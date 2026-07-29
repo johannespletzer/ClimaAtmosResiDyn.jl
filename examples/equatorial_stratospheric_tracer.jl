@@ -66,16 +66,15 @@ CA.Diagnostics.add_diagnostic_variable!(;
     compute! = compute_equatorial_tracer!,
 )
 
-function equatorial_tracer_diagnostics_config()
-    config_file = joinpath(
+function equatorial_tracer_example_config()
+    config_file = normpath(
         @__DIR__,
         "..",
         "config",
-        "common_configs",
-        "diagnostics_equatorial_stratospheric_tracer.yml",
+        "example_configs",
+        "equatorial_stratospheric_tracer.yml",
     )
-    diagnostics = YAML.load_file(config_file)["diagnostics"]
-    return CA.DiagnosticsConfig(; default = false, additional = diagnostics)
+    return YAML.load_file(config_file)
 end
 
 @inline function equatorial_tracer_source_tendency(
@@ -122,34 +121,40 @@ function CA.chemistry_tendency!(
     return nothing
 end
 
-function build_equatorial_tracer_simulation(
-    ::Type{FT} = Float64;
-    t_end = "1mins",
-) where {FT}
-    # Thirty uniform elements over 30 km give 1 km vertical resolution.
-    grid = CA.SphereGrid(
-        FT;
-        h_elem = 6,
-        z_elem = 30,
-        z_max = FT(30_000),
-        z_stretch = false,
-    )
+function equatorial_tracer_model_setup(::Type{FT}) where {FT}
     params = CA.ClimaAtmosParameters(FT)
     chemistry_model = EquatorialStratosphericTracer(FT)
     model = CA.AtmosModel(; chemistry_model)
     setup = EquatorialTracerSetup(
         CA.Setups.DecayingProfile(; perturb = false, params),
     )
+    return (; model, params, setup)
+end
+
+function build_equatorial_tracer_simulation(::Type{FT} = Float64) where {FT}
+    config = equatorial_tracer_example_config()
+    grid = CA.SphereGrid(
+        FT;
+        h_elem = config["h_elem"],
+        z_elem = config["z_elem"],
+        z_max = FT(config["z_max"]),
+        z_stretch = config["z_stretch"],
+    )
+    (; model, params, setup) = equatorial_tracer_model_setup(FT)
+    diagnostics = CA.DiagnosticsConfig(;
+        default = config["output_default_diagnostics"],
+        additional = config["diagnostics"],
+    )
     return CA.AtmosSimulation{FT}(;
         model,
         params,
         grid,
         setup,
-        dt = "5secs",
-        t_end,
-        job_id = "equatorial_stratospheric_tracer",
-        output_dir_style = "removepreexisting",
-        diagnostics = equatorial_tracer_diagnostics_config(),
+        dt = config["dt"],
+        t_end = config["t_end"],
+        job_id = config["job_id"],
+        output_dir_style = config["output_dir_style"],
+        diagnostics,
     )
 end
 

@@ -32,7 +32,7 @@ include("../../../examples/passive_stratospheric_tracers.jl")
         end
     end
 
-    simulation = build_simulation(Float64; t_end = "5secs")
+    simulation = build_simulation(Float64)
     Y = simulation.integrator.u
     tracer_names = ntuple(i -> Symbol("ρq_gas_", lpad(i, 2, '0')), N_PASSIVE_GASES)
 
@@ -40,12 +40,14 @@ include("../../../examples/passive_stratospheric_tracers.jl")
     @test all(name -> all(iszero, parent(getproperty(Y.c, name))), tracer_names)
     @test length(simulation.output_writers) == 4
 
-    diagnostics_config = passive_tracer_diagnostics_config()
-    @test !diagnostics_config.default
-    @test length(diagnostics_config.additional) == 2
+    config = passive_tracer_example_config()
+    @test config["dt"] == "5secs"
+    @test config["t_end"] == "1mins"
+    @test !config["output_default_diagnostics"]
+    @test length(config["diagnostics"]) == 2
     @test all(
         diagnostic -> diagnostic["pressure_coordinates"],
-        diagnostics_config.additional,
+        config["diagnostics"],
     )
 
     for i in 1:N_PASSIVE_GASES

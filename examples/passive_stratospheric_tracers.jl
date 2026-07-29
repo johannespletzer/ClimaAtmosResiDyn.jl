@@ -76,16 +76,15 @@ for i in 1:N_PASSIVE_GASES
     end
 end
 
-function passive_tracer_diagnostics_config()
-    config_file = joinpath(
+function passive_tracer_example_config()
+    config_file = normpath(
         @__DIR__,
         "..",
         "config",
-        "common_configs",
-        "diagnostics_passive_stratospheric_tracers.yml",
+        "example_configs",
+        "passive_stratospheric_tracers.yml",
     )
-    diagnostics = YAML.load_file(config_file)["diagnostics"]
-    return CA.DiagnosticsConfig(; default = false, additional = diagnostics)
+    return YAML.load_file(config_file)
 end
 
 @inline function tracer_source_tendency(
@@ -134,29 +133,40 @@ function CA.chemistry_tendency!(Yₜ, Y, p, t, chemistry::StratosphericPassiveGa
     return nothing
 end
 
-function build_simulation(::Type{FT} = Float64; t_end = "1mins") where {FT}
-    # A 60 km top and 60 uniform elements give 1 km vertical resolution. Each
-    # source occupies the model layer nearest its target altitude. The global
-    # cubed sphere is required because the sources also depend on latitude.
-    z_max = FT(60_000)
-    z_elem = 60
-    grid = CA.SphereGrid(FT; h_elem = 6, z_elem, z_max, z_stretch = false)
+function passive_tracer_model_setup(::Type{FT}) where {FT}
     params = CA.ClimaAtmosParameters(FT)
     chemistry_model = StratosphericPassiveGases(FT)
     model = CA.AtmosModel(; chemistry_model)
     setup = StratosphericTracerSetup(
         CA.Setups.DecayingProfile(; perturb = false, params),
     )
+    return (; model, params, setup)
+end
+
+function build_simulation(::Type{FT} = Float64) where {FT}
+    config = passive_tracer_example_config()
+    grid = CA.SphereGrid(
+        FT;
+        h_elem = config["h_elem"],
+        z_elem = config["z_elem"],
+        z_max = FT(config["z_max"]),
+        z_stretch = config["z_stretch"],
+    )
+    (; model, params, setup) = passive_tracer_model_setup(FT)
+    diagnostics = CA.DiagnosticsConfig(;
+        default = config["output_default_diagnostics"],
+        additional = config["diagnostics"],
+    )
     return CA.AtmosSimulation{FT}(;
         model,
         params,
         grid,
         setup,
-        dt = "5secs",
-        t_end,
-        job_id = "passive_stratospheric_tracers",
-        output_dir_style = "removepreexisting",
-        diagnostics = passive_tracer_diagnostics_config(),
+        dt = config["dt"],
+        t_end = config["t_end"],
+        job_id = config["job_id"],
+        output_dir_style = config["output_dir_style"],
+        diagnostics,
     )
 end
 

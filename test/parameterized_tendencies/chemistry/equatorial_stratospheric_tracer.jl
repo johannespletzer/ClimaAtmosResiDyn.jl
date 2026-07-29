@@ -45,7 +45,7 @@ include("../../../examples/equatorial_stratospheric_tracer.jl")
         )
     end
 
-    simulation = build_equatorial_tracer_simulation(Float64; t_end = "5secs")
+    simulation = build_equatorial_tracer_simulation(Float64)
     Y = simulation.integrator.u
     coordinates = Fields.coordinate_field(axes(Y.c.ρ))
     z = parent(coordinates.z)
@@ -57,12 +57,14 @@ include("../../../examples/equatorial_stratospheric_tracer.jl")
     @test all(iszero, parent(Y.c.ρq_equatorial))
     @test length(simulation.output_writers) == 4
 
-    diagnostics_config = equatorial_tracer_diagnostics_config()
-    @test !diagnostics_config.default
-    @test length(diagnostics_config.additional) == 2
+    config = equatorial_tracer_example_config()
+    @test config["dt"] == "5secs"
+    @test config["t_end"] == "1mins"
+    @test !config["output_default_diagnostics"]
+    @test length(config["diagnostics"]) == 2
     @test all(
         diagnostic -> diagnostic["pressure_coordinates"],
-        diagnostics_config.additional,
+        config["diagnostics"],
     )
 
     tracer_diagnostic = CA.Diagnostics.get_diagnostic_variable("q_equatorial")
