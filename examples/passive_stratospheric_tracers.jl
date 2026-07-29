@@ -1,12 +1,13 @@
 import ClimaAtmos as CA
 import ClimaCore: Fields
 
-const N_PASSIVE_GASES = 10
+const N_PASSIVE_GASES = 18
 
 """
-Ten passive gases with constant production in species-specific altitude-latitude
-source bands. Target altitudes span 12--60 km and target latitudes span
-90 degrees south to 90 degrees north, both at equal spacing.
+Eighteen passive gases with constant production in species-specific
+altitude-latitude source bands. Target altitudes are integer meter values from
+12--60 km and target latitudes are spaced every 10 degrees from 85 degrees south
+through 85 degrees north.
 """
 struct StratosphericPassiveGases{FT} <: CA.AbstractChemistryModel
     source_altitudes::NTuple{N_PASSIVE_GASES, FT}
@@ -21,10 +22,10 @@ function StratosphericPassiveGases(
     latitude_half_width = 5,
 ) where {FT}
     altitudes = ntuple(
-        i -> FT(12_000 + (i - 1) * (60_000 - 12_000) / 9),
+        i -> FT(12_000 + round(Int, (i - 1) * 48_000 // 17)),
         N_PASSIVE_GASES,
     )
-    latitudes = ntuple(i -> FT(-90 + (i - 1) * 180 / 9), N_PASSIVE_GASES)
+    latitudes = ntuple(i -> FT(-85 + (i - 1) * 10), N_PASSIVE_GASES)
     rates = ntuple(i -> FT(i * source_rate), N_PASSIVE_GASES)
     return StratosphericPassiveGases{FT}(
         altitudes,
@@ -94,7 +95,7 @@ function build_simulation(::Type{FT} = Float64; t_end = "1mins") where {FT}
         setup,
         dt = "5secs",
         t_end,
-        job_id = "ten_passive_stratospheric_tracers",
+        job_id = "passive_stratospheric_tracers",
         output_dir_style = "removepreexisting",
     )
 end
