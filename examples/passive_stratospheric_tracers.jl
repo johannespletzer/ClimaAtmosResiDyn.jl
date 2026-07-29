@@ -2,15 +2,16 @@ import ClimaAtmos as CA
 import ClimaCore: Fields
 
 const N_PASSIVE_GASES = 18
+const N_SOURCE_ALTITUDES = 8
 
 """
 Eighteen passive gases with constant production in species-specific
-altitude-latitude source bands. Target altitudes are integer meter values from
-12--60 km and target latitudes are spaced every 10 degrees from 85 degrees south
-through 85 degrees north.
+latitude bands at eight shared source altitudes. Target altitudes are spaced
+every 6 km from 14--56 km and target latitudes are spaced every 10 degrees from
+85 degrees south through 85 degrees north.
 """
 struct StratosphericPassiveGases{FT} <: CA.AbstractChemistryModel
-    source_altitudes::NTuple{N_PASSIVE_GASES, FT}
+    source_altitudes::NTuple{N_SOURCE_ALTITUDES, FT}
     source_latitudes::NTuple{N_PASSIVE_GASES, FT}
     source_rates::NTuple{N_PASSIVE_GASES, FT}
     altitude_half_width::FT
@@ -21,10 +22,7 @@ function StratosphericPassiveGases(
     ::Type{FT}; source_rate = 1e-10, altitude_half_width = 500,
     latitude_half_width = 5,
 ) where {FT}
-    altitudes = ntuple(
-        i -> FT(12_000 + round(Int, (i - 1) * 48_000 // 17)),
-        N_PASSIVE_GASES,
-    )
+    altitudes = ntuple(i -> FT(14_000 + (i - 1) * 6_000), N_SOURCE_ALTITUDES)
     latitudes = ntuple(i -> FT(-85 + (i - 1) * 10), N_PASSIVE_GASES)
     rates = ntuple(i -> FT(i * source_rate), N_PASSIVE_GASES)
     return StratosphericPassiveGases{FT}(
@@ -61,16 +59,17 @@ function CA.chemistry_tendency!(Yₜ, Y, p, t, chemistry::StratosphericPassiveGa
     for (i, source_rate) in enumerate(chemistry.source_rates)
         tracer_name = Symbol("ρq_gas_", lpad(i, 2, '0'))
         tracer_tendency = getproperty(Yₜ.c, tracer_name)
-        source_altitude = chemistry.source_altitudes[i]
         source_latitude = chemistry.source_latitudes[i]
-        @. tracer_tendency +=
-            Y.c.ρ * source_rate *
-            ifelse(
-                (abs(z - source_altitude) <= chemistry.altitude_half_width) &
-                abs(latitude - source_latitude) <= chemistry.latitude_half_width,
-                1,
-                0,
-            )
+        for source_altitude in chemistry.source_altitudes
+            @. tracer_tendency +=
+                Y.c.ρ * source_rate *
+                ifelse(
+                    (abs(z - source_altitude) <= chemistry.altitude_half_width) &
+                    abs(latitude - source_latitude) <= chemistry.latitude_half_width,
+                    1,
+                    0,
+                )
+        end
     end
     return nothing
 end
@@ -107,4 +106,6 @@ function main()
     return simulation
 end
 
-abspath(PROGRAM_FILE) == @__FILE__ && main()
+if abspath(PROGRAM_FILE) == @__FILE__
+    main()
+end
