@@ -96,6 +96,7 @@ if TEST_GROUP in ("parameterizations", "all")
 
     # Chemistry tests
     @safetestset "Chemistry tendency tests" begin @time include("parameterized_tendencies/chemistry/chemistry_tendency.jl") end
+    @safetestset "Passive stratospheric tracers" begin @time include("parameterized_tendencies/chemistry/passive_stratospheric_tracers.jl") end
 
     # Gravity wave: Beres convective NOGW pure-function unit tests (no simulation
     # build). The simulation-based Beres tests (test_beres_single_column.jl,
