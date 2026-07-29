@@ -1,3 +1,6 @@
+import ClimaComms as CC
+CC.@import_required_backends
+
 import ClimaAtmos as CA
 import ClimaCore: Fields
 import YAML
@@ -143,7 +146,11 @@ function passive_tracer_model_setup(::Type{FT}) where {FT}
     return (; model, params, setup)
 end
 
-function build_simulation(::Type{FT} = Float64) where {FT}
+function build_simulation(::Type{FT} = Float32) where {FT}
+    device = CC.device()
+    context = CC.context(device)
+    CC.init(context)
+
     config = passive_tracer_example_config()
     grid = CA.SphereGrid(
         FT;
