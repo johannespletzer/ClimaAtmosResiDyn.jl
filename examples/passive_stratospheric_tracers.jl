@@ -52,6 +52,27 @@ end
     return :(NamedTuple{$names}(($(values...),)))
 end
 
+@inline function tracer_source_tendency(
+    ρ,
+    z,
+    latitude,
+    source_rate,
+    source_altitude,
+    source_latitude,
+    altitude_half_width,
+    latitude_half_width,
+)
+    is_in_altitude_band = abs(z - source_altitude) <= altitude_half_width
+    is_in_latitude_band = abs(latitude - source_latitude) <= latitude_half_width
+    source_tendency = ρ * source_rate
+    latitude_tendency = ifelse(
+        is_in_latitude_band,
+        source_tendency,
+        zero(source_tendency),
+    )
+    return ifelse(is_in_altitude_band, latitude_tendency, zero(source_tendency))
+end
+
 function CA.chemistry_tendency!(Yₜ, Y, p, t, chemistry::StratosphericPassiveGases)
     coordinates = Fields.coordinate_field(axes(Y.c.ρ))
     z = coordinates.z
@@ -62,12 +83,15 @@ function CA.chemistry_tendency!(Yₜ, Y, p, t, chemistry::StratosphericPassiveGa
         source_latitude = chemistry.source_latitudes[i]
         for source_altitude in chemistry.source_altitudes
             @. tracer_tendency +=
-                Y.c.ρ * source_rate *
-                ifelse(
-                    (abs(z - source_altitude) <= chemistry.altitude_half_width) &
-                    abs(latitude - source_latitude) <= chemistry.latitude_half_width,
-                    1,
-                    0,
+                tracer_source_tendency(
+                    Y.c.ρ,
+                    z,
+                    latitude,
+                    source_rate,
+                    source_altitude,
+                    source_latitude,
+                    chemistry.altitude_half_width,
+                    chemistry.latitude_half_width,
                 )
         end
     end

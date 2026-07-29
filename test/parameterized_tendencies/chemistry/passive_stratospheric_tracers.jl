@@ -5,6 +5,33 @@ import ClimaCore: Fields
 include("../../../examples/passive_stratospheric_tracers.jl")
 
 @testset "passive stratospheric tracers" begin
+    @testset "source tendency calculation" begin
+        for FT in (Float32, Float64)
+            ρ = FT(0.8)
+            source_rate = FT(2e-10)
+            source_altitude = FT(20_000)
+            source_latitude = FT(15)
+            altitude_half_width = FT(500)
+            latitude_half_width = FT(5)
+
+            tendency(z, latitude) = tracer_source_tendency(
+                ρ,
+                FT(z),
+                FT(latitude),
+                source_rate,
+                source_altitude,
+                source_latitude,
+                altitude_half_width,
+                latitude_half_width,
+            )
+
+            @test @inferred(tendency(20_000, 15)) === ρ * source_rate
+            @test tendency(19_500, 10) === ρ * source_rate
+            @test iszero(tendency(19_499, 15))
+            @test iszero(tendency(20_000, 9))
+        end
+    end
+
     simulation = build_simulation(Float64; t_end = "5secs")
     Y = simulation.integrator.u
     tracer_names = ntuple(i -> Symbol("ρq_gas_", lpad(i, 2, '0')), N_PASSIVE_GASES)
