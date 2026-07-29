@@ -4,19 +4,35 @@ import ClimaCore: Fields
 const N_PASSIVE_GASES = 10
 
 """
-Ten passive gases with constant, species-dependent production above a fixed
-tropopause height. The production tendency is exactly zero below the tropopause.
+Ten passive gases with constant production in species-specific altitude-latitude
+source bands. Target altitudes span 12--60 km and target latitudes span
+90 degrees south to 90 degrees north, both at equal spacing.
 """
 struct StratosphericPassiveGases{FT} <: CA.AbstractChemistryModel
-    tropopause_height::FT
+    source_altitudes::NTuple{N_PASSIVE_GASES, FT}
+    source_latitudes::NTuple{N_PASSIVE_GASES, FT}
     source_rates::NTuple{N_PASSIVE_GASES, FT}
+    altitude_half_width::FT
+    latitude_half_width::FT
 end
 
 function StratosphericPassiveGases(
-    ::Type{FT}; tropopause_height = 12_000, source_rate = 1e-10,
+    ::Type{FT}; source_rate = 1e-10, altitude_half_width = 500,
+    latitude_half_width = 5,
 ) where {FT}
+    altitudes = ntuple(
+        i -> FT(12_000 + (i - 1) * (60_000 - 12_000) / 9),
+        N_PASSIVE_GASES,
+    )
+    latitudes = ntuple(i -> FT(-90 + (i - 1) * 180 / 9), N_PASSIVE_GASES)
     rates = ntuple(i -> FT(i * source_rate), N_PASSIVE_GASES)
-    return StratosphericPassiveGases{FT}(FT(tropopause_height), rates)
+    return StratosphericPassiveGases{FT}(
+        altitudes,
+        latitudes,
+        rates,
+        FT(altitude_half_width),
+        FT(latitude_half_width),
+    )
 end
 
 struct StratosphericTracerSetup{S}
@@ -38,23 +54,33 @@ end
 end
 
 function CA.chemistry_tendency!(Yₜ, Y, p, t, chemistry::StratosphericPassiveGases)
-    z = Fields.coordinate_field(axes(Y.c.ρ)).z
+    coordinates = Fields.coordinate_field(axes(Y.c.ρ))
+    z = coordinates.z
+    latitude = coordinates.lat
     for (i, source_rate) in enumerate(chemistry.source_rates)
         tracer_name = Symbol("ρq_gas_", lpad(i, 2, '0'))
         tracer_tendency = getproperty(Yₜ.c, tracer_name)
+        source_altitude = chemistry.source_altitudes[i]
+        source_latitude = chemistry.source_latitudes[i]
         @. tracer_tendency +=
-            Y.c.ρ * source_rate * ifelse(z >= chemistry.tropopause_height, 1, 0)
+            Y.c.ρ * source_rate *
+            ifelse(
+                (abs(z - source_altitude) <= chemistry.altitude_half_width) &
+                abs(latitude - source_latitude) <= chemistry.latitude_half_width,
+                1,
+                0,
+            )
     end
     return nothing
 end
 
 function build_simulation(::Type{FT} = Float64; t_end = "1mins") where {FT}
-    # A 30 km top includes 18 km of source region above the 12 km tropopause.
-    # Sixty uniform elements give 500 m vertical resolution and place the
-    # tropopause exactly on an element boundary.
-    z_max = FT(30_000)
+    # A 60 km top and 60 uniform elements give 1 km vertical resolution. Each
+    # source occupies the model layer nearest its target altitude. The global
+    # cubed sphere is required because the sources also depend on latitude.
+    z_max = FT(60_000)
     z_elem = 60
-    grid = CA.ColumnGrid(FT; z_elem, z_max, z_stretch = false)
+    grid = CA.SphereGrid(FT; h_elem = 6, z_elem, z_max, z_stretch = false)
     params = CA.ClimaAtmosParameters(FT)
     chemistry_model = StratosphericPassiveGases(FT)
     model = CA.AtmosModel(; chemistry_model)

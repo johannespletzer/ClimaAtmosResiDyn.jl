@@ -17,14 +17,26 @@ include("../../../examples/ten_passive_stratospheric_tracers.jl")
     chemistry = simulation.integrator.p.atmos.chemistry_model
     CA.chemistry_tendency!(Yₜ, Y, simulation.integrator.p, 0, chemistry)
 
-    z = Fields.coordinate_field(axes(Y.c.ρ)).z
-    below = parent(z) .< chemistry.tropopause_height
-    above = .!below
+    coordinates = Fields.coordinate_field(axes(Y.c.ρ))
+    z = parent(coordinates.z)
+    latitude = parent(coordinates.lat)
     for (i, name) in enumerate(tracer_names)
         tendency = parent(getproperty(Yₜ.c, name))
-        @test all(iszero, tendency[below])
-        @test all(tendency[above] .> 0)
-        @test tendency[above] ≈
-              i .* chemistry.source_rates[1] .* parent(Y.c.ρ)[above]
+        source_region =
+            (abs.(z .- chemistry.source_altitudes[i]) .<=
+             chemistry.altitude_half_width) .&
+            (abs.(latitude .- chemistry.source_latitudes[i]) .<=
+             chemistry.latitude_half_width)
+        @test any(source_region)
+        @test all(iszero, tendency[.!source_region])
+        @test all(tendency[source_region] .> 0)
+        @test tendency[source_region] ≈
+              chemistry.source_rates[i] .* parent(Y.c.ρ)[source_region]
     end
+
+    @test chemistry.source_altitudes[1] == 12_000
+    @test chemistry.source_altitudes[end] == 60_000
+    @test all(diff(collect(chemistry.source_altitudes)) .≈ 48_000 / 9)
+    @test chemistry.source_latitudes ==
+          (-90.0, -70.0, -50.0, -30.0, -10.0, 10.0, 30.0, 50.0, 70.0, 90.0)
 end
