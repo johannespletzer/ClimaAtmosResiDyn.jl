@@ -1,0 +1,14 @@
+diagnostics:
+  # Resolve the source-region evolution during the one-minute example run.
+  - short_name: q_equatorial
+    period: 10secs
+    pressure_coordinates: true
+    writer: netcdf
+
+  # Retain a time mean of the complete example run.
+  - short_name: q_equatorial
+    reduction_time: average
+    period: 1mins
+    compute_every: 5secs
+    pressure_coordinates: true
+    writer: netcdf

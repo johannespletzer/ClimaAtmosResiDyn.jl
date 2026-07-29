@@ -55,6 +55,20 @@ include("../../../examples/equatorial_stratospheric_tracer.jl")
     @test maximum(z) ≈ 29_500
     @test :ρq_equatorial in propertynames(Y.c)
     @test all(iszero, parent(Y.c.ρq_equatorial))
+    @test length(simulation.output_writers) == 4
+
+    diagnostics_config = equatorial_tracer_diagnostics_config()
+    @test !diagnostics_config.default
+    @test length(diagnostics_config.additional) == 2
+    @test all(
+        diagnostic -> diagnostic["pressure_coordinates"],
+        diagnostics_config.additional,
+    )
+
+    tracer_diagnostic = CA.Diagnostics.get_diagnostic_variable("q_equatorial")
+    tracer_output =
+        tracer_diagnostic.compute!(nothing, Y, simulation.integrator.p, 0)
+    @test all(iszero, parent(tracer_output))
 
     Yₜ = similar(Y)
     Yₜ .= 0

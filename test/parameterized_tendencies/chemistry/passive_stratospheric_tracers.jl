@@ -38,6 +38,22 @@ include("../../../examples/passive_stratospheric_tracers.jl")
 
     @test all(name -> name in propertynames(Y.c), tracer_names)
     @test all(name -> all(iszero, parent(getproperty(Y.c, name))), tracer_names)
+    @test length(simulation.output_writers) == 4
+
+    diagnostics_config = passive_tracer_diagnostics_config()
+    @test !diagnostics_config.default
+    @test length(diagnostics_config.additional) == 2
+    @test all(
+        diagnostic -> diagnostic["pressure_coordinates"],
+        diagnostics_config.additional,
+    )
+
+    for i in 1:N_PASSIVE_GASES
+        short_name = "q_gas_$(lpad(i, 2, '0'))"
+        tracer_diagnostic = CA.Diagnostics.get_diagnostic_variable(short_name)
+        tracer_output = tracer_diagnostic.compute!(nothing, Y, simulation.integrator.p, 0)
+        @test all(iszero, parent(tracer_output))
+    end
 
     Yₜ = similar(Y)
     Yₜ .= 0

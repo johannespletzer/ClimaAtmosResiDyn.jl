@@ -1,5 +1,6 @@
 import ClimaAtmos as CA
 import ClimaCore: Fields
+import YAML
 
 const N_PASSIVE_GASES = 18
 const N_SOURCE_ALTITUDES = 8
@@ -50,6 +51,41 @@ end
     names = ntuple(i -> Symbol("ρq_gas_", lpad(i, 2, '0')), N_PASSIVE_GASES)
     values = [:(zero(ρ)) for _ in names]
     return :(NamedTuple{$names}(($(values...),)))
+end
+
+function compute_passive_gas!(out, state, cache, time, tracer_name)
+    density_weighted_tracer = getproperty(state.c, Symbol("ρ", tracer_name))
+    if isnothing(out)
+        return @. density_weighted_tracer / state.c.ρ
+    else
+        @. out = density_weighted_tracer / state.c.ρ
+        return out
+    end
+end
+
+for i in 1:N_PASSIVE_GASES
+    tracer_name = "q_gas_$(lpad(i, 2, '0'))"
+    let tracer_name = tracer_name
+        CA.Diagnostics.add_diagnostic_variable!(;
+            short_name = tracer_name,
+            long_name = "Passive stratospheric gas $(i) mass mixing ratio",
+            units = "kg kg^-1",
+            compute! = (out, state, cache, time) ->
+                compute_passive_gas!(out, state, cache, time, tracer_name),
+        )
+    end
+end
+
+function passive_tracer_diagnostics_config()
+    config_file = joinpath(
+        @__DIR__,
+        "..",
+        "config",
+        "common_configs",
+        "diagnostics_passive_stratospheric_tracers.yml",
+    )
+    diagnostics = YAML.load_file(config_file)["diagnostics"]
+    return CA.DiagnosticsConfig(; default = false, additional = diagnostics)
 end
 
 @inline function tracer_source_tendency(
@@ -120,6 +156,7 @@ function build_simulation(::Type{FT} = Float64; t_end = "1mins") where {FT}
         t_end,
         job_id = "passive_stratospheric_tracers",
         output_dir_style = "removepreexisting",
+        diagnostics = passive_tracer_diagnostics_config(),
     )
 end
 

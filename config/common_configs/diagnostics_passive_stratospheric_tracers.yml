@@ -1,0 +1,22 @@
+diagnostics:
+  # Resolve all source regions during the one-minute example run.
+  - short_name: [
+      q_gas_01, q_gas_02, q_gas_03, q_gas_04, q_gas_05, q_gas_06,
+      q_gas_07, q_gas_08, q_gas_09, q_gas_10, q_gas_11, q_gas_12,
+      q_gas_13, q_gas_14, q_gas_15, q_gas_16, q_gas_17, q_gas_18,
+    ]
+    period: 10secs
+    pressure_coordinates: true
+    writer: netcdf
+
+  # Retain time means of the complete example run.
+  - short_name: [
+      q_gas_01, q_gas_02, q_gas_03, q_gas_04, q_gas_05, q_gas_06,
+      q_gas_07, q_gas_08, q_gas_09, q_gas_10, q_gas_11, q_gas_12,
+      q_gas_13, q_gas_14, q_gas_15, q_gas_16, q_gas_17, q_gas_18,
+    ]
+    reduction_time: average
+    period: 1mins
+    compute_every: 5secs
+    pressure_coordinates: true
+    writer: netcdf

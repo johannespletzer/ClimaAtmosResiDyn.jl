@@ -1,5 +1,6 @@
 import ClimaAtmos as CA
 import ClimaCore: Fields
+import YAML
 
 """
 A passive gas emitted in a region centered on the equator at 20 km altitude.
@@ -47,6 +48,34 @@ function CA.Setups.chemistry_variables(
     ::EquatorialStratosphericTracer,
 )
     return (; ρq_equatorial = zero(ρ))
+end
+
+function compute_equatorial_tracer!(out, state, cache, time)
+    if isnothing(out)
+        return @. state.c.ρq_equatorial / state.c.ρ
+    else
+        @. out = state.c.ρq_equatorial / state.c.ρ
+        return out
+    end
+end
+
+CA.Diagnostics.add_diagnostic_variable!(;
+    short_name = "q_equatorial",
+    long_name = "Equatorial passive tracer mass mixing ratio",
+    units = "kg kg^-1",
+    compute! = compute_equatorial_tracer!,
+)
+
+function equatorial_tracer_diagnostics_config()
+    config_file = joinpath(
+        @__DIR__,
+        "..",
+        "config",
+        "common_configs",
+        "diagnostics_equatorial_stratospheric_tracer.yml",
+    )
+    diagnostics = YAML.load_file(config_file)["diagnostics"]
+    return CA.DiagnosticsConfig(; default = false, additional = diagnostics)
 end
 
 @inline function equatorial_tracer_source_tendency(
@@ -120,6 +149,7 @@ function build_equatorial_tracer_simulation(
         t_end,
         job_id = "equatorial_stratospheric_tracer",
         output_dir_style = "removepreexisting",
+        diagnostics = equatorial_tracer_diagnostics_config(),
     )
 end
 
