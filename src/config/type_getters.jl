@@ -54,6 +54,7 @@ function get_atmos(config::AtmosConfig, params; setup_type = nothing)
         surface = AtmosSurface(config, params, FT; setup_type),
         numerics = AtmosNumerics(config, FT),
         chemistry = AtmosChem(config),
+        tagging = AtmosTagging(config),
         cosp = COSPModel(config),
         vertical_diffusion,
         disable_surface_flux_tendency = pa["disable_surface_flux_tendency"],

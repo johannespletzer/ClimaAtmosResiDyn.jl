@@ -58,6 +58,9 @@ include(joinpath("parameterized_tendencies", "microphysics", "microphysics.jl"))
 # Chemistry module (gas-phase chemistry with a MUSICA backend)
 include(joinpath("parameterized_tendencies", "chemistry", "chemistry.jl"))
 
+# Tagged prognostic energy tracers (masks, state builders, config parsing)
+include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_tracers.jl"))
+
 include(joinpath("surface_conditions", "SurfaceConditions.jl"))
 include(joinpath("setups", "Setups.jl"))
 include(joinpath("utils", "refstate_thermodynamics.jl"))

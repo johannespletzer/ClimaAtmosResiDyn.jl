@@ -1,0 +1,14 @@
+initial_condition: "DryBaroclinicWave"
+t_end: "10days"
+dt_save_state_to_disk: "2days"
+disable_surface_flux_tendency: true
+tagged_tracers:
+  - name: stratosphere
+    region: {type: tanh_altitude, z_center: 12000.0, width: 1000.0}
+  - name: tropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0}
+  - name: extratropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0, inside: false}
+diagnostics:
+  - short_name: [pfull, ua, wa, va, rv, ta, ke]
+    period: 1days

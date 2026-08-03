@@ -1009,6 +1009,17 @@ function AtmosChem(config::AtmosConfig)
     return AtmosChem(; chemistry_model)
 end
 
+function AtmosTagging(config::AtmosConfig)
+    FT = eltype(config)
+    entries = config.parsed_args["tagged_tracers"]
+    tagging_model = if isnothing(entries) || isempty(entries)
+        nothing
+    else
+        TaggingModel(tagged_tracer_tuple(entries, FT))
+    end
+    return AtmosTagging(; tagging_model)
+end
+
 function COSPModel(config::AtmosConfig)
     time_to_seconds(config.parsed_args["dt_subcol"]) == Inf && return nothing
     n_subcolumns = config.parsed_args["cosp_n_subcolumns"]

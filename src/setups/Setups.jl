@@ -42,6 +42,7 @@ import ..PrognosticEDMFX
 import ..EDOnlyEDMFX
 import ..n_mass_flux_subdomains
 import ..AbstractChemistryModel
+import ..tagging_variables
 import ..Parameters.ClimaAtmosParameters
 import Thermodynamics.Parameters.ThermodynamicsParameters
 

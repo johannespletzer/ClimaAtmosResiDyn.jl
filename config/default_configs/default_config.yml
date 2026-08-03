@@ -433,6 +433,9 @@ time_varying_trace_gases:
 chemistry_model:
   help: "Chemistry model [`~` (default, no passive tracers), `passive` (enables passive tracer A)]"
   value: ~
+tagged_tracers:
+  help: "Tagged prognostic energy tracers `ρe_tag_<name>` [`~` (default, disabled)]. List of maps, each with `name` (required, unique), optional `region` (map with `type`: `everywhere` | `tanh_altitude` with `z_center` and `width` in meters | `tanh_latitude` with `lat_bound` and `width` in degrees plus optional `inside: false` for the complement), and optional `source` (process label for source attribution). Region tags are initialized to the masked share of `ρe_tot`; source-only tags start at zero."
+  value: ~
 
 # EDMF configuration
 turbconv:

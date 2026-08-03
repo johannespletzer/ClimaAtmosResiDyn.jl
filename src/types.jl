@@ -943,6 +943,96 @@ Groups chemistry models and types.
 end
 
 """
+    AbstractTagRegion
+
+Abstract type for the smooth spatial masks used by tagged prognostic energy
+tracers. Concrete regions implement `region_mask(region, coord)` (defined in
+`parameterized_tendencies/tagged_tracers/tagged_tracers.jl`).
+"""
+abstract type AbstractTagRegion end
+
+"""
+    EntireDomain()
+
+Tag region whose mask is 1 everywhere.
+"""
+struct EntireDomain <: AbstractTagRegion end
+
+"""
+    TanhAltitudeRegion(z_center, width)
+
+Tag region with a smooth `tanh` transition in altitude, with mask
+`(1 + tanh((z - z_center) / width)) / 2` (0 well below `z_center`, 1 well
+above). Both arguments are in meters.
+"""
+struct TanhAltitudeRegion{FT} <: AbstractTagRegion
+    z_center::FT
+    width::FT
+end
+
+"""
+    TanhLatitudeRegion(lat_bound, width, inside)
+
+Tag region for a smooth latitude band `|lat| ≲ lat_bound` with `tanh`
+transitions of the given `width` (both in degrees). When `inside` is `false`,
+the mask is the exact complement `1 - M_band`, so a band and its complement
+sum to 1 everywhere. Requires spherical geometry (coordinates with `lat`).
+"""
+struct TanhLatitudeRegion{FT} <: AbstractTagRegion
+    lat_bound::FT
+    width::FT
+    inside::Bool
+end
+
+"""
+    TracerTag{name}(region, source = :none)
+
+Definition of one tagged prognostic energy tracer, stored in the state as
+`Y.c.ρe_tag_<name>`. The tag `name` is a type parameter so that state field
+names can be generated at compile time (GPU-compatible).
+
+  - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. When given, the
+    field is initialized to `ρe_tot * mask`; when `nothing`, it is initialized
+    to zero (pure source-attribution tag).
+  - `source`: a `Symbol` labeling the physical process whose `ρe_tot` tendency
+    is attributed to this tag (e.g. `:radiation`); `:none` for passive region
+    tags. Source attribution hooks are added in a later phase.
+"""
+struct TracerTag{name, R <: Union{Nothing, AbstractTagRegion}}
+    region::R
+    source::Symbol
+end
+TracerTag{name}(region::R, source::Symbol = :none) where {name, R} =
+    TracerTag{name, R}(region, source)
+
+"""
+    tag_name(tag::TracerTag)
+
+The `Symbol` name of a [`TracerTag`](@ref) (compile-time constant).
+"""
+tag_name(::TracerTag{name}) where {name} = name
+
+"""
+    TaggingModel(tags::Tuple)
+
+Model component holding a `Tuple` of [`TracerTag`](@ref)s. Constructed from
+the `tagged_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
+`config/model_getters.jl`.
+"""
+struct TaggingModel{T <: Tuple}
+    tags::T
+end
+
+"""
+    AtmosTagging
+
+Groups tagged-tracer models and types.
+"""
+@kwdef struct AtmosTagging{TM}
+    tagging_model::TM = nothing
+end
+
+"""
     AtmosWater
 
 Groups moisture and microphysics-related models and types.
@@ -1059,7 +1149,7 @@ Base.broadcastable(x::COSPModel) = tuple(x)
 # struct definition (later in this file) so the type is in scope when those
 # methods are parsed.
 
-struct AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, COSP}
+struct AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, TG, COSP}
     water::W
     scm_setup::SCM
     radiation::R
@@ -1071,6 +1161,7 @@ struct AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, COSP}
     surface::SU
     numerics::NU
     chemistry::CM
+    tagging::TG
     cosp::COSP
 
     # Whether to apply surface flux tendency (independent of surface conditions)
@@ -1089,6 +1180,7 @@ const ATMOS_MODEL_GROUPS = (
     (AtmosNumerics, :numerics),
     (SCMSetup, :scm_setup),
     (AtmosChem, :chemistry),
+    (AtmosTagging, :tagging),
 )
 
 # Auto-generate map from property_name to group_field
@@ -1285,6 +1377,8 @@ function AtmosModel(; kwargs...)
         _create_grouped_struct(AtmosNumerics, atmos_model_kwargs, group_kwargs)
     chemistry =
         _create_grouped_struct(AtmosChem, atmos_model_kwargs, group_kwargs)
+    tagging =
+        _create_grouped_struct(AtmosTagging, atmos_model_kwargs, group_kwargs)
 
     vertical_diffusion = get(atmos_model_kwargs, :vertical_diffusion, nothing)
     cosp = get(atmos_model_kwargs, :cosp, nothing)
@@ -1305,6 +1399,7 @@ function AtmosModel(; kwargs...)
         typeof(surface),
         typeof(numerics),
         typeof(chemistry),
+        typeof(tagging),
         typeof(cosp),
     }(
         water,
@@ -1318,6 +1413,7 @@ function AtmosModel(; kwargs...)
         surface,
         numerics,
         chemistry,
+        tagging,
         cosp,
         disable_surface_flux_tendency,
     )

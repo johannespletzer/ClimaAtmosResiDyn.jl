@@ -50,6 +50,7 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
         moisture_variables(ρ, physical_state, atmos_model.microphysics_model)...,
         precip_variables(ρ, physical_state, atmos_model.microphysics_model)...,
         chemistry_variables(ρ, physical_state, atmos_model.chemistry_model)...,
+        tagging_variables(ρe_tot, local_geometry, atmos_model.tagging_model)...,
     )
 end
 
