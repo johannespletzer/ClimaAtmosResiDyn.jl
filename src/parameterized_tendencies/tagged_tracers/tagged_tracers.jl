@@ -25,8 +25,9 @@
 ##### scalar with `K_h`), and the corresponding implicit-Jacobian blocks. No
 ##### hand-written transport is needed (and none should be added).
 #####
-##### Source attribution only covers genuine sources/sinks of `ρe_tot`
-##### (radiation, surface flux, microphysics, idealized forcing). Transport-like
+##### Source attribution only covers processes that the tags do NOT already
+##### receive through that machinery — see `KNOWN_TAG_SOURCES` for the list and
+##### `TAG_SOURCE_GROUPS` for the user-facing groupings. Transport-like
 ##### processes (advection, diffusion, sponges) must NOT be attributed: each tag
 ##### already receives its own transport from the tracer machinery, so masked
 ##### attribution of `ρe_tot` transport would count it twice.
@@ -69,7 +70,7 @@ end
 Initial value of the tagged field `ρe_tag_<name>` at a single point:
 
   - For pure region tags (`tag.region isa AbstractTagRegion` and
-    `tag.source === :none`), the masked share of the initial total energy,
+    no sources), the masked share of the initial total energy,
     `ρe_tot * M(coord)`. If the configured regions partition unity (e.g. a
     band and its complement), the region tags sum to `ρe_tot` at `t = 0`.
   - For source tags, zero — **regardless of whether they also carry a
@@ -80,7 +81,7 @@ Initial value of the tagged field `ρe_tag_<name>` at a single point:
     tags over a partition sum to the corresponding global source tag.
 """
 @inline tag_initial_value(tag::TracerTag, ρe_tot, coord) =
-    isnothing(tag.region) || tag.source !== :none ? zero(ρe_tot) :
+    isnothing(tag.region) || !isempty(tag.sources) ? zero(ρe_tot) :
     ρe_tot * region_mask(tag.region, coord)
 
 # Build a single-entry NamedTuple `(; ρe_tag_<name> = value)`. The field name
@@ -165,6 +166,39 @@ function tag_region_from_config(region_config, ::Type{FT}) where {FT}
 end
 
 """
+    tag_sources_from_config(source_config, name)
+
+Convert the `source` entry of a `tagged_tracers` config item into a `Tuple`
+of process labels. Accepts `nothing` (no sources), a single string, or a list
+of strings; each string is either a process in [`KNOWN_TAG_SOURCES`](@ref) or
+a group in [`TAG_SOURCE_GROUPS`](@ref), which expands to its members.
+Duplicates (e.g. from overlapping groups) are removed.
+"""
+tag_sources_from_config(::Nothing, name) = ()
+function tag_sources_from_config(source_config, name)
+    entries =
+        source_config isa AbstractString ? (source_config,) :
+        Tuple(source_config)
+    sources = Symbol[]
+    for entry in entries
+        key = Symbol(entry)
+        key === :none && continue
+        if haskey(TAG_SOURCE_GROUPS, key)
+            append!(sources, getproperty(TAG_SOURCE_GROUPS, key))
+        elseif key in KNOWN_TAG_SOURCES
+            push!(sources, key)
+        else
+            error(
+                "Unknown tagged tracer source `$key` for tag `$name`. " *
+                "Supported processes: $(join(KNOWN_TAG_SOURCES, ", ")). " *
+                "Supported groups: $(join(keys(TAG_SOURCE_GROUPS), ", ")).",
+            )
+        end
+    end
+    return Tuple(unique(sources))
+end
+
+"""
     tagged_tracer_tuple(entries, FT)
 
 Convert the parsed `tagged_tracers` config entries (a vector of `Dict`s from
@@ -178,19 +212,13 @@ function tagged_tracer_tuple(entries, ::Type{FT}) where {FT}
             error("Each `tagged_tracers` entry must specify a `name`.")
         name = Symbol(entry["name"])
         region = tag_region_from_config(get(entry, "region", nothing), FT)
-        source = Symbol(get(entry, "source", "none"))
-        if isnothing(region) && source == :none
+        sources = tag_sources_from_config(get(entry, "source", nothing), name)
+        if isnothing(region) && isempty(sources)
             error(
                 "Tagged tracer `$name` must specify a `region`, a `source`, or both.",
             )
         end
-        source == :none ||
-            source in KNOWN_TAG_SOURCES ||
-            error(
-                "Unknown tagged tracer source `$source` for tag `$name`. " *
-                "Supported sources: $(join(KNOWN_TAG_SOURCES, ", ")).",
-            )
-        return TracerTag{name}(region, source)
+        return TracerTag{name}(region, sources)
     end
     names = map(tag_name, tags)
     allunique(names) ||
@@ -205,25 +233,72 @@ end
 """
     KNOWN_TAG_SOURCES
 
-`Tuple` of the process labels that can be used as the `source` of a tagged
-tracer. Each label corresponds to one attribution bracket in
-`additional_tendency!` (see `prognostic_equations/remaining_tendency.jl`):
+`Tuple` of the process labels that can be attributed to a tagged tracer. Each
+label corresponds to one attribution bracket in `additional_tendency!` (see
+`prognostic_equations/remaining_tendency.jl`):
 
   - `:radiation`: all radiation modes (`radiation_tendency!`)
-  - `:surface_flux`: turbulent surface fluxes (`surface_flux_tendency!`)
+  - `:surface_flux`: turbulent surface energy flux (`surface_flux_tendency!`)
   - `:microphysics`: microphysics energy sources (`microphysics_tendency!`,
     only when microphysics is stepped explicitly)
   - `:held_suarez`: Held–Suarez relaxation forcing
+  - `:large_scale_advection`: prescribed large-scale advective forcing
+  - `:subsidence`: prescribed large-scale subsidence
+  - `:external_forcing`: externally prescribed (e.g. GCM-driven) forcing
 
-Only genuine sources/sinks of `ρe_tot` are attributed. Transport-like
-processes (advection, hyperdiffusion, sponges, interior vertical/SGS
-diffusion) are excluded because every tag already receives its own transport
-from the automatic tracer machinery. Processes handled by the implicit solver
-are not attributed either; with implicit diffusion or implicit microphysics,
-those contributions end up in the closure residual `ρe_tot - Σᵢ ρe_tag_i`.
+A process is attributable only if the tags do **not** already receive it
+through the automatic tracer machinery. This excludes every transport-like
+term — advection, hyperdiffusion, sponges, interior vertical diffusion, LES
+SGS diffusion — because each tag is transported in its own right, so masked
+attribution of the `ρe_tot` version would count it twice. It also excludes
+tendencies applied by the implicit solver (implicit vertical transport,
+implicit diffusion, precipitation sedimentation in
+`vertical_advection_of_water_tendency!`) and EDMFX SGS mass fluxes, which
+have no explicit bracket; those land in the closure residual
+`ρe_tot - Σᵢ ρe_tag_i`.
+
+See also [`TAG_SOURCE_GROUPS`](@ref) for the group labels that expand to
+sets of these processes.
 """
-const KNOWN_TAG_SOURCES =
-    (:radiation, :surface_flux, :microphysics, :held_suarez)
+const KNOWN_TAG_SOURCES = (
+    :radiation,
+    :surface_flux,
+    :microphysics,
+    :held_suarez,
+    :large_scale_advection,
+    :subsidence,
+    :external_forcing,
+)
+
+"""
+    TAG_SOURCE_GROUPS
+
+Named groups of process labels, usable wherever a `source` is expected so
+that a tag can follow a whole class of processes without listing each one:
+
+  - `:radiative`: radiative heating/cooling
+  - `:turbulent`: turbulent exchange with the surface
+  - `:moist`: energy sources from phase changes and precipitation formation
+  - `:forcing`: prescribed/idealized forcings (Held–Suarez, large-scale
+    advection, subsidence, external forcing)
+  - `:all`: every process in [`KNOWN_TAG_SOURCES`](@ref)
+
+Groups expand at configuration time, so `source: forcing` and
+`source: [held_suarez, large_scale_advection, subsidence, external_forcing]`
+produce identical tags.
+"""
+const TAG_SOURCE_GROUPS = (;
+    radiative = (:radiation,),
+    turbulent = (:surface_flux,),
+    moist = (:microphysics,),
+    forcing = (
+        :held_suarez,
+        :large_scale_advection,
+        :subsidence,
+        :external_forcing,
+    ),
+    all = KNOWN_TAG_SOURCES,
+)
 
 """
     tagging_cache(Y, atmos::AtmosModel)
@@ -252,13 +327,13 @@ end
     region_tag_state_names(tagging_model::TaggingModel)
 
 `Tuple` of the state-field `Symbol`s (`:ρe_tag_<name>`) of the pure region
-tags: tags with a region and `source === :none`. These are the tags whose sum
+tags: tags with a region and no sources. These are the tags whose sum
 is expected to track `ρe_tot` (tags that also carry a `source` only
 accumulate that source, so they would double-count region content).
 """
 region_tag_state_names(tagging_model::TaggingModel) = Tuple(
     Symbol(:ρe_tag_, tag_name(tag)) for
-    tag in tagging_model.tags if !isnothing(tag.region) && tag.source === :none
+    tag in tagging_model.tags if !isnothing(tag.region) && isempty(tag.sources)
 )
 
 # The closure diagnostic `e_tag_res = (ρe_tot - Σᵢ ρe_tag_i) / ρ` only
@@ -324,7 +399,7 @@ compute the increment `ᶜΔ = Yₜ.c.ρe_tot - snapshot` produced by the bracke
 process (labeled `source`, one of [`KNOWN_TAG_SOURCES`](@ref)) and add it to
 the tagged tracer tendencies:
 
-  - region tags (tag `source === :none`) receive `M * ᶜΔ`, where `M` is the
+  - pure region tags (no sources) receive `M * ᶜΔ`, where `M` is the
     tag's precomputed mask — every attributed process counts, so that the sum
     of a partition-of-unity set of region tags tracks `ρe_tot`;
   - source tags receive `ᶜΔ` only when their `source` matches, weighted by
@@ -352,12 +427,12 @@ end
 """
     tag_receives_source(tag::TracerTag, source::Symbol)
 
-Whether the attributed process labeled `source` contributes to `tag`: region
-tags (tag `source === :none`) receive every attributed process, while source
-tags only receive their own.
+Whether the attributed process labeled `source` contributes to `tag`: pure
+region tags (no sources) receive every attributed process, while source tags
+only receive the processes they list.
 """
 tag_receives_source(tag::TracerTag, source::Symbol) =
-    tag.source === :none || tag.source === source
+    isempty(tag.sources) || source in tag.sources
 
 function _accumulate_tag!(
     ᶜYₜ,

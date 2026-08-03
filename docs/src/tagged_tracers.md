@@ -56,25 +56,58 @@ precision.
 ## Source tags
 
 A source tag starts at zero and accumulates the tendency that a labeled
-process adds to ``\rho e_\mathrm{tot}``. Supported `source` labels:
+process adds to ``\rho e_\mathrm{tot}``.
 
-  - `radiation`: all radiation modes
-  - `surface_flux`: turbulent surface energy flux
-  - `microphysics`: microphysics energy sources (when stepped explicitly)
-  - `held_suarez`: Held–Suarez relaxation forcing
+### Taggable processes
 
-Region tags receive **every** attributed source, weighted by their mask, so
-a partition-of-unity set of region tags keeps tracking
+| Group | `source` label | Process |
+|:--|:--|:--|
+| `radiative` | `radiation` | All radiation modes (RRTMGP, gray, DYCOMS, TRMM\_LBA, ISDAC) |
+| `turbulent` | `surface_flux` | Turbulent surface energy flux |
+| `moist` | `microphysics` | Microphysics energy sources, when stepped explicitly |
+| `forcing` | `held_suarez` | Held–Suarez relaxation forcing |
+| `forcing` | `large_scale_advection` | Prescribed large-scale advective forcing |
+| `forcing` | `subsidence` | Prescribed large-scale subsidence |
+| `forcing` | `external_forcing` | Externally prescribed (e.g. GCM-driven) forcing |
+
+A group name may be used wherever a process label is expected, and `source`
+also accepts a list, so these are equivalent:
+
+```yaml
+  - name: forced
+    source: forcing
+  - name: forced
+    source: [held_suarez, large_scale_advection, subsidence, external_forcing]
+```
+
+The group `all` expands to every process in the table.
+
+### What is *not* taggable, and why
+
+A process can be attributed only if the tags do **not** already receive it
+through the automatic tracer machinery. Excluded, therefore:
+
+  - **Transport**: advection, hyperdiffusion, sponges, interior vertical
+    diffusion, and LES SGS diffusion all act on each tag in its own right.
+    Attributing the ``\rho e_\mathrm{tot}`` version on top of that would
+    count transport twice — this is the central correctness constraint of
+    the design.
+  - **Implicit tendencies**: implicit vertical transport, implicit
+    diffusion, and precipitation sedimentation (which runs inside the
+    implicit water-advection tendency) have no explicit bracket.
+  - **EDMFX SGS mass fluxes**: tags have no updraft counterpart.
+
+These land in the closure residual described below, which is why that
+residual is a monitored quantity rather than zero.
+
+### Regions and sources combined
+
+Pure region tags receive **every** attributed source, weighted by their
+mask, so a partition-of-unity set of region tags keeps tracking
 ``\rho e_\mathrm{tot}``. A tag with both `region` and `source` also starts
-at zero and accumulates only its own source, restricted to its region — the
+at zero and accumulates only its own sources, restricted to its region — the
 `region` restricts *where* the source is counted; it does not add the
 region's energy content to the tag.
-
-Only genuine sources/sinks are attributed. Transport-like tendencies
-(advection, hyperdiffusion, sponges, interior vertical diffusion) are never
-attributed, because each tag already receives its own transport from the
-tracer machinery — attributing them would count transport twice. Tendencies
-applied by the implicit solver are not attributed either.
 
 ## Diagnostics and closure
 

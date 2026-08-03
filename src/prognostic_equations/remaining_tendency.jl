@@ -234,9 +234,13 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
     @. Yₜ.c.ρe_tot += hs_tendency_ρe_tot
     attribute_tagged_ρe_tot!(Yₜ, p, :held_suarez)
 
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     subsidence_tendency!(Yₜ, Y, p, t, p.atmos.subsidence)
+    attribute_tagged_ρe_tot!(Yₜ, p, :subsidence)
 
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     @. Yₜ.c.ρe_tot += bc_lsa_tend_ρe_tot
+    attribute_tagged_ρe_tot!(Yₜ, p, :large_scale_advection)
     if microphysics_model isa MoistMicrophysics
         bc_lsa_tend_ρq_tot = large_scale_advection_tendency_ρq_tot(lsa_args...)
         @. Yₜ.c.ρq_tot += bc_lsa_tend_ρq_tot
@@ -244,7 +248,9 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
 
     @. Yₜ.c.uₕ += edmf_cor_tend_uₕ
 
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     external_forcing_tendency!(Yₜ, Y, p, t, p.atmos.external_forcing)
+    attribute_tagged_ρe_tot!(Yₜ, p, :external_forcing)
 
     if p.atmos.diff_mode == Explicit()
         vertical_diffusion_boundary_layer_tendency!(

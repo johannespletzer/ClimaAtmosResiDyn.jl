@@ -997,20 +997,31 @@ Definition of one tagged prognostic energy tracer, stored in the state as
 names can be generated at compile time (GPU-compatible).
 
   - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. A pure region tag
-    (`region` given, `source === :none`) is initialized to `ρe_tot * mask`
-    and receives every attributed source, masked. Any source tag is
-    initialized to zero — including region-restricted source tags, which
-    accumulate only their own source, masked by their region.
-  - `source`: a `Symbol` labeling the physical process whose `ρe_tot` tendency
-    is attributed to this tag (e.g. `:radiation`); `:none` for passive region
-    tags.
+    (`region` given, no sources) is initialized to `ρe_tot * mask` and
+    receives every attributed source, masked. Any source tag is initialized
+    to zero — including region-restricted source tags, which accumulate only
+    their own sources, masked by their region.
+  - `sources`: a `Tuple` of `Symbol`s labeling the physical processes whose
+    `ρe_tot` tendencies are attributed to this tag (e.g. `(:radiation,)`);
+    empty for passive region tags. A single `Symbol` is also accepted
+    (`:none` meaning "no sources").
 """
-struct TracerTag{name, R <: Union{Nothing, AbstractTagRegion}}
+struct TracerTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple}
     region::R
-    source::Symbol
+    sources::S
 end
-TracerTag{name}(region::R, source::Symbol = :none) where {name, R} =
-    TracerTag{name, R}(region, source)
+TracerTag{name}(region::R, sources::S = ()) where {name, R, S <: Tuple} =
+    TracerTag{name, R, S}(region, sources)
+TracerTag{name}(region, source::Symbol) where {name} =
+    TracerTag{name}(region, source === :none ? () : (source,))
+
+"""
+    tag_sources(tag::TracerTag)
+
+The `Tuple` of process labels attributed to a [`TracerTag`](@ref); empty for
+a pure region tag.
+"""
+tag_sources(tag::TracerTag) = tag.sources
 
 """
     tag_name(tag::TracerTag)

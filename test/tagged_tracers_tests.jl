@@ -122,7 +122,8 @@ import ClimaAtmos as CA
             @test tags[1].region isa CA.TanhAltitudeRegion{FT}
             @test tags[1].region.above # default
             @test tags[2].region.inside && !tags[3].region.inside
-            @test isnothing(tags[4].region) && tags[4].source == :radiation
+            @test isnothing(tags[4].region) &&
+                  tags[4].sources == (:radiation,)
 
             # Altitude complement via `above: false`
             tropo_tag = CA.tagged_tracer_tuple(
@@ -140,6 +141,32 @@ import ClimaAtmos as CA
                 FT,
             )[1]
             @test !tropo_tag.region.above
+
+            # Source groups expand to their member processes, a list of
+            # sources is accepted, and duplicates are removed
+            group_tags = CA.tagged_tracer_tuple(
+                [
+                    Dict{String, Any}("name" => "f", "source" => "forcing"),
+                    Dict{String, Any}(
+                        "name" => "rm",
+                        "source" => ["radiative", "moist"],
+                    ),
+                    Dict{String, Any}("name" => "a", "source" => "all"),
+                    Dict{String, Any}(
+                        "name" => "dup",
+                        "source" => ["radiation", "radiative"],
+                    ),
+                ],
+                FT,
+            )
+            @test group_tags[1].sources == CA.TAG_SOURCE_GROUPS.forcing
+            @test group_tags[2].sources == (:radiation, :microphysics)
+            @test group_tags[3].sources == CA.KNOWN_TAG_SOURCES
+            @test group_tags[4].sources == (:radiation,)
+            # Every group member is a known process
+            for group in CA.TAG_SOURCE_GROUPS
+                @test all(s -> s in CA.KNOWN_TAG_SOURCES, group)
+            end
 
             # Validation errors
             @test_throws ErrorException CA.tagged_tracer_tuple(
