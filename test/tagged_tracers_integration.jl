@@ -15,6 +15,16 @@ complement), plus a Held-Suarez source tag, and asserts:
 This mirrors the manual validation performed on
 `config/model_configs/baroclinic_wave_tagged_tracers.yml` (10 simulated
 days: exact partition at t = 0, sub-percent residual growth).
+
+Run either through the package test path (`Pkg.test()`, TEST_GROUP
+"dynamics") or standalone with the pinned CI environment:
+
+    julia +1.11 --project=.buildkite -e 'using Pkg; Pkg.instantiate()'
+    julia +1.11 --project=.buildkite test/tagged_tracers_integration.jl
+
+Do NOT run with an ad-hoc `--project=test` environment: this repo has no
+`test/Project.toml`, so that resolves fresh (possibly incompatible)
+dependency versions instead of the pinned set.
 =#
 
 using Test
@@ -31,6 +41,9 @@ import ClimaAtmos as CA
             "z_elem" => 10,
             "dt" => "300secs",
             "t_end" => "3600secs",
+            # Float64: the closure assertions below are precision-sensitive
+            # (the default FLOAT_TYPE is Float32)
+            "FLOAT_TYPE" => "Float64",
             "output_default_diagnostics" => false,
             "tagged_tracers" => [
                 Dict{String, Any}(
