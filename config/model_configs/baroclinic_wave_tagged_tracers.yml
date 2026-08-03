@@ -15,3 +15,5 @@ tagged_tracers:
 diagnostics:
   - short_name: [pfull, ua, wa, va, rv, ta, ke]
     period: 1days
+  - short_name: [e_tag_stratosphere, e_tag_tropics, e_tag_extratropics, e_tag_hs, e_tag_res]
+    period: 1days

@@ -188,6 +188,44 @@ import ClimaAtmos as CA
         @test CA.tag_name(model.tagging_model.tags[1]) == :rad
     end
 
+    @testset "Diagnostics registration" begin
+        tags = (
+            CA.TracerTag{:strat}(CA.TanhAltitudeRegion(12000.0, 1000.0)),
+            CA.TracerTag{:src}(nothing, :radiation),
+        )
+        # No-op when disabled
+        @test isnothing(CA.Diagnostics.register_tagging_diagnostics!(nothing))
+
+        CA.Diagnostics.register_tagging_diagnostics!(CA.TaggingModel(tags))
+        e_strat = CA.Diagnostics.get_diagnostic_variable("e_tag_strat")
+        e_src = CA.Diagnostics.get_diagnostic_variable("e_tag_src")
+        e_res = CA.Diagnostics.get_diagnostic_variable("e_tag_res")
+        @test e_strat.units == "J kg^-1"
+
+        # Compute functions divide by density; the residual sums only the
+        # region tags (the source tag would double-count region content)
+        state = (;
+            c = (;
+                ρ = [2.0, 2.0],
+                ρe_tot = [10.0, 6.0],
+                ρe_tag_strat = [4.0, 2.0],
+                ρe_tag_src = [1.0, 1.0],
+            )
+        )
+        @test e_strat.compute!(nothing, state, nothing, 0.0) == [2.0, 1.0]
+        @test e_src.compute!(nothing, state, nothing, 0.0) == [0.5, 0.5]
+        @test e_res.compute!(nothing, state, nothing, 0.0) == [3.0, 2.0]
+
+        # Mutating form writes into `out`
+        out = zeros(2)
+        e_res.compute!(out, state, nothing, 0.0)
+        @test out == [3.0, 2.0]
+
+        # Registration is idempotent for per-tag entries (no overwrite)
+        CA.Diagnostics.register_tagging_diagnostics!(CA.TaggingModel(tags))
+        @test CA.Diagnostics.get_diagnostic_variable("e_tag_strat") === e_strat
+    end
+
     @testset "Tagged name predicate" begin
         @test CA.is_tagged_tracer_name(:ρe_tag_strat)
         @test !CA.is_tagged_tracer_name(:ρq_tot)

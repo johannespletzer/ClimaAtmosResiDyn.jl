@@ -53,6 +53,11 @@ import ..OrographicGravityWave
 # chemistry_model
 import ..GasPhaseChem
 
+# tagging_model
+import ..AtmosTagging
+import ..TaggingModel
+import ..tag_name
+
 # surface temperature
 import ..SurfaceConditions
 import ..SurfaceConditions: SlabOceanTemperature
