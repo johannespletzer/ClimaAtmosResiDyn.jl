@@ -11,11 +11,14 @@
 #####   1. `tagging_variables(ρe_tot, local_geometry, atmos_model.tagging_model)`
 #####      in the initial-condition assembly (`setups/common/prognostic_variables.jl`);
 #####   2. `tagging_cache(Y, atmos)` in `cache/cache.jl`, which precomputes the
-#####      static region masks and a snapshot scratch field;
+#####      static region masks, and `tagging_scratch(Y, atmos)` in
+#####      `cache/temporary_quantities.jl` for the snapshot buffer;
 #####   3. `snapshot_tagged_ρe_tot!` / `attribute_tagged_ρe_tot!` brackets
 #####      around the attributed processes in `additional_tendency!`
-#####      (`prognostic_equations/remaining_tendency.jl`);
-#####   4. `is_tagged_tracer_name` to exempt tags from nonnegativity limiting
+#####      (`prognostic_equations/remaining_tendency.jl`) and around
+#####      precipitation sedimentation in `implicit_tendency!`
+#####      (`prognostic_equations/implicit/implicit_tendency.jl`);
+#####   4. `is_tagged_tracer_name` to exempt tags from the tracer limiters
 #####      (`prognostic_equations/limited_tendencies.jl`).
 #####
 ##### Each tag adds one grid-scale prognostic field `Y.c.ρe_tag_<name>`. Because
@@ -380,17 +383,24 @@ label corresponds to one attribution bracket in `additional_tendency!` (see
   - `:large_scale_advection`: prescribed large-scale advective forcing
   - `:subsidence`: prescribed large-scale subsidence
   - `:external_forcing`: externally prescribed (e.g. GCM-driven) forcing
+  - `:precipitation`: energy carried out of a level by sedimenting
+    precipitation (`vertical_advection_of_water_tendency!`). This is the one
+    attributed process on the **implicit** path; it is bracketed inside
+    `implicit_tendency!`, which is safe because that function zeroes `Yₜ` on
+    every evaluation. With 1-moment and 2-moment microphysics this is where
+    the moist energy sink lives, since those schemes change only the water
+    species and leave `ρe_tot` to the sedimentation flux.
 
 A process is attributable only if the tags do **not** already receive it
 through the automatic tracer machinery. This excludes every transport-like
 term — advection, hyperdiffusion, sponges, interior vertical diffusion, LES
 SGS diffusion — because each tag is transported in its own right, so masked
 attribution of the `ρe_tot` version would count it twice. It also excludes
-tendencies applied by the implicit solver (implicit vertical transport,
-implicit diffusion, precipitation sedimentation in
-`vertical_advection_of_water_tendency!`) and EDMFX SGS mass fluxes, which
-have no explicit bracket; those land in the closure residual
-`ρe_tot - Σᵢ ρe_tag_i`.
+most tendencies applied by the implicit solver (implicit vertical transport,
+implicit diffusion) and EDMFX SGS mass fluxes, which have no bracket; those
+land in the closure residual `ρe_tot - Σᵢ ρe_tag_i`. Precipitation
+sedimentation is the one implicit process that *is* attributed, because it
+is a genuine energy sink that the tags never receive.
 
 See also [`TAG_SOURCE_GROUPS`](@ref) for the group labels that expand to
 sets of these processes.
@@ -399,6 +409,7 @@ const KNOWN_TAG_SOURCES = (
     :radiation,
     :surface_flux,
     :microphysics,
+    :precipitation,
     :held_suarez,
     :large_scale_advection,
     :subsidence,
@@ -425,7 +436,7 @@ produce identical tags.
 const TAG_SOURCE_GROUPS = (;
     radiative = (:radiation,),
     turbulent = (:surface_flux,),
-    moist = (:microphysics,),
+    moist = (:microphysics, :precipitation),
     forcing = (
         :held_suarez,
         :large_scale_advection,
@@ -445,18 +456,32 @@ Cache entries used by tagged-tracer source attribution (stored as
     spatial mask of that tag's region, keyed like the state
     (`ρe_tag_<name>`). Masks are evaluated once here and never inside a
     per-timestep broadcast.
-  - `ᶜρe_tot_snapshot`: scratch used by [`snapshot_tagged_ρe_tot!`](@ref) to
-    record `Yₜ.c.ρe_tot` before an attributed process runs. This is a
-    dedicated field rather than an entry of `p.scratch` so that the bracketed
-    process cannot clobber it.
+
+The buffer that [`snapshot_tagged_ρe_tot!`](@ref) records `Yₜ.c.ρe_tot` into
+lives in `p.scratch` instead (see [`tagging_scratch`](@ref)), because the
+implicit tendency is evaluated with `ForwardDiff.Dual` numbers when an
+automatic-differentiation Jacobian is used, and only `p.precomputed` and
+`p.scratch` are converted to dual-typed fields.
 """
 tagging_cache(Y, atmos::AtmosModel) = _tagging_cache(Y, atmos.tagging_model)
 _tagging_cache(Y, ::Nothing) = nothing
 function _tagging_cache(Y, model::TaggingModel)
     ᶜmasks = _tag_masks(Fields.coordinate_field(Y.c), model.tags)
     _check_region_partition(ᶜmasks, model)
-    return (; ᶜmasks, ᶜρe_tot_snapshot = similar(Y.c.ρ))
+    return (; ᶜmasks)
 end
+
+"""
+    tagging_scratch(Y, atmos::AtmosModel)
+
+Scratch fields needed by tagged-tracer source attribution, merged into
+`p.scratch`; empty when tagging is disabled. `ᶜtagging_snapshot` holds
+`Yₜ.c.ρe_tot` from the last [`snapshot_tagged_ρe_tot!`](@ref); no other code
+touches it, so a bracketed process cannot clobber it.
+"""
+tagging_scratch(Y, atmos::AtmosModel) =
+    isnothing(atmos.tagging_model) ? (;) :
+    (; ᶜtagging_snapshot = similar(Y.c.ρ))
 
 """
     region_tag_state_names(tagging_model::TaggingModel)
@@ -522,7 +547,7 @@ snapshot_tagged_ρe_tot!(p, Yₜ) =
     _snapshot_tagged_ρe_tot!(p, Yₜ, p.atmos.tagging_model)
 _snapshot_tagged_ρe_tot!(p, Yₜ, ::Nothing) = nothing
 function _snapshot_tagged_ρe_tot!(p, Yₜ, ::TaggingModel)
-    p.tagging.ᶜρe_tot_snapshot .= Yₜ.c.ρe_tot
+    p.scratch.ᶜtagging_snapshot .= Yₜ.c.ρe_tot
     return nothing
 end
 
@@ -546,7 +571,8 @@ attribute_tagged_ρe_tot!(Yₜ, p, source::Symbol) =
     _attribute_tagged_ρe_tot!(Yₜ, p, source, p.atmos.tagging_model)
 _attribute_tagged_ρe_tot!(Yₜ, p, source, ::Nothing) = nothing
 function _attribute_tagged_ρe_tot!(Yₜ, p, source, model::TaggingModel)
-    (; ᶜmasks, ᶜρe_tot_snapshot) = p.tagging
+    (; ᶜmasks) = p.tagging
+    ᶜρe_tot_snapshot = p.scratch.ᶜtagging_snapshot
     ᶜΔρe_tot = @. lazy(Yₜ.c.ρe_tot - ᶜρe_tot_snapshot)
     _accumulate_tags!(Yₜ.c, ᶜmasks, ᶜΔρe_tot, source, model.tags)
     return nothing

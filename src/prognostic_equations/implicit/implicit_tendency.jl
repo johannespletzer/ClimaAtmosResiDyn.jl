@@ -203,7 +203,16 @@ function implicit_vertical_advection_tendency!(Yₜ, Y, p, t)
         @. Yₜ.c.ρb_rim -= ᶜprecipdivᵥ(ᶠρ * ᶠright_bias(- ᶜwᵢ * specific(ρb_rim, ρ)))
     end
 
+    # Precipitation sedimentation carries energy out of each level; it is the
+    # one attributed tagged-tracer source on the implicit path. Bracketing is
+    # safe here because `implicit_tendency!` zeroes `Yₜ` on every evaluation,
+    # so each Newton iterate recomputes the attribution from scratch rather
+    # than accumulating it. The attributed increment does not depend on the
+    # tags themselves, so the `-I` diagonal Jacobian block that tags fall back
+    # to is exactly right for this term.
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
+    attribute_tagged_ρe_tot!(Yₜ, p, :precipitation)
 
     # This is equivalent to grad_v(Φ) + grad_v(p) / ρ
     ᶜΦ_r = @. lazy(phi_r(thermo_params, ᶜp))

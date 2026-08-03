@@ -106,11 +106,19 @@ process adds to ``\rho e_\mathrm{tot}``.
 |:--|:--|:--|
 | `radiative` | `radiation` | All radiation modes (RRTMGP, gray, DYCOMS, TRMM\_LBA, ISDAC) |
 | `turbulent` | `surface_flux` | Turbulent surface energy flux |
-| `moist` | `microphysics` | Microphysics energy sources, when stepped explicitly |
+| `moist` | `microphysics` | Microphysics energy sources, when stepped explicitly (0-moment only — see below) |
+| `moist` | `precipitation` | Energy carried out of a level by sedimenting precipitation |
 | `forcing` | `held_suarez` | Held–Suarez relaxation forcing |
 | `forcing` | `large_scale_advection` | Prescribed large-scale advective forcing |
 | `forcing` | `subsidence` | Prescribed large-scale subsidence |
 | `forcing` | `external_forcing` | Externally prescribed (e.g. GCM-driven) forcing |
+
+!!! note "Which moist label carries the signal"
+    With 0-moment microphysics the moist energy sink appears in
+    `microphysics`. The 1-moment and 2-moment schemes instead change only
+    the water species, and the energy leaves with the falling precipitation,
+    so the signal appears in `precipitation`. Tagging the `moist` group
+    covers both cases.
 
 A group name may be used wherever a process label is expected, and `source`
 also accepts a list, so these are equivalent:
@@ -134,9 +142,13 @@ through the automatic tracer machinery. Excluded, therefore:
     Attributing the ``\rho e_\mathrm{tot}`` version on top of that would
     count transport twice — this is the central correctness constraint of
     the design.
-  - **Implicit tendencies**: implicit vertical transport, implicit
-    diffusion, and precipitation sedimentation (which runs inside the
-    implicit water-advection tendency) have no explicit bracket.
+  - **Implicit tendencies**: implicit vertical transport and implicit
+    diffusion. Precipitation sedimentation is the exception — it also runs
+    on the implicit path but *is* attributed (as `precipitation`), because
+    it is a real energy sink the tags never receive. Bracketing it is safe
+    because the implicit tendency is rebuilt from zero on every evaluation,
+    and its attributed increment does not depend on the tags, so the
+    identity Jacobian block that tags fall back to is exactly right.
   - **EDMFX SGS mass fluxes**: tags have no updraft counterpart.
 
 These land in the closure residual described below, which is why that

@@ -14,6 +14,7 @@ function implicit_temporary_quantities(Y, atmos)
     FT = Spaces.undertype(center_space)
     uvw_vec = UVW(FT(0), FT(0), FT(0))
     return (;
+        tagging_scratch(Y, atmos)...,
         ᶠtemp_scalar = Fields.Field(FT, face_space), # ᶠρaK_h
         ᶠtemp_scalar_2 = Fields.Field(FT, face_space), # ᶠρaK_u
         ᶠtemp_scalar_3 = Fields.Field(FT, face_space), # ᶠwaχ in advection
@@ -41,6 +42,7 @@ function temporary_quantities(Y, atmos)
     FT = Spaces.undertype(center_space)
     uvw_vec = UVW(FT(0), FT(0), FT(0))
     return (;
+        tagging_scratch(Y, atmos)...,
         ᶠtemp_scalar = Fields.Field(FT, face_space), # ᶠp, ᶠρK_h; ᶠκ in set_face_diffusivities!
         ᶠtemp_scalar_2 = Fields.Field(FT, face_space), # ᶠρK_u; ᶠN²_eff in set_face_diffusivities!
         ᶠtemp_scalar_3 = Fields.Field(FT, face_space), # ᶠstrain in set_face_diffusivities!

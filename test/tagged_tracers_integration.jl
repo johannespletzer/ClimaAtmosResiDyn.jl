@@ -135,6 +135,52 @@ import ClimaAtmos as CA
     ) / hs_scale < 1e-6
 end
 
+@testset "Tagged tracers implicit precipitation source" begin
+    # With 1-moment microphysics the moist energy sink travels the implicit
+    # sedimentation path, so `precipitation` is the label that carries it.
+    # A column with a precipitating case is the cheapest configuration that
+    # produces a nonzero signal.
+    tags = [
+        Dict{String, Any}("name" => "precip", "source" => "precipitation"),
+        Dict{String, Any}("name" => "moist", "source" => "moist"),
+        Dict{String, Any}("name" => "mp", "source" => "microphysics"),
+    ]
+    config = CA.AtmosConfig(
+        Dict(
+            "config" => "column",
+            "initial_condition" => "DYCOMS_RF02",
+            "microphysics_model" => "1M",
+            "dt" => "10secs",
+            "t_end" => "100secs",
+            "FLOAT_TYPE" => "Float64",
+            "output_default_diagnostics" => false,
+            "tagged_tracers" => tags,
+        );
+        job_id = "tagged_tracers_precipitation",
+    )
+    simulation = CA.get_simulation(config)
+    @test all(iszero, parent(simulation.integrator.u.c.ρe_tag_precip))
+
+    CA.solve_atmos!(simulation)
+    Y = simulation.integrator.u
+
+    for name in (:ρe_tag_precip, :ρe_tag_moist, :ρe_tag_mp)
+        @test all(isfinite, parent(getproperty(Y.c, name)))
+    end
+
+    # The sedimentation sink is attributed, so the tag is nonzero
+    @test maximum(abs.(parent(Y.c.ρe_tag_precip))) > 0
+
+    # The `moist` group is the union of `microphysics` and `precipitation`,
+    # so its tag equals the sum of the two single-process tags
+    @test maximum(
+        abs.(
+            parent(Y.c.ρe_tag_mp) .+ parent(Y.c.ρe_tag_precip) .-
+            parent(Y.c.ρe_tag_moist)
+        ),
+    ) / maximum(abs.(parent(Y.c.ρe_tag_moist))) < 1e-10
+end
+
 @testset "Tagged tracers restart round-trip" begin
     # A column with an altitude partition is the cheapest configuration that
     # exercises tagged state through a checkpoint (latitude regions and the
