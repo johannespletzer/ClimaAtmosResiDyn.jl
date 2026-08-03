@@ -11,12 +11,18 @@ Determine if a limiter should be applied to a specific tracer.
   - `species`: Configuration — `nothing`: apply to all; `()`: apply to none;
     `Tuple{Symbol,...}`: apply only if `ρχ_name ∈ species`
 
+Tagged energy tracers (`ρe_tag_*`) are always excluded: they can be
+legitimately negative (e.g. accumulated cooling), so nonnegativity limiting
+would silently corrupt them.
+
 # Returns
 
 `true` if the limiter should be applied, `false` otherwise.
 """
 function _should_apply_limiter_to_tracer(ρχ_name, species)
-    if isnothing(species)
+    if is_tagged_tracer_name(ρχ_name)
+        return false
+    elseif isnothing(species)
         return true  # Apply to all tracers
     elseif species isa Tuple
         return ρχ_name in species

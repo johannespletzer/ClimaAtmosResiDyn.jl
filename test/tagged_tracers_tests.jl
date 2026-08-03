@@ -122,14 +122,56 @@ import ClimaAtmos as CA
             @test_throws ErrorException CA.tagged_tracer_tuple(
                 [
                     Dict{String, Any}("name" => "a", "source" => "radiation"),
-                    Dict{String, Any}("name" => "a", "source" => "latent"),
+                    Dict{String, Any}("name" => "a", "source" => "surface_flux"),
                 ],
                 FT,
             ) # duplicate names
+            @test_throws ErrorException CA.tagged_tracer_tuple(
+                [Dict{String, Any}("name" => "a", "source" => "latent_heat")],
+                FT,
+            ) # unknown source label
             @test_throws ErrorException CA.tag_region_from_config(
                 Dict{String, Any}("type" => "step_function"),
                 FT,
             ) # unknown region type
+        end
+
+        @testset "Source attribution ($FT)" begin
+            region = CA.TanhAltitudeRegion(FT(12000), FT(1000))
+            region_tag = CA.TracerTag{:strat}(region)
+            source_tag = CA.TracerTag{:rad}(nothing, :radiation)
+            both_tag = CA.TracerTag{:strat_rad}(region, :radiation)
+
+            # Region tags receive every attributed source; source tags only
+            # their own
+            @test CA.tag_receives_source(region_tag, :radiation)
+            @test CA.tag_receives_source(region_tag, :surface_flux)
+            @test CA.tag_receives_source(source_tag, :radiation)
+            @test !CA.tag_receives_source(source_tag, :surface_flux)
+            @test CA.tag_receives_source(both_tag, :radiation)
+            @test !CA.tag_receives_source(both_tag, :microphysics)
+
+            # Accumulation: region tags are mask-weighted, source tags are
+            # not; non-matching sources leave a tag untouched
+            tags = (region_tag, source_tag, both_tag)
+            ᶜYₜ = (;
+                ρe_tag_strat = zeros(FT, 4),
+                ρe_tag_rad = zeros(FT, 4),
+                ρe_tag_strat_rad = zeros(FT, 4),
+            )
+            ᶜmasks = (;
+                ρe_tag_strat = FT[0, 0.25, 0.5, 1],
+                ρe_tag_strat_rad = FT[0, 0.25, 0.5, 1],
+            )
+            ᶜΔ = FT[1, 2, 3, 4]
+            CA._accumulate_tags!(ᶜYₜ, ᶜmasks, ᶜΔ, :radiation, tags)
+            @test ᶜYₜ.ρe_tag_strat == ᶜmasks.ρe_tag_strat .* ᶜΔ
+            @test ᶜYₜ.ρe_tag_rad == ᶜΔ
+            @test ᶜYₜ.ρe_tag_strat_rad == ᶜmasks.ρe_tag_strat_rad .* ᶜΔ
+            CA._accumulate_tags!(ᶜYₜ, ᶜmasks, ᶜΔ, :surface_flux, tags)
+            @test ᶜYₜ.ρe_tag_strat == 2 .* ᶜmasks.ρe_tag_strat .* ᶜΔ
+            @test ᶜYₜ.ρe_tag_rad == ᶜΔ # not its source; unchanged
+            @test ᶜYₜ.ρe_tag_strat_rad == ᶜmasks.ρe_tag_strat_rad .* ᶜΔ
         end
     end
 
@@ -144,5 +186,15 @@ import ClimaAtmos as CA
         model = CA.AtmosModel(; tagging_model = CA.TaggingModel(tags))
         @test model.tagging_model isa CA.TaggingModel
         @test CA.tag_name(model.tagging_model.tags[1]) == :rad
+    end
+
+    @testset "Tagged name predicate" begin
+        @test CA.is_tagged_tracer_name(:ρe_tag_strat)
+        @test !CA.is_tagged_tracer_name(:ρq_tot)
+        @test !CA.is_tagged_tracer_name(:ρe_tot)
+        # Tags are exempt from nonnegativity limiting even when the species
+        # filter would apply the limiter to all tracers
+        @test !CA._should_apply_limiter_to_tracer(:ρe_tag_strat, nothing)
+        @test CA._should_apply_limiter_to_tracer(:ρq_tot, nothing)
     end
 end

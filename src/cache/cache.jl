@@ -14,6 +14,7 @@ struct AtmosCache{
     ORGW,
     RAD,
     TRAC,
+    TAGGING,
     NETFLUXTOA,
     NETFLUXSFC,
     SSV,
@@ -58,6 +59,9 @@ struct AtmosCache{
     orographic_gravity_wave::ORGW
     radiation::RAD
     tracers::TRAC
+
+    # Precomputed region masks and snapshot scratch for tagged tracers
+    tagging::TAGGING
 
     # Net energy flux coming through top of atmosphere and surface
     net_energy_flux_toa::NETFLUXTOA
@@ -201,6 +205,7 @@ function build_cache(
     orographic_gravity_wave = orographic_gravity_wave_cache(Y, atmos)
     radiation = radiation_model_cache(Y, atmos, radiation_args...)
     tracers = tracer_cache(Y, aerosol_names, time_varying_trace_gas_names, start_date)
+    tagging = tagging_cache(Y, atmos)
 
     args = (
         dt,
@@ -218,6 +223,7 @@ function build_cache(
         orographic_gravity_wave,
         radiation,
         tracers,
+        tagging,
         net_energy_flux_toa,
         net_energy_flux_sfc,
         steady_state_velocity,
