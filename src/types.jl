@@ -990,6 +990,49 @@ struct TanhLatitudeRegion{FT} <: AbstractTagRegion
 end
 
 """
+    TanhBoxRegion(lon_min, lon_max, lat_min, lat_max, width, inside)
+
+Tag region for a smooth longitude–latitude box: the product of a smooth
+latitude band and a smooth longitude band, each with `tanh` edges of the
+given `width`. All arguments are in degrees. Longitudes are compared modulo
+360°, so a box may cross the antimeridian (e.g. `lon_min = 170`,
+`lon_max = -170`). When `inside` is `false`, the mask is the exact
+complement. Requires spherical geometry.
+"""
+struct TanhBoxRegion{FT} <: AbstractTagRegion
+    lon_min::FT
+    lon_max::FT
+    lat_min::FT
+    lat_max::FT
+    width::FT
+    inside::Bool
+end
+
+"""
+    TanhPolygonRegion(vertices, width, inside)
+
+Tag region for an arbitrary polygon on the sphere, smoothed with a `tanh`
+transition of the given `width` (in degrees) across its boundary. This is the
+region type to use for published reference regions such as the IPCC AR6 /
+ATLAS domains: export their vertices and pass them here.
+
+  - `vertices`: an `NTuple` of `(lon, lat)` pairs in degrees, in either
+    winding order. The polygon is implicitly closed.
+  - `width`: transition width in degrees of great-circle arc; the mask is
+    `1/2` on the boundary, tending to 1 well inside and 0 well outside.
+  - `inside`: when `false`, the mask is the exact complement.
+
+The polygon is evaluated in a longitude frame centered on its first vertex,
+so it may cross the antimeridian as long as it spans less than 180° of
+longitude. Requires spherical geometry.
+"""
+struct TanhPolygonRegion{N, FT} <: AbstractTagRegion
+    vertices::NTuple{N, NTuple{2, FT}}
+    width::FT
+    inside::Bool
+end
+
+"""
     TracerTag{name}(region, source = :none)
 
 Definition of one tagged prognostic energy tracer, stored in the state as

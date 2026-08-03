@@ -40,6 +40,74 @@ import ClimaAtmos as CA
                   sqrt(eps(FT))
         end
 
+        @testset "Geographic masks ($FT)" begin
+            # A box over the tropical Atlantic, and the same area as a
+            # polygon, should agree well away from the smoothed edges
+            box = CA.TanhBoxRegion(
+                FT(-60), FT(-10), FT(-10), FT(10), FT(1), true,
+            )
+            poly = CA.TanhPolygonRegion(
+                (
+                    (FT(-60), FT(-10)),
+                    (FT(-10), FT(-10)),
+                    (FT(-10), FT(10)),
+                    (FT(-60), FT(10)),
+                ),
+                FT(1),
+                true,
+            )
+            inside = (; long = FT(-35), lat = FT(0), z = FT(0))
+            outside = (; long = FT(60), lat = FT(40), z = FT(0))
+            for region in (box, poly)
+                @test CA.region_mask(region, inside) isa FT
+                @test CA.region_mask(region, inside) > 1 - FT(1e-3)
+                @test CA.region_mask(region, outside) < FT(1e-3)
+            end
+
+            # Complements are exact for both region types
+            box_out =
+                CA.TanhBoxRegion(FT(-60), FT(-10), FT(-10), FT(10), FT(1), false)
+            poly_out = CA.TanhPolygonRegion(poly.vertices, FT(1), false)
+            for coord in (inside, outside, (; long = FT(-10), lat = FT(0), z = FT(0)))
+                @test CA.region_mask(box, coord) + CA.region_mask(box_out, coord) ==
+                      FT(1)
+                @test CA.region_mask(poly, coord) + CA.region_mask(poly_out, coord) ==
+                      FT(1)
+            end
+
+            # The mask is 1/2 on a polygon edge and on a box edge
+            @test CA.region_mask(poly, (; long = FT(-10), lat = FT(0), z = FT(0))) ≈
+                  FT(0.5) atol = FT(1e-3)
+            @test CA.region_mask(box, (; long = FT(-10), lat = FT(0), z = FT(0))) ≈
+                  FT(0.5) atol = 1e-3
+
+            # Boxes and polygons may cross the antimeridian
+            dateline_box =
+                CA.TanhBoxRegion(FT(170), FT(-170), FT(-5), FT(5), FT(1), true)
+            @test CA.region_mask(
+                dateline_box, (; long = FT(180), lat = FT(0), z = FT(0)),
+            ) > 1 - FT(1e-3)
+            @test CA.region_mask(
+                dateline_box, (; long = FT(0), lat = FT(0), z = FT(0)),
+            ) < FT(1e-3)
+            dateline_poly = CA.TanhPolygonRegion(
+                (
+                    (FT(170), FT(-5)),
+                    (FT(-170), FT(-5)),
+                    (FT(-170), FT(5)),
+                    (FT(170), FT(5)),
+                ),
+                FT(1),
+                true,
+            )
+            @test CA.region_mask(
+                dateline_poly, (; long = FT(179), lat = FT(0), z = FT(0)),
+            ) > 1 - FT(1e-3)
+            @test CA.region_mask(
+                dateline_poly, (; long = FT(0), lat = FT(0), z = FT(0)),
+            ) < FT(1e-3)
+        end
+
         @testset "State variable construction ($FT)" begin
             tags = (
                 CA.TracerTag{:strat}(CA.TanhAltitudeRegion(FT(12000), FT(1000))),

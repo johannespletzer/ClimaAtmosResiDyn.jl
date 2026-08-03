@@ -64,6 +64,93 @@ function region_mask(region::TanhLatitudeRegion, coord)
     return region.inside ? band : one(band) - band
 end
 
+# Shift `lon` into the 360°-wide window centered on `lon_ref`, so that
+# longitudes on either side of the antimeridian can be compared directly.
+@inline _wrap_lon(lon, lon_ref) = lon_ref + mod(lon - lon_ref + 180, 360) - 180
+
+# Smooth band `x_min ≲ x ≲ x_max`: 1 well inside, 0 well outside, 1/2 on each
+# edge, with `tanh` transitions of the given width.
+@inline _tanh_band(x, x_min, x_max, width) =
+    (tanh((x - x_min) / width) - tanh((x - x_max) / width)) / 2
+
+function region_mask(region::TanhBoxRegion, coord)
+    lat = coord.lat
+    # Evaluate longitudes in the frame centered on the box, so a box that
+    # crosses the antimeridian stays contiguous
+    lon_center = region.lon_min + mod(region.lon_max - region.lon_min, 360) / 2
+    lon = _wrap_lon(coord.long, lon_center)
+    lon_max = region.lon_min + mod(region.lon_max - region.lon_min, 360)
+    box =
+        _tanh_band(lat, region.lat_min, region.lat_max, region.width) *
+        _tanh_band(lon, region.lon_min, lon_max, region.width)
+    return region.inside ? box : one(box) - box
+end
+
+# Whether (x, y) lies inside the polygon, by ray casting. The vertices are
+# assumed to already be in a common longitude frame.
+@inline function _point_in_polygon(vertices::NTuple{N}, x, y) where {N}
+    inside = false
+    x_prev, y_prev = vertices[N]
+    for i in 1:N
+        x_cur, y_cur = vertices[i]
+        if ((y_cur > y) != (y_prev > y)) && (
+            x <
+            (x_prev - x_cur) * (y - y_cur) / (y_prev - y_cur) + x_cur
+        )
+            inside = !inside
+        end
+        x_prev, y_prev = x_cur, y_cur
+    end
+    return inside
+end
+
+# Distance from (x, y) to the segment (x1, y1)–(x2, y2).
+@inline function _distance_to_segment(x, y, x1, y1, x2, y2)
+    dx, dy = x2 - x1, y2 - y1
+    len² = dx * dx + dy * dy
+    t =
+        len² > 0 ?
+        min(max(((x - x1) * dx + (y - y1) * dy) / len², zero(x)), one(x)) :
+        zero(x)
+    return hypot(x - (x1 + t * dx), y - (y1 + t * dy))
+end
+
+# Distance from (x, y) to the polygon boundary, in degrees of great-circle
+# arc: longitude separations are scaled by cos(lat) so that the smoothing
+# width means the same physical distance at every latitude.
+@inline function _distance_to_polygon(vertices::NTuple{N}, x, y) where {N}
+    cos_lat = max(cosd(y), eps(y))
+    x_scaled = x * cos_lat
+    dist = typemax(y)
+    x_prev, y_prev = vertices[N] # start from the closing edge
+    for i in 1:N
+        x_cur, y_cur = vertices[i]
+        dist = min(
+            dist,
+            _distance_to_segment(
+                x_scaled, y, x_prev * cos_lat, y_prev, x_cur * cos_lat, y_cur,
+            ),
+        )
+        x_prev, y_prev = x_cur, y_cur
+    end
+    return dist
+end
+
+function region_mask(region::TanhPolygonRegion, coord)
+    # Work in the longitude frame of the first vertex so that polygons
+    # crossing the antimeridian stay contiguous
+    lon_ref = region.vertices[1][1]
+    lon = _wrap_lon(coord.long, lon_ref)
+    lat = coord.lat
+    vertices = unrolled_map(v -> (_wrap_lon(v[1], lon_ref), v[2]), region.vertices)
+    distance = _distance_to_polygon(vertices, lon, lat)
+    # Signed: negative inside, so the mask tends to 1 there
+    signed_distance =
+        _point_in_polygon(vertices, lon, lat) ? -distance : distance
+    mask = (one(lat) - tanh(signed_distance / region.width)) / 2
+    return region.inside ? mask : one(mask) - mask
+end
+
 """
     tag_initial_value(tag::TracerTag, ρe_tot, coord)
 
@@ -127,6 +214,14 @@ Supported `type` values:
     complement when `above: false`); requires `z_center` and `width` in meters
   - `"tanh_latitude"`: smooth band `|lat| ≲ lat_bound` (or its complement when
     `inside: false`); requires `lat_bound` and `width` in degrees
+  - `"tanh_box"`: smooth longitude–latitude box; requires `lon_min`,
+    `lon_max`, `lat_min`, `lat_max`, and `width`, all in degrees
+  - `"tanh_polygon"`: smooth arbitrary polygon (e.g. an IPCC AR6 / ATLAS
+    reference region); requires `vertices` (a list of `[lon, lat]` pairs in
+    degrees) and `width`
+
+All region types accept `inside: false` (`above: false` for
+`"tanh_altitude"`) to select the exact complement of the mask.
 """
 tag_region_from_config(::Nothing, ::Type{FT}) where {FT} = nothing
 function tag_region_from_config(region_config, ::Type{FT}) where {FT}
@@ -157,10 +252,50 @@ function tag_region_from_config(region_config, ::Type{FT}) where {FT}
             FT(region_config["width"]),
             Bool(get(region_config, "inside", true)),
         )
+    elseif region_type == "tanh_box"
+        all(
+            key -> haskey(region_config, key),
+            ("lon_min", "lon_max", "lat_min", "lat_max", "width"),
+        ) || error(
+            "`tanh_box` regions require `lon_min`, `lon_max`, `lat_min`, " *
+            "`lat_max`, and `width` (in degrees).",
+        )
+        return TanhBoxRegion(
+            FT(region_config["lon_min"]),
+            FT(region_config["lon_max"]),
+            FT(region_config["lat_min"]),
+            FT(region_config["lat_max"]),
+            FT(region_config["width"]),
+            Bool(get(region_config, "inside", true)),
+        )
+    elseif region_type == "tanh_polygon"
+        haskey(region_config, "vertices") && haskey(region_config, "width") ||
+            error(
+                "`tanh_polygon` regions require `vertices` (a list of " *
+                "`[lon, lat]` pairs) and `width` (in degrees).",
+            )
+        vertices = region_config["vertices"]
+        length(vertices) >= 3 ||
+            error("`tanh_polygon` regions require at least 3 vertices.")
+        vertex_tuple = Tuple(
+            map(vertices) do vertex
+                length(vertex) == 2 || error(
+                    "Each `tanh_polygon` vertex must be a `[lon, lat]` pair, " *
+                    "got $(vertex).",
+                )
+                (FT(vertex[1]), FT(vertex[2]))
+            end,
+        )
+        return TanhPolygonRegion(
+            vertex_tuple,
+            FT(region_config["width"]),
+            Bool(get(region_config, "inside", true)),
+        )
     else
         error(
             """Unknown tagged tracer region type `$region_type`. Expected: \
-            "everywhere" | "tanh_altitude" | "tanh_latitude".""",
+            "everywhere" | "tanh_altitude" | "tanh_latitude" | "tanh_box" | \
+            "tanh_polygon".""",
         )
     end
 end

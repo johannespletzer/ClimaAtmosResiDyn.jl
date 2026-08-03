@@ -48,10 +48,52 @@ region types:
   - `tanh_latitude`: a smooth band ``|\mathrm{lat}| \lesssim
     \mathrm{lat\_bound}``; `inside: false` gives the exact complement.
     Requires spherical geometry.
+  - `tanh_box`: a smooth longitude–latitude box (`lon_min`, `lon_max`,
+    `lat_min`, `lat_max`, `width`). Requires spherical geometry.
+  - `tanh_polygon`: a smooth arbitrary polygon given by `vertices` (a list of
+    `[lon, lat]` pairs) and `width`. Requires spherical geometry.
 
-A region and its complement sum to exactly 1, so the corresponding pair of
-tags partitions ``\rho e_\mathrm{tot}`` at initialization to machine
-precision.
+Every region type accepts `inside: false` (`above: false` for
+`tanh_altitude`) to select the exact complement, and a region plus its
+complement sum to exactly 1 — so the corresponding pair of tags partitions
+``\rho e_\mathrm{tot}`` at initialization to machine precision.
+
+### Geographic regions
+
+`tanh_box` and `tanh_polygon` both take their `width` in degrees of
+great-circle arc; the mask equals ``1/2`` on the boundary and approaches 1
+inside and 0 outside over roughly that width. Longitudes are handled modulo
+360°, so a box or polygon may cross the antimeridian (a polygon is evaluated
+in the longitude frame of its first vertex, so it must span less than 180°
+of longitude).
+
+```yaml
+  - name: tropical_atlantic
+    region: {type: tanh_box, lon_min: -60.0, lon_max: -10.0,
+             lat_min: -10.0, lat_max: 10.0, width: 2.0}
+```
+
+Published reference regions — the IPCC AR6 / ATLAS domains, SREX, PRUDENCE,
+and anything else distributed with
+[`regionmask`](https://regionmask.readthedocs.io/) — are polygons, so they
+map directly onto `tanh_polygon`. Export the vertices once and paste them
+into the config:
+
+```python
+import regionmask, yaml
+
+region = regionmask.defined_regions.ar6.land["W.Africa"]
+vertices = [[round(x, 3), round(y, 3)] for x, y in region.polygon.exterior.coords]
+print(yaml.dump({"vertices": vertices}))
+```
+
+!!! warning "Smoothing is required, not cosmetic"
+    `regionmask` rasterizes regions with a point-in-polygon test, giving a
+    sharp 0/1 mask. A discontinuous mask must **not** be used here: in the
+    spectral-element discretization it produces Gibbs oscillations that
+    contaminate the tagged fields from the first step. The `width` parameter
+    is what makes a reference-region polygon usable — choose it comparable
+    to (or larger than) the horizontal grid spacing.
 
 ## Source tags
 
