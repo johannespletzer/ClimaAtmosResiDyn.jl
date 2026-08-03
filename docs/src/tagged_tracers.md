@@ -104,12 +104,21 @@ integration test use this identity with the Held–Suarez source.
 
 ## Caveats
 
-  - Tags are grid-scale only; `PrognosticEDMFX` configurations are not yet
-    supported with tagging enabled.
-  - Tagged energies can be legitimately negative (accumulated cooling); they
-    are excluded from the vertical-water-borrowing nonnegativity limiter.
+  - Tags are **grid-scale only**: they have no sub-grid (updraft)
+    counterpart. With `PrognosticEDMFX`, the surface-flux and SGS-flux loops
+    skip tags rather than looking for a missing updraft field, so EDMFX
+    configurations run, but tagged energy is not decomposed across
+    subdomains.
+  - Tags are excluded from both tracer limiters: from the
+    vertical-water-borrowing limiter because tagged energies can be
+    legitimately negative (accumulated cooling), and from the SEM
+    quasimonotone limiter so that tags receive the same treatment as
+    ``\rho e_\mathrm{tot}``, which is not limited either.
   - Latitude regions require spherical geometry; altitude regions also work
     in columns and boxes.
+  - Tagged state is carried through restarts like any other prognostic
+    field; the masks are rebuilt from the configuration, so the
+    `tagged_tracers` block must match the one used to write the checkpoint.
 
 See `config/model_configs/baroclinic_wave_tagged_tracers.yml` for a complete
 example, and `test/tagged_tracers_integration.jl` for the closure assertions.

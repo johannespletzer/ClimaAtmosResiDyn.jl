@@ -134,3 +134,68 @@ import ClimaAtmos as CA
         ),
     ) / hs_scale < 1e-6
 end
+
+@testset "Tagged tracers restart round-trip" begin
+    # A column with an altitude partition is the cheapest configuration that
+    # exercises tagged state through a checkpoint (latitude regions and the
+    # Held-Suarez source would require spherical geometry).
+    tags = [
+        Dict{String, Any}(
+            "name" => "strat",
+            "region" => Dict{String, Any}(
+                "type" => "tanh_altitude",
+                "z_center" => 12000.0,
+                "width" => 1000.0,
+            ),
+        ),
+        Dict{String, Any}(
+            "name" => "tropo",
+            "region" => Dict{String, Any}(
+                "type" => "tanh_altitude",
+                "z_center" => 12000.0,
+                "width" => 1000.0,
+                "above" => false,
+            ),
+        ),
+    ]
+    test_dict = Dict(
+        "config" => "column",
+        "initial_condition" => "DYCOMS_RF02",
+        "microphysics_model" => "0M",
+        "dt" => "10secs",
+        "t_end" => "20secs",
+        "dt_save_state_to_disk" => "20secs",
+        "FLOAT_TYPE" => "Float64",
+        "output_default_diagnostics" => false,
+        "output_dir" => mktempdir(pwd()),
+        "tagged_tracers" => tags,
+    )
+
+    simulation = CA.get_simulation(
+        CA.AtmosConfig(test_dict; job_id = "tagged_tracers_restart"),
+    )
+    CA.solve_atmos!(simulation)
+    Y = simulation.integrator.u
+
+    restart_file = joinpath(simulation.output_dir, "day0.20.hdf5")
+    @test isfile(restart_file)
+
+    restarted = CA.get_simulation(
+        CA.AtmosConfig(
+            merge(test_dict, Dict("restart_file" => restart_file));
+            job_id = "tagged_tracers_restart_read",
+        ),
+    )
+    Y_restart = restarted.integrator.u
+
+    # The tagged fields survive the checkpoint round-trip bit-for-bit, and
+    # the masks (rebuilt from the config, not stored) are reproduced
+    for name in (:ρe_tag_strat, :ρe_tag_tropo)
+        @test parent(getproperty(Y_restart.c, name)) ==
+              parent(getproperty(Y.c, name))
+    end
+    for name in (:ρe_tag_strat, :ρe_tag_tropo)
+        @test parent(getproperty(restarted.integrator.p.tagging.ᶜmasks, name)) ==
+              parent(getproperty(simulation.integrator.p.tagging.ᶜmasks, name))
+    end
+end

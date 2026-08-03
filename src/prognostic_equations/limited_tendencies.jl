@@ -82,6 +82,11 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
             p.scratch.ᶜtemp_scalar_2 .= Y.c.ρq_tot
         end
         for ρχ_name in filter(is_tracer_var, propertynames(Y.c))
+            # Tagged energy tracers are left unlimited so that they receive
+            # the same treatment as ρe_tot, which is not limited either. A
+            # shape-preserving adjustment applied to the tags but not to
+            # ρe_tot would show up as tagging closure error.
+            is_tagged_tracer_name(ρχ_name) && continue
             Limiters.compute_bounds!(
                 sem_quasimonotone_limiter,
                 ref_Y.c.:($ρχ_name),
