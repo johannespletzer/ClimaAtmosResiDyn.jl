@@ -57,6 +57,7 @@ import ..GasPhaseChem
 import ..AtmosTagging
 import ..TaggingModel
 import ..tag_name
+import ..region_tag_state_names
 
 # surface temperature
 import ..SurfaceConditions

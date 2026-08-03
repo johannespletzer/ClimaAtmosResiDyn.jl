@@ -959,16 +959,21 @@ Tag region whose mask is 1 everywhere.
 struct EntireDomain <: AbstractTagRegion end
 
 """
-    TanhAltitudeRegion(z_center, width)
+    TanhAltitudeRegion(z_center, width, above = true)
 
 Tag region with a smooth `tanh` transition in altitude, with mask
 `(1 + tanh((z - z_center) / width)) / 2` (0 well below `z_center`, 1 well
-above). Both arguments are in meters.
+above). When `above` is `false`, the mask is the exact complement
+`1 - M_above`, so a region and its complement sum to 1 everywhere (e.g. a
+"troposphere" tag as the complement of a "stratosphere" tag). `z_center` and
+`width` are in meters.
 """
 struct TanhAltitudeRegion{FT} <: AbstractTagRegion
     z_center::FT
     width::FT
+    above::Bool
 end
+TanhAltitudeRegion(z_center, width) = TanhAltitudeRegion(z_center, width, true)
 
 """
     TanhLatitudeRegion(lat_bound, width, inside)

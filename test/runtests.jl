@@ -74,6 +74,7 @@ if TEST_GROUP in ("dynamics", "all")
     # Conservation tests
     @safetestset "Mass conservation" begin @time include("conservation/mass_conservation.jl") end
     @safetestset "Energy conservation" begin @time include("conservation/energy_conservation.jl") end
+    @safetestset "Tagged tracers integration" begin @time include("tagged_tracers_integration.jl") end
 end
 
 # ============================================================================

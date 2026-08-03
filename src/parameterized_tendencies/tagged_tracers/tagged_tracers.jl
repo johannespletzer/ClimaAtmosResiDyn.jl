@@ -49,7 +49,8 @@ region_mask(::EntireDomain, coord) = one(coord.z)
 
 function region_mask(region::TanhAltitudeRegion, coord)
     z = coord.z
-    return (one(z) + tanh((z - region.z_center) / region.width)) / 2
+    above = (one(z) + tanh((z - region.z_center) / region.width)) / 2
+    return region.above ? above : one(above) - above
 end
 
 function region_mask(region::TanhLatitudeRegion, coord)
@@ -117,8 +118,8 @@ from YAML, or `nothing`) into an `AbstractTagRegion` (or `nothing`).
 Supported `type` values:
 
   - `"everywhere"`: mask is 1 in the whole domain
-  - `"tanh_altitude"`: `(1 + tanh((z - z_center) / width)) / 2`;
-    requires `z_center` and `width` in meters
+  - `"tanh_altitude"`: `(1 + tanh((z - z_center) / width)) / 2` (or its exact
+    complement when `above: false`); requires `z_center` and `width` in meters
   - `"tanh_latitude"`: smooth band `|lat| ≲ lat_bound` (or its complement when
     `inside: false`); requires `lat_bound` and `width` in degrees
 """
@@ -139,6 +140,7 @@ function tag_region_from_config(region_config, ::Type{FT}) where {FT}
         return TanhAltitudeRegion(
             FT(region_config["z_center"]),
             FT(region_config["width"]),
+            Bool(get(region_config, "above", true)),
         )
     elseif region_type == "tanh_latitude"
         haskey(region_config, "lat_bound") && haskey(region_config, "width") ||
@@ -236,10 +238,51 @@ Cache entries used by tagged-tracer source attribution (stored as
 """
 tagging_cache(Y, atmos::AtmosModel) = _tagging_cache(Y, atmos.tagging_model)
 _tagging_cache(Y, ::Nothing) = nothing
-_tagging_cache(Y, model::TaggingModel) = (;
-    ᶜmasks = _tag_masks(Fields.coordinate_field(Y.c), model.tags),
-    ᶜρe_tot_snapshot = similar(Y.c.ρ),
+function _tagging_cache(Y, model::TaggingModel)
+    ᶜmasks = _tag_masks(Fields.coordinate_field(Y.c), model.tags)
+    _check_region_partition(ᶜmasks, model)
+    return (; ᶜmasks, ᶜρe_tot_snapshot = similar(Y.c.ρ))
+end
+
+"""
+    region_tag_state_names(tagging_model::TaggingModel)
+
+`Tuple` of the state-field `Symbol`s (`:ρe_tag_<name>`) of the pure region
+tags: tags with a region and `source === :none`. These are the tags whose sum
+is expected to track `ρe_tot` (tags that also carry a `source` only
+accumulate that source, so they would double-count region content).
+"""
+region_tag_state_names(tagging_model::TaggingModel) = Tuple(
+    Symbol(:ρe_tag_, tag_name(tag)) for
+    tag in tagging_model.tags if !isnothing(tag.region) && tag.source === :none
 )
+
+# The closure diagnostic `e_tag_res = (ρe_tot - Σᵢ ρe_tag_i) / ρ` only
+# measures attribution leakage when the pure region masks form a partition of
+# unity. Overlapping or incomplete regions are allowed (and sometimes
+# intended), but then `e_tag_res` is dominated by the overlap/deficit, so say
+# so once at initialization.
+function _check_region_partition(ᶜmasks, model::TaggingModel)
+    names = region_tag_state_names(model)
+    isempty(names) && return nothing
+    mask_sum = reduce(
+        (a, b) -> a .+ b,
+        map(name -> parent(getproperty(ᶜmasks, name)), names),
+    )
+    deviation = maximum(abs.(mask_sum .- 1))
+    if deviation > 0.01
+        @warn(
+            "The region tag masks do not form a partition of unity (max " *
+            "deviation of their sum from 1: $deviation). This is allowed, " *
+            "but the closure diagnostic `e_tag_res` = (ρe_tot - Σᵢ " *
+            "ρe_tag_i)/ρ will be dominated by the overlap/deficit rather " *
+            "than by attribution leakage. For a clean closure monitor, use " *
+            "region tags that sum to 1 (e.g. a region and its complement " *
+            "via `inside: false` / `above: false`).",
+        )
+    end
+    return nothing
+end
 
 _tag_masks(ᶜcoord, ::Tuple{}) = (;)
 _tag_masks(ᶜcoord, tags::Tuple) = merge(

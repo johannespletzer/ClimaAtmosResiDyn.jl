@@ -8,18 +8,22 @@ import ClimaAtmos as CA
             tropics = CA.TanhLatitudeRegion(FT(20), FT(2), true)
             extratropics = CA.TanhLatitudeRegion(FT(20), FT(2), false)
 
+            troposphere = CA.TanhAltitudeRegion(FT(12000), FT(1000), false)
+
             for lat in FT[-80, -20, 0, 20, 80], z in FT[0, 5000, 12000, 20000]
                 coord = (; lat, z)
                 m_strat = CA.region_mask(strat, coord)
+                m_tropo = CA.region_mask(troposphere, coord)
                 m_trop = CA.region_mask(tropics, coord)
                 m_extra = CA.region_mask(extratropics, coord)
 
                 # Masks are bounded, of the right type, and complements are exact
-                for m in (m_strat, m_trop, m_extra)
+                for m in (m_strat, m_tropo, m_trop, m_extra)
                     @test m isa FT
                     @test FT(0) <= m <= FT(1)
                 end
                 @test m_trop + m_extra == FT(1)
+                @test m_strat + m_tropo == FT(1)
                 @test CA.region_mask(CA.EntireDomain(), coord) == FT(1)
             end
 
@@ -107,8 +111,26 @@ import ClimaAtmos as CA
             @test map(CA.tag_name, tags) ==
                   (:strat, :tropics, :extratropics, :rad)
             @test tags[1].region isa CA.TanhAltitudeRegion{FT}
+            @test tags[1].region.above # default
             @test tags[2].region.inside && !tags[3].region.inside
             @test isnothing(tags[4].region) && tags[4].source == :radiation
+
+            # Altitude complement via `above: false`
+            tropo_tag = CA.tagged_tracer_tuple(
+                [
+                    Dict{String, Any}(
+                        "name" => "tropo",
+                        "region" => Dict{String, Any}(
+                            "type" => "tanh_altitude",
+                            "z_center" => 12000.0,
+                            "width" => 1000.0,
+                            "above" => false,
+                        ),
+                    ),
+                ],
+                FT,
+            )[1]
+            @test !tropo_tag.region.above
 
             # Validation errors
             @test_throws ErrorException CA.tagged_tracer_tuple(

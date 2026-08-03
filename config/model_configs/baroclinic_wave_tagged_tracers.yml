@@ -3,17 +3,40 @@ t_end: "10days"
 dt_save_state_to_disk: "2days"
 disable_surface_flux_tendency: true
 rad: "held_suarez"
+# The tags are chosen so that validation is a set of direct near-zero checks:
+#
+#   1. Region closure: `tropics` + `extratropics` form an exact partition of
+#      unity, so `e_tag_res` (= specific ρe_tot minus the sum of the region
+#      tags) starts at machine precision and directly monitors attribution
+#      leakage (no overlapping regions to subtract out).
+#   2. Process closure: `hs_tropics` and `hs_extratropics` restrict the
+#      Held-Suarez source to each region; because transport is linear and
+#      their masks sum to 1, `e_tag_hs_tropics + e_tag_hs_extratropics`
+#      must equal `e_tag_hs` to near machine precision at all times.
+#   3. Process behavior: `e_tag_hs` starts at exactly 0 and accumulates the
+#      Held-Suarez forcing (decelerating growth toward HS equilibrium).
+#
+# For an altitude decomposition, use a `tanh_altitude` region and its exact
+# complement (`above: false`) instead of adding an overlapping tag to this
+# set: `e_tag_res` sums ALL pure region tags, so they must form a single
+# partition of unity for the residual to be a clean leakage monitor.
 tagged_tracers:
-  - name: stratosphere
-    region: {type: tanh_altitude, z_center: 12000.0, width: 1000.0}
   - name: tropics
     region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0}
   - name: extratropics
     region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0, inside: false}
   - name: hs
     source: held_suarez
+  - name: hs_tropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0}
+    source: held_suarez
+  - name: hs_extratropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0, inside: false}
+    source: held_suarez
 diagnostics:
   - short_name: [pfull, ua, wa, va, rv, ta, ke]
     period: 1days
-  - short_name: [e_tag_stratosphere, e_tag_tropics, e_tag_extratropics, e_tag_hs, e_tag_res]
+  - short_name: [e_tag_tropics, e_tag_extratropics, e_tag_res]
+    period: 1days
+  - short_name: [e_tag_hs, e_tag_hs_tropics, e_tag_hs_extratropics]
     period: 1days

@@ -31,14 +31,6 @@ function compute_e_tag_res!(out, state, cache, time, ρe_tag_names)
     return ᶜres
 end
 
-# The `Symbol`s of the state fields of the pure region tags (the tags whose
-# sum is expected to track `ρe_tot`; tags that also carry a `source` only
-# accumulate that source and would double-count region content).
-region_tag_state_names(tagging_model::TaggingModel) = Tuple(
-    Symbol(:ρe_tag_, tag_name(tag)) for
-    tag in tagging_model.tags if !isnothing(tag.region) && tag.source === :none
-)
-
 """
     register_tagging_diagnostics!(model::AtmosModel)
 
