@@ -68,15 +68,19 @@ end
 
 Initial value of the tagged field `ρe_tag_<name>` at a single point:
 
-  - For region tags (`tag.region isa AbstractTagRegion`), the masked share of
-    the initial total energy, `ρe_tot * M(coord)`. If the configured regions
-    partition unity (e.g. a band and its complement), the region tags sum to
-    `ρe_tot` at `t = 0`.
-  - For pure source tags (`tag.region === nothing`), zero; the field then
-    accumulates the attributed process tendency over time (Phase 4).
+  - For pure region tags (`tag.region isa AbstractTagRegion` and
+    `tag.source === :none`), the masked share of the initial total energy,
+    `ρe_tot * M(coord)`. If the configured regions partition unity (e.g. a
+    band and its complement), the region tags sum to `ρe_tot` at `t = 0`.
+  - For source tags, zero — **regardless of whether they also carry a
+    region**. A source tag accumulates only the attributed process tendency
+    (masked by its region when it has one); initializing a region-restricted
+    source tag to `ρe_tot * M` would add the region's energy content on top
+    of the accounting and break the identity that region-restricted source
+    tags over a partition sum to the corresponding global source tag.
 """
 @inline tag_initial_value(tag::TracerTag, ρe_tot, coord) =
-    isnothing(tag.region) ? zero(ρe_tot) :
+    isnothing(tag.region) || tag.source !== :none ? zero(ρe_tot) :
     ρe_tot * region_mask(tag.region, coord)
 
 # Build a single-entry NamedTuple `(; ρe_tag_<name> = value)`. The field name

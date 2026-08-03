@@ -65,8 +65,10 @@ process adds to ``\rho e_\mathrm{tot}``. Supported `source` labels:
 
 Region tags receive **every** attributed source, weighted by their mask, so
 a partition-of-unity set of region tags keeps tracking
-``\rho e_\mathrm{tot}``. A tag with both `region` and `source` accumulates
-only its own source, restricted to its region.
+``\rho e_\mathrm{tot}``. A tag with both `region` and `source` also starts
+at zero and accumulates only its own source, restricted to its region — the
+`region` restricts *where* the source is counted; it does not add the
+region's energy content to the tag.
 
 Only genuine sources/sinks are attributed. Transport-like tendencies
 (advection, hyperdiffusion, sponges, interior vertical diffusion) are never

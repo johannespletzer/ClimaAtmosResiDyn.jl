@@ -996,12 +996,14 @@ Definition of one tagged prognostic energy tracer, stored in the state as
 `Y.c.ρe_tag_<name>`. The tag `name` is a type parameter so that state field
 names can be generated at compile time (GPU-compatible).
 
-  - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. When given, the
-    field is initialized to `ρe_tot * mask`; when `nothing`, it is initialized
-    to zero (pure source-attribution tag).
+  - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. A pure region tag
+    (`region` given, `source === :none`) is initialized to `ρe_tot * mask`
+    and receives every attributed source, masked. Any source tag is
+    initialized to zero — including region-restricted source tags, which
+    accumulate only their own source, masked by their region.
   - `source`: a `Symbol` labeling the physical process whose `ρe_tot` tendency
     is attributed to this tag (e.g. `:radiation`); `:none` for passive region
-    tags. Source attribution hooks are added in a later phase.
+    tags.
 """
 struct TracerTag{name, R <: Union{Nothing, AbstractTagRegion}}
     region::R

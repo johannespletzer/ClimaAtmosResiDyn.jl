@@ -66,6 +66,15 @@ import ClimaAtmos as CA
             @test all(v -> v isa FT, values(nt))
             # Source-only tags start at zero
             @test nt.ρe_tag_rad == FT(0)
+            # Region-restricted source tags ALSO start at zero: the region
+            # only restricts where the source is counted (a nonzero start
+            # would break `Σ restricted source tags == global source tag`)
+            combined = CA.TracerTag{:rad_trop}(
+                CA.TanhLatitudeRegion(FT(20), FT(2), true),
+                :radiation,
+            )
+            @test CA.tag_initial_value(combined, ρe_tot, (; lat = FT(0), z = FT(0))) ==
+                  FT(0)
             # Complementary region tags partition the initial energy to
             # machine precision (the two products round independently)
             @test nt.ρe_tag_tropics + nt.ρe_tag_extratropics ≈ ρe_tot rtol =

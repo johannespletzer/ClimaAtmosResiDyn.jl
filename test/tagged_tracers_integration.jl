@@ -101,8 +101,10 @@ import ClimaAtmos as CA
     # 1. Region tags partition the initial energy to machine precision
     FT = eltype(Y₀)
     @test closure_deviation(Y₀) < 100 * eps(FT)
-    # The source tag starts at zero
+    # All source tags start at zero, including the region-restricted ones
     @test all(iszero, parent(Y₀.c.ρe_tag_hs))
+    @test all(iszero, parent(Y₀.c.ρe_tag_hs_tropics))
+    @test all(iszero, parent(Y₀.c.ρe_tag_hs_extratropics))
 
     CA.solve_atmos!(simulation)
     Y = simulation.integrator.u
