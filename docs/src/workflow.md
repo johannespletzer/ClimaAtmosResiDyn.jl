@@ -188,6 +188,20 @@ checkpoint and starts from the initial condition; every later job finds the
 latest checkpoint and resumes. You do not edit the configuration between
 segments.
 
+!!! tip "Working examples"
+    `runscripts/` contains submission scripts used on DKRZ's Levante —
+    `xmodel.cpu` (MPI on CPU nodes) and `xmodel.4gpus` (4×A100). They carry the
+    site-tested Open MPI/UCX settings, verify the MPI and CUDA setup before
+    launching the full job, and check that the Julia minor version matches the
+    pinned manifest. Their paths default to the repository containing the
+    script and can be overridden from the environment:
+
+    ```bash
+    SCRIPT=experiments/my_run.jl sbatch runscripts/xmodel.cpu
+    ```
+
+    Adapt `--account`, `--partition`, and the `module load` lines to your site.
+
 A generic SLURM script — adapt the partition, account, and resource lines to
 your site:
 

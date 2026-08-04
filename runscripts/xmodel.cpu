@@ -14,13 +14,16 @@
 #SBATCH --time=01:00:00
 #SBATCH --mail-type=FAIL
 
-set -euo pipefail
-
 # -----------------------------------------------------------------------------
 # Levante software environment
+#
+# Sourced before `set -u`: site profiles routinely reference unset variables,
+# which would abort the job at source time.
 # -----------------------------------------------------------------------------
 
 source /sw/etc/profile.levante
+
+set -euo pipefail
 
 module purge
 module load gcc/11.2.0-gcc-11.2.0
@@ -28,20 +31,30 @@ module load openmpi/4.1.2-gcc-11.2.0
 
 # -----------------------------------------------------------------------------
 # Paths
+#
+# Each may be overridden from the environment, e.g.
+#   SCRIPT=experiments/my_run.jl sbatch runscripts/xmodel.cpu
+# ROOT defaults to the repository containing this script, so a clone in a
+# different location needs no edits.
 # -----------------------------------------------------------------------------
 
-ROOT=/home/b/b309159/git/ClimaAtmosResiDyn.jl
-PROJECT="${ROOT}/.buildkite"
-SCRIPT="${ROOT}/experiments/passive_stratospheric_tracers_rev.jl"
-JULIA=/home/b/b309159/.juliaup/bin/julia
+ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+PROJECT="${PROJECT:-${ROOT}/.buildkite}"
+SCRIPT="${SCRIPT:-${ROOT}/experiments/passive_stratospheric_tracers.jl}"
+JULIA="${JULIA:-$(command -v julia || true)}"
+
+# juliaup channel to run, e.g. "+1.11". Set JULIA_CHANNEL="" to use whatever
+# `julia` resolves to (the version check below still applies).
+JULIA_CHANNEL="${JULIA_CHANNEL:-+1.11}"
 
 # -----------------------------------------------------------------------------
 # Validate required files
 # -----------------------------------------------------------------------------
 
-if [[ ! -x "${JULIA}" ]]; then
+if [[ -z "${JULIA}" || ! -x "${JULIA}" ]]; then
     echo "ERROR: Julia executable not found:"
-    echo "  ${JULIA}"
+    echo "  '${JULIA}'"
+    echo "Set JULIA=/path/to/julia."
     exit 1
 fi
 
@@ -54,7 +67,42 @@ fi
 if [[ ! -f "${SCRIPT}" ]]; then
     echo "ERROR: Experiment script not found:"
     echo "  ${SCRIPT}"
+    echo "Set SCRIPT=/path/to/experiment.jl."
     exit 1
+fi
+
+# -----------------------------------------------------------------------------
+# Julia version must match the pinned manifest
+#
+# `.buildkite` pins dependencies per Julia minor version
+# (Manifest-v<major>.<minor>.toml). Running a different minor version silently
+# ignores that manifest and re-resolves the dependency graph, which can select
+# package versions the source does not support. The failure then surfaces deep
+# inside the run -- typically as a MethodError while the configuration is being
+# built -- after the job has already been queued and started. Fail here instead.
+# -----------------------------------------------------------------------------
+
+manifest="$(ls "${PROJECT}"/Manifest-v*.toml 2>/dev/null | head -n 1 || true)"
+
+if [[ -n "${manifest}" ]]; then
+    expected_version="$(basename "${manifest}")"
+    expected_version="${expected_version#Manifest-v}"
+    expected_version="${expected_version%.toml}"
+
+    actual_version="$(
+        "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} --startup-file=no \
+            -e 'print(VERSION.major, ".", VERSION.minor)'
+    )"
+
+    if [[ "${actual_version}" != "${expected_version}" ]]; then
+        echo "ERROR: Julia version does not match the pinned manifest."
+        echo "  manifest expects: ${expected_version} ($(basename "${manifest}"))"
+        echo "  julia provides:   ${actual_version}"
+        echo
+        echo "Install the matching version (e.g. 'juliaup add ${expected_version}')"
+        echo "or set JULIA_CHANNEL=+${expected_version}."
+        exit 1
+    fi
 fi
 
 # -----------------------------------------------------------------------------
@@ -105,9 +153,9 @@ echo "Node list:       ${SLURM_JOB_NODELIST}"
 echo "Nodes:           ${SLURM_JOB_NUM_NODES}"
 echo "MPI ranks:       ${SLURM_NTASKS}"
 echo "Tasks per node:  ${SLURM_TASKS_PER_NODE}"
-#echo "CPUs per task:   ${SLURM_CPUS_PER_TASK}"
+echo "CPUs per task:   ${SLURM_CPUS_PER_TASK:-1}"
 echo "Working path:    ${ROOT}"
-echo "Julia:           ${JULIA}"
+echo "Julia:           ${JULIA} ${JULIA_CHANNEL}"
 echo "Project:         ${PROJECT}"
 echo "Experiment:      ${SCRIPT}"
 echo "Start time:      $(date --iso-8601=seconds)"
@@ -118,16 +166,16 @@ module list 2>&1
 echo
 
 echo "Julia version:"
-"${JULIA}" --version
+"${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} --version
 echo
 
 # -----------------------------------------------------------------------------
-# Verify MPI configuration before launching 128 ranks
+# Verify MPI configuration before launching all ranks
 # -----------------------------------------------------------------------------
 
 echo "MPI.jl configuration:"
 
-"${JULIA}" \
+"${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
     --project="${PROJECT}" \
     --startup-file=no \
     -e '
@@ -146,7 +194,43 @@ echo "MPI.jl configuration:"
 echo
 
 # -----------------------------------------------------------------------------
+# Warm the precompilation cache serially
+#
+# The first `import ClimaAtmos` builds the precompile cache. Doing that under
+# srun means every rank races for the same cache files: Julia serialises them
+# with lock files, which on a shared filesystem is slow and can time out. Load
+# once here instead, so the ranks below start from a warm cache.
+#
+# This also fails early, and legibly, when the environment was never
+# instantiated for this Julia version -- the packages pinned in the manifest are
+# then missing from the depot. Fix that on a login node (compute nodes usually
+# have no network access):
+#
+#   julia +<version> --project=.buildkite -e 'using Pkg; Pkg.instantiate()'
+# -----------------------------------------------------------------------------
+
+echo "Warming precompilation cache:"
+
+if ! "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
+    --project="${PROJECT}" \
+    --startup-file=no \
+    -e 'using ClimaAtmos; println("ClimaAtmos loaded")'
+then
+    echo
+    echo "ERROR: could not load ClimaAtmos from ${PROJECT}."
+    echo "If this reports missing package sources, instantiate the environment"
+    echo "on a login node:"
+    echo "  ${JULIA} ${JULIA_CHANNEL} --project=${PROJECT} -e 'using Pkg; Pkg.instantiate()'"
+    exit 1
+fi
+
+echo
+
+# -----------------------------------------------------------------------------
 # Run the experiment
+#
+# `set -e` is lifted around srun so that the exit status is reported and the
+# end time is logged even when the run fails.
 # -----------------------------------------------------------------------------
 
 cd "${ROOT}"
@@ -154,17 +238,18 @@ cd "${ROOT}"
 echo "Launching passive tracer experiment..."
 echo
 
+set +e
 srun \
     --label \
     --cpu_bind=verbose \
     --hint=nomultithread \
     --distribution=block:cyclic \
-    "${JULIA}" \
+    "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
         --project="${PROJECT}" \
         --startup-file=no \
         "${SCRIPT}"
-
 status=$?
+set -e
 
 echo
 echo "Experiment exit status: ${status}"
