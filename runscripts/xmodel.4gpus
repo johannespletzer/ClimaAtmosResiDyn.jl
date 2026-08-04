@@ -32,6 +32,19 @@ JULIA="${JULIA:-$(command -v julia || true)}"
 # `julia` resolves to (the version check below still applies).
 JULIA_CHANNEL="${JULIA_CHANNEL:-+1.11}"
 
+# Per-stack Julia depot, written by runscripts/setup-julia-levante.tcsh. Each
+# stack has its own depot because the artifact override that repoints
+# OpenMPI_jll at the system MPI is depot-global, and the CPU and GPU stacks use
+# different MPI installations. Without this, the job silently falls back to the
+# bundled MPI in the default depot.
+JULIA_DEPOT_PATH="${JULIA_DEPOT_PATH:-${HOME}/.julia/depots/levante-gpu}"
+export JULIA_DEPOT_PATH
+
+# SLURM PMIx plugin. Open MPI 4.1.x links PMIx 3, so pmix_v3 is the exact
+# match; check with `ldd <libmpi> | grep pmix` and `srun --mpi=list` if a job
+# fails to launch.
+SRUN_MPI="${SRUN_MPI:-pmix_v3}"
+
 [[ -n "${JULIA}" && -x "${JULIA}" ]] || {
     echo "Julia executable not found: '${JULIA}' (set JULIA=/path/to/julia)" >&2
     exit 1
@@ -44,6 +57,12 @@ JULIA_CHANNEL="${JULIA_CHANNEL:-+1.11}"
 
 [[ -f "${SCRIPT}" ]] || {
     echo "Experiment script not found: ${SCRIPT} (set SCRIPT=...)" >&2
+    exit 1
+}
+
+[[ -d "${JULIA_DEPOT_PATH}" ]] || {
+    echo "Julia depot not found: ${JULIA_DEPOT_PATH}" >&2
+    echo "Run 'runscripts/setup-julia-levante.tcsh gpu' on a login node first." >&2
     exit 1
 }
 
@@ -73,8 +92,8 @@ if [[ -n "${manifest}" ]]; then
 fi
 
 module purge
-module load nvhpc/22.5-gcc-11.2.0
-module load openmpi/.4.1.4-nvhpc-22.5
+module load nvhpc/24.7-gcc-11.2.0
+module load openmpi/4.1.5-nvhpc-24.7
 
 # Prevent UCX from intercepting SIGSEGV used internally by Julia.
 export UCX_ERROR_SIGNALS="SIGILL,SIGBUS,SIGFPE"
@@ -112,6 +131,7 @@ echo "Node:          ${SLURM_JOB_NODELIST}"
 echo "MPI ranks:     ${SLURM_NTASKS}"
 echo "CPUs per rank: ${SLURM_CPUS_PER_TASK:-1}"
 echo "Julia:         ${JULIA} ${JULIA_CHANNEL}"
+echo "Depot:         ${JULIA_DEPOT_PATH}"
 echo "Experiment:    ${SCRIPT}"
 echo "Start time:    $(date --iso-8601=seconds)"
 echo
@@ -126,6 +146,7 @@ echo
 echo "GPU allocation per rank:"
 
 srun \
+    --mpi="${SRUN_MPI}" \
     --label \
     --kill-on-bad-exit=1 \
     bash -c '
@@ -136,6 +157,7 @@ echo
 echo "CUDA/MPI device test:"
 
 srun \
+    --mpi="${SRUN_MPI}" \
     --label \
     --kill-on-bad-exit=1 \
     "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
@@ -196,6 +218,7 @@ cd "${ROOT}"
 # time is logged even when the run fails.
 set +e
 srun \
+    --mpi="${SRUN_MPI}" \
     --kill-on-bad-exit=1 \
     --cpu-bind=verbose \
     --distribution=block:cyclic \

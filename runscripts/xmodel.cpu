@@ -47,6 +47,19 @@ JULIA="${JULIA:-$(command -v julia || true)}"
 # `julia` resolves to (the version check below still applies).
 JULIA_CHANNEL="${JULIA_CHANNEL:-+1.11}"
 
+# Per-stack Julia depot, written by runscripts/setup-julia-levante.tcsh. Each
+# stack has its own depot because the artifact override that repoints
+# OpenMPI_jll at the system MPI is depot-global, and the CPU and GPU stacks use
+# different MPI installations. Without this, the job silently falls back to the
+# bundled MPI in the default depot.
+JULIA_DEPOT_PATH="${JULIA_DEPOT_PATH:-${HOME}/.julia/depots/levante-cpu}"
+export JULIA_DEPOT_PATH
+
+# SLURM PMIx plugin. Open MPI 4.1.x links PMIx 3, so pmix_v3 is the exact
+# match; check with `ldd <libmpi> | grep pmix` and `srun --mpi=list` if a job
+# fails to launch.
+SRUN_MPI="${SRUN_MPI:-pmix_v3}"
+
 # -----------------------------------------------------------------------------
 # Validate required files
 # -----------------------------------------------------------------------------
@@ -68,6 +81,14 @@ if [[ ! -f "${SCRIPT}" ]]; then
     echo "ERROR: Experiment script not found:"
     echo "  ${SCRIPT}"
     echo "Set SCRIPT=/path/to/experiment.jl."
+    exit 1
+fi
+
+if [[ ! -d "${JULIA_DEPOT_PATH}" ]]; then
+    echo "ERROR: Julia depot not found:"
+    echo "  ${JULIA_DEPOT_PATH}"
+    echo "Run the setup script on a login node first:"
+    echo "  runscripts/setup-julia-levante.tcsh cpu"
     exit 1
 fi
 
@@ -156,6 +177,7 @@ echo "Tasks per node:  ${SLURM_TASKS_PER_NODE}"
 echo "CPUs per task:   ${SLURM_CPUS_PER_TASK:-1}"
 echo "Working path:    ${ROOT}"
 echo "Julia:           ${JULIA} ${JULIA_CHANNEL}"
+echo "Depot:           ${JULIA_DEPOT_PATH}"
 echo "Project:         ${PROJECT}"
 echo "Experiment:      ${SCRIPT}"
 echo "Start time:      $(date --iso-8601=seconds)"
@@ -189,17 +211,15 @@ echo "MPI.jl configuration:"
 
         implementation == "OpenMPI" || error("""
             Expected OpenMPI, found $implementation.
+
             MPI.jl is using its bundled binary instead of the system MPI, so
-            the ranks below would not use the cluster interconnect. Bind it to
-            the system library, with the same modules loaded as this job:
-              julia --project=$(Base.active_project() |> dirname) -e '\''
-                  using Pkg; Pkg.add("MPIPreferences")
-                  using MPIPreferences; MPIPreferences.use_system_binary()
-              '\''
-            then re-run Pkg.resolve(); Pkg.instantiate(); Pkg.precompile().
-            Note this is recorded in the environment (LocalPreferences.toml plus
-            an MPIPreferences entry in Project.toml), so it has to be redone for
-            any checkout where Project.toml does not carry that dependency.
+            the ranks below would not use the cluster interconnect. The binding
+            lives in the depot and the project preferences, not in this script.
+            Re-create it on a login node:
+
+              runscripts/setup-julia-levante.tcsh cpu
+
+            and check that JULIA_DEPOT_PATH here matches the depot it reports.
             """)
     '
 
@@ -252,6 +272,7 @@ echo
 
 set +e
 srun \
+    --mpi="${SRUN_MPI}" \
     --label \
     --cpu_bind=verbose \
     --hint=nomultithread \
