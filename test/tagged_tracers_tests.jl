@@ -228,9 +228,14 @@ import ClimaAtmos as CA
                 FT,
             )
             @test group_tags[1].sources == CA.TAG_SOURCE_GROUPS.forcing
-            @test group_tags[2].sources == (:radiation, :microphysics)
+            # Derived from the group constants rather than hard-coded, so
+            # that adding a process to a group cannot leave this stale
+            @test group_tags[2].sources == (
+                CA.TAG_SOURCE_GROUPS.radiative...,
+                CA.TAG_SOURCE_GROUPS.moist...,
+            )
             @test group_tags[3].sources == CA.KNOWN_TAG_SOURCES
-            @test group_tags[4].sources == (:radiation,)
+            @test group_tags[4].sources == CA.TAG_SOURCE_GROUPS.radiative
             # Every group member is a known process
             for group in CA.TAG_SOURCE_GROUPS
                 @test all(s -> s in CA.KNOWN_TAG_SOURCES, group)
