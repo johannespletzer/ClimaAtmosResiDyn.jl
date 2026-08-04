@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=tracer-4gpu
+#SBATCH --job-name=tracer-gpu
 #SBATCH --account=bd1062
 #SBATCH --partition=gpu
 #SBATCH --constraint=a100_80
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=4
+#SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-task=1
-#SBATCH --cpus-per-task=1
-#SBATCH --exclusive
-#SBATCH --mem=0
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=30G
 #SBATCH --hint=nomultithread
 #SBATCH --time=04:00:00
-#SBATCH --output=tracer-4gpu-%j.out
-#SBATCH --error=tracer-4gpu-%j.err
+#SBATCH --output=tracer-gpu-%j.out
+#SBATCH --error=tracer-gpu-%j.err
 ### #SBATCH --mail-type=FAIL
 
 source /sw/etc/profile.levante
