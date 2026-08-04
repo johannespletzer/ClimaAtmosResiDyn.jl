@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=passive-tracers
+#SBATCH -o ./passive-tracers-%j.out
+#SBATCH -e ./passive-tracers-%j.err
+#SBATCH --no-requeue
+
+#SBATCH --partition=compute
+#SBATCH --ntasks-per-node=32
+#SBATCH --exclusive
+#SBATCH --mem=0
+
+#SBATCH --nodes=1
+#SBATCH --account=bd1062
+#SBATCH --time=01:00:00
+#SBATCH --mail-type=FAIL
+
+set -euo pipefail
+
+# -----------------------------------------------------------------------------
+# Levante software environment
+# -----------------------------------------------------------------------------
+
+source /sw/etc/profile.levante
+
+module purge
+module load gcc/11.2.0-gcc-11.2.0
+module load openmpi/4.1.2-gcc-11.2.0
+
+# -----------------------------------------------------------------------------
+# Paths
+# -----------------------------------------------------------------------------
+
+ROOT=/home/b/b309159/git/ClimaAtmosResiDyn.jl
+PROJECT="${ROOT}/.buildkite"
+SCRIPT="${ROOT}/experiments/passive_stratospheric_tracers_rev.jl"
+JULIA=/home/b/b309159/.juliaup/bin/julia
+
+# -----------------------------------------------------------------------------
+# Validate required files
+# -----------------------------------------------------------------------------
+
+if [[ ! -x "${JULIA}" ]]; then
+    echo "ERROR: Julia executable not found:"
+    echo "  ${JULIA}"
+    exit 1
+fi
+
+if [[ ! -f "${PROJECT}/Project.toml" ]]; then
+    echo "ERROR: Julia project not found:"
+    echo "  ${PROJECT}/Project.toml"
+    exit 1
+fi
+
+if [[ ! -f "${SCRIPT}" ]]; then
+    echo "ERROR: Experiment script not found:"
+    echo "  ${SCRIPT}"
+    exit 1
+fi
+
+# -----------------------------------------------------------------------------
+# Threading and ClimaComms
+# -----------------------------------------------------------------------------
+
+# One Julia process per physical core. Prevent nested threading.
+export JULIA_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+
+export CLIMACOMMS_DEVICE=CPU
+export CLIMACOMMS_CONTEXT=MPI
+
+# -----------------------------------------------------------------------------
+# Remove incompatible inherited settings
+# -----------------------------------------------------------------------------
+
+unset I_MPI_HYDRA_BOOTSTRAP || true
+unset I_MPI_HYDRA_BOOTSTRAP_EXEC_EXTRA_ARGS || true
+unset I_MPI_PMI || true
+unset I_MPI_PMI_LIBRARY || true
+
+unset UCX_MEMTYPE_CACHE || true
+unset UCX_ERROR_SIGNALS || true
+
+# -----------------------------------------------------------------------------
+# Open MPI and UCX settings tested on Levante
+# -----------------------------------------------------------------------------
+
+export OMPI_MCA_osc=ucx
+export OMPI_MCA_pml=ucx
+export OMPI_MCA_btl=self
+export UCX_HANDLE_ERRORS=bt
+export OMPI_MCA_pml_ucx_opal_mem_hooks=1
+
+# -----------------------------------------------------------------------------
+# Job information
+# -----------------------------------------------------------------------------
+
+echo "================================================================"
+echo "Passive tracer ClimaAtmos run"
+echo "================================================================"
+echo "Job ID:          ${SLURM_JOB_ID}"
+echo "Job name:        ${SLURM_JOB_NAME}"
+echo "Node list:       ${SLURM_JOB_NODELIST}"
+echo "Nodes:           ${SLURM_JOB_NUM_NODES}"
+echo "MPI ranks:       ${SLURM_NTASKS}"
+echo "Tasks per node:  ${SLURM_TASKS_PER_NODE}"
+#echo "CPUs per task:   ${SLURM_CPUS_PER_TASK}"
+echo "Working path:    ${ROOT}"
+echo "Julia:           ${JULIA}"
+echo "Project:         ${PROJECT}"
+echo "Experiment:      ${SCRIPT}"
+echo "Start time:      $(date --iso-8601=seconds)"
+echo
+
+echo "Loaded modules:"
+module list 2>&1
+echo
+
+echo "Julia version:"
+"${JULIA}" --version
+echo
+
+# -----------------------------------------------------------------------------
+# Verify MPI configuration before launching 128 ranks
+# -----------------------------------------------------------------------------
+
+echo "MPI.jl configuration:"
+
+"${JULIA}" \
+    --project="${PROJECT}" \
+    --startup-file=no \
+    -e '
+        using MPI
+
+        implementation, version = MPI.identify_implementation()
+
+        println("Implementation: ", implementation)
+        println("Version:        ", version)
+        println("Library:        ", MPI.libmpi)
+
+        implementation == "OpenMPI" ||
+            error("Expected OpenMPI, found $implementation")
+    '
+
+echo
+
+# -----------------------------------------------------------------------------
+# Run the experiment
+# -----------------------------------------------------------------------------
+
+cd "${ROOT}"
+
+echo "Launching passive tracer experiment..."
+echo
+
+srun \
+    --label \
+    --cpu_bind=verbose \
+    --hint=nomultithread \
+    --distribution=block:cyclic \
+    "${JULIA}" \
+        --project="${PROJECT}" \
+        --startup-file=no \
+        "${SCRIPT}"
+
+status=$?
+
+echo
+echo "Experiment exit status: ${status}"
+echo "End time:               $(date --iso-8601=seconds)"
+
+exit "${status}"

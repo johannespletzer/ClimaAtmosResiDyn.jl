@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=tracer-4gpu
+#SBATCH --account=bd1062
+#SBATCH --partition=gpu
+#SBATCH --constraint=a100_80
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=4
+#SBATCH --gpus-per-task=1
+#SBATCH --cpus-per-task=1
+#SBATCH --exclusive
+#SBATCH --mem=0
+#SBATCH --hint=nomultithread
+#SBATCH --time=04:00:00
+#SBATCH --output=tracer-4gpu-%j.out
+#SBATCH --error=tracer-4gpu-%j.err
+#SBATCH --mail-type=FAIL
+
+source /sw/etc/profile.levante
+
+set -euo pipefail
+
+ROOT=/home/b/b309159/git/ClimaAtmosResiDyn.jl
+PROJECT="${ROOT}/.buildkite"
+SCRIPT="${ROOT}/experiments/passive_stratospheric_tracers.jl"
+JULIA=/home/b/b309159/.juliaup/bin/julia
+
+[[ -x "${JULIA}" ]] || {
+    echo "Julia executable not found: ${JULIA}" >&2
+    exit 1
+}
+
+[[ -d "${PROJECT}" ]] || {
+    echo "Julia project not found: ${PROJECT}" >&2
+    exit 1
+}
+
+[[ -f "${SCRIPT}" ]] || {
+    echo "Experiment script not found: ${SCRIPT}" >&2
+    exit 1
+}
+
+module purge
+module load nvhpc/22.5-gcc-11.2.0
+module load openmpi/.4.1.4-nvhpc-22.5
+
+# Prevent UCX from intercepting SIGSEGV used internally by Julia.
+export UCX_ERROR_SIGNALS="SIGILL,SIGBUS,SIGFPE"
+
+# Required for compatibility with CUDA-aware MPI / CUDA IPC.
+export JULIA_CUDA_MEMORY_POOL=none
+
+export JULIA_NUM_THREADS="${SLURM_CPUS_PER_TASK}"
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+
+export CLIMACOMMS_DEVICE=CUDA
+export CLIMACOMMS_CONTEXT=MPI
+
+unset I_MPI_HYDRA_BOOTSTRAP || true
+unset I_MPI_HYDRA_BOOTSTRAP_EXEC_EXTRA_ARGS || true
+unset I_MPI_PMI || true
+unset I_MPI_PMI_LIBRARY || true
+
+# DKRZ-recommended Open MPI / UCX GPU settings.
+export OMPI_MCA_osc=ucx
+export OMPI_MCA_pml=ucx
+export OMPI_MCA_btl=self
+export OMPI_MCA_pml_ucx_opal_mem_hooks=1
+
+export UCX_RNDV_SCHEME=put_zcopy
+export UCX_RNDV_THRESH=16384
+export UCX_IB_GPU_DIRECT_RDMA=yes
+export UCX_TLS=cma,rc,mm,cuda_ipc,cuda_copy,gdr_copy
+export UCX_MEMTYPE_CACHE=n
+
+echo "Job ID:        ${SLURM_JOB_ID}"
+echo "Node:          ${SLURM_JOB_NODELIST}"
+echo "MPI ranks:     ${SLURM_NTASKS}"
+echo "CPUs per rank: ${SLURM_CPUS_PER_TASK}"
+echo
+
+module list 2>&1
+
+echo
+echo "Open MPI extensions:"
+ompi_info -c | grep 'MPI extensions' || true
+
+echo
+echo "GPU allocation per rank:"
+
+srun \
+    --label \
+    --kill-on-bad-exit=1 \
+    bash -c '
+        echo "local-rank=${SLURM_LOCALID} CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-unset}"
+    '
+
+echo
+echo "CUDA/MPI device test:"
+
+srun \
+    --label \
+    --kill-on-bad-exit=1 \
+    "${JULIA}" \
+    --startup-file=no \
+    --project="${PROJECT}" \
+    -e '
+        using MPI
+        using CUDA
+
+        MPI.Init()
+
+        rank = MPI.Comm_rank(MPI.COMM_WORLD)
+        size = MPI.Comm_size(MPI.COMM_WORLD)
+        visible = get(ENV, "CUDA_VISIBLE_DEVICES", "unset")
+
+        println(
+            "rank=$(rank)/$(size), " *
+            "libmpi=$(MPI.libmpi), " *
+            "CUDA-aware=$(MPI.has_cuda()), " *
+            "device=$(CUDA.device()), " *
+            "visible=$(visible)"
+        )
+
+        @assert size == parse(Int, ENV["SLURM_NTASKS"])
+        @assert MPI.has_cuda()
+        @assert CUDA.functional()
+
+        MPI.Barrier(MPI.COMM_WORLD)
+        MPI.Finalize()
+    '
+
+echo
+echo "Launching passive-tracer experiment..."
+
+cd "${ROOT}"
+
+srun \
+    --kill-on-bad-exit=1 \
+    --cpu-bind=verbose \
+    --distribution=block:cyclic \
+    "${JULIA}" \
+        --project="${PROJECT}" \
+        --startup-file=no \
+        "${SCRIPT}"
