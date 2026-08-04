@@ -12,7 +12,7 @@
 #SBATCH --nodes=1
 #SBATCH --account=bd1062
 #SBATCH --time=01:00:00
-#SBATCH --mail-type=FAIL
+### #SBATCH --mail-type=FAIL
 
 # -----------------------------------------------------------------------------
 # Levante software environment
@@ -37,8 +37,8 @@ module load openmpi/4.1.2-gcc-11.2.0
 # ROOT defaults to the repository containing this script, so a clone in a
 # different location needs no edits.
 # -----------------------------------------------------------------------------
-
-ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+# ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+ROOT="/home/b/b309159/git/ClimaAtmosResiDyn.jl/"
 PROJECT="${PROJECT:-${ROOT}/.buildkite}"
 SCRIPT="${SCRIPT:-${ROOT}/experiments/passive_stratospheric_tracers.jl}"
 JULIA="${JULIA:-$(command -v julia || true)}"
@@ -187,8 +187,20 @@ echo "MPI.jl configuration:"
         println("Version:        ", version)
         println("Library:        ", MPI.libmpi)
 
-        implementation == "OpenMPI" ||
-            error("Expected OpenMPI, found $implementation")
+        implementation == "OpenMPI" || error("""
+            Expected OpenMPI, found $implementation.
+            MPI.jl is using its bundled binary instead of the system MPI, so
+            the ranks below would not use the cluster interconnect. Bind it to
+            the system library, with the same modules loaded as this job:
+              julia --project=$(Base.active_project() |> dirname) -e '\''
+                  using Pkg; Pkg.add("MPIPreferences")
+                  using MPIPreferences; MPIPreferences.use_system_binary()
+              '\''
+            then re-run Pkg.resolve(); Pkg.instantiate(); Pkg.precompile().
+            Note this is recorded in the environment (LocalPreferences.toml plus
+            an MPIPreferences entry in Project.toml), so it has to be redone for
+            any checkout where Project.toml does not carry that dependency.
+            """)
     '
 
 echo

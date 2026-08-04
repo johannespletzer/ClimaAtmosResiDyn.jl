@@ -13,7 +13,7 @@
 #SBATCH --time=04:00:00
 #SBATCH --output=tracer-4gpu-%j.out
 #SBATCH --error=tracer-4gpu-%j.err
-#SBATCH --mail-type=FAIL
+### #SBATCH --mail-type=FAIL
 
 source /sw/etc/profile.levante
 
@@ -22,7 +22,8 @@ set -euo pipefail
 # Paths may be overridden from the environment, e.g.
 #   SCRIPT=experiments/my_run.jl sbatch runscripts/xmodel.4gpus
 # ROOT defaults to the repository containing this script.
-ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+# ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+ROOT="/home/b/b309159/git/ClimaAtmosResiDyn.jl/"
 PROJECT="${PROJECT:-${ROOT}/.buildkite}"
 SCRIPT="${SCRIPT:-${ROOT}/experiments/passive_stratospheric_tracers.jl}"
 JULIA="${JULIA:-$(command -v julia || true)}"
