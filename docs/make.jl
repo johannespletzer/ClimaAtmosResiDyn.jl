@@ -33,6 +33,7 @@ makedocs(;
             "Installation" => "installation.md",
             "Your First Simulation" => "first_simulation.md",
             "Script vs Config Interface" => "interfaces.md",
+            "Workflow: Setup to Long Runs" => "workflow.md",
         ],
         "How-to Guides" => [
             "Running Simulations" => [
