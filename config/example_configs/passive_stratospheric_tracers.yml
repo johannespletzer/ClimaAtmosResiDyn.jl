@@ -1,6 +1,6 @@
 job_id: "passive_stratospheric_tracers"
 dt: "20secs"
-t_end: "4weeks"
+t_end: "1weeks"
 output_dir_style: "removepreexisting"
 # A global cubed sphere resolves latitude-dependent sources in 1 km layers.
 h_elem: 6
