@@ -1,0 +1,16 @@
+#!/bin/tcsh -f
+
+if (-f /sw/etc/csh.levante) then
+    source /sw/etc/csh.levante
+endif
+
+module purge
+module load gcc/11.2.0-gcc-11.2.0
+module load openmpi/4.1.2-gcc-11.2.0
+setenv JULIA_DEPOT_PATH ${HOME}/.julia/depots/levante-cpu
+cd ~/git/ClimaAtmosResiDyn.jl
+
+julia +1.11 --project=.buildkite .buildkite/ci_driver.jl \
+  --config_file config/common_configs/numerics_sphere_he6ze31.yml \
+  --config_file config/model_configs/passive_stratospheric_tracers_ci.yml \
+  --job_id passive_stratospheric_tracers_ci
