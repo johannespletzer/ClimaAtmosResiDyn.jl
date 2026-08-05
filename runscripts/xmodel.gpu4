@@ -95,6 +95,59 @@ module purge
 module load nvhpc/24.7-gcc-11.2.0
 module load openmpi/4.1.5-nvhpc-24.7
 
+# ----------------------------------------------------------------------------
+# CUDA toolkit check
+#
+# CUDA_Runtime_jll resolves its artifact when the environment is instantiated --
+# on a login node, which has no GPU driver to ask which CUDA version it
+# supports. runscripts/setup-julia-levante.tcsh therefore pins the toolkit
+# version explicitly. Check here that the pin still fits the driver on the node
+# we actually landed on, and record that driver's version so the next setup run
+# can reuse it instead of queueing a probe job.
+# ----------------------------------------------------------------------------
+
+# "CUDA Version                          : 13.0" -> "13.0"
+cuda_version_field() {
+    grep -m1 -i 'CUDA Version' | sed 's/.*: *//' | tr -d '[:space:]'
+}
+
+node_cuda="$(nvidia-smi -q 2>/dev/null | cuda_version_field || true)"
+
+if [[ -z "${node_cuda}" ]]; then
+    # The batch step itself may hold no GPU allocation; a job step always does.
+    node_cuda="$(srun --ntasks=1 nvidia-smi -q 2>/dev/null | cuda_version_field || true)"
+fi
+
+pinned_cuda="$(
+    "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} --startup-file=no -e '
+        using TOML
+        prefs = isfile(ARGS[1]) ? TOML.parsefile(ARGS[1]) : Dict{String, Any}()
+        print(get(get(prefs, "CUDA_Runtime_jll", Dict{String, Any}()), "version", ""))
+    ' "${PROJECT}/LocalPreferences.toml" || true
+)"
+
+[[ -n "${pinned_cuda}" ]] || {
+    echo "ERROR: no CUDA toolkit is pinned in ${PROJECT}/LocalPreferences.toml." >&2
+    echo "  Without a pin the environment was instantiated as 'cuda=none' and" >&2
+    echo "  CUDA.jl will not find a runtime. Run on a login node:" >&2
+    echo "    runscripts/setup-julia-levante.tcsh gpu" >&2
+    exit 1
+}
+
+if [[ -n "${node_cuda}" ]]; then
+    # Feed the next setup run, so it need not probe the queue for this number.
+    printf '%s\n' "${node_cuda}" > "${JULIA_DEPOT_PATH%%:*}/levante-cuda-version" || true
+
+    # A toolkit newer than the driver will not load; an older one is fine.
+    newest="$(printf '%s\n%s\n' "${pinned_cuda}" "${node_cuda}" | sort -V | tail -n 1)"
+    [[ "${newest}" == "${node_cuda}" ]] || {
+        echo "ERROR: this environment is pinned to CUDA ${pinned_cuda}, but the" >&2
+        echo "  driver on $(hostname) supports only CUDA ${node_cuda}." >&2
+        echo "  Re-run on a login node: runscripts/setup-julia-levante.tcsh gpu" >&2
+        exit 1
+    }
+fi
+
 # Prevent UCX from intercepting SIGSEGV used internally by Julia.
 export UCX_ERROR_SIGNALS="SIGILL,SIGBUS,SIGFPE"
 
@@ -132,6 +185,7 @@ echo "MPI ranks:     ${SLURM_NTASKS}"
 echo "CPUs per rank: ${SLURM_CPUS_PER_TASK:-1}"
 echo "Julia:         ${JULIA} ${JULIA_CHANNEL}"
 echo "Depot:         ${JULIA_DEPOT_PATH}"
+echo "CUDA:          toolkit ${pinned_cuda}, driver supports ${node_cuda:-unknown}"
 echo "Experiment:    ${SCRIPT}"
 echo "Start time:    $(date --iso-8601=seconds)"
 echo
@@ -177,6 +231,8 @@ srun \
             "rank=$(rank)/$(size), " *
             "libmpi=$(MPI.libmpi), " *
             "CUDA-aware=$(MPI.has_cuda()), " *
+            "runtime=$(CUDA.runtime_version()), " *
+            "driver=$(CUDA.driver_version()), " *
             "device=$(CUDA.device()), " *
             "visible=$(visible)"
         )
@@ -184,6 +240,7 @@ srun \
         @assert size == parse(Int, ENV["SLURM_NTASKS"])
         @assert MPI.has_cuda()
         @assert CUDA.functional()
+        @assert CUDA.runtime_version() <= CUDA.driver_version()
 
         MPI.Barrier(MPI.COMM_WORLD)
         MPI.Finalize()

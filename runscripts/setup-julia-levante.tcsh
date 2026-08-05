@@ -32,9 +32,15 @@
 # configured, and a second, different libmpi then cannot be loaded -- so the
 # probe fails precisely when you are switching away from another MPI.
 #
-# Nothing here modifies tracked files: the preference goes to
-# .buildkite/LocalPreferences.toml (untracked, so it survives branch switches)
-# and no packages are added to .buildkite/Project.toml.
+# The gpu stack additionally pins the CUDA toolkit. CUDA_Runtime_jll picks its
+# artifact by dlopening libcuda and asking the driver which CUDA version it
+# supports; a login node has no driver, so the environment is instantiated as
+# `cuda=none` and the job only fails once it reaches a GPU node. The version is
+# measured on a GPU node and recorded as a preference -- see
+# runscripts/select-cuda-runtime.jl for the details.
+#
+# All preferences go to .buildkite/LocalPreferences.toml; no packages are added
+# to .buildkite/Project.toml.
 # ============================================================================
 
 set ROOT          = /home/b/b309159/git/ClimaAtmosResiDyn.jl
@@ -60,6 +66,13 @@ if ($#argv != 1) then
 endif
 
 set STACK = $argv[1]
+
+# SLURM settings for the one-off probe job that reads the GPU driver's CUDA
+# version (gpu stack only, and only when it is not already known -- see the
+# "CUDA toolkit version" section below).
+set PROBE_ACCOUNT    = bd1062
+set PROBE_PARTITION  = gpu
+set PROBE_CONSTRAINT = a100_80
 
 if ("${STACK}" == "cpu") then
     set COMPILER_MODULE = gcc/11.2.0-gcc-11.2.0
@@ -237,14 +250,147 @@ cat "${LEVANTE_PREFS}"
 echo
 
 # ----------------------------------------------------------------------------
-# Instantiate and precompile into this depot
+# CUDA toolkit version (gpu stack only)
+#
+# Determined here, before anything slow runs, so that a missing version fails
+# immediately rather than after a full precompilation. Sources, in order:
+#
+#   1. $CUDA_RUNTIME_VERSION, if set -- manual override, e.g. 13.0
+#   2. nvidia-smi, if this script is itself running on a GPU node
+#   3. the value recorded by the last GPU job (see runscripts/xmodel.gpu*)
+#   4. a two-minute probe job on the gpu partition
+#
+# Anything measured is cached in ${CUDA_VERSION_CACHE} so that later runs skip
+# the queue. Delete that file to force a fresh measurement.
 # ----------------------------------------------------------------------------
 
-echo "Instantiating and precompiling (slow on a fresh depot):"
+set CUDA_VERSION_CACHE = ${DEPOT}/levante-cuda-version
+set CUDA_VERSION       = ""
+set CUDA_VERSION_SRC   = ""
+set CUDA_VERSION_NEW   = 0
+
+# The filter below turns nvidia-smi's
+#     CUDA Version                          : 13.0
+# into a bare "13.0". It is spelled out at each use site: tcsh's `eval` does not
+# reliably keep a pipeline's stdin, so a shared filter variable cannot be piped
+# into.
+
+if ("${STACK}" == "gpu") then
+    if ($?CUDA_RUNTIME_VERSION) then
+        set CUDA_VERSION     = "${CUDA_RUNTIME_VERSION}"
+        set CUDA_VERSION_SRC = "the CUDA_RUNTIME_VERSION environment variable"
+    endif
+
+    if ("${CUDA_VERSION}" == "") then
+        which nvidia-smi >& /dev/null
+        if ($status == 0) then
+            set CUDA_VERSION = "`nvidia-smi -q |& grep -m1 -i 'CUDA Version' | sed 's/.*: *//' | tr -d '[:space:]'`"
+            if ("${CUDA_VERSION}" != "") then
+                set CUDA_VERSION_SRC = "nvidia-smi on this node"
+                set CUDA_VERSION_NEW = 1
+            endif
+        endif
+    endif
+
+    if ("${CUDA_VERSION}" == "") then
+        if (-r "${CUDA_VERSION_CACHE}") then
+            set CUDA_VERSION = "`cat ${CUDA_VERSION_CACHE} | tr -d '[:space:]'`"
+            if ("${CUDA_VERSION}" != "") then
+                set CUDA_VERSION_SRC = "${CUDA_VERSION_CACHE} (recorded by an earlier GPU job)"
+            endif
+        endif
+    endif
+
+    if ("${CUDA_VERSION}" == "") then
+        echo "No CUDA version on record; probing a GPU node (this queues a short job):"
+        set CUDA_VERSION = "`srun --account=${PROBE_ACCOUNT} --partition=${PROBE_PARTITION} --constraint=${PROBE_CONSTRAINT} --nodes=1 --ntasks=1 --gpus-per-task=1 --cpus-per-task=1 --mem=4G --time=00:02:00 nvidia-smi -q |& grep -m1 -i 'CUDA Version' | sed 's/.*: *//' | tr -d '[:space:]'`"
+        if ("${CUDA_VERSION}" != "") then
+            set CUDA_VERSION_SRC = "a probe job on the ${PROBE_PARTITION} partition"
+            set CUDA_VERSION_NEW = 1
+        endif
+    endif
+
+    if ("${CUDA_VERSION}" !~ [0-9]*.[0-9]*) then
+        echo "ERROR: could not determine the CUDA version supported by the GPU driver."
+        echo "Run 'nvidia-smi' on a GPU node, read the 'CUDA Version' field, and"
+        echo "re-run this script with it, e.g.:"
+        echo "  env CUDA_RUNTIME_VERSION=13.0 $0 gpu"
+        exit 1
+    endif
+
+    if (${CUDA_VERSION_NEW} == 1) then
+        echo "${CUDA_VERSION}" > "${CUDA_VERSION_CACHE}"
+    endif
+
+    echo "GPU driver supports CUDA ${CUDA_VERSION} (from ${CUDA_VERSION_SRC})"
+    echo
+endif
+
+# ----------------------------------------------------------------------------
+# Instantiate into this depot
+# ----------------------------------------------------------------------------
+
+echo "Instantiating (slow on a fresh depot):"
 ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \
-    -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+    -e 'using Pkg; Pkg.instantiate()'
 if ($status != 0) then
-    echo "ERROR: instantiation or precompilation failed."
+    echo "ERROR: instantiation failed."
+    exit 1
+endif
+
+# ----------------------------------------------------------------------------
+# Pin the CUDA toolkit
+#
+# This runs after the first instantiate because select-cuda-runtime.jl reads the
+# list of installable toolkits out of the installed CUDA_Runtime_jll, and before
+# precompilation because the preference is a compile-time one: setting it later
+# would invalidate every cache just written. The second instantiate downloads
+# the artifacts for the newly selected toolkit -- compute nodes have no network,
+# so nothing may be left to fetch lazily at run time.
+#
+# The cpu stack clears the pin instead. LocalPreferences.toml is shared by both
+# stacks, and a leftover pin would make the cpu depot download a CUDA toolkit it
+# never uses.
+# ----------------------------------------------------------------------------
+
+if ("${STACK}" == "gpu") then
+    echo
+    ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \
+        "${ROOT}/runscripts/select-cuda-runtime.jl" "${CUDA_VERSION}"
+    if ($status != 0) then
+        echo "ERROR: could not pin the CUDA toolkit version."
+        exit 1
+    endif
+
+    echo "Instantiating again to fetch the CUDA ${CUDA_VERSION} artifacts:"
+    ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \
+        -e 'using Pkg; Pkg.instantiate()'
+    if ($status != 0) then
+        echo "ERROR: could not install the CUDA toolkit artifacts."
+        exit 1
+    endif
+else
+    # Deleting a preference is set_preferences! with `missing`. The (UUID, name)
+    # tuple is required because CUDA_Runtime_jll is an [extras] entry, so it
+    # cannot be resolved by name -- see runscripts/select-cuda-runtime.jl.
+    ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \
+        -e 'using Preferences; jll = (Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2"), "CUDA_Runtime_jll"); set_preferences!(jll, "version" => missing, "local" => missing; force = true)'
+    if ($status != 0) then
+        echo "ERROR: could not clear the CUDA toolkit pin."
+        exit 1
+    endif
+endif
+
+# ----------------------------------------------------------------------------
+# Precompile
+# ----------------------------------------------------------------------------
+
+echo
+echo "Precompiling (slow on a fresh depot):"
+${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \
+    -e 'using Pkg; Pkg.precompile()'
+if ($status != 0) then
+    echo "ERROR: precompilation failed."
     exit 1
 endif
 
@@ -279,6 +425,27 @@ if ($status != 0) then
     exit 1
 endif
 
+# A CUDA toolkit cannot be exercised here -- login nodes have no GPU -- but the
+# one failure this section guards against is visible without one: a platform tag
+# of "none" means Pkg installed no toolkit at all, which is what happens when the
+# pin is missing and the driver probe finds nothing. The tag is read through
+# CUDA.jl, which re-exports CUDA_Runtime_jll; the JLL itself is an [extras] entry
+# and cannot be loaded by name. CUDA.jl warning about a missing driver here is
+# expected -- a login node has none.
+if ("${STACK}" == "gpu") then
+    echo
+    ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \
+        -e 'using CUDA, Preferences; jll = Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2"); tag = CUDA.CUDA_Runtime_jll.host_platform["cuda"]; println("CUDA version preference: ", something(load_preference(jll, "version"), "<unset>")); println("CUDA platform tag:       ", tag); tag == "none" && error("no CUDA toolkit installed")'
+    if ($status != 0) then
+        echo
+        echo "ERROR: no CUDA toolkit was installed for this depot."
+        echo "The environment resolved to 'cuda=none', so CUDA.jl will not find a"
+        echo "runtime on the GPU node. Re-run with an explicit version:"
+        echo "  env CUDA_RUNTIME_VERSION=<major.minor> $0 gpu"
+        exit 1
+    endif
+endif
+
 echo
 echo "============================================================"
 echo "Setup complete for the ${STACK} stack."
@@ -292,4 +459,11 @@ echo "  srun --mpi=${SRUN_MPI} ..."
 echo
 echo "NOTE: .buildkite/LocalPreferences.toml is shared by both stacks, so"
 echo "re-run this script when switching between cpu and gpu."
+if ("${STACK}" == "gpu") then
+    echo
+    echo "The CUDA toolkit is pinned for a driver supporting CUDA ${CUDA_VERSION}."
+    echo "The GPU runscripts re-check that against the node they land on and"
+    echo "refresh ${CUDA_VERSION_CACHE}, so after a driver upgrade it is enough"
+    echo "to re-run this script -- no version needs to be entered by hand."
+endif
 echo "============================================================"
