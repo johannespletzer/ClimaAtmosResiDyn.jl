@@ -11,12 +11,18 @@ Determine if a limiter should be applied to a specific tracer.
   - `species`: Configuration — `nothing`: apply to all; `()`: apply to none;
     `Tuple{Symbol,...}`: apply only if `ρχ_name ∈ species`
 
+Tagged energy tracers (`ρe_tag_*`) are always excluded: they can be
+legitimately negative (e.g. accumulated cooling), so nonnegativity limiting
+would silently corrupt them.
+
 # Returns
 
 `true` if the limiter should be applied, `false` otherwise.
 """
 function _should_apply_limiter_to_tracer(ρχ_name, species)
-    if isnothing(species)
+    if is_tagged_tracer_name(ρχ_name)
+        return false
+    elseif isnothing(species)
         return true  # Apply to all tracers
     elseif species isa Tuple
         return ρχ_name in species
@@ -76,6 +82,11 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
             p.scratch.ᶜtemp_scalar_2 .= Y.c.ρq_tot
         end
         for ρχ_name in filter(is_tracer_var, propertynames(Y.c))
+            # Tagged energy tracers are left unlimited so that they receive
+            # the same treatment as ρe_tot, which is not limited either. A
+            # shape-preserving adjustment applied to the tags but not to
+            # ρe_tot would show up as tagging closure error.
+            is_tagged_tracer_name(ρχ_name) && continue
             Limiters.compute_bounds!(
                 sem_quasimonotone_limiter,
                 ref_Y.c.:($ρχ_name),

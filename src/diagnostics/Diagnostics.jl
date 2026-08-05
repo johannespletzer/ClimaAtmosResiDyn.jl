@@ -52,6 +52,19 @@ import ..OrographicGravityWave
 
 # chemistry_model
 import ..GasPhaseChem
+import ..StratosphericPassiveTracers
+import ..stratospheric_tracer_symbol
+import ..MAX_TRACER_LATITUDE_BANDS, ..MAX_TRACER_HEIGHT_BANDS
+
+# tropopause
+import ..TropopauseParameters
+import ..set_tropopause_height!
+
+# tagging_model
+import ..AtmosTagging
+import ..TaggingModel
+import ..tag_name
+import ..region_tag_state_names
 
 # surface temperature
 import ..SurfaceConditions

@@ -28,6 +28,7 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Utilities" begin @time include("utilities.jl") end
     @safetestset "Variable manipulations" begin @time include("variable_manipulations_tests.jl") end
     @safetestset "Tracer processes" begin @time include("tracer_processes_tests.jl") end
+    @safetestset "Tagged tracers" begin @time include("tagged_tracers_tests.jl") end
     @safetestset "Parameter tests" begin @time include("parameter_tests.jl") end
 
     @safetestset "Check TOML path" begin @time include("test_output_yaml_path.jl") end
@@ -73,6 +74,7 @@ if TEST_GROUP in ("dynamics", "all")
     # Conservation tests
     @safetestset "Mass conservation" begin @time include("conservation/mass_conservation.jl") end
     @safetestset "Energy conservation" begin @time include("conservation/energy_conservation.jl") end
+    @safetestset "Tagged tracers integration" begin @time include("tagged_tracers_integration.jl") end
 end
 
 # ============================================================================
@@ -97,6 +99,7 @@ if TEST_GROUP in ("parameterizations", "all")
     # Chemistry tests
     @safetestset "Chemistry tendency tests" begin @time include("parameterized_tendencies/chemistry/chemistry_tendency.jl") end
     @safetestset "Passive stratospheric tracers" begin @time include("parameterized_tendencies/chemistry/passive_stratospheric_tracers.jl") end
+    @safetestset "Equatorial stratospheric tracer" begin @time include("parameterized_tendencies/chemistry/equatorial_stratospheric_tracer.jl") end
 
     # Gravity wave: Beres convective NOGW pure-function unit tests (no simulation
     # build). The simulation-based Beres tests (test_beres_single_column.jl,

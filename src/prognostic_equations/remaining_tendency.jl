@@ -230,11 +230,17 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
 
     # Held Suarez tendencies
     @. Yₜ.c.uₕ += hs_tendency_uₕ
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     @. Yₜ.c.ρe_tot += hs_tendency_ρe_tot
+    attribute_tagged_ρe_tot!(Yₜ, p, :held_suarez)
 
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     subsidence_tendency!(Yₜ, Y, p, t, p.atmos.subsidence)
+    attribute_tagged_ρe_tot!(Yₜ, p, :subsidence)
 
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     @. Yₜ.c.ρe_tot += bc_lsa_tend_ρe_tot
+    attribute_tagged_ρe_tot!(Yₜ, p, :large_scale_advection)
     if microphysics_model isa MoistMicrophysics
         bc_lsa_tend_ρq_tot = large_scale_advection_tendency_ρq_tot(lsa_args...)
         @. Yₜ.c.ρq_tot += bc_lsa_tend_ρq_tot
@@ -242,7 +248,9 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
 
     @. Yₜ.c.uₕ += edmf_cor_tend_uₕ
 
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     external_forcing_tendency!(Yₜ, Y, p, t, p.atmos.external_forcing)
+    attribute_tagged_ρe_tot!(Yₜ, p, :external_forcing)
 
     if p.atmos.diff_mode == Explicit()
         vertical_diffusion_boundary_layer_tendency!(
@@ -255,9 +263,13 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
         edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
     end
 
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     surface_flux_tendency!(Yₜ, Y, p, t)
+    attribute_tagged_ρe_tot!(Yₜ, p, :surface_flux)
 
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     radiation_tendency!(Yₜ, Y, p, t, p.atmos.radiation_mode)
+    attribute_tagged_ρe_tot!(Yₜ, p, :radiation)
     edmfx_tke_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
 
     # Chemistry tendencies
@@ -265,6 +277,7 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
 
     # Unified microphysics tendencies (cloud condensation + precipitation)
     if p.atmos.microphysics_tendency_timestepping == Explicit()
+        snapshot_tagged_ρe_tot!(p, Yₜ)
         microphysics_tendency!(
             Yₜ,
             Y,
@@ -273,6 +286,7 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
+        attribute_tagged_ρe_tot!(Yₜ, p, :microphysics)
     end
 
     non_orographic_gravity_wave_apply_tendency!(

@@ -1,0 +1,117 @@
+# This file is included in Diagnostics.jl
+
+# Tropopause height and stratospheric passive tracers.
+#
+# The global burden, source and loss of each tracer — the quantities the
+# lifetime is computed from — are written by the tracer-budget callback rather
+# than by these diagnostics, because they are scalars per tracer rather than
+# fields (see `stratospheric_passive_tracers.jl`).
+
+###
+# Tropopause height (2d)
+###
+"""
+    tropopause_parameters(chemistry_model)
+
+The `TropopauseParameters` the
+tropopause diagnostic should use. A model that carries its own — the
+stratospheric passive tracers, whose sink is defined by it — supplies them, so
+that the diagnostic reports exactly the surface the tracers see. Everything
+else falls back to the defaults.
+"""
+tropopause_parameters(chemistry_model) = TropopauseParameters{Float64}()
+tropopause_parameters(chemistry_model::StratosphericPassiveTracers) =
+    chemistry_model.tropopause
+
+"""
+    compute_ztrop!(out, state, cache, time)
+
+WMO lapse-rate tropopause height, in m. Also the lower boundary of the
+stratospheric passive tracers, which are removed at and below it.
+"""
+function compute_ztrop!(out, state, cache, time)
+    ᶜz_tropopause = cache.scratch.ᶜtemp_scalar_2
+    set_tropopause_height!(
+        ᶜz_tropopause,
+        cache.scratch.ᶜtemp_scalar,
+        cache.precomputed.ᶜT,
+        tropopause_parameters(cache.atmos.chemistry_model),
+    )
+    # `ᶜz_tropopause` holds the same value at every level of a column, so any
+    # level carries the answer. Copy the lowest one onto the surface space the
+    # other two-dimensional diagnostics are written on, through the data
+    # layouts, since the center and face level spaces are distinct objects
+    # over the same horizontal grid.
+    surface = cache.scratch.ᶠtemp_field_level
+    Fields.field_values(surface) .=
+        Fields.field_values(Fields.level(ᶜz_tropopause, 1))
+    isnothing(out) && return copy(surface)
+    out .= surface
+    return out
+end
+
+add_diagnostic_variable!(
+    short_name = "ztrop",
+    long_name = "Tropopause Height",
+    standard_name = "tropopause_altitude",
+    units = "m",
+    comments = "Height of the WMO lapse-rate (thermal) tropopause: the lowest \
+                level above 5 km where the lapse rate falls to 2 K/km and the \
+                mean lapse rate over the next 2 km stays below it. Columns \
+                where no such level exists fall back to a latitude-dependent \
+                climatology.",
+    compute! = compute_ztrop!,
+)
+
+###
+# Stratospheric passive tracers (3d)
+###
+
+# `ρq_gas_y01z03` -> "q_gas_y01z03"
+specific_tracer_short_name(ρχ_name) =
+    String(ρχ_name)[(ncodeunits("ρ") + 1):end]
+
+"""
+    compute_stratospheric_tracer(state, cache, time, Val(ρχ_name))
+
+Mass fraction of one stratospheric passive tracer. `ρχ_name` is wrapped in a
+`Val` when the diagnostic is registered, so the property lookup specializes
+per tracer.
+"""
+function compute_stratospheric_tracer(
+    state,
+    cache,
+    time,
+    ::Val{ρχ_name},
+) where {ρχ_name}
+    hasproperty(state.c, ρχ_name) || error_diagnostic_variable(
+        "Cannot compute $(specific_tracer_short_name(ρχ_name)): the state has \
+        no $ρχ_name. The stratospheric passive tracer grid is set by \
+        tracer_source_latitude_bands and tracer_source_height_bands.",
+    )
+    ᶜρχ = getproperty(state.c, ρχ_name)
+    return @. lazy(specific(ᶜρχ, state.c.ρ))
+end
+
+# Diagnostics are registered at load time, before any configuration is read,
+# so they cover a fixed grid of source regions rather than the grid of the
+# model at hand. `StratosphericPassiveTracers` refuses to build a larger grid
+# than this, so every tracer that can exist has an output variable.
+for latitude_index in 1:MAX_TRACER_LATITUDE_BANDS,
+    height_index in 1:MAX_TRACER_HEIGHT_BANDS
+
+    ρχ_name = stratospheric_tracer_symbol(latitude_index, height_index)
+    ρχ_key = Val(ρχ_name)
+
+    add_diagnostic_variable!(;
+        short_name = specific_tracer_short_name(ρχ_name),
+        long_name = "Stratospheric Passive Tracer, Latitude Band \
+                     $latitude_index, Height Band $height_index",
+        units = "kg kg^-1",
+        comments = "Mass fraction of the inert tracer produced in latitude \
+                    band $latitude_index and height band $height_index above \
+                    the tropopause, and removed below the tropopause.",
+        compute = (state, cache, time) ->
+            compute_stratospheric_tracer(state, cache, time, ρχ_key),
+    )
+end

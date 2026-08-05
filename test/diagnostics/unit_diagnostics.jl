@@ -378,8 +378,8 @@ VALID_CASES = [
         "hfes", "dsevi", "env_q_tot_variance", "env_temperature_variance",
         "env_q_tot_temperature_covariance", "env_q_tot_temperature_correlation",
     ), :dry)...,
-    # sphere-only (DSS / hypsography)
-    cases(("rv", "orog"), :sphere)...,
+    # sphere-only (DSS / hypsography / latitude-dependent tropopause fallback)
+    cases(("rv", "orog", "ztrop"), :sphere)...,
     # MoistMicrophysics, single path
     cases((
         "hus", "hur", "husv", "hussfc", "evspsbl", "hfls",
@@ -473,10 +473,26 @@ VALID_CASES = [
 # are unavailable. Move these back to VALID_CASES once 2M/2M+P3 compatibility
 # with CloudMicrophysics 0.37 is restored.
 #
+# stratospheric_tracer_diagnostics.jl registers one variable per (latitude
+# band, height band) source region, up to the largest grid the chemistry model
+# allows, so that every tracer a configuration can create has an output
+# variable. Only the regions a given run configures are ever computable, so
+# they are covered by
+# test/parameterized_tendencies/chemistry/passive_stratospheric_tracers.jl,
+# which builds the model, rather than by a fixture here.
+STRATOSPHERIC_TRACER_NAMES = [
+    CA.Diagnostics.specific_tracer_short_name(
+        CA.stratospheric_tracer_symbol(i, k),
+    ) for i in 1:(CA.MAX_TRACER_LATITUDE_BANDS),
+    k in 1:(CA.MAX_TRACER_HEIGHT_BANDS)
+]
+
 SKIP_CASES = Set([
     # tracer_diagnostics.jl
     "loadss", "mmrbcpi", "mmrbcpo", "mmrdust", "mmrocpi", "mmrocpo",
     "mmrso4", "mmrss", "o3",
+    # stratospheric_tracer_diagnostics.jl
+    vec(STRATOSPHERIC_TRACER_NAMES)...,
     # 2M-only (temporarily disabled, see note above)
     "cdnc", "ncra", "cdncup", "cdncen", "ncraup", "ncraen",
     # negative_scalars_diagnostics.jl

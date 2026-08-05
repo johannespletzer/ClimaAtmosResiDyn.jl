@@ -74,6 +74,112 @@ changes are needed when adding a new tracer:
 All SGS tracers (cloud species and precipitation alike) receive the same
 reduced vertical diffusion coefficient (`α_vert_diff_microphysics`).
 
+## Stratospheric Passive Tracers and Their Lifetimes
+
+`chemistry_model: "stratospheric_passive_tracers"` adds a family of inert
+grid-scale tracers designed to measure how long air stays in the stratosphere.
+Each tracer has
+
+  - **one source**: a constant production of mass fraction inside one
+    (latitude band × height band) region, and
+  - **one sink**: relaxation to zero at and below the model tropopause.
+
+Because the source and the sink are the only terms, a tracer whose burden has
+stopped drifting satisfies `source = loss`, and its lifetime is
+
+```math
+\tau = \frac{M}{S}
+```
+
+with ``M`` the global burden (kg) and ``S`` the global source rate
+(kg s``^{-1}``). Multiplying ``S`` by a year gives the annual source rate the
+burden is divided by.
+
+### Source regions tile the domain
+
+Latitude bands have equal width and cover the sphere from pole to pole; height
+bands stack upwards from the local tropopause, and the topmost is open-ended,
+so it reaches the model top. The bands are half-open, so **every point above
+the tropopause belongs to exactly one source region** — the tracers together
+cover the whole modelled stratosphere and mesosphere, and no tracer's source
+lies inside the removal region.
+
+Measuring source heights from the local tropopause
+(`tracer_source_height_coordinate: "tropopause"`, the default) is what makes
+the coverage complete: the tropopause is 8 km lower at the poles than in the
+tropics, so bands at fixed altitude would either leave the extratropical
+lowermost stratosphere without a source or put the lowest tropical band below
+the tropopause. Set `"altitude"` for bands at fixed heights above sea level
+instead.
+
+| Configuration key                     | Meaning                                              |
+|:------------------------------------- |:---------------------------------------------------- |
+| `tracer_source_latitude_bands`        | Number of latitude bands (default 6)                 |
+| `tracer_source_height_bands`          | Number of height bands (default 8)                   |
+| `tracer_source_band_depth`            | Height band thickness in m (default 5000)            |
+| `tracer_source_lowest_band_base`      | Base of the lowest band above the reference, in m    |
+| `tracer_source_height_coordinate`     | `"tropopause"` or `"altitude"`                        |
+| `tracer_production_rate`              | Mass-fraction production inside a region, in s⁻¹     |
+| `tracer_loss_timescale`               | E-folding time of the removal below the tropopause   |
+| `dt_tracer_budget`                    | How often the budget table is written                |
+
+Tracer `(i, k)` is `Y.c.ρq_gas_y<i>z<k>` and is output as `q_gas_y<i>z<k>`.
+
+`tracer_production_rate` sets the magnitude of the tracers but **not** their
+lifetimes: the tracers are linear, so burden and source scale together and
+only their ratio is reported.
+
+### The lower boundary
+
+The tropopause is diagnosed online from the model temperature with the WMO
+lapse-rate definition — the lowest level whose lapse rate has fallen to 2 K/km
+and stays below it, on average, over the next 2 km — and is available as the
+`ztrop` diagnostic. `tropopause_lapse_rate_threshold`,
+`tropopause_consistency_depth`, `tropopause_search_min_height` and
+`tropopause_search_max_height` control it; the search bounds keep
+boundary-layer inversions and the stratopause from being mistaken for the
+tropopause.
+
+### Reading the results
+
+Every `dt_tracer_budget`, the burden, source rate and loss rate of each tracer
+are appended to `stratospheric_tracer_budget.csv` in the output directory,
+together with `lifetime`, `lifetime_years` and
+`imbalance = (source - loss) / source`.
+
+```
+julia --project=.buildkite post_processing/tracer_lifetimes.jl <output_dir>
+```
+
+prints one row per tracer and flags the tracers that are not yet in
+equilibrium. A tracer counts as equilibrated when both its imbalance and its
+burden drift — the change in burden over the averaging window, divided by the
+source — are near zero. Until then its lifetime is a lower bound, because its
+burden is still filling up.
+
+Expect this to take a while: stratospheric residence times are of order 1–5
+years, so a run needs several times that on top of the circulation's own
+spin-up. `config/example_configs/passive_stratospheric_tracers.yml` sets up a
+moist aquaplanet with RRTMGP radiation for exactly this, and
+`experiments/passive_stratospheric_tracers.jl` runs it; resubmitting the same
+configuration continues from the newest checkpoint.
+
+`config/model_configs/passive_stratospheric_tracers_ci.yml` is the two-day,
+9-tracer version that CI runs. Its lifetimes are meaningless — nothing is near
+equilibrium after two days — but it exercises the state assembly, the
+tropopause diagnosis, the source and sink, the budget table and the restart
+path, so it is the config to reach for when changing any of them.
+
+!!! note "Cost"
+
+    The tracers are grid-scale only — they get no SGS updraft counterparts,
+    which would multiply the EDMF state by the number of source regions. Even
+    so, `n_latitude_bands × n_height_bands` prognostic tracers is a large
+    state: the default 6 × 8 = 48 tracers add 48 fields to `Y.c` and, with
+    `implicit_diffusion: true`, 48 tridiagonal blocks to the Jacobian. Setting
+    `implicit_diffusion: false` removes those blocks if compile time or memory
+    becomes the binding constraint.
+
 ## Adding a New Passive Tracer
 
 To add a new passive tracer `A` that is transported through the full

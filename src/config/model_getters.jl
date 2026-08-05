@@ -997,16 +997,76 @@ end
 
 function AtmosChem(config::AtmosConfig)
     chem = config.parsed_args["chemistry_model"]
+    FT = eltype(config)
     chemistry_model = if isnothing(chem)
         nothing
     elseif chem == "passive"
         GasPhaseChem()
+    elseif chem == "stratospheric_passive_tracers"
+        get_stratospheric_passive_tracers(config.parsed_args, FT)
     else
         error(
-            """Unknown chemistry_model `$chem`. Expected: ~ | "passive".""",
+            """Unknown chemistry_model `$chem`. Expected: ~ | "passive" | \
+            "stratospheric_passive_tracers".""",
         )
     end
     return AtmosChem(; chemistry_model)
+end
+
+"""
+    get_stratospheric_passive_tracers(parsed_args, FT)
+
+Build the [`StratosphericPassiveTracers`](@ref) chemistry model from the
+`tracer_*` and `tropopause_*` configuration keys.
+"""
+function get_stratospheric_passive_tracers(parsed_args, ::Type{FT}) where {FT}
+    height_coordinate_name = parsed_args["tracer_source_height_coordinate"]
+    height_coordinate = if height_coordinate_name == "tropopause"
+        TropopauseRelativeHeight()
+    elseif height_coordinate_name == "altitude"
+        GeometricHeight()
+    else
+        error(
+            """Unknown tracer_source_height_coordinate \
+            `$height_coordinate_name`. Expected: "tropopause" | "altitude".""",
+        )
+    end
+
+    loss_timescale = time_to_seconds(parsed_args["tracer_loss_timescale"])
+    isfinite(loss_timescale) || error(
+        "tracer_loss_timescale must be finite; an infinite timescale removes \
+        the tracers' only sink, so they never reach equilibrium.",
+    )
+
+    tropopause = TropopauseParameters{FT}(;
+        lapse_rate_threshold = parsed_args["tropopause_lapse_rate_threshold"],
+        consistency_depth = parsed_args["tropopause_consistency_depth"],
+        search_min_height = parsed_args["tropopause_search_min_height"],
+        search_max_height = parsed_args["tropopause_search_max_height"],
+    )
+
+    return StratosphericPassiveTracers(
+        FT;
+        n_latitude_bands = parsed_args["tracer_source_latitude_bands"],
+        n_height_bands = parsed_args["tracer_source_height_bands"],
+        band_depth = parsed_args["tracer_source_band_depth"],
+        lowest_band_base = parsed_args["tracer_source_lowest_band_base"],
+        production_rate = parsed_args["tracer_production_rate"],
+        loss_timescale,
+        height_coordinate,
+        tropopause,
+    )
+end
+
+function AtmosTagging(config::AtmosConfig)
+    FT = eltype(config)
+    entries = config.parsed_args["tagged_tracers"]
+    tagging_model = if isnothing(entries) || isempty(entries)
+        nothing
+    else
+        TaggingModel(tagged_tracer_tuple(entries, FT))
+    end
+    return AtmosTagging(; tagging_model)
 end
 
 function COSPModel(config::AtmosConfig)

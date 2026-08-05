@@ -11,13 +11,14 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
   - `src/prognostic_equations/`: tendency accumulation and implicit/explicit splitting.
   - `src/parameterized_tendencies/`: parameterization implementations.
       + `microphysics/`: microphysics tendency orchestration, SGS quadrature, limiters, Jacobian.
+      + `chemistry/`: `chemistry.jl` holds the MUSICA-backed gas-phase hook; `stratospheric_passive_tracers.jl` holds the inert latitude/height-banded tracers used for stratospheric residence times (see [passive_tracers.md](src/passive_tracers.md)). Their lower boundary comes from `src/utils/tropopause.jl`.
       + `radiation/`: RRTMGP wrappers and idealized radiation (`held_suarez.jl`).
       + `gravity_wave_drag/`: non-orographic and orographic GWD.
       + `les_sgs_models/`: Smagorinsky–Lilly, anisotropic minimum dissipation, constant horizontal diffusion.
       + `sponge/`: Rayleigh and viscous sponge tendencies.
   - EDMF code lives in `src/cache/{prognostic,diagnostic}_edmf_precomputed_quantities.jl` and `src/prognostic_equations/edmfx_*.jl`, not under `parameterized_tendencies/`.
   - `src/callbacks/`, `src/diagnostics/`, `src/setups/`, `src/surface_conditions/`, `src/topography/`, `src/parameters/`, `src/utils/`: remaining domain subtrees. Search by physics/runtime concept first.
-  - `config/`: YAML/TOML config library. `default_configs/default_config.yml` is the schema baseline; `common_configs/` holds reusable numerics; `model_configs/`, `gpu_configs/`, `mpi_configs/`, `perf_configs/`, and `longrun_configs/` are scenario overlays.
+  - `config/`: YAML/TOML config library. `default_configs/default_config.yml` is the schema baseline; `common_configs/` holds reusable numerics; `example_configs/` holds run controls for script-based examples; `model_configs/`, `gpu_configs/`, `mpi_configs/`, `perf_configs/`, and `longrun_configs/` are scenario overlays.
   - `.buildkite/ci_driver.jl`: canonical run entry for CI-style simulations. It parses config, builds the simulation, runs `solve_atmos!`, and performs validation/output checks.
   - `.buildkite/pipeline.yml`: authoritative list of Buildkite jobs and their config combinations. Use it to see which config families are combined in automation. Branch dispatch is inline: each job step is gated `if: build.branch != "main"`, and a single `main`-only step moves reproducibility results into the reference store (so a merge does not re-run simulations). New top-level jobs must carry the `if: build.branch != "main"` gate.
   - `docs/make.jl` and `docs/src/`: Documenter entry point plus user/contributor docs. Good references for API usage and config recipes.

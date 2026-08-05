@@ -50,6 +50,7 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
         moisture_variables(ρ, physical_state, atmos_model.microphysics_model)...,
         precip_variables(ρ, physical_state, atmos_model.microphysics_model)...,
         chemistry_variables(ρ, physical_state, atmos_model.chemistry_model)...,
+        tagging_variables(ρe_tot, local_geometry, atmos_model.tagging_model)...,
     )
 end
 
@@ -108,12 +109,33 @@ chemistry_variables(ρ, physical_state, ::Nothing) = (;)
 chemistry_variables(ρ, physical_state, ::AbstractChemistryModel) =
     (; ρq_gas_A = ρ * physical_state.q_gas_A)
 
+# One grid-scale tracer per (latitude band, height band) source region, all
+# starting from zero: the tracers are defined entirely by their source and
+# their sub-tropopause sink, so any nonzero initial condition would only add a
+# transient to be waited out before equilibrium.
+@generated function chemistry_variables(
+    ρ,
+    physical_state,
+    ::StratosphericPassiveTracers{NY, NZ},
+) where {NY, NZ}
+    names = stratospheric_tracer_symbols(NY, NZ)
+    zero_exprs = map(_ -> :(zero(ρ)), names)
+    return :(NamedTuple{$names}(($(zero_exprs...),)))
+end
+
 """
 SGS chemistry tracers to include in the updraft NamedTuple.
 """
 chemistry_sgs_variables(physical_state, ::Nothing) = (;)
 chemistry_sgs_variables(physical_state, ::AbstractChemistryModel) =
     (; q_gas_A = physical_state.q_gas_A)
+
+# The stratospheric passive tracers are grid-scale only. They live in the
+# stratosphere, where the mass-flux subdomains carry no meaningful updraft, and
+# giving each of them an SGS counterpart would multiply the EDMF state by the
+# number of source regions for no transport that the grid-mean diffusion of
+# `passive_gs_tracer_names` does not already provide.
+chemistry_sgs_variables(physical_state, ::StratosphericPassiveTracers) = (;)
 
 # ============================================================================
 # Turbconv center dispatch

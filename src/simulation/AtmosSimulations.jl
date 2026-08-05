@@ -32,6 +32,10 @@ function setup_diagnostics_and_writers(
     (; default, additional, interpolation_num_points, output_at_levels) =
         diagnostics_config
 
+    # Tagged-tracer short names depend on the configured tag names, so they
+    # are registered here rather than at package load time
+    CAD.register_tagging_diagnostics!(model)
+
     all_diagnostics = []
 
     num_points = if isnothing(interpolation_num_points)
