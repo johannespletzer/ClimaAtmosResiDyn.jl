@@ -472,27 +472,11 @@ VALID_CASES = [
 # (src/cache/precomputed_quantities.jl), so their `:m2`/`:m2_pedmfx` fixtures
 # are unavailable. Move these back to VALID_CASES once 2M/2M+P3 compatibility
 # with CloudMicrophysics 0.37 is restored.
-#
-# stratospheric_tracer_diagnostics.jl registers one variable per (latitude
-# band, height band) source region, up to the largest grid the chemistry model
-# allows, so that every tracer a configuration can create has an output
-# variable. Only the regions a given run configures are ever computable, so
-# they are covered by
-# test/parameterized_tendencies/chemistry/passive_stratospheric_tracers.jl,
-# which builds the model, rather than by a fixture here.
-STRATOSPHERIC_TRACER_NAMES = [
-    CA.Diagnostics.specific_tracer_short_name(
-        CA.stratospheric_tracer_symbol(i, k),
-    ) for i in 1:(CA.MAX_TRACER_LATITUDE_BANDS),
-    k in 1:(CA.MAX_TRACER_HEIGHT_BANDS)
-]
 
 SKIP_CASES = Set([
     # tracer_diagnostics.jl
     "loadss", "mmrbcpi", "mmrbcpo", "mmrdust", "mmrocpi", "mmrocpo",
     "mmrso4", "mmrss", "o3",
-    # stratospheric_tracer_diagnostics.jl
-    vec(STRATOSPHERIC_TRACER_NAMES)...,
     # 2M-only (temporarily disabled, see note above)
     "cdnc", "ncra", "cdncup", "cdncen", "ncraup", "ncraen",
     # negative_scalars_diagnostics.jl
@@ -513,8 +497,18 @@ SKIP_CASES = Set([
 # — every name in ALL_DIAGNOSTICS must appear in exactly one table
 # ---------------------------------------------------------------------------
 
+# Tagged tracers and stratospheric passive tracers register their variables
+# during simulation setup, not at load time, so which of them are present
+# depends on what ran earlier in this process. They cannot be listed here, and
+# their own test files cover them.
+is_dynamically_registered(name) =
+    startswith(name, "e_tag_") || !isnothing(match(r"^q_gas_y\d+z\d+$", name))
+
 @testset "All diagnostic variables are accounted for" begin
-    all_names = Set(keys(CA.Diagnostics.ALL_DIAGNOSTICS))
+    all_names = Set(
+        name for name in keys(CA.Diagnostics.ALL_DIAGNOSTICS) if
+        !is_dynamically_registered(name)
+    )
     covered = Set(c.name for c in VALID_CASES) ∪ SKIP_CASES
     missing_ = setdiff(all_names, covered)
     unexpected_ = setdiff(covered, all_names)

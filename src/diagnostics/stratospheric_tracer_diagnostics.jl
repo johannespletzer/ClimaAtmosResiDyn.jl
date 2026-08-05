@@ -5,6 +5,10 @@
 # The tracer-budget callback, not these diagnostics, writes the global burden,
 # source and loss that the lifetime is computed from. Those are scalars per
 # tracer rather than fields (see `stratospheric_passive_tracers.jl`).
+#
+# The per-tracer variables are registered at simulation setup by
+# `register_stratospheric_tracer_diagnostics!`, not at load time, because the
+# source-region grid is configuration-dependent.
 
 ###
 # Tropopause height (2d)
@@ -92,25 +96,48 @@ function compute_stratospheric_tracer(
     return @. lazy(specific(ᶜρχ, state.c.ρ))
 end
 
-# Diagnostics are registered at load time, before any configuration is read,
-# so they cover a fixed grid of source regions rather than the model's own
-# grid. `StratosphericPassiveTracers` refuses to build a larger grid, so every
-# tracer that can exist has an output variable.
-for latitude_index in 1:MAX_TRACER_LATITUDE_BANDS,
-    height_index in 1:MAX_TRACER_HEIGHT_BANDS
+"""
+    register_stratospheric_tracer_diagnostics!(model::AtmosModel)
 
-    ρχ_name = stratospheric_tracer_symbol(latitude_index, height_index)
-    ρχ_key = Val(ρχ_name)
+Register one `q_gas_y<i>z<k>` diagnostic per stratospheric passive tracer of
+`model`, the mass fraction of the tracer fed by source region `(i, k)`.
 
-    add_diagnostic_variable!(;
-        short_name = specific_tracer_short_name(ρχ_name),
-        long_name = "Stratospheric Passive Tracer, Latitude Band \
-                     $latitude_index, Height Band $height_index",
-        units = "kg kg^-1",
-        comments = "Mass fraction of the inert tracer produced in latitude \
-                    band $latitude_index and height band $height_index above \
-                    the tropopause, and removed below the tropopause.",
-        compute = (state, cache, time) ->
-            compute_stratospheric_tracer(state, cache, time, ρχ_key),
-    )
+Which tracers exist depends on the configured source-region grid, so this is
+called during simulation setup rather than at package load time (see
+`setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`).
+Registering from the model is what lets the grid be any size: a fixed set
+registered at load time would have to cap it.
+
+A no-op unless the chemistry model is `StratosphericPassiveTracers`. Entries
+that already exist are kept, since a tracer's compute function depends only on
+its name.
+"""
+register_stratospheric_tracer_diagnostics!(model::AtmosModel) =
+    register_stratospheric_tracer_diagnostics!(model.chemistry_model)
+register_stratospheric_tracer_diagnostics!(_) = nothing
+function register_stratospheric_tracer_diagnostics!(
+    chemistry_model::StratosphericPassiveTracers,
+)
+    for latitude_index in 1:n_latitude_bands(chemistry_model),
+        height_index in 1:n_height_bands(chemistry_model)
+
+        ρχ_name = stratospheric_tracer_symbol(latitude_index, height_index)
+        short_name = specific_tracer_short_name(ρχ_name)
+        haskey(ALL_DIAGNOSTICS, short_name) && continue
+        ρχ_key = Val(ρχ_name)
+
+        add_diagnostic_variable!(;
+            short_name,
+            long_name = "Stratospheric Passive Tracer, Latitude Band \
+                         $latitude_index, Height Band $height_index",
+            units = "kg kg^-1",
+            comments = "Mass fraction of the inert tracer produced in latitude \
+                        band $latitude_index and height band $height_index \
+                        above the tropopause, and removed below the \
+                        tropopause.",
+            compute = (state, cache, time) ->
+                compute_stratospheric_tracer(state, cache, time, ρχ_key),
+        )
+    end
+    return nothing
 end

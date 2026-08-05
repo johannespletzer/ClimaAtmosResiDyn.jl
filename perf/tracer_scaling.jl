@@ -149,20 +149,34 @@ const RESULT_FIELDS = (
     :maxrss_gb,
 )
 
-# A worker process reports one row on stdout; the driver parses it back.
-print_result(r) =
-    println("TRACER_SCALING_RESULT ", join((getfield(r, f) for f in RESULT_FIELDS), " "))
+# A worker writes its row to a file rather than to a pipe the driver reads, so
+# that both of its streams stay attached to the terminal. Nothing is printed
+# between "Built cache" and the end of the first step -- that gap is the
+# tendency, Jacobian and solve compiling, and it is the longest silence in the
+# run -- so swallowing the worker's output makes a slow point look like a hang.
+write_result(r) = write(
+    ENV["TRACER_SCALING_OUTPUT"],
+    join((getfield(r, f) for f in RESULT_FIELDS), " "),
+)
 
-function parse_result(output)
-    for line in eachline(IOBuffer(output))
-        startswith(line, "TRACER_SCALING_RESULT") || continue
-        values = parse.(Float64, split(line)[2:end])
-        return NamedTuple{RESULT_FIELDS}(Tuple(values))
-    end
-    return nothing
+function read_result(path)
+    isfile(path) || return nothing
+    values = parse.(Float64, split(read(path, String)))
+    length(values) == length(RESULT_FIELDS) || return nothing
+    return NamedTuple{RESULT_FIELDS}(Tuple(values))
 end
 
+"""
+    run_worker(n_latitude_bands, n_height_bands)
+
+Measure one point of the sweep in a fresh process, or `nothing` if it failed or
+outlived `TRACER_SCALING_TIMEOUT` seconds. A timeout is not a failure of the
+script: at some tracer count compilation stops finishing in any useful time,
+and finding that point is the reason this exists.
+"""
 function run_worker(n_latitude_bands, n_height_bands)
+    n_tracers = n_latitude_bands * n_height_bands
+    result_file = tempname()
     command = Cmd([
         first(Base.julia_cmd()),
         "--project=$(Base.active_project())",
@@ -171,19 +185,26 @@ function run_worker(n_latitude_bands, n_height_bands)
     ])
     environment = copy(ENV)
     environment["TRACER_SCALING_BANDS"] = "$(n_latitude_bands),$(n_height_bands)"
-    output = IOBuffer()
-    # The worker's stderr is left attached, so a failure is visible as it happens
-    # rather than being swallowed into the buffer this parses.
-    pipe = pipeline(setenv(command, environment); stdout = output, stderr = stderr)
-    success(pipe) || return nothing
-    return parse_result(String(take!(output)))
+    environment["TRACER_SCALING_OUTPUT"] = result_file
+
+    timeout = parse(Float64, get(ENV, "TRACER_SCALING_TIMEOUT", "5400"))
+    process = run(setenv(command, environment); wait = false)
+    killer = Timer(timeout) do _
+        if process_running(process)
+            @warn "no result after $(timeout) s; killing this point" n_tracers
+            kill(process, Base.SIGKILL)
+        end
+        return nothing
+    end
+    wait(process)
+    close(killer)
+
+    result = read_result(result_file)
+    rm(result_file; force = true)
+    return result
 end
 
-function report(results)
-    baseline = findfirst(r -> r.n_tracers == 0, results)
-    baseline_step = isnothing(baseline) ? nothing : results[baseline].step_s
-
-    println()
+print_header() = begin
     println("=" ^ 96)
     @printf(
         "%9s %10s %10s %11s %11s %10s %9s %9s\n",
@@ -195,42 +216,72 @@ function report(results)
         "", "(s)", "compile", "(s)", "compile", "(s)", "", "(GB)",
     )
     println("-" ^ 96)
-    for r in results
-        overhead =
-            isnothing(baseline_step) || baseline_step == 0 ? NaN :
-            100 * (r.step_s - baseline_step) / baseline_step
-        # `%.0f` for the tracer count: it is an `Int` in process and a `Float64`
-        # when parsed back from a worker.
-        @printf(
-            "%9.0f %10.1f %10.1f %11.1f %11.1f %10.3f %8.0f%% %9.2f\n",
-            r.n_tracers, r.setup_s, r.setup_compile_s, r.first_step_s,
-            r.first_step_compile_s, r.step_s, overhead, r.maxrss_gb,
-        )
+end
+
+function print_row(r, baseline_step)
+    overhead =
+        isnothing(baseline_step) || baseline_step == 0 ? NaN :
+        100 * (r.step_s - baseline_step) / baseline_step
+    # `%.0f` for the tracer count: it is an `Int` in process and a `Float64`
+    # when read back from a worker.
+    @printf(
+        "%9.0f %10.1f %10.1f %11.1f %11.1f %10.3f %8.0f%% %9.2f\n",
+        r.n_tracers, r.setup_s, r.setup_compile_s, r.first_step_s,
+        r.first_step_compile_s, r.step_s, overhead, r.maxrss_gb,
+    )
+end
+
+baseline_step_of(results) =
+    let baseline = findfirst(r -> r.n_tracers == 0, results)
+        isnothing(baseline) ? nothing : results[baseline].step_s
     end
+
+function report(results)
+    println()
+    print_header()
+    foreach(r -> print_row(r, baseline_step_of(results)), results)
     println("=" ^ 96)
     println()
     println("Read the compile columns for whether more tracers can be added at all,")
     println("and `vs base` for whether splitting them across runs is affordable.")
-    println("The 12 x 12 = 144 row is the largest grid the model currently accepts.")
+    println("A point that timed out is absent: that is a result, not a gap.")
 end
 
 if haskey(ENV, "TRACER_SCALING_BANDS")
     bands = parse.(Int, split(ENV["TRACER_SCALING_BANDS"], ','))
-    print_result(measure(bands[1], bands[2]))
+    write_result(measure(bands[1], bands[2]))
 else
     in_process = get(ENV, "TRACER_SCALING_INPROCESS", "0") == "1"
+    log_file = get(ENV, "TRACER_SCALING_LOG", "tracer_scaling_results.txt")
     results = NamedTuple[]
+
     for (n_latitude_bands, n_height_bands) in BAND_GRIDS
         n_tracers = n_latitude_bands * n_height_bands
         println("--- measuring $(n_tracers) tracers ---")
+        println("    (no output until the first step finishes compiling)")
         result =
             in_process ? measure(n_latitude_bands, n_height_bands) :
             run_worker(n_latitude_bands, n_height_bands)
         if isnothing(result)
-            println("    failed; skipping (see the error above)")
-        else
-            push!(results, result)
+            println("    no result for $(n_tracers) tracers; continuing")
+            continue
+        end
+        push!(results, result)
+
+        # Each row is printed and appended as soon as it exists, so that a sweep
+        # stopped part-way -- by a timeout, an out-of-memory kill or Ctrl-C --
+        # still leaves behind everything it did measure.
+        print_header()
+        print_row(result, baseline_step_of(results))
+        open(log_file, "a") do io
+            println(io, join((getfield(result, f) for f in RESULT_FIELDS), " "))
         end
     end
-    isempty(results) || report(results)
+
+    if isempty(results)
+        println("No points completed.")
+    else
+        report(results)
+        println("Rows also appended to $(log_file).")
+    end
 end

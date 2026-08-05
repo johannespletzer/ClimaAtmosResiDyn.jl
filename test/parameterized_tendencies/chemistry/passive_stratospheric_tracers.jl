@@ -144,16 +144,31 @@ end
     @test names[end] == :ρq_gas_y06z08
     @test allunique(names)
 
-    # Every tracer has a diagnostic to output it through.
+    # Every tracer has a diagnostic to output it through, registered from the
+    # model rather than at load time.
+    CA.Diagnostics.register_stratospheric_tracer_diagnostics!(chemistry_model)
     for name in names
         short_name = String(name)[(ncodeunits("ρ") + 1):end]
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, short_name)
     end
 
-    @test_throws ErrorException CA.StratosphericPassiveTracers(
+    # Registering from the model means the grid has no fixed upper bound: a
+    # 500-tracer grid registers as readily as the 48-tracer one above.
+    large_model = CA.StratosphericPassiveTracers(
         FT;
-        n_latitude_bands = CA.MAX_TRACER_LATITUDE_BANDS + 1,
+        n_latitude_bands = 20,
+        n_height_bands = 25,
+        latitude_width = 5,
     )
+    @test CA.n_tracers(large_model) == 500
+    CA.Diagnostics.register_stratospheric_tracer_diagnostics!(large_model)
+    @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "q_gas_y20z25")
+
+    # Registration is a no-op for a model without passive tracers.
+    @test isnothing(
+        CA.Diagnostics.register_stratospheric_tracer_diagnostics!(nothing),
+    )
+
     @test_throws ErrorException CA.StratosphericPassiveTracers(
         FT;
         n_height_bands = 0,

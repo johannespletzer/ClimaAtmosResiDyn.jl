@@ -44,12 +44,6 @@ they are produced, so their lifetimes approach `loss_timescale`.
 """
 struct GeometricHeight end
 
-# Diagnostics are registered once, at load time, for a fixed grid of source
-# regions (see `stratospheric_tracer_diagnostics.jl`); a model with more bands
-# than this would carry tracers with no way to output them.
-const MAX_TRACER_LATITUDE_BANDS = 12
-const MAX_TRACER_HEIGHT_BANDS = 12
-
 """
     StratosphericPassiveTracers{NY, NZ, FT, HC, TP} <: AbstractChemistryModel
 
@@ -139,14 +133,6 @@ function StratosphericPassiveTracers(
         error("n_latitude_bands must be at least 1, got $n_latitude_bands")
     n_height_bands >= 1 ||
         error("n_height_bands must be at least 1, got $n_height_bands")
-    n_latitude_bands <= MAX_TRACER_LATITUDE_BANDS || error(
-        "n_latitude_bands must be at most $MAX_TRACER_LATITUDE_BANDS \
-        (diagnostics are registered up to that many bands), got $n_latitude_bands",
-    )
-    n_height_bands <= MAX_TRACER_HEIGHT_BANDS || error(
-        "n_height_bands must be at most $MAX_TRACER_HEIGHT_BANDS \
-        (diagnostics are registered up to that many bands), got $n_height_bands",
-    )
     latitude_width > 0 ||
         error("latitude_width must be positive, got $latitude_width")
     band_depth > 0 || error("band_depth must be positive, got $band_depth")
