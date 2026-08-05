@@ -501,6 +501,7 @@ tracer_budget_header() = join(
         "loss",
         "lifetime",
         "lifetime_years",
+        "lifetime_from_loss",
         "imbalance",
     ),
     ",",
@@ -537,10 +538,20 @@ function write_tracer_budget!(output_dir, t, chemistry_model, budget)
 
             tracer_index += 1
             source_rate = source[tracer_index]
+            loss_rate = loss[tracer_index]
             lifetime = source_rate > 0 ? burden[tracer_index] / source_rate : NaN
+            # `burden / loss` is the same lifetime measured against the sink
+            # instead of the source. The two agree only in equilibrium, and
+            # before it they bracket the answer: while the tracer is still
+            # filling, `burden ≈ source * t` makes `burden / source` simply the
+            # elapsed time, rising towards the lifetime from below, whereas the
+            # sink has barely started, so `burden / loss` falls towards it from
+            # above. Watching the two converge is the cheapest way to tell how
+            # much longer a run needs.
+            lifetime_from_loss =
+                loss_rate > 0 ? burden[tracer_index] / loss_rate : NaN
             imbalance =
-                source_rate > 0 ?
-                (source_rate - loss[tracer_index]) / source_rate : NaN
+                source_rate > 0 ? (source_rate - loss_rate) / source_rate : NaN
             # The outermost latitude edges are infinite so that the bands
             # partition the sphere; report them as the poles they stand for.
             println(
@@ -555,9 +566,10 @@ function write_tracer_budget!(output_dir, t, chemistry_model, budget)
                         chemistry_model.height_upper_edges[k],
                         burden[tracer_index],
                         source_rate,
-                        loss[tracer_index],
+                        loss_rate,
                         lifetime,
                         lifetime / SECONDS_PER_YEAR,
+                        lifetime_from_loss,
                         imbalance,
                     ),
                     ",",

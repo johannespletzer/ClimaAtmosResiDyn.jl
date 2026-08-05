@@ -144,8 +144,16 @@ tropopause.
 
 Every `dt_tracer_budget`, the burden, source rate and loss rate of each tracer
 are appended to `stratospheric_tracer_budget.csv` in the output directory,
-together with `lifetime`, `lifetime_years` and
+together with `lifetime`, `lifetime_years`, `lifetime_from_loss` and
 `imbalance = (source - loss) / source`.
+
+`lifetime` and `lifetime_from_loss` are the same ratio measured against the
+source and against the sink. They agree only in equilibrium, and before it they
+bracket the answer from opposite sides: a tracer that is still filling has
+`burden ≈ source × t`, so `lifetime` is simply the elapsed time — a two-day run
+reports a two-day lifetime, which is arithmetic rather than a result — while
+the lagging sink makes `lifetime_from_loss` start enormous and fall. The gap
+between them closing is the signal that the run is long enough.
 
 ```
 julia --project=.buildkite post_processing/tracer_lifetimes.jl <output_dir>

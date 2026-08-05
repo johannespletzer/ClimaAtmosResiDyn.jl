@@ -18,10 +18,23 @@ The lifetime of a tracer whose source and sink balance is
 
     τ = burden / source
 
-The run has reached that state when two things have settled: the source–loss
-imbalance, and the burden itself. Both are reported, because a tracer can pass
-one and fail the other — an imbalance near zero at a single output time says
-little if the burden is still climbing.
+Away from that balance the same ratio measured against the sink,
+`burden / loss`, brackets it from the other side, and the two are reported
+side by side as `tau_src` and `tau_los`:
+
+  - While the tracer is still filling, `burden ≈ source * t`, so `tau_src` is
+    just the elapsed time. It rises towards τ from below, and a short run will
+    report its own length as the lifetime — that is arithmetic, not a result.
+  - The sink lags the source, so `tau_los` starts enormous and falls towards τ
+    from above.
+
+They meet at equilibrium. Watching the gap close is the cheapest way to judge
+how much longer a run needs, long before either number is trustworthy.
+
+Equilibrium itself is called on two measures: the source–loss imbalance, and
+the drift of the burden. Both are reported, because a tracer can pass one and
+fail the other — an imbalance near zero at a single output time says little if
+the burden is still climbing.
 
 This script only needs the budget table, which is written every
 `dt_tracer_budget` while the run proceeds, so it can be used to decide whether
@@ -148,6 +161,7 @@ function tracer_lifetime(series::TracerBudgetSeries; window_fraction = 0.25)
     loss = sum(@view series.loss[window]) / length(window)
 
     lifetime = source > 0 ? burden / source : NaN
+    lifetime_from_loss = loss > 0 ? burden / loss : NaN
     imbalance = source > 0 ? (source - loss) / source : NaN
 
     Δt = series.time[n] - series.time[first_index]
@@ -165,6 +179,8 @@ function tracer_lifetime(series::TracerBudgetSeries; window_fraction = 0.25)
         loss,
         lifetime,
         lifetime_years = lifetime / SECONDS_PER_YEAR,
+        lifetime_from_loss,
+        lifetime_from_loss_years = lifetime_from_loss / SECONDS_PER_YEAR,
         imbalance,
         burden_drift,
         window_start = series.time[first_index],
@@ -188,9 +204,9 @@ function tracer_lifetime_summary(path; window_fraction = 0.25, tolerance = 0.05)
     results = [tracer_lifetime(series[name]; window_fraction) for name in order]
 
     @printf(
-        "%-14s %8s %8s %10s %10s %12s %10s %10s %6s\n",
+        "%-14s %8s %8s %9s %9s %12s %11s %11s %8s %7s\n",
         "tracer", "lat_lo", "lat_hi", "h_lo[km]", "h_hi[km]",
-        "burden[kg]", "tau[yr]", "imbal", "drift",
+        "burden[kg]", "tau_src[yr]", "tau_los[yr]", "imbal", "drift",
     )
     is_equilibrated(r) =
         isfinite(r.imbalance) &&
@@ -204,10 +220,11 @@ function tracer_lifetime_summary(path; window_fraction = 0.25, tolerance = 0.05)
             @sprintf("%.1f", r.height_upper / 1000) : "top"
         marker = is_equilibrated(r) ? "" : "  (not equilibrated)"
         @printf(
-            "%-14s %8.1f %8.1f %10.1f %10s %12.4e %10.3f %10.3f %6.3f %s\n",
+            "%-14s %8.1f %8.1f %9.1f %9s %12.4e %11.3f %11.3f %8.3f %7.3f %s\n",
             r.name, r.latitude_lower, r.latitude_upper,
             r.height_lower / 1000, height_upper,
-            r.burden, r.lifetime_years, r.imbalance, r.burden_drift, marker,
+            r.burden, r.lifetime_years, r.lifetime_from_loss_years,
+            r.imbalance, r.burden_drift, marker,
         )
     end
 
