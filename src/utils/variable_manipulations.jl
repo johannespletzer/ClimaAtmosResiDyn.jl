@@ -152,6 +152,25 @@ function ᶜspecific_gs_tracers(Y)
 end
 
 """
+    allocate_ᶜspecific_gs_tracers(Y, FT)
+
+Uninitialized center `Field` with the same element type as
+`Base.materialize(ᶜspecific_gs_tracers(Y))`.
+
+Use this whenever only the storage is needed, not the values. Materializing the
+lazy broadcast instead fuses every grid-scale tracer into one `NamedTuple`, and
+past roughly 32 tracers the recursive `_getindex` over its argument tuple stops
+inferring. On a GPU the kernel then calls `gpu_gc_pool_alloc`, which is invalid
+IR, so the run fails at cache construction rather than at run time.
+"""
+function allocate_ᶜspecific_gs_tracers(Y, ::Type{FT}) where {FT}
+    isempty(gs_tracer_names(Y)) && return Base.materialize(ᶜempty(Y))
+    χ_symbols =
+        unrolled_map(MatrixFields.extract_first, specific_gs_tracer_names(Y))
+    return similar(Y.c, NamedTuple{χ_symbols, NTuple{length(χ_symbols), FT}})
+end
+
+"""
     foreach_gs_tracer(f, Y_or_similar_values...)
 
 Applies a function `f` to each grid-scale tracer in the state `Y` or any similar

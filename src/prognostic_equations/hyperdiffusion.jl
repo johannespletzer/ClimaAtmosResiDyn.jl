@@ -44,7 +44,11 @@ function hyperdiffusion_cache(Y, ::Hyperdiffusion, turbconv_model)
         ᶜ∇²q_vap = similar(Y.c, FT),
         ᶜ∇²q_liq = similar(Y.c, FT),
         ᶜ∇²q_ice = similar(Y.c, FT),
-        ᶜ∇²specific_tracers = Base.materialize(ᶜspecific_gs_tracers(Y)),
+        # Allocated, not materialized from `ᶜspecific_gs_tracers(Y)`: only the
+        # element type is needed here, and the fused NamedTuple broadcast does
+        # not compile on a GPU once there are more than ~32 tracers.
+        # `prep_tracer_hyperdiffusion_tendency!` fills this one tracer at a time.
+        ᶜ∇²specific_tracers = allocate_ᶜspecific_gs_tracers(Y, FT),
     )
 
     # Sub-grid scale quantities. SGS mse uses the same dry-static-energy +

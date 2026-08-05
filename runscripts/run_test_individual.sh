@@ -11,7 +11,8 @@ setenv JULIA_DEPOT_PATH ${HOME}/.julia/depots/levante-cpu
 cd ~/git/ClimaAtmosResiDyn.jl
 
 # Individual files
-julia +1.11 --project=.buildkite test/parameterized_tendencies/chemistry/passive_stratospheric_tracers.jl
+#julia +1.11 --project=.buildkite test/parameterized_tendencies/chemistry/passive_stratospheric_tracers.jl
+julia +1.11 --project=.buildkite perf/tracer_scaling.jl
 
 # All tests in folder
 #setenv TEST_GROUP parameterizations
