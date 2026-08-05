@@ -1,0 +1,235 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=tracer-gpu
+#SBATCH --account=bd1062
+#SBATCH --partition=gpu
+#SBATCH --constraint=a100_80
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-task=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=30G
+#SBATCH --hint=nomultithread
+#SBATCH --time=04:00:00
+#SBATCH --output=tracer-gpu-%j.out
+#SBATCH --error=tracer-gpu-%j.err
+### #SBATCH --mail-type=FAIL
+
+source /sw/etc/profile.levante
+
+set -euo pipefail
+
+# Paths may be overridden from the environment, e.g.
+#   SCRIPT=experiments/my_run.jl sbatch runscripts/xmodel.4gpus
+# ROOT defaults to the repository containing this script.
+# ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+ROOT="/home/b/b309159/git/ClimaAtmosResiDyn.jl/"
+PROJECT="${PROJECT:-${ROOT}/.buildkite}"
+SCRIPT="${SCRIPT:-${ROOT}/experiments/passive_stratospheric_tracers.jl}"
+JULIA="${JULIA:-$(command -v julia || true)}"
+
+# juliaup channel to run, e.g. "+1.11". Set JULIA_CHANNEL="" to use whatever
+# `julia` resolves to (the version check below still applies).
+JULIA_CHANNEL="${JULIA_CHANNEL:-+1.11}"
+
+# Per-stack Julia depot, written by runscripts/setup-julia-levante.tcsh. Each
+# stack has its own depot because the artifact override that repoints
+# OpenMPI_jll at the system MPI is depot-global, and the CPU and GPU stacks use
+# different MPI installations. Without this, the job silently falls back to the
+# bundled MPI in the default depot.
+JULIA_DEPOT_PATH="${JULIA_DEPOT_PATH:-${HOME}/.julia/depots/levante-gpu}"
+export JULIA_DEPOT_PATH
+
+# SLURM PMIx plugin. Open MPI 4.1.x links PMIx 3, so pmix_v3 is the exact
+# match; check with `ldd <libmpi> | grep pmix` and `srun --mpi=list` if a job
+# fails to launch.
+SRUN_MPI="${SRUN_MPI:-pmix_v3}"
+
+[[ -n "${JULIA}" && -x "${JULIA}" ]] || {
+    echo "Julia executable not found: '${JULIA}' (set JULIA=/path/to/julia)" >&2
+    exit 1
+}
+
+[[ -d "${PROJECT}" ]] || {
+    echo "Julia project not found: ${PROJECT}" >&2
+    exit 1
+}
+
+[[ -f "${SCRIPT}" ]] || {
+    echo "Experiment script not found: ${SCRIPT} (set SCRIPT=...)" >&2
+    exit 1
+}
+
+[[ -d "${JULIA_DEPOT_PATH}" ]] || {
+    echo "Julia depot not found: ${JULIA_DEPOT_PATH}" >&2
+    echo "Run 'runscripts/setup-julia-levante.tcsh gpu' on a login node first." >&2
+    exit 1
+}
+
+# The `.buildkite` environment pins dependencies per Julia minor version
+# (Manifest-v<major>.<minor>.toml). A mismatched Julia ignores that manifest and
+# re-resolves the dependency graph, which typically fails much later as a
+# MethodError while the configuration is built. Fail before queueing work.
+manifest="$(ls "${PROJECT}"/Manifest-v*.toml 2>/dev/null | head -n 1 || true)"
+
+if [[ -n "${manifest}" ]]; then
+    expected_version="$(basename "${manifest}")"
+    expected_version="${expected_version#Manifest-v}"
+    expected_version="${expected_version%.toml}"
+
+    actual_version="$(
+        "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} --startup-file=no \
+            -e 'print(VERSION.major, ".", VERSION.minor)'
+    )"
+
+    [[ "${actual_version}" == "${expected_version}" ]] || {
+        echo "ERROR: Julia ${actual_version} does not match the pinned manifest" >&2
+        echo "  ${manifest} expects ${expected_version}" >&2
+        echo "  install it ('juliaup add ${expected_version}') or set" >&2
+        echo "  JULIA_CHANNEL=+${expected_version}" >&2
+        exit 1
+    }
+fi
+
+module purge
+module load nvhpc/24.7-gcc-11.2.0
+module load openmpi/4.1.5-nvhpc-24.7
+
+# Prevent UCX from intercepting SIGSEGV used internally by Julia.
+export UCX_ERROR_SIGNALS="SIGILL,SIGBUS,SIGFPE"
+
+# Required for compatibility with CUDA-aware MPI / CUDA IPC.
+export JULIA_CUDA_MEMORY_POOL=none
+
+export JULIA_NUM_THREADS="${SLURM_CPUS_PER_TASK:-1}"
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+
+export CLIMACOMMS_DEVICE=CUDA
+export CLIMACOMMS_CONTEXT=MPI
+
+unset I_MPI_HYDRA_BOOTSTRAP || true
+unset I_MPI_HYDRA_BOOTSTRAP_EXEC_EXTRA_ARGS || true
+unset I_MPI_PMI || true
+unset I_MPI_PMI_LIBRARY || true
+
+# DKRZ-recommended Open MPI / UCX GPU settings.
+export OMPI_MCA_osc=ucx
+export OMPI_MCA_pml=ucx
+export OMPI_MCA_btl=self
+export OMPI_MCA_pml_ucx_opal_mem_hooks=1
+
+export UCX_RNDV_SCHEME=put_zcopy
+export UCX_RNDV_THRESH=16384
+export UCX_IB_GPU_DIRECT_RDMA=yes
+export UCX_TLS=cma,rc,mm,cuda_ipc,cuda_copy,gdr_copy
+export UCX_MEMTYPE_CACHE=n
+
+echo "Job ID:        ${SLURM_JOB_ID}"
+echo "Node:          ${SLURM_JOB_NODELIST}"
+echo "MPI ranks:     ${SLURM_NTASKS}"
+echo "CPUs per rank: ${SLURM_CPUS_PER_TASK:-1}"
+echo "Julia:         ${JULIA} ${JULIA_CHANNEL}"
+echo "Depot:         ${JULIA_DEPOT_PATH}"
+echo "Experiment:    ${SCRIPT}"
+echo "Start time:    $(date --iso-8601=seconds)"
+echo
+
+module list 2>&1
+
+echo
+echo "Open MPI extensions:"
+ompi_info -c | grep 'MPI extensions' || true
+
+echo
+echo "GPU allocation per rank:"
+
+srun \
+    --mpi="${SRUN_MPI}" \
+    --label \
+    --kill-on-bad-exit=1 \
+    bash -c '
+        echo "local-rank=${SLURM_LOCALID} CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-unset}"
+    '
+
+echo
+echo "CUDA/MPI device test:"
+
+srun \
+    --mpi="${SRUN_MPI}" \
+    --label \
+    --kill-on-bad-exit=1 \
+    "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
+    --startup-file=no \
+    --project="${PROJECT}" \
+    -e '
+        using MPI
+        using CUDA
+
+        MPI.Init()
+
+        rank = MPI.Comm_rank(MPI.COMM_WORLD)
+        size = MPI.Comm_size(MPI.COMM_WORLD)
+        visible = get(ENV, "CUDA_VISIBLE_DEVICES", "unset")
+
+        println(
+            "rank=$(rank)/$(size), " *
+            "libmpi=$(MPI.libmpi), " *
+            "CUDA-aware=$(MPI.has_cuda()), " *
+            "device=$(CUDA.device()), " *
+            "visible=$(visible)"
+        )
+
+        @assert size == parse(Int, ENV["SLURM_NTASKS"])
+        @assert MPI.has_cuda()
+        @assert CUDA.functional()
+
+        MPI.Barrier(MPI.COMM_WORLD)
+        MPI.Finalize()
+    '
+
+echo
+echo "Warming precompilation cache:"
+
+# Load once serially: the first import builds the precompile cache, and doing
+# that under srun makes every rank race for the same lock files. This also
+# fails legibly when the environment was never instantiated for this Julia
+# version (instantiate on a login node -- compute nodes usually have no
+# network access).
+if ! "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
+    --project="${PROJECT}" \
+    --startup-file=no \
+    -e 'using ClimaAtmos; println("ClimaAtmos loaded")'
+then
+    echo
+    echo "ERROR: could not load ClimaAtmos from ${PROJECT}." >&2
+    echo "Instantiate on a login node:" >&2
+    echo "  ${JULIA} ${JULIA_CHANNEL} --project=${PROJECT} -e 'using Pkg; Pkg.instantiate()'" >&2
+    exit 1
+fi
+
+echo
+echo "Launching passive-tracer experiment..."
+
+cd "${ROOT}"
+
+# `set -e` is lifted around srun so that the exit status is reported and the end
+# time is logged even when the run fails.
+set +e
+srun \
+    --mpi="${SRUN_MPI}" \
+    --kill-on-bad-exit=1 \
+    --cpu-bind=verbose \
+    --distribution=block:cyclic \
+    "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
+        --project="${PROJECT}" \
+        --startup-file=no \
+        "${SCRIPT}"
+status=$?
+set -e
+
+echo
+echo "Experiment exit status: ${status}"
+echo "End time:               $(date --iso-8601=seconds)"
+
+exit "${status}"
