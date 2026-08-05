@@ -215,9 +215,7 @@ function tracer_lifetime_summary(path; window_fraction = 0.25, tolerance = 0.05)
         abs(r.burden_drift) <= tolerance
 
     for r in results
-        # The topmost height band is open-ended: it reaches the model top.
-        height_upper = isfinite(r.height_upper) ?
-            @sprintf("%.1f", r.height_upper / 1000) : "top"
+        height_upper = @sprintf("%.1f", r.height_upper / 1000)
         marker = is_equilibrated(r) ? "" : "  (not equilibrated)"
         @printf(
             "%-14s %8.1f %8.1f %9.1f %9s %12.4e %11.3f %11.3f %8.3f %7.3f %s\n",

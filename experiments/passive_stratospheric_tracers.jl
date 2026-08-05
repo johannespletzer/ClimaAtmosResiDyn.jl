@@ -71,12 +71,37 @@ arguments are forwarded to [`passive_tracer_config`](@ref).
 build_simulation(; kwargs...) =
     CA.get_simulation(passive_tracer_config(; kwargs...))
 
+"""
+    plot_budget(output_dir)
+
+Plot the tracer burdens from the budget table just written.
+
+Wrapped so that a plotting failure cannot discard a completed integration:
+this runs at the very end of a run that may have taken days, and the budget
+table on disk is the actual result. `post_processing/plot_tracer_burdens.jl`
+can always be re-run against that table afterwards.
+"""
+function plot_budget(output_dir)
+    try
+        include(
+            joinpath(pkgdir(CA), "post_processing", "plot_tracer_burdens.jl"),
+        )
+        return Base.invokelatest(plot_tracer_burdens, output_dir)
+    catch exception
+        @warn "Could not plot tracer burdens; the budget table is unaffected \
+               and post_processing/plot_tracer_burdens.jl can be run on it \
+               directly" exception
+        return nothing
+    end
+end
+
 function main()
     simulation = build_simulation()
     CA.solve_atmos!(simulation)
 
     @info "Tracer budget table" path =
         CA.tracer_budget_path(simulation.output_dir)
+    plot_budget(simulation.output_dir)
 
     return simulation
 end

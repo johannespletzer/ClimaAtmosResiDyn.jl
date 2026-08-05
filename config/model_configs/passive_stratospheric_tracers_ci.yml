@@ -1,7 +1,8 @@
 job_id: "passive_stratospheric_tracers_ci"
 
-# CI-sized version of config/example_configs/passive_stratospheric_tracers.yml.
-# Two simulated days on a 3 x 3 source grid is far too short for the tracers to
+# CI-sized version of config/example_configs/passive_stratospheric_tracers.yml,
+# with the same 10 degree by 2 km source boxes on a coarser 3 x 3 grid.
+# Two simulated days is far too short for the tracers to
 # approach equilibrium — the lifetimes it produces are meaningless — but it
 # exercises every part of the machinery that a multi-year run depends on:
 # building 9 tracers into the prognostic state, diagnosing the tropopause each
@@ -16,8 +17,10 @@ job_id: "passive_stratospheric_tracers_ci"
 
 chemistry_model: "stratospheric_passive_tracers"
 tracer_source_latitude_bands: 3
+tracer_source_latitude_width: 10.0
 tracer_source_height_bands: 3
-tracer_source_band_depth: 8000.0
+tracer_source_band_depth: 2000.0
+tracer_source_band_spacing: 5000.0
 tracer_loss_timescale: "6hours"
 dt_tracer_budget: "6hours"
 

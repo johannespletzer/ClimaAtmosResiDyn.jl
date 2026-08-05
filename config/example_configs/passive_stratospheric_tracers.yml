@@ -4,12 +4,14 @@ job_id: "passive_stratospheric_tracers"
 # Stratospheric passive tracer lifetimes
 # ===========================================================================
 #
-# 48 inert tracers, one per (latitude band x height band) source region. The
-# regions tile the model domain above the tropopause: 6 latitude bands from
-# pole to pole, and 8 height bands stacked from the local tropopause upwards,
-# the topmost of which is open-ended and so reaches the model top. Every
-# tracer is removed below the tropopause and nowhere else, so once its burden
-# stops drifting its lifetime is
+# 48 inert tracers, one per (latitude box x height box) source region. The
+# boxes sample the model domain above the tropopause rather than tiling it:
+# 6 latitude boxes 10 degrees wide, centred from 75S to 75N, crossed with
+# 8 height boxes 2 km deep, stacked every 5 km from the local tropopause up to
+# 37 km above it. Small boxes are the point — a tracer emitted over a deep
+# layer or a wide latitude range reports a lifetime averaged over conditions
+# that can differ by years. Every tracer is removed below the tropopause and
+# nowhere else, so once its burden stops drifting its lifetime is
 #
 #     tau = burden / source
 #
@@ -28,8 +30,10 @@ job_id: "passive_stratospheric_tracers"
 
 chemistry_model: "stratospheric_passive_tracers"
 tracer_source_latitude_bands: 6
+tracer_source_latitude_width: 10.0
 tracer_source_height_bands: 8
-tracer_source_band_depth: 5000.0
+tracer_source_band_depth: 2000.0
+tracer_source_band_spacing: 5000.0
 tracer_source_height_coordinate: "tropopause"
 # Sets the magnitude of the tracers, not their lifetimes: the burden and the
 # source are both linear in it, and only their ratio is reported.

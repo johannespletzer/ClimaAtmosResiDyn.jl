@@ -1048,8 +1048,10 @@ function get_stratospheric_passive_tracers(parsed_args, ::Type{FT}) where {FT}
     return StratosphericPassiveTracers(
         FT;
         n_latitude_bands = parsed_args["tracer_source_latitude_bands"],
+        latitude_width = parsed_args["tracer_source_latitude_width"],
         n_height_bands = parsed_args["tracer_source_height_bands"],
         band_depth = parsed_args["tracer_source_band_depth"],
+        band_spacing = parsed_args["tracer_source_band_spacing"],
         lowest_band_base = parsed_args["tracer_source_lowest_band_base"],
         production_rate = parsed_args["tracer_production_rate"],
         loss_timescale,

@@ -85,28 +85,54 @@ end
         FT;
         n_latitude_bands = 6,
         n_height_bands = 8,
-        band_depth = 5_000,
+        latitude_width = 10,
+        band_depth = 2_000,
+        band_spacing = 5_000,
     )
 
     @test CA.n_latitude_bands(chemistry_model) == 6
     @test CA.n_height_bands(chemistry_model) == 8
     @test CA.n_tracers(chemistry_model) == 48
 
-    # The bands tile latitude and height: each upper edge is the next lower
-    # edge, and the outermost edges are infinite so nothing falls outside.
+    # The boxes sample the domain rather than tiling it: each stays within the
+    # size it was asked for, and none overlaps its neighbour.
     (; latitude_lower_edges, latitude_upper_edges) = chemistry_model
-    @test latitude_lower_edges[1] == -Inf
-    @test latitude_upper_edges[end] == Inf
-    @test collect(latitude_upper_edges[1:(end - 1)]) ==
-          collect(latitude_lower_edges[2:end])
-    @test latitude_upper_edges[3] == 0            # bands are 30 degrees wide
+    widths = latitude_upper_edges .- latitude_lower_edges
+    @test all(w -> w ≈ 10, widths)
+    @test all(
+        i -> latitude_upper_edges[i] < latitude_lower_edges[i + 1],
+        1:(length(latitude_lower_edges) - 1),
+    )
+    # Centred on the midpoints of six equal divisions of pole to pole, so the
+    # set is symmetric about the equator and stays inside it.
+    centers = (latitude_lower_edges .+ latitude_upper_edges) ./ 2
+    @test collect(centers) ≈ [-75, -45, -15, 15, 45, 75]
+    @test latitude_lower_edges[1] >= -90
+    @test latitude_upper_edges[end] <= 90
 
     (; height_lower_edges, height_upper_edges) = chemistry_model
-    @test height_lower_edges[1] == 0
-    @test height_upper_edges[end] == Inf
-    @test collect(height_upper_edges[1:(end - 1)]) ==
-          collect(height_lower_edges[2:end])
-    @test height_lower_edges[3] == 10_000
+    depths = height_upper_edges .- height_lower_edges
+    @test all(d -> d ≈ 2_000, depths)
+    @test all(
+        k -> height_upper_edges[k] < height_lower_edges[k + 1],
+        1:(length(height_lower_edges) - 1),
+    )
+    @test height_lower_edges[1] == 0          # bottom box sits on the tropopause
+    @test height_lower_edges[3] == 10_000     # stacked every 5 km
+    @test isfinite(height_upper_edges[end])   # no open-ended box
+
+    # Overlapping boxes would make a point feed two tracers at once, so they
+    # are refused rather than silently double-counted.
+    @test_throws ErrorException CA.StratosphericPassiveTracers(
+        FT;
+        n_latitude_bands = 6,
+        latitude_width = 40,      # wider than the 30 degree spacing
+    )
+    @test_throws ErrorException CA.StratosphericPassiveTracers(
+        FT;
+        band_depth = 6_000,       # deeper than the 5 km spacing
+        band_spacing = 5_000,
+    )
 
     # Names are ordered with the latitude index varying fastest, matching the
     # order every loop over tracers uses.
@@ -245,10 +271,12 @@ end
         total_source .+= tendency
     end
 
-    # The source regions partition the domain above the tropopause: every
-    # point above it is fed by exactly one tracer.
+    # The boxes sample the domain rather than covering it, so a point above
+    # the tropopause is fed by at most one tracer — never two — and nothing at
+    # or below the tropopause is fed at all.
     expected = parent(Y.c.ρ) .* chemistry_model.production_rate
-    @test all(total_source[above_tropopause] .≈ expected[above_tropopause])
+    @test all(total_source .<= expected .* (1 + 1e-6))
+    @test any(total_source .> 0)
     @test all(iszero, total_source[.!above_tropopause])
 
     # At t = 0 the budget sees the sources but no burden and no loss.
@@ -274,4 +302,48 @@ end
     CA.write_tracer_budget!(output_dir, 100.0, chemistry_model, budget)
     @test length(readlines(budget_file)) ==
           2 * CA.n_tracers(chemistry_model) + 1
+end
+
+# ===========================================================================
+# Burden plot
+# ===========================================================================
+
+@testset "tracer burden plot" begin
+    include(joinpath(pkgdir(CA), "post_processing", "plot_tracer_burdens.jl"))
+
+    chemistry_model = CA.StratosphericPassiveTracers(
+        FT;
+        n_latitude_bands = 3,
+        n_height_bands = 2,
+    )
+    n = CA.n_tracers(chemistry_model)
+    output_dir = mktempdir()
+    # Two output times of a tracer that is still filling, which is the shape
+    # every real budget table starts with.
+    for (step, t) in enumerate((0.0, 86400.0))
+        budget = (;
+            burden = collect(FT, (1:n) .* 1e9 .* (step - 1)),
+            source = collect(FT, (1:n) .* 1e4),
+            loss = zeros(FT, n),
+        )
+        CA.write_tracer_budget!(output_dir, t, chemistry_model, budget)
+    end
+
+    dpi = 300
+    size_inches = (4, 3)
+    path = plot_tracer_burdens(output_dir; dpi, size_inches)
+    @test isfile(path)
+    @test endswith(path, "tracer_burdens.png")
+
+    # The PNG header carries the pixel dimensions, so the dpi request can be
+    # checked rather than assumed: bytes 17-24 are the IHDR width and height,
+    # big-endian.
+    header = read(path)[1:24]
+    @test header[2:4] == UInt8['P', 'N', 'G']
+    png_size = (
+        Int(only(reinterpret(UInt32, reverse(header[17:20])))),
+        Int(only(reinterpret(UInt32, reverse(header[21:24])))),
+    )
+    # One pixel of slack: the point-to-pixel scaling is not exact in binary.
+    @test all(abs.(png_size .- round.(Int, size_inches .* dpi)) .<= 1)
 end

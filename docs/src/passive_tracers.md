@@ -95,14 +95,20 @@ with ``M`` the global burden (kg) and ``S`` the global source rate
 (kg s``^{-1}``). Multiplying ``S`` by a year gives the annual source rate the
 burden is divided by.
 
-### Source regions tile the domain
+### Source boxes sample the domain
 
-Latitude bands have equal width and cover the sphere from pole to pole; height
-bands stack upwards from the local tropopause, and the topmost is open-ended,
-so it reaches the model top. The bands are half-open, so **every point above
-the tropopause belongs to exactly one source region** — the tracers together
-cover the whole modelled stratosphere and mesosphere, and no tracer's source
-lies inside the removal region.
+The source regions are small boxes that **sample** the domain above the
+tropopause rather than tiling it. By default there are 6 latitude boxes 10°
+wide, centred from 75°S to 75°N, crossed with 8 height boxes 2 km deep stacked
+every 5 km from the local tropopause up to 37 km above it.
+
+Keeping a box small is the point: a tracer emitted over a deep layer or a wide
+latitude range reports a lifetime averaged over conditions that can differ by
+years, and that average is not the lifetime of anywhere in particular. The
+boxes are therefore allowed to leave gaps between them. They may never
+**overlap**, though — that would make a point feed two tracers at once — and
+the constructor refuses a `latitude_width` wider than the spacing between
+boxes, or a `band_depth` deeper than `band_spacing`.
 
 Measuring source heights from the local tropopause
 (`tracer_source_height_coordinate: "tropopause"`, the default) is what makes
@@ -114,10 +120,12 @@ instead.
 
 | Configuration key                     | Meaning                                              |
 |:------------------------------------- |:---------------------------------------------------- |
-| `tracer_source_latitude_bands`        | Number of latitude bands (default 6)                 |
-| `tracer_source_height_bands`          | Number of height bands (default 8)                   |
-| `tracer_source_band_depth`            | Height band thickness in m (default 5000)            |
-| `tracer_source_lowest_band_base`      | Base of the lowest band above the reference, in m    |
+| `tracer_source_latitude_bands`        | Number of latitude boxes (default 6)                 |
+| `tracer_source_latitude_width`        | Width of each latitude box, in degrees (default 10)  |
+| `tracer_source_height_bands`          | Number of height boxes (default 8)                   |
+| `tracer_source_band_depth`            | Depth of each height box, in m (default 2000)        |
+| `tracer_source_band_spacing`          | Distance between box bottoms, in m (default 5000)    |
+| `tracer_source_lowest_band_base`      | Base of the lowest box above the reference, in m     |
 | `tracer_source_height_coordinate`     | `"tropopause"` or `"altitude"`                        |
 | `tracer_production_rate`              | Mass-fraction production inside a region, in s⁻¹     |
 | `tracer_loss_timescale`               | E-folding time of the removal below the tropopause   |
@@ -160,7 +168,18 @@ julia --project=.buildkite post_processing/tracer_lifetimes.jl <output_dir>
 ```
 
 prints one row per tracer and flags the tracers that are not yet in
-equilibrium. A tracer counts as equilibrated when both its imbalance and its
+equilibrium. Alongside it,
+
+```
+julia --project=.buildkite post_processing/plot_tracer_burdens.jl <output_dir>
+```
+
+writes `tracer_burdens.png` (300 dpi) with every tracer's burden against time
+in one panel — colour for height box, dash pattern for latitude box, so the
+legend stays at `n_latitude + n_height` entries rather than their product. A
+burden still rising linearly is a tracer still filling; one that has levelled
+off is in equilibrium. The experiment script and the CI job both write this
+plot automatically at the end of a run. A tracer counts as equilibrated when both its imbalance and its
 burden drift — the change in burden over the averaging window, divided by the
 source — are near zero. Until then its lifetime is a lower bound, because its
 burden is still filling up.

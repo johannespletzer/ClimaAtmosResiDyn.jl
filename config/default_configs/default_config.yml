@@ -439,13 +439,19 @@ tagged_tracers:
 
 # Stratospheric passive tracers (chemistry_model: stratospheric_passive_tracers)
 tracer_source_latitude_bands:
-  help: "Number of equal-width latitude bands of tracer sources, covering pole to pole"
+  help: "Number of tracer source latitude boxes, centred on the midpoints of that many equal divisions of pole to pole"
   value: 6
+tracer_source_latitude_width:
+  help: "Width of each tracer source latitude box, in degrees. Must not exceed the spacing between boxes."
+  value: 10.0
 tracer_source_height_bands:
-  help: "Number of tracer source height bands. The topmost band is open-ended and reaches the model top."
+  help: "Number of tracer source height boxes, stacked above the reference"
   value: 8
 tracer_source_band_depth:
-  help: "Thickness of each tracer source height band except the topmost, in m"
+  help: "Depth of each tracer source height box, in m. Must not exceed `tracer_source_band_spacing`."
+  value: 2000.0
+tracer_source_band_spacing:
+  help: "Distance between the bottoms of successive tracer source height boxes, in m"
   value: 5000.0
 tracer_source_lowest_band_base:
   help: "Height above the reference (see `tracer_source_height_coordinate`) of the bottom of the lowest tracer source band, in m"

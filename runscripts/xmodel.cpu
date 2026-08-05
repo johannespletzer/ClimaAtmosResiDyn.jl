@@ -11,7 +11,7 @@
 
 #SBATCH --nodes=1
 #SBATCH --account=bd1062
-#SBATCH --time=04:00:00
+#SBATCH --time=02:00:00
 ### #SBATCH --mail-type=FAIL
 
 # -----------------------------------------------------------------------------
@@ -40,7 +40,8 @@ module load openmpi/4.1.2-gcc-11.2.0
 # ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 ROOT="/home/b/b309159/git/ClimaAtmosResiDyn.jl/"
 PROJECT="${PROJECT:-${ROOT}/.buildkite}"
-SCRIPT="${SCRIPT:-${ROOT}/experiments/passive_stratospheric_tracers.jl}"
+#SCRIPT="${SCRIPT:-${ROOT}/experiments/passive_stratospheric_tracers.jl}"
+SCRIPT="${SCRIPT:-${ROOT}/experiments/run_tracer.jl}"
 JULIA="${JULIA:-$(command -v julia || true)}"
 
 # juliaup channel to run, e.g. "+1.11". Set JULIA_CHANNEL="" to use whatever

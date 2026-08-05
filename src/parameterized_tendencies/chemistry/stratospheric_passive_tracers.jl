@@ -14,11 +14,13 @@
 ### `M` and `S` are both reported by the tracer-budget callback, so `τ` never
 ### relies on the prescribed production rate being interpreted correctly.
 ###
-### The source regions tile the model domain above the tropopause: latitude
-### bands cover the whole sphere, height bands stack from the tropopause to
-### the model top, and every grid point above the tropopause belongs to
-### exactly one (latitude, height) region. Each region feeds one tracer, so a
-### tracer's lifetime refers to one well-defined part of the stratosphere.
+### The source regions are small, well-separated boxes that sample the domain
+### above the tropopause rather than tiling it: narrow latitude bands spread
+### from pole to pole, and shallow height bands stacked above the local
+### tropopause. Keeping a box small is what makes its lifetime mean something
+### — a tracer emitted over a deep layer or a wide latitude range reports an
+### average over conditions that may differ by years — so the boxes are
+### deliberately allowed to leave gaps between them.
 ###
 
 import ClimaComms
@@ -28,9 +30,9 @@ import ClimaCore: Fields, Spaces
     TropopauseRelativeHeight()
 
 Measure tracer source heights from the local tropopause, so that the source
-regions follow the tropopause and tile the stratosphere everywhere. This is
-the default: it keeps sources out of the removal region and gives the
-lowermost stratosphere a source at every latitude.
+boxes follow it. This is the default: it keeps every box a fixed distance
+above the sink whatever the latitude, which is what makes lifetimes from
+different latitude bands comparable.
 """
 struct TropopauseRelativeHeight end
 
@@ -58,8 +60,8 @@ Region `(i, k)` is the set of points with latitude in
 `(latitude_lower_edges[i], latitude_upper_edges[i]]` and height in
 `(height_lower_edges[k], height_upper_edges[k]]`, where height is measured
 from the local tropopause (`TropopauseRelativeHeight`) or from sea level
-(`GeometricHeight`). The outermost edges are infinite, so the regions tile the
-domain: every point above the tropopause belongs to exactly one region.
+(`GeometricHeight`). The boxes never overlap, so no point feeds two tracers,
+but they do not cover the domain — they sample it.
 
 Tracer `(i, k)` is stored in `Y.c.ρq_gas_y<i>z<k>` (see
 [`stratospheric_tracer_symbol`](@ref)) and is ordered with the latitude index
@@ -96,20 +98,25 @@ end
 """
     StratosphericPassiveTracers(FT; kwargs...)
 
-Build a [`StratosphericPassiveTracers`](@ref) whose source regions tile the
+Build a [`StratosphericPassiveTracers`](@ref) whose source boxes sample the
 domain above the tropopause.
 
 # Keyword arguments
 
-  - `n_latitude_bands = 6`: number of latitude bands, of equal width in
-    latitude, covering the sphere from pole to pole.
-  - `n_height_bands = 8`: number of height bands. The topmost band is
-    open-ended, so the regions reach the model top whatever it is.
-  - `band_depth = 5000`: thickness of each height band except the topmost, in
-    m.
-  - `lowest_band_base = 0`: height of the bottom of the lowest band above the
+  - `n_latitude_bands = 6`: number of latitude boxes. They are centred on the
+    midpoints of that many equal divisions of pole to pole, so they sample the
+    full range symmetrically about the equator.
+  - `latitude_width = 10`: width of each latitude box, in degrees. Must not
+    exceed the spacing between boxes, or they would overlap.
+  - `n_height_bands = 8`: number of height boxes, stacked above the reference.
+  - `band_depth = 2000`: depth of each height box, in m. Must not exceed
+    `band_spacing`.
+  - `band_spacing = 5000`: distance between the bottoms of successive height
+    boxes, in m. With the defaults the boxes sample 0–37 km above the
+    tropopause in 2 km slices.
+  - `lowest_band_base = 0`: height of the bottom of the lowest box above the
     reference, in m. The default puts the lowest source immediately above the
-    tropopause.
+    tropopause; raise it to separate that box from the sink.
   - `production_rate = 1e-10`: see [`StratosphericPassiveTracers`](@ref).
   - `loss_timescale = 21600` (6 hours): see
     [`StratosphericPassiveTracers`](@ref).
@@ -120,7 +127,9 @@ function StratosphericPassiveTracers(
     ::Type{FT};
     n_latitude_bands::Int = 6,
     n_height_bands::Int = 8,
-    band_depth = 5000,
+    latitude_width = 10,
+    band_depth = 2000,
+    band_spacing = 5000,
     lowest_band_base = 0,
     production_rate = 1e-10,
     loss_timescale = 21600,
@@ -139,29 +148,43 @@ function StratosphericPassiveTracers(
         "n_height_bands must be at most $MAX_TRACER_HEIGHT_BANDS \
         (diagnostics are registered up to that many bands), got $n_height_bands",
     )
+    latitude_width > 0 ||
+        error("latitude_width must be positive, got $latitude_width")
     band_depth > 0 || error("band_depth must be positive, got $band_depth")
+    band_spacing > 0 ||
+        error("band_spacing must be positive, got $band_spacing")
     loss_timescale > 0 ||
         error("loss_timescale must be positive, got $loss_timescale")
 
-    # Infinite outer edges make the bands a partition of the sphere: no point
-    # is left without a source region because of rounding at ±90 degrees.
-    band_width = FT(180) / n_latitude_bands
-    latitude_lower_edges = ntuple(n_latitude_bands) do i
-        i == 1 ? FT(-Inf) : FT(-90) + (i - 1) * band_width
+    # Latitude boxes sit at the centres of `n_latitude_bands` equal divisions
+    # of pole to pole, so they sample the whole range symmetrically about the
+    # equator while each stays `latitude_width` wide. They must not be wider
+    # than their division, or neighbouring boxes would overlap and a point
+    # would feed two tracers at once.
+    latitude_interval = FT(180) / n_latitude_bands
+    latitude_width <= latitude_interval || error(
+        "latitude_width ($latitude_width) exceeds the $latitude_interval degree \
+        spacing of $n_latitude_bands bands, so the boxes would overlap",
+    )
+    half_width = FT(latitude_width) / 2
+    latitude_centers = ntuple(n_latitude_bands) do i
+        FT(-90) + (i - FT(0.5)) * latitude_interval
     end
-    latitude_upper_edges = ntuple(n_latitude_bands) do i
-        i == n_latitude_bands ? FT(Inf) : FT(-90) + i * band_width
-    end
+    latitude_lower_edges = map(center -> center - half_width, latitude_centers)
+    latitude_upper_edges = map(center -> center + half_width, latitude_centers)
 
-    # Likewise the topmost height band is open-ended, so the source regions
-    # reach the model top.
+    # Height boxes are stacked every `band_spacing` above the reference and are
+    # `band_depth` deep, so they sample the column rather than tiling it. The
+    # same non-overlap condition applies.
+    band_depth <= band_spacing || error(
+        "band_depth ($band_depth) exceeds band_spacing ($band_spacing), so the \
+        boxes would overlap",
+    )
     height_lower_edges = ntuple(n_height_bands) do k
-        FT(lowest_band_base) + (k - 1) * FT(band_depth)
+        FT(lowest_band_base) + (k - 1) * FT(band_spacing)
     end
-    height_upper_edges = ntuple(n_height_bands) do k
-        k == n_height_bands ? FT(Inf) :
-        FT(lowest_band_base) + k * FT(band_depth)
-    end
+    height_upper_edges =
+        map(lower -> lower + FT(band_depth), height_lower_edges)
 
     return StratosphericPassiveTracers(
         latitude_lower_edges,
@@ -552,16 +575,14 @@ function write_tracer_budget!(output_dir, t, chemistry_model, budget)
                 loss_rate > 0 ? burden[tracer_index] / loss_rate : NaN
             imbalance =
                 source_rate > 0 ? (source_rate - loss_rate) / source_rate : NaN
-            # The outermost latitude edges are infinite so that the bands
-            # partition the sphere; report them as the poles they stand for.
             println(
                 io,
                 join(
                     (
                         t,
                         names[tracer_index],
-                        max(chemistry_model.latitude_lower_edges[i], -90),
-                        min(chemistry_model.latitude_upper_edges[i], 90),
+                        chemistry_model.latitude_lower_edges[i],
+                        chemistry_model.latitude_upper_edges[i],
                         chemistry_model.height_lower_edges[k],
                         chemistry_model.height_upper_edges[k],
                         burden[tracer_index],

@@ -12,4 +12,5 @@ cd ~/git/ClimaAtmosResiDyn.jl
 
 setenv TEST_GROUP dynamics 
 
+julia +1.11 --project -e 'using Pkg; Pkg.add(name="CloudMicrophysics", version="0.37.1")'
 julia +1.11 --project -e 'using Pkg; Pkg.test()'
