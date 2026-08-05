@@ -2,10 +2,9 @@
 
 # Tropopause height and stratospheric passive tracers.
 #
-# The global burden, source and loss of each tracer — the quantities the
-# lifetime is computed from — are written by the tracer-budget callback rather
-# than by these diagnostics, because they are scalars per tracer rather than
-# fields (see `stratospheric_passive_tracers.jl`).
+# The tracer-budget callback, not these diagnostics, writes the global burden,
+# source and loss that the lifetime is computed from. Those are scalars per
+# tracer rather than fields (see `stratospheric_passive_tracers.jl`).
 
 ###
 # Tropopause height (2d)
@@ -38,10 +37,10 @@ function compute_ztrop!(out, state, cache, time)
         tropopause_parameters(cache.atmos.chemistry_model),
     )
     # `ᶜz_tropopause` holds the same value at every level of a column, so any
-    # level carries the answer. Copy the lowest one onto the surface space the
-    # other two-dimensional diagnostics are written on, through the data
-    # layouts, since the center and face level spaces are distinct objects
-    # over the same horizontal grid.
+    # level carries the answer. Copy the lowest one onto the surface space used
+    # by the other 2d diagnostics. This goes through the data layouts because
+    # the center and face level spaces are distinct objects over the same
+    # horizontal grid.
     surface = cache.scratch.ᶠtemp_field_level
     Fields.field_values(surface) .=
         Fields.field_values(Fields.level(ᶜz_tropopause, 1))
@@ -94,9 +93,9 @@ function compute_stratospheric_tracer(
 end
 
 # Diagnostics are registered at load time, before any configuration is read,
-# so they cover a fixed grid of source regions rather than the grid of the
-# model at hand. `StratosphericPassiveTracers` refuses to build a larger grid
-# than this, so every tracer that can exist has an output variable.
+# so they cover a fixed grid of source regions rather than the model's own
+# grid. `StratosphericPassiveTracers` refuses to build a larger grid, so every
+# tracer that can exist has an output variable.
 for latitude_index in 1:MAX_TRACER_LATITUDE_BANDS,
     height_index in 1:MAX_TRACER_HEIGHT_BANDS
 

@@ -115,9 +115,9 @@ import ClimaAtmos as CA
         @test all(isfinite, parent(tag_field))
     end
 
-    # 3. Closure of the partition pair stays a small monitored residual (the
-    # manual 10-day validation showed sub-percent drift; one hour of a coarse
-    # run should stay well below that)
+    # 3. Closure of the partition pair stays a small monitored residual. The
+    # manual 10-day validation showed sub-percent drift, so one hour of a
+    # coarse run should stay well below that
     @test closure_deviation(Y) < 5e-3
 
     # 4. The Held-Suarez source tag accumulated a nonzero contribution

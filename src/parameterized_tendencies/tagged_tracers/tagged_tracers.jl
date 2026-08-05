@@ -1,42 +1,36 @@
 #####
 ##### Tagged prognostic energy tracers
 #####
-##### This file contains the full implementation of the tagged-tracer feature.
-##### The corresponding types (`AbstractTagRegion`, `TracerTag`, `TaggingModel`,
-##### and the `AtmosTagging` model group) are defined in `types.jl`, and the
-##### config getter `AtmosTagging(::AtmosConfig)` is defined in
-##### `config/model_getters.jl`. Everything else about tagging lives here, so
-##### the rest of the model code only needs:
+##### This file holds the whole tagging implementation. The types
+##### (`AbstractTagRegion`, `TracerTag`, `TaggingModel`, `AtmosTagging`) live in
+##### `types.jl`, and the config getter `AtmosTagging(::AtmosConfig)` lives in
+##### `config/model_getters.jl`. The rest of the model needs only four hooks:
 #####
-#####   1. `tagging_variables(ρe_tot, local_geometry, atmos_model.tagging_model)`
-#####      in the initial-condition assembly (`setups/common/prognostic_variables.jl`);
-#####   2. `tagging_cache(Y, atmos)` in `cache/cache.jl`, which precomputes the
-#####      static region masks, and `tagging_scratch(Y, atmos)` in
+#####   1. `tagging_variables` in `setups/common/prognostic_variables.jl`;
+#####   2. `tagging_cache` in `cache/cache.jl`, which precomputes the static
+#####      region masks, and `tagging_scratch` in
 #####      `cache/temporary_quantities.jl` for the snapshot buffer;
-#####   3. `snapshot_tagged_ρe_tot!` / `attribute_tagged_ρe_tot!` brackets
-#####      around the attributed processes in `additional_tendency!`
-#####      (`prognostic_equations/remaining_tendency.jl`) and around
-#####      precipitation sedimentation in `implicit_tendency!`
-#####      (`prognostic_equations/implicit/implicit_tendency.jl`);
-#####   4. `is_tagged_tracer_name` to exempt tags from the tracer limiters
-#####      (`prognostic_equations/limited_tendencies.jl`).
+#####   3. `snapshot_tagged_ρe_tot!` / `attribute_tagged_ρe_tot!` around the
+#####      attributed processes in `prognostic_equations/remaining_tendency.jl`
+#####      and around precipitation sedimentation in
+#####      `prognostic_equations/implicit/implicit_tendency.jl`;
+#####   4. `is_tagged_tracer_name` in
+#####      `prognostic_equations/limited_tendencies.jl`, which exempts tags from
+#####      the tracer limiters.
 #####
-##### Each tag adds one grid-scale prognostic field `Y.c.ρe_tag_<name>`. Because
-##### these names are ρ-weighted and not in the exclusion list of
-##### `gs_tracer_names(Y)`, the existing tracer machinery automatically applies
-##### advection, hyperdiffusion, sponges, vertical eddy diffusion (as a passive
-##### scalar with `K_h`), and the corresponding implicit-Jacobian blocks. No
-##### hand-written transport is needed (and none should be added).
+##### Each tag adds one prognostic field `Y.c.ρe_tag_<name>`. These names are
+##### ρ-weighted and are not excluded by `gs_tracer_names(Y)`, so the existing
+##### tracer machinery already gives them advection, hyperdiffusion, sponges,
+##### vertical eddy diffusion and the implicit-Jacobian blocks. Do not add
+##### hand-written transport.
 #####
-##### Source attribution only covers processes that the tags do NOT already
-##### receive through that machinery — see `KNOWN_TAG_SOURCES` for the list and
-##### `TAG_SOURCE_GROUPS` for the user-facing groupings. Transport-like
-##### processes (advection, diffusion, sponges) must NOT be attributed: each tag
-##### already receives its own transport from the tracer machinery, so masked
-##### attribution of `ρe_tot` transport would count it twice.
+##### Attribution covers only the processes that machinery does not already
+##### apply; see `KNOWN_TAG_SOURCES` and `TAG_SOURCE_GROUPS`. Never attribute
+##### transport (advection, diffusion, sponges): each tag is transported on its
+##### own, so attributing `ρe_tot` transport would count it twice.
 #####
-##### Masks are static in space and must be evaluated once (when building the
-##### cache) — never inside a per-timestep broadcast.
+##### Masks are static in space. Evaluate them once when building the cache,
+##### never inside a per-timestep broadcast.
 
 """
     region_mask(region::AbstractTagRegion, coord)
@@ -496,11 +490,10 @@ region_tag_state_names(tagging_model::TaggingModel) = Tuple(
     tag in tagging_model.tags if !isnothing(tag.region) && isempty(tag.sources)
 )
 
-# The closure diagnostic `e_tag_res = (ρe_tot - Σᵢ ρe_tag_i) / ρ` only
-# measures attribution leakage when the pure region masks form a partition of
-# unity. Overlapping or incomplete regions are allowed (and sometimes
-# intended), but then `e_tag_res` is dominated by the overlap/deficit, so say
-# so once at initialization.
+# The closure diagnostic `e_tag_res = (ρe_tot - Σᵢ ρe_tag_i) / ρ` measures
+# attribution leakage only if the pure region masks form a partition of unity.
+# Overlapping or incomplete regions are allowed, but then the overlap or
+# deficit dominates `e_tag_res`. Warn once at initialization.
 function _check_region_partition(ᶜmasks, model::TaggingModel)
     names = region_tag_state_names(model)
     isempty(names) && return nothing

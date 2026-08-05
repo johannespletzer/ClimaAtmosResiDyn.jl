@@ -104,14 +104,13 @@ candidate.
     found = z_tropopause > z_zero
     has_candidate = z_candidate > z_zero
 
-    # Lapse rate across the layer below, positive where temperature decreases
-    # with height. It is the lapse rate *above* the previous level, so it is
-    # the previous level, not this one, that becomes the candidate — the
-    # tropopause is the level from which the atmosphere stops cooling, not the
-    # first level after it has.
+    # Lapse rate across the layer below, positive where temperature falls with
+    # height. This is the lapse rate *above* the previous level, so the
+    # previous level becomes the candidate, not this one. The tropopause is the
+    # level where the atmosphere stops cooling, not the first level after it.
     #
-    # Both branches of every `ifelse` here are evaluated, so each denominator
-    # is kept away from zero and the guard picks the meaningful branch.
+    # Both branches of every `ifelse` are evaluated, so each denominator is
+    # kept away from zero and the guard picks the meaningful branch.
     Δz_previous = z - z_previous
     has_level_below = (Δz_previous > z_zero) & (T_previous > zero(T_previous))
     lapse_rate = ifelse(
@@ -137,8 +136,8 @@ candidate.
         (z_previous >= search_min_height) &
         (z_previous <= search_max_height)
 
-    # `opens_candidate` and `candidate_holds` are mutually exclusive: the
-    # first requires no active candidate (or one just dropped), the second an
+    # `opens_candidate` and `candidate_holds` are mutually exclusive. The
+    # first needs no active candidate, or one just dropped; the second needs an
     # active candidate that was not dropped.
     new_z_candidate = ifelse(
         found,

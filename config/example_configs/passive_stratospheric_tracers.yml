@@ -8,7 +8,7 @@ job_id: "passive_stratospheric_tracers"
 # boxes sample the model domain above the tropopause rather than tiling it:
 # 6 latitude boxes 10 degrees wide, centred from 75S to 75N, crossed with
 # 8 height boxes 2 km deep, stacked every 5 km from the local tropopause up to
-# 37 km above it. Small boxes are the point — a tracer emitted over a deep
+# 37 km above it. Small boxes are the point. A tracer emitted over a deep
 # layer or a wide latitude range reports a lifetime averaged over conditions
 # that can differ by years. Every tracer is removed below the tropopause and
 # nowhere else, so once its burden stops drifting its lifetime is
@@ -48,16 +48,16 @@ dt_tracer_budget: "10days"
 # Dynamics: moist aquaplanet with RRTMGP radiation
 #
 # Numerics follow config/common_configs/numerics_sphere_he6ze31.yml, the
-# validated 6-element / 60 km-top combination, on the finer ze63 vertical grid
-# so that the tropopause bounding the tracers is resolved. `dt` is cut from the
-# 400 s of that file to allow for the finer vertical grid; confirm it in a
-# short run before committing to a multi-year integration.
+# validated 6-element / 60 km-top combination, but on the finer ze63 vertical
+# grid so that the tropopause bounding the tracers is resolved. `dt` is cut
+# from the 400 s of that file to suit that grid. Confirm it in a short run
+# before committing to a multi-year integration.
 # ---------------------------------------------------------------------------
 config: sphere
 # Float64 rather than the Float32 default. The lifetimes come from global
-# burdens accumulated over years and from their drift between output times, so
-# the burden integral is summed over ~10^5 points and then differenced — a
-# cancellation Float32's seven digits handle poorly.
+# burdens accumulated over years and from their drift between output times.
+# The burden integral is summed over ~10^5 points and then differenced, and
+# Float32's seven digits handle that cancellation poorly.
 FLOAT_TYPE: "Float64"
 h_elem: 6         # ~550 km
 nh_poly: 3

@@ -2,11 +2,10 @@
 
 # Tagged prognostic energy tracers
 #
-# Tag names are configuration-dependent, so the per-tag diagnostics cannot be
-# registered statically when the package is loaded. Instead,
-# `register_tagging_diagnostics!(model)` is called during simulation setup
-# (see `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`),
-# once the `TaggingModel` is known.
+# Tag names come from the configuration, so the per-tag diagnostics cannot be
+# registered statically at load time. `register_tagging_diagnostics!(model)` is
+# called during simulation setup instead, once the `TaggingModel` is known (see
+# `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`).
 
 function compute_e_tag!(out, state, cache, time, ρe_tag_name)
     ρe_tag_name in propertynames(state.c) ||

@@ -32,12 +32,11 @@
 # configured, and a second, different libmpi then cannot be loaded -- so the
 # probe fails precisely when you are switching away from another MPI.
 #
-# The gpu stack additionally pins the CUDA toolkit. CUDA_Runtime_jll picks its
-# artifact by dlopening libcuda and asking the driver which CUDA version it
-# supports; a login node has no driver, so the environment is instantiated as
-# `cuda=none` and the job only fails once it reaches a GPU node. The version is
-# measured on a GPU node and recorded as a preference -- see
-# runscripts/select-cuda-runtime.jl for the details.
+# The gpu stack additionally pins the CUDA toolkit: CUDA_Runtime_jll picks its
+# artifact by asking the driver which CUDA version it supports, and a login node
+# has no driver, so the environment resolves to `cuda=none` and the job fails
+# only once it reaches a GPU node. The version is measured on a GPU node -- see
+# runscripts/select-cuda-runtime.jl.
 #
 # All preferences go to .buildkite/LocalPreferences.toml; no packages are added
 # to .buildkite/Project.toml.
@@ -67,9 +66,8 @@ endif
 
 set STACK = $argv[1]
 
-# SLURM settings for the one-off probe job that reads the GPU driver's CUDA
-# version (gpu stack only, and only when it is not already known -- see the
-# "CUDA toolkit version" section below).
+# SLURM settings for the probe job that reads the GPU driver's CUDA version
+# (gpu stack only, and only when it is not already known).
 set PROBE_ACCOUNT    = bd1062
 set PROBE_PARTITION  = gpu
 set PROBE_CONSTRAINT = a100_80
@@ -252,16 +250,16 @@ echo
 # ----------------------------------------------------------------------------
 # CUDA toolkit version (gpu stack only)
 #
-# Determined here, before anything slow runs, so that a missing version fails
-# immediately rather than after a full precompilation. Sources, in order:
+# Determined before anything slow runs, so a missing version fails immediately
+# rather than after a full precompilation. Sources, in order:
 #
 #   1. $CUDA_RUNTIME_VERSION, if set -- manual override, e.g. 13.0
 #   2. nvidia-smi, if this script is itself running on a GPU node
 #   3. the value recorded by the last GPU job (see runscripts/xmodel.gpu*)
 #   4. a two-minute probe job on the gpu partition
 #
-# Anything measured is cached in ${CUDA_VERSION_CACHE} so that later runs skip
-# the queue. Delete that file to force a fresh measurement.
+# Anything measured is cached in ${CUDA_VERSION_CACHE}; delete that file to
+# force a fresh measurement.
 # ----------------------------------------------------------------------------
 
 set CUDA_VERSION_CACHE = ${DEPOT}/levante-cuda-version
@@ -269,11 +267,9 @@ set CUDA_VERSION       = ""
 set CUDA_VERSION_SRC   = ""
 set CUDA_VERSION_NEW   = 0
 
-# The filter below turns nvidia-smi's
-#     CUDA Version                          : 13.0
-# into a bare "13.0". It is spelled out at each use site: tcsh's `eval` does not
-# reliably keep a pipeline's stdin, so a shared filter variable cannot be piped
-# into.
+# The pipelines below turn nvidia-smi's "CUDA Version    : 13.0" into a bare
+# "13.0". Spelled out at each use site because tcsh's `eval` does not reliably
+# keep a pipeline's stdin, so a shared filter variable cannot be piped into.
 
 if ("${STACK}" == "gpu") then
     if ($?CUDA_RUNTIME_VERSION) then
@@ -341,16 +337,15 @@ endif
 # ----------------------------------------------------------------------------
 # Pin the CUDA toolkit
 #
-# This runs after the first instantiate because select-cuda-runtime.jl reads the
-# list of installable toolkits out of the installed CUDA_Runtime_jll, and before
-# precompilation because the preference is a compile-time one: setting it later
-# would invalidate every cache just written. The second instantiate downloads
-# the artifacts for the newly selected toolkit -- compute nodes have no network,
-# so nothing may be left to fetch lazily at run time.
+# After the first instantiate, because select-cuda-runtime.jl reads the list of
+# installable toolkits out of the installed CUDA_Runtime_jll; before
+# precompilation, because the preference is a compile-time one and setting it
+# later would invalidate every cache just written. The second instantiate
+# downloads the newly selected toolkit -- compute nodes have no network, so
+# nothing may be left to fetch lazily at run time.
 #
-# The cpu stack clears the pin instead. LocalPreferences.toml is shared by both
-# stacks, and a leftover pin would make the cpu depot download a CUDA toolkit it
-# never uses.
+# The cpu stack clears the pin instead: LocalPreferences.toml is shared, and a
+# leftover pin would make the cpu depot download a toolkit it never uses.
 # ----------------------------------------------------------------------------
 
 if ("${STACK}" == "gpu") then
@@ -426,12 +421,10 @@ if ($status != 0) then
 endif
 
 # A CUDA toolkit cannot be exercised here -- login nodes have no GPU -- but the
-# one failure this section guards against is visible without one: a platform tag
-# of "none" means Pkg installed no toolkit at all, which is what happens when the
-# pin is missing and the driver probe finds nothing. The tag is read through
-# CUDA.jl, which re-exports CUDA_Runtime_jll; the JLL itself is an [extras] entry
-# and cannot be loaded by name. CUDA.jl warning about a missing driver here is
-# expected -- a login node has none.
+# failure this guards against is visible without one: a platform tag of "none"
+# means Pkg installed no toolkit at all. The tag is read through CUDA.jl, which
+# imports the JLL that cannot be loaded by name. CUDA.jl warning about a missing
+# driver here is expected.
 if ("${STACK}" == "gpu") then
     echo
     ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \

@@ -14,36 +14,34 @@ Usage:
     include("post_processing/plot_tracer_burdens.jl")
     plot_tracer_burdens("output/.../output_active"; dpi = 300)
 
-The burden curve is the diagnostic that says whether a run is long enough: a
-tracer still filling rises linearly, and one in equilibrium has levelled off.
-That is the same statement as `lifetime` (`burden / source`) tracking the
-elapsed time, but far quicker to read across many tracers at once.
+The burden curve tells you whether a run is long enough. A tracer still
+filling rises linearly; one in equilibrium has levelled off. That is the same
+statement as `lifetime` (`burden / source`) tracking the elapsed time, but much
+quicker to read across many tracers at once.
 
 ## Why the colours and dashes mean what they do
 
-A run carries `n_latitude_bands * n_height_bands` tracers — 48 by default — and
-no palette has 48 distinguishable hues. Rather than cycle colours, the two
-region indices are mapped to two channels:
+A run carries `n_latitude_bands * n_height_bands` tracers, 48 by default, and no
+palette has 48 distinguishable hues. So the two region indices map to two
+channels instead of cycling colours:
 
   - **Colour: height band**, on a single-hue ramp from light (just above the
     tropopause) to dark (the model top). Height above the tropopause is an
-    ordered magnitude, so a sequential ramp is the honest encoding, not a
-    workaround for having run out of categorical hues.
+    ordered magnitude, so a sequential ramp is the honest encoding here.
   - **Dash pattern: latitude band**, south to north.
 
-The legend then has `n_latitude_bands + n_height_bands` entries instead of
-their product — 14 rather than 48 — and the two gradients a reader actually
-cares about (with height, with latitude) are each readable on their own.
+The legend then has `n_latitude_bands + n_height_bands` entries instead of their
+product, 14 rather than 48. Each of the two gradients a reader cares about, with
+height and with latitude, stays readable on its own.
 =#
 
 include(joinpath(@__DIR__, "tracer_lifetimes.jl"))
 
 import CairoMakie
 
-# Sequential blue ramp, light to dark. The lightest step used is the ordinal
-# floor: on a light surface a discrete ordered mark must stay clear of the
-# background, so the ramp starts at step 250 rather than at the near-white end
-# reserved for continuous fields.
+# Sequential blue ramp, light to dark. The ramp starts at step 250, not at the
+# near-white end reserved for continuous fields: on a light surface a discrete
+# ordered mark has to stay clear of the background.
 const BURDEN_HEIGHT_RAMP = [
     "#86b6ef",  # 250
     "#6da7ec",  # 300
@@ -76,9 +74,9 @@ function band_indices(name::AbstractString)
     return (parse(Int, m.captures[1]), parse(Int, m.captures[2]))
 end
 
-# Interpolating the ramp rather than indexing its ten tabulated steps keeps
-# adjacent bands distinct at any band count: `n_height_bands` may go to 12,
-# where picking nearest steps would hand two pairs of bands the same colour.
+# Interpolate the ramp instead of indexing its ten tabulated steps, so adjacent
+# bands stay distinct at any band count. `n_height_bands` can reach 12, where
+# nearest-step picking would give two pairs of bands the same colour.
 const BURDEN_HEIGHT_GRADIENT =
     CairoMakie.cgrad(CairoMakie.to_color.(BURDEN_HEIGHT_RAMP))
 
@@ -167,9 +165,9 @@ function plot_tracer_burdens(
         )
     end
 
-    # One legend entry per band rather than per tracer. Heights are labelled by
-    # the region they cover, latitudes by the band edges, both taken from the
-    # table so they stay true to the configuration that produced it.
+    # One legend entry per band, not per tracer. Heights are labelled by the
+    # region they cover and latitudes by the band edges. Both come from the
+    # table, so they match the configuration that produced it.
     height_labels = String[]
     height_elements = CairoMakie.LineElement[]
     for k in 1:n_height

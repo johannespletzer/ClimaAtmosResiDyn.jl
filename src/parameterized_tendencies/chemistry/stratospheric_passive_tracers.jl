@@ -2,25 +2,24 @@
 ### Stratospheric passive tracers
 ###
 ###
-### A family of passive, chemically inert tracers whose only source is a
-### constant production rate inside a (latitude band × height band) source
-### region, and whose only sink is removal below the model tropopause. Once
-### the burden of a tracer stops drifting, its source and sink balance and its
-### lifetime follows from
+### Passive, chemically inert tracers. Each has one source, a constant
+### production rate inside a (latitude band × height band) region, and one
+### sink, removal below the model tropopause. Once a tracer's burden stops
+### drifting, source and sink balance and its lifetime is
 ###
 ###     τ = M / S
 ###
 ### with `M` the global burden (kg) and `S` the global source rate (kg s⁻¹).
-### `M` and `S` are both reported by the tracer-budget callback, so `τ` never
-### relies on the prescribed production rate being interpreted correctly.
+### The tracer-budget callback reports both, so `τ` never depends on reading
+### the prescribed production rate correctly.
 ###
-### The source regions are small, well-separated boxes that sample the domain
-### above the tropopause rather than tiling it: narrow latitude bands spread
-### from pole to pole, and shallow height bands stacked above the local
-### tropopause. Keeping a box small is what makes its lifetime mean something
-### — a tracer emitted over a deep layer or a wide latitude range reports an
-### average over conditions that may differ by years — so the boxes are
-### deliberately allowed to leave gaps between them.
+### The source regions are small, well-separated boxes. They sample the domain
+### above the tropopause instead of tiling it: narrow latitude bands from pole
+### to pole, and shallow height bands stacked above the local tropopause. A
+### small box is what makes its lifetime meaningful, because a tracer emitted
+### over a deep layer or a wide latitude range reports an average over
+### conditions that can differ by years. Gaps between the boxes are therefore
+### deliberate.
 ###
 
 import ClimaComms
@@ -157,10 +156,9 @@ function StratosphericPassiveTracers(
         error("loss_timescale must be positive, got $loss_timescale")
 
     # Latitude boxes sit at the centres of `n_latitude_bands` equal divisions
-    # of pole to pole, so they sample the whole range symmetrically about the
-    # equator while each stays `latitude_width` wide. They must not be wider
-    # than their division, or neighbouring boxes would overlap and a point
-    # would feed two tracers at once.
+    # from pole to pole, so they sample the range symmetrically about the
+    # equator. A box wider than its division would overlap its neighbour, and
+    # one point would then feed two tracers.
     latitude_interval = FT(180) / n_latitude_bands
     latitude_width <= latitude_interval || error(
         "latitude_width ($latitude_width) exceeds the $latitude_interval degree \
@@ -564,13 +562,12 @@ function write_tracer_budget!(output_dir, t, chemistry_model, budget)
             loss_rate = loss[tracer_index]
             lifetime = source_rate > 0 ? burden[tracer_index] / source_rate : NaN
             # `burden / loss` is the same lifetime measured against the sink
-            # instead of the source. The two agree only in equilibrium, and
-            # before it they bracket the answer: while the tracer is still
-            # filling, `burden ≈ source * t` makes `burden / source` simply the
-            # elapsed time, rising towards the lifetime from below, whereas the
-            # sink has barely started, so `burden / loss` falls towards it from
-            # above. Watching the two converge is the cheapest way to tell how
-            # much longer a run needs.
+            # instead of the source. The two agree only in equilibrium; before
+            # it they bracket the answer. While the tracer fills,
+            # `burden / source` is just the elapsed time and rises to the
+            # lifetime from below, while the sink has barely started, so
+            # `burden / loss` falls to it from above. Their convergence tells
+            # you how much longer a run needs.
             lifetime_from_loss =
                 loss_rate > 0 ? burden[tracer_index] / loss_rate : NaN
             imbalance =
