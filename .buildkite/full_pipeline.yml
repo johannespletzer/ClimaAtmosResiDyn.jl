@@ -610,6 +610,9 @@ steps:
           --config_file $COMMON_CONFIG_PATH/numerics_sphere_he6ze31.yml
           --config_file $CONFIG_PATH/passive_stratospheric_tracers_ci.yml
           --job_id passive_stratospheric_tracers_ci
+
+          julia --color=yes --project=.buildkite post_processing/plot_tracer_burdens.jl
+          passive_stratospheric_tracers_ci/output_active
         artifact_paths: "passive_stratospheric_tracers_ci/output_active/*"
 
       - label: ":cyclone: Dycore: Dry baroclinic wave with tagged energy tracers"

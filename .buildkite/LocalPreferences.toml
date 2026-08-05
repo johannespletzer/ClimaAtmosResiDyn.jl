@@ -1,0 +1,12 @@
+[MPIPreferences]
+abi = "OpenMPI"
+_format = "1.0"
+libmpi = "/sw/spack-levante/openmpi-4.1.2-mnmady/lib/libmpi"
+preloads = []
+mpiexec = "srun"
+cclibs = []
+binary = "system"
+
+[HDF5]
+libhdf5 = "/sw/spack-levante/hdf5-1.12.1-kxfaux/lib/libhdf5.so"
+libhdf5_hl = "/sw/spack-levante/hdf5-1.12.1-kxfaux/lib/libhdf5_hl.so"
