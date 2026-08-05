@@ -19,11 +19,6 @@
 # Set TRACER_SCALING_INPROCESS=1 to run them all in this process instead, which
 # is faster but only meaningful for the run-time column.
 #
-# The 12 x 12 ceiling below is `MAX_TRACER_LATITUDE_BANDS` x
-# `MAX_TRACER_HEIGHT_BANDS`: diagnostics are registered statically at load time,
-# so the model refuses a larger grid. Raising that ceiling is a prerequisite for
-# any tracer count past 144, independent of what this script measures.
-#
 # The source-region geometry here is chosen to fit many bands into the domain,
 # not to be physically sensible. This measures cost, not science.
 
@@ -38,8 +33,20 @@ using Printf
 Random.seed!(1234)
 
 # (n_latitude_bands, n_height_bands); (0, 0) is the tracer-free baseline.
-#const BAND_GRIDS = [(0, 0), (4, 8), (12, 12)]
-const BAND_GRIDS = [(0, 0), (2, 4), (4, 4), (4, 8), (8, 8), (12, 12)]
+#
+# Measured on one CPU core at h_elem = 4, z_elem = 31, Float64:
+#
+#   tracers   setup (s)   first step (s)   step (s)
+#         0        87.9              1.8      0.613
+#         8       132.0             11.4      0.954
+#        16       413.4             14.7      1.311
+#
+# Setup is about 99% compilation and grows roughly as N^2.9, which puts 64
+# tracers near five hours and 144 near fifty. Those two points are left out:
+# they cost days to measure and cannot change the conclusion. Run time per step
+# is linear instead, about 44 ms per tracer, so the tracers dominate a step long
+# before they dominate anything else.
+const BAND_GRIDS = [(0, 0), (2, 4), (4, 4), (6, 4), (4, 8)]
 
 const N_TIMED_STEPS = 5
 
@@ -78,8 +85,8 @@ function probe_config(n_latitude_bands, n_height_bands)
     )
     n_latitude_bands * n_height_bands == 0 && return config
 
-    # Bands are packed tightly so that 12 of them still fit under the model top
-    # and 12 latitude bands stay narrower than their 15 degree division.
+    # Bands are packed tightly so that a tall stack still fits under the model
+    # top, and narrow enough that latitude boxes never overlap their division.
     config["chemistry_model"] = "stratospheric_passive_tracers"
     config["tracer_source_latitude_bands"] = n_latitude_bands
     config["tracer_source_latitude_width"] = 10.0

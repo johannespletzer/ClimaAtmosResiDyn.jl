@@ -4,11 +4,11 @@ job_id: "passive_stratospheric_tracers"
 # Stratospheric passive tracer lifetimes
 # ===========================================================================
 #
-# 48 inert tracers, one per (latitude box x height box) source region. The
+# 24 inert tracers, one per (latitude box x height box) source region. The
 # boxes sample the model domain above the tropopause rather than tiling it:
 # 6 latitude boxes 10 degrees wide, centred from 75S to 75N, crossed with
-# 8 height boxes 2 km deep, stacked every 5 km from the local tropopause up to
-# 37 km above it. Small boxes are the point. A tracer emitted over a deep
+# 4 height boxes 2 km deep, stacked every 10 km from the local tropopause up
+# to 32 km above it. Small boxes are the point. A tracer emitted over a deep
 # layer or a wide latitude range reports a lifetime averaged over conditions
 # that can differ by years. Every tracer is removed below the tropopause and
 # nowhere else, so once its burden stops drifting its lifetime is
@@ -21,6 +21,16 @@ job_id: "passive_stratospheric_tracers"
 # equilibrium has been reached. `post_processing/tracer_lifetimes.jl`
 # summarises that table.
 #
+# The grid is 6 x 4, not the 6 x 8 it used to be, because setup is almost
+# entirely compilation and grows steeply with the tracer count. Measured with
+# perf/tracer_scaling.jl it goes roughly as N^2.9: about 17 minutes at 24
+# tracers against over two hours at 48, paid again on every launch and restart.
+# The latitude bands are kept and the height bands halved, with the spacing
+# doubled so the stack still reaches the same altitude. The deep stratosphere
+# is where the long lifetimes are, so coarsening the stack costs less than
+# truncating it. Run several configurations with different slices of the source
+# grid to cover more regions; the tracers are inert and do not interact.
+#
 # Expect this to be a long run. Stratospheric residence times are of order
 # 1-5 years, so the burden needs several times that to settle, on top of the
 # ~1 year the aquaplanet circulation itself needs to spin up. Resubmit the
@@ -31,9 +41,9 @@ job_id: "passive_stratospheric_tracers"
 chemistry_model: "stratospheric_passive_tracers"
 tracer_source_latitude_bands: 6
 tracer_source_latitude_width: 10.0
-tracer_source_height_bands: 8
+tracer_source_height_bands: 4
 tracer_source_band_depth: 2000.0
-tracer_source_band_spacing: 5000.0
+tracer_source_band_spacing: 10000.0
 tracer_source_height_coordinate: "tropopause"
 # Sets the magnitude of the tracers, not their lifetimes: the burden and the
 # source are both linear in it, and only their ratio is reported.
@@ -94,7 +104,7 @@ detect_restart_file: true
 output_default_diagnostics: false
 
 diagnostics:
-  # Monthly means of the tracer mass fractions. Instantaneous 3-D output of 48
+  # Monthly means of the tracer mass fractions. Instantaneous 3-D output of 24
   # tracers would dominate the run's disk usage, and the lifetimes come from
   # the budget table rather than from these fields.
   - short_name: [
@@ -102,10 +112,6 @@ diagnostics:
       q_gas_y01z02, q_gas_y02z02, q_gas_y03z02, q_gas_y04z02, q_gas_y05z02, q_gas_y06z02,
       q_gas_y01z03, q_gas_y02z03, q_gas_y03z03, q_gas_y04z03, q_gas_y05z03, q_gas_y06z03,
       q_gas_y01z04, q_gas_y02z04, q_gas_y03z04, q_gas_y04z04, q_gas_y05z04, q_gas_y06z04,
-      q_gas_y01z05, q_gas_y02z05, q_gas_y03z05, q_gas_y04z05, q_gas_y05z05, q_gas_y06z05,
-      q_gas_y01z06, q_gas_y02z06, q_gas_y03z06, q_gas_y04z06, q_gas_y05z06, q_gas_y06z06,
-      q_gas_y01z07, q_gas_y02z07, q_gas_y03z07, q_gas_y04z07, q_gas_y05z07, q_gas_y06z07,
-      q_gas_y01z08, q_gas_y02z08, q_gas_y03z08, q_gas_y04z08, q_gas_y05z08, q_gas_y06z08,
     ]
     reduction_time: average
     period: 30days

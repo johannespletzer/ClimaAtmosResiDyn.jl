@@ -203,9 +203,19 @@ path, so it is the config to reach for when changing any of them.
     which would multiply the EDMF state by the number of source regions. Even
     so, `n_latitude_bands × n_height_bands` prognostic tracers is a large
     state: the default 6 × 8 = 48 tracers add 48 fields to `Y.c` and, with
-    `implicit_diffusion: true`, 48 tridiagonal blocks to the Jacobian. Setting
-    `implicit_diffusion: false` removes those blocks if compile time or memory
-    becomes the binding constraint.
+    `implicit_diffusion: true`, 48 tridiagonal blocks to the Jacobian.
+
+    Compilation, not memory, is what limits the grid. Setup is almost entirely
+    compile time and grows roughly as `N^2.9` in the tracer count, measured
+    with `perf/tracer_scaling.jl` and paid again on every launch and restart:
+    about 17 minutes at 24 tracers against over two hours at 48. Run time per
+    step is linear instead, about 44 ms per tracer on a small CPU grid, so the
+    tracers dominate a step long before they dominate anything else. Because
+    they are inert and only `ρq_tot` feeds back on the dynamics, several runs
+    covering different slices of the source grid cost little more in total than
+    one run covering all of it, and much less in wall clock. Setting
+    `implicit_diffusion: false` removes the per-tracer Jacobian blocks if the
+    cost is still binding.
 
 ## Adding a New Passive Tracer
 
