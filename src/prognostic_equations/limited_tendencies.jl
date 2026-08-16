@@ -116,8 +116,14 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
     # Our state stores ρχ (tracer density). Store χ in scratch, apply limiter, then write ρχ back.
     # When ρq_tot is limited, update ρ and ρe_tot for mass and energy consistency.
     if !isnothing(vertical_water_borrowing_limiter)
+        # `vertical_water_borrowing_species` holds `Symbol`s (see
+        # `vertical_water_borrowing_species_from_config`), and the per-tracer
+        # loop below tests `Symbol`s too, so this guard must use one as well: a
+        # `@name(ρq_tot)` never compares equal to `:ρq_tot`, which silently
+        # skipped the snapshot, `rescale_water_tags!` and the mass/energy
+        # consistency update whenever the species list was set explicitly.
         if _should_apply_limiter_to_tracer(
-            @name(ρq_tot),
+            :ρq_tot,
             vertical_water_borrowing_species,
         ) &&
            hasproperty(Y.c, :ρq_tot)
@@ -132,8 +138,9 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
                 ρχ .= ᶜχ .* Y.c.ρ
             end
         end
+        # Must match the `Symbol` test used to open this bracket above.
         if _should_apply_limiter_to_tracer(
-            @name(ρq_tot),
+            :ρq_tot,
             vertical_water_borrowing_species,
         ) &&
            hasproperty(Y.c, :ρq_tot)
