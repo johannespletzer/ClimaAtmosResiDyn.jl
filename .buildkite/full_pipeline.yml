@@ -612,6 +612,16 @@ steps:
           --job_id baroclinic_wave_tagged_tracers
         artifact_paths: "baroclinic_wave_tagged_tracers/output_active/*"
 
+      - label: ":cyclone: Dycore: Moist baroclinic wave with tagged water tracers"
+        retry: *retry_policy
+        key: baroclinic_wave_tagged_water
+        command: >
+          julia --color=yes --project=.buildkite .buildkite/ci_driver.jl
+          --config_file $COMMON_CONFIG_PATH/numerics_sphere_he6ze10.yml
+          --config_file $CONFIG_PATH/baroclinic_wave_tagged_water.yml
+          --job_id baroclinic_wave_tagged_water
+        artifact_paths: "baroclinic_wave_tagged_water/output_active/*"
+
       - label: ":cyclone: Dycore: Dry baroclinic wave, GPU part of comparison test"
         retry: *retry_policy
         key: "baroclinic_wave_gpu"

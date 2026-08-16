@@ -1,0 +1,50 @@
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "10days"
+dt_save_state_to_disk: "2days"
+# The tags are chosen so that validation is a set of direct near-zero checks:
+#
+#   1. Region closure: `tropics` + `extratropics` form an exact partition of
+#      unity, so `q_tag_res` (= specific ρq_tot minus the sum of the region
+#      tags) starts at machine precision and then measures only the vertical
+#      advection split — the tags ride the explicit passive-tracer path while
+#      ρq_tot is advected implicitly with a post-Newton upwind correction.
+#      Their diffusion and hyperdiffusion operators are identical, so this
+#      residual should stay well below the tagged-energy `e_tag_res`.
+#   2. Process closure: `evap_tropics` and `evap_extratropics` restrict the
+#      surface moisture source to each region. Production is masked and the
+#      masks sum to 1; loss is donor-proportional and the two shares sum to the
+#      whole tag's share; transport and the limiter rescale are both linear.
+#      So `q_tag_evap_tropics + q_tag_evap_extratropics` must equal
+#      `q_tag_evap` to near machine precision at all times, and any violation
+#      is a bug rather than expected leakage.
+#   3. Process behavior: `q_tag_evap` starts at exactly 0, grows where the
+#      surface evaporates, and is depleted in proportion to its own share
+#      wherever water is removed.
+#
+# As for `tagged_tracers`, `q_tag_res` sums ALL pure region tags, so configure
+# exactly one partition of unity per run.
+tagged_water:
+  - name: tropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0}
+  - name: extratropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0, inside: false}
+  - name: evap
+    source: surface_flux
+  - name: evap_tropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0}
+    source: surface_flux
+  - name: evap_extratropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0, inside: false}
+    source: surface_flux
+diagnostics:
+  - short_name: [pfull, ua, va, ta, hus, husv]
+    period: 1days
+  - short_name: [q_tag_tropics, q_tag_extratropics, q_tag_res]
+    period: 1days
+  - short_name: [qv_tag_tropics, qv_tag_extratropics]
+    period: 1days
+  - short_name: [q_tag_evap, q_tag_evap_tropics, q_tag_evap_extratropics]
+    period: 1days
+  - short_name: [q_tag_fix_tropics, q_tag_fix_extratropics]
+    period: 1days

@@ -73,6 +73,7 @@ makedocs(;
             "Surface Conditions" => "surface_conditions.md",
             "Passive Tracers" => "passive_tracers.md",
             "Tagged Energy Tracers" => "tagged_tracers.md",
+            "Tagged Water Tracers" => "tagged_water.md",
             "Trace Gases (Radiation)" => "tracers.md",
             "Available Diagnostics" => "available_diagnostics.md",
             "Bibliography" => "references.md",
