@@ -553,6 +553,46 @@ import ClimaCore.MatrixFields: @name
         )
         @test CA.Diagnostics.get_diagnostic_variable("q_tag_tropics") ===
               q_trop
+
+        # Residual diagnostics are model-specific even though the diagnostic
+        # catalog is global. Registering a source-only model must remove the
+        # previous model's residual rather than leave its region-tag closure
+        # behind.
+        source_only_tags =
+            (CA.WaterTag{:forced}(nothing, :external_forcing),)
+        CA.Diagnostics.register_water_tagging_diagnostics!(
+            CA.WaterTaggingModel(source_only_tags),
+        )
+        @test_throws ErrorException CA.Diagnostics.get_diagnostic_variable(
+            "q_tag_res",
+        )
+
+        # A later region model must install a fresh residual over its own tags.
+        # Keep the old field in the state with a deliberately large value so
+        # this assertion also proves that the stale `:ρq_tag_tropics` closure
+        # is not being reused.
+        replacement_tags =
+            (CA.WaterTag{:global}(CA.EntireDomain()),)
+        CA.Diagnostics.register_water_tagging_diagnostics!(
+            CA.WaterTaggingModel(replacement_tags),
+        )
+        replacement_q_res =
+            CA.Diagnostics.get_diagnostic_variable("q_tag_res")
+        @test replacement_q_res !== q_res
+        replacement_state = (;
+            c = (;
+                ρ = [2.0, 2.0],
+                ρq_tot = [0.02, 0.02],
+                ρq_tag_global = [0.012, 0.016],
+                ρq_tag_tropics = [10.0, 10.0],
+            )
+        )
+        @test replacement_q_res.compute!(
+            nothing,
+            replacement_state,
+            nothing,
+            0.0,
+        ) ≈ [0.004, 0.002]
     end
 
     @testset "Tagged name predicate" begin
