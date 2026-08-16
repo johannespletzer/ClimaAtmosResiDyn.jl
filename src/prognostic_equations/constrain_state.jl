@@ -25,11 +25,16 @@ Currently, this includes
   - `prescribe_flow!`: used for 'kinematic driver'-like simulations
   - `tracer_nonnegativity_constraint!`: used to ensure that tracer fields are non-negative
   - `enforce_physical_constraints!`: grid-mean microphysics + EDMF updraft corrections
+  - `repair_water_tag_partition!`: restores non-negativity of the tagged water
+    partition without changing its sum
 """
 NVTX.@annotate function constrain_state!(Y, p, t)
     prescribe_flow!(Y, p, t, p.atmos.prescribed_flow)
     tracer_nonnegativity_constraint!(Y, p, t, p.atmos.water.tracer_nonnegativity_method)
     enforce_physical_constraints!(Y, p, t, p.atmos)
+    # Last: the corrections above can still move ρq_tot (and rescale the tags to
+    # follow it), while the repair only needs the tags to be self-consistent.
+    repair_water_tag_partition!(Y, p)
     return nothing
 end
 

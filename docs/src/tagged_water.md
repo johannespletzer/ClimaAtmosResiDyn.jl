@@ -205,15 +205,17 @@ label that the energy tags carry has no water counterpart.
     reset on restart), so a budget over an interval is the difference of two
     outputs, and a time *average* of it is not meaningful.
 
-!!! warning "`q_tag_fix` is zero unless a limiter is configured"
+!!! note "What `q_tag_fix` includes"
 
-    `rescale_water_tags!` only runs when something corrects
+    Two mechanisms write to the ledger. `repair_water_tag_partition!` runs every
+    step and contributes wherever transport drove a partition tag negative, so
+    `q_tag_fix_<name>` is generally nonzero even under stock settings — it is a
+    useful direct measure of how much the tags are drifting.
+    `rescale_water_tags!` contributes only when something actually corrects
     ``\rho q_\mathrm{tot}``: `apply_sem_quasimonotone_limiter: true`,
     `tracer_nonnegativity_method: vertical_water_borrowing`, an elementwise
-    tracer nonnegativity constraint, or a `PrescribedFlow` setup. Under stock
-    defaults none of these is active, so `q_tag_fix_<name>` is an all-zero
-    field — the ledger is idle, not broken. The `baroclinic_wave_tagged_water`
-    example config therefore does not request it.
+    tracer nonnegativity constraint, or a `PrescribedFlow` setup. With none of
+    those configured, everything in this field is partition repair.
 
 !!! note "The vapor split is an assumption"
 

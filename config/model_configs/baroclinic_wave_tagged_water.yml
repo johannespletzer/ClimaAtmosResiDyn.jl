@@ -46,11 +46,10 @@ diagnostics:
     period: 1days
   - short_name: [q_tag_evap, q_tag_evap_tropics, q_tag_evap_extratropics]
     period: 1days
-# `q_tag_fix_*` is deliberately NOT requested here. It records the water that
-# `rescale_water_tags!` moves when a limiter or state constraint corrects
-# `ρq_tot`, and none of its callers is active under this configuration:
-# `apply_sem_quasimonotone_limiter` defaults to false and
-# `tracer_nonnegativity_method` defaults to none. Requesting it would write an
-# all-zero field every day for 10 days and read as a broken ledger. To exercise
-# that path, enable one of those options — but note that doing so changes the
-# simulation, so criteria 1-3 above would need to be re-baselined.
+  # No limiter or nonnegativity constraint is configured here, so everything in
+  # `q_tag_fix_*` comes from `repair_water_tag_partition!` — it measures how
+  # much water the repair had to move to keep the partition non-negative, which
+  # is a direct read on transport drift. Cumulative, so compare differences
+  # between outputs rather than averaging.
+  - short_name: [q_tag_fix_tropics, q_tag_fix_extratropics]
+    period: 1days

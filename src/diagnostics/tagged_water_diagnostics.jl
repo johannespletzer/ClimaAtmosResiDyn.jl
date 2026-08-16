@@ -84,13 +84,15 @@ during simulation setup rather than at package load time:
     segment. It separates "the numerics moved water" from "the transport
     operators disagree", which `q_tag_res` alone would conflate.
 
-    This is **identically zero unless a limiter or state constraint that
-    corrects `ρq_tot` is configured**, because those are the only callers of
-    `rescale_water_tags!`: `apply_sem_quasimonotone_limiter: true`,
-    `tracer_nonnegativity_method: vertical_water_borrowing`, an
-    elementwise tracer nonnegativity constraint, or a `PrescribedFlow` setup.
-    Under stock defaults none of these is active, so requesting
-    `q_tag_fix_<name>` yields an all-zero field rather than an error.
+    Two mechanisms write to it. `repair_water_tag_partition!` runs every step
+    from `constrain_state!` and contributes whenever transport has driven a
+    partition tag negative, so this is generally nonzero even under stock
+    settings. `rescale_water_tags!` contributes only when a limiter or state
+    constraint actually corrects `ρq_tot`, which requires one of
+    `apply_sem_quasimonotone_limiter: true`,
+    `tracer_nonnegativity_method: vertical_water_borrowing`, an elementwise
+    tracer nonnegativity constraint, or a `PrescribedFlow` setup; with none of
+    those configured, everything recorded here is partition repair.
 
 A no-op when water tagging is disabled. Per-tag entries that already exist in the
 diagnostics catalog are kept (their compute function only depends on the tag
