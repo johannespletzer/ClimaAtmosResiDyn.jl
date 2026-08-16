@@ -11,6 +11,20 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
     implicit_vertical_advection_tendency!(Yₜ, Y, p, t)
 
     if p.atmos.microphysics_tendency_timestepping == Implicit()
+        # `implicit_microphysics` defaults to true, so with 0-moment microphysics
+        # this is where the total-water sink lives. Bracketing it for the water
+        # tags is not optional: without it their dominant loss term would be
+        # missing under the default configuration. Bracketing is safe here for
+        # the same reason it is for sedimentation below — `implicit_tendency!`
+        # zeroes `Yₜ` on every evaluation, so each Newton iterate recomputes the
+        # attribution from scratch rather than accumulating it.
+        #
+        # Only the water half is bracketed. The energy tags' `microphysics`
+        # label has always fired on the explicit path only (see
+        # `docs/src/tagged_water.md` and `KNOWN_TAG_SOURCES`); extending it here
+        # would silently change existing tagged-energy results, so that gap is
+        # left as it is.
+        snapshot_tagged_ρq_tot!(p, Yₜ)
         microphysics_tendency!(
             Yₜ,
             Y,
@@ -19,6 +33,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
+        attribute_tagged_ρq_tot!(Yₜ, Y, p, :microphysics)
         # Surface water/energy deposition from precipitation (implicit path).
         # The explicit counterpart is called from remaining_tendency!.
         surface_precipitation_tendency!(

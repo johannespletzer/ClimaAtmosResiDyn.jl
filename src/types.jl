@@ -1033,6 +1033,16 @@ struct TanhPolygonRegion{N, FT} <: AbstractTagRegion
 end
 
 """
+    AbstractTracerTag{name}
+
+Supertype of the tag definitions, parameterized by the tag `name` so that state
+field names can be generated at compile time. The concrete subtypes differ in
+which parent quantity they partition: [`TracerTag`](@ref) tags total energy
+`ρe_tot`, [`WaterTag`](@ref) tags total water `ρq_tot`.
+"""
+abstract type AbstractTracerTag{name} end
+
+"""
     TracerTag{name}(region, source = :none)
 
 Definition of one tagged prognostic energy tracer, stored in the state as
@@ -1049,7 +1059,8 @@ names can be generated at compile time (GPU-compatible).
     empty for passive region tags. A single `Symbol` is also accepted
     (`:none` meaning "no sources").
 """
-struct TracerTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple}
+struct TracerTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
+       AbstractTracerTag{name}
     region::R
     sources::S
 end
@@ -1059,19 +1070,49 @@ TracerTag{name}(region, source::Symbol) where {name} =
     TracerTag{name}(region, source === :none ? () : (source,))
 
 """
-    tag_sources(tag::TracerTag)
+    WaterTag{name}(region, source = :none)
 
-The `Tuple` of process labels attributed to a [`TracerTag`](@ref); empty for
-a pure region tag.
+Definition of one tagged prognostic water tracer, stored in the state as
+`Y.c.ρq_tag_<name>`. Same shape as [`TracerTag`](@ref), but it partitions total
+water `ρq_tot` rather than total energy, and it is attributed with a different
+rule (see `parameterized_tendencies/tagged_tracers/tagged_water.jl`):
+
+  - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. A pure region tag
+    (`region` given, no sources) is initialized to `ρq_tot * mask` and receives
+    every attributed *production* term, masked. Any source tag is initialized to
+    zero and receives only the production of the processes it lists.
+  - `sources`: a `Tuple` of `Symbol`s labeling the processes whose `ρq_tot`
+    production is attributed to this tag (e.g. `(:surface_flux,)`); empty for a
+    pure region tag. A single `Symbol` is also accepted (`:none` meaning "no
+    sources").
+
+Unlike an energy tag, *every* water tag is depleted by *every* attributed loss
+term, in proportion to its own share of the local water. That is what makes
+`ρq_tag_<name>` an actual water mass rather than a running source integral.
 """
-tag_sources(tag::TracerTag) = tag.sources
+struct WaterTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
+       AbstractTracerTag{name}
+    region::R
+    sources::S
+end
+WaterTag{name}(region::R, sources::S = ()) where {name, R, S <: Tuple} =
+    WaterTag{name, R, S}(region, sources)
+WaterTag{name}(region, source::Symbol) where {name} =
+    WaterTag{name}(region, source === :none ? () : (source,))
 
 """
-    tag_name(tag::TracerTag)
+    tag_sources(tag::AbstractTracerTag)
 
-The `Symbol` name of a [`TracerTag`](@ref) (compile-time constant).
+The `Tuple` of process labels attributed to a tag; empty for a pure region tag.
 """
-tag_name(::TracerTag{name}) where {name} = name
+tag_sources(tag::AbstractTracerTag) = tag.sources
+
+"""
+    tag_name(tag::AbstractTracerTag)
+
+The `Symbol` name of a tag (compile-time constant).
+"""
+tag_name(::AbstractTracerTag{name}) where {name} = name
 
 """
     TaggingModel(tags::Tuple)
@@ -1085,12 +1126,24 @@ struct TaggingModel{T <: Tuple}
 end
 
 """
+    WaterTaggingModel(tags::Tuple)
+
+Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
+`tagged_water` config entry; see `AtmosTagging(::AtmosConfig)` in
+`config/model_getters.jl`.
+"""
+struct WaterTaggingModel{T <: Tuple}
+    tags::T
+end
+
+"""
     AtmosTagging
 
 Groups tagged-tracer models and types.
 """
-@kwdef struct AtmosTagging{TM}
+@kwdef struct AtmosTagging{TM, WM}
     tagging_model::TM = nothing
+    water_tagging_model::WM = nothing
 end
 
 """

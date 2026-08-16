@@ -1017,7 +1017,16 @@ function AtmosTagging(config::AtmosConfig)
     else
         TaggingModel(tagged_tracer_tuple(entries, FT))
     end
-    return AtmosTagging(; tagging_model)
+    water_entries = config.parsed_args["tagged_water"]
+    water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
+        nothing
+    else
+        check_water_tagging_supported(
+            get_microphysics_model(config.parsed_args),
+        )
+        WaterTaggingModel(water_tag_tuple(water_entries, FT))
+    end
+    return AtmosTagging(; tagging_model, water_tagging_model)
 end
 
 function COSPModel(config::AtmosConfig)

@@ -155,24 +155,26 @@ function region_mask(region::TanhPolygonRegion, coord)
 end
 
 """
-    tag_initial_value(tag::TracerTag, ρe_tot, coord)
+    tag_initial_value(tag::AbstractTracerTag, ρχ, coord)
 
-Initial value of the tagged field `ρe_tag_<name>` at a single point:
+Initial value of a tagged field at a single point, where `ρχ` is the parent
+quantity being partitioned (`ρe_tot` for a [`TracerTag`](@ref), `ρq_tot` for a
+[`WaterTag`](@ref)):
 
   - For pure region tags (`tag.region isa AbstractTagRegion` and
-    no sources), the masked share of the initial total energy,
-    `ρe_tot * M(coord)`. If the configured regions partition unity (e.g. a
-    band and its complement), the region tags sum to `ρe_tot` at `t = 0`.
+    no sources), the masked share of the initial parent, `ρχ * M(coord)`. If the
+    configured regions partition unity (e.g. a band and its complement), the
+    region tags sum to `ρχ` at `t = 0`.
   - For source tags, zero — **regardless of whether they also carry a
     region**. A source tag accumulates only the attributed process tendency
     (masked by its region when it has one); initializing a region-restricted
-    source tag to `ρe_tot * M` would add the region's energy content on top
-    of the accounting and break the identity that region-restricted source
-    tags over a partition sum to the corresponding global source tag.
+    source tag to `ρχ * M` would add the region's content on top of the
+    accounting and break the identity that region-restricted source tags over a
+    partition sum to the corresponding global source tag.
 """
-@inline tag_initial_value(tag::TracerTag, ρe_tot, coord) =
-    isnothing(tag.region) || !isempty(tag.sources) ? zero(ρe_tot) :
-    ρe_tot * region_mask(tag.region, coord)
+@inline tag_initial_value(tag::AbstractTracerTag, ρχ, coord) =
+    isnothing(tag.region) || !isempty(tag.sources) ? zero(ρχ) :
+    ρχ * region_mask(tag.region, coord)
 
 # Build a single-entry NamedTuple `(; ρe_tag_<name> = value)`. The field name
 # is computed at compile time from the tag's type parameter, so this is fully
@@ -304,16 +306,31 @@ function tag_region_from_config(region_config, ::Type{FT}) where {FT}
 end
 
 """
-    tag_sources_from_config(source_config, name)
+    tag_sources_from_config(source_config, name, known = KNOWN_TAG_SOURCES,
+                            groups = TAG_SOURCE_GROUPS)
 
-Convert the `source` entry of a `tagged_tracers` config item into a `Tuple`
-of process labels. Accepts `nothing` (no sources), a single string, or a list
-of strings; each string is either a process in [`KNOWN_TAG_SOURCES`](@ref) or
-a group in [`TAG_SOURCE_GROUPS`](@ref), which expands to its members.
-Duplicates (e.g. from overlapping groups) are removed.
+Convert the `source` entry of a `tagged_tracers` (or `tagged_water`) config item
+into a `Tuple` of process labels. Accepts `nothing` (no sources), a single
+string, or a list of strings; each string is either a process in `known` or a
+group in `groups`, which expands to its members. Duplicates (e.g. from
+overlapping groups) are removed.
+
+`known` and `groups` are arguments rather than hard-coded so that the water tags
+can reuse this parser with their own, different source table (see
+[`KNOWN_WATER_TAG_SOURCES`](@ref)).
 """
-tag_sources_from_config(::Nothing, name) = ()
-function tag_sources_from_config(source_config, name)
+tag_sources_from_config(
+    ::Nothing,
+    name,
+    known = KNOWN_TAG_SOURCES,
+    groups = TAG_SOURCE_GROUPS,
+) = ()
+function tag_sources_from_config(
+    source_config,
+    name,
+    known = KNOWN_TAG_SOURCES,
+    groups = TAG_SOURCE_GROUPS,
+)
     entries =
         source_config isa AbstractString ? (source_config,) :
         Tuple(source_config)
@@ -321,15 +338,15 @@ function tag_sources_from_config(source_config, name)
     for entry in entries
         key = Symbol(entry)
         key === :none && continue
-        if haskey(TAG_SOURCE_GROUPS, key)
-            append!(sources, getproperty(TAG_SOURCE_GROUPS, key))
-        elseif key in KNOWN_TAG_SOURCES
+        if haskey(groups, key)
+            append!(sources, getproperty(groups, key))
+        elseif key in known
             push!(sources, key)
         else
             error(
                 "Unknown tagged tracer source `$key` for tag `$name`. " *
-                "Supported processes: $(join(KNOWN_TAG_SOURCES, ", ")). " *
-                "Supported groups: $(join(keys(TAG_SOURCE_GROUPS), ", ")).",
+                "Supported processes: $(join(known, ", ")). " *
+                "Supported groups: $(join(keys(groups), ", ")).",
             )
         end
     end
@@ -463,11 +480,24 @@ implicit tendency is evaluated with `ForwardDiff.Dual` numbers when an
 automatic-differentiation Jacobian is used, and only `p.precomputed` and
 `p.scratch` are converted to dual-typed fields.
 """
-tagging_cache(Y, atmos::AtmosModel) = _tagging_cache(Y, atmos.tagging_model)
+function tagging_cache(Y, atmos::AtmosModel)
+    energy = _tagging_cache(Y, atmos.tagging_model)
+    water = _water_tagging_cache(Y, atmos.water_tagging_model)
+    isnothing(energy) && isnothing(water) && return nothing
+    return (; _or_empty(energy)..., _or_empty(water)...)
+end
+_or_empty(::Nothing) = (;)
+_or_empty(nt) = nt
+
 _tagging_cache(Y, ::Nothing) = nothing
 function _tagging_cache(Y, model::TaggingModel)
     ᶜmasks = _tag_masks(Fields.coordinate_field(Y.c), model.tags)
-    _check_region_partition(ᶜmasks, model)
+    _check_region_partition(
+        ᶜmasks,
+        region_tag_state_names(model),
+        "e_tag_res",
+        "ρe_tag",
+    )
     return (; ᶜmasks)
 end
 
@@ -477,11 +507,23 @@ end
 Scratch fields needed by tagged-tracer source attribution, merged into
 `p.scratch`; empty when tagging is disabled. `ᶜtagging_snapshot` holds
 `Yₜ.c.ρe_tot` from the last [`snapshot_tagged_ρe_tot!`](@ref); no other code
-touches it, so a bracketed process cannot clobber it.
+touches it, so a bracketed process cannot clobber it. `ᶜtagging_q_snapshot` is
+its water counterpart, and `ᶜtagging_q_share_norm` holds the partition-share
+denominator of [`water_tag_share_norm!`](@ref).
 """
-tagging_scratch(Y, atmos::AtmosModel) =
-    isnothing(atmos.tagging_model) ? (;) :
-    (; ᶜtagging_snapshot = similar(Y.c.ρ))
+tagging_scratch(Y, atmos::AtmosModel) = (;
+    (
+        isnothing(atmos.tagging_model) ? (;) :
+        (; ᶜtagging_snapshot = similar(Y.c.ρ))
+    )...,
+    (
+        isnothing(atmos.water_tagging_model) ? (;) :
+        (;
+            ᶜtagging_q_snapshot = similar(Y.c.ρ),
+            ᶜtagging_q_share_norm = similar(Y.c.ρ),
+        )
+    )...,
+)
 
 """
     region_tag_state_names(tagging_model::TaggingModel)
@@ -496,13 +538,12 @@ region_tag_state_names(tagging_model::TaggingModel) = Tuple(
     tag in tagging_model.tags if !isnothing(tag.region) && isempty(tag.sources)
 )
 
-# The closure diagnostic `e_tag_res = (ρe_tot - Σᵢ ρe_tag_i) / ρ` only
+# The closure diagnostic `<residual_name> = (parent - Σᵢ tagᵢ) / ρ` only
 # measures attribution leakage when the pure region masks form a partition of
 # unity. Overlapping or incomplete regions are allowed (and sometimes
-# intended), but then `e_tag_res` is dominated by the overlap/deficit, so say
+# intended), but then the residual is dominated by the overlap/deficit, so say
 # so once at initialization.
-function _check_region_partition(ᶜmasks, model::TaggingModel)
-    names = region_tag_state_names(model)
+function _check_region_partition(ᶜmasks, names, residual_name, tag_prefix)
     isempty(names) && return nothing
     mask_sum = reduce(
         (a, b) -> a .+ b,
@@ -511,13 +552,13 @@ function _check_region_partition(ᶜmasks, model::TaggingModel)
     deviation = maximum(abs.(mask_sum .- 1))
     if deviation > 0.01
         @warn(
-            "The region tag masks do not form a partition of unity (max " *
-            "deviation of their sum from 1: $deviation). This is allowed, " *
-            "but the closure diagnostic `e_tag_res` = (ρe_tot - Σᵢ " *
-            "ρe_tag_i)/ρ will be dominated by the overlap/deficit rather " *
-            "than by attribution leakage. For a clean closure monitor, use " *
-            "region tags that sum to 1 (e.g. a region and its complement " *
-            "via `inside: false` / `above: false`).",
+            "The `$tag_prefix` region masks do not form a partition of unity " *
+            "(max deviation of their sum from 1: $deviation). This is " *
+            "allowed, but the closure diagnostic `$residual_name` will be " *
+            "dominated by the overlap/deficit rather than by attribution " *
+            "leakage. For a clean closure monitor, use region tags that sum " *
+            "to 1 (e.g. a region and its complement via `inside: false` / " *
+            "`above: false`).",
         )
     end
     return nothing
@@ -586,13 +627,16 @@ function _accumulate_tags!(ᶜYₜ, ᶜmasks, ᶜΔ, source, tags::Tuple)
 end
 
 """
-    tag_receives_source(tag::TracerTag, source::Symbol)
+    tag_receives_source(tag::AbstractTracerTag, source::Symbol)
 
 Whether the attributed process labeled `source` contributes to `tag`: pure
 region tags (no sources) receive every attributed process, while source tags
 only receive the processes they list.
+
+For a [`WaterTag`](@ref) this governs *production* only — every water tag is
+depleted by every attributed loss, whatever it lists.
 """
-tag_receives_source(tag::TracerTag, source::Symbol) =
+tag_receives_source(tag::AbstractTracerTag, source::Symbol) =
     isempty(tag.sources) || source in tag.sources
 
 function _accumulate_tag!(
@@ -618,13 +662,34 @@ end
     :(obj.$(Symbol(:ρe_tag_, name)))
 
 """
-    is_tagged_tracer_name(name)
+    is_energy_tag_name(name)
 
 Whether `name` (a `Symbol` like `:ρe_tag_strat`, or a
-`MatrixFields.FieldName`) refers to a tagged prognostic energy tracer. Used
-to exempt tags from machinery that assumes nonnegative tracers, since tagged
-energies can be legitimately negative (e.g. accumulated cooling).
+`MatrixFields.FieldName`) refers to a tagged prognostic energy tracer.
 """
-is_tagged_tracer_name(name::Symbol) = startswith(string(name), "ρe_tag_")
-is_tagged_tracer_name(name::MatrixFields.FieldName) =
-    is_tagged_tracer_name(MatrixFields.extract_first(name))
+is_energy_tag_name(name::Symbol) = startswith(string(name), "ρe_tag_")
+is_energy_tag_name(name::MatrixFields.FieldName) =
+    is_energy_tag_name(MatrixFields.extract_first(name))
+
+"""
+    is_water_tag_name(name)
+
+Whether `name` (a `Symbol` like `:ρq_tag_tropics`, or a
+`MatrixFields.FieldName`) refers to a tagged prognostic water tracer.
+"""
+is_water_tag_name(name::Symbol) = startswith(string(name), "ρq_tag_")
+is_water_tag_name(name::MatrixFields.FieldName) =
+    is_water_tag_name(MatrixFields.extract_first(name))
+
+"""
+    is_tagged_tracer_name(name)
+
+Whether `name` refers to a tagged prognostic tracer of either family. Used to
+exempt tags from the tracer limiters, for different reasons per family: tagged
+energies can be legitimately negative (e.g. accumulated cooling), while tagged
+waters must not be limited independently of each other because a shape-preserving
+adjustment applied per tag would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags instead
+follow the parent's limiting through [`rescale_water_tags!`](@ref).
+"""
+is_tagged_tracer_name(name) =
+    is_energy_tag_name(name) || is_water_tag_name(name)

@@ -35,6 +35,7 @@ function setup_diagnostics_and_writers(
     # Tagged-tracer short names depend on the configured tag names, so they
     # are registered here rather than at package load time
     CAD.register_tagging_diagnostics!(model)
+    CAD.register_water_tagging_diagnostics!(model)
 
     all_diagnostics = []
 

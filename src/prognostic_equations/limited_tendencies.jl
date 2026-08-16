@@ -11,9 +11,13 @@ Determine if a limiter should be applied to a specific tracer.
   - `species`: Configuration — `nothing`: apply to all; `()`: apply to none;
     `Tuple{Symbol,...}`: apply only if `ρχ_name ∈ species`
 
-Tagged energy tracers (`ρe_tag_*`) are always excluded: they can be
-legitimately negative (e.g. accumulated cooling), so nonnegativity limiting
-would silently corrupt them.
+Tagged tracers are always excluded, for a different reason per family. Tagged
+energies (`ρe_tag_*`) can be legitimately negative (e.g. accumulated cooling),
+so nonnegativity limiting would silently corrupt them. Tagged waters
+(`ρq_tag_*`) are non-negative but must not be limited independently of each
+other: a per-tag shape-preserving adjustment has no reason to sum to the
+parent's, so it would break `Σᵢ ρq_tag_i = ρq_tot`. They instead follow the
+parent's correction through [`rescale_water_tags!`](@ref).
 
 # Returns
 
@@ -86,6 +90,12 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
             # the same treatment as ρe_tot, which is not limited either. A
             # shape-preserving adjustment applied to the tags but not to
             # ρe_tot would show up as tagging closure error.
+            #
+            # Tagged water tracers are skipped for the opposite reason: ρq_tot
+            # *is* limited, but limiting each tag independently has no reason to
+            # reproduce the parent's adjustment, so it would break
+            # Σᵢ ρq_tag_i = ρq_tot. They follow the parent through
+            # `rescale_water_tags!` below instead.
             is_tagged_tracer_name(ρχ_name) && continue
             Limiters.compute_bounds!(
                 sem_quasimonotone_limiter,
@@ -95,6 +105,8 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
             Limiters.apply_limiter!(Y.c.:($ρχ_name), Y.c.ρ, sem_quasimonotone_limiter)
         end
         if hasproperty(Y.c, :ρq_tot)
+            # `ᶜtemp_scalar_2` still holds the pre-limiter ρq_tot here
+            rescale_water_tags!(Y, p, p.scratch.ᶜtemp_scalar_2)
             @. p.scratch.ᶜtemp_scalar_2 = Y.c.ρq_tot - p.scratch.ᶜtemp_scalar_2
             enforce_mass_energy_consistency!(Y, p, p.scratch.ᶜtemp_scalar_2)
         end
@@ -125,6 +137,8 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
             vertical_water_borrowing_species,
         ) &&
            hasproperty(Y.c, :ρq_tot)
+            # `ᶜtemp_scalar_2` still holds the pre-limiter ρq_tot here
+            rescale_water_tags!(Y, p, p.scratch.ᶜtemp_scalar_2)
             @. p.scratch.ᶜtemp_scalar_2 = Y.c.ρq_tot - p.scratch.ᶜtemp_scalar_2
             enforce_mass_energy_consistency!(Y, p, p.scratch.ᶜtemp_scalar_2)
         end

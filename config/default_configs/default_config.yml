@@ -434,7 +434,10 @@ chemistry_model:
   help: "Chemistry model [`~` (default, no passive tracers), `passive` (enables passive tracer A)]"
   value: ~
 tagged_tracers:
-  help: "Tagged prognostic energy tracers `ρe_tag_<name>` [`~` (default, disabled)]. List of maps, each with `name` (required, unique), optional `region` (map with `type`: `everywhere` | `tanh_altitude` with `z_center` and `width` in meters | `tanh_latitude` with `lat_bound` and `width` in degrees plus optional `inside: false` for the complement), and optional `source` (process label for source attribution). Region tags are initialized to the masked share of `ρe_tot`; source-only tags start at zero."
+  help: "Tagged prognostic energy tracers `ρe_tag_<name>` [`~` (default, disabled)]. List of maps, each with `name` (required, unique), optional `region` (map with `type`: `everywhere` | `tanh_altitude` with `z_center` and `width` in meters | `tanh_latitude` with `lat_bound` and `width` in degrees | `tanh_box` with `lon_min`, `lon_max`, `lat_min`, `lat_max` and `width` in degrees | `tanh_polygon` with `vertices` (a list of `[lon, lat]` pairs) and `width` in degrees, all but `everywhere` accepting `inside: false` (`above: false` for `tanh_altitude`) for the exact complement), and optional `source` (process label for source attribution). Region tags are initialized to the masked share of `ρe_tot`; source-only tags start at zero."
+  value: ~
+tagged_water:
+  help: "Tagged prognostic water tracers `ρq_tag_<name>` [`~` (default, disabled)]. Same `name` / `region` / `source` schema as `tagged_tracers`, but the tags partition total water `ρq_tot` and the source labels are the processes that move water: `surface_flux`, `microphysics`, `large_scale_advection`, `subsidence`, `external_forcing`, plus the groups `surface`, `forcing` and `all`. Region tags are initialized to the masked share of `ρq_tot`; source-only tags start at zero. Every tag is depleted by every attributed loss in proportion to its own share of the local water. Requires `microphysics_model: 0M` or `1M`; with 1M the tags additionally sediment with their own mirrored donor-cell flux, so surface precipitation is tagged."
   value: ~
 
 # EDMF configuration

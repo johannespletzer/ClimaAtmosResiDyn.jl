@@ -60,6 +60,8 @@ include(joinpath("parameterized_tendencies", "chemistry", "chemistry.jl"))
 
 # Tagged prognostic energy tracers (masks, state builders, config parsing)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_tracers.jl"))
+# Tagged prognostic water tracers (reuses the regions and masks defined above)
+include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water.jl"))
 
 include(joinpath("surface_conditions", "SurfaceConditions.jl"))
 include(joinpath("setups", "Setups.jl"))

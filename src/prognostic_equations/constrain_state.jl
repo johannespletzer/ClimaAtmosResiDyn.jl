@@ -136,6 +136,8 @@ function tracer_nonnegativity_constraint!(Y, p, t,
             Limiters.compute_bounds!(tracer_nonnegativity_limiter, ᶜρq_lim, ᶜρ)  # bounds are `extrema(ᶜρq_lim) = (0, max(ᶜρq))`
             Limiters.apply_limiter!(ᶜρq, ᶜρ, tracer_nonnegativity_limiter; warn = false)  # ᶜρq is clipped to bounds, effectively ensuring `0 ≤ ᶜρq`
             if (name == @name(ρq_tot)) && constrain_qtot
+                # While `ᶜtemp_scalar_2` still holds the pre-clip `ρq_tot`
+                rescale_water_tags!(Y, p, ᶜtemp_scalar_2)
                 @. ᶜtemp_scalar_2 = ᶜρq - ᶜtemp_scalar_2
                 enforce_mass_energy_consistency!(Y, p, ᶜtemp_scalar_2)
             end
@@ -169,7 +171,10 @@ function prescribe_flow!(Y, p, t, flow::PrescribedFlow)
 
     # Clamp ρq_tot to non-negative to prevent the feedback loop:
     # negative ρq_tot → lower ρ → more negative q_tot → blowup
+    ᶜρq_tot_before = p.scratch.ᶜtemp_scalar_2
+    ᶜρq_tot_before .= Y.c.ρq_tot
     @. Y.c.ρq_tot = max(Y.c.ρq_tot, 0)
+    rescale_water_tags!(Y, p, ᶜρq_tot_before)
     @. Y.c.ρ = ᶜρ_init_dry + Y.c.ρq_tot
     ᶜq_tot = @. lazy(Y.c.ρq_tot / Y.c.ρ)
     ᶜe_kin = compute_kinetic(Y.c.uₕ, Y.f.u₃)

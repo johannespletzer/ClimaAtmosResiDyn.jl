@@ -59,6 +59,11 @@ import ..TaggingModel
 import ..tag_name
 import ..region_tag_state_names
 
+# water_tagging_model
+import ..WaterTaggingModel
+import ..water_region_tag_state_names
+import ..water_tag_fraction
+
 # surface temperature
 import ..SurfaceConditions
 import ..SurfaceConditions: SlabOceanTemperature
