@@ -74,9 +74,12 @@ include("../../../examples/passive_stratospheric_tracers.jl")
                 source_altitude in chemistry.source_altitudes
             ),
         )
-        source_region = altitude_region .&
-            (abs.(latitude .- chemistry.source_latitudes[i]) .<=
-             chemistry.latitude_half_width)
+        source_region =
+            altitude_region .&
+            (
+                abs.(latitude .- chemistry.source_latitudes[i]) .<=
+                chemistry.latitude_half_width
+            )
         @test any(source_region)
         @test all(iszero, tendency[.!source_region])
         @test all(tendency[source_region] .> 0)

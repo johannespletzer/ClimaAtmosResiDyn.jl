@@ -29,6 +29,7 @@ default (`tagged_tracers: ~`) disables the feature entirely: no extra state
 fields, cache entries, or runtime cost.
 
 !!! note "One partition at a time"
+
     The closure diagnostic `e_tag_res` sums **all** pure region tags, so
     configure exactly one partition of unity per run (a region and its
     complement, as above) rather than several overlapping decompositions. A
@@ -45,8 +46,7 @@ region types:
   - `everywhere`: ``M = 1`` in the whole domain.
   - `tanh_altitude`: ``M = (1 + \tanh((z - z_\mathrm{center}) / w)) / 2``;
     `above: false` gives the exact complement (1 below, 0 above).
-  - `tanh_latitude`: a smooth band ``|\mathrm{lat}| \lesssim
-    \mathrm{lat\_bound}``; `inside: false` gives the exact complement.
+  - `tanh_latitude`: a smooth band ``|\mathrm{lat}| \lesssim \mathrm{lat\_bound}``; `inside: false` gives the exact complement.
     Requires spherical geometry.
   - `tanh_box`: a smooth longitude–latitude box (`lon_min`, `lon_max`,
     `lat_min`, `lat_max`, `width`). Requires spherical geometry.
@@ -88,6 +88,7 @@ print(yaml.dump({"vertices": vertices}))
 ```
 
 !!! warning "Smoothing is required, not cosmetic"
+
     `regionmask` rasterizes regions with a point-in-polygon test, giving a
     sharp 0/1 mask. A discontinuous mask must **not** be used here: in the
     spectral-element discretization it produces Gibbs oscillations that
@@ -102,18 +103,19 @@ process adds to ``\rho e_\mathrm{tot}``.
 
 ### Taggable processes
 
-| Group | `source` label | Process |
-|:--|:--|:--|
-| `radiative` | `radiation` | All radiation modes (RRTMGP, gray, DYCOMS, TRMM\_LBA, ISDAC) |
-| `turbulent` | `surface_flux` | Turbulent surface energy flux |
-| `moist` | `microphysics` | Microphysics energy sources, when stepped explicitly (0-moment only — see below) |
-| `moist` | `precipitation` | Energy carried out of a level by sedimenting precipitation |
-| `forcing` | `held_suarez` | Held–Suarez relaxation forcing |
-| `forcing` | `large_scale_advection` | Prescribed large-scale advective forcing |
-| `forcing` | `subsidence` | Prescribed large-scale subsidence |
-| `forcing` | `external_forcing` | Externally prescribed (e.g. GCM-driven) forcing |
+| Group       | `source` label          | Process                                                                          |
+|:----------- |:----------------------- |:-------------------------------------------------------------------------------- |
+| `radiative` | `radiation`             | All radiation modes (RRTMGP, gray, DYCOMS, TRMM\_LBA, ISDAC)                     |
+| `turbulent` | `surface_flux`          | Turbulent surface energy flux                                                    |
+| `moist`     | `microphysics`          | Microphysics energy sources, when stepped explicitly (0-moment only — see below) |
+| `moist`     | `precipitation`         | Energy carried out of a level by sedimenting precipitation                       |
+| `forcing`   | `held_suarez`           | Held–Suarez relaxation forcing                                                   |
+| `forcing`   | `large_scale_advection` | Prescribed large-scale advective forcing                                         |
+| `forcing`   | `subsidence`            | Prescribed large-scale subsidence                                                |
+| `forcing`   | `external_forcing`      | Externally prescribed (e.g. GCM-driven) forcing                                  |
 
 !!! note "Which moist label carries the signal"
+
     With 0-moment microphysics the moist energy sink appears in
     `microphysics`. The 1-moment and 2-moment schemes instead change only
     the water species, and the energy leaves with the falling precipitation,
@@ -169,8 +171,7 @@ With tagging enabled, per-tag diagnostics are registered automatically:
 
   - `e_tag_<name>`: specific tagged energy ``\rho e_{\mathrm{tag}} / \rho``
     (J kg⁻¹);
-  - `e_tag_res`: the closure residual ``(\rho e_\mathrm{tot} - \sum_i \rho
-    e_{\mathrm{tag},i}) / \rho``, summed over the pure region tags.
+  - `e_tag_res`: the closure residual ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{tag},i}) / \rho``, summed over the pure region tags.
 
 `e_tag_res` is a **monitored residual**, not a machine-precision identity:
 ``\rho e_\mathrm{tot}`` is transported as enthalpy (including pressure work)
@@ -183,8 +184,7 @@ attribution leakage.
 
 A sharper *process closure* check is available by splitting a source tag
 across a partition: with `rad`, `rad_stratosphere`, and `rad_troposphere`
-tags, transport linearity implies ``e_{\mathrm{tag,rad\_strat}} +
-e_{\mathrm{tag,rad\_tropo}} = e_{\mathrm{tag,rad}}`` to near machine
+tags, transport linearity implies ``e_{\mathrm{tag,rad\_strat}} + e_{\mathrm{tag,rad\_tropo}} = e_{\mathrm{tag,rad}}`` to near machine
 precision at all times — any violation indicates a bug rather than expected
 leakage. `config/model_configs/baroclinic_wave_tagged_tracers.yml` and the
 integration test use this identity with the Held–Suarez source.
