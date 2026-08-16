@@ -365,11 +365,10 @@ if ("${STACK}" == "gpu") then
         exit 1
     endif
 else
-    # Deleting a preference is set_preferences! with `missing`. The (UUID, name)
-    # tuple is required because CUDA_Runtime_jll is an [extras] entry, so it
-    # cannot be resolved by name -- see runscripts/select-cuda-runtime.jl.
-    ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \
-        -e 'using Preferences; jll = (Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2"), "CUDA_Runtime_jll"); set_preferences!(jll, "version" => missing, "local" => missing; force = true)'
+    # Drop the entire CUDA preference table. This also removes an empty
+    # [CUDA_Runtime_jll] table left by older Preferences.jl-based cleanup.
+    ${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no \
+        -e 'using TOML; pf = ENV["LEVANTE_PREFS"]; prefs = isfile(pf) ? TOML.parsefile(pf) : Dict{String,Any}(); pop!(prefs, "CUDA_Runtime_jll", nothing); open(io -> TOML.print(io, prefs), pf, "w"); println("cleared CUDA runtime preferences from ", pf)'
     if ($status != 0) then
         echo "ERROR: could not clear the CUDA toolkit pin."
         exit 1
@@ -428,7 +427,7 @@ endif
 if ("${STACK}" == "gpu") then
     echo
     ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \
-        -e 'using CUDA, Preferences; jll = Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2"); tag = CUDA.CUDA_Runtime_jll.host_platform["cuda"]; println("CUDA version preference: ", something(load_preference(jll, "version"), "<unset>")); println("CUDA platform tag:       ", tag); tag == "none" && error("no CUDA toolkit installed")'
+        -e 'using CUDA, TOML; pf = ENV["LEVANTE_PREFS"]; prefs = isfile(pf) ? TOML.parsefile(pf) : Dict{String,Any}(); version = get(get(prefs, "CUDA_Runtime_jll", Dict{String,Any}()), "version", "<unset>"); tag = CUDA.CUDA_Runtime_jll.host_platform["cuda"]; println("CUDA version preference: ", version); println("CUDA platform tag:       ", tag); version == "<unset>" && error("CUDA toolkit version preference is unset"); tag == "none" && error("no CUDA toolkit installed")'
     if ($status != 0) then
         echo
         echo "ERROR: no CUDA toolkit was installed for this depot."
