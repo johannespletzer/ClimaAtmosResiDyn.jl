@@ -276,10 +276,11 @@ let rrtm = p_allsky.radiation.rrtmgp_solver
 end
 
 ## EDMFX models
-# Shared EDMF configuration — minimal (no entr/detr, no SGS fluxes)
+# Shared EDMF configuration — minimal (no SGS fluxes)
 tcp = CAP.turbconv_params(params)
 edmfx_model = CA.EDMFXModel(;
-    entr_model = CA.NoEntrainment(), detr_model = CA.NoDetrainment(),
+    entr_model = CA.InvZEntrainment(),
+    detr_model = CA.BuoyancyVelocityDetrainment(),
     scale_blending_method = CA.SmoothMinimumBlending(),
 )
 pedmfx = CA.PrognosticEDMFX(; area_fraction = tcp.min_area)
@@ -388,7 +389,7 @@ VALID_CASES = [
     # Union{DryModel, MoistMicrophysics}: single method
     cases(("pr", "prra", "prsn"), :dry)...,
     # EquilibriumMicrophysics0M (precomputed cache), NonEquilibriumMicrophysics (state)
-    cases(("clw", "cli", "lwp", "iwp"), (:m0, :m1))...,
+    cases(("clw", "cli", "lwp", "iwp", "ssatl", "ssati"), (:m0, :m1))...,
     # DryModel, MoistMicrophysics (different flux computation)
     case("hfss",  (:dry, :m0)),
     # Non-EDMF (Smagorinsky formula), EDMF (mixing-length closure)
@@ -490,6 +491,10 @@ SKIP_CASES = Set([
     "husra_pos_frac", "husra_pos_mean", "husra_pos_sum",
     "hussn_max", "hussn_min", "hussn_neg_frac", "hussn_neg_mean", "hussn_neg_sum",
     "hussn_pos_frac", "hussn_pos_mean", "hussn_pos_sum",
+    # tendency_diagnostics.jl — debug-only, expensive per-sample (each runs a
+    # full tendency evaluation). Exercised in single-column runs when the
+    # `debug_tendency_diagnostics` config flag is enabled.
+    CA.Diagnostics.tendency_debug_short_names()...,
 ])
 
 # ---------------------------------------------------------------------------
