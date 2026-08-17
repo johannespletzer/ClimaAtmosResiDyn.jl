@@ -3,8 +3,7 @@
 ###
 
 # Gas-phase chemistry for ClimaAtmos.
-# The MUSICA backend is provided by the ClimaAtmosMusica extension;
-# this file defines only the fallback for when no chemistry is loaded.
+# The MUSICA backend is provided by the ClimaAtmosMusica extension.
 
 """
     chemistry_tendency!(Yₜ, Y, p, t, chemistry_model)
@@ -19,4 +18,3 @@ Dispatches on the chemistry model in `p.atmos`:
     automatically when `Musica` is imported alongside `ClimaAtmos`.
 """
 chemistry_tendency!(Yₜ, Y, p, t, ::Nothing) = nothing
-function chemistry_tendency!(Yₜ, Y, p, t, ::GasPhaseChem) end

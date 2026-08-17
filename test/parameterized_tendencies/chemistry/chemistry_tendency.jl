@@ -3,8 +3,6 @@ import ClimaComms
 ClimaComms.@import_required_backends
 import ClimaAtmos as CA
 
-struct NoOpChemistry <: CA.AbstractChemistryModel end
-
 @testset "Chemistry Tendencies" begin
 
     # ========================================================================
