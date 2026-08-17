@@ -94,17 +94,22 @@ Two consequences worth stating:
 
 ### Taggable processes
 
-| Group     | `source` label          | Process                                                             |
-|:--------- |:----------------------- |:------------------------------------------------------------------- |
-| `surface` | `surface_flux`          | Turbulent surface moisture flux (evaporation, or dew when negative) |
-|           | `microphysics`          | The 0-moment total-water sink                                       |
-| `forcing` | `large_scale_advection` | Prescribed large-scale advective moistening or drying               |
-| `forcing` | `subsidence`            | Prescribed large-scale subsidence                                   |
-| `forcing` | `external_forcing`      | Externally prescribed (e.g. GCM-driven) forcing and `q_tot` nudging |
+| Group      | `source` label          | Process                                                             |
+|:---------- |:----------------------- |:------------------------------------------------------------------- |
+| `surface`  | `surface_flux`          | Turbulent surface moisture flux (evaporation, or dew when negative) |
+| *(none)*   | `microphysics`          | The 0-moment total-water sink                                       |
+| `forcing`  | `large_scale_advection` | Prescribed large-scale advective moistening or drying               |
+| `forcing`  | `subsidence`            | Prescribed large-scale subsidence                                   |
+| `forcing`  | `external_forcing`      | Externally prescribed (e.g. GCM-driven) forcing and `q_tot` nudging |
 
-The group `all` expands to every process in the table. This is a *different,
-smaller* set than the energy tags': `radiation` and `held_suarez` do not move
-water.
+The group `all` expands to every process in the table. Note that `microphysics`
+belongs to **no named group**: `source: surface` selects `surface_flux` only, so
+a tag written that way follows evaporation but not the 0-moment sink. `all` is
+the only group that includes `microphysics`; to follow both without the
+forcings, list them explicitly as `source: [surface_flux, microphysics]`.
+
+This is a *different, smaller* set than the energy tags': `radiation` and
+`held_suarez` do not move water.
 
 Splitting a net increment by sign is exact only where production and loss are
 mutually exclusive at a point, which holds for the two that matter most — the
@@ -198,7 +203,19 @@ label that the energy tags carry has no water counterpart.
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
     state constraints, cumulative since the start of the simulation segment (and
     reset on restart), so a budget over an interval is the difference of two
-    outputs.
+    outputs, and a time *average* of it is not meaningful.
+
+!!! note "What `q_tag_fix` includes"
+
+    Two mechanisms write to the ledger. `repair_water_tag_partition!` runs every
+    step and contributes wherever transport drove a partition tag negative, so
+    `q_tag_fix_<name>` is generally nonzero even under stock settings — it is a
+    useful direct measure of how much the tags are drifting.
+    `rescale_water_tags!` contributes only when something actually corrects
+    ``\rho q_\mathrm{tot}``: `apply_sem_quasimonotone_limiter: true`,
+    `tracer_nonnegativity_method: vertical_water_borrowing`, an elementwise
+    tracer nonnegativity constraint, or a `PrescribedFlow` setup. With none of
+    those configured, everything in this field is partition repair.
 
 !!! note "The vapor split is an assumption"
 
@@ -213,9 +230,16 @@ a much tighter one than the energy tags' `e_tag_res`. The tags use *identical*
 vertical diffusion (unscaled ``K_h``) and hyperdiffusion (unscaled
 ``\nu_4``) operators to ``\rho q_\mathrm{tot}``, because ``\rho q_\mathrm{tot}``
 is likewise absent from the sedimenting-species list that receives the scaled
-coefficients. What differs is the vertical advection split: ``\rho q_\mathrm{tot}`` is advected implicitly with a post-Newton upwind correction,
+coefficients. The dominant contributor is the vertical advection split: ``\rho q_\mathrm{tot}`` is advected implicitly with a post-Newton upwind correction,
 while the tags ride the explicit passive-tracer path. Subtract `q_tag_fix_*` to
 separate that operator disagreement from numerical corrections.
+
+It is not the *only* contributor, though. Any tendency that writes
+``\rho q_\mathrm{tot}`` by name without an attribution bracket and without a
+tagged counterpart also lands here — see the Caveats below for the two known
+cases (`PrognosticEDMFX` SGS mass flux, and the `PrescribedFlow` surface water
+inflow). If `q_tag_res` grows faster than expected, check those before
+concluding the advection split is responsible.
 
 A sharper *process closure* check is available by splitting a source tag across
 a partition: with `evap`, `evap_tropics` and `evap_extratropics`, linearity of
@@ -247,7 +271,17 @@ Water tagging supports `microphysics_model: "0M"` and `"1M"`, and
   - Tags are **grid-scale only**: they have no sub-grid (updraft) counterpart.
     With `PrognosticEDMFX` the SGS mass flux moves ``\rho q_\mathrm{tot}`` in a
     way the tags never receive, so `q_tag_res` grows; the grid-mean surface
-    evaporation is still attributed correctly.
+    evaporation is still attributed correctly. Nothing rejects this combination
+    at configuration time, so watch `q_tag_res` if you enable it.
+  - With a **`PrescribedFlow`** setup (e.g. `ShipwayHill2012`), the surface
+    water inflow imposed as a vertical-transport boundary condition adds to
+    ``\rho q_\mathrm{tot}`` outside every attribution bracket and has no tagged
+    counterpart. That water enters the domain untagged and `q_tag_res` drifts
+    monotonically. The combination is accepted by
+    `check_water_tagging_supported` (`ShipwayHill2012` is 1-moment), and
+    `prescribe_flow!` does rescale the tags after its clip — so the tags stay
+    consistent with each other, they are just collectively short of
+    ``\rho q_\mathrm{tot}`` by the injected amount.
   - The energy tags' `microphysics` label still fires only when microphysics is
     stepped explicitly. The water tags are bracketed on the implicit path too,
     because `implicit_microphysics` defaults to `true` and that is where the

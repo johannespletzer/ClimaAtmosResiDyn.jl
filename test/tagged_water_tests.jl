@@ -128,8 +128,8 @@ import ClimaCore.MatrixFields: @name
             @test CA.water_tag_rescale_ratio(FT(4), FT(2)) == FT(2)
             @test CA.water_tag_rescale_ratio(FT(1), FT(2)) == FT(0.5)
             @test CA.water_tag_rescale_ratio(FT(-1), FT(2)) == FT(0)
-            # Water appearing in a cell that had none belongs to no tag
-            @test CA.water_tag_rescale_ratio(FT(1), FT(0)) == FT(1)
+            # Water appearing in a dry cell is not assigned to any tag
+            @test CA.water_tag_rescale_ratio(FT(1), FT(0)) == FT(0)
         end
 
         @testset "Attribution: production and loss ($FT)" begin
@@ -251,16 +251,17 @@ import ClimaCore.MatrixFields: @name
                 ),
             )
             # Parent went 8 -> 4 (clipped down), 8 -> 8 (untouched),
-            # 8 -> 12 (borrowed up), 0 -> 2 (water where there was none)
-            ᶜρq_tot_before = FT[8, 8, 8, 0]
+            # 8 -> 12 (borrowed up), 0 -> 2 (water where there was none),
+            # and -2 -> 0 (a negative parent clipped to zero).
+            ᶜρq_tot_before = FT[8, 8, 8, 0, -2]
             ᶜY = (;
-                ρq_tot = FT[4, 8, 12, 2],
-                ρq_tag_tropics = FT[6, 4, 2, 0],
-                ρq_tag_extratropics = FT[2, 4, 6, 0],
+                ρq_tot = FT[4, 8, 12, 2, 0],
+                ρq_tag_tropics = FT[6, 4, 2, 0, -1],
+                ρq_tag_extratropics = FT[2, 4, 6, 0, -1],
             )
             ᶜfix = (;
-                ρq_tag_tropics = zeros(FT, 4),
-                ρq_tag_extratropics = zeros(FT, 4),
+                ρq_tag_tropics = zeros(FT, 5),
+                ρq_tag_extratropics = zeros(FT, 5),
             )
             before_tropics = copy(ᶜY.ρq_tag_tropics)
             before_extra = copy(ᶜY.ρq_tag_extratropics)
@@ -274,6 +275,10 @@ import ClimaCore.MatrixFields: @name
             # ... and cannot invent water in a cell that had none, so that
             # water surfaces in `q_tag_res` instead of being attributed
             @test ᶜY.ρq_tag_tropics[4] == FT(0)
+            # A negative tag is removed when the total water is set to zero.
+            # The ledger records the amount removed as an increase.
+            @test ᶜY.ρq_tag_tropics[5] == FT(0)
+            @test ᶜfix.ρq_tag_tropics[5] == FT(1)
             @test all(>=(0), ᶜY.ρq_tag_tropics)
 
             # The ledger records the signed correction applied to each tag
@@ -287,6 +292,66 @@ import ClimaCore.MatrixFields: @name
             # The ledger accumulates across calls rather than being overwritten
             CA._rescale_water_tags!(ᶜY, ᶜfix, ᶜY.ρq_tot, tags)
             @test ᶜfix.ρq_tag_tropics ≈ ᶜY.ρq_tag_tropics .- before_tropics
+        end
+
+        @testset "Partition repair ($FT)" begin
+            tropics = CA.WaterTag{:tropics}(
+                CA.TanhLatitudeRegion(FT(20), FT(2), true),
+            )
+            extratropics = CA.WaterTag{:extratropics}(
+                CA.TanhLatitudeRegion(FT(20), FT(2), false),
+            )
+            evap = CA.WaterTag{:evap}(nothing, :surface_flux)
+            tags = (tropics, extratropics, evap)
+
+            @test CA.water_tag_repair_factor(FT(6), FT(-2)) ≈ FT(2) / FT(3)
+            @test CA.water_tag_repair_factor(FT(1), FT(-3)) == FT(0)
+            @test CA.water_tag_repair_factor(FT(0), FT(-1)) == FT(0)
+
+            ᶜY = (;
+                ρq_tot = FT[4, 0, 4],
+                ρq_tag_tropics = FT[6, 1, 2],
+                ρq_tag_extratropics = FT[-2, -3, 2],
+                ρq_tag_evap = FT[-1, 3, 1],
+            )
+            ᶜwater_fix = (;
+                ρq_tag_tropics = fill(FT(0.5), 3),
+                ρq_tag_extratropics = fill(FT(0.5), 3),
+                ρq_tag_evap = fill(FT(0.5), 3),
+            )
+            before_tropics = copy(ᶜY.ρq_tag_tropics)
+            before_extra = copy(ᶜY.ρq_tag_extratropics)
+            before_evap = copy(ᶜY.ρq_tag_evap)
+            p = (;
+                tagging = (;
+                    ᶜwater_fix,
+                    ᶜrepair_pos = zeros(FT, 3),
+                    ᶜrepair_neg = zeros(FT, 3),
+                ),
+            )
+
+            CA._repair_water_tag_partition!(
+                (; c = ᶜY),
+                p,
+                CA.WaterTaggingModel(tags),
+            )
+
+            # A feasible signed sum is preserved while all partition tags are
+            # made non-negative. If negatives exceed positives, both are zero.
+            @test ᶜY.ρq_tag_tropics[1] + ᶜY.ρq_tag_extratropics[1] ≈
+                  before_tropics[1] + before_extra[1]
+            @test all(>=(0), ᶜY.ρq_tag_tropics)
+            @test all(>=(0), ᶜY.ρq_tag_extratropics)
+            @test ᶜY.ρq_tag_tropics[2] == FT(0)
+            @test ᶜY.ρq_tag_extratropics[2] == FT(0)
+            # Source tags are outside the partition and remain unchanged.
+            @test ᶜY.ρq_tag_evap == before_evap
+            @test ᶜwater_fix.ρq_tag_evap == fill(FT(0.5), 3)
+            # Corrections accumulate on top of the existing fix ledger.
+            @test ᶜwater_fix.ρq_tag_tropics ≈
+                  fill(FT(0.5), 3) .+ ᶜY.ρq_tag_tropics .- before_tropics
+            @test ᶜwater_fix.ρq_tag_extratropics ≈
+                  fill(FT(0.5), 3) .+ ᶜY.ρq_tag_extratropics .- before_extra
         end
 
         @testset "Sedimentation shares ($FT)" begin
@@ -488,6 +553,46 @@ import ClimaCore.MatrixFields: @name
         )
         @test CA.Diagnostics.get_diagnostic_variable("q_tag_tropics") ===
               q_trop
+
+        # Residual diagnostics are model-specific even though the diagnostic
+        # catalog is global. Registering a source-only model must remove the
+        # previous model's residual rather than leave its region-tag closure
+        # behind.
+        source_only_tags =
+            (CA.WaterTag{:forced}(nothing, :external_forcing),)
+        CA.Diagnostics.register_water_tagging_diagnostics!(
+            CA.WaterTaggingModel(source_only_tags),
+        )
+        @test_throws ErrorException CA.Diagnostics.get_diagnostic_variable(
+            "q_tag_res",
+        )
+
+        # A later region model must install a fresh residual over its own tags.
+        # Keep the old field in the state with a deliberately large value so
+        # this assertion also proves that the stale `:ρq_tag_tropics` closure
+        # is not being reused.
+        replacement_tags =
+            (CA.WaterTag{:global}(CA.EntireDomain()),)
+        CA.Diagnostics.register_water_tagging_diagnostics!(
+            CA.WaterTaggingModel(replacement_tags),
+        )
+        replacement_q_res =
+            CA.Diagnostics.get_diagnostic_variable("q_tag_res")
+        @test replacement_q_res !== q_res
+        replacement_state = (;
+            c = (;
+                ρ = [2.0, 2.0],
+                ρq_tot = [0.02, 0.02],
+                ρq_tag_global = [0.012, 0.016],
+                ρq_tag_tropics = [10.0, 10.0],
+            )
+        )
+        @test replacement_q_res.compute!(
+            nothing,
+            replacement_state,
+            nothing,
+            0.0,
+        ) ≈ [0.004, 0.002]
     end
 
     @testset "Tagged name predicate" begin

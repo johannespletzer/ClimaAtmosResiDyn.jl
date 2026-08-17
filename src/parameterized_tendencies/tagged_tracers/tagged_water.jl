@@ -275,9 +275,13 @@ when water tagging is disabled. Contains:
     Masks are evaluated once here and never inside a per-timestep broadcast.
   - `ᶜwater_fix`: one center `Field` per tag accumulating the water that the
     limiters and state constraints have moved into or out of that tag (see
-    [`rescale_water_tags!`](@ref)). Cumulative since the start of the simulation
-    segment, and reset on restart, so a budget over an interval is the difference
-    of two outputs.
+    [`rescale_water_tags!`](@ref) and [`repair_water_tag_partition!`](@ref)).
+    Cumulative since the start of the simulation segment, and reset on restart,
+    so a budget over an interval is the difference of two outputs.
+  - `ᶜrepair_pos`, `ᶜrepair_neg`: the positive and negative parts of the
+    partition sum, used by [`repair_water_tag_partition!`](@ref). They live in
+    the cache rather than `p.scratch` because the repair runs on the real state
+    in `constrain_state!`, never inside a dual-typed tendency evaluation.
 
 The `ρq_tot` snapshot that [`snapshot_tagged_ρq_tot!`](@ref) records lives in
 `p.scratch` instead, because the implicit tendency is evaluated with
@@ -294,7 +298,9 @@ function _water_tagging_cache(Y, model::WaterTaggingModel)
         "ρq_tag",
     )
     ᶜwater_fix = _water_fix_fields(Y.c.ρ, model.tags)
-    return (; ᶜwater_masks, ᶜwater_fix)
+    ᶜrepair_pos = zero.(Y.c.ρ)
+    ᶜrepair_neg = zero.(Y.c.ρ)
+    return (; ᶜwater_masks, ᶜwater_fix, ᶜrepair_pos, ᶜrepair_neg)
 end
 
 # ============================================================================
@@ -318,21 +324,32 @@ transport leakage, and when `ρq_tot` is positive but negligible.
 
 The factor by which [`rescale_water_tags!`](@ref) scales every tag when a
 limiter or state constraint has changed `ρq_tot`. It is
-`ρq_tot_after / ρq_tot_before`, floored at zero, with the ratio defined to be 1
-where there was no water to begin with.
+`ρq_tot_after / ρq_tot_before`, floored at zero, and zero where there was no
+positive water to begin with.
 
 Deliberately *not* clamped above 1: both limiters move water between cells, so a
 cell that was clipped up legitimately needs its tags scaled up. The result stays
 consistent because `ρq_tag ≤ ρq_tot_before` implies
-`ρq_tag · ratio ≤ ρq_tot_after`. The `ρq_tot_before ≤ 0` fallback leaves the tags
-alone: water added to a cell that had none cannot be attributed to any existing
-tag, so it correctly surfaces in `q_tag_res` rather than being invented into a
-tag.
+`ρq_tag · ratio ≤ ρq_tot_after`.
+
+The `ρq_tot_before ≤ 0` branch returns **zero**, not one. That branch is reached
+precisely when a nonnegativity constraint clips a negative `ρq_tot` up, which is
+the most common correction of all, and the tags of such a cell are themselves
+negative — the donor rule scaled them by the same negative parent. Returning one
+left them negative while the parent became zero, breaking both invariants this
+function claims to preserve, and recorded `ρq_tag · (1 - 1) = 0` in the ledger,
+so `q_tag_fix_<name>` reported that the limiter had done nothing — exactly the
+conflation the ledger exists to prevent. Returning zero empties the tags along
+with the parent, keeps `Σᵢ ρq_tag_i = ρq_tot` exact when the parent is clipped to
+zero, and logs the removal honestly. Where the correction instead adds water to a
+cell that had none, the tags stay at zero and the new water surfaces in
+`q_tag_res` rather than being invented into a tag — the original intent, which
+zero also satisfies.
 """
 @inline water_tag_rescale_ratio(ρq_tot_after, ρq_tot_before) =
     ρq_tot_before > zero(ρq_tot_before) ?
     max(ρq_tot_after / ρq_tot_before, zero(ρq_tot_before)) :
-    one(ρq_tot_before)
+    zero(ρq_tot_before)
 
 """
     snapshot_tagged_ρq_tot!(p, Yₜ)
@@ -783,6 +800,119 @@ function _rescale_water_tags!(ᶜY, ᶜwater_fix, ᶜρq_tot_before, tags::Tuple
         ᶜY,
         ᶜwater_fix,
         ᶜρq_tot_before,
+        Base.tail(tags),
+    )
+end
+
+# ============================================================================
+# Partition repair
+# ============================================================================
+
+"""
+    water_tag_repair_factor(pos, neg)
+
+The common factor that [`repair_water_tag_partition!`](@ref) applies to the
+non-negative part of each partition tag: `max(pos + neg, 0) / pos`, and zero
+where there is no positive water to redistribute into.
+"""
+@inline water_tag_repair_factor(pos, neg) =
+    pos > zero(pos) ? max(pos + neg, zero(pos)) / pos : zero(pos)
+
+"""
+    repair_water_tag_partition!(Y, p)
+
+Restore non-negativity of the partition tags without changing their sum.
+
+Unlimited transport lets the partition tags drift out of the partition: they ride
+the explicit passive-tracer path with a nonlinear flux limiter applied per field,
+which does not satisfy `Σ F(χᵢ) = F(Σ χᵢ)`, so individual tags reach a few
+percent of `max(ρq_tot)` below zero on a sphere.
+
+A negative tag is not merely cosmetic. [`water_tag_fraction`](@ref) clamps it to
+a zero donor share, which shrinks the renormalization denominator `norm`; that
+lets [`water_tag_sediment_share`](@ref) hand a surviving tag a share far larger
+than the water it actually holds — the share is bounded by 1, but the mass
+removed *relative to what the tag owns* is amplified by `1/norm` — driving that
+tag negative in turn. The feedback compounds every step, and it takes the
+sedimentation Jacobian with it, since `∂φ̂/∂ρq_tag` grows like
+`1/Σⱼ ρq_tag_j` with only a `norm > 0` guard.
+
+For each cell, writing `S⁺ = Σₖ max(ρq_tagₖ, 0)` and `S⁻ = Σₖ min(ρq_tagₖ, 0)`
+over the partition tags, this sets
+
+    ρq_tagₖ ← max(ρq_tagₖ, 0) · max(S⁺ + S⁻, 0) / S⁺,
+
+absorbing the negative water into the positive tags in proportion to what each
+holds. The sum `S⁺ + S⁻` is preserved exactly and every tag ends non-negative.
+Where the negatives outweigh the positives (`S⁺ + S⁻ < 0`) no non-negative
+partition can have that sum, so every tag is zeroed and the deficit surfaces in
+`q_tag_res` rather than being hidden.
+
+This deliberately does **not** renormalize the tags onto `ρq_tot`. Forcing
+`Σᵢ ρq_tag_i = ρq_tot` every step would drive `q_tag_res` to zero by
+construction and destroy the leakage monitor it exists to provide. The repair
+removes only the negativity, leaving genuine transport leakage visible and
+bounding the clamped-share denominator by that leakage instead of by how far a
+tag has gone negative.
+
+Source tags are left alone: they are not members of the partition, carry no
+closure obligation, and are already excluded from the renormalization
+denominator by `_accumulate_share_norm!`.
+
+The signed water moved is accumulated into `p.tagging.ᶜwater_fix` alongside the
+limiter corrections, so it is reported by the `q_tag_fix_<name>` diagnostic.
+
+Called from `constrain_state!` after the limiters and state constraints have
+finished with `ρq_tot`. A no-op when water tagging is disabled.
+"""
+repair_water_tag_partition!(Y, p) =
+    _repair_water_tag_partition!(Y, p, p.atmos.water_tagging_model)
+_repair_water_tag_partition!(Y, p, ::Nothing) = nothing
+function _repair_water_tag_partition!(Y, p, model::WaterTaggingModel)
+    (; ᶜwater_fix, ᶜrepair_pos, ᶜrepair_neg) = p.tagging
+    ᶜrepair_pos .= zero(eltype(ᶜrepair_pos))
+    ᶜrepair_neg .= zero(eltype(ᶜrepair_neg))
+    _accumulate_partition_parts!(ᶜrepair_pos, ᶜrepair_neg, Y.c, model.tags)
+    _apply_partition_repair!(
+        Y.c,
+        ᶜwater_fix,
+        ᶜrepair_pos,
+        ᶜrepair_neg,
+        model.tags,
+    )
+    return nothing
+end
+
+_accumulate_partition_parts!(ᶜpos, ᶜneg, ᶜY, ::Tuple{}) = nothing
+function _accumulate_partition_parts!(ᶜpos, ᶜneg, ᶜY, tags::Tuple)
+    tag = first(tags)
+    if _is_partition_tag(tag)
+        ᶜρq_tag = tag_field(ᶜY, tag)
+        @. ᶜpos += max(ᶜρq_tag, 0)
+        @. ᶜneg += min(ᶜρq_tag, 0)
+    end
+    return _accumulate_partition_parts!(ᶜpos, ᶜneg, ᶜY, Base.tail(tags))
+end
+
+# `ᶜpos` and `ᶜneg` are read-only here and were computed from the pre-repair
+# state, so rewriting each tag in place cannot disturb a later tag's factor.
+_apply_partition_repair!(ᶜY, ᶜwater_fix, ᶜpos, ᶜneg, ::Tuple{}) = nothing
+function _apply_partition_repair!(ᶜY, ᶜwater_fix, ᶜpos, ᶜneg, tags::Tuple)
+    tag = first(tags)
+    if _is_partition_tag(tag)
+        ᶜρq_tag = tag_field(ᶜY, tag)
+        ᶜfix = tag_field(ᶜwater_fix, tag)
+        # Ledger first, so it records the correction rather than its effect on
+        # an already-corrected tag, matching `rescale_water_tags!`.
+        @. ᶜfix +=
+            max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag
+        @. ᶜρq_tag = max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg)
+    end
+    return _apply_partition_repair!(
+        ᶜY,
+        ᶜwater_fix,
+        ᶜpos,
+        ᶜneg,
         Base.tail(tags),
     )
 end

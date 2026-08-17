@@ -46,5 +46,10 @@ diagnostics:
     period: 1days
   - short_name: [q_tag_evap, q_tag_evap_tropics, q_tag_evap_extratropics]
     period: 1days
+  # No limiter or nonnegativity constraint is configured here, so everything in
+  # `q_tag_fix_*` comes from `repair_water_tag_partition!` — it measures how
+  # much water the repair had to move to keep the partition non-negative, which
+  # is a direct read on transport drift. Cumulative, so compare differences
+  # between outputs rather than averaging.
   - short_name: [q_tag_fix_tropics, q_tag_fix_extratropics]
     period: 1days

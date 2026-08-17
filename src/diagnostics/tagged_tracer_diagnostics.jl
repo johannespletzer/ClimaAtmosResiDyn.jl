@@ -66,8 +66,13 @@ function register_tagging_diagnostics!(tagging_model::TaggingModel)
         )
     end
     region_names = region_tag_state_names(tagging_model)
+    # Drop any stale entry unconditionally, before deciding whether to register
+    # a new one: a previous simulation in this process may have registered
+    # `e_tag_res` over a different set of region tags, and if this model has
+    # none, leaving that entry behind would report a residual summed over tags
+    # that are not a partition of this model's energy.
+    delete!(ALL_DIAGNOSTICS, "e_tag_res")
     if !isempty(region_names)
-        delete!(ALL_DIAGNOSTICS, "e_tag_res")
         add_diagnostic_variable!(;
             short_name = "e_tag_res",
             units = "J kg^-1",

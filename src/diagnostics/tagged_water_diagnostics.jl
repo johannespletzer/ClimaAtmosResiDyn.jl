@@ -84,10 +84,21 @@ during simulation setup rather than at package load time:
     segment. It separates "the numerics moved water" from "the transport
     operators disagree", which `q_tag_res` alone would conflate.
 
+    Two mechanisms write to it. `repair_water_tag_partition!` runs every step
+    from `constrain_state!` and contributes whenever transport has driven a
+    partition tag negative, so this is generally nonzero even under stock
+    settings. `rescale_water_tags!` contributes only when a limiter or state
+    constraint actually corrects `ρq_tot`, which requires one of
+    `apply_sem_quasimonotone_limiter: true`,
+    `tracer_nonnegativity_method: vertical_water_borrowing`, an elementwise
+    tracer nonnegativity constraint, or a `PrescribedFlow` setup; with none of
+    those configured, everything recorded here is partition repair.
+
 A no-op when water tagging is disabled. Per-tag entries that already exist in the
 diagnostics catalog are kept (their compute function only depends on the tag
-name); the `q_tag_res` entry is replaced, because the set of region tags it sums
-over can differ between setups.
+name); the `q_tag_res` entry is always dropped and re-registered, because the set
+of region tags it sums over can differ between setups — including differing to
+*empty*, in which case no new entry replaces the stale one.
 """
 register_water_tagging_diagnostics!(model::AtmosModel) =
     register_water_tagging_diagnostics!(model.water_tagging_model)
@@ -133,14 +144,21 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             add_diagnostic_variable!(;
                 short_name,
                 units = "kg kg^-1",
-                long_name = "Tagged Water Numerical Correction ($name)",
+                long_name = "Cumulative Tagged Water Numerical Correction ($name)",
                 comments = "Water moved into (positive) or out of (negative) " *
                            "the tag `$name` by the tracer limiters and state " *
                            "constraints, following the parent `ρq_tot` " *
                            "correction. Cumulative since the start of the " *
                            "simulation segment and reset on restart, so a " *
                            "budget over an interval is the difference of two " *
-                           "outputs.",
+                           "outputs, and a time average of this variable is " *
+                           "not meaningful. Identically zero unless a tracer " *
+                           "limiter or nonnegativity constraint is configured " *
+                           "(see `register_water_tagging_diagnostics!`). Each " *
+                           "increment is accumulated at its own step's density " *
+                           "and divided by the current density here, so this " *
+                           "is not exactly the sum of the per-step specific " *
+                           "corrections.",
                 compute! = (out, u, p, t) ->
                     compute_q_tag_fix!(out, u, p, t, ρq_tag_name),
             )
@@ -148,8 +166,14 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
     end
 
     region_names = water_region_tag_state_names(model)
+    # Drop any stale entry unconditionally, before deciding whether to register
+    # a new one. An earlier simulation in this process may have registered
+    # `q_tag_res` over a different set of region tags; if this model has none
+    # (every tag carries a `source`), leaving that entry behind would let a
+    # config request a "closure residual" computed over tags that are not a
+    # partition of this model's water — a wrong number rather than an error.
+    delete!(ALL_DIAGNOSTICS, "q_tag_res")
     if !isempty(region_names)
-        delete!(ALL_DIAGNOSTICS, "q_tag_res")
         add_diagnostic_variable!(;
             short_name = "q_tag_res",
             units = "kg kg^-1",
