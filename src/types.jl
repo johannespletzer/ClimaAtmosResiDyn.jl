@@ -2569,7 +2569,7 @@ names.
 
 See the keyword constructor `AtmosModel(; kwargs...)` below.
 """
-struct AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, COSP}
+struct AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, TG, COSP}
     water::W
     scm_setup::SCM
     radiation::R
