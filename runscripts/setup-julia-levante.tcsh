@@ -108,6 +108,17 @@ if (! -f "${PROJECT}/Project.toml") then
     exit 1
 endif
 
+# MPIPreferences must be a direct dependency for the project-local preference
+# to be visible. Check the dedicated .buildkite environment without resolving
+# the repository root environment, whose dependency graph is unrelated here.
+${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no \
+    -e 'using TOML; project = TOML.parsefile(ARGS[1]); haskey(get(project, "deps", Dict()), "MPIPreferences") || error("MPIPreferences is not a direct dependency")' \
+    "${PROJECT}/Project.toml"
+if ($status != 0) then
+    echo "ERROR: MPIPreferences must be listed in ${PROJECT}/Project.toml."
+    exit 1
+endif
+
 # ----------------------------------------------------------------------------
 # Modules. `module purge` is mandatory, not hygiene: a stale PMIx left on the
 # library path by another Open MPI module breaks the load.
