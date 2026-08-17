@@ -28,7 +28,7 @@ import CloudMicrophysics.BulkMicrophysicsTendencies as BMT
 
                 # 1M parameters
                 mp_1m = CMP.Microphysics1MParams(toml_dict;
-                    rain_autoconversion = CMP.PrescribedNd(toml_dict),
+                    rain_autoconversion = CMP.PrescribedNd(),
                 )
                 @test hasfield(typeof(mp_1m), :cloud)
                 @test hasfield(typeof(mp_1m), :precip)
@@ -91,7 +91,7 @@ import CloudMicrophysics.BulkMicrophysicsTendencies as BMT
             @testset "FT = $FT" begin
                 toml_dict = CP.create_toml_dict(FT)
                 mp = CMP.Microphysics1MParams(toml_dict;
-                    rain_autoconversion = CMP.PrescribedNd(toml_dict),
+                    rain_autoconversion = CMP.PrescribedNd(),
                 )
                 thp = TD.Parameters.ThermodynamicsParameters(toml_dict)
 
@@ -231,7 +231,7 @@ import CloudMicrophysics.BulkMicrophysicsTendencies as BMT
             @testset "FT = $FT" begin
                 toml_dict = CP.create_toml_dict(FT)
                 mp = CMP.Microphysics1MParams(toml_dict;
-                    rain_autoconversion = CMP.PrescribedNd(toml_dict),
+                    rain_autoconversion = CMP.PrescribedNd(),
                 )
                 thp = TD.Parameters.ThermodynamicsParameters(toml_dict)
 
@@ -277,7 +277,7 @@ import CloudMicrophysics.BulkMicrophysicsTendencies as BMT
             @testset "FT = $FT" begin
                 toml_dict = CP.create_toml_dict(FT)
                 mp = CMP.Microphysics1MParams(toml_dict;
-                    rain_autoconversion = CMP.PrescribedNd(toml_dict),
+                    rain_autoconversion = CMP.PrescribedNd(),
                 )
                 thp = TD.Parameters.ThermodynamicsParameters(toml_dict)
 
