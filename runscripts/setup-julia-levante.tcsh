@@ -408,13 +408,12 @@ if ($status != 0) then
     echo
     echo "ERROR: verification failed."
     echo
-    echo "If MPI.versioninfo reports a binary other than 'system', the"
-    echo "preference was not picked up. Add MPIPreferences as a direct"
-    echo "dependency and re-run this script:"
-    echo "  ${JULIA_BIN} ${JULIA_CHANNEL} --project=${PROJECT} -e 'using Pkg; Pkg.add(\"MPIPreferences\")'"
+    echo "If MPI.versioninfo reports a binary other than system, the"
+    echo "preference was not picked up. Confirm that MPIPreferences is a"
+    echo "direct dependency of ${PROJECT} and re-run this script."
     echo
     echo "If a bundled MPI library is still loaded, the override did not take"
-    echo "effect -- check the UUID and the 'OpenMPI' key in:"
+    echo "effect -- check the UUID and the OpenMPI key in:"
     echo "  ${OVERRIDES}"
     exit 1
 endif
