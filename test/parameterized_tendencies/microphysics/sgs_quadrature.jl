@@ -779,7 +779,7 @@ using ClimaAtmos
                 @testset "1M: sign consistency" begin
                     quad = ClimaAtmos.SGSQuadrature(FT)
                     mp_1m = CMP.Microphysics1MParams(toml_dict;
-                        rain_autoconversion = CMP.PrescribedNd(toml_dict),
+                        rain_autoconversion = CMP.PrescribedNd(),
                     )
                     thp = TD.Parameters.ThermodynamicsParameters(toml_dict)
 
