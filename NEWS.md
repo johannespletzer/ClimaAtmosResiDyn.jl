@@ -7,6 +7,24 @@ main
 - ![][badge-✨feature/enhancement] Add `post_processing/plot_tracer_burdens.jl`, which plots every tracer's burden against time in one panel at 300 dpi. Colour encodes the height box and dash pattern the latitude box, so the legend has `n_latitude + n_height` entries rather than their product — the default configuration carries 48 tracers, which no categorical palette can distinguish. Written automatically by the experiment script and the CI job.
 - ![][badge-✨feature/enhancement] Register the stratospheric passive tracer diagnostics from the model at simulation setup instead of statically at package load. The source-region grid previously had to fit a fixed set of variables registered when ClimaAtmos loaded, which capped it at 12 latitude by 12 height bands; it is now unbounded, and a run that carries no passive tracers no longer pays for their diagnostics. Mirrors how the tagged tracers already register theirs.
 - ![][badge-✨feature/enhancement] Diagnose the WMO lapse-rate (thermal) tropopause online from the model temperature, as the new `ztrop` diagnostic and as the lower boundary of the stratospheric passive tracers. Two column sweeps, so it is GPU-compatible; columns where no tropopause exists fall back to a latitude-dependent climatology.
+- [#4770](https://github.com/CliMA/ClimaAtmos.jl/pull/4770) ![][badge-🐛bugfix] ![][badge-🔥behavioralΔ] Distribute the aggregate `q_tot_eff` diffusion of `edmfx_sgs_diffusive_flux_tendency!` to the suspended cloud mass and number species. The distribution added in [#4753](https://github.com/CliMA/ClimaAtmos.jl/pull/4753) resolved its field names against `Y` rather than `Y.c`, so its guard was never satisfied and the block never ran: `ρq_tot` and `ρ` were tendencied while `ρq_lcl`, `ρq_icl` and their number densities were not. The hyperdiffusion and vertical-diffusion-boundary-layer paths already distributed correctly, so this removes an inconsistency between them.
+0.42.5
+-------
+- [#4762](https://github.com/CliMA/ClimaAtmos.jl/pull/4762) Include more terms in the `InvZEntrainment` closure.
+- [#4760](https://github.com/CliMA/ClimaAtmos.jl/pull/4760) Diffusion / hyperdiffusion cleanup after [#4753](https://github.com/CliMA/ClimaAtmos.jl/pull/4753) and [#4732](https://github.com/CliMA/ClimaAtmos.jl/pull/4732): remove the now-inert `α_vert_diff_tracer` parameter (and the corresponding `tracer_vertical_diffusion_factor` TOML entries in `longrun_aquaplanet_1M.toml`, `les_isdac.toml`, `prognostic_edmfx_1M.toml`, `prognostic_edmfx_1M_mlcloud.toml`, `single_column_precipitation_test.toml`), remove the also-inert `α_hyperdiff_tracer` parameter (no TOML entries were set), and delete the dead helper `ᶠtotal_enthalpy_gradientᵥ`.
+- [#4744](https://github.com/CliMA/ClimaAtmos.jl/pull/4744) ![][badge-🔥behavioralΔ] Make rain sediment with non-constant velocity
+
+0.42.4
+-------
+- [#4750](https://github.com/CliMA/ClimaAtmos.jl/pull/4750) ![][badge-✨feature/enhancement] Add the diagnostics `ssatl` and `ssati` (water-vapor supersaturation with respect to liquid and to ice), available for any moist microphysics model.
+- [#4732](https://github.com/CliMA/ClimaAtmos.jl/pull/4732) ![][badge-🔥behavioralΔ] Make water hyperdiffusion species-consistent and enforce the SGS microphysics constraints.
+
+0.42.3
+-------
+- [#4735](https://github.com/CliMA/ClimaAtmos.jl/pull/4735) ![][badge-🐛bugfix] Make the `topography_damping_factor` config default a float (`5.0` instead of `5`).
+- [#4734](https://github.com/CliMA/ClimaAtmos.jl/pull/4734) ![][badge-🔥behavioralΔ] Update to CloudMicrophysics v0.38.
+- [#4733](https://github.com/CliMA/ClimaAtmos.jl/pull/4733) ![][badge-🔥behavioralΔ] Change the min area limiter and turbulent entrainment parameters in the EDMFX TOML configs.
+- [#4731](https://github.com/CliMA/ClimaAtmos.jl/pull/4731) ![][badge-🔥behavioralΔ] Remove the Rayleigh sponge from grid-mean microphysics tracers.
 - [#4664](https://github.com/CliMA/ClimaAtmos.jl/pull/4664) ![][badge-🔥behavioralΔ] Initialize the AtmosphericProfilesLibrary single-column setups (Bomex, DYCOMS, GABLS, GATE_III, ISDAC, Larcform1, PrecipitatingColumn, Rico, Soares, ShipwayHill2012, TRMM_LBA) on GPU spaces. `hydrostatic_pressure_profile` integrates the hydrostatic initial value problem on a dedicated 1000-element column (previously 100) and returns a `ClimaInterpolations` interpolant over host arrays. Because the setup profiles are host-resident interpolants, the initial condition of these setups is evaluated on the host and copied to the device rather than broadcast on the device. Initial center pressures change by about `2e-4` to `4e-4` relative, dominated by the removed interpolation error of the coarser grid; the new profiles are within about `4e-6` relative of a reference solution on a 16 times finer grid. The `ShipwayHill2012` constructor now returns the setup type (its interface methods were previously unreachable).
 
 0.42.2
