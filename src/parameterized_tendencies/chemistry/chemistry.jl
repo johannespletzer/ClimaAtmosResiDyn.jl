@@ -7,29 +7,16 @@
 # this file defines only the fallback for when no chemistry is loaded.
 
 """
-    chemistry_tendency!(Yₜ, Y, p, t, ::Nothing)
+    chemistry_tendency!(Yₜ, Y, p, t, chemistry_model)
 
-No chemistry model is active.
+Add gas-phase chemistry source terms to `Yₜ` in place; return `nothing`.
+
+Dispatches on the chemistry model in `p.atmos`:
+
+  - `::Nothing`: no chemistry is active; the tendency is a no-op.
+  - `::GasPhaseChem`: gas-phase chemistry. The fallback defined here is a no-op; the
+    MUSICA-backed method is provided by the `ClimaAtmosMusica` extension, which is loaded
+    automatically when `Musica` is imported alongside `ClimaAtmos`.
 """
 chemistry_tendency!(Yₜ, Y, p, t, ::Nothing) = nothing
-
-"""
-    chemistry_tendency!(Yₜ, Y, p, t, ::AbstractChemistryModel)
-
-Fallback for a configured chemistry model whose backend is not loaded: source
-terms are provided by the `ClimaAtmosMusica` extension, and without it chemistry
-is a no-op.
-
-Dispatch is on the abstract type rather than on `GasPhaseChem` so that the
-extension *adds* the concrete `::GasPhaseChem` method instead of replacing this
-one. A package extension may only add methods; defining the same signature the
-parent already defines is a method overwrite, which Julia rejects while
-precompiling the extension:
-
-    ERROR: Method overwriting is not permitted during Module precompilation.
-
-With `Musica` loaded, `::GasPhaseChem` is the more specific method and wins;
-without it, this fallback applies, which is the behavior this file has always
-had.
-"""
-chemistry_tendency!(Yₜ, Y, p, t, ::AbstractChemistryModel) = nothing
+function chemistry_tendency!(Yₜ, Y, p, t, ::GasPhaseChem) end
