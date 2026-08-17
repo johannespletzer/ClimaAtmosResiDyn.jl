@@ -419,8 +419,9 @@ if ($status != 0) then
     echo
     echo "ERROR: verification failed."
     echo
-    echo "If MPI.versioninfo reports a binary other than system, inspect"
-    echo "${PROJECT}/LocalPreferences.toml and re-run this script."
+    echo "If MPI.versioninfo reports a binary other than system, the"
+    echo "preference was not picked up. Confirm that MPIPreferences is a"
+    echo "direct dependency of ${PROJECT} and re-run this script."
     echo
     echo "If a bundled MPI library is still loaded, the override did not take"
     echo "effect -- check the UUID and the OpenMPI key in:"
