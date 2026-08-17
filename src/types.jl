@@ -2538,7 +2538,7 @@ Base.broadcastable(x::COSPModel) = tuple(x)
 # methods are parsed.
 
 """
-    AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, COSP}
+    AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, TG, COSP}
 
 Complete description of the physics of an atmospheric simulation: which
 parameterizations are active and how each is configured.
@@ -2563,6 +2563,7 @@ names.
   - `surface`: An `AtmosSurface` group.
   - `numerics`: An `AtmosNumerics` group.
   - `chemistry`: An `AtmosChem` group.
+  - `tagging`: An `AtmosTagging` group (tagged energy and water tracers).
   - `cosp`: `nothing`, or a `COSPModel` for the satellite simulator.
   - `disable_surface_flux_tendency`: Whether to skip applying the surface flux
     tendency, independently of whether surface conditions are computed.
