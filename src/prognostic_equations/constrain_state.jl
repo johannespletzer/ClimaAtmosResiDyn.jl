@@ -25,9 +25,6 @@ physically admissible range:
   - `enforce_physical_constraints!(Y, p, t, p.atmos)`: grid-mean microphysics and
     EDMF updraft corrections.
 
-  - `prescribe_flow!`: used for 'kinematic driver'-like simulations
-  - `tracer_nonnegativity_constraint!`: used to ensure that tracer fields are non-negative
-  - `enforce_physical_constraints!`: grid-mean microphysics + EDMF updraft corrections
   - `repair_water_tag_partition!`: restores non-negativity of the tagged water
     partition without changing its sum
 
@@ -36,7 +33,6 @@ at the cadence set by the `update_constrain_state_every` configuration option
 (`"stage"`, `"step"`, or `"dss"`; see `update_constrain_state_signal_handler`).
 The `dss!` and `set_precomputed_quantities!` calls are not part of this — the
 timestepper runs them through its own `dss!` and `cache!` hooks. Returns `nothing`.
->>>>>>> main
 """
 NVTX.@annotate function constrain_state!(Y, p, t)
     prescribe_flow!(Y, p, t, p.atmos.prescribed_flow)
