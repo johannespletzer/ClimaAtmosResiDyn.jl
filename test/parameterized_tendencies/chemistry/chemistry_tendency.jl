@@ -2,7 +2,6 @@ using Test
 import ClimaComms
 ClimaComms.@import_required_backends
 import ClimaAtmos as CA
-Sys.iswindows() || import Musica
 
 @testset "Chemistry Tendencies" begin
 
@@ -19,6 +18,23 @@ Sys.iswindows() || import Musica
         @test isnothing(result)
     end
 
+    @testset "GasPhaseChem fallback is not an extension override" begin
+        fallback_method = which(
+            CA.chemistry_tendency!,
+            (Nothing, Nothing, Nothing, Float64, CA.GasPhaseChem),
+        )
+        @test fallback_method.sig.parameters[end] == CA.AbstractChemistryModel
+        @test isnothing(
+            CA.chemistry_tendency!(
+                nothing,
+                nothing,
+                nothing,
+                0.0,
+                CA.GasPhaseChem(),
+            ),
+        )
+    end
+
     # ========================================================================
     # With Musica loaded: GasPhaseChem prints the version string
     # ========================================================================
@@ -26,6 +42,12 @@ Sys.iswindows() || import Musica
     Sys.iswindows() && return
     @testset "GasPhaseChem prints MUSICA version" begin
         import Musica
+        extension = Base.get_extension(CA, :ClimaAtmosMusica)
+        extension_method = which(
+            CA.chemistry_tendency!,
+            (Nothing, Nothing, Nothing, Float64, CA.GasPhaseChem),
+        )
+        @test extension_method.module == extension
         @test_logs (:info, r"MUSICA version: .+") CA.chemistry_tendency!(
             nothing,
             nothing,
