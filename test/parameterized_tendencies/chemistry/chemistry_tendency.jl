@@ -18,6 +18,18 @@ import ClimaAtmos as CA
         @test isnothing(result)
     end
 
+    @testset "Abstract chemistry model fallback is a no-op" begin
+        @test isnothing(
+            CA.chemistry_tendency!(
+                nothing,
+                nothing,
+                nothing,
+                0.0,
+                NoOpChemistry(),
+            ),
+        )
+    end
+
     # ========================================================================
     # With Musica loaded: GasPhaseChem prints the version string
     # ========================================================================
