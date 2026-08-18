@@ -413,6 +413,107 @@ one per `output_NNNN`. Add a step that walks the numbered directories, dedupes o
 reports τ against both z and z − ztrop(φ), and interpolates in log τ with barrier
 gaps marked rather than bridged.
 
+## Alternative track: coupled AMIP with ClimaCoupler
+
+The steady/seasonal analytic SST is the largest remaining physical shortcut in
+this campaign. A coupled AMIP run removes it properly — prescribed *observed*
+SST and sea ice over exactly the campaign period. This section scopes that
+route. It is a decision not yet taken; if adopted it **supersedes** the seasonal
+analytic SST and changes the budget basis entirely, so it should be settled
+before the calibration run, not during the campaign.
+
+Checked against ClimaCoupler at `953c273`.
+
+### What already works in our favour
+
+  - **The fork's tracers come along.** The coupler's AMIP environment
+    `Pkg.develop`s the local ClimaAtmos checkout
+    (`.buildkite/coupler_perf/pipeline.yml`), and this fork is version `0.42.6`,
+    exactly what `experiments/AMIP/Manifest-v1.11.toml` pins. No version fight
+    is expected.
+  - **The boundary data ships with the coupler and covers the period.**
+    `src/Models/prescr_ocean.jl` reads the `historical_sst_sic` artifact, file
+    `MODEL.SST.HAD187001-198110.OI198111-202206.nc` — the PCMDI AMIP II
+    dataset: HadISST to 1981-10, NOAA OI to 2022-06. It spans 1979–2021 and is
+    already the mid-month-adjusted product, so no Taylor et al. preprocessing is
+    needed. Sea-ice concentration comes from the same artifact via
+    `src/Models/prescr_seaice.jl`. Both accept a `sst_path` / `sic_path`
+    override for locally held data.
+  - **Sea ice is a real surface**, not a cold patch of ocean, so it is not
+    radiatively invisible the way a prescribed-SST-only field would be.
+  - **`mode_name: "amip"` selects the components for you.**
+    `validate_model_types_for_mode` (`src/Input.jl:940+`) forces
+    `ocean_model = prescribed` and `ice_model = prescribed`; `land_model`
+    defaults to `"bucket"`, which is the cheap option (`integrated` is ClimaLand).
+  - **Restarts carry the tracers.** `detect_restart_files: true` plus
+    `checkpoint_dt`; `restart_model_state!` (`src/Checkpointer.jl:385`) does
+    `Y .= Y_new` over the whole prognostic state.
+  - **There is already an AMIP config close to ours**:
+    `config/longrun_configs/amip_edonly.yml` with
+    `config/atmos_configs/climaatmos_edonly.yml` — `h_elem 16`,
+    `edonly_edmfx`, `0M`, `insolation: timevarying`, `["CO2", "O3"]`, the same
+    MERRA-2 aerosol list, non-orographic GWD, and `initial_condition: AMIPFromERA5`.
+
+### What it would take
+
+1. **A coupler config**, modelled on `amip_edonly.yml`: `mode_name: "amip"`,
+   `surface_setup: "PrescribedSurface"`, `albedo_model: "CouplerAlbedo"`,
+   `land_model: "bucket"`, `dt_cpl: "120secs"`, and `checkpoint_dt: "30days"` to
+   stay aligned with `dt_tracer_budget` and the diagnostic accumulation windows.
+2. **Our atmos config, pointed at by `atmos_config_file`.** Config precedence is
+   `merge(atmos_default, coupler_default_cli, atmos_config_dict, coupler_config_dict)`
+   (`src/Input.jl:404-418`), so **the coupler config wins over the atmos config
+   file** — keep the two from setting the same key. The path is resolved with
+   `joinpath(pkgdir(ClimaCoupler), atmos_config_file)`, so an absolute path
+   pointing back into this repo works; a relative one must live inside the
+   coupler checkout.
+3. **Edits to our atmos config**: drop `surface_setup` and `prognostic_surface`
+   (the coupler owns the surface). The delta from `climaatmos_edonly.yml` is then
+   only `z_elem: 120`, `z_max: 80000.0`, `dz_bottom: 200.0`, our sponge TOML, and
+   the `tracer_source_boxes` block.
+4. **A second Julia environment on Levante** — `experiments/AMIP/Project.toml`,
+   instantiated with the fork dev'd in, on its own depot alongside the existing
+   one. `runscripts/setup-julia-levante.tcsh` would need a variant.
+
+### What does not change
+
+  - The 1979 initial condition. `AMIPFromERA5` still reads a hard-wired
+    artifact path holding only 2010-01-01, so `WeatherModel` plus our own
+    pre-processed ERA5 file is still the route.
+  - No volcanic aerosol forcing; CH4, N2O and the CFCs still fixed.
+  - The source-box design, the level selection, and the member split.
+
+### Costs and open risks
+
+  - **Two more component models** (bucket land, prescribed ice) to configure,
+    checkpoint and debug.
+  - **Cost is unmeasured for our case.** The only published figure is
+    `BASELINE_SYPD: "0.310"` for `gpu_amip_progedmf_1M_land_he16` on one A100
+    (`.buildkite/coupler_perf/pipeline.yml`). That is heavier physics
+    (prognostic EDMF, 1M microphysics, *integrated* land) at 63 levels, against
+    our cheaper physics at ~2× the levels plus ~25 tracers. It is not
+    transferable in either direction — it has to be measured.
+  - **The coupler's AMIP work is GPU-first.** CPU/MPI is supported
+    (`CLIMACOMMS_CONTEXT: "MPI"` steps exist) but every AMIP performance and
+    longrun pipeline is CUDA. Our working Levante stack is the CPU one; the GPU
+    stack exists (`setup-julia-levante.tcsh gpu`, `runscripts/xmodel.gpu*`) but
+    is less exercised.
+  - **Allocation question**: is the 24,000 node-hours a CPU allocation? DKRZ
+    charges the `gpu` partition separately, so a GPU-first coupled run may draw
+    on a budget we have not accounted for.
+  - **Our tracer refactor is not covered by the coupler contract test.**
+    `test/coupler_compatibility.jl` exercises the surface API, not the
+    prognostic state; the coupler reads the tracers through
+    `get_model_prog_state`, which the refactor did not touch but has not been
+    exercised coupled either.
+
+### Decision
+
+Worth doing if the 42-year commitment stands: it removes the largest physical
+shortcut, using data that is already packaged and already covers the period.
+Settle it before calibration, since it changes which stack gets tuned and which
+allocation is drawn on.
+
 ## Known limitations to record with the results
 
 - The seasonal SST cycle is an ocean one: no land or sea-ice seasonality, no
@@ -444,7 +545,8 @@ Label these as such in any write-up:
 4. Temporal coverage of the O3 and CO2 inputs over 1979–2021 — **checked in
    calibration**, and campaign-invalidating if wrong.
 5. DKRZ specifics: `/pool/data/ERA5` layout, 128 cores/node, queue turnaround over
-   ~200 jobs, and the allocation itself.
+   ~200 jobs, and the allocation itself — including whether it covers the `gpu`
+   partition, which the coupled route would likely need.
 6. `dt = 120 s` stability on this grid — argued from the `dt/Δz` table, confirmed
    in calibration.
 7. Existence of a 1979-01-01 pre-processed ERA5 file reaching into the mesosphere.
@@ -463,7 +565,9 @@ no thermal one. `ExternalTemperature` reads
    `prognostic_surface: "SeasonalSST"` (`Setups.SeasonalOceanTemperature`).
 3. **`prognostic_surface: "SlabOceanSST"`** — config only, but drifts to its own
    equilibrium and adds spin-up.
-4. **ClimaCoupler AMIP** — the only route to observed SST/sea ice; out of scope.
+4. **ClimaCoupler AMIP** — the only route to observed SST *and* sea ice.
+   Scoped in "Alternative track: coupled AMIP with ClimaCoupler" above; it
+   supersedes options 1-3 rather than complementing them.
 
 5. **Prescribed observed surface temperature** — to be implemented separately,
    then folded back into this plan. Shape: a marker `SurfaceTemperature` subtype
