@@ -17,8 +17,9 @@ Decisions taken with the user:
   (`src/config/model_getters.jl:836-838`) fires for the reanalysis forcing modes.
   The run reproduces stratospheric climate statistics, not the observed sequence
   of SSWs or the QBO.
-- **Steady analytic zonally symmetric SST.** See the flagged decision below — I
-  recommend revisiting this one.
+- **Seasonally varying analytic zonally symmetric SST**, via the new
+  `prognostic_surface: "SeasonalSST"`. See the section below for what it does and
+  does not fix.
 - **Sampled boxes, not a tiling**, one model layer deep.
 - **1979-01-01 → 2021-01-01** (`t_end: "15341days"` = 42×365 + 11 leap days).
   ~10 y is tracer spin-up, so ~32 usable years.
@@ -26,7 +27,7 @@ Decisions taken with the user:
 
 Constraints: 24,000 node-hours this quarter, 8 h wallclock per job.
 
-## Flagged decision: the steady SST may not be adequate
+## The lower boundary: seasonal, but only over ocean
 
 `zonally_symmetric_temperature` (`src/setups/Setups.jl:208-220`) is
 `271 + 29·exp(−φ²/(2·26²)) − 6.5e-3·z`, with the time argument unused. That means
@@ -35,12 +36,18 @@ all**. The seasonal cycle of high-latitude surface temperature is a primary driv
 of stationary-wave forcing, hence of the Brewer–Dobson circulation and the polar
 vortex life cycle — which are exactly what sets stratospheric residence time.
 
-This is a larger caveat than "no ENSO". A τ(φ, z) climatology from this boundary
-condition is internally consistent but not comparable to observation-based
-estimates. Alternative 2 below (seasonally varying analytic SST, ~30 lines, no new
-infrastructure) removes the objection. **Recommend adopting it before launching a
-42-year campaign**; the plan proceeds with the steady SST as chosen, but this
-should be an explicit decision rather than a default.
+**Resolved: adopted.** `prognostic_surface: "SeasonalSST"` now exists and both
+member configs use it. It adds
+`amplitude · sind(2φ) · cos(2π (day − peak_day) / 365.25)` to the annual mean —
+antisymmetric between the hemispheres, zero at the equator and the poles, peaking
+near ±45°, phased to the calendar through `start_date`.
+
+It does not close the gap entirely, and the results should say so: the shape suits
+an *ocean* surface, whose seasonal range really is largest in midlatitudes and
+small over polar water held near freezing by ice. The much larger seasonal cycle
+of land and of sea ice is still absent, because standalone ClimaAtmos models
+neither. Prescribed observed surface temperature (alternative 5) remains the way
+to close it.
 
 ## Grid
 
@@ -408,7 +415,9 @@ gaps marked rather than bridged.
 
 ## Known limitations to record with the results
 
-- Steady SST with no seasonal cycle — see the flagged decision above.
+- The seasonal SST cycle is an ocean one: no land or sea-ice seasonality, no
+  ENSO, no SST trend. Stationary-wave forcing comes from `topography: "Earth"`
+  and this cycle.
 - `dz_bottom = 200 m` coarsens the boundary layer, degrading EDMF and surface
   fluxes.
 - CH4, N2O and the CFCs are fixed constants (`radiation.jl:210-248`); only CO2 and
@@ -449,10 +458,9 @@ no thermal one. `ExternalTemperature` reads
 `p.external_forcing.surface_fields.ts`, populated only by the column-mode
 `ForcingFromFile` path. No SST or sea-ice artifact, and no sea-ice code, exists.
 
-1. **Steady analytic SST** — as chosen; see the flagged decision.
-2. **Seasonally varying analytic SST (~30 lines).** `AnalyticTemperature(f)` takes
-   `f(coordinates, params, t)` evaluated at the current time inside the surface
-   broadcast; only the closure and a config key are needed. **Recommended.**
+1. **Steady analytic SST** — the previous default; superseded.
+2. **Seasonally varying analytic SST** — **implemented and adopted**, as
+   `prognostic_surface: "SeasonalSST"` (`Setups.SeasonalOceanTemperature`).
 3. **`prognostic_surface: "SlabOceanSST"`** — config only, but drifts to its own
    equilibrium and adds spin-up.
 4. **ClimaCoupler AMIP** — the only route to observed SST/sea ice; out of scope.
