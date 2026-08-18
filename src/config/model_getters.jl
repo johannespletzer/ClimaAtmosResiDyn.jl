@@ -1415,6 +1415,24 @@ function get_stratospheric_passive_tracers(parsed_args, ::Type{FT}) where {FT}
         search_max_height = parsed_args["tropopause_search_max_height"],
     )
 
+    production_rate = parsed_args["tracer_production_rate"]
+
+    # An explicit box list wins over the grid keys. It is what a campaign whose
+    # boxes are not an outer product needs -- non-uniform spacing, boxes of
+    # differing depth, or a grid with some combinations left out.
+    box_specs = parsed_args["tracer_source_boxes"]
+    if !isnothing(box_specs)
+        boxes = parse_tracer_source_boxes(box_specs, FT)
+        return StratosphericPassiveTracers(
+            FT,
+            boxes;
+            production_rate,
+            loss_timescale,
+            height_coordinate,
+            tropopause,
+        )
+    end
+
     return StratosphericPassiveTracers(
         FT;
         n_latitude_bands = parsed_args["tracer_source_latitude_bands"],
@@ -1423,11 +1441,58 @@ function get_stratospheric_passive_tracers(parsed_args, ::Type{FT}) where {FT}
         band_depth = parsed_args["tracer_source_band_depth"],
         band_spacing = parsed_args["tracer_source_band_spacing"],
         lowest_band_base = parsed_args["tracer_source_lowest_band_base"],
-        production_rate = parsed_args["tracer_production_rate"],
+        production_rate,
         loss_timescale,
         height_coordinate,
         tropopause,
     )
+end
+
+"""
+    parse_tracer_source_boxes(box_specs, ::Type{FT})
+
+Turn the `tracer_source_boxes` configuration entry into a vector of
+[`SourceBox`](@ref)es.
+
+Each entry must be a mapping carrying `latitude_lower`, `latitude_upper`,
+`height_lower` and `height_upper`. Heights are in m, measured from the
+reference chosen by `tracer_source_height_coordinate`; a box that should span
+exactly one model layer takes that layer's face heights.
+"""
+function parse_tracer_source_boxes(box_specs, ::Type{FT}) where {FT}
+    box_specs isa AbstractVector || error(
+        "tracer_source_boxes must be a list of boxes, got a \
+        $(typeof(box_specs))",
+    )
+    required =
+        ("latitude_lower", "latitude_upper", "height_lower", "height_upper")
+    required_list = join(required, ", ")
+    boxes = SourceBox{FT}[]
+    for (index, spec) in enumerate(box_specs)
+        spec isa AbstractDict || error(
+            "tracer_source_boxes[$index] must be a mapping with keys " *
+            "$required_list, got a $(typeof(spec))",
+        )
+        for key in required
+            haskey(spec, key) ||
+                error("tracer_source_boxes[$index] is missing `$key`")
+        end
+        extra = sort(setdiff(string.(keys(spec)), required))
+        if !isempty(extra)
+            extra_list = join(extra, ", ")
+            error(
+                "tracer_source_boxes[$index] has unknown keys " *
+                "$extra_list; expected only $required_list",
+            )
+        end
+        push!(boxes, SourceBox(
+            FT(spec["latitude_lower"]),
+            FT(spec["latitude_upper"]),
+            FT(spec["height_lower"]),
+            FT(spec["height_upper"]),
+        ))
+    end
+    return boxes
 end
 
 function AtmosTagging(config::AtmosConfig)

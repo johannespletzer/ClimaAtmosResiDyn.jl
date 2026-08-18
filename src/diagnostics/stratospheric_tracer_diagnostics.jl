@@ -118,22 +118,29 @@ register_stratospheric_tracer_diagnostics!(_) = nothing
 function register_stratospheric_tracer_diagnostics!(
     chemistry_model::StratosphericPassiveTracers,
 )
-    for latitude_index in 1:n_latitude_bands(chemistry_model),
-        height_index in 1:n_height_bands(chemistry_model)
-
-        ρχ_name = stratospheric_tracer_symbol(latitude_index, height_index)
+    names = stratospheric_tracer_symbols(chemistry_model)
+    for tracer_index in 1:n_tracers(chemistry_model)
+        ρχ_name = names[tracer_index]
         short_name = specific_tracer_short_name(ρχ_name)
         haskey(ALL_DIAGNOSTICS, short_name) && continue
         ρχ_key = Val(ρχ_name)
 
+        # The box edges, rather than the band indices, are what identifies a
+        # source region once the boxes need not form a latitude × height grid.
+        latitude_lower = chemistry_model.latitude_lower_edges[tracer_index]
+        latitude_upper = chemistry_model.latitude_upper_edges[tracer_index]
+        height_lower = chemistry_model.height_lower_edges[tracer_index]
+        height_upper = chemistry_model.height_upper_edges[tracer_index]
+
         add_diagnostic_variable!(;
             short_name,
-            long_name = "Stratospheric Passive Tracer, Latitude Band \
-                         $latitude_index, Height Band $height_index",
+            long_name = "Stratospheric Passive Tracer, Source Box \
+                         $tracer_index",
             units = "kg kg^-1",
-            comments = "Mass fraction of the inert tracer produced in latitude \
-                        band $latitude_index and height band $height_index \
-                        above the tropopause, and removed below the \
+            comments = "Mass fraction of the inert tracer produced between \
+                        $latitude_lower and $latitude_upper degrees latitude \
+                        and between $height_lower and $height_upper m above \
+                        the source reference height, and removed below the \
                         tropopause.",
             compute = (state, cache, time) ->
                 compute_stratospheric_tracer(state, cache, time, ρχ_key),

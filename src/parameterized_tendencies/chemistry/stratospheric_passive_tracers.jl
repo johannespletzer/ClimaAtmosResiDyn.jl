@@ -45,26 +45,58 @@ they are produced, so their lifetimes approach `loss_timescale`.
 struct GeometricHeight end
 
 """
-    StratosphericPassiveTracers{NY, NZ, FT, HC, TP} <: AbstractChemistryModel
+    SourceBox(latitude_lower, latitude_upper, height_lower, height_upper)
 
-`NY * NZ` passive tracers, one per (latitude band, height band) source region.
+One tracer source region: the points with latitude in
+`(latitude_lower, latitude_upper]` and height in
+`(height_lower, height_upper]`.
 
-Region `(i, k)` is the set of points with latitude in
-`(latitude_lower_edges[i], latitude_upper_edges[i]]` and height in
-`(height_lower_edges[k], height_upper_edges[k]]`, where height is measured
+Heights are measured from the reference chosen by the model's
+`height_coordinate` — the local tropopause or sea level.
+"""
+struct SourceBox{FT}
+    latitude_lower::FT
+    latitude_upper::FT
+    height_lower::FT
+    height_upper::FT
+end
+
+"""
+    boxes_overlap(a::SourceBox, b::SourceBox)
+
+Whether two source boxes share any point. Boxes that only touch at an edge do
+not overlap, because the membership test is half-open on both axes.
+"""
+boxes_overlap(a::SourceBox, b::SourceBox) =
+    a.latitude_lower < b.latitude_upper &&
+    b.latitude_lower < a.latitude_upper &&
+    a.height_lower < b.height_upper &&
+    b.height_lower < a.height_upper
+
+"""
+    StratosphericPassiveTracers{N, NAMES, FT, HC, TP} <: AbstractChemistryModel
+
+`N` passive tracers, one per source region.
+
+Region `n` is the set of points with latitude in
+`(latitude_lower_edges[n], latitude_upper_edges[n]]` and height in
+`(height_lower_edges[n], height_upper_edges[n]]`, where height is measured
 from the local tropopause (`TropopauseRelativeHeight`) or from sea level
-(`GeometricHeight`). The boxes never overlap, so no point feeds two tracers,
-but they do not cover the domain — they sample it.
+(`GeometricHeight`). The boxes never overlap, so no point feeds two tracers.
 
-Tracer `(i, k)` is stored in `Y.c.ρq_gas_y<i>z<k>` (see
-[`stratospheric_tracer_symbol`](@ref)) and is ordered with the latitude index
-varying fastest.
+The regions are held as a flat list rather than a latitude × height outer
+product. The keyword constructor still builds an outer product, which is the
+common case; the list form additionally allows non-uniform band spacing, boxes
+of differing depth, and grids with some combinations left out.
+
+Tracer `n` is stored in `Y.c.<NAMES[n]>` — see
+[`stratospheric_tracer_symbol`](@ref) for how the names are assigned.
 
 # Fields
 
-  - `latitude_lower_edges`, `latitude_upper_edges`: latitude band edges, in
-    degrees.
-  - `height_lower_edges`, `height_upper_edges`: height band edges, in m,
+  - `latitude_lower_edges`, `latitude_upper_edges`: latitude edges of each box,
+    in degrees.
+  - `height_lower_edges`, `height_upper_edges`: height edges of each box, in m,
     relative to `height_coordinate`'s reference.
   - `production_rate`: production of tracer mass fraction inside the source
     region, in s⁻¹. Its value sets the magnitude of the tracer but not its
@@ -77,11 +109,12 @@ varying fastest.
   - `tropopause`: [`TropopauseParameters`](@ref) of the WMO lapse-rate
     tropopause that bounds the tracers from below.
 """
-struct StratosphericPassiveTracers{NY, NZ, FT, HC, TP} <: AbstractChemistryModel
-    latitude_lower_edges::NTuple{NY, FT}
-    latitude_upper_edges::NTuple{NY, FT}
-    height_lower_edges::NTuple{NZ, FT}
-    height_upper_edges::NTuple{NZ, FT}
+struct StratosphericPassiveTracers{N, NAMES, FT, HC, TP} <:
+       AbstractChemistryModel
+    latitude_lower_edges::NTuple{N, FT}
+    latitude_upper_edges::NTuple{N, FT}
+    height_lower_edges::NTuple{N, FT}
+    height_upper_edges::NTuple{N, FT}
     production_rate::FT
     loss_timescale::FT
     height_coordinate::HC
@@ -89,10 +122,86 @@ struct StratosphericPassiveTracers{NY, NZ, FT, HC, TP} <: AbstractChemistryModel
 end
 
 """
+    StratosphericPassiveTracers(FT, boxes; kwargs...)
+
+Build a [`StratosphericPassiveTracers`](@ref) from an explicit list of
+[`SourceBox`](@ref)es, in the order given.
+
+Use this when the boxes are not a latitude × height outer product: bands at
+non-uniform spacing, boxes of differing depth, or a grid with some
+combinations left out because they would sit below the tropopause. For a
+regular grid, prefer the keyword constructor.
+
+Names are assigned by [`stratospheric_tracer_symbols`](@ref), which groups the
+boxes by their distinct latitude and height ranges.
+
+# Keyword arguments
+
+  - `production_rate = 1e-10`, `loss_timescale = 21600`,
+    `height_coordinate = TropopauseRelativeHeight()`,
+    `tropopause = TropopauseParameters{FT}()`: as in
+    [`StratosphericPassiveTracers`](@ref).
+"""
+function StratosphericPassiveTracers(
+    ::Type{FT},
+    boxes::AbstractVector{<:SourceBox};
+    production_rate = 1e-10,
+    loss_timescale = 21600,
+    height_coordinate = TropopauseRelativeHeight(),
+    tropopause = TropopauseParameters{FT}(),
+) where {FT}
+    isempty(boxes) && error("at least one source box is required")
+    loss_timescale > 0 ||
+        error("loss_timescale must be positive, got $loss_timescale")
+
+    for box in boxes
+        box.latitude_lower < box.latitude_upper || error(
+            "source box latitude range ($(box.latitude_lower), \
+            $(box.latitude_upper)] is empty",
+        )
+        box.height_lower < box.height_upper || error(
+            "source box height range ($(box.height_lower), \
+            $(box.height_upper)] is empty",
+        )
+    end
+
+    # A point inside two boxes would feed two tracers at once, which makes both
+    # of their budgets wrong in a way that is invisible in the output.
+    for i in eachindex(boxes), j in (i + 1):lastindex(boxes)
+        boxes_overlap(boxes[i], boxes[j]) && error(
+            "source boxes $i and $j overlap: latitude \
+            ($(boxes[i].latitude_lower), $(boxes[i].latitude_upper)] and \
+            ($(boxes[j].latitude_lower), $(boxes[j].latitude_upper)], height \
+            ($(boxes[i].height_lower), $(boxes[i].height_upper)] and \
+            ($(boxes[j].height_lower), $(boxes[j].height_upper)]",
+        )
+    end
+
+    names = stratospheric_tracer_symbols(boxes)
+    n = length(boxes)
+    return StratosphericPassiveTracers{
+        n,
+        names,
+        FT,
+        typeof(height_coordinate),
+        typeof(tropopause),
+    }(
+        ntuple(i -> FT(boxes[i].latitude_lower), n),
+        ntuple(i -> FT(boxes[i].latitude_upper), n),
+        ntuple(i -> FT(boxes[i].height_lower), n),
+        ntuple(i -> FT(boxes[i].height_upper), n),
+        FT(production_rate),
+        FT(loss_timescale),
+        height_coordinate,
+        tropopause,
+    )
+end
+
+"""
     StratosphericPassiveTracers(FT; kwargs...)
 
 Build a [`StratosphericPassiveTracers`](@ref) whose source boxes sample the
-domain above the tropopause.
+domain above the tropopause on a latitude × height grid.
 
 # Keyword arguments
 
@@ -138,8 +247,6 @@ function StratosphericPassiveTracers(
     band_depth > 0 || error("band_depth must be positive, got $band_depth")
     band_spacing > 0 ||
         error("band_spacing must be positive, got $band_spacing")
-    loss_timescale > 0 ||
-        error("loss_timescale must be positive, got $loss_timescale")
 
     # Latitude boxes sit at the centres of `n_latitude_bands` equal divisions
     # from pole to pole, so they sample the range symmetrically about the
@@ -154,8 +261,6 @@ function StratosphericPassiveTracers(
     latitude_centers = ntuple(n_latitude_bands) do i
         FT(-90) + (i - FT(0.5)) * latitude_interval
     end
-    latitude_lower_edges = map(center -> center - half_width, latitude_centers)
-    latitude_upper_edges = map(center -> center + half_width, latitude_centers)
 
     # Height boxes are stacked every `band_spacing` above the reference and are
     # `band_depth` deep, so they sample the column rather than tiling it. The
@@ -164,34 +269,39 @@ function StratosphericPassiveTracers(
         "band_depth ($band_depth) exceeds band_spacing ($band_spacing), so the \
         boxes would overlap",
     )
-    height_lower_edges = ntuple(n_height_bands) do k
+    height_lowers = ntuple(n_height_bands) do k
         FT(lowest_band_base) + (k - 1) * FT(band_spacing)
     end
-    height_upper_edges =
-        map(lower -> lower + FT(band_depth), height_lower_edges)
+
+    # Latitude varies fastest, which is the order every iteration over tracers
+    # uses. Building the list here is what lets everything downstream work with
+    # a flat list instead of a nested loop.
+    boxes = [
+        SourceBox(
+            latitude_centers[i] - half_width,
+            latitude_centers[i] + half_width,
+            height_lowers[k],
+            height_lowers[k] + FT(band_depth),
+        ) for k in 1:n_height_bands for i in 1:n_latitude_bands
+    ]
 
     return StratosphericPassiveTracers(
-        latitude_lower_edges,
-        latitude_upper_edges,
-        height_lower_edges,
-        height_upper_edges,
-        FT(production_rate),
-        FT(loss_timescale),
+        FT,
+        boxes;
+        production_rate,
+        loss_timescale,
         height_coordinate,
         tropopause,
     )
 end
 
 """
-    n_latitude_bands(chemistry_model)
-    n_height_bands(chemistry_model)
     n_tracers(chemistry_model)
 
-Size of the source-region grid of a [`StratosphericPassiveTracers`](@ref).
+Number of source boxes, and so of tracers, of a
+[`StratosphericPassiveTracers`](@ref).
 """
-n_latitude_bands(::StratosphericPassiveTracers{NY}) where {NY} = NY
-n_height_bands(::StratosphericPassiveTracers{NY, NZ}) where {NY, NZ} = NZ
-n_tracers(::StratosphericPassiveTracers{NY, NZ}) where {NY, NZ} = NY * NZ
+n_tracers(::StratosphericPassiveTracers{N}) where {N} = N
 
 """
     stratospheric_tracer_symbol(i, k)
@@ -204,19 +314,51 @@ stratospheric_tracer_symbol(i, k) =
     Symbol("ρq_gas_y", lpad(i, 2, '0'), "z", lpad(k, 2, '0'))
 
 """
-    stratospheric_tracer_symbols(n_latitude, n_height)
+    stratospheric_tracer_symbols(boxes)
 
-All tracer names, with the latitude index varying fastest. Every iteration
-over tracers — the prognostic state, the tendency, the budget — uses this
-order.
+Name every source box, by numbering the distinct latitude ranges and the
+distinct height ranges in the order they first appear and combining the two
+indices with [`stratospheric_tracer_symbol`](@ref).
+
+For an outer-product grid built by the keyword constructor this reproduces the
+familiar `y<i>z<k>` numbering exactly. For an irregular list the indices are
+labels rather than grid coordinates, so the box edges written into the budget
+table — not the names — are what identifies a box.
 """
-stratospheric_tracer_symbols(n_latitude, n_height) = Tuple(
-    stratospheric_tracer_symbol(i, k) for k in 1:n_height for
-    i in 1:n_latitude
-)
+function stratospheric_tracer_symbols(boxes::AbstractVector{<:SourceBox})
+    latitude_ranges = Tuple{Any, Any}[]
+    height_ranges = Tuple{Any, Any}[]
+    for box in boxes
+        latitude = (box.latitude_lower, box.latitude_upper)
+        latitude in latitude_ranges || push!(latitude_ranges, latitude)
+        height = (box.height_lower, box.height_upper)
+        height in height_ranges || push!(height_ranges, height)
+    end
+    names = map(boxes) do box
+        i = findfirst(
+            ==((box.latitude_lower, box.latitude_upper)),
+            latitude_ranges,
+        )
+        k = findfirst(==((box.height_lower, box.height_upper)), height_ranges)
+        stratospheric_tracer_symbol(i, k)
+    end
+    allunique(names) || error(
+        "source boxes do not have unique names; this happens when two boxes \
+        share both a latitude range and a height range, which the overlap \
+        check should already have rejected",
+    )
+    return Tuple(names)
+end
 
-stratospheric_tracer_symbols(chem::StratosphericPassiveTracers) =
-    stratospheric_tracer_symbols(n_latitude_bands(chem), n_height_bands(chem))
+"""
+    stratospheric_tracer_symbols(chemistry_model)
+
+All tracer names, in the order every iteration over tracers uses — the
+prognostic state, the tendency and the budget all follow it.
+"""
+stratospheric_tracer_symbols(
+    ::StratosphericPassiveTracers{N, NAMES},
+) where {N, NAMES} = NAMES
 
 """
     stratospheric_tracer_fields(ᶜfields, chemistry_model)
@@ -226,14 +368,14 @@ order given by [`stratospheric_tracer_symbols`](@ref).
 
 The tuple is homogeneous — every entry is a scalar center `Field` — so it can
 be indexed with a loop variable without losing type stability, which is what
-lets the tendency loop over tracers at runtime instead of unrolling `NY * NZ`
+lets the tendency loop over tracers at runtime instead of unrolling `N`
 broadcasts.
 """
 @generated function stratospheric_tracer_fields(
     ᶜfields,
-    ::StratosphericPassiveTracers{NY, NZ},
-) where {NY, NZ}
-    accessors = map(stratospheric_tracer_symbols(NY, NZ)) do name
+    ::StratosphericPassiveTracers{N, NAMES},
+) where {N, NAMES}
+    accessors = map(NAMES) do name
         :(getproperty(ᶜfields, $(QuoteNode(name))))
     end
     return :(tuple($(accessors...)))
@@ -363,15 +505,11 @@ function chemistry_tendency!(
     (; production_rate) = chemistry_model
     inverse_loss_timescale = inv(chemistry_model.loss_timescale)
 
-    tracer_index = 0
-    @inbounds for k in 1:n_height_bands(chemistry_model),
-        i in 1:n_latitude_bands(chemistry_model)
-
-        tracer_index += 1
-        latitude_lower = chemistry_model.latitude_lower_edges[i]
-        latitude_upper = chemistry_model.latitude_upper_edges[i]
-        height_lower = chemistry_model.height_lower_edges[k]
-        height_upper = chemistry_model.height_upper_edges[k]
+    @inbounds for tracer_index in 1:n_tracers(chemistry_model)
+        latitude_lower = chemistry_model.latitude_lower_edges[tracer_index]
+        latitude_upper = chemistry_model.latitude_upper_edges[tracer_index]
+        height_lower = chemistry_model.height_lower_edges[tracer_index]
+        height_upper = chemistry_model.height_upper_edges[tracer_index]
         ᶜρχ = tracers[tracer_index]
         ᶜρχₜ = tendencies[tracer_index]
 
@@ -449,15 +587,11 @@ function stratospheric_tracer_budget(
     source = zeros(FT, n)
     loss = zeros(FT, n)
 
-    tracer_index = 0
-    @inbounds for k in 1:n_height_bands(chemistry_model),
-        i in 1:n_latitude_bands(chemistry_model)
-
-        tracer_index += 1
-        latitude_lower = chemistry_model.latitude_lower_edges[i]
-        latitude_upper = chemistry_model.latitude_upper_edges[i]
-        height_lower = chemistry_model.height_lower_edges[k]
-        height_upper = chemistry_model.height_upper_edges[k]
+    @inbounds for tracer_index in 1:n
+        latitude_lower = chemistry_model.latitude_lower_edges[tracer_index]
+        latitude_upper = chemistry_model.latitude_upper_edges[tracer_index]
+        height_lower = chemistry_model.height_lower_edges[tracer_index]
+        height_upper = chemistry_model.height_upper_edges[tracer_index]
         ᶜρχ = tracers[tracer_index]
 
         burden[tracer_index] = sum(ᶜρχ)
@@ -539,11 +673,7 @@ function write_tracer_budget!(output_dir, t, chemistry_model, budget)
     open(path, "a") do io
         write_header && println(io, tracer_budget_header())
         names = stratospheric_tracer_symbols(chemistry_model)
-        tracer_index = 0
-        for k in 1:n_height_bands(chemistry_model),
-            i in 1:n_latitude_bands(chemistry_model)
-
-            tracer_index += 1
+        for tracer_index in 1:n_tracers(chemistry_model)
             source_rate = source[tracer_index]
             loss_rate = loss[tracer_index]
             lifetime = source_rate > 0 ? burden[tracer_index] / source_rate : NaN
@@ -564,10 +694,10 @@ function write_tracer_budget!(output_dir, t, chemistry_model, budget)
                     (
                         t,
                         names[tracer_index],
-                        chemistry_model.latitude_lower_edges[i],
-                        chemistry_model.latitude_upper_edges[i],
-                        chemistry_model.height_lower_edges[k],
-                        chemistry_model.height_upper_edges[k],
+                        chemistry_model.latitude_lower_edges[tracer_index],
+                        chemistry_model.latitude_upper_edges[tracer_index],
+                        chemistry_model.height_lower_edges[tracer_index],
+                        chemistry_model.height_upper_edges[tracer_index],
                         burden[tracer_index],
                         source_rate,
                         loss_rate,

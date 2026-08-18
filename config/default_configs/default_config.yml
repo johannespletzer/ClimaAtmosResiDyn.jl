@@ -450,6 +450,9 @@ tagged_tracers:
   value: ~
 
 # Stratospheric passive tracers (chemistry_model: stratospheric_passive_tracers)
+tracer_source_boxes:
+  help: "Explicit list of tracer source boxes, each a mapping with keys `latitude_lower`, `latitude_upper`, `height_lower`, `height_upper` (degrees and m). Overrides the `tracer_source_*_bands` grid keys when set. Use it when the boxes are not a latitude x height outer product: non-uniform band spacing, boxes of differing depth, or a grid with some combinations left out. Heights are measured from the reference chosen by `tracer_source_height_coordinate`. [`~` (default, use the grid keys)]"
+  value: ~
 tracer_source_latitude_bands:
   help: "Number of tracer source latitude boxes, centred on the midpoints of that many equal divisions of pole to pole"
   value: 6
