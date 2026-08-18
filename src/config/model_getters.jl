@@ -1299,6 +1299,7 @@ Surface pieces supplied by `setup_type` (flux scheme, temperature, boundary over
 take precedence over the config keys. Otherwise:
 
   - `prognostic_surface`: `"PrescribedSST"` uses the setup's temperature model,
+    `"SeasonalSST"` adds a seasonal cycle to the zonally symmetric analytic profile,
     `"SlabOceanSST"` gives `SurfaceConditions.SlabOceanTemperature`; anything else errors.
   - `surface_setup`: `"PrescribedSurface"` leaves the flux scheme `nothing`; any other
     value names a type in `SurfaceConditions` that is constructed and then called with
@@ -1321,9 +1322,16 @@ function AtmosSurface(
         SurfaceConditions.SlabOceanTemperature{FT}()
     elseif pa["prognostic_surface"] == "PrescribedSST"
         @something(setup_pieces.temperature, Setups.surface_temperature_model(setup_type))
+    elseif pa["prognostic_surface"] == "SeasonalSST"
+        # Phased to the calendar rather than to the start of the run, so a
+        # restart mid-year continues the same seasonal cycle.
+        start_day = Dates.dayofyear(parse_date(pa["start_date"]))
+        SurfaceConditions.AnalyticTemperature(
+            Setups.SeasonalOceanTemperature{FT}(; start_day = FT(start_day)),
+        )
     else
         error(
-            """Uncaught prognostic_surface `$(pa["prognostic_surface"])`. Expected: "PrescribedSST" | "SlabOceanSST".""",
+            """Uncaught prognostic_surface `$(pa["prognostic_surface"])`. Expected: "PrescribedSST" | "SeasonalSST" | "SlabOceanSST".""",
         )
     end
 

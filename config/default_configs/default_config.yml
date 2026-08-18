@@ -389,7 +389,7 @@ prognostic_tke:
   help: "A flag for prognostic TKE [`false` (default), `true`]"
   value: false
 prognostic_surface:
-  help: "Surface temperature model [`PrescribedSST` (default), `SlabOceanSST`]"
+  help: "Surface temperature model. `PrescribedSST` is the setup's own temperature model, which for most setups is a steady zonally symmetric analytic profile. `SeasonalSST` adds a seasonal cycle to that profile, antisymmetric between the hemispheres and peaking near 45 degrees, phased to the calendar via `start_date`. `SlabOceanSST` is a prognostic slab ocean. [`PrescribedSST` (default), `SeasonalSST`, `SlabOceanSST`]"
   value: "PrescribedSST"
 albedo_model:
   help: "Variable surface albedo [`ConstantAlbedo` (default), `RegressionFunctionAlbedo`, `CouplerAlbedo`]"
