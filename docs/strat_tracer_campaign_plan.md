@@ -239,7 +239,11 @@ own latitude range and height range, keeping the uniform outer-product path as t
 default so the CI config keeps working. Resolve model levels to face heights at
 setup by reproducing `Meshes.HyperbolicTangentStretching(dz_bottom)` from
 `z_max`/`z_elem`/`dz_bottom`/`z_stretch` (`src/simulation/grids.jl:356-357`).
-Validate pairwise non-overlap.
+
+Overlap must be *allowed* on this path, not rejected: the whole-domain reference
+box encloses the sampled boxes by construction, and the tracers are independent
+so a shared point simply feeds both. The real guard is that two boxes may not
+share both a latitude and a height range, since they would claim the same name.
 
 Touchpoints beyond the tendency — the outer product is assumed in all of these:
 

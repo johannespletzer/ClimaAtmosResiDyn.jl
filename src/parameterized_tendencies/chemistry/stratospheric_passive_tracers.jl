@@ -66,6 +66,10 @@ end
 
 Whether two source boxes share any point. Boxes that only touch at an edge do
 not overlap, because the membership test is half-open on both axes.
+
+Overlap is allowed — the tracers are independent, so a shared point feeds both
+— but it is worth knowing about, since two boxes that overlap heavily measure
+nearly the same thing at twice the cost.
 """
 boxes_overlap(a::SourceBox, b::SourceBox) =
     a.latitude_lower < b.latitude_upper &&
@@ -165,18 +169,12 @@ function StratosphericPassiveTracers(
         )
     end
 
-    # A point inside two boxes would feed two tracers at once, which makes both
-    # of their budgets wrong in a way that is invisible in the output.
-    for i in eachindex(boxes), j in (i + 1):lastindex(boxes)
-        boxes_overlap(boxes[i], boxes[j]) && error(
-            "source boxes $i and $j overlap: latitude \
-            ($(boxes[i].latitude_lower), $(boxes[i].latitude_upper)] and \
-            ($(boxes[j].latitude_lower), $(boxes[j].latitude_upper)], height \
-            ($(boxes[i].height_lower), $(boxes[i].height_upper)] and \
-            ($(boxes[j].height_lower), $(boxes[j].height_upper)]",
-        )
-    end
-
+    # Boxes may overlap. The tracers are independent, so a point inside two of
+    # them simply feeds both, and each budget stays self-consistent. Nesting is
+    # deliberate in at least one case: a box spanning the whole domain, used as
+    # a bulk reference, encloses the sampled boxes. What is refused is two boxes
+    # with the same latitude *and* height range, which `stratospheric_tracer_symbols`
+    # rejects because they would claim the same name.
     names = stratospheric_tracer_symbols(boxes)
     n = length(boxes)
     return StratosphericPassiveTracers{

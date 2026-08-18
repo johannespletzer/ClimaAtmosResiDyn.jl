@@ -248,25 +248,37 @@ end
     @test collect(grid_model.height_lower_edges) ≈
           collect(spelled_out.height_lower_edges)
 
-    # Overlap is refused, so no point can feed two tracers.
+    # Overlap is allowed: the tracers are independent, so a shared point feeds
+    # both and each budget stays self-consistent. A whole-domain reference box
+    # enclosing the sampled boxes is the case this exists for.
+    nested = CA.StratosphericPassiveTracers(
+        FT,
+        [
+            CA.SourceBox(FT(-10), FT(10), FT(0), FT(2_000)),
+            CA.SourceBox(FT(-90), FT(90), FT(0), FT(50_000)),
+        ],
+    )
+    @test CA.n_tracers(nested) == 2
+    @test CA.boxes_overlap(
+        CA.SourceBox(FT(-10), FT(10), FT(0), FT(2_000)),
+        CA.SourceBox(FT(-90), FT(90), FT(0), FT(50_000)),
+    )
+    # Boxes that only touch at an edge do not overlap: the membership test is
+    # half-open, so the shared edge belongs to exactly one of them.
+    @test !CA.boxes_overlap(
+        CA.SourceBox(FT(-10), FT(0), FT(0), FT(2_000)),
+        CA.SourceBox(FT(0), FT(10), FT(0), FT(2_000)),
+    )
+
+    # Two boxes with the same latitude and height range would claim the same
+    # name, which is refused.
     @test_throws ErrorException CA.StratosphericPassiveTracers(
         FT,
         [
             CA.SourceBox(FT(-10), FT(10), FT(0), FT(2_000)),
-            CA.SourceBox(FT(0), FT(20), FT(1_000), FT(3_000)),
+            CA.SourceBox(FT(-10), FT(10), FT(0), FT(2_000)),
         ],
     )
-    # Boxes that only touch at an edge do not overlap: the membership test is
-    # half-open, so the shared edge belongs to exactly one of them.
-    @test CA.n_tracers(
-        CA.StratosphericPassiveTracers(
-            FT,
-            [
-                CA.SourceBox(FT(-10), FT(0), FT(0), FT(2_000)),
-                CA.SourceBox(FT(0), FT(10), FT(0), FT(2_000)),
-            ],
-        ),
-    ) == 2
 
     # Empty ranges and empty lists are rejected rather than silently producing
     # a tracer with no source.

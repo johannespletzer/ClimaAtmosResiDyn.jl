@@ -162,8 +162,13 @@ numbering the distinct latitude and height ranges in order of first appearance,
 so an outer product spelled out box by box reproduces the familiar `y<i>z<k>`
 numbering. For an irregular list those indices are labels rather than grid
 coordinates, and the box edges written into every row of the budget table — not
-the names — are what identifies a box. Overlapping boxes are rejected, since a
-point inside two of them would feed both tracers at once.
+the names — are what identifies a box.
+
+Boxes may overlap. The tracers are independent, so a point inside two of them
+feeds both and each budget stays self-consistent; a box spanning the whole
+domain, used as a bulk reference, deliberately encloses the sampled boxes. Two
+boxes sharing both a latitude and a height range are refused, because they would
+claim the same name.
 
 `tracer_production_rate` sets the magnitude of the tracers but **not** their
 lifetimes: the tracers are linear, so burden and source scale together and
