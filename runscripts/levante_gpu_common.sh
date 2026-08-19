@@ -174,7 +174,11 @@ levante_gpu_init() {
     export UCX_RNDV_SCHEME=put_zcopy
     export UCX_RNDV_THRESH=16384
     export UCX_IB_GPU_DIRECT_RDMA=yes
-    export UCX_TLS=cma,rc,mm,cuda_ipc,cuda_copy,gdr_copy
+    # gdr_copy is deliberately absent. It appears in the DKRZ recommendations,
+    # but the gdrcopy kernel module is not loaded on Levante's GPU nodes: UCX
+    # warns "transport 'gdr_copy' is not available" twice per rank and then
+    # ignores it. Listing a transport that is never used only buys noise.
+    export UCX_TLS=cma,rc,mm,cuda_ipc,cuda_copy
     export UCX_MEMTYPE_CACHE=n
 }
 
@@ -274,6 +278,50 @@ levante_gpu_check_stack() {
         println("libmpi preference matches the loaded module: ", recorded)
         println("CUDA toolkit pinned to: ", cuda["version"])
     '
+
+    # ---------------------------------------------------------------------
+    # Re-check the pinned toolkit against the driver on this node, and refresh
+    # the version the next setup run will read.
+    #
+    # setup-julia-levante.tcsh promises exactly this, so that a driver upgrade
+    # needs only a re-run of setup rather than a version typed in by hand. It
+    # is cheap here because the batch script already runs on a GPU node.
+    #
+    # Only one direction is fatal: a toolkit newer than the driver. CUDA minor
+    # version compatibility does not always survive the CUDA-aware MPI in the
+    # nvhpc stack, which is why select-cuda-runtime.jl picks the newest toolkit
+    # no newer than the driver.
+    # ---------------------------------------------------------------------
+
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        local driver_cuda pinned_cuda newest
+        driver_cuda="$(nvidia-smi -q 2>/dev/null |
+            grep -m1 -i "CUDA Version" | sed "s/.*: *//" | tr -d "[:space:]")"
+        pinned_cuda="$(awk -F\" '
+            /^\[CUDA_Runtime_jll\]/ { in_table = 1; next }
+            /^\[/                    { in_table = 0 }
+            in_table && /^version/   { print $2; exit }
+        ' "${PROJECT}/LocalPreferences.toml")"
+
+        if [[ -n "${driver_cuda}" ]]; then
+            echo "GPU driver on this node supports CUDA ${driver_cuda}"
+            printf '%s\n' "${driver_cuda}" \
+                > "${JULIA_DEPOT_PATH}/levante-cuda-version" || true
+
+            if [[ -n "${pinned_cuda}" ]]; then
+                newest="$(printf '%s\n%s\n' "${pinned_cuda}" "${driver_cuda}" |
+                          sort -V | tail -1)"
+                if [[ "${newest}" == "${pinned_cuda}" &&
+                      "${pinned_cuda}" != "${driver_cuda}" ]]; then
+                    echo "ERROR: the pinned CUDA toolkit is newer than this node's driver." >&2
+                    echo "  pinned:  ${pinned_cuda}" >&2
+                    echo "  driver:  ${driver_cuda}" >&2
+                    echo "Re-run: ${ROOT}/runscripts/setup-julia-levante.tcsh gpu" >&2
+                    exit 1
+                fi
+            fi
+        fi
+    fi
 }
 
 levante_gpu_report_binding() {
@@ -311,8 +359,18 @@ levante_gpu_report_binding() {
             set -uo pipefail
 
             visible="${CUDA_VISIBLE_DEVICES:-}"
+            numa=""
             cpus="$(awk "/Cpus_allowed_list/ {print \$2}" /proc/self/status)"
-            numa="$(awk "/Mems_allowed_list/ {print \$2}" /proc/self/status)"
+            # Mems_allowed_list is the cgroup allowed set, which numactl
+            # --membind does not touch: it sets an MPOL_BIND policy on the
+            # process. Reading the cgroup field made a correctly bound rank
+            # look unbound (it reports 0-7 either way). Ask numactl instead.
+            if command -v numactl >/dev/null 2>&1; then
+                numa="$(numactl --show 2>/dev/null |
+                        awk "/^membind:/ {\$1 = \"\"; sub(/^ /, \"\"); print}")"
+            fi
+            numa="${numa:-unbound}"
+            cgroup_numa="$(awk "/Mems_allowed_list/ {print \$2}" /proc/self/status)"
 
             if [[ -z "${visible}" ]]; then
                 echo "ERROR: rank ${SLURM_LOCALID} has no CUDA_VISIBLE_DEVICES" >&2
@@ -344,7 +402,7 @@ levante_gpu_report_binding() {
             fi
 
             echo "rank=${SLURM_LOCALID} gpu=${visible} bdf=${bdf}" \
-                 "cores=${cpus} numa=${numa}" \
+                 "cores=${cpus} membind=${numa} cgroup-numa=${cgroup_numa}" \
                  "gpu-local-cores=${local_cpus} gpu-numa=${gpu_numa} ${verdict}"
         '
 }

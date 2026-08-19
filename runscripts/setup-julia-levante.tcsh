@@ -307,7 +307,7 @@ echo
 #
 #   1. $CUDA_RUNTIME_VERSION, if set -- manual override, e.g. 13.0
 #   2. nvidia-smi, if this script is itself running on a GPU node
-#   3. the value recorded by the last GPU job (see runscripts/xmodel.gpu*)
+#   3. the value recorded by the last GPU job (see levante_gpu_common.sh)
 #   4. a two-minute probe job on the gpu partition
 #
 # Anything measured is cached in ${CUDA_VERSION_CACHE}; delete that file to

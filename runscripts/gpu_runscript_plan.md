@@ -1,9 +1,8 @@
 # Plan: Levante GPU runscripts for 1, 2 and 4 GPUs
 
-Status: Phases 1, 1a, 2 and 3 implemented. Phase 4 (multi-node) is
-deliberately deferred; Phase 5 (documentation) is outstanding. The GPU setup
-path now completes; the binding itself (Phase 2's exit criterion) still needs
-confirming on a real node. Nothing here has been
+Status: Phases 1, 1a, 2, 3 and 5 complete and confirmed on hardware. Phase 4
+(multi-node) remains deliberately deferred. What is left is the measurement
+itself — see "Measuring" in [README.md](README.md). Nothing here has been
 tested on hardware — the sandbox this was written in has no GPU, no Levante,
 no `tcsh` and no `julia`, and no access to `docs.dkrz.de` (egress blocked).
 Every number marked **[verify]** must be confirmed on a real node before it is
@@ -444,9 +443,22 @@ returns the pinned version rather than an empty dictionary.
 **Exit criterion:** each rank's `Cpus_allowed_list` is the 16-core block local
 to its `CUDA_VISIBLE_DEVICES` device, for all three of 1, 2 and 4 ranks.
 
-Partly met, then addressed — see F7. `--gpu-bind=closest` resolved the GPUs
-correctly; the cores needed the per-rank wrapper. Re-run the report to confirm
-`MATCH` on all ranks.
+**Met.** `--gpu-bind=closest` resolved the GPUs correctly on the first run; the
+cores needed the per-rank wrapper (F7). Confirmed on a second run — all four
+ranks report `MATCH`, each on the 16 physical cores plus SMT siblings attached
+to its own GPU, and the device test passes with `CUDA-aware=true` against the
+system Open MPI 4.1.5 with no bundled MPI loaded.
+
+Two things the passing run surfaced, both fixed:
+
+- `gdr_copy` was listed in `UCX_TLS` but the gdrcopy kernel module is not
+  loaded on Levante's GPU nodes, so UCX warned twice per rank and ignored it.
+  Removed.
+- The report read `Mems_allowed_list` to show memory binding, which
+  `numactl --membind` does not touch — it sets an `MPOL_BIND` policy on the
+  process, while that field reflects the cgroup and reads `0-7` either way. A
+  correctly bound rank looked unbound. The report now asks `numactl --show`,
+  and prints the cgroup value separately for context.
 
 ### Phase 3 — the three runscripts
 
@@ -519,16 +531,21 @@ Only once 1/2/4 on a single node are solid.
 
 ### Phase 5 — documentation
 
-1. Fix the `xmodel.gpu*` reference in `setup-julia-levante.tcsh` (F3).
-2. Either implement the CUDA-version re-check the setup script promises, or
-   delete the claim. Implementing it is cheap — the GPU scripts already run
-   `nvidia-smi` on the node — and it is what keeps the pin honest after a
-   driver upgrade.
-3. Add a short `runscripts/README.md`: which script for which purpose, the
-   setup-then-submit order, and the environment overrides (`SCRIPT`, `PROJECT`,
-   `JULIA_CHANNEL`, `CLIMACOMMS_CONTEXT`).
-4. Record the Levante specifics in `docs/clima_atmos_specific.md` per the
-   self-correction rule in `AGENTS.md`.
+Complete.
+
+1. The `xmodel.gpu*` reference in `setup-julia-levante.tcsh` now points at
+   `levante_gpu_common.sh` (F3).
+2. The CUDA-version re-check the setup script promises is implemented rather
+   than deleted: each GPU job reads the driver's CUDA version on the node it
+   lands on, refreshes `${JULIA_DEPOT_PATH}/levante-cuda-version` for the next
+   setup run, and fails if the pinned toolkit is *newer* than the driver —
+   the one direction that matters, since CUDA minor-version compatibility does
+   not always survive the CUDA-aware MPI in the nvhpc stack.
+3. `runscripts/README.md` covers which script for which purpose, the
+   setup-then-submit order, the environment overrides, how to read the binding
+   report, the measured node layout, and how to make the scaling numbers mean
+   something.
+4. `docs/clima_atmos_specific.md` points at that README.
 
 ## Measurement
 
