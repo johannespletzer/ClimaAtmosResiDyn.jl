@@ -49,6 +49,19 @@ jobs:
           version: '1.11'
       - uses: julia-actions/cache@v3
 
+      # Pkg only auto-installs the General registry in an interactive session,
+      # so a fresh CI depot has none and every package looks unregistered:
+      # `expected package ClimaCore [d414da3d] to be registered`, which is not
+      # the compat failure this workflow is looking for. Install it explicitly.
+      - name: Install the General registry
+        run: |
+          julia --color=yes -e '
+              using Pkg
+              if isempty(Pkg.Registry.reachable_registries())
+                  Pkg.Registry.add("General")
+              end
+          '
+
       - name: Pkg.resolve
         run: |
           julia --project=${{ matrix.project }} --color=yes -e '
