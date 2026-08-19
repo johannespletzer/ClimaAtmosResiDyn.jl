@@ -90,32 +90,33 @@ traceable.
 `xmodel.4gpus` and `xmodel.cpu` already duplicate roughly 200 lines of
 preamble — module loading, path resolution, the manifest/Julia version check,
 the serial precompilation warm-up, the diagnostic banner. Adding two more GPU
-variants by copy-paste would make four copies of that logic and guarantee they
-drift. Extract it instead:
+variants by copy-paste would make three copies of the GPU logic and guarantee
+they drift. Extract the GPU logic instead; leave the CPU script separate until
+the project-local MPI preference issue below is resolved:
 
 ```
 runscripts/
-  levante_common.sh        # new: sourced by every runscript
+  levante_gpu_common.sh    # new: sourced by every GPU runscript
   xmodel.1gpu              # new: thin, #SBATCH + N_GPUS=1
   xmodel.2gpus             # new: thin, #SBATCH + N_GPUS=2
   xmodel.4gpus             # rewritten as a thin wrapper
-  xmodel.cpu               # migrated onto levante_common.sh
+  xmodel.cpu               # remains standalone; it uses a different MPI stack
   setup-julia-levante.tcsh # updated (F1, F3)
   select-cuda-runtime.jl   # unchanged
 ```
 
 `#SBATCH` directives cannot be sourced, so each variant keeps its own header;
-everything below it comes from `levante_common.sh`. The three GPU scripts then
-differ only in `--ntasks-per-node`, `--job-name`, `--time` and the output file
-pattern.
+everything below it comes from `levante_gpu_common.sh`. The three GPU scripts
+then differ only in `--ntasks-per-node`, `--job-name`, `--time` and the output
+file pattern.
 
-`levante_common.sh` provides:
+`levante_gpu_common.sh` provides:
 
 - path resolution (`ROOT`, `PROJECT`, `SCRIPT`, `JULIA`, `JULIA_CHANNEL`) with
   the same environment-override behaviour as today,
 - the Julia-vs-manifest version check,
-- `levante_load_stack {cpu|gpu}` — modules, `JULIA_DEPOT_PATH`, and the
-  `SRUN_MPI` value, all read from **one** table shared with
+- `levante_load_stack gpu` — modules, `JULIA_DEPOT_PATH`, and the `SRUN_MPI`
+  value, all read from **one** table shared with
   `setup-julia-levante.tcsh` so F1 cannot recur,
 - the UCX/Open MPI environment blocks,
 - `levante_banner`, `levante_report_binding`, `levante_warm_precompile`,
@@ -131,9 +132,21 @@ setup script and the bash runscripts read:
 runscripts/levante_stacks.env       # plain KEY=VALUE, no shell syntax
 ```
 
-`setup-julia-levante.tcsh` parses it with `sed`/`awk`; `levante_common.sh`
-sources it. A runscript that loads a different MPI than the depot was built
-against then requires editing a file whose only purpose is to state the pairing.
+`setup-julia-levante.tcsh` parses it with `sed`/`awk`;
+`levante_gpu_common.sh` sources it. A runscript that loads a different MPI than
+the depot was built against then requires editing a file whose only purpose is
+to state the pairing.
+
+This table prevents the module/depot pairing itself from drifting, but it does
+not make the CPU and GPU installations independently runnable. Both setup
+paths currently write MPI and CUDA preferences to the same
+`.buildkite/LocalPreferences.toml`; the setup script explicitly requires being
+rerun when switching stacks. In particular, a CPU setup performed after a GPU
+setup leaves the GPU depot intact but changes the active project's `libmpi`
+preference. The GPU runscript must therefore fail its Phase 1 preference check
+with an instruction to rerun `setup-julia-levante.tcsh gpu`. Sharing the CPU
+and GPU runscript preamble is deferred until they use separate active projects
+or otherwise have stack-local preferences.
 
 ## Per-configuration parameters
 
@@ -191,6 +204,9 @@ the model.
    may come from `/artifacts/`. `setup-julia-levante.tcsh` already performs
    exactly this check at setup time; running it again inside the job is what
    would have caught F1.
+5. If that assertion finds the CPU stack in the shared project preferences,
+   stop with an instruction to rerun `setup-julia-levante.tcsh gpu`; selecting
+   the GPU depot alone cannot repair a project-local preference.
 
 **Exit criterion:** `xmodel.4gpus` reaches the device test and it passes,
 with the assertions from (4) active.
@@ -221,17 +237,19 @@ to its `CUDA_VISIBLE_DEVICES` device, for all three of 1, 2 and 4 ranks.
 
 ### Phase 3 — the three runscripts
 
-1. Extract `levante_common.sh` from `xmodel.4gpus` as it stands after Phase 2.
+1. Extract `levante_gpu_common.sh` from `xmodel.4gpus` as it stands after
+   Phase 2.
 2. Write `xmodel.1gpu` and `xmodel.2gpus` as thin headers over it.
-3. Migrate `xmodel.cpu` onto the same common file (this also picks up the
-   `--cpu_bind` spelling fix and moves `--hint=nomultithread` into its
-   `#SBATCH` block).
-4. Confirm all four still submit and reach the model with an unchanged
-   configuration.
+3. Keep `xmodel.cpu` separate. Fix its `--cpu_bind` spelling and move
+   `--hint=nomultithread` into its `#SBATCH` block independently, without
+   suggesting that CPU and GPU jobs can switch stacks without rerunning setup.
+4. Confirm all three GPU scripts still submit and reach the model with an
+   unchanged configuration after the GPU setup path has run.
 
-**Exit criterion:** four runscripts, one shared library, no duplicated
-preamble; each of `xmodel.1gpu`, `xmodel.2gpus`, `xmodel.4gpus` completes a
-short run of `experiments/passive_stratospheric_tracers.jl`.
+**Exit criterion:** three GPU runscripts, one shared GPU library, no duplicated
+GPU preamble; each of `xmodel.1gpu`, `xmodel.2gpus`, `xmodel.4gpus` completes a
+short run of `experiments/passive_stratospheric_tracers.jl`. A subsequent CPU
+setup must cause the GPU script's preference check to fail early and clearly.
 
 ### Phase 4 — multi-node (deferred)
 
