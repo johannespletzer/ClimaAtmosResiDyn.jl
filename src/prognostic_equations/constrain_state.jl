@@ -20,8 +20,10 @@ physically admissible range:
 
   - `prescribe_flow!(Y, p, t, p.atmos.prescribed_flow)`: imposes the velocity,
     density, and energy of a 'kinematic driver'-like simulation.
+
   - `tracer_nonnegativity_constraint!(Y, p, t, p.atmos.water.tracer_nonnegativity_method)`:
     removes negative tracer masses.
+
   - `enforce_physical_constraints!(Y, p, t, p.atmos)`: grid-mean microphysics and
     EDMF updraft corrections.
 

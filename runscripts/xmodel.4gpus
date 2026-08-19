@@ -21,7 +21,7 @@
 #SBATCH --exclusive
 #SBATCH --mem=0
 #SBATCH --hint=nomultithread
-#SBATCH --time=04:00:00
+#SBATCH --time=00:30:00
 #SBATCH --output=tracer-4gpus-%j.out
 #SBATCH --error=tracer-4gpus-%j.err
 #SBATCH --mail-type=FAIL

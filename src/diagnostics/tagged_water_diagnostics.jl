@@ -75,10 +75,13 @@ Register the diagnostics associated with the tagged prognostic water tracers of
 during simulation setup rather than at package load time:
 
   - `q_tag_<name>`: tagged **total** water `ρq_tag_<name> / ρ`, for each tag;
+
   - `qv_tag_<name>`: tagged **vapor**, `q_tag_<name> * q_v / q_t`, under the
     assumption that the phases are well mixed within a grid cell;
+
   - `q_tag_res`: closure residual `(ρq_tot - Σᵢ ρq_tag_i) / ρ`, where the sum
     runs over the pure region tags (only registered when at least one exists);
+
   - `q_tag_fix_<name>`: water that the limiters and state constraints have moved
     into or out of each tag, cumulative since the start of the simulation
     segment. It separates "the numerics moved water" from "the transport

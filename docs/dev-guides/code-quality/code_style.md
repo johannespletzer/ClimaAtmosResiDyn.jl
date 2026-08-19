@@ -12,8 +12,8 @@ julia -e 'using JuliaFormatter; format(".")'
 
 or, on Julia 1.12+ (`Pkg.Apps` does not exist on 1.11 or earlier, including the 1.10 LTS; check with `isdefined(Pkg, :Apps)`), install JuliaFormatter as an app and use directly from the command-line:
 
-```julia-repl
-julia> import Pkg; Pkg.Apps.add("JuliaFormatter")
+```julia
+import Pkg; Pkg.Apps.add("JuliaFormatter")
 ```
 
 and add `~/.julia/bin/` to your PATH.

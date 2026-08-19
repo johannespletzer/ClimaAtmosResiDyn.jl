@@ -94,13 +94,13 @@ Two consequences worth stating:
 
 ### Taggable processes
 
-| Group      | `source` label          | Process                                                             |
-|:---------- |:----------------------- |:------------------------------------------------------------------- |
-| `surface`  | `surface_flux`          | Turbulent surface moisture flux (evaporation, or dew when negative) |
-| *(none)*   | `microphysics`          | The 0-moment total-water sink                                       |
-| `forcing`  | `large_scale_advection` | Prescribed large-scale advective moistening or drying               |
-| `forcing`  | `subsidence`            | Prescribed large-scale subsidence                                   |
-| `forcing`  | `external_forcing`      | Externally prescribed (e.g. GCM-driven) forcing and `q_tot` nudging |
+| Group     | `source` label          | Process                                                             |
+|:--------- |:----------------------- |:------------------------------------------------------------------- |
+| `surface` | `surface_flux`          | Turbulent surface moisture flux (evaporation, or dew when negative) |
+| *(none)*  | `microphysics`          | The 0-moment total-water sink                                       |
+| `forcing` | `large_scale_advection` | Prescribed large-scale advective moistening or drying               |
+| `forcing` | `subsidence`            | Prescribed large-scale subsidence                                   |
+| `forcing` | `external_forcing`      | Externally prescribed (e.g. GCM-driven) forcing and `q_tot` nudging |
 
 The group `all` expands to every process in the table. Note that `microphysics`
 belongs to **no named group**: `source: surface` selects `surface_flux` only, so
