@@ -132,14 +132,23 @@ if (! -f "${PROJECT}/Project.toml") then
     exit 1
 endif
 
-# MPIPreferences must be a direct dependency for the project-local preference
-# to be visible. Check the dedicated .buildkite environment without resolving
-# the repository root environment, whose dependency graph is unrelated here.
+# MPIPreferences and CUDA_Runtime_jll must both be direct dependencies for
+# their project-local preferences to be visible: Base.get_preferences maps the
+# names in LocalPreferences.toml to UUIDs through the project's own deps, so a
+# preference written for a package that is only an indirect dependency is
+# silently ignored. CUDA_Runtime_jll arrives indirectly through CUDA, and
+# before it was listed the toolkit pin below was written, read back as an empty
+# dictionary, and the environment resolved to cuda=none.
+#
+# Check the dedicated .buildkite environment without resolving the repository
+# root environment, whose dependency graph is unrelated here.
 ${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no \
-    -e 'using TOML; project = TOML.parsefile(ARGS[1]); haskey(get(project, "deps", Dict()), "MPIPreferences") || error("MPIPreferences is not a direct dependency")' \
-    "${PROJECT}/Project.toml"
+    -e 'using TOML; project = TOML.parsefile(ARGS[1]); deps = get(project, "deps", Dict()); missing_deps = filter(name -> !haskey(deps, name), ARGS[2:end]); isempty(missing_deps) || error("not direct dependencies: " * join(missing_deps, ", "))' \
+    "${PROJECT}/Project.toml" MPIPreferences CUDA_Runtime_jll
 if ($status != 0) then
-    echo "ERROR: MPIPreferences must be listed in ${PROJECT}/Project.toml."
+    echo "ERROR: MPIPreferences and CUDA_Runtime_jll must both be listed in"
+    echo "  ${PROJECT}/Project.toml"
+    echo "Their preferences are otherwise written but never read back."
     exit 1
 endif
 

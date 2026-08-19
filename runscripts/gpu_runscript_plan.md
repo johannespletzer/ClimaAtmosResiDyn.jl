@@ -98,12 +98,22 @@ dependency. `CUDA_Runtime_jll` is not a direct dependency of `.buildkite` —
 it arrives indirectly through `CUDA` — and the same rule was never applied to
 it.
 
-Not yet confirmed: the competing explanation is that the preference *is*
-visible and the platform-augmentation hook rejects the pinned version for some
-other reason. `Base.get_preferences` on the JLL's UUID distinguishes the two
-(see Phase 1a). Resolve this before changing `.buildkite/Project.toml`, since
-adding a direct dependency changes the project hash and forces the manifest to
-be regenerated.
+Confirmed on Levante. With the GPU depot active and `--project=.buildkite`:
+
+```
+julia> Base.get_preferences(Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2"))
+Dict{String, Any}()
+```
+
+The pin was written to `LocalPreferences.toml` and read back as nothing.
+`Base.get_preferences` resolves the names in that file to UUIDs through the
+project's own `[deps]`, so a preference for a package that is only an indirect
+dependency is silently ignored — no warning, no error, just a toolkit that
+never installs.
+
+Fixed by listing `CUDA_Runtime_jll` in `.buildkite/Project.toml`, and by
+extending the setup script's existing direct-dependency assertion to cover it
+alongside `MPIPreferences`.
 
 ### F3 — stale references
 
@@ -256,33 +266,31 @@ with the assertions from (4) active.
 
 ### Phase 1a — make the CUDA toolkit pin take effect (F5)
 
-Phase 1's preference check now fails the job when no toolkit is pinned, which
-is correct but currently unsatisfiable: the GPU setup cannot produce a working
-pin. Resolve F5 first.
+Phase 1's preference check fails the job when no toolkit is pinned, which is
+correct but was unsatisfiable: the GPU setup could not produce a working pin.
 
-1. Determine whether the preference is visible to the loader at all:
+1. Done — `CUDA_Runtime_jll` is now a direct dependency of `.buildkite`
+   (UUID `76a88914-d11a-5bdc-97e0-2f5a05c973a2`, compat `0.21` matching the
+   `0.21.0+1` the manifest already resolves), and
+   `setup-julia-levante.tcsh` asserts it alongside `MPIPreferences`.
+2. **Manual step, once:** adding a direct dependency invalidates the
+   manifest's `project_hash`, so the manifest must be regenerated on a login
+   node (compute nodes have no network) and the result committed:
 
    ```bash
-   JULIA_DEPOT_PATH=$HOME/.julia/depots/levante-gpu \
-   julia +1.11 --project=.buildkite -e '
-       uuid = Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2")
-       println("CUDA_Runtime_jll preferences: ", Base.get_preferences(uuid))
-   '
+   julia +1.11 --project=.buildkite -e 'using Pkg; Pkg.resolve()'
+   git diff .buildkite/Manifest-v1.11.toml
    ```
 
-2. If it comes back empty, add `CUDA_Runtime_jll` to `.buildkite/Project.toml`
-   as a direct dependency (UUID `76a88914-d11a-5bdc-97e0-2f5a05c973a2`, already
-   recorded in `select-cuda-runtime.jl`) and regenerate the manifest, mirroring
-   what is already required of `MPIPreferences`. Then have
-   `setup-julia-levante.tcsh` assert it, exactly as it asserts `MPIPreferences`.
-3. If it comes back populated, the preference is visible and the augmentation
-   hook is rejecting CUDA 13.0 for another reason. Compare the pinned version
-   against the hook's own `cuda_toolkits` list, and against what
-   `CUDA_Runtime_jll` actually ships artifacts for at the version the manifest
-   pins.
+   Expect only `project_hash` to change, plus `CUDA_Runtime_jll` gaining no
+   new entry (it is already in the manifest at a compatible version). If
+   package versions move, stop and inspect — that is not what this change
+   should cause.
+3. Re-run `./runscripts/setup-julia-levante.tcsh gpu`.
 
 **Exit criterion:** `setup-julia-levante.tcsh gpu` completes with a CUDA
-platform tag other than `none`.
+platform tag other than `none`, and the `Base.get_preferences` probe in F5
+returns the pinned version rather than an empty dictionary.
 
 ### Phase 2 — affinity
 
