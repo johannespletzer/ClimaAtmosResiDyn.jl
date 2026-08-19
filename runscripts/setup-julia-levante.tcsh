@@ -142,8 +142,16 @@ endif
 #
 # Check the dedicated .buildkite environment without resolving the repository
 # root environment, whose dependency graph is unrelated here.
+#
+# The Julia below contains no exclamation mark on purpose. tcsh performs
+# history expansion before quoting, and single quotes do not suppress it, so
+# one immediately followed by a word character is read as a history reference.
+# Negating haskey(...) that way aborts the whole script with
+# "haskey: Event not found." before Julia is ever started -- hence the loop
+# instead of a filter. Uses like pop!( and != elsewhere in this file are safe,
+# because expansion needs a word character to follow.
 ${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no \
-    -e 'using TOML; project = TOML.parsefile(ARGS[1]); deps = get(project, "deps", Dict()); missing_deps = filter(name -> !haskey(deps, name), ARGS[2:end]); isempty(missing_deps) || error("not direct dependencies: " * join(missing_deps, ", "))' \
+    -e 'using TOML; project = TOML.parsefile(ARGS[1]); deps = get(project, "deps", Dict()); for name in ARGS[2:end]; haskey(deps, name) || error(name * " is not a direct dependency"); end' \
     "${PROJECT}/Project.toml" MPIPreferences CUDA_Runtime_jll
 if ($status != 0) then
     echo "ERROR: MPIPreferences and CUDA_Runtime_jll must both be listed in"
