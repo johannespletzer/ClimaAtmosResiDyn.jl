@@ -135,6 +135,20 @@ version falls outside its compat entry. Nothing had exposed it because
 nothing had needed to re-resolve — `Pkg.instantiate()` honours a manifest
 whose hash matches and never checks the bound.
 
+The bound is stale, not protective. The root `Project.toml` — the ClimaAtmos
+package itself, which `.buildkite` consumes through
+`[sources] ClimaAtmos = {path = ".."}` — already declares
+`ClimaCore = "0.15"`. The package requires 0.15, the manifest resolved 0.15.1
+in agreement with it, and only the test environment's copy of the bound was
+left behind. Corrected to `"0.15"`, matching the root exactly rather than
+widening to `"0.14.55, 0.15"`, which would readmit a 0.14 the package itself
+forbids.
+
+Four other compat entries differ between the root and `.buildkite`
+(`ClimaDiagnostics`, `ClimaParams`, `ClimaUtilities`, `OrderedCollections`).
+None is a conflict: in each case `.buildkite` is the looser of the two, so the
+root's stricter bound governs at resolve time. Left alone.
+
 Three ways past it, in order of blast radius:
 
 1. Add the dependency without re-resolving anything else:
