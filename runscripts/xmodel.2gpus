@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=tracer-4gpus
+#SBATCH --job-name=tracer-2gpus
 #SBATCH --account=bd1062
 #SBATCH --partition=gpu
 #SBATCH --constraint=a100_80
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=4
-# GPUs are requested at node scope, not per task: --gpus-per-task implies a
-# per-task GPU binding that pins CUDA_VISIBLE_DEVICES before --gpu-bind=closest
-# can choose, so `closest` would have nothing left to decide.
+#SBATCH --ntasks-per-node=2
+# Levante's GPU partition schedules complete four-GPU nodes. Requesting only
+# two GPUs together with --exclusive is not a satisfiable node configuration.
+# Reserve all four GPUs but launch two ranks; --gpu-bind=closest exposes one
+# selected GPU to each rank through CUDA_VISIBLE_DEVICES.
 #SBATCH --gpus-per-node=4
 # One NUMA domain of cores per rank. A Levante GPU node is 128 cores over 8
 # NUMA domains of 16, with one GPU and one HCA attached to every second domain,
@@ -22,11 +23,11 @@
 #SBATCH --mem=0
 #SBATCH --hint=nomultithread
 #SBATCH --time=04:00:00
-#SBATCH --output=tracer-4gpus-%j.out
-#SBATCH --error=tracer-4gpus-%j.err
+#SBATCH --output=tracer-2gpus-%j.out
+#SBATCH --error=tracer-2gpus-%j.err
 #SBATCH --mail-type=FAIL
 
-# 4 GPUs on one node. Everything below the #SBATCH block is shared with
+# 2 GPUs on one node. Everything below the #SBATCH block is shared with
 # the other GPU variants; see runscripts/levante_gpu_common.sh.
 
 source /sw/etc/profile.levante

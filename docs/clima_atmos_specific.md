@@ -26,6 +26,7 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
   - `perf/`: allocation and performance benchmarks run separately from unit tests. Not run in CI; regressions must be caught in review.
   - `reproducibility_tests/`: reproducibility test infrastructure. `ref_counter.jl` holds a single integer counter that partitions commit history into reference bins — increment it when simulation output intentionally changes.
   - `post_processing/`, `calibration/`, `runscripts/`, `examples/`: analysis scripts, calibration workflows, launch scripts, and smaller usage examples.
+    `runscripts/` targets DKRZ Levante specifically; see [runscripts/README.md](../runscripts/README.md) for the setup-then-submit order, the CPU/GPU stack split, and the node layout the GPU scripts are built around.
 
 ## Mapping the architectural layers to ClimaAtmos directories
 

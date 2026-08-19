@@ -1,9 +1,13 @@
 # Plan: Levante GPU runscripts for 1, 2 and 4 GPUs
 
-Status: proposal, not yet implemented. Nothing here has been tested — this
-sandbox has no GPU, no Levante, and no access to `docs.dkrz.de` (egress
-blocked). Every number marked **[verify]** must be confirmed on a real node
-before it is trusted.
+Status: all phases implemented. Phases 1, 1a, 2, 3 and 5 are confirmed on
+hardware; Phase 4 (multi-node) is written and verified against a simulated
+fabric but has never been run across nodes. What is left is the measurement
+itself — see "Measuring" in [README.md](README.md). Nothing here has been
+tested on hardware — the sandbox this was written in has no GPU, no Levante,
+no `tcsh` and no `julia`, and no access to `docs.dkrz.de` (egress blocked).
+Every number marked **[verify]** must be confirmed on a real node before it is
+trusted, and Phase 1 needs one submitted job to confirm it behaves as intended.
 
 ## Goal
 
@@ -62,6 +66,173 @@ and every NetCDF write crosses the Infinity Fabric. `--distribution=block:cyclic
 additionally alternates ranks across sockets, working against any
 affinity-driven layout.
 
+### F4 — `ROOT` could not be resolved under `sbatch`
+
+Observed on Levante: `Julia project not found: /var/spool/slurmd/.buildkite`.
+
+Every runscript derived the repository from `${BASH_SOURCE[0]}`. `sbatch`
+copies the script to the node's spool directory before running it, so
+`BASH_SOURCE` is `/var/spool/slurmd/job<id>/slurm_script` and its parent is
+`/var/spool/slurmd`. The scripts therefore only ever worked when run directly,
+never through the batch system they exist for.
+
+Fixed by resolving from `SLURM_SUBMIT_DIR` (or its parent, so submitting from
+`runscripts/` also works), falling back to `BASH_SOURCE` for a direct run, and
+requiring the candidate to actually contain `.buildkite/` and `runscripts/` so
+a wrong guess fails immediately with an actionable message. `ROOT=` in the
+environment still overrides.
+
+This is more acute after Phase 1 than before it: `levante_stacks.env` is looked
+up under `${ROOT}` too.
+
+### F5 — the CUDA toolkit pin is written where the loader may not see it
+
+Observed on Levante: `setup-julia-levante.tcsh gpu` writes
+`[CUDA_Runtime_jll] version = "13.0"` into
+`.buildkite/LocalPreferences.toml`, the second `Pkg.instantiate()` downloads
+nothing, and verification ends with `CUDA platform tag: none`, i.e. no toolkit
+was installed.
+
+The script already knows the rule that probably explains this. It refuses to
+run unless `MPIPreferences` is a **direct** dependency of `.buildkite`,
+commenting that a project-local preference is only visible for a direct
+dependency. `CUDA_Runtime_jll` is not a direct dependency of `.buildkite` —
+it arrives indirectly through `CUDA` — and the same rule was never applied to
+it.
+
+Confirmed on Levante. With the GPU depot active and `--project=.buildkite`:
+
+```
+julia> Base.get_preferences(Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2"))
+Dict{String, Any}()
+```
+
+The pin was written to `LocalPreferences.toml` and read back as nothing.
+`Base.get_preferences` resolves the names in that file to UUIDs through the
+project's own `[deps]`, so a preference for a package that is only an indirect
+dependency is silently ignored — no warning, no error, just a toolkit that
+never installs.
+
+Fixed by listing `CUDA_Runtime_jll` in `.buildkite/Project.toml`, and by
+extending the setup script's existing direct-dependency assertion to cover it
+alongside `MPIPreferences`.
+
+### F6 — `Pkg.resolve()` cannot run: ClimaCore compat is stale
+
+Adding a direct dependency requires the manifest's `project_hash` to be
+regenerated, and `Pkg.resolve()` fails before it gets there:
+
+```
+ERROR: empty intersection between ClimaCore@0.15.1 and project
+       compatibility 0.14.55 - 0.14
+```
+
+`.buildkite/Project.toml` pins `ClimaCore = "0.14.55"`, which means
+`[0.14.55, 0.15.0)`, while `.buildkite/Manifest-v1.11.toml` resolves
+ClimaCore 0.15.1. The manifest violates the project's own compat bound.
+
+Pre-existing, and unrelated to the CUDA work: it is present at the branch
+point `e242482`, and it is the only direct dependency of 38 whose manifest
+version falls outside its compat entry. Nothing had exposed it because
+nothing had needed to re-resolve — `Pkg.instantiate()` honours a manifest
+whose hash matches and never checks the bound.
+
+The bound is stale, not protective. The root `Project.toml` — the ClimaAtmos
+package itself, which `.buildkite` consumes through
+`[sources] ClimaAtmos = {path = ".."}` — already declares
+`ClimaCore = "0.15"`. The package requires 0.15, the manifest resolved 0.15.1
+in agreement with it, and only the test environment's copy of the bound was
+left behind. Corrected to `"0.15"`, matching the root exactly rather than
+widening to `"0.14.55, 0.15"`, which would readmit a 0.14 the package itself
+forbids.
+
+Four other compat entries differ between the root and `.buildkite`
+(`ClimaDiagnostics`, `ClimaParams`, `ClimaUtilities`, `OrderedCollections`).
+None is a conflict: in each case `.buildkite` is the looser of the two, so the
+root's stricter bound governs at resolve time. Left alone.
+
+Three ways past it, in order of blast radius:
+
+1. Add the dependency without re-resolving anything else:
+
+   ```bash
+   julia +1.11 --project=.buildkite -e '
+       using Pkg
+       Pkg.add(
+           Pkg.PackageSpec(
+               name = "CUDA_Runtime_jll",
+               uuid = "76a88914-d11a-5bdc-97e0-2f5a05c973a2",
+           );
+           preserve = Pkg.PRESERVE_ALL,
+       )
+   '
+   ```
+
+   `PRESERVE_ALL` keeps every existing manifest version, so the resolver
+   never revisits ClimaCore. Expect `project_hash` to change and nothing
+   else.
+
+2. Correct the bound to `ClimaCore = "0.14.55, 0.15"`. This is the honest
+   fix — the manifest has shipped 0.15.1 for some time and CI resolves
+   against it, so the bound is simply stale. It is a repo-wide change
+   affecting CI and every other environment, so it belongs in its own
+   commit and is not a decision to take as a side effect of GPU runscript
+   work.
+
+3. Keep the CUDA preference out of the repository entirely: give it to the
+   per-stack depot's `environments/v1.11` instead, which sits on the default
+   load path and can carry `CUDA_Runtime_jll` as a direct dependency without
+   touching `.buildkite`. This has a genuine advantage — the pin becomes
+   depot-local, so the cpu and gpu stacks stop sharing one CUDA setting, part
+   of what the plan defers under "single source of truth". It rests on
+   `Base.get_preferences` merging across the whole load path, which should
+   be verified with the F5 probe before committing to it.
+
+### F7 — measured: `--gpu-bind=closest` binds the GPU, not the cores
+
+First real binding report, 4 GPUs on one node:
+
+```
+rank=0 gpu-numa=1  cores=0-31,128-159    gpu-local-cores=16-31,144-159
+rank=1 gpu-numa=3  cores=32-63,160-191   gpu-local-cores=48-63,176-191
+rank=2 gpu-numa=5  cores=64-95,192-223   gpu-local-cores=80-95,208-223
+rank=3 gpu-numa=7  cores=96-127,224-255  gpu-local-cores=112-127,240-255
+```
+
+Half of this is a success. `--gpu-bind=closest` did what it promised: every
+rank received a distinct GPU, in rank order, and the exactly-one-device
+assertion passed. The GPU side of Phase 2 needs no fallback.
+
+The CPU side did not. `--cpus-per-task=16` narrowed nothing, because
+`--exclusive` hands the job the whole node and Slurm divides all of it among
+the tasks: each rank got 32 physical cores spanning an even/odd NUMA pair, of
+which only the odd half is local to its GPU. `Mems_allowed_list` was `0-7` for
+every rank, so memory was not bound at all.
+
+**Topology, now measured rather than assumed** — this settles open question 1:
+
+- 128 physical cores in 8 NUMA domains of 16, plus SMT siblings, so 256
+  logical CPUs. `--hint=nomultithread` does not suppress the siblings once
+  `--exclusive` is in play.
+- The four GPUs sit on the **odd** domains 1, 3, 5, 7. The even domains have
+  no GPU.
+- Domain *n*'s cores are `16n..16n+15` with siblings at `128+16n..128+16n+15`.
+
+**Fix: narrow from inside the rank.** Each rank's cpuset is a strict superset
+of the set it wants, so it can be narrowed within the cgroup. That is what
+`runscripts/levante_gpu_rank_wrapper.sh` does, placed between `srun` and the
+command at all three call sites: it reads its own GPU's `local_cpulist` and
+`numa_node` from sysfs and `exec`s under
+`numactl --physcpubind=... --membind=...`, falling back to `taskset` and then
+to running unbound with a warning.
+
+Deriving the target from sysfs rather than hardcoding `--cpu-bind=map_ldom:1,3,5,7`
+keeps it correct for the 1- and 2-GPU variants, where the allocated GPUs are
+not known in advance, and across a topology change. It is also the ICON
+pattern DKRZ originally pointed at — arrived at from the measurement rather
+than adopted on faith, and it additionally fixes the memory binding, which no
+`srun` flag here was addressing.
+
 ### F3 — stale references
 
 - `setup-julia-levante.tcsh` refers to `runscripts/xmodel.gpu*`; the file is
@@ -90,32 +261,33 @@ traceable.
 `xmodel.4gpus` and `xmodel.cpu` already duplicate roughly 200 lines of
 preamble — module loading, path resolution, the manifest/Julia version check,
 the serial precompilation warm-up, the diagnostic banner. Adding two more GPU
-variants by copy-paste would make four copies of that logic and guarantee they
-drift. Extract it instead:
+variants by copy-paste would make three copies of the GPU logic and guarantee
+they drift. Extract the GPU logic instead; leave the CPU script separate until
+the project-local MPI preference issue below is resolved:
 
 ```
 runscripts/
-  levante_common.sh        # new: sourced by every runscript
+  levante_gpu_common.sh    # new: sourced by every GPU runscript
   xmodel.1gpu              # new: thin, #SBATCH + N_GPUS=1
   xmodel.2gpus             # new: thin, #SBATCH + N_GPUS=2
   xmodel.4gpus             # rewritten as a thin wrapper
-  xmodel.cpu               # migrated onto levante_common.sh
+  xmodel.cpu               # remains standalone; it uses a different MPI stack
   setup-julia-levante.tcsh # updated (F1, F3)
   select-cuda-runtime.jl   # unchanged
 ```
 
 `#SBATCH` directives cannot be sourced, so each variant keeps its own header;
-everything below it comes from `levante_common.sh`. The three GPU scripts then
-differ only in `--ntasks-per-node`, `--job-name`, `--time` and the output file
-pattern.
+everything below it comes from `levante_gpu_common.sh`. The three GPU scripts
+then differ only in `--ntasks-per-node`, `--job-name`, `--time` and the output
+file pattern.
 
-`levante_common.sh` provides:
+`levante_gpu_common.sh` provides:
 
 - path resolution (`ROOT`, `PROJECT`, `SCRIPT`, `JULIA`, `JULIA_CHANNEL`) with
   the same environment-override behaviour as today,
 - the Julia-vs-manifest version check,
-- `levante_load_stack {cpu|gpu}` — modules, `JULIA_DEPOT_PATH`, and the
-  `SRUN_MPI` value, all read from **one** table shared with
+- `levante_load_stack gpu` — modules, `JULIA_DEPOT_PATH`, and the `SRUN_MPI`
+  value, all read from **one** table shared with
   `setup-julia-levante.tcsh` so F1 cannot recur,
 - the UCX/Open MPI environment blocks,
 - `levante_banner`, `levante_report_binding`, `levante_warm_precompile`,
@@ -131,20 +303,32 @@ setup script and the bash runscripts read:
 runscripts/levante_stacks.env       # plain KEY=VALUE, no shell syntax
 ```
 
-`setup-julia-levante.tcsh` parses it with `sed`/`awk`; `levante_common.sh`
-sources it. A runscript that loads a different MPI than the depot was built
-against then requires editing a file whose only purpose is to state the pairing.
+`setup-julia-levante.tcsh` parses it with `sed`/`awk`;
+`levante_gpu_common.sh` sources it. A runscript that loads a different MPI than
+the depot was built against then requires editing a file whose only purpose is
+to state the pairing.
+
+This table prevents the module/depot pairing itself from drifting, but it does
+not make the CPU and GPU installations independently runnable. Both setup
+paths currently write MPI and CUDA preferences to the same
+`.buildkite/LocalPreferences.toml`; the setup script explicitly requires being
+rerun when switching stacks. In particular, a CPU setup performed after a GPU
+setup leaves the GPU depot intact but changes the active project's `libmpi`
+preference. The GPU runscript must therefore fail its Phase 1 preference check
+with an instruction to rerun `setup-julia-levante.tcsh gpu`. Sharing the CPU
+and GPU runscript preamble is deferred until they use separate active projects
+or otherwise have stack-local preferences.
 
 ## Per-configuration parameters
 
-Assumes a Levante GPU node: 2x AMD EPYC 7763 (128 physical cores), 8 NUMA
-domains of 16 cores **[verify]**, 4x A100-SXM4-80GB, 4x HDR200 HCAs, one GPU
-and one HCA per even-numbered NUMA domain **[verify]**.
+Measured on a Levante GPU node: 2x AMD EPYC 7763 (128 physical cores), 8 NUMA
+domains of 16 cores, and 4x A100-SXM4-80GB, with the GPUs attached to odd NUMA
+domains. The HCA topology remains to be verified on a multi-node run.
 
 | | `xmodel.1gpu` | `xmodel.2gpus` | `xmodel.4gpus` |
 | --- | --- | --- | --- |
 | `--ntasks-per-node` | 1 | 2 | 4 |
-| `--gpus-per-node` | 1 | 2 | 4 |
+| `--gpus-per-node` | 4 | 4 | 4 |
 | `--cpus-per-task` | 16 | 16 | 16 |
 | `--hint=nomultithread` | yes | yes | yes |
 | `--exclusive`, `--mem=0` | yes | yes | yes |
@@ -154,6 +338,12 @@ and one HCA per even-numbered NUMA domain **[verify]**.
 sharing a node's memory bandwidth or HCAs with someone else's job. This costs
 queue-time fairness but is the only way the three numbers are comparable, which
 is the whole point of producing them.
+
+Levante's GPU partition allocates complete four-GPU nodes: combining
+`--exclusive` with `--gpus-per-node=1` or `2` is rejected by `sbatch` as an
+unavailable node configuration. The smaller variants therefore reserve all
+four GPUs and reduce only `--ntasks-per-node`; their unused GPUs are the cost of
+an exclusive, directly comparable strong-scaling measurement.
 
 `--cpus-per-task=16` on all three: one NUMA domain per rank. The 4-GPU job
 therefore uses 64 of 128 cores. That is intentional — the other four NUMA
@@ -191,14 +381,56 @@ the model.
    may come from `/artifacts/`. `setup-julia-levante.tcsh` already performs
    exactly this check at setup time; running it again inside the job is what
    would have caught F1.
+5. If that assertion finds the CPU stack in the shared project preferences,
+   stop with an instruction to rerun `setup-julia-levante.tcsh gpu`; selecting
+   the GPU depot alone cannot repair a project-local preference.
 
 **Exit criterion:** `xmodel.4gpus` reaches the device test and it passes,
 with the assertions from (4) active.
 
+### Phase 1a — make the CUDA toolkit pin take effect (F5)
+
+Phase 1's preference check fails the job when no toolkit is pinned, which is
+correct but was unsatisfiable: the GPU setup could not produce a working pin.
+
+1. Done — `CUDA_Runtime_jll` is now a direct dependency of `.buildkite`
+   (UUID `76a88914-d11a-5bdc-97e0-2f5a05c973a2`, compat `0.21` matching the
+   `0.21.0+1` the manifest already resolves), and
+   `setup-julia-levante.tcsh` asserts it alongside `MPIPreferences`.
+2. **Manual step, once:** adding a direct dependency invalidates the
+   manifest's `project_hash`, so the manifest must be regenerated on a login
+   node (compute nodes have no network) and the result committed. Plain
+   `Pkg.resolve()` does not work here — see F6 — so preserve the existing
+   versions:
+
+   ```bash
+   julia +1.11 --project=.buildkite -e '
+       using Pkg
+       Pkg.add(
+           Pkg.PackageSpec(
+               name = "CUDA_Runtime_jll",
+               uuid = "76a88914-d11a-5bdc-97e0-2f5a05c973a2",
+           );
+           preserve = Pkg.PRESERVE_ALL,
+       )
+   '
+   git diff .buildkite/Manifest-v1.11.toml
+   ```
+
+   Expect only `project_hash` to change. `CUDA_Runtime_jll` is already in the
+   manifest at a compatible version, so no package should move; if any does,
+   stop and inspect.
+3. Re-run `./runscripts/setup-julia-levante.tcsh gpu`.
+
+**Exit criterion:** `setup-julia-levante.tcsh gpu` completes with a CUDA
+platform tag other than `none`, and the `Base.get_preferences` probe in F5
+returns the pinned version rather than an empty dictionary.
+
 ### Phase 2 — affinity
 
-1. Change `--gpus-per-task=1` to `--gpus-per-node=N` and `--cpus-per-task=1`
-   to `--cpus-per-task=16`.
+1. Change `--gpus-per-task=1` to a full-node `--gpus-per-node=4` request and
+   `--cpus-per-task=1` to `--cpus-per-task=16`. Vary the rank count, not the
+   allocation size, for the 1- and 2-GPU measurements.
 2. `srun --gpu-bind=closest --cpu-bind=verbose,cores --distribution=block:block`.
 3. Extend the diagnostic `srun` block to report the mapping actually obtained:
 
@@ -219,23 +451,92 @@ with the assertions from (4) active.
 **Exit criterion:** each rank's `Cpus_allowed_list` is the 16-core block local
 to its `CUDA_VISIBLE_DEVICES` device, for all three of 1, 2 and 4 ranks.
 
+**Met.** `--gpu-bind=closest` resolved the GPUs correctly on the first run; the
+cores needed the per-rank wrapper (F7). Confirmed on a second run — all four
+ranks report `MATCH`, each on the 16 physical cores plus SMT siblings attached
+to its own GPU, and the device test passes with `CUDA-aware=true` against the
+system Open MPI 4.1.5 with no bundled MPI loaded.
+
+Two things the passing run surfaced, both fixed:
+
+- `gdr_copy` was listed in `UCX_TLS` but the gdrcopy kernel module is not
+  loaded on Levante's GPU nodes, so UCX warned twice per rank and ignored it.
+  Removed.
+- The report read `Mems_allowed_list` to show memory binding, which
+  `numactl --membind` does not touch — it sets an `MPOL_BIND` policy on the
+  process, while that field reflects the cgroup and reads `0-7` either way. A
+  correctly bound rank looked unbound. The report now asks `numactl --show`,
+  and prints the cgroup value separately for context.
+
 ### Phase 3 — the three runscripts
 
-1. Extract `levante_common.sh` from `xmodel.4gpus` as it stands after Phase 2.
+1. Extract `levante_gpu_common.sh` from `xmodel.4gpus` as it stands after
+   Phase 2.
 2. Write `xmodel.1gpu` and `xmodel.2gpus` as thin headers over it.
-3. Migrate `xmodel.cpu` onto the same common file (this also picks up the
-   `--cpu_bind` spelling fix and moves `--hint=nomultithread` into its
-   `#SBATCH` block).
-4. Confirm all four still submit and reach the model with an unchanged
-   configuration.
+3. Keep `xmodel.cpu` separate. Fix its `--cpu_bind` spelling and move
+   `--hint=nomultithread` into its `#SBATCH` block independently, without
+   suggesting that CPU and GPU jobs can switch stacks without rerunning setup.
+   It also carries the same F1 defect as the GPU script did — it sets no
+   `JULIA_DEPOT_PATH` and passes no `srun --mpi=`, so it runs out of the
+   default depot without the `OpenMPI_jll` override. Its module pair happens
+   to match `LEVANTE_CPU_*`, so this is less acute than on the GPU side, but
+   it is the same bug and should be fixed with the same three lines, reading
+   the `cpu` stack from `levante_stacks.env`.
+4. Confirm all three GPU scripts still submit and reach the model with an
+   unchanged configuration after the GPU setup path has run.
 
-**Exit criterion:** four runscripts, one shared library, no duplicated
-preamble; each of `xmodel.1gpu`, `xmodel.2gpus`, `xmodel.4gpus` completes a
-short run of `experiments/passive_stratospheric_tracers.jl`.
+**Exit criterion:** three GPU runscripts, one shared GPU library, no duplicated
+GPU preamble; each of `xmodel.1gpu`, `xmodel.2gpus`, `xmodel.4gpus` completes a
+short run of `experiments/passive_stratospheric_tracers.jl`. A subsequent CPU
+setup must cause the GPU script's preference check to fail early and clearly.
 
-### Phase 4 — multi-node (deferred)
+Implemented. Each runscript is now an `#SBATCH` header plus a bootstrap that
+locates the repository and sources `levante_gpu_common.sh`, which exposes
+`levante_gpu_init`, `_banner`, `_check_stack`, `_report_binding`,
+`_device_test`, `_warm_precompile` and `_run`. The binding flags live in one
+array applied to all three `srun` call sites, so a diagnostic can no longer
+drift from the launch it is meant to describe.
 
-Only once 1/2/4 on a single node are solid.
+Verified in a sandbox against mocked `srun`, `module`, `mpicc`, `nvidia-smi`
+and `julia`: all three variants run the full sequence, and each guard fires on
+its own failure — ranks not matching GPUs, a rank seeing more than one device,
+a missing depot, and an unlocatable repository. What the mocks cannot test is
+whether Slurm resolves `--gpu-bind=closest` correctly, which is precisely
+Phase 2's open question.
+
+### Phase 4 — multi-node
+
+Implemented, but **never run across nodes**. Everything below is verified
+against a simulated sysfs fabric only.
+
+The `#SBATCH` headers still request one node; `sbatch --nodes=N` overrides it,
+keeping 4 ranks and 4 GPUs per node.
+
+Two things were needed:
+
+1. The ranks-versus-GPUs assertion compared `SLURM_NTASKS`, which is the job
+   total, against `SLURM_GPUS_ON_NODE`, which is per node. `sbatch --nodes=2`
+   would have failed at once with a nonsense message. It now divides by
+   `SLURM_NNODES` first. Found by review, not by running it.
+2. `levante_gpu_rank_wrapper.sh` sets `UCX_NET_DEVICES` when
+   `SLURM_JOB_NUM_NODES > 1`, choosing the HCA whose `device/numa_node`
+   matches the GPU's, and preferring an `ACTIVE` port. It does not assume
+   `SLURM_LOCALID` indexes the HCAs in the same order as the GPUs, which was
+   the shape of the original suggestion; matching through sysfs costs nothing
+   and cannot silently mismap. An explicit `UCX_NET_DEVICES` is left alone,
+   and a rank finding no match leaves it unset so UCX chooses — a suboptimal
+   device beats no device.
+
+The binding report gained an `hca=` field. `hca=default` on a single-node job
+is correct, not a failure.
+
+Still to check when a multi-node job is first run:
+
+- `UCX_TLS` is `cma,rc,mm,cuda_ipc,cuda_copy`. DKRZ recommend a `dc_mlx5`-based
+  list above roughly 150 nodes.
+- Whether the NUMA-matched HCA is the one DKRZ's own table would pick.
+
+Original notes, for reference:
 
 1. Add `runscripts/levante_rank_wrapper.sh`, in the shape of the ICON wrapper:
    derive per-rank environment from `SLURM_LOCALID`, then `exec "$@"`.
@@ -268,16 +569,21 @@ Only once 1/2/4 on a single node are solid.
 
 ### Phase 5 — documentation
 
-1. Fix the `xmodel.gpu*` reference in `setup-julia-levante.tcsh` (F3).
-2. Either implement the CUDA-version re-check the setup script promises, or
-   delete the claim. Implementing it is cheap — the GPU scripts already run
-   `nvidia-smi` on the node — and it is what keeps the pin honest after a
-   driver upgrade.
-3. Add a short `runscripts/README.md`: which script for which purpose, the
-   setup-then-submit order, and the environment overrides (`SCRIPT`, `PROJECT`,
-   `JULIA_CHANNEL`, `CLIMACOMMS_CONTEXT`).
-4. Record the Levante specifics in `docs/clima_atmos_specific.md` per the
-   self-correction rule in `AGENTS.md`.
+Complete.
+
+1. The `xmodel.gpu*` reference in `setup-julia-levante.tcsh` now points at
+   `levante_gpu_common.sh` (F3).
+2. The CUDA-version re-check the setup script promises is implemented rather
+   than deleted: each GPU job reads the driver's CUDA version on the node it
+   lands on, refreshes `${JULIA_DEPOT_PATH}/levante-cuda-version` for the next
+   setup run, and fails if the pinned toolkit is *newer* than the driver —
+   the one direction that matters, since CUDA minor-version compatibility does
+   not always survive the CUDA-aware MPI in the nvhpc stack.
+3. `runscripts/README.md` covers which script for which purpose, the
+   setup-then-submit order, the environment overrides, how to read the binding
+   report, the measured node layout, and how to make the scaling numbers mean
+   something.
+4. `docs/clima_atmos_specific.md` points at that README.
 
 ## Measurement
 
@@ -303,14 +609,13 @@ is part of the deliverable, not an afterthought.
 
 ## Open questions
 
-1. Is the Levante GPU node really 8 NUMA domains of 16 cores? The
-   "GPU1 -> CPUs 16-31" example implies it, but the DKRZ table was not
-   reachable from where this plan was written. Everything in Phase 2 depends
-   on it.
-2. Which two GPUs does Slurm allocate for `--gpus-per-node=2`, and are they on
-   the same socket? On A100 SXM4 with NVSwitch the device-to-device bandwidth
-   is pair-independent, so this affects the host side only — but it should be
-   observed rather than assumed.
+1. ~~Is the Levante GPU node really 8 NUMA domains of 16 cores?~~ Measured:
+   yes — 8 domains of 16 physical cores, SMT on for 256 logical CPUs, GPUs on
+   the odd domains 1, 3, 5, 7. See F7.
+2. Which two of the four reserved GPUs does `--gpu-bind=closest` expose to the
+   two ranks, and are they on the same socket? On A100 SXM4 with NVSwitch the
+   device-to-device bandwidth is pair-independent, so this affects the host
+   side only — but it should be observed rather than assumed.
 3. Is the `gpu` partition exclusive by default? If so, `--exclusive` is
    redundant but harmless; if not, it is essential for comparability.
 4. Does `experiments/passive_stratospheric_tracers.jl` at the intended
