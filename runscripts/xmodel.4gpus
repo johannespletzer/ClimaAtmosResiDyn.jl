@@ -27,10 +27,53 @@ source /sw/etc/profile.levante
 
 set -euo pipefail
 
+# ---------------------------------------------------------------------------
+# Locate the repository.
+#
+# Not from ${BASH_SOURCE[0]}: sbatch copies this script to the node's spool
+# directory before running it, so BASH_SOURCE points at
+# /var/spool/slurmd/job<id>/slurm_script and its parent is /var/spool/slurmd.
+# SLURM_SUBMIT_DIR is the directory sbatch was invoked from, which is the
+# repository root for the documented `sbatch runscripts/<script>` invocation
+# and its runscripts/ subdirectory for `cd runscripts && sbatch <script>`.
+# Accept either, and fall back to BASH_SOURCE for a direct (non-sbatch) run.
+#
+# A candidate counts only if it actually holds the project and the runscripts,
+# so a wrong guess fails here with an actionable message instead of surfacing
+# later as a missing file.
+# ---------------------------------------------------------------------------
+
+levante_find_root() {
+    local candidate
+    for candidate in "$@"; do
+        [[ -n "${candidate}" ]] || continue
+        if [[ -d "${candidate}/.buildkite" && -d "${candidate}/runscripts" ]]; then
+            (cd "${candidate}" && pwd)
+            return 0
+        fi
+    done
+    return 1
+}
+
+if [[ -z "${ROOT:-}" ]]; then
+    ROOT="$(
+        levante_find_root \
+            "${SLURM_SUBMIT_DIR:-}" \
+            "${SLURM_SUBMIT_DIR:+${SLURM_SUBMIT_DIR}/..}" \
+            "$(dirname "${BASH_SOURCE[0]}")/.."
+    )" || {
+        echo "Could not locate the repository." >&2
+        echo "  SLURM_SUBMIT_DIR=${SLURM_SUBMIT_DIR:-unset}" >&2
+        echo "Submit from the repository root:" >&2
+        echo "  sbatch runscripts/$(basename "${BASH_SOURCE[0]}")" >&2
+        echo "or pass it explicitly:" >&2
+        echo "  ROOT=/path/to/ClimaAtmosResiDyn.jl sbatch runscripts/..." >&2
+        exit 1
+    }
+fi
+
 # Paths may be overridden from the environment, e.g.
 #   SCRIPT=experiments/my_run.jl sbatch runscripts/xmodel.4gpus
-# ROOT defaults to the repository containing this script.
-ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PROJECT="${PROJECT:-${ROOT}/.buildkite}"
 SCRIPT="${SCRIPT:-${ROOT}/experiments/passive_stratospheric_tracers.jl}"
 JULIA="${JULIA:-$(command -v julia || true)}"

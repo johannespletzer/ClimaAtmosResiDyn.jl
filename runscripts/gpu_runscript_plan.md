@@ -1,6 +1,7 @@
 # Plan: Levante GPU runscripts for 1, 2 and 4 GPUs
 
-Status: Phases 1 and 2 implemented on `xmodel.4gpus`, Phases 3-5 outstanding. Nothing here has been
+Status: Phases 1 and 2 implemented on `xmodel.4gpus`; Phase 1a (F5) blocks
+them from passing on hardware. Phases 3-5 outstanding. Nothing here has been
 tested on hardware — the sandbox this was written in has no GPU, no Levante,
 no `tcsh` and no `julia`, and no access to `docs.dkrz.de` (egress blocked).
 Every number marked **[verify]** must be confirmed on a real node before it is
@@ -62,6 +63,47 @@ their GPUs sit up to four NUMA hops away, so every host-side staging buffer
 and every NetCDF write crosses the Infinity Fabric. `--distribution=block:cyclic`
 additionally alternates ranks across sockets, working against any
 affinity-driven layout.
+
+### F4 — `ROOT` could not be resolved under `sbatch`
+
+Observed on Levante: `Julia project not found: /var/spool/slurmd/.buildkite`.
+
+Every runscript derived the repository from `${BASH_SOURCE[0]}`. `sbatch`
+copies the script to the node's spool directory before running it, so
+`BASH_SOURCE` is `/var/spool/slurmd/job<id>/slurm_script` and its parent is
+`/var/spool/slurmd`. The scripts therefore only ever worked when run directly,
+never through the batch system they exist for.
+
+Fixed by resolving from `SLURM_SUBMIT_DIR` (or its parent, so submitting from
+`runscripts/` also works), falling back to `BASH_SOURCE` for a direct run, and
+requiring the candidate to actually contain `.buildkite/` and `runscripts/` so
+a wrong guess fails immediately with an actionable message. `ROOT=` in the
+environment still overrides.
+
+This is more acute after Phase 1 than before it: `levante_stacks.env` is looked
+up under `${ROOT}` too.
+
+### F5 — the CUDA toolkit pin is written where the loader may not see it
+
+Observed on Levante: `setup-julia-levante.tcsh gpu` writes
+`[CUDA_Runtime_jll] version = "13.0"` into
+`.buildkite/LocalPreferences.toml`, the second `Pkg.instantiate()` downloads
+nothing, and verification ends with `CUDA platform tag: none`, i.e. no toolkit
+was installed.
+
+The script already knows the rule that probably explains this. It refuses to
+run unless `MPIPreferences` is a **direct** dependency of `.buildkite`,
+commenting that a project-local preference is only visible for a direct
+dependency. `CUDA_Runtime_jll` is not a direct dependency of `.buildkite` —
+it arrives indirectly through `CUDA` — and the same rule was never applied to
+it.
+
+Not yet confirmed: the competing explanation is that the preference *is*
+visible and the platform-augmentation hook rejects the pinned version for some
+other reason. `Base.get_preferences` on the JLL's UUID distinguishes the two
+(see Phase 1a). Resolve this before changing `.buildkite/Project.toml`, since
+adding a direct dependency changes the project hash and forces the manifest to
+be regenerated.
 
 ### F3 — stale references
 
@@ -211,6 +253,36 @@ the model.
 
 **Exit criterion:** `xmodel.4gpus` reaches the device test and it passes,
 with the assertions from (4) active.
+
+### Phase 1a — make the CUDA toolkit pin take effect (F5)
+
+Phase 1's preference check now fails the job when no toolkit is pinned, which
+is correct but currently unsatisfiable: the GPU setup cannot produce a working
+pin. Resolve F5 first.
+
+1. Determine whether the preference is visible to the loader at all:
+
+   ```bash
+   JULIA_DEPOT_PATH=$HOME/.julia/depots/levante-gpu \
+   julia +1.11 --project=.buildkite -e '
+       uuid = Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2")
+       println("CUDA_Runtime_jll preferences: ", Base.get_preferences(uuid))
+   '
+   ```
+
+2. If it comes back empty, add `CUDA_Runtime_jll` to `.buildkite/Project.toml`
+   as a direct dependency (UUID `76a88914-d11a-5bdc-97e0-2f5a05c973a2`, already
+   recorded in `select-cuda-runtime.jl`) and regenerate the manifest, mirroring
+   what is already required of `MPIPreferences`. Then have
+   `setup-julia-levante.tcsh` assert it, exactly as it asserts `MPIPreferences`.
+3. If it comes back populated, the preference is visible and the augmentation
+   hook is rejecting CUDA 13.0 for another reason. Compare the pinned version
+   against the hook's own `cuda_toolkits` list, and against what
+   `CUDA_Runtime_jll` actually ships artifacts for at the version the manifest
+   pins.
+
+**Exit criterion:** `setup-julia-levante.tcsh gpu` completes with a CUDA
+platform tag other than `none`.
 
 ### Phase 2 — affinity
 
