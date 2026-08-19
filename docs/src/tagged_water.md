@@ -300,3 +300,23 @@ policy are modeling choices, and conclusions are conditional on them.
 
 See `config/model_configs/baroclinic_wave_tagged_water.yml` for a complete example,
 and `test/tagged_water_integration.jl` for the closure assertions.
+
+## API
+
+Rendered here so that the `@ref` links in these docstrings resolve; Documenter
+resolves `@ref` only against docstrings a `@docs` block splices into a page.
+
+```@docs
+ClimaAtmos.WaterTaggingModel
+ClimaAtmos.WaterTag
+ClimaAtmos.KNOWN_WATER_TAG_SOURCES
+ClimaAtmos.WATER_TAG_SOURCE_GROUPS
+ClimaAtmos.water_tag_fraction
+ClimaAtmos.water_tag_share_norm!
+ClimaAtmos.water_tag_sediment_share
+ClimaAtmos.sediment_water_tags!
+ClimaAtmos.snapshot_tagged_ρq_tot!
+ClimaAtmos.attribute_tagged_ρq_tot!
+ClimaAtmos.rescale_water_tags!
+ClimaAtmos.repair_water_tag_partition!
+```
