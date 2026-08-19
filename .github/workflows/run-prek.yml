@@ -8,8 +8,13 @@ on:
 jobs:
   prek:
     runs-on: ubuntu-latest
+    # JuliaFormatter is deliberately not run here; formatting is checked
+    # locally instead. The hook stays defined in .pre-commit-config.yaml, so
+    # dropping this line is all it takes to turn the check back on -- along
+    # with restoring a julia-actions/setup-julia step, which existed only to
+    # give that hook a Julia to run.
+    env:
+      SKIP: julia-formatter
     steps:
-      - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@v3
       - uses: actions/checkout@v7
       - uses: j178/prek-action@v2

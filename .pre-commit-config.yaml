@@ -43,10 +43,12 @@ repos:
         pass_filenames: true
 
       - id: julia-formatter
-        name: JuliaFormatter (matches CI)
-        # Uses the pinned .dev/format environment so the formatting matches the
-        # julia-actions/julia-format CI check regardless of the JuliaFormatter
-        # version in your base environment. Requires `julia` on your PATH.
+        name: JuliaFormatter
+        # Local only: .github/workflows/run-prek.yml sets SKIP=julia-formatter,
+        # so CI does not run this and will not catch formatting drift.
+        # Uses the pinned .dev/format environment so everyone formats
+        # identically regardless of the JuliaFormatter version in their base
+        # environment. Requires `julia` on your PATH.
         # `Pkg.resolve()` runs first because .dev/format/Manifest.toml is
         # gitignored: a manifest resolved before the compat bound in
         # .dev/format/Project.toml was last bumped still pins the old version,
