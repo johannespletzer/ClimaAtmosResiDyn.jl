@@ -50,10 +50,26 @@ set JULIA_CHANNEL = +1.11
 # OpenMPI_jll's UUID, from .buildkite/Manifest-v1.11.toml
 set OPENMPI_JLL_UUID = fe0851c0-eecd-5654-98d4-656369965a5c
 
+# The compiler module, MPI module and depot name for each stack come from
+# runscripts/levante_stacks.env, which the GPU runscripts read as well. That
+# file is the only place the module/depot pairing is stated, so a runscript
+# cannot drift onto a different MPI than the depot was built against.
+set STACKS_ENV = ${ROOT}/runscripts/levante_stacks.env
+
+if (! -r "${STACKS_ENV}") then
+    echo "ERROR: stack definitions not found: ${STACKS_ENV}"
+    exit 1
+endif
+
 # Parent directory for the per-stack depots. Each holds a full copy of the
 # packages, artifacts and precompile cache -- several GB per stack. If $HOME is
-# quota-limited, point this at a work or scratch filesystem instead.
-set DEPOT_ROOT = ${HOME}/.julia/depots
+# quota-limited, set LEVANTE_DEPOT_ROOT to an absolute path on work or scratch.
+if ($?LEVANTE_DEPOT_ROOT) then
+    set DEPOT_ROOT = "${LEVANTE_DEPOT_ROOT}"
+else
+    set DEPOT_REL = `sed -n 's/^LEVANTE_DEPOT_ROOT_RELATIVE_TO_HOME=//p' "${STACKS_ENV}"`
+    set DEPOT_ROOT = ${HOME}/${DEPOT_REL}
+endif
 
 # ----------------------------------------------------------------------------
 # Stack selection
@@ -72,20 +88,28 @@ set PROBE_ACCOUNT    = bd1062
 set PROBE_PARTITION  = gpu
 set PROBE_CONSTRAINT = a100_80
 
-if ("${STACK}" == "cpu") then
-    set COMPILER_MODULE = gcc/11.2.0-gcc-11.2.0
-    set MPI_MODULE      = openmpi/4.1.2-gcc-11.2.0
-    set DEPOT           = ${DEPOT_ROOT}/levante-cpu
-    set SRUN_MPI        = pmix_v3
-else if ("${STACK}" == "gpu") then
-    set COMPILER_MODULE = nvhpc/24.7-gcc-11.2.0
-    set MPI_MODULE      = openmpi/4.1.5-nvhpc-24.7
-    set DEPOT           = ${DEPOT_ROOT}/levante-gpu
-    set SRUN_MPI        = pmix_v3
-else
+if ("${STACK}" != "cpu" && "${STACK}" != "gpu") then
     echo "ERROR: unknown stack '${STACK}' (expected cpu or gpu)"
     exit 1
 endif
+
+# Read this stack's definition out of ${STACKS_ENV}. The keys are prefixed with
+# the upper-cased stack name, e.g. LEVANTE_GPU_MPI_MODULE.
+set STACK_UC = `echo "${STACK}" | tr '[:lower:]' '[:upper:]'`
+
+set COMPILER_MODULE = `sed -n "s/^LEVANTE_${STACK_UC}_COMPILER_MODULE=//p" "${STACKS_ENV}"`
+set MPI_MODULE      = `sed -n "s/^LEVANTE_${STACK_UC}_MPI_MODULE=//p" "${STACKS_ENV}"`
+set DEPOT_NAME      = `sed -n "s/^LEVANTE_${STACK_UC}_DEPOT_NAME=//p" "${STACKS_ENV}"`
+set SRUN_MPI        = `sed -n "s/^LEVANTE_${STACK_UC}_SRUN_MPI=//p" "${STACKS_ENV}"`
+
+if ("${COMPILER_MODULE}" == "" || "${MPI_MODULE}" == "" || \
+    "${DEPOT_NAME}" == "" || "${SRUN_MPI}" == "") then
+    echo "ERROR: ${STACKS_ENV} does not define the '${STACK}' stack completely."
+    echo "Expected LEVANTE_${STACK_UC}_{COMPILER_MODULE,MPI_MODULE,DEPOT_NAME,SRUN_MPI}."
+    exit 1
+endif
+
+set DEPOT = ${DEPOT_ROOT}/${DEPOT_NAME}
 
 echo "============================================================"
 echo "ClimaAtmos Julia setup on Levante -- ${STACK}"

@@ -31,6 +31,33 @@ JULIA="${JULIA:-$(command -v julia || true)}"
 # `julia` resolves to (the version check below still applies).
 JULIA_CHANNEL="${JULIA_CHANNEL:-+1.11}"
 
+# The compiler module, MPI module and depot for this stack come from
+# runscripts/levante_stacks.env, the same file setup-julia-levante.tcsh builds
+# the depot from. Reading it here is what keeps the runscript from drifting
+# onto a different MPI than the depot's OpenMPI_jll override points at.
+STACKS_ENV="${STACKS_ENV:-${ROOT}/runscripts/levante_stacks.env}"
+
+[[ -r "${STACKS_ENV}" ]] || {
+    echo "Stack definitions not found: ${STACKS_ENV}" >&2
+    exit 1
+}
+
+# shellcheck source=levante_stacks.env
+source "${STACKS_ENV}"
+
+LEVANTE_DEPOT_ROOT="${LEVANTE_DEPOT_ROOT:-${HOME}/${LEVANTE_DEPOT_ROOT_RELATIVE_TO_HOME}}"
+
+# Exported before the version check below, so every Julia process in this job
+# -- not only the ranks -- resolves packages out of the GPU depot, where the
+# OpenMPI_jll override lives.
+export JULIA_DEPOT_PATH="${LEVANTE_DEPOT_ROOT}/${LEVANTE_GPU_DEPOT_NAME}"
+
+[[ -d "${JULIA_DEPOT_PATH}" ]] || {
+    echo "GPU depot not found: ${JULIA_DEPOT_PATH}" >&2
+    echo "Build it on a login node: ./runscripts/setup-julia-levante.tcsh gpu" >&2
+    exit 1
+}
+
 [[ -n "${JULIA}" && -x "${JULIA}" ]] || {
     echo "Julia executable not found: '${JULIA}' (set JULIA=/path/to/julia)" >&2
     exit 1
@@ -72,8 +99,8 @@ if [[ -n "${manifest}" ]]; then
 fi
 
 module purge
-module load nvhpc/22.5-gcc-11.2.0
-module load openmpi/.4.1.4-nvhpc-22.5
+module load "${LEVANTE_GPU_COMPILER_MODULE}"
+module load "${LEVANTE_GPU_MPI_MODULE}"
 
 # Prevent UCX from intercepting SIGSEGV used internally by Julia.
 export UCX_ERROR_SIGNALS="SIGILL,SIGBUS,SIGFPE"
@@ -111,6 +138,8 @@ echo "Node:          ${SLURM_JOB_NODELIST}"
 echo "MPI ranks:     ${SLURM_NTASKS}"
 echo "CPUs per rank: ${SLURM_CPUS_PER_TASK:-1}"
 echo "Julia:         ${JULIA} ${JULIA_CHANNEL}"
+echo "Depot:         ${JULIA_DEPOT_PATH}"
+echo "Stack:         ${LEVANTE_GPU_COMPILER_MODULE} + ${LEVANTE_GPU_MPI_MODULE}"
 echo "Experiment:    ${SCRIPT}"
 echo "Start time:    $(date --iso-8601=seconds)"
 echo
@@ -122,9 +151,86 @@ echo "Open MPI extensions:"
 ompi_info -c | grep 'MPI extensions' || true
 
 echo
+echo "Stack consistency check:"
+
+# ---------------------------------------------------------------------------
+# The project's LocalPreferences.toml must describe the stack loaded above.
+#
+# .buildkite/LocalPreferences.toml is shared by the cpu and gpu setups, so
+# selecting the GPU depot is not enough: a `setup-julia-levante.tcsh cpu` run
+# after a gpu run leaves the GPU depot intact but rewrites the project's
+# MPIPreferences libmpi to the gcc Open MPI and deletes the CUDA_Runtime_jll
+# pin. Nothing detects that until MPI or CUDA misbehaves deep inside the run,
+# so check it here, where the fix is one command.
+#
+# The expected libmpi is derived from the module actually loaded, which is the
+# same value setup-julia-levante.tcsh records -- so this compares the stack in
+# the environment against the stack in the preferences, rather than against a
+# second hardcoded copy.
+# ---------------------------------------------------------------------------
+
+mpi_libdir="$(mpicc --showme:libdirs | awk '{print $1}')"
+
+[[ -n "${mpi_libdir}" ]] || {
+    echo "ERROR: mpicc did not report an MPI library directory." >&2
+    echo "  loaded MPI module: ${LEVANTE_GPU_MPI_MODULE}" >&2
+    exit 1
+}
+
+LEVANTE_EXPECTED_LIBMPI="${mpi_libdir}/libmpi" \
+LEVANTE_PREFS="${PROJECT}/LocalPreferences.toml" \
+LEVANTE_STACK_HINT="${ROOT}/runscripts/setup-julia-levante.tcsh gpu" \
+"${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} --startup-file=no -e '
+    using TOML
+
+    prefs_file = ENV["LEVANTE_PREFS"]
+    hint = ENV["LEVANTE_STACK_HINT"]
+
+    isfile(prefs_file) || error(
+        "no LocalPreferences.toml at $(prefs_file); run: $(hint)",
+    )
+
+    prefs = TOML.parsefile(prefs_file)
+    mpi = get(prefs, "MPIPreferences", Dict{String,Any}())
+
+    recorded = get(mpi, "libmpi", nothing)
+    expected = ENV["LEVANTE_EXPECTED_LIBMPI"]
+
+    isnothing(recorded) &&
+        error("MPIPreferences.libmpi is unset in $(prefs_file); run: $(hint)")
+
+    get(mpi, "binary", nothing) == "system" || error(
+        "MPIPreferences.binary is $(get(mpi, "binary", "unset")), not \"system\"; " *
+        "run: $(hint)",
+    )
+
+    recorded == expected || error(
+        "the project preferences describe a different MPI than this job loaded.\n" *
+        "  loaded (from the gpu module): $(expected)\n" *
+        "  recorded in preferences:      $(recorded)\n" *
+        "A cpu setup was most likely run after the gpu setup -- the two share " *
+        "this file. Selecting the GPU depot cannot repair a project-local " *
+        "preference. Re-run: $(hint)",
+    )
+
+    # The cpu setup path deletes this table outright, so its absence is a
+    # second, independent signal that the cpu stack was configured last.
+    cuda = get(prefs, "CUDA_Runtime_jll", Dict{String,Any}())
+    haskey(cuda, "version") || error(
+        "CUDA_Runtime_jll.version is unset in $(prefs_file), so no CUDA " *
+        "toolkit is pinned and the environment resolves to cuda=none. " *
+        "Re-run: $(hint)",
+    )
+
+    println("libmpi preference matches the loaded module: ", recorded)
+    println("CUDA toolkit pinned to: ", cuda["version"])
+'
+
+echo
 echo "GPU allocation per rank:"
 
 srun \
+    --mpi="${LEVANTE_GPU_SRUN_MPI}" \
     --label \
     --kill-on-bad-exit=1 \
     bash -c '
@@ -135,6 +241,7 @@ echo
 echo "CUDA/MPI device test:"
 
 srun \
+    --mpi="${LEVANTE_GPU_SRUN_MPI}" \
     --label \
     --kill-on-bad-exit=1 \
     "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
@@ -143,6 +250,7 @@ srun \
     -e '
         using MPI
         using CUDA
+        using Libdl
 
         MPI.Init()
 
@@ -161,6 +269,24 @@ srun \
         @assert size == parse(Int, ENV["SLURM_NTASKS"])
         @assert MPI.has_cuda()
         @assert CUDA.functional()
+
+        # The depot ships an artifacts/Overrides.toml repointing OpenMPI_jll
+        # at the system Open MPI, so that HDF5_jll, NetCDF_jll and
+        # TempestRemap_jll load the same libmpi as MPI.jl. If the override did
+        # not take effect -- wrong depot, or a stale Overrides.toml -- a second
+        # Open MPI is loaded from the artifact store and the two collide.
+        # setup-julia-levante.tcsh makes this assertion at setup time; making
+        # it again here is what catches a job that ran with the wrong depot.
+        bundled = filter(Libdl.dllist()) do path
+            occursin("/artifacts/", path) &&
+                occursin(r"libmpi|libopen-pal|libpmix", basename(path))
+        end
+
+        isempty(bundled) || error(
+            "a bundled MPI library is loaded alongside the system MPI: " *
+            join(bundled, ", ") *
+            "\nJULIA_DEPOT_PATH=$(get(ENV, "JULIA_DEPOT_PATH", "unset"))",
+        )
 
         MPI.Barrier(MPI.COMM_WORLD)
         MPI.Finalize()
@@ -195,6 +321,7 @@ cd "${ROOT}"
 # time is logged even when the run fails.
 set +e
 srun \
+    --mpi="${LEVANTE_GPU_SRUN_MPI}" \
     --kill-on-bad-exit=1 \
     --cpu-bind=verbose \
     --distribution=block:cyclic \

@@ -1,9 +1,10 @@
 # Plan: Levante GPU runscripts for 1, 2 and 4 GPUs
 
-Status: proposal, not yet implemented. Nothing here has been tested — this
-sandbox has no GPU, no Levante, and no access to `docs.dkrz.de` (egress
-blocked). Every number marked **[verify]** must be confirmed on a real node
-before it is trusted.
+Status: Phase 1 implemented, Phases 2-5 outstanding. Nothing here has been
+tested on hardware — the sandbox this was written in has no GPU, no Levante,
+no `tcsh` and no `julia`, and no access to `docs.dkrz.de` (egress blocked).
+Every number marked **[verify]** must be confirmed on a real node before it is
+trusted, and Phase 1 needs one submitted job to confirm it behaves as intended.
 
 ## Goal
 
@@ -243,6 +244,12 @@ to its `CUDA_VISIBLE_DEVICES` device, for all three of 1, 2 and 4 ranks.
 3. Keep `xmodel.cpu` separate. Fix its `--cpu_bind` spelling and move
    `--hint=nomultithread` into its `#SBATCH` block independently, without
    suggesting that CPU and GPU jobs can switch stacks without rerunning setup.
+   It also carries the same F1 defect as the GPU script did — it sets no
+   `JULIA_DEPOT_PATH` and passes no `srun --mpi=`, so it runs out of the
+   default depot without the `OpenMPI_jll` override. Its module pair happens
+   to match `LEVANTE_CPU_*`, so this is less acute than on the GPU side, but
+   it is the same bug and should be fixed with the same three lines, reading
+   the `cpu` stack from `levante_stacks.env`.
 4. Confirm all three GPU scripts still submit and reach the model with an
    unchanged configuration after the GPU setup path has run.
 
