@@ -1,7 +1,8 @@
 # Plan: Levante GPU runscripts for 1, 2 and 4 GPUs
 
-Status: Phases 1, 1a, 2, 3 and 5 complete and confirmed on hardware. Phase 4
-(multi-node) remains deliberately deferred. What is left is the measurement
+Status: all phases implemented. Phases 1, 1a, 2, 3 and 5 are confirmed on
+hardware; Phase 4 (multi-node) is written and verified against a simulated
+fabric but has never been run across nodes. What is left is the measurement
 itself — see "Measuring" in [README.md](README.md). Nothing here has been
 tested on hardware — the sandbox this was written in has no GPU, no Levante,
 no `tcsh` and no `julia`, and no access to `docs.dkrz.de` (egress blocked).
@@ -496,9 +497,39 @@ a missing depot, and an unlocatable repository. What the mocks cannot test is
 whether Slurm resolves `--gpu-bind=closest` correctly, which is precisely
 Phase 2's open question.
 
-### Phase 4 — multi-node (deferred)
+### Phase 4 — multi-node
 
-Only once 1/2/4 on a single node are solid.
+Implemented, but **never run across nodes**. Everything below is verified
+against a simulated sysfs fabric only.
+
+The `#SBATCH` headers still request one node; `sbatch --nodes=N` overrides it,
+keeping 4 ranks and 4 GPUs per node.
+
+Two things were needed:
+
+1. The ranks-versus-GPUs assertion compared `SLURM_NTASKS`, which is the job
+   total, against `SLURM_GPUS_ON_NODE`, which is per node. `sbatch --nodes=2`
+   would have failed at once with a nonsense message. It now divides by
+   `SLURM_NNODES` first. Found by review, not by running it.
+2. `levante_gpu_rank_wrapper.sh` sets `UCX_NET_DEVICES` when
+   `SLURM_JOB_NUM_NODES > 1`, choosing the HCA whose `device/numa_node`
+   matches the GPU's, and preferring an `ACTIVE` port. It does not assume
+   `SLURM_LOCALID` indexes the HCAs in the same order as the GPUs, which was
+   the shape of the original suggestion; matching through sysfs costs nothing
+   and cannot silently mismap. An explicit `UCX_NET_DEVICES` is left alone,
+   and a rank finding no match leaves it unset so UCX chooses — a suboptimal
+   device beats no device.
+
+The binding report gained an `hca=` field. `hca=default` on a single-node job
+is correct, not a failure.
+
+Still to check when a multi-node job is first run:
+
+- `UCX_TLS` is `cma,rc,mm,cuda_ipc,cuda_copy`. DKRZ recommend a `dc_mlx5`-based
+  list above roughly 150 nodes.
+- Whether the NUMA-matched HCA is the one DKRZ's own table would pick.
+
+Original notes, for reference:
 
 1. Add `runscripts/levante_rank_wrapper.sh`, in the shape of the ICON wrapper:
    derive per-rank environment from `SLURM_LOCALID`, then `exec "$@"`.

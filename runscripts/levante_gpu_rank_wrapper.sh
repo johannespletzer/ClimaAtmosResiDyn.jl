@@ -63,6 +63,46 @@ if [[ -z "${cpus}" ]]; then
     exec "$@"
 fi
 
+# ---------------------------------------------------------------------------
+# Pick the InfiniBand HCA attached to the same NUMA node as this GPU.
+#
+# Only for multi-node jobs. Within a node, UCX_TLS lists cuda_ipc, cma and mm,
+# so rank pairs never reach an HCA and constraining the device would be pure
+# superstition. Across nodes a rank that talks through a non-local HCA pays an
+# extra fabric hop.
+#
+# The device is found by matching NUMA nodes through sysfs rather than by
+# assuming SLURM_LOCALID indexes the HCAs in the same order as the GPUs. An
+# explicit UCX_NET_DEVICES in the environment is left alone, and a rank that
+# finds no match leaves the variable unset so UCX chooses for itself -- a
+# suboptimal device beats no device.
+# ---------------------------------------------------------------------------
+
+if (( ${SLURM_JOB_NUM_NODES:-1} > 1 )) &&
+   [[ -z "${UCX_NET_DEVICES:-}" && -n "${numa}" && "${numa}" != "-1" ]]; then
+    for _ib in /sys/class/infiniband/*; do
+        [[ -r "${_ib}/device/numa_node" ]] || continue
+        [[ "$(cat "${_ib}/device/numa_node")" == "${numa}" ]] || continue
+
+        # Prefer an ACTIVE port; fall back to the lowest-numbered one.
+        _port=""
+        for _p in "${_ib}"/ports/*; do
+            [[ -r "${_p}/state" ]] || continue
+            [[ -z "${_port}" ]] && _port="$(basename "${_p}")"
+            if grep -qi 'ACTIVE' "${_p}/state" 2>/dev/null; then
+                _port="$(basename "${_p}")"
+                break
+            fi
+        done
+
+        export UCX_NET_DEVICES="$(basename "${_ib}"):${_port:-1}"
+        break
+    done
+
+    [[ -n "${UCX_NET_DEVICES:-}" ]] ||
+        echo "rank ${SLURM_LOCALID:-?}: no HCA on NUMA node ${numa}; leaving UCX to choose" >&2
+fi
+
 # numactl binds memory as well as cores, which matters here: without --membind
 # every rank's Mems_allowed_list spans all eight domains. taskset is the
 # fallback and binds cores only.

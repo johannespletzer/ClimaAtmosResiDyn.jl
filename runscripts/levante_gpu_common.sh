@@ -153,9 +153,14 @@ levante_gpu_init() {
     # One rank per GPU is what every variant assumes, and what
     # levante_gpu_report_binding enforces per rank. Catch a mismatched
     # #SBATCH header here instead.
+    # SLURM_NTASKS is the job total while SLURM_GPUS_ON_NODE is per node, so
+    # compare like with like -- otherwise `sbatch --nodes=2` against these
+    # headers fails here for no reason.
+    local tasks_per_node=$(( SLURM_NTASKS / ${SLURM_NNODES:-1} ))
+
     if [[ -n "${SLURM_GPUS_ON_NODE:-}" ]] &&
-       (( SLURM_NTASKS != SLURM_GPUS_ON_NODE )); then
-        echo "ERROR: ${SLURM_NTASKS} ranks but ${SLURM_GPUS_ON_NODE} GPUs on the node." >&2
+       (( tasks_per_node != SLURM_GPUS_ON_NODE )); then
+        echo "ERROR: ${tasks_per_node} ranks per node but ${SLURM_GPUS_ON_NODE} GPUs on the node." >&2
         echo "  --ntasks-per-node and --gpus-per-node must agree." >&2
         exit 1
     fi
@@ -403,6 +408,7 @@ levante_gpu_report_binding() {
 
             echo "rank=${SLURM_LOCALID} gpu=${visible} bdf=${bdf}" \
                  "cores=${cpus} membind=${numa} cgroup-numa=${cgroup_numa}" \
+                 "hca=${UCX_NET_DEVICES:-default}" \
                  "gpu-local-cores=${local_cpus} gpu-numa=${gpu_numa} ${verdict}"
         '
 }

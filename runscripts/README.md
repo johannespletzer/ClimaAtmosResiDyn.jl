@@ -82,6 +82,23 @@ you.
 --membind` sets a policy rather than changing the cgroup. `membind` is the
 field that matters.
 
+## Multi-node
+
+The `#SBATCH` headers request one node. For more, override at submit time:
+
+```bash
+sbatch --nodes=2 --time=02:00:00 runscripts/xmodel.4gpus
+```
+
+That gives 4 ranks and 4 GPUs per node. On a multi-node job each rank also
+selects the InfiniBand HCA on its own NUMA node, reported as `hca=` in the
+binding report; `hca=default` on a single-node job is correct, since
+`UCX_TLS` keeps intra-node traffic on `cuda_ipc`, `cma` and `mm` and no HCA is
+involved. Setting `UCX_NET_DEVICES` yourself overrides the choice.
+
+Multi-node has not been run yet. The HCA selection is verified against a
+simulated fabric only.
+
 ## Node layout (measured, August 2026)
 
 A Levante GPU node: 128 physical cores in 8 NUMA domains of 16, SMT on for 256
