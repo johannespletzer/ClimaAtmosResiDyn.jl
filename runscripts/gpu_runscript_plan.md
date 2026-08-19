@@ -146,10 +146,21 @@ left behind. Corrected to `"0.15"`, matching the root exactly rather than
 widening to `"0.14.55, 0.15"`, which would readmit a 0.14 the package itself
 forbids.
 
-Four other compat entries differ between the root and `.buildkite`
+Four other compat entries differed between the root and `.buildkite`
 (`ClimaDiagnostics`, `ClimaParams`, `ClimaUtilities`, `OrderedCollections`).
-None is a conflict: in each case `.buildkite` is the looser of the two, so the
-root's stricter bound governs at resolve time. Left alone.
+None was a conflict — `.buildkite` was the looser side in each case, so the
+root's stricter bound already governed at resolve time — but they were dead
+permissiveness that would mislead the next reader, so they are now synced to
+the root. Every manifest version already satisfied the tightened bound, so
+nothing moved.
+
+`.github/workflows/manifest-compat.yml` runs `Pkg.resolve()` against both
+projects on any `Project.toml`/`Manifest-*.toml` change, and weekly, because a
+bound can also be invalidated by a registry change rather than by a commit
+here. Resolving *is* the check: it fails exactly when the recorded graph is
+not one the bounds allow. That is the class of defect that cost two rounds
+here, and it was invisible for months because `Pkg.instantiate()` honours a
+matching `project_hash` without ever checking compat.
 
 Three ways past it, in order of blast radius:
 

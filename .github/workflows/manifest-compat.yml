@@ -1,0 +1,80 @@
+name: Manifest compat
+
+# Catch a checked-in manifest that its own project's [compat] bounds forbid.
+#
+# `Pkg.instantiate()` honours a manifest whose project_hash matches without
+# ever checking the bounds, so this drift is invisible until someone needs a
+# re-resolve -- and then it blocks them, in a place unrelated to whatever they
+# were doing. .buildkite/Project.toml bounded ClimaCore to [0.14.55, 0.15.0)
+# while its manifest carried 0.15.1 for long enough that the package itself had
+# already moved to 0.15; the first `Pkg.resolve()` in months is what found it.
+#
+# Resolving is the check: it fails exactly when the graph the manifest records
+# is not one the bounds allow.
+
+on:
+  pull_request:
+    paths:
+      - '**/Project.toml'
+      - '**/Manifest-*.toml'
+      - '.github/workflows/manifest-compat.yml'
+  push:
+    branches:
+      - main
+  # Bounds can also be invalidated from outside, by a registry change rather
+  # than by a commit here, so do not rely on the path filter alone.
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  resolve:
+    name: Resolve ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ['.', '.buildkite']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: '1.11'
+      - uses: julia-actions/cache@v3
+
+      - name: Pkg.resolve
+        run: |
+          julia --project=${{ matrix.project }} --color=yes -e '
+              using Pkg
+              try
+                  Pkg.resolve()
+              catch err
+                  @error """
+                  Could not resolve $(ARGS[1]).
+
+                  The manifest most likely records a version its own
+                  [compat] bound forbids. Compare the two, and prefer
+                  correcting the bound over widening it: check what the
+                  package actually requires (the root Project.toml, for
+                  .buildkite) before assuming the manifest is wrong.
+                  """
+                  showerror(stderr, err)
+                  println(stderr)
+                  exit(1)
+              end
+              println("resolved cleanly")
+          ' ${{ matrix.project }}
+
+      # Resolving is allowed to move versions when the registry has moved on;
+      # that is not drift and must not fail the run. A changed manifest on a
+      # pull request is worth seeing, though.
+      - name: Show any manifest change
+        if: always()
+        run: git --no-pager diff --stat -- '**/Manifest-*.toml' || true
