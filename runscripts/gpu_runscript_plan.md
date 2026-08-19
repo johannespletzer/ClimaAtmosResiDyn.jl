@@ -115,6 +115,63 @@ Fixed by listing `CUDA_Runtime_jll` in `.buildkite/Project.toml`, and by
 extending the setup script's existing direct-dependency assertion to cover it
 alongside `MPIPreferences`.
 
+### F6 — `Pkg.resolve()` cannot run: ClimaCore compat is stale
+
+Adding a direct dependency requires the manifest's `project_hash` to be
+regenerated, and `Pkg.resolve()` fails before it gets there:
+
+```
+ERROR: empty intersection between ClimaCore@0.15.1 and project
+       compatibility 0.14.55 - 0.14
+```
+
+`.buildkite/Project.toml` pins `ClimaCore = "0.14.55"`, which means
+`[0.14.55, 0.15.0)`, while `.buildkite/Manifest-v1.11.toml` resolves
+ClimaCore 0.15.1. The manifest violates the project's own compat bound.
+
+Pre-existing, and unrelated to the CUDA work: it is present at the branch
+point `e242482`, and it is the only direct dependency of 38 whose manifest
+version falls outside its compat entry. Nothing had exposed it because
+nothing had needed to re-resolve — `Pkg.instantiate()` honours a manifest
+whose hash matches and never checks the bound.
+
+Three ways past it, in order of blast radius:
+
+1. Add the dependency without re-resolving anything else:
+
+   ```bash
+   julia +1.11 --project=.buildkite -e '
+       using Pkg
+       Pkg.add(
+           Pkg.PackageSpec(
+               name = "CUDA_Runtime_jll",
+               uuid = "76a88914-d11a-5bdc-97e0-2f5a05c973a2",
+           );
+           preserve = Pkg.PRESERVE_ALL,
+       )
+   '
+   ```
+
+   `PRESERVE_ALL` keeps every existing manifest version, so the resolver
+   never revisits ClimaCore. Expect `project_hash` to change and nothing
+   else.
+
+2. Correct the bound to `ClimaCore = "0.14.55, 0.15"`. This is the honest
+   fix — the manifest has shipped 0.15.1 for some time and CI resolves
+   against it, so the bound is simply stale. It is a repo-wide change
+   affecting CI and every other environment, so it belongs in its own
+   commit and is not a decision to take as a side effect of GPU runscript
+   work.
+
+3. Keep the CUDA preference out of the repository entirely: give it to the
+   per-stack depot's `environments/v1.11` instead, which sits on the default
+   load path and can carry `CUDA_Runtime_jll` as a direct dependency without
+   touching `.buildkite`. This has a genuine advantage — the pin becomes
+   depot-local, so the cpu and gpu stacks stop sharing one CUDA setting, part
+   of what the plan defers under "single source of truth". It rests on
+   `Base.get_preferences` merging across the whole load path, which should
+   be verified with the F5 probe before committing to it.
+
 ### F3 — stale references
 
 - `setup-julia-levante.tcsh` refers to `runscripts/xmodel.gpu*`; the file is
@@ -275,17 +332,27 @@ correct but was unsatisfiable: the GPU setup could not produce a working pin.
    `setup-julia-levante.tcsh` asserts it alongside `MPIPreferences`.
 2. **Manual step, once:** adding a direct dependency invalidates the
    manifest's `project_hash`, so the manifest must be regenerated on a login
-   node (compute nodes have no network) and the result committed:
+   node (compute nodes have no network) and the result committed. Plain
+   `Pkg.resolve()` does not work here — see F6 — so preserve the existing
+   versions:
 
    ```bash
-   julia +1.11 --project=.buildkite -e 'using Pkg; Pkg.resolve()'
+   julia +1.11 --project=.buildkite -e '
+       using Pkg
+       Pkg.add(
+           Pkg.PackageSpec(
+               name = "CUDA_Runtime_jll",
+               uuid = "76a88914-d11a-5bdc-97e0-2f5a05c973a2",
+           );
+           preserve = Pkg.PRESERVE_ALL,
+       )
+   '
    git diff .buildkite/Manifest-v1.11.toml
    ```
 
-   Expect only `project_hash` to change, plus `CUDA_Runtime_jll` gaining no
-   new entry (it is already in the manifest at a compatible version). If
-   package versions move, stop and inspect — that is not what this change
-   should cause.
+   Expect only `project_hash` to change. `CUDA_Runtime_jll` is already in the
+   manifest at a compatible version, so no package should move; if any does,
+   stop and inspect.
 3. Re-run `./runscripts/setup-julia-levante.tcsh gpu`.
 
 **Exit criterion:** `setup-julia-levante.tcsh gpu` completes with a CUDA
