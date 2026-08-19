@@ -1,6 +1,6 @@
 # Plan: Levante GPU runscripts for 1, 2 and 4 GPUs
 
-Status: Phase 1 implemented, Phases 2-5 outstanding. Nothing here has been
+Status: Phases 1 and 2 implemented on `xmodel.4gpus`, Phases 3-5 outstanding. Nothing here has been
 tested on hardware — the sandbox this was written in has no GPU, no Levante,
 no `tcsh` and no `julia`, and no access to `docs.dkrz.de` (egress blocked).
 Every number marked **[verify]** must be confirmed on a real node before it is

@@ -5,8 +5,16 @@
 #SBATCH --constraint=a100_80
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
-#SBATCH --gpus-per-task=1
-#SBATCH --cpus-per-task=1
+# GPUs are requested at node scope, not per task: --gpus-per-task implies a
+# per-task GPU binding that pins CUDA_VISIBLE_DEVICES before --gpu-bind=closest
+# can choose, so `closest` would have nothing left to decide.
+#SBATCH --gpus-per-node=4
+# One NUMA domain of cores per rank. A Levante GPU node is 128 cores over 8
+# NUMA domains of 16, with one GPU and one HCA attached to every second domain,
+# so 16 is the largest allocation that keeps every core local to the rank's
+# GPU. Four ranks therefore use 64 of 128 cores; the other four domains have no
+# GPU attached and nothing to place there.
+#SBATCH --cpus-per-task=16
 #SBATCH --exclusive
 #SBATCH --mem=0
 #SBATCH --hint=nomultithread
@@ -108,7 +116,13 @@ export UCX_ERROR_SIGNALS="SIGILL,SIGBUS,SIGFPE"
 # Required for compatibility with CUDA-aware MPI / CUDA IPC.
 export JULIA_CUDA_MEMORY_POOL=none
 
-export JULIA_NUM_THREADS="${SLURM_CPUS_PER_TASK:-1}"
+# One Julia thread per rank, deliberately not ${SLURM_CPUS_PER_TASK}. With
+# CLIMACOMMS_DEVICE=CUDA every tendency and dynamics kernel runs on the device
+# (src/config/type_getters.jl makes the ClimaComms device one exclusive
+# choice), so the 16 cores a rank owns exist for driver threads, I/O and GC
+# headroom -- not for Julia worker threads that would have nothing to do but
+# contend. Raising cpus-per-task without pinning this would silently start 16.
+export JULIA_NUM_THREADS=1
 export OMP_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 export MKL_NUM_THREADS=1
@@ -227,14 +241,75 @@ LEVANTE_STACK_HINT="${ROOT}/runscripts/setup-julia-levante.tcsh gpu" \
 '
 
 echo
-echo "GPU allocation per rank:"
+echo "Rank / core / GPU binding:"
+
+# ---------------------------------------------------------------------------
+# Report the binding actually obtained, and check it against the hardware.
+#
+# The srun flags here mirror the launch below exactly. Diagnosing a binding
+# under different flags than the run uses would report a mapping nothing else
+# ever sees.
+#
+# Two things are checked per rank:
+#
+#   1. Exactly one GPU is visible. This is the one failure that timings alone
+#      cannot reveal: if Slurm's topology detection hands every rank all four
+#      devices, CUDA.jl defaults each of them to device 0, and four ranks
+#      quietly serialise onto one GPU. The run completes, the numbers are
+#      simply bad, and nothing says why. Hard failure.
+#   2. The rank's cores are the ones local to that GPU, read from sysfs rather
+#      than from `nvidia-smi topo -m` -- whose trailing columns shift between
+#      driver versions, so a column-index parse silently selects the wrong
+#      field after an upgrade. Advisory: a mismatch means affinity did not
+#      take, which is worth a loud warning but not worth discarding the run.
+# ---------------------------------------------------------------------------
 
 srun \
     --mpi="${LEVANTE_GPU_SRUN_MPI}" \
     --label \
     --kill-on-bad-exit=1 \
+    --gpu-bind=closest \
+    --cpu-bind=verbose,cores \
+    --distribution=block:block \
     bash -c '
-        echo "local-rank=${SLURM_LOCALID} CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-unset}"
+        set -uo pipefail
+
+        visible="${CUDA_VISIBLE_DEVICES:-}"
+        cpus="$(awk "/Cpus_allowed_list/ {print \$2}" /proc/self/status)"
+        numa="$(awk "/Mems_allowed_list/ {print \$2}" /proc/self/status)"
+
+        if [[ -z "${visible}" ]]; then
+            echo "ERROR: rank ${SLURM_LOCALID} has no CUDA_VISIBLE_DEVICES" >&2
+            exit 1
+        fi
+
+        ndev=$(tr "," "\n" <<< "${visible}" | grep -c .)
+
+        if (( ndev != 1 )); then
+            echo "ERROR: rank ${SLURM_LOCALID} sees ${ndev} GPUs (${visible})," \
+                 "expected exactly 1. Every rank would default to device 0 and" \
+                 "share it. Slurm did not apply --gpu-bind=closest as expected;" \
+                 "bind explicitly (--cpu-bind=map_ldom:...) instead." >&2
+            exit 1
+        fi
+
+        # nvidia-smi prints an 8-digit PCI domain (00000000:0B:00.0); sysfs
+        # uses 4 (0000:0b:00.0).
+        bdf="$(nvidia-smi --query-gpu=pci.bus_id --format=csv,noheader | head -1)"
+        bdf="$(tr "A-F" "a-f" <<< "${bdf#0000}")"
+        local_cpus="$(cat "/sys/bus/pci/devices/${bdf}/local_cpulist" 2>/dev/null || echo unknown)"
+        gpu_numa="$(cat "/sys/bus/pci/devices/${bdf}/numa_node" 2>/dev/null || echo unknown)"
+
+        verdict="MATCH"
+        if [[ "${local_cpus}" == "unknown" ]]; then
+            verdict="UNCHECKED"
+        elif [[ "${cpus}" != "${local_cpus}" ]]; then
+            verdict="MISMATCH -- rank cores are not the GPU-local ones"
+        fi
+
+        echo "rank=${SLURM_LOCALID} gpu=${visible} bdf=${bdf}" \
+             "cores=${cpus} numa=${numa}" \
+             "gpu-local-cores=${local_cpus} gpu-numa=${gpu_numa} ${verdict}"
     '
 
 echo
@@ -244,6 +319,9 @@ srun \
     --mpi="${LEVANTE_GPU_SRUN_MPI}" \
     --label \
     --kill-on-bad-exit=1 \
+    --gpu-bind=closest \
+    --cpu-bind=verbose,cores \
+    --distribution=block:block \
     "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
     --startup-file=no \
     --project="${PROJECT}" \
@@ -323,8 +401,9 @@ set +e
 srun \
     --mpi="${LEVANTE_GPU_SRUN_MPI}" \
     --kill-on-bad-exit=1 \
-    --cpu-bind=verbose \
-    --distribution=block:cyclic \
+    --gpu-bind=closest \
+    --cpu-bind=verbose,cores \
+    --distribution=block:block \
     "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
         --project="${PROJECT}" \
         --startup-file=no \
