@@ -50,6 +50,16 @@ levante_gpu_init() {
     # runscripts/levante_stacks.env, the same file setup-julia-levante.tcsh builds
     # the depot from. Reading it here is what keeps the runscript from drifting
     # onto a different MPI than the depot's OpenMPI_jll override points at.
+    # Placed between srun and the command so each rank narrows itself onto the
+    # cores and memory local to its GPU. srun alone cannot: --exclusive widens
+    # every task's cpuset to a NUMA pair, half of which is remote.
+    LEVANTE_GPU_RANK_WRAPPER="${ROOT}/runscripts/levante_gpu_rank_wrapper.sh"
+
+    [[ -x "${LEVANTE_GPU_RANK_WRAPPER}" ]] || {
+        echo "Rank wrapper missing or not executable: ${LEVANTE_GPU_RANK_WRAPPER}" >&2
+        exit 1
+    }
+
     STACKS_ENV="${STACKS_ENV:-${ROOT}/runscripts/levante_stacks.env}"
 
     [[ -r "${STACKS_ENV}" ]] || {
@@ -296,6 +306,7 @@ levante_gpu_report_binding() {
         --label \
         --kill-on-bad-exit=1 \
         "${LEVANTE_GPU_SRUN_BIND[@]}" \
+        "${LEVANTE_GPU_RANK_WRAPPER}" \
         bash -c '
             set -uo pipefail
 
@@ -347,6 +358,7 @@ levante_gpu_device_test() {
         --label \
         --kill-on-bad-exit=1 \
         "${LEVANTE_GPU_SRUN_BIND[@]}" \
+        "${LEVANTE_GPU_RANK_WRAPPER}" \
         "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
         --startup-file=no \
         --project="${PROJECT}" \
@@ -431,6 +443,7 @@ levante_gpu_run() {
         --mpi="${LEVANTE_GPU_SRUN_MPI}" \
         --kill-on-bad-exit=1 \
         "${LEVANTE_GPU_SRUN_BIND[@]}" \
+        "${LEVANTE_GPU_RANK_WRAPPER}" \
         "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
             --project="${PROJECT}" \
             --startup-file=no \

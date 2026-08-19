@@ -188,6 +188,51 @@ Three ways past it, in order of blast radius:
    `Base.get_preferences` merging across the whole load path, which should
    be verified with the F5 probe before committing to it.
 
+### F7 — measured: `--gpu-bind=closest` binds the GPU, not the cores
+
+First real binding report, 4 GPUs on one node:
+
+```
+rank=0 gpu-numa=1  cores=0-31,128-159    gpu-local-cores=16-31,144-159
+rank=1 gpu-numa=3  cores=32-63,160-191   gpu-local-cores=48-63,176-191
+rank=2 gpu-numa=5  cores=64-95,192-223   gpu-local-cores=80-95,208-223
+rank=3 gpu-numa=7  cores=96-127,224-255  gpu-local-cores=112-127,240-255
+```
+
+Half of this is a success. `--gpu-bind=closest` did what it promised: every
+rank received a distinct GPU, in rank order, and the exactly-one-device
+assertion passed. The GPU side of Phase 2 needs no fallback.
+
+The CPU side did not. `--cpus-per-task=16` narrowed nothing, because
+`--exclusive` hands the job the whole node and Slurm divides all of it among
+the tasks: each rank got 32 physical cores spanning an even/odd NUMA pair, of
+which only the odd half is local to its GPU. `Mems_allowed_list` was `0-7` for
+every rank, so memory was not bound at all.
+
+**Topology, now measured rather than assumed** — this settles open question 1:
+
+- 128 physical cores in 8 NUMA domains of 16, plus SMT siblings, so 256
+  logical CPUs. `--hint=nomultithread` does not suppress the siblings once
+  `--exclusive` is in play.
+- The four GPUs sit on the **odd** domains 1, 3, 5, 7. The even domains have
+  no GPU.
+- Domain *n*'s cores are `16n..16n+15` with siblings at `128+16n..128+16n+15`.
+
+**Fix: narrow from inside the rank.** Each rank's cpuset is a strict superset
+of the set it wants, so it can be narrowed within the cgroup. That is what
+`runscripts/levante_gpu_rank_wrapper.sh` does, placed between `srun` and the
+command at all three call sites: it reads its own GPU's `local_cpulist` and
+`numa_node` from sysfs and `exec`s under
+`numactl --physcpubind=... --membind=...`, falling back to `taskset` and then
+to running unbound with a warning.
+
+Deriving the target from sysfs rather than hardcoding `--cpu-bind=map_ldom:1,3,5,7`
+keeps it correct for the 1- and 2-GPU variants, where the allocated GPUs are
+not known in advance, and across a topology change. It is also the ICON
+pattern DKRZ originally pointed at — arrived at from the measurement rather
+than adopted on faith, and it additionally fixes the memory binding, which no
+`srun` flag here was addressing.
+
 ### F3 — stale references
 
 - `setup-julia-levante.tcsh` refers to `runscripts/xmodel.gpu*`; the file is
@@ -399,6 +444,10 @@ returns the pinned version rather than an empty dictionary.
 **Exit criterion:** each rank's `Cpus_allowed_list` is the 16-core block local
 to its `CUDA_VISIBLE_DEVICES` device, for all three of 1, 2 and 4 ranks.
 
+Partly met, then addressed — see F7. `--gpu-bind=closest` resolved the GPUs
+correctly; the cores needed the per-rank wrapper. Re-run the report to confirm
+`MATCH` on all ranks.
+
 ### Phase 3 — the three runscripts
 
 1. Extract `levante_gpu_common.sh` from `xmodel.4gpus` as it stands after
@@ -505,10 +554,9 @@ is part of the deliverable, not an afterthought.
 
 ## Open questions
 
-1. Is the Levante GPU node really 8 NUMA domains of 16 cores? The
-   "GPU1 -> CPUs 16-31" example implies it, but the DKRZ table was not
-   reachable from where this plan was written. Everything in Phase 2 depends
-   on it.
+1. ~~Is the Levante GPU node really 8 NUMA domains of 16 cores?~~ Measured:
+   yes — 8 domains of 16 physical cores, SMT on for 256 logical CPUs, GPUs on
+   the odd domains 1, 3, 5, 7. See F7.
 2. Which two GPUs does Slurm allocate for `--gpus-per-node=2`, and are they on
    the same socket? On A100 SXM4 with NVSwitch the device-to-device bandwidth
    is pair-independent, so this affects the host side only — but it should be
