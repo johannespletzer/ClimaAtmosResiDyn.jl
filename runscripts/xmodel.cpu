@@ -8,6 +8,7 @@
 #SBATCH --ntasks-per-node=32
 #SBATCH --exclusive
 #SBATCH --mem=0
+#SBATCH --hint=nomultithread
 
 #SBATCH --nodes=1
 #SBATCH --account=bd1062
@@ -285,8 +286,7 @@ echo
 set +e
 srun \
     --label \
-    --cpu_bind=verbose \
-    --hint=nomultithread \
+    --cpu-bind=verbose \
     --distribution=block:cyclic \
     "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
         --project="${PROJECT}" \

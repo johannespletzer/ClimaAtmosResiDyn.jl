@@ -1,7 +1,9 @@
 # Plan: Levante GPU runscripts for 1, 2 and 4 GPUs
 
-Status: Phases 1 and 2 implemented on `xmodel.4gpus`; Phase 1a (F5) blocks
-them from passing on hardware. Phases 3-5 outstanding. Nothing here has been
+Status: Phases 1, 1a, 2 and 3 implemented. Phase 4 (multi-node) is
+deliberately deferred; Phase 5 (documentation) is outstanding. The GPU setup
+path now completes; the binding itself (Phase 2's exit criterion) still needs
+confirming on a real node. Nothing here has been
 tested on hardware — the sandbox this was written in has no GPU, no Levante,
 no `tcsh` and no `julia`, and no access to `docs.dkrz.de` (egress blocked).
 Every number marked **[verify]** must be confirmed on a real node before it is
@@ -418,6 +420,20 @@ to its `CUDA_VISIBLE_DEVICES` device, for all three of 1, 2 and 4 ranks.
 GPU preamble; each of `xmodel.1gpu`, `xmodel.2gpus`, `xmodel.4gpus` completes a
 short run of `experiments/passive_stratospheric_tracers.jl`. A subsequent CPU
 setup must cause the GPU script's preference check to fail early and clearly.
+
+Implemented. Each runscript is now an `#SBATCH` header plus a bootstrap that
+locates the repository and sources `levante_gpu_common.sh`, which exposes
+`levante_gpu_init`, `_banner`, `_check_stack`, `_report_binding`,
+`_device_test`, `_warm_precompile` and `_run`. The binding flags live in one
+array applied to all three `srun` call sites, so a diagnostic can no longer
+drift from the launch it is meant to describe.
+
+Verified in a sandbox against mocked `srun`, `module`, `mpicc`, `nvidia-smi`
+and `julia`: all three variants run the full sequence, and each guard fires on
+its own failure — ranks not matching GPUs, a rank seeing more than one device,
+a missing depot, and an unlocatable repository. What the mocks cannot test is
+whether Slurm resolves `--gpu-bind=closest` correctly, which is precisely
+Phase 2's open question.
 
 ### Phase 4 — multi-node (deferred)
 
