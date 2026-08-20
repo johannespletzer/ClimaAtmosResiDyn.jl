@@ -6,16 +6,16 @@ running multi-year simulations on a cluster — and links to the detailed page f
 each step. Read it once end to end; afterwards you will mostly use it to find
 the right stage.
 
-| Stage | What you do                         | Details                              |
-|:----- |:----------------------------------- |:------------------------------------ |
-| 1     | Set up the environment              | [Installation](installation.md)      |
-| 2     | Verify the install with a cheap run | below                                |
-| 3     | Pick and adapt a configuration      | [Custom Configurations](configuration.md)   |
-| 4     | Short test run, check the output    | [Diagnostics](diagnostics.md)        |
-| 5     | Decide what to save                 | [Diagnostics](diagnostics.md), below |
-| 6     | Scale up resolution and hardware    | below                                |
-| 7     | Run long, in segments, on a cluster | [Restarts](restarts.md), below       |
-| 8     | Monitor and post-process            | below                                |
+| Stage | What you do                         | Details                                   |
+|:----- |:----------------------------------- |:----------------------------------------- |
+| 1     | Set up the environment              | [Installation](installation.md)           |
+| 2     | Verify the install with a cheap run | below                                     |
+| 3     | Pick and adapt a configuration      | [Custom Configurations](configuration.md) |
+| 4     | Short test run, check the output    | [Diagnostics](diagnostics.md)             |
+| 5     | Decide what to save                 | [Diagnostics](diagnostics.md), below      |
+| 6     | Scale up resolution and hardware    | below                                     |
+| 7     | Run long, in segments, on a cluster | [Restarts](restarts.md), below            |
+| 8     | Monitor and post-process            | below                                     |
 
 ## 1. Set up the environment
 
