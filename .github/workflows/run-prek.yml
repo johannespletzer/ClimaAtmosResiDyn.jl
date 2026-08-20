@@ -10,6 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # Pinned deliberately. Without a version this action installs the latest
+      # release -- it was Julia 1.12.7 on 2026-08-19 -- while the repository
+      # standardises on 1.10/1.11, builds its docs with 1.11, and AGENTS.md
+      # tells contributors to format with 1.11. JuliaFormatter formats through
+      # the host Julia's parser, so an unpinned runner enforces a formatting
+      # no contributor can reproduce, and the hook fails on a correctly
+      # formatted tree.
       - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.11'
       - uses: actions/checkout@v7
       - uses: j178/prek-action@v2
