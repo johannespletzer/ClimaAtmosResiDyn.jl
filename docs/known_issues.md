@@ -78,10 +78,11 @@ the closure, not the test.
 
 ## 2. Downstream ClimaCoupler tests need a cluster-only artifact
 
-**Status:** open, and not fixable from this repository alone.
+**Status:** mitigated by pinning the downstream checkout; the artifact problem
+itself is not fixable from this repository.
 
-Both `downstream ClimaCoupler.jl` jobs fail during `CoupledSimulation`
-construction:
+Both `downstream ClimaCoupler.jl` jobs failed during `CoupledSimulation`
+construction, on 1.10 and 1.11 identically:
 
 ```
 AMIP test: Error During Test
@@ -90,28 +91,43 @@ AMIP test: Error During Test
 ```
 
 raised from `@clima_artifact("wxquest_initial_conditions")` in
-`src/utils/weather_model.jl`, via `Setups.overwrite_initial_state!` in
-`src/setups/WeatherModel.jl`.
+`src/utils/weather_model.jl:85`, reached through `Setups.overwrite_initial_state!`
+in `src/setups/WeatherModel.jl:69`.
 
 What is established:
 
-  - The artifact cannot be downloaded. `Artifacts.toml` declares
-    `wxquest_initial_conditions` with a `git-tree-sha1` and no `download`
-    block, so it resolves only through an `Overrides.toml` on a cluster that
-    already holds the data. Upstream `CliMA/ClimaAtmos.jl@main` declares it
-    identically, so this is by design rather than local drift.
+  - The trigger is a config change upstream, not an API break.
+    `.github/workflows/downstream.yml` checked out `CliMA/ClimaCoupler.jl` **main**
+    unpinned. It passed against `3d9c07c3ef911991d0b98b70c52154e448feaa02` and
+    fails against `0ad056e025e3a622859c4457a0467e5c28d9bc0d`; the only difference
+    that reaches the AMIP test is one line added to
+    `config/atmos_configs/climaatmos_edonly.yml`, the atmos config that test
+    hands to ClimaAtmos:
 
-  - The trigger is upstream. `.github/workflows/downstream.yml` checks out
-    `CliMA/ClimaCoupler.jl` **main** unpinned. The job passed against
-    ClimaCoupler `3d9c07c3` and fails against `0ad056e0`; the AMIP test now
-    reaches a `WeatherModel` initial condition that needs the artifact.
+    ```
+    +initial_condition: "WeatherModel"
+    ```
 
-  - Julia-version independent: 1.10 and 1.11 fail identically.
+  - That initial condition requires data a GitHub runner cannot obtain.
+    `weather_model_data_path` takes the artifact path whenever
+    `era5_initial_condition_dir` is `nothing`, and `Artifacts.toml` declares
+    `wxquest_initial_conditions` with a `git-tree-sha1` and no `download` block,
+    so it resolves only through an `Overrides.toml` on a machine that already
+    holds the data. Upstream `CliMA/ClimaAtmos.jl@main` declares it identically,
+    so this is by design rather than local drift.
 
-Options, none of them free: pin the downstream checkout to a known-good
-ClimaCoupler commit (masks the breakage until someone unpins it), provide an
-artifact override in CI, or fix it on the ClimaCoupler side so the AMIP test
-does not require cluster-only data.
+  - `era5_initial_condition_dir` would bypass the artifact, but it is a
+    ClimaAtmos config key and the config in question lives in the ClimaCoupler
+    repository, so this repository cannot set it for that test.
+
+The checkout is therefore pinned to `3d9c07c3`, the last commit the job passed
+against, so it again reports on changes made *here* instead of on upstream data
+availability. The cost is that upstream API breaks now go unnoticed until
+someone unpins.
+
+Unpin when any of these is true: ClimaCoupler's AMIP test no longer needs the
+artifact, the artifact gains a download block, or CI grows an `Overrides.toml`
+pointing at a copy of the data.
 
 ## 3. Levante 1/2/4 GPU scaling has not been measured
 
