@@ -118,8 +118,8 @@ Checked against ClimaCoupler at `953c273`.
     longrun pipeline is CUDA. Our working Levante stack is the CPU one; the GPU
     stack exists (`setup-julia-levante.tcsh gpu`, `runscripts/xmodel.gpu*`) but
     is less exercised.
-  - ~~Allocation question~~ **Resolved**: the allocation covers the `gpu`
-    partition, and the user reports the coupled run is viable on CPU. The
+  - **Allocation.** It covers the `gpu` partition, and the coupled run is
+    viable on CPU. The
     chaining script targets the CPU `compute` partition; switching it to GPU is a
     header change plus `CLIMACOMMS_DEVICE=CUDA` and the GPU depot.
   - **Our tracer refactor is not covered by the coupler contract test.**
@@ -405,25 +405,6 @@ the coupler writes straight into `p.precomputed.sfc_conditions.T_sfc`
 returns early when the flux scheme is `nothing` — so the member configs stay
 runnable standalone on the fallback.
 
-The original scoping, for reference:
-
-  - A coupler config modelled on `config/longrun_configs/amip_edonly.yml`:
-    `mode_name: "amip"`, `surface_setup: "PrescribedSurface"`,
-    `albedo_model: "CouplerAlbedo"`, `land_model: "bucket"`, `dt_cpl: "120secs"`,
-    `checkpoint_dt: "30days"`, `detect_restart_files: true`.
-  - `atmos_config_file` pointing at our member config. Remember the precedence:
-    the coupler config wins over the atmos config file, so the two must not set
-    the same key.
-  - Member configs edited for the coupled case: drop `surface_setup` and
-    `prognostic_surface`; everything else stands.
-  - A second Julia environment on Levante (`experiments/AMIP/Project.toml`) with
-    this fork dev'd in, on its own depot. Needs a variant of
-    `runscripts/setup-julia-levante.tcsh`.
-
-Establish early, because they gate the rest: whether the allocation covers the
-`gpu` partition, and whether the coupled run is viable on the CPU stack at
-acceptable throughput.
-
 ### 3. Calibration run
 
 Production grid, 27 tracers, full transient physics. Measure:
@@ -464,40 +445,6 @@ Verified against the coupler source and by exercising the logic directly:
 
 `SEGMENT_DAYS` defaults to 150 and must be set from the calibration run's
 measured throughput.
-
-The original design note:
-
-### 4b. Job chaining — per-segment `t_end` (design)
-
-The naive scheme does not work: with `t_end` fixed at 15341 days the Julia process
-never returns inside 8 h, SLURM kills the batch script, and nothing after `srun`
-in `runscripts/xmodel.cpu:275-292` runs — so a self-resubmit line never executes.
-A SLURM kill also writes no checkpoint: `solve_atmos!` saves only in its `catch`
-branch and only when not distributed (`src/simulation/solve.jl:140-147`), so each
-killed segment would discard up to a full checkpoint interval (~20% of compute at
-30-day checkpoints and ~73 simulated days per slot).
-
-Instead, **give each job a per-segment `t_end` aligned to the checkpoint cadence**.
-`experiments/strat_tracers_transient.jl` calls `auto_detect_restart_file`
-(`src/simulation/restart.jl:99-144`) to get the restart time, then sets
-`t_end = min(t_restart + K·30 days, 15341 days)` with K from measured throughput
-and ~1 h of margin. The run then finishes naturally, the 30-day checkpoint
-callback fires at `t_end`, `solve_atmos!` returns, and the batch script reaches
-its resubmit line. No work is discarded and no signal handling is needed.
-
-`graceful_exit.dat` (`src/callbacks/callbacks.jl:641`, installed unconditionally at
-`get_callbacks.jl:880`) is a backstop only — its own docstring warns it "may not be
-reliable for MPI jobs, where ranks poll the file independently", and it does not
-write a checkpoint either.
-
-`runscripts/xmodel.chain`, from `xmodel.cpu`: `--time=08:00:00`, node count from
-calibration, `--ntasks-per-node=128`, drop `--no-requeue`, resubmit unless the
-campaign end was reached, and guard that `output_active` resolves before launching
-(Lustre sync is a real failure mode over ~200 jobs; `test/restart.jl:228-231`).
-Fix while here: line 44 defaults `SCRIPT` to `experiments/run_tracer.jl`, which
-does not exist, and line 41 hard-codes `ROOT` with the portable version commented
-out on line 40. Do **not** use `.buildkite/ci_driver.jl`, which tars and then
-deletes `.hdf5`/`.nc` (`ci_driver.jl:249-257`).
 
 ### 5. Configs
 
@@ -542,7 +489,7 @@ prognostic_surface: "PrescribedSST"
 
 chemistry_model: "stratospheric_passive_tracers"
 tracer_source_height_coordinate: "altitude"
-tracer_source_boxes: [...]     # new key, work item 1; schema TBD there
+tracer_source_boxes: [...]     # explicit box list; see work item 1
 tracer_loss_timescale: "6hours"
 dt_tracer_budget: "30days"
 
@@ -603,15 +550,56 @@ Still to write, once there is output to write it against: the log-τ
 interpolation with barrier gaps marked, and reporting τ against both `z` and
 `z − ztrop(φ)`.
 
-The original scoping:
+## Work remaining
 
-### 7b. Post-processing (design)
+Nothing in this branch has been run as a simulation. It was written in an
+environment with no Julia toolchain, so every claim rests on reading the code,
+and CI is the only thing that has executed any of it. Treat the first Levante
+job as the first real test.
 
-`post_processing/tracer_lifetimes.jl` reads one budget CSV; a chained run writes
-one per `output_NNNN`. Add a step that walks the numbered directories, dedupes on
-`(time, band edges)`, merges the members on band edges, takes multi-year means,
-reports τ against both z and z − ztrop(φ), and interpolates in log τ with barrier
-gaps marked rather than bridged.
+### Before anything can run
+
+ 1. **Point the runscripts at the coupler checkout.** `COUPLER` in
+    `runscripts/xmodel.amip` and `runscripts/setup-julia-amip-levante.sh` is a
+    placeholder; the local clone is at `/home/b/b309159/git/ClimaCoupler.jl`.
+ 2. **Reconcile `xmodel.amip` with `xmodel.cpu`.** The AMIP chaining script was
+    derived from `xmodel.cpu` before that file was rewritten, so the two have
+    diverged and the differences have not been reviewed.
+ 3. **Produce the 1979-01-01 ERA5 initial condition** (work item 6).
+    `era5_init_processed_internal_19790101_0000.nc` has to come from DKRZ's own
+    holdings under `/pool/data/ERA5`, and has to reach into the mesosphere,
+    because `WeatherModel` extrapolates flat above the file's top. The upstream
+    route does not work from here: the `wxquest_initial_conditions` artifact is
+    declared with a tree hash and no download block, so it resolves only on a
+    machine that already holds the data.
+
+### The calibration run (work item 3)
+
+This gates everything downstream. It sets `SEGMENT_DAYS`, which is a placeholder
+`150` until measured, and the node count, and it replaces the budget table,
+which is atmosphere-only and carries a ±2× error bar. It must also confirm three
+things that are currently assumed:
+
+  - every source box captures at least one cell centre in every column;
+  - `dt = 120 s` is stable on this grid;
+  - the prescribed O₃ and CO₂ inputs actually cover 1979–2021. Silent flat
+    extrapolation of ozone would invalidate the campaign.
+
+### Still to write
+
+ 4. **Post-processing** (work item 7): interpolation in log τ with the transport
+    barriers marked rather than bridged, and τ reported against both `z` and
+    `z − ztrop(φ)`. Waiting on output to write it against.
+ 5. **A coupled smoke test** (verification item 5). `test/coupler_compatibility.jl`
+    covers the surface API but not the prognostic state, so nothing yet checks
+    that the tracers survive a coupled run and a checkpoint round-trip.
+
+### Unexercised code
+
+`post_processing/merge_tracer_budgets.jl` has never been run. Neither has
+`runscripts/xmodel.amip`, beyond exercising its checkpoint-parsing logic
+directly. The source-box change, the seasonal SST and the docs are covered by
+CI; nothing else here is.
 
 ## Known limitations to record with the results
 
@@ -644,9 +632,9 @@ Label these as such in any write-up:
  3. That the `era5_inst_model_levels` artifact holds only 2010-01-01.
  4. Temporal coverage of the O3 and CO2 inputs over 1979–2021 — **checked in
     calibration**, and campaign-invalidating if wrong.
- 5. DKRZ specifics: `/pool/data/ERA5` layout, 128 cores/node, queue turnaround over
-    ~200 jobs, and the allocation itself — including whether it covers the `gpu`
-    partition, which the coupled route would likely need.
+ 5. DKRZ specifics: `/pool/data/ERA5` layout, 128 cores/node, and queue turnaround
+    over ~200 jobs. The allocation itself is confirmed: 24,000 node-hours, and it
+    covers the `gpu` partition.
  6. `dt = 120 s` stability on this grid — argued from the `dt/Δz` table, confirmed
     in calibration.
  7. Existence of a 1979-01-01 pre-processed ERA5 file reaching into the mesosphere.

@@ -1,0 +1,81 @@
+# =============================================================================
+# Coupled AMIP configuration -- stratospheric tracer campaign, member A
+# =============================================================================
+#
+# A TEMPLATE, not a runnable config: `runscripts/xmodel.amip` substitutes
+# @ATMOS_CONFIG_FILE@ and @T_END_SECONDS@ and writes the result next to the
+# output directory. Run it through ClimaCoupler:
+#
+#   julia --project=$COUPLER/experiments/AMIP \
+#         $COUPLER/experiments/AMIP/run_simulation.jl --config_file <rendered>
+#
+# The rendered file must keep the basename `strat_tracers_amip_a.yml`: the
+# coupler derives `job_id` from it, and `job_id` sets the output directory that
+# the checkpoints and the restart chain live under.
+#
+# Config precedence in the coupler is
+#   merge(atmos_default, coupler_default_cli, atmos_config_dict, coupler_config_dict)
+# so every key here overrides the atmos config file. Three of them have to be
+# set here for exactly that reason -- see the comments below.
+# =============================================================================
+
+mode_name: "amip"
+# `amip` forces ocean_model and ice_model to `prescribed`; SST and sea-ice
+# concentration come from the `historical_sst_sic` artifact
+# (MODEL.SST.HAD187001-198110.OI198111-202206.nc), which spans 1870-2022 and is
+# already the mid-month-adjusted PCMDI product. `bucket` is the cheap land
+# option; `integrated` is ClimaLand.
+land_model: "bucket"
+
+start_date: "19790101"
+# Segment end, in seconds, written by the chaining script. The campaign end is
+# 15341 days = 1325462400 s (1979-01-01 -> 2021-01-01). Each job stops on a
+# checkpoint boundary so it exits cleanly and the batch script can resubmit.
+t_end: "@T_END_SECONDS@secs"
+
+dt: "120secs"
+dt_cpl: "120secs"
+# Do NOT add `dt_atmos`: the extension prefers it over `dt` when the key is
+# present, and the shipped AMIP configs set only `dt`.
+
+checkpoint_dt: "30days"
+detect_restart_files: true
+# The coupler anchors the checkpoint schedule on `start_date`, not on the
+# restart time, so checkpoints land on fixed calendar boundaries however a
+# segment begins. Keep this equal to `dt_tracer_budget` and to the diagnostic
+# accumulation period in the atmos config.
+
+# ClimaAtmos writes its own checkpoints too, which are redundant here because
+# the coupler checkpoint already carries the whole atmos prognostic state
+# (`restart_model_state!` does `Y .= Y_new`). Turning them off saves a large
+# amount of disk over 42 years.
+dt_save_state_to_disk: "Inf"
+
+# --- keys that MUST be set here, not in the atmos config ---------------------
+# `coupler_default_cli` is merged BEFORE the atmos config file, so the coupler's
+# own defaults for these lose to whatever the atmos config says. The atmos
+# config sets `surface_setup: "DefaultMoninObukhov"` for standalone use, which
+# would take the atmosphere out of coupled mode if it were not overridden here.
+surface_setup: "PrescribedSurface"
+albedo_model: "CouplerAlbedo"
+
+# Absolute path to the member's atmos config in ClimaAtmosResiDyn. Resolved as
+# joinpath(pkgdir(ClimaCoupler), path), and an absolute path wins, so the file
+# does not have to live inside the coupler checkout.
+atmos_config_file: "@ATMOS_CONFIG_FILE@"
+
+# --- deliberately NOT set ----------------------------------------------------
+# `coupler_toml`: when non-empty it REPLACES the atmos `toml` list outright
+# (ext/ClimaCouplerClimaAtmosExt.jl:689-693) rather than adding to it. Setting
+# it would silently discard toml/strat_tracers_transient.toml and put the
+# sponge back at its default height, inside the sampled tracer region.
+#
+# `prognostic_surface`: inert under coupling. The coupler writes straight into
+# `p.precomputed.sfc_conditions.T_sfc`, and `update_surface_conditions!` returns
+# early when the flux scheme is `nothing`, so the atmos temperature model is
+# never evaluated. Left in the atmos config so it stays runnable standalone.
+
+coupler_output_dir: "output"
+energy_check: false
+conservation_softfail: false
+rmse_check: false
