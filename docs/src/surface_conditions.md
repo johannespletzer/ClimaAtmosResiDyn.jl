@@ -180,14 +180,31 @@ another surface-policy hierarchy.
 Three of the four `AtmosSurface` fields are YAML-configurable (resolved by
 `AtmosSurface(::AtmosConfig, params, FT; setup_type)`). Setup-provided pieces
 take precedence for `flux_scheme` and `boundary_overrides`; for `temperature`,
-`prognostic_surface: SlabOceanSST` overrides the setup, while `PrescribedSST`
-falls back to the setup piece:
+`prognostic_surface: SlabOceanSST` and `SeasonalSST` override the setup, while
+`PrescribedSST` falls back to the setup piece:
 
   - `surface_setup` sets [`flux_scheme`](@ref "Flux scheme (flux_scheme)"):
     `"DefaultExchangeCoefficients"` (default), `"DefaultMoninObukhov"`, or
     `"PrescribedSurface"` (→ `nothing`).
+
   - `prognostic_surface` sets [`temperature`](@ref "Temperature source (temperature)"):
-    `"PrescribedSST"` (default) or `"SlabOceanSST"` (→ `SlabOceanTemperature`).
+    `"PrescribedSST"` (default), `"SeasonalSST"`, or `"SlabOceanSST"`
+    (→ `SlabOceanTemperature`).
+
+    `"SeasonalSST"` wraps `Setups.SeasonalOceanTemperature` in an
+    `AnalyticTemperature`. It is the zonally symmetric annual-mean profile plus
+    `amplitude * sind(2 φ) * cos(2π (day − peak_day) / 365.25)`: antisymmetric
+    between the hemispheres, zero at the equator and the poles, peaking near
+    ±45°. The shape suits an ocean surface, whose observed seasonal range is
+    largest in midlatitudes and small over polar water held near freezing by
+    ice. The cycle is phased to the calendar through `start_date`, so a restart
+    mid-year continues it rather than restarting it.
+
+    It does not supply the much larger seasonal cycle of land and sea ice,
+    neither of which exists in standalone ClimaAtmos, so it is an improvement on
+    the steady profile rather than a substitute for prescribed observed surface
+    temperatures.
+
   - `albedo_model` sets [`surface_albedo`](@ref "Albedo (surface_albedo)"):
     `"ConstantAlbedo"` (default), `"RegressionFunctionAlbedo"`, or `"CouplerAlbedo"`.
 

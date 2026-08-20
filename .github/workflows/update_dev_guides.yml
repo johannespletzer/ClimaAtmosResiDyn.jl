@@ -78,7 +78,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git push -f origin update-dev-guides
-          existing=$(gh pr list --head update-dev-guides --state open --json number --jq '.[0].number')
+          # `// empty` matters: on an empty list `.[0].number` evaluates to
+          # null, and jq prints the string "null", which is non-empty. Without
+          # it the check below always believes a PR exists and the sync silently
+          # accumulates on the branch without ever opening one.
+          existing=$(gh pr list --head update-dev-guides --state open --json number --jq '.[0].number // empty')
           if [ -n "$existing" ]; then
             echo "PR #$existing already exists — skipping creation."
           else

@@ -145,18 +145,17 @@ chemistry_variables(ρ, physical_state, ::Nothing) = (;)
 chemistry_variables(ρ, physical_state, ::AbstractChemistryModel) =
     (; ρq_gas_A = ρ * physical_state.q_gas_A)
 
-# One grid-scale tracer per (latitude band, height band) source region, all
-# starting from zero: the tracers are defined entirely by their source and
-# their sub-tropopause sink, so any nonzero initial condition would only add a
-# transient to be waited out before equilibrium.
+# One grid-scale tracer per source box, all starting from zero: the tracers are
+# defined entirely by their source and their sub-tropopause sink, so any nonzero
+# initial condition would only add a transient to be waited out before
+# equilibrium.
 @generated function chemistry_variables(
     ρ,
     physical_state,
-    ::StratosphericPassiveTracers{NY, NZ},
-) where {NY, NZ}
-    names = stratospheric_tracer_symbols(NY, NZ)
-    zero_exprs = map(_ -> :(zero(ρ)), names)
-    return :(NamedTuple{$names}(($(zero_exprs...),)))
+    ::StratosphericPassiveTracers{N, NAMES},
+) where {N, NAMES}
+    zero_exprs = map(_ -> :(zero(ρ)), NAMES)
+    return :(NamedTuple{$NAMES}(($(zero_exprs...),)))
 end
 
 """

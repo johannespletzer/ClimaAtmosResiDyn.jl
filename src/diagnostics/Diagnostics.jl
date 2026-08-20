@@ -67,8 +67,8 @@ import ..OrographicGravityWave
 # chemistry_model
 import ..GasPhaseChem
 import ..StratosphericPassiveTracers
-import ..stratospheric_tracer_symbol
-import ..n_latitude_bands, ..n_height_bands
+import ..stratospheric_tracer_symbols
+import ..n_tracers
 
 # tropopause
 import ..TropopauseParameters

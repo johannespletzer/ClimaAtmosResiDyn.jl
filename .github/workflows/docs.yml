@@ -16,8 +16,8 @@ jobs:
   # Merge-queue fast path: reuse the doc build from an already-green PR head
   # when the merge group is byte-identical to it (see
   # .github/should_skip_merge_queue.sh).
-  decide:
-    name: decide
+  docs-decide:
+    name: docs-decide
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -44,8 +44,8 @@ jobs:
           fi
 
   docbuild:
-    needs: decide
-    if: needs.decide.outputs.skip != 'true'
+    needs: docs-decide
+    if: needs.docs-decide.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -99,19 +99,19 @@ jobs:
   # (docbuild skipped) still reports green.
   docs-required:
     name: docs-required
-    needs: [decide, docbuild]
+    needs: [docs-decide, docbuild]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - run: |
-          if [[ "${{ needs.decide.result }}" != "success" ]]; then
-            echo "decide job did not succeed"; exit 1
+          if [[ "${{ needs.docs-decide.result }}" != "success" ]]; then
+            echo "docs-decide job did not succeed"; exit 1
           fi
           if [[ "${{ needs.docbuild.result }}" == "success" ]]; then
             echo "doc build passed"; exit 0
           fi
           if [[ "${{ needs.docbuild.result }}" == "skipped" && \
-                "${{ needs.decide.outputs.skip }}" == "true" ]]; then
+                "${{ needs.docs-decide.outputs.skip }}" == "true" ]]; then
             echo "doc build reused from an already-green PR head"; exit 0
           fi
           echo "doc build did not pass (result=${{ needs.docbuild.result }})"

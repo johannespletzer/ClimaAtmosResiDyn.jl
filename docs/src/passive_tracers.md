@@ -119,20 +119,56 @@ lowermost stratosphere without a source or put the lowest tropical band below
 the tropopause. Set `"altitude"` for bands at fixed heights above sea level
 instead.
 
-| Configuration key                     | Meaning                                              |
-|:------------------------------------- |:---------------------------------------------------- |
-| `tracer_source_latitude_bands`        | Number of latitude boxes (default 6)                 |
-| `tracer_source_latitude_width`        | Width of each latitude box, in degrees (default 10)  |
-| `tracer_source_height_bands`          | Number of height boxes (default 8)                   |
-| `tracer_source_band_depth`            | Depth of each height box, in m (default 2000)        |
-| `tracer_source_band_spacing`          | Distance between box bottoms, in m (default 5000)    |
-| `tracer_source_lowest_band_base`      | Base of the lowest box above the reference, in m     |
-| `tracer_source_height_coordinate`     | `"tropopause"` or `"altitude"`                        |
-| `tracer_production_rate`              | Mass-fraction production inside a region, in s⁻¹     |
-| `tracer_loss_timescale`               | E-folding time of the removal below the tropopause   |
-| `dt_tracer_budget`                    | How often the budget table is written                |
+| Configuration key                 | Meaning                                             |
+|:--------------------------------- |:--------------------------------------------------- |
+| `tracer_source_latitude_bands`    | Number of latitude boxes (default 6)                |
+| `tracer_source_latitude_width`    | Width of each latitude box, in degrees (default 10) |
+| `tracer_source_height_bands`      | Number of height boxes (default 8)                  |
+| `tracer_source_band_depth`        | Depth of each height box, in m (default 2000)       |
+| `tracer_source_band_spacing`      | Distance between box bottoms, in m (default 5000)   |
+| `tracer_source_lowest_band_base`  | Base of the lowest box above the reference, in m    |
+| `tracer_source_height_coordinate` | `"tropopause"` or `"altitude"`                      |
+| `tracer_production_rate`          | Mass-fraction production inside a region, in s⁻¹    |
+| `tracer_loss_timescale`           | E-folding time of the removal below the tropopause  |
+| `dt_tracer_budget`                | How often the budget table is written               |
+| `tracer_source_boxes`             | Explicit box list, overriding the grid keys above   |
 
 Tracer `(i, k)` is `Y.c.ρq_gas_y<i>z<k>` and is output as `q_gas_y<i>z<k>`.
+
+### Boxes that are not a latitude × height grid
+
+The keys above describe a latitude × height outer product with one width, one
+depth and one spacing. When that is the wrong shape — bands at uneven spacing,
+boxes of differing depth, or a grid with some combinations left out because
+they would sit below the tropopause — list the boxes explicitly instead:
+
+```yaml
+tracer_source_height_coordinate: "altitude"
+tracer_source_boxes:
+  - {latitude_lower: -85.0, latitude_upper: -75.0, height_lower: 9989.7, height_upper: 10404.8}
+  - {latitude_lower:  75.0, latitude_upper:  85.0, height_lower: 9989.7, height_upper: 10404.8}
+  - {latitude_lower:  -5.0, latitude_upper:   5.0, height_lower: 27896.0, height_upper: 28623.5}
+```
+
+Heights are in m, measured from the reference chosen by
+`tracer_source_height_coordinate`. To make a box span exactly one model layer,
+give it that layer's face heights; they follow from `z_max`, `z_elem`,
+`dz_bottom` and `z_stretch`, and a box thinner than the local layer would
+otherwise emit into whichever cell centres it happened to capture, or none.
+
+Setting `tracer_source_boxes` ignores the `tracer_source_*_bands`,
+`_width`, `_depth`, `_spacing` and `_lowest_band_base` keys. Boxes are named by
+numbering the distinct latitude and height ranges in order of first appearance,
+so an outer product spelled out box by box reproduces the familiar `y<i>z<k>`
+numbering. For an irregular list those indices are labels rather than grid
+coordinates, and the box edges written into every row of the budget table — not
+the names — are what identifies a box.
+
+Boxes may overlap. The tracers are independent, so a point inside two of them
+feeds both and each budget stays self-consistent; a box spanning the whole
+domain, used as a bulk reference, deliberately encloses the sampled boxes. Two
+boxes sharing both a latitude and a height range are refused, because they would
+claim the same name.
 
 `tracer_production_rate` sets the magnitude of the tracers but **not** their
 lifetimes: the tracers are linear, so burden and source scale together and
@@ -202,7 +238,7 @@ path, so it is the config to reach for when changing any of them.
 
     The tracers are grid-scale only — they get no SGS updraft counterparts,
     which would multiply the EDMF state by the number of source regions. Even
-    so, `n_latitude_bands × n_height_bands` prognostic tracers is a large
+    so, one prognostic tracer per source box is a large
     state: the default 6 × 8 = 48 tracers add 48 fields to `Y.c` and, with
     `implicit_diffusion: true`, 48 tridiagonal blocks to the Jacobian.
 
@@ -217,6 +253,22 @@ path, so it is the config to reach for when changing any of them.
     one run covering all of it, and much less in wall clock. Setting
     `implicit_diffusion: false` removes the per-tracer Jacobian blocks if the
     cost is still binding.
+
+### Types and functions
+
+```@docs
+ClimaAtmos.StratosphericPassiveTracers
+ClimaAtmos.SourceBox
+ClimaAtmos.GeometricHeight
+ClimaAtmos.TropopauseRelativeHeight
+ClimaAtmos.stratospheric_tracer_symbol
+ClimaAtmos.stratospheric_tracer_symbols
+ClimaAtmos.write_tracer_budget!
+ClimaAtmos.TropopauseParameters
+ClimaAtmos.climatological_tropopause_height
+ClimaAtmos.wmo_tropopause_scan_step
+ClimaAtmos.set_tropopause_height!
+```
 
 ## Adding a New Passive Tracer
 

@@ -94,7 +94,7 @@ import ClimaAtmos as CA
         maximum(
             abs.(
                 parent(Y.c.ρe_tag_tropics) .+
-                parent(Y.c.ρe_tag_extratropics) .- parent(Y.c.ρe_tot)
+                parent(Y.c.ρe_tag_extratropics) .- parent(Y.c.ρe_tot),
             ),
         ) / maximum(abs.(parent(Y.c.ρe_tot)))
 
@@ -130,7 +130,7 @@ import ClimaAtmos as CA
     @test maximum(
         abs.(
             parent(Y.c.ρe_tag_hs_tropics) .+
-            parent(Y.c.ρe_tag_hs_extratropics) .- parent(Y.c.ρe_tag_hs)
+            parent(Y.c.ρe_tag_hs_extratropics) .- parent(Y.c.ρe_tag_hs),
         ),
     ) / hs_scale < 1e-6
 end
@@ -176,7 +176,7 @@ end
     @test maximum(
         abs.(
             parent(Y.c.ρe_tag_mp) .+ parent(Y.c.ρe_tag_precip) .-
-            parent(Y.c.ρe_tag_moist)
+            parent(Y.c.ρe_tag_moist),
         ),
     ) / maximum(abs.(parent(Y.c.ρe_tag_moist))) < 1e-10
 end

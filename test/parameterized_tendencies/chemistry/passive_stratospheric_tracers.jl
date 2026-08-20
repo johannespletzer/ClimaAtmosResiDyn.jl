@@ -90,36 +90,45 @@ end
         band_spacing = 5_000,
     )
 
-    @test CA.n_latitude_bands(chemistry_model) == 6
-    @test CA.n_height_bands(chemistry_model) == 8
     @test CA.n_tracers(chemistry_model) == 48
+
+    # The edges are stored per box, not per band, so the keyword constructor's
+    # outer product appears as each latitude repeated once per height band.
+    (; latitude_lower_edges, latitude_upper_edges) = chemistry_model
+    @test length(latitude_lower_edges) == 48
+    widths = latitude_upper_edges .- latitude_lower_edges
+    @test all(w -> w ≈ 10, widths)
 
     # The boxes sample the domain rather than tiling it: each stays within the
     # size it was asked for, and none overlaps its neighbour.
-    (; latitude_lower_edges, latitude_upper_edges) = chemistry_model
-    widths = latitude_upper_edges .- latitude_lower_edges
-    @test all(w -> w ≈ 10, widths)
+    latitude_lowers = unique(latitude_lower_edges)
+    latitude_uppers = unique(latitude_upper_edges)
+    @test length(latitude_lowers) == 6
     @test all(
-        i -> latitude_upper_edges[i] < latitude_lower_edges[i + 1],
-        1:(length(latitude_lower_edges) - 1),
+        i -> latitude_uppers[i] < latitude_lowers[i + 1],
+        1:(length(latitude_lowers) - 1),
     )
     # Centred on the midpoints of six equal divisions of pole to pole, so the
     # set is symmetric about the equator and stays inside it.
-    centers = (latitude_lower_edges .+ latitude_upper_edges) ./ 2
-    @test collect(centers) ≈ [-75, -45, -15, 15, 45, 75]
-    @test latitude_lower_edges[1] >= -90
-    @test latitude_upper_edges[end] <= 90
+    centers = (latitude_lowers .+ latitude_uppers) ./ 2
+    @test centers ≈ [-75, -45, -15, 15, 45, 75]
+    @test minimum(latitude_lower_edges) >= -90
+    @test maximum(latitude_upper_edges) <= 90
 
     (; height_lower_edges, height_upper_edges) = chemistry_model
+    @test length(height_lower_edges) == 48
     depths = height_upper_edges .- height_lower_edges
     @test all(d -> d ≈ 2_000, depths)
+    height_lowers = unique(height_lower_edges)
+    height_uppers = unique(height_upper_edges)
+    @test length(height_lowers) == 8
     @test all(
-        k -> height_upper_edges[k] < height_lower_edges[k + 1],
-        1:(length(height_lower_edges) - 1),
+        k -> height_uppers[k] < height_lowers[k + 1],
+        1:(length(height_lowers) - 1),
     )
-    @test height_lower_edges[1] == 0          # bottom box sits on the tropopause
-    @test height_lower_edges[3] == 10_000     # stacked every 5 km
-    @test isfinite(height_upper_edges[end])   # no open-ended box
+    @test height_lowers[1] == 0          # bottom box sits on the tropopause
+    @test height_lowers[3] == 10_000     # stacked every 5 km
+    @test all(isfinite, height_upper_edges)   # no open-ended box
 
     # Overlapping boxes would make a point feed two tracers at once, so they
     # are refused rather than silently double-counted.
@@ -172,6 +181,118 @@ end
     @test_throws ErrorException CA.StratosphericPassiveTracers(
         FT;
         n_height_bands = 0,
+    )
+end
+
+@testset "stratospheric tracer explicit source boxes" begin
+    # A grid that no combination of the band keys can express: the height
+    # boxes have different depths and uneven spacing, and the lowest one is
+    # used at only two of the three latitudes.
+    boxes = [
+        CA.SourceBox(FT(-85), FT(-75), FT(9_990), FT(10_405)),
+        CA.SourceBox(FT(75), FT(85), FT(9_990), FT(10_405)),
+        CA.SourceBox(FT(-85), FT(-75), FT(27_896), FT(28_624)),
+        CA.SourceBox(FT(-5), FT(5), FT(27_896), FT(28_624)),
+        CA.SourceBox(FT(75), FT(85), FT(27_896), FT(28_624)),
+    ]
+    model = CA.StratosphericPassiveTracers(FT, boxes)
+
+    @test CA.n_tracers(model) == 5
+    @test model.latitude_lower_edges[1] ≈ -85
+    @test model.height_upper_edges[end] ≈ 28_624
+    # Depths differ between the two height levels, which the outer-product
+    # constructor cannot represent.
+    @test !(
+        model.height_upper_edges[1] - model.height_lower_edges[1] ≈
+        model.height_upper_edges[3] - model.height_lower_edges[3]
+    )
+
+    # Names index the distinct latitude and height ranges in order of first
+    # appearance, so the equator box is latitude 3 even though it appears last.
+    names = CA.stratospheric_tracer_symbols(model)
+    @test names == (
+        :ρq_gas_y01z01,
+        :ρq_gas_y02z01,
+        :ρq_gas_y01z02,
+        :ρq_gas_y03z02,
+        :ρq_gas_y02z02,
+    )
+    @test allunique(names)
+
+    CA.Diagnostics.register_stratospheric_tracer_diagnostics!(model)
+    @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "q_gas_y03z02")
+
+    # The keyword constructor is the same thing with an outer product, so the
+    # two agree when the explicit list spells that product out.
+    grid_model = CA.StratosphericPassiveTracers(
+        FT;
+        n_latitude_bands = 2,
+        n_height_bands = 2,
+        latitude_width = 10,
+        band_depth = 2_000,
+        band_spacing = 5_000,
+    )
+    spelled_out = CA.StratosphericPassiveTracers(
+        FT,
+        [
+            CA.SourceBox(FT(-50), FT(-40), FT(0), FT(2_000)),
+            CA.SourceBox(FT(40), FT(50), FT(0), FT(2_000)),
+            CA.SourceBox(FT(-50), FT(-40), FT(5_000), FT(7_000)),
+            CA.SourceBox(FT(40), FT(50), FT(5_000), FT(7_000)),
+        ],
+    )
+    @test CA.stratospheric_tracer_symbols(grid_model) ==
+          CA.stratospheric_tracer_symbols(spelled_out)
+    @test collect(grid_model.latitude_lower_edges) ≈
+          collect(spelled_out.latitude_lower_edges)
+    @test collect(grid_model.height_lower_edges) ≈
+          collect(spelled_out.height_lower_edges)
+
+    # Overlap is allowed: the tracers are independent, so a shared point feeds
+    # both and each budget stays self-consistent. A whole-domain reference box
+    # enclosing the sampled boxes is the case this exists for.
+    nested = CA.StratosphericPassiveTracers(
+        FT,
+        [
+            CA.SourceBox(FT(-10), FT(10), FT(0), FT(2_000)),
+            CA.SourceBox(FT(-90), FT(90), FT(0), FT(50_000)),
+        ],
+    )
+    @test CA.n_tracers(nested) == 2
+    @test CA.boxes_overlap(
+        CA.SourceBox(FT(-10), FT(10), FT(0), FT(2_000)),
+        CA.SourceBox(FT(-90), FT(90), FT(0), FT(50_000)),
+    )
+    # Boxes that only touch at an edge do not overlap: the membership test is
+    # half-open, so the shared edge belongs to exactly one of them.
+    @test !CA.boxes_overlap(
+        CA.SourceBox(FT(-10), FT(0), FT(0), FT(2_000)),
+        CA.SourceBox(FT(0), FT(10), FT(0), FT(2_000)),
+    )
+
+    # Two boxes with the same latitude and height range would claim the same
+    # name, which is refused.
+    @test_throws ErrorException CA.StratosphericPassiveTracers(
+        FT,
+        [
+            CA.SourceBox(FT(-10), FT(10), FT(0), FT(2_000)),
+            CA.SourceBox(FT(-10), FT(10), FT(0), FT(2_000)),
+        ],
+    )
+
+    # Empty ranges and empty lists are rejected rather than silently producing
+    # a tracer with no source.
+    @test_throws ErrorException CA.StratosphericPassiveTracers(
+        FT,
+        [CA.SourceBox(FT(10), FT(10), FT(0), FT(2_000))],
+    )
+    @test_throws ErrorException CA.StratosphericPassiveTracers(
+        FT,
+        [CA.SourceBox(FT(-10), FT(10), FT(2_000), FT(0))],
+    )
+    @test_throws ErrorException CA.StratosphericPassiveTracers(
+        FT,
+        CA.SourceBox{FT}[],
     )
 end
 

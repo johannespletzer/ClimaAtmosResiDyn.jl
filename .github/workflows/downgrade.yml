@@ -24,6 +24,10 @@ jobs:
     env:
       CLIMAATMOS_DOWNGRADE_CI: 'true'
     strategy:
+      # Without this, a failure on one version cancels the other before it
+      # reports, so a version-specific regression is indistinguishable from a
+      # shared one. Matches the ci workflow.
+      fail-fast: false
       matrix:
         version: ['1.10', '1.11']
     steps:

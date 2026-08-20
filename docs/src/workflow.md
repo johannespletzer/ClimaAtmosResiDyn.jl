@@ -6,16 +6,16 @@ running multi-year simulations on a cluster — and links to the detailed page f
 each step. Read it once end to end; afterwards you will mostly use it to find
 the right stage.
 
-| Stage | What you do | Details |
-|:--|:--|:--|
-| 1 | Set up the environment | [Installation](installation.md) |
-| 2 | Verify the install with a cheap run | below |
-| 3 | Pick and adapt a configuration | [Custom Configurations](config.md) |
-| 4 | Short test run, check the output | [Diagnostics](diagnostics.md) |
-| 5 | Decide what to save | [Diagnostics](diagnostics.md), below |
-| 6 | Scale up resolution and hardware | below |
-| 7 | Run long, in segments, on a cluster | [Restarts](restarts.md), below |
-| 8 | Monitor and post-process | below |
+| Stage | What you do                         | Details                                   |
+|:----- |:----------------------------------- |:----------------------------------------- |
+| 1     | Set up the environment              | [Installation](installation.md)           |
+| 2     | Verify the install with a cheap run | below                                     |
+| 3     | Pick and adapt a configuration      | [Custom Configurations](configuration.md) |
+| 4     | Short test run, check the output    | [Diagnostics](diagnostics.md)             |
+| 5     | Decide what to save                 | [Diagnostics](diagnostics.md), below      |
+| 6     | Scale up resolution and hardware    | below                                     |
+| 7     | Run long, in segments, on a cluster | [Restarts](restarts.md), below            |
+| 8     | Monitor and post-process            | below                                     |
 
 ## 1. Set up the environment
 
@@ -29,6 +29,7 @@ julia --project=.buildkite -e 'using Pkg; Pkg.instantiate()'
 ```
 
 !!! warning "Use the pinned environment and the matching Julia version"
+
     The manifest is per Julia minor version (`.buildkite/Manifest-v1.11.toml`).
     Running a *different* Julia minor version ignores that manifest and
     re-resolves dependencies from scratch, which can pick package versions the
@@ -94,7 +95,7 @@ Start from an existing file rather than a blank one:
 The keys you will touch first are `dt`, `t_end`, `initial_condition`,
 `microphysics_model`, `rad`, `surface_setup`, and the grid (`h_elem`,
 `z_elem`, `z_max`). `--job_id` names the output directory. See
-[Custom Configurations](config.md) for the full schema and
+[Custom Configurations](configuration.md) for the full schema and
 [Script vs Config Interface](interfaces.md) if you would rather build the
 simulation in Julia than in YAML.
 
@@ -189,6 +190,7 @@ latest checkpoint and resumes. You do not edit the configuration between
 segments.
 
 !!! tip "Working examples"
+
     `runscripts/` contains submission scripts used on DKRZ's Levante —
     `xmodel.cpu` (MPI on CPU nodes) and `xmodel.4gpus` (4×A100). They carry the
     site-tested Open MPI/UCX settings, verify the MPI and CUDA setup before
