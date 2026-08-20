@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=tracer-4gpus
+#SBATCH --account=bd1062
+#SBATCH --partition=gpu
+#SBATCH --constraint=a100_80
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=4
+# GPUs are requested at node scope, not per task: --gpus-per-task implies a
+# per-task GPU binding that pins CUDA_VISIBLE_DEVICES before --gpu-bind=closest
+# can choose, so `closest` would have nothing left to decide.
+#SBATCH --gpus-per-node=4
+# One NUMA domain of cores per rank. A Levante GPU node is 128 cores over 8
+# NUMA domains of 16, with one GPU and one HCA attached to every second domain,
+# so 16 is the largest allocation that keeps every core local to the rank's
+# GPU.
+#SBATCH --cpus-per-task=16
+# --exclusive on every variant, including the 1- and 2-GPU ones. A shared node
+# would have this job competing for memory bandwidth and HCAs with someone
+# else's, and the whole point of having three scripts is that their timings are
+# comparable.
+#SBATCH --exclusive
+#SBATCH --mem=0
+#SBATCH --hint=nomultithread
+#SBATCH --time=00:30:00
+#SBATCH --output=tracer-4gpus-%j.out
+#SBATCH --error=tracer-4gpus-%j.err
+#SBATCH --mail-type=FAIL
+
+# 4 GPUs on one node. Everything below the #SBATCH block is shared with
+# the other GPU variants; see runscripts/levante_gpu_common.sh.
+
+source /sw/etc/profile.levante
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Locate the repository, then hand over to the shared implementation.
+#
+# Not from ${BASH_SOURCE[0]}: sbatch copies this script to the node's spool
+# directory before running it, so BASH_SOURCE points at
+# /var/spool/slurmd/job<id>/slurm_script. SLURM_SUBMIT_DIR is where sbatch was
+# invoked -- the repository root for the documented
+# `sbatch runscripts/<script>`, or runscripts/ itself. A candidate counts only
+# if the shared library is actually in it, so a wrong guess fails here rather
+# than as a missing file later.
+# ---------------------------------------------------------------------------
+
+for _candidate in \
+    "${ROOT:-}" \
+    "${SLURM_SUBMIT_DIR:-}" \
+    "${SLURM_SUBMIT_DIR:-}/.." \
+    "$(dirname "${BASH_SOURCE[0]}")/.."
+do
+    if [[ -n "${_candidate}" && -r "${_candidate}/runscripts/levante_gpu_common.sh" ]]; then
+        ROOT="$(cd "${_candidate}" && pwd)"
+        break
+    fi
+done
+unset _candidate
+
+if [[ -z "${ROOT:-}" || ! -r "${ROOT}/runscripts/levante_gpu_common.sh" ]]; then
+    echo "Could not locate the repository." >&2
+    echo "  SLURM_SUBMIT_DIR=${SLURM_SUBMIT_DIR:-unset}" >&2
+    echo "Submit from the repository root:" >&2
+    echo "  sbatch runscripts/$(basename "${BASH_SOURCE[0]}")" >&2
+    echo "or pass it explicitly:" >&2
+    echo "  ROOT=/path/to/ClimaAtmosResiDyn.jl sbatch runscripts/..." >&2
+    exit 1
+fi
+
+# shellcheck source=levante_gpu_common.sh
+source "${ROOT}/runscripts/levante_gpu_common.sh"
+
+levante_gpu_init
+levante_gpu_banner
+levante_gpu_check_stack
+levante_gpu_report_binding
+levante_gpu_device_test
+levante_gpu_warm_precompile
+levante_gpu_run || exit $?
