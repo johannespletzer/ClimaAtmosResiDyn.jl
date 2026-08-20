@@ -85,10 +85,12 @@ Checked against ClimaCoupler at `953c273`.
    `joinpath(pkgdir(ClimaCoupler), atmos_config_file)`, so an absolute path
    pointing back into this repo works; a relative one must live inside the
    coupler checkout.
-3. **Edits to our atmos config**: drop `surface_setup` and `prognostic_surface`
-   (the coupler owns the surface). The delta from `climaatmos_edonly.yml` is then
-   only `z_elem: 120`, `z_max: 80000.0`, `dz_bottom: 200.0`, our sponge TOML, and
-   the `tracer_source_boxes` block.
+3. **The atmos config is left alone.** `surface_setup` and `albedo_model` are
+   overridden from the coupler config instead of being removed, so the member
+   configs stay runnable standalone on the fallback. `prognostic_surface` is
+   inert under coupling. The delta from `climaatmos_edonly.yml` is
+   `z_elem: 120`, `z_max: 80000.0`, `dz_bottom: 200.0`, our sponge TOML, and the
+   `tracer_source_boxes` block.
 4. **A second Julia environment on Levante** — `experiments/AMIP/Project.toml`,
    instantiated with the fork dev'd in, on its own depot alongside the existing
    one. `runscripts/setup-julia-levante.tcsh` would need a variant.
@@ -116,9 +118,10 @@ Checked against ClimaCoupler at `953c273`.
     longrun pipeline is CUDA. Our working Levante stack is the CPU one; the GPU
     stack exists (`setup-julia-levante.tcsh gpu`, `runscripts/xmodel.gpu*`) but
     is less exercised.
-  - **Allocation question**: is the 24,000 node-hours a CPU allocation? DKRZ
-    charges the `gpu` partition separately, so a GPU-first coupled run may draw
-    on a budget we have not accounted for.
+  - ~~Allocation question~~ **Resolved**: the allocation covers the `gpu`
+    partition, and the user reports the coupled run is viable on CPU. The
+    chaining script targets the CPU `compute` partition; switching it to GPU is a
+    header change plus `CLIMACOMMS_DEVICE=CUDA` and the GPU depot.
   - **Our tracer refactor is not covered by the coupler contract test.**
     `test/coupler_compatibility.jl` exercises the surface API, not the
     prognostic state; the coupler reads the tracers through
@@ -368,9 +371,41 @@ Decide and document the naming scheme for the explicit path (the `y{i}z{k}`
 convention has no meaning without an outer product), and keep band edges in the
 budget CSV since post-processing keys on them.
 
-### 2. Coupled AMIP setup
+### 2. Coupled AMIP setup — done
 
-Build the coupled configuration described in the surface-boundary section:
+Delivered:
+
+  - `config/coupler_configs/strat_tracers_amip_{a,b}.yml.in` — coupler config
+    templates. Templates, not runnable configs: the chaining script substitutes
+    the atmos config path and the segment end.
+  - `runscripts/setup-julia-amip-levante.sh` — builds the AMIP environment on a
+    login node, on its own depot, with this fork dev'd in, and verifies the
+    system MPI, parallel HDF5 and that the tracers are actually present.
+
+Three traps were found while building it, all now handled in the templates and
+documented there:
+
+  - **`coupler_toml` replaces the atmos TOML list rather than adding to it**
+    (`ext/ClimaCouplerClimaAtmosExt.jl:689-693`). Setting it would silently
+    discard `toml/strat_tracers_transient.toml` and put the sponge back inside
+    the sampled region. It is deliberately left unset.
+  - **`coupler_default_cli` merges *before* the atmos config file**, so the
+    coupler's own defaults for `surface_setup` and `albedo_model` lose to
+    whatever the atmos config says. Our atmos config sets
+    `surface_setup: "DefaultMoninObukhov"` for standalone use, which would take
+    the atmosphere out of coupled mode. Both keys are set explicitly in the
+    coupler config, which merges last.
+  - **`dt_atmos` is preferred over `dt` whenever the key is present**
+    (`ext/ClimaCouplerClimaAtmosExt.jl:677-680`), so only `dt` is set, matching
+    the shipped AMIP configs.
+
+`prognostic_surface` is left in the atmos configs. It is inert under coupling —
+the coupler writes straight into `p.precomputed.sfc_conditions.T_sfc`
+(`ext/ClimaCouplerClimaAtmosExt.jl:373-376`) and `update_surface_conditions!`
+returns early when the flux scheme is `nothing` — so the member configs stay
+runnable standalone on the fallback.
+
+The original scoping, for reference:
 
   - A coupler config modelled on `config/longrun_configs/amip_edonly.yml`:
     `mode_name: "amip"`, `surface_setup: "PrescribedSurface"`,
@@ -405,7 +440,34 @@ Production grid, 27 tracers, full transient physics. Measure:
   in ClimaArtifacts, not this repo; silent flat extrapolation of ozone would
   invalidate the campaign.
 
-### 4. Job chaining — per-segment `t_end`
+### 4. Job chaining — done
+
+`runscripts/xmodel.amip` runs one segment and resubmits itself. Each job reads
+the newest checkpoint from `<base>/checkpoints`, sets the segment end to
+`min(restart_t + SEGMENT_DAYS, campaign end)`, renders the config, runs, and
+resubmits unless the campaign is finished or the segment failed.
+
+Verified against the coupler source and by exercising the logic directly:
+
+  - Checkpoints are named `checkpoint_<model>_<t>.hdf5` with `t` in whole
+    seconds, and live in `<base>/checkpoints` — outside the numbered
+    `output_XXXX` directories, so they accumulate in one place across segments.
+    The parser was tested against underscored model names (`clima_seaice`),
+    numeric-versus-lexical ordering, and malformed files.
+  - `SEGMENT_DAYS` must be a whole number of checkpoint intervals or segments
+    would not end on a checkpoint; the script refuses to run otherwise.
+  - **SLURM copies the batch script into its spool directory**, so
+    `${BASH_SOURCE[0]}` is not the file in the repository and cannot be used to
+    resubmit. The script uses `SLURM_SUBMIT_DIR` and checks it can find itself
+    before running anything, since otherwise the segment would run and the chain
+    would then die silently.
+
+`SEGMENT_DAYS` defaults to 150 and must be set from the calibration run's
+measured throughput.
+
+The original design note:
+
+### 4b. Job chaining — per-segment `t_end` (design)
 
 The naive scheme does not work: with `t_end` fixed at 15341 days the Julia process
 never returns inside 8 h, SLURM kills the batch script, and nothing after `srun`
@@ -528,7 +590,22 @@ Required variables `t`, `q`, `u`, `v`, `w`, `p` on `lon`/`lat`/`z`; optional
 `Flat()` extrapolation, so everything above the source file's top is constant —
 the file must reach into the mesosphere. DKRZ holds ERA5 under `/pool/data/ERA5`.
 
-### 7. Post-processing
+### 7. Post-processing — partly done
+
+`post_processing/merge_tracer_budgets.jl` merges the budget tables across
+segments and members. It walks both output layouts (`output_XXXX/` for a
+standalone run, `output_XXXX/clima_atmos/` for a coupled one), deduplicates on
+`(time, box edges)` keeping the row from the segment that carried the run
+forward, and merges members on box edges rather than on tracer name — the names
+collide across members while the edges do not. Standard library only.
+
+Still to write, once there is output to write it against: the log-τ
+interpolation with barrier gaps marked, and reporting τ against both `z` and
+`z − ztrop(φ)`.
+
+The original scoping:
+
+### 7b. Post-processing (design)
 
 `post_processing/tracer_lifetimes.jl` reads one budget CSV; a chained run writes
 one per `output_NNNN`. Add a step that walks the numbered directories, dedupes on
