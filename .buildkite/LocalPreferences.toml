@@ -1,12 +1,12 @@
 [MPIPreferences]
 abi = "OpenMPI"
 _format = "1.0"
-libmpi = "/sw/spack-levante/openmpi-4.1.2-mnmady/lib/libmpi"
+libmpi = "/sw/spack-levante/nvhpc-24.7-py26uc/Linux_x86_64/24.7/comm_libs/12.5/openmpi4/openmpi-4.1.5/lib/libmpi"
 preloads = []
 mpiexec = "srun"
 cclibs = []
 binary = "system"
 
-[HDF5]
-libhdf5 = "/sw/spack-levante/hdf5-1.12.1-kxfaux/lib/libhdf5.so"
-libhdf5_hl = "/sw/spack-levante/hdf5-1.12.1-kxfaux/lib/libhdf5_hl.so"
+[CUDA_Runtime_jll]
+local = false
+version = "13.0"
