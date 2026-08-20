@@ -116,12 +116,11 @@ Checked against ClimaCoupler at `953c273`.
   - **The coupler's AMIP work is GPU-first.** CPU/MPI is supported
     (`CLIMACOMMS_CONTEXT: "MPI"` steps exist) but every AMIP performance and
     longrun pipeline is CUDA. Our working Levante stack is the CPU one; the GPU
-    stack exists (`setup-julia-levante.tcsh gpu`, `runscripts/xmodel.gpu*`) but
-    is less exercised.
-  - **Allocation.** It covers the `gpu` partition, and the coupled run is
-    viable on CPU. The
-    chaining script targets the CPU `compute` partition; switching it to GPU is a
-    header change plus `CLIMACOMMS_DEVICE=CUDA` and the GPU depot.
+    stack exists (`setup-julia-levante.tcsh gpu`, `runscripts/xmodel.1gpu` and
+    its siblings) but is less exercised.
+  - **Allocation.** It covers the `gpu` partition, and the coupled run is viable
+    on CPU. The chaining script targets the CPU `compute` partition; switching it
+    to GPU is a header change plus `CLIMACOMMS_DEVICE=CUDA` and the GPU depot.
   - **Our tracer refactor is not covered by the coupler contract test.**
     `test/coupler_compatibility.jl` exercises the surface API, not the
     prognostic state; the coupler reads the tracers through
