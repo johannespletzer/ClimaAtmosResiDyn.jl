@@ -74,8 +74,8 @@ driver = minor_version(VersionNumber(ARGS[1]))
 version = major_minor(select_toolkit(driver))
 
 prefs_file = joinpath(dirname(Base.active_project()), "LocalPreferences.toml")
-prefs = isfile(prefs_file) ? TOML.parsefile(prefs_file) : Dict{String,Any}()
-cuda_prefs = get!(prefs, "CUDA_Runtime_jll", Dict{String,Any}())
+prefs = isfile(prefs_file) ? TOML.parsefile(prefs_file) : Dict{String, Any}()
+cuda_prefs = get!(prefs, "CUDA_Runtime_jll", Dict{String, Any}())
 cuda_prefs["version"] = version
 cuda_prefs["local"] = false
 

@@ -50,10 +50,26 @@ set JULIA_CHANNEL = +1.11
 # OpenMPI_jll's UUID, from .buildkite/Manifest-v1.11.toml
 set OPENMPI_JLL_UUID = fe0851c0-eecd-5654-98d4-656369965a5c
 
+# The compiler module, MPI module and depot name for each stack come from
+# runscripts/levante_stacks.env, which the GPU runscripts read as well. That
+# file is the only place the module/depot pairing is stated, so a runscript
+# cannot drift onto a different MPI than the depot was built against.
+set STACKS_ENV = ${ROOT}/runscripts/levante_stacks.env
+
+if (! -r "${STACKS_ENV}") then
+    echo "ERROR: stack definitions not found: ${STACKS_ENV}"
+    exit 1
+endif
+
 # Parent directory for the per-stack depots. Each holds a full copy of the
 # packages, artifacts and precompile cache -- several GB per stack. If $HOME is
-# quota-limited, point this at a work or scratch filesystem instead.
-set DEPOT_ROOT = ${HOME}/.julia/depots
+# quota-limited, set LEVANTE_DEPOT_ROOT to an absolute path on work or scratch.
+if ($?LEVANTE_DEPOT_ROOT) then
+    set DEPOT_ROOT = "${LEVANTE_DEPOT_ROOT}"
+else
+    set DEPOT_REL = `sed -n 's/^LEVANTE_DEPOT_ROOT_RELATIVE_TO_HOME=//p' "${STACKS_ENV}"`
+    set DEPOT_ROOT = ${HOME}/${DEPOT_REL}
+endif
 
 # ----------------------------------------------------------------------------
 # Stack selection
@@ -72,20 +88,28 @@ set PROBE_ACCOUNT    = bd1062
 set PROBE_PARTITION  = gpu
 set PROBE_CONSTRAINT = a100_80
 
-if ("${STACK}" == "cpu") then
-    set COMPILER_MODULE = gcc/11.2.0-gcc-11.2.0
-    set MPI_MODULE      = openmpi/4.1.2-gcc-11.2.0
-    set DEPOT           = ${DEPOT_ROOT}/levante-cpu
-    set SRUN_MPI        = pmix_v3
-else if ("${STACK}" == "gpu") then
-    set COMPILER_MODULE = nvhpc/24.7-gcc-11.2.0
-    set MPI_MODULE      = openmpi/4.1.5-nvhpc-24.7
-    set DEPOT           = ${DEPOT_ROOT}/levante-gpu
-    set SRUN_MPI        = pmix_v3
-else
+if ("${STACK}" != "cpu" && "${STACK}" != "gpu") then
     echo "ERROR: unknown stack '${STACK}' (expected cpu or gpu)"
     exit 1
 endif
+
+# Read this stack's definition out of ${STACKS_ENV}. The keys are prefixed with
+# the upper-cased stack name, e.g. LEVANTE_GPU_MPI_MODULE.
+set STACK_UC = `echo "${STACK}" | tr '[:lower:]' '[:upper:]'`
+
+set COMPILER_MODULE = `sed -n "s/^LEVANTE_${STACK_UC}_COMPILER_MODULE=//p" "${STACKS_ENV}"`
+set MPI_MODULE      = `sed -n "s/^LEVANTE_${STACK_UC}_MPI_MODULE=//p" "${STACKS_ENV}"`
+set DEPOT_NAME      = `sed -n "s/^LEVANTE_${STACK_UC}_DEPOT_NAME=//p" "${STACKS_ENV}"`
+set SRUN_MPI        = `sed -n "s/^LEVANTE_${STACK_UC}_SRUN_MPI=//p" "${STACKS_ENV}"`
+
+if ("${COMPILER_MODULE}" == "" || "${MPI_MODULE}" == "" || \
+    "${DEPOT_NAME}" == "" || "${SRUN_MPI}" == "") then
+    echo "ERROR: ${STACKS_ENV} does not define the '${STACK}' stack completely."
+    echo "Expected LEVANTE_${STACK_UC}_{COMPILER_MODULE,MPI_MODULE,DEPOT_NAME,SRUN_MPI}."
+    exit 1
+endif
+
+set DEPOT = ${DEPOT_ROOT}/${DEPOT_NAME}
 
 echo "============================================================"
 echo "ClimaAtmos Julia setup on Levante -- ${STACK}"
@@ -108,14 +132,31 @@ if (! -f "${PROJECT}/Project.toml") then
     exit 1
 endif
 
-# MPIPreferences must be a direct dependency for the project-local preference
-# to be visible. Check the dedicated .buildkite environment without resolving
-# the repository root environment, whose dependency graph is unrelated here.
+# MPIPreferences and CUDA_Runtime_jll must both be direct dependencies for
+# their project-local preferences to be visible: Base.get_preferences maps the
+# names in LocalPreferences.toml to UUIDs through the project's own deps, so a
+# preference written for a package that is only an indirect dependency is
+# silently ignored. CUDA_Runtime_jll arrives indirectly through CUDA, and
+# before it was listed the toolkit pin below was written, read back as an empty
+# dictionary, and the environment resolved to cuda=none.
+#
+# Check the dedicated .buildkite environment without resolving the repository
+# root environment, whose dependency graph is unrelated here.
+#
+# The Julia below contains no exclamation mark on purpose. tcsh performs
+# history expansion before quoting, and single quotes do not suppress it, so
+# one immediately followed by a word character is read as a history reference.
+# Negating haskey(...) that way aborts the whole script with
+# "haskey: Event not found." before Julia is ever started -- hence the loop
+# instead of a filter. Uses like pop!( and != elsewhere in this file are safe,
+# because expansion needs a word character to follow.
 ${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no \
-    -e 'using TOML; project = TOML.parsefile(ARGS[1]); haskey(get(project, "deps", Dict()), "MPIPreferences") || error("MPIPreferences is not a direct dependency")' \
-    "${PROJECT}/Project.toml"
+    -e 'using TOML; project = TOML.parsefile(ARGS[1]); deps = get(project, "deps", Dict()); for name in ARGS[2:end]; haskey(deps, name) || error(name * " is not a direct dependency"); end' \
+    "${PROJECT}/Project.toml" MPIPreferences CUDA_Runtime_jll
 if ($status != 0) then
-    echo "ERROR: MPIPreferences must be listed in ${PROJECT}/Project.toml."
+    echo "ERROR: MPIPreferences and CUDA_Runtime_jll must both be listed in"
+    echo "  ${PROJECT}/Project.toml"
+    echo "Their preferences are otherwise written but never read back."
     exit 1
 endif
 
@@ -266,7 +307,7 @@ echo
 #
 #   1. $CUDA_RUNTIME_VERSION, if set -- manual override, e.g. 13.0
 #   2. nvidia-smi, if this script is itself running on a GPU node
-#   3. the value recorded by the last GPU job (see runscripts/xmodel.gpu*)
+#   3. the value recorded by the last GPU job (see levante_gpu_common.sh)
 #   4. a two-minute probe job on the gpu partition
 #
 # Anything measured is cached in ${CUDA_VERSION_CACHE}; delete that file to
