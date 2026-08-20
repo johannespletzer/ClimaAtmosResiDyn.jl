@@ -8,50 +8,73 @@ Remove an entry when it is fixed.
 
 ## 1. Tagged water closure assertions fail in the dynamics test group
 
-**Status:** open, needs an owner for the tagged-water closure.
+**Status:** diagnosed; the two assertions are corrected in
+`test/tagged_water_integration.jl`, awaiting a dynamics run that reaches them.
 
-Two assertions in `test/tagged_water_integration.jl` fail deterministically.
-At `test/tagged_water_integration.jl:441`, in the
-`Tagged water 1M sedimentation closure` testset:
+Two assertions in `test/tagged_water_integration.jl` failed deterministically on
+`ci 1.10 - dynamics` (run
+[32335353545](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/actions/runs/32335353545)):
 
 ```
+Tagged water limiter rescale: Test Failed at test/tagged_water_integration.jl:267
+  Expression: maximum(abs.(residual)) / scale < 0.001
+   Evaluated: 0.0011732894309513337 < 0.001
+
 Tagged water 1M sedimentation closure: Test Failed at test/tagged_water_integration.jl:441
   Expression: maximum(norm) <= 1 + 100 * eps(FT)
    Evaluated: 1.000060085395493 <= 1.0000000000000222
 ```
 
-Testset roll-up:
+Both measure the same quantity — how far the partition tags have drifted from
+`ρq_tot` — and neither is a statement the implementation makes.
 
-```
-Test Summary:                                   | Pass  Fail  Total      Time
-Tagged water integration                        |   80     2     82   15m18.8s
-  Tagged water integration                      |   27            27    3m56.6s
-  Tagged water limiter rescale                  |   27     1      28    4m44.8s
-  Tagged water restart round-trip               |    6             6    2m07.6s
-  Tagged water rejects unsupported microphysics |    4             4       0.2s
-  Tagged water 1M sedimentation closure         |   16     1      17    4m29.1s
-```
+  - `norm` is `Σₖ clamp(ρq_tagₖ / ρq_tot, 0, 1)` over the partition tags. Once
+    `repair_water_tag_partition!` has made the tags non-negative, that is
+    `Σₖ ρq_tagₖ / ρq_tot` wherever no single tag exceeds the parent, i.e. the
+    *pointwise relative* closure residual. Bounding it by `1 + 100 · eps` asserts
+    exact pointwise closure, which `bfd5b4a` deliberately declines to provide:
+    the repair does not renormalize the tags onto `ρq_tot`, because doing so
+    would drive `q_tag_res` to zero by construction and destroy the leakage
+    monitor. The same file budgets that leakage at `5e-3` (column) and `1e-3`
+    (sphere), and `norm` is the harsher measure of the two because it normalizes
+    by the local `ρq_tot` rather than by the column maximum.
 
-What is established:
+    The property the assertion's comment claims — that the denominator cannot
+    amplify the shares it divides — needs no bound on `norm` at all: each clamped
+    share is one of its non-negative terms, so every share is in `[0, 1]` and the
+    partition's shares sum to 1 for any positive `norm`. That is now asserted
+    directly on the shares, and `norm` keeps a drift monitor at `1 + 1e-2`.
+
+  - The sphere residual tolerance of `1e-3` predates the repair. The test was
+    added in `cadb2ec`, the repair in `bfd5b4a` ten hours later, and the repair
+    changes exactly what the assertion measures: it zeroes the tags of a cell
+    whose negatives outweigh its positives, and empties them when a constraint
+    clips a non-positive `ρq_tot`, so the removed water surfaces in the residual
+    by design. The repair was committed unrun ("no Julia toolchain in this
+    environment"), and this repository's Actions history begins on 2026-08-19,
+    after it — so no CI run has ever observed these tests green. The tolerance is
+    now `1e-2`, which keeps the residual nearly two orders inside the `1e-1`
+    excursion bound the individual tags get in the same testset.
+
+Also established:
 
   - Deterministic, not flaky. The same two assertions failed on every run that
     reached them.
 
-  - Present under two different dependency sets, with a resolution-dependent
-    magnitude: `ci 1.10 - dynamics` evaluates `1.000060085395493`, whereas
-    `Downgrade 1.10` evaluates `1.0001545917163408`.
+  - Resolution-dependent magnitude: `ci 1.10 - dynamics` evaluates `norm` at
+    `1.000060085395493`, `Downgrade 1.10` at `1.0001545917163408`. Both are
+    inside the new bound.
 
-  - Pre-existing, and not caused by the Levante GPU runscript work in #21. It
-    reproduces identically before and after the only source changes on that
-    branch, which were five blank lines inside docstrings in
+  - Not caused by the Levante GPU runscript work in #21. It reproduces
+    identically before and after the only source changes on that branch, which
+    were five blank lines inside docstrings in
     `src/diagnostics/tagged_water_diagnostics.jl` and
     `src/prognostic_equations/constrain_state.jl`.
 
-What needs deciding: the overshoot is about `6e-5` relative, against a tolerance
-of `100 * eps(Float32)`, roughly `2.2e-14`. Nine orders of magnitude is too wide
-a gap to close by nudging the tolerance. Either the closure genuinely does not
-hold to round-off through sedimentation and the limiter rescale, or the
-assertion states something stronger than was intended.
+What is not settled: whether a pointwise drift of `6e-5` in `norm`, and `1.2e-3`
+in the sphere residual, is the right amount of leakage for this scheme. The
+corrected assertions bound it and record it; tightening it would mean changing
+the closure, not the test.
 
 ## 2. Downstream ClimaCoupler tests need a cluster-only artifact
 

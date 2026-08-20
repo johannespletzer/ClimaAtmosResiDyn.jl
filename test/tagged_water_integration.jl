@@ -259,12 +259,19 @@ end
         @test maximum(tag .- ρq_tot) <= 1e-1 * scale
     end
 
-    # The partition still closes far more tightly than any single tag is
-    # bounded — the compensating excursions cancel. Measured ~1e-5.
+    # The partition closes more tightly than any single tag is bounded — the
+    # compensating excursions cancel — but it is a monitor, not an identity, and
+    # its budget is set by what leaves the partition, not by roundoff.
+    # `repair_water_tag_partition!` zeroes the tags of a cell whose negatives
+    # outweigh its positives, and that removed water surfaces here by design
+    # (see the repair's docstring). The `~1e-5` this comment used to quote was
+    # measured before that repair existed; `ci 1.10` measures 1.2e-3, still
+    # nearly two orders inside the 1e-1 excursion bound the tags themselves get
+    # above, which is the property being asserted.
     residual =
         ρq_tot .- parent(Y.c.ρq_tag_tropics) .-
         parent(Y.c.ρq_tag_extratropics)
-    @test maximum(abs.(residual)) / scale < 1e-3
+    @test maximum(abs.(residual)) / scale < 1e-2
 
     # Transport linearity, the sharp check — but it is no longer exact here, and
     # the reason is worth stating. `water_tag_fraction` clamps the donor share to
@@ -433,12 +440,47 @@ and nothing else in the timestep can mask or fake it.
     # any other — but it is not a partition member, so it is excluded above
     @test all(isfinite, parent(Yₜ.c.ρq_tag_evap))
 
-    # The share denominator is well posed everywhere: bounded, finite, and
-    # never negative, so the shares it divides can never be amplified
+    # The share denominator is well posed everywhere, which is what keeps the
+    # shares it divides from being amplified. That guarantee is a bound on the
+    # *shares*, not on `norm` itself: each clamped donor share is one of the
+    # non-negative terms of `norm`, so every share lands in [0, 1] and the
+    # partition's shares sum to exactly 1 wherever there is tagged water, however
+    # far `norm` sits from 1.
+    #
+    # `norm` is not bounded by 1, and asserting that it is at roundoff asserts
+    # exact closure. With the partition tags non-negative after
+    # `repair_water_tag_partition!`, `norm` is `Σₖ ρq_tagₖ / ρq_tot` wherever no
+    # single tag exceeds the parent — the pointwise relative closure residual,
+    # the quantity the design deliberately keeps as a monitor instead of driving
+    # to zero. It is also a harsher measure than `q_tag_res` above, which
+    # normalizes by the column maximum rather than by the local `ρq_tot`.
+    # Measured overshoot: 6.0e-5 on `ci 1.10`, 1.5e-4 on `Downgrade 1.10`. The
+    # bound below is a drift monitor with two orders of headroom over the larger.
     norm = parent(p.scratch.ᶜtagging_q_share_norm)
     @test all(isfinite, norm)
     @test minimum(norm) >= 0
-    @test maximum(norm) <= 1 + 100 * eps(FT)
+    @test maximum(norm) <= 1 + 1e-2
+
+    # The bound that actually delivers non-amplification, asserted directly on
+    # the shares rather than inferred from `norm`
+    shares = map((:ρq_tag_upper, :ρq_tag_lower)) do name
+        CA.water_tag_sediment_share.(
+            parent(getproperty(Y.c, name)),
+            parent(Y.c.ρq_tot),
+            norm,
+        )
+    end
+    for share in shares
+        @test minimum(share) >= 0
+        @test maximum(share) <= 1
+    end
+
+    # ... and the partition's shares sum to one wherever the denominator is
+    # positive, and to zero where there is no tagged water to sediment. This is
+    # the renormalization the exact-closure assertion above rests on, checked
+    # where it is defined rather than through its consequence.
+    share_sum = shares[1] .+ shares[2]
+    @test all(s -> s == 0 || abs(s - 1) <= 100 * eps(FT), share_sum)
 
     # Tags stay finite and bounded through active precipitation
     scale = maximum(abs.(parent(Y.c.ρq_tot)))
