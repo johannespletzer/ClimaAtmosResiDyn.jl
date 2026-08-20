@@ -64,6 +64,82 @@ if [[ -z "${cpus}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Bind to the GPU's local cores that this rank was actually given, not to all
+# of them.
+#
+# sysfs lists the hardware's view: every logical CPU near the GPU, SMT
+# siblings included. Slurm's cpuset need not contain all of those --
+# `--hint=nomultithread` hands the rank the physical cores and keeps their
+# siblings out, and a non-exclusive allocation narrows it further.
+#
+# The difference is fatal rather than cosmetic, because numactl parses
+# `--physcpubind` with numa_parse_cpustring(), which resolves against the
+# current cpuset and returns nothing at all for a list reaching outside it.
+# numactl then prints "<16-31,144-159> is invalid" on stdout, dumps its usage
+# on stderr and exits 1 -- and since we exec it, that 1 is the rank's exit
+# status. srun kills the job on it, which is the opposite of the best-effort
+# binding described above.
+# ---------------------------------------------------------------------------
+
+levante_cpu_intersection() {
+    # Print the CPUs in both lists, in the same "0-3,8" form the kernel uses.
+    # Empty output means the two do not overlap.
+    awk -v a="$1" -v b="$2" '
+        function expand(list, set,   n, i, parts, range, lo, hi, j) {
+            n = split(list, parts, ",")
+            for (i = 1; i <= n; i++) {
+                if (parts[i] == "") continue
+                if (parts[i] ~ /-/) {
+                    split(parts[i], range, "-")
+                    lo = range[1] + 0
+                    hi = range[2] + 0
+                } else {
+                    lo = parts[i] + 0
+                    hi = lo
+                }
+                for (j = lo; j <= hi; j++) {
+                    set[j] = 1
+                    if (j > max) max = j
+                }
+            }
+        }
+        function flush(   piece) {
+            piece = (start == last) ? start : start "-" last
+            out = out (out == "" ? "" : ",") piece
+            start = -1
+        }
+        BEGIN {
+            expand(a, A)
+            expand(b, B)
+            start = -1
+            for (i = 0; i <= max; i++) {
+                if ((i in A) && (i in B)) {
+                    if (start < 0) start = i
+                    last = i
+                } else if (start >= 0) {
+                    flush()
+                }
+            }
+            if (start >= 0) flush()
+            print out
+        }
+    '
+}
+
+allowed="$(awk '/Cpus_allowed_list/ {print $2}' /proc/self/status)"
+bind_cpus="$(levante_cpu_intersection "${cpus}" "${allowed}")"
+
+if [[ -z "${bind_cpus}" ]]; then
+    levante_warn "none of GPU ${bdf}'s local cores (${cpus}) are in this rank's allocation (${allowed})"
+    exec "$@"
+fi
+
+# What the binding report checks itself against: it compares the affinity it
+# observes with the set asked for here, and so catches a binding that did not
+# take.
+export LEVANTE_RANK_BOUND_CPUS="${bind_cpus}"
+
+# ---------------------------------------------------------------------------
 # Pick the InfiniBand HCA attached to the same NUMA node as this GPU.
 #
 # Only for multi-node jobs. Within a node, UCX_TLS lists cuda_ipc, cma and mm,
@@ -107,13 +183,24 @@ fi
 # every rank's Mems_allowed_list spans all eight domains. taskset is the
 # fallback and binds cores only.
 if [[ -n "${numa}" && "${numa}" != "-1" ]] && command -v numactl >/dev/null 2>&1; then
-    exec numactl --physcpubind="${cpus}" --membind="${numa}" "$@"
+    # Probed with `true` before the exec. Anything numactl still refuses would
+    # otherwise become this rank's exit status and take the job down with it.
+    # 2>&1 because numactl names the offending argument on stdout and prints
+    # its usage on stderr, so only the pair of them identifies the problem.
+    if numactl_error="$(numactl --physcpubind="${bind_cpus}" \
+                                --membind="${numa}" true 2>&1)"
+    then
+        exec numactl --physcpubind="${bind_cpus}" --membind="${numa}" "$@"
+    fi
+
+    echo "rank ${SLURM_LOCALID:-?}: numactl refused --physcpubind=${bind_cpus}" \
+         "--membind=${numa} (${numactl_error%%$'\n'*}) -- falling back to taskset" >&2
 fi
 
 if command -v taskset >/dev/null 2>&1; then
     [[ -n "${numa}" && "${numa}" != "-1" ]] ||
         levante_warn "GPU ${bdf} reports no NUMA node; binding cores only"
-    exec taskset --cpu-list "${cpus}" "$@"
+    exec taskset --cpu-list "${bind_cpus}" "$@"
 fi
 
 levante_warn "neither numactl nor taskset is available"

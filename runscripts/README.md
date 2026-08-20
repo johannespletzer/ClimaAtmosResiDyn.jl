@@ -69,9 +69,16 @@ rank=0 gpu=0 bdf=0000:44:00.0 cores=16-31,144-159 membind=1 cgroup-numa=0-7 \
 ```
 
 - `MATCH` — the rank runs on the cores attached to its own GPU.
-- `MISMATCH` — it does not. The run still works; it is just slower than it
-  should be. Worth investigating before trusting a timing.
+- `MISMATCH` — the rank wrapper asked for one set of cores and the job is
+  running on another, so the binding did not take. The run still works; it is
+  just slower than it should be. Worth investigating before trusting a timing.
+- `UNBOUND` — the wrapper could not bind this rank and said why on stderr.
 - `UNCHECKED` — the topology could not be read from sysfs.
+
+`cores` is allowed to be a subset of `gpu-local-cores`. Slurm need not hand a
+rank every logical CPU near its GPU — `--hint=nomultithread` keeps the SMT
+siblings out — and the wrapper binds to the overlap of the two, never to cores
+the rank was not given.
 
 A rank that sees more than one GPU **fails the job deliberately**. All ranks
 would default to device 0 and share it: the run would complete and only the

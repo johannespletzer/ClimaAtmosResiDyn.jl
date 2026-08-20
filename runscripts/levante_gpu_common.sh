@@ -460,11 +460,25 @@ levante_gpu_report_binding() {
             local_cpus="$(cat "/sys/bus/pci/devices/${bdf}/local_cpulist" 2>/dev/null || echo unknown)"
             gpu_numa="$(cat "/sys/bus/pci/devices/${bdf}/numa_node" 2>/dev/null || echo unknown)"
 
-            verdict="MATCH"
-            if [[ "${local_cpus}" == "unknown" ]]; then
+            # The wrapper exports the core set it asked for, and that is what
+            # the affinity in force is compared against: a rank whose cores
+            # are a strict subset of gpu-local-cores is correctly bound
+            # whenever Slurm withheld the SMT siblings, so comparing against
+            # sysfs directly would report a mismatch that is not one.
+            wanted="${LEVANTE_RANK_BOUND_CPUS:-}"
+
+            if [[ -n "${wanted}" ]]; then
+                if [[ "${cpus}" == "${wanted}" ]]; then
+                    verdict="MATCH"
+                else
+                    verdict="MISMATCH -- bound to ${wanted}, running on ${cpus}"
+                fi
+            elif [[ "${local_cpus}" == "unknown" ]]; then
                 verdict="UNCHECKED"
             elif [[ "${cpus}" != "${local_cpus}" ]]; then
-                verdict="MISMATCH -- rank cores are not the GPU-local ones"
+                verdict="UNBOUND -- the wrapper did not bind this rank; see its warning above"
+            else
+                verdict="MATCH"
             fi
 
             echo "rank=${SLURM_LOCALID} gpu=${visible} bdf=${bdf}" \
