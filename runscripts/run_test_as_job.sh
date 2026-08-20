@@ -28,5 +28,5 @@ cd ~/git/ClimaAtmosResiDyn.jl
 setenv TEST_GROUP parameterizations
 julia +1.11 --project -e 'using Pkg; Pkg.test()'
 
-#setenv TEST_GROUP infrastructure 
+#setenv TEST_GROUP infrastructure
 #julia +1.11 --project -e 'import Pkg; Pkg.test()'
