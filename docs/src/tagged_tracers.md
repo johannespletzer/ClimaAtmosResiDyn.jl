@@ -210,14 +210,20 @@ integration test use this identity with the Held–Suarez source.
 See `config/model_configs/baroclinic_wave_tagged_tracers.yml` for a complete
 example, and `test/tagged_tracers_integration.jl` for the closure assertions.
 
-## Types and functions
+## API
+
+Rendered here so that the `@ref` links in these docstrings resolve; Documenter
+resolves `@ref` only against docstrings a `@docs` block splices into a page.
 
 ```@docs
-ClimaAtmos.TracerTag
 ClimaAtmos.TaggingModel
+ClimaAtmos.TracerTag
 ClimaAtmos.AbstractTagRegion
 ClimaAtmos.KNOWN_TAG_SOURCES
 ClimaAtmos.TAG_SOURCE_GROUPS
+ClimaAtmos.tag_region_from_config
+ClimaAtmos.tag_sources_from_config
+ClimaAtmos.is_tagged_tracer_name
 ClimaAtmos.tagging_scratch
 ClimaAtmos.snapshot_tagged_ρe_tot!
 ClimaAtmos.attribute_tagged_ρe_tot!
