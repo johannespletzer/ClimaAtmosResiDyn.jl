@@ -224,7 +224,7 @@ end
 A zonally symmetric surface temperature with a seasonal cycle [K], for use as
 the `f` of an `AnalyticTemperature`.
 
-The annual mean is [`zonally_symmetric_temperature`](@ref). On top of it sits
+The annual mean is `zonally_symmetric_temperature`. On top of it sits
 
     amplitude * sind(2 φ) * cos(2π (day - peak_day) / 365.25)
 

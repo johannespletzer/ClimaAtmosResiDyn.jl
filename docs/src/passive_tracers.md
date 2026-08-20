@@ -254,6 +254,22 @@ path, so it is the config to reach for when changing any of them.
     `implicit_diffusion: false` removes the per-tracer Jacobian blocks if the
     cost is still binding.
 
+### Types and functions
+
+```@docs
+ClimaAtmos.StratosphericPassiveTracers
+ClimaAtmos.SourceBox
+ClimaAtmos.GeometricHeight
+ClimaAtmos.TropopauseRelativeHeight
+ClimaAtmos.stratospheric_tracer_symbol
+ClimaAtmos.stratospheric_tracer_symbols
+ClimaAtmos.write_tracer_budget!
+ClimaAtmos.TropopauseParameters
+ClimaAtmos.climatological_tropopause_height
+ClimaAtmos.wmo_tropopause_scan_step
+ClimaAtmos.set_tropopause_height!
+```
+
 ## Adding a New Passive Tracer
 
 Adding a tracer is developer territory; see
