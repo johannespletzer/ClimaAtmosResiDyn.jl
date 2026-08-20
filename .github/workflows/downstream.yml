@@ -33,9 +33,19 @@ jobs:
       - uses: julia-actions/cache@v3
 
       - uses: julia-actions/julia-buildpkg@v1
+      # Pinned, not tracking main. ClimaCoupler 0ad056e0 added
+      # `initial_condition: "WeatherModel"` to config/atmos_configs/climaatmos_edonly.yml,
+      # the atmos config its AMIP test uses, and that path needs the
+      # `wxquest_initial_conditions` artifact, which is declared with no download
+      # block and so can only resolve through an Overrides.toml on a cluster that
+      # already holds the data. A GitHub runner can never fetch it, so the job
+      # fails on upstream data availability rather than on anything in this
+      # repository. 3d9c07c3 is the last commit this job passed against.
+      # See docs/known_issues.md, item 2, for what unpins it.
       - uses: actions/checkout@v7
         with:
           repository: 'CliMA/ClimaCoupler.jl'
+          ref: '3d9c07c3ef911991d0b98b70c52154e448feaa02'
           path: ClimaCoupler.jl
       - run: |
           julia --color=yes --project=ClimaCoupler.jl/experiments/AMIP/ -e 'using Pkg; Pkg.instantiate()'
