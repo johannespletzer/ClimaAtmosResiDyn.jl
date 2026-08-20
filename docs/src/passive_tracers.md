@@ -119,19 +119,19 @@ lowermost stratosphere without a source or put the lowest tropical band below
 the tropopause. Set `"altitude"` for bands at fixed heights above sea level
 instead.
 
-| Configuration key                     | Meaning                                              |
-|:------------------------------------- |:---------------------------------------------------- |
-| `tracer_source_latitude_bands`        | Number of latitude boxes (default 6)                 |
-| `tracer_source_latitude_width`        | Width of each latitude box, in degrees (default 10)  |
-| `tracer_source_height_bands`          | Number of height boxes (default 8)                   |
-| `tracer_source_band_depth`            | Depth of each height box, in m (default 2000)        |
-| `tracer_source_band_spacing`          | Distance between box bottoms, in m (default 5000)    |
-| `tracer_source_lowest_band_base`      | Base of the lowest box above the reference, in m     |
-| `tracer_source_height_coordinate`     | `"tropopause"` or `"altitude"`                        |
-| `tracer_production_rate`              | Mass-fraction production inside a region, in s⁻¹     |
-| `tracer_loss_timescale`               | E-folding time of the removal below the tropopause   |
-| `dt_tracer_budget`                    | How often the budget table is written                |
-| `tracer_source_boxes`                 | Explicit box list, overriding the grid keys above    |
+| Configuration key                 | Meaning                                             |
+|:--------------------------------- |:--------------------------------------------------- |
+| `tracer_source_latitude_bands`    | Number of latitude boxes (default 6)                |
+| `tracer_source_latitude_width`    | Width of each latitude box, in degrees (default 10) |
+| `tracer_source_height_bands`      | Number of height boxes (default 8)                  |
+| `tracer_source_band_depth`        | Depth of each height box, in m (default 2000)       |
+| `tracer_source_band_spacing`      | Distance between box bottoms, in m (default 5000)   |
+| `tracer_source_lowest_band_base`  | Base of the lowest box above the reference, in m    |
+| `tracer_source_height_coordinate` | `"tropopause"` or `"altitude"`                      |
+| `tracer_production_rate`          | Mass-fraction production inside a region, in s⁻¹    |
+| `tracer_loss_timescale`           | E-folding time of the removal below the tropopause  |
+| `dt_tracer_budget`                | How often the budget table is written               |
+| `tracer_source_boxes`             | Explicit box list, overriding the grid keys above   |
 
 Tracer `(i, k)` is `Y.c.ρq_gas_y<i>z<k>` and is output as `q_gas_y<i>z<k>`.
 

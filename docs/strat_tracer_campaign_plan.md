@@ -12,18 +12,18 @@ configuration, a raised model top, and a job chain that actually chains.
 
 Decisions taken with the user:
 
-- **Free-running transient**, not nudged. ClimaAtmos has no global nudging — the
-  `config == "column"` assertion in `get_external_forcing_model`
-  (`src/config/model_getters.jl:836-838`) fires for the reanalysis forcing modes.
-  The run reproduces stratospheric climate statistics, not the observed sequence
-  of SSWs or the QBO.
-- **Coupled AMIP surface** via ClimaCoupler: prescribed observed SST and sea ice
-  over 1979–2021. This is the main track; the seasonal analytic SST added to
-  ClimaAtmos is the fallback.
-- **Sampled boxes, not a tiling**, one model layer deep.
-- **1979-01-01 → 2021-01-01** (`t_end: "15341days"` = 42×365 + 11 leap days).
-  ~10 y is tracer spin-up, so ~32 usable years.
-- **Two members with disjoint boxes.** Compile time grows as N^2.9.
+  - **Free-running transient**, not nudged. ClimaAtmos has no global nudging — the
+    `config == "column"` assertion in `get_external_forcing_model`
+    (`src/config/model_getters.jl:836-838`) fires for the reanalysis forcing modes.
+    The run reproduces stratospheric climate statistics, not the observed sequence
+    of SSWs or the QBO.
+  - **Coupled AMIP surface** via ClimaCoupler: prescribed observed SST and sea ice
+    over 1979–2021. This is the main track; the seasonal analytic SST added to
+    ClimaAtmos is the fallback.
+  - **Sampled boxes, not a tiling**, one model layer deep.
+  - **1979-01-01 → 2021-01-01** (`t_end: "15341days"` = 42×365 + 11 leap days).
+    ~10 y is tracer spin-up, so ~32 usable years.
+  - **Two members with disjoint boxes.** Compile time grows as N^2.9.
 
 Constraints: 24,000 node-hours this quarter, 8 h wallclock per job.
 
@@ -74,26 +74,26 @@ Checked against ClimaCoupler at `953c273`.
 
 ### What it would take
 
-1. **A coupler config**, modelled on `amip_edonly.yml`: `mode_name: "amip"`,
-   `surface_setup: "PrescribedSurface"`, `albedo_model: "CouplerAlbedo"`,
-   `land_model: "bucket"`, `dt_cpl: "120secs"`, and `checkpoint_dt: "30days"` to
-   stay aligned with `dt_tracer_budget` and the diagnostic accumulation windows.
-2. **Our atmos config, pointed at by `atmos_config_file`.** Config precedence is
-   `merge(atmos_default, coupler_default_cli, atmos_config_dict, coupler_config_dict)`
-   (`src/Input.jl:404-418`), so **the coupler config wins over the atmos config
-   file** — keep the two from setting the same key. The path is resolved with
-   `joinpath(pkgdir(ClimaCoupler), atmos_config_file)`, so an absolute path
-   pointing back into this repo works; a relative one must live inside the
-   coupler checkout.
-3. **The atmos config is left alone.** `surface_setup` and `albedo_model` are
-   overridden from the coupler config instead of being removed, so the member
-   configs stay runnable standalone on the fallback. `prognostic_surface` is
-   inert under coupling. The delta from `climaatmos_edonly.yml` is
-   `z_elem: 120`, `z_max: 80000.0`, `dz_bottom: 200.0`, our sponge TOML, and the
-   `tracer_source_boxes` block.
-4. **A second Julia environment on Levante** — `experiments/AMIP/Project.toml`,
-   instantiated with the fork dev'd in, on its own depot alongside the existing
-   one. `runscripts/setup-julia-levante.tcsh` would need a variant.
+ 1. **A coupler config**, modelled on `amip_edonly.yml`: `mode_name: "amip"`,
+    `surface_setup: "PrescribedSurface"`, `albedo_model: "CouplerAlbedo"`,
+    `land_model: "bucket"`, `dt_cpl: "120secs"`, and `checkpoint_dt: "30days"` to
+    stay aligned with `dt_tracer_budget` and the diagnostic accumulation windows.
+ 2. **Our atmos config, pointed at by `atmos_config_file`.** Config precedence is
+    `merge(atmos_default, coupler_default_cli, atmos_config_dict, coupler_config_dict)`
+    (`src/Input.jl:404-418`), so **the coupler config wins over the atmos config
+    file** — keep the two from setting the same key. The path is resolved with
+    `joinpath(pkgdir(ClimaCoupler), atmos_config_file)`, so an absolute path
+    pointing back into this repo works; a relative one must live inside the
+    coupler checkout.
+ 3. **The atmos config is left alone.** `surface_setup` and `albedo_model` are
+    overridden from the coupler config instead of being removed, so the member
+    configs stay runnable standalone on the fallback. `prognostic_surface` is
+    inert under coupling. The delta from `climaatmos_edonly.yml` is
+    `z_elem: 120`, `z_max: 80000.0`, `dz_bottom: 200.0`, our sponge TOML, and the
+    `tracer_source_boxes` block.
+ 4. **A second Julia environment on Levante** — `experiments/AMIP/Project.toml`,
+    instantiated with the fork dev'd in, on its own depot alongside the existing
+    one. `runscripts/setup-julia-levante.tcsh` would need a variant.
 
 ### What does not change
 
@@ -161,11 +161,11 @@ explicitly", `implicit/implicit_tendency.jl:182`). So refining the vertical grid
 does tighten the tracer CFL. Comparing `dt/Δz` against the two shipped configs
 that already run this tendency:
 
-| config | 0.5 km | 2 km | 5 km | 10 km | 15 km |
-|---|---|---|---|---|---|
-| `passive_stratospheric_tracers.yml` (ze63, dt 300) | 3.899 | 1.404 | 0.628 | 0.323 | 0.240 |
-| `numerics_sphere_he16ze63.yml` (dt 120) | 1.559 | 0.562 | 0.251 | 0.129 | 0.096 |
-| **proposed ze120 / 200 m (dt 120)** | 0.573 | 0.490 | 0.386 | 0.289 | 0.239 |
+| config                                             | 0.5 km | 2 km  | 5 km  | 10 km | 15 km |
+|:-------------------------------------------------- |:------ |:----- |:----- |:----- |:----- |
+| `passive_stratospheric_tracers.yml` (ze63, dt 300) | 3.899  | 1.404 | 0.628 | 0.323 | 0.240 |
+| `numerics_sphere_he16ze63.yml` (dt 120)            | 1.559  | 0.562 | 0.251 | 0.129 | 0.096 |
+| **proposed ze120 / 200 m (dt 120)**                | 0.573  | 0.490 | 0.386 | 0.289 | 0.239 |
 
 The proposal is *less* CFL-exposed at every height than the shipped tracer config,
 and at most ~2× more than `he16ze63` in the mid-troposphere. `dt = 120 s` is
@@ -208,14 +208,14 @@ physics.)
 note `linspace` over the *level index* does not give even spacing on a
 tanh-stretched mesh, yielding gaps growing 5.6 → 11.6 km.
 
-| box | level (0-based) | z centre | depth | gap | face edges (m) |
-|---|---|---|---|---|---|
-| 1 | 34 | 10.20 km | 415 m | — | 9989.7 – 10404.8 |
-| 2 | 52 | 19.11 km | 581 m | 8.91 km | 18821.2 – 19402.1 |
-| 3 | 66 | 28.26 km | 728 m | 9.15 km | 27896.0 – 28623.5 |
-| 4 | 77 | 36.91 km | 844 m | 8.65 km | 36485.7 – 37329.9 |
-| 5 | 87 | 45.85 km | 943 m | 8.94 km | 45380.1 – 46322.6 |
-| 6 | 96 | 54.68 km | 1017 m | 8.83 km | 54173.9 – 55191.1 |
+| box | level (0-based) | z centre | depth  | gap     | face edges (m)    |
+|:--- |:--------------- |:-------- |:------ |:------- |:----------------- |
+| 1   | 34              | 10.20 km | 415 m  | —       | 9989.7 – 10404.8  |
+| 2   | 52              | 19.11 km | 581 m  | 8.91 km | 18821.2 – 19402.1 |
+| 3   | 66              | 28.26 km | 728 m  | 9.15 km | 27896.0 – 28623.5 |
+| 4   | 77              | 36.91 km | 844 m  | 8.65 km | 36485.7 – 37329.9 |
+| 5   | 87              | 45.85 km | 943 m  | 8.94 km | 45380.1 – 46322.6 |
+| 6   | 96              | 54.68 km | 1017 m | 8.83 km | 54173.9 – 55191.1 |
 
 The face heights in metres are the specification; confirm the index convention
 against the model's own grid in calibration.
@@ -232,10 +232,10 @@ tropopause is above the box, so at 0°, ±25° and ±35° it would sit in the
 troposphere and report τ ≈ `tracer_loss_timescale`. Dropping those five leaves
 49 sampled boxes.
 
-| Member | levels | boxes | tracers |
-|---|---|---|---|
-| A | 34 (±60, ±80 only), 66, 87 | 4 + 9 + 9 | 22 + 1 reference = 23 |
-| B | 52, 77, 96 | 9 + 9 + 9 | 27 |
+| Member | levels                     | boxes     | tracers               |
+|:------ |:-------------------------- |:--------- |:--------------------- |
+| A      | 34 (±60, ±80 only), 66, 87 | 4 + 9 + 9 | 22 + 1 reference = 23 |
+| B      | 52, 77, 96                 | 9 + 9 + 9 | 27                    |
 
 The reference box spans −90…90°, **20–55 km** (not 10–55 km: at fixed altitude the
 source is ∝ ρ, so a 10 km base would put most of the emission in the upper
@@ -276,17 +276,17 @@ From `perf/tracer_scaling.jl`: 0.613 s/step over 6·4²·16·31 = 47,616 cells �
 6·16²·16·120 = 2,949,120 cells, ×2 for RRTMGP all-sky + EDMF, 128 ranks/node at
 ~60% intra-node efficiency, 262,980 steps/yr at dt 120 s, 42 years:
 
-| | member A (23 tracers) | member B (27) |
-|---|---|---|
-| dynamics + physics | 0.99 s/step | 0.99 s/step |
-| tracers | 0.81 s/step | 0.95 s/step |
-| per simulated year | 131 node-h | 142 node-h |
-| 42 years | 5,520 node-h | 5,950 node-h |
+|                    | member A (23 tracers) | member B (27) |
+|:------------------ |:--------------------- |:------------- |
+| dynamics + physics | 0.99 s/step           | 0.99 s/step   |
+| tracers            | 0.81 s/step           | 0.95 s/step   |
+| per simulated year | 131 node-h            | 142 node-h    |
+| 42 years           | 5,520 node-h          | 5,950 node-h  |
 
 | nodes/job | assumed penalty | total node-h | elapsed (member B) |
-|---|---|---|---|
-| 4 | ~25% | ~14,300 | ~77 days |
-| 6 | ~50% | ~17,200 | ~62 days |
+|:--------- |:--------------- |:------------ |:------------------ |
+| 4         | ~25%            | ~14,300      | ~77 days           |
+| 6         | ~50%            | ~17,200      | ~62 days           |
 
 **Elapsed time, not node-hours, is the scarce resource** — a quarter is ~91 days
 and both members run in parallel. Spend spare node-hours on wider parallelism.
@@ -312,27 +312,27 @@ If calibration comes in high, cut in this order: shorten to 30 years; drop level
 The deliverable is τ(φ, z) on a 9 × 6 lattice with 10°-of-20° latitude gaps and
 ~9 km height gaps.
 
-1. **Interpolate log τ, not τ.** τ grows roughly exponentially with height above
-   the tropopause and spans orders of magnitude between surf zone and tropical
-   pipe.
-2. **Do not interpolate across a transport barrier.** τ(φ) has a near-step at the
-   subtropical barrier and the vortex edge; a smooth interpolant invents a ramp and
-   places it arbitrarily. The vortex edge is seasonal, so an annual-mean
-   interpolant is doubly wrong there. The 25°/35° pair converts the subtropical
-   step into a measurement; elsewhere report sampled values with the gap marked.
-3. **Average τ over multiple years.** The source is `ρ · production_rate` inside
-   the mask, so it tracks air density and varies seasonally even with a fixed mask;
-   and burden/source is an instantaneous ratio in a seasonally varying
-   stratosphere. Use multi-year means, and keep `lifetime_from_loss` (burden/loss)
-   as a cross-check.
-4. **Boxes can be summed.** The tracers are linear and share the transport, so
-   summing k boxes gives burden ΣMᵢ and source ΣSᵢ exactly, i.e. the
-   source-weighted mean of the τᵢ. What is *not* valid is inferring a
-   whole-stratosphere τ from a sample that is not volume-proportional — which is
-   why the full-domain reference box exists.
-5. **Box depth varies, 415–1017 m**, and cell count per box varies over
-   orography. Neither biases τ, but the boxes are not equal-depth samples, so do
-   not read vertical structure finer than that.
+ 1. **Interpolate log τ, not τ.** τ grows roughly exponentially with height above
+    the tropopause and spans orders of magnitude between surf zone and tropical
+    pipe.
+ 2. **Do not interpolate across a transport barrier.** τ(φ) has a near-step at the
+    subtropical barrier and the vortex edge; a smooth interpolant invents a ramp and
+    places it arbitrarily. The vortex edge is seasonal, so an annual-mean
+    interpolant is doubly wrong there. The 25°/35° pair converts the subtropical
+    step into a measurement; elsewhere report sampled values with the gap marked.
+ 3. **Average τ over multiple years.** The source is `ρ · production_rate` inside
+    the mask, so it tracks air density and varies seasonally even with a fixed mask;
+    and burden/source is an instantaneous ratio in a seasonally varying
+    stratosphere. Use multi-year means, and keep `lifetime_from_loss` (burden/loss)
+    as a cross-check.
+ 4. **Boxes can be summed.** The tracers are linear and share the transport, so
+    summing k boxes gives burden ΣMᵢ and source ΣSᵢ exactly, i.e. the
+    source-weighted mean of the τᵢ. What is *not* valid is inferring a
+    whole-stratosphere τ from a sample that is not volume-proportional — which is
+    why the full-domain reference box exists.
+ 5. **Box depth varies, 415–1017 m**, and cell count per box varies over
+    orography. Neither biases τ, but the boxes are not equal-depth samples, so do
+    not read vertical structure finer than that.
 
 ## Work items
 
@@ -359,13 +359,13 @@ share both a latitude and a height range, since they would claim the same name.
 
 Touchpoints beyond the tendency — the outer product is assumed in all of these:
 
-- `chemistry_tendency!` nested `for k, i` loop (`:334-397`)
-- `stratospheric_tracer_budget` (`:453-485`) and `write_tracer_budget!` (`:543-582`)
-- `stratospheric_tracer_symbols` (`:213-219`) and the `@generated`
-  `stratospheric_tracer_fields` (`:232-240`)
-- `chemistry_variables` (`src/setups/common/prognostic_variables.jl:152-160`)
-- diagnostic registration (`src/diagnostics/stratospheric_tracer_diagnostics.jl:121-122`)
-- config plumbing (`src/config/model_getters.jl:1411-1425`)
+  - `chemistry_tendency!` nested `for k, i` loop (`:334-397`)
+  - `stratospheric_tracer_budget` (`:453-485`) and `write_tracer_budget!` (`:543-582`)
+  - `stratospheric_tracer_symbols` (`:213-219`) and the `@generated`
+    `stratospheric_tracer_fields` (`:232-240`)
+  - `chemistry_variables` (`src/setups/common/prognostic_variables.jl:152-160`)
+  - diagnostic registration (`src/diagnostics/stratospheric_tracer_diagnostics.jl:121-122`)
+  - config plumbing (`src/config/model_getters.jl:1411-1425`)
 
 Decide and document the naming scheme for the explicit path (the `y{i}z{k}`
 convention has no meaning without an outer product), and keep band edges in the
@@ -428,17 +428,17 @@ acceptable throughput.
 
 Production grid, 27 tracers, full transient physics. Measure:
 
-- Strong scaling at 4 and 6 nodes — this sets the node count.
-- `sypd` and `wall_time_per_timestep` (`timed_solve!`, `src/simulation/solve.jl:57-80`
-  — note it does *not* report compile time; take that from the log timestamps).
-- **Cells captured per source box, per column** — must be ≥1 everywhere; record
-  the distribution, and confirm the level-index convention against the model grid.
-- Tracer CFL and stability at `dt = 120 s`.
-- Diagnosed `ztrop` by latitude and season, to quantify level-34 straddling.
-- **Temporal coverage of the prescribed O3 and CO2 inputs over 1979–2021**
-  (`ozone_cache` / `co2_cache`, `src/cache/tracer_cache.jl:17-76`). Coverage lives
-  in ClimaArtifacts, not this repo; silent flat extrapolation of ozone would
-  invalidate the campaign.
+  - Strong scaling at 4 and 6 nodes — this sets the node count.
+  - `sypd` and `wall_time_per_timestep` (`timed_solve!`, `src/simulation/solve.jl:57-80`
+    — note it does *not* report compile time; take that from the log timestamps).
+  - **Cells captured per source box, per column** — must be ≥1 everywhere; record
+    the distribution, and confirm the level-index convention against the model grid.
+  - Tracer CFL and stability at `dt = 120 s`.
+  - Diagnosed `ztrop` by latitude and season, to quantify level-34 straddling.
+  - **Temporal coverage of the prescribed O3 and CO2 inputs over 1979–2021**
+    (`ozone_cache` / `co2_cache`, `src/cache/tracer_cache.jl:17-76`). Coverage lives
+    in ClimaArtifacts, not this repo; silent flat extrapolation of ozone would
+    invalidate the campaign.
 
 ### 4. Job chaining — done
 
@@ -615,41 +615,41 @@ gaps marked rather than bridged.
 
 ## Known limitations to record with the results
 
-- On the coupled main track the surface is observed SST and sea ice, so this is
-  no longer a limitation. If the campaign falls back to atmosphere-only, it
-  returns: the analytic seasonal cycle is an ocean one, with no land or sea-ice
-  seasonality, no ENSO and no SST trend.
-- `dz_bottom = 200 m` coarsens the boundary layer, degrading EDMF and surface
-  fluxes.
-- CH4, N2O and the CFCs are fixed constants (`radiation.jl:210-248`); only CO2 and
-  O3 vary in time.
-- No volcanic aerosol forcing exists: El Chichón (1982) and Pinatubo (1991) are
-  both absent from a period that contains them.
-- Restarts are not bit-reproducible unless `reproducible_restart: true`, not
-  recommended for production.
-- Grid and tracer set are frozen for the chain: the space is deserialized from the
-  checkpoint and `Setups.initial_state` is never called on the restart branch
-  (`AtmosSimulations.jl:364-383`), so changing `h_elem`, `z_elem`, `z_max` or any
-  source-box key invalidates the run. The only guard is a soft `@warn` on the model
-  hash (`restart.jl:37`).
+  - On the coupled main track the surface is observed SST and sea ice, so this is
+    no longer a limitation. If the campaign falls back to atmosphere-only, it
+    returns: the analytic seasonal cycle is an ocean one, with no land or sea-ice
+    seasonality, no ENSO and no SST trend.
+  - `dz_bottom = 200 m` coarsens the boundary layer, degrading EDMF and surface
+    fluxes.
+  - CH4, N2O and the CFCs are fixed constants (`radiation.jl:210-248`); only CO2 and
+    O3 vary in time.
+  - No volcanic aerosol forcing exists: El Chichón (1982) and Pinatubo (1991) are
+    both absent from a period that contains them.
+  - Restarts are not bit-reproducible unless `reproducible_restart: true`, not
+    recommended for production.
+  - Grid and tracer set are frozen for the chain: the space is deserialized from the
+    checkpoint and `Setups.initial_state` is never called on the restart branch
+    (`AtmosSimulations.jl:364-383`), so changing `h_elem`, `z_elem`, `z_max` or any
+    source-box key invalidates the run. The only guard is a soft `@warn` on the model
+    hash (`restart.jl:37`).
 
 ## Unverified assumptions
 
 Label these as such in any write-up:
 
-1. The ×2 physics factor, 60% intra-node efficiency, and 25%/50% multi-node
-   penalties; and that per-cell cost is resolution-independent.
-2. Compile-time extrapolation (~25 min at 27 tracers) — a floor, measured on a
-   cheaper physics stack.
-3. That the `era5_inst_model_levels` artifact holds only 2010-01-01.
-4. Temporal coverage of the O3 and CO2 inputs over 1979–2021 — **checked in
-   calibration**, and campaign-invalidating if wrong.
-5. DKRZ specifics: `/pool/data/ERA5` layout, 128 cores/node, queue turnaround over
-   ~200 jobs, and the allocation itself — including whether it covers the `gpu`
-   partition, which the coupled route would likely need.
-6. `dt = 120 s` stability on this grid — argued from the `dt/Δz` table, confirmed
-   in calibration.
-7. Existence of a 1979-01-01 pre-processed ERA5 file reaching into the mesosphere.
+ 1. The ×2 physics factor, 60% intra-node efficiency, and 25%/50% multi-node
+    penalties; and that per-cell cost is resolution-independent.
+ 2. Compile-time extrapolation (~25 min at 27 tracers) — a floor, measured on a
+    cheaper physics stack.
+ 3. That the `era5_inst_model_levels` artifact holds only 2010-01-01.
+ 4. Temporal coverage of the O3 and CO2 inputs over 1979–2021 — **checked in
+    calibration**, and campaign-invalidating if wrong.
+ 5. DKRZ specifics: `/pool/data/ERA5` layout, 128 cores/node, queue turnaround over
+    ~200 jobs, and the allocation itself — including whether it covers the `gpu`
+    partition, which the coupled route would likely need.
+ 6. `dt = 120 s` stability on this grid — argued from the `dt/Δz` table, confirmed
+    in calibration.
+ 7. Existence of a 1979-01-01 pre-processed ERA5 file reaching into the mesosphere.
 
 ## Fallback: atmosphere-only surface temperature
 
@@ -663,53 +663,57 @@ no thermal one. `ExternalTemperature` reads
 If the coupled route proves impractical — allocation, GPU stack, or schedule —
 these are the atmosphere-only options, in order of preference:
 
-1. **Seasonally varying analytic SST** — **implemented**, as
-   `prognostic_surface: "SeasonalSST"` (`Setups.SeasonalOceanTemperature`). The
-   member configs currently set this, and it is what the campaign falls back to.
-2. **Steady analytic SST** — the previous default; no reason to prefer it now.
-3. **`prognostic_surface: "SlabOceanSST"`** — config only, but drifts to its own
-   equilibrium and adds spin-up.
-4. **ClimaCoupler AMIP** — promoted to the main track; see the surface-boundary
-   section above.
+ 1. **Seasonally varying analytic SST** — **implemented**, as
+    `prognostic_surface: "SeasonalSST"` (`Setups.SeasonalOceanTemperature`). The
+    member configs currently set this, and it is what the campaign falls back to.
 
-5. **Prescribed observed surface temperature** — to be implemented separately,
-   then folded back into this plan. Shape: a marker `SurfaceTemperature` subtype
-   plus a cache entry holding a global `TimeVaryingInput`, mirroring
-   `ozone_cache` (`src/cache/tracer_cache.jl:17-30`). The marker/cache split is
-   required because `AtmosModel` is built before the spaces exist
-   (`AtmosSimulations.jl:376`), so the type cannot hold a `Field`.
+ 2. **Steady analytic SST** — the previous default; no reason to prefer it now.
 
-   Data: the user has HadISST1 on Levante (monthly, 1°, 1870–present, so it
-   covers 1979–2021 and is finer than the 1.85° grid). Caveats:
-   - **HadISST is ocean-only**; land carries a fill value. Standalone ClimaAtmos
-     has no land model and needs a temperature everywhere, so HadISST cannot be
-     the sole source. ERA5 skin temperature covers land, ocean and sea ice in one
-     field and is the better single choice; ERA5 `skt` over land blended with
-     HadISST over ocean is the higher-effort option.
-   - HadISST supplies sea-ice **concentration** (`sic`), not temperature. Mapping
-     ice points to roughly the freezing point gives the thermal effect but not the
-     radiative one: `albedo_model` defaults to `ConstantAlbedo` and the only
-     alternative, `RegressionFunctionAlbedo`, is an open-ocean formula
-     (`model_getters.jl:1342-1354`). Sea ice would be radiatively invisible.
-   - Apply the Taylor et al. (2000) mid-month adjustment before feeding monthly
-     means to `TimeVaryingInput`/`LinearInterpolation`, or the seasonal amplitude
-     is damped ~10–20% at the turning points.
+ 3. **`prognostic_surface: "SlabOceanSST"`** — config only, but drifts to its own
+    equilibrium and adds spin-up.
+
+ 4. **ClimaCoupler AMIP** — promoted to the main track; see the surface-boundary
+    section above.
+
+ 5. **Prescribed observed surface temperature** — to be implemented separately,
+    then folded back into this plan. Shape: a marker `SurfaceTemperature` subtype
+    plus a cache entry holding a global `TimeVaryingInput`, mirroring
+    `ozone_cache` (`src/cache/tracer_cache.jl:17-30`). The marker/cache split is
+    required because `AtmosModel` is built before the spaces exist
+    (`AtmosSimulations.jl:376`), so the type cannot hold a `Field`.
+
+    Data: the user has HadISST1 on Levante (monthly, 1°, 1870–present, so it
+    covers 1979–2021 and is finer than the 1.85° grid). Caveats:
+
+      + **HadISST is ocean-only**; land carries a fill value. Standalone ClimaAtmos
+        has no land model and needs a temperature everywhere, so HadISST cannot be
+        the sole source. ERA5 skin temperature covers land, ocean and sea ice in one
+        field and is the better single choice; ERA5 `skt` over land blended with
+        HadISST over ocean is the higher-effort option.
+      + HadISST supplies sea-ice **concentration** (`sic`), not temperature. Mapping
+        ice points to roughly the freezing point gives the thermal effect but not the
+        radiative one: `albedo_model` defaults to `ConstantAlbedo` and the only
+        alternative, `RegressionFunctionAlbedo`, is an open-ocean formula
+        (`model_getters.jl:1342-1354`). Sea ice would be radiatively invisible.
+      + Apply the Taylor et al. (2000) mid-month adjustment before feeding monthly
+        means to `TimeVaryingInput`/`LinearInterpolation`, or the seasonal amplitude
+        is damped ~10–20% at the turning points.
 
 ## Verification
 
-1. `TEST_GROUP=parameterizations` and `TEST_GROUP=restarts` stay green after the
-   source-box change.
-2. Unchanged CI path still runs (`passive_stratospheric_tracers_ci` with
-   `numerics_sphere_he6ze31.yml`).
-3. New config, 2-day run at reduced resolution: `Y.c` carries the expected tracer
-   count, box edges match the configured faces, every box captures ≥1 cell centre
-   in every column, `ztrop` is diagnosed, budget table is written.
-4. Restart proof: run through two checkpoints, kill, resubmit, confirm
-   `auto_detect_restart_file` picks the highest-numbered output directory holding a
-   checkpoint and that `t_start` matches; confirm the per-segment `t_end` logic
-   lands on a 30-day boundary.
-5. Coupled smoke test: a short AMIP run with one member config, confirming the
-   tracers appear in the coupled prognostic state, the budget table is written,
-   and a checkpoint/restart round-trip preserves them. `test/coupler_compatibility.jl`
-   covers the surface API but not the tracer state, so this is the gap it leaves.
-6. Calibration run per work item 3, then re-derive the budget before launching.
+ 1. `TEST_GROUP=parameterizations` and `TEST_GROUP=restarts` stay green after the
+    source-box change.
+ 2. Unchanged CI path still runs (`passive_stratospheric_tracers_ci` with
+    `numerics_sphere_he6ze31.yml`).
+ 3. New config, 2-day run at reduced resolution: `Y.c` carries the expected tracer
+    count, box edges match the configured faces, every box captures ≥1 cell centre
+    in every column, `ztrop` is diagnosed, budget table is written.
+ 4. Restart proof: run through two checkpoints, kill, resubmit, confirm
+    `auto_detect_restart_file` picks the highest-numbered output directory holding a
+    checkpoint and that `t_start` matches; confirm the per-segment `t_end` logic
+    lands on a 30-day boundary.
+ 5. Coupled smoke test: a short AMIP run with one member config, confirming the
+    tracers appear in the coupled prognostic state, the budget table is written,
+    and a checkpoint/restart round-trip preserves them. `test/coupler_compatibility.jl`
+    covers the surface API but not the tracer state, so this is the gap it leaves.
+ 6. Calibration run per work item 3, then re-derive the budget before launching.

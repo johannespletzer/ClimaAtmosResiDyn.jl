@@ -186,6 +186,7 @@ take precedence for `flux_scheme` and `boundary_overrides`; for `temperature`,
   - `surface_setup` sets [`flux_scheme`](@ref "Flux scheme (flux_scheme)"):
     `"DefaultExchangeCoefficients"` (default), `"DefaultMoninObukhov"`, or
     `"PrescribedSurface"` (→ `nothing`).
+
   - `prognostic_surface` sets [`temperature`](@ref "Temperature source (temperature)"):
     `"PrescribedSST"` (default), `"SeasonalSST"`, or `"SlabOceanSST"`
     (→ `SlabOceanTemperature`).
@@ -203,6 +204,7 @@ take precedence for `flux_scheme` and `boundary_overrides`; for `temperature`,
     neither of which exists in standalone ClimaAtmos, so it is an improvement on
     the steady profile rather than a substitute for prescribed observed surface
     temperatures.
+
   - `albedo_model` sets [`surface_albedo`](@ref "Albedo (surface_albedo)"):
     `"ConstantAlbedo"` (default), `"RegressionFunctionAlbedo"`, or `"CouplerAlbedo"`.
 

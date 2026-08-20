@@ -81,8 +81,7 @@ state transition so that a whole column can be swept with
     confirmed height from then on. Once set it is never revised, so the scan
     returns the *lowest* level satisfying the definition.
 
-A candidate is opened at the lowest level in `[search_min_height,
-search_max_height]` whose lapse rate over the layer above it has fallen to the
+A candidate is opened at the lowest level in `[search_min_height, search_max_height]` whose lapse rate over the layer above it has fallen to the
 threshold. It is confirmed once the scan has climbed `consistency_depth` above
 it without the mean lapse rate from the candidate to any intervening level
 exceeding the threshold, and dropped as soon as one of them does — in which

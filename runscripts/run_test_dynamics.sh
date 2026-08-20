@@ -10,7 +10,7 @@ module load openmpi/4.1.2-gcc-11.2.0
 setenv JULIA_DEPOT_PATH ${HOME}/.julia/depots/levante-cpu
 cd ~/git/ClimaAtmosResiDyn.jl
 
-setenv TEST_GROUP dynamics 
+setenv TEST_GROUP dynamics
 
 julia +1.11 --project -e 'using Pkg; Pkg.add(name="CloudMicrophysics", version="0.37.1")'
 julia +1.11 --project -e 'using Pkg; Pkg.test()'

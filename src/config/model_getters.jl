@@ -1493,12 +1493,15 @@ function parse_tracer_source_boxes(box_specs, ::Type{FT}) where {FT}
                 "$extra_list; expected only $required_list",
             )
         end
-        push!(boxes, SourceBox(
-            FT(spec["latitude_lower"]),
-            FT(spec["latitude_upper"]),
-            FT(spec["height_lower"]),
-            FT(spec["height_upper"]),
-        ))
+        push!(
+            boxes,
+            SourceBox(
+                FT(spec["latitude_lower"]),
+                FT(spec["latitude_upper"]),
+                FT(spec["height_lower"]),
+                FT(spec["height_upper"]),
+            ),
+        )
     end
     return boxes
 end
