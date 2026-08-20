@@ -7,6 +7,9 @@ on:
 jobs:
   doc-preview-cleanup:
     runs-on: ubuntu-latest
+    # The job force-pushes the rewritten gh-pages branch.
+    permissions:
+      contents: write
     steps:
       - name: Checkout gh-pages branch
         uses: actions/checkout@v7
@@ -14,15 +17,28 @@ jobs:
           ref: gh-pages
 
       - name: Delete preview and history
+        id: cleanup
         run: |
+            # Not every closed pull request left a preview behind. Documenter
+            # only deploys them for same-repository pull requests, and a failed
+            # doc build deploys nothing at all. `git rm` errors on a pathspec
+            # that matches nothing, so without this guard the job goes red on
+            # every fork pull request that gets closed.
+            if [ ! -d "previews/PR$PRNUM" ]; then
+              echo "No preview for PR$PRNUM, nothing to clean up."
+              echo "cleaned=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             git config user.name "Documenter.jl"
             git config user.email "documenter@juliadocs.github.io"
             git rm -rf "previews/PR$PRNUM"
             git commit -m "delete preview"
             git branch gh-pages-new $(echo "delete history" | git commit-tree HEAD^{tree})
+            echo "cleaned=true" >> "$GITHUB_OUTPUT"
         env:
             PRNUM: ${{ github.event.number }}
 
       - name: Push changes
+        if: steps.cleanup.outputs.cleaned == 'true'
         run: |
             git push --force origin gh-pages-new:gh-pages
