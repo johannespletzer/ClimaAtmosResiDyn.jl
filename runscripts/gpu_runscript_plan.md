@@ -254,6 +254,46 @@ than adopted on faith, and it additionally fixes the memory binding, which no
   - `xmodel.cpu` uses the deprecated `--cpu_bind` underscore spelling and carries
     `--hint=nomultithread` only on the `srun` line, not in the `#SBATCH` block.
 
+### F8 — the GPU jobs died in the CUDA check, silently
+
+Observed on Levante: the job ended a few seconds in with no error at all. The
+log stopped after the stack consistency check and nothing that follows it ran.
+`set -x` put the last line at
+
+```
++ driver_cuda=13.0
+```
+
+so the value was read correctly and the job stopped anyway.
+
+`levante_gpu_check_stack` read the driver's CUDA version with
+
+```bash
+driver_cuda="$(nvidia-smi -q 2>/dev/null | grep -m1 -i "CUDA Version" | ...)"
+```
+
+`grep -m1` closes the pipe on its first match. "CUDA Version" is in the header
+of a report thousands of lines long, so `nvidia-smi` is still writing, takes
+SIGPIPE and exits 141. Under `set -o pipefail` that 141 is the pipeline's
+status, and therefore the assignment's, and `set -e` ends the job on it. The
+broken-pipe complaint went to the `2>/dev/null` that was there to hide
+nvidia-smi's own noise, so nothing was printed. Reproduced outside Levante:
+exit status 141, no output.
+
+Fixed twice over:
+
+  - `nvidia-smi -q` is now read in full into a variable, and matched with
+    `awk` over a here-string. Nothing closes a pipe early, and a failing
+    `nvidia-smi` leaves the version empty, which the code already handles.
+  - Sourcing `levante_gpu_common.sh` installs an ERR trap (with `set -E`, or
+    it would not fire inside the functions) that names the file, line, status
+    and command of any unhandled failure, and says so explicitly when the
+    status is 141. No failure under `set -e` in these scripts is silent now.
+
+The same pipeline appears in `xmodel.gpu1`, `xmodel.gpu2` and `xmodel.gpu4`,
+where a `|| true` already absorbs the 141, and in `setup-julia-levante.tcsh`,
+which does not run under `set -e`. Neither is affected.
+
 ## Assessment of the DKRZ support advice
 
 Summarised for the record so the reasoning behind the phases below is

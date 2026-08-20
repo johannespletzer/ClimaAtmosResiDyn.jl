@@ -20,10 +20,44 @@
 #   levante_gpu_warm_precompile
 #   levante_gpu_run
 #
+# Sourcing this file also installs an ERR trap, so that a command that fails
+# under `set -e` names itself instead of ending the job in silence.
+#
 # xmodel.cpu deliberately does not use this file. The two stacks share
 # .buildkite/LocalPreferences.toml, so a cpu job and a gpu job cannot be
 # prepared at the same time; presenting them as variants of one script would
 # imply an interchangeability that does not exist. See the plan's F5.
+
+# ---------------------------------------------------------------------------
+# Say which command ended the job.
+#
+# Everything below runs under `set -euo pipefail`, where a failing command
+# ends the job at once and prints nothing of its own. A pipeline killed by
+# SIGPIPE, or a tool whose complaint went to a discarded stderr, then looks
+# like the job stopping for no reason a few seconds in -- with the log ending
+# mid-check and no clue which line was last. This trap gives every such exit a
+# file, a line and a status.
+#
+# `set -E` is what makes it fire: an ERR trap is not inherited by shell
+# functions, and every step of this file is one.
+# ---------------------------------------------------------------------------
+
+set -E
+
+levante_gpu_report_error() {
+    local status="$1" source_file="$2" line="$3" command="$4"
+
+    echo >&2
+    echo "ERROR: ${source_file}: line ${line}: exited with status ${status}" >&2
+    echo "  failing command: ${command}" >&2
+
+    if (( status == 141 )); then
+        echo "  status 141 is SIGPIPE: something closed a pipe before the" >&2
+        echo "  command writing into it had finished." >&2
+    fi
+}
+
+trap 'levante_gpu_report_error "$?" "${BASH_SOURCE[0]}" "${LINENO}" "${BASH_COMMAND}"' ERR
 
 # The srun flags that place each rank on the cores next to its GPU. Applied
 # identically to the diagnostics and to the launch: a diagnostic run under
@@ -227,7 +261,10 @@ levante_gpu_check_stack() {
     # second hardcoded copy.
     # ---------------------------------------------------------------------------
 
-    mpi_libdir="$(mpicc --showme:libdirs | awk '{print $1}')"
+    # `|| mpi_libdir=""` so a missing or broken mpicc reaches the check below.
+    # Without it `set -o pipefail` hands the failure to `set -e` and the job
+    # ends before the message that says which module was loaded.
+    mpi_libdir="$(mpicc --showme:libdirs | awk '{print $1}')" || mpi_libdir=""
 
     [[ -n "${mpi_libdir}" ]] || {
         echo "ERROR: mpicc did not report an MPI library directory." >&2
@@ -299,9 +336,27 @@ levante_gpu_check_stack() {
     # ---------------------------------------------------------------------
 
     if command -v nvidia-smi >/dev/null 2>&1; then
-        local driver_cuda pinned_cuda newest
-        driver_cuda="$(nvidia-smi -q 2>/dev/null |
-            grep -m1 -i "CUDA Version" | sed "s/.*: *//" | tr -d "[:space:]")"
+        local driver_cuda pinned_cuda newest smi
+
+        # nvidia-smi's output is read in full before it is matched, rather than
+        # piped into `grep -m1`. `grep -m1` closes the pipe on its first match,
+        # near the top of a report thousands of lines long, so nvidia-smi dies
+        # of SIGPIPE and the pipeline exits 141. Under `set -o pipefail` that
+        # status is the assignment's, and `set -e` then ends the job right
+        # here -- silently, because the broken-pipe message went to the
+        # discarded stderr and nothing after this point ever runs.
+        smi="$(nvidia-smi -q 2>/dev/null)" || smi=""
+
+        # "CUDA Version   : 13.0" -> "13.0". awk reads to the end of the
+        # here-string, so nothing closes a pipe early.
+        driver_cuda="$(awk -F: '
+            !found && tolower($0) ~ /cuda version/ {
+                gsub(/[[:space:]]/, "", $2)
+                print $2
+                found = 1
+            }
+        ' <<< "${smi}")"
+
         pinned_cuda="$(awk -F\" '
             /^\[CUDA_Runtime_jll\]/ { in_table = 1; next }
             /^\[/                    { in_table = 0 }
@@ -325,6 +380,12 @@ levante_gpu_check_stack() {
                     exit 1
                 fi
             fi
+        else
+            # Not fatal: the check below is a convenience, and a job that
+            # cannot ask the driver is no worse off than one on a node
+            # without nvidia-smi. Say so rather than skipping in silence.
+            echo "WARNING: nvidia-smi is present but reported no CUDA version;" >&2
+            echo "  skipping the driver/toolkit comparison." >&2
         fi
     fi
 }
