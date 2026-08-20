@@ -16,14 +16,12 @@
 # The toolkit pinned is the newest one no newer than the driver. Staying at or
 # below it avoids leaning on CUDA's minor-version compatibility, which the
 # CUDA-aware MPI in the nvhpc stack does not always tolerate.
+#
+# Preferences are written with Julia's TOML stdlib so this machine-specific
+# setup does not require Preferences.jl as a direct .buildkite dependency.
 
-using Preferences
+using TOML
 
-# CUDA_Runtime_jll is an [extras] entry of .buildkite/Project.toml, not a [deps]
-# one -- it is there only so preferences can be attached to it -- so it cannot be
-# loaded, or even named, by `using`. Preferences.jl takes a (UUID, name) tuple
-# for exactly this case, and the package directory comes from the manifest
-# rather than `pkgdir`.
 const CUDA_RUNTIME_JLL =
     (Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2"), "CUDA_Runtime_jll")
 
@@ -75,15 +73,15 @@ length(ARGS) == 1 || error("usage: select-cuda-runtime.jl <driver-cuda-version>"
 driver = minor_version(VersionNumber(ARGS[1]))
 version = major_minor(select_toolkit(driver))
 
-# The same two preferences `CUDA.set_runtime_version!` writes, set directly
-# because that call needs a working CUDA.jl -- the very thing missing here.
-# `local` is written explicitly so a stale `local = true` cannot survive.
-set_preferences!(
-    CUDA_RUNTIME_JLL,
-    "version" => version,
-    "local" => false;
-    force = true,
-)
+prefs_file = joinpath(dirname(Base.active_project()), "LocalPreferences.toml")
+prefs = isfile(prefs_file) ? TOML.parsefile(prefs_file) : Dict{String, Any}()
+cuda_prefs = get!(prefs, "CUDA_Runtime_jll", Dict{String, Any}())
+cuda_prefs["version"] = version
+cuda_prefs["local"] = false
+
+open(prefs_file, "w") do io
+    TOML.print(io, prefs)
+end
 
 println(
     "Pinned CUDA_Runtime_jll to CUDA $version ",

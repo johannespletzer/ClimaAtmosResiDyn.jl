@@ -50,10 +50,26 @@ set JULIA_CHANNEL = +1.11
 # OpenMPI_jll's UUID, from .buildkite/Manifest-v1.11.toml
 set OPENMPI_JLL_UUID = fe0851c0-eecd-5654-98d4-656369965a5c
 
+# The compiler module, MPI module and depot name for each stack come from
+# runscripts/levante_stacks.env, which the GPU runscripts read as well. That
+# file is the only place the module/depot pairing is stated, so a runscript
+# cannot drift onto a different MPI than the depot was built against.
+set STACKS_ENV = ${ROOT}/runscripts/levante_stacks.env
+
+if (! -r "${STACKS_ENV}") then
+    echo "ERROR: stack definitions not found: ${STACKS_ENV}"
+    exit 1
+endif
+
 # Parent directory for the per-stack depots. Each holds a full copy of the
 # packages, artifacts and precompile cache -- several GB per stack. If $HOME is
-# quota-limited, point this at a work or scratch filesystem instead.
-set DEPOT_ROOT = ${HOME}/.julia/depots
+# quota-limited, set LEVANTE_DEPOT_ROOT to an absolute path on work or scratch.
+if ($?LEVANTE_DEPOT_ROOT) then
+    set DEPOT_ROOT = "${LEVANTE_DEPOT_ROOT}"
+else
+    set DEPOT_REL = `sed -n 's/^LEVANTE_DEPOT_ROOT_RELATIVE_TO_HOME=//p' "${STACKS_ENV}"`
+    set DEPOT_ROOT = ${HOME}/${DEPOT_REL}
+endif
 
 # ----------------------------------------------------------------------------
 # Stack selection
@@ -72,20 +88,28 @@ set PROBE_ACCOUNT    = bd1062
 set PROBE_PARTITION  = gpu
 set PROBE_CONSTRAINT = a100_80
 
-if ("${STACK}" == "cpu") then
-    set COMPILER_MODULE = gcc/11.2.0-gcc-11.2.0
-    set MPI_MODULE      = openmpi/4.1.2-gcc-11.2.0
-    set DEPOT           = ${DEPOT_ROOT}/levante-cpu
-    set SRUN_MPI        = pmix_v3
-else if ("${STACK}" == "gpu") then
-    set COMPILER_MODULE = nvhpc/24.7-gcc-11.2.0
-    set MPI_MODULE      = openmpi/4.1.5-nvhpc-24.7
-    set DEPOT           = ${DEPOT_ROOT}/levante-gpu
-    set SRUN_MPI        = pmix_v3
-else
+if ("${STACK}" != "cpu" && "${STACK}" != "gpu") then
     echo "ERROR: unknown stack '${STACK}' (expected cpu or gpu)"
     exit 1
 endif
+
+# Read this stack's definition out of ${STACKS_ENV}. The keys are prefixed with
+# the upper-cased stack name, e.g. LEVANTE_GPU_MPI_MODULE.
+set STACK_UC = `echo "${STACK}" | tr '[:lower:]' '[:upper:]'`
+
+set COMPILER_MODULE = `sed -n "s/^LEVANTE_${STACK_UC}_COMPILER_MODULE=//p" "${STACKS_ENV}"`
+set MPI_MODULE      = `sed -n "s/^LEVANTE_${STACK_UC}_MPI_MODULE=//p" "${STACKS_ENV}"`
+set DEPOT_NAME      = `sed -n "s/^LEVANTE_${STACK_UC}_DEPOT_NAME=//p" "${STACKS_ENV}"`
+set SRUN_MPI        = `sed -n "s/^LEVANTE_${STACK_UC}_SRUN_MPI=//p" "${STACKS_ENV}"`
+
+if ("${COMPILER_MODULE}" == "" || "${MPI_MODULE}" == "" || \
+    "${DEPOT_NAME}" == "" || "${SRUN_MPI}" == "") then
+    echo "ERROR: ${STACKS_ENV} does not define the '${STACK}' stack completely."
+    echo "Expected LEVANTE_${STACK_UC}_{COMPILER_MODULE,MPI_MODULE,DEPOT_NAME,SRUN_MPI}."
+    exit 1
+endif
+
+set DEPOT = ${DEPOT_ROOT}/${DEPOT_NAME}
 
 echo "============================================================"
 echo "ClimaAtmos Julia setup on Levante -- ${STACK}"
@@ -105,6 +129,34 @@ endif
 
 if (! -f "${PROJECT}/Project.toml") then
     echo "ERROR: Project.toml not found: ${PROJECT}/Project.toml"
+    exit 1
+endif
+
+# MPIPreferences and CUDA_Runtime_jll must both be direct dependencies for
+# their project-local preferences to be visible: Base.get_preferences maps the
+# names in LocalPreferences.toml to UUIDs through the project's own deps, so a
+# preference written for a package that is only an indirect dependency is
+# silently ignored. CUDA_Runtime_jll arrives indirectly through CUDA, and
+# before it was listed the toolkit pin below was written, read back as an empty
+# dictionary, and the environment resolved to cuda=none.
+#
+# Check the dedicated .buildkite environment without resolving the repository
+# root environment, whose dependency graph is unrelated here.
+#
+# The Julia below contains no exclamation mark on purpose. tcsh performs
+# history expansion before quoting, and single quotes do not suppress it, so
+# one immediately followed by a word character is read as a history reference.
+# Negating haskey(...) that way aborts the whole script with
+# "haskey: Event not found." before Julia is ever started -- hence the loop
+# instead of a filter. Uses like pop!( and != elsewhere in this file are safe,
+# because expansion needs a word character to follow.
+${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no \
+    -e 'using TOML; project = TOML.parsefile(ARGS[1]); deps = get(project, "deps", Dict()); for name in ARGS[2:end]; haskey(deps, name) || error(name * " is not a direct dependency"); end' \
+    "${PROJECT}/Project.toml" MPIPreferences CUDA_Runtime_jll
+if ($status != 0) then
+    echo "ERROR: MPIPreferences and CUDA_Runtime_jll must both be listed in"
+    echo "  ${PROJECT}/Project.toml"
+    echo "Their preferences are otherwise written but never read back."
     exit 1
 endif
 
@@ -255,7 +307,7 @@ echo
 #
 #   1. $CUDA_RUNTIME_VERSION, if set -- manual override, e.g. 13.0
 #   2. nvidia-smi, if this script is itself running on a GPU node
-#   3. the value recorded by the last GPU job (see runscripts/xmodel.gpu*)
+#   3. the value recorded by the last GPU job (see levante_gpu_common.sh)
 #   4. a two-minute probe job on the gpu partition
 #
 # Anything measured is cached in ${CUDA_VERSION_CACHE}; delete that file to
@@ -365,11 +417,10 @@ if ("${STACK}" == "gpu") then
         exit 1
     endif
 else
-    # Deleting a preference is set_preferences! with `missing`. The (UUID, name)
-    # tuple is required because CUDA_Runtime_jll is an [extras] entry, so it
-    # cannot be resolved by name -- see runscripts/select-cuda-runtime.jl.
-    ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \
-        -e 'using Preferences; jll = (Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2"), "CUDA_Runtime_jll"); set_preferences!(jll, "version" => missing, "local" => missing; force = true)'
+    # Drop the entire CUDA preference table. This also removes an empty
+    # [CUDA_Runtime_jll] table left by older Preferences.jl-based cleanup.
+    ${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no \
+        -e 'using TOML; pf = ENV["LEVANTE_PREFS"]; prefs = isfile(pf) ? TOML.parsefile(pf) : Dict{String,Any}(); pop!(prefs, "CUDA_Runtime_jll", nothing); open(io -> TOML.print(io, prefs), pf, "w"); println("cleared CUDA runtime preferences from ", pf)'
     if ($status != 0) then
         echo "ERROR: could not clear the CUDA toolkit pin."
         exit 1
@@ -409,13 +460,12 @@ if ($status != 0) then
     echo
     echo "ERROR: verification failed."
     echo
-    echo "If MPI.versioninfo reports a binary other than 'system', the"
-    echo "preference was not picked up. Add MPIPreferences as a direct"
-    echo "dependency and re-run this script:"
-    echo "  ${JULIA_BIN} ${JULIA_CHANNEL} --project=${PROJECT} -e 'using Pkg; Pkg.add(\"MPIPreferences\")'"
+    echo "If MPI.versioninfo reports a binary other than system, the"
+    echo "preference was not picked up. Confirm that MPIPreferences is a"
+    echo "direct dependency of ${PROJECT} and re-run this script."
     echo
     echo "If a bundled MPI library is still loaded, the override did not take"
-    echo "effect -- check the UUID and the 'OpenMPI' key in:"
+    echo "effect -- check the UUID and the OpenMPI key in:"
     echo "  ${OVERRIDES}"
     exit 1
 endif
@@ -428,7 +478,7 @@ endif
 if ("${STACK}" == "gpu") then
     echo
     ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \
-        -e 'using CUDA, Preferences; jll = Base.UUID("76a88914-d11a-5bdc-97e0-2f5a05c973a2"); tag = CUDA.CUDA_Runtime_jll.host_platform["cuda"]; println("CUDA version preference: ", something(load_preference(jll, "version"), "<unset>")); println("CUDA platform tag:       ", tag); tag == "none" && error("no CUDA toolkit installed")'
+        -e 'using CUDA, TOML; pf = ENV["LEVANTE_PREFS"]; prefs = isfile(pf) ? TOML.parsefile(pf) : Dict{String,Any}(); version = get(get(prefs, "CUDA_Runtime_jll", Dict{String,Any}()), "version", "<unset>"); tag = CUDA.CUDA_Runtime_jll.host_platform["cuda"]; println("CUDA version preference: ", version); println("CUDA platform tag:       ", tag); version == "<unset>" && error("CUDA toolkit version preference is unset"); tag == "none" && error("no CUDA toolkit installed")'
     if ($status != 0) then
         echo
         echo "ERROR: no CUDA toolkit was installed for this depot."
