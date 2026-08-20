@@ -53,7 +53,11 @@ jobs:
     if: needs.decide.outputs.skip != 'true'
 
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    # The dynamics group runs right at the wall: 59m59s on 1.10 and a hard
+    # timeout at 59m37s on 1.11 (run 32335353545). A job killed mid-suite
+    # reports `cancelled`, which the ci-required gate cannot distinguish from a
+    # superseded run, so the budget has to leave real headroom.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
