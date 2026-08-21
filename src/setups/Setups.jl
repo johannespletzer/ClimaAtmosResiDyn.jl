@@ -42,6 +42,8 @@ import ..PrognosticEDMFX
 import ..EDOnlyEDMFX
 import ..n_mass_flux_subdomains
 import ..AbstractChemistryModel
+import ..StratosphericPassiveTracers
+import ..stratospheric_tracer_symbols
 import ..tagging_variables
 import ..water_tagging_variables
 import ..Parameters.ClimaAtmosParameters
@@ -215,6 +217,62 @@ function zonally_symmetric_temperature(
     (; lat, z) = coordinates
     FT = eltype(lat)
     return FT(271) + FT(29) * exp(-coordinates.lat^2 / (2 * 26^2)) - FT(6.5e-3) * z
+end
+
+"""
+    SeasonalOceanTemperature{FT}(; amplitude, peak_day, start_day)
+
+A zonally symmetric surface temperature with a seasonal cycle [K], for use as
+the `f` of an `AnalyticTemperature`.
+
+The annual mean is `zonally_symmetric_temperature`. On top of it sits
+
+    amplitude * sind(2 φ) * cos(2π (day - peak_day) / 365.25)
+
+which is antisymmetric between the hemispheres, vanishes at the equator, peaks
+near ±45°, and returns to zero at the poles. That shape is chosen for an ocean
+surface: the observed seasonal range of SST is largest in midlatitudes, small
+in the tropics, and small again over polar water, whose temperature is held
+near freezing by ice.
+
+Two things this does *not* supply, and which matter for the stratosphere: the
+much larger seasonal cycle of land and of sea ice, neither of which exists in
+standalone ClimaAtmos. It restores the midlatitude ocean seasonality that the
+steady profile omits entirely, but it is not a substitute for a prescribed
+observed surface temperature.
+
+`day` is the day of year, reconstructed from `start_day` and the elapsed
+simulation time, so the cycle is phased to the calendar rather than to the
+start of the run.
+
+# Fields
+
+  - `amplitude`: peak seasonal anomaly, in K, reached at ±45°.
+  - `peak_day`: day of year at which the northern anomaly is largest. The
+    default lags the June solstice by about a month, which is roughly the
+    thermal lag of the ocean mixed layer.
+  - `start_day`: day of year of the simulation's `start_date`.
+"""
+Base.@kwdef struct SeasonalOceanTemperature{FT}
+    amplitude::FT = 4
+    peak_day::FT = 210
+    start_day::FT = 1
+end
+
+function (temperature::SeasonalOceanTemperature)(coordinates, params, t)
+    FT = eltype(coordinates.z)
+    return FT(300)
+end
+function (temperature::SeasonalOceanTemperature)(
+    coordinates::Geometry.LatLongZPoint, params, t,
+)
+    (; lat, z) = coordinates
+    FT = eltype(lat)
+    annual_mean = FT(271) + FT(29) * exp(-lat^2 / (2 * 26^2))
+    day = FT(temperature.start_day) + t / FT(86400)
+    phase = FT(2) * FT(pi) * (day - FT(temperature.peak_day)) / FT(365.25)
+    seasonal = FT(temperature.amplitude) * sind(2 * lat) * cos(phase)
+    return annual_mean + seasonal - FT(6.5e-3) * z
 end
 
 """

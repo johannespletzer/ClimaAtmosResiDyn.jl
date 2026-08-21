@@ -656,6 +656,19 @@ steps:
           --job_id baroclinic_wave
         artifact_paths: "baroclinic_wave/output_active/*"
 
+      - label: ":cyclone: Dycore: Stratospheric passive tracers with tropopause sink"
+        retry: *retry_policy
+        key: passive_stratospheric_tracers_ci
+        command: >
+          julia --color=yes --project=.buildkite .buildkite/ci_driver.jl
+          --config_file $COMMON_CONFIG_PATH/numerics_sphere_he6ze31.yml
+          --config_file $CONFIG_PATH/passive_stratospheric_tracers_ci.yml
+          --job_id passive_stratospheric_tracers_ci
+
+          julia --color=yes --project=.buildkite post_processing/plot_tracer_burdens.jl
+          passive_stratospheric_tracers_ci/output_active
+        artifact_paths: "passive_stratospheric_tracers_ci/output_active/*"
+
       - label: ":cyclone: Dycore: Dry baroclinic wave with tagged energy tracers"
         retry: *retry_policy
         key: baroclinic_wave_tagged_tracers

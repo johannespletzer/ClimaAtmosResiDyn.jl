@@ -254,6 +254,82 @@ than adopted on faith, and it additionally fixes the memory binding, which no
   - `xmodel.cpu` uses the deprecated `--cpu_bind` underscore spelling and carries
     `--hint=nomultithread` only on the `srun` line, not in the `#SBATCH` block.
 
+### F8 — the GPU jobs died in the CUDA check, silently
+
+Observed on Levante: the job ended a few seconds in with no error at all. The
+log stopped after the stack consistency check and nothing that follows it ran.
+`set -x` put the last line at
+
+```
++ driver_cuda=13.0
+```
+
+so the value was read correctly and the job stopped anyway.
+
+`levante_gpu_check_stack` read the driver's CUDA version with
+
+```bash
+driver_cuda="$(nvidia-smi -q 2>/dev/null | grep -m1 -i "CUDA Version" | ...)"
+```
+
+`grep -m1` closes the pipe on its first match. "CUDA Version" is in the header
+of a report thousands of lines long, so `nvidia-smi` is still writing, takes
+SIGPIPE and exits 141. Under `set -o pipefail` that 141 is the pipeline's
+status, and therefore the assignment's, and `set -e` ends the job on it. The
+broken-pipe complaint went to the `2>/dev/null` that was there to hide
+nvidia-smi's own noise, so nothing was printed. Reproduced outside Levante:
+exit status 141, no output.
+
+Fixed twice over:
+
+  - `nvidia-smi -q` is now read in full into a variable, and matched with
+    `awk` over a here-string. Nothing closes a pipe early, and a failing
+    `nvidia-smi` leaves the version empty, which the code already handles.
+  - Sourcing `levante_gpu_common.sh` installs an ERR trap (with `set -E`, or
+    it would not fire inside the functions) that names the file, line, status
+    and command of any unhandled failure, and says so explicitly when the
+    status is 141. No failure under `set -e` in these scripts is silent now.
+
+The same pipeline appears in `xmodel.gpu1`, `xmodel.gpu2` and `xmodel.gpu4`,
+where a `|| true` already absorbs the 141, and in `setup-julia-levante.tcsh`,
+which does not run under `set -e`. Neither is affected.
+
+### F9 — the rank wrapper killed the job it promised not to
+
+Observed on Levante, on the first run that ever got past the CUDA check (F8):
+`srun: error: l50000: task 0: Exited with exit code 1` during the binding
+report, with numactl's usage text in the job's stderr. The ERR trap from F8
+named the srun that died.
+
+`levante_gpu_rank_wrapper.sh` bound each rank with
+
+```bash
+exec numactl --physcpubind="${cpus}" --membind="${numa}" "$@"
+```
+
+where `cpus` is the GPU's `local_cpulist` from sysfs. That is the hardware's
+view -- every logical CPU near the GPU, SMT siblings included -- and it is not
+always a subset of what Slurm gave the rank: `--hint=nomultithread` keeps the
+siblings out of the cpuset. numactl parses `--physcpubind` with
+`numa_parse_cpustring()`, which resolves against the current cpuset and
+returns nothing for a list reaching outside it. numactl then prints
+`<16-31,144-159> is invalid` **on stdout**, dumps its usage on stderr and
+exits 1. Because the wrapper `exec`s it, that 1 was the rank's exit status,
+and `--kill-on-bad-exit=1` took the job down with it -- while the file's own
+header promises that "a rank that cannot determine its topology runs unbound
+and says so, rather than failing the job".
+
+The split streams are why the log looked so unhelpful: the line naming the
+offending argument went to `<job>.out`, the usage dump to `<job>.err`.
+
+Fixed by binding to the intersection of the GPU's local cores and the rank's
+`Cpus_allowed_list`, and by probing `numactl ... true` before the exec, so
+anything it still refuses produces a warning naming the argument and a
+fallback to taskset rather than a dead job. The wrapper exports the set it
+asked for as `LEVANTE_RANK_BOUND_CPUS`; the binding report compares the
+affinity in force against that, since after this change a correctly bound
+rank's cores are legitimately a subset of `gpu-local-cores`.
+
 ## Assessment of the DKRZ support advice
 
 Summarised for the record so the reasoning behind the phases below is

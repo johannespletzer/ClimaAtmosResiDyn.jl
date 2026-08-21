@@ -76,10 +76,12 @@ function setup_diagnostics_and_writers(
         debug_tendency,
     ) = diagnostics_config
 
-    # Tagged-tracer short names depend on the configured tag names, so they
-    # are registered here rather than at package load time
+    # Tagged-tracer short names depend on the configured tag names, and the
+    # stratospheric passive tracers depend on the configured source-region
+    # grid, so all three are registered here rather than at package load time
     CAD.register_tagging_diagnostics!(model)
     CAD.register_water_tagging_diagnostics!(model)
+    CAD.register_stratospheric_tracer_diagnostics!(model)
 
     all_diagnostics = []
 

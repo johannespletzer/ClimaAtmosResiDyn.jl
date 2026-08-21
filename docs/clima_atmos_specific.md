@@ -11,6 +11,7 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
   - `src/prognostic_equations/`: tendency accumulation and implicit/explicit splitting.
   - `src/parameterized_tendencies/`: parameterization implementations.
       + `microphysics/`: microphysics tendency orchestration, SGS quadrature, limiters, Jacobian.
+      + `chemistry/`: `chemistry.jl` holds the MUSICA-backed gas-phase hook; `stratospheric_passive_tracers.jl` holds the inert latitude/height-banded tracers used for stratospheric residence times (see [passive_tracers.md](src/passive_tracers.md)). Their lower boundary comes from `src/utils/tropopause.jl`.
       + `radiation/`: RRTMGP wrappers and idealized radiation (`held_suarez.jl`).
       + `gravity_wave_drag/`: non-orographic and orographic GWD.
       + `les_sgs_models/`: Smagorinsky–Lilly, anisotropic minimum dissipation, constant horizontal diffusion.

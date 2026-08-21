@@ -58,6 +58,7 @@ include(joinpath("utils", "utilities.jl"))
 include(joinpath("utils", "debug_utils.jl"))
 include(joinpath("utils", "variable_manipulations.jl"))
 include(joinpath("utils", "tracer_processes.jl"))
+include(joinpath("utils", "tropopause.jl"))
 include(joinpath("utils", "read_gcm_driven_scm_data.jl"))
 include(joinpath("config", "era5_observations_to_forcing_file.jl"))
 include(joinpath("utils", "weather_model.jl"))
@@ -83,6 +84,13 @@ include(joinpath("parameterized_tendencies", "microphysics", "microphysics.jl"))
 
 # Chemistry module (gas-phase chemistry with a MUSICA backend)
 include(joinpath("parameterized_tendencies", "chemistry", "chemistry.jl"))
+include(
+    joinpath(
+        "parameterized_tendencies",
+        "chemistry",
+        "stratospheric_passive_tracers.jl",
+    ),
+)
 
 # Tagged prognostic energy tracers (masks, state builders, config parsing)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_tracers.jl"))
