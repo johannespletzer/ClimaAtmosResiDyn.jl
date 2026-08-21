@@ -463,6 +463,7 @@ end
     for (step, t) in enumerate((0.0, 86400.0))
         budget = (;
             burden = collect(FT, (1:n) .* 1e9 .* (step - 1)),
+            negative_burden = zeros(FT, n),
             source = collect(FT, (1:n) .* 1e4),
             loss = zeros(FT, n),
         )
