@@ -736,7 +736,7 @@ const FREEZE_MELT_TERMS = (
             toml_dict = CP.create_toml_dict(FT)
             mp = CMP.Microphysics1MParams(
                 toml_dict;
-                rain_autoconversion = CMP.PrescribedNd(toml_dict),
+                rain_autoconversion = CMP.PrescribedNd(),
             )
             thp = TD.Parameters.ThermodynamicsParameters(toml_dict)
 
@@ -818,7 +818,7 @@ end
     toml_dict = CP.create_toml_dict(FT)
     mp = CMP.Microphysics1MParams(
         toml_dict;
-        rain_autoconversion = CMP.PrescribedNd(toml_dict),
+        rain_autoconversion = CMP.PrescribedNd(),
     )
     thp = TD.Parameters.ThermodynamicsParameters(toml_dict)
     ρ = FT(0.7)

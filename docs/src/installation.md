@@ -13,8 +13,9 @@ If you are new to Julia's package manager, the official guides on
 ClimaAtmos is a registered Julia package. To install it, open the REPL, type `]` to enter
 the package manager, and add it:
 
-```julia-repl
-pkg> add ClimaAtmos
+```julia
+using Pkg
+Pkg.add("ClimaAtmos")
 ```
 
 (equivalently, `import Pkg; Pkg.add("ClimaAtmos")` from the Julia prompt).

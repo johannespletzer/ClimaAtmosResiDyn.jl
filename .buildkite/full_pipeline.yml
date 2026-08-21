@@ -656,6 +656,39 @@ steps:
           --job_id baroclinic_wave
         artifact_paths: "baroclinic_wave/output_active/*"
 
+      - label: ":cyclone: Dycore: Stratospheric passive tracers with tropopause sink"
+        retry: *retry_policy
+        key: passive_stratospheric_tracers_ci
+        command: >
+          julia --color=yes --project=.buildkite .buildkite/ci_driver.jl
+          --config_file $COMMON_CONFIG_PATH/numerics_sphere_he6ze31.yml
+          --config_file $CONFIG_PATH/passive_stratospheric_tracers_ci.yml
+          --job_id passive_stratospheric_tracers_ci
+
+          julia --color=yes --project=.buildkite post_processing/plot_tracer_burdens.jl
+          passive_stratospheric_tracers_ci/output_active
+        artifact_paths: "passive_stratospheric_tracers_ci/output_active/*"
+
+      - label: ":cyclone: Dycore: Dry baroclinic wave with tagged energy tracers"
+        retry: *retry_policy
+        key: baroclinic_wave_tagged_tracers
+        command: >
+          julia --color=yes --project=.buildkite .buildkite/ci_driver.jl
+          --config_file $COMMON_CONFIG_PATH/numerics_sphere_he6ze10.yml
+          --config_file $CONFIG_PATH/baroclinic_wave_tagged_tracers.yml
+          --job_id baroclinic_wave_tagged_tracers
+        artifact_paths: "baroclinic_wave_tagged_tracers/output_active/*"
+
+      - label: ":cyclone: Dycore: Moist baroclinic wave with tagged water tracers"
+        retry: *retry_policy
+        key: baroclinic_wave_tagged_water
+        command: >
+          julia --color=yes --project=.buildkite .buildkite/ci_driver.jl
+          --config_file $COMMON_CONFIG_PATH/numerics_sphere_he6ze10.yml
+          --config_file $CONFIG_PATH/baroclinic_wave_tagged_water.yml
+          --job_id baroclinic_wave_tagged_water
+        artifact_paths: "baroclinic_wave_tagged_water/output_active/*"
+
       - label: ":cyclone: Dycore: Dry baroclinic wave, GPU part of comparison test"
         retry: *retry_policy
         key: "baroclinic_wave_gpu"

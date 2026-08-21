@@ -39,6 +39,20 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
     implicit_vertical_advection_tendency!(Yₜ, Y, p, t)
 
     if p.atmos.microphysics_tendency_timestepping == Implicit()
+        # `implicit_microphysics` defaults to true, so with 0-moment microphysics
+        # this is where the total-water sink lives. Bracketing it for the water
+        # tags is not optional: without it their dominant loss term would be
+        # missing under the default configuration. Bracketing is safe here for
+        # the same reason it is for sedimentation below — `implicit_tendency!`
+        # zeroes `Yₜ` on every evaluation, so each Newton iterate recomputes the
+        # attribution from scratch rather than accumulating it.
+        #
+        # Only the water half is bracketed. The energy tags' `microphysics`
+        # label has always fired on the explicit path only (see
+        # `docs/src/tagged_water.md` and `KNOWN_TAG_SOURCES`); extending it here
+        # would silently change existing tagged-energy results, so that gap is
+        # left as it is.
+        snapshot_tagged_ρq_tot!(p, Yₜ)
         microphysics_tendency!(
             Yₜ,
             Y,
@@ -47,6 +61,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
+        attribute_tagged_ρq_tot!(Yₜ, Y, p, :microphysics)
         # Surface water/energy deposition from precipitation (implicit path).
         # The explicit counterpart is called from remaining_tendency!.
         surface_precipitation_tendency!(
@@ -281,7 +296,16 @@ function implicit_vertical_advection_tendency!(Yₜ, Y, p, t)
         @. Yₜ.c.ρb_rim -= ᶜprecipdivᵥ(ᶠρ * ᶠright_bias(- ᶜwᵢ * specific(ρb_rim, ρ)))
     end
 
+    # Precipitation sedimentation carries energy out of each level; it is the
+    # one attributed tagged-tracer source on the implicit path. Bracketing is
+    # safe here because `implicit_tendency!` zeroes `Yₜ` on every evaluation,
+    # so each Newton iterate recomputes the attribution from scratch rather
+    # than accumulating it. The attributed increment does not depend on the
+    # tags themselves, so the `-I` diagonal Jacobian block that tags fall back
+    # to is exactly right for this term.
+    snapshot_tagged_ρe_tot!(p, Yₜ)
     vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
+    attribute_tagged_ρe_tot!(Yₜ, p, :precipitation)
 
     # This is equivalent to grad_v(Φ) + grad_v(p) / ρ
     ᶜΦ_r = @. lazy(phi_r(thermo_params, ᶜp))

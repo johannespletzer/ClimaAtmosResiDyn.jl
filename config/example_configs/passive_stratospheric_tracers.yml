@@ -1,0 +1,129 @@
+job_id: "passive_stratospheric_tracers"
+
+# ===========================================================================
+# Stratospheric passive tracer lifetimes
+# ===========================================================================
+#
+# 24 inert tracers, one per (latitude box x height box) source region. The
+# boxes sample the model domain above the tropopause rather than tiling it:
+# 6 latitude boxes 10 degrees wide, centred from 75S to 75N, crossed with
+# 4 height boxes 2 km deep, stacked every 10 km from the local tropopause up
+# to 32 km above it. Small boxes are the point. A tracer emitted over a deep
+# layer or a wide latitude range reports a lifetime averaged over conditions
+# that can differ by years. Every tracer is removed below the tropopause and
+# nowhere else, so once its burden stops drifting its lifetime is
+#
+#     tau = burden / source
+#
+# Both are written to `stratospheric_tracer_budget.csv` in the output
+# directory every `dt_tracer_budget`, together with
+# `imbalance = (source - loss) / source`, which is what tells you whether
+# equilibrium has been reached. `post_processing/tracer_lifetimes.jl`
+# summarises that table.
+#
+# The grid is 6 x 4, not the 6 x 8 it used to be, because setup is almost
+# entirely compilation and grows steeply with the tracer count. Measured with
+# perf/tracer_scaling.jl it goes roughly as N^2.9: about 17 minutes at 24
+# tracers against over two hours at 48, paid again on every launch and restart.
+# The latitude bands are kept and the height bands halved, with the spacing
+# doubled so the stack still reaches the same altitude. The deep stratosphere
+# is where the long lifetimes are, so coarsening the stack costs less than
+# truncating it. Run several configurations with different slices of the source
+# grid to cover more regions; the tracers are inert and do not interact.
+#
+# Expect this to be a long run. Stratospheric residence times are of order
+# 1-5 years, so the burden needs several times that to settle, on top of the
+# ~1 year the aquaplanet circulation itself needs to spin up. Resubmit the
+# same config to continue from the newest checkpoint: `detect_restart_file`
+# picks it up automatically.
+# ===========================================================================
+
+chemistry_model: "stratospheric_passive_tracers"
+tracer_source_latitude_bands: 6
+tracer_source_latitude_width: 10.0
+tracer_source_height_bands: 4
+tracer_source_band_depth: 2000.0
+tracer_source_band_spacing: 10000.0
+tracer_source_height_coordinate: "tropopause"
+# Sets the magnitude of the tracers, not their lifetimes: the burden and the
+# source are both linear in it, and only their ratio is reported.
+tracer_production_rate: 1.0e-10
+# Short compared with the lifetimes being measured (years) and long compared
+# with the timestep, so that "zero below the tropopause" is well approximated
+# without stiffening the explicit tendency.
+tracer_loss_timescale: "6hours"
+dt_tracer_budget: "10days"
+
+# ---------------------------------------------------------------------------
+# Dynamics: moist aquaplanet with RRTMGP radiation
+#
+# Numerics follow config/common_configs/numerics_sphere_he6ze31.yml, the
+# validated 6-element / 60 km-top combination, but on the finer ze63 vertical
+# grid so that the tropopause bounding the tracers is resolved. `dt` is cut
+# from the 400 s of that file to suit that grid. Confirm it in a short run
+# before committing to a multi-year integration.
+# ---------------------------------------------------------------------------
+config: sphere
+# Float64 rather than the Float32 default. The lifetimes come from global
+# burdens accumulated over years and from their drift between output times.
+# The burden integral is summed over ~10^5 points and then differenced, and
+# Float32's seven digits handle that cancellation poorly.
+FLOAT_TYPE: "Float64"
+h_elem: 6         # ~550 km
+nh_poly: 3
+z_elem: 63
+z_max: 60000.0
+dz_bottom: 30.0
+dt: "300secs"
+t_end: "3650days"
+ode_algo: "ARS343"
+hyperdiff: "Hyperdiffusion"
+rayleigh_sponge: true
+viscous_sponge: true
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+max_newton_iters_ode: 1
+# zd_rayleigh = zd_viscous = 40 km, matching the 60 km model top. The sponges
+# act on momentum and on horizontal tracer mixing only, so they do not remove
+# tracer mass from the upper source regions.
+toml: [toml/longrun_aquaplanet.toml]
+
+rad: "allsky"
+dt_rad: "1hours"
+microphysics_model: "0M"
+surface_setup: "DefaultMoninObukhov"
+turbconv: "edonly_edmfx"
+edmfx_sgs_diffusive_flux: true
+
+dt_save_state_to_disk: "90days"
+detect_restart_file: true
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+output_default_diagnostics: false
+
+diagnostics:
+  # Monthly means of the tracer mass fractions. Instantaneous 3-D output of 24
+  # tracers would dominate the run's disk usage, and the lifetimes come from
+  # the budget table rather than from these fields.
+  - short_name: [
+      q_gas_y01z01, q_gas_y02z01, q_gas_y03z01, q_gas_y04z01, q_gas_y05z01, q_gas_y06z01,
+      q_gas_y01z02, q_gas_y02z02, q_gas_y03z02, q_gas_y04z02, q_gas_y05z02, q_gas_y06z02,
+      q_gas_y01z03, q_gas_y02z03, q_gas_y03z03, q_gas_y04z03, q_gas_y05z03, q_gas_y06z03,
+      q_gas_y01z04, q_gas_y02z04, q_gas_y03z04, q_gas_y04z04, q_gas_y05z04, q_gas_y06z04,
+    ]
+    reduction_time: average
+    period: 30days
+    writer: netcdf
+
+  # The surface the tracers are bounded by, and the state that sets it.
+  - short_name: [ztrop]
+    reduction_time: average
+    period: 30days
+    writer: netcdf
+
+  - short_name: [ta, ua, va, wa, pfull, rhoa, hus]
+    reduction_time: average
+    period: 30days
+    writer: netcdf

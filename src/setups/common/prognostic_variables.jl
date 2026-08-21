@@ -57,6 +57,16 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
         moisture_variables(ρ, physical_state, atmos_model.microphysics_model)...,
         precip_variables(ρ, physical_state, atmos_model.microphysics_model)...,
         chemistry_variables(ρ, physical_state, atmos_model.chemistry_model)...,
+        tagging_variables(ρe_tot, local_geometry, atmos_model.tagging_model)...,
+        # Uses the same `ρ * q_tot` that `moisture_variables` puts in the state,
+        # so that a partition-of-unity set of region tags sums to `ρq_tot`
+        # exactly at t = 0. Water tagging requires a moist model, which
+        # `check_water_tagging_supported` enforces at config-parse time.
+        water_tagging_variables(
+            ρ * q_tot,
+            local_geometry,
+            atmos_model.water_tagging_model,
+        )...,
     )
 end
 
@@ -144,6 +154,18 @@ chemistry_variables(ρ, physical_state, ::Nothing) = (;)
 chemistry_variables(ρ, physical_state, ::AbstractChemistryModel) =
     (; ρq_gas_A = ρ * physical_state.q_gas_A)
 
+# One zero-initialized field per source box, named at compile time from the
+# box list, so the state carries N tracers rather than the single `ρq_gas_A`
+# of the generic chemistry model.
+@generated function chemistry_variables(
+    ρ,
+    physical_state,
+    ::StratosphericPassiveTracers{N, NAMES},
+) where {N, NAMES}
+    zero_exprs = map(_ -> :(zero(ρ)), NAMES)
+    return :(NamedTuple{$NAMES}(($(zero_exprs...),)))
+end
+
 """
     chemistry_sgs_variables(physical_state, chemistry_model)
 
@@ -154,6 +176,11 @@ one.
 chemistry_sgs_variables(physical_state, ::Nothing) = (;)
 chemistry_sgs_variables(physical_state, ::AbstractChemistryModel) =
     (; q_gas_A = physical_state.q_gas_A)
+
+# The stratospheric tracers are grid-scale only: giving each of them an SGS
+# counterpart would multiply the EDMF state by the number of source regions,
+# for no transport the grid-mean diffusion does not already provide.
+chemistry_sgs_variables(physical_state, ::StratosphericPassiveTracers) = (;)
 
 # ============================================================================
 # Turbconv center dispatch

@@ -64,6 +64,7 @@ makedocs(;
             "Installation" => "installation.md",
             "Your First Simulation" => "first_simulation.md",
             "Script vs Config Interface" => "interfaces.md",
+            "Workflow: Setup to Long Runs" => "workflow.md",
         ],
         "How-to Guides" => [
             "Running Simulations" => [
@@ -111,6 +112,8 @@ makedocs(;
             "Grids" => "grids.md",
             "Surface Conditions" => "surface_conditions.md",
             "Passive Tracers" => "passive_tracers.md",
+            "Tagged Energy Tracers" => "tagged_tracers.md",
+            "Tagged Water Tracers" => "tagged_water.md",
             "Trace Gases (Radiation)" => "trace_gases.md",
             "Available Diagnostics" => "available_diagnostics.md",
             "Notation and Symbols" => "notation.md",

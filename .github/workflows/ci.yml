@@ -20,8 +20,8 @@ jobs:
   # already-green PR head (see .github/should_skip_merge_queue.sh). Always runs;
   # only ever returns skip=true for a merge_group build that is provably
   # identical to a PR whose "ci " checks already passed.
-  decide:
-    name: decide
+  ci-decide:
+    name: ci-decide
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,11 +49,15 @@ jobs:
 
   test:
     name: ci ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.test_group }}
-    needs: decide
-    if: needs.decide.outputs.skip != 'true'
+    needs: ci-decide
+    if: needs.ci-decide.outputs.skip != 'true'
 
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    # The dynamics group runs right at the wall: 59m59s on 1.10 and a hard
+    # timeout at 59m37s on 1.11 (run 32335353545). A job killed mid-suite
+    # reports `cancelled`, which the ci-required gate cannot distinguish from a
+    # superseded run, so the budget has to leave real headroom.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -90,7 +94,7 @@ jobs:
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v7
         with:
-          file: lcov.info
+          files: lcov.info
           token: ${{secrets.CODECOV_TOKEN}}
 
   # Single required status check for branch protection / the merge queue. Set
@@ -98,19 +102,19 @@ jobs:
   # jobs, so a reused merge-queue build (matrix skipped) still reports green.
   ci-required:
     name: ci-required
-    needs: [decide, test]
+    needs: [ci-decide, test]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - run: |
-          if [[ "${{ needs.decide.result }}" != "success" ]]; then
-            echo "decide job did not succeed"; exit 1
+          if [[ "${{ needs.ci-decide.result }}" != "success" ]]; then
+            echo "ci-decide job did not succeed"; exit 1
           fi
           if [[ "${{ needs.test.result }}" == "success" ]]; then
             echo "ci matrix passed"; exit 0
           fi
           if [[ "${{ needs.test.result }}" == "skipped" && \
-                "${{ needs.decide.outputs.skip }}" == "true" ]]; then
+                "${{ needs.ci-decide.outputs.skip }}" == "true" ]]; then
             echo "ci matrix reused from an already-green PR head"; exit 0
           fi
           echo "ci matrix did not pass (result=${{ needs.test.result }})"

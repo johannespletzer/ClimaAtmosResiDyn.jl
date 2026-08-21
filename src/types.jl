@@ -2125,6 +2125,210 @@ Group of chemistry models inside an `AtmosModel`.
 end
 
 """
+    AbstractTagRegion
+
+Abstract type for the smooth spatial masks used by tagged prognostic energy
+tracers. Concrete regions implement `region_mask(region, coord)` (defined in
+`parameterized_tendencies/tagged_tracers/tagged_tracers.jl`).
+"""
+abstract type AbstractTagRegion end
+
+"""
+    EntireDomain()
+
+Tag region whose mask is 1 everywhere.
+"""
+struct EntireDomain <: AbstractTagRegion end
+
+"""
+    TanhAltitudeRegion(z_center, width, above = true)
+
+Tag region with a smooth `tanh` transition in altitude, with mask
+`(1 + tanh((z - z_center) / width)) / 2` (0 well below `z_center`, 1 well
+above). When `above` is `false`, the mask is the exact complement
+`1 - M_above`, so a region and its complement sum to 1 everywhere (e.g. a
+"troposphere" tag as the complement of a "stratosphere" tag). `z_center` and
+`width` are in meters.
+"""
+struct TanhAltitudeRegion{FT} <: AbstractTagRegion
+    z_center::FT
+    width::FT
+    above::Bool
+end
+TanhAltitudeRegion(z_center, width) = TanhAltitudeRegion(z_center, width, true)
+
+"""
+    TanhLatitudeRegion(lat_bound, width, inside)
+
+Tag region for a smooth latitude band `|lat| ≲ lat_bound` with `tanh`
+transitions of the given `width` (both in degrees). When `inside` is `false`,
+the mask is the exact complement `1 - M_band`, so a band and its complement
+sum to 1 everywhere. Requires spherical geometry (coordinates with `lat`).
+"""
+struct TanhLatitudeRegion{FT} <: AbstractTagRegion
+    lat_bound::FT
+    width::FT
+    inside::Bool
+end
+
+"""
+    TanhBoxRegion(lon_min, lon_max, lat_min, lat_max, width, inside)
+
+Tag region for a smooth longitude–latitude box: the product of a smooth
+latitude band and a smooth longitude band, each with `tanh` edges of the
+given `width`. All arguments are in degrees. Longitudes are compared modulo
+360°, so a box may cross the antimeridian (e.g. `lon_min = 170`,
+`lon_max = -170`). When `inside` is `false`, the mask is the exact
+complement. Requires spherical geometry.
+"""
+struct TanhBoxRegion{FT} <: AbstractTagRegion
+    lon_min::FT
+    lon_max::FT
+    lat_min::FT
+    lat_max::FT
+    width::FT
+    inside::Bool
+end
+
+"""
+    TanhPolygonRegion(vertices, width, inside)
+
+Tag region for an arbitrary polygon on the sphere, smoothed with a `tanh`
+transition of the given `width` (in degrees) across its boundary. This is the
+region type to use for published reference regions such as the IPCC AR6 /
+ATLAS domains: export their vertices and pass them here.
+
+  - `vertices`: an `NTuple` of `(lon, lat)` pairs in degrees, in either
+    winding order. The polygon is implicitly closed.
+  - `width`: transition width in degrees of great-circle arc; the mask is
+    `1/2` on the boundary, tending to 1 well inside and 0 well outside.
+  - `inside`: when `false`, the mask is the exact complement.
+
+The polygon is evaluated in a longitude frame centered on its first vertex,
+so it may cross the antimeridian as long as it spans less than 180° of
+longitude. Requires spherical geometry.
+"""
+struct TanhPolygonRegion{N, FT} <: AbstractTagRegion
+    vertices::NTuple{N, NTuple{2, FT}}
+    width::FT
+    inside::Bool
+end
+
+"""
+    AbstractTracerTag{name}
+
+Supertype of the tag definitions, parameterized by the tag `name` so that state
+field names can be generated at compile time. The concrete subtypes differ in
+which parent quantity they partition: [`TracerTag`](@ref) tags total energy
+`ρe_tot`, [`WaterTag`](@ref) tags total water `ρq_tot`.
+"""
+abstract type AbstractTracerTag{name} end
+
+"""
+    TracerTag{name}(region, source = :none)
+
+Definition of one tagged prognostic energy tracer, stored in the state as
+`Y.c.ρe_tag_<name>`. The tag `name` is a type parameter so that state field
+names can be generated at compile time (GPU-compatible).
+
+  - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. A pure region tag
+    (`region` given, no sources) is initialized to `ρe_tot * mask` and
+    receives every attributed source, masked. Any source tag is initialized
+    to zero — including region-restricted source tags, which accumulate only
+    their own sources, masked by their region.
+  - `sources`: a `Tuple` of `Symbol`s labeling the physical processes whose
+    `ρe_tot` tendencies are attributed to this tag (e.g. `(:radiation,)`);
+    empty for passive region tags. A single `Symbol` is also accepted
+    (`:none` meaning "no sources").
+"""
+struct TracerTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
+       AbstractTracerTag{name}
+    region::R
+    sources::S
+end
+TracerTag{name}(region::R, sources::S = ()) where {name, R, S <: Tuple} =
+    TracerTag{name, R, S}(region, sources)
+TracerTag{name}(region, source::Symbol) where {name} =
+    TracerTag{name}(region, source === :none ? () : (source,))
+
+"""
+    WaterTag{name}(region, source = :none)
+
+Definition of one tagged prognostic water tracer, stored in the state as
+`Y.c.ρq_tag_<name>`. Same shape as [`TracerTag`](@ref), but it partitions total
+water `ρq_tot` rather than total energy, and it is attributed with a different
+rule (see `parameterized_tendencies/tagged_tracers/tagged_water.jl`):
+
+  - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. A pure region tag
+    (`region` given, no sources) is initialized to `ρq_tot * mask` and receives
+    every attributed *production* term, masked. Any source tag is initialized to
+    zero and receives only the production of the processes it lists.
+  - `sources`: a `Tuple` of `Symbol`s labeling the processes whose `ρq_tot`
+    production is attributed to this tag (e.g. `(:surface_flux,)`); empty for a
+    pure region tag. A single `Symbol` is also accepted (`:none` meaning "no
+    sources").
+
+Unlike an energy tag, *every* water tag is depleted by *every* attributed loss
+term, in proportion to its own share of the local water. That is what makes
+`ρq_tag_<name>` an actual water mass rather than a running source integral.
+"""
+struct WaterTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
+       AbstractTracerTag{name}
+    region::R
+    sources::S
+end
+WaterTag{name}(region::R, sources::S = ()) where {name, R, S <: Tuple} =
+    WaterTag{name, R, S}(region, sources)
+WaterTag{name}(region, source::Symbol) where {name} =
+    WaterTag{name}(region, source === :none ? () : (source,))
+
+"""
+    tag_sources(tag::AbstractTracerTag)
+
+The `Tuple` of process labels attributed to a tag; empty for a pure region tag.
+"""
+tag_sources(tag::AbstractTracerTag) = tag.sources
+
+"""
+    tag_name(tag::AbstractTracerTag)
+
+The `Symbol` name of a tag (compile-time constant).
+"""
+tag_name(::AbstractTracerTag{name}) where {name} = name
+
+"""
+    TaggingModel(tags::Tuple)
+
+Model component holding a `Tuple` of [`TracerTag`](@ref)s. Constructed from
+the `tagged_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
+`config/model_getters.jl`.
+"""
+struct TaggingModel{T <: Tuple}
+    tags::T
+end
+
+"""
+    WaterTaggingModel(tags::Tuple)
+
+Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
+`tagged_water` config entry; see `AtmosTagging(::AtmosConfig)` in
+`config/model_getters.jl`.
+"""
+struct WaterTaggingModel{T <: Tuple}
+    tags::T
+end
+
+"""
+    AtmosTagging
+
+Groups tagged-tracer models and types.
+"""
+@kwdef struct AtmosTagging{TM, WM}
+    tagging_model::TM = nothing
+    water_tagging_model::WM = nothing
+end
+
+"""
     AtmosWater{MM, CM, MTTS, TNM, SQ, TVM}(; microphysics_model = DryModel(), kwargs...)
 
 Group of moisture, cloud, and microphysics choices inside an
@@ -2334,7 +2538,7 @@ Base.broadcastable(x::COSPModel) = tuple(x)
 # methods are parsed.
 
 """
-    AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, COSP}
+    AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, TG, COSP}
 
 Complete description of the physics of an atmospheric simulation: which
 parameterizations are active and how each is configured.
@@ -2359,13 +2563,14 @@ names.
   - `surface`: An `AtmosSurface` group.
   - `numerics`: An `AtmosNumerics` group.
   - `chemistry`: An `AtmosChem` group.
+  - `tagging`: An `AtmosTagging` group (tagged energy and water tracers).
   - `cosp`: `nothing`, or a `COSPModel` for the satellite simulator.
   - `disable_surface_flux_tendency`: Whether to skip applying the surface flux
     tendency, independently of whether surface conditions are computed.
 
 See the keyword constructor `AtmosModel(; kwargs...)` below.
 """
-struct AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, COSP}
+struct AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, TG, COSP}
     water::W
     scm_setup::SCM
     radiation::R
@@ -2377,6 +2582,7 @@ struct AtmosModel{W, SCM, R, TC, PF, GW, VD, SP, SU, NU, CM, COSP}
     surface::SU
     numerics::NU
     chemistry::CM
+    tagging::TG
     cosp::COSP
 
     # Whether to apply surface flux tendency (independent of surface conditions)
@@ -2406,6 +2612,7 @@ const ATMOS_MODEL_GROUPS = (
     (AtmosNumerics, :numerics),
     (SCMSetup, :scm_setup),
     (AtmosChem, :chemistry),
+    (AtmosTagging, :tagging),
 )
 
 # Auto-generate map from property_name to group_field
@@ -2657,6 +2864,8 @@ function AtmosModel(; kwargs...)
         _create_grouped_struct(AtmosNumerics, atmos_model_kwargs, group_kwargs)
     chemistry =
         _create_grouped_struct(AtmosChem, atmos_model_kwargs, group_kwargs)
+    tagging =
+        _create_grouped_struct(AtmosTagging, atmos_model_kwargs, group_kwargs)
 
     vertical_diffusion = get(atmos_model_kwargs, :vertical_diffusion, nothing)
     cosp = get(atmos_model_kwargs, :cosp, nothing)
@@ -2677,6 +2886,7 @@ function AtmosModel(; kwargs...)
         typeof(surface),
         typeof(numerics),
         typeof(chemistry),
+        typeof(tagging),
         typeof(cosp),
     }(
         water,
@@ -2690,6 +2900,7 @@ function AtmosModel(; kwargs...)
         surface,
         numerics,
         chemistry,
+        tagging,
         cosp,
         disable_surface_flux_tendency,
     )

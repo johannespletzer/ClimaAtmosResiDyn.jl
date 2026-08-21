@@ -1299,6 +1299,7 @@ Surface pieces supplied by `setup_type` (flux scheme, temperature, boundary over
 take precedence over the config keys. Otherwise:
 
   - `prognostic_surface`: `"PrescribedSST"` uses the setup's temperature model,
+    `"SeasonalSST"` adds a seasonal cycle to the zonally symmetric analytic profile,
     `"SlabOceanSST"` gives `SurfaceConditions.SlabOceanTemperature`; anything else errors.
   - `surface_setup`: `"PrescribedSurface"` leaves the flux scheme `nothing`; any other
     value names a type in `SurfaceConditions` that is constructed and then called with
@@ -1321,9 +1322,16 @@ function AtmosSurface(
         SurfaceConditions.SlabOceanTemperature{FT}()
     elseif pa["prognostic_surface"] == "PrescribedSST"
         @something(setup_pieces.temperature, Setups.surface_temperature_model(setup_type))
+    elseif pa["prognostic_surface"] == "SeasonalSST"
+        # Phased to the calendar rather than to the start of the run, so a
+        # restart mid-year continues the same seasonal cycle.
+        start_day = Dates.dayofyear(parse_date(pa["start_date"]))
+        SurfaceConditions.AnalyticTemperature(
+            Setups.SeasonalOceanTemperature{FT}(; start_day = FT(start_day)),
+        )
     else
         error(
-            """Uncaught prognostic_surface `$(pa["prognostic_surface"])`. Expected: "PrescribedSST" | "SlabOceanSST".""",
+            """Uncaught prognostic_surface `$(pa["prognostic_surface"])`. Expected: "PrescribedSST" | "SeasonalSST" | "SlabOceanSST".""",
         )
     end
 
@@ -1367,16 +1375,155 @@ errors.
 """
 function AtmosChem(config::AtmosConfig)
     chem = config.parsed_args["chemistry_model"]
+    FT = eltype(config)
     chemistry_model = if isnothing(chem)
         nothing
     elseif chem == "passive"
         GasPhaseChem()
+    elseif chem == "stratospheric_passive_tracers"
+        get_stratospheric_passive_tracers(config.parsed_args, FT)
     else
         error(
-            """Unknown chemistry_model `$chem`. Expected: ~ | "passive".""",
+            """Unknown chemistry_model `$chem`. Expected: ~ | "passive" | \
+            "stratospheric_passive_tracers".""",
         )
     end
     return AtmosChem(; chemistry_model)
+end
+
+function AtmosTagging(config::AtmosConfig)
+    FT = eltype(config)
+    entries = config.parsed_args["tagged_tracers"]
+    tagging_model = if isnothing(entries) || isempty(entries)
+        nothing
+    else
+        TaggingModel(tagged_tracer_tuple(entries, FT))
+    end
+    water_entries = config.parsed_args["tagged_water"]
+    water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
+        nothing
+    else
+        check_water_tagging_supported(
+            get_microphysics_model(config.parsed_args),
+        )
+        WaterTaggingModel(water_tag_tuple(water_entries, FT))
+    end
+    return AtmosTagging(; tagging_model, water_tagging_model)
+end
+
+"""
+    get_stratospheric_passive_tracers(parsed_args, FT)
+
+Build the [`StratosphericPassiveTracers`](@ref) chemistry model from the
+`tracer_*` and `tropopause_*` configuration keys.
+"""
+function get_stratospheric_passive_tracers(parsed_args, ::Type{FT}) where {FT}
+    height_coordinate_name = parsed_args["tracer_source_height_coordinate"]
+    height_coordinate = if height_coordinate_name == "tropopause"
+        TropopauseRelativeHeight()
+    elseif height_coordinate_name == "altitude"
+        GeometricHeight()
+    else
+        error(
+            """Unknown tracer_source_height_coordinate \
+            `$height_coordinate_name`. Expected: "tropopause" | "altitude".""",
+        )
+    end
+
+    loss_timescale = time_to_seconds(parsed_args["tracer_loss_timescale"])
+    isfinite(loss_timescale) || error(
+        "tracer_loss_timescale must be finite; an infinite timescale removes \
+        the tracers' only sink, so they never reach equilibrium.",
+    )
+
+    tropopause = TropopauseParameters{FT}(;
+        lapse_rate_threshold = parsed_args["tropopause_lapse_rate_threshold"],
+        consistency_depth = parsed_args["tropopause_consistency_depth"],
+        search_min_height = parsed_args["tropopause_search_min_height"],
+        search_max_height = parsed_args["tropopause_search_max_height"],
+    )
+
+    production_rate = parsed_args["tracer_production_rate"]
+
+    # An explicit box list wins over the grid keys. It is what a campaign whose
+    # boxes are not an outer product needs -- non-uniform spacing, boxes of
+    # differing depth, or a grid with some combinations left out.
+    box_specs = parsed_args["tracer_source_boxes"]
+    if !isnothing(box_specs)
+        boxes = parse_tracer_source_boxes(box_specs, FT)
+        return StratosphericPassiveTracers(
+            FT,
+            boxes;
+            production_rate,
+            loss_timescale,
+            height_coordinate,
+            tropopause,
+        )
+    end
+
+    return StratosphericPassiveTracers(
+        FT;
+        n_latitude_bands = parsed_args["tracer_source_latitude_bands"],
+        latitude_width = parsed_args["tracer_source_latitude_width"],
+        n_height_bands = parsed_args["tracer_source_height_bands"],
+        band_depth = parsed_args["tracer_source_band_depth"],
+        band_spacing = parsed_args["tracer_source_band_spacing"],
+        lowest_band_base = parsed_args["tracer_source_lowest_band_base"],
+        production_rate,
+        loss_timescale,
+        height_coordinate,
+        tropopause,
+    )
+end
+
+"""
+    parse_tracer_source_boxes(box_specs, ::Type{FT})
+
+Turn the `tracer_source_boxes` configuration entry into a vector of
+[`SourceBox`](@ref)es.
+
+Each entry must be a mapping carrying `latitude_lower`, `latitude_upper`,
+`height_lower` and `height_upper`. Heights are in m, measured from the
+reference chosen by `tracer_source_height_coordinate`; a box that should span
+exactly one model layer takes that layer's face heights.
+"""
+function parse_tracer_source_boxes(box_specs, ::Type{FT}) where {FT}
+    box_specs isa AbstractVector || error(
+        "tracer_source_boxes must be a list of boxes, got a \
+        $(typeof(box_specs))",
+    )
+    required =
+        ("latitude_lower", "latitude_upper", "height_lower", "height_upper")
+    required_list = join(required, ", ")
+    boxes = SourceBox{FT}[]
+    for (index, spec) in enumerate(box_specs)
+        spec isa AbstractDict || error(
+            "tracer_source_boxes[$index] must be a mapping with keys " *
+            "$required_list, got a $(typeof(spec))",
+        )
+        for key in required
+            haskey(spec, key) ||
+                error("tracer_source_boxes[$index] is missing `$key`")
+        end
+        extra = sort(setdiff(string.(keys(spec)), required))
+        if !isempty(extra)
+            extra_list = join(extra, ", ")
+            error(
+                "tracer_source_boxes[$index] has unknown keys " *
+                "$extra_list; expected only $required_list",
+            )
+        end
+        push!(
+            boxes,
+            SourceBox(
+                FT(spec["latitude_lower"]),
+                FT(spec["latitude_upper"]),
+                FT(spec["height_lower"]),
+                FT(spec["height_upper"]),
+            ),
+        )
+    end
+    return boxes
 end
 
 """

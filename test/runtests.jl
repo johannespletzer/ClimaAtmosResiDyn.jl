@@ -28,6 +28,8 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Utilities" begin @time include("utilities.jl") end
     @safetestset "Variable manipulations" begin @time include("variable_manipulations_tests.jl") end
     @safetestset "Tracer processes" begin @time include("tracer_processes_tests.jl") end
+    @safetestset "Tagged tracers" begin @time include("tagged_tracers_tests.jl") end
+    @safetestset "Tagged water" begin @time include("tagged_water_tests.jl") end
     @safetestset "Parameter tests" begin @time include("parameter_tests.jl") end
 
     @safetestset "Check TOML path" begin @time include("test_output_yaml_path.jl") end
@@ -36,6 +38,7 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Radiation interface tests" begin @time include("rrtmgp_interface.jl") end
     @safetestset "Coupler compatibility" begin @time include("coupler_compatibility.jl") end
     @safetestset "Surface albedo tests" begin @time include("surface_albedo.jl") end
+    @safetestset "Seasonal SST" begin @time include("seasonal_sst.jl") end
     @safetestset "Larcform1 setup" begin @time include("larcform1.jl") end
 
     # Config tests
@@ -74,6 +77,8 @@ if TEST_GROUP in ("dynamics", "all")
     # Conservation tests
     @safetestset "Mass conservation" begin @time include("conservation/mass_conservation.jl") end
     @safetestset "Energy conservation" begin @time include("conservation/energy_conservation.jl") end
+    @safetestset "Tagged tracers integration" begin @time include("tagged_tracers_integration.jl") end
+    @safetestset "Tagged water integration" begin @time include("tagged_water_integration.jl") end
 end
 
 # ============================================================================

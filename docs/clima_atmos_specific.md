@@ -1,6 +1,6 @@
 # ClimaAtmos-Specific Guide
 
-This file contains everything specific to the ClimaAtmos.jl repository: directory layout, configuration system, test groups, Buildkite jobs, and reproducibility tooling. All other files in `docs/agents/` are intended to be portable across CliMA repositories.
+This file contains everything specific to the ClimaAtmos.jl repository: directory layout, configuration system, test groups, Buildkite jobs, and reproducibility tooling. All other files in `docs/dev-guides/` are vendored from CliMA/DeveloperGuides and are intended to be portable across CliMA repositories.
 
 ## Codebase map
 
@@ -11,19 +11,22 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
   - `src/prognostic_equations/`: tendency accumulation and implicit/explicit splitting.
   - `src/parameterized_tendencies/`: parameterization implementations.
       + `microphysics/`: microphysics tendency orchestration, SGS quadrature, limiters, Jacobian.
+      + `chemistry/`: `chemistry.jl` holds the MUSICA-backed gas-phase hook; `stratospheric_passive_tracers.jl` holds the inert latitude/height-banded tracers used for stratospheric residence times (see [passive_tracers.md](src/passive_tracers.md)). Their lower boundary comes from `src/utils/tropopause.jl`.
       + `radiation/`: RRTMGP wrappers and idealized radiation (`held_suarez.jl`).
       + `gravity_wave_drag/`: non-orographic and orographic GWD.
       + `les_sgs_models/`: Smagorinsky–Lilly, anisotropic minimum dissipation, constant horizontal diffusion.
       + `sponge/`: Rayleigh and viscous sponge tendencies.
+      + `tagged_tracers/`: tagged prognostic energy (`tagged_tracers.jl`, `ρe_tag_*`) and water (`tagged_water.jl`, `ρq_tag_*`) tracers — smooth region masks, config parsing, state builders, and the snapshot/attribute brackets consumed by `remaining_tendency.jl` and `implicit/implicit_tendency.jl`.
   - EDMF code lives in `src/cache/{prognostic,diagnostic}_edmf_precomputed_quantities.jl` and `src/prognostic_equations/edmfx_*.jl`, not under `parameterized_tendencies/`.
   - `src/callbacks/`, `src/diagnostics/`, `src/setups/`, `src/surface_conditions/`, `src/topography/`, `src/parameters/`, `src/utils/`: remaining domain subtrees. Search by physics/runtime concept first.
-  - `config/`: YAML/TOML config library. `default_configs/default_config.yml` is the schema baseline; `common_configs/` holds reusable numerics; `model_configs/`, `gpu_configs/`, `mpi_configs/`, `perf_configs/`, and `longrun_configs/` are scenario overlays.
+  - `config/`: YAML/TOML config library. `default_configs/default_config.yml` is the schema baseline; `common_configs/` holds reusable numerics; `example_configs/` holds run controls for script-based examples; `model_configs/`, `gpu_configs/`, `mpi_configs/`, `perf_configs/`, and `longrun_configs/` are scenario overlays.
   - `.buildkite/ci_driver.jl`: canonical run entry for CI-style simulations. It parses config, builds the simulation, runs `solve_atmos!`, and performs validation/output checks.
-  - `.buildkite/pipeline.yml`: authoritative list of Buildkite jobs and their config combinations. Use it to see which config families are combined in automation. Branch dispatch is inline: each job step is gated `if: build.branch != "main"`, and a single `main`-only step moves reproducibility results into the reference store (so a merge does not re-run simulations). New top-level jobs must carry the `if: build.branch != "main"` gate.
+  - `.buildkite/pipeline.yml` is the bootstrap pipeline Buildkite uploads; `.buildkite/full_pipeline.yml` is the authoritative list of jobs and their config combinations. Branch dispatch lives in the bootstrap, not in the individual steps: on `main` it publishes the merged PR's staged reproducibility reference, and otherwise a decider step (`decide_pipeline.sh`) either reuses an already-tested PR's results or uploads the full pipeline. New jobs go in `full_pipeline.yml` and need no branch gate of their own.
   - `docs/make.jl` and `docs/src/`: Documenter entry point plus user/contributor docs. Good references for API usage and config recipes.
   - `perf/`: allocation and performance benchmarks run separately from unit tests. Not run in CI; regressions must be caught in review.
   - `reproducibility_tests/`: reproducibility test infrastructure. `ref_counter.jl` holds a single integer counter that partitions commit history into reference bins — increment it when simulation output intentionally changes.
   - `post_processing/`, `calibration/`, `runscripts/`, `examples/`: analysis scripts, calibration workflows, launch scripts, and smaller usage examples.
+    `runscripts/` targets DKRZ Levante specifically; see [runscripts/README.md](../runscripts/README.md) for the setup-then-submit order, the CPU/GPU stack split, and the node layout the GPU scripts are built around.
 
 ## Mapping the architectural layers to ClimaAtmos directories
 
@@ -66,7 +69,7 @@ TEST_GROUP=parameterizations julia +1.11 --project -e 'import Pkg; Pkg.test()'
 
 ### Test layout
 
-  - `test/config/`, `test/diagnostics/`, `test/prognostic_equations/`, `test/parameterized_tendencies/`, `test/conservation/` mostly mirror the source layout.
+  - `test/config/`, `test/diagnostics/`, `test/prognostic_equations/`, `test/parameterized_tendencies/`, `test/conservation/`, `test/cosp/`, `test/implicit/` mostly mirror the source layout. A few feature tests sit at the top level instead (`test/tagged_tracers*.jl`, `test/tagged_water*.jl`, `test/tracer_processes_tests.jl`).
   - `test/test_helpers.jl`: shared testing utilities.
   - `test/config.jl`: config invariants and uniqueness checks; inspect this before changing config semantics.
 

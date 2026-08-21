@@ -66,6 +66,24 @@ import ..OrographicGravityWave
 
 # chemistry_model
 import ..GasPhaseChem
+import ..StratosphericPassiveTracers
+import ..stratospheric_tracer_symbols
+import ..n_tracers
+
+# tropopause
+import ..TropopauseParameters
+import ..set_tropopause_height!
+
+# tagging_model
+import ..AtmosTagging
+import ..TaggingModel
+import ..tag_name
+import ..region_tag_state_names
+
+# water_tagging_model
+import ..WaterTaggingModel
+import ..water_region_tag_state_names
+import ..water_tag_fraction
 
 # surface temperature
 import ..SurfaceConditions

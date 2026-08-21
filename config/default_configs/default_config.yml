@@ -443,8 +443,62 @@ time_varying_trace_gases:
   help: "Trace gases that vary in time, e.g. [\"CO2\", \"O3\"]. Currently, only \"CO2\" and \"O3\" are supported. All other trace gases set fixed to default values from ClimaParams."
   value: []
 chemistry_model:
-  help: "Chemistry model [`~` (default, no passive tracers), `passive` (enables passive tracer A)]"
+  help: "Chemistry model [`~` (default, no passive tracers), `passive` (enables passive tracer A), `stratospheric_passive_tracers` (one inert tracer per latitude/height source region above the tropopause)]"
   value: ~
+tagged_tracers:
+  help: "Tagged prognostic energy tracers `ρe_tag_<name>` [`~` (default, disabled)]. List of maps, each with `name` (required, unique), optional `region` (map with `type`: `everywhere` | `tanh_altitude` with `z_center` and `width` in meters | `tanh_latitude` with `lat_bound` and `width` in degrees | `tanh_box` with `lon_min`, `lon_max`, `lat_min`, `lat_max` and `width` in degrees | `tanh_polygon` with `vertices` (a list of `[lon, lat]` pairs) and `width` in degrees, all but `everywhere` accepting `inside: false` (`above: false` for `tanh_altitude`) for the exact complement), and optional `source` (process label for source attribution). Region tags are initialized to the masked share of `ρe_tot`; source-only tags start at zero."
+  value: ~
+tagged_water:
+  help: "Tagged prognostic water tracers `ρq_tag_<name>` [`~` (default, disabled)]. Same `name` / `region` / `source` schema as `tagged_tracers`, but the tags partition total water `ρq_tot` and the source labels are the processes that move water: `surface_flux`, `microphysics`, `large_scale_advection`, `subsidence`, `external_forcing`, plus the groups `surface`, `forcing` and `all`. Region tags are initialized to the masked share of `ρq_tot`; source-only tags start at zero. Every tag is depleted by every attributed loss in proportion to its own share of the local water. Requires `microphysics_model: 0M` or `1M`; with 1M the tags additionally sediment with their own mirrored donor-cell flux, so surface precipitation is tagged."
+  value: ~
+
+
+# Stratospheric passive tracers (chemistry_model: stratospheric_passive_tracers)
+tracer_source_boxes:
+  help: "Explicit list of tracer source boxes, each a mapping with keys `latitude_lower`, `latitude_upper`, `height_lower`, `height_upper` (degrees and m). Overrides the `tracer_source_*_bands` grid keys when set. Use it when the boxes are not a latitude x height outer product: non-uniform band spacing, boxes of differing depth, or a grid with some combinations left out. Heights are measured from the reference chosen by `tracer_source_height_coordinate`. [`~` (default, use the grid keys)]"
+  value: ~
+tracer_source_latitude_bands:
+  help: "Number of tracer source latitude boxes, centred on the midpoints of that many equal divisions of pole to pole"
+  value: 6
+tracer_source_latitude_width:
+  help: "Width of each tracer source latitude box, in degrees. Must not exceed the spacing between boxes."
+  value: 10.0
+tracer_source_height_bands:
+  help: "Number of tracer source height boxes, stacked above the reference"
+  value: 8
+tracer_source_band_depth:
+  help: "Depth of each tracer source height box, in m. Must not exceed `tracer_source_band_spacing`."
+  value: 2000.0
+tracer_source_band_spacing:
+  help: "Distance between the bottoms of successive tracer source height boxes, in m"
+  value: 5000.0
+tracer_source_lowest_band_base:
+  help: "Height above the reference (see `tracer_source_height_coordinate`) of the bottom of the lowest tracer source band, in m"
+  value: 0.0
+tracer_source_height_coordinate:
+  help: "Reference that tracer source heights are measured from [`tropopause` (default, source regions follow the local tropopause), `altitude` (fixed heights above sea level)]"
+  value: "tropopause"
+tracer_production_rate:
+  help: "Production of tracer mass fraction inside a source region, in s^-1. Sets the magnitude of the tracers but not their lifetimes."
+  value: 1.0e-10
+tracer_loss_timescale:
+  help: "E-folding time of the relaxation of the tracers to zero below the tropopause. Examples: [`6hours`, `1days`]"
+  value: "6hours"
+dt_tracer_budget:
+  help: "Time between appending the tracer burden/source/loss table to the output directory. Examples: [`10days`, `Inf` (never)]"
+  value: "10days"
+tropopause_lapse_rate_threshold:
+  help: "WMO lapse-rate tropopause threshold, in K m^-1 (2 K/km)"
+  value: 0.002
+tropopause_consistency_depth:
+  help: "Depth above a candidate tropopause over which the mean lapse rate must stay below the threshold, in m"
+  value: 2000.0
+tropopause_search_min_height:
+  help: "Lowest height at which a tropopause may be diagnosed, in m. Excludes boundary-layer inversions."
+  value: 5000.0
+tropopause_search_max_height:
+  help: "Highest height at which a tropopause may be diagnosed, in m"
+  value: 25000.0
 
 # Eddy-diffusivity mass-flux (EDMF) configuration
 turbconv:

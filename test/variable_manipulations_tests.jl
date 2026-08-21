@@ -140,6 +140,20 @@ end
     # Check values
     # q_tot = ρq_tot / ρ = 2 / 1 = 2
     @test all(parent(spec_tracers.q_tot) .≈ 2.0)
+
+    # Test allocate_ᶜspecific_gs_tracers
+    # It must agree with the materialized broadcast, which it stands in for
+    # wherever only the storage is needed. Allocating instead of materializing
+    # keeps a NamedTuple broadcast as wide as the tracer count off the GPU,
+    # where it stops compiling past roughly 32 tracers.
+    allocated = CA.allocate_ᶜspecific_gs_tracers(Y, FT)
+    @test eltype(allocated) == eltype(spec_tracers)
+    @test axes(allocated) == axes(spec_tracers)
+
+    # With no grid-scale tracers the element type is an empty NamedTuple
+    Y_no_tracers = (; c = similar(coords, NamedTuple{(:ρ,), Tuple{FT}}))
+    @test eltype(CA.allocate_ᶜspecific_gs_tracers(Y_no_tracers, FT)) ==
+          NamedTuple{(), Tuple{}}
 end
 
 @testset "ᶜenv_value & helpers" begin

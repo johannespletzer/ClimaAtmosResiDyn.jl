@@ -213,8 +213,15 @@ function diffusion_jacobian_blocks(Y, atmos, diffusion_flag)
     mass_names = unrolled_map(center_state_name, sedimenting_mass_names(Y))
     sedimenting_names =
         unrolled_map(center_state_name, sedimenting_tracer_names(Y))
-    passive_names =
-        unrolled_map(center_state_name, passive_gs_tracer_names(Y))
+    # Tagged water tracers are passive for diffusion, but under 1-moment
+    # microphysics their diagonals are already allocated (and initialized) by
+    # `sedimentation_jacobian_blocks`, which this update accumulates into.
+    sedimenting_tag_names =
+        unrolled_map(center_state_name, sedimenting_water_tag_names(Y))
+    passive_names = unrolled_filter(
+        name -> !(name in sedimenting_tag_names),
+        unrolled_map(center_state_name, passive_gs_tracer_names(Y)),
+    )
     ρtke_if_available =
         is_in_Y(@name(c.ρtke)) ? (@name(c.ρtke),) : ()
     return (
@@ -283,6 +290,11 @@ coupling, which `update_sedimentation_jacobian!` initializes (to `-I` and to
 zero, respectively) and which diffusion and SGS mass flux accumulate into.
 Returns `()` for `DryModel`.
 
+Tagged water tracers mirror the sedimentation flux (see
+[`sediment_water_tags!`](@ref)), so their diagonals are allocated here too and
+excluded from `diffusion_jacobian_blocks`, which would otherwise allocate them
+a second time as passive tracers.
+
 # Returns
 
 `Tuple` of `(row_name, col_name) => block` pairs.
@@ -294,7 +306,13 @@ function sedimentation_jacobian_blocks(Y, atmos)
     sedimenting_names =
         unrolled_map(center_state_name, sedimenting_tracer_names(Y))
     mass_names = unrolled_map(center_state_name, sedimenting_mass_names(Y))
+    water_tag_names =
+        unrolled_map(center_state_name, sedimenting_water_tag_names(Y))
     return (
+        map(
+            name -> (name, name) => similar(Y.c, TridiagonalRow),
+            water_tag_names,
+        )...,
         (@name(c.ρe_tot), @name(c.ρe_tot)) => similar(Y.c, TridiagonalRow),
         (@name(c.ρq_tot), @name(c.ρq_tot)) => similar(Y.c, TridiagonalRow),
         (@name(c.ρe_tot), @name(c.ρq_tot)) => similar(Y.c, TridiagonalRow),
@@ -961,6 +979,70 @@ function update_sedimentation_jacobian!(matrix, Y, p, dtγ)
                 )
         end
     end
+
+    update_water_tag_sedimentation_jacobian!(matrix, Y, p)
+    return nothing
+end
+
+"""
+    update_water_tag_sedimentation_jacobian!(matrix, Y, p)
+
+Diagonal Jacobian blocks for the mirrored sedimentation of the tagged water
+tracers (see [`sediment_water_tags!`](@ref)). A no-op under 0-moment
+microphysics, where nothing sediments and the tags are ordinary passive tracers
+whose diagonals `update_diffusion_jacobian!` initializes instead.
+
+Each tag's tendency sums a flux over the sedimenting species, so unlike the
+condensate blocks above — one species, one state variable — a single block is
+initialized to `-I` and then accumulates a contribution from every species.
+`dtγ` is not needed here: it is already folded into
+`p.scratch.ᶜbidiagonal_adjoint_matrix_c3` by the caller.
+
+Only the diagonal is carried. The tendency also depends on `ρq_tot` (through the
+donor share), on `ρ`, and on each sedimenting mass (through that species'
+specific content); those cross-terms are dropped, in the same spirit as the
+EDMFX subdomain corrections above — a convergence-rate approximation, not a
+change to what is being solved. The diagonal is the stiff part, because it is
+what couples a tag to its own vertical neighbours at the sedimentation CFL.
+"""
+function update_water_tag_sedimentation_jacobian!(matrix, Y, p)
+    isempty(sedimenting_water_tag_names(Y)) && return nothing
+    # The share denominator is a property of the current state, so it has to be
+    # rebuilt here rather than reused from the tendency evaluation.
+    water_tag_share_norm!(p, Y)
+    MatrixFields.unrolled_foreach(p.atmos.water_tagging_model.tags) do tag
+        update_water_tag_sedimentation_block!(matrix, Y, p, tag)
+    end
+    return nothing
+end
+
+# One tag's diagonal block, accumulated over the sedimenting species. Split out
+# of the loop above so that neither closure captures more than it needs.
+function update_water_tag_sedimentation_block!(matrix, Y, p, tag)
+    ᶜρq_tag = tag_field(Y.c, tag)
+    tag_state_name = center_state_name(water_tag_field_name(tag))
+    ∂ᶜρq_tag_err_∂ᶜρq_tag = matrix[tag_state_name, tag_state_name]
+    @. ∂ᶜρq_tag_err_∂ᶜρq_tag = zero(typeof(∂ᶜρq_tag_err_∂ᶜρq_tag)) - (I,)
+
+    MatrixFields.unrolled_foreach(sedimenting_mass_names(Y)) do ρqₚ_name
+        ᶜwₚ = MatrixFields.get_field(
+            p.precomputed,
+            sedimentation_velocity_name(ρqₚ_name),
+        )
+        ᶜρqₚ = MatrixFields.get_field(Y.c, ρqₚ_name)
+        # ∂/∂ρq_tag of -precipdivᵥ(ᶠρ ᶠright_bias(WVector(-wₚ) qₚ φ̂)), i.e. the
+        # parent flux with qₚ φ̂ replaced by qₚ ∂φ̂/∂ρq_tag.
+        ᶜdshare = water_tag_sediment_dshare_field(Y, p, tag)
+        @. p.scratch.ᶠband_matrix_wvec =
+            ᶠright_bias_matrix() ⋅ DiagonalMatrixRow(
+                ClimaCore.Geometry.WVector(
+                    -(ᶜwₚ) * specific(ᶜρqₚ, Y.c.ρ) * ᶜdshare,
+                ),
+            )
+        @. ∂ᶜρq_tag_err_∂ᶜρq_tag +=
+            p.scratch.ᶜbidiagonal_adjoint_matrix_c3 ⋅
+            p.scratch.ᶠband_matrix_wvec
+    end
     return nothing
 end
 
@@ -1197,12 +1279,21 @@ function update_diffusion_jacobian!(
     # vertical diffusion (see edmfx_sgs_diffusive_flux_tendency! and
     # vertical_diffusion_boundary_layer_tendency!) — both captured by
     # `ᶜdiffusion_h_matrix` above. Their diagonals receive no other
-    # implicit contributions, so they are initialized here.
+    # implicit contributions, so they are initialized here. Except
+    # for tagged water tracers under 1-moment microphysics, whose diagonals
+    # `update_sedimentation_jacobian!` has already initialized with the
+    # mirrored sedimentation flux, and which are accumulated into instead.
+    sedimenting_tag_names = sedimenting_water_tag_names(Y)
     MatrixFields.unrolled_foreach(passive_gs_tracer_names(Y)) do ρχ_name
         ρχ_state_name = center_state_name(ρχ_name)
         ∂ᶜρχ_err_∂ᶜρχ = matrix[ρχ_state_name, ρχ_state_name]
-        @. ∂ᶜρχ_err_∂ᶜρχ =
-            dtγ * ᶜdiffusion_h_matrix ⋅ DiagonalMatrixRow(1 / ᶜρ) - (I,)
+        if ρχ_name in sedimenting_tag_names
+            @. ∂ᶜρχ_err_∂ᶜρχ +=
+                dtγ * ᶜdiffusion_h_matrix ⋅ DiagonalMatrixRow(1 / ᶜρ)
+        else
+            @. ∂ᶜρχ_err_∂ᶜρχ =
+                dtγ * ᶜdiffusion_h_matrix ⋅ DiagonalMatrixRow(1 / ᶜρ) - (I,)
+        end
     end
 
     if MatrixFields.has_field(Y, @name(c.ρtke))

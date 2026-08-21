@@ -617,3 +617,43 @@ function default_diagnostics(
         return []
     end
 end
+
+###################
+# Tagged tracers  #
+###################
+function default_diagnostics(
+    atmos_tagging::AtmosTagging,
+    duration,
+    start_date,
+    t_start;
+    output_writer,
+)
+    # Per-tag specific energies plus the closure residual (when region tags
+    # exist). The short names are registered from the tagging model by
+    # `register_tagging_diagnostics!` before this function runs (see
+    # `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`).
+    tagging_model = atmos_tagging.tagging_model
+    water_tagging_model = atmos_tagging.water_tagging_model
+    isnothing(tagging_model) && isnothing(water_tagging_model) && return []
+    tag_diagnostics = String[]
+    if !isnothing(tagging_model)
+        append!(
+            tag_diagnostics,
+            ["e_tag_$(tag_name(tag))" for tag in tagging_model.tags],
+        )
+        isempty(region_tag_state_names(tagging_model)) ||
+            push!(tag_diagnostics, "e_tag_res")
+    end
+    if !isnothing(water_tagging_model)
+        for tag in water_tagging_model.tags
+            name = tag_name(tag)
+            append!(tag_diagnostics, ["q_tag_$name", "qv_tag_$name"])
+        end
+        isempty(water_region_tag_state_names(water_tagging_model)) ||
+            push!(tag_diagnostics, "q_tag_res")
+    end
+    average_func = frequency_averages(duration)
+    return [
+        average_func(tag_diagnostics...; output_writer, start_date, t_start)...,
+    ]
+end

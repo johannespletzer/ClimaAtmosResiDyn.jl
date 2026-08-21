@@ -20,10 +20,15 @@ physically admissible range:
 
   - `prescribe_flow!(Y, p, t, p.atmos.prescribed_flow)`: imposes the velocity,
     density, and energy of a 'kinematic driver'-like simulation.
+
   - `tracer_nonnegativity_constraint!(Y, p, t, p.atmos.water.tracer_nonnegativity_method)`:
     removes negative tracer masses.
+
   - `enforce_physical_constraints!(Y, p, t, p.atmos)`: grid-mean microphysics and
     EDMF updraft corrections.
+
+  - `repair_water_tag_partition!`: restores non-negativity of the tagged water
+    partition without changing its sum
 
 Registered with `ClimaTimeSteppers` as the `update_constrain_state` hook and fired
 at the cadence set by the `update_constrain_state_every` configuration option
@@ -35,6 +40,9 @@ NVTX.@annotate function constrain_state!(Y, p, t)
     prescribe_flow!(Y, p, t, p.atmos.prescribed_flow)
     tracer_nonnegativity_constraint!(Y, p, t, p.atmos.water.tracer_nonnegativity_method)
     enforce_physical_constraints!(Y, p, t, p.atmos)
+    # Last: the corrections above can still move ρq_tot (and rescale the tags to
+    # follow it), while the repair only needs the tags to be self-consistent.
+    repair_water_tag_partition!(Y, p)
     return nothing
 end
 
@@ -111,6 +119,8 @@ function tracer_nonnegativity_constraint!(Y, p, t,
             Limiters.compute_bounds!(tracer_nonnegativity_limiter, ᶜρq_lim, ᶜρ)  # bounds are `extrema(ᶜρq_lim) = (0, max(ᶜρq))`
             Limiters.apply_limiter!(ᶜρq, ᶜρ, tracer_nonnegativity_limiter; warn = false)  # ᶜρq is clipped to bounds, effectively ensuring `0 ≤ ᶜρq`
             if (name == @name(ρq_tot)) && constrain_qtot
+                # While `ᶜtemp_scalar_2` still holds the pre-clip `ρq_tot`
+                rescale_water_tags!(Y, p, ᶜtemp_scalar_2)
                 @. ᶜtemp_scalar_2 = ᶜρq - ᶜtemp_scalar_2
                 enforce_mass_energy_consistency!(Y, p, ᶜtemp_scalar_2)
             end
@@ -158,7 +168,10 @@ function prescribe_flow!(Y, p, t, flow::PrescribedFlow)
 
     # Clamp ρq_tot to non-negative to prevent the feedback loop:
     # negative ρq_tot → lower ρ → more negative q_tot → blowup
+    ᶜρq_tot_before = p.scratch.ᶜtemp_scalar_2
+    ᶜρq_tot_before .= Y.c.ρq_tot
     @. Y.c.ρq_tot = max(Y.c.ρq_tot, 0)
+    rescale_water_tags!(Y, p, ᶜρq_tot_before)
     @. Y.c.ρ = ᶜρ_init_dry + Y.c.ρq_tot
     ᶜq_tot = @. lazy(Y.c.ρq_tot / Y.c.ρ)
     ᶜe_kin = compute_kinetic(Y.c.uₕ, Y.f.u₃)

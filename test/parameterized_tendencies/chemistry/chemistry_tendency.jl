@@ -2,7 +2,6 @@ using Test
 import ClimaComms
 ClimaComms.@import_required_backends
 import ClimaAtmos as CA
-Sys.iswindows() || import Musica
 
 @testset "Chemistry Tendencies" begin
 
@@ -22,16 +21,22 @@ Sys.iswindows() || import Musica
     # ========================================================================
     # With Musica loaded: GasPhaseChem prints the version string
     # ========================================================================
-    # Musica is not compatible with Windows
-    Sys.iswindows() && return
-    @testset "GasPhaseChem prints MUSICA version" begin
-        import Musica
-        @test_logs (:info, r"MUSICA version: .+") CA.chemistry_tendency!(
-            nothing,
-            nothing,
-            nothing,
-            0.0,
-            CA.GasPhaseChem(),
-        )
+    if !Sys.iswindows() && !isnothing(Base.find_package("Musica"))
+        @testset "GasPhaseChem prints MUSICA version" begin
+            import Musica
+            extension = Base.get_extension(CA, :ClimaAtmosMusica)
+            extension_method = which(
+                CA.chemistry_tendency!,
+                (Nothing, Nothing, Nothing, Float64, CA.GasPhaseChem),
+            )
+            @test extension_method.module == extension
+            @test_logs (:info, r"MUSICA version: .+") CA.chemistry_tendency!(
+                nothing,
+                nothing,
+                nothing,
+                0.0,
+                CA.GasPhaseChem(),
+            )
+        end
     end
 end
