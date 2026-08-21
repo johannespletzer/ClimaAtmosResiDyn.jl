@@ -463,6 +463,9 @@ end
     for (step, t) in enumerate((0.0, 86400.0))
         budget = (;
             burden = collect(FT, (1:n) .* 1e9 .* (step - 1)),
+            # The writer reports undershoot mass alongside the burden, so the
+            # fixture has to carry it too. The plot reads only the burden.
+            negative_burden = zeros(FT, n),
             source = collect(FT, (1:n) .* 1e4),
             loss = zeros(FT, n),
         )
