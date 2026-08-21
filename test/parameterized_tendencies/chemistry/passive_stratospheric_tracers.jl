@@ -419,6 +419,10 @@ end
     budget = CA.stratospheric_tracer_budget(Y, p, chemistry_model)
     @test length(budget.burden) == CA.n_tracers(chemistry_model)
     @test all(iszero, budget.burden)
+    # Reported separately because the sink clamps at zero while the burden
+    # does not, so undershoot mass would otherwise bias the lifetime
+    # invisibly. The tracers start at zero, so there is none yet.
+    @test all(iszero, budget.negative_burden)
     @test all(iszero, budget.loss)
     @test all(budget.source .> 0)
     # The budget diagnoses the same source the tendency applied, tracer by

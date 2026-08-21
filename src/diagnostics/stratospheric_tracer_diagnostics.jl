@@ -122,7 +122,10 @@ function register_stratospheric_tracer_diagnostics!(
     for tracer_index in 1:n_tracers(chemistry_model)
         ρχ_name = names[tracer_index]
         short_name = specific_tracer_short_name(ρχ_name)
-        haskey(ALL_DIAGNOSTICS, short_name) && continue
+        # Delete rather than skip: a previous simulation in this process
+        # may have registered this short name with different box edges,
+        # and the stale entry would keep reporting them in its `comment`.
+        delete!(ALL_DIAGNOSTICS, short_name)
         ρχ_key = Val(ρχ_name)
 
         # The box edges, rather than the band indices, are what identifies a

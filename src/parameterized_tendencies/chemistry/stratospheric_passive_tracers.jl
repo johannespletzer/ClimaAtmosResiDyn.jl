@@ -86,7 +86,9 @@ Region `n` is the set of points with latitude in
 `(latitude_lower_edges[n], latitude_upper_edges[n]]` and height in
 `(height_lower_edges[n], height_upper_edges[n]]`, where height is measured
 from the local tropopause (`TropopauseRelativeHeight`) or from sea level
-(`GeometricHeight`). The boxes never overlap, so no point feeds two tracers.
+(`GeometricHeight`). The keyword constructor refuses overlapping boxes; the
+explicit list permits them, since the tracers are independent and a point
+inside two boxes simply feeds both (see `boxes_overlap`).
 
 The regions are held as a flat list rather than a latitude × height outer
 product. The keyword constructor still builds an outer product, which is the
@@ -582,6 +584,7 @@ function stratospheric_tracer_budget(
 
     n = n_tracers(chemistry_model)
     burden = zeros(FT, n)
+    negative_burden = zeros(FT, n)
     source = zeros(FT, n)
     loss = zeros(FT, n)
 
@@ -593,6 +596,16 @@ function stratospheric_tracer_budget(
         ᶜρχ = tracers[tracer_index]
 
         burden[tracer_index] = sum(ᶜρχ)
+
+        # Advection undershoots at the sharp box edges, so part of the
+        # burden can be negative mass. The sink only ever acts on positive
+        # mass -- `stratospheric_tracer_loss` clamps -- so that negative
+        # part enters `burden` but never `loss`, which biases `lifetime`
+        # low and holds `imbalance` off zero even in equilibrium. Report
+        # it rather than hide it: `burden + negative_burden` is the
+        # positive mass the sink sees.
+        @. ᶜwork = min(ᶜρχ, zero(ᶜρχ))
+        negative_burden[tracer_index] = -sum(ᶜwork)
 
         @. ᶜwork = stratospheric_tracer_source(
             ᶜρ,
@@ -615,7 +628,7 @@ function stratospheric_tracer_budget(
         )
         loss[tracer_index] = sum(ᶜwork)
     end
-    return (; burden, source, loss)
+    return (; burden, negative_burden, source, loss)
 end
 
 # Seconds in a Julian year, the unit lifetimes are reported in.
@@ -636,6 +649,7 @@ tracer_budget_header() = join(
         "height_lower",
         "height_upper",
         "burden",
+        "negative_burden",
         "source",
         "loss",
         "lifetime",
@@ -663,9 +677,15 @@ header) if it does not exist yet. Called on the root process only.
 `lifetime` is `burden / source`, in s, and is the quantity the experiment
 exists to measure; it is meaningful once `imbalance = (source - loss) / source`
 has settled near zero, which is what "the tracers are in equilibrium" means.
+
+`negative_burden` is the magnitude of negative tracer mass left by advection
+undershoots. The sink acts only on positive mass, so this part is counted in
+`burden` but not in `loss`: it biases `lifetime` low and keeps `imbalance`
+from reaching zero. `burden + negative_burden` is the positive mass the sink
+sees, and the ratio of the two is how far the bias goes.
 """
 function write_tracer_budget!(output_dir, t, chemistry_model, budget)
-    (; burden, source, loss) = budget
+    (; burden, negative_burden, source, loss) = budget
     path = tracer_budget_path(output_dir)
     write_header = !isfile(path) || filesize(path) == 0
     open(path, "a") do io
@@ -697,6 +717,7 @@ function write_tracer_budget!(output_dir, t, chemistry_model, budget)
                         chemistry_model.height_lower_edges[tracer_index],
                         chemistry_model.height_upper_edges[tracer_index],
                         burden[tracer_index],
+                        negative_burden[tracer_index],
                         source_rate,
                         loss_rate,
                         lifetime,

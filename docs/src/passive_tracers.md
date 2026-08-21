@@ -189,8 +189,15 @@ tropopause.
 
 Every `dt_tracer_budget`, the burden, source rate and loss rate of each tracer
 are appended to `stratospheric_tracer_budget.csv` in the output directory,
-together with `lifetime`, `lifetime_years`, `lifetime_from_loss` and
-`imbalance = (source - loss) / source`.
+together with `negative_burden`, `lifetime`, `lifetime_years`,
+`lifetime_from_loss` and `imbalance = (source - loss) / source`.
+
+`negative_burden` is the magnitude of negative tracer mass left by advection
+undershoots at the box edges. The sink acts only on positive mass, so this
+part counts towards `burden` but never towards `loss`: it biases `lifetime`
+low and stops `imbalance` reaching zero even in equilibrium.
+`burden + negative_burden` is the positive mass the sink sees, and comparing
+the two says how far the bias goes.
 
 `lifetime` and `lifetime_from_loss` are the same ratio measured against the
 source and against the sink. They agree only in equilibrium, and before it they

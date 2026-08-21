@@ -138,3 +138,65 @@ correct on the machine — the binding report shows `MATCH` on every rank and th
 CUDA/MPI device test passes — but the strong-scaling numbers they exist to
 produce have not been collected. The measurement protocol is in
 `runscripts/README.md`.
+
+## 4. Tagged water does not close under AMD LES or under PrognosticEDMFX
+
+**Status:** diagnosed, not fixed. Neither combination is exercised by any test,
+so nothing currently fails.
+
+Two transport paths move `ρq_tot` in ways the water tags do not follow, so
+`Σᵢ ρq_tag_i = ρq_tot` stops holding. Both are properties of the tagged-water
+implementation rather than of any particular run, and both predate the merge of
+the passive-tracer line.
+
+  - **AMD LES.** `parameterized_tendencies/les_sgs_models/anisotropic_minimum_dissipation.jl:135-152`
+    (horizontal) and `:282-300` (vertical) recompute `ᶜD_amd` inside
+    `foreach_gs_tracer` from *each tracer's own* gradient. So `ρq_tot` is
+    diffused with `D(∇q_tot)` and each `ρq_tag_k` with `D(∇χ_k)`, and
+    `Σₖ ∇⋅(ρ Dₖ ∇χₖ) ≠ ∇⋅(ρ D_tot ∇q_tot)` because the operator is nonlinear.
+    This is not transport "the tags receive in their own right" — it is a
+    genuine break of the partition that no bracket or repair corrects.
+    Smagorinsky–Lilly (`smagorinsky_lilly.jl:167-179`) shares one `ᶜD_h` and
+    does close, as does constant horizontal diffusion.
+
+  - **PrognosticEDMFX.** The SGS mass-flux loops in `edmfx_sgs_flux.jl:106,121`
+    are driven by `sgs_tracer_names(Y)`. Tags have no `sgsʲs` entries, so they
+    are skipped — safely, but they never receive that first-order water
+    transport. `check_water_tagging_supported` screens only the microphysics
+    model, so the combination is accepted silently. The claim in
+    `tagged_tracers/tagged_water.jl:18-20` that the implicit/explicit
+    vertical-advection split is "the one irreducible source of closure leakage"
+    is not true under EDMF.
+
+Either guard the combinations in `check_water_tagging_supported`, or give the
+tags the matching transport. Until then, read `q_tag_res` as a closure monitor
+only for configurations that use a shared diffusivity and no prognostic EDMF.
+
+## 5. The implicit water-microphysics attribution has no Jacobian diagonal
+
+**Status:** diagnosed, not fixed.
+
+`implicit/implicit_tendency.jl:55-64` puts the `:microphysics` water bracket on
+the implicit path. Its increment is `min(Δ, 0) · ρq_tag / ρq_tot`, which is
+proportional to `ρq_tag`, so `∂/∂ρq_tag = Δ⁻/ρq_tot` — the same O(1/dt)
+quantity the file's own positivity argument names. Nothing supplies that entry:
+under 0M the tags get the ordinary passive diagonal
+(`manual_sparse_jacobian.jl:1286`), or a plain `-I` when diffusion is explicit;
+under 1M the sedimentation diagonal carries no microphysics term.
+
+The comment at `:300-303` justifying the *energy* bracket's `-I` ("the
+attributed increment does not depend on the tags themselves") is true for
+`:precipitation` and false for the water bracket added directly above it. With
+a fixed Newton iteration count this is error in the answer rather than only
+slower convergence. Needs a precipitating run to show up; no GitHub CI job
+reaches it.
+
+## 6. `fill_with_nans!` would destroy the tag masks if it ever descended into the cache
+
+**Status:** latent; harmless today.
+
+The debug helper would overwrite the static region masks and the `ᶜwater_fix`
+ledger along with everything else. It does not, only because `AtmosCache` is a
+plain struct and hits the `::Any` fallback — which means the feature is a no-op
+in general, not that the tags are protected. Worth knowing before anyone makes
+it work.
