@@ -38,6 +38,9 @@ Artifacts.toml
 # ignore simulation outputs
 *.json
 *.in
+# ...except the coupler config templates, which are source files. They end
+# in .in because the chaining script substitutes into them before each run.
+!config/coupler_configs/*.yml.in
 *.vtu
 *.nc
 *.mp4

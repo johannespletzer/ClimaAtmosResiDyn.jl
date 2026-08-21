@@ -744,6 +744,79 @@ default_model_callbacks(scm::SCMSetup; kwargs...) =
 default_model_callbacks(::ExternalDrivenTVForcing; kwargs...) =
     scm_external_forcing_callback()
 
+# Chemistry component callbacks
+function default_model_callbacks(
+    chemistry::AtmosChem;
+    dt_tracer_budget = "10days",
+    output_dir,
+    dt,
+    t_start,
+    t_end,
+    checkpoint_frequency,
+    kwargs...,
+)
+    return tracer_budget_callback(
+        chemistry.chemistry_model,
+        dt_tracer_budget,
+        output_dir,
+        dt,
+        t_start,
+        t_end,
+        checkpoint_frequency,
+    )
+end
+
+tracer_budget_callback(
+    chemistry_model,
+    dt_tracer_budget,
+    output_dir,
+    dt,
+    t_start,
+    t_end,
+    checkpoint_frequency,
+) = ()
+
+"""
+    tracer_budget_callback(
+        chemistry_model::StratosphericPassiveTracers,
+        dt_tracer_budget, output_dir, dt, t_start, t_end, checkpoint_frequency,
+    )
+
+Periodically append the global burden, source rate and loss rate of every
+stratospheric passive tracer to `stratospheric_tracer_budget.csv` in the
+output directory. These are the quantities the lifetime `burden / source` is
+computed from, and their drift is what tells you whether the tracers have
+reached equilibrium yet.
+"""
+function tracer_budget_callback(
+    chemistry_model::StratosphericPassiveTracers,
+    dt_tracer_budget,
+    output_dir,
+    dt,
+    t_start,
+    t_end,
+    checkpoint_frequency,
+)
+    budget_period_seconds = time_to_seconds(dt_tracer_budget)
+    isfinite(budget_period_seconds) || return ()
+
+    if !isnothing(checkpoint_frequency) && checkpoint_frequency != Inf
+        rounded_period = Dates.Second(round(Int, budget_period_seconds))
+        isdivisible(checkpoint_frequency, rounded_period) || @warn(
+            "tracer budget period ($rounded_period) is not an even divisor of \
+            the checkpoint frequency ($checkpoint_frequency); the budget table \
+            will contain duplicated rows after a restart."
+        )
+    end
+
+    budget_period = ITime(budget_period_seconds)
+    budget_period, _, _, _ = promote(budget_period, t_start, dt, t_end)
+
+    affect!(integrator) =
+        tracer_budget_callback!(integrator, output_dir, chemistry_model)
+    return (call_every_dt(affect!, budget_period),)
+end
+
 """
     common_callbacks(model, dt, output_dir, start_date, t_start, t_end, comms_ctx,
                      checkpoint_frequency; kwargs...)

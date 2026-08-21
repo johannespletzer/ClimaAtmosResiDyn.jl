@@ -1,0 +1,11 @@
+# Sponge base for the 80 km model top used by the transient stratospheric
+# tracer campaign. The shipped TOMLs put it at 40 km, which suits a 60 km top
+# but would sit inside the sampled tracer region here.
+[zd_rayleigh]
+value = 60000.0
+
+[zd_viscous]
+value = 60000.0
+
+[precipitation_timescale]
+value = 120

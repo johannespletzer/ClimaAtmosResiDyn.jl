@@ -66,6 +66,13 @@ import ..OrographicGravityWave
 
 # chemistry_model
 import ..GasPhaseChem
+import ..StratosphericPassiveTracers
+import ..stratospheric_tracer_symbols
+import ..n_tracers
+
+# tropopause
+import ..TropopauseParameters
+import ..set_tropopause_height!
 
 # tagging_model
 import ..AtmosTagging

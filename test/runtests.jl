@@ -38,6 +38,7 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Radiation interface tests" begin @time include("rrtmgp_interface.jl") end
     @safetestset "Coupler compatibility" begin @time include("coupler_compatibility.jl") end
     @safetestset "Surface albedo tests" begin @time include("surface_albedo.jl") end
+    @safetestset "Seasonal SST" begin @time include("seasonal_sst.jl") end
     @safetestset "Larcform1 setup" begin @time include("larcform1.jl") end
 
     # Config tests
@@ -102,7 +103,6 @@ if TEST_GROUP in ("parameterizations", "all")
     # Chemistry tests
     @safetestset "Chemistry tendency tests" begin @time include("parameterized_tendencies/chemistry/chemistry_tendency.jl") end
     @safetestset "Passive stratospheric tracers" begin @time include("parameterized_tendencies/chemistry/passive_stratospheric_tracers.jl") end
-    @safetestset "Equatorial stratospheric tracer" begin @time include("parameterized_tendencies/chemistry/equatorial_stratospheric_tracer.jl") end
 
     # Gravity wave: Beres convective NOGW pure-function unit tests (no simulation
     # build). The simulation-based Beres tests (test_beres_single_column.jl,

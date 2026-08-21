@@ -62,7 +62,10 @@ function hyperdiffusion_cache(Y, ::Hyperdiffusion, turbconv_model)
         ᶜ∇²u = similar(Y.c, C123{FT}),
         ᶜ∇²s_d = similar(Y.c, FT),
         ᶜ∇²q_tot_eff = similar(Y.c, FT),
-        ᶜ∇²specific_tracers = Base.materialize(ᶜspecific_gs_tracers(Y)),
+        # Allocate without materializing the fused NamedTuple broadcast, which
+        # does not compile on a GPU once there are more than about 32 tracers.
+        # `prep_tracer_hyperdiffusion_tendency!` fills this one tracer at a time.
+        ᶜ∇²specific_tracers = allocate_ᶜspecific_gs_tracers(Y, FT),
     )
 
     # Sub-grid scale quantities. `ᶜ∇²uʲs` is DSSed as a full C123 vector

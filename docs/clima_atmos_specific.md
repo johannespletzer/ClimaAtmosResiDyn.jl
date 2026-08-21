@@ -11,12 +11,12 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
   - `src/prognostic_equations/`: tendency accumulation and implicit/explicit splitting.
   - `src/parameterized_tendencies/`: parameterization implementations.
       + `microphysics/`: microphysics tendency orchestration, SGS quadrature, limiters, Jacobian.
+      + `chemistry/`: `chemistry.jl` holds the MUSICA-backed gas-phase hook; `stratospheric_passive_tracers.jl` holds the inert latitude/height-banded tracers used for stratospheric residence times (see [passive_tracers.md](src/passive_tracers.md)). Their lower boundary comes from `src/utils/tropopause.jl`.
       + `radiation/`: RRTMGP wrappers and idealized radiation (`held_suarez.jl`).
       + `gravity_wave_drag/`: non-orographic and orographic GWD.
       + `les_sgs_models/`: Smagorinsky–Lilly, anisotropic minimum dissipation, constant horizontal diffusion.
       + `sponge/`: Rayleigh and viscous sponge tendencies.
       + `tagged_tracers/`: tagged prognostic energy (`tagged_tracers.jl`, `ρe_tag_*`) and water (`tagged_water.jl`, `ρq_tag_*`) tracers — smooth region masks, config parsing, state builders, and the snapshot/attribute brackets consumed by `remaining_tendency.jl` and `implicit/implicit_tendency.jl`.
-      + `chemistry/`: gas-phase chemistry; the MUSICA backend lives in `ext/`.
   - EDMF code lives in `src/cache/{prognostic,diagnostic}_edmf_precomputed_quantities.jl` and `src/prognostic_equations/edmfx_*.jl`, not under `parameterized_tendencies/`.
   - `src/callbacks/`, `src/diagnostics/`, `src/setups/`, `src/surface_conditions/`, `src/topography/`, `src/parameters/`, `src/utils/`: remaining domain subtrees. Search by physics/runtime concept first.
   - `config/`: YAML/TOML config library. `default_configs/default_config.yml` is the schema baseline; `common_configs/` holds reusable numerics; `example_configs/` holds run controls for script-based examples; `model_configs/`, `gpu_configs/`, `mpi_configs/`, `perf_configs/`, and `longrun_configs/` are scenario overlays.

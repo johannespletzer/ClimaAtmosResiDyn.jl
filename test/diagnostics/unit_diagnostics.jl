@@ -379,8 +379,8 @@ VALID_CASES = [
         "hfes", "dsevi", "env_q_tot_variance", "env_temperature_variance",
         "env_q_tot_temperature_covariance", "env_q_tot_temperature_correlation",
     ), :dry)...,
-    # sphere-only (DSS / hypsography)
-    cases(("rv", "orog"), :sphere)...,
+    # sphere-only (DSS / hypsography / latitude-dependent tropopause fallback)
+    cases(("rv", "orog", "ztrop"), :sphere)...,
     # MoistMicrophysics, single path
     cases((
         "hus", "hur", "husv", "hussfc", "evspsbl", "hfls",
@@ -473,7 +473,7 @@ VALID_CASES = [
 # (src/cache/precomputed_quantities.jl), so their `:m2`/`:m2_pedmfx` fixtures
 # are unavailable. Move these back to VALID_CASES once 2M/2M+P3 compatibility
 # with CloudMicrophysics 0.37 is restored.
-#
+
 SKIP_CASES = Set([
     # tracer_diagnostics.jl
     "loadss", "mmrbcpi", "mmrbcpo", "mmrdust", "mmrocpi", "mmrocpo",
@@ -502,8 +502,18 @@ SKIP_CASES = Set([
 # — every name in ALL_DIAGNOSTICS must appear in exactly one table
 # ---------------------------------------------------------------------------
 
+# Tagged tracers and stratospheric passive tracers register their variables
+# during simulation setup, not at load time, so which of them are present
+# depends on what ran earlier in this process. They cannot be listed here, and
+# their own test files cover them.
+is_dynamically_registered(name) =
+    startswith(name, "e_tag_") || !isnothing(match(r"^q_gas_y\d+z\d+$", name))
+
 @testset "All diagnostic variables are accounted for" begin
-    all_names = Set(keys(CA.Diagnostics.ALL_DIAGNOSTICS))
+    all_names = Set(
+        name for name in keys(CA.Diagnostics.ALL_DIAGNOSTICS) if
+        !is_dynamically_registered(name)
+    )
     covered = Set(c.name for c in VALID_CASES) ∪ SKIP_CASES
     missing_ = setdiff(all_names, covered)
     unexpected_ = setdiff(covered, all_names)

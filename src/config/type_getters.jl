@@ -647,6 +647,7 @@ function callback_kwargs_from_config(config::AtmosConfig)
         dt_rad = pa["dt_rad"],
         dt_nogw = pa["dt_nogw"],
         dt_ogw = pa["dt_ogw"],
+        dt_tracer_budget = pa["dt_tracer_budget"],
         log_progress = pa["log_progress"],
         check_nan_every = pa["check_nan_every"],
         check_conservation = pa["check_conservation"],

@@ -1,0 +1,40 @@
+job_id: "passive_stratospheric_tracers_ci"
+
+# CI-sized version of config/example_configs/passive_stratospheric_tracers.yml,
+# with the same 10 degree by 2 km source boxes on a coarser 3 x 3 grid.
+# Two simulated days is far too short for the tracers to approach equilibrium,
+# so the lifetimes it produces are meaningless. It does exercise every part of
+# the machinery a multi-year run depends on: building 9 tracers into the
+# prognostic state, diagnosing the tropopause each stage, applying the source
+# and the sub-tropopause sink, writing the budget table, and restarting from a
+# checkpoint.
+#
+# Held-Suarez forcing stands in for the example's RRTMGP aquaplanet. It is much
+# cheaper and still produces the tropopause the tracers are bounded by, and the
+# tracers do not care how the temperature field is maintained. Pair with
+# `numerics_sphere_he6ze31.yml`, which sets the 60 km top these source bands
+# assume.
+
+chemistry_model: "stratospheric_passive_tracers"
+tracer_source_latitude_bands: 3
+tracer_source_latitude_width: 10.0
+tracer_source_height_bands: 3
+tracer_source_band_depth: 2000.0
+tracer_source_band_spacing: 5000.0
+tracer_loss_timescale: "6hours"
+dt_tracer_budget: "6hours"
+
+rad: "held_suarez"
+vert_diff: "VerticalDiffusion"
+implicit_diffusion: false
+approximate_linear_solve_iters: 1
+
+t_end: "2days"
+dt_save_state_to_disk: "1days"
+toml: [toml/sphere_held_suarez.toml]
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [ztrop, q_gas_y01z01, q_gas_y02z02, q_gas_y03z03]
+    period: 1days
+    writer: netcdf
