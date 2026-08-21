@@ -1526,17 +1526,6 @@ function parse_tracer_source_boxes(box_specs, ::Type{FT}) where {FT}
     return boxes
 end
 
-function AtmosTagging(config::AtmosConfig)
-    FT = eltype(config)
-    entries = config.parsed_args["tagged_tracers"]
-    tagging_model = if isnothing(entries) || isempty(entries)
-        nothing
-    else
-        TaggingModel(tagged_tracer_tuple(entries, FT))
-    end
-    return AtmosTagging(; tagging_model)
-end
-
 """
     COSPModel(config::AtmosConfig)
 
