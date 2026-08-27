@@ -107,13 +107,34 @@ output_default_diagnostics: false
 diagnostics:
   # Monthly means of the tracer mass fractions. Instantaneous 3-D output of 24
   # tracers would dominate the run's disk usage, and the lifetimes come from
-  # the budget table rather than from these fields.
-  - short_name: [
-      q_gas_y01z01, q_gas_y02z01, q_gas_y03z01, q_gas_y04z01, q_gas_y05z01, q_gas_y06z01,
-      q_gas_y01z02, q_gas_y02z02, q_gas_y03z02, q_gas_y04z02, q_gas_y05z02, q_gas_y06z02,
-      q_gas_y01z03, q_gas_y02z03, q_gas_y03z03, q_gas_y04z03, q_gas_y05z03, q_gas_y06z03,
-      q_gas_y01z04, q_gas_y02z04, q_gas_y03z04, q_gas_y04z04, q_gas_y05z04, q_gas_y06z04,
-    ]
+  # the budget table rather than from these fields. One name per line, because
+  # the oldest YAML.jl our `[compat]` allows cannot read a bracketed list that
+  # spans several lines.
+  - short_name:
+      - q_gas_y01z01
+      - q_gas_y02z01
+      - q_gas_y03z01
+      - q_gas_y04z01
+      - q_gas_y05z01
+      - q_gas_y06z01
+      - q_gas_y01z02
+      - q_gas_y02z02
+      - q_gas_y03z02
+      - q_gas_y04z02
+      - q_gas_y05z02
+      - q_gas_y06z02
+      - q_gas_y01z03
+      - q_gas_y02z03
+      - q_gas_y03z03
+      - q_gas_y04z03
+      - q_gas_y05z03
+      - q_gas_y06z03
+      - q_gas_y01z04
+      - q_gas_y02z04
+      - q_gas_y03z04
+      - q_gas_y04z04
+      - q_gas_y05z04
+      - q_gas_y06z04
     reduction_time: average
     period: 30days
     writer: netcdf
