@@ -103,8 +103,7 @@ warning below is fine for a typo, but a dropped `tracer_production_rate` would
 change the science of a run without saying so. The message names the replacement
 so that a config can be migrated from the error alone.
 
-See [Configuring tracers](https://clima.github.io/ClimaAtmos.jl/dev/tracer_configuration/)
-for the interface these keys moved into.
+See `docs/src/tracer_configuration.md` for the interface these keys moved into.
 """
 const RETIRED_CONFIG_KEYS = Dict(
     "tagged_tracers" => "renamed to `energy_tracers` (same entry schema)",

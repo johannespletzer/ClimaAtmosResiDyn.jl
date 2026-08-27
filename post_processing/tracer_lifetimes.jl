@@ -1,9 +1,8 @@
 #=
 tracer_lifetimes.jl
 
-Turn the `stratospheric_tracer_budget.csv` table written by a
-`chemistry_model: stratospheric_passive_tracers` run into tracer lifetimes,
-and say how close each tracer is to equilibrium.
+Turn the `stratospheric_tracer_budget.csv` table written by a `passive_tracers`
+run into tracer lifetimes, and say how close each tracer is to equilibrium.
 
 Usage:
 

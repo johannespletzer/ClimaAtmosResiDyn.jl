@@ -3,7 +3,7 @@ plot_tracer_burdens.jl
 
 Plot the global burden of every stratospheric passive tracer against time, all
 in one panel, from the `stratospheric_tracer_budget.csv` written by a
-`chemistry_model: stratospheric_passive_tracers` run.
+`passive_tracers` run.
 
 Usage:
 

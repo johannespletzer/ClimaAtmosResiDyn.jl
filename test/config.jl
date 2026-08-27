@@ -52,7 +52,9 @@ const KNOWN_STALE_CONFIGS = Set([
         first(splitext(f)) in KNOWN_STALE_CONFIGS && continue
         config = CA.load_yaml_file(file)
         # `job_id` is set by the `AtmosConfig` constructor, not by the schema.
-        unknown = sort(setdiff(keys(config), schema_keys, ["job_id"]))
+        # `collect` because `setdiff` over `KeySet`s returns a `Set`, which
+        # `sort` has no method for.
+        unknown = sort(collect(setdiff(keys(config), schema_keys, ["job_id"])))
         # A key outside the schema is silently ignored at run time unless
         # `strict_config` is set, so nothing else catches this.
         @test unknown == String[]

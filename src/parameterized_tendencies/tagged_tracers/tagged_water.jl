@@ -3,10 +3,11 @@
 #####
 ##### Water-provenance counterpart of `tagged_tracers.jl`: each tag adds one
 ##### grid-scale prognostic field `Y.c.ρq_tag_<name>` that partitions total water
-##### `ρq_tot`. The region machinery (`AbstractTagRegion`, `region_mask`,
-##### `tag_region_from_config`), the mask cache, the state-entry generation and
-##### the restart path are all shared with the energy tags; only the source table
-##### and the attribution rule are specific to water.
+##### `ρq_tot`. The region machinery (`AbstractTagRegion`, `region_mask`), the
+##### mask cache, the state-entry generation and the restart path are all shared
+##### with the energy tags; only the source table and the attribution rule are
+##### specific to water. Config parsing for both lives in
+##### `config/tracer_config.jl`, under the `water_tracers` key.
 #####
 ##### Like `ρe_tag_*`, these names are ρ-weighted and are not excluded by
 ##### `gs_tracer_names(Y)`, so the existing tracer machinery supplies advection,

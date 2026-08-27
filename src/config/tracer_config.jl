@@ -45,33 +45,8 @@ function config_mapping(value, context)
     return value
 end
 
-"""
-    require_keys(spec, required, context)
-
-Throw unless `spec` has every key in `required`, naming all of the missing ones.
-"""
-function require_keys(spec, required, context)
-    absent = sort([string(k) for k in required if !haskey(spec, k)])
-    isempty(absent) && return nothing
-    error("$context is missing $(join(map(k -> "`$k`", absent), ", ")).")
-end
-
-"""
-    reject_unknown_keys(spec, allowed, context)
-
-Throw if `spec` has any key outside `allowed`, naming the offending keys and
-listing what is allowed.
-"""
-function reject_unknown_keys(spec, allowed, context)
-    allowed_strings = sort(unique(string.(allowed)))
-    unknown = sort(setdiff(string.(keys(spec)), allowed_strings))
-    isempty(unknown) && return nothing
-    label = length(unknown) == 1 ? "key" : "keys"
-    error(
-        "$context has unknown $label $(join(map(k -> "`$k`", unknown), ", ")). " *
-        "Allowed keys: $(join(map(k -> "`$k`", allowed_strings), ", ")).",
-    )
-end
+# `` `a`, `b` ``, for listing key names in an error message.
+quoted_keys(keys) = join(map(k -> "`$k`", keys), ", ")
 
 """
     checked_mapping(value, context; required = (), optional = ())
@@ -80,12 +55,31 @@ Validate one nested configuration block and return it.
 
 `value` must be a mapping, it must carry every key in `required`, and it must
 carry nothing outside `required` and `optional`.
+
+Unknown keys and missing keys are reported together, unknown ones first. A
+misspelling breaks both rules at once — writing `widht` invents a key and
+removes `width` — and naming what was actually typed is the half that says what
+to fix. Reporting only the missing key would send the reader looking for a key
+they thought they had written.
 """
 function checked_mapping(value, context; required = (), optional = ())
     spec = config_mapping(value, context)
-    require_keys(spec, required, context)
-    reject_unknown_keys(spec, (required..., optional...), context)
-    return spec
+    allowed = sort(unique(string.((required..., optional...))))
+    unknown = sort(setdiff(string.(keys(spec)), allowed))
+    absent = sort([string(k) for k in required if !haskey(spec, k)])
+    isempty(unknown) && isempty(absent) && return spec
+
+    problems = String[]
+    isempty(unknown) || push!(
+        problems,
+        "has unknown $(length(unknown) == 1 ? "key" : "keys") \
+        $(quoted_keys(unknown))",
+    )
+    isempty(absent) || push!(problems, "is missing $(quoted_keys(absent))")
+    return error(
+        "$context $(join(problems, " and ")). " *
+        "Allowed keys: $(quoted_keys(allowed)).",
+    )
 end
 
 """
