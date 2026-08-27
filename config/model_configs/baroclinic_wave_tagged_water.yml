@@ -24,6 +24,11 @@ dt_save_state_to_disk: "2days"
 #
 # As for `energy_tracers`, `q_tag_res` sums ALL pure region tags, so configure
 # exactly one partition of unity per run.
+# Check online that the region tags still add up to total water. Adds no
+# tendency, so simulation output is unchanged; it only writes
+# `water_tag_closure.csv`.
+water_closure_check:
+  period: "1days"
 water_tracers:
   - name: tropics
     region: tropics

@@ -228,6 +228,62 @@ energy_tracers:
 
 * * *
 
+## Checking closure while a run goes
+
+"Closure" is the statement that the tags still add up to the field they split.
+It is what tells you the tags mean what they say. The `q_tag_res` / `e_tag_res`
+diagnostics give it to you as a 3-D field to look at afterwards; the two keys
+below reduce it to one number and write it to a table as the run goes, so you
+can see drift without waiting for the run to end.
+
+```yaml
+water_closure_check:
+  period: "1days"        # how often to check
+  tolerance: 1.0e-10     # warn above this relative residual
+
+energy_closure_check:
+  period: "1days"
+  tolerance: 1.0e-6
+```
+
+Both keys are optional inside each block, and both blocks are off by default.
+Each writes `water_tag_closure.csv` / `energy_tag_closure.csv` to the output
+directory, with columns `time, total, tagged, residual, relative`, where
+`relative = (total - tagged) / total`.
+
+Exceeding the tolerance **warns and keeps running**. Closure drift is something
+you want to watch grow, and ending a multi-year integration over it costs more
+than it saves.
+
+The check adds no tendency. It only reads the state and writes a table, so
+switching it on does not change what the simulation produces.
+
+### Why the two tolerances differ
+
+The default for energy is looser than the one for water by four orders of
+magnitude, and that is not arbitrary. The water tags ride the same transport
+operators as `ρq_tot` apart from the implicit-versus-explicit vertical
+advection split, so very little escapes them. The energy tags never receive
+implicit transport or EDMFX sub-grid mass fluxes at all — that is deliberate,
+because each tag is already transported in its own right and attributing the
+`ρe_tot` version on top would count it twice — so a visibly larger residual is
+the expected, correct behaviour, not a bug.
+
+!!! tip "Calibrate on your own configuration"
+
+    Treat both defaults as starting points. Run once, read the `relative`
+    column, and set a tolerance a little above the level your configuration
+    settles at. A tolerance tuned that way turns the warning into news; one
+    left at a default that your setup never meets is just noise.
+
+Two configurations are refused at startup rather than left to mislead you: a
+check enabled without its tracer family, and a family whose entries all carry a
+`source`. Closure is the sum of the *pure region* tags — a tag with a `source`
+starts at zero and is not part of the partition — so with none of them there is
+nothing to close against.
+
+* * *
+
 ## Tag entries
 
 `water_tracers` and `energy_tracers` take the same kind of entry. Each needs a
@@ -368,4 +424,8 @@ ClimaAtmos.passive_tracer_model
 ClimaAtmos.energy_tracer_tuple
 ClimaAtmos.water_tracer_tuple
 ClimaAtmos.RETIRED_CONFIG_KEYS
+ClimaAtmos.DEFAULT_CLOSURE_TOLERANCES
+ClimaAtmos.closure_check_from_config
+ClimaAtmos.tag_closure
+ClimaAtmos.tag_closure_callback
 ```

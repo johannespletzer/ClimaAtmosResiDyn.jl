@@ -334,6 +334,178 @@ end
     @test occursin("passive_tracers", err.msg)
 end
 
+@testset "Closure checks" begin
+    tolerances = CA.DEFAULT_CLOSURE_TOLERANCES
+
+    # Both keys are optional.
+    bare = CA.closure_check_from_config(
+        Dict{String, Any}(),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+    )
+    @test bare.period == "1days"
+    @test bare.tolerance == FT(tolerances.water)
+
+    set = CA.closure_check_from_config(
+        Dict("period" => "6hours", "tolerance" => 1.0e-8),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+    )
+    @test set.period == "6hours"
+    @test set.tolerance == FT(1.0e-8)
+
+    # Off is off.
+    @test isnothing(
+        CA.closure_check_from_config(
+            nothing,
+            "`water_closure_check`",
+            FT;
+            default_tolerance = tolerances.water,
+        ),
+    )
+
+    # A tolerance of zero is legitimate -- it warns every period, which is how
+    # you confirm the threshold is being read at all.
+    zero_tolerance = CA.closure_check_from_config(
+        Dict("tolerance" => 0.0),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+    )
+    @test zero_tolerance.tolerance == FT(0)
+
+    # A typo in the block names itself, like every other nested block.
+    err = try
+        CA.closure_check_from_config(
+            Dict("tolerence" => 1.0e-8),
+            "`water_closure_check`",
+            FT;
+            default_tolerance = tolerances.water,
+        )
+    catch e
+        e
+    end
+    @test err isa ErrorException
+    @test occursin("tolerence", err.msg)
+
+    # An infinite period never checks anything, which is what leaving the block
+    # out already does; a negative tolerance compares against an absolute value.
+    for bad in (Dict("period" => "Inf"), Dict("tolerance" => -1.0))
+        @test_throws ErrorException CA.closure_check_from_config(
+            bad,
+            "`water_closure_check`",
+            FT;
+            default_tolerance = tolerances.water,
+        )
+    end
+
+    # The energy family is looser on purpose: its tags never receive implicit
+    # transport, so its residual is legitimately larger.
+    @test tolerances.energy > tolerances.water
+
+    checks = CA.closure_checks_from_config(
+        tracer_config(
+            [
+                "water_closure_check" => Dict("period" => "6hours"),
+                "energy_closure_check" => Dict("tolerance" => 1.0e-4),
+            ];
+            job_id = "tracer_config_closure",
+        ),
+    )
+    @test checks.water.period == "6hours"
+    @test checks.energy.tolerance == FT(1.0e-4)
+end
+
+@testset "Closure checks refuse what they cannot compute" begin
+    scheduling = (;
+        output_dir = mktempdir(),
+        dt = nothing,
+        t_start = nothing,
+        t_end = nothing,
+        checkpoint_frequency = nothing,
+    )
+    check = (; period = "1days", tolerance = FT(1.0e-10))
+
+    # Asking to check a family that is switched off.
+    err = try
+        CA.tag_closure_callback(
+            check,
+            nothing;
+            family = "water",
+            total_name = :ρq_tot,
+            state_names = CA.water_region_tag_state_names,
+            config_key = "water_closure_check",
+            tracer_key = "water_tracers",
+            scheduling...,
+        )
+    catch e
+        e
+    end
+    @test err isa ErrorException
+    @test occursin("water_tracers", err.msg)
+
+    # Tags configured, but none of them is a pure region tag, so there is no
+    # partition to close against.
+    source_only = CA.WaterTaggingModel(
+        CA.water_tracer_tuple(
+            [Dict("name" => "evap", "source" => "surface_flux")],
+            FT,
+        ),
+    )
+    @test isempty(CA.water_region_tag_state_names(source_only))
+    err = try
+        CA.tag_closure_callback(
+            check,
+            source_only;
+            family = "water",
+            total_name = :ρq_tot,
+            state_names = CA.water_region_tag_state_names,
+            config_key = "water_closure_check",
+            tracer_key = "water_tracers",
+            scheduling...,
+        )
+    catch e
+        e
+    end
+    @test err isa ErrorException
+    @test occursin("region", err.msg)
+
+    # No block means no callback, and no complaint about a missing family.
+    @test CA.tag_closure_callback(
+        nothing,
+        nothing;
+        family = "water",
+        total_name = :ρq_tot,
+        state_names = CA.water_region_tag_state_names,
+        config_key = "water_closure_check",
+        tracer_key = "water_tracers",
+        scheduling...,
+    ) == ()
+end
+
+@testset "Closure table" begin
+    dir = mktempdir()
+    closure = (;
+        total = 3.0,
+        tagged = 2.0,
+        residual = 1.0,
+        relative = 1 / 3,
+    )
+    CA.write_tag_closure!(dir, 0.0, "water", closure)
+    CA.write_tag_closure!(dir, 86400.0, "water", closure)
+
+    path = CA.tag_closure_path(dir, "water")
+    @test isfile(path)
+    rows = readlines(path)
+    # Header written once, then one row per call.
+    @test rows[1] == "time,total,tagged,residual,relative"
+    @test length(rows) == 3
+    @test startswith(rows[2], "0.0,3.0,2.0,1.0,")
+    @test startswith(rows[3], "86400.0,")
+end
+
 @testset "Shipped tracer configs still build a model" begin
     # The migrated configs are the interface's real regression test: each must
     # still produce the model it produced under the old keys.

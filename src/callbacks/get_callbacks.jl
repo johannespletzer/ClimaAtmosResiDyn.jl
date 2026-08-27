@@ -817,6 +817,110 @@ function tracer_budget_callback(
     return (call_every_dt(affect!, budget_period),)
 end
 
+# Tagging component callbacks
+"""
+    default_model_callbacks(tagging::AtmosTagging; water_closure_check = nothing,
+                            energy_closure_check = nothing, kwargs...)
+
+Install the online closure checks of the two tag families.
+
+The families are checked separately, on their own cadence and against their own
+tolerance, because their residuals are not comparable: the energy tags never
+receive implicit transport or EDMFX SGS mass fluxes, so theirs is legitimately
+the larger one.
+"""
+function default_model_callbacks(
+    tagging::AtmosTagging;
+    water_closure_check = nothing,
+    energy_closure_check = nothing,
+    output_dir,
+    dt,
+    t_start,
+    t_end,
+    checkpoint_frequency,
+    kwargs...,
+)
+    scheduling = (; output_dir, dt, t_start, t_end, checkpoint_frequency)
+    return (
+        tag_closure_callback(
+            water_closure_check,
+            tagging.water_tagging_model;
+            family = "water",
+            total_name = :ρq_tot,
+            state_names = water_region_tag_state_names,
+            config_key = "water_closure_check",
+            tracer_key = "water_tracers",
+            scheduling...,
+        )...,
+        tag_closure_callback(
+            energy_closure_check,
+            tagging.tagging_model;
+            family = "energy",
+            total_name = :ρe_tot,
+            state_names = region_tag_state_names,
+            config_key = "energy_closure_check",
+            tracer_key = "energy_tracers",
+            scheduling...,
+        )...,
+    )
+end
+
+tag_closure_callback(::Nothing, tagging_model; kwargs...) = ()
+
+"""
+    tag_closure_callback(check, tagging_model; family, total_name, state_names,
+                         config_key, tracer_key, output_dir, dt, t_start, t_end,
+                         checkpoint_frequency)
+
+Build the periodic closure-check callback of one tag family, or `()` when the
+family's `check` block is absent.
+
+Both ways of asking for a check that cannot be computed are refused here, at
+setup, rather than left to fail or mislead mid-run.
+"""
+function tag_closure_callback(
+    check,
+    tagging_model;
+    family,
+    total_name,
+    state_names,
+    config_key,
+    tracer_key,
+    output_dir,
+    dt,
+    t_start,
+    t_end,
+    checkpoint_frequency,
+)
+    isnothing(tagging_model) && error(
+        "`$config_key` is set but `$tracer_key` is not, so there are no tags \
+        to check. Configure `$tracer_key`, or drop `$config_key`.",
+    )
+    tag_state_names = state_names(tagging_model)
+    isempty(tag_state_names) && error(
+        "`$config_key` needs at least one `$tracer_key` entry that has a \
+        `region` and no `source`. Closure is the sum of those tags against the \
+        field they partition; a tag carrying a `source` starts at zero and is \
+        not part of the partition.",
+    )
+    affect!(integrator) = tag_closure_callback!(
+        integrator,
+        output_dir,
+        family,
+        total_name,
+        tag_state_names,
+        check.tolerance,
+    )
+    return scheduled_callback(
+        affect!,
+        check.period,
+        dt,
+        t_start,
+        t_end,
+        checkpoint_frequency,
+    )
+end
+
 """
     common_callbacks(model, dt, output_dir, start_date, t_start, t_end, comms_ctx,
                      checkpoint_frequency; kwargs...)

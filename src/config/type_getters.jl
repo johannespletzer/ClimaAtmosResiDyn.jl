@@ -637,17 +637,21 @@ end
     callback_kwargs_from_config(config::AtmosConfig)
 
 Bundle the callback config keys (`dt_subcol`, `dt_rad`, `dt_nogw`, `dt_ogw`,
-`log_progress`, `check_nan_every`, `check_conservation`) into the `NamedTuple` expected
+`dt_tracer_budget`, `water_closure_check`, `energy_closure_check`, `log_progress`,
+`check_nan_every`, `check_conservation`) into the `NamedTuple` expected
 by the `callback_kwargs` keyword of `AtmosSimulation{FT}`.
 """
 function callback_kwargs_from_config(config::AtmosConfig)
     pa = config.parsed_args
+    closure_checks = closure_checks_from_config(config)
     return (;
         dt_subcol = pa["dt_subcol"],
         dt_rad = pa["dt_rad"],
         dt_nogw = pa["dt_nogw"],
         dt_ogw = pa["dt_ogw"],
         dt_tracer_budget = pa["dt_tracer_budget"],
+        water_closure_check = closure_checks.water,
+        energy_closure_check = closure_checks.energy,
         log_progress = pa["log_progress"],
         check_nan_every = pa["check_nan_every"],
         check_conservation = pa["check_conservation"],

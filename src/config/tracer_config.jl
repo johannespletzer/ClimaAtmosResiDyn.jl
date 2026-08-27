@@ -401,6 +401,91 @@ water_tracer_tuple(entries, ::Type{FT}) where {FT} = tracer_tag_tuple(
     groups = WATER_TAG_SOURCE_GROUPS,
 )
 
+# ============================================================================
+# Closure checking
+# ============================================================================
+
+"""
+    DEFAULT_CLOSURE_TOLERANCES
+
+Default relative-residual tolerance of each tag family's closure check.
+
+The two differ by four orders of magnitude on purpose. The water tags ride the
+same transport operators as `ρq_tot` apart from the implicit-vs-explicit
+vertical advection split, so their residual is small. The energy tags never
+receive implicit transport or EDMFX SGS mass fluxes at all, which is by design
+(see `KNOWN_TAG_SOURCES`), so a much larger residual is expected and normal.
+
+These are starting points, not derived numbers. Read the first run's closure
+table and set a tolerance that sits above the level your configuration settles
+at, so that the warning means something changed.
+"""
+const DEFAULT_CLOSURE_TOLERANCES = (; water = 1.0e-10, energy = 1.0e-6)
+
+"""
+    closure_check_from_config(spec_value, context, FT; default_tolerance)
+
+Read a `water_closure_check` or `energy_closure_check` block into
+`(; period, tolerance)`, or `nothing` when the key is absent.
+
+Both keys are optional: `period` defaults to `"1days"` and `tolerance` to the
+family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref).
+"""
+closure_check_from_config(
+    ::Nothing,
+    context,
+    ::Type{FT};
+    default_tolerance,
+) where {FT} = nothing
+
+function closure_check_from_config(
+    spec_value,
+    context,
+    ::Type{FT};
+    default_tolerance,
+) where {FT}
+    spec = checked_mapping(
+        spec_value,
+        context;
+        optional = ("period", "tolerance"),
+    )
+    period = get(spec, "period", "1days")
+    isfinite(time_to_seconds(period)) || error(
+        "$context `period` must be finite; an infinite period never checks \
+        anything, which is what leaving the block out already does.",
+    )
+    tolerance = FT(get(spec, "tolerance", default_tolerance))
+    tolerance >= 0 || error(
+        "$context `tolerance` must not be negative, got $tolerance. It is \
+        compared against the absolute value of the relative residual.",
+    )
+    return (; period, tolerance)
+end
+
+"""
+    closure_checks_from_config(config::AtmosConfig)
+
+Read both closure-check blocks, as `(; water, energy)`.
+"""
+function closure_checks_from_config(config::AtmosConfig)
+    pa = config.parsed_args
+    FT = eltype(config)
+    return (;
+        water = closure_check_from_config(
+            pa["water_closure_check"],
+            "`water_closure_check`",
+            FT;
+            default_tolerance = DEFAULT_CLOSURE_TOLERANCES.water,
+        ),
+        energy = closure_check_from_config(
+            pa["energy_closure_check"],
+            "`energy_closure_check`",
+            FT;
+            default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy,
+        ),
+    )
+end
+
 """
     AtmosTagging(config::AtmosConfig)
 

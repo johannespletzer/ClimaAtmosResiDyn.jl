@@ -361,6 +361,111 @@ region_tag_state_names(tagging_model::TaggingModel) = Tuple(
     tag in tagging_model.tags if !isnothing(tag.region) && isempty(tag.sources)
 )
 
+# ============================================================================
+# Closure checking
+# ============================================================================
+#
+# The `e_tag_res` / `q_tag_res` diagnostics are the same residual as a 3-D
+# field, for looking at afterwards. What follows reduces it to one number per
+# family and appends it to a table while the run is going, so that closure
+# drift is visible without post-processing. Shared by both families: only the
+# parent field and the tag names differ.
+
+"""
+    tag_closure(Y, total_name, tag_state_names)
+
+Global closure of one tag family: how much of the parent field its tags account
+for, right now.
+
+`total_name` is `:ρe_tot` or `:ρq_tot`, and `tag_state_names` are the pure
+region tags of that family. Returns `(; total, tagged, residual, relative)`;
+the first three are volume integrals over the whole domain and
+`relative = residual / total`.
+
+`Base.sum` on a `Field` is the volume-weighted global integral and reduces
+across processes, so this is collective — every process must call it.
+"""
+function tag_closure(Y, total_name, tag_state_names)
+    total = sum(getproperty(Y.c, total_name))
+    tagged = sum(sum(getproperty(Y.c, name)) for name in tag_state_names)
+    residual = total - tagged
+    # A state with no water at all would divide by zero. It should not happen
+    # in a real run, but the check must not be the thing that ends one.
+    relative = iszero(total) ? zero(residual) : residual / total
+    return (; total, tagged, residual, relative)
+end
+
+"""
+    tag_closure_path(output_dir, family)
+
+Path of the closure table of `family` (`"energy"` or `"water"`).
+"""
+tag_closure_path(output_dir, family) =
+    joinpath(output_dir, "$(family)_tag_closure.csv")
+
+"""
+    write_tag_closure!(output_dir, t, family, closure)
+
+Append one row to the closure table of `family`, creating it with a header if
+it does not exist yet. Called on the root process only.
+"""
+function write_tag_closure!(output_dir, t, family, closure)
+    path = tag_closure_path(output_dir, family)
+    write_header = !isfile(path) || filesize(path) == 0
+    open(path, "a") do io
+        write_header && println(io, "time,total,tagged,residual,relative")
+        println(
+            io,
+            join(
+                (
+                    t,
+                    closure.total,
+                    closure.tagged,
+                    closure.residual,
+                    closure.relative,
+                ),
+                ",",
+            ),
+        )
+    end
+    return nothing
+end
+
+"""
+    tag_closure_callback!(integrator, output_dir, family, total_name,
+                          tag_state_names, tolerance)
+
+Record the closure of one tag family, and warn when the relative residual
+exceeds `tolerance`.
+
+The residual is information, not a reason to stop. Closure drift is something
+you want to watch grow, and ending a multi-year integration over it would cost
+more than it saves, so this warns and keeps running.
+"""
+function tag_closure_callback!(
+    integrator,
+    output_dir,
+    family,
+    total_name,
+    tag_state_names,
+    tolerance,
+)
+    Y = integrator.u
+    closure = tag_closure(Y, total_name, tag_state_names)
+    t = Float64(integrator.t)
+    if ClimaComms.iamroot(ClimaComms.context(Y.c))
+        write_tag_closure!(output_dir, t, family, closure)
+        abs(closure.relative) > tolerance && @warn(
+            "$family tag closure residual $(closure.relative) exceeds the \
+            configured tolerance $tolerance at t = $t s. The tags no longer \
+            account for the field they partition; see \
+            $(tag_closure_path(output_dir, family))."
+        )
+    end
+    return nothing
+end
+
+
 # The closure diagnostic `<residual_name> = (parent - Σᵢ tagᵢ) / ρ` only
 # measures attribution leakage when the pure region masks form a partition of
 # unity. Overlapping or incomplete regions are allowed (and sometimes
