@@ -53,6 +53,18 @@ short trial runs shorten the integration without editing the YAML file:
 ```julia
 config = passive_tracer_config(; t_end = "1days", dt_save_state_to_disk = "Inf")
 ```
+
+An override replaces a whole top-level key, so changing one tracer setting means
+passing the whole `passive_tracers` block, not just the part that differs:
+
+```julia
+config = passive_tracer_config(;
+    passive_tracers = Dict(
+        "release_grid" => Dict("latitude_bands" => 2, "height_bands" => 2),
+        "loss_timescale" => "6hours",
+    ),
+)
+```
 """
 function passive_tracer_config(; config_file = CONFIG_FILE, overrides...)
     config_dict = YAML.load_file(config_file)

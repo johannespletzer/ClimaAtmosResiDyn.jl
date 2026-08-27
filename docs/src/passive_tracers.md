@@ -77,7 +77,7 @@ Sedimenting microphysics species are diffused with the reduced coefficient
 
 ## Stratospheric Passive Tracers and Their Lifetimes
 
-`chemistry_model: "stratospheric_passive_tracers"` adds a family of inert
+The `passive_tracers` configuration key adds a family of inert
 grid-scale tracers designed to measure how long air stays in the stratosphere.
 Each tracer has
 
@@ -112,26 +112,27 @@ the constructor refuses a `latitude_width` wider than the spacing between
 boxes, or a `band_depth` deeper than `band_spacing`.
 
 Measuring source heights from the local tropopause
-(`tracer_source_height_coordinate: "tropopause"`, the default) is what makes
+(`heights_from: "tropopause"`, the default) is what makes
 the coverage complete: the tropopause is 8 km lower at the poles than in the
 tropics, so bands at fixed altitude would either leave the extratropical
 lowermost stratosphere without a source or put the lowest tropical band below
-the tropopause. Set `"altitude"` for bands at fixed heights above sea level
-instead.
+the tropopause. Set `heights_from: "altitude"` for bands at fixed heights above
+sea level instead.
 
-| Configuration key                 | Meaning                                             |
-|:--------------------------------- |:--------------------------------------------------- |
-| `tracer_source_latitude_bands`    | Number of latitude boxes (default 6)                |
-| `tracer_source_latitude_width`    | Width of each latitude box, in degrees (default 10) |
-| `tracer_source_height_bands`      | Number of height boxes (default 8)                  |
-| `tracer_source_band_depth`        | Depth of each height box, in m (default 2000)       |
-| `tracer_source_band_spacing`      | Distance between box bottoms, in m (default 5000)   |
-| `tracer_source_lowest_band_base`  | Base of the lowest box above the reference, in m    |
-| `tracer_source_height_coordinate` | `"tropopause"` or `"altitude"`                      |
-| `tracer_production_rate`          | Mass-fraction production inside a region, in s⁻¹    |
-| `tracer_loss_timescale`           | E-folding time of the removal below the tropopause  |
-| `dt_tracer_budget`                | How often the budget table is written               |
-| `tracer_source_boxes`             | Explicit box list, overriding the grid keys above   |
+```yaml
+passive_tracers:
+  release_grid:
+    latitude_bands: 6
+    latitude_width: 10.0
+    height_bands: 8
+    height_depth: 2000.0
+    height_spacing: 5000.0
+  heights_from: "tropopause"
+  loss_timescale: "6hours"
+```
+
+Every key, its default, and the named regions are listed in
+[Configuring Tracers](tracer_configuration.md).
 
 Tracer `(i, k)` is `Y.c.ρq_gas_y<i>z<k>` and is output as `q_gas_y<i>z<k>`.
 
@@ -143,21 +144,22 @@ boxes of differing depth, or a grid with some combinations left out because
 they would sit below the tropopause — list the boxes explicitly instead:
 
 ```yaml
-tracer_source_height_coordinate: "altitude"
-tracer_source_boxes:
-  - {latitude_lower: -85.0, latitude_upper: -75.0, height_lower: 9989.7, height_upper: 10404.8}
-  - {latitude_lower:  75.0, latitude_upper:  85.0, height_lower: 9989.7, height_upper: 10404.8}
-  - {latitude_lower:  -5.0, latitude_upper:   5.0, height_lower: 27896.0, height_upper: 28623.5}
+passive_tracers:
+  heights_from: "altitude"
+  release_boxes:
+    - {latitude: [-85.0, -75.0], height: [9989.7, 10404.8]}
+    - {latitude: [75.0, 85.0], height: [9989.7, 10404.8]}
+    - {latitude: [-5.0, 5.0], height: [27896.0, 28623.5]}
 ```
 
-Heights are in m, measured from the reference chosen by
-`tracer_source_height_coordinate`. To make a box span exactly one model layer,
+`latitude` is `[southern edge, northern edge]` in degrees, and `height` is
+`[bottom, top]` in m, measured from the reference chosen by `heights_from`. To
+make a box span exactly one model layer,
 give it that layer's face heights; they follow from `z_max`, `z_elem`,
 `dz_bottom` and `z_stretch`, and a box thinner than the local layer would
 otherwise emit into whichever cell centres it happened to capture, or none.
 
-Setting `tracer_source_boxes` ignores the `tracer_source_*_bands`,
-`_width`, `_depth`, `_spacing` and `_lowest_band_base` keys. Boxes are named by
+Setting both `release_boxes` and `release_grid` is an error. Boxes are named by
 numbering the distinct latitude and height ranges in order of first appearance,
 so an outer product spelled out box by box reproduces the familiar `y<i>z<k>`
 numbering. For an irregular list those indices are labels rather than grid
@@ -170,7 +172,7 @@ domain, used as a bulk reference, deliberately encloses the sampled boxes. Two
 boxes sharing both a latitude and a height range are refused, because they would
 claim the same name.
 
-`tracer_production_rate` sets the magnitude of the tracers but **not** their
+`production_rate` sets the magnitude of the tracers but **not** their
 lifetimes: the tracers are linear, so burden and source scale together and
 only their ratio is reported.
 
@@ -179,9 +181,9 @@ only their ratio is reported.
 The tropopause is diagnosed online from the model temperature with the WMO
 lapse-rate definition — the lowest level whose lapse rate has fallen to 2 K/km
 and stays below it, on average, over the next 2 km — and is available as the
-`ztrop` diagnostic. `tropopause_lapse_rate_threshold`,
-`tropopause_consistency_depth`, `tropopause_search_min_height` and
-`tropopause_search_max_height` control it; the search bounds keep
+`ztrop` diagnostic. The `tropopause` block of `passive_tracers` controls it
+(`lapse_rate_threshold`, `consistency_depth`, `search_min_height` and
+`search_max_height`); the search bounds keep
 boundary-layer inversions and the stratopause from being mistaken for the
 tropopause.
 

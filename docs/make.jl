@@ -111,6 +111,7 @@ makedocs(;
             "Column Datasets" => "column_datasets_reference.md",
             "Grids" => "grids.md",
             "Surface Conditions" => "surface_conditions.md",
+            "Configuring Tracers" => "tracer_configuration.md",
             "Passive Tracers" => "passive_tracers.md",
             "Tagged Energy Tracers" => "tagged_tracers.md",
             "Tagged Water Tracers" => "tagged_water.md",

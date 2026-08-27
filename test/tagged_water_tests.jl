@@ -73,7 +73,7 @@ import ClimaCore.MatrixFields: @name
                 ),
                 Dict{String, Any}("name" => "forced", "source" => "forcing"),
             ]
-            tags = CA.water_tag_tuple(entries, FT)
+            tags = CA.water_tracer_tuple(entries, FT)
             @test length(tags) == 3
             @test map(CA.tag_name, tags) == (:tropics, :evap, :forced)
             @test tags[1].region isa CA.TanhLatitudeRegion{FT}
@@ -91,22 +91,22 @@ import ClimaCore.MatrixFields: @name
             @test !(:precipitation in CA.KNOWN_WATER_TAG_SOURCES)
             @test :radiation in CA.KNOWN_TAG_SOURCES
 
-            @test_throws ErrorException CA.water_tag_tuple(
+            @test_throws ErrorException CA.water_tracer_tuple(
                 [Dict{String, Any}("source" => "surface_flux")],
                 FT,
             ) # missing name
-            @test_throws ErrorException CA.water_tag_tuple(
+            @test_throws ErrorException CA.water_tracer_tuple(
                 [Dict{String, Any}("name" => "bare")],
                 FT,
             ) # neither region nor source
-            @test_throws ErrorException CA.water_tag_tuple(
+            @test_throws ErrorException CA.water_tracer_tuple(
                 [
                     Dict{String, Any}("name" => "a", "source" => "surface_flux"),
                     Dict{String, Any}("name" => "a", "source" => "subsidence"),
                 ],
                 FT,
             ) # duplicate names
-            @test_throws ErrorException CA.water_tag_tuple(
+            @test_throws ErrorException CA.water_tracer_tuple(
                 [Dict{String, Any}("name" => "a", "source" => "radiation")],
                 FT,
             ) # energy-only source label

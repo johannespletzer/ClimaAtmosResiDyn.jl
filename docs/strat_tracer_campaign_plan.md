@@ -90,7 +90,7 @@ Checked against ClimaCoupler at `953c273`.
     configs stay runnable standalone on the fallback. `prognostic_surface` is
     inert under coupling. The delta from `climaatmos_edonly.yml` is
     `z_elem: 120`, `z_max: 80000.0`, `dz_bottom: 200.0`, our sponge TOML, and the
-    `tracer_source_boxes` block.
+    `passive_tracers` block.
  4. **A second Julia environment on Levante** — `experiments/AMIP/Project.toml`,
     instantiated with the fork dev'd in, on its own depot alongside the existing
     one. `runscripts/setup-julia-levante.tcsh` would need a variant.
@@ -228,7 +228,7 @@ mixing barrier; ±60 samples the vortex edge, ±80 the polar cap.
 
 **Level 34 is used only at ±60 and ±80.** At 10.2 km the tropical and subtropical
 tropopause is above the box, so at 0°, ±25° and ±35° it would sit in the
-troposphere and report τ ≈ `tracer_loss_timescale`. Dropping those five leaves
+troposphere and report τ ≈ the configured `loss_timescale`. Dropping those five leaves
 49 sampled boxes.
 
 | Member | levels                     | boxes     | tracers               |
@@ -486,11 +486,11 @@ edmfx_sgs_diffusive_flux: true
 surface_setup: "DefaultMoninObukhov"
 prognostic_surface: "PrescribedSST"
 
-chemistry_model: "stratospheric_passive_tracers"
-tracer_source_height_coordinate: "altitude"
-tracer_source_boxes: [...]     # explicit box list; see work item 1
-tracer_loss_timescale: "6hours"
 dt_tracer_budget: "30days"
+passive_tracers:
+  heights_from: "altitude"
+  loss_timescale: "6hours"
+  release_boxes: [...]         # explicit box list; see work item 1
 
 toml: [toml/strat_tracers_transient.toml]
 

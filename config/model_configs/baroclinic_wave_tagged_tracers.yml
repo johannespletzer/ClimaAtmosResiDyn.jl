@@ -20,18 +20,18 @@ rad: "held_suarez"
 # complement (`above: false`) instead of adding an overlapping tag to this
 # set: `e_tag_res` sums ALL pure region tags, so they must form a single
 # partition of unity for the residual to be a clean leakage monitor.
-tagged_tracers:
+energy_tracers:
   - name: tropics
-    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0}
+    region: tropics
   - name: extratropics
-    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0, inside: false}
+    region: extratropics
   - name: hs
     source: held_suarez
   - name: hs_tropics
-    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0}
+    region: tropics
     source: held_suarez
   - name: hs_extratropics
-    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0, inside: false}
+    region: extratropics
     source: held_suarez
 diagnostics:
   - short_name: [pfull, ua, wa, va, rv, ta, ke]

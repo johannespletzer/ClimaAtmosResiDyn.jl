@@ -89,8 +89,8 @@ function compute_stratospheric_tracer(
 ) where {ρχ_name}
     hasproperty(state.c, ρχ_name) || error_diagnostic_variable(
         "Cannot compute $(specific_tracer_short_name(ρχ_name)): the state has \
-        no $ρχ_name. The stratospheric passive tracer grid is set by \
-        tracer_source_latitude_bands and tracer_source_height_bands.",
+        no $ρχ_name. The passive tracer release regions are set by the \
+        `release_grid` or `release_boxes` entry of `passive_tracers`.",
     )
     ᶜρχ = getproperty(state.c, ρχ_name)
     return @. lazy(specific(ᶜρχ, state.c.ρ))

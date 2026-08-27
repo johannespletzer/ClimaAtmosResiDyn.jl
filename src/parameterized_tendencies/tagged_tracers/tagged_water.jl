@@ -183,41 +183,6 @@ const WATER_TAG_SOURCE_GROUPS = (;
 )
 
 """
-    water_tag_tuple(entries, FT)
-
-Convert the parsed `tagged_water` config entries (a vector of `Dict`s from YAML)
-into a `Tuple` of [`WaterTag`](@ref)s suitable for constructing a
-[`WaterTaggingModel`](@ref). Validates that every entry has a unique `name` and
-at least one of `region` / `source`. Region parsing is shared with the energy
-tags ([`tag_region_from_config`](@ref)); source parsing reuses
-[`tag_sources_from_config`](@ref) with the water source table.
-"""
-function water_tag_tuple(entries, ::Type{FT}) where {FT}
-    tags = map(collect(entries)) do entry
-        haskey(entry, "name") ||
-            error("Each `tagged_water` entry must specify a `name`.")
-        name = Symbol(entry["name"])
-        region = tag_region_from_config(get(entry, "region", nothing), FT)
-        sources = tag_sources_from_config(
-            get(entry, "source", nothing),
-            name,
-            KNOWN_WATER_TAG_SOURCES,
-            WATER_TAG_SOURCE_GROUPS,
-        )
-        if isnothing(region) && isempty(sources)
-            error(
-                "Tagged water tracer `$name` must specify a `region`, a `source`, or both."
-            )
-        end
-        return WaterTag{name}(region, sources)
-    end
-    names = map(tag_name, tags)
-    allunique(names) ||
-        error("Tagged water tracer names must be unique; got $(names).")
-    return Tuple(tags)
-end
-
-"""
     check_water_tagging_supported(microphysics_model)
 
 Throw a descriptive error unless `microphysics_model` is one the water tags can
@@ -239,11 +204,11 @@ which is a separate question from the mass provenance the tags carry.
 check_water_tagging_supported(::EquilibriumMicrophysics0M) = nothing
 check_water_tagging_supported(::NonEquilibriumMicrophysics1M) = nothing
 check_water_tagging_supported(::DryModel) = error(
-    "`tagged_water` requires a moist model: with `microphysics_model: dry` " *
+    "`water_tracers` requires a moist model: with `microphysics_model: dry` " *
     "there is no `ρq_tot` in the prognostic state to partition.",
 )
 check_water_tagging_supported(model) = error(
-    "`tagged_water` supports `microphysics_model: 0M` and `1M` only (got " *
+    "`water_tracers` supports `microphysics_model: 0M` and `1M` only (got " *
     "$(nameof(typeof(model)))). 2-moment and P3 schemes additionally carry " *
     "prognostic number concentrations, whose provenance is a separate question " *
     "from the water mass provenance these tags partition; mirroring only the " *

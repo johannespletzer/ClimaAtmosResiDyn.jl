@@ -38,20 +38,21 @@ job_id: "passive_stratospheric_tracers"
 # picks it up automatically.
 # ===========================================================================
 
-chemistry_model: "stratospheric_passive_tracers"
-tracer_source_latitude_bands: 6
-tracer_source_latitude_width: 10.0
-tracer_source_height_bands: 4
-tracer_source_band_depth: 2000.0
-tracer_source_band_spacing: 10000.0
-tracer_source_height_coordinate: "tropopause"
-# Sets the magnitude of the tracers, not their lifetimes: the burden and the
-# source are both linear in it, and only their ratio is reported.
-tracer_production_rate: 1.0e-10
-# Short compared with the lifetimes being measured (years) and long compared
-# with the timestep, so that "zero below the tropopause" is well approximated
-# without stiffening the explicit tendency.
-tracer_loss_timescale: "6hours"
+passive_tracers:
+  release_grid:
+    latitude_bands: 6
+    latitude_width: 10.0
+    height_bands: 4
+    height_depth: 2000.0
+    height_spacing: 10000.0
+  heights_from: "tropopause"
+  # Sets the magnitude of the tracers, not their lifetimes: the burden and the
+  # source are both linear in it, and only their ratio is reported.
+  production_rate: 1.0e-10
+  # Short compared with the lifetimes being measured (years) and long compared
+  # with the timestep, so that "zero below the tropopause" is well approximated
+  # without stiffening the explicit tendency.
+  loss_timescale: "6hours"
 dt_tracer_budget: "10days"
 
 # ---------------------------------------------------------------------------

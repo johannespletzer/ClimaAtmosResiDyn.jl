@@ -2300,8 +2300,8 @@ tag_name(::AbstractTracerTag{name}) where {name} = name
     TaggingModel(tags::Tuple)
 
 Model component holding a `Tuple` of [`TracerTag`](@ref)s. Constructed from
-the `tagged_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
-`config/model_getters.jl`.
+the `energy_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
+`config/tracer_config.jl`.
 """
 struct TaggingModel{T <: Tuple}
     tags::T
@@ -2311,8 +2311,8 @@ end
     WaterTaggingModel(tags::Tuple)
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
-`tagged_water` config entry; see `AtmosTagging(::AtmosConfig)` in
-`config/model_getters.jl`.
+`water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
+`config/tracer_config.jl`.
 """
 struct WaterTaggingModel{T <: Tuple}
     tags::T

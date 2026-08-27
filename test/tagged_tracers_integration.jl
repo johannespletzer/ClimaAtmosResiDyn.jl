@@ -45,7 +45,7 @@ import ClimaAtmos as CA
             # (the default FLOAT_TYPE is Float32)
             "FLOAT_TYPE" => "Float64",
             "output_default_diagnostics" => false,
-            "tagged_tracers" => [
+            "energy_tracers" => [
                 Dict{String, Any}(
                     "name" => "tropics",
                     "region" => Dict{String, Any}(
@@ -154,7 +154,7 @@ end
             "t_end" => "100secs",
             "FLOAT_TYPE" => "Float64",
             "output_default_diagnostics" => false,
-            "tagged_tracers" => tags,
+            "energy_tracers" => tags,
         );
         job_id = "tagged_tracers_precipitation",
     )
@@ -214,7 +214,7 @@ end
         "FLOAT_TYPE" => "Float64",
         "output_default_diagnostics" => false,
         "output_dir" => mktempdir(pwd()),
-        "tagged_tracers" => tags,
+        "energy_tracers" => tags,
     )
 
     simulation = CA.get_simulation(

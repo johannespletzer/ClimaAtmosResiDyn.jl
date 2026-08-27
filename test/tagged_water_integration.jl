@@ -68,7 +68,7 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
         "t_end" => "100secs",
         "FLOAT_TYPE" => "Float64",
         "output_default_diagnostics" => false,
-        "tagged_water" => tags,
+        "water_tracers" => tags,
     ),
     extra,
 )
@@ -222,7 +222,7 @@ end
             "t_end" => "3600secs",
             "FLOAT_TYPE" => "Float64",
             "output_default_diagnostics" => false,
-            "tagged_water" => tags,
+            "water_tracers" => tags,
         );
         job_id = "tagged_water_limiter",
     )
