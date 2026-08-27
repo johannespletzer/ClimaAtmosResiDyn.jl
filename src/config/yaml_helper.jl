@@ -69,8 +69,6 @@ order, later entries winning); `nothing` returns the defaults unchanged. Only ke
 exist in `default_config.yml` are overridden, and each value is coerced to the type of
 the corresponding default via `coerce_to_default`. Keys absent from the schema (other
 than `job_id`) are reported: an error if `strict_config` is `true`, a warning otherwise.
-Keys in [`RETIRED_CONFIG_KEYS`](@ref) are always an error, and the message names their
-replacement.
 """
 override_default_config(config_files::AbstractString) =
     override_default_config(load_yaml_file(config_files))
@@ -92,57 +90,6 @@ const EXCEPTED_KEYS = Set([
     "hyperdiff",
     "diagnostics",
 ])
-
-"""
-    RETIRED_CONFIG_KEYS
-
-Config keys that no longer exist, mapped to the sentence shown when one is used.
-
-A retired key is an error rather than a warning. The generic "unused keys"
-warning below is fine for a typo, but a dropped `tracer_production_rate` would
-change the science of a run without saying so. The message names the replacement
-so that a config can be migrated from the error alone.
-
-See `docs/src/tracer_configuration.md` for the interface these keys moved into.
-"""
-const RETIRED_CONFIG_KEYS = Dict(
-    "tagged_tracers" => "renamed to `energy_tracers` (same entry schema)",
-    "tagged_water" => "renamed to `water_tracers` (same entry schema)",
-    "tracer_source_boxes" => "moved to `passive_tracers: {release_boxes: [...]}`, \
-        where each box is `{latitude: [lower, upper], height: [lower, upper]}`",
-    "tracer_source_latitude_bands" => "moved to `passive_tracers: {release_grid: {latitude_bands: ...}}`",
-    "tracer_source_latitude_width" => "moved to `passive_tracers: {release_grid: {latitude_width: ...}}`",
-    "tracer_source_height_bands" => "moved to `passive_tracers: {release_grid: {height_bands: ...}}`",
-    "tracer_source_band_depth" => "moved to `passive_tracers: {release_grid: {height_depth: ...}}`",
-    "tracer_source_band_spacing" => "moved to `passive_tracers: {release_grid: {height_spacing: ...}}`",
-    "tracer_source_lowest_band_base" => "moved to `passive_tracers: {release_grid: {lowest_height: ...}}`",
-    "tracer_source_height_coordinate" => "moved to `passive_tracers: {heights_from: ...}`",
-    "tracer_production_rate" => "moved to `passive_tracers: {production_rate: ...}`",
-    "tracer_loss_timescale" => "moved to `passive_tracers: {loss_timescale: ...}`",
-    "tropopause_lapse_rate_threshold" => "moved to `passive_tracers: {tropopause: {lapse_rate_threshold: ...}}`",
-    "tropopause_consistency_depth" => "moved to `passive_tracers: {tropopause: {consistency_depth: ...}}`",
-    "tropopause_search_min_height" => "moved to `passive_tracers: {tropopause: {search_min_height: ...}}`",
-    "tropopause_search_max_height" => "moved to `passive_tracers: {tropopause: {search_max_height: ...}}`",
-)
-
-"""
-    check_retired_keys(config_dict)
-
-Throw if `config_dict` sets any key in [`RETIRED_CONFIG_KEYS`](@ref), listing
-every offending key with the sentence describing where it went.
-
-All retired keys are reported at once, so that migrating a config takes one pass
-rather than one run per key.
-"""
-function check_retired_keys(config_dict)
-    retired = sort(collect(intersect(keys(config_dict), keys(RETIRED_CONFIG_KEYS))))
-    isempty(retired) && return nothing
-    lines = map(k -> "  `$k`: $(RETIRED_CONFIG_KEYS[k])", retired)
-    error(
-        "The configuration passed to ClimaAtmos uses configuration keys that " *
-        "no longer exist:\n" * join(lines, "\n"),
-    )
-end
 
 """
     coerce_to_default(::Type{T}, v) -> T
@@ -192,7 +139,6 @@ coerce_to_default(::Type{T}, v) where {T} = convert(T, v)
 
 function override_default_config(config_dict::AbstractDict;)
     default_config = default_config_dict()
-    check_retired_keys(config_dict)
     config = deepcopy(default_config)
     # Allow unused keys in config_dict for coupler
     for k in intersect(keys(config_dict), keys(default_config))
