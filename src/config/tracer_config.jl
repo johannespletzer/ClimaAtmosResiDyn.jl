@@ -575,11 +575,13 @@ function passive_tracer_model(passive_spec, ::Type{FT}) where {FT}
 
     has_grid = haskey(spec, "release_grid")
     has_boxes = haskey(spec, "release_boxes")
-    has_grid && has_boxes && error(
-        "$context sets both `release_grid` and `release_boxes`. Use " *
-        "`release_grid` for a regular latitude × height grid, or " *
-        "`release_boxes` to list the boxes explicitly, but not both.",
-    )
+    has_grid &&
+        has_boxes &&
+        error(
+            "$context sets both `release_grid` and `release_boxes`. Use " *
+            "`release_grid` for a regular latitude × height grid, or " *
+            "`release_boxes` to list the boxes explicitly, but not both.",
+        )
     has_grid ||
         has_boxes ||
         error(

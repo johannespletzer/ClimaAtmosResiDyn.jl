@@ -107,7 +107,7 @@ end
     # Duplicate names would claim the same prognostic field.
     @test_throws ErrorException CA.energy_tracer_tuple(
         [Dict("name" => "a", "region" => "tropics"),
-         Dict("name" => "a", "source" => "held_suarez")],
+            Dict("name" => "a", "source" => "held_suarez")],
         FT,
     )
     # A tag with neither a region nor a source tracks nothing.
@@ -339,13 +339,13 @@ end
     # still produce the model it produced under the old keys.
     for (file, job_id) in (
         ("model_configs/passive_stratospheric_tracers_ci.yml",
-         "passive_stratospheric_tracers_ci"),
+            "passive_stratospheric_tracers_ci"),
         ("example_configs/passive_stratospheric_tracers.yml",
-         "passive_stratospheric_tracers"),
+            "passive_stratospheric_tracers"),
         ("example_configs/strat_tracers_transient_a.yml",
-         "strat_tracers_transient_a"),
+            "strat_tracers_transient_a"),
         ("example_configs/strat_tracers_transient_b.yml",
-         "strat_tracers_transient_b"),
+            "strat_tracers_transient_b"),
     )
         config = CA.AtmosConfig(joinpath(CA.config_path, file); job_id)
         @test CA.AtmosChem(config).chemistry_model isa

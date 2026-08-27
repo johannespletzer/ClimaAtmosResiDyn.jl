@@ -111,32 +111,19 @@ const RETIRED_CONFIG_KEYS = Dict(
     "tagged_water" => "renamed to `water_tracers` (same entry schema)",
     "tracer_source_boxes" => "moved to `passive_tracers: {release_boxes: [...]}`, \
         where each box is `{latitude: [lower, upper], height: [lower, upper]}`",
-    "tracer_source_latitude_bands" =>
-        "moved to `passive_tracers: {release_grid: {latitude_bands: ...}}`",
-    "tracer_source_latitude_width" =>
-        "moved to `passive_tracers: {release_grid: {latitude_width: ...}}`",
-    "tracer_source_height_bands" =>
-        "moved to `passive_tracers: {release_grid: {height_bands: ...}}`",
-    "tracer_source_band_depth" =>
-        "moved to `passive_tracers: {release_grid: {height_depth: ...}}`",
-    "tracer_source_band_spacing" =>
-        "moved to `passive_tracers: {release_grid: {height_spacing: ...}}`",
-    "tracer_source_lowest_band_base" =>
-        "moved to `passive_tracers: {release_grid: {lowest_height: ...}}`",
-    "tracer_source_height_coordinate" =>
-        "moved to `passive_tracers: {heights_from: ...}`",
-    "tracer_production_rate" =>
-        "moved to `passive_tracers: {production_rate: ...}`",
-    "tracer_loss_timescale" =>
-        "moved to `passive_tracers: {loss_timescale: ...}`",
-    "tropopause_lapse_rate_threshold" =>
-        "moved to `passive_tracers: {tropopause: {lapse_rate_threshold: ...}}`",
-    "tropopause_consistency_depth" =>
-        "moved to `passive_tracers: {tropopause: {consistency_depth: ...}}`",
-    "tropopause_search_min_height" =>
-        "moved to `passive_tracers: {tropopause: {search_min_height: ...}}`",
-    "tropopause_search_max_height" =>
-        "moved to `passive_tracers: {tropopause: {search_max_height: ...}}`",
+    "tracer_source_latitude_bands" => "moved to `passive_tracers: {release_grid: {latitude_bands: ...}}`",
+    "tracer_source_latitude_width" => "moved to `passive_tracers: {release_grid: {latitude_width: ...}}`",
+    "tracer_source_height_bands" => "moved to `passive_tracers: {release_grid: {height_bands: ...}}`",
+    "tracer_source_band_depth" => "moved to `passive_tracers: {release_grid: {height_depth: ...}}`",
+    "tracer_source_band_spacing" => "moved to `passive_tracers: {release_grid: {height_spacing: ...}}`",
+    "tracer_source_lowest_band_base" => "moved to `passive_tracers: {release_grid: {lowest_height: ...}}`",
+    "tracer_source_height_coordinate" => "moved to `passive_tracers: {heights_from: ...}`",
+    "tracer_production_rate" => "moved to `passive_tracers: {production_rate: ...}`",
+    "tracer_loss_timescale" => "moved to `passive_tracers: {loss_timescale: ...}`",
+    "tropopause_lapse_rate_threshold" => "moved to `passive_tracers: {tropopause: {lapse_rate_threshold: ...}}`",
+    "tropopause_consistency_depth" => "moved to `passive_tracers: {tropopause: {consistency_depth: ...}}`",
+    "tropopause_search_min_height" => "moved to `passive_tracers: {tropopause: {search_min_height: ...}}`",
+    "tropopause_search_max_height" => "moved to `passive_tracers: {tropopause: {search_max_height: ...}}`",
 )
 
 """

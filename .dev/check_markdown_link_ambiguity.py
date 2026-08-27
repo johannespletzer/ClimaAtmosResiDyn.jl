@@ -46,7 +46,9 @@ import sys
 # none of those. Rather than enumerate file extensions -- which wrongly flagged
 # real links such as `[src/ClimaAtmos.jl](src/ClimaAtmos.jl)` -- classify the
 # whole parenthetical.
-TARGET_SCHEME = re.compile(r"^(@ref\b|@extref\b|@cite\b|<|#|https?://|ftps?://|mailto:)")
+TARGET_SCHEME = re.compile(
+    r"^(@ref\b|@id\b|@extref\b|@cite\b|<|#|https?://|ftps?://|mailto:)"
+)
 TARGET_PATH = re.compile(r"^[\w.@/+~%#-]+$")  # a path or filename: no whitespace
 TARGET_EXTENSION = re.compile(r"\.[A-Za-z0-9]{1,8}$")
 

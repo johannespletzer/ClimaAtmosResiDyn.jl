@@ -31,7 +31,7 @@ by key, and these are three different keys.
     earlier one completely — the settings are not combined. Write the whole
     block in one file.
 
----
+* * *
 
 ## [`passive_tracers`](@id passive_tracers)
 
@@ -139,7 +139,7 @@ Rarely changed. Every key is optional.
 | `search_min_height`    | lowest height a tropopause may be found at, in m. Excludes boundary-layer inversions                  | `5000.0`  |
 | `search_max_height`    | highest height a tropopause may be found at, in m                                                     | `25000.0` |
 
----
+* * *
 
 ## [`water_tracers`](@id water_tracers)
 
@@ -185,7 +185,7 @@ every process in the table.
     includes `microphysics`. To follow both without the forcings, list them:
     `source: [surface_flux, microphysics]`.
 
----
+* * *
 
 ## [`energy_tracers`](@id energy_tracers)
 
@@ -226,7 +226,7 @@ energy_tracers:
     energy leaves with the falling precipitation, so the signal appears in
     `precipitation` instead. Tagging the `moist` group covers both.
 
----
+* * *
 
 ## Tag entries
 
@@ -304,7 +304,7 @@ energy_tracers:
     [Tagged Energy Tracers](tagged_tracers.md) for turning an IPCC AR6
     reference region into a config block.
 
----
+* * *
 
 ## Moving from the old configuration keys
 
