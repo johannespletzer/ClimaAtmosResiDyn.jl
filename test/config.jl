@@ -75,34 +75,6 @@ const KNOWN_STALE_CONFIGS = Set([
         @warn "Config files this YAML.jl could not parse, so left unchecked" unparseable
 end
 
-@testset "Retired config keys name their replacement" begin
-    for (key, replacement) in CA.RETIRED_CONFIG_KEYS
-        err = try
-            CA.override_default_config(Dict(key => nothing))
-            nothing
-        catch e
-            e
-        end
-        @test err isa ErrorException
-        @test occursin(key, err.msg)
-        @test occursin(replacement, err.msg)
-    end
-
-    # All offending keys are reported at once, so a config takes one pass to
-    # migrate rather than one run per key.
-    err = try
-        CA.override_default_config(
-            Dict("tagged_tracers" => nothing, "tracer_loss_timescale" => "1days"),
-        )
-        nothing
-    catch e
-        e
-    end
-    @test err isa ErrorException
-    @test occursin("tagged_tracers", err.msg)
-    @test occursin("tracer_loss_timescale", err.msg)
-end
-
 @testset "Config files may carry mapping-valued keys" begin
     # `strip_help_messages` runs on user config files as well as on the schema,
     # so it must unwrap only genuine `(help, value)` schema entries. Without

@@ -296,59 +296,22 @@ energy_tracers:
 
 !!! warning "Smoothing is required, not cosmetic"
 
-    A sharp 0/1 mask produces Gibbs oscillations in the spectral-element
-    discretization that contaminate the tagged fields from the first step. Set
-    `width` comparable to, or larger than, the horizontal grid spacing. This
-    matters most for `tanh_polygon`, where the vertices often come from a
-    tool that rasterizes sharply — see
+    In longitude and latitude — `tanh_latitude`, `tanh_box`, `tanh_polygon`,
+    whose `width` is in degrees — a sharp 0/1 mask produces Gibbs oscillations
+    in the spectral-element horizontal discretization that contaminate the
+    tagged fields from the first step. Set `width` comparable to, or larger
+    than, the horizontal grid spacing. This matters most for `tanh_polygon`,
+    where the vertices often come from a tool that rasterizes sharply — see
     [Tagged Energy Tracers](tagged_tracers.md) for turning an IPCC AR6
     reference region into a config block.
 
+    `tanh_altitude` is a different case. Its `width` is in metres and the
+    vertical grid is finite-difference rather than spectral, so there is no
+    ringing to avoid. Smoothing there is about resolution: a transition
+    thinner than the local layer spacing is not resolved, so set `width` at
+    least as thick as the layers the edge crosses.
+
 * * *
-
-## Moving from the old configuration keys
-
-These keys were replaced. Using one now raises an error naming its replacement,
-so a configuration can be migrated from the error message alone.
-
-| Old key                                          | Now                                                 |
-|:------------------------------------------------ |:--------------------------------------------------- |
-| `tagged_tracers`                                 | `energy_tracers` (same entries)                     |
-| `tagged_water`                                   | `water_tracers` (same entries)                      |
-| `chemistry_model: stratospheric_passive_tracers` | `passive_tracers`                                   |
-| `tracer_source_latitude_bands`                   | `passive_tracers: release_grid: latitude_bands`     |
-| `tracer_source_latitude_width`                   | `passive_tracers: release_grid: latitude_width`     |
-| `tracer_source_height_bands`                     | `passive_tracers: release_grid: height_bands`       |
-| `tracer_source_band_depth`                       | `passive_tracers: release_grid: height_depth`       |
-| `tracer_source_band_spacing`                     | `passive_tracers: release_grid: height_spacing`     |
-| `tracer_source_lowest_band_base`                 | `passive_tracers: release_grid: lowest_height`      |
-| `tracer_source_boxes`                            | `passive_tracers: release_boxes`                    |
-| `tracer_source_height_coordinate`                | `passive_tracers: heights_from`                     |
-| `tracer_production_rate`                         | `passive_tracers: production_rate`                  |
-| `tracer_loss_timescale`                          | `passive_tracers: loss_timescale`                   |
-| `tropopause_lapse_rate_threshold`                | `passive_tracers: tropopause: lapse_rate_threshold` |
-| `tropopause_consistency_depth`                   | `passive_tracers: tropopause: consistency_depth`    |
-| `tropopause_search_min_height`                   | `passive_tracers: tropopause: search_min_height`    |
-| `tropopause_search_max_height`                   | `passive_tracers: tropopause: search_max_height`    |
-
-`dt_tracer_budget` is unchanged.
-
-Boxes changed shape as well as place. Four keys per box became two pairs:
-
-```yaml
-# before
-tracer_source_boxes:
-  - {latitude_lower: -85.0, latitude_upper: -75.0, height_lower: 9989.7, height_upper: 10404.8}
-
-# after
-passive_tracers:
-  release_boxes:
-    - {latitude: [-85.0, -75.0], height: [9989.7, 10404.8]}
-```
-
-`chemistry_model` still exists, and still takes `passive` for the gas-phase
-chemistry hook that carries the tracer `q_gas_A`. It no longer takes
-`stratospheric_passive_tracers`.
 
 ## Worked examples in this repository
 
@@ -367,5 +330,4 @@ ClimaAtmos.tag_sources_from_config
 ClimaAtmos.passive_tracer_model
 ClimaAtmos.energy_tracer_tuple
 ClimaAtmos.water_tracer_tuple
-ClimaAtmos.RETIRED_CONFIG_KEYS
 ```

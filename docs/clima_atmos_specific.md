@@ -5,7 +5,7 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
 ## Codebase map
 
   - `src/ClimaAtmos.jl`: package entry point. It `include`s the main subsystems; start here when you need the owning source area.
-  - `src/config/`: YAML→typed-object translation layer (formerly `src/solver/`). `cli_options.jl` defines `--config_file` and `--job_id`; `yaml_helper.jl` loads `config/default_configs/default_config.yml`, merges overlay YAML, and holds `RETIRED_CONFIG_KEYS`; `atmos_config.jl` defines `AtmosConfig`; `model_getters.jl` and `type_getters.jl` translate config into a runnable model; `tracer_config.jl` does the same for the three tracer families (`passive_tracers`, `water_tracers`, `energy_tracers`); `solve.jl` runs it. `parsed_args` reads are confined to this folder.
+  - `src/config/`: YAML→typed-object translation layer (formerly `src/solver/`). `cli_options.jl` defines `--config_file` and `--job_id`; `yaml_helper.jl` loads `config/default_configs/default_config.yml` and merges overlay YAML; `atmos_config.jl` defines `AtmosConfig`; `model_getters.jl` and `type_getters.jl` translate config into a runnable model; `tracer_config.jl` does the same for the three tracer families (`passive_tracers`, `water_tracers`, `energy_tracers`); `solve.jl` runs it. `parsed_args` reads are confined to this folder.
   - `src/simulation/AtmosSimulations.jl`: high-level `AtmosSimulation(config)` construction.
   - `src/cache/`: precomputed quantities allocated once per stage. Naming convention: `set_*_precomputed_quantities!(Y, p, t)` — never allocate inside these functions.
   - `src/prognostic_equations/`: tendency accumulation and implicit/explicit splitting.
