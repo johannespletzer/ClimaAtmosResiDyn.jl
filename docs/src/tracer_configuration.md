@@ -233,7 +233,7 @@ energy_tracers:
 "Closure" is the statement that the tags still add up to the field they split.
 It is what tells you the tags mean what they say. The `q_tag_res` / `e_tag_res`
 diagnostics give it to you as a 3-D field to look at afterwards; the two keys
-below reduce it to one number and write it to a table as the run goes, so you
+below reduce it to two numbers and write them to a table every `period`, so you
 can see drift without waiting for the run to end.
 
 ```yaml
@@ -248,8 +248,22 @@ energy_closure_check:
 
 Both keys are optional inside each block, and both blocks are off by default.
 Each writes `water_tag_closure.csv` / `energy_tag_closure.csv` to the output
-directory, with columns `time, total, tagged, residual, relative`, where
-`relative = (total - tagged) / total`.
+directory, with columns
+`time, total, tagged, residual, relative, gross_residual, gross_relative`.
+
+`residual = total - tagged` is the signed miss between two global integrals and
+`relative` is it over `total`. `gross_residual` integrates the pointwise
+`|parent - Σ tags|` instead, and `gross_relative` is that over `total`.
+
+The distinction matters, and `gross_relative` is the one the tolerance is
+compared against. Because `total` and `tagged` are each a single global
+integral, a partition that is too high by some amount in one place and too low
+by the same amount somewhere else has a signed residual of exactly zero — it
+reports perfect closure while being locally wrong. Taking the absolute value
+before integrating cannot cancel that way. `gross_relative` is never smaller
+than `|relative|`, so watching it also catches everything the signed number
+would; the signed pair is still written because its sign says which way the
+leak goes.
 
 Exceeding the tolerance **warns and keeps running**. Closure drift is something
 you want to watch grow, and ending a multi-year integration over it costs more
@@ -374,7 +388,7 @@ energy_tracers:
   - `config/model_configs/passive_stratospheric_tracers_ci.yml` — small grid, runs in minutes
   - `config/example_configs/passive_stratospheric_tracers.yml` — a multi-year aquaplanet run
   - `config/example_configs/strat_tracers_transient_a.yml` — an explicit box list
-  - `config/model_configs/baroclinic_wave_tagged_water.yml` — region and source water tags
+  - `config/model_configs/baroclinic_wave_tagged_water.yml` — water tags with a closure check
   - `config/model_configs/baroclinic_wave_tagged_tracers.yml` — the same for energy tags
 
 ## API

@@ -877,6 +877,12 @@ family's `check` block is absent.
 
 Both ways of asking for a check that cannot be computed are refused here, at
 setup, rather than left to fail or mislead mid-run.
+
+The divisor check is spelled out here rather than left to `scheduled_callback`,
+whose warning is about reproducibility. This callback adds no tendency, so a
+restart cannot make the run irreproducible; what it does is append to a table,
+so the cost of a period that does not divide the checkpoint frequency is
+duplicated rows. Same as `tracer_budget_callback` next door.
 """
 function tag_closure_callback(
     check,
@@ -903,6 +909,19 @@ function tag_closure_callback(
         field they partition; a tag carrying a `source` starts at zero and is \
         not part of the partition.",
     )
+    period_seconds = time_to_seconds(check.period)
+    if !isnothing(checkpoint_frequency) && checkpoint_frequency != Inf
+        rounded_period = Dates.Second(round(Int, period_seconds))
+        isdivisible(checkpoint_frequency, rounded_period) || @warn(
+            "`$config_key` period ($rounded_period) is not an even divisor of \
+            the checkpoint frequency ($checkpoint_frequency); the closure \
+            table will contain duplicated rows after a restart."
+        )
+    end
+
+    period = ITime(period_seconds)
+    period, _, _, _ = promote(period, t_start, dt, t_end)
+
     affect!(integrator) = tag_closure_callback!(
         integrator,
         output_dir,
@@ -911,14 +930,7 @@ function tag_closure_callback(
         tag_state_names,
         check.tolerance,
     )
-    return scheduled_callback(
-        affect!,
-        check.period,
-        dt,
-        t_start,
-        t_end,
-        checkpoint_frequency,
-    )
+    return (call_every_dt(affect!, period),)
 end
 
 """

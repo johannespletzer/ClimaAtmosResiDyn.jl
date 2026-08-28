@@ -490,11 +490,16 @@ end
 
 @testset "Closure table" begin
     dir = mktempdir()
+    # A signed residual of 1 that came from local misses of +3 and -2, which is
+    # the case the gross columns exist to distinguish: the signed pair cannot
+    # tell it from a uniform miss of 1.
     closure = (;
         total = 3.0,
         tagged = 2.0,
         residual = 1.0,
         relative = 1 / 3,
+        gross_residual = 5.0,
+        gross_relative = 5 / 3,
     )
     CA.write_tag_closure!(dir, 0.0, "water", closure)
     CA.write_tag_closure!(dir, 86400.0, "water", closure)
@@ -503,10 +508,14 @@ end
     @test isfile(path)
     rows = readlines(path)
     # Header written once, then one row per call.
-    @test rows[1] == "time,total,tagged,residual,relative"
+    @test rows[1] ==
+          "time,total,tagged,residual,relative,gross_residual,gross_relative"
     @test length(rows) == 3
     @test startswith(rows[2], "0.0,3.0,2.0,1.0,")
+    @test endswith(rows[2], ",5.0,$(5 / 3)")
     @test startswith(rows[3], "86400.0,")
+    # Every header column is filled in.
+    @test all(row -> length(split(row, ",")) == 7, rows)
 end
 
 @testset "Shipped tracer configs still build a model" begin

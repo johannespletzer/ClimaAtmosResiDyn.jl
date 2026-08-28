@@ -44,8 +44,8 @@ fields, cache entries, or runtime cost. The region types and their `inside: fals
 
 See [Configuring Tracers](tracer_configuration.md) for the full schema, the
 named regions (`tropics`, `extratropics`, `everywhere`) used above, and the
-`water_closure_check` block, which reduces `q_tag_res` to one number per output
-time and warns while the run goes.
+`water_closure_check` block, which reduces `q_tag_res` to a pair of numbers on a
+period of its own and warns while the run goes.
 
 A region tag is initialized to ``\rho q_\mathrm{tot} \, M(x)``; a tag with a
 `source` starts at zero.
