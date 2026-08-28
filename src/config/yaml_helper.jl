@@ -8,6 +8,20 @@ const default_config_file =
     joinpath(config_path, "default_configs", "default_config.yml")
 
 """
+    is_schema_entry(v::Dict)
+
+Whether `v` is a `default_config.yml` schema entry, i.e. carries both `"help"`
+and `"value"`.
+
+The test matters because `strip_help_messages` runs on user config files as well
+as on the schema (see the `AtmosConfig` constructor). Without it, every
+mapping-valued key of a user file would be unwrapped too, so a key such as
+`passive_tracers` would fail with `KeyError("value")` before any merging
+happened.
+"""
+is_schema_entry(v::Dict) = haskey(v, "help") && haskey(v, "value")
+
+"""
     strip_help_message(v)
     strip_help_messages(d)
 
@@ -18,15 +32,8 @@ Entries in `default_config.yml` are `Dict`s of the form `(help = ..., value = ..
 else through unchanged. `strip_help_messages` applies this to every entry of the config
 `Dict` `d`.
 
-A `Dict` counts as a schema entry only when it carries both `"help"` and `"value"`.
-Without that test every mapping-valued key of a *user* config file would be
-unwrapped too — `strip_help_messages` runs on user files as well as on the schema
-(see the `AtmosConfig` constructor) — so a key such as `passive_tracers` would fail
-with `KeyError("value")` before any merging happened.
+Only genuine schema entries are unwrapped; see [`is_schema_entry`](@ref).
 """
-is_schema_entry(v::Dict) = haskey(v, "help") && haskey(v, "value")
-is_schema_entry(_) = false
-
 strip_help_message(v::Dict) = is_schema_entry(v) ? v["value"] : v
 strip_help_message(v) = v
 strip_help_messages(d) =

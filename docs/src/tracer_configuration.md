@@ -340,8 +340,8 @@ energy_tracers:
   - `config/model_configs/passive_stratospheric_tracers_ci.yml` — small grid, runs in minutes
   - `config/example_configs/passive_stratospheric_tracers.yml` — a multi-year aquaplanet run
   - `config/example_configs/strat_tracers_transient_a.yml` — an explicit box list
-  - `config/model_configs/baroclinic_wave_tagged_water.yml` — water tags with closure checks
-  - `config/model_configs/baroclinic_wave_tagged_tracers.yml` — energy tags with closure checks
+  - `config/model_configs/baroclinic_wave_tagged_water.yml` — region and source water tags
+  - `config/model_configs/baroclinic_wave_tagged_tracers.yml` — the same for energy tags
 
 ## API
 
