@@ -68,8 +68,12 @@ const KNOWN_STALE_CONFIGS = Set([
         # `sort` has no method for.
         unknown = sort(collect(setdiff(keys(config), schema_keys, ["job_id"])))
         # A key outside the schema is silently ignored at run time unless
-        # `strict_config` is set, so nothing else catches this.
-        @test unknown == String[]
+        # `strict_config` is set, so nothing else catches this. The file name
+        # rides along in the comparison because naming the offending file is
+        # the point of the test, and a bare `unknown == String[]` would report
+        # the stray keys without saying which file set them.
+        name = CA.normrelpath(file)
+        @test (name => unknown) == (name => String[])
     end
     isempty(unparseable) ||
         @warn "Config files this YAML.jl could not parse, so left unchecked" unparseable
