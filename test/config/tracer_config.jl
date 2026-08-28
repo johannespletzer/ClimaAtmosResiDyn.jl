@@ -405,17 +405,20 @@ end
     # transport, so its residual is legitimately larger.
     @test tolerances.energy > tolerances.water
 
-    checks = CA.closure_checks_from_config(
-        tracer_config(
-            [
-                "water_closure_check" => Dict("period" => "6hours"),
-                "energy_closure_check" => Dict("tolerance" => 1.0e-4),
-            ];
-            job_id = "tracer_config_closure",
-        ),
+    config = tracer_config(
+        [
+            "water_closure_check" => Dict("period" => "6hours"),
+            "energy_closure_check" => Dict("tolerance" => 1.0e-4),
+        ];
+        job_id = "tracer_config_closure",
     )
+    checks = CA.closure_checks_from_config(config)
     @test checks.water.period == "6hours"
-    @test checks.energy.tolerance == FT(1.0e-4)
+    # This path takes its float type from the run, through `eltype(config)`,
+    # rather than from this file's `FT`. `FLOAT_TYPE` defaults to Float32, and
+    # `Float32(1e-4) != Float64(1e-4)`.
+    @test checks.energy.tolerance isa eltype(config)
+    @test checks.energy.tolerance == eltype(config)(1.0e-4)
 end
 
 @testset "Closure checks refuse what they cannot compute" begin
