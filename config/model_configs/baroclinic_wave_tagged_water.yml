@@ -29,6 +29,12 @@ dt_save_state_to_disk: "2days"
 # `water_tag_closure.csv`.
 water_closure_check:
   period: "1days"
+  # Deliberately loose, and not the default. This job exists to exercise the
+  # code path, not to gate on a number nobody has measured: a tolerance set to
+  # a guess would warn every simulated day and teach everyone to skip the
+  # warning. This level means the partition is structurally broken, not that it
+  # has drifted. Read `water_tag_closure.csv` from a run and tighten it.
+  tolerance: 1.0e-4
 water_tracers:
   - name: tropics
     region: tropics

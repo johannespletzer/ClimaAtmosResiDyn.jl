@@ -24,6 +24,11 @@ rad: "held_suarez"
 # default because the energy tags never receive implicit transport.
 energy_closure_check:
   period: "1days"
+  # As for the water job, a placeholder rather than a measured threshold, and
+  # looser again: the energy tags receive neither implicit transport nor EDMFX
+  # SGS mass fluxes, so they are expected to miss by more. Read
+  # `energy_tag_closure.csv` from a run and tighten it.
+  tolerance: 1.0e-2
 energy_tracers:
   - name: tropics
     region: tropics
