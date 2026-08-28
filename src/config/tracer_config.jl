@@ -99,6 +99,30 @@ function parse_bounds(spec, key, context, ::Type{FT}) where {FT}
     return (FT(value[1]), FT(value[2]))
 end
 
+"""
+    parse_smoothing_width(spec, context, FT)
+
+Read the `width` of a `tanh` region out of `spec`, erroring unless it is
+positive.
+
+`width` divides the distance to the region edge, so a zero width is not a sharp
+region but an undefined one: away from the edge the mask becomes a step, which
+is the Gibbs case the smoothing exists to prevent, and a point sitting exactly
+on the edge evaluates `0/0` and gives `NaN`. One `NaN` in a static mask spreads
+through the tagged field on the first step. A negative width flips the region
+for its complement without saying so.
+"""
+function parse_smoothing_width(spec, context, ::Type{FT}) where {FT}
+    width = FT(spec["width"])
+    width > 0 || error(
+        "$context needs a positive `width`, got $width. The width is the \
+        distance over which the edge is smoothed, so zero leaves a sharp mask \
+        (and `NaN` exactly on the edge) and a negative value silently swaps \
+        the region for its complement.",
+    )
+    return width
+end
+
 # ============================================================================
 # Tag regions
 # ============================================================================
@@ -178,6 +202,13 @@ mapping carrying a `type`:
 
 All region types accept `inside: false` (`above: false` for
 `"tanh_altitude"`) to select the exact complement of the mask.
+
+Parameters that would define no region are refused here rather than left to
+produce a mask that is silently wrong: every `width` must be positive,
+`lat_bound` must be positive, a box needs `lat_min` below `lat_max`, and a box
+must span some longitude. A non-positive `width` is the one worth spelling out:
+it does not make a sharp region, it makes an undefined one, because a point
+sitting exactly on the edge evaluates `0/0`.
 """
 tag_region_from_config(::Nothing, ::Type{FT}) where {FT} = nothing
 
@@ -204,7 +235,7 @@ function tag_region_from_config(region_config, ::Type{FT}) where {FT}
         )
         return TanhAltitudeRegion(
             FT(spec["z_center"]),
-            FT(spec["width"]),
+            parse_smoothing_width(spec, context, FT),
             Bool(get(spec, "above", true)),
         )
     elseif region_type == "tanh_latitude"
@@ -214,9 +245,19 @@ function tag_region_from_config(region_config, ::Type{FT}) where {FT}
             required = ("type", "lat_bound", "width"),
             optional = ("inside",),
         )
+        width = parse_smoothing_width(spec, context, FT)
+        lat_bound = FT(spec["lat_bound"])
+        # The band is `tanh((lat + b)/w) - tanh((lat - b)/w)`, all over 2. That
+        # is zero everywhere when `b` is zero, and negative everywhere when `b`
+        # is negative -- a tag holding a negative share of the parent field.
+        lat_bound > 0 || error(
+            "$context needs a positive `lat_bound`, got $lat_bound. The band \
+            is `|lat| <= lat_bound`, so zero makes it empty and a negative \
+            bound makes the mask itself negative.",
+        )
         return TanhLatitudeRegion(
-            FT(spec["lat_bound"]),
-            FT(spec["width"]),
+            lat_bound,
+            width,
             Bool(get(spec, "inside", true)),
         )
     elseif region_type == "tanh_box"
@@ -228,12 +269,32 @@ function tag_region_from_config(region_config, ::Type{FT}) where {FT}
             ),
             optional = ("inside",),
         )
+        width = parse_smoothing_width(spec, context, FT)
+        lon_min, lon_max = FT(spec["lon_min"]), FT(spec["lon_max"])
+        lat_min, lat_max = FT(spec["lat_min"]), FT(spec["lat_max"])
+        lat_min < lat_max || error(
+            "$context needs `lat_min` below `lat_max`, got $lat_min and \
+            $lat_max. Equal bounds make the mask zero everywhere, and \
+            reversed bounds make it negative.",
+        )
+        # Longitudes are compared modulo 360 so that a box may cross the
+        # antimeridian, which leaves a full turn indistinguishable from no
+        # turn: `mod(180 - -180, 360)` is 0, and the mask is zero everywhere.
+        mod(lon_max - lon_min, 360) > 0 || error(
+            "$context spans no longitude: `lon_min` and `lon_max` are $lon_min \
+            and $lon_max, a whole number of turns apart, so the mask is zero \
+            everywhere. Longitudes are compared modulo 360 -- which is what \
+            lets a box cross the antimeridian -- so a full 360-degree box \
+            cannot be told from an empty one. For a band that covers every \
+            longitude and is symmetric about the equator, use a \
+            `tanh_latitude` region instead.",
+        )
         return TanhBoxRegion(
-            FT(spec["lon_min"]),
-            FT(spec["lon_max"]),
-            FT(spec["lat_min"]),
-            FT(spec["lat_max"]),
-            FT(spec["width"]),
+            lon_min,
+            lon_max,
+            lat_min,
+            lat_max,
+            width,
             Bool(get(spec, "inside", true)),
         )
     elseif region_type == "tanh_polygon"
@@ -257,7 +318,7 @@ function tag_region_from_config(region_config, ::Type{FT}) where {FT}
         )
         return TanhPolygonRegion(
             vertex_tuple,
-            FT(spec["width"]),
+            parse_smoothing_width(spec, context, FT),
             Bool(get(spec, "inside", true)),
         )
     else

@@ -85,6 +85,105 @@ end
     )
 end
 
+@testset "Region parsing rejects masks that define no region" begin
+    # Each of these parses, and each used to build a mask that is wrong rather
+    # than merely unusual: zero everywhere, negative everywhere, or `NaN` on
+    # the edge. The error has to name the key, since the value is accepted
+    # arithmetic and nothing downstream would complain.
+    region_error(spec) = try
+        CA.tag_region_from_config(spec, FT)
+        nothing
+    catch e
+        e
+    end
+
+    # A zero width is not a sharp edge but an undefined one: `0/0` exactly on
+    # the edge is `NaN`, and one `NaN` in a static mask spreads through the
+    # tagged field on the first step. A negative width swaps the region for its
+    # complement without saying so.
+    for width in (0.0, -2.0)
+        err = region_error(
+            Dict("type" => "tanh_latitude", "lat_bound" => 20.0, "width" => width),
+        )
+        @test err isa ErrorException
+        @test occursin("width", err.msg)
+    end
+
+    # Every region type checks its own width.
+    for spec in (
+        Dict("type" => "tanh_altitude", "z_center" => 12000.0, "width" => 0.0),
+        Dict(
+            "type" => "tanh_box",
+            "lon_min" => -60.0,
+            "lon_max" => -10.0,
+            "lat_min" => -10.0,
+            "lat_max" => 10.0,
+            "width" => 0.0,
+        ),
+        Dict(
+            "type" => "tanh_polygon",
+            "vertices" => [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0]],
+            "width" => 0.0,
+        ),
+    )
+        err = region_error(spec)
+        @test err isa ErrorException
+        @test occursin("width", err.msg)
+    end
+
+    # The band is `|lat| <= lat_bound`, so zero is empty and negative gives a
+    # negative mask -- a tag holding a negative share of the parent field.
+    for lat_bound in (0.0, -20.0)
+        err = region_error(
+            Dict(
+                "type" => "tanh_latitude",
+                "lat_bound" => lat_bound,
+                "width" => 2.0,
+            ),
+        )
+        @test err isa ErrorException
+        @test occursin("lat_bound", err.msg)
+    end
+
+    # A valid box, with the one or two keys each case is about overridden.
+    box(overrides...) = merge(
+        Dict{String, Any}(
+            "type" => "tanh_box",
+            "lon_min" => -60.0,
+            "lon_max" => -10.0,
+            "lat_min" => -10.0,
+            "lat_max" => 10.0,
+            "width" => 1.0,
+        ),
+        Dict{String, Any}(overrides...),
+    )
+
+    # Reversed or equal latitude bounds are the same defect on the other axis.
+    for (lat_min, lat_max) in ((10.0, -10.0), (10.0, 10.0))
+        err = region_error(box("lat_min" => lat_min, "lat_max" => lat_max))
+        @test err isa ErrorException
+        @test occursin("lat_min", err.msg)
+    end
+
+    # Longitudes are compared modulo 360 so that a box may cross the
+    # antimeridian, which leaves a whole turn indistinguishable from none:
+    # `-180` to `180` is the obvious way to write "every longitude" and used to
+    # give a mask of zero everywhere.
+    for (lon_min, lon_max) in ((-180.0, 180.0), (0.0, 360.0), (30.0, 30.0))
+        err = region_error(box("lon_min" => lon_min, "lon_max" => lon_max))
+        @test err isa ErrorException
+        @test occursin("longitude", err.msg)
+    end
+
+    # A box that wraps the antimeridian is still fine -- that is the whole
+    # reason longitudes are compared modulo 360.
+    wrapping = CA.tag_region_from_config(
+        box("lon_min" => 170.0, "lon_max" => -170.0),
+        FT,
+    )
+    @test wrapping isa CA.TanhBoxRegion
+end
+
 @testset "energy_tracers and water_tracers" begin
     entries = [
         Dict("name" => "tropics", "region" => "tropics"),

@@ -286,6 +286,28 @@ Anything else is written as a mapping with a `type`. Edges are smoothed with a
 Every type except `everywhere` also takes `inside: false` (`above: false` for
 `tanh_altitude`) to select the exact complement instead.
 
+#### What the numbers have to satisfy
+
+Four combinations describe no region at all, and are refused with a message
+naming the key rather than run:
+
+  - `width` must be **greater than zero**, for every type. Zero is not a sharp
+    edge, it is an undefined one: a point sitting exactly on the edge gives
+    `NaN`, and one `NaN` spreads through the tagged field on the first step. A
+    negative width quietly gives you the complement of the region you asked
+    for.
+  - `lat_bound` must be **greater than zero**. The band is `|lat| ≤ lat_bound`,
+    so zero is empty and a negative bound makes the mask itself negative — the
+    tag would hold a negative share of the air.
+  - A box needs `lat_min` **below** `lat_max`. Equal bounds give a mask of zero
+    everywhere, reversed bounds a negative one.
+  - A box must **span some longitude**. Longitudes are compared modulo 360°,
+    which is what lets a box cross the antimeridian (`lon_min: 170`,
+    `lon_max: -170` is a 20° box), and it also means a full turn looks exactly
+    like no turn. Writing `lon_min: -180, lon_max: 180` for "every longitude"
+    used to give a mask of zero everywhere. If you want a band over every
+    longitude and it is symmetric about the equator, use `tanh_latitude`.
+
 ```yaml
 energy_tracers:
   - name: stratosphere
