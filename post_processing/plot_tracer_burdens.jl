@@ -39,9 +39,9 @@ include(joinpath(@__DIR__, "tracer_lifetimes.jl"))
 
 import CairoMakie
 
-# Sequential blue ramp, light to dark. The ramp starts at step 250, not at the
-# near-white end reserved for continuous fields: on a light surface a discrete
-# ordered mark has to stay clear of the background.
+# Sequential blue ramp, light to dark. It starts at step 250, clear of the
+# near-white end reserved for continuous fields, so a discrete ordered mark
+# stays legible against a light background.
 const BURDEN_HEIGHT_RAMP = [
     "#86b6ef",  # 250
     "#6da7ec",  # 300
@@ -76,7 +76,7 @@ end
 
 # Interpolate the ramp instead of indexing its ten tabulated steps, so adjacent
 # bands stay distinct at any band count. `n_height_bands` can reach 12, where
-# nearest-step picking would give two pairs of bands the same colour.
+# nearest-step picking would hand two pairs of bands the same colour.
 const BURDEN_HEIGHT_GRADIENT =
     CairoMakie.cgrad(CairoMakie.to_color.(BURDEN_HEIGHT_RAMP))
 
@@ -140,8 +140,8 @@ function plot_tracer_burdens(
         xticklabelcolor = BURDEN_INK_MUTED,
         yticklabelcolor = BURDEN_INK_MUTED,
         titlecolor = BURDEN_INK,
-        # Recessive grid: present enough to read a value off, never competing
-        # with the data.
+        # Recessive grid, visible enough to read a value off while staying
+        # behind the data.
         xgridcolor = (BURDEN_INK_MUTED, 0.12),
         ygridcolor = (BURDEN_INK_MUTED, 0.12),
         topspinevisible = false,
@@ -165,8 +165,8 @@ function plot_tracer_burdens(
         )
     end
 
-    # One legend entry per band, not per tracer. Heights are labelled by the
-    # region they cover and latitudes by the band edges. Both come from the
+    # One legend entry per band rather than per tracer. Heights are labelled by
+    # the region they cover and latitudes by the band edges. Both come from the
     # table, so they match the configuration that produced it.
     height_labels = String[]
     height_elements = CairoMakie.LineElement[]
