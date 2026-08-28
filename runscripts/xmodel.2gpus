@@ -5,19 +5,18 @@
 #SBATCH --constraint=a100_80
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
-# GPUs are requested at node scope, not per task: --gpus-per-task implies a
-# per-task GPU binding that pins CUDA_VISIBLE_DEVICES before --gpu-bind=closest
-# can choose, so `closest` would have nothing left to decide.
+# GPUs are requested at node scope. --gpus-per-task implies a per-task GPU
+# binding that pins CUDA_VISIBLE_DEVICES ahead of --gpu-bind=closest, leaving
+# `closest` with nothing to decide.
 #SBATCH --gpus-per-node=2
 # One NUMA domain of cores per rank. A Levante GPU node is 128 cores over 8
-# NUMA domains of 16, with one GPU and one HCA attached to every second domain,
-# so 16 is the largest allocation that keeps every core local to the rank's
-# GPU.
+# NUMA domains of 16, with one GPU and one HCA attached to every second domain.
+# 16 is therefore the largest allocation that keeps every core local to the
+# rank's GPU.
 #SBATCH --cpus-per-task=16
-# --exclusive on every variant, including the 1- and 2-GPU ones. A shared node
-# would have this job competing for memory bandwidth and HCAs with someone
-# else's, and the whole point of having three scripts is that their timings are
-# comparable.
+# --exclusive on every variant, including the 1- and 2-GPU ones. The three
+# scripts exist so their timings can be compared, and that holds only while each
+# job has the node's memory bandwidth and HCAs to itself.
 #SBATCH --exclusive
 #SBATCH --mem=0
 #SBATCH --hint=nomultithread
@@ -36,13 +35,13 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Locate the repository, then hand over to the shared implementation.
 #
-# Not from ${BASH_SOURCE[0]}: sbatch copies this script to the node's spool
-# directory before running it, so BASH_SOURCE points at
-# /var/spool/slurmd/job<id>/slurm_script. SLURM_SUBMIT_DIR is where sbatch was
-# invoked -- the repository root for the documented
-# `sbatch runscripts/<script>`, or runscripts/ itself. A candidate counts only
-# if the shared library is actually in it, so a wrong guess fails here rather
-# than as a missing file later.
+# The path comes from SLURM_SUBMIT_DIR, the directory sbatch was invoked from.
+# That is the repository root for the documented `sbatch runscripts/<script>`,
+# or runscripts/ itself. ${BASH_SOURCE[0]} is no use here, because sbatch copies
+# this script to the node's spool directory first and BASH_SOURCE then points at
+# /var/spool/slurmd/job<id>/slurm_script. A candidate counts only once the
+# shared library is found in it, so a wrong guess fails here instead of as a
+# missing file later.
 # ---------------------------------------------------------------------------
 
 for _candidate in \

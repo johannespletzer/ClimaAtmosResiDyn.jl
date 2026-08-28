@@ -18,8 +18,8 @@
 # -----------------------------------------------------------------------------
 # Levante software environment
 #
-# Sourced before `set -u`: site profiles routinely reference unset variables,
-# which would abort the job at source time.
+# Sourced before `set -u`, because site profiles routinely reference unset
+# variables and would abort the job at source time under it.
 # -----------------------------------------------------------------------------
 
 source /sw/etc/profile.levante
@@ -42,17 +42,17 @@ module load openmpi/4.1.2-gcc-11.2.0
 # ---------------------------------------------------------------------------
 # Locate the repository.
 #
-# Not from ${BASH_SOURCE[0]}: sbatch copies this script to the node's spool
-# directory before running it, so BASH_SOURCE points at
-# /var/spool/slurmd/job<id>/slurm_script and its parent is /var/spool/slurmd.
-# SLURM_SUBMIT_DIR is the directory sbatch was invoked from, which is the
-# repository root for the documented `sbatch runscripts/<script>` invocation
+# The path comes from SLURM_SUBMIT_DIR, the directory sbatch was invoked from.
+# That is the repository root for the documented `sbatch runscripts/<script>`,
 # and its runscripts/ subdirectory for `cd runscripts && sbatch <script>`.
-# Accept either, and fall back to BASH_SOURCE for a direct (non-sbatch) run.
+# Accept either, and fall back to BASH_SOURCE for a direct run outside sbatch.
+# ${BASH_SOURCE[0]} is no use under sbatch, which copies this script to the
+# node's spool directory first, leaving BASH_SOURCE at
+# /var/spool/slurmd/job<id>/slurm_script with /var/spool/slurmd as its parent.
 #
-# A candidate counts only if it actually holds the project and the runscripts,
-# so a wrong guess fails here with an actionable message instead of surfacing
-# later as a missing file.
+# A candidate counts only once it is found to hold the project and the
+# runscripts, so a wrong guess fails here with an actionable message instead of
+# surfacing later as a missing file.
 # ---------------------------------------------------------------------------
 
 levante_find_root() {
@@ -119,12 +119,12 @@ fi
 # -----------------------------------------------------------------------------
 # Julia version must match the pinned manifest
 #
-# `.buildkite` pins dependencies per Julia minor version
-# (Manifest-v<major>.<minor>.toml). Running a different minor version silently
-# ignores that manifest and re-resolves the dependency graph, which can select
-# package versions the source does not support. The failure then surfaces deep
-# inside the run -- typically as a MethodError while the configuration is being
-# built -- after the job has already been queued and started. Fail here instead.
+# `.buildkite` pins dependencies per Julia minor version, in
+# Manifest-v<major>.<minor>.toml. Another minor version ignores that manifest
+# and re-resolves the dependency graph, which can select package versions the
+# source has never supported. The failure then surfaces deep inside the run,
+# usually as a MethodError while the configuration is built, long after the job
+# was queued and started. Check here instead.
 # -----------------------------------------------------------------------------
 
 manifest="$(ls "${PROJECT}"/Manifest-v*.toml 2>/dev/null | head -n 1 || true)"
@@ -241,15 +241,15 @@ echo
 # -----------------------------------------------------------------------------
 # Warm the precompilation cache serially
 #
-# The first `import ClimaAtmos` builds the precompile cache. Doing that under
-# srun means every rank races for the same cache files: Julia serialises them
-# with lock files, which on a shared filesystem is slow and can time out. Load
-# once here instead, so the ranks below start from a warm cache.
+# The first `import ClimaAtmos` builds the precompile cache. Under srun every
+# rank races for the same cache files, and Julia serialises them with lock
+# files, which is slow on a shared filesystem and can time out. Loading once
+# here lets the ranks below start from a warm cache.
 #
-# This also fails early, and legibly, when the environment was never
-# instantiated for this Julia version -- the packages pinned in the manifest are
-# then missing from the depot. Fix that on a login node (compute nodes usually
-# have no network access):
+# This step also fails early and legibly when the environment was never
+# instantiated for this Julia version, since the packages pinned in the manifest
+# are then missing from the depot. Fix that on a login node, as compute nodes
+# usually have no network access:
 #
 #   julia +<version> --project=.buildkite -e 'using Pkg; Pkg.instantiate()'
 # -----------------------------------------------------------------------------
@@ -274,8 +274,8 @@ echo
 # -----------------------------------------------------------------------------
 # Run the experiment
 #
-# `set -e` is lifted around srun so that the exit status is reported and the
-# end time is logged even when the run fails.
+# `set -e` is lifted around srun, so a failing run still reports its exit
+# status and logs its end time.
 # -----------------------------------------------------------------------------
 
 cd "${ROOT}"

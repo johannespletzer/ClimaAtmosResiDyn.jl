@@ -2,10 +2,10 @@
 Runscript for cloud-resolving box with RCEMIP-II setup
 """
 
-# When Julia 1.10+ is used interactively, stacktraces contain reduced type information to make them shorter.
-# On the other hand, the full type information is printed when julia is not run interactively.
-# Given that ClimaCore objects are heavily parametrized, non-abbreviated stacktraces are hard to read,
-# so we force abbreviated stacktraces even in non-interactive runs.
+# Julia 1.10+ shortens stacktraces in an interactive session by reducing the
+# type information, and prints it in full everywhere else. ClimaCore objects are
+# heavily parametrized, so the full form is hard to read. This forces the
+# abbreviated form in non-interactive runs too.
 # (See also Base.type_limited_string_from_context())
 redirect_stderr(IOContext(stderr, :stacktrace_types_limited => Ref(false)))
 
@@ -31,7 +31,8 @@ t_end = "4hours"
 ##### RCE-small #####
 x_max = y_max = 96_000
 
-# spatio-temporal discretization
+# Spatio-temporal discretization. Pick a resolution by uncommenting one pair of
+# lines below and commenting out the pair in force.
 
 #~8km grid
 x_elem = y_elem = 4

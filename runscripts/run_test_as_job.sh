@@ -1,5 +1,15 @@
 #!/bin/tcsh -f
 
+# Run one ClimaAtmos test group on Levante as a batch job, on the CPU stack.
+# The test groups are long enough that a login node times out, so they go to the
+# shared partition.
+#
+#   sbatch runscripts/run_test_as_job.sh
+#
+# Output lands in tracer-tests-<jobid>.out next to where you submitted from.
+# Edit the group at the bottom to pick what runs. Use run_test_individual.sh
+# instead for a quick check on a login node.
+
 #SBATCH --job-name=tracer-tests
 #SBATCH --account=bd1062
 #SBATCH --partition=shared
@@ -21,10 +31,12 @@ module load openmpi/4.1.2-gcc-11.2.0
 setenv JULIA_DEPOT_PATH ${HOME}/.julia/depots/levante-cpu
 cd ~/git/ClimaAtmosResiDyn.jl
 
-# Individual files
+# Pick what to run by uncommenting one block. Everything else stays commented.
+
+# A single file.
 #julia +1.11 --project=.buildkite perf/tracer_scaling.jl
 
-# All tests in folder
+# A whole test group.
 setenv TEST_GROUP parameterizations
 julia +1.11 --project -e 'using Pkg; Pkg.test()'
 

@@ -17,10 +17,11 @@
 #   sbatch --export=ALL,MEMBER=a runscripts/xmodel.amip
 #
 # The campaign runs 1979-01-01 to 2021-01-01 in segments that each end on a
-# checkpoint boundary, so the run finishes on its own inside the queue slot
-# instead of being killed. Being killed would discard everything since the last
-# checkpoint AND stop the chain, because SLURM tears down this script along with
-# the job step -- nothing after `srun` would execute.
+# checkpoint boundary, so a segment finishes on its own inside the queue slot.
+# A segment killed at the wall-time limit costs twice over. It discards
+# everything since the last checkpoint, and it stops the chain, because SLURM
+# tears down this script along with the job step and nothing after `srun`
+# runs.
 #
 # Each segment computes its own end from the newest checkpoint, so the same
 # command starts the campaign and continues it. To restart from scratch, delete
@@ -44,9 +45,10 @@ case "${MEMBER}" in
     *) echo "ERROR: MEMBER must be 'a' or 'b', got '${MEMBER}'"; exit 1 ;;
 esac
 
-# SLURM copies the batch script into its spool directory before running it, so
-# ${BASH_SOURCE[0]} is NOT the file in the repository and cannot be used either
-# to locate the repo or to resubmit. Use the submission directory instead.
+# Use the submission directory. SLURM copies the batch script into its spool
+# directory before running it, so ${BASH_SOURCE[0]} names that copy rather than
+# the file in the repository, which rules it out for locating the repo and for
+# resubmitting.
 ROOT="${ROOT:-${SLURM_SUBMIT_DIR:-${PWD}}}"
 SCRIPT_PATH="${ROOT}/runscripts/xmodel.amip"
 COUPLER="${COUPLER:?set COUPLER to the ClimaCoupler.jl checkout}"
@@ -64,10 +66,10 @@ BASE_DIR="${COUPLER_OUTPUT_DIR}/${JOB_ID}"
 
 # 1979-01-01 -> 2021-01-01 is 15341 days (42*365 + 11 leap days).
 CAMPAIGN_DAYS="${CAMPAIGN_DAYS:-15341}"
-# Simulated days per job. Must be a whole number of checkpoint intervals so that
+# Simulated days per job. Keep it a whole number of checkpoint intervals, so
 # every segment ends exactly on a checkpoint. Size it from the measured sypd of
-# the calibration run to fit inside the wall-time limit with an hour to spare;
-# the default is deliberately conservative.
+# the calibration run to fit inside the wall-time limit with an hour to spare.
+# The default errs on the low side.
 SEGMENT_DAYS="${SEGMENT_DAYS:-150}"
 CHECKPOINT_DAYS="${CHECKPOINT_DAYS:-30}"   # must equal checkpoint_dt in the config
 
@@ -85,7 +87,7 @@ fi
 TEMPLATE="${ROOT}/config/coupler_configs/${JOB_ID}.yml.in"
 ATMOS_CONFIG="${ROOT}/config/example_configs/strat_tracers_transient_${MEMBER}.yml"
 RUN_CONFIG_DIR="${BASE_DIR}/run_configs"
-# The basename decides job_id, and job_id decides BASE_DIR. It must not change.
+# The basename decides job_id, and job_id decides BASE_DIR. Keep it fixed.
 RUN_CONFIG="${RUN_CONFIG_DIR}/${JOB_ID}.yml"
 
 for f in "${TEMPLATE}" "${ATMOS_CONFIG}"; do
@@ -96,8 +98,8 @@ done
 [[ -n "${JULIA}" && -x "${JULIA}" ]] || { echo "ERROR: julia not found; set JULIA"; exit 1; }
 [[ -d "${JULIA_DEPOT_PATH}" ]] || {
     echo "ERROR: depot ${JULIA_DEPOT_PATH} not found. Build the AMIP stack on a login node first."; exit 1; }
-# Checked explicitly because the chain dies silently otherwise: the segment runs,
-# then the resubmission at the end cannot find the script to resubmit.
+# Checked here because the failure is otherwise silent. The segment would run
+# to completion, and only then would the resubmission fail to find the script.
 [[ -f "${SCRIPT_PATH}" ]] || {
     echo "ERROR: cannot find this script at ${SCRIPT_PATH}."
     echo "       Submit from the repository root, or set ROOT explicitly:"
@@ -107,9 +109,9 @@ done
 # -----------------------------------------------------------------------------
 # Where the last segment stopped
 #
-# The coupler names checkpoints `checkpoint_<model>_<t>.hdf5` with t in whole
-# seconds, and keeps them in <base>/checkpoints -- outside the numbered
-# output_XXXX directories, so they accumulate in one place across segments.
+# The coupler names checkpoints `checkpoint_<model>_<t>.hdf5`, with t in whole
+# seconds, and keeps them in <base>/checkpoints. That sits outside the numbered
+# output_XXXX directories, so they gather in one place across segments.
 # -----------------------------------------------------------------------------
 
 restart_t=0

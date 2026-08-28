@@ -1,5 +1,14 @@
 #!/bin/tcsh -f
 
+# Run the short stratospheric passive tracer job on a Levante login node, on the
+# CPU stack. This is the CI configuration, so it covers two simulated days and
+# finishes in minutes. Use it to check that a change still runs end to end.
+#
+#   ./runscripts/run_strat.tcsh
+#
+# For a full multi-year integration, submit one of the xmodel.* GPU jobs with
+# SCRIPT=experiments/passive_stratospheric_tracers.jl.
+
 if (-f /sw/etc/csh.levante) then
     source /sw/etc/csh.levante
 endif

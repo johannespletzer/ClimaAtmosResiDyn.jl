@@ -1,5 +1,13 @@
 #!/bin/tcsh -f
 
+# Run the `dynamics` test group on a Levante login node, on the CPU stack.
+#
+#   ./runscripts/run_test_dynamics.sh
+#
+# The line below pins CloudMicrophysics to 0.37.1 and writes to the project's
+# manifest, so expect a changed Manifest.toml afterwards. Project.toml currently
+# asks for 0.38, so check the pin is still the version you want before running.
+
 if (-f /sw/etc/csh.levante) then
     source /sw/etc/csh.levante
 endif
