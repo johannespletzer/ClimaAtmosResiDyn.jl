@@ -90,12 +90,13 @@ end
     # than merely unusual: zero everywhere, negative everywhere, or `NaN` on
     # the edge. The error has to name the key, since the value is accepted
     # arithmetic and nothing downstream would complain.
-    region_error(spec) = try
-        CA.tag_region_from_config(spec, FT)
-        nothing
-    catch e
-        e
-    end
+    region_error(spec) =
+        try
+            CA.tag_region_from_config(spec, FT)
+            nothing
+        catch e
+            e
+        end
 
     # A zero width is not a sharp edge but an undefined one: `0/0` exactly on
     # the edge is `NaN`, and one `NaN` in a static mask spreads through the
