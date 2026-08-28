@@ -43,9 +43,9 @@ Base.@kwdef struct TropopauseParameters{FT}
     search_max_height::FT = 25e3
 end
 
-# Height used where the lapse-rate scan finds no tropopause on a grid without
-# latitude coordinates (a column or box). On the sphere the latitude-dependent
-# `climatological_tropopause_height` is used instead.
+# Fallback height for a column or box grid, which carries no latitude
+# coordinate, when the lapse-rate scan finds no tropopause. The sphere uses the
+# latitude-dependent `climatological_tropopause_height` instead.
 const DEFAULT_TROPOPAUSE_HEIGHT = 12_000
 
 """
@@ -104,9 +104,9 @@ candidate.
     has_candidate = z_candidate > z_zero
 
     # Lapse rate across the layer below, positive where temperature falls with
-    # height. This is the lapse rate *above* the previous level, so the
-    # previous level becomes the candidate, not this one. The tropopause is the
-    # level where the atmosphere stops cooling, not the first level after it.
+    # height. It describes the layer above the previous level, so the previous
+    # level becomes the candidate. The tropopause is the level where the
+    # atmosphere stops cooling, not the first level after it.
     #
     # Both branches of every `ifelse` are evaluated, so each denominator is
     # kept away from zero and the guard picks the meaningful branch.
@@ -135,9 +135,9 @@ candidate.
         (z_previous >= search_min_height) &
         (z_previous <= search_max_height)
 
-    # `opens_candidate` and `candidate_holds` are mutually exclusive. The
-    # first needs no active candidate, or one just dropped; the second needs an
-    # active candidate that was not dropped.
+    # `opens_candidate` and `candidate_holds` are mutually exclusive. The first
+    # applies when the column has no active candidate, or has just dropped one.
+    # The second applies when a candidate is active and still standing.
     new_z_candidate = ifelse(
         found,
         z_candidate,

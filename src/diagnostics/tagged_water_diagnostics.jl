@@ -2,16 +2,15 @@
 
 # Tagged prognostic water tracers
 #
-# As for the energy tags, tag names are configuration-dependent, so the per-tag
-# diagnostics cannot be registered statically when the package is loaded.
-# `register_water_tagging_diagnostics!(model)` is called during simulation setup
-# (see `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`), once
-# the `WaterTaggingModel` is known.
+# Tag names come from the configuration, as they do for the energy tags, so the
+# per-tag diagnostics are registered once the `WaterTaggingModel` is known.
+# `register_water_tagging_diagnostics!(model)` runs during simulation setup,
+# from `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`.
 #
-# Naming note: this repo's `hus` diagnostic is called "Specific Humidity" but
-# computes `ρq_tot / ρ`, i.e. the mass of *all* water phases (`husv` is the
-# vapor-only counterpart). The tagged names below do not inherit that ambiguity:
-# `q_tag_*` is explicitly total water and `qv_tag_*` is explicitly vapor.
+# A note on naming. This repo's `hus` diagnostic is labelled "Specific Humidity"
+# and computes `ρq_tot / ρ`, the mass of all water phases, while `husv` is the
+# vapor-only counterpart. The tagged names are explicit instead: `q_tag_*` is
+# total water and `qv_tag_*` is vapor.
 
 function compute_q_tag!(out, state, cache, time, ρq_tag_name)
     ρq_tag_name in propertynames(state.c) ||
@@ -24,11 +23,11 @@ function compute_q_tag!(out, state, cache, time, ρq_tag_name)
     end
 end
 
-# Vapor share of a tag under the assumption that the phases are well mixed
-# within a grid cell: qv_tag = q_tag * q_v / q_t. With 0-moment microphysics
-# q_liq and q_ice are the saturation-adjustment diagnosis of the *grid mean*, so
-# there is no per-tag phase information available to do better than this.
-# `water_tag_fraction` supplies the guarded quotient and the dry-cell fallback.
+# Vapor share of a tag, `qv_tag = q_tag * q_v / q_t`, assuming the phases are
+# well mixed within a grid cell. With 0-moment microphysics, `q_liq` and `q_ice`
+# come from saturation adjustment of the grid mean, so the grid cell is the
+# finest phase information available. `water_tag_fraction` supplies the guarded
+# quotient and the dry-cell fallback.
 @inline function _qv_tag(ρq_tag, ρ, ρq_tot, q_liq, q_ice)
     ρq_vap = max(ρq_tot - ρ * (q_liq + q_ice), zero(ρ))
     return specific(ρq_tag, ρ) * water_tag_fraction(ρq_vap, ρq_tot)
@@ -169,12 +168,12 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
     end
 
     region_names = water_region_tag_state_names(model)
-    # Drop any stale entry unconditionally, before deciding whether to register
-    # a new one. An earlier simulation in this process may have registered
-    # `q_tag_res` over a different set of region tags; if this model has none
-    # (every tag carries a `source`), leaving that entry behind would let a
-    # config request a "closure residual" computed over tags that are not a
-    # partition of this model's water — a wrong number rather than an error.
+    # Drop any stale entry first, then decide whether to register a new one. An
+    # earlier simulation in this process may have registered `q_tag_res` over a
+    # different set of region tags. If every tag in this model carries a
+    # `source`, a leftover entry would let a config ask for a closure residual
+    # summed over tags that never partitioned this model's water. That returns a
+    # wrong number and no error, so clear it.
     delete!(ALL_DIAGNOSTICS, "q_tag_res")
     if !isempty(region_names)
         add_diagnostic_variable!(;

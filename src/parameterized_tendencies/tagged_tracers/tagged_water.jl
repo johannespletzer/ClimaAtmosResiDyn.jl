@@ -1,57 +1,27 @@
 #####
 ##### Tagged prognostic water tracers
 #####
-##### Water-provenance counterpart of `tagged_tracers.jl`: each tag adds one
-##### grid-scale prognostic field `Y.c.ρq_tag_<name>` that partitions total water
-##### `ρq_tot`. The region machinery (`AbstractTagRegion`, `region_mask`), the
-##### mask cache, the state-entry generation and the restart path are all shared
-##### with the energy tags; only the source table and the attribution rule are
-##### specific to water. Config parsing for both lives in
-##### `config/tracer_config.jl`, under the `water_tracers` key.
+##### Each tag adds one grid-scale prognostic field `Y.c.ρq_tag_<name>` holding
+##### part of the total water `ρq_tot`, so a tag records where water came from.
+##### Regions, masks, state entries and restarts are shared with the energy tags
+##### in `tagged_tracers.jl`. Config parsing lives in `config/tracer_config.jl`
+##### under the `water_tracers` key. The physics is written up in
+##### `docs/src/tagged_water.md`.
 #####
-##### Like `ρe_tag_*`, these names are ρ-weighted and are not excluded by
-##### `gs_tracer_names(Y)`, so the existing tracer machinery supplies advection,
-##### hyperdiffusion, sponges, vertical eddy diffusion and the implicit-diffusion
-##### Jacobian diagonal. Two of those operators happen to be *identical* to the
-##### ones `ρq_tot` itself uses — vertical diffusion (unscaled `K_h`) and
-##### hyperdiffusion (unscaled `ν₄_scalar`), because `ρq_tot` is likewise absent
-##### from `gs_sedimenting_tracer_candidates`. The vertical advection differs
-##### (`ρq_tot` is advected implicitly with a post-Newton upwind correction, the
-##### tags explicitly with `tracer_upwinding`), and that split is the one
-##### irreducible source of closure leakage. It is reported by `q_tag_res`.
+##### Tag names are ρ-weighted, so `gs_tracer_names(Y)` picks them up and the
+##### usual tracer machinery supplies advection, hyperdiffusion, sponges and
+##### vertical eddy diffusion. Leave transport to that machinery. Attributing it
+##### here would count it twice. Only the processes in `KNOWN_WATER_TAG_SOURCES`
+##### are attributed.
 #####
-##### Transport must therefore NOT be attributed, exactly as for the energy tags.
-##### What *is* attributed is the short list of genuine sources and sinks of
-##### `ρq_tot` — see `KNOWN_WATER_TAG_SOURCES`.
+##### Attribution follows two rules. Local sources and sinks come from a
+##### bracketed increment, where production is shared by region mask and loss in
+##### proportion to what each tag already holds. Sedimentation is a flux
+##### divergence, so each tag sediments with its own donor-cell flux built from
+##### the parent's terminal velocity. See `sediment_water_tags!`.
 #####
-##### There are two mechanisms here, not one, and the distinction is the whole
-##### design. *Local* sources and sinks are attributed from a bracketed
-##### increment (the rule below). Sedimentation, which exists only with 1-moment
-##### and higher microphysics, is a flux divergence rather than a local source
-##### and is instead *mirrored*: each tag sediments with its own donor-cell flux,
-##### built from the same terminal velocity and reconstruction as the parent, so
-##### the tagged fluxes sum to it exactly. See `sediment_water_tags!`.
-#####
-##### The attribution rule differs from the energy one in a way that matters.
-##### For a bracketed increment `Δ = Yₜ.c.ρq_tot(after) - snapshot`, split into
-##### `Δ⁺ = max(Δ, 0)` and `Δ⁻ = max(-Δ, 0)`:
-#####
-#####     ρq_tag_kₜ += M_k * Δ⁺ - φ_k * Δ⁻
-#####
-##### Production is mask-weighted (new water carries the label of where it
-##### entered), but loss is *donor-proportional*: `φ_k = ρq_tag_k / ρq_tot`, so
-##### water leaves in proportion to what is actually there, and every tag is
-##### depleted regardless of which sources it lists. Attributing a loss by mask,
-##### as the energy tags do, would remove water a tag does not own and can drive
-##### tags negative. The donor rule is what makes `ρq_tag_k` a water mass; it is
-##### the tendency form of the relative scaling `tracer *= (1 + qte·Δt/q)` used
-##### by the MESSy H2OEMIS submodel.
-#####
-##### Closure: with `Σ M_k = 1` and `Σ ρq_tag_k = ρq_tot` we get `Σ φ_k = 1` and
-##### hence `Σ Δ_k = Δ⁺ - Δ⁻ = Δ` exactly, per process. Positivity: a tag update
-##### is `ρq_tag_k * (1 - Δ⁻·dt/ρq_tot)`, so tags stay non-negative under the
-##### same step restriction that keeps `ρq_tot` non-negative — which the 0M sink
-##### already enforces via `apply_0m_tendency_limit`.
+##### `ρq_tot` is advected implicitly and the tags explicitly. That split is the
+##### one unavoidable source of closure drift, and `q_tag_res` measures it.
 
 # ============================================================================
 # Names, state, and initial values
@@ -370,12 +340,11 @@ function _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, model::WaterTaggingModel
     return nothing
 end
 
-# The gross production and gross loss of the split `Δ = Δ⁺ - Δ⁻` appear below as
-# `max(Δ, 0)` and `min(Δ, 0)`. The loss term is written `+ min(Δ, 0) * φ` rather
-# than the equivalent `- max(-Δ, 0) * φ` for two reasons: it keeps the whole
-# update in one broadcast over `ᶜΔ` (no nested lazy objects), and a `-`
-# immediately followed by a modifier letter such as `ᶜ` parses as the suffixed
-# operator `-ᶜ`, which does not exist.
+# The split `Δ = Δ⁺ - Δ⁻` appears below as `max(Δ, 0)` and `min(Δ, 0)`. The loss
+# term is written `+ min(Δ, 0) * φ` instead of the equivalent `- max(-Δ, 0) * φ`
+# for two reasons. It keeps the whole update in one broadcast over `ᶜΔ`. And a
+# `-` directly before a modifier letter such as `ᶜ` parses as the suffixed
+# operator `-ᶜ`, which Julia leaves undefined.
 _accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, ::Tuple{}) = nothing
 function _accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags::Tuple)
     _accumulate_water_tag!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, first(tags))
@@ -410,8 +379,8 @@ function _accumulate_water_tag!(
     return nothing
 end
 
-# Tag with a region: production is masked, loss is not — water leaves from
-# wherever it is, not from where the tag's region is.
+# Tag with a region: production is masked. Loss stays donor-proportional, so
+# water leaves from wherever the tag is holding it.
 function _accumulate_water_tag!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tag::WaterTag)
     ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
     ᶜρq_tag = tag_field(ᶜY, tag)
@@ -430,43 +399,30 @@ end
 # Sedimentation (1-moment and higher)
 # ============================================================================
 
-##### Sedimentation is not attributed, it is *mirrored*. For each sedimenting
+##### Each tag sediments with its own copy of the parent flux. For a sedimenting
 ##### species `s` with terminal velocity `wₛ` and specific content `qₛ`,
 ##### `vertical_advection_of_water_tendency!` adds
 #####
 #####     vtt = -ᶜprecipdivᵥ(ᶠρ * ᶠright_bias(WVector(-wₛ) * qₛ))
 #####
-##### to both `Yₜ.c.ρ` and `Yₜ.c.ρq_tot`. Each tag gets the same expression with
-##### its donor share `φ̂ₖ` multiplied *inside* the reconstruction:
+##### to `Yₜ.c.ρ` and `Yₜ.c.ρq_tot`. A tag gets the same expression with its
+##### donor share `φ̂ₖ` placed inside the reconstruction:
 #####
 #####     vttₖ = -ᶜprecipdivᵥ(ᶠρ * ᶠright_bias(WVector(-wₛ) * qₛ * φ̂ₖ))
 #####
-##### Two things follow from that placement, and they are the whole reason to
-##### mirror rather than attribute.
-#####
-##### Closure is exact. `ᶠright_bias` and `ᶜprecipdivᵥ` are linear, so if the
-##### shares sum to 1 pointwise then `Σₖ vttₖ = vtt` to roundoff — per species,
-##### per level, every step. This is stronger than bracketed attribution, which
-##### closes exactly only for local sources.
-#####
-##### Provenance is right by construction. `ᶠright_bias` is the donor-cell
-##### reconstruction for downward flux, so `φ̂ₖ` inside it is sampled in the cell
-##### the water falls *from*. Attributing the net increment instead would credit
-##### water arriving at a level to that level's own composition, which is the
-##### mislabeling this design exists to avoid.
-#####
-##### Surface removal is free: `ᶜprecipdivᵥ` sets only a top boundary condition
-##### and leaves the bottom face as free outflow, so reusing the operator removes
-##### tagged water at the surface consistently. The tagged surface precipitation
-##### rate is therefore a property of the discretization, not extra bookkeeping.
+##### That placement buys three things. Closure is exact, because both operators
+##### are linear, so shares summing to 1 pointwise give `Σₖ vttₖ = vtt` to
+##### roundoff. Provenance is right, because `ᶠright_bias` samples the cell the
+##### water falls from. Surface removal comes for free, because `ᶜprecipdivᵥ`
+##### leaves the bottom face as free outflow.
 #####
 ##### Only the grid-mean flux is mirrored. The `PrognosticEDMFX` subdomain
-##### corrections in `vertical_advection_of_water_tendency!` apply to the energy
-##### flux and have no tagged counterpart: the tags are grid-scale only.
+##### corrections apply to the energy flux, and the tags are grid-scale only.
+##### `docs/src/tagged_water.md` works through the shares and the Jacobian.
 
-# A pure region tag — a region and no sources — is a member of the partition
+# A pure region tag has a region and no sources. Those tags form the partition
 # whose shares are renormalized to sum to 1. Both properties are type
-# parameters, so this resolves at compile time. Mirrors the runtime filter in
+# parameters, so this resolves at compile time. It mirrors the runtime filter in
 # `water_region_tag_state_names`.
 _is_partition_tag(
     ::WaterTag{name, R, Tuple{}},
@@ -634,9 +590,9 @@ function _sediment_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜq, ᶜw, ᶠρ, tags::
     tag = first(tags)
     ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
     ᶜρq_tag = tag_field(ᶜY, tag)
-    # As in `vertical_advection_of_water_tendency!`, `-(ᶜw)` is parenthesized:
-    # a `-` immediately followed by a modifier letter parses as the suffixed
-    # operator `-ᶜ`, which does not exist.
+    # `-(ᶜw)` is parenthesized, as in `vertical_advection_of_water_tendency!`.
+    # A `-` directly before a modifier letter parses as the suffixed operator
+    # `-ᶜ`, which Julia leaves undefined.
     if _is_partition_tag(tag)
         @. ᶜρq_tagₜ +=
             -1 * ᶜprecipdivᵥ(
@@ -755,10 +711,9 @@ function _rescale_water_tags!(ᶜY, ᶜwater_fix, ᶜρq_tot_before, tags::Tuple
     ᶜρq_tag = tag_field(ᶜY, tag)
     ᶜfix = tag_field(ᶜwater_fix, tag)
     # Accumulate the signed change before applying it, so the ledger records the
-    # correction rather than its effect on an already-corrected tag. The ratio
-    # is recomputed rather than held in a temporary: it is two comparisons and a
-    # divide, which is cheaper than a scratch field and keeps this allocation
-    # free.
+    # correction itself and not its effect on an already-corrected tag. The
+    # ratio is recomputed on the spot. Two comparisons and a divide cost less
+    # than a scratch field, and this stays allocation free.
     @. ᶜfix +=
         ᶜρq_tag * (water_tag_rescale_ratio(ᶜY.ρq_tot, ᶜρq_tot_before) - 1)
     @. ᶜρq_tag *= water_tag_rescale_ratio(ᶜY.ρq_tot, ᶜρq_tot_before)
@@ -860,16 +815,16 @@ function _accumulate_partition_parts!(ᶜpos, ᶜneg, ᶜY, tags::Tuple)
     return _accumulate_partition_parts!(ᶜpos, ᶜneg, ᶜY, Base.tail(tags))
 end
 
-# `ᶜpos` and `ᶜneg` are read-only here and were computed from the pre-repair
-# state, so rewriting each tag in place cannot disturb a later tag's factor.
+# `ᶜpos` and `ᶜneg` are read-only here and come from the pre-repair state, so
+# each tag can be rewritten in place and a later tag's factor still holds.
 _apply_partition_repair!(ᶜY, ᶜwater_fix, ᶜpos, ᶜneg, ::Tuple{}) = nothing
 function _apply_partition_repair!(ᶜY, ᶜwater_fix, ᶜpos, ᶜneg, tags::Tuple)
     tag = first(tags)
     if _is_partition_tag(tag)
         ᶜρq_tag = tag_field(ᶜY, tag)
         ᶜfix = tag_field(ᶜwater_fix, tag)
-        # Ledger first, so it records the correction rather than its effect on
-        # an already-corrected tag, matching `rescale_water_tags!`.
+        # Ledger first, so it records the correction itself and not its effect
+        # on an already-corrected tag. This matches `rescale_water_tags!`.
         @. ᶜfix +=
             max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag
         @. ᶜρq_tag = max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg)

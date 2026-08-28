@@ -9,18 +9,18 @@
 #####   `water_tracers`    tags that split total water by origin (`WaterTag`)
 #####   `energy_tracers`   tags that split moist energy by origin (`TracerTag`)
 #####
-##### Everything here reads configuration and returns model objects. The physics
-##### lives elsewhere and never sees a config `Dict`:
+##### Everything here reads configuration and returns model objects. This is the
+##### only place that touches a config `Dict`, so the physics works from model
+##### objects alone:
 #####
 #####   - `parameterized_tendencies/chemistry/stratospheric_passive_tracers.jl`
 #####   - `parameterized_tendencies/tagged_tracers/tagged_tracers.jl`
 #####   - `parameterized_tendencies/tagged_tracers/tagged_water.jl`
 #####
-##### Which processes may be named in a `source` is a statement about which
-##### tendencies have an attribution bracket, so `KNOWN_TAG_SOURCES`,
-##### `TAG_SOURCE_GROUPS`, `KNOWN_WATER_TAG_SOURCES` and
-##### `WATER_TAG_SOURCE_GROUPS` stay with the physics too. This file only reads
-##### them.
+##### The names a user may put in a `source` are exactly the tendencies with an
+##### attribution bracket. That makes the lists a property of the physics, so
+##### `KNOWN_TAG_SOURCES`, `TAG_SOURCE_GROUPS`, `KNOWN_WATER_TAG_SOURCES` and
+##### `WATER_TAG_SOURCE_GROUPS` live with it. This file reads them.
 #####
 ##### User documentation: `docs/src/tracer_configuration.md`.
 
@@ -28,9 +28,9 @@
 # Validating nested mappings
 # ============================================================================
 #
-# `strict_config` checks top-level key names only, so without these a
-# misspelled key inside a nested block is silently dropped. Every nested block
-# below goes through `checked_mapping`, so a typo names itself.
+# `strict_config` checks top-level key names only. Every nested block below goes
+# through `checked_mapping` as well, so a key misspelled inside a block names
+# itself instead of being dropped in silence.
 
 """
     config_mapping(value, context)
