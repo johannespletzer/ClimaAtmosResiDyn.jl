@@ -1,44 +1,34 @@
 #####
 ##### Tagged prognostic energy tracers
 #####
-##### This file contains the physics of the tagged-tracer feature, configured by
-##### the `energy_tracers` config key. The corresponding types
-##### (`AbstractTagRegion`, `TracerTag`, `TaggingModel`, and the `AtmosTagging`
-##### model group) are defined in `types.jl`, and everything that reads
-##### configuration — region parsing, source parsing, and the config getter
-##### `AtmosTagging(::AtmosConfig)` — lives in `config/tracer_config.jl`.
-##### Everything else about tagging lives here, so the rest of the model code
-##### only needs:
+##### Each tag adds one grid-scale prognostic field `Y.c.ρe_tag_<name>` holding
+##### part of the total moist energy `ρe_tot`, so the tags record where energy
+##### came from. The `energy_tracers` config key switches them on. Types live in
+##### `types.jl` and config parsing in `config/tracer_config.jl`. The physics is
+##### written up in `docs/src/tagged_tracers.md`.
 #####
-#####   1. `tagging_variables(ρe_tot, local_geometry, atmos_model.tagging_model)`
-#####      in the initial-condition assembly (`setups/common/prognostic_variables.jl`);
-#####   2. `tagging_cache(Y, atmos)` in `cache/cache.jl`, which precomputes the
-#####      static region masks, and `tagging_scratch(Y, atmos)` in
-#####      `cache/temporary_quantities.jl` for the snapshot buffer;
-#####   3. `snapshot_tagged_ρe_tot!` / `attribute_tagged_ρe_tot!` brackets
-#####      around the attributed processes in `additional_tendency!`
-#####      (`prognostic_equations/remaining_tendency.jl`) and around
-#####      precipitation sedimentation in `implicit_tendency!`
-#####      (`prognostic_equations/implicit/implicit_tendency.jl`);
-#####   4. `is_tagged_tracer_name` to exempt tags from the tracer limiters
-#####      (`prognostic_equations/limited_tendencies.jl`).
+##### The rest of the model reaches tagging through four entry points:
 #####
-##### Each tag adds one grid-scale prognostic field `Y.c.ρe_tag_<name>`. Because
-##### these names are ρ-weighted and not in the exclusion list of
-##### `gs_tracer_names(Y)`, the existing tracer machinery automatically applies
-##### advection, hyperdiffusion, sponges, vertical eddy diffusion (as a passive
-##### scalar with `K_h`), and the corresponding implicit-Jacobian blocks. No
-##### hand-written transport is needed (and none should be added).
+#####   1. `tagging_variables` in the initial-condition assembly
+#####      (`setups/common/prognostic_variables.jl`);
+#####   2. `tagging_cache` in `cache/cache.jl` for the static region masks, and
+#####      `tagging_scratch` in `cache/temporary_quantities.jl` for the snapshot
+#####      buffer;
+#####   3. the `snapshot_tagged_ρe_tot!` and `attribute_tagged_ρe_tot!` brackets
+#####      in `prognostic_equations/remaining_tendency.jl` and
+#####      `prognostic_equations/implicit/implicit_tendency.jl`;
+#####   4. `is_tagged_tracer_name`, which exempts tags from the tracer limiters
+#####      in `prognostic_equations/limited_tendencies.jl`.
 #####
-##### Source attribution only covers processes that the tags do NOT already
-##### receive through that machinery — see `KNOWN_TAG_SOURCES` for the list and
-##### `TAG_SOURCE_GROUPS` for the user-facing groupings. Transport-like
-##### processes (advection, diffusion, sponges) must NOT be attributed: each tag
-##### already receives its own transport from the tracer machinery, so masked
-##### attribution of `ρe_tot` transport would count it twice.
+##### Tag names are ρ-weighted, so `gs_tracer_names(Y)` picks them up and the
+##### usual tracer machinery supplies advection, hyperdiffusion, sponges,
+##### vertical eddy diffusion and the implicit-Jacobian blocks. Leave transport
+##### to that machinery. Attributing it here would count it twice. Attribution
+##### covers only the processes in `KNOWN_TAG_SOURCES`, grouped for users by
+##### `TAG_SOURCE_GROUPS`.
 #####
-##### Masks are static in space and must be evaluated once (when building the
-##### cache) — never inside a per-timestep broadcast.
+##### Masks are static in space. Evaluate them once when building the cache,
+##### outside any per-timestep broadcast.
 
 """
     region_mask(region::AbstractTagRegion, coord)
@@ -120,9 +110,9 @@ end
     return hypot(x - (x1 + t * dx), y - (y1 + t * dy))
 end
 
-# Distance from (x, y) to the polygon boundary, in degrees of great-circle
-# arc: longitude separations are scaled by cos(lat) so that the smoothing
-# width means the same physical distance at every latitude.
+# Distance from (x, y) to the polygon boundary, in degrees of great-circle arc.
+# Longitude separations are scaled by cos(lat), so the smoothing width means the
+# same physical distance at every latitude.
 @inline function _distance_to_polygon(vertices::NTuple{N}, x, y) where {N}
     cos_lat = max(cosd(y), eps(y))
     x_scaled = x * cos_lat
@@ -365,11 +355,11 @@ region_tag_state_names(tagging_model::TaggingModel) = Tuple(
 # Closure checking
 # ============================================================================
 #
-# The `e_tag_res` / `q_tag_res` diagnostics are the same residual as a 3-D
-# field, for looking at afterwards. What follows reduces it to one number per
-# family and appends it to a table while the run is going, so that closure
-# drift is visible without post-processing. Shared by both families: only the
-# parent field and the tag names differ.
+# `e_tag_res` and `q_tag_res` hold this same residual as a 3-D field, for
+# looking at afterwards. What follows reduces it to one number per family and
+# appends it to a table while the run goes, so closure drift shows up during the
+# run itself. Both families share this code. Only the parent field and the tag
+# names differ.
 
 """
     tag_closure(Y, p, total_name, tag_state_names)
@@ -405,8 +395,9 @@ function tag_closure(Y, p, total_name, tag_state_names)
     tagged = sum(sum(getproperty(Y.c, name)) for name in tag_state_names)
     residual = total - tagged
 
-    # The same subtraction as `e_tag_res` / `q_tag_res`, reduced to one number
-    # without letting opposite-signed local errors cancel.
+    # The same subtraction as `e_tag_res` and `q_tag_res`, reduced to one
+    # number. Taking the absolute value first keeps opposite-signed local errors
+    # from cancelling.
     ᶜresidual = p.scratch.ᶜtemp_scalar
     @. ᶜresidual = ᶜparent
     for name in tag_state_names
@@ -416,8 +407,8 @@ function tag_closure(Y, p, total_name, tag_state_names)
     @. ᶜresidual = abs(ᶜresidual)
     gross_residual = sum(ᶜresidual)
 
-    # A state with no water at all would divide by zero. It should not happen
-    # in a real run, but the check must not be the thing that ends one.
+    # A state with zero water everywhere would divide by zero. A real run stays
+    # clear of that, and this guard keeps the check itself from ending one.
     relative = iszero(total) ? zero(residual) : residual / total
     gross_relative =
         iszero(total) ? zero(gross_residual) : gross_residual / total
@@ -505,11 +496,11 @@ function tag_closure_callback!(
 end
 
 
-# The closure diagnostic `<residual_name> = (parent - Σᵢ tagᵢ) / ρ` only
-# measures attribution leakage when the pure region masks form a partition of
-# unity. Overlapping or incomplete regions are allowed (and sometimes
-# intended), but then the residual is dominated by the overlap/deficit, so say
-# so once at initialization.
+# The closure diagnostic `<residual_name> = (parent - Σᵢ tagᵢ) / ρ` measures
+# attribution leakage when the pure region masks form a partition of unity.
+# Overlapping or incomplete regions are allowed, and are sometimes what the user
+# wants, but then the overlap or deficit dominates the residual. Say so once at
+# initialization so the number is read correctly.
 function _check_region_partition(ᶜmasks, names, residual_name, tag_prefix)
     isempty(names) && return nothing
     mask_sum = reduce(

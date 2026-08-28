@@ -1,31 +1,33 @@
 #=
 Stratospheric passive tracer lifetimes.
 
-Runs the configuration in `config/example_configs/passive_stratospheric_tracers.yml`:
-a moist aquaplanet with RRTMGP radiation carrying one inert tracer per
-(latitude band × height band) source region above the tropopause. Each tracer
+Runs the configuration in
+`config/example_configs/passive_stratospheric_tracers.yml`. That is a moist
+aquaplanet with RRTMGP radiation, carrying one inert tracer per source region
+above the tropopause, on a grid of latitude bands by height bands. Each tracer
 is produced at a constant rate inside its region and removed below the
-tropopause, so once its global burden stops drifting its lifetime is
+tropopause. Once its global burden stops drifting, its lifetime is
 
     τ = burden / source
 
 The burden, the source rate and the loss rate of every tracer are appended to
-`stratospheric_tracer_budget.csv` in the output directory as the run proceeds;
+`stratospheric_tracer_budget.csv` in the output directory as the run proceeds.
 `post_processing/tracer_lifetimes.jl` turns that table into lifetimes and
 reports how close each tracer is to equilibrium.
 
-The tracer machinery itself lives in the package, not here — see
+This script only selects the configuration, so the run picks up the usual
+checkpointing, restart and diagnostics handling. The tracer machinery itself
+lives in the package. See
 `src/parameterized_tendencies/chemistry/stratospheric_passive_tracers.jl` and
-`docs/src/passive_tracers.md`. This script only selects the configuration, so
-that the run gets the usual checkpointing, restart and diagnostics handling.
+`docs/src/passive_tracers.md`.
 
 Usage:
 
     julia --project=.buildkite experiments/passive_stratospheric_tracers.jl
 
-Resubmitting continues from the newest checkpoint (`detect_restart_file` is
-set in the configuration), which is how a multi-year integration is built up
-out of jobs that fit in a queue slot.
+Resubmitting continues from the newest checkpoint, because the configuration
+sets `detect_restart_file`. That is how a multi-year integration is built up out
+of jobs that each fit in a queue slot.
 =#
 
 import ClimaComms as CC

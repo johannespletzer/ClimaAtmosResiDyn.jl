@@ -2,23 +2,24 @@
 #
 #   usage: julia --project=.buildkite runscripts/select-cuda-runtime.jl 13.0
 #
-# The argument is the driver's CUDA version -- what `nvidia-smi` reports as
-# "CUDA Version" -- measured on a GPU node by setup-julia-levante.tcsh.
+# The argument is the driver's CUDA version, the number `nvidia-smi` reports as
+# "CUDA Version", measured on a GPU node by setup-julia-levante.tcsh.
 #
 # CUDA_Runtime_jll picks its artifact through a Pkg platform-augmentation hook
 # that dlopens libcuda and asks the driver which CUDA version it supports. A
 # login node has no driver, so the hook tags the platform `cuda=none` and
-# installs no toolkit; nothing fails until the job reaches a GPU node. Setting
-# the `version` preference short-circuits that probe, which the hook supports
-# deliberately: it queries the driver only "when there's no override, to support
-# precompiling with a fixed version without having the driver available".
+# installs no toolkit. That stays quiet until the job reaches a GPU node.
+# Setting the `version` preference short-circuits the probe, which the hook
+# supports on purpose: it queries the driver only "when there's no override, to
+# support precompiling with a fixed version without having the driver
+# available".
 #
-# The toolkit pinned is the newest one no newer than the driver. Staying at or
-# below it avoids leaning on CUDA's minor-version compatibility, which the
-# CUDA-aware MPI in the nvhpc stack does not always tolerate.
+# The toolkit pinned is the newest one at or below the driver's version. Staying
+# there keeps CUDA's minor-version compatibility out of the picture, which the
+# CUDA-aware MPI in the nvhpc stack can break.
 #
-# Preferences are written with Julia's TOML stdlib so this machine-specific
-# setup does not require Preferences.jl as a direct .buildkite dependency.
+# Preferences are written with Julia's TOML stdlib, so this machine-specific
+# setup adds no Preferences.jl dependency to .buildkite.
 
 using TOML
 

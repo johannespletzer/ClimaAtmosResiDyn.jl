@@ -9,37 +9,38 @@
 # What this does, and why
 # -----------------------
 # HDF5_jll, NetCDF_jll and TempestRemap_jll all `using OpenMPI_jll`, whose
-# __init__ dlopens its OWN bundled libmpi regardless of MPIPreferences. With a
-# system MPI also in the process, two incompatible OpenMPI builds collide:
+# __init__ dlopens its own bundled libmpi whatever MPIPreferences says. With a
+# system MPI in the process too, two incompatible OpenMPI builds collide:
 #
 #   libopen-pal.so.80: undefined symbol: pmix_framework_names
 #
-# Neither MPIPreferences nor an HDF5 libhdf5 preference can fix that, because
-# HDF5_jll is loaded either way. The fix is an artifact override: the depot's
+# HDF5_jll loads either way, so MPIPreferences and an HDF5 libhdf5 preference
+# both leave this in place. An artifact override is what fixes it. The depot's
 # artifacts/Overrides.toml repoints OpenMPI_jll at the system installation, so
-# every JLL that wants OpenMPI gets the one MPI.jl uses. HDF5_jll and
-# NetCDF_jll keep their pinned versions -- no system HDF5/netCDF needed.
+# every JLL that wants OpenMPI gets the one MPI.jl uses. HDF5_jll and NetCDF_jll
+# keep their pinned versions, and the system needs no HDF5 or netCDF of its
+# own.
 #
-# Open MPI 4.1.2 is used deliberately. Both 4.1.2 and the artifacts' 5.0.11
-# expose libmpi.so.40, so the MPI ABI matches and no version match is required
-# -- only a *consistent* MPI. 4.1.2 is the stable module and its PMIx 3.2.1 is
-# self-consistent; the experimental 5.0.10 module fails to dlopen under JLL
-# loading.
+# Open MPI 4.1.2 is the deliberate choice. It and the artifacts' 5.0.11 both
+# expose libmpi.so.40, so the ABI matches and consistency is all that is needed,
+# rather than an exact version match. 4.1.2 is the stable module and its PMIx
+# 3.2.1 is self-consistent. The experimental 5.0.10 module fails to dlopen under
+# JLL loading.
 #
-# The MPI preference is written directly rather than through
+# The MPI preference is written directly, in place of
 # MPIPreferences.use_system_binary(). That call probes for the library by
-# dlopen, but `using MPIPreferences` first resolves whatever MPI is currently
-# configured, and a second, different libmpi then cannot be loaded -- so the
-# probe fails precisely when you are switching away from another MPI.
+# dlopen, and `using MPIPreferences` first resolves whatever MPI is currently
+# configured. A second, different libmpi then fails to load, so the probe breaks
+# exactly when you are switching away from another MPI.
 #
-# The gpu stack additionally pins the CUDA toolkit: CUDA_Runtime_jll picks its
-# artifact by asking the driver which CUDA version it supports, and a login node
-# has no driver, so the environment resolves to `cuda=none` and the job fails
-# only once it reaches a GPU node. The version is measured on a GPU node -- see
+# The gpu stack also pins the CUDA toolkit. CUDA_Runtime_jll picks its artifact
+# by asking the driver which CUDA version it supports, and a login node has no
+# driver, so the environment resolves to `cuda=none` and the job fails once it
+# reaches a GPU node. The version is measured on a GPU node. See
 # runscripts/select-cuda-runtime.jl.
 #
-# All preferences go to .buildkite/LocalPreferences.toml; no packages are added
-# to .buildkite/Project.toml.
+# All preferences go to .buildkite/LocalPreferences.toml, leaving
+# .buildkite/Project.toml alone.
 # ============================================================================
 
 set ROOT          = /home/b/b309159/git/ClimaAtmosResiDyn.jl
@@ -52,8 +53,8 @@ set OPENMPI_JLL_UUID = fe0851c0-eecd-5654-98d4-656369965a5c
 
 # The compiler module, MPI module and depot name for each stack come from
 # runscripts/levante_stacks.env, which the GPU runscripts read as well. That
-# file is the only place the module/depot pairing is stated, so a runscript
-# cannot drift onto a different MPI than the depot was built against.
+# file states the module and depot pairing once, so every runscript loads the
+# same MPI the depot was built against.
 set STACKS_ENV = ${ROOT}/runscripts/levante_stacks.env
 
 if (! -r "${STACKS_ENV}") then
@@ -62,8 +63,8 @@ if (! -r "${STACKS_ENV}") then
 endif
 
 # Parent directory for the per-stack depots. Each holds a full copy of the
-# packages, artifacts and precompile cache -- several GB per stack. If $HOME is
-# quota-limited, set LEVANTE_DEPOT_ROOT to an absolute path on work or scratch.
+# packages, artifacts and precompile cache, running to several GB. Under a tight
+# $HOME quota, set LEVANTE_DEPOT_ROOT to an absolute path on work or scratch.
 if ($?LEVANTE_DEPOT_ROOT) then
     set DEPOT_ROOT = "${LEVANTE_DEPOT_ROOT}"
 else
@@ -132,24 +133,24 @@ if (! -f "${PROJECT}/Project.toml") then
     exit 1
 endif
 
-# MPIPreferences and CUDA_Runtime_jll must both be direct dependencies for
-# their project-local preferences to be visible: Base.get_preferences maps the
+# MPIPreferences and CUDA_Runtime_jll both have to be direct dependencies for
+# their project-local preferences to be visible. Base.get_preferences maps the
 # names in LocalPreferences.toml to UUIDs through the project's own deps, so a
-# preference written for a package that is only an indirect dependency is
-# silently ignored. CUDA_Runtime_jll arrives indirectly through CUDA, and
-# before it was listed the toolkit pin below was written, read back as an empty
-# dictionary, and the environment resolved to cuda=none.
+# preference written for an indirect dependency is dropped in silence.
+# CUDA_Runtime_jll arrives indirectly through CUDA, so it is listed explicitly.
+# Otherwise the toolkit pin below is written, reads back as an empty dictionary,
+# and the environment resolves to cuda=none.
 #
 # Check the dedicated .buildkite environment without resolving the repository
 # root environment, whose dependency graph is unrelated here.
 #
-# The Julia below contains no exclamation mark on purpose. tcsh performs
-# history expansion before quoting, and single quotes do not suppress it, so
-# one immediately followed by a word character is read as a history reference.
-# Negating haskey(...) that way aborts the whole script with
-# "haskey: Event not found." before Julia is ever started -- hence the loop
-# instead of a filter. Uses like pop!( and != elsewhere in this file are safe,
-# because expansion needs a word character to follow.
+# The Julia below avoids the exclamation mark on purpose. tcsh performs history
+# expansion before quoting, and single quotes leave it in force, so a `!`
+# followed by a word character reads as a history reference. Negating
+# haskey(...) that way aborts the whole script with "haskey: Event not found."
+# before Julia starts, which is why this is a loop rather than a filter. Uses
+# like pop!( and != elsewhere in this file are safe, since expansion needs a
+# word character to follow.
 ${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no \
     -e 'using TOML; project = TOML.parsefile(ARGS[1]); deps = get(project, "deps", Dict()); for name in ARGS[2:end]; haskey(deps, name) || error(name * " is not a direct dependency"); end' \
     "${PROJECT}/Project.toml" MPIPreferences CUDA_Runtime_jll
@@ -161,8 +162,8 @@ if ($status != 0) then
 endif
 
 # ----------------------------------------------------------------------------
-# Modules. `module purge` is mandatory, not hygiene: a stale PMIx left on the
-# library path by another Open MPI module breaks the load.
+# Modules. `module purge` is load-bearing here. A stale PMIx left on the library
+# path by another Open MPI module breaks the load.
 # ----------------------------------------------------------------------------
 
 if (-f /sw/etc/csh.levante) then
@@ -226,8 +227,8 @@ echo "MPI prefix:   ${MPI_PREFIX}"
 echo "MPI library:  ${MPI_LIBRARY}"
 echo
 
-# Confirm the library actually LOADS, not merely that the file exists: the
-# failure mode is at dlopen time, and it is far easier to diagnose here.
+# Confirm the library loads, which is a stronger check than the file existing.
+# The failure happens at dlopen time and is far easier to diagnose here.
 ${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no \
     -e 'using Libdl; Libdl.dlopen(ARGS[1]); println("dlopen ok: ", ARGS[1])' "${MPI_LIBRARY}"
 if ($status != 0) then
@@ -278,16 +279,16 @@ if ($?I_MPI_PMI_LIBRARY) unsetenv I_MPI_PMI_LIBRARY
 # ----------------------------------------------------------------------------
 # Write the MPI preference directly.
 #
-# The recorded value is the extension-less path, which is the form
-# MPIPreferences itself stores; the loader resolves libmpi.so from it.
+# The recorded value is the extension-less path, the form MPIPreferences itself
+# stores. The loader resolves libmpi.so from it.
 # ----------------------------------------------------------------------------
 
 setenv LEVANTE_LIBMPI "${MPI_LIBDIR}/libmpi"
 setenv LEVANTE_PREFS "${PROJECT}/LocalPreferences.toml"
 
-# Written as a one-liner rather than a here-document: tcsh does not reliably
-# handle a quoted here-document delimiter (<< 'EOF') and silently writes no
-# file. Existing blocks (e.g. CUDA_Runtime_jll) are preserved.
+# Written as a one-liner instead of a here-document. tcsh handles a quoted
+# here-document delimiter (<< 'EOF') unreliably and can write no file at all
+# without saying so. Existing blocks such as CUDA_Runtime_jll are preserved.
 ${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no -e 'using TOML; pf = ENV["LEVANTE_PREFS"]; prefs = isfile(pf) ? TOML.parsefile(pf) : Dict{String,Any}(); prefs["MPIPreferences"] = Dict{String,Any}("_format" => "1.0", "abi" => "OpenMPI", "binary" => "system", "cclibs" => String[], "libmpi" => ENV["LEVANTE_LIBMPI"], "mpiexec" => "srun", "preloads" => String[]); open(io -> TOML.print(io, prefs), pf, "w"); println("wrote MPI preferences to ", pf)'
 if ($status != 0) then
     echo "ERROR: could not write MPI preferences."
@@ -302,15 +303,15 @@ echo
 # ----------------------------------------------------------------------------
 # CUDA toolkit version (gpu stack only)
 #
-# Determined before anything slow runs, so a missing version fails immediately
-# rather than after a full precompilation. Sources, in order:
+# Determined before anything slow runs, so a missing version fails at once
+# instead of after a full precompilation. Sources, in order:
 #
-#   1. $CUDA_RUNTIME_VERSION, if set -- manual override, e.g. 13.0
-#   2. nvidia-smi, if this script is itself running on a GPU node
+#   1. $CUDA_RUNTIME_VERSION, if set. A manual override, e.g. 13.0
+#   2. nvidia-smi, when this script is itself running on a GPU node
 #   3. the value recorded by the last GPU job (see levante_gpu_common.sh)
 #   4. a two-minute probe job on the gpu partition
 #
-# Anything measured is cached in ${CUDA_VERSION_CACHE}; delete that file to
+# Anything measured is cached in ${CUDA_VERSION_CACHE}. Delete that file to
 # force a fresh measurement.
 # ----------------------------------------------------------------------------
 
@@ -320,8 +321,8 @@ set CUDA_VERSION_SRC   = ""
 set CUDA_VERSION_NEW   = 0
 
 # The pipelines below turn nvidia-smi's "CUDA Version    : 13.0" into a bare
-# "13.0". Spelled out at each use site because tcsh's `eval` does not reliably
-# keep a pipeline's stdin, so a shared filter variable cannot be piped into.
+# "13.0". Each use site spells it out, because tcsh's `eval` keeps a pipeline's
+# stdin unreliably and a shared filter variable has nothing to read from.
 
 if ("${STACK}" == "gpu") then
     if ($?CUDA_RUNTIME_VERSION) then
@@ -389,15 +390,15 @@ endif
 # ----------------------------------------------------------------------------
 # Pin the CUDA toolkit
 #
-# After the first instantiate, because select-cuda-runtime.jl reads the list of
-# installable toolkits out of the installed CUDA_Runtime_jll; before
-# precompilation, because the preference is a compile-time one and setting it
-# later would invalidate every cache just written. The second instantiate
-# downloads the newly selected toolkit -- compute nodes have no network, so
-# nothing may be left to fetch lazily at run time.
+# This runs after the first instantiate, because select-cuda-runtime.jl reads
+# the list of installable toolkits out of the installed CUDA_Runtime_jll. It
+# runs before precompilation, because the preference is a compile-time one and
+# setting it later would invalidate every cache just written. The second
+# instantiate downloads the newly selected toolkit, so nothing is left to fetch
+# lazily at run time, which matters because compute nodes have no network.
 #
-# The cpu stack clears the pin instead: LocalPreferences.toml is shared, and a
-# leftover pin would make the cpu depot download a toolkit it never uses.
+# The cpu stack clears the pin instead. LocalPreferences.toml is shared, and a
+# leftover pin would have the cpu depot download a toolkit it never uses.
 # ----------------------------------------------------------------------------
 
 if ("${STACK}" == "gpu") then
@@ -417,8 +418,8 @@ if ("${STACK}" == "gpu") then
         exit 1
     endif
 else
-    # Drop the entire CUDA preference table. This also removes an empty
-    # [CUDA_Runtime_jll] table left by older Preferences.jl-based cleanup.
+    # Drop the entire CUDA preference table. This clears an empty
+    # [CUDA_Runtime_jll] table too, should one be present.
     ${JULIA_BIN} ${JULIA_CHANNEL} --startup-file=no \
         -e 'using TOML; pf = ENV["LEVANTE_PREFS"]; prefs = isfile(pf) ? TOML.parsefile(pf) : Dict{String,Any}(); pop!(prefs, "CUDA_Runtime_jll", nothing); open(io -> TOML.print(io, prefs), pf, "w"); println("cleared CUDA runtime preferences from ", pf)'
     if ($status != 0) then
@@ -443,9 +444,9 @@ endif
 # ----------------------------------------------------------------------------
 # Verification
 #
-# NCDatasets is loaded deliberately: NetCDF_jll depends on both HDF5_jll and
-# OpenMPI_jll, so a bundled MPI can enter through NetCDF even when MPI.jl and
-# HDF5.jl look clean.
+# NCDatasets is loaded on purpose. NetCDF_jll depends on both HDF5_jll and
+# OpenMPI_jll, so a bundled MPI can enter through NetCDF while MPI.jl and
+# HDF5.jl both look clean.
 # ----------------------------------------------------------------------------
 
 echo
@@ -470,11 +471,11 @@ if ($status != 0) then
     exit 1
 endif
 
-# A CUDA toolkit cannot be exercised here -- login nodes have no GPU -- but the
-# failure this guards against is visible without one: a platform tag of "none"
-# means Pkg installed no toolkit at all. The tag is read through CUDA.jl, which
-# imports the JLL that cannot be loaded by name. CUDA.jl warning about a missing
-# driver here is expected.
+# Login nodes have no GPU, so the toolkit stays unexercised here. The failure
+# this guards against shows up anyway: a platform tag of "none" means Pkg
+# installed no toolkit at all. The tag is read through CUDA.jl, which imports
+# the JLL that resists loading by name. Expect CUDA.jl to warn about a missing
+# driver.
 if ("${STACK}" == "gpu") then
     echo
     ${JULIA_BIN} ${JULIA_CHANNEL} --project="${PROJECT}" --startup-file=no \

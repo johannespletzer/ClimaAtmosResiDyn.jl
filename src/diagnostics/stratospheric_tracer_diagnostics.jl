@@ -2,13 +2,13 @@
 
 # Tropopause height and stratospheric passive tracers.
 #
-# The tracer-budget callback, not these diagnostics, writes the global burden,
-# source and loss that the lifetime is computed from. Those are scalars per
-# tracer rather than fields (see `stratospheric_passive_tracers.jl`).
+# The global burden, source and loss that the lifetime is computed from are
+# scalars per tracer rather than fields, so the tracer-budget callback in
+# `stratospheric_passive_tracers.jl` writes those. This file holds the fields.
 #
-# The per-tracer variables are registered at simulation setup by
-# `register_stratospheric_tracer_diagnostics!`, not at load time, because the
-# source-region grid is configuration-dependent.
+# The source-region grid comes from the configuration, so the per-tracer
+# variables are registered at simulation setup by
+# `register_stratospheric_tracer_diagnostics!`.
 
 ###
 # Tropopause height (2d)
@@ -41,10 +41,10 @@ function compute_ztrop!(out, state, cache, time)
         tropopause_parameters(cache.atmos.chemistry_model),
     )
     # `ᶜz_tropopause` holds the same value at every level of a column, so any
-    # level carries the answer. Copy the lowest one onto the surface space used
-    # by the other 2d diagnostics. This goes through the data layouts because
-    # the center and face level spaces are distinct objects over the same
-    # horizontal grid.
+    # level carries the answer. Copy the lowest one onto the surface space the
+    # other 2d diagnostics use. This goes through the data layouts because the
+    # center and face level spaces are distinct objects over the same horizontal
+    # grid.
     surface = cache.scratch.ᶠtemp_field_level
     Fields.field_values(surface) .=
         Fields.field_values(Fields.level(ᶜz_tropopause, 1))
@@ -122,14 +122,14 @@ function register_stratospheric_tracer_diagnostics!(
     for tracer_index in 1:n_tracers(chemistry_model)
         ρχ_name = names[tracer_index]
         short_name = specific_tracer_short_name(ρχ_name)
-        # Delete rather than skip: a previous simulation in this process
-        # may have registered this short name with different box edges,
-        # and the stale entry would keep reporting them in its `comment`.
+        # Delete before registering. An earlier simulation in this process may
+        # have registered this short name with different box edges, and a stale
+        # entry would keep reporting those in its `comment`.
         delete!(ALL_DIAGNOSTICS, short_name)
         ρχ_key = Val(ρχ_name)
 
-        # The box edges, rather than the band indices, are what identifies a
-        # source region once the boxes need not form a latitude × height grid.
+        # Boxes are free to sit anywhere, so the box edges are what identify a
+        # source region. Band indices only mean something on a regular grid.
         latitude_lower = chemistry_model.latitude_lower_edges[tracer_index]
         latitude_upper = chemistry_model.latitude_upper_edges[tracer_index]
         height_lower = chemistry_model.height_lower_edges[tracer_index]

@@ -12,22 +12,21 @@
 #   rank=2 gpu-numa=5  cores=64-95,192-223   gpu-local-cores=80-95,208-223
 #   rank=3 gpu-numa=7  cores=96-127,224-255  gpu-local-cores=112-127,240-255
 #
-# --gpu-bind=closest worked: every rank got a distinct, correctly-ordered GPU.
-# The CPU side did not. --exclusive hands the job the whole node and Slurm
-# divides all 256 logical CPUs among the 4 tasks, so --cpus-per-task=16 does
-# not narrow anything: each rank receives 32 physical cores spanning an
-# even/odd NUMA pair, of which only the odd half is local to its GPU. Memory
-# was not bound at all (Mems_allowed_list was 0-7 for every rank).
+# --gpu-bind=closest did its job. Every rank got a distinct, correctly ordered
+# GPU. The CPU side came out wrong. --exclusive hands the job the whole node and
+# Slurm divides all 256 logical CPUs among the 4 tasks, so --cpus-per-task=16
+# leaves the set as wide as it started. Each rank receives 32 physical cores
+# spanning an even/odd NUMA pair, and only the odd half is local to its GPU.
+# Memory stayed unbound, with Mems_allowed_list reading 0-7 for every rank.
 #
 # Each rank's allocation is a strict superset of the set it wants, so it can be
-# narrowed from inside the cgroup. That is what this wrapper does, and it is
-# the pattern DKRZ use for ICON. Deriving the target from the GPU's own sysfs
-# entry rather than a hardcoded NUMA list keeps it correct for the 1- and
-# 2-GPU variants, and across a node topology change, without anyone updating a
-# table.
+# narrowed from inside the cgroup. That is what this wrapper does, and it is the
+# pattern DKRZ use for ICON. The target comes from the GPU's own sysfs entry, so
+# it stays correct for the 1- and 2-GPU variants and across a change in node
+# topology, with no table for anyone to update.
 #
-# Binding is best-effort: a rank that cannot determine its topology runs
-# unbound and says so, rather than failing the job.
+# Binding is best-effort. A rank that cannot work out its topology runs unbound
+# and says so, leaving the job to continue.
 
 set -uo pipefail
 
@@ -64,26 +63,25 @@ if [[ -z "${cpus}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Bind to the GPU's local cores that this rank was actually given, not to all
-# of them.
+# Bind to the GPU-local cores this rank was actually given, which can be fewer
+# than all of them.
 #
-# sysfs lists the hardware's view: every logical CPU near the GPU, SMT
-# siblings included. Slurm's cpuset need not contain all of those --
-# `--hint=nomultithread` hands the rank the physical cores and keeps their
-# siblings out, and a non-exclusive allocation narrows it further.
+# sysfs lists the hardware's view: every logical CPU near the GPU, SMT siblings
+# included. Slurm's cpuset can hold a smaller set. `--hint=nomultithread` hands
+# the rank the physical cores while keeping their siblings out, and a
+# non-exclusive allocation narrows it further.
 #
-# The difference is fatal rather than cosmetic, because numactl parses
-# `--physcpubind` with numa_parse_cpustring(), which resolves against the
-# current cpuset and returns nothing at all for a list reaching outside it.
-# numactl then prints "<16-31,144-159> is invalid" on stdout, dumps its usage
-# on stderr and exits 1 -- and since we exec it, that 1 is the rank's exit
-# status. srun kills the job on it, which is the opposite of the best-effort
-# binding described above.
+# Intersecting the two matters, because numactl parses `--physcpubind` with
+# numa_parse_cpustring(), which resolves against the current cpuset and returns
+# an empty set for a list reaching outside it. numactl then prints
+# "<16-31,144-159> is invalid" on stdout, dumps its usage on stderr and exits 1.
+# This script execs numactl, so that 1 becomes the rank's exit status and srun
+# kills the job on it. Best-effort binding has to end in a warning instead.
 # ---------------------------------------------------------------------------
 
 levante_cpu_intersection() {
     # Print the CPUs in both lists, in the same "0-3,8" form the kernel uses.
-    # Empty output means the two do not overlap.
+    # Empty output means the two lists are disjoint.
     awk -v a="$1" -v b="$2" '
         function expand(list, set,   n, i, parts, range, lo, hi, j) {
             n = split(list, parts, ",")
@@ -134,24 +132,23 @@ if [[ -z "${bind_cpus}" ]]; then
     exec "$@"
 fi
 
-# What the binding report checks itself against: it compares the affinity it
-# observes with the set asked for here, and so catches a binding that did not
-# take.
+# The binding report reads this value and compares it against the affinity it
+# observes, which is how it catches a binding that failed to take.
 export LEVANTE_RANK_BOUND_CPUS="${bind_cpus}"
 
 # ---------------------------------------------------------------------------
 # Pick the InfiniBand HCA attached to the same NUMA node as this GPU.
 #
-# Only for multi-node jobs. Within a node, UCX_TLS lists cuda_ipc, cma and mm,
-# so rank pairs never reach an HCA and constraining the device would be pure
-# superstition. Across nodes a rank that talks through a non-local HCA pays an
-# extra fabric hop.
+# This matters for multi-node jobs. Within a node, UCX_TLS lists cuda_ipc, cma
+# and mm, so rank pairs stay off the HCA entirely and the device setting is
+# inert. Across nodes, a rank talking through a remote HCA pays an extra fabric
+# hop.
 #
-# The device is found by matching NUMA nodes through sysfs rather than by
-# assuming SLURM_LOCALID indexes the HCAs in the same order as the GPUs. An
-# explicit UCX_NET_DEVICES in the environment is left alone, and a rank that
-# finds no match leaves the variable unset so UCX chooses for itself -- a
-# suboptimal device beats no device.
+# The device is found by matching NUMA nodes through sysfs, which holds even
+# when SLURM_LOCALID indexes the HCAs in a different order from the GPUs. An
+# explicit UCX_NET_DEVICES in the environment wins. A rank that finds no match
+# leaves the variable unset and lets UCX choose, since a suboptimal device beats
+# no device.
 # ---------------------------------------------------------------------------
 
 if (( ${SLURM_JOB_NUM_NODES:-1} > 1 )) &&
@@ -179,14 +176,14 @@ if (( ${SLURM_JOB_NUM_NODES:-1} > 1 )) &&
         echo "rank ${SLURM_LOCALID:-?}: no HCA on NUMA node ${numa}; leaving UCX to choose" >&2
 fi
 
-# numactl binds memory as well as cores, which matters here: without --membind
-# every rank's Mems_allowed_list spans all eight domains. taskset is the
-# fallback and binds cores only.
+# numactl binds memory as well as cores, which is what this needs. Left to
+# itself, every rank's Mems_allowed_list spans all eight domains. taskset is the
+# fallback and binds cores alone.
 if [[ -n "${numa}" && "${numa}" != "-1" ]] && command -v numactl >/dev/null 2>&1; then
-    # Probed with `true` before the exec. Anything numactl still refuses would
+    # Probe with `true` before the exec. An argument numactl refuses would
     # otherwise become this rank's exit status and take the job down with it.
-    # 2>&1 because numactl names the offending argument on stdout and prints
-    # its usage on stderr, so only the pair of them identifies the problem.
+    # 2>&1 because numactl names the offending argument on stdout and prints its
+    # usage on stderr, so the two streams together identify the problem.
     if numactl_error="$(numactl --physcpubind="${bind_cpus}" \
                                 --membind="${numa}" true 2>&1)"
     then

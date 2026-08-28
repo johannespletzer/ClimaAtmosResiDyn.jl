@@ -2,11 +2,10 @@
 
 # Tagged prognostic energy tracers
 #
-# Tag names are configuration-dependent, so the per-tag diagnostics cannot be
-# registered statically when the package is loaded. Instead,
-# `register_tagging_diagnostics!(model)` is called during simulation setup
-# (see `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`),
-# once the `TaggingModel` is known.
+# Tag names come from the configuration, so the per-tag diagnostics are
+# registered once the `TaggingModel` is known.
+# `register_tagging_diagnostics!(model)` runs during simulation setup, from
+# `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`.
 
 function compute_e_tag!(out, state, cache, time, ρe_tag_name)
     ρe_tag_name in propertynames(state.c) ||
@@ -66,11 +65,11 @@ function register_tagging_diagnostics!(tagging_model::TaggingModel)
         )
     end
     region_names = region_tag_state_names(tagging_model)
-    # Drop any stale entry unconditionally, before deciding whether to register
-    # a new one: a previous simulation in this process may have registered
-    # `e_tag_res` over a different set of region tags, and if this model has
-    # none, leaving that entry behind would report a residual summed over tags
-    # that are not a partition of this model's energy.
+    # Drop any stale entry first, then decide whether to register a new one. An
+    # earlier simulation in this process may have registered `e_tag_res` over a
+    # different set of region tags. If this model has none, a leftover entry
+    # would report a residual summed over tags that never partitioned this
+    # model's energy.
     delete!(ALL_DIAGNOSTICS, "e_tag_res")
     if !isempty(region_names)
         add_diagnostic_variable!(;

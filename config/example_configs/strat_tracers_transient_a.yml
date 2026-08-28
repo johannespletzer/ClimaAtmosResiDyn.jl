@@ -8,18 +8,18 @@ job_id: "strat_tracers_transient_a"
 # docs/strat_tracer_campaign_plan.md. The members share this configuration and
 # differ only in which model levels carry source boxes, so between them they
 # sample six levels from 10 to 55 km. They are separate integrations, not one
-# integration replicated: with `rad: allsky` their trajectories diverge
-# chaotically, which is fine for a multi-year climatology but should be stated
-# with the results.
+# integration replicated. With `rad: allsky` their trajectories diverge
+# chaotically. That suits a multi-year climatology, and it belongs in any
+# statement of the results.
 #
-# Pair with config/common_configs/numerics_sphere_he16ze120_top80.yml, whose
-# grid the source-box face heights below are taken from. Changing `z_elem`,
-# `z_max`, `dz_bottom` or `z_stretch` moves the model levels and silently
-# invalidates those heights.
+# Pair with config/common_configs/numerics_sphere_he16ze120_top80.yml. The
+# source-box face heights below are taken from that grid, so changing `z_elem`,
+# `z_max`, `dz_bottom` or `z_stretch` moves the model levels and leaves those
+# heights stale with no warning.
 #
-# Resubmitting continues from the newest checkpoint; `detect_restart_file`
-# picks it up. `t_end` here is the campaign end -- see the chaining script for
-# how each job is given a shorter segment end that lands on a checkpoint.
+# Resubmitting continues from the newest checkpoint, which `detect_restart_file`
+# picks up. `t_end` here is the campaign end. See the chaining script for how
+# each job gets a shorter segment end that lands on a checkpoint.
 # ===========================================================================
 
 start_date: "19790101"
@@ -28,8 +28,9 @@ FLOAT_TYPE: "Float64"       # burden differencing over decades
 
 initial_condition: "WeatherModel"
 # Directory holding era5_init_processed_internal_19790101_0000.nc, on model
-# levels reaching into the mesosphere. Pressure-level ERA5 stops near 1 hPa
-# (~48 km) and would be flat-extrapolated over the top 30 km of this domain.
+# levels reaching into the mesosphere. Pressure-level ERA5 stops near 1 hPa,
+# around 48 km, which would leave the top 30 km of this domain
+# flat-extrapolated.
 era5_initial_condition_dir: ~
 
 # ---------------------------------------------------------------------------
@@ -50,11 +51,11 @@ turbconv: "edonly_edmfx"
 edmfx_sgs_diffusive_flux: true
 surface_setup: "DefaultMoninObukhov"
 prognostic_surface: "SeasonalSST"    # zonally symmetric SST with a seasonal cycle
-# The steady profile has no seasonal cycle in the lower boundary at all, and
-# that cycle is a primary driver of the stationary-wave forcing which sets the
-# Brewer-Dobson circulation and the polar vortex life cycle. `SeasonalSST`
-# restores the midlatitude ocean part of it. It still cannot supply the land
-# and sea-ice seasonality, which standalone ClimaAtmos has no model for.
+# The seasonal cycle in the lower boundary is a primary driver of the
+# stationary-wave forcing that sets the Brewer-Dobson circulation and the polar
+# vortex life cycle, and the steady profile carries none of it. `SeasonalSST`
+# restores the midlatitude ocean part. The land and sea-ice seasonality stays
+# out of reach, since standalone ClimaAtmos has no model for it.
 
 toml: [toml/strat_tracers_transient.toml]
 
@@ -62,15 +63,15 @@ toml: [toml/strat_tracers_transient.toml]
 # Source boxes
 #
 # Nine latitude bands 10 degrees wide, centred 0, +/-25, +/-35, +/-60, +/-80.
-# The 25/35 pair shares an edge at 30 degrees, bracketing the subtropical
-# mixing barrier so the step in lifetime across it is measured rather than
-# interpolated through; +/-60 samples the vortex edge and +/-80 the polar cap.
+# The 25/35 pair shares an edge at 30 degrees, bracketing the subtropical mixing
+# barrier so the step in lifetime across it is measured directly. The +/-60 band
+# samples the vortex edge and +/-80 the polar cap.
 #
 # Heights are the enclosing faces of single model levels, so each box is one
-# grid layer thick over flat terrain. Over orography the SLEVE-warped
-# coordinate shifts the levels through the fixed window, so a box may catch two
-# centres; lifetimes are unaffected because burden and source come from the
-# same mask.
+# grid layer thick over flat terrain. Over orography the SLEVE-warped coordinate
+# shifts the levels through the fixed window and a box may catch two centres.
+# The lifetimes hold regardless, since burden and source come from the same
+# mask.
 # ---------------------------------------------------------------------------
 dt_tracer_budget: "30days"
 passive_tracers:
@@ -100,12 +101,12 @@ passive_tracers:
     - {latitude: [75.0, 85.0], height: [9989.7, 10404.8]}   # 80N, level 34
     - {latitude: [75.0, 85.0], height: [27896.0, 28623.5]}   # 80N, level 66
     - {latitude: [75.0, 85.0], height: [45380.1, 46322.6]}   # 80N, level 87
-    # Bulk reference: one box over the whole domain from 20 to 55 km.
-    # It deliberately encloses the sampled boxes -- the tracers are
-    # independent, so a shared point simply feeds both. Its base is at
-    # 20 km, not 10 km, because at fixed altitude the source is
-    # proportional to density and a lower base would put most of the
-    # emission in the upper troposphere, below the tropical tropopause.
+    # Bulk reference. One box over the whole domain from 20 to 55 km. It
+    # encloses the sampled boxes on purpose, and the tracers are independent,
+    # so a shared point simply feeds both. Its base sits at 20 km because at
+    # fixed altitude the source is proportional to density. A 10 km base would
+    # put most of the emission in the upper troposphere, below the tropical
+    # tropopause.
     - {latitude: [-90.0, 90.0], height: [20000.0, 55000.0]}
 
 # ---------------------------------------------------------------------------
@@ -116,16 +117,16 @@ detect_restart_file: true
 output_default_diagnostics: false
 
 diagnostics:
-  # The surface the tracers are removed below, and what identifies which low
-  # boxes sit below the local tropopause and must be discarded.
+  # The surface the tracers are removed below. It also identifies which low
+  # boxes sit under the local tropopause and should be discarded.
   - short_name: [ztrop]
     reduction_time: average
     period: 30days
     writer: netcdf
 
-  # The lifetimes come from the budget table, not from these fields, but a
-  # low-frequency sample over 42 years is cheap insurance against a surprise
-  # the table alone cannot diagnose.
+  # The lifetimes come from the budget table rather than these fields. A
+  # low-frequency sample over 42 years is still cheap insurance against a
+  # surprise the table alone cannot diagnose.
   - short_name: [ta, ua, va, pfull]
     reduction_time: average
     period: 30days

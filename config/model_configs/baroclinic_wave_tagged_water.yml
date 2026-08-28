@@ -2,38 +2,34 @@ initial_condition: "MoistBaroclinicWave"
 microphysics_model: "0M"
 t_end: "10days"
 dt_save_state_to_disk: "2days"
-# The tags are chosen so that validation is a set of direct near-zero checks:
+# A short validation job for the water tags. The tag set is chosen so each
+# check is a direct near-zero comparison.
 #
-#   1. Region closure: `tropics` + `extratropics` form an exact partition of
-#      unity, so `q_tag_res` (= specific ρq_tot minus the sum of the region
-#      tags) starts at machine precision and then measures only the vertical
-#      advection split — the tags ride the explicit passive-tracer path while
-#      ρq_tot is advected implicitly with a post-Newton upwind correction.
-#      Their diffusion and hyperdiffusion operators are identical, so this
-#      residual should stay well below the tagged-energy `e_tag_res`.
-#   2. Process closure: `evap_tropics` and `evap_extratropics` restrict the
-#      surface moisture source to each region. Production is masked and the
-#      masks sum to 1; loss is donor-proportional and the two shares sum to the
-#      whole tag's share; transport and the limiter rescale are both linear.
-#      So `q_tag_evap_tropics + q_tag_evap_extratropics` must equal
-#      `q_tag_evap` to near machine precision at all times, and any violation
-#      is a bug rather than expected leakage.
-#   3. Process behavior: `q_tag_evap` starts at exactly 0, grows where the
-#      surface evaporates, and is depleted in proportion to its own share
-#      wherever water is removed.
+#   1. Region closure. `tropics` and `extratropics` partition the globe, so
+#      `q_tag_res`, the specific ρq_tot minus the sum of the region tags, starts
+#      at machine precision. After that it measures the vertical advection
+#      split, since the tags are advected explicitly and ρq_tot implicitly. The
+#      diffusion and hyperdiffusion operators match, so this residual stays well
+#      below the tagged-energy `e_tag_res`.
+#   2. Process closure. `evap_tropics` and `evap_extratropics` split the surface
+#      moisture source by region. Every step of the attribution is linear, so
+#      `q_tag_evap_tropics + q_tag_evap_extratropics` equals `q_tag_evap` to
+#      near machine precision at all times. A gap there is a bug.
+#   3. Process behavior. `q_tag_evap` starts at 0, grows where the surface
+#      evaporates, and drains in proportion to its own share.
 #
-# As for `energy_tracers`, `q_tag_res` sums ALL pure region tags, so configure
-# exactly one partition of unity per run.
-# Check online that the region tags still add up to total water. Adds no
-# tendency, so simulation output is unchanged; it only writes
+# `q_tag_res` sums every pure region tag, as `e_tag_res` does, so configure one
+# partition of unity per run.
+
+# Check during the run that the region tags still add up to total water. This
+# adds no tendency, so simulation output is unchanged. It writes
 # `water_tag_closure.csv`.
 water_closure_check:
   period: "1days"
-  # Deliberately loose, and not the default. This job exists to exercise the
-  # code path, not to gate on a number nobody has measured: a tolerance set to
-  # a guess would warn every simulated day and teach everyone to skip the
-  # warning. This level means the partition is structurally broken, not that it
-  # has drifted. Read `water_tag_closure.csv` from a run and tighten it.
+  # Loose on purpose, and looser than the default. This job exercises the code
+  # path rather than gating on a measured number. At this level the partition is
+  # structurally broken rather than merely drifting. Read
+  # `water_tag_closure.csv` from a run and tighten it.
   tolerance: 1.0e-4
 water_tracers:
   - name: tropics
@@ -57,10 +53,10 @@ diagnostics:
     period: 1days
   - short_name: [q_tag_evap, q_tag_evap_tropics, q_tag_evap_extratropics]
     period: 1days
-  # No limiter or nonnegativity constraint is configured here, so everything in
-  # `q_tag_fix_*` comes from `repair_water_tag_partition!` — it measures how
-  # much water the repair had to move to keep the partition non-negative, which
-  # is a direct read on transport drift. Cumulative, so compare differences
-  # between outputs rather than averaging.
+  # This config sets no limiter and no nonnegativity constraint, so everything
+  # in `q_tag_fix_*` comes from `repair_water_tag_partition!`. It measures how
+  # much water the repair moved to keep the partition non-negative, which reads
+  # directly on transport drift. The values are cumulative, so compare
+  # differences between outputs rather than averaging.
   - short_name: [q_tag_fix_tropics, q_tag_fix_extratropics]
     period: 1days

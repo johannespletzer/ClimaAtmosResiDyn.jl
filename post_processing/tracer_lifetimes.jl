@@ -17,27 +17,28 @@ The lifetime of a tracer whose source and sink balance is
 
     τ = burden / source
 
-Away from that balance the same ratio measured against the sink,
-`burden / loss`, brackets it from the other side, and the two are reported
-side by side as `tau_src` and `tau_los`:
+Away from that balance, the same ratio measured against the sink,
+`burden / loss`, brackets it from the other side. The two are reported side by
+side as `tau_src` and `tau_los`:
 
   - While the tracer is still filling, `burden ≈ source * t`, so `tau_src` is
-    just the elapsed time. It rises towards τ from below, and a short run will
-    report its own length as the lifetime — that is arithmetic, not a result.
+    the elapsed time. It rises towards τ from below, so a short run reports its
+    own length as the lifetime. That is arithmetic rather than a result.
   - The sink lags the source, so `tau_los` starts enormous and falls towards τ
     from above.
 
 They meet at equilibrium. Watching the gap close is the cheapest way to judge
-how much longer a run needs, long before either number is trustworthy.
+how much longer a run needs, well before either number can be trusted on its
+own.
 
-Equilibrium itself is called on two measures: the source–loss imbalance, and
-the drift of the burden. Both are reported, because a tracer can pass one and
-fail the other — an imbalance near zero at a single output time says little if
-the burden is still climbing.
+Equilibrium itself is called on two measures, the source-loss imbalance and the
+drift of the burden. Both are reported, because a tracer can pass one and fail
+the other. An imbalance near zero at a single output time says little while the
+burden is still climbing.
 
-This script only needs the budget table, which is written every
-`dt_tracer_budget` while the run proceeds, so it can be used to decide whether
-a run needs extending before spending time on the 3-D output.
+This script needs only the budget table, which is written every
+`dt_tracer_budget` as the run proceeds. So it can settle whether a run needs
+extending before anyone spends time on the 3-D output.
 =#
 
 import Printf: @printf, @sprintf

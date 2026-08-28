@@ -10,16 +10,15 @@
 ###     τ = M / S
 ###
 ### with `M` the global burden (kg) and `S` the global source rate (kg s⁻¹).
-### The tracer-budget callback reports both, so `τ` never depends on reading
-### the prescribed production rate correctly.
+### The tracer-budget callback measures both from the state, so `τ` stands on
+### its own without the prescribed production rate being read back correctly.
 ###
-### The source regions are small, well-separated boxes. They sample the domain
-### above the tropopause instead of tiling it: narrow latitude bands from pole
-### to pole, and shallow height bands stacked above the local tropopause. A
-### small box is what makes its lifetime meaningful, because a tracer emitted
-### over a deep layer or a wide latitude range reports an average over
-### conditions that can differ by years. Gaps between the boxes are therefore
-### deliberate.
+### The source regions are small, well-separated boxes that sample the domain
+### above the tropopause. Latitude bands run narrow from pole to pole, and
+### height bands sit shallow and stacked above the local tropopause. Keeping a
+### box small is what makes its lifetime meaningful. A tracer emitted over a
+### deep layer or a wide latitude range reports an average over conditions that
+### can differ by years, so the gaps between boxes are deliberate.
 ###
 
 import ClimaComms
@@ -263,8 +262,8 @@ function StratosphericPassiveTracers(
     end
 
     # Height boxes are stacked every `band_spacing` above the reference and are
-    # `band_depth` deep, so they sample the column rather than tiling it. The
-    # same non-overlap condition applies.
+    # `band_depth` deep, so they sample the column. Keeping the depth within the
+    # spacing is what leaves gaps between them.
     band_depth <= band_spacing || error(
         "band_depth ($band_depth) exceeds band_spacing ($band_spacing), so the \
         boxes would overlap",
@@ -274,8 +273,7 @@ function StratosphericPassiveTracers(
     end
 
     # Latitude varies fastest, which is the order every iteration over tracers
-    # uses. Building the list here is what lets everything downstream work with
-    # a flat list instead of a nested loop.
+    # uses. Flattening the grid here lets everything downstream walk one list.
     boxes = [
         SourceBox(
             latitude_centers[i] - half_width,
@@ -597,13 +595,13 @@ function stratospheric_tracer_budget(
 
         burden[tracer_index] = sum(ᶜρχ)
 
-        # Advection undershoots at the sharp box edges, so part of the
-        # burden can be negative mass. The sink only ever acts on positive
-        # mass -- `stratospheric_tracer_loss` clamps -- so that negative
-        # part enters `burden` but never `loss`, which biases `lifetime`
-        # low and holds `imbalance` off zero even in equilibrium. Report
-        # it rather than hide it: `burden + negative_burden` is the
-        # positive mass the sink sees.
+        # Advection undershoots at the sharp box edges, so part of the burden
+        # can be negative mass. `stratospheric_tracer_loss` clamps, so the sink
+        # acts on positive mass alone. That negative part therefore lands in
+        # `burden` while staying out of `loss`, which biases `lifetime` low and
+        # holds `imbalance` off zero even in equilibrium. Reporting it keeps
+        # that visible, and `burden + negative_burden` is the positive mass the
+        # sink sees.
         @. ᶜwork = min(ᶜρχ, zero(ᶜρχ))
         negative_burden[tracer_index] = -sum(ᶜwork)
 
@@ -695,13 +693,12 @@ function write_tracer_budget!(output_dir, t, chemistry_model, budget)
             source_rate = source[tracer_index]
             loss_rate = loss[tracer_index]
             lifetime = source_rate > 0 ? burden[tracer_index] / source_rate : NaN
-            # `burden / loss` is the same lifetime measured against the sink
-            # instead of the source. The two agree only in equilibrium; before
-            # it they bracket the answer. While the tracer fills,
-            # `burden / source` is just the elapsed time and rises to the
-            # lifetime from below, while the sink has barely started, so
-            # `burden / loss` falls to it from above. Their convergence tells
-            # you how much longer a run needs.
+            # `burden / loss` is the same lifetime measured against the sink.
+            # The two agree in equilibrium and bracket the answer before it.
+            # While the tracer fills, `burden / source` is the elapsed time and
+            # rises to the lifetime from below. The sink has barely started, so
+            # `burden / loss` falls to it from above. How far apart they still
+            # are tells you how much longer a run needs.
             lifetime_from_loss =
                 loss_rate > 0 ? burden[tracer_index] / loss_rate : NaN
             imbalance =

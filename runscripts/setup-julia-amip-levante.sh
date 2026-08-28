@@ -5,18 +5,18 @@
 #
 #   ./runscripts/setup-julia-amip-levante.sh /path/to/ClimaCoupler.jl
 #
-# Run on a LOGIN node: compute nodes have no network, so everything must be
+# Run this on a login node. Compute nodes have no network, so everything is
 # fetched here.
 #
-# This is a separate depot from the standalone stack. The artifact override that
-# repoints OpenMPI_jll at the system MPI is depot-global, and the AMIP
-# environment resolves a different package set, so sharing a depot with the
-# standalone runs invites version churn between them.
+# This builds a separate depot from the standalone stack. The artifact override
+# that repoints OpenMPI_jll at the system MPI applies to a whole depot, and the
+# AMIP environment resolves a different package set, so a shared depot would
+# leave the two churning each other's versions.
 #
-# The fork is dev'd in rather than resolved from the registry: it carries the
-# stratospheric passive tracers, which upstream ClimaAtmos does not have. It is
-# version 0.42.6, which is what the AMIP manifest pins, so the resolve should be
-# clean.
+# The fork is dev'd in, rather than resolved from the registry, because it
+# carries the stratospheric passive tracers that upstream ClimaAtmos lacks. It
+# is version 0.42.6, which is what the AMIP manifest pins, so the resolve should
+# come out clean.
 # -----------------------------------------------------------------------------
 
 source /sw/etc/profile.levante
@@ -49,8 +49,8 @@ echo "MPI:     ${MPI_PREFIX}"
 echo
 
 # Repoint OpenMPI_jll at the system MPI, for the same reason as the standalone
-# stack: HDF5_jll and NetCDF_jll dlopen their own bundled libmpi otherwise, and
-# two incompatible OpenMPI builds in one process fail at load with
+# stack. Left alone, HDF5_jll and NetCDF_jll dlopen their own bundled libmpi,
+# and two incompatible OpenMPI builds in one process fail at load with
 # "libopen-pal.so.80: undefined symbol: pmix_framework_names".
 mkdir -p "${JULIA_DEPOT_PATH}/artifacts"
 cat > "${JULIA_DEPOT_PATH}/artifacts/Overrides.toml" <<TOML

@@ -42,10 +42,10 @@ Random.seed!(1234)
 #        16       413.4             14.7      1.311
 #
 # Setup is about 99% compilation and grows roughly as N^2.9, which puts 64
-# tracers near five hours and 144 near fifty. Those two points are left out:
-# they cost days to measure and cannot change the conclusion. Run time per step
-# is linear instead, about 44 ms per tracer, so the tracers dominate a step long
-# before they dominate anything else.
+# tracers near five hours and 144 near fifty. Those two points are left out,
+# since they cost days to measure and the trend is already clear. Run time per
+# step grows linearly instead, at about 44 ms per tracer, so the tracers come to
+# dominate a step long before they dominate anything else.
 const BAND_GRIDS = [(0, 0), (2, 4), (4, 4), (6, 4), (4, 8)]
 
 const N_TIMED_STEPS = 5
@@ -72,10 +72,10 @@ function probe_config(n_latitude_bands, n_height_bands)
         "ode_algo" => "ARS343",
         "rad" => "held_suarez",
         "vert_diff" => "VerticalDiffusion",
-        # Implicit diffusion on purpose: it is what gives every passive tracer
-        # its own Jacobian block (`manual_sparse_jacobian.jl`), which is the
-        # steepest per-tracer cost in the model. Set TRACER_SCALING_IMPLICIT=0
-        # if this combination is rejected; the sweep then under-reports.
+        # Implicit diffusion on purpose. It gives every passive tracer its own
+        # Jacobian block in `manual_sparse_jacobian.jl`, which is the steepest
+        # per-tracer cost in the model. Set TRACER_SCALING_IMPLICIT=0 if this
+        # combination is rejected, and expect the sweep to under-report.
         "implicit_diffusion" =>
             get(ENV, "TRACER_SCALING_IMPLICIT", "1") == "1",
         "approximate_linear_solve_iters" => 1,
@@ -85,8 +85,9 @@ function probe_config(n_latitude_bands, n_height_bands)
     )
     n_latitude_bands * n_height_bands == 0 && return config
 
-    # Bands are packed tightly so that a tall stack still fits under the model
-    # top, and narrow enough that latitude boxes never overlap their division.
+    # Bands are packed tightly, so a tall stack still fits under the model top.
+    # They are narrow enough for the latitude boxes to stay within their
+    # division.
     config["passive_tracers"] = Dict(
         "release_grid" => Dict(
             "latitude_bands" => n_latitude_bands,
@@ -130,7 +131,7 @@ function measure(n_latitude_bands, n_height_bands)
         timed_with_compilation(() -> CA.get_simulation(config))
     (; integrator) = simulation
 
-    # The first step compiles the tendencies, the Jacobian and the solve; the
+    # The first step compiles the tendencies, the Jacobian and the solve. The
     # rest are what a long run actually pays.
     _, first_step_s, first_step_compile_s =
         timed_with_compilation(() -> CTS.step!(integrator))
@@ -159,11 +160,12 @@ const RESULT_FIELDS = (
     :maxrss_gb,
 )
 
-# A worker writes its row to a file rather than to a pipe the driver reads, so
-# that both of its streams stay attached to the terminal. Nothing is printed
-# between "Built cache" and the end of the first step -- that gap is the
+# A worker writes its row to a file, not to a pipe the driver reads, so both of
+# its streams stay attached to the terminal. That matters because nothing is
+# printed between "Built cache" and the end of the first step. The gap is the
 # tendency, Jacobian and solve compiling, and it is the longest silence in the
-# run -- so swallowing the worker's output makes a slow point look like a hang.
+# run. Swallowing the worker's output would make a slow point look like a
+# hang.
 write_result(r) = write(
     ENV["TRACER_SCALING_OUTPUT"],
     join((getfield(r, f) for f in RESULT_FIELDS), " "),
@@ -232,7 +234,7 @@ function print_row(r, baseline_step)
     overhead =
         isnothing(baseline_step) || baseline_step == 0 ? NaN :
         100 * (r.step_s - baseline_step) / baseline_step
-    # `%.0f` for the tracer count: it is an `Int` in process and a `Float64`
+    # `%.0f` for the tracer count, which is an `Int` in process and a `Float64`
     # when read back from a worker.
     @printf(
         "%9.0f %10.1f %10.1f %11.1f %11.1f %10.3f %8.0f%% %9.2f\n",
@@ -278,9 +280,9 @@ else
         end
         push!(results, result)
 
-        # Each row is printed and appended as soon as it exists, so that a sweep
-        # stopped part-way -- by a timeout, an out-of-memory kill or Ctrl-C --
-        # still leaves behind everything it did measure.
+        # Each row is printed and appended as soon as it exists. A sweep cut
+        # short by a timeout, an out-of-memory kill or Ctrl-C then still leaves
+        # behind everything it measured.
         print_header()
         print_row(result, baseline_step_of(results))
         open(log_file, "a") do io
