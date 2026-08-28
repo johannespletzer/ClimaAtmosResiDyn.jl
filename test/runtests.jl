@@ -78,6 +78,21 @@ if TEST_GROUP in ("dynamics", "all")
     # Conservation tests
     @safetestset "Mass conservation" begin @time include("conservation/mass_conservation.jl") end
     @safetestset "Energy conservation" begin @time include("conservation/energy_conservation.jl") end
+end
+
+# ============================================================================
+# Tagging: end-to-end tagged energy and tagged water simulations
+#
+# These two files are their own group because they were the only tests in
+# `dynamics` that call `solve_atmos!`, and they do it seven times on seven
+# different tag sets. A tag name is a type parameter (`WaterTag{name, R, S}`),
+# so each set is a fresh `AtmosModel` type and the whole tendency and solve
+# pipeline is compiled from scratch. That costs about 7 minutes per simulation
+# on 1.11, against 1 to 2 minutes on 1.10. Left in `dynamics` the two files
+# were 59% of that group's wall clock and pushed it past the job timeout
+# (run 32528151981).
+# ============================================================================
+if TEST_GROUP in ("tagging", "all")
     @safetestset "Tagged tracers integration" begin @time include("tagged_tracers_integration.jl") end
     @safetestset "Tagged water integration" begin @time include("tagged_water_integration.jl") end
 end
