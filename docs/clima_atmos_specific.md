@@ -48,15 +48,25 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `diagnostics`, `dynamics`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `diagnostics`, `dynamics`, `tagging`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
 
 | Change area          | Test group          | Example Buildkite job         |
 |:-------------------- |:------------------- |:----------------------------- |
 | Prognostic equations | `dynamics`          | `sphere_baroclinic_wave_rhoe` |
+| Tagged tracers/water | `tagging`           | `baroclinic_wave_tagged_*`    |
 | Microphysics / EDMF  | `parameterizations` | `prognostic_edmfx_*`          |
 | Restarts             | `restarts`          | `restart_*`                   |
 | Diagnostics          | `diagnostics`       | any `--diagnostics` job       |
 | Config semantics     | `infrastructure`    | `config.jl`                   |
+
+`tagging` holds only `test/tagged_tracers_integration.jl` and
+`test/tagged_water_integration.jl`. It is a group of its own because those two
+files run seven full simulations on seven different tag sets, and a tag name is
+a type parameter, so each set recompiles the whole tendency and solve pipeline.
+That is roughly seven minutes per simulation on Julia 1.11. Keep new
+tagged-simulation tests here, and prefer reusing a tag set another test in the
+same file already builds: a second simulation with an identical tag signature
+costs seconds instead of minutes.
 
 ### Running a single test group
 
