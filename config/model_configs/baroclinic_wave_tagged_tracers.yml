@@ -3,30 +3,31 @@ t_end: "10days"
 dt_save_state_to_disk: "2days"
 disable_surface_flux_tendency: true
 rad: "held_suarez"
-# The tags are chosen so that validation is a set of direct near-zero checks:
+# A short validation job for the energy tags. The tag set is chosen so each
+# check is a direct near-zero comparison.
 #
-#   1. Region closure: `tropics` + `extratropics` form an exact partition of
-#      unity, so `e_tag_res` (= specific ρe_tot minus the sum of the region
-#      tags) starts at machine precision and directly monitors attribution
-#      leakage (no overlapping regions to subtract out).
-#   2. Process closure: `hs_tropics` and `hs_extratropics` restrict the
-#      Held-Suarez source to each region; because transport is linear and
-#      their masks sum to 1, `e_tag_hs_tropics + e_tag_hs_extratropics`
-#      must equal `e_tag_hs` to near machine precision at all times.
-#   3. Process behavior: `e_tag_hs` starts at exactly 0 and accumulates the
-#      Held-Suarez forcing (decelerating growth toward HS equilibrium).
+#   1. Region closure. `tropics` and `extratropics` partition the globe, so
+#      `e_tag_res`, the specific ρe_tot minus the sum of the region tags, starts
+#      at machine precision and then tracks attribution leakage on its own, with
+#      no overlapping regions to subtract out.
+#   2. Process closure. `hs_tropics` and `hs_extratropics` split the
+#      Held-Suarez source by region. Transport is linear and their masks sum to
+#      1, so `e_tag_hs_tropics + e_tag_hs_extratropics` equals `e_tag_hs` to
+#      near machine precision at all times.
+#   3. Process behavior. `e_tag_hs` starts at 0 and accumulates the Held-Suarez
+#      forcing, growing more slowly as it approaches HS equilibrium.
 #
-# For an altitude decomposition, use a `tanh_altitude` region and its exact
-# complement (`above: false`) instead of adding an overlapping tag to this
-# set: `e_tag_res` sums ALL pure region tags, so they must form a single
-# partition of unity for the residual to be a clean leakage monitor.
-# As for the water tags, but against `ρe_tot`. The tolerance is looser by
-# default because the energy tags never receive implicit transport.
+# `e_tag_res` sums every pure region tag, so they have to form a single
+# partition of unity for the residual to read as leakage. For an altitude
+# decomposition, pair a `tanh_altitude` region with its exact complement
+# (`above: false`) rather than adding an overlapping tag to this set.
+
+# The same closure check the water tags use, run against `ρe_tot`.
 energy_closure_check:
   period: "1days"
-  # As for the water job, a placeholder rather than a measured threshold, and
-  # looser again: the energy tags receive neither implicit transport nor EDMFX
-  # SGS mass fluxes, so they are expected to miss by more. Read
+  # A placeholder rather than a measured threshold, as in the water job, and
+  # looser again. The energy tags miss by more, because they receive their
+  # transport explicitly and carry no EDMFX SGS mass fluxes. Read
   # `energy_tag_closure.csv` from a run and tighten it.
   tolerance: 1.0e-2
 energy_tracers:

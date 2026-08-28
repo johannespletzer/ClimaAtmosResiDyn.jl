@@ -554,10 +554,10 @@ import ClimaCore.MatrixFields: @name
         @test CA.Diagnostics.get_diagnostic_variable("q_tag_tropics") ===
               q_trop
 
-        # Residual diagnostics are model-specific even though the diagnostic
-        # catalog is global. Registering a source-only model must remove the
-        # previous model's residual rather than leave its region-tag closure
-        # behind.
+        # Residual diagnostics belong to a model, while the diagnostic catalog
+        # is global. Registering a source-only model has to clear the residual
+        # an earlier model left behind, rather than keep its region-tag
+        # closure.
         source_only_tags =
             (CA.WaterTag{:forced}(nothing, :external_forcing),)
         CA.Diagnostics.register_water_tagging_diagnostics!(
@@ -567,10 +567,9 @@ import ClimaCore.MatrixFields: @name
             "q_tag_res",
         )
 
-        # A later region model must install a fresh residual over its own tags.
-        # Keep the old field in the state with a deliberately large value so
-        # this assertion also proves that the stale `:ρq_tag_tropics` closure
-        # is not being reused.
+        # A later region model installs a fresh residual over its own tags.
+        # The earlier field stays in the state with a large value, so this
+        # assertion also shows the stale `:ρq_tag_tropics` closure is gone.
         replacement_tags =
             (CA.WaterTag{:global}(CA.EntireDomain()),)
         CA.Diagnostics.register_water_tagging_diagnostics!(

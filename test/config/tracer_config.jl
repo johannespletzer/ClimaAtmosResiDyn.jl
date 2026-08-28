@@ -86,10 +86,10 @@ end
 end
 
 @testset "Region parsing rejects masks that define no region" begin
-    # Each of these parses, and each used to build a mask that is wrong rather
-    # than merely unusual: zero everywhere, negative everywhere, or `NaN` on
-    # the edge. The error has to name the key, since the value is accepted
-    # arithmetic and nothing downstream would complain.
+    # Each of these parses as arithmetic while describing a mask that is wrong
+    # rather than merely unusual: zero everywhere, negative everywhere, or `NaN`
+    # on the edge. The error has to name the key, because the value is accepted
+    # arithmetic that nothing downstream would flag.
     region_error(spec) =
         try
             CA.tag_region_from_config(spec, FT)
@@ -166,10 +166,10 @@ end
         @test occursin("lat_min", err.msg)
     end
 
-    # Longitudes are compared modulo 360 so that a box may cross the
-    # antimeridian, which leaves a whole turn indistinguishable from none:
-    # `-180` to `180` is the obvious way to write "every longitude" and used to
-    # give a mask of zero everywhere.
+    # Longitudes are compared modulo 360 so a box may cross the antimeridian,
+    # which leaves a whole turn indistinguishable from none. `-180` to `180` is
+    # the obvious way to write "every longitude", and it has to be rejected
+    # rather than read as a mask of zero everywhere.
     for (lon_min, lon_max) in ((-180.0, 180.0), (0.0, 360.0), (30.0, 30.0))
         err = region_error(box("lon_min" => lon_min, "lon_max" => lon_max))
         @test err isa ErrorException
@@ -295,7 +295,7 @@ end
     @test model.latitude_lower_edges == (FT(-85), FT(75))
     @test model.height_upper_edges == (FT(10400), FT(10400))
 
-    # A box written the old way, with four separate keys.
+    # A box written as four separate keys, which the schema rejects.
     @test_throws ErrorException CA.passive_tracer_model(
         Dict(
             "release_boxes" => [
@@ -419,7 +419,8 @@ end
         ),
     )
 
-    # The retired `chemistry_model` value points at the key that replaced it.
+    # `chemistry_model: stratospheric_passive_tracers` errors, and the message
+    # names the `passive_tracers` key to use instead.
     err = try
         CA.AtmosChem(
             tracer_config(
@@ -619,8 +620,8 @@ end
 end
 
 @testset "Shipped tracer configs still build a model" begin
-    # The migrated configs are the interface's real regression test: each must
-    # still produce the model it produced under the old keys.
+    # The shipped configs are the interface's real regression test. Each one
+    # has to keep building the model it describes.
     for (file, job_id) in (
         ("model_configs/passive_stratospheric_tracers_ci.yml",
             "passive_stratospheric_tracers_ci"),

@@ -2,16 +2,17 @@ job_id: "passive_stratospheric_tracers_ci"
 
 # CI-sized version of config/example_configs/passive_stratospheric_tracers.yml,
 # with the same 10 degree by 2 km source boxes on a coarser 3 x 3 grid.
-# Two simulated days is far too short for the tracers to approach equilibrium,
-# so the lifetimes it produces are meaningless. It does exercise every part of
-# the machinery a multi-year run depends on: building 9 tracers into the
-# prognostic state, diagnosing the tropopause each stage, applying the source
-# and the sub-tropopause sink, writing the budget table, and restarting from a
+#
+# This runs for two simulated days, which is far short of equilibrium, so treat
+# the lifetimes it produces as arbitrary. Its job is to exercise the machinery a
+# multi-year run depends on: building 9 tracers into the prognostic state,
+# diagnosing the tropopause each stage, applying the source and the
+# sub-tropopause sink, writing the budget table, and restarting from a
 # checkpoint.
 #
 # Held-Suarez forcing stands in for the example's RRTMGP aquaplanet. It is much
-# cheaper and still produces the tropopause the tracers are bounded by, and the
-# tracers do not care how the temperature field is maintained. Pair with
+# cheaper and still produces the tropopause that bounds the tracers, which is
+# all the tracers read from the temperature field. Pair with
 # `numerics_sphere_he6ze31.yml`, which sets the 60 km top these source bands
 # assume.
 

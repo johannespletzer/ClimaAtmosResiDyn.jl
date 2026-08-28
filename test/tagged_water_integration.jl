@@ -122,22 +122,25 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
         :ρq_tag_evap_upper,
         :ρq_tag_evap_lower,
     )
-    # The donor-proportional loss keeps a tag inside [0, ρq_tot] *exactly*, which
-    # a mask-weighted loss (the energy rule) would not — but that is a property
-    # of the attribution step alone, and `tagged_water_tests.jl` is where it is
-    # asserted at machine precision, on the kernel. It does not survive a full
-    # timestep: the tags ride the explicit passive-tracer path with no limiter of
-    # their own (`is_tagged_tracer_name` exempts them, see
-    # `limited_tendencies.jl`) while ρq_tot is advected implicitly, so both bounds
-    # leak through the same mechanism that makes `q_tag_res` nonzero. What is
-    # checked here is that the leak stays small against the column scale.
+    # The donor-proportional loss keeps a tag inside [0, ρq_tot] exactly, where
+    # the mask-weighted loss the energy tags use would not. That is a property
+    # of the attribution step alone, asserted at machine precision on the kernel
+    # in `tagged_water_tests.jl`.
+    #
+    # Over a full timestep the bounds relax. The tags ride the explicit
+    # passive-tracer path with no limiter of their own, since
+    # `is_tagged_tracer_name` exempts them in `limited_tendencies.jl`, while
+    # ρq_tot is advected implicitly. Both bounds leak through the same mechanism
+    # that makes `q_tag_res` nonzero. This test checks the leak stays small
+    # against the column scale.
     #
     # Measured on this setup, as a fraction of max(ρq_tot): undershoot ~1.4e-7,
-    # at the DYCOMS inversion where the `evap` tags have a sharp front; overshoot
-    # ~1.8e-4, worst at the top level, where ρq_tot is three orders of magnitude
-    # below its column maximum and the two advection discretizations disagree by
-    # a few percent *locally* — a negligible absolute amount of water. The
-    # tolerances below leave roughly two orders of headroom over both.
+    # at the DYCOMS inversion where the `evap` tags have a sharp front.
+    # Overshoot ~1.8e-4, worst at the top level, where ρq_tot is three orders of
+    # magnitude below its column maximum and the two advection discretizations
+    # disagree locally by a few percent, which is a negligible absolute amount
+    # of water. The tolerances below leave roughly two orders of headroom over
+    # both.
     ρq_tot_scale = maximum(parent(Y.c.ρq_tot))
     for name in tag_names
         tag = parent(getproperty(Y.c, name))
@@ -174,17 +177,17 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
     end
 end
 
-# The column above trips no limiter, which leaves `rescale_water_tags!` and all
-# three of its call sites unexercised. The SEM quasimonotone limiter is
-# horizontal, so tripping it needs a sphere: this is the same coarse geometry the
-# tagged-energy integration test uses (h_elem 4, z_elem 10, dt 300secs), made
-# moist and 0-moment with the limiter switched on.
+# The column above trips no limiter, so `rescale_water_tags!` and its three call
+# sites stay unexercised there. The SEM quasimonotone limiter is horizontal, so
+# tripping it takes a sphere. This is the coarse geometry the tagged-energy
+# integration test uses, h_elem 4, z_elem 10, dt 300secs, made moist and
+# 0-moment with the limiter switched on.
 #
-# Every tolerance here is far looser than the column's, and deliberately so. The
-# masks are a tanh front at 20° latitude, the tags are exempt from the limiter by
-# design (`is_tagged_tracer_name`), and unlimited SEM transport of a sharp front
+# Every tolerance here is far looser than the column's, on purpose. The masks
+# are a tanh front at 20 degrees latitude, `is_tagged_tracer_name` exempts the
+# tags from the limiter by design, and unlimited SEM transport of a sharp front
 # overshoots on both sides. The `tropics` and `extratropics` excursions are
-# equal and opposite, so their *sum* still tracks ρq_tot two to three orders of
+# equal and opposite, so their sum still tracks ρq_tot two to three orders of
 # magnitude more tightly than either tag tracks its own bounds.
 @testset "Tagged water limiter rescale" begin
     region(inside) = Dict{String, Any}(
@@ -259,28 +262,27 @@ end
         @test maximum(tag .- ρq_tot) <= 1e-1 * scale
     end
 
-    # The partition closes more tightly than any single tag is bounded — the
-    # compensating excursions cancel — but it is a monitor, not an identity, and
-    # its budget is set by what leaves the partition, not by roundoff.
-    # `repair_water_tag_partition!` zeroes the tags of a cell whose negatives
-    # outweigh its positives, and that removed water surfaces here by design
-    # (see the repair's docstring). The `~1e-5` this comment used to quote was
-    # measured before that repair existed; `ci 1.10` measures 1.2e-3, still
-    # nearly two orders inside the 1e-1 excursion bound the tags themselves get
-    # above, which is the property being asserted.
+    # The partition closes more tightly than any single tag is bounded, because
+    # the compensating excursions cancel. It stays a monitor rather than an
+    # identity, and its budget is set by what leaves the partition rather than
+    # by roundoff. `repair_water_tag_partition!` zeroes the tags of a cell whose
+    # negatives outweigh its positives, and that removed water surfaces here by
+    # design. See the repair's docstring. `ci 1.10` measures 1.2e-3, nearly two
+    # orders inside the 1e-1 excursion bound the tags get above, which is the
+    # property asserted here.
     residual =
         ρq_tot .- parent(Y.c.ρq_tag_tropics) .-
         parent(Y.c.ρq_tag_extratropics)
     @test maximum(abs.(residual)) / scale < 1e-2
 
-    # Transport linearity, the sharp check — but it is no longer exact here, and
-    # the reason is worth stating. `water_tag_fraction` clamps the donor share to
-    # [0, 1]; once unlimited transport has driven a tag slightly negative, the
-    # clamp truncates that tag's loss share, and the two masked halves' shares
-    # stop summing to the unrestricted tag's. That guard is deliberate (it keeps
-    # the rule well posed under drift), so the residual linearity error is a
-    # measure of how far the tags have drifted, not a bug. Measured ~4e-6 against
-    # the column's 1e-16.
+    # Transport linearity, the sharp check. It holds approximately here rather
+    # than exactly, for a reason worth stating. `water_tag_fraction` clamps the
+    # donor share to [0, 1]. Once unlimited transport has driven a tag slightly
+    # negative, the clamp truncates that tag's loss share, and the two masked
+    # halves' shares stop summing to the unrestricted tag's. That guard keeps
+    # the rule well posed under drift, so the residual linearity error measures
+    # how far the tags have drifted. Measured ~4e-6 against the column's
+    # 1e-16.
     evap = parent(Y.c.ρq_tag_evap)
     evap_split =
         parent(Y.c.ρq_tag_evap_tropics) .+
@@ -447,22 +449,22 @@ and nothing else in the timestep can mask or fake it.
     # partition's shares sum to exactly 1 wherever there is tagged water, however
     # far `norm` sits from 1.
     #
-    # `norm` is not bounded by 1, and asserting that it is at roundoff asserts
+    # `norm` can exceed 1, so pinning it to 1 at roundoff would be asserting
     # exact closure. With the partition tags non-negative after
-    # `repair_water_tag_partition!`, `norm` is `Σₖ ρq_tagₖ / ρq_tot` wherever no
-    # single tag exceeds the parent — the pointwise relative closure residual,
-    # the quantity the design deliberately keeps as a monitor instead of driving
-    # to zero. It is also a harsher measure than `q_tag_res` above, which
-    # normalizes by the column maximum rather than by the local `ρq_tot`.
-    # Measured overshoot: 6.0e-5 on `ci 1.10`, 1.5e-4 on `Downgrade 1.10`. The
-    # bound below is a drift monitor with two orders of headroom over the larger.
+    # `repair_water_tag_partition!`, `norm` is `Σₖ ρq_tagₖ / ρq_tot` wherever a
+    # single tag stays under the parent. That is the pointwise relative closure
+    # residual, which the design keeps as a monitor rather than driving to zero.
+    # It is a harsher measure than `q_tag_res` above, which normalizes by the
+    # column maximum instead of the local `ρq_tot`. Measured overshoot is 6.0e-5
+    # on `ci 1.10` and 1.5e-4 on `Downgrade 1.10`. The bound below is a drift
+    # monitor with two orders of headroom over the larger.
     norm = parent(p.scratch.ᶜtagging_q_share_norm)
     @test all(isfinite, norm)
     @test minimum(norm) >= 0
     @test maximum(norm) <= 1 + 1e-2
 
-    # The bound that actually delivers non-amplification, asserted directly on
-    # the shares rather than inferred from `norm`
+    # The bound that delivers non-amplification, asserted on the shares
+    # themselves rather than inferred from `norm`.
     shares = map((:ρq_tag_upper, :ρq_tag_lower)) do name
         CA.water_tag_sediment_share.(
             parent(getproperty(Y.c, name)),
