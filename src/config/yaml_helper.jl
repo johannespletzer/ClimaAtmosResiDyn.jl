@@ -32,7 +32,7 @@ Entries in `default_config.yml` are `Dict`s of the form `(help = ..., value = ..
 else through unchanged. `strip_help_messages` applies this to every entry of the config
 `Dict` `d`.
 
-Only genuine schema entries are unwrapped; see [`is_schema_entry`](@ref).
+Only genuine schema entries are unwrapped; see `is_schema_entry`.
 """
 strip_help_message(v::Dict) = is_schema_entry(v) ? v["value"] : v
 strip_help_message(v) = v
