@@ -293,9 +293,11 @@ naming the key rather than run:
 
   - `width` must be **greater than zero**, for every type. Zero is not a sharp
     edge, it is an undefined one: a point sitting exactly on the edge gives
-    `NaN`, and one `NaN` spreads through the tagged field on the first step. A
-    negative width quietly gives you the complement of the region you asked
-    for.
+    `NaN`, and one `NaN` spreads through the tagged field on the first step.
+    A negative width goes wrong differently for each type — it gives you the
+    complement of a `tanh_altitude` or `tanh_polygon` region, it turns a
+    `tanh_latitude` band *negative*, and it does nothing whatever to a
+    `tanh_box`, which quietly uses the width without its minus sign.
   - `lat_bound` must be **greater than zero**. The band is `|lat| ≤ lat_bound`,
     so zero is empty and a negative bound makes the mask itself negative — the
     tag would hold a negative share of the air.

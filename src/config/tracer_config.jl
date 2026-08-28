@@ -109,16 +109,29 @@ positive.
 region but an undefined one: away from the edge the mask becomes a step, which
 is the Gibbs case the smoothing exists to prevent, and a point sitting exactly
 on the edge evaluates `0/0` and gives `NaN`. One `NaN` in a static mask spreads
-through the tagged field on the first step. A negative width flips the region
-for its complement without saying so.
+through the tagged field on the first step.
+
+A negative width does something different to each shape of mask, none of it
+what was meant:
+
+  - `tanh_altitude` and `tanh_polygon` are a single `tanh`, so the sign gives
+    the exact complement — the wrong region, but still a mask in `[0, 1]`.
+  - `tanh_latitude` is a *difference* of two, so the sign negates it: the mask
+    reaches `-1` where it should reach 1, and the tag holds a negative share of
+    the parent field.
+  - `tanh_box` is a *product* of two such differences, so the two sign flips
+    cancel and the mask is unchanged. The width is silently read as its own
+    absolute value, which is the quietest failure of the three.
 """
 function parse_smoothing_width(spec, context, ::Type{FT}) where {FT}
     width = FT(spec["width"])
     width > 0 || error(
         "$context needs a positive `width`, got $width. The width is the \
         distance over which the edge is smoothed, so zero leaves a sharp mask \
-        (and `NaN` exactly on the edge) and a negative value silently swaps \
-        the region for its complement.",
+        (and `NaN` exactly on the edge). A negative width is wrong in a \
+        different way for each region type: it complements `tanh_altitude` \
+        and `tanh_polygon`, negates `tanh_latitude` so the mask reaches -1, \
+        and does nothing at all to `tanh_box`, whose two sign flips cancel.",
     )
     return width
 end
