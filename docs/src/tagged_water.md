@@ -42,8 +42,10 @@ fields, cache entries, or runtime cost. The region types and their `inside: fals
 [energy tags](tagged_tracers.md#Region-tags): `everywhere`, `tanh_altitude`,
 `tanh_latitude`, `tanh_box`, `tanh_polygon`.
 
-See [Configuring Tracers](tracer_configuration.md) for the full schema and the
-named regions (`tropics`, `extratropics`, `everywhere`) used above.
+See [Configuring Tracers](tracer_configuration.md) for the full schema, the
+named regions (`tropics`, `extratropics`, `everywhere`) used above, and the
+`water_closure_check` block, which reduces `q_tag_res` to a pair of numbers on a
+period of its own and warns while the run goes.
 
 A region tag is initialized to ``\rho q_\mathrm{tot} \, M(x)``; a tag with a
 `source` starts at zero.

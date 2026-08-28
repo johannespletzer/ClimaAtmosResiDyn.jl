@@ -29,7 +29,9 @@ default (`energy_tracers: ~`) disables the feature entirely: no extra state
 fields, cache entries, or runtime cost.
 
 See [Configuring Tracers](tracer_configuration.md) for the full schema, the
-named regions that shorten common cases, and the other two tracer families.
+named regions that shorten common cases, the other two tracer families, and the
+`energy_closure_check` block, which reduces `e_tag_res` to a pair of numbers on a
+period of its own and warns while the run goes.
 
 !!! note "One partition at a time"
 
