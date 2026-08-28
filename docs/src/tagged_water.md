@@ -24,23 +24,28 @@ and restart handling. Two things differ, and both matter — read
 
 ```yaml
 microphysics_model: "0M"
-tagged_water:
+water_tracers:
   - name: tropics
-    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0}
+    region: tropics
   - name: extratropics
-    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0, inside: false}
+    region: extratropics
   - name: evap
     source: surface_flux
   - name: evap_tropics
-    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0}
+    region: tropics
     source: surface_flux
 ```
 
 Each entry needs a unique `name` and a `region`, a `source`, or both. The
-default (`tagged_water: ~`) disables the feature entirely: no extra state
+default (`water_tracers: ~`) disables the feature entirely: no extra state
 fields, cache entries, or runtime cost. The region types and their `inside: false` / `above: false` complements are exactly those documented for the
 [energy tags](tagged_tracers.md#Region-tags): `everywhere`, `tanh_altitude`,
 `tanh_latitude`, `tanh_box`, `tanh_polygon`.
+
+See [Configuring Tracers](tracer_configuration.md) for the full schema, the
+named regions (`tropics`, `extratropics`, `everywhere`) used above, and the
+`water_closure_check` block, which reduces `q_tag_res` to a pair of numbers on a
+period of its own and warns while the run goes.
 
 A region tag is initialized to ``\rho q_\mathrm{tot} \, M(x)``; a tag with a
 `source` starts at zero.
@@ -287,7 +292,7 @@ Water tagging supports `microphysics_model: "0M"` and `"1M"`, and
     because `implicit_microphysics` defaults to `true` and that is where the
     0-moment water sink lives.
   - Tagged state is carried through restarts like any other prognostic field;
-    the masks are rebuilt from the configuration, so the `tagged_water` block
+    the masks are rebuilt from the configuration, so the `water_tracers` block
     must match the one used to write the checkpoint. The `q_tag_fix` ledger is
     cache-resident and restarts at zero.
 

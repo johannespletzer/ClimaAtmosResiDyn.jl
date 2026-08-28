@@ -182,7 +182,7 @@ import ClimaAtmos as CA
                 ),
                 Dict{String, Any}("name" => "rad", "source" => "radiation"),
             ]
-            tags = CA.tagged_tracer_tuple(entries, FT)
+            tags = CA.energy_tracer_tuple(entries, FT)
             @test tags isa Tuple
             @test length(tags) == 4
             @test map(CA.tag_name, tags) ==
@@ -194,7 +194,7 @@ import ClimaAtmos as CA
                   tags[4].sources == (:radiation,)
 
             # Altitude complement via `above: false`
-            tropo_tag = CA.tagged_tracer_tuple(
+            tropo_tag = CA.energy_tracer_tuple(
                 [
                     Dict{String, Any}(
                         "name" => "tropo",
@@ -212,7 +212,7 @@ import ClimaAtmos as CA
 
             # Source groups expand to their member processes, a list of
             # sources is accepted, and duplicates are removed
-            group_tags = CA.tagged_tracer_tuple(
+            group_tags = CA.energy_tracer_tuple(
                 [
                     Dict{String, Any}("name" => "f", "source" => "forcing"),
                     Dict{String, Any}(
@@ -242,22 +242,22 @@ import ClimaAtmos as CA
             end
 
             # Validation errors
-            @test_throws ErrorException CA.tagged_tracer_tuple(
+            @test_throws ErrorException CA.energy_tracer_tuple(
                 [Dict{String, Any}("region" => Dict("type" => "everywhere"))],
                 FT,
             ) # missing name
-            @test_throws ErrorException CA.tagged_tracer_tuple(
+            @test_throws ErrorException CA.energy_tracer_tuple(
                 [Dict{String, Any}("name" => "a")],
                 FT,
             ) # neither region nor source
-            @test_throws ErrorException CA.tagged_tracer_tuple(
+            @test_throws ErrorException CA.energy_tracer_tuple(
                 [
                     Dict{String, Any}("name" => "a", "source" => "radiation"),
                     Dict{String, Any}("name" => "a", "source" => "surface_flux"),
                 ],
                 FT,
             ) # duplicate names
-            @test_throws ErrorException CA.tagged_tracer_tuple(
+            @test_throws ErrorException CA.energy_tracer_tuple(
                 [Dict{String, Any}("name" => "a", "source" => "latent_heat")],
                 FT,
             ) # unknown source label

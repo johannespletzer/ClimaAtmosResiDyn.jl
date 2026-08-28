@@ -1,12 +1,14 @@
 #####
 ##### Tagged prognostic energy tracers
 #####
-##### This file contains the full implementation of the tagged-tracer feature.
-##### The corresponding types (`AbstractTagRegion`, `TracerTag`, `TaggingModel`,
-##### and the `AtmosTagging` model group) are defined in `types.jl`, and the
-##### config getter `AtmosTagging(::AtmosConfig)` is defined in
-##### `config/model_getters.jl`. Everything else about tagging lives here, so
-##### the rest of the model code only needs:
+##### This file contains the physics of the tagged-tracer feature, configured by
+##### the `energy_tracers` config key. The corresponding types
+##### (`AbstractTagRegion`, `TracerTag`, `TaggingModel`, and the `AtmosTagging`
+##### model group) are defined in `types.jl`, and everything that reads
+##### configuration — region parsing, source parsing, and the config getter
+##### `AtmosTagging(::AtmosConfig)` — lives in `config/tracer_config.jl`.
+##### Everything else about tagging lives here, so the rest of the model code
+##### only needs:
 #####
 #####   1. `tagging_variables(ρe_tot, local_geometry, atmos_model.tagging_model)`
 #####      in the initial-condition assembly (`setups/common/prognostic_variables.jl`);
@@ -203,185 +205,6 @@ _tag_variables(ρe_tot, coord, tags::Tuple) = merge(
 )
 
 # ============================================================================
-# Config parsing
-# ============================================================================
-
-"""
-    tag_region_from_config(region_config, FT)
-
-Convert the `region` entry of a `tagged_tracers` config item (a `Dict` parsed
-from YAML, or `nothing`) into an `AbstractTagRegion` (or `nothing`).
-
-Supported `type` values:
-
-  - `"everywhere"`: mask is 1 in the whole domain
-  - `"tanh_altitude"`: `(1 + tanh((z - z_center) / width)) / 2` (or its exact
-    complement when `above: false`); requires `z_center` and `width` in meters
-  - `"tanh_latitude"`: smooth band `|lat| ≲ lat_bound` (or its complement when
-    `inside: false`); requires `lat_bound` and `width` in degrees
-  - `"tanh_box"`: smooth longitude–latitude box; requires `lon_min`,
-    `lon_max`, `lat_min`, `lat_max`, and `width`, all in degrees
-  - `"tanh_polygon"`: smooth arbitrary polygon (e.g. an IPCC AR6 / ATLAS
-    reference region); requires `vertices` (a list of `[lon, lat]` pairs in
-    degrees) and `width`
-
-All region types accept `inside: false` (`above: false` for
-`"tanh_altitude"`) to select the exact complement of the mask.
-"""
-tag_region_from_config(::Nothing, ::Type{FT}) where {FT} = nothing
-function tag_region_from_config(region_config, ::Type{FT}) where {FT}
-    haskey(region_config, "type") || error(
-        "Each `region` entry of `tagged_tracers` must specify a `type` " *
-        """(`"everywhere"`, `"tanh_altitude"`, or `"tanh_latitude"`).""",
-    )
-    region_type = region_config["type"]
-    if region_type == "everywhere"
-        return EntireDomain()
-    elseif region_type == "tanh_altitude"
-        haskey(region_config, "z_center") && haskey(region_config, "width") ||
-            error(
-                "`tanh_altitude` regions require `z_center` and `width` (in meters).",
-            )
-        return TanhAltitudeRegion(
-            FT(region_config["z_center"]),
-            FT(region_config["width"]),
-            Bool(get(region_config, "above", true)),
-        )
-    elseif region_type == "tanh_latitude"
-        haskey(region_config, "lat_bound") && haskey(region_config, "width") ||
-            error(
-                "`tanh_latitude` regions require `lat_bound` and `width` (in degrees).",
-            )
-        return TanhLatitudeRegion(
-            FT(region_config["lat_bound"]),
-            FT(region_config["width"]),
-            Bool(get(region_config, "inside", true)),
-        )
-    elseif region_type == "tanh_box"
-        all(
-            key -> haskey(region_config, key),
-            ("lon_min", "lon_max", "lat_min", "lat_max", "width"),
-        ) || error(
-            "`tanh_box` regions require `lon_min`, `lon_max`, `lat_min`, " *
-            "`lat_max`, and `width` (in degrees).",
-        )
-        return TanhBoxRegion(
-            FT(region_config["lon_min"]),
-            FT(region_config["lon_max"]),
-            FT(region_config["lat_min"]),
-            FT(region_config["lat_max"]),
-            FT(region_config["width"]),
-            Bool(get(region_config, "inside", true)),
-        )
-    elseif region_type == "tanh_polygon"
-        haskey(region_config, "vertices") && haskey(region_config, "width") ||
-            error(
-                "`tanh_polygon` regions require `vertices` (a list of " *
-                "`[lon, lat]` pairs) and `width` (in degrees).",
-            )
-        vertices = region_config["vertices"]
-        length(vertices) >= 3 ||
-            error("`tanh_polygon` regions require at least 3 vertices.")
-        vertex_tuple = Tuple(
-            map(vertices) do vertex
-                length(vertex) == 2 || error(
-                    "Each `tanh_polygon` vertex must be a `[lon, lat]` pair, " *
-                    "got $(vertex).",
-                )
-                (FT(vertex[1]), FT(vertex[2]))
-            end,
-        )
-        return TanhPolygonRegion(
-            vertex_tuple,
-            FT(region_config["width"]),
-            Bool(get(region_config, "inside", true)),
-        )
-    else
-        error(
-            """Unknown tagged tracer region type `$region_type`. Expected: \
-            "everywhere" | "tanh_altitude" | "tanh_latitude" | "tanh_box" | \
-            "tanh_polygon".""",
-        )
-    end
-end
-
-"""
-    tag_sources_from_config(source_config, name, known = KNOWN_TAG_SOURCES,
-                            groups = TAG_SOURCE_GROUPS)
-
-Convert the `source` entry of a `tagged_tracers` (or `tagged_water`) config item
-into a `Tuple` of process labels. Accepts `nothing` (no sources), a single
-string, or a list of strings; each string is either a process in `known` or a
-group in `groups`, which expands to its members. Duplicates (e.g. from
-overlapping groups) are removed.
-
-`known` and `groups` are arguments rather than hard-coded so that the water tags
-can reuse this parser with their own, different source table (see
-[`KNOWN_WATER_TAG_SOURCES`](@ref)).
-"""
-tag_sources_from_config(
-    ::Nothing,
-    name,
-    known = KNOWN_TAG_SOURCES,
-    groups = TAG_SOURCE_GROUPS,
-) = ()
-function tag_sources_from_config(
-    source_config,
-    name,
-    known = KNOWN_TAG_SOURCES,
-    groups = TAG_SOURCE_GROUPS,
-)
-    entries =
-        source_config isa AbstractString ? (source_config,) :
-        Tuple(source_config)
-    sources = Symbol[]
-    for entry in entries
-        key = Symbol(entry)
-        key === :none && continue
-        if haskey(groups, key)
-            append!(sources, getproperty(groups, key))
-        elseif key in known
-            push!(sources, key)
-        else
-            error(
-                "Unknown tagged tracer source `$key` for tag `$name`. " *
-                "Supported processes: $(join(known, ", ")). " *
-                "Supported groups: $(join(keys(groups), ", ")).",
-            )
-        end
-    end
-    return Tuple(unique(sources))
-end
-
-"""
-    tagged_tracer_tuple(entries, FT)
-
-Convert the parsed `tagged_tracers` config entries (a vector of `Dict`s from
-YAML) into a `Tuple` of [`TracerTag`](@ref)s suitable for constructing a
-[`TaggingModel`](@ref). Validates that every entry has a unique `name` and at
-least one of `region` / `source`.
-"""
-function tagged_tracer_tuple(entries, ::Type{FT}) where {FT}
-    tags = map(collect(entries)) do entry
-        haskey(entry, "name") ||
-            error("Each `tagged_tracers` entry must specify a `name`.")
-        name = Symbol(entry["name"])
-        region = tag_region_from_config(get(entry, "region", nothing), FT)
-        sources = tag_sources_from_config(get(entry, "source", nothing), name)
-        if isnothing(region) && isempty(sources)
-            error(
-                "Tagged tracer `$name` must specify a `region`, a `source`, or both.",
-            )
-        end
-        return TracerTag{name}(region, sources)
-    end
-    names = map(tag_name, tags)
-    allunique(names) ||
-        error("Tagged tracer names must be unique; got $(names).")
-    return Tuple(tags)
-end
-
-# ============================================================================
 # Source attribution
 # ============================================================================
 
@@ -537,6 +360,150 @@ region_tag_state_names(tagging_model::TaggingModel) = Tuple(
     Symbol(:ρe_tag_, tag_name(tag)) for
     tag in tagging_model.tags if !isnothing(tag.region) && isempty(tag.sources)
 )
+
+# ============================================================================
+# Closure checking
+# ============================================================================
+#
+# The `e_tag_res` / `q_tag_res` diagnostics are the same residual as a 3-D
+# field, for looking at afterwards. What follows reduces it to one number per
+# family and appends it to a table while the run is going, so that closure
+# drift is visible without post-processing. Shared by both families: only the
+# parent field and the tag names differ.
+
+"""
+    tag_closure(Y, p, total_name, tag_state_names)
+
+Global closure of one tag family: how much of the parent field its tags account
+for, right now.
+
+`total_name` is `:ρe_tot` or `:ρq_tot`, and `tag_state_names` are the pure
+region tags of that family. Returns
+
+    (; total, tagged, residual, relative, gross_residual, gross_relative)
+
+All the integrals are volume-weighted over the whole domain.
+`residual = total - tagged` is the *signed* miss and `relative` is it over
+`total`. `gross_residual` is the integral of the pointwise `|parent - Σ tags|`,
+and `gross_relative` is that over `total`.
+
+Both are reported because the signed pair alone can say a partition is perfect
+when it is not. `total` and `tagged` are two global integrals, so a partition
+that is too high by `X` in one place and too low by `X` in another has a signed
+residual of exactly zero. Taking the absolute value before integrating removes
+that cancellation, which makes `gross_relative` — never smaller than
+`|relative|` — the number that actually says whether the tags still partition
+the field. The signed pair is kept because its sign says which way the leak
+goes.
+
+`Base.sum` on a `Field` is the volume-weighted global integral and reduces
+across processes, so this is collective — every process must call it.
+"""
+function tag_closure(Y, p, total_name, tag_state_names)
+    ᶜparent = getproperty(Y.c, total_name)
+    total = sum(ᶜparent)
+    tagged = sum(sum(getproperty(Y.c, name)) for name in tag_state_names)
+    residual = total - tagged
+
+    # The same subtraction as `e_tag_res` / `q_tag_res`, reduced to one number
+    # without letting opposite-signed local errors cancel.
+    ᶜresidual = p.scratch.ᶜtemp_scalar
+    @. ᶜresidual = ᶜparent
+    for name in tag_state_names
+        ᶜtag = getproperty(Y.c, name)
+        @. ᶜresidual -= ᶜtag
+    end
+    @. ᶜresidual = abs(ᶜresidual)
+    gross_residual = sum(ᶜresidual)
+
+    # A state with no water at all would divide by zero. It should not happen
+    # in a real run, but the check must not be the thing that ends one.
+    relative = iszero(total) ? zero(residual) : residual / total
+    gross_relative =
+        iszero(total) ? zero(gross_residual) : gross_residual / total
+    return (; total, tagged, residual, relative, gross_residual, gross_relative)
+end
+
+"""
+    tag_closure_path(output_dir, family)
+
+Path of the closure table of `family` (`"energy"` or `"water"`).
+"""
+tag_closure_path(output_dir, family) =
+    joinpath(output_dir, "$(family)_tag_closure.csv")
+
+"""
+    write_tag_closure!(output_dir, t, family, closure)
+
+Append one row to the closure table of `family`, creating it with a header if
+it does not exist yet. Called on the root process only.
+"""
+function write_tag_closure!(output_dir, t, family, closure)
+    path = tag_closure_path(output_dir, family)
+    write_header = !isfile(path) || filesize(path) == 0
+    open(path, "a") do io
+        write_header && println(
+            io,
+            "time,total,tagged,residual,relative,gross_residual,gross_relative",
+        )
+        println(
+            io,
+            join(
+                (
+                    t,
+                    closure.total,
+                    closure.tagged,
+                    closure.residual,
+                    closure.relative,
+                    closure.gross_residual,
+                    closure.gross_relative,
+                ),
+                ",",
+            ),
+        )
+    end
+    return nothing
+end
+
+"""
+    tag_closure_callback!(integrator, output_dir, family, total_name,
+                          tag_state_names, tolerance)
+
+Record the closure of one tag family, and warn when it has drifted past
+`tolerance`.
+
+The comparison is against `gross_relative`, the relative residual that does not
+let opposite-signed local errors cancel (see [`tag_closure`](@ref)). It is never
+smaller than `|relative|`, so testing it alone also catches everything a test on
+the signed residual would.
+
+The residual is information, not a reason to stop. Closure drift is something
+you want to watch grow, and ending a multi-year integration over it would cost
+more than it saves, so this warns and keeps running.
+"""
+function tag_closure_callback!(
+    integrator,
+    output_dir,
+    family,
+    total_name,
+    tag_state_names,
+    tolerance,
+)
+    Y = integrator.u
+    closure = tag_closure(Y, integrator.p, total_name, tag_state_names)
+    t = Float64(integrator.t)
+    if ClimaComms.iamroot(ClimaComms.context(Y.c))
+        write_tag_closure!(output_dir, t, family, closure)
+        closure.gross_relative > tolerance && @warn(
+            "$family tag closure residual $(closure.gross_relative) exceeds \
+            the configured tolerance $tolerance at t = $t s. The tags no \
+            longer account for the field they partition; see \
+            $(tag_closure_path(output_dir, family))."
+        )
+    end
+    return nothing
+end
+
 
 # The closure diagnostic `<residual_name> = (parent - Σᵢ tagᵢ) / ρ` only
 # measures attribution leakage when the pure region masks form a partition of

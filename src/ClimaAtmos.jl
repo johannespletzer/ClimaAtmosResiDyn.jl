@@ -209,6 +209,7 @@ include(joinpath("simulation", "solve.jl"))
 include("presets.jl")
 
 include(joinpath("config", "model_getters.jl"))
+include(joinpath("config", "tracer_config.jl"))
 include(joinpath("config", "type_getters.jl"))
 include(joinpath("config", "yaml_helper.jl"))
 

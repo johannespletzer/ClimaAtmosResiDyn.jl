@@ -72,41 +72,41 @@ toml: [toml/strat_tracers_transient.toml]
 # centres; lifetimes are unaffected because burden and source come from the
 # same mask.
 # ---------------------------------------------------------------------------
-chemistry_model: "stratospheric_passive_tracers"
-tracer_source_height_coordinate: "altitude"
-tracer_production_rate: 1.0e-10
-tracer_loss_timescale: "6hours"
 dt_tracer_budget: "30days"
-tracer_source_boxes:
-  - {latitude_lower: -85.0, latitude_upper: -75.0, height_lower: 9989.7, height_upper: 10404.8}   # 80S, level 34
-  - {latitude_lower: -85.0, latitude_upper: -75.0, height_lower: 27896.0, height_upper: 28623.5}   # 80S, level 66
-  - {latitude_lower: -85.0, latitude_upper: -75.0, height_lower: 45380.1, height_upper: 46322.6}   # 80S, level 87
-  - {latitude_lower: -65.0, latitude_upper: -55.0, height_lower: 9989.7, height_upper: 10404.8}   # 60S, level 34
-  - {latitude_lower: -65.0, latitude_upper: -55.0, height_lower: 27896.0, height_upper: 28623.5}   # 60S, level 66
-  - {latitude_lower: -65.0, latitude_upper: -55.0, height_lower: 45380.1, height_upper: 46322.6}   # 60S, level 87
-  - {latitude_lower: -40.0, latitude_upper: -30.0, height_lower: 27896.0, height_upper: 28623.5}   # 35S, level 66
-  - {latitude_lower: -40.0, latitude_upper: -30.0, height_lower: 45380.1, height_upper: 46322.6}   # 35S, level 87
-  - {latitude_lower: -30.0, latitude_upper: -20.0, height_lower: 27896.0, height_upper: 28623.5}   # 25S, level 66
-  - {latitude_lower: -30.0, latitude_upper: -20.0, height_lower: 45380.1, height_upper: 46322.6}   # 25S, level 87
-  - {latitude_lower: -5.0, latitude_upper: 5.0, height_lower: 27896.0, height_upper: 28623.5}   # EQ, level 66
-  - {latitude_lower: -5.0, latitude_upper: 5.0, height_lower: 45380.1, height_upper: 46322.6}   # EQ, level 87
-  - {latitude_lower: 20.0, latitude_upper: 30.0, height_lower: 27896.0, height_upper: 28623.5}   # 25N, level 66
-  - {latitude_lower: 20.0, latitude_upper: 30.0, height_lower: 45380.1, height_upper: 46322.6}   # 25N, level 87
-  - {latitude_lower: 30.0, latitude_upper: 40.0, height_lower: 27896.0, height_upper: 28623.5}   # 35N, level 66
-  - {latitude_lower: 30.0, latitude_upper: 40.0, height_lower: 45380.1, height_upper: 46322.6}   # 35N, level 87
-  - {latitude_lower: 55.0, latitude_upper: 65.0, height_lower: 9989.7, height_upper: 10404.8}   # 60N, level 34
-  - {latitude_lower: 55.0, latitude_upper: 65.0, height_lower: 27896.0, height_upper: 28623.5}   # 60N, level 66
-  - {latitude_lower: 55.0, latitude_upper: 65.0, height_lower: 45380.1, height_upper: 46322.6}   # 60N, level 87
-  - {latitude_lower: 75.0, latitude_upper: 85.0, height_lower: 9989.7, height_upper: 10404.8}   # 80N, level 34
-  - {latitude_lower: 75.0, latitude_upper: 85.0, height_lower: 27896.0, height_upper: 28623.5}   # 80N, level 66
-  - {latitude_lower: 75.0, latitude_upper: 85.0, height_lower: 45380.1, height_upper: 46322.6}   # 80N, level 87
-  # Bulk reference: one box over the whole domain from 20 to 55 km.
-  # It deliberately encloses the sampled boxes -- the tracers are
-  # independent, so a shared point simply feeds both. Its base is at
-  # 20 km, not 10 km, because at fixed altitude the source is
-  # proportional to density and a lower base would put most of the
-  # emission in the upper troposphere, below the tropical tropopause.
-  - {latitude_lower: -90.0, latitude_upper: 90.0, height_lower: 20000.0, height_upper: 55000.0}
+passive_tracers:
+  heights_from: "altitude"
+  production_rate: 1.0e-10
+  loss_timescale: "6hours"
+  release_boxes:
+    - {latitude: [-85.0, -75.0], height: [9989.7, 10404.8]}   # 80S, level 34
+    - {latitude: [-85.0, -75.0], height: [27896.0, 28623.5]}   # 80S, level 66
+    - {latitude: [-85.0, -75.0], height: [45380.1, 46322.6]}   # 80S, level 87
+    - {latitude: [-65.0, -55.0], height: [9989.7, 10404.8]}   # 60S, level 34
+    - {latitude: [-65.0, -55.0], height: [27896.0, 28623.5]}   # 60S, level 66
+    - {latitude: [-65.0, -55.0], height: [45380.1, 46322.6]}   # 60S, level 87
+    - {latitude: [-40.0, -30.0], height: [27896.0, 28623.5]}   # 35S, level 66
+    - {latitude: [-40.0, -30.0], height: [45380.1, 46322.6]}   # 35S, level 87
+    - {latitude: [-30.0, -20.0], height: [27896.0, 28623.5]}   # 25S, level 66
+    - {latitude: [-30.0, -20.0], height: [45380.1, 46322.6]}   # 25S, level 87
+    - {latitude: [-5.0, 5.0], height: [27896.0, 28623.5]}   # EQ, level 66
+    - {latitude: [-5.0, 5.0], height: [45380.1, 46322.6]}   # EQ, level 87
+    - {latitude: [20.0, 30.0], height: [27896.0, 28623.5]}   # 25N, level 66
+    - {latitude: [20.0, 30.0], height: [45380.1, 46322.6]}   # 25N, level 87
+    - {latitude: [30.0, 40.0], height: [27896.0, 28623.5]}   # 35N, level 66
+    - {latitude: [30.0, 40.0], height: [45380.1, 46322.6]}   # 35N, level 87
+    - {latitude: [55.0, 65.0], height: [9989.7, 10404.8]}   # 60N, level 34
+    - {latitude: [55.0, 65.0], height: [27896.0, 28623.5]}   # 60N, level 66
+    - {latitude: [55.0, 65.0], height: [45380.1, 46322.6]}   # 60N, level 87
+    - {latitude: [75.0, 85.0], height: [9989.7, 10404.8]}   # 80N, level 34
+    - {latitude: [75.0, 85.0], height: [27896.0, 28623.5]}   # 80N, level 66
+    - {latitude: [75.0, 85.0], height: [45380.1, 46322.6]}   # 80N, level 87
+    # Bulk reference: one box over the whole domain from 20 to 55 km.
+    # It deliberately encloses the sampled boxes -- the tracers are
+    # independent, so a shared point simply feeds both. Its base is at
+    # 20 km, not 10 km, because at fixed altitude the source is
+    # proportional to density and a lower base would put most of the
+    # emission in the upper troposphere, below the tropical tropopause.
+    - {latitude: [-90.0, 90.0], height: [20000.0, 55000.0]}
 
 # ---------------------------------------------------------------------------
 # Output

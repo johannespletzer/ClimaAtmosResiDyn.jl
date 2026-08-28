@@ -87,13 +87,16 @@ function probe_config(n_latitude_bands, n_height_bands)
 
     # Bands are packed tightly so that a tall stack still fits under the model
     # top, and narrow enough that latitude boxes never overlap their division.
-    config["chemistry_model"] = "stratospheric_passive_tracers"
-    config["tracer_source_latitude_bands"] = n_latitude_bands
-    config["tracer_source_latitude_width"] = 10.0
-    config["tracer_source_height_bands"] = n_height_bands
-    config["tracer_source_band_depth"] = 1000.0
-    config["tracer_source_band_spacing"] = 2000.0
-    config["tracer_loss_timescale"] = "6hours"
+    config["passive_tracers"] = Dict(
+        "release_grid" => Dict(
+            "latitude_bands" => n_latitude_bands,
+            "latitude_width" => 10.0,
+            "height_bands" => n_height_bands,
+            "height_depth" => 1000.0,
+            "height_spacing" => 2000.0,
+        ),
+        "loss_timescale" => "6hours",
+    )
     config["dt_tracer_budget"] = "1days"
     return config
 end

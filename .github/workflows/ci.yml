@@ -53,10 +53,12 @@ jobs:
     if: needs.ci-decide.outputs.skip != 'true'
 
     runs-on: ${{ matrix.os }}
-    # The dynamics group runs right at the wall: 59m59s on 1.10 and a hard
-    # timeout at 59m37s on 1.11 (run 32335353545). A job killed mid-suite
-    # reports `cancelled`, which the ci-required gate cannot distinguish from a
-    # superseded run, so the budget has to leave real headroom.
+    # A job killed mid-suite reports `cancelled`, which the ci-required gate
+    # cannot distinguish from a superseded run, so the budget has to leave real
+    # headroom. 90 minutes was not enough for `dynamics` while it also carried
+    # the two tagged-simulation files: run 32528151981 was killed partway
+    # through the last of them on 1.11. Those two now run as the `tagging`
+    # group.
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -78,6 +80,7 @@ jobs:
           - infrastructure
           - diagnostics
           - dynamics
+          - tagging
           - parameterizations
           - restarts
           - era5

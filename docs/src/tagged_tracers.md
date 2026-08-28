@@ -12,7 +12,7 @@ tags can be checked against ``\rho e_\mathrm{tot}``.
 Tags are configured with a single YAML block; no Julia code is required:
 
 ```yaml
-tagged_tracers:
+energy_tracers:
   - name: stratosphere
     region: {type: tanh_altitude, z_center: 12000.0, width: 1000.0}
   - name: troposphere
@@ -25,8 +25,13 @@ tagged_tracers:
 ```
 
 Each entry needs a unique `name` and a `region`, a `source`, or both. The
-default (`tagged_tracers: ~`) disables the feature entirely: no extra state
+default (`energy_tracers: ~`) disables the feature entirely: no extra state
 fields, cache entries, or runtime cost.
+
+See [Configuring Tracers](tracer_configuration.md) for the full schema, the
+named regions that shorten common cases, the other two tracer families, and the
+`energy_closure_check` block, which reduces `e_tag_res` to a pair of numbers on a
+period of its own and warns while the run goes.
 
 !!! note "One partition at a time"
 
@@ -205,7 +210,7 @@ integration test use this identity with the Held–Suarez source.
     in columns and boxes.
   - Tagged state is carried through restarts like any other prognostic
     field; the masks are rebuilt from the configuration, so the
-    `tagged_tracers` block must match the one used to write the checkpoint.
+    `energy_tracers` block must match the one used to write the checkpoint.
 
 See `config/model_configs/baroclinic_wave_tagged_tracers.yml` for a complete
 example, and `test/tagged_tracers_integration.jl` for the closure assertions.
@@ -219,10 +224,13 @@ resolves `@ref` only against docstrings a `@docs` block splices into a page.
 ClimaAtmos.TaggingModel
 ClimaAtmos.TracerTag
 ClimaAtmos.AbstractTagRegion
+ClimaAtmos.EntireDomain
+ClimaAtmos.TanhAltitudeRegion
+ClimaAtmos.TanhLatitudeRegion
+ClimaAtmos.TanhBoxRegion
+ClimaAtmos.TanhPolygonRegion
 ClimaAtmos.KNOWN_TAG_SOURCES
 ClimaAtmos.TAG_SOURCE_GROUPS
-ClimaAtmos.tag_region_from_config
-ClimaAtmos.tag_sources_from_config
 ClimaAtmos.is_tagged_tracer_name
 ClimaAtmos.tagging_scratch
 ClimaAtmos.snapshot_tagged_ρe_tot!

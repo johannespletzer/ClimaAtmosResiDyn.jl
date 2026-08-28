@@ -5,18 +5,18 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
 ## Codebase map
 
   - `src/ClimaAtmos.jl`: package entry point. It `include`s the main subsystems; start here when you need the owning source area.
-  - `src/config/`: YAML→typed-object translation layer (formerly `src/solver/`). `cli_options.jl` defines `--config_file` and `--job_id`; `yaml_helper.jl` loads `config/default_configs/default_config.yml` and merges overlay YAML; `atmos_config.jl` defines `AtmosConfig`; `model_getters.jl` and `type_getters.jl` translate config into a runnable model; `solve.jl` runs it. `parsed_args` reads are confined to this folder.
+  - `src/config/`: YAML→typed-object translation layer (formerly `src/solver/`). `cli_options.jl` defines `--config_file` and `--job_id`; `yaml_helper.jl` loads `config/default_configs/default_config.yml` and merges overlay YAML; `atmos_config.jl` defines `AtmosConfig`; `model_getters.jl` and `type_getters.jl` translate config into a runnable model; `tracer_config.jl` does the same for the three tracer families (`passive_tracers`, `water_tracers`, `energy_tracers`); `solve.jl` runs it. `parsed_args` reads are confined to this folder.
   - `src/simulation/AtmosSimulations.jl`: high-level `AtmosSimulation(config)` construction.
   - `src/cache/`: precomputed quantities allocated once per stage. Naming convention: `set_*_precomputed_quantities!(Y, p, t)` — never allocate inside these functions.
   - `src/prognostic_equations/`: tendency accumulation and implicit/explicit splitting.
   - `src/parameterized_tendencies/`: parameterization implementations.
       + `microphysics/`: microphysics tendency orchestration, SGS quadrature, limiters, Jacobian.
-      + `chemistry/`: `chemistry.jl` holds the MUSICA-backed gas-phase hook; `stratospheric_passive_tracers.jl` holds the inert latitude/height-banded tracers used for stratospheric residence times (see [passive_tracers.md](src/passive_tracers.md)). Their lower boundary comes from `src/utils/tropopause.jl`.
+      + `chemistry/`: `chemistry.jl` holds the MUSICA-backed gas-phase hook; `stratospheric_passive_tracers.jl` holds the inert latitude/height-banded tracers used for stratospheric residence times, configured by `passive_tracers` (see [passive_tracers.md](src/passive_tracers.md) and [tracer_configuration.md](src/tracer_configuration.md)). Their lower boundary comes from `src/utils/tropopause.jl`.
       + `radiation/`: RRTMGP wrappers and idealized radiation (`held_suarez.jl`).
       + `gravity_wave_drag/`: non-orographic and orographic GWD.
       + `les_sgs_models/`: Smagorinsky–Lilly, anisotropic minimum dissipation, constant horizontal diffusion.
       + `sponge/`: Rayleigh and viscous sponge tendencies.
-      + `tagged_tracers/`: tagged prognostic energy (`tagged_tracers.jl`, `ρe_tag_*`) and water (`tagged_water.jl`, `ρq_tag_*`) tracers — smooth region masks, config parsing, state builders, and the snapshot/attribute brackets consumed by `remaining_tendency.jl` and `implicit/implicit_tendency.jl`.
+      + `tagged_tracers/`: tagged prognostic energy (`tagged_tracers.jl`, `ρe_tag_*`, config key `energy_tracers`) and water (`tagged_water.jl`, `ρq_tag_*`, config key `water_tracers`) tracers — smooth region masks, state builders, and the snapshot/attribute brackets consumed by `remaining_tendency.jl` and `implicit/implicit_tendency.jl`. Their config parsing lives in `src/config/tracer_config.jl`.
   - EDMF code lives in `src/cache/{prognostic,diagnostic}_edmf_precomputed_quantities.jl` and `src/prognostic_equations/edmfx_*.jl`, not under `parameterized_tendencies/`.
   - `src/callbacks/`, `src/diagnostics/`, `src/setups/`, `src/surface_conditions/`, `src/topography/`, `src/parameters/`, `src/utils/`: remaining domain subtrees. Search by physics/runtime concept first.
   - `config/`: YAML/TOML config library. `default_configs/default_config.yml` is the schema baseline; `common_configs/` holds reusable numerics; `example_configs/` holds run controls for script-based examples; `model_configs/`, `gpu_configs/`, `mpi_configs/`, `perf_configs/`, and `longrun_configs/` are scenario overlays.
@@ -48,15 +48,25 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `diagnostics`, `dynamics`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `diagnostics`, `dynamics`, `tagging`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
 
 | Change area          | Test group          | Example Buildkite job         |
 |:-------------------- |:------------------- |:----------------------------- |
 | Prognostic equations | `dynamics`          | `sphere_baroclinic_wave_rhoe` |
+| Tagged tracers/water | `tagging`           | `baroclinic_wave_tagged_*`    |
 | Microphysics / EDMF  | `parameterizations` | `prognostic_edmfx_*`          |
 | Restarts             | `restarts`          | `restart_*`                   |
 | Diagnostics          | `diagnostics`       | any `--diagnostics` job       |
 | Config semantics     | `infrastructure`    | `config.jl`                   |
+
+`tagging` holds only `test/tagged_tracers_integration.jl` and
+`test/tagged_water_integration.jl`. It is a group of its own because those two
+files run seven full simulations on seven different tag sets, and a tag name is
+a type parameter, so each set recompiles the whole tendency and solve pipeline.
+That is roughly seven minutes per simulation on Julia 1.11. Keep new
+tagged-simulation tests here, and prefer reusing a tag set another test in the
+same file already builds: a second simulation with an identical tag signature
+costs seconds instead of minutes.
 
 ### Running a single test group
 

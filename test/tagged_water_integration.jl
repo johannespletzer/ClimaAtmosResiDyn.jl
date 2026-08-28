@@ -32,7 +32,7 @@ mirrored sedimentation flux, the one process 1M adds. It asserts exact closure o
 the flux itself rather than of the end-of-run residual; see the comment at that
 testset for why the residual cannot detect this.
 
-Run either through the package test path (`Pkg.test()`, TEST_GROUP "dynamics")
+Run either through the package test path (`Pkg.test()`, TEST_GROUP "tagging")
 or standalone with the pinned CI environment:
 
     julia +1.11 --project=.buildkite -e 'using Pkg; Pkg.instantiate()'
@@ -68,7 +68,7 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
         "t_end" => "100secs",
         "FLOAT_TYPE" => "Float64",
         "output_default_diagnostics" => false,
-        "tagged_water" => tags,
+        "water_tracers" => tags,
     ),
     extra,
 )
@@ -222,7 +222,7 @@ end
             "t_end" => "3600secs",
             "FLOAT_TYPE" => "Float64",
             "output_default_diagnostics" => false,
-            "tagged_water" => tags,
+            "water_tracers" => tags,
         );
         job_id = "tagged_water_limiter",
     )
