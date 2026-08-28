@@ -2148,7 +2148,7 @@ Tag region with a smooth `tanh` transition in altitude, with mask
 above). When `above` is `false`, the mask is the exact complement
 `1 - M_above`, so a region and its complement sum to 1 everywhere (e.g. a
 "troposphere" tag as the complement of a "stratosphere" tag). `z_center` and
-`width` are in meters.
+`width` are in meters, and `width` must be positive.
 """
 struct TanhAltitudeRegion{FT} <: AbstractTagRegion
     z_center::FT
@@ -2164,6 +2164,9 @@ Tag region for a smooth latitude band `|lat| ≲ lat_bound` with `tanh`
 transitions of the given `width` (both in degrees). When `inside` is `false`,
 the mask is the exact complement `1 - M_band`, so a band and its complement
 sum to 1 everywhere. Requires spherical geometry (coordinates with `lat`).
+
+Both `lat_bound` and `width` must be positive: a zero bound gives an empty
+band, and a negative one gives a negative mask.
 """
 struct TanhLatitudeRegion{FT} <: AbstractTagRegion
     lat_bound::FT
@@ -2180,6 +2183,12 @@ given `width`. All arguments are in degrees. Longitudes are compared modulo
 360°, so a box may cross the antimeridian (e.g. `lon_min = 170`,
 `lon_max = -170`). When `inside` is `false`, the mask is the exact
 complement. Requires spherical geometry.
+
+`width` must be positive and `lat_min` must be below `lat_max`. Comparing
+longitudes modulo 360° is what lets a box wrap, and it also means a box
+spanning a whole turn (`lon_min = -180`, `lon_max = 180`) is indistinguishable
+from one spanning nothing: its mask is zero everywhere. For a band over every
+longitude, symmetric about the equator, use [`TanhLatitudeRegion`](@ref).
 """
 struct TanhBoxRegion{FT} <: AbstractTagRegion
     lon_min::FT
@@ -2200,8 +2209,9 @@ ATLAS domains: export their vertices and pass them here.
 
   - `vertices`: an `NTuple` of `(lon, lat)` pairs in degrees, in either
     winding order. The polygon is implicitly closed.
-  - `width`: transition width in degrees of great-circle arc; the mask is
-    `1/2` on the boundary, tending to 1 well inside and 0 well outside.
+  - `width`: transition width in degrees of great-circle arc, and must be
+    positive; the mask is `1/2` on the boundary, tending to 1 well inside and 0
+    well outside.
   - `inside`: when `false`, the mask is the exact complement.
 
 The polygon is evaluated in a longitude frame centered on its first vertex,
