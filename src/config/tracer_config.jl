@@ -176,8 +176,9 @@ mapping carrying a `type`:
     reference region); requires `vertices` (a list of `[lon, lat]` pairs in
     degrees) and `width`
 
-All region types accept `inside: false` (`above: false` for
-`"tanh_altitude"`) to select the exact complement of the mask.
+Every type except `"everywhere"` accepts `inside: false` (`above: false` for
+`"tanh_altitude"`) to select the exact complement of the mask. The whole domain
+has no complement, so `"everywhere"` takes no key besides `type`.
 """
 tag_region_from_config(::Nothing, ::Type{FT}) where {FT} = nothing
 
