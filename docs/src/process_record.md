@@ -86,6 +86,7 @@ says what happened in this cell, not what arrived here.
     water side is zero under that same default, and is additionally a no-op
     under 1M, where `microphysics_tendency!` moves mass between species without
     changing `ρq_tot`.
+
   - **Transport, phase changes, gravity-wave drag and numerical corrections**
     have no bracket to record, so they are absent entirely. A record covers the
     processes in `KNOWN_TAG_SOURCES` and `KNOWN_WATER_TAG_SOURCES` and nothing
