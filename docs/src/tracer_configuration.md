@@ -19,6 +19,37 @@ numbers, and run.
 The three are independent. You can switch on any one of them, or all three, in
 the same run. Each is off by default and costs nothing when off.
 
+## What the words mean
+
+Two of these families use the word "tag", and both accept a `source` key, but a
+tag does not hold the same kind of quantity in each.
+
+  - **source tag**: an amount of the parent variable that is present now, traced
+    back to where it came from. Never negative. The `water_tracers` entries are
+    source tags.
+  - **process-change record**: the signed increment one process has added since
+    the tag started. Negative under net cooling. An `energy_tracers` entry with
+    a `source` holds one of these.
+  - **process tag**: an `energy_tracers` entry configured with `source`. Named
+    that way because it holds a process-change record, not a source amount.
+  - **region tag**: a transported partition of the parent variable, in either
+    family.
+  - **source tracing**: what the source tags do. A description of the method,
+    not the name of any output.
+  - **closure**: whether the tags still add up to the variable they split. Also
+    called a sum-to-total test.
+
+The two families differ in the *rule*, not the key. Water shares out production
+by mask and takes loss from each tag in proportion to what it already holds,
+which yields an amount actually present. Energy applies the whole signed
+increment by mask. See [Attribution](tagged_water.md#Attribution) and
+[What a tag means](tagged_tracers.md#What-a-tag-means).
+
+Two words are deliberately not used here. *Heat tagging* names a different
+method that tags potential temperature; this tags moist total energy. A *source
+fingerprint* is the pattern that source shares form across space and time, which
+is an analysis product rather than anything the model writes out.
+
 They are also separate top-level keys, so they can come from separate
 configuration files. A run assembled from a numerics file, a water-tracer file
 and an energy-tracer file keeps all three: later files override earlier ones key

@@ -2,10 +2,45 @@
 
 Tagged tracers decompose the total energy field ``\rho e_\mathrm{tot}`` into
 labeled prognostic components, either by **region** (via smooth spatial
-masks) or by **source process** (e.g. radiation). Each tag is an ordinary
+masks) or by **process** (e.g. radiation). Each tag is an ordinary
 grid-scale tracer `Y.c.ρe_tag_<name>`, transported by the automatic tracer
 machinery (see [Tracers](passive_tracers.md)), so the sum of a set of region
 tags can be checked against ``\rho e_\mathrm{tot}``.
+
+!!! warning "Energy, not heat and not temperature"
+
+    The tagged variable is density-weighted moist total energy
+    ``\rho e_\mathrm{tot}``. It is not temperature, and it is not heat. Two
+    named methods in the literature tag neither: Grewe's *temperature tagging*
+    tags temperature, and Fajber and Kushner's *heat tagging* tags potential
+    temperature. This page cites the latter for its proportional-removal rule,
+    which the [water tags](tagged_water.md) borrow, not for the tagged
+    variable. Do not describe this family as heat tagging.
+
+## What a tag means
+
+A tag configured with `region` and a tag configured with `source` are different
+kinds of quantity, and the difference matters more than the shared word "tag".
+
+  - A **region tag** is a transported partition of ``\rho e_\mathrm{tot}``. It
+    starts as the region's share of the energy present and receives every
+    attributed process, weighted by its mask.
+  - A **process tag** — one configured with `source` — is a **process-change
+    record**. It starts at zero and accumulates the signed increment that one
+    labeled process adds to ``\rho e_\mathrm{tot}``. Heating adds, cooling
+    subtracts, and the accumulated value can be negative.
+
+A process tag is therefore a history of what a process did, not a share of the
+energy that is here now. Reading `e_tag_rad = -3.0e4` as "radiation supplied a
+negative amount of the local energy" is a misreading: it says radiation has
+removed that much more energy than it added since the tag started.
+
+The `source` key is kept for symmetry with `water_tracers`, where the same key
+selects the same processes. The two families differ in the *rule*, not the key.
+The water tags share out production by mask and take loss from each tag in
+proportion to what it holds, which yields an amount of water actually present
+and never below zero. The energy tags apply the whole signed increment by mask.
+Both are useful; they answer different questions.
 
 ## Enabling tags
 
@@ -101,10 +136,12 @@ print(yaml.dump({"vertices": vertices}))
     is what makes a reference-region polygon usable — choose it comparable
     to (or larger than) the horizontal grid spacing.
 
-## Source tags
+## Process tags
 
-A source tag starts at zero and accumulates the tendency that a labeled
-process adds to ``\rho e_\mathrm{tot}``.
+A process tag starts at zero and accumulates the tendency that a labeled
+process adds to ``\rho e_\mathrm{tot}``. It is configured with the `source`
+key, and it holds a process-change record rather than a share of the energy
+present. See [What a tag means](#What-a-tag-means).
 
 ### Taggable processes
 
@@ -161,13 +198,13 @@ through the automatic tracer machinery. Excluded, therefore:
 These land in the closure residual described below, which is why that
 residual is a monitored quantity rather than zero.
 
-### Regions and sources combined
+### Regions and processes combined
 
-Pure region tags receive **every** attributed source, weighted by their
+Pure region tags receive **every** attributed process, weighted by their
 mask, so a partition-of-unity set of region tags keeps tracking
 ``\rho e_\mathrm{tot}``. A tag with both `region` and `source` also starts
-at zero and accumulates only its own sources, restricted to its region — the
-`region` restricts *where* the source is counted; it does not add the
+at zero and accumulates only its own processes, restricted to its region — the
+`region` restricts *where* the process is counted; it does not add the
 region's energy content to the tag.
 
 ## Diagnostics and closure
@@ -187,7 +224,7 @@ of the pointwise energy scale. If the configured region masks do not sum to
 initialization and `e_tag_res` is dominated by the overlap instead of by
 attribution leakage.
 
-A sharper *process closure* check is available by splitting a source tag
+A sharper *process closure* check is available by splitting a process tag
 across a partition: with `rad`, `rad_stratosphere`, and `rad_troposphere`
 tags, transport linearity implies ``e_{\mathrm{tag,rad\_strat}} + e_{\mathrm{tag,rad\_tropo}} = e_{\mathrm{tag,rad}}`` to near machine
 precision at all times — any violation indicates a bug rather than expected
@@ -211,6 +248,34 @@ integration test use this identity with the Held–Suarez source.
   - Tagged state is carried through restarts like any other prognostic
     field; the masks are rebuilt from the configuration, so the
     `energy_tracers` block must match the one used to write the checkpoint.
+
+## Interpretation limit
+
+Exact closure establishes internally consistent contribution accounting. It does
+not turn the tags into counterfactual sensitivities. Tagging says what
+contributed to the simulated energy; it does not say what would change if a
+process were altered. That is a question for perturbation or ensemble
+experiments.
+
+The mask weighting, the choice of which processes are attributed, and the
+grouping of gains and losses within one bracket are modeling choices.
+Conclusions are conditional on them.
+
+### Tag values depend on the energy reference
+
+Moist total energy has no physical zero. Its value depends on the chosen
+reference points for thermodynamic and gravitational energy, so a shift
+``\rho e_\mathrm{tot} \to \rho e_\mathrm{tot} + c\rho`` changes what a region
+tag holds and changes every residual normalized by
+``\max|\rho e_\mathrm{tot}|``. The integration test's tolerance is normalized
+that way, so it is not comparable across configurations that use different
+references.
+
+Process tags are unaffected, because they accumulate increments rather than
+shares. This is one reason to read the two kinds of tag separately.
+
+Water has a physical zero and does not have this problem, which is why
+`q_tag_res` and `e_tag_res` are not directly comparable numbers.
 
 See `config/model_configs/baroclinic_wave_tagged_tracers.yml` for a complete
 example, and `test/tagged_tracers_integration.jl` for the closure assertions.

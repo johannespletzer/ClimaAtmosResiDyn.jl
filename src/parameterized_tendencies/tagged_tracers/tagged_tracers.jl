@@ -2,10 +2,22 @@
 ##### Tagged prognostic energy tracers
 #####
 ##### Each tag adds one grid-scale prognostic field `Y.c.ρe_tag_<name>` holding
-##### part of the total moist energy `ρe_tot`, so the tags record where energy
-##### came from. The `energy_tracers` config key switches them on. Types live in
-##### `types.jl` and config parsing in `config/tracer_config.jl`. The physics is
-##### written up in `docs/src/tagged_tracers.md`.
+##### part of the total moist energy `ρe_tot`. The `energy_tracers` config key
+##### switches them on. Types live in `types.jl` and config parsing in
+##### `config/tracer_config.jl`. The physics is written up in
+##### `docs/src/tagged_tracers.md`.
+#####
+##### The two kinds of tag hold different quantities. A region tag is a
+##### transported partition of `ρe_tot`. A tag configured with `source` is a
+##### process-change record: it starts at zero and accumulates the signed
+##### increment one process adds, so cooling drives it negative. Call the second
+##### kind a process tag. It says what a process did, not what share of the
+##### energy present came from it.
+#####
+##### The water tags in `tagged_water.jl` use the same `source` key but a
+##### different rule. They share out production by mask and take loss from each
+##### tag in proportion to what it holds, so a water tag is an amount of water
+##### actually present and never goes below zero. The rule differs, not the key.
 #####
 ##### The rest of the model reaches tagging through four entry points:
 #####
@@ -561,8 +573,13 @@ the tagged tracer tendencies:
   - pure region tags (no sources) receive `M * ᶜΔ`, where `M` is the
     tag's precomputed mask — every attributed process counts, so that the sum
     of a partition-of-unity set of region tags tracks `ρe_tot`;
-  - source tags receive `ᶜΔ` only when their `source` matches, weighted by
+  - process tags receive `ᶜΔ` only when their `source` matches, weighted by
     their mask when they also have a region.
+
+The whole signed increment is applied, so a process tag accumulates a
+process-change record and goes negative under net cooling. This is the one
+place the energy rule differs from the water rule in `tagged_water.jl`, which
+splits the increment and takes loss donor-proportionally instead.
 
 A no-op when tagging is disabled.
 """

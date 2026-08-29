@@ -2243,13 +2243,18 @@ names can be generated at compile time (GPU-compatible).
 
   - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. A pure region tag
     (`region` given, no sources) is initialized to `ρe_tot * mask` and
-    receives every attributed source, masked. Any source tag is initialized
-    to zero — including region-restricted source tags, which accumulate only
-    their own sources, masked by their region.
+    receives every attributed process, masked. Any tag with sources is
+    initialized to zero — including region-restricted ones, which accumulate
+    only their own processes, masked by their region.
   - `sources`: a `Tuple` of `Symbol`s labeling the physical processes whose
     `ρe_tot` tendencies are attributed to this tag (e.g. `(:radiation,)`);
     empty for passive region tags. A single `Symbol` is also accepted
     (`:none` meaning "no sources").
+
+A tag with sources is a *process tag*: it holds a process-change record, the
+signed increment its processes have added since the start, and goes negative
+under net cooling. It is not a share of the energy present. The `source` key is
+shared with [`WaterTag`](@ref), which applies a different rule to it.
 """
 struct TracerTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
        AbstractTracerTag{name}
