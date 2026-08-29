@@ -562,11 +562,30 @@ function closure_checks_from_config(config::AtmosConfig)
 end
 
 """
+    process_record_from_config(record_config, key, known, groups)
+
+Convert an `energy_process_record` or `water_process_record` config entry into a
+[`ProcessRecordModel`](@ref), or `nothing` when the key is absent or empty.
+
+The entry takes the same shape as a tag's `source`: one process label, a list of
+them, or a group name that expands to its members. Reusing
+[`tag_sources_from_config`](@ref) here is deliberate, so that a record and a tag
+name their processes identically and an unknown label is refused the same way.
+"""
+process_record_from_config(::Nothing, key, known, groups) = nothing
+function process_record_from_config(record_config, key, known, groups)
+    processes = tag_sources_from_config(record_config, key, known, groups)
+    isempty(processes) && return nothing
+    return ProcessRecordModel(Tuple(RecordedProcess{p}() for p in processes))
+end
+
+"""
     AtmosTagging(config::AtmosConfig)
 
-Assemble the `AtmosTagging` group from the `energy_tracers` and `water_tracers`
-config keys. Either being `~` (null) or an empty list disables that family
-entirely, at no runtime cost.
+Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
+`energy_process_record` and `water_process_record` config keys. Any of them
+being `~` (null) or an empty list disables that feature entirely, at no runtime
+cost.
 """
 function AtmosTagging(config::AtmosConfig)
     FT = eltype(config)
@@ -585,7 +604,32 @@ function AtmosTagging(config::AtmosConfig)
         )
         WaterTaggingModel(water_tracer_tuple(water_entries, FT))
     end
-    return AtmosTagging(; tagging_model, water_tagging_model)
+    energy_process_record = process_record_from_config(
+        config.parsed_args["energy_process_record"],
+        "energy_process_record",
+        KNOWN_TAG_SOURCES,
+        TAG_SOURCE_GROUPS,
+    )
+    water_record_config = config.parsed_args["water_process_record"]
+    water_process_record = if isnothing(water_record_config)
+        nothing
+    else
+        check_water_tagging_supported(
+            get_microphysics_model(config.parsed_args),
+        )
+        process_record_from_config(
+            water_record_config,
+            "water_process_record",
+            KNOWN_WATER_TAG_SOURCES,
+            WATER_TAG_SOURCE_GROUPS,
+        )
+    end
+    return AtmosTagging(;
+        tagging_model,
+        water_tagging_model,
+        energy_process_record,
+        water_process_record,
+    )
 end
 
 # ============================================================================

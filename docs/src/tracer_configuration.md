@@ -39,6 +39,10 @@ tag does not hold the same kind of quantity in each.
   - **closure**: whether the tags still add up to the variable they split. Also
     called a sum-to-total test.
 
+A process-change record is available on its own, without any tags, through the
+`energy_process_record` and `water_process_record` keys. See
+[Process-Change Records](process_record.md).
+
 The two families differ in the *rule*, not the key. Water shares out production
 by mask and takes loss from each tag in proportion to what it already holds,
 which yields an amount actually present. Energy applies the whole signed

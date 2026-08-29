@@ -2334,13 +2334,48 @@ struct WaterTaggingModel{T <: Tuple}
 end
 
 """
+    RecordedProcess{name}()
+
+One process whose applied increment is accumulated by a
+[`ProcessRecordModel`](@ref). The process `name` is a type parameter so that the
+cache field `prc_<name>` can be looked up at compile time, exactly as
+[`TracerTag`](@ref) does for its state field.
+"""
+struct RecordedProcess{name} end
+
+"""
+    process_name(::RecordedProcess)
+
+The `Symbol` naming the recorded process, e.g. `:radiation`.
+"""
+process_name(::RecordedProcess{name}) where {name} = name
+
+"""
+    ProcessRecordModel(processes::Tuple)
+
+Model component holding a `Tuple` of [`RecordedProcess`](@ref)es. Constructed
+from the `energy_process_record` or `water_process_record` config entry; see
+`AtmosTagging(::AtmosConfig)` in `config/tracer_config.jl`.
+
+A process record answers "what did this process do here", not "where did the
+energy present come from". It accumulates the signed increment each bracketed
+process applies, so gains are positive and losses negative. It is not a
+prognostic field and is never transported.
+"""
+struct ProcessRecordModel{P <: Tuple}
+    processes::P
+end
+
+"""
     AtmosTagging
 
 Groups tagged-tracer models and types.
 """
-@kwdef struct AtmosTagging{TM, WM}
+@kwdef struct AtmosTagging{TM, WM, EPR, WPR}
     tagging_model::TM = nothing
     water_tagging_model::WM = nothing
+    energy_process_record::EPR = nothing
+    water_process_record::WPR = nothing
 end
 
 """

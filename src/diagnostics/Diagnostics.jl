@@ -85,6 +85,10 @@ import ..WaterTaggingModel
 import ..water_region_tag_state_names
 import ..water_tag_fraction
 
+# process records
+import ..ProcessRecordModel
+import ..process_name
+
 # surface temperature
 import ..SurfaceConditions
 import ..SurfaceConditions: SlabOceanTemperature

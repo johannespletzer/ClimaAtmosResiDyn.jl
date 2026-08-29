@@ -308,8 +308,16 @@ automatic-differentiation Jacobian is used, and only `p.precomputed` and
 function tagging_cache(Y, atmos::AtmosModel)
     energy = _tagging_cache(Y, atmos.tagging_model)
     water = _water_tagging_cache(Y, atmos.water_tagging_model)
-    isnothing(energy) && isnothing(water) && return nothing
-    return (; _or_empty(energy)..., _or_empty(water)...)
+    records = process_record_cache(Y, atmos)
+    isnothing(energy) &&
+        isnothing(water) &&
+        isnothing(records) &&
+        return nothing
+    return (;
+        _or_empty(energy)...,
+        _or_empty(water)...,
+        _or_empty(records)...,
+    )
 end
 _or_empty(::Nothing) = (;)
 _or_empty(nt) = nt
@@ -348,6 +356,7 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
             ᶜtagging_q_share_norm = similar(Y.c.ρ),
         )
     )...,
+    process_record_scratch(Y, atmos)...,
 )
 
 """

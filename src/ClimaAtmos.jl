@@ -96,6 +96,8 @@ include(
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_tracers.jl"))
 # Tagged prognostic water tracers (reuses the regions and masks defined above)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water.jl"))
+# Process-change records (signed per-process increments, cache-resident)
+include(joinpath("parameterized_tendencies", "tagged_tracers", "process_record.jl"))
 
 include(joinpath("surface_conditions", "SurfaceConditions.jl"))
 include(joinpath("setups", "Setups.jl"))
