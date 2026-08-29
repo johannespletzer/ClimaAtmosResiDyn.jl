@@ -8,10 +8,10 @@ energy present now came from**. Each tag adds one grid-scale prognostic field
 They are the energy counterpart of the [Tagged Water Tracers](tagged_water.md),
 and a different quantity from the [Tagged Energy Tracers](tagged_tracers.md):
 
-| Family | Field | Holds |
-|:------ |:----- |:----- |
+| Family               | Field           | Holds                                                 |
+|:-------------------- |:--------------- |:----------------------------------------------------- |
 | `energy_source_tags` | `ρe_src_<name>` | an amount of energy present now, traced to its origin |
-| `energy_tracers` | `ρe_tag_<name>` | a signed record of what one process did |
+| `energy_tracers`     | `ρe_tag_<name>` | a signed record of what one process did               |
 
 Both accept the same `source` labels. The rule applied to them differs, and that
 is the whole distinction.
