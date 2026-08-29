@@ -25,8 +25,10 @@ Two of these families use the word "tag", and both accept a `source` key, but a
 tag does not hold the same kind of quantity in each.
 
   - **source tag**: an amount of the parent variable that is present now, traced
-    back to where it came from. Never negative. The `water_tracers` entries are
-    source tags.
+    back to where it came from. The attribution rule never drives it below zero.
+    Transport can, and `repair_water_tag_partition!` puts it back. The
+    `q_tag_fix_<name>` diagnostic logs how much was moved. The `water_tracers`
+    entries are source tags.
   - **process-change record**: the signed increment one process has added since
     the tag started. Negative under net cooling. An `energy_tracers` entry with
     a `source` holds one of these.

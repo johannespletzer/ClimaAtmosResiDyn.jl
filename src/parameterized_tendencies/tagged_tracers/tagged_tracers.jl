@@ -17,7 +17,9 @@
 ##### The water tags in `tagged_water.jl` use the same `source` key but a
 ##### different rule. They share out production by mask and take loss from each
 ##### tag in proportion to what it holds, so a water tag is an amount of water
-##### actually present and never goes below zero. The rule differs, not the key.
+##### actually present. That rule never drives a tag below zero. Transport can,
+##### and `repair_water_tag_partition!` puts it back. The rule differs, not the
+##### key.
 #####
 ##### The rest of the model reaches tagging through four entry points:
 #####
