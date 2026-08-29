@@ -515,7 +515,8 @@ These are starting points, not derived numbers. Read the first run's closure
 table and set a tolerance that sits above the level your configuration settles
 at, so that the warning means something changed.
 """
-const DEFAULT_CLOSURE_TOLERANCES = (; water = 1.0e-10, energy = 1.0e-6)
+const DEFAULT_CLOSURE_TOLERANCES =
+    (; water = 1.0e-10, energy = 1.0e-6, energy_source = 1.0e-6)
 
 """
     closure_check_from_config(spec_value, context, FT; default_tolerance)
@@ -560,7 +561,7 @@ end
 """
     closure_checks_from_config(config::AtmosConfig)
 
-Read both closure-check blocks, as `(; water, energy)`.
+Read the closure-check blocks, as `(; water, energy_source, energy)`.
 """
 function closure_checks_from_config(config::AtmosConfig)
     pa = config.parsed_args
@@ -571,6 +572,12 @@ function closure_checks_from_config(config::AtmosConfig)
             "`water_closure_check`",
             FT;
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.water,
+        ),
+        energy_source = closure_check_from_config(
+            pa["energy_source_closure_check"],
+            "`energy_source_closure_check`",
+            FT;
+            default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy_source,
         ),
         energy = closure_check_from_config(
             pa["energy_closure_check"],

@@ -820,7 +820,8 @@ end
 # Tagging component callbacks
 """
     default_model_callbacks(tagging::AtmosTagging; water_closure_check = nothing,
-                            energy_closure_check = nothing, kwargs...)
+                            energy_closure_check = nothing,
+    energy_source_closure_check = nothing, kwargs...)
 
 Install the online closure checks of the two tag families.
 
@@ -860,6 +861,16 @@ function default_model_callbacks(
             state_names = region_tag_state_names,
             config_key = "energy_closure_check",
             tracer_key = "energy_tracers",
+            scheduling...,
+        )...,
+        tag_closure_callback(
+            energy_source_closure_check,
+            tagging.energy_source_tagging_model;
+            family = "energy_source",
+            total_name = :ρe_tot,
+            state_names = energy_source_region_tag_state_names,
+            config_key = "energy_source_closure_check",
+            tracer_key = "energy_source_tags",
             scheduling...,
         )...,
     )
