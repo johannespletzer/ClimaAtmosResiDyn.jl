@@ -1,7 +1,7 @@
 job_id: "passive_stratospheric_tracers"
 
 # ===========================================================================
-# Stratospheric passive tracer lifetimes
+# Stratospheric passive tracer residence times
 # ===========================================================================
 #
 # 24 inert tracers, one per source region on a grid of latitude boxes by height
@@ -9,16 +9,16 @@ job_id: "passive_stratospheric_tracers"
 # latitude boxes 10 degrees wide, centred from 75S to 75N, crossed with 4 height
 # boxes 2 km deep, stacked every 10 km from the local tropopause up to 32 km
 # above it. Small boxes are the point. A tracer emitted over a deep layer or a
-# wide latitude range reports a lifetime averaged over conditions that can
+# wide latitude range reports a residence time averaged over conditions that can
 # differ by years. Every tracer is removed below the tropopause and nowhere
-# else, so once its burden stops drifting its lifetime is
+# else, so once its burden stops drifting its residence time is
 #
 #     tau = burden / source
 #
 # Both are written to `stratospheric_tracer_budget.csv` in the output directory
 # every `dt_tracer_budget`, together with
 # `imbalance = (source - loss) / source`, which tells you whether equilibrium
-# has been reached. `post_processing/tracer_lifetimes.jl` summarises that table.
+# has been reached. `post_processing/tracer_residence_times.jl` summarises it.
 #
 # The 6 x 4 grid is sized by compilation cost. Setup is almost entirely
 # compilation and grows steeply with the tracer count. perf/tracer_scaling.jl
@@ -26,7 +26,7 @@ job_id: "passive_stratospheric_tracers"
 # hours at 48, paid again on every launch and restart. Within that budget the
 # stack is coarsened rather than truncated, with 4 height bands at double the
 # spacing so it still reaches the same altitude, because the deep stratosphere
-# is where the long lifetimes are. To cover more regions, run several
+# is where the long residence times are. To cover more regions, run several
 # configurations with different slices of the source grid. The tracers are inert
 # and independent of each other.
 #
@@ -46,12 +46,12 @@ passive_tracers:
     height_spacing: 10000.0
   heights_from: "tropopause"
   # Sets the magnitude of the tracers. The burden and the source are both
-  # linear in it and only their ratio is reported, so the lifetimes are
+  # linear in it and only their ratio is reported, so the residence times are
   # unaffected.
   production_rate: 1.0e-10
-  # Short next to the lifetimes being measured, which run to years, and long
-  # next to the timestep. That approximates "zero below the tropopause" closely
-  # while keeping the explicit tendency from stiffening.
+  # Short next to the residence times being measured, which run to years, and
+  # long next to the timestep. That approximates "zero below the tropopause"
+  # closely while keeping the explicit tendency from stiffening.
   loss_timescale: "6hours"
 dt_tracer_budget: "10days"
 
@@ -65,7 +65,7 @@ dt_tracer_budget: "10days"
 # committing to a multi-year integration.
 # ---------------------------------------------------------------------------
 config: sphere
-# Float64 rather than the Float32 default. The lifetimes come from global
+# Float64 rather than the Float32 default. The residence times come from global
 # burdens accumulated over years and from their drift between output times. The
 # burden integral is summed over ~10^5 points and then differenced, and that
 # cancellation needs more than Float32's seven digits.
@@ -106,10 +106,10 @@ output_default_diagnostics: false
 
 diagnostics:
   # Monthly means of the tracer mass fractions. Instantaneous 3-D output of 24
-  # tracers would dominate the run's disk usage, and the lifetimes come from the
-  # budget table rather than these fields. One name per line, because the oldest
-  # YAML.jl our `[compat]` allows reads a bracketed list only when it sits on a
-  # single line.
+  # tracers would dominate the run's disk usage, and the residence times come
+  # from the budget table rather than these fields. One name per line, because
+  # the oldest YAML.jl our `[compat]` allows reads a bracketed list only when
+  # it sits on a single line.
   - short_name:
       - q_gas_y01z01
       - q_gas_y02z01

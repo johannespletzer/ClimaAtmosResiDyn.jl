@@ -64,14 +64,13 @@ toml: [toml/strat_tracers_transient.toml]
 #
 # Nine latitude bands 10 degrees wide, centred 0, +/-25, +/-35, +/-60, +/-80.
 # The 25/35 pair shares an edge at 30 degrees, bracketing the subtropical mixing
-# barrier so the step in lifetime across it is measured directly. The +/-60 band
-# samples the vortex edge and +/-80 the polar cap.
+# barrier so the step in residence time across it is measured directly. The
+# +/-60 band samples the vortex edge and +/-80 the polar cap.
 #
 # Heights are the enclosing faces of single model levels, so each box is one
 # grid layer thick over flat terrain. Over orography the SLEVE-warped coordinate
 # shifts the levels through the fixed window and a box may catch two centres.
-# The lifetimes hold regardless, since burden and source come from the same
-# mask.
+# The residence times hold regardless, since burden and source share a mask.
 # ---------------------------------------------------------------------------
 dt_tracer_budget: "30days"
 passive_tracers:
@@ -124,7 +123,7 @@ diagnostics:
     period: 30days
     writer: netcdf
 
-  # The lifetimes come from the budget table rather than these fields. A
+  # The residence times come from the budget table rather than these fields. A
   # low-frequency sample over 42 years is still cheap insurance against a
   # surprise the table alone cannot diagnose.
   - short_name: [ta, ua, va, pfull]

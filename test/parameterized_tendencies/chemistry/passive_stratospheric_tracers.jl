@@ -420,13 +420,13 @@ end
     @test length(budget.burden) == CA.n_tracers(chemistry_model)
     @test all(iszero, budget.burden)
     # Reported separately because the sink clamps at zero while the burden
-    # does not, so undershoot mass would otherwise bias the lifetime
+    # does not, so undershoot mass would otherwise bias the residence time
     # invisibly. The tracers start at zero, so there is none yet.
     @test all(iszero, budget.negative_burden)
     @test all(iszero, budget.loss)
     @test all(budget.source .> 0)
     # The budget diagnoses the same source the tendency applied, tracer by
-    # tracer, which is what makes `burden / source` the tracer's lifetime.
+    # tracer. That is what makes `burden / source` the tracer's residence time.
     for (tracer_index, name) in enumerate(names)
         @test budget.source[tracer_index] ≈ sum(getproperty(Yₜ.c, name))
     end
