@@ -75,9 +75,17 @@ says what happened in this cell, not what arrived here.
     `ForwardDiff.Dual` numbers when an automatic-differentiation Jacobian is
     used, and only `p.precomputed` and `p.scratch` are converted to dual-typed
     fields. Writing a record from there would put a `Dual` into a plain-float
-    cache field. So `microphysics` on the water side and `precipitation` on the
-    energy side stay **zero** when they are stepped implicitly, which is the
-    default for microphysics.
+    cache field.
+
+    Three labels are affected, and one of them can never be anything else.
+    `precipitation` has **no explicit bracket at all** — the tendency it names
+    is reached only from the implicit path — so an energy record that lists it
+    is zero in every configuration. `microphysics` on the energy side is zero
+    whenever microphysics is stepped implicitly, which is the default, because
+    the implicit bracket covers the water half only. `microphysics` on the
+    water side is zero under that same default, and is additionally a no-op
+    under 1M, where `microphysics_tendency!` moves mass between species without
+    changing `ρq_tot`.
   - **Transport, phase changes, gravity-wave drag and numerical corrections**
     have no bracket to record, so they are absent entirely. A record covers the
     processes in `KNOWN_TAG_SOURCES` and `KNOWN_WATER_TAG_SOURCES` and nothing

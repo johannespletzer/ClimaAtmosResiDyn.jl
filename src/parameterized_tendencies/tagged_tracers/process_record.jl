@@ -23,9 +23,10 @@
 ##### contract `q_tag_fix_<name>` follows.
 #####
 ##### Only the explicit tendency path is recorded. The implicit path would need
-##### to write a `ForwardDiff.Dual` into a cache field that holds plain floats,
-##### which is why `microphysics` on the water side and `precipitation` on the
-##### energy side are absent from a record even when they are configured. See
+##### to write a `ForwardDiff.Dual` into a cache field that holds plain floats.
+##### So `precipitation` never reaches a record at all, its only bracket being
+##### on the implicit path, and `microphysics` reaches one only when it is
+##### stepped explicitly. Both stay zero otherwise, even when configured. See
 ##### `docs/src/process_record.md`.
 
 # ============================================================================

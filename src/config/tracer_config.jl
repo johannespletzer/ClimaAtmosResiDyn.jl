@@ -610,20 +610,20 @@ function AtmosTagging(config::AtmosConfig)
         KNOWN_TAG_SOURCES,
         TAG_SOURCE_GROUPS,
     )
-    water_record_config = config.parsed_args["water_process_record"]
-    water_process_record = if isnothing(water_record_config)
-        nothing
-    else
-        check_water_tagging_supported(
-            get_microphysics_model(config.parsed_args),
-        )
-        process_record_from_config(
-            water_record_config,
-            "water_process_record",
-            KNOWN_WATER_TAG_SOURCES,
-            WATER_TAG_SOURCE_GROUPS,
-        )
-    end
+    water_process_record = process_record_from_config(
+        config.parsed_args["water_process_record"],
+        "water_process_record",
+        KNOWN_WATER_TAG_SOURCES,
+        WATER_TAG_SOURCE_GROUPS,
+    )
+    # Parse before checking the microphysics model. A record that names no
+    # process is disabled, and a disabled record must not demand a moist model.
+    # Checking first made `water_process_record: []` fail on a dry run with a
+    # message naming a key the user had not set.
+    isnothing(water_process_record) || check_water_tagging_supported(
+        get_microphysics_model(config.parsed_args),
+        "water_process_record",
+    )
     return AtmosTagging(;
         tagging_model,
         water_tagging_model,
