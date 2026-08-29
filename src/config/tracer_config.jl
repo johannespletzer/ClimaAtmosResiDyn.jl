@@ -476,6 +476,26 @@ water_tracer_tuple(entries, ::Type{FT}) where {FT} = tracer_tag_tuple(
     groups = WATER_TAG_SOURCE_GROUPS,
 )
 
+"""
+    energy_source_tracer_tuple(entries, FT)
+
+Convert the parsed `energy_source_tags` config entries into a `Tuple` of
+[`EnergySourceTag`](@ref)s suitable for constructing an
+[`EnergySourceTaggingModel`](@ref).
+
+The entry schema is the one `energy_tracers` uses, and the process labels are
+the same, because a source tag and a process tag select from the same set of
+bracketed processes. Only the rule applied to them differs.
+"""
+energy_source_tracer_tuple(entries, ::Type{FT}) where {FT} = tracer_tag_tuple(
+    entries,
+    FT;
+    tag_type = EnergySourceTag,
+    key = "energy_source_tags",
+    known = KNOWN_TAG_SOURCES,
+    groups = TAG_SOURCE_GROUPS,
+)
+
 # ============================================================================
 # Closure checking
 # ============================================================================
@@ -583,7 +603,8 @@ end
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
-`energy_process_record` and `water_process_record` config keys. Any of them
+`energy_source_tags`, `energy_process_record` and `water_process_record` config
+keys. Any of them
 being `~` (null) or an empty list disables that feature entirely, at no runtime
 cost.
 """
@@ -604,6 +625,15 @@ function AtmosTagging(config::AtmosConfig)
         )
         WaterTaggingModel(water_tracer_tuple(water_entries, FT))
     end
+    source_entries = config.parsed_args["energy_source_tags"]
+    energy_source_tagging_model =
+        if isnothing(source_entries) || isempty(source_entries)
+            nothing
+        else
+            EnergySourceTaggingModel(
+                energy_source_tracer_tuple(source_entries, FT),
+            )
+        end
     energy_process_record = process_record_from_config(
         config.parsed_args["energy_process_record"],
         "energy_process_record",
@@ -627,6 +657,7 @@ function AtmosTagging(config::AtmosConfig)
     return AtmosTagging(;
         tagging_model,
         water_tagging_model,
+        energy_source_tagging_model,
         energy_process_record,
         water_process_record,
     )

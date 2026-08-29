@@ -308,14 +308,17 @@ automatic-differentiation Jacobian is used, and only `p.precomputed` and
 function tagging_cache(Y, atmos::AtmosModel)
     energy = _tagging_cache(Y, atmos.tagging_model)
     water = _water_tagging_cache(Y, atmos.water_tagging_model)
+    sources = _energy_source_tagging_cache(Y, atmos.energy_source_tagging_model)
     records = process_record_cache(Y, atmos)
     isnothing(energy) &&
         isnothing(water) &&
+        isnothing(sources) &&
         isnothing(records) &&
         return nothing
     return (;
         _or_empty(energy)...,
         _or_empty(water)...,
+        _or_empty(sources)...,
         _or_empty(records)...,
     )
 end
@@ -676,4 +679,6 @@ adjustment applied per tag would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags i
 follow the parent's limiting through [`rescale_water_tags!`](@ref).
 """
 is_tagged_tracer_name(name) =
-    is_energy_tag_name(name) || is_water_tag_name(name)
+    is_energy_tag_name(name) ||
+    is_water_tag_name(name) ||
+    is_energy_source_tag_name(name)

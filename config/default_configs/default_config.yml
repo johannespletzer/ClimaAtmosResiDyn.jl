@@ -461,6 +461,9 @@ water_tracers:
 energy_tracers:
   help: "Tracers that split moist energy by where it came from, adding one prognostic field `ρe_tag_<name>` each [`~` (default, off)]. Same entry schema as `water_tracers`, with its own set of `source` labels. See docs/src/tracer_configuration.md."
   value: ~
+energy_source_tags:
+  help: "Tags that split moist energy by where the energy present now came from, adding one prognostic field `ρe_src_<name>` each [`~` (default, off)]. Same entry schema and `source` labels as `energy_tracers`, but the never-below-zero rule the water tags use rather than the signed process record. Values depend on the chosen energy reference, which has no physical zero. See docs/src/energy_source_tags.md."
+  value: ~
 energy_process_record:
   help: "Record what each listed process did to moist energy, as the signed increment it applied, output as `e_prc_<process>` [`~` (default, off)]. One `source` label, a list of them, or a group name, using the same labels as `energy_tracers`. Not a prognostic field and not transported, so a record says what a process did rather than where the energy present came from. See docs/src/process_record.md."
   value: ~
