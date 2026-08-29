@@ -95,10 +95,12 @@ import ClimaAtmos as CA
             φ_rad = CA.energy_source_fraction.(ᶜY.ρe_src_rad, ᶜY.ρe_tot)
             @test ᶜYₜ.ρe_src_tropics ≈ ᶜΔloss .* φ_tropics
             @test ᶜYₜ.ρe_src_rad ≈ ᶜΔloss .* φ_rad
-            # Loss removes at most what the tag holds, so a forward step of the
-            # size that keeps ρe_tot positive keeps the tag non-negative
-            @test all(ᶜYₜ.ρe_src_tropics .>= .-ᶜY.ρe_src_tropics)
-            @test all(ᶜYₜ.ρe_src_rad .>= .-ᶜY.ρe_src_rad)
+            # Loss removes at most what the tag holds, so applying the
+            # increment cannot take the tag below zero. Written as a sum rather
+            # than a comparison against a negated field, because `.-ᶜ` parses
+            # as a suffixed operator that Julia leaves undefined.
+            @test all(ᶜYₜ.ρe_src_tropics .+ ᶜY.ρe_src_tropics .>= 0)
+            @test all(ᶜYₜ.ρe_src_rad .+ ᶜY.ρe_src_rad .>= 0)
 
             # A non-positive parent falls back to zero rather than Inf/NaN
             fill!(ᶜYₜ.ρe_src_rad, FT(0))
