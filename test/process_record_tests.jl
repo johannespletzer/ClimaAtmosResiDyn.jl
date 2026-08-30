@@ -58,13 +58,14 @@ import ClimaAtmos as CA
                 prc_e_radiation = zeros(FT, 4),
                 prc_e_surface_flux = zeros(FT, 4),
             )
-            acc! = (Δ, src) -> CA._accumulate_records!(
-                CA.energy_record_field,
-                ᶜYₜ,
-                Δ,
-                src,
-                processes,
-            )
+            acc! =
+                (Δ, src) -> CA._accumulate_records!(
+                    CA.energy_record_field,
+                    ᶜYₜ,
+                    Δ,
+                    src,
+                    processes,
+                )
 
             # A gain-and-loss increment reaches only the matching process, and
             # keeps its sign: a record is a history, not a composition
