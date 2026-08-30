@@ -67,6 +67,18 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
             local_geometry,
             atmos_model.water_tagging_model,
         )...,
+        # Process records are prognostic so that the timestepper integrates
+        # them, but they are not tracers: their names carry no `ρ` prefix, so
+        # `gs_tracer_names` skips them and no transport operator sees them.
+        # They start at zero, so the parent value only sets the float type.
+        energy_process_record_variables(
+            ρe_tot,
+            atmos_model.energy_process_record,
+        )...,
+        water_process_record_variables(
+            ρ * q_tot,
+            atmos_model.water_process_record,
+        )...,
     )
 end
 

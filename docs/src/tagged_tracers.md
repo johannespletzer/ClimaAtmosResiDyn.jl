@@ -139,8 +139,13 @@ print(yaml.dump({"vertices": vertices}))
 
 A process tag starts at zero and accumulates the tendency that a labeled
 process adds to ``\rho e_\mathrm{tot}``. It is configured with the `source`
-key, and it holds a process-change record rather than a share of the energy
+key, and it holds a signed running total rather than a share of the energy
 present. See [What a tag means](#What-a-tag-means).
+
+It is *not* the process-change record described in
+[Process-Change Records](process_record.md). That is a separate family with one
+field per process instead of per tag, and unlike a process tag it is never
+transported.
 
 ### Taggable processes
 
