@@ -3,28 +3,50 @@ import ClimaAtmos as CA
 
 @testset "Process records" begin
     for FT in (Float32, Float64)
-        @testset "Names and cache fields ($FT)" begin
+        @testset "Names and state fields ($FT)" begin
             rad = CA.RecordedProcess{:radiation}()
             sfc = CA.RecordedProcess{:surface_flux}()
 
             @test CA.process_name(rad) == :radiation
             @test CA.process_name(sfc) == :surface_flux
 
-            # The cache entry is keyed `prc_<process>`, and the lookup finds it
-            entry = CA.record_entry(rad, FT[1, 2, 3])
-            @test keys(entry) == (:prc_radiation,)
-            @test CA.record_field(entry, rad) == FT[1, 2, 3]
+            # State entries are keyed `prc_e_<process>` / `prc_q_<process>`,
+            # and the compile-time lookup finds them
+            entry = CA.energy_record_entry(rad, FT[1, 2, 3])
+            @test keys(entry) == (:prc_e_radiation,)
+            @test CA.energy_record_field(entry, rad) == FT[1, 2, 3]
 
-            fields = CA._record_fields(zeros(FT, 3), (rad, sfc))
-            @test keys(fields) == (:prc_radiation, :prc_surface_flux)
-            @test all(iszero, fields.prc_radiation)
-            @test eltype(fields.prc_radiation) == FT
+            wentry = CA.water_record_entry(sfc, FT[4, 5, 6])
+            @test keys(wentry) == (:prc_q_surface_flux,)
+            @test CA.water_record_field(wentry, sfc) == FT[4, 5, 6]
+
+            # Records start at zero: a history, not a share of anything present
+            fields = CA._energy_record_variables(zero(FT), (rad, sfc))
+            @test keys(fields) == (:prc_e_radiation, :prc_e_surface_flux)
+            @test iszero(fields.prc_e_radiation)
+            @test fields.prc_e_radiation isa FT
 
             model = CA.ProcessRecordModel((rad, sfc))
-            @test CA.process_record_state_names(model) ==
-                  (:prc_radiation, :prc_surface_flux)
+            @test CA.energy_process_record_state_names(model) ==
+                  (:prc_e_radiation, :prc_e_surface_flux)
+            @test CA.water_process_record_state_names(model) ==
+                  (:prc_q_radiation, :prc_q_surface_flux)
             @test CA._records_process(model, :radiation)
             @test !CA._records_process(model, :held_suarez)
+
+            # A record is prognostic but must never be transported.
+            # `gs_tracer_names` picks up any top-level `Y.c` field whose name
+            # starts with `ρ`, and that alone opts a field into advection,
+            # diffusion, hyperdiffusion and the sponges. The missing `ρ` is the
+            # only thing keeping records out, so guard it here: a well-meaning
+            # rename to `ρprc_e_radiation` would silently start transporting a
+            # quantity whose whole purpose is to be separate from transport.
+            for name in (
+                CA.energy_process_record_state_names(model)...,
+                CA.water_process_record_state_names(model)...,
+            )
+                @test !startswith(String(name), "ρ")
+            end
         end
 
         @testset "Accumulation is signed and per process ($FT)" begin
@@ -32,35 +54,95 @@ import ClimaAtmos as CA
             sfc = CA.RecordedProcess{:surface_flux}()
             processes = (rad, sfc)
 
-            records = (;
-                prc_radiation = zeros(FT, 4),
-                prc_surface_flux = zeros(FT, 4),
+            ᶜYₜ = (;
+                prc_e_radiation = zeros(FT, 4),
+                prc_e_surface_flux = zeros(FT, 4),
+            )
+            acc! = (Δ, src) -> CA._accumulate_records!(
+                CA.energy_record_field,
+                ᶜYₜ,
+                Δ,
+                src,
+                processes,
             )
 
             # A gain-and-loss increment reaches only the matching process, and
             # keeps its sign: a record is a history, not a composition
             ᶜΔ = FT[1, -2, 3, -4]
-            CA._accumulate_records!(records, ᶜΔ, :radiation, processes)
-            @test records.prc_radiation == ᶜΔ
-            @test all(iszero, records.prc_surface_flux)
+            acc!(ᶜΔ, :radiation)
+            @test ᶜYₜ.prc_e_radiation == ᶜΔ
+            @test all(iszero, ᶜYₜ.prc_e_surface_flux)
 
             # Accumulating the same process again adds to it
-            CA._accumulate_records!(records, ᶜΔ, :radiation, processes)
-            @test records.prc_radiation == 2 .* ᶜΔ
-            @test all(iszero, records.prc_surface_flux)
+            acc!(ᶜΔ, :radiation)
+            @test ᶜYₜ.prc_e_radiation == 2 .* ᶜΔ
+            @test all(iszero, ᶜYₜ.prc_e_surface_flux)
 
             # A process the record does not list changes nothing
-            CA._accumulate_records!(records, ᶜΔ, :held_suarez, processes)
-            @test records.prc_radiation == 2 .* ᶜΔ
-            @test all(iszero, records.prc_surface_flux)
+            acc!(ᶜΔ, :held_suarez)
+            @test ᶜYₜ.prc_e_radiation == 2 .* ᶜΔ
+            @test all(iszero, ᶜYₜ.prc_e_surface_flux)
 
             # Equal gain and loss cancel to zero, which is the correct answer
             # for a net record and the reason a record is not a source share
-            CA._accumulate_records!(records, -2 .* ᶜΔ, :radiation, processes)
-            @test all(iszero, records.prc_radiation)
+            acc!(-2 .* ᶜΔ, :radiation)
+            @test all(iszero, ᶜYₜ.prc_e_radiation)
 
-            CA._accumulate_records!(records, ᶜΔ, :surface_flux, processes)
-            @test records.prc_surface_flux == ᶜΔ
+            acc!(ᶜΔ, :surface_flux)
+            @test ᶜYₜ.prc_e_surface_flux == ᶜΔ
+
+            # The water family is keyed separately, so an energy-side write
+            # cannot land in a water record of the same process name
+            ᶜwYₜ = (; prc_q_surface_flux = zeros(FT, 4))
+            CA._accumulate_records!(
+                CA.water_record_field,
+                ᶜwYₜ,
+                ᶜΔ,
+                :surface_flux,
+                (sfc,),
+            )
+            @test ᶜwYₜ.prc_q_surface_flux == ᶜΔ
+        end
+
+        @testset "The record integrates the rate, not the step count ($FT)" begin
+            # `_accumulate_records!` adds to the record's TENDENCY, and the
+            # timestepper integrates it. Forward Euler is enough to show the
+            # result depends on elapsed time and not on how many evaluations
+            # there were. `Yₜ` is zeroed at the top of every tendency
+            # evaluation, which is why a fresh one is built each step.
+            rad = CA.RecordedProcess{:radiation}()
+            processes = (rad,)
+            rate = FT(3)
+
+            function integrated(dt, nsteps)
+                record = zeros(FT, 1)
+                for _ in 1:nsteps
+                    ᶜYₜ = (; prc_e_radiation = zeros(FT, 1))
+                    CA._accumulate_records!(
+                        CA.energy_record_field,
+                        ᶜYₜ,
+                        FT[rate],
+                        :radiation,
+                        processes,
+                    )
+                    record .+= ᶜYₜ.prc_e_radiation .* dt
+                end
+                return record[1]
+            end
+
+            # A constant rate held for 60 s is rate * 60, whatever the step
+            @test integrated(FT(10), 6) ≈ rate * 60 rtol = sqrt(eps(FT))
+            @test integrated(FT(5), 12) ≈ rate * 60 rtol = sqrt(eps(FT))
+            @test integrated(FT(2), 30) ≈ rate * 60 rtol = sqrt(eps(FT))
+
+            # The same interval at three step sizes must agree. This is the
+            # direct regression test: summing the rate instead of integrating
+            # it gave rate * nsteps, so these three would have been 6, 12 and
+            # 30 times `rate` rather than equal.
+            @test integrated(FT(10), 6) ≈ integrated(FT(5), 12) rtol =
+                sqrt(eps(FT))
+            @test integrated(FT(5), 12) ≈ integrated(FT(2), 30) rtol =
+                sqrt(eps(FT))
         end
     end
 
@@ -90,7 +172,7 @@ import ClimaAtmos as CA
             CA.KNOWN_TAG_SOURCES,
             CA.TAG_SOURCE_GROUPS,
         )
-        @test CA.process_record_state_names(one) == (:prc_radiation,)
+        @test CA.energy_process_record_state_names(one) == (:prc_e_radiation,)
 
         listed = CA.process_record_from_config(
             ["radiation", "surface_flux"],
@@ -98,8 +180,8 @@ import ClimaAtmos as CA
             CA.KNOWN_TAG_SOURCES,
             CA.TAG_SOURCE_GROUPS,
         )
-        @test CA.process_record_state_names(listed) ==
-              (:prc_radiation, :prc_surface_flux)
+        @test CA.energy_process_record_state_names(listed) ==
+              (:prc_e_radiation, :prc_e_surface_flux)
 
         grouped = CA.process_record_from_config(
             "forcing",

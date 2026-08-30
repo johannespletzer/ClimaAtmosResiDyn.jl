@@ -112,9 +112,11 @@ simulation.
 ClimaAtmos.ProcessRecordModel
 ClimaAtmos.RecordedProcess
 ClimaAtmos.process_name
-ClimaAtmos.process_record_state_names
+ClimaAtmos.energy_process_record_variables
+ClimaAtmos.water_process_record_variables
+ClimaAtmos.energy_process_record_state_names
+ClimaAtmos.water_process_record_state_names
 ClimaAtmos.process_record_from_config
-ClimaAtmos.process_record_cache
 ClimaAtmos.process_record_scratch
 ClimaAtmos.snapshot_process_record!
 ClimaAtmos.accumulate_process_record!

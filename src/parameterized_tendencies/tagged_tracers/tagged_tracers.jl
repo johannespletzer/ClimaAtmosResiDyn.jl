@@ -310,16 +310,10 @@ automatic-differentiation Jacobian is used, and only `p.precomputed` and
 function tagging_cache(Y, atmos::AtmosModel)
     energy = _tagging_cache(Y, atmos.tagging_model)
     water = _water_tagging_cache(Y, atmos.water_tagging_model)
-    records = process_record_cache(Y, atmos)
-    isnothing(energy) &&
-        isnothing(water) &&
-        isnothing(records) &&
-        return nothing
-    return (;
-        _or_empty(energy)...,
-        _or_empty(water)...,
-        _or_empty(records)...,
-    )
+    # The process records hold no cache of their own: they are prognostic, and
+    # their only scratch lives in `tagging_scratch`.
+    isnothing(energy) && isnothing(water) && return nothing
+    return (; _or_empty(energy)..., _or_empty(water)...)
 end
 _or_empty(::Nothing) = (;)
 _or_empty(nt) = nt

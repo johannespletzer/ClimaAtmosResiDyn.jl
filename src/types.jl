@@ -2338,8 +2338,8 @@ end
 
 One process whose applied increment is accumulated by a
 [`ProcessRecordModel`](@ref). The process `name` is a type parameter so that the
-cache field `prc_<name>` can be looked up at compile time, exactly as
-[`TracerTag`](@ref) does for its state field.
+state field `prc_e_<name>` or `prc_q_<name>` can be looked up at compile time,
+exactly as [`TracerTag`](@ref) does for its own state field.
 """
 struct RecordedProcess{name} end
 
@@ -2359,8 +2359,12 @@ from the `energy_process_record` or `water_process_record` config entry; see
 
 A process record answers "what did this process do here", not "where did the
 energy present come from". It accumulates the signed increment each bracketed
-process applies, so gains are positive and losses negative. It is not a
-prognostic field and is never transported.
+process applies, so gains are positive and losses negative.
+
+Records are prognostic, because the bracket yields a rate and only the
+timestepper can integrate it correctly across the stages. They are still never
+transported: their state names carry no `ρ` prefix, so `gs_tracer_names` does
+not see them.
 """
 struct ProcessRecordModel{P <: Tuple}
     processes::P
