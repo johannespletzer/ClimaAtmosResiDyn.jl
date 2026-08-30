@@ -105,8 +105,7 @@ started.
 
 ### The CLA check fails on every pull request in this fork
 
-`cla / checker` fails after about three seconds with `CLA_EFFECTIVE_DATE is
-required but was not set`. The job log shows `CLA_API_URL`, `CLA_API_TOKEN`,
+`cla / checker` fails after about three seconds with `CLA_EFFECTIVE_DATE is required but was not set`. The job log shows `CLA_API_URL`, `CLA_API_TOKEN`,
 `CLA_ORG_TOKEN` and `CLA_EFFECTIVE_DATE` all empty. It fails before reading any
 file, so it is independent of what a PR changes, and re-running it cannot help.
 
