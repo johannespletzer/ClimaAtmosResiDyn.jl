@@ -9,10 +9,14 @@
 #####
 ##### The two kinds of tag hold different quantities. A region tag is a
 ##### transported partition of `ρe_tot`. A tag configured with `source` is a
-##### process-change record: it starts at zero and accumulates the signed
-##### increment one process adds, so cooling drives it negative. Call the second
-##### kind a process tag. It says what a process did, not what share of the
-##### energy present came from it.
+##### signed process tag: it starts at zero and accumulates the signed
+##### increment one process adds, so cooling drives it negative. It says what a
+##### process did, not what share of the energy present came from it.
+#####
+##### A signed process tag is not the *process-change record* of
+##### `process_record.jl`. That is a separate family, one field per process
+##### rather than per tag, and it is not transported. The two are close enough
+##### that sharing a name would confuse both.
 #####
 ##### The water tags in `tagged_water.jl` use the same `source` key but a
 ##### different rule. They share out production by mask and take loss from each
@@ -581,10 +585,10 @@ the tagged tracer tendencies:
   - process tags receive `ᶜΔ` only when their `source` matches, weighted by
     their mask when they also have a region.
 
-The whole signed increment is applied, so a process tag accumulates a
-process-change record and goes negative under net cooling. This is the one
-place the energy rule differs from the water rule in `tagged_water.jl`, which
-splits the increment and takes loss donor-proportionally instead.
+The whole signed increment is applied, so a signed process tag goes negative
+under net cooling. This is the one place the energy rule differs from the water
+rule in `tagged_water.jl`, which splits the increment and takes loss
+donor-proportionally instead.
 
 A no-op when tagging is disabled.
 """

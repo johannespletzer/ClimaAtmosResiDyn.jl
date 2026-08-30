@@ -2251,10 +2251,14 @@ names can be generated at compile time (GPU-compatible).
     empty for passive region tags. A single `Symbol` is also accepted
     (`:none` meaning "no sources").
 
-A tag with sources is a *process tag*: it holds a process-change record, the
-signed increment its processes have added since the start, and goes negative
-under net cooling. It is not a share of the energy present. The `source` key is
-shared with [`WaterTag`](@ref), which applies a different rule to it.
+A tag with sources is a *signed process tag*: it starts at zero, accumulates
+the signed increment its processes have added, and goes negative under net
+cooling. It is not a share of the energy present. The `source` key is shared
+with [`WaterTag`](@ref), which applies a different rule to it.
+
+Do not call it a process-change record. That name belongs to the `prc_*`
+family in `process_record.jl`, which is a different object: one field per
+process rather than per tag, and not transported.
 """
 struct TracerTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
        AbstractTracerTag{name}

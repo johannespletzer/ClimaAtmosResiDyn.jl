@@ -25,11 +25,18 @@
 ##### difference of two outputs. This differs from `q_tag_fix_<name>`, which
 ##### lives in the cache and does restart at zero.
 #####
-##### Only the explicit tendency path is recorded. The implicit path would need
-##### to write a `ForwardDiff.Dual` into a cache field that holds plain floats.
-##### So `precipitation` never reaches a record at all, its only bracket being
-##### on the implicit path, and `microphysics` reaches one only when it is
-##### stepped explicitly. Both stay zero otherwise, even when configured. See
+##### Only the explicit tendency path is recorded, because that is the only
+##### path with a bracket: `snapshot_tags!` and `attribute_tags!` are called
+##### from `remaining_tendency.jl` and nowhere else. So `precipitation` never
+##### reaches a record at all, its only bracket being on the implicit path, and
+##### `microphysics` reaches one only when it is stepped explicitly. Both stay
+##### zero otherwise, even when configured.
+#####
+##### Note this is no longer a type restriction. While records lived in the
+##### cache, the implicit path could not write one because it is evaluated with
+##### `ForwardDiff.Dual` numbers. Now that a record is prognostic, both its
+##### snapshot (`p.scratch`) and its destination (`Yₜ`) are dual-converted, so
+##### extending it to the implicit path only needs brackets there. See
 ##### `docs/src/process_record.md`.
 
 # ============================================================================

@@ -53,29 +53,69 @@ J kg⁻¹ and `q_prc_<process>` in kg kg⁻¹. Each increment was accumulated at
 own step's density, so this is not exactly the sum of the per-step specific
 increments — the same caveat `q_tag_fix_<name>` carries.
 
-!!! note "Cumulative within a segment"
+!!! note "Cumulative, and carried across a restart"
 
-    A record accumulates from the start of the simulation segment and restarts
-    at zero. A budget over an interval is therefore the difference of two
+    A record accumulates from the start of the run, and keeps its value through
+    a restart. A budget over an interval is therefore the difference of two
     outputs, and a time *average* of a record is not meaningful.
+
+    This is **not** the `q_tag_fix_<name>` contract. That one lives in the cache
+    and does restart at zero, so a budget spanning a restart cannot be recovered
+    from it. A record can, because it is prognostic and travels in the
+    checkpoint.
+
+## How the record is integrated
+
+The bracket does not hand a record an amount. `snapshot_process_record!` copies
+`Yₜ.c.ρe_tot` and `accumulate_process_record!` differences it, so what the
+bracket yields is a difference of two *tendencies* — a rate, in J m⁻³ s⁻¹.
+
+Turning a rate into an amount is integration, and the only thing that can do it
+correctly here is the timestepper, which knows each stage's weight. So a record
+adds the rate to its own tendency and is advanced like any other prognostic
+variable. Summing the rate directly would give a total proportional to the
+number of tendency evaluations, and therefore to `dt`; multiplying by `dt` by
+hand would be right only for a single-stage explicit method and would misweight
+the IMEX schemes actually in use.
 
 ## Cost
 
-A record is **not a prognostic field**. It lives in the cache, so nothing
-transports it, no limiter touches it, and it adds no Jacobian block. The cost is
-one field per recorded process and one broadcast per process per step, against a
-difference the bracket already computed.
+A record **is** a prognostic field, but it is not a tracer. Its name carries no
+`ρ` prefix, and `gs_tracer_names` discovers grid-scale tracers by exactly that
+lexical test, so nothing advects, diffuses, hyperdiffuses, sponges or limits a
+record. It needs no hand-written Jacobian block either: `jacobian_cache`
+completes the matrix with `fallback_identity_blocks`, giving these variables the
+implicit residual `-ΔY`, so only the explicit tendency contributes — which is
+precisely the intended behaviour.
+
+The cost is one center field per recorded process in `Y`, and one broadcast per
+process per tendency evaluation against a difference the bracket already
+computed.
+
+!!! warning "Do not add the missing `ρ`"
+
+    A record holds a density-weighted quantity, so `ρprc_e_radiation` looks like
+    the correct name. It is not. That prefix is the whole of what
+    `gs_tracer_names` tests, and adding it would silently opt the record into
+    every transport loop — destroying the property the record exists for. A test
+    asserts the prefix is absent.
 
 This is also why a record is not a tag: it is never moved by the flow, so it
 says what happened in this cell, not what arrived here.
 
 ## What is not recorded
 
-  - **Only the explicit tendency path.** The implicit path is evaluated with
-    `ForwardDiff.Dual` numbers when an automatic-differentiation Jacobian is
-    used, and only `p.precomputed` and `p.scratch` are converted to dual-typed
-    fields. Writing a record from there would put a `Dual` into a plain-float
-    cache field.
+  - **Only the explicit tendency path**, because that is the only path with a
+    snapshot/attribute bracket. `snapshot_tags!` and `attribute_tags!` are
+    called from `remaining_tendency.jl` and nowhere else.
+
+    This limit used to be a type barrier as well: a cache-resident record could
+    not be written from the implicit path, which is evaluated with
+    `ForwardDiff.Dual` numbers, because the cache holds plain floats. That
+    barrier is gone. `Y`, `Yₜ`, `p.precomputed` and `p.scratch` are all
+    dual-converted, so a prognostic record's snapshot and destination are both
+    dual-safe. Extending the record to the implicit path is now a matter of
+    adding brackets there, not of finding somewhere type-safe to write.
 
     Three labels are affected, and one of them can never be anything else.
     `precipitation` has **no explicit bracket at all** — the tendency it names
