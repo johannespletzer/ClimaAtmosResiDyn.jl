@@ -75,7 +75,7 @@ changes are needed when adding a new tracer:
 Sedimenting microphysics species are diffused with the reduced coefficient
 `α_vert_diff_microphysics * K_h`; passive tracers use the unscaled `K_h`.
 
-## Stratospheric Passive Tracers and Their Lifetimes
+## Stratospheric Passive Tracers and Their Residence Times
 
 The `passive_tracers` configuration key adds a family of inert
 grid-scale tracers designed to measure how long air stays in the stratosphere.
@@ -86,7 +86,7 @@ Each tracer has
   - **one sink**: relaxation to zero at and below the model tropopause.
 
 Because the source and the sink are the only terms, a tracer whose burden has
-stopped drifting satisfies `source = loss`, and its lifetime is
+stopped drifting satisfies `source = loss`, and its residence time is
 
 ```math
 \tau = \frac{M}{S}
@@ -104,12 +104,12 @@ wide, centred from 75°S to 75°N, crossed with 8 height boxes 2 km deep stacked
 every 5 km from the local tropopause up to 37 km above it.
 
 Keeping a box small is the point: a tracer emitted over a deep layer or a wide
-latitude range reports a lifetime averaged over conditions that can differ by
-years, and that average is not the lifetime of anywhere in particular. The
-boxes are therefore allowed to leave gaps between them. They may never
-**overlap**, though — that would make a point feed two tracers at once — and
-the constructor refuses a `latitude_width` wider than the spacing between
-boxes, or a `band_depth` deeper than `band_spacing`.
+latitude range reports a residence time averaged over conditions that can
+differ by years, and that average is not the residence time of anywhere in
+particular. The boxes are therefore allowed to leave gaps between them. They
+may never **overlap**, though — that would make a point feed two tracers at
+once — and the constructor refuses a `latitude_width` wider than the spacing
+between boxes, or a `band_depth` deeper than `band_spacing`.
 
 Measuring source heights from the local tropopause
 (`heights_from: "tropopause"`, the default) is what makes
@@ -172,9 +172,9 @@ domain, used as a bulk reference, deliberately encloses the sampled boxes. Two
 boxes sharing both a latitude and a height range are refused, because they would
 claim the same name.
 
-`production_rate` sets the magnitude of the tracers but **not** their
-lifetimes: the tracers are linear, so burden and source scale together and
-only their ratio is reported.
+`production_rate` sets the magnitude of the tracers but **not** their residence
+times: the tracers are linear, so burden and source scale together and only
+their ratio is reported.
 
 ### The lower boundary
 
@@ -191,26 +191,27 @@ tropopause.
 
 Every `dt_tracer_budget`, the burden, source rate and loss rate of each tracer
 are appended to `stratospheric_tracer_budget.csv` in the output directory,
-together with `negative_burden`, `lifetime`, `lifetime_years`,
-`lifetime_from_loss` and `imbalance = (source - loss) / source`.
+together with `negative_burden`, `residence_time`, `residence_time_years`,
+`residence_time_from_loss` and `imbalance = (source - loss) / source`.
 
 `negative_burden` is the magnitude of negative tracer mass left by advection
-undershoots at the box edges. The sink acts only on positive mass, so this
-part counts towards `burden` but never towards `loss`: it biases `lifetime`
+undershoots at the box edges. The sink acts only on positive mass, so this part
+counts towards `burden` but never towards `loss`: it biases `residence_time`
 low and stops `imbalance` reaching zero even in equilibrium.
 `burden + negative_burden` is the positive mass the sink sees, and comparing
 the two says how far the bias goes.
 
-`lifetime` and `lifetime_from_loss` are the same ratio measured against the
-source and against the sink. They agree only in equilibrium, and before it they
-bracket the answer from opposite sides: a tracer that is still filling has
-`burden ≈ source × t`, so `lifetime` is simply the elapsed time — a two-day run
-reports a two-day lifetime, which is arithmetic rather than a result — while
-the lagging sink makes `lifetime_from_loss` start enormous and fall. The gap
-between them closing is the signal that the run is long enough.
+`residence_time` and `residence_time_from_loss` are the same ratio measured
+against the source and against the sink. They agree only in equilibrium, and
+before it they bracket the answer from opposite sides: a tracer that is still
+filling has `burden ≈ source × t`, so `residence_time` is simply the elapsed
+time — a two-day run reports a two-day residence time, which is arithmetic
+rather than a result — while the lagging sink makes `residence_time_from_loss`
+start enormous and fall. The gap between them closing is the signal that the
+run is long enough.
 
 ```
-julia --project=.buildkite post_processing/tracer_lifetimes.jl <output_dir>
+julia --project=.buildkite post_processing/tracer_residence_times.jl <output_dir>
 ```
 
 prints one row per tracer and flags the tracers that are not yet in
@@ -225,10 +226,10 @@ in one panel — colour for height box, dash pattern for latitude box, so the
 legend stays at `n_latitude + n_height` entries rather than their product. A
 burden still rising linearly is a tracer still filling; one that has levelled
 off is in equilibrium. The experiment script and the CI job both write this
-plot automatically at the end of a run. A tracer counts as equilibrated when both its imbalance and its
-burden drift — the change in burden over the averaging window, divided by the
-source — are near zero. Until then its lifetime is a lower bound, because its
-burden is still filling up.
+plot automatically at the end of a run. A tracer counts as equilibrated when
+both its imbalance and its burden drift — the change in burden over the
+averaging window, divided by the source — are near zero. Until then its
+residence time is a lower bound, because its burden is still filling up.
 
 Expect this to take a while: stratospheric residence times are of order 1–5
 years, so a run needs several times that on top of the circulation's own
@@ -238,8 +239,8 @@ moist aquaplanet with RRTMGP radiation for exactly this, and
 configuration continues from the newest checkpoint.
 
 `config/model_configs/passive_stratospheric_tracers_ci.yml` is the two-day,
-9-tracer version that CI runs. Its lifetimes are meaningless — nothing is near
-equilibrium after two days — but it exercises the state assembly, the
+9-tracer version that CI runs. Its residence times are meaningless — nothing is
+near equilibrium after two days — but it exercises the state assembly, the
 tropopause diagnosis, the source and sink, the budget table and the restart
 path, so it is the config to reach for when changing any of them.
 

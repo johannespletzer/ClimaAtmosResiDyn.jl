@@ -2,8 +2,8 @@
 
 # Tropopause height and stratospheric passive tracers.
 #
-# The global burden, source and loss that the lifetime is computed from are
-# scalars per tracer rather than fields, so the tracer-budget callback in
+# The global burden, source and loss that the residence time is computed from
+# are scalars per tracer rather than fields, so the tracer-budget callback in
 # `stratospheric_passive_tracers.jl` writes those. This file holds the fields.
 #
 # The source-region grid comes from the configuration, so the per-tracer

@@ -1,19 +1,20 @@
 #=
-tracer_lifetimes.jl
+tracer_residence_times.jl
 
 Turn the `stratospheric_tracer_budget.csv` table written by a `passive_tracers`
-run into tracer lifetimes, and say how close each tracer is to equilibrium.
+run into tracer residence times, and say how close each tracer is to
+equilibrium.
 
 Usage:
 
-    julia --project=.buildkite post_processing/tracer_lifetimes.jl \
+    julia --project=.buildkite post_processing/tracer_residence_times.jl \
         output/passive_stratospheric_tracers/output_active
 
     # or, from a session
-    include("post_processing/tracer_lifetimes.jl")
-    summary = tracer_lifetime_summary("output/.../output_active")
+    include("post_processing/tracer_residence_times.jl")
+    summary = tracer_residence_time_summary("output/.../output_active")
 
-The lifetime of a tracer whose source and sink balance is
+The residence time of a tracer whose source and sink balance is
 
     τ = burden / source
 
@@ -23,7 +24,7 @@ side as `tau_src` and `tau_los`:
 
   - While the tracer is still filling, `burden ≈ source * t`, so `tau_src` is
     the elapsed time. It rises towards τ from below, so a short run reports its
-    own length as the lifetime. That is arithmetic rather than a result.
+    own length as the residence time. That is arithmetic rather than a result.
   - The sink lags the source, so `tau_los` starts enormous and falls towards τ
     from above.
 
@@ -133,14 +134,14 @@ function read_tracer_budget(path)
 end
 
 """
-    tracer_lifetime(series; window_fraction = 0.25)
+    tracer_residence_time(series; window_fraction = 0.25)
 
-Lifetime and equilibrium measures of one tracer, averaged over the last
+Residence time and equilibrium measures of one tracer, averaged over the last
 `window_fraction` of its time series.
 
 Returns a NamedTuple with
 
-  - `lifetime`: `burden / source`, in s, and `lifetime_years`.
+  - `residence_time`: `burden / source`, in s, and `residence_time_years`.
   - `imbalance`: `(source - loss) / source`, the fraction of the source that
     is not being removed. Zero in equilibrium.
   - `burden_drift`: `(dburden/dt) / source` over the window — the same
@@ -149,7 +150,7 @@ Returns a NamedTuple with
     sampling it. Zero in equilibrium.
   - `window_start`, `window_end`: the times averaged over, in s.
 """
-function tracer_lifetime(series::TracerBudgetSeries; window_fraction = 0.25)
+function tracer_residence_time(series::TracerBudgetSeries; window_fraction = 0.25)
     0 < window_fraction <= 1 ||
         error("window_fraction must be in (0, 1], got $window_fraction")
     n = length(series.time)
@@ -160,8 +161,8 @@ function tracer_lifetime(series::TracerBudgetSeries; window_fraction = 0.25)
     source = sum(@view series.source[window]) / length(window)
     loss = sum(@view series.loss[window]) / length(window)
 
-    lifetime = source > 0 ? burden / source : NaN
-    lifetime_from_loss = loss > 0 ? burden / loss : NaN
+    residence_time = source > 0 ? burden / source : NaN
+    residence_time_from_loss = loss > 0 ? burden / loss : NaN
     imbalance = source > 0 ? (source - loss) / source : NaN
 
     Δt = series.time[n] - series.time[first_index]
@@ -177,10 +178,10 @@ function tracer_lifetime(series::TracerBudgetSeries; window_fraction = 0.25)
         burden,
         source,
         loss,
-        lifetime,
-        lifetime_years = lifetime / SECONDS_PER_YEAR,
-        lifetime_from_loss,
-        lifetime_from_loss_years = lifetime_from_loss / SECONDS_PER_YEAR,
+        residence_time,
+        residence_time_years = residence_time / SECONDS_PER_YEAR,
+        residence_time_from_loss,
+        residence_time_from_loss_years = residence_time_from_loss / SECONDS_PER_YEAR,
         imbalance,
         burden_drift,
         window_start = series.time[first_index],
@@ -189,19 +190,19 @@ function tracer_lifetime(series::TracerBudgetSeries; window_fraction = 0.25)
 end
 
 """
-    tracer_lifetime_summary(path; window_fraction = 0.25, tolerance = 0.05)
+    tracer_residence_time_summary(path; window_fraction = 0.25, tolerance = 0.05)
 
-Lifetimes of every tracer in the budget table at `path`, printed as a table
-and returned as a vector of NamedTuples.
+Residence times of every tracer in the budget table at `path`, printed as a
+table and returned as a vector of NamedTuples.
 
 A tracer is marked as equilibrated when both its imbalance and its burden
 drift are within `tolerance` of zero. Tracers that are not yet there need a
 longer run, not a different analysis: their burdens are still filling up, so
-their lifetimes are underestimates.
+their residence times are underestimates.
 """
-function tracer_lifetime_summary(path; window_fraction = 0.25, tolerance = 0.05)
+function tracer_residence_time_summary(path; window_fraction = 0.25, tolerance = 0.05)
     (; series, order) = read_tracer_budget(path)
-    results = [tracer_lifetime(series[name]; window_fraction) for name in order]
+    results = [tracer_residence_time(series[name]; window_fraction) for name in order]
 
     @printf(
         "%-14s %8s %8s %9s %9s %12s %11s %11s %8s %7s\n",
@@ -221,7 +222,7 @@ function tracer_lifetime_summary(path; window_fraction = 0.25, tolerance = 0.05)
             "%-14s %8.1f %8.1f %9.1f %9s %12.4e %11.3f %11.3f %8.3f %7.3f %s\n",
             r.name, r.latitude_lower, r.latitude_upper,
             r.height_lower / 1000, height_upper,
-            r.burden, r.lifetime_years, r.lifetime_from_loss_years,
+            r.burden, r.residence_time_years, r.residence_time_from_loss_years,
             r.imbalance, r.burden_drift, marker,
         )
     end
@@ -229,7 +230,7 @@ function tracer_lifetime_summary(path; window_fraction = 0.25, tolerance = 0.05)
     unequilibrated = count(!is_equilibrated, results)
     if unequilibrated > 0
         @info "$unequilibrated of $(length(results)) tracers are not yet in \
-               equilibrium to within $tolerance; their lifetimes are lower \
+               equilibrium to within $tolerance; their residence times are lower \
                bounds. Extend the run and rerun this script."
     else
         @info "All $(length(results)) tracers are in equilibrium to within \
@@ -240,7 +241,7 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     isempty(ARGS) && error(
-        "Usage: julia post_processing/tracer_lifetimes.jl <output_dir_or_csv>",
+        "Usage: julia post_processing/tracer_residence_times.jl <output_dir_or_csv>",
     )
-    tracer_lifetime_summary(ARGS[1])
+    tracer_residence_time_summary(ARGS[1])
 end

@@ -784,9 +784,9 @@ tracer_budget_callback(
 
 Periodically append the global burden, source rate and loss rate of every
 stratospheric passive tracer to `stratospheric_tracer_budget.csv` in the
-output directory. These are the quantities the lifetime `burden / source` is
-computed from, and their drift is what tells you whether the tracers have
-reached equilibrium yet.
+output directory. These are the quantities the residence time
+`burden / source` is computed from, and their drift is what tells you whether
+the tracers have reached equilibrium yet.
 """
 function tracer_budget_callback(
     chemistry_model::StratosphericPassiveTracers,

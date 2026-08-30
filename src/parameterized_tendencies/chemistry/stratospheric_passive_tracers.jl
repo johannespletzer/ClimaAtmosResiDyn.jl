@@ -5,7 +5,7 @@
 ### Passive, chemically inert tracers. Each has one source, a constant
 ### production rate inside a (latitude band × height band) region, and one
 ### sink, removal below the model tropopause. Once a tracer's burden stops
-### drifting, source and sink balance and its lifetime is
+### drifting, source and sink balance and its residence time is
 ###
 ###     τ = M / S
 ###
@@ -16,9 +16,9 @@
 ### The source regions are small, well-separated boxes that sample the domain
 ### above the tropopause. Latitude bands run narrow from pole to pole, and
 ### height bands sit shallow and stacked above the local tropopause. Keeping a
-### box small is what makes its lifetime meaningful. A tracer emitted over a
-### deep layer or a wide latitude range reports an average over conditions that
-### can differ by years, so the gaps between boxes are deliberate.
+### box small is what makes its residence time meaningful. A tracer emitted
+### over a deep layer or a wide latitude range reports an average over
+### conditions that can differ by years. The gaps between boxes are deliberate.
 ###
 
 import ClimaComms
@@ -29,7 +29,7 @@ import ClimaCore: Fields, Spaces
 
 Measure tracer source heights from the local tropopause, so that the source
 boxes follow it. This is the default: it keeps every box a fixed distance
-above the sink whatever the latitude, which is what makes lifetimes from
+above the sink whatever the latitude, which is what makes residence times from
 different latitude bands comparable.
 """
 struct TropopauseRelativeHeight end
@@ -39,7 +39,7 @@ struct TropopauseRelativeHeight end
 
 Measure tracer source heights from sea level, giving source regions at fixed
 altitudes. Regions that fall below the local tropopause are removed as fast as
-they are produced, so their lifetimes approach `loss_timescale`.
+they are produced, so their residence times approach `loss_timescale`.
 """
 struct GeometricHeight end
 
@@ -105,9 +105,9 @@ Tracer `n` is stored in `Y.c.<NAMES[n]>` — see
     relative to `height_coordinate`'s reference.
   - `production_rate`: production of tracer mass fraction inside the source
     region, in s⁻¹. Its value sets the magnitude of the tracer but not its
-    lifetime, which is a ratio of two quantities that are both linear in it.
+    residence time, which is a ratio of two quantities both linear in it.
   - `loss_timescale`: e-folding time of the relaxation to zero below the
-    tropopause, in s. Should be short compared with the lifetimes being
+    tropopause, in s. Should be short compared with the residence times being
     measured, and long compared with the model timestep.
   - `height_coordinate`: [`TropopauseRelativeHeight`](@ref) or
     [`GeometricHeight`](@ref).
@@ -423,8 +423,8 @@ Removal of density-weighted tracer, in kg m⁻³ s⁻¹, at one point.
 
 Everything at or below the tropopause relaxes to zero on `loss_timescale`,
 which is the tracers' only sink and the boundary condition that makes their
-lifetimes finite. Negative values, which the advection scheme can produce, are
-clipped so that the sink cannot turn into a source and amplify them.
+residence times finite. Negative values, which the advection scheme can
+produce, are clipped so the sink cannot turn into a source that amplifies them.
 """
 @inline function stratospheric_tracer_loss(
     ρχ,
@@ -539,10 +539,10 @@ Global burden, source rate and loss rate of every passive tracer, as three
 vectors ordered by [`stratospheric_tracer_symbols`](@ref).
 
 The burden is in kg, the rates in kg s⁻¹, and each is a volume integral over
-the whole domain, so the lifetime of a tracer in equilibrium is
+the whole domain, so the residence time of a tracer in equilibrium is
 `burden / source`. Reporting the *diagnosed* source, rather than the
-prescribed production rate, keeps the lifetime correct even where a source
-region is clipped by the model top or by the tropopause.
+prescribed production rate, keeps the residence time correct even where a
+source region is clipped by the model top or by the tropopause.
 
 Every entry involves a global reduction, so this is meant to be called from a
 callback at output frequency, not from the tendency.
@@ -598,8 +598,8 @@ function stratospheric_tracer_budget(
         # Advection undershoots at the sharp box edges, so part of the burden
         # can be negative mass. `stratospheric_tracer_loss` clamps, so the sink
         # acts on positive mass alone. That negative part therefore lands in
-        # `burden` while staying out of `loss`, which biases `lifetime` low and
-        # holds `imbalance` off zero even in equilibrium. Reporting it keeps
+        # `burden` while staying out of `loss`. It biases `residence_time` low
+        # and holds `imbalance` off zero even in equilibrium. Reporting it keeps
         # that visible, and `burden + negative_burden` is the positive mass the
         # sink sees.
         @. ᶜwork = min(ᶜρχ, zero(ᶜρχ))
@@ -629,7 +629,7 @@ function stratospheric_tracer_budget(
     return (; burden, negative_burden, source, loss)
 end
 
-# Seconds in a Julian year, the unit lifetimes are reported in.
+# Seconds in a Julian year, the unit residence times are reported in.
 const SECONDS_PER_YEAR = 365.25 * 86400
 
 """
@@ -650,9 +650,9 @@ tracer_budget_header() = join(
         "negative_burden",
         "source",
         "loss",
-        "lifetime",
-        "lifetime_years",
-        "lifetime_from_loss",
+        "residence_time",
+        "residence_time_years",
+        "residence_time_from_loss",
         "imbalance",
     ),
     ",",
@@ -672,15 +672,15 @@ tracer_budget_path(output_dir) =
 Append one row per tracer to the tracer-budget table, creating it (with a
 header) if it does not exist yet. Called on the root process only.
 
-`lifetime` is `burden / source`, in s, and is the quantity the experiment
+`residence_time` is `burden / source`, in s, and is the quantity the experiment
 exists to measure; it is meaningful once `imbalance = (source - loss) / source`
 has settled near zero, which is what "the tracers are in equilibrium" means.
 
 `negative_burden` is the magnitude of negative tracer mass left by advection
 undershoots. The sink acts only on positive mass, so this part is counted in
-`burden` but not in `loss`: it biases `lifetime` low and keeps `imbalance`
-from reaching zero. `burden + negative_burden` is the positive mass the sink
-sees, and the ratio of the two is how far the bias goes.
+`burden` but not in `loss`: it biases `residence_time` low and keeps
+`imbalance` from reaching zero. `burden + negative_burden` is the positive mass
+the sink sees, and the ratio of the two is how far the bias goes.
 """
 function write_tracer_budget!(output_dir, t, chemistry_model, budget)
     (; burden, negative_burden, source, loss) = budget
@@ -692,14 +692,15 @@ function write_tracer_budget!(output_dir, t, chemistry_model, budget)
         for tracer_index in 1:n_tracers(chemistry_model)
             source_rate = source[tracer_index]
             loss_rate = loss[tracer_index]
-            lifetime = source_rate > 0 ? burden[tracer_index] / source_rate : NaN
-            # `burden / loss` is the same lifetime measured against the sink.
-            # The two agree in equilibrium and bracket the answer before it.
-            # While the tracer fills, `burden / source` is the elapsed time and
-            # rises to the lifetime from below. The sink has barely started, so
-            # `burden / loss` falls to it from above. How far apart they still
-            # are tells you how much longer a run needs.
-            lifetime_from_loss =
+            residence_time =
+                source_rate > 0 ? burden[tracer_index] / source_rate : NaN
+            # `burden / loss` is the same residence time measured against the
+            # sink. The two agree in equilibrium and bracket the answer before
+            # it. While the tracer fills, `burden / source` is the elapsed time
+            # and rises to the residence time from below. The sink has barely
+            # started, so `burden / loss` falls to it from above. How far apart
+            # they still are tells you how much longer a run needs.
+            residence_time_from_loss =
                 loss_rate > 0 ? burden[tracer_index] / loss_rate : NaN
             imbalance =
                 source_rate > 0 ? (source_rate - loss_rate) / source_rate : NaN
@@ -717,9 +718,9 @@ function write_tracer_budget!(output_dir, t, chemistry_model, budget)
                         negative_burden[tracer_index],
                         source_rate,
                         loss_rate,
-                        lifetime,
-                        lifetime / SECONDS_PER_YEAR,
-                        lifetime_from_loss,
+                        residence_time,
+                        residence_time / SECONDS_PER_YEAR,
+                        residence_time_from_loss,
                         imbalance,
                     ),
                     ",",

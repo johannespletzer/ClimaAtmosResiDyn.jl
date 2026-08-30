@@ -243,16 +243,17 @@ middle/upper-stratosphere residence time as an anchor.
 
 **The fixed-altitude tradeoff, stated plainly.** The code's default is
 `TropopauseRelativeHeight` precisely because it "keeps every box a fixed distance
-above the sink whatever the latitude, which is what makes lifetimes from different
-latitude bands comparable" (`stratospheric_passive_tracers.jl:29-33`). At fixed
-altitude, τ(φ) at a given level conflates latitude with height-above-tropopause —
-19 km is ~2 km above the tropical tropopause but ~9 km above the polar one. Report
-τ against both z and z − ztrop(φ). Boxes at level 52 and above are stratospheric
-at all latitudes, so this is a systematic offset, not a contamination. Level 34 at
-±60/±80 additionally straddles the tropopause synoptically (±2 km), so it is a
-blend of source-only and source-plus-sink periods; the clean diagnostic — the
-source-weighted fraction of time above the instantaneous tropopause — does not
-exist in the code, so treat level 34 as indicative only.
+above the sink whatever the latitude, which is what makes residence times from
+different latitude bands comparable" (`stratospheric_passive_tracers.jl:32-34`).
+At fixed altitude, τ(φ) at a given level conflates latitude with
+height-above-tropopause — 19 km is ~2 km above the tropical tropopause but ~9 km
+above the polar one. Report τ against both z and z − ztrop(φ). Boxes at level 52
+and above are stratospheric at all latitudes, so this is a systematic offset, not
+a contamination. Level 34 at ±60/±80 additionally straddles the tropopause
+synoptically (±2 km), so it is a blend of source-only and source-plus-sink
+periods; the clean diagnostic — the source-weighted fraction of time above the
+instantaneous tropopause — does not exist in the code, so treat level 34 as
+indicative only.
 
 Tracer names collide across members (`y01z01` in A ≠ in B); band edges are written
 into every row of `stratospheric_tracer_budget.csv`, so post-processing must key
@@ -322,8 +323,8 @@ The deliverable is τ(φ, z) on a 9 × 6 lattice with 10°-of-20° latitude gaps
  3. **Average τ over multiple years.** The source is `ρ · production_rate` inside
     the mask, so it tracks air density and varies seasonally even with a fixed mask;
     and burden/source is an instantaneous ratio in a seasonally varying
-    stratosphere. Use multi-year means, and keep `lifetime_from_loss` (burden/loss)
-    as a cross-check.
+    stratosphere. Use multi-year means, and keep `residence_time_from_loss`
+    (burden/loss) as a cross-check.
  4. **Boxes can be summed.** The tracers are linear and share the transport, so
     summing k boxes gives burden ΣMᵢ and source ΣSᵢ exactly, i.e. the
     source-weighted mean of the τᵢ. What is *not* valid is inferring a
