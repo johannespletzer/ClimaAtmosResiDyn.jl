@@ -14,11 +14,12 @@
 ##### the signed increment one process applied. Both are useful; they answer
 ##### different questions.
 #####
-##### This file carries state, masks and transport only. The attribution rule
-##### that makes a source tag a source tag is not here yet, so for now the tags
-##### are initialized to their masked share and then only transported. A
-##### partition of region tags therefore closes under pure dynamics, which is
-##### the property the first tests check.
+##### This file carries the state, the masks, the transport hook-up and the
+##### attribution rule. Production is shared out by region mask and loss is
+##### taken from each tag in proportion to what it already holds, which is what
+##### makes a tag an amount of energy present rather than a running total. A
+##### partition of region tags closes under pure dynamics, and the rule is
+##### built to keep that true once sources and sinks are attributed.
 #####
 ##### Tag names are ρ-weighted, so `gs_tracer_names(Y)` picks them up and the
 ##### usual tracer machinery supplies advection, hyperdiffusion, sponges,
@@ -126,7 +127,46 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         "e_src_res",
         "ρe_src",
     )
+    _check_parent_positivity(Y)
     return (; ᶜenergy_source_masks)
+end
+
+# The donor share `φ_k = ρe_src_k / ρe_tot` needs a positive parent to mean
+# anything. Moist total energy has no physical zero, so a shifted thermodynamic
+# or gravitational reference can put part of the domain at or below it, and
+# there the shares are undefined and `energy_source_fraction` returns zero
+# instead.
+#
+# This runs unconditionally at initialization, because nothing else will say so.
+# The closure check reports `nonpositive_fraction` every time it fires, but it
+# is optional: a run with source tags and no `energy_source_closure_check` would
+# otherwise get no warning at all. A bad reference is bad from t = 0, so
+# checking the initial state catches the case that matters without costing a
+# reduction every step.
+#
+# `sum` is used rather than `minimum` because `sum` is the reduction documented
+# to reduce across processes.
+function _check_parent_positivity(Y)
+    ᶜρe_tot = Y.c.ρe_tot
+    ᶜflag = similar(ᶜρe_tot)
+    @. ᶜflag = ifelse(ᶜρe_tot <= zero(ᶜρe_tot), one(ᶜρe_tot), zero(ᶜρe_tot))
+    nonpositive_volume = sum(ᶜflag)
+    iszero(nonpositive_volume) && return nothing
+    @. ᶜflag = one(ᶜρe_tot)
+    volume = sum(ᶜflag)
+    fraction = iszero(volume) ? nonpositive_volume : nonpositive_volume / volume
+    @warn(
+        "`ρe_tot` is non-positive over $(fraction * 100)% of the domain " *
+        "volume at initialization. The energy source tags divide by it to get " *
+        "each tag's donor share, so the shares are undefined there and " *
+        "`energy_source_fraction` returns zero rather than a meaningful " *
+        "number. Moist total energy has no physical zero, so this usually " *
+        "means the chosen thermodynamic or gravitational reference puts part " *
+        "of the domain below it. Tag values elsewhere are still computed, but " *
+        "they are conditional on that reference. Enable " *
+        "`energy_source_closure_check` to keep watching it during the run.",
+    )
+    return nothing
 end
 
 # ============================================================================
@@ -185,9 +225,17 @@ is the tag's mask and `φ_k` its donor share of the local moist energy.
 Production reaches a tag only when it lists `source`; pure region tags list none
 and so receive every process. Loss reaches **every** tag, whatever it lists,
 because energy leaves in proportion to what is actually present. That asymmetry
-is what keeps a tag from going below zero and what makes it an amount rather
-than a running total. It is the same rule the water tags use, and the opposite
-of the `ρe_tag_*` family, which applies the whole signed increment by mask.
+is what makes a tag an amount rather than a running total. It is the same rule
+the water tags use, and the opposite of the `ρe_tag_*` family, which applies the
+whole signed increment by mask.
+
+Because a tag is only ever depleted in proportion to what it holds, this step
+cannot drive one below zero. That is a property of the step, not of the field.
+The tags are exempt from both tracer limiters and ride the unlimited explicit
+transport path, and unlike the water tags there is no partition repair, so
+transport can still leave a tag slightly negative. Where it does,
+[`energy_source_fraction`](@ref) clamps the donor share to zero rather than
+correcting the holding.
 
 `Y` is needed in addition to `Yₜ` because the donor share is a property of the
 current state. A no-op when energy source tagging is disabled.

@@ -13,9 +13,10 @@ family is wired into a simulation at all, which is what this file covers:
     closure residual stays a small bounded monitor;
  5. state and masks survive a checkpoint round trip.
 
-The attribution rule is not implemented yet on this branch, so a tag carrying a
-`source` stays at exactly zero. That is asserted rather than worked around; the
-rule's own assertions arrive with the rule.
+The attribution rule is implemented here, so a tag carrying a `source` must
+actually accumulate. That is the assertion this file gains over the state-only
+version: masked production reaching a source tag through a real bracketed
+process is the thing no unit test on plain arrays can show.
 
 A column with an altitude partition is the cheapest geometry that exercises all
 of it — latitude regions and the Held-Suarez source would need a sphere. One
@@ -45,8 +46,8 @@ import ClimaAtmos as CA
                 "above" => false,
             ),
         ),
-        # A source tag, to pin the documented behaviour of this branch: with no
-        # attribution rule it starts at zero and stays there.
+        # A source tag on the process that actually forces this column, so the
+        # attribution rule has something to attribute.
         Dict{String, Any}("name" => "rad", "source" => "radiation"),
     ]
     test_dict = Dict(
@@ -112,9 +113,23 @@ import ClimaAtmos as CA
     end
     @test closure_deviation(Y) < 5e-3
 
-    # With no attribution rule the source tag is still exactly zero. When the
-    # rule lands this assertion is the one that has to change.
-    @test all(iszero, parent(Y.c.ρe_src_rad))
+    # The rule fired. A source tag starts at zero, so anything nonzero here
+    # came from masked production through the `radiation` bracket — the one
+    # thing a unit test on plain arrays cannot demonstrate. DYCOMS_RF02 is
+    # radiatively forced, so this is not a marginal signal.
+    rad_scale = maximum(abs.(parent(Y.c.ρe_src_rad)))
+    @test rad_scale > 0
+
+    # The tags are exempt from both limiters and ride unlimited explicit
+    # transport with no partition repair, so a small negative excursion is
+    # expected and is what the qualified contract in `types.jl` describes. The
+    # bound here only catches a blow-up: the size of the excursion is
+    # configuration-dependent and is monitored through `e_src_res`, not pinned
+    # to a number this test could only guess at.
+    parent_scale = maximum(abs.(parent(Y.c.ρe_tot)))
+    for name in (:ρe_src_strat, :ρe_src_tropo)
+        @test minimum(parent(getproperty(Y.c, name))) > -parent_scale
+    end
 
     # 5. Checkpoint round trip: the state survives bit-for-bit and the masks,
     # which are rebuilt from the config rather than stored, are reproduced.

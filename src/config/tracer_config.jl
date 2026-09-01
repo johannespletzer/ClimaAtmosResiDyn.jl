@@ -496,15 +496,67 @@ Convert the parsed `energy_source_tags` config entries into a `Tuple` of
 The entry schema is the one `energy_tracers` uses, and the process labels are
 the same, because a source tag and a process tag select from the same set of
 bracketed processes. Only the rule applied to them differs.
+
+Not every accepted label can actually fire here; see
+[`warn_inactive_energy_source_labels`](@ref), which is called from this
+function.
 """
-energy_source_tracer_tuple(entries, ::Type{FT}) where {FT} = tracer_tag_tuple(
-    entries,
-    FT;
-    tag_type = EnergySourceTag,
-    key = "energy_source_tags",
-    known = KNOWN_TAG_SOURCES,
-    groups = TAG_SOURCE_GROUPS,
-)
+function energy_source_tracer_tuple(entries, ::Type{FT}) where {FT}
+    tags = tracer_tag_tuple(
+        entries,
+        FT;
+        tag_type = EnergySourceTag,
+        key = "energy_source_tags",
+        known = KNOWN_TAG_SOURCES,
+        groups = TAG_SOURCE_GROUPS,
+    )
+    warn_inactive_energy_source_labels(tags)
+    return tags
+end
+
+"""
+    warn_inactive_energy_source_labels(tags)
+
+Warn about `energy_source_tags` labels that cannot contribute, so a tag that
+will stay at zero says so at configuration time rather than at analysis time.
+
+The labels are shared with `energy_tracers`, but the two families do not see
+the same processes. Only the explicit tendency path carries a source-tag
+bracket, and `precipitation` has no explicit bracket at all — its tendency is
+reached solely from `implicit_tendency.jl`. So a source tag listing
+`precipitation` is zero in every configuration, while the `ρe_tag_*` family
+does receive it.
+
+`microphysics` is bracketed on the explicit path, but only when microphysics is
+stepped explicitly, which is not the default. That one depends on configuration
+this function does not see, so it is described rather than asserted.
+
+A warning and not an error: `moist` and `all` are useful shorthands that happen
+to include `precipitation`, and refusing them would make the group labels
+unusable for a family they otherwise serve.
+"""
+function warn_inactive_energy_source_labels(tags)
+    for tag in tags
+        sources = tag.sources
+        isempty(sources) && continue
+        :precipitation in sources && @warn(
+            "`energy_source_tags` tag `$(tag_name(tag))` lists " *
+            "`precipitation`, which cannot contribute to a source tag: only " *
+            "the explicit tendency path is bracketed for this family, and " *
+            "`precipitation` is reached solely from the implicit path. That " *
+            "part of the tag stays zero. The `energy_tracers` family does " *
+            "receive it. Note `moist` and `all` both expand to include " *
+            "`precipitation`.",
+        )
+        :microphysics in sources && @warn(
+            "`energy_source_tags` tag `$(tag_name(tag))` lists " *
+            "`microphysics`, which contributes only when microphysics is " *
+            "stepped explicitly. Under the default implicit microphysics " *
+            "timestepping that part of the tag stays zero.",
+        )
+    end
+    return nothing
+end
 
 # ============================================================================
 # Closure checking

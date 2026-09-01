@@ -150,6 +150,7 @@ ClimaAtmos.energy_source_tag_state_names
 ClimaAtmos.energy_source_region_tag_state_names
 ClimaAtmos.is_energy_source_tag_name
 ClimaAtmos.energy_source_tracer_tuple
+ClimaAtmos.warn_inactive_energy_source_labels
 ClimaAtmos.energy_source_fraction
 ClimaAtmos.snapshot_energy_source_tags!
 ClimaAtmos.attribute_energy_source_tags!
