@@ -668,6 +668,7 @@ function snapshot_tags!(p, Yₜ, source::Symbol)
     if source in KNOWN_WATER_TAG_SOURCES
         snapshot_tagged_ρq_tot!(p, Yₜ)
     end
+    snapshot_energy_source_tags!(p, Yₜ)
     snapshot_process_record!(p, Yₜ, source)
     return nothing
 end
@@ -675,6 +676,7 @@ end
 function attribute_tags!(Yₜ, Y, p, source::Symbol)
     attribute_tagged_ρe_tot!(Yₜ, p, source)
     attribute_tagged_ρq_tot!(Yₜ, Y, p, source)
+    attribute_energy_source_tags!(Yₜ, Y, p, source)
     accumulate_process_record!(Yₜ, p, source)
     return nothing
 end

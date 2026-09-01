@@ -314,10 +314,18 @@ automatic-differentiation Jacobian is used, and only `p.precomputed` and
 function tagging_cache(Y, atmos::AtmosModel)
     energy = _tagging_cache(Y, atmos.tagging_model)
     water = _water_tagging_cache(Y, atmos.water_tagging_model)
+    sources = _energy_source_tagging_cache(Y, atmos.energy_source_tagging_model)
     # The process records hold no cache of their own: they are prognostic, and
     # their only scratch lives in `tagging_scratch`.
-    isnothing(energy) && isnothing(water) && return nothing
-    return (; _or_empty(energy)..., _or_empty(water)...)
+    isnothing(energy) &&
+        isnothing(water) &&
+        isnothing(sources) &&
+        return nothing
+    return (;
+        _or_empty(energy)...,
+        _or_empty(water)...,
+        _or_empty(sources)...,
+    )
 end
 _or_empty(::Nothing) = (;)
 _or_empty(nt) = nt
@@ -355,6 +363,10 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
             ᶜtagging_q_snapshot = similar(Y.c.ρ),
             ᶜtagging_q_share_norm = similar(Y.c.ρ),
         )
+    )...,
+    (
+        isnothing(atmos.energy_source_tagging_model) ? (;) :
+        (; ᶜe_src_snapshot = similar(Y.c.ρ))
     )...,
     process_record_scratch(Y, atmos)...,
 )
@@ -722,12 +734,24 @@ is_water_tag_name(name::MatrixFields.FieldName) =
 """
     is_tagged_tracer_name(name)
 
-Whether `name` refers to a tagged prognostic tracer of either family. Used to
-exempt tags from the tracer limiters, for different reasons per family: tagged
-energies can be legitimately negative (e.g. accumulated cooling), while tagged
-waters must not be limited independently of each other because a shape-preserving
-adjustment applied per tag would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags instead
-follow the parent's limiting through [`rescale_water_tags!`](@ref).
+Whether `name` refers to a tagged prognostic tracer of any of the three
+families. Used to exempt tags from the tracer limiters, for a different reason
+in each case:
+
+  - `ρe_tag_*` holds a signed process-change record, so it can be legitimately
+    negative (accumulated cooling) and a non-negativity limiter would be wrong.
+  - `ρq_tag_*` must not be limited independently of the other water tags,
+    because a shape-preserving adjustment applied per tag has no reason to
+    reproduce the parent's and would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags
+    follow the parent's limiting through [`rescale_water_tags!`](@ref) instead.
+  - `ρe_src_*` is exempt for the same partition reason as the water tags, but
+    it has no equivalent of `rescale_water_tags!` and no partition repair. So
+    unlike water, nothing restores it: the attribution rule keeps it
+    non-negative, and unlimited transport can still leave it slightly below
+    zero. That is a known limit, not an oversight — see
+    `docs/src/energy_source_tags.md`.
 """
 is_tagged_tracer_name(name) =
-    is_energy_tag_name(name) || is_water_tag_name(name)
+    is_energy_tag_name(name) ||
+    is_water_tag_name(name) ||
+    is_energy_source_tag_name(name)

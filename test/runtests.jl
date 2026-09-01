@@ -30,6 +30,7 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Tracer processes" begin @time include("tracer_processes_tests.jl") end
     @safetestset "Tagged tracers" begin @time include("tagged_tracers_tests.jl") end
     @safetestset "Tagged water" begin @time include("tagged_water_tests.jl") end
+    @safetestset "Energy source tags" begin @time include("energy_source_tags_tests.jl") end
     @safetestset "Process records" begin @time include("process_record_tests.jl") end
     @safetestset "Parameter tests" begin @time include("parameter_tests.jl") end
 
@@ -82,20 +83,27 @@ if TEST_GROUP in ("dynamics", "all")
 end
 
 # ============================================================================
-# Tagging: end-to-end tagged energy and tagged water simulations
+# Tagging: end-to-end tagged energy, tagged water and energy source simulations
 #
-# These two files are their own group because they were the only tests in
-# `dynamics` that call `solve_atmos!`, and they do it seven times on seven
-# different tag sets. A tag name is a type parameter (`WaterTag{name, R, S}`),
-# so each set is a fresh `AtmosModel` type and the whole tendency and solve
-# pipeline is compiled from scratch. That costs about 7 minutes per simulation
-# on 1.11, against 1 to 2 minutes on 1.10. Left in `dynamics` the two files
-# were 59% of that group's wall clock and pushed it past the job timeout
+# These files are their own group because they were the only tests in
+# `dynamics` that call `solve_atmos!`, and they do it on many different tag
+# sets. A tag name is a type parameter (`WaterTag{name, R, S}`), so each set is
+# a fresh `AtmosModel` type and the whole tendency and solve pipeline is
+# compiled from scratch. That costs about 7 minutes per simulation on 1.11,
+# against 1 to 2 minutes on 1.10. Left in `dynamics` the first two files were
+# 59% of that group's wall clock and pushed it past the job timeout
 # (run 32528151981).
+#
+# The group runs against a 90-minute timeout, so adding a tag set here is not
+# free. `energy_source_tags_integration.jl` deliberately uses one set on a
+# column: its restart leg reuses that same set, so it recompiles nothing and
+# the marginal cost is one type plus two short solves. Keep new work to the
+# smallest set that proves the claim, and prefer extending an existing set.
 # ============================================================================
 if TEST_GROUP in ("tagging", "all")
     @safetestset "Tagged tracers integration" begin @time include("tagged_tracers_integration.jl") end
     @safetestset "Tagged water integration" begin @time include("tagged_water_integration.jl") end
+    @safetestset "Energy source tags integration" begin @time include("energy_source_tags_integration.jl") end
 end
 
 # ============================================================================

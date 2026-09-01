@@ -656,6 +656,19 @@ function default_diagnostics(
         isempty(water_region_tag_state_names(water_tagging_model)) ||
             push!(tag_diagnostics, "q_tag_res")
     end
+    energy_source_tagging_model = atmos_tagging.energy_source_tagging_model
+    if !isnothing(energy_source_tagging_model)
+        append!(
+            tag_diagnostics,
+            [
+                "e_src_$(tag_name(tag))" for
+                tag in energy_source_tagging_model.tags
+            ],
+        )
+        isempty(
+            energy_source_region_tag_state_names(energy_source_tagging_model),
+        ) || push!(tag_diagnostics, "e_src_res")
+    end
     energy_process_record = atmos_tagging.energy_process_record
     if !isnothing(energy_process_record)
         append!(

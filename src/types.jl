@@ -2338,6 +2338,54 @@ struct WaterTaggingModel{T <: Tuple}
 end
 
 """
+    EnergySourceTag{name}(region, source = :none)
+
+Definition of one energy **source tag**, stored in the state as
+`Y.c.ρe_src_<name>`. The tag `name` is a type parameter so that state field
+names can be generated at compile time (GPU-compatible).
+
+Fields mean what they do for [`TracerTag`](@ref), but the attribution rule
+differs and that is the whole point of the separate type. A source tag holds an
+amount of moist energy that is present now and is traced back to where it came
+from: production is shared out by region mask and loss is taken from each tag in
+proportion to what it already holds. A `TracerTag` configured with `source`
+instead accumulates the whole signed increment and is a process-change record.
+
+The attribution rule cannot drive a tag below zero, because a tag is only ever
+depleted in proportion to what it holds. That is a property of the rule, not a
+guarantee about the field: the tags are exempt from both tracer limiters
+through [`is_tagged_tracer_name`](@ref) and ride the unlimited explicit
+transport path, so transport can leave a tag slightly negative. Unlike the
+water tags there is no partition repair to put it back, and the donor share of
+a negative holding is clamped to zero rather than corrected. Read the promise
+as "the attribution step never drives it negative", not "it is never negative".
+
+This is the energy counterpart of [`WaterTag`](@ref), which already works this
+way. Moist total energy has no physical zero, so unlike water the resulting
+shares depend on the chosen energy reference; see `docs/src/energy_source_tags.md`.
+"""
+struct EnergySourceTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
+       AbstractTracerTag{name}
+    region::R
+    sources::S
+end
+EnergySourceTag{name}(region::R, sources::S = ()) where {name, R, S <: Tuple} =
+    EnergySourceTag{name, R, S}(region, sources)
+EnergySourceTag{name}(region, source::Symbol) where {name} =
+    EnergySourceTag{name}(region, source === :none ? () : (source,))
+
+"""
+    EnergySourceTaggingModel(tags::Tuple)
+
+Model component holding a `Tuple` of [`EnergySourceTag`](@ref)s. Constructed
+from the `energy_source_tags` config entry; see `AtmosTagging(::AtmosConfig)` in
+`config/tracer_config.jl`.
+"""
+struct EnergySourceTaggingModel{T <: Tuple}
+    tags::T
+end
+
+"""
     RecordedProcess{name}()
 
 One process whose applied increment is accumulated by a
@@ -2379,9 +2427,10 @@ end
 
 Groups tagged-tracer models and types.
 """
-@kwdef struct AtmosTagging{TM, WM, EPR, WPR}
+@kwdef struct AtmosTagging{TM, WM, ESM, EPR, WPR}
     tagging_model::TM = nothing
     water_tagging_model::WM = nothing
+    energy_source_tagging_model::ESM = nothing
     energy_process_record::EPR = nothing
     water_process_record::WPR = nothing
 end

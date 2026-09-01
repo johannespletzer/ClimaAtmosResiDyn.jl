@@ -486,6 +486,78 @@ water_tracer_tuple(entries, ::Type{FT}) where {FT} = tracer_tag_tuple(
     groups = WATER_TAG_SOURCE_GROUPS,
 )
 
+"""
+    energy_source_tracer_tuple(entries, FT)
+
+Convert the parsed `energy_source_tags` config entries into a `Tuple` of
+[`EnergySourceTag`](@ref)s suitable for constructing an
+[`EnergySourceTaggingModel`](@ref).
+
+The entry schema is the one `energy_tracers` uses, and the process labels are
+the same, because a source tag and a process tag select from the same set of
+bracketed processes. Only the rule applied to them differs.
+
+Not every accepted label can actually fire here; see
+[`warn_inactive_energy_source_labels`](@ref), which is called from this
+function.
+"""
+function energy_source_tracer_tuple(entries, ::Type{FT}) where {FT}
+    tags = tracer_tag_tuple(
+        entries,
+        FT;
+        tag_type = EnergySourceTag,
+        key = "energy_source_tags",
+        known = KNOWN_TAG_SOURCES,
+        groups = TAG_SOURCE_GROUPS,
+    )
+    warn_inactive_energy_source_labels(tags)
+    return tags
+end
+
+"""
+    warn_inactive_energy_source_labels(tags)
+
+Warn about `energy_source_tags` labels that cannot contribute, so a tag that
+will stay at zero says so at configuration time rather than at analysis time.
+
+The labels are shared with `energy_tracers`, but the two families do not see
+the same processes. Only the explicit tendency path carries a source-tag
+bracket, and `precipitation` has no explicit bracket at all — its tendency is
+reached solely from `implicit_tendency.jl`. So a source tag listing
+`precipitation` is zero in every configuration, while the `ρe_tag_*` family
+does receive it.
+
+`microphysics` is bracketed on the explicit path, but only when microphysics is
+stepped explicitly, which is not the default. That one depends on configuration
+this function does not see, so it is described rather than asserted.
+
+A warning and not an error: `moist` and `all` are useful shorthands that happen
+to include `precipitation`, and refusing them would make the group labels
+unusable for a family they otherwise serve.
+"""
+function warn_inactive_energy_source_labels(tags)
+    for tag in tags
+        sources = tag.sources
+        isempty(sources) && continue
+        :precipitation in sources && @warn(
+            "`energy_source_tags` tag `$(tag_name(tag))` lists " *
+            "`precipitation`, which cannot contribute to a source tag: only " *
+            "the explicit tendency path is bracketed for this family, and " *
+            "`precipitation` is reached solely from the implicit path. That " *
+            "part of the tag stays zero. The `energy_tracers` family does " *
+            "receive it. Note `moist` and `all` both expand to include " *
+            "`precipitation`.",
+        )
+        :microphysics in sources && @warn(
+            "`energy_source_tags` tag `$(tag_name(tag))` lists " *
+            "`microphysics`, which contributes only when microphysics is " *
+            "stepped explicitly. Under the default implicit microphysics " *
+            "timestepping that part of the tag stays zero.",
+        )
+    end
+    return nothing
+end
+
 # ============================================================================
 # Closure checking
 # ============================================================================
@@ -505,7 +577,8 @@ These are starting points, not derived numbers. Read the first run's closure
 table and set a tolerance that sits above the level your configuration settles
 at, so that the warning means something changed.
 """
-const DEFAULT_CLOSURE_TOLERANCES = (; water = 1.0e-10, energy = 1.0e-6)
+const DEFAULT_CLOSURE_TOLERANCES =
+    (; water = 1.0e-10, energy = 1.0e-6, energy_source = 1.0e-6)
 
 """
     closure_check_from_config(spec_value, context, FT; default_tolerance)
@@ -550,7 +623,7 @@ end
 """
     closure_checks_from_config(config::AtmosConfig)
 
-Read both closure-check blocks, as `(; water, energy)`.
+Read the closure-check blocks, as `(; water, energy_source, energy)`.
 """
 function closure_checks_from_config(config::AtmosConfig)
     pa = config.parsed_args
@@ -561,6 +634,12 @@ function closure_checks_from_config(config::AtmosConfig)
             "`water_closure_check`",
             FT;
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.water,
+        ),
+        energy_source = closure_check_from_config(
+            pa["energy_source_closure_check"],
+            "`energy_source_closure_check`",
+            FT;
+            default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy_source,
         ),
         energy = closure_check_from_config(
             pa["energy_closure_check"],
@@ -593,7 +672,8 @@ end
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
-`energy_process_record` and `water_process_record` config keys. Any of them
+`energy_source_tags`, `energy_process_record` and `water_process_record` config
+keys. Any of them
 being `~` (null) or an empty list disables that feature entirely, at no runtime
 cost.
 """
@@ -614,6 +694,15 @@ function AtmosTagging(config::AtmosConfig)
         )
         WaterTaggingModel(water_tracer_tuple(water_entries, FT))
     end
+    source_entries = config.parsed_args["energy_source_tags"]
+    energy_source_tagging_model =
+        if isnothing(source_entries) || isempty(source_entries)
+            nothing
+        else
+            EnergySourceTaggingModel(
+                energy_source_tracer_tuple(source_entries, FT),
+            )
+        end
     energy_process_record = process_record_from_config(
         config.parsed_args["energy_process_record"],
         "energy_process_record",
@@ -637,6 +726,7 @@ function AtmosTagging(config::AtmosConfig)
     return AtmosTagging(;
         tagging_model,
         water_tagging_model,
+        energy_source_tagging_model,
         energy_process_record,
         water_process_record,
     )
