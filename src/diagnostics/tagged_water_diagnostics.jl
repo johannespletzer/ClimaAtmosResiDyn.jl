@@ -104,7 +104,13 @@ of region tags it sums over can differ between setups — including differing to
 """
 register_water_tagging_diagnostics!(model::AtmosModel) =
     register_water_tagging_diagnostics!(model.water_tagging_model)
-register_water_tagging_diagnostics!(::Nothing) = nothing
+# Water tagging is off. As for the energy tags, the per-tag entries can stay
+# but a stale `q_tag_res` cannot: it would report a residual over a partition
+# this model does not have. See the enabled path below.
+function register_water_tagging_diagnostics!(::Nothing)
+    delete!(ALL_DIAGNOSTICS, "q_tag_res")
+    return nothing
+end
 function register_water_tagging_diagnostics!(model::WaterTaggingModel)
     for tag in model.tags
         name = tag_name(tag)

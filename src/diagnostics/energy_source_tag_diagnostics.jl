@@ -30,7 +30,14 @@ register_energy_source_tagging_diagnostics!(model::AtmosModel) =
     register_energy_source_tagging_diagnostics!(
         model.energy_source_tagging_model,
     )
-register_energy_source_tagging_diagnostics!(::Nothing) = nothing
+# Source tagging is off. As for the other families, the per-tag entries can
+# stay — they are keyed by tag name alone — but a stale `e_src_res` cannot: it
+# would report a residual over a partition this model does not have. See the
+# enabled path below, which deletes it for the same reason.
+function register_energy_source_tagging_diagnostics!(::Nothing)
+    delete!(ALL_DIAGNOSTICS, "e_src_res")
+    return nothing
+end
 function register_energy_source_tagging_diagnostics!(
     model::EnergySourceTaggingModel,
 )

@@ -265,6 +265,19 @@ import ClimaAtmos as CA
                 Dict{String, Any}("type" => "step_function"),
                 FT,
             ) # unknown region type
+            # `res` belongs to the closure residual. Without this, a tag named
+            # `res` registers `e_tag_res` and is then silently overwritten by
+            # the residual, or deleted outright when the family has no region
+            # tags. Reserved for every family, so the water reader refuses it
+            # too.
+            @test_throws ErrorException CA.energy_tracer_tuple(
+                [Dict{String, Any}("name" => "res", "source" => "radiation")],
+                FT,
+            )
+            @test_throws ErrorException CA.water_tracer_tuple(
+                [Dict{String, Any}("name" => "res", "source" => "surface_flux")],
+                FT,
+            )
         end
 
         @testset "Source attribution ($FT)" begin
@@ -304,6 +317,62 @@ import ClimaAtmos as CA
             @test ᶜYₜ.ρe_tag_rad == ᶜΔ # not its source; unchanged
             @test ᶜYₜ.ρe_tag_strat_rad == ᶜmasks.ρe_tag_strat_rad .* ᶜΔ
         end
+    end
+
+    @testset "Closure normalizes by a positive scale" begin
+        # `tag_closure` needs only `getproperty`, `sum`, and a scratch buffer it
+        # can broadcast into, so plain arrays exercise the arithmetic directly.
+        # `sum` is unweighted here rather than volume-weighted, which changes
+        # none of the sign logic under test.
+        mock(parent, tag) = (
+            (; c = (; ρe_tot = parent, ρe_tag_a = tag)),
+            (; scratch = (; ᶜtemp_scalar = similar(parent))),
+        )
+        closure_of(parent, tag) = CA.tag_closure(
+            mock(parent, tag)...,
+            :ρe_tot,
+            (:ρe_tag_a,),
+        )
+
+        # A non-negative parent is the water case. `scale == total` there, so
+        # these numbers are exactly what dividing by `total` gave before.
+        positive = closure_of([3.0, 1.0], [2.0, 1.0])
+        @test positive.scale == positive.total == 4.0
+        @test positive.relative ≈ 1 / 4
+        @test positive.gross_relative ≈ 1 / 4
+        @test positive.nonpositive_fraction == 0.0
+
+        # A parent that integrates negative. Dividing the non-negative
+        # `gross_residual` by `total` made this negative, so it could never
+        # exceed a positive tolerance and the check passed silently however bad
+        # the partition was.
+        negative = closure_of([-3.0, -1.0], [-2.0, -1.0])
+        @test negative.total == -4.0
+        @test negative.scale == 4.0
+        @test negative.gross_residual ≈ 1.0
+        @test negative.gross_relative ≈ 1 / 4
+        @test negative.gross_relative > 0
+        @test negative.nonpositive_fraction == 1.0
+
+        # Mixed signs cancelling to zero. `iszero(total)` used to return exactly
+        # zero for both ratios, reporting perfect closure over a partition that
+        # accounts for none of the field.
+        mixed = closure_of([1.0, -1.0], [0.0, 0.0])
+        @test mixed.total == 0.0
+        @test mixed.scale == 2.0
+        @test mixed.gross_relative ≈ 1.0
+        @test mixed.nonpositive_fraction == 0.5
+
+        # An identically zero field still divides by zero, so the guard stays.
+        empty = closure_of([0.0, 0.0], [0.0, 0.0])
+        @test iszero(empty.scale)
+        @test iszero(empty.relative)
+        @test iszero(empty.gross_relative)
+        @test all(isfinite, (empty.relative, empty.gross_relative))
+
+        # Zero itself counts as non-positive: the donor share is undefined at
+        # zero parent just as it is below it.
+        @test closure_of([1.0, 0.0], [0.0, 0.0]).nonpositive_fraction == 0.5
     end
 
     @testset "AtmosModel integration" begin
@@ -355,6 +424,16 @@ import ClimaAtmos as CA
         # Registration is idempotent for per-tag entries (no overwrite)
         CA.Diagnostics.register_tagging_diagnostics!(CA.TaggingModel(tags))
         @test CA.Diagnostics.get_diagnostic_variable("e_tag_strat") === e_strat
+
+        # Disabling tagging must drop the residual. `ALL_DIAGNOSTICS` is
+        # process-global, so without this a later simulation with tagging off
+        # keeps an `e_tag_res` whose closure sums region tags that never
+        # partitioned its energy. Runs last because it mutates the registry.
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_tag_res")
+        CA.Diagnostics.register_tagging_diagnostics!(nothing)
+        @test !haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_tag_res")
+        # Per-tag entries are keyed by tag name alone, so they stay valid.
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_tag_strat")
     end
 
     @testset "Tagged name predicate" begin

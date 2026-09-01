@@ -10,12 +10,10 @@ tags can be checked against ``\rho e_\mathrm{tot}``.
 !!! warning "Energy, not heat and not temperature"
 
     The tagged variable is density-weighted moist total energy
-    ``\rho e_\mathrm{tot}``. It is not temperature, and it is not heat. Two
-    named methods in the literature tag neither: Grewe's *temperature tagging*
-    tags temperature, and Fajber and Kushner's *heat tagging* tags potential
-    temperature. This page cites the latter for its proportional-removal rule,
-    which the [water tags](tagged_water.md) borrow, not for the tagged
-    variable. Do not describe this family as heat tagging.
+    ``\rho e_\mathrm{tot}``. It is not temperature, and it is not heat. The
+    methods usually meant by "temperature tagging" and "heat tagging" in the
+    literature tag temperature and potential temperature respectively, so
+    neither name describes what this family does. Do not call it heat tagging.
 
 ## What a tag means
 
@@ -35,11 +33,12 @@ energy that is here now. Reading `e_tag_rad = -3.0e4` as "radiation supplied a
 negative amount of the local energy" is a misreading: it says radiation has
 removed that much more energy than it added since the tag started.
 
-The `source` key is kept for symmetry with `water_tracers`, where the same key
-selects the same processes. The two families differ in the *rule*, not the key.
-The water tags share out production by mask and take loss from each tag in
-proportion to what it holds, which yields an amount of water actually present
-and never below zero. The energy tags apply the whole signed increment by mask.
+The `source` key is spelled the same in `water_tracers`, but it does not mean
+the same thing there. The taggable process sets differ — water's is smaller,
+because `radiation` and `held_suarez` move no water — and, more importantly, so
+does the rule. The water tags share out production by mask and take loss from
+each tag in proportion to what it holds, which yields an amount of water
+actually present. The energy tags apply the whole signed increment by mask.
 Both are useful; they answer different questions.
 
 ## Enabling tags
@@ -140,8 +139,13 @@ print(yaml.dump({"vertices": vertices}))
 
 A process tag starts at zero and accumulates the tendency that a labeled
 process adds to ``\rho e_\mathrm{tot}``. It is configured with the `source`
-key, and it holds a process-change record rather than a share of the energy
+key, and it holds a signed running total rather than a share of the energy
 present. See [What a tag means](#What-a-tag-means).
+
+It is *not* the process-change record described in
+[Process-Change Records](process_record.md). That is a separate family with one
+field per process instead of per tag, and unlike a process tag it is never
+transported.
 
 ### Taggable processes
 
@@ -271,11 +275,16 @@ tag holds and changes every residual normalized by
 that way, so it is not comparable across configurations that use different
 references.
 
-Process tags are unaffected, because they accumulate increments rather than
-shares. This is one reason to read the two kinds of tag separately.
+A process tag for a process that exchanges no mass is unaffected, because it
+accumulates increments rather than shares. One that does exchange mass is not:
+under a shift `c`, the increment attributed to `precipitation`, or to the
+moisture part of `surface_flux`, moves by `c` times the mass exchanged.
 
-Water has a physical zero and does not have this problem, which is why
-`q_tag_res` and `e_tag_res` are not directly comparable numbers.
+Water has a physical zero and does not have this problem. That is one reason
+`q_tag_res` and `e_tag_res` are not comparable numbers; the plainer one is that
+they have different units and scales.
+
+## Where to look next
 
 See `config/model_configs/baroclinic_wave_tagged_tracers.yml` for a complete
 example, and `test/tagged_tracers_integration.jl` for the closure assertions.

@@ -172,14 +172,18 @@ close against.
 2-moment and P3 remain unsupported: they add number-concentration provenance,
 which is a separate question from the mass provenance the tags carry.
 """
-check_water_tagging_supported(::EquilibriumMicrophysics0M) = nothing
-check_water_tagging_supported(::NonEquilibriumMicrophysics1M) = nothing
-check_water_tagging_supported(::DryModel) = error(
-    "`water_tracers` requires a moist model: with `microphysics_model: dry` " *
+check_water_tagging_supported(::EquilibriumMicrophysics0M, key = "water_tracers") =
+    nothing
+check_water_tagging_supported(
+    ::NonEquilibriumMicrophysics1M,
+    key = "water_tracers",
+) = nothing
+check_water_tagging_supported(::DryModel, key = "water_tracers") = error(
+    "`$key` requires a moist model: with `microphysics_model: dry` " *
     "there is no `ρq_tot` in the prognostic state to partition.",
 )
-check_water_tagging_supported(model) = error(
-    "`water_tracers` supports `microphysics_model: 0M` and `1M` only (got " *
+check_water_tagging_supported(model, key = "water_tracers") = error(
+    "`$key` supports `microphysics_model: 0M` and `1M` only (got " *
     "$(nameof(typeof(model)))). 2-moment and P3 schemes additionally carry " *
     "prognostic number concentrations, whose provenance is a separate question " *
     "from the water mass provenance these tags partition; mirroring only the " *
