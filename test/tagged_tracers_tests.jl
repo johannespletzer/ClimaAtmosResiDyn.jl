@@ -268,14 +268,17 @@ import ClimaAtmos as CA
             # `res` belongs to the closure residual. Without this, a tag named
             # `res` registers `e_tag_res` and is then silently overwritten by
             # the residual, or deleted outright when the family has no region
-            # tags. Reserved for every family, so the water reader refuses it
-            # too.
+            # tags. Reserved for every family, so all three readers refuse it.
             @test_throws ErrorException CA.energy_tracer_tuple(
                 [Dict{String, Any}("name" => "res", "source" => "radiation")],
                 FT,
             )
             @test_throws ErrorException CA.water_tracer_tuple(
                 [Dict{String, Any}("name" => "res", "source" => "surface_flux")],
+                FT,
+            )
+            @test_throws ErrorException CA.energy_source_tracer_tuple(
+                [Dict{String, Any}("name" => "res", "source" => "radiation")],
                 FT,
             )
         end
