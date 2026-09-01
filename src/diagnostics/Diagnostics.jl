@@ -85,6 +85,14 @@ import ..WaterTaggingModel
 import ..water_region_tag_state_names
 import ..water_tag_fraction
 
+# energy_source_tagging_model
+import ..EnergySourceTaggingModel
+import ..energy_source_region_tag_state_names
+
+# process records
+import ..ProcessRecordModel
+import ..process_name
+
 # surface temperature
 import ..SurfaceConditions
 import ..SurfaceConditions: SlabOceanTemperature

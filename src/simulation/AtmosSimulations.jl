@@ -81,6 +81,8 @@ function setup_diagnostics_and_writers(
     # grid, so all three are registered here rather than at package load time
     CAD.register_tagging_diagnostics!(model)
     CAD.register_water_tagging_diagnostics!(model)
+    CAD.register_energy_source_tagging_diagnostics!(model)
+    CAD.register_process_record_diagnostics!(model)
     CAD.register_stratospheric_tracer_diagnostics!(model)
 
     all_diagnostics = []

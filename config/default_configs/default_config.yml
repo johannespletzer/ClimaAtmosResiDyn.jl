@@ -461,8 +461,20 @@ water_tracers:
 energy_tracers:
   help: "Tracers that split moist energy by where it came from, adding one prognostic field `ρe_tag_<name>` each [`~` (default, off)]. Same entry schema as `water_tracers`, with its own set of `source` labels. See docs/src/tracer_configuration.md."
   value: ~
+energy_source_tags:
+  help: "Tags that split moist energy by where the energy present now came from, adding one prognostic field `ρe_src_<name>` each [`~` (default, off)]. Same entry schema and `source` labels as `energy_tracers`, but the water tags' donor-proportional rule rather than the signed process record. The attribution step never drives a tag negative; unlimited transport still can, and there is no repair. Values depend on the chosen energy reference, which has no physical zero. See docs/src/energy_source_tags.md."
+  value: ~
+energy_process_record:
+  help: "Record what each listed process did to moist energy, as the signed increment it applied, output as `e_prc_<process>` [`~` (default, off)]. One `source` label, a list of them, or a group name, using the same labels as `energy_tracers`. Not a prognostic field and not transported, so a record says what a process did rather than where the energy present came from. See docs/src/process_record.md."
+  value: ~
+water_process_record:
+  help: "The same record for total water, output as `q_prc_<process>` [`~` (default, off)]. Uses the `water_tracers` source labels and requires `microphysics_model: 0M` or `1M`. See docs/src/process_record.md."
+  value: ~
 water_closure_check:
   help: "Check while the run goes whether the `water_tracers` still add up to total water, and write the result to `water_tag_closure.csv` [`~` (default, off)]. A map with optional `period` (how often, default `1days`) and `tolerance` (relative residual to warn above, default 1.0e-10). Warns and keeps running. See docs/src/tracer_configuration.md."
+  value: ~
+energy_source_closure_check:
+  help: "The same check for `energy_source_tags`, written to `energy_source_tag_closure.csv` [`~` (default, off)]. Same `period` / `tolerance` keys and the same loose default tolerance as `energy_closure_check` (1.0e-6). The residual is normalised by a quantity whose zero is a convention, so it is not comparable across runs that use different energy references. See docs/src/energy_source_tags.md."
   value: ~
 energy_closure_check:
   help: "The same check for `energy_tracers`, written to `energy_tag_closure.csv` [`~` (default, off)]. Same `period` / `tolerance` keys, but a much looser default tolerance (1.0e-6): the energy tags do not receive implicit transport or EDMFX SGS mass fluxes, so a larger residual is expected. See docs/src/tracer_configuration.md."

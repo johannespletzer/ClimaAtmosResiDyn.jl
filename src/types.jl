@@ -2251,10 +2251,14 @@ names can be generated at compile time (GPU-compatible).
     empty for passive region tags. A single `Symbol` is also accepted
     (`:none` meaning "no sources").
 
-A tag with sources is a *process tag*: it holds a process-change record, the
-signed increment its processes have added since the start, and goes negative
-under net cooling. It is not a share of the energy present. The `source` key is
-shared with [`WaterTag`](@ref), which applies a different rule to it.
+A tag with sources is a *signed process tag*: it starts at zero, accumulates
+the signed increment its processes have added, and goes negative under net
+cooling. It is not a share of the energy present. The `source` key is shared
+with [`WaterTag`](@ref), which applies a different rule to it.
+
+Do not call it a process-change record. That name belongs to the `prc_*`
+family in `process_record.jl`, which is a different object: one field per
+process rather than per tag, and not transported.
 """
 struct TracerTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
        AbstractTracerTag{name}
@@ -2334,13 +2338,101 @@ struct WaterTaggingModel{T <: Tuple}
 end
 
 """
+    EnergySourceTag{name}(region, source = :none)
+
+Definition of one energy **source tag**, stored in the state as
+`Y.c.ρe_src_<name>`. The tag `name` is a type parameter so that state field
+names can be generated at compile time (GPU-compatible).
+
+Fields mean what they do for [`TracerTag`](@ref), but the attribution rule
+differs and that is the whole point of the separate type. A source tag holds an
+amount of moist energy that is present now and is traced back to where it came
+from: production is shared out by region mask and loss is taken from each tag in
+proportion to what it already holds. A `TracerTag` configured with `source`
+instead accumulates the whole signed increment and is a process-change record.
+
+The attribution rule cannot drive a tag below zero, because a tag is only ever
+depleted in proportion to what it holds. That is a property of the rule, not a
+guarantee about the field: the tags are exempt from both tracer limiters
+through [`is_tagged_tracer_name`](@ref) and ride the unlimited explicit
+transport path, so transport can leave a tag slightly negative. Unlike the
+water tags there is no partition repair to put it back, and the donor share of
+a negative holding is clamped to zero rather than corrected. Read the promise
+as "the attribution step never drives it negative", not "it is never negative".
+
+This is the energy counterpart of [`WaterTag`](@ref), which already works this
+way. Moist total energy has no physical zero, so unlike water the resulting
+shares depend on the chosen energy reference; see `docs/src/energy_source_tags.md`.
+"""
+struct EnergySourceTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
+       AbstractTracerTag{name}
+    region::R
+    sources::S
+end
+EnergySourceTag{name}(region::R, sources::S = ()) where {name, R, S <: Tuple} =
+    EnergySourceTag{name, R, S}(region, sources)
+EnergySourceTag{name}(region, source::Symbol) where {name} =
+    EnergySourceTag{name}(region, source === :none ? () : (source,))
+
+"""
+    EnergySourceTaggingModel(tags::Tuple)
+
+Model component holding a `Tuple` of [`EnergySourceTag`](@ref)s. Constructed
+from the `energy_source_tags` config entry; see `AtmosTagging(::AtmosConfig)` in
+`config/tracer_config.jl`.
+"""
+struct EnergySourceTaggingModel{T <: Tuple}
+    tags::T
+end
+
+"""
+    RecordedProcess{name}()
+
+One process whose applied increment is accumulated by a
+[`ProcessRecordModel`](@ref). The process `name` is a type parameter so that the
+state field `prc_e_<name>` or `prc_q_<name>` can be looked up at compile time,
+exactly as [`TracerTag`](@ref) does for its own state field.
+"""
+struct RecordedProcess{name} end
+
+"""
+    process_name(::RecordedProcess)
+
+The `Symbol` naming the recorded process, e.g. `:radiation`.
+"""
+process_name(::RecordedProcess{name}) where {name} = name
+
+"""
+    ProcessRecordModel(processes::Tuple)
+
+Model component holding a `Tuple` of [`RecordedProcess`](@ref)es. Constructed
+from the `energy_process_record` or `water_process_record` config entry; see
+`AtmosTagging(::AtmosConfig)` in `config/tracer_config.jl`.
+
+A process record answers "what did this process do here", not "where did the
+energy present come from". It accumulates the signed increment each bracketed
+process applies, so gains are positive and losses negative.
+
+Records are prognostic, because the bracket yields a rate and only the
+timestepper can integrate it correctly across the stages. They are still never
+transported: their state names carry no `ρ` prefix, so `gs_tracer_names` does
+not see them.
+"""
+struct ProcessRecordModel{P <: Tuple}
+    processes::P
+end
+
+"""
     AtmosTagging
 
 Groups tagged-tracer models and types.
 """
-@kwdef struct AtmosTagging{TM, WM}
+@kwdef struct AtmosTagging{TM, WM, ESM, EPR, WPR}
     tagging_model::TM = nothing
     water_tagging_model::WM = nothing
+    energy_source_tagging_model::ESM = nothing
+    energy_process_record::EPR = nothing
+    water_process_record::WPR = nothing
 end
 
 """
