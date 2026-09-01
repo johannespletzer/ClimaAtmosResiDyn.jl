@@ -16,8 +16,8 @@ Usage:
 
 The burden curve tells you whether a run is long enough. A tracer still
 filling rises linearly; one in equilibrium has levelled off. That is the same
-statement as `lifetime` (`burden / source`) tracking the elapsed time, but much
-quicker to read across many tracers at once.
+statement as `residence_time` (`burden / source`) tracking the elapsed time,
+but much quicker to read across many tracers at once.
 
 ## Why the colours and dashes mean what they do
 
@@ -35,7 +35,7 @@ product, 14 rather than 48. Each of the two gradients a reader cares about, with
 height and with latitude, stays readable on its own.
 =#
 
-include(joinpath(@__DIR__, "tracer_lifetimes.jl"))
+include(joinpath(@__DIR__, "tracer_residence_times.jl"))
 
 import CairoMakie
 

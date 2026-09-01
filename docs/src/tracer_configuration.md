@@ -84,8 +84,8 @@ by key, and these are three different keys.
 
 Inert tracers that are produced inside fixed regions and removed below the
 tropopause. Because production and removal are the only terms, a tracer whose
-burden has stopped drifting has a lifetime of `burden / source` — which is how
-long air released in that region stays in the stratosphere.
+burden has stopped drifting has a residence time of `burden / source` — which
+is how long air released in that region stays in the stratosphere.
 
 Physics and output: [Passive Tracers](passive_tracers.md).
 
@@ -128,14 +128,15 @@ an error, and so is setting neither — 48 tracers is hours of setup, which is
 not a thing to arrive at by leaving a key out.
 
 `production_rate` sets how large the tracer values are, not how long the
-lifetimes are: burden and source are both proportional to it, and only their
-ratio is reported. Leave it alone unless the numbers are inconveniently small.
+residence times are: burden and source are both proportional to it, and only
+their ratio is reported. Leave it alone unless the numbers are inconveniently
+small.
 
-`loss_timescale` should be short compared with the lifetimes you are measuring
-(years) and long compared with the timestep. It cannot be infinite — that would
-remove the tracers' only sink, so they would never settle.
+`loss_timescale` should be short compared with the residence times you are
+measuring (years) and long compared with the timestep. It cannot be infinite —
+that would remove the tracers' only sink, so they would never settle.
 
-The budget table that the lifetimes come from is written every
+The budget table that the residence times come from is written every
 `dt_tracer_budget`, which is a separate top-level key because it is an output
 cadence like `dt_rad`.
 

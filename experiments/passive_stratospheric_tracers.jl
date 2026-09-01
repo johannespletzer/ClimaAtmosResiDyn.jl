@@ -1,19 +1,19 @@
 #=
-Stratospheric passive tracer lifetimes.
+Stratospheric passive tracer residence times.
 
 Runs the configuration in
 `config/example_configs/passive_stratospheric_tracers.yml`. That is a moist
 aquaplanet with RRTMGP radiation, carrying one inert tracer per source region
 above the tropopause, on a grid of latitude bands by height bands. Each tracer
 is produced at a constant rate inside its region and removed below the
-tropopause. Once its global burden stops drifting, its lifetime is
+tropopause. Once its global burden stops drifting, its residence time is
 
     τ = burden / source
 
 The burden, the source rate and the loss rate of every tracer are appended to
 `stratospheric_tracer_budget.csv` in the output directory as the run proceeds.
-`post_processing/tracer_lifetimes.jl` turns that table into lifetimes and
-reports how close each tracer is to equilibrium.
+`post_processing/tracer_residence_times.jl` turns that table into residence
+times and reports how close each tracer is to equilibrium.
 
 This script only selects the configuration, so the run picks up the usual
 checkpointing, restart and diagnostics handling. The tracer machinery itself

@@ -4,9 +4,9 @@ job_id: "passive_stratospheric_tracers_ci"
 # with the same 10 degree by 2 km source boxes on a coarser 3 x 3 grid.
 #
 # This runs for two simulated days, which is far short of equilibrium, so treat
-# the lifetimes it produces as arbitrary. Its job is to exercise the machinery a
-# multi-year run depends on: building 9 tracers into the prognostic state,
-# diagnosing the tropopause each stage, applying the source and the
+# the residence times it produces as arbitrary. Its job is to exercise the
+# machinery a multi-year run depends on: building 9 tracers into the prognostic
+# state, diagnosing the tropopause each stage, applying the source and the
 # sub-tropopause sink, writing the budget table, and restarting from a
 # checkpoint.
 #
