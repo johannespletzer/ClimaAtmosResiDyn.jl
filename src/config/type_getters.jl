@@ -652,6 +652,7 @@ function callback_kwargs_from_config(config::AtmosConfig)
         dt_tracer_budget = pa["dt_tracer_budget"],
         water_closure_check = closure_checks.water,
         energy_closure_check = closure_checks.energy,
+        energy_source_closure_check = closure_checks.energy_source,
         log_progress = pa["log_progress"],
         check_nan_every = pa["check_nan_every"],
         check_conservation = pa["check_conservation"],

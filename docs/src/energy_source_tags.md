@@ -16,14 +16,6 @@ and a different quantity from the [Tagged Energy Tracers](tagged_tracers.md):
 Both accept the same `source` labels. The rule applied to them differs, and that
 is the whole distinction.
 
-!!! warning "Not finished yet"
-
-    This page describes the state, transport and diagnostics, which are in
-    place. The attribution rule that shares out production by mask and takes
-    loss in proportion to what each tag holds is **not implemented yet**. Until it is, a region tag is initialized to its
-    masked share and then only transported, and a tag carrying a `source` starts
-    at zero and stays there. Configure region tags only for now.
-
 ## Enabling tags
 
 ```yaml
@@ -47,11 +39,11 @@ named regions.
     partition of unity per run — a region and its complement. A warning is
     emitted at initialization when the masks do not sum to 1.
 
-## The intended rule
+## Attribution
 
-Once implemented, a bracketed increment ``\Delta`` to ``\rho e_\mathrm{tot}``
-will be split into gross production and gross loss and attributed by different
-rules, exactly as the water tags already do:
+A bracketed increment ``\Delta`` to ``\rho e_\mathrm{tot}`` is split into gross
+production and gross loss and attributed by **different rules**, exactly as the
+water tags do:
 
 ```math
 \Delta\!\left(\rho e_{\mathrm{src},k}\right)
@@ -60,10 +52,41 @@ rules, exactly as the water tags already do:
 \varphi_k = \frac{\rho e_{\mathrm{src},k}}{\rho e_\mathrm{tot}}.
 ```
 
-Production is shared out by region mask, so new energy carries the label of
-where it entered. Loss is donor-proportional, so cooling removes energy from
-each tag in proportion to what it holds and no tag is driven negative by a loss
-it does not own.
+  - **Production is mask-weighted.** ``M_k`` is the tag's region mask (1 for a
+    region-less source tag, 0 if the tag does not list this process). New energy
+    carries the label of where it entered.
+  - **Loss is donor-proportional.** Energy leaves in proportion to what is
+    actually present, and **every** tag is depleted, whatever processes it
+    lists. This is what makes ``\rho e_{\mathrm{src},k}`` an amount of energy
+    rather than a running total, and what keeps a tag from being driven negative
+    by a loss it does not own.
+
+With ``\sum_k M_k = 1`` and ``\sum_k \rho e_{\mathrm{src},k} = \rho e_\mathrm{tot}``
+we have ``\sum_k \varphi_k = 1``, so ``\sum_k \Delta_k = \Delta^{+} - \Delta^{-} = \Delta``
+exactly, per process.
+
+Only the explicit path is bracketed for these tags, as for the process records,
+so `precipitation` — which is attributed on the implicit path for the
+`ρe_tag_*` family — does not reach a source tag. That is a named limitation, not
+an oversight, and it shows up in `e_src_res`.
+
+## Closure checking
+
+```yaml
+energy_source_closure_check:
+  period: "1days"
+  tolerance: 1.0e-6
+```
+
+Reduces `e_src_res` to a pair of numbers on its own cadence and appends them to
+`energy_source_tag_closure.csv`, warning when the run drifts past the tolerance.
+The keys and behaviour are those of `energy_closure_check`; see
+[Configuring Tracers](tracer_configuration.md).
+
+The tolerance is compared against a residual normalized by a quantity whose zero
+is a convention, so a value tuned for one energy reference means something
+different under another. Calibrate it against a first run of your own
+configuration.
 
 ## The energy reference problem
 
@@ -127,4 +150,8 @@ ClimaAtmos.energy_source_tag_state_names
 ClimaAtmos.energy_source_region_tag_state_names
 ClimaAtmos.is_energy_source_tag_name
 ClimaAtmos.energy_source_tracer_tuple
+ClimaAtmos.warn_inactive_energy_source_labels
+ClimaAtmos.energy_source_fraction
+ClimaAtmos.snapshot_energy_source_tags!
+ClimaAtmos.attribute_energy_source_tags!
 ```

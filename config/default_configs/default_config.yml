@@ -473,6 +473,9 @@ water_process_record:
 water_closure_check:
   help: "Check while the run goes whether the `water_tracers` still add up to total water, and write the result to `water_tag_closure.csv` [`~` (default, off)]. A map with optional `period` (how often, default `1days`) and `tolerance` (relative residual to warn above, default 1.0e-10). Warns and keeps running. See docs/src/tracer_configuration.md."
   value: ~
+energy_source_closure_check:
+  help: "The same check for `energy_source_tags`, written to `energy_source_tag_closure.csv` [`~` (default, off)]. Same `period` / `tolerance` keys and the same loose default tolerance as `energy_closure_check` (1.0e-6). The residual is normalised by a quantity whose zero is a convention, so it is not comparable across runs that use different energy references. See docs/src/energy_source_tags.md."
+  value: ~
 energy_closure_check:
   help: "The same check for `energy_tracers`, written to `energy_tag_closure.csv` [`~` (default, off)]. Same `period` / `tolerance` keys, but a much looser default tolerance (1.0e-6): the energy tags do not receive implicit transport or EDMFX SGS mass fluxes, so a larger residual is expected. See docs/src/tracer_configuration.md."
   value: ~

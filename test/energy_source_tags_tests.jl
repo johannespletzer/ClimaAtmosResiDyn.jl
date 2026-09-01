@@ -43,6 +43,79 @@ import ClimaAtmos as CA
         end
     end
 
+    for FT in (Float32, Float64)
+        @testset "Donor fraction is guarded ($FT)" begin
+            # Ordinary case: the clamped share
+            @test CA.energy_source_fraction(FT(1), FT(4)) == FT(0.25)
+            # Clamped from both ends, so transport drift cannot make the rule
+            # remove more than is there or add energy back
+            @test CA.energy_source_fraction(FT(-1), FT(4)) == FT(0)
+            @test CA.energy_source_fraction(FT(9), FT(4)) == FT(1)
+            # ρe_tot has no physical zero, so a non-positive parent is possible
+            # and must not produce Inf or NaN
+            @test CA.energy_source_fraction(FT(1), FT(0)) == FT(0)
+            @test CA.energy_source_fraction(FT(1), FT(-4)) == FT(0)
+            @test isfinite(CA.energy_source_fraction(FT(1), FT(0)))
+        end
+
+        @testset "Attribution never drives a tag below zero ($FT)" begin
+            region = CA.TanhLatitudeRegion(FT(20), FT(2), true)
+            tropics = CA.EnergySourceTag{:tropics}(region)
+            rad = CA.EnergySourceTag{:rad}(nothing, :radiation)
+            tags = (tropics, rad)
+
+            ᶜYₜ = (; ρe_src_tropics = zeros(FT, 4), ρe_src_rad = zeros(FT, 4))
+            ᶜY = (;
+                ρe_src_tropics = FT[100, 100, 100, 100],
+                ρe_src_rad = FT[0, 50, 100, 200],
+                ρe_tot = FT[400, 400, 400, 400],
+            )
+            ᶜmasks = (; ρe_src_tropics = FT[0, 0.25, 0.5, 1])
+
+            # Pure production: mask-weighted, and a tag that does not list the
+            # process gets none of it
+            ᶜΔ = FT[8, 8, 8, 8]
+            CA._accumulate_energy_source_tags!(
+                ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, :radiation, tags,
+            )
+            @test ᶜYₜ.ρe_src_tropics == ᶜmasks.ρe_src_tropics .* ᶜΔ
+            @test ᶜYₜ.ρe_src_rad == ᶜΔ  # region-less, lists radiation
+
+            # Pure loss: donor-proportional, and it reaches *every* tag
+            # regardless of what it lists. This is the half that differs from
+            # the ρe_tag_* rule.
+            fill!(ᶜYₜ.ρe_src_tropics, FT(0))
+            fill!(ᶜYₜ.ρe_src_rad, FT(0))
+            ᶜΔloss = FT[-8, -8, -8, -8]
+            CA._accumulate_energy_source_tags!(
+                ᶜYₜ, ᶜY, ᶜmasks, ᶜΔloss, :held_suarez, tags,
+            )
+            φ_tropics =
+                CA.energy_source_fraction.(ᶜY.ρe_src_tropics, ᶜY.ρe_tot)
+            φ_rad = CA.energy_source_fraction.(ᶜY.ρe_src_rad, ᶜY.ρe_tot)
+            @test ᶜYₜ.ρe_src_tropics ≈ ᶜΔloss .* φ_tropics
+            @test ᶜYₜ.ρe_src_rad ≈ ᶜΔloss .* φ_rad
+            # Loss removes at most what the tag holds, so applying the
+            # increment cannot take the tag below zero. Written as a sum rather
+            # than a comparison against a negated field, because `.-ᶜ` parses
+            # as a suffixed operator that Julia leaves undefined.
+            @test all(ᶜYₜ.ρe_src_tropics .+ ᶜY.ρe_src_tropics .>= 0)
+            @test all(ᶜYₜ.ρe_src_rad .+ ᶜY.ρe_src_rad .>= 0)
+
+            # A non-positive parent falls back to zero rather than Inf/NaN
+            fill!(ᶜYₜ.ρe_src_rad, FT(0))
+            ᶜYzero = (;
+                ρe_src_tropics = ᶜY.ρe_src_tropics,
+                ρe_src_rad = ᶜY.ρe_src_rad,
+                ρe_tot = zeros(FT, 4),
+            )
+            CA._accumulate_energy_source_tags!(
+                ᶜYₜ, ᶜYzero, ᶜmasks, ᶜΔloss, :held_suarez, (rad,),
+            )
+            @test all(iszero, ᶜYₜ.ρe_src_rad)
+        end
+    end
+
     @testset "Name predicate" begin
         @test CA.is_energy_source_tag_name(:ρe_src_tropics)
         @test !CA.is_energy_source_tag_name(:ρe_tag_tropics)

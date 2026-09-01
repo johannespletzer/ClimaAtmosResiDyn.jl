@@ -364,6 +364,10 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
             ᶜtagging_q_share_norm = similar(Y.c.ρ),
         )
     )...,
+    (
+        isnothing(atmos.energy_source_tagging_model) ? (;) :
+        (; ᶜe_src_snapshot = similar(Y.c.ρ))
+    )...,
     process_record_scratch(Y, atmos)...,
 )
 
