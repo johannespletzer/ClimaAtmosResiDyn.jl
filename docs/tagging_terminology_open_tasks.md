@@ -8,66 +8,15 @@ an entry when it is done.
 The decisions themselves belong in the pull requests that make them. Nothing
 here is a commitment to a particular answer.
 
-## Naming
-
-### "Process-change record" names two different things
-
-The phrase is used for two products that the KT Boost Fund method note keeps
-deliberately apart.
-
-  - In `docs/src/tracer_configuration.md` and `docs/src/tagged_tracers.md` it is
-    the quantity an `energy_tracers` entry with a `source` holds: a prognostic
-    `ρe_tag_<name>` field, transported, signed, one per tag.
-  - In the process-record work it is the `prc_<process>` family behind the
-    `energy_process_record` and `water_process_record` keys: cache-resident, not
-    transported, one field per process.
-
-Those are the method note's item 4 and its B respectively. They differ in what
-they are attached to, whether they move, and what they can be summed over. The
-glossary currently defines the first and then, three paragraphs later, sends the
-reader to the second under the same words.
-
-Closing it: keep "process-change record" for the `prc_*` family alone, and call
-an `energy_tracers` `source` entry a *signed process tag* in prose. Both names
-already appear; only the shared one has to go. This is documentation only, but
-it should be settled before the process-record PR merges, since that is the PR
-that introduces the collision.
-
-### The glossary counts two tag families, and there will be three
-
-`docs/src/tracer_configuration.md` opens its glossary with "Two of these
-families use the word 'tag'". That is true today. It stops being true when
-`energy_source_tags` lands, which adds `ρe_src_<name>` as a third.
-
-The same file's "Which one do I want?" table has three rows and no entry for
-`energy_source_tags`, `energy_process_record` or `water_process_record`. A
-reader who arrives at the configuration reference will not learn the new keys
-exist.
-
-Closing it: fix both in the PR that adds the third family, not afterwards.
-
-### Corrections on the wording PR have not reached the stacked branches
-
-Commit 5517913 on `claude/tagging-a-and-b` corrected four overstated claims: a
-citation the repository does not make, the assertion that the `source` key
-selects the same processes in both families, an unqualified "process tags are
-unaffected" by the energy reference, and "never negative" for a water tag. The
-stacked branches were cut before it, so each still carries the old text.
-
-This resolves itself when the stack merges in order. It matters only in the
-meantime, to a reviewer who reads a stacked branch and reports a finding that is
-already fixed one PR down.
-
 ## Limits that are documented but not lifted
 
 These are stated in the docs and in the diagnostic `comments`, so nothing is
 hidden. They are listed here because they are the natural next pieces of work,
 not because they are defects.
 
-  - **Process records cover the explicit path only.** The implicit path is
-    evaluated with `ForwardDiff.Dual` numbers when an AD Jacobian is used, and
-    only `p.precomputed` and `p.scratch` are dual-converted, so a record written
-    from there would put a `Dual` into a plain-float cache field. `microphysics`
+  - **Process records cover the explicit path only.** Only the explicit path
+    has a snapshot/attribute bracket. `snapshot_tags!` and `attribute_tags!`
+    are called from `remaining_tendency.jl` and nowhere else. `microphysics`
     for water and `precipitation` for energy therefore stay zero when stepped
     implicitly, which is the default for microphysics. Lifting this is the
     smaller of the two follow-ups.
