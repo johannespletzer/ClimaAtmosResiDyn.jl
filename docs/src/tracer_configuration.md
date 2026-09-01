@@ -25,13 +25,20 @@ Two of these families use the word "tag", and both accept a `source` key, but a
 tag does not hold the same kind of quantity in each.
 
   - **source tag**: an amount of the parent variable that is present now, traced
-    back to where it came from. Never negative. The `water_tracers` entries are
-    source tags.
-  - **process-change record**: the signed increment one process has added since
-    the tag started. Negative under net cooling. An `energy_tracers` entry with
-    a `source` holds one of these.
-  - **process tag**: an `energy_tracers` entry configured with `source`. Named
-    that way because it holds a process-change record, not a source amount.
+    back to where it came from. The attribution rule never drives it below zero.
+    Transport can, and `repair_water_tag_partition!` puts it back. The
+    `q_tag_fix_<name>` diagnostic logs how much was moved. The `water_tracers`
+    entries are source tags.
+  - **signed process tag**: an `energy_tracers` entry configured with `source`.
+    It starts at zero and holds the signed increment its process has added,
+    going negative under net cooling. A running total of what a process did,
+    not a source amount. Transported like any other tag.
+  - **process-change record**: the `prc_e_<process>` and `prc_q_<process>`
+    fields from the `energy_process_record` and `water_process_record` keys.
+    Also a signed running total, but one field per process rather than per tag,
+    and never transported. Reserve the phrase for these: a signed process tag
+    is a different object and calling both by one name has already caused
+    confusion.
   - **region tag**: a transported partition of the parent variable, in either
     family.
   - **source tracing**: what the source tags do. A description of the method,
