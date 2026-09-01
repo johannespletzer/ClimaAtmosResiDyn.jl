@@ -2348,9 +2348,17 @@ Fields mean what they do for [`TracerTag`](@ref), but the attribution rule
 differs and that is the whole point of the separate type. A source tag holds an
 amount of moist energy that is present now and is traced back to where it came
 from: production is shared out by region mask and loss is taken from each tag in
-proportion to what it already holds, so the tag never goes below zero. A
-`TracerTag` configured with `source` instead accumulates the whole signed
-increment and is a process-change record.
+proportion to what it already holds. A `TracerTag` configured with `source`
+instead accumulates the whole signed increment and is a process-change record.
+
+The attribution rule cannot drive a tag below zero, because a tag is only ever
+depleted in proportion to what it holds. That is a property of the rule, not a
+guarantee about the field: the tags are exempt from both tracer limiters
+through [`is_tagged_tracer_name`](@ref) and ride the unlimited explicit
+transport path, so transport can leave a tag slightly negative. Unlike the
+water tags there is no partition repair to put it back, and the donor share of
+a negative holding is clamped to zero rather than corrected. Read the promise
+as "the attribution step never drives it negative", not "it is never negative".
 
 This is the energy counterpart of [`WaterTag`](@ref), which already works this
 way. Moist total energy has no physical zero, so unlike water the resulting

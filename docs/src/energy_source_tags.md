@@ -19,8 +19,8 @@ is the whole distinction.
 !!! warning "Not finished yet"
 
     This page describes the state, transport and diagnostics, which are in
-    place. The attribution rule that makes a source tag never go below zero is
-    **not implemented yet**. Until it is, a region tag is initialized to its
+    place. The attribution rule that shares out production by mask and takes
+    loss in proportion to what each tag holds is **not implemented yet**. Until it is, a region tag is initialized to its
     masked share and then only transported, and a tag carrying a `source` starts
     at zero and stays there. Configure region tags only for now.
 

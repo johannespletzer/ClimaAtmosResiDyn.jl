@@ -730,12 +730,22 @@ is_water_tag_name(name::MatrixFields.FieldName) =
 """
     is_tagged_tracer_name(name)
 
-Whether `name` refers to a tagged prognostic tracer of either family. Used to
-exempt tags from the tracer limiters, for different reasons per family: tagged
-energies can be legitimately negative (e.g. accumulated cooling), while tagged
-waters must not be limited independently of each other because a shape-preserving
-adjustment applied per tag would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags instead
-follow the parent's limiting through [`rescale_water_tags!`](@ref).
+Whether `name` refers to a tagged prognostic tracer of any of the three
+families. Used to exempt tags from the tracer limiters, for a different reason
+in each case:
+
+  - `ρe_tag_*` holds a signed process-change record, so it can be legitimately
+    negative (accumulated cooling) and a non-negativity limiter would be wrong.
+  - `ρq_tag_*` must not be limited independently of the other water tags,
+    because a shape-preserving adjustment applied per tag has no reason to
+    reproduce the parent's and would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags
+    follow the parent's limiting through [`rescale_water_tags!`](@ref) instead.
+  - `ρe_src_*` is exempt for the same partition reason as the water tags, but
+    it has no equivalent of `rescale_water_tags!` and no partition repair. So
+    unlike water, nothing restores it: the attribution rule keeps it
+    non-negative, and unlimited transport can still leave it slightly below
+    zero. That is a known limit, not an oversight — see
+    `docs/src/energy_source_tags.md`.
 """
 is_tagged_tracer_name(name) =
     is_energy_tag_name(name) ||
