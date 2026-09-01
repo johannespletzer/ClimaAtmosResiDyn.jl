@@ -601,6 +601,8 @@ end
         relative = 1 / 3,
         gross_residual = 5.0,
         gross_relative = 5 / 3,
+        scale = 3.0,
+        nonpositive_fraction = 0.0,
     )
     CA.write_tag_closure!(dir, 0.0, "water", closure)
     CA.write_tag_closure!(dir, 86400.0, "water", closure)
@@ -610,13 +612,14 @@ end
     rows = readlines(path)
     # Header written once, then one row per call.
     @test rows[1] ==
-          "time,total,tagged,residual,relative,gross_residual,gross_relative"
+          "time,total,tagged,residual,relative,gross_residual," *
+          "gross_relative,scale,nonpositive_fraction"
     @test length(rows) == 3
     @test startswith(rows[2], "0.0,3.0,2.0,1.0,")
-    @test endswith(rows[2], ",5.0,$(5 / 3)")
+    @test endswith(rows[2], ",5.0,$(5 / 3),3.0,0.0")
     @test startswith(rows[3], "86400.0,")
     # Every header column is filled in.
-    @test all(row -> length(split(row, ",")) == 7, rows)
+    @test all(row -> length(split(row, ",")) == 9, rows)
 end
 
 @testset "Shipped tracer configs still build a model" begin
