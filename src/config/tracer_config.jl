@@ -443,6 +443,16 @@ function tracer_tag_tuple(
     end
     names = map(tag_name, tags)
     allunique(names) || error("Names in `$key` must be unique; got $(names).")
+    # `res` is taken by the closure residual. Every family registers its
+    # per-tag diagnostics first and then unconditionally deletes and re-registers
+    # `<prefix>_res`, so a tag named `res` is either silently replaced by the
+    # residual or, when the family has no region tags, deleted and never
+    # re-registered — leaving a configured diagnostic that does not exist.
+    # Cheaper to refuse the name than to make the registration order safe.
+    :res in names && error(
+        "`res` is a reserved tag name in `$key`: it collides with the closure \
+        residual diagnostic. Choose another name.",
+    )
     return Tuple(tags)
 end
 

@@ -394,9 +394,23 @@ region tags of that family. Returns
     (; total, tagged, residual, relative, gross_residual, gross_relative)
 
 All the integrals are volume-weighted over the whole domain.
-`residual = total - tagged` is the *signed* miss and `relative` is it over
-`total`. `gross_residual` is the integral of the pointwise `|parent - Σ tags|`,
-and `gross_relative` is that over `total`.
+`residual = total - tagged` is the *signed* miss. `gross_residual` is the
+integral of the pointwise `|parent - Σ tags|`. Both are reported relative to
+`scale = ∫|parent|`, never to `total`.
+
+`scale` rather than `total` because the parent may be signed. Moist total energy
+has no physical zero, so `∫ρe_tot` can be negative or zero under a shifted
+reference, and dividing a non-negative `gross_residual` by it would give a
+negative or zero number that can never exceed a positive tolerance — the check
+would pass silently at any residual. `∫|parent|` is positive whenever the field
+is not identically zero, and equals `total` wherever the parent is non-negative,
+so the water numbers are unchanged.
+
+`nonpositive_fraction` is the volume fraction where `parent ≤ 0`. It is zero for
+a well-posed run. Anything above zero says the shares are undefined somewhere,
+which the residual alone will not tell you: a set of complementary region tags
+can partition a negative parent exactly, giving perfect closure over a state
+whose fractions are meaningless.
 
 Both are reported because the signed pair alone can say a partition is perfect
 when it is not. `total` and `tagged` are two global integrals, so a partition
@@ -416,24 +430,50 @@ function tag_closure(Y, p, total_name, tag_state_names)
     tagged = sum(sum(getproperty(Y.c, name)) for name in tag_state_names)
     residual = total - tagged
 
+    # One scratch field, reused in sequence. Only `sum` is used: it is the
+    # documented collective reduction here, and whether `minimum` reduces across
+    # processes is not something this file should assume.
+    ᶜtmp = p.scratch.ᶜtemp_scalar
+
+    # The positive normalization scale.
+    @. ᶜtmp = abs(ᶜparent)
+    scale = sum(ᶜtmp)
+
+    # Volume where the parent is non-positive, and the total volume to make it a
+    # fraction. Reported directly, because closure cannot reveal it.
+    @. ᶜtmp = ifelse(ᶜparent <= zero(ᶜparent), one(ᶜparent), zero(ᶜparent))
+    nonpositive_volume = sum(ᶜtmp)
+    @. ᶜtmp = one(ᶜparent)
+    volume = sum(ᶜtmp)
+
     # The same subtraction as `e_tag_res` and `q_tag_res`, reduced to one
     # number. Taking the absolute value first keeps opposite-signed local errors
     # from cancelling.
-    ᶜresidual = p.scratch.ᶜtemp_scalar
-    @. ᶜresidual = ᶜparent
+    @. ᶜtmp = ᶜparent
     for name in tag_state_names
         ᶜtag = getproperty(Y.c, name)
-        @. ᶜresidual -= ᶜtag
+        @. ᶜtmp -= ᶜtag
     end
-    @. ᶜresidual = abs(ᶜresidual)
-    gross_residual = sum(ᶜresidual)
+    @. ᶜtmp = abs(ᶜtmp)
+    gross_residual = sum(ᶜtmp)
 
-    # A state with zero water everywhere would divide by zero. A real run stays
+    # A field that is identically zero would divide by zero. A real run stays
     # clear of that, and this guard keeps the check itself from ending one.
-    relative = iszero(total) ? zero(residual) : residual / total
+    relative = iszero(scale) ? zero(residual) : residual / scale
     gross_relative =
-        iszero(total) ? zero(gross_residual) : gross_residual / total
-    return (; total, tagged, residual, relative, gross_residual, gross_relative)
+        iszero(scale) ? zero(gross_residual) : gross_residual / scale
+    nonpositive_fraction =
+        iszero(volume) ? zero(nonpositive_volume) : nonpositive_volume / volume
+    return (;
+        total,
+        tagged,
+        residual,
+        relative,
+        gross_residual,
+        gross_relative,
+        scale,
+        nonpositive_fraction,
+    )
 end
 
 """
@@ -456,7 +496,8 @@ function write_tag_closure!(output_dir, t, family, closure)
     open(path, "a") do io
         write_header && println(
             io,
-            "time,total,tagged,residual,relative,gross_residual,gross_relative",
+            "time,total,tagged,residual,relative,gross_residual," *
+            "gross_relative,scale,nonpositive_fraction",
         )
         println(
             io,
@@ -469,6 +510,8 @@ function write_tag_closure!(output_dir, t, family, closure)
                     closure.relative,
                     closure.gross_residual,
                     closure.gross_relative,
+                    closure.scale,
+                    closure.nonpositive_fraction,
                 ),
                 ",",
             ),
@@ -511,6 +554,17 @@ function tag_closure_callback!(
             the configured tolerance $tolerance at t = $t s. The tags no \
             longer account for the field they partition; see \
             $(tag_closure_path(output_dir, family))."
+        )
+        # Reported separately because closure cannot reveal it: complementary
+        # region tags partition a negative parent exactly, so the residual stays
+        # at zero while every share is meaningless.
+        closure.nonpositive_fraction > 0 && @warn(
+            "$family tag parent is non-positive over \
+            $(closure.nonpositive_fraction * 100)% of the domain volume at \
+            t = $t s. Source shares are undefined there, and closure will not \
+            show it. For moist total energy this usually means the chosen \
+            thermodynamic or gravitational reference puts part of the domain \
+            below zero."
         )
     end
     return nothing

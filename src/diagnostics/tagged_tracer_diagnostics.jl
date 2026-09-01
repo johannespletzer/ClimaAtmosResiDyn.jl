@@ -48,7 +48,16 @@ sums over can differ between setups.
 """
 register_tagging_diagnostics!(model::AtmosModel) =
     register_tagging_diagnostics!(model.tagging_model)
-register_tagging_diagnostics!(::Nothing) = nothing
+# Tagging is off. Leftover per-tag entries are harmless — their compute
+# functions depend only on the tag name, so an unrequested one costs nothing —
+# but a leftover `e_tag_res` is not, for the reason the enabled path gives
+# below: it would sum over region tags that never partitioned this model's
+# energy. `ALL_DIAGNOSTICS` is process-global, so this matters whenever one
+# process builds more than one simulation.
+function register_tagging_diagnostics!(::Nothing)
+    delete!(ALL_DIAGNOSTICS, "e_tag_res")
+    return nothing
+end
 function register_tagging_diagnostics!(tagging_model::TaggingModel)
     for tag in tagging_model.tags
         name = tag_name(tag)
