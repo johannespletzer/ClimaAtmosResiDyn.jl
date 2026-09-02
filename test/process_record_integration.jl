@@ -38,6 +38,11 @@ import ClimaAtmos as CA
         "initial_condition" => "DYCOMS_RF02",
         "z_max" => 1500.0,
         "z_elem" => 30,
+        # Uniform spacing, as the shipped DYCOMS configs use. `dz_bottom`
+        # defaults to 500 m, and the tanh stretching cannot fit a 500 m bottom
+        # cell into a 1500 m domain across 30 elements — it fails with
+        # "gamma root failed to converge" before the model is built.
+        "z_stretch" => false,
         # Without this the `radiation` bracket never runs and its record stays
         # at exactly zero, which is indistinguishable from a process that did
         # nothing. That is the failure mode `warn_inactive_record_labels`
