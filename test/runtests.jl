@@ -83,28 +83,43 @@ if TEST_GROUP in ("dynamics", "all")
 end
 
 # ============================================================================
-# Tagging: end-to-end tagged energy, tagged water and energy source simulations
+# Tagging: end-to-end tagged energy, tagged water, energy source and process
+# record simulations. One group per file.
 #
-# These files are their own group because they were the only tests in
-# `dynamics` that call `solve_atmos!`, and they do it on many different tag
-# sets. A tag name is a type parameter (`WaterTag{name, R, S}`), so each set is
-# a fresh `AtmosModel` type and the whole tendency and solve pipeline is
-# compiled from scratch. That costs about 7 minutes per simulation on 1.11,
-# against 1 to 2 minutes on 1.10. Left in `dynamics` the first two files were
-# 59% of that group's wall clock and pushed it past the job timeout
-# (run 32528151981).
+# These call `solve_atmos!` on many different tag sets. A tag name is a type
+# parameter (`WaterTag{name, R, S}`), so each set is a fresh `AtmosModel` type
+# and the whole tendency and solve pipeline is compiled from scratch. That
+# costs about 7 minutes per simulation on 1.11, against 1 to 2 minutes on 1.10.
 #
-# The group runs against a 90-minute timeout, so adding a tag set here is not
-# free. `energy_source_tags_integration.jl` and `process_record_integration.jl`
-# each deliberately use one set on a shallow column: the restart leg reuses
-# that same set, so it recompiles nothing and the marginal cost is one type
-# plus two short solves. Keep new work to the smallest set that proves the
-# claim, and prefer extending an existing set.
+# They get a group each because they share no compilation: putting several in
+# one job adds their compile times with nothing reused. That has now overrun a
+# timeout twice. First inside `dynamics`, where the first two files were 59% of
+# the group's wall clock (run 32528151981). Then as a combined `tagging` group
+# on 1.11, where `tagged_tracers_integration.jl` alone took 36m57s at 99%
+# compilation and the job was cancelled before the energy-source and
+# process-record files started. The second failure is the instructive one: a
+# timeout does not merely fail the group, it silently drops coverage of every
+# file that had not begun, so a green-looking suite can be testing less than it
+# claims.
+#
+# Each group still runs against a 90-minute timeout, so keep new work to the
+# smallest tag set that proves the claim, and prefer extending a set an
+# existing test in the same file already builds — a second simulation with an
+# identical tag signature costs seconds instead of minutes.
 # ============================================================================
-if TEST_GROUP in ("tagging", "all")
+if TEST_GROUP in ("tagging_energy", "all")
     @safetestset "Tagged tracers integration" begin @time include("tagged_tracers_integration.jl") end
+end
+
+if TEST_GROUP in ("tagging_water", "all")
     @safetestset "Tagged water integration" begin @time include("tagged_water_integration.jl") end
+end
+
+if TEST_GROUP in ("tagging_source", "all")
     @safetestset "Energy source tags integration" begin @time include("energy_source_tags_integration.jl") end
+end
+
+if TEST_GROUP in ("tagging_record", "all")
     @safetestset "Process record integration" begin @time include("process_record_integration.jl") end
 end
 

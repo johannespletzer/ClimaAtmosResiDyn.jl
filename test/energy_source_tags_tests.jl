@@ -131,6 +131,70 @@ import ClimaAtmos as CA
             )
             @test all(iszero, ᶜYₜ.ρe_src_rad)
         end
+
+        @testset "Donor loss depletes a positive parent ($FT)" begin
+            # The controlled counterpart to `energy_source_tags_integration.jl`.
+            # That file cannot make this claim: `ρe_tot` is non-positive over
+            # the whole of its column, so `energy_source_fraction` returns zero
+            # and the loss half of the rule never runs. Under the default
+            # energy reference no column geometry fixes that — the 30 km
+            # version is still 43% non-positive — so the parent is made
+            # positive here by construction instead, and the assertion that it
+            # is positive comes first.
+            strat = CA.EnergySourceTag{:strat}(
+                CA.TanhAltitudeRegion(FT(750), FT(100)),
+            )
+            tropo = CA.EnergySourceTag{:tropo}(
+                CA.TanhAltitudeRegion(FT(750), FT(100), false),
+            )
+            tags = (strat, tropo)
+
+            # Two tags partitioning the parent exactly, holding unequal
+            # shares so proportionality is visible rather than degenerate.
+            ᶜY = (;
+                ρe_src_strat = FT[100, 200, 300],
+                ρe_src_tropo = FT[300, 200, 100],
+                ρe_tot = FT[400, 400, 400],
+            )
+            @test all(>(0), ᶜY.ρe_tot)
+            @test ᶜY.ρe_src_strat .+ ᶜY.ρe_src_tropo == ᶜY.ρe_tot
+
+            # Both tags carry a region, and `_accumulate_energy_source_tag!`
+            # looks the mask up unconditionally, so both need one even though
+            # a pure loss increment never uses it.
+            ᶜmasks = (;
+                ρe_src_strat = FT[0, 0.5, 1],
+                ρe_src_tropo = FT[1, 0.5, 0],
+            )
+            ᶜYₜ = (;
+                ρe_src_strat = zeros(FT, 3),
+                ρe_src_tropo = zeros(FT, 3),
+            )
+            ᶜΔloss = FT[-40, -40, -40]
+            CA._accumulate_energy_source_tags!(
+                ᶜYₜ, ᶜY, ᶜmasks, ᶜΔloss, :held_suarez, tags,
+            )
+
+            # Every tag is depleted, and by its own share of the parent.
+            @test all(<(0), ᶜYₜ.ρe_src_strat)
+            @test all(<(0), ᶜYₜ.ρe_src_tropo)
+            @test ᶜYₜ.ρe_src_strat ≈ ᶜΔloss .* (ᶜY.ρe_src_strat ./ ᶜY.ρe_tot)
+            @test ᶜYₜ.ρe_src_tropo ≈ ᶜΔloss .* (ᶜY.ρe_src_tropo ./ ᶜY.ρe_tot)
+
+            # The tag holding more loses more, which is the whole content of
+            # "donor-proportional" and the half a non-positive parent hides.
+            @test ᶜYₜ.ρe_src_tropo[1] < ᶜYₜ.ρe_src_strat[1]
+            @test ᶜYₜ.ρe_src_strat[3] < ᶜYₜ.ρe_src_tropo[3]
+
+            # Closure per process: the tags partition the parent, so the loss
+            # shared out among them sums to the increment exactly.
+            @test ᶜYₜ.ρe_src_strat .+ ᶜYₜ.ρe_src_tropo ≈ ᶜΔloss
+
+            # And with a positive parent the step is well posed, so a step
+            # short against the depletion timescale leaves every tag positive.
+            @test all(ᶜY.ρe_src_strat .+ ᶜYₜ.ρe_src_strat .> 0)
+            @test all(ᶜY.ρe_src_tropo .+ ᶜYₜ.ρe_src_tropo .> 0)
+        end
     end
 
     @testset "Name predicate" begin

@@ -132,6 +132,29 @@ stable and interpretable under a realistic configuration is what decides whether
 energy source tracing is used at all, or whether water source tracing is
 combined with an energy process record instead.
 
+It is not hypothetical. `test/energy_source_tags_integration.jl` runs a
+DYCOMS_RF02 marine boundary layer, and the model reports the fraction of the
+domain where ``\rho e_\mathrm{tot} \le 0`` at initialization:
+
+  - on the shipped 1.5 km column, **100%**;
+  - on a 30 km column, **43%**.
+
+Depth reduces the fraction, because geopotential lifts ``e_\mathrm{tot}``
+positive higher up, but no choice of depth removes it.
+
+**Where the share is undefined the loss half of the rule does not run at all.**
+`energy_source_fraction` returns zero, so no tag is depleted, while production
+stays mask-weighted and reaches tags normally. A run in that regime accumulates
+production without the matching donor-proportional loss, which is not the rule
+this page describes.
+
+That is why the integration test claims only wiring, transport and restart, and
+the attribution claim is made in `test/energy_source_tags_tests.jl` against a
+parent that is positive by construction. It is also the strongest argument on
+the table for the fallback: water source tracing, whose parent is non-negative
+by construction, combined with an energy [process record](process_record.md)
+for the per-process history.
+
 ## Diagnostics
 
   - `e_src_<name>`: specific tagged energy ``\rho e_{\mathrm{src}} / \rho``

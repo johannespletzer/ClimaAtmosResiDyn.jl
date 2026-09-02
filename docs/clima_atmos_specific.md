@@ -48,23 +48,26 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `diagnostics`, `dynamics`, `tagging`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `diagnostics`, `dynamics`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
 
 | Change area          | Test group          | Example Buildkite job         |
 |:-------------------- |:------------------- |:----------------------------- |
 | Prognostic equations | `dynamics`          | `sphere_baroclinic_wave_rhoe` |
-| Tagged tracers/water | `tagging`           | `baroclinic_wave_tagged_*`    |
+| Tagged tracers/water | `tagging_*`         | `baroclinic_wave_tagged_*`    |
 | Microphysics / EDMF  | `parameterizations` | `prognostic_edmfx_*`          |
 | Restarts             | `restarts`          | `restart_*`                   |
 | Diagnostics          | `diagnostics`       | any `--diagnostics` job       |
 | Config semantics     | `infrastructure`    | `config.jl`                   |
 
-`tagging` holds `test/tagged_tracers_integration.jl`,
-`test/tagged_water_integration.jl`, `test/energy_source_tags_integration.jl`
-and `test/process_record_integration.jl`. It is a group of its own because the
-first two files run seven full simulations on seven different tag sets, and a
-tag name is a type parameter, so each set recompiles the whole tendency and
-solve pipeline. The last two add one set each, on a shallow column.
+The `tagging_*` groups are one file each: `tagging_energy` runs
+`test/tagged_tracers_integration.jl`, `tagging_water` runs
+`test/tagged_water_integration.jl`, `tagging_source` runs
+`test/energy_source_tags_integration.jl` and `tagging_record` runs
+`test/process_record_integration.jl`. They are split because a tag name is a
+type parameter, so each tag set recompiles the whole tendency and solve
+pipeline and the files share no compilation between them. Combined they
+overran the 90-minute job timeout on Julia 1.11, which cancelled the job
+before the last two files ran at all.
 That is roughly seven minutes per simulation on Julia 1.11. Keep new
 tagged-simulation tests here, and prefer reusing a tag set another test in the
 same file already builds: a second simulation with an identical tag signature

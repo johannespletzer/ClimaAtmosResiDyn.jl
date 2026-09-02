@@ -17,7 +17,7 @@ This mirrors the manual validation performed on
 days: exact partition at t = 0, sub-percent residual growth).
 
 Run either through the package test path (`Pkg.test()`, TEST_GROUP
-"tagging") or standalone with the pinned CI environment:
+"tagging_energy") or standalone with the pinned CI environment:
 
     julia +1.11 --project=.buildkite -e 'using Pkg; Pkg.instantiate()'
     julia +1.11 --project=.buildkite test/tagged_tracers_integration.jl

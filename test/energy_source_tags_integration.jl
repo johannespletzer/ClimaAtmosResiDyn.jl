@@ -138,16 +138,26 @@ import ClimaAtmos as CA
     end
     @test closure_deviation(Y) < 5e-2
 
-    # The donor share is only defined where the parent is positive, so this
-    # asserts the column stays in the regime the tags are meaningful in. It is
-    # also the guard on the geometry above: a taller column puts cells at a
-    # negative moist total energy and silently removes the loss half of the
-    # rule wherever it does.
-    @test minimum(parent(Y.c.ρe_tot)) > 0
+    # This file makes no claim about the attribution rule, and the reason is
+    # measured rather than assumed. `ρe_tot` is non-positive over 100% of this
+    # column at initialization — the model warns about it — and over 43% of the
+    # 30 km version, so depth reduces the fraction without removing it. Where
+    # the parent is not positive the donor share is undefined and
+    # `energy_source_fraction` returns zero, so the loss half of the rule does
+    # not run at all.
+    #
+    # Loosening the positivity assertion to make this file pass would have let
+    # undefined attribution count as attribution coverage. The claim moved
+    # instead: `energy_source_tags_tests.jl` asserts donor-proportional loss
+    # against a parent that is positive by construction. What is left here is
+    # wiring, transport and restart, which is what a configured solve can
+    # actually establish for this family today.
 
-    # The rule fired. A source tag starts at zero, so anything nonzero here
-    # came from masked production through the `radiation` bracket — the one
-    # thing a unit test on plain arrays cannot demonstrate. This needs
+    # Production reached the tag. This is wiring evidence, not attribution
+    # evidence: production is mask-weighted and never divides by the parent, so
+    # it works regardless of the sign problem above, while the donor-
+    # proportional loss beside it is inert here. A source tag starts at zero,
+    # so anything nonzero came through the `radiation` bracket. This needs
     # `rad: DYCOMS` in the config above: the initial condition sets the state
     # and not the forcing, so without it the bracket never runs and this tag
     # stays at exactly zero, which is how the first version of this test
