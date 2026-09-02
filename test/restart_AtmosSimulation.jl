@@ -166,7 +166,11 @@ function test_restart(simulation, args; comms_ctx, more_ignore = Symbol[])
 
     local_success = true
 
-    CA.solve_atmos!(simulation)
+    # A crashed solve returns `:simulation_crashed` instead of throwing, so
+    # without this the comparisons below run against a partial state and can
+    # report a successful round trip that never happened.
+    result = CA.solve_atmos!(simulation)
+    local_success &= result.ret_code == :success
 
     # Check re-importing the same state
     restart_dir = simulation.output_dir
@@ -248,7 +252,8 @@ function test_restart(simulation, args; comms_ctx, more_ignore = Symbol[])
     )
     CA.fill_with_nans!(simulation_restarted2.integrator.p)
 
-    CA.solve_atmos!(simulation_restarted2)
+    result = CA.solve_atmos!(simulation_restarted2)
+    local_success &= result.ret_code == :success
     local_success &= compare(
         simulation.integrator.u,
         simulation_restarted2.integrator.u;

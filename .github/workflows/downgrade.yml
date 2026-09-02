@@ -54,10 +54,28 @@ jobs:
         uses: julia-actions/julia-runtest@latest
         env:
           TEST_GROUP: dynamics
-      - name: Run tagging tests
+      # One step per tagging group, matching `ci.yml` and `runtests.jl`. A
+      # single `TEST_GROUP: tagging` step silently ran nothing once the group
+      # was split, and still exited zero, so both downgrade jobs could go green
+      # without executing a single tagging test. `runtests.jl` now rejects an
+      # unknown group outright, which turns that failure mode into an error
+      # rather than a false pass, but the steps still have to be listed here.
+      - name: Run tagging_energy tests
         uses: julia-actions/julia-runtest@latest
         env:
-          TEST_GROUP: tagging
+          TEST_GROUP: tagging_energy
+      - name: Run tagging_water tests
+        uses: julia-actions/julia-runtest@latest
+        env:
+          TEST_GROUP: tagging_water
+      - name: Run tagging_source tests
+        uses: julia-actions/julia-runtest@latest
+        env:
+          TEST_GROUP: tagging_source
+      - name: Run tagging_record tests
+        uses: julia-actions/julia-runtest@latest
+        env:
+          TEST_GROUP: tagging_record
       - name: Run parameterizations tests
         uses: julia-actions/julia-runtest@latest
         env:

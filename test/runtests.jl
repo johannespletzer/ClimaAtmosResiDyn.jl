@@ -13,6 +13,32 @@ include("download_artifacts.jl")
 # Get test group from environment variable (default: run all tests)
 TEST_GROUP = get(ENV, "TEST_GROUP", "all")
 
+# Every group this file knows how to run. Validated rather than assumed,
+# because an unrecognised name matches none of the blocks below, runs zero
+# tests and still exits successfully. That is exactly what happened when the
+# `tagging` group was split into four: `downgrade.yml` kept asking for
+# `tagging`, and both downgrade jobs went green without executing a single
+# tagging test. A silent pass is worse than a failure, so an unknown group is
+# an error here.
+const KNOWN_TEST_GROUPS = (
+    "all",
+    "infrastructure",
+    "diagnostics",
+    "dynamics",
+    "tagging_energy",
+    "tagging_water",
+    "tagging_source",
+    "tagging_record",
+    "parameterizations",
+    "restarts",
+    "era5",
+)
+TEST_GROUP in KNOWN_TEST_GROUPS || error(
+    "Unknown TEST_GROUP $(repr(TEST_GROUP)). Known groups: " *
+    join(KNOWN_TEST_GROUPS, ", ") *
+    ". An unknown group would run no tests and exit successfully.",
+)
+
 #! format: off
 
 # ============================================================================

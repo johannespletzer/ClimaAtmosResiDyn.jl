@@ -11,12 +11,26 @@ family is wired into a simulation at all, which is what this file covers:
  3. at t = 0 the region tags partition `ρe_tot` to machine precision;
  4. the generic tracer machinery transports the tags, they stay finite, and the
     closure residual stays a small bounded monitor;
- 5. state and masks survive a checkpoint round trip.
+ 5. state and masks survive a checkpoint round trip;
+ 6. masked *production* reaches a source tag through a real bracketed process,
+    which is the one thing here that a plain-array unit test cannot show.
 
-The attribution rule is implemented here, so a tag carrying a `source` must
-actually accumulate. That is the assertion this file gains over the state-only
-version: masked production reaching a source tag through a real bracketed
-process is the thing no unit test on plain arrays can show.
+**This file does not validate the attribution rule end to end, and must not be
+read as doing so.** It covers configuration and state, bracketed-production
+wiring, transport, restart, and a bounded closure residual. That is all.
+
+The missing half is the loss term, and the reason is measured rather than
+assumed: `ρe_tot` is non-positive over 100% of this column at initialization
+and again at restart, so `energy_source_fraction` returns zero everywhere and
+donor-proportional loss never runs in this solve. Production is unaffected,
+because it is mask-weighted and never divides by the parent, which is why item
+6 is real evidence while a loss claim here would not be.
+
+The loss algebra is verified in `energy_source_tags_tests.jl` against a parent
+that is positive by construction. That is a kernel-level test, not an
+end-to-end one, so **donor-proportional loss through a real bracketed solve
+remains unvalidated** and needs either a well-defined positive energy reference
+or a reference-safe reformulation. See `docs/src/energy_source_tags.md`.
 
 A column with an altitude partition is the cheapest geometry that exercises all
 of it — latitude regions and the Held-Suarez source would need a sphere. One

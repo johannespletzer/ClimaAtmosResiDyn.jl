@@ -148,12 +148,24 @@ stays mask-weighted and reaches tags normally. A run in that regime accumulates
 production without the matching donor-proportional loss, which is not the rule
 this page describes.
 
-That is why the integration test claims only wiring, transport and restart, and
-the attribution claim is made in `test/energy_source_tags_tests.jl` against a
-parent that is positive by construction. It is also the strongest argument on
-the table for the fallback: water source tracing, whose parent is non-negative
-by construction, combined with an energy [process record](process_record.md)
-for the per-process history.
+It also sets the boundary of what is currently tested, which is worth stating
+exactly:
+
+  - `test/energy_source_tags_integration.jl` covers configuration and state,
+    bracketed **production** wiring, transport, restart, and a bounded closure
+    residual. Production is mask-weighted and never divides by the parent, so
+    it is exercised even here.
+  - `test/energy_source_tags_tests.jl` covers the **loss algebra** against a
+    parent that is positive by construction. That is a kernel-level check.
+  - **Donor-proportional loss through a real bracketed solve is not validated.**
+    No configured run currently puts the donor share on a defined footing, so
+    there is nothing for such a test to assert against yet. Closing that gap
+    needs either a well-defined positive energy reference or a reference-safe
+    reformulation of the share.
+
+That last point is also the strongest argument on the table for the fallback:
+water source tracing, whose parent is non-negative by construction, combined
+with an energy [process record](process_record.md) for the per-process history.
 
 ## Diagnostics
 
