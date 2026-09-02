@@ -1,5 +1,7 @@
 using Test
 import ClimaAtmos as CA
+import ClimaDiagnostics
+import Dates
 
 @testset "Process records" begin
     for FT in (Float32, Float64)
@@ -246,5 +248,45 @@ import ClimaAtmos as CA
         )
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_prc_radiation")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_prc_surface_flux")
+    end
+
+    @testset "Default scheduling samples records and averages tags" begin
+        # A record is cumulative from the start of the simulation, so a window
+        # mean reports where the running total sat mid-window rather than what
+        # it reached, and the difference of two means is not the change over
+        # the interval between them. Records must therefore be scheduled with
+        # no reduction in time. The tags beside them are ordinary fields and
+        # are still averaged, so this checks both halves of the split.
+        record = CA.ProcessRecordModel((CA.RecordedProcess{:radiation}(),))
+        tags = (CA.TracerTag{:rad}(nothing, :radiation),)
+        tagging = CA.AtmosTagging(;
+            tagging_model = CA.TaggingModel(tags),
+            energy_process_record = record,
+        )
+        CA.Diagnostics.register_tagging_diagnostics!(CA.TaggingModel(tags))
+        CA.Diagnostics.register_process_record_diagnostics!(
+            CA.AtmosModel(; energy_process_record = record),
+        )
+
+        # A day, so the ladder picks a real period rather than the empty tuple
+        # it returns for runs under an hour.
+        scheduled = CA.Diagnostics.default_diagnostics(
+            tagging,
+            86400.0,
+            Dates.DateTime(2010, 1, 1),
+            0;
+            output_writer = ClimaDiagnostics.Writers.DictWriter(),
+        )
+        short_name_of(d) =
+            ClimaDiagnostics.DiagnosticVariables.short_name(d.variable)
+        by_name = Dict(short_name_of(d) => d for d in scheduled)
+
+        @test haskey(by_name, "e_prc_radiation")
+        @test haskey(by_name, "e_tag_rad")
+        # The record is a snapshot: no reduction, so the written value is the
+        # running total at that instant.
+        @test isnothing(by_name["e_prc_radiation"].reduction_time_func)
+        # The tag is still averaged over the period.
+        @test !isnothing(by_name["e_tag_rad"].reduction_time_func)
     end
 end

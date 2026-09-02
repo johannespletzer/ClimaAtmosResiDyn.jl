@@ -59,10 +59,12 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 | Diagnostics          | `diagnostics`       | any `--diagnostics` job       |
 | Config semantics     | `infrastructure`    | `config.jl`                   |
 
-`tagging` holds only `test/tagged_tracers_integration.jl` and
-`test/tagged_water_integration.jl`. It is a group of its own because those two
-files run seven full simulations on seven different tag sets, and a tag name is
-a type parameter, so each set recompiles the whole tendency and solve pipeline.
+`tagging` holds `test/tagged_tracers_integration.jl`,
+`test/tagged_water_integration.jl`, `test/energy_source_tags_integration.jl`
+and `test/process_record_integration.jl`. It is a group of its own because the
+first two files run seven full simulations on seven different tag sets, and a
+tag name is a type parameter, so each set recompiles the whole tendency and
+solve pipeline. The last two add one set each, on a shallow column.
 That is roughly seven minutes per simulation on Julia 1.11. Keep new
 tagged-simulation tests here, and prefer reusing a tag set another test in the
 same file already builds: a second simulation with an identical tag signature

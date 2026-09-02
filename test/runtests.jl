@@ -95,15 +95,17 @@ end
 # (run 32528151981).
 #
 # The group runs against a 90-minute timeout, so adding a tag set here is not
-# free. `energy_source_tags_integration.jl` deliberately uses one set on a
-# column: its restart leg reuses that same set, so it recompiles nothing and
-# the marginal cost is one type plus two short solves. Keep new work to the
-# smallest set that proves the claim, and prefer extending an existing set.
+# free. `energy_source_tags_integration.jl` and `process_record_integration.jl`
+# each deliberately use one set on a shallow column: the restart leg reuses
+# that same set, so it recompiles nothing and the marginal cost is one type
+# plus two short solves. Keep new work to the smallest set that proves the
+# claim, and prefer extending an existing set.
 # ============================================================================
 if TEST_GROUP in ("tagging", "all")
     @safetestset "Tagged tracers integration" begin @time include("tagged_tracers_integration.jl") end
     @safetestset "Tagged water integration" begin @time include("tagged_water_integration.jl") end
     @safetestset "Energy source tags integration" begin @time include("energy_source_tags_integration.jl") end
+    @safetestset "Process record integration" begin @time include("process_record_integration.jl") end
 end
 
 # ============================================================================
