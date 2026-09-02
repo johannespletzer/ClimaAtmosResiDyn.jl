@@ -338,17 +338,17 @@ import ClimaAtmos as CA
         )
 
         # A non-negative parent is the water case. `scale == total` there, so
-        # these numbers are exactly what dividing by `total` gave before.
+        # normalising by either gives the same residual.
         positive = closure_of([3.0, 1.0], [2.0, 1.0])
         @test positive.scale == positive.total == 4.0
         @test positive.relative ≈ 1 / 4
         @test positive.gross_relative ≈ 1 / 4
         @test positive.nonpositive_fraction == 0.0
 
-        # A parent that integrates negative. Dividing the non-negative
-        # `gross_residual` by `total` made this negative, so it could never
-        # exceed a positive tolerance and the check passed silently however bad
-        # the partition was.
+        # A parent that integrates negative. `gross_residual` is non-negative,
+        # so it is normalised by `scale`, which is `|total|`. A signed `total`
+        # would make the ratio negative. It could then never exceed a positive
+        # tolerance, however bad the partition is.
         negative = closure_of([-3.0, -1.0], [-2.0, -1.0])
         @test negative.total == -4.0
         @test negative.scale == 4.0
