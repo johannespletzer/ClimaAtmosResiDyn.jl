@@ -58,8 +58,8 @@ water tags do:
   - **Loss is donor-proportional.** Energy leaves in proportion to what is
     actually present, and **every** tag is depleted, whatever processes it
     lists. This is what makes ``\rho e_{\mathrm{src},k}`` an amount of energy
-    rather than a running total, and what keeps a tag from being driven negative
-    by a loss it does not own.
+    rather than a running total, and what keeps a tag from absorbing a loss it
+    does not own.
 
 With ``\sum_k M_k = 1`` and ``\sum_k \rho e_{\mathrm{src},k} = \rho e_\mathrm{tot}``
 we have ``\sum_k \varphi_k = 1``, so ``\sum_k \Delta_k = \Delta^{+} - \Delta^{-} = \Delta``
@@ -69,6 +69,30 @@ Only the explicit path is bracketed for these tags, as for the process records,
 so `precipitation` — which is attributed on the implicit path for the
 `ρe_tag_*` family — does not reach a source tag. That is a named limitation, not
 an oversight, and it shows up in `e_src_res`.
+
+## Tags are not guaranteed non-negative
+
+The donor-proportional loss bounds the *rate* at which a tag is depleted, not
+the amount removed. Attribution produces a tendency, and the timestepper
+integrates it over a finite step, so the energy taken from a tag across one
+step is about ``\Delta t \, \varphi_k \, \Delta^{-}``. Nothing ties that to
+what the tag holds. Parent tendencies that cancel — say ``+200`` against
+``-200`` — leave ``\rho e_\mathrm{tot}`` unchanged while a tag receiving only
+the loss half crosses zero inside the step. Clamping ``\varphi_k`` to
+``[0, 1]`` does not prevent it, because the clamp acts on the share and the
+step length sets the amount.
+
+Two further routes take a tag negative. Where ``\rho e_\mathrm{tot} \le 0``
+the share is undefined and `energy_source_fraction` returns zero, so no
+donor-proportional loss is applied there at all; how much of a domain that
+covers depends on the energy reference. And the tags are exempt from both
+tracer limiters and ride unlimited explicit transport with no partition repair.
+
+So `ρe_src_<name>` is a monitored quantity, not a bounded one. A negative value
+is information about the configuration — the timestep, the energy reference, or
+the transport — rather than a failure of the attribution rule. Watch it through
+`e_src_res` and the closure check, which reports the fraction of the domain
+where the parent is non-positive.
 
 ## Closure checking
 

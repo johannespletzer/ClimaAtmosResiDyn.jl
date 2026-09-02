@@ -738,7 +738,7 @@ Whether `name` refers to a tagged prognostic tracer of any of the three
 families. Used to exempt tags from the tracer limiters, for a different reason
 in each case:
 
-  - `ρe_tag_*` holds a signed process-change record, so it can be legitimately
+  - `ρe_tag_*` holds a signed process tag, so it can be legitimately
     negative (accumulated cooling) and a non-negativity limiter would be wrong.
   - `ρq_tag_*` must not be limited independently of the other water tags,
     because a shape-preserving adjustment applied per tag has no reason to
@@ -746,9 +746,10 @@ in each case:
     follow the parent's limiting through [`rescale_water_tags!`](@ref) instead.
   - `ρe_src_*` is exempt for the same partition reason as the water tags, but
     it has no equivalent of `rescale_water_tags!` and no partition repair. So
-    unlike water, nothing restores it: the attribution rule keeps it
-    non-negative, and unlimited transport can still leave it slightly below
-    zero. That is a known limit, not an oversight — see
+    unlike water, nothing restores it, and unlike water it carries no
+    non-negativity guarantee to restore it to: the attribution rule bounds the
+    rate a tag is depleted at rather than the amount removed over a step. That
+    is a known limit, not an oversight — see
     `docs/src/energy_source_tags.md`.
 """
 is_tagged_tracer_name(name) =

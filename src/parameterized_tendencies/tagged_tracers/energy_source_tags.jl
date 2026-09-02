@@ -10,9 +10,10 @@
 ##### This is the energy counterpart of the water tags in `tagged_water.jl`, and
 ##### it is a different quantity from `ρe_tag_*` in `tagged_tracers.jl`. A source
 ##### tag holds energy that is present now, traced back to where it came from.
-##### An `ρe_tag_*` tag configured with `source` holds a process-change record,
-##### the signed increment one process applied. Both are useful; they answer
-##### different questions.
+##### An `ρe_tag_*` tag configured with `source` is a signed process tag: it
+##### holds the signed increment one process applied. That is not the same as
+##### the process-change record, which is the separate `prc_*` family in
+##### `process_record.jl`. Both are useful; they answer different questions.
 #####
 ##### This file carries the state, the masks, the transport hook-up and the
 ##### attribution rule. Production is shared out by region mask and loss is
@@ -229,13 +230,15 @@ is what makes a tag an amount rather than a running total. It is the same rule
 the water tags use, and the opposite of the `ρe_tag_*` family, which applies the
 whole signed increment by mask.
 
-Because a tag is only ever depleted in proportion to what it holds, this step
-cannot drive one below zero. That is a property of the step, not of the field.
-The tags are exempt from both tracer limiters and ride the unlimited explicit
-transport path, and unlike the water tags there is no partition repair, so
-transport can still leave a tag slightly negative. Where it does,
-[`energy_source_fraction`](@ref) clamps the donor share to zero rather than
-correcting the holding.
+This step does not keep a tag non-negative, and nothing downstream does either.
+What it produces is a tendency: the loss term sets the *rate* a tag is depleted
+at, in proportion to what it holds, but the timestepper integrates that over a
+finite step and the amount removed is roughly `dt * φ_k * Δ⁻`. Nothing bounds
+that by the holding. Where `ρe_tot` is not positive the share is undefined and
+[`energy_source_fraction`](@ref) returns zero, so no loss is attributed there at
+all. The tags are also exempt from both tracer limiters and ride the unlimited
+explicit transport path, and unlike the water tags there is no partition repair.
+See the contract on [`EnergySourceTag`](@ref).
 
 `Y` is needed in addition to `Yₜ` because the donor share is a property of the
 current state. A no-op when energy source tagging is disabled.

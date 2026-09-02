@@ -58,7 +58,7 @@ import ClimaAtmos as CA
             @test isfinite(CA.energy_source_fraction(FT(1), FT(0)))
         end
 
-        @testset "Attribution never drives a tag below zero ($FT)" begin
+        @testset "Attribution is rate-bounded, not sign-bounded ($FT)" begin
             region = CA.TanhLatitudeRegion(FT(20), FT(2), true)
             tropics = CA.EnergySourceTag{:tropics}(region)
             rad = CA.EnergySourceTag{:rad}(nothing, :radiation)
@@ -95,12 +95,29 @@ import ClimaAtmos as CA
             φ_rad = CA.energy_source_fraction.(ᶜY.ρe_src_rad, ᶜY.ρe_tot)
             @test ᶜYₜ.ρe_src_tropics ≈ ᶜΔloss .* φ_tropics
             @test ᶜYₜ.ρe_src_rad ≈ ᶜΔloss .* φ_rad
-            # Loss removes at most what the tag holds, so applying the
-            # increment cannot take the tag below zero. Written as a sum rather
-            # than a comparison against a negated field, because `.-ᶜ` parses
-            # as a suffixed operator that Julia leaves undefined.
-            @test all(ᶜYₜ.ρe_src_tropics .+ ᶜY.ρe_src_tropics .>= 0)
-            @test all(ᶜYₜ.ρe_src_rad .+ ᶜY.ρe_src_rad .>= 0)
+
+            # What the rule bounds is the depletion *rate*, not the amount
+            # removed. `ᶜYₜ` is a tendency, so a step of length `dt` takes
+            # `dt * φ * Δ⁻` out of the tag and the result depends on `dt`.
+            # Adding `ᶜYₜ` to `ᶜY` directly would be Euler with `dt = 1`, which
+            # is what made this look like a non-negativity guarantee. Written
+            # as a sum rather than a comparison against a negated field,
+            # because `.-ᶜ` parses as a suffixed operator Julia leaves
+            # undefined.
+            after_step(dt) = ᶜY.ρe_src_rad .+ dt .* ᶜYₜ.ρe_src_rad
+
+            # A step short against the local depletion timescale keeps every
+            # tag positive.
+            @test all(after_step(FT(1)) .>= 0)
+
+            # A long enough one does not, and no clamp on φ prevents it: the
+            # clamp acts on the share while `dt` sets the amount. The cell
+            # holding 200 against a parent of 400 has φ = 0.5 and Δ⁻ = -8, so
+            # it crosses zero once `dt` passes 50. This is the documented
+            # limit, asserted rather than assumed away.
+            @test φ_rad[4] == FT(0.5)
+            @test ᶜYₜ.ρe_src_rad[4] == FT(-4)
+            @test after_step(FT(100))[4] < 0
 
             # A non-positive parent falls back to zero rather than Inf/NaN
             fill!(ᶜYₜ.ρe_src_rad, FT(0))

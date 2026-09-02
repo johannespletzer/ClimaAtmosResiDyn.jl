@@ -665,7 +665,46 @@ process_record_from_config(::Nothing, key, known, groups) = nothing
 function process_record_from_config(record_config, key, known, groups)
     processes = tag_sources_from_config(record_config, key, known, groups)
     isempty(processes) && return nothing
+    warn_inactive_record_labels(processes, key)
     return ProcessRecordModel(Tuple(RecordedProcess{p}() for p in processes))
+end
+
+"""
+    warn_inactive_record_labels(processes, key)
+
+Warn about process-record labels that cannot record anything, so a record that
+will stay at zero says so at configuration time rather than at analysis time.
+
+A record is written from the snapshot and attribute brackets, and those are
+called only from `remaining_tendency.jl`. So a process reached solely on the
+implicit path is never bracketed and its record stays zero for the whole run.
+`precipitation` is in that position always, and `microphysics` is whenever
+microphysics is stepped implicitly, which is the default.
+
+A zero record is the dangerous case precisely because it is indistinguishable
+from a real one. A process that genuinely did nothing and a process that was
+never observed both read as `0.0`, and nothing downstream can tell them apart.
+
+A warning and not an error, for the reason
+[`warn_inactive_energy_source_labels`](@ref) gives: `moist` and `all` are
+useful group labels that happen to include `precipitation`, and refusing them
+would make the groups unusable for the processes they do cover.
+"""
+function warn_inactive_record_labels(processes, key)
+    :precipitation in processes && @warn(
+        "`$key` lists `precipitation`, which cannot be recorded: a record is " *
+        "written from the explicit tendency bracket, and `precipitation` is " *
+        "reached solely from the implicit path. Its record stays zero for " *
+        "the whole run, which reads the same as a process that did nothing. " *
+        "Note `moist` and `all` both expand to include `precipitation`.",
+    )
+    :microphysics in processes && @warn(
+        "`$key` lists `microphysics`, which is recorded only when " *
+        "microphysics is stepped explicitly. Under the default implicit " *
+        "microphysics timestepping its record stays zero, which reads the " *
+        "same as a process that did nothing.",
+    )
+    return nothing
 end
 
 """

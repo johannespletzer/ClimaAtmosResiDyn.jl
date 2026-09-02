@@ -2349,16 +2349,35 @@ differs and that is the whole point of the separate type. A source tag holds an
 amount of moist energy that is present now and is traced back to where it came
 from: production is shared out by region mask and loss is taken from each tag in
 proportion to what it already holds. A `TracerTag` configured with `source`
-instead accumulates the whole signed increment and is a process-change record.
+instead accumulates the whole signed increment and is a signed process tag.
 
-The attribution rule cannot drive a tag below zero, because a tag is only ever
-depleted in proportion to what it holds. That is a property of the rule, not a
-guarantee about the field: the tags are exempt from both tracer limiters
-through [`is_tagged_tracer_name`](@ref) and ride the unlimited explicit
-transport path, so transport can leave a tag slightly negative. Unlike the
-water tags there is no partition repair to put it back, and the donor share of
-a negative holding is clamped to zero rather than corrected. Read the promise
-as "the attribution step never drives it negative", not "it is never negative".
+`ρe_src_*` is **not guaranteed non-negative**. Three separate things can take
+it below zero, and none of them is a defect in the rule.
+
+The loss term is donor-proportional, so the *rate* at which a tag is depleted
+is `φ_k` times the parent's gross loss rate. That bounds the rate, not the
+amount. What the attribution step produces is a tendency, and the timestepper
+integrates it over a finite step, so the energy taken from a tag across one
+step is about `dt * φ_k * Δ⁻`. Nothing ties that to the tag's holding. Parent
+tendencies that cancel, say `+200` against `-200`, leave `ρe_tot` unchanged
+while a tag receiving only the loss half crosses zero inside the step.
+Clamping `φ_k` to `[0, 1]` cannot prevent this: the clamp acts on the share,
+and the step length is what sets the amount.
+
+Where `ρe_tot` is not positive the share is undefined and
+[`energy_source_fraction`](@ref) returns zero, so no donor-proportional loss is
+applied there at all. Moist total energy has no physical zero, so how much of a
+domain this affects is a property of the chosen energy reference rather than a
+rare edge case.
+
+The tags are also exempt from both tracer limiters through
+[`is_tagged_tracer_name`](@ref) and ride the unlimited explicit transport path.
+Unlike the water tags there is no partition repair, so nothing puts a negative
+tag back.
+
+Read a negative `ρe_src_*` as information about the configuration — the
+timestep, the energy reference, or the transport — and watch it through
+`e_src_res` and the closure check.
 
 This is the energy counterpart of [`WaterTag`](@ref), which already works this
 way. Moist total energy has no physical zero, so unlike water the resulting

@@ -28,12 +28,15 @@ Three of these families use the word "tag", and all three accept a `source`
 key, but a tag does not hold the same kind of quantity in each.
 
   - **source tag**: an amount of the parent variable that is present now, traced
-    back to where it came from. The attribution rule never drives it below zero;
-    transport can. Both `water_tracers` and `energy_source_tags` are source
-    tags, and they differ in what happens next: for water,
-    `repair_water_tag_partition!` puts a negative holding back and the
-    `q_tag_fix_<name>` diagnostic logs how much was moved, while the energy
-    source tags have no such repair, so a small negative excursion persists.
+    back to where it came from. Both `water_tracers` and `energy_source_tags`
+    are source tags, and they differ in what is guaranteed of the result. Water
+    ends up non-negative: the parent is kept non-negative by the model and
+    `repair_water_tag_partition!` puts a negative holding back, with the
+    `q_tag_fix_<name>` diagnostic logging how much was moved. Energy source
+    tags have no such repair and **no non-negativity guarantee** — the loss
+    term bounds the depletion rate rather than the amount removed over a step,
+    and the share is undefined wherever `ρe_tot` is not positive. See
+    [Energy Source Tags](energy_source_tags.md).
   - **signed process tag**: an `energy_tracers` entry configured with `source`.
     It starts at zero and holds the signed increment its process has added,
     going negative under net cooling. A running total of what a process did,

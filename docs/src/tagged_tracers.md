@@ -23,10 +23,12 @@ kinds of quantity, and the difference matters more than the shared word "tag".
   - A **region tag** is a transported partition of ``\rho e_\mathrm{tot}``. It
     starts as the region's share of the energy present and receives every
     attributed process, weighted by its mask.
-  - A **process tag** — one configured with `source` — is a **process-change
-    record**. It starts at zero and accumulates the signed increment that one
+  - A **process tag** — one configured with `source` — is a **signed process
+    tag**. It starts at zero and accumulates the signed increment that one
     labeled process adds to ``\rho e_\mathrm{tot}``. Heating adds, cooling
-    subtracts, and the accumulated value can be negative.
+    subtracts, and the accumulated value can be negative. It is deliberately
+    not called a process-change record: that name belongs to the separate
+    `prc_*` family described in [Process-Change Records](process_record.md).
 
 A process tag is therefore a history of what a process did, not a share of the
 energy that is here now. Reading `e_tag_rad = -3.0e4` as "radiation supplied a

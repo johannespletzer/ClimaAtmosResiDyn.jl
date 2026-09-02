@@ -127,6 +127,11 @@ says what happened in this cell, not what arrived here.
     under 1M, where `microphysics_tendency!` moves mass between species without
     changing `ρq_tot`.
 
+    Configuring any of these labels warns at startup. A record that stays zero
+    reads exactly like a process that did nothing, and no analysis downstream
+    can tell the two apart, so the distinction has to be drawn at the point
+    where the run is configured.
+
   - **Transport, phase changes, gravity-wave drag and numerical corrections**
     have no bracket to record, so they are absent entirely. A record covers the
     processes in `KNOWN_TAG_SOURCES` and `KNOWN_WATER_TAG_SOURCES` and nothing
@@ -157,6 +162,7 @@ ClimaAtmos.water_process_record_variables
 ClimaAtmos.energy_process_record_state_names
 ClimaAtmos.water_process_record_state_names
 ClimaAtmos.process_record_from_config
+ClimaAtmos.warn_inactive_record_labels
 ClimaAtmos.process_record_scratch
 ClimaAtmos.snapshot_process_record!
 ClimaAtmos.accumulate_process_record!

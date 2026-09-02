@@ -258,6 +258,44 @@ function frequency_averages(duration)
     end
 end
 
+"""
+    frequency_snapshots(duration)
+
+Return the instantaneous-sampling helper appropriate to the total simulation
+length.
+
+The period ladder is the one `frequency_averages` uses, so a snapshot
+lands on the same cadence as the averages beside it. The difference is that no
+reduction is applied in time: each output is the value at that instant.
+
+This is what a cumulative field needs. Averaging one destroys the information
+it carries. A record holds a running total, so the mean of a window says only
+where the total happened to sit mid-window, and a variable-rate history cannot
+be recovered from a sequence of such means. A budget over an interval is the
+difference of two instantaneous outputs, which requires the endpoints
+themselves.
+
+# Arguments
+
+  - `duration`: Expected duration of the simulation [s].
+"""
+function frequency_snapshots(duration)
+    FT = eltype(duration)
+    duration = Float64(duration)
+    if duration >= 90 * 86400
+        return (args...; kwargs...) -> monthly_snapshots(FT, args...; kwargs...)
+    elseif duration >= 30 * 86400
+        return (args...; kwargs...) ->
+            tendaily_snapshots(FT, args...; kwargs...)
+    elseif duration >= 86400
+        return (args...; kwargs...) -> daily_snapshots(FT, args...; kwargs...)
+    elseif duration >= 3600
+        return (args...; kwargs...) -> hourly_snapshots(FT, args...; kwargs...)
+    else
+        return (args...; kwargs...) -> ()
+    end
+end
+
 # Include all the subdefaults
 
 ########
@@ -669,10 +707,15 @@ function default_diagnostics(
             energy_source_region_tag_state_names(energy_source_tagging_model),
         ) || push!(tag_diagnostics, "e_src_res")
     end
+    # The records are scheduled separately, as instantaneous samples. They hold
+    # a running total from the start of the simulation, so a window mean is not
+    # a meaningful quantity and a budget over an interval is the difference of
+    # two outputs. Both need the endpoint values, which an average discards.
+    record_diagnostics = String[]
     energy_process_record = atmos_tagging.energy_process_record
     if !isnothing(energy_process_record)
         append!(
-            tag_diagnostics,
+            record_diagnostics,
             [
                 "e_prc_$(process_name(process))" for
                 process in energy_process_record.processes
@@ -682,16 +725,26 @@ function default_diagnostics(
     water_process_record = atmos_tagging.water_process_record
     if !isnothing(water_process_record)
         append!(
-            tag_diagnostics,
+            record_diagnostics,
             [
                 "q_prc_$(process_name(process))" for
                 process in water_process_record.processes
             ],
         )
     end
-    isempty(tag_diagnostics) && return []
+    isempty(tag_diagnostics) && isempty(record_diagnostics) && return []
     average_func = frequency_averages(duration)
-    return [
-        average_func(tag_diagnostics...; output_writer, start_date, t_start)...,
-    ]
+    snapshot_func = frequency_snapshots(duration)
+    averaged =
+        isempty(tag_diagnostics) ? () :
+        average_func(tag_diagnostics...; output_writer, start_date, t_start)
+    sampled =
+        isempty(record_diagnostics) ? () :
+        snapshot_func(
+            record_diagnostics...;
+            output_writer,
+            start_date,
+            t_start,
+        )
+    return [averaged..., sampled...]
 end
