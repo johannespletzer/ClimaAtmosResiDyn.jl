@@ -136,8 +136,11 @@ makedocs(;
     ],
 )
 
+# This repository is a fork of CliMA/ClimaAtmos.jl and deploys its own docs.
+# Deploying to the upstream repository would fail, and the doc-preview link
+# posted on pull requests points at this repository's GitHub Pages site.
 deploydocs(
-    repo = "github.com/CliMA/ClimaAtmos.jl.git",
+    repo = "github.com/johannespletzer/ClimaAtmosResiDyn.jl.git",
     devbranch = "main",
     push_preview = all(
         !isempty,
