@@ -10,13 +10,13 @@ ClimaAtmos.jl solves the compressible equations of atmospheric motion on cubed-s
 
 This repository is a fork of [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl). It tracks upstream and adds tagged tracer, tagged water, energy source tag and process record work. The badges above report this fork's state, not upstream's.
 
-|                   |                                                                                                                                                                                                                   |
-| -----------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Documentation** | [![dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://johannespletzer.github.io/ClimaAtmosResiDyn.jl/dev/)                                                                                            |
+|                   |                                                                                                                                                                                                                           |
+| -----------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Documentation** | [![dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://johannespletzer.github.io/ClimaAtmosResiDyn.jl/dev/)                                                                                                     |
 | **Tests**         | [![gha ci](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/actions/workflows/ci.yml?query=branch%3Amain) |
-| **Code Coverage** | [![codecov](https://codecov.io/gh/johannespletzer/ClimaAtmosResiDyn.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/johannespletzer/ClimaAtmosResiDyn.jl)                                                 |
-| **License**       | [![license](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/blob/main/LICENSE)                                                              |
-| **Upstream**      | [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl)                                                                                                                                                    |
+| **Code Coverage** | [![codecov](https://codecov.io/gh/johannespletzer/ClimaAtmosResiDyn.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/johannespletzer/ClimaAtmosResiDyn.jl)                                                          |
+| **License**       | [![license](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/blob/main/LICENSE)                                                                       |
+| **Upstream**      | [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl)                                                                                                                                                             |
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/778b0c14-a5d7-4907-82db-6d1f8a0c5b07" alt="Condensed water path from a global ClimaAtmos simulation">
