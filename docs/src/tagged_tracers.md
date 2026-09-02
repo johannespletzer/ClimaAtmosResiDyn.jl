@@ -257,11 +257,14 @@ integration test use this identity with the Held–Suarez source.
 
 ## Interpretation limit
 
-Exact closure establishes internally consistent contribution accounting. It does
-not turn the tags into counterfactual sensitivities. Tagging says what
-contributed to the simulated energy; it does not say what would change if a
-process were altered. That is a question for perturbation or ensemble
-experiments.
+Closure proves one thing: that the included terms sum to the parent, as a
+signed discrete accounting. It does **not** establish that the amounts are
+non-negative, that the provenance reading is valid, that results are
+independent of the energy reference, or that the set of tracked processes is
+physically complete. Nor does it turn the tags into counterfactual
+sensitivities — tagging says what contributed to the simulated energy, not what
+would change if a process were altered. That last question is one for
+perturbation or ensemble experiments.
 
 The mask weighting, the choice of which processes are attributed, and the
 grouping of gains and losses within one bracket are modeling choices.

@@ -109,13 +109,11 @@ says what happened in this cell, not what arrived here.
     snapshot/attribute bracket. `snapshot_tags!` and `attribute_tags!` are
     called from `remaining_tendency.jl` and nowhere else.
 
-    This limit used to be a type barrier as well: a cache-resident record could
-    not be written from the implicit path, which is evaluated with
-    `ForwardDiff.Dual` numbers, because the cache holds plain floats. That
-    barrier is gone. `Y`, `Yₜ`, `p.precomputed` and `p.scratch` are all
-    dual-converted, so a prognostic record's snapshot and destination are both
-    dual-safe. Extending the record to the implicit path is now a matter of
-    adding brackets there, not of finding somewhere type-safe to write.
+    The limit is the bracket and nothing else. `Y`, `Yₜ`, `p.precomputed` and
+    `p.scratch` are all dual-converted, so a record's snapshot and destination
+    are both safe on the implicit path, which is evaluated with
+    `ForwardDiff.Dual` numbers. Extending a record to that path needs brackets
+    there and no change of storage.
 
     Three labels are affected, and one of them can never be anything else.
     `precipitation` has **no explicit bracket at all** — the tendency it names

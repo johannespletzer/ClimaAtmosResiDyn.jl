@@ -2348,7 +2348,10 @@ Fields mean what they do for [`TracerTag`](@ref), but the attribution rule
 differs and that is the whole point of the separate type. A source tag holds an
 amount of moist energy that is present now and is traced back to where it came
 from: production is shared out by region mask and loss is taken from each tag in
-proportion to what it already holds. A `TracerTag` configured with `source`
+proportion to what it already holds. That reading is **conditional**: it holds
+only where `ρe_tot` is positive, so the donor share is defined, and only while
+the tag itself is non-negative. Treat the family as experimental signed
+attribution rather than settled provenance. A `TracerTag` configured with `source`
 instead accumulates the whole signed increment and is a signed process tag.
 
 `ρe_src_*` is **not guaranteed non-negative**. Three separate things can take
@@ -2375,9 +2378,15 @@ The tags are also exempt from both tracer limiters through
 Unlike the water tags there is no partition repair, so nothing puts a negative
 tag back.
 
-Read a negative `ρe_src_*` as information about the configuration — the
-timestep, the energy reference, or the transport — and watch it through
-`e_src_res` and the closure check.
+These are known limits of the current discrete implementation rather than
+properties of the continuous rule. A negative value invalidates the
+amount-of-energy and provenance reading of that tag while it lasts.
+
+`e_src_res` will not reveal it: that residual covers the pure region tags only,
+so a source-labelled tag never enters it and region-tag errors of opposite sign
+can cancel. Inspect each `e_src_<name>` for its minimum or sign instead, and
+use the initialization warning and the closure check's `nonpositive_fraction`
+for the parent.
 
 This is the energy counterpart of [`WaterTag`](@ref), which already works this
 way. Moist total energy has no physical zero, so unlike water the resulting

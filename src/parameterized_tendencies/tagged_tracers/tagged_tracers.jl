@@ -548,6 +548,32 @@ The residual is information, not a reason to stop. Closure drift is something
 you want to watch grow, and ending a multi-year integration over it would cost
 more than it saves, so this warns and keeps running.
 """
+"""
+    nonpositive_parent_note(family)
+
+The family-specific consequence of a non-positive closure parent, for the
+warning in [`tag_closure_callback!`](@ref).
+
+What a non-positive parent costs depends on the rule the family applies, so
+this says which case applies rather than asserting the energy-source one for
+all three. Only `energy_source_tags` divides by the parent to get a donor
+share it then depends on; `water_tracers` does too but has a parent the model
+keeps non-negative; `energy_tracers` never divides by it at all.
+"""
+function nonpositive_parent_note(family)
+    family == "energy_source" && return "Donor shares are undefined there, so \
+        the loss half of the attribution rule does not run. For moist total \
+        energy this usually means the chosen thermodynamic or gravitational \
+        reference puts part of the domain below zero."
+    family == "water" && return "Water tags take loss in proportion to what \
+        they hold, so their shares are undefined there. The model keeps \
+        `ρq_tot` non-negative, so this is unexpected and worth investigating \
+        rather than a consequence of a reference choice."
+    return "This family applies the whole signed increment by mask and uses \
+        no donor share, so its attribution is unaffected. It does mean the \
+        closure denominator is degenerate where this happens."
+end
+
 function tag_closure_callback!(
     integrator,
     output_dir,
@@ -573,10 +599,8 @@ function tag_closure_callback!(
         closure.nonpositive_fraction > 0 && @warn(
             "$family tag parent is non-positive over \
             $(closure.nonpositive_fraction * 100)% of the domain volume at \
-            t = $t s. Source shares are undefined there, and closure will not \
-            show it. For moist total energy this usually means the chosen \
-            thermodynamic or gravitational reference puts part of the domain \
-            below zero."
+            t = $t s, and closure will not show it. \
+            $(nonpositive_parent_note(family))"
         )
     end
     return nothing

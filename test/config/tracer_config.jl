@@ -589,6 +589,142 @@ end
     ) == ()
 end
 
+@testset "Energy source closure check" begin
+    tolerances = CA.DEFAULT_CLOSURE_TOLERANCES
+    # The energy source family shares the energy tolerance: both ride the same
+    # explicit-only transport, so their residuals are the same size.
+    @test tolerances.energy_source == tolerances.energy
+
+    # Parsing, and the default that applies when the block is bare.
+    bare = CA.closure_check_from_config(
+        Dict{String, Any}(),
+        "`energy_source_closure_check`",
+        FT;
+        default_tolerance = tolerances.energy_source,
+    )
+    @test bare.period == "1days"
+    @test bare.tolerance == FT(tolerances.energy_source)
+
+    # The key reaches the config, with the run's float type rather than this
+    # file's, exactly as the other two families do.
+    config = tracer_config(
+        [
+            "energy_source_tags" => [
+                Dict{String, Any}("name" => "trop", "region" => "tropics"),
+                Dict{String, Any}(
+                    "name" => "extra",
+                    "region" => "extratropics",
+                ),
+            ],
+            "energy_source_closure_check" =>
+                Dict("period" => "6hours", "tolerance" => 1.0e-5),
+        ];
+        job_id = "tracer_config_energy_source_closure",
+    )
+    checks = CA.closure_checks_from_config(config)
+    @test checks.energy_source.period == "6hours"
+    @test checks.energy_source.tolerance isa eltype(config)
+    @test checks.energy_source.tolerance == eltype(config)(1.0e-5)
+
+    scheduling = (;
+        output_dir = mktempdir(),
+        dt = nothing,
+        t_start = nothing,
+        t_end = nothing,
+        checkpoint_frequency = nothing,
+    )
+    check = (; period = "1days", tolerance = FT(1.0e-6))
+    callback_kwargs = (;
+        family = "energy_source",
+        total_name = :ρe_tot,
+        state_names = CA.energy_source_region_tag_state_names,
+        config_key = "energy_source_closure_check",
+        tracer_key = "energy_source_tags",
+    )
+
+    # A partition of region tags is what the callback needs to exist at all.
+    # The successful construction itself is not asserted here: past the
+    # validation the builder promotes `period` against `dt`, `t_start` and
+    # `t_end`, so it needs real schedule values rather than the `nothing`s the
+    # rejection paths below use, and no test in this suite builds one. The
+    # tagging integration tests cover the assembled callback in a real run.
+    partition = CA.EnergySourceTaggingModel(
+        CA.energy_source_tracer_tuple(
+            [
+                Dict{String, Any}("name" => "trop", "region" => "tropics"),
+                Dict{String, Any}(
+                    "name" => "extra",
+                    "region" => "extratropics",
+                ),
+            ],
+            FT,
+        ),
+    )
+    @test !isempty(CA.energy_source_region_tag_state_names(partition))
+
+    # Checking a family that is switched off names the key that would enable it.
+    err = try
+        CA.tag_closure_callback(
+            check,
+            nothing;
+            callback_kwargs...,
+            scheduling...,
+        )
+    catch e
+        e
+    end
+    @test err isa ErrorException
+    @test occursin("energy_source_tags", err.msg)
+
+    # Source-only tags form no partition, so there is nothing to close against.
+    source_only = CA.EnergySourceTaggingModel(
+        CA.energy_source_tracer_tuple(
+            [Dict{String, Any}("name" => "rad", "source" => "radiation")],
+            FT,
+        ),
+    )
+    @test isempty(CA.energy_source_region_tag_state_names(source_only))
+    err = try
+        CA.tag_closure_callback(
+            check,
+            source_only;
+            callback_kwargs...,
+            scheduling...,
+        )
+    catch e
+        e
+    end
+    @test err isa ErrorException
+    @test occursin("region", err.msg)
+
+    # No block means no callback, and no complaint about the family.
+    @test CA.tag_closure_callback(
+        nothing,
+        nothing;
+        callback_kwargs...,
+        scheduling...,
+    ) == ()
+
+    # The family writes its own table, so a run with several checks on does not
+    # have them overwrite each other.
+    dir = mktempdir()
+    closure = (;
+        total = 3.0,
+        tagged = 2.0,
+        residual = 1.0,
+        relative = 1 / 3,
+        gross_residual = 5.0,
+        gross_relative = 5 / 3,
+        scale = 3.0,
+        nonpositive_fraction = 0.0,
+    )
+    CA.write_tag_closure!(dir, 0.0, "energy_source", closure)
+    path = CA.tag_closure_path(dir, "energy_source")
+    @test basename(path) == "energy_source_tag_closure.csv"
+    @test isfile(path)
+    @test path != CA.tag_closure_path(dir, "energy")
+end
+
 @testset "Closure table" begin
     dir = mktempdir()
     # A signed residual of 1 that came from local misses of +3 and -2, which is

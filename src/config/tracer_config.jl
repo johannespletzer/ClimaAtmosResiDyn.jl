@@ -567,11 +567,12 @@ end
 
 Default relative-residual tolerance of each tag family's closure check.
 
-The two differ by four orders of magnitude on purpose. The water tags ride the
-same transport operators as `ρq_tot` apart from the implicit-vs-explicit
-vertical advection split, so their residual is small. The energy tags never
-receive implicit transport or EDMFX SGS mass fluxes at all, which is by design
-(see `KNOWN_TAG_SOURCES`), so a much larger residual is expected and normal.
+Water differs from the two energy families by four orders of magnitude on
+purpose. The water tags ride the same transport operators as `ρq_tot` apart
+from the implicit-vs-explicit vertical advection split, so their residual is
+small. Neither energy family receives implicit transport or EDMFX SGS mass
+fluxes at all, which is by design (see `KNOWN_TAG_SOURCES`), so a much larger
+residual is expected and normal.
 
 These are starting points, not derived numbers. Read the first run's closure
 table and set a tolerance that sits above the level your configuration settles
@@ -583,8 +584,9 @@ const DEFAULT_CLOSURE_TOLERANCES =
 """
     closure_check_from_config(spec_value, context, FT; default_tolerance)
 
-Read a `water_closure_check` or `energy_closure_check` block into
-`(; period, tolerance)`, or `nothing` when the key is absent.
+Read a `water_closure_check`, `energy_closure_check` or
+`energy_source_closure_check` block into `(; period, tolerance)`, or `nothing`
+when the key is absent.
 
 Both keys are optional: `period` defaults to `"1days"` and `tolerance` to the
 family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref).

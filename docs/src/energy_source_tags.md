@@ -88,11 +88,17 @@ donor-proportional loss is applied there at all; how much of a domain that
 covers depends on the energy reference. And the tags are exempt from both
 tracer limiters and ride unlimited explicit transport with no partition repair.
 
-So `ρe_src_<name>` is a monitored quantity, not a bounded one. A negative value
-is information about the configuration — the timestep, the energy reference, or
-the transport — rather than a failure of the attribution rule. Watch it through
-`e_src_res` and the closure check, which reports the fraction of the domain
-where the parent is non-positive.
+So `ρe_src_<name>` is a monitored quantity, not a bounded one. These are known
+limits of the current discrete implementation rather than properties of the
+continuous rule, and a negative value **invalidates the amount-of-energy and
+provenance reading of that tag** for as long as it lasts.
+
+`e_src_res` will not tell you about it. It is the parent minus the sum of the
+*pure region* tags, so a source-labelled tag going negative never enters it,
+and a negative region-tag error can be cancelled by a positive one elsewhere.
+To watch for it, inspect each `e_src_<name>` directly — its minimum or sign.
+For the parent, use the initialization warning and the `nonpositive_fraction`
+column of the closure check.
 
 ## Closure checking
 
@@ -178,8 +184,14 @@ with an energy [process record](process_record.md) for the per-process history.
 `e_src_res` is a **monitored residual**, not a machine-precision identity.
 ``\rho e_\mathrm{tot}`` is transported as enthalpy including pressure work and
 has its own diffusion treatment, while the tags ride the generic passive-tracer
-path. Because it is normalized by a quantity whose zero is a convention, it is
-not comparable across configurations that use different references.
+path.
+
+Two things it is not. It is **not a ratio**: it is divided by density, so it is
+an energy per unit mass in J kg⁻¹, and it is not the same quantity as the
+`relative` and `gross_relative` columns the closure check writes, which are
+normalized by ``\int|\rho e_\mathrm{tot}|``. And it does **not** cover the
+source-labelled tags, only the pure region ones, so it is not a check on the
+family as a whole.
 
 ## Caveats
 
@@ -194,10 +206,13 @@ not comparable across configurations that use different references.
 
 ## Interpretation limit
 
-Exact closure establishes internally consistent contribution accounting. It does
-not turn the tags into counterfactual sensitivities. Tagging says what
-contributed to the simulated energy; it does not say what would change if a
-process were altered.
+Closure proves one thing: that the included terms sum to the parent, as a
+signed discrete accounting. It does **not** establish that the amounts are
+non-negative, that the provenance reading is valid, that results are
+independent of the energy reference, or that the set of tracked processes is
+physically complete. Nor does it turn the tags into counterfactual
+sensitivities — tagging says what contributed to the simulated energy, not what
+would change if a process were altered.
 
 ## API
 

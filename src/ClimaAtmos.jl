@@ -98,7 +98,7 @@ include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_tracers.j
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water.jl"))
 # Energy source tags (ρe_src_*, the donor-proportional counterpart of the water tags)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_tags.jl"))
-# Process-change records (signed per-process increments, cache-resident)
+# Process-change records (signed per-process increments, prognostic but not transported)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "process_record.jl"))
 
 include(joinpath("surface_conditions", "SurfaceConditions.jl"))

@@ -114,8 +114,10 @@ end
 # 7 minutes per simulation on 1.11 against 1 to 2 minutes on 1.10.
 #
 # One group per file, because the files share no compilation: combining them
-# adds their compile times with nothing reused, and a job that then overruns
-# its timeout drops coverage of whatever had not started rather than failing.
+# adds their compile times with nothing reused. A job that then overruns its
+# timeout is cancelled and reports as failed, and it also never runs the files
+# that had not started, so the loss of coverage is silent even though the job
+# is not.
 #
 # Each group runs against a 90-minute timeout, so keep new work to the smallest
 # tag set that proves the claim, and prefer extending a set an existing test in

@@ -651,10 +651,11 @@ sedimenting_water_tag_names(Y) =
     snapshot_tags!(p, Yₜ, source::Symbol)
     attribute_tags!(Yₜ, Y, p, source::Symbol)
 
-Open and close an attribution bracket for both tag families at once. The energy
-half is unconditional (every bracketed process is an energy process); the water
-half fires only for `source in KNOWN_WATER_TAG_SOURCES`, so bracketing e.g.
-radiation costs a water-tagged run nothing.
+Open and close one attribution bracket for every tagging family at once, and
+for the process records. The energy half is unconditional (every bracketed
+process is an energy process); the water half fires only for
+`source in KNOWN_WATER_TAG_SOURCES`, so bracketing e.g. radiation costs a
+water-tagged run nothing.
 
 Each half is a no-op when its own model is `nothing`, so a run with only one
 family enabled pays only for that family.

@@ -9,7 +9,8 @@
 #####
 ##### This is the energy counterpart of the water tags in `tagged_water.jl`, and
 ##### it is a different quantity from `ρe_tag_*` in `tagged_tracers.jl`. A source
-##### tag holds energy that is present now, traced back to where it came from.
+##### tag holds energy that is present now, traced back to where it came from,
+##### which holds only where `ρe_tot` is positive and the tag is non-negative.
 ##### An `ρe_tag_*` tag configured with `source` is a signed process tag: it
 ##### holds the signed increment one process applied. That is not the same as
 ##### the process-change record, which is the separate `prc_*` family in
@@ -201,8 +202,8 @@ Record the current `Yₜ.c.ρe_tot` in `p.scratch`, opening an attribution brack
 for the energy source tags. A no-op when they are disabled.
 
 Paired with [`attribute_energy_source_tags!`](@ref). This uses its own buffer
-rather than the one the `ρe_tag_*` family uses, so that either family can be
-configured without the other.
+rather than the one the `ρe_tag_*` family uses, so that the two can be
+configured independently.
 """
 snapshot_energy_source_tags!(p, Yₜ) = _snapshot_energy_source_tags!(
     p,

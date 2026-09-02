@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   test:
-    name: Downgrade ${{ matrix.version }} - ubuntu-latest
+    name: Downgrade ${{ matrix.version }} - ${{ matrix.test_group }}
     runs-on: ubuntu-latest
     # julia-downgrade-compat rewrites Project.toml (test extras are promoted to
     # deps), which makes Aqua's stale-dependency check meaningless here.
@@ -30,6 +30,22 @@ jobs:
       fail-fast: false
       matrix:
         version: ['1.10', '1.11']
+        # One job per group rather than one job running them in sequence. Run
+        # sequentially, the first failing group ends the job and every later
+        # group silently goes unrun, so a red downgrade job says nothing about
+        # the groups behind the failure. With `fail-fast: false` above, each
+        # group now reports its own result.
+        test_group:
+          - infrastructure
+          - diagnostics
+          - dynamics
+          - tagging_energy
+          - tagging_water
+          - tagging_source
+          - tagging_record
+          - parameterizations
+          - restarts
+          - era5
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@latest
@@ -42,46 +58,6 @@ jobs:
           mode: 'forcedeps'
 
       - uses: julia-actions/julia-buildpkg@latest
-      - name: Run infrastructure tests
-        uses: julia-actions/julia-runtest@latest
+      - uses: julia-actions/julia-runtest@latest
         env:
-          TEST_GROUP: infrastructure
-      - name: Run diagnostics tests
-        uses: julia-actions/julia-runtest@latest
-        env:
-          TEST_GROUP: diagnostics
-      - name: Run dynamics tests
-        uses: julia-actions/julia-runtest@latest
-        env:
-          TEST_GROUP: dynamics
-      # One step per tagging group, matching `ci.yml` and `runtests.jl`. These
-      # have to be listed individually: a stale group name runs nothing, and
-      # `runtests.jl` rejects one rather than letting it pass silently.
-      - name: Run tagging_energy tests
-        uses: julia-actions/julia-runtest@latest
-        env:
-          TEST_GROUP: tagging_energy
-      - name: Run tagging_water tests
-        uses: julia-actions/julia-runtest@latest
-        env:
-          TEST_GROUP: tagging_water
-      - name: Run tagging_source tests
-        uses: julia-actions/julia-runtest@latest
-        env:
-          TEST_GROUP: tagging_source
-      - name: Run tagging_record tests
-        uses: julia-actions/julia-runtest@latest
-        env:
-          TEST_GROUP: tagging_record
-      - name: Run parameterizations tests
-        uses: julia-actions/julia-runtest@latest
-        env:
-          TEST_GROUP: parameterizations
-      - name: Run restarts tests
-        uses: julia-actions/julia-runtest@latest
-        env:
-          TEST_GROUP: restarts
-      - name: Run era5 tests
-        uses: julia-actions/julia-runtest@latest
-        env:
-          TEST_GROUP: era5
+          TEST_GROUP: ${{ matrix.test_group }}
