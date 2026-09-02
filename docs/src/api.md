@@ -445,6 +445,65 @@ ClimaAtmos.ColumnDatasets.ClimaColumnFiles
 ClimaAtmos.ColumnDatasets.VaranalFiles
 ```
 
+## Parent-budget ledger
+
+The accounting layer that reconciles mass, total water, and total energy
+against the accepted discrete update. See
+[the budget contract](parent_budget/contract.md) for what it claims, and
+[the coverage matrices](parent_budget/coverage.md) for what it covers.
+
+```@docs
+ClimaAtmos.ComponentStatus
+ClimaAtmos.Measured
+ClimaAtmos.InvariantZero
+ClimaAtmos.NotApplicable
+ClimaAtmos.UnknownComponent
+ClimaAtmos.BudgetComponent
+ClimaAtmos.measured
+ClimaAtmos.invariant_zero
+ClimaAtmos.not_applicable
+ClimaAtmos.unknown_component
+ClimaAtmos.is_contributing
+ClimaAtmos.is_blocking
+ClimaAtmos.BudgetReservoir
+ClimaAtmos.AtmosphereReservoir
+ClimaAtmos.SlabSurfaceReservoir
+ClimaAtmos.ExteriorReservoir
+ClimaAtmos.ControlVolume
+ClimaAtmos.ATMOSPHERE_ONLY
+ClimaAtmos.ATMOSPHERE_AND_SURFACE
+ClimaAtmos.is_inside
+ClimaAtmos.UpdatePath
+ClimaAtmos.EquationTerm
+ClimaAtmos.DiscreteMap
+ClimaAtmos.NumericalCorrection
+ClimaAtmos.AlgebraicSolveDefect
+ClimaAtmos.BudgetLeg
+ClimaAtmos.budget_component
+ClimaAtmos.BUDGET_QUANTITIES
+ClimaAtmos.atmosphere_mass
+ClimaAtmos.atmosphere_water
+ClimaAtmos.atmosphere_energy
+ClimaAtmos.atmosphere_dry_mass
+ClimaAtmos.slab_heat_capacity
+ClimaAtmos.surface_energy
+ClimaAtmos.surface_water
+ClimaAtmos.surface_mass
+ClimaAtmos.ReservoirEndpoint
+ClimaAtmos.BudgetEndpoints
+ClimaAtmos.budget_endpoints
+ClimaAtmos.endpoint_total
+ClimaAtmos.BudgetLedger
+ClimaAtmos.open_transaction!
+ClimaAtmos.record_leg!
+ClimaAtmos.abort_transaction!
+ClimaAtmos.project_legs
+ClimaAtmos.BudgetReconciliation
+ClimaAtmos.reconcile
+ClimaAtmos.commit_transaction!
+ClimaAtmos.transfer_mismatch
+```
+
 ## Internals
 
 ```@docs

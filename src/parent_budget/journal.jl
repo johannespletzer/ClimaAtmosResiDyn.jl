@@ -1,0 +1,338 @@
+#####
+##### Parent-budget ledger: the transactional event journal
+#####
+##### One journal holds the signed legs of every event in one accepted
+##### timestep. A leg says what one process did to one reservoir, and it is
+##### recorded once. Control-volume totals are projections of those legs, not
+##### separate entries, so an internal transfer cancels because its two legs
+##### cancel and not because anything was synthesized to make it.
+#####
+##### The contract these types serve is in `docs/src/parent_budget/contract.md`.
+##### Three rules from it are enforced here rather than documented and hoped
+##### for. A residual is defined only by subtraction, so nothing in this file
+##### can create a balancing entry. A component that was not measured is
+##### `UnknownComponent` and blocks the claim it belongs to, so nothing here
+##### turns silence into zero. And a leg is refused if one with the same event,
+##### leg and step is already recorded, so a bracket that fires twice is an
+##### error and not a doubled amount.
+#####
+##### Legs are host-side scalar records. A few dozen per timestep are created,
+##### each after a global reduction that costs far more than they do, so these
+##### types are written for clarity rather than for a kernel. Nothing here is
+##### evaluated on the device.
+
+# ============================================================================
+# Component status
+# ============================================================================
+
+"""
+    ComponentStatus
+
+What is known about one `(ΔM, ΔW, ΔE)` component of a [`BudgetLeg`](@ref).
+
+Every component carries one of four statuses, and the difference between them
+is the whole point of the ledger.
+
+  - [`Measured`](@ref): the amount was taken from the implemented update.
+  - [`InvariantZero`](@ref): the amount is provably zero, and the evidence is
+    named in the leg's `method`.
+  - [`NotApplicable`](@ref): the path does not exist in this configuration.
+  - [`UnknownComponent`](@ref): not yet established. It contributes nothing to
+    a sum and *blocks* the closure claim for its quantity.
+
+`UnknownComponent` exists so that an unmeasured component cannot be quietly
+treated as zero. That is the failure mode a budget diagnostic is most likely to
+have, because a missing term and a zero term look identical in the output.
+"""
+abstract type ComponentStatus end
+
+"""
+    Measured()
+
+The component was measured from the implemented update. See
+[`ComponentStatus`](@ref).
+"""
+struct Measured <: ComponentStatus end
+
+"""
+    InvariantZero()
+
+The component is provably zero. See [`ComponentStatus`](@ref).
+"""
+struct InvariantZero <: ComponentStatus end
+
+"""
+    NotApplicable()
+
+The path does not exist in this configuration. See [`ComponentStatus`](@ref).
+"""
+struct NotApplicable <: ComponentStatus end
+
+"""
+    UnknownComponent()
+
+The component has not been established. See [`ComponentStatus`](@ref).
+"""
+struct UnknownComponent <: ComponentStatus end
+
+"""
+    BudgetComponent(amount, status)
+
+One signed extensive amount together with what is known about it.
+
+Units are `kg` for mass and water and `J` for energy, always extensive and
+never normalized. Positive means addition to the reservoir the leg names.
+
+Use the constructors [`measured`](@ref), [`invariant_zero`](@ref),
+[`not_applicable`](@ref), and [`unknown_component`](@ref) rather than building
+one directly, because they enforce that a non-`Measured` component carries no
+amount.
+"""
+struct BudgetComponent{FT}
+    amount::FT
+    status::ComponentStatus
+end
+
+"""
+    measured(amount)
+
+A [`BudgetComponent`](@ref) holding a measured signed amount.
+"""
+measured(amount::FT) where {FT} = BudgetComponent{FT}(amount, Measured())
+
+"""
+    invariant_zero(FT)
+
+A [`BudgetComponent`](@ref) that is provably zero. The amount is exactly zero,
+which is what makes it safe to include in a sum.
+"""
+invariant_zero(::Type{FT}) where {FT} =
+    BudgetComponent{FT}(zero(FT), InvariantZero())
+
+"""
+    not_applicable(FT)
+
+A [`BudgetComponent`](@ref) for a path that does not exist in this
+configuration. It contributes nothing and blocks nothing.
+"""
+not_applicable(::Type{FT}) where {FT} =
+    BudgetComponent{FT}(zero(FT), NotApplicable())
+
+"""
+    unknown_component(FT)
+
+A [`BudgetComponent`](@ref) that has not been established. It contributes
+nothing to a sum and blocks the closure claim for its quantity.
+"""
+unknown_component(::Type{FT}) where {FT} =
+    BudgetComponent{FT}(zero(FT), UnknownComponent())
+
+"""
+    is_contributing(c) -> Bool
+
+Whether the [`BudgetComponent`](@ref) `c` may be added into a control-volume
+total.
+
+True for [`Measured`](@ref) and [`InvariantZero`](@ref). False for
+[`NotApplicable`](@ref) and [`UnknownComponent`](@ref), whose amounts are zero
+anyway; the distinction matters because only `UnknownComponent` also blocks.
+"""
+is_contributing(c::BudgetComponent) =
+    c.status isa Measured || c.status isa InvariantZero
+
+"""
+    is_blocking(c) -> Bool
+
+Whether the [`BudgetComponent`](@ref) `c` blocks the closure claim for its
+quantity. True only for [`UnknownComponent`](@ref).
+"""
+is_blocking(c::BudgetComponent) = c.status isa UnknownComponent
+
+# ============================================================================
+# Reservoirs and control volumes
+# ============================================================================
+
+"""
+    BudgetReservoir
+
+A place the ledger can add to or take from.
+
+The graph is small and saying so is part of the contract. The atmosphere always
+exists. The slab surface exists only for a
+`SurfaceConditions.SlabOceanTemperature`, and it owns energy and water but no
+mass. Everything else is exterior: its state is not owned by the model, so a
+flux into it is a boundary crossing and never an internal transfer.
+"""
+abstract type BudgetReservoir end
+
+"""
+    AtmosphereReservoir()
+
+The atmospheric column state, `Y.c` and `Y.f`. See [`BudgetReservoir`](@ref).
+"""
+struct AtmosphereReservoir <: BudgetReservoir end
+
+"""
+    SlabSurfaceReservoir()
+
+The slab surface state, `Y.sfc`. Owns energy and water, never mass. See
+[`BudgetReservoir`](@ref).
+"""
+struct SlabSurfaceReservoir <: BudgetReservoir end
+
+"""
+    ExteriorReservoir()
+
+Everything outside the model, including a prescribed surface. See
+[`BudgetReservoir`](@ref).
+"""
+struct ExteriorReservoir <: BudgetReservoir end
+
+"""
+    ControlVolume(name, reservoirs)
+
+A named set of reservoirs to project the journal onto.
+
+The two supported views are [`ATMOSPHERE_ONLY`](@ref) and
+[`ATMOSPHERE_AND_SURFACE`](@ref). A leg counts toward a view when its reservoir
+is inside it, so a surface exchange is a boundary crossing in the first view
+and an internal transfer in the second, from the same recorded legs.
+"""
+struct ControlVolume{N}
+    name::Symbol
+    reservoirs::NTuple{N, BudgetReservoir}
+end
+
+"""
+    ATMOSPHERE_ONLY
+
+The atmosphere alone. Every surface exchange is a boundary crossing.
+"""
+const ATMOSPHERE_ONLY = ControlVolume(:atmosphere_only, (AtmosphereReservoir(),))
+
+"""
+    ATMOSPHERE_AND_SURFACE
+
+The atmosphere together with the slab surface. A surface exchange is internal,
+and its two legs are expected to cancel. The expectation is tested, never
+imposed.
+"""
+const ATMOSPHERE_AND_SURFACE = ControlVolume(
+    :atmosphere_and_surface,
+    (AtmosphereReservoir(), SlabSurfaceReservoir()),
+)
+
+"""
+    is_inside(control_volume, reservoir) -> Bool
+
+Whether `reservoir` is one of the reservoirs `control_volume` contains.
+"""
+is_inside(cv::ControlVolume, reservoir::BudgetReservoir) =
+    any(r -> r === reservoir, cv.reservoirs)
+
+# ============================================================================
+# Update paths
+# ============================================================================
+
+"""
+    UpdatePath
+
+Which term of the accounting identity a leg belongs to.
+
+```
+ΔB_actual = ΣQ_equation + ΣQ_map + ΣQ_correction + ΣQ_solve_defect + R_bookkeeping
+```
+
+The four subtypes are the four `Q` terms. The residual is not one of them: it
+is defined by subtraction in [`reconcile`](@ref) and has no leg, because a
+residual with a leg is a fixer.
+"""
+abstract type UpdatePath end
+
+"""
+    EquationTerm()
+
+`Q_equation`: accepted integration of an explicit or implicit equation term.
+"""
+struct EquationTerm <: UpdatePath end
+
+"""
+    DiscreteMap()
+
+`Q_map`: an accepted sequential, split, coupling, callback, or post-solve map.
+"""
+struct DiscreteMap <: UpdatePath end
+
+"""
+    NumericalCorrection()
+
+`Q_correction`: a limiter, clipping, projection, or consistency repair. These
+are numerical corrections and are never reported as physical tendencies.
+"""
+struct NumericalCorrection <: UpdatePath end
+
+"""
+    AlgebraicSolveDefect()
+
+`Q_solve_defect`: an independently derived projection of an incomplete
+algebraic solve.
+
+This is not a small term in ClimaAtmos. The default `NewtonsMethod(max_iters =
+1)` against an approximate Jacobian does not converge the implicit stage, so
+the defect is leading order and the identity cannot close without it. See the
+tolerance model in the contract.
+"""
+struct AlgebraicSolveDefect <: UpdatePath end
+
+# ============================================================================
+# Legs
+# ============================================================================
+
+"""
+    BudgetLeg(; event, leg, reservoir, mass, water, energy, path, process, phase, step, method)
+
+One signed contribution to one reservoir, recorded once.
+
+`event` is shared by every leg of one physical exchange, so the atmospheric and
+surface halves of a surface flux carry the same `event` and different `leg`.
+`(event, leg, step)` is the identity the journal refuses to record twice.
+
+`process` names the physics, `phase` names where in the step it happened, and
+`method` names how the amount was obtained or, for an [`InvariantZero`](@ref)
+component, what makes it zero.
+"""
+Base.@kwdef struct BudgetLeg{FT}
+    event::Symbol
+    leg::Symbol
+    reservoir::BudgetReservoir
+    mass::BudgetComponent{FT}
+    water::BudgetComponent{FT}
+    energy::BudgetComponent{FT}
+    path::UpdatePath
+    process::Symbol
+    phase::Symbol
+    step::Int
+    method::Symbol
+end
+
+"""
+    budget_component(leg, quantity) -> BudgetComponent
+
+The `quantity` component of `leg`, where `quantity` is `:mass`, `:water`, or
+`:energy`.
+"""
+function budget_component(leg::BudgetLeg, quantity::Symbol)
+    quantity === :mass && return leg.mass
+    quantity === :water && return leg.water
+    quantity === :energy && return leg.energy
+    error("Unknown budget quantity $quantity; expected :mass, :water or :energy")
+end
+
+"""
+    BUDGET_QUANTITIES
+
+The three quantities the ledger tracks, each with its own definition,
+invariants, residual, and tolerance. They share a journal so that coupled
+exchanges stay coordinated. They are never interchangeable.
+"""
+const BUDGET_QUANTITIES = (:mass, :water, :energy)
