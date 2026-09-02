@@ -56,6 +56,18 @@ function test_endpoints(FT, step; m, w, e, sfc_w = nothing, sfc_e = nothing)
     return CA.BudgetEndpoints{FT}(step, reservoirs)
 end
 
+# The atmosphere-only mass reconciliation out of one commit's results. Written
+# as a loop rather than a `filter` with a multi-line lambda, which JuliaFormatter
+# and a reader both prefer.
+function atmosphere_mass_result(reconciliations)
+    for r in reconciliations
+        if r.quantity === :mass && r.control_volume === :atmosphere_only
+            return r
+        end
+    end
+    error("No atmosphere-only mass reconciliation was returned")
+end
+
 @testset "Parent-budget journal" begin
     for FT in (Float32, Float64)
 
@@ -351,13 +363,7 @@ end
             # for. Nothing in the ledger may make that go away.
             closing = test_endpoints(FT, 1; m = 104, w = 10, e = 1000)
             rs = CA.commit_transaction!(ledger, closing)
-            r = only(
-                filter(
-                    x -> x.quantity === :mass &&
-                        x.control_volume === :atmosphere_only,
-                    rs,
-                ),
-            )
+            r = atmosphere_mass_result(rs)
             @test r.endpoint_change == FT(4)
             @test r.recorded == FT(3)
             @test r.residual == FT(1)
@@ -368,26 +374,29 @@ end
             @test !r.blocked
         end
 
-        @testset "Cumulative totals accumulate signed ($FT)" begin
-            # A per-step residual that changes sign must stay visible. This is
-            # the failure a whole-run conservation check cannot see.
+        @testset "Per-step residuals survive cancellation ($FT)" begin
+            # The mass goes 0 → 1 → 0 with nothing recorded, so each step has a
+            # residual and the two cancel. Reporting only the cumulative number
+            # would show a perfectly closed budget over a run that closed on
+            # neither step, which is the failure a whole-run conservation check
+            # cannot see. Both are reported for exactly this reason.
             ledger = CA.BudgetLedger{FT}()
-            for (step, change) in ((1, FT(1)), (2, FT(-1)))
+            per_step = FT[]
+            for (step, before, after) in ((1, FT(0), FT(1)), (2, FT(1), FT(0)))
                 CA.open_transaction!(
                     ledger,
-                    test_endpoints(FT, step - 1; m = 0, w = 0, e = 0),
+                    test_endpoints(FT, step - 1; m = before, w = 0, e = 0),
                 )
-                CA.commit_transaction!(
+                rs = CA.commit_transaction!(
                     ledger,
-                    test_endpoints(FT, step; m = change, w = 0, e = 0),
+                    test_endpoints(FT, step; m = after, w = 0, e = 0),
                 )
+                push!(per_step, atmosphere_mass_result(rs).residual)
             end
             @test ledger.committed_steps == 2
-            # Endpoints went 0 → 1 → -1, so the cumulative change is -1 and the
-            # cumulative residual is the same, since nothing was recorded.
-            @test ledger.cumulative_change[(:mass, :atmosphere_only)] == FT(-1)
-            @test ledger.cumulative_residual[(:mass, :atmosphere_only)] ==
-                  FT(-1)
+            @test per_step == [FT(1), FT(-1)]
+            @test ledger.cumulative_change[(:mass, :atmosphere_only)] == FT(0)
+            @test ledger.cumulative_residual[(:mass, :atmosphere_only)] == FT(0)
         end
 
         @testset "Quantities stay separate ($FT)" begin
