@@ -105,12 +105,12 @@ records one correction leg per firing.
 The graph is much smaller than a coupled land–ocean model's, and saying so
 precisely is part of the contract.
 
-| Reservoir | State | Owns | Exists when |
-|:--|:--|:--|:--|
-| Atmosphere | `Y.c`, `Y.f` | `M`, `W`, `E` | always |
-| Slab surface | `Y.sfc.T` | `E` | `SlabOceanTemperature` |
-| Slab surface | `Y.sfc.water` | `W` | `SlabOceanTemperature` and a moist model |
-| Exterior | none | — | always |
+| Reservoir    | State         | Owns          | Exists when                              |
+|:------------ |:------------- |:------------- |:---------------------------------------- |
+| Atmosphere   | `Y.c`, `Y.f`  | `M`, `W`, `E` | always                                   |
+| Slab surface | `Y.sfc.T`     | `E`           | `SlabOceanTemperature`                   |
+| Slab surface | `Y.sfc.water` | `W`           | `SlabOceanTemperature` and a moist model |
+| Exterior     | none          | —             | always                                   |
 
 There is **no** prognostic snow, soil-water, or deposited-condensate reservoir,
 and no wave-energy reservoir. Every other surface is prescribed or diagnosed
@@ -161,12 +161,12 @@ which is what the tests will use.
 condensate. `ρq_rai` and `ρq_sno` are outside `ρq_tot` and must be added. The
 included set by microphysics model:
 
-| Model | `W` |
-|:--|:--|
-| `DryModel` | not applicable |
-| `EquilibriumMicrophysics0M` | `ρq_tot` |
-| non-equilibrium, no precipitation | `ρq_tot` |
-| one-moment | `ρq_tot + ρq_rai + ρq_sno` |
+| Model                             | `W`                        |
+|:--------------------------------- |:-------------------------- |
+| `DryModel`                        | not applicable             |
+| `EquilibriumMicrophysics0M`       | `ρq_tot`                   |
+| non-equilibrium, no precipitation | `ρq_tot`                   |
+| one-moment                        | `ρq_tot + ρq_rai + ρq_sno` |
 
 **`E` is `ρe_tot` alone.** Total energy is prognostic, so it is authoritative
 and nothing is reconstructed from momentum and thermodynamic state. `ρtke`, the
@@ -260,12 +260,12 @@ difference `B^N − B^0`.
 Four sources are budgeted separately, because they scale differently and
 conflating them is how a real defect gets absorbed.
 
-| Source | Expectation |
-|:--|:--|
-| Local arithmetic and reconstruction | `O(ε)` relative to `Σ\|contribution\|`, not to the signed total |
-| Parallel reduction order | grows with rank count; measured, not promised bitwise |
-| Algebraic solve defect | **leading order, not small** — see below |
-| Approximate collection | none; the ledger has no intentionally approximate leg |
+| Source                              | Expectation                                           |
+|:----------------------------------- |:----------------------------------------------------- |
+| Local arithmetic and reconstruction | `O(ε)` relative to `Σ\                                |
+| Parallel reduction order            | grows with rank count; measured, not promised bitwise |
+| Algebraic solve defect              | **leading order, not small** — see below              |
+| Approximate collection              | none; the ledger has no intentionally approximate leg |
 
 The solve-defect row is the important one. The default is
 
