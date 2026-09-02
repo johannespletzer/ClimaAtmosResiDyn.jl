@@ -66,7 +66,8 @@ import ClimaAtmos as CA
         "z_elem" => 30,
         # Uniform spacing, as the shipped DYCOMS configs use. `dz_bottom`
         # defaults to 500 m, which the tanh stretching cannot fit into a 1500 m
-        # domain across 30 elements.
+        # domain across 30 elements. It fails with
+        # "gamma root failed to converge" before the model is built.
         "z_stretch" => false,
         # Radiation has to be switched on for the `rad` source tag to receive
         # anything. `initial_condition: DYCOMS_RF02` sets the state, not the
