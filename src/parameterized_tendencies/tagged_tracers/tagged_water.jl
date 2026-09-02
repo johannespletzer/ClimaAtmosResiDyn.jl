@@ -172,14 +172,18 @@ close against.
 2-moment and P3 remain unsupported: they add number-concentration provenance,
 which is a separate question from the mass provenance the tags carry.
 """
-check_water_tagging_supported(::EquilibriumMicrophysics0M) = nothing
-check_water_tagging_supported(::NonEquilibriumMicrophysics1M) = nothing
-check_water_tagging_supported(::DryModel) = error(
-    "`water_tracers` requires a moist model: with `microphysics_model: dry` " *
+check_water_tagging_supported(::EquilibriumMicrophysics0M, key = "water_tracers") =
+    nothing
+check_water_tagging_supported(
+    ::NonEquilibriumMicrophysics1M,
+    key = "water_tracers",
+) = nothing
+check_water_tagging_supported(::DryModel, key = "water_tracers") = error(
+    "`$key` requires a moist model: with `microphysics_model: dry` " *
     "there is no `ρq_tot` in the prognostic state to partition.",
 )
-check_water_tagging_supported(model) = error(
-    "`water_tracers` supports `microphysics_model: 0M` and `1M` only (got " *
+check_water_tagging_supported(model, key = "water_tracers") = error(
+    "`$key` supports `microphysics_model: 0M` and `1M` only (got " *
     "$(nameof(typeof(model)))). 2-moment and P3 schemes additionally carry " *
     "prognostic number concentrations, whose provenance is a separate question " *
     "from the water mass provenance these tags partition; mirroring only the " *
@@ -647,25 +651,34 @@ sedimenting_water_tag_names(Y) =
     snapshot_tags!(p, Yₜ, source::Symbol)
     attribute_tags!(Yₜ, Y, p, source::Symbol)
 
-Open and close an attribution bracket for both tag families at once. The energy
-half is unconditional (every bracketed process is an energy process); the water
-half fires only for `source in KNOWN_WATER_TAG_SOURCES`, so bracketing e.g.
-radiation costs a water-tagged run nothing.
+Open and close one attribution bracket for every tagging family at once, and
+for the process records. The energy half is unconditional (every bracketed
+process is an energy process); the water half fires only for
+`source in KNOWN_WATER_TAG_SOURCES`, so bracketing e.g. radiation costs a
+water-tagged run nothing.
 
 Each half is a no-op when its own model is `nothing`, so a run with only one
 family enabled pays only for that family.
+
+The same bracket also feeds the process records, which difference the same two
+fields to record what the bracketed process applied. See
+[`snapshot_process_record!`](@ref).
 """
 function snapshot_tags!(p, Yₜ, source::Symbol)
     snapshot_tagged_ρe_tot!(p, Yₜ)
     if source in KNOWN_WATER_TAG_SOURCES
         snapshot_tagged_ρq_tot!(p, Yₜ)
     end
+    snapshot_energy_source_tags!(p, Yₜ)
+    snapshot_process_record!(p, Yₜ, source)
     return nothing
 end
 
 function attribute_tags!(Yₜ, Y, p, source::Symbol)
     attribute_tagged_ρe_tot!(Yₜ, p, source)
     attribute_tagged_ρq_tot!(Yₜ, Y, p, source)
+    attribute_energy_source_tags!(Yₜ, Y, p, source)
+    accumulate_process_record!(Yₜ, p, source)
     return nothing
 end
 

@@ -17,6 +17,13 @@ on:
 
 jobs:
   cla:
+    # The reusable workflow needs CLA_EFFECTIVE_DATE, CLA_API_URL,
+    # CLA_API_TOKEN and CLA_ORG_TOKEN, which are CliMA organization secrets.
+    # `secrets: inherit` has nothing to inherit in a fork, so the job fails on
+    # an unset CLA_EFFECTIVE_DATE before it reads any file: a configuration gap
+    # rather than a missing signature. Upstream still runs it; a fork skips it.
+    # To enforce the CLA in a fork, set those four secrets and drop this line.
+    if: github.repository_owner == 'CliMA'
     uses: clima/.github/.github/workflows/cla_template.yml@main
     secrets: inherit
 

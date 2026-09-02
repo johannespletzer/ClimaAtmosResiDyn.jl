@@ -55,10 +55,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     # A job killed mid-suite reports `cancelled`, which the ci-required gate
     # cannot distinguish from a superseded run, so the budget has to leave real
-    # headroom. 90 minutes was not enough for `dynamics` while it also carried
-    # the two tagged-simulation files: run 32528151981 was killed partway
-    # through the last of them on 1.11. Those two now run as the `tagging`
-    # group.
+    # headroom. The tagged-simulation files are one group per file for the same
+    # reason: they share no compilation, so combining them only adds compile
+    # time, and a job that overruns drops coverage of whatever had not started.
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -80,7 +79,10 @@ jobs:
           - infrastructure
           - diagnostics
           - dynamics
-          - tagging
+          - tagging_energy
+          - tagging_water
+          - tagging_source
+          - tagging_record
           - parameterizations
           - restarts
           - era5

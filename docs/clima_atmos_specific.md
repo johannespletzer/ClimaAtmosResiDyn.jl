@@ -16,7 +16,7 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
       + `gravity_wave_drag/`: non-orographic and orographic GWD.
       + `les_sgs_models/`: Smagorinsky–Lilly, anisotropic minimum dissipation, constant horizontal diffusion.
       + `sponge/`: Rayleigh and viscous sponge tendencies.
-      + `tagged_tracers/`: tagged prognostic energy (`tagged_tracers.jl`, `ρe_tag_*`, config key `energy_tracers`) and water (`tagged_water.jl`, `ρq_tag_*`, config key `water_tracers`) tracers — smooth region masks, state builders, and the snapshot/attribute brackets consumed by `remaining_tendency.jl` and `implicit/implicit_tendency.jl`. Their config parsing lives in `src/config/tracer_config.jl`.
+      + `tagged_tracers/`: tagged prognostic energy (`tagged_tracers.jl`, `ρe_tag_*`, config key `energy_tracers`) and water (`tagged_water.jl`, `ρq_tag_*`, config key `water_tracers`) tracers — smooth region masks, state builders, and the snapshot/attribute brackets consumed by `remaining_tendency.jl` and `implicit/implicit_tendency.jl`. `energy_source_tags.jl` holds the energy source tags (`ρe_src_*`, config key `energy_source_tags`), which partition the same `ρe_tot` under the water tags' donor-proportional rule rather than the signed process record. `process_record.jl` holds the process-change records (`prc_e_*` and `prc_q_*` prognostic fields, config keys `energy_process_record` and `water_process_record`), which reuse the same brackets. They are prognostic so the timestepper integrates the rate the bracket yields, but carry no `ρ` prefix, so `gs_tracer_names` does not see them and nothing transports them. Their config parsing lives in `src/config/tracer_config.jl`.
   - EDMF code lives in `src/cache/{prognostic,diagnostic}_edmf_precomputed_quantities.jl` and `src/prognostic_equations/edmfx_*.jl`, not under `parameterized_tendencies/`.
   - `src/callbacks/`, `src/diagnostics/`, `src/setups/`, `src/surface_conditions/`, `src/topography/`, `src/parameters/`, `src/utils/`: remaining domain subtrees. Search by physics/runtime concept first.
   - `config/`: YAML/TOML config library. `default_configs/default_config.yml` is the schema baseline; `common_configs/` holds reusable numerics; `example_configs/` holds run controls for script-based examples; `model_configs/`, `gpu_configs/`, `mpi_configs/`, `perf_configs/`, and `longrun_configs/` are scenario overlays.
@@ -48,25 +48,29 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `diagnostics`, `dynamics`, `tagging`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `diagnostics`, `dynamics`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
 
 | Change area          | Test group          | Example Buildkite job         |
 |:-------------------- |:------------------- |:----------------------------- |
 | Prognostic equations | `dynamics`          | `sphere_baroclinic_wave_rhoe` |
-| Tagged tracers/water | `tagging`           | `baroclinic_wave_tagged_*`    |
+| Tagged tracers/water | `tagging_*`         | `baroclinic_wave_tagged_*`    |
 | Microphysics / EDMF  | `parameterizations` | `prognostic_edmfx_*`          |
 | Restarts             | `restarts`          | `restart_*`                   |
 | Diagnostics          | `diagnostics`       | any `--diagnostics` job       |
 | Config semantics     | `infrastructure`    | `config.jl`                   |
 
-`tagging` holds only `test/tagged_tracers_integration.jl` and
-`test/tagged_water_integration.jl`. It is a group of its own because those two
-files run seven full simulations on seven different tag sets, and a tag name is
-a type parameter, so each set recompiles the whole tendency and solve pipeline.
-That is roughly seven minutes per simulation on Julia 1.11. Keep new
-tagged-simulation tests here, and prefer reusing a tag set another test in the
-same file already builds: a second simulation with an identical tag signature
-costs seconds instead of minutes.
+The `tagging_*` groups are one file each: `tagging_energy` runs
+`test/tagged_tracers_integration.jl`, `tagging_water` runs
+`test/tagged_water_integration.jl`, `tagging_source` runs
+`test/energy_source_tags_integration.jl` and `tagging_record` runs
+`test/process_record_integration.jl`. They are split because a tag name is a
+type parameter, so each tag set recompiles the whole tendency and solve
+pipeline, roughly seven minutes per simulation on Julia 1.11, and the files
+share no compilation between them. Combined they overran the 90-minute job
+timeout on Julia 1.11, which cancelled the job before the last two files ran at
+all. Keep new tagged-simulation tests here, and prefer reusing a tag set
+another test in the same file already builds: a second simulation with an
+identical tag signature costs seconds instead of minutes.
 
 ### Running a single test group
 

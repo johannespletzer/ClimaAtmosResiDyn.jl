@@ -13,6 +13,28 @@ include("download_artifacts.jl")
 # Get test group from environment variable (default: run all tests)
 TEST_GROUP = get(ENV, "TEST_GROUP", "all")
 
+# Every group this file knows how to run. An unrecognised name matches none of
+# the blocks below, runs zero tests and still exits successfully, so it is
+# rejected here rather than passing silently.
+const KNOWN_TEST_GROUPS = (
+    "all",
+    "infrastructure",
+    "diagnostics",
+    "dynamics",
+    "tagging_energy",
+    "tagging_water",
+    "tagging_source",
+    "tagging_record",
+    "parameterizations",
+    "restarts",
+    "era5",
+)
+TEST_GROUP in KNOWN_TEST_GROUPS || error(
+    "Unknown TEST_GROUP $(repr(TEST_GROUP)). Known groups: " *
+    join(KNOWN_TEST_GROUPS, ", ") *
+    ". An unknown group would run no tests and exit successfully.",
+)
+
 #! format: off
 
 # ============================================================================
@@ -30,6 +52,8 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Tracer processes" begin @time include("tracer_processes_tests.jl") end
     @safetestset "Tagged tracers" begin @time include("tagged_tracers_tests.jl") end
     @safetestset "Tagged water" begin @time include("tagged_water_tests.jl") end
+    @safetestset "Energy source tags" begin @time include("energy_source_tags_tests.jl") end
+    @safetestset "Process records" begin @time include("process_record_tests.jl") end
     @safetestset "Parameter tests" begin @time include("parameter_tests.jl") end
 
     @safetestset "Check TOML path" begin @time include("test_output_yaml_path.jl") end
@@ -81,20 +105,39 @@ if TEST_GROUP in ("dynamics", "all")
 end
 
 # ============================================================================
-# Tagging: end-to-end tagged energy and tagged water simulations
+# Tagging: end-to-end tagged energy, tagged water, energy source and process
+# record simulations. One group per file.
 #
-# These two files are their own group because they were the only tests in
-# `dynamics` that call `solve_atmos!`, and they do it seven times on seven
-# different tag sets. A tag name is a type parameter (`WaterTag{name, R, S}`),
-# so each set is a fresh `AtmosModel` type and the whole tendency and solve
-# pipeline is compiled from scratch. That costs about 7 minutes per simulation
-# on 1.11, against 1 to 2 minutes on 1.10. Left in `dynamics` the two files
-# were 59% of that group's wall clock and pushed it past the job timeout
-# (run 32528151981).
+# These call `solve_atmos!` on many different tag sets. A tag name is a type
+# parameter (`WaterTag{name, R, S}`), so each set is a fresh `AtmosModel` type
+# and the whole tendency and solve pipeline is compiled from scratch, about
+# 7 minutes per simulation on 1.11 against 1 to 2 minutes on 1.10.
+#
+# One group per file, because the files share no compilation: combining them
+# adds their compile times with nothing reused. A job that then overruns its
+# timeout is cancelled and reports as failed, and it also never runs the files
+# that had not started, so the loss of coverage is silent even though the job
+# is not.
+#
+# Each group runs against a 90-minute timeout, so keep new work to the smallest
+# tag set that proves the claim, and prefer extending a set an existing test in
+# the same file already builds. A second simulation with an identical tag
+# signature costs seconds instead of minutes.
 # ============================================================================
-if TEST_GROUP in ("tagging", "all")
+if TEST_GROUP in ("tagging_energy", "all")
     @safetestset "Tagged tracers integration" begin @time include("tagged_tracers_integration.jl") end
+end
+
+if TEST_GROUP in ("tagging_water", "all")
     @safetestset "Tagged water integration" begin @time include("tagged_water_integration.jl") end
+end
+
+if TEST_GROUP in ("tagging_source", "all")
+    @safetestset "Energy source tags integration" begin @time include("energy_source_tags_integration.jl") end
+end
+
+if TEST_GROUP in ("tagging_record", "all")
+    @safetestset "Process record integration" begin @time include("process_record_integration.jl") end
 end
 
 # ============================================================================

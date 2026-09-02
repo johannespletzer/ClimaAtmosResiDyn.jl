@@ -50,7 +50,10 @@ function test_restart(test_dict; job_id, comms_ctx, more_ignore = Symbol[])
     local_success = true
 
     simulation = CA.get_simulation(CA.AtmosConfig(test_dict; job_id, comms_ctx))
-    CA.solve_atmos!(simulation)
+    # A crashed solve returns `:simulation_crashed` rather than throwing, so an
+    # unchecked result would let the assertions below run against a dead state.
+    result = CA.solve_atmos!(simulation)
+    local_success &= result.ret_code == :success
 
     # Check re-importing the same state
     restart_dir = simulation.output_dir
@@ -134,7 +137,8 @@ function test_restart(test_dict; job_id, comms_ctx, more_ignore = Symbol[])
     simulation_restarted2 = CA.get_simulation(config2)
     CA.fill_with_nans!(simulation_restarted2.integrator.p)
 
-    CA.solve_atmos!(simulation_restarted2)
+    result = CA.solve_atmos!(simulation_restarted2)
+    local_success &= result.ret_code == :success
     local_success &= compare(
         simulation.integrator.u,
         simulation_restarted2.integrator.u;

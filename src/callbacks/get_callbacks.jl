@@ -820,19 +820,23 @@ end
 # Tagging component callbacks
 """
     default_model_callbacks(tagging::AtmosTagging; water_closure_check = nothing,
-                            energy_closure_check = nothing, kwargs...)
+                            energy_closure_check = nothing,
+                            energy_source_closure_check = nothing, kwargs...)
 
-Install the online closure checks of the two tag families.
+Install the online closure checks of the three tag families.
 
 The families are checked separately, on their own cadence and against their own
 tolerance, because their residuals are not comparable: the energy tags never
 receive implicit transport or EDMFX SGS mass fluxes, so theirs is legitimately
-the larger one.
+the larger one. The energy source tags are looser again, and their residual is
+normalized by a quantity whose zero is a convention, so it is not comparable
+across runs that use different energy references.
 """
 function default_model_callbacks(
     tagging::AtmosTagging;
     water_closure_check = nothing,
     energy_closure_check = nothing,
+    energy_source_closure_check = nothing,
     output_dir,
     dt,
     t_start,
@@ -860,6 +864,16 @@ function default_model_callbacks(
             state_names = region_tag_state_names,
             config_key = "energy_closure_check",
             tracer_key = "energy_tracers",
+            scheduling...,
+        )...,
+        tag_closure_callback(
+            energy_source_closure_check,
+            tagging.energy_source_tagging_model;
+            family = "energy_source",
+            total_name = :ρe_tot,
+            state_names = energy_source_region_tag_state_names,
+            config_key = "energy_source_closure_check",
+            tracer_key = "energy_source_tags",
             scheduling...,
         )...,
     )

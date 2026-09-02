@@ -1,7 +1,7 @@
 # Configuring Tracers
 
-This page is the configuration reference for the three kinds of tracer you can
-switch on from a YAML file. It says what to write. The pages it links to say how
+This page is the configuration reference for the tracer and tagging features
+you can switch on from a YAML file. It says what to write. The pages it links to say how
 each one works and what its output means.
 
 You do not need to write any Julia code, and you do not need to understand the
@@ -10,14 +10,67 @@ numbers, and run.
 
 ## Which one do I want?
 
-| I want to know…                          | Use                                       | Adds                                |
-|:---------------------------------------- |:----------------------------------------- |:----------------------------------- |
-| how long air stays in the stratosphere   | [`passive_tracers`](@ref passive_tracers) | one inert tracer per release region |
-| where the water at a point came from     | [`water_tracers`](@ref water_tracers)     | one field `ρq_tag_<name>` per tag   |
-| what heated or cooled the air at a point | [`energy_tracers`](@ref energy_tracers)   | one field `ρe_tag_<name>` per tag   |
+| I want to know…                          | Use                                           | Adds                                |
+|:---------------------------------------- |:--------------------------------------------- |:----------------------------------- |
+| how long air stays in the stratosphere   | [`passive_tracers`](@ref passive_tracers)     | one inert tracer per release region |
+| where the water at a point came from     | [`water_tracers`](@ref water_tracers)         | one field `ρq_tag_<name>` per tag   |
+| where the energy at a point came from    | [`energy_source_tags`](energy_source_tags.md) | one field `ρe_src_<name>` per tag   |
+| what heated or cooled the air at a point | [`energy_tracers`](@ref energy_tracers)       | one field `ρe_tag_<name>` per tag   |
+| what each process did to the energy      | [`energy_process_record`](process_record.md)  | one field `prc_e_<process>` each    |
+| what each process did to the water       | [`water_process_record`](process_record.md)   | one field `prc_q_<process>` each    |
 
-The three are independent. You can switch on any one of them, or all three, in
-the same run. Each is off by default and costs nothing when off.
+They are independent. Switch on any one of them, or all of them, in the same
+run. Each is off by default and costs nothing when off.
+
+## What the words mean
+
+Three of these families use the word "tag", and all three accept a `source`
+key, but a tag does not hold the same kind of quantity in each.
+
+  - **source tag**: an amount of the parent variable that is present now, traced
+    back to where it came from. Both `water_tracers` and `energy_source_tags`
+    are source tags, and they differ in what is guaranteed of the result. Water
+    ends up non-negative: the parent is kept non-negative by the model and
+    `repair_water_tag_partition!` puts a negative holding back, with the
+    `q_tag_fix_<name>` diagnostic logging how much was moved. Energy source
+    tags have no such repair and **no non-negativity guarantee** — the loss
+    term bounds the depletion rate rather than the amount removed over a step,
+    and the share is undefined wherever `ρe_tot` is not positive. See
+    [Energy Source Tags](energy_source_tags.md).
+  - **signed process tag**: an `energy_tracers` entry configured with `source`.
+    It starts at zero and holds the signed increment its process has added,
+    going negative under net cooling. A running total of what a process did,
+    not a source amount. Transported like any other tag.
+  - **process-change record**: the `prc_e_<process>` and `prc_q_<process>`
+    fields from the `energy_process_record` and `water_process_record` keys.
+    Also a signed running total, but one field per process rather than per tag,
+    and never transported. Reserve the phrase for these: a signed process tag
+    is a different object and calling both by one name has already caused
+    confusion.
+  - **region tag**: a transported partition of the parent variable, in either
+    family.
+  - **source tracing**: what the source tags do. A description of the method,
+    not the name of any output.
+  - **closure**: whether the tags still add up to the variable they split. Also
+    called a sum-to-total test.
+
+A process-change record is available on its own, without any tags, through the
+`energy_process_record` and `water_process_record` keys. See
+[Process-Change Records](process_record.md).
+
+The families differ in the *rule*, not the key. `water_tracers` and
+`energy_source_tags` share out production by mask and take loss from each tag
+in proportion to what it already holds, which yields an amount present.
+`energy_tracers` applies the whole signed increment by mask, and an entry there
+is a signed process tag only when it is configured with `source`: a `region`
+entry is a transported partition. See
+[Attribution](tagged_water.md#Attribution) and
+[What a tag means](tagged_tracers.md#What-a-tag-means).
+
+Two words are deliberately not used here. *Heat tagging* names a different
+method that tags potential temperature; this tags moist total energy. A *source
+fingerprint* is the pattern that source shares form across space and time, which
+is an analysis product rather than anything the model writes out.
 
 They are also separate top-level keys, so they can come from separate
 configuration files. A run assembled from a numerics file, a water-tracer file

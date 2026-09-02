@@ -450,8 +450,9 @@ chemistry_model:
   value: ~
 
 
-# Tracers. See docs/src/tracer_configuration.md for the full schema of the three
-# keys below, and `dt_tracer_budget` above for the passive-tracer budget table.
+# Tracers. See docs/src/tracer_configuration.md for the full schema of the tag,
+# record and closure-check keys below, and `dt_tracer_budget` above for the
+# passive-tracer budget table.
 passive_tracers:
   help: "Inert tracers released in fixed regions and removed below the tropopause, used to measure how long air stays in the stratosphere [`~` (default, off)]. A map with `release_grid` (a regular latitude x height grid) or `release_boxes` (an explicit list of boxes), plus optional `heights_from`, `production_rate`, `loss_timescale` and `tropopause`. See docs/src/tracer_configuration.md."
   value: ~
@@ -461,8 +462,20 @@ water_tracers:
 energy_tracers:
   help: "Tracers that split moist energy by where it came from, adding one prognostic field `ρe_tag_<name>` each [`~` (default, off)]. Same entry schema as `water_tracers`, with its own set of `source` labels. See docs/src/tracer_configuration.md."
   value: ~
+energy_source_tags:
+  help: "Experimental. Tags that split moist energy by where the energy present now came from, a reading that holds only where `ρe_tot` is positive and the tag is non-negative; adding one prognostic field `ρe_src_<name>` each [`~` (default, off)]. Same entry schema and `source` labels as `energy_tracers`, but the water tags' donor-proportional rule rather than the signed process record. Not guaranteed non-negative: the loss term bounds the depletion rate, not the amount removed over a finite step, the share is undefined where `ρe_tot` is not positive, and unlimited transport has no repair. Values depend on the chosen energy reference, which has no physical zero. See docs/src/energy_source_tags.md."
+  value: ~
+energy_process_record:
+  help: "Record what each listed process did to moist energy, as the signed increment it applied, output as `e_prc_<process>` [`~` (default, off)]. One `source` label, a list of them, or a group name, using the same labels as `energy_tracers`. A prognostic field, so the timestepper integrates it and it is carried through restarts, but not a tracer: the name has no `ρ` prefix, so nothing transports, diffuses or limits it. A record says what a process did rather than where the energy present came from. See docs/src/process_record.md."
+  value: ~
+water_process_record:
+  help: "The same record for total water, output as `q_prc_<process>` [`~` (default, off)]. Uses the `water_tracers` source labels and requires `microphysics_model: 0M` or `1M`. See docs/src/process_record.md."
+  value: ~
 water_closure_check:
   help: "Check while the run goes whether the `water_tracers` still add up to total water, and write the result to `water_tag_closure.csv` [`~` (default, off)]. A map with optional `period` (how often, default `1days`) and `tolerance` (relative residual to warn above, default 1.0e-10). Warns and keeps running. See docs/src/tracer_configuration.md."
+  value: ~
+energy_source_closure_check:
+  help: "The same check for `energy_source_tags`, written to `energy_source_tag_closure.csv` [`~` (default, off)]. Same `period` / `tolerance` keys and the same loose default tolerance as `energy_closure_check` (1.0e-6). The residual is normalised by a quantity whose zero is a convention, so it is not comparable across runs that use different energy references. See docs/src/energy_source_tags.md."
   value: ~
 energy_closure_check:
   help: "The same check for `energy_tracers`, written to `energy_tag_closure.csv` [`~` (default, off)]. Same `period` / `tolerance` keys, but a much looser default tolerance (1.0e-6): the energy tags do not receive implicit transport or EDMFX SGS mass fluxes, so a larger residual is expected. See docs/src/tracer_configuration.md."

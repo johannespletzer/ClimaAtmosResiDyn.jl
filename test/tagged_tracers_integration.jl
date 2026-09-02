@@ -17,7 +17,7 @@ This mirrors the manual validation performed on
 days: exact partition at t = 0, sub-percent residual growth).
 
 Run either through the package test path (`Pkg.test()`, TEST_GROUP
-"tagging") or standalone with the pinned CI environment:
+"tagging_energy") or standalone with the pinned CI environment:
 
     julia +1.11 --project=.buildkite -e 'using Pkg; Pkg.instantiate()'
     julia +1.11 --project=.buildkite test/tagged_tracers_integration.jl
@@ -106,7 +106,10 @@ import ClimaAtmos as CA
     @test all(iszero, parent(Y₀.c.ρe_tag_hs_tropics))
     @test all(iszero, parent(Y₀.c.ρe_tag_hs_extratropics))
 
-    CA.solve_atmos!(simulation)
+    # A crashed solve returns `:simulation_crashed` rather than throwing, so an
+    # unchecked result would let the assertions below run against a dead state.
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     # 2. Tags stay finite
@@ -161,7 +164,8 @@ end
     simulation = CA.get_simulation(config)
     @test all(iszero, parent(simulation.integrator.u.c.ρe_tag_precip))
 
-    CA.solve_atmos!(simulation)
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     for name in (:ρe_tag_precip, :ρe_tag_moist, :ρe_tag_mp)
@@ -220,7 +224,8 @@ end
     simulation = CA.get_simulation(
         CA.AtmosConfig(test_dict; job_id = "tagged_tracers_restart"),
     )
-    CA.solve_atmos!(simulation)
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     restart_file = joinpath(simulation.output_dir, "day0.20.hdf5")

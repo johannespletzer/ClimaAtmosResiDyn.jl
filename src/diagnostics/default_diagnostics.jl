@@ -258,6 +258,44 @@ function frequency_averages(duration)
     end
 end
 
+"""
+    frequency_snapshots(duration)
+
+Return the instantaneous-sampling helper appropriate to the total simulation
+length.
+
+The period ladder is the one `frequency_averages` uses, so a snapshot
+lands on the same cadence as the averages beside it. The difference is that no
+reduction is applied in time: each output is the value at that instant.
+
+This is what a cumulative field needs. Averaging one destroys the information
+it carries. A record holds a running total, so the mean of a window says only
+where the total happened to sit mid-window, and a variable-rate history cannot
+be recovered from a sequence of such means. A budget over an interval is the
+difference of two instantaneous outputs, which requires the endpoints
+themselves.
+
+# Arguments
+
+  - `duration`: Expected duration of the simulation [s].
+"""
+function frequency_snapshots(duration)
+    FT = eltype(duration)
+    duration = Float64(duration)
+    if duration >= 90 * 86400
+        return (args...; kwargs...) -> monthly_snapshots(FT, args...; kwargs...)
+    elseif duration >= 30 * 86400
+        return (args...; kwargs...) ->
+            tendaily_snapshots(FT, args...; kwargs...)
+    elseif duration >= 86400
+        return (args...; kwargs...) -> daily_snapshots(FT, args...; kwargs...)
+    elseif duration >= 3600
+        return (args...; kwargs...) -> hourly_snapshots(FT, args...; kwargs...)
+    else
+        return (args...; kwargs...) -> ()
+    end
+end
+
 # Include all the subdefaults
 
 ########
@@ -628,14 +666,17 @@ function default_diagnostics(
     t_start;
     output_writer,
 )
-    # Per-tag specific energies plus the closure residual (when region tags
-    # exist). The short names are registered from the tagging model by
-    # `register_tagging_diagnostics!` before this function runs (see
+    # Every configured tagging family: per-tag specific energies and waters,
+    # each family's closure residual when it has region tags, and the process
+    # records. The short names are registered from the tagging model by the
+    # `register_*_diagnostics!` functions before this one runs (see
     # `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`).
-    tagging_model = atmos_tagging.tagging_model
-    water_tagging_model = atmos_tagging.water_tagging_model
-    isnothing(tagging_model) && isnothing(water_tagging_model) && return []
+    # Collect every configured family, then decide once whether anything was
+    # found. Returning early on a subset of the fields is how the process
+    # records came to be silently absent from the defaults: a run configured
+    # with records and no tags produced no tagging output at all.
     tag_diagnostics = String[]
+    tagging_model = atmos_tagging.tagging_model
     if !isnothing(tagging_model)
         append!(
             tag_diagnostics,
@@ -644,6 +685,7 @@ function default_diagnostics(
         isempty(region_tag_state_names(tagging_model)) ||
             push!(tag_diagnostics, "e_tag_res")
     end
+    water_tagging_model = atmos_tagging.water_tagging_model
     if !isnothing(water_tagging_model)
         for tag in water_tagging_model.tags
             name = tag_name(tag)
@@ -652,8 +694,57 @@ function default_diagnostics(
         isempty(water_region_tag_state_names(water_tagging_model)) ||
             push!(tag_diagnostics, "q_tag_res")
     end
+    energy_source_tagging_model = atmos_tagging.energy_source_tagging_model
+    if !isnothing(energy_source_tagging_model)
+        append!(
+            tag_diagnostics,
+            [
+                "e_src_$(tag_name(tag))" for
+                tag in energy_source_tagging_model.tags
+            ],
+        )
+        isempty(
+            energy_source_region_tag_state_names(energy_source_tagging_model),
+        ) || push!(tag_diagnostics, "e_src_res")
+    end
+    # The records are scheduled separately, as instantaneous samples. They hold
+    # a running total from the start of the simulation, so a window mean is not
+    # a meaningful quantity and a budget over an interval is the difference of
+    # two outputs. Both need the endpoint values, which an average discards.
+    record_diagnostics = String[]
+    energy_process_record = atmos_tagging.energy_process_record
+    if !isnothing(energy_process_record)
+        append!(
+            record_diagnostics,
+            [
+                "e_prc_$(process_name(process))" for
+                process in energy_process_record.processes
+            ],
+        )
+    end
+    water_process_record = atmos_tagging.water_process_record
+    if !isnothing(water_process_record)
+        append!(
+            record_diagnostics,
+            [
+                "q_prc_$(process_name(process))" for
+                process in water_process_record.processes
+            ],
+        )
+    end
+    isempty(tag_diagnostics) && isempty(record_diagnostics) && return []
     average_func = frequency_averages(duration)
-    return [
-        average_func(tag_diagnostics...; output_writer, start_date, t_start)...,
-    ]
+    snapshot_func = frequency_snapshots(duration)
+    averaged =
+        isempty(tag_diagnostics) ? () :
+        average_func(tag_diagnostics...; output_writer, start_date, t_start)
+    sampled =
+        isempty(record_diagnostics) ? () :
+        snapshot_func(
+            record_diagnostics...;
+            output_writer,
+            start_date,
+            t_start,
+        )
+    return [averaged..., sampled...]
 end

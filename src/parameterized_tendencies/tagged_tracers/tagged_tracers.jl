@@ -2,10 +2,28 @@
 ##### Tagged prognostic energy tracers
 #####
 ##### Each tag adds one grid-scale prognostic field `Y.c.ρe_tag_<name>` holding
-##### part of the total moist energy `ρe_tot`, so the tags record where energy
-##### came from. The `energy_tracers` config key switches them on. Types live in
-##### `types.jl` and config parsing in `config/tracer_config.jl`. The physics is
-##### written up in `docs/src/tagged_tracers.md`.
+##### part of the total moist energy `ρe_tot`. The `energy_tracers` config key
+##### switches them on. Types live in `types.jl` and config parsing in
+##### `config/tracer_config.jl`. The physics is written up in
+##### `docs/src/tagged_tracers.md`.
+#####
+##### The two kinds of tag hold different quantities. A region tag is a
+##### transported partition of `ρe_tot`. A tag configured with `source` is a
+##### signed process tag: it starts at zero and accumulates the signed
+##### increment one process adds, so cooling drives it negative. It says what a
+##### process did, not what share of the energy present came from it.
+#####
+##### A signed process tag is not the *process-change record* of
+##### `process_record.jl`. That is a separate family, one field per process
+##### rather than per tag, and it is not transported. The two are close enough
+##### that sharing a name would confuse both.
+#####
+##### The water tags in `tagged_water.jl` use the same `source` key but a
+##### different rule. They share out production by mask and take loss from each
+##### tag in proportion to what it holds, so a water tag is an amount of water
+##### actually present. That rule never drives a tag below zero. Transport can,
+##### and `repair_water_tag_partition!` puts it back. The rule differs, not the
+##### key.
 #####
 ##### The rest of the model reaches tagging through four entry points:
 #####
@@ -296,8 +314,18 @@ automatic-differentiation Jacobian is used, and only `p.precomputed` and
 function tagging_cache(Y, atmos::AtmosModel)
     energy = _tagging_cache(Y, atmos.tagging_model)
     water = _water_tagging_cache(Y, atmos.water_tagging_model)
-    isnothing(energy) && isnothing(water) && return nothing
-    return (; _or_empty(energy)..., _or_empty(water)...)
+    sources = _energy_source_tagging_cache(Y, atmos.energy_source_tagging_model)
+    # The process records hold no cache of their own: they are prognostic, and
+    # their only scratch lives in `tagging_scratch`.
+    isnothing(energy) &&
+        isnothing(water) &&
+        isnothing(sources) &&
+        return nothing
+    return (;
+        _or_empty(energy)...,
+        _or_empty(water)...,
+        _or_empty(sources)...,
+    )
 end
 _or_empty(::Nothing) = (;)
 _or_empty(nt) = nt
@@ -336,6 +364,11 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
             ᶜtagging_q_share_norm = similar(Y.c.ρ),
         )
     )...,
+    (
+        isnothing(atmos.energy_source_tagging_model) ? (;) :
+        (; ᶜe_src_snapshot = similar(Y.c.ρ))
+    )...,
+    process_record_scratch(Y, atmos)...,
 )
 
 """
@@ -373,9 +406,23 @@ region tags of that family. Returns
     (; total, tagged, residual, relative, gross_residual, gross_relative)
 
 All the integrals are volume-weighted over the whole domain.
-`residual = total - tagged` is the *signed* miss and `relative` is it over
-`total`. `gross_residual` is the integral of the pointwise `|parent - Σ tags|`,
-and `gross_relative` is that over `total`.
+`residual = total - tagged` is the *signed* miss. `gross_residual` is the
+integral of the pointwise `|parent - Σ tags|`. Both are reported relative to
+`scale = ∫|parent|`, never to `total`.
+
+`scale` rather than `total` because the parent may be signed. Moist total energy
+has no physical zero, so `∫ρe_tot` can be negative or zero under a shifted
+reference, and dividing a non-negative `gross_residual` by it would give a
+negative or zero number that can never exceed a positive tolerance — the check
+would pass silently at any residual. `∫|parent|` is positive whenever the field
+is not identically zero, and equals `total` wherever the parent is non-negative,
+so the water numbers are unchanged.
+
+`nonpositive_fraction` is the volume fraction where `parent ≤ 0`. It is zero for
+a well-posed run. Anything above zero says the shares are undefined somewhere,
+which the residual alone will not tell you: a set of complementary region tags
+can partition a negative parent exactly, giving perfect closure over a state
+whose fractions are meaningless.
 
 Both are reported because the signed pair alone can say a partition is perfect
 when it is not. `total` and `tagged` are two global integrals, so a partition
@@ -395,24 +442,50 @@ function tag_closure(Y, p, total_name, tag_state_names)
     tagged = sum(sum(getproperty(Y.c, name)) for name in tag_state_names)
     residual = total - tagged
 
+    # One scratch field, reused in sequence. Only `sum` is used: it is the
+    # documented collective reduction here, and whether `minimum` reduces across
+    # processes is not something this file should assume.
+    ᶜtmp = p.scratch.ᶜtemp_scalar
+
+    # The positive normalization scale.
+    @. ᶜtmp = abs(ᶜparent)
+    scale = sum(ᶜtmp)
+
+    # Volume where the parent is non-positive, and the total volume to make it a
+    # fraction. Reported directly, because closure cannot reveal it.
+    @. ᶜtmp = ifelse(ᶜparent <= zero(ᶜparent), one(ᶜparent), zero(ᶜparent))
+    nonpositive_volume = sum(ᶜtmp)
+    @. ᶜtmp = one(ᶜparent)
+    volume = sum(ᶜtmp)
+
     # The same subtraction as `e_tag_res` and `q_tag_res`, reduced to one
     # number. Taking the absolute value first keeps opposite-signed local errors
     # from cancelling.
-    ᶜresidual = p.scratch.ᶜtemp_scalar
-    @. ᶜresidual = ᶜparent
+    @. ᶜtmp = ᶜparent
     for name in tag_state_names
         ᶜtag = getproperty(Y.c, name)
-        @. ᶜresidual -= ᶜtag
+        @. ᶜtmp -= ᶜtag
     end
-    @. ᶜresidual = abs(ᶜresidual)
-    gross_residual = sum(ᶜresidual)
+    @. ᶜtmp = abs(ᶜtmp)
+    gross_residual = sum(ᶜtmp)
 
-    # A state with zero water everywhere would divide by zero. A real run stays
+    # A field that is identically zero would divide by zero. A real run stays
     # clear of that, and this guard keeps the check itself from ending one.
-    relative = iszero(total) ? zero(residual) : residual / total
+    relative = iszero(scale) ? zero(residual) : residual / scale
     gross_relative =
-        iszero(total) ? zero(gross_residual) : gross_residual / total
-    return (; total, tagged, residual, relative, gross_residual, gross_relative)
+        iszero(scale) ? zero(gross_residual) : gross_residual / scale
+    nonpositive_fraction =
+        iszero(volume) ? zero(nonpositive_volume) : nonpositive_volume / volume
+    return (;
+        total,
+        tagged,
+        residual,
+        relative,
+        gross_residual,
+        gross_relative,
+        scale,
+        nonpositive_fraction,
+    )
 end
 
 """
@@ -435,7 +508,8 @@ function write_tag_closure!(output_dir, t, family, closure)
     open(path, "a") do io
         write_header && println(
             io,
-            "time,total,tagged,residual,relative,gross_residual,gross_relative",
+            "time,total,tagged,residual,relative,gross_residual," *
+            "gross_relative,scale,nonpositive_fraction",
         )
         println(
             io,
@@ -448,6 +522,8 @@ function write_tag_closure!(output_dir, t, family, closure)
                     closure.relative,
                     closure.gross_residual,
                     closure.gross_relative,
+                    closure.scale,
+                    closure.nonpositive_fraction,
                 ),
                 ",",
             ),
@@ -472,6 +548,32 @@ The residual is information, not a reason to stop. Closure drift is something
 you want to watch grow, and ending a multi-year integration over it would cost
 more than it saves, so this warns and keeps running.
 """
+"""
+    nonpositive_parent_note(family)
+
+The family-specific consequence of a non-positive closure parent, for the
+warning in [`tag_closure_callback!`](@ref).
+
+What a non-positive parent costs depends on the rule the family applies, so
+this says which case applies rather than asserting the energy-source one for
+all three. Only `energy_source_tags` divides by the parent to get a donor
+share it then depends on; `water_tracers` does too but has a parent the model
+keeps non-negative; `energy_tracers` never divides by it at all.
+"""
+function nonpositive_parent_note(family)
+    family == "energy_source" && return "Donor shares are undefined there, so \
+        the loss half of the attribution rule does not run. For moist total \
+        energy this usually means the chosen thermodynamic or gravitational \
+        reference puts part of the domain below zero."
+    family == "water" && return "Water tags take loss in proportion to what \
+        they hold, so their shares are undefined there. The model keeps \
+        `ρq_tot` non-negative, so this is unexpected and worth investigating \
+        rather than a consequence of a reference choice."
+    return "This family applies the whole signed increment by mask and uses \
+        no donor share, so its attribution is unaffected. It does mean the \
+        closure denominator is degenerate where this happens."
+end
+
 function tag_closure_callback!(
     integrator,
     output_dir,
@@ -490,6 +592,15 @@ function tag_closure_callback!(
             the configured tolerance $tolerance at t = $t s. The tags no \
             longer account for the field they partition; see \
             $(tag_closure_path(output_dir, family))."
+        )
+        # Reported separately because closure cannot reveal it: complementary
+        # region tags partition a negative parent exactly, so the residual stays
+        # at zero while every share is meaningless.
+        closure.nonpositive_fraction > 0 && @warn(
+            "$family tag parent is non-positive over \
+            $(closure.nonpositive_fraction * 100)% of the domain volume at \
+            t = $t s, and closure will not show it. \
+            $(nonpositive_parent_note(family))"
         )
     end
     return nothing
@@ -561,8 +672,13 @@ the tagged tracer tendencies:
   - pure region tags (no sources) receive `M * ᶜΔ`, where `M` is the
     tag's precomputed mask — every attributed process counts, so that the sum
     of a partition-of-unity set of region tags tracks `ρe_tot`;
-  - source tags receive `ᶜΔ` only when their `source` matches, weighted by
+  - process tags receive `ᶜΔ` only when their `source` matches, weighted by
     their mask when they also have a region.
+
+The whole signed increment is applied, so a signed process tag goes negative
+under net cooling. This is the one place the energy rule differs from the water
+rule in `tagged_water.jl`, which splits the increment and takes loss
+donor-proportionally instead.
 
 A no-op when tagging is disabled.
 """
@@ -642,12 +758,25 @@ is_water_tag_name(name::MatrixFields.FieldName) =
 """
     is_tagged_tracer_name(name)
 
-Whether `name` refers to a tagged prognostic tracer of either family. Used to
-exempt tags from the tracer limiters, for different reasons per family: tagged
-energies can be legitimately negative (e.g. accumulated cooling), while tagged
-waters must not be limited independently of each other because a shape-preserving
-adjustment applied per tag would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags instead
-follow the parent's limiting through [`rescale_water_tags!`](@ref).
+Whether `name` refers to a tagged prognostic tracer of any of the three
+families. Used to exempt tags from the tracer limiters, for a different reason
+in each case:
+
+  - `ρe_tag_*` holds a signed process tag, so it can be legitimately
+    negative (accumulated cooling) and a non-negativity limiter would be wrong.
+  - `ρq_tag_*` must not be limited independently of the other water tags,
+    because a shape-preserving adjustment applied per tag has no reason to
+    reproduce the parent's and would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags
+    follow the parent's limiting through [`rescale_water_tags!`](@ref) instead.
+  - `ρe_src_*` is exempt for the same partition reason as the water tags, but
+    it has no equivalent of `rescale_water_tags!` and no partition repair. So
+    unlike water, nothing restores it, and unlike water it carries no
+    non-negativity guarantee to restore it to: the attribution rule bounds the
+    rate a tag is depleted at rather than the amount removed over a step. That
+    is a known limit, not an oversight — see
+    `docs/src/energy_source_tags.md`.
 """
 is_tagged_tracer_name(name) =
-    is_energy_tag_name(name) || is_water_tag_name(name)
+    is_energy_tag_name(name) ||
+    is_water_tag_name(name) ||
+    is_energy_source_tag_name(name)

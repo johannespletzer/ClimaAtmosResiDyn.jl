@@ -115,6 +115,8 @@ makedocs(;
             "Passive Tracers" => "passive_tracers.md",
             "Tagged Energy Tracers" => "tagged_tracers.md",
             "Tagged Water Tracers" => "tagged_water.md",
+            "Energy Source Tags" => "energy_source_tags.md",
+            "Process-Change Records" => "process_record.md",
             "Trace Gases (Radiation)" => "trace_gases.md",
             "Available Diagnostics" => "available_diagnostics.md",
             "Notation and Symbols" => "notation.md",

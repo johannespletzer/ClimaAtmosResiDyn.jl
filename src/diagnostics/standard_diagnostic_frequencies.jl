@@ -551,3 +551,120 @@ diagnostic = hourly_average(Float64, "ts"; output_writer, start_date, t_start)
 """
 hourly_average(FT, short_names; output_writer, start_date, t_start) =
     hourly_averages(FT, short_names; output_writer, start_date, t_start)[1]
+
+# A snapshot is the value at the output instant, with no reduction in time. This is
+# what a cumulative field needs: averaging a running total reports where it sat
+# mid-window rather than what it reached, and the difference of two averages is not
+# the change over the interval between them.
+
+"""
+    monthly_snapshots(FT, short_names...; output_writer, start_date, t_start)
+
+Return one `ScheduledDiagnostic` per short name, written once per month as the
+instantaneous value at that moment rather than a reduction over the month.
+
+# Arguments
+
+  - `FT`: Floating-point type of the simulation. Accepted for signature uniformity across
+    the frequency helpers and currently unused.
+  - `short_names...`: Short names of registered diagnostics, e.g. `"e_prc_radiation"`.
+
+# Keyword Arguments
+
+  - `output_writer`: `ClimaDiagnostics` writer bound to every returned diagnostic.
+  - `start_date`: `Dates.DateTime` assigned to the start of the simulation.
+  - `t_start`: Start time of the simulation [s], or an `ITime`.
+"""
+monthly_snapshots(FT, short_names...; output_writer, start_date, t_start) =
+    common_diagnostics(
+        Month(1),
+        nothing,
+        output_writer,
+        start_date,
+        t_start,
+        short_names...,
+    )
+
+"""
+    tendaily_snapshots(FT, short_names...; output_writer, start_date, t_start)
+
+Return one `ScheduledDiagnostic` per short name, written once per ten-day period as the
+instantaneous value at that moment rather than a reduction over the ten-day period.
+
+# Arguments
+
+  - `FT`: Floating-point type of the simulation. Accepted for signature uniformity across
+    the frequency helpers and currently unused.
+  - `short_names...`: Short names of registered diagnostics, e.g. `"e_prc_radiation"`.
+
+# Keyword Arguments
+
+  - `output_writer`: `ClimaDiagnostics` writer bound to every returned diagnostic.
+  - `start_date`: `Dates.DateTime` assigned to the start of the simulation.
+  - `t_start`: Start time of the simulation [s], or an `ITime`.
+"""
+tendaily_snapshots(FT, short_names...; output_writer, start_date, t_start) =
+    common_diagnostics(
+        Day(10),
+        nothing,
+        output_writer,
+        start_date,
+        t_start,
+        short_names...,
+    )
+
+"""
+    daily_snapshots(FT, short_names...; output_writer, start_date, t_start)
+
+Return one `ScheduledDiagnostic` per short name, written once per day as the
+instantaneous value at that moment rather than a reduction over the day.
+
+# Arguments
+
+  - `FT`: Floating-point type of the simulation. Accepted for signature uniformity across
+    the frequency helpers and currently unused.
+  - `short_names...`: Short names of registered diagnostics, e.g. `"e_prc_radiation"`.
+
+# Keyword Arguments
+
+  - `output_writer`: `ClimaDiagnostics` writer bound to every returned diagnostic.
+  - `start_date`: `Dates.DateTime` assigned to the start of the simulation.
+  - `t_start`: Start time of the simulation [s], or an `ITime`.
+"""
+daily_snapshots(FT, short_names...; output_writer, start_date, t_start) =
+    common_diagnostics(
+        Day(1),
+        nothing,
+        output_writer,
+        start_date,
+        t_start,
+        short_names...,
+    )
+
+"""
+    hourly_snapshots(FT, short_names...; output_writer, start_date, t_start)
+
+Return one `ScheduledDiagnostic` per short name, written once per hour as the
+instantaneous value at that moment rather than a reduction over the hour.
+
+# Arguments
+
+  - `FT`: Floating-point type of the simulation. Accepted for signature uniformity across
+    the frequency helpers and currently unused.
+  - `short_names...`: Short names of registered diagnostics, e.g. `"e_prc_radiation"`.
+
+# Keyword Arguments
+
+  - `output_writer`: `ClimaDiagnostics` writer bound to every returned diagnostic.
+  - `start_date`: `Dates.DateTime` assigned to the start of the simulation.
+  - `t_start`: Start time of the simulation [s], or an `ITime`.
+"""
+hourly_snapshots(FT, short_names...; output_writer, start_date, t_start) =
+    common_diagnostics(
+        Hour(1),
+        nothing,
+        output_writer,
+        start_date,
+        t_start,
+        short_names...,
+    )

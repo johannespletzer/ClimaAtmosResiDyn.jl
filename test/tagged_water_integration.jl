@@ -32,7 +32,8 @@ mirrored sedimentation flux, the one process 1M adds. It asserts exact closure o
 the flux itself rather than of the end-of-run residual; see the comment at that
 testset for why the residual cannot detect this.
 
-Run either through the package test path (`Pkg.test()`, TEST_GROUP "tagging")
+Run either through the package test path (`Pkg.test()`, TEST_GROUP
+"tagging_water")
 or standalone with the pinned CI environment:
 
     julia +1.11 --project=.buildkite -e 'using Pkg; Pkg.instantiate()'
@@ -63,6 +64,14 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
     Dict{String, Any}(
         "config" => "column",
         "initial_condition" => "DYCOMS_RF02",
+        # The DYCOMS geometry, as the shipped configs set it. Without it the
+        # 1.5 km boundary-layer profile is extrapolated over the default 30 km
+        # column, where pressure runs down to zero and the solve dies in
+        # `exner_given_pressure`. It also puts the `z_center = 600` region
+        # partition inside the column rather than in its bottom 2%.
+        "z_max" => 1500.0,
+        "z_elem" => 30,
+        "z_stretch" => false,
         "microphysics_model" => "0M",
         "dt" => "10secs",
         "t_end" => "100secs",
@@ -112,7 +121,10 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
         @test all(iszero, parent(getproperty(Y₀.c, name)))
     end
 
-    CA.solve_atmos!(simulation)
+    # A crashed solve returns `:simulation_crashed` rather than throwing, so an
+    # unchecked result would let the assertions below run against a dead state.
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     tag_names = (
@@ -230,7 +242,8 @@ end
         job_id = "tagged_water_limiter",
     )
     simulation = CA.get_simulation(config)
-    CA.solve_atmos!(simulation)
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
     ᶜwater_fix = simulation.integrator.p.tagging.ᶜwater_fix
 
@@ -310,7 +323,8 @@ end
     simulation = CA.get_simulation(
         CA.AtmosConfig(test_dict; job_id = "tagged_water_restart"),
     )
-    CA.solve_atmos!(simulation)
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     restart_file = joinpath(simulation.output_dir, "day0.20.hdf5")
@@ -410,7 +424,8 @@ and nothing else in the timestep can mask or fake it.
     simulation = CA.get_simulation(config)
     # Spin up until there is condensate to sediment: at t = 0 the DYCOMS column
     # holds none, and the flux check below would be vacuous.
-    CA.solve_atmos!(simulation)
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
 
     Y = simulation.integrator.u
     p = simulation.integrator.p
