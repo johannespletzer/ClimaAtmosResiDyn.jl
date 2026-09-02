@@ -357,9 +357,9 @@ import ClimaAtmos as CA
         @test negative.gross_relative > 0
         @test negative.nonpositive_fraction == 1.0
 
-        # Mixed signs cancelling to zero. `iszero(total)` used to return exactly
-        # zero for both ratios, reporting perfect closure over a partition that
-        # accounts for none of the field.
+        # Mixed signs cancelling to zero: `total` is zero while `scale` is not,
+        # so normalising by `scale` still reports that this partition accounts
+        # for none of the field.
         mixed = closure_of([1.0, -1.0], [0.0, 0.0])
         @test mixed.total == 0.0
         @test mixed.scale == 2.0

@@ -32,11 +32,9 @@
 ##### `microphysics` reaches one only when it is stepped explicitly. Both stay
 ##### zero otherwise, even when configured.
 #####
-##### Note this is no longer a type restriction. While records lived in the
-##### cache, the implicit path could not write one because it is evaluated with
-##### `ForwardDiff.Dual` numbers. Now that a record is prognostic, both its
-##### snapshot (`p.scratch`) and its destination (`Yₜ`) are dual-converted, so
-##### extending it to the implicit path only needs brackets there. See
+##### This is not a type restriction. A record's snapshot (`p.scratch`) and its
+##### destination (`Yₜ`) are both dual-converted, so extending it to the
+##### implicit path needs brackets there and nothing else. See
 ##### `docs/src/process_record.md`.
 
 # ============================================================================

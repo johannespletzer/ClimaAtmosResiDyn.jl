@@ -65,13 +65,12 @@ The `tagging_*` groups are one file each: `tagging_energy` runs
 `test/energy_source_tags_integration.jl` and `tagging_record` runs
 `test/process_record_integration.jl`. They are split because a tag name is a
 type parameter, so each tag set recompiles the whole tendency and solve
-pipeline and the files share no compilation between them. Combined they
-overran the 90-minute job timeout on Julia 1.11, which cancelled the job
-before the last two files ran at all.
-That is roughly seven minutes per simulation on Julia 1.11. Keep new
-tagged-simulation tests here, and prefer reusing a tag set another test in the
-same file already builds: a second simulation with an identical tag signature
-costs seconds instead of minutes.
+pipeline, roughly seven minutes per simulation on Julia 1.11, and the files
+share no compilation between them. Combined they overran the 90-minute job
+timeout on Julia 1.11, which cancelled the job before the last two files ran at
+all. Keep new tagged-simulation tests here, and prefer reusing a tag set
+another test in the same file already builds: a second simulation with an
+identical tag signature costs seconds instead of minutes.
 
 ### Running a single test group
 

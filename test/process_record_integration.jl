@@ -18,10 +18,9 @@ simulation. This file covers the paths it cannot reach:
     contract that makes a window budget the difference of two outputs even
     across a restart.
 
-Records are configured here with no tags at all. That combination is the one
-that regressed before — `default_diagnostics` used to return early unless a tag
-family was present, so a records-only run wrote no tagging output — and it is
-the configuration the documentation promises works.
+Records are configured here with no tags at all, which is the combination the
+documentation promises works and the one a tag-shaped guard is most likely to
+miss.
 
 The geometry is the shallow DYCOMS column the energy source tag test uses, for
 the same reason: `radiation` only fires when a radiation scheme is configured,
@@ -39,9 +38,8 @@ import ClimaAtmos as CA
         "z_max" => 1500.0,
         "z_elem" => 30,
         # Uniform spacing, as the shipped DYCOMS configs use. `dz_bottom`
-        # defaults to 500 m, and the tanh stretching cannot fit a 500 m bottom
-        # cell into a 1500 m domain across 30 elements — it fails with
-        # "gamma root failed to converge" before the model is built.
+        # defaults to 500 m, which the tanh stretching cannot fit into a 1500 m
+        # domain across 30 elements.
         "z_stretch" => false,
         # Without this the `radiation` bracket never runs and its record stays
         # at exactly zero, which is indistinguishable from a process that did
@@ -82,11 +80,8 @@ import ClimaAtmos as CA
     transported = map(string, CA.gs_tracer_names(Y₀))
     @test !any(name -> occursin("prc_", name), transported)
 
-    # `solve_atmos!` catches a crash and returns `:simulation_crashed` rather
-    # than throwing, so a discarded return value lets every assertion below run
-    # against a prematurely terminated state. That is not hypothetical: the
-    # tagged-water solve crashed on a negative pressure while its file
-    # reported 87 of 87 assertions passing.
+    # A crashed solve returns `:simulation_crashed` rather than throwing, so an
+    # unchecked result would let the assertions below run against a dead state.
     result = CA.solve_atmos!(simulation)
     @test result.ret_code == :success
     Y = simulation.integrator.u

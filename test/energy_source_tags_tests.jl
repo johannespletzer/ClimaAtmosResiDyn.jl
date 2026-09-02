@@ -133,14 +133,12 @@ import ClimaAtmos as CA
         end
 
         @testset "Donor loss depletes a positive parent ($FT)" begin
-            # The controlled counterpart to `energy_source_tags_integration.jl`.
-            # That file cannot make this claim: `ρe_tot` is non-positive over
-            # the whole of its column, so `energy_source_fraction` returns zero
-            # and the loss half of the rule never runs. Under the default
-            # energy reference no column geometry fixes that — the 30 km
-            # version is still 43% non-positive — so the parent is made
-            # positive here by construction instead, and the assertion that it
-            # is positive comes first.
+            # The controlled counterpart to `energy_source_tags_integration.jl`,
+            # which cannot make this claim: `ρe_tot` is non-positive across its
+            # column, so `energy_source_fraction` returns zero and the loss half
+            # of the rule never runs. No column geometry fixes that under the
+            # default energy reference, so the parent is positive here by
+            # construction and that is asserted first.
             strat = CA.EnergySourceTag{:strat}(
                 CA.TanhAltitudeRegion(FT(750), FT(100)),
             )

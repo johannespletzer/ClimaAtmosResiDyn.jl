@@ -55,18 +55,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     # A job killed mid-suite reports `cancelled`, which the ci-required gate
     # cannot distinguish from a superseded run, so the budget has to leave real
-    # headroom.
-    #
-    # The tagged-simulation files are one group per file, because they do not
-    # share compilation. A tag name is a type parameter, so each tag set is a
-    # fresh `AtmosModel` and recompiles the whole tendency and solve pipeline;
-    # putting several files in one job adds their compile times without any
-    # reuse. Two rounds of this were learned the hard way: the files first
-    # overran `dynamics` (run 32528151981), then overran a combined `tagging`
-    # group on 1.11, where `tagged_tracers_integration.jl` alone took 36m57s at
-    # 99% compilation and the job was cancelled before the energy-source and
-    # process-record files started at all. A timeout does not just fail the
-    # group, it silently removes coverage of whatever had not run yet.
+    # headroom. The tagged-simulation files are one group per file for the same
+    # reason: they share no compilation, so combining them only adds compile
+    # time, and a job that overruns drops coverage of whatever had not started.
     timeout-minutes: 90
     strategy:
       fail-fast: false

@@ -166,9 +166,8 @@ function test_restart(simulation, args; comms_ctx, more_ignore = Symbol[])
 
     local_success = true
 
-    # A crashed solve returns `:simulation_crashed` instead of throwing, so
-    # without this the comparisons below run against a partial state and can
-    # report a successful round trip that never happened.
+    # A crashed solve returns `:simulation_crashed` rather than throwing, so an
+    # unchecked result would let the assertions below run against a dead state.
     result = CA.solve_atmos!(simulation)
     local_success &= result.ret_code == :success
 

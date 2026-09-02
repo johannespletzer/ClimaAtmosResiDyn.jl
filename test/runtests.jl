@@ -13,13 +13,9 @@ include("download_artifacts.jl")
 # Get test group from environment variable (default: run all tests)
 TEST_GROUP = get(ENV, "TEST_GROUP", "all")
 
-# Every group this file knows how to run. Validated rather than assumed,
-# because an unrecognised name matches none of the blocks below, runs zero
-# tests and still exits successfully. That is exactly what happened when the
-# `tagging` group was split into four: `downgrade.yml` kept asking for
-# `tagging`, and both downgrade jobs went green without executing a single
-# tagging test. A silent pass is worse than a failure, so an unknown group is
-# an error here.
+# Every group this file knows how to run. An unrecognised name matches none of
+# the blocks below, runs zero tests and still exits successfully, so it is
+# rejected here rather than passing silently.
 const KNOWN_TEST_GROUPS = (
     "all",
     "infrastructure",
@@ -114,24 +110,17 @@ end
 #
 # These call `solve_atmos!` on many different tag sets. A tag name is a type
 # parameter (`WaterTag{name, R, S}`), so each set is a fresh `AtmosModel` type
-# and the whole tendency and solve pipeline is compiled from scratch. That
-# costs about 7 minutes per simulation on 1.11, against 1 to 2 minutes on 1.10.
+# and the whole tendency and solve pipeline is compiled from scratch, about
+# 7 minutes per simulation on 1.11 against 1 to 2 minutes on 1.10.
 #
-# They get a group each because they share no compilation: putting several in
-# one job adds their compile times with nothing reused. That has now overrun a
-# timeout twice. First inside `dynamics`, where the first two files were 59% of
-# the group's wall clock (run 32528151981). Then as a combined `tagging` group
-# on 1.11, where `tagged_tracers_integration.jl` alone took 36m57s at 99%
-# compilation and the job was cancelled before the energy-source and
-# process-record files started. The second failure is the instructive one: a
-# timeout does not merely fail the group, it silently drops coverage of every
-# file that had not begun, so a green-looking suite can be testing less than it
-# claims.
+# One group per file, because the files share no compilation: combining them
+# adds their compile times with nothing reused, and a job that then overruns
+# its timeout drops coverage of whatever had not started rather than failing.
 #
-# Each group still runs against a 90-minute timeout, so keep new work to the
-# smallest tag set that proves the claim, and prefer extending a set an
-# existing test in the same file already builds — a second simulation with an
-# identical tag signature costs seconds instead of minutes.
+# Each group runs against a 90-minute timeout, so keep new work to the smallest
+# tag set that proves the claim, and prefer extending a set an existing test in
+# the same file already builds. A second simulation with an identical tag
+# signature costs seconds instead of minutes.
 # ============================================================================
 if TEST_GROUP in ("tagging_energy", "all")
     @safetestset "Tagged tracers integration" begin @time include("tagged_tracers_integration.jl") end

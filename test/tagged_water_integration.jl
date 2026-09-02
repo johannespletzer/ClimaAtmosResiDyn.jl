@@ -64,14 +64,11 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
     Dict{String, Any}(
         "config" => "column",
         "initial_condition" => "DYCOMS_RF02",
-        # The DYCOMS geometry, as the shipped configs set it. Without this the
+        # The DYCOMS geometry, as the shipped configs set it. Without it the
         # 1.5 km boundary-layer profile is extrapolated over the default 30 km
         # column, where pressure runs down to zero and the solve dies in
-        # `exner_given_pressure` on a negative pressure of -6.4e-11. That was
-        # happening while this file reported every assertion passing, because
-        # `solve_atmos!` returns a crash rather than throwing one. It also puts
-        # the `z_center = 600` region partition inside the column instead of in
-        # its bottom 2%.
+        # `exner_given_pressure`. It also puts the `z_center = 600` region
+        # partition inside the column rather than in its bottom 2%.
         "z_max" => 1500.0,
         "z_elem" => 30,
         "z_stretch" => false,
@@ -124,11 +121,8 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
         @test all(iszero, parent(getproperty(Y₀.c, name)))
     end
 
-    # `solve_atmos!` catches a crash and returns `:simulation_crashed` rather
-    # than throwing, so a discarded return value lets every assertion below run
-    # against a prematurely terminated state. That is not hypothetical: the
-    # solve below crashed on a negative pressure while this file reported
-    # 87 of 87 assertions passing.
+    # A crashed solve returns `:simulation_crashed` rather than throwing, so an
+    # unchecked result would let the assertions below run against a dead state.
     result = CA.solve_atmos!(simulation)
     @test result.ret_code == :success
     Y = simulation.integrator.u

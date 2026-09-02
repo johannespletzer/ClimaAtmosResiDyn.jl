@@ -15,22 +15,15 @@ family is wired into a simulation at all, which is what this file covers:
  6. masked *production* reaches a source tag through a real bracketed process,
     which is the one thing here that a plain-array unit test cannot show.
 
-**This file does not validate the attribution rule end to end, and must not be
-read as doing so.** It covers configuration and state, bracketed-production
-wiring, transport, restart, and a bounded closure residual. That is all.
+**This file does not validate the attribution rule end to end.** `ρe_tot` is
+non-positive across this column, so `energy_source_fraction` returns zero and
+donor-proportional loss never runs here. Production is unaffected, because it
+is mask-weighted and never divides by the parent, which is why item 6 is
+evidence and a loss claim would not be.
 
-The missing half is the loss term, and the reason is measured rather than
-assumed: `ρe_tot` is non-positive over 100% of this column at initialization
-and again at restart, so `energy_source_fraction` returns zero everywhere and
-donor-proportional loss never runs in this solve. Production is unaffected,
-because it is mask-weighted and never divides by the parent, which is why item
-6 is real evidence while a loss claim here would not be.
-
-The loss algebra is verified in `energy_source_tags_tests.jl` against a parent
-that is positive by construction. That is a kernel-level test, not an
-end-to-end one, so **donor-proportional loss through a real bracketed solve
-remains unvalidated** and needs either a well-defined positive energy reference
-or a reference-safe reformulation. See `docs/src/energy_source_tags.md`.
+The loss algebra is covered in `energy_source_tags_tests.jl` against a parent
+that is positive by construction. That is a kernel test, so loss through a real
+bracketed solve remains unvalidated. See `docs/src/energy_source_tags.md`.
 
 A column with an altitude partition is the cheapest geometry that exercises all
 of it — latitude regions and the Held-Suarez source would need a sphere. One
@@ -67,18 +60,13 @@ import ClimaAtmos as CA
     test_dict = Dict(
         "config" => "column",
         "initial_condition" => "DYCOMS_RF02",
-        # DYCOMS_RF02 describes a 1.5 km marine boundary layer, so it gets the
-        # geometry the shipped DYCOMS configs use. The default column is 30 km
-        # tall, and over that depth moist total energy goes negative in the
-        # cold upper air under the default reference — 43% of cells in the
-        # first version of this test — which leaves the donor share undefined
-        # there and the whole family untested in the regime it is meant for.
+        # DYCOMS_RF02 is a 1.5 km marine boundary layer, so it gets the geometry
+        # the shipped DYCOMS configs use rather than the default 30 km column.
         "z_max" => 1500.0,
         "z_elem" => 30,
         # Uniform spacing, as the shipped DYCOMS configs use. `dz_bottom`
-        # defaults to 500 m, and the tanh stretching cannot fit a 500 m bottom
-        # cell into a 1500 m domain across 30 elements — it fails with
-        # "gamma root failed to converge" before the model is built.
+        # defaults to 500 m, which the tanh stretching cannot fit into a 1500 m
+        # domain across 30 elements.
         "z_stretch" => false,
         # Radiation has to be switched on for the `rad` source tag to receive
         # anything. `initial_condition: DYCOMS_RF02` sets the state, not the
@@ -133,11 +121,8 @@ import ClimaAtmos as CA
     @test closure_deviation(Y₀) < 100 * eps(FT)
     @test all(iszero, parent(Y₀.c.ρe_src_rad))
 
-    # `solve_atmos!` catches a crash and returns `:simulation_crashed` rather
-    # than throwing, so a discarded return value lets every assertion below run
-    # against a prematurely terminated state. That is not hypothetical: the
-    # tagged-water solve crashed on a negative pressure while its file
-    # reported 87 of 87 assertions passing.
+    # A crashed solve returns `:simulation_crashed` rather than throwing, so an
+    # unchecked result would let the assertions below run against a dead state.
     result = CA.solve_atmos!(simulation)
     @test result.ret_code == :success
     Y = simulation.integrator.u
@@ -152,41 +137,18 @@ import ClimaAtmos as CA
     end
     @test closure_deviation(Y) < 5e-2
 
-    # This file makes no claim about the attribution rule, and the reason is
-    # measured rather than assumed. `ρe_tot` is non-positive over 100% of this
-    # column at initialization — the model warns about it — and over 43% of the
-    # 30 km version, so depth reduces the fraction without removing it. Where
-    # the parent is not positive the donor share is undefined and
-    # `energy_source_fraction` returns zero, so the loss half of the rule does
-    # not run at all.
-    #
-    # Loosening the positivity assertion to make this file pass would have let
-    # undefined attribution count as attribution coverage. The claim moved
-    # instead: `energy_source_tags_tests.jl` asserts donor-proportional loss
-    # against a parent that is positive by construction. What is left here is
-    # wiring, transport and restart, which is what a configured solve can
-    # actually establish for this family today.
-
-    # Production reached the tag. This is wiring evidence, not attribution
-    # evidence: production is mask-weighted and never divides by the parent, so
-    # it works regardless of the sign problem above, while the donor-
-    # proportional loss beside it is inert here. A source tag starts at zero,
-    # so anything nonzero came through the `radiation` bracket. This needs
-    # `rad: DYCOMS` in the config above: the initial condition sets the state
-    # and not the forcing, so without it the bracket never runs and this tag
-    # stays at exactly zero, which is how the first version of this test
-    # failed.
+    # Production reached the tag: it is mask-weighted and never divides by the
+    # parent, so it works where the donor loss beside it is inert. A source tag
+    # starts at zero, so anything nonzero came through the `radiation` bracket.
+    # This needs `rad: DYCOMS` above, since the initial condition sets the
+    # state and not the forcing.
     rad_scale = maximum(abs.(parent(Y.c.ρe_src_rad)))
     @test rad_scale > 0
 
-    # No non-negativity is asserted, because none is promised. Donor-proportional
-    # loss bounds the rate a tag is depleted at, not the amount removed over a
-    # finite step, and the tags additionally ride unlimited explicit transport
-    # with no partition repair. See the contract on `EnergySourceTag`. What is
-    # checked here is only that nothing blows up: the earlier version of this
-    # test asserted `> -parent_scale` and a tag reached -50813 against a scale
-    # of 50485, which is the false guarantee showing up as a failure rather
-    # than the bound being unlucky.
+    # No sign is asserted, because none is promised: donor-proportional loss
+    # bounds the depletion rate rather than the amount removed over a step, and
+    # the tags ride unlimited transport with no partition repair. See the
+    # contract on `EnergySourceTag`. This is only a blow-up guard.
     parent_scale = maximum(abs.(parent(Y.c.ρe_tot)))
     for name in (:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
         tag_scale = maximum(abs.(parent(getproperty(Y.c, name))))
