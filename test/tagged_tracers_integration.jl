@@ -106,7 +106,13 @@ import ClimaAtmos as CA
     @test all(iszero, parent(Y₀.c.ρe_tag_hs_tropics))
     @test all(iszero, parent(Y₀.c.ρe_tag_hs_extratropics))
 
-    CA.solve_atmos!(simulation)
+    # `solve_atmos!` catches a crash and returns `:simulation_crashed` rather
+    # than throwing, so a discarded return value lets every assertion below run
+    # against a prematurely terminated state. That is not hypothetical: the
+    # tagged-water solve crashed on a negative pressure while its file
+    # reported 87 of 87 assertions passing.
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     # 2. Tags stay finite
@@ -161,7 +167,8 @@ end
     simulation = CA.get_simulation(config)
     @test all(iszero, parent(simulation.integrator.u.c.ρe_tag_precip))
 
-    CA.solve_atmos!(simulation)
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     for name in (:ρe_tag_precip, :ρe_tag_moist, :ρe_tag_mp)
@@ -220,7 +227,8 @@ end
     simulation = CA.get_simulation(
         CA.AtmosConfig(test_dict; job_id = "tagged_tracers_restart"),
     )
-    CA.solve_atmos!(simulation)
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     restart_file = joinpath(simulation.output_dir, "day0.20.hdf5")

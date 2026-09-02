@@ -82,7 +82,13 @@ import ClimaAtmos as CA
     transported = map(string, CA.gs_tracer_names(Y₀))
     @test !any(name -> occursin("prc_", name), transported)
 
-    CA.solve_atmos!(simulation)
+    # `solve_atmos!` catches a crash and returns `:simulation_crashed` rather
+    # than throwing, so a discarded return value lets every assertion below run
+    # against a prematurely terminated state. That is not hypothetical: the
+    # tagged-water solve crashed on a negative pressure while its file
+    # reported 87 of 87 assertions passing.
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     for name in (:prc_e_radiation, :prc_e_surface_flux)

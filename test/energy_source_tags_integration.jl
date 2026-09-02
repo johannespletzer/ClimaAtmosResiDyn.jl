@@ -119,7 +119,13 @@ import ClimaAtmos as CA
     @test closure_deviation(Y₀) < 100 * eps(FT)
     @test all(iszero, parent(Y₀.c.ρe_src_rad))
 
-    CA.solve_atmos!(simulation)
+    # `solve_atmos!` catches a crash and returns `:simulation_crashed` rather
+    # than throwing, so a discarded return value lets every assertion below run
+    # against a prematurely terminated state. That is not hypothetical: the
+    # tagged-water solve crashed on a negative pressure while its file
+    # reported 87 of 87 assertions passing.
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     # 4. Transport keeps them finite, and closure stays a bounded monitor. The

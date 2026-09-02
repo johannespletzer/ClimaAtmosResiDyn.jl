@@ -63,6 +63,17 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
     Dict{String, Any}(
         "config" => "column",
         "initial_condition" => "DYCOMS_RF02",
+        # The DYCOMS geometry, as the shipped configs set it. Without this the
+        # 1.5 km boundary-layer profile is extrapolated over the default 30 km
+        # column, where pressure runs down to zero and the solve dies in
+        # `exner_given_pressure` on a negative pressure of -6.4e-11. That was
+        # happening while this file reported every assertion passing, because
+        # `solve_atmos!` returns a crash rather than throwing one. It also puts
+        # the `z_center = 600` region partition inside the column instead of in
+        # its bottom 2%.
+        "z_max" => 1500.0,
+        "z_elem" => 30,
+        "z_stretch" => false,
         "microphysics_model" => "0M",
         "dt" => "10secs",
         "t_end" => "100secs",
@@ -112,7 +123,13 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
         @test all(iszero, parent(getproperty(Y₀.c, name)))
     end
 
-    CA.solve_atmos!(simulation)
+    # `solve_atmos!` catches a crash and returns `:simulation_crashed` rather
+    # than throwing, so a discarded return value lets every assertion below run
+    # against a prematurely terminated state. That is not hypothetical: the
+    # solve below crashed on a negative pressure while this file reported
+    # 87 of 87 assertions passing.
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     tag_names = (
@@ -230,7 +247,8 @@ end
         job_id = "tagged_water_limiter",
     )
     simulation = CA.get_simulation(config)
-    CA.solve_atmos!(simulation)
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
     ᶜwater_fix = simulation.integrator.p.tagging.ᶜwater_fix
 
@@ -310,7 +328,8 @@ end
     simulation = CA.get_simulation(
         CA.AtmosConfig(test_dict; job_id = "tagged_water_restart"),
     )
-    CA.solve_atmos!(simulation)
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
     Y = simulation.integrator.u
 
     restart_file = joinpath(simulation.output_dir, "day0.20.hdf5")
@@ -410,7 +429,8 @@ and nothing else in the timestep can mask or fake it.
     simulation = CA.get_simulation(config)
     # Spin up until there is condensate to sediment: at t = 0 the DYCOMS column
     # holds none, and the flux check below would be vacuous.
-    CA.solve_atmos!(simulation)
+    result = CA.solve_atmos!(simulation)
+    @test result.ret_code == :success
 
     Y = simulation.integrator.u
     p = simulation.integrator.p
