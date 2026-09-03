@@ -1,8 +1,14 @@
 # Parent-Budget Ledger: Budget Contract
 
 This page freezes what the parent-budget ledger will and will not claim. It is
-the artefact the rest of the work is measured against. Nothing here describes
-code that exists yet. The plan that governs the implementation is
+the artefact the rest of the work is measured against.
+
+The journal core in `src/parent_budget/` implements the schema, the endpoint
+integrals and the per-step transaction described here. Nothing else does: no
+tendency is instrumented, nothing is wired into the timestepper, and no
+simulation output changes, so every coverage claim below is still a statement
+about what will be measured rather than about what is. The plan that governs the
+implementation is
 [Parent-Budget Ledger: Plan](plan.md), and the path-by-path inventory is
 [Parent-Budget Ledger: Coverage Matrices](coverage.md).
 

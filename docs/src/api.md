@@ -445,12 +445,30 @@ ClimaAtmos.ColumnDatasets.ClimaColumnFiles
 ClimaAtmos.ColumnDatasets.VaranalFiles
 ```
 
-## Parent-budget ledger
+## Internals
+
+```@docs
+ClimaAtmos.parallel_lu_factorize!
+ClimaAtmos.parallel_lu_solve!
+```
+
+### Parent-budget ledger
 
 The accounting layer that reconciles mass, total water, and total energy
 against the accepted discrete update. See
 [the budget contract](parent_budget/contract.md) for what it claims, and
 [the coverage matrices](parent_budget/coverage.md) for what it covers.
+
+These are **internals**, deliberately. Nothing here is wired into a run yet:
+there is no configuration key, no output, and no reporting surface, so there
+is no user-facing API to stabilize. Publishing the types, the mutable ledger
+operations and the helpers as public would freeze a compatibility surface
+before the thing it describes exists, and every one of them is expected to
+move as PRs 3 to 7 wire the ledger in. They are rendered because the
+docstrings reference each other and because the design is worth reading, not
+because they are supported.
+
+A small public facade belongs here once configuration and reporting exist.
 
 ```@docs
 ClimaAtmos.ComponentStatus
@@ -515,9 +533,3 @@ ClimaAtmos.control_volume_available
 ClimaAtmos.check_endpoint_layout
 ```
 
-## Internals
-
-```@docs
-ClimaAtmos.parallel_lu_factorize!
-ClimaAtmos.parallel_lu_solve!
-```
