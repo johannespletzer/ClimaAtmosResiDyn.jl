@@ -194,8 +194,13 @@ include(joinpath("cache", "eddy_diffusivity_coefficient.jl"))
 include(joinpath("prognostic_equations", "constrain_state.jl"))
 include(joinpath("prognostic_equations", "limited_tendencies.jl"))
 
-include(joinpath("parent_budget", "journal.jl"))
+# The parent-budget ledger, in dependency order: the integrals define the
+# accounting type and the three quantities, the reduction layer packs and reduces
+# them, the journal builds records out of them, and the transaction reconciles
+# those records. Everything here is internal; nothing is exported.
 include(joinpath("parent_budget", "integrals.jl"))
+include(joinpath("parent_budget", "reduction.jl"))
+include(joinpath("parent_budget", "journal.jl"))
 include(joinpath("parent_budget", "transaction.jl"))
 
 include(joinpath("callbacks", "callbacks.jl"))

@@ -454,81 +454,16 @@ ClimaAtmos.parallel_lu_solve!
 
 ### Parent-budget ledger
 
-The accounting layer that reconciles mass, total water, and total energy
-against the accepted discrete update. See
-[the budget contract](parent_budget/contract.md) for what it claims, and
-[the coverage matrices](parent_budget/coverage.md) for what it covers.
+The internal accounting layer that reconciles mass, total water, and total
+energy against the accepted discrete update. It is described in the Developer
+Guide: [the closure contract](parent_budget/contract.md) for what it claims,
+[the architecture](parent_budget/architecture.md) for how it is put together,
+and [the coverage registry](parent_budget/coverage.md) for what it covers.
 
-These are **internals**, deliberately. Nothing here is wired into a run yet:
-there is no configuration key, no output, and no reporting surface, so there
-is no user-facing API to stabilize. Publishing the types, the mutable ledger
-operations and the helpers as public would freeze a compatibility surface
-before the thing it describes exists, and every one of them is expected to
-move as PRs 3 to 7 wire the ledger in. They are rendered because the
-docstrings reference each other and because the design is worth reading, not
-because they are supported.
-
-A small public facade belongs here once configuration and reporting exist.
-
-```@docs
-ClimaAtmos.ComponentStatus
-ClimaAtmos.Measured
-ClimaAtmos.InvariantZero
-ClimaAtmos.NotApplicable
-ClimaAtmos.UnknownComponent
-ClimaAtmos.BudgetComponent
-ClimaAtmos.measured
-ClimaAtmos.invariant_zero
-ClimaAtmos.not_applicable
-ClimaAtmos.unknown_component
-ClimaAtmos.status_name
-ClimaAtmos.is_contributing
-ClimaAtmos.is_blocking
-ClimaAtmos.BudgetReservoir
-ClimaAtmos.AtmosphereReservoir
-ClimaAtmos.SlabSurfaceReservoir
-ClimaAtmos.ExteriorReservoir
-ClimaAtmos.ControlVolume
-ClimaAtmos.reservoir_name
-ClimaAtmos.ATMOSPHERE_ONLY
-ClimaAtmos.ATMOSPHERE_AND_SURFACE
-ClimaAtmos.is_inside
-ClimaAtmos.UpdatePath
-ClimaAtmos.EquationTerm
-ClimaAtmos.DiscreteMap
-ClimaAtmos.NumericalCorrection
-ClimaAtmos.AlgebraicSolveDefect
-ClimaAtmos.BudgetLeg
-ClimaAtmos.StageObservation
-ClimaAtmos.leg_identity
-ClimaAtmos.leg_label
-ClimaAtmos.budget_component
-ClimaAtmos.BUDGET_QUANTITIES
-ClimaAtmos.BUDGET_ACCOUNTING_TYPE
-ClimaAtmos.atmosphere_mass
-ClimaAtmos.atmosphere_water
-ClimaAtmos.atmosphere_energy
-ClimaAtmos.atmosphere_dry_mass
-ClimaAtmos.slab_heat_capacity
-ClimaAtmos.surface_energy
-ClimaAtmos.surface_water
-ClimaAtmos.surface_mass
-ClimaAtmos.ReservoirEndpoint
-ClimaAtmos.BudgetEndpoints
-ClimaAtmos.budget_endpoints
-ClimaAtmos.endpoint_total
-ClimaAtmos.BudgetLedger
-ClimaAtmos.check_endpoint_continuity
-ClimaAtmos.open_transaction!
-ClimaAtmos.record_leg!
-ClimaAtmos.record_observation!
-ClimaAtmos.abort_transaction!
-ClimaAtmos.project_legs
-ClimaAtmos.BudgetReconciliation
-ClimaAtmos.is_blocked
-ClimaAtmos.reconcile
-ClimaAtmos.commit_transaction!
-ClimaAtmos.transfer_mismatch
-ClimaAtmos.control_volume_available
-ClimaAtmos.check_endpoint_layout
-```
+None of it is rendered here. There is no configuration key, no output and no
+reporting surface yet, so there is no user-facing API, and publishing the types,
+the mutable ledger operations and the helpers would freeze a compatibility
+surface around an implementation that is expected to move as the remaining stack
+steps wire the ledger in. A small public facade belongs here once configuration
+and reporting exist, and it will be a report and a claim certificate rather than
+the journal internals.

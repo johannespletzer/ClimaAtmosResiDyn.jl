@@ -4,32 +4,55 @@ import ClimaAtmos as CA
 # Journal mechanics for the parent-budget ledger.
 #
 # These tests are deliberately state-free. They exercise the rules the ledger
-# enforces rather than the physics it will later measure: a leg is recorded
-# once, an unknown component blocks rather than reads as zero, a residual is a
-# subtraction and never an entry, and a control-volume total is a projection of
-# the legs rather than a separate amount.
+# enforces rather than the physics it will later measure: a leg is recorded once,
+# an unknown component blocks rather than reads as zero, an envelope and its
+# decomposition never land in one sum, a residual is a subtraction and never an
+# entry, and a control-volume total is a projection of the legs rather than a
+# separate amount.
 
-# Build a leg with everything defaulted, so a test only names what it is about.
+# Components, with the evidence every constructor now requires.
+mval(FT, x) = CA.measured(FT(x); method = :synthetic, source = :test)
+zval(FT) = CA.invariant_zero(FT; proof = :writes_no_such_field, source = :test)
+naval(FT) = CA.not_applicable(FT)
+unkval(FT) = CA.unknown_component(FT)
+
+# A leg with everything defaulted, so a test only names what it is about.
 function test_leg(
     FT;
     event = :ev,
     leg = :atmos,
     reservoir = CA.AtmosphereReservoir(),
-    mass = CA.not_applicable(FT),
-    water = CA.not_applicable(FT),
-    energy = CA.not_applicable(FT),
+    channel = :explicit_main,
+    level = CA.ChannelEnvelope(),
+    mass = naval(FT),
+    water = naval(FT),
+    energy = naval(FT),
     path = CA.EquationTerm(),
     process = :test,
     phase = :explicit,
     step = 1,
     stage = 0,
     occurrence = 1,
-    method = :synthetic,
-    aggregate = false,
+    weight = one(FT),
+    measured_at = :accepted_state,
 )
     return CA.BudgetLeg{FT}(;
-        event, leg, reservoir, mass, water, energy,
-        path, process, phase, step, stage, occurrence, method, aggregate,
+        event,
+        leg,
+        reservoir,
+        channel,
+        level,
+        mass,
+        water,
+        energy,
+        path,
+        process,
+        phase,
+        step,
+        stage,
+        occurrence,
+        weight,
+        measured_at,
     )
 end
 
@@ -39,343 +62,779 @@ function test_endpoints(FT, step; m, w, e, sfc_w = nothing, sfc_e = nothing)
     reservoirs = [
         CA.ReservoirEndpoint{FT}(;
             reservoir = CA.AtmosphereReservoir(),
-            mass = CA.measured(FT(m)),
-            water = CA.measured(FT(w)),
-            energy = CA.measured(FT(e)),
+            mass = isnothing(m) ? naval(FT) : mval(FT, m),
+            water = isnothing(w) ? naval(FT) : mval(FT, w),
+            energy = isnothing(e) ? naval(FT) : mval(FT, e),
         ),
     ]
     if !isnothing(sfc_e)
+        # The slab's mass and water are one endpoint projected twice.
+        sfc = isnothing(sfc_w) ? naval(FT) : mval(FT, sfc_w)
         push!(
             reservoirs,
             CA.ReservoirEndpoint{FT}(;
                 reservoir = CA.SlabSurfaceReservoir(),
-                # The slab owns mass and water with the same amount.
-                mass = isnothing(sfc_w) ? CA.not_applicable(FT) :
-                       CA.measured(FT(sfc_w)),
-                water = isnothing(sfc_w) ? CA.not_applicable(FT) :
-                        CA.measured(FT(sfc_w)),
-                energy = CA.measured(FT(sfc_e)),
+                mass = sfc,
+                water = sfc,
+                energy = mval(FT, sfc_e),
             ),
         )
     end
     return CA.BudgetEndpoints{FT}(step, reservoirs)
 end
 
-# The atmosphere-only mass reconciliation out of one commit's results. Written
-# as a loop rather than a `filter` with a multi-line lambda, which JuliaFormatter
-# and a reader both prefer.
-function atmosphere_mass_result(reconciliations)
-    for r in reconciliations
-        if r.quantity === :mass && r.control_volume === :atmosphere_only
-            return r
-        end
-    end
-    error("No atmosphere-only mass reconciliation was returned")
-end
+# A tolerance loose enough that only a real defect fails it. `kappa` has no
+# default in the implementation on purpose, so every test that wants a verdict
+# has to declare one.
+loose_tolerance(FT, scale = 1) = Dict(
+    q => CA.BudgetTolerance(;
+        absolute = FT(1e-6) * FT(scale),
+        relative = FT(0),
+        scale = FT(0),
+        kappa = FT(64),
+    ) for q in CA.BUDGET_QUANTITIES
+)
 
-# Record `n` legs with stage indices starting at `first_stage`, for the
-# allocation bound below. The stages have to differ because a repeat of the same
-# identity is refused, which is also why the warm-up call cannot reuse them.
-function record_many!(ledger::CA.BudgetLedger{FT}, n, first_stage) where {FT}
-    for i in first_stage:(first_stage + n - 1)
-        CA.record_leg!(
-            ledger,
-            CA.BudgetLeg{FT}(;
-                event = :bulk,
-                leg = :atmosphere,
-                reservoir = CA.AtmosphereReservoir(),
-                mass = CA.measured(one(FT)),
-                water = CA.invariant_zero(FT),
-                energy = CA.not_applicable(FT),
-                path = CA.EquationTerm(),
-                process = :test,
-                phase = :explicit,
-                step = ledger.step,
-                stage = i,
-                method = :synthetic,
-            ),
-        )
+parent_for(commit, quantity, cv) = only(
+    filter(
+        r -> r.quantity === quantity && r.control_volume === cv,
+        commit.parent,
+    ),
+)
+
+attribution_for(commit, quantity, cv, channel) = only(
+    filter(
+        r ->
+            r.quantity === quantity &&
+                r.control_volume === cv &&
+                r.channel === channel,
+        commit.attribution,
+    ),
+)
+
+transfer_for(commit, quantity, event, cv) = only(
+    filter(
+        r ->
+            r.quantity === quantity &&
+                r.event === event &&
+                r.control_volume === cv,
+        commit.transfer,
+    ),
+)
+
+# One committed step, opening at zero and closing at the given atmospheric
+# totals, with whatever legs the caller wants recorded in between.
+function run_step!(ledger, FT, opening, closing, legs; tolerances = nothing)
+    CA.open_transaction!(ledger, opening)
+    for leg in legs
+        CA.record_leg!(ledger, leg)
     end
-    return nothing
+    return CA.commit_transaction!(ledger, closing; tolerances)
 end
 
 @testset "Parent-budget journal" begin
     for FT in (Float32, Float64)
 
-        @testset "Component status ($FT)" begin
-            m = CA.measured(FT(3))
-            z = CA.invariant_zero(FT)
-            n = CA.not_applicable(FT)
-            u = CA.unknown_component(FT)
-
-            @test m.amount == FT(3)
-            @test CA.is_contributing(m)
-            @test !CA.is_blocking(m)
-
-            # A proven zero carries an exact zero, which is what makes it safe
-            # to add into a total.
-            @test iszero(z.amount)
-            @test CA.is_contributing(z)
-            @test !CA.is_blocking(z)
-
-            # Not applicable contributes nothing and blocks nothing.
-            @test !CA.is_contributing(n)
-            @test !CA.is_blocking(n)
-
-            # Unknown is the one that blocks. This is the whole reason the
-            # status exists: a component nobody measured must not read as zero.
-            @test !CA.is_contributing(u)
-            @test CA.is_blocking(u)
+        @testset "A non-measured component cannot be nonzero ($FT)" begin
+            # Three separate constructors, three separate ways to smuggle a real
+            # amount in under a label that says it cannot be wrong.
+            @test_throws ErrorException CA.BudgetComponent{FT}(
+                FT(1),
+                CA.BudgetEvidence(;
+                    status = CA.InvariantZero(),
+                    method = :proof,
+                ),
+            )
+            @test_throws ErrorException CA.BudgetComponent{FT}(
+                FT(1),
+                CA.BudgetEvidence(; status = CA.NotApplicable()),
+            )
+            @test_throws ErrorException CA.BudgetComponent{FT}(
+                FT(-1),
+                CA.BudgetEvidence(; status = CA.UnknownComponent()),
+            )
+            # A measured component may hold anything, including zero.
+            @test mval(FT, 0).amount == 0
+            @test mval(FT, -3).amount == FT(-3)
         end
 
-        @testset "Control-volume membership ($FT)" begin
-            @test CA.is_inside(CA.ATMOSPHERE_ONLY, CA.AtmosphereReservoir())
-            @test !CA.is_inside(CA.ATMOSPHERE_ONLY, CA.SlabSurfaceReservoir())
-            @test CA.is_inside(
-                CA.ATMOSPHERE_AND_SURFACE,
-                CA.SlabSurfaceReservoir(),
+        @testset "An invariant zero must name its proof ($FT)" begin
+            # A zero with no proof is an assumption, which is exactly what the
+            # unknown status exists to keep out of a total.
+            @test_throws ErrorException CA.BudgetComponent{FT}(
+                zero(FT),
+                CA.BudgetEvidence(; status = CA.InvariantZero()),
             )
-            # The exterior is in no view. A flux into it is a boundary
-            # crossing, never an internal transfer.
-            @test !CA.is_inside(
-                CA.ATMOSPHERE_AND_SURFACE,
-                CA.ExteriorReservoir(),
-            )
+            proven = CA.invariant_zero(FT; proof = :momentum_only)
+            @test CA.component_method(proven) === :momentum_only
+            @test CA.is_contributing(proven)
         end
 
-        @testset "Transaction lifecycle ($FT)" begin
+        @testset "Evidence is per component ($FT)" begin
+            # One event routinely measures energy, proves a mass zero, and has
+            # nothing to say about water. A per-leg status would misdescribe two
+            # of the three.
+            leg = test_leg(
+                FT;
+                mass = CA.invariant_zero(FT; proof = :writes_no_ρ),
+                water = mval(FT, 5),
+                energy = unkval(FT),
+            )
+            @test CA.component_status(leg.mass) isa CA.InvariantZero
+            @test CA.component_method(leg.mass) === :writes_no_ρ
+            @test CA.component_status(leg.water) isa CA.Measured
+            @test CA.component_method(leg.water) === :synthetic
+            @test CA.component_status(leg.energy) isa CA.UnknownComponent
+            @test CA.is_blocking(leg.energy)
+            @test !CA.is_blocking(leg.mass)
+        end
+
+        @testset "An unknown blocks and does not sum ($FT)" begin
             ledger = CA.BudgetLedger{FT}()
-            opening = test_endpoints(FT, 0; m = 10, w = 1, e = 100)
-
-            # Nothing may be recorded outside a transaction.
-            @test_throws ErrorException CA.record_leg!(ledger, test_leg(FT))
-
-            CA.open_transaction!(ledger, opening)
-            @test ledger.is_open
-            @test ledger.step == 1
-
-            # Opening twice would mean the previous step neither committed nor
-            # aborted.
-            @test_throws ErrorException CA.open_transaction!(ledger, opening)
-
-            # A leg for the wrong step is a stage or callback writing into the
-            # wrong transaction.
-            @test_throws ErrorException CA.record_leg!(
+            opening = test_endpoints(FT, 0; m = 100, w = 10, e = 1000)
+            closing = test_endpoints(FT, 1; m = 100, w = 10, e = 1000)
+            commit = run_step!(
                 ledger,
-                test_leg(FT; step = 7),
+                FT,
+                opening,
+                closing,
+                [test_leg(FT; energy = unkval(FT))];
+                tolerances = loose_tolerance(FT),
             )
+            r = parent_for(commit, :energy, :atmosphere_only)
+            @test r.status === :blocked
+            @test !isempty(r.blocked_by)
+            @test r.recorded == 0
+        end
 
-            CA.record_leg!(ledger, test_leg(FT; mass = CA.measured(FT(2))))
-            @test length(ledger.legs) == 1
-
-            # The same (event, leg, step) twice is a bracket firing twice.
-            @test_throws ErrorException CA.record_leg!(
+        @testset "All-inapplicable is not a closed budget ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            # A dry configuration: the atmosphere owns no water at all.
+            opening = test_endpoints(FT, 0; m = 100, w = nothing, e = 1000)
+            closing = test_endpoints(FT, 1; m = 100, w = nothing, e = 1000)
+            commit = run_step!(
                 ledger,
-                test_leg(FT; mass = CA.measured(FT(2))),
+                FT,
+                opening,
+                closing,
+                CA.BudgetLeg{FT}[];
+                tolerances = loose_tolerance(FT),
             )
-            @test length(ledger.legs) == 1
+            r = parent_for(commit, :water, :atmosphere_only)
+            @test r.status === :not_applicable
+            @test !r.applicable
+            @test r.endpoint_change == 0
+            # Mass in the same step is an ordinary passing budget, so the
+            # inapplicable water is not an artefact of the whole step failing.
+            @test parent_for(commit, :mass, :atmosphere_only).status === :pass
+        end
 
-            # A different leg of the same event is fine, and is how the two
-            # halves of one exchange are recorded.
+        @testset "A leg is recorded once ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            CA.open_transaction!(
+                ledger,
+                test_endpoints(FT, 0; m = 1, w = 1, e = 1),
+            )
+            correction = CA.ProcessDecomposition()
             CA.record_leg!(
                 ledger,
-                test_leg(FT; leg = :surface, mass = CA.measured(FT(-2))),
+                test_leg(FT; level = correction, mass = mval(FT, 1)),
+            )
+            @test_throws ErrorException CA.record_leg!(
+                ledger,
+                test_leg(FT; level = correction, mass = mval(FT, 1)),
+            )
+            # A different stage is a different firing, not a duplicate. This is
+            # the `constrain_state!` case at `update_constrain_state_every =
+            # "stage"`, where the same correction fires once per ARS343 stage.
+            CA.record_leg!(
+                ledger,
+                test_leg(FT; level = correction, mass = mval(FT, 1), stage = 2),
             )
             @test length(ledger.legs) == 2
-
-            closing = test_endpoints(FT, 1; m = 10, w = 1, e = 100)
-            @test_throws ErrorException CA.commit_transaction!(
-                ledger,
-                test_endpoints(FT, 5; m = 10, w = 1, e = 100),
-            )
-            CA.commit_transaction!(ledger, closing)
-            @test !ledger.is_open
-            @test ledger.committed_steps == 1
-            @test isempty(ledger.legs)
         end
 
-        @testset "Aborted transaction commits nothing ($FT)" begin
+        @testset "An event has one collection level ($FT)" begin
             ledger = CA.BudgetLedger{FT}()
             CA.open_transaction!(
                 ledger,
-                test_endpoints(FT, 0; m = 10, w = 1, e = 100),
+                test_endpoints(FT, 0; m = 1, w = 1, e = 1),
             )
-            CA.record_leg!(ledger, test_leg(FT; mass = CA.measured(FT(5))))
-            CA.abort_transaction!(ledger)
-
-            @test !ledger.is_open
-            @test isempty(ledger.legs)
-            @test ledger.committed_steps == 0
-            @test isempty(ledger.cumulative_residual)
-
-            # And the same identity may be recorded again afterwards, because
-            # the abandoned attempt left nothing behind.
-            CA.open_transaction!(
+            CA.record_leg!(
                 ledger,
-                test_endpoints(FT, 0; m = 10, w = 1, e = 100),
+                test_leg(FT; event = :ev, level = CA.ChannelEnvelope()),
             )
-            CA.record_leg!(ledger, test_leg(FT; mass = CA.measured(FT(5))))
-            @test length(ledger.legs) == 1
+            # The same event cannot also be a decomposition: one event is one
+            # kind of thing, and classifying it twice makes both identities wrong.
+            @test_throws ErrorException CA.record_leg!(
+                ledger,
+                test_leg(
+                    FT;
+                    event = :ev,
+                    leg = :other,
+                    level = CA.ProcessDecomposition(),
+                ),
+            )
+            # A second envelope for the same channel and reservoir is refused
+            # too: a channel applies one accepted update to one reservoir.
+            @test_throws ErrorException CA.record_leg!(
+                ledger,
+                test_leg(FT; event = :other_event, level = CA.ChannelEnvelope()),
+            )
         end
 
-        @testset "Projection separates the identity terms ($FT)" begin
+        @testset "An envelope is never summed with its parts ($FT)" begin
             ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0),
-            )
-            CA.record_leg!(
-                ledger,
+            opening = test_endpoints(FT, 0; m = 100, w = 10, e = 1000)
+            closing = test_endpoints(FT, 1; m = 106, w = 10, e = 1000)
+            legs = [
                 test_leg(
                     FT;
-                    leg = :eq,
-                    mass = CA.measured(FT(1)),
-                    path = CA.EquationTerm(),
+                    event = :env_explicit,
+                    level = CA.ChannelEnvelope(),
+                    mass = mval(FT, 6),
                 ),
-            )
-            CA.record_leg!(
-                ledger,
                 test_leg(
                     FT;
-                    leg = :mp,
-                    mass = CA.measured(FT(2)),
-                    path = CA.DiscreteMap(),
+                    event = :part_a,
+                    leg = :a,
+                    level = CA.ProcessDecomposition(),
+                    mass = mval(FT, 4),
                 ),
-            )
-            CA.record_leg!(
-                ledger,
                 test_leg(
                     FT;
-                    leg = :lim,
-                    mass = CA.measured(FT(4)),
-                    path = CA.NumericalCorrection(),
+                    event = :part_b,
+                    leg = :b,
+                    level = CA.ProcessDecomposition(),
+                    mass = mval(FT, 2),
                 ),
-            )
-            CA.record_leg!(
+            ]
+            commit = run_step!(
                 ledger,
-                test_leg(
-                    FT;
-                    leg = :defect,
-                    mass = CA.measured(FT(8)),
-                    path = CA.AlgebraicSolveDefect(),
-                ),
+                FT,
+                opening,
+                closing,
+                legs;
+                tolerances = loose_tolerance(FT),
             )
+            parent = parent_for(commit, :mass, :atmosphere_only)
+            # The primary identity sees the envelope alone. Adding the parts
+            # would give 12 against an endpoint change of 6.
+            @test parent.envelopes == FT(6)
+            @test parent.recorded == FT(6)
+            @test parent.residual == 0
+            @test parent.status === :pass
 
-            p = CA.project_legs(ledger, :mass, CA.ATMOSPHERE_ONLY)
-            @test p.equation == FT(1)
-            @test p.map == FT(2)
-            @test p.correction == FT(4)
-            @test p.solve_defect == FT(8)
-            @test p.recorded == FT(15)
-            @test isempty(p.blocked_by)
+            # The attribution identity sees the parts against the envelope.
+            attribution =
+                attribution_for(commit, :mass, :atmosphere_only, :explicit_main)
+            @test attribution.envelope == FT(6)
+            @test attribution.attributed == FT(6)
+            @test attribution.residual == 0
+            @test attribution.status === :pass
         end
 
-        @testset "An unknown component blocks but does not sum ($FT)" begin
+        @testset "A missing leg shows up in attribution, not in parent ($FT)" begin
             ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0),
-            )
-            CA.record_leg!(
-                ledger,
-                test_leg(FT; leg = :known, energy = CA.measured(FT(3))),
-            )
-            CA.record_leg!(
-                ledger,
-                test_leg(FT; leg = :gap, energy = CA.unknown_component(FT)),
-            )
-
-            p = CA.project_legs(ledger, :energy, CA.ATMOSPHERE_ONLY)
-            @test p.recorded == FT(3)
-            # Blocked, and the report names which leg would unblock it.
-            @test length(p.blocked_by) == 1
-            @test occursin("gap", only(p.blocked_by))
-        end
-
-        @testset "The same legs give two control-volume views ($FT)" begin
-            # One exchange, two legs, equal and opposite. It is a boundary
-            # crossing for the atmosphere alone and internal to the coupled
-            # system, from the same recorded legs.
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0, sfc_e = 0),
-            )
-            CA.record_leg!(
-                ledger,
+            opening = test_endpoints(FT, 0; m = 100, w = 10, e = 1000)
+            closing = test_endpoints(FT, 1; m = 106, w = 10, e = 1000)
+            legs = [
                 test_leg(
                     FT;
-                    event = :surface_flux,
+                    event = :env_explicit,
+                    level = CA.ChannelEnvelope(),
+                    mass = mval(FT, 6),
+                ),
+                test_leg(
+                    FT;
+                    event = :part_a,
+                    leg = :a,
+                    level = CA.ProcessDecomposition(),
+                    mass = mval(FT, 4),
+                ),
+            ]
+            commit = run_step!(
+                ledger,
+                FT,
+                opening,
+                closing,
+                legs;
+                tolerances = loose_tolerance(FT),
+            )
+            # This is the whole reason the two residuals are separate: the step
+            # transition is reproduced exactly while the named processes explain
+            # only two thirds of it.
+            @test parent_for(commit, :mass, :atmosphere_only).status === :pass
+            attribution =
+                attribution_for(commit, :mass, :atmosphere_only, :explicit_main)
+            @test attribution.residual == FT(2)
+            @test attribution.status === :fail
+        end
+
+        @testset "A sign-reversed leg is caught ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            opening = test_endpoints(FT, 0; m = 100, w = 10, e = 1000)
+            closing = test_endpoints(FT, 1; m = 105, w = 10, e = 1000)
+            commit = run_step!(
+                ledger,
+                FT,
+                opening,
+                closing,
+                [
+                    test_leg(
+                        FT;
+                        level = CA.ChannelEnvelope(),
+                        mass = mval(FT, -5),
+                    ),
+                ];
+                tolerances = loose_tolerance(FT),
+            )
+            r = parent_for(commit, :mass, :atmosphere_only)
+            @test r.residual == FT(10)
+            @test r.status === :fail
+        end
+
+        @testset "No verdict without a calibrated tolerance ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            opening = test_endpoints(FT, 0; m = 100, w = 10, e = 1000)
+            closing = test_endpoints(FT, 1; m = 100, w = 10, e = 1000)
+            commit =
+                run_step!(ledger, FT, opening, closing, CA.BudgetLeg{FT}[])
+            r = parent_for(commit, :mass, :atmosphere_only)
+            # A perfectly closing step still reports blocked, because kappa has
+            # not been calibrated and a guessed tolerance is not a tolerance.
+            @test r.residual == 0
+            @test r.status === :blocked
+            @test isnothing(r.tolerance)
+            @test CA.UNCALIBRATED_TOLERANCE_BLOCKER in r.blocked_by
+        end
+
+        @testset "A tolerance scale is never a signed total ($FT)" begin
+            @test_throws ErrorException CA.BudgetTolerance(;
+                absolute = FT(0),
+                relative = FT(1),
+                scale = FT(-1),
+                kappa = FT(1),
+            )
+            τ = CA.BudgetTolerance(;
+                absolute = FT(2),
+                relative = FT(0),
+                scale = FT(0),
+                kappa = FT(0),
+            )
+            @test CA.tolerance_value(τ, 1e6, 1e6, 1e3) == FT(2)
+        end
+
+        @testset "A residual is a subtraction, never an entry ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            opening = test_endpoints(FT, 0; m = 100, w = 10, e = 1000)
+            closing = test_endpoints(FT, 1; m = 107, w = 10, e = 1000)
+            commit = run_step!(
+                ledger,
+                FT,
+                opening,
+                closing,
+                [
+                    test_leg(
+                        FT;
+                        level = CA.ChannelEnvelope(),
+                        mass = mval(FT, 4),
+                    ),
+                ];
+                tolerances = loose_tolerance(FT),
+            )
+            r = parent_for(commit, :mass, :atmosphere_only)
+            @test r.endpoint_change == FT(7)
+            @test r.recorded == FT(4)
+            @test r.residual == FT(3)
+            # Nothing was written back: the ledger holds the legs it was given
+            # and no balancing entry appeared to make the step close.
+            @test r.status === :fail
+            @test length(commit.parent) == 3
+        end
+
+        @testset "Signed drift cancels; absolute drift does not ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            # +5 unaccounted, then -5 unaccounted. The signed sum is zero and
+            # would report a perfectly closed run that closed on neither step.
+            run_step!(
+                ledger,
+                FT,
+                test_endpoints(FT, 0; m = 100, w = 10, e = 1000),
+                test_endpoints(FT, 1; m = 105, w = 10, e = 1000),
+                CA.BudgetLeg{FT}[],
+            )
+            commit = run_step!(
+                ledger,
+                FT,
+                test_endpoints(FT, 1; m = 105, w = 10, e = 1000),
+                test_endpoints(FT, 2; m = 100, w = 10, e = 1000),
+                CA.BudgetLeg{FT}[],
+            )
+            r = parent_for(commit, :mass, :atmosphere_only)
+            @test r.cumulative_residual == 0
+            @test r.cumulative_abs_residual == FT(10)
+            @test r.max_abs_residual == FT(5)
+        end
+
+        @testset "The cumulative change has a second reading ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            run_step!(
+                ledger,
+                FT,
+                test_endpoints(FT, 0; m = 100, w = 10, e = 1000),
+                test_endpoints(FT, 1; m = 103, w = 10, e = 1000),
+                CA.BudgetLeg{FT}[],
+            )
+            commit = run_step!(
+                ledger,
+                FT,
+                test_endpoints(FT, 1; m = 103, w = 10, e = 1000),
+                test_endpoints(FT, 2; m = 108, w = 10, e = 1000),
+                CA.BudgetLeg{FT}[],
+            )
+            r = parent_for(commit, :mass, :atmosphere_only)
+            # `Bᴺ − B⁰` read directly from the retained initial endpoint, beside
+            # the telescoped sum of the per-step differences. The telescoped sum
+            # can only reproduce the same measurements, so a difference between
+            # the two is an accumulation error rather than a rederivation.
+            @test r.endpoint_change_from_initial == FT(8)
+            @test r.cumulative_endpoint_change == FT(8)
+            @test r.telescoping_discrepancy == 0
+        end
+
+        @testset "Endpoint amounts must be continuous ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            run_step!(
+                ledger,
+                FT,
+                test_endpoints(FT, 0; m = 100, w = 10, e = 1000),
+                test_endpoints(FT, 1; m = 100, w = 10, e = 1000),
+                CA.BudgetLeg{FT}[],
+            )
+            # A gap between one step's closing state and the next one's opening
+            # state is a change nothing accounted for.
+            @test_throws ErrorException CA.open_transaction!(
+                ledger,
+                test_endpoints(FT, 1; m = 101, w = 10, e = 1000),
+            )
+        end
+
+        @testset "Endpoint statuses must be continuous ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            run_step!(
+                ledger,
+                FT,
+                test_endpoints(FT, 0; m = 100, w = 10, e = 1000),
+                test_endpoints(FT, 1; m = 100, w = 10, e = 1000),
+                CA.BudgetLeg{FT}[],
+            )
+            # Comparing amounts alone would let a reservoir change what it owns
+            # unnoticed, because the check skips any pair that does not
+            # contribute — which is exactly the pair a status change produces.
+            @test_throws ErrorException CA.open_transaction!(
+                ledger,
+                test_endpoints(FT, 1; m = 100, w = nothing, e = 1000),
+            )
+        end
+
+        @testset "A refused commit changes nothing ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            run_step!(
+                ledger,
+                FT,
+                test_endpoints(FT, 0; m = 100, w = 10, e = 1000),
+                test_endpoints(FT, 1; m = 105, w = 10, e = 1000),
+                CA.BudgetLeg{FT}[],
+            )
+            before = copy(ledger.cumulative_residual)
+            committed = ledger.committed_steps
+
+            CA.open_transaction!(
+                ledger,
+                test_endpoints(FT, 1; m = 105, w = 10, e = 1000),
+            )
+            # A closing endpoint whose reservoir set changed mid-step is refused
+            # before anything is advanced, which is what makes the commit atomic.
+            bad = test_endpoints(
+                FT,
+                2;
+                m = 110,
+                w = 10,
+                e = 1000,
+                sfc_w = 1,
+                sfc_e = 1,
+            )
+            @test_throws ErrorException CA.commit_transaction!(ledger, bad)
+            @test ledger.cumulative_residual == before
+            @test ledger.committed_steps == committed
+            @test ledger.is_open
+        end
+
+        @testset "An internal transfer cancels ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            opening =
+                test_endpoints(FT, 0; m = 100, w = 10, e = 1000, sfc_w = 5, sfc_e = 50)
+            closing =
+                test_endpoints(FT, 1; m = 98, w = 8, e = 1000, sfc_w = 7, sfc_e = 50)
+            legs = [
+                test_leg(
+                    FT;
+                    event = :deposition,
                     leg = :atmosphere,
+                    level = CA.ReservoirTransfer(),
                     reservoir = CA.AtmosphereReservoir(),
-                    energy = CA.measured(FT(7)),
+                    mass = mval(FT, -2),
+                    water = mval(FT, -2),
                 ),
-            )
-            CA.record_leg!(
-                ledger,
                 test_leg(
                     FT;
-                    event = :surface_flux,
+                    event = :deposition,
                     leg = :surface,
+                    level = CA.ReservoirTransfer(),
                     reservoir = CA.SlabSurfaceReservoir(),
-                    energy = CA.measured(FT(-7)),
+                    mass = mval(FT, 2),
+                    water = mval(FT, 2),
                 ),
+            ]
+            commit = run_step!(
+                ledger,
+                FT,
+                opening,
+                closing,
+                legs;
+                tolerances = loose_tolerance(FT),
             )
+            coupled = transfer_for(
+                commit,
+                :water,
+                :deposition,
+                :atmosphere_and_surface,
+            )
+            @test coupled.expectation === :cancellation
+            @test coupled.total == 0
+            @test coupled.leg_count == 2
+            @test coupled.status === :pass
 
-            atmos = CA.project_legs(ledger, :energy, CA.ATMOSPHERE_ONLY)
-            coupled =
-                CA.project_legs(ledger, :energy, CA.ATMOSPHERE_AND_SURFACE)
-            @test atmos.recorded == FT(7)
-            @test coupled.recorded == FT(0)
-
-            # Cancellation is measured, not imposed.
-            m = CA.transfer_mismatch(ledger, :surface_flux, :energy)
-            @test m.found
-            @test m.total == FT(0)
-            @test isempty(m.blocked_by)
-
-            # "The legs cancel", "there were no legs", and "nobody measured the
-            # legs" are three different answers and must stay distinguishable.
-            no_event = CA.transfer_mismatch(ledger, :no_such_event, :energy)
-            @test !no_event.found
-
-            unmeasured = CA.transfer_mismatch(ledger, :surface_flux, :mass)
-            @test unmeasured.found
-            @test unmeasured.total == FT(0)
+            # The same legs, seen from the atmosphere alone, are a boundary
+            # crossing. There is no cancellation to claim there, and the total is
+            # the flux rather than a residual.
+            atmos =
+                transfer_for(commit, :water, :deposition, :atmosphere_only)
+            @test atmos.expectation === :boundary_crossing
+            @test atmos.total == FT(-2)
+            @test atmos.leg_count == 1
+            @test atmos.status === :not_applicable
         end
 
         @testset "A coupling mismatch is preserved ($FT)" begin
             ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0, sfc_e = 0),
-            )
-            CA.record_leg!(
-                ledger,
+            opening =
+                test_endpoints(FT, 0; m = 100, w = 10, e = 1000, sfc_w = 5, sfc_e = 50)
+            closing =
+                test_endpoints(FT, 1; m = 98, w = 8, e = 1000, sfc_w = 7.5, sfc_e = 50)
+            legs = [
                 test_leg(
                     FT;
-                    event = :precip,
+                    event = :deposition,
                     leg = :atmosphere,
+                    level = CA.ReservoirTransfer(),
                     reservoir = CA.AtmosphereReservoir(),
-                    water = CA.measured(FT(-5)),
+                    water = mval(FT, -2),
                 ),
-            )
-            # A lagged or separately discretized surface leg. Nothing forces
-            # the two to agree, and the ledger must not hide the difference.
-            CA.record_leg!(
-                ledger,
                 test_leg(
                     FT;
-                    event = :precip,
+                    event = :deposition,
                     leg = :surface,
+                    level = CA.ReservoirTransfer(),
                     reservoir = CA.SlabSurfaceReservoir(),
-                    water = CA.measured(FT(4)),
+                    water = mval(FT, 2.5),
                 ),
+            ]
+            commit = run_step!(
+                ledger,
+                FT,
+                opening,
+                closing,
+                legs;
+                tolerances = loose_tolerance(FT),
             )
-            @test CA.transfer_mismatch(ledger, :precip, :water).total == FT(-1)
+            coupled = transfer_for(
+                commit,
+                :water,
+                :deposition,
+                :atmosphere_and_surface,
+            )
+            # Two quadratures of one physical flux are allowed to disagree, and
+            # the disagreement is the finding. Nothing here forces it to zero.
+            @test coupled.total ≈ FT(0.5) rtol = 100 * eps(FT)
+            @test coupled.status === :fail
         end
 
-        @testset "The residual is a subtraction ($FT)" begin
+        @testset "An inapplicable transfer is not a cancellation ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            opening = test_endpoints(FT, 0; m = 100, w = nothing, e = 1000)
+            closing = test_endpoints(FT, 1; m = 100, w = nothing, e = 1000)
+            legs = [
+                test_leg(
+                    FT;
+                    event = :radiation,
+                    leg = :atmosphere,
+                    level = CA.ReservoirTransfer(),
+                    energy = mval(FT, 0),
+                ),
+            ]
+            commit = run_step!(
+                ledger,
+                FT,
+                opening,
+                closing,
+                legs;
+                tolerances = loose_tolerance(FT),
+            )
+            r = transfer_for(commit, :water, :radiation, :atmosphere_only)
+            # Water does not exist for this event. Reporting a total of zero
+            # with no blockers would look exactly like a measured cancellation.
+            @test !r.applicable
+            @test r.status === :not_applicable
+            @test r.status_counts[:not_applicable] == 1
+            @test r.status_counts[:measured] == 0
+        end
+
+        @testset "A stage observation is not a leg ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            opening = test_endpoints(FT, 0; m = 100, w = 10, e = 1000)
+            closing = test_endpoints(FT, 1; m = 100, w = 10, e = 1000)
+            CA.open_transaction!(ledger, opening)
+            observation = CA.StageObservation{FT}(;
+                event = :limiter,
+                observation = :stage_2,
+                reservoir = CA.AtmosphereReservoir(),
+                mass = mval(FT, 7),
+                water = naval(FT),
+                energy = naval(FT),
+                process = :limiter,
+                step = 1,
+                stage = 2,
+            )
+            CA.record_observation!(ledger, observation)
+            @test_throws MethodError CA.record_leg!(ledger, observation)
+            commit = CA.commit_transaction!(
+                ledger,
+                closing;
+                tolerances = loose_tolerance(FT),
+            )
+            # A raw intermediate-stage difference is evidence, and evidence moves
+            # no budget: the step still closes at zero.
+            r = parent_for(commit, :mass, :atmosphere_only)
+            @test r.recorded == 0
+            @test r.residual == 0
+            @test r.status === :pass
+        end
+
+        @testset "An unknown channel is refused ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            CA.open_transaction!(
+                ledger,
+                test_endpoints(FT, 0; m = 1, w = 1, e = 1),
+            )
+            # A channel nobody reconciles would take part in no identity and
+            # vanish from every total, so it fails closed.
+            @test_throws ErrorException CA.record_leg!(
+                ledger,
+                test_leg(FT; channel = :made_up),
+            )
+        end
+
+        @testset "The two views come from the same legs ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            opening =
+                test_endpoints(FT, 0; m = 100, w = 10, e = 1000, sfc_w = 5, sfc_e = 50)
+            closing =
+                test_endpoints(FT, 1; m = 98, w = 8, e = 1000, sfc_w = 7, sfc_e = 50)
+            legs = [
+                test_leg(
+                    FT;
+                    event = :env_atmos,
+                    leg = :atmosphere,
+                    level = CA.ChannelEnvelope(),
+                    reservoir = CA.AtmosphereReservoir(),
+                    mass = mval(FT, -2),
+                    water = mval(FT, -2),
+                    energy = mval(FT, 0),
+                ),
+                test_leg(
+                    FT;
+                    event = :env_surface,
+                    leg = :surface,
+                    level = CA.ChannelEnvelope(),
+                    reservoir = CA.SlabSurfaceReservoir(),
+                    mass = mval(FT, 2),
+                    water = mval(FT, 2),
+                    energy = mval(FT, 0),
+                ),
+            ]
+            commit = run_step!(
+                ledger,
+                FT,
+                opening,
+                closing,
+                legs;
+                tolerances = loose_tolerance(FT),
+            )
+            atmos = parent_for(commit, :water, :atmosphere_only)
+            coupled = parent_for(commit, :water, :atmosphere_and_surface)
+            @test atmos.endpoint_change == FT(-2)
+            @test atmos.recorded == FT(-2)
+            @test coupled.endpoint_change == 0
+            @test coupled.recorded == 0
+            @test atmos.status === :pass
+            @test coupled.status === :pass
+        end
+
+        @testset "The coupled view is refused without a slab ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            opening = test_endpoints(FT, 0; m = 100, w = 10, e = 1000)
+            closing = test_endpoints(FT, 1; m = 100, w = 10, e = 1000)
+            commit =
+                run_step!(ledger, FT, opening, closing, CA.BudgetLeg{FT}[])
+            # An unavailable view is not emitted at all, which is different from
+            # a view that exists and is inapplicable for one quantity.
+            @test all(r -> r.control_volume === :atmosphere_only, commit.parent)
+            @test !CA.control_volume_available(
+                closing,
+                CA.ATMOSPHERE_AND_SURFACE,
+            )
+        end
+
+        @testset "Quantities stay separate ($FT)" begin
+            ledger = CA.BudgetLedger{FT}()
+            opening = test_endpoints(FT, 0; m = 100, w = 10, e = 1000)
+            closing = test_endpoints(FT, 1; m = 100, w = 12, e = 1000)
+            commit = run_step!(
+                ledger,
+                FT,
+                opening,
+                closing,
+                [
+                    test_leg(
+                        FT;
+                        level = CA.ChannelEnvelope(),
+                        mass = CA.invariant_zero(FT; proof = :writes_no_ρ),
+                        water = mval(FT, 2),
+                        energy = mval(FT, 0),
+                    ),
+                ];
+                tolerances = loose_tolerance(FT),
+            )
+            # A forcing path adds water without adding air. The mass component
+            # is a proven zero and is never manufactured from the water leg.
+            @test parent_for(commit, :mass, :atmosphere_only).status === :pass
+            @test parent_for(commit, :water, :atmosphere_only).recorded == FT(2)
+            @test parent_for(commit, :water, :atmosphere_only).status === :pass
+        end
+
+        @testset "An aborted transaction commits nothing ($FT)" begin
             ledger = CA.BudgetLedger{FT}()
             CA.open_transaction!(
                 ledger,
@@ -383,538 +842,18 @@ end
             )
             CA.record_leg!(
                 ledger,
-                test_leg(
-                    FT;
-                    leg = :eq,
-                    mass = CA.measured(FT(2)),
-                    path = CA.EquationTerm(),
-                ),
+                test_leg(FT; level = CA.ChannelEnvelope(), mass = mval(FT, 5)),
             )
-            CA.record_leg!(
-                ledger,
-                test_leg(
-                    FT;
-                    leg = :defect,
-                    mass = CA.measured(FT(1)),
-                    path = CA.AlgebraicSolveDefect(),
-                ),
-            )
-
-            # The endpoint moved by 4 while 3 was recorded, so 1 is unaccounted
-            # for. Nothing in the ledger may make that go away.
-            closing = test_endpoints(FT, 1; m = 104, w = 10, e = 1000)
-            rs = CA.commit_transaction!(ledger, closing)
-            r = atmosphere_mass_result(rs)
-            @test r.endpoint_change == FT(4)
-            @test r.recorded == FT(3)
-            @test r.residual == FT(1)
-            # Without the solve defect the discrepancy is larger, and the two
-            # are reported separately because the defect is a leading-order
-            # term under the default Newton configuration.
-            @test r.discrepancy_before_defect == FT(2)
-            @test !CA.is_blocked(r)
-            @test r.applicable
-        end
-
-        @testset "Per-step residuals survive cancellation ($FT)" begin
-            # The mass goes 0 → 1 → 0 with nothing recorded, so each step has a
-            # residual and the two cancel. Reporting only the cumulative number
-            # would show a perfectly closed budget over a run that closed on
-            # neither step, which is the failure a whole-run conservation check
-            # cannot see. Both are reported for exactly this reason.
-            ledger = CA.BudgetLedger{FT}()
-            per_step = FT[]
-            last = nothing
-            for (step, before, after) in ((1, FT(0), FT(1)), (2, FT(1), FT(0)))
-                CA.open_transaction!(
-                    ledger,
-                    test_endpoints(FT, step - 1; m = before, w = 0, e = 0),
-                )
-                last = test_endpoints(FT, step; m = after, w = 0, e = 0)
-                rs = CA.commit_transaction!(ledger, last)
-                push!(per_step, atmosphere_mass_result(rs).residual)
-            end
-            @test ledger.committed_steps == 2
-            @test per_step == [FT(1), FT(-1)]
-
-            key = (:mass, :atmosphere_only)
-            # The signed totals cancel, which is exactly why they are not the
-            # whole report.
-            @test ledger.cumulative_change[key] == FT(0)
-            @test ledger.cumulative_residual[key] == FT(0)
-            # The magnitude aggregates cannot cancel, and they are what a
-            # tolerance is checked against.
-            @test ledger.cumulative_abs_residual[key] == FT(2)
-            @test ledger.max_abs_residual[key] == FT(1)
-        end
-
-        @testset "Quantities stay separate ($FT)" begin
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0),
-            )
-            # A water-only leg. Its mass and energy components are unknown, not
-            # zero, so neither budget may be inferred from it.
-            CA.record_leg!(
-                ledger,
-                test_leg(
-                    FT;
-                    water = CA.measured(FT(6)),
-                    mass = CA.unknown_component(FT),
-                    energy = CA.unknown_component(FT),
-                ),
-            )
-            @test CA.project_legs(ledger, :water, CA.ATMOSPHERE_ONLY).recorded ==
-                  FT(6)
-            @test CA.project_legs(ledger, :mass, CA.ATMOSPHERE_ONLY).recorded ==
-                  FT(0)
-            @test !isempty(
-                CA.project_legs(ledger, :mass, CA.ATMOSPHERE_ONLY).blocked_by,
-            )
-            @test !isempty(
-                CA.project_legs(ledger, :energy, CA.ATMOSPHERE_ONLY).blocked_by,
-            )
-        end
-
-        @testset "A stage-repeated correction is not a duplicate ($FT)" begin
-            # `update_constrain_state_every` accepts "stage", and then the same
-            # correction fires once per ARS343 stage. Each firing is its own
-            # leg. Without a stage index the four would collide and three would
-            # be refused, so the identity has to carry one.
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0),
-            )
-            for stage in 1:4
-                CA.record_leg!(
-                    ledger,
-                    test_leg(
-                        FT;
-                        event = :constrain_state,
-                        leg = :atmosphere,
-                        stage = stage,
-                        mass = CA.measured(FT(1)),
-                        path = CA.NumericalCorrection(),
-                    ),
-                )
-            end
-            @test length(ledger.legs) == 4
-            @test CA.project_legs(ledger, :mass, CA.ATMOSPHERE_ONLY).recorded ==
-                  FT(4)
-
-            # The same stage twice is still a duplicate, which is the case the
-            # check exists for.
-            @test_throws ErrorException CA.record_leg!(
-                ledger,
-                test_leg(
-                    FT;
-                    event = :constrain_state,
-                    leg = :atmosphere,
-                    stage = 2,
-                    mass = CA.measured(FT(1)),
-                    path = CA.NumericalCorrection(),
-                ),
-            )
-            # And a genuine second firing within one stage says so.
-            CA.record_leg!(
-                ledger,
-                test_leg(
-                    FT;
-                    event = :constrain_state,
-                    leg = :atmosphere,
-                    stage = 2,
-                    occurrence = 2,
-                    mass = CA.measured(FT(1)),
-                    path = CA.NumericalCorrection(),
-                ),
-            )
-            @test length(ledger.legs) == 5
-        end
-
-        @testset "An inapplicable quantity is not a closed budget ($FT)" begin
-            # A dry model owns no water. That has to read differently from a
-            # water budget that closed at zero, because the ledger never made a
-            # claim about it either way.
-            dry = CA.BudgetEndpoints{FT}(
-                0,
-                [
-                    CA.ReservoirEndpoint{FT}(;
-                        reservoir = CA.AtmosphereReservoir(),
-                        mass = CA.measured(FT(10)),
-                        water = CA.not_applicable(FT),
-                        energy = CA.measured(FT(100)),
-                    ),
-                ],
-            )
-            water = CA.endpoint_total(dry, :water, CA.ATMOSPHERE_ONLY)
-            @test !water.applicable
-            @test water.total == FT(0)
-            @test isempty(water.blocked_by)
-
-            mass = CA.endpoint_total(dry, :mass, CA.ATMOSPHERE_ONLY)
-            @test mass.applicable
-            @test mass.total == FT(10)
-
-            # The coupled view of a configuration with no slab is the same
-            # situation seen from the other side: the atmosphere is in the view
-            # and owns mass, so mass stays applicable there.
-            coupled = CA.endpoint_total(dry, :water, CA.ATMOSPHERE_AND_SURFACE)
-            @test !coupled.applicable
-        end
-
-        @testset "Endpoint continuity is enforced ($FT)" begin
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 10, w = 1, e = 100),
-            )
-            CA.commit_transaction!(
-                ledger,
-                test_endpoints(FT, 1; m = 12, w = 1, e = 100),
-            )
-
-            # Opening the next transaction somewhere other than where the last
-            # one closed would lose the gap from every total.
-            @test_throws ErrorException CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 1; m = 99, w = 1, e = 100),
-            )
-            # The matching endpoint is accepted.
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 1; m = 12, w = 1, e = 100),
-            )
-            @test ledger.is_open
-            @test ledger.step == 2
-        end
-
-        @testset "The slab owns mass and water alike ($FT)" begin
-            # Deposition takes water out of the atmosphere, and `ρ` carries the
-            # whole of `ρq_tot`, so the same event has a mass leg of the same
-            # size. In the coupled view both cancel.
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0, sfc_w = 0, sfc_e = 0),
-            )
-            for (leg, reservoir, sign) in (
-                (:atmosphere, CA.AtmosphereReservoir(), -1),
-                (:surface, CA.SlabSurfaceReservoir(), 1),
-            )
-                CA.record_leg!(
-                    ledger,
-                    test_leg(
-                        FT;
-                        event = :precipitation_deposition,
-                        leg = leg,
-                        reservoir = reservoir,
-                        mass = CA.measured(FT(sign * 3)),
-                        water = CA.measured(FT(sign * 3)),
-                    ),
-                )
-            end
-
-            for quantity in (:mass, :water)
-                @test CA.project_legs(
-                    ledger,
-                    quantity,
-                    CA.ATMOSPHERE_ONLY,
-                ).recorded == FT(-3)
-                @test CA.project_legs(
-                    ledger,
-                    quantity,
-                    CA.ATMOSPHERE_AND_SURFACE,
-                ).recorded == FT(0)
-                @test CA.transfer_mismatch(
-                    ledger,
-                    :precipitation_deposition,
-                    quantity,
-                ).total == FT(0)
-            end
-        end
-
-        @testset "Recording stays cheap ($FT)" begin
-            # The leg types carry abstract status, reservoir and path fields,
-            # so a leg is not isbits and recording one allocates. That is a
-            # deliberate trade: legs are host-side records created a few dozen
-            # times per accepted step, each next to a global reduction that
-            # costs orders of magnitude more, and concretely parametrising five
-            # more type parameters would cost the readability that makes the
-            # status distinctions legible. Nothing here runs on the device.
-            #
-            # The bound is generous on purpose. It is here to catch an
-            # order-of-magnitude regression, such as a leg accidentally holding
-            # a field or a copy of the state, not to pin an exact figure that
-            # would differ between Julia versions.
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0),
-            )
-            record_many!(ledger, 1, 1)  # warm up, so compilation is not counted
-            bytes = @allocated record_many!(ledger, 100, 2)
-            @test bytes < 200_000
-            @test length(ledger.legs) == 101
+            CA.abort_transaction!(ledger)
+            @test !ledger.is_open
+            @test isempty(ledger.legs)
+            @test ledger.committed_steps == 0
+            @test isempty(ledger.cumulative_residual)
         end
 
         @testset "Bad quantity names are refused ($FT)" begin
-            @test_throws ErrorException CA.budget_component(
-                test_leg(FT),
-                :enthalpy,
-            )
-        end
-
-        @testset "Only a measured component may be nonzero ($FT)" begin
-            # `is_contributing` is true for InvariantZero, so a nonzero one
-            # would enter a control-volume total while labelled proven zero.
-            # The type refuses to hold that value at all.
-            for status in (
-                CA.InvariantZero(),
-                CA.NotApplicable(),
-                CA.UnknownComponent(),
-            )
-                @test_throws ErrorException CA.BudgetComponent{FT}(
-                    one(FT),
-                    status,
-                )
-                @test CA.BudgetComponent{FT}(zero(FT), status).amount == 0
-            end
-            @test CA.BudgetComponent{FT}(one(FT), CA.Measured()).amount == 1
-        end
-
-        @testset "A stage observation is not a leg ($FT)" begin
-            # A raw before/after difference on an intermediate stage array is
-            # not an additive contribution to the accepted endpoint. Keeping it
-            # out of the identity is a property of the type, not of discipline.
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0),
-            )
-            observation = CA.StageObservation{FT}(;
-                event = :limiter,
-                observation = :stage_change,
-                reservoir = CA.AtmosphereReservoir(),
-                mass = CA.measured(FT(5)),
-                water = CA.not_applicable(FT),
-                energy = CA.not_applicable(FT),
-                process = :limiter,
-                step = ledger.step,
-                stage = 2,
-                method = :synthetic,
-            )
-            CA.record_observation!(ledger, observation)
-            @test length(ledger.observations) == 1
-            @test isempty(ledger.legs)
-
-            # It reaches no projection, so it cannot move a budget.
-            @test CA.project_legs(ledger, :mass, CA.ATMOSPHERE_ONLY).recorded ==
-                  0
-            rs = CA.commit_transaction!(
-                ledger,
-                test_endpoints(FT, 1; m = 0, w = 0, e = 0),
-            )
-            @test atmosphere_mass_result(rs).residual == 0
-
-            # And record_leg! will not take one.
-            @test_throws MethodError CA.record_leg!(ledger, observation)
-        end
-
-        @testset "An aggregate is never booked with its parts ($FT)" begin
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0),
-            )
-            CA.record_leg!(
-                ledger,
-                test_leg(
-                    FT;
-                    event = :imex,
-                    leg = :accepted,
-                    mass = CA.measured(FT(1)),
-                    aggregate = true,
-                ),
-            )
-            # The decomposition of an event whose aggregate is recorded would
-            # count the same update twice.
-            @test_throws ErrorException CA.record_leg!(
-                ledger,
-                test_leg(
-                    FT;
-                    event = :imex,
-                    leg = :explicit_part,
-                    mass = CA.measured(FT(1)),
-                ),
-            )
-            # A different event is unaffected.
-            CA.record_leg!(
-                ledger,
-                test_leg(FT; event = :other, mass = CA.measured(FT(1))),
-            )
-            @test length(ledger.legs) == 2
-        end
-
-        @testset "A status change breaks continuity ($FT)" begin
-            # Comparing amounts alone skips any pair where one side does not
-            # contribute, which is exactly the pair a status change produces.
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 10, w = 1, e = 100),
-            )
-            CA.commit_transaction!(
-                ledger,
-                test_endpoints(FT, 1; m = 10, w = 1, e = 100),
-            )
-
-            changed = CA.BudgetEndpoints{FT}(
-                1,
-                [
-                    CA.ReservoirEndpoint{FT}(;
-                        reservoir = CA.AtmosphereReservoir(),
-                        mass = CA.measured(FT(10)),
-                        water = CA.unknown_component(FT),
-                        energy = CA.measured(FT(100)),
-                    ),
-                ],
-            )
-            @test_throws ErrorException CA.open_transaction!(ledger, changed)
-        end
-
-        @testset "The cumulative change has a second reading ($FT)" begin
-            # A running sum of per-step differences telescopes the same
-            # measurements. Holding B⁰ gives a reading that shares no
-            # arithmetic with it.
-            ledger = CA.BudgetLedger{FT}()
-            totals = (0, 3, 7, 12)
-            local rs
-            for (step, m) in enumerate(totals[2:end])
-                CA.open_transaction!(
-                    ledger,
-                    test_endpoints(FT, step - 1; m = totals[step], w = 0, e = 0),
-                )
-                rs = CA.commit_transaction!(
-                    ledger,
-                    test_endpoints(FT, step; m, w = 0, e = 0),
-                )
-            end
-            r = atmosphere_mass_result(rs)
-            @test r.cumulative_endpoint_change == FT(12)
-            @test r.endpoint_change_from_initial == FT(12)
-            @test r.telescoping_discrepancy == 0
-        end
-
-        @testset "Reusing the closing endpoint opens the next step ($FT)" begin
-            ledger = CA.BudgetLedger{FT}()
-            # There is nothing to reuse before the first commit.
-            @test_throws ErrorException CA.open_transaction!(ledger)
-
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 1, w = 0, e = 0),
-            )
-            CA.commit_transaction!(
-                ledger,
-                test_endpoints(FT, 1; m = 2, w = 0, e = 0),
-            )
-            CA.open_transaction!(ledger)
-            @test ledger.is_open
-            @test ledger.step == 2
-        end
-
-        @testset "A refused commit changes nothing ($FT)" begin
-            # The commit computes every reconciliation into a temporary and
-            # advances the ledger only once all of them have succeeded. A
-            # commit that fails must leave no trace: not a cumulative total,
-            # not the open flag, not the step count.
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 1, w = 0, e = 0),
-            )
-            CA.commit_transaction!(
-                ledger,
-                test_endpoints(FT, 1; m = 2, w = 0, e = 0),
-            )
-            CA.open_transaction!(ledger)
-
-            before_change = copy(ledger.cumulative_change)
-            before_residual = copy(ledger.cumulative_residual)
-            before_steps = ledger.committed_steps
-
-            # A closing endpoint that gains a reservoir the opening one did not
-            # have is refused by the layout check, before anything is written.
-            malformed = test_endpoints(
-                FT,
-                2;
-                m = 3,
-                w = 0,
-                e = 0,
-                sfc_w = 0,
-                sfc_e = 0,
-            )
-            @test_throws ErrorException CA.commit_transaction!(
-                ledger,
-                malformed,
-            )
-
-            @test ledger.is_open
-            @test ledger.committed_steps == before_steps
-            @test ledger.cumulative_change == before_change
-            @test ledger.cumulative_residual == before_residual
-
-            # And the transaction is still usable afterwards.
-            CA.commit_transaction!(
-                ledger,
-                test_endpoints(FT, 2; m = 3, w = 0, e = 0),
-            )
-            @test ledger.committed_steps == before_steps + 1
-        end
-
-        @testset "An inapplicable transfer is not a cancellation ($FT)" begin
-            ledger = CA.BudgetLedger{FT}()
-            CA.open_transaction!(
-                ledger,
-                test_endpoints(FT, 0; m = 0, w = 0, e = 0),
-            )
-            # Both halves of the exchange leave water inapplicable, as a dry
-            # configuration does. A bare total of zero here is
-            # indistinguishable from two legs that cancelled.
-            CA.record_leg!(ledger, test_leg(FT; event = :flux, leg = :atmos))
-            CA.record_leg!(ledger, test_leg(FT; event = :flux, leg = :sfc))
-            m = CA.transfer_mismatch(ledger, :flux, :water)
-            @test m.found
-            @test !m.applicable
-            @test m.total == 0
-            @test m.status_counts[:not_applicable] == 2
-
-            # A measured cancellation is the case it has to be told apart from.
-            CA.record_leg!(
-                ledger,
-                test_leg(
-                    FT;
-                    event = :real,
-                    leg = :atmos,
-                    water = CA.measured(FT(1)),
-                ),
-            )
-            CA.record_leg!(
-                ledger,
-                test_leg(
-                    FT;
-                    event = :real,
-                    leg = :sfc,
-                    water = CA.measured(FT(-1)),
-                ),
-            )
-            cancelled = CA.transfer_mismatch(ledger, :real, :water)
-            @test cancelled.found
-            @test cancelled.applicable
-            @test cancelled.total == 0
-            @test cancelled.status_counts[:measured] == 2
+            leg = test_leg(FT)
+            @test_throws ErrorException CA.budget_component(leg, :entropy)
         end
     end
 end
