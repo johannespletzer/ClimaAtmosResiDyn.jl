@@ -222,8 +222,10 @@ is reduction level. A `dss!` leg above that is a finding.
 
 ### PR 7 — Integrated verification and the supported closure claim
 
-Replaces the skipped placeholders in `test/conservation/mass_conservation.jl`
-and `test/conservation/energy_conservation.jl` with real timestepper tests.
+**[revised]** Adds real timestepper tests under `test/parent_budget/`. An earlier
+draft planned to replace the skipped placeholders in `test/conservation/`, but PR 50
+deleted those files from `main`, so there is nothing left to convert and the new
+tests stand on their own.
 
 Covers per-step and cumulative reconciliation across dry, moist, phase-change,
 precipitating, surface-coupled, forced, implicit, correction, and mixed-process
@@ -298,3 +300,4 @@ Meta Step 1 is complete only when all of the following hold.
 | `dss!` added to the mutation matrix                            | it mutates authoritative state                                                 |
 | `b` in `E* = E + aM + bW` left open, not set to zero           | `enforce_mass_energy_consistency!` makes it a real question                    |
 | Four named defects in `check_conservation` recorded            | so the ledger does not inherit them                                            |
+| PR 7 writes new tests instead of replacing placeholders        | PR 50 deleted the `test/conservation/` placeholder files from `main`           |
