@@ -289,10 +289,10 @@ struct NumericalCorrection <: UpdatePath end
 `Q_solve_defect`: an independently derived projection of an incomplete
 algebraic solve.
 
-This is not a small term in ClimaAtmos. The default `NewtonsMethod(max_iters =
-1)` against an approximate Jacobian does not converge the implicit stage, so
-the defect is leading order and the identity cannot close without it. See the
-tolerance model in the contract.
+This is not a small term in ClimaAtmos. The default
+`NewtonsMethod(max_iters = 1)` against an approximate Jacobian does not
+converge the implicit stage, so the defect is leading order and the identity
+cannot close without it. See the tolerance model in the contract.
 """
 struct AlgebraicSolveDefect <: UpdatePath end
 
@@ -354,8 +354,9 @@ leg_identity(leg::BudgetLeg) =
 A human-readable identity for `leg`, used when a report has to name which legs
 blocked a claim.
 """
-leg_label(leg::BudgetLeg) =
-    "$(leg.event)/$(leg.leg)@step $(leg.step) stage $(leg.stage) #$(leg.occurrence)"
+leg_label(
+    leg::BudgetLeg,
+) = "$(leg.event)/$(leg.leg)@step $(leg.step) stage $(leg.stage) #$(leg.occurrence)"
 
 """
     budget_component(leg, quantity) -> BudgetComponent

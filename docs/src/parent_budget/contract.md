@@ -374,7 +374,6 @@ distinctions legible. A test pins the recording cost so an order-of-magnitude
 regression is visible, and the decision is revisited when PR 3 wires the ledger
 into a tendency path and the cost becomes measurable against something.
 
-
 The second rule is what makes "the ledger is not a fixer" checkable rather than
 merely stated.
 
