@@ -317,12 +317,12 @@ for, and it would otherwise vanish from the cumulative total without trace.
 Four sources are budgeted separately, because they scale differently and
 conflating them is how a real defect gets absorbed.
 
-| Source                              | Expectation                                           |
-|:----------------------------------- |:----------------------------------------------------- |
-| Local arithmetic and reconstruction | `O(ε)` relative to `Σ\                                |
-| Parallel reduction order            | grows with rank count; measured, not promised bitwise |
-| Algebraic solve defect              | **leading order, not small** — see below              |
-| Approximate collection              | none; the ledger has no intentionally approximate leg |
+| Source                              | Expectation                                                                     |
+|:----------------------------------- |:------------------------------------------------------------------------------- |
+| Local arithmetic and reconstruction | `O(ε)` relative to the sum of absolute contributions, never to the signed total |
+| Parallel reduction order            | grows with rank count; measured, not promised bitwise                           |
+| Algebraic solve defect              | **leading order, not small** — see below                                        |
+| Approximate collection              | none; the ledger has no intentionally approximate leg                           |
 
 The solve-defect row is the important one. The default is
 
