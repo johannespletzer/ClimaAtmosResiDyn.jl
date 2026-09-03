@@ -425,15 +425,16 @@ function record_leg!(ledger::BudgetLedger{FT}, leg::BudgetLeg{FT}) where {FT}
             "aggregate is the reconciliation envelope and is never summed " *
             "alongside its own decomposition.",
         )
+        push!(ledger.aggregate_events, event_key)
     else
         event_key in ledger.aggregate_events && error(
             "Leg $(leg_label(leg)) decomposes event $(leg.event), but an " *
             "aggregate leg for that event is already recorded in this step. " *
             "Recording both counts the same update twice.",
         )
+        push!(ledger.decomposed_events, event_key)
     end
     push!(ledger.recorded_keys, key)
-    push!(leg.aggregate ? ledger.aggregate_events : ledger.decomposed_events, event_key)
     push!(ledger.legs, leg)
     return nothing
 end
@@ -644,9 +645,11 @@ function reconcile(
     # difference is a measurement of the accumulation error rather than a
     # rederivation of it.
     initial = ledger.initial
-    from_initial =
-        isnothing(initial) ? endpoint_change :
+    from_initial = if isnothing(initial)
+        endpoint_change
+    else
         after.total - endpoint_total(initial, quantity, cv).total
+    end
     cumulative_residual =
         get(ledger.cumulative_residual, key, zero(FT)) + residual
     cumulative_abs_residual =
@@ -694,10 +697,13 @@ read as internal to a coupled system that does not exist.
 An unavailable view is not emitted at all. It is not the same as a view that is
 available and inapplicable for one quantity.
 """
-control_volume_available(endpoints::BudgetEndpoints, cv::ControlVolume) = all(
-    r -> any(e -> e.reservoir === r, endpoints.reservoirs),
-    cv.reservoirs,
-)
+function control_volume_available(endpoints::BudgetEndpoints, cv::ControlVolume)
+    for reservoir in cv.reservoirs
+        any(e -> e.reservoir === reservoir, endpoints.reservoirs) ||
+            return false
+    end
+    return true
+end
 
 """
     check_endpoint_layout(opening, closing)
@@ -711,10 +717,7 @@ defect. Checking it here means a malformed closing endpoint is refused before
 [`commit_transaction!`](@ref) has advanced anything, which is what lets the
 commit be atomic.
 """
-function check_endpoint_layout(
-    opening::BudgetEndpoints,
-    closing::BudgetEndpoints,
-)
+function check_endpoint_layout(opening::BudgetEndpoints, closing::BudgetEndpoints)
     length(opening.reservoirs) == length(closing.reservoirs) || error(
         "The budget reservoir set changed within step $(closing.step), from " *
         "$(length(opening.reservoirs)) reservoirs to " *

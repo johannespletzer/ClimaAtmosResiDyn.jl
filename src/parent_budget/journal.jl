@@ -111,13 +111,13 @@ struct BudgetComponent{FT}
     status::ComponentStatus
     function BudgetComponent{FT}(amount, status::ComponentStatus) where {FT}
         a = convert(FT, amount)
-        status isa Measured ||
-            iszero(a) ||
+        if !(status isa Measured) && !iszero(a)
             error(
-                "A $(nameof(typeof(status))) component must carry exactly \
-                 zero, got $a. Only a Measured component may hold a nonzero \
-                 amount.",
+                "A $(nameof(typeof(status))) component must carry exactly " *
+                "zero, got $a. Only a Measured component may hold a nonzero " *
+                "amount.",
             )
+        end
         return new{FT}(a, status)
     end
 end

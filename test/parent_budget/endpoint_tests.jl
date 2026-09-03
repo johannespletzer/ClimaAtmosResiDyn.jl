@@ -23,32 +23,39 @@ const ρ_VAL, Q_VAL, E_VAL = 1.2, 0.01, 2.5e5
 const Q_LCL, Q_RAI = 0.002, 0.003
 const SFC_T, SFC_WATER = 290.0, 3.0
 
-center_variables(FT, moist, categories) =
-    if moist && categories
-        _ -> (;
-            ρ = FT(ρ_VAL),
-            ρq_tot = FT(Q_VAL),
-            ρq_lcl = FT(Q_LCL),
-            ρq_icl = zero(FT),
-            ρq_rai = FT(Q_RAI),
-            ρq_sno = zero(FT),
-            ρe_tot = FT(E_VAL),
-        )
-    elseif moist
-        _ -> (; ρ = FT(ρ_VAL), ρq_tot = FT(Q_VAL), ρe_tot = FT(E_VAL))
-    else
-        _ -> (; ρ = FT(ρ_VAL), ρe_tot = FT(E_VAL))
-    end
+# Field constructors. Written as plain functions broadcast over the local
+# geometry, which is how the model itself builds prognostic state. Types are
+# scalars under broadcasting, so `FT` rides along as an argument.
+dry_center(_, FT) = (; ρ = FT(ρ_VAL), ρe_tot = FT(E_VAL))
 
-surface_variables(FT) = _ -> (; T = FT(SFC_T), water = FT(SFC_WATER))
+moist_center(_, FT) = (; ρ = FT(ρ_VAL), ρq_tot = FT(Q_VAL), ρe_tot = FT(E_VAL))
+
+function one_moment_center(_, FT)
+    return (;
+        ρ = FT(ρ_VAL),
+        ρq_tot = FT(Q_VAL),
+        ρq_lcl = FT(Q_LCL),
+        ρq_icl = zero(FT),
+        ρq_rai = FT(Q_RAI),
+        ρq_sno = zero(FT),
+        ρe_tot = FT(E_VAL),
+    )
+end
+
+slab_variables(_, FT) = (; T = FT(SFC_T), water = FT(SFC_WATER))
+
+function center_field(space, FT, moist, categories)
+    lg = Fields.local_geometry_field(space)
+    moist || return dry_center.(lg, FT)
+    categories && return one_moment_center.(lg, FT)
+    return moist_center.(lg, FT)
+end
 
 function test_state(spaces, FT; moist, categories = false, slab)
-    c = center_variables(FT, moist, categories).(
-        Fields.local_geometry_field(spaces.cent_space)
-    )
+    c = center_field(spaces.cent_space, FT, moist, categories)
     slab || return Fields.FieldVector(; c)
     surface_space = Fields.level(spaces.face_space, Fields.half)
-    sfc = surface_variables(FT).(Fields.local_geometry_field(surface_space))
+    sfc = slab_variables.(Fields.local_geometry_field(surface_space), FT)
     return Fields.FieldVector(; c, sfc)
 end
 
