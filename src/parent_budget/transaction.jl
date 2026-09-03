@@ -321,6 +321,27 @@ opening endpoints must equal the ones the last transaction closed on. A gap
 between them is a change that nothing accounted for, and it would otherwise
 disappear from the cumulative total without leaving a residual anywhere.
 """
+function open_transaction!(
+    ledger::BudgetLedger{FT},
+    endpoints::BudgetEndpoints{FT},
+) where {FT}
+    ledger.is_open && error(
+        "A budget transaction for step $(ledger.step) is already open. " *
+        "Commit or abort it before opening another.",
+    )
+    check_endpoint_continuity(ledger, endpoints)
+    ledger.step = endpoints.step + 1
+    ledger.is_open = true
+    ledger.opening = endpoints
+    isnothing(ledger.initial) && (ledger.initial = endpoints)
+    empty!(ledger.legs)
+    empty!(ledger.observations)
+    empty!(ledger.recorded_keys)
+    empty!(ledger.aggregate_events)
+    empty!(ledger.decomposed_events)
+    return nothing
+end
+
 """
     open_transaction!(ledger)
 
@@ -352,27 +373,6 @@ function open_transaction!(ledger::BudgetLedger)
         "measure its opening endpoint.",
     )
     return open_transaction!(ledger, previous)
-end
-
-function open_transaction!(
-    ledger::BudgetLedger{FT},
-    endpoints::BudgetEndpoints{FT},
-) where {FT}
-    ledger.is_open && error(
-        "A budget transaction for step $(ledger.step) is already open. " *
-        "Commit or abort it before opening another.",
-    )
-    check_endpoint_continuity(ledger, endpoints)
-    ledger.step = endpoints.step + 1
-    ledger.is_open = true
-    ledger.opening = endpoints
-    isnothing(ledger.initial) && (ledger.initial = endpoints)
-    empty!(ledger.legs)
-    empty!(ledger.observations)
-    empty!(ledger.recorded_keys)
-    empty!(ledger.aggregate_events)
-    empty!(ledger.decomposed_events)
-    return nothing
 end
 
 """
