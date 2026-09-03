@@ -32,17 +32,21 @@ and are not made here.
 
 ## Foundation
 
-Built on the process-record work: PR 41, plus PR 46, plus the closure and
-diagnostics fixes in PR 47. In branch terms that is
-`claude/closure-and-diagnostics-hygiene`.
+Built on `main`, which now carries the process-record work: PR 41, plus PR 46,
+plus the closure and diagnostics fixes in PR 47, all merged through PR 40.
 
 **[revised]** The earlier plan said "build on PR 41 after incorporating PR 46,
-or on main after that work merges". Neither is available. PRs 41, 42, 43, 46 and
-47 are all closed without merging, and `main` has none of the process-record
-state. The content survives only on branches, and the branch above is exactly
-PR 41 + PR 46 + PR 47 with the energy-source-tag work of PRs 42 and 43 left out,
-which is what the plan asked for. It is contained in the open PR 40, so this
-stack lands after PR 40 does.
+or on main after that work merges", and for a while neither was available: PRs
+41, 42, 43, 46 and 47 were all closed without merging, and their content
+survived only on branches. PR 40 was the merge point for the whole stack, and
+merging it made the second option real. Nothing about the design depended on
+which of the two it turned out to be.
+
+PR 40 also brought in the energy source tags of PRs 42 and 43, which this plan
+said not to build the parent budget on. That exclusion is unchanged and is
+architectural rather than a matter of what is on `main`: `ρe_src_*` stays out of
+the parent identity, and its own closure is a separate audit in a later meta
+step.
 
 What is reused:
 
@@ -276,19 +280,19 @@ Meta Step 1 is complete only when all of the following hold.
 
 ## Summary of revisions to the earlier plans
 
-| Change                                                                | Reason                                                                |
-|:--------------------------------------------------------------------- |:--------------------------------------------------------------------- |
-| Base is `claude/closure-and-diagnostics-hygiene`, not `main` or PR 41 | PRs 41–47 are closed unmerged; `main` has no process-record state     |
-| Rejection and adaptivity machinery reduced to an assertion            | fixed-step IMEX with no controller never rejects                      |
-| Nonlinear-tolerance sweep replaced by an iteration sweep              | `max_iters = 1` leaves no tolerance to tighten                        |
-| Solve defect promoted to a leading-order term                         | one Newton iteration against an approximate Jacobian                  |
-| `Yₜ_lim` added as a first-class channel                               | horizontal tracer advection and tracer hyperdiffusion live only there |
-| `D = ∫(ρ − ρq_tot)` replaces `D = M − W`                              | `ρ` excludes precipitating water, `W` includes it                     |
-| `W` excludes `ρq_lcl` and `ρq_icl`                                    | they are already inside `ρq_tot`                                      |
-| Reservoir graph reduced to atmosphere plus one slab                   | no prognostic snow, soil, or deposited-condensate state exists        |
-| `Y.sfc.water` owns water but no mass                                  | mass leaves `M` when water is deposited                               |
-| EDMF, chemistry, and prescribed flow excluded from the claim          | their control-volume membership is a modelling question               |
-| Reduction cost made a design constraint, ledger off by default        | four stages times dozens of legs is a hundred reductions per step     |
-| `dss!` added to the mutation matrix                                   | it mutates authoritative state                                        |
-| `b` in `E* = E + aM + bW` left open, not set to zero                  | `enforce_mass_energy_consistency!` makes it a real question           |
-| Four named defects in `check_conservation` recorded                   | so the ledger does not inherit them                                   |
+| Change                                                         | Reason                                                                |
+|:-------------------------------------------------------------- |:--------------------------------------------------------------------- |
+| Base is `main` once PR 40 merged, not PR 41 or a branch        | PRs 41-47 were closed unmerged until PR 40 carried them to `main`     |
+| Rejection and adaptivity machinery reduced to an assertion     | fixed-step IMEX with no controller never rejects                      |
+| Nonlinear-tolerance sweep replaced by an iteration sweep       | `max_iters = 1` leaves no tolerance to tighten                        |
+| Solve defect promoted to a leading-order term                  | one Newton iteration against an approximate Jacobian                  |
+| `Yₜ_lim` added as a first-class channel                        | horizontal tracer advection and tracer hyperdiffusion live only there |
+| `D = ∫(ρ − ρq_tot)` replaces `D = M − W`                       | `ρ` excludes precipitating water, `W` includes it                     |
+| `W` excludes `ρq_lcl` and `ρq_icl`                             | they are already inside `ρq_tot`                                      |
+| Reservoir graph reduced to atmosphere plus one slab            | no prognostic snow, soil, or deposited-condensate state exists        |
+| `Y.sfc.water` owns water but no mass                           | mass leaves `M` when water is deposited                               |
+| EDMF, chemistry, and prescribed flow excluded from the claim   | their control-volume membership is a modelling question               |
+| Reduction cost made a design constraint, ledger off by default | four stages times dozens of legs is a hundred reductions per step     |
+| `dss!` added to the mutation matrix                            | it mutates authoritative state                                        |
+| `b` in `E* = E + aM + bW` left open, not set to zero           | `enforce_mass_energy_consistency!` makes it a real question           |
+| Four named defects in `check_conservation` recorded            | so the ledger does not inherit them                                   |
