@@ -825,6 +825,55 @@ end
             @test ledger.step == 2
         end
 
+        @testset "A refused commit changes nothing ($FT)" begin
+            # The commit computes every reconciliation into a temporary and
+            # advances the ledger only once all of them have succeeded. A
+            # commit that fails must leave no trace: not a cumulative total,
+            # not the open flag, not the step count.
+            ledger = CA.BudgetLedger{FT}()
+            CA.open_transaction!(
+                ledger,
+                test_endpoints(FT, 0; m = 1, w = 0, e = 0),
+            )
+            CA.commit_transaction!(
+                ledger,
+                test_endpoints(FT, 1; m = 2, w = 0, e = 0),
+            )
+            CA.open_transaction!(ledger)
+
+            before_change = copy(ledger.cumulative_change)
+            before_residual = copy(ledger.cumulative_residual)
+            before_steps = ledger.committed_steps
+
+            # A closing endpoint that gains a reservoir the opening one did not
+            # have is refused by the layout check, before anything is written.
+            malformed = test_endpoints(
+                FT,
+                2;
+                m = 3,
+                w = 0,
+                e = 0,
+                sfc_w = 0,
+                sfc_e = 0,
+            )
+            @test_throws ErrorException CA.commit_transaction!(
+                ledger,
+                malformed,
+            )
+
+            @test ledger.is_open
+            @test ledger.committed_steps == before_steps
+            @test ledger.cumulative_change == before_change
+            @test ledger.cumulative_residual == before_residual
+
+            # And the transaction is still usable afterwards.
+            CA.commit_transaction!(
+                ledger,
+                test_endpoints(FT, 2; m = 3, w = 0, e = 0),
+            )
+            @test ledger.committed_steps == before_steps + 1
+        end
+
         @testset "An inapplicable transfer is not a cancellation ($FT)" begin
             ledger = CA.BudgetLedger{FT}()
             CA.open_transaction!(
