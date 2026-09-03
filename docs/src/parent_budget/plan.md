@@ -161,12 +161,21 @@ Avoids double-counting the atmospheric tendency, the boundary flux, and the
 surface state change. Tests the atmosphere-only and coupled projections, and
 preserves any implemented coupling mismatch instead of forcing cancellation.
 
-**[sharpened]** The specific mismatch to look for is known from PR 1. The
-atmospheric precipitation sink is in `microphysics_tendency!` while the surface
-gain is in `surface_precipitation_tendency!`, and depending on
-`microphysics_tendency_timestepping` the two are called from different channels.
-Whether they carry the same amount is a measurement this PR makes, and the
-coupled-view cancellation claim is blocked until it does.
+**[corrected]** The specific mismatch to look for is known from PR 1, but an
+earlier draft named the wrong atmospheric path. There are two, and they are not
+the same mechanism.
+
+  - 0-moment removal is in `microphysics_tendency!`, a direct sink out of the
+    column with no receiving reservoir. Which channel it is called from depends
+    on `microphysics_tendency_timestepping`.
+  - 1-moment fallout is in `vertical_advection_of_water_tendency!`, which
+    `implicit_tendency!` calls, so it is always on the implicit channel and
+    carries implicit accepted-stage weighting.
+
+The surface gain is in `surface_precipitation_tendency!` in both cases. Whether
+the atmospheric leg and the surface leg carry the same amount is a measurement
+this PR makes across PRs 4 and 5 together, and the coupled-view cancellation
+claim is blocked until it does.
 
 ### PR 5 — Implicit and post-implicit accounting
 
@@ -301,3 +310,5 @@ Meta Step 1 is complete only when all of the following hold.
 | `b` in `E* = E + aM + bW` left open, not set to zero           | `enforce_mass_energy_consistency!` makes it a real question                    |
 | Four named defects in `check_conservation` recorded            | so the ledger does not inherit them                                            |
 | PR 7 writes new tests instead of replacing placeholders        | PR 50 deleted the `test/conservation/` placeholder files from `main`           |
+| 1M fallout is on the implicit channel, not the explicit one    | `implicit_tendency!` calls `vertical_advection_of_water_tendency!`             |
+| Forcing paths add water and energy but never mass              | they write `ρq_tot` and `ρe_tot` and no `ρ` term exists                        |

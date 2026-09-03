@@ -47,13 +47,21 @@ coordinates coupled exchanges. It does not make the three interchangeable.
 
 ### Configurations supported at the end of Meta Step 1
 
-  - Dry, `EquilibriumMicrophysics0M`, and non-equilibrium/one-moment moist
-    microphysics on the sphere and in a single column.
+Concrete types, not families. "Non-equilibrium" was ambiguous in an earlier
+draft and is spelled out here.
+
+  - Microphysics: `DryModel`, `EquilibriumMicrophysics0M`, and
+    `NonEquilibriumMicrophysics1M`, on the sphere and in a single column.
   - `diff_mode` explicit and implicit.
   - `microphysics_tendency_timestepping` explicit and implicit.
   - Surface: every prescribed or diagnosed surface temperature, and
     `SurfaceConditions.SlabOceanTemperature`.
   - Radiation off, `HeldSuarezForcing`, and RRTMGP.
+  - Forcing: `LargeScaleSubsidence`, large-scale advection, and the external
+    forcing that reaches `apply_Tq_forcing!`. These are supported and appear in
+    the tests, with the open dry-air budget recorded in the limitations
+    register. An earlier draft used them in the tests without listing them here.
+  - Callbacks: the default set only.
 
 ### Configurations explicitly out of scope
 
@@ -67,6 +75,16 @@ coordinates coupled exchanges. It does not make the three interchangeable.
     overwrite, but no closure is claimed for it.
   - Chemistry (`GasPhaseChem`), which changes tracer composition through an
     external solver.
+  - `NonEquilibriumMicrophysics2M` and `NonEquilibriumMicrophysics2MP3`. The
+    coverage matrix and the planned tests were written against one-moment, and a
+    two-moment scheme carries number concentrations whose paths have not been
+    audited. Excluded rather than assumed to behave like 1M.
+  - State-mutating custom callbacks. `AtmosSimulation` takes a `callbacks`
+    keyword and appends whatever it is given, so a caller can install a callback
+    that writes `Y`. The contract's claim that supported callbacks are read-only
+    covers the **default** set, which the mutation matrix inventories. A custom
+    callback must either declare itself read-only with respect to `Y` or supply
+    its own ledger accounting; without one of those, no closure is claimed.
   - Every local, column, or component-energy budget.
 
 ### Timestepping methods supported
@@ -112,6 +130,48 @@ discrete callback mutates `Y` — they write cache `Ref`s, radiation fields, fil
 and diagnostics — so the choice is currently unobservable. It is fixed here so
 that a callback which does mutate state later falls on one side of the boundary
 by rule rather than by accident.
+
+### What a leg's amount is
+
+A leg's `amount` is an **accepted-step-weighted extensive contribution**: the
+part of `Bⁿ⁺¹ − Bⁿ` that this path is responsible for. It is not a raw tendency,
+and it is not a raw before/after difference taken on an intermediate stage
+array. Those three are different numbers and the schema must not let them be
+mixed.
+
+The distinction has teeth because `lim!`, `dss!` and `constrain_state!` run on
+intermediate stage arrays as well as on the final accepted state.
+
+  - A map applied to the **final accepted state** contributes its raw change.
+    That change *is* part of the endpoint difference.
+  - A map applied to an **intermediate stage** does not. It changes the array a
+    later tendency evaluation reads, so its effect on the endpoint is mediated
+    by the tableau, not added to it. Booking its raw before/after difference in
+    the parent identity is wrong by construction, whatever the number happens
+    to look like.
+
+So an intermediate-stage map enters the identity only with its exact accepted
+weight, generally involving the tableau's `bᵢ` and the implicit `γᵢ`. And where
+the timestepper forms the stored implicit stage tendency by differencing the
+stage state *after* the post-implicit correction and post-Newton hooks have
+run, those hooks' changes are already inside the effective implicit increment;
+booking them again as separate legs double-counts, so a separately booked hook
+must be subtracted back out of the aggregate.
+
+That last mechanism is the reviewer's diagnosis of current
+`ClimaTimeSteppers`, and it is **not verified here** — the package source is not
+available in this environment. PR 5 must confirm the stage-tendency form
+against the pinned version before any implicit decomposition is booked. The
+rule above does not depend on the answer; only the size of the correction does.
+
+Until PR 5 freezes that decomposition against the actual hook order, every
+intermediate-stage leg is `unknown`, never `measured`. Raw stage observations
+are still worth collecting — they localize a defect — but they live in a
+separate audit structure that is never summed into the parent identity.
+
+PR 5 must test all three `update_constrain_state_every` cadences, `"step"`,
+`"stage"` and `"dss"`, because they place the same map on different sides of
+this distinction.
 
 ## Reservoir graph
 
@@ -171,18 +231,45 @@ all excluded from it.
 | non-equilibrium             | `∫ ρq_tot` |
 | one-moment                  | `∫ ρq_tot` |
 
-**`ρ` tracks `ρq_tot` exactly.** Every path that changes one changes the other by
-the same amount: 0-moment removal (`Yₜ.c.ρq_tot += ρ_dq_tot_dt` beside
-`Yₜ.c.ρ += ρ_dq_tot_dt`), sedimentation, surface flux, the viscous sponge, and
-`enforce_mass_energy_consistency!`. The dry-air mass is therefore
+**`D` is a derived diagnostic, not a conservation invariant.** The dry-air mass
 
 ```
 D = M − W = ∫ (ρ − ρq_tot)      [kg]
 ```
 
-and the two forms are the same number. It is a derived invariant, and testing it
-is how the mass and water budgets are checked against each other rather than
-assumed equal.
+is well defined, and the two forms are the same number because the integral is
+linear. That is all the identity asserts. `D` is **not** conserved, and an
+earlier draft of this contract wrongly said it was.
+
+`ρ` does track `ρq_tot` on the paths that move air and water together:
+0-moment removal (`Yₜ.c.ρq_tot += ρ_dq_tot_dt` beside `Yₜ.c.ρ += ρ_dq_tot_dt`),
+sedimentation in `vertical_advection_of_water_tendency!` (`Yₜ.c.ρ += vtt`
+beside `Yₜ.c.ρq_tot += vtt`), surface flux, the viscous sponge, and
+`enforce_mass_energy_consistency!`.
+
+It does not track it on the prescribed forcing paths, all three of which are in
+scope:
+
+| Path                                    | Writes                                 | Writes `ρ` |
+|:--------------------------------------- |:-------------------------------------- |:---------- |
+| `large_scale_advection_tendency_ρq_tot` | `ρq_tot`, `ρe_tot`                     | no         |
+| `subsidence_tendency!`                  | `ρq_tot`, `ρe_tot`, `ρq_lcl`, `ρq_icl` | no         |
+| `apply_Tq_forcing!`                     | `ρq_tot`, `ρe_tot`                     | no         |
+
+Each adds water to a column without adding air to it, so `W` moves while `M`
+stays put and `D` moves by `−ΔW`. Any forced configuration therefore has a
+dry-air budget that is open by construction.
+
+What the ledger does about it: these paths record a mass component of
+`InvariantZero` — the implemented equation adds no mass, and that zero is the
+measured truth about the code — with their water and energy components measured
+independently. A mass leg is never manufactured from a water leg to make `D`
+close.
+
+Whether the model *ought* to add mass along with prescribed moisture is a
+question about the physics, not about the bookkeeping. The ledger's job is to
+report what the discrete equations do. It is listed in the limitations register
+so that the answer, if it ever changes, changes there and not here.
 
 **The slab owns mass as well as water.** `Y.sfc.water` is a water content in
 `kg m⁻²`, and the water it gains left the atmosphere as `ρq_tot` and therefore
@@ -241,9 +328,37 @@ with the requirement that every leg and residual transforms as
 reason is `enforce_mass_energy_consistency!`: when a limiter moves `ρq_tot` by
 `Δ`, it moves `ρ` by `Δ` and `ρe_tot` by `Δ·(uᵥ(T) + Φ)`. Whether that carrier
 energy is consistent with a `b·W` shift across *every* water leg, including
-precipitation fallout and surface deposition, is exactly what the audit tests.
-The audit is a check on the implemented model. It is not permission to invent a
-carrier-energy term that the model does not have.
+precipitation fallout and surface deposition, is what the audit is for.
+
+**Two different things are called covariance, and only one of them can settle
+`b`.** An earlier draft ran them together.
+
+*Algebraic re-expression.* Take a completed ledger and apply
+`Q_E* = Q_E + a·Q_M + b·Q_W` to every amount. The residual then transforms the
+same way for any `a` and `b` whatever, because the ledger is linear and the
+substitution is exact. This is a **tautology**. It is worth running as a
+self-check that the implementation really is linear and that no leg was stored
+in a way that breaks the substitution, and it is worth nothing as evidence about
+which `b` the model admits.
+
+*Physical reference experiment.* Rerun the model with shifted thermodynamic
+references and compare the two ledgers. This one can reject a `b`, and it is an
+intervention, so it has to be specified before it is run. PR 7 must fix all
+four pieces:
+
+  - which `Thermodynamics` parameters are shifted, and by how much;
+  - how the initial state is transformed, so the two runs start at states that
+    correspond rather than at two unrelated states;
+  - how the boundary and carrier fluxes transform, in particular the energy
+    carried by a water flux across the surface;
+  - how the slab reservoir transforms, since `E_sfc` is built from `Y.sfc.T` and
+    a constant heat capacity and does not see the atmospheric reference at all.
+
+Until those four are written down, no covariance result may be used to accept or
+reject a value of `b`.
+
+Both audits are checks on the implemented model. Neither is permission to invent
+a carrier-energy term the model does not have.
 
 ## Control volumes
 
@@ -322,6 +437,7 @@ conflating them is how a real defect gets absorbed.
 | Local arithmetic and reconstruction | `O(ε)` relative to the sum of absolute contributions, never to the signed total |
 | Parallel reduction order            | grows with rank count; measured, not promised bitwise                           |
 | Algebraic solve defect              | **leading order, not small** — see below                                        |
+| Endpoint subtraction                | cancellation in `Bⁿ⁺¹ − Bⁿ`; scales with the endpoint magnitudes, not the legs  |
 | Approximate collection              | none; the ledger has no intentionally approximate leg                           |
 
 The solve-defect row is the important one. The default is
@@ -343,10 +459,56 @@ measured stage residual while `R_bookkeeping` stays at arithmetic level
 throughout. A residual that does not move under that sweep is a bookkeeping bug
 wearing a solver's clothes.
 
+### Accounting precision
+
+The ledger's arithmetic precision is **independent of the state's** and is at
+least `Float64`. Every reduction, endpoint, leg accumulator and cumulative total
+is `Float64` even when the state is `Float32`.
+
+This is not a refinement, it is what makes the residual mean anything. A leg is
+a small increment against a global background: a `Float32` global mass is
+carried to about seven significant digits, so a per-step change eight orders
+below it vanishes entirely in the subtraction. Accumulating in `Float64` keeps
+the endpoints and the legs exact enough that what is left is bookkeeping error
+rather than accumulation noise.
+
+For the same reason a leg is measured as an **increment** wherever the code
+offers one, never as a difference of two large states. A difference inherits the
+cancellation of its operands even in `Float64`.
+
+### The pass criterion
+
+With the residual of step `n` defined as the endpoint change minus the sum of
+that step's legs, define three positive scales: `S_endpoint`, the sum of the two
+endpoint magnitudes; `S_legs`, the sum of the leg magnitudes; and `S`, their
+total. Then require, for the arithmetic part of the budget,
+
+```
+abs(Rₙ) ≤ κ · ε_acc · S
+```
+
+where `ε_acc` is the accounting epsilon, `eps(Float64)`, and `κ` covers
+reduction-order and rank dependence. `κ = 64·√(N_ranks)` is a **provisional**
+starting value, to be calibrated in PR 7 against measured serial and MPI runs
+and then frozen. It is written down now so that PR 7 replaces a number rather
+than inventing a criterion.
+
+`S` includes `S_endpoint` deliberately. Bounding the residual by the leg
+magnitudes alone would be a stricter claim than the subtraction can support, and
+would fail on a step whose legs are tiny against the background.
+
+The solve defect is **not** inside this criterion. It is a leading-order
+physical-accounting term with its own row above, reported separately and swept
+with `max_iters`, never absorbed into an arithmetic tolerance.
+
+PR 7 tests this on a small increment over a realistic global background, in
+`Float32` and `Float64` states alike, since that is the case the criterion
+exists for.
+
 Residuals are always reported as signed absolute values in `kg` and `J`. A
-relative view may be added against a documented positive scale such as
-`Σ|contribution|`. Normalizing by signed total energy is forbidden, which is
-one of the defects in the existing check described below.
+relative view may be added against a documented positive scale such as `S`.
+Normalizing by signed total energy is forbidden, which is one of the defects in
+the existing check described below.
 
 ## Cost, and the rule that diagnostics change nothing
 
@@ -463,5 +625,11 @@ physical-completeness gaps, which are claim 3 and never a numerical residual.
     solid-Earth exchange has no implemented counterpart. Recorded as a
     completeness gap, not as a residual.
   - `flux_accumulation!` omits turbulent surface fluxes, as above.
+  - Prescribed forcing adds water and energy to a column without adding air to
+    it. `large_scale_advection_tendency_ρq_tot`, `subsidence_tendency!` and
+    `apply_Tq_forcing!` all write `ρq_tot` and `ρe_tot` and never write `ρ`, so
+    a forced run has an open dry-air budget. This is a property of the
+    implemented equations. The ledger records the mass component as an
+    invariant zero and reports the open budget rather than closing it.
   - The process record covers only the explicitly bracketed tendency path. Its
     bracket set is not the ledger's coverage set.
