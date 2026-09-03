@@ -279,10 +279,17 @@ So in the coupled view the slab contributes to `M` and to `W`, with the same
 amount, and it is the one reservoir where those two legs coincide. In the
 atmosphere-only view the deposition is a boundary crossing for both.
 
-That the two legs coincide *here* is a measured property of this reservoir, not
-a licence to infer one from the other elsewhere. The rule that a water increment
-is never copied into mass still holds for every other path, and the mass and
-water legs are still recorded independently.
+The slab's two endpoint components are **one endpoint projected twice**, not two
+measurements. Both read `Y.sfc.water`, through one reduction, so they cannot
+disagree and no test of them can discover anything. Saying they are
+independently measured, as an earlier draft did, promises a check that does not
+exist.
+
+Independent collection is a property of the *transfer legs* instead: the
+atmospheric side of a surface exchange and the surface side of it are measured
+separately, from different quadratures, and must be allowed to disagree. That is
+where a coupling mismatch becomes visible. The rule that a water increment is
+never copied into mass still holds for every other path.
 
 **`E` is `ρe_tot` alone.** Total energy is prognostic, so it is authoritative
 and nothing is reconstructed from momentum and thermodynamic state. `ρtke`, the
