@@ -364,6 +364,17 @@ Two rules follow, and they are part of the contract:
     without the feature, and a run with it on must produce the same trajectory
     as the same run with it off. Both are tested.
 
+The leg types themselves carry abstract status, reservoir and path fields, so a
+leg is not `isbits` and recording one allocates. That is deliberate. Legs are
+host-side records created a few dozen times per accepted step, each beside a
+global reduction that costs orders of magnitude more, and nothing in the journal
+runs on the device. Parametrising five more type parameters would buy an
+unmeasurable saving at the cost of the readability that makes the status
+distinctions legible. A test pins the recording cost so an order-of-magnitude
+regression is visible, and the decision is revisited when PR 3 wires the ledger
+into a tendency path and the cost becomes measurable against something.
+
+
 The second rule is what makes "the ledger is not a fixer" checkable rather than
 merely stated.
 

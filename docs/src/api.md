@@ -470,6 +470,7 @@ ClimaAtmos.AtmosphereReservoir
 ClimaAtmos.SlabSurfaceReservoir
 ClimaAtmos.ExteriorReservoir
 ClimaAtmos.ControlVolume
+ClimaAtmos.reservoir_name
 ClimaAtmos.ATMOSPHERE_ONLY
 ClimaAtmos.ATMOSPHERE_AND_SURFACE
 ClimaAtmos.is_inside
@@ -479,6 +480,8 @@ ClimaAtmos.DiscreteMap
 ClimaAtmos.NumericalCorrection
 ClimaAtmos.AlgebraicSolveDefect
 ClimaAtmos.BudgetLeg
+ClimaAtmos.leg_identity
+ClimaAtmos.leg_label
 ClimaAtmos.budget_component
 ClimaAtmos.BUDGET_QUANTITIES
 ClimaAtmos.atmosphere_mass
@@ -494,11 +497,13 @@ ClimaAtmos.BudgetEndpoints
 ClimaAtmos.budget_endpoints
 ClimaAtmos.endpoint_total
 ClimaAtmos.BudgetLedger
+ClimaAtmos.check_endpoint_continuity
 ClimaAtmos.open_transaction!
 ClimaAtmos.record_leg!
 ClimaAtmos.abort_transaction!
 ClimaAtmos.project_legs
 ClimaAtmos.BudgetReconciliation
+ClimaAtmos.is_blocked
 ClimaAtmos.reconcile
 ClimaAtmos.commit_transaction!
 ClimaAtmos.transfer_mismatch

@@ -18,38 +18,36 @@ import ClimaCore.Spaces as Spaces
 
 Total modeled atmospheric mass ``\\int \\rho`` [kg].
 
-`Y.c.ρ` is moist air density. It carries water vapour and cloud condensate but
-**not** rain or snow: every tendency that changes `ρq_tot` changes `ρ` by the
-same amount, and nothing adds `ρq_rai` or `ρq_sno` to it. Precipitation
-formation is therefore a genuine mass sink for the atmosphere even though it is
-internal to the water budget.
-
-One consequence is worth stating where it cannot be missed. `M - W` is **not**
-the dry-air mass in this model, because `W` includes precipitating water that
-`M` never had. The dry-air invariant is [`atmosphere_dry_mass`](@ref).
+`Y.c.ρ` is moist air density, and it carries the whole of `ρq_tot`, which
+includes precipitating water. Every path that changes one changes the other by
+the same amount: 0-moment removal, sedimentation, the surface flux, the viscous
+sponge, and `enforce_mass_energy_consistency!`. That is what makes
+[`atmosphere_dry_mass`](@ref) a meaningful derived invariant.
 """
 atmosphere_mass(Y) = sum(Y.c.ρ)
 
 """
     atmosphere_water(Y)
 
-Total atmospheric water ``\\int (\\rho q_{tot} + \\rho q_{rai} + \\rho q_{sno})`` [kg].
+Total atmospheric water ``\\int \\rho q_{tot}`` [kg].
 
-The included categories must not overlap. `ρq_tot` is total water, vapour plus
-cloud condensate. `ρq_lcl` and `ρq_icl` are the liquid and ice contents
-*already inside* `ρq_tot`, so adding them would double-count the condensate and
-they are deliberately absent here. `ρq_rai` and `ρq_sno` are outside `ρq_tot`
-and are added when the microphysics model carries them.
+`ρq_tot` is total water and it already contains precipitation. The
+thermodynamic state is built from `q_liq = q_lcl + q_rai` and
+`q_ice = q_icl + q_sno`, with `q_tot ≥ q_liq + q_ice`, so rain and snow sit
+inside `q_tot` exactly as cloud water does.
 
-Returns zero for a dry model, which has no water state at all.
+The category fields therefore **partition** this integral and are never added to
+it. `ρq_lcl`, `ρq_icl`, `ρq_rai` and `ρq_sno` are all deliberately absent here:
+adding any of them would invent water every time cloud condensate became rain,
+because one-moment microphysics moves the categories while applying no source at
+all to `ρq_tot`.
+
+Returns zero for a dry model, which has no water state.
 """
 function atmosphere_water(Y)
     FT = Spaces.undertype(axes(Y.c))
     hasproperty(Y.c, :ρq_tot) || return zero(FT)
-    water = sum(Y.c.ρq_tot)
-    hasproperty(Y.c, :ρq_rai) && (water += sum(Y.c.ρq_rai))
-    hasproperty(Y.c, :ρq_sno) && (water += sum(Y.c.ρq_sno))
-    return water
+    return sum(Y.c.ρq_tot)
 end
 
 """
@@ -69,14 +67,19 @@ atmosphere_energy(Y) = sum(Y.c.ρe_tot)
 
 Dry-air mass ``\\int (\\rho - \\rho q_{tot})`` [kg].
 
-This, and not `M - W`, is the derived invariant to test. See
-[`atmosphere_mass`](@ref) for why.
+Equivalently `atmosphere_mass(Y) - atmosphere_water(Y)`, because `ρ` carries the
+whole of `ρq_tot`. It is written as one integral rather than a difference of two
+global reductions so that the cancellation happens pointwise, where it is exact,
+instead of between two large sums.
+
+This is a derived invariant. Testing it is how the mass and water budgets are
+checked against each other, rather than one being assumed from the other.
 
 Equals [`atmosphere_mass`](@ref) for a dry model.
 """
 function atmosphere_dry_mass(Y)
     hasproperty(Y.c, :ρq_tot) || return atmosphere_mass(Y)
-    return sum(Y.c.ρ) - sum(Y.c.ρq_tot)
+    return sum(Y.c.ρ .- Y.c.ρq_tot)
 end
 
 """
@@ -134,10 +137,20 @@ end
 """
     surface_mass(Y, surface_temperature)
 
-Always `nothing`. No surface reservoir in this model owns mass.
+Mass held by the prognostic surface reservoir [kg], or `nothing` when there is
+none.
 
-The method exists so that the endpoint code can ask every reservoir for every
-quantity and get an explicit answer, rather than the caller remembering which
-combinations are meaningless.
+Equal to [`surface_water`](@ref), and that is a measured property of this
+reservoir rather than an inference. What the slab gains left the atmosphere as
+`ρq_tot`, and `ρ` carries the whole of `ρq_tot`, so the same deposition is a
+mass leg and a water leg of the same size. The existing `check_conservation`
+relies on this too: it adds the change in surface water to the change in
+``\\int \\rho`` before calling mass closed.
+
+Everywhere else the rule stands that a water increment is never copied into
+mass. The two legs are still recorded independently, so a path where they
+diverge shows up rather than being defined away.
 """
 surface_mass(Y, ::SurfaceConditions.SurfaceTemperature) = nothing
+surface_mass(Y, slab::SurfaceConditions.SlabOceanTemperature) =
+    surface_water(Y, slab)

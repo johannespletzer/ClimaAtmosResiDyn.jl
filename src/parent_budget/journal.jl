@@ -159,9 +159,11 @@ A place the ledger can add to or take from.
 
 The graph is small and saying so is part of the contract. The atmosphere always
 exists. The slab surface exists only for a
-`SurfaceConditions.SlabOceanTemperature`, and it owns energy and water but no
-mass. Everything else is exterior: its state is not owned by the model, so a
-flux into it is a boundary crossing and never an internal transfer.
+`SurfaceConditions.SlabOceanTemperature`, and it owns energy, water, and mass;
+its mass and water legs are equal because what it gains left the atmosphere as
+`ρq_tot`, which `ρ` carries in full. Everything else is exterior: its state is
+not owned by the model, so a flux into it is a boundary crossing and never an
+internal transfer.
 """
 abstract type BudgetReservoir end
 
@@ -175,7 +177,7 @@ struct AtmosphereReservoir <: BudgetReservoir end
 """
     SlabSurfaceReservoir()
 
-The slab surface state, `Y.sfc`. Owns energy and water, never mass. See
+The slab surface state, `Y.sfc`. Owns energy, water, and mass. See
 [`BudgetReservoir`](@ref).
 """
 struct SlabSurfaceReservoir <: BudgetReservoir end
@@ -221,6 +223,16 @@ const ATMOSPHERE_AND_SURFACE = ControlVolume(
     :atmosphere_and_surface,
     (AtmosphereReservoir(), SlabSurfaceReservoir()),
 )
+
+"""
+    reservoir_name(reservoir) -> Symbol
+
+A short label for `reservoir`, used when a report has to name which reservoir
+blocked a claim.
+"""
+reservoir_name(::AtmosphereReservoir) = :atmosphere
+reservoir_name(::SlabSurfaceReservoir) = :slab_surface
+reservoir_name(::ExteriorReservoir) = :exterior
 
 """
     is_inside(control_volume, reservoir) -> Bool
@@ -295,7 +307,18 @@ One signed contribution to one reservoir, recorded once.
 
 `event` is shared by every leg of one physical exchange, so the atmospheric and
 surface halves of a surface flux carry the same `event` and different `leg`.
-`(event, leg, step)` is the identity the journal refuses to record twice.
+
+`(event, leg, step, stage, occurrence)` is the identity the journal refuses to
+record twice, and the last two are why it is not just `(event, leg, step)`. A
+correction can fire several times within one accepted step:
+`update_constrain_state_every` accepts `"stage"` and `"dss"`, and at `"stage"`
+the same `constrain_state!` correction fires once per ARS343 stage. Each firing
+is its own leg, so without a stage index the four would collide and three of
+them would be refused as duplicates. `occurrence` covers a path that fires more
+than once within a single stage.
+
+`stage` is zero for anything that happens once per accepted step rather than per
+stage, and `occurrence` counts from one.
 
 `process` names the physics, `phase` names where in the step it happened, and
 `method` names how the amount was obtained or, for an [`InvariantZero`](@ref)
@@ -312,8 +335,27 @@ Base.@kwdef struct BudgetLeg{FT}
     process::Symbol
     phase::Symbol
     step::Int
+    stage::Int = 0
+    occurrence::Int = 1
     method::Symbol
 end
+
+"""
+    leg_identity(leg) -> Tuple
+
+The tuple the journal deduplicates on: event, leg, step, stage, occurrence.
+"""
+leg_identity(leg::BudgetLeg) =
+    (leg.event, leg.leg, leg.step, leg.stage, leg.occurrence)
+
+"""
+    leg_label(leg) -> String
+
+A human-readable identity for `leg`, used when a report has to name which legs
+blocked a claim.
+"""
+leg_label(leg::BudgetLeg) =
+    "$(leg.event)/$(leg.leg)@step $(leg.step) stage $(leg.stage) #$(leg.occurrence)"
 
 """
     budget_component(leg, quantity) -> BudgetComponent
