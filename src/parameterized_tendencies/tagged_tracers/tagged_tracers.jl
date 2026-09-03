@@ -533,22 +533,6 @@ function write_tag_closure!(output_dir, t, family, closure)
 end
 
 """
-    tag_closure_callback!(integrator, output_dir, family, total_name,
-                          tag_state_names, tolerance)
-
-Record the closure of one tag family, and warn when it has drifted past
-`tolerance`.
-
-The comparison is against `gross_relative`, the relative residual that does not
-let opposite-signed local errors cancel (see [`tag_closure`](@ref)). It is never
-smaller than `|relative|`, so testing it alone also catches everything a test on
-the signed residual would.
-
-The residual is information, not a reason to stop. Closure drift is something
-you want to watch grow, and ending a multi-year integration over it would cost
-more than it saves, so this warns and keeps running.
-"""
-"""
     nonpositive_parent_note(family)
 
 The family-specific consequence of a non-positive closure parent, for the
@@ -574,6 +558,22 @@ function nonpositive_parent_note(family)
         closure denominator is degenerate where this happens."
 end
 
+"""
+    tag_closure_callback!(integrator, output_dir, family, total_name,
+                          tag_state_names, tolerance)
+
+Record the closure of one tag family, and warn when it has drifted past
+`tolerance`.
+
+The comparison is against `gross_relative`, the relative residual that does not
+let opposite-signed local errors cancel (see [`tag_closure`](@ref)). It is never
+smaller than `|relative|`, so testing it alone also catches everything a test on
+the signed residual would.
+
+The residual is information, not a reason to stop. Closure drift is something
+you want to watch grow, and ending a multi-year integration over it would cost
+more than it saves, so this warns and keeps running.
+"""
 function tag_closure_callback!(
     integrator,
     output_dir,
