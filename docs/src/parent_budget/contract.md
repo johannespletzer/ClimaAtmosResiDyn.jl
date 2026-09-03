@@ -47,13 +47,21 @@ coordinates coupled exchanges. It does not make the three interchangeable.
 
 ### Configurations supported at the end of Meta Step 1
 
-  - Dry, `EquilibriumMicrophysics0M`, and non-equilibrium/one-moment moist
-    microphysics on the sphere and in a single column.
+Concrete types, not families. "Non-equilibrium" was ambiguous in an earlier
+draft and is spelled out here.
+
+  - Microphysics: `DryModel`, `EquilibriumMicrophysics0M`, and
+    `NonEquilibriumMicrophysics1M`, on the sphere and in a single column.
   - `diff_mode` explicit and implicit.
   - `microphysics_tendency_timestepping` explicit and implicit.
   - Surface: every prescribed or diagnosed surface temperature, and
     `SurfaceConditions.SlabOceanTemperature`.
   - Radiation off, `HeldSuarezForcing`, and RRTMGP.
+  - Forcing: `LargeScaleSubsidence`, large-scale advection, and the external
+    forcing that reaches `apply_Tq_forcing!`. These are supported and appear in
+    the tests, with the open dry-air budget recorded in the limitations
+    register. An earlier draft used them in the tests without listing them here.
+  - Callbacks: the default set only.
 
 ### Configurations explicitly out of scope
 
@@ -67,6 +75,16 @@ coordinates coupled exchanges. It does not make the three interchangeable.
     overwrite, but no closure is claimed for it.
   - Chemistry (`GasPhaseChem`), which changes tracer composition through an
     external solver.
+  - `NonEquilibriumMicrophysics2M` and `NonEquilibriumMicrophysics2MP3`. The
+    coverage matrix and the planned tests were written against one-moment, and a
+    two-moment scheme carries number concentrations whose paths have not been
+    audited. Excluded rather than assumed to behave like 1M.
+  - State-mutating custom callbacks. `AtmosSimulation` takes a `callbacks`
+    keyword and appends whatever it is given, so a caller can install a callback
+    that writes `Y`. The contract's claim that supported callbacks are read-only
+    covers the **default** set, which the mutation matrix inventories. A custom
+    callback must either declare itself read-only with respect to `Y` or supply
+    its own ledger accounting; without one of those, no closure is claimed.
   - Every local, column, or component-energy budget.
 
 ### Timestepping methods supported
@@ -310,9 +328,37 @@ with the requirement that every leg and residual transforms as
 reason is `enforce_mass_energy_consistency!`: when a limiter moves `ρq_tot` by
 `Δ`, it moves `ρ` by `Δ` and `ρe_tot` by `Δ·(uᵥ(T) + Φ)`. Whether that carrier
 energy is consistent with a `b·W` shift across *every* water leg, including
-precipitation fallout and surface deposition, is exactly what the audit tests.
-The audit is a check on the implemented model. It is not permission to invent a
-carrier-energy term that the model does not have.
+precipitation fallout and surface deposition, is what the audit is for.
+
+**Two different things are called covariance, and only one of them can settle
+`b`.** An earlier draft ran them together.
+
+*Algebraic re-expression.* Take a completed ledger and apply
+`Q_E* = Q_E + a·Q_M + b·Q_W` to every amount. The residual then transforms the
+same way for any `a` and `b` whatever, because the ledger is linear and the
+substitution is exact. This is a **tautology**. It is worth running as a
+self-check that the implementation really is linear and that no leg was stored
+in a way that breaks the substitution, and it is worth nothing as evidence about
+which `b` the model admits.
+
+*Physical reference experiment.* Rerun the model with shifted thermodynamic
+references and compare the two ledgers. This one can reject a `b`, and it is an
+intervention, so it has to be specified before it is run. PR 7 must fix all
+four pieces:
+
+  - which `Thermodynamics` parameters are shifted, and by how much;
+  - how the initial state is transformed, so the two runs start at states that
+    correspond rather than at two unrelated states;
+  - how the boundary and carrier fluxes transform, in particular the energy
+    carried by a water flux across the surface;
+  - how the slab reservoir transforms, since `E_sfc` is built from `Y.sfc.T` and
+    a constant heat capacity and does not see the atmospheric reference at all.
+
+Until those four are written down, no covariance result may be used to accept or
+reject a value of `b`.
+
+Both audits are checks on the implemented model. Neither is permission to invent
+a carrier-energy term the model does not have.
 
 ## Control volumes
 
