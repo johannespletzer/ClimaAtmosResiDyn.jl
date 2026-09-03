@@ -463,6 +463,7 @@ ClimaAtmos.measured
 ClimaAtmos.invariant_zero
 ClimaAtmos.not_applicable
 ClimaAtmos.unknown_component
+ClimaAtmos.status_name
 ClimaAtmos.is_contributing
 ClimaAtmos.is_blocking
 ClimaAtmos.BudgetReservoir
@@ -480,6 +481,7 @@ ClimaAtmos.DiscreteMap
 ClimaAtmos.NumericalCorrection
 ClimaAtmos.AlgebraicSolveDefect
 ClimaAtmos.BudgetLeg
+ClimaAtmos.StageObservation
 ClimaAtmos.leg_identity
 ClimaAtmos.leg_label
 ClimaAtmos.budget_component
@@ -500,6 +502,7 @@ ClimaAtmos.BudgetLedger
 ClimaAtmos.check_endpoint_continuity
 ClimaAtmos.open_transaction!
 ClimaAtmos.record_leg!
+ClimaAtmos.record_observation!
 ClimaAtmos.abort_transaction!
 ClimaAtmos.project_legs
 ClimaAtmos.BudgetReconciliation
@@ -507,6 +510,8 @@ ClimaAtmos.is_blocked
 ClimaAtmos.reconcile
 ClimaAtmos.commit_transaction!
 ClimaAtmos.transfer_mismatch
+ClimaAtmos.control_volume_available
+ClimaAtmos.check_endpoint_layout
 ```
 
 ## Internals

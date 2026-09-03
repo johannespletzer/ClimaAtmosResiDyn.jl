@@ -173,6 +173,7 @@ mutable struct BudgetLedger{FT}
     step::Int
     is_open::Bool
     opening::Union{Nothing, BudgetEndpoints{FT}}
+    initial::Union{Nothing, BudgetEndpoints{FT}}
     last_closing::Union{Nothing, BudgetEndpoints{FT}}
     legs::Vector{BudgetLeg{FT}}
     observations::Vector{StageObservation{FT}}
@@ -189,6 +190,7 @@ end
 BudgetLedger{FT}() where {FT} = BudgetLedger{FT}(
     0,
     false,
+    nothing,
     nothing,
     nothing,
     BudgetLeg{FT}[],
@@ -209,10 +211,18 @@ BudgetLedger{FT}() where {FT} = BudgetLedger{FT}(
 Verify that `opening` is the endpoint the previous transaction closed on.
 
 The first transaction has nothing to compare against and passes. Afterwards the
-step numbers and every reservoir's contributing amount must agree exactly.
-Exactly, not within a tolerance: a reduction over an unchanged state is
-deterministic, so any difference is a real change that happened between the two
-transactions and that nothing recorded.
+step numbers, the reservoir set, every component's **status**, and every
+contributing amount must agree exactly. Exactly, not within a tolerance: a
+reduction over an unchanged state is deterministic, so any difference is a real
+change that happened between the two transactions and that nothing recorded.
+
+Status is checked as well as amount because comparing amounts alone lets a
+reservoir change what it owns without anyone noticing. A quantity that was
+measured and is now unknown, or was inapplicable and is now measured, would slip
+through a check that skips any pair where one side does not contribute — which
+is precisely the pair a status change produces. A configuration transition
+mid-run is not supported, so a status change is a defect until it is
+deliberately represented.
 """
 function check_endpoint_continuity(
     ledger::BudgetLedger{FT},
@@ -236,7 +246,15 @@ function check_endpoint_continuity(
         for quantity in BUDGET_QUANTITIES
             b = budget_component(before, quantity)
             a = budget_component(after, quantity)
-            (is_contributing(b) && is_contributing(a)) || continue
+            typeof(b.status) === typeof(a.status) || error(
+                "Budget endpoint status changed for $quantity in " *
+                "$(reservoir_name(after.reservoir)) at step $(opening.step): " *
+                "the previous transaction closed as " *
+                "$(nameof(typeof(b.status))) and this one opens as " *
+                "$(nameof(typeof(a.status))). What a reservoir owns may not " *
+                "change mid-run without being represented as a transition.",
+            )
+            is_contributing(a) || continue
             b.amount == a.amount || error(
                 "Budget endpoint discontinuity in $quantity for " *
                 "$(reservoir_name(after.reservoir)) at step $(opening.step): " *
@@ -276,6 +294,7 @@ function open_transaction!(
     ledger.step = endpoints.step + 1
     ledger.is_open = true
     ledger.opening = endpoints
+    isnothing(ledger.initial) && (ledger.initial = endpoints)
     empty!(ledger.legs)
     empty!(ledger.observations)
     empty!(ledger.recorded_keys)
@@ -496,6 +515,8 @@ Base.@kwdef struct BudgetReconciliation{FT}
     residual::FT
     discrepancy_before_defect::FT
     cumulative_endpoint_change::FT
+    endpoint_change_from_initial::FT
+    telescoping_discrepancy::FT
     cumulative_residual::FT
     cumulative_abs_residual::FT
     max_abs_residual::FT
@@ -524,6 +545,11 @@ function reconcile(
 ) where {FT}
     opening = ledger.opening
     isnothing(opening) && error("No open budget transaction to reconcile.")
+    control_volume_available(opening, cv) || error(
+        "Control volume $(cv.name) is unavailable in this configuration: it " *
+        "names a reservoir the state does not have. Projecting it anyway " *
+        "would report another view's numbers under this view's name.",
+    )
 
     before = endpoint_total(opening, quantity, cv)
     after = endpoint_total(closing, quantity, cv)
@@ -537,6 +563,18 @@ function reconcile(
     key = (quantity, cv.name)
     cumulative_change =
         get(ledger.cumulative_change, key, zero(FT)) + endpoint_change
+
+    # The contract asks for `Bᴺ - B⁰`, and a running sum of per-step
+    # differences is not that. It telescopes the same measurements, so it can
+    # only reproduce them plus the rounding of every intermediate addition, and
+    # it can never contradict them. Holding the first accepted endpoint gives a
+    # second reading that shares no arithmetic with the first, and their
+    # difference is a measurement of the accumulation error rather than a
+    # rederivation of it.
+    initial = ledger.initial
+    from_initial =
+        isnothing(initial) ? endpoint_change :
+        after.total - endpoint_total(initial, quantity, cv).total
     cumulative_residual =
         get(ledger.cumulative_residual, key, zero(FT)) + residual
     cumulative_abs_residual =
@@ -560,11 +598,71 @@ function reconcile(
         residual,
         discrepancy_before_defect,
         cumulative_endpoint_change = cumulative_change,
+        endpoint_change_from_initial = from_initial,
+        telescoping_discrepancy = cumulative_change - from_initial,
         cumulative_residual,
         cumulative_abs_residual,
         max_abs_residual,
         blocked_by,
     )
+end
+
+"""
+    control_volume_available(endpoints, control_volume) -> Bool
+
+Whether every reservoir named by `control_volume` is present in `endpoints`.
+
+`ATMOSPHERE_AND_SURFACE` in a configuration with no slab is the case this
+exists for. The atmosphere is present and owns all three quantities, so a naive
+projection returns the atmosphere-only numbers under the coupled name: a view
+the contract says is unavailable, reported as though it had been computed. The
+totals would even look right, which is worse, because a surface exchange would
+read as internal to a coupled system that does not exist.
+
+An unavailable view is not emitted at all. It is not the same as a view that is
+available and inapplicable for one quantity.
+"""
+control_volume_available(endpoints::BudgetEndpoints, cv::ControlVolume) = all(
+    r -> any(e -> e.reservoir === r, endpoints.reservoirs),
+    cv.reservoirs,
+)
+
+"""
+    check_endpoint_layout(opening, closing)
+
+Verify that the closing endpoints describe the same reservoirs, in the same
+order, owning the same quantities as the opening ones.
+
+A supported configuration has a static reservoir graph, so a reservoir that
+appears, disappears, or changes what it owns part way through a step is a
+defect. Checking it here means a malformed closing endpoint is refused before
+[`commit_transaction!`](@ref) has advanced anything, which is what lets the
+commit be atomic.
+"""
+function check_endpoint_layout(
+    opening::BudgetEndpoints,
+    closing::BudgetEndpoints,
+)
+    length(opening.reservoirs) == length(closing.reservoirs) || error(
+        "The budget reservoir set changed within step $(closing.step), from " *
+        "$(length(opening.reservoirs)) reservoirs to " *
+        "$(length(closing.reservoirs)).",
+    )
+    for (before, after) in zip(opening.reservoirs, closing.reservoirs)
+        before.reservoir === after.reservoir ||
+            error("The budget reservoir order changed within a step.")
+        for quantity in BUDGET_QUANTITIES
+            b = budget_component(before, quantity)
+            a = budget_component(after, quantity)
+            typeof(b.status) === typeof(a.status) || error(
+                "Budget component status for $quantity in " *
+                "$(reservoir_name(after.reservoir)) changed within step " *
+                "$(closing.step), from $(nameof(typeof(b.status))) to " *
+                "$(nameof(typeof(a.status))).",
+            )
+        end
+    end
+    return nothing
 end
 
 """
@@ -576,6 +674,18 @@ quantity and control volume.
 The closing endpoints must be for the step the transaction opened, which is the
 check that catches a missed or a doubled step. Cumulative totals are updated
 here and only here, so an aborted transaction contributes nothing to them.
+
+A control volume whose reservoirs are not all present is **not emitted**. In a
+configuration with no slab the coupled view would otherwise silently return the
+atmosphere-only numbers under the coupled name. See
+[`control_volume_available`](@ref).
+
+The commit is **atomic**. Every reconciliation is computed into a temporary
+first, and the ledger is not touched until all of them have succeeded. An
+earlier version updated the cumulative dictionaries inside the loop, so an error
+raised while reconciling the fifth quantity left the first four already advanced
+in a transaction that was still open — a ledger that had half-counted a step it
+never committed, with no way to tell from its own state.
 """
 function commit_transaction!(
     ledger::BudgetLedger{FT},
@@ -588,15 +698,24 @@ function commit_transaction!(
         "transaction is step $(ledger.step).",
     )
 
+    check_endpoint_layout(ledger.opening, closing)
+
+    # Compute everything before changing anything. `reconcile` reads the
+    # cumulative dictionaries but does not write them, so this loop is free of
+    # side effects and may fail part way through without consequence.
+    available = filter(cv -> control_volume_available(closing, cv), control_volumes)
     reconciliations = BudgetReconciliation{FT}[]
-    for cv in control_volumes, quantity in BUDGET_QUANTITIES
-        r = reconcile(ledger, closing, quantity, cv)
-        key = (quantity, cv.name)
+    for cv in available, quantity in BUDGET_QUANTITIES
+        push!(reconciliations, reconcile(ledger, closing, quantity, cv))
+    end
+
+    # Past here nothing can fail, so the ledger may be advanced.
+    for r in reconciliations
+        key = (r.quantity, r.control_volume)
         ledger.cumulative_change[key] = r.cumulative_endpoint_change
         ledger.cumulative_residual[key] = r.cumulative_residual
         ledger.cumulative_abs_residual[key] = r.cumulative_abs_residual
         ledger.max_abs_residual[key] = r.max_abs_residual
-        push!(reconciliations, r)
     end
 
     ledger.is_open = false
@@ -624,10 +743,19 @@ is not permission to synthesize a counter-entry: a nonzero result is a finding,
 and it names lagged coupling, clipping, inconsistent quadrature, or a reservoir
 the model does not represent.
 
-`found` is false when `event` has no legs at all. It stays true for an event
-whose legs are all unknown, and `blocked_by` then names them: "the legs cancel",
-"there were no legs" and "nobody measured the legs" are three different answers
-and the caller has to be able to tell them apart.
+Returns `(; total, found, applicable, status_counts, blocked_by)`.
+
+Four answers have to stay distinguishable, and a bare total tells them apart
+from none of the others. "The legs cancel" is `found`, `applicable`, no
+blockers, total zero. "There were no legs" is `found = false`. "Nobody measured
+the legs" is `found` with `blocked_by` naming them. And "this quantity does not
+exist for this event" — every matching component inapplicable, as water is for a
+dry-model exchange — is `applicable = false`, which previously returned
+`found = true` with a total of zero and no blockers, exactly like a measured
+cancellation.
+
+`status_counts` gives the tally per status, so a partially inapplicable event is
+legible rather than collapsed into one flag.
 """
 function transfer_mismatch(
     ledger::BudgetLedger{FT},
@@ -636,14 +764,23 @@ function transfer_mismatch(
 ) where {FT}
     total = zero(FT)
     found = false
+    applicable = false
+    status_counts = Dict(
+        :measured => 0,
+        :invariant_zero => 0,
+        :not_applicable => 0,
+        :unknown => 0,
+    )
     blocked_by = String[]
     for leg in ledger.legs
         leg.event === event || continue
         found = true
         c = budget_component(leg, quantity)
+        status_counts[status_name(c.status)] += 1
+        c.status isa NotApplicable || (applicable = true)
         is_blocking(c) && push!(blocked_by, leg_label(leg))
         is_contributing(c) || continue
         total += c.amount
     end
-    return (; total, found, blocked_by)
+    return (; total, found, applicable, status_counts, blocked_by)
 end

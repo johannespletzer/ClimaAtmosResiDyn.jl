@@ -76,6 +76,17 @@ The component has not been established. See [`ComponentStatus`](@ref).
 struct UnknownComponent <: ComponentStatus end
 
 """
+    status_name(status) -> Symbol
+
+A short label for a [`ComponentStatus`](@ref), used when a report tallies
+statuses rather than naming each one.
+"""
+status_name(::Measured) = :measured
+status_name(::InvariantZero) = :invariant_zero
+status_name(::NotApplicable) = :not_applicable
+status_name(::UnknownComponent) = :unknown
+
+"""
     BudgetComponent(amount, status)
 
 One signed extensive amount together with what is known about it.
