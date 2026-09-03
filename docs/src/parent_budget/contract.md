@@ -171,18 +171,45 @@ all excluded from it.
 | non-equilibrium             | `∫ ρq_tot` |
 | one-moment                  | `∫ ρq_tot` |
 
-**`ρ` tracks `ρq_tot` exactly.** Every path that changes one changes the other by
-the same amount: 0-moment removal (`Yₜ.c.ρq_tot += ρ_dq_tot_dt` beside
-`Yₜ.c.ρ += ρ_dq_tot_dt`), sedimentation, surface flux, the viscous sponge, and
-`enforce_mass_energy_consistency!`. The dry-air mass is therefore
+**`D` is a derived diagnostic, not a conservation invariant.** The dry-air mass
 
 ```
 D = M − W = ∫ (ρ − ρq_tot)      [kg]
 ```
 
-and the two forms are the same number. It is a derived invariant, and testing it
-is how the mass and water budgets are checked against each other rather than
-assumed equal.
+is well defined, and the two forms are the same number because the integral is
+linear. That is all the identity asserts. `D` is **not** conserved, and an
+earlier draft of this contract wrongly said it was.
+
+`ρ` does track `ρq_tot` on the paths that move air and water together:
+0-moment removal (`Yₜ.c.ρq_tot += ρ_dq_tot_dt` beside `Yₜ.c.ρ += ρ_dq_tot_dt`),
+sedimentation in `vertical_advection_of_water_tendency!` (`Yₜ.c.ρ += vtt`
+beside `Yₜ.c.ρq_tot += vtt`), surface flux, the viscous sponge, and
+`enforce_mass_energy_consistency!`.
+
+It does not track it on the prescribed forcing paths, all three of which are in
+scope:
+
+| Path                                    | Writes                                   | Writes `ρ` |
+|:--------------------------------------- |:---------------------------------------- |:---------- |
+| `large_scale_advection_tendency_ρq_tot` | `ρq_tot`, `ρe_tot`                       | no         |
+| `subsidence_tendency!`                  | `ρq_tot`, `ρe_tot`, `ρq_lcl`, `ρq_icl`   | no         |
+| `apply_Tq_forcing!`                     | `ρq_tot`, `ρe_tot`                       | no         |
+
+Each adds water to a column without adding air to it, so `W` moves while `M`
+stays put and `D` moves by `−ΔW`. Any forced configuration therefore has a
+dry-air budget that is open by construction.
+
+What the ledger does about it: these paths record a mass component of
+`InvariantZero` — the implemented equation adds no mass, and that zero is the
+measured truth about the code — with their water and energy components measured
+independently. A mass leg is never manufactured from a water leg to make `D`
+close.
+
+Whether the model *ought* to add mass along with prescribed moisture is a
+question about the physics, not about the bookkeeping. The ledger's job is to
+report what the discrete equations do. It is listed in the limitations register
+so that the answer, if it ever changes, changes there and not here.
 
 **The slab owns mass as well as water.** `Y.sfc.water` is a water content in
 `kg m⁻²`, and the water it gains left the atmosphere as `ρq_tot` and therefore
@@ -453,5 +480,11 @@ physical-completeness gaps, which are claim 3 and never a numerical residual.
     solid-Earth exchange has no implemented counterpart. Recorded as a
     completeness gap, not as a residual.
   - `flux_accumulation!` omits turbulent surface fluxes, as above.
+  - Prescribed forcing adds water and energy to a column without adding air to
+    it. `large_scale_advection_tendency_ρq_tot`, `subsidence_tendency!` and
+    `apply_Tq_forcing!` all write `ρq_tot` and `ρe_tot` and never write `ρ`, so
+    a forced run has an open dry-air budget. This is a property of the
+    implemented equations. The ledger records the mass component as an
+    invariant zero and reports the open budget rather than closing it.
   - The process record covers only the explicitly bracketed tendency path. Its
     bracket set is not the ledger's coverage set.
