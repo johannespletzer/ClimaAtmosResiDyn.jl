@@ -47,9 +47,35 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
+  # Package-load preflight. A syntax or docstring error only shows up during
+  # precompilation, so without this gate one bad expression starts the whole
+  # matrix and every job fails the same way many minutes in. Two short jobs
+  # answer that question first, and the matrix waits for them.
+  load:
+    name: load ${{ matrix.version }}
+    needs: ci-decide
+    if: needs.ci-decide.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '1.10'
+          - '1.11'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: ${{ matrix.version }}
+      - uses: julia-actions/cache@v3
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: using ClimaAtmos
+        run: julia --project=. --color=yes -e 'using ClimaAtmos'
+
   test:
     name: ci ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.test_group }}
-    needs: ci-decide
+    needs: [ci-decide, load]
     if: needs.ci-decide.outputs.skip != 'true'
 
     runs-on: ${{ matrix.os }}
@@ -107,13 +133,17 @@ jobs:
   # jobs, so a reused merge-queue build (matrix skipped) still reports green.
   ci-required:
     name: ci-required
-    needs: [ci-decide, test]
+    needs: [ci-decide, load, test]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - run: |
           if [[ "${{ needs.ci-decide.result }}" != "success" ]]; then
             echo "ci-decide job did not succeed"; exit 1
+          fi
+          if [[ "${{ needs.load.result }}" != "success" && \
+                "${{ needs.load.result }}" != "skipped" ]]; then
+            echo "package-load preflight did not succeed"; exit 1
           fi
           if [[ "${{ needs.test.result }}" == "success" ]]; then
             echo "ci matrix passed"; exit 0

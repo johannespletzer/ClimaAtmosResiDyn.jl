@@ -5,7 +5,7 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
 ## Codebase map
 
   - `src/ClimaAtmos.jl`: package entry point. It `include`s the main subsystems; start here when you need the owning source area.
-  - `src/config/`: YAML→typed-object translation layer (formerly `src/solver/`). `cli_options.jl` defines `--config_file` and `--job_id`; `yaml_helper.jl` loads `config/default_configs/default_config.yml` and merges overlay YAML; `atmos_config.jl` defines `AtmosConfig`; `model_getters.jl` and `type_getters.jl` translate config into a runnable model; `tracer_config.jl` does the same for the three tracer families (`passive_tracers`, `water_tracers`, `energy_tracers`); `solve.jl` runs it. `parsed_args` reads are confined to this folder.
+  - `src/config/`: YAML→typed-object translation layer (formerly `src/solver/`). `cli_options.jl` defines `--config_file` and `--job_id`; `yaml_helper.jl` loads `config/default_configs/default_config.yml` and merges overlay YAML; `atmos_config.jl` defines `AtmosConfig`; `model_getters.jl` and `type_getters.jl` translate config into a runnable model; `tracer_config.jl` does the same for the tracer families and the records built on them (`passive_tracers`, `water_tracers`, `energy_tracers`, `energy_source_tags`, `energy_process_record`, `water_process_record`); `solve.jl` runs it. `parsed_args` reads are confined to this folder.
   - `src/simulation/AtmosSimulations.jl`: high-level `AtmosSimulation(config)` construction.
   - `src/cache/`: precomputed quantities allocated once per stage. Naming convention: `set_*_precomputed_quantities!(Y, p, t)` — never allocate inside these functions.
   - `src/prognostic_equations/`: tendency accumulation and implicit/explicit splitting.
@@ -21,9 +21,9 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
   - `src/callbacks/`, `src/diagnostics/`, `src/setups/`, `src/surface_conditions/`, `src/topography/`, `src/parameters/`, `src/utils/`: remaining domain subtrees. Search by physics/runtime concept first.
   - `config/`: YAML/TOML config library. `default_configs/default_config.yml` is the schema baseline; `common_configs/` holds reusable numerics; `example_configs/` holds run controls for script-based examples; `model_configs/`, `gpu_configs/`, `mpi_configs/`, `perf_configs/`, and `longrun_configs/` are scenario overlays.
   - `.buildkite/ci_driver.jl`: canonical run entry for CI-style simulations. It parses config, builds the simulation, runs `solve_atmos!`, and performs validation/output checks.
-  - `.buildkite/pipeline.yml` is the bootstrap pipeline Buildkite uploads; `.buildkite/full_pipeline.yml` is the authoritative list of jobs and their config combinations. Branch dispatch lives in the bootstrap, not in the individual steps: on `main` it publishes the merged PR's staged reproducibility reference, and otherwise a decider step (`decide_pipeline.sh`) either reuses an already-tested PR's results or uploads the full pipeline. New jobs go in `full_pipeline.yml` and need no branch gate of their own.
+  - The Buildkite pipeline runs on CliMA's `central` slurm agents, so it belongs to upstream ClimaAtmos rather than to this fork's own CI, which is GitHub Actions. `.buildkite/` is kept here for the run environment (`--project=.buildkite`) and for parity with upstream. `.buildkite/pipeline.yml` is the bootstrap pipeline Buildkite uploads; `.buildkite/full_pipeline.yml` is the authoritative list of jobs and their config combinations. Branch dispatch lives in the bootstrap, not in the individual steps: on `main` it publishes the merged PR's staged reproducibility reference, and otherwise a decider step (`decide_pipeline.sh`) either reuses an already-tested PR's results or uploads the full pipeline. New jobs go in `full_pipeline.yml` and need no branch gate of their own.
   - `docs/make.jl` and `docs/src/`: Documenter entry point plus user/contributor docs. Good references for API usage and config recipes.
-  - `perf/`: allocation and performance benchmarks run separately from unit tests. Not run in CI; regressions must be caught in review.
+  - `perf/`: allocation and performance benchmarks run separately from unit tests. This repository's CI is GitHub Actions, which does not run them, so regressions must be caught in review.
   - `reproducibility_tests/`: reproducibility test infrastructure. `ref_counter.jl` holds a single integer counter that partitions commit history into reference bins — increment it when simulation output intentionally changes.
   - `post_processing/`, `calibration/`, `runscripts/`, `examples/`: analysis scripts, calibration workflows, launch scripts, and smaller usage examples.
     `runscripts/` targets DKRZ Levante specifically; see [runscripts/README.md](../runscripts/README.md) for the setup-then-submit order, the CPU/GPU stack split, and the node layout the GPU scripts are built around.
@@ -72,6 +72,14 @@ all. Keep new tagged-simulation tests here, and prefer reusing a tag set
 another test in the same file already builds: a second simulation with an
 identical tag signature costs seconds instead of minutes.
 
+### The package-load preflight
+
+`ci.yml` runs a `load` job on each supported Julia version before the test
+matrix starts. It does nothing but `using ClimaAtmos`. A syntax or docstring
+error only surfaces during precompilation, and without this gate one bad
+expression starts every matrix job and fails them all the same way. `test`
+depends on `load`, and `ci-required` aggregates both.
+
 ### Running a single test group
 
 `test/runtests.jl` selects the group from the `TEST_GROUP` environment
@@ -83,7 +91,7 @@ TEST_GROUP=parameterizations julia +1.11 --project -e 'import Pkg; Pkg.test()'
 
 ### Test layout
 
-  - `test/config/`, `test/diagnostics/`, `test/prognostic_equations/`, `test/parameterized_tendencies/`, `test/conservation/`, `test/cosp/`, `test/implicit/` mostly mirror the source layout. A few feature tests sit at the top level instead (`test/tagged_tracers*.jl`, `test/tagged_water*.jl`, `test/tracer_processes_tests.jl`).
+  - `test/config/`, `test/diagnostics/`, `test/prognostic_equations/`, `test/parameterized_tendencies/`, `test/cosp/`, `test/implicit/` mostly mirror the source layout. A few feature tests sit at the top level instead (`test/tagged_tracers*.jl`, `test/tagged_water*.jl`, `test/tracer_processes_tests.jl`).
   - `test/test_helpers.jl`: shared testing utilities.
   - `test/config.jl`: config invariants and uniqueness checks; inspect this before changing config semantics.
 
@@ -94,7 +102,7 @@ When reviewing or writing changes, name the validation surface explicitly:
   - **`test/runtests.jl` test groups** for unit-level coverage.
   - **`.buildkite/ci_driver.jl` jobs** for config or runtime-workflow changes. Check `.buildkite/pipeline.yml` to identify the affected jobs.
   - **`reproducibility_tests/`** for changes that may shift simulation output. The reference counter in `reproducibility_tests/ref_counter.jl` must be incremented when output intentionally changes; do not edit it without explicit direction from the user.
-  - **`perf/` allocation benchmarks** are not run in CI. Allocation regressions must be caught during review using the `@allocated` pattern.
+  - **`perf/` allocation benchmarks** are not run by this repository's GitHub Actions CI. Allocation regressions must be caught during review using the `@allocated` pattern.
 
 ## MSE / reproducibility
 

@@ -200,3 +200,72 @@ ledger along with everything else. It does not, only because `AtmosCache` is a
 plain struct and hits the `::Any` fallback — which means the feature is a no-op
 in general, not that the tags are protected. Worth knowing before anyone makes
 it work.
+
+## 7. Cleanup findings that belong to upstream ClimaAtmos, not to this fork
+
+**Status:** verified as upstream's, deliberately unchanged here.
+
+A cleanup review of `851cafa` raised these. Each was checked against
+`CliMA/ClimaAtmos.jl@main` and is still there, byte for byte. This repository
+tracks upstream, so fixing them here would mean a conflict on every future
+merge for no benefit to this fork. They are recorded so the next review does
+not re-derive them.
+
+  - **Circular conservation claims in the microphysics tests.**
+    `test/parameterized_tendencies/microphysics/bmt_integration.jl:229-270` and
+    `sgs_quadrature.jl:467-532` define the vapor tendency as the negative sum
+    of the others and then only check that it is finite. That tests
+    construction, not conservation. Much of `bmt_integration.jl` also exercises
+    CloudMicrophysics structures directly rather than the ClimaAtmos wrappers.
+  - **Gravity-wave jobs called tests.** Seven active jobs in
+    `.buildkite/full_pipeline.yml:150-189` run scripts that produce plots and
+    assert nothing. They pass whenever the script does not crash.
+  - **Unverified downloads.** `test/artifact_funcs.jl` fetches mutable external
+    files into `tempdir()` with no checksum. This fork no longer downloads them
+    during unit tests (see below), but the four standalone gravity-wave scripts
+    still use these functions.
+  - **2M and 2MP3 microphysics advertised but rejected.**
+    `src/cache/precomputed_quantities.jl:160-167` asserts against both, while
+    the config parser, default help, README and microphysics documentation
+    still list them as supported.
+  - **Dead private functions.** `ᶠupdraft_nh_pressure_buoyancy` and
+    `ᶠupdraft_nh_pressure_drag` in
+    `src/prognostic_equations/mass_flux_closures.jl`, and `add_sgs_ᶜK!` in
+    `src/cache/precomputed_quantities.jl` (with its commented-out call at
+    `:749`), have no callers.
+  - **Orphan files under `test/`.** `test/implicit/debugging_tools.jl` is
+    unreferenced and says so itself;
+    `test/parameterized_tendencies/gravity_wave/orographic_gravity_wave/compute_preprocessed_topography.jl`
+    is a data-generation tool, not a test.
+  - **Comments that record patch history.**
+    `src/prognostic_equations/mass_flux_closures.jl:141` ("used to have"),
+    `src/simulation/AtmosSimulations.jl:210` ("backward compatibility since"),
+    `test/gpu_setups.jl:35-38`, and
+    `test/prognostic_equations/tracer_mass_consistency_tests.jl:89-90`
+    ("pre-fix"). The two comment sites this fork owns were rewritten.
+  - **`solve_atmos!` contract.** The docstring in `src/simulation/solve.jl:99`
+    says failures are caught and writers closed on every path, but the first
+    `CTS.step!`, `precompile_callbacks` and `GC.gc()` all run before the
+    `try` at `:128`.
+  - **Restart-test duplication.** `test/restart.jl` and
+    `test/restart_AtmosSimulation.jl` duplicate the checkpoint/reload/compare
+    contract. Note that the review's proposed `restart_utils.jl` already
+    exists; what is real is the stale signature documented at
+    `test/restart_AtmosSimulation.jl:156-164`, which names
+    `test_restart(simulation, model, grid; job_id, ...)` for a function that
+    takes `(simulation, args; comms_ctx, more_ignore)`.
+  - **Inactive pipeline history.** `.buildkite/full_pipeline.yml` carries
+    several wholly commented-out jobs.
+  - **`perf/flame.jl`.** The `@allocated` pass is labelled "old" and "TODO:
+    remove" although it is the pass that enforces the allocation limit;
+    `Profile.Allocs` only produces the report.
+  - **Placeholder testsets.** `test/conservation/*.jl`,
+    `test/prognostic_equations/hyperdiffusion_tests.jl` and `tendency_tests.jl`
+    held twelve `@test_skip` placeholders and no assertions. They ran in this
+    fork's `dynamics` group, so they were removed here; upstream still has
+    them. The tests they were meant to become — global dry-air mass, total
+    water mass and tracer mass conservation, hyperdiffusion tendency, and
+    tendency-computation coverage — are worth writing against real reference
+    values rather than restoring as scaffolds.
+  - **Julia 1.9 compatibility.** Upstream still declares `julia = "1.9"` while
+    testing only 1.10 and 1.11. This fork raised its own floor to 1.10.
