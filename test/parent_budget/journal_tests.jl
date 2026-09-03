@@ -106,8 +106,8 @@ attribution_for(commit, quantity, cv, channel) = only(
     filter(
         r ->
             r.quantity === quantity &&
-                r.control_volume === cv &&
-                r.channel === channel,
+            r.control_volume === cv &&
+            r.channel === channel,
         commit.attribution,
     ),
 )
@@ -116,8 +116,8 @@ transfer_for(commit, quantity, event, cv) = only(
     filter(
         r ->
             r.quantity === quantity &&
-                r.event === event &&
-                r.control_volume === cv,
+            r.event === event &&
+            r.control_volume === cv,
         commit.transfer,
     ),
 )

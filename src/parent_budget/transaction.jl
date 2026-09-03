@@ -338,8 +338,7 @@ end
 
 # The blocker a reconciliation carries when it was asked for a verdict with no
 # calibrated tolerance. Written once so a report can match on it.
-const UNCALIBRATED_TOLERANCE_BLOCKER =
-    "tolerance not declared; kappa is uncalibrated"
+const UNCALIBRATED_TOLERANCE_BLOCKER = "tolerance not declared; kappa is uncalibrated"
 
 # ============================================================================
 # The ledger
@@ -1059,6 +1058,9 @@ function reconcile_parent(
 
     applicable = before.applicable || after.applicable
     blocked_by = vcat(before.blocked_by, after.blocked_by, projected.blocked_by)
+    cumulative_residual = get(ledger.cumulative_residual, key, zero(FT)) + residual
+    previous_abs = get(ledger.cumulative_abs_residual, key, zero(FT))
+    previous_max = get(ledger.max_abs_residual, key, zero(FT))
     tolerance, blocked_by = resolve_tolerance(
         quantity_tolerance(tolerances, quantity),
         blocked_by,
@@ -1082,12 +1084,9 @@ function reconcile_parent(
         cumulative_endpoint_change = cumulative_change,
         endpoint_change_from_initial = from_initial,
         telescoping_discrepancy = cumulative_change - from_initial,
-        cumulative_residual =
-            get(ledger.cumulative_residual, key, zero(FT)) + residual,
-        cumulative_abs_residual =
-            get(ledger.cumulative_abs_residual, key, zero(FT)) + abs(residual),
-        max_abs_residual =
-            max(get(ledger.max_abs_residual, key, zero(FT)), abs(residual)),
+        cumulative_residual,
+        cumulative_abs_residual = previous_abs + abs(residual),
+        max_abs_residual = max(previous_max, abs(residual)),
         blocked_by,
     )
 end
