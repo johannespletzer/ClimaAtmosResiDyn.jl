@@ -25,14 +25,18 @@ docs/site/
 docs/src/configuration_options.md
 
 /Manifest*.toml
-*/Manifest*.toml  # docs, test
+# docs, test
+*/Manifest*.toml
 .buildkite/PrecompileCI/Manifest*.toml
 calibration/test/Manifest*.toml
 
+# Generated artifact declarations. The two that are checked in are source.
 Artifacts.toml
+!/Artifacts.toml
+!calibration/experiments/*/Artifacts.toml
 
 # ignore vscode and macos artifacts
-*.vscode
+.vscode/
 *.DS
 
 # ignore simulation outputs
@@ -45,6 +49,8 @@ Artifacts.toml
 *.nc
 *.mp4
 *.png
+# ...except documentation assets, which are source files.
+!docs/src/assets/*.png
 *.hdf5
 *.h5
 *.g
@@ -56,7 +62,6 @@ Artifacts.toml
 # misc
 .DS_Store
 .qodo
-AGENTS.md
 MEMORY.md
 .agents
 # Claude Code worktrees

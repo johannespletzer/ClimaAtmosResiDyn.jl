@@ -482,4 +482,5 @@ ClimaAtmos.DEFAULT_CLOSURE_TOLERANCES
 ClimaAtmos.closure_check_from_config
 ClimaAtmos.tag_closure
 ClimaAtmos.tag_closure_callback
+ClimaAtmos.tag_closure_callback!
 ```
