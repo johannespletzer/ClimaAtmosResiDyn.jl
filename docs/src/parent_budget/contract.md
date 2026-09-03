@@ -45,10 +45,12 @@ and a sum of recorded amounts to within the tolerance defined below, for the
 discrete system the model actually integrates. That is a weaker and more useful
 statement than exactness, and it is the only one the arithmetic supports.
 
-## Glossary
+## Ledger glossary
 
 One vocabulary, used in this contract, in the code, in the registry, and in
-every report.
+every report. The heading is qualified because `docs/src/glossary.md` is the
+model's own glossary, and two headings with the same text make every reference
+to either of them ambiguous.
 
 | Term                      | Meaning                                                                                                                                            |
 |:------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------- |
