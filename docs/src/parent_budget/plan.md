@@ -243,10 +243,12 @@ and the limitations register.
 has to be checkable: the ledger off must match a build without the feature, and
 the ledger on must match the ledger off, both bitwise.
 
-**[revised]** The dry-mass invariant is `D = ∫(ρ − ρq_tot)`, not `M − W`. In
-this model `ρ` carries vapour and cloud condensate but not rain or snow, while
-`W` includes `ρq_rai` and `ρq_sno`. `M − W` is not a dry mass and testing it as
-one would fail for a correct model.
+**[corrected]** The dry-mass invariant is `D = M − W`, as the original plan
+said. An earlier revision of this page claimed otherwise, on the reading that
+`ρ` excludes precipitating water. It does not: `ρq_tot` already contains rain
+and snow, `ρ` tracks `ρq_tot` on every path that changes it, and `M − W` and
+`∫(ρ − ρq_tot)` are the same number. The correction is recorded rather than
+quietly removed, because the wrong version was used to justify a wrong `W`.
 
 ## Acceptance criteria
 
@@ -280,19 +282,19 @@ Meta Step 1 is complete only when all of the following hold.
 
 ## Summary of revisions to the earlier plans
 
-| Change                                                         | Reason                                                                |
-|:-------------------------------------------------------------- |:--------------------------------------------------------------------- |
-| Base is `main` once PR 40 merged, not PR 41 or a branch        | PRs 41-47 were closed unmerged until PR 40 carried them to `main`     |
-| Rejection and adaptivity machinery reduced to an assertion     | fixed-step IMEX with no controller never rejects                      |
-| Nonlinear-tolerance sweep replaced by an iteration sweep       | `max_iters = 1` leaves no tolerance to tighten                        |
-| Solve defect promoted to a leading-order term                  | one Newton iteration against an approximate Jacobian                  |
-| `Yₜ_lim` added as a first-class channel                        | horizontal tracer advection and tracer hyperdiffusion live only there |
-| `D = ∫(ρ − ρq_tot)` replaces `D = M − W`                       | `ρ` excludes precipitating water, `W` includes it                     |
-| `W` excludes `ρq_lcl` and `ρq_icl`                             | they are already inside `ρq_tot`                                      |
-| Reservoir graph reduced to atmosphere plus one slab            | no prognostic snow, soil, or deposited-condensate state exists        |
-| `Y.sfc.water` owns water but no mass                           | mass leaves `M` when water is deposited                               |
-| EDMF, chemistry, and prescribed flow excluded from the claim   | their control-volume membership is a modelling question               |
-| Reduction cost made a design constraint, ledger off by default | four stages times dozens of legs is a hundred reductions per step     |
-| `dss!` added to the mutation matrix                            | it mutates authoritative state                                        |
-| `b` in `E* = E + aM + bW` left open, not set to zero           | `enforce_mass_energy_consistency!` makes it a real question           |
-| Four named defects in `check_conservation` recorded            | so the ledger does not inherit them                                   |
+| Change                                                         | Reason                                                                         |
+|:-------------------------------------------------------------- |:------------------------------------------------------------------------------ |
+| Base is `main` once PR 40 merged, not PR 41 or a branch        | PRs 41-47 were closed unmerged until PR 40 carried them to `main`              |
+| Rejection and adaptivity machinery reduced to an assertion     | fixed-step IMEX with no controller never rejects                               |
+| Nonlinear-tolerance sweep replaced by an iteration sweep       | `max_iters = 1` leaves no tolerance to tighten                                 |
+| Solve defect promoted to a leading-order term                  | one Newton iteration against an approximate Jacobian                           |
+| `Yₜ_lim` added as a first-class channel                        | horizontal tracer advection and tracer hyperdiffusion live only there          |
+| `D = M − W` stands, as originally written                      | `ρq_tot` contains rain and snow and `ρ` tracks it, so the two forms are equal  |
+| `W = ∫ρq_tot` alone, no category added                         | `q_liq = q_lcl + q_rai` and `q_ice = q_icl + q_sno` in the thermodynamic state |
+| Reservoir graph reduced to atmosphere plus one slab            | no prognostic snow, soil, or deposited-condensate state exists                 |
+| `Y.sfc.water` owns mass as well as water                       | what it gains left the atmosphere as `ρq_tot` and so also as `ρ`               |
+| EDMF, chemistry, and prescribed flow excluded from the claim   | their control-volume membership is a modelling question                        |
+| Reduction cost made a design constraint, ledger off by default | four stages times dozens of legs is a hundred reductions per step              |
+| `dss!` added to the mutation matrix                            | it mutates authoritative state                                                 |
+| `b` in `E* = E + aM + bW` left open, not set to zero           | `enforce_mass_energy_consistency!` makes it a real question                    |
+| Four named defects in `check_conservation` recorded            | so the ledger does not inherit them                                            |

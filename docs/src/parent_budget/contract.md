@@ -98,7 +98,20 @@ inside transaction `n+1`, not outside every transaction.
 
 `update_constrain_state_every` defaults to `"step"` but accepts `"stage"` and
 `"dss"`. The ledger reads the configured cadence rather than assuming one, and
-records one correction leg per firing.
+records one correction leg per firing. A leg's identity therefore carries an
+execution identity, stage index and occurrence, alongside its event and step:
+without it the same correction firing at four ARS343 stages would collide as one
+leg and be refused.
+
+**Where the boundary falls, stated once.** The endpoint is read after the
+integrator's own hooks for the step (`lim!`, `dss!`, `constrain_state!`,
+`cache!`) and **before** any discrete callback fires. Discrete callbacks
+therefore belong to transaction `n+1`, the one that opens on that endpoint, and
+never to the step whose hooks just finished. In every supported configuration no
+discrete callback mutates `Y` — they write cache `Ref`s, radiation fields, files
+and diagnostics — so the choice is currently unobservable. It is fixed here so
+that a callback which does mutate state later falls on one side of the boundary
+by rule rather than by accident.
 
 ## Reservoir graph
 
@@ -109,7 +122,7 @@ precisely is part of the contract.
 |:------------ |:------------- |:------------- |:---------------------------------------- |
 | Atmosphere   | `Y.c`, `Y.f`  | `M`, `W`, `E` | always                                   |
 | Slab surface | `Y.sfc.T`     | `E`           | `SlabOceanTemperature`                   |
-| Slab surface | `Y.sfc.water` | `W`           | `SlabOceanTemperature` and a moist model |
+| Slab surface | `Y.sfc.water` | `M`, `W`      | `SlabOceanTemperature` and a moist model |
 | Exterior     | none          | —             | always                                   |
 
 There is **no** prognostic snow, soil-water, or deposited-condensate reservoir,
@@ -117,56 +130,72 @@ and no wave-energy reservoir. Every other surface is prescribed or diagnosed
 and is therefore exterior, not a reservoir: its state is not owned by the model,
 so a flux into it is a boundary crossing and not an internal transfer.
 
-`Y.sfc.water` is a water reservoir that owns **no mass leg**. Water deposited on
-the slab leaves `M` and enters `W`. The two budgets must therefore record
-different things for one physical event, which is the clearest case in this
-model of the rule that a water increment may not be copied into mass.
+`Y.sfc.water` owns mass as well as water, because the water it gains left the
+atmosphere as `ρq_tot` and therefore also as `ρ`. See the integrals below for
+why that is so, and for why the coincidence of its two legs is measured here
+rather than assumed anywhere else.
 
 ## Authoritative integrals
 
 For the atmosphere, over the global domain:
 
 ```
-M = ∫ ρ                                  [kg]
-W = ∫ (ρq_tot + ρq_rai + ρq_sno)         [kg]
-E = ∫ ρe_tot                             [J]
+M = ∫ ρ            [kg]
+W = ∫ ρq_tot       [kg]
+E = ∫ ρe_tot       [J]
 ```
 
 For the slab surface, as a horizontal integral at the boundary:
 
 ```
-W_sfc = ∫_sfc  sfc.water                                    [kg]
-E_sfc = ∫_sfc  sfc.T · ρ_ocean · cp_ocean · depth_ocean      [J]
+M_sfc = ∫_sfc  sfc.water                                   [kg]
+W_sfc = ∫_sfc  sfc.water                                   [kg]
+E_sfc = ∫_sfc  sfc.T · ρ_ocean · cp_ocean · depth_ocean     [J]
 ```
 
 ### What is and is not in each
 
-**`M` excludes precipitating water.** `Y.c.ρ` is moist air density carrying
-vapour and cloud condensate but not rain or snow. Every tendency that changes
-`ρq_tot` changes `ρ` by the same amount, and nothing adds `ρq_rai` or `ρq_sno`
-to `ρ`. Precipitation formation is therefore a genuine mass sink for the
-atmosphere while being internal to the water budget.
+**`ρq_tot` is total water, precipitation included.** The categories partition it
+and are never added to it. `set_precomputed_quantities!` builds the
+thermodynamic state as `q_liq = q_lcl + q_rai`, `q_ice = q_icl + q_sno`, and
+`q_tot ≥ q_liq + q_ice`, so rain and snow are inside `q_tot` exactly as cloud
+water is. One-moment microphysics says so in its own words: it moves the
+category fields and applies "no direct sources to `ρq_tot`, `ρ`". So `W = ∫ρq_tot`
+in every moist configuration, and `ρq_lcl`, `ρq_icl`, `ρq_rai` and `ρq_sno` are
+all excluded from it.
 
-That has a direct consequence the earlier plan got wrong. `D = M − W` is **not**
-the dry-air mass in this model. The dry-air invariant is
+| Model                       | `W`        |
+|:--------------------------- |:---------- |
+| `DryModel`                  | `n/a`      |
+| `EquilibriumMicrophysics0M` | `∫ ρq_tot` |
+| non-equilibrium             | `∫ ρq_tot` |
+| one-moment                  | `∫ ρq_tot` |
+
+**`ρ` tracks `ρq_tot` exactly.** Every path that changes one changes the other by
+the same amount: 0-moment removal (`Yₜ.c.ρq_tot += ρ_dq_tot_dt` beside
+`Yₜ.c.ρ += ρ_dq_tot_dt`), sedimentation, surface flux, the viscous sponge, and
+`enforce_mass_energy_consistency!`. The dry-air mass is therefore
 
 ```
-D = ∫ (ρ − ρq_tot)                       [kg]
+D = M − W = ∫ (ρ − ρq_tot)      [kg]
 ```
 
-which is what the tests will use.
+and the two forms are the same number. It is a derived invariant, and testing it
+is how the mass and water budgets are checked against each other rather than
+assumed equal.
 
-**`W` must not double-count.** `ρq_lcl` and `ρq_icl` are cloud liquid and ice
-*contents already inside* `ρq_tot`. Adding them would double-count the
-condensate. `ρq_rai` and `ρq_sno` are outside `ρq_tot` and must be added. The
-included set by microphysics model:
+**The slab owns mass as well as water.** `Y.sfc.water` is a water content in
+`kg m⁻²`, and the water it gains left the atmosphere as `ρq_tot` and therefore
+also as `ρ`. The existing `check_conservation` already reflects this: it adds
+the change in surface water to the change in `∫ρ` before calling mass closed.
+So in the coupled view the slab contributes to `M` and to `W`, with the same
+amount, and it is the one reservoir where those two legs coincide. In the
+atmosphere-only view the deposition is a boundary crossing for both.
 
-| Model                             | `W`                        |
-|:--------------------------------- |:-------------------------- |
-| `DryModel`                        | not applicable             |
-| `EquilibriumMicrophysics0M`       | `ρq_tot`                   |
-| non-equilibrium, no precipitation | `ρq_tot`                   |
-| one-moment                        | `ρq_tot + ρq_rai + ρq_sno` |
+That the two legs coincide *here* is a measured property of this reservoir, not
+a licence to infer one from the other elsewhere. The rule that a water increment
+is never copied into mass still holds for every other path, and the mass and
+water legs are still recorded independently.
 
 **`E` is `ρe_tot` alone.** Total energy is prognostic, so it is authoritative
 and nothing is reconstructed from momentum and thermodynamic state. `ρtke`, the
@@ -250,10 +279,38 @@ and nothing else. The residual is defined by subtraction and is never an entry
 that forces closure. `Q_solve_defect` is included only when it is derived
 independently from the integrator's own residual equations.
 
+A projection reports more than a number and a Boolean. Collapsing status into
+"blocked or not" loses two things that matter. A quantity no reservoir in the
+view owns — water in a dry model, anything at all in the coupled view of a
+configuration with no slab — would otherwise read as an ordinary closed budget
+at zero, which is a claim the ledger never made. And a blocked projection has to
+name *which* components blocked it, or the report says a claim is unavailable
+without saying what would make it available. So each projection carries whether
+the quantity is applicable in that view at all, and the identities of the
+components that blocked it.
+
 Reported per step and cumulatively: endpoint change, sum of entries, solve
 defect, bookkeeping residual, the discrepancy before the solve defect is
 included, and the cumulative ledger against the independent run-segment
 difference `B^N − B^0`.
+
+The signed cumulative residual is not enough on its own, and "per-step values
+are also reported" understates the problem. `Σ Rₙ` cancels exactly the failure
+this ledger exists to expose: `+δ` on one step and `−δ` on the next sums to zero
+and reports a perfectly closed run that closed on neither step. So the ledger
+keeps three cumulative numbers per quantity and control volume, not one:
+
+  - `Σ Rₙ`, the signed total, which is the drift.
+  - `Σ |Rₙ|`, which cannot cancel and bounds the total unaccounted transfer.
+  - `max |Rₙ|`, which names the worst single step.
+
+A tolerance is checked against the magnitude aggregates. The signed sum is
+reported, never used to pass a test on its own.
+
+**Endpoint continuity is enforced, not assumed.** Transaction `n+1` opens on the
+same endpoint that transaction `n` closed on. The ledger checks that rather than
+trusting the caller, because a gap between them is a change nothing accounted
+for, and it would otherwise vanish from the cumulative total without trace.
 
 ## Tolerance model
 
@@ -345,22 +402,29 @@ specific reasons that the ledger must not inherit:
     be read without re-evaluating a stage is the first thing PR 5 must
     establish, and if they cannot, PR 5 reports aggregate closure rather than
     fabricating a tableau.
- 3. **Which surface states own what?** `Y.sfc.T` owns energy, `Y.sfc.water`
-    owns water, neither owns mass, and only `SlabOceanTemperature` has them.
+ 3. **Which surface states own what?** `Y.sfc.T` owns energy. `Y.sfc.water` owns
+    water *and* mass, with the same amount, because what it gains left the
+    atmosphere as `ρq_tot` and so also as `ρ`. Only `SlabOceanTemperature` has
+    either.
  4. **Are coupled legs derived from one amount or discretized independently?**
-    Mixed, and this is a **blocker for the coupled-view cancellation claim
-    until measured**. `surface_precipitation_tendency!` is called from both
-    `remaining_tendency!` and `implicit_tendency!` depending on
-    `microphysics_tendency_timestepping`, while the atmospheric sink is in the
-    microphysics tendency. Whether the two are the same amount is a
-    measurement, and PR 4 makes it one.
+    Independently, and this is a **blocker for the coupled-view cancellation
+    claim until measured**. The atmospheric fallout leg is
+    `ᶜprecipdivᵥ` of a sedimentation flux in
+    `vertical_advection_of_water_tendency!`, with free outflow at the lower
+    boundary. The surface leg is `Yₜ.sfc.water -= P_liq + P_snow` in
+    `surface_precipitation_tendency!`, built from the cached surface rain and
+    snow fluxes, and called from `remaining_tendency!` or `implicit_tendency!`
+    depending on `microphysics_tendency_timestepping`. Two quadratures of the
+    same physical flux is exactly the case the ledger must not paper over.
+    PR 4 measures both and reports the difference.
  5. **Which energy-reference transformations are admissible?** `a ≠ 0` yes.
     `b` open, pending the covariance audit, for the reason given above.
  6. **Can included mutations be rolled back on a rejected attempt?** The
     question does not arise in a supported configuration, because fixed-step
     IMEX never rejects. Guarded by an assertion rather than an implementation.
- 7. **Which water categories are included without overlap?** `ρq_tot`,
-    `ρq_rai`, `ρq_sno`. Never `ρq_lcl` or `ρq_icl`.
+ 7. **Which water categories are included without overlap?** `ρq_tot` alone.
+    The categories `ρq_lcl`, `ρq_icl`, `ρq_rai` and `ρq_sno` partition it and
+    are never added to it.
 
 ## Blockers carried out of PR 1
 
