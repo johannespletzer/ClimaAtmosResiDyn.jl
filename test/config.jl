@@ -32,11 +32,16 @@ config_err = ErrorException("File $(CA.normrelpath(file)) is empty or missing.")
     @test isempty(missing_value)
 end
 
-# Config files whose keys are already out of step with the schema. They predate
-# this test; each sets keys the model no longer reads, so those settings do
-# nothing. Renaming them to whatever was meant would change what the job runs,
-# so they are recorded here rather than quietly repaired. Do not add to this
-# list -- fix the config instead.
+# Config files whose keys are already out of step with the schema. All three
+# come from upstream ClimaAtmos and predate this test; each sets keys the model
+# no longer reads, so those settings do nothing. Renaming them to whatever was
+# meant would change what the job runs, so they are recorded here rather than
+# quietly repaired. Do not add to this list -- fix the config instead.
+#
+# The exemption is checked, not blanket. The testset below asserts that each
+# name here still names a config file and that the file still sets keys outside
+# the schema, so an entry that has been repaired upstream fails this test and
+# has to be deleted rather than lingering as a silent hole.
 const KNOWN_STALE_CONFIGS = Set([
     "rcemipii_box_CRM_1M",          # moist, precip_model, surface_temperature
     "single_column_beres_nogw_test", # implicit_sgs_*
@@ -46,11 +51,14 @@ const KNOWN_STALE_CONFIGS = Set([
 @testset "Check that config files only set keys the schema defines" begin
     schema_keys = keys(CA.load_yaml_file(CA.default_config_file))
     unparseable = String[]
+    # What each exempt config was found to set outside the schema, so the
+    # exemption can be checked once the walk is done.
+    stale_unknown = Dict{String, Vector{String}}()
     for (root, _, files) in walkdir(CA.config_path), f in files
         file = joinpath(root, f)
         endswith(file, ".yml") || continue
         file == CA.default_config_file && continue
-        first(splitext(f)) in KNOWN_STALE_CONFIGS && continue
+        job = first(splitext(f))
         # Whether the oldest YAML.jl our `[compat]` bound allows can read every
         # config file is a dependency-bounds question, not a config-key one.
         # YAML 0.4.0 cannot parse a multi-line flow sequence, which several
@@ -61,6 +69,7 @@ const KNOWN_STALE_CONFIGS = Set([
             CA.load_yaml_file(file)
         catch
             push!(unparseable, CA.normrelpath(file))
+            job in KNOWN_STALE_CONFIGS && (stale_unknown[job] = ["unparseable"])
             continue
         end
         # `job_id` is set by the `AtmosConfig` constructor, not by the schema.
@@ -73,10 +82,23 @@ const KNOWN_STALE_CONFIGS = Set([
         # the point of the test, and a bare `unknown == String[]` would report
         # the stray keys without saying which file set them.
         name = CA.normrelpath(file)
+        if job in KNOWN_STALE_CONFIGS
+            stale_unknown[job] = unknown
+            continue
+        end
         @test (name => unknown) == (name => String[])
     end
     isempty(unparseable) ||
         @warn "Config files this YAML.jl could not parse, so left unchecked" unparseable
+
+    # An exemption that no longer describes a real, still-stale file is a hole
+    # in the check above, so it fails here instead of passing quietly.
+    @test sort(collect(keys(stale_unknown))) == sort(collect(KNOWN_STALE_CONFIGS))
+    for (job, unknown) in stale_unknown
+        # Delete this file's entry from `KNOWN_STALE_CONFIGS` when this fails:
+        # the config now matches the schema and no longer needs exempting.
+        @test (job => isempty(unknown)) == (job => false)
+    end
 end
 
 @testset "Config files may carry mapping-valued keys" begin

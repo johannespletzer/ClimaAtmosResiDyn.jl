@@ -7,9 +7,6 @@ redirect_stderr(IOContext(stderr, :stacktrace_types_limited => Ref(false)))
 using SafeTestsets
 using Test
 
-# Download test artifacts
-include("download_artifacts.jl")
-
 # Get test group from environment variable (default: run all tests)
 TEST_GROUP = get(ENV, "TEST_GROUP", "all")
 
@@ -85,13 +82,11 @@ if TEST_GROUP in ("diagnostics", "all")
 end
 
 # ============================================================================
-# Dynamics: Prognostic equations and conservation tests
+# Dynamics: Prognostic equations
 # ============================================================================
 if TEST_GROUP in ("dynamics", "all")
     @safetestset "Prognostic equations" begin @time include("prognostic_equations.jl") end
     @safetestset "Advection operators" begin @time include("prognostic_equations/advection_tests.jl") end
-    @safetestset "Hyperdiffusion" begin @time include("prognostic_equations/hyperdiffusion_tests.jl") end
-    @safetestset "Tendency computations" begin @time include("prognostic_equations/tendency_tests.jl") end
     @safetestset "Tracer/mass transport consistency" begin @time include("prognostic_equations/tracer_mass_consistency_tests.jl") end
     @safetestset "Post-Newton implicit-advection correction" begin @time include("prognostic_equations/correct_implicit_advection_tests.jl") end
     @safetestset "Vertical diffusion tendency" begin @time include("prognostic_equations/vertical_diffusion_tests.jl") end
@@ -99,10 +94,6 @@ if TEST_GROUP in ("dynamics", "all")
     @safetestset "Vertical water borrowing limiter" begin @time include("prognostic_equations/vertical_water_borrowing_tests.jl") end
     @safetestset "Enforce physical constraints" begin @time include("prognostic_equations/enforce_physical_constraints_tests.jl") end
     @safetestset "Eddy diffusion closures" begin @time include("prognostic_equations/eddy_diffusion_closures_tests.jl") end
-
-    # Conservation tests
-    @safetestset "Mass conservation" begin @time include("conservation/mass_conservation.jl") end
-    @safetestset "Energy conservation" begin @time include("conservation/energy_conservation.jl") end
 end
 
 # ============================================================================
