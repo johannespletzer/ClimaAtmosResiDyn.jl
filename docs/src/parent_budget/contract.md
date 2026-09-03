@@ -621,6 +621,26 @@ blocks.
   - **Accepted-weight access.** Blocks the implemented-equation claim (ladder
     rung 2) for implicit terms until PR 5 establishes it. Rung 1 is unaffected.
 
+### Carried out of PR 2
+
+  - **The packed reduction does not exist yet.** `budget_endpoints` makes a
+    handful of separate global reductions and runs twice per transaction, where
+    the cost rule asks for one packed reduction per accepted step. Closing it
+    needs the local totals gathered into a single collective, and optionally the
+    previous closing endpoint reused as the next opening one. Nothing calls the
+    ledger in a run yet, so the cost is currently zero; PR 3 is where it stops
+    being zero and is where this must be closed.
+  - **Reuse of the closing endpoint trades away a check.** Reusing it removes
+    the comparison that would catch a callback mutating `Y` between steps. That
+    is sound only while no supported callback does, which the mutation matrix
+    establishes about the model rather than about the ledger. It is opt-in and
+    the measured path is the default.
+  - **Accounting precision is `Float64`, but the reduction is not.** Every
+    amount the ledger holds and every sum it takes is `Float64` whatever the
+    state's type. The reduction inside `ClimaCore` still accumulates in the
+    state's type, so a `Float32` run's endpoint is only as good as a `Float32`
+    accumulation of it. Widening that belongs where the reduction is made.
+
 ## Limitations register
 
 Started here, extended by every later PR, and published in PR 7. It holds

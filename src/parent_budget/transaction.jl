@@ -19,6 +19,23 @@
 # ============================================================================
 
 """
+    BUDGET_ACCOUNTING_TYPE
+
+The float type the ledger does its own arithmetic in, `Float64`.
+
+Deliberately independent of the state's float type. The contract fixes the
+accounting precision at no less than `Float64` whatever the model runs in,
+because the residual is a small number left over from subtracting two large
+ones and a `Float32` subtraction destroys it. Every endpoint, leg amount,
+cumulative total and residual is this type.
+
+The `FT` parameter on [`BudgetComponent`](@ref), [`BudgetLeg`](@ref),
+[`ReservoirEndpoint`](@ref) and [`BudgetLedger`](@ref) is this accounting type,
+never the state's.
+"""
+const BUDGET_ACCOUNTING_TYPE = Float64
+
+"""
     ReservoirEndpoint(; reservoir, mass, water, energy)
 
 The three authoritative integrals of one reservoir at one instant.
@@ -66,20 +83,42 @@ water and the mass that goes with it in a moist configuration.
 the field cannot distinguish an inapplicable quantity from a measured one. See
 [`surface_water`](@ref).
 
-Each call is a handful of global reductions. It runs twice per transaction, at
-the two endpoints, and never per leg.
+# Accounting arithmetic
+
+Endpoints are held in [`BUDGET_ACCOUNTING_TYPE`](@ref), not in the state's float
+type. A leg is a small increment against a large global background, and the
+residual is what survives subtracting two of those backgrounds. In `Float32` the
+background carries about seven significant digits, so a per-step change eight
+orders below it is gone in the subtraction and the residual measures nothing but
+rounding.
+
+This widens everything the ledger itself does: the endpoint subtraction, the leg
+sums, the running totals. It does **not** widen the reduction inside ClimaCore,
+which still accumulates in the state's type. Narrowing that is a change where
+the reduction is made, not here, and it is recorded as a blocker in the contract.
+
+# Reduction count
+
+Each call is a handful of separate global reductions, and it runs twice per
+transaction. The contract requires one packed reduction per accepted step, which
+this does not yet satisfy. Two things close the gap and neither belongs in this
+PR: packing the local totals into a single collective, and reusing the previous
+closing endpoint instead of measuring the opening one. The second is available
+now through `open_transaction!`, with the caveat documented there. Nothing calls
+this in a run yet, so the cost is currently zero.
 """
 function budget_endpoints(Y, surface_temperature, microphysics_model, step::Int)
-    FT = Spaces.undertype(axes(Y.c))
+    FT = BUDGET_ACCOUNTING_TYPE
     reservoirs = ReservoirEndpoint{FT}[]
+    owns_water = !(microphysics_model isa DryModel)
 
     push!(
         reservoirs,
         ReservoirEndpoint{FT}(;
             reservoir = AtmosphereReservoir(),
             mass = measured(FT(atmosphere_mass(Y))),
-            water = hasproperty(Y.c, :ρq_tot) ?
-                    measured(FT(atmosphere_water(Y))) : not_applicable(FT),
+            water = owns_water ? measured(FT(atmosphere_water(Y))) :
+                    not_applicable(FT),
             energy = measured(FT(atmosphere_energy(Y))),
         ),
     )
@@ -282,6 +321,39 @@ opening endpoints must equal the ones the last transaction closed on. A gap
 between them is a change that nothing accounted for, and it would otherwise
 disappear from the cumulative total without leaving a residual anywhere.
 """
+"""
+    open_transaction!(ledger)
+
+Open the next transaction on the endpoint the previous one closed, without
+measuring the state again.
+
+This is the reduction the contract's cost rule most wants back: measuring the
+opening endpoint repeats, identically, the reduction the previous commit already
+performed. Reusing it halves the endpoint reductions per step.
+
+**It also gives up the only check that would catch an unrecorded change between
+steps.** [`check_endpoint_continuity`](@ref) exists because the closing state of
+step `n` and the opening state of step `n+1` are read at different moments with
+discrete callbacks in between, and comparing them is what turns a callback that
+quietly mutates `Y` into an error instead of a silent gap in the cumulative
+total. Reuse makes that comparison compare a value with itself.
+
+The trade is sound only while no callback mutates the state. That holds in every
+supported configuration today, and the mutation matrix in the coverage document
+is what establishes it — but it is an assumption about the model rather than a
+property of the ledger, so it is opt-in and the measured path stays the default.
+
+Errors when there is no previous closing endpoint, which is the first step.
+"""
+function open_transaction!(ledger::BudgetLedger)
+    previous = ledger.last_closing
+    isnothing(previous) && error(
+        "No previous closing endpoint to reuse; the first transaction has to " *
+        "measure its opening endpoint.",
+    )
+    return open_transaction!(ledger, previous)
+end
+
 function open_transaction!(
     ledger::BudgetLedger{FT},
     endpoints::BudgetEndpoints{FT},

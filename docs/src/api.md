@@ -486,6 +486,7 @@ ClimaAtmos.leg_identity
 ClimaAtmos.leg_label
 ClimaAtmos.budget_component
 ClimaAtmos.BUDGET_QUANTITIES
+ClimaAtmos.BUDGET_ACCOUNTING_TYPE
 ClimaAtmos.atmosphere_mass
 ClimaAtmos.atmosphere_water
 ClimaAtmos.atmosphere_energy
