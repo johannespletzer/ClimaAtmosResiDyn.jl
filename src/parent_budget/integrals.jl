@@ -19,10 +19,19 @@ import ClimaCore.Spaces as Spaces
 Total modeled atmospheric mass ``\\int \\rho`` [kg].
 
 `Y.c.ρ` is moist air density, and it carries the whole of `ρq_tot`, which
-includes precipitating water. Every path that changes one changes the other by
-the same amount: 0-moment removal, sedimentation, the surface flux, the viscous
-sponge, and `enforce_mass_energy_consistency!`. That is what makes
-[`atmosphere_dry_mass`](@ref) a meaningful derived invariant.
+includes precipitating water.
+
+`ρ` moves with `ρq_tot` on the paths that move air and water together: 0-moment
+removal, sedimentation, the surface flux, the viscous sponge, and
+`enforce_mass_energy_consistency!`. It does **not** move with it on the
+prescribed forcing paths. `large_scale_advection_tendency_ρq_tot`,
+`subsidence_tendency!` and `apply_Tq_forcing!` each write `ρq_tot` and `ρe_tot`
+and write no `ρ` term at all, so a forced run adds water to a column without
+adding air to it.
+
+An earlier version of this docstring claimed the tracking was universal. It is
+not, and [`atmosphere_dry_mass`](@ref) is a derived diagnostic rather than a
+conserved invariant because of it. See `docs/src/parent_budget/contract.md`.
 """
 atmosphere_mass(Y) = sum(Y.c.ρ)
 
@@ -67,13 +76,16 @@ atmosphere_energy(Y) = sum(Y.c.ρe_tot)
 
 Dry-air mass ``\\int (\\rho - \\rho q_{tot})`` [kg].
 
-Equivalently `atmosphere_mass(Y) - atmosphere_water(Y)`, because `ρ` carries the
-whole of `ρq_tot`. It is written as one integral rather than a difference of two
-global reductions so that the cancellation happens pointwise, where it is exact,
+Equal to `atmosphere_mass(Y) - atmosphere_water(Y)` because the integral is
+linear. It is written as one integral rather than a difference of two global
+reductions so that the cancellation happens pointwise, where it is exact,
 instead of between two large sums.
 
-This is a derived invariant. Testing it is how the mass and water budgets are
-checked against each other, rather than one being assumed from the other.
+This is a derived **diagnostic**, not a conservation invariant. Prescribed
+forcing adds water without adding air, so dry air is not conserved in a forced
+run and this quantity moves by minus the added water. Testing it is how the mass
+and water budgets are checked against each other; it is not a closure the ledger
+claims.
 
 Equals [`atmosphere_mass`](@ref) for a dry model.
 """
@@ -113,44 +125,63 @@ surface_energy(Y, slab::SurfaceConditions.SlabOceanTemperature) =
     horizontal_integral_at_boundary(Y.sfc.T) * slab_heat_capacity(slab)
 
 """
-    surface_water(Y, surface_temperature)
+    surface_water(Y, surface_temperature, microphysics_model)
 
 Water held by the prognostic surface reservoir [kg], or `nothing` when there is
 none.
 
-Present only for a `SurfaceConditions.SlabOceanTemperature` in a moist
+Present only for a `SurfaceConditions.SlabOceanTemperature` in a **moist**
 configuration, where `Y.sfc.water` accumulates precipitation and evaporation.
 
-This reservoir owns water and owns **no mass**. Water deposited on the slab
-leaves [`atmosphere_mass`](@ref) and enters this integral, so one physical
-event has a mass leg and a water leg that are not the same leg. It is the
-clearest case in this model of the rule that a water increment may never be
-copied into mass.
+The microphysics model is a required argument because the state cannot answer
+the question. `surface_prognostic_variables` builds the slab as
+`(; T, water = FT(0))` whatever the moisture model is, so `Y.sfc.water` exists
+in a dry run too and holds a permanent zero. Dispatching on presence alone
+reported that zero as a measured budget, which is exactly the confusion between
+a measured zero and an inapplicable quantity that the ledger exists to prevent.
+
+`nothing` and zero are different answers, and the caller must keep them apart.
 """
-surface_water(Y, ::SurfaceConditions.SurfaceTemperature) = nothing
-function surface_water(Y, ::SurfaceConditions.SlabOceanTemperature)
+surface_water(Y, ::SurfaceConditions.SurfaceTemperature, _) = nothing
+surface_water(Y, ::SurfaceConditions.SlabOceanTemperature, ::DryModel) = nothing
+function surface_water(
+    Y,
+    ::SurfaceConditions.SlabOceanTemperature,
+    ::AbstractMicrophysicsModel,
+)
     hasproperty(Y, :sfc) || return nothing
     hasproperty(Y.sfc, :water) || return nothing
     return horizontal_integral_at_boundary(Y.sfc.water)
 end
 
 """
-    surface_mass(Y, surface_temperature)
+    surface_mass(Y, surface_temperature, microphysics_model)
 
 Mass held by the prognostic surface reservoir [kg], or `nothing` when there is
 none.
 
-Equal to [`surface_water`](@ref), and that is a measured property of this
-reservoir rather than an inference. What the slab gains left the atmosphere as
+The slab owns mass as well as water. What it gains left the atmosphere as
 `ρq_tot`, and `ρ` carries the whole of `ρq_tot`, so the same deposition is a
 mass leg and a water leg of the same size. The existing `check_conservation`
 relies on this too: it adds the change in surface water to the change in
 ``\\int \\rho`` before calling mass closed.
 
-Everywhere else the rule stands that a water increment is never copied into
-mass. The two legs are still recorded independently, so a path where they
-diverge shows up rather than being defined away.
+**These are two projections of one endpoint, not two measurements.** This
+function returns [`surface_water`](@ref) unchanged, so the two values cannot
+disagree and no test of them can discover anything. An earlier version of this
+docstring claimed they were measured separately and that a divergence would show
+up; that was false, because there is only one field, `Y.sfc.water`, and one
+reduction over it.
+
+Independent measurement is a property of the *transfer legs* — the atmospheric
+side of a surface exchange and the surface side of it are collected separately
+and must be allowed to disagree. That is where a coupling mismatch becomes
+visible, and it is what [`transfer_mismatch`](@ref) measures. It is not a
+property of this endpoint.
 """
-surface_mass(Y, ::SurfaceConditions.SurfaceTemperature) = nothing
-surface_mass(Y, slab::SurfaceConditions.SlabOceanTemperature) =
-    surface_water(Y, slab)
+surface_mass(Y, ::SurfaceConditions.SurfaceTemperature, _) = nothing
+surface_mass(
+    Y,
+    slab::SurfaceConditions.SlabOceanTemperature,
+    microphysics_model,
+) = surface_water(Y, slab, microphysics_model)

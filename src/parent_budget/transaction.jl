@@ -24,8 +24,8 @@
 The three authoritative integrals of one reservoir at one instant.
 
 A component is [`not_applicable`](@ref) when the reservoir does not own that
-quantity, which is how "the slab holds no mass" is expressed without writing a
-zero that the identity would then have to reconcile.
+quantity, which is how "a dry configuration has no water" is expressed without
+writing a zero that the identity would then have to reconcile.
 """
 Base.@kwdef struct ReservoirEndpoint{FT}
     reservoir::BudgetReservoir
@@ -53,18 +53,23 @@ struct BudgetEndpoints{FT}
 end
 
 """
-    budget_endpoints(Y, surface_temperature, step)
+    budget_endpoints(Y, surface_temperature, microphysics_model, step)
 
 Measure every reservoir's authoritative integrals from the state `Y`.
 
 The atmosphere always contributes. The slab surface contributes only when
-[`surface_energy`](@ref) finds one, and then it carries energy, possibly water,
-and never mass.
+[`surface_energy`](@ref) finds one, and then it carries energy, and carries
+water and the mass that goes with it in a moist configuration.
+
+`microphysics_model` is required rather than inferred. A slab carries
+`Y.sfc.water` even in a dry run, where it holds a permanent zero, so presence of
+the field cannot distinguish an inapplicable quantity from a measured one. See
+[`surface_water`](@ref).
 
 Each call is a handful of global reductions. It runs twice per transaction, at
 the two endpoints, and never per leg.
 """
-function budget_endpoints(Y, surface_temperature, step::Int)
+function budget_endpoints(Y, surface_temperature, microphysics_model, step::Int)
     FT = Spaces.undertype(axes(Y.c))
     reservoirs = ReservoirEndpoint{FT}[]
 
@@ -81,16 +86,17 @@ function budget_endpoints(Y, surface_temperature, step::Int)
 
     e_sfc = surface_energy(Y, surface_temperature)
     if !isnothing(e_sfc)
-        w_sfc = surface_water(Y, surface_temperature)
-        m_sfc = surface_mass(Y, surface_temperature)
+        w_sfc = surface_water(Y, surface_temperature, microphysics_model)
+        m_sfc = surface_mass(Y, surface_temperature, microphysics_model)
         push!(
             reservoirs,
             ReservoirEndpoint{FT}(;
                 reservoir = SlabSurfaceReservoir(),
-                # The slab's mass and water are the same amount: what it holds
-                # left the atmosphere as `ρq_tot`, which `ρ` carries in full.
-                # They are measured separately anyway, so a path where they
-                # diverge would show rather than be defined away.
+                # The slab's mass and water are one endpoint projected twice:
+                # what it holds left the atmosphere as `ρq_tot`, which `ρ`
+                # carries in full, and both read the same `Y.sfc.water`. They
+                # cannot disagree and nothing here tests that they do. Legs are
+                # where independent collection matters, not endpoints.
                 mass = isnothing(m_sfc) ? not_applicable(FT) :
                        measured(FT(m_sfc)),
                 water = isnothing(w_sfc) ? not_applicable(FT) :
