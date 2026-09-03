@@ -113,6 +113,48 @@ and diagnostics — so the choice is currently unobservable. It is fixed here so
 that a callback which does mutate state later falls on one side of the boundary
 by rule rather than by accident.
 
+### What a leg's amount is
+
+A leg's `amount` is an **accepted-step-weighted extensive contribution**: the
+part of `Bⁿ⁺¹ − Bⁿ` that this path is responsible for. It is not a raw tendency,
+and it is not a raw before/after difference taken on an intermediate stage
+array. Those three are different numbers and the schema must not let them be
+mixed.
+
+The distinction has teeth because `lim!`, `dss!` and `constrain_state!` run on
+intermediate stage arrays as well as on the final accepted state.
+
+  - A map applied to the **final accepted state** contributes its raw change.
+    That change *is* part of the endpoint difference.
+  - A map applied to an **intermediate stage** does not. It changes the array a
+    later tendency evaluation reads, so its effect on the endpoint is mediated
+    by the tableau, not added to it. Booking its raw before/after difference in
+    the parent identity is wrong by construction, whatever the number happens
+    to look like.
+
+So an intermediate-stage map enters the identity only with its exact accepted
+weight, generally involving the tableau's `bᵢ` and the implicit `γᵢ`. And where
+the timestepper forms the stored implicit stage tendency by differencing the
+stage state *after* the post-implicit correction and post-Newton hooks have
+run, those hooks' changes are already inside the effective implicit increment;
+booking them again as separate legs double-counts, so a separately booked hook
+must be subtracted back out of the aggregate.
+
+That last mechanism is the reviewer's diagnosis of current
+`ClimaTimeSteppers`, and it is **not verified here** — the package source is not
+available in this environment. PR 5 must confirm the stage-tendency form
+against the pinned version before any implicit decomposition is booked. The
+rule above does not depend on the answer; only the size of the correction does.
+
+Until PR 5 freezes that decomposition against the actual hook order, every
+intermediate-stage leg is `unknown`, never `measured`. Raw stage observations
+are still worth collecting — they localize a defect — but they live in a
+separate audit structure that is never summed into the parent identity.
+
+PR 5 must test all three `update_constrain_state_every` cadences, `"step"`,
+`"stage"` and `"dss"`, because they place the same map on different sides of
+this distinction.
+
 ## Reservoir graph
 
 The graph is much smaller than a coupled land–ocean model's, and saying so
@@ -349,6 +391,7 @@ conflating them is how a real defect gets absorbed.
 | Local arithmetic and reconstruction | `O(ε)` relative to the sum of absolute contributions, never to the signed total |
 | Parallel reduction order            | grows with rank count; measured, not promised bitwise                           |
 | Algebraic solve defect              | **leading order, not small** — see below                                        |
+| Endpoint subtraction                | cancellation in `Bⁿ⁺¹ − Bⁿ`; scales with the endpoint magnitudes, not the legs  |
 | Approximate collection              | none; the ledger has no intentionally approximate leg                           |
 
 The solve-defect row is the important one. The default is
@@ -370,10 +413,56 @@ measured stage residual while `R_bookkeeping` stays at arithmetic level
 throughout. A residual that does not move under that sweep is a bookkeeping bug
 wearing a solver's clothes.
 
+### Accounting precision
+
+The ledger's arithmetic precision is **independent of the state's** and is at
+least `Float64`. Every reduction, endpoint, leg accumulator and cumulative total
+is `Float64` even when the state is `Float32`.
+
+This is not a refinement, it is what makes the residual mean anything. A leg is
+a small increment against a global background: a `Float32` global mass is
+carried to about seven significant digits, so a per-step change eight orders
+below it vanishes entirely in the subtraction. Accumulating in `Float64` keeps
+the endpoints and the legs exact enough that what is left is bookkeeping error
+rather than accumulation noise.
+
+For the same reason a leg is measured as an **increment** wherever the code
+offers one, never as a difference of two large states. A difference inherits the
+cancellation of its operands even in `Float64`.
+
+### The pass criterion
+
+With the residual of step `n` defined as the endpoint change minus the sum of
+that step's legs, define three positive scales: `S_endpoint`, the sum of the two
+endpoint magnitudes; `S_legs`, the sum of the leg magnitudes; and `S`, their
+total. Then require, for the arithmetic part of the budget,
+
+```
+abs(Rₙ) ≤ κ · ε_acc · S
+```
+
+where `ε_acc` is the accounting epsilon, `eps(Float64)`, and `κ` covers
+reduction-order and rank dependence. `κ = 64·√(N_ranks)` is a **provisional**
+starting value, to be calibrated in PR 7 against measured serial and MPI runs
+and then frozen. It is written down now so that PR 7 replaces a number rather
+than inventing a criterion.
+
+`S` includes `S_endpoint` deliberately. Bounding the residual by the leg
+magnitudes alone would be a stricter claim than the subtraction can support, and
+would fail on a step whose legs are tiny against the background.
+
+The solve defect is **not** inside this criterion. It is a leading-order
+physical-accounting term with its own row above, reported separately and swept
+with `max_iters`, never absorbed into an arithmetic tolerance.
+
+PR 7 tests this on a small increment over a realistic global background, in
+`Float32` and `Float64` states alike, since that is the case the criterion
+exists for.
+
 Residuals are always reported as signed absolute values in `kg` and `J`. A
-relative view may be added against a documented positive scale such as
-`Σ|contribution|`. Normalizing by signed total energy is forbidden, which is
-one of the defects in the existing check described below.
+relative view may be added against a documented positive scale such as `S`.
+Normalizing by signed total energy is forbidden, which is one of the defects in
+the existing check described below.
 
 ## Cost, and the rule that diagnostics change nothing
 
