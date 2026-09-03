@@ -175,7 +175,10 @@ mutable struct BudgetLedger{FT}
     opening::Union{Nothing, BudgetEndpoints{FT}}
     last_closing::Union{Nothing, BudgetEndpoints{FT}}
     legs::Vector{BudgetLeg{FT}}
+    observations::Vector{StageObservation{FT}}
     recorded_keys::Set{Tuple{Symbol, Symbol, Int, Int, Int}}
+    aggregate_events::Set{Tuple{Symbol, Int}}
+    decomposed_events::Set{Tuple{Symbol, Int}}
     cumulative_residual::Dict{Tuple{Symbol, Symbol}, FT}
     cumulative_abs_residual::Dict{Tuple{Symbol, Symbol}, FT}
     max_abs_residual::Dict{Tuple{Symbol, Symbol}, FT}
@@ -189,7 +192,10 @@ BudgetLedger{FT}() where {FT} = BudgetLedger{FT}(
     nothing,
     nothing,
     BudgetLeg{FT}[],
+    StageObservation{FT}[],
     Set{Tuple{Symbol, Symbol, Int, Int, Int}}(),
+    Set{Tuple{Symbol, Int}}(),
+    Set{Tuple{Symbol, Int}}(),
     Dict{Tuple{Symbol, Symbol}, FT}(),
     Dict{Tuple{Symbol, Symbol}, FT}(),
     Dict{Tuple{Symbol, Symbol}, FT}(),
@@ -271,7 +277,10 @@ function open_transaction!(
     ledger.is_open = true
     ledger.opening = endpoints
     empty!(ledger.legs)
+    empty!(ledger.observations)
     empty!(ledger.recorded_keys)
+    empty!(ledger.aggregate_events)
+    empty!(ledger.decomposed_events)
     return nothing
 end
 
@@ -288,10 +297,19 @@ how a bracket that fires twice at the same point shows up. A correction that
 legitimately fires once per stage carries a different `stage` each time and is
 not a duplicate.
 
-The third is the one worth having. A doubled leg does not fail any closure test
-that a correct ledger passes, because it changes the recorded sum and the
-residual together only if the amount happens to be zero. Refusing it here is
-cheaper than finding it in a residual.
+It also refuses a leg that would be booked alongside its own aggregate, or an
+aggregate booked alongside its decomposition, for the same `(event, step)`.
+Recording both counts the same update twice.
+
+Why keep the duplicate guard, stated correctly this time. An earlier version of
+this docstring claimed a doubled leg does not fail closure. That is wrong: a
+duplicated nonzero leg increases the recorded sum, so the residual moves by the
+same amount with the opposite sign, and closure fails. The guard earns its place
+for three other reasons. It localizes the fault at the second recording rather
+than in a residual a whole step later. It catches a doubled leg whose amount
+happens to be zero, which genuinely would pass every closure test. And it forces
+each firing of a repeating path to carry a distinct execution identity, which is
+what makes a per-stage correction legible at all.
 """
 function record_leg!(ledger::BudgetLedger{FT}, leg::BudgetLeg{FT}) where {FT}
     ledger.is_open || error(
@@ -308,8 +326,56 @@ function record_leg!(ledger::BudgetLedger{FT}, leg::BudgetLeg{FT}) where {FT}
         "fires more than once in a step distinguishes its firings with `stage` " *
         "and `occurrence`.",
     )
+    event_key = (leg.event, leg.step)
+    if leg.aggregate
+        event_key in ledger.decomposed_events && error(
+            "Leg $(leg_label(leg)) is an aggregate for event $(leg.event), " *
+            "but that event already has decomposed legs in this step. An " *
+            "aggregate is the reconciliation envelope and is never summed " *
+            "alongside its own decomposition.",
+        )
+    else
+        event_key in ledger.aggregate_events && error(
+            "Leg $(leg_label(leg)) decomposes event $(leg.event), but an " *
+            "aggregate leg for that event is already recorded in this step. " *
+            "Recording both counts the same update twice.",
+        )
+    end
     push!(ledger.recorded_keys, key)
+    push!(leg.aggregate ? ledger.aggregate_events : ledger.decomposed_events, event_key)
     push!(ledger.legs, leg)
+    return nothing
+end
+
+"""
+    record_observation!(ledger, observation)
+
+Add a `StageObservation` to the open transaction's audit trail.
+
+Observations are evidence, never accounting. They are stored apart from the
+legs, no projection iterates them, and no residual is computed from them, so
+recording one cannot move a budget. That is the whole reason the type is
+separate: an intermediate-stage difference is not an additive contribution to
+the accepted endpoint, and the safest way to keep it out of the identity is to
+make it something [`record_leg!`](@ref) will not take.
+
+Unlike a leg, an observation is not deduplicated. Observing the same map at the
+same stage twice is a reading, not a double count.
+"""
+function record_observation!(
+    ledger::BudgetLedger{FT},
+    observation::StageObservation{FT},
+) where {FT}
+    ledger.is_open || error(
+        "No open budget transaction; cannot record observation " *
+        "$(observation.event)/$(observation.observation).",
+    )
+    observation.step == ledger.step || error(
+        "Observation $(observation.event)/$(observation.observation) is for " *
+        "step $(observation.step), but the open transaction is step " *
+        "$(ledger.step).",
+    )
+    push!(ledger.observations, observation)
     return nothing
 end
 
@@ -329,7 +395,10 @@ function abort_transaction!(ledger::BudgetLedger)
     ledger.is_open = false
     ledger.opening = nothing
     empty!(ledger.legs)
+    empty!(ledger.observations)
     empty!(ledger.recorded_keys)
+    empty!(ledger.aggregate_events)
+    empty!(ledger.decomposed_events)
     return nothing
 end
 
@@ -535,7 +604,10 @@ function commit_transaction!(
     ledger.last_closing = closing
     ledger.committed_steps += 1
     empty!(ledger.legs)
+    empty!(ledger.observations)
     empty!(ledger.recorded_keys)
+    empty!(ledger.aggregate_events)
+    empty!(ledger.decomposed_events)
     return reconciliations
 end
 

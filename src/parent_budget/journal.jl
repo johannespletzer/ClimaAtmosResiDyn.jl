@@ -83,15 +83,36 @@ One signed extensive amount together with what is known about it.
 Units are `kg` for mass and water and `J` for energy, always extensive and
 never normalized. Positive means addition to the reservoir the leg names.
 
-Use the constructors [`measured`](@ref), [`invariant_zero`](@ref),
-[`not_applicable`](@ref), and [`unknown_component`](@ref) rather than building
-one directly, because they enforce that a non-`Measured` component carries no
-amount.
+Prefer the constructors [`measured`](@ref), [`invariant_zero`](@ref),
+[`not_applicable`](@ref), and [`unknown_component`](@ref). Constructing one
+directly is allowed, and the rule that only a `Measured` component may carry a
+nonzero amount is enforced here rather than left to those helpers.
+
+That enforcement is not decoration. [`is_contributing`](@ref) is true for
+`InvariantZero`, so `BudgetComponent{FT}(1.0, InvariantZero())` would add a real
+amount into a control-volume total while labelled as proven zero — a wrong
+number wearing the one label that says it cannot be wrong. `NotApplicable` and
+`UnknownComponent` amounts are never read, so a nonzero one is dead data that
+misleads anyone inspecting a leg.
 """
 struct BudgetComponent{FT}
     amount::FT
     status::ComponentStatus
+    function BudgetComponent{FT}(amount, status::ComponentStatus) where {FT}
+        a = convert(FT, amount)
+        status isa Measured ||
+            iszero(a) ||
+            error(
+                "A $(nameof(typeof(status))) component must carry exactly \
+                 zero, got $a. Only a Measured component may hold a nonzero \
+                 amount.",
+            )
+        return new{FT}(a, status)
+    end
 end
+
+BudgetComponent(amount::FT, status::ComponentStatus) where {FT} =
+    BudgetComponent{FT}(amount, status)
 
 """
     measured(amount)
@@ -323,6 +344,37 @@ stage, and `occurrence` counts from one.
 `process` names the physics, `phase` names where in the step it happened, and
 `method` names how the amount was obtained or, for an [`InvariantZero`](@ref)
 component, what makes it zero.
+
+# What the amounts mean
+
+A leg's components are **accepted-step-weighted extensive contributions**: the
+part of `Bⁿ⁺¹ - Bⁿ` this path is responsible for. They are not raw tendencies,
+and they are not raw before/after differences taken on an intermediate stage
+array. Those three are different numbers and must never be added together.
+
+The distinction bites because `lim!`, `dss!` and `constrain_state!` run on
+intermediate stage arrays as well as on the accepted state. A map applied to the
+accepted state contributes its raw change, because that change *is* part of the
+endpoint difference. A map applied to an intermediate stage does not: it changes
+the array a later tendency evaluation reads, so the tableau mediates its effect
+on the endpoint. Booking its raw difference here is wrong however plausible the
+number looks.
+
+`weight` records the accepted-step coefficient already applied to reach that
+contribution — `1` for a whole-step map, and otherwise a tableau coefficient,
+generally involving `bᵢ` and the implicit `γᵢ`. `measured_at` records where the
+amount was taken. Both exist so that a weighting can be audited instead of
+trusted.
+
+A raw stage difference belongs in a `StageObservation`, which is a separate type
+precisely so that it cannot be passed to [`record_leg!`](@ref) or reach a
+projection.
+
+`aggregate` marks a leg that carries a whole accepted update rather than one
+path's share of it — the IMEX accepted increment, for instance. An aggregate is
+the reconciliation envelope and may stand in for attribution that does not exist
+yet, but it must never be summed alongside its own decomposition. The journal
+refuses that combination rather than trusting the caller to avoid it.
 """
 Base.@kwdef struct BudgetLeg{FT}
     event::Symbol
@@ -336,6 +388,43 @@ Base.@kwdef struct BudgetLeg{FT}
     phase::Symbol
     step::Int
     stage::Int = 0
+    occurrence::Int = 1
+    method::Symbol
+    weight::FT = one(FT)
+    measured_at::Symbol = :accepted_state
+    aggregate::Bool = false
+end
+
+"""
+    StageObservation(; event, observation, reservoir, mass, water, energy,
+                     process, step, stage, occurrence, method)
+
+A raw before/after difference taken on an intermediate stage array.
+
+This is deliberately **not** a [`BudgetLeg`](@ref) and shares no supertype with
+one. An intermediate-stage change is not an additive contribution to the
+accepted endpoint, so it has no place in the accounting identity, and the
+cheapest way to guarantee that is to make it a different type that
+[`record_leg!`](@ref) will not accept and no projection iterates.
+
+It is still worth collecting. When a residual appears, knowing which stage and
+which map moved the state is what turns "the step does not close" into a
+located defect. It is evidence, not accounting.
+
+There is no `path` field, because `UpdatePath` names a term of the identity and
+an observation is not one. There is no `weight`, because nothing has been
+weighted.
+"""
+Base.@kwdef struct StageObservation{FT}
+    event::Symbol
+    observation::Symbol
+    reservoir::BudgetReservoir
+    mass::BudgetComponent{FT}
+    water::BudgetComponent{FT}
+    energy::BudgetComponent{FT}
+    process::Symbol
+    step::Int
+    stage::Int
     occurrence::Int = 1
     method::Symbol
 end
@@ -364,7 +453,7 @@ leg_label(
 The `quantity` component of `leg`, where `quantity` is `:mass`, `:water`, or
 `:energy`.
 """
-function budget_component(leg::BudgetLeg, quantity::Symbol)
+function budget_component(leg::Union{BudgetLeg, StageObservation}, quantity::Symbol)
     quantity === :mass && return leg.mass
     quantity === :water && return leg.water
     quantity === :energy && return leg.energy
