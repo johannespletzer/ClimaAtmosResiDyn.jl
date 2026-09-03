@@ -1,314 +1,339 @@
-# Parent-Budget Ledger: Plan
+# Parent-Budget Ledger: Implementation Plan
 
-This is the single, consolidated plan for Meta Step 1, parent-budget closure. It
-supersedes the earlier phase-numbered plan and the PR-numbered revision of it.
-Where those two differed, this one decides; where the code contradicted both,
-the code wins and the change is marked **[revised]** with its reason.
+The sequence of work that builds the parent-budget ledger. The
+[contract](contract.md) fixes what may be claimed, the
+[architecture](architecture.md) fixes the shapes, and the
+[coverage registry](coverage.md) inventories the paths. This page says in what
+order they are built and what each step establishes.
 
-The frozen definitions live in the [budget contract](contract.md). The
-path-by-path inventory lives in the [coverage matrices](coverage.md). This page
-is the sequence of work.
+Work is organized into **stack steps**, numbered 1 to 8. Each step is one pull
+request and each carries the actual PR number once it is opened. A step
+establishes exactly one claim, has its own tests, and is finished only when its
+definition of done holds.
 
-## Target
+| Stack step | Pull request                                                           | Title                                                                   | Claim it establishes                                                            |
+|:---------- |:---------------------------------------------------------------------- |:----------------------------------------------------------------------- |:------------------------------------------------------------------------------- |
+| 1          | [#48](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/48) | Specify the parent-budget closure contract and coverage model           | none; it defines the claims                                                     |
+| 2          | [#49](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/49) | Add the internal parent-budget journal and endpoint-reconciliation core | none in a simulation; the core's own invariants hold                            |
+| 3          | not yet opened                                                         | Capture accepted parent-budget update envelopes                         | accepted-state reconciliation                                                   |
+| 4          | not yet opened                                                         | Attribute explicit parent-budget contributions                          | process attribution, explicit channels                                          |
+| 5          | not yet opened                                                         | Attribute implicit and post-implicit parent-budget contributions        | implemented-update accounting, and process attribution for the implicit channel |
+| 6          | not yet opened                                                         | Account for boundary fluxes and reservoir transfers                     | transfer consistency                                                            |
+| 7          | not yet opened                                                         | Account for final maps, restarts, and callbacks                         | accepted-state reconciliation across finalization and restart                   |
+| 8          | not yet opened                                                         | Add parent-budget reporting and closure certification                   | the published claim certificate                                                 |
 
-Exact signed discrete closure for mass, total water, and total energy, with
-internal transfers cancelled explicitly, boundaries and reservoirs accounted
-exactly, state corrections visible, and a residual reported separately.
+**Tests accompany every step.** The reporting step is where results are
+published, not where realistic tests begin. A step that cannot test the claim it
+makes does not make that claim.
 
-Physical completeness and provenance attribution are distinct, stronger claims
-and are not made here.
-
-## What this is not
+## What this work is not
 
   - Not a fixer. The ledger never changes the trajectory, and that is tested
-    rather than asserted.
-  - Not a claim about configurations outside the supported list.
-  - Not source-tag closure. `ρq_tag_*`, `ρe_src_*`, and `ρe_tag_*` are excluded
-    from the parent identity, and their sum-to-parent properties are separate
-    audits in a later meta step. A finished parent ledger may later help explain
-    a tag residual. Tag closure may never be used to certify the parent.
-  - Not a component-energy, column, or local budget. Those come after the
-    global parent budget is correct.
+    bitwise rather than asserted.
+  - Not a claim about configurations outside the contract's supported list.
+  - Not source-tag closure. `ρq_tag_*`, `ρe_src_*` and `ρe_tag_*` are excluded
+    from the parent identity, and their sum-to-parent properties are a separate
+    audit. A finished parent ledger may later help explain a tag residual; tag
+    closure may never be used to certify the parent.
+  - Not a claim of physical completeness. `D = M − W` is a derived dry-air
+    diagnostic, not a conservation invariant, and a forced run has an open
+    dry-air budget by construction.
+  - Not a component-energy, column, or local budget.
 
-## Foundation
-
-Built on `main`, which now carries the process-record work: PR 41, plus PR 46,
-plus the closure and diagnostics fixes in PR 47, all merged through PR 40.
-
-**[revised]** The earlier plan said "build on PR 41 after incorporating PR 46,
-or on main after that work merges", and for a while neither was available: PRs
-41, 42, 43, 46 and 47 were all closed without merging, and their content
-survived only on branches. PR 40 was the merge point for the whole stack, and
-merging it made the second option real. Nothing about the design depended on
-which of the two it turned out to be.
-
-PR 40 also brought in the energy source tags of PRs 42 and 43, which this plan
-said not to build the parent budget on. That exclusion is unchanged and is
-architectural rather than a matter of what is on `main`: `ρe_src_*` stays out of
-the parent identity, and its own closure is a separate audit in a later meta
-step.
-
-What is reused:
+## What is reused from the process-record work
 
   - The prognostic, untransported `prc_e_<process>` and `prc_q_<process>` fields
-    and their restart persistence.
+    and their restart persistence, as a model for how a diagnostic field
+    survives a checkpoint.
   - The snapshot-and-difference bracket pattern around explicit process blocks.
   - The timestepper integration of a record's tendency, which is what makes a
     record a time integral rather than a sum that scales with `dt`.
 
-What is not reused, and must not be implied:
+What is **not** reused, and must not be implied: a process record is not a
+closed budget and is never a closure leg. It is a partial signed history of
+configured, bracketed processes, and its bracket set is not the ledger's
+coverage set. Brackets exist only where `snapshot_tags!` and `attribute_tags!`
+are called, which is the explicit path and one implicit water block. The
+`e_prc_*` and `q_prc_*` diagnostics also divide by current density; only the raw
+`prc_e_*` and `prc_q_*` state is extensive.
 
-  - The process record is not a closed budget. It is a partial signed history of
-    configured, bracketed processes, and its public meaning stays that. Its
-    bracket set is not the ledger's coverage set: brackets exist only where
-    `snapshot_tags!` and `attribute_tags!` are called, which is the explicit
-    path and one implicit water block.
-  - The `e_prc_*` and `q_prc_*` diagnostics divide by current density. The raw
-    `prc_e_*` and `prc_q_*` state is the extensive quantity. Only the raw fields
-    are budget amounts.
+## Stack step 1 — Contract and coverage model
 
-## Architecture
+**Claim.** None. This step defines the claims the later steps make.
 
-One transactional event journal holding actual reservoir-specific legs. Each leg
-carries event and leg identity, the affected reservoir, signed extensive `ΔM`,
-`ΔW`, `ΔE`, a per-component status, update path and process classification,
-accepted-step and execution-phase identity, measurement method, and units.
+**Scope.** The [contract](contract.md), the [architecture](architecture.md) and
+the [coverage registry](coverage.md). Documentation and design only.
 
-Mass, water, and energy keep separate definitions, adapters, invariants,
-residuals, tolerances, and tests. The journal coordinates coupled exchanges. It
-does not make the three budgets one budget.
+**Non-goals.** No instrumentation, no runtime accounting, no change to any
+simulation.
 
-No component is ever inferred from another. Water is not copied into mass.
-Energy carried by water is not inferred from the water leg. An unmeasured
-component is `unknown`, never zero.
+**Primary files.** `docs/src/parent_budget/`, `docs/make.jl`.
 
-Legs are recorded once, per reservoir. Control-volume views are projections. No
-net-transfer entry is stored and no equal-and-opposite leg is manufactured, so
-an implemented mismatch stays visible.
+**Tests.** The documentation build, and the link and formatting checks.
 
-### The identity
+**Definition of done.** One contradiction-free normative contract; a coverage
+row for every path that writes an authoritative parent field, each with a
+disposition, an intended collection level, the evidence that would establish it,
+the test that would provide that evidence, and an owning stack step.
 
-```
-ΔB_actual = ΣQ_equation + ΣQ_map + ΣQ_correction + ΣQ_solve_defect + R_bookkeeping
-R_bookkeeping = ΔB_actual − ΣQ_recorded
-```
+## Stack step 2 — Journal and endpoint-reconciliation core
 
-The residual is defined by subtraction and by nothing else.
+**Claim.** None in a simulation. The core's own invariants hold: only a measured
+component carries a nonzero amount, an unknown blocks, a not-applicable is not a
+measured zero, a leg is recorded once, an aggregate is never summed with its
+decomposition, and a commit is atomic.
 
-## The pull requests
+**Scope.** The internal types and the arithmetic that turns endpoints and legs
+into the three residuals, with the packet layout that makes one collective per
+step possible.
 
-### PR 1 — Budget contract and coverage matrices
+**Non-goals.** No runtime wiring, no process attribution, no surface-transfer
+certification, no user-facing configuration key, and no claim that any
+simulation closes.
 
-Documentation and architecture only, no instrumentation.
+**Primary files.** `src/parent_budget/integrals.jl`,
+`src/parent_budget/reduction.jl`, `src/parent_budget/journal.jl`,
+`src/parent_budget/transaction.jl`.
 
-Freezes control volumes, reservoir ownership, quantities, signs, units, energy
-reference, supported methods, and tolerances. Inventories every equation and
-state-mutation path, separates authoritative from temporary mutations, and gives
-every `(M, W, E)` component a status and a proposed measurement.
+**Tests.** `test/parent_budget/` — endpoint integrals against real ClimaCore
+state across the supported model and surface combinations and both state float
+types; journal invariants including deliberate faults; packet layout and
+reduction assembly.
 
-Delivered as [contract](contract.md), [coverage](coverage.md), and this page.
+**Definition of done.** The core is internal, exports nothing, and every rule in
+the contract that can be enforced by construction is enforced rather than
+documented.
 
-### PR 2 — Core journal and endpoint reconciliation
+## Stack step 3 — Accepted update envelopes
 
-Implements the event and leg schema, the authoritative atmosphere and slab
-integrals, accepted-step transactions, control-volume projections, endpoint
-changes, and the bookkeeping residual.
+**Claim.** Accepted-state reconciliation. The endpoint change agrees with the
+recorded channel envelopes and final maps within tolerance.
 
-Tests journal mechanics, component status, reservoir projection, and duplicate
-prevention. Does not claim process coverage.
+**Scope.** A timestepper adapter that captures the complete accepted explicit,
+limited, implicit, post-implicit and final-map envelopes, and the packed
+per-step reduction that makes collecting them affordable.
 
-**[revised]** No rollback implementation. Fixed-step IMEX never rejects a step,
-so a rollback path would be untested code guarding an unreachable state.
-Instead the transaction commits only at step end, and an assertion fails loudly
-if a rejection ever occurs. If an adaptive controller is added later, rollback
-becomes real work and reopens this.
+**Non-goals.** No per-process attribution. An envelope stands alone at this step
+and its decomposition is deliberately absent.
 
-**[added]** The ledger is off by default behind its own configuration key, and
-legs accumulate into fields so the global reduction happens once per step over a
-packed buffer. Reason: a leg-per-`sum()` implementation would add on the order
-of a hundred MPI reductions per timestep on four ARS343 stages. This is a design
-constraint, not an optimization to defer.
+**Primary files.** `src/simulation/integrator.jl`, `src/simulation/solve.jl`,
+`src/prognostic_equations/limited_tendencies.jl`,
+`src/prognostic_equations/implicit/implicit_tendency.jl`, and a new timestepper
+adapter under `src/parent_budget/`.
 
-### PR 3 — Explicit equation accounting
+**Requirements.**
 
-Accumulates the explicit right-hand-side contributions the timestepper actually
-consumes, with accepted-solution weights rather than raw tendency counts or `dt`
-times one sample. Adds independently measured mass components. Ensures nothing
-is committed outside an accepted step.
+  - Pin and record the exact `ClimaTimeSteppers` behavior being adapted.
+  - Add an executable trace test for stage construction and hook order.
+  - Obtain every envelope from stage coefficients and applied increments, never
+    from endpoint subtraction.
+  - Accumulate and reduce in at least `Float64`, converting before accumulation.
+  - Use one fixed-layout packed global collective per accepted step.
+  - Reuse the previous closing endpoint as the next opening endpoint.
+  - Where an accepted implicit envelope cannot be obtained independently, leave
+    the affected claim blocked rather than inferring it.
 
-**[added]** Covers **both** explicit channels. `remaining_tendency!` accumulates
-into `Yₜ` and `Yₜ_lim`, and `ClimaTimeSteppers` integrates the limited channel
-through the limiter. Horizontal tracer advection and tracer hyperdiffusion live
-only in `Yₜ_lim`, so an adapter reading `Yₜ` alone silently loses them. Neither
-earlier plan mentioned this channel; it is the largest single coverage hole
-found in PR 1.
+**Tests.** Trace test for stage and hook order; envelope reconciliation on dry,
+moist and implicit configurations; a bitwise trajectory-invariance test with
+accounting on and off; a reduction-count test.
 
-Where a fused operator cannot expose a defensible split, records an aggregate
-contribution and marks finer attribution unavailable rather than inventing one.
+**Definition of done.** Primary reconciliation passes or is explicitly blocked
+with named blockers, in every supported configuration, with one collective per
+step and no trajectory change.
 
-Tests that enabling collection leaves the parent trajectory bitwise unchanged,
-and that existing process-record configuration and diagnostic semantics are
-untouched.
+## Stack step 4 — Explicit attribution
 
-### PR 4 — Boundaries and reservoir transfers
+**Claim.** Process attribution for the explicit channels: classified
+contributions reproduce `env.explicit_main` and `env.explicit_limited`.
 
-Records the atmospheric and slab legs of each exchange under one event identity:
-radiation, turbulent surface exchange, precipitation deposition, slab Q-flux,
-and prescribed boundaries. Adds global transport boundary accounting, or the
-proven-global-zero test where the operator has that invariant.
+**Scope.** Decomposition of `Yₜ` and `Yₜ_lim` separately, with exact accepted
+tableau weights, and the conversion of the coverage table into an executable
+registry.
 
-Avoids double-counting the atmospheric tendency, the boundary flux, and the
-surface state change. Tests the atmosphere-only and coupled projections, and
-preserves any implemented coupling mismatch instead of forcing cancellation.
+**Non-goals.** The implicit channel, which is step 5. No process-change record
+is used as a closure leg.
 
-**[corrected]** The specific mismatch to look for is known from PR 1, but an
-earlier draft named the wrong atmospheric path. There are two, and they are not
-the same mechanism.
+**Primary files.** `src/prognostic_equations/remaining_tendency.jl`,
+`src/prognostic_equations/limited_tendencies.jl`, the explicit forcing, sponge,
+diffusion, radiation and microphysics files the registry lists, and a new
+`src/parent_budget/coverage_registry.jl`.
 
-  - 0-moment removal is in `microphysics_tendency!`, a direct sink out of the
-    column with no receiving reservoir. Which channel it is called from depends
-    on `microphysics_tendency_timestepping`.
-  - 1-moment fallout is in `vertical_advection_of_water_tendency!`, which
-    `implicit_tendency!` calls, so it is always on the implicit channel and
-    carries implicit accepted-stage weighting.
+**Requirements.**
 
-The surface gain is in `surface_precipitation_tendency!` in both cases. Whether
-the atmospheric leg and the surface leg carry the same amount is a measurement
-this PR makes across PRs 4 and 5 together, and the coupled-view cancellation
-claim is blocked until it does.
+  - Decompose the two explicit channels separately. An adapter reading `Yₜ`
+    alone silently loses horizontal tracer advection and tracer hyperdiffusion.
+  - Compare classified totals against their channel envelope, never against the
+    endpoint change.
+  - Keep forcing paths that do not write `ρ` at a zero mass contribution.
+  - Generate the documentation table from the registry, or test exact agreement.
 
-### PR 5 — Implicit and post-implicit accounting
+**Tests.** Attribution residual per explicit channel; deliberate missing,
+duplicated and sign-reversed event tests; registry-to-documentation agreement.
 
-A method-specific adapter for `IMEXAlgorithm(ARS343, NewtonsMethod)`. Collects
-converged-stage contributions with the coefficients the accepted solution used,
-preferring a side channel over data already computed by the solve. Records
-`correct_implicit_advection_tendency!` as its own leg, never folded into the
-implicit terms.
+**Definition of done.** Both explicit channels attribute to within tolerance or
+name what blocks them, and the registry is the single source of truth for
+process classification.
 
-Derives the algebraic solve defect independently from the integrator's residual
-equations.
+## Stack step 5 — Implicit and post-implicit attribution
 
-**[revised]** The nonlinear-tolerance sweep is replaced by an iteration sweep.
-The default is `NewtonsMethod(max_iters = 1)` against
-`ManualSparseJacobian(approximate_solve_iters = 1)`, so there is no tolerance to
-tighten and the stage is not converged. Two consequences the earlier plans
-missed:
+**Claim.** Implemented-update accounting, and process attribution for the
+implicit channel.
 
- 1. `Q_solve_defect` is a **leading-order term**, not a small correction. The
-    identity cannot close without it in any implicit configuration.
- 2. The test sweeps `max_iters ∈ {1, 2, 4}` and `approximate_solve_iters`, and
-    requires `Q_solve_defect` to shrink with the measured stage residual while
-    `R_bookkeeping` stays at arithmetic level throughout.
+**Scope.** The effective implicit increment as the pinned timestepper forms it,
+the ownership of post-Newton and post-implicit hooks, and the algebraic solve
+defect.
 
-If prognostic record fields ever enter the implicit solve, their complete
-cross-Jacobian coupling must be correct first, and a fallback identity block is
-not sufficient. Until then they stay out of it.
+**Non-goals.** No inference of a tableau the pinned version does not expose. If
+a decomposition cannot be proven, aggregate closure is reported and attribution
+is left blocked.
 
-**Open, and the first thing this PR settles:** whether the accepted-solution
-weights are readable from the `ClimaTimeSteppers` cache without re-evaluating a
-stage. If they are not, this PR reports aggregate closure and says so, rather
-than assuming a textbook tableau.
+**Primary files.** `src/prognostic_equations/implicit/implicit_tendency.jl`,
+`src/prognostic_equations/implicit/initialize_implicit_problem.jl`,
+`src/prognostic_equations/implicit/jacobian.jl`,
+`src/simulation/integrator.jl`, and the post-implicit correction code.
 
-### PR 6 — Numerical corrections and discrete maps
+**Requirements.**
 
-Covers the limiters, `enforce_mass_energy_consistency!`, the vertical mass
-borrowing limiter, `dss!`, and each of the four `constrain_state!` steps, each
-measured from the same ordered before-and-after authoritative state pair.
+  - Derive the effective implicit increment from the pinned implementation.
+  - Identify which post-Newton, post-implicit, DSS, limiter or constraint
+    changes are already folded into it, and never book an aggregate together
+    with its decomposition.
+  - Define the solve defect with a verified sign and accepted weight.
 
-Distinguishes accepted-state maps from temporary-stage modifiers. Covers the
-prescribed-flow overwrite as a prescribed map, never as a physical tendency.
-Defines the restart transition as a zero-duration transaction of its own, so
-restart repair is never charged to the next timestep.
+**Tests.** Converged and deliberately under-converged solves, sweeping
+`max_iters` and `approximate_solve_iters`; all three
+`update_constrain_state_every` cadences, `"step"`, `"stage"` and `"dss"`.
 
-Classifies every entry as numerical or prescribed. A correction that changes
-water while leaving the stored energy variable unchanged records an energy
-component of zero and a physical-inconsistency note. It does not get an invented
-energy contribution.
+**Definition of done.** The implicit envelope's decomposition closes with the
+defect included, and every hook is booked exactly once.
 
-**[added]** `dss!` is in scope. Weighted DSS is conservative in exact arithmetic
-on a closed sphere but not bitwise, so its leg is measured and its expected size
-is reduction level. A `dss!` leg above that is a finding.
+## Stack step 6 — Boundaries and reservoir transfers
 
-### PR 7 — Integrated verification and the supported closure claim
+**Claim.** Transfer consistency: independently measured legs of a modeled
+internal exchange cancel within tolerance, and a boundary crossing is reported
+as such rather than as a failed cancellation.
 
-**[revised]** Adds real timestepper tests under `test/parent_budget/`. An earlier
-draft planned to replace the skipped placeholders in `test/conservation/`, but PR 50
-deleted those files from `main`, so there is nothing left to convert and the new
-tests stand on their own.
+**Scope.** Atmospheric, slab and exterior legs of every transfer event in the
+registry, collected independently.
 
-Covers per-step and cumulative reconciliation across dry, moist, phase-change,
-precipitating, surface-coupled, forced, implicit, correction, and mixed-process
-cases; restart; CPU against GPU; serial against MPI; and energy-reference
-covariance.
+**Non-goals.** No synthesized exterior counter-leg, and no forced cancellation.
 
-Compares the ledger against `check_conservation` as an independent cross-check,
-while treating that check as a cross-check only. The contract lists four
-specific reasons it is not authoritative, including that its boundary term is
-`dt` times one sampled radiative flux and that it omits turbulent surface fluxes
-entirely.
+**Primary files.** `src/prognostic_equations/surface_flux.jl`,
+`src/prognostic_equations/surface_temp.jl`,
+`src/prognostic_equations/water_advection.jl`,
+`src/parameterized_tendencies/microphysics/tendency.jl`,
+`src/parameterized_tendencies/radiation/radiation.jl`.
 
-Publishes the supported-configuration list, the tolerance model, the residuals,
-and the limitations register.
+**Requirements.**
 
-**[added]** Two trajectory-invariance tests, because "the ledger is not a fixer"
-has to be checkable: the ledger off must match a build without the feature, and
-the ledger on must match the ledger off, both bitwise.
+  - Handle 0-moment removal separately from 1-moment sedimentation and fallout.
+  - Treat `vertical_advection_of_water_tendency!` as implicit.
+  - Include mass, water and the appropriate energy carrier independently.
+  - Separate TOA radiation, surface radiation, latent and sensible exchange,
+    precipitation, and slab heating.
+  - Report atmosphere-only boundary flux, coupled change, and transfer mismatch
+    separately.
+  - Record the physical limitations of `Y.sfc.water` in the register.
 
-**[corrected]** The dry-mass invariant is `D = M − W`, as the original plan
-said. An earlier revision of this page claimed otherwise, on the reading that
-`ρ` excludes precipitating water. It does not: `ρq_tot` already contains rain
-and snow, `ρ` tracks `ρq_tot` on every path that changes it, and `M − W` and
-`∫(ρ − ρq_tot)` are the same number. The correction is recorded rather than
-quietly removed, because the wrong version was used to justify a wrong `W`.
+**Tests.** Per-event transfer residual in both control volumes; a mismatch
+injected deliberately and detected; dry and moist slab and prescribed-surface
+configurations.
 
-## Acceptance criteria
+**Definition of done.** Every transfer event has both legs measured from their
+own quadrature, and any mismatch is preserved and reported rather than removed.
 
-Meta Step 1 is complete only when all of the following hold.
+## Stack step 7 — Final maps, restarts, and callbacks
+
+**Claim.** Accepted-state reconciliation holds across finalization and restart.
+
+**Scope.** The final accepted-state limiter, DSS, consistency-repair and
+constraint maps, the restart transition, and the callback mutation rules.
+
+**Non-goals.** No intermediate-stage map is booked at its raw value; those stay
+stage observations unless their accepted weights are proven.
+
+**Primary files.** `src/prognostic_equations/limited_tendencies.jl`,
+`src/prognostic_equations/constrain_state.jl`, `src/simulation/restart.jl`,
+`src/callbacks/`, `test/restart.jl`, `test/restart_AtmosSimulation.jl`.
+
+**Requirements.**
+
+  - Represent restart restoration as a zero-duration transition, or segment the
+    report deliberately, and preserve cumulative ledger state where that is
+    semantically valid.
+  - Require custom callbacks to declare read-only behavior or provide
+    accounting, and fail closed for an unknown state-mutating callback.
+  - Verify no duplicate charge across step, restart and callback boundaries.
+
+**Tests.** Each final map measured on the accepted state; all three
+`constrain_state!` cadences; restart round trip with the ledger enabled; a
+deliberately mutating callback rejected at setup.
+
+**Definition of done.** Every authoritative accepted-state mutation has exactly
+one disposition and exactly one booking, across ordinary steps and restarts.
+
+## Stack step 8 — Reporting and closure certification
+
+**Claim.** The published claim certificate: exactly which claim levels were
+established, for which quantities and control volumes, under which
+configuration.
+
+**Scope.** Configuration, report generation, the claim certificate, integrated
+verification, and the performance gates.
+
+**Non-goals.** No new accounting. If a claim was not established by steps 3 to 7,
+this step reports that rather than closing it.
+
+**Primary files.** the configuration schema and getters, the diagnostics and
+reporting modules, `docs/src/parent_budget/`, and the integration and
+performance jobs.
+
+**Requirements.**
+
+  - Provide `off`, `summary` and `audit` modes, with `off` the default until
+    overhead and correctness are established.
+  - Emit versioned machine-readable output, and a concise human-readable
+    summary.
+  - Report each quantity and control volume as `pass`, `fail`, `blocked` or
+    `not_applicable`.
+  - Include the configuration, backend and rank count, state and accounting
+    precision, timestepper algorithm and adapter version, supported-scope
+    classification, tolerances and scales, the parent, attribution and transfer
+    residuals, the physical-completeness limitations, and any restart
+    segmentation.
+  - Calibrate and record `κ`, rather than shipping a guessed value.
+  - Verify bounded storage and no per-step allocation growth in summary mode,
+    against an explicit acceptable runtime and memory overhead.
+
+**Tests.** CPU, GPU, MPI, restart, fault injection, and performance; the
+energy-reference covariance audit, algebraic and physical kept apart; comparison
+against `check_conservation` as an independent cross-check only.
+
+**Definition of done.** A run emits a certificate that a reader can act on, and
+no claim level appears in it that its own tests did not establish.
+
+## Acceptance criteria for the whole sequence
 
   - Every authoritative accepted-state mutation in each supported configuration
-    has exactly one disposition.
-  - Temporary-stage changes are distinguished from accepted-state increments,
-    and nothing is booked twice.
-  - Every `(M, W, E)` component is `measured`, `zero`, `n/a`, or an explicit
-    `unknown`, and an `unknown` blocks the claim it affects.
-  - Exact per-process attribution is claimed only where the functional is linear
-    and the update algebra makes it well defined.
+    has exactly one disposition and exactly one booking.
+  - Intermediate-stage changes are distinguished from accepted-step
+    contributions, and nothing is booked twice.
+  - Every component is measured, invariant zero, not applicable, or an explicit
+    unknown, and an unknown blocks the claim it affects.
+  - Parent, attribution and transfer residuals are computed and reported
+    separately.
+  - No envelope is reconstructed from the endpoint subtraction it explains.
   - Contributions use the accepted stages, weights, and split order.
-  - Rejected attempts commit nothing, which at fixed step means the assertion
-    that none occurred.
-  - Reservoir legs are recorded once and net transfers are derived.
+  - Reservoir legs are collected independently and never negated into existence.
   - Internal cancellations are measured, never imposed.
-  - Numerical corrections and the independently derived solve defect stay
-    visible.
-  - Signed per-step and cumulative residuals are reported separately for `M`,
-    `W`, and `E`, never normalized by a signed total.
-  - Energy-reference covariance holds under the documented admissible shifts, or
-    the failing shift is reported as a finding.
-  - Residuals meet the declared arithmetic, reduction, and solver-defect model.
+  - Residuals are reported per quantity as stepwise maximum, cumulative
+    absolute, and signed drift, never normalized by a signed total.
+  - Accounting precision matches the documented precision at the point of
+    accumulation, not after the fact.
+  - One packed global collective per accepted step.
   - The ledger changes neither the trajectory nor solver convergence, tested
     bitwise.
-  - Existing process-record semantics remain backward compatible.
-  - The documentation limits the claim to the implemented discrete system in the
-    named configurations.
-
-## Summary of revisions to the earlier plans
-
-| Change                                                         | Reason                                                                         |
-|:-------------------------------------------------------------- |:------------------------------------------------------------------------------ |
-| Base is `main` once PR 40 merged, not PR 41 or a branch        | PRs 41-47 were closed unmerged until PR 40 carried them to `main`              |
-| Rejection and adaptivity machinery reduced to an assertion     | fixed-step IMEX with no controller never rejects                               |
-| Nonlinear-tolerance sweep replaced by an iteration sweep       | `max_iters = 1` leaves no tolerance to tighten                                 |
-| Solve defect promoted to a leading-order term                  | one Newton iteration against an approximate Jacobian                           |
-| `Yₜ_lim` added as a first-class channel                        | horizontal tracer advection and tracer hyperdiffusion live only there          |
-| `D = M − W` stands, as originally written                      | `ρq_tot` contains rain and snow and `ρ` tracks it, so the two forms are equal  |
-| `W = ∫ρq_tot` alone, no category added                         | `q_liq = q_lcl + q_rai` and `q_ice = q_icl + q_sno` in the thermodynamic state |
-| Reservoir graph reduced to atmosphere plus one slab            | no prognostic snow, soil, or deposited-condensate state exists                 |
-| `Y.sfc.water` owns mass as well as water                       | what it gains left the atmosphere as `ρq_tot` and so also as `ρ`               |
-| EDMF, chemistry, and prescribed flow excluded from the claim   | their control-volume membership is a modelling question                        |
-| Reduction cost made a design constraint, ledger off by default | four stages times dozens of legs is a hundred reductions per step              |
-| `dss!` added to the mutation matrix                            | it mutates authoritative state                                                 |
-| `b` in `E* = E + aM + bW` left open, not set to zero           | `enforce_mass_energy_consistency!` makes it a real question                    |
-| Four named defects in `check_conservation` recorded            | so the ledger does not inherit them                                            |
-| PR 7 writes new tests instead of replacing placeholders        | PR 50 deleted the `test/conservation/` placeholder files from `main`           |
-| 1M fallout is on the implicit channel, not the explicit one    | `implicit_tendency!` calls `vertical_advection_of_water_tendency!`             |
-| Forcing paths add water and energy but never mass              | they write `ρq_tot` and `ρe_tot` and no `ρ` term exists                        |
+  - Unsupported configurations and undeclared state-mutating callbacks fail at
+    setup.
+  - The contract, the registry, the code, and the published report describe the
+    same scope.

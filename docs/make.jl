@@ -133,9 +133,10 @@ makedocs(;
                 "Adding a Column Dataset" => "extending_column_datasets.md",
             ],
             "Parent-Budget Ledger" => [
-                "Plan" => "parent_budget/plan.md",
-                "Budget Contract" => "parent_budget/contract.md",
-                "Coverage Matrices" => "parent_budget/coverage.md",
+                "Closure Contract" => "parent_budget/contract.md",
+                "Architecture" => "parent_budget/architecture.md",
+                "Coverage Registry" => "parent_budget/coverage.md",
+                "Implementation Plan" => "parent_budget/plan.md",
             ],
         ],
     ],
