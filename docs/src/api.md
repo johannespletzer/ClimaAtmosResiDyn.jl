@@ -454,17 +454,22 @@ ClimaAtmos.parallel_lu_solve!
 
 ### Parent-budget ledger
 
-`ClimaAtmos.Internals.ParentBudget` is the accounting layer that reconciles
-mass, total water, and total energy against the accepted discrete update. It is
-described in the Developer Guide: [the closure
-contract](parent_budget/contract.md) for what it claims, [the
+The accounting layer that reconciles mass, total water, and total energy against
+the accepted discrete update. It is described in the Developer Guide: [the
+closure contract](parent_budget/contract.md) for what it claims, [the
 architecture](parent_budget/architecture.md) for how it is put together, and
 [the coverage registry](parent_budget/coverage.md) for what it covers.
 
-None of it is rendered here. `Internals` is unstable by declaration: there is no
+Only the two module docstrings are rendered, because they are what declares the
+namespace unstable. **Nothing inside them is rendered.** There is no
 configuration key, no output and no reporting surface yet, so there is no
 user-facing API, and publishing the types, the mutable ledger operations and the
 helpers would freeze a compatibility surface around an implementation that is
 expected to move as the remaining stack steps wire the ledger in. A small public
 facade belongs here once configuration and reporting exist, and it will be a
 report and a claim certificate rather than the journal internals.
+
+```@docs
+ClimaAtmos.Internals
+ClimaAtmos.Internals.ParentBudget
+```
