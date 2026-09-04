@@ -1020,9 +1020,10 @@ end
 Sum the recorded legs of one declared event for one quantity over one control
 volume.
 
-Returns `(; total, magnitude, leg_count, status_counts, blocked_by,
-missing_legs)`. Applicability comes from the schema, through
-`declared_applicable`, not from this projection.
+Returns `(; total, magnitude, leg_count, status_counts, blocked_by, missing_legs)`.
+
+Applicability comes from the schema, through `declared_applicable`, not from
+this projection.
 
 Four answers have to stay distinguishable, and a bare total tells none of them
 apart. "The legs cancel" is a total of zero with every declared leg present and

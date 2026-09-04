@@ -452,7 +452,7 @@ control_volume_names(schema) = [cv.name for cv in schema.control_volumes]
             mass = only(
                 filter(
                     r -> r.quantity === :mass &&
-                        r.control_volume === :atmosphere_only,
+                         r.control_volume === :atmosphere_only,
                     commit.parent,
                 ),
             )
