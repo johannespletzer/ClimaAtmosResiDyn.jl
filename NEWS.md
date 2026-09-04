@@ -3,7 +3,7 @@ ClimaAtmos.jl Release Notes
 
 main
 ----
-- [#49](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/49) ![][badge-✨feature/enhancement] Add the internal transaction journal and endpoint-reconciliation core for parent mass, total-water, and total-energy accounting. The core is not yet connected to simulations or exposed as a user-facing closure claim.
+- [#49](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/49) ![][badge-✨feature/enhancement] Add the internal parent-budget journal and endpoint-reconciliation core under `ClimaAtmos.Internals.ParentBudget`, including a configuration-derived schema of expected coverage, explicit unset/measured/not-applicable packet slots, fixed-packet endpoint reduction, atomic transactions, and separate parent, attribution, and transfer results. Runtime instrumentation remains disabled.
 - [#48](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/48) ![][badge-✨feature/enhancement] Specify the supported parent-budget contract, control volumes, nested reconciliation levels, and path-coverage requirements for mass, total water, and total energy.
 - [#50](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/50) ![][badge-🐛bugfix] Restored package precompilation on Julia 1.10 and 1.11 by reattaching the `tag_closure_callback!` docstring to its function, and restored the callback's API documentation.
 

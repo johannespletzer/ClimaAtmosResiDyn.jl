@@ -15,10 +15,6 @@
 ##### well defined. That is a property of these particular integrals, so changing
 ##### one reopens the question. See `docs/src/parent_budget/contract.md`.
 
-import ClimaComms
-import ClimaCore.Fields as Fields
-import ClimaCore.Spaces as Spaces
-
 """
     BUDGET_ACCOUNTING_TYPE
 
@@ -356,8 +352,10 @@ The slab owns mass as well as water. What it gains left the atmosphere as
 mass leg and a water leg of the same size.
 
 **These are two projections of one endpoint, not two measurements.** This
-returns `local_surface_water` unchanged, so the two values cannot
-disagree and no test of them can discover anything.
+returns `local_surface_water` unchanged, so the two values cannot disagree and
+no test of them can discover anything. `local_endpoint_packet` therefore reduces
+`Y.sfc.water` once and writes the same number into both slots, rather than
+calling this and paying for the reduction twice.
 
 Independent measurement is a property of the *transfer legs*: the atmospheric
 side of a surface exchange and the surface side of it are collected separately,

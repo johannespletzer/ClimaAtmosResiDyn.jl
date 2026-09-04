@@ -2,19 +2,24 @@ using Test
 using ClimaComms
 ClimaComms.@import_required_backends
 import ClimaAtmos as CA
+import ClimaAtmos.Internals.ParentBudget as PB
 
 include("../test_helpers.jl")
 
 # Endpoint integrals against real ClimaCore state.
 #
 # `journal_tests.jl` exercises the ledger's rules on synthetic scalars. Nothing
-# there ever builds a state, which is how a dry slab came to report a measured
-# water budget: `Y.sfc.water` exists in a dry run, holding a permanent zero, and
-# a presence check cannot tell that apart from a real measurement. These tests
-# call the integrals on a state that exists.
+# there ever builds a state, so nothing there can check the one thing only a
+# state can answer: that applicability comes from the configuration and not from
+# which fields happen to exist. A slab carries `Y.sfc.water` even in a dry run,
+# where it holds a permanent zero, and a presence check cannot tell that apart
+# from a real measurement. These tests call the integrals on a state that exists.
 #
 # The spaces are small and built directly, with no simulation and no config, so
 # these stay unit tests.
+
+const ATMOS = PB.ATMOSPHERE_ENDPOINT_GROUP
+const SLAB = PB.SLAB_SURFACE_ENDPOINT_GROUP
 
 # Uniform fields, so each integral can be checked against another integral of
 # the same state rather than against a hard-coded number that only restates the
@@ -77,9 +82,31 @@ function test_state(
     return Fields.FieldVector(; c, sfc)
 end
 
+# A slab that counts how often the ledger reduces `Y.sfc.water`. The counter is
+# what pins the single reduction: the slab's water and its mass are two
+# projections of one endpoint, so reading the field twice would pay for a second
+# device reduction to learn a number it already had.
+struct CountingSlab{FT} <: CA.SurfaceConditions.SurfaceTemperature
+    inner::CA.SurfaceConditions.SlabOceanTemperature{FT}
+end
+
+const SFC_WATER_READS = Ref(0)
+
+PB.has_surface_reservoir(::CountingSlab) = true
+
+PB.local_surface_energy(Y, slab::CountingSlab) =
+    PB.local_surface_energy(Y, slab.inner)
+
+function PB.local_surface_water(Y, slab::CountingSlab)
+    SFC_WATER_READS[] += 1
+    return PB.local_surface_water(Y, slab.inner)
+end
+
+PB.local_surface_mass(Y, slab::CountingSlab) = PB.local_surface_water(Y, slab)
+
 # The five supported combinations of moisture model and surface. A dry slab is
-# in the list because it is the case that motivated this file: the state carries
-# `Y.sfc.water` whatever the moisture model is.
+# in the list because it is the case only a real state can settle: the state
+# carries `Y.sfc.water` whatever the moisture model is.
 function configurations(FT)
     prescribed = CA.SurfaceConditions.ExternalTemperature()
     slab = CA.SurfaceConditions.SlabOceanTemperature{FT}()
@@ -146,10 +173,12 @@ state_for(spaces, FT, config; kwargs...) = test_state(
     kwargs...,
 )
 
-endpoints_for(spaces, FT, config; kwargs...) = CA.budget_endpoints(
+schema_for(config) = PB.endpoint_schema(config.surface, config.model)
+
+endpoints_for(spaces, FT, config; kwargs...) = PB.budget_endpoints(
     state_for(spaces, FT, config; kwargs...),
+    schema_for(config),
     config.surface,
-    config.model,
     0,
 )
 
@@ -157,15 +186,17 @@ reservoir_endpoint(endpoints, reservoir) =
     only(filter(e -> e.reservoir === reservoir, endpoints.reservoirs))
 
 atmosphere_endpoint(endpoints) =
-    reservoir_endpoint(endpoints, CA.AtmosphereReservoir())
+    reservoir_endpoint(endpoints, PB.AtmosphereReservoir())
 
 surface_endpoint(endpoints) =
-    reservoir_endpoint(endpoints, CA.SlabSurfaceReservoir())
+    reservoir_endpoint(endpoints, PB.SlabSurfaceReservoir())
 
-amount(endpoint, quantity) = CA.budget_component(endpoint, quantity).amount
+amount(endpoint, quantity) = PB.budget_component(endpoint, quantity).amount
 
 status_of(endpoint, quantity) =
-    CA.component_status(CA.budget_component(endpoint, quantity))
+    PB.component_status(PB.budget_component(endpoint, quantity))
+
+control_volume_names(schema) = [cv.name for cv in schema.control_volumes]
 
 @testset "Parent-budget endpoints on real state" begin
     for FT in (Float32, Float64)
@@ -175,21 +206,25 @@ status_of(endpoint, quantity) =
         @testset "Applicability and reservoirs ($FT)" begin
             for config in configurations(FT)
                 @testset "$(config.name)" begin
+                    schema = schema_for(config)
                     endpoints = endpoints_for(spaces, FT, config)
 
                     expected = config.has_slab ? 2 : 1
                     @test length(endpoints.reservoirs) == expected
+                    @test length(schema.reservoirs) == expected
 
                     atmosphere = atmosphere_endpoint(endpoints)
-                    @test status_of(atmosphere, :mass) isa CA.Measured
-                    @test status_of(atmosphere, :energy) isa CA.Measured
+                    @test status_of(atmosphere, :mass) isa PB.Measured
+                    @test status_of(atmosphere, :energy) isa PB.Measured
                     if config.owns_water
-                        @test status_of(atmosphere, :water) isa CA.Measured
+                        @test status_of(atmosphere, :water) isa PB.Measured
                         @test amount(atmosphere, :water) > 0
                     else
-                        @test status_of(atmosphere, :water) isa CA.NotApplicable
+                        @test status_of(atmosphere, :water) isa PB.NotApplicable
                         @test amount(atmosphere, :water) == 0
                     end
+                    @test PB.quantity_applicable(schema, ATMOS, :water) ==
+                          config.owns_water
 
                     # Signs and units: mass is positive, and energy carries the
                     # sign of the field rather than a magnitude.
@@ -198,11 +233,11 @@ status_of(endpoint, quantity) =
 
                     if config.has_slab
                         surface = surface_endpoint(endpoints)
-                        @test status_of(surface, :energy) isa CA.Measured
+                        @test status_of(surface, :energy) isa PB.Measured
                         @test amount(surface, :energy) > 0
                         if config.owns_water
-                            @test status_of(surface, :water) isa CA.Measured
-                            @test status_of(surface, :mass) isa CA.Measured
+                            @test status_of(surface, :water) isa PB.Measured
+                            @test status_of(surface, :mass) isa PB.Measured
                             # Two projections of one endpoint. They read the
                             # same `Y.sfc.water` through one reduction, so this
                             # pins the equality rather than pretending it is an
@@ -211,26 +246,61 @@ status_of(endpoint, quantity) =
                                   amount(surface, :water)
                             @test amount(surface, :water) > 0
                         else
-                            # The bug this file exists for. `Y.sfc.water` is
-                            # built whatever the moisture model is, so a
-                            # presence check reported a measured zero where the
-                            # contract says the quantity does not apply.
+                            # `Y.sfc.water` is built whatever the moisture model
+                            # is, so field presence cannot decide ownership. The
+                            # schema does, and it says the quantity is not one
+                            # this configuration has.
                             @test status_of(surface, :water) isa
-                                  CA.NotApplicable
-                            @test status_of(surface, :mass) isa CA.NotApplicable
+                                  PB.NotApplicable
+                            @test status_of(surface, :mass) isa PB.NotApplicable
+                            @test !PB.quantity_applicable(schema, SLAB, :water)
                         end
                     end
 
-                    @test CA.control_volume_available(
-                        endpoints,
-                        CA.ATMOSPHERE_ONLY,
-                    )
-                    @test CA.control_volume_available(
-                        endpoints,
-                        CA.ATMOSPHERE_AND_SURFACE,
-                    ) == config.has_slab
+                    # The coupled view exists exactly when the reservoir it
+                    # names does. Declaring it otherwise would report the
+                    # atmosphere-only numbers under the coupled name.
+                    expected_views =
+                        config.has_slab ?
+                        [:atmosphere_only, :atmosphere_and_surface] :
+                        [:atmosphere_only]
+                    @test control_volume_names(schema) == expected_views
                 end
             end
+        end
+
+        @testset "Slab water is reduced once per endpoint packet ($FT)" begin
+            config = configurations(FT)[4]
+            counting = CountingSlab(config.surface)
+            Y = state_for(spaces, FT, config)
+            schema = PB.endpoint_schema(counting, config.model)
+
+            SFC_WATER_READS[] = 0
+            packet = PB.local_endpoint_packet(Y, schema, counting)
+            # One reduction fills both slots. Calling the mass projection as
+            # well would reduce the same field a second time to obtain a number
+            # it cannot disagree with.
+            @test SFC_WATER_READS[] == 1
+            @test PB.packet_local_value(packet, SLAB, :mass) ==
+                  PB.packet_local_value(packet, SLAB, :water)
+            @test PB.slot_state(packet, SLAB, :mass) isa PB.MeasuredSlot
+            # Every slot has an explicit disposition before the packet leaves
+            # the assembly path.
+            @test isempty(PB.unresolved_slots(packet))
+        end
+
+        @testset "A dry slab resolves its slots without measuring them ($FT)" begin
+            config = configurations(FT)[2]
+            Y = state_for(spaces, FT, config)
+            schema = schema_for(config)
+            packet = PB.local_endpoint_packet(Y, schema, config.surface)
+            # Not applicable is a positive act with a configuration behind it,
+            # and it is not what an unwritten slot looks like.
+            @test PB.slot_state(packet, SLAB, :water) isa PB.NotApplicableSlot
+            @test PB.slot_state(packet, SLAB, :mass) isa PB.NotApplicableSlot
+            @test PB.slot_state(packet, SLAB, :energy) isa PB.MeasuredSlot
+            @test PB.slot_state(packet, ATMOS, :water) isa PB.NotApplicableSlot
+            @test isempty(PB.unresolved_slots(packet))
         end
 
         @testset "Accounting stays Float64 whatever the state is ($FT)" begin
@@ -239,9 +309,9 @@ status_of(endpoint, quantity) =
             # run, so the ledger's own arithmetic is always Float64.
             for config in configurations(FT)
                 endpoints = endpoints_for(spaces, FT, config)
-                @test endpoints isa CA.BudgetEndpoints{Float64}
+                @test endpoints isa PB.BudgetEndpoints{Float64}
                 for endpoint in endpoints.reservoirs
-                    for quantity in CA.BUDGET_QUANTITIES
+                    for quantity in PB.BUDGET_QUANTITIES
                         @test amount(endpoint, quantity) isa Float64
                     end
                 end
@@ -251,7 +321,7 @@ status_of(endpoint, quantity) =
         @testset "Endpoints agree with an independent integral ($FT)" begin
             config = configurations(FT)[4]
             Y = state_for(spaces, FT, config)
-            endpoints = CA.budget_endpoints(Y, config.surface, config.model, 0)
+            endpoints = endpoints_for(spaces, FT, config)
             atmosphere = atmosphere_endpoint(endpoints)
 
             # `sum` is ClimaCore's own reduction: it accumulates in the state's
@@ -282,7 +352,7 @@ status_of(endpoint, quantity) =
             # water is the integral of `ρq_tot` alone, so the two must agree
             # exactly. Adding a category would invent water every time
             # condensate became rain.
-            for quantity in CA.BUDGET_QUANTITIES
+            for quantity in PB.BUDGET_QUANTITIES
                 @test amount(atmosphere_endpoint(category_endpoints), quantity) ≈
                       amount(atmosphere_endpoint(plain_endpoints), quantity) rtol =
                     1e-12
@@ -294,19 +364,18 @@ status_of(endpoint, quantity) =
             dry = configurations(FT)[1]
 
             Y = state_for(spaces, FT, moist)
-            endpoints = CA.budget_endpoints(Y, moist.surface, moist.model, 0)
+            endpoints = endpoints_for(spaces, FT, moist)
             atmosphere = atmosphere_endpoint(endpoints)
             # `∫(ρ - ρq_tot)` is written as one integral so the cancellation is
             # pointwise. It still has to agree with the difference of the two.
-            @test CA.atmosphere_dry_mass(Y) ≈
+            @test PB.atmosphere_dry_mass(Y) ≈
                   amount(atmosphere, :mass) - amount(atmosphere, :water) rtol =
                 1e-9
 
             # With no water state there is no water to subtract.
             dry_Y = state_for(spaces, FT, dry)
-            dry_endpoints =
-                CA.budget_endpoints(dry_Y, dry.surface, dry.model, 0)
-            @test CA.atmosphere_dry_mass(dry_Y) ==
+            dry_endpoints = endpoints_for(spaces, FT, dry)
+            @test PB.atmosphere_dry_mass(dry_Y) ==
                   amount(atmosphere_endpoint(dry_endpoints), :mass)
         end
 
@@ -321,7 +390,7 @@ status_of(endpoint, quantity) =
             # area and `E_sfc` is a temperature times an areal heat capacity
             # times the same area.
             area = amount(surface, :water) / SFC_WATER
-            expected_energy = SFC_T * area * CA.slab_heat_capacity(slab)
+            expected_energy = SFC_T * area * PB.slab_heat_capacity(slab)
             @test amount(surface, :energy) ≈ expected_energy rtol =
                 10 * sqrt(eps(FT))
         end
@@ -358,6 +427,42 @@ status_of(endpoint, quantity) =
             # that, whatever the state's type.
             @test m_after - m_before ≈ Δρ_REL * m_before rtol = 1e-6
             @test m_after > m_before
+        end
+
+        @testset "A transaction runs on measured endpoints ($FT)" begin
+            config = configurations(FT)[4]
+            schema = schema_for(config)
+            ledger = PB.BudgetLedger{PB.BUDGET_ACCOUNTING_TYPE}(schema)
+
+            opening = endpoints_for(spaces, FT, config)
+            PB.open_transaction!(ledger, opening)
+            closing = PB.budget_endpoints(
+                state_for(spaces, FT, config; ρ = ρ_VAL * (1 + Δρ_REL)),
+                schema,
+                config.surface,
+                1,
+            )
+            commit = PB.commit_transaction!(ledger, closing)
+            @test commit.step == 1
+            @test ledger.committed_steps == 1
+
+            # Nothing was recorded, and the schema declares no channel yet, so
+            # there is no expectation to miss. The endpoint change is real and
+            # entirely unexplained, and with no calibrated tolerance the claim
+            # is blocked rather than passed.
+            mass = only(
+                filter(
+                    r -> r.quantity === :mass &&
+                        r.control_volume === :atmosphere_only,
+                    commit.parent,
+                ),
+            )
+            @test mass.endpoint_change > 0
+            @test mass.recorded == 0
+            @test mass.residual == mass.endpoint_change
+            @test isempty(mass.missing_expectations)
+            @test mass.status === :blocked
+            @test PB.UNCALIBRATED_TOLERANCE_BLOCKER in mass.blocked_by
         end
     end
 end

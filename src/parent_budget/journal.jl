@@ -7,9 +7,13 @@
 ##### so an internal transfer cancels because its two legs cancel and not because
 ##### anything was synthesized to make it.
 #####
-##### Three rules from `docs/src/parent_budget/contract.md` are enforced here
-##### rather than documented and hoped for. Only a measured component may carry a
-##### nonzero amount. A component that was not established is unknown and blocks
+##### This file records what happened. `schema.jl` declares what should have, and
+##### the two are compared at commit. Nothing here decides what was expected.
+#####
+##### Three rules from `docs/src/parent_budget/contract.md` are enforced by
+##### construction rather than documented and hoped for. Only a measured
+##### component may carry a nonzero amount, and a measured one must name how it
+##### was obtained. A component that was not established is unknown and blocks
 ##### the claim it belongs to, so nothing turns silence into zero. And an event
 ##### is recorded at one collection level, so an envelope and its own
 ##### decomposition can be compared but can never land in the same sum.
@@ -29,10 +33,9 @@ What is known about one component of a `BudgetComponent`.
 
   - `Measured`: the amount was taken from the implemented update.
   - `InvariantZero`: the amount is provably zero, and the proof is named.
-  - `NotApplicable`: the quantity does not exist here in this
-    configuration.
-  - `UnknownComponent`: not established. It contributes nothing to a sum
-    and *blocks* the claim for its quantity.
+  - `NotApplicable`: the quantity does not exist here in this configuration.
+  - `UnknownComponent`: not established. It contributes nothing to a sum and
+    *blocks* the claim for its quantity.
 
 `UnknownComponent` exists so that an unestablished component cannot be quietly
 treated as zero. That is the failure mode a budget diagnostic is most likely to
@@ -43,8 +46,7 @@ abstract type ComponentStatus end
 """
     Measured()
 
-The component was measured from the implemented update. See
-`ComponentStatus`.
+The component was measured from the implemented update. See `ComponentStatus`.
 """
 struct Measured <: ComponentStatus end
 
@@ -60,8 +62,7 @@ struct InvariantZero <: ComponentStatus end
     NotApplicable()
 
 The quantity does not exist for this path or reservoir in this configuration.
-Excluded from every total, and never a measured zero. See
-`ComponentStatus`.
+Excluded from every total, and never a measured zero. See `ComponentStatus`.
 """
 struct NotApplicable <: ComponentStatus end
 
@@ -76,8 +77,8 @@ struct UnknownComponent <: ComponentStatus end
 """
     status_name(status) -> Symbol
 
-A short label for a `ComponentStatus`, used when a report tallies
-statuses rather than naming each one.
+A short label for a `ComponentStatus`, used when a report tallies statuses
+rather than naming each one.
 """
 status_name(::Measured) = :measured
 status_name(::InvariantZero) = :invariant_zero
@@ -94,8 +95,8 @@ energy, proves a mass zero, and has nothing to say about water, so a single
 per-leg record would misdescribe two of the three.
 
   - `status` is the `ComponentStatus`.
-  - `method` is how the amount was obtained, or, for an `InvariantZero`,
-    the proof that makes it zero.
+  - `method` is how the amount was obtained, or, for an `InvariantZero`, the
+    proof that makes it zero.
   - `source` names the adapter or coverage-registry entry it came from.
   - `route` names the precision and reduction path, where that matters. An
     endpoint measured through the packed collective and a leg taken from an
@@ -104,6 +105,10 @@ per-leg record would misdescribe two of the three.
 
 This is what lets a failing budget be localized. Without it a missing leg, a
 duplicated leg and a mismatched pair all look the same afterwards.
+
+`method` defaults to `:unspecified`, which `BudgetComponent` refuses for the two
+statuses that make an auditable claim. `source` and `route` are descriptive and
+carry no such requirement.
 """
 Base.@kwdef struct BudgetEvidence
     status::ComponentStatus
@@ -120,16 +125,21 @@ One signed extensive amount together with the evidence for it.
 Units are kg for mass and water and J for energy, always extensive and never
 normalized. Positive means addition to the reservoir the leg names.
 
-Prefer the constructors `measured`, `invariant_zero`,
-`not_applicable` and `unknown_component`. Two rules are enforced
-here rather than left to them.
+The constructors `measured`, `invariant_zero`, `not_applicable` and
+`unknown_component` are the convenient way in. The rules below live in the inner
+constructor instead of in them, so a record built directly from
+`BudgetComponent` and `BudgetEvidence` obeys the same rules as one built through
+a helper.
 
-**Only a measured component may carry a nonzero amount.**
-`is_contributing` is true for `InvariantZero`, so a nonzero one would
-add a real amount into a total while labelled as proven zero — a wrong number
-wearing the one label that says it cannot be wrong. A nonzero `NotApplicable` or
-`UnknownComponent` amount is never read, so it is dead data that misleads anyone
-inspecting a leg.
+**Only a measured component may carry a nonzero amount.** `is_contributing` is
+true for `InvariantZero`, so a nonzero one would add a real amount into a total
+while labelled as proven zero — a wrong number wearing the one label that says
+it cannot be wrong. A nonzero `NotApplicable` or `UnknownComponent` amount is
+never read, so it is dead data that misleads anyone inspecting a leg.
+
+**A measured component must name its method.** An amount with no account of
+where it came from is not auditable, and a budget whose terms cannot be traced
+is a number rather than evidence.
 
 **An invariant zero must name its proof.** A zero with no proof is an assumption,
 and an assumed zero is exactly what the `UnknownComponent` status exists to keep
@@ -146,6 +156,14 @@ struct BudgetComponent{FT}
                 "A $(nameof(typeof(status))) component must carry exactly " *
                 "zero, got $a. Only a Measured component may hold a nonzero " *
                 "amount.",
+            )
+        end
+        if status isa Measured && evidence.method === :unspecified
+            error(
+                "A Measured component must name the method its amount came " *
+                "from. An unattributed amount cannot be audited, and a budget " *
+                "whose terms cannot be traced is a number rather than " *
+                "evidence.",
             )
         end
         if status isa InvariantZero && evidence.method === :unspecified
@@ -193,8 +211,8 @@ component_route(c::BudgetComponent) = c.evidence.route
 """
     measured(amount; method, source = :unspecified, route = :unspecified)
 
-A `BudgetComponent` holding a measured signed amount. `method` is
-required: an amount with no account of where it came from cannot be audited.
+A `BudgetComponent` holding a measured signed amount. `method` is required: an
+amount with no account of where it came from cannot be audited.
 """
 measured(
     amount::FT;
@@ -209,8 +227,8 @@ measured(
 """
     invariant_zero(FT; proof, source = :unspecified)
 
-A `BudgetComponent` that is provably zero. The amount is exactly zero,
-which is what makes it safe to include in a sum, and `proof` names why.
+A `BudgetComponent` that is provably zero. The amount is exactly zero, which is
+what makes it safe to include in a sum, and `proof` names why.
 """
 invariant_zero(
     ::Type{FT};
@@ -239,8 +257,8 @@ not_applicable(
 """
     unknown_component(FT; reason = :not_established, source = :unspecified)
 
-A `BudgetComponent` that has not been established. It contributes
-nothing to a sum and blocks the closure claim for its quantity.
+A `BudgetComponent` that has not been established. It contributes nothing to a
+sum and blocks the closure claim for its quantity.
 """
 unknown_component(
     ::Type{FT};
@@ -256,9 +274,9 @@ unknown_component(
 
 Whether the component may be added into a total.
 
-True for `Measured` and `InvariantZero`. False for
-`NotApplicable` and `UnknownComponent`, whose amounts are zero
-anyway; the distinction matters because only `UnknownComponent` also blocks.
+True for `Measured` and `InvariantZero`. False for `NotApplicable` and
+`UnknownComponent`, whose amounts are zero anyway; the distinction matters
+because only `UnknownComponent` also blocks.
 """
 is_contributing(c::BudgetComponent) =
     component_status(c) isa Measured || component_status(c) isa InvariantZero
@@ -279,264 +297,6 @@ Whether the quantity exists here at all. False only for `NotApplicable`.
 is_applicable(c::BudgetComponent) = !(component_status(c) isa NotApplicable)
 
 # ============================================================================
-# Reservoirs and control volumes
-# ============================================================================
-
-"""
-    BudgetReservoir
-
-A place the model owns state in, which can gain or lose a parent quantity.
-
-The graph is small and saying so is part of the contract. The atmosphere always
-exists. The slab surface exists only for a
-`SurfaceConditions.SlabOceanTemperature`. Everything else is exterior: its state
-is not owned by the model, so a flux into it is a boundary crossing and never an
-internal transfer.
-"""
-abstract type BudgetReservoir end
-
-"""
-    AtmosphereReservoir()
-
-The atmospheric column state, `Y.c` and `Y.f`. See `BudgetReservoir`.
-"""
-struct AtmosphereReservoir <: BudgetReservoir end
-
-"""
-    SlabSurfaceReservoir()
-
-The slab surface state, `Y.sfc`. Owns energy, and in a moist configuration water
-and the mass that goes with it. See `BudgetReservoir`.
-"""
-struct SlabSurfaceReservoir <: BudgetReservoir end
-
-"""
-    ExteriorReservoir()
-
-Everything outside the model, including a prescribed surface. It has no
-endpoint, because the model does not own its state. See
-`BudgetReservoir`.
-"""
-struct ExteriorReservoir <: BudgetReservoir end
-
-"""
-    reservoir_name(reservoir) -> Symbol
-
-A short label for `reservoir`.
-
-The atmosphere and slab labels are the same symbols the endpoint packet uses as
-group names, which is what ties a reservoir to its slots. See
-`ATMOSPHERE_ENDPOINT_GROUP`.
-"""
-reservoir_name(::AtmosphereReservoir) = ATMOSPHERE_ENDPOINT_GROUP
-reservoir_name(::SlabSurfaceReservoir) = SLAB_SURFACE_ENDPOINT_GROUP
-reservoir_name(::ExteriorReservoir) = :exterior
-
-"""
-    endpoint_group(reservoir) -> Symbol
-
-The packet group holding `reservoir`'s endpoint slots.
-
-Errors for `ExteriorReservoir`, which has no endpoint at all. Asking for
-one is a category error rather than a missing value, so it is refused rather
-than returned as `nothing`.
-"""
-endpoint_group(r::Union{AtmosphereReservoir, SlabSurfaceReservoir}) =
-    reservoir_name(r)
-endpoint_group(::ExteriorReservoir) = error(
-    "The exterior has no endpoint. Its state is not owned by the model, so a " *
-    "flux into it is a boundary crossing and there is nothing to measure.",
-)
-
-"""
-    ControlVolume(name, reservoirs)
-
-A named set of reservoirs to project the journal onto.
-
-The two supported views are `ATMOSPHERE_ONLY` and
-`ATMOSPHERE_AND_SURFACE`. A leg counts toward a view when its reservoir
-is inside it, so a surface exchange is a boundary crossing in the first view and
-an internal transfer in the second, from the same recorded legs.
-"""
-struct ControlVolume{N}
-    name::Symbol
-    reservoirs::NTuple{N, BudgetReservoir}
-end
-
-"""
-    ATMOSPHERE_ONLY
-
-The atmosphere alone. Every surface exchange is a boundary crossing.
-"""
-const ATMOSPHERE_ONLY = ControlVolume(:atmosphere_only, (AtmosphereReservoir(),))
-
-"""
-    ATMOSPHERE_AND_SURFACE
-
-The atmosphere together with the slab surface. A surface exchange is internal
-and its legs are expected to cancel. The expectation is tested, never imposed.
-"""
-const ATMOSPHERE_AND_SURFACE = ControlVolume(
-    :atmosphere_and_surface,
-    (AtmosphereReservoir(), SlabSurfaceReservoir()),
-)
-
-"""
-    is_inside(control_volume, reservoir) -> Bool
-
-Whether `reservoir` is one of the reservoirs `control_volume` contains.
-"""
-is_inside(cv::ControlVolume, reservoir::BudgetReservoir) =
-    any(r -> r === reservoir, cv.reservoirs)
-
-# ============================================================================
-# Channels, update paths and collection levels
-# ============================================================================
-
-"""
-    BUDGET_CHANNELS
-
-The update channels the primary identity reconciles against.
-
-`remaining_tendency!` writes two explicit channels, not one: `Yₜ` and the
-*limited* `Yₜ_lim`, which `ClimaTimeSteppers` integrates through the limiter.
-Horizontal tracer advection and tracer hyperdiffusion live only in the limited
-one, so an adapter reading `Yₜ` alone loses them silently. `:finalization`
-carries the accepted-state maps, which are not a tendency channel but do enter
-the identity in their own right.
-"""
-const BUDGET_CHANNELS =
-    (:explicit_main, :explicit_limited, :implicit, :post_implicit, :finalization)
-
-"""
-    UpdatePath
-
-What kind of update a leg records. This classifies the *nature* of a
-contribution; `CollectionLevel` says which identity it belongs to.
-"""
-abstract type UpdatePath end
-
-"""
-    EquationTerm()
-
-Accepted integration of an explicit or implicit equation term.
-"""
-struct EquationTerm <: UpdatePath end
-
-"""
-    DiscreteMap()
-
-An accepted sequential, split, coupling, callback, or post-solve map.
-"""
-struct DiscreteMap <: UpdatePath end
-
-"""
-    NumericalCorrection()
-
-A limiter, clipping, projection, or consistency repair. These are numerical
-corrections and are never reported as physical tendencies.
-"""
-struct NumericalCorrection <: UpdatePath end
-
-"""
-    AlgebraicSolveDefect()
-
-An independently derived projection of an incomplete algebraic solve.
-
-Not a small term in ClimaAtmos. The default `NewtonsMethod(max_iters = 1)`
-against an approximate Jacobian does not converge the implicit stage, so the
-defect is leading order and an implicit channel's attribution cannot close
-without it.
-"""
-struct AlgebraicSolveDefect <: UpdatePath end
-
-"""
-    CollectionLevel
-
-Which of the three nested identities a leg takes part in.
-
-  - `ChannelEnvelope` and `FinalMap` are the terms of the
-    **primary** identity.
-  - `ProcessDecomposition` and `ReservoirTransfer` explain an
-    envelope rather than adding to it, so they are the terms of the
-    **attribution** identity.
-  - `ReservoirTransfer` additionally takes part in the **transfer**
-    identity.
-
-This is how the contract's rule that an aggregate is never summed alongside its
-own decomposition is enforced. The two are deliberately recorded together, since
-comparing them is the whole point of attribution, and it is the *sums* that are
-kept apart: `enters_parent_identity` admits only envelopes and final
-maps, and no other total mixes the levels.
-"""
-abstract type CollectionLevel end
-
-"""
-    ChannelEnvelope()
-
-The complete update one channel applied to one reservoir, taken from the applied
-increment. A term of the primary identity, and the reference its decomposition
-is reconciled against. See `CollectionLevel`.
-"""
-struct ChannelEnvelope <: CollectionLevel end
-
-"""
-    ProcessDecomposition()
-
-One classified process's share of a channel. Explains an envelope; never added
-to one. See `CollectionLevel`.
-"""
-struct ProcessDecomposition <: CollectionLevel end
-
-"""
-    FinalMap()
-
-A map applied to the accepted state itself, contributing its raw before/after
-difference. A term of the primary identity. See `CollectionLevel`.
-"""
-struct FinalMap <: CollectionLevel end
-
-"""
-    ReservoirTransfer()
-
-One reservoir's leg of an exchange. Explains a channel like a decomposition, and
-additionally takes part in the transfer identity. See `CollectionLevel`.
-"""
-struct ReservoirTransfer <: CollectionLevel end
-
-"""
-    level_name(level) -> Symbol
-
-A short label for a `CollectionLevel`.
-"""
-level_name(::ChannelEnvelope) = :envelope
-level_name(::ProcessDecomposition) = :decomposition
-level_name(::FinalMap) = :final_map
-level_name(::ReservoirTransfer) = :transfer
-
-"""
-    enters_parent_identity(level) -> Bool
-
-Whether a leg at this level is one of the primary identity's recorded terms.
-
-True for `ChannelEnvelope` and `FinalMap`. False for the two
-levels that explain an envelope instead of adding to it, which is what makes it
-impossible to sum an aggregate alongside its own decomposition.
-"""
-enters_parent_identity(::ChannelEnvelope) = true
-enters_parent_identity(::FinalMap) = true
-enters_parent_identity(::ProcessDecomposition) = false
-enters_parent_identity(::ReservoirTransfer) = false
-
-"""
-    explains_envelope(level) -> Bool
-
-Whether a leg at this level is one of the attribution identity's terms. The
-complement of `enters_parent_identity`.
-"""
-explains_envelope(level::CollectionLevel) = !enters_parent_identity(level)
-
-# ============================================================================
 # Legs
 # ============================================================================
 
@@ -551,9 +311,9 @@ One signed contribution to one reservoir, recorded once.
 every leg of one exchange, so the atmospheric and surface halves of a surface
 flux carry the same `event` and different `leg`.
 
-`channel` is one of `BUDGET_CHANNELS` and `level` is a
-`CollectionLevel`. Together they place the leg in exactly one of the
-three identities.
+`channel` is one of `BUDGET_CHANNEL_LABELS` and `level` is a `CollectionLevel`.
+Together they place the leg in exactly one of the three identities, and the
+schema decides which of them this configuration expected.
 
 # Execution identity
 
@@ -614,11 +374,11 @@ end
 
 A raw before/after difference taken on an intermediate stage array.
 
-Deliberately **not** a `BudgetLeg`, and sharing no supertype with one.
-An intermediate-stage change is not an additive contribution to the accepted
+Deliberately **not** a `BudgetLeg`, and sharing no supertype with one. An
+intermediate-stage change is not an additive contribution to the accepted
 endpoint, so it has no place in any of the three identities, and the cheapest way
-to guarantee that is to make it a type `record_leg!` will not accept and
-no projection iterates.
+to guarantee that is to make it a type `record_leg!` will not accept and no
+projection iterates.
 
 It is still worth collecting. When a residual appears, knowing which stage and
 which map moved the state is what turns "the step does not close" into a located

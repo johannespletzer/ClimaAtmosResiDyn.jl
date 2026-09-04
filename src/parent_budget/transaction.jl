@@ -10,12 +10,16 @@
 #####
 #####   R_parent(q)         = ΔB(q) − Σ_c Q_envelope(q, c) − Σ_m Q_final_map(q, m)
 #####   R_attribution(q, c) = Q_envelope(q, c) − Σ_{e ∈ c} Q(q, e)
-#####   R_transfer(q, e, V) = Σ_{r ∈ V} Q(q, e, r)
+#####   R_transfer(q, e)    = Σ_{r ∈ modeled(e)} Q(q, e, r)
 #####
 ##### Every one of them is a subtraction or a sum of recorded amounts. No
 ##### function here creates a leg, so the ledger cannot close a budget it has not
 ##### accounted for, and nothing in this file knows what a ClimaAtmos process is
 ##### or how a collective is issued.
+#####
+##### What is expected comes from the schema and what happened comes from the
+##### journal. Every enumeration below walks the schema, so a channel or event
+##### that recorded nothing is a blocked row naming it rather than an absent one.
 
 # ============================================================================
 # Endpoints
@@ -24,11 +28,11 @@
 """
     ReservoirEndpoint(; reservoir, mass, water, energy)
 
-The three authoritative integrals of one reservoir at one instant.
+One reservoir's three parent quantities at one instant, with the evidence for
+each.
 
-A component is `not_applicable` when the reservoir does not own that
-quantity, which is how "a dry configuration has no water" is expressed without
-writing a zero that the identity would then have to reconcile.
+The components are independent: a slab measures energy, owns water only in a
+moist configuration, and carries the mass that goes with that water.
 """
 Base.@kwdef struct ReservoirEndpoint{FT}
     reservoir::BudgetReservoir
@@ -45,52 +49,62 @@ function budget_component(endpoint::ReservoirEndpoint, quantity::Symbol)
 end
 
 """
-    BudgetEndpoints(step, reservoirs)
+    BudgetEndpoints(reservoirs, step)
 
-Every reservoir's `ReservoirEndpoint` at one instant, tagged with the
-accepted step it belongs to.
+Every declared reservoir's endpoint at the end of accepted step `step`, in the
+schema's declaration order.
 """
 struct BudgetEndpoints{FT}
-    step::Int
     reservoirs::Vector{ReservoirEndpoint{FT}}
+    step::Int
 end
 
 """
     endpoint_reservoir(group) -> BudgetReservoir
 
-The reservoir a packet group belongs to. The inverse of
-`endpoint_group`.
+The reservoir a packet group belongs to.
+
+Errors for anything else, so a group the layout should never have produced fails
+here rather than becoming a reservoir nothing else knows about.
 """
 function endpoint_reservoir(group::Symbol)
     group === ATMOSPHERE_ENDPOINT_GROUP && return AtmosphereReservoir()
     group === SLAB_SURFACE_ENDPOINT_GROUP && return SlabSurfaceReservoir()
-    return error("No reservoir owns the endpoint packet group $group.")
+    return error("No budget reservoir for packet group $group.")
 end
 
 """
-    endpoint_component(packet, group, quantity)
+    endpoint_component(packet, group, quantity, FT)
 
 One endpoint component read out of a reduced packet.
 
-An applicable slot becomes a measured component whose evidence records that it
-came from the packed collective. An inapplicable slot becomes
-`not_applicable` and never a measured zero.
+A measured slot becomes a `Measured` component naming the packed collective as
+its route. A slot the schema declared not applicable becomes `NotApplicable`,
+which is excluded from every total and is never a measured zero. An unset slot
+has no reading at all and is refused, because unpacking a slot nothing wrote
+would put a zero where a measurement should be.
 """
 function endpoint_component(
     packet::BudgetPacket,
     group::Symbol,
     quantity::Symbol,
-)
-    FT = BUDGET_ACCOUNTING_TYPE
-    packet_applicable(packet, group, quantity) || return not_applicable(
-        FT;
-        reason = :not_owned_by_reservoir,
-        source = group,
+    ::Type{FT},
+) where {FT}
+    state = slot_state(packet, group, quantity)
+    state isa UnsetSlot && error(
+        "Budget packet slot $group/$quantity is unset and cannot be unpacked.",
     )
+    if state isa NotApplicableSlot
+        return not_applicable(
+            FT;
+            reason = :not_in_configuration,
+            source = :schema,
+        )
+    end
     return measured(
-        packet_value(packet, group, quantity);
-        method = :authoritative_integral,
-        source = group,
+        FT(packet_value(packet, group, quantity));
+        method = :authoritative_state_integral,
+        source = :parent_budget_integrals,
         route = :packed_global_reduction,
     )
 end
@@ -98,18 +112,14 @@ end
 """
     budget_endpoints(packet, step)
 
-Build the endpoints of one instant from an already reduced packet.
+Unpack a reduced packet into one endpoint per reservoir.
 
-The core consumes a reduced fixed-layout buffer and issues no collective of its
-own. Whoever produced the packet decided how many collectives the step spent,
-and the contract asks for one.
+Refused while any slot is unresolved. Every slot must have an explicit
+disposition before it is read, because an unset slot and a slot the
+configuration does not own are different facts and only one of them is a defect.
 """
 function budget_endpoints(packet::BudgetPacket, step::Int)
-    packet.is_reduced || error(
-        "Budget endpoints need a reduced packet. The values currently in it " *
-        "are one rank's local shares, and reading them as global totals would " *
-        "be wrong on every rank but the first.",
-    )
+    check_packet_resolved(packet, "unpacked")
     FT = BUDGET_ACCOUNTING_TYPE
     reservoirs = ReservoirEndpoint{FT}[]
     for group in packet_groups(packet)
@@ -117,36 +127,24 @@ function budget_endpoints(packet::BudgetPacket, step::Int)
             reservoirs,
             ReservoirEndpoint{FT}(;
                 reservoir = endpoint_reservoir(group),
-                mass = endpoint_component(packet, group, :mass),
-                water = endpoint_component(packet, group, :water),
-                energy = endpoint_component(packet, group, :energy),
+                mass = endpoint_component(packet, group, :mass, FT),
+                water = endpoint_component(packet, group, :water, FT),
+                energy = endpoint_component(packet, group, :energy, FT),
             ),
         )
     end
-    return BudgetEndpoints{FT}(step, reservoirs)
+    return BudgetEndpoints{FT}(reservoirs, step)
 end
 
 """
-    budget_endpoints(Y, surface_temperature, microphysics_model, step)
+    budget_endpoints(Y, schema, surface_temperature, step)
 
-Measure every reservoir's authoritative integrals from the state `Y`, with one
-collective for the whole set.
-
-The atmosphere always contributes. The slab surface contributes only for a
-`SurfaceConditions.SlabOceanTemperature`, and then it carries energy, and
-carries water and the mass that goes with it in a moist configuration.
-
-`microphysics_model` is required rather than inferred. A slab carries
-`Y.sfc.water` even in a dry run, where it holds a permanent zero, so presence of
-the field cannot distinguish an inapplicable quantity from a measured one.
-
-Endpoints are held in `BUDGET_ACCOUNTING_TYPE` whatever the state's
-float type, and the widening happens pointwise inside the reduced expression
-rather than afterwards. See `local_volume_integral`.
+Measure every declared reservoir's endpoint with **one** global collective and
+unpack the result.
 """
-budget_endpoints(Y, surface_temperature, microphysics_model, step::Int) =
+budget_endpoints(Y, schema::BudgetSchema, surface_temperature, step::Int) =
     budget_endpoints(
-        reduced_endpoint_packet(Y, surface_temperature, microphysics_model),
+        reduced_endpoint_packet(Y, schema, surface_temperature),
         step,
     )
 
@@ -159,9 +157,9 @@ Returns `(; total, magnitude, applicable, blocked_by)`. A reservoir outside the
 control volume is skipped entirely, so it can neither contribute nor block.
 
 `applicable` is false when no reservoir in the view owns the quantity at all,
-which is not the same as a total of zero. Water in a dry model, or anything at
-all in the coupled view of a configuration with no slab, would otherwise be
-reported as an ordinary closed budget at zero — a claim the ledger never made.
+which is not the same as a total of zero. Water in a dry model would otherwise
+be reported as an ordinary closed budget at zero — a claim the ledger never
+made.
 
 `magnitude` is the sum of absolute endpoint values, which the tolerance needs
 and which a signed total cannot supply.
@@ -194,29 +192,6 @@ function endpoint_total(
 end
 
 """
-    control_volume_available(endpoints, control_volume) -> Bool
-
-Whether every reservoir named by `control_volume` is present in `endpoints`.
-
-`ATMOSPHERE_AND_SURFACE` in a configuration with no slab is the case this exists
-for. The atmosphere is present and owns all three quantities, so a naive
-projection returns the atmosphere-only numbers under the coupled name: a view
-the contract says is unavailable, reported as though it had been computed. The
-totals would even look right, which is worse, because a surface exchange would
-read as internal to a coupled system that does not exist.
-
-An unavailable view is not emitted at all. That is different from a view that is
-available and inapplicable for one quantity.
-"""
-function control_volume_available(endpoints::BudgetEndpoints, cv::ControlVolume)
-    for reservoir in cv.reservoirs
-        any(e -> e.reservoir === reservoir, endpoints.reservoirs) ||
-            return false
-    end
-    return true
-end
-
-"""
     check_endpoint_layout(opening, closing)
 
 Verify that the closing endpoints describe the same reservoirs, in the same
@@ -225,8 +200,8 @@ order, owning the same quantities as the opening ones.
 A supported configuration has a static reservoir graph, so a reservoir that
 appears, disappears, or changes what it owns part way through a step is a
 defect. Checking it here means a malformed closing endpoint is refused before
-`commit_transaction!` has advanced anything, which is part of what lets
-the commit be atomic.
+`commit_transaction!` has advanced anything, which is part of what lets the
+commit be atomic.
 """
 function check_endpoint_layout(opening::BudgetEndpoints, closing::BudgetEndpoints)
     length(opening.reservoirs) == length(closing.reservoirs) || error(
@@ -245,6 +220,50 @@ function check_endpoint_layout(opening::BudgetEndpoints, closing::BudgetEndpoint
                 "$(reservoir_name(after.reservoir)) changed within step " *
                 "$(closing.step), from $(nameof(typeof(b))) to " *
                 "$(nameof(typeof(a))).",
+            )
+        end
+    end
+    return nothing
+end
+
+"""
+    check_schema_endpoints(schema, endpoints, what)
+
+Verify that `endpoints` describes exactly the reservoirs the schema declares, in
+declaration order, owning exactly the quantities the schema says they own.
+
+The schema is what every enumeration and every packet layout is built from, so
+endpoints that disagree with it would be reconciled against expectations
+belonging to a different configuration. `what` names which endpoints are being
+checked, so the message says whether the opening or the closing reading is the
+one that disagrees.
+"""
+function check_schema_endpoints(
+    schema::BudgetSchema,
+    endpoints::BudgetEndpoints,
+    what::AbstractString,
+)
+    declared = schema_reservoir_names(schema)
+    length(endpoints.reservoirs) == length(declared) || error(
+        "The $what budget endpoints hold $(length(endpoints.reservoirs)) " *
+        "reservoirs, but the schema declares $(length(declared)).",
+    )
+    for (endpoint, name) in zip(endpoints.reservoirs, declared)
+        reservoir_name(endpoint.reservoir) === name || error(
+            "The $what budget endpoints name reservoir " *
+            "$(reservoir_name(endpoint.reservoir)) where the schema declares " *
+            "$name. The declaration order fixes the packet layout, so the two " *
+            "cannot differ.",
+        )
+        for quantity in BUDGET_QUANTITIES
+            component = budget_component(endpoint, quantity)
+            expected = quantity_applicable(schema, name, quantity)
+            is_applicable(component) == expected || error(
+                "The $what budget endpoint for $quantity in $name is " *
+                "$(is_applicable(component) ? "applicable" : "not applicable") " *
+                "where the schema declares the opposite. Applicability comes " *
+                "from the configuration, so a disagreement means the endpoints " *
+                "and the schema describe different configurations.",
             )
         end
     end
@@ -271,6 +290,12 @@ The tolerance one quantity's residual is judged against.
     ledger exists to expose.
   - `kappa` covers reduction order and rank dependence.
 
+Every field must be finite, and `scale` must be strictly positive. A `NaN`
+tolerance compares false against everything and turns every step into a failure;
+an infinite one compares true against everything and turns every step into a
+pass. Both are worse than having no tolerance at all, which at least reports
+`blocked`.
+
 `kappa` has no default on purpose. It must be calibrated against measured serial
 and distributed runs and recorded with the result, and a guessed value presented
 as universal is not a tolerance. Until it is calibrated, a reconciliation
@@ -282,15 +307,32 @@ struct BudgetTolerance{FT}
     scale::FT
     kappa::FT
     function BudgetTolerance{FT}(absolute, relative, scale, kappa) where {FT}
-        scale >= 0 || error(
-            "BudgetTolerance scale must be non-negative. A signed total is " *
-            "not a scale: it can pass through zero and it hides the sign.",
+        check_tolerance_field(absolute, "absolute")
+        check_tolerance_field(relative, "relative")
+        check_tolerance_field(scale, "scale")
+        check_tolerance_field(kappa, "kappa")
+        scale > 0 || error(
+            "BudgetTolerance scale must be positive, got $scale. The relative " *
+            "term is a fraction of a magnitude, and a zero magnitude is not " *
+            "one.",
         )
-        absolute >= 0 || error("BudgetTolerance absolute must be non-negative.")
-        relative >= 0 || error("BudgetTolerance relative must be non-negative.")
-        kappa >= 0 || error("BudgetTolerance kappa must be non-negative.")
         return new{FT}(absolute, relative, scale, kappa)
     end
+end
+
+# A tolerance field has to be a finite non-negative number. Non-finite values
+# are singled out because they fail silently in the comparison rather than at
+# construction: NaN rejects every step and Inf accepts every step.
+function check_tolerance_field(value, name::AbstractString)
+    isfinite(value) || error(
+        "BudgetTolerance $name must be finite, got $value. A non-finite " *
+        "tolerance decides every comparison the same way whatever the residual " *
+        "is.",
+    )
+    value >= 0 || error(
+        "BudgetTolerance $name must be non-negative, got $value.",
+    )
+    return nothing
 end
 
 function BudgetTolerance(; absolute, relative, scale, kappa)
@@ -323,16 +365,23 @@ end
 """
     claim_status(applicable, blocked_by, residual, tolerance) -> Symbol
 
-One of `:pass`, `:fail`, `:blocked` or `:not_applicable`, in that order of
-precedence.
+The verdict for one claim, resolved in this order:
 
-A view that owns nothing is `:not_applicable` before anything else is
-considered. An unknown component blocks whatever the numbers look like. Only
-then does the residual meet a tolerance.
+ 1. `:not_applicable` when nothing in the view owns the quantity, so there is no
+    claim to make.
+ 2. `:blocked` when required evidence is unavailable, whatever the numbers look
+    like. A missing tolerance blocks for the same reason a missing measurement
+    does.
+ 3. `:fail` when complete evidence violates the tolerance.
+ 4. `:pass` when complete evidence satisfies it.
+
+The order matters and is the same everywhere. A blocked claim is not a failed
+one, and neither is a claim the configuration never made.
 """
 function claim_status(applicable::Bool, blocked_by, residual, tolerance)
     applicable || return :not_applicable
     isempty(blocked_by) || return :blocked
+    isnothing(tolerance) && return :blocked
     return abs(residual) <= tolerance ? :pass : :fail
 end
 
@@ -345,12 +394,15 @@ const UNCALIBRATED_TOLERANCE_BLOCKER = "tolerance not declared; kappa is uncalib
 # ============================================================================
 
 """
-    BudgetLedger{FT}()
+    BudgetLedger{FT}(schema)
 
-The open transaction and the running cumulative totals.
+The declared expectations, the open transaction, and the running cumulative
+totals.
 
 A ledger is opened on an endpoint, collects legs, and is committed on the next
-endpoint.
+endpoint. Its `schema` is fixed at construction and never changes: it is what
+every recording is checked against and what every reconciliation is enumerated
+from, so a channel or event that recorded nothing still produces a row.
 
 Three cumulative residuals are kept per quantity and control volume, not one,
 because a signed sum cancels the very failure the ledger exists to expose: `+δ`
@@ -365,6 +417,7 @@ The ledger is a diagnostic. Nothing in it writes to the state, and a run with it
 enabled must produce the same trajectory as one without it.
 """
 mutable struct BudgetLedger{FT}
+    schema::BudgetSchema
     step::Int
     is_open::Bool
     opening::Union{Nothing, BudgetEndpoints{FT}}
@@ -382,7 +435,8 @@ mutable struct BudgetLedger{FT}
     committed_steps::Int
 end
 
-BudgetLedger{FT}() where {FT} = BudgetLedger{FT}(
+BudgetLedger{FT}(schema::BudgetSchema) where {FT} = BudgetLedger{FT}(
+    schema,
     0,
     false,
     nothing,
@@ -490,10 +544,10 @@ transaction it opens ends after accepted step `n + 1` is finalized. Opening
 while a transaction is already open is an error, because it would mean the
 previous step neither committed nor aborted.
 
-Continuity with the previous transaction is checked rather than assumed: these
-opening endpoints must equal the ones the last transaction closed on. A gap
-between them is a change that nothing accounted for, and it would otherwise
-disappear from the cumulative total without leaving a residual anywhere.
+The endpoints are checked against the schema and against the previous
+transaction's closing reading rather than assumed. A gap between transactions is
+a change that nothing accounted for, and it would otherwise disappear from the
+cumulative total without leaving a residual anywhere.
 
 The first opening endpoint is also kept as the initial one, so that `Bᴺ − B⁰`
 can later be read directly rather than telescoped out of the per-step
@@ -507,6 +561,7 @@ function open_transaction!(
         "A budget transaction for step $(ledger.step) is already open. " *
         "Commit or abort it before opening another.",
     )
+    check_schema_endpoints(ledger.schema, endpoints, "opening")
     check_endpoint_continuity(ledger, endpoints)
     ledger.step = endpoints.step + 1
     ledger.is_open = true
@@ -527,11 +582,11 @@ commit already performed, so reusing it halves the endpoint collectives per
 step.
 
 **It also gives up the only check that would catch an unrecorded change between
-steps.** `check_endpoint_continuity` exists because the closing state of
-step `n` and the opening state of step `n+1` are read at different moments with
-discrete callbacks in between, and comparing them is what turns a callback that
-quietly mutates `Y` into an error instead of a silent gap in the cumulative
-total. Reuse makes that comparison compare a value with itself.
+steps.** `check_endpoint_continuity` exists because the closing state of step `n`
+and the opening state of step `n+1` are read at different moments with discrete
+callbacks in between, and comparing them is what turns a callback that quietly
+mutates `Y` into an error instead of a silent gap in the cumulative total. Reuse
+makes that comparison compare a value with itself.
 
 The trade is sound exactly while no callback mutates the state, which is a
 property of the model established by the coverage registry rather than a
@@ -549,34 +604,91 @@ function open_transaction!(ledger::BudgetLedger)
     return open_transaction!(ledger, previous)
 end
 
+# ============================================================================
+# Recording
+# ============================================================================
+
+# Every leg is checked against the schema before it is stored. A record the
+# schema does not declare is refused rather than becoming a new row, because a
+# row nothing expected is a row nothing will check.
+function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
+    reservoir = reservoir_name(leg.reservoir)
+    has_reservoir(schema, reservoir) || error(
+        "Leg $(leg_label(leg)) names reservoir $reservoir, which the schema " *
+        "does not declare. Expectations come from the configuration, so a " *
+        "reservoir nothing declared has no endpoint to reconcile against.",
+    )
+    if leg.level isa FinalMap
+        has_final_map(schema, leg.channel) || error(
+            "Leg $(leg_label(leg)) records final map $(leg.channel), which the " *
+            "schema does not declare.",
+        )
+        reservoir in final_map_spec(schema, leg.channel).reservoirs || error(
+            "Leg $(leg_label(leg)) records final map $(leg.channel) in " *
+            "$reservoir, which that map does not declare.",
+        )
+        return nothing
+    end
+    if leg.level isa ReservoirTransfer
+        has_transfer_event(schema, leg.event) || error(
+            "Leg $(leg_label(leg)) records transfer event $(leg.event), which " *
+            "the schema does not declare. An event's topology decides which " *
+            "test applies to it, and an undeclared event has no topology.",
+        )
+        spec = transfer_event_spec(schema, leg.event)
+        (reservoir, leg.leg) in spec.modeled_legs || error(
+            "Leg $(leg_label(leg)) is not one of the modeled legs event " *
+            "$(leg.event) declares. No leg is ever created for an exterior " *
+            "counterparty, and a modeled leg the schema did not declare would " *
+            "take part in a cancellation nobody expected.",
+        )
+        leg.channel === spec.channel || error(
+            "Leg $(leg_label(leg)) names channel $(leg.channel), but event " *
+            "$(leg.event) is declared in channel $(spec.channel).",
+        )
+        return nothing
+    end
+    has_channel(schema, leg.channel) || error(
+        "Leg $(leg_label(leg)) names channel $(leg.channel), which the schema " *
+        "does not declare as an accepted integrator channel.",
+    )
+    if leg.level isa ChannelEnvelope
+        reservoir in channel_spec(schema, leg.channel).reservoirs || error(
+            "Leg $(leg_label(leg)) offers an envelope for channel " *
+            "$(leg.channel) in $reservoir, which that channel does not write.",
+        )
+    end
+    return nothing
+end
+
 """
     record_leg!(ledger, leg)
 
 Add `leg` to the open transaction.
 
-Refused, loudly, in five cases.
+Refused, loudly, in these cases.
 
   - There is no open transaction, so the leg belongs to no accepted step.
   - The leg's `step` disagrees with the open one, which means a stage or a
     callback is writing into the wrong transaction.
-  - The leg names a channel that is not one of `BUDGET_CHANNELS`. An
-    unrecognized channel would take part in no attribution identity and would
-    disappear from every total, so it fails closed.
-  - A leg with the same `execution_identity` is already recorded, which
-    is how a bracket that fires twice at the same point shows up. A correction
-    that legitimately fires once per stage carries a different `stage` and is not
-    a duplicate.
-  - The same event is already recorded at a different `CollectionLevel`,
-    or a second envelope is offered for a channel and reservoir that already has
-    one.
+  - The schema does not declare the leg's reservoir, channel, final map, or
+    transfer event, or declares the event with different legs or in a different
+    channel. Expectations come from the configuration, so a record nothing
+    declared fails closed.
+  - A leg with the same `execution_identity` is already recorded, which is how a
+    bracket that fires twice at the same point shows up. A correction that
+    legitimately fires once per stage carries a different `stage` and is not a
+    duplicate.
+  - The same event is already recorded at a different `CollectionLevel`, or a
+    second envelope is offered for a channel and reservoir that already has one.
 
 The last one is worth stating precisely, because the contract's rule is about
 sums rather than about recording. An envelope and its decomposition are
 *supposed* to be recorded together: comparing them is the attribution identity.
 What must never happen is both landing in one total, and that is prevented by
-`enters_parent_identity` rather than by refusing the recording. What is
-refused here is one event claiming to be two different kinds of thing, which is
-a classification error and would make both identities wrong.
+`enters_parent_identity` rather than by refusing the recording. What is refused
+here is one event claiming to be two different kinds of thing, which is a
+classification error and would make both identities wrong.
 
 Why keep the duplicate guard, given that a duplicated nonzero leg does move the
 residual and does fail closure. It localizes the fault at the second recording
@@ -593,11 +705,7 @@ function record_leg!(ledger::BudgetLedger{FT}, leg::BudgetLeg{FT}) where {FT}
         "Leg $(leg.event)/$(leg.leg) is for step $(leg.step), but the open " *
         "transaction is step $(ledger.step).",
     )
-    leg.channel in BUDGET_CHANNELS || error(
-        "Leg $(leg_label(leg)) names channel $(leg.channel), which is not one " *
-        "of $(BUDGET_CHANNELS). An unrecognized channel belongs to no " *
-        "attribution identity and would vanish from every total.",
-    )
+    check_leg_declared(ledger.schema, leg)
 
     key = execution_identity(leg)
     key in ledger.recorded_keys && error(
@@ -697,10 +805,10 @@ volume.
 
 Returns `(; envelopes, final_maps, recorded, magnitude, applicable, blocked_by)`.
 
-Only `ChannelEnvelope` and `FinalMap` legs are summed. A
-decomposition or transfer leg explains an envelope rather than adding to it, so
-including it here would count the same update twice; that is where the rule
-against summing an aggregate with its own decomposition is enforced.
+Only `ChannelEnvelope` and `FinalMap` legs are summed. A decomposition or
+transfer leg explains an envelope rather than adding to it, so including it here
+would count the same update twice; that is where the rule against summing an
+aggregate with its own decomposition is enforced.
 
 A leg outside the control volume is skipped, which is what makes a surface
 exchange a boundary crossing in one view and an internal transfer in another
@@ -735,14 +843,70 @@ function project_parent(
 end
 
 """
+    missing_parent_terms(ledger, control_volume) -> Vector{String}
+
+Every term the schema declares for the primary identity in this view that no leg
+recorded.
+
+This is what keeps a channel that never reported from disappearing from the
+report. The list is built by walking the schema's declarations, so a term that
+was expected and never arrived is named here whether or not anything else in the
+step referred to it.
+"""
+function missing_parent_terms(ledger::BudgetLedger, cv::ControlVolume)
+    missing_terms = String[]
+    for spec in ledger.schema.channels
+        spec.requires_envelope || continue
+        for reservoir in spec.reservoirs
+            is_inside(cv, reservoir) || continue
+            has_envelope(ledger, spec.name, reservoir) && continue
+            push!(
+                missing_terms,
+                "expected envelope for channel $(spec.name) in $reservoir was " *
+                "not recorded",
+            )
+        end
+    end
+    for spec in ledger.schema.final_maps
+        for reservoir in spec.reservoirs
+            is_inside(cv, reservoir) || continue
+            has_final_map_leg(ledger, spec.name, reservoir) && continue
+            push!(
+                missing_terms,
+                "expected final map $(spec.name) in $reservoir was not recorded",
+            )
+        end
+    end
+    return missing_terms
+end
+
+# Whether an envelope for this channel and reservoir was recorded in the open
+# transaction.
+has_envelope(ledger::BudgetLedger, channel::Symbol, reservoir::Symbol) =
+    (channel, reservoir, ledger.step) in ledger.envelope_keys
+
+# Whether a final-map leg for this map and reservoir was recorded.
+function has_final_map_leg(
+    ledger::BudgetLedger,
+    name::Symbol,
+    reservoir::Symbol,
+)
+    for leg in ledger.legs
+        leg.level isa FinalMap || continue
+        leg.channel === name || continue
+        reservoir_name(leg.reservoir) === reservoir && return true
+    end
+    return false
+end
+
+"""
     project_attribution(ledger, quantity, control_volume, channel)
 
 Sum one channel's envelope and its explaining legs for one quantity over one
 control volume.
 
-Returns `(; envelope, attributed, magnitude, found, applicable, blocked_by)`.
-`found` is false when the channel has no envelope in this view, which is
-different from an envelope of zero.
+Returns `(; envelope, attributed, magnitude, envelope_count, explaining_count,
+applicable, blocked_by)`.
 """
 function project_attribution(
     ledger::BudgetLedger{FT},
@@ -753,7 +917,8 @@ function project_attribution(
     envelope = zero(FT)
     attributed = zero(FT)
     magnitude = zero(FT)
-    found = false
+    envelope_count = 0
+    explaining_count = 0
     applicable = false
     blocked_by = String[]
     for leg in ledger.legs
@@ -763,75 +928,52 @@ function project_attribution(
         is_applicable(c) && (applicable = true)
         is_blocking(c) && push!(blocked_by, leg_label(leg))
         if leg.level isa ChannelEnvelope
-            found = true
+            envelope_count += 1
             is_contributing(c) || continue
             envelope += c.amount
             magnitude += abs(c.amount)
         elseif explains_envelope(leg.level)
+            explaining_count += 1
             is_contributing(c) || continue
             attributed += c.amount
             magnitude += abs(c.amount)
         end
     end
-    return (; envelope, attributed, magnitude, found, applicable, blocked_by)
+    return (;
+        envelope,
+        attributed,
+        magnitude,
+        envelope_count,
+        explaining_count,
+        applicable,
+        blocked_by,
+    )
 end
 
 """
-    event_reservoirs(ledger, event) -> Vector{BudgetReservoir}
+    project_transfer(ledger, spec, quantity, control_volume)
 
-Every reservoir the recorded legs of `event` touch, in recording order.
-"""
-function event_reservoirs(ledger::BudgetLedger, event::Symbol)
-    reservoirs = BudgetReservoir[]
-    for leg in ledger.legs
-        leg.event === event || continue
-        any(r -> r === leg.reservoir, reservoirs) || push!(reservoirs, leg.reservoir)
-    end
-    return reservoirs
-end
+Sum the recorded legs of one declared event for one quantity over one control
+volume.
 
-"""
-    transfer_expectation(ledger, event, control_volume) -> Symbol
-
-`:cancellation` when every reservoir the event touches lies inside the control
-volume, `:boundary_crossing` otherwise.
-
-The same event is both, depending on the view. Precipitation reaching a slab is
-internal to the coupled volume and its legs are expected to cancel; in the
-atmosphere-only volume it crosses the boundary and a nonzero total is the
-boundary flux, not a failure. Stating which one is expected is what stops a
-report reading a boundary flux as a broken cancellation.
-"""
-function transfer_expectation(
-    ledger::BudgetLedger,
-    event::Symbol,
-    cv::ControlVolume,
-)
-    reservoirs = event_reservoirs(ledger, event)
-    all(r -> is_inside(cv, r), reservoirs) && return :cancellation
-    return :boundary_crossing
-end
-
-"""
-    project_transfer(ledger, event, quantity, control_volume)
-
-Sum every recorded leg of `event` for one quantity over one control volume.
-
-Returns `(; total, magnitude, leg_count, applicable, status_counts, blocked_by)`.
+Returns `(; total, magnitude, leg_count, applicable, status_counts, blocked_by,
+missing_legs)`.
 
 Four answers have to stay distinguishable, and a bare total tells none of them
-apart. "The legs cancel" is a total of zero with legs found, applicable, and no
-blockers. "There were no legs" is `leg_count == 0`. "Nobody measured the legs" is
-legs found with `blocked_by` naming them. And "this quantity does not exist for
-this event", as water does not for a dry-model exchange, is `applicable = false`,
-which would otherwise look exactly like a measured cancellation.
+apart. "The legs cancel" is a total of zero with every declared leg present,
+applicable, and no blockers. "A declared leg is missing" is a non-empty
+`missing_legs`. "Nobody measured the legs" is legs found with `blocked_by`
+naming them. And "this quantity does not exist for this event", as water does
+not for a dry-model exchange, is `applicable = false`, which would otherwise look
+exactly like a measured cancellation.
 
-`status_counts` gives the tally per status, so a partially inapplicable event is
-legible rather than collapsed into one flag.
+`missing_legs` comes from the specification, not from what arrived, so a leg
+that was declared and never recorded blocks the event rather than being read as
+a zero.
 """
 function project_transfer(
     ledger::BudgetLedger{FT},
-    event::Symbol,
+    spec::TransferEventSpec,
     quantity::Symbol,
     cv::ControlVolume,
 ) where {FT}
@@ -847,7 +989,7 @@ function project_transfer(
     )
     blocked_by = String[]
     for leg in ledger.legs
-        leg.event === event || continue
+        leg.event === spec.name || continue
         is_inside(cv, leg.reservoir) || continue
         leg_count += 1
         c = budget_component(leg, quantity)
@@ -858,7 +1000,63 @@ function project_transfer(
         total += c.amount
         magnitude += abs(c.amount)
     end
-    return (; total, magnitude, leg_count, applicable, status_counts, blocked_by)
+    missing_legs = String[]
+    for (reservoir, name) in spec.modeled_legs
+        is_inside(cv, reservoir) || continue
+        recorded_leg(ledger, spec.name, reservoir, name) && continue
+        push!(
+            missing_legs,
+            "expected leg $(spec.name)/$name in $reservoir was not recorded",
+        )
+    end
+    return (;
+        total,
+        magnitude,
+        leg_count,
+        applicable,
+        status_counts,
+        blocked_by,
+        missing_legs,
+    )
+end
+
+# Whether one declared leg of an event was recorded in the open transaction.
+function recorded_leg(
+    ledger::BudgetLedger,
+    event::Symbol,
+    reservoir::Symbol,
+    name::Symbol,
+)
+    for leg in ledger.legs
+        leg.event === event || continue
+        leg.leg === name || continue
+        reservoir_name(leg.reservoir) === reservoir && return true
+    end
+    return false
+end
+
+"""
+    transfer_expectation(spec, control_volume) -> Symbol
+
+What this event's signed sum means in this view, from the declared topology.
+
+  - `:exterior_crossing` when the far side is not modeled. There is one modeled
+    leg and nothing for it to cancel against, so no cancellation is tested and
+    the total is a signed boundary source or sink.
+  - `:cancellation` when every modeled reservoir the event names is inside the
+    view. The legs are expected to sum to zero and the sum is tested.
+  - `:boundary_crossing` when some modeled reservoirs are outside the view. The
+    same coupled event is internal to a larger view and crosses out of this one.
+
+The topology comes from the specification, so the meaning of the total does not
+depend on which legs a run happened to record.
+"""
+function transfer_expectation(spec::TransferEventSpec, cv::ControlVolume)
+    tests_cancellation(spec.topology) || return :exterior_crossing
+    for reservoir in event_reservoir_names(spec)
+        is_inside(cv, reservoir) || return :boundary_crossing
+    end
+    return :cancellation
 end
 
 # ============================================================================
@@ -873,6 +1071,10 @@ the recorded accepted updates account for it.
 
 `residual` is `endpoint_change - recorded` and nothing else. `recorded` is the
 sum of the channel envelopes and the final maps, never of their decompositions.
+
+`missing_expectations` names the declared channels and final maps that recorded
+nothing. Each of them blocks, because the identity has a term the run never
+supplied, and a report that dropped them would close over the gap.
 
 `endpoint_change_from_initial` is read directly from the first accepted
 endpoint. `cumulative_endpoint_change` telescopes the per-step differences
@@ -903,6 +1105,7 @@ Base.@kwdef struct ParentReconciliation{FT}
     cumulative_residual::FT
     cumulative_abs_residual::FT
     max_abs_residual::FT
+    missing_expectations::Vector{String}
     blocked_by::Vector{String}
 end
 
@@ -915,6 +1118,10 @@ envelope, for one quantity in one control volume.
 `residual` is `envelope - attributed`. A channel can reconcile perfectly in the
 primary identity while its attribution is entirely unexplained, which is why
 this is a separate result and not a field of `ParentReconciliation`.
+
+A final accepted-state map never produces one of these. It is a term of the
+primary identity and not an attribution channel, so it has no envelope to
+explain and demands no decomposition.
 """
 Base.@kwdef struct AttributionReconciliation{FT}
     quantity::Symbol
@@ -933,15 +1140,23 @@ end
 """
     TransferReconciliation
 
-Whether the independently measured legs of one event agree, for one quantity in
-one control volume.
+Whether the independently measured legs of one declared event agree, for one
+quantity in one control volume.
 
-`expectation` is `:cancellation` when the control volume holds every reservoir
-the event touches, and `:boundary_crossing` otherwise. Only a cancellation is
-judged against a tolerance. A boundary crossing has no cancellation to claim, so
-its `status` is `:not_applicable` and its `total` is the boundary flux, which is
-not expected to vanish. Reading `status` without `expectation` would make that
-flux look like a budget nobody owned.
+`topology` is what the schema declared: `:internal`, `:coupled` or `:exterior`.
+`expectation` is what that means in this view.
+
+  - `:cancellation` is the only case judged against a tolerance.
+  - `:boundary_crossing` is a coupled event seen from a view it leaves. Its
+    total is the boundary flux, which is not expected to vanish.
+  - `:exterior_crossing` is an event whose far side the model does not carry.
+    Its `counterparty` names what it crosses to, and that name never becomes a
+    numerical leg: a synthesized counterparty guarantees cancellation and
+    therefore measures nothing. The total is the signed source or sink.
+
+Neither crossing gets a cancellation verdict, so their `status` is
+`:not_applicable` unless something blocks. Reading `status` without
+`expectation` would make a boundary flux look like a budget nobody owned.
 
 A nonzero cancellation is a finding, not permission to synthesize a
 counter-entry. It names lagged coupling, clipping, inconsistent quadrature, or a
@@ -953,12 +1168,15 @@ Base.@kwdef struct TransferReconciliation{FT}
     control_volume::Symbol
     step::Int
     status::Symbol
+    topology::Symbol
     expectation::Symbol
+    counterparty::Union{Nothing, Symbol}
     applicable::Bool
     total::FT
     leg_count::Int
     tolerance::Union{Nothing, FT}
     status_counts::Dict{Symbol, Int}
+    missing_legs::Vector{String}
     blocked_by::Vector{String}
 end
 
@@ -1020,8 +1238,8 @@ end
 """
     reconcile_parent(ledger, closing, quantity, control_volume; tolerances)
 
-Compute one `ParentReconciliation` from the open transaction and the
-closing endpoints. Pure; it does not mutate the ledger.
+Compute one `ParentReconciliation` from the open transaction and the closing
+endpoints. Pure; it does not mutate the ledger.
 """
 function reconcile_parent(
     ledger::BudgetLedger{FT},
@@ -1032,11 +1250,6 @@ function reconcile_parent(
 ) where {FT}
     opening = ledger.opening
     isnothing(opening) && error("No open budget transaction to reconcile.")
-    control_volume_available(opening, cv) || error(
-        "Control volume $(cv.name) is unavailable in this configuration: it " *
-        "names a reservoir the state does not have. Projecting it anyway " *
-        "would report another view's numbers under this view's name.",
-    )
 
     before = endpoint_total(opening, quantity, cv)
     after = endpoint_total(closing, quantity, cv)
@@ -1057,7 +1270,13 @@ function reconcile_parent(
     end
 
     applicable = before.applicable || after.applicable
-    blocked_by = vcat(before.blocked_by, after.blocked_by, projected.blocked_by)
+    missing_expectations = missing_parent_terms(ledger, cv)
+    blocked_by = vcat(
+        before.blocked_by,
+        after.blocked_by,
+        projected.blocked_by,
+        missing_expectations,
+    )
     cumulative_residual = get(ledger.cumulative_residual, key, zero(FT)) + residual
     previous_abs = get(ledger.cumulative_abs_residual, key, zero(FT))
     previous_max = get(ledger.max_abs_residual, key, zero(FT))
@@ -1087,29 +1306,45 @@ function reconcile_parent(
         cumulative_residual,
         cumulative_abs_residual = previous_abs + abs(residual),
         max_abs_residual = max(previous_max, abs(residual)),
+        missing_expectations,
         blocked_by,
     )
 end
 
 """
-    reconcile_attribution(ledger, quantity, control_volume, channel; tolerances)
+    reconcile_attribution(ledger, quantity, control_volume, spec; tolerances)
 
-Compute one `AttributionReconciliation`. Pure.
+Compute one `AttributionReconciliation` for a declared channel. Pure.
+
+A required envelope that was not recorded blocks, and so does a required
+decomposition that recorded nothing. Both are read from the specification rather
+than from what arrived, so a channel that reported nothing at all is a blocked
+row naming it.
 """
 function reconcile_attribution(
     ledger::BudgetLedger{FT},
     quantity::Symbol,
     cv::ControlVolume,
-    channel::Symbol;
+    spec::ChannelSpec;
     tolerances = nothing,
 ) where {FT}
-    projected = project_attribution(ledger, quantity, cv, channel)
+    projected = project_attribution(ledger, quantity, cv, spec.name)
     residual = projected.envelope - projected.attributed
-    blocked_by = projected.blocked_by
-    projected.found || push!(
-        blocked_by,
-        "channel $channel has no envelope in $(cv.name)",
-    )
+    blocked_by = copy(projected.blocked_by)
+    if spec.requires_envelope && projected.envelope_count == 0
+        push!(
+            blocked_by,
+            "expected envelope for channel $(spec.name) in $(cv.name) was not " *
+            "recorded",
+        )
+    end
+    if spec.requires_decomposition && projected.explaining_count == 0
+        push!(
+            blocked_by,
+            "expected decomposition of channel $(spec.name) in $(cv.name) was " *
+            "not recorded",
+        )
+    end
     tolerance, blocked_by = resolve_tolerance(
         quantity_tolerance(tolerances, quantity),
         blocked_by,
@@ -1120,7 +1355,7 @@ function reconcile_attribution(
     return AttributionReconciliation{FT}(;
         quantity,
         control_volume = cv.name,
-        channel,
+        channel = spec.name,
         step = ledger.step,
         status = claim_status(
             projected.applicable,
@@ -1138,57 +1373,59 @@ function reconcile_attribution(
 end
 
 """
-    reconcile_transfer(ledger, event, quantity, control_volume; tolerances)
+    reconcile_transfer(ledger, spec, quantity, control_volume; tolerances)
 
-Compute one `TransferReconciliation`. Pure.
+Compute one `TransferReconciliation` for a declared event. Pure.
 
-A boundary crossing gets no verdict against a tolerance, because its total is
-the boundary flux rather than a residual. Its status is `:not_applicable`, with
-`expectation` carrying the reason, so that nothing downstream mistakes it for a
-passed cancellation or a failed one.
+Only a cancellation is judged against a tolerance. A crossing, whether out of
+this view or out of the model, reports its signed total as a boundary source or
+sink and takes no cancellation verdict, because there is nothing on the other
+side of it to cancel against. Testing it against zero would report a flux as a
+broken budget, and fabricating a counter-leg to make it vanish would measure
+nothing at all.
 """
 function reconcile_transfer(
     ledger::BudgetLedger{FT},
-    event::Symbol,
+    spec::TransferEventSpec,
     quantity::Symbol,
     cv::ControlVolume;
     tolerances = nothing,
 ) where {FT}
-    projected = project_transfer(ledger, event, quantity, cv)
-    expectation = transfer_expectation(ledger, event, cv)
+    projected = project_transfer(ledger, spec, quantity, cv)
+    expectation = transfer_expectation(spec, cv)
+    topology = topology_name(spec.topology)
+    blocked_by = vcat(projected.blocked_by, projected.missing_legs)
 
-    if expectation === :boundary_crossing
-        # There is no cancellation to claim in a view the event crosses out of,
-        # so the cancellation claim is inapplicable and the total reported is
-        # the boundary flux. `expectation` is what says which of the two a
-        # `:not_applicable` here means.
-        status = isempty(projected.blocked_by) ? :not_applicable : :blocked
+    if expectation !== :cancellation
         return TransferReconciliation{FT}(;
             quantity,
-            event,
+            event = spec.name,
             control_volume = cv.name,
             step = ledger.step,
-            status,
+            status = isempty(blocked_by) ? :not_applicable : :blocked,
+            topology,
             expectation,
+            counterparty = spec.counterparty,
             applicable = projected.applicable,
             total = projected.total,
             leg_count = projected.leg_count,
             tolerance = nothing,
             status_counts = projected.status_counts,
-            blocked_by = projected.blocked_by,
+            missing_legs = projected.missing_legs,
+            blocked_by,
         )
     end
 
     tolerance, blocked_by = resolve_tolerance(
         quantity_tolerance(tolerances, quantity),
-        projected.blocked_by,
+        blocked_by,
         zero(FT),
         zero(FT),
         projected.magnitude,
     )
     return TransferReconciliation{FT}(;
         quantity,
-        event,
+        event = spec.name,
         control_volume = cv.name,
         step = ledger.step,
         status = claim_status(
@@ -1197,65 +1434,56 @@ function reconcile_transfer(
             projected.total,
             tolerance,
         ),
+        topology,
         expectation,
+        counterparty = spec.counterparty,
         applicable = projected.applicable,
         total = projected.total,
         leg_count = projected.leg_count,
         tolerance,
         status_counts = projected.status_counts,
+        missing_legs = projected.missing_legs,
         blocked_by,
     )
 end
 
-"""
-    recorded_channels(ledger) -> Vector{Symbol}
-
-The channels the open transaction has legs for, in `BUDGET_CHANNELS`
-order so the result does not depend on recording order.
-"""
-recorded_channels(ledger::BudgetLedger) =
-    [c for c in BUDGET_CHANNELS if any(leg -> leg.channel === c, ledger.legs)]
-
-"""
-    transfer_events(ledger) -> Vector{Symbol}
-
-The events recorded at `ReservoirTransfer` level, in recording order.
-"""
-function transfer_events(ledger::BudgetLedger)
-    events = Symbol[]
-    for leg in ledger.legs
-        leg.level isa ReservoirTransfer || continue
-        leg.event in events || push!(events, leg.event)
+# Whether a declared event has anything to say in this view. An event whose
+# every declared leg lies outside the control volume is not part of that view at
+# all, which is different from an event that was expected here and recorded
+# nothing.
+function event_in_view(spec::TransferEventSpec, cv::ControlVolume)
+    for reservoir in event_reservoir_names(spec)
+        is_inside(cv, reservoir) && return true
     end
-    return events
+    return false
 end
 
 """
-    commit_transaction!(ledger, closing; control_volumes, tolerances)
+    commit_transaction!(ledger, closing; tolerances)
 
 Close the transaction and return a `BudgetCommit` holding the parent,
-attribution and transfer reconciliations for every quantity and available
-control volume.
+attribution and transfer reconciliations for every quantity, every declared
+control volume, every declared channel, and every declared transfer event.
 
 The closing endpoints must be for the step the transaction opened, which is the
-check that catches a missed or a doubled step. Cumulative totals are updated
-here and only here, so an aborted transaction contributes nothing to them.
+check that catches a missed or a doubled step, and they must describe the
+configuration the schema declares.
 
-A control volume whose reservoirs are not all present is **not emitted**. In a
-configuration with no slab the coupled view would otherwise silently return the
-atmosphere-only numbers under the coupled name.
+Every row comes from a declaration rather than from a record, so a channel or
+event that reported nothing produces a blocked row naming it instead of
+vanishing. Cumulative totals are updated here and only here, so an aborted
+transaction contributes nothing to them.
 
-The commit is **atomic**. Every reconciliation is computed into a temporary
-first, and the ledger is not touched until all of them have succeeded. Updating
-the cumulative totals inside the loop would leave an error raised part way
-through with some quantities already advanced in a transaction that was still
-open — a ledger that had half-counted a step it never committed, with no way to
-tell from its own state.
+The commit is **atomic**. Every check and every reconciliation is computed into
+a temporary first, and the ledger is not touched until all of them have
+succeeded. Updating the cumulative totals inside the loop would leave an error
+raised part way through with some quantities already advanced in a transaction
+that was still open — a ledger that had half-counted a step it never committed,
+with no way to tell from its own state.
 """
 function commit_transaction!(
     ledger::BudgetLedger{FT},
     closing::BudgetEndpoints{FT};
-    control_volumes = (ATMOSPHERE_ONLY, ATMOSPHERE_AND_SURFACE),
     tolerances = nothing,
 ) where {FT}
     ledger.is_open || error("No open budget transaction to commit.")
@@ -1264,34 +1492,33 @@ function commit_transaction!(
         "transaction is step $(ledger.step).",
     )
 
+    check_schema_endpoints(ledger.schema, closing, "closing")
     check_endpoint_layout(ledger.opening, closing)
 
     # Compute everything before changing anything. The reconcile functions read
     # the cumulative dictionaries but never write them, so this section is free
     # of side effects and may fail part way through without consequence.
-    available =
-        filter(cv -> control_volume_available(closing, cv), control_volumes)
-    channels = recorded_channels(ledger)
-    events = transfer_events(ledger)
-
+    schema = ledger.schema
     parent = ParentReconciliation{FT}[]
     attribution = AttributionReconciliation{FT}[]
     transfer = TransferReconciliation{FT}[]
-    for cv in available, quantity in BUDGET_QUANTITIES
+    for cv in schema.control_volumes, quantity in BUDGET_QUANTITIES
         push!(
             parent,
             reconcile_parent(ledger, closing, quantity, cv; tolerances),
         )
-        for channel in channels
+        for spec in schema.channels
+            any(r -> is_inside(cv, r), spec.reservoirs) || continue
             push!(
                 attribution,
-                reconcile_attribution(ledger, quantity, cv, channel; tolerances),
+                reconcile_attribution(ledger, quantity, cv, spec; tolerances),
             )
         end
-        for event in events
+        for spec in schema.transfer_events
+            event_in_view(spec, cv) || continue
             push!(
                 transfer,
-                reconcile_transfer(ledger, event, quantity, cv; tolerances),
+                reconcile_transfer(ledger, spec, quantity, cv; tolerances),
             )
         end
     end
