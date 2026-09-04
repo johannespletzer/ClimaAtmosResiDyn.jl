@@ -86,6 +86,38 @@ status_name(::NotApplicable) = :not_applicable
 status_name(::UnknownComponent) = :unknown
 
 """
+    disposition_permits(expected, status) -> Bool
+
+Whether a component with this `status` is what the schema's `expected`
+disposition asked for. See `EXPECTED_DISPOSITIONS`.
+
+  - `:open` permits anything. The registry has not established what the path
+    does, so nothing is demanded of the record and the claim stays blocked on
+    other grounds.
+  - `:measured` permits a `Measured` component, and an `UnknownComponent`,
+    which is the honest record of a measurement that was expected and not
+    taken. It blocks, which is the point.
+  - `:invariant_zero` permits an `InvariantZero`, and an `UnknownComponent`
+    for a proof not yet established. A `Measured` component is **not**
+    permitted: the registry says this path is provably zero, so a measurement
+    here means the proof no longer holds or never did, which is a disagreement
+    between the registry and the code rather than a residual.
+  - `:not_applicable` permits only a `NotApplicable` component. There is
+    nothing here to be unknown about.
+"""
+function disposition_permits(expected::Symbol, status::ComponentStatus)
+    expected === :open && return true
+    expected === :not_applicable && return status isa NotApplicable
+    status isa UnknownComponent && return true
+    expected === :measured && return status isa Measured
+    expected === :invariant_zero && return status isa InvariantZero
+    return error(
+        "Unknown expected disposition $expected; expected one of " *
+        "$(EXPECTED_DISPOSITIONS).",
+    )
+end
+
+"""
     BudgetEvidence(; status, method, source, route)
 
 How one component came to have the status it has.

@@ -388,6 +388,49 @@ function quantity_position(quantity::Symbol)
 end
 
 """
+    EXPECTED_DISPOSITIONS
+
+What the coverage registry can say a component of a declared row will be.
+
+  - `:measured` — not provably zero, so the ledger has to measure it.
+  - `:invariant_zero` — provably zero, with the proof named in the record.
+  - `:not_applicable` — the row does not write this quantity in this
+    configuration.
+  - `:open` — not yet established from the code, so nothing is demanded of the
+    record and the claim it feeds stays blocked.
+
+This is the proof obligation half of what a schema declares. Applicability says
+whether a reservoir owns a quantity at all; a disposition says what a particular
+channel, map or event is expected to do to it. A row that declares
+`:invariant_zero` and then measures something is a disagreement between the
+registry and the code, not a residual, so it is refused where it happens.
+"""
+const EXPECTED_DISPOSITIONS =
+    (:measured, :invariant_zero, :not_applicable, :open)
+
+"""
+    OPEN_DISPOSITIONS
+
+Every quantity `:open`: the default for a declaration whose proof obligations
+have not been established yet. Demands nothing of a record and blocks nothing by
+itself, which is what the coverage registry's `open` rows mean.
+"""
+const OPEN_DISPOSITIONS = ntuple(_ -> :open, length(BUDGET_QUANTITIES))
+
+# One flag per entry of BUDGET_QUANTITIES, each a member of the vocabulary. A
+# misspelled disposition would otherwise permit everything, which is the one
+# outcome a proof obligation must not have.
+function check_dispositions(what::AbstractString, dispositions)
+    for disposition in dispositions
+        disposition in EXPECTED_DISPOSITIONS || error(
+            "$what declares disposition $disposition, which is not one of " *
+            "$(EXPECTED_DISPOSITIONS).",
+        )
+    end
+    return nothing
+end
+
+"""
     ReservoirSpec(reservoir, applicable)
 
 Which parent quantities one reservoir owns in this configuration.
@@ -403,13 +446,14 @@ struct ReservoirSpec
 end
 
 """
-    ChannelSpec(name, reservoirs; requires_envelope = true,
-                requires_decomposition = false)
+    ChannelSpec(name, reservoirs; dispositions = OPEN_DISPOSITIONS,
+                requires_envelope = true, requires_decomposition = false)
 
 An accepted integrator channel the configuration is expected to produce.
 
 `reservoirs` names the reservoirs the channel writes, which is what says in
-which control volumes its envelope is expected at all.
+which control volumes its envelope is expected at all. `dispositions` says what
+each quantity of its legs is expected to be; see `EXPECTED_DISPOSITIONS`.
 
 `requires_envelope` says the channel must record the complete update it applied.
 A missing required envelope blocks, because the primary identity has a term with
@@ -420,11 +464,13 @@ attribution is entirely unexplained, which is why the two are separate flags.
 struct ChannelSpec
     name::Symbol
     reservoirs::Tuple{Vararg{Symbol}}
+    dispositions::NTuple{length(BUDGET_QUANTITIES), Symbol}
     requires_envelope::Bool
     requires_decomposition::Bool
     function ChannelSpec(
         name::Symbol,
         reservoirs::Tuple{Vararg{Symbol}};
+        dispositions = OPEN_DISPOSITIONS,
         requires_envelope::Bool = true,
         requires_decomposition::Bool = false,
     )
@@ -441,7 +487,14 @@ struct ChannelSpec
         )
         length(unique(reservoirs)) == length(reservoirs) ||
             error("Channel $name names the same reservoir twice.")
-        return new(name, reservoirs, requires_envelope, requires_decomposition)
+        check_dispositions("Channel $name", dispositions)
+        return new(
+            name,
+            reservoirs,
+            dispositions,
+            requires_envelope,
+            requires_decomposition,
+        )
     end
 end
 
@@ -450,18 +503,25 @@ function ChannelSpec(name::Symbol, reservoir::Symbol; kwargs...)
 end
 
 """
-    FinalMapSpec(name, reservoirs)
+    FinalMapSpec(name, reservoirs; dispositions = OPEN_DISPOSITIONS)
 
 A map applied to the accepted state that the configuration is expected to record.
 
 `name` is one of `FINAL_STATE_MAPS` and `reservoirs` names the reservoirs the map
-writes. It contributes directly to the primary identity and produces no
-attribution result of its own.
+writes. `dispositions` says what each quantity of its legs is expected to be; a
+tag-only or category-only map declares `:invariant_zero` for all three, which is
+the proof obligation that it writes no parent field. It contributes directly to
+the primary identity and produces no attribution result of its own.
 """
 struct FinalMapSpec
     name::Symbol
     reservoirs::Tuple{Vararg{Symbol}}
-    function FinalMapSpec(name::Symbol, reservoirs::Tuple{Vararg{Symbol}})
+    dispositions::NTuple{length(BUDGET_QUANTITIES), Symbol}
+    function FinalMapSpec(
+        name::Symbol,
+        reservoirs::Tuple{Vararg{Symbol}};
+        dispositions = OPEN_DISPOSITIONS,
+    )
         name in FINAL_STATE_MAPS || error(
             "Final map $name is not one of $(FINAL_STATE_MAPS).",
         )
@@ -471,14 +531,18 @@ struct FinalMapSpec
             "Final map $name names the exterior, which owns no state and has " *
             "nothing for a map to write.",
         )
-        return new(name, reservoirs)
+        check_dispositions("Final map $name", dispositions)
+        return new(name, reservoirs, dispositions)
     end
 end
 
-FinalMapSpec(name::Symbol, reservoir::Symbol) = FinalMapSpec(name, (reservoir,))
+function FinalMapSpec(name::Symbol, reservoir::Symbol; kwargs...)
+    return FinalMapSpec(name, (reservoir,); kwargs...)
+end
 
 """
-    TransferEventSpec(name, topology, channel, modeled_legs; counterparty)
+    TransferEventSpec(name, topology, channel, modeled_legs; counterparty,
+                      dispositions)
 
 One exchange the configuration is expected to record, and how its sides relate.
 
@@ -489,6 +553,11 @@ blocks the event and is never read as a zero.
 `counterparty` names the unmodeled exterior for an `ExteriorCrossing` and must be
 absent otherwise. It is metadata, not a leg. Nothing numerical is ever created
 for it.
+
+`dispositions` says what each quantity of the event's legs is expected to be;
+see `EXPECTED_DISPOSITIONS`. Radiation at the top of the atmosphere declares
+`:invariant_zero` for mass and water and `:measured` for energy, which is the
+proof obligation that it moves no air.
 
 The invariants are enforced here so a malformed topology cannot reach a
 reconciliation. An exterior crossing has exactly one modeled reservoir, because
@@ -502,12 +571,14 @@ struct TransferEventSpec
     channel::Symbol
     modeled_legs::Tuple{Vararg{Tuple{Symbol, Symbol}}}
     counterparty::Union{Nothing, Symbol}
+    dispositions::NTuple{length(BUDGET_QUANTITIES), Symbol}
     function TransferEventSpec(
         name::Symbol,
         topology::TransferTopology,
         channel::Symbol,
         modeled_legs::Tuple{Vararg{Tuple{Symbol, Symbol}}};
         counterparty::Union{Nothing, Symbol} = nothing,
+        dispositions = OPEN_DISPOSITIONS,
     )
         channel in ATTRIBUTION_CHANNELS || error(
             "Transfer event $name names channel $channel, which is not one of " *
@@ -552,9 +623,26 @@ struct TransferEventSpec
                 "nothing is a test of that leg against zero.",
             )
         end
-        return new(name, topology, channel, modeled_legs, counterparty)
+        check_dispositions("Transfer event $name", dispositions)
+        return new(
+            name,
+            topology,
+            channel,
+            modeled_legs,
+            counterparty,
+            dispositions,
+        )
     end
 end
+
+"""
+    expected_disposition(spec, quantity) -> Symbol
+
+What `spec` declares this quantity's legs will be. One of
+`EXPECTED_DISPOSITIONS`.
+"""
+expected_disposition(spec, quantity::Symbol) =
+    spec.dispositions[quantity_position(quantity)]
 
 """
     event_reservoir_names(spec) -> Vector{Symbol}

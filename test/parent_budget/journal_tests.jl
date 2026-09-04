@@ -405,6 +405,83 @@ transfer_result(commit, event, quantity, cv) = only(
         @test length(ledger.legs) == 2
     end
 
+    @testset "A declared disposition is a proof obligation" begin
+        # Radiation at the top of the atmosphere moves energy and no air, so the
+        # registry declares its mass and water provably zero.
+        exterior = PB.TransferEventSpec(
+            :xfer_toa,
+            PB.ExteriorCrossing(),
+            :explicit_main,
+            ((ATMOS, :atmosphere),);
+            counterparty = :space,
+            dispositions = (:invariant_zero, :invariant_zero, :measured),
+        )
+        schema = test_schema(;
+            channels = [
+                PB.ChannelSpec(:explicit_main, ATMOS; requires_envelope = false),
+            ],
+            events = [exterior],
+        )
+        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        function toa_leg(; mass = zval(FT), occurrence = 1)
+            return test_leg(
+                FT;
+                event = :xfer_toa,
+                leg = :atmosphere,
+                level = PB.ReservoirTransfer(),
+                mass,
+                water = zval(FT),
+                energy = mval(FT, -7),
+                occurrence,
+            )
+        end
+
+        PB.record_leg!(ledger, toa_leg())
+        @test length(ledger.legs) == 1
+
+        # A measurement where the registry declared a proof is a disagreement
+        # between the registry and the code, not a residual for a later
+        # reconciliation to absorb, so it is refused where it happens.
+        @test_throws ErrorException PB.record_leg!(
+            ledger,
+            toa_leg(; occurrence = 2, mass = mval(FT, 1)),
+        )
+        @test length(ledger.legs) == 1
+
+        # A proof that has not been established yet is an honest record. It is
+        # accepted, and it blocks.
+        PB.record_leg!(ledger, toa_leg(; occurrence = 3, mass = unkval(FT)))
+        @test length(ledger.legs) == 2
+
+        @test PB.expected_disposition(exterior, :energy) === :measured
+        @test PB.expected_disposition(exterior, :mass) === :invariant_zero
+        # The vocabulary is closed, so a misspelled disposition cannot quietly
+        # permit everything.
+        @test_throws ErrorException PB.ChannelSpec(
+            :implicit,
+            ATMOS;
+            dispositions = (:measured, :zero, :measured),
+        )
+        # An open disposition demands nothing, which is what the registry's
+        # unestablished rows mean.
+        @test PB.OPEN_DISPOSITIONS ==
+              ntuple(_ -> :open, length(PB.BUDGET_QUANTITIES))
+        for status in (
+            PB.Measured(),
+            PB.InvariantZero(),
+            PB.NotApplicable(),
+            PB.UnknownComponent(),
+        )
+            @test PB.disposition_permits(:open, status)
+        end
+        # Nothing here can be unknown about a quantity that does not exist.
+        @test PB.disposition_permits(:not_applicable, PB.NotApplicable())
+        @test !PB.disposition_permits(:not_applicable, PB.UnknownComponent())
+        @test !PB.disposition_permits(:not_applicable, PB.Measured())
+        @test !PB.disposition_permits(:invariant_zero, PB.Measured())
+        @test PB.disposition_permits(:measured, PB.UnknownComponent())
+    end
+
     @testset "A leg is recorded once" begin
         schema = test_schema(; channels = [PB.ChannelSpec(:explicit_main, ATMOS)])
         ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 1, w = 1, e = 1))

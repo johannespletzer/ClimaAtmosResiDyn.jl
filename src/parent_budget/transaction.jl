@@ -608,6 +608,26 @@ end
 # Recording
 # ============================================================================
 
+# A leg's components have to be what the declaration said they would be. The
+# proof obligations in the coverage registry are worth nothing if a row can
+# declare a quantity provably zero and then record a measurement of it, so the
+# disagreement is refused where it happens rather than surfacing as a residual
+# nobody can attribute.
+function check_leg_dispositions(spec, leg::BudgetLeg)
+    for quantity in BUDGET_QUANTITIES
+        expected = expected_disposition(spec, quantity)
+        status = component_status(budget_component(leg, quantity))
+        disposition_permits(expected, status) || error(
+            "Leg $(leg_label(leg)) records $quantity as " *
+            "$(status_name(status)), but the schema declares it $expected. A " *
+            "declared disposition is a proof obligation about the code, so a " *
+            "record that contradicts it is a disagreement between the registry " *
+            "and the implementation rather than a residual.",
+        )
+    end
+    return nothing
+end
+
 # Every leg is checked against the schema before it is stored. A record the
 # schema does not declare is refused rather than becoming a new row, because a
 # row nothing expected is a row nothing will check.
@@ -623,10 +643,12 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
             "Leg $(leg_label(leg)) records final map $(leg.channel), which the " *
             "schema does not declare.",
         )
-        reservoir in final_map_spec(schema, leg.channel).reservoirs || error(
+        spec = final_map_spec(schema, leg.channel)
+        reservoir in spec.reservoirs || error(
             "Leg $(leg_label(leg)) records final map $(leg.channel) in " *
             "$reservoir, which that map does not declare.",
         )
+        check_leg_dispositions(spec, leg)
         return nothing
     end
     if leg.level isa ReservoirTransfer
@@ -646,18 +668,21 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
             "Leg $(leg_label(leg)) names channel $(leg.channel), but event " *
             "$(leg.event) is declared in channel $(spec.channel).",
         )
+        check_leg_dispositions(spec, leg)
         return nothing
     end
     has_channel(schema, leg.channel) || error(
         "Leg $(leg_label(leg)) names channel $(leg.channel), which the schema " *
         "does not declare as an accepted integrator channel.",
     )
+    spec = channel_spec(schema, leg.channel)
     if leg.level isa ChannelEnvelope
-        reservoir in channel_spec(schema, leg.channel).reservoirs || error(
+        reservoir in spec.reservoirs || error(
             "Leg $(leg_label(leg)) offers an envelope for channel " *
             "$(leg.channel) in $reservoir, which that channel does not write.",
         )
     end
+    check_leg_dispositions(spec, leg)
     return nothing
 end
 
@@ -675,6 +700,8 @@ Refused, loudly, in these cases.
     transfer event, or declares the event with different legs or in a different
     channel. Expectations come from the configuration, so a record nothing
     declared fails closed.
+  - A component contradicts the disposition its declaration gave it, such as a
+    measurement on a quantity the registry says the path leaves provably zero.
   - A leg with the same `execution_identity` is already recorded, which is how a
     bracket that fires twice at the same point shows up. A correction that
     legitimately fires once per stage carries a different `stage` and is not a
