@@ -260,11 +260,10 @@ control_volume_names(schema) = [cv.name for cv in schema.control_volumes]
                     # The coupled view exists exactly when the reservoir it
                     # names does. Declaring it otherwise would report the
                     # atmosphere-only numbers under the coupled name.
-                    expected_views =
-                        config.has_slab ?
-                        [:atmosphere_only, :atmosphere_and_surface] :
-                        [:atmosphere_only]
-                    @test control_volume_names(schema) == expected_views
+                    views = control_volume_names(schema)
+                    @test first(views) === :atmosphere_only
+                    @test (:atmosphere_and_surface in views) == config.has_slab
+                    @test length(views) == expected
                 end
             end
         end

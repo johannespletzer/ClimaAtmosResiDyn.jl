@@ -149,8 +149,7 @@ target of an attribution identity of its own.
 Horizontal tracer advection and tracer hyperdiffusion live only in the limited
 one, so an adapter reading `Yₜ` alone loses them silently.
 """
-const ATTRIBUTION_CHANNELS =
-    (:explicit_main, :explicit_limited, :implicit, :post_implicit)
+const ATTRIBUTION_CHANNELS = (:explicit_main, :explicit_limited, :implicit, :post_implicit)
 
 """
     FINAL_STATE_MAPS

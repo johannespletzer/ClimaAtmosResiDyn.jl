@@ -803,7 +803,9 @@ end
 Sum the primary identity's recorded terms for one quantity over one control
 volume.
 
-Returns `(; envelopes, final_maps, recorded, magnitude, applicable, blocked_by)`.
+Returns `(; envelopes, final_maps, recorded, magnitude, blocked_by)`.
+Applicability is not among them: whether a view owns a quantity at all is a
+property of its endpoints and of the schema, not of which legs arrived.
 
 Only `ChannelEnvelope` and `FinalMap` legs are summed. A decomposition or
 transfer leg explains an envelope rather than adding to it, so including it here
@@ -822,13 +824,11 @@ function project_parent(
     envelopes = zero(FT)
     final_maps = zero(FT)
     magnitude = zero(FT)
-    applicable = false
     blocked_by = String[]
     for leg in ledger.legs
         is_inside(cv, leg.reservoir) || continue
         enters_parent_identity(leg.level) || continue
         c = budget_component(leg, quantity)
-        is_applicable(c) && (applicable = true)
         is_blocking(c) && push!(blocked_by, leg_label(leg))
         is_contributing(c) || continue
         magnitude += abs(c.amount)
@@ -839,7 +839,7 @@ function project_parent(
         end
     end
     recorded = envelopes + final_maps
-    return (; envelopes, final_maps, recorded, magnitude, applicable, blocked_by)
+    return (; envelopes, final_maps, recorded, magnitude, blocked_by)
 end
 
 """
@@ -856,16 +856,7 @@ step referred to it.
 function missing_parent_terms(ledger::BudgetLedger, cv::ControlVolume)
     missing_terms = String[]
     for spec in ledger.schema.channels
-        spec.requires_envelope || continue
-        for reservoir in spec.reservoirs
-            is_inside(cv, reservoir) || continue
-            has_envelope(ledger, spec.name, reservoir) && continue
-            push!(
-                missing_terms,
-                "expected envelope for channel $(spec.name) in $reservoir was " *
-                "not recorded",
-            )
-        end
+        append!(missing_terms, missing_channel_envelopes(ledger, spec, cv))
     end
     for spec in ledger.schema.final_maps
         for reservoir in spec.reservoirs
@@ -878,6 +869,36 @@ function missing_parent_terms(ledger::BudgetLedger, cv::ControlVolume)
         end
     end
     return missing_terms
+end
+
+"""
+    missing_channel_envelopes(ledger, spec, control_volume) -> Vector{String}
+
+The envelopes `spec` requires in this view that no leg recorded, one per
+reservoir the channel writes.
+
+Checked per reservoir rather than per channel, so a channel that recorded one of
+its two envelopes is still short one term and says which. The parent and the
+attribution reconciliations read the same list, so they cannot disagree about
+whether a channel reported.
+"""
+function missing_channel_envelopes(
+    ledger::BudgetLedger,
+    spec::ChannelSpec,
+    cv::ControlVolume,
+)
+    missing_envelopes = String[]
+    spec.requires_envelope || return missing_envelopes
+    for reservoir in spec.reservoirs
+        is_inside(cv, reservoir) || continue
+        has_envelope(ledger, spec.name, reservoir) && continue
+        push!(
+            missing_envelopes,
+            "expected envelope for channel $(spec.name) in $reservoir was not " *
+            "recorded",
+        )
+    end
+    return missing_envelopes
 end
 
 # Whether an envelope for this channel and reservoir was recorded in the open
@@ -900,13 +921,41 @@ function has_final_map_leg(
 end
 
 """
+    declared_applicable(schema, reservoirs, quantity, control_volume) -> Bool
+
+Whether the configuration says any of `reservoirs` inside `control_volume` owns
+`quantity`.
+
+Applicability is read from the schema and never from whether a leg arrived. An
+expected channel or event that recorded nothing is a **blocked** claim, not a
+claim the configuration never made. Those are different answers and only one of
+them is a defect, so deriving one from the absence of records would report every
+silent gap as a quantity nobody has.
+"""
+function declared_applicable(
+    schema::BudgetSchema,
+    reservoirs,
+    quantity::Symbol,
+    cv::ControlVolume,
+)
+    for reservoir in reservoirs
+        is_inside(cv, reservoir) || continue
+        quantity_applicable(schema, reservoir, quantity) && return true
+    end
+    return false
+end
+
+"""
     project_attribution(ledger, quantity, control_volume, channel)
 
 Sum one channel's envelope and its explaining legs for one quantity over one
 control volume.
 
-Returns `(; envelope, attributed, magnitude, envelope_count, explaining_count,
-applicable, blocked_by)`.
+Returns `(; envelope, attributed, magnitude, explaining_count, blocked_by)`.
+Applicability is not among them: it comes from the schema, through
+`declared_applicable`, rather than from which legs arrived. Whether the channel
+recorded its required envelope is likewise read from the schema, by
+`missing_channel_envelopes`.
 """
 function project_attribution(
     ledger::BudgetLedger{FT},
@@ -917,18 +966,14 @@ function project_attribution(
     envelope = zero(FT)
     attributed = zero(FT)
     magnitude = zero(FT)
-    envelope_count = 0
     explaining_count = 0
-    applicable = false
     blocked_by = String[]
     for leg in ledger.legs
         leg.channel === channel || continue
         is_inside(cv, leg.reservoir) || continue
         c = budget_component(leg, quantity)
-        is_applicable(c) && (applicable = true)
         is_blocking(c) && push!(blocked_by, leg_label(leg))
         if leg.level isa ChannelEnvelope
-            envelope_count += 1
             is_contributing(c) || continue
             envelope += c.amount
             magnitude += abs(c.amount)
@@ -939,15 +984,7 @@ function project_attribution(
             magnitude += abs(c.amount)
         end
     end
-    return (;
-        envelope,
-        attributed,
-        magnitude,
-        envelope_count,
-        explaining_count,
-        applicable,
-        blocked_by,
-    )
+    return (; envelope, attributed, magnitude, explaining_count, blocked_by)
 end
 
 """
@@ -956,16 +993,17 @@ end
 Sum the recorded legs of one declared event for one quantity over one control
 volume.
 
-Returns `(; total, magnitude, leg_count, applicable, status_counts, blocked_by,
-missing_legs)`.
+Returns `(; total, magnitude, leg_count, status_counts, blocked_by,
+missing_legs)`. Applicability comes from the schema, through
+`declared_applicable`, not from this projection.
 
 Four answers have to stay distinguishable, and a bare total tells none of them
-apart. "The legs cancel" is a total of zero with every declared leg present,
-applicable, and no blockers. "A declared leg is missing" is a non-empty
-`missing_legs`. "Nobody measured the legs" is legs found with `blocked_by`
-naming them. And "this quantity does not exist for this event", as water does
-not for a dry-model exchange, is `applicable = false`, which would otherwise look
-exactly like a measured cancellation.
+apart. "The legs cancel" is a total of zero with every declared leg present and
+no blockers. "A declared leg is missing" is a non-empty `missing_legs`. "Nobody
+measured the legs" is legs found with `blocked_by` naming them. And "this
+quantity does not exist for this event", as water does not for a dry-model
+exchange, is the schema saying so, which would otherwise look exactly like a
+measured cancellation.
 
 `missing_legs` comes from the specification, not from what arrived, so a leg
 that was declared and never recorded blocks the event rather than being read as
@@ -980,7 +1018,6 @@ function project_transfer(
     total = zero(FT)
     magnitude = zero(FT)
     leg_count = 0
-    applicable = false
     status_counts = Dict(
         :measured => 0,
         :invariant_zero => 0,
@@ -994,7 +1031,6 @@ function project_transfer(
         leg_count += 1
         c = budget_component(leg, quantity)
         status_counts[status_name(component_status(c))] += 1
-        is_applicable(c) && (applicable = true)
         is_blocking(c) && push!(blocked_by, leg_label(leg))
         is_contributing(c) || continue
         total += c.amount
@@ -1013,7 +1049,6 @@ function project_transfer(
         total,
         magnitude,
         leg_count,
-        applicable,
         status_counts,
         blocked_by,
         missing_legs,
@@ -1329,15 +1364,13 @@ function reconcile_attribution(
     tolerances = nothing,
 ) where {FT}
     projected = project_attribution(ledger, quantity, cv, spec.name)
+    applicable =
+        declared_applicable(ledger.schema, spec.reservoirs, quantity, cv)
     residual = projected.envelope - projected.attributed
-    blocked_by = copy(projected.blocked_by)
-    if spec.requires_envelope && projected.envelope_count == 0
-        push!(
-            blocked_by,
-            "expected envelope for channel $(spec.name) in $(cv.name) was not " *
-            "recorded",
-        )
-    end
+    blocked_by = vcat(
+        projected.blocked_by,
+        missing_channel_envelopes(ledger, spec, cv),
+    )
     if spec.requires_decomposition && projected.explaining_count == 0
         push!(
             blocked_by,
@@ -1357,13 +1390,8 @@ function reconcile_attribution(
         control_volume = cv.name,
         channel = spec.name,
         step = ledger.step,
-        status = claim_status(
-            projected.applicable,
-            blocked_by,
-            residual,
-            tolerance,
-        ),
-        applicable = projected.applicable,
+        status = claim_status(applicable, blocked_by, residual, tolerance),
+        applicable,
         envelope = projected.envelope,
         attributed = projected.attributed,
         residual,
@@ -1394,6 +1422,12 @@ function reconcile_transfer(
     projected = project_transfer(ledger, spec, quantity, cv)
     expectation = transfer_expectation(spec, cv)
     topology = topology_name(spec.topology)
+    applicable = declared_applicable(
+        ledger.schema,
+        event_reservoir_names(spec),
+        quantity,
+        cv,
+    )
     blocked_by = vcat(projected.blocked_by, projected.missing_legs)
 
     if expectation !== :cancellation
@@ -1406,7 +1440,7 @@ function reconcile_transfer(
             topology,
             expectation,
             counterparty = spec.counterparty,
-            applicable = projected.applicable,
+            applicable,
             total = projected.total,
             leg_count = projected.leg_count,
             tolerance = nothing,
@@ -1429,7 +1463,7 @@ function reconcile_transfer(
         control_volume = cv.name,
         step = ledger.step,
         status = claim_status(
-            projected.applicable,
+            applicable,
             blocked_by,
             projected.total,
             tolerance,
@@ -1437,7 +1471,7 @@ function reconcile_transfer(
         topology,
         expectation,
         counterparty = spec.counterparty,
-        applicable = projected.applicable,
+        applicable,
         total = projected.total,
         leg_count = projected.leg_count,
         tolerance,

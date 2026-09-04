@@ -149,6 +149,16 @@ parent_result(commit, quantity, cv) = only(
 attribution_results(commit, channel) =
     filter(r -> r.channel === channel, commit.attribution)
 
+attribution_result(commit, channel, quantity, cv) = only(
+    filter(
+        r ->
+            r.channel === channel &&
+                r.quantity === quantity &&
+                r.control_volume === cv,
+        commit.attribution,
+    ),
+)
+
 transfer_result(commit, event, quantity, cv) = only(
     filter(
         r ->
@@ -554,7 +564,8 @@ transfer_result(commit, event, quantity, cv) = only(
         @test length(parent.missing_expectations) == 1
         @test occursin("implicit", only(parent.missing_expectations))
 
-        attribution = only(attribution_results(commit, :implicit))
+        attribution =
+            attribution_result(commit, :implicit, :mass, :atmosphere_only)
         @test attribution.status === :blocked
         @test any(b -> occursin("implicit", b), attribution.blocked_by)
     end
@@ -607,11 +618,11 @@ transfer_result(commit, event, quantity, cv) = only(
         @test parent.residual == 0
         @test parent.status === :pass
 
-        attribution = only(
-            filter(
-                r -> r.control_volume === :atmosphere_only && r.quantity === :mass,
-                attribution_results(commit, :explicit_main),
-            ),
+        attribution = attribution_result(
+            commit,
+            :explicit_main,
+            :mass,
+            :atmosphere_only,
         )
         @test attribution.envelope == 4
         @test attribution.attributed == 4
