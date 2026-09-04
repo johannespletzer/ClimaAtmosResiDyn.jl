@@ -14,6 +14,12 @@ of truth; from that point this page is either generated from the registry or
 tested for exact agreement with it, and the event identifiers below are the
 registry keys.
 
+The registry is also where a run's schema comes from. For a given configuration
+the schema selects the rows whose guard holds and declares them as expectations
+before collection begins, which is what lets a row that was expected and never
+recorded appear as blocked instead of vanishing. Every column below is therefore
+a declaration about the code, not a summary of what some run happened to report.
+
 No supported configuration may claim closure while a row that writes an
 authoritative parent field is still `open`.
 
@@ -50,7 +56,28 @@ whatever its disposition says, and the claim it feeds stays blocked.
 **Collection level** — which part of the nested reconciliation the row belongs
 to: `envelope`, `decomposition`, `final map`, or `transfer`. An envelope row is
 the reference its decomposition rows are reconciled against and is never summed
-alongside them.
+alongside them. A `final map` row is a direct term in the parent identity and is
+not an attribution channel, so recording one creates no requirement for a channel
+envelope of its own.
+
+**Topology** — for a transfer row, how its two sides relate. The schema derives
+this from the configuration before collection begins. It is never inferred from
+whichever legs arrived.
+
+| Topology   | Meaning                                                                |
+|:---------- |:---------------------------------------------------------------------- |
+| `internal` | Both sides are modeled reservoirs within one control volume            |
+| `coupled`  | Both sides are modeled reservoirs, in different control volumes        |
+| `exterior` | One modeled side, and a counterparty the model does not carry as state |
+
+An `internal` or `coupled` row requires every declared leg, and its signed sum is
+tested for cancellation. An `exterior` row records its modeled leg alone: no
+numerical counter-leg is fabricated, no cancellation is tested, and the signed
+crossing is reported as a boundary source or sink. A row whose topology depends on
+the configuration names both cases, and the schema picks one.
+
+The reservoirs column lists modeled reservoirs only. An exterior counterparty is
+not a reservoir, has no state to integrate, and is named in its own column.
 
 Disposition columns describe the effect on the **atmosphere** unless the row's
 reservoir column says otherwise.
@@ -160,18 +187,25 @@ weight.
 
 ## Transfer events
 
-Each of these has legs in more than one reservoir, or one leg and an exterior
-counterparty. The two legs are collected **independently**, from different
-quadratures, and are never created by negating each other.
+Each of these either moves a quantity between two modeled reservoirs or carries it
+out of the modeled system entirely, and the topology column says which. When both
+sides are modeled, every declared leg is collected **independently**, from its own
+quadrature, never by negating the other, and the signed sum is tested for
+cancellation. When the far side is not modeled, the modeled leg is collected, the
+counterparty is named, and no counter-leg is invented to make a sum vanish.
 
-| Event id                      | Atmospheric leg                         | Counterparty leg                                        | Guard                                | Reservoirs                   | Parent fields                          | Disposition M·W·E              | Proof obligation                                                                    | Level    | State | Evidence required                            | Test                | Step |
-|:----------------------------- |:--------------------------------------- |:------------------------------------------------------- |:------------------------------------ |:---------------------------- |:-------------------------------------- |:------------------------------ |:----------------------------------------------------------------------------------- |:-------- |:----- |:-------------------------------------------- |:------------------- |:---- |
-| `xfer.surface_turbulent_flux` | `surface_flux_tendency!`                | `surface_temp_tendency!` for a slab, exterior otherwise | always                               | atmosphere, slab or exterior | `ρe_tot`, `ρq_tot`, `ρ`, `uₕ`, `sfc.T` | measured · measured · measured | `Yₜ.c.ρ -= btt` is the mass leg; boundary crossing in the atmosphere-only view      | transfer | none  | both legs measured separately                | `transfer_tests.jl` | 6    |
-| `xfer.radiation_toa`          | `radiation_tendency!` at the model top  | exterior                                                | radiation configured                 | atmosphere, exterior         | `ρe_tot`                               | zero · zero · measured         | boundary crossing with no receiving reservoir                                       | transfer | none  | atmospheric leg plus the TOA flux            | `transfer_tests.jl` | 6    |
-| `xfer.radiation_surface`      | `radiation_tendency!` at the surface    | `surface_temp_tendency!` for a slab                     | radiation configured                 | atmosphere, slab or exterior | `ρe_tot`, `sfc.T`                      | zero · zero · measured         | separate from the TOA leg, because only one of them has a reservoir on the far side | transfer | none  | both legs measured separately                | `transfer_tests.jl` | 6    |
-| `xfer.precipitation_0m`       | `microphysics_tendency!`, 0-moment      | exterior                                                | `EquilibriumMicrophysics0M`          | atmosphere, exterior         | `ρq_tot`, `ρ`, `ρe_tot`                | measured · measured · measured | removal with no receiving reservoir, so no cancellation is expected in any view     | transfer | none  | atmospheric leg only, exterior side declared | `transfer_tests.jl` | 6    |
-| `xfer.precipitation_1m`       | `vertical_advection_of_water_tendency!` | `surface_precipitation_tendency!`                       | `NonEquilibriumMicrophysics1M`       | atmosphere, slab or exterior | `ρq_tot`, `ρ`, `ρe_tot`, `sfc.water`   | measured · measured · measured | two quadratures of one physical flux, so the pair is measured and any mismatch kept | transfer | none  | both legs measured separately                | `transfer_tests.jl` | 6    |
-| `xfer.slab_qflux`             | —                                       | `surface_temp_tendency!` Q-flux term                    | `SlabOceanTemperature` with a Q-flux | slab, exterior               | `sfc.T`                                | n/a · n/a · measured           | prescribed exterior source into the slab                                            | transfer | none  | slab leg measured, exterior side declared    | `transfer_tests.jl` | 6    |
+| Event id                      | Topology                                    | Modeled legs                                                                              | Exterior counterparty                               | Guard                                | Reservoirs                           | Parent fields                          | Disposition M·W·E              | Proof obligation                                                                    | Level    | State | Evidence required                                            | Test                | Step |
+|:----------------------------- |:------------------------------------------- |:----------------------------------------------------------------------------------------- |:--------------------------------------------------- |:------------------------------------ |:------------------------------------ |:-------------------------------------- |:------------------------------ |:----------------------------------------------------------------------------------- |:-------- |:----- |:------------------------------------------------------------ |:------------------- |:---- |
+| `xfer.surface_turbulent_flux` | `coupled` with a slab, `exterior` otherwise | `surface_flux_tendency!`, and `surface_temp_tendency!` for a slab                         | unmodeled surface store, when no slab is configured | always                               | atmosphere, and slab when configured | `ρe_tot`, `ρq_tot`, `ρ`, `uₕ`, `sfc.T` | measured · measured · measured | `Yₜ.c.ρ -= btt` is the mass leg; boundary crossing in the atmosphere-only view      | transfer | none  | every declared leg measured separately                       | `transfer_tests.jl` | 6    |
+| `xfer.radiation_toa`          | `exterior`                                  | `radiation_tendency!` at the model top                                                    | space above the model top                           | radiation configured                 | atmosphere                           | `ρe_tot`                               | zero · zero · measured         | boundary crossing with no receiving reservoir                                       | transfer | none  | atmospheric leg, cross-checked against the reported TOA flux | `transfer_tests.jl` | 6    |
+| `xfer.radiation_surface`      | `coupled` with a slab, `exterior` otherwise | `radiation_tendency!` at the surface, and `surface_temp_tendency!` for a slab             | unmodeled surface store, when no slab is configured | radiation configured                 | atmosphere, and slab when configured | `ρe_tot`, `sfc.T`                      | zero · zero · measured         | separate from the TOA leg, because only one of them has a reservoir on the far side | transfer | none  | every declared leg measured separately                       | `transfer_tests.jl` | 6    |
+| `xfer.precipitation_0m`       | `exterior`                                  | `microphysics_tendency!`, 0-moment                                                        | unmodeled surface store                             | `EquilibriumMicrophysics0M`          | atmosphere                           | `ρq_tot`, `ρ`, `ρe_tot`                | measured · measured · measured | removal with no receiving reservoir, so no cancellation is expected in any view     | transfer | none  | atmospheric leg only, exterior counterparty declared         | `transfer_tests.jl` | 6    |
+| `xfer.precipitation_1m`       | `coupled` with a slab, `exterior` otherwise | `vertical_advection_of_water_tendency!`, and `surface_precipitation_tendency!` for a slab | unmodeled surface store, when no slab is configured | `NonEquilibriumMicrophysics1M`       | atmosphere, and slab when configured | `ρq_tot`, `ρ`, `ρe_tot`, `sfc.water`   | measured · measured · measured | two quadratures of one physical flux, so the pair is measured and any mismatch kept | transfer | none  | every declared leg measured separately                       | `transfer_tests.jl` | 6    |
+| `xfer.slab_qflux`             | `exterior`                                  | `surface_temp_tendency!` Q-flux term                                                      | prescribed ocean heat transport                     | `SlabOceanTemperature` with a Q-flux | slab                                 | `sfc.T`                                | n/a · n/a · measured           | prescribed exterior source into the slab                                            | transfer | none  | slab leg only, exterior counterparty declared                | `transfer_tests.jl` | 6    |
+
+A row that reads `coupled` with a slab and `exterior` otherwise is two different
+expectations, not one flexible one. The schema resolves it from the configuration,
+and the resolved topology decides whether a cancellation test applies at all.
 
 ## Non-authoritative paths
 
