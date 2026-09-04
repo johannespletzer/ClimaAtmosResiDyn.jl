@@ -74,35 +74,40 @@ simulation.
 **Definition of done.** One contradiction-free normative contract; a coverage
 row for every path that writes an authoritative parent field, each with a
 disposition, an intended collection level, the evidence that would establish it,
-the test that would provide that evidence, and an owning stack step.
+the test that would provide that evidence, an owning stack step, and, for a
+transfer event, a declared topology.
 
 ## Stack step 2 — Journal and endpoint-reconciliation core
 
-**Claim.** None in a simulation. The core's own invariants hold: only a measured
-component carries a nonzero amount, an unknown blocks, a not-applicable is not a
-measured zero, a leg is recorded once, an aggregate is never summed with its
-decomposition, and a commit is atomic.
+**Claim.** None in a simulation. The core's own invariants hold: expectations
+come from a declared schema and never from records, only a measured component
+carries a nonzero amount, an unknown blocks, a not-applicable is not a measured
+zero, an unset packet slot is not a not-applicable one, a leg is recorded once,
+an aggregate is never summed with its decomposition, and a commit is atomic.
 
-**Scope.** The internal types and the arithmetic that turns endpoints and legs
-into the three residuals, with the packet layout that makes one collective per
-step possible.
+**Scope.** The declaration layer that says what a configuration is expected to
+produce, the internal types that record what it did, and the arithmetic that
+turns endpoints and legs into the three residuals, with the packet layout that
+makes one collective per step possible.
 
 **Non-goals.** No runtime wiring, no process attribution, no surface-transfer
 certification, no user-facing configuration key, and no claim that any
 simulation closes.
 
-**Primary files.** `src/parent_budget/integrals.jl`,
-`src/parent_budget/reduction.jl`, `src/parent_budget/journal.jl`,
-`src/parent_budget/transaction.jl`.
+**Primary files.** `src/parent_budget/`, under
+`ClimaAtmos.Internals.ParentBudget`: `integrals.jl`, `schema.jl`,
+`reduction.jl`, `journal.jl`, `transaction.jl`.
 
 **Tests.** `test/parent_budget/` — endpoint integrals against real ClimaCore
 state across the supported model and surface combinations and both state float
-types; journal invariants including deliberate faults; packet layout and
-reduction assembly.
+types; schema declaration, and its refusal of undeclared, duplicate and missing
+records; journal invariants including deliberate faults; packet slot states,
+layout and reduction assembly.
 
 **Definition of done.** The core is internal, exports nothing, and every rule in
 the contract that can be enforced by construction is enforced rather than
-documented.
+documented. An expected channel or event that is never recorded blocks the claim
+instead of disappearing from it.
 
 ## Stack step 3 — Accepted update envelopes
 
@@ -165,6 +170,8 @@ diffusion, radiation and microphysics files the registry lists, and a new
   - Compare classified totals against their channel envelope, never against the
     endpoint change.
   - Keep forcing paths that do not write `ρ` at a zero mass contribution.
+  - Build the run's schema from the registry, so the expected set of events is
+    fixed by the configuration before the first step.
   - Generate the documentation table from the registry, or test exact agreement.
 
 **Tests.** Attribution residual per explicit channel; deliberate missing,
@@ -226,6 +233,9 @@ registry, collected independently.
 
 **Requirements.**
 
+  - Take each event's topology from the schema, never from which legs a run
+    happened to record, and resolve a configuration-dependent topology once at
+    setup.
   - Handle 0-moment removal separately from 1-moment sedimentation and fallout.
   - Treat `vertical_advection_of_water_tendency!` as implicit.
   - Include mass, water and the appropriate energy carrier independently.
@@ -324,8 +334,15 @@ no claim level appears in it that its own tests did not establish.
     separately.
   - No envelope is reconstructed from the endpoint subtraction it explains.
   - Contributions use the accepted stages, weights, and split order.
+  - Expected channels, events and reservoirs are declared from the configuration
+    before collection begins, and a declared term that is never recorded blocks
+    the claim rather than disappearing from the report.
   - Reservoir legs are collected independently and never negated into existence.
-  - Internal cancellations are measured, never imposed.
+  - Internal cancellations are measured, never imposed. An exterior crossing is
+    reported as a signed boundary source or sink, with no fabricated counter-leg
+    and no cancellation test.
+  - A packet slot is unset, measured, or explicitly not applicable, and reduction
+    is refused while a required slot is unset.
   - Residuals are reported per quantity as stepwise maximum, cumulative
     absolute, and signed drift, never normalized by a signed total.
   - Accounting precision matches the documented precision at the point of

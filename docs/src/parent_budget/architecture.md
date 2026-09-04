@@ -15,6 +15,10 @@ mismatched pair.
 ## Data flow
 
 ```
+configuration ──▶ schema: what must be collected
+                    │       quantities, control volumes, channels, final maps,
+                    │       transfer events, reservoirs, required legs
+                    ▼
 per accepted step
 
   state Y ──▶ local accumulation (accounting precision)
@@ -37,6 +41,33 @@ per accepted step
 ```
 
 The three residuals are computed from the same journal and are never combined.
+Each is also checked against the schema, so a term that was expected and never
+recorded is a blocked result rather than a missing row.
+
+## The schema comes first
+
+Nothing on the collection path decides what should have been collected. A schema
+built from the selected model configuration declares that once, before the first
+transaction opens: which quantities are enabled, which control volumes exist, which
+accepted-update channels and final-state maps are expected, which transfer events
+exist and whether each is internal, coupled, or exterior, which modeled reservoirs
+take part, which exterior counterparties carry no numerical state, which legs are
+required, and which components are expected to be provably zero.
+
+The journal records what happened. Reconciliation compares the two, in both
+directions: a declared term that no record covers blocks, and a record the schema
+does not declare is refused rather than absorbed.
+
+Deriving the expected set from the records instead would let a process that never
+reported remove itself from its own audit, and the report would then close over
+whatever happened to arrive. The [contract](contract.md) states the invariant; the
+architecture's job is to make the schema available early enough to be useful, which
+means before collection rather than during it.
+
+Two later shapes depend on that timing. The packet layout is computed from the
+schema, so it exists before any event is recorded. And a slot's applicability comes
+from the schema, so a rank can tell an inapplicable slot from an unwritten one
+without asking any other rank.
 
 ## One journal, three budgets
 
@@ -103,6 +134,55 @@ invocation, so a residual is reproducible.
 A fixed layout also bounds memory: the buffer is sized from the registry rather
 than growing with the number of recorded events, and per-step storage does not
 grow with run length.
+
+### A slot is unset, measured, or not applicable
+
+A slot carries a disposition alongside its number, and the distance between two of
+those dispositions is the point. **Unset** means nothing has written the slot yet.
+**Not applicable** means the configuration says there is nothing to write, as when a
+model with no surface reservoir has no surface water to measure. A single "no value"
+flag would make a forgotten measurement indistinguishable from a deliberate
+omission, and the ledger would then report a configuration fact where a defect
+belongs.
+
+The rules follow from that separation:
+
+  - Slots start unset. No default value stands in for a measurement.
+  - A slot is written once. Recording a measurement and marking a slot inapplicable
+    both require an unset slot, so a second write fails where it happens rather than
+    surfacing as a wrong number later.
+  - Marking a slot inapplicable is a positive act with a configuration behind it. It
+    is never what happens when nothing writes the slot.
+  - Reduction is refused while a required slot is unset, and unpacking is refused
+    while any slot is unresolved.
+
+Applicability is derived from the same configuration on every rank, so the layout and
+the set of inapplicable slots agree everywhere without being communicated.
+
+### The whole packet is one collective
+
+The one-collective rule is a property of the packet, not of each slot. Numerical
+values and whatever validity flags the reduction has to carry are laid out together
+and reduced together, because a second reduction for the flags would spend exactly
+what the first one was designed to save.
+
+That constraint reaches back into how failures are raised. A rank that throws on a
+missing slot while its peers enter the collective hangs the run instead of failing
+it. Checks that could differ between ranks therefore belong before the step, where
+the schema is known and identical everywhere, or after the reduction, where the
+reduced packet gives every rank the same answer.
+
+### Leg slots are declared but not yet packed
+
+The data flow above puts leg slots in the same packet as endpoint slots, and that is
+the design. The implementation packs endpoint slots only. Each process leg needs its
+own local accumulator and its own reserved slot, which is the instrumentation the
+stack sequences later.
+
+Until leg slots are packed, no runtime path may record a leg through its own global
+reduction. That would issue one collective per leg and reintroduce the cost this
+design exists to avoid, so it is a blocker for runtime activation. It is not a
+limitation of the endpoint claim, which needs no leg slots at all.
 
 ### Endpoint reuse
 
@@ -182,6 +262,14 @@ registry, which the documentation table is generated from or checked against.
     enabled produces the same trajectory as one without it, bitwise, and that is
     tested rather than asserted.
   - A residual is a subtraction and has no representation as a leg.
+  - The schema declares what is expected and records never define it. A declared
+    term with no record blocks, and a record with no declaration is refused.
+  - An exterior crossing records its modeled leg only. No numerical counter-leg is
+    fabricated for a reservoir the model does not carry.
+  - A final-state map is a term in the parent identity, never an attribution
+    channel, and recording one demands no channel envelope of its own.
+  - A packet slot is unset, measured, or not applicable, and the first is never read
+    as the third.
   - An aggregate envelope and its own decomposition are never both summed.
   - An unknown component blocks its claim and contributes zero to nothing.
   - No hidden global mutable state: a ledger is an ordinary value threaded

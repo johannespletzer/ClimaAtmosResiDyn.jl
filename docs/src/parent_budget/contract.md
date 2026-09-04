@@ -57,6 +57,10 @@ to either of them ambiguous.
 | Parent quantity           | One of `M`, `W`, `E`. The three budgets the ledger reconciles.                                                                                     |
 | Reservoir                 | A place the model owns state in, which can gain or lose a parent quantity.                                                                         |
 | Control volume            | A named set of reservoirs a budget is projected onto.                                                                                              |
+| Budget schema             | The configuration-derived declaration of everything the ledger expects to collect, built before collection begins.                                 |
+| Internal transfer         | An exchange whose participating reservoirs are all modeled. Its legs are expected to cancel.                                                       |
+| Exterior crossing         | An exchange whose counterparty is not modeled. It has one modeled leg and no cancellation test.                                                    |
+| Exterior counterparty     | The unmodeled far side of a crossing. Named in the topology; never given a numerical leg.                                                          |
 | Endpoint                  | The authoritative integral of one parent quantity in one reservoir at one instant.                                                                 |
 | Accepted channel envelope | The complete update one integrator channel applied to the accepted state, obtained from the applied increment rather than by endpoint subtraction. |
 | Event                     | One physical or numerical occurrence, shared by every leg that belongs to it.                                                                      |
@@ -111,24 +115,67 @@ Answers: *did the classified paths explain the whole of the accepted channel?*
 A channel can reconcile perfectly at level 1 while its attribution is entirely
 unexplained, which is exactly why the two residuals are separate.
 
+### Final maps are not attribution channels
+
+The two identities take different terms, and the distinction is easy to lose.
+
+An **accepted channel** is a term of the primary identity *and* an attribution
+target: its envelope is the amount its classified processes have to add up to. A
+**final accepted-state map** is a term of the primary identity *only*. A
+limiter, a DSS correction, a consistency repair, or a constraint applied to the
+accepted state contributes its raw before/after difference to `ΔB`, and it has
+no envelope, no decomposition, and no attribution residual.
+
+Recording a final map therefore never creates a requirement for a channel
+envelope. An operation acquires that requirement only by being declared an
+accepted integrator channel in the schema, which is a statement about what the
+integrator applied rather than about where in the step the operation runs.
+
+Raw intermediate-stage maps are neither. They stay observations until their
+exact accepted contribution has been established.
+
 ### Transfer consistency
 
-For each modeled event, parent quantity, and control volume:
+An event's topology is **declared**, never inferred from whichever legs happened
+to be recorded. For each event the schema says which modeled reservoirs take
+part and whether the counterparty is another modeled reservoir or an unmodeled
+exterior. Two different tests follow, and applying the wrong one is the mistake
+this separation exists to prevent.
+
+**Internal or coupled transfer.** Every participant is a modeled reservoir.
+Every leg the schema declares is required, and their signed sum over a control
+volume containing all of them is tested for cancellation:
 
 ```
-R_transfer(q, e, V) = Σ_{r ∈ V} Q(q, e, r)
+R_transfer(q, e) = Σ_{r ∈ modeled(e)} Q(q, e, r)
 ```
 
-summing that event's legs over the reservoirs inside the control volume.
+A nonzero result is a finding, naming lagged coupling, clipping, inconsistent
+quadrature, or a reservoir the model does not represent. A declared leg that was
+not recorded **blocks** the event; it is never read as a zero.
 
-For a control volume containing **both** reservoirs of an internal exchange, the
-transfer residual is expected to be zero within tolerance, and a nonzero value
-is a finding. For an **atmosphere-only** control volume the same event is a
-boundary crossing, so its transfer residual is the boundary flux and is not
-expected to cancel. The expectation therefore depends on the view and is stated
-per view, never assumed.
+**Exterior crossing.** One side is a modeled reservoir and the other is an
+unmodeled exterior: the top of the atmosphere, a prescribed forcing, the
+destination of 0-moment removal, or an externally imposed surface flux whose
+store the model does not carry. Then
 
-Answers: *did independently measured legs of one exchange agree?*
+  - the modeled reservoir's leg is measured independently and is required;
+  - the exterior counterparty is named in the event's topology as metadata;
+  - **no numerical exterior counter-leg is created.** A synthesized counterparty
+    guarantees cancellation and therefore measures nothing;
+  - the zero-sum cancellation test does not apply, and its inapplicability is
+    reported rather than passed off as a cancellation that happened to hold;
+  - the signed crossing is reported as a boundary source or sink, and it
+    contributes to the accepted channel and the parent reconciliation that carry
+    it.
+
+One physical event can be internal in one control volume and a crossing out of
+another: precipitation reaching a slab is internal to the coupled volume and
+leaves the atmosphere-only volume. That is a property of the view, declared per
+view, and never a property of what happened to be recorded.
+
+Answers: *did independently measured legs of one exchange agree, where both
+sides are modeled?*
 
 ### What none of them proves
 
@@ -138,10 +185,59 @@ omits a reservoir entirely closes all three identities perfectly.
 ### Aggregates are envelopes, never extra legs
 
 An accepted aggregate — the whole increment one channel applied — is an envelope
-or a fallback for attribution that does not exist yet. It is **never** summed
-alongside its own decomposition. Recording both counts the same update twice,
-and no amount of care in one place makes that safe elsewhere, so the journal
-refuses the combination rather than documenting the rule and hoping.
+or a fallback for attribution that does not exist yet. It is **never summed**
+alongside its own decomposition, because that counts the same update twice.
+
+The rule is about sums, not about recording. An envelope and its decomposition
+are meant to be recorded together: comparing them *is* the attribution identity.
+What keeps them apart is the collection level, which decides which identity a
+leg belongs to, rather than care exercised at every call site.
+
+## Declared expectations
+
+The ledger does not discover what it should have collected by looking at what it
+did collect. Expectations come from a schema derived from the selected model
+configuration, and the recorded data are checked against that schema.
+
+> Expectations are constructed from the selected model configuration before
+> collection begins. Recorded data are checked against those expectations;
+> recorded data must never define which channels, events, or reservoirs were
+> expected.
+
+The schema is the executable form of the [coverage registry](coverage.md), and
+it declares:
+
+  - the enabled budget quantities;
+  - the supported control volumes;
+  - the expected accepted-update channels;
+  - the expected final-state maps;
+  - the expected transfer events;
+  - for each event, whether it is internal, coupled, or exterior;
+  - the modeled reservoirs taking part in each event;
+  - the exterior counterparties, which have no numerical state leg;
+  - the numerical legs each event requires;
+  - the applicability of each quantity in each reservoir, and which components
+    carry a proven-zero obligation;
+  - whether an accepted channel envelope is required;
+  - whether process decomposition is required or optional.
+
+Three consequences follow, and each refuses a failure mode that an
+observation-driven report has by construction.
+
+**A missing expectation is visible.** An expected channel or event that recorded
+nothing at all produces a `blocked` or `fail` result naming it. It does not
+disappear from the report, which is what happens whenever a report is assembled
+out of whatever was recorded.
+
+**An unexpected record is refused.** A channel, event, or reservoir the schema
+does not declare is an error rather than a new row, and so is a second record
+under an identity already used.
+
+**Applicability is declared, never sniffed.** Whether a reservoir owns a
+quantity comes from the configuration, not from whether a field happens to exist
+in the state. `Y.sfc.water` exists in a dry run and holds a permanent zero, so
+reading its presence as ownership is precisely the confusion between a measured
+zero and an inapplicable quantity that the status vocabulary exists to prevent.
 
 ## Supported scope
 
