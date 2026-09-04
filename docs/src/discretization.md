@@ -206,7 +206,8 @@ while the vertical gradient and curl operators are set to zero there.
     form-type parameter (`StrongForm`, the default, or `WeakForm`), so the weak
     divergence, for example, is `Divergence{I, WeakForm}`. The ClimaAtmos code
     still uses the legacy names (`WeakDivergence`, `WeakGradient`, `WeakCurl`),
-    which remain as aliases.
+    which remain as bindings. They are no longer documented upstream, so the
+    references below point at the parameterized operators instead.
 
 Each operator below has a short name in the ClimaAtmos source, documented under
 [Discrete operators](@ref) in the API.
@@ -240,7 +241,7 @@ horizontal discretization would replace this list.
     [`ClimaCore.Operators.Divergence`](@extref).
 
   - ``\hat{\mathcal{D}}_h`` is the weak horizontal spectral divergence
-    [`ClimaCore.Operators.WeakDivergence`](@extref).
+    `Divergence{I, WeakForm}`; see [`ClimaCore.Operators.Divergence`](@extref).
 
   - ``\mathcal{D}^{split}_h`` is the split, skew-symmetric horizontal divergence
     [`ClimaCore.Operators.SplitDivergence`](@extref),
@@ -263,8 +264,8 @@ horizontal discretization would replace this list.
     [`ClimaCore.Operators.Gradient`](@extref).
 
   - ``\hat{\mathcal{G}}_h`` is the weak horizontal spectral gradient
-    [`ClimaCore.Operators.WeakGradient`](@extref), the outer gradient of the
-    vector Laplacian.
+    `Gradient{I, WeakForm}`, the outer gradient of the vector Laplacian; see
+    [`ClimaCore.Operators.Gradient`](@extref).
 
   - ``\mathcal{C}_h`` is the curl of the components involving horizontal
     derivatives [`ClimaCore.Operators.Curl`](@extref). Applied to
@@ -273,7 +274,7 @@ horizontal discretization would replace this list.
     horizontal contravariant components.
 
   - ``\hat{\mathcal{C}}_h`` is the corresponding weak curl
-    [`ClimaCore.Operators.WeakCurl`](@extref).
+    `Curl{I, WeakForm}`; see [`ClimaCore.Operators.Curl`](@extref).
 
   - ``\mathcal{P}`` is the projection onto the continuous spectral element
     basis; see [Projection: direct stiffness summation](@ref).
