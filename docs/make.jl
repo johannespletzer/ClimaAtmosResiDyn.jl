@@ -134,6 +134,12 @@ makedocs(;
                 "Surface Conditions Internals" => "surface_conditions_internals.md",
                 "Adding a Column Dataset" => "extending_column_datasets.md",
             ],
+            "Parent-Budget Ledger" => [
+                "Closure Contract" => "parent_budget/contract.md",
+                "Architecture" => "parent_budget/architecture.md",
+                "Coverage Registry" => "parent_budget/coverage.md",
+                "Implementation Plan" => "parent_budget/plan.md",
+            ],
         ],
     ],
 )
