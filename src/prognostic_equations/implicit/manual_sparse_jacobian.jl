@@ -1030,11 +1030,11 @@ function update_water_tag_sedimentation_block!(matrix, Y, p, tag)
             sedimentation_velocity_name(ρqₚ_name),
         )
         ᶜρqₚ = MatrixFields.get_field(Y.c, ρqₚ_name)
-        # ∂/∂ρq_tag of -precipdivᵥ(ᶠρ ᶠright_bias(WVector(-wₚ) qₚ φ̂)), i.e. the
+        # ∂/∂ρq_tag of -precipdivᵥ(ᶠρ ᶠtop_bias(WVector(-wₚ) qₚ φ̂)), i.e. the
         # parent flux with qₚ φ̂ replaced by qₚ ∂φ̂/∂ρq_tag.
         ᶜdshare = water_tag_sediment_dshare_field(Y, p, tag)
         @. p.scratch.ᶠband_matrix_wvec =
-            ᶠright_bias_matrix() ⋅ DiagonalMatrixRow(
+            ᶠtop_bias_matrix() ⋅ DiagonalMatrixRow(
                 ClimaCore.Geometry.WVector(
                     -(ᶜwₚ) * specific(ᶜρqₚ, Y.c.ρ) * ᶜdshare,
                 ),
