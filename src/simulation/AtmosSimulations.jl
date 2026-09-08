@@ -291,6 +291,12 @@ entry point for simulations written as scripts; configuration-driven runs go thr
     `"stage"`, `"step"`, or `"dss"`.
   - `checkpoint_frequency = Inf`: How often to write restart checkpoints; a number of
     seconds, a time string, or `"<N>months"`. `Inf` disables checkpointing.
+  - `parent_budget_mode = "off"`: The parent-budget ledger, `"off"`, `"summary"` or
+    `"audit"`. When on, the ledger measures every accepted step's mass, water and
+    energy against what the integrator applied, with one global collective per
+    step and no change to the trajectory. It refuses configurations outside the
+    contract's scope, restarts, and custom callbacks. See the parent-budget pages
+    of the documentation.
   - `log_to_file = false`: Send log output to a file in the output directory.
   - `verbose = false`: Log progress while building the simulation (root process only).
 
@@ -357,6 +363,7 @@ function AtmosSimulation{FT}(;
     update_constrain_state_every = "step",
     # Misc
     checkpoint_frequency = Inf,
+    parent_budget_mode = "off",
     log_to_file = false,
     verbose = false,
 ) where {FT}
@@ -400,13 +407,29 @@ function AtmosSimulation{FT}(;
         steady_state_velocity isa Function ? steady_state_velocity(Y, params) :
         steady_state_velocity
 
+    # The ledger's schema is fixed from the model before anything is collected.
+    parent_budget = Internals.ParentBudget.build_parent_budget(
+        parent_budget_mode, model, Y;
+        ode_config, restart = !isnothing(restart_file),
+    )
+    if !isnothing(parent_budget) && !default_callbacks && !isempty(callbacks)
+        error(
+            "The parent-budget ledger does not support custom callbacks yet: a " *
+            "callback may write the state, and the ledger would then close over " *
+            "a change nothing accounted for. Pass `parent_budget_mode = \"off\"` " *
+            "or drop the callbacks.",
+        )
+    end
+
     p = @timed_log verbose "Built cache" build_cache(
         Y, model, params, dt, start_date, aerosol_names,
         time_varying_trace_gases, resolved_steady_state_velocity,
-        vertical_water_borrowing_species,
+        vertical_water_borrowing_species;
+        parent_budget,
     )
 
-    # Combine all callbacks
+    # Combine all callbacks. The ledger's callback goes first: it reads the
+    # accepted state and the stepper cache before any other callback runs.
     discrete_callbacks = @timed_log verbose "Assembled callbacks" if default_callbacks
         checkpoint_frequency = parse_checkpoint_frequency(checkpoint_frequency)
         (
@@ -423,6 +446,10 @@ function AtmosSimulation{FT}(;
     else
         callbacks
     end
+    discrete_callbacks = (
+        Internals.ParentBudget.parent_budget_callbacks(parent_budget)...,
+        discrete_callbacks...,
+    )
     callback_set = CTS.CallbackSet(discrete_callbacks...)
 
     integrator_args, integrator_kwargs = args_integrator(

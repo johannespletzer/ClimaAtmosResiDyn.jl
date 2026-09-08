@@ -137,6 +137,32 @@ function budget_endpoints(packet::BudgetPacket, step::Int)
 end
 
 """
+    budget_endpoints(packet, schema, step)
+
+Unpack the endpoint groups of a reduced packet that also carries other slots,
+such as the envelope slots the adapter packs beside them. The groups are read
+from the schema, in declaration order, so an envelope group is never mistaken
+for a reservoir.
+"""
+function budget_endpoints(packet::BudgetPacket, schema::BudgetSchema, step::Int)
+    check_packet_resolved(packet, "unpacked")
+    FT = BUDGET_ACCOUNTING_TYPE
+    reservoirs = ReservoirEndpoint{FT}[]
+    for group in schema_reservoir_names(schema)
+        push!(
+            reservoirs,
+            ReservoirEndpoint{FT}(;
+                reservoir = endpoint_reservoir(group),
+                mass = endpoint_component(packet, group, :mass, FT),
+                water = endpoint_component(packet, group, :water, FT),
+                energy = endpoint_component(packet, group, :energy, FT),
+            ),
+        )
+    end
+    return BudgetEndpoints{FT}(reservoirs, step)
+end
+
+"""
     budget_endpoints(Y, schema, surface_temperature, step)
 
 Measure every declared reservoir's endpoint with **one** global collective and

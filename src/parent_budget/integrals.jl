@@ -147,8 +147,18 @@ function reduce_accounting_sums!(
     values::Vector{BUDGET_ACCOUNTING_TYPE},
 )
     ClimaComms.allreduce!(context, values, +)
+    REDUCTION_COUNT[] += 1
     return values
 end
+
+"""
+    REDUCTION_COUNT
+
+How many times `reduce_accounting_sums!` has run in this process. Test
+instrumentation for the rule that an accepted step costs one collective: a test
+reads it before and after a step. Nothing at runtime reads it.
+"""
+const REDUCTION_COUNT = Ref(0)
 
 """
     budget_context(Y)

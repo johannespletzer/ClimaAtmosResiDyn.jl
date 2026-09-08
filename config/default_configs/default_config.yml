@@ -363,6 +363,9 @@ reproducibility_test:
 check_conservation:
   help: "Check conservation of mass and energy [`false` (default), `true`]"
   value: false
+parent_budget_mode:
+  help: "Parent-budget ledger: reconcile every accepted step's mass, total water and total energy against the updates the integrator applied, with one global collective per step and no change to the trajectory [`off` (default), `summary`, `audit`]. `audit` also keeps every step's reconciliation. See docs/src/parent_budget/."
+  value: "off"
 check_steady_state:
   help: "Compare steady-state velocity to analytic solution; only available for certain choices of `topography` [`false` (default), `true`]"
   value: false

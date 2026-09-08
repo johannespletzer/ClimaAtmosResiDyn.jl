@@ -55,6 +55,7 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Parent-budget registry" begin @time include("parent_budget/registry_tests.jl") end
     @safetestset "Parent-budget journal" begin @time include("parent_budget/journal_tests.jl") end
     @safetestset "Parent-budget endpoints" begin @time include("parent_budget/endpoint_tests.jl") end
+    @safetestset "Parent-budget envelopes" begin @time include("parent_budget/envelope_tests.jl") end
     @safetestset "Parameter tests" begin @time include("parameter_tests.jl") end
 
     @safetestset "Check TOML path" begin @time include("test_output_yaml_path.jl") end
