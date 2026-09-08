@@ -367,11 +367,11 @@ transfer_result(commit, event, quantity, cv) = only(
         )
         ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 1, w = 1, e = 1))
 
-        # An undeclared channel belongs to no attribution identity, so it fails
-        # closed rather than becoming a row nothing checks.
+        # A channel this schema does not declare belongs to no attribution
+        # identity, so it fails closed rather than becoming a row nothing checks.
         @test_throws ErrorException PB.record_leg!(
             ledger,
-            test_leg(FT; channel = :post_implicit, mass = mval(FT, 1)),
+            test_leg(FT; channel = :implicit, mass = mval(FT, 1)),
         )
         # An undeclared reservoir has no endpoint to reconcile against.
         @test_throws ErrorException PB.record_leg!(

@@ -17,6 +17,8 @@ The files are included in dependency order.
     quantities, and the local integrals. Nothing in it communicates.
   - `schema.jl` declares what a configuration is expected to produce, before
     anything is collected.
+  - `coverage_registry.jl` holds every path that writes a parent field as a
+    row, and builds the schema a configuration selects from those rows.
   - `reduction.jl` packs local values into a fixed layout and reduces the whole
     packet with one collective.
   - `journal.jl` records what happened, with evidence per component.
@@ -34,9 +36,25 @@ import ClimaCore.Spaces as Spaces
 import ...AbstractMicrophysicsModel
 import ...DryModel
 import ...SurfaceConditions
+# The coverage registry's guards read the model configuration and nothing else.
+import ...EquilibriumMicrophysics0M
+import ...NonEquilibriumMicrophysics1M
+import ...NonEquilibriumMicrophysics2M
+import ...NonEquilibriumMicrophysics2MP3
+import ...HeldSuarezForcing
+import ...RRTMGPI
+import ...Explicit
+import ...Implicit
+import ...AbstractEDMF
+import ...GasPhaseChem
+import ...TracerNonnegativityVaporTendency
+import ...TracerNonnegativityVaporConstraint
+import ...TracerNonnegativityElementConstraint
+import ...TracerNonnegativityVerticalWaterBorrowing
 
 include("integrals.jl")
 include("schema.jl")
+include("coverage_registry.jl")
 include("reduction.jl")
 include("journal.jl")
 include("transaction.jl")

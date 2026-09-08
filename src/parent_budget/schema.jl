@@ -148,8 +148,13 @@ target of an attribution identity of its own.
 *limited* `Yₜ_lim`, which `ClimaTimeSteppers` integrates through the limiter.
 Horizontal tracer advection and tracer hyperdiffusion live only in the limited
 one, so an adapter reading `Yₜ` alone loses them silently.
+
+The post-implicit correction is not a channel. `ClimaTimeSteppers` applies it to
+the Newton-solved stage state before it forms the stored implicit tendency, so
+its accepted contribution is inside the implicit channel's envelope and it is
+booked as one of that channel's decomposition rows.
 """
-const ATTRIBUTION_CHANNELS = (:explicit_main, :explicit_limited, :implicit, :post_implicit)
+const ATTRIBUTION_CHANNELS = (:explicit_main, :explicit_limited, :implicit)
 
 """
     FINAL_STATE_MAPS

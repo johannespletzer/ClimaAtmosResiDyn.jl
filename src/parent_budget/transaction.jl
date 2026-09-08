@@ -613,10 +613,26 @@ end
 # declare a quantity provably zero and then record a measurement of it, so the
 # disagreement is refused where it happens rather than surfacing as a residual
 # nobody can attribute.
-function check_leg_dispositions(spec, leg::BudgetLeg)
+#
+# A disposition describes what a path does to a quantity where the reservoir
+# owns it. Where the schema says the reservoir does not own the quantity, the
+# only honest record is `NotApplicable`, whatever the row declares: a slab in a
+# dry run has no water to measure, and a channel that names both reservoirs
+# declares one disposition for the atmosphere's water and none for the slab's.
+function check_leg_dispositions(schema::BudgetSchema, spec, leg::BudgetLeg)
+    reservoir = reservoir_name(leg.reservoir)
     for quantity in BUDGET_QUANTITIES
         expected = expected_disposition(spec, quantity)
         status = component_status(budget_component(leg, quantity))
+        if !quantity_applicable(schema, reservoir, quantity)
+            status isa NotApplicable || error(
+                "Leg $(leg_label(leg)) records $quantity as " *
+                "$(status_name(status)), but the schema says $reservoir does " *
+                "not own $quantity. A quantity a reservoir does not own is " *
+                "not applicable there, and nothing else.",
+            )
+            continue
+        end
         disposition_permits(expected, status) || error(
             "Leg $(leg_label(leg)) records $quantity as " *
             "$(status_name(status)), but the schema declares it $expected. A " *
@@ -648,7 +664,7 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
             "Leg $(leg_label(leg)) records final map $(leg.channel) in " *
             "$reservoir, which that map does not declare.",
         )
-        check_leg_dispositions(spec, leg)
+        check_leg_dispositions(schema, spec, leg)
         return nothing
     end
     if leg.level isa ReservoirTransfer
@@ -668,7 +684,7 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
             "Leg $(leg_label(leg)) names channel $(leg.channel), but event " *
             "$(leg.event) is declared in channel $(spec.channel).",
         )
-        check_leg_dispositions(spec, leg)
+        check_leg_dispositions(schema, spec, leg)
         return nothing
     end
     has_channel(schema, leg.channel) || error(
@@ -688,7 +704,7 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
             "checks for, so an omitted process could never be missed.",
         )
     end
-    check_leg_dispositions(spec, leg)
+    check_leg_dispositions(schema, spec, leg)
     return nothing
 end
 
