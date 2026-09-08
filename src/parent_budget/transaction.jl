@@ -706,9 +706,10 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
             "counterparty, and a modeled leg the schema did not declare would " *
             "take part in a cancellation nobody expected.",
         )
-        leg.channel === spec.channel || error(
+        expected_channel = leg_channel(spec, reservoir, leg.leg)
+        leg.channel === expected_channel || error(
             "Leg $(leg_label(leg)) names channel $(leg.channel), but event " *
-            "$(leg.event) is declared in channel $(spec.channel).",
+            "$(leg.event) applies that leg through channel $expected_channel.",
         )
         check_leg_dispositions(schema, spec, leg)
         return nothing
@@ -1051,8 +1052,8 @@ function missing_transfer_legs(
 )
     missing_legs = String[]
     for event in ledger.schema.transfer_events
-        event.channel === spec.name || continue
         for (reservoir, name) in event.modeled_legs
+            leg_channel(event, reservoir, name) === spec.name || continue
             is_inside(cv, reservoir) || continue
             recorded_leg(ledger, event.name, reservoir, name) && continue
             push!(

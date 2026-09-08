@@ -637,13 +637,20 @@ end
 
 """
     TransferEventSpec(name, topology, channel, modeled_legs; counterparty,
-                      dispositions)
+                      dispositions, leg_channels = nothing)
 
 One exchange the configuration is expected to record, and how its sides relate.
 
 `modeled_legs` is the complete set of `(reservoir, leg)` pairs the event must
 record. Every one of them is required: a declared leg that was not recorded
 blocks the event and is never read as a zero.
+
+`channel` is the accepted channel the event's legs are applied through, and
+`leg_channels`, one entry per modeled leg, names a different channel for a leg
+that is applied elsewhere: one-moment fallout leaves the atmosphere on the
+implicit channel while its deposition reaches the slab on the explicit one
+when microphysics is stepped explicitly. A leg is recorded under its own
+channel, and it explains that channel's envelope. `leg_channel` reads it.
 
 `counterparty` names the unmodeled exterior for an `ExteriorCrossing` and must be
 absent otherwise. It is metadata, not a leg. Nothing numerical is ever created
@@ -667,6 +674,7 @@ struct TransferEventSpec
     modeled_legs::Tuple{Vararg{Tuple{Symbol, Symbol}}}
     counterparty::Union{Nothing, Symbol}
     dispositions::NTuple{length(BUDGET_QUANTITIES), Symbol}
+    leg_channels::Tuple{Vararg{Symbol}}
     function TransferEventSpec(
         name::Symbol,
         topology::TransferTopology,
@@ -674,11 +682,25 @@ struct TransferEventSpec
         modeled_legs::Tuple{Vararg{Tuple{Symbol, Symbol}}};
         counterparty::Union{Nothing, Symbol} = nothing,
         dispositions = OPEN_DISPOSITIONS,
+        leg_channels = nothing,
     )
         channel in ATTRIBUTION_CHANNELS || error(
             "Transfer event $name names channel $channel, which is not one of " *
             "$(ATTRIBUTION_CHANNELS).",
         )
+        channels =
+            isnothing(leg_channels) ?
+            ntuple(_ -> channel, length(modeled_legs)) : Tuple(leg_channels)
+        length(channels) == length(modeled_legs) || error(
+            "Transfer event $name declares $(length(modeled_legs)) legs and " *
+            "$(length(channels)) leg channels; each leg has one channel.",
+        )
+        for leg_channel in channels
+            leg_channel in ATTRIBUTION_CHANNELS || error(
+                "Transfer event $name applies a leg through channel " *
+                "$leg_channel, which is not one of $(ATTRIBUTION_CHANNELS).",
+            )
+        end
         isempty(modeled_legs) && error(
             "Transfer event $name declares no modeled leg. An event with no " *
             "modeled side has nothing the model can measure.",
@@ -726,8 +748,21 @@ struct TransferEventSpec
             modeled_legs,
             counterparty,
             dispositions,
+            channels,
         )
     end
+end
+
+"""
+    leg_channel(spec, reservoir, leg) -> Symbol
+
+The accepted channel one modeled leg of `spec` is applied through.
+"""
+function leg_channel(spec::TransferEventSpec, reservoir::Symbol, leg::Symbol)
+    for (k, modeled) in enumerate(spec.modeled_legs)
+        modeled == (reservoir, leg) && return spec.leg_channels[k]
+    end
+    return error("Transfer event $(spec.name) declares no leg $leg in $reservoir.")
 end
 
 """
@@ -818,6 +853,12 @@ function BudgetSchema(;
         )
     end
     for event in transfer_events
+        for leg_channel in event.leg_channels
+            haskey(channel_index, leg_channel) || error(
+                "Transfer event $(event.name) applies a leg through channel " *
+                "$leg_channel, which the schema does not declare.",
+            )
+        end
         haskey(channel_index, event.channel) || error(
             "Transfer event $(event.name) names channel $(event.channel), " *
             "which the schema does not declare.",
