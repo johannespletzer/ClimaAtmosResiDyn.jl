@@ -659,6 +659,13 @@ are measured where MPI is available, which is not this repository's GitHub
 Actions, and the certificate names the row it used. `a_q` and `r_q` are zero
 unless a configuration declares a physically motivated floor.
 
+The table is `src/parent_budget/kappa_calibration.yaml`, read by
+`calibration.jl`; the named configuration is the moist DYCOMS_RF02 slab
+column that `calibration_configuration()` states, run for 50 accepted steps
+in summary mode, and `test/parent_budget/report_tests.jl` re-measures the
+serial row. A caller's `parent_budget_tolerances` overrides the table, and
+the certificate says which of the two a run used.
+
 ### The solve defect is leading order
 
 The default is `NewtonsMethod(; max_iters = 1)` against
@@ -855,8 +862,8 @@ final report.
 
 Each blocks a named claim, not the whole ledger.
 
-| Blocker                                                      | Blocks                                 | Cleared by         |
-|:------------------------------------------------------------ |:-------------------------------------- |:------------------ |
-| Energy-reference `b`                                         | the covariance claim                   | stack step 8       |
-| `κ` not yet calibrated                                       | a numeric pass or fail verdict         | stack step 8       |
-| Attribution and transfer legs collected in `audit` mode only | claim levels 3 and 4 in `summary` mode | a decision, step 8 |
+| Blocker                                                      | Blocks                                 | Cleared by              |
+|:------------------------------------------------------------ |:-------------------------------------- |:----------------------- |
+| Energy-reference `b`                                         | the covariance claim                   | open                    |
+| `κ` rows for GPU backends and for more than one rank         | a numeric verdict on those backends    | measured where they run |
+| Attribution and transfer legs collected in `audit` mode only | claim levels 3 and 4 in `summary` mode | a decision              |

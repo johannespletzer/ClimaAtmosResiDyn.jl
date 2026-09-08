@@ -391,6 +391,25 @@ registry, which the documentation table is generated from or checked against.
   - Unsupported configurations and undeclared state-mutating callbacks fail at
     setup, before a long simulation starts.
 
+## The certificate
+
+A successful run ends by writing `parent_budget_report.yaml` into its output
+directory, from `src/parent_budget/report.jl`, and logging a concise summary.
+The certificate is versioned, and it carries the configuration the ledger
+ran under, the backend, the rank count, the state and accounting float
+types, the timestepper and adapter versions, the supported-scope
+classification, the tolerances and where they came from, the restart
+segmentation, and for every control volume and quantity the parent verdict
+with its cumulative totals and the attribution and transfer verdicts of the
+last accepted step, each with what blocks or fails it. It is read from the
+last commit and the ledger's cumulative totals and adds nothing to them.
+
+The tolerances come from the committed κ calibration table,
+`src/parent_budget/kappa_calibration.yaml`, read by
+`src/parent_budget/calibration.jl` at setup for the run's backend, float
+type and rank count, unless the caller brings its own. The protocol that
+fills a row is stated there, and the serial row is re-measured by the tests.
+
 ## Implementation state
 
 This page describes the architecture the contract requires. Which parts exist at
