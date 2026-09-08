@@ -354,7 +354,10 @@ status(component) = PB.component_status(component)
         # exactly their unrecorded legs until step 6 records them.
         r = attribution_row(adapter, :explicit_main, :energy)
         @test r.status === :blocked
-        @test length(r.blocked_by) == 3
+        # The configuration path carries no tolerance, which is the fourth
+        # blocker beside the three legs.
+        @test length(r.blocked_by) == 4
+        @test PB.UNCALIBRATED_TOLERANCE_BLOCKER in r.blocked_by
         for event in
             ("xfer.surface_turbulent_flux", "xfer.radiation_toa", "xfer.radiation_surface")
             @test any(b -> occursin(event, b), r.blocked_by)
