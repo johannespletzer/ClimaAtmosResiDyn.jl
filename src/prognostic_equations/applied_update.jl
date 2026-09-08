@@ -10,21 +10,23 @@
 
 """
     open_ledger_event!(ledger, Yₜ, event::Symbol)
-    close_ledger_event!(ledger, Yₜ, event::Symbol)
+    close_ledger_event!(ledger, Yₜ, Y, p, event::Symbol)
 
 The ledger half of an applied-update event. With the parent-budget ledger off,
 `ledger` is `nothing` and both are no-ops that compile away. With it on, the
 adapter's methods read the parent fields of `Yₜ` before and after the process
 while the adapter is metering a tendency evaluation, and do nothing otherwise.
-Defined here, before the tendency code, so that code names one function; the
-adapter adds the methods for its own type.
+The close half also sees the state and the cache, which is where a transfer
+event's legs are read from their own flux fields. Defined here, before the
+tendency code, so that code names one function; the adapter adds the methods
+for its own type.
 
 The implicit path calls these directly rather than through
 `open_applied_update!`, because the tag brackets on that path are deliberately
 partial and widening them would change tagged results.
 """
 open_ledger_event!(::Nothing, Yₜ, event::Symbol) = nothing
-close_ledger_event!(::Nothing, Yₜ, event::Symbol) = nothing
+close_ledger_event!(::Nothing, Yₜ, Y, p, event::Symbol) = nothing
 
 """
     open_applied_update!(Yₜ, p, event::Symbol)
@@ -53,7 +55,7 @@ function open_applied_update!(Yₜ, p, event::Symbol)
 end
 
 function close_applied_update!(Yₜ, Y, p, event::Symbol)
-    close_ledger_event!(p.parent_budget, Yₜ, event)
+    close_ledger_event!(p.parent_budget, Yₜ, Y, p, event)
     event in KNOWN_TAG_SOURCES && attribute_tags!(Yₜ, Y, p, event)
     return nothing
 end

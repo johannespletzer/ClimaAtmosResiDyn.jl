@@ -47,6 +47,22 @@ function surface_precipitation_tendency!(
 end
 
 """
+    slab_q_flux(Y, slab::SlabOceanTemperature)
+
+The prescribed Q-flux [W/m²] on the surface level, positive out of the slab,
+following Merlis et al. (2013). Called by `surface_temp_tendency!`, and by the
+parent-budget ledger for the slab's Q-flux leg, so both see the same field.
+"""
+function slab_q_flux(Y, slab::SlabOceanTemperature)
+    FT = eltype(Y)
+    ϕ₀ = slab.ϕ₀
+    Q₀ = slab.Q₀
+    ϕ = deg2rad.(Fields.level(Fields.coordinate_field(Y.f).lat, half))
+    ϕ₀ʳ = FT(deg2rad(ϕ₀))
+    return @. Q₀ * (1 - 2ϕ^2 / ϕ₀ʳ^2) * exp(-(ϕ^2 / ϕ₀ʳ^2)) / cos(ϕ)
+end
+
+"""
     surface_temp_tendency!(Yₜ, Y, p, t, temperature::SurfaceTemperature)
     surface_temp_tendency!(Yₜ, Y, p, t, temperature::SlabOceanTemperature)
 
@@ -111,15 +127,7 @@ function surface_temp_tendency!(Yₜ, Y, p, t, slab::SlabOceanTemperature)
     # 3. Idealized Q-fluxes (parameterization of horizontal ocean energy flux divergence),
     # following Merlis et al. (2013), "Hadley Circulation Response to Orbital Precession.
     # Part II: Subtropical Continent.", J. Climate, 26, https://doi.org/10.1175/JCLI-D-12-00149.1
-    if q_flux_enabled
-        ϕ₀ = slab.ϕ₀
-        Q₀ = slab.Q₀
-        ϕ = deg2rad.(Fields.level(Fields.coordinate_field(Y.f).lat, half))
-        ϕ₀ʳ = FT(deg2rad(ϕ₀))
-        Q = @. Q₀ * (1 - 2ϕ^2 / ϕ₀ʳ^2) * exp(-(ϕ^2 / ϕ₀ʳ^2)) / cos(ϕ)
-    else
-        Q = FT(0)
-    end
+    Q = q_flux_enabled ? slab_q_flux(Y, slab) : FT(0)
 
     # Total energy tendency for surface temperature
     # (precipitation energy/water deposition is handled separately

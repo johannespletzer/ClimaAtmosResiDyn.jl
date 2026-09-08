@@ -24,6 +24,8 @@ The files are included in dependency order.
     packet with one collective.
   - `journal.jl` records what happened, with evidence per component.
   - `transaction.jl` compares the two and produces the three residuals.
+  - `transfer_legs.jl` reads each modeled leg of a transfer event from its own
+    flux field, inside the applied-update event that applied it.
   - `adapter.jl` is the one place that knows the timestepper: it captures the
     accepted envelopes after each step, meters the applied-update events the
     tendency code brackets, and drives the transactions.
@@ -33,6 +35,8 @@ module ParentBudget
 import ClimaComms
 import ClimaCore.Fields as Fields
 import ClimaCore.Spaces as Spaces
+import ClimaCore.Geometry as Geometry
+import ClimaCore.Utilities: half
 import ClimaTimeSteppers as CTS
 
 # The adapter boundary. These are the only ClimaAtmos types the ledger
@@ -66,6 +70,9 @@ import ...do_dss
 # whether the ledger is on or off; the adapter adds its methods here.
 import ...open_ledger_event!
 import ...close_ledger_event!
+# The slab's prescribed Q-flux, read for its leg through the same function the
+# slab tendency applies it with.
+import ...slab_q_flux
 
 include("integrals.jl")
 include("schema.jl")
@@ -73,6 +80,7 @@ include("coverage_registry.jl")
 include("reduction.jl")
 include("journal.jl")
 include("transaction.jl")
+include("transfer_legs.jl")
 include("adapter.jl")
 
 end

@@ -420,8 +420,9 @@ function check_roster_events(schema::BudgetSchema)
 end
 
 # The labels whose brackets the adapter integrates: those measuring a roster
-# row in this configuration. Every other label is checked and skipped, so a
-# bracket around a process the configuration does not run costs nothing.
+# row or a transfer leg in this configuration. Every other label is checked
+# and skipped, so a bracket around a process the configuration does not run
+# costs nothing.
 function active_events(schema::BudgetSchema)
     events = Set{Symbol}()
     for channel in COLLECTED_CHANNELS
@@ -430,7 +431,61 @@ function active_events(schema::BudgetSchema)
             measured_row(row) && push!(events, row.event)
         end
     end
+    for spec in schema.transfer_events, (reservoir, _) in spec.modeled_legs
+        push!(events, transfer_leg_event(spec.name, reservoir))
+    end
     return events
+end
+
+# The evaluation a transfer leg is measured in follows the channel the schema
+# applies it through, and the bracket that measures it must fire there.
+leg_evaluation(spec::TransferEventSpec, reservoir::Symbol, leg::Symbol) =
+    evaluation_kind(leg_channel(spec, reservoir, leg))
+
+# The channel a bracket's own total in one evaluation belongs to.
+evaluation_channel(kind::Symbol) = kind === :implicit ? :implicit : :explicit_main
+
+transfer_leg_group(event::Symbol, reservoir::Symbol, leg::Symbol, stage::Int) =
+    Symbol("leg.", event, ".", reservoir, ".", leg, ".", stage)
+bracket_group(label::Symbol, reservoir::Symbol, stage::Int) =
+    Symbol("bracket.", label, ".", reservoir, ".", stage)
+
+# Every (label, reservoir) pair under which some declared transfer leg is read
+# from a flux field, with the evaluation it fires in: the bracket's own total
+# there is kept beside the legs as a check. A leg that is the bracket's total
+# needs no check against itself.
+function bracket_totals(schema::BudgetSchema)
+    totals = Dict{Tuple{Symbol, Symbol}, Symbol}()
+    for spec in schema.transfer_events, (reservoir, leg) in spec.modeled_legs
+        is_bracket_total(spec.name, reservoir) && continue
+        label = transfer_leg_event(spec.name, reservoir)
+        kind = leg_evaluation(spec, reservoir, leg)
+        current = get(totals, (label, reservoir), kind)
+        current === kind || error(
+            "The applied-update event $label measures legs in $reservoir " *
+            "from both the explicit and the implicit evaluation.",
+        )
+        totals[(label, reservoir)] = kind
+    end
+    return totals
+end
+
+"""
+    TransferCheck
+
+The bracket's own total in one reservoir at one stage beside the sum of the
+transfer legs read from flux fields inside it, both weighted as they enter
+the accepted step: radiation's two crossings against what the atmosphere
+integrated, and the slab's turbulent, radiative and prescribed fluxes against
+what the slab tendency applied. Their difference is kept, never absorbed, and
+no identity reads it.
+"""
+struct TransferCheck{FT}
+    event::Symbol
+    reservoir::Symbol
+    stage::Int
+    bracket::NTuple{3, FT}
+    legs::NTuple{3, FT}
 end
 
 """
@@ -491,8 +546,10 @@ configuration. `evaluation`, `evaluation_stage`, `open_event` and `seen`
 say which tendency evaluation is being metered, if any, and which events it
 has opened, which is how a nested, repeated or unknown bracket is refused
 where it happens. `snapshot` holds the copies of the parent tendency fields an
-open event is differenced against. `fault` is test instrumentation, see
-`inject_fault!`.
+open event is differenced against, the slab's included when there is one.
+`legs` are the transfer legs read inside the events of the current step, and
+`last_transfer_checks` the bracket checks of the last one. `fault` is test
+instrumentation, see `inject_fault!`.
 
 The mode is a field rather than a type parameter on purpose. The adapter rides
 in the cache, whose type every tendency function specialises on, so a mode in
@@ -517,6 +574,7 @@ mutable struct ParentBudgetAdapter{S, C, T, G}
     tolerances::Union{Nothing, Dict{Symbol, BudgetTolerance{BUDGET_ACCOUNTING_TYPE}}}
     scratch_tendency::T
     snapshot::G
+    slab::Bool
     events::Set{Symbol}
     timestepper::Union{Nothing, TimestepperRecord}
     stepper_cache::Any
@@ -529,11 +587,15 @@ mutable struct ParentBudgetAdapter{S, C, T, G}
     folded::Vector{Tuple{Symbol, Int, Measurement}}
     observations::Vector{Tuple{HookCall, NTuple{3, BUDGET_ACCOUNTING_TYPE}}}
     defects::Vector{Tuple{Int, Measurement}}
+    slab_defects::Vector{Tuple{Int, Measurement}}
     corrections::Vector{Tuple{Int, Measurement}}
     # Per-step event state, keyed by evaluation kind, event and stage: the
     # positive and negative parts of what the event applied.
     parts::Dict{Tuple{Symbol, Symbol, Int}, Measurement}
+    slab_parts::Dict{Tuple{Symbol, Symbol, Int}, Measurement}
     unmeasured::Vector{Tuple{Symbol, Symbol, Int}}
+    # Per-step transfer legs, keyed by event id, reservoir, leg and stage.
+    legs::Dict{Tuple{Symbol, Symbol, Symbol, Int}, LegMeasurement}
     # The evaluation being metered, if any.
     evaluation::Symbol
     evaluation_stage::Int
@@ -547,6 +609,7 @@ mutable struct ParentBudgetAdapter{S, C, T, G}
     last_legs::Vector{BudgetLeg{BUDGET_ACCOUNTING_TYPE}}
     last_observations::Vector{StageObservation{BUDGET_ACCOUNTING_TYPE}}
     last_gross::Vector{GrossRecord{BUDGET_ACCOUNTING_TYPE}}
+    last_transfer_checks::Vector{TransferCheck{BUDGET_ACCOUNTING_TYPE}}
     commits::Vector{BudgetCommit{BUDGET_ACCOUNTING_TYPE}}
 end
 
@@ -587,12 +650,12 @@ end
 const STAGE_ROWS =
     (:solve_defect, :post_implicit_correction, :folded_dss, :folded_constraint)
 
-function stage_rows(schema::BudgetSchema)
+function stage_rows(schema::BudgetSchema, reservoir::Symbol = ATMOSPHERE_ENDPOINT_GROUP)
     has_channel(schema, :implicit) || return Symbol[]
     spec = channel_spec(schema, :implicit)
     return [
         process for process in STAGE_ROWS if
-        !isnothing(process_row(spec, process, ATMOSPHERE_ENDPOINT_GROUP))
+        !isnothing(process_row(spec, process, reservoir))
     ]
 end
 
@@ -603,6 +666,9 @@ hook_is_measured(schema::BudgetSchema, hook::Symbol) =
 
 final_map_group(hook::Symbol) = Symbol("finalmap.", hook)
 stage_row_group(process::Symbol, stage::Int) = Symbol("decomp.", process, ".", stage)
+stage_row_group(process::Symbol, stage::Int, reservoir::Symbol) =
+    reservoir === ATMOSPHERE_ENDPOINT_GROUP ? stage_row_group(process, stage) :
+    Symbol("decomp.", process, ".", reservoir, ".", stage)
 observation_group(call::HookCall) =
     Symbol("obs.", call.hook, ".", call.role, ".", call.stage, ".", call.occurrence)
 
@@ -647,6 +713,14 @@ function adapter_packet_layout(
         for process in stage_rows(schema), stage in template.implicit_stages
             push_measured_group!(slots, stage_row_group(process, stage))
         end
+        for process in stage_rows(schema, SLAB_SURFACE_ENDPOINT_GROUP),
+            stage in template.implicit_stages
+
+            push_measured_group!(
+                slots,
+                stage_row_group(process, stage, SLAB_SURFACE_ENDPOINT_GROUP),
+            )
+        end
         for channel in COLLECTED_CHANNELS
             has_channel(schema, channel) || continue
             for row in channel_spec(schema, channel).processes
@@ -664,6 +738,20 @@ function adapter_packet_layout(
                         )
                     end
                 end
+            end
+        end
+        for spec in schema.transfer_events, (reservoir, leg) in spec.modeled_legs
+            channel = leg_channel(spec, reservoir, leg)
+            for stage in row_stages(template, channel)
+                push_measured_group!(
+                    slots,
+                    transfer_leg_group(spec.name, reservoir, leg, stage),
+                )
+            end
+        end
+        for ((label, reservoir), kind) in bracket_totals(schema)
+            for stage in row_stages(template, evaluation_channel(kind))
+                push_measured_group!(slots, bracket_group(label, reservoir, stage))
             end
         end
         for call in template.calls
@@ -737,7 +825,9 @@ function build_parent_budget(
     layout = adapter_packet_layout(schema, template, mode, attribution)
     scratch_tendency = mode isa AuditMode ? similar(Y) : nothing
     moist = owns_atmosphere_water(atmos.microphysics_model)
-    snapshot = mode isa AuditMode ? snapshot_fields(Y, moist) : nothing
+    slab = has_surface_reservoir(atmos.surface.temperature)
+    snapshot = mode isa AuditMode ? snapshot_fields(Y, moist, slab) : nothing
+    bracket_totals(schema)
     FT = BUDGET_ACCOUNTING_TYPE
     return ParentBudgetAdapter(
         mode,
@@ -754,6 +844,7 @@ function build_parent_budget(
         parent_budget_tolerances(tolerances),
         scratch_tendency,
         snapshot,
+        slab,
         active_events(schema),
         nothing,
         nothing,
@@ -765,8 +856,11 @@ function build_parent_budget(
         Tuple{HookCall, NTuple{3, FT}}[],
         Tuple{Int, Measurement}[],
         Tuple{Int, Measurement}[],
+        Tuple{Int, Measurement}[],
+        Dict{Tuple{Symbol, Symbol, Int}, Measurement}(),
         Dict{Tuple{Symbol, Symbol, Int}, Measurement}(),
         Tuple{Symbol, Symbol, Int}[],
+        Dict{Tuple{Symbol, Symbol, Symbol, Int}, LegMeasurement}(),
         :none,
         0,
         :none,
@@ -778,6 +872,7 @@ function build_parent_budget(
         BudgetLeg{FT}[],
         StageObservation{FT}[],
         GrossRecord{FT}[],
+        TransferCheck{FT}[],
         BudgetCommit{FT}[],
     )
 end
@@ -786,10 +881,12 @@ end
 # parent tendency field, taken when the event opens. Reading the update
 # pointwise, rather than as a difference of two integrals of the accumulated
 # tendency, is what keeps its rounding error the size of the update itself.
-snapshot_fields(Y, moist::Bool) = (;
+snapshot_fields(Y, moist::Bool, slab::Bool) = (;
     ρ = similar(Y.c.ρ),
     ρq_tot = moist ? similar(Y.c.ρq_tot) : nothing,
     ρe_tot = similar(Y.c.ρe_tot),
+    sfc_T = slab ? similar(Y.sfc.T) : nothing,
+    sfc_water = slab && moist ? similar(Y.sfc.water) : nothing,
 )
 
 # Everything the meters recorded during a step, cleared once it is committed.
@@ -802,9 +899,12 @@ function clear_step_state!(adapter::ParentBudgetAdapter)
     empty!(adapter.folded)
     empty!(adapter.observations)
     empty!(adapter.defects)
+    empty!(adapter.slab_defects)
     empty!(adapter.corrections)
     empty!(adapter.parts)
+    empty!(adapter.slab_parts)
     empty!(adapter.unmeasured)
+    empty!(adapter.legs)
     adapter.evaluation = :none
     adapter.open_event = :none
     empty!(adapter.seen)
@@ -834,6 +934,25 @@ end
 
 # A before/after difference of two integrals, with the magnitude of both.
 difference(before, after) = (after .- before, abs.(before) .+ abs.(after))
+
+# The slab's three parent integrals of a state or tendency array, in the
+# accounting type: its water twice, as the slab's water and its mass, and its
+# energy through the areal heat capacity. Water is zero and never read in a
+# dry model.
+function slab_integrals(adapter::ParentBudgetAdapter, Y)
+    FT = BUDGET_ACCOUNTING_TYPE
+    capacity = to_accounting(slab_heat_capacity(adapter.surface_temperature))
+    water = adapter.moist ? local_boundary_integral(Y.sfc.water) : zero(FT)
+    return (water, water, local_boundary_integral(Y.sfc.T) * capacity)
+end
+
+function slab_magnitudes(adapter::ParentBudgetAdapter, Y)
+    FT = BUDGET_ACCOUNTING_TYPE
+    capacity = to_accounting(slab_heat_capacity(adapter.surface_temperature))
+    integral(field) = local_boundary_integral(Base.Broadcast.broadcasted(abs, field))
+    water = adapter.moist ? integral(Y.sfc.water) : zero(FT)
+    return (water, water, integral(Y.sfc.T) * capacity)
+end
 
 # The template entry for the next firing of `hook`. One firing more than the
 # template holds means the stepper ran a hook order the adapter was not written
@@ -985,6 +1104,18 @@ function (meter::PostImplicitMeter)(Yₜ, U, p, t)
         magnitude =
             abs.(start) .+ dtγ .* parent_magnitudes(adapter, tendency) .+ abs.(solved)
         push!(adapter.defects, (call.stage, (residual, magnitude)))
+        if adapter.slab
+            # The slab is solved in the same stage, with the precipitation it
+            # receives implicitly, so it has a defect of its own.
+            slab_start = slab_integrals(adapter, adapter.stepper_cache.temp)
+            slab_applied = slab_integrals(adapter, tendency)
+            slab_solved = slab_integrals(adapter, U)
+            slab_residual = slab_start .+ dtγ .* slab_applied .- slab_solved
+            slab_magnitude =
+                abs.(slab_start) .+ dtγ .* slab_magnitudes(adapter, tendency) .+
+                abs.(slab_solved)
+            push!(adapter.slab_defects, (call.stage, (slab_residual, slab_magnitude)))
+        end
     end
     meter.f(Yₜ, U, p, t)
     is_audit(adapter) && push!(
@@ -1039,7 +1170,7 @@ end
 
 """
     open_ledger_event!(adapter, Yₜ, event)
-    close_ledger_event!(adapter, Yₜ, event)
+    close_ledger_event!(adapter, Yₜ, Y, p, event)
 
 The adapter's half of an applied-update event; see `open_applied_update!`.
 
@@ -1047,9 +1178,10 @@ Outside a metered evaluation both return at once, which covers every tendency
 evaluation in `SummaryMode`, every Newton iteration and every Jacobian
 evaluation. Inside one, the label is checked against the registry, against
 nesting and against a second opening in the same evaluation, and if a roster
-row of this configuration is measured by it, the parent integrals of `Yₜ` are
-read before and after so that their difference is the process's applied
-update at this stage. The two local integrals are the only cost, and nothing
+row or a transfer leg of this configuration is measured by it, the parent
+tendency fields are copied when it opens and the parts of what it applied are
+integrated when it closes. The transfer legs the event measures are then
+read from their own flux fields in the cache, see `transfer_legs.jl`. Nothing
 is written.
 """
 function open_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, event::Symbol)
@@ -1075,7 +1207,7 @@ function open_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, event::Symbol)
     return nothing
 end
 
-function close_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, event::Symbol)
+function close_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, Y, p, event::Symbol)
     adapter.evaluation === :none && return nothing
     adapter.open_event === event || error(
         "The applied-update event $event was closed while " *
@@ -1084,15 +1216,58 @@ function close_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, event::Symbol)
     )
     adapter.open_event = :none
     event in adapter.events || return nothing
+    kind, stage = adapter.evaluation, adapter.evaluation_stage
     positive, negative = applied_parts(adapter, Yₜ)
     fault = adapter.fault
-    if !isnothing(fault) && fault[2] === event
-        fault[1] === :missing && return nothing
+    faulted = !isnothing(fault) && fault[2] === event
+    if faulted && fault[1] === :missing
+        return nothing
+    elseif faulted && fault[1] === :sign_reversed
         # The parts of the negated update are the negated parts, swapped.
-        fault[1] === :sign_reversed && ((positive, negative) = (.-negative, .-positive))
+        positive, negative = .-negative, .-positive
     end
-    adapter.parts[(adapter.evaluation, event, adapter.evaluation_stage)] =
-        (positive, negative)
+    adapter.parts[(kind, event, stage)] = (positive, negative)
+    bracket =
+        Dict(ATMOSPHERE_ENDPOINT_GROUP => (positive .+ negative, positive .- negative))
+    if adapter.slab
+        slab_positive, slab_negative = slab_applied_parts(adapter, Yₜ)
+        adapter.slab_parts[(kind, event, stage)] = (slab_positive, slab_negative)
+        bracket[SLAB_SURFACE_ENDPOINT_GROUP] =
+            (slab_positive .+ slab_negative, slab_positive .- slab_negative)
+    end
+    for leg in transfer_leg_measurements(
+        adapter.schema,
+        event,
+        Yₜ,
+        Y,
+        p,
+        adapter.surface_temperature,
+        adapter.moist,
+        bracket,
+    )
+        spec = transfer_event_spec(adapter.schema, leg.event)
+        leg_evaluation(spec, leg.reservoir, leg.leg) === kind || error(
+            "The applied-update event $event measured the $(leg.reservoir) " *
+            "leg of $(leg.event) in the $kind evaluation, but the schema " *
+            "applies that leg through channel " *
+            "$(leg_channel(spec, leg.reservoir, leg.leg)). The registry and " *
+            "the code disagree about where the leg is applied.",
+        )
+        if faulted && fault[1] === :leg_missing
+            continue
+        elseif faulted && fault[1] === :leg_sign_reversed
+            leg = LegMeasurement(
+                leg.event,
+                leg.reservoir,
+                leg.leg,
+                .-leg.amounts,
+                leg.magnitudes,
+                leg.known,
+                leg.reason,
+            )
+        end
+        adapter.legs[(leg.event, leg.reservoir, leg.leg, stage)] = leg
+    end
     return nothing
 end
 
@@ -1101,7 +1276,35 @@ function take_snapshot!(adapter::ParentBudgetAdapter, Yₜ)
     snapshot.ρ .= Yₜ.c.ρ
     adapter.moist && (snapshot.ρq_tot .= Yₜ.c.ρq_tot)
     snapshot.ρe_tot .= Yₜ.c.ρe_tot
+    if adapter.slab
+        snapshot.sfc_T .= Yₜ.sfc.T
+        adapter.moist && (snapshot.sfc_water .= Yₜ.sfc.water)
+    end
     return nothing
+end
+
+# The slab's parts of what an event applied: the temperature tendency times
+# the areal heat capacity for energy, the water tendency for water and again
+# for the mass it carries.
+function slab_applied_parts(adapter::ParentBudgetAdapter, Yₜ)
+    FT = BUDGET_ACCOUNTING_TYPE
+    snapshot = adapter.snapshot
+    capacity = to_accounting(slab_heat_capacity(adapter.surface_temperature))
+    part(f, after, before) =
+        local_boundary_integral(Base.Broadcast.broadcasted(f, after, before))
+    water(f) = adapter.moist ? part(f, Yₜ.sfc.water, snapshot.sfc_water) : zero(FT)
+    positive_water, negative_water = water(positive_part), water(negative_part)
+    positive = (
+        positive_water,
+        positive_water,
+        part(positive_part, Yₜ.sfc.T, snapshot.sfc_T) * capacity,
+    )
+    negative = (
+        negative_water,
+        negative_water,
+        part(negative_part, Yₜ.sfc.T, snapshot.sfc_T) * capacity,
+    )
+    return (positive, negative)
 end
 
 # The pointwise parts of an applied update, widened before the difference.
@@ -1139,12 +1342,15 @@ end
 Test instrumentation: make the adapter's half of the applied-update `event`
 misbehave in a named way, so a test can show what the ledger does with a
 measurement that is missing or has the wrong sign. `kind` is `:missing`, which
-drops the event's increment, or `:sign_reversed`, which negates it. Nothing at
-runtime sets a fault.
+drops the event's increment, `:sign_reversed`, which negates it,
+`:leg_missing`, which drops the transfer legs the event measures, or
+`:leg_sign_reversed`, which negates them. Nothing at runtime sets a fault.
 """
 function inject_fault!(adapter::ParentBudgetAdapter, kind::Symbol, event::Symbol)
-    kind in (:missing, :sign_reversed) ||
-        error("Unknown fault $kind; expected :missing or :sign_reversed.")
+    kind in (:missing, :sign_reversed, :leg_missing, :leg_sign_reversed) || error(
+        "Unknown fault $kind; expected :missing, :sign_reversed, :leg_missing " *
+        "or :leg_sign_reversed.",
+    )
     adapter.fault = (kind, event)
     return nothing
 end
@@ -1251,6 +1457,7 @@ function commit_step!(adapter::ParentBudgetAdapter, integrator)
     if is_audit(adapter)
         fill_audit_slots!(packet, adapter, integrator)
         fill_process_slots!(packet, adapter, integrator)
+        fill_transfer_slots!(packet, adapter, integrator)
     end
     reduce_packet!(adapter.context, packet)
     adapter.reductions += 1
@@ -1260,6 +1467,7 @@ function commit_step!(adapter::ParentBudgetAdapter, integrator)
     record_final_maps!(adapter, packet, step)
     is_audit(adapter) && record_audit_legs!(adapter, packet, integrator, step)
     record_process_legs!(adapter, packet, integrator, step)
+    is_audit(adapter) && record_transfer_legs!(adapter, packet, integrator, step)
     # The commit clears the transaction, so the step's records are kept here
     # for the report and the tests. Bounded by the template, not the run.
     copy!(adapter.last_legs, ledger.legs)
@@ -1436,15 +1644,17 @@ function fill_envelope_slots!(
     return nothing
 end
 
-# A slot per quantity from a measured triple, honouring applicability.
+# A slot per quantity from a measured triple, honouring the reservoir's
+# applicability.
 function set_triple!(
     packet::BudgetPacket,
     adapter::ParentBudgetAdapter,
     group::Symbol,
-    values,
+    values;
+    reservoir::Symbol = ATMOSPHERE_ENDPOINT_GROUP,
 )
     for (k, quantity) in enumerate(BUDGET_QUANTITIES)
-        if quantity_applicable(adapter.schema, ATMOSPHERE_ENDPOINT_GROUP, quantity)
+        if quantity_applicable(adapter.schema, reservoir, quantity)
             set_local!(packet, group, quantity, values[k])
         else
             set_inapplicable!(packet, group, quantity)
@@ -1458,10 +1668,11 @@ function set_measurement!(
     packet::BudgetPacket,
     adapter::ParentBudgetAdapter,
     group::Symbol,
-    measurement::Measurement,
+    measurement::Measurement;
+    reservoir::Symbol = ATMOSPHERE_ENDPOINT_GROUP,
 )
-    set_triple!(packet, adapter, group, measurement[1])
-    set_triple!(packet, adapter, magnitude_group(group), measurement[2])
+    set_triple!(packet, adapter, group, measurement[1]; reservoir)
+    set_triple!(packet, adapter, magnitude_group(group), measurement[2]; reservoir)
     return nothing
 end
 
@@ -1520,6 +1731,23 @@ function fill_audit_slots!(packet::BudgetPacket, adapter::ParentBudgetAdapter, i
                 measurement,
             )
         end
+        if :solve_defect in stage_rows(adapter.schema, SLAB_SURFACE_ENDPOINT_GROUP)
+            measurement = if has_post_implicit_evaluation(adapter)
+                scale(
+                    -folded_weight,
+                    stage_value(adapter.slab_defects, stage, "slab solve defect"),
+                )
+            else
+                nothing_applied
+            end
+            set_measurement!(
+                packet,
+                adapter,
+                stage_row_group(:solve_defect, stage, SLAB_SURFACE_ENDPOINT_GROUP),
+                measurement;
+                reservoir = SLAB_SURFACE_ENDPOINT_GROUP,
+            )
+        end
         if :post_implicit_correction in rows
             correction = stage_value(adapter.corrections, stage, "post-implicit correction")
             set_measurement!(
@@ -1575,10 +1803,11 @@ function atmosphere_components(
     method::Symbol,
     source::Symbol,
     magnitudes::Bool = true,
+    reservoir::Symbol = ATMOSPHERE_ENDPOINT_GROUP,
 )
     FT = BUDGET_ACCOUNTING_TYPE
     function component(quantity)
-        quantity_applicable(adapter.schema, ATMOSPHERE_ENDPOINT_GROUP, quantity) ||
+        quantity_applicable(adapter.schema, reservoir, quantity) ||
             return not_applicable(FT; source = :schema)
         amount = packet_value(packet, group, quantity)
         magnitude =
@@ -1765,6 +1994,45 @@ function record_audit_legs!(
                 measured_at = :solved_stage,
             )
             record_leg!(ledger, leg)
+        end
+        for process in stage_rows(schema, SLAB_SURFACE_ENDPOINT_GROUP)
+            group = stage_row_group(process, stage, SLAB_SURFACE_ENDPOINT_GROUP)
+            mass, water, energy = atmosphere_components(
+                adapter, packet, group;
+                method = :algebraic_residual_integral,
+                source = Symbol("adapter.", process),
+                reservoir = SLAB_SURFACE_ENDPOINT_GROUP,
+            )
+            if !has_post_implicit_evaluation(adapter)
+                mass, water, energy = map(BUDGET_QUANTITIES) do quantity
+                    quantity_applicable(schema, SLAB_SURFACE_ENDPOINT_GROUP, quantity) ?
+                    unknown_component(
+                        FT;
+                        reason = :no_post_implicit_evaluation,
+                        source = :adapter,
+                    ) : not_applicable(FT; source = :schema)
+                end
+            end
+            record_leg!(
+                ledger,
+                BudgetLeg{FT}(;
+                    event = Symbol("impl.", process),
+                    leg = :slab_surface,
+                    reservoir = SlabSurfaceReservoir(),
+                    channel = :implicit,
+                    level = ProcessDecomposition(),
+                    mass,
+                    water,
+                    energy,
+                    path = AlgebraicSolveDefect(),
+                    process,
+                    phase = :implicit,
+                    step,
+                    stage,
+                    weight = b / γ,
+                    measured_at = :solved_stage,
+                ),
+            )
         end
     end
     for (call, _) in adapter.observations
@@ -2042,8 +2310,208 @@ function gross_record(
 end
 
 # ============================================================================
+# Transfer legs from the applied-update events
+# ============================================================================
+
+# Every declared transfer leg at every stage its channel is weighted at, from
+# the measurement the bracket took there, and the bracket's own totals beside
+# them. A leg the bracket did not read at a weighted stage keeps a zero slot
+# and is recorded as unknown.
+function fill_transfer_slots!(
+    packet::BudgetPacket,
+    adapter::ParentBudgetAdapter,
+    integrator,
+)
+    (; schema, template) = adapter
+    tableau = integrator.cache.tableau
+    dt = BUDGET_ACCOUNTING_TYPE(float(integrator.dt))
+    zeros = (zero(dt), zero(dt), zero(dt))
+    for spec in schema.transfer_events, (reservoir, leg) in spec.modeled_legs
+        channel = leg_channel(spec, reservoir, leg)
+        for stage in row_stages(template, channel)
+            weight = row_weight(tableau, channel, stage, dt)
+            measurement = get(adapter.legs, (spec.name, reservoir, leg, stage), nothing)
+            values =
+                isnothing(measurement) || !measurement.known ? (zeros, zeros) :
+                scale(weight, (measurement.amounts, measurement.magnitudes))
+            set_measurement!(
+                packet,
+                adapter,
+                transfer_leg_group(spec.name, reservoir, leg, stage),
+                values;
+                reservoir,
+            )
+        end
+    end
+    for ((label, reservoir), kind) in bracket_totals(schema)
+        channel = evaluation_channel(kind)
+        store = reservoir === ATMOSPHERE_ENDPOINT_GROUP ? adapter.parts : adapter.slab_parts
+        for stage in row_stages(template, channel)
+            weight = row_weight(tableau, channel, stage, dt)
+            parts = get(store, (kind, label, stage), nothing)
+            values =
+                isnothing(parts) ? (zeros, zeros) :
+                scale(weight, (parts[1] .+ parts[2], parts[1] .- parts[2]))
+            set_measurement!(
+                packet,
+                adapter,
+                bracket_group(label, reservoir, stage),
+                values;
+                reservoir,
+            )
+        end
+    end
+    return nothing
+end
+
+# One leg per declared transfer leg and weighted stage, from the packet, with
+# each quantity as the event declares it, and the bracket checks beside them.
+function record_transfer_legs!(
+    adapter::ParentBudgetAdapter,
+    packet::BudgetPacket,
+    integrator,
+    step::Int,
+)
+    (; schema, ledger, template) = adapter
+    FT = BUDGET_ACCOUNTING_TYPE
+    tableau = integrator.cache.tableau
+    dt = FT(float(integrator.dt))
+    empty!(adapter.last_transfer_checks)
+    sums = Dict{Tuple{Symbol, Symbol, Int}, NTuple{3, FT}}()
+    for spec in schema.transfer_events, (reservoir, leg) in spec.modeled_legs
+        channel = leg_channel(spec, reservoir, leg)
+        label = transfer_leg_event(spec.name, reservoir)
+        for stage in row_stages(template, channel)
+            weight = row_weight(tableau, channel, stage, dt)
+            group = transfer_leg_group(spec.name, reservoir, leg, stage)
+            measurement = get(adapter.legs, (spec.name, reservoir, leg, stage), nothing)
+            reason = if isnothing(measurement)
+                channel === :implicit && !has_post_implicit_evaluation(adapter) ?
+                :no_post_implicit_evaluation : :event_not_recorded
+            elseif !measurement.known
+                measurement.reason
+            else
+                :measured
+            end
+            mass, water, energy = map(BUDGET_QUANTITIES) do quantity
+                transfer_component(
+                    adapter,
+                    spec,
+                    reservoir,
+                    packet,
+                    group,
+                    quantity,
+                    reason,
+                    label,
+                )
+            end
+            record_leg!(
+                ledger,
+                BudgetLeg{FT}(;
+                    event = spec.name,
+                    leg,
+                    reservoir = endpoint_reservoir(reservoir),
+                    channel,
+                    level = ReservoirTransfer(),
+                    mass,
+                    water,
+                    energy,
+                    path = EquationTerm(),
+                    process = label,
+                    phase = channel,
+                    step,
+                    stage,
+                    weight,
+                    measured_at = is_bracket_total(spec.name, reservoir) ?
+                                  :bracket_total : :flux_quadrature,
+                ),
+            )
+            if reason === :measured && !is_bracket_total(spec.name, reservoir)
+                key = (label, reservoir, stage)
+                current = get(sums, key, (zero(FT), zero(FT), zero(FT)))
+                sums[key] = current .+ (mass.amount, water.amount, energy.amount)
+            end
+        end
+    end
+    for ((label, reservoir), kind) in bracket_totals(schema)
+        for stage in row_stages(template, evaluation_channel(kind))
+            haskey(sums, (label, reservoir, stage)) || continue
+            group = bracket_group(label, reservoir, stage)
+            bracket = map(BUDGET_QUANTITIES) do quantity
+                quantity_applicable(schema, reservoir, quantity) ?
+                packet_value(packet, group, quantity) : zero(FT)
+            end
+            push!(
+                adapter.last_transfer_checks,
+                TransferCheck{FT}(
+                    label,
+                    reservoir,
+                    stage,
+                    bracket,
+                    sums[(label, reservoir, stage)],
+                ),
+            )
+        end
+    end
+    return nothing
+end
+
+# One quantity of a transfer leg at one stage: measured where the event
+# declares it measured, required to be exactly zero where it declares a zero,
+# not applicable where the reservoir does not own it, and unknown with the
+# reason where the bracket could not read it.
+function transfer_component(
+    adapter::ParentBudgetAdapter,
+    spec::TransferEventSpec,
+    reservoir::Symbol,
+    packet::BudgetPacket,
+    group::Symbol,
+    quantity::Symbol,
+    reason::Symbol,
+    label::Symbol,
+)
+    FT = BUDGET_ACCOUNTING_TYPE
+    quantity_applicable(adapter.schema, reservoir, quantity) ||
+        return not_applicable(FT; source = :schema)
+    expected = expected_disposition(spec, quantity)
+    expected === :not_applicable && return not_applicable(FT; source = :coverage_registry)
+    source = Symbol("event.", label)
+    reason === :measured || return unknown_component(FT; reason, source)
+    value = packet_value(packet, group, quantity)
+    if expected === :invariant_zero
+        iszero(value) || error(
+            "The registry declares transfer event $(spec.name) provably zero " *
+            "for $quantity in $reservoir, but its leg moved the quantity by " *
+            "$value. The registry and the code disagree.",
+        )
+        return invariant_zero(
+            FT;
+            proof = :registry_proof_checked_at_event,
+            source = :coverage_registry,
+        )
+    end
+    expected === :measured && return measured(
+        value;
+        method = :independent_quadrature,
+        source,
+        route = :packed_global_reduction,
+        magnitude = packet_value(packet, magnitude_group(group), quantity),
+    )
+    return unknown_component(FT; reason = :disposition_open, source = :coverage_registry)
+end
+
+# ============================================================================
 # Reading the results
 # ============================================================================
+
+"""
+    latest_transfer_checks(adapter) -> Vector{TransferCheck}
+
+The bracket checks of the last accepted step: each applied-update event's
+own total in each reservoir beside the transfer legs it measured, per stage.
+Empty outside `AuditMode`.
+"""
+latest_transfer_checks(adapter::ParentBudgetAdapter) = adapter.last_transfer_checks
 
 """
     latest_gross(adapter) -> Vector{GrossRecord}
