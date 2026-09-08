@@ -15,9 +15,9 @@ definition of done holds.
 |:---------- |:---------------------------------------------------------------------- |:----------------------------------------------------------------------- |:------------------------------------------------------------------------------- |
 | 1          | [#48](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/48) | Specify the parent-budget closure contract and coverage model           | none; it defines the claims                                                     |
 | 2          | [#49](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/49) | Add the internal parent-budget journal and endpoint-reconciliation core | none in a simulation; the core's own invariants hold                            |
-| 3          | not yet opened                                                         | Capture accepted parent-budget update envelopes                         | accepted-state reconciliation                                                   |
+| 3          | [#55](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/55) | Capture accepted parent-budget update envelopes                         | accepted-state reconciliation                                                   |
 | 4          | not yet opened                                                         | Attribute explicit parent-budget contributions                          | process attribution, explicit channels                                          |
-| 5          | not yet opened                                                         | Attribute implicit and post-implicit parent-budget contributions        | implemented-update accounting, and process attribution for the implicit channel |
+| 5          | [#56](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/56) | Attribute implicit and post-implicit parent-budget contributions        | implemented-update accounting, and process attribution for the implicit channel |
 | 6          | not yet opened                                                         | Account for boundary fluxes and reservoir transfers                     | transfer consistency                                                            |
 | 7          | not yet opened                                                         | Account for final maps, restarts, and callbacks                         | accepted-state reconciliation across finalization and restart                   |
 | 8          | not yet opened                                                         | Add parent-budget reporting and closure certification                   | the published claim certificate                                                 |
@@ -219,6 +219,13 @@ is left blocked.
 
 **Definition of done.** The implicit envelope's decomposition closes with the
 defect included, and every hook is booked exactly once.
+
+**Status.** #56 delivers the implicit envelope, the final maps of step 7, the
+solve defect, the post-implicit correction and the folded hooks, each booked
+once with its accepted weight, and the parent identity passes. The implicit
+channel's per-process rows, such as vertical advection, are attributed with
+the event API of step 4, so its attribution stays blocked naming them until
+then.
 
 ## Stack step 6 — Boundaries and reservoir transfers
 
