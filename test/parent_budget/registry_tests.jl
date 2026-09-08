@@ -82,7 +82,7 @@ channel(schema, name) = PB.channel_spec(schema, name)
 final_map(schema, name) = PB.final_map_spec(schema, name)
 event(schema, name) = PB.transfer_event_spec(schema, Symbol(name))
 has_event(schema, name) = PB.has_transfer_event(schema, Symbol(name))
-processes(schema, name) = first.(channel(schema, name).processes)
+processes(schema, name) = Tuple(row.process for row in channel(schema, name).processes)
 
 # Endpoints that agree with the schema about applicability, so a ledger can
 # open and commit with nothing recorded in between.
