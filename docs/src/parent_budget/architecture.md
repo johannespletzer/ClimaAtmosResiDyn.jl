@@ -325,6 +325,18 @@ measured during the adapter's own tendency evaluation at the Newton-solved
 stage. A row whose every quantity the registry proves zero, or declares not
 applicable, needs no bracket and is booked from the registry in both modes.
 
+The same brackets measure the transfer legs, in
+`src/parent_budget/transfer_legs.jl`. A leg a bracket isolates is that
+bracket's own total: the atmosphere's side of the surface flux, either side
+of precipitation. A leg a bracket lumps with others is read from the flux
+field its tendency reads, radiation at the top and at the surface of the
+atmosphere from the radiative flux, the slab's turbulent, radiative and
+prescribed fluxes from theirs, and the bracket's total is kept beside their
+sum as a check that no identity reads. A leg is never the negation of its
+counterpart, so a coupled exchange whose two sides disagree fails its
+cancellation. Each leg is recorded under the channel the schema applies it
+through and explains that channel's envelope.
+
 The adapter refuses, where it happens, a bracket whose label the registry
 does not know, one opened inside another, one opened twice in an evaluation,
 one closed out of order, and one left open at the end of an evaluation.
