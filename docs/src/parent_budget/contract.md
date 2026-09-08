@@ -847,6 +847,9 @@ final report.
   - The process record covers only the explicitly bracketed tendency path. Its
     bracket set is not the ledger's coverage set, and a process record is never
     a closure leg.
+  - A custom callback that writes the state and supplies its own accounting is
+    not supported yet. A custom callback is accepted only declared read-only,
+    which `audit` mode verifies and `summary` mode trusts.
 
 ## Blockers
 

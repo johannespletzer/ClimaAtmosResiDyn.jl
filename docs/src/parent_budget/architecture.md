@@ -247,6 +247,28 @@ Carrying cumulative totals across a boundary is a later extension. It needs no
 checkpoint change beyond those attributes, and until it exists the report says
 the record is segmented. Decided on 2026-09-08.
 
+This is `src/parent_budget/checkpoint.jl`. The checkpoint callback runs after
+the ledger's, so the endpoint the open transaction opened on is the endpoint
+of the state being written, and `save_state_to_disk_func` writes it as
+attributes beside the model hash. A restarted run reads them before the
+adapter is built, and `initialize_ledger!` compares the measured endpoint
+with them component by component: the amounts are the same integrals of the
+same state in the same arithmetic, so they are equal or the state changed on
+the way. A checkpoint without them, written with the ledger off, restarts the
+record as unverified rather than refusing to.
+
+## Custom callbacks
+
+A discrete callback runs on the accepted state between two transactions, so
+one that writes `Y` is a change nothing accounts for. With the ledger on, a
+custom callback is accepted only inside a `ReadOnlyCallback` declaration, and
+audit mode holds it to the declaration: the parent integrals of the state are
+read before and after every firing, locally and without a collective, and a
+firing that moved them is an error. Summary mode trusts the declaration, and
+a callback that breaks it fails the next step's parent identity instead. A
+callback that supplies its own accounting is not supported yet and is
+refused.
+
 ## The timestepper adapter
 
 All timestepper-specific knowledge lives in one adapter. The transaction and
