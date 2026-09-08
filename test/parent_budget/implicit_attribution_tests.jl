@@ -214,16 +214,16 @@ defect_energy(adapter) = sum(
         expected = count(PB.is_observation, adapter.template.calls)
         @test length(adapter.last_observations) == expected
         @test expected > 0
-        # The parent identity still passes, and the implicit attribution is
-        # blocked by exactly the row step 4 attributes: vertical advection.
+        # The parent identity passes, and so does the implicit attribution:
+        # vertical advection is booked from the registry as the zero it
+        # proves, and the defect and correction rows explain the rest.
         for quantity in (:mass, :energy)
             @test parent_row(adapter, quantity).status === :pass
             r = attribution_row(adapter, :implicit, quantity)
-            @test r.status === :blocked
-            @test r.blocked_by == [
-                "expected process vertical_advection of channel implicit in atmosphere was not recorded",
-            ]
+            @test r.status === :pass
+            @test isempty(r.blocked_by)
         end
+        @test only(legs_of(adapter, :vertical_advection)).measured_at === :coverage_registry
         @test length(adapter.commits) == 2
     end
 
@@ -249,6 +249,34 @@ defect_energy(adapter) = sum(
         # approximate solve is exact, so a second approximate iteration cannot
         # change the defect; it must not grow it either.
         @test defects[(1, 2)] <= defects[(1, 1)]
+    end
+
+    @testset "Without the correction hook the defect is unknown, not zero" begin
+        # With no upwind correction the stepper never calls `T_post_imp!`, so
+        # the solved stage is never visible with a matching cache and the
+        # adapter cannot evaluate the defect without touching the trajectory.
+        # The parent identity still passes; the defect rows block by name.
+        numerics = CA.AtmosNumerics(; energy_q_tot_upwinding = :none)
+        simulation = column_simulation(;
+            parent_budget_mode = "audit",
+            model = CA.AtmosModel(; numerics),
+        )
+        adapter = adapter_of(simulation)
+        @test isempty(adapter.template.per_hook[:T_post_imp!])
+        @test !PB.has_post_implicit_evaluation(adapter)
+        step!(simulation, 2)
+        @test parent_row(adapter, :energy).status === :pass
+        @test isempty(legs_of(adapter, :post_implicit_correction))
+        legs = legs_of(adapter, :solve_defect)
+        @test [l.stage for l in legs] == [2, 3, 4]
+        for leg in legs
+            @test PB.component_status(leg.energy) isa PB.UnknownComponent
+            @test PB.component_method(leg.energy) === :no_post_implicit_evaluation
+        end
+        r = attribution_row(adapter, :implicit, :energy)
+        @test r.status === :blocked
+        @test length(r.blocked_by) == 3
+        @test all(b -> occursin("impl.solve_defect", b), r.blocked_by)
     end
 
     @testset "Audit mode changes nothing either" begin

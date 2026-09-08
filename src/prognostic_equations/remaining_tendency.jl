@@ -102,6 +102,15 @@ Accumulates contributions from:
 The order of calls matters: microphysics must precede `surface_temp_tendency!`
 (which reads the precipitation cache), and all `ρa` tendencies must precede
 `pressure_work_tendency!`. Called from `remaining_tendency!`. Returns `nothing`.
+
+Every process that writes `ρ`, `ρq_tot` or `ρe_tot` with a net integral the
+coverage registry does not prove zero sits inside an applied-update event,
+`open_applied_update!` and `close_applied_update!`, under the label the
+registry names for it. The parent-budget ledger attributes the explicit
+channel from those events, and the tag families and process records read the
+same brackets for the labels they know. A process added here without a
+bracket lands in the ledger's attribution residual, which is how the omission
+is found.
 """
 NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
 
@@ -164,35 +173,38 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
     # TODO: fuse, once we fix
     #       https://github.com/CliMA/ClimaCore.jl/issues/2165
     @. Yₜ.c.uₕ += rst_uₕ
+    open_applied_update!(Yₜ, p, :viscous_sponge)
     viscous_sponge_tendency!(Yₜ, Y, p)
+    close_applied_update!(Yₜ, Y, p, :viscous_sponge)
 
     # Held Suarez tendencies
     @. Yₜ.c.uₕ += hs_tendency_uₕ
-    snapshot_tags!(p, Yₜ, :held_suarez)
+    open_applied_update!(Yₜ, p, :held_suarez)
     @. Yₜ.c.ρe_tot += hs_tendency_ρe_tot
-    attribute_tags!(Yₜ, Y, p, :held_suarez)
+    close_applied_update!(Yₜ, Y, p, :held_suarez)
 
-    snapshot_tags!(p, Yₜ, :subsidence)
+    open_applied_update!(Yₜ, p, :subsidence)
     subsidence_tendency!(Yₜ, Y, p, t, p.atmos.subsidence)
-    attribute_tags!(Yₜ, Y, p, :subsidence)
+    close_applied_update!(Yₜ, Y, p, :subsidence)
 
     # The bracket has to span the ρq_tot half of the forcing too, not just the
     # ρe_tot half, or the water tags would miss prescribed moistening entirely.
-    snapshot_tags!(p, Yₜ, :large_scale_advection)
+    open_applied_update!(Yₜ, p, :large_scale_advection)
     @. Yₜ.c.ρe_tot += bc_lsa_tend_ρe_tot
     if microphysics_model isa MoistMicrophysics
         bc_lsa_tend_ρq_tot = large_scale_advection_tendency_ρq_tot(lsa_args...)
         @. Yₜ.c.ρq_tot += bc_lsa_tend_ρq_tot
     end
-    attribute_tags!(Yₜ, Y, p, :large_scale_advection)
+    close_applied_update!(Yₜ, Y, p, :large_scale_advection)
 
     @. Yₜ.c.uₕ += edmf_cor_tend_uₕ
 
-    snapshot_tags!(p, Yₜ, :external_forcing)
+    open_applied_update!(Yₜ, p, :external_forcing)
     external_forcing_tendency!(Yₜ, Y, p, t, p.atmos.external_forcing)
-    attribute_tags!(Yₜ, Y, p, :external_forcing)
+    close_applied_update!(Yₜ, Y, p, :external_forcing)
 
     if p.atmos.diff_mode == Explicit()
+        open_applied_update!(Yₜ, p, :vertical_diffusion)
         vertical_diffusion_boundary_layer_tendency!(
             Yₜ,
             Y,
@@ -200,16 +212,17 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
             t,
             p.atmos.vertical_diffusion,
         )
+        close_applied_update!(Yₜ, Y, p, :vertical_diffusion)
         edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
     end
 
-    snapshot_tags!(p, Yₜ, :surface_flux)
+    open_applied_update!(Yₜ, p, :surface_flux)
     surface_flux_tendency!(Yₜ, Y, p, t)
-    attribute_tags!(Yₜ, Y, p, :surface_flux)
+    close_applied_update!(Yₜ, Y, p, :surface_flux)
 
-    snapshot_tags!(p, Yₜ, :radiation)
+    open_applied_update!(Yₜ, p, :radiation)
     radiation_tendency!(Yₜ, Y, p, t, p.atmos.radiation_mode)
-    attribute_tags!(Yₜ, Y, p, :radiation)
+    close_applied_update!(Yₜ, Y, p, :radiation)
     edmfx_tke_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
 
     # Chemistry tendencies
@@ -217,7 +230,7 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
 
     # Unified microphysics tendencies (cloud condensation + precipitation)
     if p.atmos.microphysics_tendency_timestepping == Explicit()
-        snapshot_tags!(p, Yₜ, :microphysics)
+        open_applied_update!(Yₜ, p, :microphysics)
         microphysics_tendency!(
             Yₜ,
             Y,
@@ -226,7 +239,7 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
-        attribute_tags!(Yₜ, Y, p, :microphysics)
+        close_applied_update!(Yₜ, Y, p, :microphysics)
     end
 
     non_orographic_gravity_wave_apply_tendency!(
@@ -244,8 +257,11 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
 
     # NOTE: Microphysics tendencies should be applied before calling this function,
     # because precipitation cache is used in this function
+    open_applied_update!(Yₜ, p, :surface_temperature)
     surface_temp_tendency!(Yₜ, Y, p, t, p.atmos.surface.temperature)
+    close_applied_update!(Yₜ, Y, p, :surface_temperature)
     if p.atmos.microphysics_tendency_timestepping == Explicit()
+        open_applied_update!(Yₜ, p, :surface_precipitation)
         surface_precipitation_tendency!(
             Yₜ,
             Y,
@@ -254,21 +270,28 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
             p.atmos.surface.temperature,
             p.atmos.microphysics_model,
         )
+        close_applied_update!(Yₜ, Y, p, :surface_precipitation)
     end
 
     # NOTE: All ρa tendencies should be applied before calling this function
     pressure_work_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
 
     sl = p.atmos.smagorinsky_lilly
+    open_applied_update!(Yₜ, p, :smagorinsky_lilly)
     horizontal_smagorinsky_lilly_tendency!(Yₜ, Y, p, t, sl)
     vertical_smagorinsky_lilly_tendency!(Yₜ, Y, p, t, sl)
+    close_applied_update!(Yₜ, Y, p, :smagorinsky_lilly)
 
     amd = p.atmos.amd_les
+    open_applied_update!(Yₜ, p, :amd)
     horizontal_amd_tendency!(Yₜ, Y, p, t, amd)
     vertical_amd_tendency!(Yₜ, Y, p, t, amd)
+    close_applied_update!(Yₜ, Y, p, :amd)
 
     chd = p.atmos.constant_horizontal_diffusion
+    open_applied_update!(Yₜ, p, :constant_diffusion)
     horizontal_constant_diffusion_tendency!(Yₜ, Y, p, t, chd)
+    close_applied_update!(Yₜ, Y, p, :constant_diffusion)
 
     edmfx_sgs_horizontal_diffusive_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
 
