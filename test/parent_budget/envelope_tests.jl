@@ -63,9 +63,21 @@ function parent_row(adapter, quantity)
     )
 end
 
+# The sum of the two explicit envelopes the adapter recorded for one quantity,
+# read from the legs the adapter keeps after the commit clears the transaction.
+function explicit_envelopes(adapter, quantity)
+    total = 0.0
+    for leg in adapter.last_legs
+        leg.level isa PB.ChannelEnvelope || continue
+        leg.channel in (:explicit_main, :explicit_limited) || continue
+        total += PB.budget_component(leg, quantity).amount
+    end
+    return total
+end
+
 # The implicit channel's accepted energy or mass increment, measured here in
-# the test from the stage tendencies the stepper cache holds. The adapter does
-# not collect it yet, and the identity needs it.
+# the test from the stage tendencies the stepper cache holds, independently of
+# the adapter's own reading of the same cache.
 function implicit_increment(integrator, quantity)
     cache = integrator.cache
     indices, weights = PB.stage_weights(
@@ -130,14 +142,17 @@ end
 
     @testset "The explicit envelopes reproduce the applied update" begin
         # After the step just taken, the stepper cache still holds this step's
-        # stage tendencies, so the implicit term can be measured beside the
-        # adapter's explicit envelopes and the identity checked on the actual
-        # endpoint change. Nothing else moved the state: no DSS, no limiter and
-        # no constraint is configured.
+        # stage tendencies, so the implicit term can be measured here, beside
+        # the adapter's explicit envelopes, and the identity checked on the
+        # actual endpoint change. Nothing else moved the state: no DSS, no
+        # limiter and no constraint is configured, and the three final maps are
+        # booked as the invariant zeros the registry proves.
         for quantity in (:mass, :energy)
             r = parent_row(adapter, quantity)
             implicit = implicit_increment(on.integrator, quantity)
-            residual = r.endpoint_change - r.envelopes - implicit
+            explicit = explicit_envelopes(adapter, quantity)
+            @test r.envelopes ≈ explicit + implicit
+            residual = r.endpoint_change - explicit - implicit
             scale = abs(r.endpoint_change) + abs(r.envelopes) + abs(implicit)
             background =
                 2 * abs(
@@ -155,23 +170,16 @@ end
         energy = parent_row(adapter, :energy)
         @test abs(energy.envelopes) > 1e3 * eps(FT) * abs(energy.endpoint_change)
         @test abs(energy.endpoint_change - energy.envelopes) < 1e-6 * abs(energy.envelopes)
-        # Two envelope legs, one per explicit channel, and nothing else.
-        commit = PB.latest_commit(adapter)
+        # The final maps are provably zero here, and are booked as such.
         @test energy.final_maps == 0
     end
 
-    @testset "The parent claims are blocked and say why" begin
+    @testset "The parent claims are blocked only by the tolerance" begin
         for quantity in (:mass, :energy)
             r = parent_row(adapter, quantity)
             @test r.status === :blocked
-            @test any(
-                contains("expected envelope for channel implicit"),
-                r.missing_expectations,
-            )
-            for hook in ("lim!", "dss!", "constrain_state!")
-                @test any(contains("expected final map $hook"), r.missing_expectations)
-            end
-            @test any(==(PB.UNCALIBRATED_TOLERANCE_BLOCKER), r.blocked_by)
+            @test isempty(r.missing_expectations)
+            @test r.blocked_by == [PB.UNCALIBRATED_TOLERANCE_BLOCKER]
         end
         @test parent_row(adapter, :water).status === :not_applicable
         @test PB.parent_status(adapter, :energy, :atmosphere_only) === :blocked

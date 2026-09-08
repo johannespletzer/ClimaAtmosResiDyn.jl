@@ -37,6 +37,7 @@ jobs:
         # group now reports its own result.
         test_group:
           - infrastructure
+          - parent_budget
           - diagnostics
           - dynamics
           - tagging_energy

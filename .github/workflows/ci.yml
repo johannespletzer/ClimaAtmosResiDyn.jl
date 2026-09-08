@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # Cancel superseded runs on branches and pull requests, but not on `main`, 
+  # Cancel superseded runs on branches and pull requests, but not on `main`,
   # so that the workflow badge does not report a cancellation as "failing".
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
@@ -93,13 +93,14 @@ jobs:
         version:
           - '1.10'
           - '1.11'
-        # Ubuntu only. `main` then exercises the required jobs that gate a 
-        # pull request, so the workflow badge means "the required checks are 
-        # green". 
+        # Ubuntu only. `main` then exercises the required jobs that gate a
+        # pull request, so the workflow badge means "the required checks are
+        # green".
         os:
           - ubuntu-latest
         test_group:
           - infrastructure
+          - parent_budget
           - diagnostics
           - dynamics
           - tagging_energy
