@@ -270,6 +270,66 @@ end
               (:invariant_zero, :invariant_zero, :invariant_zero)
     end
 
+    @testset "Every measured row names the event that brackets it" begin
+        for row in PB.COVERAGE_ROWS
+            isnothing(row.event) || @test row.event in PB.REGISTRY_EVENTS
+            row.table in PB.ROSTER_TABLES && row.level === :decomposition || continue
+            # A hook-metered row of the implicit channel names no event; every
+            # other row with a measured quantity does, and a row with nothing
+            # to measure is booked from the registry and needs none.
+            String(row.id) in ("impl.solve_defect", "impl.post_implicit_correction",
+                "impl.folded_dss", "impl.folded_constraint") && continue
+            if :measured in row.dispositions
+                @test !isnothing(row.event)
+            end
+        end
+        @test :subsidence in PB.REGISTRY_EVENTS
+        @test !(:horizontal_dynamics in PB.REGISTRY_EVENTS)
+        # The schema carries the event onto the roster row.
+        schema = schema_for(CA.AtmosModel(;
+            subsidence = CA.LargeScaleSubsidence(z -> -0.001),
+        ))
+        row = PB.process_row(
+            channel(schema, :explicit_main),
+            :subsidence,
+            PB.ATMOSPHERE_ENDPOINT_GROUP,
+        )
+        @test row.event === :subsidence
+        @test isnothing(
+            PB.process_row(
+                channel(schema, :explicit_main),
+                :horizontal_dynamics,
+                PB.ATMOSPHERE_ENDPOINT_GROUP,
+            ).event,
+        )
+        @test PB.ProcessRowSpec(:p, PB.ATMOSPHERE_ENDPOINT_GROUP).event === nothing
+    end
+
+    @testset "Idealized radiation is declared by its form" begin
+        dycoms = schema_for(
+            CA.AtmosModel(;
+                microphysics_model = CA.EquilibriumMicrophysics0M(),
+                radiation_mode = CA.RadiationDYCOMS{Float64}(),
+            ),
+        )
+        @test has_event(dycoms, "xfer.radiation_toa")
+        @test has_event(dycoms, "xfer.radiation_surface")
+        @test !(:prescribed_radiative_heating in processes(dycoms, :explicit_main))
+        trmm = schema_for(
+            CA.AtmosModel(;
+                microphysics_model = CA.EquilibriumMicrophysics0M(),
+                radiation_mode = CA.RadiationTRMM_LBA(Float64),
+            ),
+        )
+        @test !has_event(trmm, "xfer.radiation_toa")
+        @test :prescribed_radiative_heating in processes(trmm, :explicit_main)
+        @test PB.process_row(
+            channel(trmm, :explicit_main),
+            :prescribed_radiative_heating,
+            PB.ATMOSPHERE_ENDPOINT_GROUP,
+        ).event === :radiation
+    end
+
     @testset "A ledger built from the schema blocks until the run supplies every term" begin
         for model in (dry_model(), moist_slab_model())
             schema = schema_for(model)

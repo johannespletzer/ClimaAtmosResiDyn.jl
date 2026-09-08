@@ -47,6 +47,9 @@ import ...NonEquilibriumMicrophysics2M
 import ...NonEquilibriumMicrophysics2MP3
 import ...HeldSuarezForcing
 import ...RRTMGPI
+import ...RadiationDYCOMS
+import ...RadiationISDAC
+import ...RadiationTRMM_LBA
 import ...Explicit
 import ...Implicit
 import ...AbstractEDMF

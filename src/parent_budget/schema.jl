@@ -453,27 +453,37 @@ struct ReservoirSpec
 end
 
 """
-    ProcessRowSpec(process, reservoir; dispositions = OPEN_DISPOSITIONS)
+    ProcessRowSpec(process, reservoir; dispositions = OPEN_DISPOSITIONS,
+                   event = nothing)
 
 One row of a channel's roster: the process a decomposition leg records under,
-the reservoir it writes, and what each quantity of that leg is expected to be.
+the reservoir it writes, what each quantity of that leg is expected to be, and
+the applied-update event that measures it.
 
 The dispositions are the row's own, not the channel's, because a process can
 prove a zero the channel as a whole cannot: the post-implicit correction writes
 no `ρ` term while the implicit channel measures mass. See
 `EXPECTED_DISPOSITIONS`.
+
+`event` is the label the tendency code brackets the process with, or `nothing`
+for a row that is booked from its declaration alone because nothing in it is
+measured. A row with a measured quantity and no event cannot be recorded by
+the adapter, so the schema refuses it, except for the rows the adapter meters
+at the hooks rather than in a tendency evaluation, which name no event.
 """
 struct ProcessRowSpec
     process::Symbol
     reservoir::Symbol
     dispositions::NTuple{length(BUDGET_QUANTITIES), Symbol}
+    event::Union{Nothing, Symbol}
     function ProcessRowSpec(
         process::Symbol,
         reservoir::Symbol;
         dispositions = OPEN_DISPOSITIONS,
+        event::Union{Nothing, Symbol} = nothing,
     )
         check_dispositions("Process row $process in $reservoir", dispositions)
-        return new(process, reservoir, dispositions)
+        return new(process, reservoir, dispositions, event)
     end
 end
 

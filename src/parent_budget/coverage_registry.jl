@@ -88,6 +88,12 @@ viscous_sponge(c::RegistryContext) = !isnothing(c.atmos.viscous_sponge)
 rayleigh_sponge(c::RegistryContext) = !isnothing(c.atmos.rayleigh_sponge)
 held_suarez(c::RegistryContext) = c.atmos.radiation_mode isa HeldSuarezForcing
 rrtmgp(c::RegistryContext) = c.atmos.radiation_mode isa RRTMGPI.AbstractRRTMGPMode
+# The modes that build a radiative flux and apply its divergence, so that what
+# they add to the atmosphere is what crosses the top and the surface.
+flux_form_radiation(c::RegistryContext) =
+    c.atmos.radiation_mode isa
+    Union{RRTMGPI.AbstractRRTMGPMode, RadiationDYCOMS, RadiationISDAC}
+trmm_lba(c::RegistryContext) = c.atmos.radiation_mode isa RadiationTRMM_LBA
 scm_coriolis(c::RegistryContext) = !isnothing(c.atmos.scm_coriolis)
 subsidence(c::RegistryContext) = !isnothing(c.atmos.subsidence)
 large_scale_advection(c::RegistryContext) = !isnothing(c.atmos.ls_adv)
@@ -229,6 +235,14 @@ that owns the row.
 `applies` is the guard: a function of a `RegistryContext` that says whether
 the configuration selects the row. It is the executable form of the `Guard`
 cell, and the two are written to agree.
+
+`event` is the label of the applied-update bracket that measures the row, or
+`nothing` for a row that needs no measurement: one whose every quantity is
+provably zero or not applicable, which the ledger books from this registry.
+It is not a table cell. The labels are the ones the tendency code passes to
+`open_applied_update!`, and the same label can measure one row in one
+configuration and another row elsewhere, as `:radiation` measures a
+prescribed heating under TRMM_LBA and two boundary crossings under RRTMGP.
 """
 struct CoverageRow
     table::Symbol
@@ -249,6 +263,7 @@ struct CoverageRow
     test::String
     step::Int
     applies::Function
+    event::Union{Nothing, Symbol}
     function CoverageRow(
         table,
         id,
@@ -268,6 +283,7 @@ struct CoverageRow
         test,
         step,
         applies,
+        event = nothing,
     )
         table in REGISTRY_TABLES ||
             error(
@@ -297,6 +313,7 @@ struct CoverageRow
             test,
             step,
             applies,
+            event,
         )
     end
 end
@@ -326,6 +343,7 @@ CoverageRow(
     test::String,
     step::Int,
     applies,
+    event = nothing,
 ) = CoverageRow(
     table,
     id,
@@ -345,6 +363,7 @@ CoverageRow(
     test,
     step,
     applies,
+    event,
 )
 
 # A row of the transfer table.
@@ -365,6 +384,7 @@ CoverageRow(
     test::String,
     step::Int,
     applies,
+    event = nothing,
 ) = CoverageRow(
     table,
     id,
@@ -384,6 +404,7 @@ CoverageRow(
     test,
     step,
     applies,
+    event,
 )
 
 """
@@ -468,7 +489,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "conservative horizontal divergence, global sum zero",
         :decomposition,
-        :none,
+        :collected,
         "operator global-zero test on a real state",
         "`explicit_attribution_tests.jl`",
         4,
@@ -485,7 +506,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "conservative, DSS of the `∇²` cache happens inside `hyperdiffusion_tendency!`",
         :decomposition,
-        :none,
+        :collected,
         "operator global-zero test on a real state",
         "`explicit_attribution_tests.jl`",
         4,
@@ -502,7 +523,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :not_applicable, :invariant_zero),
         "conservative transport",
         :decomposition,
-        :none,
+        :collected,
         "operator global-zero test",
         "`explicit_attribution_tests.jl`",
         4,
@@ -519,7 +540,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "conservative transport, closed vertical boundaries",
         :decomposition,
-        :none,
+        :collected,
         "operator global-zero test",
         "`explicit_attribution_tests.jl`",
         4,
@@ -536,7 +557,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:not_applicable, :not_applicable, :invariant_zero),
         "conservative",
         :decomposition,
-        :none,
+        :collected,
         "operator global-zero test",
         "`explicit_attribution_tests.jl`",
         4,
@@ -553,11 +574,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "interior numerical source; the `ρ` leg is added only for the `ρq_tot` tracer",
         :decomposition,
-        :none,
+        :collected,
         "applied increment per field",
         "`explicit_attribution_tests.jl`",
         4,
         viscous_sponge,
+        :viscous_sponge,
     ),
     CoverageRow(
         :explicit,
@@ -570,7 +592,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "momentum only, `ρe_tot` prognostic and untouched",
         :decomposition,
-        :none,
+        :collected,
         "field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
@@ -587,7 +609,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "momentum only",
         :decomposition,
-        :none,
+        :collected,
         "field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
@@ -604,11 +626,30 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :measured),
         "idealized external heating, no mass or water term",
         :decomposition,
-        :none,
+        :collected,
         "applied increment",
         "`explicit_attribution_tests.jl`",
         4,
         held_suarez,
+        :held_suarez,
+    ),
+    CoverageRow(
+        :explicit,
+        Symbol("expl.prescribed_radiative_heating"),
+        "`radiation_tendency!`, `RadiationTRMM_LBA`",
+        "`Yₜ`",
+        "`RadiationTRMM_LBA`",
+        "atmosphere",
+        "`ρe_tot`",
+        (:invariant_zero, :invariant_zero, :measured),
+        "prescribed heating rate with no flux form, so nothing crosses a boundary",
+        :decomposition,
+        :collected,
+        "applied increment",
+        "`explicit_attribution_tests.jl`",
+        4,
+        trmm_lba,
+        :radiation,
     ),
     CoverageRow(
         :explicit,
@@ -621,7 +662,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "momentum only",
         :decomposition,
-        :none,
+        :collected,
         "field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
@@ -638,11 +679,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :measured, :measured),
         "writes no `ρ` term, so the mass contribution is invariant zero",
         :decomposition,
-        :none,
+        :collected,
         "applied increment plus field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
         subsidence,
+        :subsidence,
     ),
     CoverageRow(
         :explicit,
@@ -655,11 +697,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :measured, :measured),
         "writes no `ρ` term",
         :decomposition,
-        :none,
+        :collected,
         "applied increment plus field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
         large_scale_advection,
+        :large_scale_advection,
     ),
     CoverageRow(
         :explicit,
@@ -672,11 +715,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :measured, :measured),
         "writes no `ρ` term",
         :decomposition,
-        :none,
+        :collected,
         "applied increment plus field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
         external_forcing,
+        :external_forcing,
     ),
     CoverageRow(
         :explicit,
@@ -689,11 +733,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "interior operator with zero flux at top and bottom faces",
         :decomposition,
-        :none,
+        :collected,
         "applied increment",
         "`explicit_attribution_tests.jl`",
         4,
         explicit_diffusion,
+        :vertical_diffusion,
     ),
     CoverageRow(
         :explicit,
@@ -706,11 +751,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "diffusive; global zero only if the discrete operator has it",
         :decomposition,
-        :none,
+        :collected,
         "applied increment",
         "`explicit_attribution_tests.jl`",
         4,
         smagorinsky,
+        :smagorinsky_lilly,
     ),
     CoverageRow(
         :explicit,
@@ -723,11 +769,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "as above",
         :decomposition,
-        :none,
+        :collected,
         "applied increment",
         "`explicit_attribution_tests.jl`",
         4,
         amd,
+        :amd,
     ),
     CoverageRow(
         :explicit,
@@ -740,11 +787,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "as above",
         :decomposition,
-        :none,
+        :collected,
         "applied increment",
         "`explicit_attribution_tests.jl`",
         4,
         constant_diffusion,
+        :constant_diffusion,
     ),
     CoverageRow(
         :explicit,
@@ -757,11 +805,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "formation redistributes categories inside `ρq_tot` and applies no source to `ρq_tot`, `ρ` or `ρe_tot`",
         :decomposition,
-        :none,
+        :collected,
         "field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
         one_moment_explicit,
+        :microphysics,
     ),
     CoverageRow(
         :explicit,
@@ -774,7 +823,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "category-only; writes no parent field",
         :decomposition,
-        :none,
+        :collected,
         "field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
@@ -791,7 +840,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "momentum only",
         :decomposition,
-        :none,
+        :collected,
         "field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
@@ -808,7 +857,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "momentum only",
         :decomposition,
-        :none,
+        :collected,
         "field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
@@ -825,7 +874,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "momentum only",
         :decomposition,
-        :none,
+        :collected,
         "field-write inventory",
         "`explicit_attribution_tests.jl`",
         4,
@@ -859,7 +908,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "conservative transport with closed vertical boundaries; precipitation leaves through a different operator",
         :decomposition,
-        :none,
+        :collected,
         "operator global-zero test plus accepted implicit weight",
         "`implicit_attribution_tests.jl`",
         5,
@@ -881,6 +930,7 @@ const COVERAGE_ROWS = CoverageRow[
         "`transfer_tests.jl`",
         6,
         one_moment,
+        :precipitation,
     ),
     CoverageRow(
         :implicit,
@@ -898,6 +948,7 @@ const COVERAGE_ROWS = CoverageRow[
         "`transfer_tests.jl`",
         6,
         zero_moment_implicit,
+        :microphysics,
     ),
     CoverageRow(
         :implicit,
@@ -910,11 +961,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "redistributes inside `ρq_tot`",
         :decomposition,
-        :none,
+        :collected,
         "field-write inventory",
         "`implicit_attribution_tests.jl`",
         5,
         one_moment_implicit,
+        :microphysics,
     ),
     CoverageRow(
         :implicit,
@@ -927,11 +979,12 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "interior operator, zero flux at top and bottom faces",
         :decomposition,
-        :none,
+        :collected,
         "applied increment with accepted implicit weight",
         "`implicit_attribution_tests.jl`",
         5,
         implicit_diffusion,
+        :vertical_diffusion,
     ),
     CoverageRow(
         :implicit,
@@ -1012,7 +1065,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "momentum only",
         :decomposition,
-        :none,
+        :collected,
         "field-write inventory",
         "`implicit_attribution_tests.jl`",
         5,
@@ -1273,6 +1326,7 @@ const COVERAGE_ROWS = CoverageRow[
         "`transfer_tests.jl`",
         6,
         surface_flux,
+        :surface_flux,
     ),
     CoverageRow(
         :transfers,
@@ -1280,7 +1334,7 @@ const COVERAGE_ROWS = CoverageRow[
         "`exterior`",
         "`radiation_tendency!` at the model top",
         "space above the model top",
-        "radiation configured",
+        "radiation in flux form: RRTMGP, DYCOMS or ISDAC",
         "atmosphere",
         "`ρe_tot`",
         (:invariant_zero, :invariant_zero, :measured),
@@ -1290,7 +1344,8 @@ const COVERAGE_ROWS = CoverageRow[
         "atmospheric leg, cross-checked against the reported TOA flux",
         "`transfer_tests.jl`",
         6,
-        rrtmgp,
+        flux_form_radiation,
+        :radiation,
     ),
     CoverageRow(
         :transfers,
@@ -1298,7 +1353,7 @@ const COVERAGE_ROWS = CoverageRow[
         "`coupled` with a slab, `exterior` otherwise",
         "`radiation_tendency!` at the surface, and `surface_temp_tendency!` for a slab",
         "unmodeled surface store, when no slab is configured",
-        "radiation configured",
+        "radiation in flux form: RRTMGP, DYCOMS or ISDAC",
         "atmosphere, and slab when configured",
         "`ρe_tot`, `sfc.T`",
         (:invariant_zero, :invariant_zero, :measured),
@@ -1308,7 +1363,8 @@ const COVERAGE_ROWS = CoverageRow[
         "every declared leg measured separately",
         "`transfer_tests.jl`",
         6,
-        rrtmgp,
+        flux_form_radiation,
+        :radiation,
     ),
     CoverageRow(
         :transfers,
@@ -1327,6 +1383,7 @@ const COVERAGE_ROWS = CoverageRow[
         "`transfer_tests.jl`",
         6,
         zero_moment,
+        :microphysics,
     ),
     CoverageRow(
         :transfers,
@@ -1345,6 +1402,7 @@ const COVERAGE_ROWS = CoverageRow[
         "`transfer_tests.jl`",
         6,
         one_moment,
+        :precipitation,
     ),
     CoverageRow(
         :transfers,
@@ -1363,6 +1421,7 @@ const COVERAGE_ROWS = CoverageRow[
         "`transfer_tests.jl`",
         6,
         slab_qflux,
+        :surface_temperature,
     ),
 ]
 
@@ -1434,6 +1493,16 @@ The rows whose guard holds for `context`, in page order. This is the set the
 schema is built from, so it is also the set a run is expected to record.
 """
 selected_rows(c::RegistryContext) = filter(r -> r.applies(c), COVERAGE_ROWS)
+
+"""
+    REGISTRY_EVENTS
+
+Every applied-update label some row is measured by. A bracket in the tendency
+code that passes a label outside this set names a process the registry does
+not know, which the adapter refuses when it is metering.
+"""
+const REGISTRY_EVENTS =
+    Tuple(unique(r.event for r in COVERAGE_ROWS if !isnothing(r.event)))
 
 """
     CHANNEL_LABELS
@@ -1675,6 +1744,7 @@ function budget_schema(
                         process_name(row),
                         reservoir;
                         dispositions = resolve_dispositions(row.dispositions, c),
+                        event = row.event,
                     ),
                 )
             end
