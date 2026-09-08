@@ -174,17 +174,20 @@ end
         @test energy.final_maps == 0
     end
 
-    @testset "The parent claims are blocked only by the tolerance" begin
+    @testset "The parent claims pass with the calibrated tolerance" begin
+        @test adapter.tolerance_source === :calibration_table
         for quantity in (:mass, :energy)
             r = parent_row(adapter, quantity)
-            @test r.status === :blocked
+            @test r.status === :pass
             @test isempty(r.missing_expectations)
-            @test r.blocked_by == [PB.UNCALIBRATED_TOLERANCE_BLOCKER]
+            @test isempty(r.blocked_by)
         end
         @test parent_row(adapter, :water).status === :not_applicable
-        @test PB.parent_status(adapter, :energy, :atmosphere_only) === :blocked
+        @test PB.parent_status(adapter, :energy, :atmosphere_only) === :pass
+        # Summary mode records no measured row and no transfer leg, so the
+        # main channel's attribution and the surface flux stay blocked by name.
         commit = PB.latest_commit(adapter)
-        @test all(r -> r.status in (:blocked, :not_applicable), commit.attribution)
+        @test all(r -> r.status in (:pass, :blocked, :not_applicable), commit.attribution)
         @test all(r -> r.status in (:blocked, :not_applicable), commit.transfer)
     end
 

@@ -28,6 +28,9 @@ The files are included in dependency order.
     flux field, inside the applied-update event that applied it.
   - `checkpoint.jl` carries the closing endpoint through a checkpoint, checks
     the restored state against it, and declares the custom callbacks.
+  - `calibration.jl` reads the committed κ calibration table and states the
+    protocol that fills it.
+  - `report.jl` writes the claim certificate at the end of a run.
   - `adapter.jl` is the one place that knows the timestepper: it captures the
     accepted envelopes after each step, meters the applied-update events the
     tendency code brackets, and drives the transactions.
@@ -41,6 +44,8 @@ import ClimaCore.Geometry as Geometry
 import ClimaCore.Utilities: half
 import ClimaCore.InputOutput
 import ClimaTimeSteppers as CTS
+import Dates
+import YAML
 
 # The adapter boundary. These are the only ClimaAtmos types the ledger
 # dispatches on, and naming them here keeps the dependency visible in one place
@@ -85,6 +90,8 @@ include("journal.jl")
 include("transaction.jl")
 include("transfer_legs.jl")
 include("checkpoint.jl")
+include("calibration.jl")
 include("adapter.jl")
+include("report.jl")
 
 end

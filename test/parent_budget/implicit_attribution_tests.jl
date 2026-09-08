@@ -163,20 +163,15 @@ defect_energy(adapter) = sum(
         adapter = adapter_of(simulation)
         @test adapter isa PB.ParentBudgetAdapter
         step!(simulation, 3)
-        tolerances = provisional_tolerances()
+        # The configuration path takes its tolerance from the calibration
+        # table, and every identity passes under it.
+        @test adapter.tolerance_source === :calibration_table
         for quantity in PB.BUDGET_QUANTITIES
             r = parent_row(adapter, quantity)
             @test r.applicable
-            # The configuration path carries no tolerance, so the verdict is
-            # blocked by exactly that, and the residual is judged here.
-            @test r.status === :blocked
-            @test r.blocked_by == [PB.UNCALIBRATED_TOLERANCE_BLOCKER]
+            @test r.status === :pass
             @test isempty(r.missing_expectations)
-            before =
-                PB.endpoint_total(adapter.ledger.last_closing, quantity, PB.ATMOSPHERE_ONLY).total
-            limit =
-                PB.tolerance_value(tolerances[quantity], before, before, abs(r.recorded))
-            @test abs(r.residual) <= limit
+            @test abs(r.residual) <= r.tolerance
         end
     end
 

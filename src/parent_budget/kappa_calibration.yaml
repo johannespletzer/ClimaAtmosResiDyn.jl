@@ -1,0 +1,19 @@
+# The parent-budget ledger's κ calibration table. See contract.md, "Calibrating
+# κ": one row per backend, state float type and rank count, each measured by
+# running the named configuration for the stated number of accepted steps in
+# summary mode with the arithmetic term alone at κ = 1, recording the largest
+# ratio of the parent residual to that term, and fixing κ at four times it,
+# rounded up to a power of two. `test/parent_budget/calibration_tests.jl`
+# re-measures the serial row and fails when the ratio exceeds κ/4. Rows for
+# other backends and rank counts are measured where they run.
+version: 1
+rows:
+  - backend: CPUSingleThreaded
+    float_type: Float64
+    ranks: 1
+    configuration: parent_budget_calibration_column
+    steps: 50
+    worst_ratio: 1.3834446490941426
+    kappa: 8.0
+    commit: 8902b326
+    date: 2026-09-08
