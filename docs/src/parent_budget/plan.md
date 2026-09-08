@@ -392,10 +392,15 @@ ratio of `1.38`, a run takes its row's tolerance unless it brings its own,
 and a run with no row is blocked by name. The tests re-measure the serial
 row against `κ/4`, and gate summary mode on constant per-step allocation, a
 bounded adapter, and an explicit overhead beside a run without the ledger.
-The GPU and MPI rows, the energy-reference covariance audit and the
-cross-check against `check_conservation` remain open: this repository's CI
-runs neither GPUs nor MPI, and the covariance claim needs a reference shift
-the model does not expose.
+The cross-check against `check_conservation` runs on a small moist sphere,
+which also takes the ledger through DSS and the horizontal dynamics: every
+identity holds there under the column-calibrated `κ`, the endpoint changes
+agree with ClimaCore's sums, the radiation crossings agree with the
+callback's accumulation to the order of a step, and the check's residual is
+the turbulent flux and precipitation its callback omits, as the ledger's
+legs say. The GPU and MPI rows and the energy-reference covariance audit
+remain open: this repository's CI runs neither GPUs nor MPI, and the
+covariance claim needs a reference shift the model does not expose.
 
 **Definition of done.** A run emits a certificate that a reader can act on, and
 no claim level appears in it that its own tests did not establish.

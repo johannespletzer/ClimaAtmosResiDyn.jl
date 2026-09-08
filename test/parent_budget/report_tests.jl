@@ -234,6 +234,100 @@ const SUMMARY_WALLTIME_OVERHEAD = 2e-3
         )
     end
 
+    @testset "The ledger and check_conservation agree as independent checks" begin
+        # The existing conservation check reads the two saved endpoints with
+        # ClimaCore's own sums and the radiative fluxes its callback
+        # accumulated, so it shares no arithmetic with the ledger. The endpoint
+        # changes are the same integrals summed in a different order. The
+        # radiation crossings are the same fluxes under two time quadratures,
+        # the callback's end-of-step rectangle against the ledger's
+        # tableau-weighted stages. The check omits the turbulent surface flux
+        # and precipitation, which the limitations register says, and the
+        # ledger's legs are its residual. Neither is used to close the other.
+        # The check integrates an extruded space only, so this is a small moist
+        # sphere, which also takes the ledger through DSS and the horizontal
+        # dynamics the columns never run.
+        config = CA.AtmosConfig(
+            Dict(
+                "initial_condition" => "MoistBaroclinicWave",
+                "microphysics_model" => "0M",
+                "rad" => "DYCOMS",
+                "h_elem" => 4,
+                "z_elem" => 10,
+                "dt" => "300secs",
+                "t_end" => "3600secs",
+                "FLOAT_TYPE" => "Float64",
+                "output_default_diagnostics" => false,
+                "output_dir" => mktempdir(),
+                "parent_budget_mode" => "audit",
+                "check_conservation" => true,
+            );
+            job_id = "parent_budget_cross_check",
+        )
+        simulation = CA.get_simulation(config)
+        results = CA.solve_atmos!(simulation)
+        @test results.ret_code === :success
+        adapter = adapter_of(simulation)
+        sol = results.sol
+        p = simulation.integrator.p
+        @test adapter.tolerance_source === :calibration_table
+        @test length(adapter.commits) == 12
+        # Every identity held on every step, under the κ the column calibrated.
+        @test all(
+            c -> all(r -> r.status in (:pass, :not_applicable), c.parent),
+            adapter.commits,
+        )
+        @test all(
+            c -> all(r -> r.status in (:pass, :not_applicable), c.attribution),
+            adapter.commits,
+        )
+        row = PB.calibration_row(
+            PB.read_calibration_table(),
+            "CPUSingleThreaded",
+            "Float64",
+            1,
+        )
+        @test maximum(PB.worst_parent_ratio(c) for c in adapter.commits) <= row.kappa / 4
+        commit = PB.latest_commit(adapter)
+        change(quantity) = only(
+            filter(
+                r -> r.quantity === quantity && r.control_volume === :atmosphere_only,
+                commit.parent,
+            ),
+        ).endpoint_change_from_initial
+        @test change(:energy) ≈ sum(sol.u[end].c.ρe_tot) - sum(sol.u[1].c.ρe_tot) rtol =
+            1e-10
+        @test change(:mass) ≈ sum(sol.u[end].c.ρ) - sum(sol.u[1].c.ρ) rtol = 1e-10
+        @test change(:water) ≈ sum(sol.u[end].c.ρq_tot) - sum(sol.u[1].c.ρq_tot) rtol =
+            1e-10
+        cumulative(event) = sum(
+            only(
+                filter(
+                    r ->
+                        r.event === Symbol(event) && r.quantity === :energy &&
+                        r.control_volume === :atmosphere_only,
+                    c.transfer,
+                ),
+            ).total for c in adapter.commits
+        )
+        toa = cumulative("xfer.radiation_toa")
+        @test toa < 0
+        @test toa ≈ -p.net_energy_flux_toa[][] rtol = 1e-3
+        @test cumulative("xfer.radiation_surface") ≈ p.net_energy_flux_sfc[][] rtol = 1e-6
+        # The check's residual is what its callback omits, as the ledger says.
+        conservation = CA.check_conservation(results)
+        omitted =
+            cumulative("xfer.surface_turbulent_flux") + cumulative("xfer.precipitation_0m")
+        @test abs(conservation.energy_conservation) * abs(sum(sol.u[1].c.ρe_tot)) ≈
+              abs(omitted) rtol = 0.05
+        @test abs(conservation.water_conservation) * sum(sol.u[end].c.ρq_tot) ≈
+              abs(change(:water)) rtol = 1e-6
+        # The radiation bracket check holds on the sphere too.
+        for check in filter(c -> c.event === :radiation, PB.latest_transfer_checks(adapter))
+            @test check.bracket[3] ≈ check.legs[3] rtol = 1e-9
+        end
+    end
+
     @testset "Summary mode is bounded and audit mode is not" begin
         off = column_simulation(; parent_budget_mode = "off", t_end = 6000)
         summary = column_simulation(; parent_budget_mode = "summary", t_end = 6000)
