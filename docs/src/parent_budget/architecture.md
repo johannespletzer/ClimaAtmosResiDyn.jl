@@ -172,17 +172,21 @@ it. Checks that could differ between ranks therefore belong before the step, whe
 the schema is known and identical everywhere, or after the reduction, where the
 reduced packet gives every rank the same answer.
 
-### Leg slots are declared but not yet packed
+### Envelope slots are packed; decomposition and transfer slots are not yet
 
 The data flow above puts leg slots in the same packet as endpoint slots, and that is
-the design. The implementation packs endpoint slots only. Each process leg needs its
-own local accumulator and its own reserved slot, which is the instrumentation the
-stack sequences later.
+the design. The implementation packs the endpoint slots and the envelope slots of
+the channels the adapter collects, which are the two explicit channels. The layout
+is therefore a property of the schema *and* of what the adapter collects: a channel
+the schema declares but the adapter does not collect has no slot, and its absence is
+a named blocker at reconciliation. A slot nobody writes would instead refuse the
+reduction on every rank, which is the wrong failure for a term that is merely
+unimplemented.
 
-Until leg slots are packed, no runtime path may record a leg through its own global
-reduction. That would issue one collective per leg and reintroduce the cost this
-design exists to avoid, so it is a blocker for runtime activation. It is not a
-limitation of the endpoint claim, which needs no leg slots at all.
+Each decomposition and transfer leg still needs its own local accumulator and its
+own reserved slot, which is the instrumentation stack steps 4 and 6 add. Until then
+no runtime path may record such a leg through its own global reduction. That would
+issue one collective per leg and reintroduce the cost this design exists to avoid.
 
 ### Endpoint reuse
 
@@ -255,6 +259,19 @@ The adapter owns:
 An executable trace test records the stage construction and hook order the
 adapter assumes, so that a change in the pinned version fails a test instead of
 silently changing the meaning of every implicit leg.
+
+The adapter is `src/parent_budget/adapter.jl`. It runs as the first discrete
+callback after every accepted step, so the state it reads is the finalized
+accepted state and no other callback has run. It reads the stage tendencies the
+stepper cache still holds, `T_exp` and `T_lim` for the two explicit channels,
+and forms each channel's envelope as the sum of those stages weighted by the
+cache's own tableau weights and the step, widened to the accounting type before
+the sum. The endpoints and the envelopes go into one packet and one collective,
+the envelopes are recorded as legs, the transaction is committed, and the next
+one opens on the closing endpoint. The callback's initialisation reads `B⁰`
+after the integrator has refreshed its cache and before any other callback.
+The last stage and the final assembly share the same time, so a final map will
+be identified by its position in the step, never by its time.
 
 Process classification lives in the other single source of truth, the coverage
 registry, which the documentation table is generated from or checked against.
