@@ -50,6 +50,17 @@ if (! $?ROOT) then
     set ROOT = ""
 endif
 
+# A preset ROOT is a hint, not a verdict. If it does not actually hold the
+# shared file, fall through to the candidate search rather than failing with a
+# path the caller only guessed at. The bash version does the same by making the
+# preset the first candidate and testing it like any other.
+if ("$ROOT" != "") then
+    if (! -r "$ROOT/$SHARED") then
+        echo "WARNING: ROOT=$ROOT does not hold $SHARED; searching." >> /dev/stderr
+        set ROOT = ""
+    endif
+endif
+
 if ("$ROOT" == "") then
     set candidates = ()
     if ($?SLURM_SUBMIT_DIR) then

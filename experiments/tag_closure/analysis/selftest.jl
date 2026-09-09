@@ -588,6 +588,46 @@ function test_phase_b_and_c()
     end
 end
 
+"""
+    test_configs()
+
+Run `analysis/validate_configs.py` over the committed configurations, and its
+mutation harness over copies of them.
+
+It is Python because that is the tool that was actually run while the
+configurations were written; porting it to Julia would mean shipping an
+unverified rewrite, since the container it was written in has no Julia. It needs
+only PyYAML, and neither the interpreter nor that package is guaranteed on every
+machine, so a missing one is reported and skipped rather than failing the
+self-test. What is *not* optional is the result when it does run.
+"""
+function test_configs()
+    @info "9. the configuration validator, and its mutation harness"
+    script = joinpath(HERE, "validate_configs.py")
+    isfile(script) || error("validate_configs.py is missing from $HERE")
+    python = Sys.which("python3")
+    if isnothing(python)
+        @warn "   no python3 on PATH, so the configurations were not checked. \
+               Run analysis/validate_configs.py wherever one is available."
+        return nothing
+    end
+    for args in ([script], [script, "--mutations"])
+        process = run(ignorestatus(`$python $args`))
+        if process.exitcode == 2
+            @warn "   validate_configs.py could not start, most likely no \
+                   PyYAML. Skipped." args
+            return nothing
+        end
+        process.exitcode == 0 || error(
+            "validate_configs.py failed ($(join(args, " "))). A configuration \
+            is wrong, or a check that used to catch its mutation has stopped \
+            working.",
+        )
+    end
+    @info "   configurations valid and every mutation still caught"
+    return nothing
+end
+
 function run_selftest()
     @info "Tag-closure analysis self-test. This is the first execution of \
            these scripts: they were written where no Julia was available."
@@ -598,6 +638,7 @@ function run_selftest()
     test_energy_reducer()
     test_source_reducer()
     test_process_record()
+    test_configs()
     test_phase_b_and_c()
     @info "All assertions passed."
     return nothing

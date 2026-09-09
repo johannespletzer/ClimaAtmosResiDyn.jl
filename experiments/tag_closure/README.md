@@ -59,10 +59,9 @@ fresh clone. There is also a `.gitignore` here holding one line, `!output/`: the
 repository root ignores `output/` everywhere, and without the re-inclusion the
 owner's committed results would need a `git add -f` every time.
 
-`analysis/` holds `reduce_run.jl`, `phase_a.jl` and `selftest.jl`. There is no
-`phase_b.jl` or `phase_c.jl` yet, and there will not be until those phases have
-configurations to read: a phase script is written against the columns its runs
-actually produce, and writing one now would be guessing at them.
+`analysis/` holds `reduce_run.jl`, one `phase_<letter>.jl` per phase,
+`tables.jl` with the readers they share, `validate_configs.py`, and
+`selftest.jl`, which drives all of it on synthetic input.
 
 ### How the sphere configurations are put together
 
@@ -137,6 +136,29 @@ gets two tables and a timing control gets none.
 committed `output/`, and write `output/summary_<phase>.csv` plus the phase's
 PNGs into `plots/`. They share `analysis/tables.jl`, which holds the readers, so
 that three scripts cannot drift apart in how they read a run.
+
+### Checking the configurations
+
+```bash
+python3 experiments/tag_closure/analysis/validate_configs.py
+python3 experiments/tag_closure/analysis/validate_configs.py --mutations
+```
+
+The first checks every configuration against `default_config.yml` for key
+existence and value type, then against the plan's common protocol per family:
+`job_id` equal to the file name, `FLOAT_TYPE`, defaults off, no limiter outside
+the two runs that measure one, exactly one family under test, tags and closure
+check present or absent together, at least one pure region tag, no `tolerance`,
+no `reduction_time`, no top-level key bound twice, every diagnostic a name the
+run will register, and phase A's closure period still tracking `dt`. The second
+breaks copies of the tree fourteen ways and asserts every one is caught, so
+those checks are demonstrably live rather than merely present.
+
+It is Python because that is the tool that was actually used while the
+configurations were written; a Julia port would be an unverified rewrite, since
+nothing here can run Julia. It needs only PyYAML. `selftest.jl` invokes both and
+skips with a message when neither the interpreter nor PyYAML is present, so the
+Julia self-test gains no hard dependency on it.
 
 ### Testing the analysis
 
@@ -389,6 +411,13 @@ the commit that produced it cannot be placed against the rest of the series.
   - Whether C3 also wants a sphere counterpart. As registered it is the column
     only, since C3 compares two readings of one run and the column is the cheap
     one.
+  - **Whether A3 wants a matched companion.** A3 now sets `vert_diff`, which is
+    the only one of the three 1M `q_tot_eff` operators a column can reach —
+    hyperdiffusion's branch is horizontal and the viscous sponge is off. That
+    makes A3 differ from `a1_dt10` in two keys rather than one, so the gap
+    between them is not the 1M mismatch alone. A 0M column with `vert_diff` on
+    would separate the two and costs one more column run. Not added on my own
+    initiative; say the word.
   - **Whether the sphere runs should use MPI ranks.** Every runscript here runs
     one process with `CLIMACOMMS_CONTEXT=SINGLETON` and no `srun`, which is
     plainly right for phase A's column and sidesteps the CPU/GPU preferences

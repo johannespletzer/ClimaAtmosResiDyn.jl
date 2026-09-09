@@ -37,15 +37,26 @@ can be checked rather than trusted.
 
 ## Reading the two columns against each other
 
-The invariant is an identity, not an inequality: the operator residual is the
-residual the run *would* have reported had no correction ever been applied. It
-is not reliably smaller than `q_tag_res`, and a check built on that would fire
-on almost every run. The partition repair's ledger sums to zero on its
-sum-preserving branch and to a positive number on the branch that zeroes a cell
-whose negatives outweigh its positives, so the operator residual is usually the
-larger of the two. What would be wrong is the two columns moving independently,
-or the ledger column being identically zero, which would mean the diagnostic
-was never registered.
+The invariant is an identity, not an inequality. Adding the ledger back is an
+exact instantaneous undo of the bookkeeping: it removes what the corrections
+wrote, at this moment, from this residual. It is not a counterfactual run,
+because the transport that followed each correction is nonlinear and a run that
+had never been corrected would have gone somewhere else entirely.
+
+The operator residual is not reliably smaller than `q_tag_res`, and a check
+built on that would fire on almost every run. The partition repair's ledger sums
+to zero on its sum-preserving branch and to a positive number on the branch that
+zeroes a cell whose negatives outweigh its positives, so the operator residual
+is usually the larger of the two.
+
+**A ledger column of exactly zero is the ordinary result for A1 to A4**, not a
+fault. Only the repair writes there in those runs, and it writes nothing unless
+a partition tag actually went negative in some cell. Zero means the tags stayed
+inside the partition, and the operator residual then equals `q_tag_res` because
+there was nothing to undo. A missing diagnostic does not look like this: an
+unregistered short name is a startup error, so a run that produced this table at
+all had the field. What would be worth a second look is the two columns moving
+independently of each other, since one is built from the other.
 
 ## Columns
 
@@ -129,15 +140,33 @@ function region_tag_names(config, key = "water_tracers")
         "This run configured no `$key`, so there is nothing of that family to \
         reduce. A timing control is one such run.",
     )
-    names = [
-        String(tag["name"]) for tag in tags if
-        haskey(tag, "region") && !haskey(tag, "source")
-    ]
+    names = [String(tag["name"]) for tag in tags if is_region_tag(tag)]
     isempty(names) && error(
         "No pure region tag in `$key`. The closure check would not have \
         started either.",
     )
     return names
+end
+
+"""
+    is_region_tag(tag)
+
+Whether a configured tag is a *pure region* tag: the set `q_tag_res` and its two
+siblings sum over, and so the set whose ledgers the operator residual adds back.
+
+Not simply "has a region and no source". `tag_sources_from_config` skips the
+label `none` outright (`key === :none && continue`) and returns an empty tuple
+for a missing one, so a tag written `region: tropics` with `source: none` has no
+sources at all and the model counts it in the partition. Testing for the *key*
+would drop it here while the residual still summed it, and the identity the
+operator residual rests on would quietly stop holding.
+"""
+function is_region_tag(tag)
+    haskey(tag, "region") || return false
+    source = get(tag, "source", nothing)
+    isnothing(source) && return true
+    labels = source isa AbstractString ? (source,) : Tuple(source)
+    return all(label -> String(label) == "none", labels)
 end
 
 """
@@ -214,7 +243,10 @@ function read_field(output_dir, short_name)
             "`$varname` in $path has no time dimension; dims are $dims.",
         )
         times = map(Float64, ds["time"][:])
-        raw = var[:]
+        # `var[:]` on a multidimensional NCDatasets variable reads element at a
+        # time; the colon-per-dimension form reads the whole array in one go,
+        # which is the difference between a moment and a long wait on a sphere.
+        raw = var[ntuple(_ -> Colon(), ndims(var))...]
         # Move time to the front, then collapse everything else. `missing`
         # becomes `NaN` so a masked point cannot silently win a maximum.
         moved = permutedims(raw, [time_axis; setdiff(1:ndims(raw), time_axis)])

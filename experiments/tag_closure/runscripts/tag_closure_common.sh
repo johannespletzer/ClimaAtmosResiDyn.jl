@@ -229,6 +229,17 @@ else
     echo "Writing provenance.txt to ${PROVENANCE_DIR} instead." >&2
 fi
 
+# Read this before the block below rather than inside it. `sed ... | head -n 1`
+# lets head close the pipe as soon as it has its line, so sed dies of SIGPIPE and
+# the pipeline reports failure under `set -o pipefail` -- after the value has
+# already been printed. A `|| echo unknown` inside the field would then append a
+# second line to a field that is already correct. The tcsh runscript assigns
+# first for the same reason.
+node_type="$(
+    sed -n 's/^model name[[:space:]]*:[[:space:]]*//p' /proc/cpuinfo 2>/dev/null | head -n 1
+)" || true
+[[ -n "${node_type}" ]] || node_type="unknown"
+
 {
     echo "run: ${JOB_ID}"
     echo "config: ${CONFIG}"
@@ -253,10 +264,7 @@ fi
     echo "partition: ${SLURM_JOB_PARTITION:-none}"
     echo "nodelist: ${SLURM_JOB_NODELIST:-$(hostname)}"
     echo "cpus_per_task: ${SLURM_CPUS_PER_TASK:-1}"
-    echo "node_type: $(
-        sed -n 's/^model name[[:space:]]*:[[:space:]]*//p' /proc/cpuinfo 2>/dev/null |
-            head -n 1 || echo unknown
-    )"
+    echo "node_type: ${node_type}"
     echo "climacomms_context: ${CLIMACOMMS_CONTEXT}"
     echo "climacomms_device: ${CLIMACOMMS_DEVICE}"
     echo "output_dir: ${PROVENANCE_DIR}"
