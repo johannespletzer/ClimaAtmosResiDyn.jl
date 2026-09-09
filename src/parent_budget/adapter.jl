@@ -90,7 +90,7 @@ end
 """
     parent_budget_mode(name) -> Union{Nothing, ParentBudgetMode}
 
-The mode the configuration key `parent_budget_mode` names: `"off"` is
+Return the mode the configuration key `parent_budget_mode` names. `"off"` is
 `nothing`, `"summary"` and `"audit"` are the two modes, and anything else is an
 error rather than a silent `off`. A mode object, or `nothing`, passes through.
 """
@@ -141,7 +141,9 @@ const METERED_HOOKS = (
 """
     FINAL_MAP_HOOKS
 
-The hooks whose last call of a step is a final accepted-state map.
+The hooks whose last call of a step is a final map. `dss!` and
+`constrain_state!` act on the accepted state there. `lim!` acts on the limited
+increment before the final assembly, see `HookCall`.
 """
 const FINAL_MAP_HOOKS = (:lim!, :dss!, :constrain_state!)
 
@@ -181,8 +183,9 @@ function check_algorithm(alg)
 end
 
 # The record, read from the integrator once the cache exists. The weights come
-# from the cache's tableau rather than the algorithm's, because that is the one
-# the stepper applies when a tableau is cast to the state's float type.
+# from the cache's tableau rather than the algorithm's. The cache holds the
+# tableau cast to the state's float type, and that is the one the stepper
+# applies.
 function timestepper_record(integrator)
     alg = integrator.alg
     check_algorithm(alg)
@@ -212,11 +215,13 @@ occurrence of that hook in the step.
 
 The roles say what the firing's change means:
 
-  - `:stage` is the limiter on a stage value, `:pre_solve` the DSS and
-    constraint on the assembled stage value, and `:post_init` the DSS and
-    constraint after the implicit-stage initialiser. None of these is additive:
-    each changes the array a later evaluation reads and reaches the endpoint
-    only through the tableau. They are stage observations.
+  - `:stage` is the limiter on a stage value and `:pre_solve` the DSS and
+    constraint on the assembled stage value. Neither is additive: each changes
+    the array a later evaluation reads and reaches the endpoint only through
+    the tableau. `:post_init` is the DSS and constraint after the implicit-stage
+    initialiser. The stepper stores `U₀` before the initialiser, so this change
+    sits inside the stored implicit tendency and is absorbed by the solve-defect
+    row. All three are kept as stage observations.
   - `:post_newton` is the DSS or constraint on the Newton-solved stage. The
     stepper differences the stage after it, so its change is inside the stored
     implicit tendency and enters the accepted update with weight `b_imp[i]/γ`.
@@ -224,7 +229,11 @@ The roles say what the firing's change means:
     correction, metered for the stage's `dtγ` and for the solved stage.
   - `:evaluate` is the explicit tendency evaluation of a stage, inside which
     the applied-update events of that stage fire.
-  - `:final` is the last call of a state-writing hook, on the accepted state.
+  - `:final` is the last call of a state-writing hook. For `dss!` and
+    `constrain_state!` this is on the accepted state. The final `lim!` acts on
+    the buffer holding `u` plus the limited increment, before the explicit and
+    implicit increments are added, so its change enters the accepted state
+    unchanged.
 """
 struct HookCall
     hook::Symbol
@@ -261,15 +270,16 @@ end
 """
     hook_template(tableau, cadence, has_post_implicit, has_initializer, fsal)
 
-The template for one step. Mirrors `step_u!` in `imex_ark.jl`: for every stage
-after the first, the limiter and the DSS on the assembled value; for an implicit
-stage, the initialiser, a DSS, the Newton solve, the correction when wired, and
-the post-Newton DSS, each with the constraint firings the cadence selects; then
-the explicit tendency evaluation of the stage, wherever a later stage or the
-accepted update reads it; then the final limiter on the limited increment, and
-the final DSS and constraint on the accepted state. A first-same-as-last
-tableau skips the post-Newton constraint at its last stage, because the
-end-of-step firing covers the same state.
+Build the template for one step. It mirrors `step_u!` and the stage functions
+it calls in `imex_ark.jl`: for every stage after the first, the limiter and the
+DSS on the assembled value; for an implicit stage, the initialiser, a DSS, the
+Newton solve, the correction when wired, and the post-Newton DSS, each with the
+constraint firings the cadence selects; then the explicit tendency evaluation
+of the stage, wherever a later stage or the accepted update reads it; then the
+final limiter on the limited increment, and the final DSS and constraint on
+the accepted state. A first-same-as-last tableau skips the post-Newton
+constraint at its last stage, because the end-of-step firing covers the same
+state.
 
 `explicit_stages` are the stages whose explicit tendency enters the accepted
 update with a nonzero weight, which is where a process row of an explicit
@@ -559,9 +569,9 @@ is_audit(adapter::ParentBudgetAdapter) = adapter.mode isa AuditMode
     parent_budget_tolerances(tolerances) -> Union{Nothing, Dict}
 
 Check a caller's tolerance table: `nothing`, or a mapping from a subset of
-`BUDGET_QUANTITIES` to `BudgetTolerance`s in the accounting type. Until the
-calibration table of stack step 8 exists, this is the only way a run gets a
-tolerance, and a run without one reports every verdict as `blocked`.
+`BUDGET_QUANTITIES` to `BudgetTolerance`s in the accounting type. This is the
+only way a run gets a tolerance. A run without one reports every numeric
+verdict as `blocked`, naming the tolerance.
 """
 parent_budget_tolerances(::Nothing) = nothing
 function parent_budget_tolerances(tolerances)
@@ -617,16 +627,17 @@ is_observation(call::HookCall) =
 """
     adapter_packet_layout(schema, template, mode, attribution)
 
-The layout of the one packet an accepted step reduces: the endpoint slots, the
-envelope slots of every collected channel in every reservoir it writes, the
-slots of the final maps that are measured, and in `AuditMode` the slots of the
-per-stage implicit rows, of every measured process row at every stage it is
-booked at, with its gross parts under `:gross`, and of every stage
-observation. Every measured group except the endpoints, the observations and
-the gross parts has a magnitude group beside it. A gross part is a diagnostic
-that enters no identity, so it needs no magnitude. Fixed from the schema, the
-template, the mode and the attribution, so every rank builds the same layout
-before the first step.
+Lay out the one packet an accepted step reduces. The slot groups, in order, are
+the endpoint group of every reservoir, the envelope group of every collected
+channel in every reservoir it writes, one final-map group per state-writing
+hook the schema declares measured, and in `AuditMode` one group per stage row
+of the implicit roster and implicit stage, one group per measured process row
+at every stage it is booked at, with its gross parts under `:gross`, and one
+group per stage observation in the template. Every measured group has a
+magnitude group beside it, except the endpoints, the observations and the
+gross parts. A gross part is a diagnostic that enters no identity, so it needs
+no magnitude. The layout is fixed from the schema, the template, the mode and
+the attribution, so every rank builds the same one before the first step.
 """
 function adapter_packet_layout(
     schema::BudgetSchema,
@@ -685,20 +696,22 @@ end
                         attribution = :net, tolerances = nothing)
         -> Union{Nothing, ParentBudgetAdapter}
 
-The adapter for a run, or `nothing` when `mode` is `off`.
+Build the adapter for a run, or return `nothing` when `mode` is `off`.
 
 Everything the ledger expects is fixed here, before the cache is built and
-before the first step: the configuration is checked against the supported
-scope, the schema is built from the coverage registry, every measured roster
-row is checked to name the event that measures it, the hook template is built
-from the tableau and the cadence, and the packet layout from all of them.
+before the first step. The configuration is checked against the supported
+scope. The schema is built from the coverage registry, and every measured
+roster row is checked to name the event that measures it. The hook template
+is built from the tableau and the cadence, and the packet layout from all of
+them.
 
-`attribution` is `:net` or `:gross`; `:gross` needs `AuditMode`, since the
+`attribution` is `:net` or `:gross`. `:gross` needs `AuditMode`, since the
 process rows it splits are collected there only, and is refused otherwise.
 
-A restart is refused until stack step 7 gives the restored state its
-zero-duration transition. Reading a restart file into a fresh ledger would
-either charge the restoration to the first step or silently absorb it.
+A restart is refused. A restored state is a transition no transaction
+produced, and the ledger has no transaction to book it in. Reading a restart
+file into a fresh ledger would either charge the restoration to the first step
+or silently absorb it.
 """
 build_parent_budget(mode, atmos, Y; kwargs...) =
     build_parent_budget(parent_budget_mode(mode), atmos, Y; kwargs...)
@@ -721,8 +734,8 @@ function build_parent_budget(
         )
     restart && error(
         "The parent-budget ledger does not support restarts yet: a restored " *
-        "state is a transition no transaction produced, and stack step 7 gives " *
-        "it one. Pass `parent_budget_mode = \"off\"` for this run.",
+        "state is a transition no transaction produced, and the ledger has no " *
+        "transaction to book it in. Pass `parent_budget_mode = \"off\"` for this run.",
     )
     check_algorithm(ode_config)
     implicit_solve = !isnothing(ode_config.newtons_method)
@@ -955,9 +968,10 @@ The correction is called with the Newton-solved stage `U*`, after the stepper
 has refreshed the implicit cache for it, so this is the one point in a stage
 where `U*` is visible with a cache that matches it. The defect is
 `r = U₀ + dtγ · T_imp(U*) − U*`, with `U₀` the stage value the stepper stored
-before the solve; its integrals need one extra implicit tendency evaluation,
-which is why only `AuditMode` pays for it. The correction's integral is read
-from the tendency the hook returns.
+in `cache.temp` before the initialiser and the solve; its integrals need one
+extra implicit tendency evaluation, which is why only `AuditMode` pays for it.
+The correction's integral is read from the tendency the hook writes into its
+first argument.
 
 Neither measurement writes anything the stepper reads afterwards: the extra
 evaluation writes the adapter's own scratch tendency and the cache's temporary
@@ -1004,8 +1018,9 @@ end
     meter_initialize(adapter, f)
     meter_post_implicit(adapter, f, implicit_tendency)
 
-The hook `f` behind the adapter's meter, or `f` itself when there is no adapter,
-so `args_integrator` wires the same names whether the ledger is on or off.
+Wrap the hook `f` in the adapter's meter, or return `f` itself when there is no
+adapter, so `args_integrator` wires the same names whether the ledger is on or
+off.
 """
 meter_explicit(::Nothing, f) = f
 meter_explicit(adapter::ParentBudgetAdapter, f) = ExplicitMeter(f, adapter)
@@ -1172,13 +1187,13 @@ has_post_implicit_evaluation(adapter::ParentBudgetAdapter) =
 """
     parent_budget_callbacks(adapter) -> Tuple
 
-The discrete callback that drives the ledger, as a one-element tuple to splice
-in front of every other callback, or an empty tuple for `nothing`.
+Return the discrete callback that drives the ledger, as a one-element tuple to
+splice in front of every other callback, or an empty tuple for `nothing`.
 
 The callback's `initialize` reads the opening endpoint after the integrator has
 initialised its cache and before any other callback has run, which is where
 `B⁰` is defined. Its `affect!` commits every accepted step. Its condition is
-always true: the ledger has no cadence of its own, because a step it skipped
+always true. The ledger has no cadence of its own, because a step it skipped
 would be a change nobody accounted for.
 """
 parent_budget_callbacks(::Nothing) = ()
@@ -1236,10 +1251,12 @@ Account for the accepted step the integrator has just finished.
 
 Runs before every other callback, so the state it reads is the finalized
 accepted state and the stage tendencies in the stepper cache are this step's.
-One packet, one collective. Then the legs are recorded: the envelopes, the
-final maps, the audit rows and the process rows. The transaction is committed
-and the hook counts are checked against the template. The next transaction
-opens on the closing endpoint without measuring it again.
+The hook counts are checked against the template first. Then the packet is
+reset, filled with every reservoir's endpoint, every channel's envelope, the
+final maps and, in audit mode, the stage rows and the process rows, and
+reduced once. The closing endpoints are unpacked from it, the legs are
+recorded, and the transaction is committed. Audit mode keeps the commit. The
+next transaction opens on the closing endpoint without measuring it again.
 """
 function commit_step!(adapter::ParentBudgetAdapter, integrator)
     (; schema, ledger, packet, surface_temperature) = adapter
@@ -1638,8 +1655,8 @@ function record_envelopes!(adapter::ParentBudgetAdapter, packet::BudgetPacket, s
     return nothing
 end
 
-# One final-map leg per state-writing hook, on the accepted state, with each
-# quantity as the schema declares it for this configuration: measured where a
+# One final-map leg per state-writing hook, from its last call of the step, with
+# each quantity as the schema declares it for this configuration: measured where a
 # configured path writes it, the invariant zero its rows prove where none does,
 # and not applicable where the atmosphere does not own it. Wherever the hook was
 # measured, a quantity declared zero is required to have moved by exactly zero,
@@ -2061,15 +2078,16 @@ latest_gross(adapter::ParentBudgetAdapter) = adapter.last_gross
 """
     latest_commit(adapter) -> Union{Nothing, BudgetCommit}
 
-The reconciliations of the last accepted step, or `nothing` before the first.
+Return the reconciliations of the last accepted step, or `nothing` before the
+first.
 """
 latest_commit(adapter::ParentBudgetAdapter) = adapter.last_commit
 
 """
     parent_status(adapter, quantity, control_volume) -> Symbol
 
-The parent claim's status for one quantity in one control volume at the last
-commit: `:pass`, `:fail`, `:blocked` or `:not_applicable`.
+Return the parent claim's status for one quantity in one control volume at the
+last commit: `:pass`, `:fail`, `:blocked` or `:not_applicable`.
 """
 function parent_status(
     adapter::ParentBudgetAdapter,
