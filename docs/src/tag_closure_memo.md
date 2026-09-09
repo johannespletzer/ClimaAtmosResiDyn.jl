@@ -7,7 +7,9 @@ worth it. The experiments that follow from this memo are planned in
 Scope: `Σ tags = parent` for the water tags against `ρq_tot`, and for the
 energy tags and the energy source tags against `ρe_tot`. The subject is `main`
 at `a54ce31`; the parent-budget ledger of the `parent_budget` pages is context
-only. Nothing was run when this memo was written. The latest `main` CI run
+only. Those pages are not on `main`. They arrive with the stacked pull
+requests this branch sits on, so a reader checking `main` will not find them.
+Nothing was run when this memo was written. The latest `main` CI run
 (34316488530, 2026-09-09) passed `tagging_water` 91/91, `tagging_energy` 24/24
 and `tagging_source` 24/24 on Julia 1.11, but prints no residual or closure
 value. The only relevant log lines are the water job's limiter convergence
@@ -68,7 +70,7 @@ MoistBaroclinicWave, SEM limiter, `dt` 300 s, 1 h.
 | Hyperdiffusion, vertical diffusion, viscous sponge under 1M or 2M: the parent acts on `q_tot_eff = q_tot - q_rai - q_sno`, the tags on their full content    | structural, omitted by the docs (`tagged_water.md` 234 to 238 says identical) | none measured; zero under 0M                                                                                                                                         | `hyperdiffusion.jl` 152 to 159, 481 to 487, 527 to 535; `vertical_diffusion_boundary_layer.jl` 111 to 115, 151 to 154; `eddy_diffusion_closures.jl` 1017 to 1021; `viscous_sponge.jl` 190 to 199 |
 | PrognosticEDMFX SGS mass flux and SGS diffusion of `ρq_tot`, no tag counterpart                                                                              | structural, documented                                                        | none measured                                                                                                                                                        | `edmfx_sgs_flux.jl` 106, 121, 326, 488                                                                                                                                                           |
 | PrescribedFlow surface inflow boundary condition                                                                                                             | structural coverage gap, documented                                           | monotonic drift                                                                                                                                                      | `advection.jl` 257 to 259                                                                                                                                                                        |
-| Partition repair zeroing a cell                                                                                                                              | correction-driven                                                             | 1.2e-3 residual on the `ci 1.10` sphere limiter test, bound 1e-2 (`tagged_water_integration.jl` 283 to 289); ledger `q_tag_fix_*`                                    | `tagged_water.jl` 781 to 783                                                                                                                                                                     |
+| Partition repair zeroing a cell                                                                                                                              | correction-driven                                                             | aggregate 1.2e-3 on the `ci 1.10` sphere limiter test, bound 1e-2 (`tagged_water_integration.jl` 283 to 289). Its own share is not separated. Ledger `q_tag_fix_*`   | `tagged_water.jl` 781 to 783                                                                                                                                                                     |
 | Limiter and constraint rescale                                                                                                                               | correction-driven, sum-preserving                                             | recorded in `q_tag_fix_*`                                                                                                                                            | `limited_tendencies.jl` 99, 109, 148                                                                                                                                                             |
 | DSS, reductions, the rescale ratio                                                                                                                           | rounding                                                                      | the t = 0 partition is asserted below `100 eps` (119)                                                                                                                | `constrain_state.jl` 67 to 71; `tagged_tracers.jl` 441 to 470                                                                                                                                    |
 
@@ -127,9 +129,12 @@ Reading (B), arithmetic level, per family:
     per stage. The state and restarts are unchanged. The tag trajectories
     change and the parent does not, so the two Buildkite tagged jobs
     (`full_pipeline.yml` 675 to 693) change output, but neither is
-    reproducibility-tracked, so no `ref_counter` bump. Even then the van Leer
-    correction is nonlinear in the tag, so the residual is bounded by the
-    limiter nonlinearity and not by rounding. (B) needs a linear
+    reproducibility-tracked, so no `ref_counter` bump. That pipeline is a
+    definition here rather than a thing that runs. CI in this repository is
+    the GitHub Actions test groups of `ci.yml`, which makes the conclusion
+    firmer and also means those jobs publish no closure table to read. Even
+    then the van Leer correction is nonlinear in the tag, so the residual is
+    bounded by the limiter nonlinearity and not by rounding. (B) needs a linear
     `energy_q_tot_upwinding` (`none` or `first_order`), which changes the
     parent and does bump `ref_counter`. (ii) Under 1M, run the tags'
     hyperdiffusion, diffusion and sponge on a share of `q_tot_eff`. That needs
@@ -192,11 +197,22 @@ measures nothing.
     1.2e-3 (limiter sphere, `ci 1.10`) and about 1.4e-2 (DYCOMS 1M column)
     against `100 eps` at t = 0, so the residual is three to four orders above
     the rounding floor and useful. Confidence: high. The experiment that would
-    change this: run the 0M column at `dt` = 10, 5 and 2.5 s and record
-    `max|q_tag_res|` minus the `q_tag_fix` ledger. If it scales with `dt`, the
-    split is a time-discretization error that implicit tags would remove, and
-    option 2 becomes worth its Jacobian cost. If it does not, the limiter
-    nonlinearity dominates and option 2 buys nothing.
+    change this: run the 0M column at `dt` = 10, 5 and 2.5 s and record the
+    operator residual. That is the pointwise field
+    `q_tag_res + Σᵢ q_tag_fix_i`, reduced with `max abs` afterwards. The
+    ledger holds the signed change applied to the tag, so a repair that takes
+    water out of a tag records a negative fix and raises `q_tag_res` by that
+    amount. Adding the ledger back cancels it. The experiment page states the
+    order and the sign in full. Run that ladder twice, once at the default
+    `vanleer_limiter` and once at `none` or `first_order` on both upwinding
+    keys. `vertical_transport` hands `dt` to `ᶠlin_vanleer` and to no other
+    reconstruction, so under the default the limiter's own contribution moves
+    with `dt` too and one ladder cannot tell the two apart. The
+    `dt`-independent ladder is the control. If it falls with `dt`, the split
+    is a time-discretization error that implicit tags would remove, and
+    option 2 becomes worth its Jacobian cost, less whatever floor the van
+    Leer ladder shows beneath it. If neither falls, the limiter nonlinearity
+    dominates and option 2 buys nothing.
   - Energy: option 1 only. The residual is by design the sum of every operator
     the parent receives as enthalpy, and the only way to close it is the
     double counting the design rejects. Confidence: high. The experiment: a
