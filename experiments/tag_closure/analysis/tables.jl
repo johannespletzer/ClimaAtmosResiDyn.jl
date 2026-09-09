@@ -109,9 +109,17 @@ function load_run(run_dir)
         end
     end
 
+    # Every table `analysis/reduce_run.jl` can write. A table the reducer
+    # produces and this list omits is invisible to every phase script: the file
+    # is there, `run.reduced` has no key for it, and whatever reads it silently
+    # draws nothing. Keep the two in step.
     reduced = Dict{String, Any}()
-    for table in
-        ("operator_residual", "energy_tag_residual", "source_tag_extrema")
+    for table in (
+        "operator_residual",
+        "energy_tag_residual",
+        "source_tag_extrema",
+        "process_record_extrema",
+    )
         path = joinpath(run_dir, table * ".csv")
         isfile(path) && (reduced[table] = read_table(path)[2])
     end

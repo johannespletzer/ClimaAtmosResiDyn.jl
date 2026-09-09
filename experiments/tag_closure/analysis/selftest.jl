@@ -367,18 +367,23 @@ end
 
 
 """
-    write_energy_run(dir; family)
+    write_energy_run(dir; family, record = family == "energy_source")
 
 A synthetic run for the energy (`"energy"`) or energy-source
 (`"energy_source"`) family: a snapshot, a NetCDF file, a closure table and a
 provenance file.
+
+`record` adds an `energy_process_record` and the `e_prc_<process>` field that
+goes with it. It is what separates a C0 run from a C3 one, and the two-readings
+panel is drawn only from a run that has both series, so a fixture of C0 runs
+alone cannot produce it.
 
 Neither family has a ledger, so there is nothing to add back and the reducer's
 job is a plain reduction. What the source family adds is the per-tag minimum,
 which is the number phase C turns on: `e_src_res` sums the pure region tags
 only, so a source-labelled tag going negative never enters it.
 """
-function write_energy_run(dir; family)
+function write_energy_run(dir; family, record = family == "energy_source")
     mkpath(dir)
     name = basename(dir)
     is_source = family == "energy_source"
@@ -400,7 +405,7 @@ function write_energy_run(dir; family)
             region: extratropics
           - name: src
             source: surface_flux
-        $(is_source ? "energy_process_record: [surface_flux]" : "")
+        $(record ? "energy_process_record: [surface_flux]" : "")
         """,
     )
     write(
@@ -427,6 +432,8 @@ function write_energy_run(dir; family)
             NCDatasets.defVar(ds, prefix * "tropics", tropics, ("time", "z"))
             NCDatasets.defVar(ds, prefix * "extratropics", extratropics, ("time", "z"))
             NCDatasets.defVar(ds, prefix * "src", src, ("time", "z"))
+        end
+        if record
             # The process record. Its diagnostic short name is `e_prc_*` even
             # though the state field is `prc_e_*`, and only the NetCDF carries
             # it, which is why the reducer has to bring it out.
@@ -522,6 +529,14 @@ function test_phase_b_and_c()
     mktempdir() do tmp
         output = joinpath(tmp, "output")
         reducer = load_script(joinpath(HERE, "reduce_run.jl"))
+        # Phase B: the four-run split, plus the timing control. The control
+        # carries no tag family and so no closure table, which is a path
+        # through `load_run` that nothing else here takes.
+        control = write_energy_run(
+            joinpath(output, "b1_notags"); family = "energy", record = false,
+        )
+        rm(joinpath(control, "energy_tag_closure.csv"))
+
         # Phase B: the four-run split.
         for (run, tail) in (
             ("b1_base", 5.0e-3), ("b1a_no_hyperdiff", 3.0e-3),
@@ -544,16 +559,32 @@ function test_phase_b_and_c()
                 println(io, "3600.0,1.0,1.0,0.0,0.0,$tail,$tail,1.0,0.0")
             end
         end
-        # Phase C: one column run, reduced.
-        c_dir = write_energy_run(joinpath(output, "c0_column"); family = "energy_source")
+        # Phase C: the census run, which carries no process record, and the
+        # C3 run, which does. The pair is the point: the two-readings panel is
+        # drawn from a run that has both series, and a run without the record
+        # must not contribute to it. With only c0_column here the panel could
+        # never be drawn, and the assertion below would be demanding an output
+        # the fixture cannot produce.
+        c_dir = write_energy_run(
+            joinpath(output, "c0_column"); family = "energy_source", record = false,
+        )
         header, rows, metadata = call(reducer, :reduce_source_tags, c_dir)
         call(
             reducer, :write_table, c_dir, "source_tag_extrema", header, rows,
             metadata, "synthetic",
         )
-        header, rows, metadata = call(reducer, :reduce_process_record, c_dir)
+
+        c3_dir = write_energy_run(
+            joinpath(output, "c3_column_record"); family = "energy_source",
+        )
+        header, rows, metadata = call(reducer, :reduce_source_tags, c3_dir)
         call(
-            reducer, :write_table, c_dir, "process_record_extrema", header,
+            reducer, :write_table, c3_dir, "source_tag_extrema", header, rows,
+            metadata, "synthetic",
+        )
+        header, rows, metadata = call(reducer, :reduce_process_record, c3_dir)
+        call(
+            reducer, :write_table, c3_dir, "process_record_extrema", header,
             rows, metadata, "synthetic",
         )
 
@@ -578,6 +609,16 @@ function test_phase_b_and_c()
         )
             @assert isfile(joinpath(plots, name)) "missing plot $name"
         end
+
+        # The two-readings panel is the whole reason C3 exists, so assert what
+        # it was drawn from rather than only that a file appeared. It needs a
+        # run carrying both series, and `load_run` has to read the record table
+        # for that run to have them.
+        c_summary = read(joinpath(output, "summary_c.csv"), String)
+        @assert occursin("c3_column_record", c_summary) "C3 is missing from the summary"
+        @assert occursin("surface_flux", c_summary) "the recorded process is missing"
+        @assert occursin("b1_notags", read(joinpath(output, "summary_b.csv"), String)) \
+            "the phase B timing control is missing from the summary"
 
         # The summary has to carry the barrier, not just the residual.
         text = read(joinpath(output, "summary_c.csv"), String)
