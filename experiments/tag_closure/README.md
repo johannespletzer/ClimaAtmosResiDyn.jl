@@ -28,9 +28,22 @@ experiments/tag_closure/
 ```
 
 `runscripts/` holds `phase_a.sh`, `phase_b.sh`, `phase_c.sh` and
-`tag_closure_common.sh`. The three phase scripts are their `#SBATCH` block and
-nothing else; everything they do is in the common file they source, which is
-how `runscripts/levante_gpu_common.sh` is arranged next door.
+`tag_closure_common.sh`, plus a `.tcsh` variant of each. A phase script is its
+`#SBATCH` block and enough logic to find the repository; everything else is in
+the common file it sources, which is how `runscripts/levante_gpu_common.sh` is
+arranged next door. Finding the repository has to happen in the phase script
+rather than the common file, because `sbatch` copies the job script to the
+node's spool directory before running it, so `$0` and `BASH_SOURCE` point
+somewhere that holds none of this. `runscripts/xmodel.1gpu` locates itself the
+same way and for the same reason.
+
+The bash and tcsh variants are the same job in two shells and take the same
+`CONFIG`. The bash ones are the default. The tcsh ones exist as a fallback and
+differ only where tcsh forces it: an unset variable is a fatal "Undefined
+variable" rather than the empty string, so `CONFIG` is guarded with `$?CONFIG`
+before it is ever dereferenced; tcsh has no functions, so the root search is an
+inline `foreach`; and there is no `set -e`, so `$status` is captured on the line
+immediately after the julia call, before anything can overwrite it.
 
 The plan says the runscripts follow `runscripts/run_test_as_job.sh`. That is
 right about the `#SBATCH` block — the `bd1062` account, the shared partition,
@@ -109,8 +122,13 @@ no `provenance.txt` is refused, and that the log-log slope fit recovers 2 from
     The driver and the three analysis scripts were written in a container with
     no Julia, so nothing in `run_tag_closure.jl` or `analysis/` has been
     executed, and JuliaFormatter has not seen them either. `selftest.jl` is the
-    owner's first real check and should be run before any job is submitted. The
-    shell has been exercised, against stub commands; the Julia has not.
+    owner's first real check and should be run before any job is submitted.
+
+    The bash runscripts have been exercised against stub `julia` and `module`
+    commands, including a simulation of `sbatch`'s spool-directory copy. **The
+    tcsh variants have not been checked at all**: no `tcsh` was installed in
+    that container, so not even their syntax has been parsed. Run one of them
+    once by hand before relying on it.
 
 ## Submitting one run
 
@@ -128,6 +146,42 @@ and hands it to the driver. Submit from the repository root; the path may be
 repository-relative, as above, or absolute. Watch the job with
 `squeue -u $USER`; its output lands in the `.out` file beside where it was
 submitted.
+
+### If your login shell is tcsh
+
+`CONFIG=path sbatch script` is POSIX-shell syntax and is **not valid tcsh**.
+From a tcsh login shell, use `env` or `setenv` instead:
+
+```tcsh
+env CONFIG=experiments/tag_closure/configs/a1_dt10.yml \
+    sbatch experiments/tag_closure/runscripts/phase_a.sh
+
+# or
+setenv CONFIG experiments/tag_closure/configs/a1_dt10.yml
+sbatch experiments/tag_closure/runscripts/phase_a.sh
+```
+
+**That is the only thing your login shell changes.** Two choices are in play
+here and they are independent:
+
+  - *What you type.* `VAR=value command` in a POSIX shell, `env VAR=value
+    command` or `setenv` in tcsh.
+  - *What the job script is written in.* `phase_a.sh` is bash, `phase_a.tcsh`
+    is tcsh.
+
+`sbatch` exports the submitting environment whatever the job script's own
+interpreter is, so **the bash scripts work perfectly well when submitted from a
+tcsh login shell** — only the command line differs. Logging in to tcsh is not a
+reason to reach for the `.tcsh` variants.
+
+The bash scripts are the documented default and the ones to use unless you have
+a reason not to. The `.tcsh` variants sit beside them as a fallback, do the same
+work, and take the same `CONFIG`:
+
+```tcsh
+env CONFIG=experiments/tag_closure/configs/a1_dt10.yml \
+    sbatch experiments/tag_closure/runscripts/phase_a.tcsh
+```
 
 The same driver runs by hand on a login node, which is the quick way to find a
 configuration error without queueing:

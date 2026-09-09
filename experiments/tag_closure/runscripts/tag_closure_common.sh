@@ -34,49 +34,9 @@ module load openmpi/4.1.2-gcc-11.2.0
 # builds the CPU and GPU depots separately; see runscripts/README.md.
 export JULIA_DEPOT_PATH="${LEVANTE_DEPOT:-${HOME}/.julia/depots/levante-cpu}"
 
-# ---------------------------------------------------------------------------
-# Locate the repository.
-#
-# From SLURM_SUBMIT_DIR, the directory sbatch was invoked from. That is the
-# repository root for the documented `sbatch experiments/tag_closure/...`, and
-# its parent covers a submit from inside the directory. BASH_SOURCE is no use
-# under sbatch, which copies the script to the node's spool directory first, but
-# it is the right answer for a run by hand outside sbatch. A candidate counts
-# only once it is found to hold the driver, so a wrong guess fails here with an
-# actionable message instead of surfacing later as a missing file.
-# ---------------------------------------------------------------------------
-
-tag_closure_find_root() {
-    local candidate
-    for candidate in "$@"; do
-        [[ -n "${candidate}" ]] || continue
-        if [[ -d "${candidate}/.buildkite" &&
-              -f "${candidate}/experiments/tag_closure/run_tag_closure.jl" ]]; then
-            (cd "${candidate}" && pwd)
-            return 0
-        fi
-    done
-    return 1
-}
-
-if [[ -z "${ROOT:-}" ]]; then
-    ROOT="$(
-        tag_closure_find_root \
-            "${SLURM_SUBMIT_DIR:-}" \
-            "${SLURM_SUBMIT_DIR:+${SLURM_SUBMIT_DIR}/..}" \
-            "${SLURM_SUBMIT_DIR:+${SLURM_SUBMIT_DIR}/../..}" \
-            "$(dirname "${BASH_SOURCE[0]}")/../../.."
-    )" || {
-        echo "ERROR: could not locate the repository." >&2
-        echo "  SLURM_SUBMIT_DIR=${SLURM_SUBMIT_DIR:-unset}" >&2
-        echo "Submit from the repository root:" >&2
-        echo "  CONFIG=experiments/tag_closure/configs/<run>.yml \\" >&2
-        echo "      sbatch experiments/tag_closure/runscripts/<script>" >&2
-        echo "or pass it explicitly:" >&2
-        echo "  ROOT=/path/to/ClimaAtmosResiDyn.jl CONFIG=... sbatch ..." >&2
-        exit 1
-    }
-fi
+# ROOT is found by the phase script before it sources this file, because sbatch
+# copies the job script to the node's spool directory and BASH_SOURCE is no use
+# from in here. It is exported, so it is set by the time we run.
 
 PROJECT="${PROJECT:-${ROOT}/.buildkite}"
 DRIVER="${DRIVER:-${ROOT}/experiments/tag_closure/run_tag_closure.jl}"
