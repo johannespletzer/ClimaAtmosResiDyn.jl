@@ -111,9 +111,20 @@ Rules for the layout:
     for water, `e_tag_res` for energy, `e_src_res` and every `e_src_<name>`
     for the source tags. `q_tag_fix_<name>` is what the analysis removes to
     isolate the operator residual.
+  - Those diagnostics are not automatic in the form this series needs, so
+    every config writes its own `diagnostics:` block and sets
+    `output_default_diagnostics: false`. Two reasons. The default tag block
+    never registers `q_tag_fix_<name>` at all, so the ledger would simply be
+    absent. And it puts the tag list through `frequency_averages`, a time
+    mean, which `tagged_water.md` says is not a meaningful operation on a
+    cumulative field. List each name with no `reduction_time` key, which
+    resolves to an instantaneous sample.
   - The operator residual is the pointwise field
-    `q_tag_res + Σᵢ q_tag_fix_i`, reduced with `max abs` afterwards. The
-    order and the sign both matter. Reducing each term on its own and
+    `q_tag_res + Σᵢ q_tag_fix_i`, reduced with `max abs` afterwards. The `i`
+    runs over the pure region tags only, the same set `q_tag_res` sums, never
+    a tag that carries a `source`. Including a source tag's ledger breaks the
+    identity, because the residual it would cancel was never in `q_tag_res`.
+    The order and the sign both matter. Reducing each term on its own and
     subtracting the two scalars is a different number. The ledger holds the
     signed change applied to the tag, `new - old`, so a repair that takes
     water out of a tag records a negative fix and raises `q_tag_res` by that
@@ -203,14 +214,14 @@ tags get no corrections at all, so their residual can only be larger.
 
 ## Phase B. Energy
 
-| Run | Variant                                                                                                                                                  | Learning question                                                                             |
-|:--- |:-------------------------------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------- |
-| B1  | Moist baroclinic wave, 10 days, `energy_closure_check` every 6 h, `tropics` and `extratropics` region tags; baseline with `hyperdiff` and `vert_diff` on | Which operator carries most of `gross_relative`                                               |
-| B1a | B1 with `hyperdiff` off                                                                                                                                  | The hyperdiffusion share                                                                      |
-| B1b | B1 with `vert_diff` off                                                                                                                                  | The vertical diffusion share                                                                  |
-| B1c | B1 with both off                                                                                                                                         | The advection share that remains                                                              |
-| B2  | DryBaroclinicWave, `held_suarez`, `h_elem` 4, `z_elem` 10, 10 days, as in the energy test                                                                | Reproduce the docs' "below 1% after 10 dry days" and measure the cost of the tags on a sphere |
-| B3  | B1 with `apply_limiter` on                                                                                                                               | How large the jump in `e_tag_res` is when `enforce_mass_energy_consistency!` fires            |
+| Run | Variant                                                                                                                                                                                                      | Learning question                                                                             |
+|:--- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |:--------------------------------------------------------------------------------------------- |
+| B1  | Moist baroclinic wave, `microphysics_model: 0M`, 10 days, `energy_closure_check` every 6 h, `tropics` and `extratropics` region tags; baseline with `hyperdiff` on and `vert_diff: DecayWithHeightDiffusion` | Which operator carries most of `gross_relative`                                               |
+| B1a | B1 with `hyperdiff` off                                                                                                                                                                                      | The hyperdiffusion share                                                                      |
+| B1b | B1 with `vert_diff` off                                                                                                                                                                                      | The vertical diffusion share                                                                  |
+| B1c | B1 with both off                                                                                                                                                                                             | The advection share that remains                                                              |
+| B2  | DryBaroclinicWave, `held_suarez`, `h_elem` 4, `z_elem` 10, 10 days, as in the energy test                                                                                                                    | Reproduce the docs' "below 1% after 10 dry days" and measure the cost of the tags on a sphere |
+| B3  | B1 with `apply_sem_quasimonotone_limiter` on                                                                                                                                                                 | How large the jump in `e_tag_res` is when `enforce_mass_energy_consistency!` fires            |
 
 Decision rule for B1, from the memo. If one operator carries most of the
 residual and it is linear in `e_tot`, mirroring that single operator by share
@@ -223,12 +234,14 @@ and one GPU.
 
 B2 has a choice of base, and the owner makes it. The docs' figure of below
 one percent after ten dry days comes from the validation job that
-`config/model_configs/baroclinic_wave_tagged_tracers.yml` configures, at that
-config's own resolution rather than the integration test's `h_elem` 4 and
-`z_elem` 10. Copying the config reproduces the figure and costs what the
-config costs. Keeping the test's smaller grid is cheaper, but then B2 is a
-fresh measurement that the docs figure cannot be checked against. Either way
-the run happens on Levante, since that job does not run here.
+`config/model_configs/baroclinic_wave_tagged_tracers.yml` configures. That
+file sets no resolution of its own. The job layers it on
+`config/common_configs/numerics_sphere_he6ze10.yml`, which is where `h_elem`
+6, `z_elem` 10 and `dt` 400 s come from. So the gap to the integration test
+is only `h_elem` 6 against 4 and `dt` 400 s against 300 s, and either grid is
+affordable. Reproducing the figure means taking both files, the way the job
+does. Either way the run happens on Levante, since that job does not run
+here.
 
 What phase B teaches about the source tags: the source tags ride the same
 passive-scalar path as the energy tags, so every share measured here is a
@@ -339,10 +352,19 @@ cannot be placed against the rest of the series.
 ## Analysis and plots
 
 One script per phase in `analysis/`, run with `julia --project=.buildkite`,
-which already carries CairoMakie and DataFrames. Each script reads
-`output/`, writes `output/summary_<phase>.csv` and one PNG per question in
-`plots/`. Each script is written against a synthetic CSV before any result
-exists, so it is tested before the owner runs anything.
+which already carries CairoMakie, DataFrames, NCDatasets and ClimaAnalysis.
+It does not carry CSV.jl, so read and write the tables with `DelimitedFiles`
+rather than reaching for `using CSV`. Each script reads `output/`, writes
+`output/summary_<phase>.csv` and one PNG per question in `plots/`. Each
+script is written against a synthetic CSV before any result exists, so it is
+tested before the owner runs anything.
+
+One caveat on the sphere runs. The NetCDF writer remaps horizontally onto a
+lat-lon grid with `BilinearRemapping`, so a pointwise maximum taken from
+NetCDF on A5 and on any phase B or C sphere is a maximum over the remapped
+field, not over the model's own columns. Report it as such. The A1 and A2
+ladders are columns, where no horizontal remapping happens, so the number
+the phase A decision rule turns on is unaffected.
 
   - A1 and A2: `gross_relative` against time per `dt`, and the operator
     residual at the end against `dt` on log axes. Both ladders go in one
