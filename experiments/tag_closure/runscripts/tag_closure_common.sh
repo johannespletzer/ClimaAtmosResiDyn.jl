@@ -26,6 +26,101 @@ source /sw/etc/profile.levante
 
 set -euo pipefail
 
+# ---------------------------------------------------------------------------
+# The git facts, captured HERE and not where they are printed.
+#
+# `module purge` below strips the module environment, and on a Levante compute
+# node that takes git with it: the first real run recorded `commit: unknown`
+# from a job whose every non-git field was correct. Reading them before the
+# purge is most of the fix.
+#
+# The rest of it is not depending on the binary at all. If git is absent, or
+# refuses the repository over `dubious ownership` -- which it does when the
+# checkout is not owned by the user running the job -- HEAD is read straight
+# out of `.git`, which needs no git and cannot be refused. `-c safe.directory`
+# heads off the ownership refusal in the first place.
+#
+# `commit_dirty` is the one thing the file fallback cannot answer, and it must
+# then read `unknown`. It previously read `yes`, because a failed `git diff`
+# took the `|| echo yes` branch, so a job that could not tell reported a dirty
+# tree. That is worse than no answer.
+#
+# `commit_source` and `commit_error` are recorded so that the next time this
+# fails it says why, rather than leaving another `unknown` to be diagnosed from
+# a terminal.
+# ---------------------------------------------------------------------------
+
+GIT_COMMIT=""
+GIT_BRANCH=""
+GIT_DIRTY="unknown"
+GIT_SOURCE="none"
+GIT_ERROR=""
+
+tag_closure_read_git_files() {
+    local head_file="${ROOT}/.git/HEAD"
+    [[ -r "${head_file}" ]] || return 1
+    local head ref
+    head="$(<"${head_file}")"
+    if [[ "${head}" == ref:* ]]; then
+        ref="${head#ref: }"
+        GIT_BRANCH="${ref#refs/heads/}"
+        if [[ -r "${ROOT}/.git/${ref}" ]]; then
+            GIT_COMMIT="$(<"${ROOT}/.git/${ref}")"
+        elif [[ -r "${ROOT}/.git/packed-refs" ]]; then
+            GIT_COMMIT="$(
+                awk -v r="${ref}" '$2 == r { print $1; exit }' \
+                    "${ROOT}/.git/packed-refs"
+            )"
+        fi
+    else
+        # Detached HEAD holds the object name itself.
+        GIT_COMMIT="${head}"
+        GIT_BRANCH="detached"
+    fi
+    [[ -n "${GIT_COMMIT}" ]]
+}
+
+if command -v git >/dev/null 2>&1; then
+    if GIT_COMMIT="$(
+        git -C "${ROOT}" -c safe.directory="${ROOT}" rev-parse HEAD 2>&1
+    )"; then
+        GIT_SOURCE="git"
+        GIT_BRANCH="$(
+            git -C "${ROOT}" -c safe.directory="${ROOT}" \
+                rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown
+        )"
+        if git -C "${ROOT}" -c safe.directory="${ROOT}" \
+            diff --quiet HEAD 2>/dev/null
+        then
+            GIT_DIRTY="no"
+        else
+            GIT_DIRTY="yes"
+        fi
+    else
+        GIT_ERROR="${GIT_COMMIT}"
+        GIT_COMMIT=""
+    fi
+else
+    GIT_ERROR="git is not on PATH"
+fi
+
+if [[ -z "${GIT_COMMIT}" ]]; then
+    if tag_closure_read_git_files; then
+        GIT_SOURCE="git-files"
+    else
+        GIT_SOURCE="none"
+        [[ -n "${GIT_ERROR}" ]] || GIT_ERROR="no .git under ${ROOT}"
+    fi
+fi
+
+[[ -n "${GIT_COMMIT}" ]] || GIT_COMMIT="unknown"
+[[ -n "${GIT_BRANCH}" ]] || GIT_BRANCH="unknown"
+
+if [[ "${GIT_COMMIT}" == "unknown" ]]; then
+    echo "WARNING: could not determine the commit: ${GIT_ERROR}" >&2
+    echo "The analysis refuses a run whose provenance has no commit." >&2
+fi
+
 module purge
 module load gcc/11.2.0-gcc-11.2.0
 module load openmpi/4.1.2-gcc-11.2.0
@@ -174,7 +269,7 @@ echo "Partition:       ${SLURM_JOB_PARTITION:-none}"
 echo "Nodes:           ${SLURM_JOB_NODELIST:-$(hostname)}"
 echo "CPUs per task:   ${SLURM_CPUS_PER_TASK:-1}"
 echo "Repository:      ${ROOT}"
-echo "Commit:          $(git -C "${ROOT}" rev-parse HEAD 2>/dev/null || echo unknown)"
+echo "Commit:          ${GIT_COMMIT} (from ${GIT_SOURCE})"
 echo "Julia:           ${JULIA} ${JULIA_CHANNEL}"
 echo "Project:         ${PROJECT}"
 echo "Driver:          ${DRIVER}"
@@ -243,13 +338,11 @@ node_type="$(
 {
     echo "run: ${JOB_ID}"
     echo "config: ${CONFIG}"
-    echo "commit: $(git -C "${ROOT}" rev-parse HEAD 2>/dev/null || echo unknown)"
-    echo "commit_dirty: $(
-        git -C "${ROOT}" diff --quiet HEAD 2>/dev/null && echo no || echo yes
-    )"
-    echo "branch: $(
-        git -C "${ROOT}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown
-    )"
+    echo "commit: ${GIT_COMMIT}"
+    echo "commit_source: ${GIT_SOURCE}"
+    echo "commit_dirty: ${GIT_DIRTY}"
+    echo "branch: ${GIT_BRANCH}"
+    [[ -z "${GIT_ERROR}" ]] || echo "commit_error: ${GIT_ERROR}"
     echo "julia: $(
         "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} --startup-file=no \
             -e 'print(string(VERSION))' 2>/dev/null || echo unknown

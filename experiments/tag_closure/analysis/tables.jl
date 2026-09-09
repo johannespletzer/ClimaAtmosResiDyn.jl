@@ -92,9 +92,10 @@ end
 Everything the figures need from one run directory, or `nothing` when the
 directory does not hold a finished run.
 
-Refuses a run with no `provenance.txt` rather than quietly analysing it: a
-residual without the commit that produced it cannot be placed against the rest
-of the series.
+Refuses a run whose provenance does not name the commit, whether because the
+file is absent or because it records `commit: unknown`. A residual without the
+commit that produced it cannot be placed against the rest of the series, and an
+`unknown` is that same defect wearing a hat.
 
 The three families are read the same way. `closure` is whichever
 `<family>_tag_closure.csv` the run wrote, `family` says which, and `reduced`
@@ -102,10 +103,34 @@ holds whatever `analysis/reduce_run.jl` produced for it.
 """
 function load_run(run_dir)
     name = basename(run_dir)
-    if !isfile(joinpath(run_dir, "provenance.txt"))
+    provenance_path = joinpath(run_dir, "provenance.txt")
+    if !isfile(provenance_path)
         @warn "Skipping $name: no provenance.txt. A residual without the \
                commit that produced it cannot be placed against the rest of \
                the series. Ask for the file."
+        return nothing
+    end
+    provenance = read(provenance_path, String)
+
+    # The rule is about the commit, not about the file. A provenance that
+    # records `commit: unknown` fails it exactly as a missing one does: the
+    # residual cannot be placed against the rest of the series either way. The
+    # first real run produced one of these, because `module purge` had taken
+    # git off the compute node's PATH, so this is a state that happens rather
+    # than a hypothetical.
+    commit = ""
+    for line in split(provenance, '\n')
+        startswith(line, "commit:") || continue
+        commit = strip(line[(length("commit:") + 1):end])
+        break
+    end
+    if isempty(commit) || commit == "unknown"
+        recorded = isempty(commit) ? "no commit line at all" : "`commit: $commit`"
+        @warn "Skipping $name: its provenance.txt has $recorded. A residual \
+               without the commit that produced it cannot be placed against \
+               the rest of the series. The run itself may be perfectly good: \
+               repair the file rather than discarding the run, and see the \
+               README under `Repairing a provenance`."
         return nothing
     end
 
@@ -153,7 +178,7 @@ function load_run(run_dir)
         float_type = String(setting(config, "FLOAT_TYPE", "Float32")),
         microphysics = String(setting(config, "microphysics_model", "dry")),
         geometry = String(setting(config, "config", "sphere")),
-        provenance = read(joinpath(run_dir, "provenance.txt"), String),
+        provenance,
     )
 end
 

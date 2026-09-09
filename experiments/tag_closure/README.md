@@ -397,8 +397,38 @@ points back to them. Nothing else is committed.
     NetCDF and the checkpoints. None of these is stable across months on that
     system, so a result without them cannot be set against a later one.
 
-**A run whose `provenance.txt` is missing is not analysed.** A residual without
-the commit that produced it cannot be placed against the rest of the series.
+**A run whose provenance does not name the commit is not analysed.** That means
+a missing `provenance.txt` and equally one recording `commit: unknown`: a
+residual without the commit that produced it cannot be placed against the rest
+of the series either way. The analysis warns and skips the run rather than
+failing, so one bad provenance does not stop a phase.
+
+### Repairing a provenance
+
+A run refused this way is usually a good run with a bad file, and it should be
+repaired rather than resubmitted. The runscript now resolves the commit before
+`module purge` and falls back to reading `.git` directly, so new runs record it;
+`a1_dt10`, submitted before that fix, does not.
+
+To repair one, on the machine holding the clone the job ran from, with that
+clone still at the commit it ran:
+
+```bash
+git -C ~/git/ClimaAtmosResiDyn.jl rev-parse HEAD
+git -C ~/git/ClimaAtmosResiDyn.jl rev-parse --abbrev-ref HEAD
+```
+
+Then edit the run's `provenance.txt`: replace `commit: unknown` with that hash,
+`branch: unknown` with that branch, and set `commit_dirty: unknown`. **Leave it
+as `unknown`.** The old runscript wrote `yes` there whenever git failed, so that
+`yes` is the failure path firing and not an observation, and nothing now can
+tell whether the tree was clean at submit time. Add `commit_source: repaired-by-hand`
+so the next reader knows the line was reconstructed rather than recorded.
+
+If the clone has moved on since the run, the commit is whatever it was at
+`started:` in that same file; `git reflog` on that clone will find it. If it
+cannot be established at all, the run is not usable as a measurement and should
+be resubmitted.
 
 ## Open items
 

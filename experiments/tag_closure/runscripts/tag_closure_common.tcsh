@@ -26,6 +26,67 @@ if (-f /sw/etc/csh.levante) then
     source /sw/etc/csh.levante
 endif
 
+# ---------------------------------------------------------------------------
+# The git facts, captured before `module purge`, which on a Levante compute
+# node takes git with it. If git is absent or refuses the repository over
+# dubious ownership, HEAD is read straight out of .git, which needs no binary.
+# `commit_dirty` is the one thing the file route cannot answer and then reads
+# `unknown` rather than `yes`, so a job that could not tell does not claim a
+# dirty tree.
+# ---------------------------------------------------------------------------
+
+set GIT_COMMIT = ""
+set GIT_BRANCH = ""
+set GIT_DIRTY = "unknown"
+set GIT_SOURCE = "none"
+set GIT_ERROR = ""
+
+which git >& /dev/null
+if ($status == 0) then
+    set GIT_COMMIT = `git -C "$ROOT" -c safe.directory="$ROOT" rev-parse HEAD`
+    if ($status == 0 && "$GIT_COMMIT" != "") then
+        set GIT_SOURCE = "git"
+        set GIT_BRANCH = `git -C "$ROOT" -c safe.directory="$ROOT" rev-parse --abbrev-ref HEAD`
+        git -C "$ROOT" -c safe.directory="$ROOT" diff --quiet HEAD
+        if ($status == 0) then
+            set GIT_DIRTY = "no"
+        else
+            set GIT_DIRTY = "yes"
+        endif
+    else
+        set GIT_COMMIT = ""
+        set GIT_ERROR = "git rev-parse failed"
+    endif
+else
+    set GIT_ERROR = "git is not on PATH"
+endif
+
+if ("$GIT_COMMIT" == "") then
+    if (-r "$ROOT/.git/HEAD") then
+        set head = `cat "$ROOT/.git/HEAD"`
+        if ("$head" =~ "ref:*") then
+            set ref = `echo "$head" | sed s/^ref:\ *//`
+            set GIT_BRANCH = `echo "$ref" | sed s@^refs/heads/@@`
+            if (-r "$ROOT/.git/$ref") then
+                set GIT_COMMIT = `cat "$ROOT/.git/$ref"`
+            else if (-r "$ROOT/.git/packed-refs") then
+                set GIT_COMMIT = `awk -v r="$ref" '$2 == r { print $1; exit }' "$ROOT/.git/packed-refs"`
+            endif
+        else
+            set GIT_COMMIT = "$head"
+            set GIT_BRANCH = "detached"
+        endif
+        if ("$GIT_COMMIT" != "") set GIT_SOURCE = "git-files"
+    endif
+endif
+
+if ("$GIT_COMMIT" == "") set GIT_COMMIT = "unknown"
+if ("$GIT_BRANCH" == "") set GIT_BRANCH = "unknown"
+
+if ("$GIT_COMMIT" == "unknown") then
+    echo "WARNING: could not determine the commit: $GIT_ERROR" >> /dev/stderr
+endif
+
 module purge
 module load gcc/11.2.0-gcc-11.2.0
 module load openmpi/4.1.2-gcc-11.2.0
@@ -201,10 +262,8 @@ if ($?SLURM_JOB_NODELIST) set slurm_nodelist = "$SLURM_JOB_NODELIST"
 set slurm_cpus = "1"
 if ($?SLURM_CPUS_PER_TASK) set slurm_cpus = "$SLURM_CPUS_PER_TASK"
 
-set commit = `git -C "$ROOT" rev-parse HEAD`
-if ("$commit" == "") set commit = "unknown"
-set branch = `git -C "$ROOT" rev-parse --abbrev-ref HEAD`
-if ("$branch" == "") set branch = "unknown"
+set commit = "$GIT_COMMIT"
+set branch = "$GIT_BRANCH"
 
 echo "================================================================"
 echo "ClimaAtmos tag-closure run (tcsh)"
@@ -266,13 +325,6 @@ endif
 
 set provenance = "${PROVENANCE_DIR}/provenance.txt"
 
-git -C "$ROOT" diff --quiet HEAD
-if ($status == 0) then
-    set dirty = "no"
-else
-    set dirty = "yes"
-endif
-
 if ("$JULIA_CHANNEL" == "") then
     set julia_version = `"$JULIA" --startup-file=no -e 'print(string(VERSION))'`
 else
@@ -286,8 +338,10 @@ if ("$node_type" == "") set node_type = "unknown"
 echo "run: ${JOB_ID}"                                   >  "$provenance"
 echo "config: ${CONFIG}"                                >> "$provenance"
 echo "commit: ${commit}"                                >> "$provenance"
-echo "commit_dirty: ${dirty}"                           >> "$provenance"
+echo "commit_source: ${GIT_SOURCE}"                     >> "$provenance"
+echo "commit_dirty: ${GIT_DIRTY}"                       >> "$provenance"
 echo "branch: ${branch}"                                >> "$provenance"
+if ("$GIT_ERROR" != "") echo "commit_error: ${GIT_ERROR}" >> "$provenance"
 echo "julia: ${julia_version}"                          >> "$provenance"
 echo "julia_depot: ${JULIA_DEPOT_PATH}"                 >> "$provenance"
 echo "project: ${PROJECT}"                              >> "$provenance"

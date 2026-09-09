@@ -377,10 +377,34 @@ function test_phase_a()
             write_synthetic_closure(dir, run, dt, [tail / 2, tail])
             write_synthetic_operator(dir, [tail / 2, tail])
         end
-        # A run handed back without provenance must be refused, not analysed.
+        # Two ways a run must be refused, which are the same defect: no
+        # provenance at all, and a provenance that cannot name the commit. The
+        # first real run produced the second kind, because `module purge` took
+        # git off the compute node's PATH, so it is not hypothetical.
         orphan = joinpath(output, "a5_sphere_limiter")
         mkpath(orphan)
         write_synthetic_closure(orphan, "a5_sphere_limiter", 300.0, [1.0e-2, 2.0e-2])
+
+        nameless = joinpath(output, "a2_none_dt10")
+        mkpath(nameless)
+        write(
+            joinpath(nameless, "provenance.txt"),
+            "run: a2_none_dt10\ncommit: unknown\ncommit_dirty: unknown\n",
+        )
+        write(
+            joinpath(nameless, "a2_none_dt10.yml"),
+            """
+            job_id: a2_none_dt10
+            config: column
+            dt: 10secs
+            FLOAT_TYPE: Float64
+            microphysics_model: 0M
+            tracer_upwinding: none
+            $(unset_lines(()))
+            """,
+        )
+        write_synthetic_closure(nameless, "a2_none_dt10", 10.0, [1.0e-4, 2.0e-4])
+        write_synthetic_operator(nameless, [1.0e-4, 2.0e-4])
 
         phase = load_script(joinpath(HERE, "phase_a.jl"))
         withenv("TAG_CLOSURE_DIR" => tmp) do
@@ -391,7 +415,17 @@ function test_phase_a()
         @assert isfile(summary) "no summary_a.csv"
         text = read(summary, String)
         @assert occursin("a1_dt10", text) && occursin("a2_none_dt2p5", text)
-        @assert !occursin("a5_sphere_limiter", text) "a run with no provenance was analysed"
+        @assert(
+            !occursin("a5_sphere_limiter", text),
+            "a run with no provenance was analysed",
+        )
+        # ... and the one whose provenance cannot name the commit, which is the
+        # same rule and a different symptom. It has a closure table and a
+        # reduced table, so only the commit check can keep it out.
+        @assert(
+            !occursin("a2_none_dt10", text),
+            "a run recording `commit: unknown` was analysed",
+        )
 
         plots = joinpath(tmp, "plots")
         for name in (
@@ -401,7 +435,8 @@ function test_phase_a()
         )
             @assert isfile(joinpath(plots, name)) "missing plot $name"
         end
-        @info "   summary and three PNGs written; the run without provenance was refused"
+        @info "   summary and three PNGs written; both the run with no \
+               provenance and the one recording `commit: unknown` were refused"
     end
 end
 
