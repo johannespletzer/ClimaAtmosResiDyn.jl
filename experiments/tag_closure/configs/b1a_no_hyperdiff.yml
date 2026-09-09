@@ -1,0 +1,67 @@
+# B1a. B1 with hyperdiffusion off, to measure its share of the residual.
+
+job_id: "b1a_no_hyperdiff"
+
+# Grid and numerics from `config/common_configs/numerics_sphere_he6ze10.yml`,
+# folded in rather than layered. The driver takes one configuration path, so
+# layering would mean teaching it the `--config_file` list that
+# `.buildkite/ci_driver.jl` takes, and the run would then no longer be described
+# by one readable file. The cost is that a later change to the common config
+# does not reach these copies; the README records that trade.
+#
+# This is the grid the shipped `baroclinic_wave_tagged_tracers` job runs on, so
+# B1 and B2 sit on the same mesh and the docs' below-one-percent figure is
+# comparable rather than a fresh measurement.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "10days"
+FLOAT_TYPE: "Float64"
+
+# The two operators B1 splits apart. `hyperdiff` is on by default; `vert_diff`
+# is not, so the baseline names both explicitly and each variant switches one
+# off. B1 is moist because B3's limiter path only fires when ρq_tot is in the
+# state.
+hyperdiff: "Hyperdiffusion"
+vert_diff: "DecayWithHeightDiffusion"
+
+# The variant. Overrides the baseline's `Hyperdiffusion` above.
+hyperdiff: ~
+
+# `tropics` and `extratropics` are exact complements, so the pair partitions
+# ρe_tot and `e_tag_res` reads as attribution leakage rather than as overlap.
+# The check needs at least one tag with a `region` and no `source`, or it errors
+# at startup before the first step.
+energy_tracers:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+
+# Every six hours over ten days. `tolerance` is left unset so the family default
+# applies and the run only warns.
+energy_closure_check:
+  period: "6hours"
+
+# Instantaneous samples, defaults off, as in phase A.
+#
+# There is no ledger for the energy family. Nothing corrects the energy tags, so
+# no `q_tag_fix` analogue exists and there is no operator-residual subtraction
+# to make here. What the analysis reads is `gross_relative` from the closure
+# table and `e_tag_res` from these fields.
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_tag_res]
+    period: "6hours"
+  - short_name: [e_tag_tropics, e_tag_extratropics]
+    period: "6hours"

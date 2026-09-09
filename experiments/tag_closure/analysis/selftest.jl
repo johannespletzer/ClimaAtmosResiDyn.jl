@@ -348,6 +348,193 @@ function test_slope()
     @info "   slope 2 recovered from y = x², 0 from a flat ladder"
 end
 
+
+"""
+    write_energy_run(dir; family)
+
+A synthetic run for the energy (`"energy"`) or energy-source
+(`"energy_source"`) family: a snapshot, a NetCDF file, a closure table and a
+provenance file.
+
+Neither family has a ledger, so there is nothing to add back and the reducer's
+job is a plain reduction. What the source family adds is the per-tag minimum,
+which is the number phase C turns on: `e_src_res` sums the pure region tags
+only, so a source-labelled tag going negative never enters it.
+"""
+function write_energy_run(dir; family)
+    mkpath(dir)
+    name = basename(dir)
+    is_source = family == "energy_source"
+    key = is_source ? "energy_source_tags" : "energy_tracers"
+    prefix = is_source ? "e_src_" : "e_tag_"
+
+    write(
+        joinpath(dir, name * ".yml"),
+        """
+        job_id: $name
+        config: column
+        dt: 400secs
+        FLOAT_TYPE: Float64
+        microphysics_model: 0M
+        $key:
+          - name: tropics
+            region: tropics
+          - name: extratropics
+            region: extratropics
+          - name: src
+            source: surface_flux
+        """,
+    )
+    write(
+        joinpath(dir, "provenance.txt"),
+        "run: $name\ncommit: 0123456789abcdef\nfinished: 2026-09-09T12:00:00\n",
+    )
+
+    times = [0.0, 3600.0]
+    rows(a, b) = permutedims(hcat(a, b))
+    residual = rows([1.0, -3.0, 0.0, 2.0], [0.0, 0.5, 0.0, 0.0])
+    # The region tags stay positive; `src` goes negative at the second time.
+    # That is the case e_src_res cannot show, so the minimum has to.
+    tropics = rows([5.0, 6.0, 7.0, 8.0], [5.0, 6.0, 7.0, 8.0])
+    extratropics = rows([1.0, 1.0, 1.0, 1.0], [2.0, 2.0, 2.0, 2.0])
+    src = rows([0.0, 0.0, 0.0, 0.0], [-4.0, 1.0, 1.0, 1.0])
+
+    NCDatasets.NCDataset(joinpath(dir, "diagnostics.nc"), "c") do ds
+        NCDatasets.defDim(ds, "time", length(times))
+        NCDatasets.defDim(ds, "z", 4)
+        NCDatasets.defVar(ds, "time", times, ("time",))
+        NCDatasets.defVar(ds, "z", collect(1.0:4.0), ("z",))
+        NCDatasets.defVar(ds, prefix * "res", residual, ("time", "z"))
+        if is_source
+            NCDatasets.defVar(ds, prefix * "tropics", tropics, ("time", "z"))
+            NCDatasets.defVar(ds, prefix * "extratropics", extratropics, ("time", "z"))
+            NCDatasets.defVar(ds, prefix * "src", src, ("time", "z"))
+        end
+    end
+
+    # A closure table with the real column set, including nonpositive_fraction.
+    open(joinpath(dir, family * "_tag_closure.csv"), "w") do io
+        println(
+            io,
+            "time,total,tagged,residual,relative,gross_residual," *
+            "gross_relative,scale,nonpositive_fraction",
+        )
+        println(io, "0.0,1.0,1.0,0.0,0.0,1.0e-4,1.0e-4,1.0,0.0")
+        println(io, "3600.0,1.0,1.0,0.0,0.0,5.0e-4,5.0e-4,1.0,0.75")
+    end
+    return dir
+end
+
+function test_energy_reducer()
+    @info "5. reduce_run.jl on the energy family"
+    mktempdir() do tmp
+        run_dir = write_energy_run(joinpath(tmp, "b1_base"); family = "energy")
+        reducer = load_script(joinpath(HERE, "reduce_run.jl"))
+        header, rows, metadata = call(reducer, :reduce_energy_tags, run_dir)
+        index = Dict(name => i for (i, name) in enumerate(header))
+        values = [row[index["max_abs_e_tag_res"]] for row in rows]
+        # max|[1, -3, 0, 2]| = 3 and max|[0, 0.5, 0, 0]| = 0.5.
+        @assert values ≈ [3.0, 0.5] "e_tag_res: $values, want [3.0, 0.5]"
+        @assert metadata.remapped == false
+        @info "   max |e_tag_res| $values — as computed by hand"
+    end
+end
+
+function test_source_reducer()
+    @info "6. reduce_run.jl on the energy source family"
+    mktempdir() do tmp
+        run_dir =
+            write_energy_run(joinpath(tmp, "c0_column"); family = "energy_source")
+        reducer = load_script(joinpath(HERE, "reduce_run.jl"))
+        header, rows, metadata = call(reducer, :reduce_source_tags, run_dir)
+        index = Dict(name => i for (i, name) in enumerate(header))
+
+        residual = [row[index["max_abs_e_src_res"]] for row in rows]
+        @assert residual ≈ [3.0, 0.5] "e_src_res: $residual"
+
+        # The whole point: the source tag dips to -4 at the second time while
+        # both region tags stay positive, so the residual above cannot show it.
+        min_src = [row[index["min_e_src_src"]] for row in rows]
+        @assert min_src ≈ [0.0, -4.0] "min of the source tag: $min_src"
+        min_tropics = [row[index["min_e_src_tropics"]] for row in rows]
+        @assert all(>=(0), min_tropics) "the region tag should stay positive"
+
+        # Every tag is covered, source-labelled ones included.
+        for name in ("tropics", "extratropics", "src")
+            @assert haskey(index, "min_e_src_" * name) "no minimum for $name"
+            @assert haskey(index, "max_e_src_" * name) "no maximum for $name"
+        end
+        @info "   the source tag's minimum reached $(min_src[2]) while \
+               max |e_src_res| stayed at $(residual[2]); only the minima show it"
+    end
+end
+
+function test_phase_b_and_c()
+    @info "7. phase_b.jl and phase_c.jl on synthetic tables"
+    mktempdir() do tmp
+        output = joinpath(tmp, "output")
+        # Phase B: the four-run split plus the control.
+        for (run, tail) in (
+            ("b1_base", 5.0e-3), ("b1a_no_hyperdiff", 3.0e-3),
+            ("b1b_no_vert_diff", 4.0e-3), ("b1c_neither", 1.0e-3),
+        )
+            dir = write_energy_run(joinpath(output, run); family = "energy")
+            reducer = load_script(joinpath(HERE, "reduce_run.jl"))
+            header, rows, metadata = call(reducer, :reduce_energy_tags, dir)
+            call(
+                reducer, :write_table, dir, "energy_tag_residual", header, rows,
+                metadata, "synthetic",
+            )
+            # Give each variant its own final gross_relative.
+            open(joinpath(dir, "energy_tag_closure.csv"), "w") do io
+                println(
+                    io,
+                    "time,total,tagged,residual,relative,gross_residual," *
+                    "gross_relative,scale,nonpositive_fraction",
+                )
+                println(io, "0.0,1.0,1.0,0.0,0.0,$(tail / 5),$(tail / 5),1.0,0.0")
+                println(io, "3600.0,1.0,1.0,0.0,0.0,$tail,$tail,1.0,0.0")
+            end
+        end
+        # Phase C: one column run, reduced.
+        c_dir = write_energy_run(joinpath(output, "c0_column"); family = "energy_source")
+        reducer = load_script(joinpath(HERE, "reduce_run.jl"))
+        header, rows, metadata = call(reducer, :reduce_source_tags, c_dir)
+        call(
+            reducer, :write_table, c_dir, "source_tag_extrema", header, rows,
+            metadata, "synthetic",
+        )
+
+        phase_b = load_script(joinpath(HERE, "phase_b.jl"))
+        phase_c = load_script(joinpath(HERE, "phase_c.jl"))
+        withenv("TAG_CLOSURE_DIR" => tmp) do
+            call(phase_b, :main)
+            call(phase_c, :main)
+        end
+
+        for name in ("summary_b.csv", "summary_c.csv")
+            @assert isfile(joinpath(output, name)) "no $name"
+        end
+        plots = joinpath(tmp, "plots")
+        for name in (
+            "b_gross_relative_bars.png",
+            "b_gross_relative_vs_time.png",
+            "c_nonpositive_fraction.png",
+            "c_min_tag_value.png",
+            "c_e_src_res.png",
+        )
+            @assert isfile(joinpath(plots, name)) "missing plot $name"
+        end
+
+        # The summary has to carry the barrier, not just the residual.
+        text = read(joinpath(output, "summary_c.csv"), String)
+        @assert occursin("-4.0", text) "the most negative tag value is missing"
+        @assert occursin("0.75", text) "the non-positive fraction is missing"
+        @info "   both summaries and five PNGs written; the C summary carries \
+               the negative tag and the non-positive fraction"
+    end
+end
+
 function run_selftest()
     @info "Tag-closure analysis self-test. This is the first execution of \
            these scripts: they were written where no Julia was available."
@@ -355,6 +542,9 @@ function run_selftest()
     test_sphere_is_flagged()
     test_phase_a()
     test_slope()
+    test_energy_reducer()
+    test_source_reducer()
+    test_phase_b_and_c()
     @info "All assertions passed."
     return nothing
 end

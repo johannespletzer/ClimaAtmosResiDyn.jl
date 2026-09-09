@@ -64,9 +64,24 @@ owner's committed results would need a `git add -f` every time.
 configurations to read: a phase script is written against the columns its runs
 actually produce, and writing one now would be guessing at them.
 
-The phase B and C configurations are still to come, so `phase_b.sh` and
-`phase_c.sh` have nothing to run yet and their wall times and memory are
-provisional until the B1 resolution is settled.
+### How the sphere configurations are put together
+
+The B and C sphere runs need the grid from
+`config/common_configs/numerics_sphere_he6ze10.yml`. `.buildkite` layers that
+with `--config_file`, and these configurations **fold its keys in instead**. The
+driver takes one configuration path, so layering would mean teaching it the
+`--config_file` list that `ci_driver.jl` takes, and a run would then no longer
+be described by one readable file. The cost is that a later change to the common
+config does not reach these copies, and each names its source in a comment so
+the drift is at least findable.
+
+That grid is the one the shipped `baroclinic_wave_tagged_tracers` job runs on,
+so B1, B2 and `c0_sphere` all sit on the same mesh: the docs' below-one-percent
+figure is comparable rather than a fresh measurement, and the sphere cost of the
+two energy families can be set against each other.
+
+`c1_*` and `c2_*` are still not written. Both need a model change and the
+owner's approval, and C1's reference-shift shape has not been chosen.
 
 ## Analysis
 
@@ -100,8 +115,28 @@ partition repair's ledger sums to zero on its sum-preserving branch and to a
 positive number on the branch that zeroes a cell, so the operator residual is
 usually the larger of the two.
 
-`analysis/phase_a.jl` runs afterwards, over the committed `output/`, and writes
-`output/summary_a.csv` plus three PNGs into `plots/`.
+For the energy and energy-source families the reducer instead writes
+`energy_tag_residual.csv` (`max |e_tag_res|` per time) and
+`source_tag_extrema.csv` (`max |e_src_res|`, and the minimum and maximum of
+**every** tag). It writes whichever apply, so a run configuring two families
+gets two tables and a timing control gets none.
+
+!!! note "There is no ledger outside the water family"
+
+    `q_tag_fix_<name>` exists because `rescale_water_tags!` and
+    `repair_water_tag_partition!` correct the water tags and record what they
+    moved. Nothing corrects the energy tags, and the energy source tags have no
+    rescale and no partition repair at all. So there is **no `e_tag_fix` or
+    `e_src_fix`, and the operator-residual subtraction of phase A does not apply
+    to phases B and C.** Do not go looking for one. What replaces it is the
+    per-tag minimum in `source_tag_extrema.csv`: `e_src_res` sums the pure
+    region tags only, so a source-labelled tag going negative never enters it
+    and has to be watched directly.
+
+`analysis/phase_a.jl`, `phase_b.jl` and `phase_c.jl` run afterwards over the
+committed `output/`, and write `output/summary_<phase>.csv` plus the phase's
+PNGs into `plots/`. They share `analysis/tables.jl`, which holds the readers, so
+that three scripts cannot drift apart in how they read a run.
 
 ### Testing the analysis
 
@@ -280,6 +315,10 @@ adjusted from what was learned before they are submitted.
 `c1_*` and `c2_*` are not written. C1 is the reference shift and C2 is the
 implicit-path brackets; both need a code change and the owner's approval first.
 
+All 24 configurations in the register now exist under `configs/`, along with the
+driver, the runscripts and the analysis. Nothing is waiting on the agent; what
+is left is submitting them.
+
 ## Run register
 
 Tick a run once it has been submitted, once its files are committed under
@@ -350,3 +389,15 @@ the commit that produced it cannot be placed against the rest of the series.
   - Whether C3 also wants a sphere counterpart. As registered it is the column
     only, since C3 compares two readings of one run and the column is the cheap
     one.
+  - **Whether the sphere runs should use MPI ranks.** Every runscript here runs
+    one process with `CLIMACOMMS_CONTEXT=SINGLETON` and no `srun`, which is
+    plainly right for phase A's column and sidesteps the CPU/GPU preferences
+    clash that `runscripts/README.md` describes. At `h_elem` 6 with `z_elem` 10
+    the B and C spheres are the resolution the existing CI job already runs
+    single-process, so nothing here needs ranks to work; ten days of B1 is the
+    longest of them and is the one to time first. If a later phase raises the
+    resolution, or B1 turns out to overrun the shared partition's wall clock,
+    the change is `--ntasks`, `CLIMACOMMS_CONTEXT=MPI` and an `srun` in front of
+    the driver, and at that point the stack-selection warning in
+    `runscripts/README.md` starts to matter. Not a problem now; worth knowing
+    where the edge is.

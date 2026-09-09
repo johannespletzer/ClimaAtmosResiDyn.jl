@@ -104,22 +104,46 @@ This is the set `q_tag_res` sums over, so it is also the set whose ledgers the
 operator residual adds back. A tag carrying a `source` is not a member of the
 partition, and its ledger cancels a residual that was never in `q_tag_res`.
 """
-function region_tag_names(config)
-    tags = get(config, "water_tracers", nothing)
+function region_tag_names(config, key = "water_tracers")
+    tags = get(config, key, nothing)
     isnothing(tags) && error(
-        "This run configured no `water_tracers`, so it has no operator \
-        residual to reduce. The timing control is one such run and is not \
-        reduced.",
+        "This run configured no `$key`, so there is nothing of that family to \
+        reduce. A timing control is one such run.",
     )
     names = [
         String(tag["name"]) for tag in tags if
         haskey(tag, "region") && !haskey(tag, "source")
     ]
     isempty(names) && error(
-        "No pure region tag in `water_tracers`. The closure check would not \
-        have started either.",
+        "No pure region tag in `$key`. The closure check would not have \
+        started either.",
     )
     return names
+end
+
+"""
+    all_tag_names(config, key)
+
+Every tag of a family, region and source alike.
+
+Phase C needs the source-labelled ones too. `e_src_res` is the parent minus the
+sum of the *pure region* tags, so a source tag going negative never enters it
+and has to be watched directly.
+"""
+all_tag_names(config, key) =
+    [String(tag["name"]) for tag in get(config, key, [])]
+
+"""
+    geometry_of(config)
+
+`(geometry, remapped)`. A column is finite-difference in the vertical with no
+horizontal remapping, so its maxima are over the model's own levels. Anything
+else is written through a bilinear remap onto lat-lon, and a maximum there is
+over the remapped field.
+"""
+function geometry_of(config)
+    geometry = String(get(config, "config", "sphere"))
+    return (geometry, geometry != "column")
 end
 
 """
@@ -206,12 +230,8 @@ Compute the operator residual table. Returns `(header, rows, metadata)`.
 """
 function reduce_run(output_dir)
     config = run_config(output_dir)
-    regions = region_tag_names(config)
-    geometry = String(get(config, "config", "sphere"))
-    # A column is finite-difference in the vertical and has no horizontal
-    # remapping to do, so its maximum is over the model's own levels. A sphere
-    # is written through a bilinear remap onto lat-lon.
-    remapped = geometry != "column"
+    regions = region_tag_names(config, "water_tracers")
+    geometry, remapped = geometry_of(config)
 
     times, residual = read_field(output_dir, "q_tag_res")
     ledgers = map(regions) do name
@@ -309,6 +329,143 @@ function write_operator_residual(output_dir, header, rows, metadata)
     return path
 end
 
+"""
+    min_over(row)
+
+`minimum(row)` with `NaN` treated as absent. The minimum of a source tag over
+time is the number phase C watches: a negative value invalidates the
+amount-of-energy reading of that tag for as long as it lasts, and `e_src_res`
+will not show it.
+"""
+function min_over(row)
+    best = Inf
+    for value in row
+        isfinite(value) || continue
+        best = min(best, value)
+    end
+    return isfinite(best) ? best : NaN
+end
+
+"""
+    max_over(row)
+
+`maximum(row)`, with `NaN` treated as absent.
+"""
+function max_over(row)
+    best = -Inf
+    for value in row
+        isfinite(value) || continue
+        best = max(best, value)
+    end
+    return isfinite(best) ? best : NaN
+end
+
+"""
+    reduce_energy_tags(output_dir)
+
+`e_tag_res` reduced to `max abs` per time, for a run carrying `energy_tracers`.
+
+There is no ledger for this family. Nothing corrects the energy tags, so no
+`q_tag_fix` analogue exists and there is no operator-residual subtraction to
+make. This table is the residual field's own magnitude, which the closure
+table's volume integral does not give.
+"""
+function reduce_energy_tags(output_dir)
+    config = run_config(output_dir)
+    region_tag_names(config, "energy_tracers")
+    geometry, remapped = geometry_of(config)
+    times, residual = read_field(output_dir, "e_tag_res")
+    header = ["time", "geometry", "remapped", "max_abs_e_tag_res"]
+    rows = [
+        Any[times[i], geometry, remapped, max_abs(view(residual, i, :))] for
+        i in eachindex(times)
+    ]
+    return (header, rows, (; geometry, remapped, job_id = get(config, "job_id", "unknown")))
+end
+
+"""
+    reduce_source_tags(output_dir)
+
+Per time: `max abs e_src_res`, and the minimum and maximum of **every** source
+tag, region-labelled and source-labelled alike.
+
+The minima are the point. `e_src_res` is the parent minus the sum of the pure
+region tags, so a source-labelled tag going negative never enters it, and a
+negative region-tag error can be cancelled by a positive one elsewhere. The
+family has no rescale and no partition repair, so nothing stops a tag going
+negative and staying there, and a negative tag invalidates the
+amount-of-energy reading for as long as it lasts.
+"""
+function reduce_source_tags(output_dir)
+    config = run_config(output_dir)
+    region_tag_names(config, "energy_source_tags")
+    names = all_tag_names(config, "energy_source_tags")
+    geometry, remapped = geometry_of(config)
+
+    times, residual = read_field(output_dir, "e_src_res")
+    fields = map(names) do name
+        field_times, field = read_field(output_dir, "e_src_" * name)
+        field_times == times || error(
+            "`e_src_$name` is sampled at different times than `e_src_res`; \
+            give them the same `period`.",
+        )
+        return field
+    end
+
+    header = vcat(
+        ["time", "geometry", "remapped", "max_abs_e_src_res"],
+        ["min_e_src_" * name for name in names],
+        ["max_e_src_" * name for name in names],
+    )
+    rows = map(eachindex(times)) do i
+        return vcat(
+            Any[times[i], geometry, remapped, max_abs(view(residual, i, :))],
+            [min_over(view(field, i, :)) for field in fields],
+            [max_over(view(field, i, :)) for field in fields],
+        )
+    end
+    return (header, rows, (; geometry, remapped, job_id = get(config, "job_id", "unknown")))
+end
+
+"""
+    write_table(output_dir, basename, header, rows, metadata, note)
+
+Write one reduced table with the provenance block above its header.
+"""
+function write_table(output_dir, basename, header, rows, metadata, note)
+    path = joinpath(output_dir, basename * ".csv")
+    open(path, "w") do io
+        println(io, "# $basename.csv, from analysis/reduce_run.jl")
+        println(io, "# run: $(metadata.job_id)")
+        println(io, "# generated: $(round(Int, time())) (unix)")
+        println(io, "# geometry: $(metadata.geometry)")
+        if metadata.remapped
+            println(
+                io,
+                "# NOTE: sphere. The NetCDF writer bilinearly remaps to \
+                lat-lon, so every",
+            )
+            println(
+                io,
+                "# reduction here is over the remapped field, not over the \
+                model's own columns.",
+            )
+        else
+            println(
+                io,
+                "# Column geometry: no horizontal remapping, so the \
+                reductions are over the model's own levels.",
+            )
+        end
+        println(io, "# " * note)
+        println(io, join(header, ","))
+        for row in rows
+            println(io, join(row, ","))
+        end
+    end
+    return path
+end
+
 function main()
     from_env = get(ENV, "OUTPUT_DIR", "")
     output_dir = !isempty(from_env) ? from_env : (isempty(ARGS) ? "" : first(ARGS))
@@ -318,18 +475,60 @@ function main()
     )
     isdir(output_dir) || error("Not a directory: $output_dir")
 
-    header, rows, metadata = reduce_run(output_dir)
-    path = write_operator_residual(output_dir, header, rows, metadata)
+    config = run_config(output_dir)
+    written = String[]
+    remapped = false
 
-    @info "Wrote the operator residual table" path rows = length(rows) metadata.geometry
-    if !isempty(rows)
-        @info "First and last row" first = rows[1] last = rows[end]
+    # Whichever families the run configured. A timing control configures none
+    # and is not reduced, which is not an error.
+    if !isnothing(get(config, "water_tracers", nothing))
+        header, rows, metadata = reduce_run(output_dir)
+        remapped |= metadata.remapped
+        push!(
+            written,
+            write_operator_residual(output_dir, header, rows, metadata),
+        )
+        isempty(rows) || @info "operator residual" first = rows[1] last = rows[end]
     end
-    metadata.remapped && @warn "Sphere geometry: every maximum is over the \
-                                bilinearly remapped lat-lon field rather than \
-                                the model's own columns. Do not set it beside \
-                                a column number as though they were the same."
-    return path
+    if !isnothing(get(config, "energy_tracers", nothing))
+        header, rows, metadata = reduce_energy_tags(output_dir)
+        remapped |= metadata.remapped
+        push!(
+            written,
+            write_table(
+                output_dir, "energy_tag_residual", header, rows, metadata,
+                "max |e_tag_res| per time. This family has no ledger, so there \
+                is no operator-residual subtraction to make.",
+            ),
+        )
+        isempty(rows) || @info "energy tag residual" first = rows[1] last = rows[end]
+    end
+    if !isnothing(get(config, "energy_source_tags", nothing))
+        header, rows, metadata = reduce_source_tags(output_dir)
+        remapped |= metadata.remapped
+        push!(
+            written,
+            write_table(
+                output_dir, "source_tag_extrema", header, rows, metadata,
+                "max |e_src_res| and the min and max of every tag. e_src_res \
+                covers the region tags only, so a source tag going negative \
+                shows up in the minima and nowhere else.",
+            ),
+        )
+        isempty(rows) || @info "source tag extrema" first = rows[1] last = rows[end]
+    end
+
+    if isempty(written)
+        @info "Nothing to reduce: this run configured no tag family. A timing \
+               control is one such run."
+    else
+        @info "Wrote" written
+    end
+    remapped && @warn "Sphere geometry: every reduction is over the bilinearly \
+                       remapped lat-lon field rather than the model's own \
+                       columns. Do not set it beside a column number as though \
+                       they were the same."
+    return written
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

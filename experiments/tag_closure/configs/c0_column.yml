@@ -1,0 +1,67 @@
+# C0. The barrier census on a column.
+#
+# This is the phase the whole series exists for. The question is not closure but
+# whether the family is usable at all: `nonpositive_fraction` over time, the
+# minimum of every `e_src_<name>`, `e_src_res`, and the walltime.
+#
+# The model already reports 100% non-positive ρe_tot at initialization on this
+# 1.5 km column. If that holds over a day, the donor rule is inert throughout
+# and production accumulates with no matching loss, which is not the rule the
+# docs describe. That is the barrier C1 would test a fix for.
+
+job_id: "c0_column"
+
+# The DYCOMS source column of `test/energy_source_tags_integration.jl`, run for
+# a day instead of the test's 20 s. The geometry is load-bearing: without
+# `z_max`, `z_elem` and `z_stretch` the 1.5 km boundary-layer profile is
+# extrapolated over the default 30 km column, pressure runs down to zero and the
+# solve dies in `exner_given_pressure`.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+
+# Radiation has to be on for the `rad` source tag to receive anything.
+# `initial_condition: DYCOMS_RF02` sets the state, not the forcing.
+rad: "DYCOMS"
+
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+# `strat` and `tropo` split the column at 750 m and are exact complements, so
+# the pair partitions ρe_tot. `e_src_res` sums those two and nothing else. `rad`
+# follows radiation, which is the process that actually forces this column.
+#
+# The check errors at startup without a tag carrying a `region` and no `source`.
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: rad
+    source: radiation
+
+# Hourly over a day. `tolerance` unset, so the family default applies and the
+# run only warns. `nonpositive_fraction` is the column this phase turns on: it
+# is the fraction of the domain where ρe_tot ≤ 0, and where that holds the donor
+# share is undefined and the loss half of the rule does not run at all.
+energy_source_closure_check:
+  period: "1hours"
+
+# Instantaneous samples, defaults off.
+#
+# There is no ledger for this family. Nothing corrects the source tags -- they
+# have no rescale and no partition repair -- so no `q_tag_fix` analogue exists
+# and the operator-residual subtraction of phase A does not apply here. What
+# this phase reads instead is `nonpositive_fraction` from the closure table and
+# the per-tag minima from these fields, because `e_src_res` covers only the
+# region tags and a source-labelled tag going negative never enters it.
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_strat, e_src_tropo, e_src_rad]
+    period: "1hours"

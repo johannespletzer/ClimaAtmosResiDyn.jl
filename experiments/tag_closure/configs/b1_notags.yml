@@ -1,0 +1,43 @@
+# B1's timing control: B1 with no energy tags at all.
+# The cost of the tags is the difference between this run's `sypd` and
+# `wall_time_per_timestep` lines and `b1_base`'s. Every other key is the same.
+
+job_id: "b1_notags"
+
+# Grid and numerics from `config/common_configs/numerics_sphere_he6ze10.yml`,
+# folded in rather than layered. The driver takes one configuration path, so
+# layering would mean teaching it the `--config_file` list that
+# `.buildkite/ci_driver.jl` takes, and the run would then no longer be described
+# by one readable file. The cost is that a later change to the common config
+# does not reach these copies; the README records that trade.
+#
+# This is the grid the shipped `baroclinic_wave_tagged_tracers` job runs on, so
+# B1 and B2 sit on the same mesh and the docs' below-one-percent figure is
+# comparable rather than a fresh measurement.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "10days"
+FLOAT_TYPE: "Float64"
+
+# The two operators B1 splits apart. `hyperdiff` is on by default; `vert_diff`
+# is not, so the baseline names both explicitly and each variant switches one
+# off. B1 is moist because B3's limiter path only fires when ρq_tot is in the
+# state.
+hyperdiff: "Hyperdiffusion"
+vert_diff: "DecayWithHeightDiffusion"
+
+# No `energy_tracers`, so no `energy_closure_check` either: the check errors at
+# startup when it is configured without its family. Nothing to write out, so no
+# diagnostics.
+output_default_diagnostics: false

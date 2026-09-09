@@ -1,0 +1,75 @@
+# B2. Reproduce the docs' "below 1% after 10 dry days", and measure what the
+# tags cost on a sphere.
+#
+# This is `config/model_configs/baroclinic_wave_tagged_tracers.yml` on the
+# `numerics_sphere_he6ze10.yml` common config, which is the pair
+# `.buildkite/full_pipeline.yml` runs as the `baroclinic_wave_tagged_tracers`
+# job. Both are folded in here for the reason the other B configs give.
+#
+# One deliberate departure. That config leaves `FLOAT_TYPE` at the default
+# `Float32` and sets `tolerance: 1.0e-2`; this series runs `Float64` with the
+# tolerance unset. So this is the docs configuration at a different precision,
+# and the figure is comparable rather than identical.
+
+job_id: "b2_dry_hs"
+
+# Grid and numerics from `config/common_configs/numerics_sphere_he6ze10.yml`,
+# folded in rather than layered. The driver takes one configuration path, so
+# layering would mean teaching it the `--config_file` list that
+# `.buildkite/ci_driver.jl` takes, and the run would then no longer be described
+# by one readable file. The cost is that a later change to the common config
+# does not reach these copies; the README records that trade.
+#
+# This is the grid the shipped `baroclinic_wave_tagged_tracers` job runs on, so
+# B1 and B2 sit on the same mesh and the docs' below-one-percent figure is
+# comparable rather than a fresh measurement.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "DryBaroclinicWave"
+rad: "held_suarez"
+disable_surface_flux_tendency: true
+t_end: "10days"
+FLOAT_TYPE: "Float64"
+
+# The shipped tag set. `tropics` and `extratropics` partition the globe. `hs`
+# and its two region-restricted halves give the process-closure identity
+# `e_tag_hs_tropics + e_tag_hs_extratropics == e_tag_hs`, which holds to near
+# machine precision and is a bug detector rather than a leakage monitor.
+energy_tracers:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: hs
+    source: held_suarez
+  - name: hs_tropics
+    region: tropics
+    source: held_suarez
+  - name: hs_extratropics
+    region: extratropics
+    source: held_suarez
+
+# Every six hours over ten days. `tolerance` is left unset so the family default
+# applies and the run only warns.
+energy_closure_check:
+  period: "6hours"
+
+# Instantaneous, defaults off, as everywhere in this series. No ledger exists
+# for this family, so there is no operator-residual subtraction to make.
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_tag_res]
+    period: "6hours"
+  - short_name: [e_tag_tropics, e_tag_extratropics]
+    period: "6hours"
+  - short_name: [e_tag_hs, e_tag_hs_tropics, e_tag_hs_extratropics]
+    period: "6hours"

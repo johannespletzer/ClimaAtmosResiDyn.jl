@@ -1,0 +1,33 @@
+# C0's timing control: the DYCOMS source column with no source tags at all.
+#
+# The cost of the source tags is the difference between this run's `sypd` and
+# `wall_time_per_timestep` lines and `c0_column`'s. Every other key is the same.
+#
+# `energy_source_tags` and `energy_source_closure_check` are both absent and
+# have to go together: the check errors at startup when it is configured
+# without its family.
+
+job_id: "c0_column_notags"
+
+# The DYCOMS source column of `test/energy_source_tags_integration.jl`, run for
+# a day instead of the test's 20 s. The geometry is load-bearing: without
+# `z_max`, `z_elem` and `z_stretch` the 1.5 km boundary-layer profile is
+# extrapolated over the default 30 km column, pressure runs down to zero and the
+# solve dies in `exner_given_pressure`.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+
+# Radiation has to be on for the `rad` source tag to receive anything.
+# `initial_condition: DYCOMS_RF02` sets the state, not the forcing.
+rad: "DYCOMS"
+
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+# Nothing to write out.
+output_default_diagnostics: false
