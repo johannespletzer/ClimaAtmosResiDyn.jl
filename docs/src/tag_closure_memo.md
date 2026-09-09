@@ -24,6 +24,21 @@ integration tests force `Float64` (`tagged_water_integration.jl` 78,
 
 Line numbers refer to `main` at `a54ce31`.
 
+!!! note "Measurements made since this memo was written"
+
+    The paragraph above is a statement about the original investigation and
+    stays true of it: nothing had been run when this memo was written, and
+    every magnitude in Parts 1 and 2 is still a test bound, a figure recorded
+    in a test comment, or a docs figure.
+
+    Runs have since been made. As of 2026-09-10 the phase A water ladders of
+    [tag_closure_experiments.md](tag_closure_experiments.md) have been run on
+    Levante, and Part 3's water bullet reports what they measured and marks it
+    as measured. Everything else in this memo remains as reasoned when it was
+    written. The runs, their tables and the reading of them are in
+    `experiments/tag_closure/`, with one entry per run in its `LEARNINGS.md`;
+    that file rather than this one is the record of what has been measured.
+
 ## Part 1. Current handling
 
 Enforced, meaning the state is changed so the sum holds:
@@ -196,23 +211,43 @@ measures nothing.
     inflow, and document the 1M `q_tot_eff` mismatch. The measured budget is
     1.2e-3 (limiter sphere, `ci 1.10`) and about 1.4e-2 (DYCOMS 1M column)
     against `100 eps` at t = 0, so the residual is three to four orders above
-    the rounding floor and useful. Confidence: high. The experiment that would
-    change this: run the 0M column at `dt` = 10, 5 and 2.5 s and record the
-    operator residual. That is the pointwise field
-    `q_tag_res + Σᵢ q_tag_fix_i`, reduced with `max abs` afterwards. The
-    ledger holds the signed change applied to the tag, so a repair that takes
-    water out of a tag records a negative fix and raises `q_tag_res` by that
-    amount. Adding the ledger back cancels it. The experiment page states the
-    order and the sign in full. Run that ladder twice, once at the default
-    `vanleer_limiter` and once at `none` or `first_order` on both upwinding
-    keys. `vertical_transport` hands `dt` to `ᶠlin_vanleer` and to no other
-    reconstruction, so under the default the limiter's own contribution moves
-    with `dt` too and one ladder cannot tell the two apart. The
-    `dt`-independent ladder is the control. If it falls with `dt`, the split
-    is a time-discretization error that implicit tags would remove, and
-    option 2 becomes worth its Jacobian cost, less whatever floor the van
-    Leer ladder shows beneath it. If neither falls, the limiter nonlinearity
-    dominates and option 2 buys nothing.
+    the rounding floor and useful. **Confidence: measured** (see the note
+    below); it was high on reasoning when this memo was written.
+
+    The experiment named here has since been run. The 0M column ladder at
+    `dt` = 10, 5 and 2.5 s, once at the default `vanleer_limiter` and twice
+    more with both upwinding keys linear, gives the end-of-run operator
+    residual `max |q_tag_res + Σᵢ q_tag_fix_i|` in kg kg⁻¹:
+
+    | `dt` (s) | `vanleer_limiter` | `first_order` | `none`   |
+    |:-------- |:----------------- |:------------- |:-------- |
+    | 10       | 2.844e-6          | 7.756e-7      | 2.054e-7 |
+    | 5        | 2.547e-6          | 7.090e-7      | 1.049e-7 |
+    | 2.5      | 2.888e-6          | 5.447e-7      | 1.080e-7 |
+    | slope    | −0.011            | +0.255        | +0.464   |
+
+    The linear ladders fall with `dt` and the van Leer one does not. So the
+    time-discretization part of the split is real, and the limiter sets a
+    floor beneath it that refining the step does not reach: at `dt` 10 s the
+    fully linear reconstruction sits 13.8 times below the default. **Option 2
+    is therefore not worth its Jacobian cost.** Moving the tags into the
+    implicit solve removes the part that converges and leaves the part that
+    dominates, which is what Part 2's water item (i) predicts in words when it
+    says the van Leer correction is nonlinear in the tag.
+
+    Two things that comparison does not establish. It changes
+    `energy_q_tot_upwinding` alongside `tracer_upwinding`, so 13.8 is *both
+    reconstructions linear against both van Leer* and not the limiter's own
+    share. And both linear slopes are well under the first order a
+    `dt`-independent reconstruction should give, with `none` converging
+    first-order from 10 s to 5 s and then stopping at about 1e-7 — an order
+    below the limiter floor, and a second non-converging contributor this memo
+    does not name. That is an open question rather than a finding.
+
+    The ledger was identically zero in all nine runs, so
+    `repair_water_tag_partition!` never fired on this column and the operator
+    residual equals `q_tag_res` throughout. Three `dt` points, one column, one
+    hour, 0M, one configuration.
   - Energy: option 1 only. The residual is by design the sum of every operator
     the parent receives as enthalpy, and the only way to close it is the
     double counting the design rejects. Confidence: high. The experiment: a
