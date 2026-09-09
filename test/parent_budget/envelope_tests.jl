@@ -290,8 +290,8 @@ end
             expected = expected_trace(integrator.cache.tableau, cadence, fsal)
             @test trace == expected
             # One residual evaluation per implicit stage: the defect after the
-            # single Newton update is never evaluated, which is why stack step 5
-            # has to measure it separately.
+            # single Newton update is never evaluated, which is why the solve
+            # defect needs its own measurement.
             stages = length(integrator.cache.tableau.b_exp.coeffs)
             @test count(==(:T_imp!), trace) == stages - 1
         end

@@ -104,9 +104,9 @@ The order of calls matters: microphysics must precede `surface_temp_tendency!`
 `pressure_work_tendency!`. Called from `remaining_tendency!`. Returns `nothing`.
 
 Every process that writes `ρ`, `ρq_tot` or `ρe_tot` with a net integral the
-coverage registry does not prove zero sits inside an applied-update event,
-`open_applied_update!` and `close_applied_update!`, under the label the
-registry names for it. The parent-budget ledger attributes the explicit
+coverage registry does not prove zero sits inside an applied-update event. The
+bracket is `open_applied_update!` and `close_applied_update!`, under the label
+the registry names for it. The parent-budget ledger attributes the explicit
 channel from those events, and the tag families and process records read the
 same brackets for the labels they know. A process added here without a
 bracket lands in the ledger's attribution residual, which is how the omission

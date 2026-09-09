@@ -5,12 +5,12 @@ import ClimaAtmos as CA
 import ClimaAtmos.Internals.ParentBudget as PB
 import ClimaTimeSteppers as CTS
 
-# Stack step 7: the restart transition and the callback rules.
+# The restart transition and the callback rules.
 #
 # A restart restores a state that no transaction produced. The checkpoint
 # carries the ledger's endpoint of the state it holds, and the first
 # transaction after the restart measures the restored state and compares it
-# with that endpoint exactly before it opens: the same integrals of the same
+# with that endpoint exactly before it opens. The same integrals of the same
 # state in the same arithmetic are equal, or something changed the state on
 # the way and that change belongs to no step. A checkpoint written without a
 # ledger carries no endpoint, and a restart from it is recorded as unverified
@@ -187,7 +187,7 @@ end
         # Undeclared, it is refused at setup.
         @test_throws ErrorException column_simulation(; callbacks = (counting,))
         @test_throws ErrorException PB.ReadOnlyCallback(integrator -> nothing)
-        # Declared, it runs after the ledger's callback every step.
+        # Declared, it fires every step and the identity still passes.
         declared = column_simulation(; callbacks = (PB.ReadOnlyCallback(counting),))
         step!(declared, 2)
         @test fired[] == 2

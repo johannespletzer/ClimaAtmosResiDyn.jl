@@ -35,11 +35,13 @@ checkpoint_status_key(reservoir::Symbol, quantity::Symbol) =
     write_checkpoint_attributes!(file, ledger)
 
 Write the ledger's current endpoint into the checkpoint's attributes. The
-current endpoint is the one the open transaction opened on: after a commit it
-is the closing endpoint of the committed step, and before the first commit it
-is the opening endpoint of the run, and either is the state being written,
-because the checkpoint callback runs after the ledger's. Nothing is written
-for a run without a ledger, and a checkpoint written that way restarts a
+current endpoint is the one the open transaction opened on. After a commit
+that is the closing endpoint of the committed step. Before the first commit
+it is the opening endpoint of the run. Either way it is the state being
+written, because the checkpoint callback runs after the ledger's. A
+checkpoint saved from the crash handler may hold a state the ledger has not
+committed; a restart from it is refused by the exact comparison. Nothing is
+written for a run without a ledger. A checkpoint written that way restarts a
 ledger as unverified rather than refusing to.
 """
 write_checkpoint_attributes!(file, ::Nothing) = nothing
@@ -74,8 +76,8 @@ end
 """
     read_checkpoint_endpoints(restart_file, context) -> Union{Nothing, CheckpointEndpoints}
 
-The endpoints a checkpoint carries, or `nothing` when it was written without
-a ledger.
+Read the endpoints a checkpoint carries, or return `nothing` when the
+checkpoint was written without a ledger.
 """
 function read_checkpoint_endpoints(restart_file, context)
     reader = InputOutput.HDF5Reader(restart_file, context)
@@ -110,13 +112,13 @@ end
 """
     RestartTransition
 
-What the ledger found when it opened on a restored state: `:verified` when
-the checkpoint carried endpoints and the restored state reproduced every one
-of them exactly, `:unverified` when the checkpoint carried none. A restored
-state that differs from its checkpoint is refused at initialisation instead
-of becoming a record. `checkpoint_step` is the step the ledger had committed
-when the checkpoint was written; the record after the restart is a new
-segment, starting from the restored endpoint.
+What the ledger found when it opened on a restored state. The status is
+`:verified` when the checkpoint carried endpoints and the restored state
+reproduced every one of them exactly, and `:unverified` when the checkpoint
+carried none. A restored state that differs from its checkpoint is refused at
+initialisation instead of becoming a record. `checkpoint_step` is the step
+the ledger had committed when the checkpoint was written. The record after
+the restart is a new segment, starting from the restored endpoint.
 """
 struct RestartTransition
     status::Symbol
@@ -129,7 +131,7 @@ end
 Compare the restored state's endpoints with the checkpoint's, exactly. The
 amounts are the same integrals of the same state in the same arithmetic, so
 they are equal or something changed the state between the checkpoint and the
-first transaction, and that change belongs to no step.
+first transaction. That change belongs to no step.
 """
 function check_restart_transition(
     schema::BudgetSchema,
@@ -184,7 +186,7 @@ end
 A user callback declared not to write the state. With the ledger on, a custom
 callback is accepted only inside this declaration, because a callback that
 writes `Y` between two transactions is a change nothing accounts for. In
-`AuditMode` the declaration is held to: the parent integrals of the state are
+`AuditMode` the declaration is held to. The parent integrals of the state are
 read before and after every firing, locally, and a firing that changed them
 is an error.
 """
