@@ -9,8 +9,7 @@ explained by what the model recorded.
 any compatibility promise. A simulation constructs a ledger only when
 `parent_budget_mode` is not `off`, and the ledger never writes the state, so a
 run with it off is the run without it. See
-`docs/src/parent_budget/` for the contract these types implement and
-`docs/src/parent_budget/plan.md` for the order the rest is built in.
+`docs/src/parent_budget/` for the contract these types implement.
 
 The files are included in dependency order.
 
@@ -35,9 +34,9 @@ import ClimaCore.Fields as Fields
 import ClimaCore.Spaces as Spaces
 import ClimaTimeSteppers as CTS
 
-# The adapter boundary. These are the only ClimaAtmos types the ledger
-# dispatches on, and naming them here keeps the dependency visible in one place
-# rather than scattered through the files below.
+# The ClimaAtmos types the applicability functions and the slab integrals
+# dispatch on. Naming every ClimaAtmos import here keeps the dependency visible
+# in one place.
 import ...AbstractMicrophysicsModel
 import ...DryModel
 import ...SurfaceConditions
