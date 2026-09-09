@@ -1,0 +1,1073 @@
+┌ Info: Making AtmosConfig with config files: 
+│    config/default_configs/default_config.yml
+└    experiments/tag_closure/configs/a2_none_dt10.yml
+┌ Info: numerics 
+│        `energy_q_tot_upwinding`::`Val{:none}`
+│              `tracer_upwinding`::`Val{:none}`
+│     `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│       `edmfx_sgsflux_upwinding`::`Val{:none}`
+│        `edmfx_tracer_upwinding`::`Val{:first_order}`
+│       `test_dycore_consistency`::`Nothing`
+│          `reproducible_restart`::`Nothing`
+│                       `limiter`::`Nothing`
+│                     `diff_mode`::`ClimaAtmos.Explicit`
+└                     `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.EquilibriumMicrophysics0M, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, Nothing, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:none}, Val{:none}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Explicit, ClimaAtmos.Hyperdiffusion{Float64}}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:upper, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:lower, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS343`
+[ Info: Initialized state (34.71 μs, 2.38 KiB)
+[ Info: Built cache (26.328 s, 6.59 GiB)
+[ Info: Assembled callbacks (285.801 ms, 30.27 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 1,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = IgnoreDerivative
+[ Info: Built tendency function (868.876 ms, 34.11 MiB)
+[ Info: Initialized integrator (13.005 s, 1.76 GiB)
+[ Info: Added 6 user-provided YAML-style diagnostics
+[ Info: Set up diagnostics (7.134 s, 371.12 MiB)
+[ Info: Initialized 6 total diagnostics
+┌ Info: Simulation info
+│   job_id = "a2_none_dt10"
+└   output_dir = "output/a2_none_dt10/output_0000"
+┌ Info: Running
+│   job_id = "a2_none_dt10"
+│   output_dir = "output/a2_none_dt10/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Warning: water tag closure residual 1.4808838603224269e-6 exceeds the configured tolerance 1.0e-10 at t = 10.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "10 seconds"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "0.3%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-10T00:49:30.101
+└   estimated_finish_date = 2026-09-10T00:49:30.100
+┌ Warning: water tag closure residual 2.3287865279758328e-6 exceeds the configured tolerance 1.0e-10 at t = 20.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "20 seconds"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "0.6%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.028"
+│   date_now = 2026-09-10T00:49:31.032
+└   estimated_finish_date = 2026-09-10T00:49:31.032
+┌ Warning: water tag closure residual 2.3677301245508524e-6 exceeds the configured tolerance 1.0e-10 at t = 30.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.366819570024992e-6 exceeds the configured tolerance 1.0e-10 at t = 40.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "40 seconds"
+│   n_steps_completed = 4
+│   wall_time_per_step = "3 milliseconds, 392 microseconds"
+│   wall_time_total = "1 second, 221 milliseconds"
+│   wall_time_remaining = "1 second, 207 milliseconds"
+│   wall_time_spent = "13 milliseconds, 570 microseconds"
+│   percent_complete = "1.1%"
+│   estimated_sypd = "8.07"
+│   instantaneous_sypd = "8.07"
+│   date_now = 2026-09-10T00:49:31.173
+└   estimated_finish_date = 2026-09-10T00:49:33.173
+┌ Warning: water tag closure residual 2.3674886202040494e-6 exceeds the configured tolerance 1.0e-10 at t = 50.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.366922288927166e-6 exceeds the configured tolerance 1.0e-10 at t = 60.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3668555063755387e-6 exceeds the configured tolerance 1.0e-10 at t = 70.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3666927475070663e-6 exceeds the configured tolerance 1.0e-10 at t = 80.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "1 minute, 20 seconds"
+│   n_steps_completed = 8
+│   wall_time_per_step = "138 milliseconds, 823 microseconds"
+│   wall_time_total = "49 seconds, 976 milliseconds"
+│   wall_time_remaining = "48 seconds, 865 milliseconds"
+│   wall_time_spent = "1 second, 110 milliseconds"
+│   percent_complete = "2.2%"
+│   estimated_sypd = "0.197"
+│   instantaneous_sypd = "0.1"
+│   date_now = 2026-09-10T00:49:32.152
+└   estimated_finish_date = 2026-09-10T00:50:21.152
+┌ Warning: water tag closure residual 2.3664402582473963e-6 exceeds the configured tolerance 1.0e-10 at t = 90.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3662063313050776e-6 exceeds the configured tolerance 1.0e-10 at t = 100.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.365957912592063e-6 exceeds the configured tolerance 1.0e-10 at t = 110.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3657142039671355e-6 exceeds the configured tolerance 1.0e-10 at t = 120.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3654642125068237e-6 exceeds the configured tolerance 1.0e-10 at t = 130.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3652152263639097e-6 exceeds the configured tolerance 1.0e-10 at t = 140.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.364961615706825e-6 exceeds the configured tolerance 1.0e-10 at t = 150.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.36470837072607e-6 exceeds the configured tolerance 1.0e-10 at t = 160.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "2 minutes, 40 seconds"
+│   n_steps_completed = 16
+│   wall_time_per_step = "73 milliseconds, 274 microseconds"
+│   wall_time_total = "26 seconds, 378 milliseconds"
+│   wall_time_remaining = "25 seconds, 206 milliseconds"
+│   wall_time_spent = "1 second, 172 milliseconds"
+│   percent_complete = "4.4%"
+│   estimated_sypd = "0.374"
+│   instantaneous_sypd = "3.544"
+│   date_now = 2026-09-10T00:49:32.198
+└   estimated_finish_date = 2026-09-10T00:49:58.198
+┌ Warning: water tag closure residual 2.3644509158032154e-6 exceeds the configured tolerance 1.0e-10 at t = 170.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.364193684751571e-6 exceeds the configured tolerance 1.0e-10 at t = 180.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3639324173280373e-6 exceeds the configured tolerance 1.0e-10 at t = 190.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3636713894507712e-6 exceeds the configured tolerance 1.0e-10 at t = 200.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.363406365002315e-6 exceeds the configured tolerance 1.0e-10 at t = 210.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3631417156258024e-6 exceeds the configured tolerance 1.0e-10 at t = 220.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.362872995054353e-6 exceeds the configured tolerance 1.0e-10 at t = 230.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3626048902264536e-6 exceeds the configured tolerance 1.0e-10 at t = 240.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3623325404955885e-6 exceeds the configured tolerance 1.0e-10 at t = 250.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.362061133714244e-6 exceeds the configured tolerance 1.0e-10 at t = 260.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.361785234910243e-6 exceeds the configured tolerance 1.0e-10 at t = 270.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3615106540465543e-6 exceeds the configured tolerance 1.0e-10 at t = 280.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3612313187736247e-6 exceeds the configured tolerance 1.0e-10 at t = 290.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3609536405095847e-6 exceeds the configured tolerance 1.0e-10 at t = 300.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.360671046602738e-6 exceeds the configured tolerance 1.0e-10 at t = 310.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3603902595457126e-6 exceeds the configured tolerance 1.0e-10 at t = 320.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "5 minutes, 20 seconds"
+│   n_steps_completed = 32
+│   wall_time_per_step = "40 milliseconds, 516 microseconds"
+│   wall_time_total = "14 seconds, 586 milliseconds"
+│   wall_time_remaining = "13 seconds, 289 milliseconds"
+│   wall_time_spent = "1 second, 296 milliseconds"
+│   percent_complete = "8.9%"
+│   estimated_sypd = "0.676"
+│   instantaneous_sypd = "3.529"
+│   date_now = 2026-09-10T00:49:32.322
+└   estimated_finish_date = 2026-09-10T00:49:46.322
+┌ Warning: water tag closure residual 2.3601046865648743e-6 exceeds the configured tolerance 1.0e-10 at t = 330.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.359820670530239e-6 exceeds the configured tolerance 1.0e-10 at t = 340.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3595324959157153e-6 exceeds the configured tolerance 1.0e-10 at t = 350.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.359245067113206e-6 exceeds the configured tolerance 1.0e-10 at t = 360.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.358954639542756e-6 exceeds the configured tolerance 1.0e-10 at t = 370.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.358663777400241e-6 exceeds the configured tolerance 1.0e-10 at t = 380.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3583711979165262e-6 exceeds the configured tolerance 1.0e-10 at t = 390.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.358077300460892e-6 exceeds the configured tolerance 1.0e-10 at t = 400.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3577823546344046e-6 exceeds the configured tolerance 1.0e-10 at t = 410.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.357486137151365e-6 exceeds the configured tolerance 1.0e-10 at t = 420.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3571878221638265e-6 exceeds the configured tolerance 1.0e-10 at t = 430.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.356886242155608e-6 exceeds the configured tolerance 1.0e-10 at t = 440.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3565764401220254e-6 exceeds the configured tolerance 1.0e-10 at t = 450.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.356255468122107e-6 exceeds the configured tolerance 1.0e-10 at t = 460.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3559062460049977e-6 exceeds the configured tolerance 1.0e-10 at t = 470.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3556067645698917e-6 exceeds the configured tolerance 1.0e-10 at t = 480.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.355300169217829e-6 exceeds the configured tolerance 1.0e-10 at t = 490.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3549931262269775e-6 exceeds the configured tolerance 1.0e-10 at t = 500.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3546848563649245e-6 exceeds the configured tolerance 1.0e-10 at t = 510.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "8 minutes, 30 seconds"
+│   n_steps_completed = 51
+│   wall_time_per_step = "27 milliseconds, 993 microseconds"
+│   wall_time_total = "10 seconds, 77 milliseconds"
+│   wall_time_remaining = "8 seconds, 649 milliseconds"
+│   wall_time_spent = "1 second, 427 milliseconds"
+│   percent_complete = "14.2%"
+│   estimated_sypd = "0.978"
+│   instantaneous_sypd = "3.967"
+│   date_now = 2026-09-10T00:49:32.453
+└   estimated_finish_date = 2026-09-10T00:49:41.453
+┌ Warning: water tag closure residual 2.3543754932606657e-6 exceeds the configured tolerance 1.0e-10 at t = 520.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3540650101358712e-6 exceeds the configured tolerance 1.0e-10 at t = 530.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.353753476911826e-6 exceeds the configured tolerance 1.0e-10 at t = 540.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3534408890625307e-6 exceeds the configured tolerance 1.0e-10 at t = 550.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3531272796083254e-6 exceeds the configured tolerance 1.0e-10 at t = 560.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.352812664299139e-6 exceeds the configured tolerance 1.0e-10 at t = 570.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.352497065112627e-6 exceeds the configured tolerance 1.0e-10 at t = 580.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3521805013250633e-6 exceeds the configured tolerance 1.0e-10 at t = 590.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3518629929918877e-6 exceeds the configured tolerance 1.0e-10 at t = 600.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3515445596793986e-6 exceeds the configured tolerance 1.0e-10 at t = 610.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3512252190150663e-6 exceeds the configured tolerance 1.0e-10 at t = 620.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3509049863838985e-6 exceeds the configured tolerance 1.0e-10 at t = 630.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.350583880195206e-6 exceeds the configured tolerance 1.0e-10 at t = 640.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "10 minutes, 40 seconds"
+│   n_steps_completed = 64
+│   wall_time_per_step = "23 milliseconds, 548 microseconds"
+│   wall_time_total = "8 seconds, 477 milliseconds"
+│   wall_time_remaining = "6 seconds, 970 milliseconds"
+│   wall_time_spent = "1 second, 507 milliseconds"
+│   percent_complete = "17.8%"
+│   estimated_sypd = "1.163"
+│   instantaneous_sypd = "4.478"
+│   date_now = 2026-09-10T00:49:32.532
+└   estimated_finish_date = 2026-09-10T00:49:39.532
+┌ Warning: water tag closure residual 2.3502619195266353e-6 exceeds the configured tolerance 1.0e-10 at t = 650.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.349939122501224e-6 exceeds the configured tolerance 1.0e-10 at t = 660.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3496155076089806e-6 exceeds the configured tolerance 1.0e-10 at t = 670.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3492910927325022e-6 exceeds the configured tolerance 1.0e-10 at t = 680.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.348965895775094e-6 exceeds the configured tolerance 1.0e-10 at t = 690.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.348639934394912e-6 exceeds the configured tolerance 1.0e-10 at t = 700.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3483132258055906e-6 exceeds the configured tolerance 1.0e-10 at t = 710.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.347985746119578e-6 exceeds the configured tolerance 1.0e-10 at t = 720.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.347657476007368e-6 exceeds the configured tolerance 1.0e-10 at t = 730.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3473284306813503e-6 exceeds the configured tolerance 1.0e-10 at t = 740.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.346998627335872e-6 exceeds the configured tolerance 1.0e-10 at t = 750.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3466680825276913e-6 exceeds the configured tolerance 1.0e-10 at t = 760.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.346336813444517e-6 exceeds the configured tolerance 1.0e-10 at t = 770.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.346004836403766e-6 exceeds the configured tolerance 1.0e-10 at t = 780.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.345672168008842e-6 exceeds the configured tolerance 1.0e-10 at t = 790.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3453388240687236e-6 exceeds the configured tolerance 1.0e-10 at t = 800.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.345004764903326e-6 exceeds the configured tolerance 1.0e-10 at t = 810.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3446700775528562e-6 exceeds the configured tolerance 1.0e-10 at t = 820.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3443347477090755e-6 exceeds the configured tolerance 1.0e-10 at t = 830.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "13 minutes, 50 seconds"
+│   n_steps_completed = 83
+│   wall_time_per_step = "19 milliseconds, 508 microseconds"
+│   wall_time_total = "7 seconds, 22 milliseconds"
+│   wall_time_remaining = "5 seconds, 403 milliseconds"
+│   wall_time_spent = "1 second, 619 milliseconds"
+│   percent_complete = "23.1%"
+│   estimated_sypd = "1.403"
+│   instantaneous_sypd = "4.643"
+│   date_now = 2026-09-10T00:49:32.644
+└   estimated_finish_date = 2026-09-10T00:49:38.644
+┌ Warning: water tag closure residual 2.3439988049755857e-6 exceeds the configured tolerance 1.0e-10 at t = 840.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.343662247717899e-6 exceeds the configured tolerance 1.0e-10 at t = 850.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.343325090522762e-6 exceeds the configured tolerance 1.0e-10 at t = 860.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3429873495774863e-6 exceeds the configured tolerance 1.0e-10 at t = 870.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3426490395169416e-6 exceeds the configured tolerance 1.0e-10 at t = 880.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3423101751711936e-6 exceeds the configured tolerance 1.0e-10 at t = 890.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3419707709885423e-6 exceeds the configured tolerance 1.0e-10 at t = 900.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.341630841224749e-6 exceeds the configured tolerance 1.0e-10 at t = 910.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3412904001006528e-6 exceeds the configured tolerance 1.0e-10 at t = 920.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3409494614610892e-6 exceeds the configured tolerance 1.0e-10 at t = 930.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3406080390006998e-6 exceeds the configured tolerance 1.0e-10 at t = 940.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.340266146205237e-6 exceeds the configured tolerance 1.0e-10 at t = 950.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.33992379664175e-6 exceeds the configured tolerance 1.0e-10 at t = 960.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3395810034871873e-6 exceeds the configured tolerance 1.0e-10 at t = 970.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3392377797749224e-6 exceeds the configured tolerance 1.0e-10 at t = 980.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3388941336064226e-6 exceeds the configured tolerance 1.0e-10 at t = 990.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3385500430047926e-6 exceeds the configured tolerance 1.0e-10 at t = 1000.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.338205573432054e-6 exceeds the configured tolerance 1.0e-10 at t = 1010.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.337860715248049e-6 exceeds the configured tolerance 1.0e-10 at t = 1020.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "17 minutes"
+│   n_steps_completed = 102
+│   wall_time_per_step = "17 milliseconds, 12 microseconds"
+│   wall_time_total = "6 seconds, 124 milliseconds"
+│   wall_time_remaining = "4 seconds, 389 milliseconds"
+│   wall_time_spent = "1 second, 735 milliseconds"
+│   percent_complete = "28.3%"
+│   estimated_sypd = "1.609"
+│   instantaneous_sypd = "4.481"
+│   date_now = 2026-09-10T00:49:32.761
+└   estimated_finish_date = 2026-09-10T00:49:37.761
+┌ Warning: water tag closure residual 2.3375154927087607e-6 exceeds the configured tolerance 1.0e-10 at t = 1030.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3371699126995335e-6 exceeds the configured tolerance 1.0e-10 at t = 1040.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3368239889650128e-6 exceeds the configured tolerance 1.0e-10 at t = 1050.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3364777327029007e-6 exceeds the configured tolerance 1.0e-10 at t = 1060.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.336131136989954e-6 exceeds the configured tolerance 1.0e-10 at t = 1070.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3357842234554024e-6 exceeds the configured tolerance 1.0e-10 at t = 1080.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3354369988867286e-6 exceeds the configured tolerance 1.0e-10 at t = 1090.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3350894876804546e-6 exceeds the configured tolerance 1.0e-10 at t = 1100.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3347417011702183e-6 exceeds the configured tolerance 1.0e-10 at t = 1110.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.334393649839562e-6 exceeds the configured tolerance 1.0e-10 at t = 1120.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3340453440668967e-6 exceeds the configured tolerance 1.0e-10 at t = 1130.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3336967942475473e-6 exceeds the configured tolerance 1.0e-10 at t = 1140.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3333480004799524e-6 exceeds the configured tolerance 1.0e-10 at t = 1150.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.332998968652743e-6 exceeds the configured tolerance 1.0e-10 at t = 1160.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3326497085991464e-6 exceeds the configured tolerance 1.0e-10 at t = 1170.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3323002299649996e-6 exceeds the configured tolerance 1.0e-10 at t = 1180.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3319505423183415e-6 exceeds the configured tolerance 1.0e-10 at t = 1190.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3316006552463826e-6 exceeds the configured tolerance 1.0e-10 at t = 1200.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.331250577969576e-6 exceeds the configured tolerance 1.0e-10 at t = 1210.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "20 minutes, 10 seconds"
+│   n_steps_completed = 121
+│   wall_time_per_step = "15 milliseconds, 507 microseconds"
+│   wall_time_total = "5 seconds, 582 milliseconds"
+│   wall_time_remaining = "3 seconds, 706 milliseconds"
+│   wall_time_spent = "1 second, 876 milliseconds"
+│   percent_complete = "33.6%"
+│   estimated_sypd = "1.766"
+│   instantaneous_sypd = "3.686"
+│   date_now = 2026-09-10T00:49:32.902
+└   estimated_finish_date = 2026-09-10T00:49:36.902
+┌ Warning: water tag closure residual 2.3309003199302213e-6 exceeds the configured tolerance 1.0e-10 at t = 1220.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3305498899729855e-6 exceeds the configured tolerance 1.0e-10 at t = 1230.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3301992972086213e-6 exceeds the configured tolerance 1.0e-10 at t = 1240.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.32984855084334e-6 exceeds the configured tolerance 1.0e-10 at t = 1250.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3294976549172533e-6 exceeds the configured tolerance 1.0e-10 at t = 1260.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.329146606636707e-6 exceeds the configured tolerance 1.0e-10 at t = 1270.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3287954137417254e-6 exceeds the configured tolerance 1.0e-10 at t = 1280.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "21 minutes, 20 seconds"
+│   n_steps_completed = 128
+│   wall_time_per_step = "14 milliseconds, 965 microseconds"
+│   wall_time_total = "5 seconds, 387 milliseconds"
+│   wall_time_remaining = "3 seconds, 472 milliseconds"
+│   wall_time_spent = "1 second, 915 milliseconds"
+│   percent_complete = "35.6%"
+│   estimated_sypd = "1.829"
+│   instantaneous_sypd = "4.885"
+│   date_now = 2026-09-10T00:49:32.941
+└   estimated_finish_date = 2026-09-10T00:49:36.941
+┌ Warning: water tag closure residual 2.3284440598049145e-6 exceeds the configured tolerance 1.0e-10 at t = 1290.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3280925481311646e-6 exceeds the configured tolerance 1.0e-10 at t = 1300.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3277408903811945e-6 exceeds the configured tolerance 1.0e-10 at t = 1310.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3273890938809376e-6 exceeds the configured tolerance 1.0e-10 at t = 1320.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3270371671995937e-6 exceeds the configured tolerance 1.0e-10 at t = 1330.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3266851182306874e-6 exceeds the configured tolerance 1.0e-10 at t = 1340.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.326332955138951e-6 exceeds the configured tolerance 1.0e-10 at t = 1350.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.325980685647094e-6 exceeds the configured tolerance 1.0e-10 at t = 1360.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3256283175053555e-6 exceeds the configured tolerance 1.0e-10 at t = 1370.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3252758582097553e-6 exceeds the configured tolerance 1.0e-10 at t = 1380.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.324923315407748e-6 exceeds the configured tolerance 1.0e-10 at t = 1390.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3245707157092744e-6 exceeds the configured tolerance 1.0e-10 at t = 1400.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.324218098865327e-6 exceeds the configured tolerance 1.0e-10 at t = 1410.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3238654694692845e-6 exceeds the configured tolerance 1.0e-10 at t = 1420.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3235128550839317e-6 exceeds the configured tolerance 1.0e-10 at t = 1430.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3231602585666457e-6 exceeds the configured tolerance 1.0e-10 at t = 1440.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3228076854070263e-6 exceeds the configured tolerance 1.0e-10 at t = 1450.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.322455140827567e-6 exceeds the configured tolerance 1.0e-10 at t = 1460.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.322102630004397e-6 exceeds the configured tolerance 1.0e-10 at t = 1470.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "24 minutes, 30 seconds"
+│   n_steps_completed = 147
+│   wall_time_per_step = "13 milliseconds, 833 microseconds"
+│   wall_time_total = "4 seconds, 980 milliseconds"
+│   wall_time_remaining = "2 seconds, 946 milliseconds"
+│   wall_time_spent = "2 seconds, 33 milliseconds"
+│   percent_complete = "40.8%"
+│   estimated_sypd = "1.979"
+│   instantaneous_sypd = "4.412"
+│   date_now = 2026-09-10T00:49:33.059
+└   estimated_finish_date = 2026-09-10T00:49:36.059
+┌ Warning: water tag closure residual 2.3217501578697384e-6 exceeds the configured tolerance 1.0e-10 at t = 1480.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.321397730263166e-6 exceeds the configured tolerance 1.0e-10 at t = 1490.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.321045354145724e-6 exceeds the configured tolerance 1.0e-10 at t = 1500.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.320693031763157e-6 exceeds the configured tolerance 1.0e-10 at t = 1510.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.320340766828738e-6 exceeds the configured tolerance 1.0e-10 at t = 1520.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.319988564908317e-6 exceeds the configured tolerance 1.0e-10 at t = 1530.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3196364321465035e-6 exceeds the configured tolerance 1.0e-10 at t = 1540.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3192843728279667e-6 exceeds the configured tolerance 1.0e-10 at t = 1550.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3189323915011765e-6 exceeds the configured tolerance 1.0e-10 at t = 1560.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3185804924658763e-6 exceeds the configured tolerance 1.0e-10 at t = 1570.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.318228680102177e-6 exceeds the configured tolerance 1.0e-10 at t = 1580.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.317876958510345e-6 exceeds the configured tolerance 1.0e-10 at t = 1590.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3175253319753296e-6 exceeds the configured tolerance 1.0e-10 at t = 1600.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3171738046677413e-6 exceeds the configured tolerance 1.0e-10 at t = 1610.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3168223805072167e-6 exceeds the configured tolerance 1.0e-10 at t = 1620.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3164710635068187e-6 exceeds the configured tolerance 1.0e-10 at t = 1630.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3161198574156154e-6 exceeds the configured tolerance 1.0e-10 at t = 1640.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3157687666099017e-6 exceeds the configured tolerance 1.0e-10 at t = 1650.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.315417794417168e-6 exceeds the configured tolerance 1.0e-10 at t = 1660.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "27 minutes, 40 seconds"
+│   n_steps_completed = 166
+│   wall_time_per_step = "12 milliseconds, 940 microseconds"
+│   wall_time_total = "4 seconds, 658 milliseconds"
+│   wall_time_remaining = "2 seconds, 510 milliseconds"
+│   wall_time_spent = "2 seconds, 148 milliseconds"
+│   percent_complete = "46.1%"
+│   estimated_sypd = "2.116"
+│   instantaneous_sypd = "4.537"
+│   date_now = 2026-09-10T00:49:33.173
+└   estimated_finish_date = 2026-09-10T00:49:36.173
+┌ Warning: water tag closure residual 2.3150669446170915e-6 exceeds the configured tolerance 1.0e-10 at t = 1670.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.314716220889178e-6 exceeds the configured tolerance 1.0e-10 at t = 1680.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3143656268663714e-6 exceeds the configured tolerance 1.0e-10 at t = 1690.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3140151661306645e-6 exceeds the configured tolerance 1.0e-10 at t = 1700.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.313664842247106e-6 exceeds the configured tolerance 1.0e-10 at t = 1710.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3133146585644915e-6 exceeds the configured tolerance 1.0e-10 at t = 1720.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3129646167432846e-6 exceeds the configured tolerance 1.0e-10 at t = 1730.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3126147199987135e-6 exceeds the configured tolerance 1.0e-10 at t = 1740.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3122649717807907e-6 exceeds the configured tolerance 1.0e-10 at t = 1750.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.311915375539166e-6 exceeds the configured tolerance 1.0e-10 at t = 1760.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.311565934332557e-6 exceeds the configured tolerance 1.0e-10 at t = 1770.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3112166513890638e-6 exceeds the configured tolerance 1.0e-10 at t = 1780.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3108675508660454e-6 exceeds the configured tolerance 1.0e-10 at t = 1790.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3105186359773825e-6 exceeds the configured tolerance 1.0e-10 at t = 1800.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3101699215579588e-6 exceeds the configured tolerance 1.0e-10 at t = 1810.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3098214105379378e-6 exceeds the configured tolerance 1.0e-10 at t = 1820.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3094730962706354e-6 exceeds the configured tolerance 1.0e-10 at t = 1830.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3091249860158872e-6 exceeds the configured tolerance 1.0e-10 at t = 1840.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3087770813309506e-6 exceeds the configured tolerance 1.0e-10 at t = 1850.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "30 minutes, 50 seconds"
+│   n_steps_completed = 185
+│   wall_time_per_step = "12 milliseconds, 220 microseconds"
+│   wall_time_total = "4 seconds, 399 milliseconds"
+│   wall_time_remaining = "2 seconds, 138 milliseconds"
+│   wall_time_spent = "2 seconds, 260 milliseconds"
+│   percent_complete = "51.4%"
+│   estimated_sypd = "2.24"
+│   instantaneous_sypd = "4.617"
+│   date_now = 2026-09-10T00:49:33.286
+└   estimated_finish_date = 2026-09-10T00:49:36.286
+┌ Warning: water tag closure residual 2.308429382239014e-6 exceeds the configured tolerance 1.0e-10 at t = 1860.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3080818906304595e-6 exceeds the configured tolerance 1.0e-10 at t = 1870.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3077346085109156e-6 exceeds the configured tolerance 1.0e-10 at t = 1880.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.307387540016525e-6 exceeds the configured tolerance 1.0e-10 at t = 1890.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3070406845135216e-6 exceeds the configured tolerance 1.0e-10 at t = 1900.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3066940585752566e-6 exceeds the configured tolerance 1.0e-10 at t = 1910.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3063477305751303e-6 exceeds the configured tolerance 1.0e-10 at t = 1920.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3060016856590163e-6 exceeds the configured tolerance 1.0e-10 at t = 1930.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.305655824475658e-6 exceeds the configured tolerance 1.0e-10 at t = 1940.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3053101329226024e-6 exceeds the configured tolerance 1.0e-10 at t = 1950.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3049646116621015e-6 exceeds the configured tolerance 1.0e-10 at t = 1960.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.304619263500412e-6 exceeds the configured tolerance 1.0e-10 at t = 1970.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3042740905296822e-6 exceeds the configured tolerance 1.0e-10 at t = 1980.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.303929091448681e-6 exceeds the configured tolerance 1.0e-10 at t = 1990.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.303584265959074e-6 exceeds the configured tolerance 1.0e-10 at t = 2000.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.30323961615197e-6 exceeds the configured tolerance 1.0e-10 at t = 2010.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.302895144125619e-6 exceeds the configured tolerance 1.0e-10 at t = 2020.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3025508518820416e-6 exceeds the configured tolerance 1.0e-10 at t = 2030.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.302206741429331e-6 exceeds the configured tolerance 1.0e-10 at t = 2040.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "34 minutes"
+│   n_steps_completed = 204
+│   wall_time_per_step = "11 milliseconds, 639 microseconds"
+│   wall_time_total = "4 seconds, 190 milliseconds"
+│   wall_time_remaining = "1 second, 815 milliseconds"
+│   wall_time_spent = "2 seconds, 374 milliseconds"
+│   percent_complete = "56.7%"
+│   estimated_sypd = "2.352"
+│   instantaneous_sypd = "4.577"
+│   date_now = 2026-09-10T00:49:33.400
+└   estimated_finish_date = 2026-09-10T00:49:35.400
+┌ Warning: water tag closure residual 2.3018628147940023e-6 exceeds the configured tolerance 1.0e-10 at t = 2050.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.30151907396825e-6 exceeds the configured tolerance 1.0e-10 at t = 2060.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3011755158542953e-6 exceeds the configured tolerance 1.0e-10 at t = 2070.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3008321298926834e-6 exceeds the configured tolerance 1.0e-10 at t = 2080.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.300488940317571e-6 exceeds the configured tolerance 1.0e-10 at t = 2090.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.3001459376588628e-6 exceeds the configured tolerance 1.0e-10 at t = 2100.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.299803129322402e-6 exceeds the configured tolerance 1.0e-10 at t = 2110.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.299460514841747e-6 exceeds the configured tolerance 1.0e-10 at t = 2120.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2991180967227607e-6 exceeds the configured tolerance 1.0e-10 at t = 2130.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2987758764399117e-6 exceeds the configured tolerance 1.0e-10 at t = 2140.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2984338558641536e-6 exceeds the configured tolerance 1.0e-10 at t = 2150.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.298092036631751e-6 exceeds the configured tolerance 1.0e-10 at t = 2160.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2977504201781395e-6 exceeds the configured tolerance 1.0e-10 at t = 2170.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2974090083835842e-6 exceeds the configured tolerance 1.0e-10 at t = 2180.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.297067802729786e-6 exceeds the configured tolerance 1.0e-10 at t = 2190.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2967268047837174e-6 exceeds the configured tolerance 1.0e-10 at t = 2200.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.296386016123289e-6 exceeds the configured tolerance 1.0e-10 at t = 2210.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.296045438213266e-6 exceeds the configured tolerance 1.0e-10 at t = 2220.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2957050725569137e-6 exceeds the configured tolerance 1.0e-10 at t = 2230.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "37 minutes, 10 seconds"
+│   n_steps_completed = 223
+│   wall_time_per_step = "11 milliseconds, 273 microseconds"
+│   wall_time_total = "4 seconds, 58 milliseconds"
+│   wall_time_remaining = "1 second, 544 milliseconds"
+│   wall_time_spent = "2 seconds, 513 milliseconds"
+│   percent_complete = "61.9%"
+│   estimated_sypd = "2.429"
+│   instantaneous_sypd = "3.732"
+│   date_now = 2026-09-10T00:49:33.539
+└   estimated_finish_date = 2026-09-10T00:49:35.539
+┌ Warning: water tag closure residual 2.2953649206791835e-6 exceeds the configured tolerance 1.0e-10 at t = 2240.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2950249840065125e-6 exceeds the configured tolerance 1.0e-10 at t = 2250.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.294685263882701e-6 exceeds the configured tolerance 1.0e-10 at t = 2260.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.29434576174957e-6 exceeds the configured tolerance 1.0e-10 at t = 2270.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2940064790860796e-6 exceeds the configured tolerance 1.0e-10 at t = 2280.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2936674171595747e-6 exceeds the configured tolerance 1.0e-10 at t = 2290.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.29332857728489e-6 exceeds the configured tolerance 1.0e-10 at t = 2300.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2929899607867648e-6 exceeds the configured tolerance 1.0e-10 at t = 2310.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.292651568654149e-6 exceeds the configured tolerance 1.0e-10 at t = 2320.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.292313402069713e-6 exceeds the configured tolerance 1.0e-10 at t = 2330.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.291975462222645e-6 exceeds the configured tolerance 1.0e-10 at t = 2340.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2916377501162656e-6 exceeds the configured tolerance 1.0e-10 at t = 2350.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2913002672191107e-6 exceeds the configured tolerance 1.0e-10 at t = 2360.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2909630171383084e-6 exceeds the configured tolerance 1.0e-10 at t = 2370.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2906260005215898e-6 exceeds the configured tolerance 1.0e-10 at t = 2380.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2902892204764876e-6 exceeds the configured tolerance 1.0e-10 at t = 2390.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.289952677998823e-6 exceeds the configured tolerance 1.0e-10 at t = 2400.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2896163741194803e-6 exceeds the configured tolerance 1.0e-10 at t = 2410.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.289280309950793e-6 exceeds the configured tolerance 1.0e-10 at t = 2420.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "40 minutes, 20 seconds"
+│   n_steps_completed = 242
+│   wall_time_per_step = "10 milliseconds, 840 microseconds"
+│   wall_time_total = "3 seconds, 902 milliseconds"
+│   wall_time_remaining = "1 second, 279 milliseconds"
+│   wall_time_spent = "2 seconds, 623 milliseconds"
+│   percent_complete = "67.2%"
+│   estimated_sypd = "2.526"
+│   instantaneous_sypd = "4.757"
+│   date_now = 2026-09-10T00:49:33.649
+└   estimated_finish_date = 2026-09-10T00:49:35.649
+┌ Warning: water tag closure residual 2.2889444864151766e-6 exceeds the configured tolerance 1.0e-10 at t = 2430.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.288608904573946e-6 exceeds the configured tolerance 1.0e-10 at t = 2440.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2882735653088667e-6 exceeds the configured tolerance 1.0e-10 at t = 2450.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2879384696343174e-6 exceeds the configured tolerance 1.0e-10 at t = 2460.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2876036184606022e-6 exceeds the configured tolerance 1.0e-10 at t = 2470.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2872690127544407e-6 exceeds the configured tolerance 1.0e-10 at t = 2480.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2869346533687794e-6 exceeds the configured tolerance 1.0e-10 at t = 2490.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.286600541166847e-6 exceeds the configured tolerance 1.0e-10 at t = 2500.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2862666771525042e-6 exceeds the configured tolerance 1.0e-10 at t = 2510.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.285933062017851e-6 exceeds the configured tolerance 1.0e-10 at t = 2520.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.285599696694547e-6 exceeds the configured tolerance 1.0e-10 at t = 2530.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.285266581906231e-6 exceeds the configured tolerance 1.0e-10 at t = 2540.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2849337185986097e-6 exceeds the configured tolerance 1.0e-10 at t = 2550.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2846011075026675e-6 exceeds the configured tolerance 1.0e-10 at t = 2560.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "42 minutes, 40 seconds"
+│   n_steps_completed = 256
+│   wall_time_per_step = "10 milliseconds, 543 microseconds"
+│   wall_time_total = "3 seconds, 795 milliseconds"
+│   wall_time_remaining = "1 second, 96 milliseconds"
+│   wall_time_spent = "2 seconds, 699 milliseconds"
+│   percent_complete = "71.1%"
+│   estimated_sypd = "2.597"
+│   instantaneous_sypd = "5.059"
+│   date_now = 2026-09-10T00:49:33.724
+└   estimated_finish_date = 2026-09-10T00:49:35.724
+┌ Warning: water tag closure residual 2.284268749380254e-6 exceeds the configured tolerance 1.0e-10 at t = 2570.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2839366450124125e-6 exceeds the configured tolerance 1.0e-10 at t = 2580.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.283604795081676e-6 exceeds the configured tolerance 1.0e-10 at t = 2590.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2832732004644413e-6 exceeds the configured tolerance 1.0e-10 at t = 2600.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.282941861824571e-6 exceeds the configured tolerance 1.0e-10 at t = 2610.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.282610779775271e-6 exceeds the configured tolerance 1.0e-10 at t = 2620.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.282279955059746e-6 exceeds the configured tolerance 1.0e-10 at t = 2630.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2819493883457653e-6 exceeds the configured tolerance 1.0e-10 at t = 2640.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2816190803302222e-6 exceeds the configured tolerance 1.0e-10 at t = 2650.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.281289031738187e-6 exceeds the configured tolerance 1.0e-10 at t = 2660.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.280959243094117e-6 exceeds the configured tolerance 1.0e-10 at t = 2670.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.28062969373112e-6 exceeds the configured tolerance 1.0e-10 at t = 2680.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2803003807761576e-6 exceeds the configured tolerance 1.0e-10 at t = 2690.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.279971343516188e-6 exceeds the configured tolerance 1.0e-10 at t = 2700.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2796425630488286e-6 exceeds the configured tolerance 1.0e-10 at t = 2710.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2793140479234766e-6 exceeds the configured tolerance 1.0e-10 at t = 2720.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.278985795808758e-6 exceeds the configured tolerance 1.0e-10 at t = 2730.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2786578087267582e-6 exceeds the configured tolerance 1.0e-10 at t = 2740.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2783300862965428e-6 exceeds the configured tolerance 1.0e-10 at t = 2750.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "45 minutes, 50 seconds"
+│   n_steps_completed = 275
+│   wall_time_per_step = "10 milliseconds, 210 microseconds"
+│   wall_time_total = "3 seconds, 675 milliseconds"
+│   wall_time_remaining = "867 milliseconds, 924 microseconds"
+│   wall_time_spent = "2 seconds, 807 milliseconds"
+│   percent_complete = "76.4%"
+│   estimated_sypd = "2.681"
+│   instantaneous_sypd = "4.775"
+│   date_now = 2026-09-10T00:49:33.833
+└   estimated_finish_date = 2026-09-10T00:49:34.833
+┌ Warning: water tag closure residual 2.2780026297630676e-6 exceeds the configured tolerance 1.0e-10 at t = 2760.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2776754394227285e-6 exceeds the configured tolerance 1.0e-10 at t = 2770.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2773485157343823e-6 exceeds the configured tolerance 1.0e-10 at t = 2780.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2770218593309885e-6 exceeds the configured tolerance 1.0e-10 at t = 2790.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2766954705306475e-6 exceeds the configured tolerance 1.0e-10 at t = 2800.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2763693498496147e-6 exceeds the configured tolerance 1.0e-10 at t = 2810.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.276043497781552e-6 exceeds the configured tolerance 1.0e-10 at t = 2820.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2757179147495056e-6 exceeds the configured tolerance 1.0e-10 at t = 2830.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2753926011558664e-6 exceeds the configured tolerance 1.0e-10 at t = 2840.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2750675574511454e-6 exceeds the configured tolerance 1.0e-10 at t = 2850.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.274742783964645e-6 exceeds the configured tolerance 1.0e-10 at t = 2860.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2744182812096584e-6 exceeds the configured tolerance 1.0e-10 at t = 2870.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.27409404950905e-6 exceeds the configured tolerance 1.0e-10 at t = 2880.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2737700892395273e-6 exceeds the configured tolerance 1.0e-10 at t = 2890.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2734464013870684e-6 exceeds the configured tolerance 1.0e-10 at t = 2900.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.273122988527013e-6 exceeds the configured tolerance 1.0e-10 at t = 2910.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.272799848582319e-6 exceeds the configured tolerance 1.0e-10 at t = 2920.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.272476984319906e-6 exceeds the configured tolerance 1.0e-10 at t = 2930.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.272154395313168e-6 exceeds the configured tolerance 1.0e-10 at t = 2940.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "49 minutes"
+│   n_steps_completed = 294
+│   wall_time_per_step = "9 milliseconds, 924 microseconds"
+│   wall_time_total = "3 seconds, 572 milliseconds"
+│   wall_time_remaining = "655 milliseconds, 259 nanoseconds"
+│   wall_time_spent = "2 seconds, 917 milliseconds"
+│   percent_complete = "81.7%"
+│   estimated_sypd = "2.759"
+│   instantaneous_sypd = "4.74"
+│   date_now = 2026-09-10T00:49:33.943
+└   estimated_finish_date = 2026-09-10T00:49:34.943
+┌ Warning: water tag closure residual 2.271832077216229e-6 exceeds the configured tolerance 1.0e-10 at t = 2950.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.271510013295759e-6 exceeds the configured tolerance 1.0e-10 at t = 2960.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.271188690049884e-6 exceeds the configured tolerance 1.0e-10 at t = 2970.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.270868041120365e-6 exceeds the configured tolerance 1.0e-10 at t = 2980.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.270547508035481e-6 exceeds the configured tolerance 1.0e-10 at t = 2990.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.270227269593022e-6 exceeds the configured tolerance 1.0e-10 at t = 3000.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2699072809766385e-6 exceeds the configured tolerance 1.0e-10 at t = 3010.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2695875492451706e-6 exceeds the configured tolerance 1.0e-10 at t = 3020.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2692680762387314e-6 exceeds the configured tolerance 1.0e-10 at t = 3030.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2689488601929954e-6 exceeds the configured tolerance 1.0e-10 at t = 3040.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.268629902545273e-6 exceeds the configured tolerance 1.0e-10 at t = 3050.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.268311203166719e-6 exceeds the configured tolerance 1.0e-10 at t = 3060.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2679927624194058e-6 exceeds the configured tolerance 1.0e-10 at t = 3070.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2676745847093685e-6 exceeds the configured tolerance 1.0e-10 at t = 3080.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.267356676534451e-6 exceeds the configured tolerance 1.0e-10 at t = 3090.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2670390378316344e-6 exceeds the configured tolerance 1.0e-10 at t = 3100.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2667216669449007e-6 exceeds the configured tolerance 1.0e-10 at t = 3110.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2664045643275824e-6 exceeds the configured tolerance 1.0e-10 at t = 3120.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2660877302538447e-6 exceeds the configured tolerance 1.0e-10 at t = 3130.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "52 minutes, 10 seconds"
+│   n_steps_completed = 313
+│   wall_time_per_step = "9 milliseconds, 752 microseconds"
+│   wall_time_total = "3 seconds, 510 milliseconds"
+│   wall_time_remaining = "458 milliseconds, 369 microseconds"
+│   wall_time_spent = "3 seconds, 52 milliseconds"
+│   percent_complete = "86.9%"
+│   estimated_sypd = "2.807"
+│   instantaneous_sypd = "3.858"
+│   date_now = 2026-09-10T00:49:34.078
+└   estimated_finish_date = 2026-09-10T00:49:35.078
+┌ Warning: water tag closure residual 2.2657711649860467e-6 exceeds the configured tolerance 1.0e-10 at t = 3140.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2654548688153835e-6 exceeds the configured tolerance 1.0e-10 at t = 3150.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2651388417547694e-6 exceeds the configured tolerance 1.0e-10 at t = 3160.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2648230840763746e-6 exceeds the configured tolerance 1.0e-10 at t = 3170.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2645075960349944e-6 exceeds the configured tolerance 1.0e-10 at t = 3180.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.26419235683862e-6 exceeds the configured tolerance 1.0e-10 at t = 3190.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2638772560164144e-6 exceeds the configured tolerance 1.0e-10 at t = 3200.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.263562479921272e-6 exceeds the configured tolerance 1.0e-10 at t = 3210.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.263247953749467e-6 exceeds the configured tolerance 1.0e-10 at t = 3220.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2629337143064303e-6 exceeds the configured tolerance 1.0e-10 at t = 3230.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2626197476289083e-6 exceeds the configured tolerance 1.0e-10 at t = 3240.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.26230605780873e-6 exceeds the configured tolerance 1.0e-10 at t = 3250.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2619926442868135e-6 exceeds the configured tolerance 1.0e-10 at t = 3260.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.261679506923391e-6 exceeds the configured tolerance 1.0e-10 at t = 3270.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.261366646200403e-6 exceeds the configured tolerance 1.0e-10 at t = 3280.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2610540619756608e-6 exceeds the configured tolerance 1.0e-10 at t = 3290.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.260741754288027e-6 exceeds the configured tolerance 1.0e-10 at t = 3300.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2604297233728698e-6 exceeds the configured tolerance 1.0e-10 at t = 3310.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2601179692064813e-6 exceeds the configured tolerance 1.0e-10 at t = 3320.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "55 minutes, 20 seconds"
+│   n_steps_completed = 332
+│   wall_time_per_step = "9 milliseconds, 520 microseconds"
+│   wall_time_total = "3 seconds, 427 milliseconds"
+│   wall_time_remaining = "266 milliseconds, 562 microseconds"
+│   wall_time_spent = "3 seconds, 160 milliseconds"
+│   percent_complete = "92.2%"
+│   estimated_sypd = "2.876"
+│   instantaneous_sypd = "4.811"
+│   date_now = 2026-09-10T00:49:34.186
+└   estimated_finish_date = 2026-09-10T00:49:35.186
+┌ Warning: water tag closure residual 2.2598064919102693e-6 exceeds the configured tolerance 1.0e-10 at t = 3330.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.259495291436565e-6 exceeds the configured tolerance 1.0e-10 at t = 3340.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2591843680044083e-6 exceeds the configured tolerance 1.0e-10 at t = 3350.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2588737217657787e-6 exceeds the configured tolerance 1.0e-10 at t = 3360.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.25856335245906e-6 exceeds the configured tolerance 1.0e-10 at t = 3370.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.25825323985913e-6 exceeds the configured tolerance 1.0e-10 at t = 3380.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2579433960036985e-6 exceeds the configured tolerance 1.0e-10 at t = 3390.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2576338322444297e-6 exceeds the configured tolerance 1.0e-10 at t = 3400.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.257324539347342e-6 exceeds the configured tolerance 1.0e-10 at t = 3410.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.257015515759348e-6 exceeds the configured tolerance 1.0e-10 at t = 3420.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.256706763478969e-6 exceeds the configured tolerance 1.0e-10 at t = 3430.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.256398282625565e-6 exceeds the configured tolerance 1.0e-10 at t = 3440.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2560900731673553e-6 exceeds the configured tolerance 1.0e-10 at t = 3450.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.255781985212003e-6 exceeds the configured tolerance 1.0e-10 at t = 3460.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.25547369613205e-6 exceeds the configured tolerance 1.0e-10 at t = 3470.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.25516595794882e-6 exceeds the configured tolerance 1.0e-10 at t = 3480.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.254858411534442e-6 exceeds the configured tolerance 1.0e-10 at t = 3490.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.254551190825928e-6 exceeds the configured tolerance 1.0e-10 at t = 3500.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2542442532852746e-6 exceeds the configured tolerance 1.0e-10 at t = 3510.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Info: Progress
+│   simulation_time = "58 minutes, 30 seconds"
+│   n_steps_completed = 351
+│   wall_time_per_step = "9 milliseconds, 355 microseconds"
+│   wall_time_total = "3 seconds, 367 milliseconds"
+│   wall_time_remaining = "84 milliseconds, 197 microseconds"
+│   wall_time_spent = "3 seconds, 283 milliseconds"
+│   percent_complete = "97.5%"
+│   estimated_sypd = "2.927"
+│   instantaneous_sypd = "4.228"
+│   date_now = 2026-09-10T00:49:34.309
+└   estimated_finish_date = 2026-09-10T00:49:35.309
+┌ Warning: water tag closure residual 2.253937606279556e-6 exceeds the configured tolerance 1.0e-10 at t = 3520.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2536312503458075e-6 exceeds the configured tolerance 1.0e-10 at t = 3530.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2533251836918888e-6 exceeds the configured tolerance 1.0e-10 at t = 3540.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2530194068433676e-6 exceeds the configured tolerance 1.0e-10 at t = 3550.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.252713919302432e-6 exceeds the configured tolerance 1.0e-10 at t = 3560.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2524087208082495e-6 exceeds the configured tolerance 1.0e-10 at t = 3570.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.2521038111143282e-6 exceeds the configured tolerance 1.0e-10 at t = 3580.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.251799280018446e-6 exceeds the configured tolerance 1.0e-10 at t = 3590.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: water tag closure residual 2.25149513380277e-6 exceeds the configured tolerance 1.0e-10 at t = 3600.0 s. The tags no longer account for the field they partition; see output/a2_none_dt10/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+[ Info: solve! walltime = 3.344
+[ Info: sypd: 2.949
+[ Info: wall_time_per_timestep: 9 milliseconds, 288 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 4.26 GiB
+┌ Info: Tag-closure run finished
+│   simulation.job_id = "a2_none_dt10"
+└   result.ret_code = :success
+┌ Info: Where it went
+│   config = "/home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/a2_none_dt10.yml"
+└   simulation.output_dir = "output/a2_none_dt10/output_0000"
+┌ Info: water tag closure (361 rows)
+│   columns: time,total,tagged,residual,relative,gross_residual,gross_relative,scale,nonpositive_fraction
+│   first:   0.0,11.572872709327106,11.572872709327104,1.7763568394002505e-15,1.5349316319435567e-16,3.1251792600821884e-16,2.700435180249986e-17,11.572872709327106,0.0
+│   last:    3600.0,11.510630647417267,11.510630593865791,5.355147614238831e-8,4.6523494483253255e-9,2.5916128889661003e-5,2.25149513380277e-6,11.510630647417267,0.0
+└   path = "output/a2_none_dt10/output_0000/water_tag_closure.csv"

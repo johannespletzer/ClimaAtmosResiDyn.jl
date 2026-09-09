@@ -1,0 +1,57 @@
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    a1_dt10
+Configuration:   /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/a1_dt10.yml
+SLURM job:       27360071
+Partition:       shared
+Nodes:           l40001
+CPUs per task:   35
+Repository:      /home/b/b309159/git/ClimaAtmosResiDyn.jl
+Commit:          unknown
+Julia:           /home/b/b309159/.juliaup/bin/julia +1.11
+Project:         /home/b/b309159/git/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Output base:     /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a1_dt10
+Start time:      2026-09-09T23:40:25+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) gcc/11.2.0-gcc-11.2.0   2) openmpi/4.1.2-gcc-11.2.0  
+
+
+Wrote /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a1_dt10/output_0001/provenance.txt
+Driver exit status: 0
+End time:           2026-09-09T23:45:16+02:00
+
+********************************************************************************
+*                                                                              *
+*  This is the automated job summary provided by DKRZ.                         *
+*  If you encounter problems, need assistance or have any suggestion, please   *
+*  write an email to                                                           *
+*                                                                              *
+*  --  support@dkrz.de --                                                      *
+*                                                                              *
+*                       We hope you enjoyed the DKRZ supercomputer LEVANTE ... *
+*
+* JobID            : 27360071
+* JobName          : tag-closure-a                                     
+* Account          : bd1062
+* User             : b309159 (25247), bd1062 (1413)                    
+* Partition        : shared
+* QOS              : normal
+* Nodelist         : l40001 (1)                                                
+* Submit date      : 2026-09-09T23:40:20
+* Start time       : 2026-09-09T23:40:21
+* End time         : 2026-09-09T23:45:17
+* Elapsed time     : 00:04:56 (Timelimit=06:00:00)                     
+* Command          : /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/
+*                    tag_closure/runscripts/phase_a.sh
+* WorkDir          : /home/b/b309159/git/ClimaAtmosResiDyn.jl
+*
+* StepID | JobName      NodeHours    MaxRSS [Byte] (@task)
+* ------------------------------------------------------------------------------
+* batch  | batch            0.012
+* extern | extern           0.012                       ()
+* ------------------------------------------------------------------------------
+
