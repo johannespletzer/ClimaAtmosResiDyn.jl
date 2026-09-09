@@ -126,11 +126,19 @@ Rules for the layout:
     identity, because the residual it would cancel was never in `q_tag_res`.
     The order and the sign both matter. Reducing each term on its own and
     subtracting the two scalars is a different number. The ledger holds the
-    signed change applied to the tag, `new - old`, so a repair that takes
-    water out of a tag records a negative fix and raises `q_tag_res` by that
-    amount. Adding the ledger back cancels it. The `q_tag_res` docstring says
-    to subtract `q_tag_fix_*`, which means the correction's contribution to
-    the residual and not the ledger value itself.
+    signed change applied to the tag, `new - old`, so adding it back undoes
+    the correction and recovers the residual the run would have reported had
+    no repair fired. That is an identity, and it is what the reducer asserts.
+    The `q_tag_res` docstring says to subtract `q_tag_fix_*`, which means the
+    correction's contribution to the residual and not the ledger value
+    itself.
+  - Do not expect the operator residual to be the smaller of the two. Summed
+    over the partition, the repair's ledger is never negative. It is zero on
+    the sum-preserving branch, and where a cell is zeroed it is minus that
+    cell's tag sum, which was negative for the branch to fire at all. So the
+    operator residual is usually the larger number, and a check that assumed
+    otherwise would reject correct output. The identity above is the
+    invariant worth asserting; the direction is not.
   - That decomposition is clean only while every ledger entry comes from
     `repair_water_tag_partition!`. The repair moves the tags and leaves
     `ρq_tot` alone. A rescale follows a parent that moved too, so removing it
