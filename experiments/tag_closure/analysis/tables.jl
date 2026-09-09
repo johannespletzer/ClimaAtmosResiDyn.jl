@@ -10,6 +10,7 @@ costing a qualified name on every call.
 first run of it is `analysis/selftest.jl`.
 =#
 
+import Dates
 import DelimitedFiles
 import Statistics
 import YAML

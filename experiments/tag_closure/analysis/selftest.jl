@@ -68,17 +68,34 @@ const HERE = @__DIR__
 
 Load one analysis script into a module of its own and return the module.
 
-Each script defines a `main`, and this file does too, so including them into
-`Main` would leave three definitions of one name and the last include would win.
-A module apiece keeps them apart. `Base.include` also leaves `PROGRAM_FILE`
+Each script defines a `main`, and this file does too, so including them all into
+`Main` would leave several definitions of one name and the last one would win. A
+module apiece keeps them apart. `Base.include` also leaves `PROGRAM_FILE`
 pointing at this file, so a script's own `if abspath(PROGRAM_FILE) == @__FILE__`
 guard does not fire and nothing runs on load.
+
+**A module built by `Module(...)` is not one the parser created**, so the names
+the parser normally injects into a `module ... end` block are not there to be
+relied on. `include` is the one that bites: every phase script includes
+`tables.jl`, and that call resolves inside this module, where the name does not
+exist. `eval` has the same gap. Both are defined here, bound to this module,
+before the file is loaded into it. `Base.include` takes its module explicitly
+and so never needed them, which is why a script that includes nothing loaded
+fine and one that includes something did not.
+
+`Base.include` records the path it was given as the file being loaded, so
+`@__DIR__` inside the script resolves to the script's own directory and
+`tables.jl` is found beside it rather than relative to the caller.
 
 The methods are defined while this one is already running, so every call into a
 loaded script goes through `Base.invokelatest`.
 """
 function load_script(path)
     loaded = Module(Symbol(:UnderTest_, basename(path)))
+    isdefined(loaded, :include) ||
+        Base.eval(loaded, :(include(file) = Base.include($loaded, file)))
+    isdefined(loaded, :eval) ||
+        Base.eval(loaded, :(eval(expr) = Core.eval($loaded, expr)))
     Base.include(loaded, path)
     return loaded
 end
@@ -473,13 +490,13 @@ function test_phase_b_and_c()
     @info "7. phase_b.jl and phase_c.jl on synthetic tables"
     mktempdir() do tmp
         output = joinpath(tmp, "output")
-        # Phase B: the four-run split plus the control.
+        reducer = load_script(joinpath(HERE, "reduce_run.jl"))
+        # Phase B: the four-run split.
         for (run, tail) in (
             ("b1_base", 5.0e-3), ("b1a_no_hyperdiff", 3.0e-3),
             ("b1b_no_vert_diff", 4.0e-3), ("b1c_neither", 1.0e-3),
         )
             dir = write_energy_run(joinpath(output, run); family = "energy")
-            reducer = load_script(joinpath(HERE, "reduce_run.jl"))
             header, rows, metadata = call(reducer, :reduce_energy_tags, dir)
             call(
                 reducer, :write_table, dir, "energy_tag_residual", header, rows,
@@ -498,7 +515,6 @@ function test_phase_b_and_c()
         end
         # Phase C: one column run, reduced.
         c_dir = write_energy_run(joinpath(output, "c0_column"); family = "energy_source")
-        reducer = load_script(joinpath(HERE, "reduce_run.jl"))
         header, rows, metadata = call(reducer, :reduce_source_tags, c_dir)
         call(
             reducer, :write_table, c_dir, "source_tag_extrema", header, rows,

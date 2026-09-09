@@ -428,14 +428,17 @@ function reduce_source_tags(output_dir)
 end
 
 """
-    write_table(output_dir, basename, header, rows, metadata, note)
+    write_table(output_dir, stem, header, rows, metadata, note)
 
 Write one reduced table with the provenance block above its header.
+
+`stem` rather than `basename`, which would shadow `Base.basename` inside this
+function for no gain.
 """
-function write_table(output_dir, basename, header, rows, metadata, note)
-    path = joinpath(output_dir, basename * ".csv")
+function write_table(output_dir, stem, header, rows, metadata, note)
+    path = joinpath(output_dir, stem * ".csv")
     open(path, "w") do io
-        println(io, "# $basename.csv, from analysis/reduce_run.jl")
+        println(io, "# $stem.csv, from analysis/reduce_run.jl")
         println(io, "# run: $(metadata.job_id)")
         println(io, "# generated: $(round(Int, time())) (unix)")
         println(io, "# geometry: $(metadata.geometry)")

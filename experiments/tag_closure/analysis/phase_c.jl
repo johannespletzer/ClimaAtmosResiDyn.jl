@@ -177,7 +177,7 @@ function worst_tag(run)
     which = ""
     for name in tag_names(run)
         values = column(run, "source_tag_extrema", "min_e_src_" * name)
-        isnothing(values) && continue
+        (isnothing(values) || isempty(values)) && continue
         candidate = minimum(values)
         if isnan(worst) || candidate < worst
             worst = candidate
