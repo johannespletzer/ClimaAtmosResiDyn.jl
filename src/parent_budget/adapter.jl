@@ -7,16 +7,16 @@
 ##### timestepper-specific is here, so that a change in the pinned behaviour is
 ##### a change to one file and to the trace test that fixes it.
 #####
-##### What the adapter does each accepted step, as the first discrete callback:
-##### it reads the accepted state and the stage tendencies the stepper cache
-##### still holds, packs every reservoir's endpoint and every collected channel's
-##### envelope into one buffer, reduces that buffer once, records the envelopes
-##### as legs, commits the transaction, and opens the next one on the closing
-##### endpoint. It writes nothing to the state or the cache it reads.
+##### The adapter runs each accepted step as the first discrete callback. It
+##### reads the accepted state and the stage tendencies the stepper cache still
+##### holds. It packs every reservoir's endpoint and every collected channel's
+##### envelope into one buffer and reduces that buffer once. It records the
+##### envelopes as legs, commits the transaction, and opens the next one on the
+##### closing endpoint. It writes nothing to the state or the cache it reads.
 #####
-##### What it collects is `COLLECTED_CHANNELS`: the two explicit channels. The
-##### implicit envelope, the final maps, the rosters and the transfer legs are
-##### later stack steps, and until they land the schema names them as blockers.
+##### It collects `COLLECTED_CHANNELS`, the two explicit channels. It does not
+##### collect the implicit envelope, the final maps, the rosters or the transfer
+##### legs. The schema still expects them, so each is a named blocker.
 
 # ============================================================================
 # Modes
@@ -54,7 +54,7 @@ struct AuditMode <: ParentBudgetMode end
 """
     parent_budget_mode(name) -> Union{Nothing, ParentBudgetMode}
 
-The mode the configuration key `parent_budget_mode` names: `"off"` is
+Return the mode the configuration key `parent_budget_mode` names. `"off"` is
 `nothing`, `"summary"` and `"audit"` are the two modes, and anything else is an
 error rather than a silent `off`. A mode object, or `nothing`, passes through.
 """
@@ -79,7 +79,7 @@ end
 
 The channels this adapter captures an envelope for: the two explicit channels,
 each as the tableau-weighted sum of the stage tendencies the stepper cache
-holds after a step. The implicit channel is stack step 5.
+holds after a step. The implicit channel is not collected.
 """
 const COLLECTED_CHANNELS = (:explicit_main, :explicit_limited)
 
@@ -119,8 +119,9 @@ function check_algorithm(alg)
 end
 
 # The record, read from the integrator once the cache exists. The weights come
-# from the cache's tableau rather than the algorithm's, because that is the one
-# the stepper applies when a tableau is cast to the state's float type.
+# from the cache's tableau rather than the algorithm's. The cache holds the
+# tableau cast to the state's float type, and that is the one the stepper
+# applies.
 function timestepper_record(integrator)
     alg = integrator.alg
     check_algorithm(alg)
@@ -177,16 +178,17 @@ end
 """
     build_parent_budget(mode, atmos, Y; ode_config, restart) -> Union{Nothing, ParentBudgetAdapter}
 
-The adapter for a run, or `nothing` when `mode` is `off`.
+Build the adapter for a run, or return `nothing` when `mode` is `off`.
 
 Everything the ledger expects is fixed here, before the cache is built and
-before the first step: the configuration is checked against the supported
-scope, the schema is built from the coverage registry, and the packet layout
+before the first step. The configuration is checked against the supported
+scope. The schema is built from the coverage registry. The packet layout
 follows from the schema and the collected channels.
 
-A restart is refused until stack step 7 gives the restored state its
-zero-duration transition. Reading a restart file into a fresh ledger would
-either charge the restoration to the first step or silently absorb it.
+A restart is refused. A restored state is a transition no transaction
+produced, and the ledger has no transaction to book it in. Reading a restart
+file into a fresh ledger would either charge the restoration to the first step
+or silently absorb it.
 """
 build_parent_budget(mode, atmos, Y; kwargs...) =
     build_parent_budget(parent_budget_mode(mode), atmos, Y; kwargs...)
@@ -200,8 +202,8 @@ function build_parent_budget(
 )
     restart && error(
         "The parent-budget ledger does not support restarts yet: a restored " *
-        "state is a transition no transaction produced, and stack step 7 gives " *
-        "it one. Pass `parent_budget_mode = \"off\"` for this run.",
+        "state is a transition no transaction produced, and the ledger has no " *
+        "transaction to book it in. Pass `parent_budget_mode = \"off\"` for this run.",
     )
     check_algorithm(ode_config)
     implicit_solve = !isnothing(ode_config.newtons_method)
@@ -228,13 +230,13 @@ end
 """
     parent_budget_callbacks(adapter) -> Tuple
 
-The discrete callback that drives the ledger, as a one-element tuple to splice
-in front of every other callback, or an empty tuple for `nothing`.
+Return the discrete callback that drives the ledger, as a one-element tuple to
+splice in front of every other callback, or an empty tuple for `nothing`.
 
 The callback's `initialize` reads the opening endpoint after the integrator has
 initialised its cache and before any other callback has run, which is where
 `B⁰` is defined. Its `affect!` commits every accepted step. Its condition is
-always true: the ledger has no cadence of its own, because a step it skipped
+always true. The ledger has no cadence of its own, because a step it skipped
 would be a change nobody accounted for.
 """
 parent_budget_callbacks(::Nothing) = ()
@@ -267,9 +269,11 @@ Account for the accepted step the integrator has just finished.
 
 Runs before every other callback, so the state it reads is the finalized
 accepted state and the stage tendencies in the stepper cache are this step's.
-One packet, one collective, then the envelopes are recorded, the transaction is
-committed, and the next one opens on the closing endpoint without measuring it
-again.
+The packet is reset, filled with every reservoir's endpoint and every collected
+channel's envelope, and reduced once. The closing endpoints are unpacked from
+it, the envelopes are recorded as legs, and the transaction is committed. The
+commit is kept, and the next transaction opens on the closing endpoint without
+measuring it again.
 """
 function commit_step!(adapter::ParentBudgetAdapter, integrator)
     (; schema, ledger, packet, surface_temperature) = adapter
@@ -452,15 +456,16 @@ end
 """
     latest_commit(adapter) -> Union{Nothing, BudgetCommit}
 
-The reconciliations of the last accepted step, or `nothing` before the first.
+Return the reconciliations of the last accepted step, or `nothing` before the
+first.
 """
 latest_commit(adapter::ParentBudgetAdapter) = adapter.last_commit
 
 """
     parent_status(adapter, quantity, control_volume) -> Symbol
 
-The parent claim's status for one quantity in one control volume at the last
-commit: `:pass`, `:fail`, `:blocked` or `:not_applicable`.
+Return the parent claim's status for one quantity in one control volume at the
+last commit: `:pass`, `:fail`, `:blocked` or `:not_applicable`.
 """
 function parent_status(
     adapter::ParentBudgetAdapter,

@@ -130,8 +130,9 @@ endpoint_packet_layout(schema::BudgetSchema) =
 """
     envelope_group(channel, reservoir) -> Symbol
 
-The packet group holding one channel's envelope in one reservoir. Distinct from
-every reservoir name, so an envelope slot can never be read as an endpoint.
+Return the packet group holding one channel's envelope in one reservoir. It is
+distinct from every reservoir name, so an envelope slot can never be read as an
+endpoint.
 """
 envelope_group(channel::Symbol, reservoir::Symbol) =
     Symbol("envelope.", channel, ".", reservoir)
@@ -139,9 +140,9 @@ envelope_group(channel::Symbol, reservoir::Symbol) =
 """
     budget_packet_layout(schema, channels)
 
-The layout of the one packet an accepted step reduces: the endpoint slots of
-every declared reservoir, followed by the envelope slots of each channel in
-`channels` in each reservoir that channel writes.
+Build the layout of the one packet an accepted step reduces. It holds the
+endpoint slots of every declared reservoir, followed by the envelope slots of
+each channel in `channels` in each reservoir that channel writes.
 
 `channels` is what the adapter collects, not what the schema expects. A
 declared channel the adapter does not collect has no slot here; its absence is
@@ -227,7 +228,7 @@ end
 
 Return a packet to the state it was built in: every slot unset, every value
 zero, not reduced. The adapter keeps one packet for the whole run and resets it
-at the start of each accepted step, so per-step accounting allocates nothing
+when each accepted step is committed, so per-step accounting allocates nothing
 that grows with the run.
 """
 function reset_packet!(packet::BudgetPacket)

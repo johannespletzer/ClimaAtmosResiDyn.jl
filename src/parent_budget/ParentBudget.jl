@@ -24,8 +24,9 @@ The files are included in dependency order.
     packet with one collective.
   - `journal.jl` records what happened, with evidence per component.
   - `transaction.jl` compares the two and produces the three residuals.
-  - `adapter.jl` is the one place that knows the timestepper: it captures the
-    accepted envelopes after each step and drives the transactions.
+  - `adapter.jl` is the place that knows the timestepper's stages and hooks.
+    It captures the accepted envelopes after each step and drives the
+    transactions.
 """
 module ParentBudget
 

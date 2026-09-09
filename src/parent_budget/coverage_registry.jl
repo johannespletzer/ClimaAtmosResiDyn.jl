@@ -52,6 +52,7 @@ function RegistryContext(atmos; dss::Bool, implicit_solve::Bool, restart::Bool =
     slab = has_surface_reservoir(atmos.surface.temperature)
     return RegistryContext(atmos, moist, slab, dss, implicit_solve, restart)
 end
+# The two model facts are resolved once here, so no guard reads field presence.
 
 # The guards. Each is named for the configuration fact it tests, so a row reads
 # as a sentence. They take the context and return a Bool, and none of them
@@ -132,11 +133,11 @@ end
 """
     unsupported_reason(atmos) -> Union{Nothing, String}
 
-Why the ledger refuses `atmos`, or `nothing` when the configuration is inside
-the contract's supported scope. The reasons are the contract's own: the EDMF
-subdomains raise a modelling question the bookkeeping cannot settle, a
-prescribed flow overwrites the state, chemistry changes composition through an
-external solver, and the two-moment schemes carry unaudited paths.
+Return why the ledger refuses `atmos`, or `nothing` when the configuration is
+inside the contract's supported scope. The reasons are the contract's own. The
+EDMF subdomains raise a modelling question the bookkeeping cannot settle. A
+prescribed flow overwrites the state. Chemistry changes composition through an
+external solver. The two-moment schemes carry unaudited paths.
 """
 function unsupported_reason(atmos)
     atmos.turbconv_model isa AbstractEDMF && return "EDMF turbulence-convection " *
@@ -158,17 +159,17 @@ end
 """
     is_supported(atmos) -> Bool
 
-Whether `atmos` is inside the contract's supported scope.
+Return whether `atmos` is inside the contract's supported scope.
 """
 is_supported(atmos) = isnothing(unsupported_reason(atmos))
 
 """
     check_supported(atmos)
 
-Refuse an out-of-scope configuration at setup, before a long simulation starts,
-naming the reason. A configuration outside the scope has rows the registry has
-never dispositioned, and a ledger that ran on it would close over paths nobody
-declared.
+Refuse an out-of-scope configuration at setup, naming the reason. The refusal
+comes before a long simulation starts. A configuration outside the scope has
+rows the registry has never dispositioned. A ledger that ran on it would close
+over paths nobody declared.
 """
 function check_supported(atmos)
     reason = unsupported_reason(atmos)
@@ -198,8 +199,8 @@ code cannot disagree without a test noticing. A transfer row carries
 `dispositions` is the row's `Disposition M·W·E` cell in `BUDGET_QUANTITIES`
 order and in the ledger's vocabulary, see `EXPECTED_DISPOSITIONS`. `level` is
 the collection level and `state` the collection state, both as symbols with
-the table's spelling (`:final_map` for "final map"). `step` is the stack step
-that owns the row.
+the table's spelling (`:final_map` for "final map"). `step` is the row's `Step`
+column.
 
 `applies` is the guard: a function of a `RegistryContext` that says whether
 the configuration selects the row. It is the executable form of the `Guard`
@@ -1205,7 +1206,7 @@ const COVERAGE_ROWS = CoverageRow[
         "unmodeled surface store, when no slab is configured",
         "unless `disable_surface_flux_tendency`",
         "atmosphere, and slab when configured",
-        "`ρe_tot`, `ρq_tot`, `ρ`, `uₕ`, `sfc.T`",
+        "`ρe_tot`, `ρq_tot`, `ρ`, `uₕ`, `sfc.T`, `sfc.water`",
         (:measured, :measured, :measured),
         "`Yₜ.c.ρ -= btt` is the mass leg; boundary crossing in the atmosphere-only view",
         :transfer,
@@ -1277,7 +1278,7 @@ const COVERAGE_ROWS = CoverageRow[
         "unmodeled surface store, when no slab is configured",
         "`NonEquilibriumMicrophysics1M`",
         "atmosphere, and slab when configured",
-        "`ρq_tot`, `ρ`, `ρe_tot`, `sfc.water`",
+        "`ρq_tot`, `ρ`, `ρe_tot`, `sfc.water`, `sfc.T`",
         (:measured, :measured, :measured),
         "two quadratures of one physical flux, so the pair is measured and any mismatch kept",
         :transfer,
@@ -1364,15 +1365,15 @@ const NON_AUTHORITATIVE_PATHS = NonAuthoritativePath[
 """
     registry_rows(table) -> Vector{CoverageRow}
 
-The rows of one table, in page order.
+Return the rows of one table, in page order.
 """
 registry_rows(table::Symbol) = filter(r -> r.table === table, COVERAGE_ROWS)
 
 """
     selected_rows(context) -> Vector{CoverageRow}
 
-The rows whose guard holds for `context`, in page order. This is the set the
-schema is built from, so it is also the set a run is expected to record.
+Return the rows whose guard holds for `context`, in page order. This is the set
+the schema is built from, so it is also the set a run is expected to record.
 """
 selected_rows(c::RegistryContext) = filter(r -> r.applies(c), COVERAGE_ROWS)
 
@@ -1396,8 +1397,8 @@ const CHANNEL_LABELS = Dict(
 """
     channel_name(row) -> Symbol
 
-The schema label of a dispatch row's channel. Errors for a transfer row, whose
-channel depends on the configuration; see `transfer_channel`.
+Return the schema label of a dispatch row's channel. Errors for a transfer row,
+whose channel depends on the configuration; see `transfer_channel`.
 """
 function channel_name(row::CoverageRow)
     isnothing(row.channel) &&
@@ -1413,15 +1414,15 @@ end
 """
     process_name(row) -> Symbol
 
-The process a decomposition row records under: the part of its event id after
-the table prefix, so `expl.viscous_sponge` is the process `viscous_sponge`.
+Return the process a decomposition row records under. It is the part of the
+event id after the table prefix, so `expl.viscous_sponge` is `viscous_sponge`.
 """
 process_name(row::CoverageRow) = Symbol(last(split(String(row.id), '.'; limit = 2)))
 
 """
     row_reservoirs(row, context) -> Tuple{Vararg{Symbol}}
 
-The modeled reservoirs a row writes in this configuration, resolved from its
+Resolve the modeled reservoirs a row writes in this configuration from its
 `Reservoirs` cell. The cell's wording is fixed, so an unknown phrase is an error
 rather than an empty tuple.
 """
@@ -1444,9 +1445,9 @@ end
 """
     resolve_dispositions(dispositions, context)
 
-A row's dispositions for this configuration. Water is `:not_applicable` in a
-dry model whatever the row says, because the row describes what the path does
-where the quantity exists.
+Resolve a row's dispositions for this configuration. Water is `:not_applicable`
+in a dry model whatever the row says, because the row describes what the path
+does where the quantity exists.
 """
 function resolve_dispositions(dispositions, c::RegistryContext)
     return ntuple(length(BUDGET_QUANTITIES)) do i
@@ -1477,7 +1478,7 @@ end
 """
     transfer_topology(row, context) -> TransferTopology
 
-The topology a transfer row resolves to in this configuration, from its
+Resolve the topology of a transfer row in this configuration from its
 `Topology` cell. A row that reads `coupled` with a slab and `exterior`
 otherwise is two different expectations, and the configuration picks one.
 """
@@ -1506,6 +1507,8 @@ const COUNTERPARTIES = Dict(
     "prescribed ocean heat transport" => :prescribed_ocean_heat_transport,
 )
 
+# The counterparty label of a transfer row, so the schema never stores the
+# cell's prose. An unknown cell is an error rather than a made-up label.
 function transfer_counterparty(row::CoverageRow)
     haskey(COUNTERPARTIES, row.counterparty) ||
         error(
@@ -1525,9 +1528,9 @@ const TWO_SIDED_TRANSFERS = (
 """
     transfer_legs(row, context) -> Tuple{Vararg{Tuple{Symbol, Symbol}}}
 
-The `(reservoir, leg)` pairs a transfer row requires in this configuration. The
-atmospheric leg is always `flux`; the slab leg exists when the row is two-sided
-and a slab is configured; the Q-flux is a slab-only leg.
+Return the `(reservoir, leg)` pairs a transfer row requires in this
+configuration. The atmospheric leg is always `flux`. The slab leg exists when
+the row is two-sided and a slab is configured. The Q-flux is a slab-only leg.
 """
 function transfer_legs(row::CoverageRow, c::RegistryContext)
     row.id === Symbol("xfer.slab_qflux") &&
@@ -1541,10 +1544,10 @@ end
 """
     transfer_channel(row, context) -> Symbol
 
-The accepted channel a transfer event's legs are applied through. Zero-moment
-removal follows `microphysics_tendency_timestepping`; one-moment fallout is on
-the implicit channel because `vertical_advection_of_water_tendency!` is called
-from `implicit_tendency!`; every other event is explicit.
+Return the accepted channel a transfer event's legs are applied through.
+Zero-moment removal follows `microphysics_tendency_timestepping`. One-moment
+fallout is on the implicit channel because `vertical_advection_of_water_tendency!`
+is called from `implicit_tendency!`. Every other event is explicit.
 """
 function transfer_channel(row::CoverageRow, c::RegistryContext)
     row.id === Symbol("xfer.precipitation_0m") &&
@@ -1567,14 +1570,14 @@ const ROSTER_TABLES = (:limited, :explicit, :implicit)
 """
     budget_schema(atmos; dss, implicit_solve, restart = false) -> BudgetSchema
 
-The schema a configuration is expected to produce, built from the registry.
+Build the schema a configuration is expected to produce from the registry.
 
-Refuses an out-of-scope configuration first. Then, from the rows the
-configuration selects: the reservoirs and control volumes, one `ChannelSpec`
-per envelope row with the roster of decomposition rows that share its channel,
-one `FinalMapSpec` per accepted-state hook with the dispositions of the rows
-that run in it, and one `TransferEventSpec` per transfer row with its topology
-and legs resolved.
+An out-of-scope configuration is refused first. The rest comes from the rows
+the configuration selects. The reservoirs and control volumes come from the
+model facts. Each envelope row gives one `ChannelSpec`, with the roster of
+decomposition rows that share its channel. Each accepted-state hook gives one
+`FinalMapSpec`, with the dispositions of the rows that run in it. Each transfer
+row gives one `TransferEventSpec`, with its topology and legs resolved.
 
 The `initialization` rows are not final maps of an ordinary step. They set
 `B⁰` outside every transaction, or describe the restart transition, which is
@@ -1678,15 +1681,18 @@ const DISPOSITION_CELLS = Dict(
     :open => "open",
 )
 
+# The `Disposition M·W·E` cell of a row, so the page and the registry share one
+# spelling of the three dispositions.
 disposition_cell(dispositions) =
     join((DISPOSITION_CELLS[d] for d in dispositions), " · ")
 
+# The `Level` cell of a row: the symbol with its underscore spelled as a space.
 level_cell(level::Symbol) = replace(String(level), "_" => " ")
 
 """
     table_cells(row) -> Vector{String}
 
-The row's cells in the column order of its table, as the page prints them.
+Return the row's cells in the column order of its table, as the page prints them.
 """
 function table_cells(row::CoverageRow)
     id = "`$(row.id)`"
@@ -1708,14 +1714,15 @@ function table_cells(row::CoverageRow)
     return [id, row.dispatch, common[1], row.channel, common[2:end]...]
 end
 
+# The four cells of a non-authoritative path, in the order its table prints them.
 table_cells(path::NonAuthoritativePath) =
     ["`$(path.id)`", path.dispatch, path.hook, path.why]
 
 """
     registry_table_cells(table) -> Vector{Vector{String}}
 
-Every row of one table as its cells, in page order. `:non_authoritative` is
-accepted alongside the `REGISTRY_TABLES`. This is what the documentation test
+Return every row of one table as its cells, in page order. `:non_authoritative`
+is accepted alongside the `REGISTRY_TABLES`. This is what the documentation test
 compares the page against, cell by cell.
 """
 function registry_table_cells(table::Symbol)
