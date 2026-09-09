@@ -1,5 +1,5 @@
-run: a1_dt10
-config: /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/a1_dt10.yml
+run: a1_dt5
+config: /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/a1_dt5.yml
 commit: 3659746d1005b84d057c8ade3c59138b4c91fa6d
 commit_source: git
 commit_dirty: yes
@@ -8,15 +8,15 @@ julia: 1.11.9
 julia_depot: /home/b/b309159/.julia/depots/levante-cpu
 project: /home/b/b309159/git/ClimaAtmosResiDyn.jl/.buildkite
 started: 2026-09-10T00:15:14+02:00
-finished: 2026-09-10T00:20:09+02:00
+finished: 2026-09-10T00:20:07+02:00
 exit_status: 0
-slurm_job_id: 27360483
+slurm_job_id: 27360484
 slurm_job_name: tag-closure-a
 partition: shared
-nodelist: l40002
+nodelist: l40006
 cpus_per_task: 35
 node_type: AMD EPYC 7763 64-Core Processor
 climacomms_context: SINGLETON
 climacomms_device: CPU
-output_dir: /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a1_dt10/output_0000
-netcdf_and_checkpoints: /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a1_dt10/output_0000 (left on scratch, not committed)
+output_dir: /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a1_dt5/output_0000
+netcdf_and_checkpoints: /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a1_dt5/output_0000 (left on scratch, not committed)

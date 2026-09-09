@@ -1,6 +1,6 @@
 # operator_residual.csv, from analysis/reduce_run.jl
 # run: a1_dt10
-# generated: 1788991146 (unix)
+# generated: 1788992625 (unix)
 # geometry: column
 # region tags summed: upper, lower
 # Column geometry: no horizontal remapping, so the maxima are over the model's own levels.

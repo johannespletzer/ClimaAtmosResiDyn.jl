@@ -104,9 +104,9 @@ vert_diff: ~
 use_krylov_method: false
 sleve_s: 10.0
 water_closure_check:
-  period: "10secs"
+  period: "5secs"
 prescribed_flow: ~
-dt: "10secs"
+dt: "5secs"
 netcdf_output_at_levels: true
 microphysics_model: "0M"
 output_dir_style: "ActiveLink"
@@ -160,7 +160,7 @@ energy_closure_check: ~
 reproducible_restart: false
 strict_config: false
 toml:
-  - "/home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a1_dt10/output_0000/a1_dt10_parameters.toml"
+  - "/home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a1_dt5/output_0000/a1_dt5_parameters.toml"
 energy_source_tags: ~
 cloud_ice_formation: "PrescribedIceNumber"
 external_forcing_file: ~
