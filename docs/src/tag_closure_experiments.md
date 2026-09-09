@@ -95,17 +95,47 @@ Rules for the layout:
 
   - `FLOAT_TYPE: Float64` for every run except the `Float32` comparison. The
     default is `Float32` and the memo explains why that matters.
-  - The closure check of the family under test is on, with `period` set to
-    every step for a column and to one hour for a sphere, and `tolerance`
-    left at its default so the run only warns. It writes
+  - The closure check of the family under test is on, with `tolerance` left
+    at its default so the run only warns. It writes
     `<family>_tag_closure.csv` with the columns `time, total, tagged,
     residual, relative, gross_residual, gross_relative, scale,
     nonpositive_fraction`. `gross_relative` is the number the memo reasons
     about.
+  - `period` is a duration string and not a step count. Every step therefore
+    means a value equal to that run's `dt`, so it changes with `dt` across
+    the three A1 runs. A sphere run uses one hour.
+  - The check needs at least one tag of the family that carries a `region`
+    and no `source`. `tag_closure_callback` errors at startup otherwise,
+    before the first step, and the same holds for the source-tag runs of
+    phase C. Every configuration below carries a region partition for this
+    reason.
   - The diagnostics of the family are on: `q_tag_res` and `q_tag_fix_<name>`
     for water, `e_tag_res` for energy, `e_src_res` and every `e_src_<name>`
-    for the source tags. `q_tag_fix_<name>` is what the analysis subtracts to
-    isolate the operator residual; its own docstring says so.
+    for the source tags. `q_tag_fix_<name>` is what the analysis removes to
+    isolate the operator residual.
+  - The operator residual is the pointwise field
+    `q_tag_res + Σᵢ q_tag_fix_i`, reduced with `max abs` afterwards. The
+    order and the sign both matter. Reducing each term on its own and
+    subtracting the two scalars is a different number. The ledger holds the
+    signed change applied to the tag, `new - old`, so a repair that takes
+    water out of a tag records a negative fix and raises `q_tag_res` by that
+    amount. Adding the ledger back cancels it. The `q_tag_res` docstring says
+    to subtract `q_tag_fix_*`, which means the correction's contribution to
+    the residual and not the ledger value itself.
+  - That decomposition is clean only while every ledger entry comes from
+    `repair_water_tag_partition!`. The repair moves the tags and leaves
+    `ρq_tot` alone. A rescale follows a parent that moved too, so removing it
+    is not a counterfactual. Give A1 to A4 no tracer limiter and no
+    `tracer_nonnegativity_method`, which is what
+    `config/model_configs/baroclinic_wave_tagged_water.yml` does for the same
+    reason, and the ledger then holds repair alone. A5 is the exception. It
+    exists to measure the rescale, so its ledger mixes the two and its
+    numbers are read as a total rather than as an operator residual.
+  - The `q_tag_fix_<name>` docstring also says the field is identically zero
+    unless a tracer limiter or a nonnegativity constraint is configured. That
+    sentence is stale on `main`. `repair_water_tag_partition!` runs
+    unconditionally from `constrain_state!` and writes the ledger, so keep
+    the diagnostic in a run that configures neither.
   - A control run without tags accompanies the first run of every phase, so
     the cost of the tags is measured from the `sypd` and
     `wall_time_per_timestep` lines of the log.
@@ -122,7 +152,7 @@ so growth is visible.
 
 | Run | Variant                                                                                        | Learning question                                                                          |
 |:--- |:---------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------ |
-| A1  | `dt` = 10, 5, 2.5 s, everything else fixed                                                     | Does `max abs(q_tag_res) - Σ q_tag_fix` scale with `dt`, or not                            |
+| A1  | `dt` = 10, 5, 2.5 s, everything else fixed                                                     | Does the operator residual scale with `dt`, or not                                         |
 | A2  | `dt` 10 s with `energy_q_tot_upwinding` and `tracer_upwinding` both `first_order`, both `none` | How much of the residual is the limiter nonlinearity, how much the implicit-explicit split |
 | A3  | `microphysics_model: 1M`, `dt` 10 s                                                            | How large the `q_tot_eff` mismatch is that the docs omit                                   |
 | A4  | A1 at `dt` 10 s with `FLOAT_TYPE: Float32`                                                     | Whether the `Float32` floor hides the structural residual                                  |
