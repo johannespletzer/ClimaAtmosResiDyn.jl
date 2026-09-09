@@ -46,10 +46,71 @@ fresh clone. There is also a `.gitignore` here holding one line, `!output/`: the
 repository root ignores `output/` everywhere, and without the re-inclusion the
 owner's committed results would need a `git add -f` every time.
 
-The analysis scripts arrive in the next step of the plan. The phase B and C
-configurations do too, so `phase_b.sh` and `phase_c.sh` have nothing to run yet
-and their wall times and memory are provisional until the B1 resolution is
-settled.
+`analysis/` holds `reduce_run.jl`, `phase_a.jl` and `selftest.jl`. There is no
+`phase_b.jl` or `phase_c.jl` yet, and there will not be until those phases have
+configurations to read: a phase script is written against the columns its runs
+actually produce, and writing one now would be guessing at them.
+
+The phase B and C configurations are still to come, so `phase_b.sh` and
+`phase_c.sh` have nothing to run yet and their wall times and memory are
+provisional until the B1 resolution is settled.
+
+## Analysis
+
+Two scripts, both run with `--project=.buildkite`, which carries CairoMakie,
+NCDatasets, DataFrames and Statistics. It does **not** carry CSV.jl, so these
+read tables with `DelimitedFiles`.
+
+`analysis/reduce_run.jl` runs on Levante, against a finished run's output
+directory, before anything is copied back:
+
+```bash
+julia +1.11 --project=.buildkite \
+    experiments/tag_closure/analysis/reduce_run.jl output/a1_dt10/output_active
+```
+
+It writes `operator_residual.csv` into that directory. It exists because the
+number phase A turns on is not in the closure table and the NetCDF never leaves
+scratch: `gross_relative` is a volume integral with no ledger subtracted, while
+the operator residual is a pointwise maximum of `q_tag_res + Σᵢ q_tag_fix_i`,
+**summed first and reduced afterwards**, over the pure region tags only. Beside
+it the file carries `max abs q_tag_res` and the summed ledger on their own, so
+the decomposition can be checked rather than trusted, and a `geometry` and
+`remapped` column, because on a sphere the writer has already bilinearly remapped
+to lat-lon and the maximum is then over the remapped field rather than the
+model's own columns. Phase A's ladder is columns, where that is not an issue.
+
+The invariant relating the two residual columns is an identity, not an
+inequality: the operator residual is what the run would have reported had no
+correction been applied. It is **not** reliably smaller than `q_tag_res`. The
+partition repair's ledger sums to zero on its sum-preserving branch and to a
+positive number on the branch that zeroes a cell, so the operator residual is
+usually the larger of the two.
+
+`analysis/phase_a.jl` runs afterwards, over the committed `output/`, and writes
+`output/summary_a.csv` plus three PNGs into `plots/`.
+
+### Testing the analysis
+
+```bash
+julia +1.11 --project=.buildkite \
+    experiments/tag_closure/analysis/selftest.jl
+```
+
+It builds a synthetic NetCDF run and synthetic tables in a temporary directory,
+drives both scripts over them, and asserts values worked out by hand: the
+operator residual on a worked partition-repair case, that a source tag's ledger
+was not summed, that the field was summed before it was reduced, that a run with
+no `provenance.txt` is refused, and that the log-log slope fit recovers 2 from
+`y = x²`. It writes nothing into the repository.
+
+!!! warning "None of the Julia here has ever been run"
+
+    The driver and the three analysis scripts were written in a container with
+    no Julia, so nothing in `run_tag_closure.jl` or `analysis/` has been
+    executed, and JuliaFormatter has not seen them either. `selftest.jl` is the
+    owner's first real check and should be run before any job is submitted. The
+    shell has been exercised, against stub commands; the Julia has not.
 
 ## Submitting one run
 
