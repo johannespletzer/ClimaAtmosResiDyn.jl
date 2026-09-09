@@ -490,6 +490,14 @@ be resubmitted.
   - Whether C3 also wants a sphere counterpart. As registered it is the column
     only, since C3 compares two readings of one run and the column is the cheap
     one.
+  - **A5 diverges, and the integration test cannot see it.** The water tags on
+    the sphere run away to 1e130 while the parent stays bounded, and the run
+    exits zero. `test/tagged_water_integration.jl` exercises that exact
+    configuration but stops at one hour, and the divergence starts between
+    hours two and three. Two decisions follow and neither is the agent's to
+    take: whether to lengthen or add to that test so the regime is covered, and
+    whether to instrument `water_tag_rescale_ratio` to confirm or kill the
+    leading hypothesis. Both are cheap. See the A5 entry in `LEARNINGS.md`.
   - **A3 needs a matched companion to be read cleanly.** A3 sets `vert_diff`,
     which is the only one of the three 1M `q_tot_eff` operators a column can
     reach — hyperdiffusion's branch is horizontal and the viscous sponge is off.
