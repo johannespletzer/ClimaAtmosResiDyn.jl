@@ -95,9 +95,9 @@ Rules for the layout:
     default is `Float32` and the memo explains why that matters.
   - The closure check of the family under test is on, with `tolerance` left
     at its default so the run only warns. It writes
-    `<family>_tag_closure.csv` with the columns `time, total, tagged,
-    residual, relative, gross_residual, gross_relative, scale,
-    nonpositive_fraction`. `gross_relative` is the number the memo reasons
+    `<family>_tag_closure.csv` with the columns `time`, `total`, `tagged`,
+    `residual`, `relative`, `gross_residual`, `gross_relative`, `scale` and
+    `nonpositive_fraction`. `gross_relative` is the number the memo reasons
     about.
   - `period` is a duration string and not a step count. Every step therefore
     means a value equal to that run's `dt`, so it changes with `dt` across
@@ -126,11 +126,19 @@ Rules for the layout:
     identity, because the residual it would cancel was never in `q_tag_res`.
     The order and the sign both matter. Reducing each term on its own and
     subtracting the two scalars is a different number. The ledger holds the
-    signed change applied to the tag, `new - old`, so a repair that takes
-    water out of a tag records a negative fix and raises `q_tag_res` by that
-    amount. Adding the ledger back cancels it. The `q_tag_res` docstring says
-    to subtract `q_tag_fix_*`, which means the correction's contribution to
-    the residual and not the ledger value itself.
+    signed change applied to the tag, `new - old`, so adding it back undoes
+    the correction and recovers the residual the run would have reported had
+    no repair fired. That is an identity, and it is what the reducer asserts.
+    The `q_tag_res` docstring says to subtract `q_tag_fix_*`, which means the
+    correction's contribution to the residual and not the ledger value
+    itself.
+  - Do not expect the operator residual to be the smaller of the two. Summed
+    over the partition, the repair's ledger is never negative. It is zero on
+    the sum-preserving branch, and where a cell is zeroed it is minus that
+    cell's tag sum, which was negative for the branch to fire at all. So the
+    operator residual is usually the larger number, and a check that assumed
+    otherwise would reject correct output. The identity above is the
+    invariant worth asserting; the direction is not.
   - That decomposition is clean only while every ledger entry comes from
     `repair_water_tag_partition!`. The repair moves the tags and leaves
     `ρq_tot` alone. A rescale follows a parent that moved too, so removing it
@@ -288,6 +296,7 @@ here.
  1. The agent writes `configs/<run>.yml` and sets its `job_id` to `<run>`, so
     every file the run writes names itself. It also writes the reducer of
     step 5 and adds `<run>` to the register in `README.md`.
+
  2. On Levante, from the repository root, check out the experiment branch and
     pull. Submit with the config in the environment, the way the GPU
     runscripts already take `SCRIPT`:
@@ -297,11 +306,14 @@ here.
 
     `sbatch` exports the submitting environment, so the runscript reads
     `CONFIG` and hands it to the driver.
+
  3. Watch it with `squeue -u $USER`. The job's own output lands in the `.out`
     file beside where it was submitted.
+
  4. When it finishes, check that the driver reported success. A crashed solve
     returns `:simulation_crashed` rather than throwing, so a job can exit
     zero on a dead run.
+
  5. Reduce before copying. The run's `output_dir` holds the closure CSV, the
     NetCDF diagnostics, the config snapshot and the checkpoints. The NetCDF
     stays on scratch, and the number phase A turns on is not in the closure
@@ -309,9 +321,12 @@ here.
     subtracted, while the operator residual is a pointwise maximum of
     `q_tag_res + Σᵢ q_tag_fix_i`. Run `analysis/reduce_run.jl` against
     `output_dir` on Levante to turn the diagnostics into one small CSV.
+
  6. Copy the files below into `experiments/tag_closure/output/<run>/`.
+
  7. Commit and push. One commit per phase is enough, with the run names in
     the message, and tick those runs in the register.
+
  8. The agent then runs `analysis/<phase>.jl` over `output/`, writes
     `output/summary_<phase>.csv` and the plots, fills `LEARNINGS.md`, applies
     the phase's decision rule and reports.
