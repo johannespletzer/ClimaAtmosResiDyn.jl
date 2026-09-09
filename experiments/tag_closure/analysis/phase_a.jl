@@ -48,6 +48,7 @@ tables whose answers were worked out by hand.
 
 import CairoMakie
 import Dates
+import Statistics
 
 include(joinpath(@__DIR__, "tables.jl"))
 
@@ -76,6 +77,7 @@ function plot_gross_relative(runs, plots_dir, note)
         yscale = log10,
     )
     drew = false
+    drawn = Float64[]
     for run in sort(drawable; by = r -> (r.upwinding, r.dt))
         times = column(run, "closure", "time")
         values = column(run, "closure", "gross_relative")
@@ -83,9 +85,11 @@ function plot_gross_relative(runs, plots_dir, note)
         x, y = positive(times, values)
         isempty(y) && continue
         drew = true
+        append!(drawn, y)
         CairoMakie.lines!(axis, x, y; label = "$(run.name) (dt $(run.dt) s)")
     end
     drew || return nothing
+    apply_log_limits!(axis, drawn)
     CairoMakie.axislegend(axis; position = :rb, labelsize = 10)
     path = joinpath(plots_dir, "a_gross_relative_vs_time.png")
     CairoMakie.save(path, figure)
@@ -120,8 +124,14 @@ function plot_operator_residual(runs, plots_dir, note)
         ylabel = "max |q_tag_res + Σᵢ q_tag_fix_i|  (kg kg⁻¹)",
         xscale = log10,
         yscale = log10,
+        # Tick where the runs actually are. Three points on a log axis get
+        # decade ticks otherwise, so the reader is shown 10^0.4 when what they
+        # want to know is which point is dt 5 s.
+        xticks = tick_values([run.dt for run in ladder_runs]),
     )
     drew = false
+    all_values = Float64[]
+    all_dts = Float64[]
     for upwinding in ("vanleer_limiter", "none", "first_order")
         ladder = sort(
             filter(run -> run.upwinding == upwinding, ladder_runs); by = r -> r.dt,
@@ -135,6 +145,8 @@ function plot_operator_residual(runs, plots_dir, note)
         x, y = positive(dts, values)
         isempty(y) && continue
         drew = true
+        append!(all_values, y)
+        append!(all_dts, x)
         slope = fit_slope(x, y)
         label =
             ladder_label(upwinding) * (
@@ -144,6 +156,31 @@ function plot_operator_residual(runs, plots_dir, note)
         CairoMakie.scatterlines!(axis, x, y; label)
     end
     drew || return nothing
+
+    # Reference slopes, anchored at the data's midpoint. On a convergence panel
+    # these are what make a slope readable at a glance: a ladder that falls like
+    # dt lies parallel to the first, and a flat one is unmistakably flat against
+    # both. They are also what makes the A1-against-A2 comparison legible once
+    # both ladders are here.
+    if length(unique(all_dts)) > 1
+        x_lo, x_hi = extrema(all_dts)
+        x_mid = sqrt(x_lo * x_hi)
+        y_mid = 10.0^Statistics.mean(log10.(all_values))
+        guide = range(x_lo, x_hi; length = 32)
+        for (order, style) in ((1, :dot), (2, :dashdot))
+            CairoMakie.lines!(
+                axis, guide, y_mid .* (guide ./ x_mid) .^ order;
+                color = :gray, linestyle = style,
+                label = "slope $order (reference)",
+            )
+        end
+    end
+
+    # Set the limits from the data alone, after the guides are drawn, so the
+    # guides are clipped to the panel rather than stretching it. A near-constant
+    # ladder otherwise autoscales into a dramatic shape that argues against the
+    # finding it is there to show.
+    apply_log_limits!(axis, all_values)
     CairoMakie.axislegend(axis; position = :rb, labelsize = 10)
     path = joinpath(plots_dir, "a_operator_residual_vs_dt.png")
     CairoMakie.save(path, figure)
@@ -170,6 +207,7 @@ function plot_variants(runs, plots_dir, note)
         yscale = log10,
     )
     drew = false
+    drawn = Float64[]
     for run in vcat(reference, variants)
         times = column(run, "closure", "time")
         values = column(run, "closure", "gross_relative")
@@ -177,6 +215,7 @@ function plot_variants(runs, plots_dir, note)
         x, y = positive(times, values)
         isempty(y) && continue
         drew = true
+        append!(drawn, y)
         is_reference = run.name == "a1_dt10"
         CairoMakie.lines!(
             axis, x, y;
@@ -186,6 +225,7 @@ function plot_variants(runs, plots_dir, note)
         )
     end
     drew || return nothing
+    apply_log_limits!(axis, drawn)
     CairoMakie.axislegend(axis; position = :rb, labelsize = 10)
     path = joinpath(plots_dir, "a_variants_vs_time.png")
     CairoMakie.save(path, figure)

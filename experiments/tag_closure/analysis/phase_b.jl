@@ -81,6 +81,10 @@ function plot_bars(runs, plots_dir, note)
         xticklabelrotation = pi / 6,
     )
     CairoMakie.barplot!(axis, 1:length(withvalue), [p[2] for p in withvalue])
+    # Four variants whose residuals differ by a few percent would otherwise
+    # autoscale into four dramatically different bars. The shares B1 exists to
+    # measure are real only if they are visible against a decade.
+    apply_log_limits!(axis, [p[2] for p in withvalue])
     path = joinpath(plots_dir, "b_gross_relative_bars.png")
     CairoMakie.save(path, figure)
     return path
@@ -104,6 +108,7 @@ function plot_time_series(runs, plots_dir, note)
         yscale = log10,
     )
     drew = false
+    drawn = Float64[]
     for run in sort(drawable; by = r -> r.name)
         times = column(run, "closure", "time")
         values = column(run, "closure", "gross_relative")
@@ -111,6 +116,7 @@ function plot_time_series(runs, plots_dir, note)
         x, y = positive(times, values)
         isempty(y) && continue
         drew = true
+        append!(drawn, y)
         CairoMakie.lines!(
             axis, x, y;
             label = variant_label(run.name),
@@ -119,6 +125,7 @@ function plot_time_series(runs, plots_dir, note)
         )
     end
     drew || return nothing
+    apply_log_limits!(axis, drawn)
     CairoMakie.axislegend(axis; position = :rb, labelsize = 10)
     path = joinpath(plots_dir, "b_gross_relative_vs_time.png")
     CairoMakie.save(path, figure)

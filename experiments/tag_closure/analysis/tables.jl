@@ -10,6 +10,7 @@ costing a qualified name on every call.
 first run of it is `analysis/selftest.jl`.
 =#
 
+import CairoMakie
 import Dates
 import DelimitedFiles
 import Statistics
@@ -280,6 +281,80 @@ function caption(runs)
         unique(first(split(provenance_field(run, "finished"), 'T')) for run in runs)
     today = Dates.format(Dates.today(), "yyyy-mm-dd")
     return "commit $short, run $(join(dates, "/")), plotted $today"
+end
+
+"""
+    log_limits(values; least_decades = 1.0)
+
+Y-axis limits for a logarithmic panel, never narrower than `least_decades`.
+
+A near-constant series autoscales into false structure. The first real `dt`
+ladder spanned 10^-5.58 to 10^-5.54 -- four hundredths of a decade -- and
+autoscaling magnified seven percent of scatter into a dramatic V with a sharp
+minimum, which is the opposite of the finding. Scatter reads as scatter only
+when the axis has room to show that it is small.
+
+Returns `nothing` when nothing can be drawn.
+"""
+function log_limits(values; least_decades = 1.0)
+    usable = [v for v in values if isfinite(v) && v > 0]
+    isempty(usable) && return nothing
+    low = log10(minimum(usable))
+    high = log10(maximum(usable))
+    centre = (low + high) / 2
+    half = max((high - low) / 2 * 1.15, least_decades / 2)
+    return (10.0^(centre - half), 10.0^(centre + half))
+end
+
+"""
+    apply_log_limits!(axis, values; least_decades = 1.0)
+
+Set `axis`'s y-limits with [`log_limits`](@ref). A no-op when there is nothing
+to draw, which leaves Makie's own autoscale in place rather than erroring.
+"""
+function apply_log_limits!(axis, values; least_decades = 1.0)
+    limits = log_limits(values; least_decades)
+    isnothing(limits) || CairoMakie.ylims!(axis, limits...)
+    return nothing
+end
+
+"""
+    include_zero!(axis, values)
+
+Widen a linear y-axis so that zero is inside it.
+
+Every linear panel in this series asks a question about sign -- is a tag
+negative, has a record gone negative -- and a series that stays well away from
+zero would otherwise autoscale zero off the panel, taking the reference line
+with it and leaving no scale for the reader to judge against.
+"""
+function include_zero!(axis, values)
+    usable = [v for v in values if isfinite(v)]
+    isempty(usable) && return nothing
+    low = min(0.0, minimum(usable))
+    high = max(0.0, maximum(usable))
+    pad = (high - low) * 0.05
+    pad == 0 && (pad = 1.0)
+    CairoMakie.ylims!(axis, low - pad, high + pad)
+    return nothing
+end
+
+"""
+    tick_values(values)
+
+`(positions, labels)` for ticking an axis at the actual values it holds, with a
+trailing `.0` dropped.
+
+Three `dt` values on a log axis get decade ticks by default, so the reader is
+shown `10^0.4` where they want to know which point is `dt` 5 s.
+"""
+function tick_values(values)
+    positions = sort(unique(values))
+    labels = map(positions) do value
+        text = string(value)
+        endswith(text, ".0") ? text[1:(end - 2)] : text
+    end
+    return (positions, labels)
 end
 
 """

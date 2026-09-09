@@ -117,6 +117,7 @@ function plot_min_tag(runs, plots_dir, note)
         ylabel = "min e_src_<name> (J kg⁻¹)",
     )
     drew = false
+    drawn = Float64[]
     for run in sort(runs; by = r -> r.name)
         times = column(run, "source_tag_extrema", "time")
         isnothing(times) && continue
@@ -124,11 +125,16 @@ function plot_min_tag(runs, plots_dir, note)
             values = column(run, "source_tag_extrema", "min_e_src_" * name)
             isnothing(values) && continue
             drew = true
+            append!(drawn, values)
             CairoMakie.lines!(axis, times, values; label = "$(run.name): $name")
         end
     end
     drew || return nothing
     CairoMakie.hlines!(axis, [0.0]; color = :black, linestyle = :dash)
+    # Zero is the whole question here, so it stays on the panel. Tags that sit
+    # well away from it would otherwise autoscale the reference line off the
+    # figure, leaving the reader no scale to judge the distance against.
+    include_zero!(axis, drawn)
     CairoMakie.axislegend(axis; position = :rb, labelsize = 9)
     path = joinpath(plots_dir, "c_min_tag_value.png")
     CairoMakie.save(path, figure)
@@ -151,6 +157,7 @@ function plot_residual(runs, plots_dir, note)
         yscale = log10,
     )
     drew = false
+    drawn = Float64[]
     for run in sort(runs; by = r -> r.name)
         times = column(run, "source_tag_extrema", "time")
         values = column(run, "source_tag_extrema", "max_abs_e_src_res")
@@ -158,9 +165,11 @@ function plot_residual(runs, plots_dir, note)
         x, y = positive(times, values)
         isempty(y) && continue
         drew = true
+        append!(drawn, y)
         CairoMakie.lines!(axis, x, y; label = run.name)
     end
     drew || return nothing
+    apply_log_limits!(axis, drawn)
     CairoMakie.axislegend(axis; position = :rb, labelsize = 10)
     path = joinpath(plots_dir, "c_e_src_res.png")
     CairoMakie.save(path, figure)
@@ -205,6 +214,7 @@ function plot_two_readings(runs, plots_dir, note)
         ylabel = "J kg⁻¹",
     )
     drew = false
+    drawn = Float64[]
     for run in sort(both; by = r -> r.name)
         times = column(run, "source_tag_extrema", "time")
         isnothing(times) && continue
@@ -212,6 +222,7 @@ function plot_two_readings(runs, plots_dir, note)
             values = column(run, "source_tag_extrema", "max_e_src_" * name)
             isnothing(values) && continue
             drew = true
+            append!(drawn, values)
             CairoMakie.lines!(
                 axis, times, values;
                 label = "$(run.name): max e_src_$name (amount present)",
@@ -223,6 +234,7 @@ function plot_two_readings(runs, plots_dir, note)
             values = column(run, "process_record_extrema", "max_e_prc_" * process)
             isnothing(values) && continue
             drew = true
+            append!(drawn, values)
             CairoMakie.lines!(
                 axis, record_times, values;
                 linestyle = :dash,
@@ -232,6 +244,9 @@ function plot_two_readings(runs, plots_dir, note)
     end
     drew || return nothing
     CairoMakie.hlines!(axis, [0.0]; color = :black, linestyle = :dot)
+    # A record goes negative under net cooling, so zero stays on the panel here
+    # too, and it is the line the two readings are read against.
+    include_zero!(axis, drawn)
     CairoMakie.axislegend(axis; position = :lt, labelsize = 9)
     path = joinpath(plots_dir, "c_two_readings.png")
     CairoMakie.save(path, figure)
