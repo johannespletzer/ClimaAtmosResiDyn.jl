@@ -226,7 +226,9 @@ MUTATIONS = [
          "  - name: extratropics\n    region: extratropics",
          "  - name: hs\n    source: held_suarez")),
     ("set a tolerance", "b1_base.yml",
-     lambda t: t.replace('  period: "6hours"', '  period: "6hours"\n  tolerance: 1.0e-3', 1)),
+     lambda t: t.replace(
+         '  period: "6hours"',
+         '  period: "6hours"\n  tolerance: 1.0e-3', 1)),
     ("ask for an averaged diagnostic", "c0_sphere.yml",
      lambda t: t.replace('    period: "1hours"',
                          '    period: "1hours"\n    reduction_time: average', 1)),
@@ -253,6 +255,73 @@ MUTATIONS = [
      lambda t: t + "vert_diff: ~\n"),
 ]
 
+def bad_continuations(path):
+    """Lines of *code* ending in a backslash, which Julia does not continue.
+
+    Inside a string literal a trailing backslash joins lines. Outside one it is
+    the left-division operator, and Base's generic fallback for that is
+    `\\(x, y) = adjoint(adjoint(y) / adjoint(x))`. So
+
+        @assert cond \\
+            "a message"
+
+    parses as `cond \\ "a message"` and dies far away with
+    `MethodError: no method matching adjoint(::String)`, naming neither the file
+    nor the operator. One of these cost two runs on Levante.
+
+    A full scan rather than a line-based one, because block comments and quotes
+    inside `$(...)` interpolations both defeat counting quotes per line.
+    """
+    src = open(path).read()
+    n, i, line = len(src), 0, 1
+    in_str = in_tstr = False
+    depth = 0
+    offenders = []
+    while i < n:
+        c = src[i]
+        if depth:
+            if src.startswith("=#", i): depth -= 1; i += 2; continue
+            if src.startswith("#=", i): depth += 1; i += 2; continue
+            if c == "\n": line += 1
+            i += 1; continue
+        if not (in_str or in_tstr):
+            if src.startswith("#=", i): depth = 1; i += 2; continue
+            if c == "#":
+                while i < n and src[i] != "\n": i += 1
+                continue
+            if src.startswith('"""', i): in_tstr = True; i += 3; continue
+            if c == '"': in_str = True; i += 1; continue
+            if c == "\\":
+                j = i + 1
+                while j < n and src[j] in " \t": j += 1
+                if j < n and src[j] == "\n":
+                    offenders.append(line)
+                i += 1; continue
+            if c == "\n": line += 1
+            i += 1; continue
+        if in_tstr and src.startswith('"""', i): in_tstr = False; i += 3; continue
+        if in_str and c == '"': in_str = False; i += 1; continue
+        if c == "\\":
+            if i + 1 < n and src[i + 1] == "\n": line += 1
+            i += 2; continue
+        if c == "\n":
+            line += 1
+            if in_str: in_str = False
+        i += 1
+    return offenders
+
+def lint_continuations():
+    """Refuse a backslash continuation in Julia code anywhere in analysis/."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    failed = 0
+    for path in sorted(glob.glob(os.path.join(here, "*.jl"))):
+        for line in bad_continuations(path):
+            print("FAIL %s:%d backslash continuation in code" %
+                  (os.path.basename(path), line))
+            failed += 1
+    print("%d backslash continuations in code" % failed)
+    return 1 if failed else 0
+
 def run_mutations():
     """Break a copy of the tree thirteen ways; every one must be caught."""
     import shutil, tempfile
@@ -270,7 +339,8 @@ def run_mutations():
                 continue
             with open(path, "w") as handle:
                 handle.write(broken)
-            caught = any(check(p)[1] for p in sorted(glob.glob(os.path.join(copy, "*.yml"))))
+            files = sorted(glob.glob(os.path.join(copy, "*.yml")))
+            caught = any(check(f)[1] for f in files)
             caught = caught or duplicate_keys(path)
             print(("CAUGHT  " if caught else "MISSED  ") + label)
             if not caught:
@@ -281,6 +351,8 @@ def run_mutations():
 def main():
     if "--mutations" in sys.argv:
         return run_mutations()
+    if "--lint-continuations" in sys.argv:
+        return lint_continuations()
     paths = sorted(glob.glob(os.path.join(CFG, "*.yml")))
     failed = 0
     for path in paths:

@@ -178,6 +178,27 @@ function write_synthetic_run(dir)
 end
 
 """
+    summary_row(path, run)
+
+One row of a phase summary as a `name => value` `Dict` of strings.
+
+Reading a summary back by field rather than testing the file for a substring.
+`occursin` passes on a row whose every number is `NaN`, which is what a fault
+between the reducer and the loader actually produces, so it cannot tell a
+working column from a silently empty one.
+"""
+function summary_row(path, run)
+    lines = readlines(path)
+    header = split(first(lines), ',')
+    for line in lines[2:end]
+        fields = split(line, ',')
+        first(fields) == run || continue
+        return Dict(String(k) => String(v) for (k, v) in zip(header, fields))
+    end
+    error("no row for $run in $path")
+end
+
+"""
     write_synthetic_closure(dir, run, dt, values)
 
 A synthetic `water_tag_closure.csv` with the real column set, so the phase
@@ -611,21 +632,40 @@ function test_phase_b_and_c()
         end
 
         # The two-readings panel is the whole reason C3 exists, so assert what
-        # it was drawn from rather than only that a file appeared. It needs a
-        # run carrying both series, and `load_run` has to read the record table
-        # for that run to have them.
-        c_summary = read(joinpath(output, "summary_c.csv"), String)
-        @assert occursin("c3_column_record", c_summary) "C3 is missing from the summary"
-        @assert occursin("surface_flux", c_summary) "the recorded process is missing"
-        @assert occursin("b1_notags", read(joinpath(output, "summary_b.csv"), String)) \
-            "the phase B timing control is missing from the summary"
+        # it was drawn from rather than only that a file appeared. Reading the
+        # summary back by field rather than with `occursin` is the point: a
+        # substring test passes on a row that is all `NaN`, which is exactly
+        # what a reducer-to-loader wiring fault produces.
+        c3 = summary_row(joinpath(output, "summary_c.csv"), "c3_column_record")
+        c0 = summary_row(joinpath(output, "summary_c.csv"), "c0_column")
 
-        # The summary has to carry the barrier, not just the residual.
-        text = read(joinpath(output, "summary_c.csv"), String)
-        @assert occursin("-4.0", text) "the most negative tag value is missing"
-        @assert occursin("0.75", text) "the non-positive fraction is missing"
-        @info "   both summaries and five PNGs written; the C summary carries \
-               the negative tag and the non-positive fraction"
+        # `@assert(cond, msg)`, the call form, because it is the only way to
+        # break these across lines. A trailing backslash is not a continuation
+        # in Julia code; see `check_no_code_continuations` below.
+        recorded = c3["recorded_processes"]
+        @assert(recorded == "surface_flux", "C3 recorded $recorded")
+
+        # The record's maximum over the field at the last time is 3.0, from the
+        # synthetic e_prc_surface_flux above. A NaN here means the record was
+        # reduced and never read back, which is the fault this covers.
+        final_record = parse(Float64, c3["final_max_e_prc"])
+        @assert(final_record ≈ 3.0, "C3 final_max_e_prc $final_record, want 3.0")
+
+        # ... and C0, which carries no record, must not claim one.
+        @assert(isempty(c0["recorded_processes"]), "C0 claims a record")
+
+        # The barrier columns, per run rather than anywhere in the file.
+        worst = parse(Float64, c3["most_negative_tag_value"])
+        fraction = parse(Float64, c3["max_nonpositive_fraction"])
+        @assert(worst ≈ -4.0, "most negative tag value $worst, want -4.0")
+        @assert(fraction ≈ 0.75, "non-positive fraction $fraction, want 0.75")
+
+        control = summary_row(joinpath(output, "summary_b.csv"), "b1_notags")
+        @assert(control["family"] == "none", "control family $(control["family"])")
+
+        @info "   summaries read back by field: C3 carries its record " *
+              "($final_record), C0 carries none, and the barrier columns " *
+              "hold $worst and $fraction"
     end
 end
 
@@ -634,6 +674,14 @@ end
 
 Run `analysis/validate_configs.py` over the committed configurations, and its
 mutation harness over copies of them.
+
+Three passes: the configurations, the mutation harness that proves those checks
+are live, and a lint for backslash line continuations in Julia code. Julia has
+no such continuation -- inside a string it joins lines, outside one it is the
+left-division operator -- so `@assert cond \\` with its message on the next
+line parses as `cond \\ message` and dies as
+`MethodError: no method matching adjoint(::String)`, naming neither the file nor
+the cause. This file shipped one and it cost two runs on Levante.
 
 It is Python because that is the tool that was actually run while the
 configurations were written; porting it to Julia would mean shipping an
@@ -652,7 +700,7 @@ function test_configs()
                Run analysis/validate_configs.py wherever one is available."
         return nothing
     end
-    for args in ([script], [script, "--mutations"])
+    for args in ([script], [script, "--mutations"], [script, "--lint-continuations"])
         process = run(ignorestatus(`$python $args`))
         if process.exitcode == 2
             @warn "   validate_configs.py could not start, most likely no \
@@ -665,7 +713,8 @@ function test_configs()
             working.",
         )
     end
-    @info "   configurations valid and every mutation still caught"
+    @info "   configurations valid, every mutation still caught, and no \
+           backslash continuation in code"
     return nothing
 end
 
