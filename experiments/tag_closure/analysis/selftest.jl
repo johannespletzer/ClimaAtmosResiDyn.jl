@@ -400,6 +400,7 @@ function write_energy_run(dir; family)
             region: extratropics
           - name: src
             source: surface_flux
+        $(is_source ? "energy_process_record: [surface_flux]" : "")
         """,
     )
     write(
@@ -426,6 +427,14 @@ function write_energy_run(dir; family)
             NCDatasets.defVar(ds, prefix * "tropics", tropics, ("time", "z"))
             NCDatasets.defVar(ds, prefix * "extratropics", extratropics, ("time", "z"))
             NCDatasets.defVar(ds, prefix * "src", src, ("time", "z"))
+            # The process record. Its diagnostic short name is `e_prc_*` even
+            # though the state field is `prc_e_*`, and only the NetCDF carries
+            # it, which is why the reducer has to bring it out.
+            NCDatasets.defVar(
+                ds, "e_prc_surface_flux",
+                rows([2.0, 2.0, 2.0, 2.0], [-7.0, 3.0, 3.0, 3.0]),
+                ("time", "z"),
+            )
         end
     end
 
@@ -486,6 +495,28 @@ function test_source_reducer()
     end
 end
 
+function test_process_record()
+    @info "8. reduce_run.jl on the energy process record"
+    mktempdir() do tmp
+        run_dir =
+            write_energy_run(joinpath(tmp, "c3_column_record"); family = "energy_source")
+        reducer = load_script(joinpath(HERE, "reduce_run.jl"))
+        header, rows, metadata = call(reducer, :reduce_process_record, run_dir)
+        index = Dict(name => i for (i, name) in enumerate(header))
+        @assert haskey(index, "min_e_prc_surface_flux") "no record minimum"
+        @assert haskey(index, "max_e_prc_surface_flux") "no record maximum"
+        mins = [row[index["min_e_prc_surface_flux"]] for row in rows]
+        maxs = [row[index["max_e_prc_surface_flux"]] for row in rows]
+        # A record goes negative under net cooling, so both ends matter.
+        @assert mins ≈ [2.0, -7.0] "record minima: $mins, want [2.0, -7.0]"
+        @assert maxs ≈ [2.0, 3.0] "record maxima: $maxs, want [2.0, 3.0]"
+        # The run name comes from the snapshot's file name, not a job_id key
+        # that the merged snapshot never carries.
+        @assert metadata.job_id == "c3_column_record" "job_id $(metadata.job_id)"
+        @info "   record min $mins max $maxs, stamped run $(metadata.job_id)"
+    end
+end
+
 function test_phase_b_and_c()
     @info "7. phase_b.jl and phase_c.jl on synthetic tables"
     mktempdir() do tmp
@@ -520,6 +551,11 @@ function test_phase_b_and_c()
             reducer, :write_table, c_dir, "source_tag_extrema", header, rows,
             metadata, "synthetic",
         )
+        header, rows, metadata = call(reducer, :reduce_process_record, c_dir)
+        call(
+            reducer, :write_table, c_dir, "process_record_extrema", header,
+            rows, metadata, "synthetic",
+        )
 
         phase_b = load_script(joinpath(HERE, "phase_b.jl"))
         phase_c = load_script(joinpath(HERE, "phase_c.jl"))
@@ -538,6 +574,7 @@ function test_phase_b_and_c()
             "c_nonpositive_fraction.png",
             "c_min_tag_value.png",
             "c_e_src_res.png",
+            "c_two_readings.png",
         )
             @assert isfile(joinpath(plots, name)) "missing plot $name"
         end
@@ -560,6 +597,7 @@ function run_selftest()
     test_slope()
     test_energy_reducer()
     test_source_reducer()
+    test_process_record()
     test_phase_b_and_c()
     @info "All assertions passed."
     return nothing

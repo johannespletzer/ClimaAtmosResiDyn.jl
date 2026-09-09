@@ -28,14 +28,11 @@ microphysics_model: "0M"
 t_end: "10days"
 FLOAT_TYPE: "Float64"
 
-# The two operators B1 splits apart. `hyperdiff` is on by default; `vert_diff`
-# is not, so the baseline names both explicitly and each variant switches one
-# off. B1 is moist because B3's limiter path only fires when ρq_tot is in the
-# state.
+# The two operators B1 splits apart. This is the variant with vertical
+# diffusion off; `hyperdiff` keeps the baseline's value. Each key appears
+# exactly once: a YAML reader that takes the first binding rather than the last
+# would otherwise turn this run silently back into B1.
 hyperdiff: "Hyperdiffusion"
-vert_diff: "DecayWithHeightDiffusion"
-
-# The variant. Overrides the baseline's `DecayWithHeightDiffusion` above.
 vert_diff: ~
 
 # `tropics` and `extratropics` are exact complements, so the pair partitions

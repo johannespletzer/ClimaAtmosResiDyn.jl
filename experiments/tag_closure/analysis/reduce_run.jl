@@ -96,6 +96,25 @@ function run_config(output_dir)
 end
 
 """
+    run_name(output_dir)
+
+The run's name, from the configuration snapshot's file name.
+
+Not from a `job_id` key inside it: `job_id` is resolved by the `AtmosConfig`
+constructor before `override_default_config` drops everything outside the
+schema, so the merged snapshot the run writes never carries it. Reading it from
+there stamped every table `run: unknown`. The file is named `<job_id>.yml`, so
+its stem is the answer.
+"""
+function run_name(output_dir)
+    snapshots = filter(readdir(output_dir)) do name
+        endswith(name, ".yml") && !startswith(name, ".")
+    end
+    isempty(snapshots) && return "unknown"
+    return first(splitext(first(sort(snapshots))))
+end
+
+"""
     region_tag_names(config)
 
 Names of the pure region water tags: those with a `region` and no `source`.
@@ -277,7 +296,7 @@ function reduce_run(output_dir)
         ]
     end
 
-    metadata = (; geometry, remapped, regions, job_id = get(config, "job_id", "unknown"))
+    metadata = (; geometry, remapped, regions, job_id = run_name(output_dir))
     return (header, rows, metadata)
 end
 
@@ -380,7 +399,7 @@ function reduce_energy_tags(output_dir)
         Any[times[i], geometry, remapped, max_abs(view(residual, i, :))] for
         i in eachindex(times)
     ]
-    return (header, rows, (; geometry, remapped, job_id = get(config, "job_id", "unknown")))
+    return (header, rows, (; geometry, remapped, job_id = run_name(output_dir)))
 end
 
 """
@@ -424,7 +443,67 @@ function reduce_source_tags(output_dir)
             [max_over(view(field, i, :)) for field in fields],
         )
     end
-    return (header, rows, (; geometry, remapped, job_id = get(config, "job_id", "unknown")))
+    return (header, rows, (; geometry, remapped, job_id = run_name(output_dir)))
+end
+
+"""
+    record_process_names(config)
+
+The processes an `energy_process_record` lists, as they appear in the
+diagnostic short names.
+
+A trap worth naming. The prognostic field is `prc_e_<process>`, with no `ρ`
+prefix so that `gs_tracer_names` does not pick it up and transport it. The
+*diagnostic* short name is the other way round, `e_prc_<process>`, and that is
+what the NetCDF holds.
+"""
+record_process_names(config) =
+    [String(name) for name in get(config, "energy_process_record", [])]
+
+"""
+    reduce_process_record(output_dir)
+
+Per time, the minimum and maximum of every `e_prc_<process>` field.
+
+Without this the run that exists to compare two readings of one process hands
+back exactly what a run without the record hands back. The record lives only in
+the NetCDF, the NetCDF stays on scratch, and the comparison C3 exists for would
+be unrecoverable once scratch is cleaned.
+
+A record is a signed running total of what a process applied since the run
+started, not a share of what is present now, so its minimum and maximum are the
+useful pair rather than an absolute maximum.
+"""
+function reduce_process_record(output_dir)
+    config = run_config(output_dir)
+    processes = record_process_names(config)
+    isempty(processes) && error("This run configured no `energy_process_record`.")
+    geometry, remapped = geometry_of(config)
+
+    times = nothing
+    fields = map(processes) do process
+        field_times, field = read_field(output_dir, "e_prc_" * process)
+        isnothing(times) && (times = field_times)
+        field_times == times || error(
+            "`e_prc_$process` is sampled at different times than the first \
+            record; give every record entry the same `period`.",
+        )
+        return field
+    end
+
+    header = vcat(
+        ["time", "geometry", "remapped"],
+        ["min_e_prc_" * p for p in processes],
+        ["max_e_prc_" * p for p in processes],
+    )
+    rows = map(eachindex(times)) do i
+        return vcat(
+            Any[times[i], geometry, remapped],
+            [min_over(view(field, i, :)) for field in fields],
+            [max_over(view(field, i, :)) for field in fields],
+        )
+    end
+    return (header, rows, (; geometry, remapped, job_id = run_name(output_dir)))
 end
 
 """
@@ -519,6 +598,21 @@ function main()
             ),
         )
         isempty(rows) || @info "source tag extrema" first = rows[1] last = rows[end]
+    end
+
+    if !isempty(get(config, "energy_process_record", []))
+        header, rows, metadata = reduce_process_record(output_dir)
+        remapped |= metadata.remapped
+        push!(
+            written,
+            write_table(
+                output_dir, "process_record_extrema", header, rows, metadata,
+                "min and max of every e_prc_<process>. A record is a signed \
+                running total of what a process applied, not a share of what \
+                is present, so it is not comparable with a tag value directly.",
+            ),
+        )
+        isempty(rows) || @info "process record" first = rows[1] last = rows[end]
     end
 
     if isempty(written)

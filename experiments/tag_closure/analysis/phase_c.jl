@@ -168,6 +168,77 @@ function plot_residual(runs, plots_dir, note)
 end
 
 """
+    record_processes(run)
+
+The processes this run recorded, from its configuration snapshot.
+"""
+record_processes(run) =
+    [String(name) for name in get(run.config, "energy_process_record", [])]
+
+"""
+    plot_two_readings(runs, plots_dir, note)
+
+The source tags and the process record of the same run, in one panel.
+
+This is what C3 exists for, and it is the figure the fallback argument turns on.
+The two are different quantities and neither can be read off the other: a source
+tag is the amount of energy present now that came from a process, and a record
+is the signed total that process has applied since the run started. They are
+both J kg⁻¹, so one axis holds them, but where they diverge is the measurement
+rather than an error.
+
+Linear, not logarithmic: a record goes negative under net cooling, which a log
+axis cannot draw at all.
+"""
+function plot_two_readings(runs, plots_dir, note)
+    both = filter(runs) do run
+        haskey(run.reduced, "process_record_extrema") &&
+            haskey(run.reduced, "source_tag_extrema")
+    end
+    isempty(both) && return nothing
+    figure = CairoMakie.Figure(size = (900, 600))
+    axis = CairoMakie.Axis(
+        figure[1, 1];
+        title = "Phase C: two readings of the same process",
+        subtitle = note,
+        xlabel = "time (s)",
+        ylabel = "J kg⁻¹",
+    )
+    drew = false
+    for run in sort(both; by = r -> r.name)
+        times = column(run, "source_tag_extrema", "time")
+        isnothing(times) && continue
+        for name in tag_names(run)
+            values = column(run, "source_tag_extrema", "max_e_src_" * name)
+            isnothing(values) && continue
+            drew = true
+            CairoMakie.lines!(
+                axis, times, values;
+                label = "$(run.name): max e_src_$name (amount present)",
+            )
+        end
+        record_times = column(run, "process_record_extrema", "time")
+        isnothing(record_times) && continue
+        for process in record_processes(run)
+            values = column(run, "process_record_extrema", "max_e_prc_" * process)
+            isnothing(values) && continue
+            drew = true
+            CairoMakie.lines!(
+                axis, record_times, values;
+                linestyle = :dash,
+                label = "$(run.name): max e_prc_$process (applied since t=0)",
+            )
+        end
+    end
+    drew || return nothing
+    CairoMakie.hlines!(axis, [0.0]; color = :black, linestyle = :dot)
+    CairoMakie.axislegend(axis; position = :lt, labelsize = 9)
+    path = joinpath(plots_dir, "c_two_readings.png")
+    CairoMakie.save(path, figure)
+    return path
+end
+
+"""
     worst_tag(run)
 
 The most negative any tag of this run reached, and which tag it was.
@@ -204,6 +275,7 @@ function main()
             "final_gross_relative", "final_nonpositive_fraction",
             "max_nonpositive_fraction", "final_max_abs_e_src_res",
             "most_negative_tag_value", "most_negative_tag",
+            "recorded_processes", "final_max_e_prc",
         ],
         function (run)
             fraction = column(run, "closure", "nonpositive_fraction")
@@ -215,6 +287,14 @@ function main()
                 final(column(run, "source_tag_extrema", "max_abs_e_src_res")),
                 worst,
                 which,
+                join(record_processes(run), " "),
+                isempty(record_processes(run)) ? NaN :
+                final(
+                    column(
+                        run, "process_record_extrema",
+                        "max_e_prc_" * first(record_processes(run)),
+                    ),
+                ),
             ]
         end,
     )
@@ -224,6 +304,7 @@ function main()
             plot_nonpositive(runs, plots_dir, note),
             plot_min_tag(runs, plots_dir, note),
             plot_residual(runs, plots_dir, note),
+            plot_two_readings(runs, plots_dir, note),
         ],
     )
 

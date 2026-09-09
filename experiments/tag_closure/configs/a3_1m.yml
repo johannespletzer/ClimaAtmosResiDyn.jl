@@ -1,10 +1,30 @@
 # A3. `a1_dt10` under 1-moment microphysics.
-# 1M makes the condensate prognostic, so it sediments and the mirrored
-# sedimentation flux runs. It also makes hyperdiffusion, vertical diffusion
-# and the sponge act on the parent's `q_tot_eff = q_tot - q_rai - q_sno`
-# while the tags see their full content. That mismatch is what this run
-# measures, and `docs/src/tagged_water.md` currently says the operators are
-# identical.
+#
+# Under 1M the parent's hyperdiffusion, vertical diffusion and viscous sponge
+# act on `q_tot_eff = q_tot - q_rai - q_sno` while the tags see their full
+# content. `docs/src/tagged_water.md` says those operators are identical, and
+# under 1M they are not. **A column can only see one of the three.**
+#
+#   - Vertical diffusion: reachable, and this run reaches it. The `q_tot_eff`
+#     branch is `ᶜdiffdivᵥ(-(ᶠρK * ᶠgradᵥ(q_tot_eff)))`, which is vertical, so
+#     it fires in a column -- but only when `vert_diff` is set, and it defaults
+#     to `~`. Hence the key below. Without it this run measured nothing it
+#     claimed to.
+#   - Hyperdiffusion: not reachable here. Its `q_tot_eff` branch is
+#     `wdivₕ(gradₕ(...))` (`hyperdiffusion.jl`), horizontal only, and a column
+#     has no horizontal space for it.
+#   - Viscous sponge: not reachable here either. `viscous_sponge` defaults to
+#     false and this run does not set it; on a column it would be a second
+#     change to a run that already has two.
+#
+# So read this run as the vertical-diffusion share of the 1M mismatch plus the
+# sedimentation mirror, not as the whole of it. The horizontal two need a
+# sphere, which phase A does not otherwise have.
+#
+# One caveat on the comparison. This run now differs from `a1_dt10` in two keys,
+# `microphysics_model` and `vert_diff`, so the difference between them is not
+# the 1M mismatch alone. A 0M companion with `vert_diff` on would separate them
+# and costs one more column; it is an open item rather than something assumed.
 
 job_id: "a3_1m"
 
@@ -20,6 +40,11 @@ z_max: 1500.0
 z_elem: 30
 z_stretch: false
 microphysics_model: "1M"
+
+# Required for this run to measure anything. The `q_tot_eff` mismatch reaches a
+# column through vertical diffusion and through nothing else, and `vert_diff`
+# is off by default.
+vert_diff: "DecayWithHeightDiffusion"
 
 dt: "10secs"
 t_end: "1hours"
