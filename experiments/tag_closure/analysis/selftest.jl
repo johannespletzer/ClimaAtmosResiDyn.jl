@@ -64,6 +64,38 @@ import NCDatasets
 const HERE = @__DIR__
 
 """
+    UNSET_KEYS
+
+The tag and record keys a run leaves unset, written as `~`.
+
+Every synthetic snapshot carries these, because a real merged snapshot does: the
+run writes back all 175 keys of `default_config.yml`, unset ones included. A
+fixture that omitted them made `get(config, key, default)` return the default,
+while the real thing returns `nothing` and reaches `isempty(nothing)`. That is
+what the first real run died of, and no fixture here could see it.
+"""
+const UNSET_KEYS = (
+    "water_tracers",
+    "energy_tracers",
+    "energy_source_tags",
+    "energy_process_record",
+    "water_process_record",
+    "water_closure_check",
+    "energy_closure_check",
+    "energy_source_closure_check",
+)
+
+"""
+    unset_lines(set_keys)
+
+`key: ~` for every key of [`UNSET_KEYS`](@ref) not in `set_keys`.
+"""
+unset_lines(set_keys) = join(
+    ["$key: ~" for key in UNSET_KEYS if !(key in set_keys)],
+    "\n",
+)
+
+"""
     load_script(path)
 
 Load one analysis script into a module of its own and return the module.
@@ -132,6 +164,7 @@ function write_synthetic_run(dir)
             region: {type: tanh_altitude, z_center: 600.0, width: 100.0, above: false}
           - name: evap
             source: surface_flux
+        $(unset_lines(("water_tracers",)))
         """,
     )
 
@@ -427,6 +460,7 @@ function write_energy_run(dir; family, record = family == "energy_source")
           - name: src
             source: surface_flux
         $(record ? "energy_process_record: [surface_flux]" : "")
+        $(unset_lines(record ? (key, "energy_process_record") : (key,)))
         """,
     )
     write(
@@ -718,6 +752,110 @@ function test_configs()
     return nothing
 end
 
+"""
+    test_single_run_phases()
+
+Each phase with exactly one run committed, which is the state every phase is in
+after its first job comes back.
+
+Nothing else here covers it: every other fixture holds four to eight runs, so a
+one-point ladder, a comparison panel with nothing to compare against, and a
+reference run that is simply absent had all never been reached. A figure that
+cannot honestly be drawn from one run must be skipped, not drawn empty and not
+thrown over, and the summary must still be written.
+"""
+function test_single_run_phases()
+    @info "10. one run per phase, the state after the first job comes back"
+
+    # Phase A: the water ladder with a single rung.
+    mktempdir() do tmp
+        run_dir = write_synthetic_run(joinpath(tmp, "output", "a1_dt10"))
+        reducer = load_script(joinpath(HERE, "reduce_run.jl"))
+        header, rows, metadata = call(reducer, :reduce_run, run_dir)
+        call(reducer, :write_operator_residual, run_dir, header, rows, metadata)
+        write_synthetic_closure(run_dir, "a1_dt10", 10.0, [1.0e-6, 2.8e-6])
+
+        phase = load_script(joinpath(HERE, "phase_a.jl"))
+        withenv("TAG_CLOSURE_DIR" => tmp) do
+            call(phase, :main)
+        end
+        plots = joinpath(tmp, "plots")
+        summary = joinpath(tmp, "output", "summary_a.csv")
+        @assert isfile(summary) "no summary_a.csv from a single run"
+        @assert length(readlines(summary)) == 2 "expected a header and one row"
+        @assert isfile(joinpath(plots, "a_gross_relative_vs_time.png"))
+        # One rung is still a point worth drawing; the slope is not.
+        @assert isfile(joinpath(plots, "a_operator_residual_vs_dt.png"))
+        # A3 and A4 are absent, so the variants panel has nothing to draw and
+        # must be skipped rather than drawn empty.
+        @assert(
+            !isfile(joinpath(plots, "a_variants_vs_time.png")),
+            "the variants panel was drawn with no variant present",
+        )
+        @info "   phase A: summary and two panels, variants panel skipped"
+    end
+
+    # Phase B: one energy run.
+    mktempdir() do tmp
+        dir = write_energy_run(joinpath(tmp, "output", "b1_base"); family = "energy")
+        reducer = load_script(joinpath(HERE, "reduce_run.jl"))
+        header, rows, metadata = call(reducer, :reduce_energy_tags, dir)
+        call(
+            reducer, :write_table, dir, "energy_tag_residual", header, rows,
+            metadata, "synthetic",
+        )
+        phase_b = load_script(joinpath(HERE, "phase_b.jl"))
+        withenv("TAG_CLOSURE_DIR" => tmp) do
+            call(phase_b, :main)
+        end
+        summary = joinpath(tmp, "output", "summary_b.csv")
+        @assert isfile(summary) "no summary_b.csv from a single run"
+        @assert length(readlines(summary)) == 2 "expected a header and one row"
+        plots = joinpath(tmp, "plots")
+        @assert isfile(joinpath(plots, "b_gross_relative_bars.png"))
+        @assert isfile(joinpath(plots, "b_gross_relative_vs_time.png"))
+        @info "   phase B: summary and both panels from one run"
+    end
+
+    # Phase C: one census run, which carries no process record.
+    mktempdir() do tmp
+        dir = write_energy_run(
+            joinpath(tmp, "output", "c0_column");
+            family = "energy_source", record = false,
+        )
+        reducer = load_script(joinpath(HERE, "reduce_run.jl"))
+        header, rows, metadata = call(reducer, :reduce_source_tags, dir)
+        call(
+            reducer, :write_table, dir, "source_tag_extrema", header, rows,
+            metadata, "synthetic",
+        )
+        phase_c = load_script(joinpath(HERE, "phase_c.jl"))
+        withenv("TAG_CLOSURE_DIR" => tmp) do
+            call(phase_c, :main)
+        end
+        summary = joinpath(tmp, "output", "summary_c.csv")
+        @assert isfile(summary) "no summary_c.csv from a single run"
+        @assert length(readlines(summary)) == 2 "expected a header and one row"
+        plots = joinpath(tmp, "plots")
+        for name in (
+            "c_nonpositive_fraction.png", "c_min_tag_value.png", "c_e_src_res.png",
+        )
+            @assert isfile(joinpath(plots, name)) "missing $name from one run"
+        end
+        # No record here, so the two-readings panel has one of its two series
+        # and must be skipped.
+        @assert(
+            !isfile(joinpath(plots, "c_two_readings.png")),
+            "the two-readings panel was drawn with no record present",
+        )
+        # And the summary must say so rather than inventing a process.
+        row = summary_row(summary, "c0_column")
+        @assert isempty(row["recorded_processes"]) "C0 claims a record"
+        @info "   phase C: summary and three panels, two-readings panel skipped"
+    end
+    return nothing
+end
+
 function run_selftest()
     @info "Tag-closure analysis self-test. This is the first execution of \
            these scripts: they were written where no Julia was available."
@@ -730,6 +868,7 @@ function run_selftest()
     test_process_record()
     test_configs()
     test_phase_b_and_c()
+    test_single_run_phases()
     @info "All assertions passed."
     return nothing
 end

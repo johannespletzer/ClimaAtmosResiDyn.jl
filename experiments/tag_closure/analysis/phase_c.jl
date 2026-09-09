@@ -61,7 +61,7 @@ const PHASE = "c"
 The `e_src_<name>` tags this run carried, from its configuration snapshot.
 """
 tag_names(run) =
-    [String(tag["name"]) for tag in get(run.config, "energy_source_tags", [])]
+    [String(tag["name"]) for tag in setting(run.config, "energy_source_tags", [])]
 
 """
     plot_nonpositive(runs, plots_dir, note)
@@ -173,7 +173,7 @@ end
 The processes this run recorded, from its configuration snapshot.
 """
 record_processes(run) =
-    [String(name) for name in get(run.config, "energy_process_record", [])]
+    [String(name) for name in setting(run.config, "energy_process_record", [])]
 
 """
     plot_two_readings(runs, plots_dir, note)

@@ -16,6 +16,24 @@ import Statistics
 import YAML
 
 """
+    setting(config, key, default)
+
+A configuration value, treating a key that is present but null as absent.
+
+`get` cannot do this on its own. The merged snapshot a run writes carries
+**every** key of `default_config.yml` -- 175 of them -- with the unset ones
+written as `~`, so `get(config, "energy_process_record", [])` finds the key,
+returns `nothing`, and never reaches the default. `isempty(nothing)` is then
+`iterate(::Nothing)`, which is what the first real run died of. The synthetic
+snapshots in the self-test carried only the keys they set, which is why nothing
+caught it.
+"""
+function setting(config, key, default)
+    value = get(config, key, nothing)
+    return isnothing(value) ? default : value
+end
+
+"""
     read_table(path)
 
 Read a CSV written by this series into `(names, columns)`, where `columns` maps
@@ -130,11 +148,11 @@ function load_run(run_dir)
         family,
         closure,
         reduced,
-        dt = seconds(get(config, "dt", "600secs")),
-        upwinding = String(get(config, "tracer_upwinding", "vanleer_limiter")),
-        float_type = String(get(config, "FLOAT_TYPE", "Float32")),
-        microphysics = String(get(config, "microphysics_model", "dry")),
-        geometry = String(get(config, "config", "sphere")),
+        dt = seconds(setting(config, "dt", "600secs")),
+        upwinding = String(setting(config, "tracer_upwinding", "vanleer_limiter")),
+        float_type = String(setting(config, "FLOAT_TYPE", "Float32")),
+        microphysics = String(setting(config, "microphysics_model", "dry")),
+        geometry = String(setting(config, "config", "sphere")),
         provenance = read(joinpath(run_dir, "provenance.txt"), String),
     )
 end

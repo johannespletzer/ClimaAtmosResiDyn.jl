@@ -107,6 +107,24 @@ function run_config(output_dir)
 end
 
 """
+    setting(config, key, default)
+
+A configuration value, treating a key that is present but null as absent.
+
+`get` cannot do this on its own. The merged snapshot a run writes carries
+**every** key of `default_config.yml` -- 175 of them -- with the unset ones
+written as `~`, so `get(config, "energy_process_record", [])` finds the key,
+returns `nothing`, and never reaches the default. `isempty(nothing)` is then
+`iterate(::Nothing)`, which is what the first real run died of. The synthetic
+snapshots in the self-test carried only the keys they set, which is why nothing
+caught it.
+"""
+function setting(config, key, default)
+    value = get(config, key, nothing)
+    return isnothing(value) ? default : value
+end
+
+"""
     run_name(output_dir)
 
 The run's name, from the configuration snapshot's file name.
@@ -135,7 +153,7 @@ operator residual adds back. A tag carrying a `source` is not a member of the
 partition, and its ledger cancels a residual that was never in `q_tag_res`.
 """
 function region_tag_names(config, key = "water_tracers")
-    tags = get(config, key, nothing)
+    tags = setting(config, key, nothing)
     isnothing(tags) && error(
         "This run configured no `$key`, so there is nothing of that family to \
         reduce. A timing control is one such run.",
@@ -179,7 +197,7 @@ sum of the *pure region* tags, so a source tag going negative never enters it
 and has to be watched directly.
 """
 all_tag_names(config, key) =
-    [String(tag["name"]) for tag in get(config, key, [])]
+    [String(tag["name"]) for tag in setting(config, key, [])]
 
 """
     geometry_of(config)
@@ -190,7 +208,7 @@ else is written through a bilinear remap onto lat-lon, and a maximum there is
 over the remapped field.
 """
 function geometry_of(config)
-    geometry = String(get(config, "config", "sphere"))
+    geometry = String(setting(config, "config", "sphere"))
     return (geometry, geometry != "column")
 end
 
@@ -490,7 +508,7 @@ prefix so that `gs_tracer_names` does not pick it up and transport it. The
 what the NetCDF holds.
 """
 record_process_names(config) =
-    [String(name) for name in get(config, "energy_process_record", [])]
+    [String(name) for name in setting(config, "energy_process_record", [])]
 
 """
     reduce_process_record(output_dir)
@@ -595,7 +613,7 @@ function main()
 
     # Whichever families the run configured. A timing control configures none
     # and is not reduced, which is not an error.
-    if !isnothing(get(config, "water_tracers", nothing))
+    if !isnothing(setting(config, "water_tracers", nothing))
         header, rows, metadata = reduce_run(output_dir)
         remapped |= metadata.remapped
         push!(
@@ -604,7 +622,7 @@ function main()
         )
         isempty(rows) || @info "operator residual" first = rows[1] last = rows[end]
     end
-    if !isnothing(get(config, "energy_tracers", nothing))
+    if !isnothing(setting(config, "energy_tracers", nothing))
         header, rows, metadata = reduce_energy_tags(output_dir)
         remapped |= metadata.remapped
         push!(
@@ -617,7 +635,7 @@ function main()
         )
         isempty(rows) || @info "energy tag residual" first = rows[1] last = rows[end]
     end
-    if !isnothing(get(config, "energy_source_tags", nothing))
+    if !isnothing(setting(config, "energy_source_tags", nothing))
         header, rows, metadata = reduce_source_tags(output_dir)
         remapped |= metadata.remapped
         push!(
@@ -632,7 +650,7 @@ function main()
         isempty(rows) || @info "source tag extrema" first = rows[1] last = rows[end]
     end
 
-    if !isempty(get(config, "energy_process_record", []))
+    if !isempty(setting(config, "energy_process_record", []))
         header, rows, metadata = reduce_process_record(output_dir)
         remapped |= metadata.remapped
         push!(

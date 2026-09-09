@@ -142,8 +142,10 @@ function main()
         run -> Any[
             final(column(run, "closure", "gross_relative")),
             final(column(run, "energy_tag_residual", "max_abs_e_tag_res")),
-            something(get(run.config, "hyperdiff", nothing), "off"),
-            something(get(run.config, "vert_diff", nothing), "off"),
+            # `setting` rather than `get`: a snapshot writes an unset key as
+            # `~`, so `get` returns nothing rather than the default.
+            setting(run.config, "hyperdiff", "off"),
+            setting(run.config, "vert_diff", "off"),
         ],
     )
     figures = filter(
