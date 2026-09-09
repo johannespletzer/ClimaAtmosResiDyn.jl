@@ -5,8 +5,8 @@ import ClimaAtmos as CA
 import ClimaAtmos.Internals.ParentBudget as PB
 import ClimaTimeSteppers as CTS
 
-# Stack step 4: process attribution for the explicit channels, through the
-# applied-update event.
+# Process attribution for the explicit channels, through the applied-update
+# event.
 #
 # Every process that writes a parent field sits inside one bracket in the
 # tendency code, and in audit mode the adapter reads what each bracket applied

@@ -11,7 +11,7 @@
 #              wrap comments and strings, so this is a warning, not a failure
 #   4. links   .dev/check_markdown_link_ambiguity.py on changed .jl and .md files
 #   5. shapes  .dev/check_identity_shapes.jl: a named identity tuple and the
-#              container that stores it must agree (a CI round was lost to this)
+#              container that stores it must agree
 #   6. format  the pinned JuliaFormatter =2.10.1 from .dev/format over the whole
 #              repository, exactly as the prek julia-formatter hook runs it. With
 #              --fix the files are rewritten in place, which also pads every

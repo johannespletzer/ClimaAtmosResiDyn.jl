@@ -1,11 +1,10 @@
 # Check that a named identity tuple type and everything built or stored with it agree.
 #
-# One CI round was lost when `execution_identity` grew from five fields to seven while
-# `BudgetLedger.recorded_keys` stayed a `Set` of the old five-field tuple: every
-# recording was refused with a `convert` MethodError that no local parse could see.
-# The rule this enforces is the one that fix introduced. An identity has one named
-# type, declared as `const Name = Tuple{...}`; the function that builds it is
-# annotated `::Name` and returns a tuple of the same length; and no `Set` or `Dict`
+# A tuple key spelled out on a `Set` or `Dict` field silently diverges from the
+# identity it stores when the identity gains a field, and every recording is then
+# refused with a `convert` MethodError. The rule is this. An identity has one named
+# type, declared as `const Name = Tuple{...}`. The function that builds it is
+# annotated `::Name` and returns a tuple of the same length. No `Set` or `Dict`
 # field in the checked files spells out a tuple key of the same length instead of
 # using the name.
 #

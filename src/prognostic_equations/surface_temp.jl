@@ -49,9 +49,9 @@ end
 """
     slab_q_flux(Y, slab::SlabOceanTemperature)
 
-The prescribed Q-flux [W/m²] on the surface level, positive out of the slab,
-following Merlis et al. (2013). Called by `surface_temp_tendency!`, and by the
-parent-budget ledger for the slab's Q-flux leg, so both see the same field.
+Return the prescribed Q-flux on the surface level [W/m²], positive out of the
+slab, following Merlis et al. (2013). Called by `surface_temp_tendency!`, and by
+the parent-budget ledger for the slab's Q-flux leg, so both see the same field.
 """
 function slab_q_flux(Y, slab::SlabOceanTemperature)
     FT = eltype(Y)
