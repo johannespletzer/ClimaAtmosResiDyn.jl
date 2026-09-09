@@ -141,6 +141,16 @@ Rules for the layout:
     `wall_time_per_timestep` lines of the log.
   - Nothing in the series edits `reproducibility_tests/ref_counter.jl`, a
     tolerance, or the parent-budget calibration table.
+  - Every number in this series comes from a Levante run. There is no
+    artifact to pull instead. `config/model_configs` carries
+    `baroclinic_wave_tagged_tracers.yml` and
+    `baroclinic_wave_tagged_water.yml`, and `.buildkite/full_pipeline.yml`
+    defines a job for each, but that pipeline is not exercised in this
+    repository. CI here is the GitHub Actions test groups of
+    `.github/workflows/ci.yml`, which run the integration tests and publish
+    no closure table. The two configs are still the right base to copy,
+    because they already carry the tag sets, the closure check and the
+    diagnostics these runs need.
 
 ## Phase A. Water
 
@@ -150,20 +160,43 @@ The column is the DYCOMS_RF02 0M column of `test/tagged_water_integration.jl`:
 and the `evap` source tag. The run length is one hour, not the test's 100 s,
 so growth is visible.
 
-| Run | Variant                                                                                        | Learning question                                                                          |
-|:--- |:---------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------ |
-| A1  | `dt` = 10, 5, 2.5 s, everything else fixed                                                     | Does the operator residual scale with `dt`, or not                                         |
-| A2  | `dt` 10 s with `energy_q_tot_upwinding` and `tracer_upwinding` both `first_order`, both `none` | How much of the residual is the limiter nonlinearity, how much the implicit-explicit split |
-| A3  | `microphysics_model: 1M`, `dt` 10 s                                                            | How large the `q_tot_eff` mismatch is that the docs omit                                   |
-| A4  | A1 at `dt` 10 s with `FLOAT_TYPE: Float32`                                                     | Whether the `Float32` floor hides the structural residual                                  |
-| A5  | MoistBaroclinicWave, SEM limiter, `dt` 300 s, one day, as in the sphere limiter test           | How much the partition repair and the limiter rescale contribute on a sphere               |
+| Run | Variant                                                                                       | Learning question                                                            |
+|:--- |:--------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------------- |
+| A1  | `dt` = 10, 5, 2.5 s, everything else fixed                                                    | Does the operator residual scale with `dt`, or not                           |
+| A2  | the A1 ladder with `energy_q_tot_upwinding` and `tracer_upwinding` `none`, then `first_order` | The same slope with a `dt`-independent reconstruction, as A1's control       |
+| A3  | `microphysics_model: 1M`, `dt` 10 s                                                           | How large the `q_tot_eff` mismatch is that the docs omit                     |
+| A4  | A1 at `dt` 10 s with `FLOAT_TYPE: Float32`                                                    | Whether the `Float32` floor hides the structural residual                    |
+| A5  | MoistBaroclinicWave, SEM limiter, `dt` 300 s, one day, as in the sphere limiter test          | How much the partition repair and the limiter rescale contribute on a sphere |
 
-Decision rule for A1, from the memo. If the operator residual scales with
-`dt`, the split is a time-discretization error that implicit tags would
-remove, and moving the water tags into the implicit solve becomes worth its
-Jacobian cost. If it does not, the limiter nonlinearity dominates and that
-change buys nothing. A2 changes the parent's transport and is an experiment
-only, never a default. A5 is optional if the shared partition makes it slow.
+A1 is read against A2, not on its own. The memo's rule was that a residual
+scaling with `dt` is a time-discretization error that implicit tags would
+remove, and that a residual which does not scale is limiter nonlinearity that
+implicit tags would not touch. Those two are not separable under the default
+upwinding. `vertical_transport` passes `dt` to `ᶠlin_vanleer` and to nothing
+else, so with `vanleer_limiter` on both `tracer_upwinding` and
+`energy_q_tot_upwinding`, which is the default, the limiter's own
+contribution moves with `dt` as well. A slope anywhere between zero and one
+would then say nothing.
+
+A2 is the control that separates them, so it runs the same `dt` ladder as A1
+rather than a single step. Its reconstructions are `dt`-independent, so its
+residual is the implicit-explicit split alone and its slope is the clean
+time-discretization signal. With both keys at `none` the parent's post-Newton
+correction is identically zero, since it is formed as the upwind transport
+minus the central one, which leaves an implicit central parent against
+explicit central tags. That is the sharpest form of the control.
+`first_order` keeps an upwind reconstruction and is the second point.
+
+The decision then reads from the pair. If A2's ladder falls with `dt` and
+A1's is much flatter, the time-discretization part is real but the limiter
+sets a floor that implicit tags cannot remove, and option 2 buys only the
+distance between the two curves. If both fall together, the split is
+time-discretization error and moving the water tags into the implicit solve
+becomes worth its Jacobian cost. If neither falls, the residual is
+structural, and option 2 buys nothing.
+
+A2 changes the parent's transport and is an experiment only, never a default.
+A5 is optional if the shared partition makes it slow.
 
 What phase A teaches about the source tags: whether a monitored residual with
 a contract-style tolerance is enough for a family that does get corrections,
@@ -189,6 +222,15 @@ receives as enthalpy is measured rather than argued. The resolution of B1 is
 an open question for the owner; the `numerics_sphere_he6ze31` common config
 is the candidate, and its cost on the shared partition decides between CPU
 and one GPU.
+
+B2 has a choice of base, and the owner makes it. The docs' figure of below
+one percent after ten dry days comes from the validation job that
+`config/model_configs/baroclinic_wave_tagged_tracers.yml` configures, at that
+config's own resolution rather than the integration test's `h_elem` 4 and
+`z_elem` 10. Copying the config reproduces the figure and costs what the
+config costs. Keeping the test's smaller grid is cheaper, but then B2 is a
+fresh measurement that the docs figure cannot be checked against. Either way
+the run happens on Levante, since that job does not run here.
 
 What phase B teaches about the source tags: the source tags ride the same
 passive-scalar path as the energy tags, so every share measured here is a
@@ -235,9 +277,12 @@ which already carries CairoMakie and DataFrames. Each script reads
 `plots/`. Each script is written against a synthetic CSV before any result
 exists, so it is tested before the owner runs anything.
 
-  - A1: `gross_relative` against time per `dt`, and the operator residual at
-    the end against `dt` on log axes with the fitted slope in the title.
-  - A2 to A4: `gross_relative` against time, one line per variant, with the
+  - A1 and A2: `gross_relative` against time per `dt`, and the operator
+    residual at the end against `dt` on log axes. Both ladders go in one
+    panel, van Leer against `none` and `first_order`, with the fitted slope
+    of each in the legend. The gap between them is the limiter's share, and
+    it is what the decision rule above reads.
+  - A3 and A4: `gross_relative` against time, one line per variant, with the
     `Float64` A1 run at `dt` 10 s as the reference line in every panel.
   - B1: the final `gross_relative` per variant as one bar each, and the four
     time series in one panel.
@@ -254,6 +299,10 @@ configs are adjusted from what was learned before they are submitted. Items
 that change code, C1 and C2, wait for the discussion with the owner. C0 may
 run alongside phase A if the owner wants the census early; it changes nothing
 in the model.
+
+A1 and A2 are submitted together and read together. A1's slope on its own
+does not answer the question it was written for, so neither ladder is
+reported before the other has run.
 
 ## Steps for the preparing agent
 

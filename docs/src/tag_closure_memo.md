@@ -129,9 +129,12 @@ Reading (B), arithmetic level, per family:
     per stage. The state and restarts are unchanged. The tag trajectories
     change and the parent does not, so the two Buildkite tagged jobs
     (`full_pipeline.yml` 675 to 693) change output, but neither is
-    reproducibility-tracked, so no `ref_counter` bump. Even then the van Leer
-    correction is nonlinear in the tag, so the residual is bounded by the
-    limiter nonlinearity and not by rounding. (B) needs a linear
+    reproducibility-tracked, so no `ref_counter` bump. That pipeline is a
+    definition here rather than a thing that runs. CI in this repository is
+    the GitHub Actions test groups of `ci.yml`, which makes the conclusion
+    firmer and also means those jobs publish no closure table to read. Even
+    then the van Leer correction is nonlinear in the tag, so the residual is
+    bounded by the limiter nonlinearity and not by rounding. (B) needs a linear
     `energy_q_tot_upwinding` (`none` or `first_order`), which changes the
     parent and does bump `ref_counter`. (ii) Under 1M, run the tags'
     hyperdiffusion, diffusion and sponge on a share of `q_tot_eff`. That needs
@@ -200,10 +203,16 @@ measures nothing.
     ledger holds the signed change applied to the tag, so a repair that takes
     water out of a tag records a negative fix and raises `q_tag_res` by that
     amount. Adding the ledger back cancels it. The experiment page states the
-    order and the sign in full. If the residual scales with `dt`, the
-    split is a time-discretization error that implicit tags would remove, and
-    option 2 becomes worth its Jacobian cost. If it does not, the limiter
-    nonlinearity dominates and option 2 buys nothing.
+    order and the sign in full. Run that ladder twice, once at the default
+    `vanleer_limiter` and once at `none` or `first_order` on both upwinding
+    keys. `vertical_transport` hands `dt` to `ᶠlin_vanleer` and to no other
+    reconstruction, so under the default the limiter's own contribution moves
+    with `dt` too and one ladder cannot tell the two apart. The
+    `dt`-independent ladder is the control. If it falls with `dt`, the split
+    is a time-discretization error that implicit tags would remove, and
+    option 2 becomes worth its Jacobian cost, less whatever floor the van
+    Leer ladder shows beneath it. If neither falls, the limiter nonlinearity
+    dominates and option 2 buys nothing.
   - Energy: option 1 only. The residual is by design the sum of every operator
     the parent receives as enthalpy, and the only way to close it is the
     double counting the design rejects. Confidence: high. The experiment: a
