@@ -5,7 +5,7 @@ import ClimaAtmos as CA
 import ClimaAtmos.Internals.ParentBudget as PB
 import ClimaTimeSteppers as CTS
 
-# Stack step 6: boundaries and reservoir transfers.
+# Boundaries and reservoir transfers.
 #
 # Every modeled leg of every transfer event is measured on its own side. Where
 # an applied-update event isolates one leg, the leg is that event's own total:

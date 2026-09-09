@@ -1,18 +1,23 @@
 #####
 ##### Parent-budget ledger: transfer legs from their own quadratures
 #####
-##### A transfer event moves a quantity across a boundary, and each modeled
-##### side of it is measured on its own: the atmosphere's leg from the flux the
-##### tendency applied at the boundary, the slab's leg from the flux the slab
-##### tendency applied, each read inside the applied-update event that applied
-##### it. Wherever a bracket isolates one leg, that leg is the bracket's own
-##### total, what the reservoir's fields integrated: the atmosphere's side of
-##### the surface flux and of precipitation, the slab's side of precipitation.
-##### Where a bracket lumps several legs, radiation at the top and at the
-##### surface of the atmosphere, and the slab's turbulent, radiative and
-##### prescribed fluxes in one slab tendency, the legs are read from the flux
+##### A transfer event moves a quantity across a boundary. Each modeled side of
+##### it is measured on its own, inside the applied-update event that applied
+##### it. The atmosphere's leg comes from the flux the tendency applied at the
+##### boundary. The slab's leg comes from the flux the slab tendency applied.
+#####
+##### Where a bracket isolates one leg, that leg is the bracket's own total,
+##### which is what the reservoir's fields integrated. This holds for the
+##### atmosphere's side of the surface flux and of precipitation, and for the
+##### slab's side of precipitation.
+#####
+##### Where a bracket lumps several legs, the legs are read from the flux
 ##### fields those tendencies read, and the bracket's total is kept beside
-##### their sum as a check. A leg is never the negation of its counterpart.
+##### their sum as a check. This holds for radiation at the top and at the
+##### surface of the atmosphere, and for the slab's turbulent, radiative and
+##### prescribed fluxes in one slab tendency.
+#####
+##### A leg is never the negation of its counterpart.
 
 """
     TRANSFER_LEG_EVENTS
@@ -157,12 +162,13 @@ top_level(Y) = Spaces.nlevels(axes(Y.c)) + half
     transfer_leg_measurements(schema, event, Yₜ, Y, p, surface_temperature,
                               moist, bracket) -> Vector{LegMeasurement}
 
-Every declared leg of every transfer event that the applied-update `event`
-measures, read from the flux fields inside it. `bracket` is the bracket's own
-total in the leg's reservoir, `(amounts, magnitudes)` for the atmosphere and
-for the slab, which is the leg for a volume sink. Legs the configuration does
-not declare are not measured, and a declared leg that cannot be read here is
-returned unknown with its reason.
+Read every declared leg of every transfer event that the applied-update
+`event` measures, from the bracket's own total or from the flux fields inside
+it. `bracket` is the bracket's own total in the leg's reservoir,
+`(amounts, magnitudes)` for the atmosphere and for the slab, which is the leg
+for a volume sink. Legs the configuration does not declare are not measured,
+and a declared leg that cannot be read here is returned unknown with its
+reason.
 """
 function transfer_leg_measurements(
     schema::BudgetSchema,

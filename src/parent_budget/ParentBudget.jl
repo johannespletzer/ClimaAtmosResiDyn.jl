@@ -24,8 +24,9 @@ The files are included in dependency order.
     packet with one collective.
   - `journal.jl` records what happened, with evidence per component.
   - `transaction.jl` compares the two and produces the three residuals.
-  - `transfer_legs.jl` reads each modeled leg of a transfer event from its own
-    flux field, inside the applied-update event that applied it.
+  - `transfer_legs.jl` measures each modeled leg of a transfer event inside the
+    applied-update event that applied it. Some legs are that event's own total,
+    the others are read from the flux field the tendency reads.
   - `adapter.jl` is the one place that knows the timestepper: it captures the
     accepted envelopes after each step, meters the applied-update events the
     tendency code brackets, and drives the transactions.

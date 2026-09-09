@@ -827,6 +827,9 @@ function build_parent_budget(
     moist = owns_atmosphere_water(atmos.microphysics_model)
     slab = has_surface_reservoir(atmos.surface.temperature)
     snapshot = mode isa AuditMode ? snapshot_fields(Y, moist, slab) : nothing
+    # Called for its check only. An event that measures legs in one reservoir
+    # from both the explicit and the implicit evaluation is refused here,
+    # before the first step.
     bracket_totals(schema)
     FT = BUDGET_ACCOUNTING_TYPE
     return ParentBudgetAdapter(
@@ -2507,9 +2510,9 @@ end
 """
     latest_transfer_checks(adapter) -> Vector{TransferCheck}
 
-The bracket checks of the last accepted step: each applied-update event's
-own total in each reservoir beside the transfer legs it measured, per stage.
-Empty outside `AuditMode`.
+Return the bracket checks of the last accepted step: each applied-update
+event's own total in each reservoir beside the transfer legs it measured, per
+stage. Empty outside `AuditMode`.
 """
 latest_transfer_checks(adapter::ParentBudgetAdapter) = adapter.last_transfer_checks
 

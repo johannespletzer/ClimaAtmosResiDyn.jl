@@ -941,7 +941,7 @@ const COVERAGE_ROWS = CoverageRow[
         "atmosphere",
         "`ρq_tot`, `ρ`, `ρe_tot`",
         (:measured, :measured, :measured),
-        "removal straight out of the column, no receiving reservoir",
+        "removal out of the column; the slab leg, when configured, is the transfer row `xfer.precipitation_0m`",
         :transfer,
         :none,
         "applied increment with accepted implicit weight",
@@ -995,7 +995,7 @@ const COVERAGE_ROWS = CoverageRow[
         "atmosphere, and slab when configured",
         "`ρ`, `ρq_tot`, `ρe_tot`, `sfc.*`",
         (:measured, :measured, :measured),
-        "leading order at `max_iters = 1`; sign and accepted weight verified; the slab has its own, from the precipitation it receives implicitly",
+        "leading order at `max_iters = 1`; the slab has its own, from the precipitation it receives implicitly",
         :decomposition,
         :collected,
         "independent projection of the algebraic residual",
@@ -1691,10 +1691,11 @@ end
 """
     transfer_leg_channels(row, context) -> Tuple{Vararg{Symbol}}
 
-The channel each leg of `transfer_legs(row, context)` is applied through. The
-one split event is one-moment precipitation: the fallout leaves the atmosphere
-on the implicit channel, while `surface_precipitation_tendency!` deposits it on
-the slab from whichever path `microphysics_tendency_timestepping` selects.
+Return the channel each leg of `transfer_legs(row, context)` is applied
+through. The one split event is one-moment precipitation: the fallout leaves
+the atmosphere on the implicit channel, while `surface_precipitation_tendency!`
+deposits it on the slab from whichever path `microphysics_tendency_timestepping`
+selects.
 """
 function transfer_leg_channels(row::CoverageRow, c::RegistryContext)
     legs = transfer_legs(row, c)

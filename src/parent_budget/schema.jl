@@ -756,7 +756,7 @@ end
 """
     leg_channel(spec, reservoir, leg) -> Symbol
 
-The accepted channel one modeled leg of `spec` is applied through.
+Return the accepted channel one modeled leg of `spec` is applied through.
 """
 function leg_channel(spec::TransferEventSpec, reservoir::Symbol, leg::Symbol)
     for (k, modeled) in enumerate(spec.modeled_legs)
