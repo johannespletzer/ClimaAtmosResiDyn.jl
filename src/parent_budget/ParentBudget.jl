@@ -30,10 +30,10 @@ The files are included in dependency order.
     the restored state against it, and declares the custom callbacks.
   - `calibration.jl` reads the committed κ calibration table and states the
     protocol that fills it.
-  - `report.jl` writes the claim certificate at the end of a run.
   - `adapter.jl` is the one place that knows the timestepper: it captures the
     accepted envelopes after each step, meters the applied-update events the
     tendency code brackets, and drives the transactions.
+  - `report.jl` writes the claim certificate at the end of a run.
 """
 module ParentBudget
 

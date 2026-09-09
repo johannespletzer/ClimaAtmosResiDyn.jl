@@ -3,13 +3,13 @@
 #####
 ##### The tolerance's arithmetic term carries a factor κ that covers reduction
 ##### order and rank dependence. The contract says it is calibrated and never
-##### chosen: a named configuration is run for a fixed number of accepted
-##### steps with every term of the parent identity measured, the largest ratio
-##### of the residual to the arithmetic term evaluated with κ = 1 is recorded,
-##### and κ is four times that ratio, rounded up to a power of two. One row per
-##### backend, state float type and rank count, committed with the
-##### configuration, the commit and the date. A run whose row is missing has no
-##### tolerance and every numeric verdict is blocked.
+##### chosen. A named configuration is run for a fixed number of accepted
+##### steps with every term of the parent identity measured. The largest ratio
+##### of the residual to the arithmetic term evaluated with κ = 1 is recorded.
+##### κ is four times that ratio, rounded up to a power of two. The table has
+##### one row per backend, state float type and rank count. Each row is
+##### committed with the configuration, the commit and the date. A run whose
+##### row is missing has no tolerance and every numeric verdict is blocked.
 
 """
     CALIBRATION_TABLE_PATH
@@ -46,7 +46,7 @@ end
 """
     read_calibration_table(path = CALIBRATION_TABLE_PATH) -> Vector{CalibrationRow}
 
-The committed rows. A malformed row is an error, never a default.
+Read the committed rows. A malformed row is an error, never a default.
 """
 function read_calibration_table(path = CALIBRATION_TABLE_PATH)
     table = YAML.load_file(path)
@@ -85,15 +85,15 @@ end
 """
     backend_name(context) -> String
 
-The name the table keys a backend by: the device type of the communications
-context.
+Return the name the table keys a backend by. It is the device type of the
+communications context.
 """
 backend_name(context) = String(nameof(typeof(ClimaComms.device(context))))
 
 """
     calibration_row(rows, backend, float_type, ranks) -> Union{Nothing, CalibrationRow}
 
-The row for one backend, float type and rank count, or `nothing`.
+Return the row for one backend, float type and rank count, or `nothing`.
 """
 function calibration_row(
     rows,
@@ -112,10 +112,10 @@ end
     calibrated_tolerances(context, float_type; rows = read_calibration_table())
         -> Union{Nothing, Dict{Symbol, BudgetTolerance}}
 
-The tolerances the committed table gives a run on `context` with state float
-type `float_type`: no floor, no relative term, and the row's κ, for every
-quantity. `nothing` when the table has no row for the run, which leaves every
-numeric verdict blocked.
+Return the tolerances the committed table gives a run on `context` with state
+float type `float_type`. Every quantity gets no floor, no relative term, and
+the row's κ. Return `nothing` when the table has no row for the run, which
+leaves every numeric verdict blocked.
 """
 function calibrated_tolerances(context, float_type; rows = read_calibration_table())
     row = calibration_row(
@@ -138,9 +138,9 @@ end
 """
     protocol_tolerances() -> Dict{Symbol, BudgetTolerance}
 
-The tolerances the calibration protocol runs with: the arithmetic term alone,
-at κ = 1, so that a reconciliation's tolerance is the term the residual is
-compared with.
+Return the tolerances the calibration protocol runs with. They hold the
+arithmetic term alone, at κ = 1, so that a reconciliation's tolerance is the
+term the residual is compared with.
 """
 protocol_tolerances() = Dict(
     quantity => BudgetTolerance(;
@@ -154,10 +154,10 @@ protocol_tolerances() = Dict(
 """
     calibration_configuration() -> Dict{String, Any}
 
-The named configuration the protocol runs: a moist DYCOMS_RF02 column with
-zero-moment microphysics, idealized radiation and a slab ocean, in summary
-mode, at `Float64`, with every reservoir the ledger knows. The caller builds
-an `AtmosConfig` from it and adds the output directory.
+Return the named configuration the protocol runs. It is a moist DYCOMS_RF02
+column with zero-moment microphysics, idealized radiation and a slab ocean, in
+summary mode, at `Float64`, with every reservoir the ledger knows. The caller
+builds an `AtmosConfig` from it and adds the output directory.
 """
 calibration_configuration() = Dict{String, Any}(
     "initial_condition" => "DYCOMS_RF02",
@@ -180,9 +180,9 @@ const CALIBRATION_CONFIGURATION_NAME = "parent_budget_calibration_column"
 """
     worst_parent_ratio(commit) -> Float64
 
-The largest ratio of the parent residual to its tolerance over the applicable
-rows of one commit. Run with `protocol_tolerances`, the tolerance is the
-arithmetic term at κ = 1, and this is the number the protocol records.
+Return the largest ratio of the parent residual to its tolerance over the
+applicable rows of one commit. Under `protocol_tolerances` the tolerance is
+the arithmetic term at κ = 1, and this is the number the protocol records.
 """
 function worst_parent_ratio(commit::BudgetCommit)
     worst = 0.0
@@ -201,6 +201,6 @@ end
 """
     kappa_from_ratio(worst_ratio) -> Float64
 
-Four times the worst ratio, rounded up to a power of two, and at least one.
+Return four times the worst ratio, rounded up to a power of two, and at least one.
 """
 kappa_from_ratio(worst_ratio) = max(1.0, 2.0^ceil(log2(4 * worst_ratio)))

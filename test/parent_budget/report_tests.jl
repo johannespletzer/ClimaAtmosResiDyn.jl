@@ -6,8 +6,7 @@ import ClimaAtmos.Internals.ParentBudget as PB
 import ClimaTimeSteppers as CTS
 import YAML
 
-# Stack step 8: the claim certificate, the κ calibration and the performance
-# gates.
+# The claim certificate, the κ calibration and the performance gates.
 #
 # The certificate is what a run publishes: which claim levels held for which
 # quantities in which control volumes, under which configuration, with every
@@ -124,7 +123,7 @@ const SUMMARY_ALLOCATION_OVERHEAD = 256 * 1024
         )
         @test adapter_of(explicit).tolerance_source === :explicit
         @test adapter_of(explicit).tolerances[:energy].kappa == 64.0
-        # Without a row every numeric verdict is blocked, naming the tolerance.
+        # Without a row the adapter carries no tolerance.
         Y = simulation.integrator.u
         bare = PB.build_parent_budget(
             PB.SummaryMode(),

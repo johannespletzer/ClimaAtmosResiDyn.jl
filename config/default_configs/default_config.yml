@@ -364,7 +364,7 @@ check_conservation:
   help: "Check conservation of mass and energy [`false` (default), `true`]"
   value: false
 parent_budget_mode:
-  help: "Parent-budget ledger: reconcile every accepted step's mass, total water and total energy against the updates the integrator applied, with one global collective per step and no change to the trajectory [`off` (default), `summary`, `audit`]. `audit` also attributes every channel to its processes and keeps every step's reconciliation. A successful run writes `parent_budget_report.yaml` into its output directory. See docs/src/parent_budget/."
+  help: "Reconcile each accepted step's mass, total water and total energy against the updates the integrator applied. The trajectory is unchanged and each step costs one global collective. `audit` also attributes every channel to its processes and keeps every step. A successful run writes `parent_budget_report.yaml` to the output directory. See docs/src/parent_budget/ [`off` (default), `summary`, `audit`]"
   value: "off"
 parent_budget_attribution:
   help: "How the parent-budget ledger books a process row in `audit` mode: `net` books the signed integral of what the process applied; `gross` also keeps its positive and negative parts, as a diagnostic beside the net amount the identities use [`net` (default), `gross`]"

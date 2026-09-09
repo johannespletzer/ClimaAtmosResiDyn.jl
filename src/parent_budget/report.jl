@@ -1,12 +1,12 @@
 #####
 ##### Parent-budget ledger: the report and the claim certificate
 #####
-##### What a run established, written once at its end: which claim levels held
-##### for which quantities in which control volumes, under which
-##### configuration, and what blocked the rest. Versioned and machine-readable
-##### as YAML beside the run's other output, with a concise human summary.
-##### Nothing here is new accounting: the report reads the last commit and the
-##### ledger's cumulative totals and adds nothing to them.
+##### The report states what a run established. It is written once at the end
+##### of the run. It says which claim levels held for which quantities in which
+##### control volumes, under which configuration, and what blocked the rest.
+##### It is versioned YAML beside the run's other output, with a concise human
+##### summary. Nothing here is new accounting. The report reads the last
+##### commit and the ledger's cumulative totals and adds nothing to them.
 
 """
     REPORT_VERSION
@@ -26,8 +26,8 @@ const REPORT_FILE = "parent_budget_report.yaml"
     LIMITATIONS
 
 The physical-completeness limitations every certificate carries, from the
-contract's limitations register: closure of the accepted discrete update is
-not physical completeness, and these are the places where the model does not
+contract's limitations register. Closure of the accepted discrete update is
+not physical completeness. These are the places where the model does not
 represent a process the physics has.
 """
 const LIMITATIONS = (
@@ -56,6 +56,7 @@ function parent_entry(r::ParentReconciliation)
     )
 end
 
+# One channel's attribution verdict and numbers as a report entry.
 function attribution_entry(r::AttributionReconciliation)
     return Dict{String, Any}(
         "channel" => String(r.channel),
@@ -68,6 +69,7 @@ function attribution_entry(r::AttributionReconciliation)
     )
 end
 
+# One transfer event's verdict and numbers as a report entry.
 function transfer_entry(r::TransferReconciliation)
     return Dict{String, Any}(
         "event" => String(r.event),
@@ -83,6 +85,7 @@ function transfer_entry(r::TransferReconciliation)
     )
 end
 
+# One tolerance's four terms as a report entry.
 tolerance_entry(t::BudgetTolerance) = Dict{String, Any}(
     "absolute" => t.absolute,
     "relative" => t.relative,
@@ -93,13 +96,13 @@ tolerance_entry(t::BudgetTolerance) = Dict{String, Any}(
 """
     budget_report(adapter; job_id = "", float_type = "") -> Dict{String, Any}
 
-The claim certificate of a run as a nested dictionary ready to be written:
-the configuration the ledger ran under, the tolerances and where they came
-from, the restart segmentation, and for every control volume and quantity
-the parent verdict with its cumulative totals, the attribution verdict of
-every channel and the transfer verdict of every event, all from the last
-accepted step. Before the first commit the claims section is empty and the
-report says so.
+Return the claim certificate of a run as a nested dictionary ready to be
+written. It holds the configuration the ledger ran under, the tolerances and
+their source, and the restart segmentation. For every control volume and
+quantity it holds the parent verdict with cumulative totals, the attribution
+verdict of every channel and the transfer verdict of every event, all from the
+last accepted step. Before the first commit the claims section is empty and
+`last_step` is 0.
 """
 function budget_report(adapter::ParentBudgetAdapter; job_id = "", float_type = "")
     (; schema, ledger) = adapter
@@ -113,6 +116,8 @@ function budget_report(adapter::ParentBudgetAdapter; job_id = "", float_type = "
         "configuration" => Dict{String, Any}(
             "mode" => adapter.mode isa AuditMode ? "audit" : "summary",
             "attribution" => String(adapter.attribution),
+            # Out-of-scope runs are refused at setup, so a run that reports
+            # passed the scope check.
             "scope" => "supported",
             "backend" => backend_name(context),
             "ranks" => ClimaComms.nprocs(context),
@@ -201,10 +206,10 @@ end
 """
     budget_summary(adapter) -> String
 
-A concise human-readable summary of the last accepted step: one line per
-control volume and quantity with the parent verdict and residual, then the
-attribution and transfer verdicts that are not `pass`, `reported` or
-`not_applicable`, each with what blocks or fails it.
+Return a concise human-readable summary of the last accepted step. It has one
+line per control volume and quantity with the parent verdict and residual.
+Then come the attribution and transfer verdicts that are not `pass`,
+`reported` or `not_applicable`, each with what blocks or fails it.
 """
 function budget_summary(adapter::ParentBudgetAdapter)
     commit = latest_commit(adapter)

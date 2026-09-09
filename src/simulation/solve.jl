@@ -100,8 +100,8 @@ end
     write_parent_budget_report(simulation, comms_ctx)
 
 Write the parent-budget ledger's claim certificate into the output directory
-on the root process and log its summary, when the run has a ledger. Called
-at the end of a successful solve; a crashed run writes none.
+on the root process and log its summary, when the run has a ledger. It is
+called at the end of a successful solve. A crashed run writes none.
 """
 function write_parent_budget_report(simulation, comms_ctx)
     adapter = simulation.integrator.p.parent_budget
@@ -130,6 +130,9 @@ The first step is taken outside the timed solve so that compilation is not count
 the callbacks are precompiled. Failures are caught rather than rethrown, so that partial
 results can still be inspected: in a serial run the crashed state is written to the
 output directory first. The diagnostic writers are closed on every path.
+When the run has a parent-budget ledger, its report is written to the output
+directory after a successful solve. A failure to write it is logged and does not
+change the return code.
 
 # Examples
 
