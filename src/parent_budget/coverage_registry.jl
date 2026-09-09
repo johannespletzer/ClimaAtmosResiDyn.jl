@@ -236,13 +236,13 @@ that owns the row.
 the configuration selects the row. It is the executable form of the `Guard`
 cell, and the two are written to agree.
 
-`event` is the label of the applied-update bracket that measures the row, or
-`nothing` for a row that needs no measurement: one whose every quantity is
-provably zero or not applicable, which the ledger books from this registry.
-It is not a table cell. The labels are the ones the tendency code passes to
-`open_applied_update!`, and the same label can measure one row in one
-configuration and another row elsewhere, as `:radiation` measures a
-prescribed heating under TRMM_LBA and two boundary crossings under RRTMGP.
+`event` is the label of the applied-update bracket that measures the row. It
+is `nothing` for a row that needs no measurement. Such a row has every
+quantity provably zero or not applicable, and the ledger books it from this
+registry. It is not a table cell. The labels are the ones the tendency code
+passes to `open_applied_update!`. The same label can measure one row in one
+configuration and another row elsewhere. `:radiation` measures a prescribed
+heating under TRMM_LBA and two boundary crossings under RRTMGP.
 """
 struct CoverageRow
     table::Symbol

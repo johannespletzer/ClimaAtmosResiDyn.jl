@@ -1035,8 +1035,9 @@ end
 """
     missing_transfer_legs(ledger, spec, control_volume) -> Vector{String}
 
-Every modeled leg, inside `control_volume`, of a transfer event the schema
-declares in channel `spec`, that was not recorded, as blockers.
+Return the modeled legs that were not recorded, as blockers. A leg counts when
+its event is applied through channel `spec` and its reservoir is inside
+`control_volume`.
 
 A transfer leg explains its channel's envelope exactly as a decomposition row
 does: the surface flux is part of what the explicit channel applied. So an

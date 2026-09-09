@@ -467,9 +467,9 @@ no `ρ` term while the implicit channel measures mass. See
 
 `event` is the label the tendency code brackets the process with, or `nothing`
 for a row that is booked from its declaration alone because nothing in it is
-measured. A row with a measured quantity and no event cannot be recorded by
-the adapter, so the schema refuses it, except for the rows the adapter meters
-at the hooks rather than in a tendency evaluation, which name no event.
+measured. A row with a measured quantity and no event cannot be recorded, so
+the adapter's `check_roster_events` refuses it, except for the stage rows the
+adapter meters at the hooks, which name no event.
 """
 struct ProcessRowSpec
     process::Symbol

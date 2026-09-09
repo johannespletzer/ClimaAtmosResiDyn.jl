@@ -38,14 +38,16 @@ How much the ledger measures and keeps.
     is what the parent identity needs, plus the cumulative totals and the last
     step's reconciliations. Per-step storage is bounded, so this is the mode a
     long run uses.
-  - `AuditMode`: everything `SummaryMode` measures, and in addition the
-    process rows of every collected channel from the applied-update events the
-    tendency code brackets them with, every intermediate hook firing as a stage
-    observation, the algebraic solve defect and the post-implicit correction of
-    every implicit stage, and every step's reconciliations. It costs two local
-    integrals per bracketed process and stage, one extra implicit tendency
-    evaluation per implicit stage, and storage that grows with the run, which
-    is why it is not the default.
+  - `AuditMode`: everything `SummaryMode` measures, and more. It adds the
+    process rows of every collected channel, read from the applied-update
+    events the tendency code brackets them with. It adds every intermediate
+    hook firing as a stage observation, the algebraic solve defect and the
+    post-implicit correction of every implicit stage, and every step's
+    reconciliations. It costs a copy of the parent tendency fields when a
+    bracket opens and six local integrals when it closes, the positive and
+    negative parts of three fields. Each implicit stage also costs one extra
+    implicit tendency evaluation. Storage grows with the run. This is why it
+    is not the default.
 
 `off` is not a mode. It is the absence of an adapter, so that a run with the
 ledger off is the run without the feature.
@@ -71,10 +73,10 @@ struct AuditMode <: ParentBudgetMode end
 """
     parent_budget_attribution(name) -> Symbol
 
-The attribution the configuration key `parent_budget_attribution` names:
-`:net` books each process row's signed amount, `:gross` keeps its positive
-and negative parts beside it. Anything else is an error rather than a silent
-default.
+Return the attribution the configuration key `parent_budget_attribution`
+names. `:net` books each process row's signed amount, `:gross` keeps its
+positive and negative parts beside it. Anything else is an error rather than
+a silent default.
 """
 function parent_budget_attribution(name)
     attribution = Symbol(name)
@@ -264,9 +266,10 @@ after the first, the limiter and the DSS on the assembled value; for an implicit
 stage, the initialiser, a DSS, the Newton solve, the correction when wired, and
 the post-Newton DSS, each with the constraint firings the cadence selects; then
 the explicit tendency evaluation of the stage, wherever a later stage or the
-accepted update reads it; then the final limiter, DSS and constraint on the
-accepted state. A first-same-as-last tableau skips the post-Newton constraint
-at its last stage, because the end-of-step firing covers the same state.
+accepted update reads it; then the final limiter on the limited increment, and
+the final DSS and constraint on the accepted state. A first-same-as-last
+tableau skips the post-Newton constraint at its last stage, because the
+end-of-step firing covers the same state.
 
 `explicit_stages` are the stages whose explicit tendency enters the accepted
 update with a nonzero weight, which is where a process row of an explicit
@@ -489,7 +492,7 @@ compares with the number of accepted steps.
 `events` are the applied-update labels that measure a roster row in this
 configuration. `evaluation`, `evaluation_stage`, `open_event` and `seen`
 say which tendency evaluation is being metered, if any, and which events it
-has opened, which is how a nested, repeated or unknown bracket is refused
+has opened. That is how a nested, repeated or unknown bracket is refused
 where it happens. `snapshot` holds the copies of the parent tendency fields an
 open event is differenced against. `fault` is test instrumentation, see
 `inject_fault!`.
@@ -619,10 +622,11 @@ envelope slots of every collected channel in every reservoir it writes, the
 slots of the final maps that are measured, and in `AuditMode` the slots of the
 per-stage implicit rows, of every measured process row at every stage it is
 booked at, with its gross parts under `:gross`, and of every stage
-observation. Every measured group except the endpoints and the observations
-has a magnitude group beside it. Fixed from the schema, the template, the
-mode and the attribution, so every rank builds the same layout before the
-first step.
+observation. Every measured group except the endpoints, the observations and
+the gross parts has a magnitude group beside it. A gross part is a diagnostic
+that enters no identity, so it needs no magnitude. Fixed from the schema, the
+template, the mode and the attribution, so every rank builds the same layout
+before the first step.
 """
 function adapter_packet_layout(
     schema::BudgetSchema,
@@ -1041,16 +1045,18 @@ end
     open_ledger_event!(adapter, Yₜ, event)
     close_ledger_event!(adapter, Yₜ, event)
 
-The adapter's half of an applied-update event; see `open_applied_update!`.
+Open and close the adapter's half of an applied-update event; see
+`open_applied_update!`.
 
 Outside a metered evaluation both return at once, which covers every tendency
 evaluation in `SummaryMode`, every Newton iteration and every Jacobian
 evaluation. Inside one, the label is checked against the registry, against
-nesting and against a second opening in the same evaluation, and if a roster
-row of this configuration is measured by it, the parent integrals of `Yₜ` are
-read before and after so that their difference is the process's applied
-update at this stage. The two local integrals are the only cost, and nothing
-is written.
+nesting and against a second opening in the same evaluation. If a roster row
+of this configuration is measured by it, the open copies the parent tendency
+fields of `Yₜ` and the close integrates the positive and negative parts of
+what the process added to them, which is its applied update at this stage.
+The copy and the six local integrals are the only cost, and nothing is
+written.
 """
 function open_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, event::Symbol)
     adapter.evaluation === :none && return nothing
@@ -1136,11 +1142,11 @@ end
     inject_fault!(adapter, kind, event)
     clear_fault!(adapter)
 
-Test instrumentation: make the adapter's half of the applied-update `event`
-misbehave in a named way, so a test can show what the ledger does with a
-measurement that is missing or has the wrong sign. `kind` is `:missing`, which
-drops the event's increment, or `:sign_reversed`, which negates it. Nothing at
-runtime sets a fault.
+Make the adapter's half of the applied-update `event` misbehave in a named
+way, so a test can show what the ledger does with a measurement that is
+missing or has the wrong sign. `kind` is `:missing`, which drops the event's
+increment, or `:sign_reversed`, which negates it. This is test
+instrumentation. Nothing at runtime sets a fault.
 """
 function inject_fault!(adapter::ParentBudgetAdapter, kind::Symbol, event::Symbol)
     kind in (:missing, :sign_reversed) ||
@@ -1230,10 +1236,10 @@ Account for the accepted step the integrator has just finished.
 
 Runs before every other callback, so the state it reads is the finalized
 accepted state and the stage tendencies in the stepper cache are this step's.
-One packet, one collective, then the legs are recorded, envelopes, final maps,
-the audit rows and the process rows, the transaction is committed, the hook
-counts are checked against the template, and the next transaction opens on
-the closing endpoint without measuring it again.
+One packet, one collective. Then the legs are recorded: the envelopes, the
+final maps, the audit rows and the process rows. The transaction is committed
+and the hook counts are checked against the template. The next transaction
+opens on the closing endpoint without measuring it again.
 """
 function commit_step!(adapter::ParentBudgetAdapter, integrator)
     (; schema, ledger, packet, surface_temperature) = adapter
@@ -1453,7 +1459,6 @@ function set_triple!(
     return nothing
 end
 
-# A measurement's amounts into its group and its magnitudes beside them.
 function set_measurement!(
     packet::BudgetPacket,
     adapter::ParentBudgetAdapter,
@@ -2048,8 +2053,8 @@ end
 """
     latest_gross(adapter) -> Vector{GrossRecord}
 
-The gross parts of the last accepted step's measured process rows, empty
-unless `parent_budget_attribution` is `gross`.
+Return the gross parts of the last accepted step's measured process rows,
+empty unless `parent_budget_attribution` is `gross`.
 """
 latest_gross(adapter::ParentBudgetAdapter) = adapter.last_gross
 

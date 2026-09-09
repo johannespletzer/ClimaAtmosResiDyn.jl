@@ -12,7 +12,7 @@
     open_ledger_event!(ledger, Yₜ, event::Symbol)
     close_ledger_event!(ledger, Yₜ, event::Symbol)
 
-The ledger half of an applied-update event. With the parent-budget ledger off,
+Open and close the ledger half of an applied-update event. With the ledger off,
 `ledger` is `nothing` and both are no-ops that compile away. With it on, the
 adapter's methods read the parent fields of `Yₜ` before and after the process
 while the adapter is metering a tendency evaluation, and do nothing otherwise.
@@ -36,8 +36,8 @@ is that event's applied update.
 
 Three consumers read the bracket. The tagging families and the process
 records take it for the labels in `KNOWN_TAG_SOURCES`, through
-[`snapshot_tags!`](@ref) and `attribute_tags!`, and are untouched by a
-label outside that list, so bracketing a transport or diffusion term for the
+[`snapshot_tags!`](@ref) and `attribute_tags!`. A label outside that list
+leaves them untouched, so bracketing a transport or diffusion term for the
 ledger changes no tagged result. The parent-budget ledger takes every label the
 coverage registry names, through [`open_ledger_event!`](@ref), and is a no-op
 when it is off.

@@ -284,7 +284,7 @@ component_route(c::BudgetComponent) = c.evidence.route
 """
     component_magnitude(component) -> FT
 
-The arithmetic magnitude of the sum the amount came from; see
+Return the arithmetic magnitude of the sum the amount came from; see
 `BudgetComponent`.
 """
 component_magnitude(c::BudgetComponent) = c.magnitude
