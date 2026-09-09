@@ -159,7 +159,14 @@ function solve_atmos!(simulation)
         else
             (sol, walltime) = timed_solve!(integrator)
         end
-        write_parent_budget_report(simulation, comms_ctx)
+        # The certificate is a diagnostic of a run that has already finished.
+        # A failure to write it must not turn that run into a reported crash.
+        try
+            write_parent_budget_report(simulation, comms_ctx)
+        catch report_error
+            @error "Writing the parent-budget report failed; the run itself succeeded" exception =
+                (report_error, catch_backtrace())
+        end
         return AtmosSolveResults(sol, :success, walltime)
     catch ret_code
         if !is_distributed(comms_ctx)

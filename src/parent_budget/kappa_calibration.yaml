@@ -3,7 +3,7 @@
 # running the named configuration for the stated number of accepted steps in
 # summary mode with the arithmetic term alone at κ = 1, recording the largest
 # ratio of the parent residual to that term, and fixing κ at four times it,
-# rounded up to a power of two. `test/parent_budget/calibration_tests.jl`
+# rounded up to a power of two. `test/parent_budget/report_tests.jl`
 # re-measures the serial row and fails when the ratio exceeds κ/4. Rows for
 # other backends and rank counts are measured where they run.
 version: 1
