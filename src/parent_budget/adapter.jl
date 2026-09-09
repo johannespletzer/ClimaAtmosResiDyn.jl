@@ -788,10 +788,10 @@ from the tableau and the cadence, and the packet layout from all of them.
 process rows it splits are collected there only, and is refused otherwise.
 
 A restarted run passes `restart = true` and the endpoints its checkpoint
-carried as `checkpoint`, read by `read_checkpoint_endpoints`, or `nothing`
-for a checkpoint written without a ledger. The first transaction then checks
-the restored state against them exactly before it opens, see
-`check_restart_transition`, and the record after the restart is a new segment.
+carried as `checkpoint`. `read_checkpoint_endpoints` reads them, and returns
+`nothing` for a checkpoint written without a ledger. The first transaction
+then checks the restored state against them exactly before it opens, see
+`check_restart_transition`. The record after the restart is a new segment.
 """
 build_parent_budget(mode, atmos, Y; kwargs...) =
     build_parent_budget(parent_budget_mode(mode), atmos, Y; kwargs...)
@@ -1449,18 +1449,19 @@ end
 """
     restart_transition(adapter) -> Union{Nothing, RestartTransition}
 
-What the ledger found when it opened on a restored state, or `nothing` for a
-run that did not restart.
+Return what the ledger found when it opened on a restored state, or `nothing`
+for a run that did not restart.
 """
 restart_transition(adapter::ParentBudgetAdapter) = adapter.transition
 
 """
     declared_callbacks(adapter, callbacks) -> Tuple
 
-The user callbacks a run may install beside the ledger. Without a ledger they
-pass through. With one, each must be a `ReadOnlyCallback`; the declaration is
-unwrapped, and in `AuditMode` every firing is checked against it by reading
-the parent integrals of the state around the call, locally, with no collective.
+Return the user callbacks a run may install beside the ledger. Without a
+ledger they pass through. With one, each must be a `ReadOnlyCallback`, and the
+declaration is unwrapped. In `AuditMode` every firing is checked against it by
+reading the parent integrals of the state around the call, locally and with
+no collective.
 """
 declared_callbacks(::Nothing, callbacks) = callbacks
 function declared_callbacks(adapter::ParentBudgetAdapter, callbacks)
@@ -1471,7 +1472,7 @@ declared_callback(::ParentBudgetAdapter, callback) = error(
     "The parent-budget ledger accepts a custom callback only inside a " *
     "ReadOnlyCallback declaration, got $(typeof(callback)). A callback that " *
     "writes the state between two transactions is a change nothing accounts " *
-    "for, and a callback that supplies its own accounting is not supported yet.",
+    "for, and a callback that supplies its own accounting is not supported.",
 )
 function declared_callback(adapter::ParentBudgetAdapter, declared::ReadOnlyCallback)
     inner = declared.callback
