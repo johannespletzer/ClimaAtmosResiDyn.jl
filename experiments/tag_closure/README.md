@@ -27,14 +27,29 @@ experiments/tag_closure/
   plots/               PNGs written by the analysis scripts
 ```
 
+`runscripts/` holds `phase_a.sh`, `phase_b.sh`, `phase_c.sh` and
+`tag_closure_common.sh`. The three phase scripts are their `#SBATCH` block and
+nothing else; everything they do is in the common file they source, which is
+how `runscripts/levante_gpu_common.sh` is arranged next door.
+
+The plan says the runscripts follow `runscripts/run_test_as_job.sh`. That is
+right about the `#SBATCH` block — the `bd1062` account, the shared partition,
+the `levante-cpu` depot, the module lines — and misleading about the shell.
+`run_test_as_job.sh` is **tcsh** and hardcodes its own repository path, and in
+tcsh an unset `$CONFIG` is a fatal "Undefined variable" rather than a message
+anyone can act on. These scripts are bash, and take their structure from
+`runscripts/xmodel.cpu`: `SLURM_SUBMIT_DIR` root discovery, environment
+overrides with defaults, and fail-early checks that name what to fix.
+
 The empty directories are tracked with a `.gitkeep` so the layout survives a
 fresh clone. There is also a `.gitignore` here holding one line, `!output/`: the
 repository root ignores `output/` everywhere, and without the re-inclusion the
 owner's committed results would need a `git add -f` every time.
 
-`run_tag_closure.jl`, the configurations, the runscripts and the analysis
-scripts arrive in the following steps of the plan. This commit is the skeleton
-and the run order only.
+The analysis scripts arrive in the next step of the plan. The phase B and C
+configurations do too, so `phase_b.sh` and `phase_c.sh` have nothing to run yet
+and their wall times and memory are provisional until the B1 resolution is
+settled.
 
 ## Submitting one run
 
@@ -48,12 +63,38 @@ CONFIG=experiments/tag_closure/configs/a1_dt10.yml \
 ```
 
 `sbatch` exports the submitting environment, so the runscript reads `CONFIG`
-and hands it to the driver. Watch the job with `squeue -u $USER`; its output
-lands in the `.out` file beside where it was submitted.
+and hands it to the driver. Submit from the repository root; the path may be
+repository-relative, as above, or absolute. Watch the job with
+`squeue -u $USER`; its output lands in the `.out` file beside where it was
+submitted.
 
-**Check that the driver reported success before believing anything.** A crashed
-solve returns `:simulation_crashed` rather than throwing, so a job can exit zero
-on a dead run.
+The same driver runs by hand on a login node, which is the quick way to find a
+configuration error without queueing:
+
+```bash
+CONFIG=experiments/tag_closure/configs/a1_dt10.yml \
+    julia +1.11 --project=.buildkite \
+    experiments/tag_closure/run_tag_closure.jl
+```
+
+**The job's exit status is the thing to read.** A crashed solve returns
+`:simulation_crashed` rather than throwing, so a driver that ignored the return
+code would let the job exit zero over a dead run. This one checks it and exits
+non-zero, so `sacct` or the `.out` file's last line answers the question without
+anyone reading the log.
+
+The runscript writes `provenance.txt` into the run's own output directory,
+whether the run succeeded or not, so that file does not have to be retyped. It
+fills in the run name and its configuration path, the commit, the branch and
+whether the tracked tree was dirty, the Julia version and depot, the start and
+end times, the driver's exit status, the SLURM job id and name, the partition,
+the node list, the CPU model as the node type, the ClimaComms context and
+device, and the absolute output directory. The NetCDF diagnostics and the
+checkpoints live under that directory, so the path is what points back to them.
+What it cannot fill in is anything about the run's meaning: which register row
+this is beyond the `job_id`, and why it was submitted. Add those by hand if they
+are not obvious. If a run dies before its output directory exists, the file goes
+to the submit directory instead and the log says so.
 
 A crashed run is handed back too, with its log, its provenance and whatever
 tables it managed to write. The closure check appends a row per firing, so a run
