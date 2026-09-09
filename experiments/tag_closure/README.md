@@ -96,8 +96,8 @@ adjusted from what was learned before they are submitted.
 | `a2_first_order_dt10`  | `phase_a.sh` | A2, both upwinding keys `first_order`, `dt` 10 s       |
 | `a2_first_order_dt5`   | `phase_a.sh` | A2, both upwinding keys `first_order`, `dt` 5 s        |
 | `a2_first_order_dt2p5` | `phase_a.sh` | A2, both upwinding keys `first_order`, `dt` 2.5 s      |
-| `a3_1m_dt10`           | `phase_a.sh` | A3, `microphysics_model: 1M`, `dt` 10 s                |
-| `a4_float32_dt10`      | `phase_a.sh` | A4, `FLOAT_TYPE: Float32`, `dt` 10 s                   |
+| `a3_1m`                | `phase_a.sh` | A3, `microphysics_model: 1M`, `dt` 10 s                |
+| `a4_float32`           | `phase_a.sh` | A4, `FLOAT_TYPE: Float32`, `dt` 10 s                   |
 | `a5_sphere_limiter`    | `phase_a.sh` | A5, sphere with the SEM limiter, `dt` 300 s, one day   |
 
 ### Phase B. Energy
@@ -142,8 +142,8 @@ Tick a run once it has been submitted, once its files are committed under
 | `a2_first_order_dt10`  | A     |           |             |          |                |
 | `a2_first_order_dt5`   | A     |           |             |          |                |
 | `a2_first_order_dt2p5` | A     |           |             |          |                |
-| `a3_1m_dt10`           | A     |           |             |          |                |
-| `a4_float32_dt10`      | A     |           |             |          |                |
+| `a3_1m`                | A     |           |             |          |                |
+| `a4_float32`           | A     |           |             |          |                |
 | `a5_sphere_limiter`    | A     |           |             |          |                |
 | `b1_notags`            | B     |           |             |          |                |
 | `b1_base`              | B     |           |             |          |                |

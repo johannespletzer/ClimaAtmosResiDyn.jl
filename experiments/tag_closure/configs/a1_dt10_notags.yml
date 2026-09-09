@@ -1,0 +1,34 @@
+# A1's timing control: `a1_dt10` with no water tags at all.
+#
+# The cost of the tags is the difference between this run's `sypd` and
+# `wall_time_per_timestep` lines and `a1_dt10`'s. Every other key is identical,
+# so the difference is the tag state fields, their transport and their
+# attribution brackets.
+#
+# `water_tracers` and `water_closure_check` are both absent, and they have to
+# go together: `tag_closure_callback` errors at startup when the check is
+# configured without its family, before the first step. There is nothing to
+# tag, so there are no tag diagnostics either, and this run writes no
+# diagnostics at all. The tagged runs write six column fields a minute on a
+# 30-level column, which is small beside the tag arithmetic, but it does mean
+# this number is a floor rather than an exact counterfactual.
+job_id: "a1_dt10_notags"
+
+# The DYCOMS_RF02 0M column of `test/tagged_water_integration.jl`. The geometry
+# is load-bearing rather than cosmetic: without `z_max`, `z_elem` and
+# `z_stretch` the 1.5 km boundary-layer profile is extrapolated over the
+# default 30 km column, pressure runs down to zero and the solve dies in
+# `exner_given_pressure`. `z_stretch: false` because `dz_bottom` defaults to
+# 500 m, which the tanh stretching cannot fit into 1500 m across 30 elements.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+
+dt: "10secs"
+t_end: "1hours"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false

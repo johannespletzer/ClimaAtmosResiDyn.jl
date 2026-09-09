@@ -1,0 +1,62 @@
+# A5. The sphere limiter run: how much do the partition repair and the limiter
+# rescale contribute?
+#
+# The coarse moist sphere of the "Tagged water limiter rescale" testset in
+# `test/tagged_water_integration.jl`, run for a day instead of an hour. The
+# column of A1 to A4 trips no limiter, so `rescale_water_tags!` is a no-op
+# there and the fix ledger holds partition repair alone. The SEM quasimonotone
+# limiter is horizontal, so tripping it takes a sphere.
+#
+# This is the one exception to the phase-A rule that no run configures a
+# limiter. Its ledger therefore mixes the repair with the rescale, and a
+# rescale follows a parent that moved too, so subtracting it is not a
+# counterfactual. Read this run's numbers as a total, not as an operator
+# residual.
+job_id: "a5_sphere_limiter"
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+h_elem: 4
+z_elem: 10
+
+dt: "300secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+# The point of this run. Off by default, and off in every other phase-A config.
+apply_sem_quasimonotone_limiter: true
+
+# A tanh front at 20 degrees latitude and its exact complement, so the pair
+# partitions ρq_tot. `evap` follows the surface moisture flux and is not a
+# partition member.
+water_tracers:
+  - name: tropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0}
+  - name: extratropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 2.0, inside: false}
+  - name: evap
+    source: surface_flux
+
+# One hour, as the plan sets for a sphere run, rather than the every-step
+# cadence of the column ladder. `tolerance` is left unset so the run warns
+# rather than stopping.
+water_closure_check:
+  period: "1hours"
+
+# Instantaneous samples, as in the column configs, and for the same two
+# reasons: the defaults never register `q_tag_fix_<name>`, and they would put
+# the cumulative ledger through a time mean.
+#
+# `q_tag_fix_evap` is listed here and in no other phase-A config. The repair
+# touches partition tags only, but the rescale touches every tag, so the
+# source tag's ledger is nonzero here and is part of what this run measures.
+# It is still excluded from the operator residual sum, which runs over the
+# region tags alone.
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [q_tag_res, q_tag_fix_tropics, q_tag_fix_extratropics]
+    period: "1hours"
+  - short_name: [q_tag_fix_evap]
+    period: "1hours"
+  - short_name: [q_tag_tropics, q_tag_extratropics, q_tag_evap]
+    period: "1hours"

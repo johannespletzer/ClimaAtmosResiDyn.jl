@@ -1,0 +1,63 @@
+# A1. The van Leer ladder: does the operator residual scale with `dt`?
+# Everything but `dt` is fixed across the three A1 runs. Read against the
+# matching rung of A2, never on its own.
+
+job_id: "a1_dt2p5"
+
+# The DYCOMS_RF02 0M column of `test/tagged_water_integration.jl`. The geometry
+# is load-bearing rather than cosmetic: without `z_max`, `z_elem` and
+# `z_stretch` the 1.5 km boundary-layer profile is extrapolated over the
+# default 30 km column, pressure runs down to zero and the solve dies in
+# `exner_given_pressure`. `z_stretch: false` because `dz_bottom` defaults to
+# 500 m, which the tanh stretching cannot fit into 1500 m across 30 elements.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+
+dt: "2.5secs"
+t_end: "1hours"
+# Float64 is required, not cosmetic. The default is `Float32`, whose
+# rounding floor grows with the cell count; A4 is the run that measures
+# how far that floor sits below the structural residual.
+FLOAT_TYPE: "Float64"
+
+# `upper` and `lower` split the column at 600 m and are exact complements, so
+# they partition ρq_tot and `q_tag_res` reads as leakage rather than as
+# overlap. `evap` follows the surface moisture flux. It is not a member of the
+# partition, so `q_tag_res` does not sum it and its ledger is not part of the
+# operator residual.
+water_tracers:
+  - name: upper
+    region: {type: tanh_altitude, z_center: 600.0, width: 100.0}
+  - name: lower
+    region: {type: tanh_altitude, z_center: 600.0, width: 100.0, above: false}
+  - name: evap
+    source: surface_flux
+
+# Every step. `period` is a duration string and not a step count, so this is
+# this run's own `dt` and it changes down the ladder. `tolerance` is left
+# unset, so the family default applies and the run only warns rather than
+# stopping. The check adds no tendency.
+water_closure_check:
+  period: "2.5secs"
+
+# The default tag diagnostics are not usable here, for two reasons. They never
+# register `q_tag_fix_<name>` at all, so the ledger the operator residual adds
+# back would simply be absent. And they put the tag list through a time mean,
+# which `docs/src/tagged_water.md` says is not a meaningful operation on a
+# cumulative field. So list the names here with no `reduction_time` key, which
+# resolves to an instantaneous sample, and switch the defaults off.
+#
+# The sample period is fixed at one minute rather than tied to `dt`, so the
+# three runs of the ladder are sampled at the same times and their residual
+# curves can be laid over one another. One minute is a whole number of steps
+# at 10, 5 and 2.5 s.
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [q_tag_res, q_tag_fix_upper, q_tag_fix_lower]
+    period: "60secs"
+  - short_name: [q_tag_upper, q_tag_lower, q_tag_evap]
+    period: "60secs"
