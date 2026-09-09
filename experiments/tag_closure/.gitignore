@@ -1,3 +1,25 @@
-# The repository root ignores `output/` everywhere. This directory is where the
-# owner commits the small result files of each run, so re-include it here.
+# Un-ignore what this directory is for.
+#
+# The repository root ignores several patterns globally that the layout of this
+# experiment depends on. A rule here wins for paths under this directory, so
+# each one is re-included deliberately and nothing else is.
+
+# `output/` (root rule `output/`) is where the owner commits each run's small
+# result files.
 !output/
+
+# `plots/` receives one PNG per question from the analysis scripts (root rule
+# `*.png`). A phase report whose figures exist only on the machine that ran the
+# analysis is not a record, so they are committed with the tables they came
+# from.
+!plots/*.png
+
+# `run.log` is on the hand-back list for every run (root rule `*.log`). Without
+# this it was dropped silently: the first three runs came back with `.err`
+# files, which nothing ignores, and no `run.log` at all.
+!output/**/*.log
+
+# Deliberately still ignored, and not re-included here: `*.nc`, because the
+# NetCDF diagnostics stay on Levante scratch and `provenance.txt` is what points
+# back to them, and `*.out`, because the job's own output is trimmed into
+# `run.log` rather than committed whole.

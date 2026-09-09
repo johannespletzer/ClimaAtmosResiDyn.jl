@@ -187,6 +187,38 @@ no `provenance.txt` is refused, and that the log-log slope fit recovers 2 from
     that container, so not even their syntax has been parsed. Run one of them
     once by hand before relying on it.
 
+## Before the first job: instantiate the environment
+
+**Do this once, on a login node, before submitting anything.** The runscript
+does not do it and a batch job cannot: `Pkg.instantiate` needs the package
+registry and Levante's compute nodes have no outbound network.
+
+```bash
+JULIA_DEPOT_PATH="${LEVANTE_DEPOT:-$HOME/.julia/depots/levante-cpu}" \
+    julia +1.11 --project=.buildkite \
+    -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+```
+
+Two things about that line are easy to get wrong, and both cost a job.
+
+**The depot has to match.** The runscript sets
+`JULIA_DEPOT_PATH="${LEVANTE_DEPOT:-$HOME/.julia/depots/levante-cpu}"`, so an
+instantiate run under the default depot installs packages the batch job will
+never look at. Set the same variable here, or export `LEVANTE_DEPOT` once and
+use it in both places.
+
+**`.buildkite/Manifest-v1.11.toml` is generated, not committed.** The root
+`.gitignore` excludes `*/Manifest*.toml`, so a fresh clone has none, and without
+one Julia resolves the environment from scratch. That is what makes the failure
+look so strange: `Statistics` is a resolvable standard library in 1.11 but has
+no source until a manifest pins it, and the first run dies with
+`Missing source file for base pkg Statistics` — which reads like a broken Julia
+rather than an environment that was never instantiated.
+
+`Pkg.precompile()` is not optional in practice. Without it the first job spends
+its walltime compiling ClimaAtmos rather than running the model. CI does the
+same thing, at `.buildkite/full_pipeline.yml:32`.
+
 ## Submitting one run
 
 From the repository root on Levante, with the experiment branch checked out and
@@ -392,6 +424,18 @@ points back to them. Nothing else is committed.
   - `run.log`. The `Simulation info` line, the `sypd` and
     `wall_time_per_timestep` lines, every warning, and the final status. Trim
     the rest.
+
+    The first three runs came back without one, because the root `.gitignore`
+    has a global `*.log` and `git add` dropped the file without saying so. This
+    directory now re-includes it, so a `run.log` added from here on is
+    committed.
+
+    Those three carry their full `.err` instead, which nothing ignores. That is
+    not a loss of information — Julia logs through `@info`, so `Simulation
+    info`, `sypd` and `wall_time_per_timestep` are all on stderr and all
+    present — but it is a thousand lines where the hand-back asks for a trimmed
+    handful. Trimming them into `run.log` is worth doing when convenient; it is
+    not worth resubmitting anything for.
   - `provenance.txt`. The commit the run used, the Julia version, the date, the
     node type and the partition, the SLURM job id, and the scratch paths to the
     NetCDF and the checkpoints. None of these is stable across months on that
@@ -432,8 +476,13 @@ be resubmitted.
 
 ## Open items
 
-  - The resolution and length of B1, and whether it runs on the shared partition
-    or one GPU.
+  - ~~The resolution and length of B1, and whether it runs on the shared
+    partition or one GPU.~~ **Decided by the owner:**
+    `config/common_configs/numerics_sphere_he6ze10.yml`, ten days, on the shared
+    CPU partition. That is the grid the shipped `baroclinic_wave_tagged_tracers`
+    job runs on, so B1, B2 and `c0_sphere` share a mesh and the docs'
+    below-one-percent figure is comparable rather than a fresh measurement. No
+    GPU work is needed and `phase_b.sh` stands as written.
   - The shape of the C1 reference shift, which the agent puts to the owner
     before writing either version.
   - Whether C0 runs alongside phase A.
@@ -441,13 +490,14 @@ be resubmitted.
   - Whether C3 also wants a sphere counterpart. As registered it is the column
     only, since C3 compares two readings of one run and the column is the cheap
     one.
-  - **Whether A3 wants a matched companion.** A3 now sets `vert_diff`, which is
-    the only one of the three 1M `q_tot_eff` operators a column can reach —
-    hyperdiffusion's branch is horizontal and the viscous sponge is off. That
-    makes A3 differ from `a1_dt10` in two keys rather than one, so the gap
-    between them is not the 1M mismatch alone. A 0M column with `vert_diff` on
-    would separate the two and costs one more column run. Not added on my own
-    initiative; say the word.
+  - **A3 needs a matched companion to be read cleanly.** A3 sets `vert_diff`,
+    which is the only one of the three 1M `q_tot_eff` operators a column can
+    reach — hyperdiffusion's branch is horizontal and the viscous sponge is off.
+    So A3 differs from `a1_dt10` in two keys, `microphysics_model` and
+    `vert_diff`, and the gap between them is not the 1M mismatch alone. **One
+    extra 0M column with `vert_diff` on separates them**, at the cost of one
+    more column run. The configuration is deliberately not written: say the word
+    and it takes a minute.
   - **Whether the sphere runs should use MPI ranks.** Every runscript here runs
     one process with `CLIMACOMMS_CONTEXT=SINGLETON` and no `srun`, which is
     plainly right for phase A's column and sidesteps the CPU/GPU preferences
