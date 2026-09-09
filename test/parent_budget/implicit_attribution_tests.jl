@@ -5,24 +5,23 @@ import ClimaAtmos as CA
 import ClimaAtmos.Internals.ParentBudget as PB
 import ClimaTimeSteppers as CTS
 
-# Stack step 5, with the final maps of step 7: the implicit envelope, the final
-# accepted-state maps, and the implicit channel's own rows.
+# The implicit envelope, the final accepted-state maps, and the implicit
+# channel's own rows.
 #
-# With every term of the parent identity collected, the identity can pass, and
-# this file is where it first does, on a dry column under all three constraint
-# cadences and on a moist column built from the configuration path. The rest is
-# the implicit channel seen from inside in audit mode: the solve defect measured
-# on the Newton-solved stage, the post-implicit correction, the hooks the
-# stepper folds into the stored tendency, and the stage firings kept as
-# observations. The defect is a leading-order term at one Newton iteration and
-# shrinks when the solve converges, which is the test that separates a solver
-# from a bookkeeping error.
+# With every term of the parent identity collected, the identity can pass, on a
+# dry column under all three constraint cadences and on a moist column built
+# from the configuration path. The rest is the implicit channel seen from inside
+# in audit mode: the solve defect measured on the Newton-solved stage, the
+# post-implicit correction, the hooks the stepper folds into the stored
+# tendency, and the stage firings kept as observations. The defect is a
+# leading-order term at one Newton iteration and shrinks when the solve
+# converges, which is the test that separates a solver from a bookkeeping error.
 
 const FT = Float64
 const ATMOS = PB.ATMOSPHERE_ENDPOINT_GROUP
 
 # A provisional tolerance for these tests: no floor, no relative term, and the
-# arithmetic term at κ = 64. Not a calibrated value; step 8 calibrates κ.
+# arithmetic term at κ = 64. Not a calibrated value.
 provisional_tolerances() = Dict(
     quantity =>
         PB.BudgetTolerance(; absolute = 0.0, relative = 0.0, scale = 1.0, kappa = 64.0)
@@ -215,7 +214,8 @@ defect_energy(adapter) = sum(
         @test length(adapter.last_observations) == expected
         @test expected > 0
         # The parent identity still passes, and the implicit attribution is
-        # blocked by exactly the row step 4 attributes: vertical advection.
+        # blocked by exactly the one roster row nothing records: vertical
+        # advection.
         for quantity in (:mass, :energy)
             @test parent_row(adapter, quantity).status === :pass
             r = attribution_row(adapter, :implicit, quantity)

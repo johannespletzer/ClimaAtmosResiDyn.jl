@@ -109,7 +109,9 @@ const METERED_HOOKS = (:lim!, :dss!, :constrain_state!, :initialize_imp!, :T_pos
 """
     FINAL_MAP_HOOKS
 
-The hooks whose last call of a step is a final accepted-state map.
+The hooks whose last call of a step is a final map. `dss!` and
+`constrain_state!` act on the accepted state there. `lim!` acts on the limited
+increment before the final assembly, see `HookCall`.
 """
 const FINAL_MAP_HOOKS = (:lim!, :dss!, :constrain_state!)
 
@@ -180,17 +182,23 @@ occurrence of that hook in the step.
 
 The roles say what the firing's change means:
 
-  - `:stage` is the limiter on a stage value, `:pre_solve` the DSS and
-    constraint on the assembled stage value, and `:post_init` the DSS and
-    constraint after the implicit-stage initialiser. None of these is additive:
-    each changes the array a later evaluation reads and reaches the endpoint
-    only through the tableau. They are stage observations.
+  - `:stage` is the limiter on a stage value and `:pre_solve` the DSS and
+    constraint on the assembled stage value. Neither is additive: each changes
+    the array a later evaluation reads and reaches the endpoint only through
+    the tableau. `:post_init` is the DSS and constraint after the implicit-stage
+    initialiser. The stepper stores `U₀` before the initialiser, so this change
+    sits inside the stored implicit tendency and is absorbed by the solve-defect
+    row. All three are kept as stage observations.
   - `:post_newton` is the DSS or constraint on the Newton-solved stage. The
     stepper differences the stage after it, so its change is inside the stored
     implicit tendency and enters the accepted update with weight `b_imp[i]/γ`.
   - `:initialize` and `:correction` are the initialiser and the post-implicit
     correction, metered for the stage's `dtγ` and for the solved stage.
-  - `:final` is the last call of a state-writing hook, on the accepted state.
+  - `:final` is the last call of a state-writing hook. For `dss!` and
+    `constrain_state!` this is on the accepted state. The final `lim!` acts on
+    the buffer holding `u` plus the limited increment, before the explicit and
+    implicit increments are added, so its change enters the accepted state
+    unchanged.
 """
 struct HookCall
     hook::Symbol
@@ -226,13 +234,13 @@ end
 """
     hook_template(tableau, cadence, has_post_implicit, has_initializer, fsal)
 
-The template for one step. Mirrors `step_u!` in `imex_ark.jl`: for every stage
-after the first, the limiter and the DSS on the assembled value; for an implicit
-stage, the initialiser, a DSS, the Newton solve, the correction when wired, and
-the post-Newton DSS, each with the constraint firings the cadence selects; then
-the final limiter, DSS and constraint on the accepted state. A first-same-as-last
-tableau skips the post-Newton constraint at its last stage, because the
-end-of-step firing covers the same state.
+Build the template for one step. It mirrors `step_u!` and the stage functions
+it calls in `imex_ark.jl`: for every stage after the first, the limiter and the
+DSS on the assembled value; for an implicit stage, the initialiser, a DSS, the
+Newton solve, the correction when wired, and the post-Newton DSS, each with the
+constraint firings the cadence selects; then the final limiter, DSS and
+constraint. A first-same-as-last tableau skips the post-Newton constraint at
+its last stage, because the end-of-step firing covers the same state.
 """
 function hook_template(
     tableau,
@@ -344,9 +352,9 @@ is_audit(adapter::ParentBudgetAdapter) = adapter.mode isa AuditMode
     parent_budget_tolerances(tolerances) -> Union{Nothing, Dict}
 
 Check a caller's tolerance table: `nothing`, or a mapping from a subset of
-`BUDGET_QUANTITIES` to `BudgetTolerance`s in the accounting type. Until the
-calibration table of stack step 8 exists, this is the only way a run gets a
-tolerance, and a run without one reports every verdict as `blocked`.
+`BUDGET_QUANTITIES` to `BudgetTolerance`s in the accounting type. This is the
+only way a run gets a tolerance. A run without one reports every numeric
+verdict as `blocked`, naming the tolerance.
 """
 parent_budget_tolerances(::Nothing) = nothing
 function parent_budget_tolerances(tolerances)
@@ -402,12 +410,14 @@ is_observation(call::HookCall) =
 """
     adapter_packet_layout(schema, template, mode)
 
-The layout of the one packet an accepted step reduces: the endpoint slots, the
-envelope slots of every collected channel in every reservoir it writes, the
-slots of the final maps that are measured, and in `AuditMode` the slots of the
-per-stage implicit rows and of every stage observation. Fixed from the schema,
-the template and the mode, so every rank builds the same layout before the
-first step.
+Lay out the one packet an accepted step reduces. The slot groups, in order, are
+the endpoint group of every reservoir, the envelope group of every collected
+channel in every reservoir it writes, one final-map group per state-writing
+hook the schema declares measured, and in `AuditMode` one group per stage row
+of the implicit roster and implicit stage, then one group per stage
+observation in the template. Every group holds one slot per quantity and no
+group carries a magnitude beside it. The layout is fixed from the schema, the
+template and the mode, so every rank builds the same one before the first step.
 """
 function adapter_packet_layout(
     schema::BudgetSchema,
@@ -631,9 +641,10 @@ The correction is called with the Newton-solved stage `U*`, after the stepper
 has refreshed the implicit cache for it, so this is the one point in a stage
 where `U*` is visible with a cache that matches it. The defect is
 `r = U₀ + dtγ · T_imp(U*) − U*`, with `U₀` the stage value the stepper stored
-before the solve; its integrals need one extra implicit tendency evaluation,
-which is why only `AuditMode` pays for it. The correction's integral is read
-from the tendency the hook returns.
+in `cache.temp` before the initialiser and the solve; its integrals need one
+extra implicit tendency evaluation, which is why only `AuditMode` pays for it.
+The correction's integral is read from the tendency the hook writes into its
+first argument.
 
 Neither measurement writes anything the stepper reads afterwards: the extra
 evaluation writes the adapter's own scratch tendency and the cache's temporary
@@ -669,8 +680,9 @@ end
     meter_initialize(adapter, f)
     meter_post_implicit(adapter, f, implicit_tendency)
 
-The hook `f` behind the adapter's meter, or `f` itself when there is no adapter,
-so `args_integrator` wires the same names whether the ledger is on or off.
+Wrap the hook `f` in the adapter's meter, or return `f` itself when there is no
+adapter, so `args_integrator` wires the same names whether the ledger is on or
+off.
 """
 meter_hook(::Nothing, ::Symbol, f) = f
 meter_hook(adapter::ParentBudgetAdapter, hook::Symbol, f) = HookMeter(hook, f, adapter)
@@ -1065,8 +1077,8 @@ function record_envelopes!(adapter::ParentBudgetAdapter, packet::BudgetPacket, s
     return nothing
 end
 
-# One final-map leg per state-writing hook, on the accepted state, with each
-# quantity as the schema declares it for this configuration: measured where a
+# One final-map leg per state-writing hook, from its last call of the step, with
+# each quantity as the schema declares it for this configuration: measured where a
 # configured path writes it, the invariant zero its rows prove where none does,
 # and not applicable where the atmosphere does not own it. Wherever the hook was
 # measured, a quantity declared zero is required to have moved by exactly zero,

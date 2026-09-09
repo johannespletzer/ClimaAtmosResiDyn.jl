@@ -573,8 +573,8 @@ end
 """
     process_row(spec, process, reservoir) -> Union{Nothing, ProcessRowSpec}
 
-The roster row for `process` in `reservoir`, or `nothing` when the channel
-does not declare it.
+Return the roster row for `process` in `reservoir`, or `nothing` when the
+channel does not declare it.
 """
 function process_row(spec::ChannelSpec, process::Symbol, reservoir::Symbol)
     for row in spec.processes
