@@ -62,25 +62,23 @@ Layout on the branch:
 
 ```
 experiments/tag_closure/
-  README.md            how to run the series, in order, with the sbatch lines
+  README.md            the run order, the sbatch lines, and the run register
   LEARNINGS.md         the barrier register, one entry per run
   run_tag_closure.jl   the driver: one config path in, one run out
   configs/             one YAML per run, named <phase><n>_<variant>.yml
   runscripts/          one sbatch script per phase, CPU shared partition
-  analysis/            one Julia script per phase, reads output/, writes plots/
-  output/              committed by the owner: closure CSVs, summary CSVs, log excerpts
+  analysis/            reduce_run.jl, run on Levante, plus one script per phase
+  output/              committed by the owner, one directory per run
   plots/               PNGs written by the analysis scripts
 ```
 
 Rules for the layout:
 
-  - `output/` holds only small text files: the `*_tag_closure.csv` a run
-    writes, the summary CSV the analysis writes, and the log lines that carry
-    the walltime, the throughput and the warnings. NetCDF diagnostics and
-    checkpoints stay on Levante scratch; `README.md` records their path.
-  - Every committed result names the commit it ran on, the Julia version, the
-    date and the node type, because none of them is stable across months on
-    that system (`runscripts/README.md`, "Measuring").
+  - `output/` holds only small text files, one directory per run. The
+    hand-back section below lists exactly what goes in one and what stays on
+    Levante scratch. Every committed result names the commit it ran on, the
+    Julia version, the date and the node type, because none of them is stable
+    across months on that system (`runscripts/README.md`, "Measuring").
   - The driver is a script in the shape of `experiments/passive_stratospheric_tracers.jl`:
     it reads a YAML, builds `AtmosConfig`, runs `get_simulation` and
     `solve_atmos!`, and prints the closure summary. It does not add model
@@ -269,6 +267,75 @@ is the tolerance model and the implicit brackets. If it does not, the docs'
 alternative, water source tracing plus the energy process record, is the
 recommendation, and C3 is the run that shows what that alternative reads.
 
+## Running a case and handing the results back
+
+One run, end to end. The owner does steps 2 to 7. The agent does the rest
+here.
+
+ 1. The agent writes `configs/<run>.yml` and sets its `job_id` to `<run>`, so
+    every file the run writes names itself. It also writes the reducer of
+    step 5 and adds `<run>` to the register in `README.md`.
+ 2. On Levante, from the repository root, check out the experiment branch and
+    pull. Submit with the config in the environment, the way the GPU
+    runscripts already take `SCRIPT`:
+
+        CONFIG=experiments/tag_closure/configs/a1_dt10.yml \
+            sbatch experiments/tag_closure/runscripts/phase_a.sh
+
+    `sbatch` exports the submitting environment, so the runscript reads
+    `CONFIG` and hands it to the driver.
+ 3. Watch it with `squeue -u $USER`. The job's own output lands in the `.out`
+    file beside where it was submitted.
+ 4. When it finishes, check that the driver reported success. A crashed solve
+    returns `:simulation_crashed` rather than throwing, so a job can exit
+    zero on a dead run.
+ 5. Reduce before copying. The run's `output_dir` holds the closure CSV, the
+    NetCDF diagnostics, the config snapshot and the checkpoints. The NetCDF
+    stays on scratch, and the number phase A turns on is not in the closure
+    CSV. `gross_relative` is a volume integral of the residual with no ledger
+    subtracted, while the operator residual is a pointwise maximum of
+    `q_tag_res + Σᵢ q_tag_fix_i`. Run `analysis/reduce_run.jl` against
+    `output_dir` on Levante to turn the diagnostics into one small CSV.
+ 6. Copy the files below into `experiments/tag_closure/output/<run>/`.
+ 7. Commit and push. One commit per phase is enough, with the run names in
+    the message, and tick those runs in the register.
+ 8. The agent then runs `analysis/<phase>.jl` over `output/`, writes
+    `output/summary_<phase>.csv` and the plots, fills `LEARNINGS.md`, applies
+    the phase's decision rule and reports.
+
+What each run's directory holds:
+
+  - `<family>_tag_closure.csv`, verbatim from `output_dir`. The table the
+    closure check wrote, one row per firing.
+  - `operator_residual.csv`, from step 5. One row per diagnostic time with
+    the maximum absolute operator residual, and beside it the maximum
+    absolute `q_tag_res` and the summed ledger on their own, so the
+    decomposition can be checked rather than trusted.
+  - `<run>.yml`, the merged configuration snapshot the run writes next to its
+    output. This pins what actually ran, including every default in force at
+    the time, which a config in `configs/` does not.
+  - `run.log`. The `Simulation info` line, the `sypd` and
+    `wall_time_per_timestep` lines, every warning, and the final status.
+    Trim the rest.
+  - `provenance.txt`. The commit the run used, the Julia version, the date,
+    the node type and the partition, the SLURM job id, and the scratch paths
+    to the NetCDF and the checkpoints. None of these is stable across months
+    on that system, so a result without them cannot be set against a later
+    one.
+
+Nothing else is committed. The NetCDF diagnostics and the checkpoints stay on
+scratch, and `provenance.txt` is what points back to them.
+
+A crashed run is handed back too, with its log, its provenance and whatever
+tables it managed to write. The closure check appends a row per firing, so a
+run that died partway still leaves a partial one, and where it stops is
+itself the measurement. A crash is a barrier like any other and earns its
+entry in `LEARNINGS.md`.
+
+The agent does not analyse a run whose `provenance.txt` is missing. It says
+so and asks for it instead. A residual without the commit that produced it
+cannot be placed against the rest of the series.
+
 ## Analysis and plots
 
 One script per phase in `analysis/`, run with `julia --project=.buildkite`,
@@ -311,20 +378,26 @@ reported before the other has run.
     three integration tests, `runscripts/README.md` and
     `runscripts/run_test_as_job.sh`.
  2. Create `claude/tag-closure-experiments` from the branch of this page and
-    the layout above. Write `README.md` with the run order and one `sbatch`
-    line per run.
+    the layout above. Write `README.md` with the run order, one `sbatch` line
+    per run, and the run register the owner ticks as results land.
  3. Write the configs for A1 to A5, B1 to B3 and C0 and C3. Take the test
-    configurations as the base and change only the keys the tables name. Do
-    not write C1 or C2 configs until the code they need exists.
+    configurations as the base and change only the keys the tables name. Set
+    each config's `job_id` to its run name, so the run's own output names
+    itself. Do not write C1 or C2 configs until the code they need exists.
  4. Write the driver and the runscripts. If Julia is available, check every
     config with `CA.AtmosConfig` and one `get_simulation` on the column. If
-     not, check the YAML parses and say so in the report.
- 5. Write the analysis scripts and run them on synthetic CSVs.
+    not, check the YAML parses and say so in the report.
+ 5. Write `analysis/reduce_run.jl`, which the owner runs on Levante, and the
+    per-phase analysis scripts. Run both on synthetic input, the reducer on a
+    small synthetic NetCDF and the phase scripts on synthetic CSVs, so they
+    are tested before anything real exists.
  6. Push the branch, open a draft pull request against the branch of this
     page, and stop. Report what is ready to run and what is waiting on a
     decision.
- 7. After the owner commits results: run the analysis, write the plots,
-    fill `LEARNINGS.md`, and report the phase with the decision rule applied.
+ 7. After the owner commits results, follow the hand-back section above. Run
+    the analysis, write the plots, fill `LEARNINGS.md`, and report the phase
+    with its decision rule applied. Say which runs are still missing, and
+    refuse the ones whose provenance is not there.
 
 ## Open questions for the owner
 
