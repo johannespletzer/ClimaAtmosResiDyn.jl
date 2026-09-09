@@ -1501,8 +1501,14 @@ Every applied-update label some row is measured by. A bracket in the tendency
 code that passes a label outside this set names a process the registry does
 not know, which the adapter refuses when it is metering.
 """
-const REGISTRY_EVENTS =
-    Tuple(unique(r.event for r in COVERAGE_ROWS if !isnothing(r.event)))
+const REGISTRY_EVENTS = Tuple(
+    unique(
+        vcat(
+            [r.event for r in COVERAGE_ROWS if !isnothing(r.event)],
+            [:surface_temperature, :surface_precipitation],
+        ),
+    ),
+)
 
 """
     CHANNEL_LABELS
