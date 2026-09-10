@@ -368,7 +368,7 @@ mean.
 
 One thing is still missing: the long ClimaParams names that a TOML override keys
 on, since the field names above are aliases rather than table headers. They come
-from one command, recorded in `LEVANTE_TASKS.md` task 2.
+from one command, recorded in `LEVANTE_TASKS.md` task 1.
 
 **And one thing to watch.** `T_0` currently equals `T_triple` and `T_freeze`, all
 273.16. Moving `T_0` alone is correct, since the other two are physical

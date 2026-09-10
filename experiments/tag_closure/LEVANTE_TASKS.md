@@ -34,44 +34,66 @@ The pre-fix A5 reading is kept beside its re-run under
 `output/a5_sphere_limiter/before_issue_64_fix/`, because it measures the bug
 issue #64 names rather than a residual.
 
+## Once per machine
+
+`.buildkite/LocalPreferences.toml` is generated rather than tracked, and without
+it Julia fails in ways that do not name the cause. The first attempt in this
+series died on `Missing source file for base pkg Statistics`, which was exactly
+this. Run the setup once:
+
+```bash
+./runscripts/setup-julia-levante.tcsh cpu
+```
+
+It prints the depot and modules to use afterwards, and it is shared with the gpu
+stack, so re-run it when switching. `AGENTS.md` records the same rule under
+*Local norms*, added by #67.
+
 ## Once per shell
 
 ```bash
 cd ~/git/ClimaAtmosResiDyn.jl
 git pull origin claude/tag-closure-experiments
 export JULIA_DEPOT_PATH="$HOME/.julia/depots/levante-cpu"
+module load gcc/11.2.0-gcc-11.2.0 openmpi/4.1.2-gcc-11.2.0
 ```
 
 The depot export matters. The runscripts use that depot, so an instantiate or a
-script run under a different one will not be seen by a batch job.
+script run under a different one will not be seen by a batch job. The modules
+matter for the interactive Julia calls below; the batch scripts load their own.
 
-## 1. One more `phase_a.jl` pass
+## 0. What has never been run, because no session so far had Julia
 
-Both loose ends from the re-run are closed. The audit table came back, A5 is in
-`summary_a.csv`, and so are its `final_overclaimed_relative` and
-`final_orphaned_relative`. What is left is that `phase_a.jl` has since gained a
-`vert_diff` column, which the committed summary predates and which is the one
-column that will distinguish `a3_0m_vert_diff` from `a1_dt10`. One command:
+Everything in `analysis/` was written and reviewed by reading. Three things
+should happen before the analysis is trusted, and all three are cheap.
+
+**a. The self-test.** It has not run since `ce76919` added `is_ladder_rung` and
+the `vert_diff` column, nor since the audit pass changed `tables.jl` and
+`phase_a.jl`. It is the only check that the analysis does what its comments say.
+
+```bash
+julia +1.11 --project=.buildkite experiments/tag_closure/analysis/selftest.jl
+```
+
+**b. The two phase passes.** `summary_a.csv`'s audit columns are still NaN
+because the A5 results and its audit table landed on either side of the last
+run, and `summary_c.csv` predates `c0_sphere_audit`.
 
 ```bash
 julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_a.jl
+julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_c.jl
 ```
 
-**The audit is worth reading before that.** It confirms the fix directly rather
-than by inference. `untagged_relative` 1.3556e-4 plus `overclaimed_relative`
-1.4307e-4 is exactly the closure table's `gross_relative`, so the two halves are
-balanced to within 5% — a runaway is one-sided, this is not. `orphaned_relative`
-is 2.5e-9, five orders below the residual, so the removal floor is not holding
-closure by discarding tag content. That was the one outcome `gross_relative`
-could not distinguish, and it is now excluded by measurement.
+**c. The formatter.** No session has run it, because none had Julia, and no pull
+request exists for this branch so CI has not run it either. JuliaFormatter
+formats markdown here (`format_markdown = true`), so every document in this
+directory except `README.md` is in scope and none has been through it.
 
-And `nonpositive_mass_fraction` is 2.77e-7 against a `nonpositive_fraction` of
-0.351 — a factor of 1.3 million. Both are fractions **by volume**, not by cell
-count. For water, "a third of the domain is non-positive" is about vanishingly
-dry air and nothing else. See *Lower
-priority*, where this changes a judgement.
+```bash
+prek run julia-formatter --all-files
+```
 
-## 2. C1 — approved, submit it
+## 1. C1 — approved, submit it
 
 **Approved 2026-09-10: the sphere, at `δ` = −110 K.** Both files are written and
 validated.
@@ -140,7 +162,7 @@ thermodynamic parameter. The acceptance test above is what would catch it.
 TOML dict and `Parameters.jl:602` forwards every field, so C1 is a configuration
 change. It still needs the owner's approval; it no longer needs a code change.
 
-## 3. C3 — done, and it is the result the series was for
+## 2. C3 — done, and it is the result the series was for
 
 Nothing to run. Recorded here because it is the strongest finding so far.
 
@@ -164,7 +186,7 @@ So the alternative `energy_source_tags.md` names is demonstrated rather than
 merely available, on exactly the configuration where the tags are inert, and it
 is reference-independent so nothing about C1 can touch it.
 
-## 4. The timing controls — measured, both pairs
+## 3. The timing controls — measured, both pairs
 
 The `.err` files came back and the A1 pair reads clean:
 
@@ -220,10 +242,10 @@ refuses any run whose `provenance.txt` records `commit: unknown`.
 
 Then the phase script, `phase_a.jl` or `phase_c.jl` as appropriate.
 
-## 5. Nothing left here
+## 4. The two runs that just landed
 
 `c0_sphere_audit` and `a3_0m_vert_diff` have both run and are analysed.
-`c0_sphere_deep` is dropped. C1, in task 2, is the only thing left to submit.
+`c0_sphere_deep` is dropped. C1, in task 1, is the only thing left to submit.
 
 **What the two runs said**, since both changed a number quoted elsewhere:
 
@@ -266,7 +288,7 @@ plateaus at 2.79e-4 over a full day rather than running away. **Phase B has no
 technical objection left.** Whether it is worth ten days of queue is the owner's
 call on cost, not on risk. B2 is dry and unaffected either way.
 
-**C1.** It needs the owner's approval and the two values task 2 collects. It no
+**C1.** Approved and ready to submit; see task 1. It no
 longer needs a code change or a choice of shape. Of the two shapes in the memo,
 shifting only the share's denominator should be dropped rather than costed: the
 region tags sum to `ρe_tot` and not to `ρe_tot + c`, so wherever `e < 0` the
@@ -288,10 +310,10 @@ of 100 K on the sphere, and `T_0` anchors the latent heats. Left alone it takes
 `LH_v` at 288.3 K down 9.4%, which is a different atmosphere and not a change of
 reference — the exact thing this shape was chosen over the state offset to
 avoid. So the shape has to move `LH_v0`, `LH_s0` and `LH_f0` with it, and the
-saturation-vapour-pressure path needs checking as well. Task 2 confirms the
+saturation-vapour-pressure path needs checking as well. Task 1 confirms the
 coupling from the running package; `C1_reference_shift.md` carries the
 argument.
 
-**A3's companion.** Written, validated and listed in task 5 as
+**A3's companion.** Written, validated and reported in task 4 as
 `a3_0m_vert_diff`. It is not in this section any more; it needs no approval and
 only the queue.
