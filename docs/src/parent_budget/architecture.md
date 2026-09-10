@@ -172,21 +172,27 @@ it. Checks that could differ between ranks therefore belong before the step, whe
 the schema is known and identical everywhere, or after the reduction, where the
 reduced packet gives every rank the same answer.
 
-### Envelope slots are packed; decomposition and transfer slots are not yet
+### What the packet carries
 
 The data flow above puts leg slots in the same packet as endpoint slots, and that is
-the design. The implementation packs the endpoint slots and the envelope slots of
-the channels the adapter collects, which are the two explicit channels. The layout
-is therefore a property of the schema *and* of what the adapter collects: a channel
-the schema declares but the adapter does not collect has no slot, and its absence is
-a named blocker at reconciliation. A slot nobody writes would instead refuse the
-reduction on every rank, which is the wrong failure for a term that is merely
-unimplemented.
+the design. The packet carries the endpoint slots, the envelope slots of the three
+channels in every reservoir they write, and the slots of the final maps that some
+configured path writes. In audit mode it also carries, per implicit stage, the solve
+defect, the post-implicit correction and the hooks the stepper folds into the stored
+implicit tendency, and every intermediate hook firing as a stage observation. The
+layout is a property of the schema, the hook template and the mode, so every rank
+builds the same one before the first step.
 
-Each decomposition and transfer leg still needs its own local accumulator and its
-own reserved slot, which is the instrumentation stack steps 4 and 6 add. Until then
-no runtime path may record such a leg through its own global reduction. That would
-issue one collective per leg and reintroduce the cost this design exists to avoid.
+A channel the schema declares but the adapter does not collect has no slot, and its
+absence is a named blocker at reconciliation. A slot nobody writes would instead
+refuse the reduction on every rank, which is the wrong failure for a term that is
+merely unimplemented.
+
+Each explicit decomposition row and each transfer leg still needs its own local
+accumulator and its own reserved slot, which is the instrumentation stack steps 4 and
+6 add. Until then no runtime path may record such a leg through its own global
+reduction. That would issue one collective per leg and reintroduce the cost this
+design exists to avoid.
 
 ### Endpoint reuse
 
@@ -260,18 +266,37 @@ An executable trace test records the stage construction and hook order the
 adapter assumes, so that a change in the pinned version fails a test instead of
 silently changing the meaning of every implicit leg.
 
-The adapter is `src/parent_budget/adapter.jl`. It runs as the first discrete
-callback after every accepted step, so the state it reads is the finalized
-accepted state and no other callback has run. It reads the stage tendencies the
-stepper cache still holds, `T_exp` and `T_lim` for the two explicit channels,
-and forms each channel's envelope as the sum of those stages weighted by the
-cache's own tableau weights and the step, widened to the accounting type before
-the sum. The endpoints and the envelopes go into one packet and one collective,
-the envelopes are recorded as legs, the transaction is committed, and the next
-one opens on the closing endpoint. The callback's initialisation reads `B⁰`
-after the integrator has refreshed its cache and before any other callback.
-The last stage and the final assembly share the same time, so a final map will
-be identified by its position in the step, never by its time.
+The adapter is `src/parent_budget/adapter.jl`. It sees a step twice.
+
+During the step it sits behind the `lim!`, `dss!`, `constrain_state!`,
+`initialize_imp!` and `T_post_imp!` hooks as meters that read the state before
+and after each call and never write it. Which call is which is decided by
+position in the step, never by time, because the last stage and the final
+assembly share the same `t`. The positions come from a **hook template** built
+from the tableau, the constraint cadence and which hooks are wired, mirroring
+`step_u!` of `ClimaTimeSteppers` 0.10: for every stage after the first, the
+limiter and the DSS on the assembled value; for an implicit stage, the
+initialiser, a DSS, the Newton solve, the correction and the post-Newton DSS,
+each with the constraint firings the cadence selects; then the final limiter,
+DSS and constraint. The meters check the stepper against the template as it
+runs: one firing more than the template holds, or fewer by the end of the step,
+is an error. The last firing of each state-writing hook is the final map; a
+post-Newton firing is folded into the stored implicit tendency and enters the
+accepted update with weight `b_imp[i]/γ`; every other firing is a stage
+observation. In audit mode the correction hook is also where the solve defect
+is measured, since the Newton-solved stage is visible there with a cache that
+matches it, at the cost of one extra implicit tendency evaluation per stage.
+
+After the step it runs as the first discrete callback, so the state it reads is
+the finalized accepted state and no other callback has run. It reads the stage
+tendencies the stepper cache still holds, `T_exp`, `T_lim` and the stored
+effective `T_imp`, and forms each channel's envelope as the sum of those stages
+weighted by the cache's own tableau weights and the step, widened to the
+accounting type before the sum. The endpoints, the envelopes, the final maps
+and whatever the meters measured go into one packet and one collective, the
+legs are recorded, the transaction is committed, and the next one opens on the
+closing endpoint. The callback's initialisation reads `B⁰` after the integrator
+has refreshed its cache and before any other callback.
 
 Process classification lives in the other single source of truth, the coverage
 registry, which the documentation table is generated from or checked against.

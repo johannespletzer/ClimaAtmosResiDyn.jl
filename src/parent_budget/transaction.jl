@@ -722,12 +722,17 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
         "which that channel does not write.",
     )
     if leg.level isa ProcessDecomposition
-        (leg.process, reservoir) in spec.processes || error(
+        row = process_row(spec, leg.process, reservoir)
+        isnothing(row) && error(
             "Leg $(leg_label(leg)) decomposes channel $(leg.channel) with " *
             "process $(leg.process) in $reservoir, which the channel does not " *
             "declare. A row the registry did not declare is a row nothing " *
             "checks for, so an omitted process could never be missed.",
         )
+        # The row's own dispositions, not the channel's: a process can prove a
+        # zero the channel as a whole measures.
+        check_leg_dispositions(schema, row, leg)
+        return nothing
     end
     check_leg_dispositions(schema, spec, leg)
     return nothing
@@ -1015,13 +1020,13 @@ function missing_processes(
     cv::ControlVolume,
 )
     missing_rows = String[]
-    for (process, reservoir) in spec.processes
-        is_inside(cv, reservoir) || continue
-        has_process_leg(ledger, spec.name, process, reservoir) && continue
+    for row in spec.processes
+        is_inside(cv, row.reservoir) || continue
+        has_process_leg(ledger, spec.name, row.process, row.reservoir) && continue
         push!(
             missing_rows,
-            "expected process $process of channel $(spec.name) in $reservoir " *
-            "was not recorded",
+            "expected process $(row.process) of channel $(spec.name) in " *
+            "$(row.reservoir) was not recorded",
         )
     end
     return missing_rows
@@ -1066,7 +1071,7 @@ function open_dispositions(specs, quantity::Symbol, cv::ControlVolume)
         expected_disposition(spec, quantity) === :open || continue
         push!(
             blockers,
-            "$(spec_kind(spec)) $(spec.name) leaves $quantity open in " *
+            "$(spec_kind(spec)) $(spec_label(spec)) leaves $quantity open in " *
             "$(cv.name); the registry has not established what it writes",
         )
     end
@@ -1078,10 +1083,17 @@ touches_view(spec::ChannelSpec, cv::ControlVolume) =
 touches_view(spec::FinalMapSpec, cv::ControlVolume) =
     any(r -> is_inside(cv, r), spec.reservoirs)
 touches_view(spec::TransferEventSpec, cv::ControlVolume) = event_in_view(spec, cv)
+touches_view(row::ProcessRowSpec, cv::ControlVolume) = is_inside(cv, row.reservoir)
 
 spec_kind(::ChannelSpec) = "channel"
 spec_kind(::FinalMapSpec) = "final map"
 spec_kind(::TransferEventSpec) = "transfer event"
+spec_kind(::ProcessRowSpec) = "process row"
+
+spec_label(spec::ChannelSpec) = spec.name
+spec_label(spec::FinalMapSpec) = spec.name
+spec_label(spec::TransferEventSpec) = spec.name
+spec_label(row::ProcessRowSpec) = "$(row.process) in $(row.reservoir)"
 
 """
     declared_applicable(schema, reservoirs, quantity, control_volume) -> Bool
@@ -1547,6 +1559,7 @@ function reconcile_attribution(
         missing_channel_envelopes(ledger, spec, cv),
         missing_processes(ledger, spec, cv),
         open_dispositions((spec,), quantity, cv),
+        open_dispositions(spec.processes, quantity, cv),
     )
     tolerance, blocked_by = resolve_tolerance(
         quantity_tolerance(tolerances, quantity),

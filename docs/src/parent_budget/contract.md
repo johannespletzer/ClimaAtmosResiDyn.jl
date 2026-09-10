@@ -541,9 +541,11 @@ implicit increment may be booked independently **only** if the same amount is
 subtracted back out of that aggregate.
 
 Which hooks are folded in is a property of the pinned timestepper version, and
-the coverage registry records what the pinned version does. Until a folded
-hook's accepted weight has been measured, an intermediate-stage leg is
-`unknown`, never `measured`.
+the coverage registry records what the pinned version does. The intended form
+of booking a folded hook is as a decomposition row of the implicit channel,
+with its accepted weight: the rows explain the aggregate and are never added
+to it, so nothing is counted twice. Until a folded hook's accepted weight has
+been measured, an intermediate-stage leg is `unknown`, never `measured`.
 
 ## Component status and evidence
 
@@ -838,11 +840,9 @@ final report.
 
 Each blocks a named claim, not the whole ledger.
 
-| Blocker                                                                                                                               | Blocks                                             | Cleared by          |
-|:------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------- |:------------------- |
-| Accepted implicit stage weights not yet read from the pinned timestepper                                                              | claim level 2 for implicit terms                   | stack step 5        |
-| The hooks folded into the effective implicit increment are known from the stepper source; their accepted weights are not yet measured | claim level 3 for the implicit channel             | stack step 5        |
-| Coupled surface legs measured from two quadratures, agreement not yet measured                                                        | claim level 4 in the coupled view                  | stack step 6        |
-| Energy-reference `b`                                                                                                                  | the covariance claim                               | stack step 8        |
-| Decomposition and transfer legs not yet packed into the per-step collective                                                           | attribution and transfer claims at acceptable cost | stack steps 4 and 6 |
-| `κ` not yet calibrated                                                                                                                | a numeric pass or fail verdict                     | stack step 8        |
+| Blocker                                                                        | Blocks                                             | Cleared by          |
+|:------------------------------------------------------------------------------ |:-------------------------------------------------- |:------------------- |
+| Coupled surface legs measured from two quadratures, agreement not yet measured | claim level 4 in the coupled view                  | stack step 6        |
+| Energy-reference `b`                                                           | the covariance claim                               | stack step 8        |
+| Decomposition and transfer legs not yet packed into the per-step collective    | attribution and transfer claims at acceptable cost | stack steps 4 and 6 |
+| `κ` not yet calibrated                                                         | a numeric pass or fail verdict                     | stack step 8        |

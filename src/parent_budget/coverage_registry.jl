@@ -34,8 +34,12 @@ What a guard may look at when deciding whether its row applies to a run.
     Newton's method. An `ExplicitAlgorithm` evaluates `T_imp!` explicitly, so it
     has an implicit channel but no solve defect.
   - `restart` says whether the run restores a checkpoint.
+  - `constraint_cadence` is `update_constrain_state_every` as a symbol, `:step`,
+    `:stage` or `:dss`. It decides whether `constrain_state!` also fires on the
+    Newton-solved stage, where the stepper folds its change into the stored
+    implicit tendency.
 
-The last three are properties of the run rather than of the model, which is why
+The last four are properties of the run rather than of the model, which is why
 they are arguments and not read from `atmos`.
 """
 struct RegistryContext{A}
@@ -45,12 +49,30 @@ struct RegistryContext{A}
     dss::Bool
     implicit_solve::Bool
     restart::Bool
+    constraint_cadence::Symbol
 end
 
-function RegistryContext(atmos; dss::Bool, implicit_solve::Bool, restart::Bool = false)
+function RegistryContext(
+    atmos;
+    dss::Bool,
+    implicit_solve::Bool,
+    restart::Bool = false,
+    constraint_cadence::Symbol = :step,
+)
+    constraint_cadence in (:step, :stage, :dss) || error(
+        "Unknown constraint cadence $constraint_cadence; expected :step, :stage or :dss.",
+    )
     moist = owns_atmosphere_water(atmos.microphysics_model)
     slab = has_surface_reservoir(atmos.surface.temperature)
-    return RegistryContext(atmos, moist, slab, dss, implicit_solve, restart)
+    return RegistryContext(
+        atmos,
+        moist,
+        slab,
+        dss,
+        implicit_solve,
+        restart,
+        constraint_cadence,
+    )
 end
 # The two model facts are resolved once here, so no guard reads field presence.
 
@@ -99,6 +121,9 @@ implicit_diffusion(c::RegistryContext) =
     c.atmos.diff_mode == Implicit() && !isnothing(c.atmos.vertical_diffusion)
 post_implicit_correction(c::RegistryContext) =
     c.implicit_solve && c.atmos.numerics.energy_q_tot_upwinding != Val(:none)
+folded_dss(c::RegistryContext) = c.implicit_solve && c.dss
+folded_constraint(c::RegistryContext) =
+    c.implicit_solve && c.constraint_cadence !== :step
 quasimonotone_limiter(c::RegistryContext) = !isnothing(c.atmos.numerics.limiter)
 vapor_tendency(c::RegistryContext) =
     c.atmos.tracer_nonnegativity_method isa TracerNonnegativityVaporTendency
@@ -427,7 +452,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "effective implicit increment as the pinned solver forms it",
         :envelope,
-        :none,
+        :collected,
         "stage weights and hook-folding established against the pinned version",
         "`envelope_tests.jl`",
         3,
@@ -920,9 +945,9 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "leading order at `max_iters = 1`; sign and accepted weight verified",
         :decomposition,
-        :none,
+        :collected,
         "independent projection of the algebraic residual",
-        "`solve_defect_tests.jl`",
+        "`implicit_attribution_tests.jl`",
         5,
         implicit_solve,
     ),
@@ -934,14 +959,48 @@ const COVERAGE_ROWS = CoverageRow[
         "`energy_q_tot_upwinding != Val(:none)`",
         "atmosphere",
         "`ρe_tot`, `ρq_tot`",
-        (:open, :open, :open),
-        "folded into the effective implicit increment by the stepper; the difference of two vertical divergences with zero boundary flux, so a global zero is expected and not yet established",
+        (:invariant_zero, :measured, :measured),
+        "writes no `ρ` term; folded into the effective implicit increment by the stepper, so it is booked from the correction the stepper applied, with weight `dt · b_imp[i]`",
         :decomposition,
-        :none,
-        "accepted implicit weight `b_imp[i]/γ` on the stage change, one booking only",
+        :collected,
+        "the correction tendency read at the hook, weighted; one booking only",
         "`implicit_attribution_tests.jl`",
         5,
         post_implicit_correction,
+    ),
+    CoverageRow(
+        :implicit,
+        Symbol("impl.folded_dss"),
+        "`dss!` on the Newton-solved stage",
+        "`T_imp!`",
+        "spectral element with an implicit solve",
+        "atmosphere",
+        "`ρ`, `ρq_tot`, `ρe_tot`",
+        (:measured, :measured, :measured),
+        "the stepper differences the stage after this DSS, so its change is inside the stored implicit tendency and enters the accepted update with weight `b_imp[i]/γ`",
+        :decomposition,
+        :collected,
+        "before/after pair on the solved stage, weighted",
+        "`implicit_attribution_tests.jl`",
+        5,
+        folded_dss,
+    ),
+    CoverageRow(
+        :implicit,
+        Symbol("impl.folded_constraint"),
+        "`constrain_state!` on the Newton-solved stage",
+        "`T_imp!`",
+        "`update_constrain_state_every` is `stage` or `dss`, with an implicit solve",
+        "atmosphere",
+        "`ρ`, `ρq_tot`, `ρe_tot`",
+        (:measured, :measured, :measured),
+        "as `impl.folded_dss`; skipped at the last stage of a first-same-as-last tableau, where the end-of-step firing is the final map instead",
+        :decomposition,
+        :collected,
+        "before/after pair on the solved stage, weighted",
+        "`implicit_attribution_tests.jl`",
+        5,
+        folded_constraint,
     ),
     CoverageRow(
         :implicit,
@@ -988,7 +1047,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "numerical correction, not a physical tendency",
         :final_map,
-        :none,
+        :collected,
         "ordered before/after pair on the accepted state",
         "`journal_tests.jl`",
         7,
@@ -1005,7 +1064,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "tag-only, writes no parent field",
         :final_map,
-        :none,
+        :collected,
         "field-write inventory",
         "`journal_tests.jl`",
         7,
@@ -1022,7 +1081,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :invariant_zero, :measured),
         "moves `ρ` by `Δρq_tot` and `ρe_tot` by `Δρq_tot·(uᵥ(T)+Φ)`",
         :final_map,
-        :none,
+        :collected,
         "ordered before/after pair",
         "`journal_tests.jl`",
         7,
@@ -1039,7 +1098,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "numerical correction",
         :final_map,
-        :none,
+        :collected,
         "ordered before/after pair",
         "`journal_tests.jl`",
         7,
@@ -1056,7 +1115,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "conservative in exact arithmetic on a closed sphere, so the amount is expected at reduction level and larger is a finding",
         :final_map,
-        :none,
+        :collected,
         "ordered before/after pair, compared against the reduction scale",
         "`journal_tests.jl`",
         7,
@@ -1090,7 +1149,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "the loop skips `ρq_tot`, so no parent field is written",
         :final_map,
-        :none,
+        :collected,
         "field-write inventory",
         "`journal_tests.jl`",
         7,
@@ -1107,7 +1166,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "clips `ρq_tot` and hands the increment to `enforce_mass_energy_consistency!`",
         :final_map,
-        :none,
+        :collected,
         "ordered before/after pair",
         "`journal_tests.jl`",
         7,
@@ -1124,7 +1183,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :measured, :invariant_zero),
         "at `constrain_qtot = true` it clips `ρq_tot` without calling `enforce_mass_energy_consistency!`, so water moves while stored energy does not",
         :final_map,
-        :none,
+        :collected,
         "ordered before/after pair plus a physical-inconsistency note",
         "`journal_tests.jl`",
         7,
@@ -1141,7 +1200,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "clamps and rescales the condensate fields, reads `ρq_tot` and writes none of `ρ`, `ρq_tot`, `ρe_tot`",
         :final_map,
-        :none,
+        :collected,
         "field-write inventory",
         "`journal_tests.jl`",
         7,
@@ -1158,7 +1217,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :invariant_zero),
         "tag-only, sum preserved by construction",
         :final_map,
-        :none,
+        :collected,
         "field-write inventory",
         "`journal_tests.jl`",
         7,
@@ -1568,7 +1627,7 @@ The tables whose `decomposition` rows form a channel's roster.
 const ROSTER_TABLES = (:limited, :explicit, :implicit)
 
 """
-    budget_schema(atmos; dss, implicit_solve, restart = false) -> BudgetSchema
+    budget_schema(atmos; dss, implicit_solve, restart = false, constraint_cadence = :step)
 
 Build the schema a configuration is expected to produce from the registry.
 
@@ -1583,9 +1642,15 @@ The `initialization` rows are not final maps of an ordinary step. They set
 `B⁰` outside every transaction, or describe the restart transition, which is
 its own transaction; neither is a term a step could record.
 """
-function budget_schema(atmos; dss::Bool, implicit_solve::Bool, restart::Bool = false)
+function budget_schema(
+    atmos;
+    dss::Bool,
+    implicit_solve::Bool,
+    restart::Bool = false,
+    constraint_cadence::Symbol = :step,
+)
     check_supported(atmos)
-    c = RegistryContext(atmos; dss, implicit_solve, restart)
+    c = RegistryContext(atmos; dss, implicit_solve, restart, constraint_cadence)
     rows = selected_rows(c)
 
     reservoirs = ReservoirSpec[
@@ -1601,13 +1666,20 @@ function budget_schema(atmos; dss::Bool, implicit_solve::Bool, restart::Bool = f
     for envelope in filter(r -> r.table === :envelopes, rows)
         name = channel_name(envelope)
         channel_reservoirs = row_reservoirs(envelope, c)
-        processes = Tuple{Symbol, Symbol}[]
+        processes = ProcessRowSpec[]
         for row in rows
             row.table in ROSTER_TABLES || continue
             row.level === :decomposition || continue
             channel_name(row) === name || continue
             for reservoir in row_reservoirs(row, c)
-                push!(processes, (process_name(row), reservoir))
+                push!(
+                    processes,
+                    ProcessRowSpec(
+                        process_name(row),
+                        reservoir;
+                        dispositions = resolve_dispositions(row.dispositions, c),
+                    ),
+                )
             end
         end
         push!(

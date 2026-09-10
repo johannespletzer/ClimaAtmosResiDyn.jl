@@ -297,6 +297,10 @@ entry point for simulations written as scripts; configuration-driven runs go thr
     step and no change to the trajectory. It refuses configurations outside the
     contract's scope, restarts, and custom callbacks. See the parent-budget pages
     of the documentation.
+  - `parent_budget_tolerances = nothing`: The tolerances the ledger judges its
+    residuals against, a mapping from `:mass`, `:water` or `:energy` to a
+    `BudgetTolerance`. Without one every numeric verdict is `blocked`, naming
+    the tolerance.
   - `log_to_file = false`: Send log output to a file in the output directory.
   - `verbose = false`: Log progress while building the simulation (root process only).
 
@@ -364,6 +368,7 @@ function AtmosSimulation{FT}(;
     # Misc
     checkpoint_frequency = Inf,
     parent_budget_mode = "off",
+    parent_budget_tolerances = nothing,
     log_to_file = false,
     verbose = false,
 ) where {FT}
@@ -410,7 +415,10 @@ function AtmosSimulation{FT}(;
     # The ledger's schema is fixed from the model before anything is collected.
     parent_budget = Internals.ParentBudget.build_parent_budget(
         parent_budget_mode, model, Y;
-        ode_config, restart = !isnothing(restart_file),
+        ode_config,
+        restart = !isnothing(restart_file),
+        constraint_cadence = Symbol(update_constrain_state_every),
+        tolerances = parent_budget_tolerances,
     )
     if !isnothing(parent_budget) && !default_callbacks && !isempty(callbacks)
         error(

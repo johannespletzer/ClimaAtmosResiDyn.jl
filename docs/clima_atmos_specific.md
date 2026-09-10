@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -61,6 +61,13 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 | Restarts                            | `restarts`          | `restart_*`                              |
 | Diagnostics                         | `diagnostics`       | any `--diagnostics` job                  |
 | Config semantics                    | `infrastructure`    | `config.jl`                              |
+| Parent-budget ledger                | `parent_budget`     | none; GitHub Actions only                |
+
+The `parent_budget` group holds the ledger tests that drive real simulations,
+`test/parent_budget/envelope_tests.jl` and
+`test/parent_budget/implicit_attribution_tests.jl`. Each builds several
+`AtmosSimulation`s and compiles the tendency pipeline for each, so they are kept
+out of `infrastructure`, which still runs the ledger's state-free unit tests.
 
 The `tagging_*` groups are one file each: `tagging_energy` runs
 `test/tagged_tracers_integration.jl`, `tagging_water` runs

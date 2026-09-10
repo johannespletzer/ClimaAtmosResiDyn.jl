@@ -16,6 +16,7 @@ TEST_GROUP = get(ENV, "TEST_GROUP", "all")
 const KNOWN_TEST_GROUPS = (
     "all",
     "infrastructure",
+    "parent_budget",
     "diagnostics",
     "dynamics",
     "dynamics_tracers",
@@ -57,7 +58,6 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Parent-budget registry" begin @time include("parent_budget/registry_tests.jl") end
     @safetestset "Parent-budget journal" begin @time include("parent_budget/journal_tests.jl") end
     @safetestset "Parent-budget endpoints" begin @time include("parent_budget/endpoint_tests.jl") end
-    @safetestset "Parent-budget envelopes" begin @time include("parent_budget/envelope_tests.jl") end
     @safetestset "Parameter tests" begin @time include("parameter_tests.jl") end
 
     @safetestset "Check TOML path" begin @time include("test_output_yaml_path.jl") end
@@ -76,6 +76,16 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "AtmosModel Constructor" begin @time include("config/atmos_model_constructor.jl") end
     @safetestset "Presets" begin @time include("presets.jl") end
     @safetestset "Topography tests" begin @time include("topography.jl") end
+end
+
+# ============================================================================
+# Parent budget: the ledger driven by real simulations. Every file here builds
+# several `AtmosSimulation`s and compiles the tendency pipeline for each, which
+# is why they are not in `infrastructure` with the ledger's unit tests.
+# ============================================================================
+if TEST_GROUP in ("parent_budget", "all")
+    @safetestset "Parent-budget envelopes" begin @time include("parent_budget/envelope_tests.jl") end
+    @safetestset "Parent-budget implicit attribution" begin @time include("parent_budget/implicit_attribution_tests.jl") end
 end
 
 # ============================================================================

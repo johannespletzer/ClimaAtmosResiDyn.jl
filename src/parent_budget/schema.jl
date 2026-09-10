@@ -455,6 +455,44 @@ struct ReservoirSpec
 end
 
 """
+    ProcessRowSpec(process, reservoir; dispositions = OPEN_DISPOSITIONS)
+
+One row of a channel's roster: the process a decomposition leg records under,
+the reservoir it writes, and what each quantity of that leg is expected to be.
+
+The dispositions are the row's own, not the channel's, because a process can
+prove a zero the channel as a whole cannot: the post-implicit correction writes
+no `ρ` term while the implicit channel measures mass. See
+`EXPECTED_DISPOSITIONS`.
+"""
+struct ProcessRowSpec
+    process::Symbol
+    reservoir::Symbol
+    dispositions::NTuple{length(BUDGET_QUANTITIES), Symbol}
+    function ProcessRowSpec(
+        process::Symbol,
+        reservoir::Symbol;
+        dispositions = OPEN_DISPOSITIONS,
+    )
+        check_dispositions("Process row $process in $reservoir", dispositions)
+        return new(process, reservoir, dispositions)
+    end
+end
+
+# A roster entry may be written as a `ProcessRowSpec`, as a `(process,
+# reservoir)` pair that inherits the channel's dispositions, or as a `(process,
+# reservoir, dispositions)` triple.
+process_row_spec(::Symbol, row::ProcessRowSpec, _) = row
+process_row_spec(::Symbol, row::Tuple{Symbol, Symbol}, dispositions) =
+    ProcessRowSpec(row[1], row[2]; dispositions)
+process_row_spec(::Symbol, row::Tuple{Symbol, Symbol, Any}, _) =
+    ProcessRowSpec(row[1], row[2]; dispositions = row[3])
+process_row_spec(channel::Symbol, row, _) = error(
+    "Channel $channel has a roster entry $row that is neither a ProcessRowSpec " *
+    "nor a (process, reservoir) pair.",
+)
+
+"""
     ChannelSpec(name, reservoirs; dispositions = OPEN_DISPOSITIONS,
                 requires_envelope = true, processes = ())
 
@@ -468,8 +506,9 @@ each quantity of its legs is expected to be; see `EXPECTED_DISPOSITIONS`.
 A missing required envelope blocks, because the primary identity has a term with
 nothing in it.
 
-`processes` is the roster of `(process, reservoir)` rows the channel's
-decomposition must record, each in a reservoir the channel names. A channel can
+`processes` is the roster of rows the channel's decomposition must record,
+each a `ProcessRowSpec` or a `(process, reservoir)` pair that inherits the
+channel's dispositions, in a reservoir the channel names. A channel can
 reconcile in the primary identity while its attribution is entirely unexplained,
 which is why the roster is separate from the envelope. It is a roster and not a
 flag because a flag is satisfied by whichever rows happen to arrive: the rows
@@ -486,13 +525,13 @@ struct ChannelSpec
     dispositions::NTuple{length(BUDGET_QUANTITIES), Symbol}
     requires_envelope::Bool
     requires_decomposition::Bool
-    processes::Tuple{Vararg{Tuple{Symbol, Symbol}}}
+    processes::Tuple{Vararg{ProcessRowSpec}}
     function ChannelSpec(
         name::Symbol,
         reservoirs::Tuple{Vararg{Symbol}};
         dispositions = OPEN_DISPOSITIONS,
         requires_envelope::Bool = true,
-        processes::Tuple{Vararg{Tuple{Symbol, Symbol}}} = (),
+        processes = (),
     )
         name in ATTRIBUTION_CHANNELS || error(
             "Channel $name is not one of $(ATTRIBUTION_CHANNELS). A final " *
@@ -507,28 +546,43 @@ struct ChannelSpec
         )
         length(unique(reservoirs)) == length(reservoirs) ||
             error("Channel $name names the same reservoir twice.")
-        length(unique(processes)) == length(processes) || error(
+        check_dispositions("Channel $name", dispositions)
+        rows = Tuple(process_row_spec(name, entry, dispositions) for entry in processes)
+        keys = [(row.process, row.reservoir) for row in rows]
+        length(unique(keys)) == length(keys) || error(
             "Channel $name declares the same (process, reservoir) row twice. " *
             "A row is recorded once and a repeated declaration would demand " *
             "two records of it.",
         )
-        for (process, reservoir) in processes
-            reservoir in reservoirs || error(
-                "Channel $name expects process $process in $reservoir, which " *
-                "the channel does not write. A decomposition row belongs to a " *
-                "reservoir its channel names.",
+        for row in rows
+            row.reservoir in reservoirs || error(
+                "Channel $name expects process $(row.process) in " *
+                "$(row.reservoir), which the channel does not write. A " *
+                "decomposition row belongs to a reservoir its channel names.",
             )
         end
-        check_dispositions("Channel $name", dispositions)
         return new(
             name,
             reservoirs,
             dispositions,
             requires_envelope,
-            !isempty(processes),
-            processes,
+            !isempty(rows),
+            rows,
         )
     end
+end
+
+"""
+    process_row(spec, process, reservoir) -> Union{Nothing, ProcessRowSpec}
+
+Return the roster row for `process` in `reservoir`, or `nothing` when the
+channel does not declare it.
+"""
+function process_row(spec::ChannelSpec, process::Symbol, reservoir::Symbol)
+    for row in spec.processes
+        row.process === process && row.reservoir === reservoir && return row
+    end
+    return nothing
 end
 
 function ChannelSpec(name::Symbol, reservoir::Symbol; kwargs...)
