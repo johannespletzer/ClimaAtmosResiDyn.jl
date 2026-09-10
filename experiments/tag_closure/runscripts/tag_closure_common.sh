@@ -193,6 +193,12 @@ mkdir -p "${RUN_DIR}"
 
 PROJECT="${PROJECT:-${ROOT}/.buildkite}"
 DRIVER="${DRIVER:-${ROOT}/experiments/tag_closure/run_tag_closure.jl}"
+
+# Julia starts in RUN_DIR, which on terrabyte is not the repository. So a
+# PROJECT or DRIVER given relative to the repository, the way CONFIG is, is
+# made absolute here.
+[[ "${PROJECT}" == /* ]] || PROJECT="${ROOT}/${PROJECT}"
+[[ "${DRIVER}" == /* ]] || DRIVER="${ROOT}/${DRIVER}"
 JULIA="${JULIA:-$(command -v julia || true)}"
 
 # juliaup channel, e.g. "+1.11". Set JULIA_CHANNEL="" to use whatever `julia`
