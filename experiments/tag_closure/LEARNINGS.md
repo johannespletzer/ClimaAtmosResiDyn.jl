@@ -277,11 +277,18 @@ correction is the same order as the failure: at 24 h the summed ledger is
 
 ### The existing test cannot see this
 
-`test/tagged_water_integration.jl` runs this exact configuration — same initial
-condition, same grid, same limiter, same `dt` — and asserts the residual stays
-under 1e-2. It sets `t_end = 3600secs`. **At one hour the measured value is
-3.07e-5, comfortably inside the bound, and the divergence starts between hours
-two and three.** The test passes because it stops before the failure begins.
+`test/tagged_water_integration.jl` runs this configuration — same initial
+condition, same grid, same limiter, same `dt`, five tags where this run has
+three — and bounds the residual at 1e-2. It sets `t_end = 3600secs`
+(`:237`).
+
+Read the bound carefully before setting a number beside it. It is
+`max |residual| / max |ρq_tot|` (`:312`), a pointwise maximum over the domain
+maximum, and not the closure table's `gross_relative`, which is a ratio of
+volume integrals. The comparable quantity here is the archived pre-fix operator
+residual: **7.5e-6 at one hour and 6.0e-5 at two, both far inside 1e-2, with the
+divergence starting between hours two and three.** The test passes because it
+stops before the failure begins.
 
 That is a statement about test coverage, and it is the reason this went
 unnoticed. The configuration was exercised; the duration was not enough to
@@ -415,8 +422,9 @@ was never approached. `gross_relative` against the archived before:
 
 **It plateaus rather than merely staying finite.** 1.89e-4 at 6 h, 2.51e-4 at
 12 h, 2.79e-4 at 24 h — each doubling of elapsed time adds less than the last,
-against 0 to 1.15e-4 in the first three hours. The integration test's bound is
-1e-2, so the day ends with 36× of margin.
+against 0 to 1.15e-4 in the first three hours. Not set against the integration
+test's 1e-2: that bounds a pointwise maximum over the domain maximum and this is
+a ratio of volume integrals, so the two do not divide.
 
 **And it did not get there by emptying the tags**, which was the second of the
 two informative outcomes and is now ruled out. `nonpositive_fraction` runs
@@ -523,6 +531,34 @@ it was `(Σₖ ρq_tag_k)(r - 1)` and is now `Δ`, and those agree only on a
 closed partition. A1 to A4 are unaffected either way, because a column trips no
 limiter, so `Δ = 0` and every shift is zero — which is why their ledger column is
 identically zero and will stay so.
+
+## Caveats on all of phase A
+
+**Every run in the series records `commit_dirty: yes`.** `commit_source` is
+`git` throughout, so the commit itself is real and was read successfully; the
+working tree simply had uncommitted changes when each job was submitted, which
+is what editing and submitting in the same session looks like. So a recorded
+commit is the nearest committed ancestor of what ran, not an exact description
+of it. For these runs the uncommitted changes were configurations and analysis
+scripts rather than model code, so the measurements stand, but a run whose
+result surprises you is worth checking against this.
+
+The A1 and A2 ladders are three `dt` points each, one column, one hour, 0M, one
+configuration. Their ledgers are identically zero, which is why those numbers
+are clean: the column trips no limiter, so they measure operator disagreement
+with nothing subtracted.
+
+A3 is uninterpretable until its matched companion runs. A4 settles the
+`Float32` question on a column and explicitly not on a sphere. A5 delivers the
+sphere operator residual after the issue-64 fix, but only the one run at one
+resolution, and the plan's expectation that it would quantify the repair and
+rescale contributions separately is still not met: the ledger is measured as a
+total, not split between the rescale and the partition repair.
+
+The A1 runs are at `3659746` and the A2 runs at `66d6ded`. The two differ only
+in `.gitignore`, `README.md` and previously committed results — nothing
+touching the model, the configurations, the driver or the runscripts — so the
+ladders are comparable.
 
 ## C0. The barrier census
 
@@ -731,35 +767,8 @@ better one, because no run has used a better one.
 record is the alternative reading the docs name. Before C0 it was a
 completeness exercise. After C0 — with the source tags' donor rule inert over
 almost the whole column — it is the run that shows what the fallback actually
-delivers on a configuration where the primary method is in trouble. It is
-written, validated, and has not been submitted.
-
-### Caveats on all of phase A so far
-
-**Every run in the series records `commit_dirty: yes`.** `commit_source` is
-`git` throughout, so the commit itself is real and was read successfully; the
-working tree simply had uncommitted changes when each job was submitted, which
-is what editing and submitting in the same session looks like. So a recorded
-commit is the nearest committed ancestor of what ran, not an exact description
-of it. For these runs the uncommitted changes were configurations and analysis
-scripts rather than model code, so the measurements stand, but a run whose
-result surprises you is worth checking against this.
-
-The A1 and A2 ladders are three `dt` points each, one column, one hour, 0M, one
-configuration. Their ledgers are identically zero, which is why those numbers
-are clean: the column trips no limiter, so they measure operator disagreement
-with nothing subtracted.
-
-A3 is uninterpretable until its matched companion runs. A4 settles the
-`Float32` question on a column and explicitly not on a sphere. A5 diverges, so
-phase A has no usable sphere measurement of the operator residual at all, and
-the plan's expectation that A5 would quantify the repair and rescale
-contributions is not met.
-
-The A1 runs are at `3659746` and the A2 runs at `66d6ded`. The two differ only
-in `.gitignore`, `README.md` and previously committed results — nothing
-touching the model, the configurations, the driver or the runscripts — so the
-ladders are comparable.
+delivers on a configuration where the primary method is in trouble. It has since
+run; its entry is below.
 
 ## C3. The two readings, side by side
 
