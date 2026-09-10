@@ -3,9 +3,9 @@
 Configurations, runscripts, analysis and results for the experiments planned in
 [the experiment plan](../../docs/src/tag_closure_experiments.md). The reasoning
 behind them is in [the memo](../../docs/src/tag_closure_memo.md). Read the plan
-before submitting anything. This page is the operator's copy of it: the run
-order, one `sbatch` line per run, and the register to tick as results land. It
-does not repeat the motivation or the decision rules.
+before submitting anything. This page is the operator's copy of it: how to
+submit a run, what has to come back with it, and the traps. It does not repeat
+the motivation, the decision rules, or what the runs have measured.
 
 **The owner submits every job by hand.** Nothing here runs on its own and no
 agent submits to Levante. The agent writes the configurations, the driver, the
@@ -15,13 +15,21 @@ files into `output/`, and commits them. The agent then runs the analysis over
 
 ## Where things stand
 
-**Last updated 2026-09-10**, on branch `claude/tag-closure-experiments` — run
-`git log -1` for its head rather than trusting a number written here. The docs
-are on `claude/tag-closure-experiments-plan` (PR #63) at `0d7bd37`, carrying the
+On branch `claude/tag-closure-experiments` — run `git log -1` for its head. The
+docs are on `claude/tag-closure-experiments-plan` (PR #63), carrying the
 corrected plan and the memo with measured results.
 
-**14 of 24 runs committed**, all of phase A and both C0 runs. Findings live in
-[LEARNINGS.md](LEARNINGS.md); this section is what to do next.
+**This page does not track state.** It used to, and every count and tick in it
+had gone stale by the time anyone read them. What has been measured is in
+[FINDINGS.md](FINDINGS.md), one numbered claim per finding; the reasoning per
+run is in [LEARNINGS.md](LEARNINGS.md); what to run next, in order, is in
+[LEVANTE_TASKS.md](LEVANTE_TASKS.md). Which runs are live is a fact about the
+tree rather than a table to maintain: a run is live when
+`output/<run>/provenance.txt` exists, and `ls experiments/tag_closure/output`
+answers it in full.
+
+What is below is how the harness works — submitting, what comes back, and the
+traps — which is the part no other page carries.
 
 ### Before you submit anything
 
@@ -36,139 +44,25 @@ its siblings skip any run whose `provenance.txt` records `commit: unknown`, with
 a warning naming it. Runs submitted before `3659746` can hit this. The fix is
 *Repairing a provenance* below — repair the file, do not resubmit the run.
 
-### What has run, and what it decided
-
-**Phase A is complete. Phase C's census is complete.**
-
-  - **A1 and A2 (nine runs) settled the phase A question.** The van Leer ladder
-    is flat, slope −0.011; both linear ladders fall, +0.255 and +0.464. So the
-    time-discretization part of the split is real and the limiter sets a floor
-    beneath it. **Option 2, moving the water tags into the implicit solve, is
-    not worth its Jacobian cost.** The memo's Part 3 water bullet now reports
-    this as measured.
-  - **A3 is uninterpretable.** It came out an order of magnitude *below* A1,
-    but it moves `microphysics_model` and `vert_diff` together. Needs its
-    matched companion before it says anything.
-  - **A4 says `Float32` is fine here.** It agrees with `Float64` to 0.3% and
-    the measured floor is 2.34e-8, far better than the memo's `100 eps` bound.
-    **On a column only** — the memo's claim is that the floor grows with cell
-    count, and the sphere that would test it is A5.
-  - **A5 diverged, and the fix is merged.** The water tags ran away to 1e130
-    while the parent stayed bounded, and the run exited zero. That is issue
-    #64, fixed on this branch at `f2e5384`: the rescale no longer multiplies
-    the tags, and every closure check gained an `abort_above` level. **Nothing
-    has re-run, so nothing is confirmed**, and phase A still has no usable
-    sphere measurement. The re-run is the top task in
-    [LEVANTE_TASKS.md](LEVANTE_TASKS.md); the pre-fix files are kept under
-    `output/a5_sphere_limiter/before_issue_64_fix/`.
-  - **C0 (both runs) confirmed both predicted barriers.** The donor rule is
-    inert over 96.7% of the column and 43% of the sphere, and a source tag goes
-    monotonically negative on the sphere with nothing to repair it.
-
-### What to run next
-
-[LEVANTE_TASKS.md](LEVANTE_TASKS.md) is the ordered, self-contained list and is
-the one to work from at a terminal. It puts the A5 re-run first, because that is
-the only thing that can confirm the issue-64 fix. What follows here is the same
-material as background, and is not a second ordering to reconcile with it.
-
-**1. C3 — the highest-value run available.** No code change, no approval
-needed, config written and validated. C0 made this interesting: it shows what
-the energy process record reads on a configuration where the source tags' own
-donor rule is not running, and the record is the alternative
-`energy_source_tags.md` names.
-
-```bash
-CONFIG=experiments/tag_closure/configs/c3_column_record.yml \
-    sbatch experiments/tag_closure/runscripts/phase_c.sh
-```
-
-**2. The three timing controls.** Cheap, and nothing in the series has measured
-what the tags cost yet. Each is its phase's first run with the tag family
-removed; the cost is the difference in the `sypd` and `wall_time_per_timestep`
-lines.
-
-```bash
-CONFIG=experiments/tag_closure/configs/c0_column_notags.yml \
-    sbatch experiments/tag_closure/runscripts/phase_c.sh
-CONFIG=experiments/tag_closure/configs/a1_dt10_notags.yml \
-    sbatch experiments/tag_closure/runscripts/phase_a.sh
-```
-
-`b1_notags` waits on the phase B decision below.
-
-**3. The two pre-C1 diagnostics.** Both are cheap and both can change what C1
-is for, so they come before it rather than after.
-
-`analysis/where_negative.jl` needs no new run at all — it reconstructs specific
-`e_tot` at t = 0 from a C0 run's region tags and reports where it is negative,
-by level, with the smallest constant that would make it positive. Run it on
-Levante against a C0 `output_dir` while the NetCDF is still on scratch:
-
-```bash
-julia +1.11 --project=.buildkite \
-    experiments/tag_closure/analysis/where_negative.jl \
-    output/c0_column/output_active
-```
-
-`c0_sphere_deep` is the depth control: `c0_sphere` on the 60 km grid, testing
-whether the non-positive fraction is a property of the domain or of the energy
-reference.
-
-```bash
-CONFIG=experiments/tag_closure/configs/c0_sphere_deep.yml \
-    sbatch experiments/tag_closure/runscripts/phase_c.sh
-```
-
-**4. A3's matched companion**, once someone writes its config — a 0M column at
-`dt` 10 s with `vert_diff: DecayWithHeightDiffusion`. Until then A3 is a number
-with no reading. Minutes of walltime.
-
-**Phase B: still a recommendation to hold, and the reason has changed.** The
-reason recorded here was that B1 is ten days of a moist sphere with a limiter,
-in the regime that diverged in A5. That was wrong twice over, and the paragraph
-contradicted itself two lines later. `b1_base` configures no limiter — only
-`b3_limiter` does, which is what the pair exists to compare — and phase B is the
-*energy* family, which has no `rescale_water_tags!` and no partition repair, as
-`is_tagged_tracer_name`'s docstring says outright. #64's mechanism was a
-multiplicative rescale amplifying the closure error, and on that path there is
-no rescale to amplify anything.
-
-What A5 does bound for phase B is the unlimited explicit transport the energy
-tags share, which A5 showed drives tags far out of partition on a coarse
-sphere. That is a weaker argument than the one it replaces, and whether it is
-worth ten sphere-days before the A5 re-run reads is the owner's call. B2 is dry
-and unaffected either way, so if phase B has to start somewhere, start there.
-
 ### Decisions waiting on the owner
 
-**C1's reference shift — the critical path.** C1 reruns C0 under a shift making
-`ρe_tot > 0` everywhere, and it is the run designed to say whether C0's barriers
-are fixable. It needs the owner's approval. It no longer needs a code change —
-`T_0`, `LH_v0` and `LH_s0` are all settable, so the shift is three TOML entries
-— and of the two shapes below the first should be dropped rather than costed:
+**C1's reference shift.** C1 reruns C0 under a shift making `ρe_tot > 0`
+everywhere, and it is the run designed to say whether C0's barriers are
+fixable. It needs the owner's approval and nothing else: no code change, and
+the shape is settled. The argument, the two shapes and why one of them is
+dropped rather than costed are in
+[C1_reference_shift.md](C1_reference_shift.md). **Nothing else in phase C can
+move until this is decided.**
 
-  - **Shift only the share's denominator.** The loss rule reads `e_tot + c` with
-    `c` a constant from the initial state. The parent is untouched, no
-    reproducibility reference changes, and the runs stay cheap. The cost is that
-    the shares then depend on `c`, so the result is conditional on a number
-    someone picked.
-  - **Shift the model's energy reference itself.** The parent changes, so
-    `ref_counter` bumps and output moves. The tags then read the physics as it
-    is, with no free parameter. The cost is that it touches the model and the
-    reproducibility machinery.
+**C2** needs approval and a code change, and no configuration for it is
+written.
 
-Either way the docs say results are conditional on the reference, so whichever
-is chosen gets reported with its value. **Nothing else in phase C can move until
-this is decided.**
-
-**Two smaller ones.** Whether to write A3's companion config — one file, and it
-unblocks A3. And whether to lengthen `test/tagged_water_integration.jl` past
-A5's onset. The issue-64 fix strengthened that test rather than lengthening it:
-`t_end` is still one hour and the new assertions bound each tag and the residual
-against the *local* parent. On the archived pre-fix numbers the residual half of
-that would still have passed at one hour, so the coverage gap is narrowed and
-not closed. See the A5 open item below.
+**Whether to lengthen `test/tagged_water_integration.jl` past A5's onset.** The
+issue-64 fix strengthened that test rather than lengthening it: `t_end` is
+still one hour and the new assertions bound each tag and the residual against
+the *local* parent. On the archived pre-fix numbers the residual half of that
+would still have passed at one hour, so the coverage gap is narrowed and not
+closed. See the A5 open item below.
 
 ### What will bite you
 
@@ -191,11 +85,13 @@ not closed. See the A5 open item below.
     the closure CSV, the reduced table from the reducer, the merged `<run>.yml`
     snapshot, `run.log`, and `provenance.txt`. The NetCDF and checkpoints stay
     on scratch.
-  - **`summary_a.csv` is stale.** It predates `a3_1m` and does not include it.
-    Re-run `analysis/phase_a.jl` to regenerate. Phase C has no summary yet —
-    `analysis/phase_c.jl` has not been run over C0, so its figures and
-    `summary_c.csv` do not exist. The C0 entries in `LEARNINGS.md` were written
-    from the raw tables.
+  - **A committed summary is one analysis pass behind whatever landed last.**
+    `output/summary_<phase>.csv` and the PNGs in `plots/` are written by
+    `analysis/phase_<letter>.jl`, which needs Julia and therefore Levante. A run
+    committed since the last pass has no row, and a column the script has gained
+    since the last pass is in no row at all. Re-run the phase script after
+    copying anything back; it is the last step of the hand-back and the one most
+    often skipped.
   - **Every run so far records `commit_dirty: yes`.** The commit is real, the
     tree simply had uncommitted edits at submit time. So a recorded commit is
     the nearest committed ancestor, not an exact description of what ran.
@@ -204,19 +100,28 @@ not closed. See the A5 open item below.
 
 | What                             | Where                                                |
 |:-------------------------------- |:---------------------------------------------------- |
-| Findings, one entry per run      | [LEARNINGS.md](LEARNINGS.md)                         |
-| What has landed                  | the run register below                               |
-| The A5 divergence                | issue #64, fixed at `f2e5384`, re-run pending        |
+| Every established claim, numbered | [FINDINGS.md](FINDINGS.md)                          |
+| The reasoning, one entry per run | [LEARNINGS.md](LEARNINGS.md)                         |
+| The C1 reference argument        | [C1_reference_shift.md](C1_reference_shift.md)       |
 | What to run next, on Levante     | [LEVANTE_TASKS.md](LEVANTE_TASKS.md)                 |
+| Raw probe output from Levante    | [LEVANTE_TASKS_RESULTS.md](LEVANTE_TASKS_RESULTS.md) |
+| Which runs are live              | `output/<run>/provenance.txt`                        |
 | Plan and memo                    | PR #63, branch `claude/tag-closure-experiments-plan` |
 | Configurations, driver, analysis | this directory                                       |
+
+A claim belongs in exactly one of these. `FINDINGS.md` is the index and cites
+the run behind each number, so a number quoted anywhere else should be a
+cross-reference rather than a copy — copies are what went stale here before.
 
 ## Layout
 
 ```
 experiments/tag_closure/
-  README.md            this page: the run order, the sbatch lines, the register
+  README.md            this page: how the harness works and how to submit
+  FINDINGS.md          every established claim, numbered, with its run
   LEARNINGS.md         the barrier register, one entry per run
+  C1_reference_shift.md  the C1 argument and its recipe
+  LEVANTE_TASKS.md     what to run next, in order
   run_tag_closure.jl   the driver: one config path in, one run out
   configs/             one YAML per run, named <phase><n>_<variant>.yml
   runscripts/          one sbatch script per phase, CPU shared partition
@@ -278,14 +183,18 @@ so B1, B2 and `c0_sphere` all sit on the same mesh: the docs' below-one-percent
 figure is comparable rather than a fresh measurement, and the sphere cost of the
 two energy families can be set against each other.
 
-`c1_*` and `c2_*` are still not written. Both need a model change and the
-owner's approval, and C1's reference-shift shape has not been chosen.
+`c2_*` is not written: it needs a model change and the owner's approval. C1
+needs approval too, but its shape is settled and it reaches the model through
+`toml:` rather than through a code change — see
+[C1_reference_shift.md](C1_reference_shift.md).
 
 ## Analysis
 
-Two scripts, both run with `--project=.buildkite`, which carries CairoMakie,
+Everything here runs with `--project=.buildkite`, which carries CairoMakie,
 NCDatasets, DataFrames and Statistics. It does **not** carry CSV.jl, so these
-read tables with `DelimitedFiles`.
+read tables with `DelimitedFiles`. Two stages: `reduce_run.jl` on Levante,
+against a finished run, then one `phase_<letter>.jl` over the committed
+`output/`.
 
 `analysis/reduce_run.jl` runs on Levante, against a finished run's output
 directory, before anything is copied back:
@@ -350,9 +259,12 @@ the two runs that measure one, exactly one family under test, tags and closure
 check present or absent together, at least one pure region tag, no `tolerance`,
 no `reduction_time`, no top-level key bound twice, every diagnostic a name the
 run will register, phase A's closure period still tracking `dt`, and `audit`
-set on exactly the runs that need it and on no others. The second breaks copies
-of the tree fifteen ways and asserts every one is caught, so those checks are
-demonstrably live rather than merely present.
+set on exactly the runs that need it and on no others, plus one cross-key
+consistency rule mirroring `check_case_consistency`. The second breaks copies of
+the tree one way per check and asserts every one is caught, so those checks are
+demonstrably live rather than merely present. It prints the tally it managed, so
+a check that stops catching its mutation is visible without anyone having to
+remember last week's number.
 
 It is Python because that is the tool that was actually used while the
 configurations were written; a Julia port would be an unverified rewrite, since
@@ -495,8 +407,8 @@ end times, the driver's exit status, the SLURM job id and name, the partition,
 the node list, the CPU model as the node type, the ClimaComms context and
 device, and the absolute output directory. The NetCDF diagnostics and the
 checkpoints live under that directory, so the path is what points back to them.
-What it cannot fill in is anything about the run's meaning: which register row
-this is beyond the `job_id`, and why it was submitted. Add those by hand if they
+What it cannot fill in is anything about the run's meaning: which question this
+is beyond the `job_id`, and why it was submitted. Add those by hand if they
 are not obvious. If a run dies before its output directory exists, the file goes
 to the submit directory instead and the log says so.
 
@@ -520,9 +432,9 @@ adjusted from what was learned before they are submitted.
     `SCRIPT` set to the driver. That is a cost decision for the owner.
   - **C0 may run alongside phase A** if the owner wants the barrier census
     early. It changes nothing in the model and needs no code.
-  - **C1 and C2 wait for the discussion.** Both need the owner's approval, so no
-    configuration for them is written yet. C2 also needs a code change; C1 turns
-    out not to, since its shift is three settable thermodynamic parameters.
+  - **C1 and C2 wait for the discussion.** Both need the owner's approval. C2
+    also needs a code change and has no configuration; C1 turns out not to,
+    since its shift is three settable thermodynamic parameters.
   - Nothing in this series edits `reproducibility_tests/ref_counter.jl`, a
     tolerance, or the parent-budget calibration table.
 
@@ -570,62 +482,30 @@ adjusted from what was learned before they are submitted.
 | `c0_sphere_audit`  | `phase_c.sh` | `c0_sphere` with `audit: true` and nothing else changed      |
 | `c3_column_record` | `phase_c.sh` | C3, `c0_column` with `energy_process_record` beside the tags |
 
-`c1_*` and `c2_*` are not written. C1 is the reference shift, which needs the
-owner's approval and a TOML file but no code change; C2 is the implicit-path
-brackets, which needs both.
+C2, the implicit-path brackets, needs the owner's approval and a code change,
+and no configuration for it is written. C1, the reference shift, needs approval
+and a TOML file but no code change.
 
-All 24 configurations in the register now exist under `configs/`, along with the
-driver, the runscripts and the analysis. Nothing is waiting on the agent; what
-is left is submitting them.
+`ls configs/` is the authoritative list; the tables above say what each one is
+for. Nothing is waiting on the agent — what is left is submitting them, in the
+order [LEVANTE_TASKS.md](LEVANTE_TASKS.md) gives.
 
-## Run register
+## Which runs are live
 
-Tick a run once it has been submitted, once its files are committed under
-`output/`, once the analysis has read it, and once its entry is in
-`LEARNINGS.md`.
+Not a table. A run is live when `output/<run>/provenance.txt` exists, so
 
-| Run                    | Phase | Submitted | Handed back | Analysed | Learning entry |
-|:---------------------- |:----- |:--------- |:----------- |:-------- |:-------------- |
-| `a1_dt10_notags`       | A     |           |             |          |                |
-| `a1_dt10`              | A     | yes       | yes         | yes      | yes            |
-| `a1_dt5`               | A     | yes       | yes         | yes      | yes            |
-| `a1_dt2p5`             | A     | yes       | yes         | yes      | yes            |
-| `a2_none_dt10`         | A     | yes       | yes         | yes      | yes            |
-| `a2_none_dt5`          | A     | yes       | yes         | yes      | yes            |
-| `a2_none_dt2p5`        | A     | yes       | yes         | yes      | yes            |
-| `a2_first_order_dt10`  | A     | yes       | yes         | yes      | yes            |
-| `a2_first_order_dt5`   | A     | yes       | yes         | yes      | yes            |
-| `a2_first_order_dt2p5` | A     | yes       | yes         | yes      | yes            |
-| `a3_1m`                | A     | yes       | yes         | not yet  | yes            |
-| `a3_0m_vert_diff`      | A     |           |             |          |                |
-| `a4_float32`           | A     | yes       | yes         | yes      | yes            |
-| `a5_sphere_limiter`    | A     |           |             |          |                |
-| `b1_notags`            | B     |           |             |          |                |
-| `b1_base`              | B     |           |             |          |                |
-| `b1a_no_hyperdiff`     | B     |           |             |          |                |
-| `b1b_no_vert_diff`     | B     |           |             |          |                |
-| `b1c_neither`          | B     |           |             |          |                |
-| `b2_dry_hs`            | B     |           |             |          |                |
-| `b3_limiter`           | B     |           |             |          |                |
-| `c0_column_notags`     | C     |           |             |          |                |
-| `c0_column`            | C     | yes       | yes         | not yet  | yes            |
-| `c0_sphere`            | C     | yes       | yes         | not yet  | yes            |
-| `c0_sphere_deep`       | C     |           |             |          |                |
-| `c0_sphere_audit`      | C     |           |             |          |                |
-| `c3_column_record`     | C     |           |             |          |                |
+```bash
+ls experiments/tag_closure/output
+```
 
-`a5_sphere_limiter` is blank on purpose. It ran once, at `49b2ec9`, and that
-reading measured the bug issue #64 names rather than a residual. Its files are
-kept under `output/a5_sphere_limiter/before_issue_64_fix/` and its entry in
-`LEARNINGS.md` is the record of it. The row fills in again when the re-run under
-the fix lands; it is the top task in [LEVANTE_TASKS.md](LEVANTE_TASKS.md).
+is the register, and it cannot go stale. The tables under *The runs* above say
+what each configuration **is**; `output/` says which have **run**;
+[FINDINGS.md](FINDINGS.md) says what they established.
 
-`output/summary_a.csv` is one cycle behind this table and cannot be brought
-forward here: it is written by `analysis/phase_a.jl`, which needs Julia, and it
-still carries the pre-fix `a5_sphere_limiter` row and lacks the two audit
-columns the script now writes. Running `phase_a.jl` on Levante regenerates it,
-which the A5 task already asks for. The same is true of `summary_c.csv` and
-`phase_c.jl`.
+`output/a5_sphere_limiter/` is the one directory that needs reading rather than
+listing: it holds both the pre-fix reading, under
+`before_issue_64_fix/`, and the re-run beside it. *Keeping an earlier reading of
+the same configuration* below says why.
 
 ## What goes in `output/<run>/`
 
@@ -729,35 +609,12 @@ be resubmitted.
     job runs on, so B1, B2 and `c0_sphere` share a mesh and the docs'
     below-one-percent figure is comparable rather than a fresh measurement. No
     GPU work is needed and `phase_b.sh` stands as written.
-  - The shape of the C1 reference shift, which the agent puts to the owner
-    before writing either version.
-  - Whether C0 runs alongside phase A.
   - Where large outputs live on Levante, so this page can record the path.
   - Whether C3 also wants a sphere counterpart. As registered it is the column
     only, since C3 compares two readings of one run and the column is the cheap
     one.
-  - **Two cheap things come before C1 and can change what it is for.** Where
-    `ρe_tot` is negative has never been looked at, and
-    `analysis/where_negative.jl` answers it from data already on scratch. And
-    the offset's origin does not reconcile with the textbook reference — the
-    model reports −4.50e4 J kg⁻¹ on the column where the arithmetic gives
-    +3.34e4 — so either the convention differs or the initialisation does, and
-    the second would mean C1 treats a symptom. One command on Levante
-    distinguishes them; see `C1_reference_shift.md`.
-  - **C0 found both predicted barriers, and C1 is what would settle them.** The
-    donor rule is inert over 96.7% of the column and 43% of the sphere, and a
-    source tag drifts monotonically negative on the sphere with nothing to
-    repair it. C1 reruns this under a reference shift making `ρe_tot > 0`
-    everywhere and is the run designed to say whether that is fixable. It needs
-    the owner's approval, and that is now the only thing it needs: the shift is
-    three TOML entries with an exact acceptance test, not a code change, and of
-    the plan's two shapes the denominator shift should be dropped rather than
-    costed. The approval is the series' critical path. C3 is
-    written and unsubmitted, and C0 has made it more interesting: it shows what
-    the energy process record reads on a configuration where the source tags'
-    own rule is not running.
   - ~~**A5 diverges, and the integration test cannot see it.**~~ **The fix is
-    merged and the re-run is task 1 in `LEVANTE_TASKS.md`.** Both decisions
+    merged and the re-run has landed.** Both decisions
     that were left open here have been taken, and one of them differently from
     how it was framed. `water_tag_rescale_ratio` was not instrumented; it was
     removed, replaced by an additive redistribution, so there is no ratio left
@@ -778,14 +635,13 @@ be resubmitted.
     test is a better test and it is not yet a test that would have caught this;
     whether to lengthen it remains the owner's call. See the A5 entry in
     `LEARNINGS.md`.
-  - **A3 needs a matched companion to be read cleanly.** A3 sets `vert_diff`,
-    which is the only one of the three 1M `q_tot_eff` operators a column can
-    reach — hyperdiffusion's branch is horizontal and the viscous sponge is off.
-    So A3 differs from `a1_dt10` in two keys, `microphysics_model` and
-    `vert_diff`, and the gap between them is not the 1M mismatch alone. **One
-    extra 0M column with `vert_diff` on separates them**, at the cost of one
-    more column run. The configuration is deliberately not written: say the word
-    and it takes a minute.
+  - ~~**A3 needs a matched companion to be read cleanly.**~~ **Written as
+    `a3_0m_vert_diff`.** Kept here for the reason it is the right companion: A3
+    sets `vert_diff`, which is the only one of the three 1M `q_tot_eff`
+    operators a column can reach — hyperdiffusion's branch is horizontal and the
+    viscous sponge is off — so A3 differs from `a1_dt10` in
+    `microphysics_model` and `vert_diff` together, and one 0M column with
+    `vert_diff` on separates them. It needs no approval, only the queue.
   - **Whether the sphere runs should use MPI ranks.** Every runscript here runs
     one process with `CLIMACOMMS_CONTEXT=SINGLETON` and no `srun`, which is
     plainly right for phase A's column and sidesteps the CPU/GPU preferences
