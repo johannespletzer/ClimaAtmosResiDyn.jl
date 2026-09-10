@@ -1,0 +1,14 @@
+# Overrides for run_c1_twin.jl, named by TWIN_OVERRIDES. Both halves of the
+# twin take these keys on top of C1's configuration.
+#
+# With the van Leer energy limiter switched off, the twins still differ by
+# 3.7e-8 in rho after one step, growing to 5.8e-6 by 5 h (FINDINGS E16). The
+# next suspect is the surface-flux code path, which c1_acceptance.jl checks only
+# as a formula. This twin also switches the surface-flux tendency off in both
+# halves. If the twins then agree to rounding, the surface-flux path is the
+# remainder. If they do not, it is a term nobody has read yet.
+#
+# Six hours, as in the other two twins, because the first step decides.
+energy_q_tot_upwinding: "none"
+disable_surface_flux_tendency: true
+t_end: "6hours"
