@@ -22,28 +22,32 @@
 #   LH_s0 -> LH_s0 + (cp_v - cp_i)*d = 2834400 + (1859 - 2070)*(-110)
 #
 # leaves every latent heat and the saturation vapour pressure exactly unchanged
-# while moving `e_int` by `-cp_d*d` = +110,495 J/kg. LH_f0 and e_int_v0 are
+# while moving dry air's `e_int` by `-cp_d*d` = +110,495 J/kg and every water
+# phase's by `-cp_l*d` = +459,910 J/kg. LH_f0 and e_int_v0 are
 # derived rather than settable -- `Parameters.jl` defines
 # `LH_f0 = LH_s0 - LH_v0` and `e_int_v0 = LH_v0 - R_v*T_0` -- so they follow
 # from these three and must not be listed here.
 #
-# ACCEPTANCE TEST. Run this before trusting any result produced with this file.
-# All three must come back UNCHANGED from their unshifted values, because that
-# is what makes this a change of reference rather than of atmosphere:
+# ACCEPTANCE TEST. Run this before trusting any result produced with this file:
 #
-#   julia +1.11 --project=.buildkite -e '
-#       import ClimaParams
-#       import Thermodynamics as TD
-#       tp = TD.Parameters.ThermodynamicsParameters(Float64)
-#       println(TD.latent_heat_vapor(tp, 288.3))                        # 2.46564492e6
-#       println(TD.latent_heat_fusion(tp, 273.16))                      # 333600.0
-#       println(TD.saturation_vapor_pressure(tp, 288.3, TD.Liquid()))   # 1721.1532852305072
-#       println(TD.internal_energy_dry(tp, 288.3))'                     # -67533.97 -> +42961.03
+#   julia +1.11 --project=.buildkite \
+#       experiments/tag_closure/analysis/c1_acceptance.jl
 #
-# and `internal_energy_dry(288.3)` must move by exactly +110,495. A latent heat
-# or a saturation pressure that moves means the co-adjustment is wrong and the
-# run would measure a different atmosphere. A value that does not move at all
-# means an entry did not bind, most likely a mistyped key.
+# It builds the parameters from this file the way a run does. It checks that
+# every latent heat and saturation vapour pressure is unchanged from 150 K to
+# 330 K, including the three values recorded before the change, and that each
+# internal energy moves by the amount above. A latent heat or a saturation
+# pressure that moves means the co-adjustment is wrong, and the run would
+# measure a different atmosphere. A value that does not move at all means an
+# entry did not bind, most likely a mistyped key. It passed on 2026-09-10.
+#
+# This header used to carry a one-line test instead, and that test could not
+# work. It imported Thermodynamics, which `.buildkite` does not list directly,
+# so it stopped at "Package Thermodynamics not found". Past that, it built the
+# parameters from the ClimaParams defaults and never read this file.
+#
+# The script covers Thermodynamics only. `experiments/tag_closure/run_c1_twin.jl`
+# runs the whole model with and without this file and compares the states.
 #
 # WHY -110 AND NOT -99.95. The sphere's measured minimum at t = 0 is
 # 100.4 kJ/kg, so 110.495 carries about 10% of margin, which is 14 K of further
