@@ -524,6 +524,49 @@ residual that does not converge away, and that is a floor beneath these numbers,
 not the explanation for them. The barriers here are an order of magnitude larger
 and of a different kind.
 
+### The energy reference, settled after C0
+
+C0 left one thing unaccounted for: the field is about 7.8e4 J kg⁻¹ below what
+the textbook expression `cv_m(T − T_0) + q_v·e_int_v0 + gz` gives for the same
+state. Either the convention differed or the initialisation was wrong, and the
+second would have made C1 a treatment of a symptom. Read on Levante:
+
+```julia
+@inline function internal_energy_dry(param_set::APS, T)
+    T_0 = TP.T_0(param_set)
+    cv_d = TP.cv_d(param_set)
+    R_d = TP.R_d(param_set)
+    return cv_d * (T - T_0) - R_d * T_0
+end
+```
+
+`internal_energy_dry(T_0 = 273.16)` returns −78396.92, which is `−R_d·T_0` to
+the last digit with `R_d` = 287.0. Energy is referenced so that *enthalpy*
+vanishes at `T_0`. **The unaccounted gap is that term**, and `TD.total_energy`
+called on the DYCOMS surface state returns −44,009 against the field's −43,125.
+The function reproduces the field. It is a convention, not an error, so
+**C0's 43.276% stands as a fact about the reference** and the C0 entry above
+needs no correction.
+
+The model carries the same convention in its own analytic Jacobian:
+`manual_sparse_jacobian.jl:835` and `:1805` write `T_0 * cp_d`, not `T_0 * cv_d`.
+
+**Two consequences for C1, one of which was got wrong first.** The derivative
+that sets any reference shift is `∂e_int/∂T_0 = −cp_d`, not `−cv_d` and not
+`−R_d`: an earlier note put the factor at 2.5 in the wrong direction, and it is
+`γ = 1.4` in the other. The sphere needs `ΔT_0` = 100.0 K and the column 45.2 K,
+where the textbook reading would have said 140 K.
+
+The second consequence is larger and nobody had counted it. `T_0` is not a free
+datum. The same constants give
+`LH_v(T) = LH_v0 + (cp_v − cp_l)(T − T_0)` with `cp_v − cp_l` = −2322, so moving
+`T_0` to 173.2 K with `LH_v0` fixed drops `LH_v(288.3)` from 2.4656e6 to
+2.2335e6, low by 9.4%. That is a change of physics, which is what the chosen
+shift shape existed to avoid. A C1 configuration therefore has to co-adjust
+`LH_v0`, `LH_s0` and `LH_f0`, and the saturation vapour pressure needs checking
+because it carries a reference of its own. `C1_reference_shift.md` has the
+derivation and the command that confirms it against the package.
+
 ### What this bears on, and what it does not decide
 
 `energy_source_tags.md` states the open question the family exists to answer:
@@ -539,9 +582,10 @@ this is irreparable.
 
 **C1 is the run designed to answer that**, and it has not run. It reruns this
 configuration under a reference shift making `ρe_tot > 0` everywhere, and it
-needs a code change and the owner's approval, with the shape of the shift still
-unchosen — the plan gives two and says the agent must put both to the owner
-before writing either. If C1 shows bounded residuals and non-negative tags under
+needs a code change and the owner's approval. The plan gives two shapes; the
+first should be dropped rather than costed, and the second is now known to be a
+co-adjusted reference *set* rather than a single constant, per the subsection
+above. If C1 shows bounded residuals and non-negative tags under
 a positive reference, the family is viable and the remaining work is the
 tolerance model and the implicit brackets. If it does not, the docs' alternative
 is the recommendation.
