@@ -13,16 +13,43 @@
 # path, and in tcsh an unset $CONFIG is a fatal "Undefined variable" rather than
 # a message anyone can act on. These are bash.
 #
+# Two machines run it: DKRZ Levante, where the series started, and LRZ
+# terrabyte. The #SBATCH blocks in the phase scripts are Levante's. On
+# terrabyte the account and the partition are given on the sbatch command line,
+# which overrides them; README.md shows the line.
+#
 # Not sourced directly. Source it from a phase script.
 
 # ---------------------------------------------------------------------------
-# Levante software environment.
+# Which machine, and how its modules start.
 #
-# Sourced before `set -u`, because site profiles routinely reference unset
-# variables and would abort the job at source time under it.
+# TAG_CLOSURE_MACHINE names it. Otherwise it is detected from a path only that
+# machine has. This runs before `set -u`, because site profiles routinely
+# reference unset variables and would abort the job at source time under it.
 # ---------------------------------------------------------------------------
 
-source /sw/etc/profile.levante
+if [[ -z "${TAG_CLOSURE_MACHINE:-}" ]]; then
+    if [[ -r /sw/etc/profile.levante ]]; then
+        TAG_CLOSURE_MACHINE="levante"
+    elif [[ -d /dss/lrzsys ]]; then
+        TAG_CLOSURE_MACHINE="terrabyte"
+    fi
+fi
+
+case "${TAG_CLOSURE_MACHINE:-}" in
+    levante)
+        source /sw/etc/profile.levante
+        ;;
+    terrabyte)
+        # A batch job's bash inherits MODULESHOME but not the module function.
+        type module >/dev/null 2>&1 || source "${MODULESHOME}/init/bash"
+        ;;
+    *)
+        echo "ERROR: cannot tell which machine this is." >&2
+        echo "Set TAG_CLOSURE_MACHINE to levante or terrabyte." >&2
+        exit 1
+        ;;
+esac
 
 set -euo pipefail
 
@@ -121,13 +148,44 @@ if [[ "${GIT_COMMIT}" == "unknown" ]]; then
     echo "The analysis refuses a run whose provenance has no commit." >&2
 fi
 
-module purge
-module load gcc/11.2.0-gcc-11.2.0
-module load openmpi/4.1.2-gcc-11.2.0
+# ---------------------------------------------------------------------------
+# The machine's CPU stack, its depot, and where the run writes.
+#
+# RUN_DIR is the run's working directory, and ClimaAtmos writes output/<job_id>
+# under it. On Levante that is the repository root, as it always was. On
+# terrabyte it is on scratch, because $HOME there is for code only. Nothing
+# needs the working directory to be the repository: CONFIG, DRIVER and PROJECT
+# are absolute paths below, and a `toml:` entry that is not found from the
+# working directory is looked up in the ClimaAtmos package directory.
+# ---------------------------------------------------------------------------
 
-# The CPU stack's depot, as run_test_as_job.sh selects it. `setup-julia-levante`
-# builds the CPU and GPU depots separately; see runscripts/README.md.
-export JULIA_DEPOT_PATH="${LEVANTE_DEPOT:-${HOME}/.julia/depots/levante-cpu}"
+case "${TAG_CLOSURE_MACHINE}" in
+    levante)
+        module purge
+        module load gcc/11.2.0-gcc-11.2.0
+        module load openmpi/4.1.2-gcc-11.2.0
+        # The CPU stack's depot, as run_test_as_job.sh selects it.
+        # `setup-julia-levante` builds the CPU and GPU depots separately; see
+        # runscripts/README.md.
+        export JULIA_DEPOT_PATH="${LEVANTE_DEPOT:-${HOME}/.julia/depots/levante-cpu}"
+        RUN_DIR="${RUN_DIR:-${ROOT}}"
+        ;;
+    terrabyte)
+        # The compiler, MPI and depot pairing lives in one file, which
+        # setup-julia-terrabyte.tcsh reads as well.
+        source "${ROOT}/runscripts/terrabyte_stacks.env"
+        # Never `module purge` here. It drops stack/24.4.0, and loading that
+        # again does not bring the spack modules back. The module function
+        # reads unset variables, so `set -u` is lifted around it.
+        set +u
+        module load "${TERRABYTE_CPU_COMPILER_MODULE}"
+        module load "${TERRABYTE_CPU_MPI_MODULE}"
+        set -u
+        export JULIA_DEPOT_PATH="${TERRABYTE_DEPOT_ROOT:-${TERRABYTE_DEPOT_ROOT_ABSOLUTE}}/${TERRABYTE_CPU_DEPOT_NAME}"
+        RUN_DIR="${RUN_DIR:-${SCRATCH:?SCRATCH is not set}/tag_closure}"
+        ;;
+esac
+mkdir -p "${RUN_DIR}"
 
 # ROOT is found by the phase script before it sources this file, because sbatch
 # copies the job script to the node's spool directory and BASH_SOURCE is no use
@@ -237,7 +295,12 @@ if [[ -z "${JOB_ID}" ]]; then
     exit 1
 fi
 
-OUTPUT_BASE="${ROOT}/output/${JOB_ID}"
+# A job that is not the configuration's own run, such as the C1 twin test,
+# names its output with TAG_CLOSURE_JOB_ID so that it cannot write over that
+# run. Only a driver that reads the same variable should be given it.
+JOB_ID="${TAG_CLOSURE_JOB_ID:-${JOB_ID}}"
+
+OUTPUT_BASE="${RUN_DIR}/output/${JOB_ID}"
 
 # ---------------------------------------------------------------------------
 # Threading and ClimaComms.
@@ -263,6 +326,7 @@ echo "================================================================"
 echo "ClimaAtmos tag-closure run"
 echo "================================================================"
 echo "Run (job_id):    ${JOB_ID}"
+echo "Machine:         ${TAG_CLOSURE_MACHINE}"
 echo "Configuration:   ${CONFIG}"
 echo "SLURM job:       ${SLURM_JOB_ID:-none}"
 echo "Partition:       ${SLURM_JOB_PARTITION:-none}"
@@ -273,6 +337,8 @@ echo "Commit:          ${GIT_COMMIT} (from ${GIT_SOURCE})"
 echo "Julia:           ${JULIA} ${JULIA_CHANNEL}"
 echo "Project:         ${PROJECT}"
 echo "Driver:          ${DRIVER}"
+echo "Depot:           ${JULIA_DEPOT_PATH}"
+echo "Run directory:   ${RUN_DIR}"
 echo "Output base:     ${OUTPUT_BASE}"
 echo "Start time:      $(date --iso-8601=seconds)"
 echo
@@ -290,7 +356,7 @@ echo
 # throwing, so this status is the thing to read.
 # ---------------------------------------------------------------------------
 
-cd "${ROOT}"
+cd "${RUN_DIR}"
 
 start_iso="$(date --iso-8601=seconds)"
 set +e
@@ -337,7 +403,9 @@ node_type="$(
 
 {
     echo "run: ${JOB_ID}"
+    echo "machine: ${TAG_CLOSURE_MACHINE}"
     echo "config: ${CONFIG}"
+    echo "driver: ${DRIVER}"
     echo "commit: ${GIT_COMMIT}"
     echo "commit_source: ${GIT_SOURCE}"
     echo "commit_dirty: ${GIT_DIRTY}"

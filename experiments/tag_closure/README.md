@@ -7,11 +7,15 @@ before submitting anything. This page is the operator's copy of it: how to
 submit a run, what has to come back with it, and the traps. It does not repeat
 the motivation, the decision rules, or what the runs have measured.
 
-**The owner submits every job by hand.** Nothing here runs on its own and no
+**The owner decides every submission.** Nothing here runs on its own and no
 agent submits to Levante. The agent writes the configurations, the driver, the
 runscripts and the analysis. The owner runs each job, copies the small result
 files into `output/`, and commits them. The agent then runs the analysis over
 `output/`, produces the plots, and writes the entries in `LEARNINGS.md`.
+
+On LRZ terrabyte an agent session can reach `sbatch`. There the owner may
+approve an agent to submit named jobs and hand them back itself. The approval
+is per job. The first were C1 and its two checks, approved on 2026-09-10.
 
 ## Where things stand
 
@@ -124,6 +128,7 @@ experiments/tag_closure/
   C1_reference_shift.md  the C1 argument and its recipe
   LEVANTE_TASKS.md     what to run next, in order
   run_tag_closure.jl   the driver: one config path in, one run out
+  run_c1_twin.jl       C1's twin test: the model with and without the shift
   configs/             one YAML per run, named <phase><n>_<variant>.yml
   runscripts/          one sbatch script per phase, CPU shared partition
   analysis/            reduce_run.jl, run on Levante, plus one script per phase
@@ -166,7 +171,8 @@ owner's committed results would need a `git add -f` every time.
 `analysis/` holds `reduce_run.jl`, one `phase_<letter>.jl` per phase,
 `tables.jl` with the readers they share, `where_negative.jl`,
 `validate_configs.py`, and `selftest.jl`, which drives all of it on synthetic
-input.
+input. `c1_acceptance.jl` sits beside them and is not driven by the self-test.
+It checks the C1 shift file against the Thermodynamics package a run loads.
 
 ### How the sphere configurations are put together
 
@@ -393,6 +399,39 @@ CONFIG=experiments/tag_closure/configs/a1_dt10.yml \
     julia +1.11 --project=.buildkite \
     experiments/tag_closure/run_tag_closure.jl
 ```
+
+### On terrabyte
+
+The same bash scripts run on LRZ terrabyte. `tag_closure_common.sh` tells the
+machines apart by a path only Levante has, or by `TAG_CLOSURE_MACHINE` when
+that is set. On terrabyte it loads the stack named in
+`runscripts/terrabyte_stacks.env` and uses the depot on scratch that
+`runscripts/setup-julia-terrabyte.tcsh` builds. It never runs `module purge`,
+which on terrabyte drops the spack modules for good.
+
+Each phase script's `#SBATCH` block is Levante's. Give terrabyte's account and
+partition on the command line, which overrides the block:
+
+```tcsh
+env CONFIG=experiments/tag_closure/configs/c1_sphere_shift.yml \
+    sbatch --account=hpda-c --partition=hpda2_test --time=01:30:00 \
+        --cpus-per-task=2 --mem=32G \
+        experiments/tag_closure/runscripts/phase_c.sh
+```
+
+`hpda2_test` has a two-hour limit. On 2026-09-10 it started jobs at once, while
+`hpda2_compute` put even a two-core, half-hour job 30 hours out. A sphere-day
+took 9 minutes on Levante, plus compilation.
+
+**The run writes to scratch, not to the repository.** `$HOME` on terrabyte is
+for code, so the run's working directory is `$SCRATCH/tag_closure`, and its
+output lands in `$SCRATCH/tag_closure/output/<run>/`. Set `RUN_DIR` to move it.
+Reduce from there, and copy the hand-back files into `output/<run>/` here as
+usual. The provenance records the machine and the driver.
+
+`TAG_CLOSURE_JOB_ID` renames a job's output directory. It is for drivers that
+are not the run's own, such as `run_c1_twin.jl`, so that they cannot write over
+the real run. The `.tcsh` variants are still Levante-only.
 
 **The job's exit status is the thing to read.** A crashed solve returns
 `:simulation_crashed` rather than throwing, so a driver that ignored the return
