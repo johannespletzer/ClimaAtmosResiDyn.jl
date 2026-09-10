@@ -13,6 +13,161 @@ runscripts and the analysis. The owner runs each job, copies the small result
 files into `output/`, and commits them. The agent then runs the analysis over
 `output/`, produces the plots, and writes the entries in `LEARNINGS.md`.
 
+## Where things stand
+
+**Last updated 2026-09-10**, on branch `claude/tag-closure-experiments` — run
+`git log -1` for its head rather than trusting a number written here. The docs
+are on `claude/tag-closure-experiments-plan` (PR #63) at `0d7bd37`, carrying the
+corrected plan and the memo with measured results.
+
+**14 of 24 runs committed**, all of phase A and both C0 runs. Findings live in
+[LEARNINGS.md](LEARNINGS.md); this section is what to do next.
+
+### Before you submit anything
+
+Two things, both easy to miss.
+
+**Instantiate first**, once, on a login node, under the runscript's depot. See
+*Before the first job* below — it is a prerequisite, not a suggestion, and it is
+what cost the first attempt.
+
+**The analysis refuses a run whose provenance has no commit.** `phase_a.jl` and
+its siblings skip any run whose `provenance.txt` records `commit: unknown`, with
+a warning naming it. Runs submitted before `3659746` can hit this. The fix is
+*Repairing a provenance* below — repair the file, do not resubmit the run.
+
+### What has run, and what it decided
+
+**Phase A is complete. Phase C's census is complete.**
+
+  - **A1 and A2 (nine runs) settled the phase A question.** The van Leer ladder
+    is flat, slope −0.011; both linear ladders fall, +0.255 and +0.464. So the
+    time-discretization part of the split is real and the limiter sets a floor
+    beneath it. **Option 2, moving the water tags into the implicit solve, is
+    not worth its Jacobian cost.** The memo's Part 3 water bullet now reports
+    this as measured.
+  - **A3 is uninterpretable.** It came out an order of magnitude *below* A1,
+    but it moves `microphysics_model` and `vert_diff` together. Needs its
+    matched companion before it says anything.
+  - **A4 says `Float32` is fine here.** It agrees with `Float64` to 0.3% and
+    the measured floor is 2.34e-8, far better than the memo's `100 eps` bound.
+    **On a column only** — the memo's claim is that the floor grows with cell
+    count, and the sphere that would test it is A5.
+  - **A5 diverged.** The water tags run away to 1e130 while the parent stays
+    bounded, and the run exits zero. **This is issue #64.** It also means phase
+    A has no usable sphere measurement.
+  - **C0 (both runs) confirmed both predicted barriers.** The donor rule is
+    inert over 96.7% of the column and 43% of the sphere, and a source tag goes
+    monotonically negative on the sphere with nothing to repair it.
+
+### What to run next
+
+In this order. Each line works as written from the repository root on Levante.
+
+**1. C3 — the highest-value run available.** No code change, no approval
+needed, config written and validated. C0 made this interesting: it shows what
+the energy process record reads on a configuration where the source tags' own
+donor rule is not running, and the record is the alternative
+`energy_source_tags.md` names.
+
+```bash
+CONFIG=experiments/tag_closure/configs/c3_column_record.yml \
+    sbatch experiments/tag_closure/runscripts/phase_c.sh
+```
+
+**2. The three timing controls.** Cheap, and nothing in the series has measured
+what the tags cost yet. Each is its phase's first run with the tag family
+removed; the cost is the difference in the `sypd` and `wall_time_per_timestep`
+lines.
+
+```bash
+CONFIG=experiments/tag_closure/configs/c0_column_notags.yml \
+    sbatch experiments/tag_closure/runscripts/phase_c.sh
+CONFIG=experiments/tag_closure/configs/a1_dt10_notags.yml \
+    sbatch experiments/tag_closure/runscripts/phase_a.sh
+```
+
+`b1_notags` waits on the phase B decision below.
+
+**3. A3's matched companion**, once someone writes its config — a 0M column at
+`dt` 10 s with `vert_diff: DecayWithHeightDiffusion`. Until then A3 is a number
+with no reading. Minutes of walltime.
+
+**Phase B: a recommendation to hold, not a rule.** B1 is ten days of a moist
+sphere with a limiter. That is the regime that diverged inside three hours in
+A5, on a coarser grid. Running it before #64 is understood risks spending
+sphere-days to produce a residual that means nothing, in the same way A5's did
+after hour three. B2 is dry and unaffected by that argument, so if phase B has
+to start somewhere, start there. If you disagree, the evidence to check is
+whether A5's divergence needs the SEM limiter — B1 has no limiter, B3 does.
+
+### Decisions waiting on the owner
+
+**C1's reference shift — the critical path.** C1 reruns C0 under a shift making
+`ρe_tot > 0` everywhere, and it is the run designed to say whether C0's barriers
+are fixable. It needs a code change, approval, and a choice between two shapes
+that has not been made:
+
+  - **Shift only the share's denominator.** The loss rule reads `e_tot + c` with
+    `c` a constant from the initial state. The parent is untouched, no
+    reproducibility reference changes, and the runs stay cheap. The cost is that
+    the shares then depend on `c`, so the result is conditional on a number
+    someone picked.
+  - **Shift the model's energy reference itself.** The parent changes, so
+    `ref_counter` bumps and output moves. The tags then read the physics as it
+    is, with no free parameter. The cost is that it touches the model and the
+    reproducibility machinery.
+
+Either way the docs say results are conditional on the reference, so whichever
+is chosen gets reported with its value. **Nothing else in phase C can move until
+this is decided.**
+
+**Two smaller ones.** Whether to write A3's companion config — one file, and it
+unblocks A3. And whether to lengthen `test/tagged_water_integration.jl` past
+A5's onset, or add a case: it runs A5's exact configuration but stops at one
+hour, and the divergence starts between hours two and three, which is why this
+went unnoticed.
+
+### What will bite you
+
+  - **The tcsh runscripts have never been syntax-checked.** No `tcsh` was
+    available where they were written. `phase_a.sh` and its siblings are the
+    tested path; the `.tcsh` variants are a fallback that nobody has run. A
+    tcsh *login shell* is fine with the bash scripts — see *If your login shell
+    is tcsh*.
+  - **Run the reducer before copying anything back.** `analysis/reduce_run.jl`
+    turns the NetCDF into the small tables. The NetCDF stays on scratch and is
+    the only place the pointwise numbers exist; once scratch is cleaned they are
+    gone. A run copied back without it has no operator residual and no per-tag
+    minima.
+  - **Sphere numbers are not column numbers.** The NetCDF writer bilinearly
+    remaps to lat-lon, so every reduction on a sphere is over the remapped
+    field. The tables carry a `remapped` column and the reducer warns. Do not
+    set a sphere maximum beside a column one as though they were the same
+    quantity.
+  - **Five files per run**, listed under *What goes in `output/<run>/`*:
+    the closure CSV, the reduced table from the reducer, the merged `<run>.yml`
+    snapshot, `run.log`, and `provenance.txt`. The NetCDF and checkpoints stay
+    on scratch.
+  - **`summary_a.csv` is stale.** It predates `a3_1m` and does not include it.
+    Re-run `analysis/phase_a.jl` to regenerate. Phase C has no summary yet —
+    `analysis/phase_c.jl` has not been run over C0, so its figures and
+    `summary_c.csv` do not exist. The C0 entries in `LEARNINGS.md` were written
+    from the raw tables.
+  - **Every run so far records `commit_dirty: yes`.** The commit is real, the
+    tree simply had uncommitted edits at submit time. So a recorded commit is
+    the nearest committed ancestor, not an exact description of what ran.
+
+### Where the record lives
+
+| What                             | Where                                                |
+|:-------------------------------- |:---------------------------------------------------- |
+| Findings, one entry per run      | [LEARNINGS.md](LEARNINGS.md)                         |
+| What has landed                  | the run register below                               |
+| The A5 divergence                | issue #64                                            |
+| Plan and memo                    | PR #63, branch `claude/tag-closure-experiments-plan` |
+| Configurations, driver, analysis | this directory                                       |
+
 ## Layout
 
 ```
@@ -382,18 +537,18 @@ Tick a run once it has been submitted, once its files are committed under
 | Run                    | Phase | Submitted | Handed back | Analysed | Learning entry |
 |:---------------------- |:----- |:--------- |:----------- |:-------- |:-------------- |
 | `a1_dt10_notags`       | A     |           |             |          |                |
-| `a1_dt10`              | A     |           |             |          |                |
-| `a1_dt5`               | A     |           |             |          |                |
-| `a1_dt2p5`             | A     |           |             |          |                |
-| `a2_none_dt10`         | A     |           |             |          |                |
-| `a2_none_dt5`          | A     |           |             |          |                |
-| `a2_none_dt2p5`        | A     |           |             |          |                |
-| `a2_first_order_dt10`  | A     |           |             |          |                |
-| `a2_first_order_dt5`   | A     |           |             |          |                |
-| `a2_first_order_dt2p5` | A     |           |             |          |                |
-| `a3_1m`                | A     |           |             |          |                |
-| `a4_float32`           | A     |           |             |          |                |
-| `a5_sphere_limiter`    | A     |           |             |          |                |
+| `a1_dt10`              | A     | yes       | yes         | yes      | yes            |
+| `a1_dt5`               | A     | yes       | yes         | yes      | yes            |
+| `a1_dt2p5`             | A     | yes       | yes         | yes      | yes            |
+| `a2_none_dt10`         | A     | yes       | yes         | yes      | yes            |
+| `a2_none_dt5`          | A     | yes       | yes         | yes      | yes            |
+| `a2_none_dt2p5`        | A     | yes       | yes         | yes      | yes            |
+| `a2_first_order_dt10`  | A     | yes       | yes         | yes      | yes            |
+| `a2_first_order_dt5`   | A     | yes       | yes         | yes      | yes            |
+| `a2_first_order_dt2p5` | A     | yes       | yes         | yes      | yes            |
+| `a3_1m`                | A     | yes       | yes         | not yet  | yes            |
+| `a4_float32`           | A     | yes       | yes         | yes      | yes            |
+| `a5_sphere_limiter`    | A     | yes       | yes         | yes      | yes            |
 | `b1_notags`            | B     |           |             |          |                |
 | `b1_base`              | B     |           |             |          |                |
 | `b1a_no_hyperdiff`     | B     |           |             |          |                |
@@ -402,8 +557,8 @@ Tick a run once it has been submitted, once its files are committed under
 | `b2_dry_hs`            | B     |           |             |          |                |
 | `b3_limiter`           | B     |           |             |          |                |
 | `c0_column_notags`     | C     |           |             |          |                |
-| `c0_column`            | C     |           |             |          |                |
-| `c0_sphere`            | C     |           |             |          |                |
+| `c0_column`            | C     | yes       | yes         | not yet  | yes            |
+| `c0_sphere`            | C     | yes       | yes         | not yet  | yes            |
 | `c3_column_record`     | C     |           |             |          |                |
 
 ## What goes in `output/<run>/`

@@ -158,7 +158,7 @@ within 2× of that floor.
 
 ## A3. 1-moment microphysics
 
-Ran at `66d6ded` on 2026-09-10, AMD EPYC 7763 64-Core, `shared`. `a1_dt10`
+Ran at `49b2ec9` on 2026-09-10, AMD EPYC 7763 64-Core, `shared`. `a1_dt10`
 with `microphysics_model: 1M` and `vert_diff: DecayWithHeightDiffusion`.
 
 End-of-run operator residual **9.844e-8**, against A1's 2.844e-6 at the same
@@ -191,7 +191,7 @@ is the vertical diffusion alone. One extra column run, minutes of walltime.
 
 ## A4. Float32
 
-Ran at `66d6ded` on 2026-09-10, AMD EPYC 7763 64-Core, `shared`. `a1_dt10` at
+Ran at `49b2ec9` on 2026-09-10, AMD EPYC 7763 64-Core, `shared`. `a1_dt10` at
 `FLOAT_TYPE: Float32`.
 
 | quantity                       | `Float32` (A4) | `Float64` (`a1_dt10`) |
@@ -232,7 +232,8 @@ measured; C0's tables are the place to check the first.
 
 ## A5. The sphere with the SEM limiter: the water tags diverge
 
-Ran at `66d6ded` on 2026-09-10, AMD EPYC 7763 64-Core, `shared`. A moist baroclinic wave, `h_elem` 4, `z_elem` 10, 0M, with
+Ran at `49b2ec9` on 2026-09-10, AMD EPYC 7763 64-Core, `shared`. A moist
+baroclinic wave, `h_elem` 4, `z_elem` 10, 0M, with
 `apply_sem_quasimonotone_limiter: true`, `dt` 300 s, one day, hourly closure
 check.
 
@@ -487,6 +488,15 @@ delivers on a configuration where the primary method is in trouble. It is
 written, validated, and has not been submitted.
 
 ### Caveats on all of phase A so far
+
+**Every run in the series records `commit_dirty: yes`.** `commit_source` is
+`git` throughout, so the commit itself is real and was read successfully; the
+working tree simply had uncommitted changes when each job was submitted, which
+is what editing and submitting in the same session looks like. So a recorded
+commit is the nearest committed ancestor of what ran, not an exact description
+of it. For these runs the uncommitted changes were configurations and analysis
+scripts rather than model code, so the measurements stand, but a run whose
+result surprises you is worth checking against this.
 
 The A1 and A2 ladders are three `dt` points each, one column, one hour, 0M, one
 configuration. Their ledgers are identically zero, which is why those numbers
