@@ -60,6 +60,14 @@ applies a wrong-signed, unbounded correction. Given that A5 reached 1e130 from
 an unbounded ratio, adding a second one deliberately is not a trade worth
 considering. Drop it rather than offering it as the low-cost choice.
 
+*Added on 2026-09-10.* The conclusion above is right about this shape and wrong
+about the route. `Σₖ φₖ` falls short of 1 only because the tags still sum to
+`ρe_tot` while the share divides by `ρe_tot + c`. Rebase the tags as well, so
+that they partition `ρe_tot + c·ρ` from the start and each process's increment
+includes `c` times its change in mass, and the shares sum to 1 exactly. The
+model's own state is then untouched. That is C1's accounting done inside the
+tags, and FINDINGS §8 proposes it.
+
 ## Option 2, shift the reference: two different operations
 
 The memo's phrase "shifts the model's energy reference itself" is ambiguous
@@ -135,8 +143,10 @@ One of the two things this left open is now settled. The other is not.
     might. The tags are shares of the same recomputed `ρe_tot`, so both sides
     move together and `Σ tags = ρe_tot` still holds exactly. What it does mean
     is that "the shift" has no single value, so whether the field is positive
-    *everywhere* has to be checked pointwise. That happens to help: the largest
-    `c(q)` sits in the warm moist low levels, which are the most negative.
+    *everywhere* has to be checked pointwise. The larger moist coefficient does
+    not help where it is needed: the parent's minimum at t = 0 is in the cold,
+    dry extratropics, −100,416 J kg⁻¹ against −23,686 in the tropics. This page
+    first said the warm moist low levels were the most negative.
 
 ## Costs the memo does not count
 

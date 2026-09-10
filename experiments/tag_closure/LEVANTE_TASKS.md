@@ -122,13 +122,15 @@ limits.
 **Two ways on, each needing approval.**
 
   - **Move the shift into the tag code** (FINDINGS §8, item 1). The tags
-    partition `ρe_tot` plus a fixed offset per kilogram of air, which the model
-    never sees, so the atmosphere is bit for bit the unshifted one. It is a code
-    change in `energy_source_tags.jl`, then one run at 110 K for comparison with
-    C1 and one at a larger offset for R11's suppression cost.
-  - **Find E16's cause first.** One twin with `energy_q_tot_upwinding: first_order` in both halves, from a new file in `overrides/`. About 20
-    minutes on `hpda2_test`. If the differences fall to rounding, the limiter
-    is the cause.
+    partition `ρe_tot + c·ρ`, with `c` a fixed 110.5 kJ kg⁻¹ per kilogram of
+    air. The model never sees it, so the atmosphere is bit for bit the unshifted
+    one. It is a code change in `energy_source_tags.jl` and in the code that
+    reads the parent, with a kernel test first. Then one run at 110.5 kJ kg⁻¹
+    for comparison with C1, and one at a larger `c` for R11's suppression cost.
+  - **Confirm E16's cause first.** One twin with `energy_q_tot_upwinding: none`
+    in both halves, which switches the post-solve limiter hook off, from a new
+    file in `overrides/`. About 20 minutes on `hpda2_test`. If the differences
+    fall to rounding, the limiter is the whole cause.
 
 ## 2. C1 — done
 

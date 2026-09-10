@@ -273,17 +273,22 @@ twins still differ by 3.6e-5 in `ρ`, 7.4e-6 in `ρq_tot`, 1.3e-4 in `uₕ` and
 orders of magnitude, and instead `ρ`'s moved by 6% and `u₃`'s grew. So the
 difference is in the tendencies themselves.
 
-**The leading candidate is the limiter on vertical energy transport.** The
-implicit tendency upwinds `h_tot` and `q_tot` with `energy_q_tot_upwinding`,
-which C1 runs as `vanleer_limiter` (`implicit_tendency.jl:360-369`). The shift
-adds to `h_tot` a constant plus a multiple of `q_tot`. A limiter built on
-differences passes the constant through unchanged but not the `q_tot` part, so
-its choices differ between the runs from the first step. Saturation adjustment,
-an iterative solve that stops at a tolerance, is the other candidate. By
-reading, hyperdiffusion is covariant: it moves `ρ` with the water it diffuses
-(`hyperdiffusion.jl:484-487`), and its energy flux carries each phase's
-enthalpy, which moves by exactly the `cp_l·|δ|` a relabelling needs. That is an
-argument, and none of the candidates is measured. *Twin tests, SLURM jobs
+**The leading candidate is the limiter on vertical energy transport.** After
+each Newton solve, a hook corrects the central vertical advection of `ρe_tot`
+and `ρq_tot` towards an upwinded one, using `energy_q_tot_upwinding`, which C1
+runs as `vanleer_limiter` (`implicit_tendency.jl:335-372`, the `T_post_imp!`
+hook). It acts on `h_tot`. The shift adds to `h_tot` a constant plus
+`(cp_l − cp_d)·|δ|·q_tot`, which is 3.5 to 7 kJ kg⁻¹ where `q_tot` is 10 to
+20 g kg⁻¹. A limiter built on differences passes the constant through
+unchanged. The `q_tot` part is about as large as the level-to-level differences
+it limits, so its choices change from the first step. The hook runs after the
+solve, which is why converging the solve changed nothing. The other candidates
+are argued out. Saturation adjustment solves the same equation for `T` in both
+runs, because every water phase shifts by the same `cp_l·|δ|`. Hyperdiffusion
+moves `ρ` with the water it diffuses (`hyperdiffusion.jl:484-487`) and carries
+each phase's enthalpy, which moves by exactly what a relabelling needs. These
+are arguments, reached in discussion with the reviewer agent that proposed the
+tag-side shift of §8, and no twin has isolated the limiter yet. *Twin tests, SLURM jobs
 `13383683` and `13384080` on terrabyte, `output/twin_c1/` and
 `output/twin_c1_newton/`.*
 
@@ -349,15 +354,21 @@ with `T_0` cancels the difference. So the coefficient is
 `c(q) = (1 − q_tot)·cp_d + q_tot·cp_l`, running 1004.5 dry to 1068.0 at
 `q_tot` = 0.02, a 6.3% spread. This does not break the closure identity — the
 tags are shares of the same recomputed `ρe_tot` — but it means "the shift" has no
-single value and positivity must be checked pointwise. It helps: the largest
-`c(q)` sits in the warm moist low levels, which are the most negative.
-*Measured by `analysis/c1_acceptance.jl` on each phase alone and on six states
-from dry to mixed-phase. The coefficient first recorded here was wrong (§6).*
+single value and positivity must be checked pointwise. The larger moist
+coefficient does not land where the margin is needed. At t = 0 the parent's
+minimum is −100,416 J kg⁻¹ in the extratropics, against −23,686 in the tropics,
+so the most negative cells are cold and dry and the sizing rests on the dry
+coefficient. *Measured by `analysis/c1_acceptance.jl` on each phase alone and on
+six states from dry to mixed-phase; the minima are C0's region tags at t = 0.
+The coefficient and the location first recorded here were wrong (§6).*
 
 **R10. Shifting only the share's denominator should be dropped rather than
 costed.** The region tags sum to `ρe_tot` and not to `ρe_tot + c`, so wherever
 `e < 0` the shares sum to a negative number and the loss *adds* energy, diverging
-as `e` approaches `−c` — over exactly the region the shift exists to fix.
+as `e` approaches `−c` — over exactly the region the shift exists to fix. That
+rules out this shape, not the route. If the tags are rebased onto the shifted
+total as well, the shares sum to 1 exactly and the model is left alone (§8,
+item 1).
 
 **R11. C1's remaining costs are firm rather than conditional.** The shift must
 clear the tropospheric minimum (E6) so it cannot be small; the discriminating
@@ -530,6 +541,13 @@ Kept because a later reader will otherwise re-derive them.
     region tags go negative too (E14).
   - **The one-iteration implicit solve as the cause of E16.** Converging it
     left the one-step difference in `ρ` at 3.6e-5, against 3.8e-5 (E16).
+  - **R9's "the largest `c(q)` sits in the warm moist low levels, which are the
+    most negative".** At t = 0 the parent's minimum is −100,416 J kg⁻¹ in the
+    extratropics and −23,686 in the tropics. The most negative cells are cold
+    and dry.
+  - **That the only alternative to shifting the model's reference was shifting
+    the share's denominator.** R10 rejects that shape correctly, but rebasing
+    the tags as well repairs it and leaves the model untouched (§8, item 1).
 
 ## 7. What is not established
 
@@ -539,11 +557,11 @@ Kept because a later reader will otherwise re-derive them.
     Thermodynamics: over liquid, over ice and over the mixture ramp it is
     unchanged to 9.2e-16 from 150 K to 330 K (R8). Whether the *model* is
     invariant is the next item.
-  - **What in a step depends on the reference (E16).** Not the implicit solve.
-    A twin with `energy_q_tot_upwinding` linear in both halves (`first_order`)
-    would say whether the limiter on vertical energy transport is the cause. If
-    the differences then fall to rounding, it is. If they do not, saturation
-    adjustment is next.
+  - **Whether the energy limiter is all of E16.** A twin with
+    `energy_q_tot_upwinding: none` in both halves switches the hook off. If the
+    differences then fall to rounding, the limiter is the whole cause. If they
+    do not, the next suspect is the surface-flux code path, which the acceptance
+    script checks only as a formula.
   - **Why a tag goes negative under a positive parent (E14).** The finite-step
     donor loss and unlimited explicit transport are both candidates.
   - **What makes the residual's first-hour jump (E13).** The enthalpy-against-
@@ -558,20 +576,29 @@ Kept because a later reader will otherwise re-derive them.
 
 ## 8. Next
 
- 1. **Shift the reference inside the tag code, not the model.** The tags could
-    partition a shadow total, `ρe_tot` plus a fixed offset per kilogram of air,
-    that the model never sees. The donor share is then as well defined as in
-    C1. Per-process closure still holds exactly, once each process's change in
-    mass is added to its increment. And the atmosphere stays bit for bit the
-    unshifted one, so E16 cannot arise. It is C1's accounting moved into the
-    tags, and it needs a code change in `energy_source_tags.jl` and the owner's
-    approval. A run at the same 110 K would test whether E11 to E15 belong to
-    the tag rule rather than to E16's slightly different atmosphere. A second
-    run at a larger offset, on the identical atmosphere, would measure R11's
-    suppression cost cleanly.
- 2. **Or first find E16's cause.** One twin with a linear
-    `energy_q_tot_upwinding` in both halves, about 20 minutes on `hpda2_test`.
-    It matters less if item 1 is taken, because item 1 leaves the model alone.
+ 1. **Shift the reference inside the tag code, not the model.** The tags would
+    partition a shadow total `E = ρe_tot + c·ρ`, with `c` a fixed energy per
+    kilogram of air, 110.5 kJ kg⁻¹ to match C1. The model never sees `E`, so
+    the atmosphere stays bit for bit the unshifted one and E16 cannot arise.
+    The donor share is as well defined as in C1. Per-process closure still
+    holds exactly once each process's increment includes `c` times its change
+    in mass. Of the processes that change `ρ` here, the surface flux is
+    bracketed and supplies that change. Precipitation and hyperdiffusion are
+    outside the brackets in C0 and C1 too, so no new gap opens. A constant per
+    kilogram also passes the tags' own van Leer transport unchanged, which a
+    humidity-dependent offset would not. The minimum of `E` would be about
+    10.1 kJ kg⁻¹ against C1's 10.7, and the tags would start within a few
+    percent of C1's, so E11 to E15 should carry over to a few percent; those
+    two are arguments. It needs a code change in `energy_source_tags.jl` and in
+    the closure and diagnostic code that read the parent, a kernel test first,
+    and the owner's approval. Then one run at `c` = 110.5 kJ kg⁻¹ for comparison
+    with C1, and one at a larger `c` on the identical atmosphere, which would
+    measure R11's suppression cost cleanly. It came out of the discussion with
+    the reviewer agent, which found this route independently.
+ 2. **Or first confirm E16's cause.** One twin with
+    `energy_q_tot_upwinding: none` in both halves, about 20 minutes on
+    `hpda2_test`. It matters less if item 1 is taken, because item 1 leaves the
+    model alone.
  3. **Decide what C1 says about the family.** C1 answers its question. With a
     positive reference the donor rule runs everywhere, and the residual stops
     being directional and falls to 0.70 of the unshifted one (E11, E12). It does
