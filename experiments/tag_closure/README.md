@@ -144,8 +144,9 @@ and unaffected either way, so if phase B has to start somewhere, start there.
 
 **C1's reference shift — the critical path.** C1 reruns C0 under a shift making
 `ρe_tot > 0` everywhere, and it is the run designed to say whether C0's barriers
-are fixable. It needs a code change, approval, and a choice between two shapes
-that has not been made:
+are fixable. It needs the owner's approval. It no longer needs a code change —
+`T_0`, `LH_v0` and `LH_s0` are all settable, so the shift is three TOML entries
+— and of the two shapes below the first should be dropped rather than costed:
 
   - **Shift only the share's denominator.** The loss rule reads `e_tot + c` with
     `c` a constant from the initial state. The parent is untouched, no
@@ -519,8 +520,9 @@ adjusted from what was learned before they are submitted.
     `SCRIPT` set to the driver. That is a cost decision for the owner.
   - **C0 may run alongside phase A** if the owner wants the barrier census
     early. It changes nothing in the model and needs no code.
-  - **C1 and C2 wait for the discussion.** Both need a code change and the
-    owner's approval, so no configuration for them is written yet.
+  - **C1 and C2 wait for the discussion.** Both need the owner's approval, so no
+    configuration for them is written yet. C2 also needs a code change; C1 turns
+    out not to, since its shift is three settable thermodynamic parameters.
   - Nothing in this series edits `reproducibility_tests/ref_counter.jl`, a
     tolerance, or the parent-budget calibration table.
 
@@ -566,8 +568,9 @@ adjusted from what was learned before they are submitted.
 | `c0_sphere_deep`   | `phase_c.sh` | C0's depth control: the same sphere on the 60 km grid        |
 | `c3_column_record` | `phase_c.sh` | C3, `c0_column` with `energy_process_record` beside the tags |
 
-`c1_*` and `c2_*` are not written. C1 is the reference shift and C2 is the
-implicit-path brackets; both need a code change and the owner's approval first.
+`c1_*` and `c2_*` are not written. C1 is the reference shift, which needs the
+owner's approval and a TOML file but no code change; C2 is the implicit-path
+brackets, which needs both.
 
 All 24 configurations in the register now exist under `configs/`, along with the
 driver, the runscripts and the analysis. Nothing is waiting on the agent; what
@@ -741,9 +744,10 @@ be resubmitted.
     source tag drifts monotonically negative on the sphere with nothing to
     repair it. C1 reruns this under a reference shift making `ρe_tot > 0`
     everywhere and is the run designed to say whether that is fixable. It needs
-    a code change and the owner's approval, and **the shape of the shift is
-    still unchosen** — the plan gives two and says both go to the owner before
-    either is written. That decision is now the series' critical path. C3 is
+    the owner's approval, and that is now the only thing it needs: the shift is
+    three TOML entries with an exact acceptance test, not a code change, and of
+    the plan's two shapes the denominator shift should be dropped rather than
+    costed. The approval is the series' critical path. C3 is
     written and unsubmitted, and C0 has made it more interesting: it shows what
     the energy process record reads on a configuration where the source tags'
     own rule is not running.

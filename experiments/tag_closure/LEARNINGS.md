@@ -563,9 +563,24 @@ datum. The same constants give
 `T_0` to 173.2 K with `LH_v0` fixed drops `LH_v(288.3)` from 2.4656e6 to
 2.2335e6, low by 9.4%. That is a change of physics, which is what the chosen
 shift shape existed to avoid. A C1 configuration therefore has to co-adjust
-`LH_v0`, `LH_s0` and `LH_f0`, and the saturation vapour pressure needs checking
-because it carries a reference of its own. `C1_reference_shift.md` has the
-derivation and the command that confirms it against the package.
+`LH_v0` and `LH_s0`, and the saturation vapour pressure needs checking because
+it carries a reference of its own.
+
+**Confirmed, and it makes C1 cheaper rather than dearer.**
+`latent_heat_vapor(288.3)` returns 2.46564492e6 against a predicted
+2,465,644.92, and `latent_heat_fusion(273.16)` returns 333600.0, so `LH_f0` is
+that and `LH_s0` is 2.8344e6. The settable fields include `T_0`, `LH_v0` and
+`LH_s0` and exclude `LH_f0`, every `cv_*` and `e_int_v0`, so the derived ones
+follow for free. Everything physical depends on `T_0` only through the group
+`LH_0 − Δcp·T_0`, so moving `T_0` by `δ` together with `LH_v0` by
+`(cp_v − cp_l)·δ` and `LH_s0` by `(cp_v − cp_i)·δ` leaves every latent heat and
+`p_sat` exactly unchanged while moving `e_int` by `−cp_d·δ`. **C1 therefore
+needs no code change**, only three TOML entries and the owner's approval, and
+its acceptance test is exact: `LH_v(288.3)`, `LH_f(273.16)` and `p_sat(288.3)`
+must come back unchanged at 2.46564492e6, 333600.0 and 1721.1532852305072 while
+`internal_energy_dry(288.3)` moves from −67533.97 to +32865.8. The raw probe
+output is in `LEVANTE_TASKS_RESULTS.md`; `C1_reference_shift.md` has the
+derivation and the recipe.
 
 ### What this bears on, and what it does not decide
 
@@ -582,10 +597,10 @@ this is irreparable.
 
 **C1 is the run designed to answer that**, and it has not run. It reruns this
 configuration under a reference shift making `ρe_tot > 0` everywhere, and it
-needs a code change and the owner's approval. The plan gives two shapes; the
-first should be dropped rather than costed, and the second is now known to be a
-co-adjusted reference *set* rather than a single constant, per the subsection
-above. If C1 shows bounded residuals and non-negative tags under
+needs the owner's approval, but no longer a code change. The plan gives two
+shapes; the first should be dropped rather than costed, and the second is now
+known to be a co-adjusted reference *set* rather than a single constant — three
+TOML entries, per the subsection above. If C1 shows bounded residuals and non-negative tags under
 a positive reference, the family is viable and the remaining work is the
 tolerance model and the implicit brackets. If it does not, the docs' alternative
 is the recommendation.

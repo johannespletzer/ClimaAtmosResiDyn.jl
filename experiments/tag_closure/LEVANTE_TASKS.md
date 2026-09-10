@@ -77,8 +77,20 @@ change, which is exactly what option 2 was chosen to avoid. C1's remaining
 shape therefore has to co-adjust `LH_v0`, `LH_s0` and `LH_f0` by the same
 `ΔT_0`, and the saturation-vapour-pressure path has to be checked too, since it
 integrates Clausius–Clapeyron from a reference of its own. That is being
-written up in `C1_reference_shift.md`; task 2 is the one command that confirms
-the coupling rather than deriving it.
+written up in `C1_reference_shift.md`.
+
+**The coupling is confirmed, and C1 turns out to need no code change.** The
+probe returned `LH_v(288.3) = 2.46564492e6`, which is
+`LH_v0 + (cp_v − cp_l)(288.3 − T_0)` to every digit, and `LH_f(273.16)` =
+333600.0, so `LH_f0` is that and `LH_s0 = LH_v0 + LH_f0` = 2.8344e6. The
+settable fields include `T_0`, `LH_v0` and `LH_s0` and exclude `LH_f0`, every
+`cv_*` and `e_int_v0`, so those are derived and follow for free. The invariance
+this gives is the useful part: everything physical depends on `T_0` only through
+the group `LH_0 − Δcp·T_0`, so moving `T_0` by `δ` and `LH_v0` by
+`(cp_v − cp_l)·δ` and `LH_s0` by `(cp_v − cp_i)·δ` leaves every latent heat and
+the saturation vapour pressure **exactly** unchanged while moving `e_int` by
+`−cp_d·δ`. C1 is three TOML entries, not a fork and not a model edit, and
+`p_sat(288.3) = 1721.1532852305072` is the before-value that proves it. Task 2.
 
 ## Once per shell
 
@@ -128,41 +140,66 @@ why this config sets `audit: true`. The audit table's `orphaned` and
 `overclaimed` are the two signed halves of the residual and name the direction
 on sight. Read them before concluding anything.
 
-## 2. Confirm the latent-heat coupling (the convention itself is settled)
+## 2. Write the C1 TOML, which is now a three-line change
 
-**The convention question is answered** — see *Where things stand*. What is left
-is the coupling it exposed: moving `T_0` moves every latent heat with it unless
-`LH_v0`, `LH_s0` and `LH_f0` move too. One command confirms that from the
-running package rather than from arithmetic, and its last line settles which
-TOML keys a C1 configuration has to set.
+The convention and the coupling are both settled, so what is left is mechanical.
+Two things are still missing and one command gets both.
 
 ```bash
 julia +1.11 --project=.buildkite -e '
     import ClimaParams
     import Thermodynamics as TD
     tp = TD.Parameters.ThermodynamicsParameters(Float64)
-    println("LH_v(288.3) = ", TD.latent_heat_vapor(tp, 288.3))
-    println("LH_f(273.16) = ", TD.latent_heat_fusion(tp, 273.16))
-    println("p_sat(288.3) = ", TD.saturation_vapor_pressure(tp, 288.3, TD.Liquid()))
-    println(fieldnames(TD.Parameters.ThermodynamicsParameters))'
+    println("cp_i = ", TD.Parameters.cp_i(tp))
+    println("cp_v = ", TD.Parameters.cp_v(tp), "  cp_l = ", TD.Parameters.cp_l(tp))
+    println("LH_s0 = ", TD.Parameters.LH_s0(tp))
+    println(pkgdir(ClimaParams))'
 ```
 
-**`LH_v(288.3)` near 2.4656e6 confirms the coupling.** That is
-`LH_v0 + (cp_v − cp_l)·(288.3 − T_0)` with `LH_v0` = 2.5008e6 and
-`cp_v − cp_l` = −2322, so a match means the offset really is anchored on `T_0`
-and a C1 TOML that moves `T_0` alone would change the latent heats by −9.4% at
-that temperature.
+```bash
+grep -n -B4 'alias = "\(T_0\|LH_v0\|LH_s0\)"' <that dir>/src/parameters.toml
+```
 
-`fieldnames` is the other half: it lists exactly which of `T_0`, `LH_v0`,
-`LH_s0`, `LH_f0` and the saturation reference are settable fields, and therefore
-what a C1 configuration writes under its `toml:` key. `p_sat(288.3)` is the
-before-value for the saturation path, which has a reference of its own and has
-not been checked.
+`cp_i` sets `LH_s0`'s coefficient and is the one constant we do not have. The
+grep gives the long ClimaParams names, which are what a TOML override file keys
+on — the struct field names above are aliases, not table headers.
+
+**The recipe, for `δ = −99.95 K`** (the sphere's 100.4 kJ kg⁻¹ at `cp_d`):
+
+| field   | now      | after                            |
+|:------- |:-------- |:-------------------------------- |
+| `T_0`   | 273.16   | 173.21                           |
+| `LH_v0` | 2.5008e6 | 2.7328839e6                      |
+| `LH_s0` | 2.8344e6 | 2.8344e6 + (cp_v − cp_i)·δ       |
+
+`LH_f0` is derived as `LH_s0 − LH_v0` and comes out right on its own: it needs
+`(cp_l − cp_i)·δ` and that is what the two entries above give it.
+
+**The acceptance test is exact, and the before-values are already recorded** in
+`LEVANTE_TASKS_RESULTS.md`. After the change these three must come back
+*unchanged*:
+
+```
+LH_v(288.3) = 2.46564492e6
+LH_f(273.16) = 333600.0
+p_sat(288.3) = 1721.1532852305072
+```
+
+and `internal_energy_dry(288.3)` must move from −67533.97 to +32865.8, a shift
+of +100,399.8 J kg⁻¹. If a latent heat or `p_sat` moves, the co-adjustment is
+wrong and the run would be measuring a different atmosphere rather than a
+different reference. Do not submit C1 until all four hold.
+
+**One thing to watch.** `T_0` currently equals `T_triple` and `T_freeze`, all
+273.16. The recipe moves `T_0` alone, which is correct — the other two are
+physical temperatures — but it breaks a coincidence that has almost certainly
+never been exercised, since nothing in this repository has ever overridden a
+thermodynamic parameter. The acceptance test above is what would catch it.
 
 **Still true, and unaffected:** the plumbing reaches these from configuration.
 `create_parameters.jl:75` builds the thermodynamic parameters entirely from the
 TOML dict and `Parameters.jl:602` forwards every field, so C1 is a configuration
-change rather than a fork of Thermodynamics.jl.
+change. It still needs the owner's approval; it no longer needs a code change.
 
 ## 3. C3, the fallback reading
 
@@ -249,9 +286,9 @@ ten days of queue before that is understood stays the owner's call, but it
 should be taken for that reason and not for this one. B2 is dry and unaffected
 either way.
 
-**C1.** It needs a code change, the owner's approval, and a shift shape. Of the
-two in the memo, shifting only the share's denominator should be dropped rather
-than costed: the region tags sum to `ρe_tot` and not to `ρe_tot + c`, so
+**C1.** It needs the owner's approval and the two values task 2 collects. It no
+longer needs a code change or a choice of shape. Of the two shapes in the memo,
+shifting only the share's denominator should be dropped rather than costed: the region tags sum to `ρe_tot` and not to `ρe_tot + c`, so
 wherever `e < 0` the shares sum to a negative number and the loss adds energy
 instead of removing it, diverging as `e` approaches `−c` — over exactly the
 region the shift was introduced to fix. The remaining shape is a change of the

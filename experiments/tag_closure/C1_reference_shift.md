@@ -1,12 +1,14 @@
 # Which reference shift for C1
 
-A recommendation, not a decision. C1 needs a model change and the owner's
-approval, and the shift's shape has not been chosen. This page says what the two
-shapes in [the memo](../../docs/src/tag_closure_memo.md) actually do, why one of
-them should be dropped rather than costed, and what to measure before choosing.
+A recommendation, not a decision. C1 still needs the owner's approval, but it no
+longer needs a model change: it is three TOML entries. This page says what the
+two shapes in [the memo](../../docs/src/tag_closure_memo.md) actually do, why
+one of them should be dropped rather than costed, and what the reference change
+actually costs now that its arithmetic is pinned.
 
-Written after C0 and revised once the reference convention was read on Levante.
-Every code reference below was checked against the tree. Where the first draft
+Written after C0, revised once the reference convention was read on Levante, and
+revised again once the latent-heat coupling was confirmed against the package.
+Every code reference below was checked against the tree. Where an earlier draft
 got something wrong, the correction is marked rather than quietly applied.
 
 ## The question
@@ -102,20 +104,15 @@ largest unknown in its cost.
 
 One of the two things this left open is now settled. The other is not.
 
-  - **The parameter's name.** Still open. No ClimaParams source is available
-    here, and no TOML in `toml/` overrides a thermodynamic parameter, so the
-    mechanism is unexercised in this repository and there is no local example to
-    copy a name from. The pinned versions are Thermodynamics 1.3.0 and
-    ClimaParams 1.1.6 (`.buildkite/Manifest-v1.11.toml`). One command lists the
-    settable fields and the directory whose `src/parameters.toml` carries their
-    ClimaParams names:
-
-    ```bash
-    julia +1.11 --project=.buildkite -e '
-        import Thermodynamics as TD, ClimaParams
-        println(fieldnames(TD.Parameters.ThermodynamicsParameters))
-        println(pkgdir(ClimaParams))'
-    ```
+  - **The parameter's name.** Half answered. The settable fields have since been
+    listed and `T_0`, `LH_v0` and `LH_s0` are all among them — see *Which turns
+    out to make C1 cheap* below. What is still missing is the long ClimaParams
+    name each one keys on, because a TOML override file uses those as table
+    headers rather than the struct field names. No ClimaParams source is
+    available here and no TOML in `toml/` overrides a thermodynamic parameter,
+    so the mechanism is unexercised in this repository and there is no local
+    example to copy from. The pinned versions are Thermodynamics 1.3.0 and
+    ClimaParams 1.1.6 (`.buildkite/Manifest-v1.11.toml`).
 
   - **Whether the shift is actually constant.** **Settled: it is not.** The
     coefficient is `c(q) = q_d·cp_d + q_v·cp_v + q_l·cp_l + q_i·cp_i`, so the
@@ -301,21 +298,77 @@ still a configuration change rather than a fork, but it is several coupled TOML
 entries whose effects must cancel, and getting it wrong changes the climate
 rather than the reading.
 
-The coupling above is derived from the model's own constants, not read from the
-package. One command confirms it:
+**Confirmed against the package.** The derivation above was made from the
+model's constants rather than read from Thermodynamics, so it was probed:
+`latent_heat_vapor(288.3)` returns **2.46564492e6**, and
+`LH_v0 + (cp_v − cp_l)(288.3 − T_0)` is 2,465,644.92. Every digit.
+`latent_heat_fusion(273.16)` returns 333600.0, so `LH_f0` is that and
+`LH_s0 = LH_v0 + LH_f0` = 2.8344e6. The coupling is real.
 
-```bash
-julia +1.11 --project=.buildkite -e '
-    import ClimaParams
-    import Thermodynamics as TD
-    tp = TD.Parameters.ThermodynamicsParameters(Float64)
-    println("LH_v(288.3)  = ", TD.latent_heat_vapor(tp, 288.3))
-    println("LH_f(273.16) = ", TD.latent_heat_fusion(tp, 273.16))'
+### Which turns out to make C1 cheap, not expensive
+
+The same probe listed the settable fields:
+
+```
+T_0, T_triple, T_freeze, T_icenuc, T_min, T_max, T_init_min, T_surf_ref,
+T_min_ref, entropy_reference_temperature, MSLP, p_ref_theta, press_triple,
+R_d, R_v, cp_d, cp_v, cp_l, cp_i, LH_v0, LH_s0, entropy_dry_air,
+entropy_water_vapor, grav, pow_icenuc, q_min
 ```
 
-`LH_v(288.3)` near 2.4656e6 confirms it. A different value means the package's
-latent heat and its internal energies disagree, which would be a larger problem
-than C1.
+`T_0`, `LH_v0` and `LH_s0` are all there. `LH_f0`, every `cv_*` and `e_int_v0`
+are **not**, which confirms them derived — the guess at `Parameters.jl:607` was
+right — and means they follow the three that are set without being touched.
+
+The useful structure is an invariance. Everything physical depends on `T_0` only
+through the group `LH_0 − Δcp·T_0`: the latent heats by construction, and the
+saturation vapour pressure through the same group in its Clausius-Clapeyron
+exponent. So the map
+
+```
+T_0   → T_0 + δ
+LH_v0 → LH_v0 + (cp_v − cp_l)·δ
+LH_s0 → LH_s0 + (cp_v − cp_i)·δ
+```
+
+leaves every latent heat and `p_sat` **exactly** unchanged while moving `e_int`
+by `−cp_d·δ`. `LH_f0` needs `(cp_l − cp_i)·δ` and gets it for free, since it is
+`LH_s0 − LH_v0` and the two coefficients differ by exactly that.
+
+That changes what C1 is. It was "a code change, the owner's approval, and a
+shape nobody had chosen". It is now three TOML entries under a `toml:` key, with
+an acceptance test that is exact rather than a judgement call. For the sphere's
+100.4 kJ kg⁻¹, `δ` = −99.95 K:
+
+| field   | now      | after                      |
+|:------- |:-------- |:-------------------------- |
+| `T_0`   | 273.16   | 173.21                     |
+| `LH_v0` | 2.5008e6 | 2.7328839e6                |
+| `LH_s0` | 2.8344e6 | 2.8344e6 + (cp_v − cp_i)·δ |
+
+and afterwards `LH_v(288.3)`, `LH_f(273.16)` and `p_sat(288.3)` must return
+2.46564492e6, 333600.0 and 1721.1532852305072 — the values recorded before the
+change — while `internal_energy_dry(288.3)` moves from −67533.97 to +32865.8. If
+a latent heat or `p_sat` moves, the run would be measuring a different
+atmosphere rather than a different reference, and the result would not mean what
+C1 needs it to mean.
+
+Two things are still missing: `cp_i`, which sets `LH_s0`'s coefficient, and the
+long ClimaParams names that a TOML override keys on, since the field names above
+are aliases rather than table headers. Both come from one command, recorded in
+`LEVANTE_TASKS.md` task 2.
+
+**And one thing to watch.** `T_0` currently equals `T_triple` and `T_freeze`, all
+273.16. Moving `T_0` alone is correct, since the other two are physical
+temperatures, but it breaks a coincidence that has almost certainly never been
+exercised: nothing in this repository has ever overridden a thermodynamic
+parameter. The acceptance test is what would catch it.
+
+**This does not make the other costs go away.** The shift is still large enough
+to suppress the discriminating part of the donor rule, still grows the closure
+check's normalising scale by about 2.2×, and still cannot manufacture a physical
+zero. What it removes is the implementation risk, which was the part that read
+as expensive.
 
 ## A third shape, for completeness
 
@@ -361,25 +414,25 @@ into the sections above. What is left:
    source tags' own rule is not running — the fallback, measured. It is also
    reference-independent, so nothing above can invalidate it. If only one thing
    runs next, this is it.
-2. **Confirm the latent-heat coupling before writing a C1 TOML.** One command,
-   in the section above. If `latent_heat_vapor(288.3)` comes back near 2.4656e6
-   the coupling is real, and a C1 configuration has to co-adjust `LH_v0`,
-   `LH_s0` and `LH_f0` rather than move `T_0` alone.
-3. **Then C1 as option 2, implemented as a co-adjusted reference change.**
-   Moving `T_0` by itself is now known to be the wrong operation, not merely an
-   unverified one.
+2. **Collect `cp_i` and the ClimaParams names, then write the TOML.** One
+   command, in the section above. The recipe and its acceptance test are already
+   fixed; these are the two values still missing from them.
+3. **Then C1 as option 2, implemented as the co-adjusted map above.** Moving
+   `T_0` by itself is now known to be the wrong operation, not merely an
+   unverified one, and the acceptance test distinguishes the two on sight.
 
 ## What is not established here
 
-- Which TOML keys a C1 configuration must set. The reference is reachable from
-  configuration and the arithmetic is pinned, but nobody has listed
-  `fieldnames(ThermodynamicsParameters)` or found the ClimaParams names.
-- Whether Thermodynamics implements `latent_heat_vapor` as its own internal
-  energies require. The coupling above is derived, not read from the package.
-- Whether the saturation vapour pressure moves with `T_0`. Its
-  Clausius-Clapeyron integration carries a reference too, and nobody has checked
-  whether that reference is `T_0` or `T_triple`.
-- Whether the suppression cost matters in practice. The magnitude is now firm,
-  so this is measurable rather than open in principle.
+- The long ClimaParams names for `T_0`, `LH_v0` and `LH_s0`, and the value of
+  `cp_i`. The fields are confirmed settable; these are what a TOML file needs to
+  actually name them.
+- Whether `p_sat` is in fact invariant under the co-adjusted map. The argument
+  is that it depends on `T_0` only through `LH_0 − Δcp·T_0`, which is structural
+  rather than measured, and the recorded 1721.1532852305072 is the before-value
+  that tests it.
+- Whether anything in ClimaAtmos or Thermodynamics quietly assumes
+  `T_0 == T_triple`. Nothing found, but nothing has ever moved them apart.
+- Whether the suppression cost matters in practice. The magnitude is firm, so
+  this is measurable rather than open in principle.
 
 None of these needs a Levante run. All three are cheaper than C1.
