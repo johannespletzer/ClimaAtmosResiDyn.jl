@@ -166,6 +166,8 @@ any disagreement between the two readings is a property of the readings. *C3.*
 | source tag `e_src_rad`           | −2.07e-9     | +4,321       |
 | process record `e_prc_radiation` | −20,566      | +7,587       |
 
+All four numbers are the last sample, at 24 h. The tag's minimum over the day is
+−2.47e-9, at 1 h, and each of the other three is also its extreme over the day.
 The tag is pinned at zero from below by E1 and can only accumulate. The record
 says the larger excursion is cooling, −20.6 kJ kg⁻¹, and cloud-top radiative
 cooling is the entire point of a DYCOMS stratocumulus column. The warming halves
@@ -247,20 +249,29 @@ free, being `LH_s0 − LH_v0`.
 derived. `create_parameters.jl:75` builds the thermodynamic parameters entirely
 from the TOML dict. C1 is three TOML entries plus the owner's approval.
 
-**R8. And its acceptance test is exact.** After the change `LH_v(288.3)`,
-`LH_f(273.16)` and `p_sat(288.3)` must return 2.46564492e6, 333600.0 and
-1721.1532852305072 unchanged, while `internal_energy_dry(288.3)` moves by
-`−cp_d·δ` and nothing else. A latent heat that moves means the run measures a
-different atmosphere rather than a different reference. Before-values are in
-`C1_reference_shift.md`'s appendix; the chosen `δ` and the after-values it
-implies are in `toml/tag_closure_c1_reference.toml`.
+**R8. And its acceptance test is exact, and it passes.** After the change
+`LH_v(288.3)`, `LH_f(273.16)` and `p_sat(288.3)` must return 2.46564492e6,
+333600.0 and 1721.1532852305072 unchanged, while `internal_energy_dry(288.3)`
+moves by `−cp_d·δ` and nothing else. A latent heat that moves means the run
+measures a different atmosphere rather than a different reference.
+`analysis/c1_acceptance.jl` builds the parameters from
+`toml/tag_closure_c1_reference.toml` the way a run does and makes 38 checks,
+over every temperature from 150 K to 330 K rather than at three points. All
+pass. The worst relative change in any latent heat or saturation pressure is
+9.2e-16. *Run on terrabyte, 2026-09-10.* The test that used to sit in the TOML's
+header could not have run at all (§6). Before-values are in
+`C1_reference_shift.md`'s appendix.
 
-**R9. The shift is not a constant.** Its coefficient is
-`c(q) = q_d·cp_d + q_v·cp_v + q_l·cp_l + q_i·cp_i`, running 1004.5 dry to 1021.6
-at `q_tot` = 0.02, a 1.7% spread. This does not break the closure identity — the
+**R9. The shift is not a constant.** Under C1's map every water phase moves by
+`cp_l·|δ|`, not by its own heat capacity, because moving `LH_v0` and `LH_s0`
+with `T_0` cancels the difference. So the coefficient is
+`c(q) = (1 − q_tot)·cp_d + q_tot·cp_l`, running 1004.5 dry to 1068.0 at
+`q_tot` = 0.02, a 6.3% spread. This does not break the closure identity — the
 tags are shares of the same recomputed `ρe_tot` — but it means "the shift" has no
 single value and positivity must be checked pointwise. It helps: the largest
 `c(q)` sits in the warm moist low levels, which are the most negative.
+*Measured by `analysis/c1_acceptance.jl` on each phase alone and on six states
+from dry to mixed-phase. The coefficient first recorded here was wrong (§6).*
 
 **R10. Shifting only the share's denominator should be dropped rather than
 costed.** The region tags sum to `ρe_tot` and not to `ρe_tot + c`, so wherever
@@ -367,6 +378,16 @@ entries for `output/`, `*.png` and `*.log` silently drop committed results; and
 `sypd` is logged through `@info`, which Julia sends to **stderr**, so it is in
 the `.err` and not the `.out`.
 
+**M5. The most negative tag hides the source tags.** A region tag is a masked
+share of `ρe_tot` and carries its sign. On `c0_sphere` the most negative tag is
+therefore the region tag `extratropics`, at −100,416 J kg⁻¹, which is the
+parent's own minimum at t = 0. The source tag `sfc`, which E2 is about, reaches
+−209.19 at 24 h and appeared in no summary. `phase_c.jl` reported and warned on
+the minimum over all tags and called it a source tag. It now reports the most
+negative source-labelled tag in a column of its own. It warns on a source tag
+that goes negative, and on a region tag only if it goes negative while the
+parent stays positive. *C0, recomputed from `source_tag_extrema.csv`.*
+
 ## 6. Claims that were made and then falsified
 
 Kept because a later reader will otherwise re-derive them.
@@ -387,16 +408,37 @@ Kept because a later reader will otherwise re-derive them.
     phase B is the energy family, which has no rescale and no partition repair,
     so #64's mechanism cannot reach it.
   - **`.out` for the timing figures.** They are in `.err` (M4).
+  - **R9's `c(q) = q_d·cp_d + q_v·cp_v + q_l·cp_l + q_i·cp_i`.** That is the
+    coefficient for moving `T_0` alone. C1 moves `LH_v0` and `LH_s0` with it,
+    and then every water phase moves by `cp_l·|δ|`. At `q_tot` = 0.02 the
+    coefficient is 1068.0, not 1021.6, and the spread is 6.3%, not 1.7%. The
+    error was on the safe side for positivity, because the moist cells get more
+    shift, not less.
+  - **`T_0`, `T_triple` and `T_freeze` "all 273.16".** `T_freeze` is 273.15.
+    Only `T_0` and `T_triple` share 273.16.
+  - **The acceptance test in the C1 TOML's header.** It could not have run. It
+    imported Thermodynamics, which `.buildkite` does not list as a direct
+    dependency. Past that, it built the parameters from the defaults and never
+    read the file, so it could not tell a shift that bound from one that did not
+    (R8).
+  - **"A source tag went negative", naming `extratropics`.** That was
+    `phase_c.jl` calling a region tag a source tag (M5).
 
 ## 7. What is not established
 
-  - The energy family's mass-weighted non-positive fraction (M1).
-  - Whether `p_sat` is in fact invariant under R6's map. The argument is
-    structural; the recorded before-value tests it.
-  - Whether anything assumes `T_0 == T_triple`. Nothing found, but nothing has
-    ever moved them apart.
+  - ~~The energy family's mass-weighted non-positive fraction (M1).~~ Settled:
+    0.7839 on `c0_sphere_audit` (E9b).
+  - ~~Whether `p_sat` is in fact invariant under R6's map.~~ Settled in
+    Thermodynamics: over liquid, over ice and over the mixture ramp it is
+    unchanged to 9.2e-16 from 150 K to 330 K (R8). Whether the *model* is
+    invariant is the next item.
+  - Whether anything assumes `T_0 == T_triple`, or otherwise breaks the
+    invariance outside Thermodynamics. Nothing found by reading, but nothing
+    has ever moved them apart. `run_c1_twin.jl` tests it by running the model
+    with and without the shift.
   - `Float32` on a sphere (W4).
-  - Whether 1M changes the residual (W5).
+  - ~~Whether 1M changes the residual (W5).~~ Settled on a column: 7% down
+    (W5b). A sphere, which reaches the horizontal branches, is still open.
   - The tag cost on anything but one column on one node (T4 bounds it at 1.32×
     there).
   - Whether C1's suppression cost (R11) matters in practice. Measurable now

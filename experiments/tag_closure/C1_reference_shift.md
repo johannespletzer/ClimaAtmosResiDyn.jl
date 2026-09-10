@@ -115,13 +115,19 @@ One of the two things this left open is now settled. The other is not.
     ClimaParams 1.1.6 (`.buildkite/Manifest-v1.11.toml`).
 
   - **Whether the shift is actually constant.** **Settled: it is not.** The
-    coefficient is `c(q) = q_d·cp_d + q_v·cp_v + q_l·cp_l + q_i·cp_i`, so the
-    shifted parent is `e_tot + c(q)·ΔT_0` rather than `e_tot + c`. The first
-    draft guessed `ΔT·(cv_m + q_vap·R_v)`, which is the same expression except
-    that it carries `cv_d` on the dry part where the measured convention
-    requires `cp_d`. Across the moisture range `c(q)` runs from 1004.5 dry to
-    1021.6 at `q_tot` = 0.02, a spread of **1.7%**, and liquid water widens it
-    because `cp_l` is four times `cp_d`.
+    shifted parent is `e_tot + c(q)·|ΔT_0|` rather than `e_tot + c`. Under the
+    co-adjusted map below, every water phase moves by `cp_l·|ΔT_0|`, so
+    `c(q) = (1 − q_tot)·cp_d + q_tot·cp_l`. Across the moisture range it runs
+    from 1004.5 dry to 1068.0 at `q_tot` = 0.02, a spread of **6.3%**.
+    `analysis/c1_acceptance.jl` measures it on the parameters a run builds.
+
+    *Corrected on 2026-09-10.* This paragraph used to give
+    `c(q) = q_d·cp_d + q_v·cp_v + q_l·cp_l + q_i·cp_i`, 1021.6 at `q_tot` =
+    0.02 and a spread of 1.7%. That is the coefficient for moving `T_0` alone.
+    Moving `LH_v0` and `LH_s0` with it adds `(cp_v − cp_l)·δ` to vapour's
+    energy and `−(cp_l − cp_i)·δ` to ice's, which leaves `−cp_l·δ` on every
+    phase. The draft before that guessed `ΔT·(cv_m + q_vap·R_v)`, which carried
+    `cv_d` on the dry part where the measured convention requires `cp_d`.
 
     This does not break the closure identity, and the first draft implied it
     might. The tags are shares of the same recomputed `ρe_tot`, so both sides
@@ -366,15 +372,15 @@ heat or `p_sat` moves, the run would be measuring a different atmosphere rather
 than a different reference, and the result would not mean what C1 needs it to
 mean.
 
-One thing is still missing: the long ClimaParams names that a TOML override keys
-on, since the field names above are aliases rather than table headers. They come
-from one command, recorded in `LEVANTE_TASKS.md` task 1.
+The long ClimaParams names that a TOML override keys on are in the appendix. The
+field names above are struct fields, not table headers.
 
-**And one thing to watch.** `T_0` currently equals `T_triple` and `T_freeze`, all
-273.16. Moving `T_0` alone is correct, since the other two are physical
-temperatures, but it breaks a coincidence that has almost certainly never been
-exercised: nothing in this repository has ever overridden a thermodynamic
-parameter. The acceptance test is what would catch it.
+**And one thing to watch.** `T_0` currently equals `T_triple`, both 273.16.
+`T_freeze` is 273.15, not 273.16 as this page used to say. Moving `T_0` alone is
+correct, since the other two are physical temperatures, but it breaks a
+coincidence that has almost certainly never been exercised: nothing in this
+repository has ever overridden a thermodynamic parameter. The acceptance test
+catches it in Thermodynamics, and `run_c1_twin.jl` in the model.
 
 **This does not make the other costs go away.** The shift is still large enough
 to suppress the discriminating part of the donor rule, still grows the closure
@@ -435,10 +441,10 @@ into the sections above. What is left:
 
 ## What is not established here
 
-- Whether `p_sat` is in fact invariant under the co-adjusted map. The argument
-  is that it depends on `T_0` only through `LH_0 − Δcp·T_0`, which is structural
-  rather than measured, and the recorded 1721.1532852305072 is the before-value
-  that tests it.
+- ~~Whether `p_sat` is in fact invariant under the co-adjusted map.~~ Measured:
+  over liquid, over ice and over the mixture ramp it is unchanged to 9.2e-16
+  from 150 K to 330 K, and 1721.1532852305072 comes back bit for bit
+  (`analysis/c1_acceptance.jl`).
 - Whether anything in ClimaAtmos or Thermodynamics quietly assumes
   `T_0 == T_triple`. Nothing found, and the two are separate ClimaParams
   entries that merely happen to share the value 273.16, but nothing has ever
