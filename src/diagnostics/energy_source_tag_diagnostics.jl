@@ -128,3 +128,14 @@ function compute_e_src_res!(out, state, cache, time, region_names, offset)
     isnothing(offset) || (ᶜres .+= offset)
     return ᶜres
 end
+
+# `e_src_fix_<name>`: the repair's ledger for one tag, per unit mass, as the
+# water tags' `q_tag_fix_<name>` is computed.
+function compute_e_src_fix!(out, state, cache, time, ρe_src_name)
+    ᶜfix = getproperty(cache.tagging.ᶜenergy_source_fix, ρe_src_name)
+    if isnothing(out)
+        return specific.(ᶜfix, state.c.ρ)
+    else
+        out .= specific.(ᶜfix, state.c.ρ)
+    end
+end
