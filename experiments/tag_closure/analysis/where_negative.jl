@@ -260,9 +260,10 @@ function main()
     header, rows, summary = where_negative(output_dir)
     path = write_where_negative(output_dir, header, rows, summary)
 
-    @info "Specific e_tot at t = 0, from the region tags" summary.job_id summary.geometry summary.levels
-    @info "How negative, and where" minimum_J_per_kg = summary.field_minimum smallest_shift_J_per_kg =
-        summary.smallest_shift fraction_negative = summary.fraction_negative
+    @info "Specific e_tot at t = 0, from the region tags" summary.job_id summary.geometry
+    @info "How negative, and where" levels = summary.levels minimum_J_per_kg =
+        summary.field_minimum smallest_shift_J_per_kg = summary.smallest_shift
+    @info "Fraction of the field below zero" summary.fraction_negative
     if isempty(summary.negative_levels)
         @info "No level contains a negative value. A reference shift is not \
                needed for this configuration."

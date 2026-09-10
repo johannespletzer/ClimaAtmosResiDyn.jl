@@ -179,12 +179,60 @@ J kg⁻¹** on the sphere, and reaches −4.50e4 on the column. Making it positi
 everywhere needs at least 100.4 kJ kg⁻¹, roughly **140 K** of reference
 temperature. That is not a nudge.
 
-**We cannot account for that offset.** A back-of-envelope with the standard
-reference puts `e_tot` positive nearly everywhere in a normal atmosphere — of
-order +10 kJ kg⁻¹ at the surface and +60 kJ kg⁻¹ at 10 km — and we could not
-reproduce −100 kJ kg⁻¹ from `cv(T − T₀) + Φ`. Something specific sets this offset
-and we do not know what. Until someone does, "shift by 100 kJ kg⁻¹" is a
-prescription written against a number whose origin is unverified.
+**We still cannot account for that offset**, but it is now bounded rather than
+open. What has been ruled out, all checked against this tree:
+
+  - **The numbers mean what we read them as.** `e_src_<name>` is specific,
+    `units = "J kg^-1"` (`energy_source_tag_diagnostics.jl:51`), not a density.
+    A region tag initialises to a masked share of `ρe_tot`
+    (`energy_source_tags.jl:65`), so its extrema are `ρe_tot`'s extrema over
+    that region.
+  - **Nothing is customised in how energy is formed.** `ρe_tot = ρ *
+    TD.total_energy(thermo_params, e_kin, e_pot, T, q_tot, q_liq, q_ice)` at
+    `src/setups/common/prognostic_variables.jl:52`, with
+    `e_pot = geopotential(grav, z)`.
+  - **This repository overrides no thermodynamic reference.** Nothing in `toml/`
+    or `src/parameters/` sets `T_0`, a triple point or `e_int_v0`; the only
+    mention of the latter is the derived-parameter forwarding list at
+    `Parameters.jl:607`. Whatever sets the offset is in Thermodynamics.jl or the
+    ClimaParams defaults, outside this tree.
+  - **The initial state is ordinary.** DYCOMS RF02 takes `θ_liq_ice` and `q_tot`
+    from AtmosphericProfilesLibrary with `p_0 = 101780.0` (`DYCOMS.jl:55-64`) —
+    roughly 288 K and 9.45 g kg⁻¹ near the surface. Nothing exotic.
+
+**The arithmetic, and the size of the gap.** With standard CliMA values (`T_0`
+273.16, `cv_d` 717.5, `cv_v` 1397.11, `R_v` 461.5, `LH_v0` 2.5008e6, giving
+`e_int_v0 = LH_v0 − R_v·T_0 = 2.375e6`), the textbook
+`cv_m(T − T_0) + q_v·e_int_v0 + gz` gives:
+
+| state                                    | textbook `e_tot` (J kg⁻¹) |
+|:---------------------------------------- |:------------------------- |
+| DYCOMS surface, 288.3 K, 9.45 g/kg, z = 0 | +3.34e4                   |
+| DYCOMS top, 288 K, 5 g/kg, z = 1500 m     | +3.73e4                   |
+| sphere surface, 300 K, 15 g/kg, z = 0     | +5.52e4                   |
+| sphere upper, 220 K, dry, z = 30 km       | +2.56e5                   |
+
+Every one is positive. The model reports **−4.50e4** on the column and
+**−1.004e5** on the sphere. At the DYCOMS surface that is a discrepancy of about
+**7.8e4 J kg⁻¹**, and reconciling it would need an effective reference near
+**381 K** rather than 273.16 K.
+
+**Two readings, and they lead different places.** Either Thermodynamics.jl uses
+a convention this arithmetic does not capture, in which case the 100 kJ kg⁻¹
+figure stands but its origin should be written down rather than inherited; or
+something is off in how energy is initialised here, in which case **C1 would be
+treating a symptom**. Both are cheaper to settle than C1, and one of them
+changes what C1 is for.
+
+**One command settles it**, on Levante where the packages exist: evaluate
+`TD.internal_energy` on the DYCOMS surface state and print `TP.T_0` and
+`TP.e_int_v0` beside it. If `T_0` is 273.16 and `internal_energy` still comes
+out near −5e4, the convention differs from the textbook form and the definition
+is the thing to read. If `T_0` is not 273.16, that is the answer on its own.
+
+So: narrowed, not solved. "Shift by 100 kJ kg⁻¹" is still a prescription written
+against a number whose origin is unverified — but the space of explanations is
+now two, and one command distinguishes them.
 
 ## A third shape, for completeness
 
@@ -226,7 +274,15 @@ result is not read as answering more than it can.
    written. It shows what the process record reads on a configuration where the
    source tags' own rule is not running — the fallback, measured. If only one
    thing runs next, this is it.
-2. **Do the free diagnostic before choosing a shift.** At t = 0 the region tags
+2. **Settle where the offset comes from, before anything else about a shift.**
+   One command on Levante, in the section above: evaluate `TD.internal_energy`
+   on the DYCOMS surface state and print `TP.T_0` and `TP.e_int_v0` beside it.
+   The textbook form puts every sampled state positive while the model reports
+   −4.50e4 and −1.004e5, a gap of about 7.8e4 J kg⁻¹ at the DYCOMS surface. If
+   the convention differs, the shift figure stands and its origin gets written
+   down. If it does not, C1 would be treating a symptom. **This is the cheapest
+   step here and the one that can invalidate the rest.**
+3. **Do the free diagnostic before choosing a shift.** At t = 0 the region tags
    sum to `ρe_tot` exactly, so **C0's existing NetCDF already contains the
    `e_tot` field** — add `e_src_strat + e_src_tropo` on the column, or the
    tropics pair on the sphere. If it is still on scratch, looking at *where* it
@@ -234,13 +290,17 @@ result is not read as answering more than it can.
    whether the region is a thin layer or the bulk troposphere, and whether the
    −100 kJ kg⁻¹ figure means what it appears to. Every magnitude argument above
    depends on this and nobody has looked.
-3. **Test the depth hypothesis for one cheap run.** The docs attribute the
+   `analysis/where_negative.jl` does exactly this: run it on a C0 run's
+   `output_dir` and it reports the fraction negative by level, the smallest
+   constant that makes the field positive, and whether the negative region is a
+   single layer.
+4. **Test the depth hypothesis for one cheap run.** The docs attribute the
    non-positive parent to shallow domains; C0 found 43.276% at
    `z_max` 30 km. `config/common_configs/numerics_sphere_he6ze31.yml` is already
    in the repo at `z_max` 60 km with `z_elem` 31. If depth drives it, that should
    move the fraction, and it separates "domain artifact" from "intrinsic to the
    reference" for the price of one sphere run and no code.
-4. **Then C1 as option 2, implemented as a reference-constant change and not a
+5. **Then C1 as option 2, implemented as a reference-constant change and not a
    state offset**, if the family is still to be made to work as designed.
 
 ## What is not established here

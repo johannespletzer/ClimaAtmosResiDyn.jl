@@ -89,11 +89,34 @@ CONFIG=experiments/tag_closure/configs/a1_dt10_notags.yml \
 
 `b1_notags` waits on the phase B decision below.
 
-**3. A3's matched companion**, once someone writes its config — a 0M column at
+**3. The two pre-C1 diagnostics.** Both are cheap and both can change what C1
+is for, so they come before it rather than after.
+
+`analysis/where_negative.jl` needs no new run at all — it reconstructs specific
+`e_tot` at t = 0 from a C0 run's region tags and reports where it is negative,
+by level, with the smallest constant that would make it positive. Run it on
+Levante against a C0 `output_dir` while the NetCDF is still on scratch:
+
+```bash
+julia +1.11 --project=.buildkite \
+    experiments/tag_closure/analysis/where_negative.jl \
+    output/c0_column/output_active
+```
+
+`c0_sphere_deep` is the depth control: `c0_sphere` on the 60 km grid, testing
+whether the non-positive fraction is a property of the domain or of the energy
+reference.
+
+```bash
+CONFIG=experiments/tag_closure/configs/c0_sphere_deep.yml \
+    sbatch experiments/tag_closure/runscripts/phase_c.sh
+```
+
+**4. A3's matched companion**, once someone writes its config — a 0M column at
 `dt` 10 s with `vert_diff: DecayWithHeightDiffusion`. Until then A3 is a number
 with no reading. Minutes of walltime.
 
-**Phase B: a recommendation to hold, not a rule.** B1 is ten days of a moist
+**Phase B: still a recommendation to hold, not a rule.** B1 is ten days of a moist
 sphere with a limiter. That is the regime that diverged inside three hours in
 A5, on a coarser grid. Running it before #64 is understood risks spending
 sphere-days to produce a residual that means nothing, in the same way A5's did
@@ -215,8 +238,9 @@ repository root ignores `output/` everywhere, and without the re-inclusion the
 owner's committed results would need a `git add -f` every time.
 
 `analysis/` holds `reduce_run.jl`, one `phase_<letter>.jl` per phase,
-`tables.jl` with the readers they share, `validate_configs.py`, and
-`selftest.jl`, which drives all of it on synthetic input.
+`tables.jl` with the readers they share, `where_negative.jl`,
+`validate_configs.py`, and `selftest.jl`, which drives all of it on synthetic
+input.
 
 ### How the sphere configurations are put together
 
@@ -519,6 +543,7 @@ adjusted from what was learned before they are submitted.
 | `c0_column_notags` | `phase_c.sh` | C0's column with no source tags. The cost baseline.          |
 | `c0_column`        | `phase_c.sh` | C0, DYCOMS source column with `rad: DYCOMS`, one day         |
 | `c0_sphere`        | `phase_c.sh` | C0, moist sphere, one day                                    |
+| `c0_sphere_deep`   | `phase_c.sh` | C0's depth control: the same sphere on the 60 km grid        |
 | `c3_column_record` | `phase_c.sh` | C3, `c0_column` with `energy_process_record` beside the tags |
 
 `c1_*` and `c2_*` are not written. C1 is the reference shift and C2 is the
@@ -559,6 +584,7 @@ Tick a run once it has been submitted, once its files are committed under
 | `c0_column_notags`     | C     |           |             |          |                |
 | `c0_column`            | C     | yes       | yes         | not yet  | yes            |
 | `c0_sphere`            | C     | yes       | yes         | not yet  | yes            |
+| `c0_sphere_deep`       | C     |           |             |          |                |
 | `c3_column_record`     | C     |           |             |          |                |
 
 ## What goes in `output/<run>/`
@@ -645,6 +671,14 @@ be resubmitted.
   - Whether C3 also wants a sphere counterpart. As registered it is the column
     only, since C3 compares two readings of one run and the column is the cheap
     one.
+  - **Two cheap things come before C1 and can change what it is for.** Where
+    `ρe_tot` is negative has never been looked at, and
+    `analysis/where_negative.jl` answers it from data already on scratch. And
+    the offset's origin does not reconcile with the textbook reference — the
+    model reports −4.50e4 J kg⁻¹ on the column where the arithmetic gives
+    +3.34e4 — so either the convention differs or the initialisation does, and
+    the second would mean C1 treats a symptom. One command on Levante
+    distinguishes them; see `C1_reference_shift.md`.
   - **C0 found both predicted barriers, and C1 is what would settle them.** The
     donor rule is inert over 96.7% of the column and 43% of the sphere, and a
     source tag drifts monotonically negative on the sphere with nothing to

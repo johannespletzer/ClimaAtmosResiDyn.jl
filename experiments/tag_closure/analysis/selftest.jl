@@ -789,6 +789,7 @@ end
 
 """
     test_single_run_phases()
+    test_where_negative()
 
 Each phase with exactly one run committed, which is the state every phase is in
 after its first job comes back.
@@ -891,6 +892,157 @@ function test_single_run_phases()
     return nothing
 end
 
+"""
+    test_where_negative()
+
+`where_negative.jl` on a synthetic four-level column whose answers are worked
+out by hand.
+
+The two region tags sum, level by level, to a specific `e_tot` of
+
+    level 1 (z = 100):  [-30, -10,  -5, -1]   all negative
+    level 2 (z = 200):  [-20,   5,  10, 20]   one quarter negative
+    level 3 (z = 300):  [  1,   2,   3,  4]   none
+    level 4 (z = 400):  [ 10,  20,  30, 40]   none
+
+so the fractions are 1.0, 0.25, 0.0, 0.0; the field minimum is -30, hence the
+smallest constant making it positive is +30; the negative levels are [1, 2],
+which is contiguous; and the sign change is at the base of level 3, z = 300.
+"""
+function test_where_negative()
+    @info "11. where_negative.jl on a synthetic column"
+    mktempdir() do tmp
+        dir = joinpath(tmp, "c0_column")
+        mkpath(dir)
+        write(
+            joinpath(dir, "c0_column.yml"),
+            """
+            job_id: c0_column
+            config: column
+            dt: 10secs
+            FLOAT_TYPE: Float64
+            energy_source_tags:
+              - name: strat
+                region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+              - name: tropo
+                region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+              - name: rad
+                source: radiation
+            $(unset_lines(("energy_source_tags",)))
+            """,
+        )
+        write(
+            joinpath(dir, "provenance.txt"),
+            "run: c0_column\ncommit: 0123456789abcdef\nfinished: 2026-09-10T12:00:00\n",
+        )
+
+        z = [100.0, 200.0, 300.0, 400.0]
+        # Split the intended total across two region tags; only the sum matters.
+        strat = [
+            -20.0 -6.0 -3.0 -0.5
+            -12.0 3.0 6.0 12.0
+            0.5 1.0 1.5 2.0
+            6.0 12.0 18.0 24.0
+        ]
+        tropo = [
+            -10.0 -4.0 -2.0 -0.5
+            -8.0 2.0 4.0 8.0
+            0.5 1.0 1.5 2.0
+            4.0 8.0 12.0 16.0
+        ]
+        # Two times, so the script has to take the first and not the last.
+        function with_time(level_data, factor)
+            stacked = Array{Float64}(undef, 2, size(level_data)...)
+            stacked[1, :, :] = level_data
+            stacked[2, :, :] = level_data .* factor
+            return stacked
+        end
+        NCDatasets.NCDataset(joinpath(dir, "diagnostics.nc"), "c") do ds
+            NCDatasets.defDim(ds, "time", 2)
+            NCDatasets.defDim(ds, "z", 4)
+            NCDatasets.defVar(ds, "time", [0.0, 3600.0], ("time",))
+            NCDatasets.defVar(ds, "z", z, ("z",))
+            NCDatasets.defVar(
+                ds, "e_src_strat", with_time(strat, 100.0), ("time", "z", "x"),
+            )
+            NCDatasets.defVar(
+                ds, "e_src_tropo", with_time(tropo, 100.0), ("time", "z", "x"),
+            )
+        end
+
+        script = load_script(joinpath(HERE, "where_negative.jl"))
+        header, rows, summary = call(script, :where_negative, dir)
+
+        index = Dict(name => i for (i, name) in enumerate(header))
+        fractions = [row[index["fraction_negative"]] for row in rows]
+        minima = [row[index["minimum"]] for row in rows]
+
+        @assert fractions ≈ [1.0, 0.25, 0.0, 0.0] "fractions: $fractions"
+        @assert minima ≈ [-30.0, -20.0, 1.0, 10.0] "minima: $minima"
+        # The second time is a hundred times larger; taking it would give -3000.
+        @assert summary.field_minimum ≈ -30.0 "field minimum $(summary.field_minimum)"
+        @assert summary.smallest_shift ≈ 30.0 "shift $(summary.smallest_shift)"
+        @assert summary.negative_levels == [1, 2] "levels $(summary.negative_levels)"
+        @assert summary.contiguous "levels 1 and 2 are contiguous"
+        @assert summary.sign_change_z ≈ 300.0 "sign change $(summary.sign_change_z)"
+        field_fraction = summary.fraction_negative
+        @assert field_fraction ≈ 5 / 16 "field fraction $field_fraction"
+        @assert summary.remapped == false "a column must not be marked remapped"
+
+        path = call(script, :write_where_negative, dir, header, rows, summary)
+        @assert isfile(path)
+        text = read(path, String)
+        @assert occursin("smallest constant", text) "the shift is not in the header"
+        @assert occursin("fraction_negative", text)
+        @info "   fractions $fractions, smallest shift $(summary.smallest_shift), \
+               sign change at $(summary.sign_change_z) m — as computed by hand"
+    end
+
+    # A field with nothing negative must say so rather than inventing a layer.
+    mktempdir() do tmp
+        dir = joinpath(tmp, "c0_positive")
+        mkpath(dir)
+        write(
+            joinpath(dir, "c0_positive.yml"),
+            """
+            job_id: c0_positive
+            config: sphere
+            FLOAT_TYPE: Float64
+            energy_source_tags:
+              - name: tropics
+                region: tropics
+              - name: extratropics
+                region: extratropics
+            $(unset_lines(("energy_source_tags",)))
+            """,
+        )
+        write(joinpath(dir, "provenance.txt"), "run: c0_positive\ncommit: abc123\n")
+        NCDatasets.NCDataset(joinpath(dir, "diagnostics.nc"), "c") do ds
+            NCDatasets.defDim(ds, "time", 1)
+            NCDatasets.defDim(ds, "z", 2)
+            NCDatasets.defVar(ds, "time", [0.0], ("time",))
+            NCDatasets.defVar(ds, "z", [10.0, 20.0], ("z",))
+            for name in ("e_src_tropics", "e_src_extratropics")
+                NCDatasets.defVar(
+                    ds, name, reshape([1.0 2.0; 3.0 4.0], 1, 2, 2),
+                    ("time", "z", "x"),
+                )
+            end
+        end
+        script = load_script(joinpath(HERE, "where_negative.jl"))
+        _, _, summary = call(script, :where_negative, dir)
+        @assert(
+            isempty(summary.negative_levels),
+            "found a negative level in a positive field",
+        )
+        @assert summary.smallest_shift == 0.0 "a positive field needs no shift"
+        @assert isnan(summary.sign_change_z) "there is no sign change to report"
+        @assert summary.remapped "a sphere must be marked remapped"
+        @info "   a wholly positive field reports no shift and no sign change"
+    end
+    return nothing
+end
+
 function run_selftest()
     @info "Tag-closure analysis self-test. This is the first execution of \
            these scripts: they were written where no Julia was available."
@@ -904,6 +1056,7 @@ function run_selftest()
     test_configs()
     test_phase_b_and_c()
     test_single_run_phases()
+    test_where_negative()
     @info "All assertions passed."
     return nothing
 end
