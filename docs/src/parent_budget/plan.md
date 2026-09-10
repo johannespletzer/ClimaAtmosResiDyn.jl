@@ -18,7 +18,7 @@ definition of done holds.
 | 3          | [#55](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/55) | Capture accepted parent-budget update envelopes                         | accepted-state reconciliation                                                   |
 | 4          | [#57](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/57) | Attribute explicit parent-budget contributions                          | process attribution, explicit channels                                          |
 | 5          | [#56](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/56) | Attribute implicit and post-implicit parent-budget contributions        | implemented-update accounting, and process attribution for the implicit channel |
-| 6          | not yet opened                                                         | Account for boundary fluxes and reservoir transfers                     | transfer consistency                                                            |
+| 6          | [#58](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/58) | Account for boundary fluxes and reservoir transfers                     | transfer consistency                                                            |
 | 7          | not yet opened                                                         | Account for final maps, restarts, and callbacks                         | accepted-state reconciliation across finalization and restart                   |
 | 8          | not yet opened                                                         | Add parent-budget reporting and closure certification                   | the published claim certificate                                                 |
 
@@ -278,6 +278,23 @@ registry, collected independently.
 **Tests.** Per-event transfer residual in both control volumes; a mismatch
 injected deliberately and detected; dry and moist slab and prescribed-surface
 configurations.
+
+**Status.** #58 records every modeled leg of every transfer event in
+`audit` mode, one per weighted stage, through the applied-update events. A
+leg an event isolates is that event's own total: the atmosphere's side of the
+surface flux and of precipitation, and the slab's side of precipitation. A
+leg an event lumps with others is read from the flux field its tendency
+reads, radiation at the top and at the surface from the radiative flux, the
+slab's turbulent, radiative and prescribed fluxes from theirs, and the
+event's own total is kept beside their sum as a bracket check. Each leg
+carries the channel it is applied through, so one-moment fallout under
+explicit microphysics is one event on two channels. Zero-moment precipitation
+reaches the slab through the cached surface fluxes and is declared two-sided
+with a slab, and the slab's own solve defect is booked beside the
+atmosphere's. On a dry slab column the surface flux cancels in the coupled
+view and crosses in the atmosphere-only view; on a moist DYCOMS slab column
+every declared transfer passes or is reported, and every identity holds in
+both views. Summary mode records no leg and blocks each event by name.
 
 **Definition of done.** Every transfer event has both legs measured from their
 own quadrature, and any mismatch is preserved and reported rather than removed.

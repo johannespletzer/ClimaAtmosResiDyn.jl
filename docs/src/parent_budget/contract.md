@@ -852,9 +852,8 @@ final report.
 
 Each blocks a named claim, not the whole ledger.
 
-| Blocker                                                                        | Blocks                                             | Cleared by          |
-|:------------------------------------------------------------------------------ |:-------------------------------------------------- |:------------------- |
-| Coupled surface legs measured from two quadratures, agreement not yet measured | claim level 4 in the coupled view                  | stack step 6        |
-| Energy-reference `b`                                                           | the covariance claim                               | stack step 8        |
-| Decomposition and transfer legs not yet packed into the per-step collective    | attribution and transfer claims at acceptable cost | stack steps 4 and 6 |
-| `κ` not yet calibrated                                                         | a numeric pass or fail verdict                     | stack step 8        |
+| Blocker                                                      | Blocks                                 | Cleared by         |
+|:------------------------------------------------------------ |:-------------------------------------- |:------------------ |
+| Energy-reference `b`                                         | the covariance claim                   | stack step 8       |
+| `κ` not yet calibrated                                       | a numeric pass or fail verdict         | stack step 8       |
+| Attribution and transfer legs collected in `audit` mode only | claim levels 3 and 4 in `summary` mode | a decision, step 8 |

@@ -236,14 +236,28 @@ end
             (PB.ATMOSPHERE_ENDPOINT_GROUP, :flux),
             (PB.SLAB_SURFACE_ENDPOINT_GROUP, :flux),
         )
-        # Zero-moment removal has no receiving reservoir even with a slab, and
-        # it is applied through the implicit channel by default.
+        # Zero-moment removal reaches the slab through the cached surface
+        # fluxes, so with a slab it is a coupled transfer with two legs, both
+        # applied through the implicit channel by default.
         removal = event(schema, "xfer.precipitation_0m")
-        @test removal.topology isa PB.ExteriorCrossing
+        @test removal.topology isa PB.CoupledTransfer
         @test removal.channel === :implicit
-        @test removal.modeled_legs == ((PB.ATMOSPHERE_ENDPOINT_GROUP, :flux),)
+        @test removal.modeled_legs == (
+            (PB.ATMOSPHERE_ENDPOINT_GROUP, :flux),
+            (PB.SLAB_SURFACE_ENDPOINT_GROUP, :flux),
+        )
+        @test removal.leg_channels == (:implicit, :implicit)
         @test !has_event(schema, "xfer.precipitation_1m")
         @test !has_event(schema, "xfer.slab_qflux")
+        # The slab is solved implicitly with the precipitation it receives, so
+        # the solve defect has a slab row beside the atmosphere's.
+        @test !isnothing(
+            PB.process_row(
+                channel(schema, :implicit),
+                :solve_defect,
+                PB.SLAB_SURFACE_ENDPOINT_GROUP,
+            ),
+        )
     end
 
     @testset "A dry slab owns energy only" begin
@@ -259,6 +273,31 @@ end
         @test fallout.topology isa PB.CoupledTransfer
         @test fallout.channel === :implicit
         @test length(fallout.modeled_legs) == 2
+        @test fallout.leg_channels == (:implicit, :implicit)
+        # With explicit microphysics the deposition on the slab moves to the
+        # explicit channel while the fallout stays implicit: one event, two
+        # channels, each leg explaining its own.
+        split = schema_for(
+            CA.AtmosModel(;
+                microphysics_model = CA.NonEquilibriumMicrophysics1M(),
+                microphysics_tendency_timestepping = CA.Explicit(),
+                surface = slab(Float64),
+            ),
+        )
+        split_fallout = event(split, "xfer.precipitation_1m")
+        @test split_fallout.leg_channels == (:implicit, :explicit_main)
+        @test PB.leg_channel(split_fallout, PB.SLAB_SURFACE_ENDPOINT_GROUP, :flux) ===
+              :explicit_main
+        @test_throws ErrorException PB.TransferEventSpec(
+            Symbol("xfer.x"),
+            PB.CoupledTransfer(),
+            :implicit,
+            (
+                (PB.ATMOSPHERE_ENDPOINT_GROUP, :flux),
+                (PB.SLAB_SURFACE_ENDPOINT_GROUP, :flux),
+            );
+            leg_channels = (:implicit,),
+        )
         @test !has_event(schema, "xfer.precipitation_0m")
         @test :microphysics_formation in processes(schema, :implicit)
         # Fallout is a transfer leg, never a roster row: it explains the

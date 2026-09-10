@@ -186,19 +186,20 @@ status(component) = PB.component_status(component)
         @test parent_row(adapter, :energy).status === :pass
     end
 
-    @testset "A transfer the channel applies blocks its attribution" begin
+    @testset "A transfer the channel applies blocks its attribution until recorded" begin
+        # Summary mode records no transfer legs, so the channel is blocked by
+        # the leg it applies, with the residual reported and not judged.
         simulation = column_simulation(;
+            parent_budget_mode = "summary",
             model = forced_model(; disable_surface_flux_tendency = false),
         )
         adapter = adapter_of(simulation)
         step!(simulation, 2)
         r = attribution_row(adapter, :explicit_main, :energy)
         @test r.status === :blocked
-        @test r.blocked_by == [
-            "expected leg flux of transfer event xfer.surface_turbulent_flux in " *
-            "atmosphere, which channel explicit_main applies, was not recorded",
-        ]
-        # The residual is reported, not judged: it is the flux nobody booked.
+        @test "expected leg flux of transfer event xfer.surface_turbulent_flux in " *
+              "atmosphere, which channel explicit_main applies, was not recorded" in
+              r.blocked_by
         @test abs(r.residual) > 0
         @test parent_row(adapter, :energy).status === :pass
     end
@@ -242,24 +243,26 @@ status(component) = PB.component_status(component)
     @testset "A duplicated, nested, mismatched or unknown event is refused where it fires" begin
         simulation = column_simulation()
         adapter = adapter_of(simulation)
-        Yₜ = copy(simulation.integrator.u)
+        Y = simulation.integrator.u
+        p = simulation.integrator.p
+        Yₜ = copy(Y)
         # Outside a metered evaluation every bracket is a no-op, whatever it
         # names: this is every Newton iteration and every summary-mode step.
         @test adapter.evaluation === :none
         PB.open_ledger_event!(adapter, Yₜ, :not_a_process)
-        PB.close_ledger_event!(adapter, Yₜ, :not_a_process)
+        PB.close_ledger_event!(adapter, Yₜ, Y, p, :not_a_process)
         @test isempty(adapter.parts)
         PB.begin_evaluation!(adapter, :explicit, 2)
         PB.open_ledger_event!(adapter, Yₜ, :subsidence)
-        PB.close_ledger_event!(adapter, Yₜ, :subsidence)
+        PB.close_ledger_event!(adapter, Yₜ, Y, p, :subsidence)
         @test haskey(adapter.parts, (:explicit, :subsidence, 2))
         # Duplicated.
         @test_throws ErrorException PB.open_ledger_event!(adapter, Yₜ, :subsidence)
         # Nested, and closed out of order.
         PB.open_ledger_event!(adapter, Yₜ, :radiation)
         @test_throws ErrorException PB.open_ledger_event!(adapter, Yₜ, :surface_flux)
-        @test_throws ErrorException PB.close_ledger_event!(adapter, Yₜ, :surface_flux)
-        PB.close_ledger_event!(adapter, Yₜ, :radiation)
+        @test_throws ErrorException PB.close_ledger_event!(adapter, Yₜ, Y, p, :surface_flux)
+        PB.close_ledger_event!(adapter, Yₜ, Y, p, :radiation)
         # Unknown to the registry.
         @test_throws ErrorException PB.open_ledger_event!(adapter, Yₜ, :not_a_process)
         # Left open at the end of the evaluation.
@@ -350,17 +353,15 @@ status(component) = PB.component_status(component)
         @test adapter.attribution === :gross
         step!(simulation, 1)
         # The idealized radiation is a flux-form mode, so the two crossings and
-        # the surface flux are declared. Nothing records their legs, so the
-        # explicit channel is blocked by exactly those legs.
+        # the surface flux are declared, and their legs are recorded.
         r = attribution_row(adapter, :explicit_main, :energy)
         @test r.status === :blocked
-        # The configuration path carries no tolerance, which is the fourth
-        # blocker beside the three legs.
-        @test length(r.blocked_by) == 4
-        @test PB.UNCALIBRATED_TOLERANCE_BLOCKER in r.blocked_by
+        # The transfer legs are recorded in audit mode, so the configuration
+        # path's missing tolerance is the only blocker left.
+        @test r.blocked_by == [PB.UNCALIBRATED_TOLERANCE_BLOCKER]
         for event in
             ("xfer.surface_turbulent_flux", "xfer.radiation_toa", "xfer.radiation_surface")
-            @test any(b -> occursin(event, b), r.blocked_by)
+            @test any(l -> String(l.event) == event, adapter.last_legs)
         end
         @test attribution_row(adapter, :explicit_limited, :water).status === :blocked
         @test attribution_row(adapter, :explicit_limited, :water).blocked_by ==

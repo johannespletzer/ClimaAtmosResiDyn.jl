@@ -942,7 +942,7 @@ const COVERAGE_ROWS = CoverageRow[
         "atmosphere",
         "`ρq_tot`, `ρ`, `ρe_tot`",
         (:measured, :measured, :measured),
-        "removal straight out of the column, no receiving reservoir",
+        "removal out of the column; the slab leg, when configured, is the transfer row `xfer.precipitation_0m`",
         :transfer,
         :none,
         "applied increment with accepted implicit weight",
@@ -993,10 +993,10 @@ const COVERAGE_ROWS = CoverageRow[
         "Newton stage residual",
         "`T_imp!`",
         "implicit configurations",
-        "atmosphere",
-        "`ρ`, `ρq_tot`, `ρe_tot`",
+        "atmosphere, and slab when configured",
+        "`ρ`, `ρq_tot`, `ρe_tot`, `sfc.*`",
         (:measured, :measured, :measured),
-        "leading order at `max_iters = 1`; sign and accepted weight verified",
+        "leading order at `max_iters = 1`; the slab has its own, from the precipitation it receives implicitly",
         :decomposition,
         :collected,
         "independent projection of the algebraic residual",
@@ -1322,7 +1322,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "`Yₜ.c.ρ -= btt` is the mass leg; boundary crossing in the atmosphere-only view",
         :transfer,
-        :none,
+        :collected,
         "every declared leg measured separately",
         "`transfer_tests.jl`",
         6,
@@ -1341,7 +1341,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :measured),
         "boundary crossing with no receiving reservoir",
         :transfer,
-        :none,
+        :collected,
         "atmospheric leg, cross-checked against the reported TOA flux",
         "`transfer_tests.jl`",
         6,
@@ -1360,7 +1360,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:invariant_zero, :invariant_zero, :measured),
         "separate from the TOA leg, because only one of them has a reservoir on the far side",
         :transfer,
-        :none,
+        :collected,
         "every declared leg measured separately",
         "`transfer_tests.jl`",
         6,
@@ -1370,17 +1370,17 @@ const COVERAGE_ROWS = CoverageRow[
     CoverageRow(
         :transfers,
         Symbol("xfer.precipitation_0m"),
-        "`exterior`",
-        "`microphysics_tendency!`, 0-moment",
-        "unmodeled surface store",
+        "`coupled` with a slab, `exterior` otherwise",
+        "`microphysics_tendency!`, 0-moment, and `surface_precipitation_tendency!` for a slab",
+        "unmodeled surface store, when no slab is configured",
         "`EquilibriumMicrophysics0M`",
-        "atmosphere",
-        "`ρq_tot`, `ρ`, `ρe_tot`",
+        "atmosphere, and slab when configured",
+        "`ρq_tot`, `ρ`, `ρe_tot`, `sfc.T`, `sfc.water`",
         (:measured, :measured, :measured),
-        "removal with no receiving reservoir, so no cancellation is expected in any view",
+        "removal from the column; the slab receives the cached column integral of the same sink",
         :transfer,
-        :none,
-        "atmospheric leg only, exterior counterparty declared",
+        :collected,
+        "every declared leg measured separately",
         "`transfer_tests.jl`",
         6,
         zero_moment,
@@ -1398,7 +1398,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:measured, :measured, :measured),
         "two quadratures of one physical flux, so the pair is measured and any mismatch kept",
         :transfer,
-        :none,
+        :collected,
         "every declared leg measured separately",
         "`transfer_tests.jl`",
         6,
@@ -1417,7 +1417,7 @@ const COVERAGE_ROWS = CoverageRow[
         (:not_applicable, :not_applicable, :measured),
         "prescribed exterior source into the slab",
         :transfer,
-        :none,
+        :collected,
         "slab leg only, exterior counterparty declared",
         "`transfer_tests.jl`",
         6,
@@ -1656,6 +1656,7 @@ end
 const TWO_SIDED_TRANSFERS = (
     Symbol("xfer.surface_turbulent_flux"),
     Symbol("xfer.radiation_surface"),
+    Symbol("xfer.precipitation_0m"),
     Symbol("xfer.precipitation_1m"),
 )
 
@@ -1688,6 +1689,25 @@ function transfer_channel(row::CoverageRow, c::RegistryContext)
         return implicit_microphysics(c) ? :implicit : :explicit_main
     row.id === Symbol("xfer.precipitation_1m") && return :implicit
     return :explicit_main
+end
+
+"""
+    transfer_leg_channels(row, context) -> Tuple{Vararg{Symbol}}
+
+Return the channel each leg of `transfer_legs(row, context)` is applied
+through. The one split event is one-moment precipitation: the fallout leaves
+the atmosphere on the implicit channel, while `surface_precipitation_tendency!`
+deposits it on the slab from whichever path `microphysics_tendency_timestepping`
+selects.
+"""
+function transfer_leg_channels(row::CoverageRow, c::RegistryContext)
+    legs = transfer_legs(row, c)
+    channel = transfer_channel(row, c)
+    row.id === Symbol("xfer.precipitation_1m") || return ntuple(_ -> channel, length(legs))
+    return Tuple(
+        reservoir === SLAB_SURFACE_ENDPOINT_GROUP && explicit_microphysics(c) ?
+        :explicit_main : channel for (reservoir, _) in legs
+    )
 end
 
 # ============================================================================
@@ -1800,6 +1820,7 @@ function budget_schema(
                 counterparty = topology isa ExteriorCrossing ?
                                transfer_counterparty(row) : nothing,
                 dispositions = resolve_dispositions(row.dispositions, c),
+                leg_channels = transfer_leg_channels(row, c),
             ),
         )
     end

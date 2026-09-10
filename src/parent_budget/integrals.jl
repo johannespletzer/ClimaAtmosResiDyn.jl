@@ -114,14 +114,27 @@ local_volume_integral(field) =
 """
     local_boundary_integral(field)
 
-Integrate a 2D spectral-element field over the part of the boundary this rank
-owns, in accounting precision, without communicating.
+Integrate a boundary-level field over the part of the boundary this rank owns,
+in accounting precision, without communicating.
 
-The horizontal counterpart of `local_volume_integral`, reconstructing the
-area element the same way `horizontal_integral_at_boundary` does.
+The horizontal counterpart of `local_volume_integral`. On a 2D
+spectral-element space the area element is reconstructed the same way
+`horizontal_integral_at_boundary` does. On a column the boundary is one point
+of unit area whose quadrature weight still carries a vertical metric, so the
+value is divided by that weight before the weighted sum puts it back, and
+the integral is the value itself.
 """
 function local_boundary_integral(field)
     space = axes(field)
+    if space isa Spaces.PointSpace
+        return Fields.local_sum(
+            Base.Broadcast.broadcasted(
+                point_areal_density,
+                field,
+                Fields.local_geometry_field(space).WJ,
+            ),
+        )
+    end
     @assert space isa Spaces.SpectralElementSpace2D
     return Fields.local_sum(
         Base.Broadcast.broadcasted(
@@ -131,6 +144,9 @@ function local_boundary_integral(field)
         ),
     )
 end
+
+# The integrand of a point-space boundary integral, see `local_boundary_integral`.
+point_areal_density(x, WJ) = BUDGET_ACCOUNTING_TYPE(x) / BUDGET_ACCOUNTING_TYPE(WJ)
 
 """
     reduce_accounting_sums!(context, values)
