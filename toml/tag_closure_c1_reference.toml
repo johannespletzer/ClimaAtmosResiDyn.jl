@@ -1,0 +1,73 @@
+# C1's energy reference shift, for the tag-closure experiment series.
+#
+# Moves the thermodynamic reference temperature down by 110 K so that specific
+# `e_tot` is positive everywhere on the C0 sphere, which is what the energy
+# source tags' donor rule needs: the share `rho_e_src_k / rho_e_tot` is
+# undefined where the parent is non-positive, and C0 measured that over 43.276%
+# of the domain.
+#
+# The three entries are not independent and must move together. Thermodynamics
+# references internal energy so that *enthalpy* vanishes at T_0
+# (`internal_energy_dry(T) = cv_d*(T - T_0) - R_d*T_0`), and the latent heats
+# are anchored on the same T_0
+# (`LH_v(T) = LH_v0 + (cp_v - cp_l)*(T - T_0)`). Moving T_0 alone would change
+# the latent heat of vaporization at 288.3 K by -9.4%, which is a change of
+# physics rather than of reference.
+#
+# Everything physical depends on T_0 only through the group `LH_0 - dcp*T_0`, so
+# with d = -110 K:
+#
+#   T_0   -> T_0 + d
+#   LH_v0 -> LH_v0 + (cp_v - cp_l)*d = 2500800 + (1859 - 4181)*(-110)
+#   LH_s0 -> LH_s0 + (cp_v - cp_i)*d = 2834400 + (1859 - 2070)*(-110)
+#
+# leaves every latent heat and the saturation vapour pressure exactly unchanged
+# while moving `e_int` by `-cp_d*d` = +110,495 J/kg. LH_f0 and e_int_v0 are
+# derived rather than settable -- `Parameters.jl` defines
+# `LH_f0 = LH_s0 - LH_v0` and `e_int_v0 = LH_v0 - R_v*T_0` -- so they follow
+# from these three and must not be listed here.
+#
+# ACCEPTANCE TEST. Run this before trusting any result produced with this file.
+# All three must come back UNCHANGED from their unshifted values, because that
+# is what makes this a change of reference rather than of atmosphere:
+#
+#   julia +1.11 --project=.buildkite -e '
+#       import ClimaParams
+#       import Thermodynamics as TD
+#       tp = TD.Parameters.ThermodynamicsParameters(Float64)
+#       println(TD.latent_heat_vapor(tp, 288.3))                        # 2.46564492e6
+#       println(TD.latent_heat_fusion(tp, 273.16))                      # 333600.0
+#       println(TD.saturation_vapor_pressure(tp, 288.3, TD.Liquid()))   # 1721.1532852305072
+#       println(TD.internal_energy_dry(tp, 288.3))'                     # -67533.97 -> +42961.03
+#
+# and `internal_energy_dry(288.3)` must move by exactly +110,495. A latent heat
+# or a saturation pressure that moves means the co-adjustment is wrong and the
+# run would measure a different atmosphere. A value that does not move at all
+# means an entry did not bind, most likely a mistyped key.
+#
+# WHY -110 AND NOT -99.95. The sphere's measured minimum at t = 0 is
+# 100.4 kJ/kg, so 110.495 carries about 10% of margin, which is 14 K of further
+# surface cooling or 4.3 g/kg of drying before any cell returns to non-positive.
+# The margin is deliberately small: the discriminating part of a source tag's
+# share goes as 1/(e + c), so a larger shift makes the donor rule less
+# discriminating everywhere, and the closure check normalises by the integral of
+# |rho_e_tot|, which the shift grows -- so an oversized shift both suppresses the
+# signal and flatters the metric. `nonpositive_fraction` in the run's own closure
+# table is the check: it must stay at 0.0 at every sample.
+#
+# This file is sized for the C0 SPHERE. A column C1 wants its own smaller shift,
+# about -45 K, because the column's minimum is 45.4 kJ/kg; using this file there
+# would over-shift by 2.4x and pay the suppression cost for nothing.
+#
+# Every result produced with this file must be reported with the shift value.
+# The reading is reference-dependent by construction, which is the point C1
+# exists to test and cannot itself settle.
+
+[thermodynamics_temperature_reference]
+value = 163.16
+
+[latent_heat_vaporization_at_reference]
+value = 2756220.0
+
+[latent_heat_sublimation_at_reference]
+value = 2857610.0

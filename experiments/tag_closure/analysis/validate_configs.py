@@ -59,7 +59,12 @@ FLOAT32_OK = {"a4_float32"}
 # has and the rest do not; see each config's own comment. It is checked in both
 # directions so that neither dropping it from a run that needs it nor spraying
 # it over runs that do not passes silently.
-AUDIT_REQUIRED = {"a5_sphere_limiter", "c0_sphere_deep", "c0_sphere_audit"}
+AUDIT_REQUIRED = {
+    "a5_sphere_limiter",
+    "c0_sphere_deep",
+    "c0_sphere_audit",
+    "c1_sphere_shift",
+}
 
 def shorts(config):
     out = set()
