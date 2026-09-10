@@ -1,6 +1,6 @@
 # operator_residual.csv, from analysis/reduce_run.jl
 # run: a5_sphere_limiter
-# generated: 1789029657 (unix)
+# generated: 1789030057 (unix)
 # geometry: sphere
 # region tags summed: tropics, extratropics
 # NOTE: this is a sphere. The NetCDF writer bilinearly remaps to lat-lon, so
