@@ -1,0 +1,56 @@
+# C4 at twice the offset, on the identical atmosphere.
+#
+# `c4_sphere_tag_offset` gives the tags the total rho_e_tot + c*rho with
+# c = 110495 J/kg, C1's shift for dry air. This run is the same configuration
+# with c doubled to 220990 J/kg and nothing else changed. The model never sees
+# the offset, so the two runs carry the same atmosphere to the last bit, and
+# every difference between them is the offset's effect on the tags.
+#
+# That makes it the clean measurement of R11's suppression cost. The part of a
+# source tag that tells it apart from a plain mask-weighted tag scales as
+# 1/(e_tot + c), so a larger offset should make the tags less discriminating.
+# C1 could not measure this, because each moved reference is a different
+# atmosphere.
+#
+# `ta` is written hourly only to check that the atmosphere is the same: it must
+# be identical, to the last bit, in this run and in `c4_sphere_tag_offset`.
+job_id: "c4_sphere_tag_offset_2x"
+
+energy_source_tag_offset: 220990.0
+
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc]
+    period: "1hours"
+  - short_name: [ta]
+    period: "1hours"

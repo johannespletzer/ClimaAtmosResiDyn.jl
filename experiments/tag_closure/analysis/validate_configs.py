@@ -64,7 +64,14 @@ AUDIT_REQUIRED = {
     "c0_sphere_deep",
     "c0_sphere_audit",
     "c1_sphere_shift",
+    "c4_sphere_tag_offset",
+    "c4_sphere_tag_offset_2x",
 }
+# Runs allowed one model-state diagnostic besides their tags. The two C4 runs
+# differ only in an offset the model never sees, so their `ta` must be identical
+# to the last bit, and that is the check that the atmosphere is untouched.
+STATE_CHECK = {"c4_sphere_tag_offset", "c4_sphere_tag_offset_2x"}
+STATE_DIAGNOSTICS = {"ta"}
 
 def shorts(config):
     out = set()
@@ -210,6 +217,8 @@ def check(path):
         covered.add("e_prc_" + label)
     for label in config.get("water_process_record", []) or []:
         covered.add("q_prc_" + label)
+    if name in STATE_CHECK:
+        covered |= STATE_DIAGNOSTICS
 
     if name in CONTROLS:
         if active:
