@@ -1,3 +1,4 @@
-run,family,geometry,dt_seconds,float_type,remapped_maximum,final_gross_relative,final_nonpositive_fraction,max_nonpositive_fraction,final_max_abs_e_src_res,most_negative_tag_value,most_negative_tag,recorded_processes,final_max_e_prc,commit
-c0_column,energy_source,column,10.0,Float64,false,0.13456131085846748,0.9666666666666667,1.0,26888.66561703798,-44972.50629142498,strat,,NaN,49b2ec9737f227de7d7fb03ed33c061157e9e773
-c0_sphere,energy_source,sphere,400.0,Float64,true,0.01542423698718311,0.4327600052941768,0.4327600052941768,11042.177725350648,-100416.38783695316,extratropics,,NaN,49b2ec9737f227de7d7fb03ed33c061157e9e773
+run,family,geometry,dt_seconds,float_type,remapped_maximum,final_gross_relative,final_nonpositive_fraction,max_nonpositive_fraction,final_nonpositive_mass_fraction,final_max_abs_e_src_res,most_negative_tag_value,most_negative_tag,recorded_processes,final_max_e_prc,commit
+c0_column,energy_source,column,10.0,Float64,false,0.13456131085846748,0.9666666666666667,1.0,NaN,26888.66561703798,-44972.50629142498,strat,,NaN,49b2ec9737f227de7d7fb03ed33c061157e9e773
+c0_sphere,energy_source,sphere,400.0,Float64,true,0.01542423698718311,0.4327600052941768,0.4327600052941768,NaN,11042.177725350648,-100416.38783695316,extratropics,,NaN,49b2ec9737f227de7d7fb03ed33c061157e9e773
+c3_column_record,energy_source,column,10.0,Float64,false,0.13456131085846748,0.9666666666666667,1.0,NaN,26888.66561703798,-44972.50629142498,strat,radiation,7587.324107300024,1a9a419e78225225f9fb0aff8aa54b16c1d8a7af

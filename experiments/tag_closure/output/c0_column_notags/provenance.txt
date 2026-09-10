@@ -1,0 +1,22 @@
+run: c0_column_notags
+config: /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c0_column_notags.yml
+commit: c7c00de9e395eaf1db9c044b19f6c45b3e47d9ea
+commit_source: git
+commit_dirty: yes
+branch: claude/tag-closure-experiments
+julia: 1.11.9
+julia_depot: /home/b/b309159/.julia/depots/levante-cpu
+project: /home/b/b309159/git/ClimaAtmosResiDyn.jl/.buildkite
+started: 2026-09-10T10:09:24+02:00
+finished: 2026-09-10T10:13:27+02:00
+exit_status: 0
+slurm_job_id: 27368036
+slurm_job_name: tag-closure-a
+partition: shared
+nodelist: l40007
+cpus_per_task: 35
+node_type: AMD EPYC 7763 64-Core Processor
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/c0_column_notags/output_0000
+netcdf_and_checkpoints: /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/c0_column_notags/output_0000 (left on scratch, not committed)
