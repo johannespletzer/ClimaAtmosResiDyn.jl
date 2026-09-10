@@ -1,0 +1,21 @@
+# Overrides for run_c1_twin.jl, named by TWIN_OVERRIDES. Both halves of the
+# twin, the shifted and the unshifted, take these keys on top of C1's
+# configuration. This directory is not configs/, so the validator does not
+# read these files as runs.
+#
+# The first twin found the shifted and unshifted states 3.8e-5 apart in rho
+# after a single step (FINDINGS E16). C1 takes one Newton iteration per implicit
+# stage, with an approximate Jacobian that carries T_0 and e_int_v0 directly.
+# One iteration lands where that Jacobian points it, so its answer can depend on
+# the energy reference. Iterated to convergence, both halves land on the root of
+# the same equation. If the twins then agree to rounding, the one-iteration
+# solve was the cause. If they do not, saturation adjustment is next.
+#
+# newton_rtol is far below the 3.8e-5 being explained, and max_newton_iters_ode
+# caps the cost where the tolerance is not reached. t_end is six hours rather
+# than a day, because the first step and the first hours decide the question
+# and a converged solve costs several times more per step.
+max_newton_iters_ode: 10
+use_newton_rtol: true
+newton_rtol: 1.0e-10
+t_end: "6hours"

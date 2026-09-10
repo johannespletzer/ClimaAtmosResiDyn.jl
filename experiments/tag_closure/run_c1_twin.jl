@@ -20,6 +20,12 @@ touch the state. The unshifted run drops the `toml:` entry. Both drop the
 diagnostics, which only write output. Everything else is C1's, the closure
 check included.
 
+`TWIN_OVERRIDES` may name a YAML file of configuration keys to set in both
+halves, on top of C1's. It is for asking how the answer depends on the solver,
+for instance by converging the implicit solve. It may not set `toml:`, because
+the shift is the one thing the twin varies. A relative path is looked up from
+the repository root. The keys it set are written into the table's header.
+
 Run it through the phase C runscript, so that it gets a provenance, and set
 `TAG_CLOSURE_JOB_ID` so that its output cannot land on C1's:
 
@@ -72,13 +78,34 @@ function config_path()
 end
 
 """
-    twin_configs(path, output_base)
+    overrides()
+
+The configuration keys to set in both halves of the twin, from the YAML file
+named by `TWIN_OVERRIDES`. Empty when that is unset.
+"""
+function overrides()
+    path = get(ENV, "TWIN_OVERRIDES", "")
+    isempty(path) && return Dict{String, Any}()
+    isabspath(path) || (path = joinpath(get(ENV, "ROOT", pwd()), path))
+    isfile(path) || error("TWIN_OVERRIDES names no file: $path")
+    extra = CA.load_yaml_file(path)
+    haskey(extra, "toml") &&
+        error("$path sets `toml:`, but the shift is what the twin varies.")
+    return extra
+end
+
+describe(extra) =
+    isempty(extra) ? "none" :
+    join(["$key = $(extra[key])" for key in sort(collect(keys(extra)))], ", ")
+
+"""
+    twin_configs(path, output_base, extra = Dict{String, Any}())
 
 The unshifted and the shifted configuration, each writing into its own
-directory under `output_base`.
+directory under `output_base`, both with the keys in `extra` set.
 """
-function twin_configs(path, output_base)
-    config = CA.load_yaml_file(path)
+function twin_configs(path, output_base, extra = Dict{String, Any}())
+    config = merge(CA.load_yaml_file(path), extra)
     toml = get(config, "toml", nothing)
     (isnothing(toml) || isempty(toml)) &&
         error("$path has no `toml:` entry, so there is no shift to test.")
@@ -153,11 +180,13 @@ end
 
 function main()
     path = config_path()
+    extra = overrides()
     job_id = get(ENV, "TAG_CLOSURE_JOB_ID", "twin_c1")
     output_base = joinpath(pwd(), "output", job_id)
     mkpath(output_base)
+    @info "C1 twin test" path job_id overrides = describe(extra)
 
-    sims = map(twin_configs(path, output_base)) do config
+    sims = map(twin_configs(path, output_base, extra)) do config
         CA.get_simulation(CA.AtmosConfig(config))
     end
     unshifted, shifted = sims
@@ -192,6 +221,7 @@ function main()
         println(io, "# $job_id.csv, from experiments/tag_closure/run_c1_twin.jl")
         println(io, "# config: $path")
         println(io, "# T_0 unshifted $(T_0[1]) K, shifted $(T_0[2]) K")
+        println(io, "# overrides in both halves: $(describe(extra))")
         println(io, "# columns after time: max|shifted - unshifted| / max|unshifted|;")
         println(io, "# energy_after_shift has the predicted shift removed, relative to it")
         println(io, join(COLUMNS, ","))
