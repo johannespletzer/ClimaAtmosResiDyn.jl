@@ -293,18 +293,21 @@ was not summed, that the field was summed before it was reduced, that a run with
 no `provenance.txt` is refused, and that the log-log slope fit recovers 2 from
 `y = x²`. It writes nothing into the repository.
 
-!!! warning "None of the Julia here has ever been run"
+!!! note "What has been run, and what has not"
 
-    The driver and the three analysis scripts were written in a container with
-    no Julia, so nothing in `run_tag_closure.jl` or `analysis/` has been
-    executed, and JuliaFormatter has not seen them either. `selftest.jl` is the
-    owner's first real check and should be run before any job is submitted.
+    The driver has run every job in `output/`. The analysis scripts first ran
+    on 2026-09-10, on terrabyte, and `selftest.jl` passed all eleven sections
+    there, including the configuration validator and its sixteen mutations. The
+    validator needs PyYAML. Without it the self-test skips that section with a
+    warning rather than failing, so check that section ran.
 
-    The bash runscripts have been exercised against stub `julia` and `module`
-    commands, including a simulation of `sbatch`'s spool-directory copy. **The
-    tcsh variants have not been checked at all**: no `tcsh` was installed in
-    that container, so not even their syntax has been parsed. Run one of them
-    once by hand before relying on it.
+    The bash runscripts have run every job, on Levante and on terrabyte. **The
+    tcsh variants have never run.** `tcsh -n` parses the three phase scripts.
+    It parses `tag_closure_common.tcsh` up to the provenance block at the end,
+    and there it stops on a one-line `if` that redirects into a variable.
+    `tcsh -n` executes nothing, so that variable is never set, and it fails the
+    same way on a one-line reproduction. So no syntax error was found. Run one
+    of them once by hand before relying on it.
 
 ## Before the first job: instantiate the environment
 
