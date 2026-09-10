@@ -203,8 +203,8 @@ Nothing under this module is public API. Names, signatures and behavior may
 change in any release, nothing here is exported, and no top-level alias
 forwards to it, so a user cannot come to depend on it by accident.
 
-`Internals.ParentBudget` is the parent-budget ledger's implementation. It is not
-wired into any simulation.
+`Internals.ParentBudget` is the parent-budget ledger's implementation. A
+simulation builds one only when `parent_budget_mode` is not `off`.
 """
 module Internals
 

@@ -742,6 +742,7 @@ function get_simulation(config::AtmosConfig)
         callback_kwargs = callback_kwargs_from_config(config),
         diagnostics = diagnostics_config_from_config(config),
         checkpoint_frequency = pa["dt_save_state_to_disk"],
+        parent_budget_mode = pa["parent_budget_mode"],
         log_to_file = pa["log_to_file"],
         verbose = true,  # Config-based runs are always verbose
     )

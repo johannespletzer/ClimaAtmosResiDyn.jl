@@ -128,6 +128,42 @@ endpoint_packet_layout(schema::BudgetSchema) =
     endpoint_packet_layout(schema_reservoir_names(schema))
 
 """
+    envelope_group(channel, reservoir) -> Symbol
+
+Return the packet group holding one channel's envelope in one reservoir. It is
+distinct from every reservoir name, so an envelope slot can never be read as an
+endpoint.
+"""
+envelope_group(channel::Symbol, reservoir::Symbol) =
+    Symbol("envelope.", channel, ".", reservoir)
+
+"""
+    budget_packet_layout(schema, channels)
+
+Build the layout of the one packet an accepted step reduces. It holds the
+endpoint slots of every declared reservoir, followed by the envelope slots of
+each channel in `channels` in each reservoir that channel writes.
+
+`channels` is what the adapter collects, not what the schema expects. A
+declared channel the adapter does not collect has no slot here; its absence is
+a named blocker at reconciliation, which is the fail-closed answer, whereas a
+slot nobody writes would refuse the reduction on every rank.
+"""
+function budget_packet_layout(schema::BudgetSchema, channels)
+    slots = Tuple{Symbol, Symbol}[]
+    for group in schema_reservoir_names(schema), quantity in BUDGET_QUANTITIES
+        push!(slots, (group, quantity))
+    end
+    for channel in channels
+        spec = channel_spec(schema, channel)
+        for reservoir in spec.reservoirs, quantity in BUDGET_QUANTITIES
+            push!(slots, (envelope_group(channel, reservoir), quantity))
+        end
+    end
+    return BudgetPacketLayout(slots)
+end
+
+"""
     packet_length(layout) -> Int
 
 Return how many values a packet with this layout holds.
@@ -185,6 +221,21 @@ function BudgetPacket(layout::BudgetPacketLayout)
         PacketSlotState[UnsetSlot() for _ in 1:n],
         false,
     )
+end
+
+"""
+    reset_packet!(packet)
+
+Return a packet to the state it was built in: every slot unset, every value
+zero, not reduced. The adapter keeps one packet for the whole run and resets it
+when each accepted step is committed, so per-step accounting allocates nothing
+that grows with the run.
+"""
+function reset_packet!(packet::BudgetPacket)
+    fill!(packet.values, zero(BUDGET_ACCOUNTING_TYPE))
+    fill!(packet.states, UnsetSlot())
+    packet.is_reduced = false
+    return packet
 end
 
 """

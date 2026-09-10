@@ -137,6 +137,32 @@ function budget_endpoints(packet::BudgetPacket, step::Int)
 end
 
 """
+    budget_endpoints(packet, schema, step)
+
+Unpack the endpoint groups of a reduced packet that also carries other slots,
+such as the envelope slots the adapter packs beside them. The groups are read
+from the schema, in declaration order, so an envelope group is never mistaken
+for a reservoir.
+"""
+function budget_endpoints(packet::BudgetPacket, schema::BudgetSchema, step::Int)
+    check_packet_resolved(packet, "unpacked")
+    FT = BUDGET_ACCOUNTING_TYPE
+    reservoirs = ReservoirEndpoint{FT}[]
+    for group in schema_reservoir_names(schema)
+        push!(
+            reservoirs,
+            ReservoirEndpoint{FT}(;
+                reservoir = endpoint_reservoir(group),
+                mass = endpoint_component(packet, group, :mass, FT),
+                water = endpoint_component(packet, group, :water, FT),
+                energy = endpoint_component(packet, group, :energy, FT),
+            ),
+        )
+    end
+    return BudgetEndpoints{FT}(reservoirs, step)
+end
+
+"""
     budget_endpoints(Y, schema, surface_temperature, step)
 
 Measure every declared reservoir's endpoint with **one** global collective and
@@ -612,10 +638,26 @@ end
 # declare a quantity provably zero and then record a measurement of it, so the
 # disagreement is refused where it happens rather than surfacing as a residual
 # nobody can attribute.
-function check_leg_dispositions(spec, leg::BudgetLeg)
+#
+# A disposition describes what a path does to a quantity where the reservoir
+# owns it. Where the schema says the reservoir does not own the quantity, the
+# only honest record is `NotApplicable`, whatever the row declares: a slab in a
+# dry run has no water to measure, and a channel that names both reservoirs
+# declares one disposition for the atmosphere's water and none for the slab's.
+function check_leg_dispositions(schema::BudgetSchema, spec, leg::BudgetLeg)
+    reservoir = reservoir_name(leg.reservoir)
     for quantity in BUDGET_QUANTITIES
         expected = expected_disposition(spec, quantity)
         status = component_status(budget_component(leg, quantity))
+        if !quantity_applicable(schema, reservoir, quantity)
+            status isa NotApplicable || error(
+                "Leg $(leg_label(leg)) records $quantity as " *
+                "$(status_name(status)), but the schema says $reservoir does " *
+                "not own $quantity. A quantity a reservoir does not own is " *
+                "not applicable there, and nothing else.",
+            )
+            continue
+        end
         disposition_permits(expected, status) || error(
             "Leg $(leg_label(leg)) records $quantity as " *
             "$(status_name(status)), but the schema declares it $expected. A " *
@@ -647,7 +689,7 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
             "Leg $(leg_label(leg)) records final map $(leg.channel) in " *
             "$reservoir, which that map does not declare.",
         )
-        check_leg_dispositions(spec, leg)
+        check_leg_dispositions(schema, spec, leg)
         return nothing
     end
     if leg.level isa ReservoirTransfer
@@ -667,7 +709,7 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
             "Leg $(leg_label(leg)) names channel $(leg.channel), but event " *
             "$(leg.event) is declared in channel $(spec.channel).",
         )
-        check_leg_dispositions(spec, leg)
+        check_leg_dispositions(schema, spec, leg)
         return nothing
     end
     has_channel(schema, leg.channel) || error(
@@ -687,7 +729,7 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
             "checks for, so an omitted process could never be missed.",
         )
     end
-    check_leg_dispositions(spec, leg)
+    check_leg_dispositions(schema, spec, leg)
     return nothing
 end
 
