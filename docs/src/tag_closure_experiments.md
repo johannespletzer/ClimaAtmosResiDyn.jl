@@ -264,7 +264,7 @@ waits for A and B.
 | Run | Variant                                                                                                                                               | Learning question                                                                                      |
 |:--- |:----------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------ |
 | C0  | Barrier census: the DYCOMS source column of the test with `rad: DYCOMS` for one day, and a moist sphere for one day, `energy_source_closure_check` on | `nonpositive_fraction` over time, the minimum of every `e_src_<name>`, `e_src_res`, and the walltime   |
-| C1  | C0 under a reference shift that makes `ρe_tot > 0` everywhere. Needs a code change and the owner's approval; see below                                | Does `e_src_res` stay bounded and does every tag stay non-negative over a day once the donor rule runs |
+| C1  | C0 under a reference shift that makes `ρe_tot > 0` everywhere. Needs the owner's approval; no code change, see below                                  | Does `e_src_res` stay bounded and does every tag stay non-negative over a day once the donor rule runs |
 | C2  | C0 in 1M with implicit microphysics, before and after the implicit-path brackets. Needs a code change and the owner's approval                        | How much residual the unbracketed implicit path carries                                                |
 | C3  | C0 with `energy_process_record` for the same source labels beside the source tags                                                                     | What each of the two readings says about the same run, and where they disagree                         |
 
@@ -277,6 +277,26 @@ then depend on `c`. The second shifts the model's energy reference itself;
 the parent changes, `ref_counter` bumps, and the tags read the physics as it
 is. The docs page on the source tags says the results are conditional on the
 reference either way, so whichever is chosen is reported with the value.
+
+!!! note "C1 after C0, revised 2026-09-10"
+
+    C0 has since run and the two paragraphs above are superseded on two
+    points. **The first shape should be dropped rather than put to the owner.**
+    The region tags sum to `ρe_tot` and not to `ρe_tot + c`, so wherever
+    `e_tot < 0` the shares sum to a negative number and the loss adds energy
+    instead of removing it, diverging as `e_tot` approaches `−c`. That is over
+    exactly the region the shift exists to fix, which C0 measured as 43.276% of
+    a moist sphere.
+
+    **The second shape needs no code change.** The energy reference is
+    `cv_d·T − cp_d·T_0`, and `T_0`, `LH_v0` and `LH_s0` are settable
+    thermodynamic parameters reachable through a configuration's `toml:` key.
+    Moving `T_0` by `δ` together with `LH_v0` by `(cp_v − cp_l)·δ` and `LH_s0`
+    by `(cp_v − cp_i)·δ` leaves every latent heat and the saturation vapour
+    pressure exactly unchanged while moving `e_int` by `−cp_d·δ`, which is what
+    makes it a change of reference rather than of atmosphere. So C1 is three
+    TOML entries and the owner's approval. The derivation, the magnitudes and
+    the acceptance test are in `experiments/tag_closure/C1_reference_shift.md`.
 
 C2 is the small structural fix the memo recommends. It is a code change on
 the implicit path and belongs in its own pull request after the measurement
@@ -399,10 +419,11 @@ the phase A decision rule turns on is unaffected.
 
 Water first, then energy, then the source tags. Each phase ends with its
 learning entries and a short report to the owner, and the next phase's
-configs are adjusted from what was learned before they are submitted. Items
-that change code, C1 and C2, wait for the discussion with the owner. C0 may
-run alongside phase A if the owner wants the census early; it changes nothing
-in the model.
+configs are adjusted from what was learned before they are submitted. C1 and
+C2 wait for the discussion with the owner. C2 changes code; C1 turns out not
+to, but it changes the energy reference, which needs approval on its own
+terms. C0 may run alongside phase A if the owner wants the census early; it
+changes nothing in the model.
 
 A1 and A2 are submitted together and read together. A1's slope on its own
 does not answer the question it was written for, so neither ladder is
@@ -420,7 +441,9 @@ reported before the other has run.
  3. Write the configs for A1 to A5, B1 to B3 and C0 and C3. Take the test
     configurations as the base and change only the keys the tables name. Set
     each config's `job_id` to its run name, so the run's own output names
-    itself. Do not write C1 or C2 configs until the code they need exists.
+    itself. Do not write the C2 config until the code it needs exists, or the
+    C1 config until the owner has approved the reference change and its
+    values.
  4. Write the driver and the runscripts. If Julia is available, check every
     config with `CA.AtmosConfig` and one `get_simulation` on the column. If
     not, check the YAML parses and say so in the report.
@@ -440,6 +463,7 @@ reported before the other has run.
 
   - The resolution and length of B1, and whether it runs on the shared
     partition or one GPU.
-  - The shape of the C1 reference shift.
+  - Approval of the C1 reference change, and the value of `δ` it uses. The
+    shape is settled; see the note under phase C.
   - Whether C0 runs alongside phase A.
   - Where large outputs live on Levante, so `README.md` can record the path.
