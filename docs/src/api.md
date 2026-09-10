@@ -512,3 +512,17 @@ report and a claim certificate rather than the journal internals.
 ClimaAtmos.Internals
 ClimaAtmos.Internals.ParentBudget
 ```
+
+### Applied-update event
+
+The one bracket in the tendency code around every process that writes a parent
+field. The tag families and the process records read it for the labels they
+know, the parent-budget ledger for every label. These are internal functions of
+the tendency code, rendered so their cross-references resolve; they are not a
+compatibility surface.
+
+```@docs
+ClimaAtmos.open_applied_update!
+ClimaAtmos.open_ledger_event!
+ClimaAtmos.snapshot_tags!
+```

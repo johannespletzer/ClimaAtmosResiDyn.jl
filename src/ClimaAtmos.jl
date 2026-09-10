@@ -100,6 +100,9 @@ include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water.jl"
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_tags.jl"))
 # Process-change records (signed per-process increments, prognostic but not transported)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "process_record.jl"))
+# The applied-update event the tendency code brackets every parent-writing
+# process with; feeds the tags, the process records and the parent-budget ledger.
+include(joinpath("prognostic_equations", "applied_update.jl"))
 
 include(joinpath("surface_conditions", "SurfaceConditions.jl"))
 include(joinpath("setups", "Setups.jl"))

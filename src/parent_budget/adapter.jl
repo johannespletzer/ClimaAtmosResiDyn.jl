@@ -7,14 +7,17 @@
 ##### timestepper-specific is here, so that a change in the pinned behaviour is
 ##### a change to one file and to the trace test that fixes it.
 #####
-##### The adapter sees a step twice. During the step it sits behind the `lim!`,
-##### `dss!`, `constrain_state!`, `initialize_imp!` and `T_post_imp!` hooks as
-##### meters that read the state before and after each call and never write it.
-##### After the step it runs as the first discrete callback: it reads the stage
-##### tendencies the stepper cache still holds, packs every reservoir's endpoint,
-##### every channel's envelope, the final maps and whatever the meters measured
-##### into one buffer, reduces that buffer once, records the legs, commits the
-##### transaction, and opens the next one on the closing endpoint.
+##### The adapter sees a step twice. During the step it sits behind the
+##### explicit tendency, the `lim!`, `dss!`, `constrain_state!`,
+##### `initialize_imp!` and `T_post_imp!` hooks as meters that read the state
+##### before and after each call and never write it, and in audit mode it
+##### listens to the applied-update events the tendency code brackets its
+##### processes with. After the step it runs as the first discrete callback: it
+##### reads the stage tendencies the stepper cache still holds, packs every
+##### reservoir's endpoint, every channel's envelope, the final maps, the
+##### process rows and whatever the meters measured into one buffer, reduces
+##### that buffer once, records the legs, commits the transaction, and opens
+##### the next one on the closing endpoint.
 #####
 ##### Which hook call is the final map and which is a stage firing is decided
 ##### by position in the step, never by time: the last stage and the final
@@ -35,12 +38,16 @@ How much the ledger measures and keeps.
     is what the parent identity needs, plus the cumulative totals and the last
     step's reconciliations. Per-step storage is bounded, so this is the mode a
     long run uses.
-  - `AuditMode`: everything `SummaryMode` measures, and in addition every
-    intermediate hook firing as a stage observation, the algebraic solve defect
-    and the post-implicit correction of every implicit stage, and every step's
-    reconciliations. It costs one extra implicit tendency evaluation per
-    implicit stage and storage that grows with the run, which is why it is not
-    the default.
+  - `AuditMode`: everything `SummaryMode` measures, and more. It adds the
+    process rows of every collected channel, read from the applied-update
+    events the tendency code brackets them with. It adds every intermediate
+    hook firing as a stage observation, the algebraic solve defect and the
+    post-implicit correction of every implicit stage, and every step's
+    reconciliations. It costs a copy of the parent tendency fields when a
+    bracket opens and six local integrals when it closes, the positive and
+    negative parts of three fields. Each implicit stage also costs one extra
+    implicit tendency evaluation. Storage grows with the run. This is why it
+    is not the default.
 
 `off` is not a mode. It is the absence of an adapter, so that a run with the
 ledger off is the run without the feature.
@@ -58,10 +65,27 @@ struct SummaryMode <: ParentBudgetMode end
 """
     AuditMode()
 
-Measure every firing, the solve defect and the correction, and keep every
-commit. See `ParentBudgetMode`.
+Measure every firing, every bracketed process, the solve defect and the
+correction, and keep every commit. See `ParentBudgetMode`.
 """
 struct AuditMode <: ParentBudgetMode end
+
+"""
+    parent_budget_attribution(name) -> Symbol
+
+Return the attribution the configuration key `parent_budget_attribution`
+names. `:net` books each process row's signed amount, `:gross` keeps its
+positive and negative parts beside it. Anything else is an error rather than
+a silent default.
+"""
+function parent_budget_attribution(name)
+    attribution = Symbol(name)
+    attribution in (:net, :gross) && return attribution
+    return error(
+        "Unknown `parent_budget_attribution = $(repr(name))`; expected `net` " *
+        "or `gross`.",
+    )
+end
 
 """
     parent_budget_mode(name) -> Union{Nothing, ParentBudgetMode}
@@ -99,12 +123,20 @@ const COLLECTED_CHANNELS = (:explicit_main, :explicit_limited, :implicit)
 """
     METERED_HOOKS
 
-The `ClimaODEFunction` hooks the adapter meters: the three that write the
-state, the implicit-stage initialiser, which tells the adapter the stage's
-`dtγ`, and the post-implicit correction, which is where the Newton-solved
-stage is visible.
+The `ClimaODEFunction` hooks the adapter meters: the explicit tendency, whose
+position says which stage's applied-update events are being measured, the
+three hooks that write the state, the implicit-stage initialiser, which tells
+the adapter the stage's `dtγ`, and the post-implicit correction, which is
+where the Newton-solved stage is visible.
 """
-const METERED_HOOKS = (:lim!, :dss!, :constrain_state!, :initialize_imp!, :T_post_imp!)
+const METERED_HOOKS = (
+    :T_exp_T_lim!,
+    :lim!,
+    :dss!,
+    :constrain_state!,
+    :initialize_imp!,
+    :T_post_imp!,
+)
 
 """
     FINAL_MAP_HOOKS
@@ -195,6 +227,8 @@ The roles say what the firing's change means:
     implicit tendency and enters the accepted update with weight `b_imp[i]/γ`.
   - `:initialize` and `:correction` are the initialiser and the post-implicit
     correction, metered for the stage's `dtγ` and for the solved stage.
+  - `:evaluate` is the explicit tendency evaluation of a stage, inside which
+    the applied-update events of that stage fire.
   - `:final` is the last call of a state-writing hook. For `dss!` and
     `constrain_state!` this is on the accepted state. The final `lim!` acts on
     the buffer holding `u` plus the limited increment, before the explicit and
@@ -222,6 +256,7 @@ struct HookTemplate
     calls::Vector{HookCall}
     per_hook::Dict{Symbol, Vector{Int}}
     implicit_stages::Vector{Int}
+    explicit_stages::Vector{Int}
 end
 
 # Whether the constraint handler fires on a signal, following the signal
@@ -239,9 +274,16 @@ Build the template for one step. It mirrors `step_u!` and the stage functions
 it calls in `imex_ark.jl`: for every stage after the first, the limiter and the
 DSS on the assembled value; for an implicit stage, the initialiser, a DSS, the
 Newton solve, the correction when wired, and the post-Newton DSS, each with the
-constraint firings the cadence selects; then the final limiter, DSS and
-constraint. A first-same-as-last tableau skips the post-Newton constraint at
-its last stage, because the end-of-step firing covers the same state.
+constraint firings the cadence selects; then the explicit tendency evaluation
+of the stage, wherever a later stage or the accepted update reads it; then the
+final limiter on the limited increment, and the final DSS and constraint on
+the accepted state. A first-same-as-last tableau skips the post-Newton
+constraint at its last stage, because the end-of-step firing covers the same
+state.
+
+`explicit_stages` are the stages whose explicit tendency enters the accepted
+update with a nonzero weight, which is where a process row of an explicit
+channel is booked; `implicit_stages` are the stages with an implicit solve.
 """
 function hook_template(
     tableau,
@@ -250,11 +292,14 @@ function hook_template(
     has_initializer::Bool,
     fsal::Bool,
 )
+    a_exp = tableau.a_exp.coeffs
+    b_exp = tableau.b_exp.coeffs
     a_imp = tableau.a_imp.coeffs
     s = length(tableau.b_imp.coeffs)
     calls = HookCall[]
     counts = Dict{Symbol, Int}(hook => 0 for hook in METERED_HOOKS)
     implicit_stages = Int[]
+    explicit_stages = Int[]
     push_call!(hook, stage, role) =
         push!(calls, HookCall(hook, stage, role, counts[hook] += 1))
     for i in 1:s
@@ -266,20 +311,27 @@ function hook_template(
             constraint_fires(cadence, top_signal) &&
                 push_call!(:constrain_state!, i, :pre_solve)
         end
-        implicit || continue
-        push!(implicit_stages, i)
-        if has_initializer
-            push_call!(:initialize_imp!, i, :initialize)
-            push_call!(:dss!, i, :post_init)
-            constraint_fires(cadence, :with_dss) &&
-                push_call!(:constrain_state!, i, :post_init)
+        if implicit
+            push!(implicit_stages, i)
+            if has_initializer
+                push_call!(:initialize_imp!, i, :initialize)
+                push_call!(:dss!, i, :post_init)
+                constraint_fires(cadence, :with_dss) &&
+                    push_call!(:constrain_state!, i, :post_init)
+            end
+            has_post_implicit && push_call!(:T_post_imp!, i, :correction)
+            push_call!(:dss!, i, :post_newton)
+            if !(i == s && fsal)
+                constraint_fires(cadence, :end_of_stage) &&
+                    push_call!(:constrain_state!, i, :post_newton)
+            end
         end
-        has_post_implicit && push_call!(:T_post_imp!, i, :correction)
-        push_call!(:dss!, i, :post_newton)
-        if !(i == s && fsal)
-            constraint_fires(cadence, :end_of_stage) &&
-                push_call!(:constrain_state!, i, :post_newton)
+        # The explicit tendency of a stage is evaluated when a later stage or
+        # the accepted update reads it, as `evaluate_stage_tendencies!` does.
+        if any(!iszero, a_exp[:, i]) || !iszero(b_exp[i])
+            push_call!(:T_exp_T_lim!, i, :evaluate)
         end
+        iszero(b_exp[i]) || push!(explicit_stages, i)
     end
     push_call!(:lim!, 0, :final)
     push_call!(:dss!, 0, :final)
@@ -288,7 +340,147 @@ function hook_template(
     for (index, call) in enumerate(calls)
         push!(per_hook[call.hook], index)
     end
-    return HookTemplate(calls, per_hook, implicit_stages)
+    return HookTemplate(calls, per_hook, implicit_stages, explicit_stages)
+end
+
+# ============================================================================
+# Process rows and applied-update events
+# ============================================================================
+
+"""
+    EVENT_PREFIXES
+
+The coverage registry's event-id prefix of each collected channel, so that a
+decomposition leg's event is the row's id in the coverage table.
+"""
+const EVENT_PREFIXES = Dict(
+    :explicit_main => "expl.",
+    :explicit_limited => "lim_chan.",
+    :implicit => "impl.",
+)
+
+# Which metered evaluation feeds a channel: the explicit tendency evaluation
+# writes both explicit channels, the audit evaluation at the solved stage the
+# implicit one.
+evaluation_kind(channel::Symbol) = channel === :implicit ? :implicit : :explicit
+
+# A roster row the adapter measures through an applied-update event, as
+# opposed to one it books from the registry's declaration or meters at a hook.
+measured_row(row::ProcessRowSpec) =
+    !isnothing(row.event) && :measured in row.dispositions
+
+# A hook-metered row of the implicit channel, booked by `record_audit_legs!`.
+is_stage_row(row::ProcessRowSpec) = row.process in STAGE_ROWS
+
+# The stages a measured row of a channel is booked at: the weighted explicit
+# stages for an explicit channel, the solved stages for the implicit one.
+row_stages(template::HookTemplate, channel::Symbol) =
+    channel === :implicit ? template.implicit_stages : template.explicit_stages
+
+# The accepted weight of a stage's applied update in a channel.
+function row_weight(tableau, channel::Symbol, stage::Int, dt)
+    coefficients = channel === :implicit ? tableau.b_imp.coeffs : tableau.b_exp.coeffs
+    return BUDGET_ACCOUNTING_TYPE(dt) * BUDGET_ACCOUNTING_TYPE(coefficients[stage])
+end
+
+process_row_group(channel::Symbol, process::Symbol, stage::Int) =
+    Symbol("row.", channel, ".", process, ".", stage)
+gross_group(channel::Symbol, process::Symbol, stage::Int, part::Symbol) =
+    Symbol("gross.", part, ".", channel, ".", process, ".", stage)
+
+# The packet group holding the arithmetic magnitudes of a measured group.
+magnitude_group(group::Symbol) = Symbol("magnitude.", group)
+
+# The slots of one measured group and of its magnitudes.
+function push_measured_group!(slots, group::Symbol)
+    for quantity in BUDGET_QUANTITIES
+        push!(slots, (group, quantity))
+    end
+    for quantity in BUDGET_QUANTITIES
+        push!(slots, (magnitude_group(group), quantity))
+    end
+    return nothing
+end
+
+# Every roster row with a measured quantity is either metered at a hook or
+# named by an event that brackets it in the atmosphere's explicit or implicit
+# tendency. A row that is neither could never be recorded, and the schema
+# would block on it forever without saying why, so it is refused here.
+function check_roster_events(schema::BudgetSchema)
+    for channel in COLLECTED_CHANNELS
+        has_channel(schema, channel) || continue
+        for row in channel_spec(schema, channel).processes
+            is_stage_row(row) && continue
+            :measured in row.dispositions || continue
+            isnothing(row.event) && error(
+                "Coverage row $(row.process) of channel $channel declares a " *
+                "measured quantity but names no applied-update event, so " *
+                "nothing could ever record it.",
+            )
+            row.reservoir === ATMOSPHERE_ENDPOINT_GROUP || error(
+                "Coverage row $(row.process) of channel $channel is measured " *
+                "in $(row.reservoir), and the adapter measures events in the " *
+                "atmosphere only.",
+            )
+            channel === :explicit_limited && error(
+                "Coverage row $(row.process) of the limited channel is " *
+                "measured, but an applied-update event reads the main " *
+                "explicit tendency and not the limited one.",
+            )
+        end
+    end
+    return nothing
+end
+
+# The labels whose brackets the adapter integrates: those measuring a roster
+# row in this configuration. Every other label is checked and skipped, so a
+# bracket around a process the configuration does not run costs nothing.
+function active_events(schema::BudgetSchema)
+    events = Set{Symbol}()
+    for channel in COLLECTED_CHANNELS
+        has_channel(schema, channel) || continue
+        for row in channel_spec(schema, channel).processes
+            measured_row(row) && push!(events, row.event)
+        end
+    end
+    return events
+end
+
+"""
+    Measurement
+
+Two triples in `BUDGET_QUANTITIES` order: what a meter measured, and the
+arithmetic magnitude of each amount, which is the integral of the absolute
+value of what was summed to produce it. A before/after difference of two
+stage integrals has the magnitude of both integrals; an applied update
+measured pointwise has the integral of its absolute value. The magnitudes
+travel with the amounts into the packet and onto the legs, where the
+tolerance's arithmetic term reads them.
+
+For an applied-update event the two triples are its positive and negative
+parts instead, from which the amount and the magnitude follow as their sum
+and their difference.
+"""
+const Measurement = NTuple{2, NTuple{3, BUDGET_ACCOUNTING_TYPE}}
+
+"""
+    GrossRecord
+
+The positive and negative parts of one process row's applied update at one
+stage, weighted as the row's leg is, kept under
+`parent_budget_attribution = gross`. A diagnostic beside the leg, never a term:
+the parts sum to the leg's net amount and the identities use the net. The
+parts are those of the weighted contribution, so `positive` is never negative
+whatever the sign of the stage weight.
+"""
+struct GrossRecord{FT}
+    event::Symbol
+    channel::Symbol
+    process::Symbol
+    stage::Int
+    weight::FT
+    positive::NTuple{3, FT}
+    negative::NTuple{3, FT}
 end
 
 # ============================================================================
@@ -300,11 +492,20 @@ end
 
 The ledger and everything it needs to run inside a simulation: the schema and
 the ledger built from it, the one packet the step reduces, the hook template,
-the record of the timestepper, the tolerances, what the meters measured in the
-current step, and what has been committed. `last_commit`, `last_legs` and
-`last_observations` hold the latest step's results in every mode; `commits`
-holds every commit in `AuditMode` only. `reductions` counts the packets reduced,
-which a test compares with the number of accepted steps.
+the record of the timestepper, the tolerances, what the meters and the
+applied-update events measured in the current step, and what has been
+committed. `last_commit`, `last_legs`, `last_observations` and `last_gross`
+hold the latest step's results in every mode; `commits` holds every commit in
+`AuditMode` only. `reductions` counts the packets reduced, which a test
+compares with the number of accepted steps.
+
+`events` are the applied-update labels that measure a roster row in this
+configuration. `evaluation`, `evaluation_stage`, `open_event` and `seen`
+say which tendency evaluation is being metered, if any, and which events it
+has opened. That is how a nested, repeated or unknown bracket is refused
+where it happens. `snapshot` holds the copies of the parent tendency fields an
+open event is differenced against. `fault` is test instrumentation, see
+`inject_fault!`.
 
 The mode is a field rather than a type parameter on purpose. The adapter rides
 in the cache, whose type every tendency function specialises on, so a mode in
@@ -314,8 +515,9 @@ what they keep.
 The per-step fields are cleared at every commit, so their storage is bounded
 by the template and never by the run's length.
 """
-mutable struct ParentBudgetAdapter{S, C, T}
+mutable struct ParentBudgetAdapter{S, C, T, G}
     mode::ParentBudgetMode
+    attribution::Symbol
     schema::BudgetSchema
     surface_temperature::S
     context::C
@@ -327,23 +529,37 @@ mutable struct ParentBudgetAdapter{S, C, T}
     channels::Tuple{Vararg{Symbol}}
     tolerances::Union{Nothing, Dict{Symbol, BudgetTolerance{BUDGET_ACCOUNTING_TYPE}}}
     scratch_tendency::T
+    snapshot::G
+    events::Set{Symbol}
     timestepper::Union{Nothing, TimestepperRecord}
     stepper_cache::Any
-    # Per-step meter state.
+    # Per-step meter state. A measurement is a triple of amounts and a triple
+    # of arithmetic magnitudes, see `Measurement`.
     calls::Dict{Symbol, Int}
     before::NTuple{3, BUDGET_ACCOUNTING_TYPE}
     dtγ::Dict{Int, BUDGET_ACCOUNTING_TYPE}
-    final_changes::Dict{Symbol, NTuple{3, BUDGET_ACCOUNTING_TYPE}}
-    folded::Vector{Tuple{Symbol, Int, NTuple{3, BUDGET_ACCOUNTING_TYPE}}}
+    final_changes::Dict{Symbol, Measurement}
+    folded::Vector{Tuple{Symbol, Int, Measurement}}
     observations::Vector{Tuple{HookCall, NTuple{3, BUDGET_ACCOUNTING_TYPE}}}
-    defects::Vector{Tuple{Int, NTuple{3, BUDGET_ACCOUNTING_TYPE}}}
-    corrections::Vector{Tuple{Int, NTuple{3, BUDGET_ACCOUNTING_TYPE}}}
+    defects::Vector{Tuple{Int, Measurement}}
+    corrections::Vector{Tuple{Int, Measurement}}
+    # Per-step event state, keyed by evaluation kind, event and stage: the
+    # positive and negative parts of what the event applied.
+    parts::Dict{Tuple{Symbol, Symbol, Int}, Measurement}
+    unmeasured::Vector{Tuple{Symbol, Symbol, Int}}
+    # The evaluation being metered, if any.
+    evaluation::Symbol
+    evaluation_stage::Int
+    open_event::Symbol
+    seen::Set{Symbol}
+    fault::Union{Nothing, Tuple{Symbol, Symbol}}
     # Results.
     steps_committed::Int
     reductions::Int
     last_commit::Union{Nothing, BudgetCommit{BUDGET_ACCOUNTING_TYPE}}
     last_legs::Vector{BudgetLeg{BUDGET_ACCOUNTING_TYPE}}
     last_observations::Vector{StageObservation{BUDGET_ACCOUNTING_TYPE}}
+    last_gross::Vector{GrossRecord{BUDGET_ACCOUNTING_TYPE}}
     commits::Vector{BudgetCommit{BUDGET_ACCOUNTING_TYPE}}
 end
 
@@ -409,34 +625,60 @@ is_observation(call::HookCall) =
     call.hook in FINAL_MAP_HOOKS && call.role in (:stage, :pre_solve, :post_init)
 
 """
-    adapter_packet_layout(schema, template, mode)
+    adapter_packet_layout(schema, template, mode, attribution)
 
 Lay out the one packet an accepted step reduces. The slot groups, in order, are
 the endpoint group of every reservoir, the envelope group of every collected
 channel in every reservoir it writes, one final-map group per state-writing
 hook the schema declares measured, and in `AuditMode` one group per stage row
-of the implicit roster and implicit stage, then one group per stage
-observation in the template. Every group holds one slot per quantity and no
-group carries a magnitude beside it. The layout is fixed from the schema, the
-template and the mode, so every rank builds the same one before the first step.
+of the implicit roster and implicit stage, one group per measured process row
+at every stage it is booked at, with its gross parts under `:gross`, and one
+group per stage observation in the template. Every measured group has a
+magnitude group beside it, except the endpoints, the observations and the
+gross parts. A gross part is a diagnostic that enters no identity, so it needs
+no magnitude. The layout is fixed from the schema, the template, the mode and
+the attribution, so every rank builds the same one before the first step.
 """
 function adapter_packet_layout(
     schema::BudgetSchema,
     template::HookTemplate,
     mode::ParentBudgetMode,
+    attribution::Symbol,
 )
     layout = budget_packet_layout(schema, COLLECTED_CHANNELS)
     slots = copy(layout.slots)
+    for channel in COLLECTED_CHANNELS
+        for reservoir in channel_spec(schema, channel).reservoirs,
+            quantity in BUDGET_QUANTITIES
+
+            push!(slots, (magnitude_group(envelope_group(channel, reservoir)), quantity))
+        end
+    end
     for hook in FINAL_MAP_HOOKS
         hook_is_measured(schema, hook) || continue
-        for quantity in BUDGET_QUANTITIES
-            push!(slots, (final_map_group(hook), quantity))
-        end
+        push_measured_group!(slots, final_map_group(hook))
     end
     if mode isa AuditMode
         for process in stage_rows(schema), stage in template.implicit_stages
-            for quantity in BUDGET_QUANTITIES
-                push!(slots, (stage_row_group(process, stage), quantity))
+            push_measured_group!(slots, stage_row_group(process, stage))
+        end
+        for channel in COLLECTED_CHANNELS
+            has_channel(schema, channel) || continue
+            for row in channel_spec(schema, channel).processes
+                measured_row(row) || continue
+                for stage in row_stages(template, channel)
+                    push_measured_group!(
+                        slots,
+                        process_row_group(channel, row.process, stage),
+                    )
+                    attribution === :gross || continue
+                    for part in (:positive, :negative), quantity in BUDGET_QUANTITIES
+                        push!(
+                            slots,
+                            (gross_group(channel, row.process, stage, part), quantity),
+                        )
+                    end
+                end
             end
         end
         for call in template.calls
@@ -451,14 +693,20 @@ end
 
 """
     build_parent_budget(mode, atmos, Y; ode_config, restart, constraint_cadence,
-                        tolerances = nothing) -> Union{Nothing, ParentBudgetAdapter}
+                        attribution = :net, tolerances = nothing)
+        -> Union{Nothing, ParentBudgetAdapter}
 
 Build the adapter for a run, or return `nothing` when `mode` is `off`.
 
 Everything the ledger expects is fixed here, before the cache is built and
 before the first step. The configuration is checked against the supported
-scope. The schema is built from the coverage registry, the hook template
-from the tableau and the cadence, and the packet layout from all three.
+scope. The schema is built from the coverage registry, and every measured
+roster row is checked to name the event that measures it. The hook template
+is built from the tableau and the cadence, and the packet layout from all of
+them.
+
+`attribution` is `:net` or `:gross`. `:gross` needs `AuditMode`, since the
+process rows it splits are collected there only, and is refused otherwise.
 
 A restart is refused. A restored state is a transition no transaction
 produced, and the ledger has no transaction to book it in. Reading a restart
@@ -475,8 +723,15 @@ function build_parent_budget(
     ode_config,
     restart::Bool,
     constraint_cadence::Symbol,
+    attribution = :net,
     tolerances = nothing,
 )
+    attribution = parent_budget_attribution(attribution)
+    attribution === :gross && !(mode isa AuditMode) &&
+        error(
+            "`parent_budget_attribution = \"gross\"` splits the process rows, " *
+            "which only `parent_budget_mode = \"audit\"` collects.",
+        )
     restart && error(
         "The parent-budget ledger does not support restarts yet: a restored " *
         "state is a transition no transaction produced, and the ledger has no " *
@@ -486,6 +741,7 @@ function build_parent_budget(
     implicit_solve = !isnothing(ode_config.newtons_method)
     dss = do_dss(axes(Y.c))
     schema = budget_schema(atmos; dss, implicit_solve, restart, constraint_cadence)
+    check_roster_events(schema)
     has_post_implicit =
         implicit_solve && atmos.numerics.energy_q_tot_upwinding != Val(:none)
     template = hook_template(
@@ -495,15 +751,18 @@ function build_parent_budget(
         true,
         CTS.is_fsal(ode_config),
     )
-    layout = adapter_packet_layout(schema, template, mode)
+    layout = adapter_packet_layout(schema, template, mode, attribution)
     scratch_tendency = mode isa AuditMode ? similar(Y) : nothing
+    moist = owns_atmosphere_water(atmos.microphysics_model)
+    snapshot = mode isa AuditMode ? snapshot_fields(Y, moist) : nothing
     FT = BUDGET_ACCOUNTING_TYPE
     return ParentBudgetAdapter(
         mode,
+        attribution,
         schema,
         atmos.surface.temperature,
         budget_context(Y),
-        owns_atmosphere_water(atmos.microphysics_model),
+        moist,
         BudgetLedger{FT}(schema),
         template,
         layout,
@@ -511,24 +770,44 @@ function build_parent_budget(
         COLLECTED_CHANNELS,
         parent_budget_tolerances(tolerances),
         scratch_tendency,
+        snapshot,
+        active_events(schema),
         nothing,
         nothing,
         Dict{Symbol, Int}(hook => 0 for hook in METERED_HOOKS),
         (zero(FT), zero(FT), zero(FT)),
         Dict{Int, FT}(),
-        Dict{Symbol, NTuple{3, FT}}(),
-        Tuple{Symbol, Int, NTuple{3, FT}}[],
+        Dict{Symbol, Measurement}(),
+        Tuple{Symbol, Int, Measurement}[],
         Tuple{HookCall, NTuple{3, FT}}[],
-        Tuple{Int, NTuple{3, FT}}[],
-        Tuple{Int, NTuple{3, FT}}[],
+        Tuple{Int, Measurement}[],
+        Tuple{Int, Measurement}[],
+        Dict{Tuple{Symbol, Symbol, Int}, Measurement}(),
+        Tuple{Symbol, Symbol, Int}[],
+        :none,
+        0,
+        :none,
+        Set{Symbol}(),
+        nothing,
         0,
         0,
         nothing,
         BudgetLeg{FT}[],
         StageObservation{FT}[],
+        GrossRecord{FT}[],
         BudgetCommit{FT}[],
     )
 end
+
+# The fields an event's applied update is differenced against: a copy of each
+# parent tendency field, taken when the event opens. Reading the update
+# pointwise, rather than as a difference of two integrals of the accumulated
+# tendency, is what keeps its rounding error the size of the update itself.
+snapshot_fields(Y, moist::Bool) = (;
+    ρ = similar(Y.c.ρ),
+    ρq_tot = moist ? similar(Y.c.ρq_tot) : nothing,
+    ρe_tot = similar(Y.c.ρe_tot),
+)
 
 # Everything the meters recorded during a step, cleared once it is committed.
 function clear_step_state!(adapter::ParentBudgetAdapter)
@@ -541,6 +820,11 @@ function clear_step_state!(adapter::ParentBudgetAdapter)
     empty!(adapter.observations)
     empty!(adapter.defects)
     empty!(adapter.corrections)
+    empty!(adapter.parts)
+    empty!(adapter.unmeasured)
+    adapter.evaluation = :none
+    adapter.open_event = :none
+    empty!(adapter.seen)
     return nothing
 end
 
@@ -555,6 +839,18 @@ function parent_integrals(adapter::ParentBudgetAdapter, Y)
     water = adapter.moist ? local_atmosphere_water(Y) : zero(BUDGET_ACCOUNTING_TYPE)
     return (local_atmosphere_mass(Y), water, local_atmosphere_energy(Y))
 end
+
+# The local integrals of the absolute values of the three parent fields: the
+# arithmetic magnitude of `parent_integrals` of the same array.
+function parent_magnitudes(adapter::ParentBudgetAdapter, Y)
+    FT = BUDGET_ACCOUNTING_TYPE
+    integral(field) = local_volume_integral(Base.Broadcast.broadcasted(abs, field))
+    water = adapter.moist ? integral(Y.c.ρq_tot) : zero(FT)
+    return (integral(Y.c.ρ), water, integral(Y.c.ρe_tot))
+end
+
+# A before/after difference of two integrals, with the magnitude of both.
+difference(before, after) = (after .- before, abs.(before) .+ abs.(after))
 
 # The template entry for the next firing of `hook`. One firing more than the
 # template holds means the stepper ran a hook order the adapter was not written
@@ -579,15 +875,39 @@ function measures(adapter::ParentBudgetAdapter, call::HookCall)
     return call.role === :final && hook_is_measured(adapter.schema, call.hook)
 end
 
-# Book a measured change where its role says it belongs.
-function book_change!(adapter::ParentBudgetAdapter, call::HookCall, change)
+# Book a measured change where its role says it belongs. An observation keeps
+# the change alone: it enters no identity and needs no magnitude.
+function book_change!(adapter::ParentBudgetAdapter, call::HookCall, change::Measurement)
     if call.role === :final
         adapter.final_changes[call.hook] = change
     elseif call.role === :post_newton
         push!(adapter.folded, (call.hook, call.stage, change))
     else
-        push!(adapter.observations, (call, change))
+        push!(adapter.observations, (call, change[1]))
     end
+    return nothing
+end
+
+"""
+    ExplicitMeter
+
+The explicit tendency wrapped so the adapter knows which stage's tendency is
+being evaluated and, in `AuditMode`, meters the applied-update events inside
+it. The wrapped function receives exactly what the stepper passed; the meter
+only reads.
+"""
+struct ExplicitMeter{F, A}
+    f::F
+    adapter::A
+end
+
+function (meter::ExplicitMeter)(Yₜ, Yₜ_lim, Y, p, t)
+    adapter = meter.adapter
+    call = next_call!(adapter, :T_exp_T_lim!)
+    metering = is_audit(adapter)
+    metering && begin_evaluation!(adapter, :explicit, call.stage)
+    meter.f(Yₜ, Yₜ_lim, Y, p, t)
+    metering && end_evaluation!(adapter)
     return nothing
 end
 
@@ -610,7 +930,12 @@ function (meter::HookMeter)(Y, p, t, args...)
     measure = measures(adapter, call)
     measure && (adapter.before = parent_integrals(adapter, Y))
     meter.f(Y, p, t, args...)
-    measure && book_change!(adapter, call, parent_integrals(adapter, Y) .- adapter.before)
+    measure &&
+        book_change!(
+            adapter,
+            call,
+            difference(adapter.before, parent_integrals(adapter, Y)),
+        )
     return nothing
 end
 
@@ -664,20 +989,31 @@ function (meter::PostImplicitMeter)(Yₜ, U, p, t)
     if is_audit(adapter)
         dtγ = adapter.dtγ[call.stage]
         tendency = adapter.scratch_tendency
+        # The one implicit tendency evaluation the adapter owns is also where
+        # the implicit channel's process rows are measured.
+        begin_evaluation!(adapter, :implicit, call.stage)
         meter.implicit_tendency(tendency, U, p, t)
-        residual =
-            parent_integrals(adapter, adapter.stepper_cache.temp) .+
-            dtγ .* parent_integrals(adapter, tendency) .-
-            parent_integrals(adapter, U)
-        push!(adapter.defects, (call.stage, residual))
+        end_evaluation!(adapter)
+        start = parent_integrals(adapter, adapter.stepper_cache.temp)
+        applied = parent_integrals(adapter, tendency)
+        solved = parent_integrals(adapter, U)
+        residual = start .+ dtγ .* applied .- solved
+        # Three integrals of a stage state cancel to a small residual, so its
+        # magnitude is theirs.
+        magnitude =
+            abs.(start) .+ dtγ .* parent_magnitudes(adapter, tendency) .+ abs.(solved)
+        push!(adapter.defects, (call.stage, (residual, magnitude)))
     end
     meter.f(Yₜ, U, p, t)
-    is_audit(adapter) &&
-        push!(adapter.corrections, (call.stage, parent_integrals(adapter, Yₜ)))
+    is_audit(adapter) && push!(
+        adapter.corrections,
+        (call.stage, (parent_integrals(adapter, Yₜ), parent_magnitudes(adapter, Yₜ))),
+    )
     return nothing
 end
 
 """
+    meter_explicit(adapter, f)
     meter_hook(adapter, hook, f)
     meter_initialize(adapter, f)
     meter_post_implicit(adapter, f, implicit_tendency)
@@ -686,6 +1022,8 @@ Wrap the hook `f` in the adapter's meter, or return `f` itself when there is no
 adapter, so `args_integrator` wires the same names whether the ledger is on or
 off.
 """
+meter_explicit(::Nothing, f) = f
+meter_explicit(adapter::ParentBudgetAdapter, f) = ExplicitMeter(f, adapter)
 meter_hook(::Nothing, ::Symbol, f) = f
 meter_hook(adapter::ParentBudgetAdapter, hook::Symbol, f) = HookMeter(hook, f, adapter)
 meter_initialize(::Nothing, f) = f
@@ -694,6 +1032,153 @@ meter_post_implicit(::Nothing, f, _) = f
 meter_post_implicit(::ParentBudgetAdapter, ::Nothing, _) = nothing
 meter_post_implicit(adapter::ParentBudgetAdapter, f, implicit_tendency) =
     PostImplicitMeter(f, implicit_tendency, adapter)
+
+# ============================================================================
+# The applied-update events
+# ============================================================================
+
+# The adapter meters an evaluation between these two calls: every event opened
+# in it is integrated for the channel `kind` feeds, at `stage`.
+function begin_evaluation!(adapter::ParentBudgetAdapter, kind::Symbol, stage::Int)
+    adapter.evaluation = kind
+    adapter.evaluation_stage = stage
+    adapter.open_event = :none
+    empty!(adapter.seen)
+    return nothing
+end
+
+function end_evaluation!(adapter::ParentBudgetAdapter)
+    adapter.open_event === :none || error(
+        "The $(adapter.evaluation) tendency evaluation ended with the " *
+        "applied-update event $(adapter.open_event) still open.",
+    )
+    adapter.evaluation = :none
+    return nothing
+end
+
+"""
+    open_ledger_event!(adapter, Yₜ, event)
+    close_ledger_event!(adapter, Yₜ, event)
+
+Open and close the adapter's half of an applied-update event; see
+`open_applied_update!`.
+
+Outside a metered evaluation both return at once, which covers every tendency
+evaluation in `SummaryMode`, every Newton iteration and every Jacobian
+evaluation. Inside one, the label is checked against the registry, against
+nesting and against a second opening in the same evaluation. If a roster row
+of this configuration is measured by it, the open copies the parent tendency
+fields of `Yₜ` and the close integrates the positive and negative parts of
+what the process added to them, which is its applied update at this stage.
+The copy and the six local integrals are the only cost, and nothing is
+written.
+"""
+function open_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, event::Symbol)
+    adapter.evaluation === :none && return nothing
+    event in REGISTRY_EVENTS || error(
+        "The applied-update event $event is not one the coverage registry " *
+        "names. Add the process to the registry before bracketing it.",
+    )
+    adapter.open_event === :none || error(
+        "The applied-update event $event was opened while " *
+        "$(adapter.open_event) is open. Events do not nest: what a nested " *
+        "bracket measured would be counted by both.",
+    )
+    event in adapter.seen && error(
+        "The applied-update event $event was opened twice in one " *
+        "$(adapter.evaluation) tendency evaluation. A process is bracketed " *
+        "once per evaluation; a second bracket would book its update twice.",
+    )
+    adapter.open_event = event
+    push!(adapter.seen, event)
+    event in adapter.events || return nothing
+    take_snapshot!(adapter, Yₜ)
+    return nothing
+end
+
+function close_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, event::Symbol)
+    adapter.evaluation === :none && return nothing
+    adapter.open_event === event || error(
+        "The applied-update event $event was closed while " *
+        "$(adapter.open_event === :none ? "no event" : adapter.open_event) " *
+        "is open.",
+    )
+    adapter.open_event = :none
+    event in adapter.events || return nothing
+    positive, negative = applied_parts(adapter, Yₜ)
+    fault = adapter.fault
+    if !isnothing(fault) && fault[2] === event
+        fault[1] === :missing && return nothing
+        # The parts of the negated update are the negated parts, swapped.
+        fault[1] === :sign_reversed && ((positive, negative) = (.-negative, .-positive))
+    end
+    adapter.parts[(adapter.evaluation, event, adapter.evaluation_stage)] =
+        (positive, negative)
+    return nothing
+end
+
+function take_snapshot!(adapter::ParentBudgetAdapter, Yₜ)
+    snapshot = adapter.snapshot
+    snapshot.ρ .= Yₜ.c.ρ
+    adapter.moist && (snapshot.ρq_tot .= Yₜ.c.ρq_tot)
+    snapshot.ρe_tot .= Yₜ.c.ρe_tot
+    return nothing
+end
+
+# The pointwise parts of an applied update, widened before the difference.
+positive_part(after, before) =
+    max(to_accounting(after) - to_accounting(before), zero(BUDGET_ACCOUNTING_TYPE))
+negative_part(after, before) =
+    min(to_accounting(after) - to_accounting(before), zero(BUDGET_ACCOUNTING_TYPE))
+
+# The local integrals of the positive and negative parts of what an event
+# applied to each parent field, against the copies taken when it opened. The
+# amount is their sum and the arithmetic magnitude their difference.
+function applied_parts(adapter::ParentBudgetAdapter, Yₜ)
+    FT = BUDGET_ACCOUNTING_TYPE
+    snapshot = adapter.snapshot
+    part(f, after, before) =
+        local_volume_integral(Base.Broadcast.broadcasted(f, after, before))
+    water(f) = adapter.moist ? part(f, Yₜ.c.ρq_tot, snapshot.ρq_tot) : zero(FT)
+    positive = (
+        part(positive_part, Yₜ.c.ρ, snapshot.ρ),
+        water(positive_part),
+        part(positive_part, Yₜ.c.ρe_tot, snapshot.ρe_tot),
+    )
+    negative = (
+        part(negative_part, Yₜ.c.ρ, snapshot.ρ),
+        water(negative_part),
+        part(negative_part, Yₜ.c.ρe_tot, snapshot.ρe_tot),
+    )
+    return (positive, negative)
+end
+
+"""
+    inject_fault!(adapter, kind, event)
+    clear_fault!(adapter)
+
+Make the adapter's half of the applied-update `event` misbehave in a named
+way, so a test can show what the ledger does with a measurement that is
+missing or has the wrong sign. `kind` is `:missing`, which drops the event's
+increment, or `:sign_reversed`, which negates it. This is test
+instrumentation. Nothing at runtime sets a fault.
+"""
+function inject_fault!(adapter::ParentBudgetAdapter, kind::Symbol, event::Symbol)
+    kind in (:missing, :sign_reversed) ||
+        error("Unknown fault $kind; expected :missing or :sign_reversed.")
+    adapter.fault = (kind, event)
+    return nothing
+end
+
+function clear_fault!(adapter::ParentBudgetAdapter)
+    adapter.fault = nothing
+    return nothing
+end
+
+# Whether the post-implicit correction hook is wired, which is the one point
+# where the adapter can evaluate the implicit tendency at the solved stage.
+has_post_implicit_evaluation(adapter::ParentBudgetAdapter) =
+    !isempty(adapter.template.per_hook[:T_post_imp!])
 
 # ============================================================================
 # The callback
@@ -733,6 +1218,20 @@ function initialize_ledger!(adapter::ParentBudgetAdapter, integrator)
         "template $expected. The template was built from the algorithm passed " *
         "at setup, which is not the one the integrator runs.",
     )
+    b_exp = integrator.cache.tableau.b_exp.coeffs
+    findall(!iszero, b_exp) == adapter.template.explicit_stages || error(
+        "The integrator's tableau weights the explicit stages " *
+        "$(findall(!iszero, b_exp)), the adapter's template " *
+        "$(adapter.template.explicit_stages).",
+    )
+    for i in findall(!iszero, integrator.cache.tableau.b_imp.coeffs)
+        i in adapter.template.implicit_stages || error(
+            "The tableau gives the implicit tendency of stage $i a nonzero " *
+            "weight, but that stage has no implicit solve, so the stepper " *
+            "evaluates the implicit tendency there explicitly. The adapter " *
+            "attributes the implicit channel at solved stages only.",
+        )
+    end
     clear_step_state!(adapter)
     endpoints = budget_endpoints(
         integrator.u,
@@ -754,10 +1253,10 @@ Runs before every other callback, so the state it reads is the finalized
 accepted state and the stage tendencies in the stepper cache are this step's.
 The hook counts are checked against the template first. Then the packet is
 reset, filled with every reservoir's endpoint, every channel's envelope, the
-final maps and, in audit mode, the stage rows, and reduced once. The closing
-endpoints are unpacked from it, the legs are recorded, and the transaction is
-committed. Audit mode keeps the commit. The next transaction opens on the
-closing endpoint without measuring it again.
+final maps and, in audit mode, the stage rows and the process rows, and
+reduced once. The closing endpoints are unpacked from it, the legs are
+recorded, and the transaction is committed. Audit mode keeps the commit. The
+next transaction opens on the closing endpoint without measuring it again.
 """
 function commit_step!(adapter::ParentBudgetAdapter, integrator)
     (; schema, ledger, packet, surface_temperature) = adapter
@@ -772,7 +1271,10 @@ function commit_step!(adapter::ParentBudgetAdapter, integrator)
     end
     fill_envelope_slots!(packet, adapter, integrator)
     fill_final_map_slots!(packet, adapter)
-    is_audit(adapter) && fill_audit_slots!(packet, adapter, integrator)
+    if is_audit(adapter)
+        fill_audit_slots!(packet, adapter, integrator)
+        fill_process_slots!(packet, adapter, integrator)
+    end
     reduce_packet!(adapter.context, packet)
     adapter.reductions += 1
 
@@ -780,6 +1282,7 @@ function commit_step!(adapter::ParentBudgetAdapter, integrator)
     record_envelopes!(adapter, packet, step)
     record_final_maps!(adapter, packet, step)
     is_audit(adapter) && record_audit_legs!(adapter, packet, integrator, step)
+    record_process_legs!(adapter, packet, integrator, step)
     # The commit clears the transaction, so the step's records are kept here
     # for the report and the tests. Bounded by the template, not the run.
     copy!(adapter.last_legs, ledger.legs)
@@ -838,6 +1341,19 @@ end
     return total
 end
 
+# The arithmetic magnitude of the same increment: every term of the weighted
+# sum taken in absolute value.
+@inline function weighted_stage_magnitude(
+    weights::NTuple{N, BUDGET_ACCOUNTING_TYPE},
+    values::Vararg{Any, N},
+) where {N}
+    total = zero(BUDGET_ACCOUNTING_TYPE)
+    for k in 1:N
+        total += abs(weights[k]) * abs(BUDGET_ACCOUNTING_TYPE(values[k]))
+    end
+    return total
+end
+
 # A lazy broadcast of the weighted sum over the stage fields, for one local
 # reduction. The closure captures the weights, which are plain numbers, so the
 # broadcast is as cheap on a device as any other pointwise expression.
@@ -848,13 +1364,20 @@ function weighted_stage_sum(weights, fields)
     )
 end
 
+function weighted_stage_magnitudes(weights, fields)
+    return Base.Broadcast.broadcasted(
+        (values...) -> weighted_stage_magnitude(weights, values...),
+        fields...,
+    )
+end
+
 # The prognostic field one parent quantity is integrated from.
 atmosphere_field_name(quantity::Symbol) =
     quantity === :mass ? :ρ : quantity === :water ? :ρq_tot : :ρe_tot
 
 # The local, accounting-precision integral of a channel's accepted increment in
-# one reservoir for one quantity. `tendencies` is the cache's container of stage
-# tendencies for the channel, indexed by stage.
+# one reservoir for one quantity, and its arithmetic magnitude. `tendencies` is
+# the cache's container of stage tendencies for the channel, indexed by stage.
 function local_envelope(
     tendencies,
     indices,
@@ -866,16 +1389,25 @@ function local_envelope(
     if reservoir === ATMOSPHERE_ENDPOINT_GROUP
         name = atmosphere_field_name(quantity)
         fields = map(i -> getproperty(tendencies[i].c, name), indices)
-        return local_volume_integral(weighted_stage_sum(weights, fields))
+        return (
+            local_volume_integral(weighted_stage_sum(weights, fields)),
+            local_volume_integral(weighted_stage_magnitudes(weights, fields)),
+        )
     end
     if quantity === :energy
         fields = map(i -> tendencies[i].sfc.T, indices)
-        return local_boundary_integral(weighted_stage_sum(weights, fields)) *
-               to_accounting(slab_heat_capacity(surface_temperature))
+        capacity = to_accounting(slab_heat_capacity(surface_temperature))
+        return (
+            local_boundary_integral(weighted_stage_sum(weights, fields)) * capacity,
+            local_boundary_integral(weighted_stage_magnitudes(weights, fields)) * capacity,
+        )
     end
     # The slab's water and its mass are one field seen twice.
     fields = map(i -> tendencies[i].sfc.water, indices)
-    return local_boundary_integral(weighted_stage_sum(weights, fields))
+    return (
+        local_boundary_integral(weighted_stage_sum(weights, fields)),
+        local_boundary_integral(weighted_stage_magnitudes(weights, fields)),
+    )
 end
 
 # The stepper cache's container of stage tendencies and the weights for a
@@ -907,7 +1439,7 @@ function fill_envelope_slots!(
             group = envelope_group(channel, reservoir)
             for quantity in BUDGET_QUANTITIES
                 if quantity_applicable(schema, reservoir, quantity)
-                    value = local_envelope(
+                    value, magnitude = local_envelope(
                         tendencies,
                         indices,
                         weights,
@@ -916,8 +1448,10 @@ function fill_envelope_slots!(
                         surface_temperature,
                     )
                     set_local!(packet, group, quantity, value)
+                    set_local!(packet, magnitude_group(group), quantity, magnitude)
                 else
                     set_inapplicable!(packet, group, quantity)
+                    set_inapplicable!(packet, magnitude_group(group), quantity)
                 end
             end
         end
@@ -942,6 +1476,22 @@ function set_triple!(
     return nothing
 end
 
+function set_measurement!(
+    packet::BudgetPacket,
+    adapter::ParentBudgetAdapter,
+    group::Symbol,
+    measurement::Measurement,
+)
+    set_triple!(packet, adapter, group, measurement[1])
+    set_triple!(packet, adapter, magnitude_group(group), measurement[2])
+    return nothing
+end
+
+# A measurement scaled by an accepted weight: the amounts signed, the
+# magnitudes absolute.
+scale(weight, measurement::Measurement) =
+    (weight .* measurement[1], abs(weight) .* measurement[2])
+
 # The measured final maps. A hook the schema declares measured must have been
 # measured on its final call; one declared zero has no slot.
 function fill_final_map_slots!(packet::BudgetPacket, adapter::ParentBudgetAdapter)
@@ -952,7 +1502,12 @@ function fill_final_map_slots!(packet::BudgetPacket, adapter::ParentBudgetAdapte
             "its position, so the stepper did not fire it where the adapter " *
             "expected.",
         )
-        set_triple!(packet, adapter, final_map_group(hook), adapter.final_changes[hook])
+        set_measurement!(
+            packet,
+            adapter,
+            final_map_group(hook),
+            adapter.final_changes[hook],
+        )
     end
     return nothing
 end
@@ -963,28 +1518,37 @@ function fill_audit_slots!(packet::BudgetPacket, adapter::ParentBudgetAdapter, i
     tableau = integrator.cache.tableau
     dt = BUDGET_ACCOUNTING_TYPE(float(integrator.dt))
     rows = stage_rows(adapter.schema)
+    zeros = (zero(dt), zero(dt), zero(dt))
+    nothing_applied = (zeros, zeros)
     for stage in adapter.template.implicit_stages
         b = BUDGET_ACCOUNTING_TYPE(tableau.b_imp.coeffs[stage])
         γ = BUDGET_ACCOUNTING_TYPE(tableau.a_imp.coeffs[stage, stage])
         folded_weight = b / γ
         if :solve_defect in rows
             # The stored tendency is `dtγ T(U*) − r` plus the hooks, so the
-            # defect enters the accepted update with weight `−b/γ`.
-            residual = stage_value(adapter.defects, stage, "solve defect")
-            set_triple!(
+            # defect enters the accepted update with weight `−b/γ`. Without
+            # the correction hook the solved stage is never visible with a
+            # matching cache, so the defect is not measured, its slot stays
+            # zero and its leg is recorded as unknown.
+            measurement = if has_post_implicit_evaluation(adapter)
+                scale(-folded_weight, stage_value(adapter.defects, stage, "solve defect"))
+            else
+                nothing_applied
+            end
+            set_measurement!(
                 packet,
                 adapter,
                 stage_row_group(:solve_defect, stage),
-                (-folded_weight) .* residual,
+                measurement,
             )
         end
         if :post_implicit_correction in rows
             correction = stage_value(adapter.corrections, stage, "post-implicit correction")
-            set_triple!(
+            set_measurement!(
                 packet,
                 adapter,
                 stage_row_group(:post_implicit_correction, stage),
-                (dt * b) .* correction,
+                scale(dt * b, correction),
             )
         end
         for (process, hook) in
@@ -994,9 +1558,8 @@ function fill_audit_slots!(packet::BudgetPacket, adapter::ParentBudgetAdapter, i
             change = folded_change(adapter, hook, stage)
             # A hook the template skips at this stage, such as the constraint at
             # the last stage of a first-same-as-last tableau, contributes zero.
-            values =
-                isnothing(change) ? (zero(dt), zero(dt), zero(dt)) : folded_weight .* change
-            set_triple!(packet, adapter, group, values)
+            measurement = isnothing(change) ? nothing_applied : scale(folded_weight, change)
+            set_measurement!(packet, adapter, group, measurement)
         end
     end
     for (call, change) in adapter.observations
@@ -1025,23 +1588,32 @@ end
 
 # The three components of one atmosphere slot group, measured where the
 # schema says the atmosphere owns the quantity and not applicable elsewhere.
+# A group with magnitudes beside it, which is every group that enters an
+# identity, reads them; an observation has none.
 function atmosphere_components(
     adapter::ParentBudgetAdapter,
     packet::BudgetPacket,
     group::Symbol;
     method::Symbol,
     source::Symbol,
+    magnitudes::Bool = true,
 )
     FT = BUDGET_ACCOUNTING_TYPE
-    component(quantity) =
-        quantity_applicable(adapter.schema, ATMOSPHERE_ENDPOINT_GROUP, quantity) ?
-        measured(
-            packet_value(packet, group, quantity);
+    function component(quantity)
+        quantity_applicable(adapter.schema, ATMOSPHERE_ENDPOINT_GROUP, quantity) ||
+            return not_applicable(FT; source = :schema)
+        amount = packet_value(packet, group, quantity)
+        magnitude =
+            magnitudes ? packet_value(packet, magnitude_group(group), quantity) :
+            abs(amount)
+        return measured(
+            amount;
             method,
             source,
             route = :packed_global_reduction,
-        ) :
-        not_applicable(FT; source = :schema)
+            magnitude,
+        )
+    end
     return component(:mass), component(:water), component(:energy)
 end
 
@@ -1060,6 +1632,7 @@ function record_envelopes!(adapter::ParentBudgetAdapter, packet::BudgetPacket, s
                     method = :tableau_weighted_stage_sum,
                     source,
                     route = :packed_global_reduction,
+                    magnitude = packet_value(packet, magnitude_group(group), quantity),
                 ) : not_applicable(FT; source = :schema)
             leg = BudgetLeg{FT}(;
                 event = Symbol("env.", channel),
@@ -1099,19 +1672,21 @@ function record_final_maps!(adapter::ParentBudgetAdapter, packet::BudgetPacket, 
                 return not_applicable(FT; source = :schema)
             expected = expected_disposition(spec, quantity)
             if expected === :measured
+                group = final_map_group(hook)
                 return measured(
-                    packet_value(packet, final_map_group(hook), quantity);
+                    packet_value(packet, group, quantity);
                     method = :accepted_state_difference,
                     source = Symbol("adapter.", hook),
                     route = :packed_global_reduction,
+                    magnitude = packet_value(packet, magnitude_group(group), quantity),
                 )
             elseif expected === :invariant_zero
-                if !isnothing(measured_change) && !iszero(measured_change[k])
+                if !isnothing(measured_change) && !iszero(measured_change[1][k])
                     error(
                         "The registry declares the final $hook provably zero for " *
                         "$quantity in this configuration, but it changed the " *
-                        "quantity by $(measured_change[k]). The registry and the " *
-                        "code disagree.",
+                        "quantity by $(measured_change[1][k]). The registry and " *
+                        "the code disagree.",
                     )
                 end
                 return invariant_zero(
@@ -1182,6 +1757,15 @@ function record_audit_legs!(
                         proof = :writes_no_density_term,
                         source = :coverage_registry,
                     ) : mass
+            elseif process === :solve_defect && !has_post_implicit_evaluation(adapter)
+                mass, water, energy = map(BUDGET_QUANTITIES) do quantity
+                    quantity_applicable(schema, ATMOSPHERE_ENDPOINT_GROUP, quantity) ?
+                    unknown_component(
+                        FT;
+                        reason = :no_post_implicit_evaluation,
+                        source = :adapter,
+                    ) : not_applicable(FT; source = :schema)
+                end
             end
             leg = BudgetLeg{FT}(;
                 event = Symbol("impl.", process),
@@ -1209,6 +1793,7 @@ function record_audit_legs!(
         mass, water, energy = atmosphere_components(
             adapter, packet, observation_group(call);
             method = :stage_difference, source = Symbol("adapter.", call.hook),
+            magnitudes = false,
         )
         observation = StageObservation{FT}(;
             event = Symbol("obs.", call.hook),
@@ -1228,8 +1813,267 @@ function record_audit_legs!(
 end
 
 # ============================================================================
+# Process rows from the applied-update events
+# ============================================================================
+
+# The measured process rows, each stage's applied update weighted as it enters
+# the accepted step, and the gross parts beside them. A row whose event did
+# not fire at a weighted stage gets a zero slot and is remembered as
+# unmeasured, so that its leg is recorded as unknown rather than as a zero.
+function fill_process_slots!(
+    packet::BudgetPacket,
+    adapter::ParentBudgetAdapter,
+    integrator,
+)
+    (; schema, template) = adapter
+    tableau = integrator.cache.tableau
+    dt = BUDGET_ACCOUNTING_TYPE(float(integrator.dt))
+    zeros = (zero(dt), zero(dt), zero(dt))
+    empty!(adapter.unmeasured)
+    for channel in adapter.channels
+        kind = evaluation_kind(channel)
+        for row in channel_spec(schema, channel).processes
+            measured_row(row) || continue
+            for stage in row_stages(template, channel)
+                weight = row_weight(tableau, channel, stage, dt)
+                parts = get(adapter.parts, (kind, row.event, stage), nothing)
+                isnothing(parts) && push!(adapter.unmeasured, (channel, row.process, stage))
+                positive, negative = isnothing(parts) ? (zeros, zeros) : parts
+                # The amount is the sum of the parts and the magnitude their
+                # difference, each weighted as the row enters the step.
+                measurement = scale(weight, (positive .+ negative, positive .- negative))
+                set_measurement!(
+                    packet,
+                    adapter,
+                    process_row_group(channel, row.process, stage),
+                    measurement,
+                )
+                adapter.attribution === :gross || continue
+                # The parts of the weighted contribution: a negative stage
+                # weight swaps which part is which.
+                weighted_positive, weighted_negative =
+                    weight >= 0 ? (weight .* positive, weight .* negative) :
+                    (weight .* negative, weight .* positive)
+                set_triple!(
+                    packet,
+                    adapter,
+                    gross_group(channel, row.process, stage, :positive),
+                    weighted_positive,
+                )
+                set_triple!(
+                    packet,
+                    adapter,
+                    gross_group(channel, row.process, stage, :negative),
+                    weighted_negative,
+                )
+            end
+        end
+    end
+    return nothing
+end
+
+# One leg per declared row of every collected channel: from the registry alone
+# for a row nothing measures, and in audit mode one per weighted stage from the
+# packet for a row an event measures. The hook-metered rows of the implicit
+# channel are recorded by `record_audit_legs!`. In summary mode a measured row
+# records nothing, and the attribution is blocked naming it.
+function record_process_legs!(
+    adapter::ParentBudgetAdapter,
+    packet::BudgetPacket,
+    integrator,
+    step::Int,
+)
+    (; schema, ledger, template) = adapter
+    FT = BUDGET_ACCOUNTING_TYPE
+    tableau = integrator.cache.tableau
+    dt = FT(float(integrator.dt))
+    empty!(adapter.last_gross)
+    for channel in adapter.channels
+        for row in channel_spec(schema, channel).processes
+            is_stage_row(row) && continue
+            event = Symbol(EVENT_PREFIXES[channel], row.process)
+            if !measured_row(row)
+                record_declared_row!(adapter, row, channel, event, step)
+                continue
+            end
+            is_audit(adapter) || continue
+            for stage in row_stages(template, channel)
+                weight = row_weight(tableau, channel, stage, dt)
+                group = process_row_group(channel, row.process, stage)
+                unmeasured = (channel, row.process, stage) in adapter.unmeasured
+                mass, water, energy = map(BUDGET_QUANTITIES) do quantity
+                    process_component(
+                        adapter,
+                        row,
+                        channel,
+                        packet,
+                        group,
+                        quantity,
+                        unmeasured,
+                    )
+                end
+                leg = BudgetLeg{FT}(;
+                    event,
+                    leg = :atmosphere,
+                    reservoir = AtmosphereReservoir(),
+                    channel,
+                    level = ProcessDecomposition(),
+                    mass,
+                    water,
+                    energy,
+                    path = EquationTerm(),
+                    process = row.process,
+                    phase = channel,
+                    step,
+                    stage,
+                    weight,
+                    measured_at = channel === :implicit ? :solved_stage : :stage_evaluation,
+                )
+                record_leg!(ledger, leg)
+                adapter.attribution === :gross && !unmeasured &&
+                    push!(
+                        adapter.last_gross,
+                        gross_record(adapter, packet, row, channel, stage, weight),
+                    )
+            end
+        end
+    end
+    return nothing
+end
+
+# One quantity of a measured row's leg at one stage. The registry's
+# disposition says what the bracket must have found: a measured quantity takes
+# the reduced amount, a quantity declared provably zero is required to have
+# moved by exactly zero, and one the atmosphere does not own is not applicable.
+# An unmeasured row is unknown in every owned quantity, with the reason, and
+# blocks.
+function process_component(
+    adapter::ParentBudgetAdapter,
+    row::ProcessRowSpec,
+    channel::Symbol,
+    packet::BudgetPacket,
+    group::Symbol,
+    quantity::Symbol,
+    unmeasured::Bool,
+)
+    FT = BUDGET_ACCOUNTING_TYPE
+    quantity_applicable(adapter.schema, ATMOSPHERE_ENDPOINT_GROUP, quantity) ||
+        return not_applicable(FT; source = :schema)
+    expected = expected_disposition(row, quantity)
+    expected === :not_applicable && return not_applicable(FT; source = :coverage_registry)
+    source = Symbol("event.", row.event)
+    if unmeasured
+        reason =
+            channel === :implicit && !has_post_implicit_evaluation(adapter) ?
+            :no_post_implicit_evaluation : :event_not_recorded
+        return unknown_component(FT; reason, source)
+    end
+    value = packet_value(packet, group, quantity)
+    if expected === :invariant_zero
+        iszero(value) || error(
+            "The registry declares process $(row.process) of channel $channel " *
+            "provably zero for $quantity, but its applied-update event " *
+            "$(row.event) moved the quantity by $value. The registry and the " *
+            "code disagree.",
+        )
+        return invariant_zero(
+            FT;
+            proof = :registry_proof_checked_at_event,
+            source = :coverage_registry,
+        )
+    end
+    expected === :measured && return measured(
+        value;
+        method = :applied_update_integral,
+        source,
+        route = :packed_global_reduction,
+        magnitude = packet_value(packet, magnitude_group(group), quantity),
+    )
+    return unknown_component(FT; reason = :disposition_open, source = :coverage_registry)
+end
+
+# A row nothing measures, booked once per step from what the registry
+# declares: an invariant zero with its proof, not applicable, or unknown for a
+# disposition still open. It carries no measurement and takes no stage.
+function record_declared_row!(
+    adapter::ParentBudgetAdapter,
+    row::ProcessRowSpec,
+    channel::Symbol,
+    event::Symbol,
+    step::Int,
+)
+    FT = BUDGET_ACCOUNTING_TYPE
+    mass, water, energy = map(BUDGET_QUANTITIES) do quantity
+        quantity_applicable(adapter.schema, row.reservoir, quantity) ||
+            return not_applicable(FT; source = :schema)
+        expected = expected_disposition(row, quantity)
+        expected === :invariant_zero &&
+            return invariant_zero(FT; proof = :registry_proof, source = :coverage_registry)
+        expected === :not_applicable &&
+            return not_applicable(FT; source = :coverage_registry)
+        expected === :measured &&
+            return unknown_component(FT; reason = :no_event, source = :coverage_registry)
+        return unknown_component(
+            FT;
+            reason = :disposition_open,
+            source = :coverage_registry,
+        )
+    end
+    leg = BudgetLeg{FT}(;
+        event,
+        leg = :atmosphere,
+        reservoir = endpoint_reservoir(row.reservoir),
+        channel,
+        level = ProcessDecomposition(),
+        mass,
+        water,
+        energy,
+        path = EquationTerm(),
+        process = row.process,
+        phase = channel,
+        step,
+        measured_at = :coverage_registry,
+    )
+    record_leg!(adapter.ledger, leg)
+    return nothing
+end
+
+function gross_record(
+    adapter::ParentBudgetAdapter,
+    packet::BudgetPacket,
+    row::ProcessRowSpec,
+    channel::Symbol,
+    stage::Int,
+    weight,
+)
+    FT = BUDGET_ACCOUNTING_TYPE
+    value(part, quantity) =
+        quantity_applicable(adapter.schema, ATMOSPHERE_ENDPOINT_GROUP, quantity) ?
+        packet_value(packet, gross_group(channel, row.process, stage, part), quantity) :
+        zero(FT)
+    parts(part) = map(quantity -> value(part, quantity), BUDGET_QUANTITIES)
+    return GrossRecord{FT}(
+        row.event,
+        channel,
+        row.process,
+        stage,
+        weight,
+        parts(:positive),
+        parts(:negative),
+    )
+end
+
+# ============================================================================
 # Reading the results
 # ============================================================================
+
+"""
+    latest_gross(adapter) -> Vector{GrossRecord}
+
+Return the gross parts of the last accepted step's measured process rows,
+empty unless `parent_budget_attribution` is `gross`.
+"""
+latest_gross(adapter::ParentBudgetAdapter) = adapter.last_gross
 
 """
     latest_commit(adapter) -> Union{Nothing, BudgetCommit}

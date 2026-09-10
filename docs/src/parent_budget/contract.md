@@ -627,6 +627,18 @@ The endpoint magnitudes are inside the last term deliberately. Bounding the
 residual by the leg magnitudes alone is a stricter claim than the subtraction
 supports, and fails on a step whose legs are tiny against the background.
 
+`abs(Q_q,k)` is the **arithmetic magnitude** of the recorded amount: the
+integral of the absolute value of what was summed to produce it. For a single
+measurement it is the absolute amount. For an amount that is itself a
+cancelling sum it is larger, and the difference is not small: the envelope of
+a conservative operator sums a large pointwise tendency to a net near zero,
+and the solve defect is the residual of three stage integrals. Rounding error
+scales with what was added, not with what was left, so a term built from the
+net amounts alone would judge such a row against a tolerance far below its
+own rounding noise. Every measured component carries its magnitude, and the
+adapter measures it beside the amount. Found by the first attribution
+verdicts in stack step 4.
+
 The algebraic solve defect is **not** inside this tolerance. It is a
 leading-order accounting term, reported separately.
 

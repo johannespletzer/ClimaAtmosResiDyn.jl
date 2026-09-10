@@ -294,9 +294,14 @@ entry point for simulations written as scripts; configuration-driven runs go thr
   - `parent_budget_mode = "off"`: The parent-budget ledger, `"off"`, `"summary"` or
     `"audit"`. When on, the ledger measures every accepted step's mass, water and
     energy against what the integrator applied, with one global collective per
-    step and no change to the trajectory. It refuses configurations outside the
+    step and no change to the trajectory. `"audit"` also attributes each channel
+    to the processes that wrote it. It refuses configurations outside the
     contract's scope, restarts, and custom callbacks. See the parent-budget pages
     of the documentation.
+  - `parent_budget_attribution = "net"`: How the ledger books a process row in
+    `"audit"` mode: `"net"` books the signed integral of what the process applied,
+    `"gross"` also keeps its positive and negative parts as a diagnostic. The
+    identities use the net amount either way.
   - `parent_budget_tolerances = nothing`: The tolerances the ledger judges its
     residuals against, a mapping from `:mass`, `:water` or `:energy` to a
     `BudgetTolerance`. Without one every numeric verdict is `blocked`, naming
@@ -368,6 +373,7 @@ function AtmosSimulation{FT}(;
     # Misc
     checkpoint_frequency = Inf,
     parent_budget_mode = "off",
+    parent_budget_attribution = "net",
     parent_budget_tolerances = nothing,
     log_to_file = false,
     verbose = false,
@@ -418,6 +424,7 @@ function AtmosSimulation{FT}(;
         ode_config,
         restart = !isnothing(restart_file),
         constraint_cadence = Symbol(update_constrain_state_every),
+        attribution = parent_budget_attribution,
         tolerances = parent_budget_tolerances,
     )
     if !isnothing(parent_budget) && !default_callbacks && !isempty(callbacks)

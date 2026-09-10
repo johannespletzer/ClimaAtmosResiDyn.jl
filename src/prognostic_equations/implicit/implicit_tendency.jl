@@ -52,6 +52,12 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
         # `docs/src/tagged_water.md` and `KNOWN_TAG_SOURCES`); extending it here
         # would silently change existing tagged-energy results, so that gap is
         # left as it is.
+        #
+        # The parent-budget ledger takes the whole increment, through its own
+        # half of the applied-update event, and only while it is metering the
+        # audit evaluation at the Newton-solved stage. It reads `Yₜ` and writes
+        # nothing, so the Newton iterations see no difference.
+        open_ledger_event!(p.parent_budget, Yₜ, :microphysics)
         snapshot_tagged_ρq_tot!(p, Yₜ)
         microphysics_tendency!(
             Yₜ,
@@ -61,6 +67,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
+        close_ledger_event!(p.parent_budget, Yₜ, :microphysics)
         attribute_tagged_ρq_tot!(Yₜ, Y, p, :microphysics)
         # Surface water/energy deposition from precipitation (implicit path).
         # The explicit counterpart is called from remaining_tendency!.
@@ -83,6 +90,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
     )
 
     if p.atmos.diff_mode == Implicit()
+        open_ledger_event!(p.parent_budget, Yₜ, :vertical_diffusion)
         vertical_diffusion_boundary_layer_tendency!(
             Yₜ,
             Y,
@@ -90,6 +98,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             t,
             p.atmos.vertical_diffusion,
         )
+        close_ledger_event!(p.parent_budget, Yₜ, :vertical_diffusion)
         edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
     end
 
@@ -301,8 +310,10 @@ function implicit_vertical_advection_tendency!(Yₜ, Y, p, t)
     # than accumulating it. The attributed increment does not depend on the
     # tags themselves, so the `-I` diagonal Jacobian block that tags fall back
     # to is exactly right for this term.
+    open_ledger_event!(p.parent_budget, Yₜ, :precipitation)
     snapshot_tagged_ρe_tot!(p, Yₜ)
     vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
+    close_ledger_event!(p.parent_budget, Yₜ, :precipitation)
     attribute_tagged_ρe_tot!(Yₜ, p, :precipitation)
 
     # This is equivalent to grad_v(Φ) + grad_v(p) / ρ

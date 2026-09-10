@@ -22,6 +22,7 @@ configuration ──▶ schema: what must be collected
 per accepted step
 
   state Y ──▶ local accumulation (accounting precision)
+  events  ──▶ applied updates, per process and stage
                     │
                     ├── endpoint slots      ┐
                     └── leg slots           ├──▶ one packed buffer, fixed layout
@@ -292,11 +293,45 @@ the finalized accepted state and no other callback has run. It reads the stage
 tendencies the stepper cache still holds, `T_exp`, `T_lim` and the stored
 effective `T_imp`, and forms each channel's envelope as the sum of those stages
 weighted by the cache's own tableau weights and the step, widened to the
-accounting type before the sum. The endpoints, the envelopes, the final maps
-and whatever the meters measured go into one packet and one collective, the
-legs are recorded, the transaction is committed, and the next one opens on the
-closing endpoint. The callback's initialisation reads `B⁰` after the integrator
-has refreshed its cache and before any other callback.
+accounting type before the sum. The endpoints, the envelopes, the final maps,
+the process rows and whatever the meters measured go into one packet and one
+collective, the legs are recorded, the transaction is committed, and the next
+one opens on the closing endpoint. The callback's initialisation reads `B⁰`
+after the integrator has refreshed its cache and before any other callback.
+
+### The applied-update event
+
+Process attribution comes from one bracket. Every process that writes a
+parent field with a net integral the registry does not prove zero is wrapped
+in `open_applied_update!` and `close_applied_update!` under the label the
+registry names for it, in `src/prognostic_equations/applied_update.jl`. The
+same bracket feeds the tagging families and the process records for the
+labels they know, and feeds the ledger for every label, so there is one place
+in the tendency code where a process is delimited and every consumer reads
+it. A process added without a bracket lands in the attribution residual,
+which is how the omission is found.
+
+The explicit tendency sits behind a meter of its own, so the adapter knows
+which stage's tendency is being evaluated. In audit mode it meters the
+evaluation: each bracket takes a copy of the parent tendency fields when it
+opens and integrates the positive and negative parts of what the process
+added when it closes, read pointwise, so the rounding error is the size of
+the update and not of the accumulated tendency. The amount is the sum of the
+parts, the arithmetic magnitude their difference, and under
+`parent_budget_attribution: gross` the parts are kept beside the leg. Each
+stage's update enters the accepted step with the stage's weight, `dt b_exp[i]`
+for an explicit channel and `dt b_imp[i]` for the implicit one, whose rows are
+measured during the adapter's own tendency evaluation at the Newton-solved
+stage. A row whose every quantity the registry proves zero, or declares not
+applicable, needs no bracket and is booked from the registry in both modes.
+
+The adapter refuses, where it happens, a bracket whose label the registry
+does not know, one opened inside another, one opened twice in an evaluation,
+one closed out of order, and one left open at the end of an evaluation.
+Outside a metered evaluation, which is every Newton iteration and every
+summary-mode step, a bracket costs a field access and a comparison. A bracket
+that did not fire at a weighted stage leaves its row unknown, and the row
+blocks by name.
 
 Process classification lives in the other single source of truth, the coverage
 registry, which the documentation table is generated from or checked against.

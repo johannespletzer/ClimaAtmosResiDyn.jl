@@ -182,16 +182,37 @@ out of the totals.
 reach a verdict as a comparison that is silently false, so a non-finite amount
 is refused at construction rather than surfacing as a residual nobody can
 attribute.
+
+**A measured component carries its arithmetic magnitude.** `magnitude` is the
+integral of the absolute value of what was summed to produce the amount: for
+a single measurement it is `abs(amount)`, the default, and for an amount that
+is itself a cancelling sum, such as an envelope of a conservative operator or
+a difference of two stage integrals, it is larger. The tolerance's arithmetic
+term is built from the magnitudes, because rounding error scales with what
+was added and not with what was left. It is never smaller than the amount,
+and it is zero for a component that carries no amount.
 """
 struct BudgetComponent{FT}
     amount::FT
     evidence::BudgetEvidence
-    function BudgetComponent{FT}(amount, evidence::BudgetEvidence) where {FT}
+    magnitude::FT
+    function BudgetComponent{FT}(
+        amount,
+        evidence::BudgetEvidence,
+        magnitude = abs(amount),
+    ) where {FT}
         a = convert(FT, amount)
+        m = convert(FT, magnitude)
         isfinite(a) || error(
             "A component amount must be finite, got $a. A NaN or Inf would " *
             "pass through every sum and reach the verdict as a comparison " *
             "that is silently false, so it is refused where it enters.",
+        )
+        isfinite(m) && m >= abs(a) || error(
+            "A component magnitude must be finite and at least the absolute " *
+            "amount, got magnitude $m for amount $a. The magnitude bounds the " *
+            "rounding error of the sum the amount came from, and a bound " *
+            "below the amount itself bounds nothing.",
         )
         status = evidence.status
         if !(status isa Measured) && !iszero(a)
@@ -216,12 +237,21 @@ struct BudgetComponent{FT}
                 "zero is what UnknownComponent exists to keep out of a total.",
             )
         end
-        return new{FT}(a, evidence)
+        if !(status isa Measured) && !iszero(m)
+            error(
+                "A $(nameof(typeof(status))) component carries no amount and " *
+                "so has no magnitude, got $m.",
+            )
+        end
+        return new{FT}(a, evidence, m)
     end
 end
 
-BudgetComponent(amount::FT, evidence::BudgetEvidence) where {FT} =
-    BudgetComponent{FT}(amount, evidence)
+BudgetComponent(
+    amount::FT,
+    evidence::BudgetEvidence,
+    magnitude = abs(amount),
+) where {FT} = BudgetComponent{FT}(amount, evidence, magnitude)
 
 """
     component_status(component) -> ComponentStatus
@@ -252,19 +282,32 @@ Return the precision and reduction path the amount travelled.
 component_route(c::BudgetComponent) = c.evidence.route
 
 """
-    measured(amount; method, source = :unspecified, route = :unspecified)
+    component_magnitude(component) -> FT
+
+Return the arithmetic magnitude of the sum the amount came from; see
+`BudgetComponent`.
+"""
+component_magnitude(c::BudgetComponent) = c.magnitude
+
+"""
+    measured(amount; method, source = :unspecified, route = :unspecified,
+             magnitude = abs(amount))
 
 Build a `BudgetComponent` holding a measured signed amount. `method` is
 required: an amount with no account of where it came from cannot be audited.
+`magnitude` is the arithmetic magnitude of the sum behind the amount, see
+`BudgetComponent`; the default is right for a single measurement.
 """
 measured(
     amount::FT;
     method::Symbol,
     source::Symbol = :unspecified,
     route::Symbol = :unspecified,
+    magnitude = abs(amount),
 ) where {FT} = BudgetComponent{FT}(
     amount,
     BudgetEvidence(; status = Measured(), method, source, route),
+    magnitude,
 )
 
 """

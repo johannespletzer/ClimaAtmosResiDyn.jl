@@ -208,7 +208,7 @@ function endpoint_total(
         is_applicable(c) && (applicable = true)
         if is_contributing(c)
             total += c.amount
-            magnitude += abs(c.amount)
+            magnitude += c.magnitude
         end
         if is_blocking(c)
             push!(blocked_by, "$(reservoir_name(endpoint.reservoir)) endpoint")
@@ -912,7 +912,7 @@ function project_parent(
         c = budget_component(leg, quantity)
         is_blocking(c) && push!(blocked_by, leg_label(leg))
         is_contributing(c) || continue
-        magnitude += abs(c.amount)
+        magnitude += c.magnitude
         if leg.level isa ChannelEnvelope
             envelopes += c.amount
         else
@@ -1030,6 +1030,40 @@ function missing_processes(
         )
     end
     return missing_rows
+end
+
+"""
+    missing_transfer_legs(ledger, spec, control_volume) -> Vector{String}
+
+Return the modeled legs that were not recorded, as blockers. A leg counts when
+its event is applied through channel `spec` and its reservoir is inside
+`control_volume`.
+
+A transfer leg explains its channel's envelope exactly as a decomposition row
+does: the surface flux is part of what the explicit channel applied. So an
+event whose legs are missing leaves the attribution short by them, and the
+honest answer is blocked, naming the legs, rather than a residual the size of
+the flux. Read from the specification, like `missing_processes`.
+"""
+function missing_transfer_legs(
+    ledger::BudgetLedger,
+    spec::ChannelSpec,
+    cv::ControlVolume,
+)
+    missing_legs = String[]
+    for event in ledger.schema.transfer_events
+        event.channel === spec.name || continue
+        for (reservoir, name) in event.modeled_legs
+            is_inside(cv, reservoir) || continue
+            recorded_leg(ledger, event.name, reservoir, name) && continue
+            push!(
+                missing_legs,
+                "expected leg $name of transfer event $(event.name) in " *
+                "$reservoir, which channel $(spec.name) applies, was not recorded",
+            )
+        end
+    end
+    return missing_legs
 end
 
 # Whether a decomposition leg for this channel, process and reservoir was
@@ -1154,12 +1188,12 @@ function project_attribution(
         if leg.level isa ChannelEnvelope
             is_contributing(c) || continue
             envelope += c.amount
-            magnitude += abs(c.amount)
+            magnitude += c.magnitude
         elseif explains_envelope(leg.level)
             is_contributing(c) || continue
             explaining_count += 1
             attributed += c.amount
-            magnitude += abs(c.amount)
+            magnitude += c.magnitude
         end
     end
     return (; envelope, attributed, magnitude, explaining_count, blocked_by)
@@ -1213,7 +1247,7 @@ function project_transfer(
         is_blocking(c) && push!(blocked_by, leg_label(leg))
         is_contributing(c) || continue
         total += c.amount
-        magnitude += abs(c.amount)
+        magnitude += c.magnitude
     end
     missing_legs = String[]
     for (reservoir, name) in spec.modeled_legs
@@ -1537,11 +1571,12 @@ end
 
 Compute one `AttributionReconciliation` for a declared channel. Pure.
 
-Three things block. A required envelope that was not recorded. A declared
-decomposition row that was not recorded. A disposition the registry has left
-open. All three are read from the specification rather than from what arrived,
-so a channel that reported nothing at all is a blocked row naming it, and a
-channel that reported some of its processes is blocked by the rest.
+Four things block. A required envelope that was not recorded. A declared
+decomposition row that was not recorded. A transfer leg the channel applies
+that was not recorded. A disposition the registry has left open. All four are
+read from the specification rather than from what arrived, so a channel that
+reported nothing at all is a blocked row naming it, and a channel that
+reported some of its processes is blocked by the rest.
 """
 function reconcile_attribution(
     ledger::BudgetLedger{FT},
@@ -1558,6 +1593,7 @@ function reconcile_attribution(
         projected.blocked_by,
         missing_channel_envelopes(ledger, spec, cv),
         missing_processes(ledger, spec, cv),
+        missing_transfer_legs(ledger, spec, cv),
         open_dispositions((spec,), quantity, cv),
         open_dispositions(spec.processes, quantity, cv),
     )

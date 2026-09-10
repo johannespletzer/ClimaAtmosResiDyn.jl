@@ -24,7 +24,8 @@ The files are included in dependency order.
   - `journal.jl` records what happened, with evidence per component.
   - `transaction.jl` compares the two and produces the three residuals.
   - `adapter.jl` is the place that knows the timestepper's stages and hooks.
-    It captures the accepted envelopes after each step and drives the
+    It captures the accepted envelopes after each step, meters the
+    applied-update events the tendency code brackets, and drives the
     transactions.
 """
 module ParentBudget
@@ -47,6 +48,9 @@ import ...NonEquilibriumMicrophysics2M
 import ...NonEquilibriumMicrophysics2MP3
 import ...HeldSuarezForcing
 import ...RRTMGPI
+import ...RadiationDYCOMS
+import ...RadiationISDAC
+import ...RadiationTRMM_LBA
 import ...Explicit
 import ...Implicit
 import ...AbstractEDMF
@@ -57,6 +61,11 @@ import ...TracerNonnegativityElementConstraint
 import ...TracerNonnegativityVerticalWaterBorrowing
 # The adapter asks the space whether it performs DSS.
 import ...do_dss
+# The ledger half of the applied-update event. The functions are declared in
+# the main module, next to the tag half, so the tendency code calls one API
+# whether the ledger is on or off; the adapter adds its methods here.
+import ...open_ledger_event!
+import ...close_ledger_event!
 
 include("integrals.jl")
 include("schema.jl")

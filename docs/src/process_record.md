@@ -105,9 +105,12 @@ says what happened in this cell, not what arrived here.
 
 ## What is not recorded
 
-  - **Only the explicit tendency path**, because that is the only path with a
-    snapshot/attribute bracket. `snapshot_tags!` and `attribute_tags!` are
-    called from `remaining_tendency.jl` and nowhere else.
+  - **Only the explicit tendency path**, because that is the only path whose
+    applied-update events reach the records. `open_applied_update!` and
+    `close_applied_update!`, which call the record's snapshot and accumulate
+    halves for a label in `KNOWN_TAG_SOURCES`, are called from
+    `remaining_tendency.jl`; the implicit path opens the ledger's half of the
+    event directly and never the records'.
 
     The limit is the bracket and nothing else. `Y`, `Yₜ`, `p.precomputed` and
     `p.scratch` are all dual-converted, so a record's snapshot and destination

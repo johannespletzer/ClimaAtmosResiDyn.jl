@@ -16,7 +16,7 @@ definition of done holds.
 | 1          | [#48](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/48) | Specify the parent-budget closure contract and coverage model           | none; it defines the claims                                                     |
 | 2          | [#49](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/49) | Add the internal parent-budget journal and endpoint-reconciliation core | none in a simulation; the core's own invariants hold                            |
 | 3          | [#55](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/55) | Capture accepted parent-budget update envelopes                         | accepted-state reconciliation                                                   |
-| 4          | not yet opened                                                         | Attribute explicit parent-budget contributions                          | process attribution, explicit channels                                          |
+| 4          | [#57](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/57) | Attribute explicit parent-budget contributions                          | process attribution, explicit channels                                          |
 | 5          | [#56](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/56) | Attribute implicit and post-implicit parent-budget contributions        | implemented-update accounting, and process attribution for the implicit channel |
 | 6          | not yet opened                                                         | Account for boundary fluxes and reservoir transfers                     | transfer consistency                                                            |
 | 7          | not yet opened                                                         | Account for final maps, restarts, and callbacks                         | accepted-state reconciliation across finalization and restart                   |
@@ -185,6 +185,21 @@ duplicated and sign-reversed event tests; registry-to-documentation agreement.
 name what blocks them, and the registry is the single source of truth for
 process classification.
 
+**Status.** #57 delivers the applied-update event, one bracket per process
+that feeds the tag families, the process records and the ledger, and books
+every roster row of every collected channel: a row the registry proves zero
+from the registry alone, in both modes, and a measured row from its event at
+every weighted stage, in `audit` mode, with the gross parts beside it under
+`parent_budget_attribution: gross`. Both explicit channels attribute on a
+forced dry column, and the implicit channel does too, now that vertical
+advection is booked. A transfer event a channel applies blocks that channel's
+attribution until step 6 records its legs, so a run with surface fluxes or
+flux-form radiation reports its explicit attribution as blocked, naming the
+legs. Two corrections came out of the first verdicts: the tolerance's
+arithmetic term now reads each amount's arithmetic magnitude, and a run
+without the upwind correction hook records the solve defect as unknown
+instead of failing at the commit.
+
 ## Stack step 5 — Implicit and post-implicit attribution
 
 **Claim.** Implemented-update accounting, and process attribution for the
@@ -222,10 +237,12 @@ defect included, and every hook is booked exactly once.
 
 **Status.** #56 delivers the implicit envelope, the final maps of step 7, the
 solve defect, the post-implicit correction and the folded hooks, each booked
-once with its accepted weight, and the parent identity passes. The implicit
-channel's per-process rows, such as vertical advection, are attributed with
-the event API of step 4, so its attribution stays blocked naming them until
-then.
+once with its accepted weight, and the parent identity passes. #57 books the
+implicit channel's per-process rows through the same event API as the
+explicit ones, measured during the adapter's own tendency evaluation at the
+solved stage, so the implicit attribution passes on the dry column. Where the
+correction hook is not wired, that evaluation does not exist, and the defect
+and the measured implicit rows are recorded as unknown and block by name.
 
 ## Stack step 6 — Boundaries and reservoir transfers
 

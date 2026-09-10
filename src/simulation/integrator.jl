@@ -212,14 +212,15 @@ function args_integrator(Y, p, tspan, ode_algo, callback,
         T_post_imp! =
             (isnothing(T_imp!) || atmos.numerics.energy_q_tot_upwinding == Val(:none)) ?
             nothing : correct_implicit_advection_tendency!
-        # With the parent-budget ledger on, the state-writing hooks, the
-        # implicit-stage initialiser and the post-implicit correction sit
-        # behind meters that read the state around each call and never write
-        # it. Off, these are the plain functions.
+        # With the parent-budget ledger on, the explicit tendency, the
+        # state-writing hooks, the implicit-stage initialiser and the
+        # post-implicit correction sit behind meters that read the state around
+        # each call and never write it. Off, these are the plain functions.
         ledger = p.parent_budget
         PB = Internals.ParentBudget
         tendency_function = CTS.ClimaODEFunction(;
-            T_exp_T_lim!, T_imp!,
+            T_exp_T_lim! = PB.meter_explicit(ledger, T_exp_T_lim!),
+            T_imp!,
             T_post_imp! = PB.meter_post_implicit(ledger, T_post_imp!, implicit_tendency!),
             cache! = set_precomputed_quantities!, cache_imp!,
             lim! = PB.meter_hook(ledger, :lim!, limiters_func!),
