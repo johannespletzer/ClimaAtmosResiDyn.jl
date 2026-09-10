@@ -412,6 +412,15 @@ function test_phase_a()
             write_synthetic_closure(dir, run, dt, [tail / 2, tail])
             write_synthetic_operator(dir, [tail / 2, tail])
         end
+        # One run carries an audit table and the others do not, which is the
+        # real shape: `audit: true` is off by default and set on one phase-A
+        # run. It goes on `a1_dt10` here rather than on `a5_sphere_limiter`
+        # because a5's slot in this fixture is the run refused for having no
+        # provenance, so it never reaches the summary at all.
+        write_synthetic_audit(
+            joinpath(output, "a1_dt10"), "water",
+            [(0.0, 1.0e-5, 2.0e-6, 0.0), (10.0, 3.0e-5, 7.0e-6, 0.0)],
+        )
         # Two ways a run must be refused, which are the same defect: no
         # provenance at all, and a provenance that cannot name the commit. The
         # first real run produced the second kind, because `module purge` took
@@ -462,6 +471,23 @@ function test_phase_a()
             "a run recording `commit: unknown` was analysed",
         )
 
+        # The audit columns, read back by field. `occursin` would pass on a row
+        # of `NaN`, which is exactly what a loader that never opened the file
+        # produces, and that is the fault this covers: a table written by the
+        # model, listed in the hand-back, and read by nothing.
+        audited = summary_row(summary, "a1_dt10")
+        over = parse(Float64, audited["final_overclaimed_relative"])
+        orphan = parse(Float64, audited["final_orphaned_relative"])
+        @assert(over ≈ 3.0e-5, "final_overclaimed_relative $over, want 3.0e-5")
+        @assert(orphan ≈ 7.0e-6, "final_orphaned_relative $orphan, want 7.0e-6")
+        # ... and a run with no audit table must say so rather than borrowing
+        # the neighbouring run's numbers.
+        plain = summary_row(summary, "a1_dt5")
+        @assert(
+            isnan(parse(Float64, plain["final_overclaimed_relative"])),
+            "a run with no audit table reported $(plain["final_overclaimed_relative"])",
+        )
+
         plots = joinpath(tmp, "plots")
         for name in (
             "a_gross_relative_vs_time.png",
@@ -470,8 +496,9 @@ function test_phase_a()
         )
             @assert isfile(joinpath(plots, name)) "missing plot $name"
         end
-        @info "   summary and three PNGs written; both the run with no \
-               provenance and the one recording `commit: unknown` were refused"
+        @info "   summary and three PNGs written; the audit columns read back \
+               as $over and $orphan, and both the run with no provenance and \
+               the one recording `commit: unknown` were refused"
     end
 end
 
@@ -693,6 +720,13 @@ function test_phase_b_and_c()
         c_dir = write_energy_run(
             joinpath(output, "c0_column"); family = "energy_source", record = false,
         )
+        # C0 is the run whose volume fraction the mass fraction is the
+        # counterpart of, so the audit table goes on it here. In the real tree
+        # it is `c0_sphere_deep` that carries the key; the shape read back is
+        # the same.
+        write_synthetic_audit(
+            c_dir, "energy_source", [(0.0, 0.0, 0.0, 0.25), (3600.0, 0.0, 0.0, 0.9)],
+        )
         header, rows, metadata = call(reducer, :reduce_source_tags, c_dir)
         call(
             reducer, :write_table, c_dir, "source_tag_extrema", header, rows,
@@ -764,12 +798,24 @@ function test_phase_b_and_c()
         @assert(worst ≈ -4.0, "most negative tag value $worst, want -4.0")
         @assert(fraction ≈ 0.75, "non-positive fraction $fraction, want 0.75")
 
+        # The mass counterpart of that volume fraction, from the audit table.
+        # C0 has one and C3 does not, so this covers both the read and the
+        # absence in the same phase.
+        mass = parse(Float64, c0["final_nonpositive_mass_fraction"])
+        @assert(mass ≈ 0.9, "final_nonpositive_mass_fraction $mass, want 0.9")
+        @assert(
+            isnan(parse(Float64, c3["final_nonpositive_mass_fraction"])),
+            "C3 has no audit table but reported \
+             $(c3["final_nonpositive_mass_fraction"])",
+        )
+
         control = summary_row(joinpath(output, "summary_b.csv"), "b1_notags")
         @assert(control["family"] == "none", "control family $(control["family"])")
 
         @info "   summaries read back by field: C3 carries its record " *
-              "($final_record), C0 carries none, and the barrier columns " *
-              "hold $worst and $fraction"
+              "($final_record), C0 carries none, the barrier columns hold " *
+              "$worst and $fraction, and C0's audit puts $mass of the mass " *
+              "in the non-positive region against $fraction of the volume"
     end
 end
 

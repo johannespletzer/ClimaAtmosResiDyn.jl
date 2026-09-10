@@ -232,6 +232,11 @@ measured; C0's tables are the place to check the first.
 
 ## A5. The sphere with the SEM limiter: the water tags diverge
 
+**Status: a fix has landed and nothing has re-run.** Everything in this entry is
+the measurement made at `49b2ec9`, before the fix, and it stays as written. The
+fix is described under *The fix, and what it does not yet establish* at the end
+of the entry. Do not read any number here as current.
+
 Ran at `49b2ec9` on 2026-09-10, AMD EPYC 7763 64-Core, `shared`. A moist
 baroclinic wave, `h_elem` 4, `z_elem` 10, 0M, with
 `apply_sem_quasimonotone_limiter: true`, `dt` 300 s, one day, hourly closure
@@ -282,7 +287,11 @@ That is a statement about test coverage, and it is the reason this went
 unnoticed. The configuration was exercised; the duration was not enough to
 reach the regime where it fails. Nothing about the assertion is wrong.
 
-### Mechanism: a hypothesis, not a finding
+### Mechanism: the hypothesis made at the time
+
+Kept as written, because the fix has since sharpened it and the difference is
+worth having on the record. Read this as what was believed at `49b2ec9`, not as
+the account that stood up.
 
 **Leading candidate: the rescale ratio is unbounded above.**
 `water_tag_rescale_ratio` (`tagged_water.jl`) is
@@ -336,6 +345,68 @@ not anticipate: on this configuration they do not merely contribute to the
 residual, they participate in destroying it. The plan's statement that A5's
 numbers are "read as a total rather than as an operator residual" is too
 generous — after hour three they are not readable as either.
+
+### The fix, and what it does not yet establish
+
+**Fix landed, re-test pending.** The owner merged issue #64 onto this branch at
+`f2e5384`, from `7799a5a` and `acfea85`. Nothing above has been re-measured. The
+table stays as the before.
+
+**What changed in the model.** `rescale_water_tags!` followed every parent
+correction by multiplying each water tag by `r = ρq_tot_after / ρq_tot_before`.
+It now hands the tags the parent's increment additively instead,
+`ρq_tag_k += Δ · s_k`, with `Δ = max(ρq_tot_after - ρq_tot_before, -pos)`,
+`s_k = max(ρq_tag_k, 0) / pos` and `pos = Σⱼ max(ρq_tag_j, 0)`. On a
+closed non-negative partition the two are the same expression.
+`water_tag_rescale_ratio` is gone, replaced by `water_tag_rescale_shift` and
+`water_tag_source_rescale_shift`.
+
+**The account that stood up is not quite the one above.** Writing
+`e = ρq_tot - Σₖ ρq_tag_k` for what `q_tag_res` reports, the old rule gave
+`e_after = r · e_before` in *every* cell with a positive parent, and
+unconditionally: `ρq_tot_after = r · ρq_tot_before` is what `r` means, so
+scaling the tags scales the error with them. The hypothesis above was in the
+right place — the rescale, and the cells near `ρq_tot = 0` where `r` is large
+— but it hung the mechanism on the docstring's precondition
+`ρq_tag ≤ ρq_tot_before` failing. That is not what breaks. The error is
+amplified whether or not the precondition holds; the precondition governs
+non-negativity, not closure. The additive rule leaves `e` exactly where it was
+wherever the partition holds water and the loss floor does not bind, and moves it
+by at most `|Δ|` where the floor binds.
+
+**A second change bears on this run directly.** All three closure checks now take
+`abort_above`, and water defaults to `1.0` — a level no non-negative partition of
+a non-negative parent can reach. The table above crosses it between hours three
+and four: 0.809 at 3 h and 24.2 at 4 h. A re-run of this configuration under the
+old rule would therefore stop in its fourth hour instead of reporting success at
+24 h. `a5_sphere_limiter.yml` leaves the default in place deliberately, and its
+comment says so, because a non-zero exit from that run is a result rather than a
+broken job.
+
+**What the re-run has to establish, and what it cannot.** Two outcomes are
+informative and both need recording. The residual may stay small through a full
+day, which is the fix working. Or it may reach 1.0 and abort, which is not
+automatically a failure of the fix: the floor `Δ ≥ -pos` empties the tags of a
+cell whose parent loses more water than the tags hold, and the water the parent
+still holds then surfaces in `q_tag_res`. A residual pegged near 1 with the tags
+gone reads exactly the same in `gross_relative` as one near 1 with the tags
+intact. **That is why `audit: true` is now set on this config and on no other
+phase-A run.** `orphaned` is the mass in cells whose parent holds water while
+every tag is empty, and it separates those two; `overclaimed` names the direction
+of any new runaway on sight, which is the reading that took a separate analysis
+pass the first time. Neither has been measured.
+
+**What the ledger means now, and why the operator residual is unaffected.** The
+identity `analysis/reduce_run.jl` rests on — that `q_tag_res + Σᵢ q_tag_fix_i`
+is this residual with the bookkeeping instantaneously undone — survives the
+change. Both correction sites still write `ᶜfix += shift` immediately before
+`ᶜρq_tag += shift`, with the same expression and the same pre-correction
+operands, and both diagnostics still divide by the same `ρ`, so the ledger still
+records exactly what was applied. What does change is what the ledger *sums to*:
+it was `(Σₖ ρq_tag_k)(r - 1)` and is now `Δ`, and those agree only on a
+closed partition. A1 to A4 are unaffected either way, because a column trips no
+limiter, so `Δ = 0` and every shift is zero — which is why their ledger column is
+identically zero and will stay so.
 
 ## C0. The barrier census
 
