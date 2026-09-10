@@ -54,9 +54,23 @@ energy_source_tags:
   - name: sfc
     source: surface_flux
 
-# Hourly over a day, `tolerance` unset.
+# Hourly over a day, `tolerance` unset. `abort_above` is unset too, and for the
+# energy families that is also the default: their residual is normalised by
+# `∫|ρe_tot|`, whose zero is a convention, so no single level means the same
+# thing in every configuration.
+#
+# `audit` is on. C0 measured that the parent is non-positive over 43.276% of the
+# shallow sphere by *volume*, and every magnitude argument in
+# `C1_reference_shift.md` needs to know what share of the field that accounts
+# for. `nonpositive_mass_fraction` is that number and nothing else in this
+# harness can produce it: `where_negative.jl` works on the remapped lat-lon grid
+# and has no cell volumes, so it can report where the field is negative but not
+# how much of it is. This run is the only sphere of the energy-source family
+# left to submit, which is why the key goes here and not on the columns, where
+# the fraction is already 1.0.
 energy_source_closure_check:
   period: "1hours"
+  audit: true
 
 # Instantaneous, defaults off. No ledger exists for this family, so there is no
 # operator-residual subtraction to make. The per-tag fields are here because

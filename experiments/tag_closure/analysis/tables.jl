@@ -100,7 +100,9 @@ commit that produced it cannot be placed against the rest of the series, and an
 
 The three families are read the same way. `closure` is whichever
 `<family>_tag_closure.csv` the run wrote, `family` says which, and `reduced`
-holds whatever `analysis/reduce_run.jl` produced for it.
+holds whatever `analysis/reduce_run.jl` produced for it. `audit` is the
+`<family>_tag_audit.csv` of the same family when the run set `audit: true` on
+its closure block, and `nothing` otherwise, which is the ordinary case.
 """
 function load_run(run_dir)
     name = basename(run_dir)
@@ -144,11 +146,18 @@ function load_run(run_dir)
 
     family = nothing
     closure = nothing
+    audit = nothing
     for candidate in ("water", "energy_source", "energy")
         path = joinpath(run_dir, candidate * "_tag_closure.csv")
         if isfile(path)
             family = candidate
             closure = read_table(path)[2]
+            # The audit table belongs beside `closure` and not in `reduced`,
+            # because the model writes it and `analysis/reduce_run.jl` does not.
+            # Most runs do not have one; `audit: true` is off by default and is
+            # set on the two runs that have a question it answers.
+            audit_path = joinpath(run_dir, candidate * "_tag_audit.csv")
+            isfile(audit_path) && (audit = read_table(audit_path)[2])
             break
         end
     end
@@ -156,7 +165,9 @@ function load_run(run_dir)
     # Every table `analysis/reduce_run.jl` can write. A table the reducer
     # produces and this list omits is invisible to every phase script: the file
     # is there, `run.reduced` has no key for it, and whatever reads it silently
-    # draws nothing. Keep the two in step.
+    # draws nothing. Keep the two in step. `<family>_tag_audit.csv` is
+    # deliberately not here: the reducer does not write it, and it is read above
+    # beside the closure table it refines.
     reduced = Dict{String, Any}()
     for table in (
         "operator_residual",
@@ -173,6 +184,7 @@ function load_run(run_dir)
         config,
         family,
         closure,
+        audit,
         reduced,
         dt = seconds(setting(config, "dt", "600secs")),
         upwinding = String(setting(config, "tracer_upwinding", "vanleer_limiter")),
@@ -213,11 +225,13 @@ end
     column(run, table, name)
 
 One column of one reduced table as `Float64`, or `nothing` when the table or the
-column is absent. `table` is `"closure"` for the run's closure table.
+column is absent. `table` is `"closure"` for the run's closure table and
+`"audit"` for its audit table, neither of which the reducer writes.
 """
 function column(run, table, name)
     source =
-        table == "closure" ? run.closure : get(run.reduced, table, nothing)
+        table == "closure" ? run.closure :
+        table == "audit" ? run.audit : get(run.reduced, table, nothing)
     isnothing(source) && return nothing
     haskey(source, name) || return nothing
     return numeric(source[name])

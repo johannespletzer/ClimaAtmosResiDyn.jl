@@ -27,6 +27,23 @@ Usage, from the repository root:
     tags only, so a source-labelled tag going negative never enters it.
   - `c_e_src_res.png` — `max |e_src_res|` against time.
 
+## The volume fraction and its mass counterpart
+
+`nonpositive_fraction` is a volume fraction. It answers how much of the *domain*
+has an undefined donor share and it cannot answer how much of the *field* that
+accounts for, because a cell with almost no energy in it counts the same as one
+holding a column's worth. On the sphere the two can differ by orders of
+magnitude and tell opposite stories.
+
+A run that sets `audit: true` on its closure block writes the counterpart,
+`nonpositive_mass_fraction`, into `<family>_tag_audit.csv`. It is
+`∫|ρe_tot| where ρe_tot ≤ 0` over `∫|ρe_tot|`, on the model's own grid with its
+own cell volumes. `summary_c.csv` carries it next to the volume fraction so the
+two are read together; a run without the table gets `NaN`, which is the ordinary
+case. `analysis/where_negative.jl` cannot supply this — it works on the
+bilinearly remapped lat-lon field and has no volumes — so it gives the vertical
+structure while this gives the weight.
+
 ## What this phase decides
 
 If a run shows bounded residuals and non-negative tags, the family is viable and
@@ -288,7 +305,8 @@ function main()
         runs, joinpath(base, "output"), PHASE,
         [
             "final_gross_relative", "final_nonpositive_fraction",
-            "max_nonpositive_fraction", "final_max_abs_e_src_res",
+            "max_nonpositive_fraction", "final_nonpositive_mass_fraction",
+            "final_max_abs_e_src_res",
             "most_negative_tag_value", "most_negative_tag",
             "recorded_processes", "final_max_e_prc",
         ],
@@ -299,6 +317,7 @@ function main()
                 final(column(run, "closure", "gross_relative")),
                 final(fraction),
                 isnothing(fraction) || isempty(fraction) ? NaN : maximum(fraction),
+                final(column(run, "audit", "nonpositive_mass_fraction")),
                 final(column(run, "source_tag_extrema", "max_abs_e_src_res")),
                 worst,
                 which,

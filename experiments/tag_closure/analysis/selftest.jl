@@ -278,6 +278,41 @@ function write_synthetic_operator(dir, values)
     return path
 end
 
+"""
+    write_synthetic_audit(dir, family, rows)
+
+A synthetic `<family>_tag_audit.csv` in the shape the model writes when a
+closure block sets `audit: true`, so the loader is read against the real column
+set rather than against one invented here.
+
+`rows` is a vector of `(time, overclaimed_relative, orphaned_relative,
+nonpositive_mass_fraction)`. The remaining columns are filled consistently:
+`untagged + overclaimed` is `gross_residual` by construction in the model, so
+the fixture keeps that true rather than writing numbers that could not occur
+together.
+"""
+function write_synthetic_audit(dir, family, rows)
+    path = joinpath(dir, family * "_tag_audit.csv")
+    open(path, "w") do io
+        println(
+            io,
+            "time,untagged,untagged_relative,overclaimed," *
+            "overclaimed_relative,orphaned,orphaned_relative," *
+            "orphaned_volume_fraction,nonpositive_mass," *
+            "nonpositive_mass_fraction",
+        )
+        for (t, over, orphan, npmass) in rows
+            # scale = 1 in every fixture closure table, so the absolute and the
+            # relative columns carry the same number here.
+            println(
+                io,
+                "$t,0.0,0.0,$over,$over,$orphan,$orphan,$orphan,$npmass,$npmass",
+            )
+        end
+    end
+    return path
+end
+
 function test_reducer()
     @info "1. reduce_run.jl on a synthetic NetCDF run"
     mktempdir() do tmp

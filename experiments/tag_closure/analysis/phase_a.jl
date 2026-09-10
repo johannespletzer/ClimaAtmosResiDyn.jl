@@ -22,6 +22,14 @@ Per run, from `output/<run>/`:
     `max_abs_operator_residual` is the number phase A turns on.
   - `<run>.yml`, the merged snapshot, for `dt` and the upwinding keys. The
     snapshot rather than the file in `configs/`, because it pins what ran.
+  - `water_tag_audit.csv`, when the run set `audit: true`. Only
+    `a5_sphere_limiter` does. Two of its columns go in the summary and the rest
+    of the phase ignores it: `overclaimed_relative` says whether the tags hold
+    water the parent does not, which is the direction a runaway takes, and
+    `orphaned_relative` says whether cells have lost their provenance
+    altogether. Together they separate the two ways a bounded residual can come
+    about. Runs without the table get `NaN` in those columns, which is the
+    ordinary result.
 
 A run with no `provenance.txt` is refused rather than analysed: a residual
 without the commit that produced it cannot be placed against the rest of the
@@ -248,7 +256,8 @@ function main()
         [
             "tracer_upwinding", "microphysics_model", "final_gross_relative",
             "final_operator_residual", "final_max_abs_q_tag_res",
-            "final_max_abs_ledger_sum",
+            "final_max_abs_ledger_sum", "final_overclaimed_relative",
+            "final_orphaned_relative",
         ],
         run -> Any[
             run.upwinding,
@@ -257,6 +266,8 @@ function main()
             final(column(run, "operator_residual", "max_abs_operator_residual")),
             final(column(run, "operator_residual", "max_abs_q_tag_res")),
             final(column(run, "operator_residual", "max_abs_ledger_sum")),
+            final(column(run, "audit", "overclaimed_relative")),
+            final(column(run, "audit", "orphaned_relative")),
         ],
     )
     figures = filter(

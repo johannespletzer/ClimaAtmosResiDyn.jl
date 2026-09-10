@@ -40,8 +40,26 @@ water_tracers:
 # One hour, as the plan sets for a sphere run, rather than the every-step
 # cadence of the column ladder. `tolerance` is left unset so the run warns
 # rather than stopping.
+#
+# `abort_above` is left unset too, which since the issue-64 fix means the
+# water default of 1.0 is live. That is deliberate. A relative residual of 1
+# means the tags hold water the parent does not, which is the state this run
+# reached in its fourth hour before the fix, so the run ending is a *result*
+# and not a broken job. Check the closure table before reading a non-zero exit
+# status as a fault.
+#
+# `audit` is on here and nowhere else in phase A. The re-run has two good
+# outcomes that `gross_relative` alone cannot tell apart. If the residual stays
+# small the tags are intact. If it settles near 1 that could be tags that are
+# still fine against an almost empty parent, or the loss floor emptying cells
+# and pegging the monitor -- the failure mode the fix's commit message says the
+# rejected alternative would have produced. `orphaned` separates them, and
+# `overclaimed` names the direction of any new runaway on sight. The column
+# runs get nothing from this: their parent is positive everywhere and their
+# residual is 1e-6.
 water_closure_check:
   period: "1hours"
+  audit: true
 
 # Instantaneous samples, as in the column configs, and for the same two
 # reasons: the defaults never register `q_tag_fix_<name>`, and they would put

@@ -6,7 +6,7 @@
 Each file is checked against `config/default_configs/default_config.yml` for key
 existence and value type, then against the per-run invariants of the plan's
 common protocol, per tag family. `--mutations` breaks a copy of the tree in
-thirteen ways and asserts every one is caught, so the checks below are
+fifteen ways and asserts every one is caught, so the checks below are
 demonstrably live rather than merely present.
 
 Python rather than Julia because this is the tool that was actually run while
@@ -54,6 +54,12 @@ CONTROLS = {"a1_dt10_notags", "b1_notags", "c0_column_notags"}
 # The only run allowed a limiter, and the only one allowed Float32.
 LIMITER_OK = {"a5_sphere_limiter", "b3_limiter"}
 FLOAT32_OK = {"a4_float32"}
+# Runs that must set `audit: true` on their closure block, and no others. The
+# audit costs a handful of global reductions and answers a question that run
+# has and the rest do not; see each config's own comment. It is checked in both
+# directions so that neither dropping it from a run that needs it nor spraying
+# it over runs that do not passes silently.
+AUDIT_REQUIRED = {"a5_sphere_limiter", "c0_sphere_deep"}
 
 def shorts(config):
     out = set()
@@ -166,6 +172,12 @@ def check(path):
             problems.append("%s: tolerance set; leave it at the default" % family)
         if "period" not in block:
             problems.append("%s: no period" % family)
+        wants_audit = name in AUDIT_REQUIRED
+        if bool(block.get("audit")) != wants_audit:
+            problems.append(
+                "%s: audit is %r, want %r"
+                % (family, block.get("audit"), wants_audit or None)
+            )
         need = {residual}
         if ledger:
             need |= {ledger + r for r in region}
@@ -213,7 +225,7 @@ def check(path):
 
     return name, problems, config
 
-# The thirteen classes of mistake these checks exist to catch. Each is applied
+# The fifteen classes of mistake these checks exist to catch. Each is applied
 # to a copy of one real configuration; `--mutations` asserts every one is
 # caught. A check that stops catching its mutation is a check that has quietly
 # stopped working.
@@ -253,6 +265,9 @@ MUTATIONS = [
      lambda t: t.replace("[q_tag_res, q_tag_fix_upper, q_tag_fix_lower]", "[q_tag_res]")),
     ("a top-level key bound twice", "b1_base.yml",
      lambda t: t + "vert_diff: ~\n"),
+    ("the audit dropped from the run that needs it", "a5_sphere_limiter.yml",
+     lambda t: t.replace('  period: "1hours"\n  audit: true',
+                         '  period: "1hours"')),
 ]
 
 def bad_continuations(path):
@@ -323,7 +338,7 @@ def lint_continuations():
     return 1 if failed else 0
 
 def run_mutations():
-    """Break a copy of the tree thirteen ways; every one must be caught."""
+    """Break a copy of the tree fifteen ways; every one must be caught."""
     import shutil, tempfile
     missed = []
     for label, target, mutate in MUTATIONS:

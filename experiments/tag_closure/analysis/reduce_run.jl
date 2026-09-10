@@ -74,6 +74,22 @@ field and not over the model's own columns, and a sphere number is therefore not
 the same kind of quantity as a column number. Phase A's ladder is columns, where
 this is false and the maximum is over the model's own levels.
 
+## The audit table
+
+A run whose closure block sets `audit: true` writes a second table beside the
+closure table, `<family>_tag_audit.csv`. **Nothing here computes it and nothing
+here reduces it.** The model wrote it, it is already one row per check, and it
+is listed at the end of a run so that the hand-back names it. A table left on
+scratch is a table nobody reads.
+
+It does not overlap this one. The audit is a set of volume integrals of the
+residual *as it stands*, split by sign; the operator residual is a pointwise
+maximum of that residual with the ledger added back. Different norm, different
+quantity. What the audit refines is the closure table: `untagged` and
+`overclaimed` are the two signed halves of `gross_residual` and add to it
+exactly, so the audit says which way the tags are wrong where `gross_residual`
+says only how far.
+
 **This script has never been executed.** There is no Julia in the container it
 was written in. `analysis/selftest.jl` builds synthetic input with values worked
 out by hand and asserts the results; run that first.
@@ -598,6 +614,20 @@ function write_table(output_dir, stem, header, rows, metadata, note)
     return path
 end
 
+"""
+    audit_tables(output_dir)
+
+The `<family>_tag_audit.csv` files the run wrote itself, if any.
+
+Written by the model when a closure-check block sets `audit: true`, not by this
+script, and already one row per check. They are found and named rather than
+reduced, so that the hand-back list is complete: a table that stays on scratch is
+a table nobody reads. See the header of this file for why the audit does not
+overlap the operator residual.
+"""
+audit_tables(output_dir) =
+    sort(filter(name -> endswith(name, "_tag_audit.csv"), readdir(output_dir)))
+
 function main()
     from_env = get(ENV, "OUTPUT_DIR", "")
     output_dir = !isempty(from_env) ? from_env : (isempty(ARGS) ? "" : first(ARGS))
@@ -671,6 +701,10 @@ function main()
     else
         @info "Wrote" written
     end
+    audits = audit_tables(output_dir)
+    isempty(audits) || @info "The run wrote these audit tables itself. Copy \
+                              them back beside the closure table; nothing here \
+                              reduces them." audits
     remapped && @warn "Sphere geometry: every reduction is over the bilinearly \
                        remapped lat-lon field rather than the model's own \
                        columns. Do not set it beside a column number as though \
