@@ -52,10 +52,14 @@ a warning naming it. Runs submitted before `3659746` can hit this. The fix is
 
 **C1 has run.** It was approved on 2026-09-10 and ran on terrabyte the same
 day. What it measured is in [FINDINGS.md](FINDINGS.md), E11 to E16, and the
-argument behind it is in [C1_reference_shift.md](C1_reference_shift.md). One
-follow-up waits on a decision. The twin test showed that the shift changes the
-simulated atmosphere slightly (E16). One more twin run, with the implicit solve
-converged, would say whether the one-iteration Newton step is why.
+argument behind it is in [C1_reference_shift.md](C1_reference_shift.md). Its
+twin tests showed that the moved reference changes the simulated atmosphere
+slightly, mostly through the van Leer energy limiter (E16).
+
+**C4 has run too.** `energy_source_tag_offset` gives the tags the same positive
+total without touching the model, and it reproduces C1's tag results (E17 to
+E19). What is left to decide is whether this family, whose tags still go
+negative, is worth keeping over the process record of C3.
 
 **C2** needs approval and a code change, and no configuration for it is
 written.

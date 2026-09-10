@@ -874,3 +874,42 @@ residual. It does not keep the tags non-negative, and it cannot make their
 reading meaningful (E10). The decision `energy_source_tags.md` names is now
 between a family whose rule runs but whose tags go negative, and the process
 record of C3, which reads what the tags cannot.
+
+## C4. The positive total, made in the tags
+
+Ran at `29430612` on 2026-09-10, Intel Xeon Platinum 8380, `hpda2_test` on LRZ
+terrabyte, SLURM jobs `13384913` and `13384914`. Both are `c0_sphere_audit` with
+`energy_source_tag_offset`, a new configuration key: 110,495 J/kg, which is C1's
+shift for dry air, and twice that. The owner approved the code change and both
+runs.
+
+**What C4 was for.** C1 made the tags' total positive by moving the
+thermodynamic reference, and that changed the simulated atmosphere slightly
+through the model's numerics (E16). C4 gets the positive total from the tags'
+own bookkeeping instead. They partition `ρe_tot + c·ρ`, which the model never
+uses. The question is whether C1's tag results survive without C1's changed
+atmosphere.
+
+**The atmosphere is untouched.** The two runs' `ta` is identical in every value
+over the day, and a column run with and without an offset gives bit-identical
+state. The model never reads the offset, and the runs show it.
+
+**C1's results survive.** The residual stays within 0.7% of C1's all day and is
+balanced, and the region tags reach C1's minima to four digits. So the
+improvement over the unshifted run and the negative tags both belong to the tag
+rule.
+
+**Barrier.** The same as C1's, without E16. The tags still go negative: the
+source tag to −212.5 J kg⁻¹, and the region tags to about −10 kJ kg⁻¹ with the
+parent positive. At twice the offset the region tags' minima grow 1.51× while
+the source tag barely moves. That points at transport of what the region tags
+carry rather than at the donor loss, and it is an argument.
+
+**Class.** Numerical: negative tags under a well-posed share. Not a cost worth
+counting: the solve took 353.3 s and 355.8 s at the two offsets, against 345.6 s
+unshifted and 349.0 s for C1, which is within the 2% scatter T2 measured (T7).
+
+**Carry-over to the source tags.** This is the source tags, now with a positive
+total that costs the model nothing. What stays open is whether a family whose
+tags go negative is worth keeping over the process record of C3, and that is
+the owner's call.

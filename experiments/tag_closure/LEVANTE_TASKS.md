@@ -9,11 +9,11 @@ Branch `claude/tag-closure-experiments`.
 
 ## Where things stand
 
-20 of the 28 configured runs are live in `output/`. A run is live when
+22 of the 30 configured runs are live in `output/`. A run is live when
 `output/<run>/provenance.txt` exists, so `ls output` is the register.
 `c0_sphere_deep` is dropped rather than pending — see *Not yet, and why*.
-`output/twin_c1/` is not a configured run but a check on C1, and
-`output/c0_sphere_audit/terrabyte/` is a second reading of that run.
+The three `output/twin_c1*/` directories are not configured runs but checks on
+C1, and `output/c0_sphere_audit/terrabyte/` is a second reading of that run.
 
 **Phase A and phase C are both complete** apart from C2, which needs a code
 change and the owner's approval. What they concluded, one line each, with the
@@ -35,6 +35,9 @@ evidence in [FINDINGS.md](FINDINGS.md) under the tags given:
     stops being directional and falls to 0.70 of the unshifted one. The tags
     still go negative, and the shift changes the simulated atmosphere slightly,
     by up to 1.1e-3 in `uₕ`. *E11 to E16.*
+  - Giving the tags their own positive total, `energy_source_tag_offset`,
+    reproduces C1's tag results with the atmosphere left bit for bit alone.
+    *E17 to E19, T7.*
   - Three source tags cost 32%. The closure check, not the tags, is what made
     the A1 pair look like 6×. *T1 to T6.*
 
@@ -121,12 +124,11 @@ limits.
 
 **Two ways on, each needing approval.**
 
-  - **Move the shift into the tag code** (FINDINGS §8, item 1). The tags
-    partition `ρe_tot + c·ρ`, with `c` a fixed 110.5 kJ kg⁻¹ per kilogram of
-    air. The model never sees it, so the atmosphere is bit for bit the unshifted
-    one. It is a code change in `energy_source_tags.jl` and in the code that
-    reads the parent, with a kernel test first. Then one run at 110.5 kJ kg⁻¹
-    for comparison with C1, and one at a larger `c` for R11's suppression cost.
+  - **Done: the shift in the tag code, C4** (FINDINGS E17 to E19).
+    `energy_source_tag_offset` is in the model, with the owner's approval. The
+    two C4 runs carry an identical atmosphere. At C1's size they reproduce C1's
+    tag results, and at twice the size the source tag moves by about 1%. Both
+    are in `output/c4_sphere_tag_offset*/`.
   - **The limiter twin ran** (job `13384884`, `overrides/twin_limiter_off.yml`).
     The limiter is most of E16: the one-step difference in `ρ` fell from 3.6e-5
     to 3.7e-8. A remainder is left. One more twin that adds

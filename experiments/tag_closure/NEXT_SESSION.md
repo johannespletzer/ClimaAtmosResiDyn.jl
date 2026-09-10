@@ -62,13 +62,16 @@ one agent has worked this branch at once.
 
 ## Where the last session stopped
 
-  - **The twin follow-up ran**, and it ruled out the implicit solve as E16's
-    cause. Task 1 of the task list gives the two ways on, both needing
-    approval: move the shift into the tag code, or first test the energy
-    limiter with one more twin.
+  - **C4 ran, and the tag-side offset works.** `energy_source_tag_offset` is in
+    the model. It leaves the atmosphere bit for bit untouched and reproduces
+    C1's tag results (FINDINGS E17 to E19). The twin tests found E16 to be
+    mostly the van Leer energy limiter, with a small remainder unexplained. One
+    more twin could test the surface-flux code path (task 1). It needs
+    approval, and it matters less now that C4 leaves the model alone.
   - **PR #65** has `main` merged in, with both sides of `NEWS.md` kept, at the
     owner's request. Check its CI before anything else touches it.
-  - **What C1 means for the family** is the owner's call (FINDINGS §8).
+  - **What C1 and C4 mean for the family** is the owner's call (FINDINGS §8).
+    The tags still go negative, with or without a positive total.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for

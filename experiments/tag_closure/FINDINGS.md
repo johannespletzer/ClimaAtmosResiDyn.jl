@@ -6,10 +6,10 @@ from. The reasoning is in [LEARNINGS.md](LEARNINGS.md), one entry per run; the
 C1 argument is in [C1_reference_shift.md](C1_reference_shift.md); what to run
 next is in [LEVANTE_TASKS.md](LEVANTE_TASKS.md).
 
-State as of 2026-09-10 on `claude/tag-closure-experiments`. 20 of the 28
-configured runs are live in `output/`. The latest is C1, which ran on LRZ
-terrabyte. Phase A and phase C are complete except for C2, which needs a code
-change and approval. `c0_sphere_audit` has a second reading, from terrabyte, in
+State as of 2026-09-10 on `claude/tag-closure-experiments`. 22 of the 30
+configured runs are live in `output/`. The latest are C1 and C4, which ran on
+LRZ terrabyte. Phase A and phase C are complete except for C2, which needs a
+code change and approval. `c0_sphere_audit` has a second reading, from terrabyte, in
 `output/c0_sphere_audit/terrabyte/`.
 
 A finding here is something a run measured. Where a claim is bounded — one
@@ -301,6 +301,39 @@ which the model does not normally run, may also amplify what is left. *Twin
 tests, SLURM jobs `13383683`, `13384080` and `13384884` on terrabyte,
 `output/twin_c1/`, `output/twin_c1_newton/` and `output/twin_c1_limiter_off/`.*
 
+**E17. An offset in the tags' total leaves the atmosphere untouched.**
+`energy_source_tag_offset` gives the tags the total `ρe_tot + c·ρ`, which the
+model never uses (§8, item 1). The two C4 runs differ only in `c`, 110,495 and
+220,990 J kg⁻¹, and their `ta` is identical in every value: 25 hourly samples of
+72 × 36 × 10 points, largest difference 0.0. On a DYCOMS column the model state
+after twelve steps is bit for bit the same with and without an offset.
+`nonpositive_fraction` is 0.0 at every sample in both runs, as in C1. *C4, jobs
+`13384913` and `13384914` on terrabyte; `analysis/same_atmosphere.jl` and
+`analysis/offset_smoke.jl`.*
+
+**E18. C1's tag results belong to the tag rule, not to its changed
+atmosphere.** C4 at C1's size reproduces them. Its absolute `gross_residual`
+stays within 0.7% of C1's all day, and at 24 h it is 0.70 of the baseline's,
+as C1's is. The audit is balanced, 1.001 at 3 h and 1.013 at 24 h, against
+C1's 1.002 and 1.033. The region tags reach the same minima to four digits,
+−11,575 and −9,631 J kg⁻¹ against C1's −11,575 and −9,632, with the parent
+positive. The source tag `sfc` reaches −212.5 against C1's −219.9, and its
+maximum is 3% below C1's. The tags start a few percent apart, because C1's shift
+adds `(cp_l − cp_d)·|δ|·q_tot` and a constant per kilogram does not. So E11 to
+E14 hold without E16. *C4, against C1 and the terrabyte baseline.*
+
+**E19. Doubling the offset barely moves the source tag, and makes the region
+tags more negative.** On the identical atmosphere, `c` = 220,990 J kg⁻¹ against
+110,495 moves the absolute residual by 0.9%, `sfc`'s maximum by 1.1% (19,706
+against 19,486) and its minimum by 0.8%, and the audit balance from 1.013 to
+1.009. `gross_relative` halves, but that is the scale growing a further 2.2×.
+The region tags' minima grow 1.51× in both regions, to −17,505 and −14,563.
+That fits transport undershoots that scale with the energy a region tag
+carries, which includes its masked share of `c·ρ`, but it is an argument, not
+a measurement. So R11's suppression is real in the algebra and small in the
+tags over a day here, while the offset's size shows up in the region tags'
+negativity. *C4 at both offsets.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -446,6 +479,12 @@ against 345.6 s for its unshifted baseline, 1.0% apart, with `sypd` 0.678
 against 0.685. The two ran at the same time on the same node. *C1, jobs
 `13383684` and `13383685` on terrabyte.*
 
+**T7. The tag offset costs no more than the scatter.** C4's `solve! walltime` is
+353.3 s at C1's offset and 355.8 s at twice it, against 345.6 s unshifted and
+349.0 s for C1, all on the same node type. T2 puts run-to-run scatter at about
+2%, so the second snapshot and the few extra broadcasts are not measurable
+here. *C4, jobs `13384913` and `13384914` on terrabyte.*
+
 ## 5. Method
 
 **M1. Volume fractions and mass fractions can differ by six orders of
@@ -574,7 +613,10 @@ Kept because a later reader will otherwise re-derive them.
     `disable_surface_flux_tendency: true` in both halves would say whether it
     is the surface-flux code path.
   - **Why a tag goes negative under a positive parent (E14).** The finite-step
-    donor loss and unlimited explicit transport are both candidates.
+    donor loss and unlimited explicit transport are both candidates. On an
+    identical atmosphere the region tags' minima scale with the offset while
+    the source tag's barely move (E19), which points at transport for the
+    region tags.
   - **What makes the residual's first-hour jump (E13).** The enthalpy-against-
     tracer transport reading fits, but no run has isolated it.
   - `Float32` on a sphere (W4).
@@ -582,14 +624,17 @@ Kept because a later reader will otherwise re-derive them.
     (W5b). A sphere, which reaches the horizontal branches, is still open.
   - The tag cost on anything but one column on one node (T4 bounds it at 1.32×
     there).
-  - Whether C1's suppression cost (R11) matters in practice. Measurable now
-    rather than open in principle.
+  - ~~Whether C1's suppression cost (R11) matters in practice.~~ Measured on
+    C4: doubling the offset moves the source tag by about 1% over a day (E19).
+    What it does move is the region tags' negativity.
 
 ## 8. Next
 
- 1. **Shift the reference inside the tag code, not the model.** The tags would
-    partition a shadow total `E = ρe_tot + c·ρ`, with `c` a fixed energy per
-    kilogram of air, 110.5 kJ kg⁻¹ to match C1. The model never sees `E`, so
+ 1. **Done: the shift inside the tag code, not the model** (E17 to E19).
+    `energy_source_tag_offset` is in the model, and future runs of this family
+    should use it rather than a moved reference. What it does, as designed: the
+    tags partition a shadow total `E = ρe_tot + c·ρ`, with `c` a fixed energy
+    per kilogram of air, 110.5 kJ kg⁻¹ to match C1. The model never sees `E`, so
     the atmosphere stays bit for bit the unshifted one and E16 cannot arise.
     The donor share is as well defined as in C1. Per-process closure still
     holds exactly once each process's increment includes `c` times its change
