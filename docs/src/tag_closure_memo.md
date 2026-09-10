@@ -39,6 +39,11 @@ Line numbers refer to `main` at `a54ce31`.
     `experiments/tag_closure/`, with one entry per run in its `LEARNINGS.md`;
     that file rather than this one is the record of what has been measured.
 
+    The model has changed since as well. Issue #64 replaced the multiplicative
+    rescale that Part 1's first water bullet describes with an additive
+    redistribution, so that bullet is accurate at `a54ce31` and no longer
+    describes the running model.
+
 ## Part 1. Current handling
 
 Enforced, meaning the state is changed so the sum holds:
