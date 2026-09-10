@@ -6,9 +6,9 @@ from. The reasoning is in [LEARNINGS.md](LEARNINGS.md), one entry per run; the
 C1 argument is in [C1_reference_shift.md](C1_reference_shift.md); what to run
 next is in [LEVANTE_TASKS.md](LEVANTE_TASKS.md).
 
-State as of 2026-09-10 on `claude/tag-closure-experiments`. 17 of 25 configured
-runs are live in `output/`. Phase A and phase C are complete except for C1 and
-C2, which need approval.
+State as of 2026-09-10 on `claude/tag-closure-experiments`. 17 of the 27
+configured runs are live in `output/`. Phase A and phase C are complete except
+for C1 and C2, which need approval.
 
 A finding here is something a run measured. Where a claim is bounded — one
 geometry, one resolution, an uncontrolled comparison — the bound is part of the
@@ -37,8 +37,8 @@ established on a sphere. *A4.*
 **W5. A3 is uninterpretable as it stands.** `a3_1m` reads 5.50e-6 against
 `a1_dt10`'s 2.66e-5, but it differs in two keys, `microphysics_model` *and*
 `vert_diff`, so the gap is not attributable to 1M. One matched 0M column run
-with `vert_diff` on would separate them. The config is deliberately not written.
-*A3.*
+with `vert_diff` on would separate them. `a3_0m_vert_diff` is that run: written
+and validated, not yet submitted. *A3.*
 
 **W6. Issue #64: the water tags diverged to 1e130 on a sphere while `ρq_tot`
 stayed bounded, and the run exited 0 reporting success.** `gross_relative` ran
@@ -50,17 +50,25 @@ stayed bounded, and the run exited 0 reporting success.** `gross_relative` ran
 precondition.** Writing `e = ρq_tot − Σₖ ρq_tag_k`, the old rule gave
 `e_after = r · e_before` in *every* cell with a positive parent, unconditionally
 — scaling the tags scales the error with them. The docstring's
-`ρq_tag ≤ ρq_tot_before` governs non-negativity, not closure. *Verified against
-source, 200,000 randomised correction sequences.*
+`ρq_tag ≤ ρq_tot_before` governs non-negativity, not closure. It is an identity
+rather than a measurement: `ρq_tot_after = r · ρq_tot_before` is what `r` means,
+so the same `r` multiplies the difference. *Verified against
+`tagged_water.jl:800`. The randomised sequences it was first found with are not
+in the tree.*
 
-**W8. The existing test could not see it.** `tagged_water_integration.jl:237`
-runs this configuration for one hour and asserts below 1e-2. At one hour the
-value is 3.07e-5. The window ended before the failure.
+**W8. The existing test could not see it.** The "Tagged water limiter rescale"
+testset runs this configuration for one hour (`tagged_water_integration.jl:237`)
+and bounds the residual at `tagged_water_integration.jl:312`. That bound is
+`max |residual| / max |ρq_tot|` and not `gross_relative`, so the two are not
+comparable directly; on the archived pre-fix operator residual the test's own
+quantity is 7.5e-6 at 1 h and 6.0e-5 at 2 h against a bound of 1e-2. Either way
+the window ended before the failure, which starts between hours two and three.
 
 **W9. The fix holds through a full day, and plateaus.** Post-fix `gross_relative`
 is 1.89e-4 at 6 h, 2.51e-4 at 12 h, 2.79e-4 at 24 h — each doubling of elapsed
-time adding less. Exit 0, the `abort_above` level of 1.0 never approached, and
-36× of margin against the integration test's bound. *A5, re-run at `8ed98b6`.*
+time adding less. Exit 0 and the `abort_above` level of 1.0 never approached.
+Not stated as margin against the integration test's 1e-2, which bounds a
+different quantity (W8). *A5, re-run at `8ed98b6`.*
 
 **W10. It did not hold closure by emptying the tags.** `orphaned_relative` is
 2.5e-9, five orders below the residual, so almost no mass sits in cells whose
@@ -82,14 +90,15 @@ sum-preserving redistribution, which is what the additive rule was designed to
 produce. Domain maxima rather than per-cell values, so a signature rather than a
 proof. *A5.*
 
-**W13. Phase A now has a sphere operator residual.** `max |q_tag_res|` is 1.9e-5
-and flat from about 6 h. The column at `dt` 10 under the same limiter gives
+**W13. Phase A now has a sphere operator residual.** `max |q_tag_res|` ends the
+day at 1.9e-5, having reached 1.5e-5 by 6 h and 1.91e-5 by 17 h, after which it
+is flat to three digits. The column at `dt` 10 under the same limiter gives
 2.84e-6. Not a controlled comparison — A5 is `dt` 300 on `h_elem` 4 against a
 30-level column at `dt` 10 — and a 30× larger timestep costing 6.8× is on the
 favourable side. Reduced over the remapped lat-lon field. *A5.*
 
 **W14. The ledger keeps growing while the residual does not.** 6.2e-4 at 24 h,
-33× the residual, still rising. The limiter works all day and the corrections
+32× the residual, still rising. The limiter works all day and the corrections
 absorb it; what stopped is the amplification. *A5.*
 
 ## 2. Energy source tags
@@ -104,10 +113,12 @@ latter constant to the last digit across 24 hours. *C0.*
 reaches −209 J kg⁻¹ on the sphere while `e_src_res` shows nothing, because the
 residual sums only the pure region tags. *C0.*
 
-**E3. One level crossing changes the behaviour of the whole column.** The `rad`
-tag's non-monotone drop coincides exactly with the transition from 30 to 29
-non-positive levels: the single hour in which a level turns positive is the
-single hour the tag loses anything. *C0.*
+**E3. One level crossing changes the behaviour of the whole column.** `max
+e_src_rad` rises monotonically for all seven hours before the transition from 30
+to 29 non-positive levels, falls by 137 J kg⁻¹ in the hour of the transition
+itself, and every later decrease — 20 h to 23 h, four consecutive samples — is
+also after it. The tag can lose only where a level supports a donor share.
+*C0.*
 
 **E4. The closure residual reaches 13.5% of `∫|ρe_tot|` in one day**, growing
 monotonically. Production with no compensating loss, seen from the budget side.
@@ -234,13 +245,19 @@ not happen.
 as a tag cost.
 
 **T2. The A1 configuration costs 6.1× its untagged control**, and the three
-measures agree exactly:
+measures agree to three digits:
 
 | | tagged | untagged | ratio |
 |:-------------------- |:------- |:-------- |:----- |
 | `solve! walltime` | 3.337 s | 0.548 s | 6.09 |
 | `sypd` | 2.956 | 17.992 | 6.09 |
 | per timestep | 9.269 ms | 1.522 ms | 6.09 |
+
+The agreement is within one log rather than across runs. `output/a1_dt10/` holds
+a second `.err` for the same configuration, job `27360071`, which gives 3.274 s,
+3.012 and 9.095 ms — the same three-way agreement at 5.97. So the ratio carries
+about 2% of run-to-run scatter and 6.1× is one of two readings, not a repeat
+measurement. *A1, jobs `27360483` and `27360071`.*
 
 **T3. But that is the cost of the configuration, not of the tags.** The tagged
 side carries three water tags *and* `water_closure_check` at `period: "10secs"`
@@ -249,18 +266,30 @@ diagnostics every 60 s. The check frequency is a diagnostic choice no production
 run would make, and it is the term most likely to dominate. Reading 6.1× as a
 tag cost would be wrong.
 
-**T4. The clean measurement exists as a configuration and is missing one file.**
-The C0 pair is the one to use: three energy source tags with the closure check
-and the diagnostics both hourly, over 8640 steps rather than 360. Only the
-untagged half is known — `sypd` 27.779 at 986 µs per timestep — because
-`c0_column`'s `.err` was never committed. Nor was any other tagged run's except
-`a1_dt10`.
+**T4. And the clean measurement now exists: 1.32×.** The C0 pair is the one to
+use — three energy source tags with the closure check and the diagnostics both
+hourly, over 8640 steps rather than 360 — and both halves are in `output/`:
+
+| | tagged | untagged | ratio |
+|:-------------------- |:--------- |:---------- |:----- |
+| `solve! walltime` | 11.225 s | 8.521 s | 1.317 |
+| `sypd` | 21.088 | 27.779 | 1.317 |
+| per timestep | 1.299 ms | 986.3 µs | 1.317 |
+
+So T3's reading is confirmed rather than merely argued: the same three tag
+families, checked hourly instead of every step, cost **1.32×** where A1's
+every-step check costs 6.09×. Most of A1's factor is the check, not the tags.
+Still one configuration, one column and one node, so it bounds the tag cost
+rather than fixing it. *C0, jobs `27361326` and `27368587`.*
 
 **T5. Short runs flatter nothing but they do skew per-step figures.** The two
-untagged columns read 1.522 ms and 986 µs per timestep for the same 30-level
-column at the same `dt`, because one ran 360 steps and the other 8640. Fixed
-overhead weighs differently. The A1 pair is still internally consistent — both
-halves ran 360 steps — but the C0 pair would be the better number.
+untagged columns read 1.522 ms and 986 µs per timestep on the same 30-level
+column at the same `dt`, one over 360 steps and the other over 8640, so fixed
+overhead weighs differently. It is not a controlled pair: `c0_column_notags`
+also sets `rad: DYCOMS` where `a1_dt10_notags` runs no radiation. That cuts the
+right way — the run carrying the extra physics is still the faster per step —
+but the gap is not step count alone. Each pair in T2 and T4 is internally
+controlled, which is why the ratios are read within a pair and never across.
 
 ## 5. Method
 
@@ -317,7 +346,8 @@ Kept because a later reader will otherwise re-derive them.
     ever moved them apart.
   - `Float32` on a sphere (W4).
   - Whether 1M changes the residual (W5).
-  - The tag cost as distinct from the closure-check cost (T3, T4).
+  - The tag cost on anything but one column on one node (T4 bounds it at 1.32×
+    there).
   - Whether C1's suppression cost (R11) matters in practice. Measurable now
     rather than open in principle.
 
@@ -325,12 +355,16 @@ Kept because a later reader will otherwise re-derive them.
 
 Beyond the two clerical items in [LEVANTE_TASKS.md](LEVANTE_TASKS.md):
 
- 1. **C1.** Collect `cp_i` and the long ClimaParams names, write the three-entry
-    TOML, get approval, run. The only thing left that can change the verdict on
-    the source-tag family. R7 and R8 make it cheap and its result unambiguous.
- 2. **`c0_sphere_deep`.** Ready to submit, no approval. The only configured run
-    that produces the energy family's mass-weighted non-positive fraction, which
-    M1 shows is the number the 43.276% has been standing in for.
+ 1. **C1.** Collect the long ClimaParams names, write the three-entry TOML, get
+    approval, run. `cp_i` = 2070.0 is already recorded in
+    `LEVANTE_TASKS_RESULTS.md`, so the names are the only thing still missing.
+    The only thing left that can change the verdict on the source-tag family.
+    R7 and R8 make it cheap and its result unambiguous.
+ 2. **`c0_sphere_audit`.** `c0_sphere` with `audit: true` and nothing else, so
+    its mass-weighted non-positive fraction pairs with the 43.276% actually in
+    circulation, which M1 shows is the number that has been standing in for it.
+    `c0_sphere_deep` also carries the audit, but on a different grid and domain.
+    Neither needs approval.
  3. **`a3_0m_vert_diff`.** Written and validated. `a1_dt10` with `vert_diff` on
     and nothing else changed, so it differs from `a3_1m` in
     `microphysics_model` alone and from `a1_dt10` in `vert_diff` alone. Two
