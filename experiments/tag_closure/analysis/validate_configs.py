@@ -75,6 +75,7 @@ AUDIT_REQUIRED = {
     "c6_sphere_repair",
     "c6_sphere_no_repair",
     "c6_sphere_first_order",
+    "c7_sphere_mp",
 }
 # Runs allowed one model-state diagnostic besides their tags. The two C4 runs
 # differ only in an offset the model never sees, so their `ta` must be identical
@@ -89,6 +90,7 @@ STATE_CHECK = {
     "c6_sphere_repair",
     "c6_sphere_no_repair",
     "c6_sphere_first_order",
+    "c7_sphere_mp",
 }
 STATE_DIAGNOSTICS = {"ta"}
 # Runs allowed the air density besides their tags. The C5 and C6 columns sum

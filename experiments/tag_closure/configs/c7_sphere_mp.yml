@@ -1,0 +1,76 @@
+# C7, sphere. `c6_sphere_no_repair` with a tag for the microphysics that the
+# per-process check found producing energy (FINDINGS E28), and nothing else
+# changed.
+#
+# On C6's sphere the new energy split by region exceeded the split by process by
+# up to 149 J/kg. At the worst point the microphysics record was +270.6 J/kg.
+# The implicit rain-out removes condensate colder than the reference, which
+# carries negative energy, so the total rises and the bracket counts that as
+# production. The `new_` tags took it, and no process tag did. `mp` follows
+# `microphysics`, so form A should close up to what C5's sphere left without any
+# microphysics bracket, about 20 J/kg.
+#
+# The repair is off, so that form A reads the attribution rule and the transport
+# alone. `ta` must be identical to `c6_sphere_no_repair`, to the last bit,
+# since only the tags differ.
+job_id: "c7_sphere_mp"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: false
+
+# C5's sphere, unchanged.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+rad: "gray"
+dt_rad: "1hours"
+
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+  - name: mp
+    source: microphysics
+  - name: new_tropics
+    region: tropics
+    source: all
+  - name: new_extratropics
+    region: extratropics
+    source: all
+
+energy_process_record: [radiation, surface_flux, microphysics]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_mp, e_src_new_tropics, e_src_new_extratropics]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_microphysics]
+    period: "1hours"
+  - short_name: [ta]
+    period: "1hours"
