@@ -26,6 +26,8 @@ The files are included in dependency order.
   - `transfer_legs.jl` measures each modeled leg of a transfer event inside the
     applied-update event that applied it. Some legs are that event's own total,
     the others are read from the flux field the tendency reads.
+  - `checkpoint.jl` carries the closing endpoint through a checkpoint, checks
+    the restored state against it, and declares the custom callbacks.
   - `adapter.jl` is the place that knows the timestepper's stages and hooks.
     It captures the accepted envelopes after each step, meters the
     applied-update events the tendency code brackets, and drives the
@@ -38,6 +40,7 @@ import ClimaCore.Fields as Fields
 import ClimaCore.Spaces as Spaces
 import ClimaCore.Geometry as Geometry
 import ClimaCore.Utilities: half
+import ClimaCore.InputOutput
 import ClimaTimeSteppers as CTS
 
 # The ClimaAtmos types the applicability functions and the slab integrals
@@ -82,6 +85,7 @@ include("reduction.jl")
 include("journal.jl")
 include("transaction.jl")
 include("transfer_legs.jl")
+include("checkpoint.jl")
 include("adapter.jl")
 
 end

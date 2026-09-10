@@ -554,7 +554,10 @@ hold the latest step's results in every mode; `commits` holds every commit in
 `AuditMode` only. `reductions` counts the packets reduced, which a test
 compares with the number of accepted steps.
 
-`events` are the applied-update labels that measure a roster row in this
+`restart` says the run restored a checkpoint, `checkpoint` holds the
+endpoints that checkpoint carried, and `transition` what the first
+transaction found when it compared the restored state with them. `events`
+are the applied-update labels that measure a roster row in this
 configuration. `evaluation`, `evaluation_stage`, `open_event` and `seen`
 say which tendency evaluation is being metered, if any, and which events it
 has opened. That is how a nested, repeated or unknown bracket is refused
@@ -589,6 +592,9 @@ mutable struct ParentBudgetAdapter{S, C, T, G}
     snapshot::G
     slab::Bool
     events::Set{Symbol}
+    restart::Bool
+    checkpoint::Union{Nothing, CheckpointEndpoints}
+    transition::Union{Nothing, RestartTransition}
     timestepper::Union{Nothing, TimestepperRecord}
     stepper_cache::Any
     # Per-step meter state. A measurement is a triple of amounts and a triple
@@ -781,7 +787,8 @@ end
 
 """
     build_parent_budget(mode, atmos, Y; ode_config, restart, constraint_cadence,
-                        attribution = :net, tolerances = nothing)
+                        attribution = :net, tolerances = nothing,
+                        checkpoint = nothing)
         -> Union{Nothing, ParentBudgetAdapter}
 
 Build the adapter for a run, or return `nothing` when `mode` is `off`.
@@ -796,10 +803,11 @@ them.
 `attribution` is `:net` or `:gross`. `:gross` needs `AuditMode`, since the
 process rows it splits are collected there only, and is refused otherwise.
 
-A restart is refused. A restored state is a transition no transaction
-produced, and the ledger has no transaction to book it in. Reading a restart
-file into a fresh ledger would either charge the restoration to the first step
-or silently absorb it.
+A restarted run passes `restart = true` and the endpoints its checkpoint
+carried as `checkpoint`. `read_checkpoint_endpoints` reads them, and returns
+`nothing` for a checkpoint written without a ledger. The first transaction
+then checks the restored state against them exactly before it opens, see
+`check_restart_transition`. The record after the restart is a new segment.
 """
 build_parent_budget(mode, atmos, Y; kwargs...) =
     build_parent_budget(parent_budget_mode(mode), atmos, Y; kwargs...)
@@ -813,6 +821,7 @@ function build_parent_budget(
     constraint_cadence::Symbol,
     attribution = :net,
     tolerances = nothing,
+    checkpoint = nothing,
 )
     attribution = parent_budget_attribution(attribution)
     attribution === :gross && !(mode isa AuditMode) &&
@@ -820,11 +829,10 @@ function build_parent_budget(
             "`parent_budget_attribution = \"gross\"` splits the process rows, " *
             "which only `parent_budget_mode = \"audit\"` collects.",
         )
-    restart && error(
-        "The parent-budget ledger does not support restarts yet: a restored " *
-        "state is a transition no transaction produced, and the ledger has no " *
-        "transaction to book it in. Pass `parent_budget_mode = \"off\"` for this run.",
-    )
+    restart || isnothing(checkpoint) ||
+        error(
+            "Checkpoint endpoints were passed to a run that is not a restart.",
+        )
     check_algorithm(ode_config)
     implicit_solve = !isnothing(ode_config.newtons_method)
     dss = do_dss(axes(Y.c))
@@ -866,6 +874,9 @@ function build_parent_budget(
         snapshot,
         slab,
         active_events(schema),
+        restart,
+        checkpoint,
+        nothing,
         nothing,
         nothing,
         Dict{Symbol, Int}(hook => 0 for hook in METERED_HOOKS),
@@ -1414,7 +1425,8 @@ end
 
 # The first transaction opens on a measured endpoint: there is no previous
 # closing endpoint to reuse. This is one collective, paid once per run. The
-# cache the integrator built is checked against the template built earlier.
+# cache the integrator built is checked against the template built earlier,
+# and a restored state against the endpoints its checkpoint carried.
 function initialize_ledger!(adapter::ParentBudgetAdapter, integrator)
     adapter.timestepper = timestepper_record(integrator)
     adapter.stepper_cache = integrator.cache
@@ -1448,8 +1460,62 @@ function initialize_ledger!(adapter::ParentBudgetAdapter, integrator)
         0,
     )
     adapter.reductions += 1
+    adapter.restart && (
+        adapter.transition =
+            check_restart_transition(adapter.schema, endpoints, adapter.checkpoint)
+    )
     open_transaction!(adapter.ledger, endpoints)
     return nothing
+end
+
+"""
+    restart_transition(adapter) -> Union{Nothing, RestartTransition}
+
+Return what the ledger found when it opened on a restored state, or `nothing`
+for a run that did not restart.
+"""
+restart_transition(adapter::ParentBudgetAdapter) = adapter.transition
+
+"""
+    declared_callbacks(adapter, callbacks) -> Tuple
+
+Return the user callbacks a run may install beside the ledger. Without a
+ledger they pass through. With one, each must be a `ReadOnlyCallback`, and the
+declaration is unwrapped. In `AuditMode` every firing is checked against it by
+reading the parent integrals of the state around the call, locally and with
+no collective.
+"""
+declared_callbacks(::Nothing, callbacks) = callbacks
+function declared_callbacks(adapter::ParentBudgetAdapter, callbacks)
+    return Tuple(declared_callback(adapter, callback) for callback in callbacks)
+end
+
+declared_callback(::ParentBudgetAdapter, callback) = error(
+    "The parent-budget ledger accepts a custom callback only inside a " *
+    "ReadOnlyCallback declaration, got $(typeof(callback)). A callback that " *
+    "writes the state between two transactions is a change nothing accounts " *
+    "for, and a callback that supplies its own accounting is not supported.",
+)
+function declared_callback(adapter::ParentBudgetAdapter, declared::ReadOnlyCallback)
+    inner = declared.callback
+    is_audit(adapter) || return inner
+    affect! =
+        integrator -> begin
+            before = parent_integrals(adapter, integrator.u)
+            inner.affect!(integrator)
+            after = parent_integrals(adapter, integrator.u)
+            before == after || error(
+                "A callback declared read-only changed the state: the parent " *
+                "integrals moved by $(after .- before) across its firing.",
+            )
+            return nothing
+        end
+    return CTS.DiscreteCallback(
+        inner.condition,
+        affect!;
+        initialize = inner.initialize,
+        finalize = inner.finalize,
+    )
 end
 
 """

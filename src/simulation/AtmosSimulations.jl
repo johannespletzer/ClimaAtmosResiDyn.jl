@@ -296,8 +296,10 @@ entry point for simulations written as scripts; configuration-driven runs go thr
     energy against what the integrator applied, with one global collective per
     step and no change to the trajectory. `"audit"` also attributes each channel
     to the processes that wrote it. It refuses configurations outside the
-    contract's scope, restarts, and custom callbacks. See the parent-budget pages
-    of the documentation.
+    contract's scope, and a custom callback unless it is declared read-only with
+    `Internals.ParentBudget.ReadOnlyCallback`. A restarted run checks the
+    restored state against the endpoints its checkpoint carried. See the
+    parent-budget pages of the documentation.
   - `parent_budget_attribution = "net"`: How the ledger books a process row in
     `"audit"` mode: `"net"` books the signed integral of what the process applied,
     `"gross"` also keeps its positive and negative parts as a diagnostic. The
@@ -419,6 +421,11 @@ function AtmosSimulation{FT}(;
         steady_state_velocity
 
     # The ledger's schema is fixed from the model before anything is collected.
+    # A restarted run also reads the endpoints its checkpoint carried, so the
+    # first transaction can check the restored state against them.
+    parent_budget_checkpoint =
+        (isnothing(restart_file) || parent_budget_mode == "off") ? nothing :
+        Internals.ParentBudget.read_checkpoint_endpoints(restart_file, context)
     parent_budget = Internals.ParentBudget.build_parent_budget(
         parent_budget_mode, model, Y;
         ode_config,
@@ -426,15 +433,10 @@ function AtmosSimulation{FT}(;
         constraint_cadence = Symbol(update_constrain_state_every),
         attribution = parent_budget_attribution,
         tolerances = parent_budget_tolerances,
+        checkpoint = parent_budget_checkpoint,
     )
-    if !isnothing(parent_budget) && !default_callbacks && !isempty(callbacks)
-        error(
-            "The parent-budget ledger does not support custom callbacks yet: a " *
-            "callback may write the state, and the ledger would then close over " *
-            "a change nothing accounted for. Pass `parent_budget_mode = \"off\"` " *
-            "or drop the callbacks.",
-        )
-    end
+    # With the ledger on, a custom callback must declare itself read-only.
+    callbacks = Internals.ParentBudget.declared_callbacks(parent_budget, callbacks)
 
     p = @timed_log verbose "Built cache" build_cache(
         Y, model, params, dt, start_date, aerosol_names,

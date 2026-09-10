@@ -19,7 +19,7 @@ definition of done holds.
 | 4          | [#57](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/57) | Attribute explicit parent-budget contributions                          | process attribution, explicit channels                                          |
 | 5          | [#56](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/56) | Attribute implicit and post-implicit parent-budget contributions        | implemented-update accounting, and process attribution for the implicit channel |
 | 6          | [#58](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/58) | Account for boundary fluxes and reservoir transfers                     | transfer consistency                                                            |
-| 7          | not yet opened                                                         | Account for final maps, restarts, and callbacks                         | accepted-state reconciliation across finalization and restart                   |
+| 7          | [#59](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/59) | Account for final maps, restarts, and callbacks                         | accepted-state reconciliation across finalization and restart                   |
 | 8          | not yet opened                                                         | Add parent-budget reporting and closure certification                   | the published claim certificate                                                 |
 
 **Tests accompany every step.** The reporting step is where results are
@@ -328,6 +328,18 @@ deliberately mutating callback rejected at setup.
 
 **Definition of done.** Every authoritative accepted-state mutation has exactly
 one disposition and exactly one booking, across ordinary steps and restarts.
+
+**Status.** The final maps were delivered by #56. #59 delivers the restart
+transition and the callback rules. A checkpoint written with the ledger on
+carries the ledger's endpoint of the state it holds, as attributes, and the
+first transaction after a restart measures the restored state and compares
+it with that endpoint exactly before it opens; a difference is refused, and a
+checkpoint written without a ledger restarts the record as unverified. The
+record after a restart is a new segment from the restored endpoint. A custom
+callback is accepted only inside a `ReadOnlyCallback` declaration, which
+`audit` mode holds to by reading the state around every firing; a callback
+that supplies its own accounting is not supported yet and is refused, which
+the limitations register records.
 
 ## Stack step 8 — Reporting and closure certification
 
