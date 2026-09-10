@@ -1,0 +1,70 @@
+# C0. The depth control: the barrier census on a 60 km sphere, for a day.
+#
+# `c0_sphere` on `config/common_configs/numerics_sphere_he6ze31.yml` instead of
+# `he6ze10`, and nothing else changed. It exists to answer one question that
+# decides whether C1 is unavoidable.
+#
+# `energy_source_tags.md` attributes the non-positive parent to shallow domains:
+# 100% on the shipped 1.5 km column, 43% on a 30 km column, with "depth reduces
+# the fraction, because geopotential lifts `e_tot` positive higher up". C0
+# measured 43.3% on a 30 km sphere, which matches. **If depth is the driver, a
+# 60 km top should move that number.** If it does not move, the non-positive
+# region is a property of the energy reference rather than of the domain, and no
+# choice of grid avoids it — which is the case in which C1's reference shift
+# becomes unavoidable rather than optional.
+#
+# Read against `c0_sphere` and against nothing else. The grid differs, so the
+# residual magnitudes are not comparable with the shallow run; the
+# `nonpositive_fraction` column is what this run is for.
+#
+# The `he6ze31` grid also turns on the sponges and implicit diffusion that
+# `he6ze10` leaves off. Those come with the common config and are kept rather
+# than stripped, so this is that grid as the repository defines it; it does mean
+# the comparison is depth plus those settings, not depth alone.
+job_id: "c0_sphere_deep"
+
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 31
+z_max: 60000.0
+dz_bottom: 50.0
+dt: "400secs"
+ode_algo: "ARS343"
+hyperdiff: "Hyperdiffusion"
+rayleigh_sponge: true
+viscous_sponge: true
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+max_newton_iters_ode: 1
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+# `tropics` and `extratropics` are exact complements and partition ρe_tot.
+# `sfc` follows the turbulent surface energy flux, which is on by default and is
+# the process that forces this configuration.
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+
+# Hourly over a day, `tolerance` unset.
+energy_source_closure_check:
+  period: "1hours"
+
+# Instantaneous, defaults off. No ledger exists for this family, so there is no
+# operator-residual subtraction to make. The per-tag fields are here because
+# `e_src_res` covers the region tags only, so a source tag going negative never
+# shows up in it and has to be watched directly.
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc]
+    period: "1hours"

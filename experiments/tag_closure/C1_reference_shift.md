@@ -79,11 +79,56 @@ measured from a colder zero, is neutral in exact arithmetic: the inverse map
 shifts with it and `T` comes back unchanged. This is the operation that deserves
 the name, and it is the only one that supports the memo's claim.
 
-If C1 is run as option 2, it must be the second. We could not verify in this
-container whether that reference is a tunable ClimaParams entry or is fixed
-inside Thermodynamics.jl, because the package sources are not available here.
-**Check that before committing to the option**: it decides whether this is a
-configuration change or a dependency change.
+If C1 is run as option 2, it must be the second.
+
+### It is reachable from configuration
+
+Checked, and the answer is yes, though one detail still needs a command on
+Levante to pin down.
+
+`src/parameters/create_parameters.jl:75` builds the thermodynamic parameters as
+`ThermodynamicsParameters(toml_dict)` — that is, **entirely from the TOML dict**,
+with no hard-coded values in ClimaAtmos. `src/parameters/Parameters.jl:602`
+then forwards every field of that struct, so whatever the reference is, it is a
+field, and every field comes from a ClimaParams entry. A configuration reaches
+it through the `toml:` key (`default_config.yml:394`), which is the same
+mechanism `toml/longrun_baroclinic_wave.toml` uses for
+`precipitation_timescale`.
+
+**So option 2 is a configuration change, not a dependency change.** It needs a
+TOML file and a `toml:` line, not a fork of Thermodynamics.jl. That removes the
+largest unknown in its cost.
+
+Two things this does not settle, both cheap to close:
+
+  - **The parameter's name.** No ClimaParams source is available here, and no
+    TOML in `toml/` overrides a thermodynamic parameter, so the mechanism is
+    unexercised in this repository and there is no local example to copy a name
+    from. The pinned versions are Thermodynamics 1.3.0 and ClimaParams 1.1.6
+    (`.buildkite/Manifest-v1.11.toml`).
+  - **Whether the shift is actually constant.** `Parameters.jl:607` lists
+    `e_int_v0` and `e_int_i0` as *derived* parameters rather than fields, so
+    they are computed from the reference rather than set beside it. If they are
+    derived the way Thermodynamics conventionally derives them, moving the
+    reference also moves the latent-heat offsets, and the resulting shift in
+    `e_int` is `ΔT·(cv_m + q_vap·R_v)` rather than `ΔT·cv`. That is a variation
+    of order 1% across the moisture range — small, but it means the shifted
+    parent is `e_tot + c(q)` and not `e_tot + c`, which is a premise both
+    options in the memo rest on. **This is inferred from the derivation list,
+    not read from the package**, and should be confirmed with the same command.
+
+One command on Levante settles both:
+
+```bash
+julia +1.11 --project=.buildkite -e '
+    import Thermodynamics as TD, ClimaParams
+    println(fieldnames(TD.Parameters.ThermodynamicsParameters))
+    println(pkgdir(ClimaParams))'
+```
+
+The first line names every settable field; the second gives the directory whose
+`src/parameters.toml` carries their ClimaParams names, defaults and units. Grep
+that file for the reference temperature to get the key to put in a TOML.
 
 ## Two costs the memo does not count
 
