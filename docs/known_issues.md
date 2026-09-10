@@ -76,6 +76,14 @@ in the sphere residual, is the right amount of leakage for this scheme. The
 corrected assertions bound it and record it; tightening it would mean changing
 the closure, not the test.
 
+Both numbers predate the fix for issue #64, which changed `rescale_water_tags!`
+from scaling the tags to adding the parent's increment to them. That changes what
+the sphere residual does over a run — it no longer rides the limiter's ratio —
+so `1.2e-3` is a measurement of the old rule and the first run to reach these
+assertions will produce a new one. Neither assertion was retuned for it, because
+retuning a tolerance against a number nobody has measured is how this entry came
+to exist.
+
 ## 2. Levante 1/2/4 GPU scaling has not been measured
 
 **Status:** open, needs a run on Levante.

@@ -31,6 +31,10 @@ water_closure_check:
   # structurally broken rather than merely drifting. Read
   # `water_tag_closure.csv` from a run and tighten it.
   tolerance: 1.0e-4
+  # `abort_above` is left at its default of 1.0, so this job ends rather than
+  # warns if the tags ever hold more water than exists. That is the failure
+  # mode of issue #64, which ran a full simulated day past it and reported
+  # success.
 water_tracers:
   - name: tropics
     region: tropics

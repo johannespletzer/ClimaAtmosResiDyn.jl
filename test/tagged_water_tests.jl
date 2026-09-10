@@ -122,14 +122,66 @@ import ClimaCore.MatrixFields: @name
             @test CA.water_tag_fraction(FT(1), FT(0)) == FT(0)
             @test CA.water_tag_fraction(FT(1), FT(-1)) == FT(0)
             @test isfinite(CA.water_tag_fraction(FT(1), FT(0)))
+        end
 
-            # The rescale ratio is floored at zero but NOT clamped above 1:
-            # limiters move water between cells, so a cell can gain
-            @test CA.water_tag_rescale_ratio(FT(4), FT(2)) == FT(2)
-            @test CA.water_tag_rescale_ratio(FT(1), FT(2)) == FT(0.5)
-            @test CA.water_tag_rescale_ratio(FT(-1), FT(2)) == FT(0)
-            # Water appearing in a dry cell is not assigned to any tag
-            @test CA.water_tag_rescale_ratio(FT(1), FT(0)) == FT(0)
+        @testset "Rescale shift ($FT)" begin
+            # A partition tag takes the parent's increment in proportion to what
+            # it holds, over the positive part of the partition sum. Two tags
+            # holding 2 and 6 of a parent that goes 8 -> 12 split the +4.
+            @test CA.water_tag_rescale_shift(FT(2), FT(12), FT(8), FT(8)) ==
+                  FT(1)
+            @test CA.water_tag_rescale_shift(FT(6), FT(12), FT(8), FT(8)) ==
+                  FT(3)
+            # Nothing clamps the shift from above: both limiters move water
+            # between cells, so a cell that was clipped up legitimately needs
+            # its tags raised.
+            @test CA.water_tag_rescale_shift(FT(4), FT(16), FT(8), FT(8)) ==
+                  FT(4)
+
+            # The shares are renormalized, so what the tags absorb is the
+            # parent's whole increment even when they do not add up to it. Two
+            # tags holding 3 of a parent of 8 each take half of +4.
+            @test CA.water_tag_rescale_shift(FT(3), FT(12), FT(8), FT(6)) ==
+                  FT(2)
+
+            # The loss is floored at what the partition holds, so a tag cannot
+            # be driven negative. Two tags holding 1 each cannot pay out 8.
+            @test CA.water_tag_rescale_shift(FT(1), FT(0), FT(8), FT(2)) ==
+                  FT(-1)
+            # On a closed partition that floor is exactly the old factor's floor
+            # at zero: a parent clipped from 8 to -4 empties its tags.
+            @test CA.water_tag_rescale_shift(FT(6), FT(-4), FT(8), FT(8)) ==
+                  FT(-6)
+
+            # A negative tag is left for `repair_water_tag_partition!`, and an
+            # empty partition gets nothing invented into it
+            @test CA.water_tag_rescale_shift(FT(-1), FT(12), FT(8), FT(5)) ==
+                  FT(0)
+            @test CA.water_tag_rescale_shift(FT(0), FT(12), FT(8), FT(0)) ==
+                  FT(0)
+            @test isfinite(
+                CA.water_tag_rescale_shift(FT(1), FT(12), FT(8), FT(0)),
+            )
+
+            # A non-positive parent empties every tag, whatever it held. This is
+            # the branch a nonnegativity constraint reaches, and the ledger has
+            # to see the removal.
+            @test CA.water_tag_rescale_shift(FT(-1), FT(0), FT(-2), FT(0)) ==
+                  FT(1)
+            @test CA.water_tag_rescale_shift(FT(2), FT(3), FT(0), FT(2)) ==
+                  FT(-2)
+
+            # A source tag uses its own unnormalized donor share instead, as it
+            # does for sedimentation: it is not a member of the partition
+            @test CA.water_tag_source_rescale_shift(FT(2), FT(12), FT(8)) ==
+                  FT(1)
+            @test CA.water_tag_source_rescale_shift(FT(2), FT(4), FT(8)) ==
+                  FT(-1)
+            # Its loss is floored at the parent, so it cannot go negative either
+            @test CA.water_tag_source_rescale_shift(FT(2), FT(-8), FT(8)) ==
+                  FT(-2)
+            @test CA.water_tag_source_rescale_shift(FT(1), FT(3), FT(0)) ==
+                  FT(-1)
         end
 
         @testset "Attribution: production and loss ($FT)" begin
@@ -250,26 +302,42 @@ import ClimaCore.MatrixFields: @name
                     CA.TanhLatitudeRegion(FT(20), FT(2), false),
                 ),
             )
+            # Cells 1-5 have the tags summing exactly to the parent, so the
+            # closure error is zero and the correction can only be checked
+            # against the partition. Cells 6-9 are the cases that matter for
+            # issue #64: the tags do not add up to the parent, in both
+            # directions, so the correction has a nonzero error to act on.
+            #
             # Parent went 8 -> 4 (clipped down), 8 -> 8 (untouched),
             # 8 -> 12 (borrowed up), 0 -> 2 (water where there was none),
-            # and -2 -> 0 (a negative parent clipped to zero).
-            ᶜρq_tot_before = FT[8, 8, 8, 0, -2]
+            # -2 -> 0 (a negative parent clipped to zero), 10 -> 14 with the
+            # tags 4 short of the parent, 10 -> 14 with the tags 2 over it,
+            # 10 -> 2 with the tags holding less than the parent loses, and
+            # 10 -> 12 with one tag already negative.
+            ᶜρq_tot_before = FT[8, 8, 8, 0, -2, 10, 10, 10, 10]
             ᶜY = (;
-                ρq_tot = FT[4, 8, 12, 2, 0],
-                ρq_tag_tropics = FT[6, 4, 2, 0, -1],
-                ρq_tag_extratropics = FT[2, 4, 6, 0, -1],
+                ρq_tot = FT[4, 8, 12, 2, 0, 14, 14, 2, 12],
+                ρq_tag_tropics = FT[6, 4, 2, 0, -1, 3, 7, 1, -1],
+                ρq_tag_extratropics = FT[2, 4, 6, 0, -1, 3, 5, 1, 5],
             )
             ᶜfix = (;
-                ρq_tag_tropics = zeros(FT, 5),
-                ρq_tag_extratropics = zeros(FT, 5),
+                ρq_tag_tropics = zeros(FT, 9),
+                ρq_tag_extratropics = zeros(FT, 9),
             )
+            p = (;
+                tagging = (; ᶜwater_fix = ᶜfix, ᶜwater_pos = zeros(FT, 9)),
+            )
+            model = CA.WaterTaggingModel(tags)
             before_tropics = copy(ᶜY.ρq_tag_tropics)
             before_extra = copy(ᶜY.ρq_tag_extratropics)
+            # The closure error the `q_tag_res` diagnostic reports, per cell.
+            residual(Y) = Y.ρq_tot .- Y.ρq_tag_tropics .- Y.ρq_tag_extratropics
+            before_residual = residual(ᶜY)
 
-            CA._rescale_water_tags!(ᶜY, ᶜfix, ᶜρq_tot_before, tags)
+            CA._rescale_water_tags!((; c = ᶜY), p, ᶜρq_tot_before, model)
 
-            # Scaling by the parent's relative change preserves the partition
-            # wherever there was water to scale
+            # Handing the parent's increment out in proportion to what each tag
+            # holds preserves the partition wherever it was already closed
             @test ᶜY.ρq_tag_tropics[1:3] .+ ᶜY.ρq_tag_extratropics[1:3] ≈
                   ᶜY.ρq_tot[1:3]
             # ... and cannot invent water in a cell that had none, so that
@@ -279,7 +347,57 @@ import ClimaCore.MatrixFields: @name
             # The ledger records the amount removed as an increase.
             @test ᶜY.ρq_tag_tropics[5] == FT(0)
             @test ᶜfix.ρq_tag_tropics[5] == FT(1)
-            @test all(>=(0), ᶜY.ρq_tag_tropics)
+            @test all(>=(0), ᶜY.ρq_tag_tropics[1:8])
+
+            # The closure error is what the multiplicative rule amplified. The
+            # shares sum to one, so the partition absorbs the whole increment
+            # and the error comes out exactly where it went in. Cell 6 is 4
+            # short of its parent and cell 7 is 2 over it; the old rule would
+            # have returned 4 * 1.4 = 5.6 and -2 * 1.4 = -2.8 instead.
+            after_residual = residual(ᶜY)
+            atol = 32 * eps(FT) * maximum(abs.(ᶜρq_tot_before))
+            @test after_residual[6] ≈ before_residual[6] atol = atol
+            @test after_residual[7] ≈ before_residual[7] atol = atol
+            @test after_residual[9] ≈ before_residual[9] atol = atol
+            # Cell 8 is the one cell where the error moves: the parent loses 8
+            # while the tags hold 2, so they empty and the 6 they could not pay
+            # for surfaces in the residual. That is bounded, not amplified.
+            @test after_residual[8] < before_residual[8]
+
+            # Wherever the parent was positive the error moves by at most the
+            # parent's own increment, in either direction. This is the property
+            # the multiplicative rule did not have: it returned r * e, which
+            # grows without bound when r > 1 persists.
+            Δ = ᶜY.ρq_tot .- ᶜρq_tot_before
+            moved = abs.(after_residual .- before_residual)
+            positive_parent = ᶜρq_tot_before .> 0
+            @test all(
+                moved[positive_parent] .<=
+                abs.(Δ[positive_parent]) .+ atol,
+            )
+            # Where the parent was not positive the tags are emptied instead, so
+            # the whole of the new parent is the error. That branch is what a
+            # nonnegativity constraint reaches, and it is bounded by the parent
+            # rather than by what came before.
+            @test all(
+                isapprox.(
+                    after_residual[.!positive_parent],
+                    ᶜY.ρq_tot[.!positive_parent];
+                    atol = atol,
+                ),
+            )
+            # Either way the error ends no larger than the error already there
+            # or the cell's own parent, whichever is bigger. Nothing in this
+            # correction can take it past both.
+            @test all(
+                abs.(after_residual) .<=
+                max.(abs.(before_residual), abs.(ᶜY.ρq_tot)) .+ atol,
+            )
+
+            # A tag that transport has driven negative is left alone, for
+            # `repair_water_tag_partition!` to absorb into the positive tags.
+            # Scaling it would have made it more negative.
+            @test ᶜY.ρq_tag_tropics[9] == before_tropics[9]
 
             # The ledger records the signed correction applied to each tag
             @test ᶜfix.ρq_tag_tropics ≈ ᶜY.ρq_tag_tropics .- before_tropics
@@ -290,8 +408,67 @@ import ClimaCore.MatrixFields: @name
             @test ᶜfix.ρq_tag_tropics[3] > 0  # borrowed up
 
             # The ledger accumulates across calls rather than being overwritten
-            CA._rescale_water_tags!(ᶜY, ᶜfix, ᶜY.ρq_tot, tags)
+            CA._rescale_water_tags!((; c = ᶜY), p, copy(ᶜY.ρq_tot), model)
             @test ᶜfix.ρq_tag_tropics ≈ ᶜY.ρq_tag_tropics .- before_tropics
+        end
+
+        @testset "Limiter rescale does not amplify the residual ($FT)" begin
+            # The regression test for issue #64. A cell whose element minimum
+            # sits above it is lifted by the SEM quasimonotone limiter every
+            # stage, so the same ratio is applied over and over. Multiplying
+            # the tags multiplied the closure error with them, at 1.4 per
+            # application; after sixteen applications that is a factor of 220,
+            # and after a simulated day it reached 1e113 while `ρq_tot` stayed
+            # bounded. Adding the increment leaves the error where it was.
+            tags = (
+                CA.WaterTag{:tropics}(
+                    CA.TanhLatitudeRegion(FT(20), FT(2), true),
+                ),
+                CA.WaterTag{:extratropics}(
+                    CA.TanhLatitudeRegion(FT(20), FT(2), false),
+                ),
+            )
+            model = CA.WaterTaggingModel(tags)
+            ᶜY = (;
+                ρq_tot = FT[10],
+                ρq_tag_tropics = FT[3],
+                ρq_tag_extratropics = FT[3],
+            )
+            p = (;
+                tagging = (;
+                    ᶜwater_fix = (;
+                        ρq_tag_tropics = zeros(FT, 1),
+                        ρq_tag_extratropics = zeros(FT, 1),
+                    ),
+                    ᶜwater_pos = zeros(FT, 1),
+                ),
+            )
+            ᶜρq_tot_before = zeros(FT, 1)
+            for _ in 1:16
+                ᶜρq_tot_before .= ᶜY.ρq_tot
+                ᶜY.ρq_tot .= FT(1.4) .* ᶜρq_tot_before
+                CA._rescale_water_tags!(
+                    (; c = ᶜY),
+                    p,
+                    ᶜρq_tot_before,
+                    model,
+                )
+            end
+            residual =
+                ᶜY.ρq_tot[1] - ᶜY.ρq_tag_tropics[1] -
+                ᶜY.ρq_tag_extratropics[1]
+            # The error started at 10 - 6 = 4 and stays there. The tolerance is
+            # loose because the parent has grown by 1.4^16 by now and Float32
+            # rounding at that magnitude is not negligible against 4. Under the
+            # rule this replaced the error would be 4 * 1.4^16, about 870.
+            @test residual ≈ FT(4) rtol = 1e-2
+            @test residual < FT(8)
+            # Bounded by the cell's own parent, which is the property the
+            # diverged run lost: there the tags reached 1e130 against a parent
+            # of 1.6e16.
+            @test abs(residual) <= ᶜY.ρq_tot[1]
+            @test ᶜY.ρq_tag_tropics[1] > 0
+            @test ᶜY.ρq_tag_tropics[1] < ᶜY.ρq_tot[1]
         end
 
         @testset "Partition repair ($FT)" begin
@@ -325,8 +502,8 @@ import ClimaCore.MatrixFields: @name
             p = (;
                 tagging = (;
                     ᶜwater_fix,
-                    ᶜrepair_pos = zeros(FT, 3),
-                    ᶜrepair_neg = zeros(FT, 3),
+                    ᶜwater_pos = zeros(FT, 3),
+                    ᶜwater_neg = zeros(FT, 3),
                 ),
             )
 

@@ -181,15 +181,16 @@ end
 The donor share `φ = ρe_src / ρe_tot` of a tag in the local moist energy,
 clamped to `[0, 1]` and defined to be zero where `ρe_tot` is not positive.
 
-This is the energy counterpart of `water_tag_fraction`, and it carries one
-weakness that the water version does not. `ρq_tot > 0` is enforced by the parent
-model, so a water donor share is always well posed. `ρe_tot` has no physical
-zero: it depends on the chosen thermodynamic and gravitational energy reference,
-and a shift of that reference can make it non-positive somewhere. The fallback
-below keeps the arithmetic finite there, but it does not make the answer
-meaningful. A configuration whose `ρe_tot` goes non-positive anywhere is one
-whose source shares cannot be interpreted, and the run reports that through
-`e_src_res` rather than silently.
+This is the energy counterpart of `water_tag_fraction`, and the two share the
+same weakness for different reasons. Total water has a physical zero, so a cell
+with `ρq_tot ≤ 0` is a numerical artifact and a rare one; moist total energy has
+none, because it depends on the chosen thermodynamic and gravitational reference,
+and a shift of that reference can put a whole region below zero at once. The
+fallback below keeps the arithmetic finite in either case, but it does not make
+the answer meaningful. A configuration whose `ρe_tot` goes non-positive anywhere
+is one whose source shares cannot be interpreted there, and the run reports that
+through `e_src_res` and through the `nonpositive_fraction` column of its closure
+table rather than silently.
 """
 @inline energy_source_fraction(ρe_src, ρe_tot) =
     ρe_tot > zero(ρe_tot) ?

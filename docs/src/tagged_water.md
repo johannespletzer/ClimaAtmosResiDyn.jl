@@ -93,9 +93,16 @@ Two consequences worth stating:
     absorbs the rest — also correct, just not a partition.
   - **Positivity.** A tag update is
     ``\rho q_{\mathrm{tag},k}\,(1 - \Delta^{-}\Delta t / \rho q_\mathrm{tot})``,
-    so tags stay non-negative under the same step restriction that keeps
-    ``\rho q_\mathrm{tot}`` non-negative, which the 0-moment sink already
-    enforces.
+    so a tag stays non-negative for as long as the step is short enough that
+    ``\Delta^{-}\Delta t`` does not exceed ``\rho q_\mathrm{tot}`` — the same
+    restriction that keeps ``\rho q_\mathrm{tot}`` itself non-negative under the
+    0-moment sink. But nothing in the model enforces that restriction.
+    `tracer_nonnegativity_method` is off unless configured, transport can drive a
+    cell negative on its own, and a run on a sphere routinely has
+    ``\rho q_\mathrm{tot} \le 0`` over part of its volume. Where it does, the
+    share is undefined and the tags of that cell say nothing; the
+    `nonpositive_fraction` column of the closure table is what reports how much
+    of the domain is in that state.
 
 ### Taggable processes
 
@@ -140,9 +147,26 @@ construction. For the prescribed forcings it is an assumption.
   - **Numerical corrections** are handled separately, by
     `rescale_water_tags!`: the tags are excluded from both tracer limiters,
     because limiting each independently has no reason to reproduce the parent's
-    adjustment and would break ``\sum_i \rho q_{\mathrm{tag},i} = \rho q_\mathrm{tot}``. Instead every tag is scaled by the parent's relative
-    change, which preserves both the sum and non-negativity exactly, and the
-    signed water moved is recorded in `q_tag_fix_<name>`.
+    adjustment and would break ``\sum_i \rho q_{\mathrm{tag},i} = \rho q_\mathrm{tot}``. Instead the parent's increment
+    ``\Delta = \rho q_\mathrm{tot}^{\,\mathrm{after}} - \rho q_\mathrm{tot}^{\,\mathrm{before}}``
+    is handed to the tags under the donor rule,
+    ``\rho q_{\mathrm{tag},k} \leftarrow \rho q_{\mathrm{tag},k} + \Delta\,s_k``,
+    where ``s_k`` is the tag's share of what the partition holds. The share is
+    renormalized over the partition, as the sedimentation mirror's is, so the
+    shares sum to one and the partition absorbs ``\Delta`` in full. The signed
+    water moved is recorded in `q_tag_fix_<name>`.
+
+    Adding the increment rather than scaling the tags is deliberate, and the two
+    agree wherever the tags already sum to the parent. Where they do not, scaling
+    multiplies the closure error by the same factor it applies to the tags, so a
+    cell that a limiter lifts every stage compounds that error while
+    ``\rho q_\mathrm{tot}`` stays bounded — which is how the tags of a sphere run
+    reached ``10^{130}`` against a parent of ``1.6\times10^{16}``
+    ([issue #64](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/issues/64)).
+    The additive form leaves the error where it was. The loss is floored at what
+    the tags hold, so non-negativity still holds exactly, and where that floor
+    binds the tags empty and the water they could not account for surfaces in
+    `q_tag_res`.
 
 ### Sedimentation with 1-moment microphysics
 
@@ -323,5 +347,7 @@ ClimaAtmos.sediment_water_tags!
 ClimaAtmos.snapshot_tagged_ρq_tot!
 ClimaAtmos.attribute_tagged_ρq_tot!
 ClimaAtmos.rescale_water_tags!
+ClimaAtmos.water_tag_rescale_shift
+ClimaAtmos.water_tag_source_rescale_shift
 ClimaAtmos.repair_water_tag_partition!
 ```
