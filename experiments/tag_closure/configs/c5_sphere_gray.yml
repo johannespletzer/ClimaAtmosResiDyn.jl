@@ -1,0 +1,85 @@
+# C5, sphere. C4's moist sphere with gray radiation added, so that energy leaves
+# as well as enters, and with the per-process layout of the C5 column.
+#
+# C4 had one attributed process, the surface flux, and no sink that the tags
+# could see. Gray radiation gives the loss half of the rule something to remove
+# over the whole sphere. Read this run for:
+#   - how much of radiation's cooling the `rad` tag feels, against the record;
+#   - form A of per-process closure. `tropics - new_tropics` and
+#     `extratropics - new_extratropics` are the energy that was in each region
+#     at the start, which gains nothing. And `new_tropics + new_extratropics`
+#     must equal `rad + sfc` at every point, since both are the new energy.
+#     Interpolation to the lat-lon grid is linear, so that identity survives it;
+#   - whether a real sink changes the negative tags of E14 and E19.
+#
+# Form B, the records against the change in rho_e_tot, needs domain integrals,
+# which the lat-lon output only approximates. That is the column's job.
+#
+# `all` expands to every process label, `precipitation` and `microphysics`
+# included. Neither reaches this family here, and the initialization warns
+# about both. That is expected: the region tags do not receive them either.
+#
+# The atmosphere is not C4's, because radiation changes it. `c` is C4's.
+job_id: "c5_sphere_gray"
+
+energy_source_tag_offset: 110495.0
+
+# C4's sphere, unchanged apart from radiation.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+# `gray` needs only temperature and pressure, so no data files. The fluxes are
+# recomputed hourly rather than every six hours, the default, so that the
+# radiative tendency follows the developing wave. An hour is nine steps.
+rad: "gray"
+dt_rad: "1hours"
+
+# `tropics` and `extratropics` partition the offset total, as in C4. `sfc` and
+# `rad` split the new energy by process, `new_tropics` and `new_extratropics`
+# by region.
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+  - name: new_tropics
+    region: tropics
+    source: all
+  - name: new_extratropics
+    region: extratropics
+    source: all
+
+energy_process_record: [radiation, surface_flux]
+
+# Hourly with the audit on, as C4.
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_new_tropics, e_src_new_extratropics]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux]
+    period: "1hours"

@@ -9,10 +9,10 @@ Branch `claude/tag-closure-experiments`.
 
 ## Where things stand
 
-22 of the 30 configured runs are live in `output/`. A run is live when
+22 of the 32 configured runs are live in `output/`. A run is live when
 `output/<run>/provenance.txt` exists, so `ls output` is the register.
 `c0_sphere_deep` is dropped rather than pending — see *Not yet, and why*.
-The three `output/twin_c1*/` directories are not configured runs but checks on
+The four `output/twin_c1*/` directories are not configured runs but checks on
 C1, and `output/c0_sphere_audit/terrabyte/` is a second reading of that run.
 
 **Phase A and phase C are both complete** apart from C2, which needs a code
@@ -131,8 +131,13 @@ limits.
     are in `output/c4_sphere_tag_offset*/`.
   - **The limiter twin ran** (job `13384884`, `overrides/twin_limiter_off.yml`).
     The limiter is most of E16: the one-step difference in `ρ` fell from 3.6e-5
-    to 3.7e-8. A remainder is left. One more twin that adds
-    `disable_surface_flux_tendency: true` would test the surface-flux code path.
+    to 3.7e-8. A remainder is left.
+  - **Done: the surface-flux path is ruled out** (job `13385303`,
+    `overrides/twin_limiter_off_no_sfc.yml`). With the surface-flux tendency
+    off as well, the one-step difference in `ρ` is 3.7e-8 again. What starts
+    the remainder is not established. The owner did not take up a further
+    twin: the offset leaves the model alone, so the tags no longer depend on
+    it.
 
 ## 1b. Making the energy source tags operational
 
@@ -144,7 +149,9 @@ What stands between the tags and operational use, in the order to do it:
 
  1. **PR #65**, the #64 fix and the closure audit. The offset builds on the
     audit, so this lands first.
- 2. **`energy_source_tag_offset`**, in its own pull request stacked on #65.
+ 2. **`energy_source_tag_offset`**, in its own pull request stacked on #65:
+    [#68](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/68),
+    a draft. It carries the loss-rule integration test (item 7).
  3. **Precipitation on the implicit path** does not reach the source tags. Only
     the explicit path is bracketed for this family, so the 0M sink's energy
     leaves the parent unattributed. This is C2, and it needs a code change.
@@ -162,6 +169,48 @@ What stands between the tags and operational use, in the order to do it:
     is the starting point.
  8. **Sub-grid transport and GPU.** The tags are grid-scale only, and neither
     the family nor the offset has run on a GPU.
+
+## 1c. C5 — per-process closure, and a real sink
+
+The owner approved both runs on 2026-09-10, on `hpda2_test`. Both carry C4's
+offset, 110,495 J/kg, and add what C4 could not test.
+
+  - **`c5_column_offset`**: C3's DYCOMS column. Tags `strat`, `tropo`, `rad`,
+    `sfc`, `new_strat` and `new_tropo`, records for radiation and the surface
+    flux, and `rhoa`.
+  - **`c5_sphere_gray`**: C4's sphere with `rad: gray`, fluxes hourly. Tags
+    `tropics`, `extratropics`, `sfc`, `rad`, `new_tropics` and
+    `new_extratropics`, and the same two records.
+
+What to read from them:
+
+  - **Cloud top.** How much of radiation's cooling the `rad` tag feels once the
+    loss runs, against the record. C3 could not say (E8).
+  - **The initial tag, without code.** A region tag minus its `new_` tag is the
+    energy that was in that region at the start, followed as it moves. It gains
+    nothing, so its domain total may only fall. The column's total is exact;
+    the sphere's lat-lon output only approximates it.
+  - **Per-process closure, form A.** The new energy split by region, the sum of
+    the `new_` tags, must equal the new energy split by process, `rad + sfc`, at
+    every point. They are separate tags, so this is a check and not an
+    identity. A gap means a process that fires with no tag of its own, or the
+    share's clamp where a tag has gone negative.
+  - **Per-process closure, form B, on the column only.** The records summed
+    over the column, against the change in `ρe_tot`, up to what no record sees.
+
+The analysis script is not written yet. It goes in `analysis/` before the result
+is recorded.
+
+Submit as C4 was, with the run as the job name:
+
+```tcsh
+env CONFIG=experiments/tag_closure/configs/c5_column_offset.yml \
+    sbatch --account=hpda-c --partition=hpda2_test --time=01:00:00 \
+        --cpus-per-task=2 --mem=32G --job-name=c5_column_offset \
+        --output=$SCRATCH/tag_closure/logs/%x-%j.out \
+        --error=$SCRATCH/tag_closure/logs/%x-%j.err \
+        experiments/tag_closure/runscripts/phase_c.sh
+```
 
 ## 2. C1 — done
 

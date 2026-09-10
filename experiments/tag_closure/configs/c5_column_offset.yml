@@ -1,0 +1,86 @@
+# C5, column. C3's DYCOMS column with the tags on `rho_e_tot + c*rho`, so the
+# loss half of the rule runs, and with tags and records laid out so that the
+# energy can be checked per process as well as per region.
+#
+# Three questions:
+#   - Cloud top. With the loss running, how much of radiation's cooling does
+#     the `rad` tag feel? C3 could not say, because the loss never ran there
+#     (FINDINGS E8). The rule predicts a small share: at this `c` the tags'
+#     total is about 65 kJ/kg below the inversion, and radiation delivered at
+#     most 4.3 kJ/kg in C3.
+#   - Per-process closure, form A. `new_strat` and `new_tropo` take every
+#     attributed process's production in their region, exactly as `strat` and
+#     `tropo` do, but start at zero. So `strat - new_strat` is the energy that
+#     was above 750 m at the start, followed as it moves and is lost. It gains
+#     nothing, so its column total may only fall. And `new_strat + new_tropo`
+#     is the new energy split by region, which must equal `rad + sfc`, the same
+#     energy split by process, as long as every process that fires has a tag.
+#   - Per-process closure, form B. The records add up what each process did.
+#     Summed over the column, they should explain the change in rho_e_tot, up to
+#     what no record sees. `rhoa` is written so the analysis can integrate.
+#
+# `all` expands to every process label, `precipitation` and `microphysics`
+# included. Neither reaches this family here, and the initialization warns
+# about both. That is expected: `strat` and `tropo` do not receive them either.
+#
+# c = 110495 J/kg as in C4, so C4 and both C5 runs share one offset. The
+# column's most negative rho_e_tot is about -45.4 kJ/kg (E6), so the tags' total
+# is positive everywhere with room to spare.
+job_id: "c5_column_offset"
+
+energy_source_tag_offset: 110495.0
+
+# C3's column, unchanged.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+rad: "DYCOMS"
+
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+# `strat` and `tropo` partition the offset total, as in C3. `rad` and `sfc` split
+# the new energy by process, `new_strat` and `new_tropo` by region.
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: rad
+    source: radiation
+  - name: sfc
+    source: surface_flux
+  - name: new_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: all
+  - name: new_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: all
+
+# The same processes as the source tags, so the two readings are of the same
+# processes. If the surface flux does not fire in this column, `sfc` and its
+# record stay zero and form A reduces to radiation alone.
+energy_process_record: [radiation, surface_flux]
+
+# The audit splits the residual by sign, which is how C4 and the smoke run were
+# read.
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_strat, e_src_tropo, e_src_rad, e_src_sfc]
+    period: "1hours"
+  - short_name: [e_src_new_strat, e_src_new_tropo]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux]
+    period: "1hours"
+  - short_name: [rhoa]
+    period: "1hours"

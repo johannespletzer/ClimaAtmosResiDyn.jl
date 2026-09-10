@@ -66,12 +66,18 @@ AUDIT_REQUIRED = {
     "c1_sphere_shift",
     "c4_sphere_tag_offset",
     "c4_sphere_tag_offset_2x",
+    "c5_column_offset",
+    "c5_sphere_gray",
 }
 # Runs allowed one model-state diagnostic besides their tags. The two C4 runs
 # differ only in an offset the model never sees, so their `ta` must be identical
 # to the last bit, and that is the check that the atmosphere is untouched.
 STATE_CHECK = {"c4_sphere_tag_offset", "c4_sphere_tag_offset_2x"}
 STATE_DIAGNOSTICS = {"ta"}
+# Runs allowed the air density besides their tags. C5's column sums its process
+# records over the column, and that needs `rhoa`.
+DENSITY_CHECK = {"c5_column_offset"}
+DENSITY_DIAGNOSTICS = {"rhoa"}
 
 def shorts(config):
     out = set()
@@ -219,6 +225,8 @@ def check(path):
         covered.add("q_prc_" + label)
     if name in STATE_CHECK:
         covered |= STATE_DIAGNOSTICS
+    if name in DENSITY_CHECK:
+        covered |= DENSITY_DIAGNOSTICS
 
     if name in CONTROLS:
         if active:

@@ -65,21 +65,33 @@ one agent has worked this branch at once.
   - **C4 ran, and the tag-side offset works.** `energy_source_tag_offset` is in
     the model. It leaves the atmosphere bit for bit untouched and reproduces
     C1's tag results (FINDINGS E17 to E19). The twin tests found E16 to be
-    mostly the van Leer energy limiter, with a small remainder unexplained. One
-    more twin could test the surface-flux code path (task 1). It needs
-    approval, and it matters less now that C4 leaves the model alone.
-  - **PR #65** has `main` merged in, with both sides of `NEWS.md` kept, at the
-    owner's request. Check its CI before anything else touches it.
+    mostly the van Leer energy limiter. A fourth twin ruled out the surface-flux
+    path for the remainder, and the owner stopped there.
+  - **C5 is submitted** (task 1c): the column with the offset, and the sphere
+    with gray radiation. Both are laid out to check the tags per process as well
+    as per region, and to read a region's initial energy without code. Its
+    analysis script is not written yet.
+  - **PR #65 and PR #68 stay drafts** until the owner has reviewed them. #68 is
+    the offset, stacked on #65, and it now carries the loss-rule integration
+    test the owner asked for. Check both PRs' CI before anything else touches
+    them.
   - **The owner decided to keep both** the energy source tags and the process
     record, as the main goal (FINDINGS §8). Task 1b of the task list names what
-    is left to make the tags operational, and the offset has its own pull
-    request, stacked on #65.
+    is left to make the tags operational. The owner chose to write no model
+    code until C5 has been read.
+  - **Enthalpy-form transport of the tags as an audit,** with passive tracers
+    kept as the default, was put to a reviewer agent. Its answer belongs in
+    FINDINGS §8.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for
 
   - **`.buildkite` needs a prepared machine.** Run the machine's setup script
     once. Without it Julia dies on `Missing source file for base pkg Statistics`, which names nothing useful.
+  - **`main` tracks `.buildkite/LocalPreferences.toml`; this branch does not.**
+    In a worktree based on `main`, such as #68's, the setup script rewrites the
+    tracked file. Run `git checkout -- .buildkite/LocalPreferences.toml` before
+    committing there.
   - **On terrabyte, never `module purge`**, and load `python/3.12` last.
     `validate_configs.py` needs PyYAML, which no default Python here has, and
     the self-test only warns when it is missing.

@@ -534,6 +534,8 @@ adjusted from what was learned before they are submitted.
 | `c1_sphere_shift`  | `phase_c.sh` | C1, `c0_sphere` under the reference shift, `δ` = −110 K       |
 | `c4_sphere_tag_offset` | `phase_c.sh` | C4, `c0_sphere_audit` with the tags on `ρe_tot + c·ρ`, `c` = 110,495 J/kg |
 | `c4_sphere_tag_offset_2x` | `phase_c.sh` | C4 at twice the offset, on the identical atmosphere |
+| `c5_column_offset` | `phase_c.sh` | C5, C3's column with the offset, per-process tags, two records and `rhoa` |
+| `c5_sphere_gray` | `phase_c.sh` | C5, C4's sphere with `rad: gray`, per-process tags and two records |
 
 C2, the implicit-path brackets, needs the owner's approval and a code change,
 and no configuration for it is written. C1, the reference shift, needs approval
