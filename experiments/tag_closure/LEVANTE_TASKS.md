@@ -199,14 +199,23 @@ off, and `13385454` the sphere with first-order tag upwinding. They are in
     where cold condensate falls out;
   - the region tags' negativity does not come from their vertical upwinding.
 
-**Next, each needing approval:**
+**C7 and the sphere's transport ledger, done on 2026-09-11** (FINDINGS E30,
+E31). Job `13399601` is C6's sphere, repair off, with a `microphysics` tag, in
+`output/c7_sphere_mp/`. Job `13399604` ran `analysis/transport_ledger.jl` on the
+same sphere, in `output/transport_ledger_sphere/`. What they found:
 
-  - C7: C6's sphere with a `microphysics` tag, which should close form A there
-    (E28);
-  - sedimentation as transport of the tags, if the owner wants it built
-    (FINDINGS §8), with a 1M column to test it;
-  - the enthalpy-form audit switch. The column measurement meets the rule for
-    building it (E25), and the sphere is not measured.
+  - with the rain-out tagged, the sphere closes per process to 20.2 J/kg,
+    against 149;
+  - on the sphere too, pressure work is at least 93% of the residual's growth,
+    the per-tag limiter 2e-4 and hyperdiffusion 2.4%.
+
+**Next.** The owner approved both builds after C6. Each run still needs its own
+approval:
+
+  - sedimentation as transport of the tags, being built (FINDINGS §8), with a
+    1M column to test it;
+  - the enthalpy-form audit switch. Both measurements meet the rule for building
+    it (E25, E31), and the sphere's says it needs a horizontal half.
 
 The first submission, jobs `13385435` to `13385439`, failed at startup. The
 repair's commit had registered `e_src_fix_<name>` without defining the function

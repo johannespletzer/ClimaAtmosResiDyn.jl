@@ -3,11 +3,11 @@
 This is an instruction for an agent, not a record. The records are the four
 documents named below. Delete this file when the series ends.
 
-The previous session, on 2026-09-10 on LRZ terrabyte, was the first with Julia
-and the GitHub CLI. It ran the analysis for the first time, ran C1 with the
-owner's approval, and found two things that change how C1 is read: the tags
-still go negative under a positive reference (E14), and the shift is not a pure
-relabelling in the discrete model (E16). Start from those.
+Since C1, the series ran C4 to C7 on LRZ terrabyte on 2026-09-10 and
+2026-09-11, with the owner's approval. It built the tag-side offset (#68), the
+implicit bracket and the repair (#69), and measured where the tags' closure
+residual comes from in both geometries (E25, E31). Start from "Where the last
+session stopped" below.
 
 Branch: `claude/tag-closure-experiments`. Work there, push there.
 
@@ -20,7 +20,7 @@ Branch: `claude/tag-closure-experiments`. Work there, push there.
  2. [LEVANTE_TASKS.md](LEVANTE_TASKS.md) — the task list, for both machines.
     The name is historical. Task 1 is the next job.
  3. [LEARNINGS.md](LEARNINGS.md) — one entry per run, the reasoning behind the
-    register. The C1 entry is the last.
+    register. The C7 entry is the last.
  4. [C1_reference_shift.md](C1_reference_shift.md) — the argument C1 was built
     on, with the raw probe output in its appendix.
 
@@ -67,28 +67,37 @@ one agent has worked this branch at once.
     C1's tag results (FINDINGS E17 to E19). The twin tests found E16 to be
     mostly the van Leer energy limiter. A fourth twin ruled out the surface-flux
     path for the remainder, and the owner stopped there.
-  - **C5 and C6 ran** (task 1c, FINDINGS E20 to E29). The radiation tag holds
-    nothing where radiation cools, even with the loss running. Checked per
+  - **C5, C6 and C7 ran** (task 1c, FINDINGS E20 to E30). The radiation tag
+    holds nothing where radiation cools, even with the loss running. Checked per
     process, the tags found a process that no tag listed in both geometries:
     subsidence on the column, and on the sphere the rain-out producing energy
-    where cold condensate falls out. With subsidence listed, the column closes
-    per process, and per record to the joule. C7, the sphere with a
-    `microphysics` tag, is proposed in task 1c and needs approval.
-  - **PR #65, #68 and #69 stay drafts** until the owner has reviewed them.
+    where cold condensate falls out. With those listed, the column closes per
+    process to 60.7 J/kg and per record to the joule, and the sphere per process
+    to 20.2 J/kg (C7). What the sphere's last 20 J/kg is, is open.
+  - **PR state.** #65 is ready for review. Another session reviewed #65 and #68
+    under the owner's account and pushed fixes to both. #68 and #69 stay drafts
+    until the owner has reviewed them.
     - #68 is the offset, stacked on #65, with the loss-rule integration test.
+      Its test comment now carries the measured ratio (`57957cae`).
     - #69 is the implicit bracket and the repair, stacked on #68, with the fix
-      that defines `compute_e_src_fix!` (`a4b8ab96`).
+      that defines `compute_e_src_fix!`. #68's review fixes are merged into it
+      at `481cf02c`, and its four test files pass there.
 
-    Check all three PRs' CI before anything else touches them.
+    Check all three PRs' CI before anything else touches them. The review left
+    these for the owner: `c·Δρ` from mass-changing processes the tags do not
+    bracket, a restart guard for a changed offset, the `Float32` rounding floor,
+    `parent` shadowed in tests, `nothing` inside a broadcast, and `isfinite`
+    before the conversion to `FT`.
   - **The owner decided to keep both** the energy source tags and the process
     record, as the main goal (FINDINGS §8). Task 1b of the task list names what
     is left to make the tags operational.
-  - **On the column, the residual's growth is pressure work** (FINDINGS E25,
-    `analysis/transport_ledger.jl`). That meets the reviewer's rule for building
-    an enthalpy-form transport of the tags as an audit. The sphere is not
-    measured, and the switch is not built.
-  - **Sedimentation as transport of the tags** was assessed as viable by a
-    reviewer agent (FINDINGS §8). Building it waits for the owner.
+  - **The residual's growth is pressure work in both geometries** (FINDINGS
+    E25, E31, `analysis/transport_ledger.jl`). On the sphere it is at least 93%,
+    with a horizontal part half the vertical one. Both meet the reviewer's rule
+    for building an enthalpy-form transport of the tags as an audit. The owner
+    approved building it, and it is not built.
+  - **Sedimentation as transport of the tags** was approved by the owner and is
+    being built on this branch (FINDINGS §8).
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for

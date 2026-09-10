@@ -1001,3 +1001,33 @@ it, now twice in two runs. Numerical: negative tags, now repaired and logged.
 **Carry-over to the source tags.** List every process that fires, and check
 form A: it found a missing process in both geometries. Read the repair's ledgers
 beside the tags.
+
+## C7. The sphere's missing process, tagged
+
+Ran at `414f5f1b` on 2026-09-11, `hpda2_test` on LRZ terrabyte, SLURM job
+`13399601`, 18 minutes. The owner approved it.
+
+**What C7 was for.** C6's check found the rain-out producing energy on the
+sphere, and no tag listed `microphysics` (E28). C7 is C6's sphere with the
+repair off and one more tag, `mp`, on `source: microphysics`. The tags never act
+on the model, so the atmosphere and every other tag should stay C6's, and form A
+should close.
+
+**It closes.** The new energy split by region and split by process agree to
+20.2 J/kg at 24 h, down from 149 (E30). The atmosphere and the region tags are
+C6's in every value.
+
+**Beside it, the transport ledger on the same sphere.** Job `13399604` split
+the residual's growth by operator, as E25 did on the column. Pressure work,
+vertical and horizontal together, is at least 93% of it, the per-tag limiter
+2e-4 and hyperdiffusion 2.4% (E31).
+
+**Barrier.** A gap of 20 J/kg is left, growing close to the square of time.
+What it is, is open.
+
+**Class.** Configuration, now closed: the second process the check found, now
+tagged. The residual is pressure work in both geometries.
+
+**Carry-over to the source tags.** On a sphere with ice, tag `microphysics`,
+because the rain-out produces energy there. A switch that moves the tags as
+enthalpy needs a horizontal half as well as a vertical one.

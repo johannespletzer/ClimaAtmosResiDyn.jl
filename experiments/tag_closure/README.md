@@ -549,6 +549,7 @@ adjusted from what was learned before they are submitted.
 | `c6_sphere_repair` | `phase_c.sh` | C6, C5's sphere on the bracket and the repair |
 | `c6_sphere_no_repair` | `phase_c.sh` | `c6_sphere_repair` with the repair off |
 | `c6_sphere_first_order` | `phase_c.sh` | `c6_sphere_no_repair` with the tags moved by first-order upwinding |
+| `c7_sphere_mp` | `phase_c.sh` | C7, `c6_sphere_no_repair` with an `mp` tag on `source: microphysics` |
 
 C2, the implicit-path brackets, needs the owner's approval and a code change,
 and no configuration for it is written. C1, the reference shift, needs approval

@@ -507,6 +507,66 @@ transport and hyperdiffusion, neither limited for tags, and the finite-step
 loss. E19's scaling with the offset points at transport. *C6, jobs `13385453`
 and `13385454`.*
 
+**E30. With a `microphysics` tag, the sphere closes per process.** C7 is
+`c6_sphere_no_repair` with one more tag, `mp`, on `source: microphysics`. The
+new energy split by region and split by process now agree to 20.2 J kg⁻¹ at
+24 h, 9.5e-4 in relative terms, against C6's 149 J kg⁻¹ and 7e-3 (E28). So the
+gap of E28 was the rain-out's production, and the check closes once every
+process that fires has a tag.
+
+  - The largest gap left is at grid index (63, 33, 2), on the second level,
+    where the new energy is 2,648 J kg⁻¹. The radiation record there is
+    2,090 J kg⁻¹, and the other two records are zero to rounding. The records
+    stay where their process acted, while the tags are transported, so the tags
+    there can still hold energy made elsewhere.
+  - The gap grows close to the square of time, from 0.04 J kg⁻¹ at 1 h to 5.27
+    at 12 h and 20.2 at 24 h. What it is, is open (§7).
+  - The `mp` tag reaches 149 J kg⁻¹, and the microphysics record 270.7, as in
+    C6.
+  - The extra tag changes nothing else. The region tags' closure table is
+    identical to C6's in every row, and `ta` in every value.
+
+*C7, job `13399601` on terrabyte at `414f5f1b`; `analysis/c5_process_closure.jl`
+and `analysis/same_atmosphere.jl`.*
+
+**E31. On the sphere too, pressure work is nearly all of the residual's
+growth.** `analysis/transport_ledger.jl` stepped `c6_sphere_no_repair` for six
+hours at its 400 s step, with the repair off. From the end of the first hour on,
+it split the rate at which the residual grows. Over the next five hours the
+residual moved by 4.86e20 J, as a gross integral over the sphere:
+
+| part                                                |    gross, J |
+|:--------------------------------------------------- | -----------:|
+| pressure work, vertical                             |     6.67e20 |
+| pressure work, horizontal                           |     3.28e20 |
+| hyperdiffusion                                      |     1.18e19 |
+| transport of the residual already there, vertical   |     5.79e18 |
+| everything else, the brackets included              |     5.53e18 |
+| transport of the residual already there, horizontal |     3.93e18 |
+| the per-tag van Leer limiter                        |     9.47e16 |
+
+  - The two pressure parts oppose each other in places, so each alone can
+    exceed the change. The parts sum to 4.83e20 J, gross, and the regression
+    slope of the actual change on their sum is 1.005.
+  - Everything but pressure work adds up to at most 2.71e19 J. So pressure
+    work, vertical and horizontal together, is at least 4.56e20 J, 93% of the
+    change. The per-tag limiter is 2e-4 of it, and hyperdiffusion 2.4%.
+  - The last part's signed integral, −5.53e18 J, matches the residual's,
+    −5.57e18. Transport cancels over the sphere, so that part is what changes
+    the residual's integral.
+  - What an estimate at each step's start cannot see is 2.59e19 J, 5.3%,
+    against 1.4% on the column (E25).
+  - Measuring did not change the run: its closure residuals match C6's to
+    every printed digit.
+
+So the sphere's residual grows as the column's does: the parent moves enthalpy
+while the tags move energy. It does so horizontally as well as vertically, and
+an audit that changed only vertical transport would miss the horizontal part.
+
+The bounds: one configuration, five hours, and the first hour left out. *Job
+`13399604` on terrabyte, script and model code of `6af01228`;
+`output/transport_ledger_sphere/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -815,10 +875,13 @@ Kept because a later reader will otherwise re-derive them.
   - **Why C5's radiation tag outgrows C3's after four hours (E24).** The
     atmospheres agree, the loss only removes, and both runs move tags with the
     van Leer limiter. The runs differ in machine and in code.
-  - **Whether the sphere's per-process gap is the per-tag limiter or the clamp
-    (E20).** In a 0-moment run `tracer_upwinding` moves only the tags, so a run
-    with `first_order`, which is linear, would separate the two on the same
-    atmosphere.
+  - ~~Whether the sphere's per-process gap is the per-tag limiter or the clamp
+    (E20).~~ Neither: it was the rain-out's production (E28), and a
+    `microphysics` tag closes it to 20.2 J kg⁻¹ (E30).
+  - **What the sphere's last per-process gap is (E30).** 20.2 J kg⁻¹ at 24 h,
+    growing close to the square of time, where only radiation's record is
+    nonzero. C7 ran with the repair off, so the clamp on negative tags is a
+    candidate, as are the per-tag limiter and the finite-step loss.
   - **How the column's unrecorded 1.37 MJ m⁻² splits (E23)** between
     subsidence, the 0-moment rain-out and the numerics. A column run that
     records subsidence and microphysics, on the code of §8, would split it.
@@ -917,8 +980,14 @@ Kept because a later reader will otherwise re-derive them.
     the column's first ten minutes, pressure work accounts for 72,260 of the
     72,000 J m⁻² the residual moved in 50 minutes, and the per-tag limiter for
     268 (E25). That meets the agent's rule for building the switch, on the
-    column. The sphere, with horizontal transport and hyperdiffusion, is not
-    measured.
+    column.
+
+    **Measured on the sphere: the same, horizontally as well.** Pressure work,
+    vertical and horizontal together, is at least 93% of the residual's growth
+    over five hours, the per-tag limiter 2e-4 and hyperdiffusion 2.4% (E31).
+    That meets the rule on the sphere too. The horizontal pressure part is half
+    the vertical one, gross, so the switch needs both halves. The owner approved
+    building it after C6, once the sphere was measured.
 
     It also found that the implicit bracket evaluates the tags' loss at the
     Newton iterate with no Jacobian block of its own. For energy that is a small

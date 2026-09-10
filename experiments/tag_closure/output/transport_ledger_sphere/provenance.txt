@@ -1,0 +1,10 @@
+run: transport_ledger_sphere
+kind: analysis run as SLURM batch job 13399604 on terrabyte. The script writes no provenance of its own, so this file is written by hand
+script: experiments/tag_closure/analysis/transport_ledger.jl, as committed at 6af01228
+command: julia +1.11 --project=.buildkite experiments/tag_closure/analysis/transport_ledger.jl experiments/tag_closure/configs/c6_sphere_no_repair.yml 54 9, with LEDGER_REPORT_EVERY=9 and LEDGER_DIR=$SCRATCH/tag_closure/output/transport_ledger_sphere
+config: experiments/tag_closure/configs/c6_sphere_no_repair.yml, with the repair forced off by the script
+steps: 54 at dt 400 s, the ledger from step 9, reports every 9 steps
+model code: that of 6af01228
+machine: LRZ terrabyte, julia 1.11.9. The job's output does not name the node
+finished: 2026-09-11T01:23:54+02:00, the modification time of the job's .out and .err
+table: transport_ledger.csv, copied from $SCRATCH/tag_closure/output/transport_ledger_sphere/jl_4iJtKs/. The two simulations' own output is left on scratch
