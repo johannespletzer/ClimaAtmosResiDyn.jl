@@ -2438,15 +2438,22 @@ EnergySourceTag{name}(region, source::Symbol) where {name} =
     EnergySourceTag{name}(region, source === :none ? () : (source,))
 
 """
-    EnergySourceTaggingModel(tags::Tuple)
+    EnergySourceTaggingModel(tags::Tuple, offset = nothing)
 
 Model component holding a `Tuple` of [`EnergySourceTag`](@ref)s. Constructed
 from the `energy_source_tags` config entry; see `AtmosTagging(::AtmosConfig)` in
 `config/tracer_config.jl`.
+
+`offset` is an energy per unit mass of air in J/kg, from the
+`energy_source_tag_offset` config key, or `nothing`. With an offset `c` the tags
+partition `ρe_tot + c·ρ` rather than `ρe_tot`. The model never uses that total,
+so the simulated atmosphere is the same either way. See `energy_source_parent`.
 """
-struct EnergySourceTaggingModel{T <: Tuple}
+struct EnergySourceTaggingModel{T <: Tuple, O <: Union{Nothing, AbstractFloat}}
     tags::T
+    offset::O
 end
+EnergySourceTaggingModel(tags::Tuple) = EnergySourceTaggingModel(tags, nothing)
 
 """
     RecordedProcess{name}()

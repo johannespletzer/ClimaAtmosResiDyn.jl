@@ -173,13 +173,45 @@ That last point is also the strongest argument on the table for the fallback:
 water source tracing, whose parent is non-negative by construction, combined
 with an energy [process record](process_record.md) for the per-process history.
 
+## An offset in the tags' total
+
+`energy_source_tag_offset` gives the tags a total the model never uses. With an
+offset ``c``, in J kg⁻¹, the tags partition
+
+```math
+E = \rho e_\mathrm{tot} + c\,\rho
+```
+
+instead of ``\rho e_\mathrm{tot}``. The region tags start as their masked shares
+of ``E``, the donor share is ``\varphi_k = \rho e_{\mathrm{src},k} / E``, and
+each bracketed increment becomes
+``\Delta E = \Delta(\rho e_\mathrm{tot}) + c\,\Delta\rho``. So a process that
+changes the mass, such as surface evaporation, changes the total by ``c`` times
+that change. The closure check, its audit and `e_src_res` all read ``E``.
+
+Only the tags see ``E``, so the simulated atmosphere is exactly the one without
+the offset. That is what separates it from moving the thermodynamic reference.
+In exact arithmetic the two give the tags the same total, but a moved reference
+reaches the model's own numerics, and a twin run with and without it has shown
+the two atmospheres drifting apart from the first step. An offset large enough
+to make ``E`` positive everywhere lets the loss half of the rule run
+everywhere, with nothing else changed.
+
+It does not make the reading any less conventional. ``c`` is a choice, as the
+energy reference is, and the shares depend on it. The part of a source tag that
+tells it apart from a plain mask-weighted tag scales as
+``1/(e_\mathrm{tot} + c)``, so a larger offset makes the tags less
+discriminating. Nor does it keep the tags non-negative: the finite step and the
+unlimited transport described above still apply.
+
 ## Diagnostics
 
   - `e_src_<name>`: specific tagged energy ``\rho e_{\mathrm{src}} / \rho``
     (J kg⁻¹);
   - `e_src_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
-    over the pure region tags.
+    over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
+    under an offset.
 
 `e_src_res` is a **monitored residual**, not a machine-precision identity.
 ``\rho e_\mathrm{tot}`` is transported as enthalpy including pressure work and

@@ -193,6 +193,123 @@ import ClimaAtmos as CA
             @test all(ᶜY.ρe_src_strat .+ ᶜYₜ.ρe_src_strat .> 0)
             @test all(ᶜY.ρe_src_tropo .+ ᶜYₜ.ρe_src_tropo .> 0)
         end
+
+        @testset "An offset total the model never uses ($FT)" begin
+            strat = CA.EnergySourceTag{:strat}(
+                CA.TanhAltitudeRegion(FT(750), FT(100)),
+            )
+            tropo = CA.EnergySourceTag{:tropo}(
+                CA.TanhAltitudeRegion(FT(750), FT(100), false),
+            )
+            sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+            tags = (strat, tropo, sfc)
+            c = FT(110495)
+            model = CA.EnergySourceTaggingModel(tags, c)
+            plain = CA.EnergySourceTaggingModel(tags)
+
+            # Without an offset the total is ρe_tot itself, bit for bit, so a
+            # run that does not set the key is unchanged.
+            @test isnothing(plain.offset)
+            @test CA.energy_source_parent(FT(-5e4), FT(1.2), plain) === FT(-5e4)
+            @test CA.energy_source_parent(FT(-5e4), FT(1.2), nothing) ===
+                  FT(-5e4)
+            @test CA.energy_source_closure_total(plain) === :ρe_tot
+            @test CA.energy_source_closure_total(nothing) === :ρe_tot
+
+            # With one it is ρe_tot + c·ρ, positive where ρe_tot is not.
+            E_point = CA.energy_source_parent(FT(-5e4), FT(1.2), model)
+            @test E_point == FT(-5e4) + c * FT(1.2)
+            @test E_point > 0
+
+            # The region tags partition the offset total at t = 0.
+            vars = CA.energy_source_tagging_variables(
+                E_point,
+                (; coordinates = (; z = FT(500))),
+                model,
+            )
+            @test vars.ρe_src_strat + vars.ρe_src_tropo ≈ E_point rtol =
+                sqrt(eps(FT))
+            @test vars.ρe_src_sfc == FT(0)
+
+            # A bracket that moves mass as well as energy, in three cells whose
+            # ρe_tot is negative in two and whose offset total is positive in
+            # all three.
+            ρ = FT[1.2, 1.0, 0.8]
+            ρe_tot = FT[-60000, -20000, 30000]
+            E = ρe_tot .+ c .* ρ
+            @test all(<(0), ρe_tot[1:2])
+            @test all(>(0), E)
+            masks = (;
+                ρe_src_strat = FT[0, 0.5, 1],
+                ρe_src_tropo = FT[1, 0.5, 0],
+            )
+            Y = (;
+                c = (;
+                    ρ,
+                    ρe_tot,
+                    ρe_src_strat = masks.ρe_src_strat .* E,
+                    ρe_src_tropo = masks.ρe_src_tropo .* E,
+                    ρe_src_sfc = FT[10, 0, 5],
+                ),
+            )
+            # Tendencies accumulated before the bracket opens, which the
+            # bracket has to difference away.
+            Yₜ = (;
+                c = (;
+                    ρ = FT[1e-6, -2e-6, 3e-6],
+                    ρe_tot = FT[4, 5, -6],
+                    ρe_src_strat = zeros(FT, 3),
+                    ρe_src_tropo = zeros(FT, 3),
+                    ρe_src_sfc = zeros(FT, 3),
+                ),
+            )
+            p = (;
+                atmos = (; energy_source_tagging_model = model),
+                tagging = (; ᶜenergy_source_masks = masks),
+                scratch = CA.energy_source_scratch(Y, model),
+            )
+            CA.snapshot_energy_source_tags!(p, Yₜ)
+            # The bracketed process gains energy in the first cell and loses it
+            # in the other two, and moves mass in all three, as a surface flux
+            # with evaporation does.
+            Δρe_tot = FT[30, -40, -50]
+            Δρ = FT[2e-4, -1e-4, 3e-4]
+            Yₜ.c.ρe_tot .+= Δρe_tot
+            Yₜ.c.ρ .+= Δρ
+            CA.attribute_energy_source_tags!(Yₜ, Y, p, :surface_flux)
+
+            # The increment of the total carries the energy of the mass moved.
+            ΔE = Δρe_tot .+ c .* Δρ
+            @test ΔE[1] > 0
+            @test all(<(0), ΔE[2:3])
+            # The region tags account for the whole increment in every cell,
+            # the two with a negative ρe_tot included.
+            @test Yₜ.c.ρe_src_strat .+ Yₜ.c.ρe_src_tropo ≈ ΔE rtol =
+                sqrt(eps(FT))
+            # The source tag takes the production and its donor share of the
+            # loss, measured against the offset total.
+            @test Yₜ.c.ρe_src_sfc[1] ≈ ΔE[1] rtol = sqrt(eps(FT))
+            @test Yₜ.c.ρe_src_sfc[3] ≈ ΔE[3] * FT(5) / E[3] rtol = sqrt(eps(FT))
+
+            # Against ρe_tot alone, as without an offset, the same loss goes
+            # unattributed where ρe_tot is negative. That is the barrier the
+            # offset removes.
+            unshifted_Yₜ = (;
+                ρe_src_strat = zeros(FT, 3),
+                ρe_src_tropo = zeros(FT, 3),
+                ρe_src_sfc = zeros(FT, 3),
+            )
+            CA._accumulate_energy_source_tags!(
+                unshifted_Yₜ, Y.c, masks, ΔE, :held_suarez, tags,
+            )
+            @test unshifted_Yₜ.ρe_src_strat[2] + unshifted_Yₜ.ρe_src_tropo[2] ==
+                  FT(0)
+
+            # The closure check reads the offset total from a scratch field.
+            @test CA.closure_parent(Y, p, CA.energy_source_closure_total(model)) ≈
+                  E
+            @test CA.closure_parent(Y, p, :ρe_tot) === Y.c.ρe_tot
+        end
     end
 
     @testset "Name predicate" begin
@@ -232,6 +349,28 @@ import ClimaAtmos as CA
         @test CA.tag_name(sourced[1]) == :rad
         @test sourced[1].sources == (:radiation,)
         @test isnothing(sourced[1].region)
+    end
+
+    @testset "Offset config parsing" begin
+        # Unset and zero both leave the tags on ρe_tot exactly as before.
+        @test isnothing(CA.energy_source_offset_from_config(nothing, Float64))
+        @test isnothing(CA.energy_source_offset_from_config(0, Float64))
+        @test CA.energy_source_offset_from_config(110495, Float32) ===
+              Float32(110495)
+        # A negative offset could only make the total less positive, and a
+        # value that is not a finite number is a typo.
+        @test_throws ErrorException CA.energy_source_offset_from_config(
+            -1.0,
+            Float64,
+        )
+        @test_throws ErrorException CA.energy_source_offset_from_config(
+            Inf,
+            Float64,
+        )
+        @test_throws ErrorException CA.energy_source_offset_from_config(
+            "big",
+            Float64,
+        )
     end
 
     @testset "AtmosModel integration" begin

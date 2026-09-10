@@ -23,6 +23,11 @@
 ##### partition of region tags closes under pure dynamics, and the rule is
 ##### built to keep that true once sources and sinks are attributed.
 #####
+##### `energy_source_tag_offset` gives the tags a total the model never uses,
+##### `ρe_tot + c·ρ`, which can be positive where `ρe_tot` is not. Every place
+##### below that reads the parent goes through `energy_source_parent` or one of
+##### its field forms, so without an offset the arithmetic is exactly as before.
+#####
 ##### Tag names are ρ-weighted, so `gs_tracer_names(Y)` picks them up and the
 ##### usual tracer machinery supplies advection, hyperdiffusion, sponges,
 ##### vertical eddy diffusion and the implicit-Jacobian blocks. Leave transport
@@ -54,28 +59,58 @@ _tag_mask_entry(ᶜcoord, tag::EnergySourceTag) =
     tag_entry(tag, region_mask.(Ref(tag.region), ᶜcoord))
 
 """
-    energy_source_tagging_variables(ρe_tot, local_geometry, model)
+    energy_source_tagging_variables(ρe_parent, local_geometry, model)
 
 NamedTuple of tagged prognostic fields `(; ρe_src_<name₁> = ..., ...)` for a
 single grid point, to be splatted into the center prognostic state alongside the
 other grid-scale variables. Returns `(;)` when energy source tagging is disabled
 (`model === nothing`).
 
-Initial values come from `tag_initial_value`, so a pure region tag starts as its
-masked share of `ρe_tot` and a tag carrying a source starts at zero.
+`ρe_parent` is the total the tags partition, from `energy_source_parent`:
+`ρe_tot`, or `ρe_tot + c·ρ` with an offset. Initial values come from
+`tag_initial_value`, so a pure region tag starts as its masked share of that
+total and a tag carrying a source starts at zero.
 """
-energy_source_tagging_variables(ρe_tot, local_geometry, ::Nothing) = (;)
+energy_source_tagging_variables(ρe_parent, local_geometry, ::Nothing) = (;)
 energy_source_tagging_variables(
-    ρe_tot,
+    ρe_parent,
     local_geometry,
     model::EnergySourceTaggingModel,
-) = _energy_source_variables(ρe_tot, local_geometry.coordinates, model.tags)
+) = _energy_source_variables(ρe_parent, local_geometry.coordinates, model.tags)
 
-_energy_source_variables(ρe_tot, coord, ::Tuple{}) = (;)
-_energy_source_variables(ρe_tot, coord, tags::Tuple) = merge(
-    tag_entry(first(tags), tag_initial_value(first(tags), ρe_tot, coord)),
-    _energy_source_variables(ρe_tot, coord, Base.tail(tags)),
+_energy_source_variables(ρe_parent, coord, ::Tuple{}) = (;)
+_energy_source_variables(ρe_parent, coord, tags::Tuple) = merge(
+    tag_entry(first(tags), tag_initial_value(first(tags), ρe_parent, coord)),
+    _energy_source_variables(ρe_parent, coord, Base.tail(tags)),
 )
+
+"""
+    energy_source_parent(ρe_tot, ρ, model)
+
+The total the energy source tags partition at one point: `ρe_tot` itself, or
+`ρe_tot + c·ρ` when `model` carries an offset `c` in J/kg.
+
+The model never uses this total. Only the tags see it, so an offset changes what
+they split and leaves the simulated atmosphere exactly as it was. That is the
+reason for it. `ρe_tot` has no physical zero, and under the default energy
+reference it is negative over much of a typical domain, where the donor share
+`ρe_src_k / ρe_tot` is undefined. A large enough `c` makes the total positive
+everywhere without moving the thermodynamic reference, which would reach the
+model's own numerics. See `docs/src/energy_source_tags.md`.
+
+`c·ρ` is energy carried by mass, so a process that changes `ρ` changes the total
+by `c` times that change, and the attribution bracket counts it. A constant per
+unit mass also passes unchanged through transport that is consistent with the
+mass flux, and through limiters built on differences.
+"""
+@inline energy_source_parent(ρe_tot, ρ, ::Nothing) = ρe_tot
+@inline energy_source_parent(ρe_tot, ρ, model::EnergySourceTaggingModel) =
+    _offset_parent(ρe_tot, ρ, model.offset)
+
+# The same total from the offset alone, so that it can be broadcast. `nothing`
+# broadcasts as a scalar.
+@inline _offset_parent(ρe_tot, ρ, ::Nothing) = ρe_tot
+@inline _offset_parent(ρe_tot, ρ, offset) = ρe_tot + offset * ρ
 
 """
     energy_source_tag_state_names(model::EnergySourceTaggingModel)
@@ -129,8 +164,42 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         "e_src_res",
         "ρe_src",
     )
-    _check_parent_positivity(Y)
+    _check_parent_positivity(Y, model)
     return (; ᶜenergy_source_masks)
+end
+
+"""
+    energy_source_scratch(Y, model)
+
+Scratch fields of the energy source tags, merged into `p.scratch`: the
+bracket's snapshot of `Yₜ.c.ρe_tot`, and with an offset also a snapshot of
+`Yₜ.c.ρ` and a field the closure check fills with the offset total.
+"""
+energy_source_scratch(Y, model::EnergySourceTaggingModel) =
+    _energy_source_scratch(Y, model.offset)
+_energy_source_scratch(Y, ::Nothing) = (; ᶜe_src_snapshot = similar(Y.c.ρ))
+_energy_source_scratch(Y, offset) = (;
+    ᶜe_src_snapshot = similar(Y.c.ρ),
+    ᶜe_src_ρ_snapshot = similar(Y.c.ρ),
+    ᶜe_src_parent = similar(Y.c.ρ),
+)
+
+"""
+    energy_source_closure_total(model)
+
+What the energy source closure check compares its region tags against, in the
+form `closure_parent` takes: `:ρe_tot`, or with an offset a function that fills
+a scratch field with the offset total and returns it.
+"""
+energy_source_closure_total(::Nothing) = :ρe_tot
+energy_source_closure_total(model::EnergySourceTaggingModel) =
+    _energy_source_closure_total(model.offset)
+_energy_source_closure_total(::Nothing) = :ρe_tot
+_energy_source_closure_total(offset) =
+    (Y, p) -> _fill_energy_source_parent!(p.scratch.ᶜe_src_parent, Y, offset)
+function _fill_energy_source_parent!(ᶜparent, Y, offset)
+    @. ᶜparent = Y.c.ρe_tot + offset * Y.c.ρ
+    return ᶜparent
 end
 
 # The donor share `φ_k = ρe_src_k / ρe_tot` needs a positive parent to mean
@@ -148,25 +217,38 @@ end
 #
 # `sum` is used rather than `minimum` because `sum` is the reduction documented
 # to reduce across processes.
-function _check_parent_positivity(Y)
+#
+# With an offset the check is made on the offset total, since that is what the
+# shares divide by.
+function _check_parent_positivity(Y, model)
     ᶜρe_tot = Y.c.ρe_tot
+    offset = model.offset
     ᶜflag = similar(ᶜρe_tot)
-    @. ᶜflag = ifelse(ᶜρe_tot <= zero(ᶜρe_tot), one(ᶜρe_tot), zero(ᶜρe_tot))
+    @. ᶜflag = ifelse(
+        _offset_parent(ᶜρe_tot, Y.c.ρ, offset) <= zero(ᶜρe_tot),
+        one(ᶜρe_tot),
+        zero(ᶜρe_tot),
+    )
     nonpositive_volume = sum(ᶜflag)
     iszero(nonpositive_volume) && return nothing
     @. ᶜflag = one(ᶜρe_tot)
     volume = sum(ᶜflag)
     fraction = iszero(volume) ? nonpositive_volume : nonpositive_volume / volume
+    parent =
+        isnothing(offset) ? "`ρe_tot`" :
+        "`ρe_tot + $(offset)·ρ`, the total the energy source tags partition,"
     @warn(
-        "`ρe_tot` is non-positive over $(fraction * 100)% of the domain " *
+        "$parent is non-positive over $(fraction * 100)% of the domain " *
         "volume at initialization. The energy source tags divide by it to get " *
         "each tag's donor share, so the shares are undefined there and " *
         "`energy_source_fraction` returns zero rather than a meaningful " *
         "number. Moist total energy has no physical zero, so this usually " *
         "means the chosen thermodynamic or gravitational reference puts part " *
         "of the domain below it. Tag values elsewhere are still computed, but " *
-        "they are conditional on that reference. Enable " *
-        "`energy_source_closure_check` to keep watching it during the run.",
+        "they are conditional on that reference. A large enough " *
+        "`energy_source_tag_offset` gives the tags a positive total without " *
+        "moving the model's reference. Enable `energy_source_closure_check` " *
+        "to keep watching it during the run.",
     )
     return nothing
 end
@@ -191,6 +273,9 @@ the answer meaningful. A configuration whose `ρe_tot` goes non-positive anywher
 is one whose source shares cannot be interpreted there, and the run reports that
 through `e_src_res` and through the `nonpositive_fraction` column of its closure
 table rather than silently.
+
+With `energy_source_tag_offset` the second argument is the offset total
+`ρe_tot + c·ρ` rather than `ρe_tot`; see `energy_source_parent`.
 """
 @inline energy_source_fraction(ρe_src, ρe_tot) =
     ρe_tot > zero(ρe_tot) ?
@@ -200,10 +285,11 @@ table rather than silently.
     snapshot_energy_source_tags!(p, Yₜ)
 
 Record the current `Yₜ.c.ρe_tot` in `p.scratch`, opening an attribution bracket
-for the energy source tags. A no-op when they are disabled.
+for the energy source tags, and with an offset `Yₜ.c.ρ` as well. A no-op when
+they are disabled.
 
-Paired with [`attribute_energy_source_tags!`](@ref). This uses its own buffer
-rather than the one the `ρe_tag_*` family uses, so that the two can be
+Paired with [`attribute_energy_source_tags!`](@ref). This uses its own buffers
+rather than the ones the `ρe_tag_*` family uses, so that the two can be
 configured independently.
 """
 snapshot_energy_source_tags!(p, Yₜ) = _snapshot_energy_source_tags!(
@@ -212,8 +298,14 @@ snapshot_energy_source_tags!(p, Yₜ) = _snapshot_energy_source_tags!(
     p.atmos.energy_source_tagging_model,
 )
 _snapshot_energy_source_tags!(p, Yₜ, ::Nothing) = nothing
-function _snapshot_energy_source_tags!(p, Yₜ, ::EnergySourceTaggingModel)
+function _snapshot_energy_source_tags!(p, Yₜ, model::EnergySourceTaggingModel)
     p.scratch.ᶜe_src_snapshot .= Yₜ.c.ρe_tot
+    _snapshot_mass!(p, Yₜ, model.offset)
+    return nothing
+end
+_snapshot_mass!(p, Yₜ, ::Nothing) = nothing
+function _snapshot_mass!(p, Yₜ, offset)
+    p.scratch.ᶜe_src_ρ_snapshot .= Yₜ.c.ρ
     return nothing
 end
 
@@ -224,6 +316,11 @@ Close a bracket opened by [`snapshot_energy_source_tags!`](@ref): compute the
 increment `Δ = Yₜ.c.ρe_tot - snapshot` produced by the bracketed process
 (labeled `source`) and add `M_k·Δ⁺ - φ_k·Δ⁻` to each tag's tendency, where `M_k`
 is the tag's mask and `φ_k` its donor share of the local moist energy.
+
+With an offset `c` the increment is that of the offset total instead,
+`Δ + c·(Yₜ.c.ρ - ρ snapshot)`, and `φ_k` is the share of `ρe_tot + c·ρ`. A
+process that moves mass then moves the offset energy that mass carries, so the
+region tags still account for the whole increment.
 
 Production reaches a tag only when it lists `source`; pure region tags list none
 and so receive every process. Loss reaches **every** tag, whatever it lists,
@@ -262,8 +359,8 @@ function _attribute_energy_source_tags!(
     model::EnergySourceTaggingModel,
 )
     (; ᶜenergy_source_masks) = p.tagging
-    ᶜsnapshot = p.scratch.ᶜe_src_snapshot
-    ᶜΔ = @. lazy(Yₜ.c.ρe_tot - ᶜsnapshot)
+    ᶜΔ = _energy_source_increment(Yₜ, p.scratch, model.offset)
+    ᶜparent = _energy_source_parent_field(Y, model.offset)
     _accumulate_energy_source_tags!(
         Yₜ.c,
         Y.c,
@@ -271,15 +368,50 @@ function _attribute_energy_source_tags!(
         ᶜΔ,
         source,
         model.tags,
+        ᶜparent,
     )
     return nothing
 end
+
+# The bracketed process's increment to the total the tags partition. With an
+# offset `c`, a process that changes the mass changes the total by `c` times
+# that change. The two differences are taken separately, so the large
+# tendencies accumulated before the bracket cancel within each field rather than
+# across them.
+function _energy_source_increment(Yₜ, scratch, ::Nothing)
+    ᶜsnapshot = scratch.ᶜe_src_snapshot
+    return @. lazy(Yₜ.c.ρe_tot - ᶜsnapshot)
+end
+function _energy_source_increment(Yₜ, scratch, offset)
+    ᶜsnapshot = scratch.ᶜe_src_snapshot
+    ᶜρ_snapshot = scratch.ᶜe_src_ρ_snapshot
+    return @. lazy((Yₜ.c.ρe_tot - ᶜsnapshot) + offset * (Yₜ.c.ρ - ᶜρ_snapshot))
+end
+
+# The total the donor share divides by, as a field: `Y.c.ρe_tot` itself without
+# an offset, so that path is unchanged, and a lazy sum with one.
+_energy_source_parent_field(Y, ::Nothing) = Y.c.ρe_tot
+_energy_source_parent_field(Y, offset) = @. lazy(Y.c.ρe_tot + offset * Y.c.ρ)
 
 # The split `Δ = Δ⁺ - Δ⁻` appears below as `max(Δ, 0)` and `min(Δ, 0)`, written
 # the same way as in `tagged_water.jl` and for the same two reasons: it keeps the
 # update in one broadcast, and a `-` directly before a modifier letter such as
 # `ᶜ` parses as the suffixed operator `-ᶜ`, which Julia leaves undefined.
-_accumulate_energy_source_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, ::Tuple{}) = nothing
+#
+# `ᶜparent` is the total the donor share divides by. Called without it, it is
+# `ᶜY.ρe_tot`, which is what a model without an offset uses.
+_accumulate_energy_source_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags::Tuple) =
+    _accumulate_energy_source_tags!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜmasks,
+        ᶜΔ,
+        source,
+        tags,
+        ᶜY.ρe_tot,
+    )
+_accumulate_energy_source_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, ::Tuple{}, ᶜparent) =
+    nothing
 function _accumulate_energy_source_tags!(
     ᶜYₜ,
     ᶜY,
@@ -287,8 +419,17 @@ function _accumulate_energy_source_tags!(
     ᶜΔ,
     source,
     tags::Tuple,
+    ᶜparent,
 )
-    _accumulate_energy_source_tag!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, first(tags))
+    _accumulate_energy_source_tag!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜmasks,
+        ᶜΔ,
+        source,
+        first(tags),
+        ᶜparent,
+    )
     return _accumulate_energy_source_tags!(
         ᶜYₜ,
         ᶜY,
@@ -296,6 +437,7 @@ function _accumulate_energy_source_tags!(
         ᶜΔ,
         source,
         Base.tail(tags),
+        ᶜparent,
     )
 end
 
@@ -307,15 +449,15 @@ function _accumulate_energy_source_tag!(
     ᶜΔ,
     source,
     tag::EnergySourceTag{name, Nothing},
+    ᶜparent,
 ) where {name}
     ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
     ᶜρe_src = tag_field(ᶜY, tag)
     if tag_receives_source(tag, source)
         @. ᶜρe_srcₜ +=
-            max(ᶜΔ, 0) +
-            min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜY.ρe_tot)
+            max(ᶜΔ, 0) + min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
     else
-        @. ᶜρe_srcₜ += min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜY.ρe_tot)
+        @. ᶜρe_srcₜ += min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
     end
     return nothing
 end
@@ -329,6 +471,7 @@ function _accumulate_energy_source_tag!(
     ᶜΔ,
     source,
     tag::EnergySourceTag,
+    ᶜparent,
 )
     ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
     ᶜρe_src = tag_field(ᶜY, tag)
@@ -336,9 +479,9 @@ function _accumulate_energy_source_tag!(
     if tag_receives_source(tag, source)
         @. ᶜρe_srcₜ +=
             ᶜmask * max(ᶜΔ, 0) +
-            min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜY.ρe_tot)
+            min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
     else
-        @. ᶜρe_srcₜ += min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜY.ρe_tot)
+        @. ᶜρe_srcₜ += min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
     end
     return nothing
 end
