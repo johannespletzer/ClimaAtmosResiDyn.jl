@@ -1,0 +1,22 @@
+run: a5_sphere_limiter
+config: /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/a5_sphere_limiter.yml
+commit: 8ed98b63f27fae0bb9960ba2017ce53623a10f49
+commit_source: git
+commit_dirty: yes
+branch: claude/tag-closure-experiments
+julia: 1.11.9
+julia_depot: /home/b/b309159/.julia/depots/levante-cpu
+project: /home/b/b309159/git/ClimaAtmosResiDyn.jl/.buildkite
+started: 2026-09-10T10:00:59+02:00
+finished: 2026-09-10T10:09:08+02:00
+exit_status: 0
+slurm_job_id: 27367905
+slurm_job_name: tag-closure-a
+partition: shared
+nodelist: l40012
+cpus_per_task: 35
+node_type: AMD EPYC 7763 64-Core Processor
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a5_sphere_limiter/output_0001
+netcdf_and_checkpoints: /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a5_sphere_limiter/output_0001 (left on scratch, not committed)
