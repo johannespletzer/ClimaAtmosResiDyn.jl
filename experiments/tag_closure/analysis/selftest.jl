@@ -388,12 +388,19 @@ function test_phase_a()
             ("a2_none_dt5", 5.0, "none", 2.0e-4),
             ("a2_none_dt2p5", 2.5, "none", 1.0e-4),
             ("a3_1m", 10.0, "vanleer_limiter", 5.0e-3),
+            # The A3 companion. It matches `a1_dt10` in every key the ladder
+            # filter screens on -- column, Float64, 0M, van Leer, dt 10 -- and
+            # differs only in `vert_diff`. So it is the one run that lands on
+            # top of a rung if that key is not screened, and the assertion
+            # below is what keeps the screen honest.
+            ("a3_0m_vert_diff", 10.0, "vanleer_limiter", 1.5e-3),
             ("a4_float32", 10.0, "vanleer_limiter", 2.0e-3),
         )
             dir = joinpath(output, run)
             mkpath(dir)
             micro = run == "a3_1m" ? "1M" : "0M"
             float_type = run == "a4_float32" ? "Float32" : "Float64"
+            vert_diff = run == "a3_0m_vert_diff" ? "DecayWithHeightDiffusion" : "~"
             write(
                 joinpath(dir, run * ".yml"),
                 """
@@ -403,6 +410,7 @@ function test_phase_a()
                 FLOAT_TYPE: $float_type
                 microphysics_model: $micro
                 tracer_upwinding: $upwinding
+                vert_diff: $vert_diff
                 """,
             )
             write(
@@ -519,6 +527,37 @@ function test_phase_a()
             "a run with no audit table reported $(plain["final_overclaimed_relative"])",
         )
 
+        # `vert_diff` has to reach the summary, because `a3_0m_vert_diff` and
+        # `a1_dt10` agree in every other column there -- column, Float64, 0M,
+        # van Leer, dt 10 -- and a summary that cannot tell them apart is the
+        # two-key confusion the companion run exists to undo.
+        companion = summary_row(summary, "a3_0m_vert_diff")
+        @assert(
+            companion["vert_diff"] == "DecayWithHeightDiffusion",
+            "the companion reported vert_diff $(companion["vert_diff"])",
+        )
+        @assert(
+            summary_row(summary, "a1_dt10")["vert_diff"] == "none",
+            "an unset vert_diff did not resolve to \"none\"",
+        )
+
+        # And the ladder must exclude it. Asserted on the predicate rather than
+        # on the PNG, because a plot carrying a spurious second point at dt 10
+        # saves perfectly well and looks right until someone reads a slope off
+        # it.
+        loaded_runs = call(phase, :load_phase, tmp, "a")
+        rungs = Set(
+            run.name for run in loaded_runs
+            if call(phase, :is_ladder_rung, run)
+        )
+        for outsider in ("a3_0m_vert_diff", "a3_1m", "a4_float32")
+            @assert(
+                !(outsider in rungs),
+                "$outsider was drawn onto the dt ladder",
+            )
+        end
+        @assert("a1_dt10" in rungs, "a1_dt10 was screened off its own ladder")
+
         plots = joinpath(tmp, "plots")
         for name in (
             "a_gross_relative_vs_time.png",
@@ -528,8 +567,9 @@ function test_phase_a()
             @assert isfile(joinpath(plots, name)) "missing plot $name"
         end
         @info "   summary and three PNGs written; the audit columns read back \
-               as $over and $orphan, and both the run with no provenance and \
-               the one recording `commit: unknown` were refused"
+               as $over and $orphan; the ladder kept $(length(rungs)) rungs and \
+               screened the three variants; and both the run with no provenance \
+               and the one recording `commit: unknown` were refused"
     end
 end
 

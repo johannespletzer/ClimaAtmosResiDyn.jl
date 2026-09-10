@@ -273,6 +273,61 @@ refuses any run whose `provenance.txt` records `commit: unknown`.
 
 Then the phase script, `phase_a.jl` or `phase_c.jl` as appropriate.
 
+## 5. Two runs, both ready, neither needing approval
+
+Submit together. Both are single batch jobs and neither touches model code.
+
+```bash
+CONFIG=experiments/tag_closure/configs/c0_sphere_deep.yml \
+    sbatch experiments/tag_closure/runscripts/phase_c.sh
+
+CONFIG=experiments/tag_closure/configs/a3_0m_vert_diff.yml \
+    sbatch experiments/tag_closure/runscripts/phase_a.sh
+```
+
+**`c0_sphere_deep`** is the 60 km sphere. It was written as a depth control and
+`where_negative.jl` has since answered that question — the sign change is at the
+tropopause, not the domain top — but it keeps one value nothing else can
+produce. It sets `audit: true`, so it reports `nonpositive_mass_fraction`: the
+share of the field's own magnitude sitting where the shares are undefined. A5
+measured the water analogue at 2.77e-7 against a count fraction of 0.351, a
+factor of 1.3 million, so count fractions can be wildly misleading. C0's 43.276%
+has been quoted throughout this series as a count fraction with no mass-weighted
+companion, and this run is the only one configured to give it one. For energy it
+should come out large rather than small, because the non-positive region is the
+troposphere, but that is a prediction and not a measurement.
+
+**`a3_0m_vert_diff`** is new, written for this. A3 differs from `a1_dt10` in two
+keys, `microphysics_model` and `vert_diff`, so the gap between them is 1M *plus*
+vertical diffusion and A3 alone cannot say how much is which. This run is
+`a1_dt10` with `vert_diff: DecayWithHeightDiffusion` and nothing else changed,
+which makes it the third corner:
+
+| run               | microphysics | `vert_diff` |
+|:----------------- |:------------ |:----------- |
+| `a1_dt10`         | 0M           | off         |
+| `a3_0m_vert_diff` | 0M           | on          |
+| `a3_1m`           | 1M           | on          |
+
+Against `a3_1m` it differs in `microphysics_model` alone — the 1M mismatch
+isolated. Against `a1_dt10` it differs in `vert_diff` alone. Two single-key
+comparisons out of one column-hour. The fourth corner is deliberately not
+written: on a column the 1M mismatch reaches the tags through vertical diffusion
+and nothing else, so 1M with `vert_diff` off would measure the absence of the
+thing being measured.
+
+Reading `a3_1m` minus this run still gives only the *vertical* share of the
+mismatch. Hyperdiffusion and the viscous sponge are horizontal and a column has
+no horizontal space for them.
+
+**The analysis needed a change to accept it**, made in the same commit.
+`vert_diff` is now carried on the run record and printed in `summary_a.csv`,
+because without it this run and `a1_dt10` are identical in every summary column.
+And `phase_a.jl`'s `dt`-ladder filter now screens on it: the run matches every
+other ladder criterion, so it would otherwise have been drawn as a second point
+at `dt` 10 under `a1_dt10`'s own label, inside the plot the ladder exists to
+produce. `selftest.jl` asserts both.
+
 ## Lower priority
 
 **`c0_sphere_deep`, the 60 km sphere — promoted by the A5 audit.** It was

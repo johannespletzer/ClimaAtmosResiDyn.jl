@@ -202,6 +202,11 @@ function load_run(run_dir)
         upwinding = String(setting(config, "tracer_upwinding", "vanleer_limiter")),
         float_type = String(setting(config, "FLOAT_TYPE", "Float32")),
         microphysics = String(setting(config, "microphysics_model", "dry")),
+        # `vert_diff` defaults to `~`, so `setting` resolves it to "none" here.
+        # It has to be carried: `a3_0m_vert_diff` differs from `a1_dt10` in this
+        # key and in no other, so without it the two are indistinguishable in
+        # the summary and the ladder filter cannot tell them apart either.
+        vert_diff = String(setting(config, "vert_diff", "none")),
         geometry = String(setting(config, "config", "sphere")),
         provenance,
     )

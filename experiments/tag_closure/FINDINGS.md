@@ -328,11 +328,13 @@ Beyond the two clerical items in [LEVANTE_TASKS.md](LEVANTE_TASKS.md):
  1. **C1.** Collect `cp_i` and the long ClimaParams names, write the three-entry
     TOML, get approval, run. The only thing left that can change the verdict on
     the source-tag family. R7 and R8 make it cheap and its result unambiguous.
- 2. **`c0_sphere_deep`.** One sphere run, no approval. The only configured run
+ 2. **`c0_sphere_deep`.** Ready to submit, no approval. The only configured run
     that produces the energy family's mass-weighted non-positive fraction, which
     M1 shows is the number the 43.276% has been standing in for.
- 3. **A3's companion.** One 0M column with `vert_diff` on, which makes W5
-    interpretable. Cheap, and phase A is otherwise closed.
+ 3. **`a3_0m_vert_diff`.** Written and validated. `a1_dt10` with `vert_diff` on
+    and nothing else changed, so it differs from `a3_1m` in
+    `microphysics_model` alone and from `a1_dt10` in `vert_diff` alone. Two
+    single-key comparisons out of one column-hour, which is what W5 needs.
  4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
     and the energy family has no rescale. Whether it is worth ten days of queue
     is a cost decision, not a risk one.

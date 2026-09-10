@@ -105,6 +105,25 @@ function plot_gross_relative(runs, plots_dir, note)
 end
 
 """
+    is_ladder_rung(run)
+
+Whether a run belongs on the `dt` ladder, which is A1 and A2 and nothing else.
+
+Every other phase-A column differs from a rung in exactly one key, and each of
+those keys is screened here: A3 by `microphysics`, A4 by `float_type`, and
+`a3_0m_vert_diff` by `vert_diff`. Miss one and that run is drawn as a second
+point at a rung's own `dt` under the rung's own label, inside the plot the
+ladder exists to produce. `analysis/selftest.jl` asserts this predicate
+directly rather than through the PNG, because a corrupted series still saves.
+"""
+is_ladder_rung(run) =
+    haskey(run.reduced, "operator_residual") &&
+    run.geometry == "column" &&
+    run.float_type == "Float64" &&
+    run.microphysics == "0M" &&
+    run.vert_diff == "none"
+
+"""
     plot_operator_residual(runs, plots_dir, note)
 
 The end-of-run operator residual against `dt`, log axes, one series per ladder,
@@ -118,10 +137,7 @@ time-discretization error and moving the water tags into the implicit solve
 becomes worth its Jacobian cost. If neither falls, it is structural.
 """
 function plot_operator_residual(runs, plots_dir, note)
-    ladder_runs = filter(runs) do run
-        haskey(run.reduced, "operator_residual") && run.geometry == "column" &&
-            run.float_type == "Float64" && run.microphysics == "0M"
-    end
+    ladder_runs = filter(is_ladder_rung, runs)
     isempty(ladder_runs) && return nothing
     figure = CairoMakie.Figure(size = (860, 600))
     axis = CairoMakie.Axis(
@@ -198,17 +214,25 @@ end
 """
     plot_variants(runs, plots_dir, note)
 
-A3 and A4 against time, with the `Float64` A1 run at `dt` 10 s as the reference
-line in the panel.
+A3, its 0M companion and A4 against time, with the `Float64` A1 run at `dt`
+10 s as the reference line in the panel. The companion is what makes the A3
+curve readable: it sits between the reference and `a3_1m`, and the two gaps are
+the vertical-diffusion share and the 1M share of the same mismatch.
 """
 function plot_variants(runs, plots_dir, note)
     reference = filter(run -> run.name == "a1_dt10", runs)
-    variants = filter(run -> run.name in ("a3_1m", "a4_float32"), runs)
+    # `a3_0m_vert_diff` belongs here rather than on the ladder. It is the run
+    # that makes A3 readable: it differs from the reference in `vert_diff` alone
+    # and from `a3_1m` in `microphysics_model` alone, so the three curves
+    # together separate the 1M mismatch from the diffusion that carries it.
+    variants = filter(
+        run -> run.name in ("a3_0m_vert_diff", "a3_1m", "a4_float32"), runs,
+    )
     isempty(variants) && return nothing
     figure = CairoMakie.Figure(size = (900, 560))
     axis = CairoMakie.Axis(
         figure[1, 1];
-        title = "Phase A: 1M and Float32 against the a1_dt10 reference",
+        title = "Phase A: the variants against the a1_dt10 reference",
         subtitle = note,
         xlabel = "time (s)",
         ylabel = "gross_relative (dimensionless)",
@@ -254,7 +278,8 @@ function main()
     summary = write_summary(
         runs, joinpath(base, "output"), PHASE,
         [
-            "tracer_upwinding", "microphysics_model", "final_gross_relative",
+            "tracer_upwinding", "microphysics_model", "vert_diff",
+            "final_gross_relative",
             "final_operator_residual", "final_max_abs_q_tag_res",
             "final_max_abs_ledger_sum", "final_overclaimed_relative",
             "final_orphaned_relative",
@@ -262,6 +287,7 @@ function main()
         run -> Any[
             run.upwinding,
             run.microphysics,
+            run.vert_diff,
             final(column(run, "closure", "gross_relative")),
             final(column(run, "operator_residual", "max_abs_operator_residual")),
             final(column(run, "operator_residual", "max_abs_q_tag_res")),

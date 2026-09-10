@@ -1,0 +1,100 @@
+# A3's companion. `a1_dt10` with vertical diffusion on, still 0M.
+#
+# A3 was written to measure what 1-moment microphysics costs the water tags:
+# under 1M the parent's diffusion acts on `q_tot_eff = q_tot - q_rai - q_sno`
+# while the tags see their full content, and `docs/src/tagged_water.md` claims
+# those operators are identical. But `a3_1m` differs from `a1_dt10` in **two**
+# keys, `microphysics_model` and `vert_diff`, because the `q_tot_eff` branch
+# only reaches a column through vertical diffusion and `vert_diff` is off by
+# default. So the gap between those two runs is 1M *plus* vertical diffusion,
+# and A3 on its own cannot say how much of it is which.
+#
+# This run is the missing third corner. Against `a3_1m` it differs in
+# `microphysics_model` alone, which is the 1M mismatch isolated. Against
+# `a1_dt10` it differs in `vert_diff` alone, which is what turning vertical
+# diffusion on costs a 0M column. Two single-key comparisons out of one run:
+#
+#   | run                | microphysics | vert_diff | isolates            |
+#   |:------------------ |:------------ |:--------- |:------------------- |
+#   | `a1_dt10`          | 0M           | off       | the phase-A baseline |
+#   | `a3_0m_vert_diff`  | 0M           | on        | this run            |
+#   | `a3_1m`            | 1M           | on        | A3 as submitted     |
+#
+# The fourth corner, 1M with `vert_diff` off, is deliberately not written. A3's
+# own header records why: on a column the 1M mismatch reaches the tags through
+# vertical diffusion and through nothing else, so that run would measure the
+# absence of the thing being measured.
+#
+# **What it still cannot see.** The other two branches of the 1M mismatch,
+# hyperdiffusion and the viscous sponge, are horizontal (`wdivₕ(gradₕ(...))`)
+# and a column has no horizontal space for them. Reading `a3_1m` minus this run
+# gives the vertical-diffusion share of the mismatch plus the sedimentation
+# mirror, not the whole of it. The horizontal two need a sphere, which phase A
+# does not otherwise have.
+#
+# Everything below is `a1_dt10.yml` verbatim apart from `job_id` and the
+# `vert_diff` key. That is the point of the run and it should stay that way: any
+# other edit here turns two single-key comparisons back into the two-key one
+# this run exists to undo.
+
+job_id: "a3_0m_vert_diff"
+
+# The DYCOMS_RF02 0M column of `test/tagged_water_integration.jl`. The geometry
+# is load-bearing rather than cosmetic: without `z_max`, `z_elem` and
+# `z_stretch` the 1.5 km boundary-layer profile is extrapolated over the
+# default 30 km column, pressure runs down to zero and the solve dies in
+# `exner_given_pressure`. `z_stretch: false` because `dz_bottom` defaults to
+# 500 m, which the tanh stretching cannot fit into 1500 m across 30 elements.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+
+# The one key that differs from `a1_dt10`. It matches `a3_1m` exactly, which is
+# what makes the pair a single-key comparison.
+vert_diff: "DecayWithHeightDiffusion"
+
+dt: "10secs"
+t_end: "1hours"
+# Float64 is required, not cosmetic. The default is `Float32`, whose
+# rounding floor grows with the cell count; A4 is the run that measures
+# how far that floor sits below the structural residual.
+FLOAT_TYPE: "Float64"
+
+# `upper` and `lower` split the column at 600 m and are exact complements, so
+# they partition ρq_tot and `q_tag_res` reads as leakage rather than as
+# overlap. `evap` follows the surface moisture flux. It is not a member of the
+# partition, so `q_tag_res` does not sum it and its ledger is not part of the
+# operator residual.
+water_tracers:
+  - name: upper
+    region: {type: tanh_altitude, z_center: 600.0, width: 100.0}
+  - name: lower
+    region: {type: tanh_altitude, z_center: 600.0, width: 100.0, above: false}
+  - name: evap
+    source: surface_flux
+
+# Every step, matching `a1_dt10` and `a3_1m` so the three are sampled alike.
+# `period` is a duration string and not a step count, so this is this run's own
+# `dt`. `tolerance` is left unset, so the family default applies and the run
+# only warns rather than stopping. The check adds no tendency.
+water_closure_check:
+  period: "10secs"
+
+# The default tag diagnostics are not usable here, for two reasons. They never
+# register `q_tag_fix_<name>` at all, so the ledger the operator residual adds
+# back would simply be absent. And they put the tag list through a time mean,
+# which `docs/src/tagged_water.md` says is not a meaningful operation on a
+# cumulative field. So list the names here with no `reduction_time` key, which
+# resolves to an instantaneous sample, and switch the defaults off.
+#
+# The sample period is one minute, the same as every other phase-A column, so
+# the residual curves can be laid over one another.
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [q_tag_res, q_tag_fix_upper, q_tag_fix_lower]
+    period: "60secs"
+  - short_name: [q_tag_upper, q_tag_lower, q_tag_evap]
+    period: "60secs"
