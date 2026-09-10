@@ -348,9 +348,10 @@ generous — after hour three they are not readable as either.
 
 ### The fix, and what it does not yet establish
 
-**Fix landed, re-test pending.** The owner merged issue #64 onto this branch at
-`f2e5384`, from `7799a5a` and `acfea85`. Nothing above has been re-measured. The
-table stays as the before.
+**Fix landed, and re-measured.** The owner merged issue #64 onto this branch at
+`f2e5384`, from `7799a5a` and `acfea85`, and the re-run is in *The re-run* below.
+The table above stays as the before; the archived reading is in
+`output/a5_sphere_limiter/before_issue_64_fix/`.
 
 **What changed in the model.** `rescale_water_tags!` followed every parent
 correction by multiplying each water tag by `r = ρq_tot_after / ρq_tot_before`.
@@ -383,7 +384,8 @@ old rule would therefore stop in its fourth hour instead of reporting success at
 comment says so, because a non-zero exit from that run is a result rather than a
 broken job.
 
-**What the re-run has to establish, and what it cannot.** Two outcomes are
+**What the re-run had to establish, and what it could not.** Answered below;
+this is what was asked of it beforehand. Two outcomes are
 informative and both need recording. The residual may stay small through a full
 day, which is the fix working. Or it may reach 1.0 and abort, which is not
 automatically a failure of the fix: the floor `Δ ≥ -pos` empties the tags of a
@@ -395,6 +397,77 @@ phase-A run.** `orphaned` is the mass in cells whose parent holds water while
 every tag is empty, and it separates those two; `overclaimed` names the direction
 of any new runaway on sight, which is the reading that took a separate analysis
 pass the first time. Neither has been measured.
+
+### The re-run: the fix holds, and phase A finally has a sphere
+
+Run at `8ed98b6`, one day, `exit_status: 0`, and the `abort_above` level of 1.0
+was never approached. `gross_relative` against the archived before:
+
+| time | before      | after    |
+|:---- |:----------- |:-------- |
+| 1 h  | 3.07e-5     | 2.84e-5  |
+| 2 h  | 9.03e-5     | 7.12e-5  |
+| 3 h  | 8.09e-1     | 1.15e-4  |
+| 4 h  | 2.42e+1     | 1.55e-4  |
+| 6 h  | 3.54e+10    | 1.89e-4  |
+| 12 h | 9.84e+17    | 2.51e-4  |
+| 24 h | 5.90e+113   | **2.79e-4** |
+
+**It plateaus rather than merely staying finite.** 1.89e-4 at 6 h, 2.51e-4 at
+12 h, 2.79e-4 at 24 h — each doubling of elapsed time adds less than the last,
+against 0 to 1.15e-4 in the first three hours. The integration test's bound is
+1e-2, so the day ends with 36× of margin.
+
+**And it did not get there by emptying the tags**, which was the second of the
+two informative outcomes and is now ruled out. `nonpositive_fraction` runs
+0.350 to 0.363 throughout, essentially what the diverging run showed (0.36), so
+a third of the domain still holds non-positive water and the tags stay
+consistent over it anyway. The signed residual is −1.2e11 against a parent of
+1.62e16, or −7.5e-6 relative, so `tagged` tracks `total` rather than sitting
+below it. The tags are neither exploding nor collapsing.
+
+**The corrections changed character, and that is the mechanistic evidence.**
+Before the fix the ledger ran 2 to 3× the residual with essentially all of it in
+one tag: `q_tag_fix_extratropics` 1.027e115 against `q_tag_fix_tropics`
+4.55e109, a factor of 2e5. After it, the two per-tag maxima agree to fifteen
+digits — 1.0433587234981436e-3 and 1.043358723498146e-3 — while the maximum of
+their *sum* is 6.2e-4, smaller than either. Two fields whose extremes coincide
+to machine precision, summing to less than either, is what sum-preserving
+redistribution looks like: the repair step takes the same quantity out of one
+tag that it puts into the other. The residue that does not cancel is the
+rescale shift `Δ`, which is the part that genuinely changes the total because
+the limiter moved water into or out of the cell. These are domain maxima rather
+than per-cell values, so this is a signature rather than a proof, but it is the
+signature the additive rule was designed to produce and the opposite of the
+one-sided amplification it replaced.
+
+**Phase A now has the sphere measurement it lacked.** `max |q_tag_res|` is
+**1.9e-5 and flat** from about 6 h on, where before the fix it passed 1.8e1 at
+3 h and 4.5e114 at 24 h. The column at `dt` 10 under the same van Leer limiter
+gives 2.84e-6, so the sphere sits 6.8× above it. That is not a controlled
+comparison — A5 is `dt` 300 on `h_elem` 4 and `z_elem` 10, against a 30-level
+column at `dt` 10 — and a 30× larger timestep costing 6.8× in residual is on
+the favourable side of what the ladders would predict. The reduction is over
+the remapped lat-lon field, as `operator_residual.csv` says in its header.
+
+The ledger, unlike the residual, is still growing: 6.2e-4 at 24 h, 33× the
+residual, with no sign of levelling. So the limiter keeps doing work all day and
+the corrections keep absorbing it. What has stopped is the amplification.
+
+**Two things this run did not deliver.**
+
+  - **No `water_tag_audit.csv`, although `audit: true` is set** in the config
+    and in the copy committed beside the results. Either the model wrote it into
+    the scratch output directory and it was not copied back, or the audit is not
+    wired for the water family. `orphaned` and `overclaimed` are the columns
+    that would say which side a residual came from, and `summary_a.csv` carries
+    `final_overclaimed_relative` and `final_orphaned_relative` as NaN waiting for
+    them. The conclusions above do not depend on the audit, because
+    `nonpositive_fraction` and the signed residual already rule out the emptied
+    case, but it is the reading that would have settled it directly.
+  - **A5 is absent from `summary_a.csv` and the plots.** The summary added in
+    the same commit carries `a1_dt10_notags` and no A5 row, so `phase_a.jl` ran
+    before the files were copied in. Re-running it is all that is needed.
 
 **What the ledger means now, and why the operator residual is unaffected.** The
 identity `analysis/reduce_run.jl` rests on — that `q_tag_res + Σᵢ q_tag_fix_i`
@@ -600,8 +673,9 @@ configuration under a reference shift making `ρe_tot > 0` everywhere, and it
 needs the owner's approval, but no longer a code change. The plan gives two
 shapes; the first should be dropped rather than costed, and the second is now
 known to be a co-adjusted reference *set* rather than a single constant — three
-TOML entries, per the subsection above. If C1 shows bounded residuals and non-negative tags under
-a positive reference, the family is viable and the remaining work is the
+TOML entries, per the subsection above. If C1 shows bounded residuals and
+non-negative tags under a positive reference, the family is viable and the
+remaining work is the
 tolerance model and the implicit brackets. If it does not, the docs' alternative
 is the recommendation.
 
@@ -643,3 +717,55 @@ The A1 runs are at `3659746` and the A2 runs at `66d6ded`. The two differ only
 in `.gitignore`, `README.md` and previously committed results — nothing
 touching the model, the configurations, the driver or the runscripts — so the
 ladders are comparable.
+
+## C3. The two readings, side by side
+
+Ran at `1a9a419` on 2026-09-10, AMD EPYC 7763, `shared`, SLURM job `27367733`.
+Same DYCOMS column as `c0_column`, with an `energy_process_record` for
+radiation added beside the source tags. One day, `dt` 10 s, `rad: DYCOMS`.
+
+**The run is a controlled comparison, and that is worth stating first.** C3
+reproduces `c0_column` bit for bit: `gross_relative` 0.13456131085846748,
+`max_abs_e_src_res` 26888.66561703798, most-negative tag −44972.50629142498, all
+identical to the last digit. The record perturbs nothing. Whatever the two
+readings disagree about is a property of the readings, not of two different
+simulations.
+
+**Barrier.** The source tag cannot see the dominant physical term. Over the day:
+
+| reading of what radiation did    | min (J kg⁻¹) | max (J kg⁻¹) |
+|:-------------------------------- |:------------ |:------------ |
+| source tag `e_src_rad`           | −2.07e-9     | +4,321       |
+| process record `e_prc_radiation` | −20,566      | +7,587       |
+
+The source tag is pinned at zero from below. It has to be:
+`energy_source_fraction` returns 0 where `ρe_tot ≤ 0`, which is 29 or 30 of the
+column's 30 levels, so the loss half of the donor rule never runs and the tag
+can only accumulate. The record says the larger excursion is **cooling**,
+−20.6 kJ kg⁻¹, and cloud-top radiative cooling is the entire point of a DYCOMS
+stratocumulus column. The warming halves disagree too, 4,321 against 7,587, a
+factor of 1.75.
+
+The budget side says the same thing from the other direction. `gross_relative`
+grows monotonically to 0.1346 over the day — production accumulating with no
+compensating loss, 13.5% of `∫|ρe_tot|` in twenty-four hours.
+
+**Class.** Structural. It is not a residual to be tightened or a tolerance to be
+set. The share `ρe_src_k / ρe_tot` is undefined where the parent is
+non-positive, and no amount of accuracy makes an undefined quantity readable.
+
+**Carry-over to the source tags.** This *is* the source tags, on the
+configuration `energy_source_tags.md` names. It answers that page's open
+question in the direction of the alternative.
+
+**The alternative is now demonstrated rather than available.** The process
+record measures energy added by each process since `t = 0`. That is
+reference-independent, so nothing in C1 or in the reference convention can touch
+it, and here it reads the cooling the tags cannot. Two cautions on the
+comparison. A record is a signed running total of what a process applied and a
+tag is a share of what is present, so the two columns above are not the same
+quantity and their numbers should not be differenced. And a record needs one
+entry per process, whereas the tags partition whatever is there — the record
+tells you what radiation did, not what fraction of the energy here came from
+radiation. C1 is still the run that would say whether the second question can be
+made well posed at all.
