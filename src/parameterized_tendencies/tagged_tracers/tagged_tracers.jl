@@ -555,8 +555,10 @@ responses. This separates them.
     a sliver of one tag is not orphaned by this test and appears in `untagged`
     instead.
 
-`untagged + overclaimed` is exactly `gross_residual`, so reading these loses
-nothing.
+`untagged + overclaimed` is `gross_residual` to reduction round-off, so reading
+these loses nothing. The identity is exact pointwise, but the three are three
+separate reductions and each rounds on its own, so test them with a tolerance
+rather than for equality.
 
 `nonpositive_mass` is the mass where the parent is non-positive, the counterpart
 of the volume fraction [`tag_closure`](@ref) reports. The two answer different
