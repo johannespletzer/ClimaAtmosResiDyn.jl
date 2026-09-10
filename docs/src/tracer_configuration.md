@@ -378,8 +378,10 @@ already read. Join the two on `time`.
 
 Three things it tells you that the closure table cannot.
 
-**Which way the tags are wrong.** `untagged + overclaimed` is exactly
-`gross_residual`, so nothing is lost by reading them apart. They mean opposite
+**Which way the tags are wrong.** `untagged + overclaimed` is `gross_residual`
+to reduction round-off, so nothing is lost by reading them apart. The identity
+is exact pointwise; each of the three is its own volume integral and rounds
+separately, so compare them with a tolerance. They mean opposite
 things. Untagged water has an origin that nothing claims to know, which is
 recoverable in principle. Overclaimed water is the tags asserting water that
 does not exist, which is not a physical state at all and is the direction a

@@ -272,9 +272,11 @@ clamped to `[0, 1]` and defined to be zero where `ρe_tot` is not positive.
 
 This is the energy counterpart of `water_tag_fraction`, and the two share the
 same weakness for different reasons. Total water has a physical zero, so a cell
-with `ρq_tot ≤ 0` is a numerical artifact and a rare one; moist total energy has
-none, because it depends on the chosen thermodynamic and gravitational reference,
-and a shift of that reference can put a whole region below zero at once. The
+with `ρq_tot ≤ 0` is a numerical artifact, though not a rare one: nothing in the
+model enforces the bound and a sphere run routinely has it over part of its
+volume. Moist total energy has no physical zero at all, because it depends on
+the chosen thermodynamic and gravitational reference, and a shift of that
+reference can put a whole region below zero at once. The
 fallback below keeps the arithmetic finite in either case, but it does not make
 the answer meaningful. A configuration whose `ρe_tot` goes non-positive anywhere
 is one whose source shares cannot be interpreted there, and the run reports that
