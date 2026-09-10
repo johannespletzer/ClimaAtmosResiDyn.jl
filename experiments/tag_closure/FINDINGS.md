@@ -260,13 +260,32 @@ step, so the step makes them; they are not amplified rounding. Over the day `ρ`
 stays near 3e-5 while the others grow: `ρq_tot` to 1.1e-4, `uₕ` to 1.1e-3, and
 `u₃`, which is small, to 6.2e-2. `c1_acceptance.jl` found the Thermodynamics
 functions and the surface flux formula invariant, so the cause is elsewhere in
-the step. The leading candidate is the implicit solve. C1 takes one Newton
-iteration per stage (`max_newton_iters_ode: 1`, `use_newton_rtol: false`), so
-the step depends on the approximate Jacobian, and that Jacobian carries `T_0`
-and `e_int_v0` directly (`manual_sparse_jacobian.jl:694-701`, `:835`, `:1805`).
-An iterative saturation adjustment is the other candidate. Neither is
-established. *Twin test, SLURM job `13383683` on terrabyte,
-`output/twin_c1/`.*
+the step.
+
+**It is not the implicit solve.** C1 takes one Newton iteration per stage, with
+an approximate Jacobian that carries `T_0` and `e_int_v0` directly
+(`manual_sparse_jacobian.jl:694-701`, `:835`, `:1805`), and that was the first
+suspect. A second twin converged the solve in both halves
+(`max_newton_iters_ode: 10`, `use_newton_rtol: true`, `newton_rtol: 1e-10`).
+The step cost rose from 3.2 s to 10.0 s, so it iterated. After one step the
+twins still differ by 3.6e-5 in `ρ`, 7.4e-6 in `ρq_tot`, 1.3e-4 in `uₕ` and
+4.1e-4 in `u₃`. Converging a solve that was the cause would have shrunk that by
+orders of magnitude, and instead `ρ`'s moved by 6% and `u₃`'s grew. So the
+difference is in the tendencies themselves.
+
+**The leading candidate is the limiter on vertical energy transport.** The
+implicit tendency upwinds `h_tot` and `q_tot` with `energy_q_tot_upwinding`,
+which C1 runs as `vanleer_limiter` (`implicit_tendency.jl:360-369`). The shift
+adds to `h_tot` a constant plus a multiple of `q_tot`. A limiter built on
+differences passes the constant through unchanged but not the `q_tot` part, so
+its choices differ between the runs from the first step. Saturation adjustment,
+an iterative solve that stops at a tolerance, is the other candidate. By
+reading, hyperdiffusion is covariant: it moves `ρ` with the water it diffuses
+(`hyperdiffusion.jl:484-487`), and its energy flux carries each phase's
+enthalpy, which moves by exactly the `cp_l·|δ|` a relabelling needs. That is an
+argument, and none of the candidates is measured. *Twin tests, SLURM jobs
+`13383683` and `13384080` on terrabyte, `output/twin_c1/` and
+`output/twin_c1_newton/`.*
 
 ## 3. The energy reference
 
@@ -509,6 +528,8 @@ Kept because a later reader will otherwise re-derive them.
     files the −209 J kg⁻¹ under "production therefore accumulates without
     loss". With the loss running everywhere, the tag reaches −219.9 and the
     region tags go negative too (E14).
+  - **The one-iteration implicit solve as the cause of E16.** Converging it
+    left the one-step difference in `ρ` at 3.6e-5, against 3.8e-5 (E16).
 
 ## 7. What is not established
 
@@ -518,11 +539,11 @@ Kept because a later reader will otherwise re-derive them.
     Thermodynamics: over liquid, over ice and over the mixture ramp it is
     unchanged to 9.2e-16 from 150 K to 330 K (R8). Whether the *model* is
     invariant is the next item.
-  - **What in a step depends on the reference (E16).** The shifted and
-    unshifted runs differ by 3.8e-5 in `ρ` after one step. A twin run with more
-    Newton iterations and a tolerance check would say whether the one-iteration
-    implicit solve is the cause. If the differences then fall to rounding, it
-    is. If they do not, saturation adjustment is next.
+  - **What in a step depends on the reference (E16).** Not the implicit solve.
+    A twin with `energy_q_tot_upwinding` linear in both halves (`first_order`)
+    would say whether the limiter on vertical energy transport is the cause. If
+    the differences then fall to rounding, it is. If they do not, saturation
+    adjustment is next.
   - **Why a tag goes negative under a positive parent (E14).** The finite-step
     donor loss and unlimited explicit transport are both candidates.
   - **What makes the residual's first-hour jump (E13).** The enthalpy-against-
@@ -537,20 +558,29 @@ Kept because a later reader will otherwise re-derive them.
 
 ## 8. Next
 
- 1. **Settle E16 before C1's numbers are quoted without its bound.** One twin
-    run with `max_newton_iters_ode` raised and `use_newton_rtol: true` says
-    whether the one-iteration implicit solve is what depends on the reference.
-    About 20 minutes on terrabyte's `hpda2_test`, and it needs the owner's
-    approval like every job.
- 2. **Decide what C1 says about the family.** C1 answers its question. With a
+ 1. **Shift the reference inside the tag code, not the model.** The tags could
+    partition a shadow total, `ρe_tot` plus a fixed offset per kilogram of air,
+    that the model never sees. The donor share is then as well defined as in
+    C1. Per-process closure still holds exactly, once each process's change in
+    mass is added to its increment. And the atmosphere stays bit for bit the
+    unshifted one, so E16 cannot arise. It is C1's accounting moved into the
+    tags, and it needs a code change in `energy_source_tags.jl` and the owner's
+    approval. A run at the same 110 K would test whether E11 to E15 belong to
+    the tag rule rather than to E16's slightly different atmosphere. A second
+    run at a larger offset, on the identical atmosphere, would measure R11's
+    suppression cost cleanly.
+ 2. **Or first find E16's cause.** One twin with a linear
+    `energy_q_tot_upwinding` in both halves, about 20 minutes on `hpda2_test`.
+    It matters less if item 1 is taken, because item 1 leaves the model alone.
+ 3. **Decide what C1 says about the family.** C1 answers its question. With a
     positive reference the donor rule runs everywhere, and the residual stops
     being directional and falls to 0.70 of the unshifted one (E11, E12). It does
     not keep the tags non-negative (E14), and it cannot make the reading
     meaningful (E10). Whether that is enough to keep the source tags, or the
     process record of C3 (E9) becomes the recommendation, is the owner's call.
- 3. **Phase B.** No technical objection left after W9 — B1 configures no limiter
+ 4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
     and the energy family has no rescale. C1 solved a simulated day in 5.8
     minutes on this grid, so ten days is about an hour of solve if B1 runs at
     that speed, which fits `hpda2_test`'s two-hour limit. Whether it is worth
     running is the owner's call.
- 4. **C2.** Unchanged: needs a code change and approval.
+ 5. **C2.** Unchanged: needs a code change and approval.

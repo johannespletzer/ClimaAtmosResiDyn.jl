@@ -109,23 +109,26 @@ Re-run the self-test after any change to `analysis/`:
 julia +1.11 --project=.buildkite experiments/tag_closure/analysis/selftest.jl
 ```
 
-## 1. The twin follow-up — needs approval
+## 1. After the twins — the next decision
 
-The twin test (`run_c1_twin.jl`) failed its own tolerance. The shifted and
-unshifted runs differ by 3.8e-5 in `ρ` after one step, where a pure relabelling
-would give rounding. See FINDINGS E16. That bounds every C1 number, and one more
-twin run would say where it comes from.
+**Done: the implicit solve is ruled out.** The owner approved a twin with the
+solve converged in both halves, `overrides/twin_newton_converged.yml` through
+`TWIN_OVERRIDES`, job `13384080`. The step cost tripled, so it iterated, and the
+one-step difference in `ρ` went only from 3.8e-5 to 3.6e-5 (FINDINGS E16). The
+difference is in the tendencies. The leading candidate is the van Leer limiter
+on vertical energy transport, which sees the shift as a change in the field it
+limits.
 
-**What to run.** The same twin, with the implicit solve converged in both halves:
-`max_newton_iters_ode` raised to something like 10, `use_newton_rtol: true`, and
-a tight `newton_rtol`. If the differences fall to rounding, the one-iteration
-Newton step is the cause, and C1's numbers stand with a solver caveat rather
-than a physics one. If they do not, saturation adjustment is next.
+**Two ways on, each needing approval.**
 
-**What it needs first.** `run_c1_twin.jl` reads C1's configuration and has no
-way to override a key. Either it gains an override, or a twin-only copy of the
-configuration carries the Newton keys. Both are small, and both need the owner's
-approval like the job itself. About 20 minutes on `hpda2_test`.
+  - **Move the shift into the tag code** (FINDINGS §8, item 1). The tags
+    partition `ρe_tot` plus a fixed offset per kilogram of air, which the model
+    never sees, so the atmosphere is bit for bit the unshifted one. It is a code
+    change in `energy_source_tags.jl`, then one run at 110 K for comparison with
+    C1 and one at a larger offset for R11's suppression cost.
+  - **Find E16's cause first.** One twin with `energy_q_tot_upwinding: first_order` in both halves, from a new file in `overrides/`. About 20
+    minutes on `hpda2_test`. If the differences fall to rounding, the limiter
+    is the cause.
 
 ## 2. C1 — done
 
@@ -235,10 +238,10 @@ Then the phase script, `phase_a.jl` or `phase_c.jl` as appropriate.
 ## Pull requests, as of 2026-09-10
 
   - **#65** carries the #64 fix, `7799a5a` and `acfea85`, plus `af2079cc` with CI
-    fixes. It conflicts with `main` in `NEWS.md` only, where both sides add
-    entries at the top. `default_config.yml` and `tagged_water.jl` merge
-    cleanly. This branch has the first two commits and not the third, which
-    touches only docs and a test.
+    fixes. `main` was merged into it on 2026-09-10 at the owner's request, as
+    `4c8795e9`. The only conflict was `NEWS.md`, where both sides had added
+    entries at the top, and both were kept. This branch has the first two fix
+    commits and not the third, which touches only docs and a test.
   - **#63**, the memo and the plan, is a draft on the draft #62. The formatter
     would add two blank lines to `tag_closure_memo.md`.
 

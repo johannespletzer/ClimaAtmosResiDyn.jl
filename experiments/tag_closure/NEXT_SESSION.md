@@ -62,11 +62,12 @@ one agent has worked this branch at once.
 
 ## Where the last session stopped
 
-  - **The twin follow-up** — task 1 of the task list. It needs approval for the
-    driver change and for the job.
-  - **PR #65** conflicts with `main` in `NEWS.md` only, where both sides add
-    entries at the top. Keeping both resolves it. The owner has not yet said
-    whether to do that.
+  - **The twin follow-up ran**, and it ruled out the implicit solve as E16's
+    cause. Task 1 of the task list gives the two ways on, both needing
+    approval: move the shift into the tag code, or first test the energy
+    limiter with one more twin.
+  - **PR #65** has `main` merged in, with both sides of `NEWS.md` kept, at the
+    owner's request. Check its CI before anything else touches it.
   - **What C1 means for the family** is the owner's call (FINDINGS §8).
   - **Three known defects** are listed in the task list and are not fixed.
 

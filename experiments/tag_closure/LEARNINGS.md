@@ -853,11 +853,13 @@ established.
 **Barrier, part two: the shift is not a pure relabelling in the discrete
 model.** The twin test found the shifted and unshifted states 3.8e-5 apart in
 `ρ` after one step, and 1.1e-3 apart in `uₕ` by the end of the day. So C1
-measures a slightly different atmosphere, not only a different reference. The
-leading candidate is the implicit solve, which C1 runs with one Newton iteration
-and an approximate Jacobian that carries `T_0` directly. A twin with the solve
-converged would say. The size is far below the closure differences above, so it
-bounds C1's numbers rather than overturning them.
+measures a slightly different atmosphere, not only a different reference. It is
+not the implicit solve: a second twin with the solve converged left the one-step
+difference at 3.6e-5. The leading candidate is now the van Leer limiter on
+vertical energy transport, which sees the shift as a change in the field it
+limits. The size is far below the closure differences above, so it bounds C1's
+numbers rather than overturning them. It also points to a cleaner design: do the
+shift inside the tag code, where the model never sees it (FINDINGS §8).
 
 **Read `gross_relative` with the scale.** It falls 4.06×, while the normalising
 `∫|ρe_tot|` grows 2.85×. The documents had estimated 2.2×.
