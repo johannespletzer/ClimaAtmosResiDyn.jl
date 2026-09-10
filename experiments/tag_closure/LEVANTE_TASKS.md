@@ -8,11 +8,10 @@ the reference probe answered the convention question.
 
 ## Where things stand
 
-13 of 25 runs are live in `output/`. Phase A's ladders are complete, C0 is
-complete, and all analysis scripts have run on real data. A5 also ran, but its
-reading measured the bug issue #64 names rather than a residual, so its files
-are archived under `output/a5_sphere_limiter/before_issue_64_fix/` and the run
-counts as outstanding until task 1 lands.
+17 of 25 runs are live in `output/`. **Phase A and phase C are both complete**
+except for C1 and C2, which need approval. The pre-fix A5 reading is kept
+alongside its re-run under `output/a5_sphere_limiter/before_issue_64_fix/`,
+because it measures the bug issue #64 names rather than a residual.
 
 **Decided by measurement.** Moving the water tags into the implicit solve is not
 worth its Jacobian cost. The default van Leer ladder is flat, slope −0.011,
@@ -27,7 +26,14 @@ exited 0 reporting success. The unbounded multiplicative rescale ratio is now an
 additive redistribution whose removal is floored at the cell's positive content,
 and a new `abort_above` level ends a run that passes it — water defaults to 1.0,
 which no honest non-negative partition of a non-negative parent can reach.
-**Nothing has re-run, so nothing is confirmed.** Task 1.
+**Re-run at `8ed98b6`, and it holds.** `gross_relative` ends the day at
+2.79e-4 where it reached 5.9e113 before, exit 0, the abort level never
+approached, and it plateaus rather than merely staying finite. It did not get
+there by emptying the tags: `nonpositive_fraction` is unchanged at 0.35 to 0.36
+and the signed residual is −7.5e-6 relative, so the tags track the parent over a
+third of the domain that holds non-positive water. Phase A also gains the sphere
+operator residual it never had — `max |q_tag_res|` 1.9e-5 and flat.
+`LEARNINGS.md` has the reading. Two loose ends in task 1.
 
 **Measured by C0.** The source-tag donor rule is inert over 96.7% of the DYCOMS
 column and 43.276% of a moist sphere. Production accumulates without loss, and a
@@ -103,42 +109,34 @@ export JULIA_DEPOT_PATH="$HOME/.julia/depots/levante-cpu"
 The depot export matters. The runscripts use that depot, so an instantiate or a
 script run under a different one will not be seen by a batch job.
 
-## 1. Re-run A5, the direct test of the #64 fix
+## 1. Two loose ends from the A5 re-run
 
-One batch job, and the only thing that can confirm the fix.
+The run itself is done and the fix is confirmed. Neither of these changes the
+conclusion; both are cheap and one of them is a possible bug.
+
+**a. The audit table is missing.** `a5_sphere_limiter.yml` sets `audit: true`,
+and the copy committed beside the results has it too, but no
+`water_tag_audit.csv` came back. Check the scratch output directory first:
 
 ```bash
-CONFIG=experiments/tag_closure/configs/a5_sphere_limiter.yml \
-    sbatch experiments/tag_closure/runscripts/phase_a.sh
+ls ~/git/ClimaAtmosResiDyn.jl/output/a5_sphere_limiter/output_0001/
 ```
 
-Before the fix this run gave `gross_relative` 3.07e-5 at 1 h, 9.03e-5 at 2 h,
-0.809 at 3 h, 24.2 at 4 h and 5.9e113 at 24 h, with the parent bounded at
-1.62e16 throughout.
+If it is there, copy it in beside the other files and the two NaN columns in
+`summary_a.csv` fill themselves. **If it is not there, that is a bug** — the
+audit is requested and not written — and it is worth an issue, because the audit
+is the diagnostic that separates a residual from a runaway on sight and nothing
+else does.
 
-**Those files are kept, and nothing needs moving by hand.** They now sit in
-`experiments/tag_closure/output/a5_sphere_limiter/before_issue_64_fix/`, so the
-run directory is empty and the re-run's files go straight into it. `load_run`
-skips a directory that holds no files of its own, silently and by design, so the
-phase A analysis is quiet about a5 until the new run lands rather than warning
-every time.
+**b. A5 is not in the summary or the plots.** `summary_a.csv` carries
+`a1_dt10_notags` and no A5 row, so `phase_a.jl` ran before the A5 files were
+copied in. One command:
 
-**Three outcomes, and two of them are good.**
+```bash
+julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_a.jl
+```
 
-  - **Bounded through a full day.** The fix works.
-  - **Reaches 1.0 and aborts.** This is *not* automatically a failure. A
-    relative residual of 1 means the tags hold water the parent does not, which
-    is where this run was in its fourth hour before the fix, so the job ending
-    there is a result. Check the closure table before reading a non-zero exit
-    status as a fault. It may also mean the removal floor has emptied the tags
-    of cells whose parent has gone, leaving intact tags against an almost empty
-    parent.
-  - **Diverges again.** The mechanism was not the one the issue named.
-
-`gross_relative` alone cannot separate the second from a new runaway, which is
-why this config sets `audit: true`. The audit table's `orphaned` and
-`overclaimed` are the two signed halves of the residual and name the direction
-on sight. Read them before concluding anything.
+Do it after (a), so the run only has to be reduced once.
 
 ## 2. Write the C1 TOML, which is now a three-line change
 
@@ -201,41 +199,57 @@ thermodynamic parameter. The acceptance test above is what would catch it.
 TOML dict and `Parameters.jl:602` forwards every field, so C1 is a configuration
 change. It still needs the owner's approval; it no longer needs a code change.
 
-## 3. C3, the fallback reading
+## 3. C3 — done, and it is the result the series was for
 
-One batch job. No code change, no approval, and reference-independent.
+Nothing to run. Recorded here because it is the strongest finding so far.
+
+C3 reproduces `c0_column` bit for bit — `gross_relative` 0.13456131085846748,
+`max_abs_e_src_res` 26888.66561703798, most-negative tag −44972.50629142498, all
+identical — so the process record perturbs nothing and is a pure diagnostic
+sitting beside the tags. On the same run, over the same day:
+
+| reading of what radiation did    | range (J kg⁻¹)   |
+|:-------------------------------- |:---------------- |
+| source tag `e_src_rad`           | −2e-9 … +4,321   |
+| process record `e_prc_radiation` | −20,566 … +7,587 |
+
+The source tag is pinned at zero from below, because `energy_source_fraction`
+returns 0 where `ρe_tot ≤ 0` and that is 29 or 30 of 30 levels. The record says
+the larger excursion is cooling, −20.6 kJ kg⁻¹, and cloud-top radiative cooling
+is the entire point of a DYCOMS stratocumulus column. **The source tag misses
+the dominant term.** The warming half disagrees by 1.75× as well.
+
+So the alternative `energy_source_tags.md` names is demonstrated rather than
+merely available, on exactly the configuration where the tags are inert, and it
+is reference-independent so nothing about C1 can touch it.
+
+## 4. The timing controls — run, but not yet readable
+
+Both jobs ran. `a1_dt10_notags` and `c0_column_notags` came back with only
+`.yml` and `provenance.txt`, no `.out`, so there is no `sypd` and no
+`wall_time_per_timestep` to compare. Copying the two logs in is all that is
+needed:
 
 ```bash
-CONFIG=experiments/tag_closure/configs/c3_column_record.yml \
-    sbatch experiments/tag_closure/runscripts/phase_c.sh
+cp ~/git/ClimaAtmosResiDyn.jl/output/a1_dt10_notags/output_*/*.out \
+   experiments/tag_closure/output/a1_dt10_notags/
+cp ~/git/ClimaAtmosResiDyn.jl/output/c0_column_notags/output_*/*.out \
+   experiments/tag_closure/output/c0_column_notags/
 ```
 
-C3 reads the energy process record on a configuration where the source tags'
-own donor rule is not running. The record measures energy *added by each process
-since t = 0*, which is reference-independent and therefore immune to everything
-tasks 2 and C1 are about. If it reads well here, the alternative that
-`energy_source_tags.md` names is viable whatever happens to C1.
-
-## 4. The timing controls
-
-Cheap, and nothing has yet measured what the tags cost.
-
-```bash
-for c in a1_dt10_notags c0_column_notags; do
-  CONFIG=experiments/tag_closure/configs/$c.yml \
-      sbatch experiments/tag_closure/runscripts/phase_a.sh
-done
-```
-
-Take `sypd` and `wall_time_per_timestep` from each log and compare with the
-tagged run at the same configuration. `a1_dt10` reported `sypd 3.012` and 9 ms
-per timestep.
+The job wall times in `provenance.txt` cannot substitute. They give 235 s
+against 295 s and 243 s against 295 s, but `a1_dt10` is one hour and
+`c0_column` is a full day and both took 295 s, so compilation dominates and
+those numbers compare compile time rather than tag cost. `a1_dt10` reported
+`sypd 3.012` and 9 ms per timestep; that is the figure the controls have to be
+read against.
 
 ## After any batch job
 
 Check the exit status rather than only the log, because a crashed solve returns
 `:simulation_crashed` and the driver's non-zero exit is what makes that visible.
-Note that A5 may now exit non-zero *by design*, per task 1.
+A5's re-run exited 0 and never approached its abort level, so that
+configuration is no longer expected to stop early.
 
 ```bash
 sacct -j <jobid> -o JobID,State,ExitCode
@@ -279,17 +293,18 @@ repair, as `is_tagged_tracer_name`'s docstring says in as many words. #64's
 mechanism was a multiplicative rescale amplifying the closure error, and there
 is no rescale on that path to amplify anything.
 
-So the A5 re-run does not gate phase B on the evidence. What it does bound is
-the *unlimited explicit transport* the energy tags share, which A5 showed drives
-tags far out of partition on a sphere at `h_elem` 4; whether phase B is worth
-ten days of queue before that is understood stays the owner's call, but it
-should be taken for that reason and not for this one. B2 is dry and unaffected
-either way.
+So the A5 re-run never gated phase B on the evidence, and it has now run
+anyway. What it bounds is the *unlimited explicit transport* the energy tags
+share, and the news there is good: on a sphere at `h_elem` 4 the residual
+plateaus at 2.79e-4 over a full day rather than running away. **Phase B has no
+technical objection left.** Whether it is worth ten days of queue is the owner's
+call on cost, not on risk. B2 is dry and unaffected either way.
 
 **C1.** It needs the owner's approval and the two values task 2 collects. It no
 longer needs a code change or a choice of shape. Of the two shapes in the memo,
-shifting only the share's denominator should be dropped rather than costed: the region tags sum to `ρe_tot` and not to `ρe_tot + c`, so
-wherever `e < 0` the shares sum to a negative number and the loss adds energy
+shifting only the share's denominator should be dropped rather than costed: the
+region tags sum to `ρe_tot` and not to `ρe_tot + c`, so wherever `e < 0` the
+shares sum to a negative number and the loss adds energy
 instead of removing it, diverging as `e` approaches `−c` — over exactly the
 region the shift was introduced to fix. The remaining shape is a change of the
 thermodynamic reference constant, not an offset added to the state.
