@@ -1,11 +1,38 @@
 # Levante task list
 
-What to run next, in order, with the commands. Written against
-`claude/tag-closure-experiments` at `655cb5f`.
+Self-contained. Everything needed to pick the work up is here — the state, what
+was found, what to run, and what is still open. Nothing below requires reading
+another document first.
 
-Tasks 1 to 4 run on a login node and take seconds to minutes. Task 5 is two
-batch jobs. Task 1 is the one to do first: it could change what C1 is for, and
-it costs one command.
+Branch `claude/tag-closure-experiments`. Written at `992b9d8`.
+
+## Where things stand
+
+14 of 25 runs are committed and analysed. Phase A is complete, C0 is complete.
+
+**Decided by measurement.** Moving the water tags into the implicit solve is not
+worth its Jacobian cost. The default van Leer ladder is flat, slope −0.011,
+while both linear ladders converge (+0.255 and +0.464), and at `dt` 10 s the
+fully linear reconstruction sits 13.8× lower. The residual is limiter-bounded,
+not discretization-bounded, so implicit tags would remove the part that is not
+there.
+
+**Found, and now issue #64.** The water tags diverge to 1e130 on a one-day
+sphere with the SEM limiter while `ρq_tot` stays bounded at 1.62e16 throughout,
+and the run exits 0 reporting success. The existing integration test runs that
+same configuration for one hour and the divergence starts between hours two and
+three, so the test passes because it stops before the failure begins.
+
+**Measured by C0.** The source-tag donor rule is inert over 96.7% of the DYCOMS
+column and 43.276% of a moist sphere — the latter constant to the last digit
+across 24 hours. Production accumulates without loss, and a source tag reaches
+−209 J kg⁻¹ on the sphere with `e_src_res` showing nothing, because the residual
+sums only the pure region tags.
+
+**Open and unexplained.** The textbook internal energy at the DYCOMS surface
+state is about +3.3e4 J kg⁻¹; the model's own field reaches −4.5e4. Nothing in
+this repository overrides a thermodynamic reference, so whatever sets that
+offset is in Thermodynamics.jl or the ClimaParams defaults. Task 1 settles it.
 
 ## Once per shell
 
@@ -26,8 +53,8 @@ julia +1.11 --project=.buildkite -e 'using Pkg; Pkg.instantiate(); Pkg.precompil
 
 ## 1. The thermodynamic reference
 
-Highest value, one command. It settles two open questions in
-[C1_reference_shift.md](C1_reference_shift.md) and may raise a third.
+One command, and the highest value thing here. Do it before deciding anything
+about C1.
 
 ```bash
 julia +1.11 --project=.buildkite -e '
@@ -42,23 +69,26 @@ julia +1.11 --project=.buildkite -e '
     println("ClimaParams at ", pkgdir(ClimaParams))'
 ```
 
-What to look for:
+Three things it decides.
 
-  - **The textbook form gives `e_int` about `+3.3e4` J kg⁻¹ at the DYCOMS
-    surface state. The model's own field reaches `−4.5e4`.** If `T_0` is 273.16
-    and `internal_energy` still returns something near `−5e4`, the convention
-    differs from the one assumed and the definition itself is what to read. If
-    `T_0` is not 273.16, that is the answer outright.
-  - **The field list** says whether the reference is a field, and therefore
-    settable from a TOML file through the `toml:` config key. The parameter
-    plumbing is already known to be reachable; what is missing is the name.
-  - **Whether `e_int_v0` is derived rather than a field.** If it is, moving the
-    reference moves the latent-heat offsets with it and the shift becomes
-    `ΔT·(cv_m + q_vap·R_v)` rather than `ΔT·cv`. The shifted parent would then
-    be `e_tot + c(q)` and not `e_tot + c` — a premise both shapes in the memo
-    rest on.
+  - **Which reading explains the offset.** If `T_0` is 273.16 and
+    `internal_energy` still returns near `−5e4`, the convention differs from the
+    textbook form and the definition is what to read. If `T_0` is not 273.16,
+    that is the answer outright.
+  - **The parameter's name.** The plumbing is already known to be reachable:
+    `create_parameters.jl:75` builds the thermodynamic parameters entirely from
+    the TOML dict and `Parameters.jl:602` forwards every field, so a config
+    reaches them through the `toml:` key. What is missing is the name, and the
+    field list gives it. **This means the reference shift is a configuration
+    change, not a fork of Thermodynamics.jl.**
+  - **Whether the shift is even constant.** `Parameters.jl:607` lists
+    `e_int_v0` and `e_int_i0` as *derived* rather than as fields. If they are
+    derived conventionally, moving the reference moves the latent-heat offsets
+    with it and the shift becomes `ΔT·(cv_m + q_vap·R_v)` rather than `ΔT·cv`.
+    The shifted parent would then be `e_tot + c(q)` and not `e_tot + c` — a
+    premise both shift shapes rest on.
 
-There is a third possibility worth holding in mind. If the initialisation is
+There is a third possibility worth holding in mind. If the *initialisation* is
 what is off rather than the reference, then C0's headline result — 43.276% of a
 sphere where the donor share is undefined — is a fact about this model's initial
 state and not about the energy reference. That would mean rereading the C0
@@ -89,9 +119,8 @@ julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_c.jl
 
 ## 4. Where `e_tot` is negative
 
-Also never run. Every magnitude argument in
-[C1_reference_shift.md](C1_reference_shift.md) turns on the structure of the
-negative region, and only its minimum has been seen so far.
+Also never run. Every magnitude argument about the shift turns on the structure
+of the negative region, and only its minimum has been seen so far.
 
 ```bash
 julia +1.11 --project=.buildkite \
@@ -126,9 +155,9 @@ only thing the login shell changes.
     shallow domains. Doubling the depth separates a domain artifact from a
     property of the reference.
 
-After each: check the job's exit status rather than only the log, because a
+After each, check the job's exit status rather than only the log, because a
 crashed solve returns `:simulation_crashed` and the driver's non-zero exit is
-what makes that visible.
+what makes that visible:
 
 ```bash
 sacct -j <jobid> -o JobID,State,ExitCode
@@ -144,18 +173,28 @@ julia +1.11 --project=.buildkite \
 
 Five files per run into `experiments/tag_closure/output/<run>/`: the family's
 `*_tag_closure.csv`, the reduced tables, `<run>.yml`, `provenance.txt`, and a
-trimmed `run.log`.
+trimmed `run.log`. The analysis refuses any run whose `provenance.txt` records
+`commit: unknown`.
 
-## Not yet
+## Not yet, and why
 
 **Phase B.** B1 is ten simulated days on a sphere with a limiter, which is the
-regime that diverged to 1e130 in three hours in A5 — see issue #64. Until that
-is understood, phase B risks buying expensive noise. B2 is dry and unaffected if
+regime that diverged to 1e130 in three hours in A5. Until issue #64 is
+understood, phase B risks buying expensive noise. B2 is dry and unaffected if
 the phase has to start somewhere.
 
 **C1.** It needs a code change, the owner's approval, and a shift shape that has
-not been chosen. Tasks 1 and 4 both bear on that choice, and task 1 could change
-what C1 is for.
+not been chosen. Of the two shapes in the memo, shifting only the share's
+denominator should be dropped rather than costed: the region tags sum to
+`ρe_tot` and not to `ρe_tot + c`, so wherever `e < 0` the shares sum to a
+negative number and the loss adds energy instead of removing it, diverging as
+`e` approaches `−c` — over exactly the region the shift was introduced to fix.
+Tasks 1 and 4 both bear on the remaining choice.
+
+**A3's companion.** A3 differs from `a1_dt10` in two keys, `microphysics_model`
+and `vert_diff`, so the gap between them is not the 1M mismatch alone.
+Separating it cleanly needs one extra 0M column run with `vert_diff` on. The
+config is deliberately not written.
 
 ## What to expect
 
