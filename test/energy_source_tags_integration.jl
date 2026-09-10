@@ -232,5 +232,19 @@ import ClimaAtmos as CA
         without_loss = signed_residual(Y, 0)
         with_loss = signed_residual(Y_offset, c)
         @test abs(with_loss) < abs(without_loss) / 5
+
+        # The repair runs by default, and its ledger is a diagnostic. Computing
+        # the ledger once shows that the function behind `e_src_fix_<name>`
+        # exists; registering the name does not. A source tag is only ever
+        # clipped upward, so its ledger cannot be negative.
+        ledger = CA.Diagnostics.compute_e_src_fix!(
+            nothing,
+            Y_offset,
+            offset_simulation.integrator.p,
+            offset_simulation.integrator.t,
+            :ρe_src_rad,
+        )
+        @test all(isfinite, parent(ledger))
+        @test minimum(parent(ledger)) >= 0
     end
 end

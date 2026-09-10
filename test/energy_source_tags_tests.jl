@@ -448,5 +448,6 @@ import ClimaAtmos as CA
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_tropics")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_extratropics")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_res")
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fix_tropics")
     end
 end
