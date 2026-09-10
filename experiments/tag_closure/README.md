@@ -567,6 +567,7 @@ adjusted from what was learned before they are submitted.
 | `c0_column`        | `phase_c.sh` | C0, DYCOMS source column with `rad: DYCOMS`, one day         |
 | `c0_sphere`        | `phase_c.sh` | C0, moist sphere, one day                                    |
 | `c0_sphere_deep`   | `phase_c.sh` | C0's depth control: the same sphere on the 60 km grid        |
+| `c0_sphere_audit`  | `phase_c.sh` | `c0_sphere` with `audit: true` and nothing else changed      |
 | `c3_column_record` | `phase_c.sh` | C3, `c0_column` with `energy_process_record` beside the tags |
 
 `c1_*` and `c2_*` are not written. C1 is the reference shift, which needs the
@@ -610,6 +611,7 @@ Tick a run once it has been submitted, once its files are committed under
 | `c0_column`            | C     | yes       | yes         | not yet  | yes            |
 | `c0_sphere`            | C     | yes       | yes         | not yet  | yes            |
 | `c0_sphere_deep`       | C     |           |             |          |                |
+| `c0_sphere_audit`      | C     |           |             |          |                |
 | `c3_column_record`     | C     |           |             |          |                |
 
 `a5_sphere_limiter` is blank on purpose. It ran once, at `49b2ec9`, and that
@@ -634,7 +636,8 @@ points back to them. Nothing else is committed.
   - `<family>_tag_closure.csv`, verbatim from `output_dir`. The table the
     closure check wrote, one row per firing.
   - `<family>_tag_audit.csv`, verbatim, **when the run set `audit: true`**.
-    Two configs do: `a5_sphere_limiter` and `c0_sphere_deep`. The model writes
+    Three configs do: `a5_sphere_limiter`, `c0_sphere_deep` and
+    `c0_sphere_audit`. The model writes
     it, not the reducer, and `analysis/reduce_run.jl` names it in its last log
     line so it is not left on scratch. `untagged` and `overclaimed` are the two
     signed halves of the closure table's `gross_residual` and add to it exactly,

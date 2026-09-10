@@ -17,10 +17,28 @@
 # residual magnitudes are not comparable with the shallow run; the
 # `nonpositive_fraction` column is what this run is for.
 #
-# The `he6ze31` grid also turns on the sponges and implicit diffusion that
-# `he6ze10` leaves off. Those come with the common config and are kept rather
-# than stripped, so this is that grid as the repository defines it; it does mean
-# the comparison is depth plus those settings, not depth alone.
+# The `he6ze31` grid also turns on the sponges that `he6ze10` leaves off. Those
+# come with the common config and are kept rather than stripped, so this is that
+# grid as the repository defines it; it does mean the comparison is depth plus
+# those settings, not depth alone.
+#
+# `implicit_diffusion: true` is the one key from that common config **not**
+# copied here, and the first submission of this run died on it:
+#
+#     AssertionError: Implicit vertical diffusion is only supported when using
+#     a turbulence convection model or vertical diffusion model.
+#     check_case_consistency, model_getters.jl:1074
+#
+# `numerics_sphere_he6ze31.yml` is numerics only. It sets the key expecting the
+# composing configuration to supply a diffusion model, and the repository's own
+# consumer of that grid, `passive_stratospheric_tracers_ci.yml`, sets
+# `vert_diff: VerticalDiffusion` and then overrides the key back to `false`.
+# This run has no diffusion model and should not gain one: `c0_sphere` has none
+# either, and adding a physical process would widen the very confound the note
+# above is apologising for. Dropping the key instead costs nothing, because
+# `diff_mode` gates exactly one tendency,
+# `vertical_diffusion_boundary_layer_tendency!`, which is a no-op when
+# `vertical_diffusion` is `nothing`. The sponges do not go through it.
 job_id: "c0_sphere_deep"
 
 config: "sphere"
@@ -34,7 +52,6 @@ ode_algo: "ARS343"
 hyperdiff: "Hyperdiffusion"
 rayleigh_sponge: true
 viscous_sponge: true
-implicit_diffusion: true
 approximate_linear_solve_iters: 2
 max_newton_iters_ode: 1
 

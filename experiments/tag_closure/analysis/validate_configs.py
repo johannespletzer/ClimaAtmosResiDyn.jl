@@ -59,7 +59,7 @@ FLOAT32_OK = {"a4_float32"}
 # has and the rest do not; see each config's own comment. It is checked in both
 # directions so that neither dropping it from a run that needs it nor spraying
 # it over runs that do not passes silently.
-AUDIT_REQUIRED = {"a5_sphere_limiter", "c0_sphere_deep"}
+AUDIT_REQUIRED = {"a5_sphere_limiter", "c0_sphere_deep", "c0_sphere_audit"}
 
 def shorts(config):
     out = set()
@@ -147,6 +147,20 @@ def check(path):
             problems.append("configures %s outside a limiter run" % key)
     if name in LIMITER_OK and config.get("apply_sem_quasimonotone_limiter") is not True:
         problems.append("a limiter run without the limiter")
+
+    # 5b. Cross-key model consistency the schema check cannot see. These
+    #     mirror `check_case_consistency` in `src/config/model_getters.jl`,
+    #     which runs inside `get_atmos` -- that is, after the queue, after
+    #     Julia starts and after the packages load. A configuration that trips
+    #     one of these validates cleanly here and then dies on the node, which
+    #     is what happened to the first `c0_sphere_deep` submission.
+    if config.get("implicit_diffusion") is True and not (
+        config.get("vert_diff") or config.get("turbconv")
+    ):
+        problems.append(
+            "implicit_diffusion: true without vert_diff or turbconv "
+            "(model_getters.jl:1074 asserts on this)"
+        )
 
     # 6. Per family: tags and check together, a pure region tag, the check
     #    period, no tolerance, and the diagnostics that phase needs.
@@ -249,6 +263,13 @@ MUTATIONS = [
     ("wrong FLOAT_TYPE", "b2_dry_hs.yml",
      lambda t: t.replace('FLOAT_TYPE: "Float64"', 'FLOAT_TYPE: "Float32"')),
     ("a typo'd key", "b1_base.yml", lambda t: t.replace("vert_diff:", "vertical_diff:")),
+    # The one that got through. `c0_sphere_deep` carried `implicit_diffusion`
+    # from a numerics common config that expects its partner to supply a
+    # diffusion model, validated clean, and died in `check_case_consistency`
+    # after the queue.
+    ("implicit diffusion with no diffusion model", "c0_sphere_deep.yml",
+     lambda t: t.replace("viscous_sponge: true",
+                         "viscous_sponge: true\nimplicit_diffusion: true")),
     ("a limiter outside a limiter run", "c0_column.yml",
      lambda t: t + "apply_sem_quasimonotone_limiter: true\n"),
     ("default diagnostics left on", "b1_base.yml",

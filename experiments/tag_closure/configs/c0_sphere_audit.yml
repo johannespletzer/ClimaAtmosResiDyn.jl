@@ -1,0 +1,80 @@
+# C0's sphere again, with the audit on and nothing else changed.
+#
+# `c0_sphere` measured that the parent is non-positive over **43.276%** of a
+# moist sphere, and that figure is now quoted throughout this series -- in the
+# memo, in `C1_reference_shift.md`, in every magnitude argument about the
+# reference shift. It is a fraction **by cell count**.
+#
+# A5 showed how far that can be from the fraction that matters. On the water
+# family `nonpositive_fraction` was 0.351 while `nonpositive_mass_fraction` was
+# 2.77e-7, a factor of 1.3 million: a third of the cells held non-positive water
+# and they held almost none of the water. For energy the two should be much
+# closer, because `where_negative.jl` puts the non-positive region in the
+# troposphere where the mass is, but **that is a prediction and nobody has
+# measured it**. `nonpositive_mass_fraction` is the measurement, and only a run
+# with `audit: true` produces it. `where_negative.jl` cannot: it works on the
+# remapped lat-lon grid and has no cell volumes, so it can say where the field
+# is negative but not how much of it is.
+#
+# **Why this run and not `c0_sphere_deep`.** The deep sphere also carries
+# `audit: true`, and it was the first plan for this number. But it is a 60 km
+# domain on a different grid with the hyperdiffusion and the two sponges that
+# `he6ze10` leaves off, so its mass fraction would belong to a configuration
+# that is not the one that produced 43.276%. This run is `c0_sphere` with one
+# key added, so its answer pairs with the number actually in circulation. Same
+# cost: one sphere, one day. `c0_sphere_deep` remains worth running for the
+# depth reading, but it is not the companion to the headline figure.
+#
+# Everything below is `c0_sphere.yml` verbatim apart from `job_id` and `audit`.
+# Keep it that way: any other edit here reintroduces exactly the confound this
+# run exists to avoid.
+
+job_id: "c0_sphere_audit"
+
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+# `tropics` and `extratropics` are exact complements and partition ρe_tot.
+# `sfc` follows the turbulent surface energy flux, which is on by default and is
+# the process that forces this configuration.
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+
+# Hourly over a day, `tolerance` unset. `audit` is the one key that differs from
+# `c0_sphere`, and it is the reason the run exists. Besides
+# `nonpositive_mass_fraction` it also reports `orphaned` and `overclaimed`, the
+# two signed halves of the residual, which on this family have never been
+# separated: `e_src_res` sums the region tags only, so a source tag drifting
+# negative has so far shown up only in the per-tag minima.
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+# Instantaneous, defaults off. No ledger exists for this family, so there is no
+# operator-residual subtraction to make. The per-tag fields are here because
+# `e_src_res` covers the region tags only, so a source tag going negative never
+# shows up in it and has to be watched directly.
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc]
+    period: "1hours"
