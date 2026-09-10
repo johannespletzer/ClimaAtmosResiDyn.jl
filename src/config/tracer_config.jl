@@ -522,12 +522,12 @@ will stay at zero says so at configuration time rather than at analysis time.
 
 The labels are shared with `energy_tracers`, but the two families do not see
 the same processes. `precipitation` is the sedimentation of precipitating
-species, and this family does not bracket it: sedimentation moves energy from
-level to level, and a bracket would count what arrives in a cell as new energy.
-So a source tag listing `precipitation` is zero in every configuration, while
-the `ρe_tag_*` family does receive it. Under 0-moment microphysics, rain leaves
-through `microphysics` instead, which reaches this family on both tendency
-paths.
+species, and this family does not count it as production: sedimentation moves
+energy from level to level, and the tags follow it as transport instead, each by
+its share of what the losing cell holds. So a source tag listing
+`precipitation` receives nothing in any configuration, while the `ρe_tag_*`
+family does. Under 0-moment microphysics, rain leaves through `microphysics`
+instead, which reaches this family on both tendency paths.
 
 A warning and not an error: `moist` and `all` are useful shorthands that happen
 to include `precipitation`, and refusing them would make the group labels
@@ -540,12 +540,13 @@ function warn_inactive_energy_source_labels(tags)
         :precipitation in sources && @warn(
             "`energy_source_tags` tag `$(tag_name(tag))` lists " *
             "`precipitation`, which cannot contribute to a source tag. It is " *
-            "the sedimentation of precipitating species, which this family " *
-            "does not bracket, because it moves energy between levels rather " *
-            "than adding it. That part of the tag stays zero. The " *
-            "`energy_tracers` family does receive it. Under 0-moment " *
-            "microphysics, rain leaves through `microphysics` instead. Note " *
-            "`moist` and `all` both expand to include `precipitation`.",
+            "the sedimentation of precipitating species, which moves energy " *
+            "between levels rather than adding it. Where water sediments, " *
+            "the tags follow it as transport instead, so nothing is credited " *
+            "to `precipitation`. The `energy_tracers` family does attribute " *
+            "it. Under 0-moment microphysics, rain leaves through " *
+            "`microphysics` instead. Note `moist` and `all` both expand to " *
+            "include `precipitation`.",
         )
     end
     return nothing

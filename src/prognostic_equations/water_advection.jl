@@ -63,9 +63,11 @@ function vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
     ᶜq = p.scratch.ᶜtemp_scalar
     vtt = p.scratch.ᶜtemp_scalar_2
     @. ᶠρ = ᶠinterp(Y.c.ρ * ᶜJ) / ᶠJ
-    # Partition-share denominator for the tagged water tracers, evaluated once
-    # for the current state because it does not depend on the species.
+    # Partition-share denominators for the tagged water tracers and the energy
+    # source tags, evaluated once for the current state because they do not
+    # depend on the species.
     water_tag_share_norm!(p, Y)
+    energy_source_share_norm!(p, Y)
     MatrixFields.unrolled_foreach(microphysics_tracers) do (ρq_name, w_name)
         MatrixFields.has_field(Y.c, ρq_name) || return
 
@@ -91,6 +93,17 @@ function vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
             ᶠρ * ᶠtop_bias(
                 Geometry.WVector(p.scratch.ᶜtemp_scalar_3),
             ),
+        )
+        # Move the energy source tags with the same flux, each by its share of
+        # what the losing cell holds.
+        sediment_energy_source_tags!(
+            Yₜ,
+            Y,
+            p,
+            ᶜq,
+            ᶜw,
+            p.scratch.ᶜtemp_scalar_3,
+            ᶠρ,
         )
     end
 
