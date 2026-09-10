@@ -362,13 +362,13 @@ table, `<family>_tag_audit.csv`, that separates them. It is off by default,
 costs a handful of extra global reductions per check, and changes nothing about
 the run.
 
-| column | what it is |
-|:-- |:-- |
-| `untagged` | `∫max(parent - Σ tags, 0)`: water the tags do not account for |
-| `overclaimed` | `∫max(Σ tags - parent, 0)`: water the tags claim that is not there |
-| `orphaned` | mass in cells whose parent still holds water while every tag is empty |
-| `orphaned_volume_fraction` | volume fraction of those cells |
-| `nonpositive_mass` | mass where the parent is not positive |
+| column                     | what it is                                                            |
+|:-------------------------- |:--------------------------------------------------------------------- |
+| `untagged`                 | `∫max(parent - Σ tags, 0)`: water the tags do not account for         |
+| `overclaimed`              | `∫max(Σ tags - parent, 0)`: water the tags claim that is not there    |
+| `orphaned`                 | mass in cells whose parent still holds water while every tag is empty |
+| `orphaned_volume_fraction` | volume fraction of those cells                                        |
+| `nonpositive_mass`         | mass where the parent is not positive                                 |
 
 Each of the first three also has a `_relative` column over the same `scale` the
 closure table uses, and `nonpositive_mass_fraction` is `nonpositive_mass` over

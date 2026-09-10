@@ -331,8 +331,13 @@ import ClimaCore.MatrixFields: @name
             before_tropics = copy(ᶜY.ρq_tag_tropics)
             before_extra = copy(ᶜY.ρq_tag_extratropics)
             # The closure error the `q_tag_res` diagnostic reports, per cell.
-            residual(Y) = Y.ρq_tot .- Y.ρq_tag_tropics .- Y.ρq_tag_extratropics
-            before_residual = residual(ᶜY)
+            # Before the correction it is measured against the parent the tags
+            # were in step with, `ᶜρq_tot_before`. `ᶜY.ρq_tot` already holds the
+            # corrected parent, which is the one it is measured against
+            # afterwards, so reading both from `ᶜY` would compare the tags
+            # against a parent that has already moved.
+            tagged(Y) = Y.ρq_tag_tropics .+ Y.ρq_tag_extratropics
+            before_residual = ᶜρq_tot_before .- tagged(ᶜY)
 
             CA._rescale_water_tags!((; c = ᶜY), p, ᶜρq_tot_before, model)
 
@@ -354,7 +359,7 @@ import ClimaCore.MatrixFields: @name
             # and the error comes out exactly where it went in. Cell 6 is 4
             # short of its parent and cell 7 is 2 over it; the old rule would
             # have returned 4 * 1.4 = 5.6 and -2 * 1.4 = -2.8 instead.
-            after_residual = residual(ᶜY)
+            after_residual = ᶜY.ρq_tot .- tagged(ᶜY)
             atol = 32 * eps(FT) * maximum(abs.(ᶜρq_tot_before))
             @test after_residual[6] ≈ before_residual[6] atol = atol
             @test after_residual[7] ≈ before_residual[7] atol = atol

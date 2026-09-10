@@ -134,16 +134,19 @@ construction. For the prescribed forcings it is an assumption.
     diffusion and LES SGS diffusion all act on each tag in its own right, so
     attributing the ``\rho q_\mathrm{tot}`` version on top would count transport
     twice. This is the central correctness constraint of the design.
+
   - **Phase changes**: condensation, evaporation, freezing and melting conserve
     ``q_t``, so they are invisible to a total-water tag by construction. This is
     why no per-transfer ledger is needed — and why a vapor-only passive tracer
     would be the wrong design, since it would lose provenance at every phase
     change.
+
   - **Precipitation sedimentation**: with 0-moment microphysics there are no
     prognostic condensate species to sediment, so the term does not exist. With
     1-moment it is a flux divergence between levels rather than a local source,
     so it is not attributed but *mirrored* — see
     [Sedimentation with 1-moment microphysics](@ref).
+
   - **Numerical corrections** are handled separately, by
     `rescale_water_tags!`: the tags are excluded from both tracer limiters,
     because limiting each independently has no reason to reproduce the parent's
