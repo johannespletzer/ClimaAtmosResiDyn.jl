@@ -780,11 +780,31 @@ function warn_inactive_record_labels(processes, key)
 end
 
 """
+    energy_source_offset_from_config(value, FT)
+
+Parse `energy_source_tag_offset`. `~` and `0` give `nothing`, which leaves the
+energy source tags on `ρe_tot` exactly as without the key. A positive number is
+the offset in J/kg, as `FT`. A negative or non-finite value is an error, since
+it could only make the tags' total less positive.
+"""
+function energy_source_offset_from_config(value, ::Type{FT}) where {FT}
+    isnothing(value) && return nothing
+    value isa Real || error(
+        "`energy_source_tag_offset` must be a number of J/kg, got $(repr(value)).",
+    )
+    (isfinite(value) && value >= 0) || error(
+        "`energy_source_tag_offset` must be finite and not negative, got $value.",
+    )
+    iszero(value) && return nothing
+    return FT(value)
+end
+
+"""
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
-`energy_source_tags`, `energy_process_record` and `water_process_record` config
-keys. Any of them
+`energy_source_tags` (with `energy_source_tag_offset`), `energy_process_record`
+and `water_process_record` config keys. Any of them
 being `~` (null) or an empty list disables that feature entirely, at no runtime
 cost.
 """
@@ -806,12 +826,22 @@ function AtmosTagging(config::AtmosConfig)
         WaterTaggingModel(water_tracer_tuple(water_entries, FT))
     end
     source_entries = config.parsed_args["energy_source_tags"]
+    source_offset = energy_source_offset_from_config(
+        get(config.parsed_args, "energy_source_tag_offset", nothing),
+        FT,
+    )
     energy_source_tagging_model =
         if isnothing(source_entries) || isempty(source_entries)
+            isnothing(source_offset) || error(
+                "`energy_source_tag_offset` is set but `energy_source_tags` \
+                is not, so there are no tags for it to offset. Configure \
+                `energy_source_tags`, or drop `energy_source_tag_offset`.",
+            )
             nothing
         else
             EnergySourceTaggingModel(
                 energy_source_tracer_tuple(source_entries, FT),
+                source_offset,
             )
         end
     energy_process_record = process_record_from_config(

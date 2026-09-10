@@ -823,7 +823,9 @@ function default_model_callbacks(
             energy_source_closure_check,
             tagging.energy_source_tagging_model;
             family = "energy_source",
-            total_name = :ρe_tot,
+            total_name = energy_source_closure_total(
+                tagging.energy_source_tagging_model,
+            ),
             state_names = energy_source_region_tag_state_names,
             config_key = "energy_source_closure_check",
             tracer_key = "energy_source_tags",
