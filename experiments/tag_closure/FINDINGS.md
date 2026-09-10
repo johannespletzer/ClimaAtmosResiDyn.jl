@@ -6,7 +6,7 @@ from. The reasoning is in [LEARNINGS.md](LEARNINGS.md), one entry per run; the
 C1 argument is in [C1_reference_shift.md](C1_reference_shift.md); what to run
 next is in [LEVANTE_TASKS.md](LEVANTE_TASKS.md).
 
-State as of 2026-09-10 on `claude/tag-closure-experiments`. 17 of the 27
+State as of 2026-09-10 on `claude/tag-closure-experiments`. 19 of the 28
 configured runs are live in `output/`. Phase A and phase C are complete except
 for C1 and C2, which need approval.
 
@@ -34,11 +34,26 @@ eleven column runs. *A1–A4.*
 `a1_dt10`'s 2.660e-5 at the same configuration — a 3% difference. Explicitly not
 established on a sphere. *A4.*
 
-**W5. A3 is uninterpretable as it stands.** `a3_1m` reads 5.50e-6 against
-`a1_dt10`'s 2.66e-5, but it differs in two keys, `microphysics_model` *and*
-`vert_diff`, so the gap is not attributable to 1M. One matched 0M column run
-with `vert_diff` on would separate them. `a3_0m_vert_diff` is that run: written
-and validated, not yet submitted. *A3.*
+**W5. A3's gap was vertical diffusion, not 1M.** `a3_1m` reads 29× below
+`a1_dt10` on `max |q_tag_res|`, but it differs in two keys and the companion
+separates them:
+
+| step                                | factor |
+|:----------------------------------- |:------ |
+| `vert_diff` on, 0M held (a1 → a3_0m) | 0.037  |
+| 1M on, `vert_diff` held (a3_0m → a3_1m) | 0.934 |
+| both (a1 → a3_1m)                   | 0.035  |
+
+So **vertical diffusion accounts for 27× of the 29×** and 1M for 7%. *A1, A3,
+`a3_0m_vert_diff`.*
+
+**W5b. The 1M `q_tot_eff` mismatch is not measurable on a column, and does not
+raise the residual.** Under 1M the parent's diffusion acts on
+`q_tot − q_rai − q_sno` while the tags see their full content, and the memo
+expected that to cost closure. Holding `vert_diff` fixed, 1M moves
+`max |q_tag_res|` from 1.054e-7 to 9.845e-8 — 7% **down**. Bounded to a column,
+which reaches only the vertical branch of the mismatch: hyperdiffusion and the
+viscous sponge are horizontal and need a sphere. *A3, `a3_0m_vert_diff`.*
 
 **W6. Issue #64: the water tags diverged to 1e130 on a sphere while `ρq_tot`
 stayed bounded, and the run exited 0 reporting success.** `gross_relative` ran
@@ -164,6 +179,24 @@ applied and a tag is a share of what is present, so the columns in E8 are not
 the same quantity and should not be differenced; and a record answers "what did
 radiation do" rather than "what fraction of the energy here came from
 radiation". *C3.*
+
+**E9b. And the barrier is 1.8× larger than the headline figure.**
+`c0_sphere_audit` is `c0_sphere` with `audit: true` and nothing else changed. It
+measures `nonpositive_mass_fraction` = **0.7839** against
+`nonpositive_fraction` = 0.43276, a ratio of 1.811, near-constant across the day
+(0.7813 at t = 0). So the share of `∫|ρe_tot|` sitting where the donor share is
+undefined is **78.4%, not 43.3%** — the volume fraction quoted throughout this
+series understates the barrier, because the non-positive region is the
+troposphere and that is where the field's magnitude is (E5, M1). *C0 audit.*
+
+**E9c. The energy residual is directional, where water's is balanced.**
+`overclaimed_relative` 1.2245e-2 against `untagged_relative` 3.1795e-3, a ratio
+of 3.85: the tags hold more than the parent, persistently. That is production
+without loss (E2) seen in the audit, and it is the opposite of A5's water
+residual, which split evenly and read as transport leakage (W11).
+`orphaned_relative` is exactly 0.0 at every sample, so no cell has a parent
+holding energy while every tag is empty. The identity of M2 holds again:
+3.1795e-3 + 1.2245e-2 = 1.5424236987e-2 = `gross_relative`. *C0 audit.*
 
 **E10. The barrier is structural, not numerical.** No tolerance and no accuracy
 makes an undefined quantity readable. Total energy has no physical zero at any
@@ -303,9 +336,12 @@ magnitude.** On A5, `nonpositive_fraction` is 0.351 while
 `nonpositive_mass_fraction` is 2.77e-7 — a factor of 1.3 million. For water,
 "a third of the domain is non-positive" is about vanishingly dry cells: they
 take up the volume and hold none of the water. For energy it should go the
-other way, since E5 puts the region in the troposphere where the mass is, but
-**no run has measured it**: C0's 43.276% is quoted throughout as a volume
-fraction with no mass-weighted companion.
+other way, since E5 puts the region in the troposphere where the mass is, and
+**it does**: `c0_sphere_audit` measures 0.7839 against a volume fraction of
+0.43276, a ratio of 1.811 (E9b). So the same diagnostic understates the water
+barrier by six orders of magnitude and overstates nothing for energy — it
+understates that one too, by 1.8×. A volume fraction is not a proxy for how much
+of a field is affected, in either direction.
 
 `nonpositive_fraction` is a **volume** fraction and not a fraction of cells.
 `tagged_tracers.jl:456-459` fills a field with ones over the non-positive region

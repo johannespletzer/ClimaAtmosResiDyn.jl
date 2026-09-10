@@ -7,8 +7,9 @@ Branch `claude/tag-closure-experiments`.
 
 ## Where things stand
 
-17 of the 28 configured runs are live in `output/`. A run is live when
+19 of the 28 configured runs are live in `output/`. A run is live when
 `output/<run>/provenance.txt` exists, so `ls output` is the register.
+`c0_sphere_deep` is dropped rather than pending — see *Not yet, and why*.
 
 **Phase A and phase C are both complete** apart from C1 and C2, which need the
 owner's approval. What they concluded, one line each, with the evidence in
@@ -70,16 +71,31 @@ count. For water, "a third of the domain is non-positive" is about vanishingly
 dry air and nothing else. See *Lower
 priority*, where this changes a judgement.
 
-## 2. C1 — written, waiting on approval
+## 2. C1 — approved, submit it
 
-Nothing is missing any more. The convention, the coupling and the ClimaParams
-table headers are all settled, and both files are written:
-`toml/tag_closure_c1_reference.toml` and `configs/c1_sphere_shift.yml`. The raw
-probe output the numbers come from is in `C1_reference_shift.md`'s appendix.
+**Approved 2026-09-10: the sphere, at `δ` = −110 K.** Both files are written and
+validated.
 
-**What is left is the owner's approval.** C1 changes the model's energy
-reference, so `ρe_tot` is a different number everywhere and `ref_counter` would
-bump for any job adopting the shift. No code change; that is the whole of it.
+```bash
+CONFIG=experiments/tag_closure/configs/c1_sphere_shift.yml \
+    sbatch experiments/tag_closure/runscripts/phase_c.sh
+```
+
+**Run the acceptance test before trusting the output.** It is in the TOML's
+header, and it is the only thing standing between a change of reference and an
+accidental change of atmosphere. Then check the run's own parameter log:
+`c0_sphere_audit` wrote `c0_sphere_audit_parameters.toml` beside its results, so
+C1 writes its own, and that file is direct proof the three overrides bound
+rather than silently falling back to defaults.
+
+**What to read, and what not to.** `nonpositive_fraction` should be 0.0 at every
+sample against 0.43276 unshifted, and the per-tag minima should stay
+non-negative — unshifted, a source tag reached −209 J kg⁻¹.
+**`gross_relative` is not comparable with `c0_sphere`'s**, because the shift
+grows the normalising scale about 2.2× and the same absolute residual then reads
+smaller. Compare the absolute `gross_residual` column. The audit columns say
+whether the *direction* changed: unshifted they run 3.85 to 1 in favour of
+overclaim, which is production with no loss.
 
 **The recipe, for `δ = −110.0 K`.** The TOML carries the derivation, the
 acceptance test and the reason for the margin:
@@ -204,83 +220,35 @@ refuses any run whose `provenance.txt` records `commit: unknown`.
 
 Then the phase script, `phase_a.jl` or `phase_c.jl` as appropriate.
 
-## 5. Three runs, none needing approval
+## 5. Nothing left here
 
-`c0_sphere_deep` was submitted and died before the solve started:
+`c0_sphere_audit` and `a3_0m_vert_diff` have both run and are analysed.
+`c0_sphere_deep` is dropped. C1, in task 2, is the only thing left to submit.
 
-```
-AssertionError: Implicit vertical diffusion is only supported when using a
-turbulence convection model or vertical diffusion model.
-check_case_consistency, model_getters.jl:1074
-```
+**What the two runs said**, since both changed a number quoted elsewhere:
 
-**Fixed.** The config copied `implicit_diffusion: true` out of
-`numerics_sphere_he6ze31.yml`, which is a numerics-only common config that
-expects its partner to supply a diffusion model — the repository's own consumer
-of that grid sets `vert_diff: VerticalDiffusion` and then overrides the key back
-to `false`. This run has no diffusion model and should not gain one, so the key
-is dropped instead. That costs nothing: `diff_mode` gates exactly one tendency,
-`vertical_diffusion_boundary_layer_tendency!`, which is a no-op when
-`vertical_diffusion` is `nothing`. The sponges do not go through it.
-
-`validate_configs.py` now mirrors that assertion, so this class of failure is
-caught before the queue rather than after it. 27 configs, 16 of 16 mutations.
-
-**Run `c0_sphere_audit` first.** It is `c0_sphere` with `audit: true` and
-nothing else changed, and it is a better answer to the question
-`c0_sphere_deep` was promoted for. The number wanted is the mass-weighted
-companion to C0's **43.276%**, which is a volume fraction quoted throughout the
-series. `c0_sphere_deep` is a 60 km domain on a different grid with
-hyperdiffusion and two sponges the shallow sphere leaves off, so its mass
-fraction would belong to a configuration that is not the one that produced
-43.276%. Same cost either way: one sphere, one day.
-
-```bash
-CONFIG=experiments/tag_closure/configs/c0_sphere_audit.yml \
-    sbatch experiments/tag_closure/runscripts/phase_c.sh
-
-CONFIG=experiments/tag_closure/configs/a3_0m_vert_diff.yml \
-    sbatch experiments/tag_closure/runscripts/phase_a.sh
-
-CONFIG=experiments/tag_closure/configs/c0_sphere_deep.yml \
-    sbatch experiments/tag_closure/runscripts/phase_c.sh
-```
-
-`a3_0m_vert_diff` is A3's companion, unchanged from the last list: `a1_dt10`
-with `vert_diff: DecayWithHeightDiffusion` and nothing else, so it differs from
-`a3_1m` in `microphysics_model` alone and from `a1_dt10` in `vert_diff` alone.
-Two single-key comparisons out of one column-hour, where A3 alone gives a
-two-key gap it cannot decompose. The fourth corner, 1M with `vert_diff` off,
-stays unwritten: on a column the 1M mismatch reaches the tags through vertical
-diffusion and nothing else.
-
-`c0_sphere_deep` is now third rather than first. It still reads depth, and
-`where_negative.jl` has already answered the question it was written for, so it
-is the one of the three that could be dropped.
-
-## Lower priority
-
-**`c0_sphere_deep`, the 60 km sphere — promoted by the A5 audit.** It was
-written to separate a domain artifact from a property of the reference, and
-`where_negative.jl` already answered that: the sign change is at the tropopause,
-not at the domain top, so a deeper domain adds positive levels above and lowers
-the fraction without changing anything physical.
-
-It keeps one distinct value, and A5 has just shown what that value is worth. It
-sets `audit: true`, and `nonpositive_mass_fraction` is the share of the field's
-own *magnitude* sitting where the shares are undefined. On A5 that number was
-2.77e-7 against a volume fraction of 0.351 — a factor of 1.3 million — so for
-water the alarming volume fraction is almost entirely empty air. For energy it
-should go the other way, because `where_negative.jl` put the non-positive region
-in the troposphere where the mass is. But **nobody has measured it**, and C0's
-43.276% is quoted throughout this series as a volume fraction with no
-mass-weighted companion. `where_negative.jl` cannot supply one: it works on the
-remapped lat-lon grid and has no cell volumes, so it says where the field is
-negative but not how much of it is. `c0_sphere_audit` is the run to use for it,
-for the reason task 5 gives; this one would answer the same question on a
-different grid and domain.
+  - `c0_sphere_audit` measured `nonpositive_mass_fraction` = **0.7839** against
+    the volume fraction's 0.43276. So **78.4%** of `∫|ρe_tot|` sits where the
+    donor share is undefined, not 43.3%: the headline understated the barrier by
+    1.8×, because the non-positive region is the troposphere and that is where
+    the field's magnitude is. Its residual is also directional — overclaim beats
+    undertag 3.85 to 1 — where A5's water residual split evenly.
+  - `a3_0m_vert_diff` settled A3. Vertical diffusion accounts for 27× of the
+    29× gap and 1M for 7%, and holding `vert_diff` fixed, 1M moves the residual
+    7% **down** rather than up. The `q_tot_eff` mismatch the memo expected to
+    cost closure is not measurable on a column.
 
 ## Not yet, and why
+
+**`c0_sphere_deep`, dropped 2026-09-10.** It was written as a depth control, and
+`where_negative.jl` answered that question independently: the sign change is at
+the tropopause, not the domain top. Its other purpose,
+`nonpositive_mass_fraction`, has been measured by `c0_sphere_audit` on the
+configuration that actually produced 43.276%. What is left is a 60 km domain on
+a different grid carrying hyperdiffusion and two sponges the shallow sphere
+leaves off, so its number would need three caveats and pair with nothing. The
+config stays in the tree, fixed and validated, if the depth reading is ever
+wanted.
 
 **Phase B, and a correction to why.** The reason recorded here was that B1 is
 ten days on a sphere with a limiter, in the regime that diverged in three hours

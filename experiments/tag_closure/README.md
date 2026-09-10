@@ -481,6 +481,7 @@ adjusted from what was learned before they are submitted.
 | `c0_sphere_deep`   | `phase_c.sh` | C0's depth control: the same sphere on the 60 km grid        |
 | `c0_sphere_audit`  | `phase_c.sh` | `c0_sphere` with `audit: true` and nothing else changed      |
 | `c3_column_record` | `phase_c.sh` | C3, `c0_column` with `energy_process_record` beside the tags |
+| `c1_sphere_shift`  | `phase_c.sh` | C1, `c0_sphere` under the reference shift, `δ` = −110 K       |
 
 C2, the implicit-path brackets, needs the owner's approval and a code change,
 and no configuration for it is written. C1, the reference shift, needs approval
@@ -516,8 +517,8 @@ points back to them. Nothing else is committed.
   - `<family>_tag_closure.csv`, verbatim from `output_dir`. The table the
     closure check wrote, one row per firing.
   - `<family>_tag_audit.csv`, verbatim, **when the run set `audit: true`**.
-    Three configs do: `a5_sphere_limiter`, `c0_sphere_deep` and
-    `c0_sphere_audit`. The model writes
+    Four configs do: `a5_sphere_limiter`, `c0_sphere_deep`,
+    `c0_sphere_audit` and `c1_sphere_shift`. The model writes
     it, not the reducer, and `analysis/reduce_run.jl` names it in its last log
     line so it is not left on scratch. `untagged` and `overclaimed` are the two
     signed halves of the closure table's `gross_residual` and add to it exactly,
