@@ -1,14 +1,14 @@
 # Levante task list
 
-Self-contained. Everything needed to pick the work up is here — the state, what
-was found, what to run, and what is still open. Nothing below requires reading
-another document first.
+Self-contained. The state, what was found, what to run, and what is still open.
+Nothing below requires reading another document first.
 
-Branch `claude/tag-closure-experiments`. Written at `992b9d8`.
+Branch `claude/tag-closure-experiments`. Written at `270c043`.
 
 ## Where things stand
 
-14 of 25 runs are committed and analysed. Phase A is complete, C0 is complete.
+16 of 25 runs are committed and analysed. Phase A is complete, C0 is complete,
+and all three analysis scripts have now run on real data.
 
 **Decided by measurement.** Moving the water tags into the implicit solve is not
 worth its Jacobian cost. The default van Leer ladder is flat, slope −0.011,
@@ -24,15 +24,26 @@ same configuration for one hour and the divergence starts between hours two and
 three, so the test passes because it stops before the failure begins.
 
 **Measured by C0.** The source-tag donor rule is inert over 96.7% of the DYCOMS
-column and 43.276% of a moist sphere — the latter constant to the last digit
-across 24 hours. Production accumulates without loss, and a source tag reaches
-−209 J kg⁻¹ on the sphere with `e_src_res` showing nothing, because the residual
-sums only the pure region tags.
+column and 43.276% of a moist sphere. Production accumulates without loss, and a
+source tag reaches −209 J kg⁻¹ on the sphere while `e_src_res` shows nothing,
+because the residual sums only the pure region tags.
+
+**The negative region is the troposphere.** `where_negative.jl` settled the
+structure. On the sphere every level from 250 m to 11.0 km is 100% negative and
+every level from 15.5 km up is 0% negative — no mixed level anywhere. The sign
+change sits between them, and `0.43276 × 30 km = 12.98 km` places it there
+exactly. The vertical structure is geopotential as it should be: `e_tot` swings
+212 kJ kg⁻¹ between 250 m and 26.9 km against `gz` = 264 kJ kg⁻¹ over the same
+span. The column is negative at all 30 levels, −41.0 to −45.4 kJ kg⁻¹, with a
+clean step at 825 m where the DYCOMS inversion is. **The shape is right; what is
+wrong is an offset.** Smallest shift that would make the field positive: 45.4 kJ
+kg⁻¹ on the column, 100.4 kJ kg⁻¹ on the sphere.
 
 **Open and unexplained.** The textbook internal energy at the DYCOMS surface
 state is about +3.3e4 J kg⁻¹; the model's own field reaches −4.5e4. Nothing in
 this repository overrides a thermodynamic reference, so whatever sets that
-offset is in Thermodynamics.jl or the ClimaParams defaults. Task 1 settles it.
+offset is in Thermodynamics.jl or the ClimaParams defaults. Task 1 settles it,
+and it is now the only thing standing between here and a decision on C1.
 
 ## Once per shell
 
@@ -53,8 +64,7 @@ julia +1.11 --project=.buildkite -e 'using Pkg; Pkg.instantiate(); Pkg.precompil
 
 ## 1. The thermodynamic reference
 
-One command, and the highest value thing here. Do it before deciding anything
-about C1.
+One command, and now the only blocker on C1.
 
 ```bash
 julia +1.11 --project=.buildkite -e '
@@ -71,16 +81,17 @@ julia +1.11 --project=.buildkite -e '
 
 Three things it decides.
 
-  - **Which reading explains the offset.** If `T_0` is 273.16 and
-    `internal_energy` still returns near `−5e4`, the convention differs from the
-    textbook form and the definition is what to read. If `T_0` is not 273.16,
-    that is the answer outright.
+  - **Which reading explains the offset.** The textbook form gives `e_int` about
+    `+3.3e4` J kg⁻¹ at the DYCOMS surface state; the model's field reaches
+    `−4.5e4`. If `T_0` is 273.16 and `internal_energy` still returns near
+    `−5e4`, the convention differs from the textbook form and the definition is
+    what to read. If `T_0` is not 273.16, that is the answer outright.
   - **The parameter's name.** The plumbing is already known to be reachable:
     `create_parameters.jl:75` builds the thermodynamic parameters entirely from
     the TOML dict and `Parameters.jl:602` forwards every field, so a config
-    reaches them through the `toml:` key. What is missing is the name, and the
-    field list gives it. **This means the reference shift is a configuration
-    change, not a fork of Thermodynamics.jl.**
+    reaches them through the `toml:` key. **That makes the reference shift a
+    configuration change, not a fork of Thermodynamics.jl.** What is missing is
+    the name, and the field list gives it.
   - **Whether the shift is even constant.** `Parameters.jl:607` lists
     `e_int_v0` and `e_int_i0` as *derived* rather than as fields. If they are
     derived conventionally, moving the reference moves the latent-heat offsets
@@ -88,93 +99,91 @@ Three things it decides.
     The shifted parent would then be `e_tot + c(q)` and not `e_tot + c` — a
     premise both shift shapes rest on.
 
-There is a third possibility worth holding in mind. If the *initialisation* is
-what is off rather than the reference, then C0's headline result — 43.276% of a
-sphere where the donor share is undefined — is a fact about this model's initial
-state and not about the energy reference. That would mean rereading the C0
-learning entry and the memo's Part 3 source bullet. The evidence does not force
-that yet, which is why neither was edited, but this command is what decides.
+**The outcome forks the work.** If the offset is a convention, the shift is
+legitimate, `c` must clear the tropospheric minimum at about 100 kJ kg⁻¹ on a
+sphere, and the suppression cost below applies at full strength. If instead the
+initialisation is wrong, then the troposphere should not be negative at all,
+C1 would be treating a symptom, and C0's 43.276% is a fact about this model's
+initial state rather than about the energy reference — which would mean
+rereading the C0 learning entry and the memo's Part 3 source bullet. Neither was
+edited, because the evidence does not force it. This command decides.
 
-## 2. Re-run the phase A analysis
+## 2. C3, the fallback reading
 
-`summary_a.csv` predates `a3_1m` and does not contain it, and the plot scaling
-has changed since the figures were made.
-
-```bash
-julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_a.jl
-```
-
-The ladder figure should now show flat as flat: at least a full decade on the
-y-axis, reference slopes 1 and 2, and x ticks at 2.5, 5 and 10 rather than
-powers of ten. Commit the regenerated `summary_a.csv` and the PNGs.
-
-## 3. Run the phase C analysis
-
-**This has never been executed.** The C0 learning entries were written from the
-raw tables. There is no `summary_c.csv` and there are no phase C figures.
-
-```bash
-julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_c.jl
-```
-
-## 4. Where `e_tot` is negative
-
-Also never run. Every magnitude argument about the shift turns on the structure
-of the negative region, and only its minimum has been seen so far.
-
-```bash
-julia +1.11 --project=.buildkite \
-    experiments/tag_closure/analysis/where_negative.jl output/c0_column/output_active
-julia +1.11 --project=.buildkite \
-    experiments/tag_closure/analysis/where_negative.jl output/c0_sphere/output_active
-```
-
-It reports the fraction negative by level, the minimum by level, the height at
-which the sign changes, whether the negative region is contiguous, and the
-smallest constant that would make the whole field positive. Commit the CSVs it
-writes.
-
-## 5. Two batch runs
+One batch job. It needs no code change and no approval, and after C0 it is the
+most informative run left.
 
 ```bash
 CONFIG=experiments/tag_closure/configs/c3_column_record.yml \
     sbatch experiments/tag_closure/runscripts/phase_c.sh
-
-CONFIG=experiments/tag_closure/configs/c0_sphere_deep.yml \
-    sbatch experiments/tag_closure/runscripts/phase_c.sh
 ```
+
+C3 reads the energy process record on a configuration where the source tags'
+own donor rule is not running. The record measures energy *added by each process
+since t = 0*, which is reference-independent and therefore immune to everything
+task 1 is about. If it reads well here, the alternative that
+`energy_source_tags.md` names is viable regardless of how C1 turns out, and C1
+matters less than it currently appears to.
 
 From a tcsh login shell use `env CONFIG=... sbatch ...` instead; that is the
 only thing the login shell changes.
 
-  - **C3** reads the energy process record on a configuration where the source
-    tags' own donor rule is not running. It measures the alternative that
-    `energy_source_tags.md` names, and needs no code change or approval.
-  - **`c0_sphere_deep`** is `c0_sphere` on the 60 km grid. C0 measured 43.276%
-    non-positive at 30 km while the docs attribute the non-positive parent to
-    shallow domains. Doubling the depth separates a domain artifact from a
-    property of the reference.
+## 3. After the job: check, reduce, commit
 
-After each, check the job's exit status rather than only the log, because a
-crashed solve returns `:simulation_crashed` and the driver's non-zero exit is
-what makes that visible:
+Check the exit status rather than only the log, because a crashed solve returns
+`:simulation_crashed` and the driver's non-zero exit is what makes that visible:
 
 ```bash
 sacct -j <jobid> -o JobID,State,ExitCode
 ```
 
-Then reduce before copying anything back, because the operator residual lives in
-the NetCDF and the NetCDF stays on scratch:
+Reduce before copying anything back, because the operator residual and the
+process record live in the NetCDF and the NetCDF stays on scratch:
 
 ```bash
 julia +1.11 --project=.buildkite \
-    experiments/tag_closure/analysis/reduce_run.jl output/<run>/output_active
+    experiments/tag_closure/analysis/reduce_run.jl output/c3_column_record/output_active
 ```
 
-Five files per run into `experiments/tag_closure/output/<run>/`: the family's
+Five files into `experiments/tag_closure/output/c3_column_record/`: the family's
 `*_tag_closure.csv`, the reduced tables, `<run>.yml`, `provenance.txt`, and a
 trimmed `run.log`. The analysis refuses any run whose `provenance.txt` records
 `commit: unknown`.
+
+Then the phase analysis, which will draw the two-readings panel for the first
+time with real data:
+
+```bash
+julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_c.jl
+```
+
+## 4. The timing controls
+
+Cheap, and they are what the tag-cost numbers get measured against. Nothing has
+measured what the tags cost yet.
+
+```bash
+for c in a1_dt10_notags c0_column_notags; do
+  CONFIG=experiments/tag_closure/configs/$c.yml \
+      sbatch experiments/tag_closure/runscripts/phase_a.sh
+done
+```
+
+Take `sypd` and `wall_time_per_timestep` from each log and compare with the
+tagged run at the same configuration. `a1_dt10` reported `sypd 3.012` and 9 ms
+per timestep.
+
+## Downgraded, and why
+
+**`c0_sphere_deep`, the 60 km depth control.** It was written to separate a
+domain artifact from a property of the reference. `where_negative.jl` has
+already answered that: the sign change is at the tropopause, not at the domain
+top, so doubling the depth adds positive levels above and lowers the fraction
+without changing anything physical. The docs' framing that the non-positive
+parent follows from shallow domains is wrong in a specific way — **the negative
+region is the troposphere**, which is where the weather is and where source
+tracing is worth doing. The run is now a confirmation rather than a
+discriminator. Worth doing eventually; it should not gate C1.
 
 ## Not yet, and why
 
@@ -189,15 +198,28 @@ denominator should be dropped rather than costed: the region tags sum to
 `ρe_tot` and not to `ρe_tot + c`, so wherever `e < 0` the shares sum to a
 negative number and the loss adds energy instead of removing it, diverging as
 `e` approaches `−c` — over exactly the region the shift was introduced to fix.
-Tasks 1 and 4 both bear on the remaining choice.
+The remaining shape is a change of the thermodynamic reference constant, not an
+offset added to the state; adding to the state shifts `e_int`, and therefore
+temperature and pressure, which is a different atmosphere rather than a change
+of reference.
 
-**A3's companion.** A3 differs from `a1_dt10` in two keys, `microphysics_model`
-and `vert_diff`, so the gap between them is not the 1M mismatch alone.
-Separating it cleanly needs one extra 0M column run with `vert_diff` on. The
-config is deliberately not written.
+One cost is now firm rather than conditional. The shift must clear the
+*tropospheric* minimum, so `c` is about 100 kJ kg⁻¹ on a sphere and cannot be
+made small. The discriminating part of a source tag's share is proportional to
+`1/(e+c)`, so at that magnitude the donor rule is several times less
+discriminating than it is today in the cells where it already works — the family
+would partly succeed by becoming more like the mask-weighted energy tags it was
+meant to improve on.
+
+**A3's companion.** A3 differs from `a1_dt10` in two keys,
+`microphysics_model` and `vert_diff`, so the gap between them is not the 1M
+mismatch alone. Separating it cleanly needs one extra 0M column run with
+`vert_diff` on. The config is deliberately not written.
 
 ## What to expect
 
-Tasks 3 and 4 have never executed. Every first run in this series has failed
-once, and every one of those failures has been in the tooling rather than in the
-science. Send the error rather than working around it.
+Every script here has now run at least once on real data, `where_negative.jl`
+and `phase_c.jl` both on first execution. The remaining first-time paths are the
+two-readings panel with real process-record data in task 3, and the timing
+controls in task 4, which take the `family = nothing` route through the loader.
+Send the error rather than working around it.
