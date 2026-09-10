@@ -1,0 +1,89 @@
+# run.log for c4_sphere_tag_offset_2x, trimmed from SLURM job 13384914's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    c4_sphere_tag_offset_2x
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c4_sphere_tag_offset_2x.yml
+SLURM job:       13384914
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl
+Commit:          29430612267fc3742bfe217bf65ab5f060a7d34d (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c4_sphere_tag_offset_2x
+Start time:      2026-09-10T15:36:03+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c4_sphere_tag_offset_2x/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-10T15:48:46+02:00
+
+# Simulation info:
+┌ Info: Simulation info
+│   job_id = "c4_sphere_tag_offset_2x"
+└   output_dir = "output/c4_sphere_tag_offset_2x/output_0000"
+
+# Every distinct warning, first occurrence, first line only:
+┌ Warning: energy_source tag closure residual X exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c4_sphere_tag_offset_2x/output_0000/energy_source_tag_closure.csv.
+
+# The last progress report and the end of the run:
+┌ Warning: energy_source tag closure residual 0.001709433126785215 exceeds the configured tolerance 1.0e-6 at t = 79200.0 s. The tags no longer account for the field they partition; see output/c4_sphere_tag_offset_2x/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:791
+┌ Info: Progress
+│   simulation_time = "22 hours, 13 minutes"
+│   n_steps_completed = 200
+│   wall_time_per_step = "1 second, 655 milliseconds"
+│   wall_time_total = "5 minutes, 57 seconds"
+│   wall_time_remaining = "26 seconds, 486 milliseconds"
+│   wall_time_spent = "5 minutes, 31 seconds"
+│   percent_complete = "92.6%"
+│   estimated_sypd = "0.662"
+│   instantaneous_sypd = "0.664"
+│   date_now = 2026-09-10T15:48:19.181
+└   estimated_finish_date = 2026-09-10T15:48:46.181
+┌ Warning: energy_source tag closure residual 0.0017303677865224323 exceeds the configured tolerance 1.0e-6 at t = 82800.0 s. The tags no longer account for the field they partition; see output/c4_sphere_tag_offset_2x/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:791
+┌ Info: Progress
+│   simulation_time = "23 hours, 33 minutes"
+│   n_steps_completed = 212
+│   wall_time_per_step = "1 second, 654 milliseconds"
+│   wall_time_total = "5 minutes, 57 seconds"
+│   wall_time_remaining = "6 seconds, 618 milliseconds"
+│   wall_time_spent = "5 minutes, 50 seconds"
+│   percent_complete = "98.1%"
+│   estimated_sypd = "0.662"
+│   instantaneous_sypd = "0.667"
+│   date_now = 2026-09-10T15:48:38.888
+└   estimated_finish_date = 2026-09-10T15:48:45.888
+┌ Warning: energy_source tag closure residual 0.0017496601494186202 exceeds the configured tolerance 1.0e-6 at t = 86400.0 s. The tags no longer account for the field they partition; see output/c4_sphere_tag_offset_2x/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:791
+[ Info: solve! walltime = 355.755
+[ Info: sypd: 0.665
+[ Info: wall_time_per_timestep: 1 second, 647 milliseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 5.32 GiB
+┌ Info: Tag-closure run finished
+│   simulation.job_id = "c4_sphere_tag_offset_2x"
+└   result.ret_code = :success
+┌ Info: Where it went
+│   config = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c4_sphere_tag_offset_2x.yml"
+└   simulation.output_dir = "output/c4_sphere_tag_offset_2x/output_0000"
+┌ Info: energy_source tag closure (25 rows)
+│   columns: time,total,tagged,residual,relative,gross_residual,gross_relative,scale,nonpositive_fraction
+│   first:   0.0,1.0575888873617921e24,1.0575888873617918e24,2.68435456e8,2.538183401960903e-16,2.668193367864637e7,2.522902235215971e-17,1.0575888873617921e24,0.0
+│   last:    86400.0,1.0572636860888818e24,1.0572718440075083e24,-8.157918626515517e18,-7.716068123642808e-6,1.849852138977154e21,0.0017496601494186202,1.0572636860888818e24,0.0
+└   path = "output/c4_sphere_tag_offset_2x/output_0000/energy_source_tag_closure.csv"
