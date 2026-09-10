@@ -271,10 +271,10 @@ end
     failed_claims(adapter) -> Vector{String}
 
 Return one line per claim of the last accepted step whose status is `:fail`,
-naming the control volume, the claim and the quantity. The vector is empty
-when nothing failed or when no step has been committed. The caller logs the
-lines at warn level, so a failed identity is visible in a run's log and not
-only in the certificate.
+naming the control volume, the claim, the channel or event where the claim
+has one, and the quantity. The vector is empty when nothing failed or when
+no step has been committed. The caller logs the lines at warn level, so a
+failed identity is visible in a run's log and not only in the certificate.
 """
 function failed_claims(adapter::ParentBudgetAdapter)
     commit = latest_commit(adapter)
