@@ -490,6 +490,17 @@ be resubmitted.
   - Whether C3 also wants a sphere counterpart. As registered it is the column
     only, since C3 compares two readings of one run and the column is the cheap
     one.
+  - **C0 found both predicted barriers, and C1 is what would settle them.** The
+    donor rule is inert over 96.7% of the column and 43% of the sphere, and a
+    source tag drifts monotonically negative on the sphere with nothing to
+    repair it. C1 reruns this under a reference shift making `ρe_tot > 0`
+    everywhere and is the run designed to say whether that is fixable. It needs
+    a code change and the owner's approval, and **the shape of the shift is
+    still unchosen** — the plan gives two and says both go to the owner before
+    either is written. That decision is now the series' critical path. C3 is
+    written and unsubmitted, and C0 has made it more interesting: it shows what
+    the energy process record reads on a configuration where the source tags'
+    own rule is not running.
   - **A5 diverges, and the integration test cannot see it.** The water tags on
     the sphere run away to 1e130 while the parent stays bounded, and the run
     exits zero. `test/tagged_water_integration.jl` exercises that exact

@@ -336,6 +336,156 @@ residual, they participate in destroying it. The plan's statement that A5's
 numbers are "read as a total rather than as an operator residual" is too
 generous — after hour three they are not readable as either.
 
+## C0. The barrier census
+
+Both runs at `49b2ec9` on 2026-09-10, AMD EPYC 7763 64-Core, `shared`, SLURM
+jobs `27361326` (column) and `27361327` (sphere). Both `exit_status: 0`.
+
+This is the phase the series was pointed at. **Both barriers the memo predicted
+are present, and both are structural.**
+
+### c0_column — DYCOMS 1.5 km column, `rad: DYCOMS`, one day
+
+| time | `nonpositive_fraction` | `gross_relative` | `max e_src_rad` |
+|:---- |:---------------------- |:---------------- |:--------------- |
+| 0    | 1.0000                 | 2.55e-17         | 0               |
+| 1 h  | 1.0000                 | 6.34e-3          | 441.91          |
+| 6 h  | 1.0000                 | 3.90e-2          | 2835.76         |
+| 12 h | 0.9667                 | 7.59e-2          | 3791.54         |
+| 24 h | 0.9667                 | 1.346e-1         | 4321.33         |
+
+**Barrier one: the donor rule does not run.** `ρe_tot ≤ 0` over the *entire*
+domain at initialization and for the first eight hours. The docs record 100% at
+initialization on this column; this shows it **persists through integration**
+rather than being an initial-condition artifact that the first few steps clear.
+
+`nonpositive_fraction` then takes a single step, at exactly 8 h, from 1.000000
+to 0.966667 — which is 29/30, so **exactly one of the thirty levels crosses
+into positive `ρe_tot`** and stays there. It does not move again for the rest of
+the day.
+
+Where the share is undefined `energy_source_fraction` returns zero, so no tag is
+depleted while production stays mask-weighted and reaches tags normally. The
+`rad` tag is that regime made visible: zero at t = 0, then 441.91 at 1 h,
+2835.76 at 6 h, 3791.54 at 12 h, 4321.33 at 24 h. Its own minimum sits at about
+−2e-9 throughout, which is numerical noise, not a sign change.
+
+**A detail that supports the reading.** The `rad` tag's growth is **not
+monotone**, and where it first turns is not a coincidence. It rises steadily to
+3221.91 at 7 h, then *falls* by 137.0 over the next hour — and that hour,
+25200 s to 28800 s, is exactly the interval in which the one level crosses into
+positive `ρe_tot`. The first time any part of this domain can support a donor
+share is the first time the tag loses anything. After 19 h it plateaus and
+drifts down through four consecutive samples before ending at 4321.33. So the
+loss half is not merely absent, it is switched on and off by the sign of the
+parent, cell by cell.
+
+**A second observation the brief did not carry.** The region tags do not stay a
+partition of a negative parent. At t = 0 both are wholly negative — `strat`
+spans −44972.5 to −0.0217, `tropo` −43124.8 to −0.0225 — which is what
+mask-weighting a negative parent gives. By 12 h `max e_src_tropo` is +39007.5
+and by 24 h +107824, against a parent whose scale has not changed that way. The
+tags are not merely negative; they are spreading apart, and `gross_relative`
+rising to 0.135 is that spread.
+
+### c0_sphere — moist sphere, `h_elem` 6, `z_elem` 10, one day
+
+| time | `nonpositive_fraction` | `gross_relative` | `min e_src_sfc` | `max e_src_sfc` |
+|:---- |:---------------------- |:---------------- |:--------------- |:--------------- |
+| 0    | 0.43276                | 2.10e-17         | 0               | 0               |
+| 6 h  | 0.43276                | 9.39e-3          | −50.46          | 6035.84         |
+| 12 h | 0.43276                | 1.175e-2         | −114.53         | 11199.4         |
+| 24 h | 0.43276                | 1.542e-2         | −209.19         | 19265.9         |
+
+**Barrier one again, and this is the stronger statement.**
+`nonpositive_fraction` is 0.4327600052941768 at every one of the 25 samples —
+constant to the last digit across the whole day. **A full sphere reaching 30 km
+still has 43% of its volume where the shares are undefined.**
+
+`energy_source_tags.md` frames the non-positive parent as a consequence of
+shallow domains, citing 100% on the shipped 1.5 km column and 43% on a 30 km
+column, with "depth reduces the fraction, because geopotential lifts `e_tot`
+positive higher up". That framing holds — 43% is indeed far better than 100% —
+but it invites the reading that a realistic configuration escapes the problem.
+It does not. On a real sphere, over a real day, **the figure is 43% and it does
+not move at all.**
+
+**Barrier two: a source tag goes negative and stays there.** The `sfc` tag
+starts at zero, and its minimum falls **monotonically** — 0, −50.46 at 6 h,
+−114.53 at 12 h, −169.55 at 18 h, −209.19 at 24 h. That is not a transient
+excursion; it is a steady accumulation, roughly linear in time, with no sign of
+turning. This is the memo's second prediction, from Part 1's source table: no
+rescale and no partition repair for this family, so tags may go negative — and
+`tagged_tracers.jl` exempts them from both limiters.
+
+A negative source tag invalidates the amount-of-energy and provenance reading
+of that tag for as long as it lasts, which by 24 h is the whole run.
+
+**And `e_src_res` does not show it.** The residual sums the pure region tags
+only, so a source-labelled tag going negative never enters it. `gross_relative`
+on this run ends at 1.54e-2 — smaller than the column's, unremarkable, and
+entirely silent about the tag that has gone negative underneath it. The only
+thing that shows it is the per-tag minimum, which is why `reduce_run.jl` emits
+one for every tag rather than for the partition alone.
+
+The region tags are negative here too, and from t = 0: `min e_src_tropics`
+−23686, `min e_src_extratropics` −100416. That is mask-weighting a parent that
+is negative over 43% of the domain, so it is expected rather than drift.
+
+### The three questions, for both runs
+
+**Barrier.** Two, both present in both runs: the donor loss does not run where
+`ρe_tot ≤ 0`, which is 96.7% of a column and 43% of a sphere; and a source tag
+goes negative with nothing to repair it, monotonically, on the sphere.
+
+**Class. Structural, not numerical.** Nothing here is a rounding problem, a
+stability problem or a cost. `gross_relative` starts at 2.55e-17 and 2.10e-17,
+which is machine precision, so the arithmetic is exact where it is defined. Both
+runs completed in their slots. The rule simply does not run where the parent is
+non-positive, and nothing exists to repair a negative source tag. These are
+properties of the design as written, and they are what the memo said they were.
+
+**Carry-over.** Not applicable in the usual direction — this *is* the family the
+rest of the series was measuring toward. What carries the other way: phase A
+established that the shared passive-scalar transport contributes an operator
+residual that does not converge away, and that is a floor beneath these numbers,
+not the explanation for them. The barriers here are an order of magnitude larger
+and of a different kind.
+
+### What this bears on, and what it does not decide
+
+`energy_source_tags.md` states the open question the family exists to answer:
+whether the shares are stable and interpretable under a realistic configuration,
+and that the answer decides whether energy source tracing is used at all, or
+whether water source tracing is combined with the energy process record instead.
+
+**C0 is evidence toward that decision and is not the decision.** What it
+establishes: on the two configurations tested, the shares are undefined over
+96.7% of a column and 43% of a sphere, the donor rule is correspondingly inert,
+and a source tag drifts negative and stays so. What it does not establish: that
+this is irreparable.
+
+**C1 is the run designed to answer that**, and it has not run. It reruns this
+configuration under a reference shift making `ρe_tot > 0` everywhere, and it
+needs a code change and the owner's approval, with the shape of the shift still
+unchosen — the plan gives two and says the agent must put both to the owner
+before writing either. If C1 shows bounded residuals and non-negative tags under
+a positive reference, the family is viable and the remaining work is the
+tolerance model and the implicit brackets. If it does not, the docs' alternative
+is the recommendation.
+
+**Do not read C0 as a verdict on the family.** It measures how large the problem
+is under the current reference. It says nothing about how large it is under a
+better one, because no run has used a better one.
+
+**C3 is now a more interesting run than it was.** It puts an
+`energy_process_record` beside the source tags on the same column, and the
+record is the alternative reading the docs name. Before C0 it was a
+completeness exercise. After C0 — with the source tags' donor rule inert over
+almost the whole column — it is the run that shows what the fallback actually
+delivers on a configuration where the primary method is in trouble. It is
+written, validated, and has not been submitted.
+
 ### Caveats on all of phase A so far
 
 The A1 and A2 ladders are three `dt` points each, one column, one hour, 0M, one
