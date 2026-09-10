@@ -1,0 +1,25 @@
+run: c1_sphere_shift
+machine: terrabyte
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c1_sphere_shift.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+commit: 72a1bc6aa1fe161387062d3193ae2085fba0330a
+commit_source: git-files
+commit_dirty: unknown
+branch: claude/tag-closure-experiments
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+started: 2026-09-10T13:25:22+02:00
+finished: 2026-09-10T13:38:19+02:00
+exit_status: 0
+slurm_job_id: 13383684
+slurm_job_name: c1_sphere_shift
+partition: hpda2_test
+nodelist: hpdar03c01s12
+cpus_per_task: 2
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c1_sphere_shift/output_0000
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c1_sphere_shift/output_0000 (left on scratch, not committed)

@@ -1,0 +1,89 @@
+# run.log for c1_sphere_shift, trimmed from SLURM job 13383684's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    c1_sphere_shift
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c1_sphere_shift.yml
+SLURM job:       13383684
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl
+Commit:          72a1bc6aa1fe161387062d3193ae2085fba0330a (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c1_sphere_shift
+Start time:      2026-09-10T13:25:22+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c1_sphere_shift/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-10T13:38:19+02:00
+
+# Simulation info:
+┌ Info: Simulation info
+│   job_id = "c1_sphere_shift"
+└   output_dir = "output/c1_sphere_shift/output_0000"
+
+# Every distinct warning, first occurrence, first line only:
+┌ Warning: energy_source tag closure residual X exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c1_sphere_shift/output_0000/energy_source_tag_closure.csv.
+
+# The last progress report and the end of the run:
+┌ Warning: energy_source tag closure residual 0.0037085096917848248 exceeds the configured tolerance 1.0e-6 at t = 79200.0 s. The tags no longer account for the field they partition; see output/c1_sphere_shift/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:779
+┌ Info: Progress
+│   simulation_time = "22 hours, 13 minutes"
+│   n_steps_completed = 200
+│   wall_time_per_step = "1 second, 623 milliseconds"
+│   wall_time_total = "5 minutes, 50 seconds"
+│   wall_time_remaining = "25 seconds, 972 milliseconds"
+│   wall_time_spent = "5 minutes, 24 seconds"
+│   percent_complete = "92.6%"
+│   estimated_sypd = "0.675"
+│   instantaneous_sypd = "0.677"
+│   date_now = 2026-09-10T13:37:52.852
+└   estimated_finish_date = 2026-09-10T13:38:18.852
+┌ Warning: energy_source tag closure residual 0.0037548028415882715 exceeds the configured tolerance 1.0e-6 at t = 82800.0 s. The tags no longer account for the field they partition; see output/c1_sphere_shift/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:779
+┌ Info: Progress
+│   simulation_time = "23 hours, 33 minutes"
+│   n_steps_completed = 212
+│   wall_time_per_step = "1 second, 623 milliseconds"
+│   wall_time_total = "5 minutes, 50 seconds"
+│   wall_time_remaining = "6 seconds, 493 milliseconds"
+│   wall_time_spent = "5 minutes, 44 seconds"
+│   percent_complete = "98.1%"
+│   estimated_sypd = "0.675"
+│   instantaneous_sypd = "0.674"
+│   date_now = 2026-09-10T13:38:12.339
+└   estimated_finish_date = 2026-09-10T13:38:19.339
+┌ Warning: energy_source tag closure residual 0.003798184214720837 exceeds the configured tolerance 1.0e-6 at t = 86400.0 s. The tags no longer account for the field they partition; see output/c1_sphere_shift/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:779
+[ Info: solve! walltime = 349.01
+[ Info: sypd: 0.678
+[ Info: wall_time_per_timestep: 1 second, 615 milliseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 5.13 GiB
+┌ Info: Tag-closure run finished
+│   simulation.job_id = "c1_sphere_shift"
+└   result.ret_code = :success
+┌ Info: Where it went
+│   config = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c1_sphere_shift.yml"
+└   simulation.output_dir = "output/c1_sphere_shift/output_0000"
+┌ Info: energy_source tag closure (25 rows)
+│   columns: time,total,tagged,residual,relative,gross_residual,gross_relative,scale,nonpositive_fraction
+│   first:   0.0,4.8629389502288286e23,4.86293895022883e23,-1.34217728e8,-2.7600126050047226e-16,1.2651798006341249e7,2.601677326371928e-17,4.8629389502288286e23,0.0
+│   last:    86400.0,4.8597721588418256e23,4.8600747552877504e23,-3.0259644592474292e19,-6.226556225978654e-5,1.8458309900852826e21,0.003798184214720837,4.8597721588418256e23,0.0
+└   path = "output/c1_sphere_shift/output_0000/energy_source_tag_closure.csv"

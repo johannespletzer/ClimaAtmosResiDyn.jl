@@ -1,0 +1,91 @@
+# run.log for c0_sphere_audit, trimmed from SLURM job 13383685's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    c0_sphere_audit
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c0_sphere_audit.yml
+SLURM job:       13383685
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl
+Commit:          72a1bc6aa1fe161387062d3193ae2085fba0330a (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c0_sphere_audit
+Start time:      2026-09-10T13:25:22+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c0_sphere_audit/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-10T13:38:09+02:00
+
+# Simulation info:
+┌ Info: Simulation info
+│   job_id = "c0_sphere_audit"
+└   output_dir = "output/c0_sphere_audit/output_0000"
+
+# Every distinct warning, first occurrence, first line only:
+┌ Warning: `ρe_tot` is non-positive over 43.27600052941769% of the domain volume at initialization. The energy source tags divide by it to get each tag's donor share, so the shares are undefined there and `energy_source_fraction` returns zero rather than a meaningful number. Moist total energy has no physical zero, so this usually means the chosen thermodynamic or gravitational reference puts part of the domain below it. Tag values elsewhere are still computed, but they are conditional on that reference. Enable `energy_source_closure_check` to keep watching it during the run.
+┌ Warning: energy_source tag parent is non-positive over 43.27600052941769% of the domain volume, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+┌ Warning: energy_source tag closure residual X exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c0_sphere_audit/output_0000/energy_source_tag_closure.csv.
+
+# The last progress report and the end of the run:
+│   n_steps_completed = 200
+│   wall_time_per_step = "1 second, 607 milliseconds"
+│   wall_time_total = "5 minutes, 47 seconds"
+│   wall_time_remaining = "25 seconds, 720 milliseconds"
+│   wall_time_spent = "5 minutes, 21 seconds"
+│   percent_complete = "92.6%"
+│   estimated_sypd = "0.681"
+│   instantaneous_sypd = "0.683"
+│   date_now = 2026-09-10T13:37:42.934
+└   estimated_finish_date = 2026-09-10T13:38:08.934
+┌ Warning: energy_source tag closure residual 0.015164934071442883 exceeds the configured tolerance 1.0e-6 at t = 82800.0 s. The tags no longer account for the field they partition; see output/c0_sphere_audit/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:779
+┌ Warning: energy_source tag parent is non-positive over 43.27600052941769% of the domain volume at t = 82800.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:788
+┌ Info: Progress
+│   simulation_time = "23 hours, 33 minutes"
+│   n_steps_completed = 212
+│   wall_time_per_step = "1 second, 607 milliseconds"
+│   wall_time_total = "5 minutes, 47 seconds"
+│   wall_time_remaining = "6 seconds, 428 milliseconds"
+│   wall_time_spent = "5 minutes, 40 seconds"
+│   percent_complete = "98.1%"
+│   estimated_sypd = "0.681"
+│   instantaneous_sypd = "0.685"
+│   date_now = 2026-09-10T13:38:02.122
+└   estimated_finish_date = 2026-09-10T13:38:09.121
+┌ Warning: energy_source tag closure residual 0.015424236987183062 exceeds the configured tolerance 1.0e-6 at t = 86400.0 s. The tags no longer account for the field they partition; see output/c0_sphere_audit/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:779
+┌ Warning: energy_source tag parent is non-positive over 43.27600052941769% of the domain volume at t = 86400.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:788
+[ Info: solve! walltime = 345.606
+[ Info: sypd: 0.685
+[ Info: wall_time_per_timestep: 1 second, 600 milliseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 4.57 GiB
+┌ Info: Tag-closure run finished
+│   simulation.job_id = "c0_sphere_audit"
+└   result.ret_code = :success
+┌ Info: Where it went
+│   config = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c0_sphere_audit.yml"
+└   simulation.output_dir = "output/c0_sphere_audit/output_0000"
+┌ Info: energy_source tag closure (25 rows)
+│   columns: time,total,tagged,residual,relative,gross_residual,gross_relative,scale,nonpositive_fraction
+│   first:   0.0,-9.63119002647646e22,-9.63119002647646e22,0.0,0.0,3.5855815234789494e6,2.094633402670219e-17,1.711794302004391e23,0.4327600052941769
+│   last:    86400.0,-9.664488099885372e22,-9.510168678248718e22,-1.5431942163665414e21,-0.009065314663249406,2.625677562741754e21,0.015424236987183062,1.702306289071926e23,0.4327600052941769
+└   path = "output/c0_sphere_audit/output_0000/energy_source_tag_closure.csv"
