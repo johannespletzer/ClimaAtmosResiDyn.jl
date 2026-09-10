@@ -456,18 +456,55 @@ the corrections keep absorbing it. What has stopped is the amplification.
 
 **Two things this run did not deliver.**
 
-  - **No `water_tag_audit.csv`, although `audit: true` is set** in the config
-    and in the copy committed beside the results. Either the model wrote it into
-    the scratch output directory and it was not copied back, or the audit is not
-    wired for the water family. `orphaned` and `overclaimed` are the columns
-    that would say which side a residual came from, and `summary_a.csv` carries
-    `final_overclaimed_relative` and `final_orphaned_relative` as NaN waiting for
-    them. The conclusions above do not depend on the audit, because
-    `nonpositive_fraction` and the signed residual already rule out the emptied
-    case, but it is the reading that would have settled it directly.
-  - **A5 is absent from `summary_a.csv` and the plots.** The summary added in
-    the same commit carries `a1_dt10_notags` and no A5 row, so `phase_a.jl` ran
-    before the files were copied in. Re-running it is all that is needed.
+### What the audit says, and one number that reframes the series
+
+`water_tag_audit.csv` came back on the second pass. It is the first audit table
+this series has produced on real data, and it settles by measurement what the
+paragraphs above could only infer.
+
+**The identity holds.** `untagged_relative` 1.3556e-4 plus
+`overclaimed_relative` 1.4307e-4 is 2.7863e-4, which is `gross_relative` in the
+closure table to the last digit. The relation the harness was built on is now
+confirmed against a model run rather than against randomised states.
+
+**The residual is balanced, not directional, and that is the reading that
+matters.** The two halves differ by 5% — the tags are very nearly as often
+slightly short of the parent as slightly over it. A runaway is one-sided by
+construction: before the fix this run was pure overclaim, tags holding water the
+parent did not have. A residual split evenly between the two directions is what
+transport leakage looks like, not what a failure looks like.
+
+**And the emptied-tags outcome is excluded directly.**
+`orphaned_relative` is **2.5e-9**, five orders of magnitude below the residual.
+Almost no mass sits in cells whose parent holds water while every tag is empty,
+so the removal floor is not holding closure by throwing tag content away.
+`orphaned_volume_fraction` is 0.032, so 3.2% of cells *are* orphaned by count
+while carrying 2.5e-9 of the mass: they are essentially empty cells, a
+rounding-level artifact. There is one transient — orphaned mass falls from
+8.69e9 at 5 h to 4.89e7 at 6 h, a factor of 178, while the volume fraction goes
+on rising — which is the early adjustment settling out.
+
+**The number that reframes things.** `nonpositive_mass_fraction` is
+**2.77e-7** where `nonpositive_fraction` is **0.351**. So 35% of cells hold
+non-positive water and they carry three ten-millionths of the water. The count
+fraction exceeds the mass fraction by a factor of 1.3 million. For the water
+family, "a third of the domain is non-positive" is a statement about vanishingly
+dry upper-atmosphere cells and almost nothing else.
+
+**It cuts the other way for energy, which sharpens C0 rather than softening
+it.** C0's 43.276% on the sphere is also a count fraction, but `where_negative.jl`
+placed the non-positive region at every level from 250 m to 11.0 km — the
+troposphere, which holds most of the atmosphere's mass. The same headline
+percentage therefore means opposite things in the two families: for water a
+rounding artifact, for energy the bulk of the field. Nobody has measured the
+energy family's mass fraction, and `c0_sphere_deep` is the only configured run
+that would produce it. That makes it worth more than the low priority it
+currently carries.
+
+**One thing still outstanding.** `summary_a.csv` now has its A5 row but its
+`final_overclaimed_relative` and `final_orphaned_relative` are still NaN,
+because `phase_a.jl` ran between the results landing and the audit table
+landing. One more pass fills them.
 
 **What the ledger means now, and why the operator residual is unaffected.** The
 identity `analysis/reduce_run.jl` rests on — that `q_tag_res + Σᵢ q_tag_fix_i`

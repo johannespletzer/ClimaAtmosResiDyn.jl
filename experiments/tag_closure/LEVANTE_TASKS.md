@@ -109,34 +109,29 @@ export JULIA_DEPOT_PATH="$HOME/.julia/depots/levante-cpu"
 The depot export matters. The runscripts use that depot, so an instantiate or a
 script run under a different one will not be seen by a batch job.
 
-## 1. Two loose ends from the A5 re-run
+## 1. One more `phase_a.jl` pass
 
-The run itself is done and the fix is confirmed. Neither of these changes the
-conclusion; both are cheap and one of them is a possible bug.
-
-**a. The audit table is missing.** `a5_sphere_limiter.yml` sets `audit: true`,
-and the copy committed beside the results has it too, but no
-`water_tag_audit.csv` came back. Check the scratch output directory first:
-
-```bash
-ls ~/git/ClimaAtmosResiDyn.jl/output/a5_sphere_limiter/output_0001/
-```
-
-If it is there, copy it in beside the other files and the two NaN columns in
-`summary_a.csv` fill themselves. **If it is not there, that is a bug** — the
-audit is requested and not written — and it is worth an issue, because the audit
-is the diagnostic that separates a residual from a runaway on sight and nothing
-else does.
-
-**b. A5 is not in the summary or the plots.** `summary_a.csv` carries
-`a1_dt10_notags` and no A5 row, so `phase_a.jl` ran before the A5 files were
-copied in. One command:
+Both loose ends from the re-run are closed. The audit table came back and A5 is
+in `summary_a.csv`. What is left is that the two ran in the wrong order, so the
+summary's `final_overclaimed_relative` and `final_orphaned_relative` are still
+NaN. One command:
 
 ```bash
 julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_a.jl
 ```
 
-Do it after (a), so the run only has to be reduced once.
+**The audit is worth reading before that.** It confirms the fix directly rather
+than by inference. `untagged_relative` 1.3556e-4 plus `overclaimed_relative`
+1.4307e-4 is exactly the closure table's `gross_relative`, so the two halves are
+balanced to within 5% — a runaway is one-sided, this is not. `orphaned_relative`
+is 2.5e-9, five orders below the residual, so the removal floor is not holding
+closure by discarding tag content. That was the one outcome `gross_relative`
+could not distinguish, and it is now excluded by measurement.
+
+And `nonpositive_mass_fraction` is 2.77e-7 against a `nonpositive_fraction` of
+0.351 — a factor of 1.3 million. For water, "a third of the domain is
+non-positive" is about vanishingly dry cells and nothing else. See *Lower
+priority*, where this changes a judgement.
 
 ## 2. Write the C1 TOML, which is now a three-line change
 
@@ -223,26 +218,32 @@ So the alternative `energy_source_tags.md` names is demonstrated rather than
 merely available, on exactly the configuration where the tags are inert, and it
 is reference-independent so nothing about C1 can touch it.
 
-## 4. The timing controls — run, but not yet readable
+## 4. The timing controls — one more copy, and my instruction was wrong
 
-Both jobs ran. `a1_dt10_notags` and `c0_column_notags` came back with only
-`.yml` and `provenance.txt`, no `.out`, so there is no `sypd` and no
-`wall_time_per_timestep` to compare. Copying the two logs in is all that is
-needed:
+Both jobs ran and the `.out` files came back. **The timing is not in `.out`.**
+ClimaAtmos logs through `@info`, which Julia sends to stderr, so `sypd` and
+`wall_time_per_timestep` are in the `.err` file. My earlier instruction said
+`.out` and that was my mistake.
+
+The SLURM `.err` lands wherever the job was submitted from, which for these two
+was `phase_timer/` rather than the output directory. So find them first:
 
 ```bash
-cp ~/git/ClimaAtmosResiDyn.jl/output/a1_dt10_notags/output_*/*.out \
-   experiments/tag_closure/output/a1_dt10_notags/
-cp ~/git/ClimaAtmosResiDyn.jl/output/c0_column_notags/output_*/*.out \
-   experiments/tag_closure/output/c0_column_notags/
+find ~/git/ClimaAtmosResiDyn.jl -name '*2736858[67]*.err'
 ```
 
-The job wall times in `provenance.txt` cannot substitute. They give 235 s
-against 295 s and 243 s against 295 s, but `a1_dt10` is one hour and
-`c0_column` is a full day and both took 295 s, so compilation dominates and
-those numbers compare compile time rather than tag cost. `a1_dt10` reported
-`sypd 3.012` and 9 ms per timestep; that is the figure the controls have to be
-read against.
+then copy each beside its `.out`, in
+`experiments/tag_closure/output/a1_dt10_notags/` and
+`experiments/tag_closure/output/c0_column_notags/`. Job 27368586 is
+`a1_dt10_notags`, 27368587 is `c0_column_notags`.
+
+**What to compare against.** `a1_dt10` reports `solve! walltime = 3.337`,
+`sypd: 2.956`, `wall_time_per_timestep: 9 milliseconds, 269 microseconds`.
+
+**And note what that implies about the job wall times.** The solve is 3.3
+seconds inside a job that took 295 s. Compilation is more than 98% of these
+jobs, which is why the provenance timestamps — 235 s against 295 s, 243 s
+against 295 s — cannot be read as a tag cost at all. Only the `.err` figures can.
 
 ## After any batch job
 
@@ -272,15 +273,23 @@ Then the phase script, `phase_a.jl` or `phase_c.jl` as appropriate.
 
 ## Lower priority
 
-**`c0_sphere_deep`, the 60 km sphere.** It was written to separate a domain
-artifact from a property of the reference, and `where_negative.jl` already
-answered that: the sign change is at the tropopause, not at the domain top, so a
-deeper domain adds positive levels above and lowers the fraction without
-changing anything physical. It keeps one distinct value — it now sets
-`audit: true`, and `nonpositive_mass_fraction` is the share of the field's
-*mass* that sits where the shares are undefined, which nothing else here can
-produce. `where_negative.jl` works on the remapped lat-lon grid and has no cell
-volumes, so it says where the field is negative but not how much of it is.
+**`c0_sphere_deep`, the 60 km sphere — promoted by the A5 audit.** It was
+written to separate a domain artifact from a property of the reference, and
+`where_negative.jl` already answered that: the sign change is at the tropopause,
+not at the domain top, so a deeper domain adds positive levels above and lowers
+the fraction without changing anything physical.
+
+It keeps one distinct value, and A5 has just shown what that value is worth. It
+sets `audit: true`, and `nonpositive_mass_fraction` is the share of the field's
+own *magnitude* sitting where the shares are undefined. On A5 that number was
+2.77e-7 against a count fraction of 0.351 — a factor of 1.3 million — so for
+water the alarming count fraction is almost entirely empty cells. For energy it
+should go the other way, because `where_negative.jl` put the non-positive region
+in the troposphere where the mass is. But **nobody has measured it**, and C0's
+43.276% is quoted throughout this series as a count fraction with no
+mass-weighted companion. This run is the only one configured to produce one.
+`where_negative.jl` cannot: it works on the remapped lat-lon grid and has no
+cell volumes, so it says where the field is negative but not how much of it is.
 
 ## Not yet, and why
 
