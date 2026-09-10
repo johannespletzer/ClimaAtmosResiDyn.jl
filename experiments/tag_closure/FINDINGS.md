@@ -655,12 +655,13 @@ Kept because a later reader will otherwise re-derive them.
     with the limiter off and `disable_surface_flux_tendency: true`, would test
     the surface-flux code path, about 15 minutes on `hpda2_test`. It matters
     less once item 1 runs, because item 1 leaves the model alone.
- 3. **Decide what C1 says about the family.** C1 answers its question. With a
-    positive reference the donor rule runs everywhere, and the residual stops
-    being directional and falls to 0.70 of the unshifted one (E11, E12). It does
-    not keep the tags non-negative (E14), and it cannot make the reading
-    meaningful (E10). Whether that is enough to keep the source tags, or the
-    process record of C3 (E9) becomes the recommendation, is the owner's call.
+ 3. **Decided: keep both.** On 2026-09-10 the owner decided to keep the energy
+    source tags, and made keeping both them and the process record the main
+    goal. They answer different questions: the tags say where the energy
+    present came from, and the record says what each process did (E9). The
+    offset makes the tags' donor rule run everywhere without touching the model
+    (E17). What is left before the tags are operational is task 1b of the task
+    list.
  4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
     and the energy family has no rescale. C1 solved a simulated day in 5.8
     minutes on this grid, so ten days is about an hour of solve if B1 runs at

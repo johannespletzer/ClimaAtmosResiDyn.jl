@@ -70,8 +70,10 @@ one agent has worked this branch at once.
     approval, and it matters less now that C4 leaves the model alone.
   - **PR #65** has `main` merged in, with both sides of `NEWS.md` kept, at the
     owner's request. Check its CI before anything else touches it.
-  - **What C1 and C4 mean for the family** is the owner's call (FINDINGS §8).
-    The tags still go negative, with or without a positive total.
+  - **The owner decided to keep both** the energy source tags and the process
+    record, as the main goal (FINDINGS §8). Task 1b of the task list names what
+    is left to make the tags operational, and the offset has its own pull
+    request, stacked on #65.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for

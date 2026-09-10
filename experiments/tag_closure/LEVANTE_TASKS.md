@@ -134,6 +134,35 @@ limits.
     to 3.7e-8. A remainder is left. One more twin that adds
     `disable_surface_flux_tendency: true` would test the surface-flux code path.
 
+## 1b. Making the energy source tags operational
+
+**The owner's decision, 2026-09-10: keep both** the energy source tags and the
+process record, as the main goal. The tags say where the energy present came
+from, and the record says what each process did.
+
+What stands between the tags and operational use, in the order to do it:
+
+ 1. **PR #65**, the #64 fix and the closure audit. The offset builds on the
+    audit, so this lands first.
+ 2. **`energy_source_tag_offset`**, in its own pull request stacked on #65.
+ 3. **Precipitation on the implicit path** does not reach the source tags. Only
+    the explicit path is bracketed for this family, so the 0M sink's energy
+    leaves the parent unattributed. This is C2, and it needs a code change.
+ 4. **Negative tags.** The tags are exempt from both tracer limiters and have no
+    partition repair, so they go negative (E14, E19). The water tags' additive
+    repair from #64 is the pattern to adapt.
+ 5. **The transport mismatch.** `ρe_tot` moves as enthalpy, pressure work
+    included, and the tags as passive tracers, which is most of the residual
+    (E13). Either the tags learn the enthalpy form, or the residual is
+    documented with a calibrated tolerance.
+ 6. **A calibrated closure tolerance.** The default 1e-6 warns every hour on a
+    residual that reaches 3.8e-3 in a day on the sphere (E15, E18).
+ 7. **An integration test of the loss half.** With an offset the donor loss runs
+    through a real solve, which no test checks yet. `analysis/offset_smoke.jl`
+    is the starting point.
+ 8. **Sub-grid transport and GPU.** The tags are grid-scale only, and neither
+    the family nor the offset has run on a GPU.
+
 ## 2. C1 — done
 
 **Ran 2026-09-10 on terrabyte, approved the same day**, at `72a1bc6`, SLURM job

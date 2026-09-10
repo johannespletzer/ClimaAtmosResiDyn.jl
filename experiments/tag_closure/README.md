@@ -58,8 +58,9 @@ slightly, mostly through the van Leer energy limiter (E16).
 
 **C4 has run too.** `energy_source_tag_offset` gives the tags the same positive
 total without touching the model, and it reproduces C1's tag results (E17 to
-E19). What is left to decide is whether this family, whose tags still go
-negative, is worth keeping over the process record of C3.
+E19). The owner has decided to keep both the energy source tags and the
+process record, and task 1b of the task list names what is left to make the
+tags operational.
 
 **C2** needs approval and a code change, and no configuration for it is
 written.
