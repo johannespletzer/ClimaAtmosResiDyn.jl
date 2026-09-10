@@ -218,32 +218,34 @@ So the alternative `energy_source_tags.md` names is demonstrated rather than
 merely available, on exactly the configuration where the tags are inert, and it
 is reference-independent so nothing about C1 can touch it.
 
-## 4. The timing controls — one more copy, and my instruction was wrong
+## 4. The timing controls — measured, and the number needs one more file
 
-Both jobs ran and the `.out` files came back. **The timing is not in `.out`.**
-ClimaAtmos logs through `@info`, which Julia sends to stderr, so `sypd` and
-`wall_time_per_timestep` are in the `.err` file. My earlier instruction said
-`.out` and that was my mistake.
+The `.err` files came back and the A1 pair reads clean:
 
-The SLURM `.err` lands wherever the job was submitted from, which for these two
-was `phase_timer/` rather than the output directory. So find them first:
+| | tagged | untagged | ratio |
+|:-------------------- |:------- |:-------- |:----- |
+| `solve! walltime` | 3.337 s | 0.548 s | 6.09 |
+| `sypd` | 2.956 | 17.992 | 6.09 |
+| per timestep | 9.269 ms | 1.522 ms | 6.09 |
+
+**Do not read 6.1× as the cost of the tags.** `a1_dt10` runs
+`water_closure_check` at `period: "10secs"` against a `dt` of 10 s, so a global
+reduction fires on every timestep, and diagnostics every 60 s on top. That is a
+diagnostic choice, not what carrying tags costs.
+
+**The C0 pair is the measurement that would settle it** — three source tags with
+the closure check and diagnostics both hourly, over 8640 steps instead of 360 —
+and it is one file short. `c0_column`'s `.err` was never committed, and neither
+was any other tagged run's except `a1_dt10`:
 
 ```bash
-find ~/git/ClimaAtmosResiDyn.jl -name '*2736858[67]*.err'
+find ~/git/ClimaAtmosResiDyn.jl -name '*27361326*.err'   # c0_column
+find ~/git/ClimaAtmosResiDyn.jl -name '*27367733*.err'   # c3_column_record
 ```
 
-then copy each beside its `.out`, in
-`experiments/tag_closure/output/a1_dt10_notags/` and
-`experiments/tag_closure/output/c0_column_notags/`. Job 27368586 is
-`a1_dt10_notags`, 27368587 is `c0_column_notags`.
-
-**What to compare against.** `a1_dt10` reports `solve! walltime = 3.337`,
-`sypd: 2.956`, `wall_time_per_timestep: 9 milliseconds, 269 microseconds`.
-
-**And note what that implies about the job wall times.** The solve is 3.3
-seconds inside a job that took 295 s. Compilation is more than 98% of these
-jobs, which is why the provenance timestamps — 235 s against 295 s, 243 s
-against 295 s — cannot be read as a tag cost at all. Only the `.err` figures can.
+Copy each beside its run's other files. The untagged half is already known:
+`sypd` 27.779 at 986 µs per timestep. If the SLURM logs have been cleaned up,
+say so and the pair can be re-run cheaply instead.
 
 ## After any batch job
 
