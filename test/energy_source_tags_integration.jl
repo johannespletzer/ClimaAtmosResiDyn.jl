@@ -15,7 +15,10 @@ family is wired into a simulation at all, which is what this file covers:
  6. masked *production* reaches a source tag through a real bracketed process,
     which is the one thing here that a plain-array unit test cannot show;
  7. with `energy_source_tag_offset`, the donor-proportional *loss* runs through
-    the same solve, and the offset leaves the model's own state untouched.
+    the same solve, and the offset leaves the model's own state untouched;
+ 8. under 1-moment microphysics, sedimentation moves the tags with the water.
+    The partition's fluxes add up to the parent's, and each face takes the
+    shares of the cell that loses the energy, in either direction.
 
 Items 1 to 6 run on `ρe_tot` itself. It is non-positive across this column, so
 `energy_source_fraction` returns zero and the loss never runs there. Production
@@ -223,9 +226,16 @@ import ClimaAtmos as CA
         # the column integral of the residual keeps only what the processes
         # left unmatched. Without the loss half, that is every loss the tags
         # never took, and the tags hold more than the parent. With it, they
-        # follow the parent down. A smoke run of this column over 120 s found
-        # the offset cut this integral 19-fold, while the balanced part of the
-        # residual, the transport mismatch, was the same in both runs.
+        # follow the parent down. At this test's 20 s the integral is
+        # -2,382 J/m² without the loss half and -120 J/m² with it, a factor of
+        # 19.9, so the bound of 5 leaves a factor of four. Over 120 s the
+        # factor is 19.2.
+        #
+        # Both are absolute integrals on purpose. Each counts unmatched
+        # increments in J/m², and the size of the parent does not enter it.
+        # Dividing each by its own ∫|parent| would divide the ratio by the
+        # ratio of the two parents' sizes, 6.5 here, which has nothing to do
+        # with the loss half.
         signed_residual(Y, c) =
             sum(Y.c.ρe_tot .+ c .* Y.c.ρ) -
             sum(Y.c.ρe_src_strat .+ Y.c.ρe_src_tropo)
@@ -246,5 +256,102 @@ import ClimaAtmos as CA
         )
         @test all(isfinite, parent(ledger))
         @test minimum(parent(ledger)) >= 0
+    end
+
+    # 8. Sedimentation moves the tags. Under 1-moment microphysics the cloud and
+    # the rain fall, and each face's energy flux is shared out by the shares of
+    # the cell that loses the energy. What makes that transport is that the
+    # partition's fluxes add up to the parent's, so sedimentation adds nothing
+    # to `e_src_res`.
+    @testset "Sedimentation moves the tags with the water" begin
+        c = 50000.0
+        sedimentation_simulation = CA.get_simulation(
+            CA.AtmosConfig(
+                merge(
+                    test_dict,
+                    Dict{String, Any}(
+                        "microphysics_model" => "1M",
+                        # Cloud liquid falls at a fixed speed by default. The
+                        # diagnostic speed is nonzero wherever there is cloud.
+                        "fixed_terminal_velocity_liquid" => false,
+                        "energy_source_tag_offset" => c,
+                        "t_end" => "60secs",
+                        "output_dir" => mktempdir(pwd()),
+                    ),
+                );
+                job_id = "energy_source_tags_integration_sedimentation",
+            ),
+        )
+        result = CA.solve_atmos!(sedimentation_simulation)
+        @test result.ret_code == :success
+        Y = sedimentation_simulation.integrator.u
+        p = sedimentation_simulation.integrator.p
+        t = sedimentation_simulation.integrator.t
+
+        # Sedimentation alone, into a zeroed tendency. The tags partition
+        # `E = ρe_tot + c·ρ`, so theirs must add up to the tendency of that.
+        Yₜ = zero(Y)
+        CA.vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
+        ᶜE_tendency = @. Yₜ.c.ρe_tot + c * Yₜ.c.ρ
+        scale = maximum(abs, parent(ᶜE_tendency))
+        # Something fell, or the rest is vacuous.
+        @test scale > 0
+        ᶜpartition_tendency = @. Yₜ.c.ρe_src_strat + Yₜ.c.ρe_src_tropo
+        @test maximum(
+            abs,
+            parent(ᶜpartition_tendency) .- parent(ᶜE_tendency),
+        ) < 100 * eps(FT) * scale
+        @test all(isfinite, parent(Yₜ.c.ρe_src_rad))
+
+        # The donor. DYCOMS is warm, so the water carries positive energy, and
+        # the energy falls with it. Ice can carry negative energy against the
+        # reference plus the offset, and then the energy flux points up while
+        # the water falls. Both directions are checked on a step partition,
+        # all of `E` above 750 m in `strat` and all below in `tropo`, moved by
+        # a flux of one sign in a band around the step. With no water given,
+        # the offset adds nothing, and the flux is exactly the one set here.
+        ᶜz = CA.Fields.coordinate_field(Y.c).z
+        Y_step = copy(Y)
+        ᶜE = @. Y_step.c.ρe_tot + c * Y_step.c.ρ
+        @. Y_step.c.ρe_src_strat = ifelse(ᶜz > 750, ᶜE, FT(0))
+        @. Y_step.c.ρe_src_tropo = ᶜE - Y_step.c.ρe_src_strat
+        CA.energy_source_share_norm!(p, Y_step)
+        ᶜJ = CA.Fields.local_geometry_field(Y.c).J
+        ᶠJ = CA.Fields.local_geometry_field(Y.f).J
+        ᶠρ = @. CA.ᶠinterp(Y_step.c.ρ * ᶜJ) / ᶠJ
+        ᶜnone = zero.(Y_step.c.ρ)
+        above = parent(ᶜz) .> 750
+        for direction in (-1, 1)
+            ᶜflux = @. ifelse((ᶜz > 500) & (ᶜz < 1000), direction * FT(1000), FT(0))
+            Yₜ_step = zero(Y_step)
+            CA.sediment_energy_source_tags!(
+                Yₜ_step,
+                Y_step,
+                p,
+                ᶜnone,
+                ᶜnone,
+                ᶜflux,
+                ᶠρ,
+            )
+            ᶜparent_tendency = @. -CA.ᶜprecipdivᵥ(
+                ᶠρ * CA.ᶠtop_bias(CA.Geometry.WVector(ᶜflux)),
+            )
+            strat = parent(Yₜ_step.c.ρe_src_strat)
+            tropo = parent(Yₜ_step.c.ρe_src_tropo)
+            @test maximum(abs, strat .+ tropo .- parent(ᶜparent_tendency)) <
+                  100 * eps(FT) * maximum(abs, parent(ᶜparent_tendency))
+            if direction < 0
+                # The energy falls, and the cell above is the donor. So `tropo`
+                # never reaches above the step, and `strat` reaches only the
+                # first cell below it.
+                @test all(iszero, tropo[above])
+                @test count(!iszero, strat[.!above]) == 1
+            else
+                # The energy rises, and the cell below is the donor: the mirror
+                # image.
+                @test all(iszero, strat[.!above])
+                @test count(!iszero, tropo[above]) == 1
+            end
+        end
     end
 end

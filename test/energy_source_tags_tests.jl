@@ -410,6 +410,32 @@ import ClimaAtmos as CA
         @test_throws ErrorException CA.energy_source_repair_from_config("false")
     end
 
+    @testset "Sedimentation shares ($FT)" for FT in (Float32, Float64)
+        # A partition that holds all of a total of 10. The shares are the
+        # fractions themselves, and they add up to one.
+        total = FT(10)
+        tags = FT[6, 3, 1]
+        norm = sum(CA.energy_source_fraction.(tags, total))
+        shares = CA.energy_source_sediment_share.(tags, total, norm)
+        @test shares ≈ FT[0.6, 0.3, 0.1]
+        @test sum(shares) ≈ 1
+        # One tag is negative. The clamp drops it, and dividing by the sum of
+        # the shares hands its part of the flux to the others. So the shares
+        # still add up to one, and the partition's fluxes to the parent's.
+        tags = FT[6, 3, -1]
+        norm = sum(CA.energy_source_fraction.(tags, total))
+        shares = CA.energy_source_sediment_share.(tags, total, norm)
+        @test shares ≈ FT[2 / 3, 1 / 3, 0]
+        @test sum(shares) ≈ 1
+        # Where no tag holds a positive share, nothing moves, and there is no
+        # NaN.
+        @test CA.energy_source_sediment_share(FT(1), FT(-5), FT(0)) == 0
+        # A tag that carries a source keeps its plain, clamped share.
+        @test CA.energy_source_source_sediment_share(FT(2), total) ≈ FT(0.2)
+        @test CA.energy_source_source_sediment_share(FT(-2), total) == 0
+        @test CA.energy_source_source_sediment_share(FT(20), total) == 1
+    end
+
     @testset "AtmosModel integration" begin
         model = CA.AtmosModel()
         @test isnothing(model.energy_source_tagging_model)

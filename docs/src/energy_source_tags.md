@@ -72,10 +72,24 @@ changes no share and shrinks every tag by the same fraction.
 
 `precipitation`, the sedimentation of precipitating species, is not bracketed
 for these tags, although the `ρe_tag_*` family attributes it. Sedimentation
-moves energy from level to level with the falling water. Bracketed, what
-arrives in a cell would count as new energy that entered through precipitation,
-when it was only moved. For a tag that says where energy came from, that is
-transport rather than a source, and it shows up in `e_src_res`.
+moves energy from level to level with the falling water, and bracketed, what
+arrives in a cell would count as new energy. So the tags follow it as transport
+instead. Each face's energy flux, with `c` times the mass it carries under an
+offset, is shared out by the shares of the cell that loses the energy:
+
+  - where the water falls with positive energy, that is the cell above;
+  - where it carries negative energy against the reference plus offset, as ice
+    can, the energy flux points up while the water falls, and it is the cell
+    below;
+  - at the surface, the lowest cell's shares are kept.
+
+The partition tags' shares add up to one, so their fluxes add up to the
+parent's, and sedimentation adds nothing to `e_src_res`. Two conditions come
+with it. It needs an offset: a share is zero wherever the total is not
+positive, and there the tags would not move, which the model warns about at
+initialization. And the tags have no Jacobian block for it, so within a step
+they lag the parent's implicit flux slightly, and that gap lands in
+`e_src_res`.
 
 ## Negative tags, and the repair
 
