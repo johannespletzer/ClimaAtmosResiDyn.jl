@@ -27,7 +27,8 @@
 #     residual sums only the pure region tags.
 #   - **`gross_relative` is NOT comparable with `c0_sphere`'s.** The closure
 #     check normalises by the integral of |rho_e_tot|, which the shift grows by
-#     roughly 2.2x, so the same absolute residual reports a smaller relative one.
+#     2.85x (measured on this run, FINDINGS E15), so the same absolute residual
+#     reports a smaller relative one.
 #     A number that looks better here may be an artifact of the denominator. The
 #     absolute `gross_residual` column is the one to compare.
 #

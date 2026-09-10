@@ -6,9 +6,11 @@ from. The reasoning is in [LEARNINGS.md](LEARNINGS.md), one entry per run; the
 C1 argument is in [C1_reference_shift.md](C1_reference_shift.md); what to run
 next is in [LEVANTE_TASKS.md](LEVANTE_TASKS.md).
 
-State as of 2026-09-10 on `claude/tag-closure-experiments`. 19 of the 28
-configured runs are live in `output/`. Phase A and phase C are complete except
-for C1 and C2, which need approval.
+State as of 2026-09-10 on `claude/tag-closure-experiments`. 20 of the 28
+configured runs are live in `output/`. The latest is C1, which ran on LRZ
+terrabyte. Phase A and phase C are complete except for C2, which needs a code
+change and approval. `c0_sphere_audit` has a second reading, from terrabyte, in
+`output/c0_sphere_audit/terrabyte/`.
 
 A finding here is something a run measured. Where a claim is bounded — one
 geometry, one resolution, an uncontrolled comparison — the bound is part of the
@@ -205,6 +207,67 @@ reference, so a shift relocates the arbitrariness rather than removing it. C1
 can test whether a well-posed donor *rule* is achievable; it cannot test whether
 the reading is meaningful.
 
+**E11. Under C1's shift the parent is positive everywhere, all day.**
+`nonpositive_fraction` and `nonpositive_mass_fraction` are 0.0 at every hourly
+sample, and so is `orphaned`. So for the first time in this series the loss half
+of the donor rule runs over the whole domain. `energy_source_tags.md` says that
+donor-proportional loss through a real bracketed solve "is not validated",
+because no configured run had a positive reference. C1 is that run. The shifted
+atmosphere is not exactly the unshifted one: they differ by up to 1.1e-3 in
+`uₕ` over the day (E16), far less than the closure differences E12 to E15 read.
+*C1, read against `c0_sphere_audit` re-run on the same machine, as are E12 to
+E15.*
+
+**E12. With the loss running, the residual stops being directional and grows
+more slowly.** The audit's overclaim-to-undertag ratio stays between 1.002 and
+1.033 all day, where the unshifted run climbs from 1.49 at 3 h to 3.85 at 24 h.
+The absolute `gross_residual` at 24 h is 1.846e21 against 2.626e21, 0.70 of the
+unshifted value. After the first hour it grows 48%, where the unshifted one
+grows 113%. So what the shift removes is the production-without-loss part of the
+residual (E9c). *C1.*
+
+**E13. Both runs make the same jump in the first hour, so that part does not
+depend on the reference.** `gross_residual` goes from about 1e7 at t = 0 to
+1.2485e21 in C1 and 1.2343e21 unshifted at 1 h, 1.2% apart. In C1 that first
+hour is 68% of the day's residual. `energy_source_tags.md` names a candidate that
+does not depend on the reference: `ρe_tot` is transported as enthalpy, pressure
+work included, while the tags ride the passive-tracer path, and the two fluxes
+differ by `p·u`. That fits every number here, but no run has isolated it, so it
+is a reading and not a measurement. *C1.*
+
+**E14. A positive parent does not keep the tags non-negative.** The source tag
+`sfc` reaches −219.9 J kg⁻¹ at 24 h, against −209.2 unshifted. The region tags
+reach −11,575 (`tropics`, at 7 h) and −9,632 (`extratropics`, at 4 h) while the
+parent is positive everywhere. So the non-positive parent is not what makes E2's
+source tag negative: with it removed, the tag is as negative as before. The
+design page names two other routes, the finite-step donor loss and unlimited
+explicit transport with no partition repair. Which one it is here is not
+established. Minima of the remapped lat-lon field, like every sphere number in
+this series. *C1.*
+
+**E15. `gross_relative` improves 4.06×, and 2.85× of that is the scale.** It is
+0.00380 against 0.01542 at 24 h. The normalising `∫|ρe_tot|` is 2.84× larger at
+t = 0 and 2.85× at 24 h, which is R11's trap, measured. The absolute ratio of
+E12, 0.70, is the comparison that means something. *C1.*
+
+**E16. The shift is not a pure relabelling in the discrete model.**
+`run_c1_twin.jl` runs C1's configuration with and without the shift in one
+process and compares the prognostic state. At t = 0 the two agree exactly, and
+`ρe_tot` differs by the predicted shift to 5.5e-16. After one 400 s step they
+differ by 3.8e-5 in `ρ`, 7.8e-6 in `ρq_tot`, 1.3e-4 in `uₕ` and 3.5e-4 in `u₃`,
+each relative to the field's own maximum. They are this size after a single
+step, so the step makes them; they are not amplified rounding. Over the day `ρ`
+stays near 3e-5 while the others grow: `ρq_tot` to 1.1e-4, `uₕ` to 1.1e-3, and
+`u₃`, which is small, to 6.2e-2. `c1_acceptance.jl` found the Thermodynamics
+functions and the surface flux formula invariant, so the cause is elsewhere in
+the step. The leading candidate is the implicit solve. C1 takes one Newton
+iteration per stage (`max_newton_iters_ode: 1`, `use_newton_rtol: false`), so
+the step depends on the approximate Jacobian, and that Jacobian carries `T_0`
+and `e_int_v0` directly (`manual_sparse_jacobian.jl:694-701`, `:835`, `:1805`).
+An iterative saturation adjustment is the other candidate. Neither is
+established. *Twin test, SLURM job `13383683` on terrabyte,
+`output/twin_c1/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -281,9 +344,10 @@ as `e` approaches `−c` — over exactly the region the shift exists to fix.
 clear the tropospheric minimum (E6) so it cannot be small; the discriminating
 part of a source tag's share goes as `1/(e + c)`, so the donor rule becomes
 several times less discriminating where it already works; and the closure check
-normalises by `∫|ρe_tot|`, which the shift grows about 2.2×, so the same absolute
+normalises by `∫|ρe_tot|`, which the shift grows 2.85×, so the same absolute
 residual reports a smaller relative one and would read as an improvement that did
-not happen.
+not happen. *The 2.85× is measured on C1 (E15). Before C1 ran it was recorded
+here as about 2.2× (§6).*
 
 ## 4. Cost
 
@@ -338,6 +402,11 @@ right way — the run carrying the extra physics is still the faster per step �
 but the gap is not step count alone. Each pair in T2 and T4 is internally
 controlled, which is why the ratios are read within a pair and never across.
 
+**T6. The reference shift costs nothing.** C1's `solve! walltime` is 349.0 s
+against 345.6 s for its unshifted baseline, 1.0% apart, with `sypd` 0.678
+against 0.685. The two ran at the same time on the same node. *C1, jobs
+`13383684` and `13383685` on terrabyte.*
+
 ## 5. Method
 
 **M1. Volume fractions and mass fractions can differ by six orders of
@@ -386,6 +455,17 @@ negative source-labelled tag in a column of its own. It warns on a source tag
 that goes negative, and on a region tag only if it goes negative while the
 parent stays positive. *C0, recomputed from `source_tag_extrema.csv`.*
 
+**M6. Levante and terrabyte agree to rounding, not bit for bit.** The terrabyte
+re-run of `c0_sphere_audit` differs from the Levante reading in the last digits
+from t = 0 on, and by at most 1.5e-14 in `gross_residual` over the day.
+`nonpositive_mass_fraction` at 24 h agrees to every digit. So for this
+configuration a run from either machine can be set beside one from the other,
+but a bit-for-bit comparison needs both runs on one machine. On one machine the
+runs are deterministic. Each half of the twin test reproduces its standalone
+run, C1 or the terrabyte baseline, in all 25 rows of the closure and audit
+tables, although it drops the diagnostics. *`c0_sphere_audit`, Levante and
+terrabyte, and the twin test.*
+
 ## 6. Claims that were made and then falsified
 
 Kept because a later reader will otherwise re-derive them.
@@ -421,6 +501,14 @@ Kept because a later reader will otherwise re-derive them.
     (R8).
   - **"A source tag went negative", naming `extratropics`.** That was
     `phase_c.jl` calling a region tag a source tag (M5).
+  - **"The shift grows `∫|ρe_tot|` about 2.2×".** C1 measures 2.84× at t = 0
+    and 2.85× at 24 h (E15), so `gross_relative` flatters the shifted run more
+    than R11 said.
+  - **E2's negative source tag as a product of the inert donor rule, and C1's
+    expectation that a positive parent would keep the tags non-negative.** E2
+    files the −209 J kg⁻¹ under "production therefore accumulates without
+    loss". With the loss running everywhere, the tag reaches −219.9 and the
+    region tags go negative too (E14).
 
 ## 7. What is not established
 
@@ -430,10 +518,15 @@ Kept because a later reader will otherwise re-derive them.
     Thermodynamics: over liquid, over ice and over the mixture ramp it is
     unchanged to 9.2e-16 from 150 K to 330 K (R8). Whether the *model* is
     invariant is the next item.
-  - Whether anything assumes `T_0 == T_triple`, or otherwise breaks the
-    invariance outside Thermodynamics. Nothing found by reading, but nothing
-    has ever moved them apart. `run_c1_twin.jl` tests it by running the model
-    with and without the shift.
+  - **What in a step depends on the reference (E16).** The shifted and
+    unshifted runs differ by 3.8e-5 in `ρ` after one step. A twin run with more
+    Newton iterations and a tolerance check would say whether the one-iteration
+    implicit solve is the cause. If the differences then fall to rounding, it
+    is. If they do not, saturation adjustment is next.
+  - **Why a tag goes negative under a positive parent (E14).** The finite-step
+    donor loss and unlimited explicit transport are both candidates.
+  - **What makes the residual's first-hour jump (E13).** The enthalpy-against-
+    tracer transport reading fits, but no run has isolated it.
   - `Float32` on a sphere (W4).
   - ~~Whether 1M changes the residual (W5).~~ Settled on a column: 7% down
     (W5b). A sphere, which reaches the horizontal branches, is still open.
@@ -444,23 +537,20 @@ Kept because a later reader will otherwise re-derive them.
 
 ## 8. Next
 
-Beyond the two clerical items in [LEVANTE_TASKS.md](LEVANTE_TASKS.md):
-
- 1. **C1.** Written and waiting on approval —
-    `toml/tag_closure_c1_reference.toml` and `configs/c1_sphere_shift.yml`, at
-    `δ` = −110 K. Nothing is outstanding but the decision. The only thing left
-    that can change the verdict on the source-tag family, and R7 and R8 make it
-    cheap and its result unambiguous.
- 2. **`c0_sphere_audit`.** `c0_sphere` with `audit: true` and nothing else, so
-    its mass-weighted non-positive fraction pairs with the 43.276% actually in
-    circulation, which M1 shows is the number that has been standing in for it.
-    `c0_sphere_deep` also carries the audit, but on a different grid and domain.
-    Neither needs approval.
- 3. **`a3_0m_vert_diff`.** Written and validated. `a1_dt10` with `vert_diff` on
-    and nothing else changed, so it differs from `a3_1m` in
-    `microphysics_model` alone and from `a1_dt10` in `vert_diff` alone. Two
-    single-key comparisons out of one column-hour, which is what W5 needs.
- 4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
-    and the energy family has no rescale. Whether it is worth ten days of queue
-    is a cost decision, not a risk one.
- 5. **C2.** Unchanged: needs a code change and approval.
+ 1. **Settle E16 before C1's numbers are quoted without its bound.** One twin
+    run with `max_newton_iters_ode` raised and `use_newton_rtol: true` says
+    whether the one-iteration implicit solve is what depends on the reference.
+    About 20 minutes on terrabyte's `hpda2_test`, and it needs the owner's
+    approval like every job.
+ 2. **Decide what C1 says about the family.** C1 answers its question. With a
+    positive reference the donor rule runs everywhere, and the residual stops
+    being directional and falls to 0.70 of the unshifted one (E11, E12). It does
+    not keep the tags non-negative (E14), and it cannot make the reading
+    meaningful (E10). Whether that is enough to keep the source tags, or the
+    process record of C3 (E9) becomes the recommendation, is the owner's call.
+ 3. **Phase B.** No technical objection left after W9 — B1 configures no limiter
+    and the energy family has no rescale. C1 solved a simulated day in 5.8
+    minutes on this grid, so ten days is about an hour of solve if B1 runs at
+    that speed, which fits `hpda2_test`'s two-hour limit. Whether it is worth
+    running is the owner's call.
+ 4. **C2.** Unchanged: needs a code change and approval.

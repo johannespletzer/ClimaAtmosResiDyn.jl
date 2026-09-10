@@ -813,5 +813,62 @@ tag is a share of what is present, so the two columns above are not the same
 quantity and their numbers should not be differenced. And a record needs one
 entry per process, whereas the tags partition whatever is there — the record
 tells you what radiation did, not what fraction of the energy here came from
-radiation. C1 is still the run that would say whether the second question can be
-made well posed at all.
+radiation. C1 has since run, and its entry follows. It makes the donor rule well
+posed, which is not the same as making the second question meaningful.
+
+## C1. The sphere under a positive energy reference
+
+Ran at `72a1bc6` on 2026-09-10, Intel Xeon Platinum 8380, `hpda2_test` on LRZ
+terrabyte, SLURM job `13383684`. It is `c0_sphere_audit` under
+`toml/tag_closure_c1_reference.toml`, which moves `T_0` down 110 K together with
+the two latent heats anchored on it. The baseline is `c0_sphere_audit` re-run on
+the same node at the same time, job `13383685`. The twin test is job
+`13383683`. All three were approved by the owner and submitted by the agent.
+
+**What C1 was for.** C0 found the donor rule inert over 43.276% of the sphere by
+volume and 78.4% by mass, because the share divides by a parent that is negative
+there. C1 asks whether the rule works once the parent is positive: does the
+residual stay bounded, and does every tag stay non-negative?
+
+**The shift did what it was built to do.** `analysis/c1_acceptance.jl` passes,
+the run's parameter log differs from the baseline's in exactly the three shifted
+entries, and `nonpositive_fraction` is 0.0 at every sample. For the first time
+in this series the loss half of the donor rule runs everywhere.
+
+**What improved.** The residual stops being directional. The audit's
+overclaim-to-undertag ratio stays between 1.002 and 1.033 all day, where the
+baseline climbs to 3.85. The absolute `gross_residual` at 24 h is 0.70 of the
+baseline's. After the first hour it grows 48%, where the baseline's grows 113%.
+Both runs jump to about 1.2e21 in the first hour, 1.2% apart, and that part the
+reference does not touch.
+
+**Barrier, part one: the tags still go negative.** The source tag `sfc` reaches
+−219.9 J kg⁻¹ at 24 h, against −209.2 in the baseline. The region tags reach
+−11,575 and −9,632 while the parent is positive everywhere. So the negative
+source tag C0 recorded was not caused by the undefined share, and no reference
+fixes it. `energy_source_tags.md` names two other routes, the finite-step donor
+loss and unlimited explicit transport. Which of them it is here is not
+established.
+
+**Barrier, part two: the shift is not a pure relabelling in the discrete
+model.** The twin test found the shifted and unshifted states 3.8e-5 apart in
+`ρ` after one step, and 1.1e-3 apart in `uₕ` by the end of the day. So C1
+measures a slightly different atmosphere, not only a different reference. The
+leading candidate is the implicit solve, which C1 runs with one Newton iteration
+and an approximate Jacobian that carries `T_0` directly. A twin with the solve
+converged would say. The size is far below the closure differences above, so it
+bounds C1's numbers rather than overturning them.
+
+**Read `gross_relative` with the scale.** It falls 4.06×, while the normalising
+`∫|ρe_tot|` grows 2.85×. The documents had estimated 2.2×.
+
+**Class.** Numerical: a negative tag and a residual, both now under a well-posed
+share. The twin's discrepancy is numerical too, if the Newton explanation holds.
+Not a cost: the shift changes the solve time by 1%, 349.0 s against 345.6 s.
+
+**Carry-over to the source tags.** This is the source tags. A positive reference
+makes their donor rule well posed and removes the directional part of their
+residual. It does not keep the tags non-negative, and it cannot make their
+reading meaningful (E10). The decision `energy_source_tags.md` names is now
+between a family whose rule runs but whose tags go negative, and the process
+record of C3, which reads what the tags cannot.

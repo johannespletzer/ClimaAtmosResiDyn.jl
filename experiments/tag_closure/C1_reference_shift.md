@@ -1,7 +1,9 @@
 # Which reference shift for C1
 
-A recommendation, not a decision. C1 still needs the owner's approval, but it no
-longer needs a model change: it is three TOML entries. This page says what the
+Written as a recommendation, before C1 ran. C1 was approved on 2026-09-10 and ran
+the same day on terrabyte, as the co-adjusted map below at `δ` = −110 K. What it
+measured is in [FINDINGS.md](FINDINGS.md), E11 to E16. It needed no model
+change, only three TOML entries. This page says what the
 two shapes in [the memo](../../docs/src/tag_closure_memo.md) actually do, why
 one of them should be dropped rather than costed, and what the reference change
 actually costs now that its arithmetic is pinned.
@@ -178,8 +180,9 @@ argument stands rather than evaporating.
 ### It flatters the number you would judge it by
 
 The closure check normalises by `scale = ∫|ρe_tot|`. Shifting the reference grows
-that by roughly 2.2× over the sphere's range, so **the same absolute residual
-reports a `gross_relative` about 2.2× smaller**. Comparing C1-under-option-2
+that by 2.85× over the sphere's range, so **the same absolute residual reports a
+`gross_relative` 2.85× smaller**. That is C1's measurement (FINDINGS E15). This
+page first estimated about 2.2×. Comparing C1-under-option-2
 against C0 is therefore not a comparison of residuals. The docs already warn that
 tolerances are not comparable across references; this is that warning with a
 number on it, and without care it would read as an improvement that did not
@@ -382,7 +385,7 @@ catches it in Thermodynamics, and `run_c1_twin.jl` in the model.
 
 **This does not make the other costs go away.** The shift is still large enough
 to suppress the discriminating part of the donor rule, still grows the closure
-check's normalising scale by about 2.2×, and still cannot manufacture a physical
+check's normalising scale by 2.85× (measured on C1), and still cannot manufacture a physical
 zero. What it removes is the implementation risk, which was the part that read
 as expensive.
 

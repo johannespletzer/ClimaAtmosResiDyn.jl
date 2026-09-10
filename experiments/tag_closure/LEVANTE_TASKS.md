@@ -1,19 +1,23 @@
-# Levante task list
+# Task list
 
 What to run next, and what each run is for. Every task carries what it needs, so
-none of them requires opening another document first.
+none of them requires opening another document first. The file name is
+historical. The series started on DKRZ Levante, and since 2026-09-10 it also
+runs on LRZ terrabyte.
 
 Branch `claude/tag-closure-experiments`.
 
 ## Where things stand
 
-19 of the 28 configured runs are live in `output/`. A run is live when
+20 of the 28 configured runs are live in `output/`. A run is live when
 `output/<run>/provenance.txt` exists, so `ls output` is the register.
 `c0_sphere_deep` is dropped rather than pending — see *Not yet, and why*.
+`output/twin_c1/` is not a configured run but a check on C1, and
+`output/c0_sphere_audit/terrabyte/` is a second reading of that run.
 
-**Phase A and phase C are both complete** apart from C1 and C2, which need the
-owner's approval. What they concluded, one line each, with the evidence in
-[FINDINGS.md](FINDINGS.md) under the tags given:
+**Phase A and phase C are both complete** apart from C2, which needs a code
+change and the owner's approval. What they concluded, one line each, with the
+evidence in [FINDINGS.md](FINDINGS.md) under the tags given:
 
   - Implicit water tags are not worth their Jacobian cost. The residual is
     limiter-bounded, not discretization-bounded, so implicit tags would remove a
@@ -27,8 +31,12 @@ owner's approval. What they concluded, one line each, with the evidence in
   - The energy reference is enthalpy zero. The offset C0 could not account for
     is a convention rather than an error, and C1 is three TOML entries rather
     than a code change. *R1 to R11.*
+  - With C1's positive reference the donor rule runs everywhere, and the residual
+    stops being directional and falls to 0.70 of the unshifted one. The tags
+    still go negative, and the shift changes the simulated atmosphere slightly,
+    by up to 1.1e-3 in `uₕ`. *E11 to E16.*
   - Three source tags cost 32%. The closure check, not the tags, is what made
-    the A1 pair look like 6×. *T1 to T5.*
+    the A1 pair look like 6×. *T1 to T6.*
 
 The pre-fix A5 reading is kept beside its re-run under
 `output/a5_sphere_limiter/before_issue_64_fix/`, because it measures the bug
@@ -39,17 +47,20 @@ issue #64 names rather than a residual.
 `.buildkite/LocalPreferences.toml` is generated rather than tracked, and without
 it Julia fails in ways that do not name the cause. The first attempt in this
 series died on `Missing source file for base pkg Statistics`, which was exactly
-this. Run the setup once:
+this. Run the setup once, for the machine you are on:
 
 ```bash
-./runscripts/setup-julia-levante.tcsh cpu
+./runscripts/setup-julia-levante.tcsh cpu     # DKRZ Levante
+./runscripts/setup-julia-terrabyte.tcsh cpu   # LRZ terrabyte
 ```
 
-It prints the depot and modules to use afterwards, and it is shared with the gpu
-stack, so re-run it when switching. `AGENTS.md` records the same rule under
-*Local norms*, added by #67.
+Each prints the depot and modules to use afterwards. On Levante the preferences
+file is shared with the gpu stack, so re-run the setup when switching.
+`AGENTS.md` records the same rule under *Local norms*, added by #67.
 
 ## Once per shell
+
+On Levante:
 
 ```bash
 cd ~/git/ClimaAtmosResiDyn.jl
@@ -58,118 +69,112 @@ export JULIA_DEPOT_PATH="$HOME/.julia/depots/levante-cpu"
 module load gcc/11.2.0-gcc-11.2.0 openmpi/4.1.2-gcc-11.2.0
 ```
 
-The depot export matters. The runscripts use that depot, so an instantiate or a
-script run under a different one will not be seen by a batch job. The modules
-matter for the interactive Julia calls below; the batch scripts load their own.
+On terrabyte, from a zsh or bash tool shell. Never `module purge` there:
 
-## 0. What has never been run, because no session so far had Julia
+```bash
+source $MODULESHOME/init/zsh
+module load gcc/13.2.0 openmpi/4.1.8-gcc13
+export JULIA_DEPOT_PATH=/dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+```
 
-Everything in `analysis/` was written and reviewed by reading. Three things
-should happen before the analysis is trusted, and all three are cheap.
+The depot matters. The runscripts use that depot, so an instantiate or a script
+run under a different one will not be seen by a batch job. The modules matter
+for the interactive Julia calls below; the batch scripts load their own.
 
-**a. The self-test.** It has not run since `ce76919` added `is_ladder_rung` and
-the `vert_diff` column, nor since the audit pass changed `tables.jl` and
-`phase_a.jl`. It is the only check that the analysis does what its comments say.
+`validate_configs.py` needs PyYAML, which neither machine's default Python has.
+Without it `selftest.jl` skips its validator section with a warning. A scratch
+venv is enough: `uv venv` with the `python/3.12` module, then
+`uv pip install pyyaml`, and put the venv's `bin/` first on `PATH`.
+
+## 0. Checked on 2026-09-10, the first time Julia was available
+
+Everything in `analysis/` had been written and reviewed by reading only.
+
+  - **The self-test passes all eleven sections**, the validator and its sixteen
+    mutations included, once PyYAML is present.
+  - **The phase passes run.** `phase_a.jl` reproduces `summary_a.csv` byte for
+    byte, so its audit columns were already current. `phase_c.jl` now carries
+    `c0_sphere_audit` and C1.
+  - **The formatter has been through this directory**, as one commit of
+    formatting only. It would also change three files in `docs/src/`, which
+    were left alone: `tag_closure_memo.md` belongs to PR #63, and
+    `tagged_water.md` and `tracer_configuration.md` would change exactly as PR
+    #65's commit `af2079cc` changes them.
+  - **`phase_c.jl` called region tags source tags** in its tag-minimum warning,
+    and so hid the source tag E2 is about. Fixed; see M5.
+
+Re-run the self-test after any change to `analysis/`:
 
 ```bash
 julia +1.11 --project=.buildkite experiments/tag_closure/analysis/selftest.jl
 ```
 
-**b. The two phase passes.** `summary_a.csv`'s audit columns are still NaN
-because the A5 results and its audit table landed on either side of the last
-run, and `summary_c.csv` predates `c0_sphere_audit`.
+## 1. The twin follow-up — needs approval
 
-```bash
-julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_a.jl
-julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_c.jl
+The twin test (`run_c1_twin.jl`) failed its own tolerance. The shifted and
+unshifted runs differ by 3.8e-5 in `ρ` after one step, where a pure relabelling
+would give rounding. See FINDINGS E16. That bounds every C1 number, and one more
+twin run would say where it comes from.
+
+**What to run.** The same twin, with the implicit solve converged in both halves:
+`max_newton_iters_ode` raised to something like 10, `use_newton_rtol: true`, and
+a tight `newton_rtol`. If the differences fall to rounding, the one-iteration
+Newton step is the cause, and C1's numbers stand with a solver caveat rather
+than a physics one. If they do not, saturation adjustment is next.
+
+**What it needs first.** `run_c1_twin.jl` reads C1's configuration and has no
+way to override a key. Either it gains an override, or a twin-only copy of the
+configuration carries the Newton keys. Both are small, and both need the owner's
+approval like the job itself. About 20 minutes on `hpda2_test`.
+
+## 2. C1 — done
+
+**Ran 2026-09-10 on terrabyte, approved the same day**, at `72a1bc6`, SLURM job
+`13383684` on `hpda2_test`, exit 0. The baseline is `c0_sphere_audit` re-run on
+the same node at the same time, job `13383685`, so the pair is controlled. It is
+committed under `output/c0_sphere_audit/terrabyte/` and agrees with the Levante
+reading to 1.5e-14 (M6).
+
+**The acceptance checks all held.** `analysis/c1_acceptance.jl` passes its 38
+checks on the shift file (R8). C1's own `c1_sphere_shift_parameters.toml`
+differs from the baseline's in exactly the three shifted entries, which is
+direct proof they bound. The acceptance test that used to sit in the TOML's
+header could not have run (FINDINGS §6).
+
+**What it measured**, against its baseline:
+
+|                                   | baseline    | C1                       |
+|:--------------------------------- |:----------- |:------------------------ |
+| `nonpositive_fraction`, all day   | 0.43276     | 0.0                      |
+| absolute `gross_residual` at 24 h | 2.626e21    | 1.846e21 (0.70×)         |
+| overclaim ÷ undertag, 3 h → 24 h  | 1.49 → 3.85 | 1.002 → 1.033            |
+| most negative source tag (`sfc`)  | −209.2      | −219.9                   |
+| most negative region tag          | −100,416    | −11,575, parent positive |
+| `solve! walltime`                 | 345.6 s     | 349.0 s                  |
+
+Read `gross_relative` with care: 0.00380 against 0.01542 looks like 4.06×, and
+2.85× of that is the normalising scale growing (E15). The table above is E11 to
+E15 and T6, and the twin test's bound is E16.
+
+**How it was run**, for the next run on terrabyte:
+
+```tcsh
+env CONFIG=experiments/tag_closure/configs/c1_sphere_shift.yml \
+    sbatch --account=hpda-c --partition=hpda2_test --time=01:30:00 \
+        --cpus-per-task=2 --mem=32G \
+        --output=$SCRATCH/tag_closure/logs/%x-%j.out \
+        --error=$SCRATCH/tag_closure/logs/%x-%j.err \
+        experiments/tag_closure/runscripts/phase_c.sh
 ```
 
-**c. The formatter.** No session has run it, because none had Julia, and no pull
-request exists for this branch so CI has not run it either. JuliaFormatter
-formats markdown here (`format_markdown = true`), so every document in this
-directory except `README.md` is in scope and none has been through it.
+## 3. C3 — done, and it is the result the series was for
 
-```bash
-prek run julia-formatter --all-files
-```
-
-## 1. C1 — approved, submit it
-
-**Approved 2026-09-10: the sphere, at `δ` = −110 K.** Both files are written and
-validated.
-
-```bash
-CONFIG=experiments/tag_closure/configs/c1_sphere_shift.yml \
-    sbatch experiments/tag_closure/runscripts/phase_c.sh
-```
-
-**Run the acceptance test before trusting the output.** It is in the TOML's
-header, and it is the only thing standing between a change of reference and an
-accidental change of atmosphere. Then check the run's own parameter log:
-`c0_sphere_audit` wrote `c0_sphere_audit_parameters.toml` beside its results, so
-C1 writes its own, and that file is direct proof the three overrides bound
-rather than silently falling back to defaults.
-
-**What to read, and what not to.** `nonpositive_fraction` should be 0.0 at every
-sample against 0.43276 unshifted, and the per-tag minima should stay
-non-negative — unshifted, a source tag reached −209 J kg⁻¹.
-**`gross_relative` is not comparable with `c0_sphere`'s**, because the shift
-grows the normalising scale about 2.2× and the same absolute residual then reads
-smaller. Compare the absolute `gross_residual` column. The audit columns say
-whether the *direction* changed: unshifted they run 3.85 to 1 in favour of
-overclaim, which is production with no loss.
-
-**The recipe, for `δ = −110.0 K`.** The TOML carries the derivation, the
-acceptance test and the reason for the margin:
-
-| field   | now      | after     |
-|:------- |:-------- |:--------- |
-| `T_0`   | 273.16   | 163.16    |
-| `LH_v0` | 2.5008e6 | 2.75622e6 |
-| `LH_s0` | 2.8344e6 | 2.85761e6 |
-
-`LH_f0` is derived as `LH_s0 − LH_v0` and comes out right on its own: it needs
-`(cp_l − cp_i)·δ` = −232210, and 2857610 − 2756220 = 101390 is exactly that.
-
-The sphere's minimum needs 100416.4 J kg⁻¹ and `δ` = −110.0 K delivers 110495.0,
-about 10% of margin. An earlier version of this table used −99.95 K, which
-delivers 100399.8 and is 16.6 J kg⁻¹ **short** of the minimum it was derived
-from; it also left `LH_s0` as a formula rather than a number. Both are fixed.
-
-**The acceptance test is exact**, and the before-values are recorded in
-`C1_reference_shift.md`'s appendix. After the change these three must come back
-*unchanged*:
-
-```
-LH_v(288.3) = 2.46564492e6
-LH_f(273.16) = 333600.0
-p_sat(288.3) = 1721.1532852305072
-```
-
-and `internal_energy_dry(288.3)` must move from −67533.97 to +42961.03, a shift
-of +110,495.0 J kg⁻¹. If a latent heat or `p_sat` moves, the co-adjustment is
-wrong and the run would be measuring a different atmosphere rather than a
-different reference. Do not submit C1 until all four hold.
-
-**One thing to watch.** `T_0` currently equals `T_triple` and `T_freeze`, all
-273.16. The recipe moves `T_0` alone, which is correct — the other two are
-physical temperatures — but it breaks a coincidence that has almost certainly
-never been exercised, since nothing in this repository has ever overridden a
-thermodynamic parameter. The acceptance test above is what would catch it.
-
-**Still true, and unaffected:** the plumbing reaches these from configuration.
-`create_parameters.jl:75` builds the thermodynamic parameters entirely from the
-TOML dict and `Parameters.jl:602` forwards every field, so C1 is a configuration
-change. It still needs the owner's approval; it no longer needs a code change.
-
-## 2. C3 — done, and it is the result the series was for
-
-Nothing to run. Recorded here because it is the strongest finding so far.
+Nothing to run.
 
 C3 reproduces `c0_column` bit for bit — `gross_relative` 0.13456131085846748,
 `max_abs_e_src_res` 26888.66561703798, most-negative tag −44972.50629142498, all
 identical — so the process record perturbs nothing and is a pure diagnostic
-sitting beside the tags. On the same run, over the same day:
+sitting beside the tags. On the same run, at the end of the day:
 
 | reading of what radiation did    | range (J kg⁻¹)   |
 |:-------------------------------- |:---------------- |
@@ -186,79 +191,67 @@ So the alternative `energy_source_tags.md` names is demonstrated rather than
 merely available, on exactly the configuration where the tags are inert, and it
 is reference-independent so nothing about C1 can touch it.
 
-## 3. The timing controls — measured, both pairs
+## 4. The timing controls — measured
 
-The `.err` files came back and the A1 pair reads clean:
+|                       | tagged   | untagged | ratio |
+|:--------------------- |:-------- |:-------- |:----- |
+| A1, `solve! walltime` | 3.337 s  | 0.548 s  | 6.09  |
+| C0, `solve! walltime` | 11.225 s | 8.521 s  | 1.317 |
 
-|                   | tagged   | untagged | ratio |
-|:----------------- |:-------- |:-------- |:----- |
-| `solve! walltime` | 3.337 s  | 0.548 s  | 6.09  |
-| `sypd`            | 2.956    | 17.992   | 6.09  |
-| per timestep      | 9.269 ms | 1.522 ms | 6.09  |
-
-**Do not read 6.1× as the cost of the tags.** `a1_dt10` runs
-`water_closure_check` at `period: "10secs"` against a `dt` of 10 s, so a global
-reduction fires on every timestep, and diagnostics every 60 s on top. That is a
-diagnostic choice, not what carrying tags costs.
-
-**The C0 pair settles it, and both halves are now in `output/`** — three source
-tags with the closure check and diagnostics both hourly, over 8640 steps instead
-of 360:
-
-|                   | tagged   | untagged | ratio |
-|:----------------- |:-------- |:-------- |:----- |
-| `solve! walltime` | 11.225 s | 8.521 s  | 1.317 |
-| `sypd`            | 21.088   | 27.779   | 1.317 |
-| per timestep      | 1.299 ms | 986.3 µs | 1.317 |
-
-**1.32×, not 6.1×.** Same three tag families; the difference between the pairs is
-that A1 fires the closure reduction on every timestep and C0 fires it hourly. So
-the check is most of A1's factor, which is what the paragraph above predicted.
-Nothing left to collect here.
+**1.32×, not 6.1×.** Same three tag families. A1 fires the closure reduction on
+every timestep and C0 fires it hourly, so the check is most of A1's factor
+(T2 to T4). The reference shift itself costs nothing measurable (T6).
 
 ## After any batch job
 
 Check the exit status rather than only the log, because a crashed solve returns
 `:simulation_crashed` and the driver's non-zero exit is what makes that visible.
-A5's re-run exited 0 and never approached its abort level, so that
-configuration is no longer expected to stop early.
+The twin test exits 1 on purpose when the twins differ.
 
 ```bash
 sacct -j <jobid> -o JobID,State,ExitCode
 ```
 
-Reduce before copying anything back, because the operator residual and the audit
-table live beside the NetCDF and the NetCDF stays on scratch:
+Reduce before copying anything back, because the operator residual and the
+per-tag extrema come from the NetCDF, and the NetCDF stays on scratch. On
+Levante the run directory is the repository root. On terrabyte it is
+`$SCRATCH/tag_closure`:
 
 ```bash
 julia +1.11 --project=.buildkite \
-    experiments/tag_closure/analysis/reduce_run.jl output/<run>/output_active
+    experiments/tag_closure/analysis/reduce_run.jl <run directory>/output/<run>/output_active
 ```
 
-Then the five files per run into `experiments/tag_closure/output/<run>/`: the
-family's `*_tag_closure.csv`, the reduced tables, the audit table where the run
-wrote one, `<run>.yml`, `provenance.txt`, and a trimmed `run.log`. The analysis
-refuses any run whose `provenance.txt` records `commit: unknown`.
+Then copy into `experiments/tag_closure/output/<run>/`: the family's
+`*_tag_closure.csv`, the reduced tables, the audit table where the run wrote
+one, `<run>.yml`, `<run>_parameters.toml`, `provenance.txt`, and a trimmed
+`run.log`. The analysis refuses any run whose `provenance.txt` records
+`commit: unknown`. On terrabyte the compute nodes have no git, so the commit is
+read from `.git` and `commit_dirty` reads `unknown`; commit before submitting so
+that the recorded commit is exact.
 
 Then the phase script, `phase_a.jl` or `phase_c.jl` as appropriate.
 
-## 4. The two runs that just landed
+## Pull requests, as of 2026-09-10
 
-`c0_sphere_audit` and `a3_0m_vert_diff` have both run and are analysed.
-`c0_sphere_deep` is dropped. C1, in task 1, is the only thing left to submit.
+  - **#65** carries the #64 fix, `7799a5a` and `acfea85`, plus `af2079cc` with CI
+    fixes. It conflicts with `main` in `NEWS.md` only, where both sides add
+    entries at the top. `default_config.yml` and `tagged_water.jl` merge
+    cleanly. This branch has the first two commits and not the third, which
+    touches only docs and a test.
+  - **#63**, the memo and the plan, is a draft on the draft #62. The formatter
+    would add two blank lines to `tag_closure_memo.md`.
 
-**What the two runs said**, since both changed a number quoted elsewhere:
+## Known defects, reported and not fixed
 
-  - `c0_sphere_audit` measured `nonpositive_mass_fraction` = **0.7839** against
-    the volume fraction's 0.43276. So **78.4%** of `∫|ρe_tot|` sits where the
-    donor share is undefined, not 43.3%: the headline understated the barrier by
-    1.8×, because the non-positive region is the troposphere and that is where
-    the field's magnitude is. Its residual is also directional — overclaim beats
-    undertag 3.85 to 1 — where A5's water residual split evenly.
-  - `a3_0m_vert_diff` settled A3. Vertical diffusion accounts for 27× of the
-    29× gap and 1M for 7%, and holding `vert_diff` fixed, 1M moves the residual
-    7% **down** rather than up. The `q_tot_eff` mismatch the memo expected to
-    cost closure is not measurable on a column.
+  - This directory's `.gitignore` says `*.out` is "deliberately still ignored",
+    while thirteen `.out` files sit committed under `output/`.
+  - `validate_configs.py`'s `implicit_diffusion` rule is stricter than the
+    model. `model_getters.jl:1068` puts that assert in an `elseif` chain after
+    the ISDAC branch, so an ISDAC config would pass the model and fail the
+    validator. False positives only; nothing here uses ISDAC.
+  - `output/c0_sphere_deep/` holds a `.out` and an `.err` and no provenance, so
+    every phase C pass warns that it skips it.
 
 ## Not yet, and why
 
@@ -272,48 +265,13 @@ leaves off, so its number would need three caveats and pair with nothing. The
 config stays in the tree, fixed and validated, if the depth reading is ever
 wanted.
 
-**Phase B, and a correction to why.** The reason recorded here was that B1 is
-ten days on a sphere with a limiter, in the regime that diverged in three hours
-in A5. **Both halves of that are wrong.** `b1_base` configures no limiter at
-all — only `b3_limiter` does, which is the whole point of the pair — and phase B
-is the *energy* family, which has no `rescale_water_tags!` and no partition
-repair, as `is_tagged_tracer_name`'s docstring says in as many words. #64's
-mechanism was a multiplicative rescale amplifying the closure error, and there
-is no rescale on that path to amplify anything.
+**Phase B.** `b1_base` configures no limiter at all — only `b3_limiter` does —
+and phase B is the *energy* family, which has no `rescale_water_tags!` and no
+partition repair, so #64's mechanism cannot reach it. **Phase B has no technical
+objection left.** C1 solved a simulated day in 5.8 minutes on the `he6ze10`
+grid, so B1's ten days is about an hour of solve if it runs at that speed, which
+fits `hpda2_test`'s two-hour limit. Whether it is worth running is the owner's
+call. B2 is dry and unaffected either way.
 
-So the A5 re-run never gated phase B on the evidence, and it has now run
-anyway. What it bounds is the *unlimited explicit transport* the energy tags
-share, and the news there is good: on a sphere at `h_elem` 4 the residual
-plateaus at 2.79e-4 over a full day rather than running away. **Phase B has no
-technical objection left.** Whether it is worth ten days of queue is the owner's
-call on cost, not on risk. B2 is dry and unaffected either way.
-
-**C1.** Approved and ready to submit; see task 1. It no
-longer needs a code change or a choice of shape. Of the two shapes in the memo,
-shifting only the share's denominator should be dropped rather than costed: the
-region tags sum to `ρe_tot` and not to `ρe_tot + c`, so wherever `e < 0` the
-shares sum to a negative number and the loss adds energy
-instead of removing it, diverging as `e` approaches `−c` — over exactly the
-region the shift was introduced to fix. The remaining shape is a change of the
-thermodynamic reference constant, not an offset added to the state.
-
-Its costs are now firm rather than conditional. The shift must clear the
-*tropospheric* minimum, so it cannot be made small; the discriminating part of a
-source tag's share is proportional to `1/(e+c)`, so the donor rule becomes
-several times less discriminating where it already works; the closure check
-normalises by `∫|ρe_tot|`, which the shift grows about 2.2×, so the same
-absolute residual would report a smaller relative one and read as an improvement
-that did not happen.
-
-**And one more, now that the magnitude is known.** The shift is a move in `T_0`
-of 100 K on the sphere, and `T_0` anchors the latent heats. Left alone it takes
-`LH_v` at 288.3 K down 9.4%, which is a different atmosphere and not a change of
-reference — the exact thing this shape was chosen over the state offset to
-avoid. So the shape has to move `LH_v0`, `LH_s0` and `LH_f0` with it, and the
-saturation-vapour-pressure path needs checking as well. Task 1 confirms the
-coupling from the running package; `C1_reference_shift.md` carries the
-argument.
-
-**A3's companion.** Written, validated and reported in task 4 as
-`a3_0m_vert_diff`. It is not in this section any more; it needs no approval and
-only the queue.
+**C2** needs a code change and the owner's approval, and no configuration for it
+is written.

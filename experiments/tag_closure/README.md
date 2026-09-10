@@ -50,13 +50,12 @@ a warning naming it. Runs submitted before `3659746` can hit this. The fix is
 
 ### Decisions waiting on the owner
 
-**C1's reference shift.** C1 reruns C0 under a shift making `ρe_tot > 0`
-everywhere, and it is the run designed to say whether C0's barriers are
-fixable. It needs the owner's approval and nothing else: no code change, and
-the shape is settled. The argument, the two shapes and why one of them is
-dropped rather than costed are in
-[C1_reference_shift.md](C1_reference_shift.md). **Nothing else in phase C can
-move until this is decided.**
+**C1 has run.** It was approved on 2026-09-10 and ran on terrabyte the same
+day. What it measured is in [FINDINGS.md](FINDINGS.md), E11 to E16, and the
+argument behind it is in [C1_reference_shift.md](C1_reference_shift.md). One
+follow-up waits on a decision. The twin test showed that the shift changes the
+simulated atmosphere slightly (E16). One more twin run, with the implicit solve
+converged, would say whether the one-iteration Newton step is why.
 
 **C2** needs approval and a code change, and no configuration for it is
 written.
