@@ -180,6 +180,11 @@ input. `c1_acceptance.jl` sits beside them and is not driven by the self-test.
 It checks the C1 shift file against the Thermodynamics package a run loads.
 `offset_smoke.jl` and `same_atmosphere.jl` check that `energy_source_tag_offset`
 leaves the model alone, on a column and between the two C4 runs.
+`bracket_repair_smoke.jl` does the same for `energy_source_tag_repair`, and
+checks that the implicit microphysics bracket reaches the process records.
+`c5_process_closure.jl` reads a C5-layout run per process: the new energy split
+by region against by process, each region's initial energy, and on a column the
+records against the change in `ρe_tot`.
 
 ### How the sphere configurations are put together
 

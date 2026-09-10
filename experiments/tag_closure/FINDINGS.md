@@ -348,6 +348,72 @@ a measurement. So R11's suppression is real in the algebra and small in the
 tags over a day here, while the offset's size shows up in the region tags'
 negativity. *C4 at both offsets.*
 
+**E20. Checked per process, the tags found a process nobody had listed.** C5
+splits the new energy two ways at every point: by region, in `new_<region>`
+tags that follow every process (`source: all`) inside their region, and by
+process, in `rad` and `sfc`. Both sides obey one rule, so they should agree.
+
+  - On the sphere they agree to 20.2 J kg⁻¹ at 24 h, 9.6e-4 of the new energy's
+    largest value. The gap grows steadily from 0.04 J kg⁻¹ at 1 h.
+  - On the column they differ by 17,954 J kg⁻¹ at 675 m at 24 h. There the
+    region split holds 17,954 J kg⁻¹ and the process split 0.004.
+
+The DYCOMS setup runs large-scale subsidence (`LargeScaleSubsidence` in the
+run's `scm_setup`). It is bracketed as `subsidence`, and neither process tag
+lists it. So the check found a process that fires without a tag, which is what
+it was built for. It also means the column tags of C0, C3 and C5 carried
+subsidence's energy all along, inside the region tags.
+
+The sphere's gap cannot come from a rule that is linear in the tags. Two
+nonlinear steps are candidates: the tracers' default vertical upwinding,
+`vanleer_limiter`, which acts on each tag on its own, and the clamp on the share
+where a tag is negative. The `new_` tags reach −158 and −88 J kg⁻¹. This run does
+not separate the two. *C5, jobs `13385401` and `13385402` on terrabyte;
+`analysis/c5_process_closure.jl`.*
+
+**E21. On the column, a region's initial energy only falls.** `strat − new_strat` is the energy that was above 750 m at the start, followed as it
+moves, and `tropo − new_tropo` the same below. Their column integrals fall at
+every hourly sample, from 5.268e7 to 5.008e7 J m⁻² and from 6.030e7 to 5.224e7
+J m⁻². Neither is negative anywhere: their smallest values are +0.028 and +0.032
+J kg⁻¹. On the sphere the same differences reach −9,617 and −11,638 J kg⁻¹, where
+the region tags themselves are negative (E14, E19). The sphere's lat-lon output
+gives no domain integral to test the fall with. *C5.*
+
+**E22. The radiation tag holds nothing where radiation cools, with the loss
+running.** At 675 m, where the radiation record is most negative at 24 h,
+−20,566 J kg⁻¹ as in C3, the `rad` tag holds 0.0044 J kg⁻¹ of a total of 61,718
+J kg⁻¹, a share of 7.1e-8. The loss runs there, since the total is positive
+everywhere. But it takes each loss from every tag by share, and radiation added
+almost nothing at that level, so its tag has almost nothing to lose. Elsewhere
+in the column the tag reaches 6,100 J kg⁻¹, where radiation warms. So E8 is not
+an artefact of the inert loss: a source tag cannot show where its process
+removed energy. *C5, `cloud_top.csv`.*
+
+**E23. The column's records leave 1.37 MJ m⁻² of its energy change unexplained
+over a day.** Summed over the column at 24 h, radiation's record is −6.62 MJ m⁻²
+and the surface flux's +9.42 MJ m⁻². The latter is 109 W m⁻² for a day, DYCOMS
+RF02's prescribed 16 plus 93 W m⁻². Together the records say +2.80 MJ m⁻², while
+the column integral of `ρe_tot` rose 1.43 MJ m⁻². The difference, −1.37 MJ m⁻², is
+what no record saw:
+
+  - subsidence (E20);
+  - the 0-moment rain-out on the implicit path, which no record reached at this
+    commit;
+  - whatever the numerics do not conserve.
+
+This run does not split them. The integrals are sums of `rhoa · value · Δz`,
+which match the closure table's native integral to 1.3e-16 at t = 0. *C5.*
+
+**E24. C5's radiation tag outgrows C3's after four hours, which the loss cannot
+do on the same atmosphere.** For four hours C5's column maximum sits just below
+C3's, 1,865 against 1,873 J kg⁻¹ at 4 h, as a running loss makes it. Then it grows
+faster, to 5,990 against 4,272 at 22 h. The atmospheres agree: the radiation
+record's extremes at 24 h match C3's to the five digits E8 quotes. The loss only
+removes, and both runs move tags with the van Leer limiter, the tracers' default
+since `da85255e`, which C3's commit contains. C3 ran on Levante at a commit with
+uncommitted changes, so a difference in how that code moved or attributed the
+tag is possible. Not established. *C5 against C3.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -636,6 +702,16 @@ Kept because a later reader will otherwise re-derive them.
     region tags.
   - **What makes the residual's first-hour jump (E13).** The enthalpy-against-
     tracer transport reading fits, but no run has isolated it.
+  - **Why C5's radiation tag outgrows C3's after four hours (E24).** The
+    atmospheres agree, the loss only removes, and both runs move tags with the
+    van Leer limiter. The runs differ in machine and in code.
+  - **Whether the sphere's per-process gap is the per-tag limiter or the clamp
+    (E20).** In a 0-moment run `tracer_upwinding` moves only the tags, so a run
+    with `first_order`, which is linear, would separate the two on the same
+    atmosphere.
+  - **How the column's unrecorded 1.37 MJ m⁻² splits (E23)** between
+    subsidence, the 0-moment rain-out and the numerics. A column run that
+    records subsidence and microphysics, on the code of §8, would split it.
   - `Float32` on a sphere (W4).
   - ~~Whether 1M changes the residual (W5).~~ Settled on a column: 7% down
     (W5b). A sphere, which reaches the horizontal branches, is still open.
@@ -668,9 +744,11 @@ Kept because a later reader will otherwise re-derive them.
     with C1, and one at a larger `c` on the identical atmosphere, which would
     measure R11's suppression cost cleanly. It came out of the discussion with
     the reviewer agent, which found this route independently.
+
  2. **Stopped: the rest of E16.** The limiter is most of it, and the
     surface-flux path is not the rest (E16). The owner took up no further twin
     on 2026-09-10, because item 1 leaves the model alone.
+
  3. **Decided: keep both.** On 2026-09-10 the owner decided to keep the energy
     source tags, and made keeping both them and the process record the main
     goal. They answer different questions: the tags say where the energy
@@ -678,9 +756,56 @@ Kept because a later reader will otherwise re-derive them.
     offset makes the tags' donor rule run everywhere without touching the model
     (E17). What is left before the tags are operational is task 1b of the task
     list.
+
+    **Built on the same day, in the order the owner set: the bracket, then the
+    repair.** The owner approved both, and a switch for the repair, on
+    2026-09-10.
+
+      + The implicit microphysics sink is bracketed for the source tags and the
+        process records. That is where a 0-moment run loses its rain. The
+        records also take sedimentation from the implicit path. The source tags
+        do not: sedimentation moves energy between levels, and a bracket would
+        count what arrives as new energy.
+      + `energy_source_tag_repair`, on by default and switchable off, keeps the
+        tags non-negative where their total is positive. The partition tags
+        keep their sum, the tags that carry a source are clipped at zero, and
+        every change goes to `e_src_fix_<name>`.
+
+    `analysis/bracket_repair_smoke.jl` runs both on a DYCOMS column for two
+    minutes at 50 kJ kg⁻¹:
+
+      + the microphysics record is −568 J m⁻², where it was zero;
+      + the model's state is bit for bit the same with and without the repair;
+      + the repair clipped the radiation tag's −2.9e-9 to zero;
+      + the column's signed residual at 120 s went from −744 J m⁻², the tags
+        overclaiming, to +382 J m⁻². So the tags no longer overclaim. A smaller
+        untagged remainder of the opposite sign is left, which this run does
+        not explain.
+
+    **Under discussion: enthalpy-form transport of the tags, as an audit.** The
+    owner proposed passive tracers as the default, and enthalpy-form transport
+    as an audit. A reviewer agent mapped every transport term. Its reading of
+    C4 is that more than 99% of the gross residual is balanced operator-form
+    terms, pressure work first. That is an inference, not a measurement. Its
+    recommendation:
+
+      + first measure each operator's share of the residual with a script and
+        no model change, `analysis/transport_ledger.jl`, which is not written;
+      + build a per-run switch only if pressure work and the per-tag limiter
+        explain most of the residual. The switch would use a flux-share
+        vertically, where each tag carries the parent's energy flux times its
+        upwind share, and an enthalpy-like specific value horizontally;
+      + reckon on about 500 lines of model code and 300 of tests.
+
+    It also found that the implicit bracket evaluates the tags' loss at the
+    Newton iterate with no Jacobian block of its own. For energy that is a small
+    fraction of the total per step, but a block like the water tags' would make
+    it backward Euler.
+
  4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
     and the energy family has no rescale. C1 solved a simulated day in 5.8
     minutes on this grid, so ten days is about an hour of solve if B1 runs at
     that speed, which fits `hpda2_test`'s two-hour limit. Whether it is worth
     running is the owner's call.
+
  5. **C2.** Unchanged: needs a code change and approval.

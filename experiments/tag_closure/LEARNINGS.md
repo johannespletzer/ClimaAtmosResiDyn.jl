@@ -917,3 +917,51 @@ unshifted and 349.0 s for C1, which is within the 2% scatter T2 measured (T7).
 total that costs the model nothing. What stays open is whether a family whose
 tags go negative is worth keeping over the process record of C3, and that is
 the owner's call.
+
+## C5. Per process, and a real sink
+
+Ran at `bca389ba` on 2026-09-10, Intel Xeon Platinum 8380, `hpda2_test` on LRZ
+terrabyte. SLURM jobs `13385401` (the column, 8.5 min) and `13385402` (the
+sphere, 16 min). Both carry C4's offset. The owner approved both runs.
+
+**What C5 was for.** Three questions C4 could not ask:
+
+  - Does a source tag feel its process's cooling once the loss runs? That is
+    the cloud-top question C3 left open.
+  - Can the tags be checked per process, as the region tags are checked per
+    region?
+  - What happens to the energy that was in a region at the start? The owner
+    called this the initial tag.
+
+The layout answers all three without new code. Each region gets a `new_` tag
+that follows every process inside it, beside one tag per process.
+
+**Cloud top, answered.** Where radiation cools most, the radiation tag holds
+0.004 J kg⁻¹ of 61,718. The loss runs there, but radiation never put energy at
+that level, so its tag has nothing to lose (E22). A source tag cannot show a
+process's cooling. The record shows it, −20.6 kJ kg⁻¹.
+
+**Per process, a check that works.** On the column the new energy split by
+region exceeds the same energy split by process by up to 18 kJ kg⁻¹, just below
+the inversion. The DYCOMS setup runs subsidence, and no tag listed it (E20). On
+the sphere the two splits agree to 1e-3, and the rest is the per-tag limiter or
+the clamp.
+
+**The initial tag works on the column.** A region's initial energy falls at
+every sample and never goes negative (E21). On the sphere it goes negative
+where the region tags do.
+
+**Barrier.** The column's list of processes was incomplete. The records miss
+subsidence too, and with it the 0-moment rain-out: 1.37 MJ m⁻² of the day's
+energy change is unexplained (E23). On the sphere the tags still go negative,
+the region tags to about −10 kJ kg⁻¹ and `sfc` to −208 J kg⁻¹.
+
+**Class.** A configuration gap, subsidence without a tag or a record, found by
+the check designed to find it. And numerical: per-tag limiting and negative
+tags.
+
+**Carry-over to the source tags.** The next column run should list subsidence
+as a tag and as a record, and microphysics as a record, now that the implicit
+microphysics sink is bracketed (FINDINGS §8). With the repair on, which is the
+default from that code on, form A holds only after the repair's ledgers are
+added back.

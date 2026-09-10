@@ -9,7 +9,7 @@ Branch `claude/tag-closure-experiments`.
 
 ## Where things stand
 
-22 of the 32 configured runs are live in `output/`. A run is live when
+24 of the 32 configured runs are live in `output/`. A run is live when
 `output/<run>/provenance.txt` exists, so `ls output` is the register.
 `c0_sphere_deep` is dropped rather than pending — see *Not yet, and why*.
 The four `output/twin_c1*/` directories are not configured runs but checks on
@@ -170,7 +170,33 @@ What stands between the tags and operational use, in the order to do it:
  8. **Sub-grid transport and GPU.** The tags are grid-scale only, and neither
     the family nor the offset has run on a GPU.
 
-## 1c. C5 — per-process closure, and a real sink
+## 1c. C5 — done, and what comes next
+
+**Done.** Both runs ran on 2026-09-10, jobs `13385401` and `13385402`, and are
+in `output/c5_*/`. `analysis/c5_process_closure.jl` reads them (FINDINGS E20
+to E24):
+
+  - the radiation tag holds nothing where radiation cools, with the loss
+    running (E22);
+  - checked per process, the tags found subsidence, which the DYCOMS column
+    runs and no tag listed (E20);
+  - on the column, a region's initial energy only falls (E21);
+  - the column's records leave 1.37 MJ m⁻² of a day's energy change
+    unexplained (E23).
+
+**Next, C6, which needs approval.** The same two layouts on the code of
+FINDINGS §8, which brackets the implicit microphysics sink and repairs negative
+tags by default:
+
+  - the column with a `sub` tag, and records for radiation, the surface flux,
+    subsidence and microphysics, so that both forms can close;
+  - the column and the sphere each run twice, repair on and off, so that the
+    ledgers measure what the repair changes;
+  - optionally, the sphere with `tracer_upwinding: first_order`. In a 0-moment
+    run that moves only the tags, so it separates the limiter from the clamp
+    (E20).
+
+The design of C5, as the owner approved it:
 
 The owner approved both runs on 2026-09-10, on `hpda2_test`. Both carry C4's
 offset, 110,495 J/kg, and add what C4 could not test.

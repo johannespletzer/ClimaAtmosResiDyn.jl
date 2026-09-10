@@ -67,21 +67,26 @@ one agent has worked this branch at once.
     C1's tag results (FINDINGS E17 to E19). The twin tests found E16 to be
     mostly the van Leer energy limiter. A fourth twin ruled out the surface-flux
     path for the remainder, and the owner stopped there.
-  - **C5 is submitted** (task 1c): the column with the offset, and the sphere
-    with gray radiation. Both are laid out to check the tags per process as well
-    as per region, and to read a region's initial energy without code. Its
-    analysis script is not written yet.
+  - **C5 ran** (task 1c, FINDINGS E20 to E24). The radiation tag holds nothing
+    where radiation cools, even with the loss running. Checked per process, the
+    tags found subsidence in the DYCOMS column, which no tag listed. On the
+    column a region's initial energy only falls. C6 is proposed in task 1c and
+    needs approval.
   - **PR #65 and PR #68 stay drafts** until the owner has reviewed them. #68 is
     the offset, stacked on #65, and it now carries the loss-rule integration
-    test the owner asked for. Check both PRs' CI before anything else touches
-    them.
+    test the owner asked for (`466dd2f4`, 33 of 33 pass). Check both PRs' CI
+    before anything else touches them.
   - **The owner decided to keep both** the energy source tags and the process
     record, as the main goal (FINDINGS §8). Task 1b of the task list names what
-    is left to make the tags operational. The owner chose to write no model
-    code until C5 has been read.
-  - **Enthalpy-form transport of the tags as an audit,** with passive tracers
-    kept as the default, was put to a reviewer agent. Its answer belongs in
-    FINDINGS §8.
+    is left to make the tags operational.
+  - **The implicit bracket and the repair are built on this branch** (FINDINGS
+    §8), in the order the owner set, with the repair on by default and
+    switchable off. They are not in a pull request yet; ask before opening one.
+  - **Enthalpy-form transport of the tags, as an audit** with passive tracers
+    kept as the default, went to a reviewer agent. Its answer is in FINDINGS
+    §8: measure each operator's share of the residual first, with a script
+    that is not written yet, and build a switch only if the measurement
+    supports it.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for
