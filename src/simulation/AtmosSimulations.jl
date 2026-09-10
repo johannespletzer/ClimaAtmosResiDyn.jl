@@ -291,6 +291,24 @@ entry point for simulations written as scripts; configuration-driven runs go thr
     `"stage"`, `"step"`, or `"dss"`.
   - `checkpoint_frequency = Inf`: How often to write restart checkpoints; a number of
     seconds, a time string, or `"<N>months"`. `Inf` disables checkpointing.
+  - `parent_budget_mode = "off"`: The parent-budget ledger, `"off"`, `"summary"` or
+    `"audit"`. When on, the ledger measures every accepted step's mass, water and
+    energy against what the integrator applied, with one global collective per
+    step and no change to the trajectory. `"audit"` also attributes each channel
+    to the processes that wrote it. It refuses configurations outside the
+    contract's scope, and a custom callback unless it is declared read-only with
+    `Internals.ParentBudget.ReadOnlyCallback`. A restarted run checks the
+    restored state against the endpoints its checkpoint carried. See the
+    parent-budget pages of the documentation.
+  - `parent_budget_attribution = "net"`: How the ledger books a process row in
+    `"audit"` mode: `"net"` books the signed integral of what the process applied,
+    `"gross"` also keeps its positive and negative parts as a diagnostic. The
+    identities use the net amount either way.
+  - `parent_budget_tolerances = nothing`: The tolerances the ledger judges its
+    residuals against, a mapping from `:mass`, `:water` or `:energy` to a
+    `BudgetTolerance`. Without one the ledger takes the tolerances from the
+    committed calibration table for this backend, float type and rank count.
+    With no table row every numeric verdict is `blocked`, naming the tolerance.
   - `log_to_file = false`: Send log output to a file in the output directory.
   - `verbose = false`: Log progress while building the simulation (root process only).
 
@@ -357,6 +375,9 @@ function AtmosSimulation{FT}(;
     update_constrain_state_every = "step",
     # Misc
     checkpoint_frequency = Inf,
+    parent_budget_mode = "off",
+    parent_budget_attribution = "net",
+    parent_budget_tolerances = nothing,
     log_to_file = false,
     verbose = false,
 ) where {FT}
@@ -400,13 +421,33 @@ function AtmosSimulation{FT}(;
         steady_state_velocity isa Function ? steady_state_velocity(Y, params) :
         steady_state_velocity
 
+    # The ledger's schema is fixed from the model before anything is collected.
+    # A restarted run also reads the endpoints its checkpoint carried, so the
+    # first transaction can check the restored state against them.
+    parent_budget_checkpoint =
+        (isnothing(restart_file) || parent_budget_mode == "off") ? nothing :
+        Internals.ParentBudget.read_checkpoint_endpoints(restart_file, context)
+    parent_budget = Internals.ParentBudget.build_parent_budget(
+        parent_budget_mode, model, Y;
+        ode_config,
+        restart = !isnothing(restart_file),
+        constraint_cadence = Symbol(update_constrain_state_every),
+        attribution = parent_budget_attribution,
+        tolerances = parent_budget_tolerances,
+        checkpoint = parent_budget_checkpoint,
+    )
+    # With the ledger on, a custom callback must declare itself read-only.
+    callbacks = Internals.ParentBudget.declared_callbacks(parent_budget, callbacks)
+
     p = @timed_log verbose "Built cache" build_cache(
         Y, model, params, dt, start_date, aerosol_names,
         time_varying_trace_gases, resolved_steady_state_velocity,
-        vertical_water_borrowing_species,
+        vertical_water_borrowing_species;
+        parent_budget,
     )
 
-    # Combine all callbacks
+    # Combine all callbacks. The ledger's callback goes first: it reads the
+    # accepted state and the stepper cache before any other callback runs.
     discrete_callbacks = @timed_log verbose "Assembled callbacks" if default_callbacks
         checkpoint_frequency = parse_checkpoint_frequency(checkpoint_frequency)
         (
@@ -423,6 +464,10 @@ function AtmosSimulation{FT}(;
     else
         callbacks
     end
+    discrete_callbacks = (
+        Internals.ParentBudget.parent_budget_callbacks(parent_budget)...,
+        discrete_callbacks...,
+    )
     callback_set = CTS.CallbackSet(discrete_callbacks...)
 
     integrator_args, integrator_kwargs = args_integrator(

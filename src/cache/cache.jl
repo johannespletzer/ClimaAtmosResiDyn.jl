@@ -42,6 +42,9 @@ state and may be overwritten by any function.
     is `true`; otherwise `nothing`.
   - `conservation_check`: Column-integrated precipitation energy tendency, used for
     the conservation check with a prognostic surface temperature.
+  - `parent_budget`: The parent-budget ledger adapter when `parent_budget_mode` is
+    not `off`, and `nothing` otherwise. It reads the state and the timestepper
+    cache after every accepted step and never writes either.
 """
 struct AtmosCache{
     FT,
@@ -64,6 +67,7 @@ struct AtmosCache{
     NETFLUXSFC,
     SSV,
     CONSCHECK,
+    PARENTBUDGET,
 }
     # Timestep of the simulation (in seconds); also used by callbacks and tendencies
     dt::FT
@@ -115,6 +119,9 @@ struct AtmosCache{
 
     # Conservation check for prognostic surface temperature
     conservation_check::CONSCHECK
+
+    # The parent-budget ledger adapter, or `nothing` when the ledger is off
+    parent_budget::PARENTBUDGET
 end
 
 # Allow cache to be moved on the CPU. Used by ClimaCoupler to save checkpoints
@@ -136,7 +143,7 @@ Adapt.@adapt_structure AtmosCache
 """
     build_cache(Y, atmos, params, dt, start_date, aerosol_names,
                 time_varying_trace_gas_names, steady_state_velocity,
-                vwb_species = nothing)
+                vwb_species = nothing; parent_budget = nothing)
 
 Allocate and initialize the `AtmosCache` `p` for the initial state `Y` and model
 configuration `atmos`.
@@ -161,6 +168,9 @@ gravity waves, radiation, tracers).
     `check_steady_state` diagnostic, or `nothing`.
   - `vwb_species`: Species tuple for the vertical-water-borrowing limiter, or
     `nothing`.
+  - `parent_budget`: The parent-budget ledger adapter, or `nothing`. Built before
+    the cache by `Internals.ParentBudget.build_parent_budget`, so that the
+    schema is fixed before anything is collected.
 
 # Returns
 
@@ -175,7 +185,8 @@ function build_cache(
     aerosol_names,
     time_varying_trace_gas_names,
     steady_state_velocity,
-    vwb_species = nothing,
+    vwb_species = nothing;
+    parent_budget = nothing,
 )
     FT = eltype(params)
     dt = FT(dt)
@@ -305,6 +316,7 @@ function build_cache(
         net_energy_flux_sfc,
         steady_state_velocity,
         conservation_check,
+        parent_budget,
     )
 
     return AtmosCache{map(typeof, args)...}(args...)

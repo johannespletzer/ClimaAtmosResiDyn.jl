@@ -100,6 +100,9 @@ include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water.jl"
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_tags.jl"))
 # Process-change records (signed per-process increments, prognostic but not transported)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "process_record.jl"))
+# The applied-update event the tendency code brackets every parent-writing
+# process with; feeds the tags, the process records and the parent-budget ledger.
+include(joinpath("prognostic_equations", "applied_update.jl"))
 
 include(joinpath("surface_conditions", "SurfaceConditions.jl"))
 include(joinpath("setups", "Setups.jl"))
@@ -193,6 +196,24 @@ include(joinpath("cache", "cache.jl"))
 include(joinpath("cache", "eddy_diffusivity_coefficient.jl"))
 include(joinpath("prognostic_equations", "constrain_state.jl"))
 include(joinpath("prognostic_equations", "limited_tendencies.jl"))
+
+"""
+    ClimaAtmos.Internals
+
+Unstable internal machinery.
+
+Nothing under this module is public API. Names, signatures and behavior may
+change in any release, nothing here is exported, and no top-level alias
+forwards to it, so a user cannot come to depend on it by accident.
+
+`Internals.ParentBudget` is the parent-budget ledger's implementation. A
+simulation builds one only when `parent_budget_mode` is not `off`.
+"""
+module Internals
+
+include(joinpath("parent_budget", "ParentBudget.jl"))
+
+end
 
 include(joinpath("cosp", "callbacks.jl"))
 include(joinpath("callbacks", "callbacks.jl"))

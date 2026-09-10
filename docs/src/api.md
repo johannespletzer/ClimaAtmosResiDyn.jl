@@ -490,3 +490,39 @@ ClimaAtmos.ColumnDatasets.GCMColumnData
 ClimaAtmos.parallel_lu_factorize!
 ClimaAtmos.parallel_lu_solve!
 ```
+
+### Parent-budget ledger
+
+The accounting layer that reconciles mass, total water, and total energy against
+the accepted discrete update. It is described in the Developer Guide: [the
+closure contract](parent_budget/contract.md) for what it claims, [the
+architecture](parent_budget/architecture.md) for how it is put together, and
+[the coverage registry](parent_budget/coverage.md) for what it covers.
+
+Only the two module docstrings are rendered, because they are what declares the
+namespace unstable. **Nothing inside them is rendered.** There is no
+configuration key, no output and no reporting surface yet, so there is no
+user-facing API, and publishing the types, the mutable ledger operations and the
+helpers would freeze a compatibility surface around an implementation that is
+expected to move as the remaining stack steps wire the ledger in. A small public
+facade belongs here once configuration and reporting exist, and it will be a
+report and a claim certificate rather than the journal internals.
+
+```@docs
+ClimaAtmos.Internals
+ClimaAtmos.Internals.ParentBudget
+```
+
+### Applied-update event
+
+The one bracket in the tendency code around every process that writes a parent
+field. The tag families and the process records read it for the labels they
+know, the parent-budget ledger for every label. These are internal functions of
+the tendency code, rendered so their cross-references resolve; they are not a
+compatibility surface.
+
+```@docs
+ClimaAtmos.open_applied_update!
+ClimaAtmos.open_ledger_event!
+ClimaAtmos.snapshot_tags!
+```

@@ -630,6 +630,11 @@ process is an energy process); the water half fires only for
 `source in KNOWN_WATER_TAG_SOURCES`, so bracketing e.g. radiation costs a
 water-tagged run nothing.
 
+This is the tag half of the applied-update event. The tendency code calls
+[`open_applied_update!`](@ref) and `close_applied_update!`, which reach
+here only for a `source` in `KNOWN_TAG_SOURCES` and feed the parent-budget
+ledger for every label.
+
 Each half is a no-op when its own model is `nothing`, so a run with only one
 family enabled pays only for that family.
 
