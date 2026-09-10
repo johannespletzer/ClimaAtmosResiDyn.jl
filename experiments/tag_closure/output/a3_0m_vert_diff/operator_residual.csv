@@ -1,6 +1,6 @@
 # operator_residual.csv, from analysis/reduce_run.jl
 # run: a3_0m_vert_diff
-# generated: 1789032227 (unix)
+# generated: 1789035241 (unix)
 # geometry: column
 # region tags summed: upper, lower
 # Column geometry: no horizontal remapping, so the maxima are over the model's own levels.
