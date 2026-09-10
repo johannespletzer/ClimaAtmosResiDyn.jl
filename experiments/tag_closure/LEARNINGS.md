@@ -478,28 +478,34 @@ transport leakage looks like, not what a failure looks like.
 `orphaned_relative` is **2.5e-9**, five orders of magnitude below the residual.
 Almost no mass sits in cells whose parent holds water while every tag is empty,
 so the removal floor is not holding closure by throwing tag content away.
-`orphaned_volume_fraction` is 0.032, so 3.2% of cells *are* orphaned by count
-while carrying 2.5e-9 of the mass: they are essentially empty cells, a
-rounding-level artifact. There is one transient — orphaned mass falls from
+`orphaned_volume_fraction` is 0.032, so 3.2% of the domain *volume* is orphaned
+while carrying 2.5e-9 of the mass: it is essentially empty air, a rounding-level
+artifact. There is one transient — orphaned mass falls from
 8.69e9 at 5 h to 4.89e7 at 6 h, a factor of 178, while the volume fraction goes
 on rising — which is the early adjustment settling out.
 
 **The number that reframes things.** `nonpositive_mass_fraction` is
-**2.77e-7** where `nonpositive_fraction` is **0.351**. So 35% of cells hold
-non-positive water and they carry three ten-millionths of the water. The count
-fraction exceeds the mass fraction by a factor of 1.3 million. For the water
-family, "a third of the domain is non-positive" is a statement about vanishingly
-dry upper-atmosphere cells and almost nothing else.
+**2.77e-7** where `nonpositive_fraction` is **0.351**. So 35% of the domain's
+volume holds non-positive water and carries three ten-millionths of the water.
+The volume fraction exceeds the mass fraction by a factor of 1.3 million. For
+the water family, "a third of the domain is non-positive" is a statement about
+vanishingly dry upper-atmosphere air and almost nothing else.
+
+**Both are volume fractions, not fractions of cells.** `tag_closure` fills a
+field with ones and reduces it with `sum`, which on a ClimaCore `Field` is the
+volume-weighted integral (`tagged_tracers.jl:456-459`, docstring at `:421`). On
+a uniformly spaced column the two readings coincide, which is why `c0_column`'s
+0.9667 is also exactly 29 of 30 levels. On a stretched sphere they do not.
 
 **It cuts the other way for energy, which sharpens C0 rather than softening
-it.** C0's 43.276% on the sphere is also a count fraction, but `where_negative.jl`
-placed the non-positive region at every level from 250 m to 11.0 km — the
-troposphere, which holds most of the atmosphere's mass. The same headline
-percentage therefore means opposite things in the two families: for water a
-rounding artifact, for energy the bulk of the field. Nobody has measured the
-energy family's mass fraction, and `c0_sphere_deep` is the only configured run
-that would produce it. That makes it worth more than the low priority it
-currently carries.
+it.** C0's 43.276% on the sphere is a volume fraction too, and
+`where_negative.jl` placed the non-positive region at every level from 250 m to
+11.0 km — the troposphere, which holds most of the atmosphere's mass. The same
+headline percentage therefore means opposite things in the two families: for
+water a rounding artifact, for energy the bulk of the field. Nobody has measured
+the energy family's mass fraction. `c0_sphere_audit` is the run for it — the
+same sphere with `audit: true` and nothing else, so its answer pairs with the
+43.276% actually in circulation.
 
 **One thing still outstanding.** `summary_a.csv` now has its A5 row but its
 `final_overclaimed_relative` and `final_orphaned_relative` are still NaN,
@@ -688,9 +694,9 @@ follow for free. Everything physical depends on `T_0` only through the group
 needs no code change**, only three TOML entries and the owner's approval, and
 its acceptance test is exact: `LH_v(288.3)`, `LH_f(273.16)` and `p_sat(288.3)`
 must come back unchanged at 2.46564492e6, 333600.0 and 1721.1532852305072 while
-`internal_energy_dry(288.3)` moves from −67533.97 to +32865.8. The raw probe
-output is in `LEVANTE_TASKS_RESULTS.md`; `C1_reference_shift.md` has the
-derivation and the recipe.
+`internal_energy_dry(288.3)` moves from −67533.97 by `−cp_d·δ` and by nothing
+else. The raw probe output is in `LEVANTE_TASKS_RESULTS.md`;
+`C1_reference_shift.md` has the derivation and the recipe.
 
 ### What this bears on, and what it does not decide
 

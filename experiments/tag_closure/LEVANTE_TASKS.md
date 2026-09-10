@@ -43,8 +43,10 @@ because the residual sums only the pure region tags.
 
 **The negative region is the troposphere.** On the sphere every level from 250 m
 to 11.0 km is 100% negative and every level from 15.5 km up is 0% negative, with
-no mixed level; `0.43276 × 30 km = 12.98 km` places the sign change between
-them. The vertical structure is geopotential as it should be — `e_tot` swings
+no mixed level, so the sign change is at the face between them, 13.02 km. The
+closure table's 0.43276 is the r²-weighted volume below that face and agrees
+with it to eight digits, which is two independent diagnostics landing on the
+same place. The vertical structure is geopotential as it should be — `e_tot` swings
 212 kJ kg⁻¹ between 250 m and 26.9 km against `gz` = 264 kJ kg⁻¹. The column is
 negative at all 30 levels with a clean step at 825 m where the DYCOMS inversion
 is. The shape is right; what is wrong is an offset. Smallest shift making the
@@ -131,8 +133,9 @@ closure by discarding tag content. That was the one outcome `gross_relative`
 could not distinguish, and it is now excluded by measurement.
 
 And `nonpositive_mass_fraction` is 2.77e-7 against a `nonpositive_fraction` of
-0.351 — a factor of 1.3 million. For water, "a third of the domain is
-non-positive" is about vanishingly dry cells and nothing else. See *Lower
+0.351 — a factor of 1.3 million. Both are fractions **by volume**, not by cell
+count. For water, "a third of the domain is non-positive" is about vanishingly
+dry air and nothing else. See *Lower
 priority*, where this changes a judgement.
 
 ## 2. Write the C1 TOML, which is now a three-line change
@@ -161,21 +164,23 @@ The first block has already been run and its output is in
 which are what a TOML override file keys on — the struct field names above are
 aliases, not table headers.
 
-**The recipe, for `δ = −100.0 K`:**
+**The recipe, for `δ = −110.0 K`**, written out in
+`toml/tag_closure_c1_reference.toml`, which carries the derivation, the
+acceptance test and the reason for the margin:
 
-| field   | now      | after    |
-|:------- |:-------- |:-------- |
-| `T_0`   | 273.16   | 173.16   |
-| `LH_v0` | 2.5008e6 | 2.7330e6 |
-| `LH_s0` | 2.8344e6 | 2.8555e6 |
+| field   | now      | after     |
+|:------- |:-------- |:--------- |
+| `T_0`   | 273.16   | 163.16    |
+| `LH_v0` | 2.5008e6 | 2.75622e6 |
+| `LH_s0` | 2.8344e6 | 2.85761e6 |
 
 `LH_f0` is derived as `LH_s0 − LH_v0` and comes out right on its own: it needs
-`(cp_l − cp_i)·δ` = −211100, and 2855500 − 2733000 = 122500 is exactly that.
+`(cp_l − cp_i)·δ` = −232210, and 2857610 − 2756220 = 101390 is exactly that.
 
-The sphere needs 100416.4 J kg⁻¹ and `δ` = −100.0 K delivers 100450.0, clearing
-it by 33.6. An earlier version of this table used −99.95 K, which delivers
-100399.8 and is 16.6 J kg⁻¹ **short**; it also left `LH_s0` as a formula rather
-than a number. Both are fixed above.
+The sphere's minimum needs 100416.4 J kg⁻¹ and `δ` = −110.0 K delivers 110495.0,
+about 10% of margin. An earlier version of this table used −99.95 K, which
+delivers 100399.8 and is 16.6 J kg⁻¹ **short** of the minimum it was derived
+from; it also left `LH_s0` as a formula rather than a number. Both are fixed.
 
 **The acceptance test is exact, and the before-values are already recorded** in
 `LEVANTE_TASKS_RESULTS.md`. After the change these three must come back
@@ -187,8 +192,8 @@ LH_f(273.16) = 333600.0
 p_sat(288.3) = 1721.1532852305072
 ```
 
-and `internal_energy_dry(288.3)` must move from −67533.97 to +32916.03, a shift
-of +100,450.0 J kg⁻¹. If a latent heat or `p_sat` moves, the co-adjustment is
+and `internal_energy_dry(288.3)` must move from −67533.97 to +42961.03, a shift
+of +110,495.0 J kg⁻¹. If a latent heat or `p_sat` moves, the co-adjustment is
 wrong and the run would be measuring a different atmosphere rather than a
 different reference. Do not submit C1 until all four hold.
 
@@ -308,7 +313,7 @@ caught before the queue rather than after it. 27 configs, 16 of 16 mutations.
 **Run `c0_sphere_audit` first.** It is `c0_sphere` with `audit: true` and
 nothing else changed, and it is a better answer to the question
 `c0_sphere_deep` was promoted for. The number wanted is the mass-weighted
-companion to C0's **43.276%**, which is a count fraction quoted throughout the
+companion to C0's **43.276%**, which is a volume fraction quoted throughout the
 series. `c0_sphere_deep` is a 60 km domain on a different grid with
 hyperdiffusion and two sponges the shallow sphere leaves off, so its mass
 fraction would belong to a configuration that is not the one that produced
@@ -348,11 +353,11 @@ the fraction without changing anything physical.
 It keeps one distinct value, and A5 has just shown what that value is worth. It
 sets `audit: true`, and `nonpositive_mass_fraction` is the share of the field's
 own *magnitude* sitting where the shares are undefined. On A5 that number was
-2.77e-7 against a count fraction of 0.351 — a factor of 1.3 million — so for
-water the alarming count fraction is almost entirely empty cells. For energy it
+2.77e-7 against a volume fraction of 0.351 — a factor of 1.3 million — so for
+water the alarming volume fraction is almost entirely empty air. For energy it
 should go the other way, because `where_negative.jl` put the non-positive region
 in the troposphere where the mass is. But **nobody has measured it**, and C0's
-43.276% is quoted throughout this series as a count fraction with no
+43.276% is quoted throughout this series as a volume fraction with no
 mass-weighted companion. `where_negative.jl` cannot supply one: it works on the
 remapped lat-lon grid and has no cell volumes, so it says where the field is
 negative but not how much of it is. `c0_sphere_audit` is the run to use for it,

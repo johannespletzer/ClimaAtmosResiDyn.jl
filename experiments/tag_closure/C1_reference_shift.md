@@ -338,27 +338,30 @@ by `−cp_d·δ`. `LH_f0` needs `(cp_l − cp_i)·δ` and gets it for free, sinc
 That changes what C1 is. It was "a code change, the owner's approval, and a
 shape nobody had chosen". It is now three TOML entries under a `toml:` key, with
 an acceptance test that is exact rather than a judgement call. With `cp_i` =
-2070.0 from the probe, every entry is a closed number. For `δ` = −100.0 K:
+2070.0 from the probe, every entry is a closed number. The chosen shift is
+`δ` = −110.0 K, written out in `toml/tag_closure_c1_reference.toml`:
 
 | field   | now      | after     |
 |:------- |:-------- |:--------- |
-| `T_0`   | 273.16   | 173.16    |
-| `LH_v0` | 2.5008e6 | 2.7330e6  |
-| `LH_s0` | 2.8344e6 | 2.8555e6  |
+| `T_0`   | 273.16   | 163.16    |
+| `LH_v0` | 2.5008e6 | 2.75622e6 |
+| `LH_s0` | 2.8344e6 | 2.85761e6 |
 
-`δ` = −100.0 K and not −99.9666, which is what 100416.4 J kg⁻¹ divided by
-`cp_d` gives. The round number moves `e_int` by 100450.0 J kg⁻¹, which clears
-the sphere's minimum by 33.6, and it makes all three entries exact in decimal.
-An earlier draft used −99.95, which is 16.6 J kg⁻¹ **short** of the minimum it
-was derived from; the moist `c(q)` of R9 would probably have covered that, but
-an acceptance test advertised as exact should not depend on probably.
+−110.0 K and not −99.9666, which is 100416.4 J kg⁻¹ divided by `cp_d` and is the
+bare minimum. It moves `e_int` by 110495.0 J kg⁻¹, about 10% above that, which
+is the smallest margin the suppression argument below tolerates: too little and
+a cell returns to non-positive, too much and the donor rule is suppressed for
+nothing. The TOML gives the sizing in full. An earlier draft here used −99.95,
+which is 16.6 J kg⁻¹ **short** of the minimum it was derived from; the moist
+`c(q)` of R9 would probably have covered that, but an acceptance test advertised
+as exact should not depend on probably.
 
 Afterwards `LH_v(288.3)`, `LH_f(273.16)` and `p_sat(288.3)` must return
 2.46564492e6, 333600.0 and 1721.1532852305072 — the values recorded before the
-change — while `internal_energy_dry(288.3)` moves from −67533.97 to +32916.03.
+change — while `internal_energy_dry(288.3)` moves from −67533.97 to +42961.03.
 The first two are exact identities under the map and not approximations:
-`LH_v(288.3)` is `2733000 − 2322 × 115.14`, and the derived `LH_f0` lands at
-122500.0, which puts `LH_f(273.16)` back at `122500 + 2111 × 100`. If a latent
+`LH_v(288.3)` is `2756220 − 2322 × 125.14`, and the derived `LH_f0` lands at
+101390.0, which puts `LH_f(273.16)` back at `101390 + 2111 × 110`. If a latent
 heat or `p_sat` moves, the run would be measuring a different atmosphere rather
 than a different reference, and the result would not mean what C1 needs it to
 mean.

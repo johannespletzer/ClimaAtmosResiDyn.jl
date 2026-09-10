@@ -106,8 +106,8 @@ absorb it; what stopped is the amplification. *A5.*
 **E1. The donor rule is inert over almost the whole domain.** The share
 `ρe_src_k / ρe_tot` is undefined where `ρe_tot ≤ 0` and `energy_source_fraction`
 returns zero there, so the loss half never runs while production still does.
-That is **96.7% of the DYCOMS column** and **43.276% of a moist sphere**, the
-latter constant to the last digit across 24 hours. *C0.*
+That is **96.7% of the DYCOMS column's volume** and **43.276% of a moist
+sphere's**, the latter constant to the last digit across 24 hours. *C0.*
 
 **E2. Production therefore accumulates without loss, invisibly.** A source tag
 reaches −209 J kg⁻¹ on the sphere while `e_src_res` shows nothing, because the
@@ -126,8 +126,12 @@ monotonically. Production with no compensating loss, seen from the budget side.
 
 **E5. The non-positive region is the troposphere, not a thin layer or a domain
 artifact.** On the sphere every level from 250 m to 11.0 km is 100% negative and
-every level from 15.5 km up is 0%, with no mixed level. `0.43276 × 30 km` =
-12.98 km places the sign change between them. The column is negative at all 30
+every level from 15.5 km up is 0%, with no mixed level, so the sign change is at
+the face between them. That face is at 13.02 km, and the r²-weighted volume
+below it is 0.4327600 against the closure table's 0.4327600052941768 — the two
+diagnostics agree to eight digits without sharing any code. (`0.43276 × 30 km` =
+12.98 km reads the fraction as a height, which is 35 m low here and is not what
+the fraction is; M1.) The column is negative at all 30
 levels with a clean step at 825 m, where the DYCOMS inversion is. *C0,
 `where_negative.jl`.*
 
@@ -212,10 +216,11 @@ from the TOML dict. C1 is three TOML entries plus the owner's approval.
 
 **R8. And its acceptance test is exact.** After the change `LH_v(288.3)`,
 `LH_f(273.16)` and `p_sat(288.3)` must return 2.46564492e6, 333600.0 and
-1721.1532852305072 unchanged, while `internal_energy_dry(288.3)` moves from
-−67533.97 to +32865.8. A latent heat that moves means the run measures a
+1721.1532852305072 unchanged, while `internal_energy_dry(288.3)` moves by
+`−cp_d·δ` and nothing else. A latent heat that moves means the run measures a
 different atmosphere rather than a different reference. Before-values recorded in
-`LEVANTE_TASKS_RESULTS.md`.
+`LEVANTE_TASKS_RESULTS.md`; the chosen `δ` and the after-values it implies are in
+`toml/tag_closure_c1_reference.toml`.
 
 **R9. The shift is not a constant.** Its coefficient is
 `c(q) = q_d·cp_d + q_v·cp_v + q_l·cp_l + q_i·cp_i`, running 1004.5 dry to 1021.6
@@ -293,13 +298,23 @@ controlled, which is why the ratios are read within a pair and never across.
 
 ## 5. Method
 
-**M1. Count fractions and mass fractions can differ by six orders of
+**M1. Volume fractions and mass fractions can differ by six orders of
 magnitude.** On A5, `nonpositive_fraction` is 0.351 while
 `nonpositive_mass_fraction` is 2.77e-7 — a factor of 1.3 million. For water,
-"a third of the domain is non-positive" is about vanishingly dry cells. For
-energy it should go the other way, since E5 puts the region in the troposphere
-where the mass is, but **no run has measured it**: C0's 43.276% is quoted
-throughout as a count fraction with no mass-weighted companion.
+"a third of the domain is non-positive" is about vanishingly dry cells: they
+take up the volume and hold none of the water. For energy it should go the
+other way, since E5 puts the region in the troposphere where the mass is, but
+**no run has measured it**: C0's 43.276% is quoted throughout as a volume
+fraction with no mass-weighted companion.
+
+`nonpositive_fraction` is a **volume** fraction and not a fraction of cells.
+`tagged_tracers.jl:456-459` fills a field with ones over the non-positive region
+and reduces it with `sum`, which on a `Field` is the volume-weighted integral;
+the docstring at `:421` says so. On `c0_column` the distinction is invisible,
+because 30 uniform 50 m levels make volume and count the same number, which is
+how "29 of 30 levels" reads correctly there. On a sphere it is not: 0.43276 is
+the r²-weighted volume of the levels below 13.02 km, and the count fraction of
+the same levels would be 7/10.
 
 **M2. `untagged + overclaimed = gross_residual` exactly**, confirmed on a model
 run and not only on randomised states. So the audit table says which *direction*
