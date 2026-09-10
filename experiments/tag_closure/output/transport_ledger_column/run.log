@@ -1,0 +1,37 @@
+# run.log for transport_ledger_column: the script's printed output, from runs on the terrabyte login node.
+# The run the findings use, with the ledger from step 60 and the rates computed on a second simulation:
+
+config: experiments/tag_closure/configs/c6_column_no_repair.yml; 360 steps, ledger from step 60; offset 110495.0 J/kg; tags ρe_src_strat, ρe_src_tropo
+gross column integrals in J/m², since the spin-up ended:
+  time  moved  moved_signed  pressure  residual  limiter  other  other_signed  sum_of_parts  unexplained  pressure_slope  limiter_slope  sum_slope
+  900.0  7500.0  77.92  7443.0  32.42  25.49  95.66  78.19  7503.0  144.3  1.015  134.2  1.005
+  1200.0  14930.0  138.0  14850.0  65.55  58.05  173.5  138.5  14950.0  270.6  1.013  110.6  1.004
+  1500.0  22300.0  182.8  22210.0  101.2  89.72  236.1  183.5  22340.0  370.4  1.011  100.5  1.004
+  1800.0  29600.0  214.7  29510.0  137.2  117.6  285.8  215.6  29650.0  448.4  1.01  96.1  1.003
+  2100.0  36820.0  235.2  36750.0  176.7  143.8  324.3  236.3  36890.0  519.7  1.008  94.33  1.003
+  2400.0  43980.0  245.7  43920.0  219.9  173.5  352.6  246.9  44060.0  581.9  1.007  94.28  1.003
+  2700.0  51060.0  246.9  51020.0  266.8  201.1  371.8  248.3  51140.0  635.5  1.005  95.19  1.003
+  3000.0  58070.0  239.6  58070.0  315.8  226.4  382.4  241.1  58170.0  680.8  1.004  95.78  1.003
+  3300.0  65100.0  224.4  65170.0  366.9  249.1  385.3  226.0  65220.0  754.1  1.003  95.77  1.003
+  3600.0  72000.0  201.8  72260.0  420.8  267.7  380.8  203.6  72250.0  977.8  0.9999  95.2  1.0
+wrote /dss/dsstbyfs02/scratch/0D/di38kez/di38kez/claude-4358097/-dss-dsshome1-0D-di38kez-git-Clima-ClimaAtmosResiDyn-jl/6f37e714-35ca-492d-96d0-e3db85f91ae7/scratchpad/jl_1RHuf4/transport_ledger.csv
+exit: 0
+
+[exited with code 0]
+
+# The first attempt, with the ledger from step one and the rates computed on the run's own cache. Its measured run did not end in the plain run's state:
+
+config: experiments/tag_closure/configs/c6_column_no_repair.yml; 360 steps; offset 110495.0 J/kg; tags ρe_src_strat, ρe_src_tropo
+gross column integrals in J/m², since the start:
+  time  moved  moved_signed  pressure  residual  limiter  other  other_signed  sum_of_parts  unexplained
+  600.0  142700.0  225.3  210200.0  726.2  2315.0  253.2  218.9  208500.0  346100.0
+  1200.0  143100.0  363.2  220500.0  721.3  2329.0  426.6  357.4  219000.0  345900.0
+  1800.0  143500.0  439.9  231900.0  739.6  2337.0  538.9  434.5  230300.0  345800.0
+  2400.0  149900.0  470.9  243200.0  777.3  2343.0  605.7  465.8  241700.0  345700.0
+  3000.0  158500.0  464.7  254400.0  838.1  2348.0  635.5  459.9  252900.0  345700.0
+  3600.0  166000.0  426.9  265600.0  923.4  2354.0  633.8  422.3  264000.0  345600.0
+the measured run and the plain run end in the same state: false
+wrote /dss/dsstbyfs02/scratch/0D/di38kez/di38kez/claude-4358097/-dss-dsshome1-0D-di38kez-git-Clima-ClimaAtmosResiDyn-jl/6f37e714-35ca-492d-96d0-e3db85f91ae7/scratchpad/jl_BDiqSW/transport_ledger.csv
+exit: 1
+
+[exited with code 0]

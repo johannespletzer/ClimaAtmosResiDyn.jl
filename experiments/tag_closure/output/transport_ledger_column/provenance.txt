@@ -1,0 +1,8 @@
+run: transport_ledger_column
+kind: analysis run, not a batch job, so this file is written by hand
+script: experiments/tag_closure/analysis/transport_ledger.jl, as committed beside this directory
+config: experiments/tag_closure/configs/c6_column_no_repair.yml, with the repair forced off by the script
+steps: 360 at dt 10 s, the ledger from step 60, reports every 30 steps
+model code: that of f3bbdb7b. The run's tree held the same diagnostics fix uncommitted, which the ledger does not touch.
+machine: LRZ terrabyte login node, julia 1.11.9, ClimaComms CPUSingleThreaded
+date: 2026-09-10

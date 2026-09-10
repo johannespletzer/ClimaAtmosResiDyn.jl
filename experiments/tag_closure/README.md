@@ -184,7 +184,10 @@ leaves the model alone, on a column and between the two C4 runs.
 checks that the implicit microphysics bracket reaches the process records.
 `c5_process_closure.jl` reads a C5-layout run per process: the new energy split
 by region against by process, each region's initial energy, and on a column the
-records against the change in `ρe_tot`.
+records against the change in `ρe_tot`. With the repair on, it also takes the
+repair's ledgers back out. `transport_ledger.jl` steps a column by hand and
+splits the growth of the residual by operator: pressure work, the transport of
+the residual already there, the per-tag limiter, and everything else.
 
 ### How the sphere configurations are put together
 
@@ -541,6 +544,11 @@ adjusted from what was learned before they are submitted.
 | `c4_sphere_tag_offset_2x` | `phase_c.sh` | C4 at twice the offset, on the identical atmosphere |
 | `c5_column_offset` | `phase_c.sh` | C5, C3's column with the offset, per-process tags, two records and `rhoa` |
 | `c5_sphere_gray` | `phase_c.sh` | C5, C4's sphere with `rad: gray`, per-process tags and two records |
+| `c6_column_repair` | `phase_c.sh` | C6, C5's column on the bracket and the repair, with `sub` and four records |
+| `c6_column_no_repair` | `phase_c.sh` | `c6_column_repair` with the repair off |
+| `c6_sphere_repair` | `phase_c.sh` | C6, C5's sphere on the bracket and the repair |
+| `c6_sphere_no_repair` | `phase_c.sh` | `c6_sphere_repair` with the repair off |
+| `c6_sphere_first_order` | `phase_c.sh` | `c6_sphere_no_repair` with the tags moved by first-order upwinding |
 
 C2, the implicit-path brackets, needs the owner's approval and a code change,
 and no configuration for it is written. C1, the reference shift, needs approval

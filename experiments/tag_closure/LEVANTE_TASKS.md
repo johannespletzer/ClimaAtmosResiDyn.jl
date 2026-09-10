@@ -184,9 +184,19 @@ to E24):
   - the column's records leave 1.37 MJ m⁻² of a day's energy change
     unexplained (E23).
 
-**Next, C6, which needs approval.** The same two layouts on the code of
-FINDINGS §8, which brackets the implicit microphysics sink and repairs negative
-tags by default:
+**C6, approved and submitted on 2026-09-10.** The same two layouts on the code
+of FINDINGS §8, which brackets the implicit microphysics sink and repairs
+negative tags by default. Jobs `13385450` and `13385451` are the column with the
+repair on and off, `13385452` and `13385453` the sphere with it on and off, and
+`13385454` the sphere with first-order tag upwinding.
+
+The first submission, jobs `13385435` to `13385439`, failed at startup. The
+repair's commit had registered `e_src_fix_<name>` without defining the function
+that computes it, and these are the first runs to ask for it. `f3bbdb7b` adds
+the function, and an integration test now computes it. The resubmission is the
+same five configurations on that commit.
+
+The runs:
 
   - the column with a `sub` tag, and records for radiation, the surface flux,
     subsidence and microphysics, so that both forms can close;

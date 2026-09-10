@@ -414,6 +414,33 @@ since `da85255e`, which C3's commit contains. C3 ran on Levante at a commit with
 uncommitted changes, so a difference in how that code moved or attributed the
 tag is possible. Not established. *C5 against C3.*
 
+**E25. On the column, after its first ten minutes, pressure work is the whole
+of the residual's growth.** `analysis/transport_ledger.jl` steps
+`c6_column_no_repair` with the repair off. From step 60 on, it splits the rate
+at which the residual grows into four parts at each step's start. Over the
+next 50 minutes the residual moved by 72,000 J m⁻², as a gross column integral,
+and the parts account for it:
+
+| part                                                  | gross, J m⁻² |
+|:----------------------------------------------------- | ------------:|
+| pressure work: the parent moves `h_tot`, the tags `e` |       72,260 |
+| transport of the residual already there               |          421 |
+| the per-tag van Leer limiter                          |          268 |
+| everything else, the brackets included                |          381 |
+
+The parts sum to 72,250 J m⁻². The regression slope of the actual change on
+their sum is 1.000, and on pressure work alone 0.9999. The last part's signed
+integral, 204 J m⁻², matches the residual's, 202. What an estimate at each
+step's start cannot see is 978 J m⁻², 1.4%. So on this column the residual
+grows because the parent moves enthalpy while the tags move energy. The
+per-tag limiter adds under half a percent.
+
+The bounds: one column, 50 minutes, no horizontal transport, and the first ten
+minutes left out. In the first minute the residual jumps by about 143,000 J m⁻²,
+and a first version of the script, which started at step one, could not
+reproduce that (§6). *Terrabyte login node, model code of `f3bbdb7b`;
+`output/transport_ledger_column/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -682,6 +709,15 @@ Kept because a later reader will otherwise re-derive them.
   - **The surface-flux code path as the rest of E16.** With the limiter off in
     both halves, switching the surface-flux tendency off as well left the
     one-step difference in `ρ` at 3.71e-8, as with it on (E16).
+  - **An explicit estimate at each step's start as enough to screen the
+    operators behind the residual.** The reviewer agent of §8 proposed it. Over
+    the column's first ten minutes it missed the residual's change by more than
+    the change itself, 346,100 against 142,700 J m⁻², gross. After those ten
+    minutes it misses by 1.4% (E25).
+  - **Evaluating the model's tendencies on the run's own cache between steps
+    as harmless.** The first version of `transport_ledger.jl` did so, and its
+    run ended in a different state from an identical run stepped plainly. The
+    script now evaluates on a second simulation.
 
 ## 7. What is not established
 
@@ -700,8 +736,10 @@ Kept because a later reader will otherwise re-derive them.
     identical atmosphere the region tags' minima scale with the offset while
     the source tag's barely move (E19), which points at transport for the
     region tags.
-  - **What makes the residual's first-hour jump (E13).** The enthalpy-against-
-    tracer transport reading fits, but no run has isolated it.
+  - **What makes the residual's first-minute jump (E13, E25).** After the first
+    ten minutes, pressure work is the whole of the residual's growth on the
+    column (E25). The first minute is too fast for an estimate at each step's
+    start. A ledger weighted by the stepper's own stages would split it.
   - **Why C5's radiation tag outgrows C3's after four hours (E24).** The
     atmospheres agree, the loss only removes, and both runs move tags with the
     van Leer limiter. The runs differ in machine and in code.
@@ -797,10 +835,39 @@ Kept because a later reader will otherwise re-derive them.
         upwind share, and an enthalpy-like specific value horizontally;
       + reckon on about 500 lines of model code and 300 of tests.
 
+    **Measured on the column: pressure work is the residual's growth.** After
+    the column's first ten minutes, pressure work accounts for 72,260 of the
+    72,000 J m⁻² the residual moved in 50 minutes, and the per-tag limiter for
+    268 (E25). That meets the agent's rule for building the switch, on the
+    column. The sphere, with horizontal transport and hyperdiffusion, is not
+    measured.
+
     It also found that the implicit bracket evaluates the tags' loss at the
     Newton iterate with no Jacobian block of its own. For energy that is a small
     fraction of the total per step, but a block like the water tags' would make
     it backward Euler.
+
+    **Assessed: sedimentation as transport of the source tags.** The owner
+    asked whether falling precipitation could move the source tags, as it
+    moves the water tags. A second reviewer agent found it viable, and needed:
+
+      - under 1M, 2M and P3, sedimentation is the only way precipitation
+        energy leaves the atmosphere, and the source tags receive none of it,
+        not even the loss at the ground. Under 0M there is none, so no run of
+        this series changes;
+      - the design is the water tags' flux-share. Each tag's face flux is the
+        parent's sedimentation energy flux, plus `c` times the mass flux, times
+        the donor cell's share, normalised by the partition sum for the region
+        tags;
+      - it needs an offset. It also needs the donor chosen by the sign of the
+        energy carried: at `c` = 110.5 kJ kg⁻¹, falling ice carries about
+        −200 kJ kg⁻¹ by the agent's estimate;
+      - exact closure within a step needs a Jacobian cross block to the rain.
+        Without one a bounded lag remains;
+      - about 450 lines of model code and 250 of tests. A 1M column tests it,
+        but does not reach ice.
+
+    That is an assessment, not a measurement. Building it waits for the owner.
 
  4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
     and the energy family has no rescale. C1 solved a simulated day in 5.8

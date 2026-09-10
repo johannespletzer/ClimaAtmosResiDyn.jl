@@ -185,6 +185,29 @@ function main(dir)
     for r in regions
         println("  initial energy of $r: smallest value $(minimum(initial_min[r])) J/kg")
     end
+
+    # With the repair on, each tag's ledger holds what the repair added to it.
+    # Taking the ledgers back out gives form A as the rule and the transport
+    # alone would have it, to first order, since a repaired value also fed the
+    # shares after it.
+    fixes = filter(startswith("fix_"), names_with_prefix(dir, "e_src_"))
+    if !isempty(fixes)
+        fix(name) = read_field(dir, "e_src_fix_" * name).values
+        unrepaired =
+            sum(value("new_" * r) .- fix("new_" * r) for r in regions) .-
+            sum(value(p) .- fix(p) for p in processes)
+        form_a_unrepaired = [maximum(abs, g) for g in slices(unrepaired)]
+        push!(header, "form_a_max_unrepaired")
+        push!(columns, form_a_unrepaired)
+        println(
+            "  with the repair's ledgers taken back out: largest gap $(maximum(form_a_unrepaired)) J/kg",
+        )
+        println("the repair's ledgers over the run, J/kg:")
+        for name in names
+            ledger = fix(name)
+            println("  ", rpad(name, 18), minimum(ledger), "   ", maximum(ledger))
+        end
+    end
     println("tag minima and maxima over the run, J/kg:")
     for name in names
         println("  ", rpad(name, 18), minimum(value(name)), "   ", maximum(value(name)))
