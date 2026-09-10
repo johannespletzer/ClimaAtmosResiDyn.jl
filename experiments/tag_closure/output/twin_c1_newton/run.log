@@ -1,0 +1,60 @@
+# run.log for twin_c1_newton, trimmed from SLURM job 13384080's .out and .err on terrabyte.
+# The job exits 1 by design when the twins differ by more than rounding.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    twin_c1_newton
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c1_sphere_shift.yml
+SLURM job:       13384080
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl
+Commit:          4a40838f4eeec9944dc41cbf56ef710cb7ca1b97 (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_c1_twin.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/twin_c1_newton
+Start time:      2026-09-10T14:08:29+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+0.0                     0.0                     0.0                     0.0                     0.0                     5.54474068044277e-16    
+400.0                   3.5549637635955776e-5   7.380015856655542e-6    0.00012723471605170466  0.0004141208226669706   3.189504091493449e-5    
+3600.0                  2.7523116772983217e-5   9.41522397860745e-6     0.0002986874371362754   0.031076212357628398    2.7054871117589344e-5   
+7200.0                  2.809128949541902e-5    1.522675218023265e-5    0.0004749293259997201   0.019495241454419065    2.812282085757765e-5    
+
+# Every distinct warning, first occurrence, first line only:
+┌ Warning: `ρe_tot` is non-positive over 43.27600052941769% of the domain volume at initialization. The energy source tags divide by it to get each tag's donor share, so the shares are undefined there and `energy_source_fraction` returns zero rather than a meaningful number. Moist total energy has no physical zero, so this usually means the chosen thermodynamic or gravitational reference puts part of the domain below it. Tag values elsewhere are still computed, but they are conditional on that reference. Enable `energy_source_closure_check` to keep watching it during the run.
+┌ Warning: energy_source tag parent is non-positive over 43.27600052941769% of the domain volume, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+┌ Warning: energy_source tag closure residual X exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/twin_c1_newton/unshifted/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual X exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/twin_c1_newton/shifted/output_0000/energy_source_tag_closure.csv.
+
+# The end of the run:
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:779
+┌ Warning: energy_source tag parent is non-positive over 43.27600052941769% of the domain volume at t = 21600.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:788
+┌ Warning: energy_source tag closure residual 0.002922034882019028 exceeds the configured tolerance 1.0e-6 at t = 21600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/twin_c1_newton/shifted/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:779
+┌ Info: C1 twin test
+│   table = "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/twin_c1_newton/twin_c1_newton.csv"
+│   worst = 0.054114444371767906
+└   tolerance = 1.0e-8
+┌ Error: The twins differ by more than rounding. The shift changes the atmosphere, not only its energy reference.
+│   worst = 0.054114444371767906
+└ @ Main ~/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_c1_twin.jl:237
+
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/twin_c1_newton/provenance.txt
+Driver exit status: 1
+End time:           2026-09-10T14:24:01+02:00

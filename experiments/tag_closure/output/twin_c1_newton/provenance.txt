@@ -1,0 +1,25 @@
+run: twin_c1_newton
+machine: terrabyte
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c1_sphere_shift.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_c1_twin.jl
+commit: 4a40838f4eeec9944dc41cbf56ef710cb7ca1b97
+commit_source: git-files
+commit_dirty: unknown
+branch: claude/tag-closure-experiments
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+started: 2026-09-10T14:08:29+02:00
+finished: 2026-09-10T14:24:01+02:00
+exit_status: 1
+slurm_job_id: 13384080
+slurm_job_name: twin_c1_newton
+partition: hpda2_test
+nodelist: hpdar03c01s12
+cpus_per_task: 2
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/twin_c1_newton
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/twin_c1_newton (left on scratch, not committed)

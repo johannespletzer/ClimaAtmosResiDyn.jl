@@ -129,6 +129,7 @@ experiments/tag_closure/
   run_tag_closure.jl   the driver: one config path in, one run out
   run_c1_twin.jl       C1's twin test: the model with and without the shift
   configs/             one YAML per run, named <phase><n>_<variant>.yml
+  overrides/           keys run_c1_twin.jl sets in both halves, via TWIN_OVERRIDES
   runscripts/          one sbatch script per phase, CPU shared partition
   analysis/            reduce_run.jl, run on Levante, plus one script per phase
   output/              committed by the owner, one directory per run
