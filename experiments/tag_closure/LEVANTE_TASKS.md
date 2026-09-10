@@ -8,10 +8,11 @@ the reference probe answered the convention question.
 
 ## Where things stand
 
-17 of 25 runs are live in `output/`. **Phase A and phase C are both complete**
-except for C1 and C2, which need approval. The pre-fix A5 reading is kept
-alongside its re-run under `output/a5_sphere_limiter/before_issue_64_fix/`,
-because it measures the bug issue #64 names rather than a residual.
+17 of the 27 configured runs are live in `output/`. **Phase A and phase C are
+both complete** except for C1 and C2, which need approval. The pre-fix A5
+reading is kept alongside its re-run under
+`output/a5_sphere_limiter/before_issue_64_fix/`, because it measures the bug
+issue #64 names rather than a residual.
 
 **Decided by measurement.** Moving the water tags into the implicit solve is not
 worth its Jacobian cost. The default van Leer ladder is flat, slope −0.011,
@@ -111,10 +112,11 @@ script run under a different one will not be seen by a batch job.
 
 ## 1. One more `phase_a.jl` pass
 
-Both loose ends from the re-run are closed. The audit table came back and A5 is
-in `summary_a.csv`. What is left is that the two ran in the wrong order, so the
-summary's `final_overclaimed_relative` and `final_orphaned_relative` are still
-NaN. One command:
+Both loose ends from the re-run are closed. The audit table came back, A5 is in
+`summary_a.csv`, and so are its `final_overclaimed_relative` and
+`final_orphaned_relative`. What is left is that `phase_a.jl` has since gained a
+`vert_diff` column, which the committed summary predates and which is the one
+column that will distinguish `a3_0m_vert_diff` from `a1_dt10`. One command:
 
 ```bash
 julia +1.11 --project=.buildkite experiments/tag_closure/analysis/phase_a.jl
@@ -153,20 +155,27 @@ julia +1.11 --project=.buildkite -e '
 grep -n -B4 'alias = "\(T_0\|LH_v0\|LH_s0\)"' <that dir>/src/parameters.toml
 ```
 
-`cp_i` sets `LH_s0`'s coefficient and is the one constant we do not have. The
-grep gives the long ClimaParams names, which are what a TOML override file keys
-on — the struct field names above are aliases, not table headers.
+The first block has already been run and its output is in
+`LEVANTE_TASKS_RESULTS.md`: `cp_i` = 2070.0, `cp_v` = 1859.0, `cp_l` = 4181.0,
+`LH_s0` = 2.8344e6. Only the grep is left. It gives the long ClimaParams names,
+which are what a TOML override file keys on — the struct field names above are
+aliases, not table headers.
 
-**The recipe, for `δ = −99.95 K`** (the sphere's 100.4 kJ kg⁻¹ at `cp_d`):
+**The recipe, for `δ = −100.0 K`:**
 
-| field   | now      | after                            |
-|:------- |:-------- |:-------------------------------- |
-| `T_0`   | 273.16   | 173.21                           |
-| `LH_v0` | 2.5008e6 | 2.7328839e6                      |
-| `LH_s0` | 2.8344e6 | 2.8344e6 + (cp_v − cp_i)·δ       |
+| field   | now      | after    |
+|:------- |:-------- |:-------- |
+| `T_0`   | 273.16   | 173.16   |
+| `LH_v0` | 2.5008e6 | 2.7330e6 |
+| `LH_s0` | 2.8344e6 | 2.8555e6 |
 
 `LH_f0` is derived as `LH_s0 − LH_v0` and comes out right on its own: it needs
-`(cp_l − cp_i)·δ` and that is what the two entries above give it.
+`(cp_l − cp_i)·δ` = −211100, and 2855500 − 2733000 = 122500 is exactly that.
+
+The sphere needs 100416.4 J kg⁻¹ and `δ` = −100.0 K delivers 100450.0, clearing
+it by 33.6. An earlier version of this table used −99.95 K, which delivers
+100399.8 and is 16.6 J kg⁻¹ **short**; it also left `LH_s0` as a formula rather
+than a number. Both are fixed above.
 
 **The acceptance test is exact, and the before-values are already recorded** in
 `LEVANTE_TASKS_RESULTS.md`. After the change these three must come back
@@ -178,8 +187,8 @@ LH_f(273.16) = 333600.0
 p_sat(288.3) = 1721.1532852305072
 ```
 
-and `internal_energy_dry(288.3)` must move from −67533.97 to +32865.8, a shift
-of +100,399.8 J kg⁻¹. If a latent heat or `p_sat` moves, the co-adjustment is
+and `internal_energy_dry(288.3)` must move from −67533.97 to +32916.03, a shift
+of +100,450.0 J kg⁻¹. If a latent heat or `p_sat` moves, the co-adjustment is
 wrong and the run would be measuring a different atmosphere rather than a
 different reference. Do not submit C1 until all four hold.
 
@@ -218,7 +227,7 @@ So the alternative `energy_source_tags.md` names is demonstrated rather than
 merely available, on exactly the configuration where the tags are inert, and it
 is reference-independent so nothing about C1 can touch it.
 
-## 4. The timing controls — measured, and the number needs one more file
+## 4. The timing controls — measured, both pairs
 
 The `.err` files came back and the A1 pair reads clean:
 
@@ -233,19 +242,20 @@ The `.err` files came back and the A1 pair reads clean:
 reduction fires on every timestep, and diagnostics every 60 s on top. That is a
 diagnostic choice, not what carrying tags costs.
 
-**The C0 pair is the measurement that would settle it** — three source tags with
-the closure check and diagnostics both hourly, over 8640 steps instead of 360 —
-and it is one file short. `c0_column`'s `.err` was never committed, and neither
-was any other tagged run's except `a1_dt10`:
+**The C0 pair settles it, and both halves are now in `output/`** — three source
+tags with the closure check and diagnostics both hourly, over 8640 steps instead
+of 360:
 
-```bash
-find ~/git/ClimaAtmosResiDyn.jl -name '*27361326*.err'   # c0_column
-find ~/git/ClimaAtmosResiDyn.jl -name '*27367733*.err'   # c3_column_record
-```
+| | tagged | untagged | ratio |
+|:-------------------- |:--------- |:---------- |:----- |
+| `solve! walltime` | 11.225 s | 8.521 s | 1.317 |
+| `sypd` | 21.088 | 27.779 | 1.317 |
+| per timestep | 1.299 ms | 986.3 µs | 1.317 |
 
-Copy each beside its run's other files. The untagged half is already known:
-`sypd` 27.779 at 986 µs per timestep. If the SLURM logs have been cleaned up,
-say so and the pair can be re-run cheaply instead.
+**1.32×, not 6.1×.** Same three tag families; the difference between the pairs is
+that A1 fires the closure reduction on every timestep and C0 fires it hourly. So
+the check is most of A1's factor, which is what the paragraph above predicted.
+Nothing left to collect here.
 
 ## After any batch job
 
@@ -343,9 +353,11 @@ water the alarming count fraction is almost entirely empty cells. For energy it
 should go the other way, because `where_negative.jl` put the non-positive region
 in the troposphere where the mass is. But **nobody has measured it**, and C0's
 43.276% is quoted throughout this series as a count fraction with no
-mass-weighted companion. This run is the only one configured to produce one.
-`where_negative.jl` cannot: it works on the remapped lat-lon grid and has no
-cell volumes, so it says where the field is negative but not how much of it is.
+mass-weighted companion. `where_negative.jl` cannot supply one: it works on the
+remapped lat-lon grid and has no cell volumes, so it says where the field is
+negative but not how much of it is. `c0_sphere_audit` is the run to use for it,
+for the reason task 5 gives; this one would answer the same question on a
+different grid and domain.
 
 ## Not yet, and why
 
@@ -391,7 +403,6 @@ saturation-vapour-pressure path needs checking as well. Task 2 confirms the
 coupling from the running package; `C1_reference_shift.md` carries the
 argument.
 
-**A3's companion.** A3 differs from `a1_dt10` in two keys,
-`microphysics_model` and `vert_diff`, so the gap between them is not the 1M
-mismatch alone. Separating it needs one extra 0M column run with `vert_diff` on.
-The config is deliberately not written.
+**A3's companion.** Written, validated and listed in task 5 as
+`a3_0m_vert_diff`. It is not in this section any more; it needs no approval and
+only the queue.

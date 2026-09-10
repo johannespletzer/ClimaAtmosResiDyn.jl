@@ -21,8 +21,8 @@ while production still does.
 C0 measured how much of the domain that is: **96.7% of the DYCOMS column** for
 the whole day after one level crosses at 8 h, and **43.276% of a moist sphere,
 constant to the last digit across 24 hours**. On the column the `rad` tag grew
-from 0 to 4321 J kg⁻¹ with the loss inert, and the one hour in which a level
-first turns positive is the one hour the tag loses anything.
+from 0 to 4321 J kg⁻¹ with the loss inert, and it does not lose anything until
+the hour in which a level first turns positive.
 
 So the rule needs a positive parent. The memo names two ways to get one.
 
@@ -337,26 +337,35 @@ by `−cp_d·δ`. `LH_f0` needs `(cp_l − cp_i)·δ` and gets it for free, sinc
 
 That changes what C1 is. It was "a code change, the owner's approval, and a
 shape nobody had chosen". It is now three TOML entries under a `toml:` key, with
-an acceptance test that is exact rather than a judgement call. For the sphere's
-100.4 kJ kg⁻¹, `δ` = −99.95 K:
+an acceptance test that is exact rather than a judgement call. With `cp_i` =
+2070.0 from the probe, every entry is a closed number. For `δ` = −100.0 K:
 
-| field   | now      | after                      |
-|:------- |:-------- |:-------------------------- |
-| `T_0`   | 273.16   | 173.21                     |
-| `LH_v0` | 2.5008e6 | 2.7328839e6                |
-| `LH_s0` | 2.8344e6 | 2.8344e6 + (cp_v − cp_i)·δ |
+| field   | now      | after     |
+|:------- |:-------- |:--------- |
+| `T_0`   | 273.16   | 173.16    |
+| `LH_v0` | 2.5008e6 | 2.7330e6  |
+| `LH_s0` | 2.8344e6 | 2.8555e6  |
 
-and afterwards `LH_v(288.3)`, `LH_f(273.16)` and `p_sat(288.3)` must return
+`δ` = −100.0 K and not −99.9666, which is what 100416.4 J kg⁻¹ divided by
+`cp_d` gives. The round number moves `e_int` by 100450.0 J kg⁻¹, which clears
+the sphere's minimum by 33.6, and it makes all three entries exact in decimal.
+An earlier draft used −99.95, which is 16.6 J kg⁻¹ **short** of the minimum it
+was derived from; the moist `c(q)` of R9 would probably have covered that, but
+an acceptance test advertised as exact should not depend on probably.
+
+Afterwards `LH_v(288.3)`, `LH_f(273.16)` and `p_sat(288.3)` must return
 2.46564492e6, 333600.0 and 1721.1532852305072 — the values recorded before the
-change — while `internal_energy_dry(288.3)` moves from −67533.97 to +32865.8. If
-a latent heat or `p_sat` moves, the run would be measuring a different
-atmosphere rather than a different reference, and the result would not mean what
-C1 needs it to mean.
+change — while `internal_energy_dry(288.3)` moves from −67533.97 to +32916.03.
+The first two are exact identities under the map and not approximations:
+`LH_v(288.3)` is `2733000 − 2322 × 115.14`, and the derived `LH_f0` lands at
+122500.0, which puts `LH_f(273.16)` back at `122500 + 2111 × 100`. If a latent
+heat or `p_sat` moves, the run would be measuring a different atmosphere rather
+than a different reference, and the result would not mean what C1 needs it to
+mean.
 
-Two things are still missing: `cp_i`, which sets `LH_s0`'s coefficient, and the
-long ClimaParams names that a TOML override keys on, since the field names above
-are aliases rather than table headers. Both come from one command, recorded in
-`LEVANTE_TASKS.md` task 2.
+One thing is still missing: the long ClimaParams names that a TOML override keys
+on, since the field names above are aliases rather than table headers. They come
+from one command, recorded in `LEVANTE_TASKS.md` task 2.
 
 **And one thing to watch.** `T_0` currently equals `T_triple` and `T_freeze`, all
 273.16. Moving `T_0` alone is correct, since the other two are physical
@@ -414,18 +423,17 @@ into the sections above. What is left:
    source tags' own rule is not running — the fallback, measured. It is also
    reference-independent, so nothing above can invalidate it. If only one thing
    runs next, this is it.
-2. **Collect `cp_i` and the ClimaParams names, then write the TOML.** One
-   command, in the section above. The recipe and its acceptance test are already
-   fixed; these are the two values still missing from them.
+2. **Collect the ClimaParams names, then write the TOML.** One command, in the
+   section above. The recipe and its acceptance test are fixed and every
+   constant in them is now known; the table headers are what is left.
 3. **Then C1 as option 2, implemented as the co-adjusted map above.** Moving
    `T_0` by itself is now known to be the wrong operation, not merely an
    unverified one, and the acceptance test distinguishes the two on sight.
 
 ## What is not established here
 
-- The long ClimaParams names for `T_0`, `LH_v0` and `LH_s0`, and the value of
-  `cp_i`. The fields are confirmed settable; these are what a TOML file needs to
-  actually name them.
+- The long ClimaParams names for `T_0`, `LH_v0` and `LH_s0`. The fields are
+  confirmed settable; these are what a TOML file needs to actually name them.
 - Whether `p_sat` is in fact invariant under the co-adjusted map. The argument
   is that it depends on `T_0` only through `LH_0 − Δcp·T_0`, which is structural
   rather than measured, and the recorded 1721.1532852305072 is the before-value
