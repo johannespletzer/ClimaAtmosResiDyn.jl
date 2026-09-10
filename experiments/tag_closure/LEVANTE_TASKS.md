@@ -1,105 +1,37 @@
 # Levante task list
 
-Self-contained. The state, what was found, what to run, and what is still open.
-Nothing below requires reading another document first.
+What to run next, and what each run is for. Every task carries what it needs, so
+none of them requires opening another document first.
 
-Branch `claude/tag-closure-experiments`. Written at `1a9a419`, revised after
-the reference probe answered the convention question.
+Branch `claude/tag-closure-experiments`.
 
 ## Where things stand
 
-17 of the 27 configured runs are live in `output/`. **Phase A and phase C are
-both complete** except for C1 and C2, which need approval. The pre-fix A5
-reading is kept alongside its re-run under
+17 of the 28 configured runs are live in `output/`. A run is live when
+`output/<run>/provenance.txt` exists, so `ls output` is the register.
+
+**Phase A and phase C are both complete** apart from C1 and C2, which need the
+owner's approval. What they concluded, one line each, with the evidence in
+[FINDINGS.md](FINDINGS.md) under the tags given:
+
+  - Implicit water tags are not worth their Jacobian cost. The residual is
+    limiter-bounded, not discretization-bounded, so implicit tags would remove a
+    part that is not there. *W1, W2.*
+  - Issue #64's fix holds. A5 re-ran a full day ending at 2.79e-4 where it had
+    reached 5.9e113, and the audit shows it did not get there by emptying the
+    tags. *W6 to W12.*
+  - The energy source tags' donor rule is inert over 43.276% of a sphere by
+    volume, and C3 showed the process record reads the radiative cooling the
+    tags miss entirely. *E1 to E9.*
+  - The energy reference is enthalpy zero. The offset C0 could not account for
+    is a convention rather than an error, and C1 is three TOML entries rather
+    than a code change. *R1 to R11.*
+  - Three source tags cost 32%. The closure check, not the tags, is what made
+    the A1 pair look like 6×. *T1 to T5.*
+
+The pre-fix A5 reading is kept beside its re-run under
 `output/a5_sphere_limiter/before_issue_64_fix/`, because it measures the bug
 issue #64 names rather than a residual.
-
-**Decided by measurement.** Moving the water tags into the implicit solve is not
-worth its Jacobian cost. The default van Leer ladder is flat, slope −0.011,
-while both linear ladders converge (+0.255 and +0.464), and at `dt` 10 s the
-fully linear reconstruction sits 13.8× lower. The residual is limiter-bounded,
-not discretization-bounded, so implicit tags would remove the part that is not
-there.
-
-**Issue #64 has a fix on this branch.** The water tags diverged to 1e130 on a
-one-day sphere with the SEM limiter while `ρq_tot` stayed bounded, and the run
-exited 0 reporting success. The unbounded multiplicative rescale ratio is now an
-additive redistribution whose removal is floored at the cell's positive content,
-and a new `abort_above` level ends a run that passes it — water defaults to 1.0,
-which no honest non-negative partition of a non-negative parent can reach.
-**Re-run at `8ed98b6`, and it holds.** `gross_relative` ends the day at
-2.79e-4 where it reached 5.9e113 before, exit 0, the abort level never
-approached, and it plateaus rather than merely staying finite. It did not get
-there by emptying the tags: `nonpositive_fraction` is unchanged at 0.35 to 0.36
-and the signed residual is −7.5e-6 relative, so the tags track the parent over a
-third of the domain that holds non-positive water. Phase A also gains the sphere
-operator residual it never had — `max |q_tag_res|` 1.9e-5 and flat.
-`LEARNINGS.md` has the reading. Two loose ends in task 1.
-
-**Measured by C0.** The source-tag donor rule is inert over 96.7% of the DYCOMS
-column and 43.276% of a moist sphere. Production accumulates without loss, and a
-source tag reaches −209 J kg⁻¹ on the sphere while `e_src_res` shows nothing,
-because the residual sums only the pure region tags.
-
-**The negative region is the troposphere.** On the sphere every level from 250 m
-to 11.0 km is 100% negative and every level from 15.5 km up is 0% negative, with
-no mixed level, so the sign change is at the face between them, 13.02 km. The
-closure table's 0.43276 is the r²-weighted volume below that face and agrees
-with it to eight digits, which is two independent diagnostics landing on the
-same place. The vertical structure is geopotential as it should be — `e_tot` swings
-212 kJ kg⁻¹ between 250 m and 26.9 km against `gz` = 264 kJ kg⁻¹. The column is
-negative at all 30 levels with a clean step at 825 m where the DYCOMS inversion
-is. The shape is right; what is wrong is an offset. Smallest shift making the
-field positive: 45.4 kJ kg⁻¹ on the column, 100.4 kJ kg⁻¹ on the sphere.
-
-**The offset is a convention, not an initialisation error.** This was the fork
-that gated C1 and it is now closed. The parameters are standard — `T_0` 273.16,
-`cv_d` 717.5, `e_int_v0` 2.37473666e6 — and `TD.total_energy` called with the
-model's own signature returns −44,009 J kg⁻¹ against the field's −43,125, the 2%
-gap being the approximated DYCOMS state. **The function reproduces the field.**
-So C0's 43.276% is a fact about the energy reference, the C0 entry and the
-memo's Part 3 source bullet stand as written, and C1 is legitimate rather than a
-treatment of a symptom.
-
-**The convention is enthalpy zero, and that is now read from the source rather
-than inferred.** Thermodynamics defines
-`internal_energy_dry(T) = cv_d·(T − T_0) − R_d·T_0`, and the probe returned
-`internal_energy_dry(273.16) = −78396.92`, which is `−R_d·T_0` to the last
-digit at `R_d` = 287.0. So `e_d = cv_d·T − cp_d·T_0`, and the model's own
-Jacobian already writes it that way: `manual_sparse_jacobian.jl:835` has
-`ᶜkappa_m * (T_0 * cp_d − ᶜK − ᶜΦ)`. The constants are
-`R_d` 287.0, `R_v` 461.5, `cv_d` 717.5, `cv_v` 1397.5, `cv_l` 4181.0,
-`cp_d` 1004.5.
-
-**The shift in `T_0` is cheaper than the textbook estimate, not dearer.**
-`∂e_d/∂T_0` is `−cp_d` = −1004.5, not `−cv_d` = −717.5, so the factor is
-`cp_d/cv_d` = 1.4 exactly and it points the other way. The sphere's 100.4 kJ
-kg⁻¹ needs `ΔT_0` = 100.0 K, so `T_0` 273.16 → 173.2 K; the column's 45.4 kJ
-kg⁻¹ needs 45.2 K, so `T_0` → 228.0 K. **An earlier draft of this file said the
-factor was about 2.5 in the other direction. That was wrong and is struck.**
-
-**What that opens instead, and it is larger.** `T_0` is not a free datum.
-`LH_v(T) = LH_v0 + (cp_v − cp_l)·(T − T_0)` with `cp_v − cp_l` = −2322, so
-holding `LH_v0` fixed while moving `T_0` to 173.2 K drops the latent heat of
-vaporisation at 288.3 K from 2.4656e6 to 2.2335e6, **−9.4%**. That is a physics
-change, which is exactly what option 2 was chosen to avoid. C1's remaining
-shape therefore has to co-adjust `LH_v0`, `LH_s0` and `LH_f0` by the same
-`ΔT_0`, and the saturation-vapour-pressure path has to be checked too, since it
-integrates Clausius–Clapeyron from a reference of its own. That is being
-written up in `C1_reference_shift.md`.
-
-**The coupling is confirmed, and C1 turns out to need no code change.** The
-probe returned `LH_v(288.3) = 2.46564492e6`, which is
-`LH_v0 + (cp_v − cp_l)(288.3 − T_0)` to every digit, and `LH_f(273.16)` =
-333600.0, so `LH_f0` is that and `LH_s0 = LH_v0 + LH_f0` = 2.8344e6. The
-settable fields include `T_0`, `LH_v0` and `LH_s0` and exclude `LH_f0`, every
-`cv_*` and `e_int_v0`, so those are derived and follow for free. The invariance
-this gives is the useful part: everything physical depends on `T_0` only through
-the group `LH_0 − Δcp·T_0`, so moving `T_0` by `δ` and `LH_v0` by
-`(cp_v − cp_l)·δ` and `LH_s0` by `(cp_v − cp_i)·δ` leaves every latent heat and
-the saturation vapour pressure **exactly** unchanged while moving `e_int` by
-`−cp_d·δ`. C1 is three TOML entries, not a fork and not a model edit, and
-`p_sat(288.3) = 1721.1532852305072` is the before-value that proves it. Task 2.
 
 ## Once per shell
 
@@ -138,34 +70,18 @@ count. For water, "a third of the domain is non-positive" is about vanishingly
 dry air and nothing else. See *Lower
 priority*, where this changes a judgement.
 
-## 2. Write the C1 TOML, which is now a three-line change
+## 2. C1 — written, waiting on approval
 
-The convention and the coupling are both settled, so what is left is mechanical.
-Two things are still missing and one command gets both.
+Nothing is missing any more. The convention, the coupling and the ClimaParams
+table headers are all settled, and both files are written:
+`toml/tag_closure_c1_reference.toml` and `configs/c1_sphere_shift.yml`. The raw
+probe output the numbers come from is in `C1_reference_shift.md`'s appendix.
 
-```bash
-julia +1.11 --project=.buildkite -e '
-    import ClimaParams
-    import Thermodynamics as TD
-    tp = TD.Parameters.ThermodynamicsParameters(Float64)
-    println("cp_i = ", TD.Parameters.cp_i(tp))
-    println("cp_v = ", TD.Parameters.cp_v(tp), "  cp_l = ", TD.Parameters.cp_l(tp))
-    println("LH_s0 = ", TD.Parameters.LH_s0(tp))
-    println(pkgdir(ClimaParams))'
-```
+**What is left is the owner's approval.** C1 changes the model's energy
+reference, so `ρe_tot` is a different number everywhere and `ref_counter` would
+bump for any job adopting the shift. No code change; that is the whole of it.
 
-```bash
-grep -n -B4 'alias = "\(T_0\|LH_v0\|LH_s0\)"' <that dir>/src/parameters.toml
-```
-
-The first block has already been run and its output is in
-`LEVANTE_TASKS_RESULTS.md`: `cp_i` = 2070.0, `cp_v` = 1859.0, `cp_l` = 4181.0,
-`LH_s0` = 2.8344e6. Only the grep is left. It gives the long ClimaParams names,
-which are what a TOML override file keys on — the struct field names above are
-aliases, not table headers.
-
-**The recipe, for `δ = −110.0 K`**, written out in
-`toml/tag_closure_c1_reference.toml`, which carries the derivation, the
+**The recipe, for `δ = −110.0 K`.** The TOML carries the derivation, the
 acceptance test and the reason for the margin:
 
 | field   | now      | after     |
@@ -182,8 +98,8 @@ about 10% of margin. An earlier version of this table used −99.95 K, which
 delivers 100399.8 and is 16.6 J kg⁻¹ **short** of the minimum it was derived
 from; it also left `LH_s0` as a formula rather than a number. Both are fixed.
 
-**The acceptance test is exact, and the before-values are already recorded** in
-`LEVANTE_TASKS_RESULTS.md`. After the change these three must come back
+**The acceptance test is exact**, and the before-values are recorded in
+`C1_reference_shift.md`'s appendix. After the change these three must come back
 *unchanged*:
 
 ```

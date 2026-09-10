@@ -435,15 +435,102 @@ into the sections above. What is left:
 
 ## What is not established here
 
-- The long ClimaParams names for `T_0`, `LH_v0` and `LH_s0`. The fields are
-  confirmed settable; these are what a TOML file needs to actually name them.
 - Whether `p_sat` is in fact invariant under the co-adjusted map. The argument
   is that it depends on `T_0` only through `LH_0 − Δcp·T_0`, which is structural
   rather than measured, and the recorded 1721.1532852305072 is the before-value
   that tests it.
 - Whether anything in ClimaAtmos or Thermodynamics quietly assumes
-  `T_0 == T_triple`. Nothing found, but nothing has ever moved them apart.
+  `T_0 == T_triple`. Nothing found, and the two are separate ClimaParams
+  entries that merely happen to share the value 273.16, but nothing has ever
+  moved them apart.
 - Whether the suppression cost matters in practice. The magnitude is firm, so
   this is measurable rather than open in principle.
 
-None of these needs a Levante run. All three are cheaper than C1.
+The parameter names are no longer among these: the appendix has them. None of
+the three needs a Levante run, and all three are cheaper than C1.
+
+## Appendix: the probe output
+
+Every constant in this document comes from here, so it is kept rather than
+summarised. Previously a separate file, `LEVANTE_TASKS_RESULTS.md`; folded in
+because this is the only argument that consumes it, and the split is what let
+`cp_i` read as missing in four places while sitting in the other file.
+
+**The reference convention.** From `Thermodynamics/src/air_energies.jl`:
+
+```julia
+@inline function internal_energy_dry(param_set::APS, T)
+    T_0 = TP.T_0(param_set)
+    cv_d = TP.cv_d(param_set)
+    R_d = TP.R_d(param_set)
+    return cv_d * (T - T_0) - R_d * T_0
+end
+```
+
+and, evaluated:
+
+```
+internal_energy_dry(T_0=273.16) = -78396.92000000001
+internal_energy_dry(288.3)      = -67533.97000000003
+internal_energy_vapor(288.3)    = 2.39589481e6
+internal_energy_liquid(288.3)   = 63300.339999999946
+
+T_0 = 273.16   e_int_v0 = 2.37473666e6   cv_d = 717.5
+TD.total_energy(tp, 0.0, 9.81*25, 288.3, 0.00945, 0.0, 0.0) = -44009.31802900004
+```
+
+These four blocks were read back through the session rather than pasted from a
+file, so they are transcriptions. Everything below is verbatim.
+
+**The latent heats and the settable fields.**
+
+```
+LH_v(288.3) = 2.46564492e6
+LH_f(273.16) = 333600.0
+p_sat(288.3) = 1721.1532852305072
+(:T_0, :T_triple, :T_freeze, :T_icenuc, :T_min, :T_max, :T_init_min,
+ :T_surf_ref, :T_min_ref, :entropy_reference_temperature, :MSLP, :p_ref_theta,
+ :press_triple, :R_d, :R_v, :cp_d, :cp_v, :cp_l, :cp_i, :LH_v0, :LH_s0,
+ :entropy_dry_air, :entropy_water_vapor, :grav, :pow_icenuc, :q_min)
+```
+
+`LH_f0`, every `cv_*` and `e_int_v0` are absent from that list because they are
+derived. `Thermodynamics/src/Parameters.jl` defines them:
+
+```julia
+@inline LH_f0(ps::ATP) = LH_s0(ps) - LH_v0(ps)              # line 125
+@inline e_int_v0(ps::ATP) = LH_v0(ps) - R_v(ps) * T_0(ps)   # line 128
+```
+
+**The remaining constants.**
+
+```
+cp_i = 2070.0
+cp_v = 1859.0  cp_l = 4181.0
+LH_s0 = 2.8344e6
+pkgdir(ClimaParams) = .../packages/ClimaParams/9BD0g
+```
+
+**The ClimaParams table headers**, which are what a `toml:` override keys on —
+the names in the field list above are struct fields, not table headers. From
+`ClimaParams/src/parameters.toml`:
+
+```toml
+[thermodynamics_temperature_reference]
+value = 273.16
+description = "Reference temperature for thermodynamics (K)."
+
+[latent_heat_vaporization_at_reference]
+value = 2500800
+description = "Latent heat of vaporization at the reference temperature (J kg-1)."
+
+[latent_heat_sublimation_at_reference]
+value = 2834400
+description = "Latent heat of sublimation at the reference temperature (J kg-1)."
+```
+
+`[temperature_triple_point]` sits immediately above the first of these at the
+same value, 273.16, and is a different entry. That is what settles whether
+moving `T_0` drags `T_triple` with it: it does not.
+
+The shift built from these is `toml/tag_closure_c1_reference.toml`.

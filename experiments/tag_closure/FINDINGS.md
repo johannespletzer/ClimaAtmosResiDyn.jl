@@ -218,9 +218,9 @@ from the TOML dict. C1 is three TOML entries plus the owner's approval.
 `LH_f(273.16)` and `p_sat(288.3)` must return 2.46564492e6, 333600.0 and
 1721.1532852305072 unchanged, while `internal_energy_dry(288.3)` moves by
 `−cp_d·δ` and nothing else. A latent heat that moves means the run measures a
-different atmosphere rather than a different reference. Before-values recorded in
-`LEVANTE_TASKS_RESULTS.md`; the chosen `δ` and the after-values it implies are in
-`toml/tag_closure_c1_reference.toml`.
+different atmosphere rather than a different reference. Before-values are in
+`C1_reference_shift.md`'s appendix; the chosen `δ` and the after-values it
+implies are in `toml/tag_closure_c1_reference.toml`.
 
 **R9. The shift is not a constant.** Its coefficient is
 `c(q) = q_d·cp_d + q_v·cp_v + q_l·cp_l + q_i·cp_i`, running 1004.5 dry to 1021.6
@@ -370,11 +370,11 @@ Kept because a later reader will otherwise re-derive them.
 
 Beyond the two clerical items in [LEVANTE_TASKS.md](LEVANTE_TASKS.md):
 
- 1. **C1.** Collect the long ClimaParams names, write the three-entry TOML, get
-    approval, run. `cp_i` = 2070.0 is already recorded in
-    `LEVANTE_TASKS_RESULTS.md`, so the names are the only thing still missing.
-    The only thing left that can change the verdict on the source-tag family.
-    R7 and R8 make it cheap and its result unambiguous.
+ 1. **C1.** Written and waiting on approval —
+    `toml/tag_closure_c1_reference.toml` and `configs/c1_sphere_shift.yml`, at
+    `δ` = −110 K. Nothing is outstanding but the decision. The only thing left
+    that can change the verdict on the source-tag family, and R7 and R8 make it
+    cheap and its result unambiguous.
  2. **`c0_sphere_audit`.** `c0_sphere` with `audit: true` and nothing else, so
     its mass-weighted non-positive fraction pairs with the 43.276% actually in
     circulation, which M1 shows is the number that has been standing in for it.

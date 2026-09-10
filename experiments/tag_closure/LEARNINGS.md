@@ -725,7 +725,7 @@ needs no code change**, only three TOML entries and the owner's approval, and
 its acceptance test is exact: `LH_v(288.3)`, `LH_f(273.16)` and `p_sat(288.3)`
 must come back unchanged at 2.46564492e6, 333600.0 and 1721.1532852305072 while
 `internal_energy_dry(288.3)` moves from −67533.97 by `−cp_d·δ` and by nothing
-else. The raw probe output is in `LEVANTE_TASKS_RESULTS.md`;
+else. The raw probe output is in `C1_reference_shift.md`'s appendix;
 `C1_reference_shift.md` has the derivation and the recipe.
 
 ### What this bears on, and what it does not decide
