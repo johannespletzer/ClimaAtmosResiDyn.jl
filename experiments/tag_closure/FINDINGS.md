@@ -295,11 +295,25 @@ both halves, which leaves the hook unwired, the one-step differences fall to
 3.7e-8 in `ρ`, 5.7e-10 in `ρq_tot`, 1.8e-7 in `uₕ` and 4.7e-5 in `u₃`. That is
 a thousandth or less of what they were, except `u₃` at a ninth. They are still
 above rounding, and `ρ`'s grows to 5.8e-6 by 5 h. So a second, smaller term
-depends on the reference too. The next suspect is the surface-flux code path,
-which `c1_acceptance.jl` checks only as a formula. Central vertical advection,
-which the model does not normally run, may also amplify what is left. *Twin
-tests, SLURM jobs `13383683`, `13384080` and `13384884` on terrabyte,
-`output/twin_c1/`, `output/twin_c1_newton/` and `output/twin_c1_limiter_off/`.*
+depends on the reference too. Central vertical advection, which the model does
+not normally run, may also amplify what is left. *Twin tests, SLURM jobs
+`13383683`, `13384080` and `13384884` on terrabyte, `output/twin_c1/`,
+`output/twin_c1_newton/` and `output/twin_c1_limiter_off/`.*
+
+**And the rest is not the surface-flux code path.** That was the next suspect,
+because `c1_acceptance.jl` checks the surface flux only as a formula. A fourth
+twin kept the limiter off and added `disable_surface_flux_tendency: true` to
+both halves, over six hours. After one step the twins differ by 3.71e-8 in
+`ρ`, 1.75e-7 in `uₕ` and 4.67e-5 in `u₃`, the same to three digits as with the
+surface flux on, and by 4.4e-10 in `ρq_tot` against 5.7e-10. So the surface
+flux does not start the remainder. Without it the difference also grows more
+slowly: `ρ`'s reaches 8.6e-7 at 6 h, and the jump the third twin shows at 5 h,
+to 5.8e-6 in `ρ` and 4.8e-3 in `u₃`, does not appear. Whether that is the
+surface flux amplifying the remainder, or only a different atmosphere, this pair
+cannot separate. What starts the remainder is not established. Saturation
+adjustment and hyperdiffusion were argued out above, not tested. The owner did
+not take up a fifth twin, because the offset of E17 leaves the model alone.
+*SLURM job `13385303` on terrabyte, `output/twin_c1_limiter_off_no_sfc/`.*
 
 **E17. An offset in the tags' total leaves the atmosphere untouched.**
 `energy_source_tag_offset` gives the tags the total `ρe_tot + c·ρ`, which the
@@ -599,6 +613,9 @@ Kept because a later reader will otherwise re-derive them.
   - **The limiter as all of E16.** The discussion predicted that switching it
     off would bring the twins to rounding from the first step. It brought `ρ`
     from 3.6e-5 to 3.7e-8, and not to rounding (E16).
+  - **The surface-flux code path as the rest of E16.** With the limiter off in
+    both halves, switching the surface-flux tendency off as well left the
+    one-step difference in `ρ` at 3.71e-8, as with it on (E16).
 
 ## 7. What is not established
 
@@ -609,9 +626,9 @@ Kept because a later reader will otherwise re-derive them.
     unchanged to 9.2e-16 from 150 K to 330 K (R8). Whether the *model* is
     invariant is the next item.
   - **What is left of E16 once the limiter is off.** 3.7e-8 in `ρ` after one
-    step, growing to 5.8e-6 by 5 h. A twin with the limiter off and
-    `disable_surface_flux_tendency: true` in both halves would say whether it
-    is the surface-flux code path.
+    step, growing to 5.8e-6 by 5 h. It is not the surface-flux code path
+    (E16). What starts it is open. Since the offset of E17 leaves the model
+    alone, nothing in the tags depends on it.
   - **Why a tag goes negative under a positive parent (E14).** The finite-step
     donor loss and unlimited explicit transport are both candidates. On an
     identical atmosphere the region tags' minima scale with the offset while
@@ -651,10 +668,9 @@ Kept because a later reader will otherwise re-derive them.
     with C1, and one at a larger `c` on the identical atmosphere, which would
     measure R11's suppression cost cleanly. It came out of the discussion with
     the reviewer agent, which found this route independently.
- 2. **Find the rest of E16.** The limiter is most of it (E16). One more twin,
-    with the limiter off and `disable_surface_flux_tendency: true`, would test
-    the surface-flux code path, about 15 minutes on `hpda2_test`. It matters
-    less once item 1 runs, because item 1 leaves the model alone.
+ 2. **Stopped: the rest of E16.** The limiter is most of it, and the
+    surface-flux path is not the rest (E16). The owner took up no further twin
+    on 2026-09-10, because item 1 leaves the model alone.
  3. **Decided: keep both.** On 2026-09-10 the owner decided to keep the energy
     source tags, and made keeping both them and the process record the main
     goal. They answer different questions: the tags say where the energy

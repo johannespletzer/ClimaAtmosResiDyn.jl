@@ -857,15 +857,19 @@ measures a slightly different atmosphere, not only a different reference. It is
 not the implicit solve: a second twin with the solve converged left the one-step
 difference at 3.6e-5. A third twin, with the van Leer limiter on vertical energy
 transport switched off, cut the one-step difference in `ρ` a thousandfold, to
-3.7e-8. So the limiter is most of it, and a smaller term remains. The size is far below the closure differences above, so it bounds C1's
-numbers rather than overturning them. It also points to a cleaner design: do the
-shift inside the tag code, where the model never sees it (FINDINGS §8).
+3.7e-8. So the limiter is most of it, and a smaller term remains. A fourth twin
+switched the surface-flux tendency off as well and left that term at 3.7e-8,
+so it is not the surface-flux path either. The size is far below the closure
+differences above, so it bounds C1's numbers rather than overturning them. It
+also points to a cleaner design: do the shift inside the tag code, where the
+model never sees it (FINDINGS §8).
 
 **Read `gross_relative` with the scale.** It falls 4.06×, while the normalising
 `∫|ρe_tot|` grows 2.85×. The documents had estimated 2.2×.
 
 **Class.** Numerical: a negative tag and a residual, both now under a well-posed
-share. The twin's discrepancy is numerical too, if the Newton explanation holds.
+share. The twin's discrepancy is numerical too. It is mostly the energy
+limiter's, not the implicit solve's as first supposed (E16).
 Not a cost: the shift changes the solve time by 1%, 349.0 s against 345.6 s.
 
 **Carry-over to the source tags.** This is the source tags. A positive reference
