@@ -540,9 +540,9 @@ warning in [`tag_closure_callback!`](@ref).
 
 What a non-positive parent costs depends on the rule the family applies, so
 this says which case applies rather than asserting the energy-source one for
-all three. Only `energy_source_tags` divides by the parent to get a donor
-share it then depends on; `water_tracers` does too but has a parent the model
-keeps non-negative; `energy_tracers` never divides by it at all.
+all three. `energy_source_tags` and `water_tracers` both divide by the parent to
+get a donor share they then depend on; `energy_tracers` never divides by it at
+all.
 """
 function nonpositive_parent_note(family)
     family == "energy_source" && return "Donor shares are undefined there, so \
@@ -550,9 +550,14 @@ function nonpositive_parent_note(family)
         energy this usually means the chosen thermodynamic or gravitational \
         reference puts part of the domain below zero."
     family == "water" && return "Water tags take loss in proportion to what \
-        they hold, so their shares are undefined there. The model keeps \
-        `ρq_tot` non-negative, so this is unexpected and worth investigating \
-        rather than a consequence of a reference choice."
+        they hold, so their shares are undefined there and the tags of those \
+        cells carry no provenance. Nothing in the model keeps `ρq_tot` \
+        non-negative: `tracer_nonnegativity_method` is off unless configured, \
+        and transport alone can take a cell below zero. Those cells have their \
+        tags emptied by `rescale_water_tags!` whenever a constraint clips the \
+        parent, so the water they held surfaces in the residual. A large \
+        fraction is worth investigating as a sign that the run is under-resolved \
+        or the timestep too long."
     return "This family applies the whole signed increment by mask and uses \
         no donor share, so its attribution is unaffected. It does mean the \
         closure denominator is degenerate where this happens."
@@ -560,19 +565,30 @@ end
 
 """
     tag_closure_callback!(integrator, output_dir, family, total_name,
-                          tag_state_names, tolerance)
+                          tag_state_names, tolerance, abort_above)
 
-Record the closure of one tag family, and warn when it has drifted past
-`tolerance`.
+Record the closure of one tag family, warn when it has drifted past `tolerance`,
+and end the run when it has passed `abort_above`.
 
 The comparison is against `gross_relative`, the relative residual that does not
 let opposite-signed local errors cancel (see [`tag_closure`](@ref)). It is never
 smaller than `|relative|`, so testing it alone also catches everything a test on
 the signed residual would.
 
-The residual is information, not a reason to stop. Closure drift is something
-you want to watch grow, and ending a multi-year integration over it would cost
-more than it saves, so this warns and keeps running.
+Drift is information, not a reason to stop. Closure drift is something you want
+to watch grow, and ending a multi-year integration over it would cost more than
+it saves, so exceeding `tolerance` warns and keeps running.
+
+A divergence is not drift. A residual far larger than the field it measures says
+the tags no longer describe anything, and every hour the run continues past that
+point costs compute and produces output nobody can use. `abort_above` is the
+level at which the run stops instead, and `nothing` disables it. See
+[`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref) for what each family defaults to and why
+the two energy families default to no level at all.
+
+The abort is raised outside the root-only block, because every process computes
+the same `closure` from the same global reductions. Raising it on the root alone
+would leave the others waiting in the next reduction.
 """
 function tag_closure_callback!(
     integrator,
@@ -581,6 +597,7 @@ function tag_closure_callback!(
     total_name,
     tag_state_names,
     tolerance,
+    abort_above,
 )
     Y = integrator.u
     closure = tag_closure(Y, integrator.p, total_name, tag_state_names)
@@ -601,6 +618,16 @@ function tag_closure_callback!(
             $(closure.nonpositive_fraction * 100)% of the domain volume at \
             t = $t s, and closure will not show it. \
             $(nonpositive_parent_note(family))"
+        )
+    end
+    if !isnothing(abort_above) && closure.gross_relative > abort_above
+        error(
+            "$family tag closure residual $(closure.gross_relative) exceeds \
+            the configured abort level $abort_above at t = $t s. The tags no \
+            longer describe the field they partition, so the rest of this run \
+            would produce tagged output that means nothing; see \
+            $(tag_closure_path(output_dir, family)). Raise or unset \
+            `abort_above` in the closure-check block to keep going anyway.",
         )
     end
     return nothing

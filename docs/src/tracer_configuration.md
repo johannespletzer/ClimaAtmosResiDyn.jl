@@ -30,13 +30,17 @@ key, but a tag does not hold the same kind of quantity in each.
   - **source tag**: an amount of the parent variable that is present now, traced
     back to where it came from. Both `water_tracers` and `energy_source_tags`
     are source tags, and they differ in what is guaranteed of the result. Water
-    ends up non-negative: the parent is kept non-negative by the model and
-    `repair_water_tag_partition!` puts a negative holding back, with the
-    `q_tag_fix_<name>` diagnostic logging how much was moved. Energy source
-    tags have no such repair and **no non-negativity guarantee** — the loss
-    term bounds the depletion rate rather than the amount removed over a step,
-    and the share is undefined wherever `ρe_tot` is not positive. See
-    [Energy Source Tags](energy_source_tags.md).
+    ends up non-negative wherever its parent does: every correction that touches
+    a water tag preserves non-negativity, and `repair_water_tag_partition!` puts
+    a negative holding back, with the `q_tag_fix_<name>` diagnostic logging how
+    much was moved. Nothing keeps `ρq_tot` itself non-negative, though —
+    `tracer_nonnegativity_method` is off by default — and where the parent is
+    not positive the shares are undefined and the tags of that cell mean
+    nothing, which the `nonpositive_fraction` column of the closure table
+    reports. Energy source tags have no repair at all and **no non-negativity
+    guarantee** — the loss term bounds the depletion rate rather than the amount
+    removed over a step, and their parent has no physical zero to begin with.
+    See [Energy Source Tags](energy_source_tags.md).
   - **signed process tag**: an `energy_tracers` entry configured with `source`.
     It starts at zero and holds the signed increment its process has added,
     going negative under net cooling. A running total of what a process did,
@@ -294,20 +298,27 @@ can see drift without waiting for the run to end.
 water_closure_check:
   period: "1days"        # how often to check
   tolerance: 1.0e-10     # warn above this relative residual
+  abort_above: 1.0       # end the run above this one
 
 energy_closure_check:
   period: "1days"
   tolerance: 1.0e-6
+  abort_above: ~         # the default for both energy families
 ```
 
-Both keys are optional inside each block, and both blocks are off by default.
+Every key is optional inside each block, and both blocks are off by default.
 Each writes `water_tag_closure.csv` / `energy_tag_closure.csv` to the output
-directory, with columns
-`time, total, tagged, residual, relative, gross_residual, gross_relative`.
+directory, with columns `time`, `total`, `tagged`, `residual`, `relative`,
+`gross_residual`, `gross_relative`, `scale` and `nonpositive_fraction`.
 
-`residual = total - tagged` is the signed miss between two global integrals and
-`relative` is it over `total`. `gross_residual` integrates the pointwise
-`|parent - Σ tags|` instead, and `gross_relative` is that over `total`.
+`residual = total - tagged` is the signed miss between two global integrals, and
+`relative` is it over `scale = ∫|parent|`. `gross_residual` integrates the
+pointwise `|parent - Σ tags|` instead, and `gross_relative` is that over `scale`
+too. The normalizer is `∫|parent|` rather than `total` because the parent may be
+signed: moist total energy has no physical zero, so `∫ρe_tot` can be negative or
+zero under a shifted reference and a ratio taken over it could never exceed a
+positive tolerance. `nonpositive_fraction` is the volume fraction where the
+parent is not positive, reported separately because closure cannot reveal it.
 
 The distinction matters, and `gross_relative` is the one the tolerance is
 compared against. Because `total` and `tagged` are each a single global
@@ -322,6 +333,21 @@ leak goes.
 Exceeding the tolerance **warns and keeps running**. Closure drift is something
 you want to watch grow, and ending a multi-year integration over it costs more
 than it saves.
+
+Exceeding `abort_above` **ends the run**. That is a different event from drift: a
+residual larger than the field it measures says the tags no longer describe
+anything, and every hour past that point burns compute to produce output nobody
+can use. Only water has a default level, `1.0`. A set of non-negative tags inside
+a non-negative parent misses it by at most the parent itself, pointwise, so an
+honest partition cannot reach 1 — and neither can an honest strict subset of one,
+which leaves most of the water untagged and pushes the ratio towards 1 from
+below. Passing 1 means the tags hold water that is not there, or the parent has
+gone negative. Both energy families default to `~`, no level at all, because
+their residual is normalized by `∫|ρe_tot|`, whose zero is a convention: a
+shifted energy reference can make that denominator arbitrarily small and the
+ratio arbitrarily large with nothing wrong. Set one per run once its first
+closure table shows where that configuration settles. Writing `abort_above: ~`
+turns the water default off.
 
 The check adds no tendency. It only reads the state and writes a table, so
 switching it on does not change what the simulation produces.
@@ -479,6 +505,7 @@ ClimaAtmos.passive_tracer_model
 ClimaAtmos.energy_tracer_tuple
 ClimaAtmos.water_tracer_tuple
 ClimaAtmos.DEFAULT_CLOSURE_TOLERANCES
+ClimaAtmos.DEFAULT_CLOSURE_ABORT_LEVELS
 ClimaAtmos.closure_check_from_config
 ClimaAtmos.tag_closure
 ClimaAtmos.tag_closure_callback

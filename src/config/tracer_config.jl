@@ -582,20 +582,51 @@ const DEFAULT_CLOSURE_TOLERANCES =
     (; water = 1.0e-10, energy = 1.0e-6, energy_source = 1.0e-6)
 
 """
-    closure_check_from_config(spec_value, context, FT; default_tolerance)
+    DEFAULT_CLOSURE_ABORT_LEVELS
+
+Default `abort_above` level of each tag family's closure check: the relative
+residual at which the run ends rather than warns, or `nothing` where no single
+level means the same thing in every configuration.
+
+Water gets `1.0`. `gross_relative` is `∫|ρq_tot - Σ tags| / ∫|ρq_tot|`, and any
+set of non-negative tags that stays inside a non-negative parent misses it by at
+most the parent itself, pointwise. So an honest partition cannot reach 1, and
+neither can an honest strict subset of one, which leaves most of the water
+untagged and drives the ratio *towards* 1 from below. Passing 1 means the tags
+hold water that is not there, or the parent has gone negative. That is a broken
+state rather than drift, and it is ten orders of magnitude above the level the
+default `tolerance` warns at. Issue #64 is the run this level exists for: its
+residual passed 1 in the fourth simulated hour and reached 1e113 by the end of
+the day, while the run reported success.
+
+Both energy families get `nothing`. Their residual is normalized by `∫|ρe_tot|`,
+whose zero is a convention: a shifted energy reference can make the denominator
+arbitrarily small and the ratio arbitrarily large with nothing actually wrong, so
+no level transfers between configurations. Set one per run, once its closure
+table shows where that run settles.
+"""
+const DEFAULT_CLOSURE_ABORT_LEVELS =
+    (; water = 1.0, energy = nothing, energy_source = nothing)
+
+"""
+    closure_check_from_config(spec_value, context, FT; default_tolerance,
+                              default_abort_above)
 
 Read a `water_closure_check`, `energy_closure_check` or
-`energy_source_closure_check` block into `(; period, tolerance)`, or `nothing`
-when the key is absent.
+`energy_source_closure_check` block into `(; period, tolerance, abort_above)`,
+or `nothing` when the key is absent.
 
-Both keys are optional: `period` defaults to `"1days"` and `tolerance` to the
-family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref).
+Every key is optional: `period` defaults to `"1days"`, `tolerance` to the
+family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref) and `abort_above` to its
+entry in [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref). Writing `abort_above: ~` turns
+the abort off for a family that defaults to having one.
 """
 closure_check_from_config(
     ::Nothing,
     context,
     ::Type{FT};
     default_tolerance,
+    default_abort_above,
 ) where {FT} = nothing
 
 function closure_check_from_config(
@@ -603,11 +634,12 @@ function closure_check_from_config(
     context,
     ::Type{FT};
     default_tolerance,
+    default_abort_above,
 ) where {FT}
     spec = checked_mapping(
         spec_value,
         context;
-        optional = ("period", "tolerance"),
+        optional = ("period", "tolerance", "abort_above"),
     )
     period = get(spec, "period", "1days")
     isfinite(time_to_seconds(period)) || error(
@@ -619,7 +651,34 @@ function closure_check_from_config(
         "$context `tolerance` must not be negative, got $tolerance. It is \
         compared against the absolute value of the relative residual.",
     )
-    return (; period, tolerance)
+    abort_above = closure_abort_above_from_config(
+        get(spec, "abort_above", default_abort_above),
+        context,
+        FT,
+    )
+    return (; period, tolerance, abort_above)
+end
+
+"""
+    closure_abort_above_from_config(value, context, FT)
+
+Read the `abort_above` entry of a closure-check block, as an `FT` or `nothing`.
+
+`nothing` means the run never ends over closure, which is what the two energy
+families default to. Zero is refused rather than read as "always abort": a run
+configured that way would die at the first check whatever its residual was, and
+`~` already says "never" without the ambiguity.
+"""
+closure_abort_above_from_config(::Nothing, context, ::Type{FT}) where {FT} =
+    nothing
+
+function closure_abort_above_from_config(value, context, ::Type{FT}) where {FT}
+    abort_above = FT(value)
+    abort_above > 0 || error(
+        "$context `abort_above` must be positive, got $abort_above. Use `~` to \
+        keep warning without ever ending the run.",
+    )
+    return abort_above
 end
 
 """
@@ -636,18 +695,21 @@ function closure_checks_from_config(config::AtmosConfig)
             "`water_closure_check`",
             FT;
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.water,
+            default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.water,
         ),
         energy_source = closure_check_from_config(
             pa["energy_source_closure_check"],
             "`energy_source_closure_check`",
             FT;
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy_source,
+            default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy_source,
         ),
         energy = closure_check_from_config(
             pa["energy_closure_check"],
             "`energy_closure_check`",
             FT;
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy,
+            default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy,
         ),
     )
 end

@@ -478,13 +478,13 @@ water_process_record:
   help: "The same record for total water, output as `q_prc_<process>` [`~` (default, off)]. Uses the `water_tracers` source labels and requires `microphysics_model: 0M` or `1M`. See docs/src/process_record.md."
   value: ~
 water_closure_check:
-  help: "Check while the run goes whether the `water_tracers` still add up to total water, and write the result to `water_tag_closure.csv` [`~` (default, off)]. A map with optional `period` (how often, default `1days`) and `tolerance` (relative residual to warn above, default 1.0e-10). Warns and keeps running. See docs/src/tracer_configuration.md."
+  help: "Check while the run goes whether the `water_tracers` still add up to total water, and write the result to `water_tag_closure.csv` [`~` (default, off)]. A map with optional `period` (how often, default `1days`), `tolerance` (relative residual to warn above, default 1.0e-10) and `abort_above` (relative residual to end the run above, default 1.0; `~` never ends the run). Exceeding `tolerance` warns and keeps running. The `abort_above` default is the largest value an honest partition can reach: non-negative tags inside a non-negative parent miss it by at most the parent itself, so a larger residual means the tags hold water that is not there. See docs/src/tracer_configuration.md."
   value: ~
 energy_source_closure_check:
-  help: "The same check for `energy_source_tags`, written to `energy_source_tag_closure.csv` [`~` (default, off)]. Same `period` / `tolerance` keys and the same loose default tolerance as `energy_closure_check` (1.0e-6). The residual is normalised by a quantity whose zero is a convention, so it is not comparable across runs that use different energy references. See docs/src/energy_source_tags.md."
+  help: "The same check for `energy_source_tags`, written to `energy_source_tag_closure.csv` [`~` (default, off)]. Same `period` / `tolerance` / `abort_above` keys and the same loose default tolerance as `energy_closure_check` (1.0e-6). The residual is normalised by a quantity whose zero is a convention, so it is not comparable across runs that use different energy references and `abort_above` defaults to `~`; set one once a first run shows where this configuration settles. See docs/src/energy_source_tags.md."
   value: ~
 energy_closure_check:
-  help: "The same check for `energy_tracers`, written to `energy_tag_closure.csv` [`~` (default, off)]. Same `period` / `tolerance` keys, but a much looser default tolerance (1.0e-6): the energy tags do not receive implicit transport or EDMFX SGS mass fluxes, so a larger residual is expected. See docs/src/tracer_configuration.md."
+  help: "The same check for `energy_tracers`, written to `energy_tag_closure.csv` [`~` (default, off)]. Same `period` / `tolerance` / `abort_above` keys, but a much looser default tolerance (1.0e-6): the energy tags do not receive implicit transport or EDMFX SGS mass fluxes, so a larger residual is expected. `abort_above` defaults to `~` for the same reason as `energy_source_closure_check`. See docs/src/tracer_configuration.md."
   value: ~
 
 # Eddy-diffusivity mass-flux (EDMF) configuration

@@ -776,6 +776,10 @@ receive implicit transport or EDMFX SGS mass fluxes, so theirs is legitimately
 the larger one. The energy source tags are looser again, and their residual is
 normalized by a quantity whose zero is a convention, so it is not comparable
 across runs that use different energy references.
+
+Each block also carries an `abort_above` level at which the run ends instead of
+warning. Only water has a default one, for the same reason: see
+[`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref).
 """
 function default_model_callbacks(
     tagging::AtmosTagging;
@@ -888,6 +892,7 @@ function tag_closure_callback(
         total_name,
         tag_state_names,
         check.tolerance,
+        check.abort_above,
     )
     return (call_every_dt(affect!, period),)
 end
