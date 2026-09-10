@@ -89,6 +89,7 @@ if TEST_GROUP in ("parent_budget", "all")
     @safetestset "Parent-budget explicit attribution" begin @time include("parent_budget/explicit_attribution_tests.jl") end
     @safetestset "Parent-budget transfers" begin @time include("parent_budget/transfer_tests.jl") end
     @safetestset "Parent-budget restarts" begin @time include("parent_budget/restart_ledger_tests.jl") end
+    @safetestset "Parent-budget report" begin @time include("parent_budget/report_tests.jl") end
 end
 
 # ============================================================================

@@ -20,7 +20,7 @@ definition of done holds.
 | 5          | [#56](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/56) | Attribute implicit and post-implicit parent-budget contributions        | implemented-update accounting, and process attribution for the implicit channel |
 | 6          | [#58](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/58) | Account for boundary fluxes and reservoir transfers                     | transfer consistency                                                            |
 | 7          | [#59](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/59) | Account for final maps, restarts, and callbacks                         | accepted-state reconciliation across finalization and restart                   |
-| 8          | not yet opened                                                         | Add parent-budget reporting and closure certification                   | the published claim certificate                                                 |
+| 8          | [#60](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/60) | Add parent-budget reporting and closure certification                   | the published claim certificate                                                 |
 
 **Tests accompany every step.** The reporting step is where results are
 published, not where realistic tests begin. A step that cannot test the claim it
@@ -378,6 +378,29 @@ performance jobs.
 **Tests.** CPU, GPU, MPI, restart, fault injection, and performance; the
 energy-reference covariance audit, algebraic and physical kept apart; comparison
 against `check_conservation` as an independent cross-check only.
+
+**Status.** #60 delivers the certificate, the calibration table and the
+performance gates. A successful run writes `parent_budget_report.yaml`, a
+versioned certificate with the configuration, the tolerances and their
+source, the restart segmentation, and for every control volume and quantity
+the parent verdict with its cumulative totals and the attribution and
+transfer verdicts of the last step, and logs a concise summary. `κ` is
+calibrated by the contract's protocol on the named moist slab column and
+committed as `src/parent_budget/kappa_calibration.yaml`, one row per
+backend, float type and rank count; the serial row is `κ = 8` from a worst
+ratio of `1.38`, a run takes its row's tolerance unless it brings its own,
+and a run with no row is blocked by name. The tests re-measure the serial
+row against `κ/4`, and gate summary mode on constant per-step allocation, a
+bounded adapter, and an explicit overhead beside a run without the ledger.
+The cross-check against `check_conservation` runs on a small moist sphere,
+which also takes the ledger through DSS and the horizontal dynamics: every
+identity holds there under the column-calibrated `κ`, the endpoint changes
+agree with ClimaCore's sums, the radiation crossings agree with the
+callback's accumulation to the order of a step, and the check's residual is
+the turbulent flux and precipitation its callback omits, as the ledger's
+legs say. The GPU and MPI rows and the energy-reference covariance audit
+remain open: this repository's CI runs neither GPUs nor MPI, and the
+covariance claim needs a reference shift the model does not expose.
 
 **Definition of done.** A run emits a certificate that a reader can act on, and
 no claim level appears in it that its own tests did not establish.

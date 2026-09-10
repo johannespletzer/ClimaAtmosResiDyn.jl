@@ -85,8 +85,8 @@ function moist_slab_simulation()
         job_id = "parent_budget_transfers_moist_slab",
     )
     simulation = CA.get_simulation(config)
-    # The configuration path carries no tolerance yet; the tests judge the
-    # residuals with the provisional one.
+    # The configuration path takes its tolerance from the calibration table.
+    # These tests judge the residuals with the provisional one instead.
     adapter_of(simulation).tolerances =
         PB.parent_budget_tolerances(provisional_tolerances())
     return simulation

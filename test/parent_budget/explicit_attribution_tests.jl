@@ -355,16 +355,16 @@ status(component) = PB.component_status(component)
         # The idealized radiation is a flux-form mode, so the two crossings and
         # the surface flux are declared, and their legs are recorded.
         r = attribution_row(adapter, :explicit_main, :energy)
-        @test r.status === :blocked
-        # The transfer legs are recorded in audit mode, so the configuration
-        # path's missing tolerance is the only blocker left.
-        @test r.blocked_by == [PB.UNCALIBRATED_TOLERANCE_BLOCKER]
+        # The transfer legs are recorded in audit mode and the configuration
+        # path takes its tolerance from the calibration table, so the channel
+        # attributes in full.
+        @test adapter.tolerance_source === :calibration_table
+        @test r.status === :pass
+        @test isempty(r.blocked_by)
         for event in
             ("xfer.surface_turbulent_flux", "xfer.radiation_toa", "xfer.radiation_surface")
             @test any(l -> String(l.event) == event, adapter.last_legs)
         end
-        @test attribution_row(adapter, :explicit_limited, :water).status === :blocked
-        @test attribution_row(adapter, :explicit_limited, :water).blocked_by ==
-              [PB.UNCALIBRATED_TOLERANCE_BLOCKER]
+        @test attribution_row(adapter, :explicit_limited, :water).status === :pass
     end
 end

@@ -28,10 +28,13 @@ The files are included in dependency order.
     the others are read from the flux field the tendency reads.
   - `checkpoint.jl` carries the closing endpoint through a checkpoint, checks
     the restored state against it, and declares the custom callbacks.
+  - `calibration.jl` reads the committed κ calibration table and states the
+    protocol that fills it.
   - `adapter.jl` is the place that knows the timestepper's stages and hooks.
     It captures the accepted envelopes after each step, meters the
     applied-update events the tendency code brackets, and drives the
     transactions.
+  - `report.jl` writes the claim certificate at the end of a run.
 """
 module ParentBudget
 
@@ -42,6 +45,8 @@ import ClimaCore.Geometry as Geometry
 import ClimaCore.Utilities: half
 import ClimaCore.InputOutput
 import ClimaTimeSteppers as CTS
+import Dates
+import YAML
 
 # The ClimaAtmos types the applicability functions and the slab integrals
 # dispatch on. Naming every ClimaAtmos import here keeps the dependency visible
@@ -86,6 +91,8 @@ include("journal.jl")
 include("transaction.jl")
 include("transfer_legs.jl")
 include("checkpoint.jl")
+include("calibration.jl")
 include("adapter.jl")
+include("report.jl")
 
 end

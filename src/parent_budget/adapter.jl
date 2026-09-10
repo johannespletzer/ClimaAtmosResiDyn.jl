@@ -554,6 +554,8 @@ hold the latest step's results in every mode; `commits` holds every commit in
 `AuditMode` only. `reductions` counts the packets reduced, which a test
 compares with the number of accepted steps.
 
+`tolerance_source` says where the tolerances came from: `:explicit` from
+the caller, `:calibration_table` from the committed κ table, `:none`.
 `restart` says the run restored a checkpoint, `checkpoint` holds the
 endpoints that checkpoint carried, and `transition` what the first
 transaction found when it compared the restored state with them. `events`
@@ -588,6 +590,7 @@ mutable struct ParentBudgetAdapter{S, C, T, G}
     packet::BudgetPacket
     channels::Tuple{Vararg{Symbol}}
     tolerances::Union{Nothing, Dict{Symbol, BudgetTolerance{BUDGET_ACCOUNTING_TYPE}}}
+    tolerance_source::Symbol
     scratch_tendency::T
     snapshot::G
     slab::Bool
@@ -638,9 +641,9 @@ is_audit(adapter::ParentBudgetAdapter) = adapter.mode isa AuditMode
     parent_budget_tolerances(tolerances) -> Union{Nothing, Dict}
 
 Check a caller's tolerance table: `nothing`, or a mapping from a subset of
-`BUDGET_QUANTITIES` to `BudgetTolerance`s in the accounting type. This is the
-only way a run gets a tolerance. A run without one reports every numeric
-verdict as `blocked`, naming the tolerance.
+`BUDGET_QUANTITIES` to `BudgetTolerance`s in the accounting type. A caller's
+table overrides the committed calibration table; without either a run
+reports every numeric verdict as `blocked`.
 """
 parent_budget_tolerances(::Nothing) = nothing
 function parent_budget_tolerances(tolerances)
@@ -802,6 +805,9 @@ them.
 
 `attribution` is `:net` or `:gross`. `:gross` needs `AuditMode`, since the
 process rows it splits are collected there only, and is refused otherwise.
+`tolerances` overrides the committed κ calibration table, whose row for the
+run's backend, float type and rank count is used otherwise; a run with
+neither reports every numeric verdict as `blocked`.
 
 A restarted run passes `restart = true` and the endpoints its checkpoint
 carried as `checkpoint`. `read_checkpoint_endpoints` reads them, and returns
@@ -822,6 +828,7 @@ function build_parent_budget(
     attribution = :net,
     tolerances = nothing,
     checkpoint = nothing,
+    calibration_rows = read_calibration_table(),
 )
     attribution = parent_budget_attribution(attribution)
     attribution === :gross && !(mode isa AuditMode) &&
@@ -849,6 +856,19 @@ function build_parent_budget(
     )
     layout = adapter_packet_layout(schema, template, mode, attribution)
     scratch_tendency = mode isa AuditMode ? similar(Y) : nothing
+    # A caller's tolerances first, then the committed calibration table's row
+    # for this backend, float type and rank count, and otherwise none.
+    context = budget_context(Y)
+    tolerance_table, tolerance_source = if !isnothing(tolerances)
+        parent_budget_tolerances(tolerances), :explicit
+    else
+        calibrated = calibrated_tolerances(
+            context,
+            Spaces.undertype(axes(Y.c));
+            rows = calibration_rows,
+        )
+        calibrated, isnothing(calibrated) ? :none : :calibration_table
+    end
     moist = owns_atmosphere_water(atmos.microphysics_model)
     slab = has_surface_reservoir(atmos.surface.temperature)
     snapshot = mode isa AuditMode ? snapshot_fields(Y, moist, slab) : nothing
@@ -862,14 +882,15 @@ function build_parent_budget(
         attribution,
         schema,
         atmos.surface.temperature,
-        budget_context(Y),
+        context,
         moist,
         BudgetLedger{FT}(schema),
         template,
         layout,
         BudgetPacket(layout),
         COLLECTED_CHANNELS,
-        parent_budget_tolerances(tolerances),
+        tolerance_table,
+        tolerance_source,
         scratch_tendency,
         snapshot,
         slab,

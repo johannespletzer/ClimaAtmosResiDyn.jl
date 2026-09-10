@@ -306,8 +306,9 @@ entry point for simulations written as scripts; configuration-driven runs go thr
     identities use the net amount either way.
   - `parent_budget_tolerances = nothing`: The tolerances the ledger judges its
     residuals against, a mapping from `:mass`, `:water` or `:energy` to a
-    `BudgetTolerance`. Without one every numeric verdict is `blocked`, naming
-    the tolerance.
+    `BudgetTolerance`. Without one the ledger takes the tolerances from the
+    committed calibration table for this backend, float type and rank count.
+    With no table row every numeric verdict is `blocked`, naming the tolerance.
   - `log_to_file = false`: Send log output to a file in the output directory.
   - `verbose = false`: Log progress while building the simulation (root process only).
 
