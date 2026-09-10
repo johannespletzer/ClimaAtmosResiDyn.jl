@@ -167,9 +167,11 @@ construction. For the prescribed forcings it is an assumption.
     reached ``10^{130}`` against a parent of ``1.6\times10^{16}``
     ([issue #64](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/issues/64)).
     The additive form leaves the error where it was. The loss is floored at what
-    the tags hold, so non-negativity still holds exactly, and where that floor
+    the tags hold, so a non-negative tag stays non-negative and where that floor
     binds the tags empty and the water they could not account for surfaces in
-    `q_tag_res`.
+    `q_tag_res`. A tag that is already negative is not lifted by this
+    correction, because its share is zero; `repair_water_tag_partition!` is what
+    handles those.
 
 ### Sedimentation with 1-moment microphysics
 

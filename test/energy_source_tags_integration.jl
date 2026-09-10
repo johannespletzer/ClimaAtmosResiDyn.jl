@@ -223,9 +223,16 @@ import ClimaAtmos as CA
         # the column integral of the residual keeps only what the processes
         # left unmatched. Without the loss half, that is every loss the tags
         # never took, and the tags hold more than the parent. With it, they
-        # follow the parent down. A smoke run of this column over 120 s found
-        # the offset cut this integral 19-fold, while the balanced part of the
-        # residual, the transport mismatch, was the same in both runs.
+        # follow the parent down. At this test's 20 s the integral is
+        # -2,382 J/m² without the loss half and -120 J/m² with it, a factor of
+        # 19.9, so the bound of 5 leaves a factor of four. Over 120 s the
+        # factor is 19.2.
+        #
+        # Both are absolute integrals on purpose. Each counts unmatched
+        # increments in J/m², and the size of the parent does not enter it.
+        # Dividing each by its own ∫|parent| would divide the ratio by the
+        # ratio of the two parents' sizes, 6.5 here, which has nothing to do
+        # with the loss half.
         signed_residual(Y, c) =
             sum(Y.c.ρe_tot .+ c .* Y.c.ρ) -
             sum(Y.c.ρe_src_strat .+ Y.c.ρe_src_tropo)
