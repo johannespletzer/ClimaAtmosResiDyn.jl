@@ -1,0 +1,81 @@
+# C6, sphere, repair on. C5's gray-radiation sphere on the code that brackets
+# the implicit microphysics sink and repairs negative tags (FINDINGS §8).
+#
+# C5's sphere took the region tags to about -10 kJ/kg and `sfc` to -208 J/kg
+# with the total positive everywhere (FINDINGS E14, E19, C5). Here the repair
+# puts them back after each state update, and `e_src_fix_<name>` says how much
+# it moved. The microphysics record now sees the 0-moment rain-out.
+#
+# It is one of three sphere runs that must carry an identical atmosphere, since
+# the model never reads the tags:
+#   - `c6_sphere_repair`, this one;
+#   - `c6_sphere_no_repair`, the repair off;
+#   - `c6_sphere_first_order`, the repair off and the tags moved by first-order
+#     upwinding.
+# `ta` is written to check that, to the last bit.
+#
+# `all` expands to every process label, `precipitation` included, which the
+# initialization warns about. That is expected.
+job_id: "c6_sphere_repair"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+
+# C5's sphere, unchanged.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+rad: "gray"
+dt_rad: "1hours"
+
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+  - name: new_tropics
+    region: tropics
+    source: all
+  - name: new_extratropics
+    region: extratropics
+    source: all
+
+energy_process_record: [radiation, surface_flux, microphysics]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_new_tropics, e_src_new_extratropics]
+    period: "1hours"
+  - short_name: [e_src_fix_tropics, e_src_fix_extratropics, e_src_fix_sfc]
+    period: "1hours"
+  - short_name: [e_src_fix_rad, e_src_fix_new_tropics, e_src_fix_new_extratropics]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_microphysics]
+    period: "1hours"
+  - short_name: [ta]
+    period: "1hours"

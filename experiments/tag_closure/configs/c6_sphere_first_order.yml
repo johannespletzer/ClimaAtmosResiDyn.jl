@@ -1,0 +1,80 @@
+# C6, sphere, repair off, tags moved by first-order upwinding.
+# `c6_sphere_no_repair` with `tracer_upwinding: first_order`, and nothing else
+# changed.
+#
+# On C5's sphere the new energy split by region and split by process differ by
+# up to 20 J/kg, 1e-3 (FINDINGS E20). A rule linear in the tags cannot make
+# that. Two steps are not linear: the tracers' default vertical upwinding, a van
+# Leer limiter applied to each tag on its own, and the clamp on the share where
+# a tag is negative. First-order upwinding is linear in the field it moves, so
+# here only the clamp is left. The gap here against the gap in
+# `c6_sphere_no_repair` separates the two.
+#
+# `tracer_upwinding` sets the vertical transport of every tracer other than
+# `rho_e_tot` and `rho_q_tot`. Under 0-moment microphysics the tags are the only
+# such tracers, so the atmosphere is untouched. `ta` checks that: it must be
+# identical to the other two C6 sphere runs, to the last bit.
+job_id: "c6_sphere_first_order"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: false
+tracer_upwinding: "first_order"
+
+# C5's sphere, unchanged.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+rad: "gray"
+dt_rad: "1hours"
+
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+  - name: new_tropics
+    region: tropics
+    source: all
+  - name: new_extratropics
+    region: extratropics
+    source: all
+
+energy_process_record: [radiation, surface_flux, microphysics]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_new_tropics, e_src_new_extratropics]
+    period: "1hours"
+  - short_name: [e_src_fix_tropics, e_src_fix_extratropics, e_src_fix_sfc]
+    period: "1hours"
+  - short_name: [e_src_fix_rad, e_src_fix_new_tropics, e_src_fix_new_extratropics]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_microphysics]
+    period: "1hours"
+  - short_name: [ta]
+    period: "1hours"

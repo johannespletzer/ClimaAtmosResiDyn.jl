@@ -1,0 +1,74 @@
+# C6, sphere, repair off. `c6_sphere_repair` with `energy_source_tag_repair:
+# false`, and nothing else changed.
+#
+# The tags go negative here as the attribution rule and their transport make
+# them, so the difference from `c6_sphere_repair` is what the repair changes,
+# and the ledgers must be zero. `ta` must be identical to the other two C6
+# sphere runs, to the last bit.
+#
+# It is also the reference for `c6_sphere_first_order`. Here the per-process gap
+# of form A comes from the per-tag van Leer limiter and from the clamp on the
+# share; there only the clamp is left (FINDINGS E20).
+job_id: "c6_sphere_no_repair"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: false
+
+# C5's sphere, unchanged.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+rad: "gray"
+dt_rad: "1hours"
+
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+  - name: new_tropics
+    region: tropics
+    source: all
+  - name: new_extratropics
+    region: extratropics
+    source: all
+
+energy_process_record: [radiation, surface_flux, microphysics]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_new_tropics, e_src_new_extratropics]
+    period: "1hours"
+  - short_name: [e_src_fix_tropics, e_src_fix_extratropics, e_src_fix_sfc]
+    period: "1hours"
+  - short_name: [e_src_fix_rad, e_src_fix_new_tropics, e_src_fix_new_extratropics]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_microphysics]
+    period: "1hours"
+  - short_name: [ta]
+    period: "1hours"

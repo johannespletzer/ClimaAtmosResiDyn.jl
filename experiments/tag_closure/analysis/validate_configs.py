@@ -45,8 +45,10 @@ FAMILIES = {
               ("q_tag_", "qv_tag_", "q_tag_fix_"), "q_tag_fix_"),
     "energy": ("energy_tracers", "energy_closure_check", "e_tag_res",
                ("e_tag_",), None),
+    # `e_src_fix_<name>` is the repair's ledger. It is optional, because runs
+    # from before the repair do not have one, so it is not a required ledger.
     "energy_source": ("energy_source_tags", "energy_source_closure_check",
-                      "e_src_res", ("e_src_",), None),
+                      "e_src_res", ("e_src_", "e_src_fix_"), None),
 }
 
 # Runs that deliberately carry no tags: the per-phase timing controls.
@@ -68,15 +70,30 @@ AUDIT_REQUIRED = {
     "c4_sphere_tag_offset_2x",
     "c5_column_offset",
     "c5_sphere_gray",
+    "c6_column_repair",
+    "c6_column_no_repair",
+    "c6_sphere_repair",
+    "c6_sphere_no_repair",
+    "c6_sphere_first_order",
 }
 # Runs allowed one model-state diagnostic besides their tags. The two C4 runs
 # differ only in an offset the model never sees, so their `ta` must be identical
-# to the last bit, and that is the check that the atmosphere is untouched.
-STATE_CHECK = {"c4_sphere_tag_offset", "c4_sphere_tag_offset_2x"}
+# to the last bit, and that is the check that the atmosphere is untouched. The
+# C6 runs differ only in the repair and in how the tags move, which the model
+# never sees either.
+STATE_CHECK = {
+    "c4_sphere_tag_offset",
+    "c4_sphere_tag_offset_2x",
+    "c6_column_repair",
+    "c6_column_no_repair",
+    "c6_sphere_repair",
+    "c6_sphere_no_repair",
+    "c6_sphere_first_order",
+}
 STATE_DIAGNOSTICS = {"ta"}
-# Runs allowed the air density besides their tags. C5's column sums its process
-# records over the column, and that needs `rhoa`.
-DENSITY_CHECK = {"c5_column_offset"}
+# Runs allowed the air density besides their tags. The C5 and C6 columns sum
+# their process records over the column, and that needs `rhoa`.
+DENSITY_CHECK = {"c5_column_offset", "c6_column_repair", "c6_column_no_repair"}
 DENSITY_DIAGNOSTICS = {"rhoa"}
 
 def shorts(config):
