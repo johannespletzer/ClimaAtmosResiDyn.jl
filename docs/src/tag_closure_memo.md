@@ -254,6 +254,7 @@ measures nothing.
     `repair_water_tag_partition!` never fired on this column and the operator
     residual equals `q_tag_res` throughout. Three `dt` points, one column, one
     hour, 0M, one configuration.
+
   - Energy: option 1 only. The residual is by design the sum of every operator
     the parent receives as enthalpy, and the only way to close it is the
     double counting the design rejects. Confidence: high. The experiment: a
@@ -261,6 +262,7 @@ measures nothing.
     hyperdiffusion and then vertical diffusion switched off one at a time. If
     one operator carries most of `gross_relative` and it is linear in `e_tot`,
     mirroring that single operator by share could be reconsidered.
+
   - Energy source: option 1, but closure is not the binding problem. First add
     the implicit-path brackets, which are small and the only structural gap
     that is a coverage gap. Then settle the energy reference: until
