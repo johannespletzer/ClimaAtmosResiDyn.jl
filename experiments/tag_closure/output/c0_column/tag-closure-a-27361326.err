@@ -1,0 +1,537 @@
+┌ Info: Making AtmosConfig with config files: 
+│    config/default_configs/default_config.yml
+└    experiments/tag_closure/configs/c0_column.yml
+┌ Info: numerics 
+│        `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│              `tracer_upwinding`::`Val{:vanleer_limiter}`
+│     `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│       `edmfx_sgsflux_upwinding`::`Val{:none}`
+│        `edmfx_tracer_upwinding`::`Val{:first_order}`
+│       `test_dycore_consistency`::`Nothing`
+│          `reproducible_restart`::`Nothing`
+│                       `limiter`::`Nothing`
+│                     `diff_mode`::`ClimaAtmos.Explicit`
+└                     `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.EquilibriumMicrophysics0M, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, Nothing, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Explicit, ClimaAtmos.Hyperdiffusion{Float64}}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, ClimaAtmos.EnergySourceTaggingModel{Tuple{ClimaAtmos.EnergySourceTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:rad, Nothing, Tuple{Symbol}}}}, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS343`
+[ Info: Initialized state (38.19 μs, 2.38 KiB)
+┌ Warning: `ρe_tot` is non-positive over 100.0% of the domain volume at initialization. The energy source tags divide by it to get each tag's donor share, so the shares are undefined there and `energy_source_fraction` returns zero rather than a meaningful number. Moist total energy has no physical zero, so this usually means the chosen thermodynamic or gravitational reference puts part of the domain below it. Tag values elsewhere are still computed, but they are conditional on that reference. Enable `energy_source_closure_check` to keep watching it during the run.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl:160
+[ Info: Built cache (27.387 s, 6.87 GiB)
+[ Info: Assembled callbacks (284.49 ms, 31.58 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 1,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = IgnoreDerivative
+[ Info: Built tendency function (856.229 ms, 34.12 MiB)
+┌ Warning: energy_source tag parent is non-positive over 100.0% of the domain volume at t = 0.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+[ Info: Initialized integrator (11.922 s, 1.48 GiB)
+[ Info: Added 4 user-provided YAML-style diagnostics
+[ Info: Set up diagnostics (6.624 s, 357.84 MiB)
+[ Info: Initialized 4 total diagnostics
+┌ Info: Simulation info
+│   job_id = "c0_column"
+└   output_dir = "output/c0_column/output_0000"
+┌ Info: Running
+│   job_id = "c0_column"
+│   output_dir = "output/c0_column/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 86400.0 seconds (2010-01-02T00:00:00) [counter = 86400, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "10 seconds"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "0.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-10T01:33:39.012
+└   estimated_finish_date = 2026-09-10T01:33:39.011
+┌ Info: Progress
+│   simulation_time = "20 seconds"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "0.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.025"
+│   date_now = 2026-09-10T01:33:40.078
+└   estimated_finish_date = 2026-09-10T01:33:40.078
+┌ Info: Progress
+│   simulation_time = "40 seconds"
+│   n_steps_completed = 4
+│   wall_time_per_step = "1 millisecond, 817 microseconds"
+│   wall_time_total = "15 seconds, 702 milliseconds"
+│   wall_time_remaining = "15 seconds, 695 milliseconds"
+│   wall_time_spent = "7 milliseconds, 269 microseconds"
+│   percent_complete = "0.0%"
+│   estimated_sypd = "15.064"
+│   instantaneous_sypd = "15.064"
+│   date_now = 2026-09-10T01:33:40.222
+└   estimated_finish_date = 2026-09-10T01:33:56.222
+┌ Info: Progress
+│   simulation_time = "1 minute, 20 seconds"
+│   n_steps_completed = 8
+│   wall_time_per_step = "19 milliseconds, 138 microseconds"
+│   wall_time_total = "2 minutes, 45 seconds"
+│   wall_time_remaining = "2 minutes, 45 seconds"
+│   wall_time_spent = "153 milliseconds, 106 microseconds"
+│   percent_complete = "0.1%"
+│   estimated_sypd = "1.431"
+│   instantaneous_sypd = "0.751"
+│   date_now = 2026-09-10T01:33:40.263
+└   estimated_finish_date = 2026-09-10T01:36:26.263
+┌ Info: Progress
+│   simulation_time = "2 minutes, 40 seconds"
+│   n_steps_completed = 16
+│   wall_time_per_step = "12 milliseconds, 371 microseconds"
+│   wall_time_total = "1 minute, 46 seconds"
+│   wall_time_remaining = "1 minute, 46 seconds"
+│   wall_time_spent = "197 milliseconds, 945 microseconds"
+│   percent_complete = "0.2%"
+│   estimated_sypd = "2.213"
+│   instantaneous_sypd = "4.885"
+│   date_now = 2026-09-10T01:33:40.272
+└   estimated_finish_date = 2026-09-10T01:35:27.272
+┌ Info: Progress
+│   simulation_time = "5 minutes, 20 seconds"
+│   n_steps_completed = 32
+│   wall_time_per_step = "6 milliseconds, 748 microseconds"
+│   wall_time_total = "58 seconds, 302 milliseconds"
+│   wall_time_remaining = "58 seconds, 87 milliseconds"
+│   wall_time_spent = "215 milliseconds, 936 microseconds"
+│   percent_complete = "0.4%"
+│   estimated_sypd = "4.057"
+│   instantaneous_sypd = "24.349"
+│   date_now = 2026-09-10T01:33:40.290
+└   estimated_finish_date = 2026-09-10T01:34:39.290
+┌ Info: Progress
+│   simulation_time = "10 minutes, 40 seconds"
+│   n_steps_completed = 64
+│   wall_time_per_step = "3 milliseconds, 930 microseconds"
+│   wall_time_total = "33 seconds, 963 milliseconds"
+│   wall_time_remaining = "33 seconds, 711 milliseconds"
+│   wall_time_spent = "251 milliseconds, 580 microseconds"
+│   percent_complete = "0.7%"
+│   estimated_sypd = "6.965"
+│   instantaneous_sypd = "24.579"
+│   date_now = 2026-09-10T01:33:40.326
+└   estimated_finish_date = 2026-09-10T01:34:14.326
+┌ Info: Progress
+│   simulation_time = "21 minutes, 20 seconds"
+│   n_steps_completed = 128
+│   wall_time_per_step = "2 milliseconds, 516 microseconds"
+│   wall_time_total = "21 seconds, 743 milliseconds"
+│   wall_time_remaining = "21 seconds, 421 milliseconds"
+│   wall_time_spent = "322 milliseconds, 126 microseconds"
+│   percent_complete = "1.5%"
+│   estimated_sypd = "10.879"
+│   instantaneous_sypd = "24.838"
+│   date_now = 2026-09-10T01:33:40.396
+└   estimated_finish_date = 2026-09-10T01:34:02.396
+┌ Info: Progress
+│   simulation_time = "42 minutes, 40 seconds"
+│   n_steps_completed = 256
+│   wall_time_per_step = "1 millisecond, 807 microseconds"
+│   wall_time_total = "15 seconds, 613 milliseconds"
+│   wall_time_remaining = "15 seconds, 150 milliseconds"
+│   wall_time_spent = "462 milliseconds, 610 microseconds"
+│   percent_complete = "3.0%"
+│   estimated_sypd = "15.151"
+│   instantaneous_sypd = "24.946"
+│   date_now = 2026-09-10T01:33:40.537
+└   estimated_finish_date = 2026-09-10T01:33:56.537
+┌ Warning: energy_source tag closure residual 0.006336710945809516 exceeds the configured tolerance 1.0e-6 at t = 3600.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 100.0% of the domain volume at t = 3600.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "1 hour, 25 minutes"
+│   n_steps_completed = 512
+│   wall_time_per_step = "3 milliseconds, 169 microseconds"
+│   wall_time_total = "27 seconds, 387 milliseconds"
+│   wall_time_remaining = "25 seconds, 764 milliseconds"
+│   wall_time_spent = "1 second, 622 milliseconds"
+│   percent_complete = "5.9%"
+│   estimated_sypd = "8.637"
+│   instantaneous_sypd = "6.04"
+│   date_now = 2026-09-10T01:33:41.715
+└   estimated_finish_date = 2026-09-10T01:34:07.715
+┌ Warning: energy_source tag closure residual 0.012352062374903699 exceeds the configured tolerance 1.0e-6 at t = 7200.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 100.0% of the domain volume at t = 7200.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "2 hours, 37 minutes"
+│   n_steps_completed = 945
+│   wall_time_per_step = "2 milliseconds, 263 microseconds"
+│   wall_time_total = "19 seconds, 552 milliseconds"
+│   wall_time_remaining = "17 seconds, 413 milliseconds"
+│   wall_time_spent = "2 seconds, 138 milliseconds"
+│   percent_complete = "10.9%"
+│   estimated_sypd = "12.098"
+│   instantaneous_sypd = "22.994"
+│   date_now = 2026-09-10T01:33:42.213
+└   estimated_finish_date = 2026-09-10T01:34:00.213
+┌ Info: Progress
+│   simulation_time = "2 hours, 50 minutes"
+│   n_steps_completed = 1024
+│   wall_time_per_step = "2 milliseconds, 173 microseconds"
+│   wall_time_total = "18 seconds, 779 milliseconds"
+│   wall_time_remaining = "16 seconds, 554 milliseconds"
+│   wall_time_spent = "2 seconds, 225 milliseconds"
+│   percent_complete = "11.9%"
+│   estimated_sypd = "12.596"
+│   instantaneous_sypd = "24.796"
+│   date_now = 2026-09-10T01:33:42.300
+└   estimated_finish_date = 2026-09-10T01:33:59.300
+┌ Warning: energy_source tag closure residual 0.018657903119906276 exceeds the configured tolerance 1.0e-6 at t = 10800.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 100.0% of the domain volume at t = 10800.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Warning: energy_source tag closure residual 0.02524775798389291 exceeds the configured tolerance 1.0e-6 at t = 14400.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 100.0% of the domain volume at t = 14400.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "4 hours, 2 minutes"
+│   n_steps_completed = 1457
+│   wall_time_per_step = "1 millisecond, 880 microseconds"
+│   wall_time_total = "16 seconds, 250 milliseconds"
+│   wall_time_remaining = "13 seconds, 510 milliseconds"
+│   wall_time_spent = "2 seconds, 740 milliseconds"
+│   percent_complete = "16.9%"
+│   estimated_sypd = "14.557"
+│   instantaneous_sypd = "23.037"
+│   date_now = 2026-09-10T01:33:42.815
+└   estimated_finish_date = 2026-09-10T01:33:56.815
+┌ Warning: energy_source tag closure residual 0.03208362628433063 exceeds the configured tolerance 1.0e-6 at t = 18000.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 100.0% of the domain volume at t = 18000.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "5 hours, 15 minutes"
+│   n_steps_completed = 1890
+│   wall_time_per_step = "1 millisecond, 716 microseconds"
+│   wall_time_total = "14 seconds, 826 milliseconds"
+│   wall_time_remaining = "11 seconds, 583 milliseconds"
+│   wall_time_spent = "3 seconds, 243 milliseconds"
+│   percent_complete = "21.9%"
+│   estimated_sypd = "15.954"
+│   instantaneous_sypd = "23.57"
+│   date_now = 2026-09-10T01:33:43.318
+└   estimated_finish_date = 2026-09-10T01:33:55.318
+┌ Info: Progress
+│   simulation_time = "5 hours, 41 minutes"
+│   n_steps_completed = 2048
+│   wall_time_per_step = "1 millisecond, 670 microseconds"
+│   wall_time_total = "14 seconds, 430 milliseconds"
+│   wall_time_remaining = "11 seconds, 10 milliseconds"
+│   wall_time_spent = "3 seconds, 420 milliseconds"
+│   percent_complete = "23.7%"
+│   estimated_sypd = "16.392"
+│   instantaneous_sypd = "24.399"
+│   date_now = 2026-09-10T01:33:43.495
+└   estimated_finish_date = 2026-09-10T01:33:55.495
+┌ Warning: energy_source tag closure residual 0.03898067505946037 exceeds the configured tolerance 1.0e-6 at t = 21600.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 100.0% of the domain volume at t = 21600.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "6 hours, 53 minutes"
+│   n_steps_completed = 2481
+│   wall_time_per_step = "1 millisecond, 604 microseconds"
+│   wall_time_total = "13 seconds, 866 milliseconds"
+│   wall_time_remaining = "9 seconds, 884 milliseconds"
+│   wall_time_spent = "3 seconds, 981 milliseconds"
+│   percent_complete = "28.7%"
+│   estimated_sypd = "17.059"
+│   instantaneous_sypd = "21.128"
+│   date_now = 2026-09-10T01:33:44.056
+└   estimated_finish_date = 2026-09-10T01:33:54.056
+┌ Warning: energy_source tag closure residual 0.0458557597964679 exceeds the configured tolerance 1.0e-6 at t = 25200.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 100.0% of the domain volume at t = 25200.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Warning: energy_source tag closure residual 0.051900228767739975 exceeds the configured tolerance 1.0e-6 at t = 28800.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 28800.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "8 hours, 5 minutes"
+│   n_steps_completed = 2914
+│   wall_time_per_step = "1 millisecond, 545 microseconds"
+│   wall_time_total = "13 seconds, 349 milliseconds"
+│   wall_time_remaining = "8 seconds, 846 milliseconds"
+│   wall_time_spent = "4 seconds, 502 milliseconds"
+│   percent_complete = "33.7%"
+│   estimated_sypd = "17.72"
+│   instantaneous_sypd = "22.778"
+│   date_now = 2026-09-10T01:33:44.576
+└   estimated_finish_date = 2026-09-10T01:33:53.576
+┌ Warning: energy_source tag closure residual 0.05793826882428546 exceeds the configured tolerance 1.0e-6 at t = 32400.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 32400.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "9 hours, 17 minutes"
+│   n_steps_completed = 3347
+│   wall_time_per_step = "1 millisecond, 493 microseconds"
+│   wall_time_total = "12 seconds, 904 milliseconds"
+│   wall_time_remaining = "7 seconds, 905 milliseconds"
+│   wall_time_spent = "4 seconds, 999 milliseconds"
+│   percent_complete = "38.7%"
+│   estimated_sypd = "18.331"
+│   instantaneous_sypd = "23.86"
+│   date_now = 2026-09-10T01:33:45.073
+└   estimated_finish_date = 2026-09-10T01:33:53.073
+┌ Warning: energy_source tag closure residual 0.06404111287662557 exceeds the configured tolerance 1.0e-6 at t = 36000.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 36000.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "10 hours, 30 minutes"
+│   n_steps_completed = 3780
+│   wall_time_per_step = "1 millisecond, 453 microseconds"
+│   wall_time_total = "12 seconds, 557 milliseconds"
+│   wall_time_remaining = "7 seconds, 63 milliseconds"
+│   wall_time_spent = "5 seconds, 494 milliseconds"
+│   percent_complete = "43.8%"
+│   estimated_sypd = "18.837"
+│   instantaneous_sypd = "23.95"
+│   date_now = 2026-09-10T01:33:45.568
+└   estimated_finish_date = 2026-09-10T01:33:53.568
+┌ Warning: energy_source tag closure residual 0.07005898672895676 exceeds the configured tolerance 1.0e-6 at t = 39600.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 39600.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "11 hours, 22 minutes"
+│   n_steps_completed = 4096
+│   wall_time_per_step = "1 millisecond, 431 microseconds"
+│   wall_time_total = "12 seconds, 368 milliseconds"
+│   wall_time_remaining = "6 seconds, 504 milliseconds"
+│   wall_time_spent = "5 seconds, 863 milliseconds"
+│   percent_complete = "47.4%"
+│   estimated_sypd = "19.126"
+│   instantaneous_sypd = "23.422"
+│   date_now = 2026-09-10T01:33:45.938
+└   estimated_finish_date = 2026-09-10T01:33:52.938
+┌ Warning: energy_source tag closure residual 0.07588836825898217 exceeds the configured tolerance 1.0e-6 at t = 43200.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 43200.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "12 hours, 34 minutes"
+│   n_steps_completed = 4529
+│   wall_time_per_step = "1 millisecond, 405 microseconds"
+│   wall_time_total = "12 seconds, 146 milliseconds"
+│   wall_time_remaining = "5 seconds, 779 milliseconds"
+│   wall_time_spent = "6 seconds, 367 milliseconds"
+│   percent_complete = "52.4%"
+│   estimated_sypd = "19.474"
+│   instantaneous_sypd = "23.533"
+│   date_now = 2026-09-10T01:33:46.441
+└   estimated_finish_date = 2026-09-10T01:33:52.441
+┌ Warning: energy_source tag closure residual 0.08142551405319219 exceeds the configured tolerance 1.0e-6 at t = 46800.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 46800.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "13 hours, 47 minutes"
+│   n_steps_completed = 4962
+│   wall_time_per_step = "1 millisecond, 384 microseconds"
+│   wall_time_total = "11 seconds, 963 milliseconds"
+│   wall_time_remaining = "5 seconds, 92 milliseconds"
+│   wall_time_spent = "6 seconds, 870 milliseconds"
+│   percent_complete = "57.4%"
+│   estimated_sypd = "19.772"
+│   instantaneous_sypd = "23.537"
+│   date_now = 2026-09-10T01:33:46.945
+└   estimated_finish_date = 2026-09-10T01:33:52.945
+┌ Warning: energy_source tag closure residual 0.086746811247875 exceeds the configured tolerance 1.0e-6 at t = 50400.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 50400.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "14 hours, 59 minutes"
+│   n_steps_completed = 5395
+│   wall_time_per_step = "1 millisecond, 366 microseconds"
+│   wall_time_total = "11 seconds, 810 milliseconds"
+│   wall_time_remaining = "4 seconds, 435 milliseconds"
+│   wall_time_spent = "7 seconds, 374 milliseconds"
+│   percent_complete = "62.4%"
+│   estimated_sypd = "20.029"
+│   instantaneous_sypd = "23.536"
+│   date_now = 2026-09-10T01:33:47.449
+└   estimated_finish_date = 2026-09-10T01:33:52.449
+┌ Warning: energy_source tag closure residual 0.09230574630347817 exceeds the configured tolerance 1.0e-6 at t = 54000.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 54000.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Warning: energy_source tag closure residual 0.09761901595579374 exceeds the configured tolerance 1.0e-6 at t = 57600.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 57600.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "16 hours, 11 minutes"
+│   n_steps_completed = 5828
+│   wall_time_per_step = "1 millisecond, 361 microseconds"
+│   wall_time_total = "11 seconds, 759 milliseconds"
+│   wall_time_remaining = "3 seconds, 827 milliseconds"
+│   wall_time_spent = "7 seconds, 932 milliseconds"
+│   percent_complete = "67.5%"
+│   estimated_sypd = "20.116"
+│   instantaneous_sypd = "21.257"
+│   date_now = 2026-09-10T01:33:48.007
+└   estimated_finish_date = 2026-09-10T01:33:52.007
+┌ Warning: energy_source tag closure residual 0.1029949104852685 exceeds the configured tolerance 1.0e-6 at t = 61200.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 61200.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "17 hours, 23 minutes"
+│   n_steps_completed = 6261
+│   wall_time_per_step = "1 millisecond, 345 microseconds"
+│   wall_time_total = "11 seconds, 626 milliseconds"
+│   wall_time_remaining = "3 seconds, 201 milliseconds"
+│   wall_time_spent = "8 seconds, 425 milliseconds"
+│   percent_complete = "72.5%"
+│   estimated_sypd = "20.346"
+│   instantaneous_sypd = "24.054"
+│   date_now = 2026-09-10T01:33:48.499
+└   estimated_finish_date = 2026-09-10T01:33:52.499
+┌ Warning: energy_source tag closure residual 0.10823413353911056 exceeds the configured tolerance 1.0e-6 at t = 64800.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 64800.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "18 hours, 35 minutes"
+│   n_steps_completed = 6694
+│   wall_time_per_step = "1 millisecond, 332 microseconds"
+│   wall_time_total = "11 seconds, 513 milliseconds"
+│   wall_time_remaining = "2 seconds, 593 milliseconds"
+│   wall_time_spent = "8 seconds, 920 milliseconds"
+│   percent_complete = "77.5%"
+│   estimated_sypd = "20.545"
+│   instantaneous_sypd = "23.938"
+│   date_now = 2026-09-10T01:33:48.995
+└   estimated_finish_date = 2026-09-10T01:33:51.995
+┌ Warning: energy_source tag closure residual 0.11332846118917284 exceeds the configured tolerance 1.0e-6 at t = 68400.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 68400.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "19 hours, 47 minutes"
+│   n_steps_completed = 7127
+│   wall_time_per_step = "1 millisecond, 321 microseconds"
+│   wall_time_total = "11 seconds, 414 milliseconds"
+│   wall_time_remaining = "1 second, 998 milliseconds"
+│   wall_time_spent = "9 seconds, 415 milliseconds"
+│   percent_complete = "82.5%"
+│   estimated_sypd = "20.723"
+│   instantaneous_sypd = "23.927"
+│   date_now = 2026-09-10T01:33:49.490
+└   estimated_finish_date = 2026-09-10T01:33:51.490
+┌ Warning: energy_source tag closure residual 0.11789861882895233 exceeds the configured tolerance 1.0e-6 at t = 72000.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 72000.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Warning: energy_source tag closure residual 0.12186984346033736 exceeds the configured tolerance 1.0e-6 at t = 75600.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 75600.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "21 hours"
+│   n_steps_completed = 7560
+│   wall_time_per_step = "1 millisecond, 312 microseconds"
+│   wall_time_total = "11 seconds, 339 milliseconds"
+│   wall_time_remaining = "1 second, 417 milliseconds"
+│   wall_time_spent = "9 seconds, 922 milliseconds"
+│   percent_complete = "87.5%"
+│   estimated_sypd = "20.861"
+│   instantaneous_sypd = "23.413"
+│   date_now = 2026-09-10T01:33:49.996
+└   estimated_finish_date = 2026-09-10T01:33:51.996
+┌ Warning: energy_source tag closure residual 0.12575925909496302 exceeds the configured tolerance 1.0e-6 at t = 79200.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 79200.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "22 hours, 12 minutes"
+│   n_steps_completed = 7993
+│   wall_time_per_step = "1 millisecond, 306 microseconds"
+│   wall_time_total = "11 seconds, 289 milliseconds"
+│   wall_time_remaining = "845 milliseconds, 395 microseconds"
+│   wall_time_spent = "10 seconds, 443 milliseconds"
+│   percent_complete = "92.5%"
+│   estimated_sypd = "20.953"
+│   instantaneous_sypd = "22.717"
+│   date_now = 2026-09-10T01:33:50.518
+└   estimated_finish_date = 2026-09-10T01:33:51.518
+┌ Info: Progress
+│   simulation_time = "22 hours, 45 minutes"
+│   n_steps_completed = 8192
+│   wall_time_per_step = "1 millisecond, 302 microseconds"
+│   wall_time_total = "11 seconds, 251 milliseconds"
+│   wall_time_remaining = "583 milliseconds, 401 microseconds"
+│   wall_time_spent = "10 seconds, 667 milliseconds"
+│   percent_complete = "94.8%"
+│   estimated_sypd = "21.024"
+│   instantaneous_sypd = "24.328"
+│   date_now = 2026-09-10T01:33:50.742
+└   estimated_finish_date = 2026-09-10T01:33:51.742
+┌ Warning: energy_source tag closure residual 0.1300841877530531 exceeds the configured tolerance 1.0e-6 at t = 82800.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 82800.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+┌ Info: Progress
+│   simulation_time = "23 hours, 57 minutes"
+│   n_steps_completed = 8625
+│   wall_time_per_step = "1 millisecond, 297 microseconds"
+│   wall_time_total = "11 seconds, 211 milliseconds"
+│   wall_time_remaining = "19 milliseconds, 464 microseconds"
+│   wall_time_spent = "11 seconds, 192 milliseconds"
+│   percent_complete = "99.8%"
+│   estimated_sypd = "21.099"
+│   instantaneous_sypd = "22.617"
+│   date_now = 2026-09-10T01:33:51.266
+└   estimated_finish_date = 2026-09-10T01:33:52.266
+┌ Warning: energy_source tag closure residual 0.13456131085846748 exceeds the configured tolerance 1.0e-6 at t = 86400.0 s. The tags no longer account for the field they partition; see output/c0_column/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:590
+┌ Warning: energy_source tag parent is non-positive over 96.66666666666667% of the domain volume at t = 86400.0 s, and closure will not show it. Donor shares are undefined there, so the loss half of the attribution rule does not run. For moist total energy this usually means the chosen thermodynamic or gravitational reference puts part of the domain below zero.
+└ @ ClimaAtmos ~/git/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:599
+[ Info: solve! walltime = 11.225
+[ Info: sypd: 21.088
+[ Info: wall_time_per_timestep: 1 millisecond, 299 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 4.56 GiB
+┌ Info: Tag-closure run finished
+│   simulation.job_id = "c0_column"
+└   result.ret_code = :success
+┌ Info: Where it went
+│   config = "/home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c0_column.yml"
+└   simulation.output_dir = "output/c0_column/output_0000"
+┌ Info: energy_source tag closure (25 rows)
+│   columns: time,total,tagged,residual,relative,gross_residual,gross_relative,scale,nonpositive_fraction
+│   first:   0.0,-7.294100384667896e7,-7.294100384667894e7,-1.4901161193847656e-8,-2.0429059661928569e-16,1.8617272654064543e-9,2.5523740656487e-17,7.294100384667896e7,1.0
+│   last:    86400.0,-7.15074769845631e7,-6.072244567823717e7,-1.0785031306325927e7,-0.13297614823642154,1.0913595930366531e7,0.13456131085846748,8.110500604327144e7,0.9666666666666667
+└   path = "output/c0_column/output_0000/energy_source_tag_closure.csv"
