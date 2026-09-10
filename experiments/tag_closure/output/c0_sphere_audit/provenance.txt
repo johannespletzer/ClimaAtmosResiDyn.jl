@@ -1,0 +1,22 @@
+run: c0_sphere_audit
+config: /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c0_sphere_audit.yml
+commit: bcbe190f844c59374a16290e1bb05af6bf5bca5a
+commit_source: git
+commit_dirty: yes
+branch: claude/tag-closure-experiments
+julia: 1.11.9
+julia_depot: /home/b/b309159/.julia/depots/levante-cpu
+project: /home/b/b309159/git/ClimaAtmosResiDyn.jl/.buildkite
+started: 2026-09-10T11:23:35+02:00
+finished: 2026-09-10T11:32:45+02:00
+exit_status: 0
+slurm_job_id: 27369268
+slurm_job_name: tag-closure-a
+partition: shared
+nodelist: l40003
+cpus_per_task: 35
+node_type: AMD EPYC 7763 64-Core Processor
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/c0_sphere_audit/output_0000
+netcdf_and_checkpoints: /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/c0_sphere_audit/output_0000 (left on scratch, not committed)
