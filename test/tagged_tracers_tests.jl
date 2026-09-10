@@ -378,6 +378,89 @@ import ClimaAtmos as CA
         @test closure_of([1.0, 0.0], [0.0, 0.0]).nonpositive_fraction == 0.5
     end
 
+    @testset "Audit splits the residual by what it means" begin
+        # `tag_audit` needs what `tag_closure` needs plus a second scratch
+        # buffer, so plain arrays exercise it the same way. `sum` is unweighted
+        # here rather than volume-weighted, which changes none of the arithmetic
+        # under test.
+        mock(parent, tag) = (
+            (; c = (; ρq_tot = parent, ρq_tag_a = tag)),
+            (;
+                scratch = (;
+                    ᶜtemp_scalar = similar(parent),
+                    ᶜtemp_scalar_2 = similar(parent),
+                )
+            ),
+        )
+        audit_of(parent, tag) = CA.tag_audit(
+            mock(parent, tag)...,
+            :ρq_tot,
+            (:ρq_tag_a,),
+            sum(abs.(parent)),
+        )
+
+        # The two directions are separated rather than added. One cell is short
+        # by 1 and the other holds 1 too much, so the closure reports a gross
+        # residual of 2 and says nothing about which way either cell leaks.
+        split = audit_of([3.0, 1.0], [2.0, 2.0])
+        @test split.untagged == 1.0
+        @test split.overclaimed == 1.0
+        # Their sum is what `tag_closure` reports, so reading them loses nothing.
+        @test split.untagged + split.overclaimed == 2.0
+
+        # A cell that still holds water with no tags left is orphaned: its water
+        # has no origin any more and no later step gives it one back. The cell
+        # beside it is short of tags without being empty, so it is untagged but
+        # not orphaned. That is why the orphan count is a lower bound.
+        orphan = audit_of([2.0, 4.0], [0.0, 1.0])
+        @test orphan.orphaned == 2.0
+        @test orphan.orphaned_volume_fraction == 0.5
+        @test orphan.untagged == 5.0  # both cells, the orphaned one included
+
+        # A tag that has gone negative leaves nothing positive behind, so its
+        # cell counts as orphaned rather than as tagged.
+        @test audit_of([2.0], [-1.0]).orphaned == 2.0
+
+        # Mass and volume disagree, which is why both are reported. Three of
+        # these four cells have a non-positive parent and they hold almost none
+        # of the mass. The volume fraction alone says most of the domain has
+        # undefined shares. The mass fraction alone says the state is nearly
+        # clean. Both are true of the same field, and a moist sphere really does
+        # look like this above the troposphere.
+        thin_parent = [1.0, -1e-9, -1e-9, 0.0]
+        thin_tag = [1.0, 0.0, 0.0, 0.0]
+        thin = audit_of(thin_parent, thin_tag)
+        @test thin.nonpositive_mass ≈ 2e-9
+        @test thin.nonpositive_mass_fraction < 1e-8
+        @test CA.tag_closure(
+            mock(thin_parent, thin_tag)...,
+            :ρq_tot,
+            (:ρq_tag_a,),
+        ).nonpositive_fraction == 0.75
+
+        # An identically zero field still divides by zero, so the guard
+        # `tag_closure` keeps is kept here too.
+        empty = audit_of([0.0, 0.0], [0.0, 0.0])
+        @test all(
+            iszero,
+            (
+                empty.untagged_relative,
+                empty.overclaimed_relative,
+                empty.orphaned_relative,
+                empty.nonpositive_mass_fraction,
+            ),
+        )
+        @test all(
+            isfinite,
+            (
+                empty.untagged_relative,
+                empty.overclaimed_relative,
+                empty.orphaned_relative,
+                empty.nonpositive_mass_fraction,
+            ),
+        )
+    end
+
     @testset "AtmosModel integration" begin
         # Disabled by default
         model = CA.AtmosModel()

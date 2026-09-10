@@ -299,6 +299,7 @@ water_closure_check:
   period: "1days"        # how often to check
   tolerance: 1.0e-10     # warn above this relative residual
   abort_above: 1.0       # end the run above this one
+  audit: false           # write the second table described below
 
 energy_closure_check:
   period: "1days"
@@ -351,6 +352,53 @@ turns the water default off.
 
 The check adds no tendency. It only reads the state and writes a table, so
 switching it on does not change what the simulation produces.
+
+### The audit table
+
+`gross_relative` is the right number to compare against a tolerance and the
+wrong number to diagnose with. It adds together situations that are not the same
+problem and do not have the same answer. Setting `audit: true` writes a second
+table, `<family>_tag_audit.csv`, that separates them. It is off by default,
+costs a handful of extra global reductions per check, and changes nothing about
+the run.
+
+| column | what it is |
+|:-- |:-- |
+| `untagged` | `∫max(parent - Σ tags, 0)`: water the tags do not account for |
+| `overclaimed` | `∫max(Σ tags - parent, 0)`: water the tags claim that is not there |
+| `orphaned` | mass in cells whose parent still holds water while every tag is empty |
+| `orphaned_volume_fraction` | volume fraction of those cells |
+| `nonpositive_mass` | mass where the parent is not positive |
+
+Each of the first three also has a `_relative` column over the same `scale` the
+closure table uses, and `nonpositive_mass_fraction` is `nonpositive_mass` over
+it. A separate file rather than more columns on the closure table, so that
+turning the audit on does not change a schema other runs and analysis scripts
+already read. Join the two on `time`.
+
+Three things it tells you that the closure table cannot.
+
+**Which way the tags are wrong.** `untagged + overclaimed` is exactly
+`gross_residual`, so nothing is lost by reading them apart. They mean opposite
+things. Untagged water has an origin that nothing claims to know, which is
+recoverable in principle. Overclaimed water is the tags asserting water that
+does not exist, which is not a physical state at all and is the direction a
+runaway takes.
+
+**Whether provenance is drifting or gone.** A tag that is a little wrong still
+maps water to where it came from. A cell whose tags have all been emptied does
+not, and nothing re-tags it afterwards: that water stays anonymous for the rest
+of the run and mixes into its neighbours. `orphaned` counts total loss only, so
+it is a lower bound — a cell left holding a sliver of one tag does not appear
+there and shows up in `untagged` instead.
+
+**How much of the field the undefined region actually holds.**
+`nonpositive_fraction` in the closure table is a volume fraction while `scale`
+is a mass integral, and on a moist sphere the two tell opposite stories: cells
+with no water take up much of the volume and almost none of the mass. Reading
+the volume fraction alone says most of the domain has undefined shares. Reading
+the mass fraction alone says the state is nearly clean. Both are true, and a
+cell that holds negligible mass can still be where a scheme breaks.
 
 ### Why the two tolerances differ
 
@@ -508,6 +556,7 @@ ClimaAtmos.DEFAULT_CLOSURE_TOLERANCES
 ClimaAtmos.DEFAULT_CLOSURE_ABORT_LEVELS
 ClimaAtmos.closure_check_from_config
 ClimaAtmos.tag_closure
+ClimaAtmos.tag_audit
 ClimaAtmos.tag_closure_callback
 ClimaAtmos.tag_closure_callback!
 ```

@@ -613,13 +613,20 @@ const DEFAULT_CLOSURE_ABORT_LEVELS =
                               default_abort_above)
 
 Read a `water_closure_check`, `energy_closure_check` or
-`energy_source_closure_check` block into `(; period, tolerance, abort_above)`,
-or `nothing` when the key is absent.
+`energy_source_closure_check` block into
+`(; period, tolerance, abort_above, audit)`, or `nothing` when the key is
+absent.
 
 Every key is optional: `period` defaults to `"1days"`, `tolerance` to the
 family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref) and `abort_above` to its
 entry in [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref). Writing `abort_above: ~` turns
 the abort off for a family that defaults to having one.
+
+`audit` defaults to `false`. Setting it writes a second table beside the closure
+table, splitting the residual into the parts that mean different things; see
+[`tag_audit`](@ref). It costs a handful of extra global reductions per check and
+changes nothing about the run, so it is safe to leave on for a run whose tags
+are under investigation.
 """
 closure_check_from_config(
     ::Nothing,
@@ -639,7 +646,7 @@ function closure_check_from_config(
     spec = checked_mapping(
         spec_value,
         context;
-        optional = ("period", "tolerance", "abort_above"),
+        optional = ("period", "tolerance", "abort_above", "audit"),
     )
     period = get(spec, "period", "1days")
     isfinite(time_to_seconds(period)) || error(
@@ -656,7 +663,8 @@ function closure_check_from_config(
         context,
         FT,
     )
-    return (; period, tolerance, abort_above)
+    audit = Bool(get(spec, "audit", false))
+    return (; period, tolerance, abort_above, audit)
 end
 
 """

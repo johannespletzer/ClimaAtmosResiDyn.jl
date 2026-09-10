@@ -780,6 +780,10 @@ across runs that use different energy references.
 Each block also carries an `abort_above` level at which the run ends instead of
 warning. Only water has a default one, for the same reason: see
 [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref).
+
+Each block also carries an `audit` flag, off by default, which adds a second
+table splitting the residual into the parts that mean different things. See
+[`tag_audit`](@ref).
 """
 function default_model_callbacks(
     tagging::AtmosTagging;
@@ -893,6 +897,7 @@ function tag_closure_callback(
         tag_state_names,
         check.tolerance,
         check.abort_above,
+        check.audit,
     )
     return (call_every_dt(affect!, period),)
 end
