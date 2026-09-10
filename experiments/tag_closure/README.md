@@ -105,6 +105,7 @@ closed. See the A5 open item below.
 | The C1 reference argument        | [C1_reference_shift.md](C1_reference_shift.md)       |
 | What to run next, on Levante     | [LEVANTE_TASKS.md](LEVANTE_TASKS.md)                 |
 | Raw probe output from Levante    | [C1_reference_shift.md](C1_reference_shift.md), appendix |
+| Instructions for the next session | [NEXT_SESSION.md](NEXT_SESSION.md)                    |
 | Which runs are live              | `output/<run>/provenance.txt`                        |
 | Plan and memo                    | PR #63, branch `claude/tag-closure-experiments-plan` |
 | Configurations, driver, analysis | this directory                                       |
