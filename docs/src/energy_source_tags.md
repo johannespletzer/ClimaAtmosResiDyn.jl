@@ -159,19 +159,21 @@ exactly:
 
   - `test/energy_source_tags_integration.jl` covers configuration and state,
     bracketed **production** wiring, transport, restart, and a bounded closure
-    residual. Production is mask-weighted and never divides by the parent, so
-    it is exercised even here.
+    residual, on `ρe_tot` itself. Production is mask-weighted and never divides
+    by the parent, so it is exercised even there.
   - `test/energy_source_tags_tests.jl` covers the **loss algebra** against a
     parent that is positive by construction. That is a kernel-level check.
-  - **Donor-proportional loss through a real bracketed solve is not validated.**
-    No configured run currently puts the donor share on a defined footing, so
-    there is nothing for such a test to assert against yet. Closing that gap
-    needs either a well-defined positive energy reference or a reference-safe
-    reformulation of the share.
+  - **Donor-proportional loss through a real bracketed solve** is covered by the
+    same integration test with `energy_source_tag_offset` (see below), which
+    makes the tags' total positive on this column. It checks that the offset
+    leaves the model's own state bit for bit alone, and that the loss shows
+    where it should: in the column integral of the residual, where transport
+    cancels.
 
-That last point is also the strongest argument on the table for the fallback:
-water source tracing, whose parent is non-negative by construction, combined
-with an energy [process record](process_record.md) for the per-process history.
+Without an offset only the first two hold. That is also the strongest argument
+on the table for the fallback: water source tracing, whose parent is
+non-negative by construction, combined with an energy
+[process record](process_record.md) for the per-process history.
 
 ## An offset in the tags' total
 

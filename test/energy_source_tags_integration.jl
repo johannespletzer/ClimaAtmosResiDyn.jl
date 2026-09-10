@@ -13,23 +13,27 @@ family is wired into a simulation at all, which is what this file covers:
     closure residual stays a small bounded monitor;
  5. state and masks survive a checkpoint round trip;
  6. masked *production* reaches a source tag through a real bracketed process,
-    which is the one thing here that a plain-array unit test cannot show.
+    which is the one thing here that a plain-array unit test cannot show;
+ 7. with `energy_source_tag_offset`, the donor-proportional *loss* runs through
+    the same solve, and the offset leaves the model's own state untouched.
 
-**This file does not validate the attribution rule end to end.** `ρe_tot` is
-non-positive across this column, so `energy_source_fraction` returns zero and
-donor-proportional loss never runs here. Production is unaffected, because it
-is mask-weighted and never divides by the parent, which is why item 6 is
-evidence and a loss claim would not be.
+Items 1 to 6 run on `ρe_tot` itself. It is non-positive across this column, so
+`energy_source_fraction` returns zero and the loss never runs there. Production
+is unaffected, because it is mask-weighted and never divides by the parent,
+which is why item 6 is evidence. Item 7 gives the tags a positive total, so the
+loss runs, and checks it where it shows: in the column integral of the residual,
+where transport cancels.
 
-The loss algebra is covered in `energy_source_tags_tests.jl` against a parent
-that is positive by construction. That is a kernel test, so loss through a real
-bracketed solve remains unvalidated. See `docs/src/energy_source_tags.md`.
+The loss algebra itself is covered exactly in `energy_source_tags_tests.jl`,
+against a parent that is positive by construction. See
+`docs/src/energy_source_tags.md`.
 
 A column with an altitude partition is the cheapest geometry that exercises all
-of it — latitude regions and the Held-Suarez source would need a sphere. One
-tag set only: each set is a fresh `AtmosModel` type and costs a full compile of
-the solve pipeline, which is why these files have their own test group (see the
-note in `runtests.jl`).
+of it — latitude regions and the Held-Suarez source would need a sphere. Each
+tag set is a fresh `AtmosModel` type and costs a full compile of the solve
+pipeline, which is why these files have their own test group (see the note in
+`runtests.jl`). The offset is part of that type, so item 7 costs a second
+compile.
 =#
 using Test
 import ClimaAtmos as CA
@@ -176,5 +180,57 @@ import ClimaAtmos as CA
     for name in (:ρe_src_strat, :ρe_src_tropo)
         @test parent(getproperty(restarted_masks, name)) ==
               parent(getproperty(masks, name))
+    end
+
+    # 7. The loss half through a real solve. The run above never reaches it,
+    # because `ρe_tot` is negative across this column. With an offset of
+    # 50 kJ/kg the tags partition `ρe_tot + c·ρ`, which is positive everywhere,
+    # since the column's minimum is about -45.4 kJ/kg.
+    @testset "The loss half runs with an offset" begin
+        c = 50000.0
+        offset_simulation = CA.get_simulation(
+            CA.AtmosConfig(
+                merge(
+                    test_dict,
+                    Dict{String, Any}(
+                        "energy_source_tag_offset" => c,
+                        "output_dir" => mktempdir(pwd()),
+                    ),
+                );
+                job_id = "energy_source_tags_integration_offset",
+            ),
+        )
+        Y₀_offset = offset_simulation.integrator.u
+        ᶜE₀ = @. Y₀_offset.c.ρe_tot + c * Y₀_offset.c.ρ
+        @test minimum(parent(ᶜE₀)) > 0
+        ᶜpartition₀ = @. Y₀_offset.c.ρe_src_strat + Y₀_offset.c.ρe_src_tropo
+        @test maximum(abs.(parent(ᶜpartition₀) .- parent(ᶜE₀))) /
+              maximum(abs.(parent(ᶜE₀))) < 100 * eps(FT)
+
+        result = CA.solve_atmos!(offset_simulation)
+        @test result.ret_code == :success
+        Y_offset = offset_simulation.integrator.u
+
+        # The offset reaches the tags and nothing else, so the model's own
+        # state is bit for bit the one from the run without it.
+        @test parent(Y_offset.c.ρ) == parent(Y.c.ρ)
+        @test parent(Y_offset.c.ρe_tot) == parent(Y.c.ρe_tot)
+        @test parent(Y_offset.c.ρq_tot) == parent(Y.c.ρq_tot)
+        @test parent(Y_offset.c.uₕ) == parent(Y.c.uₕ)
+        @test parent(Y_offset.f.u₃) == parent(Y.f.u₃)
+
+        # Transport moves energy around the column but not in or out of it, so
+        # the column integral of the residual keeps only what the processes
+        # left unmatched. Without the loss half, that is every loss the tags
+        # never took, and the tags hold more than the parent. With it, they
+        # follow the parent down. A smoke run of this column over 120 s found
+        # the offset cut this integral 19-fold, while the balanced part of the
+        # residual, the transport mismatch, was the same in both runs.
+        signed_residual(Y, c) =
+            sum(Y.c.ρe_tot .+ c .* Y.c.ρ) -
+            sum(Y.c.ρe_src_strat .+ Y.c.ρe_src_tropo)
+        without_loss = signed_residual(Y, 0)
+        with_loss = signed_residual(Y_offset, c)
+        @test abs(with_loss) < abs(without_loss) / 5
     end
 end
