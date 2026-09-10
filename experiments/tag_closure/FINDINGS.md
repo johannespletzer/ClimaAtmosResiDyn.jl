@@ -441,6 +441,72 @@ and a first version of the script, which started at step one, could not
 reproduce that (§6). *Terrabyte login node, model code of `f3bbdb7b`;
 `output/transport_ledger_column/`.*
 
+**E26. With its subsidence listed, the column closes per process and per
+record.** C6 is C5's layout on the code that brackets the implicit rain-out and
+repairs negative tags, with a `sub` tag and records for all four processes that
+change the column's energy.
+
+  - **Form A.** The new energy split by region and split by process agree to
+    60.7 J kg⁻¹ at 24 h, 3.8e-4 of the new energy, against C5's 17,954. So the
+    gap of E20 was subsidence.
+  - **Form B.** The four records explain the change in the column's `ρe_tot`
+    to 3.3e-7 J m⁻² out of 1.43 MJ m⁻². C5's unexplained −1,365,477 J m⁻² (E23)
+    is subsidence's −1,277,826 and the rain-out's −87,651, to the joule. Nothing
+    else changes the column's energy, the dynamical core included.
+  - **The initial energy** of each region still falls at every sample and is
+    never negative (E21).
+  - **The repair has almost nothing to do** on the column. Its largest ledger
+    is 3.5e-9 J kg⁻¹, and form A is the same with it on and off. The
+    atmosphere is too: `ta` is identical in every value.
+
+*C6, jobs `13385450` and `13385451` on terrabyte at `f3bbdb7b`;
+`analysis/c5_process_closure.jl`.*
+
+**E27. With the repair on, no tag goes negative on the sphere, and the region
+tags trade a lot of energy to get there.** On C5's gray sphere every tag's
+minimum over the day is zero or above. With the repair off the region tags
+reach −9,628 and −11,664 J kg⁻¹, and `sfc` −208 J kg⁻¹, as in C5.
+
+  - The two region tags' cumulative ledgers reach ±30,920 J kg⁻¹ at their worst
+    points, against maxima of about 220 kJ kg⁻¹. Each ledger holds everything
+    the repair moved at that point over the day. Where they peak is not reduced
+    here.
+  - The tags that carry a source were lifted by up to 707 J kg⁻¹ (`sfc`), 473
+    and 249 (`new_extratropics`, `new_tropics`) and 79 (`rad`).
+  - The atmosphere is untouched: `ta` is identical in every value with the
+    repair on and off.
+
+*C6, jobs `13385452` and `13385453`.*
+
+**E28. On the sphere, the per-process check found the rain-out producing
+energy.** The new energy split by region exceeds the split by process by up to
+149 J kg⁻¹ at 24 h, 7e-3, at the lowest level of the southernmost row. The gap is
+the same to 0.01 J kg⁻¹ with the repair on or off and with first-order tag
+upwinding, so neither the repair nor the per-tag limiter makes it.
+
+At that point the microphysics record is +270.6 J kg⁻¹: the implicit rain-out
+raised `ρe_tot` there. Condensate colder than the reference carries negative
+energy, and ice carries less than −333.6 kJ kg⁻¹, its fusion heat. So removing
+it raises the total, and `E` with it, net of `c` times the mass removed. The
+bracket counts that as production, the `new_` tags (`source: all`) take it, and
+no process tag lists `microphysics`. So the check found a second process
+nobody had listed. A run with a `microphysics` tag should close it.
+
+The size fits if what fell out was ice at about −3.7e5 J kg⁻¹. Then +270.6 J kg⁻¹
+of `ρe_tot` is about 7e-4 kg kg⁻¹ of ice, which lowers `E` by `c` times that,
+80 J kg⁻¹, leaving about 190 J kg⁻¹ of production against the 149 J kg⁻¹ gap. That
+arithmetic is an estimate, and the phase at that point is not read from the
+run. *C6, jobs `13385452` to `13385454`. `analysis/c5_process_closure.jl`
+prints each record at the worst point.*
+
+**E29. The region tags' negativity does not come from their vertical
+upwinding.** With first-order upwinding, which is monotone for a single field,
+the region tags still reach −9,566 and −11,588 J kg⁻¹, against −9,628 and
+−11,664 with van Leer. That leaves E14's other routes: the tags' horizontal
+transport and hyperdiffusion, neither limited for tags, and the finite-step
+loss. E19's scaling with the offset points at transport. *C6, jobs `13385453`
+and `13385454`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -591,6 +657,12 @@ against 0.685. The two ran at the same time on the same node. *C1, jobs
 349.0 s for C1, all on the same node type. T2 puts run-to-run scatter at about
 2%, so the second snapshot and the few extra broadcasts are not measurable
 here. *C4, jobs `13384913` and `13384914` on terrabyte.*
+
+**T8. The repair costs about 1%.** C6's `solve! walltime` is 21.47 s with the
+repair on and 21.01 s with it off on the column, and 435.9 s against 431.5 s on
+the sphere. First-order tag upwinding took 423.7 s. The differences, 2.2% and
+1.0%, sit at T2's scatter of about 2%. *C6, jobs `13385450` to `13385454` on
+terrabyte.*
 
 ## 5. Method
 
@@ -750,6 +822,12 @@ Kept because a later reader will otherwise re-derive them.
   - **How the column's unrecorded 1.37 MJ m⁻² splits (E23)** between
     subsidence, the 0-moment rain-out and the numerics. A column run that
     records subsidence and microphysics, on the code of §8, would split it.
+  - **What the column's last per-process gap is (E26).** 60.7 J kg⁻¹ at 775 m,
+    near the inversion, with the process split the larger. It is the same with
+    the repair on and off. The per-tag limiter and the clamp are candidates.
+  - **Where the repair's large ledgers sit on the sphere (E27),** and whether
+    that is where the two region tags meet, as the undershoots of E19 would
+    place them.
   - `Float32` on a sphere (W4).
   - ~~Whether 1M changes the residual (W5).~~ Settled on a column: 7% down
     (W5b). A sphere, which reaches the horizontal branches, is still open.

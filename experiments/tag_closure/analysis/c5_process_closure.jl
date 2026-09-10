@@ -182,6 +182,12 @@ function main(dir)
     )
     println("  largest relative gap $(maximum(form_a_relative))")
     println("  largest gap by hour: ", join(round.(form_a_max; sigdigits = 3), " "))
+    # What each process record holds at that point, to tell which process gave
+    # the tags energy that no process tag follows.
+    for p in record_names(dir)
+        record = read_field(dir, "e_prc_" * p).values
+        println("  record $p there: $(selectdim(record, ndims(record), worst)[at]) J/kg")
+    end
     for r in regions
         println("  initial energy of $r: smallest value $(minimum(initial_min[r])) J/kg")
     end

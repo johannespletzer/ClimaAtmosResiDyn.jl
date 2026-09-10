@@ -1,0 +1,25 @@
+run: c6_sphere_repair
+machine: terrabyte
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c6_sphere_repair.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+commit: f3bbdb7bb2df71f74e455f92fe1f8690c0e9a6ec
+commit_source: git-files
+commit_dirty: unknown
+branch: claude/tag-closure-experiments
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+started: 2026-09-10T18:45:41+02:00
+finished: 2026-09-10T19:03:11+02:00
+exit_status: 0
+slurm_job_id: 13385452
+slurm_job_name: c6_sphere_repair
+partition: hpda2_test
+nodelist: hpdar03c01s12
+cpus_per_task: 2
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c6_sphere_repair/output_0001
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c6_sphere_repair/output_0001 (left on scratch, not committed)

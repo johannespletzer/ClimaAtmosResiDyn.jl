@@ -1,0 +1,72 @@
+# run.log for c6_sphere_no_repair, trimmed from SLURM job 13385453's .out and .err on terrabyte.
+# A first submission of the same configuration failed at startup, before the fix in f3bbdb7b; see the task list.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    c6_sphere_no_repair
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c6_sphere_no_repair.yml
+SLURM job:       13385453
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl
+Commit:          f3bbdb7bb2df71f74e455f92fe1f8690c0e9a6ec (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c6_sphere_no_repair
+Start time:      2026-09-10T18:45:41+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c6_sphere_no_repair/output_0001/provenance.txt
+Driver exit status: 0
+End time:           2026-09-10T19:02:58+02:00
+
+# Every distinct warning, first occurrence, first line only:
+┌ Warning: `energy_source_tags` tag `new_tropics` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which this family does not bracket, because it moves energy between levels rather than adding it. That part of the tag stays zero. The `energy_tracers` family does receive it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+┌ Warning: `energy_source_tags` tag `new_extratropics` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which this family does not bracket, because it moves energy between levels rather than adding it. That part of the tag stays zero. The `energy_tracers` family does receive it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+┌ Warning: energy_source tag closure residual 0.002705379288657289 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0028648157585948945 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0030245054139172983 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0031805538743092687 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0033322031862154833 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.003483014059236221 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.003636337830488091 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0037885605431568865 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.003939145862082312 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.004084247708741046 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.004225679609189324 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0043673691583101335 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.004508508580983104 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.004650061813150383 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.00479110435329658 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.00492769546630813 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.005057173661406543 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.005179192707936743 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.005297166638620988 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.005415357967805357 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.005535578788576882 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.005656723083717107 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.005775513231302344 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.005889306323900263 exceeds the configured tolerance 1.0e-6. The tags no longer account for the field they partition; see output/c6_sphere_no_repair/output_0001/energy_source_tag_closure.csv.
+
+# The end of the run:
+[ Info: solve! walltime = 431.514
+[ Info: sypd: 0.549
+[ Info: wall_time_per_timestep: 1 second, 997 milliseconds
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c6_sphere_no_repair/output_0001/provenance.txt
+Driver exit status: 0
+End time:           2026-09-10T19:02:58+02:00

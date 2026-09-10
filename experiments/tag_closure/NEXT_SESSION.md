@@ -67,26 +67,28 @@ one agent has worked this branch at once.
     C1's tag results (FINDINGS E17 to E19). The twin tests found E16 to be
     mostly the van Leer energy limiter. A fourth twin ruled out the surface-flux
     path for the remainder, and the owner stopped there.
-  - **C5 ran** (task 1c, FINDINGS E20 to E24). The radiation tag holds nothing
-    where radiation cools, even with the loss running. Checked per process, the
-    tags found subsidence in the DYCOMS column, which no tag listed. On the
-    column a region's initial energy only falls. C6 is proposed in task 1c and
-    needs approval.
-  - **PR #65 and PR #68 stay drafts** until the owner has reviewed them. #68 is
-    the offset, stacked on #65, and it now carries the loss-rule integration
-    test the owner asked for (`466dd2f4`, 33 of 33 pass). Check both PRs' CI
-    before anything else touches them.
+  - **C5 and C6 ran** (task 1c, FINDINGS E20 to E29). The radiation tag holds
+    nothing where radiation cools, even with the loss running. Checked per
+    process, the tags found a process that no tag listed in both geometries:
+    subsidence on the column, and on the sphere the rain-out producing energy
+    where cold condensate falls out. With subsidence listed, the column closes
+    per process, and per record to the joule. C7, the sphere with a
+    `microphysics` tag, is proposed in task 1c and needs approval.
+  - **PR #65, #68 and #69 stay drafts** until the owner has reviewed them.
+    - #68 is the offset, stacked on #65, with the loss-rule integration test.
+    - #69 is the implicit bracket and the repair, stacked on #68, with the fix
+      that defines `compute_e_src_fix!` (`a4b8ab96`).
+
+    Check all three PRs' CI before anything else touches them.
   - **The owner decided to keep both** the energy source tags and the process
     record, as the main goal (FINDINGS §8). Task 1b of the task list names what
     is left to make the tags operational.
-  - **The implicit bracket and the repair are built on this branch** (FINDINGS
-    §8), in the order the owner set, with the repair on by default and
-    switchable off. They are not in a pull request yet; ask before opening one.
-  - **Enthalpy-form transport of the tags, as an audit** with passive tracers
-    kept as the default, went to a reviewer agent. Its answer is in FINDINGS
-    §8: measure each operator's share of the residual first, with a script
-    that is not written yet, and build a switch only if the measurement
-    supports it.
+  - **On the column, the residual's growth is pressure work** (FINDINGS E25,
+    `analysis/transport_ledger.jl`). That meets the reviewer's rule for building
+    an enthalpy-form transport of the tags as an audit. The sphere is not
+    measured, and the switch is not built.
+  - **Sedimentation as transport of the tags** was assessed as viable by a
+    reviewer agent (FINDINGS §8). Building it waits for the owner.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for

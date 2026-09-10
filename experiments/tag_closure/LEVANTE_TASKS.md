@@ -184,11 +184,29 @@ to E24):
   - the column's records leave 1.37 MJ m⁻² of a day's energy change
     unexplained (E23).
 
-**C6, approved and submitted on 2026-09-10.** The same two layouts on the code
-of FINDINGS §8, which brackets the implicit microphysics sink and repairs
-negative tags by default. Jobs `13385450` and `13385451` are the column with the
-repair on and off, `13385452` and `13385453` the sphere with it on and off, and
-`13385454` the sphere with first-order tag upwinding.
+**C6, done on 2026-09-10** (FINDINGS E26 to E29, T8). The same two layouts on
+the code of FINDINGS §8, which brackets the implicit microphysics sink and
+repairs negative tags by default. Jobs `13385450` and `13385451` are the column
+with the repair on and off, `13385452` and `13385453` the sphere with it on and
+off, and `13385454` the sphere with first-order tag upwinding. They are in
+`output/c6_*/`. What they found:
+
+  - the column closes per process once subsidence has a tag, and per record to
+    the joule;
+  - with the repair on, no tag goes negative on the sphere, at about 1% of the
+    solve, but the region tags trade up to 31 kJ/kg between them;
+  - on the sphere, the per-process check found the rain-out producing energy
+    where cold condensate falls out;
+  - the region tags' negativity does not come from their vertical upwinding.
+
+**Next, each needing approval:**
+
+  - C7: C6's sphere with a `microphysics` tag, which should close form A there
+    (E28);
+  - sedimentation as transport of the tags, if the owner wants it built
+    (FINDINGS §8), with a 1M column to test it;
+  - the enthalpy-form audit switch. The column measurement meets the rule for
+    building it (E25), and the sphere is not measured.
 
 The first submission, jobs `13385435` to `13385439`, failed at startup. The
 repair's commit had registered `e_src_fix_<name>` without defining the function

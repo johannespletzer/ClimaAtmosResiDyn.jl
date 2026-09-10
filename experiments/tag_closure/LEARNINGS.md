@@ -965,3 +965,39 @@ as a tag and as a record, and microphysics as a record, now that the implicit
 microphysics sink is bracketed (FINDINGS §8). With the repair on, which is the
 default from that code on, form A holds only after the repair's ledgers are
 added back.
+
+## C6. The bracket and the repair, and a second missing process
+
+Ran at `f3bbdb7b` on 2026-09-10, `hpda2_test` on LRZ terrabyte, SLURM jobs
+`13385450` to `13385454`. A first submission failed at startup, on a diagnostic
+the repair's commit had registered without its function. The owner approved all
+five runs.
+
+**What C6 was for.** C5's two layouts on the code that brackets the implicit
+rain-out and repairs negative tags. Each ran with the repair on and off, and the
+sphere once more with the tags moved by first-order upwinding. On the column,
+the subsidence C5 found got a tag and a record.
+
+**The column closes.** Per process to 4e-4 once subsidence has its tag. Per
+record to the joule: the four records are the whole of the column's energy
+change (E26).
+
+**The repair works, and moves a lot to do it.** No tag goes negative, the
+atmosphere is untouched, and the solve costs about 1% more (T8). But on the
+sphere the region tags trade up to 31 kJ/kg between them over a day (E27).
+
+**The sphere had a missing process too.** The rain-out produces energy where
+cold condensate falls out, because that condensate carries negative energy
+against the reference. No process tag listed `microphysics` (E28).
+
+**Barrier.** The repair keeps the tags non-negative by moving energy between
+the region tags. That is bookkeeping, and its ledger says how much. What makes
+the region tags negative is not their vertical scheme (E29). That leaves
+horizontal transport, hyperdiffusion or the finite-step loss.
+
+**Class.** Configuration: a process without a tag, found by the check built for
+it, now twice in two runs. Numerical: negative tags, now repaired and logged.
+
+**Carry-over to the source tags.** List every process that fires, and check
+form A: it found a missing process in both geometries. Read the repair's ledgers
+beside the tags.
