@@ -56,13 +56,25 @@ There is no ledger for this family either: the source tags have no rescale and
 no partition repair, so no `q_tag_fix` analogue exists and the operator-residual
 subtraction of phase A does not apply.
 
-A `c1_*` run does not exist yet and needs a model change and the owner's
-approval. When one lands it is picked up here without an edit, and the
-before-and-after reading the plan asks for becomes possible.
+A `c1_*` run is picked up here without an edit, which makes the before-and-after
+reading the plan asks for possible. C1 needs no model change. Its shift is three
+TOML entries, in `toml/tag_closure_c1_reference.toml`.
 
-**This script has never been executed.** There is no Julia in the container it
-was written in. Run `analysis/selftest.jl` first; it drives this on synthetic
-tables whose answers were worked out by hand.
+`analysis/selftest.jl` drives this on synthetic tables whose answers were worked
+out by hand. It first ran, and passed, on 2026-09-10.
+
+## Region tags and source-labelled tags
+
+Both kinds are `e_src_<name>` fields, and they go negative for different
+reasons. A region tag is a masked share of `ρe_tot`, so it carries the parent's
+sign and is negative wherever the parent is. That is the barrier the
+non-positive fraction already measures. A source-labelled tag holds only what
+its process added, so a negative value is a separate finding, and `e_src_res`
+cannot show it because it sums the region tags only.
+
+So the summary gives the most negative tag of either kind and, beside it, the
+most negative source-labelled tag, which a region tag at the parent's minimum
+would otherwise hide. The warnings are split the same way.
 =#
 
 import CairoMakie
@@ -79,6 +91,18 @@ The `e_src_<name>` tags this run carried, from its configuration snapshot.
 """
 tag_names(run) =
     [String(tag["name"]) for tag in setting(run.config, "energy_source_tags", [])]
+
+"""
+    source_tag_names(run)
+
+The tags this run labelled with `source:` rather than `region:`. A region tag
+carries the parent's sign and a source-labelled tag does not, so only the second
+going negative is news once the parent is itself non-positive.
+"""
+source_tag_names(run) = [
+    String(tag["name"]) for
+    tag in setting(run.config, "energy_source_tags", []) if haskey(tag, "source")
+]
 
 """
     plot_nonpositive(runs, plots_dir, note)
@@ -271,14 +295,15 @@ function plot_two_readings(runs, plots_dir, note)
 end
 
 """
-    worst_tag(run)
+    worst_tag(run, names = tag_names(run))
 
-The most negative any tag of this run reached, and which tag it was.
+The most negative any of `names` reached in this run, and which tag it was.
+`(NaN, "")` when none of them has a minimum in the reduced table.
 """
-function worst_tag(run)
+function worst_tag(run, names = tag_names(run))
     worst = NaN
     which = ""
-    for name in tag_names(run)
+    for name in names
         values = column(run, "source_tag_extrema", "min_e_src_" * name)
         (isnothing(values) || isempty(values)) && continue
         candidate = minimum(values)
@@ -308,11 +333,13 @@ function main()
             "max_nonpositive_fraction", "final_nonpositive_mass_fraction",
             "final_max_abs_e_src_res",
             "most_negative_tag_value", "most_negative_tag",
+            "most_negative_source_tag_value", "most_negative_source_tag",
             "recorded_processes", "final_max_e_prc",
         ],
         function (run)
             fraction = column(run, "closure", "nonpositive_fraction")
             worst, which = worst_tag(run)
+            source_worst, source_which = worst_tag(run, source_tag_names(run))
             return Any[
                 final(column(run, "closure", "gross_relative")),
                 final(fraction),
@@ -321,6 +348,8 @@ function main()
                 final(column(run, "source_tag_extrema", "max_abs_e_src_res")),
                 worst,
                 which,
+                source_worst,
+                source_which,
                 join(record_processes(run), " "),
                 isempty(record_processes(run)) ? NaN :
                 final(
@@ -350,10 +379,22 @@ function main()
                    there and production accumulates with no matching loss." run =
                 run.name max_fraction = maximum(fraction)
         end
-        worst, which = worst_tag(run)
+        # A source-labelled tag going negative is news on any run. A region tag
+        # going negative is news only where the parent never did, because a
+        # region tag is a share of the parent and carries its sign.
+        worst, which = worst_tag(run, source_tag_names(run))
         if !isnan(worst) && worst < 0
             @warn "A source tag went negative, which invalidates its \
                    amount-of-energy reading. e_src_res does not show this." run =
+                run.name tag = which minimum = worst
+        end
+        regions = setdiff(tag_names(run), source_tag_names(run))
+        worst, which = worst_tag(run, regions)
+        parent_positive =
+            !isnothing(fraction) && !isempty(fraction) && maximum(fraction) == 0
+        if !isnan(worst) && worst < 0 && parent_positive
+            @warn "A region tag went negative although the parent stayed \
+                   positive, so the sign it carries is not the parent's." run =
                 run.name tag = which minimum = worst
         end
     end

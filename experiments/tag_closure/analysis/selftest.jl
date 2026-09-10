@@ -639,10 +639,13 @@ function write_energy_run(dir; family, record = family == "energy_source")
     times = [0.0, 3600.0]
     rows(a, b) = permutedims(hcat(a, b))
     residual = rows([1.0, -3.0, 0.0, 2.0], [0.0, 0.5, 0.0, 0.0])
-    # The region tags stay positive; `src` goes negative at the second time.
-    # That is the case e_src_res cannot show, so the minimum has to.
+    # `src` goes negative at the second time. That is the case e_src_res cannot
+    # show, so the minimum has to. `extratropics` goes further negative at the
+    # same time, the way a region tag does where the parent is non-positive. A
+    # reading of the most negative tag of either kind then names it and hides
+    # `src`, and the source-only column must not.
     tropics = rows([5.0, 6.0, 7.0, 8.0], [5.0, 6.0, 7.0, 8.0])
-    extratropics = rows([1.0, 1.0, 1.0, 1.0], [2.0, 2.0, 2.0, 2.0])
+    extratropics = rows([1.0, 1.0, 1.0, 1.0], [2.0, 2.0, 2.0, -10.0])
     src = rows([0.0, 0.0, 0.0, 0.0], [-4.0, 1.0, 1.0, 1.0])
 
     NCDatasets.NCDataset(joinpath(dir, "diagnostics.nc"), "c") do ds
@@ -709,7 +712,7 @@ function test_source_reducer()
         @assert residual ≈ [3.0, 0.5] "e_src_res: $residual"
 
         # The whole point: the source tag dips to -4 at the second time while
-        # both region tags stay positive, so the residual above cannot show it.
+        # max |e_src_res| falls, so the residual above cannot show it.
         min_src = [row[index["min_e_src_src"]] for row in rows]
         @assert min_src ≈ [0.0, -4.0] "min of the source tag: $min_src"
         min_tropics = [row[index["min_e_src_tropics"]] for row in rows]
@@ -864,9 +867,20 @@ function test_phase_b_and_c()
         @assert(isempty(c0["recorded_processes"]), "C0 claims a record")
 
         # The barrier columns, per run rather than anywhere in the file.
+        # The most negative tag of either kind is the region tag. The most
+        # negative source-labelled tag is `src`, which that reading hides.
         worst = parse(Float64, c3["most_negative_tag_value"])
+        which = c3["most_negative_tag"]
+        @assert(worst ≈ -10.0, "most negative tag value $worst, want -10.0")
+        @assert(which == "extratropics", "most negative tag $which")
+        source_worst = parse(Float64, c3["most_negative_source_tag_value"])
+        source_which = c3["most_negative_source_tag"]
+        @assert(
+            source_worst ≈ -4.0,
+            "most negative source tag value $source_worst, want -4.0",
+        )
+        @assert(source_which == "src", "most negative source tag $source_which")
         fraction = parse(Float64, c3["max_nonpositive_fraction"])
-        @assert(worst ≈ -4.0, "most negative tag value $worst, want -4.0")
         @assert(fraction ≈ 0.75, "non-positive fraction $fraction, want 0.75")
 
         # The mass counterpart of that volume fraction, from the audit table.
