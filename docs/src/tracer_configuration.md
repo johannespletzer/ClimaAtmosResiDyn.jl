@@ -266,16 +266,16 @@ energy_tracers:
 
 ### What energy can come from
 
-| Group       | `source` label          | Process                                                      |
-|:----------- |:----------------------- |:------------------------------------------------------------ |
-| `radiative` | `radiation`             | all radiation modes (RRTMGP, gray, DYCOMS, TRMM\_LBA, ISDAC) |
-| `turbulent` | `surface_flux`          | turbulent surface energy flux                                |
-| `moist`     | `microphysics`          | microphysics energy sources, when stepped explicitly         |
-| `moist`     | `precipitation`         | energy carried out of a level by falling precipitation       |
-| `forcing`   | `held_suarez`           | Held–Suarez relaxation forcing                               |
-| `forcing`   | `large_scale_advection` | prescribed large-scale advective forcing                     |
-| `forcing`   | `subsidence`            | prescribed large-scale subsidence                            |
-| `forcing`   | `external_forcing`      | externally prescribed (e.g. GCM-driven) forcing              |
+| Group       | `source` label          | Process                                                                        |
+|:----------- |:----------------------- |:------------------------------------------------------------------------------ |
+| `radiative` | `radiation`             | all radiation modes (RRTMGP, gray, DYCOMS, TRMM\_LBA, ISDAC)                   |
+| `turbulent` | `surface_flux`          | turbulent surface energy flux                                                  |
+| `moist`     | `microphysics`          | microphysics energy sources; for `energy_tracers` only when stepped explicitly |
+| `moist`     | `precipitation`         | energy carried out of a level by falling precipitation                         |
+| `forcing`   | `held_suarez`           | Held–Suarez relaxation forcing                                                 |
+| `forcing`   | `large_scale_advection` | prescribed large-scale advective forcing                                       |
+| `forcing`   | `subsidence`            | prescribed large-scale subsidence                                              |
+| `forcing`   | `external_forcing`      | externally prescribed (e.g. GCM-driven) forcing                                |
 
 !!! note "Which moist label carries the signal"
 

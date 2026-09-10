@@ -373,6 +373,43 @@ import ClimaAtmos as CA
         )
     end
 
+    @testset "Repair kernels ($FT)" for FT in (Float32, Float64)
+        # One negative tag in a partition whose sum is 10. The positive tags give
+        # up the deficit in proportion to what each holds, so the sum is kept.
+        pos, neg, parent = FT(12), FT(-2), FT(10)
+        repaired =
+            CA.energy_source_partition_repair.(FT[8, 4, -2], pos, neg, parent)
+        @test all(≥(0), repaired)
+        @test sum(repaired) ≈ pos + neg
+        @test repaired[1] / repaired[2] ≈ 2
+        # A cell with no negative tag is left exactly as it is.
+        @test CA.energy_source_partition_repair(FT(3), FT(5), FT(0), FT(5)) ==
+              FT(3)
+        # Where the negatives outweigh the positives, every tag is zeroed.
+        @test CA.energy_source_partition_repair(FT(1), FT(1), FT(-3), FT(1)) ==
+              0
+        # Where the total is not positive, a region tag carries its sign by
+        # design, and the repair leaves it alone.
+        @test CA.energy_source_partition_repair(FT(-4), FT(1), FT(-5), FT(-4)) ==
+              FT(-4)
+        # A tag that carries a source is clipped at zero where the total is
+        # positive, and left alone where it is not.
+        @test CA.energy_source_overlay_repair(FT(-1), FT(10)) == 0
+        @test CA.energy_source_overlay_repair(FT(2), FT(10)) == FT(2)
+        @test CA.energy_source_overlay_repair(FT(-1), FT(-10)) == FT(-1)
+    end
+
+    @testset "Repair switch" begin
+        tags = (CA.EnergySourceTag{:everywhere}(CA.EntireDomain()),)
+        @test CA.EnergySourceTaggingModel(tags).repair
+        @test !CA.EnergySourceTaggingModel(tags, nothing; repair = false).repair
+        @test CA.energy_source_repair_from_config(true)
+        @test !CA.energy_source_repair_from_config(false)
+        @test CA.energy_source_repair_from_config(nothing)
+        # A quoted "false" is a string, and must not read as on.
+        @test_throws ErrorException CA.energy_source_repair_from_config("false")
+    end
+
     @testset "AtmosModel integration" begin
         model = CA.AtmosModel()
         @test isnothing(model.energy_source_tagging_model)

@@ -314,10 +314,11 @@ Water tagging supports `microphysics_model: "0M"` and `"1M"`, and
     `prescribe_flow!` does rescale the tags after its clip — so the tags stay
     consistent with each other, they are just collectively short of
     ``\rho q_\mathrm{tot}`` by the injected amount.
-  - The energy tags' `microphysics` label still fires only when microphysics is
-    stepped explicitly. The water tags are bracketed on the implicit path too,
-    because `implicit_microphysics` defaults to `true` and that is where the
-    0-moment water sink lives.
+  - The `ρe_tag_*` family's `microphysics` label still fires only when
+    microphysics is stepped explicitly. The water tags are bracketed on the
+    implicit path too, because `implicit_microphysics` defaults to `true` and
+    that is where the 0-moment water sink lives, and so are the energy source
+    tags and the process records.
   - Tagged state is carried through restarts like any other prognostic field;
     the masks are rebuilt from the configuration, so the `water_tracers` block
     must match the one used to write the checkpoint. The `q_tag_fix` ledger is
