@@ -36,7 +36,8 @@ Line numbers refer to `main` at `a54ce31`.
     Levante, and Part 3's water bullet reports what they measured and marks it
     as measured. Everything else in this memo remains as reasoned when it was
     written. The runs, their tables and the reading of them are in
-    `experiments/tag_closure/`, with one entry per run in its `LEARNINGS.md`;
+    `experiments/tag_closure/` on the experiment branch, with one entry per
+    run in its `LEARNINGS.md`;
     that file rather than this one is the record of what has been measured.
 
     The model has changed since as well. Issue #64 replaced the multiplicative
