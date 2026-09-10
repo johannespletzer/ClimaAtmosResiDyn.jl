@@ -30,6 +30,14 @@ docs/src/configuration_options.md
 .buildkite/PrecompileCI/Manifest*.toml
 calibration/test/Manifest*.toml
 
+# Machine-specific Julia preferences. runscripts/setup-julia-<machine>.tcsh
+# writes this file with the libmpi path, and for a GPU stack the CUDA toolkit
+# pin, of the machine it runs on. A committed copy follows a checkout onto a
+# different cluster, where the recorded libmpi does not exist and every package
+# downstream of MPI fails to precompile. Run the setup script for your machine
+# before instantiating.
+.buildkite/LocalPreferences.toml
+
 # Generated artifact declarations. The two that are checked in are source.
 Artifacts.toml
 !/Artifacts.toml

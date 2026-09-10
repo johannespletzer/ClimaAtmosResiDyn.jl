@@ -19,6 +19,14 @@ Always read the ClimaAtmos-specific guide before working in this repository:
 
 - Prefer Julia 1.11.x for local work. CI also runs 1.10 and 1.11.
 - For runtime validation, prefer `julia +1.11 --project=.buildkite .buildkite/ci_driver.jl ...`.
+- That command needs a prepared environment on a cluster, and it fails in
+  confusing ways without one. `.buildkite/LocalPreferences.toml` is generated,
+  not tracked, so run the setup script for the machine once first:
+  `./runscripts/setup-julia-terrabyte.tcsh cpu` on LRZ terrabyte, or
+  `./runscripts/setup-julia-levante.tcsh {cpu,gpu}` on DKRZ Levante. Afterwards
+  each Julia call needs that machine's `JULIA_DEPOT_PATH` and MPI module, which
+  the setup script prints when it finishes. See
+  [runscripts/README.md](runscripts/README.md).
 - For package tests, prefer `Pkg.test()` over manually `include`ing `test/runtests.jl` because test-only deps are loaded through the package test path.
 - Keep edits inside the owning subtree when possible; use [src/ClimaAtmos.jl](src/ClimaAtmos.jl) to trace where a feature is wired.
 - Match existing style: explicit names, narrow imports, comments that explain why.

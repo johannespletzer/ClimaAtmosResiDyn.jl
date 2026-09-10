@@ -1,20 +1,26 @@
-# Levante runscripts
+# Cluster runscripts
 
-Batch scripts for running ClimaAtmos on DKRZ's Levante, plus the one-time
-setup that makes Julia use the system MPI.
+Batch scripts for running ClimaAtmos on the clusters this fork is developed on,
+plus the one-time setup that makes Julia use each machine's system MPI.
+
+Two machines are supported, and they are not interchangeable. DKRZ's **Levante**
+has the full CPU and GPU story, including the submission scripts. LRZ's
+**terrabyte** has the CPU stack only.
 
 | File | What it is |
 | --- | --- |
-| `setup-julia-levante.tcsh` | One-time (per stack) depot build on a **login node**. |
-| `levante_stacks.env` | The compiler/MPI/depot pairing. Read by the setup script and the GPU runscripts. |
-| `xmodel.1gpu`, `xmodel.2gpus`, `xmodel.4gpus` | GPU jobs, one rank per GPU. |
+| `setup-julia-levante.tcsh` | Levante: one-time (per stack) depot build on a **login node**. |
+| `levante_stacks.env` | Levante: the compiler/MPI/depot pairing. Read by the setup script and the GPU runscripts. |
+| `setup-julia-terrabyte.tcsh` | terrabyte: one-time depot build on a **login node**. CPU only. |
+| `terrabyte_stacks.env` | terrabyte: the compiler/MPI/depot pairing, and what was measured about `srun --mpi`. |
+| `xmodel.1gpu`, `xmodel.2gpus`, `xmodel.4gpus` | Levante: GPU jobs, one rank per GPU. |
 | `levante_gpu_common.sh` | Everything the three GPU scripts do, sourced by each. |
 | `levante_gpu_rank_wrapper.sh` | Runs between `srun` and the command; pins each rank to its GPU's cores and memory. |
-| `xmodel.cpu` | CPU job, 32 ranks on one node. Standalone — see "Two stacks, one preferences file". |
+| `xmodel.cpu` | Levante: CPU job, 32 ranks on one node. Standalone — see "Two stacks, one preferences file". |
 | `select-cuda-runtime.jl` | Pins the CUDA toolkit to what the driver supports. Called by the setup script. |
 | `gpu_runscript_plan.md` | Why all of this looks the way it does, and what is still outstanding. |
 
-## Running something
+## Running something on Levante
 
 Once, on a login node (compute nodes have no network):
 
@@ -43,6 +49,52 @@ Overridable from the environment:
 SCRIPT=experiments/my_run.jl sbatch runscripts/xmodel.2gpus
 ```
 
+## Running something on terrabyte
+
+Once, on a login node (compute nodes have no network):
+
+```bash
+./runscripts/setup-julia-terrabyte.tcsh cpu
+```
+
+The script finds the repository from its own location, so it needs no editing.
+It loads `gcc/13.2.0` and `openmpi/4.1.8-gcc13`, writes the MPI preference and
+the `OpenMPI_jll` override, instantiates, precompiles, and then verifies that
+`MPI.jl`, `HDF5.jl` and `NCDatasets` all end up on the system MPI rather than a
+bundled one.
+
+Two things differ from Levante and are deliberate:
+
+- **The depot lives on scratch**, at
+  `/dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu`, because
+  `$HOME` on terrabyte is for code and configs. Override with
+  `TERRABYTE_DEPOT_ROOT`. Nothing on scratch is durable; a lost depot is
+  rebuilt by re-running the script.
+- **`module purge` is never run.** On Levante it is load-bearing. Here it drops
+  `stack/24.4.0` in a way that re-loading `stack` does not repair, so the script
+  unloads only a conflicting MPI module.
+
+There are no terrabyte submission scripts yet. Run jobs by hand, setting the
+same depot and modules the script prints when it finishes:
+
+```bash
+module load gcc/13.2.0 openmpi/4.1.8-gcc13
+export JULIA_DEPOT_PATH=/dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+export PMIX_MCA_psec=native OMPI_MCA_pmix=ext3x
+srun --account=hpda-c --partition=hpda2_compute --mpi=pmix ... \
+    julia +1.11 --project=.buildkite .buildkite/ci_driver.jl --config_file ...
+```
+
+`--mpi=pmix` is measured, not guessed. `--mpi=pmi2` does not work: this Open MPI
+is built `--with-pmix` and has no usable PMI-2 path, so `MPI_Init` aborts. The
+two `*_MCA_*` variables only silence PMIx startup noise.
+
+The GPU stack is not set up. `setup-julia-terrabyte.tcsh gpu` exits with a
+pointer to what is known: `nvhpc/24.9` carries a CUDA-aware Open MPI 4.1.5, and
+the GPU partitions are `hpda2_compute_gpu` and `hpda2_testgpu`. Finishing it
+means measuring the driver's CUDA version on a GPU node and pinning
+`CUDA_Runtime_jll`, the way the Levante script does.
+
 ## Two stacks, one preferences file
 
 `setup-julia-levante.tcsh cpu` and `... gpu` build separate depots but write to
@@ -53,6 +105,12 @@ The GPU runscripts detect this before launching any ranks: they compare the
 `libmpi` recorded in the preferences against the module actually loaded and
 stop with an instruction to re-run setup. Selecting the right depot is not
 enough — the preference is project-local, not depot-local.
+
+`.buildkite/LocalPreferences.toml` is **generated, and not tracked in git**. It
+records an absolute `libmpi` path, so a committed copy follows a checkout onto
+another cluster, where that path does not exist and every package downstream of
+`MPI` fails to precompile. That is what it used to do. The cost is that a fresh
+clone cannot instantiate until the setup script for that machine has run once.
 
 Note also that `CUDA_Runtime_jll` and `MPIPreferences` must both stay listed in
 `.buildkite/Project.toml`. Julia resolves the names in `LocalPreferences.toml`
