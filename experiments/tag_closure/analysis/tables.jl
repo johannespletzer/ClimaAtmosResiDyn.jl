@@ -106,6 +106,18 @@ its closure block, and `nothing` otherwise, which is the ordinary case.
 """
 function load_run(run_dir)
     name = basename(run_dir)
+
+    # A directory holding no files at all is not a run and is not a fault
+    # either. It is what is left when a reading has been archived into a
+    # subdirectory of its own, which is how an earlier reading of a
+    # configuration is kept when the same configuration is run again against a
+    # changed model. Skipping it silently is the point: warning here would fire
+    # on every analysis until the new run lands, and would tell the reader to
+    # ask for a file that is deliberately not there. A real run always hands
+    # back at least `provenance.txt`, including a timing control, which has no
+    # closure table.
+    any(isfile, readdir(run_dir; join = true)) || return nothing
+
     provenance_path = joinpath(run_dir, "provenance.txt")
     if !isfile(provenance_path)
         @warn "Skipping $name: no provenance.txt. A residual without the \

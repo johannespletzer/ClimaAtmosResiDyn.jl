@@ -429,6 +429,31 @@ function test_phase_a()
         mkpath(orphan)
         write_synthetic_closure(orphan, "a5_sphere_limiter", 300.0, [1.0e-2, 2.0e-2])
 
+        # A run whose earlier reading has been archived into a subdirectory of
+        # its own, which is what an emptied run directory looks like between a
+        # model change and the re-run. It must be skipped in silence, and the
+        # archived files inside it must not be read as though they were the
+        # run: they are a measurement of a different model.
+        archived = joinpath(output, "a2_first_order_dt10")
+        keep = joinpath(archived, "before_issue_64_fix")
+        mkpath(keep)
+        write(
+            joinpath(keep, "provenance.txt"),
+            "run: a2_first_order_dt10\ncommit: 0123456789abcdef\n",
+        )
+        write(
+            joinpath(keep, "a2_first_order_dt10.yml"),
+            """
+            job_id: a2_first_order_dt10
+            config: column
+            dt: 10secs
+            FLOAT_TYPE: Float64
+            microphysics_model: 0M
+            tracer_upwinding: first_order
+            """,
+        )
+        write_synthetic_closure(keep, "a2_first_order_dt10", 10.0, [1.0e-6, 2.0e-6])
+
         nameless = joinpath(output, "a2_none_dt10")
         mkpath(nameless)
         write(
@@ -469,6 +494,12 @@ function test_phase_a()
         @assert(
             !occursin("a2_none_dt10", text),
             "a run recording `commit: unknown` was analysed",
+        )
+        # ... and the emptied directory, whose archived reading is a
+        # measurement of a different model and must not be read as this run's.
+        @assert(
+            !occursin("a2_first_order_dt10", text),
+            "an archived reading was analysed as though it were the run",
         )
 
         # The audit columns, read back by field. `occursin` would pass on a row

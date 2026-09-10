@@ -53,16 +53,24 @@ a warning naming it. Runs submitted before `3659746` can hit this. The fix is
     the measured floor is 2.34e-8, far better than the memo's `100 eps` bound.
     **On a column only** — the memo's claim is that the floor grows with cell
     count, and the sphere that would test it is A5.
-  - **A5 diverged.** The water tags run away to 1e130 while the parent stays
-    bounded, and the run exits zero. **This is issue #64.** It also means phase
-    A has no usable sphere measurement.
+  - **A5 diverged, and the fix is merged.** The water tags ran away to 1e130
+    while the parent stayed bounded, and the run exited zero. That is issue
+    #64, fixed on this branch at `f2e5384`: the rescale no longer multiplies
+    the tags, and every closure check gained an `abort_above` level. **Nothing
+    has re-run, so nothing is confirmed**, and phase A still has no usable
+    sphere measurement. The re-run is the top task in
+    [LEVANTE_TASKS.md](LEVANTE_TASKS.md); the pre-fix files are kept under
+    `output/a5_sphere_limiter/before_issue_64_fix/`.
   - **C0 (both runs) confirmed both predicted barriers.** The donor rule is
     inert over 96.7% of the column and 43% of the sphere, and a source tag goes
     monotonically negative on the sphere with nothing to repair it.
 
 ### What to run next
 
-In this order. Each line works as written from the repository root on Levante.
+[LEVANTE_TASKS.md](LEVANTE_TASKS.md) is the ordered, self-contained list and is
+the one to work from at a terminal. It puts the A5 re-run first, because that is
+the only thing that can confirm the issue-64 fix. What follows here is the same
+material as background, and is not a second ordering to reconcile with it.
 
 **1. C3 — the highest-value run available.** No code change, no approval
 needed, config written and validated. C0 made this interesting: it shows what
@@ -116,13 +124,21 @@ CONFIG=experiments/tag_closure/configs/c0_sphere_deep.yml \
 `dt` 10 s with `vert_diff: DecayWithHeightDiffusion`. Until then A3 is a number
 with no reading. Minutes of walltime.
 
-**Phase B: still a recommendation to hold, not a rule.** B1 is ten days of a moist
-sphere with a limiter. That is the regime that diverged inside three hours in
-A5, on a coarser grid. Running it before #64 is understood risks spending
-sphere-days to produce a residual that means nothing, in the same way A5's did
-after hour three. B2 is dry and unaffected by that argument, so if phase B has
-to start somewhere, start there. If you disagree, the evidence to check is
-whether A5's divergence needs the SEM limiter — B1 has no limiter, B3 does.
+**Phase B: still a recommendation to hold, and the reason has changed.** The
+reason recorded here was that B1 is ten days of a moist sphere with a limiter,
+in the regime that diverged in A5. That was wrong twice over, and the paragraph
+contradicted itself two lines later. `b1_base` configures no limiter — only
+`b3_limiter` does, which is what the pair exists to compare — and phase B is the
+*energy* family, which has no `rescale_water_tags!` and no partition repair, as
+`is_tagged_tracer_name`'s docstring says outright. #64's mechanism was a
+multiplicative rescale amplifying the closure error, and on that path there is
+no rescale to amplify anything.
+
+What A5 does bound for phase B is the unlimited explicit transport the energy
+tags share, which A5 showed drives tags far out of partition on a coarse
+sphere. That is a weaker argument than the one it replaces, and whether it is
+worth ten sphere-days before the A5 re-run reads is the owner's call. B2 is dry
+and unaffected either way, so if phase B has to start somewhere, start there.
 
 ### Decisions waiting on the owner
 
@@ -147,9 +163,11 @@ this is decided.**
 
 **Two smaller ones.** Whether to write A3's companion config — one file, and it
 unblocks A3. And whether to lengthen `test/tagged_water_integration.jl` past
-A5's onset, or add a case: it runs A5's exact configuration but stops at one
-hour, and the divergence starts between hours two and three, which is why this
-went unnoticed.
+A5's onset. The issue-64 fix strengthened that test rather than lengthening it:
+`t_end` is still one hour and the new assertions bound each tag and the residual
+against the *local* parent. On the archived pre-fix numbers the residual half of
+that would still have passed at one hour, so the coverage gap is narrowed and
+not closed. See the A5 open item below.
 
 ### What will bite you
 
@@ -187,7 +205,8 @@ went unnoticed.
 |:-------------------------------- |:---------------------------------------------------- |
 | Findings, one entry per run      | [LEARNINGS.md](LEARNINGS.md)                         |
 | What has landed                  | the run register below                               |
-| The A5 divergence                | issue #64                                            |
+| The A5 divergence                | issue #64, fixed at `f2e5384`, re-run pending        |
+| What to run next, on Levante     | [LEVANTE_TASKS.md](LEVANTE_TASKS.md)                 |
 | Plan and memo                    | PR #63, branch `claude/tag-closure-experiments-plan` |
 | Configurations, driver, analysis | this directory                                       |
 
@@ -329,9 +348,10 @@ existence and value type, then against the plan's common protocol per family:
 the two runs that measure one, exactly one family under test, tags and closure
 check present or absent together, at least one pure region tag, no `tolerance`,
 no `reduction_time`, no top-level key bound twice, every diagnostic a name the
-run will register, and phase A's closure period still tracking `dt`. The second
-breaks copies of the tree fourteen ways and asserts every one is caught, so
-those checks are demonstrably live rather than merely present.
+run will register, phase A's closure period still tracking `dt`, and `audit`
+set on exactly the runs that need it and on no others. The second breaks copies
+of the tree fifteen ways and asserts every one is caught, so those checks are
+demonstrably live rather than merely present.
 
 It is Python because that is the tool that was actually used while the
 configurations were written; a Julia port would be an unverified rewrite, since
@@ -573,7 +593,7 @@ Tick a run once it has been submitted, once its files are committed under
 | `a2_first_order_dt2p5` | A     | yes       | yes         | yes      | yes            |
 | `a3_1m`                | A     | yes       | yes         | not yet  | yes            |
 | `a4_float32`           | A     | yes       | yes         | yes      | yes            |
-| `a5_sphere_limiter`    | A     | yes       | yes         | yes      | yes            |
+| `a5_sphere_limiter`    | A     |           |             |          |                |
 | `b1_notags`            | B     |           |             |          |                |
 | `b1_base`              | B     |           |             |          |                |
 | `b1a_no_hyperdiff`     | B     |           |             |          |                |
@@ -587,6 +607,19 @@ Tick a run once it has been submitted, once its files are committed under
 | `c0_sphere_deep`       | C     |           |             |          |                |
 | `c3_column_record`     | C     |           |             |          |                |
 
+`a5_sphere_limiter` is blank on purpose. It ran once, at `49b2ec9`, and that
+reading measured the bug issue #64 names rather than a residual. Its files are
+kept under `output/a5_sphere_limiter/before_issue_64_fix/` and its entry in
+`LEARNINGS.md` is the record of it. The row fills in again when the re-run under
+the fix lands; it is the top task in [LEVANTE_TASKS.md](LEVANTE_TASKS.md).
+
+`output/summary_a.csv` is one cycle behind this table and cannot be brought
+forward here: it is written by `analysis/phase_a.jl`, which needs Julia, and it
+still carries the pre-fix `a5_sphere_limiter` row and lacks the two audit
+columns the script now writes. Running `phase_a.jl` on Levante regenerates it,
+which the A5 task already asks for. The same is true of `summary_c.csv` and
+`phase_c.jl`.
+
 ## What goes in `output/<run>/`
 
 Reduce before copying. The run's `output_dir` also holds the NetCDF diagnostics
@@ -595,6 +628,14 @@ points back to them. Nothing else is committed.
 
   - `<family>_tag_closure.csv`, verbatim from `output_dir`. The table the
     closure check wrote, one row per firing.
+  - `<family>_tag_audit.csv`, verbatim, **when the run set `audit: true`**.
+    Two configs do: `a5_sphere_limiter` and `c0_sphere_deep`. The model writes
+    it, not the reducer, and `analysis/reduce_run.jl` names it in its last log
+    line so it is not left on scratch. `untagged` and `overclaimed` are the two
+    signed halves of the closure table's `gross_residual` and add to it exactly,
+    `orphaned` is the mass in cells whose parent holds water while every tag is
+    empty, and `nonpositive_mass` is the mass counterpart of the closure table's
+    volume fraction. Join it to the closure table on `time`.
   - `operator_residual.csv`, from `analysis/reduce_run.jl`. One row per
     diagnostic time with the maximum absolute operator residual, and beside it
     the maximum absolute `q_tag_res` and the summed ledger on their own, so the
@@ -621,6 +662,22 @@ points back to them. Nothing else is committed.
     node type and the partition, the SLURM job id, and the scratch paths to the
     NetCDF and the checkpoints. None of these is stable across months on that
     system, so a result without them cannot be set against a later one.
+
+### Keeping an earlier reading of the same configuration
+
+When a configuration is run again against a changed model, the earlier reading
+is not deleted and not overwritten. It moves into a subdirectory of its own run
+directory, named for what changed:
+`output/a5_sphere_limiter/before_issue_64_fix/` holds the pre-fix A5 files, and
+`output/a5_sphere_limiter/` is otherwise empty until the re-run lands.
+
+A subdirectory rather than a sibling directory, because `load_run` reads files
+by name inside a run directory and never descends, so an archive there is
+invisible to the analysis without any rule about names. `load_run` skips a
+directory holding no files of its own, silently, so a run directory waiting on
+its re-run does not warn on every analysis. A real run always hands back at
+least `provenance.txt`, including a timing control, which writes no closure
+table, so nothing that is a run can be skipped by that rule.
 
 **A run whose provenance does not name the commit is not analysed.** That means
 a missing `provenance.txt` and equally one recording `commit: unknown`: a
@@ -690,14 +747,28 @@ be resubmitted.
     written and unsubmitted, and C0 has made it more interesting: it shows what
     the energy process record reads on a configuration where the source tags'
     own rule is not running.
-  - **A5 diverges, and the integration test cannot see it.** The water tags on
-    the sphere run away to 1e130 while the parent stays bounded, and the run
-    exits zero. `test/tagged_water_integration.jl` exercises that exact
-    configuration but stops at one hour, and the divergence starts between
-    hours two and three. Two decisions follow and neither is the agent's to
-    take: whether to lengthen or add to that test so the regime is covered, and
-    whether to instrument `water_tag_rescale_ratio` to confirm or kill the
-    leading hypothesis. Both are cheap. See the A5 entry in `LEARNINGS.md`.
+  - ~~**A5 diverges, and the integration test cannot see it.**~~ **The fix is
+    merged and the re-run is task 1 in `LEVANTE_TASKS.md`.** Both decisions
+    that were left open here have been taken, and one of them differently from
+    how it was framed. `water_tag_rescale_ratio` was not instrumented; it was
+    removed, replaced by an additive redistribution, so there is no ratio left
+    to measure. `test/tagged_water_integration.jl` was not lengthened either:
+    `t_end` is still one hour, and what changed is the assertion, which now
+    bounds each tag and the residual against the *local* parent on well
+    populated cells instead of against the global maximum of `ρq_tot`.
+
+    **That leaves the coverage gap open, and it should be said plainly.** At
+    one hour the archived pre-fix run has `max |q_tag_res|` of 7.5e-6 kg kg⁻¹
+    and at two hours 6.0e-5, against a moist parent of order 1e-2 kg kg⁻¹ in
+    the cells the new bound keeps, so the strengthened residual assertion would
+    still have passed on the model that diverged. (Those maxima are over the
+    remapped lat-lon field, so the model's own maximum is at least as large;
+    bilinear interpolation does not hide three orders of magnitude, which is
+    what would be needed to change the conclusion.) The tag-ratio half of the
+    new assertion cannot be evaluated from the committed tables at all. So the
+    test is a better test and it is not yet a test that would have caught this;
+    whether to lengthen it remains the owner's call. See the A5 entry in
+    `LEARNINGS.md`.
   - **A3 needs a matched companion to be read cleanly.** A3 sets `vert_diff`,
     which is the only one of the three 1M `q_tot_eff` operators a column can
     reach — hyperdiffusion's branch is horizontal and the viscous sponge is off.
