@@ -716,7 +716,9 @@ function nonpositive_parent_note(family)
     family == "energy_source" && return "Donor shares are undefined there, so \
         the loss half of the attribution rule does not run. For moist total \
         energy this usually means the chosen thermodynamic or gravitational \
-        reference puts part of the domain below zero."
+        reference puts part of the domain below zero. An \
+        `energy_source_tag_offset` large enough to lift the partitioned \
+        total positive removes the region without moving that reference."
     family == "water" && return "Water tags take loss in proportion to what \
         they hold, so their shares are undefined there and the tags of those \
         cells carry no provenance. Nothing in the model keeps `ρq_tot` \

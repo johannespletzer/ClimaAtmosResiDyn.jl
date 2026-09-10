@@ -54,8 +54,10 @@ function register_energy_source_tagging_diagnostics!(
             long_name = "Source-Tagged Moist Energy ($name)",
             comments = "Moist energy attributed to the tag `$name`, per " *
                        "unit mass of moist air. Reads as energy present now " *
-                       "traced back to that tag only where `ρe_tot` is " *
-                       "positive and this field is non-negative; elsewhere " *
+                       "traced back to that tag only where the partitioned " *
+                       "total is positive and this field is non-negative; " *
+                       "that total is `ρe_tot`, or `ρe_tot + c*ρ` under an " *
+                       "`energy_source_tag_offset`. Elsewhere " *
                        "it is a signed attribution with no amount " *
                        "interpretation. Distinct from `e_tag_$name`, which " *
                        "is a signed record of what a process did rather " *
