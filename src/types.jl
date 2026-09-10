@@ -2410,12 +2410,13 @@ rare edge case.
 
 The tags are also exempt from both tracer limiters through
 [`is_tagged_tracer_name`](@ref) and ride the unlimited explicit transport path.
-Unlike the water tags there is no partition repair, so nothing puts a negative
-tag back.
 
 These are known limits of the current discrete implementation rather than
 properties of the continuous rule. A negative value invalidates the
-amount-of-energy and provenance reading of that tag while it lasts.
+amount-of-energy and provenance reading of that tag while it lasts. So by
+default `repair_energy_source_tags!` puts negative tags back after each state
+update, where the total is positive, and logs what it moved. With
+`energy_source_tag_repair: false` nothing does.
 
 `e_src_res` will not reveal it: that residual covers the pure region tags only,
 so a source-labelled tag never enters it and region-tag errors of opposite sign
@@ -2438,7 +2439,7 @@ EnergySourceTag{name}(region, source::Symbol) where {name} =
     EnergySourceTag{name}(region, source === :none ? () : (source,))
 
 """
-    EnergySourceTaggingModel(tags::Tuple, offset = nothing)
+    EnergySourceTaggingModel(tags::Tuple, offset = nothing; repair = true)
 
 Model component holding a `Tuple` of [`EnergySourceTag`](@ref)s. Constructed
 from the `energy_source_tags` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2448,12 +2449,20 @@ from the `energy_source_tags` config entry; see `AtmosTagging(::AtmosConfig)` in
 `energy_source_tag_offset` config key, or `nothing`. With an offset `c` the tags
 partition `ρe_tot + c·ρ` rather than `ρe_tot`. The model never uses that total,
 so the simulated atmosphere is the same either way. See `energy_source_parent`.
+
+`repair`, from the `energy_source_tag_repair` config key, keeps the tags
+non-negative where their total is positive, without changing the sum of the
+partition. It is on by default. Switched off, the tags go negative as the rule
+and their transport make them, which is how to measure what the repair changes.
+See `repair_energy_source_tags!`.
 """
 struct EnergySourceTaggingModel{T <: Tuple, O <: Union{Nothing, AbstractFloat}}
     tags::T
     offset::O
+    repair::Bool
 end
-EnergySourceTaggingModel(tags::Tuple) = EnergySourceTaggingModel(tags, nothing)
+EnergySourceTaggingModel(tags::Tuple, offset = nothing; repair::Bool = true) =
+    EnergySourceTaggingModel(tags, offset, repair)
 
 """
     RecordedProcess{name}()

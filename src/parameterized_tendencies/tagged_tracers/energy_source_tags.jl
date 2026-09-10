@@ -150,10 +150,18 @@ is_energy_source_tag_name(name::MatrixFields.FieldName) =
     _energy_source_tagging_cache(Y, model)
 
 Cache entries used by the energy source tags, merged into `p.tagging`; `nothing`
-when they are disabled. Contains `ᶜenergy_source_masks`, one static center
-`Field` per region tag holding the smooth spatial mask of that tag's region,
-keyed like the state (`ρe_src_<name>`). Masks are evaluated once here and never
-inside a per-timestep broadcast.
+when they are disabled. Contains:
+
+  - `ᶜenergy_source_masks`: one static center `Field` per region tag holding
+    the smooth spatial mask of that tag's region, keyed like the state
+    (`ρe_src_<name>`). Masks are evaluated once here and never inside a
+    per-timestep broadcast.
+  - `ᶜenergy_source_fix`: one center `Field` per tag, accumulating the energy
+    that `repair_energy_source_tags!` has moved into or out of it. It is
+    reported as `e_src_fix_<name>`. It lives in the cache, so it restarts at
+    zero, as the water tags' ledger does.
+  - `ᶜenergy_source_pos` and `ᶜenergy_source_neg`: the positive and negative
+    parts of the partition's sum, which the repair fills itself.
 """
 _energy_source_tagging_cache(Y, ::Nothing) = nothing
 function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
@@ -165,8 +173,24 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         "ρe_src",
     )
     _check_parent_positivity(Y, model)
-    return (; ᶜenergy_source_masks)
+    # The ledger exists whether or not the repair is on, so that
+    # `e_src_fix_<name>` reads zero rather than failing when it is off.
+    ᶜenergy_source_fix = _energy_source_fix_fields(Y.c.ρ, model.tags)
+    ᶜenergy_source_pos = zero.(Y.c.ρ)
+    ᶜenergy_source_neg = zero.(Y.c.ρ)
+    return (;
+        ᶜenergy_source_masks,
+        ᶜenergy_source_fix,
+        ᶜenergy_source_pos,
+        ᶜenergy_source_neg,
+    )
 end
+
+_energy_source_fix_fields(ᶜρ, ::Tuple{}) = (;)
+_energy_source_fix_fields(ᶜρ, tags::Tuple) = merge(
+    tag_entry(first(tags), zero.(ᶜρ)),
+    _energy_source_fix_fields(ᶜρ, Base.tail(tags)),
+)
 
 """
     energy_source_scratch(Y, model)
@@ -484,4 +508,169 @@ function _accumulate_energy_source_tag!(
         @. ᶜρe_srcₜ += min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
     end
     return nothing
+end
+
+# ============================================================================
+# Repair
+# ============================================================================
+
+# A pure region tag has a region and no sources. Those tags partition the total,
+# and the repair keeps their sum. Both properties are type parameters, so this
+# resolves at compile time, as `_is_partition_tag` does for the water tags.
+_is_energy_partition_tag(
+    ::EnergySourceTag{name, R, Tuple{}},
+) where {name, R <: AbstractTagRegion} = true
+_is_energy_partition_tag(::EnergySourceTag) = false
+
+"""
+    energy_source_partition_repair(ρe_src, pos, neg, parent)
+
+The value `repair_energy_source_tags!` gives a partition tag. `pos` and `neg` are
+the positive and negative parts of the partition's sum in the same cell, and
+`parent` is the total the tags partition there.
+
+Where `parent` is positive, a negative tag is set to zero and the positive tags
+are scaled by the common factor `max(pos + neg, 0) / pos`, the factor of the
+water tags' repair, `water_tag_repair_factor`. The sum `pos + neg` is kept
+exactly and every tag ends non-negative. Where the negatives outweigh the
+positives, no non-negative partition has that sum, so every tag is zeroed, as
+the water repair does.
+
+Where `parent` is not positive the tag is left as it is. The donor share is
+undefined there, and a region tag carries the parent's sign by design, so a
+negative value is not an error to repair. Under the default energy reference
+that is much of the troposphere. With a large enough `energy_source_tag_offset`
+it is nowhere.
+"""
+@inline energy_source_partition_repair(ρe_src, pos, neg, parent) =
+    parent > zero(parent) ?
+    max(ρe_src, zero(ρe_src)) * water_tag_repair_factor(pos, neg) : ρe_src
+
+"""
+    energy_source_overlay_repair(ρe_src, parent)
+
+The value `repair_energy_source_tags!` gives a tag that carries a source. Such a
+tag is not a member of the partition. It marks the part of the total that came
+in through its processes. Where `parent` is positive a negative value is set to
+zero; elsewhere the tag is left alone, for the reason
+`energy_source_partition_repair` gives.
+
+There is no sum to keep, so the energy the clip adds comes from nowhere within
+the tags. The ledger records it.
+"""
+@inline energy_source_overlay_repair(ρe_src, parent) =
+    parent > zero(parent) ? max(ρe_src, zero(ρe_src)) : ρe_src
+
+"""
+    repair_energy_source_tags!(Y, p)
+
+Keep the energy source tags non-negative where their total is positive.
+
+The tags go negative for the reasons given in `docs/src/energy_source_tags.md`:
+the finite step of the donor loss, and unlimited explicit transport with no
+limiter. A negative tag voids its reading as an amount of energy from
+somewhere. Through the clamp in `energy_source_fraction` it also distorts what
+the other tags lose. This puts the tags back in range after each state update:
+
+  - the partition tags keep their sum, through `energy_source_partition_repair`;
+  - a tag that carries a source is clipped at zero, through
+    `energy_source_overlay_repair`.
+
+Both act only where the total the tags partition is positive, which is
+everywhere with a large enough `energy_source_tag_offset`.
+
+It does **not** force the region tags to add up to the total. That would drive
+`e_src_res` to zero by construction and hide the transport mismatch the residual
+exists to show. It removes only the negativity, as the water tags' partition
+repair does.
+
+Every change is added to `p.tagging.ᶜenergy_source_fix` and reported as
+`e_src_fix_<name>`, so what the repair did stays distinguishable from what the
+rule and the transport did. For the partition tags these changes sum to zero in
+each cell, except where the negatives outweighed the positives and every tag was
+zeroed.
+
+On by default. `energy_source_tag_repair: false` switches it off, and leaves the
+tags exactly as the rule and their transport make them, negative values
+included. Called from `constrain_state!` after the water tags' repair. A no-op
+when energy source tagging is disabled.
+"""
+repair_energy_source_tags!(Y, p) =
+    _repair_energy_source_tags!(Y, p, p.atmos.energy_source_tagging_model)
+_repair_energy_source_tags!(Y, p, ::Nothing) = nothing
+function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
+    model.repair || return nothing
+    (; ᶜenergy_source_fix, ᶜenergy_source_pos, ᶜenergy_source_neg) = p.tagging
+    ᶜparent = _energy_source_parent_field(Y, model.offset)
+    ᶜenergy_source_pos .= zero(eltype(ᶜenergy_source_pos))
+    ᶜenergy_source_neg .= zero(eltype(ᶜenergy_source_neg))
+    _accumulate_energy_source_partition!(
+        ᶜenergy_source_pos,
+        ᶜenergy_source_neg,
+        Y.c,
+        model.tags,
+    )
+    _apply_energy_source_repair!(
+        Y.c,
+        ᶜenergy_source_fix,
+        ᶜenergy_source_pos,
+        ᶜenergy_source_neg,
+        ᶜparent,
+        model.tags,
+    )
+    return nothing
+end
+
+# The partition's sum split into its positive and negative parts, over the pure
+# region tags only. The tags that carry a source are outside the partition.
+_accumulate_energy_source_partition!(ᶜpos, ᶜneg, ᶜY, ::Tuple{}) = nothing
+function _accumulate_energy_source_partition!(ᶜpos, ᶜneg, ᶜY, tags::Tuple)
+    tag = first(tags)
+    if _is_energy_partition_tag(tag)
+        ᶜρe_src = tag_field(ᶜY, tag)
+        @. ᶜpos += max(ᶜρe_src, 0)
+        @. ᶜneg += min(ᶜρe_src, 0)
+    end
+    return _accumulate_energy_source_partition!(
+        ᶜpos,
+        ᶜneg,
+        ᶜY,
+        Base.tail(tags),
+    )
+end
+
+# `ᶜpos` and `ᶜneg` come from the state before the repair and are only read
+# here, so each tag can be rewritten in place and a later tag's factor still
+# holds. The ledger is written first, so it records the correction itself.
+_apply_energy_source_repair!(ᶜY, ᶜfix, ᶜpos, ᶜneg, ᶜparent, ::Tuple{}) =
+    nothing
+function _apply_energy_source_repair!(
+    ᶜY,
+    ᶜfix,
+    ᶜpos,
+    ᶜneg,
+    ᶜparent,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜρe_src = tag_field(ᶜY, tag)
+    ᶜtag_fix = tag_field(ᶜfix, tag)
+    if _is_energy_partition_tag(tag)
+        @. ᶜtag_fix +=
+            energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
+            ᶜρe_src
+        @. ᶜρe_src =
+            energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent)
+    else
+        @. ᶜtag_fix += energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src
+        @. ᶜρe_src = energy_source_overlay_repair(ᶜρe_src, ᶜparent)
+    end
+    return _apply_energy_source_repair!(
+        ᶜY,
+        ᶜfix,
+        ᶜpos,
+        ᶜneg,
+        ᶜparent,
+        Base.tail(tags),
+    )
 end
