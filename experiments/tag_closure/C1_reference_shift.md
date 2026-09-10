@@ -101,11 +101,11 @@ inversely proportional to `e + c`. But `c` must be large enough to keep `e + c`
 away from zero, or the unbounded-ratio failure returns. One constant controls
 both, and they pull in opposite directions:
 
-| margin above the minimum | `e + c` spans (J kg⁻¹) | discrimination vs today |
-|:------------------------ |:---------------------- |:----------------------- |
+| margin above the minimum | `e + c` spans (J kg⁻¹) | discrimination vs today                |
+|:------------------------ |:---------------------- |:-------------------------------------- |
 | 1.0×                     | 0 … 2.13e5             | ~1.9× weaker, denominator touches zero |
-| 1.5×                     | 5.0e4 … 2.63e5         | ~2.8× weaker            |
-| 3.0×                     | 2.0e5 … 4.14e5         | ~5.5× weaker            |
+| 1.5×                     | 5.0e4 … 2.63e5         | ~2.8× weaker                           |
+| 3.0×                     | 2.0e5 … 4.14e5         | ~5.5× weaker                           |
 
 At a margin anyone would actually choose, the donor rule is several times less
 discriminating in the cells where it already works today. It does not collapse
