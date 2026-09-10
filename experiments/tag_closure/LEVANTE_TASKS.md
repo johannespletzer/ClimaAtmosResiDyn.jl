@@ -190,11 +190,11 @@ is reference-independent so nothing about C1 can touch it.
 
 The `.err` files came back and the A1 pair reads clean:
 
-| | tagged | untagged | ratio |
-|:-------------------- |:------- |:-------- |:----- |
-| `solve! walltime` | 3.337 s | 0.548 s | 6.09 |
-| `sypd` | 2.956 | 17.992 | 6.09 |
-| per timestep | 9.269 ms | 1.522 ms | 6.09 |
+|                   | tagged   | untagged | ratio |
+|:----------------- |:-------- |:-------- |:----- |
+| `solve! walltime` | 3.337 s  | 0.548 s  | 6.09  |
+| `sypd`            | 2.956    | 17.992   | 6.09  |
+| per timestep      | 9.269 ms | 1.522 ms | 6.09  |
 
 **Do not read 6.1× as the cost of the tags.** `a1_dt10` runs
 `water_closure_check` at `period: "10secs"` against a `dt` of 10 s, so a global
@@ -205,11 +205,11 @@ diagnostic choice, not what carrying tags costs.
 tags with the closure check and diagnostics both hourly, over 8640 steps instead
 of 360:
 
-| | tagged | untagged | ratio |
-|:-------------------- |:--------- |:---------- |:----- |
-| `solve! walltime` | 11.225 s | 8.521 s | 1.317 |
-| `sypd` | 21.088 | 27.779 | 1.317 |
-| per timestep | 1.299 ms | 986.3 µs | 1.317 |
+|                   | tagged   | untagged | ratio |
+|:----------------- |:-------- |:-------- |:----- |
+| `solve! walltime` | 11.225 s | 8.521 s  | 1.317 |
+| `sypd`            | 21.088   | 27.779   | 1.317 |
+| per timestep      | 1.299 ms | 986.3 µs | 1.317 |
 
 **1.32×, not 6.1×.** Same three tag families; the difference between the pairs is
 that A1 fires the closure reduction on every timestep and C0 fires it hourly. So

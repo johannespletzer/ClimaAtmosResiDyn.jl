@@ -285,8 +285,7 @@ A synthetic `<family>_tag_audit.csv` in the shape the model writes when a
 closure block sets `audit: true`, so the loader is read against the real column
 set rather than against one invented here.
 
-`rows` is a vector of `(time, overclaimed_relative, orphaned_relative,
-nonpositive_mass_fraction)`. The remaining columns are filled consistently:
+`rows` is a vector of `(time, overclaimed_relative, orphaned_relative, nonpositive_mass_fraction)`. The remaining columns are filled consistently:
 `untagged + overclaimed` is `gross_residual` by construction in the model, so
 the fixture keeps that true rather than writing numbers that could not occur
 together.
@@ -548,7 +547,7 @@ function test_phase_a()
         loaded_runs = call(phase, :load_phase, tmp, "a")
         rungs = Set(
             run.name for run in loaded_runs
-            if call(phase, :is_ladder_rung, run)
+                         if call(phase, :is_ladder_rung, run)
         )
         for outsider in ("a3_0m_vert_diff", "a3_1m", "a4_float32")
             @assert(

@@ -38,11 +38,11 @@ established on a sphere. *A4.*
 `a1_dt10` on `max |q_tag_res|`, but it differs in two keys and the companion
 separates them:
 
-| step                                | factor |
-|:----------------------------------- |:------ |
-| `vert_diff` on, 0M held (a1 → a3_0m) | 0.037  |
-| 1M on, `vert_diff` held (a3_0m → a3_1m) | 0.934 |
-| both (a1 → a3_1m)                   | 0.035  |
+| step                                    | factor |
+|:--------------------------------------- |:------ |
+| `vert_diff` on, 0M held (a1 → a3_0m)    | 0.037  |
+| 1M on, `vert_diff` held (a3_0m → a3_1m) | 0.934  |
+| both (a1 → a3_1m)                       | 0.035  |
 
 So **vertical diffusion accounts for 27× of the 29×** and 1M for 7%. *A1, A3,
 `a3_0m_vert_diff`.*
@@ -128,8 +128,7 @@ sphere's**, the latter constant to the last digit across 24 hours. *C0.*
 reaches −209 J kg⁻¹ on the sphere while `e_src_res` shows nothing, because the
 residual sums only the pure region tags. *C0.*
 
-**E3. One level crossing changes the behaviour of the whole column.** `max
-e_src_rad` rises monotonically for all seven hours before the transition from 30
+**E3. One level crossing changes the behaviour of the whole column.** `max e_src_rad` rises monotonically for all seven hours before the transition from 30
 to 29 non-positive levels, falls by 137 J kg⁻¹ in the hour of the transition
 itself, and every later decrease — 20 h to 23 h, four consecutive samples — is
 also after it. The tag can lose only where a level supports a donor share.
@@ -288,19 +287,18 @@ not happen.
 
 ## 4. Cost
 
-**T1. Compilation dominates these jobs.** `a1_dt10` reports `solve! walltime =
-3.337` s inside a job that took 295 s, with `sypd: 2.956` and
+**T1. Compilation dominates these jobs.** `a1_dt10` reports `solve! walltime = 3.337` s inside a job that took 295 s, with `sypd: 2.956` and
 `wall_time_per_timestep: 9 ms 269 µs`. Job wall times therefore cannot be read
 as a tag cost.
 
 **T2. The A1 configuration costs 6.1× its untagged control**, and the three
 measures agree to three digits:
 
-| | tagged | untagged | ratio |
-|:-------------------- |:------- |:-------- |:----- |
-| `solve! walltime` | 3.337 s | 0.548 s | 6.09 |
-| `sypd` | 2.956 | 17.992 | 6.09 |
-| per timestep | 9.269 ms | 1.522 ms | 6.09 |
+|                   | tagged   | untagged | ratio |
+|:----------------- |:-------- |:-------- |:----- |
+| `solve! walltime` | 3.337 s  | 0.548 s  | 6.09  |
+| `sypd`            | 2.956    | 17.992   | 6.09  |
+| per timestep      | 9.269 ms | 1.522 ms | 6.09  |
 
 The agreement is within one log rather than across runs. `output/a1_dt10/` holds
 a second `.err` for the same configuration, job `27360071`, which gives 3.274 s,
@@ -319,11 +317,11 @@ tag cost would be wrong.
 use — three energy source tags with the closure check and the diagnostics both
 hourly, over 8640 steps rather than 360 — and both halves are in `output/`:
 
-| | tagged | untagged | ratio |
-|:-------------------- |:--------- |:---------- |:----- |
-| `solve! walltime` | 11.225 s | 8.521 s | 1.317 |
-| `sypd` | 21.088 | 27.779 | 1.317 |
-| per timestep | 1.299 ms | 986.3 µs | 1.317 |
+|                   | tagged   | untagged | ratio |
+|:----------------- |:-------- |:-------- |:----- |
+| `solve! walltime` | 11.225 s | 8.521 s  | 1.317 |
+| `sypd`            | 21.088   | 27.779   | 1.317 |
+| per timestep      | 1.299 ms | 986.3 µs | 1.317 |
 
 So T3's reading is confirmed rather than merely argued: the same three tag
 families, checked hourly instead of every step, cost **1.32×** where A1's

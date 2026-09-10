@@ -240,8 +240,7 @@ because it is what narrowed the question to the convention:
     A region tag initialises to a masked share of `ρe_tot`
     (`energy_source_tags.jl:65`), so its extrema are `ρe_tot`'s extrema over
     that region.
-  - **Nothing is customised in how energy is formed.** `ρe_tot = ρ *
-    TD.total_energy(thermo_params, e_kin, e_pot, T, q_tot, q_liq, q_ice)` at
+  - **Nothing is customised in how energy is formed.** `ρe_tot = ρ * TD.total_energy(thermo_params, e_kin, e_pot, T, q_tot, q_liq, q_ice)` at
     `src/setups/common/prognostic_variables.jl:52`, with
     `e_pot = geopotential(grav, z)`. Calling that function directly on the
     DYCOMS surface state returns **−44,009 J kg⁻¹** against the field's
@@ -259,8 +258,8 @@ because it is what narrowed the question to the convention:
 717.5, `cv_v` 1397.5, `R_v` 461.5, `LH_v0` 2.5008e6, the textbook
 `cv_m(T − T_0) + q_v·e_int_v0 + gz` gives:
 
-| state                                    | textbook `e_tot` (J kg⁻¹) |
-|:---------------------------------------- |:------------------------- |
+| state                                     | textbook `e_tot` (J kg⁻¹) |
+|:----------------------------------------- |:------------------------- |
 | DYCOMS surface, 288.3 K, 9.45 g/kg, z = 0 | +3.34e4                   |
 | DYCOMS top, 288 K, 5 g/kg, z = 1500 m     | +3.73e4                   |
 | sphere surface, 300 K, 15 g/kg, z = 0     | +5.52e4                   |
@@ -280,8 +279,7 @@ to resolve, and it is closed.
 This is the finding that should decide C1's shape, and neither the memo nor the
 first draft of this page counted it.
 
-The internal energies fix the latent heat. With `e_v = cv_v(T − T_0) + LH_v0 −
-R_v·T_0` and `e_l = cv_l(T − T_0)`, and liquid taken incompressible so
+The internal energies fix the latent heat. With `e_v = cv_v(T − T_0) + LH_v0 − R_v·T_0` and `e_l = cv_l(T − T_0)`, and liquid taken incompressible so
 `cp_l = cv_l`:
 
 ```
@@ -427,30 +425,30 @@ result is not read as answering more than it can.
 Steps 2 to 4 of the original list have been done and their results are folded
 into the sections above. What is left:
 
-1. **Run C3 first.** It needs no code change, no approval, and is already
-   written. It shows what the process record reads on a configuration where the
-   source tags' own rule is not running — the fallback, measured. It is also
-   reference-independent, so nothing above can invalidate it. If only one thing
-   runs next, this is it.
-2. **Collect the ClimaParams names, then write the TOML.** One command, in the
-   section above. The recipe and its acceptance test are fixed and every
-   constant in them is now known; the table headers are what is left.
-3. **Then C1 as option 2, implemented as the co-adjusted map above.** Moving
-   `T_0` by itself is now known to be the wrong operation, not merely an
-   unverified one, and the acceptance test distinguishes the two on sight.
+ 1. **Run C3 first.** It needs no code change, no approval, and is already
+    written. It shows what the process record reads on a configuration where the
+    source tags' own rule is not running — the fallback, measured. It is also
+    reference-independent, so nothing above can invalidate it. If only one thing
+    runs next, this is it.
+ 2. **Collect the ClimaParams names, then write the TOML.** One command, in the
+    section above. The recipe and its acceptance test are fixed and every
+    constant in them is now known; the table headers are what is left.
+ 3. **Then C1 as option 2, implemented as the co-adjusted map above.** Moving
+    `T_0` by itself is now known to be the wrong operation, not merely an
+    unverified one, and the acceptance test distinguishes the two on sight.
 
 ## What is not established here
 
-- ~~Whether `p_sat` is in fact invariant under the co-adjusted map.~~ Measured:
-  over liquid, over ice and over the mixture ramp it is unchanged to 9.2e-16
-  from 150 K to 330 K, and 1721.1532852305072 comes back bit for bit
-  (`analysis/c1_acceptance.jl`).
-- Whether anything in ClimaAtmos or Thermodynamics quietly assumes
-  `T_0 == T_triple`. Nothing found, and the two are separate ClimaParams
-  entries that merely happen to share the value 273.16, but nothing has ever
-  moved them apart.
-- Whether the suppression cost matters in practice. The magnitude is firm, so
-  this is measurable rather than open in principle.
+  - ~~Whether `p_sat` is in fact invariant under the co-adjusted map.~~ Measured:
+    over liquid, over ice and over the mixture ramp it is unchanged to 9.2e-16
+    from 150 K to 330 K, and 1721.1532852305072 comes back bit for bit
+    (`analysis/c1_acceptance.jl`).
+  - Whether anything in ClimaAtmos or Thermodynamics quietly assumes
+    `T_0 == T_triple`. Nothing found, and the two are separate ClimaParams
+    entries that merely happen to share the value 273.16, but nothing has ever
+    moved them apart.
+  - Whether the suppression cost matters in practice. The magnitude is firm, so
+    this is measurable rather than open in principle.
 
 The parameter names are no longer among these: the appendix has them. None of
 the three needs a Levante run, and all three are cheaper than C1.

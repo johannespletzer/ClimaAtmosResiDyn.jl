@@ -411,15 +411,15 @@ pass the first time. Neither has been measured.
 Run at `8ed98b6`, one day, `exit_status: 0`, and the `abort_above` level of 1.0
 was never approached. `gross_relative` against the archived before:
 
-| time | before      | after    |
-|:---- |:----------- |:-------- |
-| 1 h  | 3.07e-5     | 2.84e-5  |
-| 2 h  | 9.03e-5     | 7.12e-5  |
-| 3 h  | 8.09e-1     | 1.15e-4  |
-| 4 h  | 2.42e+1     | 1.55e-4  |
-| 6 h  | 3.54e+10    | 1.89e-4  |
-| 12 h | 9.84e+17    | 2.51e-4  |
-| 24 h | 5.90e+113   | **2.79e-4** |
+| time | before    | after       |
+|:---- |:--------- |:----------- |
+| 1 h  | 3.07e-5   | 2.84e-5     |
+| 2 h  | 9.03e-5   | 7.12e-5     |
+| 3 h  | 8.09e-1   | 1.15e-4     |
+| 4 h  | 2.42e+1   | 1.55e-4     |
+| 6 h  | 3.54e+10  | 1.89e-4     |
+| 12 h | 9.84e+17  | 2.51e-4     |
+| 24 h | 5.90e+113 | **2.79e-4** |
 
 **It plateaus rather than merely staying finite.** 1.89e-4 at 6 h, 2.51e-4 at
 12 h, 2.79e-4 at 24 h — each doubling of elapsed time adds less than the last,
