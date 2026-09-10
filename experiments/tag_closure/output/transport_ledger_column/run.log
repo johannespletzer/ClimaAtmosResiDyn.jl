@@ -35,3 +35,5 @@ wrote /dss/dsstbyfs02/scratch/0D/di38kez/di38kez/claude-4358097/-dss-dsshome1-0D
 exit: 1
 
 [exited with code 0]
+
+# A rerun at f13054e2, with the output folder kept, printed the same table to every digit shown, and wrote transport_ledger.csv beside this file.
