@@ -232,10 +232,11 @@ measured; C0's tables are the place to check the first.
 
 ## A5. The sphere with the SEM limiter: the water tags diverge
 
-**Status: a fix has landed and nothing has re-run.** Everything in this entry is
-the measurement made at `49b2ec9`, before the fix, and it stays as written. The
-fix is described under *The fix, and what it does not yet establish* at the end
-of the entry. Do not read any number here as current.
+**Status: fixed and re-run.** Everything down to *The fix* is the measurement
+made at `49b2ec9`, before the fix, and it stays as written because it is what
+issue #64 names. **Do not read any number in it as current.** The fix, the
+re-run at `8ed98b6` and the audit follow it, in that order, and those are the
+current readings.
 
 Ran at `49b2ec9` on 2026-09-10, AMD EPYC 7763 64-Core, `shared`. A moist
 baroclinic wave, `h_elem` 4, `z_elem` 10, 0M, with
@@ -458,11 +459,9 @@ column at `dt` 10 — and a 30× larger timestep costing 6.8× in residual is on
 the favourable side of what the ladders would predict. The reduction is over
 the remapped lat-lon field, as `operator_residual.csv` says in its header.
 
-The ledger, unlike the residual, is still growing: 6.2e-4 at 24 h, 33× the
+The ledger, unlike the residual, is still growing: 6.2e-4 at 24 h, 32× the
 residual, with no sign of levelling. So the limiter keeps doing work all day and
 the corrections keep absorbing it. What has stopped is the amplification.
-
-**Two things this run did not deliver.**
 
 ### What the audit says, and one number that reframes the series
 
@@ -514,11 +513,6 @@ water a rounding artifact, for energy the bulk of the field. Nobody has measured
 the energy family's mass fraction. `c0_sphere_audit` is the run for it — the
 same sphere with `audit: true` and nothing else, so its answer pairs with the
 43.276% actually in circulation.
-
-**One thing still outstanding.** `summary_a.csv` now has its A5 row but its
-`final_overclaimed_relative` and `final_orphaned_relative` are still NaN,
-because `phase_a.jl` ran between the results landing and the audit table
-landing. One more pass fills them.
 
 **What the ledger means now, and why the operator residual is unaffected.** The
 identity `analysis/reduce_run.jl` rests on — that `q_tag_res + Σᵢ q_tag_fix_i`
