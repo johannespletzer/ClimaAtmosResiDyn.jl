@@ -127,10 +127,10 @@ limits.
     one. It is a code change in `energy_source_tags.jl` and in the code that
     reads the parent, with a kernel test first. Then one run at 110.5 kJ kg⁻¹
     for comparison with C1, and one at a larger `c` for R11's suppression cost.
-  - **Confirm E16's cause first.** One twin with `energy_q_tot_upwinding: none`
-    in both halves, which switches the post-solve limiter hook off, from a new
-    file in `overrides/`. About 20 minutes on `hpda2_test`. If the differences
-    fall to rounding, the limiter is the whole cause.
+  - **The limiter twin ran** (job `13384884`, `overrides/twin_limiter_off.yml`).
+    The limiter is most of E16: the one-step difference in `ρ` fell from 3.6e-5
+    to 3.7e-8. A remainder is left. One more twin that adds
+    `disable_surface_flux_tendency: true` would test the surface-flux code path.
 
 ## 2. C1 — done
 

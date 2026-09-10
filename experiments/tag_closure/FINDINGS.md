@@ -288,9 +288,18 @@ runs, because every water phase shifts by the same `cp_l·|δ|`. Hyperdiffusion
 moves `ρ` with the water it diffuses (`hyperdiffusion.jl:484-487`) and carries
 each phase's enthalpy, which moves by exactly what a relabelling needs. These
 are arguments, reached in discussion with the reviewer agent that proposed the
-tag-side shift of §8, and no twin has isolated the limiter yet. *Twin tests, SLURM jobs
-`13383683` and `13384080` on terrabyte, `output/twin_c1/` and
-`output/twin_c1_newton/`.*
+tag-side shift of §8, and a third twin then isolated the limiter.
+
+**The limiter is most of it, not all.** With `energy_q_tot_upwinding: none` in
+both halves, which leaves the hook unwired, the one-step differences fall to
+3.7e-8 in `ρ`, 5.7e-10 in `ρq_tot`, 1.8e-7 in `uₕ` and 4.7e-5 in `u₃`. That is
+a thousandth or less of what they were, except `u₃` at a ninth. They are still
+above rounding, and `ρ`'s grows to 5.8e-6 by 5 h. So a second, smaller term
+depends on the reference too. The next suspect is the surface-flux code path,
+which `c1_acceptance.jl` checks only as a formula. Central vertical advection,
+which the model does not normally run, may also amplify what is left. *Twin
+tests, SLURM jobs `13383683`, `13384080` and `13384884` on terrabyte,
+`output/twin_c1/`, `output/twin_c1_newton/` and `output/twin_c1_limiter_off/`.*
 
 ## 3. The energy reference
 
@@ -548,6 +557,9 @@ Kept because a later reader will otherwise re-derive them.
   - **That the only alternative to shifting the model's reference was shifting
     the share's denominator.** R10 rejects that shape correctly, but rebasing
     the tags as well repairs it and leaves the model untouched (§8, item 1).
+  - **The limiter as all of E16.** The discussion predicted that switching it
+    off would bring the twins to rounding from the first step. It brought `ρ`
+    from 3.6e-5 to 3.7e-8, and not to rounding (E16).
 
 ## 7. What is not established
 
@@ -557,11 +569,10 @@ Kept because a later reader will otherwise re-derive them.
     Thermodynamics: over liquid, over ice and over the mixture ramp it is
     unchanged to 9.2e-16 from 150 K to 330 K (R8). Whether the *model* is
     invariant is the next item.
-  - **Whether the energy limiter is all of E16.** A twin with
-    `energy_q_tot_upwinding: none` in both halves switches the hook off. If the
-    differences then fall to rounding, the limiter is the whole cause. If they
-    do not, the next suspect is the surface-flux code path, which the acceptance
-    script checks only as a formula.
+  - **What is left of E16 once the limiter is off.** 3.7e-8 in `ρ` after one
+    step, growing to 5.8e-6 by 5 h. A twin with the limiter off and
+    `disable_surface_flux_tendency: true` in both halves would say whether it
+    is the surface-flux code path.
   - **Why a tag goes negative under a positive parent (E14).** The finite-step
     donor loss and unlimited explicit transport are both candidates.
   - **What makes the residual's first-hour jump (E13).** The enthalpy-against-
@@ -595,10 +606,10 @@ Kept because a later reader will otherwise re-derive them.
     with C1, and one at a larger `c` on the identical atmosphere, which would
     measure R11's suppression cost cleanly. It came out of the discussion with
     the reviewer agent, which found this route independently.
- 2. **Or first confirm E16's cause.** One twin with
-    `energy_q_tot_upwinding: none` in both halves, about 20 minutes on
-    `hpda2_test`. It matters less if item 1 is taken, because item 1 leaves the
-    model alone.
+ 2. **Find the rest of E16.** The limiter is most of it (E16). One more twin,
+    with the limiter off and `disable_surface_flux_tendency: true`, would test
+    the surface-flux code path, about 15 minutes on `hpda2_test`. It matters
+    less once item 1 runs, because item 1 leaves the model alone.
  3. **Decide what C1 says about the family.** C1 answers its question. With a
     positive reference the donor rule runs everywhere, and the residual stops
     being directional and falls to 0.70 of the unshifted one (E11, E12). It does

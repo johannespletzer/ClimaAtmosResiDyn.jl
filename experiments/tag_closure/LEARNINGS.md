@@ -855,9 +855,9 @@ model.** The twin test found the shifted and unshifted states 3.8e-5 apart in
 `ρ` after one step, and 1.1e-3 apart in `uₕ` by the end of the day. So C1
 measures a slightly different atmosphere, not only a different reference. It is
 not the implicit solve: a second twin with the solve converged left the one-step
-difference at 3.6e-5. The leading candidate is now the van Leer limiter on
-vertical energy transport, which sees the shift as a change in the field it
-limits. The size is far below the closure differences above, so it bounds C1's
+difference at 3.6e-5. A third twin, with the van Leer limiter on vertical energy
+transport switched off, cut the one-step difference in `ρ` a thousandfold, to
+3.7e-8. So the limiter is most of it, and a smaller term remains. The size is far below the closure differences above, so it bounds C1's
 numbers rather than overturning them. It also points to a cleaner design: do the
 shift inside the tag code, where the model never sees it (FINDINGS §8).
 
