@@ -209,14 +209,8 @@ function main()
     n_steps = round(Int, t_end / dt)
 
     integrators = (unshifted.integrator, shifted.integrator)
-    rows = [sample(integrators, cp_d, cp_l)]
-    for n in 1:n_steps
-        foreach(CTS.step!, integrators)
-        (n == 1 || n % steps_per_sample == 0) &&
-            push!(rows, sample(integrators, cp_d, cp_l))
-    end
-
     table = joinpath(output_base, "$job_id.csv")
+    rows = Vector{Vector{Float64}}()
     open(table, "w") do io
         println(io, "# $job_id.csv, from experiments/tag_closure/run_c1_twin.jl")
         println(io, "# config: $path")
@@ -225,7 +219,19 @@ function main()
         println(io, "# columns after time: max|shifted - unshifted| / max|unshifted|;")
         println(io, "# energy_after_shift has the predicted shift removed, relative to it")
         println(io, join(COLUMNS, ","))
-        foreach(row -> println(io, join(row, ",")), rows)
+        # Each row is written as it is taken, so a run that dies partway still
+        # leaves the rows it reached.
+        function record()
+            row = sample(integrators, cp_d, cp_l)
+            push!(rows, row)
+            println(io, join(row, ","))
+            flush(io)
+        end
+        record()
+        for n in 1:n_steps
+            foreach(CTS.step!, integrators)
+            (n == 1 || n % steps_per_sample == 0) && record()
+        end
     end
 
     worst = maximum(row -> maximum(row[2:end]), rows)

@@ -1,0 +1,17 @@
+# Overrides for run_c1_twin.jl, named by TWIN_OVERRIDES. Both halves of the
+# twin take these keys on top of C1's configuration.
+#
+# The converged-Newton twin ruled out the solver (FINDINGS E16). The leading
+# candidate is the hook that runs after each Newton solve and corrects the
+# vertical advection of rho_e_tot and rho_q_tot towards a van Leer upwinded one
+# (implicit_tendency.jl:335-372). It acts on h_tot, to which the shift adds a
+# humidity-dependent term, and a limiter built on differences does not pass that
+# term through unchanged. With energy_q_tot_upwinding: none the hook is not
+# wired at all, and the vertical advection stays central and linear. If the
+# twins then agree to rounding, the limiter is the whole cause.
+#
+# Six hours, as in the converged-Newton twin, because the first step decides. If
+# central advection turns out unstable over that span, first_order is also
+# linear and is the fallback.
+energy_q_tot_upwinding: "none"
+t_end: "6hours"
