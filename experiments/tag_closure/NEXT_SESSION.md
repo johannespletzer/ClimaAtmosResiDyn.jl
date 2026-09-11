@@ -110,9 +110,9 @@ one agent has worked this branch at once.
     is identical. On the sphere, form A worsens where the source tags go
     negative with the repair off. A run with the repair on would test that.
   - **C10 ran** (E35). It is C9's sphere with the repair on, and it did not
-    bring form A back: 274 J/kg raw and 55 with the ledgers taken out, against
-    C7's 20. On the audit's sphere, read the closure residual rather than
-    form A.
+    bring form A back: 274 J/kg, against C7's 20. Subtracting the repair's
+    ledgers does not undo the repair (E35). Form A's global integral, not its
+    largest gap, is the check (E38).
   - **The Opus review of #69 is done, and posted on the PR.** It found no
     blocker. Its five findings are fixed in `d545af90` and merged into #70
     (`30d8bb4c`), #72 (`404ba98f`) and this branch (`602153b9`). The worktree

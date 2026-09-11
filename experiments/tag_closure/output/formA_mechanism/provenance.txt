@@ -1,0 +1,6 @@
+run: formA_mechanism
+kind: analysis of existing output on the terrabyte login node, by a reviewer agent, so this file is written by hand
+scripts: experiments/tag_closure/analysis/formA_mechanism.jl, formA_followup.jl and formA_last.jl, as committed beside this directory; the header comment was added when they were committed
+data: the hourly NetCDF of c6_sphere_no_repair, c6_sphere_first_order, c7_sphere_mp, c9_sphere_enthalpy and c10_sphere_enthalpy_repair, under $SCRATCH/tag_closure/output/<run>/output_active/
+approximation: the integrals take a hydrostatic density from ta with a surface pressure of 1e5 Pa, on the remapped lat-lon grid
+date: 2026-09-11

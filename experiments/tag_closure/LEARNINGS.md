@@ -1093,15 +1093,17 @@ on, so that no tag stays negative.
 **The prediction failed.** The repair keeps every tag non-negative, and leaves
 the atmosphere and the closure residual as they were. But form A gets worse, to
 274 J/kg, because the repair adds energy to the source tags on one side of the
-check more than on the other. With the ledgers taken back out it is 55 J/kg,
-still above C7's 20 (E35).
+check more than on the other. Subtracting the ledgers afterwards does not undo
+that, so C10 cannot say how much of C9's gap the clamp makes (E35). A reviewer
+later traced C9's gap to negative overlays frozen at their nodes by the audit's
+clamp (E36).
 
-**Barrier.** On the audit's sphere, form A is not a clean check with the repair
-on or off. The closure residual is.
+**Barrier.** On the audit's sphere, form A's largest gap is not a clean check
+with the repair on or off. Its global integral is (E38).
 
 **Class.** A limit of the diagnostic: the per-process check and the repair do
 not mix.
 
-**Carry-over to the source tags.** Read form A without the repair, or with its
-ledgers taken out, and do not expect it to close on a sphere under the audit.
-This corrects C9's carry-over, which said to read it with the repair on.
+**Carry-over to the source tags.** Read form A as a global integral, and without
+the repair (E38). This corrects C9's carry-over, which said to read it with the
+repair on.

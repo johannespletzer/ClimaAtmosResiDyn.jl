@@ -213,9 +213,11 @@ function main(dir)
     end
 
     # With the repair on, each tag's ledger holds what the repair added to it.
-    # Taking the ledgers back out gives form A as the rule and the transport
-    # alone would have it, to first order, since a repaired value also fed the
-    # shares after it.
+    # Taking the ledgers back out is an indicator only, not form A without the
+    # repair. The ledger is not transported, while a repaired value moves and
+    # feeds the shares after it. Against C9, the same atmosphere without the
+    # repair, this field was off by 22 J/kg at 24 h, and by 219 under tracer
+    # transport (FINDINGS E35).
     fixes = filter(startswith("fix_"), names_with_prefix(dir, "e_src_"))
     if !isempty(fixes)
         fix(name) = read_field(dir, "e_src_fix_" * name).values
@@ -226,7 +228,7 @@ function main(dir)
         push!(header, "form_a_max_unrepaired")
         push!(columns, form_a_unrepaired)
         println(
-            "  with the repair's ledgers taken back out: largest gap $(maximum(form_a_unrepaired)) J/kg",
+            "  with the repair's ledgers taken back out, an indicator only: largest gap $(maximum(form_a_unrepaired)) J/kg",
         )
         println("the repair's ledgers over the run, J/kg:")
         for name in names

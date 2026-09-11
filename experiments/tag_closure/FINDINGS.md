@@ -684,18 +684,115 @@ the repair keeps the partition's sum. No source tag is left below
   - The repair lifts negative source tags by adding energy that the other side
     of form A does not receive. It lifted `sfc` by up to 397 J kg⁻¹, on the
     process side, and the `new_` tags by up to 121 and 56, on the region side.
-    With the ledgers taken back out, to first order, the gap is 54.9 J kg⁻¹.
+    C10's worst point is the node where C9's `sfc` sinks furthest. The
+    repair's ledger there, 397.04 J kg⁻¹, is what C9's `sfc` reaches there,
+    −397.06 (E36).
   - So E34's prediction fails: the repair does not bring form A back to C7's
-    20 J kg⁻¹, and the clamp is at most part of C9's gap. Under the audit on
-    the sphere, form A is not a clean check with the repair on or off. The
-    closure residual is.
+    20 J kg⁻¹. C10 cannot say how much of C9's gap the clamp makes, because
+    the repair creates energy at the same nodes. C9 is itself the no-repair
+    counterfactual.
   - The region tags trade up to ±16,294 J kg⁻¹ through the repair, against
     ±30,920 under tracer transport (E27).
   - The repair costs nothing measurable here: 2.20 s per step against C9's
     2.19.
 
+*Corrected on 2026-09-11.* This finding first quoted 54.9 J kg⁻¹ as form A
+"with the repair's ledgers taken back out", and concluded from it that the clamp
+is at most part of C9's gap. The ledgers are not transported, while a repaired
+value moves and feeds the shares after it, so subtracting them does not give
+form A without the repair. Against C9, the same atmosphere without the repair,
+that field is off by up to 22.0 J kg⁻¹ at 24 h. Under tracer transport, C6 with
+and without the repair, it is off by 219 (§6).
+
 *C10, job `13403083` on terrabyte at `7dc0a302`; `analysis/c5_process_closure.jl`
-and `analysis/same_atmosphere.jl`; `output/c10_sphere_enthalpy_repair/`.*
+and `analysis/same_atmosphere.jl`; `output/c10_sphere_enthalpy_repair/`. The
+correction: `analysis/formA_mechanism.jl`.*
+
+**E36. Under the audit, a negative source tag freezes at its node and sinks
+faster: the clamp in the audit's transport.** Under the audit a tag moves by
+its share, and an overlay's share is clamped at zero. So a negative overlay
+neither moves nor loses, while the central operators keep adding a tendency
+from its neighbours' shares.
+
+  - **The node stays put.** C9's `sfc` minimum sits at one node from 12 h on:
+    43.7°N, 164.8°W, 250 m. It falls ever faster there: −112, −172, −236, −310
+    and −397 J kg⁻¹ at 12, 15, 18, 21 and 24 h. C7's minimum moves among four
+    nodes and levels off, at −208.
+  - **Only transport can change it.** The node is under surface cooling all
+    day, with a surface-flux record of −1,375 J kg⁻¹ at 24 h, so nothing is
+    produced into `sfc` there. It sits on the southern edge of `sfc`'s source
+    band. At 12 h C9's row of `sfc` through it is spiky (303, 261, 76, −112,
+    187, 391 J kg⁻¹), where C7's is smooth (715 down to 441).
+  - **C10's repair confirms it:** it lifts that same node by 397.04 J kg⁻¹.
+  - **The gap sits at and beside negative nodes.** At 24 h, within one grid
+    point of the points where the source tags' negative parts add up to below
+    −1 J kg⁻¹, lies 78% of the gap's absolute sum, on 39% of the points. On C7
+    it is 11% on 51%.
+  - **The gap is horizontal.** It cancels along each level: per level, the
+    absolute of its integral over its gross is 0.00 to 0.37, and 0.60 near
+    5 km. It does not cancel within columns, 0.88 over the sphere.
+  - **Only the extreme is deeper.** Overall the audit makes the overlays less
+    negative. At 24 h `sfc`'s cos-latitude-weighted negative parts add up to
+    −4.9e3 against C7's −3.4e4, on 242 points below −1 J kg⁻¹ against 758.
+
+That the clamp is the only cause is inferred, from the code. The audit's
+kernels are linear in the shares apart from it, and the loss clamp is the one
+other non-linear step. A C9 twin with signed shares for the overlays in the
+audit's kernels would decide it. *`analysis/formA_mechanism.jl`,
+`formA_followup.jl` and `formA_last.jl`, on the outputs of C7, C9 and C10;
+`output/formA_mechanism/`.*
+
+**E37. C7's form-A gap under tracer transport is the per-tag van Leer limiter,
+with a small part from the loss clamp.** Under tracer transport each tag
+evolves on its own. C6's and C7's shared tags are identical, and C6's gap equals
+C7's plus `mp` to 1.8e-12. So C6's first-order run, less `mp`, is C7 with a
+linear scheme.
+
+  - At C7's worst point the first-order equivalent is −0.044 J kg⁻¹, against
+    20.2.
+  - Over the sphere, first order removes 99.8% of the gap's absolute sum at
+    6 h and 97% at 24 h.
+  - **Where it sits.** In the worst column the gap is +20.2 J kg⁻¹ at 869 m and
+    −15.2 at 1,778 m. `sfc` falls from 17,404 to 463 to 0 J kg⁻¹ over the
+    lowest three levels, which is where van Leer limits. The gap cancels
+    within columns: over the sphere the columns' absolute integrals add up to
+    0.037 of its gross.
+  - **How it grows.** It grows close to the square of time, since the tags
+    grow in proportion to time, and so does the limiter's error per step.
+  - **The rest** is the loss clamp, about 3% of the absolute sum at 24 h. It
+    peaks at 4.87 J kg⁻¹ at 38.6°N, 250 m, where `sfc` is negative all day
+    under strong surface cooling, with a record of −9,130 J kg⁻¹. First order
+    leaves that point unchanged.
+
+This settles E30's open point, as E34 did on the column. *The same scripts.*
+
+**E38. Form A's global integral separates a missing process from numerical
+noise. Its largest pointwise gap does not.**
+
+| run                    | largest gap / largest new energy | ∫ gap / ∫ new energy |
+|:---------------------- | --------------------------------:| --------------------:|
+| C6, no `mp` tag        |                           7.0e-3 |              1.26e-3 |
+| C7, tracer             |                           9.5e-4 |               5.2e-5 |
+| C9, audit              |                           4.1e-3 |               4.7e-5 |
+| C10, audit with repair |                           1.5e-2 |               6.0e-4 |
+
+  - **Pointwise.** A process that no tag follows, C6's rain-out, gives 7.0e-3.
+    The numerical noise gives up to 1.5e-2, and it grows as the square of
+    time, while the missing process's signal levels off.
+  - **Integrated.** Transport cancels over the sphere, so the limiter's and
+    the transport clamp's errors do too. The missing process stands out: C6
+    gives 1.26e-3, and `mp`'s own integral is 1.21e-3. C7 and C9 give 5e-5,
+    and C10's 6.0e-4 is the repair's created energy, whose integral is
+    5.8e-4.
+  - **A check of labels is exact.** Form A's production signal is exactly the
+    production of labels that no process tag lists. Checking at configuration
+    that every active label has a process tag carries the same information,
+    and would have caught subsidence (E20) and the rain-out (E28) before any
+    run.
+
+The integrals take a hydrostatic density with a surface pressure of 1e5 Pa, on
+the remapped grid, so they are approximate, and the model's own quadrature
+should confirm them. *`analysis/formA_followup.jl`.*
 
 ## 3. The energy reference
 
@@ -982,7 +1079,20 @@ Kept because a later reader will otherwise re-derive them.
     script now evaluates on a second simulation.
   - **That the repair would bring the audit's sphere form A back to C7's
     20 J kg⁻¹.** C10's config and E34 predicted it. With the repair on, form A
-    is 274 J kg⁻¹, and 54.9 with the repair's ledgers taken back out (E35).
+    is 274 J kg⁻¹ (E35).
+  - **That subtracting the repair's ledgers gives form A without the repair.**
+    E35, as first written, did so and read 54.9 J kg⁻¹, and concluded that the
+    clamp is at most part of C9's gap. The ledgers are not transported, so the
+    field is off by up to 22.0 J kg⁻¹ against C9, the same atmosphere without
+    the repair, and by 219 under tracer transport (E35's correction,
+    `analysis/formA_mechanism.jl`).
+  - **That `ρ` is not hyperdiffused, so the offset adds nothing to the audit's
+    hyperdiffusion.** `ENTHALPY_AUDIT_DESIGN.md`, the audit kernel's docstring
+    and the sphere test's comment all said so. `hyperdiffusion.jl:495-497`
+    hyperdiffuses total water and takes the same flux out of `ρ`. So `c` times
+    that flux changes `E`, and the audit does not share it out. A reviewer
+    found this on 2026-09-11. The fix is to add `c` to the water part of the
+    shared flux, in #72, and it waits for the owner.
 
 ## 7. What is not established
 
@@ -1011,10 +1121,9 @@ Kept because a later reader will otherwise re-derive them.
   - ~~Whether the sphere's per-process gap is the per-tag limiter or the clamp
     (E20).~~ Neither: it was the rain-out's production (E28), and a
     `microphysics` tag closes it to 20.2 J kg⁻¹ (E30).
-  - **What the sphere's last per-process gap is (E30).** 20.2 J kg⁻¹ at 24 h,
-    growing close to the square of time, where only radiation's record is
-    nonzero. C7 ran with the repair off, so the clamp on negative tags is a
-    candidate, as are the per-tag limiter and the finite-step loss.
+  - ~~What the sphere's last per-process gap is (E30).~~ Under tracer
+    transport, the per-tag van Leer limiter, with a small part from the loss
+    clamp (E37).
   - **What the 1M column's last signed residual is (E32).** +196 J m⁻² after
     an hour with the tags moved by sedimentation, against −3,029 without. The
     tags' missing Jacobian block for sedimentation is one candidate.
@@ -1028,10 +1137,11 @@ Kept because a later reader will otherwise re-derive them.
     on the shares and the per-tag limiter are candidates, as on the column
     before (E26). For form B, a process under 1-moment microphysics that changes
     `ρe_tot` outside the brackets would do it. None is identified.
-  - **Why the sphere's form A worsens under the audit (E34, E35).**
-    76.8 J kg⁻¹ against 20.2 under tracer transport, and 54.9 with the repair
-    on and its ledgers taken back out. The clamp is part of it (E34), and not
-    all of it (E35). What the rest is, is open.
+  - **Whether the audit's transport clamp is the whole of its form-A gap on
+    the sphere (E36).** A negative overlay freezes at its node while its
+    neighbours' shares keep pushing it. That the clamp is the only cause is
+    inferred from the code. A C9 twin with signed shares for the overlays would
+    decide it.
   - **What makes the audit's first-hour residual (E34).** After the first hour
     it does not grow. The initial adjustment of E13 and E25 is the candidate.
   - ~~How the column's unrecorded 1.37 MJ m⁻² splits (E23).~~ Subsidence's

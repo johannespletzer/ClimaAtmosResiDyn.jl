@@ -241,8 +241,9 @@ What they found:
 **C10, done on 2026-09-11** (FINDINGS E35). Job `13403083` is C9's sphere with
 the repair on, in `output/c10_sphere_enthalpy_repair/`. The repair keeps every
 tag non-negative, and leaves `ta` and the closure residual as they were. But
-form A gets worse, 274 J/kg, and 55 with the ledgers taken back out. The
-prediction that it would come back to C7's 20 J/kg failed.
+form A gets worse, 274 J/kg. The prediction that it would come back to C7's
+20 J/kg failed. A reviewer traced the audit's gap to negative overlays frozen at
+their nodes by the transport clamp (E36).
 
 **Next.** The owner sets the merge order: #69, then #70, then #72 retargeted to
 `main`. The review of #69 is posted on the PR, and its five findings are fixed
