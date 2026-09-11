@@ -85,8 +85,11 @@ A record **is** a prognostic field, but it is not a tracer. Its name carries no
 lexical test, so nothing advects, diffuses, hyperdiffuses, sponges or limits a
 record. It needs no hand-written Jacobian block either: `jacobian_cache`
 completes the matrix with `fallback_identity_blocks`, giving these variables the
-implicit residual `-ΔY`, so only the explicit tendency contributes — which is
-precisely the intended behaviour.
+implicit residual `-ΔY`. So a record takes each bracketed increment as it is
+evaluated, with no Jacobian correction. Those are the explicit brackets'
+increments, and on the implicit path those of the microphysics sink and of
+sedimentation. That is the intended behaviour, since no record's tendency
+depends on a record.
 
 The cost is one center field per recorded process in `Y`, and one broadcast per
 process per tendency evaluation against a difference the bracket already

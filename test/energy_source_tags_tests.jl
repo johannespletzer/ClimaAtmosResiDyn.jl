@@ -467,6 +467,84 @@ import ClimaAtmos as CA
         @test_throws ErrorException CA.energy_source_transport_from_config(true)
     end
 
+    @testset "Repair on fields ($FT)" for FT in (Float32, Float64)
+        # The kernels above, applied through `repair_energy_source_tags!` as
+        # `constrain_state!` calls it, on plain arrays. Two cells: the first has
+        # a positive total and a negative tag of each kind, the second a total
+        # that is not positive.
+        strat = CA.EnergySourceTag{:strat}(
+            CA.TanhAltitudeRegion(FT(750), FT(100)),
+        )
+        tropo = CA.EnergySourceTag{:tropo}(
+            CA.TanhAltitudeRegion(FT(750), FT(100), false),
+        )
+        sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        tags = (strat, tropo, sfc)
+        tag_state_names = (:ρe_src_strat, :ρe_src_tropo, :ρe_src_sfc)
+        c = FT(50000)
+        ρ = FT[1, 1]
+        ρe_tot = FT[-40000, -60000]
+        E = ρe_tot .+ c .* ρ
+        @test E[1] > 0
+        @test E[2] < 0
+        state() = (;
+            c = (;
+                ρ = copy(ρ),
+                ρe_tot = copy(ρe_tot),
+                ρe_src_strat = FT[12000, -3000],
+                ρe_src_tropo = FT[-2000, -7000],
+                ρe_src_sfc = FT[-5, -5],
+            ),
+        )
+        cache(model) = (;
+            atmos = (; energy_source_tagging_model = model),
+            tagging = (;
+                ᶜenergy_source_fix = (;
+                    ρe_src_strat = zeros(FT, 2),
+                    ρe_src_tropo = zeros(FT, 2),
+                    ρe_src_sfc = zeros(FT, 2),
+                ),
+                ᶜenergy_source_pos = zeros(FT, 2),
+                ᶜenergy_source_neg = zeros(FT, 2),
+            ),
+        )
+        before = state().c
+
+        Y = state()
+        p = cache(CA.EnergySourceTaggingModel(tags, c))
+        CA.repair_energy_source_tags!(Y, p)
+        fix = p.tagging.ᶜenergy_source_fix
+        # Where the total is positive, the partition keeps its sum and every tag
+        # ends non-negative. The tag that carries a source is clipped at zero.
+        @test Y.c.ρe_src_strat[1] + Y.c.ρe_src_tropo[1] ≈
+              before.ρe_src_strat[1] + before.ρe_src_tropo[1]
+        @test Y.c.ρe_src_strat[1] > 0
+        @test Y.c.ρe_src_tropo[1] == 0
+        @test Y.c.ρe_src_sfc[1] == 0
+        # The ledger is the change, and the partition's entries cancel.
+        for name in tag_state_names
+            @test getproperty(fix, name) ≈
+                  getproperty(Y.c, name) .- getproperty(before, name)
+        end
+        @test fix.ρe_src_strat[1] + fix.ρe_src_tropo[1] ≈ 0 atol =
+            sqrt(eps(FT)) * abs(before.ρe_src_strat[1])
+        @test fix.ρe_src_sfc[1] == 5
+        # Where the total is not positive, nothing is touched.
+        for name in tag_state_names
+            @test getproperty(Y.c, name)[2] == getproperty(before, name)[2]
+            @test getproperty(fix, name)[2] == 0
+        end
+
+        # Switched off, the repair leaves the tags and the ledger alone.
+        Y = state()
+        p = cache(CA.EnergySourceTaggingModel(tags, c; repair = false))
+        CA.repair_energy_source_tags!(Y, p)
+        for name in tag_state_names
+            @test getproperty(Y.c, name) == getproperty(before, name)
+            @test all(iszero, getproperty(p.tagging.ᶜenergy_source_fix, name))
+        end
+    end
+
     @testset "AtmosModel integration" begin
         model = CA.AtmosModel()
         @test isnothing(model.energy_source_tagging_model)

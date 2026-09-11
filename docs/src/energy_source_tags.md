@@ -68,7 +68,11 @@ exactly, per process.
 The explicit path is bracketed for these tags. So is the microphysics sink on
 the implicit path, which is where rain leaves a 0-moment run with its energy.
 The loss half takes that energy from every tag by its share, so a pure sink
-changes no share and shrinks every tag by the same fraction.
+changes no share and shrinks every tag by the same fraction. The increment is
+not always a loss, though. Removing water raises the total wherever that water
+carries less energy per kilogram than `-c`, with `c` the offset or zero, as cold
+condensate can. Then the increment is production, and it goes by mask to the
+region tags and to any tag that lists `microphysics` or `all`.
 
 `precipitation`, the sedimentation of precipitating species, is not bracketed
 for these tags, although the `ρe_tag_*` family attributes it. Sedimentation
@@ -131,7 +135,11 @@ enough `energy_source_tag_offset` that is nowhere.
 The repair does not force the region tags onto the total. That would drive
 `e_src_res` to zero by construction and hide the transport mismatch it exists to
 show. Every change is logged in `e_src_fix_<name>`, so what the repair did can
-be told apart from what the rule and the transport did.
+be told apart from what the rule and the transport did. The log is exact at the
+default `update_constrain_state_every: step`. At `stage` or `dss` the repair
+also runs inside the step, where the stepper rescales or discards what it
+changes, so the log no longer equals what reached the state. The tags are
+repaired either way.
 
 `energy_source_tag_repair: false` switches it off and leaves the tags exactly as
 the rule and their transport make them, negative values included. That is how
@@ -306,7 +314,8 @@ the tags do not see add.
     (J kg⁻¹);
   - `e_src_fix_<name>`: the energy the repair has moved into (positive) or out
     of (negative) each tag, per unit mass, cumulative since the start of the
-    run segment and reset on restart. Zero with the repair off;
+    run segment and reset on restart. Zero with the repair off, and exact only
+    at the default `update_constrain_state_every: step`;
   - `e_src_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``

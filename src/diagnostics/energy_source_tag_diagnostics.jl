@@ -21,7 +21,8 @@ Register the diagnostics of the energy source tags:
   - `e_src_fix_<name>`: the energy `repair_energy_source_tags!` has moved into
     (positive) or out of (negative) each tag, per unit mass, cumulative since
     the start of the simulation segment. Zero when `energy_source_tag_repair`
-    is false;
+    is false. It equals what the repair changed in the state only at the
+    default `update_constrain_state_every: step`;
   - `e_src_res`: closure residual `(ρe_tot - Σᵢ ρe_src_i) / ρ`, summed over the
     pure region tags (only registered when at least one exists). With
     `energy_source_tag_offset` `c` the parent is the total the tags partition,
@@ -90,7 +91,10 @@ function register_energy_source_tagging_diagnostics!(
                            "time average is not meaningful. Zero when " *
                            "energy_source_tag_repair is false. Each increment " *
                            "is accumulated at its own step's density and " *
-                           "divided by the current density here.",
+                           "divided by the current density here. Exact only " *
+                           "at the default update_constrain_state_every: " *
+                           "step. At stage or dss the stepper rescales or " *
+                           "discards what the repair changes inside a step.",
                 compute! = (out, u, p, t) ->
                     compute_e_src_fix!(out, u, p, t, ρe_src_name),
             )
