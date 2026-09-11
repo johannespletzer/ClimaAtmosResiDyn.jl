@@ -436,6 +436,37 @@ import ClimaAtmos as CA
         @test CA.energy_source_source_sediment_share(FT(20), total) == 1
     end
 
+    @testset "Transport switch" begin
+        tags = (CA.EnergySourceTag{:everywhere}(CA.EntireDomain()),)
+        # Passive tracers by default, as before the switch existed.
+        @test CA.EnergySourceTaggingModel(tags).transport isa
+              CA.TracerEnergySourceTransport
+        @test !CA.moves_as_enthalpy(CA.EnergySourceTaggingModel(tags))
+        @test !CA.moves_as_enthalpy(nothing)
+        audit = CA.EnergySourceTaggingModel(
+            tags,
+            50000.0;
+            transport = CA.EnthalpyEnergySourceTransport(),
+        )
+        @test CA.moves_as_enthalpy(audit)
+        # Without an offset a share is zero wherever the total is not positive,
+        # and the tags would not move there, so the audit is refused.
+        @test_throws ErrorException CA.EnergySourceTaggingModel(
+            tags;
+            transport = CA.EnthalpyEnergySourceTransport(),
+        )
+        @test CA.energy_source_transport_from_config(nothing) isa
+              CA.TracerEnergySourceTransport
+        @test CA.energy_source_transport_from_config("tracer") isa
+              CA.TracerEnergySourceTransport
+        @test CA.energy_source_transport_from_config("enthalpy") isa
+              CA.EnthalpyEnergySourceTransport
+        @test_throws ErrorException CA.energy_source_transport_from_config(
+            "Enthalpy",
+        )
+        @test_throws ErrorException CA.energy_source_transport_from_config(true)
+    end
+
     @testset "AtmosModel integration" begin
         model = CA.AtmosModel()
         @test isnothing(model.energy_source_tagging_model)
