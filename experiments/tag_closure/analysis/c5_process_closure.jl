@@ -188,6 +188,26 @@ function main(dir)
         record = read_field(dir, "e_prc_" * p).values
         println("  record $p there: $(selectdim(record, ndims(record), worst)[at]) J/kg")
     end
+    # What each tag holds at that point. A negative tag's share is clamped to
+    # zero, and then the tags' fluxes and losses no longer add up.
+    for name in names
+        println(
+            "  tag $name there: $(selectdim(value(name), ndims(gap), worst)[at]) J/kg",
+        )
+    end
+    # How much of the gap, at that sample, sits where the tags that carry a
+    # source are negative, beside how many of the points are. If the clamp makes
+    # the gap, the first is much larger than the second. A region-masked `new_`
+    # tag holds values around -1e-5 J/kg outside its region, so a point counts
+    # only where the tags' negative parts add up to below -1 J/kg. The sums are
+    # over grid points, not weighted by mass.
+    sources = [processes; ["new_" * r for r in regions]]
+    negative = sum(min.(value(name), 0) for name in sources) .< -1
+    gap_then = selectdim(gap, ndims(gap), worst)
+    negative_then = selectdim(negative, ndims(gap), worst)
+    println(
+        "  share of the gap's absolute sum where the source tags' negative parts add up to below -1 J/kg: $(sum(abs, gap_then[negative_then]) / sum(abs, gap_then)), at a fraction $(count(negative_then) / length(negative_then)) of the points",
+    )
     for r in regions
         println("  initial energy of $r: smallest value $(minimum(initial_min[r])) J/kg")
     end

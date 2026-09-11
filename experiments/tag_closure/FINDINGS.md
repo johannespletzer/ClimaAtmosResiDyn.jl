@@ -650,9 +650,16 @@ changed, and `ta` is identical to the reference in every value, in both.
   - On the sphere, form A gets worse: 76.8 J kg⁻¹ at 24 h, 4e-3, against C7's
     20.2 (E30). The worst point is at the lowest level, where the new energy is
     124 J kg⁻¹. With the repair off, the tags that carry a source go negative,
-    `sfc` to −397 J kg⁻¹. A negative tag's share is clamped to zero, so the
-    overlays' fluxes no longer add up. That is an inference, not a
-    measurement. A run with the repair on would test it.
+    and at that point `sfc` holds −397 J kg⁻¹, its minimum over the run. A
+    negative tag's share is clamped to zero, so the overlays' fluxes no longer
+    add up. At 24 h, 29% of the gap's absolute sum sits at the 5.4% of points
+    where the source tags' negative parts add up to below −1 J kg⁻¹. On C7's
+    sphere, under tracer transport, it is 2.5% at 15.8% of the points. The
+    points are those of the remapped grid, not weighted by mass. So the clamp is
+    a cause under the audit, and not what makes C7's gap. The rest of the gap
+    may have been made where tags were negative and moved since. A run with the
+    repair on would test that. *`analysis/c5_process_closure.jl` prints both
+    shares, and each tag at the worst point.*
   - The audit costs about 5% per step: 2.54 ms against 2.43 on the column, and
     2.19 s against 2.07 on the sphere.
   - At the column's most-cooled level the radiation tag holds 5.8 J kg⁻¹, a
