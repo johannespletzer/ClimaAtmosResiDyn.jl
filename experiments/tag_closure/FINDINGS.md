@@ -846,14 +846,15 @@ is the loss rule acting on the residual that tracer transport makes. On the same
 atmosphere at 600 s under the audit, the block's lag is −7.8 J m⁻²: small, and
 of the other sign.
 
-**Not established:**
+**Not established when this was written:**
   - C8's form A over a day. The 1M runs covered only the first ten minutes,
     because the 1M build takes about 20 minutes on the login node. In those ten
-    minutes, under the audit, form A is at most 4.3e-7 J kg⁻¹.
-  - The sphere's mechanism.
+    minutes, under the audit, form A is at most 4.3e-7 J kg⁻¹. E43 settles it.
+  - The sphere's mechanism. E39b shows that the Newton increment makes 83% of
+    it.
 
-`analysis/first_hour_sphere.jl` ran as a Slurm job (E39b), and
-`analysis/c8_variants.jl` was submitted with it.
+`analysis/first_hour_sphere.jl` and `analysis/c8_variants.jl` ran as Slurm jobs
+(E39b, E43).
 
 *A reviewer agent on the terrabyte login node, 2026-09-11.
 `analysis/first_hour_0m.jl`, `c8_variants.jl`, `formb_vs_flux.py`,
@@ -989,6 +990,35 @@ The bounds: one column, one hour, and ice that mostly sublimates in its first
 minute (E41). A step costs 30 ms. *D1, job `13404535` on terrabyte at
 `78586e39`; `analysis/c5_process_closure.jl` and
 `analysis/d1_residual_profile.jl`; `output/d1_column_1m_ice/`.*
+
+**E43. On the 1M column over a day, the audit keeps form A below
+4.4e-7 J kg⁻¹, and a converged Newton solve takes form B to −3.8e-3 J m⁻².**
+`analysis/c8_variants.jl` steps C8's column in four variants, and records the
+closure residual, form B and form A as it goes. Converged means 10 Newton
+iterations to a relative tolerance of 1e-10, as in E39.
+
+| variant                                 | length | gross residual at the end, J m⁻² | form B at the end, J m⁻² | form A, largest over the run, J kg⁻¹ |
+|:--------------------------------------- |:------ | --------------------------------:| ------------------------:| ------------------------------------:|
+| tracer, one Newton iteration, as C8 ran | 1 h    |                          177,377 |                    −0.80 |                               7.9e-3 |
+| tracer, converged                       | 1 h    |                          177,342 |                  −1.8e-4 |                               7.9e-3 |
+| enthalpy, one Newton iteration          | 24 h   |                              193 |                    −5.29 |                               4.3e-7 |
+| enthalpy, converged                     | 24 h   |                             12.0 |                  −3.8e-3 |                               2.8e-7 |
+
+  - **C8's form-A gap is the per-tag transport.** Moved as enthalpy, the tags
+    keep form A below 4.4e-7 J kg⁻¹ for the whole day, against 117 J kg⁻¹
+    under tracer transport (E33). Converging the solve does not change form A
+    under either transport. This settles E33's open point, as E34 did on the
+    0-moment column.
+  - **C8's form-B remainder is the Newton lag.** Converged, form B is
+    −3.8e-3 J m⁻² at 24 h against −5.29, and −1.8e-4 against −0.80 at 1 h.
+    This confirms E39's reading, which rested on a correlation.
+  - **Under the audit, a converged solve also shrinks the residual,** to
+    12.0 J m⁻² at 24 h against 193. Under tracer transport it does not:
+    177,342 against 177,377 at 1 h, because pressure work makes that residual.
+  - The one-iteration day reproduces C8's form B, −5.29 J m⁻² at 24 h against
+    E33's −5.3.
+
+*Job `13408403` on terrabyte at `78586e39`; `output/newton_lag/c8_variants_slurm/`.*
 
 ## 3. The energy reference
 
@@ -1344,10 +1374,10 @@ Kept because a later reader will otherwise re-derive them.
   - **2M and P3.** The model disables both on this branch (E41). By the code,
     the tags need nothing more for 2M than for 1M. Behind that gate, P3 has
     gaps in the parent's own sedimentation (`SUBGRID_AND_MICROPHYSICS_DESIGN.md`).
-  - **What C8's form-A gap is (E33).** Form B's remainder is the one-iteration
-    Newton increment in the records, and it does not accumulate (E39). Form A's
-    117 J kg⁻¹ is most likely the per-tag transport, as on the 0-moment column
-    (E37). A day of C8 under the audit would confirm it.
+  - ~~What C8's form-A gap is (E33).~~ The per-tag transport. Moved as
+    enthalpy, C8's column keeps form A below 4.4e-7 J kg⁻¹ for a day. Form B's
+    remainder is the one-iteration Newton increment, and a converged solve
+    takes it to −3.8e-3 J m⁻² (E43).
   - **Whether the audit's transport clamp is the whole of its form-A gap on
     the sphere (E36).** A negative overlay freezes at its node while its
     neighbours' shares keep pushing it. That the clamp is the only cause is

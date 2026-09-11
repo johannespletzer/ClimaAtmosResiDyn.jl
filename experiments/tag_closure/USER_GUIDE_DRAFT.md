@@ -236,9 +236,11 @@ monitored residual, not a machine-precision identity, and it is not a ratio.
   - Under `tracer` it grows with pressure work, as above. Under `enthalpy` it
     stops growing after the first hour (E34). The first hour's residual comes
     from the stepper's single Newton iteration during the initial adjustment.
-    On the column a converged solve removes 99% of it (E39). After that, what
-    is left is the terms the tags still take as tracers: vertical diffusion,
-    the sponges and the sub-grid closures.
+    A converged solve removes 99% of it on the column (E39), and 83% on the
+    sphere (E39b). After that, what is left is the terms the tags still take
+    as tracers: vertical diffusion, the sponges and the sub-grid closures. On
+    a cold column, vertical diffusion is the candidate for a gross residual of
+    3.7e-3 in an hour, zero-sum and spread over the column (E42).
   - Processes that change `ρ` without a bracket, such as vertical diffusion of
     water, move `E` by `c` times that change, and the difference lands here.
   - Under `prognostic_edmfx` it also holds the whole sub-grid mass flux of
@@ -310,9 +312,9 @@ Each check is blind to something.
 | check | column, `tracer` | column, `enthalpy` | sphere, `tracer` | sphere, `enthalpy` |
 |:-- |:-- |:-- |:-- |:-- |
 | closure residual | yes. It grows with pressure work: 2.44e6 J/m² gross at 24 h under 0M, 2.46e6 under 1M (E33, E34) | yes, and clean: 2,284 J/m² at 24 h (E34) | yes. 2.82e21 J gross at 24 h (E34) | yes, and clean: 2.54e20 J, flat after the first hour (E34, E35) |
-| form A, largest gap | yes. 60.7 J/kg at 24 h under 0M (E26), 117 J/kg under 1M (E33) | yes, and very tight: 6.6e-6 J/kg (E34) | yes, once every process that runs has a tag: 20.2 J/kg at 24 h (E30) | **no.** 76.8 J/kg with the repair off, 274 J/kg with it on (E34, E35) |
+| form A, largest gap | yes. 60.7 J/kg at 24 h under 0M (E26), 117 J/kg under 1M (E33) | yes, and very tight: 6.6e-6 J/kg under 0M (E34), below 4.4e-7 J/kg for a day under 1M (E43) | yes, once every process that runs has a tag: 20.2 J/kg at 24 h (E30) | **no.** 76.8 J/kg with the repair off, 274 J/kg with it on (E34, E35) |
 | form A, global integral | not computed | not computed | yes. 5.2e-5 of the new energy, against 1.26e-3 with a process untagged (E38) | yes. 4.7e-5 with the repair off. 6.0e-4 with it on, which is the energy the repair created (E38) |
-| form B | yes. 3.3e-7 J/m² under 0M (E26), 5.3 J/m² of 897,043 under 1M (E33) | yes (E34) | not available: the lat-lon output gives no domain integral | not available |
+| form B | yes. 3.3e-7 J/m² under 0M (E26), 5.3 J/m² of 897,043 under 1M (E33) | yes (E34). Under 1M what is left is the one Newton iteration: converged, −3.8e-3 J/m² at 24 h (E43) | not available: the lat-lon output gives no domain integral | not available |
 
 The global integrals of E38 are approximate. They take a hydrostatic density on
 the remapped grid.
@@ -330,10 +332,12 @@ Transport errors cancel over the sphere, and a missing process does not. So
 read form A as a global integral, and rely on the closure residual for
 transport.
 
-Not yet run: ice through time, and anything under EDMF. On a real cold state,
-ice takes sedimentation's upward branch in every cell, and the partition closes
-to 100 eps (E41). Under EDMF the tags get no sub-grid mass flux (E40). 2M cannot
-run on this branch at all. On those, read all three checks as untested.
+Ice has run for one hour on one column. Ice takes sedimentation's upward branch
+in every cell, and the partition closes to 100 eps (E41). Through the hour the
+column stays closed and the tags stay non-negative. But form A has nothing to
+test there, since the surface flux is the only production (E42). Nothing has
+run under EDMF, where the tags get no sub-grid mass flux (E40). 2M cannot run
+on this branch at all. On those, read all three checks as untested.
 
 ## What it costs
 

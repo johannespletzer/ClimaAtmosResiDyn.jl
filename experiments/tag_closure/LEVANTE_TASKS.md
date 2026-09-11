@@ -249,11 +249,13 @@ the microphysics tag and record are exactly zero. What the upward branch moved
 cannot be told apart from vertical diffusion. A twin without vertical diffusion
 would separate them.
 
-**R4's sphere half, done on 2026-09-11** (FINDINGS E39b). Job `13408404` shows
-that a converged Newton solve removes 83% of the audit's first-hour residual on
-the sphere. Its tables are in `output/newton_lag/first_hour_sphere_slurm/`.
-`c8_variants.jl` (job `13408403`) and the D4 pair (jobs `13404536` and
-`13404537`) were submitted with it.
+**R4, done on 2026-09-11** (FINDINGS E39b, E43). Job `13408404` shows that a
+converged Newton solve removes 83% of the audit's first-hour residual on the
+sphere. Job `13408403` shows that on C8's column the audit keeps form A below
+4.4e-7 J/kg for a day, and a converged solve takes form B to −3.8e-3 J/m². The
+tables are in `output/newton_lag/first_hour_sphere_slurm/` and
+`output/newton_lag/c8_variants_slurm/`. The D4 pair (jobs `13404536` and
+`13404537`) was submitted with them.
 
 **Next.** The owner sets the merge order: #69, then #70, then #72 retargeted to
 `main`. The review of #69 is posted on the PR, and its five findings are fixed

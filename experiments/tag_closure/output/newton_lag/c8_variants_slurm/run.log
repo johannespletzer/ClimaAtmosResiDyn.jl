@@ -1,0 +1,83 @@
+# SLURM job 13408403 on terrabyte, hpda2_test, at 78586e39: analysis/c8_variants.jl, AGENTB_OUT on scratch.
+commit 78586e39b61b8df6d436c6c9cd65969b9f15cefa
+Fri Sep 11 12:05:12 PM CEST 2026
+== enthalpy, dt = 10.0, t_end = 86400.0
+  t =    600 s  signed -7.8099  gross 205.883  formB -2.822  formA 4.341e-7 at z = 125.0  unrepaired 7.146e-10  ledger 4.34e-7
+  t =   1200 s  signed -5.0185  gross 207.36  formB -1.636  formA 4.338e-7 at z = 125.0  unrepaired 1.553e-9  ledger 4.34e-7
+  t =   1800 s  signed -4.0293  gross 207.826  formB -1.15  formA 4.334e-7 at z = 125.0  unrepaired 2.448e-9  ledger 4.34e-7
+  t =   2400 s  signed -3.7247  gross 207.832  formB -0.9342  formA 4.33e-7 at z = 125.0  unrepaired 3.372e-9  ledger 4.34e-7
+  t =   3000 s  signed -3.7157  gross 207.618  formB -0.838  formA 4.327e-7 at z = 125.0  unrepaired 4.312e-9  ledger 4.34e-7
+  t =   3600 s  signed -3.8457  gross 207.253  formB -0.801  formA 4.323e-7 at z = 125.0  unrepaired 5.432e-9  ledger 4.34e-7
+  t =   7200 s  signed -7.673  gross 206.783  formB -1.921  formA 4.29e-7 at z = 125.0  unrepaired 1.455e-8  ledger 4.34e-7
+  t =  10800 s  signed -9.4546  gross 206.813  formB -2.641  formA 4.255e-7 at z = 125.0  unrepaired 2.434e-8  ledger 4.34e-7
+  t =  14400 s  signed -11.005  gross 207.234  formB -3.641  formA 4.219e-7 at z = 125.0  unrepaired 3.391e-8  ledger 4.34e-7
+  t =  18000 s  signed -8.4432  gross 206.333  formB -3.673  formA 4.182e-7 at z = 125.0  unrepaired 4.289e-8  ledger 4.34e-7
+  t =  21600 s  signed -8.3833  gross 207.481  formB -5.096  formA 4.145e-7 at z = 125.0  unrepaired 5.136e-8  ledger 4.33e-7
+  t =  25200 s  signed -4.3989  gross 205.024  formB -4.502  formA 4.109e-7 at z = 125.0  unrepaired 5.939e-8  ledger 4.33e-7
+  t =  28800 s  signed -0.34569  gross 202.794  formB -3.741  formA 4.074e-7 at z = 125.0  unrepaired 6.7e-8  ledger 4.33e-7
+  t =  32400 s  signed 3.2976  gross 200.862  formB -3.079  formA 4.039e-7 at z = 125.0  unrepaired 7.423e-8  ledger 4.33e-7
+  t =  36000 s  signed 6.5297  gross 199.236  formB -2.519  formA 4.005e-7 at z = 125.0  unrepaired 8.121e-8  ledger 4.33e-7
+  t =  39600 s  signed 9.411  gross 197.512  formB -2.007  formA 3.971e-7 at z = 125.0  unrepaired 8.791e-8  ledger 4.33e-7
+  t =  43200 s  signed 11.66  gross 196.151  formB -1.707  formA 3.936e-7 at z = 125.0  unrepaired 9.434e-8  ledger 4.33e-7
+  t =  46800 s  signed 13.318  gross 195.448  formB -1.605  formA 3.902e-7 at z = 125.0  unrepaired 1.004e-7  ledger 4.33e-7
+  t =  50400 s  signed 14.398  gross 195.218  formB -1.619  formA 3.869e-7 at z = 125.0  unrepaired 1.061e-7  ledger 4.33e-7
+  t =  54000 s  signed 7.4393  gross 199.421  formB -6.606  formA 3.836e-7 at z = 125.0  unrepaired 1.106e-7  ledger 4.33e-7
+  t =  57600 s  signed 11.39  gross 196.779  formB -4.529  formA 3.803e-7 at z = 125.0  unrepaired 1.154e-7  ledger 4.33e-7
+  t =  61200 s  signed 13.576  gross 195.285  formB -3.429  formA 3.77e-7 at z = 125.0  unrepaired 1.2e-7  ledger 4.34e-7
+  t =  64800 s  signed 11.574  gross 195.123  formB -4.867  formA 3.738e-7 at z = 125.0  unrepaired 1.238e-7  ledger 4.34e-7
+  t =  68400 s  signed 10.611  gross 195.216  formB -5.443  formA 3.706e-7 at z = 125.0  unrepaired 1.278e-7  ledger 4.34e-7
+  t =  72000 s  signed 6.8573  gross 225.75  formB -7.681  formA 3.674e-7 at z = 125.0  unrepaired 1.319e-7  ledger 4.34e-7
+  t =  75600 s  signed 10.44  gross 189.572  formB -5.337  formA 3.643e-7 at z = 125.0  unrepaired 1.35e-7  ledger 4.34e-7
+  t =  79200 s  signed 9.1772  gross 190.001  formB -5.914  formA 3.612e-7 at z = 125.0  unrepaired 1.385e-7  ledger 4.34e-7
+  t =  82800 s  signed 11.619  gross 194.99  formB -4.099  formA 3.581e-7 at z = 125.0  unrepaired 1.418e-7  ledger 4.34e-7
+  t =  86400 s  signed 9.5502  gross 193.462  formB -5.292  formA 3.551e-7 at z = 125.0  unrepaired 1.446e-7  ledger 4.34e-7
+  done in 1504.6 s incl. build
+== enthalpy_newton, dt = 10.0, t_end = 86400.0
+  t =    600 s  signed -0.21698  gross 6.32645  formB -4.882e-5  formA 2.814e-7 at z = 125.0  unrepaired 4.72e-10  ledger 2.82e-7
+  t =   1200 s  signed -0.23704  gross 6.30263  formB -9.635e-5  formA 2.811e-7 at z = 125.0  unrepaired 1.016e-9  ledger 2.82e-7
+  t =   1800 s  signed -0.25598  gross 6.28031  formB -0.0001229  formA 2.809e-7 at z = 125.0  unrepaired 1.596e-9  ledger 2.81e-7
+  t =   2400 s  signed -0.27455  gross 6.25925  formB -0.0001433  formA 2.807e-7 at z = 125.0  unrepaired 2.194e-9  ledger 2.81e-7
+  t =   3000 s  signed -0.2929  gross 6.23907  formB -0.0001625  formA 2.805e-7 at z = 125.0  unrepaired 2.804e-9  ledger 2.81e-7
+  t =   3600 s  signed -0.3112  gross 6.22108  formB -0.0001809  formA 2.803e-7 at z = 125.0  unrepaired 3.53e-9  ledger 2.81e-7
+  t =   7200 s  signed -0.41861  gross 6.18186  formB -0.0009138  formA 2.785e-7 at z = 125.0  unrepaired 9.445e-9  ledger 2.81e-7
+  t =  10800 s  signed -0.51615  gross 6.23924  formB -0.001209  formA 2.765e-7 at z = 125.0  unrepaired 1.58e-8  ledger 2.81e-7
+  t =  14400 s  signed -0.59062  gross 6.36958  formB -0.001609  formA 2.745e-7 at z = 125.0  unrepaired 2.203e-8  ledger 2.81e-7
+  t =  18000 s  signed -0.60465  gross 6.60864  formB -0.001798  formA 2.725e-7 at z = 125.0  unrepaired 2.787e-8  ledger 2.81e-7
+  t =  21600 s  signed -0.62134  gross 6.86663  formB -0.002005  formA 2.705e-7 at z = 125.0  unrepaired 3.34e-8  ledger 2.81e-7
+  t =  25200 s  signed -0.6345  gross 7.14009  formB -0.002165  formA 2.685e-7 at z = 125.0  unrepaired 3.864e-8  ledger 2.81e-7
+  t =  28800 s  signed -0.64577  gross 7.41836  formB -0.002266  formA 2.665e-7 at z = 125.0  unrepaired 4.363e-8  ledger 2.81e-7
+  t =  32400 s  signed -0.65449  gross 7.70736  formB -0.002366  formA 2.646e-7 at z = 125.0  unrepaired 4.837e-8  ledger 2.8e-7
+  t =  36000 s  signed -0.66068  gross 7.9991  formB -0.00241  formA 2.628e-7 at z = 125.0  unrepaired 5.295e-8  ledger 2.8e-7
+  t =  39600 s  signed -0.66547  gross 8.29606  formB -0.002431  formA 2.609e-7 at z = 125.0  unrepaired 5.735e-8  ledger 2.81e-7
+  t =  43200 s  signed -0.66777  gross 8.5935  formB -0.002456  formA 2.589e-7 at z = 125.0  unrepaired 6.16e-8  ledger 2.81e-7
+  t =  46800 s  signed -0.66893  gross 8.88727  formB -0.00252  formA 2.57e-7 at z = 125.0  unrepaired 6.561e-8  ledger 2.81e-7
+  t =  50400 s  signed -0.65959  gross 9.18358  formB -0.002627  formA 2.552e-7 at z = 125.0  unrepaired 6.934e-8  ledger 2.81e-7
+  t =  54000 s  signed -0.64838  gross 9.43754  formB -0.002767  formA 2.533e-7 at z = 125.0  unrepaired 7.234e-8  ledger 2.81e-7
+  t =  57600 s  signed -0.6391  gross 9.75767  formB -0.002715  formA 2.514e-7 at z = 125.0  unrepaired 7.551e-8  ledger 2.81e-7
+  t =  61200 s  signed -0.63018  gross 10.0402  formB -0.002809  formA 2.496e-7 at z = 125.0  unrepaired 7.862e-8  ledger 2.81e-7
+  t =  64800 s  signed -0.61265  gross 10.3238  formB -0.002747  formA 2.477e-7 at z = 125.0  unrepaired 8.112e-8  ledger 2.81e-7
+  t =  68400 s  signed -0.6059  gross 10.5922  formB -0.002948  formA 2.458e-7 at z = 125.0  unrepaired 8.382e-8  ledger 2.81e-7
+  t =  72000 s  signed -0.59756  gross 10.8783  formB -0.003072  formA 2.44e-7 at z = 125.0  unrepaired 8.651e-8  ledger 2.81e-7
+  t =  75600 s  signed -0.57332  gross 11.1898  formB -0.003211  formA 2.422e-7 at z = 125.0  unrepaired 8.864e-8  ledger 2.81e-7
+  t =  79200 s  signed -0.559  gross 11.4809  formB -0.003509  formA 2.403e-7 at z = 125.0  unrepaired 9.095e-8  ledger 2.81e-7
+  t =  82800 s  signed -0.54365  gross 11.7435  formB -0.003728  formA 2.385e-7 at z = 125.0  unrepaired 9.317e-8  ledger 2.81e-7
+  t =  86400 s  signed -0.52107  gross 12.0012  formB -0.003832  formA 2.367e-7 at z = 125.0  unrepaired 9.509e-8  ledger 2.81e-7
+  done in 137.7 s incl. build
+== tracer_newton, dt = 10.0, t_end = 3600.0
+  t =    600 s  signed 200.79  gross 141767.0  formB -4.882e-5  formA 0.0001601 at z = 675.0  unrepaired 0.0001601  ledger 2.01e-7
+  t =   1200 s  signed 329.24  gross 142466.0  formB -9.635e-5  formA 0.0007591 at z = 525.0  unrepaired 0.0007591  ledger 2.01e-7
+  t =   1800 s  signed 389.83  gross 143200.0  formB -0.0001229  formA 0.002073 at z = 525.0  unrepaired 0.002073  ledger 2.01e-7
+  t =   2400 s  signed 387.61  gross 152962.0  formB -0.0001433  formA 0.00345 at z = 675.0  unrepaired 0.00345  ledger 2.01e-7
+  t =   3000 s  signed 323.84  gross 164683.0  formB -0.0001625  formA 0.00597 at z = 675.0  unrepaired 0.00597  ledger 2.01e-7
+  t =   3600 s  signed 199.25  gross 177342.0  formB -0.0001809  formA 0.007937 at z = 675.0  unrepaired 0.007937  ledger 2.02e-7
+  done in 150.6 s incl. build
+== tracer, dt = 10.0, t_end = 3600.0
+  t =    600 s  signed 193.34  gross 141781.0  formB -2.822  formA 0.00016 at z = 675.0  unrepaired 0.00016  ledger 2.93e-7
+  t =   1200 s  signed 324.72  gross 142476.0  formB -1.636  formA 0.0007592 at z = 525.0  unrepaired 0.0007592  ledger 2.93e-7
+  t =   1800 s  signed 386.41  gross 143208.0  formB -1.15  formA 0.002073 at z = 525.0  unrepaired 0.002073  ledger 2.93e-7
+  t =   2400 s  signed 384.59  gross 152998.0  formB -0.9342  formA 0.003452 at z = 675.0  unrepaired 0.003452  ledger 2.93e-7
+  t =   3000 s  signed 320.93  gross 164718.0  formB -0.838  formA 0.005968 at z = 675.0  unrepaired 0.005968  ledger 2.93e-7
+  t =   3600 s  signed 196.3  gross 177377.0  formB -0.801  formA 0.007914 at z = 675.0  unrepaired 0.007914  ledger 2.92e-7
+  done in 62.1 s incl. build
+exit 0
+Fri Sep 11 12:36:43 PM CEST 2026

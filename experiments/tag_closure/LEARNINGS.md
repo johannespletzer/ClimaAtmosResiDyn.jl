@@ -1135,20 +1135,24 @@ the tags.
 others off in a twin. Before a run, check that form A's two sides can differ at
 all.
 
-## R4. The sphere's first hour with a converged Newton solve
+## R4. The Newton lag, on the sphere and on C8's column
 
-Ran at `78586e39` on 2026-09-11, `hpda2_test`, SLURM job `13408404`, 14
-minutes, as `analysis/first_hour_sphere.jl` with its output on scratch. The
-owner approved it.
+Ran at `78586e39` on 2026-09-11, `hpda2_test`, as two SLURM jobs with their
+output on scratch: `13408404`, 14 minutes, for `analysis/first_hour_sphere.jl`,
+and `13408403` for `analysis/c8_variants.jl`. The owner approved both.
 
 **What it was for.** E39 traced the audit's first-hour residual on the column to
-the stepper's single Newton iteration, and inferred the same on the sphere.
+the stepper's single Newton iteration, and inferred the same on the sphere. It
+also read C8's form-B remainder as that lag, from a correlation, and left C8's
+form A over a day open.
 
 **What it showed.** A converged solve removes 83% of the sphere's first-hour
 residual, against 99% on the column (E39b). The rest is made in the first step
-too.
+too. On C8's 1M column, the audit keeps form A below 4.4e-7 J/kg for a day,
+against 117 under tracer transport. A converged solve takes form B from −5.29
+to −3.8e-3 J/m² (E43).
 
-**Barrier.** None to the run. What the remaining 17% is, is open.
+**Barrier.** None to the runs. What the sphere's remaining 17% is, is open.
 
 **Class.** A numerical property of the stepper, not of the tags.
 
