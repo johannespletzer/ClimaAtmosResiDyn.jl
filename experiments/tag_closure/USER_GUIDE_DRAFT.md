@@ -239,8 +239,9 @@ monitored residual, not a machine-precision identity, and it is not a ratio.
     A converged solve removes 99% of it on the column (E39), and 83% on the
     sphere (E39b). After that, what is left is the terms the tags still take
     as tracers: vertical diffusion, the sponges and the sub-grid closures. On
-    a cold column, vertical diffusion is the candidate for a gross residual of
-    3.7e-3 in an hour, zero-sum and spread over the column (E42).
+    a cold column under `tracer`, the gross residual reaches 3.7e-3 in an hour,
+    zero-sum and spread over the column (E42). Vertical diffusion does not make
+    it (E42b). Pressure work in the vertical advection is the next candidate.
   - Processes that change `ρ` without a bracket, such as vertical diffusion of
     water, move `E` by `c` times that change, and the difference lands here.
   - Under `prognostic_edmfx` it also holds the whole sub-grid mass flux of

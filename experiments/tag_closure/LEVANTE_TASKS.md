@@ -249,6 +249,12 @@ the microphysics tag and record are exactly zero. What the upward branch moved
 cannot be told apart from vertical diffusion. A twin without vertical diffusion
 would separate them.
 
+**D1's twin, done on 2026-09-11** (FINDINGS E42b). Job `13412243` is D1 without
+vertical diffusion, in `output/d1_column_1m_ice_no_vdiff/`. The upward branch
+lifts about a fifth of what `lower` gained above its boundary in D1, and
+vertical diffusion the rest. The gross residual is the same as D1's, so
+vertical diffusion does not make it (§6).
+
 **R4, done on 2026-09-11** (FINDINGS E39b, E43). Job `13408404` shows that a
 converged Newton solve removes 83% of the audit's first-hour residual on the
 sphere. Job `13408403` shows that on C8's column the audit keeps form A below

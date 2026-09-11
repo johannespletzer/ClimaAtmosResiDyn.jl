@@ -1135,6 +1135,29 @@ the tags.
 others off in a twin. Before a run, check that form A's two sides can differ at
 all.
 
+## D1's twin. The same column without vertical diffusion
+
+Ran at `cf1e9c7c` on 2026-09-11, `hpda2_test` on LRZ terrabyte, SLURM job
+`13412243`, 16 minutes. The owner approved it.
+
+**What it was for.** D1 could not say how much of `lower`'s rise above its
+boundary came from sedimentation's upward branch, because vertical diffusion
+also moves the tags upward (E42).
+
+**What it showed.** Without vertical diffusion, `lower` rises above 5.6 km by
+7,879 J/m², a fifth of D1's 39,276 (E42b). The gross residual is the same as
+D1's. So vertical diffusion is not what makes it, and the inference E42 drew
+was wrong (§6).
+
+**Barrier.** The two atmospheres differ a little, so the split is approximate.
+What makes the residual is still open.
+
+**Class.** A falsified inference: a pattern that fits a mechanism is not proof
+of it.
+
+**Carry-over to the source tags.** Switch a candidate off before writing it down
+as the cause.
+
 ## R4. The Newton lag, on the sphere and on C8's column
 
 Ran at `78586e39` on 2026-09-11, `hpda2_test`, as two SLURM jobs with their

@@ -970,7 +970,8 @@ vertical diffusion.** D1 is `PrecipitatingColumn` under 1M, 200 levels to
     still gives 2.7 m² s⁻¹ at 5 km. It moves the tags as tracers and `ρe_tot`
     in enthalpy form, and such a mismatch makes a zero-sum growth. That it is
     the cause is an inference. In the first minute the ice layers held 54% of
-    the gross, and the largest level was the top one.
+    the gross, and the largest level was the top one. *E42b falsifies the
+    inference. Without vertical diffusion the gross residual is the same (§6).*
   - **The tags stay non-negative.** No tag goes below zero, and the repair's
     largest ledger is 1.8e-8 J kg⁻¹.
   - **The records.** `e_prc_microphysics` and the `mp` tag are exactly zero at
@@ -983,13 +984,47 @@ vertical diffusion.** D1 is `PrecipitatingColumn` under 1M, 200 levels to
   - **`lower` rises above the boundary.** Its column integral above 5.6 km,
     where its mask is below 0.3%, goes from 13,969 J m⁻² to 53,245 over the
     hour. Sedimentation's upward branch does that where snow falls through
-    5 km, and so does vertical diffusion. This run cannot separate the two. A
-    twin without vertical diffusion would.
+    5 km, and so does vertical diffusion. This run cannot separate the two. Its
+    twin without vertical diffusion does, and gives the upward branch about a
+    fifth (E42b).
 
 The bounds: one column, one hour, and ice that mostly sublimates in its first
 minute (E41). A step costs 30 ms. *D1, job `13404535` on terrabyte at
 `78586e39`; `analysis/c5_process_closure.jl` and
 `analysis/d1_residual_profile.jl`; `output/d1_column_1m_ice/`.*
+
+**E42b. Without vertical diffusion, the upward branch lifts about a fifth of
+what D1's `lower` gained above its boundary. The gross residual is unchanged,
+so vertical diffusion does not make it.** D1's twin is D1 with `vert_diff` and
+`implicit_diffusion` off, and nothing else changed.
+
+| over the hour                                     | D1, J m⁻² | twin, J m⁻² |
+|:------------------------------------------------- | ---------:| -----------:|
+| `lower` above 5.6 km, rise from the start         |    39,276 |       7,879 |
+| gross residual after the first minute             |   1.118e6 |     1.119e6 |
+| gross residual at 1 h                             |   2.370e6 |     2.350e6 |
+| growth of the gross after the first minute        |   2.129e6 |     2.096e6 |
+| signed residual at 1 h                            |     0.286 |       0.286 |
+| surface-flux record, column integral              |    95,023 |      89,211 |
+
+  - **The upward branch.** Without diffusion, `lower` still rises above 5.6 km,
+    by 7,879 J m⁻². Only sedimentation's upward branch can do that there. That
+    is a fifth of D1's rise, so vertical diffusion moved the other four fifths.
+    The two atmospheres differ a little, so the split is approximate.
+  - **The residual.** Its gross and its growth are within 2% of D1's. The
+    growth splits over height as in D1: 42% in the ice layers, 50% below
+    4.5 km. So vertical diffusion does not make it, and E42's inference was
+    wrong (§6). Grid-mean vertical advection under tracer transport, pressure
+    work as on the DYCOMS column (E25), is the next candidate. That is not
+    tested.
+  - **The rest holds.** Form B closes to 0.14 J m⁻² again, and no tag goes
+    below zero. The surface flux still reaches the atmosphere without vertical
+    diffusion, but stays in the lowest level: `sfc` peaks at 1,580 J kg⁻¹,
+    against D1's 608.
+  - A step costs 27 ms.
+
+*D1's twin, job `13412243` on terrabyte at `cf1e9c7c`; the same scripts;
+`output/d1_column_1m_ice_no_vdiff/`.*
 
 **E43. On the 1M column over a day, the audit keeps form A below
 4.4e-7 J kg⁻¹, and a converged Newton solve takes form B to −3.8e-3 J m⁻².**
@@ -1325,6 +1360,11 @@ Kept because a later reader will otherwise re-derive them.
     the other way round. The tags' explicit flux is evaluated at the solved
     stage state, and the parent's side is the one-iteration Newton increment,
     linearised about the stage's initial guess (E39).
+  - **That vertical diffusion's form mismatch makes D1's gross residual
+    (E42).** E42 inferred it because the residual is zero-sum and spread over
+    the column, where vertical diffusion acts. D1's twin without vertical
+    diffusion has the same gross residual, 2.350e6 J m⁻² at 1 h against
+    2.370e6, split the same way over height (E42b).
 
 ## 7. What is not established
 
@@ -1359,14 +1399,14 @@ Kept because a later reader will otherwise re-derive them.
   - ~~What the 1M column's last signed residual is (E32).~~ The loss rule
     acting on the residual that tracer transport makes. It is not the tags'
     missing Jacobian block, whose lag is −7.8 J m⁻² (E39).
-  - **How much provenance sedimentation's upward branch moves in a run (E32,
-    E41, E42).** On a real cold state every ice and snow cell takes it, and the
-    partition closes to 1.6e-15 (E41). Through D1's hour the column stays
-    closed and the tags non-negative. But `lower`'s rise above the boundary
-    cannot be told apart from vertical diffusion (E42). A D1 twin without
-    vertical diffusion would separate them. D5 would keep making ice.
-  - **What makes D1's gross residual (E42).** A zero-sum 3.7e-3, spread over
-    the column. Vertical diffusion's form mismatch is the candidate.
+  - ~~How much provenance sedimentation's upward branch moves in a run (E32,
+    E41, E42).~~ On D1's column, about a fifth of what `lower` gained above its
+    boundary in the hour; vertical diffusion moved the rest (E42b). Where ice
+    persists, as in deep convection, it is open. D5 would keep making ice.
+  - **What makes D1's gross residual (E42, E42b).** A zero-sum 3.7e-3, spread
+    over the column, and not vertical diffusion. Pressure work in the grid-mean
+    vertical advection, as on the DYCOMS column (E25), is the next candidate. A
+    twin with the tags moved as enthalpy would test it.
   - **Anything under `prognostic_edmfx` (E40).** The tags get no sub-grid mass
     flux and no sedimentation corrections, and the shipped settings fail. How
     much that adds to `e_src_res` in a run is what the D4 pair would measure,
