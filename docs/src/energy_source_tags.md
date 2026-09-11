@@ -65,12 +65,23 @@ With ``\sum_k M_k = 1`` and ``\sum_k \rho e_{\mathrm{src},k} = \rho e_\mathrm{to
 we have ``\sum_k \varphi_k = 1``, so ``\sum_k \Delta_k = \Delta^{+} - \Delta^{-} = \Delta``
 exactly, per process.
 
-Only the explicit path is bracketed for these tags, as for the process records,
-so `precipitation` — which is attributed on the implicit path for the
-`ρe_tag_*` family — does not reach a source tag. That is a named limitation, not
-an oversight, and it shows up in `e_src_res`.
+The explicit path is bracketed for these tags. So is the microphysics sink on
+the implicit path, which is where rain leaves a 0-moment run with its energy.
+The loss half takes that energy from every tag by its share, so a pure sink
+changes no share and shrinks every tag by the same fraction. The increment is
+not always a loss, though. Removing water raises the total wherever that water
+carries less energy per kilogram than `-c`, with `c` the offset or zero, as cold
+condensate can. Then the increment is production, and it goes by mask to the
+region tags and to any tag that lists `microphysics` or `all`.
 
-## Tags are not guaranteed non-negative
+`precipitation`, the sedimentation of precipitating species, is not bracketed
+for these tags, although the `ρe_tag_*` family attributes it. Sedimentation
+moves energy from level to level with the falling water. Bracketed, what
+arrives in a cell would count as new energy that entered through precipitation,
+when it was only moved. For a tag that says where energy came from, that is
+transport rather than a source, and it shows up in `e_src_res`.
+
+## Negative tags, and the repair
 
 The donor-proportional loss bounds the *rate* at which a tag is depleted, not
 the amount removed. Attribution produces a tendency, and the timestepper
@@ -86,18 +97,47 @@ Two further routes take a tag negative. Where ``\rho e_\mathrm{tot} \le 0``
 the share is undefined and `energy_source_fraction` returns zero, so no
 donor-proportional loss is applied there at all; how much of a domain that
 covers depends on the energy reference. And the tags are exempt from both
-tracer limiters and ride unlimited explicit transport with no partition repair.
+tracer limiters and ride unlimited explicit transport.
 
-So `ρe_src_<name>` is a monitored quantity, not a bounded one. These are known
-limits of the current discrete implementation rather than properties of the
-continuous rule, and a negative value **invalidates the amount-of-energy and
-provenance reading of that tag** for as long as it lasts.
+These are known limits of the current discrete implementation rather than
+properties of the continuous rule, and a negative value **invalidates the
+amount-of-energy and provenance reading of that tag** for as long as it lasts.
 
-`e_src_res` will not tell you about it. It is the parent minus the sum of the
-*pure region* tags, so a source-labelled tag going negative never enters it,
-and a negative region-tag error can be cancelled by a positive one elsewhere.
-To watch for it, inspect each `e_src_<name>` directly — its minimum or sign.
-For the parent, use the initialization warning and the `nonpositive_fraction`
+### The repair
+
+`energy_source_tag_repair`, on by default, puts negative tags back after each
+state update, wherever the total the tags partition is positive:
+
+  - the pure region tags keep their sum. A negative one is set to zero, and the
+    positive ones give up the deficit in proportion to what each holds, as the
+    water tags' partition repair does;
+  - a tag that carries a source is clipped at zero. It is not a member of the
+    partition, so it has no sum to keep.
+
+Where the total is not positive the tags are left alone. The share is undefined
+there, and a region tag carries the parent's sign by design. With a large
+enough `energy_source_tag_offset` that is nowhere.
+
+The repair does not force the region tags onto the total. That would drive
+`e_src_res` to zero by construction and hide the transport mismatch it exists to
+show. Every change is logged in `e_src_fix_<name>`, so what the repair did can
+be told apart from what the rule and the transport did. The log is exact at the
+default `update_constrain_state_every: step`. At `stage` or `dss` the repair
+also runs inside the step, where the stepper rescales or discards what it
+changes, so the log no longer equals what reached the state. The tags are
+repaired either way.
+
+`energy_source_tag_repair: false` switches it off and leaves the tags exactly as
+the rule and their transport make them, negative values included. That is how
+to measure what the repair changes. `ρe_src_<name>` is then a monitored
+quantity, not a bounded one.
+
+`e_src_res` will not tell you about negative values. It is the parent minus the
+sum of the *pure region* tags, so a source-labelled tag going negative never
+enters it, and a negative region-tag error can be cancelled by a positive one
+elsewhere. With the repair off, inspect each `e_src_<name>` directly — its
+minimum or sign. With it on, `e_src_fix_<name>` says how much was put back. For
+the parent, use the initialization warning and the `nonpositive_fraction`
 column of the closure check.
 
 ## Closure checking
@@ -210,6 +250,10 @@ unlimited transport described above still apply.
 
   - `e_src_<name>`: specific tagged energy ``\rho e_{\mathrm{src}} / \rho``
     (J kg⁻¹);
+  - `e_src_fix_<name>`: the energy the repair has moved into (positive) or out
+    of (negative) each tag, per unit mass, cumulative since the start of the
+    run segment and reset on restart. Zero with the repair off, and exact only
+    at the default `update_constrain_state_every: step`;
   - `e_src_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
@@ -231,7 +275,8 @@ family as a whole.
 
   - Tags are **grid-scale only**, with no sub-grid updraft counterpart.
   - Tags are excluded from both tracer limiters, through
-    `is_tagged_tracer_name`.
+    `is_tagged_tracer_name`. The repair above keeps them non-negative instead,
+    unless it is switched off.
   - Latitude regions require spherical geometry; altitude regions also work in
     columns and boxes.
   - Tagged state is carried through restarts like any other prognostic field,

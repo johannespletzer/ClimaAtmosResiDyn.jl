@@ -97,11 +97,11 @@ function _register_process_record_diagnostics!(
                        "start of the run and carried through a restart, " *
                        "so a budget over an interval is the difference of two " *
                        "outputs, and a time average of this variable is not " *
-                       "meaningful. Only the explicit tendency path is " *
-                       "recorded. `precipitation` has no explicit bracket at " *
-                       "all, so an energy record listing it is always zero, " *
-                       "and `microphysics` is zero on both sides under the " *
-                       "default implicit microphysics timestepping.",
+                       "meaningful. Both tendency paths are recorded, so " *
+                       "`microphysics` is recorded however microphysics is " *
+                       "stepped. `precipitation` records sedimentation, " *
+                       "which 0-moment microphysics does not have, so it " *
+                       "stays zero there.",
             compute! = (out, u, p, t) ->
                 compute_process_record!(out, u, p, t, field_name),
         )

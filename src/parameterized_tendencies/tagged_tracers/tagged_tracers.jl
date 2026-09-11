@@ -226,14 +226,16 @@ label corresponds to one attribution bracket in `additional_tendency!` (see
   - `:radiation`: all radiation modes (`radiation_tendency!`)
   - `:surface_flux`: turbulent surface energy flux (`surface_flux_tendency!`)
   - `:microphysics`: microphysics energy sources (`microphysics_tendency!`,
-    only when microphysics is stepped explicitly)
+    only when microphysics is stepped explicitly, for this family). The energy
+    source tags and the process records, which share these labels, also
+    bracket the implicit microphysics sink.
   - `:held_suarez`: Held–Suarez relaxation forcing
   - `:large_scale_advection`: prescribed large-scale advective forcing
   - `:subsidence`: prescribed large-scale subsidence
   - `:external_forcing`: externally prescribed (e.g. GCM-driven) forcing
   - `:precipitation`: energy carried out of a level by sedimenting
-    precipitation (`vertical_advection_of_water_tendency!`). This is the one
-    attributed process on the **implicit** path; it is bracketed inside
+    precipitation (`vertical_advection_of_water_tendency!`). For this family
+    it is the one attributed process on the **implicit** path; it is bracketed inside
     `implicit_tendency!`, which is safe because that function zeroes `Yₜ` on
     every evaluation. With 1-moment and 2-moment microphysics this is where
     the moist energy sink lives, since those schemes change only the water
@@ -983,13 +985,12 @@ in each case:
     because a shape-preserving adjustment applied per tag has no reason to
     reproduce the parent's and would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags
     follow the parent's limiting through [`rescale_water_tags!`](@ref) instead.
-  - `ρe_src_*` is exempt for the same partition reason as the water tags, but
-    it has no equivalent of `rescale_water_tags!` and no partition repair. So
-    unlike water, nothing restores it, and unlike water it carries no
-    non-negativity guarantee to restore it to: the attribution rule bounds the
-    rate a tag is depleted at rather than the amount removed over a step. That
-    is a known limit, not an oversight — see
-    `docs/src/energy_source_tags.md`.
+  - `ρe_src_*` is exempt for the same partition reason as the water tags. It
+    has no equivalent of `rescale_water_tags!`. Instead
+    `repair_energy_source_tags!`, on by default, puts negative tags back after
+    each state update where their total is positive, and keeps the partition's
+    sum. The attribution rule itself bounds only the rate a tag is depleted at,
+    not the amount removed over a step. See `docs/src/energy_source_tags.md`.
 """
 is_tagged_tracer_name(name) =
     is_energy_tag_name(name) ||
