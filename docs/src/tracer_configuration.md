@@ -362,13 +362,13 @@ table, `<family>_tag_audit.csv`, that separates them. It is off by default,
 costs a handful of extra global reductions per check, and changes nothing about
 the run.
 
-| column | what it is |
-|:-- |:-- |
-| `untagged` | `∫max(parent - Σ tags, 0)`: water the tags do not account for |
-| `overclaimed` | `∫max(Σ tags - parent, 0)`: water the tags claim that is not there |
-| `orphaned` | mass in cells whose parent still holds water while every tag is empty |
-| `orphaned_volume_fraction` | volume fraction of those cells |
-| `nonpositive_mass` | mass where the parent is not positive |
+| column                     | what it is                                                            |
+|:-------------------------- |:--------------------------------------------------------------------- |
+| `untagged`                 | `∫max(parent - Σ tags, 0)`: water the tags do not account for         |
+| `overclaimed`              | `∫max(Σ tags - parent, 0)`: water the tags claim that is not there    |
+| `orphaned`                 | mass in cells whose parent still holds water while every tag is empty |
+| `orphaned_volume_fraction` | volume fraction of those cells                                        |
+| `nonpositive_mass`         | mass where the parent is not positive                                 |
 
 Each of the first three also has a `_relative` column over the same `scale` the
 closure table uses, and `nonpositive_mass_fraction` is `nonpositive_mass` over
@@ -378,8 +378,10 @@ already read. Join the two on `time`.
 
 Three things it tells you that the closure table cannot.
 
-**Which way the tags are wrong.** `untagged + overclaimed` is exactly
-`gross_residual`, so nothing is lost by reading them apart. They mean opposite
+**Which way the tags are wrong.** `untagged + overclaimed` is `gross_residual`
+to reduction round-off, so nothing is lost by reading them apart. The identity
+is exact pointwise; each of the three is its own volume integral and rounds
+separately, so compare them with a tolerance. They mean opposite
 things. Untagged water has an origin that nothing claims to know, which is
 recoverable in principle. Overclaimed water is the tags asserting water that
 does not exist, which is not a physical state at all and is the direction a

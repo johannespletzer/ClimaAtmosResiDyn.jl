@@ -567,8 +567,10 @@ responses. This separates them.
     a sliver of one tag is not orphaned by this test and appears in `untagged`
     instead.
 
-`untagged + overclaimed` is exactly `gross_residual`, so reading these loses
-nothing.
+`untagged + overclaimed` is `gross_residual` to reduction round-off, so reading
+these loses nothing. The identity is exact pointwise, but the three are three
+separate reductions and each rounds on its own, so test them with a tolerance
+rather than for equality.
 
 `nonpositive_mass` is the mass where the parent is non-positive, the counterpart
 of the volume fraction [`tag_closure`](@ref) reports. The two answer different
@@ -716,7 +718,9 @@ function nonpositive_parent_note(family)
     family == "energy_source" && return "Donor shares are undefined there, so \
         the loss half of the attribution rule does not run. For moist total \
         energy this usually means the chosen thermodynamic or gravitational \
-        reference puts part of the domain below zero."
+        reference puts part of the domain below zero. An \
+        `energy_source_tag_offset` large enough to lift the partitioned \
+        total positive removes the region without moving that reference."
     family == "water" && return "Water tags take loss in proportion to what \
         they hold, so their shares are undefined there and the tags of those \
         cells carry no provenance. Nothing in the model keeps `ρq_tot` \

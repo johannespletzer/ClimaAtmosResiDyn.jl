@@ -10,7 +10,8 @@
 ##### This is the energy counterpart of the water tags in `tagged_water.jl`, and
 ##### it is a different quantity from `ρe_tag_*` in `tagged_tracers.jl`. A source
 ##### tag holds energy that is present now, traced back to where it came from,
-##### which holds only where `ρe_tot` is positive and the tag is non-negative.
+##### which holds only where the partitioned total is positive and the tag is
+##### non-negative. That total is `ρe_tot`, or `ρe_tot + c·ρ` under an offset.
 ##### An `ρe_tag_*` tag configured with `source` is a signed process tag: it
 ##### holds the signed increment one process applied. That is not the same as
 ##### the process-change record, which is the separate `prc_*` family in
@@ -99,9 +100,15 @@ everywhere without moving the thermodynamic reference, which would reach the
 model's own numerics. See `docs/src/energy_source_tags.md`.
 
 `c·ρ` is energy carried by mass, so a process that changes `ρ` changes the total
-by `c` times that change, and the attribution bracket counts it. A constant per
-unit mass also passes unchanged through transport that is consistent with the
-mass flux, and through limiters built on differences.
+by `c` times that change. The attribution bracket counts it for the processes it
+covers, which are the labels in `KNOWN_TAG_SOURCES`. A process that writes
+`Yₜ.c.ρ` under any other label, or under none, moves the offset total without
+reaching a tag, and that difference lands in `e_src_res`. Vertical diffusion,
+the viscous sponge, the LES SGS closures and hyperdiffusion are all in that
+group, so the residual carries a `c`-proportional term wherever they are active
+that it did not carry without an offset. A constant per unit mass does pass
+unchanged through transport that is consistent with the mass flux, and through
+limiters built on differences.
 """
 @inline energy_source_parent(ρe_tot, ρ, ::Nothing) = ρe_tot
 @inline energy_source_parent(ρe_tot, ρ, model::EnergySourceTaggingModel) =
@@ -321,9 +328,11 @@ clamped to `[0, 1]` and defined to be zero where `ρe_tot` is not positive.
 
 This is the energy counterpart of `water_tag_fraction`, and the two share the
 same weakness for different reasons. Total water has a physical zero, so a cell
-with `ρq_tot ≤ 0` is a numerical artifact and a rare one; moist total energy has
-none, because it depends on the chosen thermodynamic and gravitational reference,
-and a shift of that reference can put a whole region below zero at once. The
+with `ρq_tot ≤ 0` is a numerical artifact, though not a rare one: nothing in the
+model enforces the bound and a sphere run routinely has it over part of its
+volume. Moist total energy has no physical zero at all, because it depends on
+the chosen thermodynamic and gravitational reference, and a shift of that
+reference can put a whole region below zero at once. The
 fallback below keeps the arithmetic finite in either case, but it does not make
 the answer meaningful. A configuration whose `ρe_tot` goes non-positive anywhere
 is one whose source shares cannot be interpreted there, and the run reports that

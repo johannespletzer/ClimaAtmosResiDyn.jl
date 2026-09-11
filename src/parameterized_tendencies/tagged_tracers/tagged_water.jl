@@ -714,18 +714,28 @@ limiter lifts every stage grows its error geometrically while `ρq_tot` stays
 bounded (issue #64). Adding `Δ` leaves `e` where it was.
 
 `Δ` is floored at `-pos`, because the tags cannot pay out more water than they
-hold. That floor is what keeps every tag non-negative, and on a closed partition
-it reproduces the old factor's floor at zero exactly. Where it binds, the tags
-empty and the water the parent still holds surfaces in `q_tag_res`.
+hold. That floor is what keeps a non-negative tag non-negative: at `Δ = -pos` a
+tag receives exactly `-ρq_tag_k` and lands on zero, never below. On a closed
+partition it reproduces the old factor's floor at zero exactly. Where it binds,
+the tags empty and the water the parent still holds surfaces in `q_tag_res`.
+
+It does not lift a tag that is already negative. `max(ρq_tag_k, 0)` is zero
+there, so such a tag receives no share and keeps its value until
+[`repair_water_tag_partition!`](@ref) runs, which is the correction that exists
+for it. What changed is that the old factor made an already-negative tag more
+negative whenever the ratio exceeded one.
 
 Where `pos` is zero there is no tagged water to share the increment out over, so
 nothing moves and the change surfaces in `q_tag_res`. Water is never invented
 into a tag that holds none, which is the rule the rest of this file follows.
 
-The `ρq_tot_before ≤ 0` branch removes the tag, returning `-ρq_tag`. That branch
-is reached precisely when a nonnegativity constraint clips a negative `ρq_tot`
-up, which is the most common correction of all, and the tags of such a cell are
-themselves negative — the donor rule scaled them by the same negative parent.
+The `ρq_tot_before ≤ 0` branch removes the tag, returning `-ρq_tag`. The
+rescale is applied to the whole field after a correction, not only to the cells
+the correction touched, so this branch is reached in every cell whose
+pre-correction parent is non-positive, whether or not anything moved there. The
+case it is written for is a nonnegativity constraint clipping a negative
+`ρq_tot` up, where the tags of such a cell are themselves negative — the donor
+rule scaled them by the same negative parent.
 Leaving them alone would leave them negative while the parent became zero, and
 would record nothing in `q_tag_fix_<name>`, so the ledger would report that the
 limiter had done nothing — exactly the conflation the ledger exists to prevent.
@@ -781,7 +791,8 @@ under the donor rule,
 
 rather than by scaling them. Numerical corrections add or remove water in
 proportion to the local composition, and the shares of the partition tags sum to
-one, so the partition still absorbs `Δ` in full and every tag stays non-negative.
+one, so the partition still absorbs `Δ` in full and no non-negative tag is
+driven below zero.
 Limiting each tag independently would give neither: a shape-preserving adjustment
 applied per tag has no reason to sum to the parent's. That is why water tags are
 excluded from the tracer limiters by [`is_tagged_tracer_name`](@ref) and
@@ -796,8 +807,10 @@ branch and the floor that bounds the loss.
 This does **not** assume the tags partition `ρq_tot`, and does not restore that
 if they do not. Writing `e = ρq_tot - Σₖ ρq_tag_k` for the closure error the
 `q_tag_res` diagnostic reports, this leaves `e` exactly where it was whenever the
-partition holds some water and the floor does not bind, and otherwise moves it by
-at most `|Δ|`. It never multiplies it. The multiplicative rule this replaced gave
+partition holds some water and the floor does not bind, and moves it by at most
+`|Δ|` where the floor binds. Where the parent is non-positive every tag is
+removed, so `e` moves by the whole tag sum there, which can exceed `|Δ|`. It
+never multiplies `e`. The multiplicative rule this replaced gave
 `e_after = r · e_before` for every cell, so a cell that a limiter lifts every
 stage grew its error geometrically while `ρq_tot` stayed bounded (issue #64).
 
