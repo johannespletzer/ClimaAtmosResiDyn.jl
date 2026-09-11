@@ -97,15 +97,20 @@ one agent has worked this branch at once.
     for building an enthalpy-form transport of the tags as an audit. The owner
     approved building it, and it is not built.
   - **Sedimentation as transport of the tags is built** (`91b9bbb9`, FINDINGS
-    §8 and E32). Its tests pass on this branch and on #69's. The stacked PR's
-    branch, `claude/energy-source-tag-sedimentation` at `e8debaba`, exists only
-    locally, in the worktree `../ClimaAtmosResiDyn-repair`, and waits for the
-    owner's approval to push. That worktree was #69's. Switch it back with
+    §8 and E32). It is draft PR #70, stacked on #69, at `e8debaba`, and its
+    tests pass on this branch and on #69's. The worktree
+    `../ClimaAtmosResiDyn-repair` is on #70's branch now. Switch it back with
     `git switch claude/energy-source-tag-repair` before working on #69.
-  - **This branch lacks the review fixes pushed to #65 and #68.** Most are
-    docstrings. `git diff claude/tag-closure-experiments
-    claude/energy-source-tag-sedimentation -- src test` lists them. Whether to
-    merge #69's head here is the owner's call.
+  - **This branch carries the review fixes of #65 and #68,** merged from #69's
+    head with the owner's approval. Its model code differs from #70's only in
+    `src/parent_budget/report.jl` and `src/simulation/solve.jl`, which are its
+    own. Five test files pass on the merge.
+  - **C8 is prepared and not submitted.** `configs/c8_column_1m.yml` is the 1M
+    column for a day, with sedimentation moving the tags. The task list has the
+    command.
+  - **The enthalpy audit switch has a design and no code**
+    (`ENTHALPY_AUDIT_DESIGN.md`). It waits for the owner's answers to the four
+    decisions at its end.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for
