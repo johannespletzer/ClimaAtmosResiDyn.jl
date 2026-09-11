@@ -75,14 +75,26 @@ one agent has worked this branch at once.
     process to 60.7 J/kg and per record to the joule, and the sphere per process
     to 20.2 J/kg (C7). What the sphere's last 20 J/kg is, is open.
   - **PR state.** #65 and #68 are merged into `main`. #69, the implicit bracket
-    and the repair, and #70, sedimentation as transport, a draft, were
-    retargeted to `main` on 2026-09-11 at the owner's request. Both merge
-    cleanly, and neither needed a conflict fix. An Opus review of #69 was
-    started then. Check both PRs' CI before anything else touches them. The
-    review of #65 and #68 left these for the owner: `c·Δρ` from mass-changing
-    processes the tags do not bracket, a restart guard for a changed offset, the
-    `Float32` rounding floor, `parent` shadowed in tests, `nothing` inside a
-    broadcast, and `isfinite` before the conversion to `FT`.
+    and the repair, and #70, sedimentation as transport, a draft, target
+    `main`. #72, the audit, is a draft stacked on #70. On 2026-09-11, with the
+    owner's approval:
+      + #69 got the corrected repair help text and records comment, at
+        `0ae408d8`;
+      + #72 got C3, the offset in the audit's hyperdiffusion, and the corrected
+        timing wording, at `7a290c98`. Its unit tests (230) and integration
+        tests (66) pass. It has not merged #69's `0ae408d8` or #70's new
+        commit;
+      + #70 has the EDMF refusal and M2's label warnings, at `4c274aed` in
+        `../ClimaAtmosResiDyn-repair`, with #69 merged in. Its unit tests pass.
+        It is **not pushed**: pushing to #70 waits for the owner.
+
+    This branch has not merged `0ae408d8` or `7a290c98` yet. Merge them once
+    the D4 pair has finished, since those jobs run from this tree. Check the
+    PRs' CI before anything else touches them. The review of #65 and #68 left
+    these for the owner: `c·Δρ` from mass-changing processes the tags do not
+    bracket, a restart guard for a changed offset, the `Float32` rounding
+    floor, `parent` shadowed in tests, `nothing` inside a broadcast, and
+    `isfinite` before the conversion to `FT`.
   - **The owner decided to keep both** the energy source tags and the process
     record, as the main goal (FINDINGS §8). Task 1b of the task list names what
     is left to make the tags operational.
@@ -101,9 +113,7 @@ one agent has worked this branch at once.
     own. Five test files pass on the merge.
   - **The enthalpy audit switch is built** (`511e00e9`), as designed in
     `ENTHALPY_AUDIT_DESIGN.md` with the owner's four decisions. It is draft PR
-    #72, stacked on #70, at `a4a67187`, and its tests pass there and on this
-    branch. The worktree `../ClimaAtmosResiDyn-repair` is on #69's branch, at
-    its head, for the review below.
+    #72, stacked on #70, and its tests pass there and on this branch.
   - **C9 ran** (E34). Moved as enthalpy, the tags' closure residual stops
     growing after the first hour. At 24 h it is 1,069 times smaller than under
     tracer transport on the column and 11 times smaller on the sphere, and `ta`
@@ -115,8 +125,7 @@ one agent has worked this branch at once.
     largest gap, is the check (E38).
   - **The Opus review of #69 is done, and posted on the PR.** It found no
     blocker. Its five findings are fixed in `d545af90` and merged into #70
-    (`30d8bb4c`), #72 (`404ba98f`) and this branch (`602153b9`). The worktree
-    `../ClimaAtmosResiDyn-repair` is on #72's branch now.
+    (`30d8bb4c`), #72 (`404ba98f`) and this branch (`602153b9`).
   - **Why form A fails on the sphere, and where the leftover residuals come
     from, are recorded** (E36 to E39). Form A's global integral is the check,
     not its largest gap (E38).
@@ -126,11 +135,32 @@ one agent has worked this branch at once.
     flux reaches no tag (E40). Falling ice takes sedimentation's upward branch
     in every cell, and the partition closes through it (E41). 2M and P3 are
     disabled in the model on this branch. Configs D1 to D5 are written and
-    validated, and none has run. A user guide is drafted,
+    validated. D1 ran (E42), and the D4 pair was submitted. A user guide is
+    drafted,
     [USER_GUIDE_DRAFT.md](USER_GUIDE_DRAFT.md).
   - **What is left before operation is
     [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md).** Start from its decisions for
     the owner. The GPU is last, by the owner's decision.
+  - **The owner's decisions of 2026-09-11 are in
+    [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md).** Production is a GPU sphere in
+    Float32 with EDMF and 1M. EDMF is refused now and shared later.
+  - **D1 ran** (E42). Through an hour of falling ice the column stays closed
+    and the tags non-negative. Under 1M the microphysics tag and record are
+    exactly zero. What the upward branch moved cannot be told apart from
+    vertical diffusion.
+  - **R4 ran** (E39b, E43). A converged Newton solve removes 83% of the
+    audit's first-hour residual on the sphere. On C8's column the audit keeps
+    form A below 4.4e-7 J/kg for a day, and a converged solve takes form B to
+    −3.8e-3 J/m².
+  - **The D4 EDMF pair, jobs `13404536` and `13404537`,** was still building
+    after an hour, at full CPU, when this was written. `hpda2_test` stops a job
+    at two hours. Check `sacct`, and `output/d4_column_edmf*` on scratch. If it
+    timed out, the EDMF build with tags takes more than two hours on two cores,
+    and the pair needs a longer partition.
+  - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch, three
+    commits ahead of origin. `../ClimaAtmosResiDyn-audit` is on #72's branch,
+    level with origin. Its tracked `.buildkite/LocalPreferences.toml` names a
+    Levante MPI library, so tests there log an MPI error and still pass.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for
