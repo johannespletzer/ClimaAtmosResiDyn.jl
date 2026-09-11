@@ -212,10 +212,15 @@ same sphere, in `output/transport_ledger_sphere/`. What they found:
 **Next.** The owner approved both builds after C6. Each run still needs its own
 approval:
 
-  - sedimentation as transport of the tags, being built (FINDINGS §8), with a
-    1M column to test it;
+  - sedimentation as transport of the tags is built at `91b9bbb9`, and passes
+    its tests. A one-hour 1M column on the login node shows the tags now follow
+    it out at the ground (FINDINGS E32). A draft PR stacked on #69 is prepared
+    locally, on `claude/energy-source-tag-sedimentation` at `e8debaba`, and
+    waits for the owner's approval to push. A day-long 1M column, C8, would
+    test it at length;
   - the enthalpy-form audit switch. Both measurements meet the rule for building
-    it (E25, E31), and the sphere's says it needs a horizontal half.
+    it (E25, E31), and the sphere's says it needs a horizontal half. It is not
+    built.
 
 The first submission, jobs `13385435` to `13385439`, failed at startup. The
 repair's commit had registered `e_src_fix_<name>` without defining the function

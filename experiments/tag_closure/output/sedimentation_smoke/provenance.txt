@@ -1,0 +1,9 @@
+run: sedimentation_smoke
+kind: analysis run on the terrabyte login node, not a batch job, so this file is written by hand
+script: experiments/tag_closure/analysis/sedimentation_smoke.jl, as committed beside this directory
+command: julia +1.11 --project=.buildkite experiments/tag_closure/analysis/sedimentation_smoke.jl, with SMOKE_DIR=$SCRATCH/tag_closure/output/sedimentation_smoke
+config: experiments/tag_closure/configs/c6_column_repair.yml under 1-moment microphysics, with the diagnostic fall speed for cloud liquid, a precipitation record beside the other four, and the closure check every ten minutes; one hour at dt 10 s; run once as built and once with sediment_energy_source_tags! redefined to do nothing
+model code: that of 91b9bbb9
+machine: LRZ terrabyte login node, julia 1.11.9, ClimaComms CPUSingleThreaded
+date: 2026-09-11
+output: the two simulations' tables are left on scratch under $SCRATCH/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/. run.log holds them as printed

@@ -1,0 +1,77 @@
+# run.log for sedimentation_smoke: the script's output, from its run on the terrabyte login node.
+# Every distinct warning, first line only:
+┌ Warning: `energy_source_tags` tag `new_strat` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+┌ Warning: `energy_source_tags` tag `new_tropo` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+┌ Warning: `energy_process_record` lists `precipitation`, which records the sedimentation of precipitating species. Under 0-moment microphysics there is none, so its record stays zero there, which reads the same as a process that did nothing, and rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+┌ Warning: energy_source tag closure residual 0.0012546931014906144 exceeds the configured tolerance 1.0e-6 at t = 600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_moved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0012607018253865772 exceeds the configured tolerance 1.0e-6 at t = 1200.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_moved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.001267037194732963 exceeds the configured tolerance 1.0e-6 at t = 1800.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_moved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0013534954716017153 exceeds the configured tolerance 1.0e-6 at t = 2400.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_moved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0014570143677896399 exceeds the configured tolerance 1.0e-6 at t = 3000.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_moved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0015688090725577033 exceeds the configured tolerance 1.0e-6 at t = 3600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_moved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.001279249475966233 exceeds the configured tolerance 1.0e-6 at t = 600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_unmoved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0013035933367384269 exceeds the configured tolerance 1.0e-6 at t = 1200.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_unmoved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0013240152576208472 exceeds the configured tolerance 1.0e-6 at t = 1800.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_unmoved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0013657450458366307 exceeds the configured tolerance 1.0e-6 at t = 2400.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_unmoved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0014728818083512172 exceeds the configured tolerance 1.0e-6 at t = 3000.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_unmoved/output_0000/energy_source_tag_closure.csv.
+┌ Warning: energy_source tag closure residual 0.0015885509173499488 exceeds the configured tolerance 1.0e-6 at t = 3600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ/sedimentation_unmoved/output_0000/energy_source_tag_closure.csv.
+
+# The script's report:
+model state after one hour, with and without the tags moved:
+  ρ       identical
+  ρe_tot  identical
+  ρq_tot  identical
+  ρq_lcl  identical
+  ρq_rai  identical
+  uₕ      identical
+  u₃      identical
+precipitation record, column integral: signed -1327.4737707750155, gross 3771.813494094336 J m^-2
+residual, E less the region tags, column integral in J m^-2:
+  tags moved:       signed 196.29514126775473, gross 177377.14254025032
+  tags unmoved:     signed -3028.5553473660784, gross 179609.2510096465
+  unmoved - moved:  signed -3224.850488633822, gross 11717.043496725111
+tag minima in J m^-3, tags moved and unmoved:
+  ρe_src_strat    0.04517443872293501   0.04510220307533491
+  ρe_src_tropo    0.034007445787717146   0.034007445787717146
+  ρe_src_rad      1.2679856875951224e-149   1.2679928229823983e-149
+  ρe_src_sfc      2.6008861184304113e-266   2.603814161781669e-266
+  ρe_src_sub      2.6481111462953077e-32   6.85010329192131e-61
+  ρe_src_new_strat2.634713721375409e-32   2.634713721375409e-32
+  ρe_src_new_tropo4.486691009160065e-33   4.486691009160065e-33
+sedimentation_moved closure table:
+  time,total,tagged,residual,relative,gross_residual,gross_relative,scale,nonpositive_fraction
+  0.0,1.1298739844259547e8,1.1298739844259542e8,4.470348358154297e-8,3.9565017159196814e-16,3.488170169374527e-9,3.0872205373829646e-17,1.1298739844259547e8,0.0
+  600.0,1.130003883692322e8,1.1300019503063148e8,193.33860071003437,1.7109551878555907e-6,141780.80775263588,0.0012546931014906144,1.130003883692322e8,0.0
+  1200.0,1.1301314830507465e8,1.1301282358862571e8,324.7164489328861,2.873262569912012e-6,142475.88236089156,0.0012607018253865772,1.1301314830507465e8,0.0
+  1800.0,1.1302610255717726e8,1.1302571614596364e8,386.41121362149715,3.418778537692395e-6,143208.27591564605,0.001267037194732963,1.1302610255717726e8,0.0
+  2400.0,1.1303907547712345e8,1.130386908830541e8,384.59406934678555,3.402310817949132e-6,152997.8767723311,0.0013534954716017153,1.1303907547712345e8,0.0
+  3000.0,1.1305199760501541e8,1.1305167667618072e8,320.9288346916437,2.8387719057642383e-6,164718.3848178274,0.0014570143677896399,1.1305199760501541e8,0.0
+  3600.0,1.1306483729792817e8,1.1306464100278693e8,196.29514123499393,1.7361289851570052e-6,177377.14254025032,0.0015688090725577033,1.1306483729792817e8,0.0
+sedimentation_moved audit table:
+  time,untagged,untagged_relative,overclaimed,overclaimed_relative,orphaned,orphaned_relative,orphaned_volume_fraction,nonpositive_mass,nonpositive_mass_fraction
+  0.0,2.797045234315121e-9,2.4755373367908736e-17,6.911249350594062e-10,6.116832005920909e-18,0.0,0.0,0.0,0.0,0.0
+  600.0,70987.07317665651,0.0006282020283390894,70793.7345759794,0.0006264910731515252,0.0,0.0,0.0,0.0,0.0
+  1200.0,71400.29940491218,0.0006317875439782442,71075.58295597936,0.0006289142814083328,0.0,0.0,0.0,0.0,0.0
+  1800.0,71797.34356463989,0.0006352279866353817,71410.93235100617,0.0006318092080975813,0.0,0.0,0.0,0.0,0.0
+  2400.0,76691.23542083292,0.0006784488912097789,76306.64135149818,0.0006750465803919364,0.0,0.0,0.0,0.0,0.0
+  3000.0,82519.65682627178,0.0007299265698478104,82198.72799155564,0.0007270877979418295,0.0,0.0,0.0,0.0,0.0
+  3600.0,88786.71884075904,0.0007852726007715751,88590.4236994913,0.0007835364717861284,0.0,0.0,0.0,0.0,0.0
+sedimentation_unmoved closure table:
+  time,total,tagged,residual,relative,gross_residual,gross_relative,scale,nonpositive_fraction
+  0.0,1.1298739844259547e8,1.1298739844259542e8,4.470348358154297e-8,3.9565017159196814e-16,3.488170169374527e-9,3.0872205373829646e-17,1.1298739844259547e8,0.0
+  600.0,1.130003883692322e8,1.130009548149439e8,-566.4457117021084,-5.012776680476795e-6,144555.68760532112,0.001279249475966233,1.130003883692322e8,0.0
+  1200.0,1.1301314830507465e8,1.130144484674047e8,-1300.1623300462961,-1.1504522699753111e-5,147323.18709432695,0.0013035933367384269,1.1301314830507465e8,0.0
+  1800.0,1.1302610255717726e8,1.1302788539252007e8,-1782.835342809558,-1.5773660264961035e-5,149648.28429512135,0.0013240152576208472,1.1302610255717726e8,0.0
+  2400.0,1.1303907547712345e8,1.130412654023988e8,-2189.9252753406763,-1.9373170437720604e-5,154382.55731883433,0.0013657450458366307,1.1303907547712345e8,0.0
+  3000.0,1.1305199760501541e8,1.1305459133381169e8,-2593.72879627347,-2.294279491933898e-5,166512.23067019257,0.0014728818083512172,1.1305199760501541e8,0.0
+  3600.0,1.1306483729792817e8,1.1306786585327555e8,-3028.5553473830223,-2.678600544396236e-5,179609.2510096465,0.0015885509173499488,1.1306483729792817e8,0.0
+sedimentation_unmoved audit table:
+  time,untagged,untagged_relative,overclaimed,overclaimed_relative,orphaned,orphaned_relative,orphaned_volume_fraction,nonpositive_mass,nonpositive_mass_fraction
+  0.0,2.797045234315121e-9,2.4755373367908736e-17,6.911249350594062e-10,6.116832005920909e-18,0.0,0.0,0.0,0.0,0.0
+  600.0,71994.62094678833,0.0006371183496426909,72561.06665853277,0.0006421311263235422,0.0,0.0,0.0,0.0,0.0
+  1200.0,73011.51238213283,0.0006460444070192705,74311.67471219414,0.0006575489297191566,0.0,0.0,0.0,0.0,0.0
+  1800.0,73932.7244761521,0.0006541207986779095,75715.55981896927,0.0006698944589429379,0.0,0.0,0.0,0.0,0.0
+  2400.0,76096.31602173205,0.0006731859376993244,78286.24129710224,0.000692559108137306,0.0,0.0,0.0,0.0,0.0
+  3000.0,81959.25093697719,0.0007249695067160951,84552.9797332154,0.0007479123016351221,0.0,0.0,0.0,0.0,0.0
+  3600.0,88290.34783114023,0.0007808824559530683,91318.9031785063,0.0008076684613968808,0.0,0.0,0.0,0.0,0.0
+output kept in /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/sedimentation_smoke/jl_KoCiJJ

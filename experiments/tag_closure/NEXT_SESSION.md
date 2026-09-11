@@ -96,8 +96,16 @@ one agent has worked this branch at once.
     with a horizontal part half the vertical one. Both meet the reviewer's rule
     for building an enthalpy-form transport of the tags as an audit. The owner
     approved building it, and it is not built.
-  - **Sedimentation as transport of the tags** was approved by the owner and is
-    being built on this branch (FINDINGS §8).
+  - **Sedimentation as transport of the tags is built** (`91b9bbb9`, FINDINGS
+    §8 and E32). Its tests pass on this branch and on #69's. The stacked PR's
+    branch, `claude/energy-source-tag-sedimentation` at `e8debaba`, exists only
+    locally, in the worktree `../ClimaAtmosResiDyn-repair`, and waits for the
+    owner's approval to push. That worktree was #69's. Switch it back with
+    `git switch claude/energy-source-tag-repair` before working on #69.
+  - **This branch lacks the review fixes pushed to #65 and #68.** Most are
+    docstrings. `git diff claude/tag-closure-experiments
+    claude/energy-source-tag-sedimentation -- src test` lists them. Whether to
+    merge #69's head here is the owner's call.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for

@@ -567,6 +567,35 @@ The bounds: one configuration, five hours, and the first hour left out. *Job
 `13399604` on terrabyte, script and model code of `6af01228`;
 `output/transport_ledger_sphere/`.*
 
+**E32. Moved with the falling water, the tags follow sedimentation out of the
+column.** `analysis/sedimentation_smoke.jl` runs `c6_column_repair` under
+1-moment microphysics for an hour, with the cloud falling at its diagnostic
+speed. It runs once as built, and once with the tags' sedimentation switched
+off, as before it existed. The model's state is identical in every field in the
+two runs.
+
+  - By the `precipitation` record, sedimentation changed the column's `ρe_tot`
+    by −1,327 J m⁻² net and 3,772 J m⁻² gross.
+  - Without the transport, the column's signed residual grows at every check
+    and reaches −3,029 J m⁻² at 1 h. The tags keep energy that sedimentation
+    took out at the ground. With it, the residual is +196 J m⁻² at 1 h, 15
+    times smaller, and it does not grow steadily: +193, +325, +386, +385, +321
+    and +196 at the ten-minute checks.
+  - The two runs' residuals differ by −3,225 J m⁻² signed and 11,717 gross.
+    That is the part of sedimentation the tags now follow. The gross is 3.1
+    times the record's. That fits the tags' total also carrying `c` times the
+    mass that moved: by an estimate not read from the run, liquid near 284 K
+    carries about 52 kJ kg⁻¹ with its geopotential, against `c` = 110.5.
+  - The gross residual barely changes, 177,377 against 179,609 J m⁻². Pressure
+    work dominates it, as on the 0-moment column (E25).
+  - Every tag stays non-negative in both runs, with the repair on.
+
+The bounds: one warm column for one hour, liquid only. Ice, where the energy
+flux points up while the water falls, is not reached. The integration test
+covers that direction on a set flux. What the +196 J m⁻² left is, is not
+separated, and the tags' missing Jacobian block is one candidate. *Terrabyte
+login node, model code of `91b9bbb9`; `output/sedimentation_smoke/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -882,6 +911,13 @@ Kept because a later reader will otherwise re-derive them.
     growing close to the square of time, where only radiation's record is
     nonzero. C7 ran with the repair off, so the clamp on negative tags is a
     candidate, as are the per-tag limiter and the finite-step loss.
+  - **What the 1M column's last signed residual is (E32).** +196 J m⁻² after
+    an hour with the tags moved by sedimentation, against −3,029 without. The
+    tags' missing Jacobian block for sedimentation is one candidate.
+  - **Sedimentation's upward branch in a run (E32).** Where the water carries
+    negative energy against the reference plus offset, the tags take the lower
+    cell's shares. Only the integration test's set flux reaches that branch. A
+    run with ice would.
   - **How the column's unrecorded 1.37 MJ m⁻² splits (E23)** between
     subsidence, the 0-moment rain-out and the numerics. A column run that
     records subsidence and microphysics, on the code of §8, would split it.
@@ -1014,7 +1050,27 @@ Kept because a later reader will otherwise re-derive them.
       - about 450 lines of model code and 250 of tests. A 1M column tests it,
         but does not reach ice.
 
-    That is an assessment, not a measurement. Building it waits for the owner.
+    That is an assessment, not a measurement. The owner approved building it
+    after C6.
+
+    **Built: sedimentation as transport of the source tags** (`91b9bbb9`). It
+    follows the agent's design, without the Jacobian block:
+
+      + `sediment_energy_source_tags!` runs in
+        `vertical_advection_of_water_tendency!` for each sedimenting species,
+        on the parent's energy flux plus `c` times its mass flux;
+      + each face takes the shares of the cell that loses the energy. That is
+        the cell below where the energy flux points up while the water falls;
+      + the partition tags' shares are divided by their sum, so their fluxes
+        add up to the parent's at every face;
+      + without an offset it warns at initialization.
+
+    The tests check the flux sum on a 1M column to 100 eps, and the donor in
+    both directions on a step partition. They pass on this branch and on #69's.
+    Run twice for an hour on a 1M column, with the tags moved and without, the
+    column's signed residual is 15 times smaller with them (E32). It is about
+    270 lines of model code with docstrings, and 140 of tests. A draft PR
+    stacked on #69 is prepared locally and waits for the owner.
 
  4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
     and the energy family has no rescale. C1 solved a simulated day in 5.8
