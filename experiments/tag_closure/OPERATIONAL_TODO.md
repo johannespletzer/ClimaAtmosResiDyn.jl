@@ -238,10 +238,11 @@ tendency, with B4; and M2. Still open:
     skip it when nothing sediments.
   - **P3, N.** A string allocation per tracer per evaluation when the audit is
     on (`energy_source_tags.jl:148`).
-  - **P4, B while production uses EDMF. The EDMF build time with tags.** The
-    D4 pair did not finish building in two hours on two cores. If its control
-    without tags does, the tags make the EDMF build slow, and that needs
-    looking into before operation. Pending the control, job `13414334`.
+  - **P4, B. The EDMF build time with tags.** With 8 tags, 5 records, the
+    audited check and 24 diagnostics, the D4 column did not finish building in
+    two hours on two cores. Without them it builds in 410 s (E44). Next,
+    separate the part that does it: build with the tags alone, then add the
+    records, then the diagnostics. Then find and fix the cause. M, with runs.
 
 ## 6. Defaults and UX
 

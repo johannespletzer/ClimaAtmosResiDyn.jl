@@ -1060,6 +1060,27 @@ iterations to a relative tolerance of 1e-10, as in E39.
 
 *Job `13408403` on terrabyte at `78586e39`; `output/newton_lag/c8_variants_slurm/`.*
 
+**E44. With the tags, the EDMF column does not build in two hours. Without
+them it builds in 410 s.** The D4 pair and its control ran on the same node of
+`hpda2_test`, with two cores each. Every model key is the same in the three
+runs.
+
+| run                                         | besides the model                                                        | build                                                        | outcome                               |
+|:------------------------------------------- |:------------------------------------------------------------------------ |:------------------------------------------------------------ |:------------------------------------- |
+| `d4_column_edmf`, `d4_column_edmf_enthalpy` | 8 tags, 5 records, the audited closure check, 24 hourly diagnostics      | not finished in 2 h                                          | stopped at the limit, with no output  |
+| `d4_column_edmf_notags`                     | nothing                                                                  | 410 s: cache 129 s, tendency function 228 s, integrator 53 s | ran its hour, 18.5 minutes in all     |
+
+  - So what the tags bring makes the build of an EDMF column more than 17
+    times slower. Columns without EDMF build with the same kinds of tags in
+    minutes (D1, C8).
+  - Which part does it is not separated: the tags, the records, the check or
+    the diagnostics.
+  - Production uses EDMF, so this blocks operation (P4 in
+    `OPERATIONAL_TODO.md`).
+
+*Jobs `13404536` and `13404537` at `78586e39`, and `13414334` at `41adabc5`, on
+terrabyte; `output/d4_column_edmf_notags/`. The D4 pair left no output.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

@@ -260,6 +260,10 @@ vertical diffusion does not make it (§6).
 tags takes longer than that on two cores. With C1a merged, the pair runs only on
 code from before C1a, or after the sub-grid sharing (B) is built.
 
+**D4's build control, done on 2026-09-11** (FINDINGS E44). Job `13414334` ran
+the D4 column without tags, and built it in 410 s. So what the tags bring makes
+the EDMF build take more than two hours. Which part does it is not separated.
+
 **R4, done on 2026-09-11** (FINDINGS E39b, E43). Job `13408404` shows that a
 converged Newton solve removes 83% of the audit's first-hour residual on the
 sphere. Job `13408403` shows that on C8's column the audit keeps form A below

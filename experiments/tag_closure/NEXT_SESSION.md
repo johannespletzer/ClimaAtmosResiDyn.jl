@@ -162,9 +162,9 @@ one agent has worked this branch at once.
     runs only on code from before C1a, or after the sub-grid sharing is built.
     The owner chose to time the build without tags first. The control,
     `d4_column_edmf_notags`, job `13414334`, was submitted at `41adabc5` on
-    2026-09-11. If it builds and steps within the two hours, the tags make the
-    EDMF build slow, which matters because production uses EDMF. Hand it back
-    from its Slurm log and `output/d4_column_edmf_notags/` on scratch.
+    2026-09-11. It built in 410 s and ran its hour (E44). So what the tags
+    bring makes the EDMF build take more than two hours. That blocks operation
+    while production uses EDMF (P4 in the to-do list).
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and
     `../ClimaAtmosResiDyn-audit` on #72's, both level with origin. The audit
     worktree's tracked `.buildkite/LocalPreferences.toml` names a Levante MPI

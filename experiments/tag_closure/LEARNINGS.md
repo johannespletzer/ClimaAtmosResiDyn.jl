@@ -1182,6 +1182,28 @@ With C1a merged, D4 also runs only on code from before C1a.
 submitting it to a capped queue, and have the log flushed, so that a killed job
 still says where it was.
 
+## D4's build control. The EDMF column without tags
+
+Ran at `41adabc5` on 2026-09-11, `hpda2_test`, SLURM job `13414334`, 18.5
+minutes. The owner approved it.
+
+**What it was for.** The D4 pair did not finish building in two hours. The
+control asks whether the EDMF column builds slowly anyway, or only with the
+tags.
+
+**What it showed.** Without tags the column builds in 410 s and runs its hour,
+on the node the D4 pair used. So what the tags bring makes the EDMF build more
+than 17 times slower (E44).
+
+**Barrier.** Which part does it, the tags, the records, the check or the
+diagnostics, is not separated.
+
+**Class.** A cost of the diagnostic, and one that blocks operation while
+production uses EDMF.
+
+**Carry-over to the source tags.** Time the build of every new configuration
+with tags beside the same configuration without them.
+
 ## R4. The Newton lag, on the sphere and on C8's column
 
 Ran at `78586e39` on 2026-09-11, `hpda2_test`, as two SLURM jobs with their

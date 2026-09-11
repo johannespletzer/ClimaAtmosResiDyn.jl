@@ -1,0 +1,85 @@
+# run.log for d4_column_edmf_notags, trimmed from SLURM job 13414334's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    d4_column_edmf_notags
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/d4_column_edmf_notags.yml
+SLURM job:       13414334
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl
+Commit:          41adabc5e5e637b148383ca5f9c11e6a34fc6b74 (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/d4_column_edmf_notags
+Start time:      2026-09-11T14:14:02+02:00
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) gcc/13.2.0(default)           
+ 2) python/3.12                             4) openmpi/4.1.8-gcc13(default)  
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/d4_column_edmf_notags/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-11T14:32:32+02:00
+# The .err, without the model's type listing:
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/d4_column_edmf_notags.yml
+┌ Info: numerics 
+└                     `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+┌ Info: AtmosModel: 
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+└               `rain_snow_accretion`::`RainSnowAccretion`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (58.536 μs, 4.7 KiB)
+[ Info: Built cache (128.884 s, 28.43 GiB)
+[ Info: Assembled callbacks (159.484 ms, 15.01 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (227.957 s, 6.56 GiB)
+[ Info: Initialized integrator (52.924 s, 6.96 GiB)
+[ Info: Set up diagnostics (7.703 s, 293.89 MiB)
+┌ Info: Simulation info
+└   output_dir = "output/d4_column_edmf_notags/output_0000"
+┌ Info: Running
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:27.130
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:30.088
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:31.275
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:31.289
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:31.294
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:31.307
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:31.320
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:31.329
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:31.342
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:31.355
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:31.368
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T14:32:31.382
+[ Info: solve! walltime = 0.339
+[ Info: sypd: 29.054
+[ Info: wall_time_per_timestep: 11 milliseconds, 315 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 9.43 GiB
+┌ Info: Tag-closure run finished
+└   result.ret_code = :success
+┌ Info: Where it went
+└   simulation.output_dir = "output/d4_column_edmf_notags/output_0000"
+[ Info: No closure table was written. Expected when the run configures no closure check, and a symptom otherwise.
