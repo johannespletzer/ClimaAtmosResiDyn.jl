@@ -36,16 +36,16 @@ signed process tag that moves. This page does not cover it. See
 
 | configuration | energy source tags | energy records |
 |:-- |:-- |:-- |
-| 0M or 1M, no EDMF | yes. 0M measured on a column and a sphere, 1M on a warm column, a day each | yes |
+| 0M or 1M, no EDMF | yes. 0M measured on a column and a sphere, 1M on a warm column, a day each, and 1M with ice on a cold column for an hour (E42) | yes |
 | dry, no EDMF | yes, by the code. Not measured for this family | yes |
 | 2M, no EDMF | no. The model itself disables 2M on this branch, pending a CloudMicrophysics fix (`src/cache/precomputed_quantities.jl:160-167`). By the code, the tags need nothing beyond 1M once it returns | no |
 | 2MP3 (P3 ice) | no. Disabled with 2M, and its sedimentation has further gaps behind that | no |
-| `turbconv: edonly_edmfx` | should run, by the code; not yet tried. The eddy diffusion moves the tags as plain tracers | yes |
-| `turbconv: prognostic_edmfx`, `edmfx_vertical_diffusion: true` (every shipped EDMF config) | no. The run fails with `type NamedTuple has no field e_src_<name>`. The updraft diffusion asks for a tag field the updraft does not carry | yes |
-| `turbconv: prognostic_edmfx`, `edmfx_vertical_diffusion: false` | should run, by the code; not yet stepped. The tags miss the sub-grid mass flux and the sedimentation corrections, so do not read `e_src_res` there as the tags' closure | yes |
+| `turbconv: edonly_edmfx` | should run, by the code; not yet tried. The eddy diffusion moves the tags as plain tracers, and the model warns | yes |
+| `turbconv: prognostic_edmfx` | no. Refused at startup (#70, `4c274aed`). Before that, every shipped EDMF config failed with `type NamedTuple has no field e_src_<name>`, and with `edmfx_vertical_diffusion: false` the tags missed the sub-grid mass flux and the sedimentation corrections (E40) | yes |
 
-Nothing refuses these configurations at startup today. A design to refuse or
-support them is with the owner.
+The refusal stays until the sub-grid fluxes are shared among the tags, which
+the owner decided to build later
+([SUBGRID_AND_MICROPHYSICS_DESIGN.md](../../experiments/tag_closure/SUBGRID_AND_MICROPHYSICS_DESIGN.md)).
 
 `water_process_record`, like the water tags, needs `microphysics_model: "0M"`
 or `"1M"`. It is refused otherwise.
@@ -389,23 +389,28 @@ type and a full compile, which dominates a short job (T1).
 |:-- |:-- |
 | the total the tags split is non-positive over some % of the domain | set or raise `energy_source_tag_offset` |
 | condensate sediments but there is no offset | set an offset |
-| a tag or a record lists `precipitation` | expected with `all` or `moist`. Such a tag receives nothing from it |
+| a tag lists `precipitation` | expected with `all` or `moist`. Such a tag receives nothing from it |
+| a record lists `precipitation` where nothing sediments, under 0M or dry | expected with `all` or `moist`. The record stays zero |
+| a tag or a record lists `microphysics` under a scheme other than 0M | expected with `all` or `moist`. It stays zero, and the rain-out is in `precipitation` |
+| `energy_source_tags` with `turbconv: edonly_edmfx` | expected. The eddy diffusion moves the tags as tracers, and the difference goes to `e_src_res` |
 | the region masks do not add up to 1 | use one region and its complement |
 
 Refused at startup: `enthalpy` without an offset, an offset or `enthalpy`
 without tags, a closure check without its family, a family with only overlays,
-and a tag named `res`.
+a tag named `res`, and `turbconv: prognostic_edmfx` (since #70's `4c274aed`).
+The `microphysics` and `precipitation` rows above follow the scheme since that
+commit too. Before it, `precipitation` warned under every scheme.
 
 ## Proposed fixes to the existing pages
 
 Each was checked against the code on this branch.
 
- 1. **`tracer_configuration.md:40-43`** says energy source tags "have no repair
+ 1. *Done in #69, `0ae408d8`.* **`tracer_configuration.md:40-43`** says energy source tags "have no repair
     at all and no non-negativity guarantee". The repair exists and is on by
     default (`energy_source_tag_repair`). Say: "The repair keeps them
     non-negative where their total is positive, and logs every change in
     `e_src_fix_<name>`. Without it they are not guaranteed non-negative."
- 2. **`config/default_configs/default_config.yml:478`**, the help of
+ 2. *Done in #69, `0ae408d8`.* **`config/default_configs/default_config.yml:478`**, the help of
     `energy_source_tags`, says "unlimited transport has no repair". Same fix.
  3. **`tracer_configuration.md:410-414`** says the energy tags "never receive
     implicit transport or EDMFX sub-grid mass fluxes", "deliberate, because each
@@ -421,12 +426,12 @@ Each was checked against the code on this branch.
  5. **`energy_source_tags.md:292-294`**, under the audit: "the SGS closures"
     stay as under `tracer`. Add that the EDMF mass flux reaches the tags in
     neither mode.
- 6. **`energy_source_tags.md:338`**, "grid-scale only". Add the consequences:
+ 6. *Done in #70, `4c274aed`.* **`energy_source_tags.md:338`**, "grid-scale only". Add the consequences:
     no sub-grid mass flux, and a failed run with `edmfx_vertical_diffusion: true`.
  7. **`energy_source_tags.md:211-227`**, the tested boundary. The integration
     test now also covers sedimentation and the audit on a column and a small
     sphere (items 8 to 10 of `test/energy_source_tags_integration.jl`).
- 8. **`process_record.md:120-125`** says `microphysics` is recorded however
+ 8. *Done in #70, `4c274aed`.* **`process_record.md:120-125`** says `microphysics` is recorded however
     microphysics is stepped, and that the water side is a no-op under 1M. The
     energy side is a no-op too, under 1M, 2M and P3: the microphysics there
     never writes `ρe_tot`.

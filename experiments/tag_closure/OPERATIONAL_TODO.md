@@ -27,14 +27,19 @@ Done or built:
 
   - #65 and the offset (#68) are merged, with the loss-half integration test.
   - The implicit bracket and the repair are #69, which targets `main`. Its
-    review found no blocker, and its five findings are fixed.
-  - Sedimentation as transport is #70, a draft on `main`.
-  - The enthalpy audit is #72, a draft stacked on #70.
+    review found no blocker, and its five findings are fixed. Its help text is
+    corrected (`0ae408d8`).
+  - Sedimentation as transport is #70, a draft on `main`. It now refuses
+    `prognostic_edmfx` with tags and has M2's label warnings (`4c274aed`).
+  - The enthalpy audit is #72, a draft stacked on #70. It now carries the
+    offset in its hyperdiffusion (C3) and states its timing correctly
+    (`7a290c98`).
   - Measured: 0M on a column and on a sphere, and 1M on a warm column, a day
-    each (E26 to E39).
+    each (E26 to E39, E43). 1M with ice on a cold column, for an hour (E42).
 
-Not yet run: EDMF, ice through time, 2M and P3, Float32, a restart, anything
-longer than a day, and the GPU.
+Not yet run: EDMF, ice beyond an hour, 2M and P3, Float32, a restart, anything
+longer than a day, and the GPU. The D4 EDMF pair and D1's twin without vertical
+diffusion were submitted on 2026-09-11.
 
 ## Decided on 2026-09-11
 
@@ -67,14 +72,14 @@ longer than a day, and the GPU.
 
 ## 1. Merge the stack
 
-  - **B, #69.** Fix the stale help text at `default_config.yml:478`,
-    "unlimited transport has no repair" (D2). Then merge.
-  - **B, #70.** Before it leaves draft, refuse or document the EDMF
-    sedimentation gap (C1a, E40). Also run D1, or say plainly that ice is
-    checked only on a state and over one minute (E41).
-  - **B, #72.** Before it leaves draft: C3 and its test, the timing wording
-    (R2), and E35 to E39 and the audit's scope in the docs. Then retarget it to
-    `main` after #70.
+  - **B, #69.** ~~Fix the stale help text at `default_config.yml:478`~~, done
+    in `0ae408d8`. Then merge.
+  - **B, #70.** ~~Refuse or document the EDMF sedimentation gap (C1a)~~, done
+    in `4c274aed`. ~~Run D1~~, done (E42). Nothing else in this list holds it
+    in draft.
+  - **B, #72.** ~~C3 and its test, and the timing wording (R2)~~, done in
+    `7a290c98`. Still before it leaves draft: E35 to E43 and the audit's scope
+    in the docs. Then retarget it to `main` after #70.
 
 ## 2. Code and correctness
 
@@ -82,16 +87,16 @@ longer than a day, and the GPU.
 
 From E40, E41 and the design.
 
-  - **C1a, B if production uses EDMF. Refuse `prognostic_edmfx` with energy
-    source tags now.** This is the design's option A, with M1. Allow
+  - **C1a, B. Refuse `prognostic_edmfx` with energy source tags now.** Done in
+    #70, `4c274aed`. This is the design's option A, with M1. It allows
     `edonly_edmfx`, with a warning that its eddy diffusion moves the tags as
-    tracers. Refuse 2MP3 until the parent's P3 is fixed. About 40 lines, with
-    no compile in the tests.
-      - Today nothing refuses it.
-      - With the shipped settings the run fails, with
-        `type NamedTuple has no field e_src_<name>`.
-      - With `edmfx_vertical_diffusion: false`, the whole sub-grid energy flux
-        lands in `e_src_res` (E40).
+    tracers. It does not refuse 2MP3, which the model's own gate refuses
+    already; that waits for the gate to lift (M5). Before it:
+      - nothing refused `prognostic_edmfx`;
+      - with the shipped settings the run failed, with
+        `type NamedTuple has no field e_src_<name>`;
+      - with `edmfx_vertical_diffusion: false`, the whole sub-grid energy flux
+        landed in `e_src_res` (E40).
   - **C1b, B if production uses EDMF. Share the parent's sub-grid fluxes of
     `E` by the losing cell's shares.** This is option B, one PR, about 220
     lines and 200 of tests.
@@ -108,8 +113,10 @@ From E40, E41 and the design.
     the audit beyond the scope decided on 2026-09-11. Wait for the D4 pair.
   - **C1d, N. Option C, per-updraft tag shares.** About three times B. Only if
     a question needs provenance mixed by convection.
-  - **M2, S. Label warnings that see the microphysics model.** Warn on
-    `microphysics` under 1M, 2M and P3, where its tags and records stay zero.
+  - **M2, S. Label warnings that see the microphysics model.** Done in #70,
+    `4c274aed`. A tag or a record that lists `microphysics` warns under every
+    scheme but 0M, where it stays zero; C8's record is exactly zero for a day.
+    A record that lists `precipitation` warns only where nothing sediments.
     This covers the first half of R3.
   - **M3, S. A test that the two lists of sedimenting species agree:**
     `water_advection.jl:51-56` and `gs_sedimenting_mass_candidates`.
@@ -132,7 +139,8 @@ tendency, with B4; and M2. Still open:
   - **C2, B. A restart guard.** Write the offset, the tag set, the transport
     and the repair setting into the checkpoint. Fail with a named key on a
     mismatch (`restart.jl:34-39`). S to M.
-  - **C3, S, in #72. The audit's hyperdiffusion.**
+  - **C3, S, in #72. The audit's hyperdiffusion.** Done in `7a290c98`. The
+    integration test's sphere item now checks the whole change in `E`.
       - `hyperdiffusion.jl:495-497` takes the water hyperdiffusion flux out of
         `ρ` too. So `c·Δρ` from hyperdiffusion reaches `e_src_res`.
       - Add `c` to the water part of the shared flux.
@@ -184,16 +192,19 @@ tendency, with B4; and M2. Still open:
     sponges, topography and 1M, with `transport_ledger.jl`. It sizes C1 and
     C4. It needs C1a or C1b first, since EDMF with tags fails today.
   - **V3, S.** Float32 on a CPU sphere. The GPU half is in section 8.
-  - **V4, S. D1.** Ice through sedimentation's upward branch, for an hour. It
-    runs today.
+  - **V4, S. D1.** Ice through sedimentation's upward branch, for an hour.
+    Ran (E42). Its twin without vertical diffusion, approved and submitted on
+    2026-09-11, separates the branch from diffusion.
   - **V5, S.** Restart equivalence: two segments against one run, with the
     offset and the repair.
   - **V6.** Topography (S). D2 and D3, when the model runs 2M and P3 (N unless
     production uses them).
   - **The D4 pair, S.** EDMF on the DYCOMS column, `tracer` and `enthalpy`,
     with `edmfx_vertical_diffusion: false`. Today it measures the gap that B
-    must close. After B it validates B. D5 is meant for after B.
-  - **R4, S.**
+    must close. After B it validates B. D5 is meant for after B. Submitted on
+    2026-09-11, on code without C1a. Once C1a is merged, D4 runs only on such
+    code, or after B.
+  - **R4, S.** Ran (E39b, E43).
       - `c8_variants.jl`: a day of C8 under the audit, a converged Newton
         solve, and an hour under tracer transport. About 30 minutes.
       - `first_hour_sphere.jl`: two hours, one Newton iteration against a
@@ -255,16 +266,15 @@ tendency, with B4; and M2. Still open:
       - which check to trust where;
       - E35 to E41.
   - **D2, S. Stale text.** The guide lists ten fixes, each checked against the
-    code. The clearest:
-      - `default_config.yml:478` and `tracer_configuration.md:40-43` say there
-        is no repair;
+    code. Four are done: the repair texts in #69, and the EDMF caveat and the
+    `microphysics` record in #70. The clearest of the rest:
       - `tracer_configuration.md:410-414` and `tracer_config.jl:564-569`
         misstate how the tags move;
       - `energy_source_tags.md:90-96` is wrong under EDMF;
-      - `process_record.md:120-125` omits that the energy record of
-        `microphysics` is zero under 1M, 2M and P3;
       - no page defines form A and form B.
-  - **R2, S. Three statements to correct.**
+  - **R2, S. Three statements to correct.** Done: the timing in #72
+    (`7a290c98`) and in `ENTHALPY_AUDIT_DESIGN.md`, the "exact" comment in #69
+    (`0ae408d8`), and "ρ is not hyperdiffused" with C3.
       - The audit's timing. The tags take the solved stage state, and the
         parent's side is the one-iteration increment. Fix it in
         `docs/src/energy_source_tags.md`, the kernel's docstring and
@@ -288,5 +298,6 @@ tendency, with B4; and M2. Still open:
 
 ## Open science, not blocking
 
-  - C8's form A over a day. Most likely the per-tag transport (E39).
+  - ~~C8's form A over a day.~~ The per-tag transport (E43).
+  - What the sphere's converged 17% of the first-hour residual is (E39b).
   - E16's remainder, E24 and E14.
