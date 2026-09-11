@@ -147,6 +147,8 @@ makedocs(;
                 "Architecture" => "parent_budget/architecture.md",
                 "Coverage Registry" => "parent_budget/coverage.md",
                 "Implementation Plan" => "parent_budget/plan.md",
+                "Closure Memo" => "parent_budget/closure_memo.md",
+                "Closure Plan" => "parent_budget/closure_plan.md",
             ],
         ],
     ],

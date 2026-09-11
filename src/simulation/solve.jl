@@ -117,6 +117,11 @@ function write_parent_budget_report(simulation, comms_ctx)
     )
     @info "Parent-budget report written" path
     @info PB.budget_summary(adapter)
+    # A failed identity is a finding about the run, so it is raised above the
+    # summary. The return code does not change: the ledger is a diagnostic.
+    failed = PB.failed_claims(adapter)
+    isempty(failed) ||
+        @warn "Parent-budget claims failed on the last accepted step" failed
     return nothing
 end
 
