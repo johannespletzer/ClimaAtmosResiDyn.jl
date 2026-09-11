@@ -205,7 +205,8 @@ tendency, with B4; and M2. Still open:
     2026-09-11 on code without C1a, and stopped at `hpda2_test`'s two-hour
     limit before it stepped: the EDMF build with tags takes longer than that on
     two cores. With C1a merged, D4 runs only on code from before C1a, or after
-    B.
+    B. The owner chose to time the build without tags first: the control
+    `d4_column_edmf_notags`, job `13414334`, and P4.
   - **R4, S.** Ran (E39b, E43).
       - `c8_variants.jl`: a day of C8 under the audit, a converged Newton
         solve, and an hour under tracer transport. About 30 minutes.
@@ -237,6 +238,10 @@ tendency, with B4; and M2. Still open:
     skip it when nothing sediments.
   - **P3, N.** A string allocation per tracer per evaluation when the audit is
     on (`energy_source_tags.jl:148`).
+  - **P4, B while production uses EDMF. The EDMF build time with tags.** The
+    D4 pair did not finish building in two hours on two cores. If its control
+    without tags does, the tags make the EDMF build slow, and that needs
+    looking into before operation. Pending the control, job `13414334`.
 
 ## 6. Defaults and UX
 

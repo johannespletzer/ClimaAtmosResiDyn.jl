@@ -160,7 +160,11 @@ one agent has worked this branch at once.
     `hpda2_test`'s two-hour limit, still building, with no output. The EDMF
     build with tags takes longer than that on two cores. With C1a merged, D4
     runs only on code from before C1a, or after the sub-grid sharing is built.
-    What to do with it is the owner's call.
+    The owner chose to time the build without tags first. The control,
+    `d4_column_edmf_notags`, job `13414334`, was submitted at `41adabc5` on
+    2026-09-11. If it builds and steps within the two hours, the tags make the
+    EDMF build slow, which matters because production uses EDMF. Hand it back
+    from its Slurm log and `output/d4_column_edmf_notags/` on scratch.
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and
     `../ClimaAtmosResiDyn-audit` on #72's, both level with origin. The audit
     worktree's tracked `.buildkite/LocalPreferences.toml` names a Levante MPI
