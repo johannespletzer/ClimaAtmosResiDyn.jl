@@ -553,6 +553,7 @@ adjusted from what was learned before they are submitted.
 | `c8_column_1m` | `phase_c.sh` | C8, `c6_column_repair` under 1-moment microphysics, with sedimentation moving the tags |
 | `c9_column_enthalpy` | `phase_c.sh` | C9, `c6_column_no_repair` with the tags moved as enthalpy |
 | `c9_sphere_enthalpy` | `phase_c.sh` | C9, `c7_sphere_mp` with the tags moved as enthalpy |
+| `c10_sphere_enthalpy_repair` | `phase_c.sh` | C10, `c9_sphere_enthalpy` with the repair on and its ledgers in the output |
 
 C2, the implicit-path brackets, needs the owner's approval and a code change,
 and no configuration for it is written. C1, the reference shift, needs approval

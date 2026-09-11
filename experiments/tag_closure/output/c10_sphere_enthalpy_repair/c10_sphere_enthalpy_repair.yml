@@ -1,0 +1,235 @@
+sleve_eta: 0.7
+era5_diurnal_warming: ~
+prognostic_tke: false
+use_newton_rtol: false
+era5_ic_full_pressure: false
+external_forcing: ~
+t_end: "1days"
+c_amd: 0.29
+era5_initial_condition_dir: ~
+check_steady_state: false
+fixed_terminal_velocity_ice: true
+update_jacobian_every: "solve"
+test_dycore_consistency: false
+add_isothermal_boundary_layer: true
+rad: "gray"
+cloud_model: "quadrature"
+surface_setup: "DefaultExchangeCoefficients"
+cloud_ice_snow_accretion: "CloudIceSnowAccretion"
+energy_source_tag_transport: "enthalpy"
+microphysics_n_substeps: 3
+insolation: "idealized"
+snow_melt: "SnowMelt"
+water_process_record: ~
+edmfx_filter: false
+tracer_upwinding: "vanleer_limiter"
+edmfx_sgs_diffusive_flux: false
+chemistry_model: ~
+non_orographic_gravity_wave: false
+microphysics_n_substeps_quadrature: 2
+topography_damping_factor: 5.0
+passive_tracers: ~
+reproducibility_test: false
+sgs_distribution: "gaussian"
+implicit_diffusion: false
+use_auto_jacobian: false
+cosp_overlap: "maximum_random"
+disable_surface_flux_tendency: false
+cfsite_number: "site23"
+dt_ogw: "1800secs"
+turbconv: ~
+x_elem: 6
+idealized_clouds: false
+edmfx_mse_q_tot_upwinding: "first_order"
+check_nan_every: 1024
+use_dynamic_krylov_rtol: false
+dt_tracer_budget: "10days"
+mesh_warp_type: "SLEVE"
+edmfx_detr_model: "Generalized"
+water_tracers: ~
+topo_smoothing: false
+hyperdiff: "Hyperdiffusion"
+debug_tendency_diagnostics: false
+nogw_beres_detailed_diagnostics: false
+constant_horizontal_diffusion: false
+apply_sem_quasimonotone_limiter: false
+ode_algo: "ARS343"
+use_dense_jacobian: false
+snow_deposition_sublimation: "DepositionAndSublimation"
+detect_restart_file: false
+restart_file: ~
+rayleigh_sponge: false
+nogw_beres_source: false
+divergence_damping_factor: 5.0
+edmfx_tracer_upwinding: "first_order"
+idealized_h2o: false
+perturb_initstate: true
+rain_autoconversion: "Kessler1M"
+dz_bottom: 500.0
+dt_save_state_to_disk: "Inf"
+fixed_terminal_velocity_snow: true
+aerosol_radiation: false
+vorticity_hyperdiffusion_coefficient: 0.1857
+viscous_sponge: false
+cloud_liquid_freezing: "HomogeneousAndHeterogeneous"
+approximate_linear_solve_iters: 1
+smagorinsky_lilly: ~
+rain_snow_accretion: "RainSnowAccretion"
+enable_diagnostics: true
+energy_source_tag_offset: 110495.0
+cloud_liquid_formation: "CloudLiquidFormation"
+prescribe_clouds_in_radiation: false
+update_cache_every: "step"
+energy_source_closure_check:
+  audit: true
+  period: "1hours"
+deep_atmosphere: true
+updraft_number: 1
+amd_les: false
+prescribed_aerosols: []
+output_default_diagnostics: false
+edmfx_sgs_mass_flux: false
+radiation_reset_rng_seed: false
+fixed_terminal_velocity_liquid: true
+vert_diff: ~
+use_krylov_method: false
+sleve_s: 10.0
+water_closure_check: ~
+prescribed_flow: ~
+dt: "400secs"
+netcdf_output_at_levels: true
+microphysics_model: "0M"
+output_dir_style: "ActiveLink"
+device: "auto"
+y_elem: 6
+z_stretch: true
+dt_subcol: "Inf"
+edmfx_nh_pressure: false
+nogw_beres_heating_latent: false
+cloud_liquid_rain_accretion: "CloudLiquidRainAccretion"
+initial_condition: "MoistBaroclinicWave"
+krylov_rtol: 0.1
+eisenstat_walker_forcing_alpha: 2.0
+update_constrain_state_every: "step"
+jvp_step_adjustment: 1.0
+log_progress: true
+site_latitude: 17.0
+h_elem: 6
+netcdf_interpolation_num_points: ~
+z_max: 30000.0
+diagnostics:
+  - short_name:
+      - "e_src_res"
+    period: "1hours"
+  - short_name:
+      - "e_src_tropics"
+      - "e_src_extratropics"
+      - "e_src_sfc"
+      - "e_src_rad"
+    period: "1hours"
+  - short_name:
+      - "e_src_mp"
+      - "e_src_new_tropics"
+      - "e_src_new_extratropics"
+    period: "1hours"
+  - short_name:
+      - "e_src_fix_tropics"
+      - "e_src_fix_extratropics"
+      - "e_src_fix_sfc"
+    period: "1hours"
+  - short_name:
+      - "e_src_fix_rad"
+      - "e_src_fix_mp"
+      - "e_src_fix_new_tropics"
+    period: "1hours"
+  - short_name:
+      - "e_src_fix_new_extratropics"
+    period: "1hours"
+  - short_name:
+      - "e_prc_radiation"
+      - "e_prc_surface_flux"
+      - "e_prc_microphysics"
+    period: "1hours"
+  - short_name:
+      - "ta"
+    period: "1hours"
+debug_jacobian: false
+log_to_file: false
+orographic_gravity_wave: ~
+dt_rad: "1hours"
+nh_poly: 3
+y_max: 300000.0
+energy_tracers: ~
+cloud_ice_rain_accretion: "CloudIceRainAccretion"
+config: "sphere"
+hyperdiffusion_prandtl_number: 0.2
+cloud_liquid_snow_accretion: "CloudLiquidSnowAccretion"
+check_conservation: false
+cosp_n_subcolumns: 100
+vertical_water_borrowing_species: ~
+auto_jacobian_padding_bands: ~
+z_elem: 10
+snow_autoconversion: "NoSupersaturation"
+fixed_terminal_velocity_rain: false
+energy_closure_check: ~
+reproducible_restart: false
+strict_config: false
+toml:
+  - "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c10_sphere_enthalpy_repair/output_0000/c10_sphere_enthalpy_repair_parameters.toml"
+energy_source_tags:
+  - name: "tropics"
+    region: "tropics"
+  - name: "extratropics"
+    region: "extratropics"
+  - name: "sfc"
+    source: "surface_flux"
+  - name: "rad"
+    source: "radiation"
+  - name: "mp"
+    source: "microphysics"
+  - name: "new_tropics"
+    source: "all"
+    region: "tropics"
+  - name: "new_extratropics"
+    source: "all"
+    region: "extratropics"
+cloud_ice_formation: "PrescribedIceNumber"
+external_forcing_file: ~
+cloud_nn_architecture: "arch_2layers_8nodes.jld2"
+output_dir: ~
+rain_condensation_evaporation: "RainEvaporation"
+bubble: false
+cloud_ice_melt: "CloudIceMelt"
+max_newton_iters_ode: 1
+start_date: "20100101"
+time_varying_trace_gases: []
+parent_budget_mode: "off"
+prognostic_surface: "PrescribedSST"
+edmfx_vertical_diffusion: false
+parent_budget_attribution: "net"
+edmfx_entr_model: "Generalized"
+edmfx_scale_blending: "SmoothMinimum"
+t_start: "0secs"
+advection_test: false
+topography: "NoWarp"
+reference_job_id: ~
+strict_params: true
+energy_process_record:
+  - "radiation"
+  - "surface_flux"
+  - "microphysics"
+tracer_nonnegativity_method: ~
+site_longitude: -149.0
+albedo_model: "ConstantAlbedo"
+edmfx_sgs_horizontal_diffusive_flux: false
+quadrature_order: 3
+FLOAT_TYPE: "Float64"
+energy_q_tot_upwinding: "vanleer_limiter"
+dt_nogw: "1800secs"
+x_max: 300000.0
+newton_rtol: 1.0e-5
+edmfx_sgsflux_upwinding: "none"
+use_sgs_quadrature: true
+energy_source_tag_repair: true
+implicit_microphysics: true
+edmfx_horizontal_diffusion: false

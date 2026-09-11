@@ -671,6 +671,32 @@ off. *C9, jobs `13402392` and `13402393` on terrabyte at `0bfb5037`;
 `analysis/c5_process_closure.jl` and `analysis/same_atmosphere.jl`;
 `output/c9_column_enthalpy/` and `output/c9_sphere_enthalpy/`.*
 
+**E35. With the repair on, the audit's sphere keeps its residual, and its form
+A gets worse, not better.** C10 is C9's sphere with the repair on and its
+ledgers in the output. `ta` is identical to C9's in every value. The closure
+residual is C9's to four digits, 2.5357e20 J against 2.5359e20 at 24 h, because
+the repair keeps the partition's sum. No source tag is left below
+−2e-26 J kg⁻¹.
+
+  - Form A gets worse: 274 J kg⁻¹ at 24 h, 1.5e-2, against C9's 76.8 and C7's
+    20.2 (E30, E34). At the worst point the process tags hold 447 J kg⁻¹
+    against the new energy's 173.
+  - The repair lifts negative source tags by adding energy that the other side
+    of form A does not receive. It lifted `sfc` by up to 397 J kg⁻¹, on the
+    process side, and the `new_` tags by up to 121 and 56, on the region side.
+    With the ledgers taken back out, to first order, the gap is 54.9 J kg⁻¹.
+  - So E34's prediction fails: the repair does not bring form A back to C7's
+    20 J kg⁻¹, and the clamp is at most part of C9's gap. Under the audit on
+    the sphere, form A is not a clean check with the repair on or off. The
+    closure residual is.
+  - The region tags trade up to ±16,294 J kg⁻¹ through the repair, against
+    ±30,920 under tracer transport (E27).
+  - The repair costs nothing measurable here: 2.20 s per step against C9's
+    2.19.
+
+*C10, job `13403083` on terrabyte at `7dc0a302`; `analysis/c5_process_closure.jl`
+and `analysis/same_atmosphere.jl`; `output/c10_sphere_enthalpy_repair/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -954,6 +980,9 @@ Kept because a later reader will otherwise re-derive them.
     as harmless.** The first version of `transport_ledger.jl` did so, and its
     run ended in a different state from an identical run stepped plainly. The
     script now evaluates on a second simulation.
+  - **That the repair would bring the audit's sphere form A back to C7's
+    20 J kg⁻¹.** C10's config and E34 predicted it. With the repair on, form A
+    is 274 J kg⁻¹, and 54.9 with the repair's ledgers taken back out (E35).
 
 ## 7. What is not established
 
@@ -999,10 +1028,10 @@ Kept because a later reader will otherwise re-derive them.
     on the shares and the per-tag limiter are candidates, as on the column
     before (E26). For form B, a process under 1-moment microphysics that changes
     `ρe_tot` outside the brackets would do it. None is identified.
-  - **Why the sphere's form A worsens under the audit (E34).** 76.8 J kg⁻¹
-    against 20.2 under tracer transport. The clamp on negative source tags,
-    with the repair off, is the candidate. The same sphere with the repair on
-    would test it.
+  - **Why the sphere's form A worsens under the audit (E34, E35).**
+    76.8 J kg⁻¹ against 20.2 under tracer transport, and 54.9 with the repair
+    on and its ledgers taken back out. The clamp is part of it (E34), and not
+    all of it (E35). What the rest is, is open.
   - **What makes the audit's first-hour residual (E34).** After the first hour
     it does not grow. The initial adjustment of E13 and E25 is the candidate.
   - ~~How the column's unrecorded 1.37 MJ m⁻² splits (E23).~~ Subsidence's

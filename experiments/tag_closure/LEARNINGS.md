@@ -1080,3 +1080,28 @@ residual stays, and is not separated.
 **Carry-over to the source tags.** Transport is most of the residual, and the
 audit removes it for 5% of the step. On a sphere, read form A with the repair on
 before trusting it under the audit.
+
+## C10. The audit with the repair on
+
+Ran at `7dc0a302` on 2026-09-11, `hpda2_test` on LRZ terrabyte, SLURM job
+`13403083`, 19 minutes. The owner approved it.
+
+**What C10 was for.** To test whether the clamp on negative source tags is what
+worsens form A on the audit's sphere (E34). C10 is C9's sphere with the repair
+on, so that no tag stays negative.
+
+**The prediction failed.** The repair keeps every tag non-negative, and leaves
+the atmosphere and the closure residual as they were. But form A gets worse, to
+274 J/kg, because the repair adds energy to the source tags on one side of the
+check more than on the other. With the ledgers taken back out it is 55 J/kg,
+still above C7's 20 (E35).
+
+**Barrier.** On the audit's sphere, form A is not a clean check with the repair
+on or off. The closure residual is.
+
+**Class.** A limit of the diagnostic: the per-process check and the repair do
+not mix.
+
+**Carry-over to the source tags.** Read form A without the repair, or with its
+ledgers taken out, and do not expect it to close on a sphere under the audit.
+This corrects C9's carry-over, which said to read it with the repair on.

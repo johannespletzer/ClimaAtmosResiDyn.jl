@@ -109,9 +109,14 @@ one agent has worked this branch at once.
     tracer transport on the column and 11 times smaller on the sphere, and `ta`
     is identical. On the sphere, form A worsens where the source tags go
     negative with the repair off. A run with the repair on would test that.
-  - **An Opus review of #69** was started on 2026-09-11, read-only, from the
-    worktree and the PR's diff. It was stopped when a session ended, and then
-    resumed. If its report never reached the owner, run it again.
+  - **C10 ran** (E35). It is C9's sphere with the repair on, and it did not
+    bring form A back: 274 J/kg raw and 55 with the ledgers taken out, against
+    C7's 20. On the audit's sphere, read the closure residual rather than
+    form A.
+  - **The Opus review of #69 is done, and posted on the PR.** It found no
+    blocker. Its five findings are fixed in `d545af90` and merged into #70
+    (`30d8bb4c`), #72 (`404ba98f`) and this branch (`602153b9`). The worktree
+    `../ClimaAtmosResiDyn-repair` is on #72's branch now.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for

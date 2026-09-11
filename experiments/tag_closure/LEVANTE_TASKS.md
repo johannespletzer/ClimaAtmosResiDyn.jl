@@ -238,9 +238,15 @@ What they found:
   - on the sphere, form A gets worse, 77 J/kg against 20, where the source tags
     go negative with the repair off.
 
-**Next, needing approval:** C9's sphere with the repair on. If the clamp on
-negative source tags is what worsens form A there, the repair should bring it
-back to C7's 20 J/kg or below (E34).
+**C10, done on 2026-09-11** (FINDINGS E35). Job `13403083` is C9's sphere with
+the repair on, in `output/c10_sphere_enthalpy_repair/`. The repair keeps every
+tag non-negative, and leaves `ta` and the closure residual as they were. But
+form A gets worse, 274 J/kg, and 55 with the ledgers taken back out. The
+prediction that it would come back to C7's 20 J/kg failed.
+
+**Next.** The owner sets the merge order: #69, then #70, then #72 retargeted to
+`main`. The review of #69 is posted on the PR, and its five findings are fixed
+on all three branches.
 
 The first submission, jobs `13385435` to `13385439`, failed at startup. The
 repair's commit had registered `e_src_fix_<name>` without defining the function
