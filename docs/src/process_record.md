@@ -91,6 +91,15 @@ increments, and on the implicit path those of the microphysics sink and of
 sedimentation. That is the intended behaviour, since no record's tendency
 depends on a record.
 
+The records have no cross blocks, though. With a single Newton iteration
+(`max_newton_iters_ode: 1`), a record takes its implicit increments at the
+stage's first guess, while `ρe_tot` also gets the Jacobian's coupling to other
+rows. Under 0-moment microphysics that coupling does not reach the rain-out,
+and a column's records add up to its change in `ρe_tot` to rounding. Under 1M
+and 2M it includes sedimentation, so the two differ by a small linearised term.
+On a 1M column over a day, that term tracked the precipitation record's rate
+times the step, and it did not accumulate.
+
 The cost is one center field per recorded process in `Y`, and one broadcast per
 process per tendency evaluation against a difference the bracket already
 computed.
