@@ -79,12 +79,13 @@ AUDIT_REQUIRED = {
     "c8_column_1m",
     "c9_column_enthalpy",
     "c9_sphere_enthalpy",
+    "c10_sphere_enthalpy_repair",
 }
 # Runs allowed one model-state diagnostic besides their tags. The two C4 runs
 # differ only in an offset the model never sees, so their `ta` must be identical
 # to the last bit, and that is the check that the atmosphere is untouched. The
-# C6 and C9 runs differ only in the repair and in how the tags move, which the
-# model never sees either.
+# C6, C9 and C10 runs differ only in the repair and in how the tags move, which
+# the model never sees either.
 STATE_CHECK = {
     "c4_sphere_tag_offset",
     "c4_sphere_tag_offset_2x",
@@ -97,6 +98,7 @@ STATE_CHECK = {
     "c8_column_1m",
     "c9_column_enthalpy",
     "c9_sphere_enthalpy",
+    "c10_sphere_enthalpy_repair",
 }
 STATE_DIAGNOSTICS = {"ta"}
 # Runs allowed the air density besides their tags. The C5, C6, C8 and C9 columns
