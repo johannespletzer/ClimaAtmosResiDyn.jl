@@ -215,12 +215,11 @@ column on the login node shows the tags now follow it out at the ground. C8,
 job `13401744`, ran that column for a day, in `output/c8_column_1m/`. Form B
 closes there to 5.3 J/m² out of 0.9 MJ/m², and form A to 117 J/kg.
 
-**Running.** The enthalpy-form audit switch is built at `511e00e9`, as designed
-in `ENTHALPY_AUDIT_DESIGN.md`, and is draft PR #72, stacked on #70. C9 is its
-pair of runs, each against its reference with only the transport changed. The
-owner approved both, and they were submitted on 2026-09-11 with C7's flags:
-job `13402392` is `c9_column_enthalpy`, against `c6_column_no_repair`, and job
-`13402393` is `c9_sphere_enthalpy`, against `c7_sphere_mp`.
+**C9, done on 2026-09-11** (FINDINGS E34). The enthalpy-form audit switch is
+built at `511e00e9`, as designed in `ENTHALPY_AUDIT_DESIGN.md`, and is draft PR
+#72, stacked on #70. Jobs `13402392` and `13402393` ran it on C6's column and
+C7's sphere, each against its reference with only the transport changed, and
+are in `output/c9_*/`. They were submitted with C7's flags:
 
     env CONFIG=experiments/tag_closure/configs/c9_column_enthalpy.yml \
         sbatch --account=hpda-c --partition=hpda2_test --time=01:30:00 \
@@ -229,9 +228,19 @@ job `13402392` is `c9_column_enthalpy`, against `c6_column_no_repair`, and job
         --error=$SCRATCH/tag_closure/logs/%x-%j.err \
         experiments/tag_closure/runscripts/phase_c.sh
 
-Hand each back with `analysis/c5_process_closure.jl`, with
-`analysis/same_atmosphere.jl` against its reference, and with the two closure
-tables side by side.
+What they found:
+
+  - after the first hour the closure residual stops growing. At 24 h it is
+    1,069 times smaller on the column and 11 times smaller on the sphere, and
+    `ta` is identical to the reference in both;
+  - on the column, form A closes to 7e-6 J/kg, so C6's 60.7 J/kg was the per-tag
+    transport;
+  - on the sphere, form A gets worse, 77 J/kg against 20, where the source tags
+    go negative with the repair off.
+
+**Next, needing approval:** C9's sphere with the repair on. If the clamp on
+negative source tags is what worsens form A there, the repair should bring it
+back to C7's 20 J/kg or below (E34).
 
 The first submission, jobs `13385435` to `13385439`, failed at startup. The
 repair's commit had registered `e_src_fix_<name>` without defining the function

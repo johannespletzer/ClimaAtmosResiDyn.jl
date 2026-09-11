@@ -104,14 +104,14 @@ one agent has worked this branch at once.
     #72, stacked on #70, at `a4a67187`, and its tests pass there and on this
     branch. The worktree `../ClimaAtmosResiDyn-repair` is on #69's branch, at
     its head, for the review below.
-  - **C9 is running.** It was submitted on 2026-09-11 as jobs `13402392`
-    (`c9_column_enthalpy`) and `13402393` (`c9_sphere_enthalpy`), each against
-    its reference with only the transport changed. The outputs land in
-    `$SCRATCH/tag_closure/output/c9_*`, and the task list says how to hand them
-    back.
+  - **C9 ran** (E34). Moved as enthalpy, the tags' closure residual stops
+    growing after the first hour. At 24 h it is 1,069 times smaller than under
+    tracer transport on the column and 11 times smaller on the sphere, and `ta`
+    is identical. On the sphere, form A worsens where the source tags go
+    negative with the repair off. A run with the repair on would test that.
   - **An Opus review of #69** was started on 2026-09-11, read-only, from the
-    worktree and the PR's diff. If its report never reached the owner, run it
-    again.
+    worktree and the PR's diff. It was stopped when a session ended, and then
+    resumed. If its report never reached the owner, run it again.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for

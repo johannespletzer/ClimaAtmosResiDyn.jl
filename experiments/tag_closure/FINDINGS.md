@@ -623,6 +623,47 @@ with the repair on, under 1-moment microphysics, with an `mp` tag and a
 *C8, job `13401744` on terrabyte at `c11d1d3b`; `analysis/c5_process_closure.jl`,
 `output/c8_column_1m/`.*
 
+**E34. Moved as enthalpy, the tags follow their total: the closure residual
+stops growing, and on the column form A closes to 7e-6 J kg⁻¹.** C9 runs the
+audit switch, `energy_source_tag_transport: enthalpy`, on C6's column and C7's
+sphere, both with the repair off. Each is its reference with only the transport
+changed, and `ta` is identical to the reference in every value, in both.
+
+| closure residual                        | tracer, the reference | enthalpy, C9 |
+|:--------------------------------------- | ---------------------:| ------------:|
+| column, gross at 1 h, J m⁻²             |               166,016 |        2,695 |
+| column, gross at 24 h, J m⁻²            |             2,442,276 |        2,284 |
+| column, signed at 24 h, J m⁻²           |              −187,999 |         +199 |
+| sphere, gross at 1 h, J                 |               1.30e21 |      2.54e20 |
+| sphere, gross at 24 h, J                |               2.82e21 |      2.54e20 |
+| sphere, signed at 24 h, J               |              −2.82e19 |     −1.16e17 |
+
+  - After the first hour the residual does not grow in either geometry. At
+    24 h it is 1,069 times smaller on the column and 11 times smaller on the
+    sphere. On the column it even shrinks, from 2,695 to 2,284 J m⁻². Transport
+    no longer moves it, and the loss rule makes a residual decay where energy
+    is lost, which would do that. What makes the first hour's residual is not
+    separated. The initial adjustment of E13 and E25 is the candidate.
+  - On the column, form A closes to 6.6e-6 J kg⁻¹, 1e-9, against 60.7 J kg⁻¹
+    under tracer transport (E26). So E26's gap was the tags' per-tag transport,
+    not the clamp. Form B is unchanged, to 3.3e-7 J m⁻².
+  - On the sphere, form A gets worse: 76.8 J kg⁻¹ at 24 h, 4e-3, against C7's
+    20.2 (E30). The worst point is at the lowest level, where the new energy is
+    124 J kg⁻¹. With the repair off, the tags that carry a source go negative,
+    `sfc` to −397 J kg⁻¹. A negative tag's share is clamped to zero, so the
+    overlays' fluxes no longer add up. That is an inference, not a
+    measurement. A run with the repair on would test it.
+  - The audit costs about 5% per step: 2.54 ms against 2.43 on the column, and
+    2.19 s against 2.07 on the sphere.
+  - At the column's most-cooled level the radiation tag holds 5.8 J kg⁻¹, a
+    share of 9e-5, against 0.004 J kg⁻¹ under tracer transport (E22). The
+    first-order shares smear, as the design says they would.
+
+The bounds: one column and one sphere configuration, a day each, with the repair
+off. *C9, jobs `13402392` and `13402393` on terrabyte at `0bfb5037`;
+`analysis/c5_process_closure.jl` and `analysis/same_atmosphere.jl`;
+`output/c9_column_enthalpy/` and `output/c9_sphere_enthalpy/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -951,12 +992,17 @@ Kept because a later reader will otherwise re-derive them.
     on the shares and the per-tag limiter are candidates, as on the column
     before (E26). For form B, a process under 1-moment microphysics that changes
     `ρe_tot` outside the brackets would do it. None is identified.
-  - **How the column's unrecorded 1.37 MJ m⁻² splits (E23)** between
-    subsidence, the 0-moment rain-out and the numerics. A column run that
-    records subsidence and microphysics, on the code of §8, would split it.
-  - **What the column's last per-process gap is (E26).** 60.7 J kg⁻¹ at 775 m,
-    near the inversion, with the process split the larger. It is the same with
-    the repair on and off. The per-tag limiter and the clamp are candidates.
+  - **Why the sphere's form A worsens under the audit (E34).** 76.8 J kg⁻¹
+    against 20.2 under tracer transport. The clamp on negative source tags,
+    with the repair off, is the candidate. The same sphere with the repair on
+    would test it.
+  - **What makes the audit's first-hour residual (E34).** After the first hour
+    it does not grow. The initial adjustment of E13 and E25 is the candidate.
+  - ~~How the column's unrecorded 1.37 MJ m⁻² splits (E23).~~ Subsidence's
+    −1,277,826 J m⁻² and the rain-out's −87,651, to the joule (E26).
+  - ~~What the column's last per-process gap is (E26).~~ The tags' per-tag
+    transport. Moved as enthalpy, the same column's form A closes to
+    6.6e-6 J kg⁻¹ (E34).
   - **Where the repair's large ledgers sit on the sphere (E27),** and whether
     that is where the two region tags meet, as the undershoots of E19 would
     place them.
@@ -1114,8 +1160,15 @@ Kept because a later reader will otherwise re-derive them.
     `energy_q_tot_upwinding` vertically. The tests check each of the three sums
     against the parent's to 100 eps, on the column and on a two-element sphere.
     They also check the upwind donor both ways, and that the model's state is
-    untouched. It is draft PR #72, stacked on #70. C9, its pair of runs, was
-    submitted as jobs `13402392` and `13402393`.
+    untouched. It is draft PR #72, stacked on #70.
+
+    **Run: C9, the audit on the column and the sphere** (E34). After the first
+    hour the closure residual stops growing. At 24 h it is 1,069 times smaller
+    than under tracer transport on the column and 11 times smaller on the
+    sphere, with `ta` identical, for 5% more per step. On the column form A
+    closes to 7e-6 J kg⁻¹. On the sphere it worsens where the source tags go
+    negative with the repair off. The same sphere with the repair on would test
+    that.
 
  4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
     and the energy family has no rescale. C1 solved a simulated day in 5.8

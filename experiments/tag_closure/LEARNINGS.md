@@ -1053,3 +1053,30 @@ falls. Form B no longer closes to the joule. Neither residue is separated.
 **Carry-over to the source tags.** Under 1M, record `precipitation`: it is how
 the column's energy leaves with the rain. The tags need no label for it,
 because they follow it.
+
+## C9. The tags moved as enthalpy
+
+Ran at `0bfb5037` on 2026-09-11, `hpda2_test` on LRZ terrabyte, SLURM jobs
+`13402392` (the column, 11 minutes) and `13402393` (the sphere, 19 minutes).
+The owner approved both.
+
+**What C9 was for.** The first runs of the audit switch,
+`energy_source_tag_transport: enthalpy`. Each is its reference with only the
+transport changed, `c6_column_no_repair` and `c7_sphere_mp`. So the difference
+in the closure residual is the transport alone.
+
+**It does what it was built for.** After the first hour the closure residual
+stops growing in both geometries. At 24 h it is 1,069 times smaller on the
+column and 11 times smaller on the sphere, and the atmosphere is the same to
+the last bit (E34). On the column, form A closes to 7e-6 J/kg. That settles
+what C6's 60.7 J/kg was: the per-tag transport.
+
+**Barrier.** On the sphere, form A gets worse, 77 J/kg against C7's 20, where
+the tags that carry a source go negative with the repair off. The first hour's
+residual stays, and is not separated.
+
+**Class.** Numerical: the tags' transport, now measured by taking it away.
+
+**Carry-over to the source tags.** Transport is most of the residual, and the
+audit removes it for 5% of the step. On a sphere, read form A with the repair on
+before trusting it under the audit.

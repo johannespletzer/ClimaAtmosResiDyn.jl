@@ -1,0 +1,25 @@
+run: c9_sphere_enthalpy
+machine: terrabyte
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c9_sphere_enthalpy.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+commit: 0bfb503722448c33f784ab5292d756c590610db3
+commit_source: git-files
+commit_dirty: unknown
+branch: claude/tag-closure-experiments
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+started: 2026-09-11T09:02:59+02:00
+finished: 2026-09-11T09:21:29+02:00
+exit_status: 0
+slurm_job_id: 13402393
+slurm_job_name: c9_sphere_enthalpy
+partition: hpda2_test
+nodelist: hpdar03c01s12
+cpus_per_task: 2
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c9_sphere_enthalpy/output_0000
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c9_sphere_enthalpy/output_0000 (left on scratch, not committed)
