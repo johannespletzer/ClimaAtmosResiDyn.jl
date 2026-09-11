@@ -1,0 +1,75 @@
+# C9, sphere, with the tags moved as enthalpy: the audit switch of
+# ENTHALPY_AUDIT_DESIGN.md. `c7_sphere_mp` with
+# `energy_source_tag_transport: enthalpy`, and nothing else changed.
+#
+# On this sphere pressure work is at least 93% of the residual's growth, its
+# vertical and horizontal parts together (FINDINGS E31). Under `enthalpy` the
+# tags take their shares of the parent's own flux in both, and in
+# hyperdiffusion, so the gross residual should fall by about that much. Form A
+# is C7's check, and whether the region tags still go negative (E29) is worth
+# reading beside it.
+#
+# The repair is off, as in C7, so that the difference is the transport alone.
+# `ta` must be identical to C7's, to the last bit, since only the tags differ.
+job_id: "c9_sphere_enthalpy"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: false
+energy_source_tag_transport: "enthalpy"
+
+# C5's sphere, unchanged.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+rad: "gray"
+dt_rad: "1hours"
+
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+  - name: mp
+    source: microphysics
+  - name: new_tropics
+    region: tropics
+    source: all
+  - name: new_extratropics
+    region: extratropics
+    source: all
+
+energy_process_record: [radiation, surface_flux, microphysics]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_mp, e_src_new_tropics, e_src_new_extratropics]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_microphysics]
+    period: "1hours"
+  - short_name: [ta]
+    period: "1hours"

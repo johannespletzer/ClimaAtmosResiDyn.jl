@@ -112,3 +112,10 @@ Jacobian block.
     only.
  4. The vertical reconstruction: the parent's `energy_q_tot_upwinding`, which is
     what "moving like the parent" means, or the tags' own `tracer_upwinding`.
+
+**Decided on 2026-09-11.** The owner took all four as proposed:
+
+  - the key is `energy_source_tag_transport`, `tracer` by default or `enthalpy`;
+  - `enthalpy` without `energy_source_tag_offset` is refused at configuration;
+  - the switch replaces vertical and horizontal advection and hyperdiffusion;
+  - the vertical flux uses the parent's `energy_q_tot_upwinding`.

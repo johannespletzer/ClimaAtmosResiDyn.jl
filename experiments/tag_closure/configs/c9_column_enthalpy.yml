@@ -1,0 +1,74 @@
+# C9, column, with the tags moved as enthalpy: the audit switch of
+# ENTHALPY_AUDIT_DESIGN.md. `c6_column_no_repair` with
+# `energy_source_tag_transport: enthalpy`, and nothing else changed.
+#
+# On this column, after its first ten minutes, pressure work is the whole of the
+# residual's growth (FINDINGS E25). Under `enthalpy` the tags take their shares
+# of the parent's own flux, so the gross residual should fall by about that
+# much. What is left is the timing of the step, the attribution, and what the
+# tags still see in tracer form.
+#
+# The repair is off, as in its twin, so that the difference from
+# `c6_column_no_repair` is the transport alone. The model never reads the tags,
+# so `ta` must be identical in the two runs, to the last bit.
+job_id: "c9_column_enthalpy"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: false
+energy_source_tag_transport: "enthalpy"
+
+# C3's column, unchanged.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+rad: "DYCOMS"
+
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: rad
+    source: radiation
+  - name: sfc
+    source: surface_flux
+  - name: sub
+    source: subsidence
+  - name: new_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: all
+  - name: new_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: all
+
+energy_process_record: [radiation, surface_flux, subsidence, microphysics]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_strat, e_src_tropo, e_src_rad, e_src_sfc, e_src_sub]
+    period: "1hours"
+  - short_name: [e_src_new_strat, e_src_new_tropo]
+    period: "1hours"
+  - short_name: [e_src_fix_strat, e_src_fix_tropo, e_src_fix_rad, e_src_fix_sfc]
+    period: "1hours"
+  - short_name: [e_src_fix_sub, e_src_fix_new_strat, e_src_fix_new_tropo]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_subsidence]
+    period: "1hours"
+  - short_name: [e_prc_microphysics]
+    period: "1hours"
+  - short_name: [rhoa, ta]
+    period: "1hours"
