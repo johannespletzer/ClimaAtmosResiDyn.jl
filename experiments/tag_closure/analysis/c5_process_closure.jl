@@ -241,6 +241,7 @@ function main(dir)
         println("  ", rpad(name, 18), minimum(value(name)), "   ", maximum(value(name)))
     end
 
+    cloud_top = false
     if column
         rhoa = read_field(dir, "rhoa").values
         Δz = z[2] - z[1]
@@ -288,24 +289,30 @@ function main(dir)
 
         # The last sample, level by level, to read radiation's cooling beside
         # the tag that says how much of the energy came in through radiation.
-        radiation = read_field(dir, "e_prc_radiation").values[:, end]
-        rad_tag = value("rad")[:, end]
-        total_now = total[:, end]
-        write_csv(
-            joinpath(dir, "cloud_top.csv"),
-            ["z", "e_prc_radiation", "e_src_rad", "total", "rad_share"],
-            [z, radiation, rad_tag, total_now, rad_tag ./ total_now],
-        )
-        k = argmin(radiation)
-        println(
-            "where the radiation record is most negative, z = $(z[k]) m, at the last sample:",
-        )
-        println(
-            "  record $(radiation[k]) J/kg; rad tag $(rad_tag[k]) J/kg; tags' total $(total_now[k]) J/kg; share $(rad_tag[k] / total_now[k])",
-        )
-        println(
-            "  over the column at the last sample: rad tag $(minimum(rad_tag)) to $(maximum(rad_tag)) J/kg, record $(minimum(radiation)) to $(maximum(radiation)) J/kg",
-        )
+        # A run with no radiation record or no `rad` tag, such as D1, has none.
+        if "radiation" in records && "rad" in names
+            radiation = read_field(dir, "e_prc_radiation").values[:, end]
+            rad_tag = value("rad")[:, end]
+            total_now = total[:, end]
+            write_csv(
+                joinpath(dir, "cloud_top.csv"),
+                ["z", "e_prc_radiation", "e_src_rad", "total", "rad_share"],
+                [z, radiation, rad_tag, total_now, rad_tag ./ total_now],
+            )
+            cloud_top = true
+            k = argmin(radiation)
+            println(
+                "where the radiation record is most negative, z = $(z[k]) m, at the last sample:",
+            )
+            println(
+                "  record $(radiation[k]) J/kg; rad tag $(rad_tag[k]) J/kg; tags' total $(total_now[k]) J/kg; share $(rad_tag[k] / total_now[k])",
+            )
+            println(
+                "  over the column at the last sample: rad tag $(minimum(rad_tag)) to $(maximum(rad_tag)) J/kg, record $(minimum(radiation)) to $(maximum(radiation)) J/kg",
+            )
+        else
+            println("no radiation record or no `rad` tag, so no cloud_top.csv")
+        end
     else
         for p in record_names(dir)
             record = read_field(dir, "e_prc_" * p).values
@@ -314,7 +321,7 @@ function main(dir)
     end
 
     write_csv(joinpath(dir, "process_closure.csv"), header, columns)
-    println("wrote process_closure.csv", column ? " and cloud_top.csv" : "")
+    println("wrote process_closure.csv", cloud_top ? " and cloud_top.csv" : "")
     return nothing
 end
 

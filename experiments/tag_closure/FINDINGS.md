@@ -852,13 +852,33 @@ of the other sign.
     minutes, under the audit, form A is at most 4.3e-7 J kg⁻¹.
   - The sphere's mechanism.
 
-`analysis/c8_variants.jl` and `analysis/first_hour_sphere.jl` are ready for short
-Slurm jobs.
+`analysis/first_hour_sphere.jl` ran as a Slurm job (E39b), and
+`analysis/c8_variants.jl` was submitted with it.
 
 *A reviewer agent on the terrabyte login node, 2026-09-11.
 `analysis/first_hour_0m.jl`, `c8_variants.jl`, `formb_vs_flux.py`,
 `after_first_hour.py`, `signed_by_loss_rule.py` and `sphere_levels.py`;
 `output/newton_lag/`.*
+
+**E39b. On the sphere, the one Newton iteration makes 83% of the audit's
+first-hour residual.** `analysis/first_hour_sphere.jl` steps C9's sphere for two
+hours, once as run and once with a converged Newton solve (10 iterations,
+relative tolerance 1e-10).
+
+| variant                      | gross at 400 s, J | gross at 1 h, J | gross at 2 h, J |
+|:---------------------------- | -----------------:| ---------------:| ---------------:|
+| one Newton iteration, as run |           2.50e20 |       2.5352e20 |       2.5350e20 |
+| converged                    |           4.15e19 |       4.24e19   |       4.25e19   |
+
+  - The run reproduces C9's first hour, 2.54e20 J (E34).
+  - A converged solve leaves 17% of it. On the column it left 1% (E39).
+  - In both variants the first 400 s step makes nearly all of it, while `u₃` is
+    largest, and it barely changes after 20 minutes.
+  - The signed residual barely moves: −2.79e17 J against −2.59e17 at 1 h.
+  - What the converged 17% is, is not established. E39 found 69% of the
+    sphere's residual in the top two levels.
+
+*Job `13408404` on terrabyte at `78586e39`; `output/newton_lag/first_hour_sphere_slurm/`.*
 
 **E40. Under `prognostic_edmfx` the tags get none of the sub-grid mass flux,
 and every shipped EDMF configuration fails with tags.** These are build checks
@@ -932,6 +952,43 @@ login node.
 This settles the branch on a real state. Following it through a run is still
 open (§7). *The same agent. `analysis/subgrid_light_check.jl 1M|2M|2MP3` and
 `analysis/subgrid_check_cold.jl 1M`; `output/subgrid_build_checks/`.*
+
+**E42. Through an hour of falling ice, the column stays closed and the tags
+stay non-negative. What the upward branch moved cannot be told apart from
+vertical diffusion.** D1 is `PrecipitatingColumn` under 1M, 200 levels to
+10 km, with the offset and the repair on, sampled every minute for an hour.
+
+  - **The column closes.** The signed residual is 0.29 J m⁻² against a total of
+    6.37e8, 4.5e-10, and it does not change after the first minute. The gross
+    is 1.12e6 J m⁻² after the first minute and 2.37e6 at 1 h, 3.7e-3 of the
+    total. So the residual moves energy between levels and makes none.
+  - **It does not sit where the ice falls.** After the first minute, 42% of the
+    gross's growth is in the ice layers, 5.5 to 9.5 km, which are 40% of the
+    column's depth. Half is below 4.5 km. Vertical diffusion acts on the whole
+    column: `DecayWithHeightDiffusion`, with `D₀` = 5 m² s⁻¹ and `H` = 8 km,
+    still gives 2.7 m² s⁻¹ at 5 km. It moves the tags as tracers and `ρe_tot`
+    in enthalpy form, and such a mismatch makes a zero-sum growth. That it is
+    the cause is an inference. In the first minute the ice layers held 54% of
+    the gross, and the largest level was the top one.
+  - **The tags stay non-negative.** No tag goes below zero, and the repair's
+    largest ledger is 1.8e-8 J kg⁻¹.
+  - **The records.** `e_prc_microphysics` and the `mp` tag are exactly zero at
+    every sample, as under 1M they must be. Form B closes to 0.14 J m⁻² out of
+    95,023, nearly all of it the surface flux. The precipitation record is
+    −0.67 J m⁻².
+  - **Form A is exactly zero, and says nothing here.** The surface flux is the
+    only production, and it is all in `lower`, so `sfc` and `new_lower` are the
+    same field.
+  - **`lower` rises above the boundary.** Its column integral above 5.6 km,
+    where its mask is below 0.3%, goes from 13,969 J m⁻² to 53,245 over the
+    hour. Sedimentation's upward branch does that where snow falls through
+    5 km, and so does vertical diffusion. This run cannot separate the two. A
+    twin without vertical diffusion would.
+
+The bounds: one column, one hour, and ice that mostly sublimates in its first
+minute (E41). A step costs 30 ms. *D1, job `13404535` on terrabyte at
+`78586e39`; `analysis/c5_process_closure.jl` and
+`analysis/d1_residual_profile.jl`; `output/d1_column_1m_ice/`.*
 
 ## 3. The energy reference
 
@@ -1272,11 +1329,14 @@ Kept because a later reader will otherwise re-derive them.
   - ~~What the 1M column's last signed residual is (E32).~~ The loss rule
     acting on the residual that tracer transport makes. It is not the tags'
     missing Jacobian block, whose lag is −7.8 J m⁻² (E39).
-  - **Sedimentation's upward branch through a run (E32, E41).** On a real cold
-    state every ice and snow cell takes it, and the partition still closes to
-    1.6e-15 after a minute of stepping (E41). The ice there sublimates within
-    that minute, so no run has followed the branch through time. D1 samples it
-    for an hour. D5, deep convection, would keep making ice.
+  - **How much provenance sedimentation's upward branch moves in a run (E32,
+    E41, E42).** On a real cold state every ice and snow cell takes it, and the
+    partition closes to 1.6e-15 (E41). Through D1's hour the column stays
+    closed and the tags non-negative. But `lower`'s rise above the boundary
+    cannot be told apart from vertical diffusion (E42). A D1 twin without
+    vertical diffusion would separate them. D5 would keep making ice.
+  - **What makes D1's gross residual (E42).** A zero-sum 3.7e-3, spread over
+    the column. Vertical diffusion's form mismatch is the candidate.
   - **Anything under `prognostic_edmfx` (E40).** The tags get no sub-grid mass
     flux and no sedimentation corrections, and the shipped settings fail. How
     much that adds to `e_src_res` in a run is what the D4 pair would measure,
@@ -1293,10 +1353,11 @@ Kept because a later reader will otherwise re-derive them.
     neighbours' shares keep pushing it. That the clamp is the only cause is
     inferred from the code. A C9 twin with signed shares for the overlays would
     decide it.
-  - ~~What makes the audit's first-hour residual (E34).~~ On the column, the
-    one-iteration Newton increment during the initial adjustment: a converged
-    solve removes 99% of it (E39). On the sphere this is inferred. The two-hour
-    test in `analysis/first_hour_sphere.jl` would decide it.
+  - ~~What makes the audit's first-hour residual (E34).~~ The one-iteration
+    Newton increment during the initial adjustment. A converged solve removes
+    99% of it on the column (E39) and 83% on the sphere (E39b).
+  - **What the sphere's converged 17% is (E39b).** 4.24e19 J at 1 h, made in
+    the first step, and nearly flat after it.
   - ~~How the column's unrecorded 1.37 MJ m⁻² splits (E23).~~ Subsidence's
     −1,277,826 J m⁻² and the rain-out's −87,651, to the joule (E26).
   - ~~What the column's last per-process gap is (E26).~~ The tags' per-tag

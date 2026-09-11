@@ -1,0 +1,238 @@
+# run.log for d1_column_1m_ice, trimmed from SLURM job 13404535's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    d1_column_1m_ice
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/d1_column_1m_ice.yml
+SLURM job:       13404535
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl
+Commit:          78586e39b61b8df6d436c6c9cd65969b9f15cefa (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/d1_column_1m_ice
+Start time:      2026-09-11T12:04:44+02:00
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/d1_column_1m_ice/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-11T12:21:32+02:00
+# The .err, without the model's type listing:
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/d1_column_1m_ice.yml
+┌ Info: numerics 
+└                     `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+┌ Warning: `energy_source_tags` tag `new_upper` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/config/tracer_config.jl:540
+┌ Warning: `energy_source_tags` tag `new_lower` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/config/tracer_config.jl:540
+┌ Warning: `energy_process_record` lists `precipitation`, which records the sedimentation of precipitating species. Under 0-moment microphysics there is none, so its record stays zero there, which reads the same as a process that did nothing, and rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/config/tracer_config.jl:760
+┌ Info: AtmosModel: 
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+└               `rain_snow_accretion`::`RainSnowAccretion`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS343`
+[ Info: Initialized state (169.577 μs, 29.88 KiB)
+[ Info: Built cache (59.187 s, 10.37 GiB)
+[ Info: Assembled callbacks (411.329 ms, 32.51 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (233.19 s, 5.43 GiB)
+[ Info: Initialized integrator (35.118 s, 3.09 GiB)
+[ Info: Added 18 user-provided YAML-style diagnostics
+[ Info: Set up diagnostics (9.794 s, 379.61 MiB)
+[ Info: Initialized 18 total diagnostics
+┌ Info: Simulation info
+└   output_dir = "output/d1_column_1m_ice/output_0000"
+┌ Info: Running
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:16.304
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:19.939
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:28.193
+┌ Warning: energy_source tag closure residual 0.0017557538493141365 exceeds the configured tolerance 1.0e-6 at t = 60.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:22:56.049
+┌ Warning: energy_source tag closure residual 0.0022987764646613695 exceeds the configured tolerance 1.0e-6 at t = 120.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:22:13.237
+┌ Warning: energy_source tag closure residual 0.0021212128847808956 exceeds the configured tolerance 1.0e-6 at t = 180.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0020979081966651767 exceeds the configured tolerance 1.0e-6 at t = 240.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0022795745836452636 exceeds the configured tolerance 1.0e-6 at t = 300.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:51.630
+┌ Warning: energy_source tag closure residual 0.002462957578531572 exceeds the configured tolerance 1.0e-6 at t = 360.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.002627062595701346 exceeds the configured tolerance 1.0e-6 at t = 420.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0027710104910370877 exceeds the configured tolerance 1.0e-6 at t = 480.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:43.086
+┌ Warning: energy_source tag closure residual 0.002898494938883228 exceeds the configured tolerance 1.0e-6 at t = 540.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0030115714108482844 exceeds the configured tolerance 1.0e-6 at t = 600.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:40.397
+┌ Warning: energy_source tag closure residual 0.003111679223826976 exceeds the configured tolerance 1.0e-6 at t = 660.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0031994337528717613 exceeds the configured tolerance 1.0e-6 at t = 720.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.003276224486221469 exceeds the configured tolerance 1.0e-6 at t = 780.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:37.852
+┌ Warning: energy_source tag closure residual 0.003342732634754131 exceeds the configured tolerance 1.0e-6 at t = 840.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0034006966995388573 exceeds the configured tolerance 1.0e-6 at t = 900.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.003450717932177449 exceeds the configured tolerance 1.0e-6 at t = 960.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0034936297832664225 exceeds the configured tolerance 1.0e-6 at t = 1020.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:36.312
+┌ Warning: energy_source tag closure residual 0.0035303177681695564 exceeds the configured tolerance 1.0e-6 at t = 1080.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0035615751977554873 exceeds the configured tolerance 1.0e-6 at t = 1140.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.003588390292575624 exceeds the configured tolerance 1.0e-6 at t = 1200.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:34.810
+┌ Warning: energy_source tag closure residual 0.003611085415647281 exceeds the configured tolerance 1.0e-6 at t = 1260.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:34.976
+┌ Warning: energy_source tag closure residual 0.0036302015180672575 exceeds the configured tolerance 1.0e-6 at t = 1320.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0036462351906131163 exceeds the configured tolerance 1.0e-6 at t = 1380.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.003659623270214894 exceeds the configured tolerance 1.0e-6 at t = 1440.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:34.436
+┌ Warning: energy_source tag closure residual 0.0036707487893566522 exceeds the configured tolerance 1.0e-6 at t = 1500.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0036799465570660195 exceeds the configured tolerance 1.0e-6 at t = 1560.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0036875083282649763 exceeds the configured tolerance 1.0e-6 at t = 1620.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:33.897
+┌ Warning: energy_source tag closure residual 0.003693687554464444 exceeds the configured tolerance 1.0e-6 at t = 1680.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0036987037576975 exceeds the configured tolerance 1.0e-6 at t = 1740.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037027463568953963 exceeds the configured tolerance 1.0e-6 at t = 1800.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:33.355
+┌ Warning: energy_source tag closure residual 0.003705978376050985 exceeds the configured tolerance 1.0e-6 at t = 1860.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037085395918386482 exceeds the configured tolerance 1.0e-6 at t = 1920.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037105494259461235 exceeds the configured tolerance 1.0e-6 at t = 1980.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037121094923143133 exceeds the configured tolerance 1.0e-6 at t = 2040.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:32.814
+┌ Warning: energy_source tag closure residual 0.0037133060378254563 exceeds the configured tolerance 1.0e-6 at t = 2100.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037142117967701614 exceeds the configured tolerance 1.0e-6 at t = 2160.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.003714887914990772 exceeds the configured tolerance 1.0e-6 at t = 2220.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:32.292
+┌ Warning: energy_source tag closure residual 0.0037153855209882546 exceeds the configured tolerance 1.0e-6 at t = 2280.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037157471307181582 exceeds the configured tolerance 1.0e-6 at t = 2340.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.003716008007185034 exceeds the configured tolerance 1.0e-6 at t = 2400.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:31.756
+┌ Warning: energy_source tag closure residual 0.0037161966817490866 exceeds the configured tolerance 1.0e-6 at t = 2460.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037163368451463958 exceeds the configured tolerance 1.0e-6 at t = 2520.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:32.086
+┌ Warning: energy_source tag closure residual 0.0037164474320361632 exceeds the configured tolerance 1.0e-6 at t = 2580.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.003716543556309235 exceeds the configured tolerance 1.0e-6 at t = 2640.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037166371279758617 exceeds the configured tolerance 1.0e-6 at t = 2700.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:31.532
+┌ Warning: energy_source tag closure residual 0.003716737373780485 exceeds the configured tolerance 1.0e-6 at t = 2760.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.00371685129065744 exceeds the configured tolerance 1.0e-6 at t = 2820.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.003716984022107393 exceeds the configured tolerance 1.0e-6 at t = 2880.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037171392762513104 exceeds the configured tolerance 1.0e-6 at t = 2940.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:31.977
+┌ Warning: energy_source tag closure residual 0.0037173194261790146 exceeds the configured tolerance 1.0e-6 at t = 3000.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037175259111917433 exceeds the configured tolerance 1.0e-6 at t = 3060.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037177593851754273 exceeds the configured tolerance 1.0e-6 at t = 3120.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:31.452
+┌ Warning: energy_source tag closure residual 0.003718019968435309 exceeds the configured tolerance 1.0e-6 at t = 3180.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.003718307029253007 exceeds the configured tolerance 1.0e-6 at t = 3240.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.00371861987620648 exceeds the configured tolerance 1.0e-6 at t = 3300.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:30.907
+┌ Warning: energy_source tag closure residual 0.0037189574425789238 exceeds the configured tolerance 1.0e-6 at t = 3360.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037193184781485252 exceeds the configured tolerance 1.0e-6 at t = 3420.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037197016178775206 exceeds the configured tolerance 1.0e-6 at t = 3480.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T12:21:31.363
+┌ Warning: energy_source tag closure residual 0.003720105460771712 exceeds the configured tolerance 1.0e-6 at t = 3540.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+┌ Warning: energy_source tag closure residual 0.0037205285097314826 exceeds the configured tolerance 1.0e-6 at t = 3600.0 s. The tags no longer account for the field they partition; see output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn.jl/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:797
+[ Info: solve! walltime = 10.684
+[ Info: sypd: 0.923
+[ Info: wall_time_per_timestep: 29 milliseconds, 676 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 6.68 GiB
+┌ Info: Tag-closure run finished
+└   result.ret_code = :success
+┌ Info: Where it went
+└   simulation.output_dir = "output/d1_column_1m_ice/output_0000"
+┌ Info: energy_source tag closure (61 rows)
+└   path = "output/d1_column_1m_ice/output_0000/energy_source_tag_closure.csv"

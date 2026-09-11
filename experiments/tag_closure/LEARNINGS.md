@@ -1107,3 +1107,51 @@ not mix.
 **Carry-over to the source tags.** Read form A as a global integral, and without
 the repair (E38). This corrects C9's carry-over, which said to read it with the
 repair on.
+
+## D1. Ice through sedimentation's upward branch, for an hour
+
+Ran at `78586e39` on 2026-09-11, `hpda2_test` on LRZ terrabyte, SLURM job
+`13404535`, 17 minutes. The owner approved it.
+
+**What D1 was for.** To follow sedimentation's upward branch through a run. On
+a cold column every ice and snow face takes the lower cell's shares (E41), and
+no run had followed that through time.
+
+**What it showed.** The column stays closed, 4.5e-10 signed, and the tags stay
+non-negative, with a repair ledger of at most 1.8e-8 J/kg. Under 1M the
+microphysics tag and record are exactly zero, as predicted. The gross residual,
+3.7e-3, is zero-sum and spread over the column, not gathered where the ice
+falls (E42).
+
+**Barrier.** Vertical diffusion also moves provenance upward, in tracer form. So
+the run cannot say how much of `lower`'s rise above the boundary the upward
+branch made. Form A cannot help: with one production, its two sides are the
+same field.
+
+**Class.** A confound in the configuration: two processes do the same thing to
+the tags.
+
+**Carry-over to the source tags.** To isolate one transport term, switch the
+others off in a twin. Before a run, check that form A's two sides can differ at
+all.
+
+## R4. The sphere's first hour with a converged Newton solve
+
+Ran at `78586e39` on 2026-09-11, `hpda2_test`, SLURM job `13408404`, 14
+minutes, as `analysis/first_hour_sphere.jl` with its output on scratch. The
+owner approved it.
+
+**What it was for.** E39 traced the audit's first-hour residual on the column to
+the stepper's single Newton iteration, and inferred the same on the sphere.
+
+**What it showed.** A converged solve removes 83% of the sphere's first-hour
+residual, against 99% on the column (E39b). The rest is made in the first step
+too.
+
+**Barrier.** None to the run. What the remaining 17% is, is open.
+
+**Class.** A numerical property of the stepper, not of the tags.
+
+**Carry-over to the source tags.** On both geometries the first hour's residual
+is a spin-up artefact. Report the closure from a spin-up reference (R1 of
+`OPERATIONAL_TODO.md`).

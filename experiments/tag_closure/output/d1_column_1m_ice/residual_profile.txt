@@ -1,0 +1,23 @@
+# experiments/tag_closure/analysis/d1_residual_profile.jl on d1_column_1m_ice's output_active, at 78586e39's run.
+first minute, t = 60.0 s: signed 0.2845844371968269 J/m², gross 1.1180964529452687e6 J/m²
+  below 1 km                    0.06
+  1 to 4.5 km                   0.142
+  4.5 to 5.5 km, the boundary   0.141
+  5.5 to 9.5 km, the ice        0.539
+  above 9.5 km                  0.118
+  largest at z = 9975.0 m: 14324.48234569352 J/m², T = 237.62910834158376 K
+last sample, t = 3600.0 s: signed 0.2860777890855388 J/m², gross 2.3696628354239827e6 J/m²
+  below 1 km                    0.147
+  1 to 4.5 km                   0.269
+  4.5 to 5.5 km, the boundary   0.048
+  5.5 to 9.5 km, the ice        0.428
+  above 9.5 km                  0.109
+  largest at z = 25.0 m: -38444.480889054525 J/m², T = 298.46979132336685 K
+change from the first minute to the last sample: signed 0.0014933519614714896 J/m², gross 2.1290543278686195e6 J/m²
+  below 1 km                    0.195
+  1 to 4.5 km                   0.305
+  4.5 to 5.5 km, the boundary   0.021
+  5.5 to 9.5 km, the ice        0.42
+  above 9.5 km                  0.059
+`lower` above 5.6 km, column integral: 13968.717663895959 J/m² at the start, 15439.506345623204 after the first minute, 53244.7515951899 at the last sample
+temperature from 5 to 9 km: 245.00234543334233 to 273.09453674029703 K at the start

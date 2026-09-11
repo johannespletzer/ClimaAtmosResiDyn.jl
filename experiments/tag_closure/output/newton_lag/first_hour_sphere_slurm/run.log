@@ -1,0 +1,23 @@
+# SLURM job 13408404 on terrabyte, hpda2_test, at 78586e39: analysis/first_hour_sphere.jl, AGENTB_OUT on scratch.
+commit 78586e39b61b8df6d436c6c9cd65969b9f15cefa
+Fri Sep 11 12:05:12 PM CEST 2026
+== base (646.3 s incl. build), dt = 400.0
+  t =   400.0 s  signed -1.7701e17  gross 2.50125e20  max|u3| 7030.0
+  t =   800.0 s  signed -2.9542e17  gross 2.53255e20  max|u3| 927.0
+  t =  1200.0 s  signed -2.8672e17  gross 2.53526e20  max|u3| 213.0
+  t =  2000.0 s  signed -2.8426e17  gross 2.53528e20  max|u3| 18.1
+  t =  4000.0 s  signed -2.774e17  gross 2.53518e20  max|u3| 11.9
+  t =  1200.0 s  signed -2.8672e17  gross 2.53526e20  max|u3| 213.0
+  t =  3600.0 s  signed -2.7875e17  gross 2.5352e20  max|u3| 12.3
+  t =  7200.0 s  signed -2.6706e17  gross 2.53503e20  max|u3| 18.7
+== newton (164.1 s incl. build), dt = 400.0
+  t =   400.0 s  signed -1.6762e17  gross 4.15298e19  max|u3| 5590.0
+  t =   800.0 s  signed -2.6317e17  gross 4.23877e19  max|u3| 942.0
+  t =  1200.0 s  signed -2.5655e17  gross 4.23905e19  max|u3| 87.5
+  t =  2000.0 s  signed -2.5893e17  gross 4.24102e19  max|u3| 18.7
+  t =  4000.0 s  signed -2.5856e17  gross 4.24561e19  max|u3| 12.0
+  t =  1200.0 s  signed -2.5655e17  gross 4.23905e19  max|u3| 87.5
+  t =  3600.0 s  signed -2.5866e17  gross 4.24464e19  max|u3| 12.5
+  t =  7200.0 s  signed -2.582e17  gross 4.25414e19  max|u3| 19.1
+exit 0
+Fri Sep 11 12:18:52 PM CEST 2026

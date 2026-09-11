@@ -242,6 +242,19 @@ form A gets worse, 274 J/kg. The prediction that it would come back to C7's
 20 J/kg failed. A reviewer traced the audit's gap to negative overlays frozen at
 their nodes by the transport clamp (E36).
 
+**D1, done on 2026-09-11** (FINDINGS E42). Job `13404535` ran
+`PrecipitatingColumn` under 1M for an hour, in `output/d1_column_1m_ice/`. The
+column stays closed, 4.5e-10 signed, and the tags stay non-negative. Under 1M
+the microphysics tag and record are exactly zero. What the upward branch moved
+cannot be told apart from vertical diffusion. A twin without vertical diffusion
+would separate them.
+
+**R4's sphere half, done on 2026-09-11** (FINDINGS E39b). Job `13408404` shows
+that a converged Newton solve removes 83% of the audit's first-hour residual on
+the sphere. Its tables are in `output/newton_lag/first_hour_sphere_slurm/`.
+`c8_variants.jl` (job `13408403`) and the D4 pair (jobs `13404536` and
+`13404537`) were submitted with it.
+
 **Next.** The owner sets the merge order: #69, then #70, then #72 retargeted to
 `main`. The review of #69 is posted on the PR, and its five findings are fixed
 on all three branches.
