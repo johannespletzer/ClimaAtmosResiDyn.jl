@@ -127,13 +127,15 @@ says what happened in this cell, not what arrived here.
     evaluated with `ForwardDiff.Dual` numbers.
 
     So `microphysics` is recorded however microphysics is stepped, and under
-    0-moment microphysics that is where rain leaves. `precipitation` names
-    sedimentation, which 0-moment microphysics does not have, so a record that
-    lists it stays zero there. `microphysics` on the water side is a no-op under
-    1M, where `microphysics_tendency!` moves mass between species without
-    changing `ρq_tot`.
+    0-moment microphysics that is where rain leaves. Under 1M, 2M and P3 it
+    records nothing, on either side: `microphysics_tendency!` moves mass
+    between species without changing `ρq_tot` or `ρe_tot`, and the rain-out is
+    in `precipitation`. `precipitation` names sedimentation, which 0-moment
+    microphysics does not have, so a record that lists it stays zero there.
 
-    Configuring `precipitation` warns at startup. A record that stays zero reads
+    A label that stays zero under the chosen microphysics warns at startup:
+    `precipitation` under 0-moment microphysics, and `microphysics` under the
+    other schemes. A record that stays zero reads
     exactly like a process that did nothing, and no analysis downstream can tell
     the two apart, so the distinction has to be drawn at the point where the run
     is configured.

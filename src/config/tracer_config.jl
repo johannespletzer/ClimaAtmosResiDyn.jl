@@ -487,7 +487,7 @@ water_tracer_tuple(entries, ::Type{FT}) where {FT} = tracer_tag_tuple(
 )
 
 """
-    energy_source_tracer_tuple(entries, FT)
+    energy_source_tracer_tuple(entries, FT; microphysics_model = nothing)
 
 Convert the parsed `energy_source_tags` config entries into a `Tuple` of
 [`EnergySourceTag`](@ref)s suitable for constructing an
@@ -499,9 +499,14 @@ bracketed processes. Only the rule applied to them differs.
 
 Not every accepted label can actually fire here; see
 [`warn_inactive_energy_source_labels`](@ref), which is called from this
-function.
+function. It needs `microphysics_model` to tell which labels the scheme leaves
+at zero.
 """
-function energy_source_tracer_tuple(entries, ::Type{FT}) where {FT}
+function energy_source_tracer_tuple(
+    entries,
+    ::Type{FT};
+    microphysics_model = nothing,
+) where {FT}
     tags = tracer_tag_tuple(
         entries,
         FT;
@@ -510,12 +515,12 @@ function energy_source_tracer_tuple(entries, ::Type{FT}) where {FT}
         known = KNOWN_TAG_SOURCES,
         groups = TAG_SOURCE_GROUPS,
     )
-    warn_inactive_energy_source_labels(tags)
+    warn_inactive_energy_source_labels(tags, microphysics_model)
     return tags
 end
 
 """
-    warn_inactive_energy_source_labels(tags)
+    warn_inactive_energy_source_labels(tags, microphysics_model = nothing)
 
 Warn about `energy_source_tags` labels that cannot contribute, so a tag that
 will stay at zero says so at configuration time rather than at analysis time.
@@ -529,11 +534,19 @@ its share of what the losing cell holds. So a source tag listing
 family does. Under 0-moment microphysics, rain leaves through `microphysics`
 instead, which reaches this family on both tendency paths.
 
+`microphysics` is the other label that can stay at zero. Only 0-moment
+microphysics changes `ρe_tot`, through its rain-out. The 1-moment, 2-moment and
+P3 schemes move water between species, and the energy leaves with
+sedimentation. A dry model has no microphysics. So a tag listing `microphysics`
+gets a warning under every `microphysics_model` but 0-moment. With
+`microphysics_model = nothing` the scheme is not known, and there is no warning
+for it.
+
 A warning and not an error: `moist` and `all` are useful shorthands that happen
-to include `precipitation`, and refusing them would make the group labels
-unusable for a family they otherwise serve.
+to include `precipitation` and `microphysics`, and refusing them would make the
+group labels unusable for a family they otherwise serve.
 """
-function warn_inactive_energy_source_labels(tags)
+function warn_inactive_energy_source_labels(tags, microphysics_model = nothing)
     for tag in tags
         sources = tag.sources
         isempty(sources) && continue
@@ -548,9 +561,34 @@ function warn_inactive_energy_source_labels(tags)
             "`microphysics` instead. Note `moist` and `all` both expand to " *
             "include `precipitation`.",
         )
+        :microphysics in sources &&
+            microphysics_is_inert(microphysics_model) &&
+            @warn(
+                "`energy_source_tags` tag `$(tag_name(tag))` lists " *
+                "`microphysics`, which cannot contribute under " *
+                "$(nameof(typeof(microphysics_model))). Only 0-moment " *
+                "microphysics changes `ρe_tot`. The other schemes move " *
+                "water between species, and the energy leaves with " *
+                "sedimentation, which the tags follow as transport. Note " *
+                "`moist` and `all` both expand to include `microphysics`.",
+            )
     end
     return nothing
 end
+
+# Whether a microphysics model leaves the `microphysics` label with nothing to
+# attribute or record. Only 0-moment microphysics changes `ρe_tot` and
+# `ρq_tot`, through its rain-out. `nothing` means the model is not known.
+microphysics_is_inert(::Nothing) = false
+microphysics_is_inert(::EquilibriumMicrophysics0M) = false
+microphysics_is_inert(::AbstractMicrophysicsModel) = true
+
+# Whether a microphysics model sediments anything, so that `precipitation` can
+# record. `nothing` means the model is not known, and then the label counts as
+# inactive, as it did before the model was passed.
+has_sedimentation(::Nothing) = false
+has_sedimentation(::Union{DryModel, EquilibriumMicrophysics0M}) = false
+has_sedimentation(::AbstractMicrophysicsModel) = true
 
 # ============================================================================
 # Closure checking
@@ -717,7 +755,7 @@ function closure_checks_from_config(config::AtmosConfig)
 end
 
 """
-    process_record_from_config(record_config, key, known, groups)
+    process_record_from_config(record_config, key, known, groups; microphysics_model)
 
 Convert an `energy_process_record` or `water_process_record` config entry into a
 [`ProcessRecordModel`](@ref), or `nothing` when the key is absent or empty.
@@ -726,26 +764,47 @@ The entry takes the same shape as a tag's `source`: one process label, a list of
 them, or a group name that expands to its members. Reusing
 [`tag_sources_from_config`](@ref) here is deliberate, so that a record and a tag
 name their processes identically and an unknown label is refused the same way.
+`microphysics_model`, `nothing` by default, lets the label warnings see the
+scheme.
 """
-process_record_from_config(::Nothing, key, known, groups) = nothing
-function process_record_from_config(record_config, key, known, groups)
+process_record_from_config(
+    ::Nothing,
+    key,
+    known,
+    groups;
+    microphysics_model = nothing,
+) = nothing
+function process_record_from_config(
+    record_config,
+    key,
+    known,
+    groups;
+    microphysics_model = nothing,
+)
     processes = tag_sources_from_config(record_config, key, known, groups)
     isempty(processes) && return nothing
-    warn_inactive_record_labels(processes, key)
+    warn_inactive_record_labels(processes, key, microphysics_model)
     return ProcessRecordModel(Tuple(RecordedProcess{p}() for p in processes))
 end
 
 """
-    warn_inactive_record_labels(processes, key)
+    warn_inactive_record_labels(processes, key, microphysics_model = nothing)
 
 Warn about process-record labels that cannot record anything, so a record that
 will stay at zero says so at configuration time rather than at analysis time.
 
 Both tendency paths are bracketed for the records, so a label is inactive only
-where its process does not exist. That is `precipitation` under 0-moment
-microphysics, which has no sedimentation: rain leaves through `microphysics`
-instead. This function does not see the microphysics model, so it warns about
-`precipitation` whenever it is listed.
+where its process does not exist or does not change the recorded total.
+
+  - `precipitation` records nothing where nothing sediments: under 0-moment
+    microphysics, where rain leaves through `microphysics` instead, and in a
+    dry model.
+  - `microphysics` records nothing under every scheme but 0-moment. The others
+    move water between species and never change `ρe_tot` or `ρq_tot`. Their
+    rain-out is in the `precipitation` record.
+
+With `microphysics_model = nothing` the scheme is not known. Then it warns about
+`precipitation` whenever it is listed, and not about `microphysics`.
 
 A zero record is the dangerous case precisely because it is indistinguishable
 from a real one. A process that genuinely did nothing and a process that was
@@ -756,14 +815,26 @@ A warning and not an error, for the reason
 useful group labels that happen to include `precipitation`, and refusing them
 would make the groups unusable for the processes they do cover.
 """
-function warn_inactive_record_labels(processes, key)
-    :precipitation in processes && @warn(
-        "`$key` lists `precipitation`, which records the sedimentation of " *
-        "precipitating species. Under 0-moment microphysics there is none, " *
-        "so its record stays zero there, which reads the same as a process " *
-        "that did nothing, and rain leaves through `microphysics` instead. " *
-        "Note `moist` and `all` both expand to include `precipitation`.",
-    )
+function warn_inactive_record_labels(processes, key, microphysics_model = nothing)
+    :precipitation in processes &&
+        !has_sedimentation(microphysics_model) &&
+        @warn(
+            "`$key` lists `precipitation`, which records the sedimentation of " *
+            "precipitating species. Under 0-moment microphysics there is none, " *
+            "so its record stays zero there, which reads the same as a process " *
+            "that did nothing, and rain leaves through `microphysics` instead. " *
+            "Note `moist` and `all` both expand to include `precipitation`.",
+        )
+    :microphysics in processes &&
+        microphysics_is_inert(microphysics_model) &&
+        @warn(
+            "`$key` lists `microphysics`, which records nothing under " *
+            "$(nameof(typeof(microphysics_model))). Only 0-moment " *
+            "microphysics changes `ρe_tot` and `ρq_tot`. The other schemes " *
+            "move water between species, so this record stays zero, which " *
+            "reads the same as a process that did nothing. Their rain-out is " *
+            "in the `precipitation` record.",
+        )
     return nothing
 end
 
@@ -805,6 +876,45 @@ function energy_source_repair_from_config(value)
 end
 
 """
+    check_energy_source_tagging_supported(turbconv)
+
+Refuse `energy_source_tags` under `turbconv: prognostic_edmfx`, and warn under
+`edonly_edmfx`.
+
+The tags have no updraft copy. So the parent's sub-grid mass flux of energy
+reaches no tag, and neither do the updraft and environment corrections to
+sedimentation. Both would land in `e_src_res`. With
+`edmfx_vertical_diffusion: true`, as every shipped EDMF configuration has it,
+the run would also fail: the updrafts' vertical diffusion asks each updraft for
+a copy of every grid-scale tracer. Sharing those fluxes among the tags is not
+built yet, so this refuses until it is.
+
+`edonly_edmfx` has no updraft. Its eddy diffusion moves the tags as passive
+tracers, while it moves `ρe_tot` in enthalpy form. The difference goes to
+`e_src_res`, as it does under vertical diffusion, so this is a warning.
+"""
+function check_energy_source_tagging_supported(turbconv)
+    if turbconv == "prognostic_edmfx"
+        error(
+            "`energy_source_tags` cannot be used with `turbconv: \
+            prognostic_edmfx` yet. The tags have no updraft copy, so the \
+            sub-grid mass flux of energy and the updraft and environment \
+            corrections to sedimentation reach no tag. With \
+            `edmfx_vertical_diffusion: true` the run would also fail. Use \
+            `turbconv: edonly_edmfx` or no `turbconv`, or drop \
+            `energy_source_tags`.",
+        )
+    elseif turbconv == "edonly_edmfx"
+        @warn(
+            "`energy_source_tags` with `turbconv: edonly_edmfx`: the eddy \
+            diffusion moves the tags as passive tracers, while it moves \
+            `ρe_tot` in enthalpy form. The difference goes to `e_src_res`.",
+        )
+    end
+    return nothing
+end
+
+"""
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
@@ -812,9 +922,14 @@ Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
 and `water_process_record` config keys. Any of them
 being `~` (null) or an empty list disables that feature entirely, at no runtime
 cost.
+
+Energy source tags are refused under `turbconv: prognostic_edmfx`; see
+`check_energy_source_tagging_supported`. The label warnings of the energy source
+tags and the records see the microphysics model.
 """
 function AtmosTagging(config::AtmosConfig)
     FT = eltype(config)
+    microphysics_model = get_microphysics_model(config.parsed_args)
     entries = config.parsed_args["energy_tracers"]
     tagging_model = if isnothing(entries) || isempty(entries)
         nothing
@@ -825,9 +940,7 @@ function AtmosTagging(config::AtmosConfig)
     water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
         nothing
     else
-        check_water_tagging_supported(
-            get_microphysics_model(config.parsed_args),
-        )
+        check_water_tagging_supported(microphysics_model)
         WaterTaggingModel(water_tracer_tuple(water_entries, FT))
     end
     source_entries = config.parsed_args["energy_source_tags"]
@@ -847,8 +960,15 @@ function AtmosTagging(config::AtmosConfig)
             )
             nothing
         else
+            check_energy_source_tagging_supported(
+                get(config.parsed_args, "turbconv", nothing),
+            )
             EnergySourceTaggingModel(
-                energy_source_tracer_tuple(source_entries, FT),
+                energy_source_tracer_tuple(
+                    source_entries,
+                    FT;
+                    microphysics_model,
+                ),
                 source_offset;
                 repair = source_repair,
             )
@@ -857,20 +977,22 @@ function AtmosTagging(config::AtmosConfig)
         config.parsed_args["energy_process_record"],
         "energy_process_record",
         KNOWN_TAG_SOURCES,
-        TAG_SOURCE_GROUPS,
+        TAG_SOURCE_GROUPS;
+        microphysics_model,
     )
     water_process_record = process_record_from_config(
         config.parsed_args["water_process_record"],
         "water_process_record",
         KNOWN_WATER_TAG_SOURCES,
-        WATER_TAG_SOURCE_GROUPS,
+        WATER_TAG_SOURCE_GROUPS;
+        microphysics_model,
     )
     # Parse before checking the microphysics model. A record that names no
     # process is disabled, and a disabled record must not demand a moist model.
     # Checking first made `water_process_record: []` fail on a dry run with a
     # message naming a key the user had not set.
     isnothing(water_process_record) || check_water_tagging_supported(
-        get_microphysics_model(config.parsed_args),
+        microphysics_model,
         "water_process_record",
     )
     return AtmosTagging(;

@@ -287,7 +287,11 @@ family as a whole.
 
 ## Caveats
 
-  - Tags are **grid-scale only**, with no sub-grid updraft counterpart.
+  - Tags are **grid-scale only**, with no sub-grid updraft counterpart. So
+    `turbconv: prognostic_edmfx` is refused: its sub-grid mass flux of energy,
+    and the updraft and environment corrections to sedimentation, would reach
+    no tag. Under `edonly_edmfx` the eddy diffusion moves the tags as passive
+    tracers while it moves `ρe_tot` in enthalpy form, and the model warns.
   - Tags are excluded from both tracer limiters, through
     `is_tagged_tracer_name`. The repair above keeps them non-negative instead,
     unless it is switched off.
