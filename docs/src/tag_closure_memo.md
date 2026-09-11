@@ -71,7 +71,7 @@ Enforced, meaning the state is changed so the sum holds:
     729; source `energy_source_tags.jl` 256 to 340).
 
 Monitored only: the `q_tag_res`, `e_tag_res` and `e_src_res` diagnostics
-(`default_diagnostics.jl` 686, 695, 708), and the three `*_closure_check`
+(`default_diagnostics.jl` 695, 686, 708), and the three `*_closure_check`
 callbacks (`get_callbacks.jl` 782 to 827, 846 to 893). The callbacks write a
 CSV and warn when `gross_relative > tolerance` (`tagged_tracers.jl` 590 to
 595) or when `nonpositive_fraction > 0` (599 to 604). Nothing errors on a
@@ -117,12 +117,12 @@ Test: DryBaroclinicWave, `held_suarez`, `h_elem` 4, `z_elem` 10, `dt` 300 s,
 Test: DYCOMS_RF02 0M column, `rad: DYCOMS`, `dt` 10 s, 20 s; bound 5e-2
 (`energy_source_tags_integration.jl` 139).
 
-| Contributor                                                                                                                | Class                                  | Magnitude                                  | Evidence on `main`                                                                                         |
-|:-------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------- |:------------------------------------------ |:---------------------------------------------------------------------------------------------------------- |
-| Every energy-tag transport row above, since the family rides the same passive-scalar path                                  | structural                             | aggregate only                             | `is_tagged_tracer_name` `tagged_tracers.jl` 779 to 782; `gs_tracer_names` `tracer_processes.jl` 118 to 121 |
-| Implicit-path processes not bracketed for this family: the precipitation energy sink and implicit microphysics             | structural, documented                 | zero in the 0M, 20 s test                  | `implicit_tendency.jl` 304 to 306 calls `attribute_tagged_ρe_tot!` only                                    |
-| The donor loss is not applied where `ρe_tot ≤ 0` (100% of the test domain per the CI warning); production is still applied | structural under the current reference | unmeasured; the CI log confirms the regime | `energy_source_tags.jl` 136 to 140, 194; `energy_source_tags.md` 141 to 155                                |
-| No rescale and no partition repair for this family                                                                         | correction-driven, uncorrected         | tags may go negative                       | `tagged_tracers.jl` 770 to 778                                                                             |
+| Contributor                                                                                                                | Class                                  | Magnitude                                  | Evidence on `main`                                                                                        |
+|:-------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------- |:------------------------------------------ |:--------------------------------------------------------------------------------------------------------- |
+| Every energy-tag transport row above, since the family rides the same passive-scalar path                                  | structural                             | aggregate only                             | `is_tagged_tracer_name` `tagged_tracers.jl` 779 to 782; `gs_tracer_names` `variable_manipulations.jl` 118 |
+| Implicit-path processes not bracketed for this family: the precipitation energy sink and implicit microphysics             | structural, documented                 | zero in the 0M, 20 s test                  | `implicit_tendency.jl` 304 to 306 calls `attribute_tagged_ρe_tot!` only                                   |
+| The donor loss is not applied where `ρe_tot ≤ 0` (100% of the test domain per the CI warning); production is still applied | structural under the current reference | unmeasured; the CI log confirms the regime | `energy_source_tags.jl` 136 to 140, 194; `energy_source_tags.md` 141 to 155                               |
+| No rescale and no partition repair for this family                                                                         | correction-driven, uncorrected         | tags may go negative                       | `tagged_tracers.jl` 770 to 778                                                                            |
 
 ## Part 2. What floating-point closure would require
 
