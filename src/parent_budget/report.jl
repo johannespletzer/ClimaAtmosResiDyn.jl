@@ -266,3 +266,34 @@ function budget_summary(adapter::ParentBudgetAdapter)
     end
     return String(take!(io))
 end
+
+"""
+    failed_claims(adapter) -> Vector{String}
+
+Return one line per claim of the last accepted step whose status is `:fail`,
+naming the control volume, the claim, the channel or event where the claim
+has one, and the quantity. The vector is empty when nothing failed or when
+no step has been committed. The caller logs the lines at warn level, so a
+failed identity is visible in a run's log and not only in the certificate.
+"""
+function failed_claims(adapter::ParentBudgetAdapter)
+    commit = latest_commit(adapter)
+    failed = String[]
+    isnothing(commit) && return failed
+    for r in commit.parent
+        if r.status === :fail
+            push!(failed, "$(r.control_volume) parent $(r.quantity)")
+        end
+    end
+    for r in commit.attribution
+        if r.status === :fail
+            push!(failed, "$(r.control_volume) attribution $(r.channel) $(r.quantity)")
+        end
+    end
+    for r in commit.transfer
+        if r.status === :fail
+            push!(failed, "$(r.control_volume) transfer $(r.event) $(r.quantity)")
+        end
+    end
+    return failed
+end
