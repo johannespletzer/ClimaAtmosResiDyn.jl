@@ -91,6 +91,15 @@ increments, and on the implicit path those of the microphysics sink and of
 sedimentation. That is the intended behaviour, since no record's tendency
 depends on a record.
 
+The records have no cross blocks, though. With a single Newton iteration
+(`max_newton_iters_ode: 1`), a record takes its implicit increments at the
+stage's first guess, while `ρe_tot` also gets the Jacobian's coupling to other
+rows. Under 0-moment microphysics that coupling does not reach the rain-out,
+and a column's records add up to its change in `ρe_tot` to rounding. Under 1M
+and 2M it includes sedimentation, so the two differ by a small linearised term.
+On a 1M column over a day, that term tracked the precipitation record's rate
+times the step, and it did not accumulate.
+
 The cost is one center field per recorded process in `Y`, and one broadcast per
 process per tendency evaluation against a difference the bracket already
 computed.
@@ -118,13 +127,15 @@ says what happened in this cell, not what arrived here.
     evaluated with `ForwardDiff.Dual` numbers.
 
     So `microphysics` is recorded however microphysics is stepped, and under
-    0-moment microphysics that is where rain leaves. `precipitation` names
-    sedimentation, which 0-moment microphysics does not have, so a record that
-    lists it stays zero there. `microphysics` on the water side is a no-op under
-    1M, where `microphysics_tendency!` moves mass between species without
-    changing `ρq_tot`.
+    0-moment microphysics that is where rain leaves. Under 1M, 2M and P3 it
+    records nothing, on either side: `microphysics_tendency!` moves mass
+    between species without changing `ρq_tot` or `ρe_tot`, and the rain-out is
+    in `precipitation`. `precipitation` names sedimentation, which 0-moment
+    microphysics does not have, so a record that lists it stays zero there.
 
-    Configuring `precipitation` warns at startup. A record that stays zero reads
+    A label that stays zero under the chosen microphysics warns at startup:
+    `precipitation` under 0-moment microphysics, and `microphysics` under the
+    other schemes. A record that stays zero reads
     exactly like a process that did nothing, and no analysis downstream can tell
     the two apart, so the distinction has to be drawn at the point where the run
     is configured.

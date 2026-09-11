@@ -251,6 +251,55 @@ end
     end
 end
 
+@testset "energy_source_tags against the scheme" begin
+    entries = [
+        Dict{String, Any}("name" => "a", "region" => "tropics"),
+        Dict{String, Any}("name" => "b", "region" => "extratropics"),
+        Dict{String, Any}("name" => "mp", "source" => "microphysics"),
+    ]
+    source_config(name, pairs...) = tracer_config(
+        [
+            "energy_source_tags" => entries,
+            "energy_source_tag_offset" => 110495.0,
+            pairs...,
+        ];
+        job_id = "tracer_config_source_$name",
+    )
+    # The warnings that `AtmosTagging` gives about one label.
+    label_warnings(config, label) = filter(
+        log -> occursin("lists `$label`", string(log.message)),
+        first(Test.collect_test_logs(() -> CA.AtmosTagging(config))),
+    )
+
+    # The tags have no updraft copy, so EDMF's updrafts are refused.
+    @test_throws ErrorException CA.AtmosTagging(
+        source_config("edmf", "turbconv" => "prognostic_edmfx"),
+    )
+    # Eddy diffusion alone moves them as tracers. That is allowed, and warned.
+    @test_logs (:warn, r"edonly_edmfx") match_mode = :any CA.AtmosTagging(
+        source_config("edonly", "turbconv" => "edonly_edmfx"),
+    )
+
+    # Only 0-moment microphysics changes `ρe_tot`. So under 1M the `mp` tag and
+    # a `microphysics` record stay zero, and each says so.
+    one_moment = source_config(
+        "1m",
+        "microphysics_model" => "1M",
+        "energy_process_record" => ["microphysics", "precipitation"],
+    )
+    @test length(label_warnings(one_moment, "microphysics")) == 2
+    # Under 1M sedimentation runs, so the `precipitation` record is quiet.
+    @test isempty(label_warnings(one_moment, "precipitation"))
+
+    zero_moment = source_config(
+        "0m",
+        "microphysics_model" => "0M",
+        "energy_process_record" => ["microphysics", "precipitation"],
+    )
+    @test isempty(label_warnings(zero_moment, "microphysics"))
+    @test length(label_warnings(zero_moment, "precipitation")) == 1
+end
+
 @testset "passive_tracers release grid" begin
     spec = Dict(
         "release_grid" => Dict(
