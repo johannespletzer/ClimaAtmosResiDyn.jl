@@ -38,8 +38,8 @@ Done or built:
     each (E26 to E39, E43). 1M with ice on a cold column, for an hour (E42).
 
 Not yet run: EDMF, ice beyond an hour, 2M and P3, Float32, a restart, anything
-longer than a day, and the GPU. The D4 EDMF pair and D1's twin without vertical
-diffusion were submitted on 2026-09-11.
+longer than a day, and the GPU. D1's twin without vertical diffusion ran
+(E42b). The D4 EDMF pair timed out before it stepped.
 
 ## Decided on 2026-09-11
 
@@ -202,8 +202,10 @@ tendency, with B4; and M2. Still open:
   - **The D4 pair, S.** EDMF on the DYCOMS column, `tracer` and `enthalpy`,
     with `edmfx_vertical_diffusion: false`. Today it measures the gap that B
     must close. After B it validates B. D5 is meant for after B. Submitted on
-    2026-09-11, on code without C1a. Once C1a is merged, D4 runs only on such
-    code, or after B.
+    2026-09-11 on code without C1a, and stopped at `hpda2_test`'s two-hour
+    limit before it stepped: the EDMF build with tags takes longer than that on
+    two cores. With C1a merged, D4 runs only on code from before C1a, or after
+    B.
   - **R4, S.** Ran (E39b, E43).
       - `c8_variants.jl`: a day of C8 under the audit, a converged Newton
         solve, and an hour under tracer transport. About 30 minutes.

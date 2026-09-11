@@ -1158,6 +1158,30 @@ of it.
 **Carry-over to the source tags.** Switch a candidate off before writing it down
 as the cause.
 
+## D4. The EDMF column pair, which never started stepping
+
+Submitted at `78586e39` on 2026-09-11, `hpda2_test`, SLURM jobs `13404536` and
+`13404537`. The owner approved them. Both were stopped at the two-hour limit.
+
+**What D4 was for.** To measure how much the unshared sub-grid fluxes add to
+`e_src_res` on the DYCOMS EDMF column, under tracer transport and under the
+audit, with `edmfx_vertical_diffusion: false` (E40).
+
+**What happened.** Neither job finished building the simulation. Each used a
+full core for two hours, reached 6.7 GB, and wrote no output. Julia's own log
+was buffered and lost when the jobs were killed, so where the build stood is not
+known.
+
+**Barrier.** The EDMF build with tags takes more than two hours on two cores,
+which is `hpda2_test`'s limit. Whether the tags make it slow was not measured.
+With C1a merged, D4 also runs only on code from before C1a.
+
+**Class.** A resource limit of the queue, not a finding about the tags.
+
+**Carry-over to the source tags.** Time a new configuration's build before
+submitting it to a capped queue, and have the log flushed, so that a killed job
+still says where it was.
+
 ## R4. The Newton lag, on the sphere and on C8's column
 
 Ran at `78586e39` on 2026-09-11, `hpda2_test`, as two SLURM jobs with their

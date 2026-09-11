@@ -255,6 +255,11 @@ lifts about a fifth of what `lower` gained above its boundary in D1, and
 vertical diffusion the rest. The gross residual is the same as D1's, so
 vertical diffusion does not make it (§6).
 
+**D4, stopped on 2026-09-11.** Jobs `13404536` and `13404537` hit
+`hpda2_test`'s two-hour limit before they wrote any output. The EDMF build with
+tags takes longer than that on two cores. With C1a merged, the pair runs only on
+code from before C1a, or after the sub-grid sharing (B) is built.
+
 **R4, done on 2026-09-11** (FINDINGS E39b, E43). Job `13408404` shows that a
 converged Newton solve removes 83% of the audit's first-hour residual on the
 sphere. Job `13408403` shows that on C8's column the audit keeps form A below

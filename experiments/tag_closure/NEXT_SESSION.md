@@ -77,20 +77,22 @@ one agent has worked this branch at once.
   - **PR state.** #65 and #68 are merged into `main`. #69, the implicit bracket
     and the repair, and #70, sedimentation as transport, a draft, target
     `main`. #72, the audit, is a draft stacked on #70. On 2026-09-11, with the
-    owner's approval:
-      + #69 got the corrected repair help text and records comment, at
-        `0ae408d8`;
-      + #72 got C3, the offset in the audit's hyperdiffusion, and the corrected
-        timing wording, at `7a290c98`. Its unit tests (230) and integration
-        tests (66) pass. It has not merged #69's `0ae408d8` or #70's new
-        commit;
-      + #70 has the EDMF refusal and M2's label warnings, at `4c274aed` in
-        `../ClimaAtmosResiDyn-repair`, with #69 merged in. Its unit tests pass.
-        It is **not pushed**: pushing to #70 waits for the owner.
+    owner's approval, all three got fixes and were pushed:
+      + #69: the corrected repair help text and records comment, `0ae408d8`;
+      + #70: the EDMF refusal and M2's label warnings, `4c274aed`, with #69
+        merged in. Its unit tests pass;
+      + #72: C3, the offset in the audit's hyperdiffusion, and the corrected
+        timing wording, `7a290c98`, then #70 merged in, `530a3658`. Its unit
+        tests (230), `tracer_config`, records (82), tagged tracers (624) and
+        integration tests (66) pass.
 
-    This branch has not merged `0ae408d8` or `7a290c98` yet. Merge them once
-    the D4 pair has finished, since those jobs run from this tree. Check the
-    PRs' CI before anything else touches them. The review of #65 and #68 left
+    This branch merged #72's head, `530a3658`, on 2026-09-11 in `57ed9c1f`,
+    with #72's previous head `404ba98f` as the merge base. A plain merge
+    conflicts, because this branch carries the audit and sedimentation as its
+    own commits. Its tag code now equals #72's, and it differs outside
+    `experiments/` only in its own `report.jl` and `solve.jl`, and its docs and
+    runscripts. Check the PRs' CI before anything else touches them. The review
+    of #65 and #68 left
     these for the owner: `c·Δρ` from mass-changing processes the tags do not
     bracket, a restart guard for a changed offset, the `Float32` rounding
     floor, `parent` shadowed in tests, `nothing` inside a broadcast, and
@@ -144,23 +146,25 @@ one agent has worked this branch at once.
   - **The owner's decisions of 2026-09-11 are in
     [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md).** Production is a GPU sphere in
     Float32 with EDMF and 1M. EDMF is refused now and shared later.
-  - **D1 ran** (E42). Through an hour of falling ice the column stays closed
-    and the tags non-negative. Under 1M the microphysics tag and record are
-    exactly zero. What the upward branch moved cannot be told apart from
-    vertical diffusion.
+  - **D1 and its twin ran** (E42, E42b). Through an hour of falling ice the
+    column stays closed and the tags non-negative. Under 1M the microphysics
+    tag and record are exactly zero. The twin, without vertical diffusion,
+    shows that the upward branch moved about a fifth of what `lower` gained
+    above its boundary. It also shows that vertical diffusion does not make
+    D1's gross residual, which falsifies E42's inference (§6).
   - **R4 ran** (E39b, E43). A converged Newton solve removes 83% of the
     audit's first-hour residual on the sphere. On C8's column the audit keeps
     form A below 4.4e-7 J/kg for a day, and a converged solve takes form B to
     −3.8e-3 J/m².
-  - **The D4 EDMF pair, jobs `13404536` and `13404537`,** was still building
-    after an hour, at full CPU, when this was written. `hpda2_test` stops a job
-    at two hours. Check `sacct`, and `output/d4_column_edmf*` on scratch. If it
-    timed out, the EDMF build with tags takes more than two hours on two cores,
-    and the pair needs a longer partition.
-  - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch, three
-    commits ahead of origin. `../ClimaAtmosResiDyn-audit` is on #72's branch,
-    level with origin. Its tracked `.buildkite/LocalPreferences.toml` names a
-    Levante MPI library, so tests there log an MPI error and still pass.
+  - **The D4 EDMF pair, jobs `13404536` and `13404537`, timed out** at
+    `hpda2_test`'s two-hour limit, still building, with no output. The EDMF
+    build with tags takes longer than that on two cores. With C1a merged, D4
+    runs only on code from before C1a, or after the sub-grid sharing is built.
+    What to do with it is the owner's call.
+  - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and
+    `../ClimaAtmosResiDyn-audit` on #72's, both level with origin. The audit
+    worktree's tracked `.buildkite/LocalPreferences.toml` names a Levante MPI
+    library, so tests there log an MPI error and still pass.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for

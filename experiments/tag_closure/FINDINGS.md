@@ -910,7 +910,12 @@ Nothing was stepped.
   - **A full EDMF simulation with tags did not build in 15 minutes** on the
     login node. The cache took 108 s, and the implicit problem was still
     compiling when the limit ended it. With `edmfx_vertical_diffusion: false`
-    it should run, by the code.
+    it should run, by the code. *Added on 2026-09-11:* on `hpda2_test`, with
+    two cores, the D4 pair did not finish building in two hours either. Both
+    jobs used a full core throughout, reached 6.7 GB, and wrote no output
+    before the time limit (jobs `13404536` and `13404537`). The same column
+    without tags was not built, so whether the tags make the build slow is not
+    known.
 
 The synthetic updraft covers a tenth of the area and rises. Below 800 m its
 `mse` is 1.5 kJ kg⁻¹ above the grid mean's and its `q_tot` 1 g kg⁻¹ above;
