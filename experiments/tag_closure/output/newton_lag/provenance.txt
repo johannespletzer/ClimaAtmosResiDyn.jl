@@ -1,0 +1,7 @@
+run: newton_lag
+kind: login-node simulations and analyses by a reviewer agent, so this file is written by hand
+scripts: experiments/tag_closure/analysis/first_hour_0m.jl, c8_variants.jl, first_hour_sphere.jl, formb_vs_flux.py, after_first_hour.py, signed_by_loss_rule.py and sphere_levels.py, as committed beside this directory; the header comment was added when they were committed
+configs: c9_column_enthalpy.yml in five variants (Newton iterations, upwinding, dt), and c8_column_1m.yml under the audit for its first 60 steps
+model code: that of the experiment branch on 2026-09-11 (the tree at 1633ab74 or its parent)
+machine: LRZ terrabyte login node, julia 1.11.9
+date: 2026-09-11

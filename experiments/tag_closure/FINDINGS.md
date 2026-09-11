@@ -794,6 +794,72 @@ The integrals take a hydrostatic density with a surface pressure of 1e5 Pa, on
 the remapped grid, so they are approximate, and the model's own quadrature
 should confirm them. *`analysis/formA_followup.jl`.*
 
+**E39. The audit's first-hour residual and C8's form-B remainder are the
+one-iteration Newton increment.** The stepper takes one Newton iteration
+(`max_newton_iters_ode: 1`). In ClimaTimeSteppers' `imex_ark.jl` a stage's
+implicit contribution is `T_imp[i] = (U − temp)/dtγ`. With one iteration that is
+the increment linearised about the stage's initial guess, not the tendency at
+the solved state.
+  - The tags and the records have no cross blocks in the Jacobian, so they take
+    their bracketed increments at the initial guess.
+  - `ρe_tot` also gets the Jacobian's coupling.
+  - Under the audit, the tags' explicit fluxes are evaluated at the solved stage
+    state.
+
+**The audit's first-hour residual (E34), on the column.** A reviewer stepped C9's
+column on the login node:
+
+| variant                                      | gross after the first step | gross at 1 h, J m⁻² |
+|:-------------------------------------------- | --------------------------:| -------------------:|
+| one Newton iteration, as run                 |                      2,675 |               2,695 |
+| Newton converged (10 iterations, rtol 1e-10) |                         25 |                20.5 |
+| no post-Newton upwind correction             |                      2,729 |               2,757 |
+| both                                         |                        7.8 |                13.1 |
+| a 5 s step                                   |              2,169 at 5 s |               2,239 |
+
+  - **When it is made.** 98% of the first hour's residual is made in the first
+    10 s step, while the vertical velocity reaches 3.66 m s⁻¹ in the initial
+    adjustment. Nothing is made after about 30 s.
+  - **Its shape.** It sits as a dipole around the inversion.
+  - **What removes it.** Converging the solve removes 99% of it. The upwind
+    correction and the step length matter little.
+  - **After the first hour.** The loss rule alone, fed with the hourly records,
+    reproduces C9's column: a gross of 2,265 J m⁻² at 24 h against 2,284, and a
+    signed +201 against +199.
+  - **On the sphere,** the residual at 24 h is the 1 h field, frozen in place,
+    with a correlation of 0.99999. By an approximate mass weighting, 69% of its
+    gross is in the top two levels. That the same mechanism made it, near the
+    lid, is an inference.
+
+**C8's form-B remainder (E33) is the same lag, in the records.** The Jacobian
+couples the `ρe_tot` and `ρ` rows to the condensates, and the records miss the
+linearised change of the outflow.
+  - Per step, form B tracks `dtγ` times the rate of the precipitation record,
+    with a correlation of 0.9945 and a slope of 3.84 s against `dtγ` = 4.36 s.
+    So it does not accumulate.
+  - No 1-moment process writes `ρe_tot` or `ρ` outside the brackets.
+  - The 0-moment column closes to the joule because 0M has no such coupling in
+    the `ρe_tot` row.
+
+**E32's +196 J m⁻² is the loss rule, not the tags' missing Jacobian block.** It
+is the loss rule acting on the residual that tracer transport makes. On the same
+atmosphere at 600 s under the audit, the block's lag is −7.8 J m⁻²: small, and
+of the other sign.
+
+**Not established:**
+  - C8's form A over a day. The 1M runs covered only the first ten minutes,
+    because the 1M build takes about 20 minutes on the login node. In those ten
+    minutes, under the audit, form A is at most 4.3e-7 J kg⁻¹.
+  - The sphere's mechanism.
+
+`analysis/c8_variants.jl` and `analysis/first_hour_sphere.jl` are ready for short
+Slurm jobs.
+
+*A reviewer agent on the terrabyte login node, 2026-09-11.
+`analysis/first_hour_0m.jl`, `c8_variants.jl`, `formb_vs_flux.py`,
+`after_first_hour.py`, `signed_by_loss_rule.py` and `sphere_levels.py`;
+`output/newton_lag/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -1093,6 +1159,12 @@ Kept because a later reader will otherwise re-derive them.
     that flux changes `E`, and the audit does not share it out. A reviewer
     found this on 2026-09-11. The fix is to add `c` to the water part of the
     shared flux, in #72, and it waits for the owner.
+  - **That under the audit the tags follow the parent's vertical flux at the
+    stage state rather than at the solved one.** The audit's docs section, the
+    vertical kernel's docstring and `ENTHALPY_AUDIT_DESIGN.md` said so. It is
+    the other way round. The tags' explicit flux is evaluated at the solved
+    stage state, and the parent's side is the one-iteration Newton increment,
+    linearised about the stage's initial guess (E39).
 
 ## 7. What is not established
 
@@ -1124,26 +1196,26 @@ Kept because a later reader will otherwise re-derive them.
   - ~~What the sphere's last per-process gap is (E30).~~ Under tracer
     transport, the per-tag van Leer limiter, with a small part from the loss
     clamp (E37).
-  - **What the 1M column's last signed residual is (E32).** +196 J m⁻² after
-    an hour with the tags moved by sedimentation, against −3,029 without. The
-    tags' missing Jacobian block for sedimentation is one candidate.
+  - ~~What the 1M column's last signed residual is (E32).~~ The loss rule
+    acting on the residual that tracer transport makes. It is not the tags'
+    missing Jacobian block, whose lag is −7.8 J m⁻² (E39).
   - **Sedimentation's upward branch in a run (E32).** Where the water carries
     negative energy against the reference plus offset, the tags take the lower
     cell's shares. Only the integration test's set flux reaches that branch. A
     run with ice would.
-  - **What C8's form-A gap and form-B remainder are (E33).** Form A leaves
-    117 J kg⁻¹ where the rain falls, twice C6's 0-moment column, and form B
-    leaves 5.3 J m⁻² that the five records do not explain. For form A the clamp
-    on the shares and the per-tag limiter are candidates, as on the column
-    before (E26). For form B, a process under 1-moment microphysics that changes
-    `ρe_tot` outside the brackets would do it. None is identified.
+  - **What C8's form-A gap is (E33).** Form B's remainder is the one-iteration
+    Newton increment in the records, and it does not accumulate (E39). Form A's
+    117 J kg⁻¹ is most likely the per-tag transport, as on the 0-moment column
+    (E37). A day of C8 under the audit would confirm it.
   - **Whether the audit's transport clamp is the whole of its form-A gap on
     the sphere (E36).** A negative overlay freezes at its node while its
     neighbours' shares keep pushing it. That the clamp is the only cause is
     inferred from the code. A C9 twin with signed shares for the overlays would
     decide it.
-  - **What makes the audit's first-hour residual (E34).** After the first hour
-    it does not grow. The initial adjustment of E13 and E25 is the candidate.
+  - ~~What makes the audit's first-hour residual (E34).~~ On the column, the
+    one-iteration Newton increment during the initial adjustment: a converged
+    solve removes 99% of it (E39). On the sphere this is inferred. The two-hour
+    test in `analysis/first_hour_sphere.jl` would decide it.
   - ~~How the column's unrecorded 1.37 MJ m⁻² splits (E23).~~ Subsidence's
     −1,277,826 J m⁻² and the rain-out's −87,651, to the joule (E26).
   - ~~What the column's last per-process gap is (E26).~~ The tags' per-tag
