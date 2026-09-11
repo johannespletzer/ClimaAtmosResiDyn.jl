@@ -53,6 +53,10 @@ FAMILIES = {
 
 # Runs that deliberately carry no tags: the per-phase timing controls.
 CONTROLS = {"a1_dt10_notags", "b1_notags", "c0_column_notags", "d4_column_edmf_notags"}
+# P4's split test builds D4's EDMF column with only part of what D4 adds, to
+# find what makes its build slow (FINDINGS E44). These runs carry tags without a
+# closure check, write nothing, and are read for their build time alone.
+BUILD_SPLIT = {"p4_edmf_two_tags", "p4_edmf_tags", "p4_edmf_tags_records"}
 # The only run allowed a limiter, and the only one allowed Float32.
 LIMITER_OK = {"a5_sphere_limiter", "b3_limiter"}
 FLOAT32_OK = {"a4_float32"}
@@ -248,6 +252,8 @@ def check(path):
         if tags is None and block is None:
             continue
         if (tags is None) != (block is None):
+            if name in BUILD_SPLIT and block is None:
+                continue
             problems.append(
                 "%s: %s and %s must be present or absent together; the check "
                 "errors at startup without its family" % (family, tracer_key, check_key)
@@ -290,6 +296,13 @@ def check(path):
             problems.append("a timing control must configure no tag family")
         if listed:
             problems.append("a timing control should list no diagnostics")
+    elif name in BUILD_SPLIT:
+        if active:
+            problems.append("a build-split run must configure no closure check")
+        if listed:
+            problems.append("a build-split run should list no diagnostics")
+        if not config.get("energy_source_tags"):
+            problems.append("a build-split run must configure energy_source_tags")
     else:
         if active != 1:
             problems.append("expected exactly one tag family under test, found %d" % active)

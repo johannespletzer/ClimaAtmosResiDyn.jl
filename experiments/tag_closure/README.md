@@ -570,6 +570,9 @@ run today.
 | `d4_column_edmf` | `phase_c.sh` | D4, the DYCOMS RF02 EDMF column with C8's tags, and `edmfx_vertical_diffusion: false` |
 | `d4_column_edmf_enthalpy` | `phase_c.sh` | `d4_column_edmf` with the tags moved as enthalpy |
 | `d4_column_edmf_notags` | `phase_c.sh` | D4's column with no tags, for an hour: does the EDMF build take over two hours without them too? |
+| `p4_edmf_two_tags` | `phase_c.sh`, from a worktree at `edd44e1d` | P4, D4's column with its two region tags only, for build time |
+| `p4_edmf_tags` | `phase_c.sh`, from a worktree at `edd44e1d` | P4, D4's column with its 8 tags only |
+| `p4_edmf_tags_records` | `phase_c.sh`, from a worktree at `edd44e1d` | P4, D4's column with its 8 tags and 5 records |
 | `d5_column_edmf_ice` | `phase_c.sh` | D5, TRMM LBA EDMF deep convection under 1M. It is meant for after the sub-grid sharing |
 
 C2, the implicit-path brackets, needs the owner's approval and a code change,

@@ -1,0 +1,59 @@
+# P4's split test, part 1: D4's EDMF column with two region tags and nothing
+# else (OPERATIONAL_TODO.md, P4; FINDINGS E44).
+#
+# With D4's 8 tags, 5 records, audited closure check and 24 diagnostics, this
+# column did not finish building in two hours. Without any of them it builds in
+# 410 s. The three P4 runs add those parts back one at a time:
+#   - this one, the two region tags of D4's partition;
+#   - `p4_edmf_tags`, all of D4's 8 tags;
+#   - `p4_edmf_tags_records`, the 8 tags and D4's 5 records.
+# None has a closure check or writes any diagnostic, so the build time belongs
+# to the tags and the records alone.
+#
+# The model refuses `prognostic_edmfx` with energy source tags since #70's
+# `4c274aed`, which this branch merged in `57ed9c1f`. So these runs are
+# submitted from a worktree at `edd44e1d`, the head before that merge, whose
+# model is the one D4 ran on. The config itself is read from this branch.
+#
+# One hour, so that a build that finishes in time also finishes the run and
+# its log is flushed. `hpda2_test` stops a job at two hours.
+job_id: "p4_edmf_two_tags"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+
+# `d4_column_edmf`'s column, unchanged.
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: false
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1hours"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+
+output_default_diagnostics: false

@@ -1,0 +1,63 @@
+# P4's split test, part 3: D4's EDMF column with D4's 8 tags and its 5 records,
+# and nothing else (OPERATIONAL_TODO.md, P4; FINDINGS E44). `p4_edmf_two_tags`
+# says why and how the three P4 runs are submitted.
+#
+# `all` includes `precipitation`, and so does the record, so the initialization
+# warns. That is expected.
+job_id: "p4_edmf_tags_records"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+
+# `d4_column_edmf`'s column, unchanged.
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: false
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1hours"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: rad
+    source: radiation
+  - name: sfc
+    source: surface_flux
+  - name: sub
+    source: subsidence
+  - name: mp
+    source: microphysics
+  - name: new_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: all
+  - name: new_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: all
+
+energy_process_record:
+  [radiation, surface_flux, subsidence, microphysics, precipitation]
+
+output_default_diagnostics: false
