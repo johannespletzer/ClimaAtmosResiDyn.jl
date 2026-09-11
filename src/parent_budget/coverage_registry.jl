@@ -108,6 +108,9 @@ nogw(c::RegistryContext) = !isnothing(c.atmos.non_orographic_gravity_wave)
 ogw(c::RegistryContext) = !isnothing(c.atmos.orographic_gravity_wave)
 prescribed_flow(c::RegistryContext) = !isnothing(c.atmos.prescribed_flow)
 water_tags(c::RegistryContext) = !isnothing(c.atmos.water_tagging_model)
+energy_source_repair(c::RegistryContext) =
+    !isnothing(c.atmos.energy_source_tagging_model) &&
+    c.atmos.energy_source_tagging_model.repair
 surface_flux(c::RegistryContext) = !c.atmos.disable_surface_flux_tendency
 slab_qflux(c::RegistryContext) = c.slab && c.atmos.surface.temperature.q_flux
 zero_moment(c::RegistryContext) =
@@ -1275,6 +1278,23 @@ const COVERAGE_ROWS = CoverageRow[
         "`journal_tests.jl`",
         7,
         water_tags,
+    ),
+    CoverageRow(
+        :final_maps,
+        Symbol("map.repair_energy_source_tags"),
+        "`constrain_state!`, `repair_energy_source_tags!`",
+        "`constrain_state!`",
+        "energy source repair on",
+        "atmosphere",
+        "tag fields only",
+        (:invariant_zero, :invariant_zero, :invariant_zero),
+        "tag-only, partition sum preserved by construction",
+        :final_map,
+        :collected,
+        "unit test of the repair on fields",
+        "`energy_source_tags_tests.jl`",
+        7,
+        energy_source_repair,
     ),
     CoverageRow(
         :final_maps,

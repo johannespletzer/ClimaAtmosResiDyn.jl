@@ -394,15 +394,17 @@ is what makes a tag an amount rather than a running total. It is the same rule
 the water tags use, and the opposite of the `ρe_tag_*` family, which applies the
 whole signed increment by mask.
 
-This step does not keep a tag non-negative, and nothing downstream does either.
-What it produces is a tendency: the loss term sets the *rate* a tag is depleted
-at, in proportion to what it holds, but the timestepper integrates that over a
-finite step and the amount removed is roughly `dt * φ_k * Δ⁻`. Nothing bounds
-that by the holding. Where `ρe_tot` is not positive the share is undefined and
+This step does not keep a tag non-negative. What it produces is a tendency: the
+loss term sets the *rate* a tag is depleted at, in proportion to what it holds,
+but the timestepper integrates that over a finite step and the amount removed is
+roughly `dt * φ_k * Δ⁻`. Nothing here bounds that by the holding. Where the
+total is not positive the share is undefined and
 [`energy_source_fraction`](@ref) returns zero, so no loss is attributed there at
 all. The tags are also exempt from both tracer limiters and ride the unlimited
-explicit transport path, and unlike the water tags there is no partition repair.
-See the contract on [`EnergySourceTag`](@ref).
+explicit transport path. What puts a negative tag back, where the total is
+positive, is `repair_energy_source_tags!`, after each state update, unless
+`energy_source_tag_repair` is off. See the contract on
+[`EnergySourceTag`](@ref).
 
 `Y` is needed in addition to `Yₜ` because the donor share is a property of the
 current state. A no-op when energy source tagging is disabled.
@@ -629,7 +631,11 @@ Every change is added to `p.tagging.ᶜenergy_source_fix` and reported as
 `e_src_fix_<name>`, so what the repair did stays distinguishable from what the
 rule and the transport did. For the partition tags these changes sum to zero in
 each cell, except where the negatives outweighed the positives and every tag was
-zeroed.
+zeroed. The ledger equals what the repair changed in the accepted state only at
+the default `update_constrain_state_every: step`. At `stage` or `dss` the repair
+also runs inside the step, where the stepper rescales or discards what it
+changes, as it does for the water tags' `q_tag_fix`. The tags end each step
+repaired either way.
 
 On by default. `energy_source_tag_repair: false` switches it off, and leaves the
 tags exactly as the rule and their transport make them, negative values
