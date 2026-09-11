@@ -596,6 +596,33 @@ covers that direction on a set flux. What the +196 J m⁻² left is, is not
 separated, and the tags' missing Jacobian block is one candidate. *Terrabyte
 login node, model code of `91b9bbb9`; `output/sedimentation_smoke/`.*
 
+**E33. On a 1M column for a day, with sedimentation moving the tags, both
+per-process checks hold, less tightly than on the 0M column.** C8 is C6's column
+with the repair on, under 1-moment microphysics, with an `mp` tag and a
+`precipitation` record, so that both forms see sedimentation.
+
+  - **Form B.** The five records explain the change in the column's `ρe_tot` to
+    −5.3 J m⁻² out of 897,043, 6e-6. The rain took 158,979 J m⁻² out of the
+    column, by the `precipitation` record. C6's 0-moment column closed to the
+    joule (E26). What the 5.3 J m⁻² is, is not separated.
+  - **Form A.** The new energy split by region and split by process agree to
+    117 J kg⁻¹ at 24 h, 7.1e-4 in relative terms, at 75 m, where the
+    `precipitation` record is −613 J kg⁻¹. C6's column left 60.7 J kg⁻¹ and
+    3.8e-4 (E26). The gap grows slowly for ten hours, to 1.75 J kg⁻¹, and faster
+    after. It is not separated either.
+  - Each region's initial energy still only falls, and the repair's largest
+    ledger is 5e-7 J kg⁻¹.
+  - The first hour reproduces E32's run with the tags moved, to every printed
+    digit of the closure table, although C8 ran on the code with the review
+    fixes of #65 and #68 merged in.
+  - The closure residual's gross at 24 h is 2.46e6 J m⁻², against 2.44e6 on
+    C6's 0-moment column. Pressure work dominates both (E25).
+  - Where radiation cools most, at 725 m, the radiation tag holds 9e-8 J kg⁻¹
+    against a record of −43,033 J kg⁻¹, as in E22.
+
+*C8, job `13401744` on terrabyte at `c11d1d3b`; `analysis/c5_process_closure.jl`,
+`output/c8_column_1m/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -918,6 +945,12 @@ Kept because a later reader will otherwise re-derive them.
     negative energy against the reference plus offset, the tags take the lower
     cell's shares. Only the integration test's set flux reaches that branch. A
     run with ice would.
+  - **What C8's form-A gap and form-B remainder are (E33).** Form A leaves
+    117 J kg⁻¹ where the rain falls, twice C6's 0-moment column, and form B
+    leaves 5.3 J m⁻² that the five records do not explain. For form A the clamp
+    on the shares and the per-tag limiter are candidates, as on the column
+    before (E26). For form B, a process under 1-moment microphysics that changes
+    `ρe_tot` outside the brackets would do it. None is identified.
   - **How the column's unrecorded 1.37 MJ m⁻² splits (E23)** between
     subsidence, the 0-moment rain-out and the numerics. A column run that
     records subsidence and microphysics, on the code of §8, would split it.
@@ -1068,9 +1101,21 @@ Kept because a later reader will otherwise re-derive them.
     The tests check the flux sum on a 1M column to 100 eps, and the donor in
     both directions on a step partition. They pass on this branch and on #69's.
     Run twice for an hour on a 1M column, with the tags moved and without, the
-    column's signed residual is 15 times smaller with them (E32). It is about
-    270 lines of model code with docstrings, and 140 of tests. A draft PR
-    stacked on #69 is prepared locally and waits for the owner.
+    column's signed residual is 15 times smaller with them (E32). A day of the
+    same column keeps both per-process checks, less tightly than at 0M (E33).
+    It is about 270 lines of model code with docstrings, and 140 of tests, and
+    it is draft PR #70, stacked on #69.
+
+    **Built: the enthalpy audit switch** (`511e00e9`), as
+    `ENTHALPY_AUDIT_DESIGN.md` designs it, with the owner's four decisions. The
+    key is `energy_source_tag_transport`, `tracer` by default or `enthalpy`.
+    `enthalpy` is refused without an offset, covers vertical and horizontal
+    advection and hyperdiffusion, and uses the parent's
+    `energy_q_tot_upwinding` vertically. The tests check each of the three sums
+    against the parent's to 100 eps, on the column and on a two-element sphere.
+    They also check the upwind donor both ways, and that the model's state is
+    untouched. C9 is its pair of runs, prepared and not submitted. Its PR
+    branch, stacked on #70, is prepared locally.
 
  4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
     and the energy family has no rescale. C1 solved a simulated day in 5.8

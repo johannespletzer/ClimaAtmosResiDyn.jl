@@ -209,26 +209,27 @@ same sphere, in `output/transport_ledger_sphere/`. What they found:
   - on the sphere too, pressure work is at least 93% of the residual's growth,
     the per-tag limiter 2e-4 and hyperdiffusion 2.4%.
 
-**Next.** The owner approved both builds after C6. Each run still needs its own
-approval:
+**Sedimentation as transport, built and run on 2026-09-11** (FINDINGS E32,
+E33). It is draft PR #70, stacked on #69. A one-hour 1M column on the login
+node shows the tags now follow it out at the ground. C8, job `13401744`, ran
+that column for a day, in `output/c8_column_1m/`. Form B closes there to
+5.3 J/m² out of 0.9 MJ/m², and form A to 117 J/kg.
 
-  - sedimentation as transport of the tags is built at `91b9bbb9`, and passes
-    its tests. A one-hour 1M column on the login node shows the tags now follow
-    it out at the ground (FINDINGS E32). It is draft PR #70, stacked on #69.
-    C8, `configs/c8_column_1m.yml`, runs that column for a day and is ready to
-    submit:
+**Next.** Each run needs its own approval:
 
-        env CONFIG=experiments/tag_closure/configs/c8_column_1m.yml \
+  - the enthalpy-form audit switch is built at `511e00e9`, as designed in
+    `ENTHALPY_AUDIT_DESIGN.md`, and passes its tests on this branch. Its PR
+    branch, stacked on #70, is prepared locally. C9 is its pair of runs, each
+    against its reference with only the transport changed:
+
+        env CONFIG=experiments/tag_closure/configs/c9_column_enthalpy.yml \
             sbatch --account=hpda-c --partition=hpda2_test --time=01:30:00 \
-            --cpus-per-task=2 --mem=32G --job-name=c8_column_1m \
+            --cpus-per-task=2 --mem=32G --job-name=c9_column_enthalpy \
             --output=$SCRATCH/tag_closure/logs/%x-%j.out \
             --error=$SCRATCH/tag_closure/logs/%x-%j.err \
             experiments/tag_closure/runscripts/phase_c.sh
 
-  - the enthalpy-form audit switch. Both measurements meet the rule for building
-    it (E25, E31), and the sphere's says it needs a horizontal half. Its design
-    is `ENTHALPY_AUDIT_DESIGN.md`, and it waits for the owner's answers to the
-    four decisions there. No code is written.
+    and the same with `c9_sphere_enthalpy`.
 
 The first submission, jobs `13385435` to `13385439`, failed at startup. The
 repair's commit had registered `e_src_fix_<name>` without defining the function

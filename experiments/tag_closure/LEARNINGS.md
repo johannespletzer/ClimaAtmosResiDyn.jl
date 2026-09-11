@@ -1031,3 +1031,25 @@ tagged. The residual is pressure work in both geometries.
 **Carry-over to the source tags.** On a sphere with ice, tag `microphysics`,
 because the rain-out produces energy there. A switch that moves the tags as
 enthalpy needs a horizontal half as well as a vertical one.
+
+## C8. Sedimentation moving the tags, for a day
+
+Ran at `c11d1d3b` on 2026-09-11, `hpda2_test` on LRZ terrabyte, SLURM job
+`13401744`, 26 minutes. The owner approved it.
+
+**What C8 was for.** The first day-long run with sedimentation moving the
+source tags. It is E32's one-hour column, with C6's layout, an `mp` tag and a
+`precipitation` record, so that both forms of the per-process check see
+sedimentation.
+
+**Both forms hold.** Form B closes to 5.3 J/m² out of 0.9 MJ/m², while the rain
+takes 0.16 MJ/m² out of the column. Form A holds to 117 J/kg, 7e-4 (E33).
+
+**Barrier.** Form A's gap is twice C6's 0M column's, and sits where the rain
+falls. Form B no longer closes to the joule. Neither residue is separated.
+
+**Class.** Numerical, and small. No process was missing this time.
+
+**Carry-over to the source tags.** Under 1M, record `precipitation`: it is how
+the column's energy leaves with the rain. The tags need no label for it,
+because they follow it.
