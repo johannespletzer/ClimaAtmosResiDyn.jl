@@ -52,7 +52,7 @@ FAMILIES = {
 }
 
 # Runs that deliberately carry no tags: the per-phase timing controls.
-CONTROLS = {"a1_dt10_notags", "b1_notags", "c0_column_notags"}
+CONTROLS = {"a1_dt10_notags", "b1_notags", "c0_column_notags", "d4_column_edmf_notags"}
 # The only run allowed a limiter, and the only one allowed Float32.
 LIMITER_OK = {"a5_sphere_limiter", "b3_limiter"}
 FLOAT32_OK = {"a4_float32"}

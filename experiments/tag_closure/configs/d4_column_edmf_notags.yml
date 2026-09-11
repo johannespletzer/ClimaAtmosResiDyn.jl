@@ -1,0 +1,47 @@
+# D4's build control: the same EDMF column with no tags at all.
+#
+# The D4 pair did not finish building in two hours on `hpda2_test`, and wrote
+# no output (FINDINGS E40, LEARNINGS D4). The same column without tags was never
+# built, so it is not known whether the tags make the EDMF build slow. That
+# matters, because production uses EDMF. This run answers it: if it builds and
+# steps within the limit, the tags are what make the build slow.
+#
+# Every model key is `d4_column_edmf`'s. It runs one hour instead of a day, so
+# that if the build finishes in time the run finishes too, and Julia's log,
+# with its build time, is flushed. D4's log was lost when its jobs were killed.
+#
+# `energy_source_tags` and `energy_source_closure_check` are both absent and
+# have to go together: the check errors at startup when it is configured
+# without its family.
+job_id: "d4_column_edmf_notags"
+
+# `d4_column_edmf`'s column, unchanged.
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: false
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1hours"
+FLOAT_TYPE: "Float64"
+
+# Nothing to write out.
+output_default_diagnostics: false
