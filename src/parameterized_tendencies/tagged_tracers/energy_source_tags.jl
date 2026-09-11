@@ -157,10 +157,21 @@ is_energy_source_tag_name(name::MatrixFields.FieldName) =
     _energy_source_tagging_cache(Y, model)
 
 Cache entries used by the energy source tags, merged into `p.tagging`; `nothing`
-when they are disabled. Contains `ᶜenergy_source_masks`, one static center
-`Field` per region tag holding the smooth spatial mask of that tag's region,
-keyed like the state (`ρe_src_<name>`). Masks are evaluated once here and never
-inside a per-timestep broadcast.
+when they are disabled. Contains:
+
+  - `ᶜenergy_source_masks`: one static center `Field` per region tag holding
+    the smooth spatial mask of that tag's region, keyed like the state
+    (`ρe_src_<name>`). Masks are evaluated once here and never inside a
+    per-timestep broadcast.
+  - `ᶜenergy_source_fix`: one center `Field` per tag, accumulating the energy
+    that `repair_energy_source_tags!` has moved into or out of it. It is
+    reported as `e_src_fix_<name>`. It lives in the cache, so it restarts at
+    zero, as the water tags' ledger does.
+  - `ᶜenergy_source_pos` and `ᶜenergy_source_neg`: the positive and negative
+    parts of the partition's sum, which the repair fills itself.
+  - `ᶠenergy_source_interior`: one on every face but the bottom one, where it
+    is zero. `sediment_energy_source_tags!` uses it to keep the lowest cell as
+    the donor at the surface, where there is no cell below.
 """
 _energy_source_tagging_cache(Y, ::Nothing) = nothing
 function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
@@ -172,21 +183,66 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         "ρe_src",
     )
     _check_parent_positivity(Y, model)
-    return (; ᶜenergy_source_masks)
+    _check_sedimentation_offset(Y, model)
+    # The ledger exists whether or not the repair is on, so that
+    # `e_src_fix_<name>` reads zero rather than failing when it is off.
+    ᶜenergy_source_fix = _energy_source_fix_fields(Y.c.ρ, model.tags)
+    ᶜenergy_source_pos = zero.(Y.c.ρ)
+    ᶜenergy_source_neg = zero.(Y.c.ρ)
+    ᶠenergy_source_interior = one.(Fields.coordinate_field(Y.f).z)
+    Fields.level(ᶠenergy_source_interior, half) .=
+        zero(eltype(ᶠenergy_source_interior))
+    return (;
+        ᶜenergy_source_masks,
+        ᶜenergy_source_fix,
+        ᶜenergy_source_pos,
+        ᶜenergy_source_neg,
+        ᶠenergy_source_interior,
+    )
 end
+
+# Sedimentation moves each tag by its share of the total the tags partition,
+# and a share is zero wherever that total is not positive. Without an offset,
+# under the default energy reference, that is much of a moist troposphere, and
+# there the tags would not follow the falling water at all.
+function _check_sedimentation_offset(Y, model)
+    isempty(sedimenting_mass_names(Y)) && return nothing
+    isnothing(model.offset) || return nothing
+    @warn "`energy_source_tags` run with sedimenting condensate but no " *
+          "`energy_source_tag_offset`. Sedimentation moves each tag by its " *
+          "share of the total the tags partition, and that share is zero " *
+          "wherever the total is not positive, which under the default " *
+          "energy reference is much of the troposphere. There the tags do " *
+          "not follow the falling water, and the difference lands in " *
+          "`e_src_res`."
+    return nothing
+end
+
+_energy_source_fix_fields(ᶜρ, ::Tuple{}) = (;)
+_energy_source_fix_fields(ᶜρ, tags::Tuple) = merge(
+    tag_entry(first(tags), zero.(ᶜρ)),
+    _energy_source_fix_fields(ᶜρ, Base.tail(tags)),
+)
 
 """
     energy_source_scratch(Y, model)
 
 Scratch fields of the energy source tags, merged into `p.scratch`: the
-bracket's snapshot of `Yₜ.c.ρe_tot`, and with an offset also a snapshot of
-`Yₜ.c.ρ` and a field the closure check fills with the offset total.
+bracket's snapshot of `Yₜ.c.ρe_tot`, the partition-share denominator that
+sedimentation divides by, and with an offset also a snapshot of `Yₜ.c.ρ` and a
+field the closure check fills with the offset total. They live in `p.scratch`
+because the implicit tendency, where sedimentation runs, may be evaluated with
+`ForwardDiff.Dual` numbers, and `p.scratch` is converted for that.
 """
 energy_source_scratch(Y, model::EnergySourceTaggingModel) =
     _energy_source_scratch(Y, model.offset)
-_energy_source_scratch(Y, ::Nothing) = (; ᶜe_src_snapshot = similar(Y.c.ρ))
+_energy_source_scratch(Y, ::Nothing) = (;
+    ᶜe_src_snapshot = similar(Y.c.ρ),
+    ᶜe_src_share_norm = similar(Y.c.ρ),
+)
 _energy_source_scratch(Y, offset) = (;
     ᶜe_src_snapshot = similar(Y.c.ρ),
+    ᶜe_src_share_norm = similar(Y.c.ρ),
     ᶜe_src_ρ_snapshot = similar(Y.c.ρ),
     ᶜe_src_parent = similar(Y.c.ρ),
 )
@@ -338,15 +394,17 @@ is what makes a tag an amount rather than a running total. It is the same rule
 the water tags use, and the opposite of the `ρe_tag_*` family, which applies the
 whole signed increment by mask.
 
-This step does not keep a tag non-negative, and nothing downstream does either.
-What it produces is a tendency: the loss term sets the *rate* a tag is depleted
-at, in proportion to what it holds, but the timestepper integrates that over a
-finite step and the amount removed is roughly `dt * φ_k * Δ⁻`. Nothing bounds
-that by the holding. Where `ρe_tot` is not positive the share is undefined and
+This step does not keep a tag non-negative. What it produces is a tendency: the
+loss term sets the *rate* a tag is depleted at, in proportion to what it holds,
+but the timestepper integrates that over a finite step and the amount removed is
+roughly `dt * φ_k * Δ⁻`. Nothing here bounds that by the holding. Where the
+total is not positive the share is undefined and
 [`energy_source_fraction`](@ref) returns zero, so no loss is attributed there at
 all. The tags are also exempt from both tracer limiters and ride the unlimited
-explicit transport path, and unlike the water tags there is no partition repair.
-See the contract on [`EnergySourceTag`](@ref).
+explicit transport path. What puts a negative tag back, where the total is
+positive, is `repair_energy_source_tags!`, after each state update, unless
+`energy_source_tag_repair` is off. See the contract on
+[`EnergySourceTag`](@ref).
 
 `Y` is needed in addition to `Yₜ` because the donor share is a property of the
 current state. A no-op when energy source tagging is disabled.
@@ -494,3 +552,369 @@ function _accumulate_energy_source_tag!(
     end
     return nothing
 end
+
+# ============================================================================
+# Repair
+# ============================================================================
+
+# A pure region tag has a region and no sources. Those tags partition the total,
+# and the repair keeps their sum. Both properties are type parameters, so this
+# resolves at compile time, as `_is_partition_tag` does for the water tags.
+_is_energy_partition_tag(
+    ::EnergySourceTag{name, R, Tuple{}},
+) where {name, R <: AbstractTagRegion} = true
+_is_energy_partition_tag(::EnergySourceTag) = false
+
+"""
+    energy_source_partition_repair(ρe_src, pos, neg, parent)
+
+The value `repair_energy_source_tags!` gives a partition tag. `pos` and `neg` are
+the positive and negative parts of the partition's sum in the same cell, and
+`parent` is the total the tags partition there.
+
+Where `parent` is positive, a negative tag is set to zero and the positive tags
+are scaled by the common factor `max(pos + neg, 0) / pos`, the factor of the
+water tags' repair, `water_tag_repair_factor`. The sum `pos + neg` is kept
+exactly and every tag ends non-negative. Where the negatives outweigh the
+positives, no non-negative partition has that sum, so every tag is zeroed, as
+the water repair does.
+
+Where `parent` is not positive the tag is left as it is. The donor share is
+undefined there, and a region tag carries the parent's sign by design, so a
+negative value is not an error to repair. Under the default energy reference
+that is much of the troposphere. With a large enough `energy_source_tag_offset`
+it is nowhere.
+"""
+@inline energy_source_partition_repair(ρe_src, pos, neg, parent) =
+    parent > zero(parent) ?
+    max(ρe_src, zero(ρe_src)) * water_tag_repair_factor(pos, neg) : ρe_src
+
+"""
+    energy_source_overlay_repair(ρe_src, parent)
+
+The value `repair_energy_source_tags!` gives a tag that carries a source. Such a
+tag is not a member of the partition. It marks the part of the total that came
+in through its processes. Where `parent` is positive a negative value is set to
+zero; elsewhere the tag is left alone, for the reason
+`energy_source_partition_repair` gives.
+
+There is no sum to keep, so the energy the clip adds comes from nowhere within
+the tags. The ledger records it.
+"""
+@inline energy_source_overlay_repair(ρe_src, parent) =
+    parent > zero(parent) ? max(ρe_src, zero(ρe_src)) : ρe_src
+
+"""
+    repair_energy_source_tags!(Y, p)
+
+Keep the energy source tags non-negative where their total is positive.
+
+The tags go negative for the reasons given in `docs/src/energy_source_tags.md`:
+the finite step of the donor loss, and unlimited explicit transport with no
+limiter. A negative tag voids its reading as an amount of energy from
+somewhere. Through the clamp in `energy_source_fraction` it also distorts what
+the other tags lose. This puts the tags back in range after each state update:
+
+  - the partition tags keep their sum, through `energy_source_partition_repair`;
+  - a tag that carries a source is clipped at zero, through
+    `energy_source_overlay_repair`.
+
+Both act only where the total the tags partition is positive, which is
+everywhere with a large enough `energy_source_tag_offset`.
+
+It does **not** force the region tags to add up to the total. That would drive
+`e_src_res` to zero by construction and hide the transport mismatch the residual
+exists to show. It removes only the negativity, as the water tags' partition
+repair does.
+
+Every change is added to `p.tagging.ᶜenergy_source_fix` and reported as
+`e_src_fix_<name>`, so what the repair did stays distinguishable from what the
+rule and the transport did. For the partition tags these changes sum to zero in
+each cell, except where the negatives outweighed the positives and every tag was
+zeroed. The ledger equals what the repair changed in the accepted state only at
+the default `update_constrain_state_every: step`. At `stage` or `dss` the repair
+also runs inside the step, where the stepper rescales or discards what it
+changes, as it does for the water tags' `q_tag_fix`. The tags end each step
+repaired either way.
+
+On by default. `energy_source_tag_repair: false` switches it off, and leaves the
+tags exactly as the rule and their transport make them, negative values
+included. Called from `constrain_state!` after the water tags' repair. A no-op
+when energy source tagging is disabled.
+"""
+repair_energy_source_tags!(Y, p) =
+    _repair_energy_source_tags!(Y, p, p.atmos.energy_source_tagging_model)
+_repair_energy_source_tags!(Y, p, ::Nothing) = nothing
+function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
+    model.repair || return nothing
+    (; ᶜenergy_source_fix, ᶜenergy_source_pos, ᶜenergy_source_neg) = p.tagging
+    ᶜparent = _energy_source_parent_field(Y, model.offset)
+    ᶜenergy_source_pos .= zero(eltype(ᶜenergy_source_pos))
+    ᶜenergy_source_neg .= zero(eltype(ᶜenergy_source_neg))
+    _accumulate_energy_source_partition!(
+        ᶜenergy_source_pos,
+        ᶜenergy_source_neg,
+        Y.c,
+        model.tags,
+    )
+    _apply_energy_source_repair!(
+        Y.c,
+        ᶜenergy_source_fix,
+        ᶜenergy_source_pos,
+        ᶜenergy_source_neg,
+        ᶜparent,
+        model.tags,
+    )
+    return nothing
+end
+
+# The partition's sum split into its positive and negative parts, over the pure
+# region tags only. The tags that carry a source are outside the partition.
+_accumulate_energy_source_partition!(ᶜpos, ᶜneg, ᶜY, ::Tuple{}) = nothing
+function _accumulate_energy_source_partition!(ᶜpos, ᶜneg, ᶜY, tags::Tuple)
+    tag = first(tags)
+    if _is_energy_partition_tag(tag)
+        ᶜρe_src = tag_field(ᶜY, tag)
+        @. ᶜpos += max(ᶜρe_src, 0)
+        @. ᶜneg += min(ᶜρe_src, 0)
+    end
+    return _accumulate_energy_source_partition!(
+        ᶜpos,
+        ᶜneg,
+        ᶜY,
+        Base.tail(tags),
+    )
+end
+
+# `ᶜpos` and `ᶜneg` come from the state before the repair and are only read
+# here, so each tag can be rewritten in place and a later tag's factor still
+# holds. The ledger is written first, so it records the correction itself.
+_apply_energy_source_repair!(ᶜY, ᶜfix, ᶜpos, ᶜneg, ᶜparent, ::Tuple{}) =
+    nothing
+function _apply_energy_source_repair!(
+    ᶜY,
+    ᶜfix,
+    ᶜpos,
+    ᶜneg,
+    ᶜparent,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜρe_src = tag_field(ᶜY, tag)
+    ᶜtag_fix = tag_field(ᶜfix, tag)
+    if _is_energy_partition_tag(tag)
+        @. ᶜtag_fix +=
+            energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
+            ᶜρe_src
+        @. ᶜρe_src =
+            energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent)
+    else
+        @. ᶜtag_fix += energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src
+        @. ᶜρe_src = energy_source_overlay_repair(ᶜρe_src, ᶜparent)
+    end
+    return _apply_energy_source_repair!(
+        ᶜY,
+        ᶜfix,
+        ᶜpos,
+        ᶜneg,
+        ᶜparent,
+        Base.tail(tags),
+    )
+end
+
+# ============================================================================
+# Sedimentation
+# ============================================================================
+
+# A center value taken from the cell below each face. There is no cell below
+# the bottom face, so it gives zero there, and `ᶠenergy_source_interior`
+# removes the term it enters at that face anyway.
+const ᶠbottom_bias_zero =
+    Operators.BottomBiasedC2F(bottom = Operators.SetValue(0))
+
+"""
+    energy_source_sediment_share(ρe_src, parent, norm)
+    energy_source_source_sediment_share(ρe_src, parent)
+
+The fraction of the energy that sedimentation carries out of a cell which a tag
+gives up. A partition tag's clamped share of the total is divided by `norm`,
+the sum of those shares over the partition. So the shares add up to one wherever
+there is tagged energy, and the partition's fluxes add up to the parent's
+exactly. A tag that carries a source keeps its own clamped share, as the water
+tags' source tags do.
+"""
+@inline energy_source_sediment_share(ρe_src, parent, norm) =
+    norm > zero(norm) ? energy_source_fraction(ρe_src, parent) / norm :
+    zero(norm)
+@inline energy_source_source_sediment_share(ρe_src, parent) =
+    energy_source_fraction(ρe_src, parent)
+
+"""
+    energy_source_share_norm!(p, Y)
+
+Fill `p.scratch.ᶜe_src_share_norm` with the sum of the partition tags' clamped
+shares of the total they partition, the denominator that
+`energy_source_sediment_share` divides by. It is a property of the current
+state, so `vertical_advection_of_water_tendency!` recomputes it once per call.
+A no-op when energy source tagging is disabled.
+"""
+energy_source_share_norm!(p, Y) =
+    _energy_source_share_norm!(p, Y, p.atmos.energy_source_tagging_model)
+_energy_source_share_norm!(p, Y, ::Nothing) = nothing
+function _energy_source_share_norm!(p, Y, model::EnergySourceTaggingModel)
+    ᶜnorm = p.scratch.ᶜe_src_share_norm
+    ᶜparent = _energy_source_parent_field(Y, model.offset)
+    ᶜnorm .= zero(eltype(ᶜnorm))
+    _accumulate_energy_source_share_norm!(ᶜnorm, Y.c, ᶜparent, model.tags)
+    return nothing
+end
+
+_accumulate_energy_source_share_norm!(ᶜnorm, ᶜY, ᶜparent, ::Tuple{}) =
+    nothing
+function _accumulate_energy_source_share_norm!(
+    ᶜnorm,
+    ᶜY,
+    ᶜparent,
+    tags::Tuple,
+)
+    tag = first(tags)
+    if _is_energy_partition_tag(tag)
+        ᶜρe_src = tag_field(ᶜY, tag)
+        @. ᶜnorm += energy_source_fraction(ᶜρe_src, ᶜparent)
+    end
+    return _accumulate_energy_source_share_norm!(
+        ᶜnorm,
+        ᶜY,
+        ᶜparent,
+        Base.tail(tags),
+    )
+end
+
+"""
+    sediment_energy_source_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ)
+
+Move the energy source tags with one sedimenting species. `ᶜq` is that species'
+specific content, `ᶜw` its terminal velocity, `ᶠρ` the face density, and
+`ᶜenergy_flux` the per-cell value of the species' energy flux,
+`-w q (e_int + Φ + K)`. They are the quantities
+`vertical_advection_of_water_tendency!` builds the parent's flux from.
+
+The tags partition `E = ρe_tot + c·ρ`, and sedimentation moves `c` with the mass
+it moves, so the flux the tags share is `-w q (e_int + Φ + K + c)`. Each face's
+flux is shared out by the shares of the cell that loses the energy:
+
+  - where the energy falls with the water, the cell above loses it, and the
+    face takes the shares of the cell above, as the parent's flux takes its
+    value;
+  - where the water carries negative energy against the reference plus offset,
+    as ice can, the energy flux points up while the water falls. Then the cell
+    below loses the energy, and the face takes its shares;
+  - at the bottom face there is no cell below, so the lowest cell's shares are
+    kept, and energy that enters there brings no new provenance.
+
+The partition's shares add up to one, so its fluxes add up to the parent's at
+every face, and sedimentation adds nothing to `e_src_res`. A no-op when energy
+source tagging is disabled, and under 0-moment microphysics, where nothing
+sediments.
+
+The tags have no Jacobian block for this. A tag's own Courant number is the
+species' times the species' share of the total, which is small, so the step is
+not stiff for the tags. The parent's energy flux does enter the Newton solve,
+through the condensate's own blocks, so within a step the tags lag it slightly.
+That gap is bounded and lands in `e_src_res`.
+"""
+sediment_energy_source_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ) =
+    _sediment_energy_source_tags!(
+        Yₜ,
+        Y,
+        p,
+        ᶜq,
+        ᶜw,
+        ᶜenergy_flux,
+        ᶠρ,
+        p.atmos.energy_source_tagging_model,
+    )
+_sediment_energy_source_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ, ::Nothing) =
+    nothing
+function _sediment_energy_source_tags!(
+    Yₜ,
+    Y,
+    p,
+    ᶜq,
+    ᶜw,
+    ᶜenergy_flux,
+    ᶠρ,
+    model::EnergySourceTaggingModel,
+)
+    # The offset per unit of falling mass. `false` is a strong zero, so without
+    # an offset the flux is exactly the parent's.
+    c = _mass_energy(model.offset)
+    ᶜflux = @. lazy(ᶜenergy_flux - c * ᶜw * ᶜq)
+    _sediment_energy_source_tag_fluxes!(
+        Yₜ.c,
+        Y.c,
+        _energy_source_parent_field(Y, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        p.tagging.ᶠenergy_source_interior,
+        ᶜflux,
+        ᶠρ,
+        model.tags,
+    )
+    return nothing
+end
+_mass_energy(::Nothing) = false
+_mass_energy(offset) = offset
+
+_sediment_energy_source_tag_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶠinterior,
+    ᶜflux,
+    ᶠρ,
+    ::Tuple{},
+) = nothing
+function _sediment_energy_source_tag_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶠinterior,
+    ᶜflux,
+    ᶠρ,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
+    ᶜρe_src = tag_field(ᶜY, tag)
+    ᶜshare = _energy_source_sediment_share_field(ᶜρe_src, ᶜparent, ᶜnorm, tag)
+    # The whole flux with the shares of the cell above, plus, on interior faces
+    # where the energy moves up, the difference that swaps in the shares of the
+    # cell below.
+    @. ᶜρe_srcₜ -= ᶜprecipdivᵥ(
+        ᶠρ * (
+            ᶠtop_bias(Geometry.WVector(ᶜflux * ᶜshare)) +
+            ᶠinterior *
+            ᶠtop_bias(Geometry.WVector(max(ᶜflux, 0))) *
+            (ᶠbottom_bias_zero(ᶜshare) - ᶠtop_bias(ᶜshare))
+        ),
+    )
+    return _sediment_energy_source_tag_fluxes!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜparent,
+        ᶜnorm,
+        ᶠinterior,
+        ᶜflux,
+        ᶠρ,
+        Base.tail(tags),
+    )
+end
+
+# The partition and source forms of the share, selected on the tag's type, so
+# the branch folds away at compile time.
+_energy_source_sediment_share_field(ᶜρe_src, ᶜparent, ᶜnorm, tag) =
+    _is_energy_partition_tag(tag) ?
+    (@. lazy(energy_source_sediment_share(ᶜρe_src, ᶜparent, ᶜnorm))) :
+    (@. lazy(energy_source_source_sediment_share(ᶜρe_src, ᶜparent)))

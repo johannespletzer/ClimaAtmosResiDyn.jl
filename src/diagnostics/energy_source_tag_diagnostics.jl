@@ -18,6 +18,11 @@
 Register the diagnostics of the energy source tags:
 
   - `e_src_<name>`: specific tagged energy `ρe_src_<name> / ρ`, for each tag;
+  - `e_src_fix_<name>`: the energy `repair_energy_source_tags!` has moved into
+    (positive) or out of (negative) each tag, per unit mass, cumulative since
+    the start of the simulation segment. Zero when `energy_source_tag_repair`
+    is false. It equals what the repair changed in the state only at the
+    default `update_constrain_state_every: step`;
   - `e_src_res`: closure residual `(ρe_tot - Σᵢ ρe_src_i) / ρ`, summed over the
     pure region tags (only registered when at least one exists). With
     `energy_source_tag_offset` `c` the parent is the total the tags partition,
@@ -45,28 +50,55 @@ function register_energy_source_tagging_diagnostics!(
 )
     for tag in model.tags
         name = tag_name(tag)
-        short_name = "e_src_$name"
-        haskey(ALL_DIAGNOSTICS, short_name) && continue
         ρe_src_name = Symbol(:ρe_src_, name)
-        add_diagnostic_variable!(;
-            short_name,
-            units = "J kg^-1",
-            long_name = "Source-Tagged Moist Energy ($name)",
-            comments = "Moist energy attributed to the tag `$name`, per " *
-                       "unit mass of moist air. Reads as energy present now " *
-                       "traced back to that tag only where the partitioned " *
-                       "total is positive and this field is non-negative; " *
-                       "that total is `ρe_tot`, or `ρe_tot + c*ρ` under an " *
-                       "`energy_source_tag_offset`. Elsewhere " *
-                       "it is a signed attribution with no amount " *
-                       "interpretation. Distinct from `e_tag_$name`, which " *
-                       "is a signed record of what a process did rather " *
-                       "than an amount present. Moist total energy has no " *
-                       "physical zero, so this value and its share of the " *
-                       "total both depend on the chosen energy reference.",
-            compute! = (out, u, p, t) ->
-                compute_e_tag!(out, u, p, t, ρe_src_name),
-        )
+        short_name = "e_src_$name"
+        if !haskey(ALL_DIAGNOSTICS, short_name)
+            add_diagnostic_variable!(;
+                short_name,
+                units = "J kg^-1",
+                long_name = "Source-Tagged Moist Energy ($name)",
+                comments = "Moist energy attributed to the tag `$name`, per " *
+                           "unit mass of moist air. Reads as energy present " *
+                           "now traced back to that tag only where the " *
+                           "partitioned total is positive and this field is " *
+                           "non-negative; that total is `ρe_tot`, or " *
+                           "`ρe_tot + c*ρ` under an " *
+                           "`energy_source_tag_offset`. Elsewhere it is a " *
+                           "signed attribution with no amount " *
+                           "interpretation. Distinct from `e_tag_$name`, " *
+                           "which is a signed record of what a process did " *
+                           "rather than an amount present. Moist total " *
+                           "energy has no physical zero, so this value and " *
+                           "its share of the total both depend on the " *
+                           "chosen energy reference.",
+                compute! = (out, u, p, t) ->
+                    compute_e_tag!(out, u, p, t, ρe_src_name),
+            )
+        end
+        fix_name = "e_src_fix_$name"
+        if !haskey(ALL_DIAGNOSTICS, fix_name)
+            add_diagnostic_variable!(;
+                short_name = fix_name,
+                units = "J kg^-1",
+                long_name = "Cumulative Energy Source Tag Repair ($name)",
+                comments = "Energy moved into (positive) or out of " *
+                           "(negative) the tag `$name` by the repair that " *
+                           "keeps the energy source tags non-negative where " *
+                           "their total is positive, per unit mass of moist " *
+                           "air. Cumulative since the start of the simulation " *
+                           "segment and reset on restart, so a budget over an " *
+                           "interval is the difference of two outputs, and a " *
+                           "time average is not meaningful. Zero when " *
+                           "energy_source_tag_repair is false. Each increment " *
+                           "is accumulated at its own step's density and " *
+                           "divided by the current density here. Exact only " *
+                           "at the default update_constrain_state_every: " *
+                           "step. At stage or dss the stepper rescales or " *
+                           "discards what the repair changes inside a step.",
+                compute! = (out, u, p, t) ->
+                    compute_e_src_fix!(out, u, p, t, ρe_src_name),
+            )
+        end
     end
 
     region_names = energy_source_region_tag_state_names(model)
@@ -102,4 +134,15 @@ function compute_e_src_res!(out, state, cache, time, region_names, offset)
     ᶜres = compute_e_tag_res!(out, state, cache, time, region_names)
     isnothing(offset) || (ᶜres .+= offset)
     return ᶜres
+end
+
+# `e_src_fix_<name>`: the repair's ledger for one tag, per unit mass, as the
+# water tags' `q_tag_fix_<name>` is computed.
+function compute_e_src_fix!(out, state, cache, time, ρe_src_name)
+    ᶜfix = getproperty(cache.tagging.ᶜenergy_source_fix, ρe_src_name)
+    if isnothing(out)
+        return specific.(ᶜfix, state.c.ρ)
+    else
+        out .= specific.(ᶜfix, state.c.ρ)
+    end
 end

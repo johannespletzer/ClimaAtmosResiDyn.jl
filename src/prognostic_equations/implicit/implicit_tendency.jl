@@ -47,11 +47,16 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
         # zeroes `Yₜ` on every evaluation, so each Newton iterate recomputes the
         # attribution from scratch rather than accumulating it.
         #
-        # Only the water half is bracketed. The energy tags' `microphysics`
-        # label has always fired on the explicit path only (see
-        # `docs/src/tagged_water.md` and `KNOWN_TAG_SOURCES`); extending it here
-        # would silently change existing tagged-energy results, so that gap is
-        # left as it is.
+        # The energy source tags and the process records are bracketed here
+        # too. Under 0-moment microphysics this is where rain leaves the
+        # column with its energy, and without a bracket that loss reaches
+        # neither of them. The source tags read the donor share from `Y`, the
+        # Newton iterate, as the water tags do.
+        #
+        # The `ρe_tag_*` family is not. Its `microphysics` label has always
+        # fired on the explicit path only (see `docs/src/tagged_water.md` and
+        # `KNOWN_TAG_SOURCES`); extending it here would silently change
+        # existing tagged-energy results, so that gap is left as it is.
         #
         # The parent-budget ledger takes the whole increment, through its own
         # half of the applied-update event, and only while it is metering the
@@ -59,6 +64,8 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
         # nothing, so the Newton iterations see no difference.
         open_ledger_event!(p.parent_budget, Yₜ, :microphysics)
         snapshot_tagged_ρq_tot!(p, Yₜ)
+        snapshot_energy_source_tags!(p, Yₜ)
+        snapshot_process_record!(p, Yₜ, :microphysics)
         microphysics_tendency!(
             Yₜ,
             Y,
@@ -69,6 +76,8 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
         )
         close_ledger_event!(p.parent_budget, Yₜ, Y, p, :microphysics)
         attribute_tagged_ρq_tot!(Yₜ, Y, p, :microphysics)
+        attribute_energy_source_tags!(Yₜ, Y, p, :microphysics)
+        accumulate_process_record!(Yₜ, p, :microphysics)
         # Surface water/energy deposition from precipitation (implicit path).
         # The explicit counterpart is called from remaining_tendency!.
         open_ledger_event!(p.parent_budget, Yₜ, :surface_precipitation)
@@ -305,18 +314,28 @@ function implicit_vertical_advection_tendency!(Yₜ, Y, p, t)
         @. Yₜ.c.ρb_rim -= ᶜprecipdivᵥ(ᶠρ * ᶠtop_bias(- ᶜwᵢ * specific(ρb_rim, ρ)))
     end
 
-    # Precipitation sedimentation carries energy out of each level; it is the
-    # one attributed tagged-tracer source on the implicit path. Bracketing is
-    # safe here because `implicit_tendency!` zeroes `Yₜ` on every evaluation,
-    # so each Newton iterate recomputes the attribution from scratch rather
-    # than accumulating it. The attributed increment does not depend on the
-    # tags themselves, so the `-I` diagonal Jacobian block that tags fall back
-    # to is exactly right for this term.
+    # Precipitation sedimentation carries energy out of each level, and the
+    # `ρe_tag_*` family attributes it here. Bracketing is safe because
+    # `implicit_tendency!` zeroes `Yₜ` on every evaluation, so each Newton
+    # iterate recomputes the attribution from scratch rather than accumulating
+    # it. The attributed increment does not depend on the tags themselves, so
+    # the `-I` diagonal Jacobian block that tags fall back to is exactly right
+    # for this term.
+    #
+    # The process records are bracketed here too, for the same reason: a record
+    # says what sedimentation did to each cell, which needs no share. The
+    # energy source tags are not bracketed. Sedimentation moves energy from
+    # level to level with the falling water, and a bracket would count what
+    # arrives in a cell as new energy. So `vertical_advection_of_water_tendency!`
+    # moves the tags with the water instead, each by its share of what the
+    # losing cell holds (`sediment_energy_source_tags!`).
     open_ledger_event!(p.parent_budget, Yₜ, :precipitation)
     snapshot_tagged_ρe_tot!(p, Yₜ)
+    snapshot_process_record!(p, Yₜ, :precipitation)
     vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
     close_ledger_event!(p.parent_budget, Yₜ, Y, p, :precipitation)
     attribute_tagged_ρe_tot!(Yₜ, p, :precipitation)
+    accumulate_process_record!(Yₜ, p, :precipitation)
 
     # This is equivalent to grad_v(Φ) + grad_v(p) / ρ
     ᶜΦ_r = @. lazy(phi_r(thermo_params, ᶜp))
