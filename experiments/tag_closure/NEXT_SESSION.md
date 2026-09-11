@@ -164,9 +164,17 @@ one agent has worked this branch at once.
     `d4_column_edmf_notags`, job `13414334`, was submitted at `41adabc5` on
     2026-09-11. It built in 410 s and ran its hour (E44). So what the tags
     bring makes the EDMF build take more than two hours. That blocks operation
-    while production uses EDMF (P4 in the to-do list).
+    while production uses EDMF (P4 in the to-do list). The owner approved a
+    split test to find which part does it. P4's three runs, jobs `13415603` to
+    `13415605`, were submitted on 2026-09-11 from the worktree
+    `../ClimaAtmosResiDyn-p4`, detached at `edd44e1d`, since this branch now
+    refuses `prognostic_edmfx` with tags. A worktree's `.git` is a file the
+    runscript cannot read, so their `provenance.txt` will say
+    `commit: unknown`. Repair it to `edd44e1d` by hand, as README.md says.
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and
-    `../ClimaAtmosResiDyn-audit` on #72's, both level with origin. The audit
+    `../ClimaAtmosResiDyn-audit` on #72's, both level with origin.
+    `../ClimaAtmosResiDyn-p4` is detached at `edd44e1d`, with a copied
+    `.buildkite/LocalPreferences.toml`, for P4's runs. The audit
     worktree's tracked `.buildkite/LocalPreferences.toml` names a Levante MPI
     library, so tests there log an MPI error and still pass.
   - **Three known defects** are listed in the task list and are not fixed.

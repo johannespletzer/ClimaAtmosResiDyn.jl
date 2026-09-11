@@ -243,6 +243,8 @@ tendency, with B4; and M2. Still open:
     two hours on two cores. Without them it builds in 410 s (E44). Next,
     separate the part that does it: build with the tags alone, then add the
     records, then the diagnostics. Then find and fix the cause. M, with runs.
+    The first three builds, P4's split test, were approved and submitted on
+    2026-09-11: jobs `13415603` to `13415605`.
 
 ## 6. Defaults and UX
 
