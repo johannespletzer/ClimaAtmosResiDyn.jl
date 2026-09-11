@@ -260,6 +260,58 @@ tells it apart from a plain mask-weighted tag scales as
 discriminating. Nor does it keep the tags non-negative: the finite step and the
 unlimited transport described above still apply.
 
+## Moving the tags as enthalpy, an audit
+
+By default the tags move as passive tracers, while the parent moves enthalpy:
+`ρe_tot` is carried with `h_tot = e_tot + p/ρ`. The difference is pressure
+work, and it is most of what the closure residual `e_src_res` grows by. In the
+tag-closure experiments it was all of the residual's growth on a column after
+its first ten minutes, and at least 93% of it on a sphere.
+
+`energy_source_tag_transport: enthalpy` removes that part, as an audit. In three
+transport terms, each tag takes its share of the parent's own flux of
+`E = ρe_tot + c·ρ`:
+
+  - **vertical advection:** the parent's flux through each face, `ρ u³` times the
+    face value of `h_tot + c` under `energy_q_tot_upwinding`, times the tag's
+    share in the cell upwind of the face;
+  - **horizontal advection:** `split_divₕ(ρu, sₖ (h_tot + c))`, which is linear
+    in the value it moves;
+  - **hyperdiffusion:** the parent's hyperdiffusion flux of `E` times the
+    share, before the divergence. Its water part moves `ρ` too, so it carries
+    `h_eff + Φ + c`.
+
+The shares are the ones sedimentation uses. A partition tag's clamped share of
+`E` is divided by the partition's sum, and a tag with a source keeps its plain
+clamped share. So the partition tags' tendencies add up to the parent's, and
+transport adds nothing to `e_src_res`, except for one gap in timing. The tags
+move explicitly, with the fluxes of the solved stage state. The parent moves
+`ρe_tot` vertically in the implicit step. With one Newton iteration
+(`max_newton_iters_ode: 1`), its contribution is the increment linearised about
+the stage's first guess, and its upwind correction comes after the solve. The
+two differ by that linearisation. In the tag-closure experiments this made the
+audit's residual in its first hour, during the initial adjustment, and a
+converged Newton solve removed 99% of it on a column.
+
+Everything else the tags see stays as under `tracer`: the brackets, the repair,
+sedimentation, vertical diffusion, the sponges and the SGS closures. The model
+itself is untouched, so its state is the same with the switch on and off.
+
+It needs an `energy_source_tag_offset`. A share is zero wherever `E` is not
+positive, and there the tags would not move at all, so `enthalpy` without an
+offset is refused at configuration. The upwind shares are first order, so a
+region's edge smears more than under van Leer. That is the price of exact
+closure, and for an audit it is acceptable.
+
+```yaml
+energy_source_tag_offset: 110495.0
+energy_source_tag_transport: enthalpy
+```
+
+A pair of runs on the same atmosphere, with the switch off and on, separates
+what transport adds to `e_src_res` from what the attribution and the processes
+the tags do not see add.
+
 ## Diagnostics
 
   - `e_src_<name>`: specific tagged energy ``\rho e_{\mathrm{src}} / \rho``
@@ -325,4 +377,11 @@ ClimaAtmos.warn_inactive_energy_source_labels
 ClimaAtmos.energy_source_fraction
 ClimaAtmos.snapshot_energy_source_tags!
 ClimaAtmos.attribute_energy_source_tags!
+ClimaAtmos.AbstractEnergySourceTransport
+ClimaAtmos.TracerEnergySourceTransport
+ClimaAtmos.EnthalpyEnergySourceTransport
+ClimaAtmos.moves_as_enthalpy
+ClimaAtmos.enthalpy_vertical_advection_of_energy_source_tags!
+ClimaAtmos.enthalpy_horizontal_advection_of_energy_source_tags!
+ClimaAtmos.enthalpy_hyperdiffusion_of_energy_source_tags!
 ```

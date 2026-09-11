@@ -308,6 +308,16 @@ NVTX.@annotate function apply_hyperdiffusion_tendency!(Yₜ, Y, p, t)
         @. ᶜh_flux_div += wdivₕ(ᶜρ * ᶜh_eff_plus_Φ * gradₕ(ᶜ∇²q_tot_eff))
     end
     @. Yₜ.c.ρe_tot -= ν₄_scalar * ᶜh_flux_div
+    # Under enthalpy transport the energy source tags take their shares of this
+    # flux. `ᶜh_eff_plus_Φ` is still in scratch here when moisture is prognostic.
+    enthalpy_hyperdiffusion_of_energy_source_tags!(
+        Yₜ,
+        Y,
+        p,
+        ν₄_scalar,
+        MatrixFields.has_field(Y, @name(c.ρq_tot)) ? p.scratch.ᶜtemp_scalar_2 :
+        nothing,
+    )
 
     if (turbconv_model isa AbstractEDMF) && diffuse_tke
         @. Yₜ.c.ρtke -= ν₄_vorticity * wdivₕ(ᶜρ * gradₕ(ᶜ∇²tke))
@@ -531,6 +541,9 @@ NVTX.@annotate function apply_tracer_hyperdiffusion_tendency!(Yₜ, Y, p, t)
         # standard ∇⁴ tendency.
         ρχ_name == @name(ρq_tot) && return
         ρχ_name in _microphysics_names && return
+        # Under enthalpy transport the energy source tags take their shares of
+        # the parent's flux in `apply_hyperdiffusion_tendency!` instead.
+        energy_source_tag_moves_as_enthalpy(p, ρχ_name) && return
         @. ᶜρχₜ -= ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²χ))
     end
 
