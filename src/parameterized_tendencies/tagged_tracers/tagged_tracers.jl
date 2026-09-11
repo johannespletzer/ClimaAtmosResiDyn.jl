@@ -366,7 +366,7 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
     )...,
     (
         isnothing(atmos.energy_source_tagging_model) ? (;) :
-        (; ᶜe_src_snapshot = similar(Y.c.ρ))
+        energy_source_scratch(Y, atmos.energy_source_tagging_model)
     )...,
     process_record_scratch(Y, atmos)...,
 )
@@ -395,13 +395,25 @@ region_tag_state_names(tagging_model::TaggingModel) = Tuple(
 # names differ.
 
 """
+    closure_parent(Y, p, total_name)
+
+The field a closure check compares its tags against: the state field named by
+`total_name` when that is a `Symbol`, or the field `total_name(Y, p)` returns
+otherwise. The second form is for a parent the model does not carry, such as
+the offset total of the energy source tags; see `energy_source_closure_total`.
+"""
+closure_parent(Y, p, total_name::Symbol) = getproperty(Y.c, total_name)
+closure_parent(Y, p, total_name) = total_name(Y, p)
+
+"""
     tag_closure(Y, p, total_name, tag_state_names)
 
 Global closure of one tag family: how much of the parent field its tags account
 for, right now.
 
-`total_name` is `:ρe_tot` or `:ρq_tot`, and `tag_state_names` are the pure
-region tags of that family. Returns
+`total_name` is `:ρe_tot` or `:ρq_tot`, or a function for a parent the model
+does not carry (see `closure_parent`), and `tag_state_names` are the pure region
+tags of that family. Returns
 
     (; total, tagged, residual, relative, gross_residual, gross_relative)
 
@@ -437,7 +449,7 @@ goes.
 across processes, so this is collective — every process must call it.
 """
 function tag_closure(Y, p, total_name, tag_state_names)
-    ᶜparent = getproperty(Y.c, total_name)
+    ᶜparent = closure_parent(Y, p, total_name)
     total = sum(ᶜparent)
     tagged = sum(sum(getproperty(Y.c, name)) for name in tag_state_names)
     residual = total - tagged
@@ -576,7 +588,7 @@ parent and the tag sum in the same expression. `Base.sum` on a `Field` reduces
 across processes, so this is collective: every process must call it.
 """
 function tag_audit(Y, p, total_name, tag_state_names, scale)
-    ᶜparent = getproperty(Y.c, total_name)
+    ᶜparent = closure_parent(Y, p, total_name)
     ᶜtmp = p.scratch.ᶜtemp_scalar
     ᶜtmp_2 = p.scratch.ᶜtemp_scalar_2
 
@@ -706,7 +718,9 @@ function nonpositive_parent_note(family)
     family == "energy_source" && return "Donor shares are undefined there, so \
         the loss half of the attribution rule does not run. For moist total \
         energy this usually means the chosen thermodynamic or gravitational \
-        reference puts part of the domain below zero."
+        reference puts part of the domain below zero. An \
+        `energy_source_tag_offset` large enough to lift the partitioned \
+        total positive removes the region without moving that reference."
     family == "water" && return "Water tags take loss in proportion to what \
         they hold, so their shares are undefined there and the tags of those \
         cells carry no provenance. Nothing in the model keeps `ρq_tot` \

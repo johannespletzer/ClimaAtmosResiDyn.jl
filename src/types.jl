@@ -2384,8 +2384,9 @@ differs and that is the whole point of the separate type. A source tag holds an
 amount of moist energy that is present now and is traced back to where it came
 from: production is shared out by region mask and loss is taken from each tag in
 proportion to what it already holds. That reading is **conditional**: it holds
-only where `ρe_tot` is positive, so the donor share is defined, and only while
-the tag itself is non-negative. Treat the family as experimental signed
+only where the total the tags partition is positive, so the donor share is
+defined, and only while the tag itself is non-negative. That total is `ρe_tot`,
+or `ρe_tot + c·ρ` when `energy_source_tag_offset` is set. Treat the family as experimental signed
 attribution rather than settled provenance. A `TracerTag` configured with `source`
 instead accumulates the whole signed increment and is a signed process tag.
 
@@ -2402,11 +2403,13 @@ while a tag receiving only the loss half crosses zero inside the step.
 Clamping `φ_k` to `[0, 1]` cannot prevent this: the clamp acts on the share,
 and the step length is what sets the amount.
 
-Where `ρe_tot` is not positive the share is undefined and
+Where that total is not positive the share is undefined and
 [`energy_source_fraction`](@ref) returns zero, so no donor-proportional loss is
 applied there at all. Moist total energy has no physical zero, so how much of a
 domain this affects is a property of the chosen energy reference rather than a
-rare edge case.
+rare edge case. An `energy_source_tag_offset` large enough to lift the total
+positive everywhere is what removes the region, without moving the reference the
+model itself uses.
 
 The tags are also exempt from both tracer limiters through
 [`is_tagged_tracer_name`](@ref) and ride the unlimited explicit transport path.
@@ -2438,15 +2441,22 @@ EnergySourceTag{name}(region, source::Symbol) where {name} =
     EnergySourceTag{name}(region, source === :none ? () : (source,))
 
 """
-    EnergySourceTaggingModel(tags::Tuple)
+    EnergySourceTaggingModel(tags::Tuple, offset = nothing)
 
 Model component holding a `Tuple` of [`EnergySourceTag`](@ref)s. Constructed
 from the `energy_source_tags` config entry; see `AtmosTagging(::AtmosConfig)` in
 `config/tracer_config.jl`.
+
+`offset` is an energy per unit mass of air in J/kg, from the
+`energy_source_tag_offset` config key, or `nothing`. With an offset `c` the tags
+partition `ρe_tot + c·ρ` rather than `ρe_tot`. The model never uses that total,
+so the simulated atmosphere is the same either way. See `energy_source_parent`.
 """
-struct EnergySourceTaggingModel{T <: Tuple}
+struct EnergySourceTaggingModel{T <: Tuple, O <: Union{Nothing, AbstractFloat}}
     tags::T
+    offset::O
 end
+EnergySourceTaggingModel(tags::Tuple) = EnergySourceTaggingModel(tags, nothing)
 
 """
     RecordedProcess{name}()
