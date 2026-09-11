@@ -2442,7 +2442,38 @@ EnergySourceTag{name}(region, source::Symbol) where {name} =
     EnergySourceTag{name}(region, source === :none ? () : (source,))
 
 """
-    EnergySourceTaggingModel(tags::Tuple, offset = nothing; repair = true)
+    AbstractEnergySourceTransport
+
+How the energy source tags are transported, from the
+`energy_source_tag_transport` config key: [`TracerEnergySourceTransport`](@ref),
+the default, or [`EnthalpyEnergySourceTransport`](@ref), an audit.
+"""
+abstract type AbstractEnergySourceTransport end
+
+"""
+    TracerEnergySourceTransport()
+
+The default. Each energy source tag is moved as a passive tracer, by the same
+advection, hyperdiffusion and closures as any other tracer. The parent moves
+enthalpy, so the tags' sum drifts from the total they partition by pressure
+work, and the closure residual `e_src_res` reports that.
+"""
+struct TracerEnergySourceTransport <: AbstractEnergySourceTransport end
+
+"""
+    EnthalpyEnergySourceTransport()
+
+An audit. In vertical and horizontal advection and in hyperdiffusion, each
+energy source tag takes its share of the parent's own flux of `ρe_tot + c·ρ`.
+So transport adds nothing to `e_src_res`, up to the timing of the step. It needs
+an `energy_source_tag_offset`. Everything else the tags see is as under
+[`TracerEnergySourceTransport`](@ref). See `docs/src/energy_source_tags.md`.
+"""
+struct EnthalpyEnergySourceTransport <: AbstractEnergySourceTransport end
+
+"""
+    EnergySourceTaggingModel(tags::Tuple, offset = nothing; repair = true,
+                             transport = TracerEnergySourceTransport())
 
 Model component holding a `Tuple` of [`EnergySourceTag`](@ref)s. Constructed
 from the `energy_source_tags` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2458,14 +2489,40 @@ non-negative where their total is positive, without changing the sum of the
 partition. It is on by default. Switched off, the tags go negative as the rule
 and their transport make them, which is how to measure what the repair changes.
 See `repair_energy_source_tags!`.
+
+`transport`, from the `energy_source_tag_transport` config key, is how the tags
+move: as passive tracers by default, or by their shares of the parent's own
+flux, as an audit. The audit needs an offset, because a share is zero wherever
+the total is not positive, and there the tags would not move. So it is refused
+without one. See [`EnthalpyEnergySourceTransport`](@ref).
 """
-struct EnergySourceTaggingModel{T <: Tuple, O <: Union{Nothing, AbstractFloat}}
+struct EnergySourceTaggingModel{
+    T <: Tuple,
+    O <: Union{Nothing, AbstractFloat},
+    TR <: AbstractEnergySourceTransport,
+}
     tags::T
     offset::O
     repair::Bool
+    transport::TR
 end
-EnergySourceTaggingModel(tags::Tuple, offset = nothing; repair::Bool = true) =
-    EnergySourceTaggingModel(tags, offset, repair)
+function EnergySourceTaggingModel(
+    tags::Tuple,
+    offset = nothing;
+    repair::Bool = true,
+    transport::AbstractEnergySourceTransport = TracerEnergySourceTransport(),
+)
+    transport isa EnthalpyEnergySourceTransport && isnothing(offset) &&
+        error(
+            "`energy_source_tag_transport: enthalpy` needs \
+            `energy_source_tag_offset`. Each tag moves by its share of the total \
+            the tags partition, and a share is zero wherever that total is not \
+            positive, which under the default energy reference is much of the \
+            domain. There the tags would not move at all. Set an offset large \
+            enough to make the total positive everywhere.",
+        )
+    return EnergySourceTaggingModel(tags, offset, repair, transport)
+end
 
 """
     RecordedProcess{name}()

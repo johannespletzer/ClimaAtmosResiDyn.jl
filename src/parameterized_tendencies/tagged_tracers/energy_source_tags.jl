@@ -749,8 +749,9 @@ tags' source tags do.
 Fill `p.scratch.ᶜe_src_share_norm` with the sum of the partition tags' clamped
 shares of the total they partition, the denominator that
 `energy_source_sediment_share` divides by. It is a property of the current
-state, so `vertical_advection_of_water_tendency!` recomputes it once per call.
-A no-op when energy source tagging is disabled.
+state, so each caller recomputes it: `vertical_advection_of_water_tendency!`
+once per call, and each term of the enthalpy-form transport once per
+evaluation. A no-op when energy source tagging is disabled.
 """
 energy_source_share_norm!(p, Y) =
     _energy_source_share_norm!(p, Y, p.atmos.energy_source_tagging_model)
@@ -882,7 +883,7 @@ function _sediment_energy_source_tag_fluxes!(
     tag = first(tags)
     ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
     ᶜρe_src = tag_field(ᶜY, tag)
-    ᶜshare = _energy_source_sediment_share_field(ᶜρe_src, ᶜparent, ᶜnorm, tag)
+    ᶜshare = _energy_source_share_field(ᶜρe_src, ᶜparent, ᶜnorm, tag)
     # The whole flux with the shares of the cell above, plus, on interior faces
     # where the energy moves up, the difference that swaps in the shares of the
     # cell below.
@@ -907,8 +908,309 @@ function _sediment_energy_source_tag_fluxes!(
 end
 
 # The partition and source forms of the share, selected on the tag's type, so
-# the branch folds away at compile time.
-_energy_source_sediment_share_field(ᶜρe_src, ᶜparent, ᶜnorm, tag) =
+# the branch folds away at compile time. Sedimentation and the enthalpy-form
+# transport below both share out a flux with it.
+_energy_source_share_field(ᶜρe_src, ᶜparent, ᶜnorm, tag) =
     _is_energy_partition_tag(tag) ?
     (@. lazy(energy_source_sediment_share(ᶜρe_src, ᶜparent, ᶜnorm))) :
     (@. lazy(energy_source_source_sediment_share(ᶜρe_src, ᶜparent)))
+
+# ============================================================================
+# Enthalpy-form transport, an audit
+# ============================================================================
+
+"""
+    moves_as_enthalpy(model)
+
+Whether the energy source tags of `model` move by their shares of the parent's
+own flux, which `energy_source_tag_transport: enthalpy` selects. `false` when
+energy source tagging is off, and under the default `tracer` transport. The
+answer is a property of the model's type, so it folds away at compile time.
+"""
+moves_as_enthalpy(::Nothing) = false
+moves_as_enthalpy(model::EnergySourceTaggingModel) =
+    model.transport isa EnthalpyEnergySourceTransport
+
+"""
+    energy_source_tag_moves_as_enthalpy(p, name)
+
+Whether `name` is an energy source tag that the enthalpy-form transport moves.
+The generic tracer loops skip those tags in advection and hyperdiffusion, and
+the kernels below move them instead.
+"""
+energy_source_tag_moves_as_enthalpy(p, name) =
+    moves_as_enthalpy(p.atmos.energy_source_tagging_model) &&
+    is_energy_source_tag_name(name)
+
+# A center value taken from the cell above each face, and zero at the top face,
+# where there is no cell above. The counterpart of `ᶠbottom_bias_zero`.
+const ᶠtop_bias_zero = Operators.TopBiasedC2F(top = Operators.SetValue(0))
+
+# Whether the flow through a face points up. `u³` is contravariant, and its one
+# component has the sign of the vertical velocity.
+@inline _is_upward(u³) = u³.components.data.:1 > 0
+
+# The face flux per unit density, `u³` times the face value of `ᶜχ`, as
+# `vertical_transport` builds it for each upwinding scheme.
+_face_value_flux(ᶠu³, ᶜχ, dt, ::Val{:none}) = @. lazy(ᶠu³ * ᶠinterp(ᶜχ))
+_face_value_flux(ᶠu³, ᶜχ, dt, ::Val{:first_order}) =
+    @. lazy(ᶠupwind1(ᶠu³, ᶜχ))
+_face_value_flux(ᶠu³, ᶜχ, dt, ::Val{:vanleer_limiter}) =
+    @. lazy(ᶠlin_vanleer(ᶠu³, ᶜχ, dt))
+_face_value_flux(ᶠu³, ᶜχ, dt, ::Val{:third_order}) =
+    @. lazy(ᶠupwind3(ᶠu³, ᶜχ))
+
+"""
+    enthalpy_vertical_advection_of_energy_source_tags!(Yₜ, Y, p)
+
+Under `energy_source_tag_transport: enthalpy`, move the energy source tags
+vertically by their shares of the parent's own flux.
+
+The parent moves `h_tot` with `energy_q_tot_upwinding`, and the offset's `c·ρ`
+moves with the mass. A constant passes through each of those reconstructions
+unchanged, so the parent's flux of `E = ρe_tot + c·ρ` through a face is `ρ u³`
+times the face value of `h_tot + c`. Each tag takes that flux times its share in
+the cell upwind of the face. The shares add up to one, so the partition's fluxes
+add up to the parent's at every face. The upwind shares are first order, so a
+region's edge smears more than under van Leer. For an audit that is acceptable,
+because what it checks is closure.
+
+The tags move explicitly, at the stage state, while the parent moves `ρe_tot` in
+the implicit step, with its upwind correction after the Newton solve. So the
+tags' fluxes add up to the parent's flux at the stage state rather than at the
+solved one, and that gap lands in `e_src_res`. A no-op under the default
+`tracer` transport, where the generic tracer loop moves the tags.
+"""
+enthalpy_vertical_advection_of_energy_source_tags!(Yₜ, Y, p) =
+    moves_as_enthalpy(p.atmos.energy_source_tagging_model) ?
+    _enthalpy_vertical_advection!(
+        Yₜ,
+        Y,
+        p,
+        p.atmos.energy_source_tagging_model,
+    ) : nothing
+function _enthalpy_vertical_advection!(Yₜ, Y, p, model)
+    energy_source_share_norm!(p, Y)
+    (; ᶠu³, ᶜh_tot) = p.precomputed
+    c = model.offset
+    ᶜJ = Fields.local_geometry_field(Y.c).J
+    ᶠJ = Fields.local_geometry_field(Y.f).J
+    ᶠρ = @. lazy(ᶠinterp(Y.c.ρ * ᶜJ) / ᶠJ)
+    ᶜH = @. lazy(ᶜh_tot + c)
+    ᶠflux = _face_value_flux(
+        ᶠu³,
+        ᶜH,
+        p.dt,
+        p.atmos.numerics.energy_q_tot_upwinding,
+    )
+    _enthalpy_vertical_tag_fluxes!(
+        Yₜ.c,
+        Y.c,
+        _energy_source_parent_field(Y, c),
+        p.scratch.ᶜe_src_share_norm,
+        ᶠρ,
+        ᶠu³,
+        ᶠflux,
+        model.tags,
+    )
+    return nothing
+end
+
+_enthalpy_vertical_tag_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶠρ,
+    ᶠu³,
+    ᶠflux,
+    ::Tuple{},
+) = nothing
+function _enthalpy_vertical_tag_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶠρ,
+    ᶠu³,
+    ᶠflux,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
+    ᶜshare =
+        _energy_source_share_field(tag_field(ᶜY, tag), ᶜparent, ᶜnorm, tag)
+    @. ᶜρe_srcₜ -= ᶜadvdivᵥ(
+        ᶠρ *
+        ᶠflux *
+        ifelse(
+            _is_upward(ᶠu³),
+            ᶠbottom_bias_zero(ᶜshare),
+            ᶠtop_bias_zero(ᶜshare),
+        ),
+    )
+    return _enthalpy_vertical_tag_fluxes!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜparent,
+        ᶜnorm,
+        ᶠρ,
+        ᶠu³,
+        ᶠflux,
+        Base.tail(tags),
+    )
+end
+
+"""
+    enthalpy_horizontal_advection_of_energy_source_tags!(Yₜ, Y, p)
+
+Under `energy_source_tag_transport: enthalpy`, move the energy source tags
+horizontally with the parent's own value. The parent moves `h_tot`, and the
+offset's `c·ρ` moves with the mass, through `split_divₕ`, which is linear in the
+value it moves. So each tag moves with its share times `h_tot + c`, and the
+partition's tendencies add up to the parent's. A no-op under the default
+`tracer` transport, where the generic tracer loop moves the tags.
+"""
+enthalpy_horizontal_advection_of_energy_source_tags!(Yₜ, Y, p) =
+    moves_as_enthalpy(p.atmos.energy_source_tagging_model) ?
+    _enthalpy_horizontal_advection!(
+        Yₜ,
+        Y,
+        p,
+        p.atmos.energy_source_tagging_model,
+    ) : nothing
+function _enthalpy_horizontal_advection!(Yₜ, Y, p, model)
+    energy_source_share_norm!(p, Y)
+    (; ᶜu, ᶜh_tot) = p.precomputed
+    c = model.offset
+    ᶜH = @. lazy(ᶜh_tot + c)
+    _enthalpy_horizontal_tag_fluxes!(
+        Yₜ.c,
+        Y.c,
+        _energy_source_parent_field(Y, c),
+        p.scratch.ᶜe_src_share_norm,
+        ᶜu,
+        ᶜH,
+        model.tags,
+    )
+    return nothing
+end
+
+_enthalpy_horizontal_tag_fluxes!(ᶜYₜ, ᶜY, ᶜparent, ᶜnorm, ᶜu, ᶜH, ::Tuple{}) =
+    nothing
+function _enthalpy_horizontal_tag_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶜu,
+    ᶜH,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
+    ᶜshare =
+        _energy_source_share_field(tag_field(ᶜY, tag), ᶜparent, ᶜnorm, tag)
+    @. ᶜρe_srcₜ -= split_divₕ(ᶜY.ρ * ᶜu, ᶜshare * ᶜH)
+    return _enthalpy_horizontal_tag_fluxes!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜparent,
+        ᶜnorm,
+        ᶜu,
+        ᶜH,
+        Base.tail(tags),
+    )
+end
+
+"""
+    enthalpy_hyperdiffusion_of_energy_source_tags!(Yₜ, Y, p, ν₄_scalar, ᶜh_eff_plus_Φ)
+
+Under `energy_source_tag_transport: enthalpy`, hyperdiffuse the energy source
+tags with their shares of the parent's own hyperdiffusion flux.
+
+The parent's flux of `ρe_tot` is `ρ ∇∇²s_d`, plus `ρ (h_eff + Φ) ∇∇²q_tot_eff`
+when moisture is prognostic; see `apply_hyperdiffusion_tendency!`. Each tag
+takes that vector times its share before the divergence, so the partition's
+tendencies add up to the parent's. `ρ` is not hyperdiffused, so the offset adds
+nothing here. `ᶜh_eff_plus_Φ` is `nothing` in a dry model. A no-op under the
+default `tracer` transport, where the tags are hyperdiffused as tracers.
+"""
+enthalpy_hyperdiffusion_of_energy_source_tags!(
+    Yₜ,
+    Y,
+    p,
+    ν₄_scalar,
+    ᶜh_eff_plus_Φ,
+) =
+    moves_as_enthalpy(p.atmos.energy_source_tagging_model) ?
+    _enthalpy_hyperdiffusion!(
+        Yₜ,
+        Y,
+        p,
+        p.atmos.energy_source_tagging_model,
+        ν₄_scalar,
+        ᶜh_eff_plus_Φ,
+    ) : nothing
+function _enthalpy_hyperdiffusion!(Yₜ, Y, p, model, ν₄_scalar, ᶜh_eff_plus_Φ)
+    energy_source_share_norm!(p, Y)
+    (; ᶜ∇²s_d, ᶜ∇²q_tot_eff) = p.hyperdiff
+    ᶜflux = _enthalpy_hyperdiffusion_flux(
+        Y.c.ρ,
+        ᶜ∇²s_d,
+        ᶜ∇²q_tot_eff,
+        ᶜh_eff_plus_Φ,
+    )
+    _enthalpy_hyperdiffusion_tags!(
+        Yₜ.c,
+        Y.c,
+        _energy_source_parent_field(Y, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        ν₄_scalar,
+        ᶜflux,
+        model.tags,
+    )
+    return nothing
+end
+
+# The parent's hyperdiffusion flux of `ρe_tot`, in a dry and a moist model.
+_enthalpy_hyperdiffusion_flux(ᶜρ, ᶜ∇²s_d, ᶜ∇²q_tot_eff, ::Nothing) =
+    @. lazy(ᶜρ * gradₕ(ᶜ∇²s_d))
+_enthalpy_hyperdiffusion_flux(ᶜρ, ᶜ∇²s_d, ᶜ∇²q_tot_eff, ᶜh_eff_plus_Φ) =
+    @. lazy(
+        ᶜρ * gradₕ(ᶜ∇²s_d) + ᶜρ * ᶜh_eff_plus_Φ * gradₕ(ᶜ∇²q_tot_eff),
+    )
+
+_enthalpy_hyperdiffusion_tags!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ν₄_scalar,
+    ᶜflux,
+    ::Tuple{},
+) = nothing
+function _enthalpy_hyperdiffusion_tags!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ν₄_scalar,
+    ᶜflux,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
+    ᶜshare =
+        _energy_source_share_field(tag_field(ᶜY, tag), ᶜparent, ᶜnorm, tag)
+    @. ᶜρe_srcₜ -= ν₄_scalar * wdivₕ(ᶜshare * ᶜflux)
+    return _enthalpy_hyperdiffusion_tags!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜparent,
+        ᶜnorm,
+        ν₄_scalar,
+        ᶜflux,
+        Base.tail(tags),
+    )
+end
