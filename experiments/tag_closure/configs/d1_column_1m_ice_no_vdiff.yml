@@ -1,0 +1,80 @@
+# D1's twin with vertical diffusion off: `d1_column_1m_ice` with `vert_diff` and
+# `implicit_diffusion` at their defaults, off, and nothing else changed.
+#
+# D1 could not say how much of `lower`'s rise above the 5 km boundary came from
+# sedimentation's upward branch (FINDINGS E42). Vertical diffusion also moves
+# the tags upward, in tracer form. `DecayWithHeightDiffusion`, with D₀ = 5 m²/s
+# and H = 8 km, still gives 2.7 m²/s at 5 km. Here nothing diffuses. So what
+# carries `lower` up across the boundary is sedimentation's upward branch.
+#
+# What it decides:
+#   - how much of D1's rise of `lower` above 5.6 km, 39,276 J/m² in an hour, the
+#     upward branch makes;
+#   - whether D1's gross residual, a zero-sum 3.7e-3, is vertical diffusion's
+#     form mismatch. Without diffusion it should not grow after the first
+#     minute.
+#
+# Surface fluxes may not reach the atmosphere without vertical diffusion. Then
+# `sfc`, `new_lower` and the surface-flux record stay at zero, which matters for
+# neither question. The atmosphere differs from D1's, so `ta` will not match it.
+#
+# `all` includes `precipitation`, and so does the record, so the initialization
+# warns twice. That is expected.
+job_id: "d1_column_1m_ice_no_vdiff"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+
+# D1's column, without its vertical diffusion.
+config: "column"
+initial_condition: "PrecipitatingColumn"
+surface_setup: "DefaultMoninObukhov"
+z_elem: 200
+z_max: 10000.0
+z_stretch: false
+cloud_model: "grid_scale"
+microphysics_model: "1M"
+use_sgs_quadrature: false
+
+dt: "10secs"
+t_end: "1hours"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: upper
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0}
+  - name: lower
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0, above: false}
+  - name: sfc
+    source: surface_flux
+  - name: mp
+    source: microphysics
+  - name: new_upper
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0}
+    source: all
+  - name: new_lower
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0, above: false}
+    source: all
+
+energy_process_record: [surface_flux, microphysics, precipitation]
+
+energy_source_closure_check:
+  period: "1mins"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1mins"
+  - short_name: [e_src_upper, e_src_lower, e_src_sfc, e_src_mp]
+    period: "1mins"
+  - short_name: [e_src_new_upper, e_src_new_lower]
+    period: "1mins"
+  - short_name: [e_src_fix_upper, e_src_fix_lower, e_src_fix_sfc]
+    period: "1mins"
+  - short_name: [e_src_fix_mp, e_src_fix_new_upper, e_src_fix_new_lower]
+    period: "1mins"
+  - short_name: [e_prc_surface_flux, e_prc_microphysics, e_prc_precipitation]
+    period: "1mins"
+  - short_name: [rhoa, ta]
+    period: "1mins"

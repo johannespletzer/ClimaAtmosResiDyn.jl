@@ -564,6 +564,7 @@ run today.
 | Run | Runscript | What it is |
 |:-- |:-- |:-- |
 | `d1_column_1m_ice` | `phase_c.sh` | D1, `PrecipitatingColumn` under 1M: ice through sedimentation's upward branch. It runs today |
+| `d1_column_1m_ice_no_vdiff` | `phase_c.sh` | D1 with vertical diffusion off, to separate the upward branch from diffusion (E42) |
 | `d2_column_2m_ice` | `phase_c.sh` | D1 under 2M. It cannot run while the model disables 2M |
 | `d3_column_p3` | `phase_c.sh` | D1 under 2MP3. It cannot run: the 2M gate, then gaps in the parent's P3 sedimentation |
 | `d4_column_edmf` | `phase_c.sh` | D4, the DYCOMS RF02 EDMF column with C8's tags, and `edmfx_vertical_diffusion: false` |
