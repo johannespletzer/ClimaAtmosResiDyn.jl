@@ -530,8 +530,10 @@ import ClimaAtmos as CA
         @test maximum(abs, tags_sum(Yₜ_sphere) .- parent(ᶜexpected)) <
               100 * eps(FT) * tags_scale(Yₜ_sphere)
 
-        # Hyperdiffusion. The parent's is the only hyperdiffusion of `E`,
-        # because `ρ` is not hyperdiffused, and the tags take none as tracers.
+        # Hyperdiffusion. The parent's is the only hyperdiffusion of `E`, and
+        # the tags take none as tracers. The parent takes the water part out of
+        # `ρ` as well as `ρq_tot`, so `E` changes by `c` times that too. Both
+        # tendency buffers are summed, so it does not matter which holds what.
         Yₜ_sphere = zero(Y_sphere)
         Yₜ_lim = zero(Y_sphere)
         CA.hyperdiffusion_tendency!(
@@ -543,7 +545,11 @@ import ClimaAtmos as CA
         )
         @test all(iszero, tags_sum(Yₜ_lim))
         @test tags_scale(Yₜ_sphere) > 0
-        @test maximum(abs, tags_sum(Yₜ_sphere) .- parent(Yₜ_sphere.c.ρe_tot)) <
+        ᶜρₜ = parent(Yₜ_sphere.c.ρ) .+ parent(Yₜ_lim.c.ρ)
+        @test maximum(abs, ᶜρₜ) > 0
+        ᶜEₜ =
+            parent(Yₜ_sphere.c.ρe_tot) .+ parent(Yₜ_lim.c.ρe_tot) .+ c .* ᶜρₜ
+        @test maximum(abs, tags_sum(Yₜ_sphere) .- ᶜEₜ) <
               100 * eps(FT) * tags_scale(Yₜ_sphere)
     end
 end

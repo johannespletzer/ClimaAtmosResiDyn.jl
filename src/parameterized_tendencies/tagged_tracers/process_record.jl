@@ -33,9 +33,14 @@
 ##### wherever sedimentation runs, which is never under 0-moment microphysics.
 #####
 ##### That needed brackets and nothing else. A record's snapshot (`p.scratch`)
-##### and its destination (`Yₜ`) are both dual-converted, and a record's
-##### increment does not depend on the record, so the identity block it falls
-##### back to in the Jacobian is exact. See `docs/src/process_record.md`.
+##### and its destination (`Yₜ`) are both dual-converted. A record's increment
+##### does not depend on the record, so the identity block it falls back to in
+##### the Jacobian is right for its own row. It has no cross blocks, though.
+##### With one Newton iteration, a record takes its implicit increments at the
+##### stage's first guess, while `ρe_tot` also gets the Jacobian's coupling to
+##### other rows. Under 1M and 2M that coupling includes sedimentation, so the
+##### records and `ρe_tot` differ by a small linearised term. See
+##### `docs/src/process_record.md`.
 
 # ============================================================================
 # Names and state fields

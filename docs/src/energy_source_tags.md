@@ -277,17 +277,21 @@ transport terms, each tag takes its share of the parent's own flux of
     share in the cell upwind of the face;
   - **horizontal advection:** `split_divₕ(ρu, sₖ (h_tot + c))`, which is linear
     in the value it moves;
-  - **hyperdiffusion:** the parent's enthalpy hyperdiffusion flux times the
-    share, before the divergence.
+  - **hyperdiffusion:** the parent's hyperdiffusion flux of `E` times the
+    share, before the divergence. Its water part moves `ρ` too, so it carries
+    `h_eff + Φ + c`.
 
 The shares are the ones sedimentation uses. A partition tag's clamped share of
 `E` is divided by the partition's sum, and a tag with a source keeps its plain
 clamped share. So the partition tags' tendencies add up to the parent's, and
-transport adds nothing to `e_src_res`, except for one gap. The parent moves
-`ρe_tot` vertically in the implicit step, with the upwind correction after the
-Newton solve, and the tags move explicitly, at the stage state. So the tags
-follow the parent's vertical flux at the stage state rather than at the solved
-one.
+transport adds nothing to `e_src_res`, except for one gap in timing. The tags
+move explicitly, with the fluxes of the solved stage state. The parent moves
+`ρe_tot` vertically in the implicit step. With one Newton iteration
+(`max_newton_iters_ode: 1`), its contribution is the increment linearised about
+the stage's first guess, and its upwind correction comes after the solve. The
+two differ by that linearisation. In the tag-closure experiments this made the
+audit's residual in its first hour, during the initial adjustment, and a
+converged Newton solve removed 99% of it on a column.
 
 Everything else the tags see stays as under `tracer`: the brackets, the repair,
 sedimentation, vertical diffusion, the sponges and the SGS closures. The model
@@ -335,7 +339,11 @@ family as a whole.
 
 ## Caveats
 
-  - Tags are **grid-scale only**, with no sub-grid updraft counterpart.
+  - Tags are **grid-scale only**, with no sub-grid updraft counterpart. So
+    `turbconv: prognostic_edmfx` is refused: its sub-grid mass flux of energy,
+    and the updraft and environment corrections to sedimentation, would reach
+    no tag. Under `edonly_edmfx` the eddy diffusion moves the tags as passive
+    tracers while it moves `ρe_tot` in enthalpy form, and the model warns.
   - Tags are excluded from both tracer limiters, through
     `is_tagged_tracer_name`. The repair above keeps them non-negative instead,
     unless it is switched off.

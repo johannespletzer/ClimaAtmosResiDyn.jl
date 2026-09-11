@@ -981,11 +981,13 @@ add up to the parent's at every face. The upwind shares are first order, so a
 region's edge smears more than under van Leer. For an audit that is acceptable,
 because what it checks is closure.
 
-The tags move explicitly, at the stage state, while the parent moves `ρe_tot` in
-the implicit step, with its upwind correction after the Newton solve. So the
-tags' fluxes add up to the parent's flux at the stage state rather than at the
-solved one, and that gap lands in `e_src_res`. A no-op under the default
-`tracer` transport, where the generic tracer loop moves the tags.
+The tags move explicitly, with the fluxes of the solved stage state. The parent
+moves `ρe_tot` vertically in the implicit step. With one Newton iteration
+(`max_newton_iters_ode: 1`), its contribution is the increment linearised about
+the stage's first guess, not its flux at the solved state, and its upwind
+correction comes after the solve. The two differ by that linearisation, and the
+difference lands in `e_src_res`. A no-op under the default `tracer` transport,
+where the generic tracer loop moves the tags.
 """
 enthalpy_vertical_advection_of_energy_source_tags!(Yₜ, Y, p) =
     moves_as_enthalpy(p.atmos.energy_source_tagging_model) ?
@@ -1136,11 +1138,14 @@ Under `energy_source_tag_transport: enthalpy`, hyperdiffuse the energy source
 tags with their shares of the parent's own hyperdiffusion flux.
 
 The parent's flux of `ρe_tot` is `ρ ∇∇²s_d`, plus `ρ (h_eff + Φ) ∇∇²q_tot_eff`
-when moisture is prognostic; see `apply_hyperdiffusion_tendency!`. Each tag
-takes that vector times its share before the divergence, so the partition's
-tendencies add up to the parent's. `ρ` is not hyperdiffused, so the offset adds
-nothing here. `ᶜh_eff_plus_Φ` is `nothing` in a dry model. A no-op under the
-default `tracer` transport, where the tags are hyperdiffused as tracers.
+when moisture is prognostic; see `apply_hyperdiffusion_tendency!`. The water
+part moves `ρ` too, since `apply_tracer_hyperdiffusion_tendency!` takes it out
+of `ρ` as well as `ρq_tot`. So the flux of `E = ρe_tot + c·ρ` carries
+`h_eff + Φ + c` in its water part. Each tag takes that vector times its share
+before the divergence, so the partition's tendencies add up to the parent's.
+`ᶜh_eff_plus_Φ` is `nothing` in a dry model, where nothing moves `ρ`. A no-op
+under the default `tracer` transport, where the tags are hyperdiffused as
+tracers.
 """
 enthalpy_hyperdiffusion_of_energy_source_tags!(
     Yₜ,
@@ -1166,6 +1171,7 @@ function _enthalpy_hyperdiffusion!(Yₜ, Y, p, model, ν₄_scalar, ᶜh_eff_plu
         ᶜ∇²s_d,
         ᶜ∇²q_tot_eff,
         ᶜh_eff_plus_Φ,
+        model.offset,
     )
     _enthalpy_hyperdiffusion_tags!(
         Yₜ.c,
@@ -1179,12 +1185,13 @@ function _enthalpy_hyperdiffusion!(Yₜ, Y, p, model, ν₄_scalar, ᶜh_eff_plu
     return nothing
 end
 
-# The parent's hyperdiffusion flux of `ρe_tot`, in a dry and a moist model.
-_enthalpy_hyperdiffusion_flux(ᶜρ, ᶜ∇²s_d, ᶜ∇²q_tot_eff, ::Nothing) =
+# The parent's hyperdiffusion flux of `E = ρe_tot + c·ρ`, in a dry and a moist
+# model. The water part moves `ρ` too, so it carries the offset `c`.
+_enthalpy_hyperdiffusion_flux(ᶜρ, ᶜ∇²s_d, ᶜ∇²q_tot_eff, ::Nothing, c) =
     @. lazy(ᶜρ * gradₕ(ᶜ∇²s_d))
-_enthalpy_hyperdiffusion_flux(ᶜρ, ᶜ∇²s_d, ᶜ∇²q_tot_eff, ᶜh_eff_plus_Φ) =
+_enthalpy_hyperdiffusion_flux(ᶜρ, ᶜ∇²s_d, ᶜ∇²q_tot_eff, ᶜh_eff_plus_Φ, c) =
     @. lazy(
-        ᶜρ * gradₕ(ᶜ∇²s_d) + ᶜρ * ᶜh_eff_plus_Φ * gradₕ(ᶜ∇²q_tot_eff),
+        ᶜρ * gradₕ(ᶜ∇²s_d) + ᶜρ * (ᶜh_eff_plus_Φ + c) * gradₕ(ᶜ∇²q_tot_eff),
     )
 
 _enthalpy_hyperdiffusion_tags!(
