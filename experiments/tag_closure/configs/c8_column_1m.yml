@@ -1,0 +1,87 @@
+# C8, column, 1-moment microphysics, with sedimentation moving the source tags
+# (FINDINGS §8, E32). C6's column with the repair on, under 1M, for a day.
+#
+# E32 ran this column for an hour, twice, and found that the tags now follow
+# sedimentation out at the ground. C8 runs it for a day with C6's layout, so that
+# the per-process checks see sedimentation:
+#   - form A: `new_strat + new_tropo` against `rad + sfc + sub + mp`. The `new_`
+#     tags list `all`, which includes `precipitation`. Sedimentation is not
+#     production for these tags, so neither side receives it, and moving the
+#     tags with the water must not open a gap;
+#   - form B: the five records, `precipitation` among them, against the change
+#     in the column's `ρe_tot`;
+#   - the closure residual, now that sedimentation moves the tags instead of
+#     leaving the difference behind.
+#
+# Cloud liquid falls at the diagnostic speed, as in E32, rather than the default
+# fixed one, so that the cloud falls as well as the rain. The column's records
+# need `rhoa`, and `ta` lets a later twin check the atmosphere.
+#
+# `all` expands to every process label, `precipitation` included, which the
+# initialization warns about. That is expected.
+job_id: "c8_column_1m"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+
+# C6's column, under 1-moment microphysics.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: rad
+    source: radiation
+  - name: sfc
+    source: surface_flux
+  - name: sub
+    source: subsidence
+  - name: mp
+    source: microphysics
+  - name: new_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: all
+  - name: new_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: all
+
+energy_process_record:
+  [radiation, surface_flux, subsidence, microphysics, precipitation]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_strat, e_src_tropo, e_src_rad, e_src_sfc, e_src_sub]
+    period: "1hours"
+  - short_name: [e_src_mp, e_src_new_strat, e_src_new_tropo]
+    period: "1hours"
+  - short_name: [e_src_fix_strat, e_src_fix_tropo, e_src_fix_rad, e_src_fix_sfc]
+    period: "1hours"
+  - short_name: [e_src_fix_sub, e_src_fix_mp, e_src_fix_new_strat]
+    period: "1hours"
+  - short_name: [e_src_fix_new_tropo]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_subsidence]
+    period: "1hours"
+  - short_name: [e_prc_microphysics, e_prc_precipitation]
+    period: "1hours"
+  - short_name: [rhoa, ta]
+    period: "1hours"

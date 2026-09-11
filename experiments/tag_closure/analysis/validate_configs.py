@@ -76,6 +76,7 @@ AUDIT_REQUIRED = {
     "c6_sphere_no_repair",
     "c6_sphere_first_order",
     "c7_sphere_mp",
+    "c8_column_1m",
 }
 # Runs allowed one model-state diagnostic besides their tags. The two C4 runs
 # differ only in an offset the model never sees, so their `ta` must be identical
@@ -91,11 +92,17 @@ STATE_CHECK = {
     "c6_sphere_no_repair",
     "c6_sphere_first_order",
     "c7_sphere_mp",
+    "c8_column_1m",
 }
 STATE_DIAGNOSTICS = {"ta"}
-# Runs allowed the air density besides their tags. The C5 and C6 columns sum
+# Runs allowed the air density besides their tags. The C5, C6 and C8 columns sum
 # their process records over the column, and that needs `rhoa`.
-DENSITY_CHECK = {"c5_column_offset", "c6_column_repair", "c6_column_no_repair"}
+DENSITY_CHECK = {
+    "c5_column_offset",
+    "c6_column_repair",
+    "c6_column_no_repair",
+    "c8_column_1m",
+}
 DENSITY_DIAGNOSTICS = {"rhoa"}
 
 def shorts(config):
