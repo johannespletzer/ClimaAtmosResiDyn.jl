@@ -1,0 +1,88 @@
+# D2, column, 2-moment microphysics, cold. D1 under 2M, and nothing else
+# changed but what 2M needs (SUBGRID_AND_MICROPHYSICS_DESIGN.md).
+#
+# It CANNOT RUN TODAY. The model disables 2M and 2MP3 when it builds its cache:
+# "temporarily disabled: incompatible with CloudMicrophysics 0.37 pending a fix"
+# (`src/cache/precomputed_quantities.jl:160-167`). The design's build check
+# hit that assertion. Nothing in the tags is the cause. It is ready for when
+# 2M returns.
+#
+# Under 2M the tags meet the same four species that carry energy as under 1M:
+# cloud liquid, cloud ice, rain and snow. 2M adds number concentrations, which
+# sediment too but carry no energy, so the tags need nothing for them. That is
+# why the water tags' refusal of 2M does not carry over to the energy tags.
+# Warm-rain 2M has no ice or snow sources, so here the ice and snow come only
+# from the initial state. As in D1, most of the ice sublimates within the first
+# minute, so this run too samples every minute and ends after an hour.
+#
+# What it decides: whether 2M needs anything beyond 1M. Read beside D1:
+#   - the closure residual, which should behave as D1's;
+#   - form A and form B, as in D1;
+#   - `mp` and `e_prc_microphysics`, which must read zero. 2M's microphysics
+#     writes only the species, as 1M's does.
+#
+# The shipped 2M column runs its microphysics explicitly: "2M implicit
+# microphysics Jacobian not yet fully implemented". So the `microphysics`
+# bracket here is the explicit one.
+job_id: "d2_column_2m_ice"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+
+# `config/model_configs/single_column_precipitation_2M_test.yml`'s column.
+config: "column"
+initial_condition: "PrecipitatingColumn"
+surface_setup: "DefaultMoninObukhov"
+z_elem: 200
+z_max: 10000.0
+z_stretch: false
+cloud_model: "grid_scale"
+implicit_microphysics: false
+microphysics_model: "2M"
+use_sgs_quadrature: false
+vert_diff: "DecayWithHeightDiffusion"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+
+dt: "10secs"
+t_end: "1hours"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: upper
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0}
+  - name: lower
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0, above: false}
+  - name: sfc
+    source: surface_flux
+  - name: mp
+    source: microphysics
+  - name: new_upper
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0}
+    source: all
+  - name: new_lower
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0, above: false}
+    source: all
+
+energy_process_record: [surface_flux, microphysics, precipitation]
+
+energy_source_closure_check:
+  period: "1mins"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1mins"
+  - short_name: [e_src_upper, e_src_lower, e_src_sfc, e_src_mp]
+    period: "1mins"
+  - short_name: [e_src_new_upper, e_src_new_lower]
+    period: "1mins"
+  - short_name: [e_src_fix_upper, e_src_fix_lower, e_src_fix_sfc]
+    period: "1mins"
+  - short_name: [e_src_fix_mp, e_src_fix_new_upper, e_src_fix_new_lower]
+    period: "1mins"
+  - short_name: [e_prc_surface_flux, e_prc_microphysics, e_prc_precipitation]
+    period: "1mins"
+  - short_name: [rhoa, ta]
+    period: "1mins"

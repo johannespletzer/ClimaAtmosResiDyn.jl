@@ -555,6 +555,21 @@ adjusted from what was learned before they are submitted.
 | `c9_sphere_enthalpy` | `phase_c.sh` | C9, `c7_sphere_mp` with the tags moved as enthalpy |
 | `c10_sphere_enthalpy_repair` | `phase_c.sh` | C10, `c9_sphere_enthalpy` with the repair on and its ledgers in the output |
 
+### Phase D. Sub-grid transport, ice, and the other microphysics schemes
+
+[SUBGRID_AND_MICROPHYSICS_DESIGN.md](SUBGRID_AND_MICROPHYSICS_DESIGN.md) designs
+these. None has run. Each header says what the run decides and whether it can
+run today.
+
+| Run | Runscript | What it is |
+|:-- |:-- |:-- |
+| `d1_column_1m_ice` | `phase_c.sh` | D1, `PrecipitatingColumn` under 1M: ice through sedimentation's upward branch. It runs today |
+| `d2_column_2m_ice` | `phase_c.sh` | D1 under 2M. It cannot run while the model disables 2M |
+| `d3_column_p3` | `phase_c.sh` | D1 under 2MP3. It cannot run: the 2M gate, then gaps in the parent's P3 sedimentation |
+| `d4_column_edmf` | `phase_c.sh` | D4, the DYCOMS RF02 EDMF column with C8's tags, and `edmfx_vertical_diffusion: false` |
+| `d4_column_edmf_enthalpy` | `phase_c.sh` | `d4_column_edmf` with the tags moved as enthalpy |
+| `d5_column_edmf_ice` | `phase_c.sh` | D5, TRMM LBA EDMF deep convection under 1M. It is meant for after the sub-grid sharing |
+
 C2, the implicit-path brackets, needs the owner's approval and a code change,
 and no configuration for it is written. C1, the reference shift, needs approval
 and a TOML file but no code change.

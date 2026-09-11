@@ -1,0 +1,104 @@
+# D5, column, EDMF deep convection with ice, 1-moment microphysics. The shipped
+# TRMM LBA EDMF column with tags and records
+# (SUBGRID_AND_MICROPHYSICS_DESIGN.md, "Where ice changes the picture").
+#
+# Meant for after option B, with B4 so that the updrafts' vertical diffusion
+# can be on, as the shipped config has it. It runs today only with
+# `edmfx_vertical_diffusion: false`, which is not the shipped TRMM physics.
+# Then the tags get no SGS mass flux and no sedimentation corrections, and this
+# run measures that gap in a deep, cold column.
+#
+# Deep convection brings the three places where ice changes the picture:
+#   - snow and cloud ice fall through most of the column, so sedimentation
+#     takes its upward branch there. Each face takes the lower cell's shares,
+#     and `lower` is carried up across 5 km while the snow falls;
+#   - the sedimentation corrections act with ice, where updraft and environment
+#     differ in temperature and in how much condensate they hold;
+#   - the SGS flux of `E` points against the updraft where the updraft's
+#     `mse + K` falls below the grid mean's `h_tot`, as at its top.
+#
+# What it decides, after B: whether the partition stays closed through all
+# three, with the donor taken from the sign of each flux, and whether the tags
+# stay non-negative, read from `e_src_fix_<name>`. Form A should hold as on the
+# 0M and 1M columns (E26, E33). Form B sums the records over the column: the
+# radiation of the setup, the prescribed surface fluxes, and the rain-out,
+# which the `precipitation` record sees.
+#
+# `mp` and `e_prc_microphysics` must read zero, since 1M's microphysics writes
+# no `ρe_tot`. `all` includes `precipitation`, and so does the record, so the
+# initialization warns twice. That is expected.
+job_id: "d5_column_edmf_ice"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+
+# `config/model_configs/prognostic_edmfx_trmm_column.yml`, with the updrafts'
+# vertical diffusion off, until B4.
+initial_condition: "TRMM_LBA"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: false
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+rad: "TRMM_LBA"
+config: "column"
+z_max: 16400.0
+z_elem: 82
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "6hours"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: upper
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0}
+  - name: lower
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0, above: false}
+  - name: rad
+    source: radiation
+  - name: sfc
+    source: surface_flux
+  - name: mp
+    source: microphysics
+  - name: new_upper
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0}
+    source: all
+  - name: new_lower
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0, above: false}
+    source: all
+
+energy_process_record: [radiation, surface_flux, microphysics, precipitation]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_upper, e_src_lower, e_src_rad, e_src_sfc, e_src_mp]
+    period: "1hours"
+  - short_name: [e_src_new_upper, e_src_new_lower]
+    period: "1hours"
+  - short_name: [e_src_fix_upper, e_src_fix_lower, e_src_fix_rad, e_src_fix_sfc]
+    period: "1hours"
+  - short_name: [e_src_fix_mp, e_src_fix_new_upper, e_src_fix_new_lower]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_microphysics]
+    period: "1hours"
+  - short_name: [e_prc_precipitation]
+    period: "1hours"
+  - short_name: [rhoa, ta]
+    period: "1hours"

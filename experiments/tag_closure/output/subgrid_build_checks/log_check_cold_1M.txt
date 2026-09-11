@@ -1,0 +1,139 @@
+=== check_cold.jl 1M start Fri Sep 11 11:22:03 AM CEST 2026
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│        `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│              `tracer_upwinding`::`Val{:vanleer_limiter}`
+│     `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│       `edmfx_sgsflux_upwinding`::`Val{:none}`
+│        `edmfx_tracer_upwinding`::`Val{:first_order}`
+│       `test_dycore_consistency`::`Nothing`
+│          `reproducible_restart`::`Nothing`
+│                       `limiter`::`Nothing`
+│                     `diff_mode`::`ClimaAtmos.Implicit`
+└                     `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.GridScaleCloud, ClimaAtmos.Implicit, Nothing, Nothing, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{Nothing, Nothing, Nothing, Bool, Nothing}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{Nothing, ClimaAtmos.IdealizedInsolation}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, Nothing, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`ClimaAtmos.DecayWithHeightDiffusion{false, Float64}`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, Nothing, Nothing}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{typeof(ClimaAtmos.Setups.zonally_symmetric_temperature)}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Nothing, Nothing, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, ClimaAtmos.EnergySourceTaggingModel{Tuple{ClimaAtmos.EnergySourceTag{:upper, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:lower, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:sfc, Nothing, Tuple{Symbol}}}, Float64, ClimaAtmos.TracerEnergySourceTransport}, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS343`
+[ Info: Initialized state (127.883 μs, 10.41 KiB)
+[ Info: Built cache (42.988 s, 10.37 GiB)
+[ Info: Assembled callbacks (118.893 ms, 14.89 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (67.316 s, 2.69 GiB)
+[ Info: Initialized integrator (16.206 s, 1.77 GiB)
+[ Info: Set up diagnostics (5.74 s, 300.47 MiB)
+┌ Info: Simulation info
+│   job_id = "agentD_cold_1M"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/di38kez/claude-4358097/-dss-dsshome1-0D-di38kez-git-Clima-ClimaAtmosResiDyn-jl/6f37e714-35ca-492d-96d0-e3db85f91ae7/scratchpad/agentD/checks/out_cold_1M/output_0000"
+┌ Info: Running
+│   job_id = "agentD_cold_1M"
+│   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/di38kez/claude-4358097/-dss-dsshome1-0D-di38kez-git-Clima-ClimaAtmosResiDyn-jl/6f37e714-35ca-492d-96d0-e3db85f91ae7/scratchpad/agentD/checks/out_cold_1M/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 60.0 seconds (2010-01-01T00:01:00) [counter = 60, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "10 seconds"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "16.7%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-11T11:28:54.115
+└   estimated_finish_date = 2026-09-11T11:28:54.115
+┌ Info: Progress
+│   simulation_time = "20 seconds"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "33.3%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.02"
+│   date_now = 2026-09-11T11:28:55.416
+└   estimated_finish_date = 2026-09-11T11:28:55.416
+┌ Info: Progress
+│   simulation_time = "40 seconds"
+│   n_steps_completed = 4
+│   wall_time_per_step = "6 milliseconds, 783 microseconds"
+│   wall_time_total = "40 milliseconds, 698 microseconds"
+│   wall_time_remaining = "13 milliseconds, 566 microseconds"
+│   wall_time_spent = "27 milliseconds, 132 microseconds"
+│   percent_complete = "66.7%"
+│   estimated_sypd = "4.036"
+│   instantaneous_sypd = "4.036"
+│   date_now = 2026-09-11T11:28:55.569
+└   estimated_finish_date = 2026-09-11T11:28:56.569
+┌ Info: Progress
+│   simulation_time = "1 minute"
+│   n_steps_completed = 6
+│   wall_time_per_step = "30 milliseconds, 84 microseconds"
+│   wall_time_total = "180 milliseconds, 504 microseconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "180 milliseconds, 504 microseconds"
+│   percent_complete = "100.0%"
+│   estimated_sypd = "0.91"
+│   instantaneous_sypd = "0.357"
+│   date_now = 2026-09-11T11:28:55.616
+└   estimated_finish_date = 2026-09-11T11:28:55.616
+[ Info: solve! walltime = 0.228
+[ Info: sypd: 0.72
+[ Info: wall_time_per_timestep: 38 milliseconds, 70 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 5.48 GiB
+[1M] simulation built after 246 s
+[1M] state: (:ρ, :uₕ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno, :ρe_src_upper, :ρe_src_lower, :ρe_src_sfc)
+[1M] ret_code = success
+[1M] solved after 404 s
+[1M] cells with E <= 0: 0
+[1M] min ρe_src_upper   0.0000e+00
+[1M] min ρe_src_lower   8.0720e-43
+[1M] min ρe_src_sfc     0.0000e+00
+[1M] closure after 60 s: gross 1.1193e+06, over gross E 6.3681e+08
+[1M] sedimentation: max|E-tendency| 4.2840e-04, max|partition - E| 6.9118e-19, ratio 1.61e-15 (100 eps = 2.22e-14)
+[1M] ρq_lcl  cells with q > 1e-9:  57, of which E per kg < 0:   0, min(e_int + Φ + c) there NaN J/kg
+[1M] ρq_icl  cells with q > 1e-9:  16, of which E per kg < 0:  16, min(e_int + Φ + c) there -1.758e+05 J/kg
+[1M] ρq_rai  cells with q > 1e-9:  25, of which E per kg < 0:   0, min(e_int + Φ + c) there NaN J/kg
+[1M] ρq_sno  cells with q > 1e-9:  17, of which E per kg < 0:  17, min(e_int + Φ + c) there -1.758e+05 J/kg
+[1M] step at 6500 m: cells above the step where `lower` moves: 0; cells below where `upper` moves: 0; closure 1.61e-15
+[1M] ρq_lcl  own sedimentation, gross 3.3188e-08
+[1M] ρq_icl  own sedimentation, gross 2.8391e-09
+[1M] ρq_rai  own sedimentation, gross 1.6619e-06
+[1M] ρq_sno  own sedimentation, gross 3.8559e-07
+[1M] ρq_tot moved by sedimentation, gross 2.0424e-06; minus the species' own, gross 0.0000e+00
+[1M] done after 412 s
+=== exit 0 at Fri Sep 11 11:29:04 AM CEST 2026

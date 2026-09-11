@@ -1,0 +1,88 @@
+# D3, column, 2-moment microphysics with P3 ice. D2 under `2MP3`
+# (SUBGRID_AND_MICROPHYSICS_DESIGN.md). It CANNOT RUN TODAY, for reasons in the
+# parent model, not in the tags:
+#   - the model disables 2M and 2MP3 when it builds its cache, pending a
+#     CloudMicrophysics fix (`src/cache/precomputed_quantities.jl:160-167`).
+#     The design's build check hit that assertion. Behind that gate:
+#   - P3's `set_precipitation_velocities!` unpacks `ᶜwnₗ` and `ᶜwnᵣ`
+#     (`src/cache/microphysics_cache.jl:608`). The cache allocates `ᶜwₙₗ` and
+#     `ᶜwₙᵣ` (`src/cache/precomputed_quantities.jl:315-316`), so the first
+#     update fails;
+#   - it never sets the snow speed `ᶜwₛ`. But `ρq_sno` is in the P3 state, and
+#     `vertical_advection_of_water_tendency!` moves `ρ`, `ρq_tot` and `ρe_tot`
+#     with it (`src/prognostic_equations/water_advection.jl:55`);
+#   - `ρq_rai`, `ρq_sno`, `ρn_lcl` and `ρn_rai` do not sediment in their own
+#     equations under P3. The 2M block tests `isa NonEquilibriumMicrophysics2M`
+#     (`src/prognostic_equations/implicit/implicit_tendency.jl:281`), and 2MP3
+#     is not a subtype. Yet `ρ`, `ρq_tot` and `ρe_tot` move with the rain;
+#   - `PrecipitatingColumn` gives P3 ice mass with zero ice number, and it puts
+#     the snow in both `ρq_icl` and `ρq_sno`. A P3 initial state is needed too.
+#
+# Once the parent runs, it decides whether P3 needs anything beyond 2M for the
+# energy tags. It should not. P3's number, rime mass and rime volume sediment
+# with the ice but carry no energy of their own, since the rime is part of the
+# ice mass. So the closure residual, form A and form B should read as D2's,
+# and `mp` and `e_prc_microphysics` must read zero. It samples every minute and
+# ends after an hour, as D1 and D2 do.
+job_id: "d3_column_p3"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+
+# D2's column, under P3.
+config: "column"
+initial_condition: "PrecipitatingColumn"
+surface_setup: "DefaultMoninObukhov"
+z_elem: 200
+z_max: 10000.0
+z_stretch: false
+cloud_model: "grid_scale"
+implicit_microphysics: false
+microphysics_model: "2MP3"
+use_sgs_quadrature: false
+vert_diff: "DecayWithHeightDiffusion"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+
+dt: "10secs"
+t_end: "1hours"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: upper
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0}
+  - name: lower
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0, above: false}
+  - name: sfc
+    source: surface_flux
+  - name: mp
+    source: microphysics
+  - name: new_upper
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0}
+    source: all
+  - name: new_lower
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0, above: false}
+    source: all
+
+energy_process_record: [surface_flux, microphysics, precipitation]
+
+energy_source_closure_check:
+  period: "1mins"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1mins"
+  - short_name: [e_src_upper, e_src_lower, e_src_sfc, e_src_mp]
+    period: "1mins"
+  - short_name: [e_src_new_upper, e_src_new_lower]
+    period: "1mins"
+  - short_name: [e_src_fix_upper, e_src_fix_lower, e_src_fix_sfc]
+    period: "1mins"
+  - short_name: [e_src_fix_mp, e_src_fix_new_upper, e_src_fix_new_lower]
+    period: "1mins"
+  - short_name: [e_prc_surface_flux, e_prc_microphysics, e_prc_precipitation]
+    period: "1mins"
+  - short_name: [rhoa, ta]
+    period: "1mins"

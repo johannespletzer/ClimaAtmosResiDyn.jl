@@ -80,12 +80,20 @@ AUDIT_REQUIRED = {
     "c9_column_enthalpy",
     "c9_sphere_enthalpy",
     "c10_sphere_enthalpy_repair",
+    "d1_column_1m_ice",
+    "d2_column_2m_ice",
+    "d3_column_p3",
+    "d4_column_edmf",
+    "d4_column_edmf_enthalpy",
+    "d5_column_edmf_ice",
 }
 # Runs allowed one model-state diagnostic besides their tags. The two C4 runs
 # differ only in an offset the model never sees, so their `ta` must be identical
 # to the last bit, and that is the check that the atmosphere is untouched. The
 # C6, C9 and C10 runs differ only in the repair and in how the tags move, which
-# the model never sees either.
+# the model never sees either. So does the D4 pair. The other D runs carry `ta`
+# beside their ice, because the branch sedimentation takes depends on the
+# temperature.
 STATE_CHECK = {
     "c4_sphere_tag_offset",
     "c4_sphere_tag_offset_2x",
@@ -99,16 +107,29 @@ STATE_CHECK = {
     "c9_column_enthalpy",
     "c9_sphere_enthalpy",
     "c10_sphere_enthalpy_repair",
+    "d1_column_1m_ice",
+    "d2_column_2m_ice",
+    "d3_column_p3",
+    "d4_column_edmf",
+    "d4_column_edmf_enthalpy",
+    "d5_column_edmf_ice",
 }
 STATE_DIAGNOSTICS = {"ta"}
-# Runs allowed the air density besides their tags. The C5, C6, C8 and C9 columns
-# sum their process records over the column, and that needs `rhoa`.
+# Runs allowed the air density besides their tags. The C5, C6, C8 and C9
+# columns, and the D columns, sum their process records over the column, and
+# that needs `rhoa`.
 DENSITY_CHECK = {
     "c5_column_offset",
     "c6_column_repair",
     "c6_column_no_repair",
     "c8_column_1m",
     "c9_column_enthalpy",
+    "d1_column_1m_ice",
+    "d2_column_2m_ice",
+    "d3_column_p3",
+    "d4_column_edmf",
+    "d4_column_edmf_enthalpy",
+    "d5_column_edmf_ice",
 }
 DENSITY_DIAGNOSTICS = {"rhoa"}
 

@@ -860,6 +860,79 @@ Slurm jobs.
 `after_first_hour.py`, `signed_by_loss_rule.py` and `sphere_levels.py`;
 `output/newton_lag/`.*
 
+**E40. Under `prognostic_edmfx` the tags get none of the sub-grid mass flux,
+and every shipped EDMF configuration fails with tags.** These are build checks
+on the DYCOMS RF02 EDMF column under 1M, with the offset, on the login node.
+Nothing was stepped.
+
+  - **The shipped settings fail.** Every shipped EDMF config sets
+    `edmfx_vertical_diffusion: true`. Then the sub-grid diffusive flux applies
+    the grid mean's specific tendency to the updraft's copy of every
+    grid-scale tracer (`edmfx_sgs_flux.jl:403-409`). No tag has a copy, so the
+    call fails with `type NamedTuple has no field e_src_strat`. The water
+    species before the tags pass, because the updraft carries them. By the
+    code, the water tags, the `ρe_tag_*` family and the passive tracers would
+    fail there too. That was not run.
+  - **The sub-grid mass flux reaches no tag.** The updraft carries `ρa`, `mse`,
+    `q_tot` and the four condensates, and no tag. A field with no updraft copy
+    has a zero difference-form flux. On a synthetic updraft,
+    `edmfx_sgs_mass_flux_tendency!` changes `E` by a summed absolute tendency
+    of 11.5 W m⁻³ over the column's cells, and the partition by exactly zero.
+    The `c·ρ` part alone sums to 0.60 W m⁻³. So all of it would go to
+    `e_src_res`. The sizes are the synthetic state's. The zero is the result.
+  - **Sedimentation under EDMF does not close.** With more rain in the updraft
+    than in the grid mean between 300 and 900 m, the partition's sedimentation
+    tendency misses the parent's by 3.4e-3 of its largest value. Without EDMF
+    the integration test holds the same comparison to 100 eps. The miss is the
+    updraft and environment corrections (`water_advection.jl:127-186`), which
+    the tags do not share.
+  - **A full EDMF simulation with tags did not build in 15 minutes** on the
+    login node. The cache took 108 s, and the implicit problem was still
+    compiling when the limit ended it. With `edmfx_vertical_diffusion: false`
+    it should run, by the code.
+
+The synthetic updraft covers a tenth of the area and rises. Below 800 m its
+`mse` is 1.5 kJ kg⁻¹ above the grid mean's and its `q_tot` 1 g kg⁻¹ above;
+above 800 m its `mse` is 0.5 kJ kg⁻¹ below. The bounds: one column, one state at
+t = 0, and tendency functions called one at a time. Nothing refuses these
+configurations at startup. *A design agent on the terrabyte login node,
+2026-09-11. `analysis/subgrid_light_check.jl edmf` and
+`analysis/subgrid_check_edmf.jl`; `output/subgrid_build_checks/`. The design is
+[SUBGRID_AND_MICROPHYSICS_DESIGN.md](SUBGRID_AND_MICROPHYSICS_DESIGN.md).*
+
+**E41. Falling ice takes sedimentation's upward branch in every cell, and the
+partition stays closed through it.** These are build checks on
+`PrecipitatingColumn` under 1M, 100 levels to 10 km, with the offset, on the
+login node.
+
+  - **Every ice and snow cell takes it.** At t = 0, all 79 cells holding cloud
+    ice and all 69 holding snow above 1e-9 kg kg⁻¹ carry negative energy per
+    kilogram, geopotential and offset included, down to −193 kJ kg⁻¹. None of
+    the 55 cells of cloud liquid or the 50 of rain does. So every face under
+    falling ice takes the lower cell's shares.
+  - **The partition's sedimentation tendency matches the parent's** to 5.7e-15
+    of its largest value, within 100 eps. On a step partition at 6.5 km,
+    inside the ice, `lower` moves in the one cell above the step, and `upper`
+    in no cell below it. Only the upward branch does that. Closure there is
+    5.9e-15.
+  - **Stepped six times at 10 s, with the repair on,** `E` stays positive in
+    every cell and every tag stays non-negative. Sedimentation still closes to
+    1.6e-15. The 16 cells still holding cloud ice and the 17 holding snow still
+    take the branch.
+  - **The ice does not last.** Most of it sublimates in that minute, since the
+    profile's air is below ice saturation aloft. After the minute, nothing
+    crosses the step.
+  - Each species' own sedimentation adds up exactly to what `ρq_tot` is moved
+    by.
+  - **2M and 2MP3 do not build.** The model and the state do. The cache stops
+    at the model's own gate, "2M and 2M+P3 microphysics are temporarily
+    disabled" (`precomputed_quantities.jl:160-167`). The tags play no part in
+    it.
+
+This settles the branch on a real state. Following it through a run is still
+open (§7). *The same agent. `analysis/subgrid_light_check.jl 1M|2M|2MP3` and
+`analysis/subgrid_check_cold.jl 1M`; `output/subgrid_build_checks/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -1199,10 +1272,18 @@ Kept because a later reader will otherwise re-derive them.
   - ~~What the 1M column's last signed residual is (E32).~~ The loss rule
     acting on the residual that tracer transport makes. It is not the tags'
     missing Jacobian block, whose lag is −7.8 J m⁻² (E39).
-  - **Sedimentation's upward branch in a run (E32).** Where the water carries
-    negative energy against the reference plus offset, the tags take the lower
-    cell's shares. Only the integration test's set flux reaches that branch. A
-    run with ice would.
+  - **Sedimentation's upward branch through a run (E32, E41).** On a real cold
+    state every ice and snow cell takes it, and the partition still closes to
+    1.6e-15 after a minute of stepping (E41). The ice there sublimates within
+    that minute, so no run has followed the branch through time. D1 samples it
+    for an hour. D5, deep convection, would keep making ice.
+  - **Anything under `prognostic_edmfx` (E40).** The tags get no sub-grid mass
+    flux and no sedimentation corrections, and the shipped settings fail. How
+    much that adds to `e_src_res` in a run is what the D4 pair would measure,
+    with `edmfx_vertical_diffusion: false`.
+  - **2M and P3.** The model disables both on this branch (E41). By the code,
+    the tags need nothing more for 2M than for 1M. Behind that gate, P3 has
+    gaps in the parent's own sedimentation (`SUBGRID_AND_MICROPHYSICS_DESIGN.md`).
   - **What C8's form-A gap is (E33).** Form B's remainder is the one-iteration
     Newton increment in the records, and it does not accumulate (E39). Form A's
     117 J kg⁻¹ is most likely the per-tag transport, as on the 0-moment column
@@ -1387,6 +1468,26 @@ Kept because a later reader will otherwise re-derive them.
     closes to 7e-6 J kg⁻¹. On the sphere it worsens where the source tags go
     negative with the repair off. The same sphere with the repair on would test
     that.
+
+    **Run: C10, and where form A's gaps come from** (E35 to E38). The repair
+    does not bring the audit's form A back. Under the audit a negative overlay
+    freezes at its node. Under tracer transport the gap is the per-tag limiter.
+    Form A's global integral, not its largest gap, shows a missing process.
+    The audit's first-hour residual and C8's form-B remainder are the stepper's
+    one Newton iteration (E39).
+
+    **Designed: the tags under EDMF, with ice, and under 2M and P3**
+    ([SUBGRID_AND_MICROPHYSICS_DESIGN.md](SUBGRID_AND_MICROPHYSICS_DESIGN.md),
+    E40, E41). The owner asked for it on 2026-09-11. It recommends refusing
+    `prognostic_edmfx` with tags now. Then one PR would share the parent's
+    sub-grid flux of `E` and each species' whole sedimentation flux by the
+    losing cell's shares, and guard the shared tracer loop. It leaves seven
+    decisions to the owner. Its configs are D1 to D5, and none has run. A user
+    guide is drafted beside it, [USER_GUIDE_DRAFT.md](USER_GUIDE_DRAFT.md).
+
+    **Listed: what is left before operation**, in
+    [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md). The GPU comes last, by the
+    owner's decision of 2026-09-11.
 
  4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
     and the energy family has no rescale. C1 solved a simulated day in 5.8
