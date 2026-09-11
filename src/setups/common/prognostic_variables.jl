@@ -58,10 +58,14 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
         precip_variables(ρ, physical_state, atmos_model.microphysics_model)...,
         chemistry_variables(ρ, physical_state, atmos_model.chemistry_model)...,
         tagging_variables(ρe_tot, local_geometry, atmos_model.tagging_model)...,
-        # Energy source tags partition the same `ρe_tot`, so a partition of
-        # region tags sums to it exactly at t = 0.
+        # Energy source tags partition `ρe_tot`, or `ρe_tot + c·ρ` with an
+        # offset, so a partition of region tags sums to that exactly at t = 0.
         energy_source_tagging_variables(
-            ρe_tot,
+            energy_source_parent(
+                ρe_tot,
+                ρ,
+                atmos_model.energy_source_tagging_model,
+            ),
             local_geometry,
             atmos_model.energy_source_tagging_model,
         )...,

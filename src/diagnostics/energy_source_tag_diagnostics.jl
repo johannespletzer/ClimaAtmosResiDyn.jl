@@ -19,7 +19,9 @@ Register the diagnostics of the energy source tags:
 
   - `e_src_<name>`: specific tagged energy `ρe_src_<name> / ρ`, for each tag;
   - `e_src_res`: closure residual `(ρe_tot - Σᵢ ρe_src_i) / ρ`, summed over the
-    pure region tags (only registered when at least one exists).
+    pure region tags (only registered when at least one exists). With
+    `energy_source_tag_offset` `c` the parent is the total the tags partition,
+    so the residual is `(ρe_tot + c·ρ - Σᵢ ρe_src_i) / ρ`.
 
 A no-op when energy source tagging is disabled. Per-tag entries already in the
 catalog are kept, since their compute function depends only on the tag name; the
@@ -52,8 +54,10 @@ function register_energy_source_tagging_diagnostics!(
             long_name = "Source-Tagged Moist Energy ($name)",
             comments = "Moist energy attributed to the tag `$name`, per " *
                        "unit mass of moist air. Reads as energy present now " *
-                       "traced back to that tag only where `ρe_tot` is " *
-                       "positive and this field is non-negative; elsewhere " *
+                       "traced back to that tag only where the partitioned " *
+                       "total is positive and this field is non-negative; " *
+                       "that total is `ρe_tot`, or `ρe_tot + c*ρ` under an " *
+                       "`energy_source_tag_offset`. Elsewhere " *
                        "it is a signed attribution with no amount " *
                        "interpretation. Distinct from `e_tag_$name`, which " *
                        "is a signed record of what a process did rather " *
@@ -66,6 +70,7 @@ function register_energy_source_tagging_diagnostics!(
     end
 
     region_names = energy_source_region_tag_state_names(model)
+    offset = model.offset
     # Drop any stale entry first, then decide whether to register a new one. An
     # earlier simulation in this process may have registered `e_src_res` over a
     # different set of region tags, which would return a wrong number and no
@@ -81,10 +86,20 @@ function register_energy_source_tagging_diagnostics!(
                        "residual, not a machine-precision identity: ρe_tot is " *
                        "transported as enthalpy including pressure work and " *
                        "has its own diffusion treatment, while the tags ride " *
-                       "the generic passive-tracer path.",
+                       "the generic passive-tracer path. With " *
+                       "energy_source_tag_offset c, ρe_tot here is replaced " *
+                       "by the total the tags partition, ρe_tot + c·ρ.",
             compute! = (out, u, p, t) ->
-                compute_e_tag_res!(out, u, p, t, region_names),
+                compute_e_src_res!(out, u, p, t, region_names, offset),
         )
     end
     return nothing
+end
+
+# `e_src_res` against the total the tags partition. With an offset `c` that is
+# `ρe_tot + c·ρ`, so the specific residual is `compute_e_tag_res!`'s plus `c`.
+function compute_e_src_res!(out, state, cache, time, region_names, offset)
+    ᶜres = compute_e_tag_res!(out, state, cache, time, region_names)
+    isnothing(offset) || (ᶜres .+= offset)
+    return ᶜres
 end
