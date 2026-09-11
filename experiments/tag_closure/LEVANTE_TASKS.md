@@ -145,30 +145,27 @@ limits.
 process record, as the main goal. The tags say where the energy present came
 from, and the record says what each process did.
 
-What stands between the tags and operational use, in the order to do it:
+**What is left is now listed in [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md)**
+(2026-09-11). That list merges four reviews and puts the owner's decisions
+first. The GPU comes last, by the owner's decision of 2026-09-11.
 
- 1. **PR #65**, the #64 fix and the closure audit. The offset builds on the
-    audit, so this lands first.
- 2. **`energy_source_tag_offset`**, in its own pull request stacked on #65:
-    [#68](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/68),
-    a draft. It carries the loss-rule integration test (item 7).
- 3. **Precipitation on the implicit path** does not reach the source tags. Only
-    the explicit path is bracketed for this family, so the 0M sink's energy
-    leaves the parent unattributed. This is C2, and it needs a code change.
- 4. **Negative tags.** The tags are exempt from both tracer limiters and have no
-    partition repair, so they go negative (E14, E19). The water tags' additive
-    repair from #64 is the pattern to adapt.
- 5. **The transport mismatch.** `ρe_tot` moves as enthalpy, pressure work
-    included, and the tags as passive tracers, which is most of the residual
-    (E13). Either the tags learn the enthalpy form, or the residual is
-    documented with a calibrated tolerance.
- 6. **A calibrated closure tolerance.** The default 1e-6 warns every hour on a
-    residual that reaches 3.8e-3 in a day on the sphere (E15, E18).
- 7. **An integration test of the loss half.** With an offset the donor loss runs
-    through a real solve, which no test checks yet. `analysis/offset_smoke.jl`
-    is the starting point.
- 8. **Sub-grid transport and GPU.** The tags are grid-scale only, and neither
-    the family nor the offset has run on a GPU.
+The eight items first listed here stand as follows on 2026-09-11:
+
+ 1. **PR #65**, the #64 fix and the closure audit: merged.
+ 2. **`energy_source_tag_offset`**,
+    [#68](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/68):
+    merged, with the loss-rule integration test (item 7).
+ 3. **Precipitation on the implicit path**: bracketed for the source tags and
+    the records, in #69.
+ 4. **Negative tags**: `energy_source_tag_repair`, on by default, in #69.
+    Sedimentation moves the tags as transport, in draft #70.
+ 5. **The transport mismatch**: the enthalpy audit, in draft #72. Tracer
+    transport stays the default, and the audit shows what transport adds (E34).
+ 6. **A calibrated closure tolerance**: open. U2 and R1 of the list.
+ 7. **An integration test of the loss half**: merged with #68.
+ 8. **Sub-grid transport and GPU**: sub-grid transport is designed, not built
+    (`SUBGRID_AND_MICROPHYSICS_DESIGN.md`, E40, E41). Every shipped EDMF
+    configuration fails with tags today. The GPU is last.
 
 ## 1c. C5 — done, and what comes next
 

@@ -117,6 +117,20 @@ one agent has worked this branch at once.
     blocker. Its five findings are fixed in `d545af90` and merged into #70
     (`30d8bb4c`), #72 (`404ba98f`) and this branch (`602153b9`). The worktree
     `../ClimaAtmosResiDyn-repair` is on #72's branch now.
+  - **Why form A fails on the sphere, and where the leftover residuals come
+    from, are recorded** (E36 to E39). Form A's global integral is the check,
+    not its largest gap (E38).
+  - **Sub-grid transport, ice and the other microphysics schemes are designed,
+    not built** ([SUBGRID_AND_MICROPHYSICS_DESIGN.md](SUBGRID_AND_MICROPHYSICS_DESIGN.md)).
+    Every shipped EDMF configuration fails with tags, and the sub-grid mass
+    flux reaches no tag (E40). Falling ice takes sedimentation's upward branch
+    in every cell, and the partition closes through it (E41). 2M and P3 are
+    disabled in the model on this branch. Configs D1 to D5 are written and
+    validated, and none has run. A user guide is drafted,
+    [USER_GUIDE_DRAFT.md](USER_GUIDE_DRAFT.md).
+  - **What is left before operation is
+    [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md).** Start from its decisions for
+    the owner. The GPU is last, by the owner's decision.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for
