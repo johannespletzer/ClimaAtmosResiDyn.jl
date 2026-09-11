@@ -36,28 +36,34 @@ Done or built:
 Not yet run: EDMF, ice through time, 2M and P3, Float32, a restart, anything
 longer than a day, and the GPU.
 
+## Decided on 2026-09-11
+
+  - **Production** is a GPU sphere in Float32, with EDMF and 1M. So every item
+    marked B blocks, and so do those marked "B if production uses EDMF". The
+    GPU still comes last.
+  - **EDMF:** refuse `prognostic_edmfx` with tags now (C1a), and build the
+    sharing later (C1b): under both transports, in the implicit tendency, and
+    with the guard of the shared loop (B4). These are the design's
+    recommendations for its decisions 1 to 4.
+  - **Approved to write:** C3 in #72, the help text in #69, R2's wording, and
+    M2's label warnings, with C1a.
+  - **Approved to run:** D1, the D4 pair, and R4's two scripts, on terrabyte.
+
 ## Decisions for the owner
 
- 1. **What "production" means:** sphere, microphysics scheme, EDMF, Float32,
-    topography. This decides which items below block. The readiness review
-    assumed a GPU sphere in Float32, with EDMF, vertical diffusion, sponges,
-    topography and 1M.
- 2. **The offset (U1).** Either require one, with an explicit `0` keeping
+ 1. **The offset (U1).** Either require one, with an explicit `0` keeping
     today's behaviour, or keep `~` and have the warning print the smallest
     offset that makes the total positive.
- 3. **The closure check (U2, R1).** On by default at a daily period, with a
+ 2. **The closure check (U2, R1).** On by default at a daily period, with a
     tolerance calibrated per transport, and one warning rather than one per
     check. Reported from a spin-up reference.
- 4. **The per-process checks (A2, A3).** A check of labels at configuration,
+ 3. **The per-process checks (A2, A3).** A check of labels at configuration,
     and form A as a global integral, instead of pointwise form A as a pass or
     fail test.
- 5. **Model code that needs approval:**
-      - C3, the audit's hyperdiffusion, in #72;
-      - A4, signed overlay shares under the audit;
-      - C1a, refusing `prognostic_edmfx` with tags now.
- 6. **The sub-grid and microphysics design.** Its seven decisions are in
-    section 2.
- 7. **Runs, each on its own:** V1 to V6, R4, D1 and the D4 pair.
+ 4. **Model code that still needs approval:** A4, signed overlay shares under
+    the audit.
+ 5. **The design's open decisions**, 5 and 6 in section 2.
+ 6. **Runs, each on its own:** V1 to V3, V5 and V6.
 
 ## 1. Merge the stack
 
@@ -113,16 +119,13 @@ From E40, E41 and the design.
       - `ᶜwₛ`, which is never set;
       - rain and the numbers, which do not sediment in their own equations.
 
-The design's decisions for the owner:
+The design's decisions. On 2026-09-11 the owner took 1 to 4 and 7 as
+recommended: refuse now; then B under both transports, in the implicit
+tendency, with B4; and M2. Still open:
 
- 1. Refuse `prognostic_edmfx` now (C1a)?
- 2. Build B? Under both transports (recommended), or under `enthalpy` only?
- 3. Run B in the implicit tendency (recommended), or in the explicit one?
- 4. Guard the shared loop (B4), or refuse `edmfx_vertical_diffusion: true`?
  5. B3 now, or keep the sub-grid closures in tracer form?
  6. Who lifts the 2M gate and fixes the parent's P3? Do the tags refuse P3
     until then?
- 7. M2?
 
 ### The rest
 

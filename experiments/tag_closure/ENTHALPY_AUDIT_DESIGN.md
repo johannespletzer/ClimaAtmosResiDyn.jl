@@ -34,7 +34,7 @@ add up to the parent's.
 |:-- |:-- |:-- |
 | vertical advection, explicit (`advection.jl:249`) | `vertical_transport(ρ, u³, χₖ, dt, tracer_upwinding)` | the face flux `ᶠρ · scheme(u³, h_tot + c)` times the upwind cell's share `sₖ`, with the parent's `energy_q_tot_upwinding` |
 | horizontal advection (`advection.jl:121`) | `-split_divₕ(ρu, χₖ)` | `-split_divₕ(ρu, sₖ (h_tot + c))` |
-| hyperdiffusion (`hyperdiffusion.jl:527`) | `-ν₄ wdivₕ(ρ gradₕ ∇²χₖ)` | `-ν₄ wdivₕ(sₖ F_h)`, with `F_h` the parent's enthalpy hyperdiffusion flux |
+| hyperdiffusion (`hyperdiffusion.jl:527`) | `-ν₄ wdivₕ(ρ gradₕ ∇²χₖ)` | `-ν₄ wdivₕ(sₖ F_h)`, with `F_h` the parent's hyperdiffusion flux of `E` |
 
   - **The shares** are sedimentation's. A partition tag's clamped fraction of
     `E` is divided by the partition's sum, so the shares add up to one. A tag
@@ -50,8 +50,11 @@ add up to the parent's.
     tag with `sₖ (h_tot + c)` sums to the parent's `h_tot` term plus `c` times
     the mass term, exactly.
   - **Hyperdiffusion.** The parent's flux is a vector at cell centers before
-    `wdivₕ` takes its divergence, so each tag takes it times its share. `ρ` is
-    not hyperdiffused, so `c` adds nothing here.
+    `wdivₕ` takes its divergence, so each tag takes it times its share. The
+    water part moves `ρ` too (`hyperdiffusion.jl:495-497`), so it carries
+    `h_eff + Φ + c`. *Corrected on 2026-09-11. This first said that `ρ` is not
+    hyperdiffused and that `c` adds nothing here. The build left `c` out, and
+    C3 in #72 puts it in (FINDINGS §6).*
   - **The cost of exactness.** The shares are taken from the upwind cell, first
     order, so a region's edge smears more than under van Leer. For an audit that
     is acceptable, because the question it answers is closure, not sharpness.
@@ -69,12 +72,14 @@ add up to the parent's.
 
 ## What is left in the residual by design
 
-The parent moves `ρe_tot` vertically in the implicit step, with the upwind
-correction after the Newton solve. The tags move explicitly, at the stage state.
-So their fluxes add up to the parent's flux at the explicit state, not at the
-solved one. That timing gap is bounded. The ledger's `unexplained`, 1.4% on the
-column and 5.3% on the sphere, is of the same kind, and the ledger would measure
-it with the switch on.
+The tags move explicitly, with the fluxes of the solved stage state. The parent
+moves `ρe_tot` vertically in the implicit step. With one Newton iteration, its
+contribution is the increment linearised about the stage's first guess, and its
+upwind correction comes after the solve. The two differ by that linearisation
+(FINDINGS E39). *Corrected on 2026-09-11. This first said that the tags take the
+explicit state and the parent the solved one, which is the wrong way round
+(§6).* The ledger's `unexplained`, 1.4% on the column and 5.3% on the sphere, is
+of the same kind, and the ledger would measure it with the switch on.
 
 ## Tests
 
