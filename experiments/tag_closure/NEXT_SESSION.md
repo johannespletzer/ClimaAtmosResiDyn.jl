@@ -74,20 +74,15 @@ one agent has worked this branch at once.
     where cold condensate falls out. With those listed, the column closes per
     process to 60.7 J/kg and per record to the joule, and the sphere per process
     to 20.2 J/kg (C7). What the sphere's last 20 J/kg is, is open.
-  - **PR state.** #65 is ready for review. Another session reviewed #65 and #68
-    under the owner's account and pushed fixes to both. #68 and #69 stay drafts
-    until the owner has reviewed them.
-    - #68 is the offset, stacked on #65, with the loss-rule integration test.
-      Its test comment now carries the measured ratio (`57957cae`).
-    - #69 is the implicit bracket and the repair, stacked on #68, with the fix
-      that defines `compute_e_src_fix!`. #68's review fixes are merged into it
-      at `481cf02c`, and its four test files pass there.
-
-    Check all three PRs' CI before anything else touches them. The review left
-    these for the owner: `c·Δρ` from mass-changing processes the tags do not
-    bracket, a restart guard for a changed offset, the `Float32` rounding floor,
-    `parent` shadowed in tests, `nothing` inside a broadcast, and `isfinite`
-    before the conversion to `FT`.
+  - **PR state.** #65 and #68 are merged into `main`. #69, the implicit bracket
+    and the repair, and #70, sedimentation as transport, a draft, were
+    retargeted to `main` on 2026-09-11 at the owner's request. Both merge
+    cleanly, and neither needed a conflict fix. An Opus review of #69 was
+    started then. Check both PRs' CI before anything else touches them. The
+    review of #65 and #68 left these for the owner: `c·Δρ` from mass-changing
+    processes the tags do not bracket, a restart guard for a changed offset, the
+    `Float32` rounding floor, `parent` shadowed in tests, `nothing` inside a
+    broadcast, and `isfinite` before the conversion to `FT`.
   - **The owner decided to keep both** the energy source tags and the process
     record, as the main goal (FINDINGS §8). Task 1b of the task list names what
     is left to make the tags operational.
@@ -97,22 +92,26 @@ one agent has worked this branch at once.
     for building an enthalpy-form transport of the tags as an audit. The owner
     approved building it, and it is not built.
   - **Sedimentation as transport of the tags is built** (`91b9bbb9`, FINDINGS
-    §8 and E32). It is draft PR #70, stacked on #69, at `e8debaba`, and its
-    tests pass on this branch and on #69's. C8 ran it on a 1M column for a
+    §8 and E32). It is draft PR #70, at `e8debaba`, now targeting `main`, and
+    its tests pass on this branch and on #69's. C8 ran it on a 1M column for a
     day (E33).
   - **This branch carries the review fixes of #65 and #68,** merged from #69's
     head with the owner's approval. Its model code differs from #70's only in
     `src/parent_budget/report.jl` and `src/simulation/solve.jl`, which are its
     own. Five test files pass on the merge.
   - **The enthalpy audit switch is built** (`511e00e9`), as designed in
-    `ENTHALPY_AUDIT_DESIGN.md` with the owner's four decisions. Its tests pass
-    on this branch. Its PR branch, `claude/energy-source-tag-enthalpy-audit`,
-    stacked on #70, exists only locally, in the worktree
-    `../ClimaAtmosResiDyn-repair`, which is on that branch now. Switch it back
-    with `git switch claude/energy-source-tag-repair` before working on #69.
-  - **C9 is prepared and not submitted.** It runs the audit on the column and
-    on the sphere, each against its reference with only the transport changed.
-    The task list has the command.
+    `ENTHALPY_AUDIT_DESIGN.md` with the owner's four decisions. It is draft PR
+    #72, stacked on #70, at `a4a67187`, and its tests pass there and on this
+    branch. The worktree `../ClimaAtmosResiDyn-repair` is on #69's branch, at
+    its head, for the review below.
+  - **C9 is running.** It was submitted on 2026-09-11 as jobs `13402392`
+    (`c9_column_enthalpy`) and `13402393` (`c9_sphere_enthalpy`), each against
+    its reference with only the transport changed. The outputs land in
+    `$SCRATCH/tag_closure/output/c9_*`, and the task list says how to hand them
+    back.
+  - **An Opus review of #69** was started on 2026-09-11, read-only, from the
+    worktree and the PR's diff. If its report never reached the owner, run it
+    again.
   - **Three known defects** are listed in the task list and are not fixed.
 
 ## Traps this series has already paid for

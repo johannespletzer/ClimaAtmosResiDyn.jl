@@ -210,26 +210,28 @@ same sphere, in `output/transport_ledger_sphere/`. What they found:
     the per-tag limiter 2e-4 and hyperdiffusion 2.4%.
 
 **Sedimentation as transport, built and run on 2026-09-11** (FINDINGS E32,
-E33). It is draft PR #70, stacked on #69. A one-hour 1M column on the login
-node shows the tags now follow it out at the ground. C8, job `13401744`, ran
-that column for a day, in `output/c8_column_1m/`. Form B closes there to
-5.3 J/m² out of 0.9 MJ/m², and form A to 117 J/kg.
+E33). It is draft PR #70, which, like #69, now targets `main`. A one-hour 1M
+column on the login node shows the tags now follow it out at the ground. C8,
+job `13401744`, ran that column for a day, in `output/c8_column_1m/`. Form B
+closes there to 5.3 J/m² out of 0.9 MJ/m², and form A to 117 J/kg.
 
-**Next.** Each run needs its own approval:
+**Running.** The enthalpy-form audit switch is built at `511e00e9`, as designed
+in `ENTHALPY_AUDIT_DESIGN.md`, and is draft PR #72, stacked on #70. C9 is its
+pair of runs, each against its reference with only the transport changed. The
+owner approved both, and they were submitted on 2026-09-11 with C7's flags:
+job `13402392` is `c9_column_enthalpy`, against `c6_column_no_repair`, and job
+`13402393` is `c9_sphere_enthalpy`, against `c7_sphere_mp`.
 
-  - the enthalpy-form audit switch is built at `511e00e9`, as designed in
-    `ENTHALPY_AUDIT_DESIGN.md`, and passes its tests on this branch. Its PR
-    branch, stacked on #70, is prepared locally. C9 is its pair of runs, each
-    against its reference with only the transport changed:
+    env CONFIG=experiments/tag_closure/configs/c9_column_enthalpy.yml \
+        sbatch --account=hpda-c --partition=hpda2_test --time=01:30:00 \
+        --cpus-per-task=2 --mem=32G --job-name=c9_column_enthalpy \
+        --output=$SCRATCH/tag_closure/logs/%x-%j.out \
+        --error=$SCRATCH/tag_closure/logs/%x-%j.err \
+        experiments/tag_closure/runscripts/phase_c.sh
 
-        env CONFIG=experiments/tag_closure/configs/c9_column_enthalpy.yml \
-            sbatch --account=hpda-c --partition=hpda2_test --time=01:30:00 \
-            --cpus-per-task=2 --mem=32G --job-name=c9_column_enthalpy \
-            --output=$SCRATCH/tag_closure/logs/%x-%j.out \
-            --error=$SCRATCH/tag_closure/logs/%x-%j.err \
-            experiments/tag_closure/runscripts/phase_c.sh
-
-    and the same with `c9_sphere_enthalpy`.
+Hand each back with `analysis/c5_process_closure.jl`, with
+`analysis/same_atmosphere.jl` against its reference, and with the two closure
+tables side by side.
 
 The first submission, jobs `13385435` to `13385439`, failed at startup. The
 repair's commit had registered `e_src_fix_<name>` without defining the function

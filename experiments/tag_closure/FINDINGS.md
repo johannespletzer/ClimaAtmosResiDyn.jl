@@ -1104,7 +1104,7 @@ Kept because a later reader will otherwise re-derive them.
     column's signed residual is 15 times smaller with them (E32). A day of the
     same column keeps both per-process checks, less tightly than at 0M (E33).
     It is about 270 lines of model code with docstrings, and 140 of tests, and
-    it is draft PR #70, stacked on #69.
+    it is draft PR #70, which, like #69, now targets `main`.
 
     **Built: the enthalpy audit switch** (`511e00e9`), as
     `ENTHALPY_AUDIT_DESIGN.md` designs it, with the owner's four decisions. The
@@ -1114,8 +1114,8 @@ Kept because a later reader will otherwise re-derive them.
     `energy_q_tot_upwinding` vertically. The tests check each of the three sums
     against the parent's to 100 eps, on the column and on a two-element sphere.
     They also check the upwind donor both ways, and that the model's state is
-    untouched. C9 is its pair of runs, prepared and not submitted. Its PR
-    branch, stacked on #70, is prepared locally.
+    untouched. It is draft PR #72, stacked on #70. C9, its pair of runs, was
+    submitted as jobs `13402392` and `13402393`.
 
  4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
     and the energy family has no rescale. C1 solved a simulated day in 5.8
