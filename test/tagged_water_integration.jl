@@ -275,6 +275,29 @@ end
         @test maximum(tag .- ρq_tot) <= 1e-1 * scale
     end
 
+    # The bounds above are against `scale`, the *global* maximum of `ρq_tot`.
+    # That is the right yardstick for the drift budget and the wrong one for
+    # asking whether a tag still means "this much of the water in this cell". In
+    # a cell holding a thousandth of the domain maximum, an excursion of
+    # 1e-2 * scale is ten times the cell's own water and the bound above still
+    # passes. Issue #64 diverged exactly that way: the tags reached 1e130 while
+    # `ρq_tot` stayed inside 1.6185e16 to 1.6214e16.
+    #
+    # So bound the excursion against the *local* parent as well, over the cells
+    # where the local parent is a meaningful yardstick. The cells are filtered
+    # rather than the bound loosened because below a fifth of the domain maximum
+    # the ratio says more about the drift budget above than about the tag. On
+    # the cells that are kept, the bounds asserted above already imply a ratio
+    # inside 1 + 1e-1/2e-1 = 1.5 and -0.5, so 2 and -1 leave margin without
+    # letting anything through that a runaway could hide in.
+    wet = ρq_tot .> 2e-1 * scale
+    @test count(wet) > 0  # non-vacuous
+    for name in tag_names
+        tag = parent(getproperty(Y.c, name))
+        @test maximum(tag[wet] ./ ρq_tot[wet]) <= 2
+        @test minimum(tag[wet] ./ ρq_tot[wet]) >= -1
+    end
+
     # The partition closes more tightly than any single tag is bounded, because
     # the compensating excursions cancel. It stays a monitor rather than an
     # identity, and its budget is set by what leaves the partition rather than
@@ -287,6 +310,12 @@ end
         ρq_tot .- parent(Y.c.ρq_tag_tropics) .-
         parent(Y.c.ρq_tag_extratropics)
     @test maximum(abs.(residual)) / scale < 1e-2
+    # And the same statement locally, on the cells where the local parent is a
+    # yardstick: the residual of a well-populated cell stays inside that cell's
+    # own water. `rescale_water_tags!` no longer multiplies the residual by the
+    # factor it applies to the tags, so a repeatedly lifted cell cannot grow its
+    # residual geometrically past its own parent (issue #64).
+    @test maximum(abs.(residual[wet]) ./ ρq_tot[wet]) <= 1
 
     # Transport linearity, the sharp check. It holds approximately here rather
     # than exactly, for a reason worth stating. `water_tag_fraction` clamps the

@@ -366,7 +366,7 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
     )...,
     (
         isnothing(atmos.energy_source_tagging_model) ? (;) :
-        (; ᶜe_src_snapshot = similar(Y.c.ρ))
+        energy_source_scratch(Y, atmos.energy_source_tagging_model)
     )...,
     process_record_scratch(Y, atmos)...,
 )
@@ -395,13 +395,25 @@ region_tag_state_names(tagging_model::TaggingModel) = Tuple(
 # names differ.
 
 """
+    closure_parent(Y, p, total_name)
+
+The field a closure check compares its tags against: the state field named by
+`total_name` when that is a `Symbol`, or the field `total_name(Y, p)` returns
+otherwise. The second form is for a parent the model does not carry, such as
+the offset total of the energy source tags; see `energy_source_closure_total`.
+"""
+closure_parent(Y, p, total_name::Symbol) = getproperty(Y.c, total_name)
+closure_parent(Y, p, total_name) = total_name(Y, p)
+
+"""
     tag_closure(Y, p, total_name, tag_state_names)
 
 Global closure of one tag family: how much of the parent field its tags account
 for, right now.
 
-`total_name` is `:ρe_tot` or `:ρq_tot`, and `tag_state_names` are the pure
-region tags of that family. Returns
+`total_name` is `:ρe_tot` or `:ρq_tot`, or a function for a parent the model
+does not carry (see `closure_parent`), and `tag_state_names` are the pure region
+tags of that family. Returns
 
     (; total, tagged, residual, relative, gross_residual, gross_relative)
 
@@ -437,7 +449,7 @@ goes.
 across processes, so this is collective — every process must call it.
 """
 function tag_closure(Y, p, total_name, tag_state_names)
-    ᶜparent = getproperty(Y.c, total_name)
+    ᶜparent = closure_parent(Y, p, total_name)
     total = sum(ᶜparent)
     tagged = sum(sum(getproperty(Y.c, name)) for name in tag_state_names)
     residual = total - tagged
@@ -533,6 +545,164 @@ function write_tag_closure!(output_dir, t, family, closure)
 end
 
 """
+    tag_audit(Y, p, total_name, tag_state_names, scale)
+
+Split the closure residual of one tag family into the parts that mean different
+things. Computed when the family's closure check sets `audit`.
+
+[`tag_closure`](@ref) reduces the residual to `gross_residual = ∫|parent - Σ tags|`.
+That is the right number to test a tolerance against and the wrong number to
+diagnose with, because it adds together situations that call for different
+responses. This separates them.
+
+  - `untagged = ∫max(parent - Σ tags, 0)` is water the tags do not account for.
+    Its origin is unknown, but nothing claims to know it.
+  - `overclaimed = ∫max(Σ tags - parent, 0)` is the opposite: the tags hold more
+    than the field they partition. That state is not physical, and it is the
+    direction a runaway takes, so it is worth watching by itself.
+  - `orphaned` is the mass in cells whose parent still holds water while every
+    partition tag is empty. That is water whose origin has been erased rather
+    than tags that have drifted, and it does not come back: nothing re-tags a
+    cell. It counts total loss only, so it is a lower bound. A cell left holding
+    a sliver of one tag is not orphaned by this test and appears in `untagged`
+    instead.
+
+`untagged + overclaimed` is `gross_residual` to reduction round-off, so reading
+these loses nothing. The identity is exact pointwise, but the three are three
+separate reductions and each rounds on its own, so test them with a tolerance
+rather than for equality.
+
+`nonpositive_mass` is the mass where the parent is non-positive, the counterpart
+of the volume fraction [`tag_closure`](@ref) reports. The two answer different
+questions and can differ by many orders of magnitude, because cells with no
+water take up much of a moist sphere's volume and almost none of its mass. The
+volume fraction says how much of the domain has undefined shares. The mass
+fraction says how much of the field that accounts for. Reading either alone
+gives the wrong impression of the same state.
+
+`scale = ∫|parent|` is passed in from the closure of the same state, so both
+tables normalize by the same number.
+
+Uses two scratch fields rather than one, because the orphan test needs the
+parent and the tag sum in the same expression. `Base.sum` on a `Field` reduces
+across processes, so this is collective: every process must call it.
+"""
+function tag_audit(Y, p, total_name, tag_state_names, scale)
+    ᶜparent = closure_parent(Y, p, total_name)
+    ᶜtmp = p.scratch.ᶜtemp_scalar
+    ᶜtmp_2 = p.scratch.ᶜtemp_scalar_2
+
+    # The same subtraction `tag_closure` reduces, kept signed. The negative part
+    # is taken with `min` and negated afterwards, because a `-` directly before
+    # a modifier letter such as `ᶜ` parses as the suffixed operator `-ᶜ`, which
+    # Julia leaves undefined.
+    @. ᶜtmp = ᶜparent
+    for name in tag_state_names
+        ᶜtag = getproperty(Y.c, name)
+        @. ᶜtmp -= ᶜtag
+    end
+    @. ᶜtmp_2 = max(ᶜtmp, zero(ᶜtmp))
+    untagged = sum(ᶜtmp_2)
+    @. ᶜtmp_2 = min(ᶜtmp, zero(ᶜtmp))
+    overclaimed = -sum(ᶜtmp_2)
+
+    # Cells that still hold water and have no tags left at all. The tag sum is
+    # taken over the positive parts, so a cell whose only remaining tag is
+    # negative counts as orphaned rather than as tagged.
+    @. ᶜtmp_2 = zero(ᶜparent)
+    for name in tag_state_names
+        ᶜtag = getproperty(Y.c, name)
+        @. ᶜtmp_2 += max(ᶜtag, zero(ᶜtag))
+    end
+    @. ᶜtmp = ifelse(
+        (ᶜparent > zero(ᶜparent)) & (ᶜtmp_2 <= zero(ᶜtmp_2)),
+        ᶜparent,
+        zero(ᶜparent),
+    )
+    orphaned = sum(ᶜtmp)
+    @. ᶜtmp = ifelse(
+        (ᶜparent > zero(ᶜparent)) & (ᶜtmp_2 <= zero(ᶜtmp_2)),
+        one(ᶜparent),
+        zero(ᶜparent),
+    )
+    orphaned_volume = sum(ᶜtmp)
+    @. ᶜtmp = one(ᶜparent)
+    volume = sum(ᶜtmp)
+
+    @. ᶜtmp = ifelse(ᶜparent <= zero(ᶜparent), abs(ᶜparent), zero(ᶜparent))
+    nonpositive_mass = sum(ᶜtmp)
+
+    # The same guards `tag_closure` uses, for the same reason: a field that is
+    # identically zero would divide by zero, and the audit must not be what ends
+    # a run.
+    per_scale(x) = iszero(scale) ? zero(x) : x / scale
+    return (;
+        untagged,
+        untagged_relative = per_scale(untagged),
+        overclaimed,
+        overclaimed_relative = per_scale(overclaimed),
+        orphaned,
+        orphaned_relative = per_scale(orphaned),
+        orphaned_volume_fraction = iszero(volume) ? zero(orphaned_volume) :
+                                   orphaned_volume / volume,
+        nonpositive_mass,
+        nonpositive_mass_fraction = per_scale(nonpositive_mass),
+    )
+end
+
+"""
+    tag_audit_path(output_dir, family)
+
+Path of the audit table of `family` (`"energy"`, `"energy_source"` or
+`"water"`).
+
+A table of its own rather than more columns on the closure table, so that
+turning the audit on does not change the schema of a file other runs and
+analysis scripts already read. Join the two on `time`.
+"""
+tag_audit_path(output_dir, family) =
+    joinpath(output_dir, "$(family)_tag_audit.csv")
+
+"""
+    write_tag_audit!(output_dir, t, family, audit)
+
+Append one row to the audit table of `family`, creating it with a header if it
+does not exist yet. Called on the root process only.
+"""
+function write_tag_audit!(output_dir, t, family, audit)
+    path = tag_audit_path(output_dir, family)
+    write_header = !isfile(path) || filesize(path) == 0
+    open(path, "a") do io
+        write_header && println(
+            io,
+            "time,untagged,untagged_relative,overclaimed," *
+            "overclaimed_relative,orphaned,orphaned_relative," *
+            "orphaned_volume_fraction,nonpositive_mass," *
+            "nonpositive_mass_fraction",
+        )
+        println(
+            io,
+            join(
+                (
+                    t,
+                    audit.untagged,
+                    audit.untagged_relative,
+                    audit.overclaimed,
+                    audit.overclaimed_relative,
+                    audit.orphaned,
+                    audit.orphaned_relative,
+                    audit.orphaned_volume_fraction,
+                    audit.nonpositive_mass,
+                    audit.nonpositive_mass_fraction,
+                ),
+                ",",
+            ),
+        )
+    end
+    return nothing
+end
+
+"""
     nonpositive_parent_note(family)
 
 The family-specific consequence of a non-positive closure parent, for the
@@ -540,19 +710,26 @@ warning in [`tag_closure_callback!`](@ref).
 
 What a non-positive parent costs depends on the rule the family applies, so
 this says which case applies rather than asserting the energy-source one for
-all three. Only `energy_source_tags` divides by the parent to get a donor
-share it then depends on; `water_tracers` does too but has a parent the model
-keeps non-negative; `energy_tracers` never divides by it at all.
+all three. `energy_source_tags` and `water_tracers` both divide by the parent to
+get a donor share they then depend on; `energy_tracers` never divides by it at
+all.
 """
 function nonpositive_parent_note(family)
     family == "energy_source" && return "Donor shares are undefined there, so \
         the loss half of the attribution rule does not run. For moist total \
         energy this usually means the chosen thermodynamic or gravitational \
-        reference puts part of the domain below zero."
+        reference puts part of the domain below zero. An \
+        `energy_source_tag_offset` large enough to lift the partitioned \
+        total positive removes the region without moving that reference."
     family == "water" && return "Water tags take loss in proportion to what \
-        they hold, so their shares are undefined there. The model keeps \
-        `ρq_tot` non-negative, so this is unexpected and worth investigating \
-        rather than a consequence of a reference choice."
+        they hold, so their shares are undefined there and the tags of those \
+        cells carry no provenance. Nothing in the model keeps `ρq_tot` \
+        non-negative: `tracer_nonnegativity_method` is off unless configured, \
+        and transport alone can take a cell below zero. Those cells have their \
+        tags emptied by `rescale_water_tags!` whenever a constraint clips the \
+        parent, so the water they held surfaces in the residual. A large \
+        fraction is worth investigating as a sign that the run is under-resolved \
+        or the timestep too long."
     return "This family applies the whole signed increment by mask and uses \
         no donor share, so its attribution is unaffected. It does mean the \
         closure denominator is degenerate where this happens."
@@ -560,19 +737,37 @@ end
 
 """
     tag_closure_callback!(integrator, output_dir, family, total_name,
-                          tag_state_names, tolerance)
+                          tag_state_names, tolerance, abort_above, audit)
 
-Record the closure of one tag family, and warn when it has drifted past
-`tolerance`.
+Record the closure of one tag family, warn when it has drifted past `tolerance`,
+and end the run when it has passed `abort_above`.
 
 The comparison is against `gross_relative`, the relative residual that does not
 let opposite-signed local errors cancel (see [`tag_closure`](@ref)). It is never
 smaller than `|relative|`, so testing it alone also catches everything a test on
 the signed residual would.
 
-The residual is information, not a reason to stop. Closure drift is something
-you want to watch grow, and ending a multi-year integration over it would cost
-more than it saves, so this warns and keeps running.
+Drift is information, not a reason to stop. Closure drift is something you want
+to watch grow, and ending a multi-year integration over it would cost more than
+it saves, so exceeding `tolerance` warns and keeps running.
+
+A divergence is not drift. A residual far larger than the field it measures says
+the tags no longer describe anything, and every hour the run continues past that
+point costs compute and produces output nobody can use. `abort_above` is the
+level at which the run stops instead, and `nothing` disables it. See
+[`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref) for what each family defaults to and why
+the two energy families default to no level at all.
+
+`audit` adds a second table that splits the residual into the parts that mean
+different things, and reports the non-positive parent by mass beside the volume
+fraction reported here. See [`tag_audit`](@ref) for what it separates and why
+one number cannot say it.
+
+The abort is raised outside the root-only block, because every process computes
+the same `closure` from the same global reductions. Raising it on the root alone
+would leave the others waiting in the next reduction. `audit` comes from the
+configuration and is therefore the same on every process, so the reductions
+inside [`tag_audit`](@ref) are entered by all of them or by none.
 """
 function tag_closure_callback!(
     integrator,
@@ -581,12 +776,22 @@ function tag_closure_callback!(
     total_name,
     tag_state_names,
     tolerance,
+    abort_above,
+    audit,
 )
     Y = integrator.u
     closure = tag_closure(Y, integrator.p, total_name, tag_state_names)
+    # Collective, like the closure itself, so it runs on every process and is
+    # written on one.
+    audit_row =
+        audit ?
+        tag_audit(Y, integrator.p, total_name, tag_state_names, closure.scale) :
+        nothing
     t = Float64(integrator.t)
     if ClimaComms.iamroot(ClimaComms.context(Y.c))
         write_tag_closure!(output_dir, t, family, closure)
+        isnothing(audit_row) ||
+            write_tag_audit!(output_dir, t, family, audit_row)
         closure.gross_relative > tolerance && @warn(
             "$family tag closure residual $(closure.gross_relative) exceeds \
             the configured tolerance $tolerance at t = $t s. The tags no \
@@ -601,6 +806,16 @@ function tag_closure_callback!(
             $(closure.nonpositive_fraction * 100)% of the domain volume at \
             t = $t s, and closure will not show it. \
             $(nonpositive_parent_note(family))"
+        )
+    end
+    if !isnothing(abort_above) && closure.gross_relative > abort_above
+        error(
+            "$family tag closure residual $(closure.gross_relative) exceeds \
+            the configured abort level $abort_above at t = $t s. The tags no \
+            longer describe the field they partition, so the rest of this run \
+            would produce tagged output that means nothing; see \
+            $(tag_closure_path(output_dir, family)). Raise or unset \
+            `abort_above` in the closure-check block to keep going anyway.",
         )
     end
     return nothing

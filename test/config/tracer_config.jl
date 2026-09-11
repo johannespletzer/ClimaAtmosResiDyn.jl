@@ -437,6 +437,7 @@ end
 
 @testset "Closure checks" begin
     tolerances = CA.DEFAULT_CLOSURE_TOLERANCES
+    aborts = CA.DEFAULT_CLOSURE_ABORT_LEVELS
 
     # Both keys are optional.
     bare = CA.closure_check_from_config(
@@ -444,18 +445,41 @@ end
         "`water_closure_check`",
         FT;
         default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
     )
     @test bare.period == "1days"
     @test bare.tolerance == FT(tolerances.water)
+    @test bare.abort_above == FT(aborts.water)
+    # The audit is extra reductions and a second file, so it is opt-in.
+    @test bare.audit == false
 
     set = CA.closure_check_from_config(
-        Dict("period" => "6hours", "tolerance" => 1.0e-8),
+        Dict(
+            "period" => "6hours",
+            "tolerance" => 1.0e-8,
+            "abort_above" => 5.0,
+        ),
         "`water_closure_check`",
         FT;
         default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
     )
     @test set.period == "6hours"
     @test set.tolerance == FT(1.0e-8)
+    @test set.abort_above == FT(5.0)
+
+    audited = CA.closure_check_from_config(
+        Dict{String, Any}("audit" => true),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
+    )
+    @test audited.audit == true
+    # Turning the audit on changes nothing else about the check.
+    @test audited.period == bare.period
+    @test audited.tolerance == bare.tolerance
+    @test audited.abort_above == bare.abort_above
 
     # Off is off.
     @test isnothing(
@@ -464,6 +488,7 @@ end
             "`water_closure_check`",
             FT;
             default_tolerance = tolerances.water,
+            default_abort_above = aborts.water,
         ),
     )
 
@@ -474,8 +499,44 @@ end
         "`water_closure_check`",
         FT;
         default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
     )
     @test zero_tolerance.tolerance == FT(0)
+
+    # `abort_above: ~` is how a family that defaults to having a level opts out
+    # of it. Zero is refused instead of read as "always", because a run
+    # configured that way would die at the first check whatever its residual
+    # was, and `~` already says "never" without the ambiguity.
+    no_abort = CA.closure_check_from_config(
+        Dict{String, Any}("abort_above" => nothing),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
+    )
+    @test isnothing(no_abort.abort_above)
+    @test_throws ErrorException CA.closure_check_from_config(
+        Dict("abort_above" => 0.0),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
+    )
+
+    # The two energy families have no default level at all: their residual is
+    # normalised by a quantity whose zero is a convention, so no one number
+    # transfers between configurations.
+    @test isnothing(aborts.energy)
+    @test isnothing(aborts.energy_source)
+    @test isnothing(
+        CA.closure_check_from_config(
+            Dict{String, Any}(),
+            "`energy_closure_check`",
+            FT;
+            default_tolerance = tolerances.energy,
+            default_abort_above = aborts.energy,
+        ).abort_above,
+    )
 
     # A typo in the block names itself, like every other nested block.
     err = try
@@ -484,6 +545,7 @@ end
             "`water_closure_check`",
             FT;
             default_tolerance = tolerances.water,
+            default_abort_above = aborts.water,
         )
     catch e
         e
@@ -499,6 +561,7 @@ end
             "`water_closure_check`",
             FT;
             default_tolerance = tolerances.water,
+            default_abort_above = aborts.water,
         )
     end
 
@@ -530,7 +593,7 @@ end
         t_end = nothing,
         checkpoint_frequency = nothing,
     )
-    check = (; period = "1days", tolerance = FT(1.0e-10))
+    check = (; period = "1days", tolerance = FT(1.0e-10), abort_above = FT(1))
 
     # Asking to check a family that is switched off.
     err = try
@@ -601,9 +664,11 @@ end
         "`energy_source_closure_check`",
         FT;
         default_tolerance = tolerances.energy_source,
+        default_abort_above = CA.DEFAULT_CLOSURE_ABORT_LEVELS.energy_source,
     )
     @test bare.period == "1days"
     @test bare.tolerance == FT(tolerances.energy_source)
+    @test isnothing(bare.abort_above)
 
     # The key reaches the config, with the run's float type rather than this
     # file's, exactly as the other two families do.
@@ -633,7 +698,7 @@ end
         t_end = nothing,
         checkpoint_frequency = nothing,
     )
-    check = (; period = "1days", tolerance = FT(1.0e-6))
+    check = (; period = "1days", tolerance = FT(1.0e-6), abort_above = nothing)
     callback_kwargs = (;
         family = "energy_source",
         total_name = :ρe_tot,
@@ -756,6 +821,43 @@ end
     @test startswith(rows[3], "86400.0,")
     # Every header column is filled in.
     @test all(row -> length(split(row, ",")) == 9, rows)
+end
+
+@testset "Audit table" begin
+    dir = mktempdir()
+    audit = (;
+        untagged = 3.0,
+        untagged_relative = 1.0,
+        overclaimed = 2.0,
+        overclaimed_relative = 2 / 3,
+        orphaned = 1.0,
+        orphaned_relative = 1 / 3,
+        orphaned_volume_fraction = 0.25,
+        nonpositive_mass = 0.5,
+        nonpositive_mass_fraction = 1 / 6,
+    )
+    CA.write_tag_audit!(dir, 0.0, "water", audit)
+    CA.write_tag_audit!(dir, 86400.0, "water", audit)
+
+    path = CA.tag_audit_path(dir, "water")
+    @test basename(path) == "water_tag_audit.csv"
+    @test isfile(path)
+    # A file of its own, so turning the audit on leaves the schema of the
+    # closure table alone for whatever already reads it.
+    @test path != CA.tag_closure_path(dir, "water")
+    @test !isfile(CA.tag_closure_path(dir, "water"))
+
+    rows = readlines(path)
+    @test rows[1] ==
+          "time,untagged,untagged_relative,overclaimed," *
+          "overclaimed_relative,orphaned,orphaned_relative," *
+          "orphaned_volume_fraction,nonpositive_mass," *
+          "nonpositive_mass_fraction"
+    @test length(rows) == 3
+    @test startswith(rows[2], "0.0,3.0,1.0,2.0,")
+    @test startswith(rows[3], "86400.0,")
+    # Every header column is filled in.
+    @test all(row -> length(split(row, ",")) == 10, rows)
 end
 
 @testset "Shipped tracer configs still build a model" begin

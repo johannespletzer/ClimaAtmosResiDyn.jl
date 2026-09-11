@@ -46,6 +46,7 @@ import ..stratospheric_tracer_symbols
 import ..tagging_variables
 import ..water_tagging_variables
 import ..energy_source_tagging_variables
+import ..energy_source_parent
 import ..energy_process_record_variables
 import ..water_process_record_variables
 import ..Parameters.ClimaAtmosParameters
