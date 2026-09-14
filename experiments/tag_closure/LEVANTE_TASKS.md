@@ -278,6 +278,21 @@ tables are in `output/newton_lag/first_hour_sphere_slurm/` and
 `output/newton_lag/c8_variants_slurm/`. The D4 pair (jobs `13404536` and
 `13404537`) was submitted with them.
 
+**V3, done on 2026-09-14** (FINDINGS E45). Job `13440822` ran C7's sphere in
+Float32 at `297eda4c`, in 17.5 minutes. It closes as C7 does in Float64: the
+residuals lie within 3.4 rounding steps of each other in every hour, and form A
+agrees to 6e-4. Float32 does not make the CPU solve faster, 444 s against 448.
+The tables are in `output/v3_sphere_float32/`, and
+`analysis/float_type_compare.jl` makes the comparison.
+
+**MP1, failed on 2026-09-14.** Job `13440823`, C7's sphere on 4 ranks, died in
+`MPI_Init` after 91 s. The runscript launched the ranks with a bare `srun`, and
+Slurm's default plugin here is `pmi2`, which this Open MPI cannot use. The
+runscript now passes `--mpi=pmix`, as `runscripts/terrabyte_stacks.env` records.
+Its provenance went to the submit directory, because the run made no output
+directory; it was moved to `$SCRATCH/tag_closure/logs/`. Submitting it again
+needs the owner's approval.
+
 **Next.** The owner sets the merge order: #69, then #70, then #72 retargeted to
 `main`. The review of #69 is posted on the PR, and its five findings are fixed
 on all three branches.

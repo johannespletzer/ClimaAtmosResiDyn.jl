@@ -182,11 +182,15 @@ one agent has worked this branch at once.
     (`08682fd8`) and re-ran #70's docs job. PR #73 fixes the docs deploy (a
     read-only token gave 403 on `gh-pages`) and raises the docs timeout to 60
     minutes; after the owner merges it, merge `main` into #70 and push, as
-    approved. V3 (Float32, job `13440822`) and MP1 (4 ranks, job `13440823`)
-    are submitted; the runscript now launches ranks with `srun`, keeps its logs
-    while a job runs, and reads a worktree's commit (`297eda4c`). The runs' provenance was repaired
-    by hand to `edd44e1d`, because a worktree's `.git` is a file the runscript
-    cannot read.
+    approved. The runscript now launches ranks with `srun`, keeps its logs
+    while a job runs, and reads a worktree's commit (`297eda4c`). P4's runs'
+    provenance was repaired by hand to `edd44e1d`, because back then a
+    worktree's `.git` was a file the runscript could not read. V3 (Float32, job
+    `13440822`) ran its day and closes as C7 does, to rounding (E45). MP1 (4
+    ranks, job `13440823`) died in `MPI_Init`, because `srun` lacked
+    `--mpi=pmix`. The runscript passes it now, and a new submission needs
+    approval. The owner accepted the grouping of the S items; it is in
+    `OPERATIONAL_TODO.md`, and C5 is the first.
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and
     `../ClimaAtmosResiDyn-audit` on #72's, both level with origin.
     `../ClimaAtmosResiDyn-p4` is detached at `edd44e1d`, with a copied

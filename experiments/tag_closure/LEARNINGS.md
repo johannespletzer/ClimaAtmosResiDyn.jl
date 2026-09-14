@@ -1254,3 +1254,44 @@ to −3.8e-3 J/m² (E43).
 **Carry-over to the source tags.** On both geometries the first hour's residual
 is a spin-up artefact. Report the closure from a spin-up reference (R1 of
 `OPERATIONAL_TODO.md`).
+
+## V3. C7's sphere in Float32
+
+Ran at `297eda4c` on 2026-09-14, `hpda2_test`, SLURM job `13440822`, 17.5
+minutes. The owner approved it.
+
+**What it was for.** Production runs in Float32, and no run with tags had used
+it on a sphere (W4). The records accumulate from the start in `FT` and are never
+reset, so rounding could build up.
+
+**What it showed.** Over a day it closes as C7 does in Float64. The closure
+residuals lie within 3.4 rounding steps of each other in every hour, out of 784
+steps at 24 h. Form A agrees to 6e-4, and the audit table to 4e-5. The two runs
+differ most at the rain-out's onset, where the `mp` tag's maximum is 1.3% lower
+at 4 h (E45).
+
+**Barrier.** None over a day. Longer runs, the audit transport, the repair, 1M
+and the GPU in Float32 are not covered.
+
+**Class.** A numerical property of the diagnostic, and a benign one.
+
+**Carry-over to the source tags.** Float32 is not a reason to keep the records
+in Float64 for a day's run. Compare a Float32 run in rounding steps of its
+total, not in relative terms, while the residual is still small: at 1 h a
+difference of 3 steps reads as 11%.
+
+## MP1. C7's sphere on 4 ranks, which did not start
+
+Submitted at `297eda4c` on 2026-09-14, `hpda2_test`, SLURM job `13440823`. It
+died after 91 s. The owner approved it.
+
+**What happened.** Every rank aborted in `MPI_Init`. The runscript launched them
+with `srun` and no `--mpi` option, and Slurm's default here is `pmi2`. This
+Open MPI is built with PMIx and has no usable PMI-2 path.
+`runscripts/terrabyte_stacks.env` had recorded exactly that, and the runscript
+did not read it.
+
+**Class.** A launch error in the runscript, not a property of the model.
+
+**Carry-over.** Before a first multi-rank job, launch through what the machine's
+stacks file names, and test it on a 2-rank job of a few minutes.

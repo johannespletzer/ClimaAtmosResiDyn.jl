@@ -34,7 +34,8 @@ eleven column runs. *A1–A4.*
 
 **W4. `Float32` costs nothing on a column.** `a4_float32` gives 2.745e-5 against
 `a1_dt10`'s 2.660e-5 at the same configuration — a 3% difference. Explicitly not
-established on a sphere. *A4.*
+established on a sphere. *A4.* The sphere followed later, for a day on C7's
+configuration (E45).
 
 **W5. A3's gap was vertical diffusion, not 1M.** `a3_1m` reads 29× below
 `a1_dt10` on `max |q_tag_res|`, but it differs in two keys and the companion
@@ -1114,6 +1115,47 @@ driver logs them. With the 8 tags they take 145 s, 668 s and 63 s.
 their provenance repaired by hand; `output/p4_edmf_two_tags/` and
 `output/p4_edmf_tags/`. The third left no output.*
 
+**E45. In `Float32`, C7's sphere closes as it does in `Float64`, to the last
+place the `Float32` integrals hold.** V3 is C7 with `FLOAT_TYPE: Float32`: the
+0-moment sphere, 6 elements, 10 levels, a 400 s step, one day, tracer transport
+and no repair. It ran at `297eda4c`, C7 at `414f5f1b`. The two merged configs
+differ only in the float type and in `energy_source_tag_transport`, a key added
+in between, which V3 records at its default, `tracer`.
+
+| at 24 h                                  |       C7, `Float64` |        V3, `Float32` |
+|:---------------------------------------- | -------------------:| --------------------:|
+| closure residual, J                      |          −2.8227e19 |           −2.8247e19 |
+| gross residual, relative                 |           5.8893e-3 |            5.8892e-3 |
+| form A, largest gap, J kg⁻¹              |             20.2127 |              20.2146 |
+| untagged share, audit table              |          2.91519e-3 |           2.91513e-3 |
+| `mp` tag's maximum, J kg⁻¹               |             148.775 |              148.746 |
+| `solve!` wall time, s                    |               448.0 |                444.4 |
+
+  - **The residuals agree to rounding, hour by hour.** The smallest step a
+    `Float32` total of 4.8e23 J can take is 3.6e16 J. In those steps the two
+    residuals lie at most 3.4 apart in any hour, and 0.55 apart at 24 h, while
+    the residual itself grows to 784. At 1 h, where it is 24 steps, the 3 steps
+    between them read as an 11% difference.
+  - **Rounding sets a floor near 1e-7, far below the day's residual.** At
+    t = 0 the `Float32` residual is −3.6e16 J, exactly one step, or 7.5e-8 of
+    the total. Pointwise, the largest `|e_src_res|` is 0.019 J kg⁻¹, below the
+    0.031 J kg⁻¹ step of a `Float32` near 3.3e5 J kg⁻¹, the energy plus the
+    offset.
+  - **Form A agrees to 6e-4 in every hour,** and its largest gap sits at the
+    same grid index, (63, 33, 2). The audit table agrees to 4e-5.
+  - **The rain-out's onset is where the two runs differ most.** At 4 h, when
+    the `mp` tag's maximum jumps from 2 to 16 J kg⁻¹, V3's is 1.3% lower, and
+    the microphysics record's maximum too. By 24 h the gap is 2e-4. Every other
+    tag extremum above 1 J kg⁻¹ agrees to 3.1e-4 or better throughout.
+  - **`Float32` does not speed up this run on a CPU.** The solve takes 444 s
+    against 448 s, one run each, on the same node with 2 CPUs.
+  - Not covered: runs longer than a day, the audit transport, the repair, 1M,
+    and a GPU, each in `Float32`.
+
+*V3, job `13440822` on terrabyte at `297eda4c`, against C7, job `13399601`;
+`output/v3_sphere_float32/`; `analysis/reduce_run.jl`,
+`analysis/c5_process_closure.jl` and `analysis/float_type_compare.jl`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -1495,7 +1537,9 @@ Kept because a later reader will otherwise re-derive them.
   - **Where the repair's large ledgers sit on the sphere (E27),** and whether
     that is where the two region tags meet, as the undershoots of E19 would
     place them.
-  - `Float32` on a sphere (W4).
+  - ~~`Float32` on a sphere (W4).~~ Settled for a day on C7's sphere: it
+    closes as `Float64` does, to rounding (E45). Longer runs, the audit, 1M
+    and a GPU in `Float32` are still open.
   - ~~Whether 1M changes the residual (W5).~~ Settled on a column: 7% down
     (W5b). A sphere, which reaches the horizontal branches, is still open.
   - The tag cost on anything but one column on one node (T4 bounds it at 1.32×

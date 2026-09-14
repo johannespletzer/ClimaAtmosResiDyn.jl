@@ -40,9 +40,11 @@ campaign.
   - Measured: 0M on a column and a sphere, and 1M on a warm column, a day each
     (E26 to E39, E43); 1M with ice on a cold column for an hour, with a twin
     without vertical diffusion (E42, E42b); the EDMF build time with and without
-    tags (E44, E44b).
-  - Not yet run: EDMF with tags past its build, Float32, more than one process,
-    a restart, anything longer than a day, 2M and P3, and the GPU.
+    tags (E44, E44b); C7's sphere in Float32 for a day, which closes as Float64
+    does, to rounding (E45).
+  - Not yet run: EDMF with tags past its build, more than one process (MP1
+    failed to start), a restart, anything longer than a day, 2M and P3, and the
+    GPU.
 
 ## Decided
 
@@ -78,10 +80,21 @@ On 2026-09-14:
     below.
   - **Merges:** the owner merged #69. #73 fixes the docs deploy; the owner
     merges it, and then `main` goes into #70.
-  - **V3 and MP1** are approved and submitted: jobs `13440822` (V3, C7's sphere
-    in Float32) and `13440823` (MP1, C7's sphere on 4 ranks). For MP1 the
-    runscript now launches ranks through `srun`; it also keeps its logs while a
-    job runs and reads a worktree's commit.
+  - **V3 and MP1** were approved and submitted: jobs `13440822` (V3, C7's sphere
+    in Float32) and `13440823` (MP1, C7's sphere on 4 ranks). V3 ran its day
+    and is handed back (E45). MP1 died in `MPI_Init` after 91 s. The runscript
+    called `srun` without `--mpi=pmix`, and Slurm's default here, `pmi2`, does
+    not work with this Open MPI. The runscript now passes the plugin from
+    `runscripts/terrabyte_stacks.env`. Submitting MP1 again needs a new
+    approval.
+  - **The S items**, as proposed and accepted by the owner:
+      - now: C5; P1, whose run needs its own approval; D2, once #70 merges;
+      - with the defaults and checks (B9): U3, U4, R3, T4;
+      - with C1b (B4): M3, T5;
+      - before the GPU (B13): T3;
+      - with V2 (B10): C4, V6;
+      - with D1 (B12): D3;
+      - A4, A5 and A7 move to N.
 
 ## 0. In flight
 
@@ -102,8 +115,8 @@ On 2026-09-14:
     P3, and whether the tags refuse P3 until then.
  4. **Phase B.** FINDINGS §8 item 4 still lists it as the owner's call. Drop it
     or keep it.
- 5. **Runs**, each on its own: V2, V3, V5, V6, MP1, the D4 variant with
-    `edmfx_vertical_diffusion: true`, and D5.
+ 5. **Runs**, each on its own: V2, V5, V6, MP1 again with the fixed launch, P1,
+    the D4 variant with `edmfx_vertical_diffusion: true`, and D5.
  6. **Docs:** whether to move `USER_GUIDE_DRAFT.md` into `docs/src/` (D1).
  7. **Merges:** #73, then #70 once its docs pass, then #72.
 
@@ -148,17 +161,19 @@ On 2026-09-14:
     FINDINGS §8, the implicit brackets, which #69 built.) Size S to M.
  6. **V5, restart equivalence.** Two segments against one run, with the offset
     and the repair. Production runs restart. S.
- 7. **Float32: V3 and T2's Float32 part.** No Float32 run with tags exists. The
-    records are `FT` fields that accumulate from the start and are never reset
-    (`process_record.jl:22-25`). V3 is a CPU sphere in Float32 with tags,
-    records and the check; T2 adds a Float32 test group. Then re-rank U6 and
-    the Float32 rounding floor. Size S to M. V3 is submitted: job `13440822`,
-    `configs/v3_sphere_float32.yml`.
+ 7. **Float32: ~~V3~~ and T2's Float32 part.** ~~No Float32 run with tags
+    exists.~~ V3 is done (E45): C7's sphere in Float32 closes as in Float64
+    over a day, to rounding, with a floor near 1e-7. What remains is T2, a
+    Float32 test group. The records are `FT` fields that accumulate from the
+    start and are never reset (`process_record.jl:22-25`), so runs longer than
+    a day are still untested; that is U6. Size S.
  8. **MP1, more than one process.** Every run so far was single-process, and
     the closure check reduces with global sums (`tagged_tracers.jl:450-484`). A
     2 to 4 rank CPU sphere with tags, records and the check, before the GPU.
-    Size S, plus a run. MP1 is submitted: job `13440823`,
-    `configs/mp1_sphere_4ranks.yml`, on 4 ranks.
+    Size S, plus a run. The first try, job `13440823`, died in `MPI_Init`
+    because `srun` lacked `--mpi=pmix`. The runscript is fixed; the run needs
+    the owner's approval to go again. `configs/mp1_sphere_4ranks.yml`, on 4
+    ranks.
  9. **The decided defaults and checks.** U1, require the offset with tags; U2
     and R1, the closure check on by default, daily, from a spin-up reference,
     report-only; A2's label check at configuration (accept when it flags
@@ -179,48 +194,67 @@ On 2026-09-14:
 
 ## 3. Should fix (S)
 
-  - **C4.** `c·Δρ` from processes the tags do not bracket: vertical diffusion,
-    sponges, hyperdiffusion, EDMF, LES (`energy_source_tags.jl:102-111`).
-    Measure on V2, then share them as transport or document the size.
+Grouped as the owner accepted on 2026-09-14.
+
+Now:
+
   - **C5.** Where the repair's large trades sit: up to ±30,920 J/kg under tracer
     transport and ±16,294 under the audit (E27, E35), from C6's and C10's
     output.
-  - **M3.** A test that `water_advection.jl:51-56` and
-    `gs_sedimenting_mass_candidates` list the same species.
-  - **R3.** A warning on `constrain_qtot`, which writes `ρ` and `ρe_tot` outside
-    the brackets (`utilities.jl:34`).
-  - **A4.** Signed overlay shares (decision 1). Accept when a C9 twin gives form
-    A of at most 5 J/kg, or at most 1e-6 with the loss signed too, and `sfc` no
-    longer freezes at a node, with `ta` and the partition residual unchanged.
-  - **A5.** An overlay-bound diagnostic: the mass fraction where an overlay is
-    negative, and where a member exceeds its group's sum.
-  - **A7.** In `c5_process_closure.jl`, how the gap cancels over columns and
-    levels.
-  - **U3.** Output `e_src_fix_<name>` by default (`default_diagnostics.jl:697-709`).
-  - **U4.** The most negative source tag, and the energy the repair moved, in
-    the audit table.
-  - **T3.** An inference and allocation test of a tendency with tags, modelled
-    on `test/parameterized_tendencies/microphysics/allocations.jl`. Needed by
-    the GPU step.
-  - **T4.** An example config under `config/model_configs/`; no shipped config
-    turns the tags on. It sets the offset, as U1 will require.
-  - **T5.** The cold column as an integration item, from
-    `analysis/subgrid_check_cold.jl`, covering both sedimentation branches.
   - **P1.** The tag cost on a sphere against an untagged control; known on one
-    column only, 1.32× (T4).
-  - **V6.** Topography. D2 and D3 when the model runs 2M and P3 (N unless
-    production uses them).
-  - **D2, stale docs.** The guide's fixes 3, 4, 5, 7, 9 and 10
+    column only, 1.32× (T4). Its run needs the owner's approval.
+  - **D2, stale docs,** once #70 merges. The guide's fixes 3, 4, 5, 7, 9 and 10
     (`USER_GUIDE_DRAFT.md`, "Proposed fixes"): `tracer_configuration.md:410-414`
     and the docstring at `tracer_config.jl:605` on how the tags move;
     `energy_source_tags.md:90-96` under EDMF; the audit section on the EDMF mass
     flux; the tested boundary in `energy_source_tags.md`; the records' column
     closure in `process_record.md`; and no page defining form A and form B.
+
+With the defaults and checks (B9):
+
+  - **U3.** Output `e_src_fix_<name>` by default (`default_diagnostics.jl:697-709`).
+  - **U4.** The most negative source tag, and the energy the repair moved, in
+    the audit table.
+  - **R3.** A warning on `constrain_qtot`, which writes `ρ` and `ρe_tot` outside
+    the brackets (`utilities.jl:34`).
+  - **T4.** An example config under `config/model_configs/`; no shipped config
+    turns the tags on. It sets the offset, as U1 will require.
+
+With C1b (B4):
+
+  - **M3.** A test that `water_advection.jl:51-56` and
+    `gs_sedimenting_mass_candidates` list the same species.
+  - **T5.** The cold column as an integration item, from
+    `analysis/subgrid_check_cold.jl`, covering both sedimentation branches.
+
+Before the GPU (B13):
+
+  - **T3.** An inference and allocation test of a tendency with tags, modelled
+    on `test/parameterized_tendencies/microphysics/allocations.jl`.
+
+With V2 (B10):
+
+  - **C4.** `c·Δρ` from processes the tags do not bracket: vertical diffusion,
+    sponges, hyperdiffusion, EDMF, LES (`energy_source_tags.jl:102-111`).
+    Measure on V2, then share them as transport or document the size.
+  - **V6.** Topography. D2 and D3 when the model runs 2M and P3 (N unless
+    production uses them).
+
+With D1 (B12):
+
   - **D3, caveats:** C1 and C4, what is untested, stitching `e_src_fix` across
     restarts, choosing `c`, and ice passing provenance upward (E41).
 
 ## 4. Nice to have (N)
 
+  - **A4.** Signed overlay shares (decision 1), moved from S on 2026-09-14.
+    Accept when a C9 twin gives form A of at most 5 J/kg, or at most 1e-6 with
+    the loss signed too, and `sfc` no longer freezes at a node, with `ta` and
+    the partition residual unchanged.
+  - **A5.** An overlay-bound diagnostic: the mass fraction where an overlay is
+    negative, and where a member exceeds its group's sum. Moved from S.
+  - **A7.** In `c5_process_closure.jl`, how the gap cancels over columns and
+    levels. Moved from S.
   - **A2's runtime part and A3,** as optional validation features (decided
     2026-09-14): ∫Δ⁺ per label at runtime, and form A as a global integral
     online, on the native grid with ∫Δfix subtracted. Accept A3 at about 1.2e-3
@@ -229,7 +263,9 @@ On 2026-09-14:
   - **C1d.** Option C, per-updraft tag shares; about three times B.
   - **C6.** Review leftovers: `isfinite` before the conversion to `FT`
     (`tracer_config.jl:784-788`), `nothing` inside a broadcast at init, `parent`
-    shadowed in tests, the Float32 rounding floor (re-rank after V3).
+    shadowed in tests, the Float32 rounding floor (stays N: 7.5e-8 of the
+    total at t = 0 on V3's sphere, against a residual of 5.9e-5 after a day,
+    E45).
   - **C7.** Jacobian blocks for the tags' sedimentation and the implicit
     bracket.
   - **A6.** A tag-only vertical upwinding key (E37).
@@ -237,8 +273,10 @@ On 2026-09-14:
     when nothing sediments. **P3.** A string allocation per tracer per
     evaluation under the audit (`energy_source_tags.jl:148`).
   - **U5.** A clear error when the tag list changes across a restart.
-    **U6.** Records in Float64, or reset at each output, for long Float32 runs
-    (re-rank after V3).
+    **U6.** Records in Float64, or reset at each output, for long Float32 runs.
+    Stays N: over V3's day the records' extrema match Float64's to 1.2e-2 at
+    worst, at the rain-out's onset, and to 4e-4 at 24 h (E45). Runs longer
+    than a day are untested.
   - **R5.** A converged Newton solve for closure studies; its cost is not
     measured.
   - **M4,** when 2M returns: D2 and one integration item. **M5,** when the
@@ -248,8 +286,9 @@ On 2026-09-14:
 
   - ~~**The runscript.** Read a worktree's `.git` file, so provenance records
     the commit; and flush the log, so a killed job keeps it.~~ Done in
-    `297eda4c`, with MPI ranks through `srun`. The tcsh runscripts are not
-    changed.
+    `297eda4c`, with MPI ranks through `srun`. On 2026-09-14 `srun` got
+    `--mpi=pmix` on terrabyte, after MP1 died without it. The tcsh runscripts
+    are not changed.
   - ~~**`analysis/validate_d_configs.jl`** failed the control.~~ Done on
     2026-09-14: it checks controls as controls, and expects the C1a refusal
     for the EDMF runs with tags (D4, its audit twin, D5). All eight D configs
@@ -286,7 +325,7 @@ On 2026-09-14:
  6. C1b's validation (the D4 pair, the D4 variant with vertical diffusion on,
     D5) and T6.
  7. C2 with T1 and V5.
- 8. V3 and T2's Float32 part; MP1.
+ 8. T2's Float32 part (V3 is done); MP1 again.
  9. The decided defaults and checks: U1, U2 with R1, A2's label check.
 10. V2 with C4; V1 as decided.
 11. Calibrate U2's tolerance.

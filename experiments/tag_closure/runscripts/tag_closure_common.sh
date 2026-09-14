@@ -184,6 +184,9 @@ case "${TAG_CLOSURE_MACHINE}" in
         # runscripts/README.md.
         export JULIA_DEPOT_PATH="${LEVANTE_DEPOT:-${HOME}/.julia/depots/levante-cpu}"
         RUN_DIR="${RUN_DIR:-${ROOT}}"
+        # No run here has used more than one task on Levante. So srun keeps
+        # its default PMI plugin until one is measured with these modules.
+        SRUN_MPI="${SRUN_MPI:-}"
         ;;
     terrabyte)
         # The compiler, MPI and depot pairing lives in one file, which
@@ -198,6 +201,10 @@ case "${TAG_CLOSURE_MACHINE}" in
         set -u
         export JULIA_DEPOT_PATH="${TERRABYTE_DEPOT_ROOT:-${TERRABYTE_DEPOT_ROOT_ABSOLUTE}}/${TERRABYTE_CPU_DEPOT_NAME}"
         RUN_DIR="${RUN_DIR:-${SCRATCH:?SCRATCH is not set}/tag_closure}"
+        # Slurm here defaults to pmi2, which this Open MPI cannot use. MP1
+        # (job 13440823) died in MPI_Init for that reason. The stacks file
+        # names the plugin that was measured to work.
+        SRUN_MPI="${SRUN_MPI:-${TERRABYTE_CPU_SRUN_MPI}}"
         ;;
 esac
 mkdir -p "${RUN_DIR}"
@@ -331,7 +338,7 @@ OUTPUT_BASE="${RUN_DIR}/output/${JOB_ID}"
 # preferences clash that runscripts/README.md describes under "Two stacks, one
 # preferences file". A job submitted with more than one task, such as MP1, runs
 # that many ranks through `srun`, which the MPI preferences name, with the MPI
-# context.
+# context. srun gets the PMI plugin chosen for the machine above.
 # ---------------------------------------------------------------------------
 
 export JULIA_NUM_THREADS=1
@@ -342,8 +349,15 @@ export MKL_NUM_THREADS=1
 NTASKS="${SLURM_NTASKS:-1}"
 LAUNCH=()
 if (( NTASKS > 1 )); then
-    LAUNCH=(srun --ntasks="${NTASKS}" --cpus-per-task="${SLURM_CPUS_PER_TASK:-1}")
+    LAUNCH=(srun ${SRUN_MPI:+--mpi="${SRUN_MPI}"} --ntasks="${NTASKS}"
+        --cpus-per-task="${SLURM_CPUS_PER_TASK:-1}")
     export CLIMACOMMS_CONTEXT="${CLIMACOMMS_CONTEXT:-MPI}"
+    if [[ "${TAG_CLOSURE_MACHINE}" == terrabyte ]]; then
+        # These two only keep PMIx start-up noise out of the logs. See
+        # runscripts/terrabyte_stacks.env.
+        export PMIX_MCA_psec="${PMIX_MCA_psec:-native}"
+        export OMPI_MCA_pmix="${OMPI_MCA_pmix:-ext3x}"
+    fi
 fi
 
 export CLIMACOMMS_DEVICE="${CLIMACOMMS_DEVICE:-CPU}"
@@ -364,6 +378,7 @@ echo "Partition:       ${SLURM_JOB_PARTITION:-none}"
 echo "Nodes:           ${SLURM_JOB_NODELIST:-$(hostname)}"
 echo "CPUs per task:   ${SLURM_CPUS_PER_TASK:-1}"
 echo "Tasks:           ${NTASKS}"
+echo "Launch:          ${LAUNCH[*]:-(direct)}"
 echo "Repository:      ${ROOT}"
 echo "Commit:          ${GIT_COMMIT} (from ${GIT_SOURCE})"
 echo "Julia:           ${JULIA} ${JULIA_CHANNEL}"
@@ -462,6 +477,7 @@ node_type="$(
     echo "nodelist: ${SLURM_JOB_NODELIST:-$(hostname)}"
     echo "cpus_per_task: ${SLURM_CPUS_PER_TASK:-1}"
     echo "ntasks: ${NTASKS}"
+    echo "launch: ${LAUNCH[*]:-direct}"
     echo "node_type: ${node_type}"
     echo "climacomms_context: ${CLIMACOMMS_CONTEXT}"
     echo "climacomms_device: ${CLIMACOMMS_DEVICE}"
