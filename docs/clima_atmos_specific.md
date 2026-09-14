@@ -115,8 +115,26 @@ When reviewing or writing changes, name the validation surface explicitly:
 
   - **`test/runtests.jl` test groups** for unit-level coverage.
   - **`.buildkite/ci_driver.jl` jobs** for config or runtime-workflow changes. Check `.buildkite/pipeline.yml` to identify the affected jobs.
-  - **`reproducibility_tests/`** for changes that may shift simulation output. The reference counter in `reproducibility_tests/ref_counter.jl` must be incremented when output intentionally changes; do not edit it without explicit direction from the user.
+  - **`reproducibility_tests/`** for changes that may shift simulation output. The reference counter in `reproducibility_tests/ref_counter.jl` must be incremented when output intentionally changes; do not edit it without explicit direction from the user. In this fork only an upstream merge may change output; see [Fork parity with upstream](#fork-parity-with-upstream).
   - **`perf/` allocation benchmarks** are not run by this repository's GitHub Actions CI. Allocation regressions must be caught during review using the `@allocated` pattern.
+
+## Fork parity with upstream
+
+ClimaAtmosResiDyn develops diagnostics on top of upstream [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl): the stratospheric passive tracers, the tagged energy and water tracers, the energy source tags, the process records and the parent-budget ledger. It must not change the simulation. This is a boundary condition on every change in this repository.
+
+  - **Without a diagnostic.** A configuration that upstream can run gives bit-for-bit the same results here as at the upstream commit last merged into `main`. Compare the prognostic state and every output field with `==`, not with a tolerance.
+  - **With a diagnostic.** Every field upstream has stays bit for bit the same as in the same run without the diagnostic. Only the diagnostic's own prognostic fields (such as `ρe_tag_*`, `ρq_tag_*`, `ρe_src_*` and `prc_*`), its cache, callbacks and output may differ, and so may the run time.
+  - **What is compared.** Bit-for-bit holds within one machine, one Julia and `Manifest`, one float type and one process count. The same run on Levante and on terrabyte agrees only to rounding, so compare two runs from one machine.
+
+What follows for a change:
+
+  - A diagnostic reads the model's state, tendencies and cache, and writes only its own fields. It never writes a model field, or a shared scratch field that the model reads afterwards.
+  - A hook in shared code is a no-op when its diagnostic is off. When it is on, it must not reorder, split or fuse arithmetic on model fields. An equal formula with different rounding is a different result.
+  - A change to a solver or a loop that the model uses, such as solving the tags apart from the implicit Jacobian, must give bitwise identical model fields, and a test must show it.
+  - A diagnostic that needs another energy reference moves its own reference, as `energy_source_tag_offset` does, and not the model's. A moved thermodynamic reference reaches the model's numerics, and the atmosphere drifts from the first step (see [`energy_source_tags.md`](src/energy_source_tags.md)).
+  - A refusal or a warning at configuration may only concern the diagnostic's own keys. A configuration without them runs as it does upstream.
+  - A defect found in upstream code is fixed upstream, and reaches this fork with the next merge. Fixing it here first breaks parity.
+  - `reproducibility_tests/ref_counter.jl` changes only with an upstream merge. A change of this fork's own that would need a new reference breaks this rule.
 
 ## MSE / reproducibility
 
