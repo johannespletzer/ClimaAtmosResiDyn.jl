@@ -21,7 +21,7 @@ Priorities: **B** blocks operation, **S** should be fixed, **N** is nice to
 have. Sizes: S is under a day, M one to three days, L several PRs or a
 campaign.
 
-## Where things stand (2026-09-14, evening)
+## Where things stand (2026-09-14, late evening)
 
 Merged into `main`: #65 and the offset (#68); #69, the implicit bracket and the
 repair (`08682fd8`); #70, sedimentation as transport, the EDMF refusal and the
@@ -29,28 +29,32 @@ label warnings (`3b4b6056`).
 
 Open pull requests:
 
-| PR  | What                                                                  | State                                  |
-|:--- |:--------------------------------------------------------------------- |:-------------------------------------- |
-| #73 | Docs workflow: `contents: write` for the deploy, a 60-minute timeout  | ready, waits for the owner             |
-| #72 | The enthalpy audit, `energy_source_tag_transport`, with its docs      | ready, waits for the owner             |
-| #74 | D2: the energy source tag docs brought up to date after #70           | ready, waits for the owner             |
-| #75 | T2: a Float32 integration test of the tags and records, own CI group  | draft; 38 of 38 pass locally           |
-| #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | draft; EDMF validated (E44e)           |
-| #77 | B9: the offset required, the closure check and label check by default | draft; tests pass locally              |
+| PR  | What                                                                  | State                          | CI, 2026-09-14 late    |
+|:--- |:--------------------------------------------------------------------- |:------------------------------ |:---------------------- |
+| #73 | Docs workflow: `contents: write` for the deploy, a 60-minute timeout  | ready, waits for the owner     | 57 pass, 6 pending     |
+| #72 | The enthalpy audit, `energy_source_tag_transport`, with its docs      | ready, waits for the owner     | 28 pass, 34 pending    |
+| #74 | D2: the energy source tag docs brought up to date after #70           | ready, waits for the owner     | 29 pass, 34 pending    |
+| #75 | T2: a Float32 integration test of the tags and records, own CI group  | draft; 38 of 38 pass locally   | 16 pass, 49 pending    |
+| #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | draft; EDMF validated (E44e)   | 5 pass, 30 pending     |
+| #77 | B9: the offset required, the closure check and label check by default | draft; tests pass locally      | 1 pass, 31 pending     |
+
+No check has failed on any of them. The queue is long, so most are still
+pending.
 
 Measured so far: 0M on a column and a sphere, and 1M on a warm column, a day
 each (E26 to E39, E43); 1M with ice on a cold column for an hour, with a twin
 without vertical diffusion (E42, E42b); the EDMF build time with and without
-tags, and why it grows (E44 to E44d); C7's sphere in Float32 (E45) and on 4 MPI
-ranks (E47), each closing as C7 does, to rounding; the tag cost on that sphere,
-1.46× (T9); where the repair's trades sit (E46).
+tags, why it grows and the fix (E44 to E44e); C7's sphere in Float32 (E45) and
+on 4 MPI ranks (E47), each closing as C7 does, to rounding; the tag cost on that
+sphere, 1.46× (T9); where the repair's trades sit (E46), and that 10° masks
+remove them (E48).
 
 Not yet run: EDMF with tags past its build, a restart, anything longer than a
 day, 2M and P3, more than one node, and the GPU.
 
 ## 0. In flight
 
-  - **CI** on #75, #76 and #77.
+  - **CI** on all six open PRs. Nothing runs on Slurm.
 
 ## Decided
 
@@ -286,20 +290,72 @@ With D1 (B12):
     C1b).
   - E14, E16's remainder and E24.
 
-## Suggested order
+## Plan
 
- 1. The owner merges #73, #72 and #74.
- 2. The owner merges #76 and #75 once their CI passes. (#76's EDMF validation
-    is done, E44e.)
- 3. #77: its CI, and the owner's review of decision 2.
- 4. Decision 10, the named regions' width (E48).
- 5. C1b and T6, M3, T5; its validation runs.
- 6. C2 with T1, then V5.
- 7. V2 with C4 and V6, once approved; V1 as decided.
- 8. Calibrate U2's tolerance.
- 9. The docs: D1 and D3.
-10. The remaining S and N items.
-11. The GPU, last, with T3.
+### A. Waiting for the owner
+
+ 1. **Merges,** in this order, each once its CI passes: #73, #72, #74, then
+    #76 and #75, then #77. #72 goes before #77 and the C1b and C2 work, because
+    they build on `energy_source_tag_transport`. #76 goes before C1b, whose
+    validation needs the EDMF build to fit in two hours.
+ 2. **#76 out of draft:** its EDMF validation is done (E44e).
+ 3. **#77's three choices** (decision 2).
+ 4. **The named regions' width** (decision 10, E48).
+ 5. **The other decisions of section 1:** ClimaCore upstream (3), A4 (4), V1's
+    scope (5), the design's decisions 5 and 6 (6), Phase B (7), the runs not
+    yet approved (8), moving the guide into the docs (9).
+
+### B. Can be done now, without a new approval
+
+None of these writes model code, a default or a tolerance, or submits a run.
+
+ 1. **T3,** an inference and allocation test of a tendency with tags, modelled
+    on `test/parameterized_tendencies/microphysics/allocations.jl`. It also
+    guards #76's split solver against allocating in the Newton loop. Test code
+    only, as a draft PR. (Grouped before the GPU; pulling it forward costs
+    nothing.)
+ 2. **M3,** a test that `water_advection.jl:51-56` and
+    `gs_sedimenting_mass_candidates` list the same species. Test code only.
+    (Grouped with C1b; it can be written now and opened with C1b.)
+ 3. **C2's design,** as a note: which keys go into the checkpoint, where
+    `restart.jl` reads them, and the error text. The code waits for #72.
+ 4. **C1b's plan against #72 and #76:** the design exists
+    (`SUBGRID_AND_MICROPHYSICS_DESIGN.md`); check it against the merged code,
+    and name the blocks the split solver must keep uncoupled or couple. The
+    code waits for both merges.
+ 5. **A7,** in `analysis/c5_process_closure.jl`: how form A's gap cancels over
+    columns and levels. Analysis only.
+ 6. **Housekeeping:** the validator's `implicit_diffusion` rule for ISDAC, and
+    provenance for `output/c0_sphere_deep/`.
+ 7. **A draft of the ClimaCore issue** for decision 3, kept local: the
+    name-set scaling, with E44d's numbers. Filing it is outward-facing and waits
+    for the owner.
+
+### C. Unlocked by merges, already approved
+
+ 1. **After #72:** C2, the restart guard with T1, as a draft PR; then V5,
+    restart equivalence, up to 2 jobs.
+ 2. **After #72 and #76:** C1b, the EDMF sharing, with T6 and T5, as a draft PR;
+    then its validation, up to 5 jobs: the D4 pair, D4 with
+    `edmfx_vertical_diffusion: true`, D5. With those, the D4 column's residual
+    under EDMF can be measured for the first time.
+ 3. **After #77 and the owner's review:** nothing further is approved; U2's
+    tolerance is calibrated later, from V2 and V3.
+ 4. **After all merges:** remove the worktrees (section 5).
+
+### D. Needs a new approval
+
+ 1. **V2,** the production physics on a sphere (EDMF with
+    `edmfx_vertical_diffusion: true`, vertical diffusion, sponges, topography,
+    1M), with C4 and V6. It needs C1b. Then the calibration of U2's tolerance.
+ 2. **A change of the named regions' width,** if decision 10 asks for one: a
+    default.
+ 3. **A4,** signed overlay shares: model code and a C9 twin.
+ 4. **Runs:** MP1 on more than one node; an audit twin of D1 (section 6).
+ 5. **The N items that change model code:** C6's leftovers, C7, A6, P2, P3,
+    U5, U6, R5, A2's runtime part and A3.
+ 6. **D1 and D3,** the user guide into the docs (decision 9).
+ 7. **The GPU,** last, with T3.
 
 ## Done, for reference
 
