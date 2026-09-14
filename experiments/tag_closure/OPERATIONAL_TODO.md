@@ -94,6 +94,25 @@ On 2026-09-14:
   - **P1** is approved and submitted as a pair at `c2842ba6`: jobs `13440989`
     (`p1_sphere_tags`, C7 under its own name) and `13440990`
     (`p1_sphere_notags`, C7 without tags, records, check or diagnostics).
+  - **Standing approvals, given by the owner on 2026-09-14** so that the work
+    runs without stopping. The main session takes P4 and every task that
+    needs approval; an agent takes T2. Each approval covers only what it names:
+      - **P4 jobs:** up to 8 Slurm jobs from `../ClimaAtmosResiDyn-p4` or a
+        successor worktree, on `hpda2_test`, at most 2 CPUs, 48G and 2 h each:
+        diagnosis of the build's growth at 0, 2 and 8 tags, validation of the
+        fix, and reruns.
+      - **Code**, written, tested and opened as draft PRs to `main`, each
+        merged only by the owner: P4's build-time fix, with results bit for
+        bit and the tag tests passing; B9, the decided defaults and checks (U1,
+        U2 with R1, A2's label check) with U3, U4, R3 and T4; C2's restart guard
+        with T1, after #72 merges; C1b, the EDMF sharing, after P4's fix and
+        #72.
+      - **Runs**, when ready, at their predecessors' settings: the C6 twin with
+        a 10° mask (1 job); V5, restart equivalence (up to 2 jobs, after C2);
+        C1b's validation (up to 5 jobs: the D4 pair, D4 with
+        `edmfx_vertical_diffusion: true`, D5).
+      - **Pushes:** the main session's branches and the agent's T2 branch, as
+        draft PRs to `main`. The owner merges.
   - **The S items**, as proposed and accepted by the owner:
       - now: C5 (done, E46); P1 (done, T9); D2 (#74);
       - with the defaults and checks (B9): U3, U4, R3, T4;
