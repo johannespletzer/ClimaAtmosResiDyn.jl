@@ -1,0 +1,25 @@
+run: c0_sphere_deep
+machine: levante
+config: /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c0_sphere_deep.yml
+driver: /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+commit: ce76919465ee8c8df1cf1dc27040cbbd131859f4
+commit_source: git
+commit_dirty: unknown
+branch: unknown
+julia: +1.11
+julia_depot: unknown
+project: /home/b/b309159/git/ClimaAtmosResiDyn.jl/.buildkite
+started: 2026-09-10T11:10:09+02:00
+finished: 2026-09-10T11:11:03+02:00
+exit_status: 1
+slurm_job_id: 27369030
+slurm_job_name: tag-closure-a
+partition: shared
+nodelist: l40003
+cpus_per_task: 35
+node_type: unknown
+climacomms_context: unknown
+climacomms_device: unknown
+output_dir: none, the run died in `check_case_consistency` before the simulation was built
+netcdf_and_checkpoints: none
+# Reconstructed on 2026-09-14 from run.log and tag-closure-a-27369030.err in this directory. The runscript wrote the original to /home/b/b309159/git/ClimaAtmosResiDyn.jl/phase_c0_deep/provenance.txt on Levante, because the run left no output directory, and it was never committed. Fields the logs do not hold are `unknown`. The run was dropped on 2026-09-10; see LEVANTE_TASKS.md, "Not yet, and why".

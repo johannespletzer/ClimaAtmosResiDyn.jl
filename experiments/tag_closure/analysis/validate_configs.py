@@ -6,7 +6,7 @@
 Each file is checked against `config/default_configs/default_config.yml` for key
 existence and value type, then against the per-run invariants of the plan's
 common protocol, per tag family. `--mutations` breaks a copy of the tree in
-fifteen ways and asserts every one is caught, so the checks below are
+every way listed in `MUTATIONS` and asserts each is caught, so the checks below are
 demonstrably live rather than merely present.
 
 Python rather than Julia because this is the tool that was actually run while
@@ -255,13 +255,37 @@ def check(path):
     #     Julia starts and after the packages load. A configuration that trips
     #     one of these validates cleanly here and then dies on the node, which
     #     is what happened to the first `c0_sphere_deep` submission.
-    if config.get("implicit_diffusion") is True and not (
-        config.get("vert_diff") or config.get("turbconv")
-    ):
-        problems.append(
-            "implicit_diffusion: true without vert_diff or turbconv "
-            "(model_getters.jl:1074 asserts on this)"
-        )
+    #     The model checks these in one `if`/`elseif` chain
+    #     (`model_getters.jl:1067-1089`), so a check runs only when the ones
+    #     before it did not match. An ISDAC run skips the implicit diffusion
+    #     check, and a run with implicit diffusion skips the prescribed flow
+    #     check. The model tests `isnothing`, so `vert_diff: false` counts as
+    #     set.
+    implicit_diffusion = config.get("implicit_diffusion") is True
+    if config.get("initial_condition") == "ISDAC":
+        if config.get("microphysics_model") == "dry":
+            problems.append(
+                "initial_condition: ISDAC with microphysics_model: dry "
+                "(model_getters.jl:1068 asserts on this)"
+            )
+    elif implicit_diffusion:
+        if config.get("vert_diff") is None and config.get("turbconv") is None:
+            problems.append(
+                "implicit_diffusion: true without vert_diff or turbconv "
+                "(model_getters.jl:1074 asserts on this)"
+            )
+    elif config.get("prescribed_flow") is not None:
+        if config.get("topography", "NoWarp") != "NoWarp":
+            problems.append(
+                "prescribed_flow with topography %r "
+                "(model_getters.jl:1080 asserts on this)"
+                % config.get("topography")
+            )
+        if config.get("implicit_microphysics", True) is not False:
+            problems.append(
+                "prescribed_flow without implicit_microphysics: false "
+                "(model_getters.jl:1084 asserts on this)"
+            )
 
     # 6. Per family: tags and check together, a pure region tag, the check
     #    period, no tolerance, and the diagnostics that phase needs.
@@ -353,7 +377,7 @@ def check(path):
 
     return name, problems, config
 
-# The fifteen classes of mistake these checks exist to catch. Each is applied
+# The classes of mistake these checks exist to catch. Each is applied
 # to a copy of one real configuration; `--mutations` asserts every one is
 # caught. A check that stops catching its mutation is a check that has quietly
 # stopped working.
@@ -473,7 +497,7 @@ def lint_continuations():
     return 1 if failed else 0
 
 def run_mutations():
-    """Break a copy of the tree fifteen ways; every one must be caught."""
+    """Break a copy of the tree in every way listed; each must be caught."""
     import shutil, tempfile
     missed = []
     for label, target, mutate in MUTATIONS:

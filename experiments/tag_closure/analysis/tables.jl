@@ -149,6 +149,18 @@ function load_run(run_dir)
         return nothing
     end
 
+    # A run that failed says so in its provenance, and has no output to read.
+    # Its logs stay for the record, so it is skipped with a note, not a warning.
+    for line in split(provenance, '\n')
+        startswith(line, "exit_status:") || continue
+        status = strip(line[(length("exit_status:") + 1):end])
+        if status != "0"
+            @info "Skipping $name: the run exited with status $status."
+            return nothing
+        end
+        break
+    end
+
     snapshot = joinpath(run_dir, name * ".yml")
     if !isfile(snapshot)
         @warn "Skipping $name: no $name.yml configuration snapshot."

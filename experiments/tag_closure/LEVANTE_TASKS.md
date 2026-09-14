@@ -508,12 +508,17 @@ Then the phase script, `phase_a.jl` or `phase_c.jl` as appropriate.
     ignored", while thirteen `.out` files sit committed under `output/`.~~
     Fixed on 2026-09-14: each `.out` is trimmed into its directory's `run.log`
     and no longer committed.
-  - `validate_configs.py`'s `implicit_diffusion` rule is stricter than the
-    model. `model_getters.jl:1068` puts that assert in an `elseif` chain after
-    the ISDAC branch, so an ISDAC config would pass the model and fail the
-    validator. False positives only; nothing here uses ISDAC.
-  - `output/c0_sphere_deep/` holds a `.out` and an `.err` and no provenance, so
-    every phase C pass warns that it skips it.
+  - ~~`validate_configs.py`'s `implicit_diffusion` rule is stricter than the
+    model.~~ Fixed on 2026-09-14: the validator follows the model's
+    `if`/`elseif` chain (`model_getters.jl:1067-1089`), so an ISDAC config skips
+    the rule, `vert_diff: false` counts as set, and the ISDAC and prescribed-flow
+    asserts are checked too. Seven constructed configs came out as the model
+    would have them; all 61 configs and 16 mutations still pass.
+  - ~~`output/c0_sphere_deep/` has no provenance.~~ Fixed on 2026-09-14: a
+    `provenance.txt` reconstructed from its `run.log` and `.err`, with
+    `exit_status: 1`. `analysis/tables.jl` now skips a run whose provenance
+    records a failed exit with a note, not a warning. That also covers the four
+    `twin_c1*` directories. The self-test passes.
 
 ## Not yet, and why
 
