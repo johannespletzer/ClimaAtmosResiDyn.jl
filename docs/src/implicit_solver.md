@@ -92,6 +92,14 @@ the presence of topography, the diffusion mode, and the prognostic variables in
 When grid-scale diffusion is implicit, the linear solve is itself approximate;
 `approximate_linear_solve_iters` sets how many iterations it takes.
 
+Tags and process records couple to no other variable: their only block is their
+own diagonal. They are solved one field at a time, apart from the nested solver
+of the other variables, by a `SplitJacobianSolver`, which gives the same
+increments. The reason is the build. ClimaCore works out at compile time which
+blocks each nested solve touches, over the names of every field in the state,
+and that work grows much faster than the number of fields. With the split, the
+tags and records no longer add to it.
+
 ### Automatic differentiation
 
 The alternative is to differentiate the tendency automatically, by replacing

@@ -554,4 +554,33 @@ import ClimaAtmos as CA
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_res")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fix_tropics")
     end
+
+    @testset "Fields the Jacobian solves apart" begin
+        name(chain...) = CA.MatrixFields.FieldName(chain...)
+        block_pairs = (
+            (name(:c, :ρ), name(:c, :ρ)) => :block,
+            (name(:c, :ρe_tot), name(:c, :ρ)) => :block,
+            (name(:c, :ρe_tot), name(:c, :ρe_tot)) => :block,
+            # A tag with only its own diagonal is solved apart.
+            (name(:c, :ρe_src_tropics), name(:c, :ρe_src_tropics)) => :block,
+            # So is a record.
+            (name(:c, :prc_e_radiation), name(:c, :prc_e_radiation)) => :block,
+            # A tag another block names is not.
+            (name(:c, :ρq_tag_rain), name(:c, :ρq_tag_rain)) => :block,
+            (name(:c, :ρq_tag_rain), name(:f, :u₃)) => :block,
+            # Nor is a field that is neither a tag nor a record, even when it
+            # couples to nothing.
+            (name(:c, :ρq_lcl), name(:c, :ρq_lcl)) => :block,
+            (name(:f, :u₃), name(:f, :u₃)) => :block,
+        )
+        @test CA.uncoupled_jacobian_names(block_pairs) ==
+              (name(:c, :ρe_src_tropics), name(:c, :prc_e_radiation))
+        # A block that names a part of a tag also couples it.
+        @test isempty(
+            CA.uncoupled_jacobian_names((
+                (name(:c, :ρe_src_x), name(:c, :ρe_src_x)) => :block,
+                (name(:c, :ρ), name(:c, :ρe_src_x, :components)) => :block,
+            )),
+        )
+    end
 end

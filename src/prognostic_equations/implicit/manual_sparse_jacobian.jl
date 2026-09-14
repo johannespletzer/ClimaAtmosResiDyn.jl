@@ -603,7 +603,7 @@ function jacobian_solver_algorithm(
 end
 
 """
-    jacobian_cache(alg::ManualSparseJacobian, Y, atmos)
+    jacobian_cache(alg::ManualSparseJacobian, Y, atmos; split_uncoupled_fields = true)
 
 Allocate the sparse `∂R/∂Y` matrix and its solver for a
 [`ManualSparseJacobian`](@ref).
@@ -612,13 +612,33 @@ The nonzero blocks are collected from the per-process builders, de-duplicated
 with `merge_jacobian_blocks`, and completed with `fallback_identity_blocks`;
 the solver comes from `jacobian_solver_algorithm`.
 
+When the state holds tags or process records that couple to no other variable,
+and `split_uncoupled_fields` is `true`, they are solved apart from the rest by a
+[`SplitJacobianSolver`](@ref), which gives the same result. That keeps the build
+time of the solver from growing with the number of tags and records.
+`AutoSparseJacobian` asks for the unsplit form, because it builds on the
+`FieldMatrixWithSolver` itself.
+
 # Returns
 
-`NamedTuple` with fields `matrix` (a `MatrixFields.FieldMatrixWithSolver`) and
-`derivative_flags` (the flags from `_derivative_flags`, which
-`update_jacobian!` passes back to the process updates).
+`NamedTuple` with fields `matrix`, `solver` and `derivative_flags` (the flags
+from `_derivative_flags`, which `update_jacobian!` passes back to the process
+updates). Without a split, `matrix` and `solver` are the same
+`MatrixFields.FieldMatrixWithSolver`. With one, `matrix` is the whole
+`MatrixFields.FieldMatrix`, whose blocks `update_jacobian!` fills, and `solver`
+is the `SplitJacobianSolver`, which shares those blocks.
+
+`verbose` is accepted and ignored. `Jacobian` passes it to every algorithm, and
+a method that declares keywords receives it, rather than falling back to the
+generic method that drops it.
 """
-function jacobian_cache(alg::ManualSparseJacobian, Y, atmos)
+function jacobian_cache(
+    alg::ManualSparseJacobian,
+    Y,
+    atmos;
+    split_uncoupled_fields = true,
+    verbose = false,
+)
     derivative_flags = _derivative_flags(atmos, Y)
     (; topography_flag, diffusion_flag) = derivative_flags
     FT = Spaces.undertype(axes(Y.c))
@@ -643,10 +663,273 @@ function jacobian_cache(alg::ManualSparseJacobian, Y, atmos)
         alg.approximate_solve_iters,
     )
 
-    return (;
-        matrix = MatrixFields.FieldMatrixWithSolver(matrix, Y, full_alg),
-        derivative_flags,
+    uncoupled_names =
+        split_uncoupled_fields ? uncoupled_jacobian_names(block_pairs) : ()
+    # The solver is built through `invokelatest`, which inference does not look
+    # into. Otherwise the compiler would infer both builders, whichever this
+    # run needs, and building the unsplit solver for a state with many tags is
+    # the very compile the split avoids. This runs once, when the cache is
+    # built.
+    build_solver =
+        isempty(uncoupled_names) ? build_unsplit_jacobian_solver :
+        build_split_jacobian_solver
+    (matrix, solver) = Base.invokelatest(
+        build_solver,
+        matrix,
+        Y,
+        full_alg,
+        uncoupled_names,
+        alg.approximate_solve_iters,
     )
+    return (; matrix, solver, derivative_flags)
+end
+
+# Without uncoupled fields, the matrix and its solver are one
+# `FieldMatrixWithSolver`, as before the split existed.
+function build_unsplit_jacobian_solver(
+    matrix,
+    Y,
+    full_alg,
+    uncoupled_names,
+    approximate_solve_iters,
+)
+    matrix_with_solver = MatrixFields.FieldMatrixWithSolver(matrix, Y, full_alg)
+    return (matrix_with_solver, matrix_with_solver)
+end
+
+# With them, the whole matrix is kept for the updates, and the solver splits.
+build_split_jacobian_solver(
+    matrix,
+    Y,
+    full_alg,
+    uncoupled_names,
+    approximate_solve_iters,
+) = (
+    matrix,
+    split_jacobian_solver(
+        matrix,
+        Y,
+        full_alg,
+        uncoupled_names,
+        approximate_solve_iters,
+    ),
+)
+
+# ============================================================================
+# Solving the tags and the records apart from the rest
+# ============================================================================
+
+# A field name's chain of properties, as a vector. The split compares names
+# through these vectors, so that nothing in it compiles once per pair of name
+# types. Comparing the names themselves would make the build grow with the
+# number of fields, which is what the split exists to avoid.
+jacobian_name_chain(::MatrixFields.FieldName{chain}) where {chain} =
+    collect(Any, chain)
+
+# Whether one name chain is the other, or a part of it.
+function jacobian_name_chains_overlap(a::Vector{Any}, b::Vector{Any})
+    n = min(length(a), length(b))
+    return a[1:n] == b[1:n]
+end
+
+# Whether a state variable is one the split may solve apart: a tag of any of the
+# three families, or a process record. Both live directly in `Y.c`.
+function is_splittable_jacobian_field(name::MatrixFields.FieldName)
+    chain = jacobian_name_chain(name)
+    (length(chain) == 2 && chain[1] === :c && chain[2] isa Symbol) ||
+        return false
+    return is_tagged_tracer_name(chain[2]) || startswith(string(chain[2]), "prc_")
+end
+
+"""
+    uncoupled_jacobian_names(block_pairs)
+
+The fields among the Jacobian's `block_pairs` that a [`SplitJacobianSolver`](@ref)
+solves apart from the rest, as a `Tuple` of `FieldName`s.
+
+A field qualifies when it is a tag or a process record, its only block is its
+own diagonal, and no other block names it, as a row, a column or a part of one.
+Such a field enters no other variable's equation, and no other variable enters
+its equation. This runs once, when the Jacobian is built, on plain vectors.
+"""
+function uncoupled_jacobian_names(block_pairs)
+    block_keys = Any[pair.first for pair in block_pairs]
+    rows = [jacobian_name_chain(key[1]) for key in block_keys]
+    columns = [jacobian_name_chain(key[2]) for key in block_keys]
+    uncoupled = Any[]
+    for (i, key) in enumerate(block_keys)
+        (rows[i] == columns[i] && is_splittable_jacobian_field(key[1])) ||
+            continue
+        mentions = count(eachindex(block_keys)) do j
+            jacobian_name_chains_overlap(rows[i], rows[j]) ||
+                jacobian_name_chains_overlap(rows[i], columns[j])
+        end
+        mentions == 1 && push!(uncoupled, key[1])
+    end
+    return Tuple(uncoupled)
+end
+
+"""
+    SplitJacobianSolver
+
+The linear solver of a [`ManualSparseJacobian`](@ref) when the state holds tags
+or process records that couple to nothing.
+
+ClimaCore's nested block solvers work out, at compile time, which blocks each
+of their nested solves touches. They do it over the names of every field in the
+state, so that work grows faster than the number of fields, and each tag or
+record added makes the build slower by more than the last. The tags and records
+never act on the model and have only their own diagonal blocks. So this solves
+them one field at a time, and the other fields with the model's own nested
+solver, built over a name tree that leaves the tags and records out.
+
+Each field is solved as the nested solver solves it in the whole system, so the
+result does not change. There, such a field falls into the group that the
+arrowhead solve leaves to its second algorithm, whose block diagonal part
+inverts the field's block exactly:
+
+  - under `ApproximateBlockArrowheadIterativeSolve`, that inverse is repeated
+    `n_iters` times from zero, which a `StationaryIterativeSolve` with a
+    `BlockDiagonalPreconditioner` and the same `n_iters` does for the field
+    alone;
+  - under `BlockArrowheadSolve`, it is taken once, which `BlockDiagonalSolve`
+    does.
+
+Every solve reuses the state's own fields, and every uncoupled field is solved
+under one name, `@name(field)`, so the fields of one kind share one compiled
+solve however many there are.
+
+# Fields
+
+  - `alg`, `cache`, `keys`, `matrix`: the nested solver of the coupled fields,
+    its cache, the keys `(@name(c), @name(f), ...)` over the coupled fields'
+    name tree, and their blocks over the same tree;
+  - `uncoupled`: one `NamedTuple` per uncoupled field, holding its `name`, its
+    solver `alg` and `cache`, its `keys` and its one-block `matrix`.
+"""
+struct SplitJacobianSolver{A, C, K, M, U}
+    alg::A
+    cache::C
+    keys::K
+    matrix::M
+    uncoupled::U
+end
+
+# Build a `SplitJacobianSolver` from the whole matrix, the state, the model's
+# nested solver algorithm and the names `uncoupled_jacobian_names` found.
+function split_jacobian_solver(
+    matrix,
+    Y,
+    alg,
+    uncoupled_names,
+    approximate_solve_iters,
+)
+    uncoupled_chains = map(jacobian_name_chain, collect(uncoupled_names))
+    is_uncoupled(name) = jacobian_name_chain(name) in uncoupled_chains
+
+    # The coupled fields' name tree comes from a template of the state without
+    # the uncoupled fields. Only its structure is used.
+    coupled_center_names = Tuple(
+        name for name in propertynames(Y.c) if
+        !is_uncoupled(MatrixFields.FieldName(:c, name))
+    )
+    coupled_center_types = Tuple{
+        map(name -> eltype(getproperty(Y.c, name)), coupled_center_names)...,
+    }
+    template = Fields.FieldVector(;
+        (
+            name =>
+                name === :c ?
+                similar(
+                    Y.c,
+                    NamedTuple{coupled_center_names, coupled_center_types},
+                ) : getproperty(Y, name) for name in propertynames(Y)
+        )...,
+    )
+    tree = MatrixFields.FieldNameTree(template)
+    view_keys = keys(MatrixFields.field_vector_view(Y))
+    coupled_keys = MatrixFields.FieldVectorKeys(view_keys.values, tree)
+    coupled_pairs = Tuple(
+        name_pair => matrix[name_pair] for
+        name_pair in keys(matrix) if !is_uncoupled(name_pair[1])
+    )
+    coupled_matrix = MatrixFields.replace_name_tree(
+        MatrixFields.FieldMatrix(coupled_pairs...),
+        tree,
+    )
+    b = split_solver_view(coupled_keys, Y)
+    cache = MatrixFields.field_matrix_solver_cache(alg, coupled_matrix, b)
+    MatrixFields.check_field_matrix_solver(alg, cache, coupled_matrix, b)
+
+    uncoupled_alg =
+        alg isa MatrixFields.SchurComplementReductionSolve ?
+        MatrixFields.StationaryIterativeSolve(;
+            P_alg = MatrixFields.BlockDiagonalPreconditioner(),
+            n_iters = approximate_solve_iters,
+        ) : MatrixFields.BlockDiagonalSolve()
+    uncoupled = map(uncoupled_names) do name
+        field = MatrixFields.get_field(Y, name)
+        field_tree = MatrixFields.FieldNameTree(Fields.FieldVector(; field))
+        field_keys = MatrixFields.FieldVectorKeys((@name(field),), field_tree)
+        field_matrix = MatrixFields.replace_name_tree(
+            MatrixFields.FieldMatrix(
+                (@name(field), @name(field)) => matrix[name, name],
+            ),
+            field_tree,
+        )
+        field_b = MatrixFields.FieldNameDict(field_keys, (field,))
+        field_cache = MatrixFields.field_matrix_solver_cache(
+            uncoupled_alg,
+            field_matrix,
+            field_b,
+        )
+        MatrixFields.check_field_matrix_solver(
+            uncoupled_alg,
+            field_cache,
+            field_matrix,
+            field_b,
+        )
+        (;
+            name,
+            alg = uncoupled_alg,
+            cache = field_cache,
+            keys = field_keys,
+            matrix = field_matrix,
+        )
+    end
+    return SplitJacobianSolver(alg, cache, coupled_keys, coupled_matrix, uncoupled)
+end
+
+# The view of a state-like `FieldVector` under the given keys, whose name tree
+# decides which fields a solve can see.
+split_solver_view(keys, x) = MatrixFields.FieldNameDict(
+    keys,
+    map(name -> MatrixFields.get_field(x, name), keys),
+)
+
+function LinearAlgebra.ldiv!(
+    ΔY::Fields.FieldVector,
+    solver::SplitJacobianSolver,
+    R::Fields.FieldVector,
+)
+    MatrixFields.run_field_matrix_solver!(
+        solver.alg,
+        solver.cache,
+        split_solver_view(solver.keys, ΔY),
+        solver.matrix,
+        split_solver_view(solver.keys, R),
+    )
+    foreach(solver.uncoupled) do field_solve
+        (; name, alg, cache, keys, matrix) = field_solve
+        MatrixFields.run_field_matrix_solver!(
+            alg,
+            cache,
+            MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(ΔY, name),)),
+            matrix,
+            MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(R, name),)),
+        )
+    end
+    return ΔY
 end
 
 # ============================================================================
@@ -1986,4 +2269,4 @@ Solve `(∂R/∂Y) ΔY = R` for `ΔY` with the nested block solver from
 `jacobian_solver_algorithm`. Mutates `ΔY`.
 """
 invert_jacobian!(::ManualSparseJacobian, cache, ΔY, R) =
-    LinearAlgebra.ldiv!(ΔY, cache.matrix, R)
+    LinearAlgebra.ldiv!(ΔY, cache.solver, R)
