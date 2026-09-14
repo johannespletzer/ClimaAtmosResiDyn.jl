@@ -80,8 +80,10 @@ On 2026-09-14:
     offline script covers validation runs until then.
   - The code for these defaults and checks is written at step 9 of the order
     below.
-  - **Merges:** the owner merged #69. #73 fixes the docs deploy; the owner
-    merges it, and then `main` goes into #70.
+  - **Merges:** the owner merged #69 and then #70, once #70's docs check passed
+    on a re-run. #73, the docs deploy fix, is open. The owner approved pushing
+    #72's docs, retargeting #72 to `main` and taking it out of draft, and
+    opening D2 as #74.
   - **V3 and MP1** were approved and submitted: jobs `13440822` (V3, C7's sphere
     in Float32) and `13440823` (MP1, C7's sphere on 4 ranks). V3 ran its day
     and is handed back (E45). MP1 died in `MPI_Init` after 91 s. The runscript
