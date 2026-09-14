@@ -590,6 +590,101 @@ has_sedimentation(::Nothing) = false
 has_sedimentation(::Union{DryModel, EquilibriumMicrophysics0M}) = false
 has_sedimentation(::AbstractMicrophysicsModel) = true
 
+"""
+    active_energy_source_processes(atmos)
+
+The process labels whose bracket changes `ρe_tot` in a run of `atmos`, as a
+`Tuple` of `Symbol`s.
+
+`precipitation` is never among them: for the energy source tags it is transport,
+not production. `microphysics` is, only under 0-moment microphysics, whose
+rain-out is the one microphysics that changes `ρe_tot`.
+"""
+function active_energy_source_processes(atmos)
+    radiation_mode = atmos.radiation_mode
+    active = (
+        :radiation =>
+            !isnothing(radiation_mode) && !(radiation_mode isa HeldSuarezForcing),
+        :held_suarez => radiation_mode isa HeldSuarezForcing,
+        :surface_flux => !atmos.disable_surface_flux_tendency,
+        :subsidence => !isnothing(atmos.subsidence),
+        :large_scale_advection => !isnothing(atmos.ls_adv),
+        :external_forcing => !isnothing(atmos.external_forcing),
+        :microphysics =>
+            atmos.microphysics_model isa EquilibriumMicrophysics0M,
+    )
+    return Tuple(label for (label, is_active) in active if is_active)
+end
+
+"""
+    warn_untagged_energy_source_processes(atmos)
+
+Warn about each process that changes `ρe_tot` in this run and that no energy
+source tag follows.
+
+The per-process check, form A, sets the new energy split by region against the
+new energy split by process. A process that produces energy and has no tag of
+its own opens a gap there. That is how the tag-closure experiments found
+subsidence on a column and the rain-out of cold condensate on a sphere. Checking
+the labels at configuration finds the same gap before the run.
+
+The check applies to a run that follows processes, one with at least one tag
+that carries some sources but not all of them. A tag that lists every process,
+through `all`, follows no process in particular, so it does not count as
+following any. A run with region tags alone gets no warning, since it does not
+split energy by process.
+"""
+function warn_untagged_energy_source_processes(atmos)
+    model = atmos.energy_source_tagging_model
+    isnothing(model) && return nothing
+    all_labels = Set(KNOWN_TAG_SOURCES)
+    process_tags = filter(collect(model.tags)) do tag
+        sources = Set(tag.sources)
+        !isempty(sources) && sources != all_labels
+    end
+    isempty(process_tags) && return nothing
+    followed = Set{Symbol}()
+    for tag in process_tags
+        union!(followed, tag.sources)
+    end
+    for label in active_energy_source_processes(atmos)
+        label in followed && continue
+        @warn(
+            "`$label` changes `ρe_tot` in this run, and no `energy_source_tags` \
+            tag follows it. Its production goes to the region tags that list \
+            `all`, and to no process tag, so the new energy split by process \
+            misses it. Add a tag with `source: $label` to follow it.",
+        )
+    end
+    return nothing
+end
+
+"""
+    warn_unbracketed_energy_source_constraints(atmos)
+
+Warn when a state constraint changes `ρe_tot` outside every bracket in a run with
+energy source tags.
+
+Clipping `ρq_tot` in the element constraint, as `constrain_qtot` does, moves the
+clipped water's mass and energy into `ρ` and `ρe_tot` through
+`enforce_mass_energy_consistency!`. No bracket sees that change, so no tag
+takes it, and it lands in `e_src_res`.
+"""
+warn_unbracketed_energy_source_constraints(atmos) =
+    _warn_unbracketed_energy_source_constraints(
+        atmos.energy_source_tagging_model,
+        atmos.water.tracer_nonnegativity_method,
+    )
+_warn_unbracketed_energy_source_constraints(model, method) = nothing
+_warn_unbracketed_energy_source_constraints(
+    ::EnergySourceTaggingModel,
+    ::TracerNonnegativityElementConstraint{true},
+) = @warn(
+    "`energy_source_tags` with a `tracer_nonnegativity_method` that clips \
+    `ρq_tot`: the clip changes `ρ` and `ρe_tot` outside every bracket, so no \
+    tag takes the change, and it goes to `e_src_res`.",
+)
+
 # ============================================================================
 # Closure checking
 # ============================================================================
@@ -609,9 +704,14 @@ residual is expected and normal.
 These are starting points, not derived numbers. Read the first run's closure
 table and set a tolerance that sits above the level your configuration settles
 at, so that the warning means something changed.
+
+The energy source tags have no default tolerance, so their check only reports.
+It is on by default with the tags, and a fixed level would warn in every run:
+their residual depends on the transport and the configuration, and no tolerance
+has been calibrated for either yet. Set `tolerance` in the block to warn.
 """
 const DEFAULT_CLOSURE_TOLERANCES =
-    (; water = 1.0e-10, energy = 1.0e-6, energy_source = 1.0e-6)
+    (; water = 1.0e-10, energy = 1.0e-6, energy_source = nothing)
 
 """
     DEFAULT_CLOSURE_ABORT_LEVELS
@@ -642,23 +742,31 @@ const DEFAULT_CLOSURE_ABORT_LEVELS =
 
 """
     closure_check_from_config(spec_value, context, FT; default_tolerance,
-                              default_abort_above)
+                              default_abort_above, default_spin_up = nothing)
 
 Read a `water_closure_check`, `energy_closure_check` or
 `energy_source_closure_check` block into
-`(; period, tolerance, abort_above, audit)`, or `nothing` when the key is
-absent.
+`(; period, tolerance, abort_above, audit, spin_up)`, or `nothing` when the key
+is absent.
 
 Every key is optional: `period` defaults to `"1days"`, `tolerance` to the
 family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref) and `abort_above` to its
 entry in [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref). Writing `abort_above: ~` turns
-the abort off for a family that defaults to having one.
+the abort off for a family that defaults to having one. A `tolerance` of `~`
+means the check only reports and never warns.
 
 `audit` defaults to `false`. Setting it writes a second table beside the closure
 table, splitting the residual into the parts that mean different things; see
 [`tag_audit`](@ref). It costs a handful of extra global reductions per check and
 changes nothing about the run, so it is safe to leave on for a run whose tags
 are under investigation.
+
+`spin_up` is a time after the start, such as `"1hours"`, or `~` for none. When
+set, the check also runs once at that time, and every row reports the residual
+since then beside the residual itself. The first hour of a run makes a residual
+that is an artefact of the initial adjustment, and the rows since the spin-up
+leave it out. The reference is taken again after a restart, at `spin_up` after
+the restart.
 """
 closure_check_from_config(
     ::Nothing,
@@ -666,6 +774,7 @@ closure_check_from_config(
     ::Type{FT};
     default_tolerance,
     default_abort_above,
+    default_spin_up = nothing,
 ) where {FT} = nothing
 
 function closure_check_from_config(
@@ -674,21 +783,22 @@ function closure_check_from_config(
     ::Type{FT};
     default_tolerance,
     default_abort_above,
+    default_spin_up = nothing,
 ) where {FT}
     spec = checked_mapping(
         spec_value,
         context;
-        optional = ("period", "tolerance", "abort_above", "audit"),
+        optional = ("period", "tolerance", "abort_above", "audit", "spin_up"),
     )
     period = get(spec, "period", "1days")
     isfinite(time_to_seconds(period)) || error(
         "$context `period` must be finite; an infinite period never checks \
         anything, which is what leaving the block out already does.",
     )
-    tolerance = FT(get(spec, "tolerance", default_tolerance))
-    tolerance >= 0 || error(
-        "$context `tolerance` must not be negative, got $tolerance. It is \
-        compared against the absolute value of the relative residual.",
+    tolerance = closure_tolerance_from_config(
+        get(spec, "tolerance", default_tolerance),
+        context,
+        FT,
     )
     abort_above = closure_abort_above_from_config(
         get(spec, "abort_above", default_abort_above),
@@ -696,8 +806,82 @@ function closure_check_from_config(
         FT,
     )
     audit = Bool(get(spec, "audit", false))
-    return (; period, tolerance, abort_above, audit)
+    spin_up = get(spec, "spin_up", default_spin_up)
+    isnothing(spin_up) ||
+        (isfinite(time_to_seconds(spin_up)) && time_to_seconds(spin_up) > 0) ||
+        error(
+            "$context `spin_up` must be a positive, finite time such as \
+            \"1hours\", or `~` for none; got $(repr(spin_up)).",
+        )
+    return (; period, tolerance, abort_above, audit, spin_up)
 end
+
+"""
+    closure_tolerance_from_config(value, context, FT)
+
+Read the `tolerance` entry of a closure-check block, as an `FT` or `nothing`.
+`nothing` means the check reports and never warns.
+"""
+closure_tolerance_from_config(::Nothing, context, ::Type{FT}) where {FT} =
+    nothing
+
+function closure_tolerance_from_config(value, context, ::Type{FT}) where {FT}
+    tolerance = FT(value)
+    tolerance >= 0 || error(
+        "$context `tolerance` must not be negative, got $tolerance. It is \
+        compared against the absolute value of the relative residual.",
+    )
+    return tolerance
+end
+
+"""
+    energy_source_closure_check_from_config(value, entries, FT)
+
+Read `energy_source_closure_check`. Unlike the other two families' checks, this
+one is on by default whenever the tags include a pure region tag, a tag with a
+`region` and no `source`, which is what closure needs:
+
+  - `~`, the default, gives a daily check that only reports, from a spin-up
+    reference one hour after the start, without the audit;
+  - `false` switches the check off;
+  - a mapping sets the keys of [`closure_check_from_config`](@ref), with the same
+    defaults.
+
+`~` with no pure region tag gives no check, since there is no partition to close.
+"""
+function energy_source_closure_check_from_config(
+    value,
+    entries,
+    ::Type{FT},
+) where {FT}
+    value === false && return nothing
+    if isnothing(value)
+        has_energy_source_partition_entry(entries) || return nothing
+        value = Dict{String, Any}()
+    end
+    return closure_check_from_config(
+        value,
+        "`energy_source_closure_check`",
+        FT;
+        default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy_source,
+        default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy_source,
+        default_spin_up = "1hours",
+    )
+end
+
+# Whether the `energy_source_tags` entries include a pure region tag, one with a
+# `region` and no `source`, or only the source `none`.
+has_energy_source_partition_entry(::Nothing) = false
+has_energy_source_partition_entry(entries) =
+    entries isa AbstractVector && any(entries) do entry
+        entry isa AbstractDict || return false
+        haskey(entry, "region") || return false
+        source = get(entry, "source", nothing)
+        sources =
+            isnothing(source) ? () :
+            source isa AbstractString ? (source,) : Tuple(source)
+        return all(==("none"), string.(sources))
+    end
 
 """
     closure_abort_above_from_config(value, context, FT)
@@ -737,12 +921,10 @@ function closure_checks_from_config(config::AtmosConfig)
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.water,
             default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.water,
         ),
-        energy_source = closure_check_from_config(
+        energy_source = energy_source_closure_check_from_config(
             pa["energy_source_closure_check"],
-            "`energy_source_closure_check`",
-            FT;
-            default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy_source,
-            default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy_source,
+            pa["energy_source_tags"],
+            FT,
         ),
         energy = closure_check_from_config(
             pa["energy_closure_check"],
@@ -859,6 +1041,34 @@ function energy_source_offset_from_config(value, ::Type{FT}) where {FT}
 end
 
 """
+    check_energy_source_offset_given(value)
+
+Refuse `energy_source_tags` when `energy_source_tag_offset` is not set.
+
+`ρe_tot` has no physical zero, and it is negative over much of a typical domain.
+Where the total the tags partition is not positive, the donor share is undefined,
+and the loss half of the attribution rule does not run. An offset makes that
+total positive without touching the model. So the key has no default, and every
+run with these tags states its offset. `0` is accepted, and keeps the tags on
+`ρe_tot` itself.
+
+The values quoted are those the tag-closure experiments tested.
+"""
+function check_energy_source_offset_given(value)
+    isnothing(value) && error(
+        "`energy_source_tags` needs `energy_source_tag_offset`, an energy per \
+        kilogram of air in J/kg that the tags add to `ρe_tot`. Without one the \
+        donor share is undefined wherever `ρe_tot` is not positive, which is \
+        much of a typical domain. The tag-closure experiments used 110495 J/kg. \
+        The smallest offsets that made the total positive there were \
+        45.4 kJ/kg on the DYCOMS RF02 column and 100.4 kJ/kg on the moist \
+        baroclinic wave sphere. Set `energy_source_tag_offset: 0` to keep the \
+        tags on `ρe_tot` itself.",
+    )
+    return nothing
+end
+
+"""
     energy_source_repair_from_config(value)
 
 Parse `energy_source_tag_repair`. `true`, the default, and `~` keep the energy
@@ -923,7 +1133,8 @@ and `water_process_record` config keys. Any of them
 being `~` (null) or an empty list disables that feature entirely, at no runtime
 cost.
 
-Energy source tags are refused under `turbconv: prognostic_edmfx`; see
+Energy source tags are refused without `energy_source_tag_offset`, see
+`check_energy_source_offset_given`, and under `turbconv: prognostic_edmfx`, see
 `check_energy_source_tagging_supported`. The label warnings of the energy source
 tags and the records see the microphysics model.
 """
@@ -944,10 +1155,9 @@ function AtmosTagging(config::AtmosConfig)
         WaterTaggingModel(water_tracer_tuple(water_entries, FT))
     end
     source_entries = config.parsed_args["energy_source_tags"]
-    source_offset = energy_source_offset_from_config(
-        get(config.parsed_args, "energy_source_tag_offset", nothing),
-        FT,
-    )
+    source_offset_value =
+        get(config.parsed_args, "energy_source_tag_offset", nothing)
+    source_offset = energy_source_offset_from_config(source_offset_value, FT)
     source_repair = energy_source_repair_from_config(
         get(config.parsed_args, "energy_source_tag_repair", true),
     )
@@ -960,6 +1170,7 @@ function AtmosTagging(config::AtmosConfig)
             )
             nothing
         else
+            check_energy_source_offset_given(source_offset_value)
             check_energy_source_tagging_supported(
                 get(config.parsed_args, "turbconv", nothing),
             )
