@@ -218,6 +218,20 @@ import ClimaAtmos as CA
         @test parent(ΔY_split.c) == parent(ΔY_unsplit.c)
         @test parent(ΔY_split.f) == parent(ΔY_unsplit.f)
         @test !all(iszero, parent(ΔY_split.c.ρe_src_rad))
+
+        # The split solver runs in every Newton iteration, so neither its
+        # update nor its solve may allocate. Each check is a function that is
+        # given everything it uses, so `@allocated` counts the call alone.
+        function update_allocations(alg, cache, Y, p, dtγ, t)
+            CA.update_jacobian!(alg, cache, Y, p, dtγ, t)
+            return @allocated CA.update_jacobian!(alg, cache, Y, p, dtγ, t)
+        end
+        function invert_allocations(alg, cache, ΔY, R)
+            CA.invert_jacobian!(alg, cache, ΔY, R)
+            return @allocated CA.invert_jacobian!(alg, cache, ΔY, R)
+        end
+        @test update_allocations(jacobian_alg, split_cache, Y, p, dtγ, t) == 0
+        @test invert_allocations(jacobian_alg, split_cache, ΔY_split, Y) == 0
     end
 
     # 7. The loss half through a real solve. The run above never reaches it,
