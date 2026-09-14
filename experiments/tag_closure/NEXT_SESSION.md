@@ -178,7 +178,13 @@ one agent has worked this branch at once.
     The owner's decisions of 2026-09-14 are recorded there: require an offset
     with tags; the closure check on by default, daily, from a spin-up
     reference, report-only until calibrated; the label check at configuration
-    now, and online form A later as an optional feature. The runs' provenance was repaired
+    now, and online form A later as an optional feature. The owner merged #69
+    (`08682fd8`) and re-ran #70's docs job. PR #73 fixes the docs deploy (a
+    read-only token gave 403 on `gh-pages`) and raises the docs timeout to 60
+    minutes; after the owner merges it, merge `main` into #70 and push, as
+    approved. V3 (Float32, job `13440822`) and MP1 (4 ranks, job `13440823`)
+    are submitted; the runscript now launches ranks with `srun`, keeps its logs
+    while a job runs, and reads a worktree's commit (`297eda4c`). The runs' provenance was repaired
     by hand to `edd44e1d`, because a worktree's `.git` is a file the runscript
     cannot read.
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and

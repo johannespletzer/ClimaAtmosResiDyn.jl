@@ -23,11 +23,16 @@ campaign.
 ## Where things stand (2026-09-14)
 
   - #65 and the offset (#68) are merged, with the loss-half integration test.
-  - #69, the implicit bracket and the repair, targets `main`, with all checks
-    passing.
+  - #69, the implicit bracket and the repair, is merged into `main`
+    (`08682fd8`, 2026-09-14).
   - #70, sedimentation as transport, the EDMF refusal and M2's label warnings,
-    targets `main` and is out of draft. Its `docbuild` hit the 35-minute limit,
-    so `docs-required` fails (run 34593320376).
+    targets `main` and is out of draft. Its `docbuild` hit the 30-minute limit,
+    so `docs-required` failed (run 34593320376). The owner re-ran it on
+    2026-09-14.
+  - #73 fixes the docs workflow: `main`'s deploy to `gh-pages` failed with 403
+    on every push, because the job token was read-only. It grants
+    `contents: write` and raises the timeout to 60 minutes. After it merges,
+    `main` is merged into #70 and pushed, as the owner approved.
   - #72, the enthalpy audit, is a draft on #70's branch, with all checks
     passing. It carries C3 and the corrected timing wording, and has #70 merged
     in (`530a3658`). `energy_source_tag_transport` exists only there.
@@ -71,6 +76,12 @@ On 2026-09-14:
     offline script covers validation runs until then.
   - The code for these defaults and checks is written at step 9 of the order
     below.
+  - **Merges:** the owner merged #69. #73 fixes the docs deploy; the owner
+    merges it, and then `main` goes into #70.
+  - **V3 and MP1** are approved and submitted: jobs `13440822` (V3, C7's sphere
+    in Float32) and `13440823` (MP1, C7's sphere on 4 ranks). For MP1 the
+    runscript now launches ranks through `srun`; it also keeps its logs while a
+    job runs and reads a worktree's commit.
 
 ## 0. In flight
 
@@ -94,11 +105,12 @@ On 2026-09-14:
  5. **Runs**, each on its own: V2, V3, V5, V6, MP1, the D4 variant with
     `edmfx_vertical_diffusion: true`, and D5.
  6. **Docs:** whether to move `USER_GUIDE_DRAFT.md` into `docs/src/` (D1).
- 7. **Merges:** #69, then #70, then #72, and who merges.
+ 7. **Merges:** #73, then #70 once its docs pass, then #72.
 
 ## 2. Blocking operation (B), in dependency order
 
- 1. **Merge #69 and #70.** Re-run #70's docs job first. Size S.
+ 1. **Merge #70.** #69 is merged. Merge #73, the docs-workflow fix, then
+    merge `main` into #70 and push, and merge #70 once its checks pass. Size S.
  2. **Finish and merge #72.** Add E35 to E43 and the audit's scope to its docs,
     take it out of draft, retarget it to `main` after #70, merge. This comes
     before C1b and C2, because both use `energy_source_tag_transport`, which
@@ -140,11 +152,13 @@ On 2026-09-14:
     records are `FT` fields that accumulate from the start and are never reset
     (`process_record.jl:22-25`). V3 is a CPU sphere in Float32 with tags,
     records and the check; T2 adds a Float32 test group. Then re-rank U6 and
-    the Float32 rounding floor. Size S to M.
+    the Float32 rounding floor. Size S to M. V3 is submitted: job `13440822`,
+    `configs/v3_sphere_float32.yml`.
  8. **MP1, more than one process.** Every run so far was single-process, and
     the closure check reduces with global sums (`tagged_tracers.jl:450-484`). A
     2 to 4 rank CPU sphere with tags, records and the check, before the GPU.
-    Size S, plus a run.
+    Size S, plus a run. MP1 is submitted: job `13440823`,
+    `configs/mp1_sphere_4ranks.yml`, on 4 ranks.
  9. **The decided defaults and checks.** U1, require the offset with tags; U2
     and R1, the closure check on by default, daily, from a spin-up reference,
     report-only; A2's label check at configuration (accept when it flags
@@ -232,9 +246,10 @@ On 2026-09-14:
 
 ## 5. Housekeeping
 
-  - **The runscript.** Read a worktree's `.git` file, so provenance records the
-    commit (P4's needed a repair by hand); and flush the log, so a killed job
-    keeps it (D4's was lost).
+  - ~~**The runscript.** Read a worktree's `.git` file, so provenance records
+    the commit; and flush the log, so a killed job keeps it.~~ Done in
+    `297eda4c`, with MPI ranks through `srun`. The tcsh runscripts are not
+    changed.
   - **`analysis/validate_d_configs.jl`** filters `^d\d_`, so it now includes the
     control `d4_column_edmf_notags` and fails it. Skip controls, as
     `validate_configs.py` does.
@@ -262,7 +277,7 @@ On 2026-09-14:
 
  1. P4's three staged runs (in flight).
  2. The owner's remaining decisions.
- 3. Re-run #70's docs job; merge #69 and #70.
+ 3. Merge #73; merge `main` into #70; merge #70. (#69 is merged.)
  4. #72's docs; out of draft; retarget; merge.
  5. P4's fix, with C1b's code alongside.
  6. C1b's validation (the D4 pair, the D4 variant with vertical diffusion on,
