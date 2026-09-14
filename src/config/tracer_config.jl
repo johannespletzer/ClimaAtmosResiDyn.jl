@@ -602,9 +602,10 @@ Default relative-residual tolerance of each tag family's closure check.
 Water differs from the two energy families by four orders of magnitude on
 purpose. The water tags ride the same transport operators as `ρq_tot` apart
 from the implicit-vs-explicit vertical advection split, so their residual is
-small. Neither energy family receives implicit transport or EDMFX SGS mass
-fluxes at all, which is by design (see `KNOWN_TAG_SOURCES`), so a much larger
-residual is expected and normal.
+small. Neither energy family receives the parent's implicit vertical advection
+or the EDMFX SGS mass flux, and transport is not attributed on top, by design
+(see `KNOWN_TAG_SOURCES`). So a much larger residual is expected and normal.
+The energy source tags do follow sedimentation, as transport of their own.
 
 These are starting points, not derived numbers. Read the first run's closure
 table and set a tolerance that sits above the level your configuration settles

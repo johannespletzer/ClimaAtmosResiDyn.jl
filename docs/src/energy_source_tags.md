@@ -172,6 +172,43 @@ is a convention, so a value tuned for one energy reference means something
 different under another. Calibrate it against a first run of your own
 configuration.
 
+### Checking per process
+
+`e_src_res` checks the region tags against their total. Two more checks test
+the attribution process by process. The model does not compute them; they are
+read from the output of a run laid out for them:
+
+  - the region tags, say `tropics` and `extratropics`;
+  - one tag per region with `source: all`, say `new_tropics` and
+    `new_extratropics`, which collects every process's new energy there;
+  - one tag per process that runs, say `sfc` on `surface_flux` and `rad` on
+    `radiation`;
+  - a [process record](process_record.md) for each of those processes, and on
+    a column `rhoa`, to weight the column integrals.
+
+**Form A**, at each point, sets the new energy split by region against the new
+energy split by process: `new_tropics + new_extratropics - (sfc + rad)`. The
+two sides are separate tags that obey the same rule, so their agreement is a
+check, not an identity. A process that produces energy and has no tag of its
+own opens a gap, and so do the tags' own numerics: a negative tag whose share
+is clamped, the repair lifting a tag on one side only, and each tag's own
+transport.
+
+**Form B**, over a column, sets the change in the column integral of
+``\rho e_\mathrm{tot}`` against the column integrals of the records. What is
+left is what no record sees.
+
+Each is blind to something. Form A compares tags moved by the same transport,
+so it does not see pressure work. Transport cancels in a column integral, so
+form B does not see it either. Only `e_src_res` sees transport.
+
+On a sphere, the tags' numerics dominate form A's largest pointwise gap, and
+they cancel when the gap is integrated over the domain, while a process without
+a tag does not. So on a sphere, read form A as a domain integral. In the
+tag-closure experiments, a process without a tag gave an integrated gap of about
+1e-3 of the integrated new energy, against about 5e-5 once every process had
+one.
+
 ## The energy reference problem
 
 Water has a physical zero: ``\rho q_\mathrm{tot} \ge 0`` is enforced by the
@@ -223,6 +260,11 @@ exactly:
     leaves the model's own state bit for bit alone, and that the loss shows
     where it should: in the column integral of the residual, where transport
     cancels.
+  - **Sedimentation as transport** is covered by the same integration test under
+    1-moment microphysics, with an offset. The partition's sedimentation
+    tendencies add up to the parent's to 100 eps, and on a step partition the
+    donor is the cell above where the energy falls and the cell below where it
+    rises.
 
 Without an offset only the first two hold. That is also the strongest argument
 on the table for the fallback: water source tracing, whose parent is

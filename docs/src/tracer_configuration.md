@@ -409,10 +409,16 @@ cell that holds negligible mass can still be where a scheme breaks.
 The default for energy is looser than the one for water by four orders of
 magnitude, and that is not arbitrary. The water tags ride the same transport
 operators as `ρq_tot` apart from the implicit-versus-explicit vertical
-advection split, so very little escapes them. The energy tags never receive
-implicit transport or EDMFX sub-grid mass fluxes at all — that is deliberate,
-because each tag is already transported in its own right and attributing the
-`ρe_tot` version on top would count it twice — so a visibly larger residual is
+advection split, so very little escapes them. The energy tags follow their
+parent less closely. They ride the passive-tracer path, while `ρe_tot` is moved
+as enthalpy, pressure work included, and vertically on the implicit path.
+Transport is not attributed on top of that. Each tag is already transported in
+its own right, and attributing the `ρe_tot` version as well would count it
+twice. Neither energy family receives the EDMFX sub-grid mass flux, because the
+tags have no updraft copy, and the energy source tags refuse
+`turbconv: prognostic_edmfx` for that reason. The energy source tags do follow
+sedimentation, on the implicit path, as transport of their own (see
+[Energy Source Tags](energy_source_tags.md)). So a visibly larger residual is
 the expected, correct behaviour, not a bug.
 
 !!! tip "Calibrate on your own configuration"
