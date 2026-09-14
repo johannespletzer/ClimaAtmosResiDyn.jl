@@ -18,7 +18,12 @@ family is wired into a simulation at all, which is what this file covers:
     the same solve, and the offset leaves the model's own state untouched;
  8. under 1-moment microphysics, sedimentation moves the tags with the water.
     The partition's fluxes add up to the parent's, and each face takes the
-    shares of the cell that loses the energy, in either direction.
+    shares of the cell that loses the energy, in either direction;
+ 9. under `energy_source_tag_transport: enthalpy`, the tags' vertical advection
+    adds up to the parent's, each face takes the upwind cell's shares, and the
+    model's state is untouched;
+ 10. on a small sphere, the same audit adds up to the parent's in horizontal
+     advection and in hyperdiffusion.
 
 Items 1 to 6 run on `ρe_tot` itself. It is non-positive across this column, so
 `energy_source_fraction` returns zero and the loss never runs there. Production
@@ -31,12 +36,13 @@ The loss algebra itself is covered exactly in `energy_source_tags_tests.jl`,
 against a parent that is positive by construction. See
 `docs/src/energy_source_tags.md`.
 
-A column with an altitude partition is the cheapest geometry that exercises all
-of it — latitude regions and the Held-Suarez source would need a sphere. Each
-tag set is a fresh `AtmosModel` type and costs a full compile of the solve
-pipeline, which is why these files have their own test group (see the note in
-`runtests.jl`). The offset is part of that type, so item 7 costs a second
-compile.
+A column with an altitude partition is the cheapest geometry that exercises
+items 1 to 9. Horizontal transport and hyperdiffusion need a sphere, so item 10
+builds the smallest one. Each tag set is a fresh `AtmosModel` type and costs a
+full compile of the solve pipeline, which is why these files have their own
+test group (see the note in `runtests.jl`). The offset is part of that type, and
+so are the microphysics and the transport. So item 7 costs a second compile,
+item 8 a third, item 9 a fourth and item 10 a fifth.
 =#
 using Test
 import ClimaAtmos as CA
@@ -285,9 +291,11 @@ import ClimaAtmos as CA
         )
         result = CA.solve_atmos!(sedimentation_simulation)
         @test result.ret_code == :success
-        Y = sedimentation_simulation.integrator.u
-        p = sedimentation_simulation.integrator.p
-        t = sedimentation_simulation.integrator.t
+        # `local`, because the enclosing test set already has a `Y`, and a
+        # plain assignment in a nested test set would overwrite it.
+        local Y = sedimentation_simulation.integrator.u
+        local p = sedimentation_simulation.integrator.p
+        local t = sedimentation_simulation.integrator.t
 
         # Sedimentation alone, into a zeroed tendency. The tags partition
         # `E = ρe_tot + c·ρ`, so theirs must add up to the tendency of that.
@@ -354,5 +362,194 @@ import ClimaAtmos as CA
                 @test count(!iszero, tropo[above]) == 1
             end
         end
+    end
+
+    # 9. Enthalpy-form transport, the audit, on the column. The tags take their
+    # shares of the parent's own flux of `E`, so the partition's vertical
+    # tendency is the parent's. The model is untouched, so its state is the one
+    # the first run ended in. A new transport is a new model type, and a
+    # compile.
+    @testset "Enthalpy transport moves the tags with the parent" begin
+        local c = 50000.0
+        audit_simulation = CA.get_simulation(
+            CA.AtmosConfig(
+                merge(
+                    test_dict,
+                    Dict{String, Any}(
+                        "energy_source_tag_offset" => c,
+                        "energy_source_tag_transport" => "enthalpy",
+                        "output_dir" => mktempdir(pwd()),
+                    ),
+                );
+                job_id = "energy_source_tags_integration_enthalpy",
+            ),
+        )
+        result = CA.solve_atmos!(audit_simulation)
+        @test result.ret_code == :success
+        Y_audit = audit_simulation.integrator.u
+        p_audit = audit_simulation.integrator.p
+        t_audit = audit_simulation.integrator.t
+
+        # The tags never act on the model, so its state is the first run's.
+        Y_base = simulation.integrator.u
+        @test parent(Y_audit.c.ρ) == parent(Y_base.c.ρ)
+        @test parent(Y_audit.c.ρe_tot) == parent(Y_base.c.ρe_tot)
+        @test parent(Y_audit.c.ρq_tot) == parent(Y_base.c.ρq_tot)
+        @test parent(Y_audit.f.u₃) == parent(Y_base.f.u₃)
+        for name in (:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
+            @test all(isfinite, parent(getproperty(Y_audit.c, name)))
+        end
+
+        # The explicit vertical advection alone, into a zeroed tendency. The
+        # partition's tendency is the parent's vertical transport of `E` at the
+        # same state, with the parent's reconstruction. The tags' own
+        # tendencies carry the size of the face fluxes, which is what rounding
+        # scales with.
+        Yₜ_audit = zero(Y_audit)
+        CA.explicit_vertical_advection_tendency!(
+            Yₜ_audit,
+            Y_audit,
+            p_audit,
+            t_audit,
+        )
+        (; ᶠu³, ᶜh_tot) = p_audit.precomputed
+        ᶜH = @. ᶜh_tot + c
+        vtt = CA.vertical_transport(
+            Y_audit.c.ρ,
+            ᶠu³,
+            ᶜH,
+            p_audit.dt,
+            p_audit.atmos.numerics.energy_q_tot_upwinding,
+        )
+        ᶜexpected = zero.(Y_audit.c.ρ)
+        @. ᶜexpected += vtt
+        strat = parent(Yₜ_audit.c.ρe_src_strat)
+        tropo = parent(Yₜ_audit.c.ρe_src_tropo)
+        scale = max(maximum(abs, strat), maximum(abs, tropo))
+        @test scale > 0
+        @test maximum(abs, strat .+ tropo .- parent(ᶜexpected)) <
+              100 * eps(FT) * scale
+
+        # The donor, on a step partition: all of `E` above 750 m in `strat` and
+        # all below in `tropo`, moved by a flow of one sign in a band around
+        # the step. The face takes the shares of the upwind cell, so the other
+        # tag's tendency is exactly zero wherever its energy cannot reach.
+        ᶜz = CA.Fields.coordinate_field(Y_audit.c).z
+        ᶠz = CA.Fields.coordinate_field(Y_audit.f).z
+        Y_step = copy(Y_audit)
+        ᶜE = @. Y_step.c.ρe_tot + c * Y_step.c.ρ
+        @. Y_step.c.ρe_src_strat = ifelse(ᶜz > 750, ᶜE, FT(0))
+        @. Y_step.c.ρe_src_tropo = ᶜE - Y_step.c.ρe_src_strat
+        above = parent(ᶜz) .> 750
+        for direction in (-1, 1)
+            @. ᶠu³ = CA.Geometry.Contravariant3Vector(
+                ifelse((ᶠz > 500) & (ᶠz < 1000), direction * FT(0.01), FT(0)),
+            )
+            Yₜ_step = zero(Y_step)
+            CA.enthalpy_vertical_advection_of_energy_source_tags!(
+                Yₜ_step,
+                Y_step,
+                p_audit,
+            )
+            strat = parent(Yₜ_step.c.ρe_src_strat)
+            tropo = parent(Yₜ_step.c.ρe_src_tropo)
+            if direction > 0
+                # The flow rises, and the cell below is the donor. So `strat`
+                # never reaches below the step, and `tropo` reaches only the
+                # first cell above it.
+                @test all(iszero, strat[.!above])
+                @test count(!iszero, tropo[above]) == 1
+            else
+                # The flow sinks, and the cell above is the donor: the mirror
+                # image.
+                @test all(iszero, tropo[above])
+                @test count(!iszero, strat[.!above]) == 1
+            end
+        end
+    end
+
+    # 10. The audit horizontally and in hyperdiffusion, which need a sphere.
+    # The smallest sphere that has both, for two steps, with the offset of the
+    # tag-closure experiments. That is a fifth compile.
+    @testset "Enthalpy transport on a sphere" begin
+        local c = 110495.0
+        sphere_simulation = CA.get_simulation(
+            CA.AtmosConfig(
+                Dict{String, Any}(
+                    "config" => "sphere",
+                    "h_elem" => 2,
+                    "z_elem" => 4,
+                    "z_max" => 30000.0,
+                    "z_stretch" => false,
+                    "dt" => "400secs",
+                    "t_end" => "800secs",
+                    "initial_condition" => "MoistBaroclinicWave",
+                    "microphysics_model" => "0M",
+                    "FLOAT_TYPE" => "Float64",
+                    "output_default_diagnostics" => false,
+                    "output_dir" => mktempdir(pwd()),
+                    "energy_source_tag_offset" => c,
+                    "energy_source_tag_transport" => "enthalpy",
+                    "energy_source_tags" => [
+                        Dict{String, Any}(
+                            "name" => "tropics",
+                            "region" => "tropics",
+                        ),
+                        Dict{String, Any}(
+                            "name" => "extratropics",
+                            "region" => "extratropics",
+                        ),
+                    ],
+                );
+                job_id = "energy_source_tags_integration_sphere",
+            ),
+        )
+        result = CA.solve_atmos!(sphere_simulation)
+        @test result.ret_code == :success
+        Y_sphere = sphere_simulation.integrator.u
+        p_sphere = sphere_simulation.integrator.p
+        t_sphere = sphere_simulation.integrator.t
+        tags_sum(x) =
+            parent(x.c.ρe_src_tropics) .+ parent(x.c.ρe_src_extratropics)
+        tags_scale(x) = max(
+            maximum(abs, parent(x.c.ρe_src_tropics)),
+            maximum(abs, parent(x.c.ρe_src_extratropics)),
+        )
+
+        # Horizontal advection. `split_divₕ` is linear in the value it moves.
+        Yₜ_sphere = zero(Y_sphere)
+        CA.horizontal_tracer_advection_tendency!(
+            Yₜ_sphere,
+            Y_sphere,
+            p_sphere,
+            t_sphere,
+        )
+        (; ᶜu, ᶜh_tot) = p_sphere.precomputed
+        ᶜexpected = @. -CA.split_divₕ(Y_sphere.c.ρ * ᶜu, ᶜh_tot + c)
+        @test tags_scale(Yₜ_sphere) > 0
+        @test maximum(abs, tags_sum(Yₜ_sphere) .- parent(ᶜexpected)) <
+              100 * eps(FT) * tags_scale(Yₜ_sphere)
+
+        # Hyperdiffusion. The parent's is the only hyperdiffusion of `E`, and
+        # the tags take none as tracers. The parent takes the water part out of
+        # `ρ` as well as `ρq_tot`, so `E` changes by `c` times that too. Both
+        # tendency buffers are summed, so it does not matter which holds what.
+        Yₜ_sphere = zero(Y_sphere)
+        Yₜ_lim = zero(Y_sphere)
+        CA.hyperdiffusion_tendency!(
+            Yₜ_sphere,
+            Yₜ_lim,
+            Y_sphere,
+            p_sphere,
+            t_sphere,
+        )
+        @test all(iszero, tags_sum(Yₜ_lim))
+        @test tags_scale(Yₜ_sphere) > 0
+        ᶜρₜ = parent(Yₜ_sphere.c.ρ) .+ parent(Yₜ_lim.c.ρ)
+        @test maximum(abs, ᶜρₜ) > 0
+        ᶜEₜ =
+            parent(Yₜ_sphere.c.ρe_tot) .+ parent(Yₜ_lim.c.ρe_tot) .+ c .* ᶜρₜ
+        @test maximum(abs, tags_sum(Yₜ_sphere) .- ᶜEₜ) <
+              100 * eps(FT) * tags_scale(Yₜ_sphere)
     end
 end

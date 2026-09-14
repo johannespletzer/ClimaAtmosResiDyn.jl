@@ -876,6 +876,24 @@ function energy_source_repair_from_config(value)
 end
 
 """
+    energy_source_transport_from_config(value)
+
+Parse `energy_source_tag_transport`. `tracer`, the default, and `~` move the
+energy source tags as passive tracers. `enthalpy` moves them by their shares of
+the parent's own flux, as an audit. It needs `energy_source_tag_offset`, which
+`EnergySourceTaggingModel` checks. Anything else is an error.
+"""
+function energy_source_transport_from_config(value)
+    (isnothing(value) || value == "tracer") &&
+        return TracerEnergySourceTransport()
+    value == "enthalpy" && return EnthalpyEnergySourceTransport()
+    return error(
+        "`energy_source_tag_transport` must be `tracer` or `enthalpy`, got \
+        $(repr(value)).",
+    )
+end
+
+"""
     check_energy_source_tagging_supported(turbconv)
 
 Refuse `energy_source_tags` under `turbconv: prognostic_edmfx`, and warn under
@@ -918,8 +936,9 @@ end
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
-`energy_source_tags` (with `energy_source_tag_offset`), `energy_process_record`
-and `water_process_record` config keys. Any of them
+`energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`
+and `energy_source_tag_transport`), `energy_process_record` and
+`water_process_record` config keys. Any of them
 being `~` (null) or an empty list disables that feature entirely, at no runtime
 cost.
 
@@ -951,12 +970,20 @@ function AtmosTagging(config::AtmosConfig)
     source_repair = energy_source_repair_from_config(
         get(config.parsed_args, "energy_source_tag_repair", true),
     )
+    source_transport = energy_source_transport_from_config(
+        get(config.parsed_args, "energy_source_tag_transport", "tracer"),
+    )
     energy_source_tagging_model =
         if isnothing(source_entries) || isempty(source_entries)
             isnothing(source_offset) || error(
                 "`energy_source_tag_offset` is set but `energy_source_tags` \
                 is not, so there are no tags for it to offset. Configure \
                 `energy_source_tags`, or drop `energy_source_tag_offset`.",
+            )
+            source_transport isa EnthalpyEnergySourceTransport && error(
+                "`energy_source_tag_transport: enthalpy` is set but \
+                `energy_source_tags` is not, so there are no tags for it to \
+                move. Configure `energy_source_tags`, or drop the key.",
             )
             nothing
         else
@@ -971,6 +998,7 @@ function AtmosTagging(config::AtmosConfig)
                 ),
                 source_offset;
                 repair = source_repair,
+                transport = source_transport,
             )
         end
     energy_process_record = process_record_from_config(
