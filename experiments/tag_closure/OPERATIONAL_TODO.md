@@ -128,9 +128,21 @@ On 2026-09-14:
 
 ## 0. In flight
 
-  - Nothing is running. P1 (T9) and MP1 (E47) finished on 2026-09-14, and
-    P4's stage timing is E44c.
-  - **Waiting for the owner:** merging #72, #74 and #73, once their checks
+  - **P4, the fix.** The inference profiles (jobs `13441219` to `13441221`, and
+    the 0M column on the login node) put all of the build's growth with the
+    tags in ClimaCore's compile-time name-set operations inside the Jacobian's
+    nested solver, `FieldMatrixWithSolver`. The fix, `49646b24` on
+    `claude/energy-source-tag-build-time` (not pushed yet), solves the tags and
+    records apart from the rest (`SplitJacobianSolver`). On the 0M column with 8
+    tags its increments are identical to the unsplit solver's. Checks running:
+    the same with implicit diffusion on the login node, and the EDMF column with
+    8 tags and with 8 tags and 5 records, jobs `13441507` and `13441508`, from
+    the worktree `../ClimaAtmosResiDyn-buildtime-edmf` with the EDMF refusal off
+    locally. 5 of the 8 approved P4 jobs are used.
+  - **B9** is being written in `../ClimaAtmosResiDyn-defaults` on
+    `claude/energy-source-tag-defaults`: U1, U2 with R1, A2, U3, U4, R3 and T4,
+    not yet tested or committed.
+  - **Waiting for the owner:** merging #72, #74, #73 and #75, once their checks
     pass.
 
 ## 1. Decisions for the owner
