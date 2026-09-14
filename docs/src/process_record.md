@@ -85,8 +85,20 @@ A record **is** a prognostic field, but it is not a tracer. Its name carries no
 lexical test, so nothing advects, diffuses, hyperdiffuses, sponges or limits a
 record. It needs no hand-written Jacobian block either: `jacobian_cache`
 completes the matrix with `fallback_identity_blocks`, giving these variables the
-implicit residual `-ΔY`, so only the explicit tendency contributes — which is
-precisely the intended behaviour.
+implicit residual `-ΔY`. So a record takes each bracketed increment as it is
+evaluated, with no Jacobian correction. Those are the explicit brackets'
+increments, and on the implicit path those of the microphysics sink and of
+sedimentation. That is the intended behaviour, since no record's tendency
+depends on a record.
+
+The records have no cross blocks, though. With a single Newton iteration
+(`max_newton_iters_ode: 1`), a record takes its implicit increments at the
+stage's first guess, while `ρe_tot` also gets the Jacobian's coupling to other
+rows. Under 0-moment microphysics that coupling does not reach the rain-out,
+and a column's records add up to its change in `ρe_tot` to rounding. Under 1M
+and 2M it includes sedimentation, so the two differ by a small linearised term.
+On a 1M column over a day, that term tracked the precipitation record's rate
+times the step, and it did not accumulate.
 
 The cost is one center field per recorded process in `Y`, and one broadcast per
 process per tendency evaluation against a difference the bracket already
@@ -105,33 +117,26 @@ says what happened in this cell, not what arrived here.
 
 ## What is not recorded
 
-  - **Only the explicit tendency path**, because that is the only path whose
-    applied-update events reach the records. `open_applied_update!` and
-    `close_applied_update!`, which call the record's snapshot and accumulate
-    halves for a label in `KNOWN_TAG_SOURCES`, are called from
-    `remaining_tendency.jl`; the implicit path opens the ledger's half of the
-    event directly and never the records'.
+  - **A label whose process does not run.** Both tendency paths are bracketed.
+    `open_applied_update!` and `close_applied_update!` call the record's
+    snapshot and accumulate halves from `remaining_tendency.jl`, for a label in
+    `KNOWN_TAG_SOURCES`, and `implicit_tendency.jl` brackets the records itself
+    around the implicit microphysics sink and precipitation sedimentation. `Y`,
+    `Yₜ`, `p.precomputed` and `p.scratch` are all dual-converted, so a record's
+    snapshot and destination are both safe on the implicit path, which is
+    evaluated with `ForwardDiff.Dual` numbers.
 
-    The limit is the bracket and nothing else. `Y`, `Yₜ`, `p.precomputed` and
-    `p.scratch` are all dual-converted, so a record's snapshot and destination
-    are both safe on the implicit path, which is evaluated with
-    `ForwardDiff.Dual` numbers. Extending a record to that path needs brackets
-    there and no change of storage.
-
-    Three labels are affected, and one of them can never be anything else.
-    `precipitation` has **no explicit bracket at all** — the tendency it names
-    is reached only from the implicit path — so an energy record that lists it
-    is zero in every configuration. `microphysics` on the energy side is zero
-    whenever microphysics is stepped implicitly, which is the default, because
-    the implicit bracket covers the water half only. `microphysics` on the
-    water side is zero under that same default, and is additionally a no-op
-    under 1M, where `microphysics_tendency!` moves mass between species without
+    So `microphysics` is recorded however microphysics is stepped, and under
+    0-moment microphysics that is where rain leaves. `precipitation` names
+    sedimentation, which 0-moment microphysics does not have, so a record that
+    lists it stays zero there. `microphysics` on the water side is a no-op under
+    1M, where `microphysics_tendency!` moves mass between species without
     changing `ρq_tot`.
 
-    Configuring any of these labels warns at startup. A record that stays zero
-    reads exactly like a process that did nothing, and no analysis downstream
-    can tell the two apart, so the distinction has to be drawn at the point
-    where the run is configured.
+    Configuring `precipitation` warns at startup. A record that stays zero reads
+    exactly like a process that did nothing, and no analysis downstream can tell
+    the two apart, so the distinction has to be drawn at the point where the run
+    is configured.
 
   - **Transport, phase changes, gravity-wave drag and numerical corrections**
     have no bracket to record, so they are absent entirely. A record covers the

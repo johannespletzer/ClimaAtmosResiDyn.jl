@@ -30,6 +30,9 @@ physically admissible range:
   - `repair_water_tag_partition!`: restores non-negativity of the tagged water
     partition without changing its sum
 
+  - `repair_energy_source_tags!`: the same for the energy source tags, where
+    their total is positive, unless `energy_source_tag_repair` is false
+
 Registered with `ClimaTimeSteppers` as the `update_constrain_state` hook and fired
 at the cadence set by the `update_constrain_state_every` configuration option
 (`"stage"`, `"step"`, or `"dss"`; see `update_constrain_state_signal_handler`).
@@ -43,6 +46,7 @@ NVTX.@annotate function constrain_state!(Y, p, t)
     # Last: the corrections above can still move ρq_tot (and rescale the tags to
     # follow it), while the repair only needs the tags to be self-consistent.
     repair_water_tag_partition!(Y, p)
+    repair_energy_source_tags!(Y, p)
     return nothing
 end
 

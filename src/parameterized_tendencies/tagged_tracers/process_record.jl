@@ -25,16 +25,21 @@
 ##### difference of two outputs. This differs from `q_tag_fix_<name>`, which
 ##### lives in the cache and does restart at zero.
 #####
-##### Only the explicit tendency path is recorded, because that is the only
-##### path with a bracket: `snapshot_tags!` and `attribute_tags!` are called
-##### from `remaining_tendency.jl` and nowhere else. So `precipitation` never
-##### reaches a record at all, its only bracket being on the implicit path, and
-##### `microphysics` reaches one only when it is stepped explicitly. Both stay
-##### zero otherwise, even when configured.
+##### Both tendency paths are recorded. `snapshot_tags!` and `attribute_tags!`
+##### bracket the explicit path from `remaining_tendency.jl`, and
+##### `implicit_tendency.jl` brackets the records itself around the implicit
+##### microphysics sink and precipitation sedimentation. So `microphysics` is
+##### recorded however microphysics is stepped, and `precipitation` is recorded
+##### wherever sedimentation runs, which is never under 0-moment microphysics.
 #####
-##### This is not a type restriction. A record's snapshot (`p.scratch`) and its
-##### destination (`Yₜ`) are both dual-converted, so extending it to the
-##### implicit path needs brackets there and nothing else. See
+##### That needed brackets and nothing else. A record's snapshot (`p.scratch`)
+##### and its destination (`Yₜ`) are both dual-converted. A record's increment
+##### does not depend on the record, so the identity block it falls back to in
+##### the Jacobian is right for its own row. It has no cross blocks, though.
+##### With one Newton iteration, a record takes its implicit increments at the
+##### stage's first guess, while `ρe_tot` also gets the Jacobian's coupling to
+##### other rows. Under 1M and 2M that coupling includes sedimentation, so the
+##### records and `ρe_tot` differ by a small linearised term. See
 ##### `docs/src/process_record.md`.
 
 # ============================================================================
@@ -144,8 +149,8 @@ These are separate from the tags' own snapshot buffers on purpose. A record can
 be configured without any tags, and giving it its own buffers keeps the two
 features independent rather than making one depend on the other being enabled.
 
-Only the explicit tendency path is bracketed, so nothing here is ever written
-with a `ForwardDiff.Dual`.
+The implicit path is bracketed too, so these can hold `ForwardDiff.Dual`
+numbers, which is why they live in `p.scratch`: it is dual-converted.
 """
 process_record_scratch(Y, atmos::AtmosModel) = (;
     (

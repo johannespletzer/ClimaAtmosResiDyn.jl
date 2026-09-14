@@ -150,9 +150,10 @@ import ClimaAtmos as CA
     rad_scale = maximum(abs.(parent(Y.c.ρe_src_rad)))
     @test rad_scale > 0
 
-    # No sign is asserted, because none is promised: donor-proportional loss
-    # bounds the depletion rate rather than the amount removed over a step, and
-    # the tags ride unlimited transport with no partition repair. See the
+    # No sign is asserted, because none is promised here. Donor-proportional
+    # loss bounds the depletion rate rather than the amount removed over a step,
+    # the tags ride unlimited transport, and the repair acts only where the
+    # total is positive, which `ρe_tot` is nowhere in this column. See the
     # contract on `EnergySourceTag`. This is only a blow-up guard.
     parent_scale = maximum(abs.(parent(Y.c.ρe_tot)))
     for name in (:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
@@ -239,5 +240,19 @@ import ClimaAtmos as CA
         without_loss = signed_residual(Y, 0)
         with_loss = signed_residual(Y_offset, c)
         @test abs(with_loss) < abs(without_loss) / 5
+
+        # The repair runs by default, and its ledger is a diagnostic. Computing
+        # the ledger once shows that the function behind `e_src_fix_<name>`
+        # exists; registering the name does not. A source tag is only ever
+        # clipped upward, so its ledger cannot be negative.
+        ledger = CA.Diagnostics.compute_e_src_fix!(
+            nothing,
+            Y_offset,
+            offset_simulation.integrator.p,
+            offset_simulation.integrator.t,
+            :ρe_src_rad,
+        )
+        @test all(isfinite, parent(ledger))
+        @test minimum(parent(ledger)) >= 0
     end
 end

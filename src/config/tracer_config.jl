@@ -521,15 +521,13 @@ Warn about `energy_source_tags` labels that cannot contribute, so a tag that
 will stay at zero says so at configuration time rather than at analysis time.
 
 The labels are shared with `energy_tracers`, but the two families do not see
-the same processes. Only the explicit tendency path carries a source-tag
-bracket, and `precipitation` has no explicit bracket at all — its tendency is
-reached solely from `implicit_tendency.jl`. So a source tag listing
-`precipitation` is zero in every configuration, while the `ρe_tag_*` family
-does receive it.
-
-`microphysics` is bracketed on the explicit path, but only when microphysics is
-stepped explicitly, which is not the default. That one depends on configuration
-this function does not see, so it is described rather than asserted.
+the same processes. `precipitation` is the sedimentation of precipitating
+species, and this family does not bracket it: sedimentation moves energy from
+level to level, and a bracket would count what arrives in a cell as new energy.
+So a source tag listing `precipitation` is zero in every configuration, while
+the `ρe_tag_*` family does receive it. Under 0-moment microphysics, rain leaves
+through `microphysics` instead, which reaches this family on both tendency
+paths.
 
 A warning and not an error: `moist` and `all` are useful shorthands that happen
 to include `precipitation`, and refusing them would make the group labels
@@ -541,18 +539,13 @@ function warn_inactive_energy_source_labels(tags)
         isempty(sources) && continue
         :precipitation in sources && @warn(
             "`energy_source_tags` tag `$(tag_name(tag))` lists " *
-            "`precipitation`, which cannot contribute to a source tag: only " *
-            "the explicit tendency path is bracketed for this family, and " *
-            "`precipitation` is reached solely from the implicit path. That " *
-            "part of the tag stays zero. The `energy_tracers` family does " *
-            "receive it. Note `moist` and `all` both expand to include " *
-            "`precipitation`.",
-        )
-        :microphysics in sources && @warn(
-            "`energy_source_tags` tag `$(tag_name(tag))` lists " *
-            "`microphysics`, which contributes only when microphysics is " *
-            "stepped explicitly. Under the default implicit microphysics " *
-            "timestepping that part of the tag stays zero.",
+            "`precipitation`, which cannot contribute to a source tag. It is " *
+            "the sedimentation of precipitating species, which this family " *
+            "does not bracket, because it moves energy between levels rather " *
+            "than adding it. That part of the tag stays zero. The " *
+            "`energy_tracers` family does receive it. Under 0-moment " *
+            "microphysics, rain leaves through `microphysics` instead. Note " *
+            "`moist` and `all` both expand to include `precipitation`.",
         )
     end
     return nothing
@@ -747,11 +740,11 @@ end
 Warn about process-record labels that cannot record anything, so a record that
 will stay at zero says so at configuration time rather than at analysis time.
 
-A record is written from the snapshot and attribute brackets, and those are
-called only from `remaining_tendency.jl`. So a process reached solely on the
-implicit path is never bracketed and its record stays zero for the whole run.
-`precipitation` is in that position always, and `microphysics` is whenever
-microphysics is stepped implicitly, which is the default.
+Both tendency paths are bracketed for the records, so a label is inactive only
+where its process does not exist. That is `precipitation` under 0-moment
+microphysics, which has no sedimentation: rain leaves through `microphysics`
+instead. This function does not see the microphysics model, so it warns about
+`precipitation` whenever it is listed.
 
 A zero record is the dangerous case precisely because it is indistinguishable
 from a real one. A process that genuinely did nothing and a process that was
@@ -764,17 +757,11 @@ would make the groups unusable for the processes they do cover.
 """
 function warn_inactive_record_labels(processes, key)
     :precipitation in processes && @warn(
-        "`$key` lists `precipitation`, which cannot be recorded: a record is " *
-        "written from the explicit tendency bracket, and `precipitation` is " *
-        "reached solely from the implicit path. Its record stays zero for " *
-        "the whole run, which reads the same as a process that did nothing. " *
+        "`$key` lists `precipitation`, which records the sedimentation of " *
+        "precipitating species. Under 0-moment microphysics there is none, " *
+        "so its record stays zero there, which reads the same as a process " *
+        "that did nothing, and rain leaves through `microphysics` instead. " *
         "Note `moist` and `all` both expand to include `precipitation`.",
-    )
-    :microphysics in processes && @warn(
-        "`$key` lists `microphysics`, which is recorded only when " *
-        "microphysics is stepped explicitly. Under the default implicit " *
-        "microphysics timestepping its record stays zero, which reads the " *
-        "same as a process that did nothing.",
     )
     return nothing
 end
@@ -797,6 +784,23 @@ function energy_source_offset_from_config(value, ::Type{FT}) where {FT}
     )
     iszero(value) && return nothing
     return FT(value)
+end
+
+"""
+    energy_source_repair_from_config(value)
+
+Parse `energy_source_tag_repair`. `true`, the default, and `~` keep the energy
+source tags non-negative where their total is positive; `false` leaves them as
+the attribution rule and their transport make them. Anything else is an error,
+so that a quoted `"false"` cannot silently read as on.
+"""
+function energy_source_repair_from_config(value)
+    isnothing(value) && return true
+    value isa Bool || error(
+        "`energy_source_tag_repair` must be `true` or `false`, got \
+        $(repr(value)).",
+    )
+    return value
 end
 
 """
@@ -830,6 +834,9 @@ function AtmosTagging(config::AtmosConfig)
         get(config.parsed_args, "energy_source_tag_offset", nothing),
         FT,
     )
+    source_repair = energy_source_repair_from_config(
+        get(config.parsed_args, "energy_source_tag_repair", true),
+    )
     energy_source_tagging_model =
         if isnothing(source_entries) || isempty(source_entries)
             isnothing(source_offset) || error(
@@ -841,7 +848,8 @@ function AtmosTagging(config::AtmosConfig)
         else
             EnergySourceTaggingModel(
                 energy_source_tracer_tuple(source_entries, FT),
-                source_offset,
+                source_offset;
+                repair = source_repair,
             )
         end
     energy_process_record = process_record_from_config(

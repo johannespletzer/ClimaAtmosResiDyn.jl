@@ -851,9 +851,10 @@ final report.
   - `Y.sfc.water` is an accounting accumulator with no hydrology, as described
     above. There is no soil, snow, or deposited-condensate reservoir at all.
   - `flux_accumulation!` omits turbulent surface fluxes.
-  - The process record covers only the explicitly bracketed tendency path. Its
-    bracket set is not the ledger's coverage set, and a process record is never
-    a closure leg.
+  - The process record covers the explicitly bracketed tendency path, and on
+    the implicit path the microphysics sink and sedimentation, which
+    `implicit_tendency!` brackets for it. Its bracket set is not the ledger's
+    coverage set, and a process record is never a closure leg.
   - A custom callback that writes the state and supplies its own accounting is
     not supported yet. A custom callback is accepted only declared read-only,
     which `audit` mode verifies and `summary` mode trusts.
