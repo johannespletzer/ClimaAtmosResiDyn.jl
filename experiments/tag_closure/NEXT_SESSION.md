@@ -192,13 +192,12 @@ one agent has worked this branch at once.
     `get_simulation`, mostly compiled before its first timer (E44c). The owner
     accepted the grouping of the S items; it is in `OPERATIONAL_TODO.md`. C5 is
     done: the repair's trades sit just beyond the 20° edge where the region
-    tags meet (E46). D2's docs and #72's docs are committed locally and wait
-    for the owner's approval to push.
+    tags meet (E46). D2's docs are PR #74 to `main`. #72 has its docs pushed,
+    targets `main` and is ready for review.
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch, now
-    merged. `../ClimaAtmosResiDyn-audit` is on #72's, one local commit ahead of
-    origin (`f3f48e97`, the docs). `../ClimaAtmosResiDyn-docs` is on
-    `claude/energy-source-tag-docs` from `main`, with D2's commit `fbeb561e`,
-    not pushed.
+    merged. `../ClimaAtmosResiDyn-audit` is on #72's, level with origin.
+    `../ClimaAtmosResiDyn-docs` is on #74's branch,
+    `claude/energy-source-tag-docs`, level with origin.
     `../ClimaAtmosResiDyn-p4` is detached at `edd44e1d`, with a copied
     `.buildkite/LocalPreferences.toml`, for P4's runs. The audit
     worktree's tracked `.buildkite/LocalPreferences.toml` names a Levante MPI
