@@ -1,0 +1,7 @@
+run: p4_inference_profile
+kind: inference profiles and timings of the build, by the main session, written by hand
+jobs: 13441219 (d4_column_edmf_notags), 13441220 (p4_edmf_two_tags), 13441221 (p4_edmf_tags) on terrabyte hpda2_test, 2 CPUs, from the worktree at edd44e1d, script commit e1493feb
+login node: login_* directories, pieces_*.txt, solver_profile_*.txt, from the same worktree at edd44e1d, on one shared core; split_check_*.txt from the fix branch claude/energy-source-tag-build-time before a55d15ce
+scripts: analysis/p4_inference_profile.jl, p4_profile_compare.jl, p4_jacobian_pieces.jl, p4_solver_profile.jl, p4_split_solver.jl, p4_split_check.jl, p4_cache_time.jl, p4_cache_profile.jl
+tables: methods, roots and files are cut to their 200 largest rows; the full tables stay under $SCRATCH/tag_closure/p4_profile/
+date: 2026-09-14T15:20:16+02:00

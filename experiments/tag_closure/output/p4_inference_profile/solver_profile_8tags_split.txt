@@ -1,0 +1,123 @@
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-p4/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/p4_column_0m_tags.yml
+┌ Info: numerics 
+│        `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│              `tracer_upwinding`::`Val{:vanleer_limiter}`
+│     `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│       `edmfx_sgsflux_upwinding`::`Val{:none}`
+│        `edmfx_tracer_upwinding`::`Val{:first_order}`
+│       `test_dycore_consistency`::`Nothing`
+│          `reproducible_restart`::`Nothing`
+│                       `limiter`::`Nothing`
+│                     `diff_mode`::`ClimaAtmos.Explicit`
+└                     `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+┌ Warning: `energy_source_tags` tag `new_strat` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-p4/src/config/tracer_config.jl:540
+┌ Warning: `energy_source_tags` tag `new_tropo` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-p4/src/config/tracer_config.jl:540
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.EquilibriumMicrophysics0M, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, Nothing, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Explicit, ClimaAtmos.Hyperdiffusion{Float64}}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, ClimaAtmos.EnergySourceTaggingModel{Tuple{ClimaAtmos.EnergySourceTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:rad, Nothing, Tuple{Symbol}}, ClimaAtmos.EnergySourceTag{:sfc, Nothing, Tuple{Symbol}}, ClimaAtmos.EnergySourceTag{:sub, Nothing, Tuple{Symbol}}, ClimaAtmos.EnergySourceTag{:mp, Nothing, Tuple{Symbol}}, ClimaAtmos.EnergySourceTag{:new_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, NTuple{8, Symbol}}, ClimaAtmos.EnergySourceTag{:new_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, NTuple{8, Symbol}}}, Float64, ClimaAtmos.TracerEnergySourceTransport}, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+blocks: 21, fields: (:ρ, :uₕ, :ρe_tot, :ρq_tot, :ρe_src_strat, :ρe_src_tropo, :ρe_src_rad, :ρe_src_sfc, :ρe_src_sub, :ρe_src_mp, :ρe_src_new_strat, :ρe_src_new_tropo)
+FieldMatrixWithSolver: wall 96.7 s, outside inference 0.8 s, inference 95.7 s
+
+the inference tree, calls over 1 s inclusive, to depth 8:
+  95.7 s  ClimaCore.MatrixFields.FieldMatrixWithSolver field_matrix_with_solver.jl:17
+    95.7 s  ClimaCore.MatrixFields.FieldMatrixSolver field_matrix_solver.jl:58
+      94.6 s  ClimaCore.MatrixFields.field_matrix_solver_cache field_matrix_solver.jl:349
+        55.0 s  ClimaCore.MatrixFields.field_matrix_solver_cache field_matrix_solver.jl:502
+          28.2 s  ClimaCore.MatrixFields.field_matrix_solver_cache field_matrix_solver.jl:349
+            24.3 s  ClimaCore.MatrixFields.field_matrix_solver_cache field_matrix_solver.jl:349
+              13.6 s  ClimaCore.MatrixFields.partition_blocks field_matrix_solver.jl:108
+                13.6 s  ClimaCore.MatrixFields.partition_blocks field_matrix_solver.jl:108
+              10.6 s  ClimaCore.MatrixFields.field_matrix_solver_cache field_matrix_solver.jl:349
+                10.4 s  ClimaCore.MatrixFields.partition_blocks field_matrix_solver.jl:108
+            3.9 s  ClimaCore.MatrixFields.partition_blocks field_matrix_solver.jl:108
+              3.9 s  ClimaCore.MatrixFields.partition_blocks field_matrix_solver.jl:108
+                3.4 s  ClimaCore.MatrixFields.getindex field_name_dict.jl:304
+          14.9 s  ClimaCore.MatrixFields.partition_blocks field_matrix_solver.jl:108
+            14.9 s  ClimaCore.MatrixFields.partition_blocks field_matrix_solver.jl:108
+              5.0 s  ClimaCore.MatrixFields.getindex field_name_dict.jl:304
+                5.0 s  ClimaCore.MatrixFields.intersect field_name_set.jl:106
+              4.7 s  ClimaCore.MatrixFields.cartesian_product field_name_set.jl:142
+                4.5 s  ClimaCore.MatrixFields.FieldNameSet field_name_set.jl:39
+              1.6 s  ClimaCore.MatrixFields.getindex field_name_dict.jl:304
+                1.6 s  ClimaCore.MatrixFields.intersect field_name_set.jl:106
+              1.5 s  ClimaCore.MatrixFields.getindex field_name_dict.jl:304
+                1.5 s  ClimaCore.MatrixFields.intersect field_name_set.jl:106
+          11.9 s  ClimaCore.MatrixFields.field_matrix_solver_cache field_matrix_iterative_solver.jl:441
+            11.9 s  ClimaCore.MatrixFields.preconditioner_cache field_matrix_iterative_solver.jl:50
+              11.0 s  ClimaCore.MatrixFields.field_matrix_solver_cache field_matrix_solver.jl:349
+                10.8 s  ClimaCore.MatrixFields.partition_blocks field_matrix_solver.jl:108
+        38.9 s  ClimaCore.MatrixFields.partition_blocks field_matrix_solver.jl:108
+          38.9 s  ClimaCore.MatrixFields.partition_blocks field_matrix_solver.jl:108
+            9.6 s  ClimaCore.MatrixFields.getindex field_name_dict.jl:304
+              9.3 s  ClimaCore.MatrixFields.intersect field_name_set.jl:106
+                5.4 s  ClimaCore.MatrixFields.union_values field_name_set.jl:370
+                3.8 s  UnrolledUtilities.unrolled_filter UnrolledUtilities.jl:401
+            6.1 s  ClimaCore.MatrixFields.getindex field_name_dict.jl:304
+              6.1 s  ClimaCore.MatrixFields.intersect field_name_set.jl:106
+                3.3 s  ClimaCore.MatrixFields.union_values field_name_set.jl:370
+                2.8 s  UnrolledUtilities.unrolled_filter UnrolledUtilities.jl:401
+            6.0 s  ClimaCore.MatrixFields.getindex field_name_dict.jl:304
+              6.0 s  ClimaCore.MatrixFields.intersect field_name_set.jl:106
+                3.3 s  ClimaCore.MatrixFields.union_values field_name_set.jl:370
+                2.7 s  UnrolledUtilities.unrolled_filter UnrolledUtilities.jl:401
+            5.0 s  ClimaCore.MatrixFields.getindex field_name_dict.jl:304
+              4.8 s  ClimaCore.MatrixFields.intersect field_name_set.jl:106
+                3.1 s  ClimaCore.MatrixFields.union_values field_name_set.jl:370
+                1.6 s  UnrolledUtilities.unrolled_filter UnrolledUtilities.jl:401
+            4.5 s  ClimaCore.MatrixFields.cartesian_product field_name_set.jl:142
+              4.4 s  ClimaCore.MatrixFields.FieldNameSet field_name_set.jl:39
+                4.4 s  UnrolledUtilities.unrolled_foreach UnrolledUtilities.jl:170
+            2.5 s  ClimaCore.MatrixFields.cartesian_product field_name_set.jl:142
+              2.4 s  ClimaCore.MatrixFields.FieldNameSet field_name_set.jl:39
+                2.4 s  UnrolledUtilities.unrolled_foreach UnrolledUtilities.jl:170
+            2.2 s  ClimaCore.MatrixFields.cartesian_product field_name_set.jl:142
+              2.2 s  ClimaCore.MatrixFields.FieldNameSet field_name_set.jl:39
+                2.2 s  UnrolledUtilities.unrolled_foreach UnrolledUtilities.jl:170
+            1.2 s  ClimaCore.MatrixFields.set_complement field_name_set.jl:132
+              1.2 s  ClimaCore.MatrixFields.setdiff field_name_set.jl:117
+            1.1 s  ClimaCore.MatrixFields.cartesian_product field_name_set.jl:142
+              1.1 s  ClimaCore.MatrixFields.FieldNameSet field_name_set.jl:39
+                1.1 s  UnrolledUtilities.unrolled_foreach UnrolledUtilities.jl:170
+
+the 25 methods with the most exclusive inference time:
+   19.81 s    1798  UnrolledUtilities._unrolled_any manually_unrolled_functions.jl:21
+    9.48 s    2210  UnrolledUtilities.output_type_for_promotion unrollable_iterator_interface.jl:34
+    7.92 s    4651  UnrolledUtilities.unrolled_map_into_tuple UnrolledUtilities.jl:153
+    7.65 s    2113  UnrolledUtilities._unrolled_map manually_unrolled_functions.jl:3
+    6.00 s    1389  Base.ntuple ntuple.jl:69
+    3.74 s     963  UnrolledUtilities.first_reduction_value UnrolledUtilities.jl:60
+    3.34 s    2100  UnrolledUtilities._unrolled_map manually_unrolled_functions.jl:10
+    3.25 s    3024  UnrolledUtilities.unrolled_any UnrolledUtilities.jl:163
+    3.14 s     963  UnrolledUtilities.unrolled_reduce UnrolledUtilities.jl:174
+    2.55 s    2214  UnrolledUtilities.unrolled_map UnrolledUtilities.jl:157
+    1.99 s     867  UnrolledUtilities._unrolled_reduce manually_unrolled_functions.jl:66
+    1.94 s   28282  Base.== tuple.jl:547
+    1.78 s   60020  UnrolledUtilities.#60 UnrolledUtilities.jl:405
+    1.68 s    1982  UnrolledUtilities.unrolled_append_into UnrolledUtilities.jl:112
+    1.58 s   28279  Base.isequal tuple.jl:533
+    1.52 s   28454  ClimaCore.MatrixFields.#46 field_name_set.jl:54
+    1.45 s   28488  Base.!= operators.jl:277
+    1.41 s   28510  Base.Fix2 operators.jl:1144
+    1.41 s     441  Base.ntuple ntuple.jl:48
+    1.33 s      33  UnrolledUtilities.unrolled_product UnrolledUtilities.jl:443
+    1.00 s    1904  UnrolledUtilities.unrolled_append UnrolledUtilities.jl:120
+    0.88 s    5224  Base.getindex tuple.jl:31
+    0.86 s   29380  ClimaCore.MatrixFields.is_overlapping_value field_name_set.jl:330
+    0.84 s    1934  UnrolledUtilities.promoted_output_type unrollable_iterator_interface.jl:133
+    0.60 s   28430  Base._eq tuple.jl:550

@@ -1,0 +1,20 @@
+[check] get_simulation 221.7 s
+[check] 30 steps 132.1 s, t = 300.0 seconds (2010-01-01T00:05:00) [counter = 300, period = 1 second, epoch = 2010-01-01T00:00:00]
+[check] jacobian_cache, split            0.0 s
+[check] jacobian_cache, unsplit          0.9 s
+[check] split solver: SplitJacobianSolver
+[check] uncoupled fields: (@name(c.ρe_src_strat), @name(c.ρe_src_tropo), @name(c.ρe_src_rad), @name(c.ρe_src_sfc), @name(c.ρe_src_sub), @name(c.ρe_src_mp), @name(c.ρe_src_new_strat), @name(c.ρe_src_new_tropo))
+[check] c.ρ                    identical, largest difference 0, largest value 1.29
+[check] c.uₕ                   identical, largest difference 0, largest value 4.8
+[check] c.ρe_tot               identical, largest difference 0, largest value 5.54e+04
+[check] c.ρq_tot               identical, largest difference 0, largest value 0.0129
+[check] c.ρe_src_strat         identical, largest difference 0, largest value 7.34e+04
+[check] c.ρe_src_tropo         identical, largest difference 0, largest value 8.85e+04
+[check] c.ρe_src_rad           identical, largest difference 0, largest value 45.5
+[check] c.ρe_src_sfc           identical, largest difference 0, largest value 571
+[check] c.ρe_src_sub           identical, largest difference 0, largest value 1.89
+[check] c.ρe_src_mp            identical, largest difference 0, largest value 0
+[check] c.ρe_src_new_strat     identical, largest difference 0, largest value 1.68
+[check] c.ρe_src_new_tropo     identical, largest difference 0, largest value 562
+[check] f.u₃                   identical
+[check] all increments identical

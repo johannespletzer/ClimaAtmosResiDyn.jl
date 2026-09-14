@@ -1,0 +1,10 @@
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/c0_column_notags.yml
+julia: 1.11.9
+get_simulation wall time, s: 124.4
+compile time Julia counts, s: 124.3
+time in inference, s: 65.1
+time outside inference while timing, s: 59.1
+inference frames: 226957
+methods inferred: 8268
+specializations inferred: 128819
+inference roots: 489

@@ -1163,7 +1163,58 @@ compiled in its own call, or an inference profile. One candidate from the
 code, not tested: at `edd44e1d`, 13 functions in `energy_source_tags.jl` and
 `process_record.jl` recurse over their tuple of tags or processes with
 `Base.tail`, and each compiles one method per remaining tuple. *Jobs `13440706`, `13440707` and `13440637` on terrabyte, from the
-worktree at `edd44e1d`; `output/p4_build_stages/`.*
+worktree at `edd44e1d`; `output/p4_build_stages/`.* E44d names the step, and
+the candidate is not it.
+
+**E44d. The growth is ClimaCore building the implicit Jacobian's solver: its
+compile-time work on the names of the state's fields grows much faster than
+their number.** Julia's own inference timer, `Core.Compiler.Timings`, measured
+where the build's inference goes, method by method. The runs used `edd44e1d`.
+
+| column          | tags | `get_simulation`, s | in inference, s | outside it, s |
+|:--------------- | ----:| -------------------:| ---------------:| -------------:|
+| EDMF (D4's)     |    0 |               731.4 |           568.7 |         158.0 |
+| EDMF            |    2 |               955.4 |           791.5 |         162.1 |
+| EDMF            |    8 |              2639.6 |          2457.3 |         177.5 |
+| 0M, login node  |    0 |               120.5 |            62.0 |          58.3 |
+| 0M, login node  |    2 |               139.6 |            75.7 |          63.6 |
+| 0M, login node  |    8 |               217.6 |           149.1 |          68.1 |
+
+  - **Inference makes the growth, code generation does not.** From 0 to 8 tags,
+    inference grows by 1,889 s on the EDMF column and 87 s on the 0M column.
+    The time outside it grows by 20 s and 10 s.
+  - **None of it is the tag code.** On both columns the 40 methods that grow
+    most make all of the growth, and all of them are in UnrolledUtilities and in
+    the field-name sets of ClimaCore's `MatrixFields`. On the EDMF column, `==`
+    on tuples of field names grows from 88,597 specializations to 412,854. No
+    tag or record function is among them, so E44c's candidate is not the cause.
+  - **It is the Jacobian's solver.** On the 0M column the inference root
+    `args_integrator`, which builds the Jacobian, grows from 15 s to 97 s. Timed
+    apart on the login node, building `FieldMatrixWithSolver` takes 14.1 s with
+    13 blocks and 89.2 s with the 8 tags' 21. Every other piece of the Jacobian
+    takes under 1.5 s. Inside it, 86 of 88 s go to `field_matrix_solver_cache`,
+    and half of that to `partition_blocks` at the top level. On the EDMF column
+    the solver is an inference root of its own, 247 s without tags and 579 s
+    with 8, and most of `args_integrator`'s 1,727 s is the same work.
+  - **Why it grows so fast.** Each level of the nested solver splits the state's
+    fields into two groups and builds the four sets of name pairs between them.
+    Building a set checks every pair against every other, at compile time, so a
+    set over `n` fields costs of order `n⁴` checks, and the intersections with
+    the matrix's keys add more. The tags are in the group the solver iterates
+    over with the velocities, so they enter every set.
+  - **Moving the tags into a group of their own does not help.** A prototype that
+    solves them first, in a `BlockLowerTriangularSolve`, took 95.2 s. ClimaCore
+    takes each group's complement from the state's name tree, so every level
+    still carries every tag. Built over the coupled fields alone, against a name
+    tree without the tags, the solver takes 13.6 s with 8 tags.
+
+This points at the fix: solve the tags and records outside ClimaCore's nested
+solver, each on its own, and build that solver over the other fields only. The
+tags couple to nothing, so this can give the same increments. E44e tests it.
+*Jobs `13441219`, `13441220` and `13441221` on terrabyte at `edd44e1d`, and the
+login node; `analysis/p4_inference_profile.jl`, `p4_profile_compare.jl`,
+`p4_jacobian_pieces.jl`, `p4_solver_profile.jl` and `p4_split_solver.jl`;
+`output/p4_inference_profile/`.*
 
 **E45. In `Float32`, C7's sphere closes as it does in `Float64`, to the last
 place the `Float32` integrals hold.** V3 is C7 with `FLOAT_TYPE: Float32`: the
@@ -1616,6 +1667,14 @@ Kept because a later reader will otherwise re-derive them.
     the column, where vertical diffusion acts. D1's twin without vertical
     diffusion has the same gross residual, 2.350e6 J m⁻² at 1 h against
     2.370e6, split the same way over height (E42b).
+  - **That the tag code's recursion over its tuple of tags makes the EDMF build
+    slow (E44c's candidate).** No tag or record function is among the methods
+    whose inference grows with the tags. All of the growth is in ClimaCore's
+    Jacobian solver (E44d).
+  - **That solving the tags in a group of their own removes that growth.** A
+    prototype that put them in the first group of a `BlockLowerTriangularSolve`
+    took as long to build, because ClimaCore takes each group's complement from
+    the state's name tree (E44d).
 
 ## 7. What is not established
 
