@@ -77,6 +77,10 @@ are the history that led there. In short:
     apart from the Jacobian's solver, validated on EDMF, E44e, now with an
     allocation check), #77 (B9, the defaults and checks) and #78 (T3, the tag
     and record code allocates nothing).
+  - **Paused on the night of 2026-09-14 by the owner, until CI finishes.**
+    Then: CI results of #72 to #80, and the owner's merges and decisions. The
+    owner removed `SeasonalSST` (#80) and set the parity rule (#79), and chose
+    to skip the binary comparison against upstream for now.
   - Plan B of the to-do list is done: T3 (#78, T10), M3 (a local branch, to open
     with C1b), C2's design (`RESTART_GUARD_DESIGN.md`), C1b checked against #72
     and #76 (the design's last section), A7 (E49), the two known defects, and a

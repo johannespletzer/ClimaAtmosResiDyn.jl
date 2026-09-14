@@ -39,6 +39,7 @@ Open pull requests:
 | #77 | B9: the offset required, the closure check and label check by default | draft; tests pass locally      | 9 pass, 26 pending         |
 | #78 | T3: the tag and record code allocates nothing                         | draft; 52 and 17 pass locally  | 1 pass, 32 pending         |
 | #79 | The parity rule in `AGENTS.md` and `docs/clima_atmos_specific.md`     | draft; docs only               | opened 2026-09-14 night    |
+| #80 | `SeasonalSST` removed entirely, by the owner's decision               | draft; loads, refuses the key  | opened 2026-09-14 night    |
 
 No check has failed on any of them. The queue is long, so most are still
 pending.
@@ -56,7 +57,8 @@ day, 2M and P3, more than one node, and the GPU.
 
 ## 0. In flight
 
-  - **CI** on all eight open PRs. Nothing runs on Slurm.
+  - **CI** on all nine open PRs. Nothing runs on Slurm.
+  - **Paused** on 2026-09-14 night, by the owner, until CI has finished.
 
 ## Decided
 
@@ -103,6 +105,11 @@ On 2026-09-14:
     for bit the same. Written into `AGENTS.md` and
     `docs/clima_atmos_specific.md` ("Fork parity with upstream"), on this
     branch and in #79 for `main`.
+  - **`SeasonalSST` is removed entirely** (#80, and on this branch in
+    `c00aca1e`). It was new physics. The transient stratospheric tracer
+    examples use `PrescribedSST` again.
+  - **The binary comparison against an upstream checkout is skipped for now**
+    (P6).
 
 ## 1. Decisions for the owner
 
@@ -270,12 +277,12 @@ With D1 (B12):
     against off. The tests compare variants with tags on: the offset on and
     off (item 7), the two transports (#72's item 9), and the split and unsplit
     solver (#76's item 6, 0M only). A test of tags on against off is test code.
-    A run against upstream `v0.42.9` sets a reproducibility reference, so it
-    needs the owner's approval. Besides `dd06318f` (decision 12), a first read
+    A run against upstream `v0.42.9` sets a reproducibility reference; the
+    owner chose on 2026-09-14 to skip it for now. Besides `dd06318f` (decision 12), a first read
     of the 14 files in `src/` where the fork rewrites upstream lines, against
     `v0.42.9`, found nothing else that acts without a diagnostic. The fork
-    also adds options upstream cannot run (`prognostic_surface: SeasonalSST`,
-    `passive_tracers`). The files it only adds to were not read for this.
+    also adds `passive_tracers`, which upstream cannot run; `SeasonalSST` was
+    removed (#80). The files it only adds to were not read for this.
   - **P5.** The explicit tendency's generic tracer loops allocate, with or
     without tags, and each tag adds to it: 22,576 bytes per call without tags
     and 58,160 with four on a 1M column (#78's description). Shared model
@@ -314,7 +321,7 @@ With D1 (B12):
     change that must never be committed), `-defaults` (#77), and `-p4`
     (detached at `edd44e1d`, for P4's diagnosis), `-t3` (#78), `-m3` (M3,
     local only, until C1b), and `-c1b-check` (a scratch merge of #76 into #72,
-    detached, removable at any time), and `-parity` (#79). Each has a copied
+    detached, removable at any time), `-parity` (#79) and `-noseasonal` (#80). Each has a copied
     `.buildkite/LocalPreferences.toml`, which `main` tracks: never commit it.
   - ~~**The known defects** in `LEVANTE_TASKS.md`.~~ Fixed on 2026-09-14: the
     validator now follows the model's `if`/`elseif` chain, so ISDAC skips the
