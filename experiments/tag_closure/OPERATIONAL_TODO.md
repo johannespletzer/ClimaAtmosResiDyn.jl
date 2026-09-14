@@ -88,7 +88,8 @@ On 2026-09-14:
     `runscripts/terrabyte_stacks.env`. Submitting MP1 again needs a new
     approval.
   - **The S items**, as proposed and accepted by the owner:
-      - now: C5; P1, whose run needs its own approval; D2, once #70 merges;
+      - now: C5 (done, E46); P1, whose run needs its own approval; D2, once
+        #70 merges;
       - with the defaults and checks (B9): U3, U4, R3, T4;
       - with C1b (B4): M3, T5;
       - before the GPU (B13): T3;
@@ -198,9 +199,15 @@ Grouped as the owner accepted on 2026-09-14.
 
 Now:
 
-  - **C5.** Where the repair's large trades sit: up to ±30,920 J/kg under tracer
-    transport and ±16,294 under the audit (E27, E35), from C6's and C10's
-    output.
+  - ~~**C5.** Where the repair's large trades sit: up to ±30,920 J/kg under
+    tracer transport and ±16,294 under the audit (E27, E35), from C6's and
+    C10's output.~~ Done on 2026-09-14 (E46, `analysis/repair_trades.jl`).
+    They sit just beyond the 20° edge where the region tags meet, one to two
+    lat-lon rows out on each side. Each tag is lifted only beyond its own edge.
+    The named regions' tanh is 2° wide, a step on a 5° grid. A follow-up for
+    the owner: a C6 twin with a mask wider than the grid spacing, to test
+    whether the step causes the trades. If it does, the width of the named
+    regions is a default, which needs approval.
   - **P1.** The tag cost on a sphere against an untagged control; known on one
     column only, 1.32× (T4). Its run needs the owner's approval.
   - **D2, stale docs,** once #70 merges. The guide's fixes 3, 4, 5, 7, 9 and 10

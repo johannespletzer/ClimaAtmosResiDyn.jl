@@ -190,7 +190,8 @@ one agent has worked this branch at once.
     ranks, job `13440823`) died in `MPI_Init`, because `srun` lacked
     `--mpi=pmix`. The runscript passes it now, and a new submission needs
     approval. The owner accepted the grouping of the S items; it is in
-    `OPERATIONAL_TODO.md`, and C5 is the first.
+    `OPERATIONAL_TODO.md`. C5 is done: the repair's trades sit just beyond the
+    20° edge where the region tags meet (E46).
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and
     `../ClimaAtmosResiDyn-audit` on #72's, both level with origin.
     `../ClimaAtmosResiDyn-p4` is detached at `edd44e1d`, with a copied

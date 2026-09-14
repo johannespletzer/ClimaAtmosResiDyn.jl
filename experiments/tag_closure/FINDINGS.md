@@ -1156,6 +1156,56 @@ in between, which V3 records at its default, `tracer`.
 `output/v3_sphere_float32/`; `analysis/reduce_run.jl`,
 `analysis/c5_process_closure.jl` and `analysis/float_type_compare.jl`.*
 
+**E46. The repair's large trades sit just beyond the edge where the two region
+tags meet, and each tag is lifted only on the other's side.** The masks of
+`tropics` and `extratropics` cross at 20° in a tanh 2° wide. The lat-lon rows lie
+5.14° apart, so on this grid the mask is a step between the rows at 18.0° and
+23.1°. The front between the tags, where the tropics tag holds half of their
+sum, stays at the edge all day: between 19.6° and 21.1° in 80% of longitudes,
+levels and hours. The table gives the mass-weighted share of the tropics
+ledger's gross at 24 h, both hemispheres together, by row counted from the edge.
+The hemispheres agree to three decimals. The last two columns give the share of
+the region tags' negative parts at 24 h in each run's twin without the repair.
+
+| rows from the edge, on each side | mass | ledger, tracer (C6) | ledger, audit (C10) | negative parts, tracer | negative parts, audit (C9) |
+|:-------------------------------- | ----:| -------------------:| -------------------:| ----------------------:| --------------------------:|
+| first: 18.0° and 23.1°           | 0.17 |               0.022 |               0.424 |                  0.000 |                      0.002 |
+| second: 12.9° and 28.3°          | 0.17 |               0.738 |               0.470 |                  0.142 |                      0.810 |
+| third: 7.7° and 33.4°            | 0.16 |               0.220 |               0.064 |                  0.796 |                      0.118 |
+| all others                       | 0.50 |               0.020 |               0.042 |                  0.062 |                      0.070 |
+
+  - **Under tracer transport the trades sit one row out from the step on each
+    side.** 96% of the gross lies in the second and third rows, and 2% in the
+    rows beside the step. The extremes, ±30,915 J kg⁻¹, sit on the second rows
+    at the top level, 26.9 km, where the air is thin.
+  - **Under the audit they sit closer to the step.** 42% lies in the rows
+    beside it and 47% in the next. The extremes, ±16,294 J kg⁻¹, sit at 11 km,
+    at 28.3° and 18.0°.
+  - **Each tag goes negative only beyond its own edge.** The repair lifts the
+    tropics tag outside the tropics, in 100% of its gross under tracer
+    transport and 99.5% under the audit, and the extratropics tag inside the
+    tropics, in 100% and 99.9%. At 24 h the two ledgers cancel in every cell
+    to 7.3e-10 J kg⁻¹ or better, so the partition repair trades only between
+    them.
+  - **Without the repair the negative parts lie one row further out** than the
+    repair's trades, in both pairs. The ledger adds up where the repair acted
+    all day, and the negative parts are a snapshot at 24 h.
+  - **By height, both follow the mass, shifted upward.** Above 11 km lie 40% of
+    each ledger's gross against 30% of the mass. The negative parts of the twins
+    have the same shares by level to 0.005.
+  - **In time the two transports differ.** Under tracer transport 14% of the
+    day's gross is traded in the first hour and 56% by 6 h. Under the audit it
+    grows by 3% to 5% an hour after 1.7% in the first, and its share beside the
+    step rises from 4% at 1 h to 43% by 12 h.
+
+This places the undershoots E19 argued for: at the region step, from its
+neighbouring rows out, on the far side of each tag's edge. Which operator makes
+them is not separated. A mask wider than the grid spacing, in a C6 twin, would
+test whether the step is the cause.
+
+*C6, jobs `13385452` and `13385453`; C9 and C10, jobs `13402393` and
+`13403083`; `analysis/repair_trades.jl`; `output/repair_trades/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -1534,9 +1584,11 @@ Kept because a later reader will otherwise re-derive them.
   - ~~What the column's last per-process gap is (E26).~~ The tags' per-tag
     transport. Moved as enthalpy, the same column's form A closes to
     6.6e-6 J kg⁻¹ (E34).
-  - **Where the repair's large ledgers sit on the sphere (E27),** and whether
+  - ~~**Where the repair's large ledgers sit on the sphere (E27),** and whether
     that is where the two region tags meet, as the undershoots of E19 would
-    place them.
+    place them.~~ Just beyond the edge where they meet, one to two rows out on
+    each side, with each tag lifted only beyond its own edge (E46). Whether a
+    wider mask removes them is open.
   - ~~`Float32` on a sphere (W4).~~ Settled for a day on C7's sphere: it
     closes as `Float64` does, to rounding (E45). Longer runs, the audit, 1M
     and a GPU in `Float32` are still open.

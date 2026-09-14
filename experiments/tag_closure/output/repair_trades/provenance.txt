@@ -1,0 +1,7 @@
+run: repair_trades
+kind: analysis of existing output on the terrabyte login node, so this file is written by hand
+script: experiments/tag_closure/analysis/repair_trades.jl
+commit: 111c0833abdf745802fa2163cd7fb8b370c1fd67 plus the uncommitted script, committed together with this directory
+data: the hourly NetCDF of c6_sphere_repair, c6_sphere_no_repair, c10_sphere_enthalpy_repair and c9_sphere_enthalpy, under $SCRATCH/tag_closure/output/<run>/output_active/
+approximation: mass weights take a hydrostatic density from ta with a surface pressure of 1e5 Pa, on the remapped lat-lon grid
+date: 2026-09-14T13:12:34+02:00
