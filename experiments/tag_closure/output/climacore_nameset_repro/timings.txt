@@ -1,0 +1,5 @@
+tracers 0  blocks 7  FieldMatrix 1.3 s  FieldMatrixWithSolver 3.1 s  again 0.0 s
+tracers 4  blocks 11  FieldMatrix 2.0 s  FieldMatrixWithSolver 10.4 s  again 0.0 s
+tracers 8  blocks 15  FieldMatrix 2.5 s  FieldMatrixWithSolver 28.1 s  again 0.0 s
+tracers 12  blocks 19  FieldMatrix 3.0 s  FieldMatrixWithSolver 67.3 s  again 0.0 s
+tracers 16  blocks 23  FieldMatrix 3.8 s  FieldMatrixWithSolver 170.3 s  again 0.0 s

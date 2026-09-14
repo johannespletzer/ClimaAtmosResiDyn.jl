@@ -524,3 +524,91 @@ the `.buildkite` environment and the terrabyte CPU depot. The scripts are
     P3 sedimentation is fixed.
  7. **The inert labels:** make the label warnings see the microphysics model
     (M2).
+
+## Checked against #72 and #76, for C1b
+
+Plan item B4 of `OPERATIONAL_TODO.md`, on 2026-09-14. C1b is B1, B2 and B4,
+under both transports, in the implicit tendency, approved to be built once #72
+and #76 merge. No code is written. This checks the design against the tree C1b
+will start from: #72 at `f3f48e97` with #76 at `7d190db1` merged into it, in a
+scratch worktree, `../ClimaAtmosResiDyn-c1b-check`. Line numbers below are in
+that tree.
+
+### The two pull requests merge cleanly
+
+`git merge --no-commit` of #76 into #72 reports no conflict. Both touch
+`test/energy_source_tags_integration.jl`, `test/energy_source_tags_tests.jl` and
+`NEWS.md`, and git merges each.
+
+### What B builds on is where the design says
+
+  - **The parent's SGS fluxes** are unchanged since `17badbe7`:
+    `edmfx_sgs_flux.jl` adds the energy flux at `:77` and `:90`, the mass flux
+    at `:107` and `:122`, and loops over the updraft's tracers at `:134-171`.
+    Each flux goes through `vertical_transport`, which returns the divergence,
+    not the face flux. So B1 rebuilds the face flux with `_face_value_flux`
+    (`energy_source_tags.jl:961-967`), as the design says.
+  - **B1's place.** `edmfx_sgs_mass_flux_tendency!` is called once, in the
+    implicit tendency (`implicit_tendency.jl:118`), and nowhere in the explicit
+    one. B1 goes right after it.
+  - **B1's shares** are the audit's: `_energy_source_share_field`
+    (`energy_source_tags.jl:919`), which #72's three kernels already call
+    (`:1050`, `:1121`, `:1218`).
+  - **B1's face scratch field** goes into `_energy_source_scratch`
+    (`energy_source_tags.jl:239-248`), which is merged into `p.scratch`.
+  - **B2's kernel** takes a cell value today: `sediment_energy_source_tags!(Yₜ,
+    Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ)` (`energy_source_tags.jl:827`), and forms the
+    face flux with the grid mean's `ᶠρ` inside. The corrections use their own
+    face densities, `ᶠinterp(ᶜρʲ J)/J` and `ᶠinterp(ᶜρ⁰ J)/J`
+    (`water_advection.jl:168-184`). So B2 changes the kernel to take a face flux
+    and keeps a method with today's arguments, so that without EDMF the result
+    is bit for bit today's.
+  - **B4's loop** is `edmfx_sgs_flux.jl:390-409`, with the unguarded
+    `get_field` at `:406`. The horizontal path's guard is at `:556`.
+  - **The refusal** to narrow afterwards is
+    `check_energy_source_tagging_supported` (`tracer_config.jl:914-933`).
+
+### What the split solver needs from C1b
+
+#76 solves a tag or a record apart from the nested solver when its only
+Jacobian block is its own diagonal (`uncoupled_jacobian_names`,
+`manual_sparse_jacobian.jl:755-770`). That is what keeps the EDMF build within
+two hours (E44e).
+
+  - **Today every tag and record qualifies under EDMF.** A tag gets a diagonal
+    block from implicit diffusion, as a passive tracer
+    (`diffusion_jacobian_blocks`, the `passive_names` diagonal), and the fallback
+    identity otherwise. The SGS blocks take `microphysics_tracer_names` and
+    `advected_sgs_scalar_names` (`sgs_advection_jacobian_blocks` at `:358`,
+    `sgs_massflux_jacobian_blocks` at `:395`), which hold no tag.
+  - **C1b adds no block,** by design ("Why no Jacobian block"). So nothing in
+    the split changes.
+  - **The risk is silent.** A cross block for a tag, say `(tag, f.sgsʲs.u₃)`,
+    would move that tag back into the nested solver without an error, and E44's
+    build time would return. So T6 asserts that `split_cache.solver.uncoupled`
+    names every tag and record on the EDMF column, as item 6 of #76 does on the
+    0-moment column. It needs no unsplit build.
+  - **Not yet shown:** that the split and unsplit solvers give identical
+    increments on the EDMF column. E44e showed it on the 0-moment column, with
+    and without implicit diffusion. The EDMF solver nests one level more
+    (`jacobian_solver_algorithm`, the `PrognosticEDMFX` branch), and the tags
+    still fall into the innermost block diagonal solve, so they should match.
+    One login-node script before C1b's validation settles it. Not in CI: the
+    unsplit EDMF build takes about 16 minutes with two tags (E44d).
+
+### Order of the work
+
+ 1. B4, the guard, with a unit test on a state with an updraft and a tag.
+ 2. B2's kernel on face fluxes, with a test that the column without EDMF is bit
+    for bit today's.
+ 3. B1 in the implicit tendency, and B2 under EDMF.
+ 4. T6, the EDMF integration item: the partition's tendencies from the SGS mass
+    flux and from sedimentation match the parent's to 100 eps, the model's
+    state is the same with and without tags, and the uncoupled list above.
+ 5. T5, the cold column (with M3, written and committed locally on
+    `claude/energy-source-tag-species-lists`).
+ 6. Narrow the refusal to `updraft_number` > 1.
+ 7. The validation, approved for up to 5 jobs: the D4 pair, D5, and D4 with
+    `edmfx_vertical_diffusion: true`. That last config does not exist yet:
+    `d4_column_edmf.yml` and `d5_column_edmf_ice.yml` both set it `false`. It
+    is `d4_column_edmf.yml` with the key flipped, validated before submission.

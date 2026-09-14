@@ -1410,6 +1410,55 @@ is the owner's decision. *Job `13441633` on terrabyte at `f399b9f8`;
 `output/c6_sphere_wide_mask/`; `analysis/wide_mask_trades.jl`,
 `analysis/same_atmosphere.jl`, `analysis/c5_process_closure.jl`.*
 
+**E49. Summed over levels and over columns, form A's gap shows which way a
+transport error moved. A process that no tag follows, and the repair, keep most
+of their sum.** A7. `c5_process_closure.jl` now writes `gap_cancellation.csv`:
+for each sample, the absolute value of the gap's mass-weighted sums, added up,
+over its weighted gross. Summed within each column first, over levels; within
+each level first, over columns; and over everything. One means nothing cancels.
+
+| run, at 24 h                         | what makes the gap                  | kept over levels | kept over columns | kept overall | ∫ gap / ∫ new energy |
+|:------------------------------------ |:----------------------------------- | ----------------:| -----------------:| ------------:| --------------------:|
+| C7, sphere, tracer                   | the per-tag limiter (E37)            |            0.037 |              0.99 |        0.035 |               5.2e-5 |
+| C9, sphere, audit                    | the loss clamp, horizontally (E36)   |             0.88 |             0.073 |        0.041 |               4.7e-5 |
+| C10, sphere, audit and repair        | the repair's created energy (E38)    |             0.92 |              0.93 |         0.23 |               6.0e-4 |
+| C6, sphere, no repair                | the rain-out has no tag (E28)        |             0.47 |              0.99 |         0.46 |              1.26e-3 |
+| C6, sphere, repair                   | the same, and the repair             |             0.62 |              0.70 |         0.42 |               3.5e-3 |
+| C5, column, 0M                       | subsidence has no tag (E20)          |             1.00 |                 — |         1.00 |                 0.26 |
+| C8, column, 1M, tracer               | not separated (E33)                 |            0.011 |                 — |        0.011 |              −1.5e-5 |
+| C9, column, audit                    | rounding (E34)                      |            0.066 |                 — |        0.066 |              2.6e-12 |
+
+  - **It reproduces the earlier numbers.** C7's 0.037 over levels is E37's, C9's
+    0.88 is E36's, and the four sphere integrals are E38's. The regenerated
+    `process_closure.csv` is identical to the committed one for all eight runs.
+  - **A transport error cancels along the way it moved.** C7's limiter error
+    moves vertically: it cancels within columns, 0.0014 to 0.037 over the day,
+    and along levels hardly at all, 0.945 to 0.995. C9's audit error is the
+    reverse: 0.88 to 0.95 over levels, 0.022 to 0.090 over columns. Summed over
+    everything, C7 keeps at most 0.035 and C9 at most 0.087, both 0.04 at
+    24 h.
+  - **C8's gap, which E33 left unseparated, cancels within its column,** to
+    0.011 at 24 h and at most 0.016 over the day. So it behaves as a transport
+    error, not as a missing process. Which transport term makes it is not
+    shown.
+  - **A process no tag follows keeps its sum.** On C5's column the gap keeps
+    at least 0.9999 of it at every hour. On C6's sphere it keeps 0.97 at
+    1 h and 0.46 at 24 h. The fall fits E38, where the limiter's part, which
+    cancels, grows as the square of time and the missing process's part levels
+    off. That reading is inferred, not separated here.
+  - **So does the repair.** C10 keeps 0.92 to 0.98 over levels and 0.93 to 0.97
+    over columns all day. Overall it falls from 0.85 at 1 h to 0.23 at 24 h.
+  - **Neither fraction names the cause alone.** At 24 h C10's repair keeps 0.23
+    overall and C6's missing rain-out 0.46. What separates them is the repair
+    ledgers, and a check of labels (E38, A2). The fractions add the direction of
+    a transport error, and they say when a gap is not transport at all.
+
+On the sphere the weights take a hydrostatic density from `ta` with a surface
+pressure of 1e5 Pa, as in E38, so they are approximate. On a column they are the
+model's `rhoa` times the level spacing. Every sphere run's largest pointwise gap
+is at 24 h. *Login node, from the runs' hourly NetCDF on scratch;
+`analysis/c5_process_closure.jl`; `output/a7_gap_cancellation/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -1592,6 +1641,43 @@ same node, beside MP1.
 *P1, jobs `13440989` and `13440990` on terrabyte at `c2842ba6`;
 `output/p1_sphere_tags/` and `output/p1_sphere_notags/`,
 `analysis/same_atmosphere.jl`.*
+
+**T10. The tag and record code allocates nothing. The explicit tendency
+allocates without tags, and each tag adds to it.** T3 measured `@allocated` on
+a second call, on the 1M DYCOMS column in `Float64`, with an offset, 4 tags and
+3 records, against the same column with none.
+
+| call, bytes per call                        | tags and records | none   |
+|:------------------------------------------- | ----------------:| ------:|
+| an explicit bracket, radiation or surface   |                0 |      — |
+| the implicit microphysics bracket           |                0 |      — |
+| `energy_source_share_norm!`                 |                0 |      — |
+| `repair_energy_source_tags!`                |                0 |      — |
+| `vertical_advection_of_water_tendency!`     |                0 |      0 |
+| `implicit_tendency!`                        |                0 |      0 |
+| `remaining_tendency!`                       |           58,160 | 22,576 |
+| `constrain_state!`                          |               32 |     32 |
+
+  - **Where the explicit tendency allocates.** `Profile.Allocs` puts every
+    allocation in shared loops over the tracers:
+    `horizontal_tracer_advection_tendency!` (`advection.jl:122-123`),
+    `explicit_vertical_advection_tendency!` (`advection.jl:249-253`),
+    `surface_flux_tendency!` (`surface_flux.jl:126-136`), and
+    `foreach_gs_tracer` (`variable_manipulations.jl:238`). None is in tag or
+    record code. Records are not tracers, so the 35,584 bytes the tags add come
+    from the 4 tags, about 8.9 kB each.
+  - **#76's split solver** allocates nothing, in its update and its solve. The
+    unsplit ClimaCore solve allocates 48 bytes per call, on the 0M column with 3
+    tags.
+  - The two zero-allocation sets are tests now: #78 on `main`'s integration
+    files, and a check in #76's item 6. The diagnostics' compute functions,
+    which run at output time, allocate 128 to 224 bytes each and are not
+    checked.
+  - CPU, Julia 1.11.9, without CI's `--check-bounds=yes` and coverage.
+
+*Login node at `3b4b6056` and `7d190db1`; `analysis/t3_allocations.jl`,
+`analysis/t3_allocation_profile.jl` and
+`analysis/t3_split_solver_allocations.jl`.*
 
 ## 5. Method
 

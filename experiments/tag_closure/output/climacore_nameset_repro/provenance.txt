@@ -1,0 +1,11 @@
+analysis: the ClimaCore-only reproducer for CLIMACORE_ISSUE_DRAFT.md
+machine: terrabyte login node, shared with other work
+script: experiments/tag_closure/analysis/climacore_nameset_repro.jl, at the commit that adds this directory
+command: julia +1.11 --project=.buildkite experiments/tag_closure/analysis/climacore_nameset_repro.jl <n>, one fresh process per n, from this repository (the model is not loaded)
+climacore: 0.16.0
+unrolledutilities: 0.1.10
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+date: 2026-09-14
+files: timings.txt, one line per n. Each time includes the compile, since each process builds once.
+note: a first run of an earlier copy of the script, from ../ClimaAtmosResiDyn-t3 with the same ClimaCore (git-tree f11cb3c3), the same state and solver, gave 3.2, 10.8, 27.7 and 169.8 s for n = 0, 4, 8 and 16.
