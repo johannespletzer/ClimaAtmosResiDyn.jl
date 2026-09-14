@@ -457,8 +457,10 @@ Then the phase script, `phase_a.jl` or `phase_c.jl` as appropriate.
 
 ## Known defects, reported and not fixed
 
-  - This directory's `.gitignore` says `*.out` is "deliberately still ignored",
-    while thirteen `.out` files sit committed under `output/`.
+  - ~~This directory's `.gitignore` says `*.out` is "deliberately still
+    ignored", while thirteen `.out` files sit committed under `output/`.~~
+    Fixed on 2026-09-14: each `.out` is trimmed into its directory's `run.log`
+    and no longer committed.
   - `validate_configs.py`'s `implicit_diffusion` rule is stricter than the
     model. `model_getters.jl:1068` puts that assert in an `elseif` chain after
     the ISDAC branch, so an ISDAC config would pass the model and fail the

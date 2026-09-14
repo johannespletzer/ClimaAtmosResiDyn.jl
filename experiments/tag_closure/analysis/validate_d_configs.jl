@@ -18,6 +18,16 @@ import ClimaAtmos as CA
 
 dir = joinpath(@__DIR__, "..", "configs")
 is_d_config(path) = endswith(path, ".yml") && occursin(r"^d\d_", basename(path))
+# Runs that deliberately carry no tags, as in `validate_configs.py`'s `CONTROLS`.
+# A control configures no tag family and lists no diagnostics.
+const CONTROLS = Set(["d4_column_edmf_notags"])
+# EDMF runs with tags. Since C1a (#70) the model refuses `prognostic_edmfx` with
+# energy source tags, so these parse only on code from before it, or once C1b
+# shares the sub-grid fluxes. Here the refusal is the expected outcome, and a
+# config in this set that parses is flagged, so that the set gets updated.
+const REFUSED_BY_C1A =
+    Set(["d4_column_edmf", "d4_column_edmf_enthalpy", "d5_column_edmf_ice"])
+const C1A_REFUSAL = "cannot be used with `turbconv: prognostic_edmfx`"
 defaults = CA.default_config_dict()
 
 function duplicate_keys(path)
@@ -88,8 +98,14 @@ function check(path)
     end
     tags = get(config, "energy_source_tags", nothing)
     block = get(config, "energy_source_closure_check", nothing)
-    (isnothing(tags) || isnothing(block)) && push!(problems, "tags and check together")
     listed = shorts(config)
+    if name in CONTROLS
+        (isnothing(tags) && isnothing(block)) ||
+            push!(problems, "a control must configure no tag family")
+        isempty(listed) || push!(problems, "a control should list no diagnostics")
+        return name, problems
+    end
+    (isnothing(tags) || isnothing(block)) && push!(problems, "tags and check together")
     if !isnothing(tags) && !isnothing(block)
         any(is_region_tag, tags) || push!(problems, "no pure region tag")
         haskey(block, "tolerance") && push!(problems, "tolerance set")
@@ -132,12 +148,28 @@ for path in sort(filter(is_d_config, readdir(dir; join = true)))
         )
         atmos = CA.get_atmos(config, params; setup_type = setup)
         model = tagging.energy_source_tagging_model
-        println("     $name: $(length(model.tags)) tags, offset $(model.offset), ",
-            "repair $(model.repair), $(nameof(typeof(model.transport))), ",
-            "$(nameof(typeof(atmos.microphysics_model))), ",
-            "$(nameof(typeof(atmos.turbconv_model)))")
+        if isnothing(model)
+            println("     $name: no tags (control), ",
+                "$(nameof(typeof(atmos.microphysics_model))), ",
+                "$(nameof(typeof(atmos.turbconv_model)))")
+        else
+            println("     $name: $(length(model.tags)) tags, offset $(model.offset), ",
+                "repair $(model.repair), $(nameof(typeof(model.transport))), ",
+                "$(nameof(typeof(atmos.microphysics_model))), ",
+                "$(nameof(typeof(atmos.turbconv_model)))")
+        end
+        name in REFUSED_BY_C1A &&
+            push!(
+                problems,
+                "parsed, but the C1a refusal was expected; update REFUSED_BY_C1A",
+            )
     catch err
-        push!(problems, "model parsing failed: " * first(sprint(showerror, err), 400))
+        message = sprint(showerror, err)
+        if name in REFUSED_BY_C1A && occursin(C1A_REFUSAL, message)
+            println("     $name: refused, as C1a intends until C1b")
+        else
+            push!(problems, "model parsing failed: " * first(message, 400))
+        end
     end
     if isempty(problems)
         println("ok   $name")

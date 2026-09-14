@@ -250,15 +250,18 @@ On 2026-09-14:
     the commit; and flush the log, so a killed job keeps it.~~ Done in
     `297eda4c`, with MPI ranks through `srun`. The tcsh runscripts are not
     changed.
-  - **`analysis/validate_d_configs.jl`** filters `^d\d_`, so it now includes the
-    control `d4_column_edmf_notags` and fails it. Skip controls, as
-    `validate_configs.py` does.
-  - **Run `analysis/phase_c.jl`** over the committed output, so `summary_c.csv`
-    and the plots include the D and P runs.
-  - **The known defects** in `LEVANTE_TASKS.md`: the `.gitignore` says `*.out`
-    is ignored while `.out` files sit committed under `output/`; the
-    validator's `implicit_diffusion` rule is stricter than the model for ISDAC;
-    `output/c0_sphere_deep/` has no provenance, so every phase C pass warns.
+  - ~~**`analysis/validate_d_configs.jl`** failed the control.~~ Done on
+    2026-09-14: it checks controls as controls, and expects the C1a refusal
+    for the EDMF runs with tags (D4, its audit twin, D5). All eight D configs
+    pass.
+  - ~~**Run `analysis/phase_c.jl`**~~, done on 2026-09-14: `summary_c.csv` and
+    the plots now include C5 to C10. It reads only runs named `c*`, so the D,
+    P4, V3 and MP1 runs are not in it; FINDINGS reports them.
+  - **The known defects** in `LEVANTE_TASKS.md`: ~~the committed `.out` files~~
+    (fixed on 2026-09-14: each is trimmed into its directory's `run.log` and no
+    longer committed); the validator's `implicit_diffusion` rule is stricter
+    than the model for ISDAC; `output/c0_sphere_deep/` has no provenance, so
+    every phase C pass warns.
   - **Remove the worktrees** `../ClimaAtmosResiDyn-repair`, `-audit` and `-p4`
     once the stack is merged and P4 is done.
 

@@ -1,0 +1,24 @@
+# run.log for a2_first_order_dt2p5, trimmed from its SLURM .out file(s) on Levante: the runscript's header and exit lines, without blank lines and without DKRZ's job summary box. The .err is committed beside it. The .out is no longer committed, as .gitignore intends.
+# From tag-closure-a-27360830.out:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    a2_first_order_dt2p5
+Configuration:   /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/a2_first_order_dt2p5.yml
+SLURM job:       27360830
+Partition:       shared
+Nodes:           l40007
+CPUs per task:   35
+Repository:      /home/b/b309159/git/ClimaAtmosResiDyn.jl
+Commit:          66d6dedcdbfab7447bbe96a3544c6d4f7e507763 (from git)
+Julia:           /home/b/b309159/.juliaup/bin/julia +1.11
+Project:         /home/b/b309159/git/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /home/b/b309159/git/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Output base:     /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a2_first_order_dt2p5
+Start time:      2026-09-10T00:44:35+02:00
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) gcc/11.2.0-gcc-11.2.0   2) openmpi/4.1.2-gcc-11.2.0  
+Wrote /home/b/b309159/git/ClimaAtmosResiDyn.jl/output/a2_first_order_dt2p5/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-10T00:49:40+02:00
