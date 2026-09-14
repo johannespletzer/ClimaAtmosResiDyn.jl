@@ -128,17 +128,20 @@ On 2026-09-14:
 
 ## 0. In flight
 
-  - **P4, the fix.** The inference profiles (jobs `13441219` to `13441221`, and
-    the 0M column on the login node) put all of the build's growth with the
-    tags in ClimaCore's compile-time name-set operations inside the Jacobian's
-    nested solver, `FieldMatrixWithSolver`. The fix, `49646b24` on
-    `claude/energy-source-tag-build-time` (not pushed yet), solves the tags and
-    records apart from the rest (`SplitJacobianSolver`). On the 0M column with 8
-    tags its increments are identical to the unsplit solver's. Checks running:
-    the same with implicit diffusion on the login node, and the EDMF column with
-    8 tags and with 8 tags and 5 records, jobs `13441507` and `13441508`, from
-    the worktree `../ClimaAtmosResiDyn-buildtime-edmf` with the EDMF refusal off
-    locally. 5 of the 8 approved P4 jobs are used.
+  - **P4, the fix.** E44d names the cause: ClimaCore's compile-time name-set
+    work when it builds the Jacobian's nested solver. The fix, on
+    `claude/energy-source-tag-build-time` (`a55d15ce`, not pushed yet), solves
+    the tags and records apart from the rest (`SplitJacobianSolver`), built
+    through `invokelatest` so the unsplit solver is not compiled too. On the 0M
+    column with 8 tags its increments are identical to the unsplit solver's,
+    with and without implicit diffusion, and the Jacobian cache builds in 20.8 s
+    against 97.4 s. Running: its tests on the login node, and the EDMF column
+    with 8 tags and with 8 tags and 5 records, jobs `13441606` and `13441607`,
+    from `../ClimaAtmosResiDyn-buildtime-edmf` with the EDMF refusal off
+    locally. Jobs `13441507` and `13441508` ran the first commit and were
+    cancelled after 25 minutes, since it still compiled the unsplit solver. 7 of
+    the 8 approved P4 jobs are used.
+  - **The C6 twin with a 10° mask** is job `13441633`, as approved.
   - **B9** is being written in `../ClimaAtmosResiDyn-defaults` on
     `claude/energy-source-tag-defaults`: U1, U2 with R1, A2, U3, U4, R3 and T4,
     not yet tested or committed.
