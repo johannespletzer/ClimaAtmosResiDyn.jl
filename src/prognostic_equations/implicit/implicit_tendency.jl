@@ -324,10 +324,11 @@ function implicit_vertical_advection_tendency!(Yₜ, Y, p, t)
     #
     # The process records are bracketed here too, for the same reason: a record
     # says what sedimentation did to each cell, which needs no share. The
-    # energy source tags are not. Sedimentation moves energy from level to level
-    # with the falling water, and a bracket would count what arrives in a cell
-    # as new energy that entered through precipitation. For a tag that says
-    # where energy came from, that is transport rather than a source.
+    # energy source tags are not bracketed. Sedimentation moves energy from
+    # level to level with the falling water, and a bracket would count what
+    # arrives in a cell as new energy. So `vertical_advection_of_water_tendency!`
+    # moves the tags with the water instead, each by its share of what the
+    # losing cell holds (`sediment_energy_source_tags!`).
     open_ledger_event!(p.parent_budget, Yₜ, :precipitation)
     snapshot_tagged_ρe_tot!(p, Yₜ)
     snapshot_process_record!(p, Yₜ, :precipitation)
