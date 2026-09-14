@@ -37,6 +37,12 @@ preparing the command.
 **Ask before pushing anywhere but this branch.** PR #65 in particular belongs to
 the #64 fix, and resolving its conflict means pushing to its branch.
 
+**Simulation results stay binary identical to upstream ClimaAtmos.** The
+fork develops diagnostics only, so a run upstream can make gives bit-for-bit
+the same results here, and a diagnostic switched on changes no model field.
+The rule and what follows from it are in the repository's `AGENTS.md` and in
+`docs/clima_atmos_specific.md`, "Fork parity with upstream".
+
 **What needs approval before it is written, not after:** model code, a default,
 a tolerance, an energy reference, a reproducibility reference. The twin
 follow-up needs a small change to `run_c1_twin.jl` or a new configuration, and

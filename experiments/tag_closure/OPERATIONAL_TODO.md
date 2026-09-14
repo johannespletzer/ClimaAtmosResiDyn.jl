@@ -96,6 +96,11 @@ On 2026-09-14:
         validation (up to 5 jobs: the D4 pair, D4 with
         `edmfx_vertical_diffusion: true`, D5).
       - **Pushes:** the main session's branches and T2's, as draft PRs.
+  - **Parity with upstream, a boundary condition.** Simulation results from
+    ClimaAtmos and from this fork must be binary identical: the fork develops
+    a diagnostic only. With a diagnostic on, every field upstream has stays bit
+    for bit the same. Written into `AGENTS.md` and
+    `docs/clima_atmos_specific.md` ("Fork parity with upstream").
 
 ## 1. Decisions for the owner
 
@@ -133,6 +138,16 @@ On 2026-09-14:
     review before the code: the keys, where they are read, the error texts,
     and four questions (the records, #77's spin-up reference, an override, and
     tags from a restart without them).
+12. **The one known break of parity.** `dd06318f` (2026-08-16) fixed an
+    upstream defect in `limiters_func!`: the water-borrowing guard compared
+    `@name(ρq_tot)` with the `Symbol`s of `vertical_water_borrowing_species`,
+    so with an explicit species list upstream skips
+    `enforce_mass_energy_consistency!`. The fork runs it, so `ρ` and `ρe_tot`
+    differ from upstream in that configuration (upstream `v0.42.9` still has
+    `@name(ρq_tot)`, `limited_tendencies.jl:97`, `:113`). No shipped config
+    sets the list. Options: revert it here and fix it upstream, so that it
+    comes back with the next merge, as the rule says; or keep it as a named
+    exception until upstream has the fix. Read from the diff, not run.
 
 ## 2. Blocking operation (B), in dependency order
 
@@ -248,6 +263,17 @@ With D1 (B12):
     negative, and where a member exceeds its group's sum.
   - ~~**A7.**~~ Done (E49): a transport error cancels along the direction it
     moved, and a process no tag follows, or the repair, keeps its sum.
+  - **Parity checks (P6).** Nothing yet compares the fork with an upstream
+    checkout, and no test compares every model field with a diagnostic on
+    against off. The tests compare variants with tags on: the offset on and
+    off (item 7), the two transports (#72's item 9), and the split and unsplit
+    solver (#76's item 6, 0M only). A test of tags on against off is test code.
+    A run against upstream `v0.42.9` sets a reproducibility reference, so it
+    needs the owner's approval. Besides `dd06318f` (decision 12), a first read
+    of the 14 files in `src/` where the fork rewrites upstream lines, against
+    `v0.42.9`, found nothing else that acts without a diagnostic. The fork
+    also adds options upstream cannot run (`prognostic_surface: SeasonalSST`,
+    `passive_tracers`). The files it only adds to were not read for this.
   - **P5.** The explicit tendency's generic tracer loops allocate, with or
     without tags, and each tag adds to it: 22,576 bytes per call without tags
     and 58,160 with four on a 1M column (#78's description). Shared model
@@ -323,7 +349,8 @@ With D1 (B12):
  4. **The named regions' width** (decision 10, E48).
  5. **The other decisions of section 1:** ClimaCore upstream (3), A4 (4), V1's
     scope (5), the design's decisions 5 and 6 (6), Phase B (7), the runs not
-    yet approved (8), moving the guide into the docs (9), C2's design (11).
+    yet approved (8), moving the guide into the docs (9), C2's design (11),
+    the parity break (12).
 
 ### B. Can be done now, without a new approval
 

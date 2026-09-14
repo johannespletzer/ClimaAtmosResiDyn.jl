@@ -1840,6 +1840,13 @@ Kept because a later reader will otherwise re-derive them.
     prototype that put them in the first group of a `BlockLowerTriangularSolve`
     took as long to build, because ClimaCore takes each group's complement from
     the state's name tree (E44d).
+  - **That `dd06318f`'s fixes "change no simulation results".** Its commit
+    message says so. One of them makes `limiters_func!` compare `:ρq_tot`
+    instead of `@name(ρq_tot)` with `vertical_water_borrowing_species`. With an
+    explicit species list, the fork now runs `enforce_mass_energy_consistency!`,
+    which writes `ρ` and `ρe_tot`, and upstream `v0.42.9` skips it. So in that
+    configuration the fork's atmosphere differs from upstream's. Read from the
+    code on 2026-09-14, not run (to-do list, decision 12).
 
 ## 7. What is not established
 

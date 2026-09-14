@@ -17,6 +17,14 @@ Always read the ClimaAtmos-specific guide before working in this repository:
 
 ## Local norms
 
+- **Simulation results must stay binary identical to upstream ClimaAtmos.**
+  This fork develops diagnostics only. A configuration that upstream
+  ClimaAtmos can run must give bit-for-bit the same results here as at the
+  upstream commit last merged. With a diagnostic switched on, every field
+  upstream has must still be bit for bit the same. Only the diagnostic's own
+  fields and output may differ. A change that moves model output is a defect
+  here, not a new reference. See
+  [Fork parity with upstream](docs/clima_atmos_specific.md#fork-parity-with-upstream).
 - Prefer Julia 1.11.x for local work. CI also runs 1.10 and 1.11.
 - For runtime validation, prefer `julia +1.11 --project=.buildkite .buildkite/ci_driver.jl ...`.
 - That command needs a prepared environment on a cluster, and it fails in
