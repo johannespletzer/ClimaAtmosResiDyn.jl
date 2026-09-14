@@ -52,7 +52,13 @@ FAMILIES = {
 }
 
 # Runs that deliberately carry no tags: the per-phase timing controls.
-CONTROLS = {"a1_dt10_notags", "b1_notags", "c0_column_notags", "d4_column_edmf_notags"}
+CONTROLS = {
+    "a1_dt10_notags",
+    "b1_notags",
+    "c0_column_notags",
+    "d4_column_edmf_notags",
+    "p1_sphere_notags",
+}
 # P4's split test builds D4's EDMF column with only part of what D4 adds, to
 # find what makes its build slow (FINDINGS E44). These runs carry tags without a
 # closure check, write nothing, and are read for their build time alone.
@@ -87,6 +93,7 @@ AUDIT_REQUIRED = {
     "c10_sphere_enthalpy_repair",
     "v3_sphere_float32",
     "mp1_sphere_4ranks",
+    "p1_sphere_tags",
     "d1_column_1m_ice",
     "d1_column_1m_ice_no_vdiff",
     "d2_column_2m_ice",
@@ -117,6 +124,7 @@ STATE_CHECK = {
     "c10_sphere_enthalpy_repair",
     "v3_sphere_float32",
     "mp1_sphere_4ranks",
+    "p1_sphere_tags",
     "d1_column_1m_ice",
     "d1_column_1m_ice_no_vdiff",
     "d2_column_2m_ice",

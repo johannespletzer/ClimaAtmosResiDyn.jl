@@ -1,0 +1,76 @@
+# P1, the tag cost on a sphere: the tagged half. `c7_sphere_mp` unchanged, under
+# its own name so that it does not write over C7's output (OPERATIONAL_TODO.md,
+# P1). It is submitted together with `p1_sphere_notags`, so that the two run at
+# the same time on the same node type, as C1's pair did (FINDINGS T6).
+#
+# The tag cost is known on one column only, 1.32x (T4). The pair measures it on
+# a CPU sphere: 7 tags, 3 records, the audited closure check and 12 fields
+# written hourly, against none of them. As in T4, the ratio of the `solve!` wall
+# times is the cost of the feature as used, check and output included. T2 puts
+# the run-to-run scatter at about 2%. Production, a GPU sphere with EDMF and 1M,
+# is not what this measures.
+#
+# `ta` should match C7's to the last bit, since the model changes since C7 do
+# not act on this path (see `v3_sphere_float32.yml`). It is written here for
+# that, and not in the control, as T4's control wrote nothing.
+job_id: "p1_sphere_tags"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: false
+
+# C5's sphere, unchanged.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+rad: "gray"
+dt_rad: "1hours"
+
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+  - name: mp
+    source: microphysics
+  - name: new_tropics
+    region: tropics
+    source: all
+  - name: new_extratropics
+    region: extratropics
+    source: all
+
+energy_process_record: [radiation, surface_flux, microphysics]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_mp, e_src_new_tropics, e_src_new_extratropics]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_microphysics]
+    period: "1hours"
+  - short_name: [ta]
+    period: "1hours"

@@ -1,0 +1,32 @@
+# P1, the tag cost on a sphere: the untagged control. `c7_sphere_mp` with no
+# energy source tags, no process records, no closure check and no diagnostics
+# (OPERATIONAL_TODO.md, P1). It is submitted together with `p1_sphere_tags`; see
+# that file for why.
+#
+# `energy_source_tags` and `energy_source_closure_check` are both absent, and
+# have to go together: the check errors at startup when it is configured without
+# its family. The offset and the repair keys go too, since they act only on the
+# tags.
+job_id: "p1_sphere_notags"
+
+# C5's sphere, unchanged.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+rad: "gray"
+dt_rad: "1hours"
+
+output_default_diagnostics: false

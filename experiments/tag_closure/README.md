@@ -582,6 +582,8 @@ Runs from OPERATIONAL_TODO.md that test what production needs: Float32 and more 
 |:-- |:-- |:-- |
 | `v3_sphere_float32` | `phase_c.sh` | V3, `c7_sphere_mp` in Float32 |
 | `mp1_sphere_4ranks` | `phase_c.sh`, with `--ntasks=4` | MP1, `c7_sphere_mp` on 4 MPI ranks |
+| `p1_sphere_tags` | `phase_c.sh`, submitted with `p1_sphere_notags` | P1, `c7_sphere_mp` under its own name, the tagged half of the cost pair |
+| `p1_sphere_notags` | `phase_c.sh`, submitted with `p1_sphere_tags` | P1, `c7_sphere_mp` without tags, records, check or diagnostics |
 | `d5_column_edmf_ice` | `phase_c.sh` | D5, TRMM LBA EDMF deep convection under 1M. It is meant for after the sub-grid sharing |
 
 C2, the implicit-path brackets, needs the owner's approval and a code change,
