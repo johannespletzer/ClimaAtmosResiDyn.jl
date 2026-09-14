@@ -38,6 +38,7 @@ Open pull requests:
 | #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | draft; EDMF validated (E44e)   | 30 pending, restarted by the allocation check |
 | #77 | B9: the offset required, the closure check and label check by default | draft; tests pass locally      | 9 pass, 26 pending         |
 | #78 | T3: the tag and record code allocates nothing                         | draft; 52 and 17 pass locally  | 1 pass, 32 pending         |
+| #79 | The parity rule in `AGENTS.md` and `docs/clima_atmos_specific.md`     | draft; docs only               | opened 2026-09-14 night    |
 
 No check has failed on any of them. The queue is long, so most are still
 pending.
@@ -55,7 +56,7 @@ day, 2M and P3, more than one node, and the GPU.
 
 ## 0. In flight
 
-  - **CI** on all seven open PRs. Nothing runs on Slurm.
+  - **CI** on all eight open PRs. Nothing runs on Slurm.
 
 ## Decided
 
@@ -100,7 +101,8 @@ On 2026-09-14:
     ClimaAtmos and from this fork must be binary identical: the fork develops
     a diagnostic only. With a diagnostic on, every field upstream has stays bit
     for bit the same. Written into `AGENTS.md` and
-    `docs/clima_atmos_specific.md` ("Fork parity with upstream").
+    `docs/clima_atmos_specific.md` ("Fork parity with upstream"), on this
+    branch and in #79 for `main`.
 
 ## 1. Decisions for the owner
 
@@ -312,7 +314,7 @@ With D1 (B12):
     change that must never be committed), `-defaults` (#77), and `-p4`
     (detached at `edd44e1d`, for P4's diagnosis), `-t3` (#78), `-m3` (M3,
     local only, until C1b), and `-c1b-check` (a scratch merge of #76 into #72,
-    detached, removable at any time). Each has a copied
+    detached, removable at any time), and `-parity` (#79). Each has a copied
     `.buildkite/LocalPreferences.toml`, which `main` tracks: never commit it.
   - ~~**The known defects** in `LEVANTE_TASKS.md`.~~ Fixed on 2026-09-14: the
     validator now follows the model's `if`/`elseif` chain, so ISDAC skips the
