@@ -29,7 +29,7 @@ Done or built:
   - The implicit bracket and the repair are #69, which targets `main`. Its
     review found no blocker, and its five findings are fixed. Its help text is
     corrected (`0ae408d8`).
-  - Sedimentation as transport is #70, a draft on `main`. It now refuses
+  - Sedimentation as transport is #70, on `main` and out of draft. It now refuses
     `prognostic_edmfx` with tags and has M2's label warnings (`4c274aed`).
   - The enthalpy audit is #72, a draft stacked on #70. It now carries the
     offset in its hyperdiffusion (C3) and states its timing correctly
@@ -76,7 +76,7 @@ longer than a day, and the GPU. D1's twin without vertical diffusion ran
     in `0ae408d8`. Then merge.
   - **B, #70.** ~~Refuse or document the EDMF sedimentation gap (C1a)~~, done
     in `4c274aed`. ~~Run D1~~, done (E42). Nothing else in this list holds it
-    in draft.
+    back. It is out of draft, and merges after #69.
   - **B, #72.** ~~C3 and its test, and the timing wording (R2)~~, done in
     `7a290c98`. Still before it leaves draft: E35 to E43 and the audit's scope
     in the docs. Then retarget it to `main` after #70.

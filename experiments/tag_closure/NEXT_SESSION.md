@@ -75,7 +75,7 @@ one agent has worked this branch at once.
     process to 60.7 J/kg and per record to the joule, and the sphere per process
     to 20.2 J/kg (C7). What the sphere's last 20 J/kg is, is open.
   - **PR state.** #65 and #68 are merged into `main`. #69, the implicit bracket
-    and the repair, and #70, sedimentation as transport, a draft, target
+    and the repair, and #70, sedimentation as transport, now out of draft, target
     `main`. #72, the audit, is a draft stacked on #70. On 2026-09-11, with the
     owner's approval, all three got fixes and were pushed:
       + #69: the corrected repair help text and records comment, `0ae408d8`;
