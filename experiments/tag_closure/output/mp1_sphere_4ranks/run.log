@@ -1,0 +1,69 @@
+# run.log for mp1_sphere_4ranks, trimmed from SLURM job 13440991's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    mp1_sphere_4ranks
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/mp1_sphere_4ranks.yml
+SLURM job:       13440991
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Tasks:           4
+Launch:          srun --mpi=pmix --ntasks=4 --cpus-per-task=2
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl
+Commit:          c2842ba6720ab02d2c0bd2efbe00ed9cf997b02f (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/mp1_sphere_4ranks
+Start time:      2026-09-14T13:18:43+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+
+
+# Every distinct warning, first occurrence, first line only:
+┌ Warning: `energy_source_tags` tag `new_tropics` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating speci
+┌ Warning: `energy_source_tags` tag `new_extratropics` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating 
+┌ Warning: energy_source tag closure residual 0.0027053792886572972 exceeds the configured tolerance 1.0e-6 at t = 3600.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.0028648157585949153 exceeds the configured tolerance 1.0e-6 at t = 7200.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.0030245054139173165 exceeds the configured tolerance 1.0e-6 at t = 10800.0 s. The tags no longer account for the
+┌ Warning: energy_source tag closure residual 0.003180553874309302 exceeds the configured tolerance 1.0e-6 at t = 14400.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.003332203186215518 exceeds the configured tolerance 1.0e-6 at t = 18000.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.0034830140592362483 exceeds the configured tolerance 1.0e-6 at t = 21600.0 s. The tags no longer account for the
+┌ Warning: energy_source tag closure residual 0.0036363378304881252 exceeds the configured tolerance 1.0e-6 at t = 25200.0 s. The tags no longer account for the
+┌ Warning: energy_source tag closure residual 0.0037885605431569125 exceeds the configured tolerance 1.0e-6 at t = 28800.0 s. The tags no longer account for the
+┌ Warning: energy_source tag closure residual 0.00393914586208233 exceeds the configured tolerance 1.0e-6 at t = 32400.0 s. The tags no longer account for the f
+┌ Warning: energy_source tag closure residual 0.004084247708741056 exceeds the configured tolerance 1.0e-6 at t = 36000.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.004225679609189332 exceeds the configured tolerance 1.0e-6 at t = 39600.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.004367369158310126 exceeds the configured tolerance 1.0e-6 at t = 43200.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.0045085085809831015 exceeds the configured tolerance 1.0e-6 at t = 46800.0 s. The tags no longer account for the
+┌ Warning: energy_source tag closure residual 0.004650061813150379 exceeds the configured tolerance 1.0e-6 at t = 50400.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.004791104353296571 exceeds the configured tolerance 1.0e-6 at t = 54000.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.004927695466308115 exceeds the configured tolerance 1.0e-6 at t = 57600.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.005057173661406519 exceeds the configured tolerance 1.0e-6 at t = 61200.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.005179192707936717 exceeds the configured tolerance 1.0e-6 at t = 64800.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.005297166638620961 exceeds the configured tolerance 1.0e-6 at t = 68400.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.00541535796780533 exceeds the configured tolerance 1.0e-6 at t = 72000.0 s. The tags no longer account for the f
+┌ Warning: energy_source tag closure residual 0.00553557878857684 exceeds the configured tolerance 1.0e-6 at t = 75600.0 s. The tags no longer account for the f
+┌ Warning: energy_source tag closure residual 0.005656723083717062 exceeds the configured tolerance 1.0e-6 at t = 79200.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.0057755132313023 exceeds the configured tolerance 1.0e-6 at t = 82800.0 s. The tags no longer account for the fi
+┌ Warning: energy_source tag closure residual 0.005889306323900211 exceeds the configured tolerance 1.0e-6 at t = 86400.0 s. The tags no longer account for the 
+
+# The end of the run:
+[ Info: solve! walltime = 117.379
+[ Info: sypd: 2.017
+[ Info: wall_time_per_timestep: 543 milliseconds, 421 microseconds
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/mp1_sphere_4ranks/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-14T13:31:52+02:00

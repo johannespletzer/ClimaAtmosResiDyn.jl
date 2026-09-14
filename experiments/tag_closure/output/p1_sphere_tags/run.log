@@ -1,0 +1,69 @@
+# run.log for p1_sphere_tags, trimmed from SLURM job 13440989's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    p1_sphere_tags
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/p1_sphere_tags.yml
+SLURM job:       13440989
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Tasks:           1
+Launch:          (direct)
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl
+Commit:          c2842ba6720ab02d2c0bd2efbe00ed9cf997b02f (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p1_sphere_tags
+Start time:      2026-09-14T13:18:43+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+
+
+# Every distinct warning, first occurrence, first line only:
+┌ Warning: `energy_source_tags` tag `new_tropics` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating speci
+┌ Warning: `energy_source_tags` tag `new_extratropics` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating 
+┌ Warning: energy_source tag closure residual 0.002705379288657289 exceeds the configured tolerance 1.0e-6 at t = 3600.0 s. The tags no longer account for the f
+┌ Warning: energy_source tag closure residual 0.0028648157585948945 exceeds the configured tolerance 1.0e-6 at t = 7200.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.0030245054139172983 exceeds the configured tolerance 1.0e-6 at t = 10800.0 s. The tags no longer account for the
+┌ Warning: energy_source tag closure residual 0.0031805538743092687 exceeds the configured tolerance 1.0e-6 at t = 14400.0 s. The tags no longer account for the
+┌ Warning: energy_source tag closure residual 0.0033322031862154833 exceeds the configured tolerance 1.0e-6 at t = 18000.0 s. The tags no longer account for the
+┌ Warning: energy_source tag closure residual 0.003483014059236221 exceeds the configured tolerance 1.0e-6 at t = 21600.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.003636337830488091 exceeds the configured tolerance 1.0e-6 at t = 25200.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.0037885605431568865 exceeds the configured tolerance 1.0e-6 at t = 28800.0 s. The tags no longer account for the
+┌ Warning: energy_source tag closure residual 0.003939145862082312 exceeds the configured tolerance 1.0e-6 at t = 32400.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.004084247708741046 exceeds the configured tolerance 1.0e-6 at t = 36000.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.004225679609189324 exceeds the configured tolerance 1.0e-6 at t = 39600.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.0043673691583101335 exceeds the configured tolerance 1.0e-6 at t = 43200.0 s. The tags no longer account for the
+┌ Warning: energy_source tag closure residual 0.004508508580983104 exceeds the configured tolerance 1.0e-6 at t = 46800.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.004650061813150383 exceeds the configured tolerance 1.0e-6 at t = 50400.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.00479110435329658 exceeds the configured tolerance 1.0e-6 at t = 54000.0 s. The tags no longer account for the f
+┌ Warning: energy_source tag closure residual 0.00492769546630813 exceeds the configured tolerance 1.0e-6 at t = 57600.0 s. The tags no longer account for the f
+┌ Warning: energy_source tag closure residual 0.005057173661406543 exceeds the configured tolerance 1.0e-6 at t = 61200.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.005179192707936743 exceeds the configured tolerance 1.0e-6 at t = 64800.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.005297166638620988 exceeds the configured tolerance 1.0e-6 at t = 68400.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.005415357967805357 exceeds the configured tolerance 1.0e-6 at t = 72000.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.005535578788576882 exceeds the configured tolerance 1.0e-6 at t = 75600.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.005656723083717107 exceeds the configured tolerance 1.0e-6 at t = 79200.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.005775513231302344 exceeds the configured tolerance 1.0e-6 at t = 82800.0 s. The tags no longer account for the 
+┌ Warning: energy_source tag closure residual 0.005889306323900263 exceeds the configured tolerance 1.0e-6 at t = 86400.0 s. The tags no longer account for the 
+
+# The end of the run:
+[ Info: solve! walltime = 445.75
+[ Info: sypd: 0.531
+[ Info: wall_time_per_timestep: 2 seconds, 63 milliseconds
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p1_sphere_tags/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-14T13:36:57+02:00

@@ -179,22 +179,26 @@ one agent has worked this branch at once.
     with tags; the closure check on by default, daily, from a spin-up
     reference, report-only until calibrated; the label check at configuration
     now, and online form A later as an optional feature. The owner merged #69
-    (`08682fd8`) and re-ran #70's docs job. PR #73 fixes the docs deploy (a
-    read-only token gave 403 on `gh-pages`) and raises the docs timeout to 60
-    minutes; after the owner merges it, merge `main` into #70 and push, as
-    approved. The runscript now launches ranks with `srun`, keeps its logs
-    while a job runs, and reads a worktree's commit (`297eda4c`). P4's runs'
-    provenance was repaired by hand to `edd44e1d`, because back then a
-    worktree's `.git` was a file the runscript could not read. V3 (Float32, job
-    `13440822`) ran its day and closes as C7 does, to rounding (E45). MP1 (4
-    ranks, job `13440823`) died in `MPI_Init`, because `srun` lacked
-    `--mpi=pmix`. The runscript passes it now. The owner approved MP1 again
-    (job `13440991`) and P1's pair (jobs `13440989` and `13440990`), all
-    submitted at `c2842ba6`. The owner accepted the grouping of the S items; it is in
-    `OPERATIONAL_TODO.md`. C5 is done: the repair's trades sit just beyond the
-    20° edge where the region tags meet (E46).
-  - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and
-    `../ClimaAtmosResiDyn-audit` on #72's, both level with origin.
+    (`08682fd8`), re-ran #70's docs job, which passed, and merged #70
+    (`3b4b6056`). PR #73 fixes the docs deploy (a read-only token gave 403 on
+    `gh-pages`) and raises the docs timeout to 60 minutes; it is open. The
+    runscript now launches ranks with `srun --mpi=pmix`, keeps its logs while a
+    job runs, and reads a worktree's commit. P4's runs' provenance was repaired
+    by hand to `edd44e1d`, because back then a worktree's `.git` was a file the
+    runscript could not read. On 2026-09-14: V3 closes in Float32 as C7 does,
+    to rounding (E45); MP1 closes on 4 ranks as C7 does, to rounding, after a
+    first try that died in `MPI_Init` (E47); P1 puts the tag cost on the sphere
+    at 1.46× (T9); P4's stage timing puts the build's growth in
+    `get_simulation`, mostly compiled before its first timer (E44c). The owner
+    accepted the grouping of the S items; it is in `OPERATIONAL_TODO.md`. C5 is
+    done: the repair's trades sit just beyond the 20° edge where the region
+    tags meet (E46). D2's docs and #72's docs are committed locally and wait
+    for the owner's approval to push.
+  - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch, now
+    merged. `../ClimaAtmosResiDyn-audit` is on #72's, one local commit ahead of
+    origin (`f3f48e97`, the docs). `../ClimaAtmosResiDyn-docs` is on
+    `claude/energy-source-tag-docs` from `main`, with D2's commit `fbeb561e`,
+    not pushed.
     `../ClimaAtmosResiDyn-p4` is detached at `edd44e1d`, with a copied
     `.buildkite/LocalPreferences.toml`, for P4's runs. The audit
     worktree's tracked `.buildkite/LocalPreferences.toml` names a Levante MPI

@@ -290,8 +290,26 @@ The tables are in `output/v3_sphere_float32/`, and
 Slurm's default plugin here is `pmi2`, which this Open MPI cannot use. The
 runscript now passes `--mpi=pmix`, as `runscripts/terrabyte_stacks.env` records.
 Its provenance went to the submit directory, because the run made no output
-directory; it was moved to `$SCRATCH/tag_closure/logs/`. Submitting it again
-needs the owner's approval.
+directory; it was moved to `$SCRATCH/tag_closure/logs/`.
+
+**MP1, done on 2026-09-14** (FINDINGS E47). The owner approved it again. Job
+`13440991` ran at `c2842ba6` in 13 minutes, launched with
+`srun --mpi=pmix --ntasks=4 --cpus-per-task=2`. Every table matches C7's to
+8e-11 or better, and `ta` to 1.6e-12 K. The solve took 117 s against C7's
+448 s. The tables are in `output/mp1_sphere_4ranks/`.
+
+**P1, done on 2026-09-14** (FINDINGS T9). Jobs `13440989` and `13440990` ran C7
+under its own name and C7 without tags, records, check or diagnostics, together
+on one node at `c2842ba6`. The solves took 445.75 s and 305.44 s, so the feature
+as used costs 1.46× on this sphere. The tagged half's `ta` and tables are
+identical to C7's. The tables are in `output/p1_sphere_tags/` and
+`output/p1_sphere_notags/`.
+
+**P4's stage timing, done on 2026-09-14** (FINDINGS E44c). Jobs `13440706`,
+`13440707` and `13440637` ran `analysis/p4_build_stages.jl` from the worktree at
+`edd44e1d`. With 8 tags, `get_simulation` takes 2,604 s against 712 s without,
+and most of that is compiled before the constructor's first timer. The trimmed
+logs are in `output/p4_build_stages/`.
 
 **Next.** The owner sets the merge order: #69, then #70, then #72 retargeted to
 `main`. The review of #69 is posted on the PR, and its five findings are fixed

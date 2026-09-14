@@ -1,0 +1,43 @@
+# run.log for p1_sphere_notags, trimmed from SLURM job 13440990's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    p1_sphere_notags
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/p1_sphere_notags.yml
+SLURM job:       13440990
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Tasks:           1
+Launch:          (direct)
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl
+Commit:          c2842ba6720ab02d2c0bd2efbe00ed9cf997b02f (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p1_sphere_notags
+Start time:      2026-09-14T13:18:43+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+
+
+# Every distinct warning, first occurrence, first line only:
+
+# The end of the run:
+[ Info: solve! walltime = 305.442
+[ Info: sypd: 0.775
+[ Info: wall_time_per_timestep: 1 second, 414 milliseconds
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p1_sphere_notags/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-14T13:29:43+02:00

@@ -413,32 +413,32 @@ Each was checked against the code on this branch.
     `e_src_fix_<name>`. Without it they are not guaranteed non-negative."
  2. *Done in #69, `0ae408d8`.* **`config/default_configs/default_config.yml:478`**, the help of
     `energy_source_tags`, says "unlimited transport has no repair". Same fix.
- 3. **`tracer_configuration.md:410-414`** says the energy tags "never receive
+ 3. *Drafted in D2, `fbeb561e`, not pushed.* **`tracer_configuration.md:410-414`** says the energy tags "never receive
     implicit transport or EDMFX sub-grid mass fluxes", "deliberate, because each
     tag is already transported in its own right". For the source tags both
     halves are now wrong. They receive sedimentation in the implicit step
     (`water_advection.jl:99-107`). And nothing transports them for the sub-grid
     mass flux: they have no updraft copy, so that flux reaches no tag. The
     docstring at `src/config/tracer_config.jl:564-569` repeats the first half.
- 4. **`energy_source_tags.md:90-96`** says sedimentation adds nothing to
+ 4. *Needs no change since C1a refuses `prognostic_edmfx`.* **`energy_source_tags.md:90-96`** says sedimentation adds nothing to
     `e_src_res`. True without EDMF. Under `prognostic_edmfx` the corrections
     between updraft and environment (`water_advection.jl:127-186`) are not
     shared, and they do add to it.
- 5. **`energy_source_tags.md:292-294`**, under the audit: "the SGS closures"
+ 5. *Drafted on #72's branch, `f3f48e97`, not pushed.* **`energy_source_tags.md:292-294`**, under the audit: "the SGS closures"
     stay as under `tracer`. Add that the EDMF mass flux reaches the tags in
     neither mode.
  6. *Done in #70, `4c274aed`.* **`energy_source_tags.md:338`**, "grid-scale only". Add the consequences:
     no sub-grid mass flux, and a failed run with `edmfx_vertical_diffusion: true`.
- 7. **`energy_source_tags.md:211-227`**, the tested boundary. The integration
+ 7. *Drafted in D2 (sedimentation) and on #72's branch (the audit), not pushed.* **`energy_source_tags.md:211-227`**, the tested boundary. The integration
     test now also covers sedimentation and the audit on a column and a small
     sphere (items 8 to 10 of `test/energy_source_tags_integration.jl`).
  8. *Done in #70, `4c274aed`.* **`process_record.md:120-125`** says `microphysics` is recorded however
     microphysics is stepped, and that the water side is a no-op under 1M. The
     energy side is a no-op too, under 1M, 2M and P3: the microphysics there
     never writes `ρe_tot`.
- 9. **`process_record.md:137-140`** says the records do not add up to the
+ 9. *Drafted in D2, `fbeb561e`, not pushed.* **`process_record.md:137-140`** says the records do not add up to the
     change in the parent. At a point, yes. Over a column they do, to 3.3e-7 J/m²
     under 0M (E26). Say both.
-10. **Neither page defines form A and form B**, or the validating layout. Link
+10. *Drafted in D2, `fbeb561e`, not pushed: a section in `energy_source_tags.md`.* **Neither page defines form A and form B**, or the validating layout. Link
     this guide, or move its "per-process checks" section into
     `energy_source_tags.md`.

@@ -1295,3 +1295,29 @@ did not read it.
 
 **Carry-over.** Before a first multi-rank job, launch through what the machine's
 stacks file names, and test it on a 2-rank job of a few minutes.
+
+**The second try.** Job `13440991` at `c2842ba6`, with `--mpi=pmix`, ran its day
+in 13 minutes. Every table matches C7's to 8e-11 or better, and `ta` to
+1.6e-12 K, the rounding of sums taken in another order. The closure check's
+global sums hold on 4 ranks (E47).
+
+## P1. The tag cost on the sphere
+
+Ran at `c2842ba6` on 2026-09-14, `hpda2_test`, SLURM jobs `13440989` (18
+minutes) and `13440990` (11 minutes), started together on one node. The owner
+approved them.
+
+**What it was for.** The tag cost was known on one column only, 1.32× (T4).
+
+**What it showed.** 1.46× in the solve on C7's sphere, with 7 tags, 3 records,
+the audited check and 12 fields written hourly, against none of them (T9). The
+tagged half repeats C7 exactly, three days and many commits later.
+
+**Barrier.** It does not split the tags from the check and the output, and it is
+one pair on one node.
+
+**Class.** A cost measurement.
+
+**Carry-over to the source tags.** Budget about half as much again for a CPU
+sphere with a validating layout. A monitoring layout, with fewer tags and a
+daily check, should cost less; that is not measured.

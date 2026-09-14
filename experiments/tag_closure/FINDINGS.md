@@ -1256,6 +1256,30 @@ test whether the step is the cause.
 *C6, jobs `13385452` and `13385453`; C9 and C10, jobs `13402393` and
 `13403083`; `analysis/repair_trades.jl`; `output/repair_trades/`.*
 
+**E47. On 4 MPI ranks, C7's sphere closes as it does on one process, to
+rounding.** MP1 is C7 on 4 ranks, launched with `srun --mpi=pmix` and the MPI
+context. The closure check reduces over the domain with global sums, and every
+run before this one was a single process.
+
+  - **The tables agree to rounding.** The largest relative difference after
+    t = 0 is 2.1e-14 in the audit table, 9.2e-13 in form A, 9.3e-13 in the tag
+    extrema, 2.5e-13 in the record extrema, and 7.7e-11 in the closure residual
+    at 1 h. In Float64 steps of the total, the two residuals lie about one step
+    apart, at 1 h and at 24 h.
+  - **The atmosphere differs by rounding only.** `ta` differs from C7's by at
+    most 1.6e-12 K over the day. Split over 4 ranks, the sums run in another
+    order.
+  - **It runs 3.8 times faster.** The solve takes 117.4 s against C7's 448.0 s,
+    at one thread per rank, on the node that also ran P1's pair.
+  - The first try, job `13440823`, died in `MPI_Init`, because the runscript
+    called `srun` without `--mpi=pmix`. That was a launch error, and it is
+    fixed.
+  - Not covered: other rank counts, more than one node, and a restart across a
+    changed rank count.
+
+*MP1, job `13440991` on terrabyte at `c2842ba6`; `output/mp1_sphere_4ranks/`,
+`analysis/float_type_compare.jl` and `analysis/same_atmosphere.jl`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -1412,6 +1436,32 @@ repair on and 21.01 s with it off on the column, and 435.9 s against 431.5 s on
 the sphere. First-order tag upwinding took 423.7 s. The differences, 2.2% and
 1.0%, sit at T2's scatter of about 2%. *C6, jobs `13385450` to `13385454` on
 terrabyte.*
+
+**T9. On the sphere the tags cost 1.46×.** P1 is C7 under its own name against
+C7 with no tags, records, check or diagnostics. The two started together on the
+same node, beside MP1.
+
+|                   | tagged   | untagged | ratio |
+|:----------------- |:-------- |:-------- |:----- |
+| `solve! walltime` | 445.75 s | 305.44 s | 1.459 |
+| `sypd`            | 0.531    | 0.775    | 1.459 |
+| per timestep      | 2.063 s  | 1.414 s  | 1.459 |
+| whole job         | 18.2 min | 11.0 min | 1.66  |
+
+  - As in T4, this is the cost of the feature as used: 7 tags, 3 records, the
+    audited closure check hourly and 12 fields written hourly, against nothing.
+    It does not split the tags from the check or the output. On T4's column,
+    with 3 tags, it was 1.32×.
+  - The build takes longer too: the whole job gains 7.2 minutes against 2.3 in
+    the solve.
+  - The tagged half repeats C7. Its `ta` and all five of its tables are
+    identical to C7's in every value, at `c2842ba6` against `414f5f1b`, and its
+    solve took 445.75 s against C7's 447.98.
+  - One pair, on one node. CPU only.
+
+*P1, jobs `13440989` and `13440990` on terrabyte at `c2842ba6`;
+`output/p1_sphere_tags/` and `output/p1_sphere_notags/`,
+`analysis/same_atmosphere.jl`.*
 
 ## 5. Method
 
@@ -1644,8 +1694,9 @@ Kept because a later reader will otherwise re-derive them.
     and a GPU in `Float32` are still open.
   - ~~Whether 1M changes the residual (W5).~~ Settled on a column: 7% down
     (W5b). A sphere, which reaches the horizontal branches, is still open.
-  - The tag cost on anything but one column on one node (T4 bounds it at 1.32×
-    there).
+  - ~~The tag cost on anything but one column on one node (T4 bounds it at
+    1.32× there).~~ Measured on C7's sphere too: 1.46× (T9). On a GPU, and
+    under EDMF once it builds, still open.
   - ~~Whether C1's suppression cost (R11) matters in practice.~~ Measured on
     C4: doubling the offset moves the source tag by about 1% over a day (E19).
     What it does move is the region tags' negativity.

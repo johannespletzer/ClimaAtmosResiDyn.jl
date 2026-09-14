@@ -26,25 +26,29 @@ campaign.
   - #69, the implicit bracket and the repair, is merged into `main`
     (`08682fd8`, 2026-09-14).
   - #70, sedimentation as transport, the EDMF refusal and M2's label warnings,
-    targets `main` and is out of draft. Its `docbuild` hit the 30-minute limit,
-    so `docs-required` failed (run 34593320376). The owner re-ran it on
-    2026-09-14: `docbuild` passed in 17 minutes, and `docs-required` passed.
+    is merged into `main` (`3b4b6056`, 2026-09-14), after the owner's re-run
+    of its docs check passed.
   - #73 fixes the docs workflow: `main`'s deploy to `gh-pages` failed with 403
     on every push, because the job token was read-only. It grants
-    `contents: write` and raises the timeout to 60 minutes. After it merges,
-    `main` is merged into #70 and pushed, as the owner approved.
-  - #72, the enthalpy audit, is a draft on #70's branch, with all checks
-    passing. It carries C3 and the corrected timing wording, and has #70 merged
-    in (`530a3658`). `energy_source_tag_transport` exists only there.
+    `contents: write` and raises the timeout to 60 minutes. It is open. With
+    #70 merged, nothing waits on it any more but the deploy itself.
+  - #72, the enthalpy audit, is a draft still based on #70's branch, with all
+    checks passing. Against `main` it merges cleanly and changes only the
+    audit's 10 files. `energy_source_tag_transport` exists only there. Its docs
+    (B2) are committed locally in `../ClimaAtmosResiDyn-audit` (`f3f48e97`) and
+    not pushed.
+  - D2's docs fixes are committed locally on a new branch,
+    `claude/energy-source-tag-docs`, in `../ClimaAtmosResiDyn-docs`
+    (`fbeb561e`, from `main`), and not pushed.
   - This branch merged #72's head in `57ed9c1f`.
   - Measured: 0M on a column and a sphere, and 1M on a warm column, a day each
     (E26 to E39, E43); 1M with ice on a cold column for an hour, with a twin
     without vertical diffusion (E42, E42b); the EDMF build time with and without
-    tags (E44, E44b); C7's sphere in Float32 for a day, which closes as Float64
-    does, to rounding (E45).
-  - Not yet run: EDMF with tags past its build, more than one process (MP1
-    failed to start), a restart, anything longer than a day, 2M and P3, and the
-    GPU.
+    tags (E44 to E44c); C7's sphere in Float32 (E45) and on 4 MPI ranks (E47),
+    each closing as C7 does, to rounding; the tag cost on that sphere, 1.46×
+    (T9).
+  - Not yet run: EDMF with tags past its build, a restart, anything longer than
+    a day, 2M and P3, and the GPU.
 
 ## Decided
 
@@ -91,8 +95,7 @@ On 2026-09-14:
     (`p1_sphere_tags`, C7 under its own name) and `13440990`
     (`p1_sphere_notags`, C7 without tags, records, check or diagnostics).
   - **The S items**, as proposed and accepted by the owner:
-      - now: C5 (done, E46); P1, whose run needs its own approval; D2, once
-        #70 merges;
+      - now: C5 (done, E46); P1 (done, T9); D2 (drafted, not pushed);
       - with the defaults and checks (B9): U3, U4, R3, T4;
       - with C1b (B4): M3, T5;
       - before the GPU (B13): T3;
@@ -102,11 +105,10 @@ On 2026-09-14:
 
 ## 0. In flight
 
-  - **P1**, jobs `13440989` and `13440990`, and **MP1**, job `13440991`, all
-    submitted at `c2842ba6` on 2026-09-14. MP1 got past `MPI_Init` this time.
-  - **#72's docs (B2)** are drafted in the worktree `../ClimaAtmosResiDyn-audit`,
-    in `docs/src/energy_source_tags.md`, and not committed or pushed.
-  - ~~**P4-stages.**~~ Done: E44c. The three jobs ran; see B3.
+  - Nothing is running. P1 (T9) and MP1 (E47) finished on 2026-09-14, and
+    P4's stage timing is E44c.
+  - **Waiting for the owner:** pushing D2's branch as a PR to `main`, and
+    pushing #72's docs, retargeting #72 to `main` and taking it out of draft.
 
 ## 1. Decisions for the owner
 
@@ -122,16 +124,17 @@ On 2026-09-14:
     `edmfx_vertical_diffusion: true`, D5, and a C6 twin with a wider region mask
     (E46).
  6. **Docs:** whether to move `USER_GUIDE_DRAFT.md` into `docs/src/` (D1).
- 7. **Merges:** #73, then #70 once its docs pass, then #72.
+ 7. **Merges:** #73; #72 once its docs are pushed; D2's PR once opened. (#70
+    is merged.)
 
 ## 2. Blocking operation (B), in dependency order
 
- 1. **Merge #70.** #69 is merged. Merge #73, the docs-workflow fix, then
-    merge `main` into #70 and push, and merge #70 once its checks pass. Size S.
- 2. **Finish and merge #72.** Add E35 to E43 and the audit's scope to its docs,
-    take it out of draft, retarget it to `main` after #70, merge. This comes
-    before C1b and C2, because both use `energy_source_tag_transport`, which
-    exists only in #72. Size S.
+ 1. ~~**Merge #70.**~~ Done on 2026-09-14 (`3b4b6056`). #73, the docs-workflow
+    fix, is still open.
+ 2. **Finish and merge #72.** Add E35 to E43 and the audit's scope to its docs
+    (committed locally, `f3f48e97`), push, take it out of draft, retarget it to
+    `main`, merge. This comes before C1b and C2, because both use
+    `energy_source_tag_transport`, which exists only in #72. Size S.
  3. **P4, the EDMF build time with tags.** With 8 tags, 5 records, the audited
     check and 24 diagnostics, the D4 column did not build in two hours on two
     cores; without them it builds in 410 s (E44). The job takes 27 minutes with
@@ -177,12 +180,11 @@ On 2026-09-14:
     Float32 test group. The records are `FT` fields that accumulate from the
     start and are never reset (`process_record.jl:22-25`), so runs longer than
     a day are still untested; that is U6. Size S.
- 8. **MP1, more than one process.** Every run so far was single-process, and
-    the closure check reduces with global sums (`tagged_tracers.jl:450-484`). A
-    2 to 4 rank CPU sphere with tags, records and the check, before the GPU.
-    Size S, plus a run. The first try, job `13440823`, died in `MPI_Init`
-    because `srun` lacked `--mpi=pmix`. The runscript is fixed, and the second
-    try is job `13440991`. `configs/mp1_sphere_4ranks.yml`, on 4 ranks.
+ 8. ~~**MP1, more than one process.**~~ Done on 2026-09-14 (E47). On 4 ranks
+    C7's sphere closes as on one process, to rounding: every table within
+    8e-11, and `ta` within 1.6e-12 K. The solve runs 3.8 times faster. The
+    first try died in `MPI_Init`, because `srun` lacked `--mpi=pmix`; the
+    runscript is fixed. More than one node is untested.
  9. **The decided defaults and checks.** U1, require the offset with tags; U2
     and R1, the closure check on by default, daily, from a spin-up reference,
     report-only; A2's label check at configuration (accept when it flags
@@ -216,15 +218,21 @@ Now:
     the owner: a C6 twin with a mask wider than the grid spacing, to test
     whether the step causes the trades. If it does, the width of the named
     regions is a default, which needs approval.
-  - **P1.** The tag cost on a sphere against an untagged control; known on one
-    column only, 1.32× (T4). Submitted on 2026-09-14 as jobs `13440989` and
-    `13440990`.
-  - **D2, stale docs,** once #70 merges. The guide's fixes 3, 4, 5, 7, 9 and 10
-    (`USER_GUIDE_DRAFT.md`, "Proposed fixes"): `tracer_configuration.md:410-414`
-    and the docstring at `tracer_config.jl:605` on how the tags move;
-    `energy_source_tags.md:90-96` under EDMF; the audit section on the EDMF mass
-    flux; the tested boundary in `energy_source_tags.md`; the records' column
-    closure in `process_record.md`; and no page defining form A and form B.
+  - ~~**P1.** The tag cost on a sphere against an untagged control; known on
+    one column only, 1.32× (T4).~~ Done on 2026-09-14 (T9): 1.46× on C7's
+    sphere, check and output included.
+  - **D2, stale docs.** The guide's fixes 3, 4, 5, 7, 9 and 10
+    (`USER_GUIDE_DRAFT.md`, "Proposed fixes"). Drafted on 2026-09-14 and
+    committed locally, not pushed:
+      - on `claude/energy-source-tag-docs` from `main` (`fbeb561e`): fix 3 in
+        `tracer_configuration.md` and `DEFAULT_CLOSURE_TOLERANCES`; fix 7's
+        sedimentation item in the tested boundary; fix 9 in
+        `process_record.md`; fix 10, a section on form A and form B in
+        `energy_source_tags.md`;
+      - on #72's branch (`f3f48e97`): fix 5, and fix 7's audit items, in the
+        audit section.
+      - Fix 4 needs no change: with `prognostic_edmfx` refused, sedimentation
+        adds nothing to `e_src_res`, as the page says.
 
 With the defaults and checks (B9):
 
@@ -333,15 +341,16 @@ With D1 (B12):
 
 ## Suggested order
 
- 1. P4's three staged runs (in flight).
+ 1. ~~P4's three staged runs.~~ Done (E44c).
  2. The owner's remaining decisions.
- 3. Merge #73; merge `main` into #70; merge #70. (#69 is merged.)
- 4. #72's docs; out of draft; retarget; merge.
- 5. P4's fix, with C1b's code alongside.
+ 3. ~~Merge #70.~~ Done. Merge #73.
+ 4. Push #72's docs; out of draft; retarget; merge. Push D2 as a PR; merge.
+ 5. P4: time the constructor's pieces apart, then the fix, with C1b's code
+    alongside.
  6. C1b's validation (the D4 pair, the D4 variant with vertical diffusion on,
     D5) and T6.
  7. C2 with T1 and V5.
- 8. T2's Float32 part (V3 is done); MP1 again.
+ 8. T2's Float32 part. (V3 and MP1 are done.)
  9. The decided defaults and checks: U1, U2 with R1, A2's label check.
 10. V2 with C4; V1 as decided.
 11. Calibrate U2's tolerance.
