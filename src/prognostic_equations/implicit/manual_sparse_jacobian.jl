@@ -665,12 +665,16 @@ function jacobian_cache(
 
     uncoupled_names =
         split_uncoupled_fields ? uncoupled_jacobian_names(block_pairs) : ()
-    # The choice goes through a dispatch on a value known only when this runs.
-    # A plain `if` would let the compiler infer both branches, and building the
-    # unsplit solver for a state with many tags is the very compile the split
-    # avoids.
-    (matrix, solver) = build_manual_sparse_jacobian_solver(
-        Val(isempty(uncoupled_names)),
+    # The solver is built through `invokelatest`, which inference does not look
+    # into. Otherwise the compiler would infer both builders, whichever this
+    # run needs, and building the unsplit solver for a state with many tags is
+    # the very compile the split avoids. This runs once, when the cache is
+    # built.
+    build_solver =
+        isempty(uncoupled_names) ? build_unsplit_jacobian_solver :
+        build_split_jacobian_solver
+    (matrix, solver) = Base.invokelatest(
+        build_solver,
         matrix,
         Y,
         full_alg,
@@ -682,8 +686,7 @@ end
 
 # Without uncoupled fields, the matrix and its solver are one
 # `FieldMatrixWithSolver`, as before the split existed.
-function build_manual_sparse_jacobian_solver(
-    ::Val{true},
+function build_unsplit_jacobian_solver(
     matrix,
     Y,
     full_alg,
@@ -693,8 +696,9 @@ function build_manual_sparse_jacobian_solver(
     matrix_with_solver = MatrixFields.FieldMatrixWithSolver(matrix, Y, full_alg)
     return (matrix_with_solver, matrix_with_solver)
 end
-build_manual_sparse_jacobian_solver(
-    ::Val{false},
+
+# With them, the whole matrix is kept for the updates, and the solver splits.
+build_split_jacobian_solver(
     matrix,
     Y,
     full_alg,
