@@ -85,8 +85,11 @@ On 2026-09-14:
     and is handed back (E45). MP1 died in `MPI_Init` after 91 s. The runscript
     called `srun` without `--mpi=pmix`, and Slurm's default here, `pmi2`, does
     not work with this Open MPI. The runscript now passes the plugin from
-    `runscripts/terrabyte_stacks.env`. Submitting MP1 again needs a new
-    approval.
+    `runscripts/terrabyte_stacks.env`. The owner approved MP1 again, and it
+    is submitted as job `13440991` at `c2842ba6`.
+  - **P1** is approved and submitted as a pair at `c2842ba6`: jobs `13440989`
+    (`p1_sphere_tags`, C7 under its own name) and `13440990`
+    (`p1_sphere_notags`, C7 without tags, records, check or diagnostics).
   - **The S items**, as proposed and accepted by the owner:
       - now: C5 (done, E46); P1, whose run needs its own approval; D2, once
         #70 merges;
@@ -172,9 +175,8 @@ On 2026-09-14:
     the closure check reduces with global sums (`tagged_tracers.jl:450-484`). A
     2 to 4 rank CPU sphere with tags, records and the check, before the GPU.
     Size S, plus a run. The first try, job `13440823`, died in `MPI_Init`
-    because `srun` lacked `--mpi=pmix`. The runscript is fixed; the run needs
-    the owner's approval to go again. `configs/mp1_sphere_4ranks.yml`, on 4
-    ranks.
+    because `srun` lacked `--mpi=pmix`. The runscript is fixed, and the second
+    try is job `13440991`. `configs/mp1_sphere_4ranks.yml`, on 4 ranks.
  9. **The decided defaults and checks.** U1, require the offset with tags; U2
     and R1, the closure check on by default, daily, from a spin-up reference,
     report-only; A2's label check at configuration (accept when it flags
@@ -209,7 +211,8 @@ Now:
     whether the step causes the trades. If it does, the width of the named
     regions is a default, which needs approval.
   - **P1.** The tag cost on a sphere against an untagged control; known on one
-    column only, 1.32× (T4). Its run needs the owner's approval.
+    column only, 1.32× (T4). Submitted on 2026-09-14 as jobs `13440989` and
+    `13440990`.
   - **D2, stale docs,** once #70 merges. The guide's fixes 3, 4, 5, 7, 9 and 10
     (`USER_GUIDE_DRAFT.md`, "Proposed fixes"): `tracer_configuration.md:410-414`
     and the docstring at `tracer_config.jl:605` on how the tags move;

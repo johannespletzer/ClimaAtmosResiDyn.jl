@@ -188,8 +188,9 @@ one agent has worked this branch at once.
     worktree's `.git` was a file the runscript could not read. V3 (Float32, job
     `13440822`) ran its day and closes as C7 does, to rounding (E45). MP1 (4
     ranks, job `13440823`) died in `MPI_Init`, because `srun` lacked
-    `--mpi=pmix`. The runscript passes it now, and a new submission needs
-    approval. The owner accepted the grouping of the S items; it is in
+    `--mpi=pmix`. The runscript passes it now. The owner approved MP1 again
+    (job `13440991`) and P1's pair (jobs `13440989` and `13440990`), all
+    submitted at `c2842ba6`. The owner accepted the grouping of the S items; it is in
     `OPERATIONAL_TODO.md`. C5 is done: the repair's trades sit just beyond the
     20° edge where the region tags meet (E46).
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and
