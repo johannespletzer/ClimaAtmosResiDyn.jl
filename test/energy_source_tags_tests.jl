@@ -1,5 +1,7 @@
 using Test
 import ClimaAtmos as CA
+import ClimaDiagnostics
+import Dates
 
 @testset "Energy source tags" begin
     for FT in (Float32, Float64)
@@ -553,5 +555,92 @@ import ClimaAtmos as CA
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_extratropics")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_res")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fix_tropics")
+
+        # With the repair on, the default output carries its ledgers, sampled
+        # rather than averaged, because each is a running total. With the
+        # repair off they would read zero, so they are left out.
+        scheduled_names(repair) = begin
+            tagging = CA.AtmosTagging(;
+                energy_source_tagging_model = CA.EnergySourceTaggingModel(
+                    tags;
+                    repair,
+                ),
+            )
+            scheduled = CA.Diagnostics.default_diagnostics(
+                tagging,
+                86400.0,
+                Dates.DateTime(2010, 1, 1),
+                0;
+                output_writer = ClimaDiagnostics.Writers.DictWriter(),
+            )
+            Dict(
+                ClimaDiagnostics.DiagnosticVariables.short_name(d.variable) =>
+                    d for d in scheduled
+            )
+        end
+        with_repair = scheduled_names(true)
+        @test haskey(with_repair, "e_src_fix_tropics")
+        @test haskey(with_repair, "e_src_fix_extratropics")
+        @test isnothing(with_repair["e_src_fix_tropics"].reduction_time_func)
+        @test !isnothing(with_repair["e_src_tropics"].reduction_time_func)
+        @test !haskey(scheduled_names(false), "e_src_fix_tropics")
+    end
+
+    @testset "Processes that no tag follows" begin
+        tropics = CA.EnergySourceTag{:tropics}(CA.TanhLatitudeRegion(20.0, 2.0, true))
+        extratropics =
+            CA.EnergySourceTag{:extratropics}(CA.TanhLatitudeRegion(20.0, 2.0, false))
+        rad = CA.EnergySourceTag{:rad}(nothing, :radiation)
+        sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        mp = CA.EnergySourceTag{:mp}(nothing, :microphysics)
+        new_tropics = CA.EnergySourceTag{:new_tropics}(
+            CA.TanhLatitudeRegion(20.0, 2.0, true),
+            CA.KNOWN_TAG_SOURCES,
+        )
+        # A stand-in for the model, with only the properties the check reads: a
+        # sphere with gray radiation, surface fluxes and 0-moment microphysics,
+        # which is C6's sphere of the tag-closure experiments.
+        sphere(tags; subsidence = nothing) = (;
+            energy_source_tagging_model = CA.EnergySourceTaggingModel(tags),
+            radiation_mode = :gray,
+            disable_surface_flux_tendency = false,
+            subsidence,
+            ls_adv = nothing,
+            external_forcing = nothing,
+            microphysics_model = CA.EquilibriumMicrophysics0M(),
+        )
+        @test CA.active_energy_source_processes(sphere(())) ==
+              (:radiation, :surface_flux, :microphysics)
+
+        # Without a tag for the rain-out, it is warned about, and nothing else.
+        c6 = sphere((tropics, extratropics, sfc, rad, new_tropics))
+        @test_logs (:warn, r"`microphysics` changes `ρe_tot`") CA.warn_untagged_energy_source_processes(
+            c6,
+        )
+        # With one, as in C7, nothing is.
+        @test_logs CA.warn_untagged_energy_source_processes(
+            sphere((tropics, extratropics, sfc, rad, mp, new_tropics)),
+        )
+        # A tag listing every process follows none in particular.
+        @test_logs (:warn, r"`subsidence`") match_mode = :any CA.warn_untagged_energy_source_processes(
+            sphere((tropics, extratropics, sfc, rad, mp, new_tropics); subsidence = :on),
+        )
+        # Region tags alone do not split energy by process, so they get no warning.
+        @test_logs CA.warn_untagged_energy_source_processes(
+            sphere((tropics, extratropics, new_tropics)),
+        )
+
+        # Clipping `ρq_tot` changes `ρe_tot` outside the brackets, which is warned
+        # about with the tags and not without them.
+        clipping = CA.TracerNonnegativityElementConstraint{true}()
+        @test_logs (:warn, r"clips") CA._warn_unbracketed_energy_source_constraints(
+            CA.EnergySourceTaggingModel((tropics, extratropics)),
+            clipping,
+        )
+        @test_logs CA._warn_unbracketed_energy_source_constraints(nothing, clipping)
+        @test_logs CA._warn_unbracketed_energy_source_constraints(
+            CA.EnergySourceTaggingModel((tropics, extratropics)),
+            CA.TracerNonnegativityElementConstraint{false}(),
+        )
     end
 end

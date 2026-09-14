@@ -546,6 +546,7 @@ energy_tracers:
   - `config/example_configs/strat_tracers_transient_a.yml` — an explicit box list
   - `config/model_configs/baroclinic_wave_tagged_water.yml` — water tags with a closure check
   - `config/model_configs/baroclinic_wave_tagged_tracers.yml` — the same for energy tags
+  - `config/model_configs/baroclinic_wave_energy_source_tags.yml` — energy source tags laid out for the per-process checks, with records
 
 ## API
 

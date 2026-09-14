@@ -90,6 +90,9 @@ import ClimaAtmos as CA
         "output_default_diagnostics" => false,
         "output_dir" => mktempdir(pwd()),
         "energy_source_tags" => tags,
+        # Items 1 to 6 test the tags on `ρe_tot` itself. The tags refuse to run
+        # without the key, and `0` is how a run asks for no offset.
+        "energy_source_tag_offset" => 0,
     )
 
     simulation = CA.get_simulation(

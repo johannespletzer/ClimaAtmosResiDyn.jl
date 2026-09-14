@@ -19,6 +19,7 @@ is the whole distinction.
 ## Enabling tags
 
 ```yaml
+energy_source_tag_offset: 110495.0
 energy_source_tags:
   - name: tropics
     region: tropics
@@ -29,6 +30,10 @@ energy_source_tags:
 Each entry needs a unique `name` and a `region`, a `source`, or both — the entry
 schema and the region types are exactly those of the
 [energy tags](tagged_tracers.md#Region-tags). Off by default, at no runtime cost.
+
+`energy_source_tag_offset` is required with the tags. The section on the offset
+below says what it does. The tag-closure experiments used 110,495 J kg⁻¹, and
+`0` keeps the tags on ``\rho e_\mathrm{tot}`` itself.
 
 See [Configuring Tracers](tracer_configuration.md) for the full schema and the
 named regions.
@@ -156,16 +161,34 @@ column of the closure check.
 
 ## Closure checking
 
+The check is on by default whenever the tags include a pure region tag. Without
+a block, it runs daily, reports without warning, and adds the residual since one
+hour after the start to every row. A block sets its keys:
+
 ```yaml
 energy_source_closure_check:
   period: "1days"
   tolerance: 1.0e-6
+  spin_up: "1hours"
 ```
 
+`energy_source_closure_check: false` switches it off.
+
 Reduces `e_src_res` to a pair of numbers on its own cadence and appends them to
-`energy_source_tag_closure.csv`, warning when the run drifts past the tolerance.
-The keys and behaviour are those of `energy_closure_check`; see
-[Configuring Tracers](tracer_configuration.md).
+`energy_source_tag_closure.csv`. The keys and behaviour are those of
+`energy_closure_check`, see [Configuring Tracers](tracer_configuration.md), with
+two differences:
+
+  - `tolerance` has no default, so the check warns only when one is set. No
+    level has been calibrated for this family yet, and a fixed default would
+    warn in every run.
+  - `spin_up`, `"1hours"` by default and `~` for none, takes the residual once at
+    that time. Each row then also carries `residual_at_spin_up`,
+    `residual_since_spin_up` and `relative_since_spin_up`, `NaN` before the
+    reference is taken. The first hour's residual comes from the initial
+    adjustment and the solver's one Newton iteration, and the rows since the
+    spin-up leave it out. After a restart, the reference is taken again at
+    `spin_up` after the restart.
 
 The tolerance is compared against a residual normalized by a quantity whose zero
 is a convention, so a value tuned for one energy reference means something

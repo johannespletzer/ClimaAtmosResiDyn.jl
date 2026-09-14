@@ -81,6 +81,8 @@ function get_atmos(config::AtmosConfig, params; setup_type = nothing)
     if microphysics_model isa NonEquilibriumMicrophysics1M
         @info "Microphysics settings: $(sprint(summary_microphysics, microphysics_model))"
     end
+    warn_untagged_energy_source_processes(atmos)
+    warn_unbracketed_energy_source_constraints(atmos)
     return atmos
 end
 

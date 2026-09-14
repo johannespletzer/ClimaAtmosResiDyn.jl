@@ -511,37 +511,42 @@ tag_closure_path(output_dir, family) =
     joinpath(output_dir, "$(family)_tag_closure.csv")
 
 """
-    write_tag_closure!(output_dir, t, family, closure)
+    write_tag_closure!(output_dir, t, family, closure; reference = nothing)
 
 Append one row to the closure table of `family`, creating it with a header if
 it does not exist yet. Called on the root process only.
+
+A check with a spin-up reference passes `reference`, a `Ref` that holds the
+residual at the spin-up once it is taken, and `nothing` before. The row then
+carries three more columns: that residual, the residual since, and the residual
+since relative to the scale. Before the reference is taken, they are `NaN`.
 """
-function write_tag_closure!(output_dir, t, family, closure)
+function write_tag_closure!(output_dir, t, family, closure; reference = nothing)
     path = tag_closure_path(output_dir, family)
     write_header = !isfile(path) || filesize(path) == 0
+    values = (
+        t,
+        closure.total,
+        closure.tagged,
+        closure.residual,
+        closure.relative,
+        closure.gross_residual,
+        closure.gross_relative,
+        closure.scale,
+        closure.nonpositive_fraction,
+    )
+    header =
+        "time,total,tagged,residual,relative,gross_residual," *
+        "gross_relative,scale,nonpositive_fraction"
+    if !isnothing(reference)
+        header *= ",residual_at_spin_up,residual_since_spin_up,relative_since_spin_up"
+        at_spin_up = isnothing(reference[]) ? NaN : reference[]
+        since = closure.residual - at_spin_up
+        values = (values..., at_spin_up, since, since / closure.scale)
+    end
     open(path, "a") do io
-        write_header && println(
-            io,
-            "time,total,tagged,residual,relative,gross_residual," *
-            "gross_relative,scale,nonpositive_fraction",
-        )
-        println(
-            io,
-            join(
-                (
-                    t,
-                    closure.total,
-                    closure.tagged,
-                    closure.residual,
-                    closure.relative,
-                    closure.gross_residual,
-                    closure.gross_relative,
-                    closure.scale,
-                    closure.nonpositive_fraction,
-                ),
-                ",",
-            ),
-        )
+        write_header && println(io, header)
+        println(io, join(values, ","))
     end
     return nothing
 end
@@ -666,40 +671,42 @@ tag_audit_path(output_dir, family) =
     joinpath(output_dir, "$(family)_tag_audit.csv")
 
 """
-    write_tag_audit!(output_dir, t, family, audit)
+    write_tag_audit!(output_dir, t, family, audit; extra = nothing)
 
 Append one row to the audit table of `family`, creating it with a header if it
 does not exist yet. Called on the root process only.
+
+`extra` is a `NamedTuple` of a family's own columns, such as
+[`energy_source_audit`](@ref) gives, appended after the common ones under their
+own names, or `nothing`.
 """
-function write_tag_audit!(output_dir, t, family, audit)
+function write_tag_audit!(output_dir, t, family, audit; extra = nothing)
     path = tag_audit_path(output_dir, family)
     write_header = !isfile(path) || filesize(path) == 0
+    header =
+        "time,untagged,untagged_relative,overclaimed," *
+        "overclaimed_relative,orphaned,orphaned_relative," *
+        "orphaned_volume_fraction,nonpositive_mass," *
+        "nonpositive_mass_fraction"
+    row = (
+        t,
+        audit.untagged,
+        audit.untagged_relative,
+        audit.overclaimed,
+        audit.overclaimed_relative,
+        audit.orphaned,
+        audit.orphaned_relative,
+        audit.orphaned_volume_fraction,
+        audit.nonpositive_mass,
+        audit.nonpositive_mass_fraction,
+    )
+    if !isnothing(extra)
+        header *= "," * join(string.(keys(extra)), ",")
+        row = (row..., values(extra)...)
+    end
     open(path, "a") do io
-        write_header && println(
-            io,
-            "time,untagged,untagged_relative,overclaimed," *
-            "overclaimed_relative,orphaned,orphaned_relative," *
-            "orphaned_volume_fraction,nonpositive_mass," *
-            "nonpositive_mass_fraction",
-        )
-        println(
-            io,
-            join(
-                (
-                    t,
-                    audit.untagged,
-                    audit.untagged_relative,
-                    audit.overclaimed,
-                    audit.overclaimed_relative,
-                    audit.orphaned,
-                    audit.orphaned_relative,
-                    audit.orphaned_volume_fraction,
-                    audit.nonpositive_mass,
-                    audit.nonpositive_mass_fraction,
-                ),
-                ",",
-            ),
-        )
+        write_header && println(io, header)
+        println(io, join(row, ","))
     end
     return nothing
 end
@@ -770,6 +777,12 @@ the same `closure` from the same global reductions. Raising it on the root alone
 would leave the others waiting in the next reduction. `audit` comes from the
 configuration and is therefore the same on every process, so the reductions
 inside [`tag_audit`](@ref) are entered by all of them or by none.
+
+A `tolerance` of `nothing` means the check only reports. `reference` is the
+spin-up reference of the check, a `Ref`, or `nothing` for a check without one;
+see [`write_tag_closure!`](@ref). `extra_audit`, a function of `(Y, p, scale)`,
+gives a family's own audit columns, such as [`energy_source_audit`](@ref), when
+`audit` is on.
 """
 function tag_closure_callback!(
     integrator,
@@ -779,7 +792,9 @@ function tag_closure_callback!(
     tag_state_names,
     tolerance,
     abort_above,
-    audit,
+    audit;
+    reference = nothing,
+    extra_audit = nothing,
 )
     Y = integrator.u
     closure = tag_closure(Y, integrator.p, total_name, tag_state_names)
@@ -789,17 +804,21 @@ function tag_closure_callback!(
         audit ?
         tag_audit(Y, integrator.p, total_name, tag_state_names, closure.scale) :
         nothing
+    extra_row =
+        (audit && !isnothing(extra_audit)) ?
+        extra_audit(Y, integrator.p, closure.scale) : nothing
     t = Float64(integrator.t)
     if ClimaComms.iamroot(ClimaComms.context(Y.c))
-        write_tag_closure!(output_dir, t, family, closure)
+        write_tag_closure!(output_dir, t, family, closure; reference)
         isnothing(audit_row) ||
-            write_tag_audit!(output_dir, t, family, audit_row)
-        closure.gross_relative > tolerance && @warn(
-            "$family tag closure residual $(closure.gross_relative) exceeds \
-            the configured tolerance $tolerance at t = $t s. The tags no \
-            longer account for the field they partition; see \
-            $(tag_closure_path(output_dir, family))."
-        )
+            write_tag_audit!(output_dir, t, family, audit_row; extra = extra_row)
+        !isnothing(tolerance) && closure.gross_relative > tolerance &&
+            @warn(
+                "$family tag closure residual $(closure.gross_relative) exceeds \
+                the configured tolerance $tolerance at t = $t s. The tags no \
+                longer account for the field they partition; see \
+                $(tag_closure_path(output_dir, family))."
+            )
         # Reported separately because closure cannot reveal it: complementary
         # region tags partition a negative parent exactly, so the residual stays
         # at zero while every share is meaningless.
@@ -820,6 +839,25 @@ function tag_closure_callback!(
             `abort_above` in the closure-check block to keep going anyway.",
         )
     end
+    return nothing
+end
+
+"""
+    take_tag_closure_reference!(integrator, reference, total_name, tag_state_names)
+
+Store the family's closure residual in `reference`, a `Ref`, unless it holds one
+already. Runs once, at the spin-up time of a check with a spin-up reference, and
+writes no row. The residual is a global reduction, so every process takes it.
+"""
+function take_tag_closure_reference!(
+    integrator,
+    reference,
+    total_name,
+    tag_state_names,
+)
+    isnothing(reference[]) || return nothing
+    closure = tag_closure(integrator.u, integrator.p, total_name, tag_state_names)
+    reference[] = closure.residual
     return nothing
 end
 
