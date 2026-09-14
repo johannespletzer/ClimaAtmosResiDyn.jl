@@ -272,8 +272,8 @@ With D1 (B12):
     `output/c0_sphere_deep/` has no provenance, so every phase C pass warns.
   - **`analysis/phase_c.jl`** reads only runs named `c*`; the D, P, V and MP
     runs are in FINDINGS only.
-  - **NEXT_SESSION.md** needs the day's state: #75, #76, #77, and the jobs in
-    flight.
+  - ~~**NEXT_SESSION.md** needs the day's state.~~ It points here, with a
+    summary of the day.
 
 ## 6. Open questions, not blocking
 

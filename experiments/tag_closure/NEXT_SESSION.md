@@ -62,6 +62,22 @@ one agent has worked this branch at once.
 
 ## Where the last session stopped
 
+**The state on the evening of 2026-09-14 is in
+[OPERATIONAL_TODO.md](OPERATIONAL_TODO.md).** Read it first; the bullets below
+are the history that led there. In short:
+
+  - Open PRs: #73 (docs workflow), #72 (the audit) and #74 (docs), ready for the
+    owner; drafts #75 (Float32 test), #76 (P4's fix: tags and records solved
+    apart from the Jacobian's solver, validated on EDMF, E44e) and #77 (B9, the
+    defaults and checks).
+  - Results of the day: V3, MP1, P1, C5 and the 10° mask twin (E45 to E48, T9),
+    and P4's cause and fix (E44c to E44e).
+  - Standing approvals are listed under "Decided" in the to-do list, with how
+    much of each is used. 1 of the 8 P4 jobs is left.
+  - Worktrees beside the repository are listed under "Housekeeping". The one
+    named `-buildtime-edmf` has the EDMF refusal switched off locally: never
+    commit from it.
+
   - **C4 ran, and the tag-side offset works.** `energy_source_tag_offset` is in
     the model. It leaves the atmosphere bit for bit untouched and reproduces
     C1's tag results (FINDINGS E17 to E19). The twin tests found E16 to be
