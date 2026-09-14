@@ -100,7 +100,12 @@ function jacobian_cache(alg::AutoSparseJacobian, Y, atmos; verbose = true)
     # TODO: Add FieldNameTree(Y) to the matrix in FieldMatrixWithSolver. The
     # tree is needed to evaluate scalar_tendency_matrix[autodiff_matrix_keys].
     # (; matrix) = jacobian_cache(sparse_jacobian_alg, Y, atmos)
-    matrix_without_tree = jacobian_cache(sparse_jacobian_alg, Y, atmos).matrix
+    matrix_without_tree = jacobian_cache(
+        sparse_jacobian_alg,
+        Y,
+        atmos;
+        split_uncoupled_fields = false,
+    ).matrix
     tree = MatrixFields.FieldNameTree(Y)
     matrix = MatrixFields.FieldMatrixWithSolver(
         MatrixFields.replace_name_tree(matrix_without_tree.matrix, tree),
