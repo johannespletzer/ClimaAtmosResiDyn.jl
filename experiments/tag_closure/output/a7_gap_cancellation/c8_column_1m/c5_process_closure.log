@@ -1,0 +1,62 @@
+run: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c8_column_1m/output_active
+offset 110495.0 J/kg; regions strat, tropo; processes mp, rad, sfc, sub
+form A, new energy by region against by process:
+  largest pointwise gap 117.05159187557365 J/kg, at t = 86400.0 s, z = 75.0 m
+  there: new by region 18916.893191115156, by process 18799.841599239582
+  largest relative gap 0.000707432212417878
+  largest gap by hour: 0.0 0.00791 0.051 0.14 0.258 0.433 0.683 0.946 1.21 1.46 1.75 4.46 5.78 4.61 8.6 13.3 19.6 27.4 35.6 45.7 57.6 69.6 84.0 100.0 117.0
+  record microphysics there: 0.0 J/kg
+  record precipitation there: -613.3748444227133 J/kg
+  record radiation there: 6323.423842508618 J/kg
+  record subsidence there: -3667.936390743437 J/kg
+  record surface_flux there: 0.0 J/kg
+  tag mp there: 0.0 J/kg
+  tag new_strat there: 0.014584581131372589 J/kg
+  tag new_tropo there: 18916.878606534025 J/kg
+  tag rad there: 6912.1812280586455 J/kg
+  tag sfc there: 11887.655544891608 J/kg
+  tag strat there: 0.09317468696059485 J/kg
+  tag sub there: 0.0048262893278253815 J/kg
+  tag tropo there: 82199.2959573163 J/kg
+  share of the gap's absolute sum where the source tags' negative parts add up to below -1 J/kg: 0.0, at a fraction 0.0 of the points
+  initial energy of strat: smallest value 0.030115588440654387 J/kg
+  initial energy of tropo: smallest value 0.03226898469004923 J/kg
+  with the repair's ledgers taken back out, an indicator only: largest gap 117.05159217957771 J/kg
+the repair's ledgers over the run, J/kg:
+  mp                0.0   0.0
+  new_strat         0.0   3.7134050278654424e-11
+  new_tropo         0.0   4.960976073379313e-7
+  rad               0.0   4.96134741389807e-7
+  sfc               0.0   9.93544615238097e-19
+  strat             0.0   0.0
+  sub               0.0   6.972297881836797e-11
+  tropo             0.0   0.0
+tag minima and maxima over the run, J/kg:
+  mp                0.0   0.0
+  new_strat         0.0   12671.407702341423
+  new_tropo         0.0   165459.71572542464
+  rad               0.0   13113.682450186394
+  sfc               0.0   152344.61548671225
+  strat             0.033977965380665935   65875.65445855673
+  sub               0.0   33502.41930043406
+  tropo             0.03226900293963322   222711.3952632965
+column quadrature against the closure table at the first sample: relative difference 1.3188339053065605e-16
+initial energy of strat, column integral: 5.2684683046055384e7 to 4.9189468153733134e7 J/m², largest rise between samples -58110.55139414966
+initial energy of tropo, column integral: 6.030271539654003e7 to 5.0692488137588054e7 J/m², largest rise between samples -144935.41309756786
+form B, records (microphysics, precipitation, radiation, subsidence, surface_flux) against the change in ρe_tot, J/m²:
+  record microphysics at the last sample: 0.0
+  record precipitation at the last sample: -158979.4561997174
+  record radiation at the last sample: -7.124694502442778e6
+  record subsidence at the last sample: -1.2368772754903338e6
+  record surface_flux at the last sample: 9.417599999999087e6
+  at the last sample: change 897043.4740019143, records 897048.7658662573, difference -5.291864342987537
+where the radiation record is most negative, z = 725.0 m, at the last sample:
+  record -43033.22943940676 J/kg; rad tag 9.107455569812256e-8 J/kg; tags' total 61406.9246390218 J/kg; share 1.4831316864262583e-12
+  over the column at the last sample: rad tag 8.42430089624446e-121 to 13113.682450186394 J/kg, record -43033.22943940676 to 15771.289692558163 J/kg
+wrote process_closure.csv and cloud_top.csv
+how form A's gap cancels, as the kept fraction of its weighted gross (1: nothing cancels):
+  at the largest pointwise gap, t = 86400.0 s: over levels 0.010949662305679463, over columns NaN, overall 0.010949662305679463
+    ∫ gap / ∫ new energy -1.5080926973895516e-5
+  at the last sample, t = 86400.0 s: over levels 0.010949662305679463, over columns NaN, overall 0.010949662305679463
+    ∫ gap / ∫ new energy -1.5080926973895516e-5
+wrote gap_cancellation.csv

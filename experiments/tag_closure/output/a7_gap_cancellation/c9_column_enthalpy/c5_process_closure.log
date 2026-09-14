@@ -1,0 +1,57 @@
+run: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c9_column_enthalpy/output_active
+offset 110495.0 J/kg; regions strat, tropo; processes rad, sfc, sub
+form A, new energy by region against by process:
+  largest pointwise gap 6.623586313203589e-6 J/kg, at t = 3600.0 s, z = 375.0 m
+  there: new by region 6.421355019638931, by process 6.421348396052617
+  largest relative gap 9.908226325348166e-10
+  largest gap by hour: 0.0 6.62e-6 6.46e-6 6.3e-6 6.14e-6 5.98e-6 5.85e-6 5.74e-6 5.64e-6 5.54e-6 5.44e-6 5.35e-6 5.26e-6 5.18e-6 5.1e-6 5.02e-6 4.95e-6 4.87e-6 4.8e-6 4.72e-6 4.66e-6 4.6e-6 4.54e-6 4.47e-6 4.38e-6
+  record microphysics there: 0.0 J/kg
+  record radiation there: 0.0 J/kg
+  record subsidence there: 6.446287210234665 J/kg
+  record surface_flux there: 0.0 J/kg
+  tag new_strat there: 0.0035559081032997303 J/kg
+  tag new_tropo there: 6.417799111535631 J/kg
+  tag rad there: 0.006701324337170926 J/kg
+  tag sfc there: 2.672916334018423e-14 J/kg
+  tag strat there: 38.68854573653664 J/kg
+  tag sub there: 6.41464707171542 J/kg
+  tag tropo there: 68357.50076947908 J/kg
+  share of the gap's absolute sum where the source tags' negative parts add up to below -1 J/kg: 0.0, at a fraction 0.0 of the points
+  initial energy of strat: smallest value 0.02406950016511744 J/kg
+  initial energy of tropo: smallest value 0.03322423235154931 J/kg
+  with the repair's ledgers taken back out, an indicator only: largest gap 6.623586313203589e-6 J/kg
+the repair's ledgers over the run, J/kg:
+  new_strat         0.0   0.0
+  new_tropo         0.0   0.0
+  rad               0.0   0.0
+  sfc               0.0   0.0
+  strat             0.0   0.0
+  sub               0.0   0.0
+  tropo             0.0   0.0
+tag minima and maxima over the run, J/kg:
+  new_strat         -1.5726580218063796e-11   5466.679834627851
+  new_tropo         0.0   152622.9260779564
+  rad               -1.5582221809091977e-6   5701.288221727731
+  sfc               0.0   146921.71483124618
+  strat             0.033977965380665935   65875.65445855673
+  sub               -1.5697797258783339e-30   17324.432304571164
+  tropo             0.03322423235154931   200111.1600596839
+column quadrature against the closure table at the first sample: relative difference 1.3188339053065605e-16
+initial energy of strat, column integral: 5.2684683046055384e7 to 5.006236183114899e7 J/m², largest rise between samples -44087.497529916465
+initial energy of tropo, column integral: 6.030271539654003e7 to 5.187014887598286e7 J/m², largest rise between samples -157941.94586406648
+form B, records (microphysics, radiation, subsidence, surface_flux) against the change in ρe_tot, J/m²:
+  record microphysics at the last sample: -87650.90467226101
+  record radiation at the last sample: -6.618596107665209e6
+  record subsidence at the last sample: -1.2778261255460896e6
+  record surface_flux at the last sample: 9.417599999999087e6
+  at the last sample: change 1.43352686211586e6, records 1.4335268621155275e6, difference 3.3248215913772583e-7
+where the radiation record is most negative, z = 675.0 m, at the last sample:
+  record -20565.795089624895 J/kg; rad tag 5.777500125366353 J/kg; tags' total 61718.03665994302 J/kg; share 9.361121056393122e-5
+  over the column at the last sample: rad tag 3.7996539190960337e-29 to 5701.288221727731 J/kg, record -20565.795089624895 to 7587.324107300024 J/kg
+wrote process_closure.csv and cloud_top.csv
+how form A's gap cancels, as the kept fraction of its weighted gross (1: nothing cancels):
+  at the largest pointwise gap, t = 3600.0 s: over levels 5.126837988207425e-7, over columns NaN, overall 5.126837988207425e-7
+    ∫ gap / ∫ new energy 8.213410223976615e-16
+  at the last sample, t = 86400.0 s: over levels 0.06574158995854851, over columns NaN, overall 0.06574158995854851
+    ∫ gap / ∫ new energy 2.6225615340577406e-12
+wrote gap_cancellation.csv

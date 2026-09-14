@@ -1,0 +1,44 @@
+run: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c6_sphere_repair/output_active
+offset 110495.0 J/kg; regions extratropics, tropics; processes rad, sfc
+form A, new energy by region against by process:
+  largest pointwise gap 148.7814014667929 J/kg, at t = 86400.0 s, grid index (1, 1, 1)
+  there: new by region 21198.13416137544, by process 21049.35275990865
+  largest relative gap 0.007034091658556862
+  largest gap by hour: 0.0 2.1 3.96 7.61 16.5 28.9 40.3 50.6 59.9 68.4 76.2 83.7 90.6 96.9 103.0 108.0 113.0 119.0 124.0 129.0 133.0 138.0 142.0 145.0 149.0
+  record microphysics there: 270.6052835357525 J/kg
+  record radiation there: 2579.442183260396 J/kg
+  record surface_flux there: 18869.94098879669 J/kg
+  tag extratropics there: 31138.399857878725 J/kg
+  tag new_extratropics there: 21198.13416137544 J/kg
+  tag new_tropics there: 0.0 J/kg
+  tag rad there: 2524.4503409771414 J/kg
+  tag sfc there: 18524.902418931506 J/kg
+  tag tropics there: 0.0021109934604822207 J/kg
+  share of the gap's absolute sum where the source tags' negative parts add up to below -1 J/kg: 0.0, at a fraction 0.0 of the points
+  initial energy of extratropics: smallest value -0.6915214649040509 J/kg
+  initial energy of tropics: smallest value -4.018673001966976 J/kg
+  with the repair's ledgers taken back out, an indicator only: largest gap 222.82871833471825 J/kg
+the repair's ledgers over the run, J/kg:
+  extratropics      -30920.39161138436   25281.505143368347
+  new_extratropics  0.0   473.0425606245339
+  new_tropics       0.0   249.32971426304726
+  rad               0.0   78.63956541546604
+  sfc               0.0   706.5417309061771
+  tropics           -25281.505143368442   30920.391611384435
+tag minima and maxima over the run, J/kg:
+  extratropics      0.0   222808.42859456438
+  new_extratropics  0.0   21198.140900291066
+  new_tropics       0.0   2209.9142243427386
+  rad               0.0   3217.36769210756
+  sfc               -2.644127451236632e-53   18524.91484025459
+  tropics           0.0   217406.80386903352
+record microphysics over the run: -0.07369889942536192 to 270.66224755489117 J/kg
+record radiation over the run: -2542.52247700756 to 3359.148236054472 J/kg
+record surface_flux over the run: -13129.072297604256 to 18878.573250062822 J/kg
+wrote process_closure.csv
+how form A's gap cancels, as the kept fraction of its weighted gross (1: nothing cancels):
+  at the largest pointwise gap, t = 86400.0 s: over levels 0.6150994198347159, over columns 0.7017632234419038, overall 0.4171047982697361
+    ∫ gap / ∫ new energy 0.003520893035054759
+  at the last sample, t = 86400.0 s: over levels 0.6150994198347159, over columns 0.7017632234419038, overall 0.4171047982697361
+    ∫ gap / ∫ new energy 0.003520893035054759
+wrote gap_cancellation.csv

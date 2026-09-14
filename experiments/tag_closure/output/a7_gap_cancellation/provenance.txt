@@ -1,0 +1,12 @@
+analysis: A7, how form A's gap cancels over levels and over columns (FINDINGS E49)
+machine: terrabyte login node
+script: experiments/tag_closure/analysis/c5_process_closure.jl, at the commit that adds this directory
+command: julia +1.11 --project=.buildkite experiments/tag_closure/analysis/c5_process_closure.jl <run>/output_active experiments/tag_closure/output/a7_gap_cancellation/<run>
+inputs: the hourly NetCDF of each run on scratch, /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/<run>/output_active
+runs: c7_sphere_mp c9_sphere_enthalpy c10_sphere_enthalpy_repair c6_sphere_no_repair c6_sphere_repair c5_column_offset c8_column_1m c9_column_enthalpy
+run_provenance: each run's own provenance.txt in experiments/tag_closure/output/<run>/
+date: 2026-09-14
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+files: per run, gap_cancellation.csv and c5_process_closure.log (the printed summary). The script also wrote process_closure.csv, and cloud_top.csv on a column. Each was identical to the committed one in output/<run>/ (compared with cmp), so the copies are not kept.
+weights: on the sphere, a hydrostatic density from ta with a surface pressure of 1e5 Pa, times layer thickness and cos(latitude); on a column, rhoa times the level spacing

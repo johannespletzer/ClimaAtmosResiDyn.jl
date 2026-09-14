@@ -1,0 +1,42 @@
+run: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/c5_column_offset/output_active
+offset 110495.0 J/kg; regions strat, tropo; processes rad, sfc
+form A, new energy by region against by process:
+  largest pointwise gap 17953.961491737573 J/kg, at t = 86400.0 s, z = 675.0 m
+  there: new by region 17953.965874404636, by process 0.0043826670608471925
+  largest relative gap 0.13518807403688113
+  largest gap by hour: 0.0 127.0 718.0 1330.0 1850.0 2290.0 3800.0 5450.0 7070.0 8450.0 9600.0 10600.0 11400.0 12100.0 12700.0 13200.0 13600.0 14000.0 14300.0 14800.0 15600.0 16400.0 17000.0 17500.0 18000.0
+  record radiation there: -20565.795089624895 J/kg
+  record surface_flux there: 0.0 J/kg
+  tag new_strat there: 3295.911106488184 J/kg
+  tag new_tropo there: 14658.054767916452 J/kg
+  tag rad there: 0.0043826670608471925 J/kg
+  tag sfc there: 1.1245407622333655e-59 J/kg
+  tag strat there: 11352.670035020625 J/kg
+  tag tropo there: 52015.72787009151 J/kg
+  share of the gap's absolute sum where the source tags' negative parts add up to below -1 J/kg: 0.0, at a fraction 0.0 of the points
+  initial energy of strat: smallest value 0.027596463342275293 J/kg
+  initial energy of tropo: smallest value 0.032322901958482225 J/kg
+tag minima and maxima over the run, J/kg:
+  new_strat         -6.180112866249974e-12   5775.988872121742
+  new_tropo         -1.8650896596283832e-13   160304.39643906755
+  rad               -2.468918270665195e-9   6099.740290366305
+  sfc               -2.5507693340446753e-26   154204.7369978487
+  strat             0.033977965380665935   65875.65445855673
+  tropo             0.03232293035486049   216562.8498224167
+column quadrature against the closure table at the first sample: relative difference 1.3188339053065605e-16
+initial energy of strat, column integral: 5.2684683046055384e7 to 5.008100256470347e7 J/m², largest rise between samples -44022.35625299811
+initial energy of tropo, column integral: 6.030271539654003e7 to 5.224412944845535e7 J/m², largest rise between samples -146766.8591194451
+form B, records (radiation, surface_flux) against the change in ρe_tot, J/m²:
+  record radiation at the last sample: -6.618596107665209e6
+  record surface_flux at the last sample: 9.417599999999087e6
+  at the last sample: change 1.4335268621158302e6, records 2.799003892333878e6, difference -1.365477030218048e6
+where the radiation record is most negative, z = 675.0 m, at the last sample:
+  record -20565.795089624895 J/kg; rad tag 0.0043826670608471925 J/kg; tags' total 61718.036659943005 J/kg; share 7.101112248587915e-8
+  over the column at the last sample: rad tag -2.0727513835189436e-9 to 6099.740290366305 J/kg, record -20565.795089624895 to 7587.324107300024 J/kg
+wrote process_closure.csv and cloud_top.csv
+how form A's gap cancels, as the kept fraction of its weighted gross (1: nothing cancels):
+  at the largest pointwise gap, t = 86400.0 s: over levels 0.9999826095540668, over columns NaN, overall 0.9999826095540668
+    ∫ gap / ∫ new energy 0.25874308022656606
+  at the last sample, t = 86400.0 s: over levels 0.9999826095540668, over columns NaN, overall 0.9999826095540668
+    ∫ gap / ∫ new energy 0.25874308022656606
+wrote gap_cancellation.csv

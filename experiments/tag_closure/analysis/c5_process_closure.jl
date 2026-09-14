@@ -2,10 +2,11 @@
 C5's per-process reading of the energy source tags, from one run's output.
 
     julia +1.11 --project=.buildkite \
-        experiments/tag_closure/analysis/c5_process_closure.jl <output_dir>
+        experiments/tag_closure/analysis/c5_process_closure.jl <output_dir> [<write_dir>]
 
 `<output_dir>` is the run's own output directory, the one that holds its NetCDF
-diagnostics, its configuration and `energy_source_tag_closure.csv`. The script
+diagnostics, its configuration and `energy_source_tag_closure.csv`. The tables
+go to `<write_dir>`, which defaults to `<output_dir>`. The script
 expects the C5 tag layout:
 
   - pure region tags;
@@ -13,7 +14,7 @@ expects the C5 tag layout:
     (`source: all`) inside that region and starts at zero;
   - one tag per process.
 
-It writes `process_closure.csv` into that directory, one row per sample, and on
+It writes `process_closure.csv` into `<write_dir>`, one row per sample, and on
 a column also `cloud_top.csv`, one row per level at the last sample. It prints
 a summary.
 
@@ -42,6 +43,10 @@ A column integral is the sum of `rhoa × value × Δz` over the levels, which is
 the model's own quadrature on an unstretched column. The script refuses a
 stretched column, and checks the sum against the closure table's native
 integral of the tags' total at the first sample.
+
+It also writes `gap_cancellation.csv`, one row per sample, on how form A's gap
+cancels when it is summed (A7). See `gap_cancellation`. On a sphere this needs
+`ta`, for approximate mass weights.
 =#
 
 import NCDatasets
@@ -67,7 +72,9 @@ end
     read_field(dir, short_name)
 
 The values of `short_name` with time as the last dimension, whatever order the
-writer used, and the file's raw time axis and `z`.
+writer used, and the file's raw time axis and `z`. `dims` names the dimensions
+of `values` in order. On a lat-lon grid `lon` and `lat` hold the grid, and on a
+column they are empty.
 """
 read_field(dir, short_name) =
     NCDatasets.NCDataset(diagnostic_file(dir, short_name), "r") do ds
@@ -75,7 +82,16 @@ read_field(dir, short_name) =
         names = collect(NCDatasets.dimnames(variable))
         order = [findall(!=("time"), names); findfirst(==("time"), names)]
         values = permutedims(Array(variable.var), order)
-        (; values, time = Array(ds["time"].var), z = Array(ds["z"].var))
+        lon = haskey(ds, "lon") ? Array(ds["lon"].var) : Float64[]
+        lat = haskey(ds, "lat") ? Array(ds["lat"].var) : Float64[]
+        (;
+            values,
+            dims = names[order],
+            time = Array(ds["time"].var),
+            z = Array(ds["z"].var),
+            lon,
+            lat,
+        )
     end
 
 # Names from files `<prefix><name>_<period>_inst.nc`.
@@ -131,7 +147,99 @@ function write_csv(path, header, columns)
     return nothing
 end
 
-function main(dir)
+const R_d = 287.05
+const grav = 9.80616
+
+# Layer thicknesses from level heights, with the lowest face at z = 0.
+function layer_thickness(z)
+    faces = zeros(length(z) + 1)
+    for k in eachindex(z)
+        faces[k + 1] = 2z[k] - faces[k]
+    end
+    return diff(faces)
+end
+
+"""
+    sphere_mass_weights(dir)
+
+Mass weights on the lat-lon grid, as an array of `(lon, lat, z, time)`: a
+hydrostatic density from `ta` with a surface pressure of 1e5 Pa, times the
+layer thickness and the cosine of latitude. So they are approximate, as in
+`formA_followup.jl`, and they leave out the area of a cell at the equator,
+which cancels in every fraction. The remapped grid repeats 180° as −180°, and
+the repeated column gets no weight. `nothing` when the run wrote no `ta`.
+"""
+function sphere_mass_weights(dir)
+    any(name -> startswith(name, "ta_") && endswith(name, ".nc"), readdir(dir)) ||
+        return nothing
+    ta = read_field(dir, "ta")
+    order = [findfirst(==(d), ta.dims) for d in ("lon", "lat", "z", "time")]
+    T = permutedims(ta.values, order)
+    nx, ny, nz, nt = size(T)
+    z = ta.z
+    ρ = similar(T)
+    for t in 1:nt, j in 1:ny, i in 1:nx
+        log_p = log(1e5) - grav * z[1] / (R_d * T[i, j, 1, t])
+        ρ[i, j, 1, t] = exp(log_p) / (R_d * T[i, j, 1, t])
+        for k in 2:nz
+            T_mean = (T[i, j, k, t] + T[i, j, k - 1, t]) / 2
+            log_p -= grav * (z[k] - z[k - 1]) / (R_d * T_mean)
+            ρ[i, j, k, t] = exp(log_p) / (R_d * T[i, j, k, t])
+        end
+    end
+    repeated = abs(ta.lon[end] - ta.lon[1] - 360) < 1e-6
+    Δz = layer_thickness(z)
+    area = [
+        (repeated && i == nx ? 0.0 : 1.0) * cosd(ta.lat[j]) for i in 1:nx,
+        j in 1:ny, k in 1:1, t in 1:1
+    ]
+    return ρ .* area .* reshape(Δz, 1, 1, nz, 1)
+end
+
+"""
+    gap_cancellation(gap, new_sum, weight, z_dim)
+
+How form A's gap cancels when it is summed over levels, over columns, and over
+the whole domain (A7), one value per sample. Each `kept_*` is the absolute value
+of the weighted sums over its group, added up, over the weighted sum of `|gap|`.
+One means nothing cancels, zero that everything does.
+
+  - `kept_over_levels`: sum each column over its levels first.
+  - `kept_over_columns`: sum each level over its columns first. Missing on a
+    column.
+  - `kept_overall`: sum over everything.
+
+An error that transport moves between cells cancels in a sum over those cells.
+An unfollowed process does not. So a gap that survives summing over levels, and
+not over columns, was moved horizontally, and so on.
+
+`gap` and `new_sum` have time as their last dimension, and `z_dim` is the
+dimension of the levels. `weight` is the mass per cell, of the same shape or
+broadcastable to it.
+"""
+function gap_cancellation(gap, new_sum, weight, z_dim)
+    time_dim = ndims(gap)
+    wg = weight .* gap
+    per_sample(x) = vec(sum(x; dims = Tuple(setdiff(1:time_dim, time_dim))))
+    gross = per_sample(weight .* abs.(gap))
+    horizontal = Tuple(setdiff(1:(time_dim - 1), z_dim))
+    kept_over_levels = ratio.(per_sample(abs.(sum(wg; dims = z_dim))), gross)
+    kept_over_columns =
+        isempty(horizontal) ? fill(NaN, length(gross)) :
+        ratio.(per_sample(abs.(sum(wg; dims = horizontal))), gross)
+    integral = per_sample(wg)
+    return (;
+        gap_integral = integral,
+        gap_gross = gross,
+        new_integral = per_sample(weight .* new_sum),
+        kept_over_levels,
+        kept_over_columns,
+        kept_overall = ratio.(abs.(integral), gross),
+    )
+end
+
+function main(dir, write_dir = dir)
+    mkpath(write_dir)
     names = tag_names(dir)
     new = filter(startswith("new_"), names)
     isempty(new) && error("No `new_<region>` tags in $dir: not a C5 layout.")
@@ -295,7 +403,7 @@ function main(dir)
             rad_tag = value("rad")[:, end]
             total_now = total[:, end]
             write_csv(
-                joinpath(dir, "cloud_top.csv"),
+                joinpath(write_dir, "cloud_top.csv"),
                 ["z", "e_prc_radiation", "e_src_rad", "total", "rad_share"],
                 [z, radiation, rad_tag, total_now, rad_tag ./ total_now],
             )
@@ -320,13 +428,53 @@ function main(dir)
         end
     end
 
-    write_csv(joinpath(dir, "process_closure.csv"), header, columns)
+    write_csv(joinpath(write_dir, "process_closure.csv"), header, columns)
     println("wrote process_closure.csv", cloud_top ? " and cloud_top.csv" : "")
+
+    # A7: how form A's gap cancels over levels and over columns. On a column the
+    # weights are the model's density and the level spacing, checked above. On
+    # a sphere they are approximate.
+    weights = if column
+        (; weight = read_field(dir, "rhoa").values .* (z[2] - z[1]), z_dim = 1)
+    else
+        order = [
+            findfirst(==(d), fields[first(names)].dims) for
+            d in ("lon", "lat", "z", "time")
+        ]
+        gap = permutedims(gap, order)
+        new_sum = permutedims(new_sum, order)
+        (; weight = sphere_mass_weights(dir), z_dim = 3)
+    end
+    if isnothing(weights.weight)
+        println("no `ta` written, so no mass weights and no gap_cancellation.csv")
+        return nothing
+    end
+    cancellation = gap_cancellation(gap, new_sum, weights.weight, weights.z_dim)
+    write_csv(
+        joinpath(write_dir, "gap_cancellation.csv"),
+        ["time"; collect(string.(keys(cancellation)))],
+        Any[time, values(cancellation)...],
+    )
+    println(
+        "how form A's gap cancels, as the kept fraction of its weighted gross (1: nothing cancels):",
+    )
+    for (label, i) in (("largest pointwise gap", worst), ("last sample", length(time)))
+        println(
+            "  at the $label, t = $(time[i]) s: over levels $(cancellation.kept_over_levels[i]), over columns $(cancellation.kept_over_columns[i]), overall $(cancellation.kept_overall[i])",
+        )
+        println(
+            "    ∫ gap / ∫ new energy $(ratio(cancellation.gap_integral[i], cancellation.new_integral[i]))",
+        )
+    end
+    println("wrote gap_cancellation.csv")
     return nothing
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    dir = isempty(ARGS) ? get(ENV, "OUTPUT_DIR", "") : only(ARGS)
-    isempty(dir) && error("Usage: c5_process_closure.jl <output_dir>")
-    main(dir)
+    dir = isempty(ARGS) ? get(ENV, "OUTPUT_DIR", "") : first(ARGS)
+    isempty(dir) &&
+        error("Usage: c5_process_closure.jl <output_dir> [<write_dir>]")
+    length(ARGS) <= 2 ||
+        error("Usage: c5_process_closure.jl <output_dir> [<write_dir>]")
+    main(dir, length(ARGS) == 2 ? ARGS[2] : dir)
 end
