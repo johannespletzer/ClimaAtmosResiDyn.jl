@@ -21,7 +21,7 @@ Priorities: **B** blocks operation, **S** should be fixed, **N** is nice to
 have. Sizes: S is under a day, M one to three days, L several PRs or a
 campaign.
 
-## Where things stand (2026-09-14, late evening)
+## Where things stand (2026-09-14, night)
 
 Merged into `main`: #65 and the offset (#68); #69, the implicit bracket and the
 repair (`08682fd8`); #70, sedimentation as transport, the EDMF refusal and the
@@ -29,14 +29,15 @@ label warnings (`3b4b6056`).
 
 Open pull requests:
 
-| PR  | What                                                                  | State                          | CI, 2026-09-14 late    |
-|:--- |:--------------------------------------------------------------------- |:------------------------------ |:---------------------- |
-| #73 | Docs workflow: `contents: write` for the deploy, a 60-minute timeout  | ready, waits for the owner     | 57 pass, 6 pending     |
-| #72 | The enthalpy audit, `energy_source_tag_transport`, with its docs      | ready, waits for the owner     | 28 pass, 34 pending    |
-| #74 | D2: the energy source tag docs brought up to date after #70           | ready, waits for the owner     | 29 pass, 34 pending    |
-| #75 | T2: a Float32 integration test of the tags and records, own CI group  | draft; 38 of 38 pass locally   | 16 pass, 49 pending    |
-| #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | draft; EDMF validated (E44e)   | 5 pass, 30 pending     |
-| #77 | B9: the offset required, the closure check and label check by default | draft; tests pass locally      | 1 pass, 31 pending     |
+| PR  | What                                                                  | State                          | CI, 2026-09-14 night       |
+|:--- |:--------------------------------------------------------------------- |:------------------------------ |:-------------------------- |
+| #73 | Docs workflow: `contents: write` for the deploy, a 60-minute timeout  | ready, waits for the owner     | 63 pass, 1 pending         |
+| #72 | The enthalpy audit, `energy_source_tag_transport`, with its docs      | ready, waits for the owner     | 36 pass, 26 pending        |
+| #74 | D2: the energy source tag docs brought up to date after #70           | ready, waits for the owner     | 40 pass, 23 pending        |
+| #75 | T2: a Float32 integration test of the tags and records, own CI group  | draft; 38 of 38 pass locally   | 28 pass, 39 pending        |
+| #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | draft; EDMF validated (E44e)   | 30 pending, restarted by the allocation check |
+| #77 | B9: the offset required, the closure check and label check by default | draft; tests pass locally      | 9 pass, 26 pending         |
+| #78 | T3: the tag and record code allocates nothing                         | draft; 52 and 17 pass locally  | 1 pass, 32 pending         |
 
 No check has failed on any of them. The queue is long, so most are still
 pending.
@@ -54,7 +55,7 @@ day, 2M and P3, more than one node, and the GPU.
 
 ## 0. In flight
 
-  - **CI** on all six open PRs. Nothing runs on Slurm.
+  - **CI** on all seven open PRs. Nothing runs on Slurm.
 
 ## Decided
 
@@ -111,6 +112,8 @@ On 2026-09-14:
  3. **#76 uses ClimaCore `MatrixFields` internals,** since the public
     `FieldMatrixWithSolver` cannot solve on part of a state. Whether to keep
     that, or also ask ClimaCore upstream to make its name-set work scale (N).
+    A draft of that issue, with a ClimaCore-only reproducer, is in
+    [CLIMACORE_ISSUE_DRAFT.md](CLIMACORE_ISSUE_DRAFT.md). It is not filed.
  4. **A4.** Signed overlay shares under the audit: model code and a C9 twin.
  5. **V1's scope.** A 0M 10-day sphere is not production physics. Either fold
     it into a 10-day Float32 run with V2's physics, or make it S.
@@ -126,6 +129,10 @@ On 2026-09-14:
     blurrier provenance: a 10° mask leaves 3.6% of the total in the extratropics
     tag at the equator. Options: keep 2°; widen the named regions; or tie the
     width to the grid spacing. Changing it is a default.
+11. **C2's design,** [RESTART_GUARD_DESIGN.md](RESTART_GUARD_DESIGN.md), for
+    review before the code: the keys, where they are read, the error texts,
+    and four questions (the records, #77's spin-up reference, an override, and
+    tags from a restart without them).
 
 ## 2. Blocking operation (B), in dependency order
 
@@ -204,14 +211,18 @@ Done or in a pull request:
 With C1b (B4):
 
   - **M3.** A test that `water_advection.jl:51-56` and
-    `gs_sedimenting_mass_candidates` list the same species.
+    `gs_sedimenting_mass_candidates` list the same species. Written, and
+    committed only locally, on `claude/energy-source-tag-species-lists`
+    (`68cfe17f`), to open with C1b. Four mutations of the source each fail
+    it.
   - **T5.** The cold column as an integration item, from
     `analysis/subgrid_check_cold.jl`, covering both sedimentation branches.
 
 Before the GPU (B13):
 
-  - **T3.** An inference and allocation test of a tendency with tags, modelled
-    on `test/parameterized_tendencies/microphysics/allocations.jl`.
+  - ~~**T3.**~~ In #78: the tag and record code allocates nothing in a tendency
+    evaluation or in the repair. #76's split solver allocates nothing either
+    (a check added to #76).
 
 With V2 (B10):
 
@@ -235,8 +246,12 @@ With D1 (B12):
     longer freezes at a node, with `ta` and the partition residual unchanged.
   - **A5.** An overlay-bound diagnostic: the mass fraction where an overlay is
     negative, and where a member exceeds its group's sum.
-  - **A7.** In `c5_process_closure.jl`, how the gap cancels over columns and
-    levels.
+  - ~~**A7.**~~ Done (E49): a transport error cancels along the direction it
+    moved, and a process no tag follows, or the repair, keeps its sum.
+  - **P5.** The explicit tendency's generic tracer loops allocate, with or
+    without tags, and each tag adds to it: 22,576 bytes per call without tags
+    and 58,160 with four on a 1M column (#78's description). Shared model
+    code, not tag code.
   - **A2's runtime part and A3,** as optional validation features: ∫Δ⁺ per
     label at runtime, and form A as a global integral online. Accept A3 at
     about 1.2e-3 on a C6-type run and at most 1e-4 on C7, C9 and C10 at 24 h.
@@ -269,11 +284,16 @@ With D1 (B12):
     `-repair` (#70, merged), `-audit` (#72), `-docs` (#74), `-float32` (#75),
     `-buildtime` (#76), `-buildtime-edmf` (#76's validation, with a local
     change that must never be committed), `-defaults` (#77), and `-p4`
-    (detached at `edd44e1d`, for P4's diagnosis). Each has a copied
+    (detached at `edd44e1d`, for P4's diagnosis), `-t3` (#78), `-m3` (M3,
+    local only, until C1b), and `-c1b-check` (a scratch merge of #76 into #72,
+    detached, removable at any time). Each has a copied
     `.buildkite/LocalPreferences.toml`, which `main` tracks: never commit it.
-  - **The known defects** in `LEVANTE_TASKS.md`: the validator's
-    `implicit_diffusion` rule is stricter than the model for ISDAC;
-    `output/c0_sphere_deep/` has no provenance, so every phase C pass warns.
+  - ~~**The known defects** in `LEVANTE_TASKS.md`.~~ Fixed on 2026-09-14: the
+    validator now follows the model's `if`/`elseif` chain, so ISDAC skips the
+    `implicit_diffusion` rule, and it checks the ISDAC and prescribed-flow
+    asserts too; `output/c0_sphere_deep/` has a provenance reconstructed from
+    its logs, and the analysis skips a run whose provenance records a failed
+    exit with a note instead of a warning.
   - **`analysis/phase_c.jl`** reads only runs named `c*`; the D, P, V and MP
     runs are in FINDINGS only.
   - ~~**NEXT_SESSION.md** needs the day's state.~~ It points here, with a
@@ -303,33 +323,35 @@ With D1 (B12):
  4. **The named regions' width** (decision 10, E48).
  5. **The other decisions of section 1:** ClimaCore upstream (3), A4 (4), V1's
     scope (5), the design's decisions 5 and 6 (6), Phase B (7), the runs not
-    yet approved (8), moving the guide into the docs (9).
+    yet approved (8), moving the guide into the docs (9), C2's design (11).
 
 ### B. Can be done now, without a new approval
 
 None of these writes model code, a default or a tolerance, or submits a run.
+All seven were done on 2026-09-14.
 
- 1. **T3,** an inference and allocation test of a tendency with tags, modelled
-    on `test/parameterized_tendencies/microphysics/allocations.jl`. It also
-    guards #76's split solver against allocating in the Newton loop. Test code
-    only, as a draft PR. (Grouped before the GPU; pulling it forward costs
-    nothing.)
- 2. **M3,** a test that `water_advection.jl:51-56` and
-    `gs_sedimenting_mass_candidates` list the same species. Test code only.
-    (Grouped with C1b; it can be written now and opened with C1b.)
- 3. **C2's design,** as a note: which keys go into the checkpoint, where
-    `restart.jl` reads them, and the error text. The code waits for #72.
- 4. **C1b's plan against #72 and #76:** the design exists
-    (`SUBGRID_AND_MICROPHYSICS_DESIGN.md`); check it against the merged code,
-    and name the blocks the split solver must keep uncoupled or couple. The
-    code waits for both merges.
- 5. **A7,** in `analysis/c5_process_closure.jl`: how form A's gap cancels over
-    columns and levels. Analysis only.
- 6. **Housekeeping:** the validator's `implicit_diffusion` rule for ISDAC, and
-    provenance for `output/c0_sphere_deep/`.
- 7. **A draft of the ClimaCore issue** for decision 3, kept local: the
-    name-set scaling, with E44d's numbers. Filing it is outward-facing and waits
-    for the owner.
+ 1. ~~**T3.**~~ #78: the tag and record code allocates nothing, checked in the
+    integration files' own simulations, so CI compiles nothing more. #76 got
+    the same check for its split solver: its update and its solve allocate
+    nothing, while the unsplit solve allocates 48 bytes per call. That check is
+    on #76 (`41432652`); its integration file passes 52 of 52 locally (T10).
+ 2. ~~**M3.**~~ Written, committed locally on
+    `claude/energy-source-tag-species-lists`, to open with C1b. It reads the
+    two species lists from `water_advection.jl` and fails on each of four
+    mutations.
+ 3. ~~**C2's design.**~~ [RESTART_GUARD_DESIGN.md](RESTART_GUARD_DESIGN.md)
+    (decision 11). The hash that `restart.jl` compares is stable across
+    processes and changes with the offset, a region and the repair, but only
+    warns.
+ 4. ~~**C1b's plan against #72 and #76.**~~ A new last section of
+    `SUBGRID_AND_MICROPHYSICS_DESIGN.md`: the two PRs merge cleanly, B's anchors
+    are where the design says, no tag gains a Jacobian block, and T6 should
+    assert the split solver's uncoupled list on the EDMF column.
+ 5. ~~**A7.**~~ E49, `output/a7_gap_cancellation/`.
+ 6. ~~**Housekeeping.**~~ See section 5.
+ 7. ~~**A draft of the ClimaCore issue.**~~
+    [CLIMACORE_ISSUE_DRAFT.md](CLIMACORE_ISSUE_DRAFT.md), with a ClimaCore-only
+    reproducer (`analysis/climacore_nameset_repro.jl`). Not filed.
 
 ### C. Unlocked by merges, already approved
 

@@ -62,14 +62,19 @@ one agent has worked this branch at once.
 
 ## Where the last session stopped
 
-**The state on the evening of 2026-09-14 is in
+**The state on the night of 2026-09-14 is in
 [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md).** Read it first; the bullets below
 are the history that led there. In short:
 
   - Open PRs: #73 (docs workflow), #72 (the audit) and #74 (docs), ready for the
     owner; drafts #75 (Float32 test), #76 (P4's fix: tags and records solved
-    apart from the Jacobian's solver, validated on EDMF, E44e) and #77 (B9, the
-    defaults and checks).
+    apart from the Jacobian's solver, validated on EDMF, E44e, now with an
+    allocation check), #77 (B9, the defaults and checks) and #78 (T3, the tag
+    and record code allocates nothing).
+  - Plan B of the to-do list is done: T3 (#78, T10), M3 (a local branch, to open
+    with C1b), C2's design (`RESTART_GUARD_DESIGN.md`), C1b checked against #72
+    and #76 (the design's last section), A7 (E49), the two known defects, and a
+    local draft of a ClimaCore issue (`CLIMACORE_ISSUE_DRAFT.md`, not filed).
   - Results of the day: V3, MP1, P1, C5 and the 10° mask twin (E45 to E48, T9),
     and P4's cause and fix (E44c to E44e).
   - Standing approvals are listed under "Decided" in the to-do list, with how
@@ -218,7 +223,7 @@ are the history that led there. In short:
     `.buildkite/LocalPreferences.toml`, for P4's runs. The audit
     worktree's tracked `.buildkite/LocalPreferences.toml` names a Levante MPI
     library, so tests there log an MPI error and still pass.
-  - **Three known defects** are listed in the task list and are not fixed.
+  - **The known defects** in the task list are fixed.
 
 ## Traps this series has already paid for
 

@@ -1373,3 +1373,53 @@ cannot both be had with a tanh mask on this grid.
 grid spacing, or accept the repair's trades near the edge. The named regions'
 width is the owner's decision.
 
+
+## T3. Whether the tag code allocates
+
+Login node, 2026-09-14, at `main` (`3b4b6056`) and #76 (`7d190db1`). No job.
+
+**What it was for.** A tendency that allocates cannot run on a GPU, and T3 was
+grouped before the GPU. It also checks #76's split solver, which runs in every
+Newton iteration.
+
+**What it showed.** The tags' brackets, the sedimentation shares, sedimentation
+itself, the repair and the whole implicit tendency allocate nothing, and
+neither do the records' brackets. Nor does #76's split solver, while the
+unsplit ClimaCore solve allocates 48 bytes per call. The whole explicit tendency
+allocates with or without tags: 22,576 bytes per call on a 1M column, and
+58,160 with four tags. `Profile.Allocs` puts all of it in the generic tracer
+loops, none in tag code.
+
+**Barrier.** `@allocated` on the whole explicit tendency cannot be a test,
+because shared code already allocates. So the tests check the tag functions
+one at a time.
+
+**Class.** A property of the implementation, measured, now guarded in #78 and
+#76.
+
+**Carry-over.** Compare a count with and without the feature before blaming it,
+then group `Profile.Allocs.fetch()` by the innermost frame of the package. Put
+allocation checks into a simulation a test file already builds, since each tag
+set is a compile.
+
+## A7. How form A's gap cancels
+
+Login node, 2026-09-14, on the hourly NetCDF of eight runs. No job.
+
+**What it was for.** E38 showed that form A's integral separates a missing
+process from numerical noise. A7 asked which direction the noise cancels in.
+
+**What it showed.** A transport error cancels along the direction it moved.
+C7's limiter error cancels within columns, and C9's audit error along levels.
+A process no tag follows keeps its sum, and so does the repair (E49).
+Recomputing E36, E37 and E38 from the new code gave their numbers.
+
+**Barrier.** On the sphere the mass weights are approximate, since the runs
+wrote no density. Neither fraction alone names the cause; the ledgers and the
+label check still do.
+
+**Class.** An analysis of existing output.
+
+**Carry-over.** Before calling a gap a transport error, sum it along the
+direction the suspect transport moves energy. Write analysis output to a new
+directory rather than beside a run's own tables.
