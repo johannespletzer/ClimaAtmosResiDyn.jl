@@ -14,275 +14,193 @@ complete.
 
 Nothing here is approved unless it says so. Model code, a default, a tolerance,
 an energy reference and every run need the owner's approval before they are
-written or submitted.
+written or submitted. The standing approvals of 2026-09-14 are listed under
+"Decided".
 
 Priorities: **B** blocks operation, **S** should be fixed, **N** is nice to
 have. Sizes: S is under a day, M one to three days, L several PRs or a
 campaign.
 
-## Where things stand (2026-09-14)
+## Where things stand (2026-09-14, evening)
 
-  - #65 and the offset (#68) are merged, with the loss-half integration test.
-  - #69, the implicit bracket and the repair, is merged into `main`
-    (`08682fd8`, 2026-09-14).
-  - #70, sedimentation as transport, the EDMF refusal and M2's label warnings,
-    is merged into `main` (`3b4b6056`, 2026-09-14), after the owner's re-run
-    of its docs check passed.
-  - #73 fixes the docs workflow: `main`'s deploy to `gh-pages` failed with 403
-    on every push, because the job token was read-only. It grants
-    `contents: write` and raises the timeout to 60 minutes. It is open. With
-    #70 merged, nothing waits on it any more but the deploy itself.
-  - #72, the enthalpy audit, targets `main` and is ready for review since
-    2026-09-14, with its docs pushed (`f3f48e97`), as the owner approved. Its
-    diff is the audit's 10 files. `energy_source_tag_transport` exists only
-    there.
-  - #74 is D2, the docs fixes after #70 (`fbeb561e`, from `main`), opened on
-    2026-09-14 as the owner approved. It merges cleanly with #72.
-  - #76, a draft, is P4's fix: tags and records solved apart from the implicit
-    Jacobian's nested solver, whose build otherwise grows much faster than the
-    number of fields (E44d). EDMF validation is running.
-  - #75, a draft, is T2: a Float32 integration test of the tags and the
-    records, in a new CI group `tagging_source_float32` (`1d5b5b51`). An agent
-    wrote it and the main session reviewed it; 38 of 38 pass locally in 8.5
-    minutes.
-  - This branch merged #72's head in `57ed9c1f`.
-  - Measured: 0M on a column and a sphere, and 1M on a warm column, a day each
-    (E26 to E39, E43); 1M with ice on a cold column for an hour, with a twin
-    without vertical diffusion (E42, E42b); the EDMF build time with and without
-    tags (E44 to E44c); C7's sphere in Float32 (E45) and on 4 MPI ranks (E47),
-    each closing as C7 does, to rounding; the tag cost on that sphere, 1.46×
-    (T9).
-  - Not yet run: EDMF with tags past its build, a restart, anything longer than
-    a day, 2M and P3, and the GPU.
+Merged into `main`: #65 and the offset (#68); #69, the implicit bracket and the
+repair (`08682fd8`); #70, sedimentation as transport, the EDMF refusal and the
+label warnings (`3b4b6056`).
+
+Open pull requests:
+
+| PR  | What                                                                  | State                                  |
+|:--- |:--------------------------------------------------------------------- |:-------------------------------------- |
+| #73 | Docs workflow: `contents: write` for the deploy, a 60-minute timeout  | ready, waits for the owner             |
+| #72 | The enthalpy audit, `energy_source_tag_transport`, with its docs      | ready, waits for the owner             |
+| #74 | D2: the energy source tag docs brought up to date after #70           | ready, waits for the owner             |
+| #75 | T2: a Float32 integration test of the tags and records, own CI group  | draft; 38 of 38 pass locally           |
+| #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | draft; EDMF validation running         |
+
+Not yet a pull request: B9, the decided defaults and checks, written in
+`../ClimaAtmosResiDyn-defaults` on `claude/energy-source-tag-defaults`, under
+test and not committed.
+
+Measured so far: 0M on a column and a sphere, and 1M on a warm column, a day
+each (E26 to E39, E43); 1M with ice on a cold column for an hour, with a twin
+without vertical diffusion (E42, E42b); the EDMF build time with and without
+tags, and why it grows (E44 to E44d); C7's sphere in Float32 (E45) and on 4 MPI
+ranks (E47), each closing as C7 does, to rounding; the tag cost on that sphere,
+1.46× (T9); where the repair's trades sit (E46).
+
+Not yet run: EDMF with tags past its build, a restart, anything longer than a
+day, 2M and P3, more than one node, and the GPU.
+
+## 0. In flight
+
+  - **P4's EDMF validation.** Jobs `13441606` (D4's column with 8 tags) and
+    `13441607` (8 tags and 5 records, which did not build in two hours before)
+    build with #76's fix, from `../ClimaAtmosResiDyn-buildtime-edmf`, where the
+    EDMF refusal is switched off locally and never committed. Hand back as E44e
+    and add the result to #76. 7 of the 8 approved P4 jobs are used.
+  - **The C6 twin with a 10° mask,** job `13441633`: whether the step of the
+    2°-wide region mask makes the repair's trades (E46). Hand back with
+    `analysis/repair_trades.jl`.
+  - **B9's tests** on the login node: `test/config/tracer_config.jl` and
+    `test/energy_source_tags_tests.jl` pass (233 of 233); the integration test
+    is running. Then commit, push and open a draft PR.
 
 ## Decided
 
 On 2026-09-11:
 
   - **Production** is a GPU sphere in Float32, with EDMF and 1M.
-  - **EDMF:** refuse `prognostic_edmfx` with tags now (C1a, done), and build the
-    sharing later (C1b): under both transports, in the implicit tendency, with
-    the guard of the shared loop (B4). These are the design's decisions 1 to 4.
-    M2 (decision 7) is done too.
-  - **Approved and done:** C3, the #69 help text, R2's wording, M2 with C1a; the
-    runs D1, its twin, the D4 pair, R4, the D4 build control and P4's split
-    test.
+  - **EDMF:** refuse `prognostic_edmfx` with tags now (C1a, done in #70), and
+    build the sharing later (C1b): under both transports, in the implicit
+    tendency, with the guard of the shared loop (B4).
 
 On 2026-09-14:
 
-  - **P4's stage timing** is approved for the 8-tag EDMF build (job `13440637`)
-    and for its two baselines, `d4_column_edmf_notags` and `p4_edmf_two_tags`
-    (jobs `13440706` and `13440707`).
-  - **The offset (U1):** require `energy_source_tag_offset` whenever energy
-    source tags are set. An explicit `0` keeps today's behaviour. The refusal
-    quotes the tested values: 110,495 J/kg as used in the series, and the
-    smallest offsets that made the total positive, 45.4 kJ/kg on the DYCOMS
-    column and 100.4 kJ/kg on the moist sphere (E6).
-  - **The closure check (U2, R1):** on by default whenever the tags are set, at
-    a daily period, reported from a spin-up reference. It only reports until V2
-    and V3 calibrate a tolerance per transport.
-  - **The per-process checks (A2, A3):** the label check at configuration now,
-    warning on a process that runs with no tag that lists it. A2's runtime part
-    and A3, form A online, come later as optional validation features; the
-    offline script covers validation runs until then.
-  - The code for these defaults and checks is written at step 9 of the order
-    below.
-  - **Merges:** the owner merged #69 and then #70, once #70's docs check passed
-    on a re-run. #73, the docs deploy fix, is open. The owner approved pushing
-    #72's docs, retargeting #72 to `main` and taking it out of draft, and
-    opening D2 as #74.
-  - **V3 and MP1** were approved and submitted: jobs `13440822` (V3, C7's sphere
-    in Float32) and `13440823` (MP1, C7's sphere on 4 ranks). V3 ran its day
-    and is handed back (E45). MP1 died in `MPI_Init` after 91 s. The runscript
-    called `srun` without `--mpi=pmix`, and Slurm's default here, `pmi2`, does
-    not work with this Open MPI. The runscript now passes the plugin from
-    `runscripts/terrabyte_stacks.env`. The owner approved MP1 again, and it
-    is submitted as job `13440991` at `c2842ba6`.
-  - **P1** is approved and submitted as a pair at `c2842ba6`: jobs `13440989`
-    (`p1_sphere_tags`, C7 under its own name) and `13440990`
-    (`p1_sphere_notags`, C7 without tags, records, check or diagnostics).
-  - **Standing approvals, given by the owner on 2026-09-14** so that the work
-    runs without stopping. The main session takes P4 and every task that
-    needs approval; an agent takes T2. Each approval covers only what it names:
-      - **P4 jobs:** up to 8 Slurm jobs from `../ClimaAtmosResiDyn-p4` or a
-        successor worktree, on `hpda2_test`, at most 2 CPUs, 48G and 2 h each:
-        diagnosis of the build's growth at 0, 2 and 8 tags, validation of the
-        fix, and reruns.
-      - **Code**, written, tested and opened as draft PRs to `main`, each
-        merged only by the owner: P4's build-time fix, with results bit for
-        bit and the tag tests passing; B9, the decided defaults and checks (U1,
-        U2 with R1, A2's label check) with U3, U4, R3 and T4; C2's restart guard
-        with T1, after #72 merges; C1b, the EDMF sharing, after P4's fix and
-        #72.
-      - **Runs**, when ready, at their predecessors' settings: the C6 twin with
-        a 10° mask (1 job); V5, restart equivalence (up to 2 jobs, after C2);
-        C1b's validation (up to 5 jobs: the D4 pair, D4 with
+  - **The offset (U1):** required whenever energy source tags are set. An
+    explicit `0` keeps today's behaviour. The refusal quotes the tested values:
+    110,495 J/kg, and the smallest offsets that made the total positive, 45.4
+    kJ/kg on the DYCOMS column and 100.4 kJ/kg on the moist sphere (E6).
+  - **The closure check (U2, R1):** on by default whenever the tags are set,
+    daily, reported from a spin-up reference, report-only until V2 and V3
+    calibrate a tolerance per transport.
+  - **The per-process checks (A2, A3):** the label check at configuration now.
+    A2's runtime part and A3, form A online, later, as optional validation
+    features.
+  - **The S items,** grouped: now C5, P1, D2 (all done or in a PR); with B9 U3,
+    U4, R3, T4; with C1b M3, T5; before the GPU T3; with V2 C4, V6; with D1 D3.
+    A4, A5 and A7 move to N.
+  - **Merges:** the owner merged #69 and #70, and approved pushing #72's docs,
+    retargeting it to `main` and taking it out of draft, and opening #74.
+  - **Standing approvals,** so that the work runs without stopping. The main
+    session takes P4 and every task that needs approval; an agent took T2.
+      - **P4 jobs:** up to 8 on `hpda2_test`, at most 2 CPUs, 48G and 2 h
+        each. 7 used: 3 inference profiles, 2 cancelled validations of the
+        first commit, 2 validations running.
+      - **Code, as draft PRs to `main`, merged only by the owner:** P4's fix
+        (#76); B9 with U3, U4, R3 and T4 (in test); C2's restart guard with T1,
+        after #72 merges; C1b, after #76 and #72 merge.
+      - **Runs at their predecessors' settings:** the C6 twin with a 10° mask
+        (submitted); V5, restart equivalence (up to 2 jobs, after C2); C1b's
+        validation (up to 5 jobs: the D4 pair, D4 with
         `edmfx_vertical_diffusion: true`, D5).
-      - **Pushes:** the main session's branches and the agent's T2 branch, as
-        draft PRs to `main`. The owner merges.
-  - **The S items**, as proposed and accepted by the owner:
-      - now: C5 (done, E46); P1 (done, T9); D2 (#74);
-      - with the defaults and checks (B9): U3, U4, R3, T4;
-      - with C1b (B4): M3, T5;
-      - before the GPU (B13): T3;
-      - with V2 (B10): C4, V6;
-      - with D1 (B12): D3;
-      - A4, A5 and A7 move to N.
-
-## 0. In flight
-
-  - **P4, the fix.** E44d names the cause: ClimaCore's compile-time name-set
-    work when it builds the Jacobian's nested solver. The fix, on
-    `claude/energy-source-tag-build-time`, draft PR #76 (`7d190db1`), solves
-    the tags and records apart from the rest (`SplitJacobianSolver`), built
-    through `invokelatest` so the unsplit solver is not compiled too. On the 0M
-    column with 8 tags its increments are identical to the unsplit solver's,
-    with and without implicit diffusion, and the Jacobian cache builds in 20.8 s
-    against 97.4 s. Its tests pass: 222 unit tests and 50 integration
-    assertions, with a new bitwise item. Running: the EDMF column
-    with 8 tags and with 8 tags and 5 records, jobs `13441606` and `13441607`,
-    from `../ClimaAtmosResiDyn-buildtime-edmf` with the EDMF refusal off
-    locally. Jobs `13441507` and `13441508` ran the first commit and were
-    cancelled after 25 minutes, since it still compiled the unsplit solver. 7 of
-    the 8 approved P4 jobs are used.
-  - **The C6 twin with a 10° mask** is job `13441633`, as approved.
-  - **B9** is being written in `../ClimaAtmosResiDyn-defaults` on
-    `claude/energy-source-tag-defaults`: U1, U2 with R1, A2, U3, U4, R3 and T4,
-    not yet tested or committed.
-  - **Waiting for the owner:** merging #72, #74, #73 and #75, once their checks
-    pass.
+      - **Pushes:** the main session's branches and T2's, as draft PRs.
 
 ## 1. Decisions for the owner
 
- 1. **A4.** Signed overlay shares under the audit: model code and a C9 twin.
- 2. **V1's scope.** A 0M 10-day sphere is not production physics. Either fold
-    it into a 10-day Float32 run with V2's and V3's physics, or make it S.
- 3. **The design's open decisions:** 5, whether to share the SGS diffusive
-    flux under `enthalpy` (C1c); 6, who lifts the 2M gate and fixes the parent's
-    P3, and whether the tags refuse P3 until then.
- 4. **Phase B.** FINDINGS §8 item 4 still lists it as the owner's call. Drop it
-    or keep it.
- 5. **Runs**, each on its own: V2, V5, V6, the D4 variant with
-    `edmfx_vertical_diffusion: true`, D5, and a C6 twin with a wider region mask
-    (E46).
- 6. **Docs:** whether to move `USER_GUIDE_DRAFT.md` into `docs/src/` (D1).
- 7. **Merges:** #72, #74 (D2) and #73. (#70 is merged.)
+ 1. **Merges:** #73, #72 and #74 are ready. #75 after its CI. #76 after its
+    EDMF validation and CI.
+ 2. **B9's three choices, for review when its PR opens:**
+      - A2 warns only in a run with at least one per-process tag, and a tag
+        listing `all` counts as following no process. Otherwise a run with
+        region tags alone would warn about every process.
+      - The default check has no tolerance and never warns. The old default,
+        1e-6, warned at every check of every run (24 times a day on C7).
+      - After a restart, the spin-up reference is taken again one `spin_up`
+        after the restart.
+ 3. **#76 uses ClimaCore `MatrixFields` internals,** since the public
+    `FieldMatrixWithSolver` cannot solve on part of a state. Whether to keep
+    that, or also ask ClimaCore upstream to make its name-set work scale (N).
+ 4. **A4.** Signed overlay shares under the audit: model code and a C9 twin.
+ 5. **V1's scope.** A 0M 10-day sphere is not production physics. Either fold
+    it into a 10-day Float32 run with V2's physics, or make it S.
+ 6. **The design's open decisions:** 5, whether to share the SGS diffusive
+    flux under `enthalpy` (C1c); 6, who lifts the 2M gate and fixes the
+    parent's P3, and whether the tags refuse P3 until then.
+ 7. **Phase B.** FINDINGS §8 item 4 still lists it as the owner's call.
+ 8. **Runs not yet approved:** V2, V6, and a second node for MP1.
+ 9. **Docs:** whether to move `USER_GUIDE_DRAFT.md` into `docs/src/` (D1).
 
 ## 2. Blocking operation (B), in dependency order
 
- 1. ~~**Merge #70.**~~ Done on 2026-09-14 (`3b4b6056`). #73, the docs-workflow
-    fix, is still open.
- 2. **Finish and merge #72.** Add E35 to E43 and the audit's scope to its docs
-    (pushed, `f3f48e97`), take it out of draft, retarget it to `main` (both
-    done on 2026-09-14), merge. This comes before C1b and C2, because both use
-    `energy_source_tag_transport`, which exists only in #72. Size S.
- 3. **P4, the EDMF build time with tags.** With 8 tags, 5 records, the audited
-    check and 24 diagnostics, the D4 column did not build in two hours on two
-    cores; without them it builds in 410 s (E44). The job takes 27 minutes with
-    2 tags, 60 with 8, and more than 120 with 8 tags and 5 records, against 18.5
-    without, and most of the growth lies outside the stages the driver logs
-    (E44b). The staged runs (E44c) put 1,891 s of the 1,978 s that 8 tags add
-    into `get_simulation`, and 1,528 s of it into the part no timer logs, which
-    Julia compiles before the constructor's first timer starts. The first
-    tendency calls and the first step add only 94 s. Steps left: time the
-    constructor's pieces apart, each compiled in its own call, or profile
-    inference; then fix what grows. A candidate from the code is the 13
-    functions that recurse over the tags or processes with `Base.tail`. Within
-    `hpda2_test`'s two-hour cap it blocks every EDMF run with tags. Size M to
-    L.
+ 1. ~~**Merge #70.**~~ Done (`3b4b6056`).
+ 2. **Merge #72.** Its docs carry E34 to E43 and the audit's scope, it targets
+    `main` and is ready. It comes before C1b and C2, which both use
+    `energy_source_tag_transport`. Size S; waits for the owner.
+ 3. **P4, the EDMF build time with tags.** The D4 column with 8 tags and 5
+    records did not build in two hours (E44, E44b). E44d names the cause:
+    ClimaCore builds the implicit Jacobian's nested solver with compile-time
+    work on the names of every field, which grows much faster than their
+    number. #76 solves the tags and records apart, and builds the rest over the
+    other fields only. On the 0M column with 8 tags the increments are
+    identical to the unsplit solver's, with and without implicit diffusion, and
+    the Jacobian cache builds in 20.8 s against 97.4 s. Left: the EDMF
+    validation (in flight), E44e, then merge. If EDMF still grows, what is left
+    of `args_integrator` is the next suspect. Size M.
  4. **C1b, share EDMF's sub-grid fluxes among the tags** (design option B).
+    Needs #72 and #76 merged.
       - B1, the SGS mass flux, with the donor from the sign of the flux of `E`;
         B2, each species' whole sedimentation face flux, the corrections
         included; B4, a guard in the shared tracer loop,
         `edmfx_sgs_flux.jl:403-409`.
       - Both transports, in the implicit tendency. About 220 lines and 200 of
-        tests. Its code can be written alongside P4's fix; its validation waits
-        for P4.
+        tests.
       - T6, an EDMF integration item: the partition's tendencies from the SGS
         mass flux and sedimentation match the parent's to 100 eps. It adds an
-        EDMF compile to CI, where `tagging_energy` already takes up to 56
-        minutes, so it depends on P4's fix.
-      - Validation: the D4 pair and D5, and a D4 variant with
-        `edmfx_vertical_diffusion: true`, the shipped setting, which B4 makes
-        possible. Before B the D4 pair measures the gap; after B its residual
-        should fall back towards C8's and C9's kind of residual, less what B3
-        would take.
+        EDMF compile to CI.
+      - Validation (approved): the D4 pair, D5, and D4 with
+        `edmfx_vertical_diffusion: true`, the shipped setting.
       - Then narrow C1a's refusal to `updraft_number > 1`.
       - Size M.
- 5. **C2, a restart guard.** Write the offset, the tag set, the transport and
-    the repair setting into the checkpoint, and fail with a named key on a
-    mismatch (`restart.jl:34-39`). With T1 and V5. (Not the experiment C2 of
-    FINDINGS §8, the implicit brackets, which #69 built.) Size S to M.
- 6. **V5, restart equivalence.** Two segments against one run, with the offset
-    and the repair. Production runs restart. S.
- 7. **Float32: ~~V3~~ and T2's Float32 part.** ~~No Float32 run with tags
-    exists.~~ V3 is done (E45): C7's sphere in Float32 closes as in Float64
-    over a day, to rounding, with a floor near 1e-7. T2, the Float32 test
-    group, is draft #75. The records are `FT` fields that accumulate from the
-    start and are never reset (`process_record.jl:22-25`), so runs longer than
-    a day are still untested; that is U6. Size S.
- 8. ~~**MP1, more than one process.**~~ Done on 2026-09-14 (E47). On 4 ranks
-    C7's sphere closes as on one process, to rounding: every table within
-    8e-11, and `ta` within 1.6e-12 K. The solve runs 3.8 times faster. The
-    first try died in `MPI_Init`, because `srun` lacked `--mpi=pmix`; the
-    runscript is fixed. More than one node is untested.
- 9. **The decided defaults and checks.** U1, require the offset with tags; U2
-    and R1, the closure check on by default, daily, from a spin-up reference,
-    report-only; A2's label check at configuration (accept when it flags
-    subsidence on C5's column and microphysics on C6's sphere, and nothing on
-    C7). Size S to M each.
+ 5. **C2, a restart guard** (approved, after #72). Write the offset, the tag
+    set, the transport and the repair setting into the checkpoint, and fail with
+    a named key on a mismatch (`restart.jl:34-39`). With T1. Size S to M.
+ 6. **V5, restart equivalence** (approved, after C2). Two segments against one
+    run, with the offset and the repair. Size S.
+ 7. **Float32.** ~~V3~~ is done (E45). T2, the Float32 test group, is draft
+    #75. Runs longer than a day are untested; that is U6. Size S.
+ 8. ~~**MP1, more than one process.**~~ Done (E47): on 4 ranks C7's sphere
+    closes as on one process, to rounding. More than one node is untested.
+ 9. **The decided defaults and checks (B9).** Written: U1, the offset
+    required; U2 with R1, the closure check on by default, daily, report-only,
+    with a spin-up reference at 1 h and `false` to switch it off; A2, a warning
+    at configuration for a process that runs with no tag following it (flags
+    subsidence on C5's column and microphysics on C6's sphere, nothing on C7).
+    With U3, U4, R3 and T4. Left: the integration test, then a draft PR, and
+    the owner's review of the three choices under decision 2. Size M.
 10. **V2, the production physics on a sphere:** EDMF with
     `edmfx_vertical_diffusion: true`, vertical diffusion, sponges, topography
-    and 1M, with `analysis/transport_ledger.jl`. It sizes C4. It needs C1b and
-    P4. V1 as decided.
+    and 1M, with `analysis/transport_ledger.jl`. It sizes C4. Needs C1b and
+    #76. V1 as decided. Its run is not approved yet.
 11. **Calibrate** U2's tolerance per transport from V2 and V3, and add the
     warning.
-12. **D1, the user guide into the docs,** with D2 and D3. #63 has merged, so the
-    memo and the plan already sit in `docs/src/`.
+12. **D1, the user guide into the docs,** with D3.
 13. **The GPU, last.** Run the diagnostic on a GPU on Levante, with Float32 and
-    T3, and fix what that forces. From the code, every branch on tags is
-    resolved on the host, and the kernels use isbits scalars only; nothing has
-    shown it.
+    T3, and fix what that forces.
 
 ## 3. Should fix (S)
 
-Grouped as the owner accepted on 2026-09-14.
+Done or in a pull request:
 
-Now:
-
-  - ~~**C5.** Where the repair's large trades sit: up to ±30,920 J/kg under
-    tracer transport and ±16,294 under the audit (E27, E35), from C6's and
-    C10's output.~~ Done on 2026-09-14 (E46, `analysis/repair_trades.jl`).
-    They sit just beyond the 20° edge where the region tags meet, one to two
-    lat-lon rows out on each side. Each tag is lifted only beyond its own edge.
-    The named regions' tanh is 2° wide, a step on a 5° grid. A follow-up for
-    the owner: a C6 twin with a mask wider than the grid spacing, to test
-    whether the step causes the trades. If it does, the width of the named
-    regions is a default, which needs approval.
-  - ~~**P1.** The tag cost on a sphere against an untagged control; known on
-    one column only, 1.32× (T4).~~ Done on 2026-09-14 (T9): 1.46× on C7's
-    sphere, check and output included.
-  - **D2, stale docs.** The guide's fixes 3, 4, 5, 7, 9 and 10
-    (`USER_GUIDE_DRAFT.md`, "Proposed fixes"). Written on 2026-09-14:
-      - in #74, from `main` (`fbeb561e`): fix 3 in
-        `tracer_configuration.md` and `DEFAULT_CLOSURE_TOLERANCES`; fix 7's
-        sedimentation item in the tested boundary; fix 9 in
-        `process_record.md`; fix 10, a section on form A and form B in
-        `energy_source_tags.md`;
-      - in #72 (`f3f48e97`): fix 5, and fix 7's audit items, in the audit
-        section.
-      - Fix 4 needs no change: with `prognostic_edmfx` refused, sedimentation
-        adds nothing to `e_src_res`, as the page says.
-
-With the defaults and checks (B9):
-
-  - **U3.** Output `e_src_fix_<name>` by default (`default_diagnostics.jl:697-709`).
-  - **U4.** The most negative source tag, and the energy the repair moved, in
-    the audit table.
-  - **R3.** A warning on `constrain_qtot`, which writes `ρ` and `ρe_tot` outside
-    the brackets (`utilities.jl:34`).
-  - **T4.** An example config under `config/model_configs/`; no shipped config
-    turns the tags on. It sets the offset, as U1 will require.
+  - ~~**C5.**~~ Where the repair's large trades sit: just beyond the 20° edge
+    where the region tags meet (E46). The 10° twin is running.
+  - ~~**P1.**~~ The tag cost on a sphere: 1.46× (T9).
+  - **D2,** the stale docs: #74 (fixes 3, 7, 9, 10) and #72 (fixes 5, 7). Fix
+    4 needs no change.
+  - **U3,** `e_src_fix_<name>` in the default output when the repair is on;
+    **U4,** the source tags' negative parts and minimum, and the energy the
+    repair moved, in the audit table; **R3,** a warning when clipping `ρq_tot`
+    changes `ρe_tot` outside every bracket; **T4,**
+    `config/model_configs/baroclinic_wave_energy_source_tags.yml`. All in B9.
 
 With C1b (B4):
 
@@ -301,8 +219,7 @@ With V2 (B10):
   - **C4.** `c·Δρ` from processes the tags do not bracket: vertical diffusion,
     sponges, hyperdiffusion, EDMF, LES (`energy_source_tags.jl:102-111`).
     Measure on V2, then share them as transport or document the size.
-  - **V6.** Topography. D2 and D3 when the model runs 2M and P3 (N unless
-    production uses them).
+  - **V6.** Topography.
 
 With D1 (B12):
 
@@ -311,36 +228,35 @@ With D1 (B12):
 
 ## 4. Nice to have (N)
 
-  - **A4.** Signed overlay shares (decision 1), moved from S on 2026-09-14.
-    Accept when a C9 twin gives form A of at most 5 J/kg, or at most 1e-6 with
-    the loss signed too, and `sfc` no longer freezes at a node, with `ta` and
-    the partition residual unchanged.
+  - **ClimaCore upstream.** Its field-name sets check every pair against every
+    other at compile time (E44d). Scaling that down would help every model
+    with many tracers, and would let #76 use public API only.
+  - **A4.** Signed overlay shares (decision 4). Accept when a C9 twin gives form
+    A of at most 5 J/kg, or at most 1e-6 with the loss signed too, and `sfc` no
+    longer freezes at a node, with `ta` and the partition residual unchanged.
   - **A5.** An overlay-bound diagnostic: the mass fraction where an overlay is
-    negative, and where a member exceeds its group's sum. Moved from S.
+    negative, and where a member exceeds its group's sum.
   - **A7.** In `c5_process_closure.jl`, how the gap cancels over columns and
-    levels. Moved from S.
-  - **A2's runtime part and A3,** as optional validation features (decided
-    2026-09-14): ∫Δ⁺ per label at runtime, and form A as a global integral
-    online, on the native grid with ∫Δfix subtracted. Accept A3 at about 1.2e-3
-    on a C6-type run and at most 1e-4 on C7, C9 and C10 at 24 h.
-  - **C1c.** B3, the SGS diffusive flux under `enthalpy` (decision 3).
+    levels.
+  - **A2's runtime part and A3,** as optional validation features: ∫Δ⁺ per
+    label at runtime, and form A as a global integral online. Accept A3 at
+    about 1.2e-3 on a C6-type run and at most 1e-4 on C7, C9 and C10 at 24 h.
+  - **The region masks' width,** if the 10° twin shows the step makes the
+    trades: the named regions' 2° is a default, and changing it needs approval.
+  - **C1c.** B3, the SGS diffusive flux under `enthalpy` (decision 6).
   - **C1d.** Option C, per-updraft tag shares; about three times B.
-  - **C6.** Review leftovers: `isfinite` before the conversion to `FT`
-    (`tracer_config.jl:784-788`), `nothing` inside a broadcast at init, `parent`
-    shadowed in tests, the Float32 rounding floor (stays N: 7.5e-8 of the
-    total at t = 0 on V3's sphere, against a residual of 5.9e-5 after a day,
-    E45).
+  - **C6.** Review leftovers: `isfinite` before the conversion to `FT`, `nothing`
+    inside a broadcast at init, `parent` shadowed in tests. The Float32 rounding
+    floor stays N (E45).
   - **C7.** Jacobian blocks for the tags' sedimentation and the implicit
     bracket.
   - **A6.** A tag-only vertical upwinding key (E37).
   - **P2.** Compute `energy_source_share_norm!` once per evaluation, and skip it
     when nothing sediments. **P3.** A string allocation per tracer per
     evaluation under the audit (`energy_source_tags.jl:148`).
-  - **U5.** A clear error when the tag list changes across a restart.
-    **U6.** Records in Float64, or reset at each output, for long Float32 runs.
-    Stays N: over V3's day the records' extrema match Float64's to 1.2e-2 at
-    worst, at the rain-out's onset, and to 4e-4 at 24 h (E45). Runs longer
-    than a day are untested.
+  - **U5.** A clear error when the tag list changes across a restart (C2 covers
+    most of it). **U6.** Records in Float64, or reset at each output, for long
+    Float32 runs; over a day they match Float64 to 4e-4 at 24 h (E45).
   - **R5.** A converged Newton solve for closure studies; its cost is not
     measured.
   - **M4,** when 2M returns: D2 and one integration item. **M5,** when the
@@ -348,28 +264,25 @@ With D1 (B12):
 
 ## 5. Housekeeping
 
-  - ~~**The runscript.** Read a worktree's `.git` file, so provenance records
-    the commit; and flush the log, so a killed job keeps it.~~ Done in
-    `297eda4c`, with MPI ranks through `srun`. On 2026-09-14 `srun` got
-    `--mpi=pmix` on terrabyte, after MP1 died without it. The tcsh runscripts
-    are not changed.
-  - ~~**`analysis/validate_d_configs.jl`** failed the control.~~ Done on
-    2026-09-14: it checks controls as controls, and expects the C1a refusal
-    for the EDMF runs with tags (D4, its audit twin, D5). All eight D configs
-    pass.
-  - ~~**Run `analysis/phase_c.jl`**~~, done on 2026-09-14: `summary_c.csv` and
-    the plots now include C5 to C10. It reads only runs named `c*`, so the D,
-    P4, V3 and MP1 runs are not in it; FINDINGS reports them.
-  - **The known defects** in `LEVANTE_TASKS.md`: ~~the committed `.out` files~~
-    (fixed on 2026-09-14: each is trimmed into its directory's `run.log` and no
-    longer committed); the validator's `implicit_diffusion` rule is stricter
-    than the model for ISDAC; `output/c0_sphere_deep/` has no provenance, so
-    every phase C pass warns.
-  - **Remove the worktrees** `../ClimaAtmosResiDyn-repair`, `-audit` and `-p4`
-    once the stack is merged and P4 is done.
+  - **Worktrees** beside the repository, to remove once their PRs merge:
+    `-repair` (#70, merged), `-audit` (#72), `-docs` (#74), `-float32` (#75),
+    `-buildtime` (#76), `-buildtime-edmf` (#76's validation, with a local
+    change that must never be committed), `-defaults` (B9), and `-p4`
+    (detached at `edd44e1d`, for P4's diagnosis). Each has a copied
+    `.buildkite/LocalPreferences.toml`, which `main` tracks: never commit it.
+  - **The known defects** in `LEVANTE_TASKS.md`: the validator's
+    `implicit_diffusion` rule is stricter than the model for ISDAC;
+    `output/c0_sphere_deep/` has no provenance, so every phase C pass warns.
+  - **`analysis/phase_c.jl`** reads only runs named `c*`; the D, P, V and MP
+    runs are in FINDINGS only.
+  - **NEXT_SESSION.md** needs the day's state: #75, #76, B9, and the jobs in
+    flight.
 
 ## 6. Open questions, not blocking
 
+  - Whether the EDMF column with tags builds within `hpda2_test`'s two hours
+    with #76 (in flight), and what of `args_integrator`'s growth remains.
+  - Whether the region mask's step makes the repair's trades (in flight).
   - What makes D1's zero-sum gross residual (E42, E42b). Candidate: pressure
     work in grid-mean vertical advection under tracer transport. An audit twin
     of D1 would test it.
@@ -381,29 +294,27 @@ With D1 (B12):
 
 ## Suggested order
 
- 1. ~~P4's three staged runs.~~ Done (E44c).
- 2. The owner's remaining decisions.
- 3. ~~Merge #70.~~ Done. Merge #73.
- 4. Merge #72 and #74. (Pushed, retargeted and ready.)
- 5. P4: time the constructor's pieces apart, then the fix, with C1b's code
-    alongside.
- 6. C1b's validation (the D4 pair, the D4 variant with vertical diffusion on,
-    D5) and T6.
- 7. C2 with T1 and V5.
- 8. Merge #75, T2's Float32 test. (V3 and MP1 are done.)
- 9. The decided defaults and checks: U1, U2 with R1, A2's label check.
-10. V2 with C4; V1 as decided.
-11. Calibrate U2's tolerance.
-12. The docs: D1 to D3.
-13. The remaining S and N items.
-14. The GPU, last.
+ 1. The owner merges #73, #72 and #74.
+ 2. Hand back P4's EDMF validation (E44e) into #76; the owner merges #76 and
+    #75 once their CI passes.
+ 3. B9: finish the tests, open the draft PR, the owner reviews decision 2.
+ 4. Hand back the C6 twin with the 10° mask.
+ 5. C1b and T6, M3, T5; its validation runs.
+ 6. C2 with T1, then V5.
+ 7. V2 with C4 and V6, once approved; V1 as decided.
+ 8. Calibrate U2's tolerance.
+ 9. The docs: D1 and D3.
+10. The remaining S and N items.
+11. The GPU, last, with T3.
 
 ## Done, for reference
 
-  - C1a and M2 in #70 (`4c274aed`); C3 and R2's timing in #72 (`7a290c98`); the
-    #69 help text and the records comment (`0ae408d8`); R2's audit design text
-    on this branch.
-  - The guide's fixes 1, 2, 6 and 8, in #69 and #70.
-  - Runs: D1 and its twin (E42, E42b); R4 (E39b, E43); the D4 pair, timed out
-    (E40, E44); the D4 build control (E44); P4's split test (E44b).
+  - **Model:** C1a and M2 (#70); C3 and R2's timing (#72); the #69 help text
+    and records comment; the runscript's `srun --mpi=pmix`.
+  - **Runs and analyses:** D1 and its twin (E42, E42b); R4 (E39b, E43); the D4
+    pair (E40, E44); the D4 build control (E44); P4's split test (E44b) and
+    stage timing (E44c); P4's inference profiles (E44d); V3 (E45); C5's repair
+    trades (E46); MP1 (E47); P1 (T9).
+  - **Docs:** the guide's fixes 1, 2, 6 and 8 (#69, #70); 3, 5, 7, 9 and 10
+    (#72, #74).
   - #72 merged into this branch (`57ed9c1f`).
