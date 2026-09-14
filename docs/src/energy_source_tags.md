@@ -294,8 +294,10 @@ audit's residual in its first hour, during the initial adjustment, and a
 converged Newton solve removed 99% of it on a column.
 
 Everything else the tags see stays as under `tracer`: the brackets, the repair,
-sedimentation, vertical diffusion, the sponges and the SGS closures. The model
-itself is untouched, so its state is the same with the switch on and off.
+sedimentation, vertical diffusion, the sponges and the SGS closures. The EDMF
+sub-grid mass flux reaches the tags in neither mode, so `prognostic_edmfx` stays
+refused. The model itself is untouched, so its state is the same with the
+switch on and off.
 
 It needs an `energy_source_tag_offset`. A share is zero wherever `E` is not
 positive, and there the tags would not move at all, so `enthalpy` without an
@@ -311,6 +313,47 @@ energy_source_tag_transport: enthalpy
 A pair of runs on the same atmosphere, with the switch off and on, separates
 what transport adds to `e_src_res` from what the attribution and the processes
 the tags do not see add.
+
+### What the audit has shown
+
+The tag-closure experiments ran it on a 0-moment column, a 0-moment sphere and a
+1-moment column, for a day each.
+
+  - **The residual stops growing after the first hour.** At 24 h it was 1,069
+    times smaller than under `tracer` on the column, and 11 times smaller on the
+    sphere. Nearly all that is left is made in the first step, by the Newton
+    lag above. A converged solve removed 99% of it on the column and 83% on the
+    sphere.
+  - **On a column, the per-process check closes.** The new energy split by
+    region and split by process agreed to 7e-6 J kg⁻¹ on the 0-moment column
+    and to 4.4e-7 J kg⁻¹ on the 1-moment column. Under `tracer` the gaps were
+    61 and 117 J kg⁻¹, made by each tag's own transport.
+  - **On a sphere, it does not, pointwise.** The largest gap was 77 J kg⁻¹ at
+    24 h, against 20 under `tracer`. A tag with a source that goes negative has
+    its share clamped at zero. It then neither moves nor loses, while its
+    neighbours' fluxes still reach it, so it stays in place and sinks further.
+    With the repair on the gap grew to 274 J kg⁻¹, because the repair lifts
+    those tags with energy that the region tags do not receive.
+  - **Integrated over the sphere, the gap cancels.** It was 5e-5 of the
+    integrated new energy with the repair off, and 6e-4 with it on, which is
+    the energy the repair created.
+
+### Where the audit stops
+
+  - It audits the grid-scale transport only. What the tags see besides, listed
+    above, still adds to `e_src_res` as under `tracer`.
+  - The first hour's residual is the Newton lag, not transport. Read the
+    residual from a reference taken after the first hour, or converge the
+    solve.
+  - On a sphere, read the per-process check as an integral. Pointwise, the
+    audit's gap came within a factor of two of the signal of a process that no
+    tag follows, and with the repair on it exceeded it.
+  - These are one column and one sphere configuration, a day each.
+  - `test/energy_source_tags_integration.jl` covers the audit on a column,
+    where the model's state is bit for bit the one without the switch, and on a
+    two-element sphere for two steps. The partition's tendencies from vertical
+    advection on the column, and from horizontal advection and hyperdiffusion
+    on the sphere, add up to the parent's to 100 eps.
 
 ## Diagnostics
 
