@@ -1,0 +1,24 @@
+# P4 on the login node: the build's growth with the tags, without EDMF.
+# `c0_column_notags`'s 0M DYCOMS column with `p4_edmf_two_tags.yml`'s tags and offset, and no
+# closure check or diagnostics, so that only the tags differ from that control.
+# If the build grows with the tags here too, a fix can be tested in minutes on
+# the login node rather than in hour-long EDMF jobs.
+job_id: "p4_column_0m_two_tags"
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+rad: "DYCOMS"
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+output_default_diagnostics: false

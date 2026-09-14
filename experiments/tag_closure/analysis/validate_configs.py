@@ -62,7 +62,13 @@ CONTROLS = {
 # P4's split test builds D4's EDMF column with only part of what D4 adds, to
 # find what makes its build slow (FINDINGS E44). These runs carry tags without a
 # closure check, write nothing, and are read for their build time alone.
-BUILD_SPLIT = {"p4_edmf_two_tags", "p4_edmf_tags", "p4_edmf_tags_records"}
+BUILD_SPLIT = {
+    "p4_edmf_two_tags",
+    "p4_edmf_tags",
+    "p4_edmf_tags_records",
+    "p4_column_0m_two_tags",
+    "p4_column_0m_tags",
+}
 # The runs allowed a limiter, and the runs allowed Float32: A4, and V3, which
 # tests Float32 with the energy source tags.
 LIMITER_OK = {"a5_sphere_limiter", "b3_limiter"}
@@ -84,6 +90,7 @@ AUDIT_REQUIRED = {
     "c6_column_repair",
     "c6_column_no_repair",
     "c6_sphere_repair",
+    "c6_sphere_wide_mask",
     "c6_sphere_no_repair",
     "c6_sphere_first_order",
     "c7_sphere_mp",
@@ -115,6 +122,7 @@ STATE_CHECK = {
     "c6_column_repair",
     "c6_column_no_repair",
     "c6_sphere_repair",
+    "c6_sphere_wide_mask",
     "c6_sphere_no_repair",
     "c6_sphere_first_order",
     "c7_sphere_mp",

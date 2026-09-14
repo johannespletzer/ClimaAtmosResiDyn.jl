@@ -1,0 +1,78 @@
+# C6's sphere with the repair on, and the two region masks ten times wider
+# (OPERATIONAL_TODO.md, C5's follow-up; FINDINGS E46). The owner approved it on
+# 2026-09-14.
+#
+# E46 found the repair's large trades between `tropics` and `extratropics` one
+# to two lat-lon rows beyond the 20° edge where the masks meet. The named
+# regions cross in a tanh 2° wide, which on this 5° grid is a step. This run
+# writes the same two regions out with a width of 10°, which spreads the edge
+# over two to three rows, and changes nothing else. If the step is what makes
+# the region tags undershoot, the ledgers `e_src_fix_tropics` and
+# `e_src_fix_extratropics` should shrink against `c6_sphere_repair`'s.
+#
+# The `new_` tags take the same wide masks, so that form A still compares like
+# with like. `ta` must be identical to `c6_sphere_repair`'s, since the model
+# never reads the tags.
+job_id: "c6_sphere_wide_mask"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+
+# C5's sphere, unchanged.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+rad: "gray"
+dt_rad: "1hours"
+
+energy_source_tags:
+  - name: tropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 10.0}
+  - name: extratropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 10.0, inside: false}
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+  - name: new_tropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 10.0}
+    source: all
+  - name: new_extratropics
+    region: {type: tanh_latitude, lat_bound: 20.0, width: 10.0, inside: false}
+    source: all
+
+energy_process_record: [radiation, surface_flux, microphysics]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_new_tropics, e_src_new_extratropics]
+    period: "1hours"
+  - short_name: [e_src_fix_tropics, e_src_fix_extratropics, e_src_fix_sfc]
+    period: "1hours"
+  - short_name: [e_src_fix_rad, e_src_fix_new_tropics, e_src_fix_new_extratropics]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_microphysics]
+    period: "1hours"
+  - short_name: [ta]
+    period: "1hours"
