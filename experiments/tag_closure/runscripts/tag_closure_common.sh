@@ -84,19 +84,34 @@ GIT_SOURCE="none"
 GIT_ERROR=""
 
 tag_closure_read_git_files() {
-    local head_file="${ROOT}/.git/HEAD"
+    # In a worktree `.git` is a file that names the worktree's own git
+    # directory, and the branch refs live in that directory's common directory.
+    # P4's runs came from a worktree and recorded `commit: unknown` before this.
+    local git_dir="${ROOT}/.git"
+    if [[ -f "${git_dir}" ]]; then
+        local gitdir_line
+        gitdir_line="$(<"${git_dir}")"
+        git_dir="${gitdir_line#gitdir: }"
+        [[ "${git_dir}" == /* ]] || git_dir="${ROOT}/${git_dir}"
+    fi
+    local common_dir="${git_dir}"
+    if [[ -r "${git_dir}/commondir" ]]; then
+        common_dir="$(<"${git_dir}/commondir")"
+        [[ "${common_dir}" == /* ]] || common_dir="${git_dir}/${common_dir}"
+    fi
+    local head_file="${git_dir}/HEAD"
     [[ -r "${head_file}" ]] || return 1
     local head ref
     head="$(<"${head_file}")"
     if [[ "${head}" == ref:* ]]; then
         ref="${head#ref: }"
         GIT_BRANCH="${ref#refs/heads/}"
-        if [[ -r "${ROOT}/.git/${ref}" ]]; then
-            GIT_COMMIT="$(<"${ROOT}/.git/${ref}")"
-        elif [[ -r "${ROOT}/.git/packed-refs" ]]; then
+        if [[ -r "${common_dir}/${ref}" ]]; then
+            GIT_COMMIT="$(<"${common_dir}/${ref}")"
+        elif [[ -r "${common_dir}/packed-refs" ]]; then
             GIT_COMMIT="$(
                 awk -v r="${ref}" '$2 == r { print $1; exit }' \
-                    "${ROOT}/.git/packed-refs"
+                    "${common_dir}/packed-refs"
             )"
         fi
     else
@@ -309,17 +324,27 @@ JOB_ID="${TAG_CLOSURE_JOB_ID:-${JOB_ID}}"
 OUTPUT_BASE="${RUN_DIR}/output/${JOB_ID}"
 
 # ---------------------------------------------------------------------------
-# Threading and ClimaComms.
+# Threading, ClimaComms and the number of processes.
 #
-# One process, no MPI. These runs are a single column or a coarse sphere on one
-# task, so SINGLETON avoids the MPI stack and the CPU/GPU preferences clash that
-# runscripts/README.md describes under "Two stacks, one preferences file".
+# Most runs are one process with no MPI. A single column or a coarse sphere on
+# one task needs nothing more, and SINGLETON avoids the MPI stack and the CPU/GPU
+# preferences clash that runscripts/README.md describes under "Two stacks, one
+# preferences file". A job submitted with more than one task, such as MP1, runs
+# that many ranks through `srun`, which the MPI preferences name, with the MPI
+# context.
 # ---------------------------------------------------------------------------
 
 export JULIA_NUM_THREADS=1
 export OMP_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 export MKL_NUM_THREADS=1
+
+NTASKS="${SLURM_NTASKS:-1}"
+LAUNCH=()
+if (( NTASKS > 1 )); then
+    LAUNCH=(srun --ntasks="${NTASKS}" --cpus-per-task="${SLURM_CPUS_PER_TASK:-1}")
+    export CLIMACOMMS_CONTEXT="${CLIMACOMMS_CONTEXT:-MPI}"
+fi
 
 export CLIMACOMMS_DEVICE="${CLIMACOMMS_DEVICE:-CPU}"
 export CLIMACOMMS_CONTEXT="${CLIMACOMMS_CONTEXT:-SINGLETON}"
@@ -338,6 +363,7 @@ echo "SLURM job:       ${SLURM_JOB_ID:-none}"
 echo "Partition:       ${SLURM_JOB_PARTITION:-none}"
 echo "Nodes:           ${SLURM_JOB_NODELIST:-$(hostname)}"
 echo "CPUs per task:   ${SLURM_CPUS_PER_TASK:-1}"
+echo "Tasks:           ${NTASKS}"
 echo "Repository:      ${ROOT}"
 echo "Commit:          ${GIT_COMMIT} (from ${GIT_SOURCE})"
 echo "Julia:           ${JULIA} ${JULIA_CHANNEL}"
@@ -365,12 +391,16 @@ echo
 cd "${RUN_DIR}"
 
 start_iso="$(date --iso-8601=seconds)"
+# Julia buffers what it writes to a regular file until it exits, so a job
+# stopped at its time limit left empty logs (D4). Through a pipe it writes as it
+# goes, so stdout and stderr each pass through `cat` into the job's own files.
 set +e
-"${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
+${LAUNCH[@]+"${LAUNCH[@]}"} "${JULIA}" ${JULIA_CHANNEL:+"${JULIA_CHANNEL}"} \
     --project="${PROJECT}" \
     --startup-file=no \
-    "${DRIVER}"
-status=$?
+    "${DRIVER}" 2> >(cat >&2) | cat
+status=${PIPESTATUS[0]}
+wait
 set -e
 
 # ---------------------------------------------------------------------------
@@ -431,6 +461,7 @@ node_type="$(
     echo "partition: ${SLURM_JOB_PARTITION:-none}"
     echo "nodelist: ${SLURM_JOB_NODELIST:-$(hostname)}"
     echo "cpus_per_task: ${SLURM_CPUS_PER_TASK:-1}"
+    echo "ntasks: ${NTASKS}"
     echo "node_type: ${node_type}"
     echo "climacomms_context: ${CLIMACOMMS_CONTEXT}"
     echo "climacomms_device: ${CLIMACOMMS_DEVICE}"

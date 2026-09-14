@@ -57,9 +57,10 @@ CONTROLS = {"a1_dt10_notags", "b1_notags", "c0_column_notags", "d4_column_edmf_n
 # find what makes its build slow (FINDINGS E44). These runs carry tags without a
 # closure check, write nothing, and are read for their build time alone.
 BUILD_SPLIT = {"p4_edmf_two_tags", "p4_edmf_tags", "p4_edmf_tags_records"}
-# The only run allowed a limiter, and the only one allowed Float32.
+# The runs allowed a limiter, and the runs allowed Float32: A4, and V3, which
+# tests Float32 with the energy source tags.
 LIMITER_OK = {"a5_sphere_limiter", "b3_limiter"}
-FLOAT32_OK = {"a4_float32"}
+FLOAT32_OK = {"a4_float32", "v3_sphere_float32"}
 # Runs that must set `audit: true` on their closure block, and no others. The
 # audit costs a handful of global reductions and answers a question that run
 # has and the rest do not; see each config's own comment. It is checked in both
@@ -84,6 +85,8 @@ AUDIT_REQUIRED = {
     "c9_column_enthalpy",
     "c9_sphere_enthalpy",
     "c10_sphere_enthalpy_repair",
+    "v3_sphere_float32",
+    "mp1_sphere_4ranks",
     "d1_column_1m_ice",
     "d1_column_1m_ice_no_vdiff",
     "d2_column_2m_ice",
@@ -112,6 +115,8 @@ STATE_CHECK = {
     "c9_column_enthalpy",
     "c9_sphere_enthalpy",
     "c10_sphere_enthalpy_repair",
+    "v3_sphere_float32",
+    "mp1_sphere_4ranks",
     "d1_column_1m_ice",
     "d1_column_1m_ice_no_vdiff",
     "d2_column_2m_ice",

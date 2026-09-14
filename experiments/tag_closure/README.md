@@ -573,6 +573,15 @@ run today.
 | `p4_edmf_two_tags` | `phase_c.sh`, from a worktree at `edd44e1d` | P4, D4's column with its two region tags only, for build time |
 | `p4_edmf_tags` | `phase_c.sh`, from a worktree at `edd44e1d` | P4, D4's column with its 8 tags only |
 | `p4_edmf_tags_records` | `phase_c.sh`, from a worktree at `edd44e1d` | P4, D4's column with its 8 tags and 5 records |
+
+### Operational checks
+
+Runs from OPERATIONAL_TODO.md that test what production needs: Float32 and more than one process.
+
+| Run | Runscript | What it is |
+|:-- |:-- |:-- |
+| `v3_sphere_float32` | `phase_c.sh` | V3, `c7_sphere_mp` in Float32 |
+| `mp1_sphere_4ranks` | `phase_c.sh`, with `--ntasks=4` | MP1, `c7_sphere_mp` on 4 MPI ranks |
 | `d5_column_edmf_ice` | `phase_c.sh` | D5, TRMM LBA EDMF deep convection under 1M. It is meant for after the sub-grid sharing |
 
 C2, the implicit-path brackets, needs the owner's approval and a code change,
