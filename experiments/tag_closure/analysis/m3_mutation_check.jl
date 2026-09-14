@@ -19,11 +19,13 @@ function run_with_source(label, text)
     # Only the new block, with the imports it needs. The rest of the file needs
     # test-only packages that the .buildkite project does not have.
     full_text = read(test_file, String)
-    first_line = findfirst("# `vertical_advection_of_water_tendency!` does not use", full_text)
+    first_line =
+        findfirst("# `vertical_advection_of_water_tendency!` does not use", full_text)
     last_line = findfirst("@testset \"Name lifting\"", full_text)
     block = full_text[first(first_line):(first(last_line) - 1)]
-    test_text = "using Test\nimport ClimaAtmos as CA\nimport ClimaCore.MatrixFields: @name\n" *
-                replace(block, "pkgdir(CA)" => repr(root))
+    test_text =
+        "using Test\nimport ClimaAtmos as CA\nimport ClimaCore.MatrixFields: @name\n" *
+        replace(block, "pkgdir(CA)" => repr(root))
     mod = Module(Symbol(label))
     ts = @testset ReportingTestSet "$label" begin
         Base.include_string(mod, test_text, test_file)
@@ -43,7 +45,13 @@ function Test.finish(ts::ReportingTestSet)
     return ts
 end
 
-count_fails(ts) = sum(r -> r isa ReportingTestSet ? count_fails(r) : (r isa Test.Fail || r isa Test.Error) ? 1 : 0, ts.results; init = 0)
+count_fails(ts) = sum(
+    r ->
+        r isa ReportingTestSet ? count_fails(r) :
+        (r isa Test.Fail || r isa Test.Error) ? 1 : 0,
+    ts.results;
+    init = 0,
+)
 function show_failures(ts, path = ts.description)
     for r in ts.results
         if r isa ReportingTestSet
@@ -53,14 +61,29 @@ function show_failures(ts, path = ts.description)
         end
     end
 end
-count_all(ts) =sum(r -> r isa ReportingTestSet ? count_all(r) : 1, ts.results; init = 0)
+count_all(ts) = sum(r -> r isa ReportingTestSet ? count_all(r) : 1, ts.results; init = 0)
 
 mutations = [
     ("unchanged", original),
     ("species_dropped", replace(original, "        (@name(ρq_sno), @name(ᶜwₛ)),\n" => "")),
-    ("species_added", replace(original, "        (@name(ρq_sno), @name(ᶜwₛ)),\n" => "        (@name(ρq_sno), @name(ᶜwₛ)),\n        (@name(ρq_rim), @name(ᶜwᵢ)),\n")),
-    ("wrong_velocity", replace(original, "(@name(ρq_rai), @name(ᶜwᵣ))" => "(@name(ρq_rai), @name(ᶜwₗ))")),
-    ("sgs_species_dropped", replace(original, "            (@name(q_sno), @name(ᶜwₛʲs.:(1)), @name(ᶜwₛ)),\n" => "")),
+    (
+        "species_added",
+        replace(
+            original,
+            "        (@name(ρq_sno), @name(ᶜwₛ)),\n" => "        (@name(ρq_sno), @name(ᶜwₛ)),\n        (@name(ρq_rim), @name(ᶜwᵢ)),\n",
+        ),
+    ),
+    (
+        "wrong_velocity",
+        replace(original, "(@name(ρq_rai), @name(ᶜwᵣ))" => "(@name(ρq_rai), @name(ᶜwₗ))"),
+    ),
+    (
+        "sgs_species_dropped",
+        replace(
+            original,
+            "            (@name(q_sno), @name(ᶜwₛʲs.:(1)), @name(ᶜwₛ)),\n" => "",
+        ),
+    ),
 ]
 for (label, text) in mutations
     label != "unchanged" && text == original && error("mutation $label did not apply")

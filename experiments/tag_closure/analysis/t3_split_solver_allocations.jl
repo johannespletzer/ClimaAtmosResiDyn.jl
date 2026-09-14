@@ -14,11 +14,20 @@ import LinearAlgebra
 tags = [
     Dict{String, Any}(
         "name" => "strat",
-        "region" => Dict{String, Any}("type" => "tanh_altitude", "z_center" => 750.0, "width" => 100.0),
+        "region" => Dict{String, Any}(
+            "type" => "tanh_altitude",
+            "z_center" => 750.0,
+            "width" => 100.0,
+        ),
     ),
     Dict{String, Any}(
         "name" => "tropo",
-        "region" => Dict{String, Any}("type" => "tanh_altitude", "z_center" => 750.0, "width" => 100.0, "above" => false),
+        "region" => Dict{String, Any}(
+            "type" => "tanh_altitude",
+            "z_center" => 750.0,
+            "width" => 100.0,
+            "above" => false,
+        ),
     ),
     Dict{String, Any}("name" => "rad", "source" => "radiation"),
 ]
@@ -57,8 +66,16 @@ println("split solver type: ", nameof(typeof(split_cache.solver)))
 dtγ = FT(5)
 ΔY = zero(Y)
 for (label, cache) in (("split", split_cache), ("unsplit", unsplit_cache))
-    println(label, " update_jacobian! allocs ", allocations(CA.update_jacobian!, jacobian_alg, cache, Y, p, dtγ, t))
-    println(label, " invert_jacobian! allocs ", allocations(CA.invert_jacobian!, jacobian_alg, cache, ΔY, Y))
+    println(
+        label,
+        " update_jacobian! allocs ",
+        allocations(CA.update_jacobian!, jacobian_alg, cache, Y, p, dtγ, t),
+    )
+    println(
+        label,
+        " invert_jacobian! allocs ",
+        allocations(CA.invert_jacobian!, jacobian_alg, cache, ΔY, Y),
+    )
     println(label, " ldiv! allocs ", allocations(LinearAlgebra.ldiv!, ΔY, cache.solver, Y))
     flush(stdout)
 end

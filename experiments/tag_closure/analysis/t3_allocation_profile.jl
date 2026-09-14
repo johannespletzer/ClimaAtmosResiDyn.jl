@@ -70,10 +70,24 @@ end
 Yₜ = zero(Y)
 Yₜ_lim = zero(Y)
 measure("remaining_tendency!", CA.remaining_tendency!, Yₜ, Yₜ_lim, Y, p, t)
-measure("horizontal_tracer_advection_tendency!", CA.horizontal_tracer_advection_tendency!, Yₜ_lim, Y, p, t)
+measure(
+    "horizontal_tracer_advection_tendency!",
+    CA.horizontal_tracer_advection_tendency!,
+    Yₜ_lim,
+    Y,
+    p,
+    t,
+)
 measure("horizontal_dynamics_tendency!", CA.horizontal_dynamics_tendency!, Yₜ, Y, p, t)
 measure("hyperdiffusion_tendency!", CA.hyperdiffusion_tendency!, Yₜ, Yₜ_lim, Y, p, t)
-measure("explicit_vertical_advection_tendency!", CA.explicit_vertical_advection_tendency!, Yₜ, Y, p, t)
+measure(
+    "explicit_vertical_advection_tendency!",
+    CA.explicit_vertical_advection_tendency!,
+    Yₜ,
+    Y,
+    p,
+    t,
+)
 measure("additional_tendency!", CA.additional_tendency!, Yₜ, Y, p, t)
 measure("surface_flux_tendency!", CA.surface_flux_tendency!, Yₜ, Y, p, t)
 measure("radiation_tendency!", CA.radiation_tendency!, Yₜ, Y, p, t, p.atmos.radiation_mode)
@@ -96,7 +110,12 @@ for alloc in results.allocs
     n, bytes = get(groups, key, (0, 0))
     groups[key] = (n + 1, bytes + alloc.size)
 end
-println("allocations in one call: ", length(results.allocs), ", bytes ", sum(a -> a.size, results.allocs; init = 0))
+println(
+    "allocations in one call: ",
+    length(results.allocs),
+    ", bytes ",
+    sum(a -> a.size, results.allocs; init = 0),
+)
 for (key, (n, bytes)) in sort(collect(groups); by = x -> -x[2][2])
     println(lpad(bytes, 8), " bytes ", lpad(n, 4), " allocs  ", key)
 end

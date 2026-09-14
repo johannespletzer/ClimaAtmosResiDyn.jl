@@ -49,11 +49,42 @@ function model_hash(extra)
 end
 for (label, extra) in (
     ("no tags", Dict{String, Any}()),
-    ("tags, offset 50000", Dict{String, Any}("energy_source_tags" => tags(100.0), "energy_source_tag_offset" => 50000.0)),
-    ("tags, offset 50000 again", Dict{String, Any}("energy_source_tags" => tags(100.0), "energy_source_tag_offset" => 50000.0)),
-    ("tags, offset 60000", Dict{String, Any}("energy_source_tags" => tags(100.0), "energy_source_tag_offset" => 60000.0)),
-    ("tags, width 200", Dict{String, Any}("energy_source_tags" => tags(200.0), "energy_source_tag_offset" => 50000.0)),
-    ("tags, repair off", Dict{String, Any}("energy_source_tags" => tags(100.0), "energy_source_tag_offset" => 50000.0, "energy_source_tag_repair" => false)),
+    (
+        "tags, offset 50000",
+        Dict{String, Any}(
+            "energy_source_tags" => tags(100.0),
+            "energy_source_tag_offset" => 50000.0,
+        ),
+    ),
+    (
+        "tags, offset 50000 again",
+        Dict{String, Any}(
+            "energy_source_tags" => tags(100.0),
+            "energy_source_tag_offset" => 50000.0,
+        ),
+    ),
+    (
+        "tags, offset 60000",
+        Dict{String, Any}(
+            "energy_source_tags" => tags(100.0),
+            "energy_source_tag_offset" => 60000.0,
+        ),
+    ),
+    (
+        "tags, width 200",
+        Dict{String, Any}(
+            "energy_source_tags" => tags(200.0),
+            "energy_source_tag_offset" => 50000.0,
+        ),
+    ),
+    (
+        "tags, repair off",
+        Dict{String, Any}(
+            "energy_source_tags" => tags(100.0),
+            "energy_source_tag_offset" => 50000.0,
+            "energy_source_tag_repair" => false,
+        ),
+    ),
 )
     println(rpad(label, 28), " ", model_hash(extra))
 end

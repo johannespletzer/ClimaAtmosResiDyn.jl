@@ -68,7 +68,16 @@ function measure(label, f::F, args...) where {F}
     compile = time() - t0
     a1 = @allocated f(args...)
     a2 = @allocated f(args...)
-    println(rpad(label, 40), " allocs ", a1, " / ", a2, "   first call ", round(compile; digits = 1), " s")
+    println(
+        rpad(label, 40),
+        " allocs ",
+        a1,
+        " / ",
+        a2,
+        "   first call ",
+        round(compile; digits = 1),
+        " s",
+    )
     flush(stdout)
 end
 
@@ -89,11 +98,43 @@ if with_tags
     measure("repair_energy_source_tags!", CA.repair_energy_source_tags!, Y_work, p)
     region_names = (:ρe_src_strat, :ρe_src_tropo)
     out = zero(Y.c.ρ)
-    measure("compute_e_src_res!", CA.Diagnostics.compute_e_src_res!, out, Y, p, t, region_names, FT(50000))
-    measure("compute_e_src_fix!", CA.Diagnostics.compute_e_src_fix!, out, Y, p, t, :ρe_src_rad)
-    measure("compute_process_record!", CA.Diagnostics.compute_process_record!, out, Y, p, t, :prc_e_radiation)
+    measure(
+        "compute_e_src_res!",
+        CA.Diagnostics.compute_e_src_res!,
+        out,
+        Y,
+        p,
+        t,
+        region_names,
+        FT(50000),
+    )
+    measure(
+        "compute_e_src_fix!",
+        CA.Diagnostics.compute_e_src_fix!,
+        out,
+        Y,
+        p,
+        t,
+        :ρe_src_rad,
+    )
+    measure(
+        "compute_process_record!",
+        CA.Diagnostics.compute_process_record!,
+        out,
+        Y,
+        p,
+        t,
+        :prc_e_radiation,
+    )
 end
-measure("vertical_advection_of_water_tendency!", CA.vertical_advection_of_water_tendency!, Yₜ, Y, p, t)
+measure(
+    "vertical_advection_of_water_tendency!",
+    CA.vertical_advection_of_water_tendency!,
+    Yₜ,
+    Y,
+    p,
+    t,
+)
 measure("constrain_state!", CA.constrain_state!, Y_work, p, t)
 measure("set_precomputed_quantities!", CA.set_precomputed_quantities!, Y_work, p, t)
 measure("implicit_tendency!", CA.implicit_tendency!, Yₜ, Y, p, t)
