@@ -36,10 +36,7 @@ Open pull requests:
 | #74 | D2: the energy source tag docs brought up to date after #70           | ready, waits for the owner             |
 | #75 | T2: a Float32 integration test of the tags and records, own CI group  | draft; 38 of 38 pass locally           |
 | #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | draft; EDMF validation running         |
-
-Not yet a pull request: B9, the decided defaults and checks, written in
-`../ClimaAtmosResiDyn-defaults` on `claude/energy-source-tag-defaults`, under
-test and not committed.
+| #77 | B9: the offset required, the closure check and label check by default | draft; tests pass locally              |
 
 Measured so far: 0M on a column and a sphere, and 1M on a warm column, a day
 each (E26 to E39, E43); 1M with ice on a cold column for an hour, with a twin
@@ -61,9 +58,7 @@ day, 2M and P3, more than one node, and the GPU.
   - **The C6 twin with a 10° mask,** job `13441633`: whether the step of the
     2°-wide region mask makes the repair's trades (E46). Hand back with
     `analysis/repair_trades.jl`.
-  - **B9's tests** on the login node: `test/config/tracer_config.jl` and
-    `test/energy_source_tags_tests.jl` pass (233 of 233); the integration test
-    is running. Then commit, push and open a draft PR.
+  - **CI** on #75, #76 and #77.
 
 ## Decided
 
@@ -97,7 +92,7 @@ On 2026-09-14:
         each. 7 used: 3 inference profiles, 2 cancelled validations of the
         first commit, 2 validations running.
       - **Code, as draft PRs to `main`, merged only by the owner:** P4's fix
-        (#76); B9 with U3, U4, R3 and T4 (in test); C2's restart guard with T1,
+        (#76); B9 with U3, U4, R3 and T4 (#77); C2's restart guard with T1,
         after #72 merges; C1b, after #76 and #72 merge.
       - **Runs at their predecessors' settings:** the C6 twin with a 10° mask
         (submitted); V5, restart equivalence (up to 2 jobs, after C2); C1b's
@@ -107,9 +102,9 @@ On 2026-09-14:
 
 ## 1. Decisions for the owner
 
- 1. **Merges:** #73, #72 and #74 are ready. #75 after its CI. #76 after its
-    EDMF validation and CI.
- 2. **B9's three choices, for review when its PR opens:**
+ 1. **Merges:** #73, #72 and #74 are ready. #75 and #77 after their CI. #76
+    after its EDMF validation and CI.
+ 2. **#77's three choices, for review in the PR:**
       - A2 warns only in a run with at least one per-process tag, and a tag
         listing `all` counts as following no process. Otherwise a run with
         region tags alone would warn about every process.
@@ -175,8 +170,9 @@ On 2026-09-14:
     with a spin-up reference at 1 h and `false` to switch it off; A2, a warning
     at configuration for a process that runs with no tag following it (flags
     subsidence on C5's column and microphysics on C6's sphere, nothing on C7).
-    With U3, U4, R3 and T4. Left: the integration test, then a draft PR, and
-    the owner's review of the three choices under decision 2. Size M.
+    With U3, U4, R3 and T4. Draft #77; its tests pass locally (config tests,
+    233 unit tests, 45 integration assertions). Left: CI, and the owner's review
+    of the three choices under decision 2. Size M.
 10. **V2, the production physics on a sphere:** EDMF with
     `edmfx_vertical_diffusion: true`, vertical diffusion, sponges, topography
     and 1M, with `analysis/transport_ledger.jl`. It sizes C4. Needs C1b and
@@ -200,7 +196,7 @@ Done or in a pull request:
     **U4,** the source tags' negative parts and minimum, and the energy the
     repair moved, in the audit table; **R3,** a warning when clipping `ρq_tot`
     changes `ρe_tot` outside every bracket; **T4,**
-    `config/model_configs/baroclinic_wave_energy_source_tags.yml`. All in B9.
+    `config/model_configs/baroclinic_wave_energy_source_tags.yml`. All in #77.
 
 With C1b (B4):
 
@@ -267,7 +263,7 @@ With D1 (B12):
   - **Worktrees** beside the repository, to remove once their PRs merge:
     `-repair` (#70, merged), `-audit` (#72), `-docs` (#74), `-float32` (#75),
     `-buildtime` (#76), `-buildtime-edmf` (#76's validation, with a local
-    change that must never be committed), `-defaults` (B9), and `-p4`
+    change that must never be committed), `-defaults` (#77), and `-p4`
     (detached at `edd44e1d`, for P4's diagnosis). Each has a copied
     `.buildkite/LocalPreferences.toml`, which `main` tracks: never commit it.
   - **The known defects** in `LEVANTE_TASKS.md`: the validator's
@@ -275,7 +271,7 @@ With D1 (B12):
     `output/c0_sphere_deep/` has no provenance, so every phase C pass warns.
   - **`analysis/phase_c.jl`** reads only runs named `c*`; the D, P, V and MP
     runs are in FINDINGS only.
-  - **NEXT_SESSION.md** needs the day's state: #75, #76, B9, and the jobs in
+  - **NEXT_SESSION.md** needs the day's state: #75, #76, #77, and the jobs in
     flight.
 
 ## 6. Open questions, not blocking
@@ -297,7 +293,7 @@ With D1 (B12):
  1. The owner merges #73, #72 and #74.
  2. Hand back P4's EDMF validation (E44e) into #76; the owner merges #76 and
     #75 once their CI passes.
- 3. B9: finish the tests, open the draft PR, the owner reviews decision 2.
+ 3. #77: its CI, and the owner's review of decision 2.
  4. Hand back the C6 twin with the 10° mask.
  5. C1b and T6, M3, T5; its validation runs.
  6. C2 with T1, then V5.
@@ -317,4 +313,6 @@ With D1 (B12):
     trades (E46); MP1 (E47); P1 (T9).
   - **Docs:** the guide's fixes 1, 2, 6 and 8 (#69, #70); 3, 5, 7, 9 and 10
     (#72, #74).
+  - **Pull requests opened on 2026-09-14:** #74 (D2), #75 (T2), #76 (P4's
+    fix), #77 (B9).
   - #72 merged into this branch (`57ed9c1f`).
