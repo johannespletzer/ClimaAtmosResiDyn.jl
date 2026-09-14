@@ -158,7 +158,7 @@ The eight items first listed here stand as follows on 2026-09-11:
  3. **Precipitation on the implicit path**: bracketed for the source tags and
     the records, in #69.
  4. **Negative tags**: `energy_source_tag_repair`, on by default, in #69.
-    Sedimentation moves the tags as transport, in draft #70.
+    Sedimentation moves the tags as transport, in #70.
  5. **The transport mismatch**: the enthalpy audit, in draft #72. Tracer
     transport stays the default, and the audit shows what transport adds (E34).
  6. **A calibrated closure tolerance**: open. U2 and R1 of the list.

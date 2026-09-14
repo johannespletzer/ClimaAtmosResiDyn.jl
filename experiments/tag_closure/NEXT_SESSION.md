@@ -46,10 +46,10 @@ the owner should see which before it is written.
 under `output/`. A second reading of an existing run goes into a subdirectory,
 the way `output/c0_sphere_audit/terrabyte/` does.
 
-**`docs/src/` is on open PR #63** — `tag_closure_memo.md` and
-`tag_closure_experiments.md`. Changes there are cherry-picks onto
-`claude/tag-closure-experiments-plan`, and the owner has asked for each one.
-Do not edit them casually, and that includes the formatter.
+**`docs/src/` holds the memo and the plan** — `tag_closure_memo.md` and
+`tag_closure_experiments.md`, merged with PR #63 on 2026-09-11. While #63 was
+open, the owner asked for each change there. Keep asking. Do not edit them
+casually, and that includes the formatter.
 
 **Commits.** Small, separately described, and end every message with:
 
@@ -170,7 +170,10 @@ one agent has worked this branch at once.
     refuses `prognostic_edmfx` with tags. The tags and the records make the
     build slow by themselves: 27 minutes with 2 tags, 60 with 8, and more than
     two hours with 8 tags and 5 records, against 18.5 without (E44b). Which
-    compile step grows is the next question. The runs' provenance was repaired
+    compile step grows is the next question. On 2026-09-14 the owner approved
+    timing each build stage of the 8-tag column with
+    `analysis/p4_build_stages.jl`: job `13440637`. The list of what remains was
+    rebuilt the same day and reviewed by an agent; it is `OPERATIONAL_TODO.md`. The runs' provenance was repaired
     by hand to `edd44e1d`, because a worktree's `.git` is a file the runscript
     cannot read.
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and

@@ -1411,8 +1411,8 @@ Kept because a later reader will otherwise re-derive them.
     and the sphere test's comment all said so. `hyperdiffusion.jl:495-497`
     hyperdiffuses total water and takes the same flux out of `ρ`. So `c` times
     that flux changes `E`, and the audit does not share it out. A reviewer
-    found this on 2026-09-11. The fix is to add `c` to the water part of the
-    shared flux, in #72, and it waits for the owner.
+    found this on 2026-09-11. The fix adds `c` to the water part of the shared
+    flux. It is in #72, `7a290c98`, with the owner's approval.
   - **That under the audit the tags follow the parent's vertical flux at the
     stage state rather than at the solved one.** The audit's docs section, the
     vertical kernel's docstring and `ENTHALPY_AUDIT_DESIGN.md` said so. It is
@@ -1672,7 +1672,8 @@ Kept because a later reader will otherwise re-derive them.
     `prognostic_edmfx` with tags now. Then one PR would share the parent's
     sub-grid flux of `E` and each species' whole sedimentation flux by the
     losing cell's shares, and guard the shared tracer loop. It leaves seven
-    decisions to the owner. Its configs are D1 to D5, and none has run. A user
+    decisions to the owner. Its configs are D1 to D5. D1 ran (E42, E42b), and
+    the D4 pair timed out before it stepped (E44). A user
     guide is drafted beside it, [USER_GUIDE_DRAFT.md](USER_GUIDE_DRAFT.md).
 
     **Listed: what is left before operation**, in
@@ -1685,4 +1686,5 @@ Kept because a later reader will otherwise re-derive them.
     that speed, which fits `hpda2_test`'s two-hour limit. Whether it is worth
     running is the owner's call.
 
- 5. **C2.** Unchanged: needs a code change and approval.
+ 5. **C2.** Built: the implicit-path brackets are in #69. This is not the
+    restart guard that `OPERATIONAL_TODO.md` also calls C2.
