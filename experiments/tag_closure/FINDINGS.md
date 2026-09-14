@@ -1370,6 +1370,46 @@ run before this one was a single process.
 *MP1, job `13440991` on terrabyte at `c2842ba6`; `output/mp1_sphere_4ranks/`,
 `analysis/float_type_compare.jl` and `analysis/same_atmosphere.jl`.*
 
+**E48. With the region masks 10° wide, the repair never trades between the
+region tags: the step of the 2° mask makes all of E46's trades.** The twin is
+`c6_sphere_repair` with `tropics` and `extratropics` written out as
+`tanh_latitude` regions 10° wide instead of the named regions' 2°, and no other
+key changed. It ran at `f399b9f8`, C6 at `f3bbdb7b`. Its `ta` is identical to
+C6's in every value, and the repair ledgers of `sfc` and `rad`, whose tags have
+no mask, match C6's, so the repair acts as it did then.
+
+| at 24 h, or over the day                          | 2° masks (C6)             | 10° masks                 |
+|:------------------------------------------------- | -------------------------:| -------------------------:|
+| `e_src_fix_tropics`, extremes                     | ±30,915 J kg⁻¹            | 0                         |
+| region ledger's gross, relative to C6's           | 1                         | 0                         |
+| smallest `e_src_tropics` over the day             | 0, after the repair       | 0.0069 J kg⁻¹             |
+| smallest `e_src_extratropics` over the day        | 0, after the repair       | 3,243 J kg⁻¹              |
+| closure residual                                  | −4.074e19 J               | −4.087e19 J               |
+| form A, largest gap                               | 148.781 J kg⁻¹            | 148.781 J kg⁻¹            |
+
+  - **No region tag goes negative, so the repair has nothing to trade.** The
+    region ledger is zero in every cell at every hour. With 2° masks it grew to
+    ±30,915 J kg⁻¹ one to two rows beyond the edge (E46).
+  - **Part of the reason is that a 10° mask never reaches zero.** At the equator
+    the extratropics mask is 0.036, so the extratropics tag starts with 3.6% of
+    the total there, and at the poles the tropics mask is 8e-7. A tag's
+    transport undershoot then stays above zero. A 2° mask is 4e-9 at the
+    equator, so the tag sits at zero where the undershoots arrive.
+  - **That is also the price.** Each region tag holds a few percent of the
+    other region's energy from the start, so the reading "energy that came from
+    the tropics" is blurred by that much near the edge and in the far region.
+  - **The rest is unchanged.** The closure residual differs by 0.3%. Form A
+    agrees to 1e-8, since the rain-out has no tag here in either run, as in C6.
+    The source tags' repair ledgers are the same, apart from the `new_` tags,
+    whose masks changed too: their ledgers shrink by factors of 2 and 5.
+
+So the trades are a property of a region mask that is a step on the grid, not
+of the repair or the transport. Whether the named regions should be wider is a
+default, and a trade between provenance sharpness and the repair's trades. It
+is the owner's decision. *Job `13441633` on terrabyte at `f399b9f8`;
+`output/c6_sphere_wide_mask/`; `analysis/wide_mask_trades.jl`,
+`analysis/same_atmosphere.jl`, `analysis/c5_process_closure.jl`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

@@ -1,0 +1,66 @@
+
+c6_sphere_repair
+  e_src_fix_tropics at 24 h: max 30915.1 J/kg at lon 68.5, lat -28.3, z 26865 m
+                              min -25202.6 J/kg at lon -58.3, lat 12.9, z 26865 m
+  gross at 24 h, relative to c6_sphere_repair: 1.000
+  gross of e_src_fix_sfc at 24 h, relative to the region ledger of c6_sphere_repair: 0.0014
+  gross of e_src_fix_rad at 24 h, relative to the region ledger of c6_sphere_repair: 0.0003
+  gross of e_src_fix_new_tropics at 24 h, relative to the region ledger of c6_sphere_repair: 0.0014
+  gross of e_src_fix_new_extratropics at 24 h, relative to the region ledger of c6_sphere_repair: 0.0014
+
+c6_sphere_wide_mask
+  e_src_fix_tropics at 24 h: max 0.0 J/kg at lon -180.0, lat -90.0, z 250 m
+                              min 0.0 J/kg at lon -180.0, lat -90.0, z 250 m
+  gross at 24 h, relative to c6_sphere_repair: 0.000
+  gross of e_src_fix_sfc at 24 h, relative to the region ledger of c6_sphere_repair: 0.0014
+  gross of e_src_fix_rad at 24 h, relative to the region ledger of c6_sphere_repair: 0.0003
+  gross of e_src_fix_new_tropics at 24 h, relative to the region ledger of c6_sphere_repair: 0.0003
+  gross of e_src_fix_new_extratropics at 24 h, relative to the region ledger of c6_sphere_repair: 0.0007
+
+the tropics ledger's gross by the hour, relative to c6_sphere_repair at 24 h:
+  hour   2° mask   10° mask
+     1     0.136      0.000
+     2     0.254      0.000
+     3     0.353      0.000
+     4     0.435      0.000
+     5     0.504      0.000
+     6     0.563      0.000
+     7     0.612      0.000
+     8     0.654      0.000
+     9     0.691      0.000
+    10     0.725      0.000
+    11     0.756      0.000
+    12     0.784      0.000
+    13     0.809      0.000
+    14     0.832      0.000
+    15     0.853      0.000
+    16     0.873      0.000
+    17     0.892      0.000
+    18     0.910      0.000
+    19     0.927      0.000
+    20     0.943      0.000
+    21     0.958      0.000
+    22     0.973      0.000
+    23     0.987      0.000
+    24     1.000      0.000
+
+share of each run's tropics ledger gross by latitude row at 24 h, both hemispheres:
+  |lat|    mass   2° mask   10° mask
+    2.6    0.090    0.006        NaN
+    7.7    0.089    0.121        NaN
+   12.9    0.088    0.288        NaN
+   18.0    0.085    0.002        NaN
+   23.1    0.083    0.019        NaN
+   28.3    0.079    0.451        NaN
+   33.4    0.075    0.101        NaN
+   38.6    0.070    0.008        NaN
+   43.7    0.065    0.004        NaN
+   48.9    0.059    0.001        NaN
+   54.0    0.053    0.000        NaN
+   59.1    0.046    0.000        NaN
+   64.3    0.039    0.000        NaN
+   69.4    0.032    0.000        NaN
+   74.6    0.024    0.000        NaN
+   79.7    0.016    0.000        NaN
+   84.9    0.008    0.000        NaN
+   90.0    0.000    0.000        NaN

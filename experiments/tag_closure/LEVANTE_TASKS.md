@@ -311,6 +311,20 @@ identical to C7's. The tables are in `output/p1_sphere_tags/` and
 and most of that is compiled before the constructor's first timer. The trimmed
 logs are in `output/p4_build_stages/`.
 
+**P4's cause and fix, done on 2026-09-14** (FINDINGS E44d, E44e). Jobs
+`13441219` to `13441221` profiled type inference in the EDMF build at 0, 2 and
+8 tags: all of the growth is ClimaCore building the implicit Jacobian's nested
+solver. Draft #76 solves the tags and records apart from it. Jobs `13441606`
+and `13441607` built D4's column with 8 tags, and with 8 tags and 5 records, in
+21 minutes each, from `../ClimaAtmosResiDyn-buildtime-edmf` with the EDMF
+refusal off locally. Jobs `13441507` and `13441508` ran the fix's first commit,
+which still compiled the unsplit solver, and were cancelled.
+
+**The C6 twin with a 10° mask, done on 2026-09-14** (FINDINGS E48). Job
+`13441633` ran C6's sphere with the region masks 10° wide. No region tag went
+negative, and the repair traded nothing between them. The tables are in
+`output/c6_sphere_wide_mask/`.
+
 **Next.** The owner sets the merge order: #69, then #70, then #72 retargeted to
 `main`. The review of #69 is posted on the PR, and its five findings are fixed
 on all three branches.

@@ -50,9 +50,6 @@ day, 2M and P3, more than one node, and the GPU.
 
 ## 0. In flight
 
-  - **The C6 twin with a 10° mask,** job `13441633`, finished: hand back with
-    `analysis/repair_trades.jl`, whether the step of the 2°-wide region mask
-    makes the repair's trades (E46).
   - **CI** on #75, #76 and #77.
 
 ## Decided
@@ -90,7 +87,7 @@ On 2026-09-14:
         (#76); B9 with U3, U4, R3 and T4 (#77); C2's restart guard with T1,
         after #72 merges; C1b, after #76 and #72 merge.
       - **Runs at their predecessors' settings:** the C6 twin with a 10° mask
-        (submitted); V5, restart equivalence (up to 2 jobs, after C2); C1b's
+        (done, E48); V5, restart equivalence (up to 2 jobs, after C2); C1b's
         validation (up to 5 jobs: the D4 pair, D4 with
         `edmfx_vertical_diffusion: true`, D5).
       - **Pushes:** the main session's branches and T2's, as draft PRs.
@@ -119,6 +116,12 @@ On 2026-09-14:
  7. **Phase B.** FINDINGS §8 item 4 still lists it as the owner's call.
  8. **Runs not yet approved:** V2, V6, and a second node for MP1.
  9. **Docs:** whether to move `USER_GUIDE_DRAFT.md` into `docs/src/` (D1).
+10. **The named regions' width.** E48: with `tropics` and `extratropics` 10°
+    wide instead of 2°, no region tag goes negative on the 5° sphere, and the
+    repair trades nothing between them, against ±30,915 J/kg. The price is
+    blurrier provenance: a 10° mask leaves 3.6% of the total in the extratropics
+    tag at the equator. Options: keep 2°; widen the named regions; or tie the
+    width to the grid spacing. Changing it is a default.
 
 ## 2. Blocking operation (B), in dependency order
 
@@ -184,7 +187,7 @@ On 2026-09-14:
 Done or in a pull request:
 
   - ~~**C5.**~~ Where the repair's large trades sit: just beyond the 20° edge
-    where the region tags meet (E46). The 10° twin is running.
+    where the region tags meet (E46). With 10° masks there are none (E48).
   - ~~**P1.**~~ The tag cost on a sphere: 1.46× (T9).
   - **D2,** the stale docs: #74 (fixes 3, 7, 9, 10) and #72 (fixes 5, 7). Fix
     4 needs no change.
@@ -233,8 +236,10 @@ With D1 (B12):
   - **A2's runtime part and A3,** as optional validation features: ∫Δ⁺ per
     label at runtime, and form A as a global integral online. Accept A3 at
     about 1.2e-3 on a C6-type run and at most 1e-4 on C7, C9 and C10 at 24 h.
-  - **The region masks' width,** if the 10° twin shows the step makes the
-    trades: the named regions' 2° is a default, and changing it needs approval.
+  - **The region masks' width.** With 10° masks the repair never trades between
+    the region tags, against ±30,915 J/kg with the named regions' 2° (E48). A
+    wider mask blurs provenance: each region tag keeps a few percent of the
+    other region's energy. The width is a default (decision 10).
   - **C1c.** B3, the SGS diffusive flux under `enthalpy` (decision 6).
   - **C1d.** Option C, per-updraft tag shares; about three times B.
   - **C6.** Review leftovers: `isfinite` before the conversion to `FT`, `nothing`
@@ -272,8 +277,6 @@ With D1 (B12):
 
 ## 6. Open questions, not blocking
 
-  - Whether the region mask's step makes the repair's trades (finished, to
-    hand back).
   - What makes D1's zero-sum gross residual (E42, E42b). Candidate: pressure
     work in grid-mean vertical advection under tracer transport. An audit twin
     of D1 would test it.
@@ -289,7 +292,7 @@ With D1 (B12):
  2. The owner merges #76 and #75 once their CI passes. (#76's EDMF validation
     is done, E44e.)
  3. #77: its CI, and the owner's review of decision 2.
- 4. Hand back the C6 twin with the 10° mask.
+ 4. Decision 10, the named regions' width (E48).
  5. C1b and T6, M3, T5; its validation runs.
  6. C2 with T1, then V5.
  7. V2 with C4 and V6, once approved; V1 as decided.
@@ -306,7 +309,7 @@ With D1 (B12):
     pair (E40, E44); the D4 build control (E44); P4's split test (E44b) and
     stage timing (E44c); P4's inference profiles (E44d); P4's fix on EDMF
     (E44e); V3 (E45); C5's repair
-    trades (E46); MP1 (E47); P1 (T9).
+    trades (E46); MP1 (E47); the 10° mask twin (E48); P1 (T9).
   - **Docs:** the guide's fixes 1, 2, 6 and 8 (#69, #70); 3, 5, 7, 9 and 10
     (#72, #74).
   - **Pull requests opened on 2026-09-14:** #74 (D2), #75 (T2), #76 (P4's

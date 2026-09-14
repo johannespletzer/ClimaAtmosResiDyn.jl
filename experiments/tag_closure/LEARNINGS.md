@@ -1321,3 +1321,55 @@ one pair on one node.
 **Carry-over to the source tags.** Budget about half as much again for a CPU
 sphere with a validating layout. A monitoring layout, with fewer tags and a
 daily check, should cost less; that is not measured.
+
+## P4's cause and fix. The Jacobian solver's build
+
+Profiled on 2026-09-14: SLURM jobs `13441219` to `13441221` at `edd44e1d`, and
+the login node. Validated with jobs `13441606` and `13441607` on #76's branch.
+The owner approved up to 8 jobs; 7 were used.
+
+**What it was for.** E44c put the growth in `get_simulation`, before the first
+timer, and could not name the step.
+
+**What it showed.** Julia's own inference timer names it: ClimaCore's
+`FieldMatrixWithSolver`, which does compile-time work on pairs of field names at
+every level of the nested solver (E44d). Moving the tags into a solver group of
+their own did not help, because ClimaCore takes each group's complement from
+the state's name tree. Solving the tags and records outside that solver did:
+the EDMF column with 8 tags and 5 records builds in 21 minutes, against more
+than two hours, with identical increments (E44e).
+
+**Barrier.** Two, both paid for. The first split kept the tag names in the name
+tree. The first fix chose its solver with a branch, and inference compiled the
+unused, expensive branch too; only `invokelatest` hid it.
+
+**Class.** A compile-time scaling of a dependency, reached through the number of
+prognostic fields, not a property of the tags.
+
+**Carry-over.** Measure inference before guessing at a compile-time cause: the
+candidate from reading the code, the tag code's recursion, was wrong. And a
+runtime choice between two expensive builds must be hidden from inference, or
+both get compiled.
+
+## The C6 twin with 10° masks
+
+Ran at `f399b9f8` on 2026-09-14, `hpda2_test`, SLURM job `13441633`, 17
+minutes. The owner approved it.
+
+**What it was for.** E46 found the repair's large trades one to two rows beyond
+the 20° edge, where the named regions' 2° tanh is a step on the 5° grid.
+
+**What it showed.** With the masks 10° wide, no region tag goes negative and the
+repair trades nothing between them (E48). The atmosphere, the closure residual
+and form A are unchanged.
+
+**Barrier.** A wider mask never reaches zero, so each region tag keeps a few
+percent of the other region's energy: sharper provenance and no repair trades
+cannot both be had with a tanh mask on this grid.
+
+**Class.** A configuration property: the mask's width against the grid.
+
+**Carry-over to the source tags.** Choose a region mask at least as wide as the
+grid spacing, or accept the repair's trades near the edge. The named regions'
+width is the owner's decision.
+
