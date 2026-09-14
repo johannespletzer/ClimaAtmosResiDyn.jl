@@ -1,0 +1,37 @@
+# stages of d4_column_edmf_notags, trimmed from SLURM job 13440706's .out and .err on terrabyte.
+# The script's own stage lines, from the .out:
+model commit edd44e1d01afdc184894ea7bbcd014421dfae42a from /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-p4
+script commit 106076304baeaa774ce5e7c85663ae37652bfe43
+node hpdar03c01s12
+Mon Sep 14 12:11:31 PM CEST 2026
+[p4] loading ClimaAtmos                                32.3 s   (since start    32.3 s)
+[p4] AtmosConfig                                        8.8 s   (since start    41.8 s)
+[p4] get_simulation                                   712.2 s   (since start   754.0 s)
+[p4] prognostic fields: (:ρ, :uₕ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno, :ρtke, :sgsʲs)
+[p4] precomputed quantities, call 1                     0.0 s   (since start   755.9 s)
+[p4] precomputed quantities, call 2                     0.0 s   (since start   755.9 s)
+[p4] explicit tendency, call 1                         83.7 s   (since start   839.6 s)
+[p4] explicit tendency, call 2                          0.0 s   (since start   839.6 s)
+[p4] implicit tendency, call 1                         95.3 s   (since start   935.0 s)
+[p4] implicit tendency, call 2                          0.0 s   (since start   935.0 s)
+[p4] Jacobian update, call 1                          103.0 s   (since start  1038.0 s)
+[p4] Jacobian update, call 2                            0.0 s   (since start  1038.0 s)
+[p4] first step                                        95.5 s   (since start  1133.5 s)
+[p4] second step                                        0.0 s   (since start  1133.5 s)
+[p4] the rest of the run                                8.7 s   (since start  1142.2 s)
+[p4] done                                               0.0 s   (since start  1142.2 s)
+exit 0
+Mon Sep 14 12:30:37 PM CEST 2026
+
+# The driver's sub-stage lines and the end of the run, from the .err:
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (61.461 μs, 4.7 KiB)
+[ Info: Built cache (133.0 s, 28.43 GiB)
+[ Info: Assembled callbacks (163.425 ms, 14.96 MiB)
+[ Info: Built tendency function (241.238 s, 6.56 GiB)
+[ Info: Initialized integrator (52.8 s, 6.96 GiB)
+[ Info: Set up diagnostics (7.881 s, 293.85 MiB)
+[ Info: solve! walltime = 0.415
+[ Info: sypd: 23.763
+[ Info: wall_time_per_timestep: 13 milliseconds, 835 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 8.27 GiB

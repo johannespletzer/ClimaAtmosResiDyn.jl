@@ -1115,6 +1115,56 @@ driver logs them. With the 8 tags they take 145 s, 668 s and 63 s.
 their provenance repaired by hand; `output/p4_edmf_two_tags/` and
 `output/p4_edmf_tags/`. The third left no output.*
 
+**E44c. The EDMF build's growth with the tags is nearly all in building the
+simulation, and most of it is compiled before the driver's first timer
+starts.** `analysis/p4_build_stages.jl` times each stage of E44b's runs, with
+each compile inside its timer. It ran on the model of `edd44e1d`.
+
+| stage, s                                 | no tags | 2 tags | 8 tags |
+|:---------------------------------------- | -------:| ------:| ------:|
+| loading ClimaAtmos                       |    32.3 |   32.3 |   18.2 |
+| `AtmosConfig`                            |     8.8 |    8.8 |    9.1 |
+| `get_simulation`                         |   712.2 |  916.3 | 2603.6 |
+| of it, the cache, as the driver logs it  |   133.0 |  135.8 |  137.7 |
+| of it, the tendency function             |   241.2 |  318.8 |  588.1 |
+| of it, the integrator                    |    52.8 |   53.7 |   58.7 |
+| of it, the diagnostics                   |     7.9 |    8.2 |   13.6 |
+| of it, not logged                        |     277 |    400 |   1805 |
+| explicit tendency, first call            |    83.7 |   84.7 |  109.1 |
+| implicit tendency, first call            |    95.3 |  102.4 |  112.2 |
+| Jacobian update, first call              |   103.0 |  106.0 |  112.3 |
+| first step                               |    95.5 |  101.7 |  137.8 |
+| the rest of the run                      |     8.7 |    9.1 |   15.4 |
+| the whole script                         |    1142 |   1367 |   3120 |
+
+  - **Building the simulation is the growth.** From no tags to 8 the script
+    takes 1,978 s longer. `get_simulation` makes 1,891 s of that. The first
+    calls of the two tendencies and of the Jacobian update, and the first step,
+    make 94 s. Every second call takes under 0.1 s.
+  - **Within it, the part no timer logs grows most:** 277 s, 400 s and
+    1,805 s. The logged tendency function grows from 241 s to 588 s. The cache,
+    the integrator and the diagnostics barely change.
+  - **Why a part goes unlogged.** `get_simulation` calls the
+    `AtmosSimulation{FT}` constructor, a single method. Julia infers the calls a
+    method makes, where their types are known, before it runs the method's
+    first line. So much of the constructor's compile time falls before its
+    first `@timed_log` starts, and a logged stage sees only what compiles while
+    it runs. The initial state, for one, takes 57 µs inside its timer. This is
+    read from how Julia compiles, not measured.
+  - **It grows faster than the fields.** `get_simulation` gains 204 s with 2
+    tags and 1,891 s with 8: 102 s and 236 s per tag.
+  - **Once built, the column steps as fast with tags:** 13.8, 13.7 and 14.7 ms
+    per step.
+  - Each run is one job. The two baselines ran together, and the 8-tag job
+    shared its node for part of its time with V3, MP1 and P1.
+
+Naming the step that grows needs the constructor's pieces timed apart, each
+compiled in its own call, or an inference profile. One candidate from the
+code, not tested: at `edd44e1d`, 13 functions in `energy_source_tags.jl` and
+`process_record.jl` recurse over their tuple of tags or processes with
+`Base.tail`, and each compiles one method per remaining tuple. *Jobs `13440706`, `13440707` and `13440637` on terrabyte, from the
+worktree at `edd44e1d`; `output/p4_build_stages/`.*
+
 **E45. In `Float32`, C7's sphere closes as it does in `Float64`, to the last
 place the `Float32` integrals hold.** V3 is C7 with `FLOAT_TYPE: Float32`: the
 0-moment sphere, 6 elements, 10 levels, a 400 s step, one day, tracer transport

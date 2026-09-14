@@ -1,0 +1,37 @@
+# stages of p4_edmf_tags, trimmed from SLURM job 13440637's .out and .err on terrabyte.
+# The script's own stage lines, from the .out:
+model commit edd44e1d01afdc184894ea7bbcd014421dfae42a from /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-p4
+script commit 106076304baeaa774ce5e7c85663ae37652bfe43
+node hpdar03c01s12
+Mon Sep 14 12:28:31 PM CEST 2026
+[p4] loading ClimaAtmos                                18.2 s   (since start    18.2 s)
+[p4] AtmosConfig                                        9.1 s   (since start    27.9 s)
+[p4] get_simulation                                  2603.6 s   (since start  2631.5 s)
+[p4] prognostic fields: (:ρ, :uₕ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno, :ρe_src_strat, :ρe_src_tropo, :ρe_src_rad, :ρe_src_sfc, :ρe_src_sub, :ρe_src_mp, :ρe_src_new_strat, :ρe_src_new_tropo, :ρtke, :sgsʲs)
+[p4] precomputed quantities, call 1                     0.0 s   (since start  2633.3 s)
+[p4] precomputed quantities, call 2                     0.0 s   (since start  2633.3 s)
+[p4] explicit tendency, call 1                        109.1 s   (since start  2742.4 s)
+[p4] explicit tendency, call 2                          0.0 s   (since start  2742.4 s)
+[p4] implicit tendency, call 1                        112.2 s   (since start  2854.7 s)
+[p4] implicit tendency, call 2                          0.0 s   (since start  2854.7 s)
+[p4] Jacobian update, call 1                          112.3 s   (since start  2967.1 s)
+[p4] Jacobian update, call 2                            0.0 s   (since start  2967.1 s)
+[p4] first step                                       137.8 s   (since start  3104.9 s)
+[p4] second step                                        0.0 s   (since start  3104.9 s)
+[p4] the rest of the run                               15.4 s   (since start  3120.3 s)
+[p4] done                                               0.0 s   (since start  3120.3 s)
+exit 0
+Mon Sep 14 01:20:32 PM CEST 2026
+
+# The driver's sub-stage lines and the end of the run, from the .err:
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (56.61 μs, 6.57 KiB)
+[ Info: Built cache (137.659 s, 29.12 GiB)
+[ Info: Assembled callbacks (158.804 ms, 15.1 MiB)
+[ Info: Built tendency function (588.05 s, 13.54 GiB)
+[ Info: Initialized integrator (58.667 s, 6.96 GiB)
+[ Info: Set up diagnostics (13.632 s, 295.04 MiB)
+[ Info: solve! walltime = 0.441
+[ Info: sypd: 22.355
+[ Info: wall_time_per_timestep: 14 milliseconds, 706 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 9.9 GiB

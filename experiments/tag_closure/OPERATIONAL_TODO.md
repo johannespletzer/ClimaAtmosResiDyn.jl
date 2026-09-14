@@ -102,12 +102,11 @@ On 2026-09-14:
 
 ## 0. In flight
 
-  - **P4-stages.** `analysis/p4_build_stages.jl` times each build stage and the
-    first steps, with each compile inside its timer. It runs from the worktree
-    `../ClimaAtmosResiDyn-p4` at `edd44e1d` on three configs: `p4_edmf_tags`
-    (job `13440637`), `d4_column_edmf_notags` (job `13440706`) and
-    `p4_edmf_two_tags` (job `13440707`). With 0, 2 and 8 tag fields, each stage's
-    growth can be named. Hand back as E44c.
+  - **P1**, jobs `13440989` and `13440990`, and **MP1**, job `13440991`, all
+    submitted at `c2842ba6` on 2026-09-14. MP1 got past `MPI_Init` this time.
+  - **#72's docs (B2)** are drafted in the worktree `../ClimaAtmosResiDyn-audit`,
+    in `docs/src/energy_source_tags.md`, and not committed or pushed.
+  - ~~**P4-stages.**~~ Done: E44c. The three jobs ran; see B3.
 
 ## 1. Decisions for the owner
 
@@ -119,8 +118,9 @@ On 2026-09-14:
     P3, and whether the tags refuse P3 until then.
  4. **Phase B.** FINDINGS §8 item 4 still lists it as the owner's call. Drop it
     or keep it.
- 5. **Runs**, each on its own: V2, V5, V6, MP1 again with the fixed launch, P1,
-    the D4 variant with `edmfx_vertical_diffusion: true`, and D5.
+ 5. **Runs**, each on its own: V2, V5, V6, the D4 variant with
+    `edmfx_vertical_diffusion: true`, D5, and a C6 twin with a wider region mask
+    (E46).
  6. **Docs:** whether to move `USER_GUIDE_DRAFT.md` into `docs/src/` (D1).
  7. **Merges:** #73, then #70 once its docs pass, then #72.
 
@@ -137,9 +137,15 @@ On 2026-09-14:
     cores; without them it builds in 410 s (E44). The job takes 27 minutes with
     2 tags, 60 with 8, and more than 120 with 8 tags and 5 records, against 18.5
     without, and most of the growth lies outside the stages the driver logs
-    (E44b). Steps: the three staged runs (in flight), then find the compile step
-    that grows, then fix it. Within `hpda2_test`'s two-hour cap it blocks every
-    EDMF run with tags. Size M to L; not known until E44c.
+    (E44b). The staged runs (E44c) put 1,891 s of the 1,978 s that 8 tags add
+    into `get_simulation`, and 1,528 s of it into the part no timer logs, which
+    Julia compiles before the constructor's first timer starts. The first
+    tendency calls and the first step add only 94 s. Steps left: time the
+    constructor's pieces apart, each compiled in its own call, or profile
+    inference; then fix what grows. A candidate from the code is the 13
+    functions that recurse over the tags or processes with `Base.tail`. Within
+    `hpda2_test`'s two-hour cap it blocks every EDMF run with tags. Size M to
+    L.
  4. **C1b, share EDMF's sub-grid fluxes among the tags** (design option B).
       - B1, the SGS mass flux, with the donor from the sign of the flux of `E`;
         B2, each species' whole sedimentation face flux, the corrections
