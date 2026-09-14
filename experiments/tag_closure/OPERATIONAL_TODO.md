@@ -28,7 +28,7 @@ campaign.
   - #70, sedimentation as transport, the EDMF refusal and M2's label warnings,
     targets `main` and is out of draft. Its `docbuild` hit the 30-minute limit,
     so `docs-required` failed (run 34593320376). The owner re-ran it on
-    2026-09-14.
+    2026-09-14: `docbuild` passed in 17 minutes, and `docs-required` passed.
   - #73 fixes the docs workflow: `main`'s deploy to `gh-pages` failed with 403
     on every push, because the job token was read-only. It grants
     `contents: write` and raises the timeout to 60 minutes. After it merges,
