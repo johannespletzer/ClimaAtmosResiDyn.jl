@@ -68,6 +68,7 @@ BUILD_SPLIT = {
     "p4_edmf_tags_records",
     "p4_column_0m_two_tags",
     "p4_column_0m_tags",
+    "p4_column_0m_tags_vdiff",
 }
 # The runs allowed a limiter, and the runs allowed Float32: A4, and V3, which
 # tests Float32 with the energy source tags.

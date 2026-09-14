@@ -1,0 +1,44 @@
+# P4, the fix check: `p4_column_0m_tags` with implicit vertical diffusion.
+# `c0_column_notags`'s 0M DYCOMS column with `p4_edmf_tags.yml`'s tags and offset, and no
+# closure check or diagnostics, so that only the tags differ from that control.
+# If the build grows with the tags here too, a fix can be tested in minutes on
+# the login node rather than in hour-long EDMF jobs.
+# With implicit diffusion, each tag gets a tridiagonal diagonal block and the
+# approximate arrowhead solve iterates twice, so the split solver must repeat
+# that to give the same result to the bit. `p4_split_check.jl` checks it.
+job_id: "p4_column_0m_tags_vdiff"
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+rad: "DYCOMS"
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: rad
+    source: radiation
+  - name: sfc
+    source: surface_flux
+  - name: sub
+    source: subsidence
+  - name: mp
+    source: microphysics
+  - name: new_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: all
+  - name: new_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: all
+vert_diff: "DecayWithHeightDiffusion"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+output_default_diagnostics: false
