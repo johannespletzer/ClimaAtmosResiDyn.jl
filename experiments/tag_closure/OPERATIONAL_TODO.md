@@ -38,6 +38,10 @@ campaign.
     there.
   - #74 is D2, the docs fixes after #70 (`fbeb561e`, from `main`), opened on
     2026-09-14 as the owner approved. It merges cleanly with #72.
+  - #75, a draft, is T2: a Float32 integration test of the tags and the
+    records, in a new CI group `tagging_source_float32` (`1d5b5b51`). An agent
+    wrote it and the main session reviewed it; 38 of 38 pass locally in 8.5
+    minutes.
   - This branch merged #72's head in `57ed9c1f`.
   - Measured: 0M on a column and a sphere, and 1M on a warm column, a day each
     (E26 to E39, E43); 1M with ice on a cold column for an hour, with a twin
@@ -194,8 +198,8 @@ On 2026-09-14:
     and the repair. Production runs restart. S.
  7. **Float32: ~~V3~~ and T2's Float32 part.** ~~No Float32 run with tags
     exists.~~ V3 is done (E45): C7's sphere in Float32 closes as in Float64
-    over a day, to rounding, with a floor near 1e-7. What remains is T2, a
-    Float32 test group. The records are `FT` fields that accumulate from the
+    over a day, to rounding, with a floor near 1e-7. T2, the Float32 test
+    group, is draft #75. The records are `FT` fields that accumulate from the
     start and are never reset (`process_record.jl:22-25`), so runs longer than
     a day are still untested; that is U6. Size S.
  8. ~~**MP1, more than one process.**~~ Done on 2026-09-14 (E47). On 4 ranks
@@ -367,7 +371,7 @@ With D1 (B12):
  6. C1b's validation (the D4 pair, the D4 variant with vertical diffusion on,
     D5) and T6.
  7. C2 with T1 and V5.
- 8. T2's Float32 part. (V3 and MP1 are done.)
+ 8. Merge #75, T2's Float32 test. (V3 and MP1 are done.)
  9. The decided defaults and checks: U1, U2 with R1, A2's label check.
 10. V2 with C4; V1 as decided.
 11. Calibrate U2's tolerance.
