@@ -1216,6 +1216,45 @@ login node; `analysis/p4_inference_profile.jl`, `p4_profile_compare.jl`,
 `p4_jacobian_pieces.jl`, `p4_solver_profile.jl` and `p4_split_solver.jl`;
 `output/p4_inference_profile/`.*
 
+**E44e. With the tags and records solved apart, the EDMF column with 8 tags
+and 5 records builds in 21 minutes, and the tags add 37 s to its build.** #76
+builds a `SplitJacobianSolver`: the model's nested solver over the coupled
+fields, against a name tree without the tags and records, and a one-field solve
+for each of them, which repeats what the nested solver did for it. The runs
+used `a55d15ce`, with the EDMF refusal switched off locally for the test.
+
+| D4's column              | `get_simulation` before, s | with #76, s | whole script before, s | with #76, s |
+|:------------------------ | --------------------------:| -----------:| ----------------------:| -----------:|
+| no tags                  |                      712.2 |           — |                   1142 |           — |
+| 8 tags                   |                     2603.6 |       748.8 |                   3120 |        1239 |
+| 8 tags and 5 records     |            did not finish  |       757.1 |           over 7,200   |        1257 |
+
+  - **The growth is gone.** With 8 tags `get_simulation` takes 37 s more than
+    without tags, against 1,891 s more before. The 5 records add another 8 s.
+    The first calls of the tendencies and the Jacobian update, and the first
+    step, take 415 s with 8 tags against 377 s without, and 471 s before.
+  - **The increments do not change.** On the 0M column with 8 tags, the split
+    and unsplit solvers give identical increments in every field, with and
+    without implicit vertical diffusion, which gives the tags tridiagonal
+    blocks and two iterations. An integration item of #76 checks it on the
+    tagging column.
+  - **The build has to hide which solver it needs.** The fix's first commit
+    chose with a plain branch, and inference compiled the unsplit solver as
+    well: the 0M cache still took 99.8 s. Chosen through `invokelatest`, it
+    takes 20.8 s, and the unsplit solver 97.4 s. The EDMF jobs of that first
+    commit were cancelled after 25 minutes.
+  - **Once built, the column steps in 14 ms,** as before.
+  - Each case is one job on one node type. The logged "Built tendency function"
+    now holds the solver's compile, 443 s against 241 s without tags, because
+    it no longer falls before the constructor's first timer.
+
+This unblocks every EDMF run with tags within `hpda2_test`'s two hours, which
+C1b's validation needs. *Jobs `13441606` and `13441607` on terrabyte, from the
+worktree `../ClimaAtmosResiDyn-buildtime-edmf`;
+`analysis/p4_build_stages.jl`, `p4_split_check.jl`, `p4_cache_time.jl` and
+`p4_cache_profile.jl`; `output/p4_fix_validation/` and
+`output/p4_inference_profile/`.*
+
 **E45. In `Float32`, C7's sphere closes as it does in `Float64`, to the last
 place the `Float32` integrals hold.** V3 is C7 with `FLOAT_TYPE: Float32`: the
 0-moment sphere, 6 elements, 10 levels, a 400 s step, one day, tracer transport

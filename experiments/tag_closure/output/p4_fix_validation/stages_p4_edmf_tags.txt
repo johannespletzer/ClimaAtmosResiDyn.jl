@@ -1,0 +1,37 @@
+# stages of p4_edmf_tags with #76's split Jacobian solver, trimmed from SLURM job 13441606's .out and .err on terrabyte.
+# The model is a55d15ce with the EDMF refusal switched off locally, for validation only.
+model commit a55d15ce with the EDMF refusal off, from /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-buildtime-edmf
+script commit 88756c160fa50da145d37c27035133950a41761b
+node hpdar03c01s12
+Mon Sep 14 03:19:33 PM CEST 2026
+[p4] loading ClimaAtmos                                53.1 s   (since start    53.1 s)
+[p4] AtmosConfig                                        9.1 s   (since start    62.6 s)
+[p4] get_simulation                                   748.8 s   (since start   811.4 s)
+[p4] prognostic fields: (:ρ, :uₕ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno, :ρe_src_strat, :ρe_src_tropo, :ρe_src_rad, :ρe_src_sfc, :ρe_src_sub, :ρe_src_mp, :ρe_src_new_strat, :ρe_src_new_tropo, :ρtke, :sgsʲs)
+[p4] precomputed quantities, call 1                     0.0 s   (since start   813.3 s)
+[p4] precomputed quantities, call 2                     0.0 s   (since start   813.3 s)
+[p4] explicit tendency, call 1                         90.1 s   (since start   903.3 s)
+[p4] explicit tendency, call 2                          0.0 s   (since start   903.3 s)
+[p4] implicit tendency, call 1                        107.5 s   (since start  1010.8 s)
+[p4] implicit tendency, call 2                          0.0 s   (since start  1010.8 s)
+[p4] Jacobian update, call 1                          103.6 s   (since start  1114.5 s)
+[p4] Jacobian update, call 2                            0.0 s   (since start  1114.5 s)
+[p4] first step                                       113.9 s   (since start  1228.4 s)
+[p4] second step                                        0.0 s   (since start  1228.4 s)
+[p4] the rest of the run                               10.3 s   (since start  1238.7 s)
+[p4] done                                               0.0 s   (since start  1238.7 s)
+exit 0
+Mon Sep 14 03:40:12 PM CEST 2026
+
+# The driver's sub-stage lines and the end of the run, from the .err:
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (66.011 μs, 6.57 KiB)
+[ Info: Built cache (139.505 s, 29.12 GiB)
+[ Info: Assembled callbacks (158.961 ms, 15.1 MiB)
+[ Info: Built tendency function (443.334 s, 21.03 GiB)
+[ Info: Initialized integrator (57.068 s, 6.96 GiB)
+[ Info: Set up diagnostics (13.972 s, 295.04 MiB)
+[ Info: solve! walltime = 0.435
+[ Info: sypd: 22.688
+[ Info: wall_time_per_timestep: 14 milliseconds, 490 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 8.27 GiB

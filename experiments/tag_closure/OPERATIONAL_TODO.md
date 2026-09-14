@@ -35,7 +35,7 @@ Open pull requests:
 | #72 | The enthalpy audit, `energy_source_tag_transport`, with its docs      | ready, waits for the owner             |
 | #74 | D2: the energy source tag docs brought up to date after #70           | ready, waits for the owner             |
 | #75 | T2: a Float32 integration test of the tags and records, own CI group  | draft; 38 of 38 pass locally           |
-| #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | draft; EDMF validation running         |
+| #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | draft; EDMF validated (E44e)           |
 | #77 | B9: the offset required, the closure check and label check by default | draft; tests pass locally              |
 
 Measured so far: 0M on a column and a sphere, and 1M on a warm column, a day
@@ -50,14 +50,9 @@ day, 2M and P3, more than one node, and the GPU.
 
 ## 0. In flight
 
-  - **P4's EDMF validation.** Jobs `13441606` (D4's column with 8 tags) and
-    `13441607` (8 tags and 5 records, which did not build in two hours before)
-    build with #76's fix, from `../ClimaAtmosResiDyn-buildtime-edmf`, where the
-    EDMF refusal is switched off locally and never committed. Hand back as E44e
-    and add the result to #76. 7 of the 8 approved P4 jobs are used.
-  - **The C6 twin with a 10° mask,** job `13441633`: whether the step of the
-    2°-wide region mask makes the repair's trades (E46). Hand back with
-    `analysis/repair_trades.jl`.
+  - **The C6 twin with a 10° mask,** job `13441633`, finished: hand back with
+    `analysis/repair_trades.jl`, whether the step of the 2°-wide region mask
+    makes the repair's trades (E46).
   - **CI** on #75, #76 and #77.
 
 ## Decided
@@ -90,7 +85,7 @@ On 2026-09-14:
     session takes P4 and every task that needs approval; an agent took T2.
       - **P4 jobs:** up to 8 on `hpda2_test`, at most 2 CPUs, 48G and 2 h
         each. 7 used: 3 inference profiles, 2 cancelled validations of the
-        first commit, 2 validations running.
+        first commit, 2 validations (E44e). 1 left.
       - **Code, as draft PRs to `main`, merged only by the owner:** P4's fix
         (#76); B9 with U3, U4, R3 and T4 (#77); C2's restart guard with T1,
         after #72 merges; C1b, after #76 and #72 merge.
@@ -102,8 +97,8 @@ On 2026-09-14:
 
 ## 1. Decisions for the owner
 
- 1. **Merges:** #73, #72 and #74 are ready. #75 and #77 after their CI. #76
-    after its EDMF validation and CI.
+ 1. **Merges:** #73, #72 and #74 are ready. #75, #76 and #77 after their CI.
+    #76's EDMF validation is done (E44e); it can come out of draft.
  2. **#77's three choices, for review in the PR:**
       - A2 warns only in a run with at least one per-process tag, and a tag
         listing `all` counts as following no process. Otherwise a run with
@@ -138,9 +133,10 @@ On 2026-09-14:
     number. #76 solves the tags and records apart, and builds the rest over the
     other fields only. On the 0M column with 8 tags the increments are
     identical to the unsplit solver's, with and without implicit diffusion, and
-    the Jacobian cache builds in 20.8 s against 97.4 s. Left: the EDMF
-    validation (in flight), E44e, then merge. If EDMF still grows, what is left
-    of `args_integrator` is the next suspect. Size M.
+    the Jacobian cache builds in 20.8 s against 97.4 s. On the EDMF column with
+    8 tags and 5 records the whole build now takes 21 minutes, and 8 tags add
+    37 s to `get_simulation` against 1,891 s before (E44e). Left: CI and the
+    merge.
  4. **C1b, share EDMF's sub-grid fluxes among the tags** (design option B).
     Needs #72 and #76 merged.
       - B1, the SGS mass flux, with the donor from the sign of the flux of `E`;
@@ -276,9 +272,8 @@ With D1 (B12):
 
 ## 6. Open questions, not blocking
 
-  - Whether the EDMF column with tags builds within `hpda2_test`'s two hours
-    with #76 (in flight), and what of `args_integrator`'s growth remains.
-  - Whether the region mask's step makes the repair's trades (in flight).
+  - Whether the region mask's step makes the repair's trades (finished, to
+    hand back).
   - What makes D1's zero-sum gross residual (E42, E42b). Candidate: pressure
     work in grid-mean vertical advection under tracer transport. An audit twin
     of D1 would test it.
@@ -291,8 +286,8 @@ With D1 (B12):
 ## Suggested order
 
  1. The owner merges #73, #72 and #74.
- 2. Hand back P4's EDMF validation (E44e) into #76; the owner merges #76 and
-    #75 once their CI passes.
+ 2. The owner merges #76 and #75 once their CI passes. (#76's EDMF validation
+    is done, E44e.)
  3. #77: its CI, and the owner's review of decision 2.
  4. Hand back the C6 twin with the 10° mask.
  5. C1b and T6, M3, T5; its validation runs.
@@ -309,7 +304,8 @@ With D1 (B12):
     and records comment; the runscript's `srun --mpi=pmix`.
   - **Runs and analyses:** D1 and its twin (E42, E42b); R4 (E39b, E43); the D4
     pair (E40, E44); the D4 build control (E44); P4's split test (E44b) and
-    stage timing (E44c); P4's inference profiles (E44d); V3 (E45); C5's repair
+    stage timing (E44c); P4's inference profiles (E44d); P4's fix on EDMF
+    (E44e); V3 (E45); C5's repair
     trades (E46); MP1 (E47); P1 (T9).
   - **Docs:** the guide's fixes 1, 2, 6 and 8 (#69, #70); 3, 5, 7, 9 and 10
     (#72, #74).

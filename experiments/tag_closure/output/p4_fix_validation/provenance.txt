@@ -1,0 +1,6 @@
+run: p4_fix_validation
+kind: P4's fix validation builds, trimmed stage logs written by the main session
+jobs: 13441606 (p4_edmf_tags), 13441607 (p4_edmf_tags_records) on terrabyte hpda2_test, 2 CPUs, 48G
+model: claude/energy-source-tag-build-time at a55d15ce, from ../ClimaAtmosResiDyn-buildtime-edmf, with the EDMF refusal in src/config/tracer_config.jl switched off locally and never committed
+script: analysis/p4_build_stages.jl at script commit 88756c160fa50da145d37c27035133950a41761b
+date: 2026-09-14T15:48:49+02:00
