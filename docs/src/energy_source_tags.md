@@ -348,4 +348,5 @@ ClimaAtmos.warn_inactive_energy_source_labels
 ClimaAtmos.energy_source_fraction
 ClimaAtmos.snapshot_energy_source_tags!
 ClimaAtmos.attribute_energy_source_tags!
+ClimaAtmos.energy_source_audit
 ```

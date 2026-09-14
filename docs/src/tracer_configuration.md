@@ -564,4 +564,5 @@ ClimaAtmos.tag_closure
 ClimaAtmos.tag_audit
 ClimaAtmos.tag_closure_callback
 ClimaAtmos.tag_closure_callback!
+ClimaAtmos.write_tag_closure!
 ```
