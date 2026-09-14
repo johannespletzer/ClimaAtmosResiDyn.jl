@@ -38,6 +38,9 @@ campaign.
     there.
   - #74 is D2, the docs fixes after #70 (`fbeb561e`, from `main`), opened on
     2026-09-14 as the owner approved. It merges cleanly with #72.
+  - #76, a draft, is P4's fix: tags and records solved apart from the implicit
+    Jacobian's nested solver, whose build otherwise grows much faster than the
+    number of fields (E44d). EDMF validation is running.
   - #75, a draft, is T2: a Float32 integration test of the tags and the
     records, in a new CI group `tagging_source_float32` (`1d5b5b51`). An agent
     wrote it and the main session reviewed it; 38 of 38 pass locally in 8.5
@@ -130,12 +133,13 @@ On 2026-09-14:
 
   - **P4, the fix.** E44d names the cause: ClimaCore's compile-time name-set
     work when it builds the Jacobian's nested solver. The fix, on
-    `claude/energy-source-tag-build-time` (`a55d15ce`, not pushed yet), solves
+    `claude/energy-source-tag-build-time`, draft PR #76 (`7d190db1`), solves
     the tags and records apart from the rest (`SplitJacobianSolver`), built
     through `invokelatest` so the unsplit solver is not compiled too. On the 0M
     column with 8 tags its increments are identical to the unsplit solver's,
     with and without implicit diffusion, and the Jacobian cache builds in 20.8 s
-    against 97.4 s. Running: its tests on the login node, and the EDMF column
+    against 97.4 s. Its tests pass: 222 unit tests and 50 integration
+    assertions, with a new bitwise item. Running: the EDMF column
     with 8 tags and with 8 tags and 5 records, jobs `13441606` and `13441607`,
     from `../ClimaAtmosResiDyn-buildtime-edmf` with the EDMF refusal off
     locally. Jobs `13441507` and `13441508` ran the first commit and were
