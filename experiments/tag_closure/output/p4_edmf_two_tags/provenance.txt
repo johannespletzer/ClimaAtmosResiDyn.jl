@@ -1,0 +1,26 @@
+run: p4_edmf_two_tags
+machine: terrabyte
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/p4_edmf_two_tags.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-p4/experiments/tag_closure/run_tag_closure.jl
+commit: edd44e1d01afdc184894ea7bbcd014421dfae42a
+commit_source: repaired-by-hand
+commit_dirty: unknown
+branch: detached
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-p4/.buildkite
+started: 2026-09-11T14:46:21+02:00
+finished: 2026-09-11T15:13:28+02:00
+exit_status: 0
+slurm_job_id: 13415603
+slurm_job_name: p4_edmf_two_tags
+partition: hpda2_test
+nodelist: hpdar03c01s12
+cpus_per_task: 2
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p4_edmf_two_tags/output_0000
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p4_edmf_two_tags/output_0000 (left on scratch, not committed)
+# Repaired by hand on 2026-09-14, as README.md describes. The job ran from the worktree ../ClimaAtmosResiDyn-p4, detached at this commit; a worktree's .git is a file the runscript cannot read.

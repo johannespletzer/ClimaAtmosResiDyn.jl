@@ -1074,12 +1074,45 @@ runs.
     times slower. Columns without EDMF build with the same kinds of tags in
     minutes (D1, C8).
   - Which part does it is not separated: the tags, the records, the check or
-    the diagnostics.
+    the diagnostics. *E44b separates it: the tags and the records do it by
+    themselves.*
   - Production uses EDMF, so this blocks operation (P4 in
     `OPERATIONAL_TODO.md`).
 
 *Jobs `13404536` and `13404537` at `78586e39`, and `13414334` at `41adabc5`, on
 terrabyte; `output/d4_column_edmf_notags/`. The D4 pair left no output.*
+
+**E44b. The EDMF build grows faster than the number of fields the tags and
+records add, and the tags with the records alone take it past two hours.** P4
+adds back what D4 adds, one part at a time, on the same column and node, with no
+closure check and no diagnostics. Its three runs used `edd44e1d`'s model, from a
+worktree.
+
+| run                     | fields added             | build stages logged | whole job             |
+|:----------------------- |:------------------------ | -------------------:| ---------------------:|
+| `d4_column_edmf_notags` | none                     |               410 s |              18.5 min |
+| `p4_edmf_two_tags`      | 2 region tags            |               572 s |                27 min |
+| `p4_edmf_tags`          | D4's 8 tags              |               876 s |                60 min |
+| `p4_edmf_tags_records`  | D4's 8 tags and 5 records |         not reached | over 120 min, stopped |
+
+The build stages are the cache, the tendency function and the integrator, as the
+driver logs them. With the 8 tags they take 145 s, 668 s and 63 s.
+
+  - **It is compile time.** Once built, the 2-tag and 8-tag columns each step
+    in 17 ms.
+  - **It grows faster than the fields.** Each tag and each record is one
+    prognostic field. Against the column without them, 2 fields add 8.5 minutes
+    to the job, 8 add 42, and 13 add more than 100.
+  - **Most of it lies outside the three logged stages.** What is left of each
+    job grows from 12 minutes without tags to 18 with 2 and 45 with 8. That part
+    holds Julia's start, the model's construction, the first step's compile and
+    the solve. Which of those grows is not logged.
+  - **The tags and the records take the build past two hours by themselves.**
+    D4's closure check and diagnostics are not needed to explain its timeout.
+
+*Jobs `13415603`, `13415604` and `13415605` on terrabyte, at `edd44e1d`, with
+their provenance repaired by hand; `output/p4_edmf_two_tags/` and
+`output/p4_edmf_tags/`. The third left no output.*
 
 ## 3. The energy reference
 

@@ -264,6 +264,12 @@ code from before C1a, or after the sub-grid sharing (B) is built.
 the D4 column without tags, and built it in 410 s. So what the tags bring makes
 the EDMF build take more than two hours. Which part does it is not separated.
 
+**P4, done on 2026-09-11** (FINDINGS E44b). Jobs `13415603` to `13415605` built
+D4's EDMF column with 2 tags, with 8 tags, and with 8 tags and 5 records. They
+took 27 minutes, 60 minutes, and more than two hours. So the tags and the
+records make the build slow by themselves, faster than their number grows. The
+runs' provenance was repaired by hand to `edd44e1d`.
+
 **R4, done on 2026-09-11** (FINDINGS E39b, E43). Job `13408404` shows that a
 converged Newton solve removes 83% of the audit's first-hour residual on the
 sphere. Job `13408403` shows that on C8's column the audit keeps form A below

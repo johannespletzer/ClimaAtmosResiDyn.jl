@@ -1,0 +1,87 @@
+# run.log for p4_edmf_two_tags, trimmed from SLURM job 13415603's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    p4_edmf_two_tags
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/p4_edmf_two_tags.yml
+SLURM job:       13415603
+Partition:       hpda2_test
+Nodes:           hpdar03c01s12
+CPUs per task:   2
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-p4
+Commit:          unknown (from none)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-p4/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-p4/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p4_edmf_two_tags
+Start time:      2026-09-11T14:46:21+02:00
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) gcc/13.2.0(default)           
+ 2) python/3.12                             4) openmpi/4.1.8-gcc13(default)  
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p4_edmf_two_tags/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-11T15:13:28+02:00
+# The .err, without the model's type listing:
+WARNING: could not determine the commit: git is not on PATH
+The analysis refuses a run whose provenance has no commit.
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/configs/p4_edmf_two_tags.yml
+┌ Info: numerics 
+└                     `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+┌ Info: AtmosModel: 
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+└               `rain_snow_accretion`::`RainSnowAccretion`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (74.94 μs, 5.2 KiB)
+[ Info: Built cache (138.775 s, 29.06 GiB)
+[ Info: Assembled callbacks (156.821 ms, 15.03 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (372.169 s, 7.82 GiB)
+[ Info: Initialized integrator (61.266 s, 6.96 GiB)
+[ Info: Set up diagnostics (9.313 s, 299.47 MiB)
+┌ Info: Simulation info
+└   output_dir = "output/p4_edmf_two_tags/output_0000"
+┌ Info: Running
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:20.934
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:25.899
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:27.126
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:27.206
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:27.212
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:27.228
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:27.244
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:27.255
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:27.271
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:27.286
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:27.302
+┌ Info: Progress
+└   estimated_finish_date = 2026-09-11T15:13:27.318
+[ Info: solve! walltime = 0.522
+[ Info: sypd: 18.907
+[ Info: wall_time_per_timestep: 17 milliseconds, 388 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 11.89 GiB
+┌ Info: Tag-closure run finished
+└   result.ret_code = :success
+┌ Info: Where it went
+└   simulation.output_dir = "output/p4_edmf_two_tags/output_0000"
+[ Info: No closure table was written. Expected when the run configures no closure check, and a symptom otherwise.

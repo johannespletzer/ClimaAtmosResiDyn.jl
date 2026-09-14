@@ -165,12 +165,14 @@ one agent has worked this branch at once.
     2026-09-11. It built in 410 s and ran its hour (E44). So what the tags
     bring makes the EDMF build take more than two hours. That blocks operation
     while production uses EDMF (P4 in the to-do list). The owner approved a
-    split test to find which part does it. P4's three runs, jobs `13415603` to
-    `13415605`, were submitted on 2026-09-11 from the worktree
+    split test, P4, which ran on 2026-09-11 from the worktree
     `../ClimaAtmosResiDyn-p4`, detached at `edd44e1d`, since this branch now
-    refuses `prognostic_edmfx` with tags. A worktree's `.git` is a file the
-    runscript cannot read, so their `provenance.txt` will say
-    `commit: unknown`. Repair it to `edd44e1d` by hand, as README.md says.
+    refuses `prognostic_edmfx` with tags. The tags and the records make the
+    build slow by themselves: 27 minutes with 2 tags, 60 with 8, and more than
+    two hours with 8 tags and 5 records, against 18.5 without (E44b). Which
+    compile step grows is the next question. The runs' provenance was repaired
+    by hand to `edd44e1d`, because a worktree's `.git` is a file the runscript
+    cannot read.
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and
     `../ClimaAtmosResiDyn-audit` on #72's, both level with origin.
     `../ClimaAtmosResiDyn-p4` is detached at `edd44e1d`, with a copied

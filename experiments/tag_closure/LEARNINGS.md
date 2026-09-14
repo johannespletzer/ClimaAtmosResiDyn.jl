@@ -1204,6 +1204,32 @@ production uses EDMF.
 **Carry-over to the source tags.** Time the build of every new configuration
 with tags beside the same configuration without them.
 
+## P4. The EDMF build, split
+
+Ran at `edd44e1d`, from a worktree, on 2026-09-11, `hpda2_test`, SLURM jobs
+`13415603` (27 minutes), `13415604` (60 minutes) and `13415605` (stopped at two
+hours). The owner approved them.
+
+**What it was for.** To find which of what D4 adds makes the EDMF build take
+more than two hours: the tags, the records, the check or the diagnostics
+(E44).
+
+**What it showed.** The tags and the records do it by themselves. With 2 tags
+the job takes 27 minutes, with 8 tags 60, and with 8 tags and 5 records it does
+not finish in two hours. Without tags it takes 18.5. The time grows faster than
+the number of fields, and most of it lies outside the build stages the driver
+logs (E44b).
+
+**Barrier.** The logs do not say which step grows. A build that writes its log
+at each stage, or a profile of the first step's compile, would.
+
+**Class.** A cost of the diagnostic that grows with its size, and one that
+blocks operation while production uses EDMF.
+
+**Carry-over to the source tags.** Until the cause is found, an EDMF
+configuration can afford only a few tags and records. Count the fields, not
+only the features.
+
 ## R4. The Newton lag, on the sphere and on C8's column
 
 Ran at `78586e39` on 2026-09-11, `hpda2_test`, as two SLURM jobs with their

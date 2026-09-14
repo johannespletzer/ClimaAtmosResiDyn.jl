@@ -240,11 +240,14 @@ tendency, with B4; and M2. Still open:
     on (`energy_source_tags.jl:148`).
   - **P4, B. The EDMF build time with tags.** With 8 tags, 5 records, the
     audited check and 24 diagnostics, the D4 column did not finish building in
-    two hours on two cores. Without them it builds in 410 s (E44). Next,
-    separate the part that does it: build with the tags alone, then add the
-    records, then the diagnostics. Then find and fix the cause. M, with runs.
-    The first three builds, P4's split test, were approved and submitted on
-    2026-09-11: jobs `13415603` to `13415605`.
+    two hours on two cores. Without them it builds in 410 s (E44). P4's split
+    test, approved and run on 2026-09-11, found that the tags and the records
+    do it by themselves. The job takes 27 minutes with 2 tags, 60 with 8, and
+    more than 120 with 8 tags and 5 records, against 18.5 without (E44b). The
+    time grows faster than the number of fields, and most of it lies outside
+    the build stages the driver logs. Next, find which compile step grows,
+    with a log written at each stage or a profile of the first step's compile.
+    Then fix it. M.
 
 ## 6. Defaults and UX
 
