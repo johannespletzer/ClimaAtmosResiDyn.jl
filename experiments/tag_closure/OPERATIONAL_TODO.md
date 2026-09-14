@@ -5,7 +5,8 @@ operational. This list names what is left. It merges four reviews made on
 2026-09-11 (readiness, form A, the leftover residuals, and sub-grid transport
 with ice and the other microphysics schemes). On 2026-09-14 it was rebuilt as a
 list of what remains, and an Opus agent reviewed it against the repository.
-Its findings are folded in.
+Its findings are folded in; its report is
+[TODO_REVIEW_2026-09-14.md](TODO_REVIEW_2026-09-14.md).
 
 Production, as the owner decided on 2026-09-11, is a GPU sphere in Float32,
 with EDMF and 1M. The GPU check comes last, once the physics is robust and
@@ -53,43 +54,47 @@ On 2026-09-11:
 
 On 2026-09-14:
 
-  - **P4's stage timing** of the 8-tag EDMF build is approved: job `13440637`.
+  - **P4's stage timing** is approved for the 8-tag EDMF build (job `13440637`)
+    and for its two baselines, `d4_column_edmf_notags` and `p4_edmf_two_tags`
+    (jobs `13440706` and `13440707`).
+  - **The offset (U1):** require `energy_source_tag_offset` whenever energy
+    source tags are set. An explicit `0` keeps today's behaviour. The refusal
+    quotes the tested values: 110,495 J/kg as used in the series, and the
+    smallest offsets that made the total positive, 45.4 kJ/kg on the DYCOMS
+    column and 100.4 kJ/kg on the moist sphere (E6).
+  - **The closure check (U2, R1):** on by default whenever the tags are set, at
+    a daily period, reported from a spin-up reference. It only reports until V2
+    and V3 calibrate a tolerance per transport.
+  - **The per-process checks (A2, A3):** the label check at configuration now,
+    warning on a process that runs with no tag that lists it. A2's runtime part
+    and A3, form A online, come later as optional validation features; the
+    offline script covers validation runs until then.
+  - The code for these defaults and checks is written at step 9 of the order
+    below.
 
 ## 0. In flight
 
   - **P4-stages.** `analysis/p4_build_stages.jl` times each build stage and the
-    first steps, with each compile inside its timer. Job `13440637` runs it on
-    `p4_edmf_tags` from the worktree `../ClimaAtmosResiDyn-p4` at `edd44e1d`.
-    Hand back as E44c. One staged run gives a breakdown but not which stage
-    grows with the fields, so the baselines below are needed too.
+    first steps, with each compile inside its timer. It runs from the worktree
+    `../ClimaAtmosResiDyn-p4` at `edd44e1d` on three configs: `p4_edmf_tags`
+    (job `13440637`), `d4_column_edmf_notags` (job `13440706`) and
+    `p4_edmf_two_tags` (job `13440707`). With 0, 2 and 8 tag fields, each stage's
+    growth can be named. Hand back as E44c.
 
 ## 1. Decisions for the owner
 
- 1. **P4 baselines (runs).** Stage `d4_column_edmf_notags` (18.5 min) and
-    `p4_edmf_two_tags` (27 min) with the same script, so that the stage that
-    grows can be named. `c0_column_notags` is not an EDMF baseline.
- 2. **The offset default (U1).** Require one, with an explicit `0` keeping
-    today's behaviour, or keep `~` and have the warning print the smallest
-    offset that makes the total positive. U1 is B only if example configs and
-    the guide cannot be relied on to set it; that is the owner's call.
- 3. **The closure-check defaults (U2, R1).** On by default at a daily period,
-    one warning rather than one per check, reported from a spin-up reference.
-    The tolerance is calibrated per transport, after V2 and V3.
- 4. **The operational per-process checks (A2, A3).** A check of labels at
-    configuration, and form A as a global integral online, instead of
-    pointwise form A as a pass or fail test.
- 5. **A4.** Signed overlay shares under the audit: model code and a C9 twin.
- 6. **V1's scope.** A 0M 10-day sphere is not production physics. Either fold
+ 1. **A4.** Signed overlay shares under the audit: model code and a C9 twin.
+ 2. **V1's scope.** A 0M 10-day sphere is not production physics. Either fold
     it into a 10-day Float32 run with V2's and V3's physics, or make it S.
- 7. **The design's open decisions:** 5, whether to share the SGS diffusive
+ 3. **The design's open decisions:** 5, whether to share the SGS diffusive
     flux under `enthalpy` (C1c); 6, who lifts the 2M gate and fixes the parent's
     P3, and whether the tags refuse P3 until then.
- 8. **Phase B.** FINDINGS §8 item 4 still lists it as the owner's call. Drop it
+ 4. **Phase B.** FINDINGS §8 item 4 still lists it as the owner's call. Drop it
     or keep it.
- 9. **Runs**, each on its own: V2, V3, V5, V6, MP1, the D4 variant with
+ 5. **Runs**, each on its own: V2, V3, V5, V6, MP1, the D4 variant with
     `edmfx_vertical_diffusion: true`, and D5.
-10. **Docs:** whether to move `USER_GUIDE_DRAFT.md` into `docs/src/` (D1).
-11. **Merges:** #69, then #70, then #72.
+ 6. **Docs:** whether to move `USER_GUIDE_DRAFT.md` into `docs/src/` (D1).
+ 7. **Merges:** #69, then #70, then #72, and who merges.
 
 ## 2. Blocking operation (B), in dependency order
 
@@ -103,10 +108,9 @@ On 2026-09-14:
     cores; without them it builds in 410 s (E44). The job takes 27 minutes with
     2 tags, 60 with 8, and more than 120 with 8 tags and 5 records, against 18.5
     without, and most of the growth lies outside the stages the driver logs
-    (E44b). Steps: the staged run (in flight) and its baselines (decision 1),
-    then find the compile step that grows, then fix it. Within `hpda2_test`'s
-    two-hour cap it blocks every EDMF run with tags. Size M to L; not known
-    until E44c.
+    (E44b). Steps: the three staged runs (in flight), then find the compile step
+    that grows, then fix it. Within `hpda2_test`'s two-hour cap it blocks every
+    EDMF run with tags. Size M to L; not known until E44c.
  4. **C1b, share EDMF's sub-grid fluxes among the tags** (design option B).
       - B1, the SGS mass flux, with the donor from the sign of the flux of `E`;
         B2, each species' whole sedimentation face flux, the corrections
@@ -141,18 +145,17 @@ On 2026-09-14:
     the closure check reduces with global sums (`tagged_tracers.jl:450-484`). A
     2 to 4 rank CPU sphere with tags, records and the check, before the GPU.
     Size S, plus a run.
- 9. **The operational switches:** A2, the label check (accept when it flags
+ 9. **The decided defaults and checks.** U1, require the offset with tags; U2
+    and R1, the closure check on by default, daily, from a spin-up reference,
+    report-only; A2's label check at configuration (accept when it flags
     subsidence on C5's column and microphysics on C6's sphere, and nothing on
-    C7); A3, form A as a global integral online, on the native grid with ∫Δfix
-    subtracted; U1; U2 and R1. Implement the switches here, as decided. Size S
-    to M each.
+    C7). Size S to M each.
 10. **V2, the production physics on a sphere:** EDMF with
     `edmfx_vertical_diffusion: true`, vertical diffusion, sponges, topography
     and 1M, with `analysis/transport_ledger.jl`. It sizes C4. It needs C1b and
     P4. V1 as decided.
-11. **Calibrate** A3's threshold (from a five-day pair; accept about 1.2e-3 on a
-    C6-type run and at most 1e-4 on C7, C9 and C10 at 24 h) and U2's tolerance,
-    from V2 and V3.
+11. **Calibrate** U2's tolerance per transport from V2 and V3, and add the
+    warning.
 12. **D1, the user guide into the docs,** with D2 and D3. #63 has merged, so the
     memo and the plan already sit in `docs/src/`.
 13. **The GPU, last.** Run the diagnostic on a GPU on Levante, with Float32 and
@@ -172,7 +175,7 @@ On 2026-09-14:
     `gs_sedimenting_mass_candidates` list the same species.
   - **R3.** A warning on `constrain_qtot`, which writes `ρ` and `ρe_tot` outside
     the brackets (`utilities.jl:34`).
-  - **A4.** Signed overlay shares (decision 5). Accept when a C9 twin gives form
+  - **A4.** Signed overlay shares (decision 1). Accept when a C9 twin gives form
     A of at most 5 J/kg, or at most 1e-6 with the loss signed too, and `sfc` no
     longer freezes at a node, with `ta` and the partition residual unchanged.
   - **A5.** An overlay-bound diagnostic: the mass fraction where an overlay is
@@ -186,7 +189,7 @@ On 2026-09-14:
     on `test/parameterized_tendencies/microphysics/allocations.jl`. Needed by
     the GPU step.
   - **T4.** An example config under `config/model_configs/`; no shipped config
-    turns the tags on.
+    turns the tags on. It sets the offset, as U1 will require.
   - **T5.** The cold column as an integration item, from
     `analysis/subgrid_check_cold.jl`, covering both sedimentation branches.
   - **P1.** The tag cost on a sphere against an untagged control; known on one
@@ -204,7 +207,11 @@ On 2026-09-14:
 
 ## 4. Nice to have (N)
 
-  - **C1c.** B3, the SGS diffusive flux under `enthalpy` (decision 7).
+  - **A2's runtime part and A3,** as optional validation features (decided
+    2026-09-14): ∫Δ⁺ per label at runtime, and form A as a global integral
+    online, on the native grid with ∫Δfix subtracted. Accept A3 at about 1.2e-3
+    on a C6-type run and at most 1e-4 on C7, C9 and C10 at 24 h.
+  - **C1c.** B3, the SGS diffusive flux under `enthalpy` (decision 3).
   - **C1d.** Option C, per-updraft tag shares; about three times B.
   - **C6.** Review leftovers: `isfinite` before the conversion to `FT`
     (`tracer_config.jl:784-788`), `nothing` inside a broadcast at init, `parent`
@@ -253,8 +260,8 @@ On 2026-09-14:
 
 ## Suggested order
 
- 1. P4's staged run (in flight) and its baselines.
- 2. The owner's decisions, in one batch.
+ 1. P4's three staged runs (in flight).
+ 2. The owner's remaining decisions.
  3. Re-run #70's docs job; merge #69 and #70.
  4. #72's docs; out of draft; retarget; merge.
  5. P4's fix, with C1b's code alongside.
@@ -262,9 +269,9 @@ On 2026-09-14:
     D5) and T6.
  7. C2 with T1 and V5.
  8. V3 and T2's Float32 part; MP1.
- 9. The switches: A2, A3, U1, U2, R1.
+ 9. The decided defaults and checks: U1, U2 with R1, A2's label check.
 10. V2 with C4; V1 as decided.
-11. Calibrate A3 and U2.
+11. Calibrate U2's tolerance.
 12. The docs: D1 to D3.
 13. The remaining S and N items.
 14. The GPU, last.

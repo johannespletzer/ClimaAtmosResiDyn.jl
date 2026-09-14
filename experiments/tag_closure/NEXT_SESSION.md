@@ -172,8 +172,13 @@ one agent has worked this branch at once.
     two hours with 8 tags and 5 records, against 18.5 without (E44b). Which
     compile step grows is the next question. On 2026-09-14 the owner approved
     timing each build stage of the 8-tag column with
-    `analysis/p4_build_stages.jl`: job `13440637`. The list of what remains was
-    rebuilt the same day and reviewed by an agent; it is `OPERATIONAL_TODO.md`. The runs' provenance was repaired
+    `analysis/p4_build_stages.jl`: job `13440637`, and its two baselines, jobs
+    `13440706` (no tags) and `13440707` (2 tags). The list of what remains was
+    rebuilt the same day and reviewed by an agent; it is `OPERATIONAL_TODO.md`.
+    The owner's decisions of 2026-09-14 are recorded there: require an offset
+    with tags; the closure check on by default, daily, from a spin-up
+    reference, report-only until calibrated; the label check at configuration
+    now, and online form A later as an optional feature. The runs' provenance was repaired
     by hand to `edd44e1d`, because a worktree's `.git` is a file the runscript
     cannot read.
   - **Worktrees.** `../ClimaAtmosResiDyn-repair` is on #70's branch and
