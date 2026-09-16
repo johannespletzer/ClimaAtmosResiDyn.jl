@@ -603,7 +603,7 @@ function jacobian_solver_algorithm(
 end
 
 """
-    jacobian_cache(alg::ManualSparseJacobian, Y, atmos; split_uncoupled_fields = true)
+    jacobian_cache(alg::ManualSparseJacobian, Y, atmos; split_uncoupled_fields = true, verbose = false)
 
 Allocate the sparse `∂R/∂Y` matrix and its solver for a
 [`ManualSparseJacobian`](@ref).
@@ -673,47 +673,21 @@ function jacobian_cache(
     build_solver =
         isempty(uncoupled_names) ? build_unsplit_jacobian_solver :
         build_split_jacobian_solver
-    (matrix, solver) = Base.invokelatest(
-        build_solver,
-        matrix,
-        Y,
-        full_alg,
-        uncoupled_names,
-        alg.approximate_solve_iters,
-    )
+    (matrix, solver) =
+        Base.invokelatest(build_solver, matrix, Y, full_alg, uncoupled_names)
     return (; matrix, solver, derivative_flags)
 end
 
 # Without uncoupled fields, the matrix and its solver are one
 # `FieldMatrixWithSolver`, as before the split existed.
-function build_unsplit_jacobian_solver(
-    matrix,
-    Y,
-    full_alg,
-    uncoupled_names,
-    approximate_solve_iters,
-)
+function build_unsplit_jacobian_solver(matrix, Y, full_alg, uncoupled_names)
     matrix_with_solver = MatrixFields.FieldMatrixWithSolver(matrix, Y, full_alg)
     return (matrix_with_solver, matrix_with_solver)
 end
 
 # With them, the whole matrix is kept for the updates, and the solver splits.
-build_split_jacobian_solver(
-    matrix,
-    Y,
-    full_alg,
-    uncoupled_names,
-    approximate_solve_iters,
-) = (
-    matrix,
-    split_jacobian_solver(
-        matrix,
-        Y,
-        full_alg,
-        uncoupled_names,
-        approximate_solve_iters,
-    ),
-)
+build_split_jacobian_solver(matrix, Y, full_alg, uncoupled_names) =
+    (matrix, split_jacobian_solver(matrix, Y, full_alg, uncoupled_names))
 
 # ============================================================================
 # Solving the tags and the records apart from the rest
@@ -817,13 +791,7 @@ end
 
 # Build a `SplitJacobianSolver` from the whole matrix, the state, the model's
 # nested solver algorithm and the names `uncoupled_jacobian_names` found.
-function split_jacobian_solver(
-    matrix,
-    Y,
-    alg,
-    uncoupled_names,
-    approximate_solve_iters,
-)
+function split_jacobian_solver(matrix, Y, alg, uncoupled_names)
     uncoupled_chains = map(jacobian_name_chain, collect(uncoupled_names))
     is_uncoupled(name) = jacobian_name_chain(name) in uncoupled_chains
 
@@ -861,12 +829,7 @@ function split_jacobian_solver(
     cache = MatrixFields.field_matrix_solver_cache(alg, coupled_matrix, b)
     MatrixFields.check_field_matrix_solver(alg, cache, coupled_matrix, b)
 
-    uncoupled_alg =
-        alg isa MatrixFields.SchurComplementReductionSolve ?
-        MatrixFields.StationaryIterativeSolve(;
-            P_alg = MatrixFields.BlockDiagonalPreconditioner(),
-            n_iters = approximate_solve_iters,
-        ) : MatrixFields.BlockDiagonalSolve()
+    uncoupled_alg = uncoupled_field_algorithm(alg)
     uncoupled = map(uncoupled_names) do name
         field = MatrixFields.get_field(Y, name)
         field_tree = MatrixFields.FieldNameTree(Fields.FieldVector(; field))
@@ -899,6 +862,32 @@ function split_jacobian_solver(
     end
     return SplitJacobianSolver(alg, cache, coupled_keys, coupled_matrix, uncoupled)
 end
+
+# The algorithm that solves one uncoupled field as `alg` solves it in the whole
+# system. There the field falls into the group that `alg` leaves to its second
+# algorithm, whose block diagonal part inverts the field's block exactly. The
+# iterative arrowhead solve repeats that inverse as often as its own iterative
+# second algorithm does, so the count and the start are read from it.
+uncoupled_field_algorithm(::MatrixFields.BlockArrowheadSolve) =
+    MatrixFields.BlockDiagonalSolve()
+function uncoupled_field_algorithm(
+    alg::MatrixFields.SchurComplementReductionSolve{
+        <:Any,
+        <:Any,
+        <:MatrixFields.StationaryIterativeSolve,
+    },
+)
+    return MatrixFields.StationaryIterativeSolve(;
+        P_alg = MatrixFields.BlockDiagonalPreconditioner(),
+        n_iters = alg.alg₂.n_iters,
+        correlated_solves = alg.alg₂.correlated_solves,
+    )
+end
+uncoupled_field_algorithm(alg) = error(
+    "The tags and records cannot be solved apart under a \
+    $(nameof(typeof(alg))). Only the block arrowhead solves that \
+    `jacobian_solver_algorithm` builds are supported.",
+)
 
 # The view of a state-like `FieldVector` under the given keys, whose name tree
 # decides which fields a solve can see.

@@ -583,4 +583,150 @@ import ClimaAtmos as CA
             )),
         )
     end
+
+    # The split must give the nested solver's increments bit for bit when a tag
+    # block is not a scaled identity and the solve iterates more than once. With
+    # the `-I` blocks of the integration test's column every solver gives `-R`
+    # exactly, so that test cannot tell a wrong iteration count from a right
+    # one. The state here is a column with two coupled scalars, a face velocity,
+    # a tag and a record, whose own blocks are tridiagonal. The two algorithms
+    # have the shapes `jacobian_solver_algorithm` builds.
+    @testset "The split solver matches the nested one on tridiagonal blocks" begin
+        CC = CA.ClimaCore
+        MF = CA.MatrixFields
+        FT = Float64
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 12,
+            staggering,
+        )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜnames = (:ρ, :ρe_tot, :ρe_src_upper, :prc_e_radiation)
+        Y = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{4, FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        # Values that differ from point to point and from field to field,
+        # without random numbers.
+        fill_pattern!(values, shift) =
+            values .= sin.(shift .+ 0.7 .* reshape(1:length(values), size(values)))
+        R = similar(Y)
+        fill_pattern!(parent(R.c), 0)
+        fill_pattern!(parent(R.f), 1)
+
+        # A block of the given row type: a pattern of size 0.1 in every entry,
+        # plus `diagonal` on the main diagonal. Entries that would reach past
+        # an end of the column are zero.
+        function band_block(space, row_type, diagonal, shift)
+            block = fill(zero(row_type), space)
+            # One row per level and one column per entry of the band. A column
+            # Field's parent array has singleton dimensions around those two.
+            n_levels = size(parent(block), 1)
+            values = reshape(parent(block), n_levels, :)
+            fill_pattern!(values, shift)
+            values .*= 0.1
+            n_entries = size(values, 2)
+            if isodd(n_entries)
+                values[:, (n_entries + 1) ÷ 2] .+= diagonal
+            end
+            if n_entries > 1
+                values[1, 1] = 0
+                values[end, end] = 0
+            end
+            return block
+        end
+        ᶜdiagonal(shift) =
+            band_block(ᶜspace, MF.DiagonalMatrixRow{FT}, -1, shift)
+        ᶜtridiagonal(shift) =
+            band_block(ᶜspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
+        ᶠtridiagonal(shift) =
+            band_block(ᶠspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
+        # Faces to centres and back, as for a divergence and a gradient.
+        ᶜᶠbidiagonal(shift) =
+            band_block(ᶜspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+        ᶠᶜbidiagonal(shift) =
+            band_block(ᶠspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+        block_pairs = (
+            (CA.MatrixFields.@name(c.ρ), CA.MatrixFields.@name(c.ρ)) => ᶜdiagonal(2),
+            (CA.MatrixFields.@name(c.ρe_tot), CA.MatrixFields.@name(c.ρe_tot)) =>
+                ᶜdiagonal(3),
+            (CA.MatrixFields.@name(c.ρ), CA.MatrixFields.@name(f.u₃)) =>
+                ᶜᶠbidiagonal(4),
+            (CA.MatrixFields.@name(c.ρe_tot), CA.MatrixFields.@name(f.u₃)) =>
+                ᶜᶠbidiagonal(5),
+            (CA.MatrixFields.@name(f.u₃), CA.MatrixFields.@name(c.ρ)) =>
+                ᶠᶜbidiagonal(6),
+            (CA.MatrixFields.@name(f.u₃), CA.MatrixFields.@name(c.ρe_tot)) =>
+                ᶠᶜbidiagonal(7),
+            (CA.MatrixFields.@name(f.u₃), CA.MatrixFields.@name(f.u₃)) =>
+                ᶠtridiagonal(8),
+            (
+                CA.MatrixFields.@name(c.ρe_src_upper),
+                CA.MatrixFields.@name(c.ρe_src_upper)
+            ) =>
+                ᶜtridiagonal(9),
+            (
+                CA.MatrixFields.@name(c.prc_e_radiation),
+                CA.MatrixFields.@name(c.prc_e_radiation)
+            ) =>
+                ᶜtridiagonal(10),
+        )
+        uncoupled_names = CA.uncoupled_jacobian_names(block_pairs)
+        @test uncoupled_names ==
+              (
+            CA.MatrixFields.@name(c.ρe_src_upper),
+            CA.MatrixFields.@name(c.prc_e_radiation)
+        )
+
+        velocity_alg = MF.BlockLowerTriangularSolve(CA.MatrixFields.@name(f.u₃))
+        iterative_alg(n_iters) = MF.ApproximateBlockArrowheadIterativeSolve(
+            CA.MatrixFields.@name(c.ρ),
+            CA.MatrixFields.@name(c.ρe_tot);
+            alg₂ = velocity_alg,
+            P_alg₁ = MF.MainDiagonalPreconditioner(),
+            n_iters,
+        )
+        direct_alg = MF.BlockArrowheadSolve(
+            CA.MatrixFields.@name(c.ρ),
+            CA.MatrixFields.@name(c.ρe_tot);
+            alg₂ = velocity_alg,
+        )
+
+        function increments(alg, split)
+            matrix = MF.FieldMatrix(block_pairs...)
+            solver =
+                split ? CA.split_jacobian_solver(matrix, Y, alg, uncoupled_names) :
+                MF.FieldMatrixWithSolver(matrix, Y, alg)
+            ΔY = zero(Y)
+            CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+            return ΔY
+        end
+        same_bits(a, b) =
+            isequal(parent(a.c), parent(b.c)) && isequal(parent(a.f), parent(b.f))
+        for alg in (iterative_alg(1), iterative_alg(2), direct_alg)
+            @test same_bits(increments(alg, true), increments(alg, false))
+        end
+        # The count matters on these blocks: a second iteration changes the
+        # tags' bits, so a split that ignored it would fail the check above.
+        one_iteration = increments(iterative_alg(1), false)
+        two_iterations = increments(iterative_alg(2), false)
+        @test !isequal(
+            parent(one_iteration.c.ρe_src_upper),
+            parent(two_iterations.c.ρe_src_upper),
+        )
+        @test all(isfinite, parent(two_iterations.c))
+        # Only the arrowhead solves are supported.
+        @test_throws ErrorException CA.uncoupled_field_algorithm(
+            MF.BlockDiagonalSolve(),
+        )
+    end
 end

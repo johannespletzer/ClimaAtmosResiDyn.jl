@@ -217,8 +217,9 @@ import ClimaAtmos as CA
         ΔY_unsplit = zero(Y)
         CA.invert_jacobian!(jacobian_alg, split_cache, ΔY_split, Y)
         CA.invert_jacobian!(jacobian_alg, unsplit_cache, ΔY_unsplit, Y)
-        @test parent(ΔY_split.c) == parent(ΔY_unsplit.c)
-        @test parent(ΔY_split.f) == parent(ΔY_unsplit.f)
+        # `isequal` rather than `==`, which would let a signed zero differ.
+        @test isequal(parent(ΔY_split.c), parent(ΔY_unsplit.c))
+        @test isequal(parent(ΔY_split.f), parent(ΔY_unsplit.f))
         @test !all(iszero, parent(ΔY_split.c.ρe_src_rad))
 
         # The split solver runs in every Newton iteration, so neither its
