@@ -642,5 +642,112 @@ import Dates
             CA.EnergySourceTaggingModel((tropics, extratropics)),
             CA.TracerNonnegativityElementConstraint{false}(),
         )
+
+        # The two limiters that clip `ρq_tot` are warned about too. A stand-in
+        # for the model, with only the properties the check reads.
+        limited(; limiter = nothing, method = nothing,
+            microphysics_model =
+            CA.EquilibriumMicrophysics0M(), tags = (tropics, extratropics)) = (;
+            energy_source_tagging_model = isnothing(tags) ? nothing :
+                                          CA.EnergySourceTaggingModel(tags),
+            water = (; tracer_nonnegativity_method = method, microphysics_model),
+            numerics = (; limiter),
+        )
+        quasimonotone = CA.QuasiMonotoneLimiter()
+        borrowing = CA.TracerNonnegativityVerticalWaterBorrowing()
+        @test_logs CA.warn_unbracketed_energy_source_constraints(limited())
+        @test_logs (:warn, r"apply_sem_quasimonotone_limiter") CA.warn_unbracketed_energy_source_constraints(
+            limited(; limiter = quasimonotone),
+        )
+        # Borrowing clips `ρq_tot` when every tracer is selected, or `ρq_tot`
+        # is, and not otherwise.
+        @test_logs (:warn, r"vertical_water_borrowing") CA.warn_unbracketed_energy_source_constraints(
+            limited(; method = borrowing),
+        )
+        @test_logs (:warn, r"vertical_water_borrowing") CA.warn_unbracketed_energy_source_constraints(
+            limited(; method = borrowing),
+            (:ρq_tot, :ρq_lcl),
+        )
+        @test_logs CA.warn_unbracketed_energy_source_constraints(
+            limited(; method = borrowing),
+            (:ρq_lcl,),
+        )
+        # Neither without the tags, nor in a dry model.
+        @test_logs CA.warn_unbracketed_energy_source_constraints(
+            limited(; limiter = quasimonotone, method = borrowing, tags = nothing),
+        )
+        @test_logs CA.warn_unbracketed_energy_source_constraints(
+            limited(;
+                limiter = quasimonotone,
+                method = borrowing,
+                microphysics_model = CA.DryModel(),
+            ),
+        )
+    end
+
+    # The audit table's energy source columns, on a column of four unit-height
+    # cells, where a volume integral is the plain sum of the cells' values.
+    @testset "The audit's energy source columns" begin
+        CC = CA.ClimaCore
+        FT = Float64
+        space = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 4,
+            z_elem = 4,
+            staggering = CC.CommonSpaces.CellCenter(),
+        )
+        function cells(values)
+            field = zeros(space)
+            parent(field) .= reshape(FT.(values), size(parent(field)))
+            return field
+        end
+        tropics = CA.EnergySourceTag{:tropics}(CA.TanhLatitudeRegion(20.0, 2.0, true))
+        rad = CA.EnergySourceTag{:rad}(nothing, :radiation)
+        sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        model = CA.EnergySourceTaggingModel((tropics, rad, sfc))
+
+        ᶜnames = (:ρ, :ρe_src_tropics, :ρe_src_rad, :ρe_src_sfc)
+        ᶜY = similar(
+            CC.Fields.coordinate_field(space),
+            NamedTuple{ᶜnames, NTuple{4, FT}},
+        )
+        ᶜY.ρ .= cells([2, 2, 2, 2])
+        # The region tag is negative too, and no source column counts it.
+        ᶜY.ρe_src_tropics .= cells([-100, -100, 5, 5])
+        ᶜY.ρe_src_rad .= cells([-2, 4, -6, 8])
+        ᶜY.ρe_src_sfc .= cells([1, -1, 3, 5])
+        Y = CC.Fields.FieldVector(; c = ᶜY)
+        fix = (;
+            ρe_src_tropics = cells([-1, 0, 0, 0]),
+            ρe_src_rad = cells([1, 0, -2, 0]),
+            ρe_src_sfc = cells([0, 0, 0, 3]),
+        )
+        p = (;
+            scratch = (; ᶜtemp_scalar = zeros(space)),
+            tagging = (; ᶜenergy_source_fix = fix),
+        )
+
+        audit = CA.energy_source_audit(Y, p, model, FT(10))
+        # The negative parts of the source tags: -2, -6 and -1.
+        @test audit.source_negative == 9
+        @test audit.source_negative_relative == 0.9
+        # The smallest source tag per unit mass: -6 / 2.
+        @test audit.source_minimum == -3
+        # Every tag's ledger counts, the region tag's too: 1 + 2 + 3 + 1.
+        @test audit.repair_moved == 7
+        @test audit.repair_moved_relative == 0.7
+
+        # A zero scale gives zero ratios, as the rest of the audit does.
+        zero_scale = CA.energy_source_audit(Y, p, model, FT(0))
+        @test zero_scale.source_negative_relative == 0
+        @test zero_scale.repair_moved_relative == 0
+
+        # Without a source tag there is nothing to take a minimum of.
+        region_only = CA.EnergySourceTaggingModel((tropics,))
+        no_sources = CA.energy_source_audit(Y, p, region_only, FT(10))
+        @test no_sources.source_negative == 0
+        @test isnan(no_sources.source_minimum)
+        @test no_sources.repair_moved == 1
     end
 end

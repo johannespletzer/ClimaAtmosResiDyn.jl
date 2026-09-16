@@ -82,7 +82,10 @@ function get_atmos(config::AtmosConfig, params; setup_type = nothing)
         @info "Microphysics settings: $(sprint(summary_microphysics, microphysics_model))"
     end
     warn_untagged_energy_source_processes(atmos)
-    warn_unbracketed_energy_source_constraints(atmos)
+    warn_unbracketed_energy_source_constraints(
+        atmos,
+        vertical_water_borrowing_species_from_config(config),
+    )
     return atmos
 end
 

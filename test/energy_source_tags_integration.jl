@@ -202,6 +202,13 @@ import ClimaAtmos as CA
                     Dict{String, Any}(
                         "energy_source_tag_offset" => c,
                         "output_dir" => mktempdir(pwd()),
+                        # A spin-up of one step, so that the reference is taken
+                        # inside this 20 s run. The check is a callback, so the
+                        # model type and its compile are unchanged.
+                        "energy_source_closure_check" => Dict{String, Any}(
+                            "period" => "10secs",
+                            "spin_up" => "10secs",
+                        ),
                     ),
                 );
                 job_id = "energy_source_tags_integration_offset",
@@ -260,6 +267,24 @@ import ClimaAtmos as CA
         )
         @test all(isfinite, parent(ledger))
         @test minimum(parent(ledger)) >= 0
+
+        # The spin-up reference. The check writes rows at 0, 10 and 20 s. The
+        # reference is taken at 10 s, before that row is written, so the row at
+        # 10 s holds its own residual as the reference and nothing since, and
+        # the row at 20 s holds what changed after it. The row at 0 s has no
+        # reference yet. Column 4 is the residual, 10 to 12 the new columns.
+        closure_path =
+            CA.tag_closure_path(offset_simulation.output_dir, "energy_source")
+        rows = map(readlines(closure_path)[2:end]) do line
+            parse.(Float64, split(line, ","))
+        end
+        @test first.(rows) ≈ [0, 10, 20]
+        @test all(isnan, rows[1][10:12])
+        @test rows[2][10] == rows[2][4]
+        @test rows[2][11] == 0
+        @test rows[3][10] == rows[2][4]
+        @test rows[3][11] == rows[3][4] - rows[2][4]
+        @test rows[3][12] == rows[3][11] / rows[3][8]
     end
 
     # 8. Sedimentation moves the tags. Under 1-moment microphysics the cloud and

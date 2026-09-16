@@ -935,6 +935,19 @@ end
     @test after[10] == 0.25
     @test after[11] == closure.residual - 0.25
     @test after[12] == (closure.residual - 0.25) / closure.scale
+
+    # An identically zero parent gives a zero ratio, as the other columns do,
+    # and not `Inf` or `NaN`.
+    zero_dir = mktempdir()
+    zero_closure = merge(closure, (; scale = 0.0))
+    CA.write_tag_closure!(zero_dir, 0.0, "energy_source", zero_closure; reference)
+    zero_row =
+        parse.(
+            Float64,
+            split(readlines(CA.tag_closure_path(zero_dir, "energy_source"))[2], ","),
+        )
+    @test zero_row[11] == closure.residual - 0.25
+    @test zero_row[12] == 0
 end
 
 @testset "Closure table" begin
@@ -1005,6 +1018,18 @@ end
     @test startswith(rows[3], "86400.0,")
     # Every header column is filled in.
     @test all(row -> length(split(row, ",")) == 10, rows)
+
+    # A family's own columns go after the common ones, under their own names.
+    extra_dir = mktempdir()
+    extra = (; source_negative = 9.0, source_minimum = -3.0)
+    CA.write_tag_audit!(extra_dir, 0.0, "energy_source", audit; extra)
+    extra_rows = readlines(CA.tag_audit_path(extra_dir, "energy_source"))
+    @test endswith(
+        extra_rows[1],
+        ",nonpositive_mass_fraction,source_negative,source_minimum",
+    )
+    @test length(split(extra_rows[2], ",")) == 12
+    @test endswith(extra_rows[2], ",9.0,-3.0")
 end
 
 @testset "Shipped tracer configs still build a model" begin

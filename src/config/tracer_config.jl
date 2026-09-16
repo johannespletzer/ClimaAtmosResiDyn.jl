@@ -660,21 +660,31 @@ function warn_untagged_energy_source_processes(atmos)
 end
 
 """
-    warn_unbracketed_energy_source_constraints(atmos)
+    warn_unbracketed_energy_source_constraints(atmos, vwb_species = nothing)
 
-Warn when a state constraint changes `ρe_tot` outside every bracket in a run with
-energy source tags.
+Warn when a state constraint or a limiter changes `ρe_tot` outside every bracket
+in a run with energy source tags.
 
-Clipping `ρq_tot` in the element constraint, as `constrain_qtot` does, moves the
-clipped water's mass and energy into `ρ` and `ρe_tot` through
-`enforce_mass_energy_consistency!`. No bracket sees that change, so no tag
-takes it, and it lands in `e_src_res`.
+Three paths clip `ρq_tot` and then move the clipped water's mass and energy into
+`ρ` and `ρe_tot` through `enforce_mass_energy_consistency!`:
+
+  - the element constraint, as `constrain_qtot` does;
+  - the quasimonotone limiter, `apply_sem_quasimonotone_limiter: true`;
+  - vertical water borrowing, when its species include `ρq_tot`. `vwb_species`
+    is that list, as `vertical_water_borrowing_species_from_config` gives it,
+    and `nothing` means every tracer.
+
+No bracket sees that change, so no tag takes it, and it lands in `e_src_res`.
 """
-warn_unbracketed_energy_source_constraints(atmos) =
+function warn_unbracketed_energy_source_constraints(atmos, vwb_species = nothing)
+    model = atmos.energy_source_tagging_model
     _warn_unbracketed_energy_source_constraints(
-        atmos.energy_source_tagging_model,
+        model,
         atmos.water.tracer_nonnegativity_method,
     )
+    _warn_unbracketed_energy_source_limiters(model, atmos, vwb_species)
+    return nothing
+end
 _warn_unbracketed_energy_source_constraints(model, method) = nothing
 _warn_unbracketed_energy_source_constraints(
     ::EnergySourceTaggingModel,
@@ -684,6 +694,31 @@ _warn_unbracketed_energy_source_constraints(
     `ρq_tot`: the clip changes `ρ` and `ρe_tot` outside every bracket, so no \
     tag takes the change, and it goes to `e_src_res`.",
 )
+
+# The two limiters that clip `ρq_tot`. A dry model has no `ρq_tot` to clip.
+_warn_unbracketed_energy_source_limiters(model, atmos, vwb_species) = nothing
+function _warn_unbracketed_energy_source_limiters(
+    ::EnergySourceTaggingModel,
+    atmos,
+    vwb_species,
+)
+    atmos.water.microphysics_model isa DryModel && return nothing
+    atmos.numerics.limiter isa QuasiMonotoneLimiter && @warn(
+        "`energy_source_tags` with `apply_sem_quasimonotone_limiter: true`: the \
+        limiter clips `ρq_tot` and changes `ρ` and `ρe_tot` to match, outside \
+        every bracket, so no tag takes the change, and it goes to `e_src_res`.",
+    )
+    atmos.water.tracer_nonnegativity_method isa
+    TracerNonnegativityVerticalWaterBorrowing &&
+        _should_apply_limiter_to_tracer(:ρq_tot, vwb_species) &&
+        @warn(
+            "`energy_source_tags` with `tracer_nonnegativity_method: \
+            vertical_water_borrowing` on `ρq_tot`: the borrowing changes `ρ` \
+            and `ρe_tot` to match, outside every bracket, so no tag takes the \
+            change, and it goes to `e_src_res`.",
+        )
+    return nothing
+end
 
 # ============================================================================
 # Closure checking
