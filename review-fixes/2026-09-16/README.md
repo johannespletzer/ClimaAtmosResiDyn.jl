@@ -10,10 +10,14 @@ One review comment was posted on each open pull request, in order:
 [#79](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/79#issuecomment-5695637975),
 [#80](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/80#issuecomment-5695644776).
 
-The patches here address the findings that had a clear fix. They were not
-pushed to the pull request branches, since that needs the owner's say. Each
-directory holds the commits for one pull request, on top of its head at the
-time of the review. Apply with
+The patches here address the findings that had a clear fix. On the owner's
+say they were pushed to the pull request branches on 2026-09-16 (#72 at
+50dd1dd, #74 at d00a99a, #75 at a28dacc, #76 at 33481bc, #77 at a83e6ab,
+#78 at 2067875, #79 at 423382a), so this directory is now a record. The
+owner also decided that the closure check stays on by default inside the
+other pull requests' integration tests. Each directory holds the commits for
+one pull request, on top of its head at the time of the review. To re-apply
+elsewhere:
 
 ```
 git checkout <pr-branch>
