@@ -162,8 +162,9 @@ column of the closure check.
 ## Closure checking
 
 The check is on by default whenever the tags include a pure region tag. Without
-a block, it runs daily, reports without warning, and adds the residual since one
-hour after the start to every row. A block sets its keys:
+a block, it runs daily, warns about nothing but a non-positive total, and adds
+the residual since one hour after the start to every row. A block sets its
+keys:
 
 ```yaml
 energy_source_closure_check:

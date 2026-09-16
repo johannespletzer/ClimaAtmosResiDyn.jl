@@ -705,7 +705,8 @@ These are starting points, not derived numbers. Read the first run's closure
 table and set a tolerance that sits above the level your configuration settles
 at, so that the warning means something changed.
 
-The energy source tags have no default tolerance, so their check only reports.
+The energy source tags have no default tolerance, so their check never warns
+about the residual.
 It is on by default with the tags, and a fixed level would warn in every run:
 their residual depends on the transport and the configuration, and no tolerance
 has been calibrated for either yet. Set `tolerance` in the block to warn.
@@ -753,7 +754,8 @@ Every key is optional: `period` defaults to `"1days"`, `tolerance` to the
 family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref) and `abort_above` to its
 entry in [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref). Writing `abort_above: ~` turns
 the abort off for a family that defaults to having one. A `tolerance` of `~`
-means the check only reports and never warns.
+means the check never warns about the residual; the warning about a non-positive
+parent stays.
 
 `audit` defaults to `false`. Setting it writes a second table beside the closure
 table, splitting the residual into the parts that mean different things; see
@@ -842,7 +844,7 @@ Read `energy_source_closure_check`. Unlike the other two families' checks, this
 one is on by default whenever the tags include a pure region tag, a tag with a
 `region` and no `source`, which is what closure needs:
 
-  - `~`, the default, gives a daily check that only reports, from a spin-up
+  - `~`, the default, gives a daily check with no tolerance, from a spin-up
     reference one hour after the start, without the audit;
   - `false` switches the check off;
   - a mapping sets the keys of [`closure_check_from_config`](@ref), with the same
