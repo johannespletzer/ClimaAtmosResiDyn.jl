@@ -395,6 +395,7 @@ import ClimaAtmos as CA
         @test parent(Y_audit.c.ρ) == parent(Y_base.c.ρ)
         @test parent(Y_audit.c.ρe_tot) == parent(Y_base.c.ρe_tot)
         @test parent(Y_audit.c.ρq_tot) == parent(Y_base.c.ρq_tot)
+        @test parent(Y_audit.c.uₕ) == parent(Y_base.c.uₕ)
         @test parent(Y_audit.f.u₃) == parent(Y_base.f.u₃)
         for name in (:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
             @test all(isfinite, parent(getproperty(Y_audit.c, name)))
