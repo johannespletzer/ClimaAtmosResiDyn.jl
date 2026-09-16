@@ -1,0 +1,86 @@
+From 2067875f3c7d025acfc3705bd5e0dc36ea2a3a43 Mon Sep 17 00:00:00 2001
+From: review <review@local>
+Date: Wed, 16 Sep 2026 10:03:02 +0000
+Subject: [PATCH] Specialize the allocation helper, and say where the checks
+ are and what they cover
+
+The helper's vararg now carries a length parameter, so the call inside
+is static for any number of arguments. The tag file's header and the
+docs name the allocation check, and the record file's comment says that
+the implicit check measures the guards, since no record lists the two
+implicit labels.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LA3FukgbRCMkra999BhdDw
+---
+ docs/src/energy_source_tags.md         | 4 ++++
+ test/energy_source_tags_integration.jl | 8 ++++++--
+ test/process_record_integration.jl     | 7 +++++--
+ 3 files changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/docs/src/energy_source_tags.md b/docs/src/energy_source_tags.md
+index 1831a51..ef93e6a 100644
+--- a/docs/src/energy_source_tags.md
++++ b/docs/src/energy_source_tags.md
+@@ -217,6 +217,10 @@ exactly:
+     by the parent, so it is exercised even there.
+   - `test/energy_source_tags_tests.jl` covers the **loss algebra** against a
+     parent that is positive by construction. That is a kernel-level check.
++  - The integration test also checks that the tag code **allocates nothing**
++    in a tendency evaluation or in the repair, on the 1-moment column with an
++    offset, and `test/process_record_integration.jl` checks the same for the
++    records' brackets.
+   - **Donor-proportional loss through a real bracketed solve** is covered by the
+     same integration test with `energy_source_tag_offset` (see below), which
+     makes the tags' total positive on this column. It checks that the offset
+diff --git a/test/energy_source_tags_integration.jl b/test/energy_source_tags_integration.jl
+index 0f61ee8..460541f 100644
+--- a/test/energy_source_tags_integration.jl
++++ b/test/energy_source_tags_integration.jl
+@@ -18,7 +18,9 @@ family is wired into a simulation at all, which is what this file covers:
+     the same solve, and the offset leaves the model's own state untouched;
+  8. under 1-moment microphysics, sedimentation moves the tags with the water.
+     The partition's fluxes add up to the parent's, and each face takes the
+-    shares of the cell that loses the energy, in either direction.
++    shares of the cell that loses the energy, in either direction. On the
++    same column the tag code allocates nothing, in a tendency evaluation or
++    in the repair.
+ 
+ Items 1 to 6 run on `ρe_tot` itself. It is non-positive across this column, so
+ `energy_source_fraction` returns zero and the loss never runs there. Production
+@@ -44,7 +46,9 @@ import ClimaAtmos as CA
+ # Allocation checks, as in `parameterized_tendencies/microphysics/allocations.jl`:
+ # one call to compile, then `@allocated` on a second call. Each is a function, so
+ # that `@allocated` does not count the boxing of globals in a test file.
+-function second_call_allocations(f::F, args...) where {F}
++# The length parameter makes Julia specialize on every argument, so the call
++# inside is static and nothing is boxed at the call itself.
++function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
+     f(args...)
+     return @allocated f(args...)
+ end
+diff --git a/test/process_record_integration.jl b/test/process_record_integration.jl
+index a985fd3..3c0c3e6 100644
+--- a/test/process_record_integration.jl
++++ b/test/process_record_integration.jl
+@@ -36,7 +36,9 @@ import ClimaAtmos as CA
+ # Allocation checks, as in `parameterized_tendencies/microphysics/allocations.jl`:
+ # one call to compile, then `@allocated` on a second call. Each is a function, so
+ # that `@allocated` does not count the boxing of globals in a test file.
+-function second_call_allocations(f::F, args...) where {F}
++# The length parameter makes Julia specialize on every argument, so the call
++# inside is static and nothing is boxed at the call itself.
++function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
+     f(args...)
+     return @allocated f(args...)
+ end
+@@ -136,7 +138,8 @@ end
+     @test !all(iszero, parent(Y_restart.c.prc_e_radiation))
+ 
+     # 5. The brackets allocate nothing. The implicit tendency brackets
+-    # microphysics and precipitation for the records.
++    # microphysics and precipitation, which no record here lists, so that
++    # check measures the records' guards and the recursion over them.
+     @testset "The records do not allocate" begin
+         p = simulation.integrator.p
+         t = simulation.integrator.t

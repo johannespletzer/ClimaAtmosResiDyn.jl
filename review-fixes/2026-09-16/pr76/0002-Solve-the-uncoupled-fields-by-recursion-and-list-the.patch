@@ -1,0 +1,80 @@
+From 33481bc40835d77d39509aa977767df80cf5c1df Mon Sep 17 00:00:00 2001
+From: review <review@local>
+Date: Wed, 16 Sep 2026 10:02:45 +0000
+Subject: [PATCH 2/2] Solve the uncoupled fields by recursion, and list the
+ split solver in the test header
+
+The foreach closure over the tuple of uncoupled fields allocated 1056
+bytes per solve on Julia 1.10, where the test asserts zero. A recursion
+over the tuple compiles one method per element and captures nothing. The
+integration test's header now names item 6.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LA3FukgbRCMkra999BhdDw
+---
+ .../implicit/manual_sparse_jacobian.jl        | 28 ++++++++++++-------
+ test/energy_source_tags_integration.jl        |  8 ++++--
+ 2 files changed, 23 insertions(+), 13 deletions(-)
+
+diff --git a/src/prognostic_equations/implicit/manual_sparse_jacobian.jl b/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
+index aa240ef..f71cbc1 100644
+--- a/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
++++ b/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
+@@ -919,19 +919,27 @@ function LinearAlgebra.ldiv!(
+         solver.matrix,
+         split_solver_view(solver.keys, R),
+     )
+-    foreach(solver.uncoupled) do field_solve
+-        (; name, alg, cache, keys, matrix) = field_solve
+-        MatrixFields.run_field_matrix_solver!(
+-            alg,
+-            cache,
+-            MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(ΔY, name),)),
+-            matrix,
+-            MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(R, name),)),
+-        )
+-    end
++    solve_uncoupled_fields!(solver.uncoupled, ΔY, R)
+     return ΔY
+ end
+ 
++# Solve the uncoupled fields one by one, by recursion over the tuple. A
++# `foreach` with a closure over this tuple allocated on Julia 1.10, since its
++# elements differ in type. The recursion compiles one method per element and
++# captures nothing.
++solve_uncoupled_fields!(::Tuple{}, ΔY, R) = nothing
++function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
++    (; name, alg, cache, keys, matrix) = first(uncoupled)
++    MatrixFields.run_field_matrix_solver!(
++        alg,
++        cache,
++        MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(ΔY, name),)),
++        matrix,
++        MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(R, name),)),
++    )
++    return solve_uncoupled_fields!(Base.tail(uncoupled), ΔY, R)
++end
++
+ # ============================================================================
+ # Jacobian matrix entries
+ # ============================================================================
+diff --git a/test/energy_source_tags_integration.jl b/test/energy_source_tags_integration.jl
+index 6bbacca..57b6928 100644
+--- a/test/energy_source_tags_integration.jl
++++ b/test/energy_source_tags_integration.jl
+@@ -10,10 +10,12 @@ family is wired into a simulation at all, which is what this file covers:
+  2. the region masks reach `p.tagging.ᶜenergy_source_masks` and partition unity;
+  3. at t = 0 the region tags partition `ρe_tot` to machine precision;
+  4. the generic tracer machinery transports the tags, they stay finite, and the
+-    closure residual stays a small bounded monitor;
++    closure residual stays a small bounded monitor; masked *production* reaches
++    a source tag through a real bracketed process, which is the one thing here
++    that a plain-array unit test cannot show;
+  5. state and masks survive a checkpoint round trip;
+- 6. masked *production* reaches a source tag through a real bracketed process,
+-    which is the one thing here that a plain-array unit test cannot show;
++ 6. the implicit Jacobian solves the tags apart from the rest, and the split
++    solver gives the increments of the unsplit one exactly, without allocating;
+  7. with `energy_source_tag_offset`, the donor-proportional *loss* runs through
+     the same solve, and the offset leaves the model's own state untouched;
+  8. under 1-moment microphysics, sedimentation moves the tags with the water.

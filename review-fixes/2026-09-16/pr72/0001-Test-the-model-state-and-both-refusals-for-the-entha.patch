@@ -1,0 +1,64 @@
+From 88be3a2a88e8ee0e0ccd95b09826c4197aaf07d1 Mon Sep 17 00:00:00 2001
+From: review <review@local>
+Date: Wed, 16 Sep 2026 09:34:54 +0000
+Subject: [PATCH] Test the model state and both refusals for the enthalpy
+ transport
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Item 9 of the integration test now also compares uₕ, so it shows what the
+docs claim for the whole model state. The config tests now run the offset
+and the transport keys through AtmosTagging without tags, where both are
+refused, and check that with tags the key reaches the model.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LA3FukgbRCMkra999BhdDw
+---
+ test/config/tracer_config.jl           | 20 ++++++++++++++++++++
+ test/energy_source_tags_integration.jl |  1 +
+ 2 files changed, 21 insertions(+)
+
+diff --git a/test/config/tracer_config.jl b/test/config/tracer_config.jl
+index f448632..4bc3491 100644
+--- a/test/config/tracer_config.jl
++++ b/test/config/tracer_config.jl
+@@ -298,6 +298,26 @@ end
+     )
+     @test isempty(label_warnings(zero_moment, "microphysics"))
+     @test length(label_warnings(zero_moment, "precipitation")) == 1
++
++    # The offset and the transport act on the tags, so each is refused alone.
++    @test_throws ErrorException CA.AtmosTagging(
++        tracer_config(
++            ["energy_source_tag_offset" => 110495.0];
++            job_id = "tracer_config_source_offset_alone",
++        ),
++    )
++    @test_throws ErrorException CA.AtmosTagging(
++        tracer_config(
++            ["energy_source_tag_transport" => "enthalpy"];
++            job_id = "tracer_config_source_transport_alone",
++        ),
++    )
++    # With tags, the key reaches the model.
++    enthalpy = CA.AtmosTagging(
++        source_config("enthalpy", "energy_source_tag_transport" => "enthalpy"),
++    )
++    @test enthalpy.energy_source_tagging_model.transport isa
++          CA.EnthalpyEnergySourceTransport
+ end
+ 
+ @testset "passive_tracers release grid" begin
+diff --git a/test/energy_source_tags_integration.jl b/test/energy_source_tags_integration.jl
+index 37025e0..935077c 100644
+--- a/test/energy_source_tags_integration.jl
++++ b/test/energy_source_tags_integration.jl
+@@ -395,6 +395,7 @@ import ClimaAtmos as CA
+         @test parent(Y_audit.c.ρ) == parent(Y_base.c.ρ)
+         @test parent(Y_audit.c.ρe_tot) == parent(Y_base.c.ρe_tot)
+         @test parent(Y_audit.c.ρq_tot) == parent(Y_base.c.ρq_tot)
++        @test parent(Y_audit.c.uₕ) == parent(Y_base.c.uₕ)
+         @test parent(Y_audit.f.u₃) == parent(Y_base.f.u₃)
+         for name in (:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
+             @test all(isfinite, parent(getproperty(Y_audit.c, name)))

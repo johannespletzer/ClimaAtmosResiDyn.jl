@@ -1,0 +1,90 @@
+From d00a99a5d02b149bf532ce01a89da8dfd8c5aef2 Mon Sep 17 00:00:00 2001
+From: review <review@local>
+Date: Wed, 16 Sep 2026 09:36:32 +0000
+Subject: [PATCH] Say which warnings the per-process layout prints, and where
+ sedimentation lands
+
+The recommended layout lists precipitation under source: all, so the run
+warns at startup; the page now says those warnings are expected. The
+tolerance docstring and the page now say that sedimentation reaches both
+energy families, one by attribution and one as transport. The sphere
+paragraph says when the tags' numerics set the pointwise gap.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LA3FukgbRCMkra999BhdDw
+---
+ docs/src/energy_source_tags.md   | 18 ++++++++++++------
+ docs/src/tracer_configuration.md |  9 +++++----
+ src/config/tracer_config.jl      |  3 ++-
+ 3 files changed, 19 insertions(+), 11 deletions(-)
+
+diff --git a/docs/src/energy_source_tags.md b/docs/src/energy_source_tags.md
+index 9209628..5daef34 100644
+--- a/docs/src/energy_source_tags.md
++++ b/docs/src/energy_source_tags.md
+@@ -186,6 +186,11 @@ read from the output of a run laid out for them:
+   - a [process record](process_record.md) for each of those processes, and on
+     a column `rhoa`, to weight the column integrals.
+ 
++The `new_*` tags list `precipitation`, which no source tag can follow, so the
++run warns about each of them at startup. Under a scheme other than 0-moment
++microphysics it also warns that `microphysics` is inert. Those warnings are
++expected for this layout.
++
+ **Form A**, at each point, sets the new energy split by region against the new
+ energy split by process: `new_tropics + new_extratropics - (sfc + rad)`. The
+ two sides are separate tags that obey the same rule, so their agreement is a
+@@ -202,12 +207,13 @@ Each is blind to something. Form A compares tags moved by the same transport,
+ so it does not see pressure work. Transport cancels in a column integral, so
+ form B does not see it either. Only `e_src_res` sees transport.
+ 
+-On a sphere, the tags' numerics dominate form A's largest pointwise gap, and
+-they cancel when the gap is integrated over the domain, while a process without
+-a tag does not. So on a sphere, read form A as a domain integral. In the
+-tag-closure experiments, a process without a tag gave an integrated gap of about
+-1e-3 of the integrated new energy, against about 5e-5 once every process had
+-one.
++On a sphere, the tags' numerics set form A's largest pointwise gap once every
++process has a tag, and they cancel when the gap is integrated over the domain,
++while a process without a tag does not. In the tag-closure experiments a
++process without a tag still stood out sevenfold pointwise. So on a sphere,
++read form A as a domain integral. There, a process without a tag gave an
++integrated gap of about 1e-3 of the integrated new energy, against about 5e-5
++once every process had one.
+ 
+ ## The energy reference problem
+ 
+diff --git a/docs/src/tracer_configuration.md b/docs/src/tracer_configuration.md
+index 4229530..b47a333 100644
+--- a/docs/src/tracer_configuration.md
++++ b/docs/src/tracer_configuration.md
+@@ -416,10 +416,11 @@ Transport is not attributed on top of that. Each tag is already transported in
+ its own right, and attributing the `ρe_tot` version as well would count it
+ twice. Neither energy family receives the EDMFX sub-grid mass flux, because the
+ tags have no updraft copy, and the energy source tags refuse
+-`turbconv: prognostic_edmfx` for that reason. The energy source tags do follow
+-sedimentation, on the implicit path, as transport of their own (see
+-[Energy Source Tags](energy_source_tags.md)). So a visibly larger residual is
+-the expected, correct behaviour, not a bug.
++`turbconv: prognostic_edmfx` for that reason. Sedimentation reaches both
++families: the `ρe_tag_*` family attributes it under `precipitation`, and the
++energy source tags follow it on the implicit path as transport of their own
++(see [Energy Source Tags](energy_source_tags.md)). So a visibly larger residual
++is the expected, correct behaviour, not a bug.
+ 
+ !!! tip "Calibrate on your own configuration"
+ 
+diff --git a/src/config/tracer_config.jl b/src/config/tracer_config.jl
+index f659444..3bbed66 100644
+--- a/src/config/tracer_config.jl
++++ b/src/config/tracer_config.jl
+@@ -605,7 +605,8 @@ from the implicit-vs-explicit vertical advection split, so their residual is
+ small. Neither energy family receives the parent's implicit vertical advection
+ or the EDMFX SGS mass flux, and transport is not attributed on top, by design
+ (see `KNOWN_TAG_SOURCES`). So a much larger residual is expected and normal.
+-The energy source tags do follow sedimentation, as transport of their own.
++Sedimentation reaches both: the `ρe_tag_*` family attributes it under
++`precipitation`, and the energy source tags follow it as transport of their own.
+ 
+ These are starting points, not derived numbers. Read the first run's closure
+ table and set a tolerance that sits above the level your configuration settles

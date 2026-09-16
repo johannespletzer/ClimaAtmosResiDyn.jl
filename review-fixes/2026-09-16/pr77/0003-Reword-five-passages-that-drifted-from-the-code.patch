@@ -1,0 +1,106 @@
+From 721fa86e6f0880398fb223f463896f60af940acb Mon Sep 17 00:00:00 2001
+From: review <review@local>
+Date: Wed, 16 Sep 2026 10:03:51 +0000
+Subject: [PATCH 3/3] Reword five passages that drifted from the code
+
+The spin-up reference writes no row and its callback fires every spin_up;
+the energy source family has no default tolerance; repair_moved counts
+in-step repairs at stage or dss; and every closure block accepts spin_up.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LA3FukgbRCMkra999BhdDw
+---
+ docs/src/tracer_configuration.md                      |  1 +
+ src/callbacks/get_callbacks.jl                        | 11 ++++++-----
+ src/config/tracer_config.jl                           | 11 ++++++-----
+ .../tagged_tracers/energy_source_tags.jl              |  4 +++-
+ .../tagged_tracers/tagged_tracers.jl                  |  5 +++--
+ 5 files changed, 19 insertions(+), 13 deletions(-)
+
+diff --git a/docs/src/tracer_configuration.md b/docs/src/tracer_configuration.md
+index 30ee5a4..3cbe770 100644
+--- a/docs/src/tracer_configuration.md
++++ b/docs/src/tracer_configuration.md
+@@ -310,6 +310,7 @@ energy_closure_check:
+ ```
+ 
+ Every key is optional inside each block, and both blocks are off by default.
++Both also accept `spin_up`, described under the energy source tags.
+ Each writes `water_tag_closure.csv` / `energy_tag_closure.csv` to the output
+ directory, with columns `time`, `total`, `tagged`, `residual`, `relative`,
+ `gross_residual`, `gross_relative`, `scale` and `nonpositive_fraction`.
+diff --git a/src/callbacks/get_callbacks.jl b/src/callbacks/get_callbacks.jl
+index d92d360..30b55eb 100644
+--- a/src/callbacks/get_callbacks.jl
++++ b/src/callbacks/get_callbacks.jl
+@@ -771,11 +771,12 @@ end
+ Install the online closure checks of the three tag families.
+ 
+ The families are checked separately, on their own cadence and against their own
+-tolerance, because their residuals are not comparable: the energy tags never
+-receive implicit transport or EDMFX SGS mass fluxes, so theirs is legitimately
+-the larger one. The energy source tags are looser again, and their residual is
+-normalized by a quantity whose zero is a convention, so it is not comparable
+-across runs that use different energy references.
++tolerance, where one is set, because their residuals are not comparable: the
++energy tags never receive implicit transport or EDMFX SGS mass fluxes, so theirs
++is legitimately the larger one. The energy source tags have no default
++tolerance, so by default their check only reports: their residual is normalized
++by a quantity whose zero is a convention, so it is not comparable across runs
++that use different energy references.
+ 
+ Each block also carries an `abort_above` level at which the run ends instead of
+ warning. Only water has a default one, for the same reason: see
+diff --git a/src/config/tracer_config.jl b/src/config/tracer_config.jl
+index d3016d9..041226b 100644
+--- a/src/config/tracer_config.jl
++++ b/src/config/tracer_config.jl
+@@ -762,11 +762,12 @@ changes nothing about the run, so it is safe to leave on for a run whose tags
+ are under investigation.
+ 
+ `spin_up` is a time after the start, such as `"1hours"`, or `~` for none. When
+-set, the check also runs once at that time, and every row reports the residual
+-since then beside the residual itself. The first hour of a run makes a residual
+-that is an artefact of the initial adjustment, and the rows since the spin-up
+-leave it out. The reference is taken again after a restart, at `spin_up` after
+-the restart.
++set, the check takes the residual once at that time and writes no row for it,
++and every later row reports the residual since then beside the residual itself.
++The first hour of a run makes a residual that is an artefact of the initial
++adjustment, and the rows since the spin-up leave it out. The reference is taken
++again after a restart, at `spin_up` after the restart. Every family's block
++accepts the key; only the energy source family sets it by default.
+ """
+ closure_check_from_config(
+     ::Nothing,
+diff --git a/src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl b/src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl
+index 5679441..890017a 100644
+--- a/src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl
++++ b/src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl
+@@ -279,7 +279,9 @@ The energy source family's own columns of the audit table, beside those
+     unit mass, in J/kg, over the whole domain, or `NaN` when there is none;
+   - `repair_moved`, `repair_moved_relative`: the integral over all tags of the
+     absolute value of what the repair has moved since the start of the run
+-    segment, in J, and over `scale`. Zero with the repair off.
++    segment, in J, and over `scale`. Zero with the repair off. At
++    `update_constrain_state_every: stage` or `dss` the ledger also counts the
++    in-step repairs the stepper discards; see `repair_energy_source_tags!`.
+ 
+ Every reduction is collective, so every process must call it.
+ """
+diff --git a/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl b/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl
+index 596ecbd..241645e 100644
+--- a/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl
++++ b/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl
+@@ -849,8 +849,9 @@ end
+     take_tag_closure_reference!(integrator, reference, total_name, tag_state_names)
+ 
+ Store the family's closure residual in `reference`, a `Ref`, unless it holds one
+-already. Runs once, at the spin-up time of a check with a spin-up reference, and
+-writes no row. The residual is a global reduction, so every process takes it.
++already. The callback fires every `spin_up` from the start, stores the residual
++the first time, and writes no row. The residual is a global reduction, so every
++process takes it.
+ """
+ function take_tag_closure_reference!(
+     integrator,

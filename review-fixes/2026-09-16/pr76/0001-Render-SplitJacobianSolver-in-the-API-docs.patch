@@ -1,0 +1,30 @@
+From add70a52ce7d4ccc05042e8d0a79396d209e4242 Mon Sep 17 00:00:00 2001
+From: Johannes Pletzer <johannes.pletzer@posteo.de>
+Date: Wed, 16 Sep 2026 04:30:43 +0000
+Subject: [PATCH 1/2] Render SplitJacobianSolver in the API docs
+
+The docs build failed: the docstrings of jacobian_cache and
+uncoupled_jacobian_names link to SplitJacobianSolver, and no page
+rendered it. The check in docs/check_docstring_refs.jl refuses a link
+to a symbol no page renders. It is now in the Jacobian block of the
+API page, with uncoupled_jacobian_names beside it.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LA3FukgbRCMkra999BhdDw
+---
+ docs/src/api.md | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/docs/src/api.md b/docs/src/api.md
+index 51e0541..2a688b3 100644
+--- a/docs/src/api.md
++++ b/docs/src/api.md
+@@ -379,6 +379,8 @@ See the [Implicit Solver](implicit_solver.md) page for the algorithms.
+ ClimaAtmos.Jacobian
+ ClimaAtmos.JacobianAlgorithm
+ ClimaAtmos.ManualSparseJacobian
++ClimaAtmos.SplitJacobianSolver
++ClimaAtmos.uncoupled_jacobian_names
+ ClimaAtmos.AutoDenseJacobian
+ ClimaAtmos.AutoSparseJacobian
+ ClimaAtmos.AutoSparseJacobian()
