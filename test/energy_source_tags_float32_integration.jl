@@ -258,12 +258,20 @@ import ClimaAtmos as CA
     )
     Y_restart = restarted.integrator.u
     # The checkpoint holds the whole state, so the model fields, the tags and
-    # the records all come back bit for bit.
+    # the records all come back bit for bit. `isequal` tells signed zeros
+    # apart, which `==` does not.
     for name in propertynames(Y.c)
-        @test parent(getproperty(Y_restart.c, name)) ==
-              parent(getproperty(Y.c, name))
+        @test isequal(
+            parent(getproperty(Y_restart.c, name)),
+            parent(getproperty(Y.c, name)),
+        )
     end
-    @test parent(Y_restart.f.u₃) == parent(Y.f.u₃)
+    for name in propertynames(Y.f)
+        @test isequal(
+            parent(getproperty(Y_restart.f, name)),
+            parent(getproperty(Y.f, name)),
+        )
+    end
     # The restored records are genuinely carried over, not zeroed and
     # refilled.
     @test !all(iszero, parent(Y_restart.c.prc_e_radiation))
