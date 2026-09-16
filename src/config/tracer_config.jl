@@ -729,7 +729,7 @@ end
 
 Default relative-residual tolerance of each tag family's closure check.
 
-Water differs from the two energy families by four orders of magnitude on
+Water differs from the `energy` family by four orders of magnitude on
 purpose. The water tags ride the same transport operators as `ρq_tot` apart
 from the implicit-vs-explicit vertical advection split, so their residual is
 small. Neither energy family receives implicit transport or EDMFX SGS mass

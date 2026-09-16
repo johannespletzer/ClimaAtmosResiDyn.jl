@@ -418,7 +418,9 @@ the expected, correct behaviour, not a bug.
 
 !!! tip "Calibrate on your own configuration"
 
-    Treat both defaults as starting points. Run once, read the `relative`
+    Treat the water and energy defaults as starting points. The energy source
+    tags have none, and their check never warns about the residual until you
+    set one. Run once, read the `relative`
     column, and set a tolerance a little above the level your configuration
     settles at. A tolerance tuned that way turns the warning into news; one
     left at a default that your setup never meets is just noise.
