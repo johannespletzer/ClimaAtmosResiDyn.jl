@@ -849,8 +849,9 @@ end
     take_tag_closure_reference!(integrator, reference, total_name, tag_state_names)
 
 Store the family's closure residual in `reference`, a `Ref`, unless it holds one
-already. Runs once, at the spin-up time of a check with a spin-up reference, and
-writes no row. The residual is a global reduction, so every process takes it.
+already. The callback fires every `spin_up` from the start, stores the residual
+the first time, and writes no row. The residual is a global reduction, so every
+process takes it.
 """
 function take_tag_closure_reference!(
     integrator,

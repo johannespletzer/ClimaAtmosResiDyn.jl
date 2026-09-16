@@ -279,7 +279,9 @@ The energy source family's own columns of the audit table, beside those
     unit mass, in J/kg, over the whole domain, or `NaN` when there is none;
   - `repair_moved`, `repair_moved_relative`: the integral over all tags of the
     absolute value of what the repair has moved since the start of the run
-    segment, in J, and over `scale`. Zero with the repair off.
+    segment, in J, and over `scale`. Zero with the repair off. At
+    `update_constrain_state_every: stage` or `dss` the ledger also counts the
+    in-step repairs the stepper discards; see `repair_energy_source_tags!`.
 
 Every reduction is collective, so every process must call it.
 """

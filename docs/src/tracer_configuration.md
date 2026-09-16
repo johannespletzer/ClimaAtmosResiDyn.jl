@@ -310,6 +310,7 @@ energy_closure_check:
 ```
 
 Every key is optional inside each block, and both blocks are off by default.
+Both also accept `spin_up`, described under the energy source tags.
 Each writes `water_tag_closure.csv` / `energy_tag_closure.csv` to the output
 directory, with columns `time`, `total`, `tagged`, `residual`, `relative`,
 `gross_residual`, `gross_relative`, `scale` and `nonpositive_fraction`.

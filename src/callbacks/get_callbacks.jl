@@ -771,11 +771,12 @@ end
 Install the online closure checks of the three tag families.
 
 The families are checked separately, on their own cadence and against their own
-tolerance, because their residuals are not comparable: the energy tags never
-receive implicit transport or EDMFX SGS mass fluxes, so theirs is legitimately
-the larger one. The energy source tags are looser again, and their residual is
-normalized by a quantity whose zero is a convention, so it is not comparable
-across runs that use different energy references.
+tolerance, where one is set, because their residuals are not comparable: the
+energy tags never receive implicit transport or EDMFX SGS mass fluxes, so theirs
+is legitimately the larger one. The energy source tags have no default
+tolerance, so by default their check only reports: their residual is normalized
+by a quantity whose zero is a convention, so it is not comparable across runs
+that use different energy references.
 
 Each block also carries an `abort_above` level at which the run ends instead of
 warning. Only water has a default one, for the same reason: see

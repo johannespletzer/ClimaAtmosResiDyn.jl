@@ -762,11 +762,12 @@ changes nothing about the run, so it is safe to leave on for a run whose tags
 are under investigation.
 
 `spin_up` is a time after the start, such as `"1hours"`, or `~` for none. When
-set, the check also runs once at that time, and every row reports the residual
-since then beside the residual itself. The first hour of a run makes a residual
-that is an artefact of the initial adjustment, and the rows since the spin-up
-leave it out. The reference is taken again after a restart, at `spin_up` after
-the restart.
+set, the check takes the residual once at that time and writes no row for it,
+and every later row reports the residual since then beside the residual itself.
+The first hour of a run makes a residual that is an artefact of the initial
+adjustment, and the rows since the spin-up leave it out. The reference is taken
+again after a restart, at `spin_up` after the restart. Every family's block
+accepts the key; only the energy source family sets it by default.
 """
 closure_check_from_config(
     ::Nothing,
