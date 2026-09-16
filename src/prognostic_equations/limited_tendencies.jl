@@ -8,8 +8,8 @@ Return whether the vertical mass borrowing limiter applies to the tracer
 
 # Arguments
 
-  - `ρχ_name`: Tracer variable name, either a `Symbol` (e.g. `:ρq_tot`) or a
-    `MatrixFields.FieldName`; it is only tested for membership in `species`.
+  - `ρχ_name`: Tracer variable name as a `Symbol` (e.g. `:ρq_tot`), the type
+    `species` holds. A `MatrixFields.FieldName` never matches it.
   - `species`: Species selection. `nothing` selects all tracers; a `Tuple` selects
     only the tracers it lists, so the empty tuple selects none. Any other type is an
     error.
@@ -93,8 +93,12 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
     # Our state stores ρχ (tracer density). Store χ in scratch, apply limiter, then write ρχ back.
     # When ρq_tot is limited, update ρ and ρe_tot for mass and energy consistency.
     if !isnothing(vertical_water_borrowing_limiter)
+        # `vertical_water_borrowing_species` holds `Symbol`s, as the tracer loop
+        # below tests, so these guards test a `Symbol` too. A `FieldName` never
+        # equals one, which skipped this update whenever the species were
+        # listed.
         if _should_apply_limiter_to_tracer(
-            @name(ρq_tot),
+            :ρq_tot,
             vertical_water_borrowing_species,
         ) &&
            hasproperty(Y.c, :ρq_tot)
@@ -110,7 +114,7 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
             end
         end
         if _should_apply_limiter_to_tracer(
-            @name(ρq_tot),
+            :ρq_tot,
             vertical_water_borrowing_species,
         ) &&
            hasproperty(Y.c, :ρq_tot)

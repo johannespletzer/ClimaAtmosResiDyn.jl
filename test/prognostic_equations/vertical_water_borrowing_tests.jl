@@ -83,4 +83,36 @@ end
         @test minimum(parent(Y.c.ρq_tot)) >= FT(0)
         hasproperty(Y.c, :ρq_lcl) && @test minimum(parent(Y.c.ρq_lcl)) >= FT(0)
     end
+
+    # When the limiter changes total water, density and total energy must
+    # change with it, whether `ρq_tot` is selected by name or as one of all
+    # tracers. The added water is vapor, as `enforce_mass_energy_consistency!`
+    # takes it. The increments are compared, not the states: at the default
+    # Float32, a density near one hides a small increment in rounding. The
+    # negative values are large enough to stand far above that rounding.
+    cases = (("species list", ["ρq_tot"]), ("all tracers", nothing))
+    @testset "Density and energy follow water ($label)" for (label, species) in cases
+        config = create_vwb_config(species, "vwb_consistency")
+        (; Y, p) = generate_test_simulation(config)
+        FT = eltype(Y)
+        ref_Y = deepcopy(Y)
+        introduce_negatives!(parent(Y.c.ρq_tot), 0.2, 1e-3)
+        Y_before = copy(Y)
+
+        CA.limiters_func!(Y, p, FT(0), ref_Y)
+        ᶜΔρq_tot = @. Y.c.ρq_tot - Y_before.c.ρq_tot
+        ᶜΔρ = @. Y.c.ρ - Y_before.c.ρ
+        ᶜΔρe_tot = @. Y.c.ρe_tot - Y_before.c.ρe_tot
+        thermo_params = CA.Parameters.thermodynamics_params(p.params)
+        ᶜΔρe_tot_expected = @. ᶜΔρq_tot * (
+            CA.TD.internal_energy_vapor(thermo_params, p.precomputed.ᶜT) +
+            p.core.ᶜΦ
+        )
+        # Without a change to total water there would be nothing to follow.
+        @test maximum(abs, parent(ᶜΔρq_tot)) > 1e-4
+        @test maximum(abs, parent(ᶜΔρ) .- parent(ᶜΔρq_tot)) <=
+              100 * eps(FT) * maximum(abs, parent(Y.c.ρ))
+        @test maximum(abs, parent(ᶜΔρe_tot) .- parent(ᶜΔρe_tot_expected)) <=
+              100 * eps(FT) * maximum(abs, parent(Y.c.ρe_tot))
+    end
 end

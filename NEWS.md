@@ -3,6 +3,14 @@ ClimaAtmos.jl Release Notes
 
 main
 ----
+- ![][badge-🐛bugfix] With `tracer_nonnegativity_method: vertical_water_borrowing`
+  and `ρq_tot` in an explicit `vertical_water_borrowing_species` list, the
+  change the limiter makes to total water now reaches density and total energy,
+  as it already did with the default, which selects every tracer. The two
+  guards around `enforce_mass_energy_consistency!` compared a `FieldName` with
+  the `Symbol`s of the list, so they never matched and the update was skipped.
+  Results change only for runs that set the list; no configuration in
+  `config/` does.
 - [#4802](https://github.com/CliMA/ClimaAtmos.jl/pull/4802) ![][badge-✨feature/enhancement] Horizontal resolved-gradient (geometric) SGS variance term
   `c_g (c_Δx Δx_h)² |∇_h ψ|²` for the SGS quadrature (`sgs_variance_horizontal_scale_factor` switches it on), with a closure-validity bound on
   σ_q (`sgs_variance_max_rel_std`); The new parameters default to the historical closure.
