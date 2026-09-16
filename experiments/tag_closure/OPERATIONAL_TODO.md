@@ -41,7 +41,7 @@ and ran the patched files locally.
 | #75 | T2: a Float32 integration test of the tags and records, own CI group  | whole state on restart, the repair after the solve; then `isequal`                                 | Float32 integration 51/51                 |
 | #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | docs entries, a recursion for the 1.10 allocation; then a tridiagonal two-iteration unit test, the iteration count taken from the algorithm, `isequal` | unit 229/229, integration 52/52           |
 | #77 | B9: the offset required, the closure check and label check by default | docs entries, NEWS, the zero guard, five passages; then tests of the audit columns and the spin-up, R3 on both limiters, the tolerance sentences | unit 250/250, config 15 sets, integration 52/52 |
-| #78 | T3: the tag and record code allocates nothing                         | `Vararg{Any, N}`, comments and docs                                                               | not rerun; CI                             |
+| #78 | T3: the tag and record code allocates nothing                         | `Vararg{Any, N}`, comments and docs                                                               | records 17/17, source tags 52/52          |
 | #79 | The parity rule, now with a test per family                           | known departures, `isequal`, scope; then an on/off test in each of the four tag and record families | records 22/22, source tags 53/53, water 111/111, energy tags 32/32 |
 
 CI is slow. At the last check nothing had failed except `Downgrade 1.11 -
@@ -67,7 +67,7 @@ day, 2M and P3, more than one node, and the GPU.
 ## 0. In flight
 
   - **CI** on the seven open PRs. Nothing runs on Slurm.
-  - **A local run** of #78's two integration files.
+  - Nothing runs locally.
 
 ## Decided
 
