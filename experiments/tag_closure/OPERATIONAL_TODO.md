@@ -68,6 +68,10 @@ day, 2M and P3, more than one node, and the GPU.
 
   - **CI** on the seven open PRs. Nothing runs on Slurm.
   - Nothing runs locally.
+  - **Two PRs to open,** both by the owner: decision 13's test (the token
+    cannot create PRs any more) and decision 12's upstream fix.
+  - **New worktrees:** `../ClimaAtmosResiDyn-defect` (decision 13) and
+    `../ClimaAtmos-upstream-vwb` (decision 12, on the new `upstream` remote).
 
 ## Decided
 
@@ -165,11 +169,28 @@ On 2026-09-14:
     `@name(ρq_tot)`, `limited_tendencies.jl:97`, `:113`). No shipped config
     sets the list. Options: revert it here and fix it upstream, so that it
     comes back with the next merge, as the rule says; or keep it as a named
-    exception until upstream has the fix. Read from the diff, not run.
+    exception until upstream has the fix. Upstream `main` at `eb010645`
+    (2026-09-16) still has the defect, and no upstream issue names it.
+    **Prepared, not opened:** an upstream fix with a test, on the local branch
+    `upstream-vwb-species-guard` (`527cdf06`, worktree
+    `../ClimaAtmos-upstream-vwb`). The test fails on upstream `main` (`ρ`
+    misses an increment of 1e-3, `ρe_tot` misses 2,564) and passes with the
+    fix, 13 of 13. The PR text and the steps are in
+    [UPSTREAM_VWB_PR_DRAFT.md](UPSTREAM_VWB_PR_DRAFT.md), and the check is
+    `analysis/vwb_guard_check.jl`. Opening it is the owner's call, and upstream
+    may ask for a CLA.
 13. **A fragile test on `main`.** `test/parent_budget/implicit_attribution_tests.jl:241`
     asserts that three Newton iterations leave a smaller defect than one. On
-    one CI runner it did not (5.37e-7 against 3.43e-7). Loosen it, or pin what
-    the defect is expected to do, in a PR of its own?
+    one CI runner it did not (5.37e-7 against 3.43e-7). On that dry column
+    both defects are about two rounding units of the column energy, so their
+    order is noise (`analysis/parent_budget_defect_size.jl`). On the owner's
+    request the test now runs where the defect is real: a moist DYCOMS column
+    at dt 10 s, 2.5e6 rounding units at one iteration and 110 times less at
+    three. The dry column keeps a check that the defect stays within four
+    rounding units for one and two inner iterations. Branch
+    `claude/parent-budget-defect-test` (`4c15038f`), pushed, 133 of 133
+    locally. The token could not open the PR; the title and body are in
+    [PARENT_BUDGET_DEFECT_PR.md](PARENT_BUDGET_DEFECT_PR.md).
 
 ## 2. Blocking operation (B), in dependency order
 
@@ -372,7 +393,8 @@ With D1 (B12):
  5. **The other decisions of section 1:** ClimaCore upstream (3), A4 (4), V1's
     scope (5), the design's decisions 5 and 6 (6), Phase B (7), the runs not
     yet approved (8), moving the guide into the docs (9), C2's design (11),
-    the parity break (12), the fragile ledger test (13). #80 merged without a
+    the parity break (12, an upstream PR is ready to open), the fragile ledger
+    test (13, a PR is ready to open). #80 merged without a
     NEWS entry, which its review left to the owner.
 
 ### B. Can be done now, without a new approval
