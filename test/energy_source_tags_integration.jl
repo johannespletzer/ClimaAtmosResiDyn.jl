@@ -390,13 +390,22 @@ import ClimaAtmos as CA
         p_audit = audit_simulation.integrator.p
         t_audit = audit_simulation.integrator.t
 
-        # The tags never act on the model, so its state is the first run's.
+        # The tags never act on the model, so every other field is the first
+        # run's, bit for bit. `isequal` tells signed zeros apart.
         Y_base = simulation.integrator.u
-        @test parent(Y_audit.c.ρ) == parent(Y_base.c.ρ)
-        @test parent(Y_audit.c.ρe_tot) == parent(Y_base.c.ρe_tot)
-        @test parent(Y_audit.c.ρq_tot) == parent(Y_base.c.ρq_tot)
-        @test parent(Y_audit.c.uₕ) == parent(Y_base.c.uₕ)
-        @test parent(Y_audit.f.u₃) == parent(Y_base.f.u₃)
+        for name in propertynames(Y_base.c)
+            CA.is_energy_source_tag_name(name) && continue
+            @test isequal(
+                parent(getproperty(Y_audit.c, name)),
+                parent(getproperty(Y_base.c, name)),
+            )
+        end
+        for name in propertynames(Y_base.f)
+            @test isequal(
+                parent(getproperty(Y_audit.f, name)),
+                parent(getproperty(Y_base.f, name)),
+            )
+        end
         for name in (:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
             @test all(isfinite, parent(getproperty(Y_audit.c, name)))
         end
@@ -430,6 +439,33 @@ import ClimaAtmos as CA
         @test scale > 0
         @test maximum(abs, strat .+ tropo .- parent(ᶜexpected)) <
               100 * eps(FT) * scale
+
+        # That reference reconstructs `h_tot + c`. The parent moves `h_tot`
+        # with the same reconstruction and `ρ` with the central flux. The two
+        # agree because each reconstruction reproduces a constant, which is
+        # asserted here rather than assumed. Rounding scales with the face
+        # fluxes over the level spacing.
+        upwinding = p_audit.atmos.numerics.energy_q_tot_upwinding
+        ᶜJ = CA.Fields.local_geometry_field(Y_audit.c).J
+        ᶠJ = CA.Fields.local_geometry_field(Y_audit.f).J
+        vtt_h = CA.vertical_transport(
+            Y_audit.c.ρ,
+            ᶠu³,
+            ᶜh_tot,
+            p_audit.dt,
+            upwinding,
+        )
+        ᶜparent_E = zero.(Y_audit.c.ρ)
+        @. ᶜparent_E +=
+            vtt_h -
+            c * CA.ᶜadvdivᵥ(CA.ᶠinterp(Y_audit.c.ρ * ᶜJ) / ᶠJ * ᶠu³)
+        ᶠmass_flux = @. CA.ᶠinterp(Y_audit.c.ρ * ᶜJ) / ᶠJ * ᶠu³
+        flux_scale =
+            (maximum(abs, parent(ᶜh_tot)) + c) *
+            maximum(abs, parent(ᶠmass_flux)) /
+            minimum(parent(CA.Fields.Δz_field(Y_audit.c)))
+        @test maximum(abs, parent(ᶜexpected) .- parent(ᶜparent_E)) <
+              100 * eps(FT) * flux_scale
 
         # The donor, on a step partition: all of `E` above 750 m in `strat` and
         # all below in `tropo`, moved by a flow of one sign in a band around
@@ -530,6 +566,29 @@ import ClimaAtmos as CA
         @test tags_scale(Yₜ_sphere) > 0
         @test maximum(abs, tags_sum(Yₜ_sphere) .- parent(ᶜexpected)) <
               100 * eps(FT) * tags_scale(Yₜ_sphere)
+
+        # The same against the parent's own horizontal tendency, into a second
+        # buffer. It moves `h_tot` in `ρe_tot` and one in `ρ`, so `E` changes by
+        # the first plus `c` times the second. Rounding scales with the larger
+        # of the two terms.
+        Yₜ_parent = zero(Y_sphere)
+        CA.horizontal_dynamics_tendency!(
+            Yₜ_parent,
+            Y_sphere,
+            p_sphere,
+            t_sphere,
+        )
+        ᶜρe_totₜ = parent(Yₜ_parent.c.ρe_tot)
+        ᶜρₜ_horizontal = parent(Yₜ_parent.c.ρ)
+        @test maximum(abs, ᶜρₜ_horizontal) > 0
+        term_scale = max(
+            maximum(abs, ᶜρe_totₜ),
+            c * maximum(abs, ᶜρₜ_horizontal),
+        )
+        @test maximum(
+            abs,
+            tags_sum(Yₜ_sphere) .- (ᶜρe_totₜ .+ c .* ᶜρₜ_horizontal),
+        ) < 100 * eps(FT) * term_scale
 
         # Hyperdiffusion. The parent's is the only hyperdiffusion of `E`, and
         # the tags take none as tracers. The parent takes the water part out of

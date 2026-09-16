@@ -286,9 +286,12 @@ transport terms, each tag takes its share of the parent's own flux of
 The shares are the ones sedimentation uses. A partition tag's clamped share of
 `E` is divided by the partition's sum, and a tag with a source keeps its plain
 clamped share. So the partition tags' tendencies add up to the parent's, and
-transport adds nothing to `e_src_res`, except for one gap in timing. The tags
+transport adds nothing to `e_src_res`, except for one gap in timing. The
+horizontal and the hyperdiffusion operators combine every node of an element,
+so there the sum holds when the shares add up to one at every node of the
+element. With the offset and the repair on, they do. The tags
 move explicitly, with the fluxes of the solved stage state. The parent moves
-`ρe_tot` vertically in the implicit step. With one Newton iteration
+`ρe_tot` and `ρ`, and so `c·ρ`, vertically in the implicit step. With one Newton iteration
 (`max_newton_iters_ode: 1`), its contribution is the increment linearised about
 the stage's first guess, and its upwind correction comes after the solve. The
 two differ by that linearisation. In the tag-closure experiments this made the
@@ -303,7 +306,12 @@ switch on and off.
 
 It needs an `energy_source_tag_offset`. A share is zero wherever `E` is not
 positive, and there the tags would not move at all, so `enthalpy` without an
-offset is refused at configuration. The upwind shares are first order, so a
+offset is refused at configuration. A partition tag's share is also zero where
+`E` is positive but the partition's clamped shares add up to zero, that is,
+where every region tag is negative. There the tags stop moving while the
+parent's flux goes on, and the difference lands in `e_src_res`. The repair keeps
+the region tags non-negative wherever `E` is positive, so this happens only
+with `energy_source_tag_repair: false`. The upwind shares are first order, so a
 region's edge smears more than under van Leer. That is the price of exact
 closure, and for an audit it is acceptable.
 
