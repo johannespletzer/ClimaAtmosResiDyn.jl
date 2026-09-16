@@ -1,7 +1,7 @@
 From 6c0fe4bd639d5bcc5eed5f1623612168c782aff5 Mon Sep 17 00:00:00 2001
 From: review <review@local>
 Date: Wed, 16 Sep 2026 09:38:19 +0000
-Subject: [PATCH] Name the departures from parity, and scope the rule
+Subject: [PATCH 1/2] Name the departures from parity, and scope the rule
 
 The section now names the upstream commit it compares against, asks for
 isequal rather than ==, says what a diagnostic being off means, scopes the

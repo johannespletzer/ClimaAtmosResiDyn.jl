@@ -1,7 +1,7 @@
 From 721fa86e6f0880398fb223f463896f60af940acb Mon Sep 17 00:00:00 2001
 From: review <review@local>
 Date: Wed, 16 Sep 2026 10:03:51 +0000
-Subject: [PATCH 3/3] Reword five passages that drifted from the code
+Subject: [PATCH 3/4] Reword five passages that drifted from the code
 
 The spin-up reference writes no row and its callback fires every spin_up;
 the energy source family has no default tolerance; repair_moved counts

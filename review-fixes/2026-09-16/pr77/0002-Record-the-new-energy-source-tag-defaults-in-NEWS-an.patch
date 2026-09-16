@@ -1,7 +1,7 @@
 From ee0445391ca41ade09a8c59ac4408cee2af84034 Mon Sep 17 00:00:00 2001
 From: review <review@local>
 Date: Wed, 16 Sep 2026 09:35:44 +0000
-Subject: [PATCH 2/3] Record the new energy source tag defaults in NEWS, and
+Subject: [PATCH 2/4] Record the new energy source tag defaults in NEWS, and
  guard the spin-up ratio
 
 The offset is now required, the closure check runs by default without a
