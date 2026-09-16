@@ -122,8 +122,8 @@ When reviewing or writing changes, name the validation surface explicitly:
 
 ClimaAtmosResiDyn develops diagnostics on top of upstream [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl): the stratospheric passive tracers, the tagged energy and water tracers, the energy source tags, the process records and the parent-budget ledger. It must not change the simulation. This is a boundary condition on every change in this repository.
 
-  - **Without a diagnostic.** A configuration that upstream can run gives bit-for-bit the same results here as at the upstream commit last merged into `main`. Compare the prognostic state and every output field with `==`, not with a tolerance.
-  - **With a diagnostic.** Every field upstream has stays bit for bit the same as in the same run without the diagnostic. Only the diagnostic's own prognostic fields (such as `ρe_tag_*`, `ρq_tag_*`, `ρe_src_*` and `prc_*`), its cache, callbacks and output may differ, and so may the run time.
+  - **Without a diagnostic.** A configuration that upstream can run gives bit-for-bit the same results here as at the upstream commit last merged into `main`. That commit is the second parent of the last "Merge upstream CliMA/ClimaAtmos.jl main" commit (currently 4a10f18, release v0.42.9). Compare the prognostic state and every output field with `isequal` on the parent arrays, not with a tolerance; `==` accepts a signed-zero difference and rejects matching `NaN`s.
+  - **With a diagnostic.** Every field upstream has stays bit for bit the same as in the same run without the diagnostic. Only the diagnostic's own prognostic fields (such as `ρe_tag_*`, `ρq_tag_*`, `ρe_src_*` and `prc_*`), its cache, callbacks and output may differ, and so may the run time. A diagnostic is off when its family key is at its default; the defaults of its sub-keys do not count. This clause is claimed for the default solver, a fixed number of Newton iterations with the direct block solver. With `use_krylov_method` or `use_newton_rtol` the residual norm spans the diagnostic's fields too, so a tagged run there is not expected to match, and that mismatch is not a defect of the diagnostic.
   - **What is compared.** Bit-for-bit holds within one machine, one Julia and `Manifest`, one float type and one process count. The same run on Levante and on terrabyte agrees only to rounding, so compare two runs from one machine.
 
 What follows for a change:
@@ -135,6 +135,13 @@ What follows for a change:
   - A refusal or a warning at configuration may only concern the diagnostic's own keys. A configuration without them runs as it does upstream.
   - A defect found in upstream code is fixed upstream, and reaches this fork with the next merge. Fixing it here first breaks parity.
   - `reproducibility_tests/ref_counter.jl` changes only with an upstream merge. A change of this fork's own that would need a new reference breaks this rule.
+
+Known departures, to be removed as they are resolved:
+
+  - dd06318f changed two guards in `limiters_func!` from `@name(ρq_tot)` to `:ρq_tot` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`, where upstream v0.42.9 skips it. No shipped config sets the list. The decision is pending: revert here and fix upstream, or keep it as a named exception.
+  - `prognostic_surface: "SeasonalSST"` was a fork-only surface option, not a diagnostic. #80 removes it.
+
+No test yet compares a run with a diagnostic on against the same run with it off on the model fields, and no CI job compares the fork with upstream. Until one exists, the fork-versus-upstream clause is checked by a run against the last merged upstream commit on one machine.
 
 ## MSE / reproducibility
 
