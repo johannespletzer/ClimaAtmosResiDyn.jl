@@ -605,7 +605,8 @@ from the implicit-vs-explicit vertical advection split, so their residual is
 small. Neither energy family receives the parent's implicit vertical advection
 or the EDMFX SGS mass flux, and transport is not attributed on top, by design
 (see `KNOWN_TAG_SOURCES`). So a much larger residual is expected and normal.
-The energy source tags do follow sedimentation, as transport of their own.
+Sedimentation reaches both: the `ρe_tag_*` family attributes it under
+`precipitation`, and the energy source tags follow it as transport of their own.
 
 These are starting points, not derived numbers. Read the first run's closure
 table and set a tolerance that sits above the level your configuration settles

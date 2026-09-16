@@ -186,6 +186,11 @@ read from the output of a run laid out for them:
   - a [process record](process_record.md) for each of those processes, and on
     a column `rhoa`, to weight the column integrals.
 
+The `new_*` tags list `precipitation`, which no source tag can follow, so the
+run warns about each of them at startup. Under a scheme other than 0-moment
+microphysics it also warns that `microphysics` is inert. Those warnings are
+expected for this layout.
+
 **Form A**, at each point, sets the new energy split by region against the new
 energy split by process: `new_tropics + new_extratropics - (sfc + rad)`. The
 two sides are separate tags that obey the same rule, so their agreement is a
@@ -202,12 +207,13 @@ Each is blind to something. Form A compares tags moved by the same transport,
 so it does not see pressure work. Transport cancels in a column integral, so
 form B does not see it either. Only `e_src_res` sees transport.
 
-On a sphere, the tags' numerics dominate form A's largest pointwise gap, and
-they cancel when the gap is integrated over the domain, while a process without
-a tag does not. So on a sphere, read form A as a domain integral. In the
-tag-closure experiments, a process without a tag gave an integrated gap of about
-1e-3 of the integrated new energy, against about 5e-5 once every process had
-one.
+On a sphere, the tags' numerics set form A's largest pointwise gap once every
+process has a tag, and they cancel when the gap is integrated over the domain,
+while a process without a tag does not. In the tag-closure experiments a
+process without a tag still stood out sevenfold pointwise. So on a sphere,
+read form A as a domain integral. There, a process without a tag gave an
+integrated gap of about 1e-3 of the integrated new energy, against about 5e-5
+once every process had one.
 
 ## The energy reference problem
 
