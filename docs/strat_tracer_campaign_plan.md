@@ -18,8 +18,10 @@ Decisions taken with the user:
     The run reproduces stratospheric climate statistics, not the observed sequence
     of SSWs or the QBO.
   - **Coupled AMIP surface** via ClimaCoupler: prescribed observed SST and sea ice
-    over 1979–2021. This is the main track; the seasonal analytic SST added to
-    ClimaAtmos is the fallback.
+    over 1979–2021. This is the main track. The fallback is the steady analytic
+    SST: the seasonal analytic SST was removed on 2026-09-14, because this fork
+    changes no simulation result against upstream ClimaAtmos
+    (`docs/clima_atmos_specific.md`, "Fork parity with upstream").
   - **Sampled boxes, not a tiling**, one model layer deep.
   - **1979-01-01 → 2021-01-01** (`t_end: "15341days"` = 42×365 + 11 leap days).
     ~10 y is tracer spin-up, so ~32 usable years.
@@ -34,11 +36,12 @@ seasonal — was the largest remaining physical shortcut in the campaign. A
 coupled AMIP run removes it: prescribed *observed* SST and sea ice over exactly
 the campaign period, from data that already ships with the coupler.
 
-Adopting it supersedes `prognostic_surface: "SeasonalSST"`, which stays in the
-codebase as the fallback if the coupled route proves impractical (see
-"Fallback: atmosphere-only" below). It also changes the cost basis: the budget
-section's node-hour figures were derived for an atmosphere-only CPU run and do
-**not** carry over.
+If the coupled route proves impractical, the fallback is the steady analytic
+surface temperature (see "Fallback: atmosphere-only" below). The seasonal
+analytic SST, `prognostic_surface: "SeasonalSST"`, was removed on 2026-09-14,
+since the fork adds diagnostics only. Adopting AMIP also changes the cost basis:
+the budget section's node-hour figures were derived for an atmosphere-only CPU
+run and do **not** carry over.
 
 Checked against ClimaCoupler at `953c273`.
 
@@ -598,15 +601,15 @@ things that are currently assumed:
 
 `post_processing/merge_tracer_budgets.jl` has never been run. Neither has
 `runscripts/xmodel.amip`, beyond exercising its checkpoint-parsing logic
-directly. The source-box change, the seasonal SST and the docs are covered by
-CI; nothing else here is.
+directly. The source-box change and the docs are covered by CI; nothing else
+here is.
 
 ## Known limitations to record with the results
 
   - On the coupled main track the surface is observed SST and sea ice, so this is
     no longer a limitation. If the campaign falls back to atmosphere-only, it
-    returns: the analytic seasonal cycle is an ocean one, with no land or sea-ice
-    seasonality, no ENSO and no SST trend.
+    returns in full: the analytic surface temperature is steady, with no
+    seasonal cycle, no land or sea-ice seasonality, no ENSO and no SST trend.
   - `dz_bottom = 200 m` coarsens the boundary layer, degrading EDMF and surface
     fluxes.
   - CH4, N2O and the CFCs are fixed constants (`radiation.jl:210-248`); only CO2 and
@@ -651,11 +654,13 @@ no thermal one. `ExternalTemperature` reads
 If the coupled route proves impractical — allocation, GPU stack, or schedule —
 these are the atmosphere-only options, in order of preference:
 
- 1. **Seasonally varying analytic SST** — **implemented**, as
-    `prognostic_surface: "SeasonalSST"` (`Setups.SeasonalOceanTemperature`). The
-    member configs currently set this, and it is what the campaign falls back to.
+ 1. **Seasonally varying analytic SST** — **removed** on 2026-09-14. It was
+    `prognostic_surface: "SeasonalSST"` (`Setups.SeasonalOceanTemperature`). It
+    changed the simulation against upstream ClimaAtmos, which this fork does not
+    do. A seasonal cycle has to come from upstream or from the coupler.
 
- 2. **Steady analytic SST** — the previous default; no reason to prefer it now.
+ 2. **Steady analytic SST** — `prognostic_surface: "PrescribedSST"`. The member
+    configs set this, and it is what the campaign falls back to.
 
  3. **`prognostic_surface: "SlabOceanSST"`** — config only, but drifts to its own
     equilibrium and adds spin-up.
