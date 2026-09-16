@@ -139,9 +139,9 @@ What follows for a change:
 Known departures, to be removed as they are resolved:
 
   - dd06318f changed two guards in `limiters_func!` from `@name(ρq_tot)` to `:ρq_tot` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`, where upstream v0.42.9 skips it. No shipped config sets the list. The decision is pending: revert here and fix upstream, or keep it as a named exception.
-  - `prognostic_surface: "SeasonalSST"` was a fork-only surface option, not a diagnostic. #80 removes it.
+  - `prognostic_surface: "SeasonalSST"` was a fork-only surface option, not a diagnostic. #80 removes it; drop this bullet once #80 has merged.
 
-No test yet compares a run with a diagnostic on against the same run with it off on the model fields, and no CI job compares the fork with upstream. Until one exists, the fork-versus-upstream clause is checked by a run against the last merged upstream commit on one machine.
+The parent-budget ledger has a test that steps the same column with the ledger off and on and compares every model field (`test/parent_budget/envelope_tests.jl`, "The trajectory is unchanged"); it is the pattern to reuse. The four tagging and record families have no such test yet, and no CI job compares the fork with upstream. Until one exists, the fork-versus-upstream clause is checked by a run against the last merged upstream commit on one machine.
 
 ## MSE / reproducibility
 
