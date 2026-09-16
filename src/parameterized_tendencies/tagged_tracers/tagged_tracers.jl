@@ -542,7 +542,10 @@ function write_tag_closure!(output_dir, t, family, closure; reference = nothing)
         header *= ",residual_at_spin_up,residual_since_spin_up,relative_since_spin_up"
         at_spin_up = isnothing(reference[]) ? NaN : reference[]
         since = closure.residual - at_spin_up
-        values = (values..., at_spin_up, since, since / closure.scale)
+        # The same guard as `tag_closure` uses for its ratios.
+        relative_since =
+            iszero(closure.scale) ? zero(since) : since / closure.scale
+        values = (values..., at_spin_up, since, relative_since)
     end
     open(path, "a") do io
         write_header && println(io, header)
