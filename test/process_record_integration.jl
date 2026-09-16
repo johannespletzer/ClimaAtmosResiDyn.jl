@@ -36,7 +36,9 @@ import ClimaAtmos as CA
 # Allocation checks, as in `parameterized_tendencies/microphysics/allocations.jl`:
 # one call to compile, then `@allocated` on a second call. Each is a function, so
 # that `@allocated` does not count the boxing of globals in a test file.
-function second_call_allocations(f::F, args...) where {F}
+# The length parameter makes Julia specialize on every argument, so the call
+# inside is static and nothing is boxed at the call itself.
+function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
     f(args...)
     return @allocated f(args...)
 end
@@ -136,7 +138,8 @@ end
     @test !all(iszero, parent(Y_restart.c.prc_e_radiation))
 
     # 5. The brackets allocate nothing. The implicit tendency brackets
-    # microphysics and precipitation for the records.
+    # microphysics and precipitation, which no record here lists, so that
+    # check measures the records' guards and the recursion over them.
     @testset "The records do not allocate" begin
         p = simulation.integrator.p
         t = simulation.integrator.t

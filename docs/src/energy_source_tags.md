@@ -217,6 +217,10 @@ exactly:
     by the parent, so it is exercised even there.
   - `test/energy_source_tags_tests.jl` covers the **loss algebra** against a
     parent that is positive by construction. That is a kernel-level check.
+  - The integration test also checks that the tag code **allocates nothing**
+    in a tendency evaluation or in the repair, on the 1-moment column with an
+    offset, and `test/process_record_integration.jl` checks the same for the
+    records' brackets.
   - **Donor-proportional loss through a real bracketed solve** is covered by the
     same integration test with `energy_source_tag_offset` (see below), which
     makes the tags' total positive on this column. It checks that the offset

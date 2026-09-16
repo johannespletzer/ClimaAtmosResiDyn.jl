@@ -18,7 +18,9 @@ family is wired into a simulation at all, which is what this file covers:
     the same solve, and the offset leaves the model's own state untouched;
  8. under 1-moment microphysics, sedimentation moves the tags with the water.
     The partition's fluxes add up to the parent's, and each face takes the
-    shares of the cell that loses the energy, in either direction.
+    shares of the cell that loses the energy, in either direction. On the
+    same column the tag code allocates nothing, in a tendency evaluation or
+    in the repair.
 
 Items 1 to 6 run on `ρe_tot` itself. It is non-positive across this column, so
 `energy_source_fraction` returns zero and the loss never runs there. Production
@@ -44,7 +46,9 @@ import ClimaAtmos as CA
 # Allocation checks, as in `parameterized_tendencies/microphysics/allocations.jl`:
 # one call to compile, then `@allocated` on a second call. Each is a function, so
 # that `@allocated` does not count the boxing of globals in a test file.
-function second_call_allocations(f::F, args...) where {F}
+# The length parameter makes Julia specialize on every argument, so the call
+# inside is static and nothing is boxed at the call itself.
+function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
     f(args...)
     return @allocated f(args...)
 end
