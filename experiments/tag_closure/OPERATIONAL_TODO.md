@@ -21,28 +21,37 @@ Priorities: **B** blocks operation, **S** should be fixed, **N** is nice to
 have. Sizes: S is under a day, M one to three days, L several PRs or a
 campaign.
 
-## Where things stand (2026-09-14, night)
+## Where things stand (2026-09-16, after the reviews)
 
 Merged into `main`: #65 and the offset (#68); #69, the implicit bracket and the
 repair (`08682fd8`); #70, sedimentation as transport, the EDMF refusal and the
-label warnings (`3b4b6056`).
+label warnings (`3b4b6056`); #73, the docs deploy (`327cd207`); #80,
+`SeasonalSST` removed (`2f60df85`).
 
-Open pull requests:
+On 2026-09-16 each open PR got a review, and the owner had another session
+push patches for the findings with a clear fix (the record is on
+`claude/review-open-prs-tasks-wxiw0k`, `review-fixes/2026-09-16/`). Nobody had
+run those patches. This session added the findings that needed a Julia run,
+and ran the patched files locally.
 
-| PR  | What                                                                  | State                          | CI, 2026-09-14 night       |
-|:--- |:--------------------------------------------------------------------- |:------------------------------ |:-------------------------- |
-| #73 | Docs workflow: `contents: write` for the deploy, a 60-minute timeout  | ready, waits for the owner     | 63 pass, 1 pending         |
-| #72 | The enthalpy audit, `energy_source_tag_transport`, with its docs      | ready, waits for the owner     | 36 pass, 26 pending        |
-| #74 | D2: the energy source tag docs brought up to date after #70           | ready, waits for the owner     | 40 pass, 23 pending        |
-| #75 | T2: a Float32 integration test of the tags and records, own CI group  | draft; 38 of 38 pass locally   | 28 pass, 39 pending        |
-| #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | draft; EDMF validated (E44e)   | 30 pending, restarted by the allocation check |
-| #77 | B9: the offset required, the closure check and label check by default | draft; tests pass locally      | 9 pass, 26 pending         |
-| #78 | T3: the tag and record code allocates nothing                         | draft; 52 and 17 pass locally  | 1 pass, 32 pending         |
-| #79 | The parity rule in `AGENTS.md` and `docs/clima_atmos_specific.md`     | draft; docs only               | opened 2026-09-14 night    |
-| #80 | `SeasonalSST` removed entirely, by the owner's decision               | draft; loads, refuses the key  | opened 2026-09-14 night    |
+| PR  | What                                                                  | Review patches, then this session                                                                 | Local runs, this session                  |
+|:--- |:--------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------- |:----------------------------------------- |
+| #72 | The enthalpy audit, `energy_source_tag_transport`, with its docs      | `uₕ` compared, both refusals tested, two transport sentences; then every model field with `isequal`, the vertical and horizontal checks against the parent's own terms, three doc sentences | in progress                               |
+| #74 | D2: the energy source tag docs brought up to date after #70           | three sentences; its clash with #77 is fixed on #77                                               | docs only                                 |
+| #75 | T2: a Float32 integration test of the tags and records, own CI group  | whole state on restart, the repair after the solve; then `isequal`                                 | in progress                               |
+| #76 | P4's fix: tags and records solved apart from the Jacobian's solver    | docs entries, a recursion for the 1.10 allocation; then a tridiagonal two-iteration unit test, the iteration count taken from the algorithm, `isequal` | unit 229/229, integration 52/52           |
+| #77 | B9: the offset required, the closure check and label check by default | docs entries, NEWS, the zero guard, five passages; then tests of the audit columns and the spin-up, R3 on both limiters, the tolerance sentences | unit 250/250, config 15 sets, integration 52/52 |
+| #78 | T3: the tag and record code allocates nothing                         | `Vararg{Any, N}`, comments and docs                                                               | not rerun; CI                             |
+| #79 | The parity rule, now with a test per family                           | known departures, `isequal`, scope; then an on/off test in each of the four tag and record families | records 22/22, source tags 53/53, water 111/111, energy tags 32/32 |
 
-No check has failed on any of them. The queue is long, so most are still
-pending.
+CI is slow. At the last check nothing had failed except `Downgrade 1.11 -
+parent_budget` on #72: `implicit_attribution_tests.jl:241` found the defect of
+three Newton iterations larger than that of one (5.37e-7 against 3.43e-7).
+That test is on `main`, #72 does not touch it, the same job passed at #72's
+previous head with the same `src/`, and it passes on #74 and #75. The runner
+was in another Azure region, so the test looks hardware-sensitive (decision 13).
+The token cannot rerun a job; #72's next push starts a new run. Whether the
+recursion removes #76's 1,056 bytes on Julia 1.10 is also for CI to show.
 
 Measured so far: 0M on a column and a sphere, and 1M on a warm column, a day
 each (E26 to E39, E43); 1M with ice on a cold column for an hour, with a twin
@@ -57,8 +66,8 @@ day, 2M and P3, more than one node, and the GPU.
 
 ## 0. In flight
 
-  - **CI** on all nine open PRs. Nothing runs on Slurm.
-  - **Paused** on 2026-09-14 night, by the owner, until CI has finished.
+  - **CI** on the seven open PRs. Nothing runs on Slurm.
+  - **Local runs** of #72's integration file and #75's Float32 file.
 
 ## Decided
 
@@ -157,6 +166,10 @@ On 2026-09-14:
     sets the list. Options: revert it here and fix it upstream, so that it
     comes back with the next merge, as the rule says; or keep it as a named
     exception until upstream has the fix. Read from the diff, not run.
+13. **A fragile test on `main`.** `test/parent_budget/implicit_attribution_tests.jl:241`
+    asserts that three Newton iterations leave a smaller defect than one. On
+    one CI runner it did not (5.37e-7 against 3.43e-7). Loosen it, or pin what
+    the defect is expected to do, in a PR of its own?
 
 ## 2. Blocking operation (B), in dependency order
 
@@ -272,17 +285,17 @@ With D1 (B12):
     negative, and where a member exceeds its group's sum.
   - ~~**A7.**~~ Done (E49): a transport error cancels along the direction it
     moved, and a process no tag follows, or the repair, keeps its sum.
-  - **Parity checks (P6).** Nothing yet compares the fork with an upstream
-    checkout, and no test compares every model field with a diagnostic on
-    against off. The tests compare variants with tags on: the offset on and
-    off (item 7), the two transports (#72's item 9), and the split and unsplit
-    solver (#76's item 6, 0M only). A test of tags on against off is test code.
-    A run against upstream `v0.42.9` sets a reproducibility reference; the
-    owner chose on 2026-09-14 to skip it for now. Besides `dd06318f` (decision 12), a first read
-    of the 14 files in `src/` where the fork rewrites upstream lines, against
-    `v0.42.9`, found nothing else that acts without a diagnostic. The fork
-    also adds `passive_tracers`, which upstream cannot run; `SeasonalSST` was
-    removed (#80). The files it only adds to were not read for this.
+  - **Parity checks (P6).** The on/off half is done in #79: each tag and
+    record family now runs the same column with and without it and compares
+    every model field with `isequal`, as the ledger's envelope test already
+    did. All four match bit for bit locally. Still open: the stratospheric
+    passive tracers have no such test, and nothing compares the fork with an
+    upstream checkout. That run sets a reproducibility reference, and the
+    owner chose on 2026-09-14 to skip it for now. Besides `dd06318f`
+    (decision 12), a first read of the 14 files in `src/` where the fork
+    rewrites upstream lines, against `v0.42.9`, found nothing else that acts
+    without a diagnostic. The files the fork only adds to were not read for
+    this. `SeasonalSST` is gone (#80).
   - **P5.** The explicit tendency's generic tracer loops allocate, with or
     without tags, and each tag adds to it: 22,576 bytes per call without tags
     and 58,160 with four on a 1M column (#78's description). Shared model
@@ -359,7 +372,8 @@ With D1 (B12):
  5. **The other decisions of section 1:** ClimaCore upstream (3), A4 (4), V1's
     scope (5), the design's decisions 5 and 6 (6), Phase B (7), the runs not
     yet approved (8), moving the guide into the docs (9), C2's design (11),
-    the parity break (12).
+    the parity break (12), the fragile ledger test (13). #80 merged without a
+    NEWS entry, which its review left to the owner.
 
 ### B. Can be done now, without a new approval
 
