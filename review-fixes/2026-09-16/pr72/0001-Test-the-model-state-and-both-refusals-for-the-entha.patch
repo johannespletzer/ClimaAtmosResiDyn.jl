@@ -1,7 +1,7 @@
 From 88be3a2a88e8ee0e0ccd95b09826c4197aaf07d1 Mon Sep 17 00:00:00 2001
 From: review <review@local>
 Date: Wed, 16 Sep 2026 09:34:54 +0000
-Subject: [PATCH] Test the model state and both refusals for the enthalpy
+Subject: [PATCH 1/2] Test the model state and both refusals for the enthalpy
  transport
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

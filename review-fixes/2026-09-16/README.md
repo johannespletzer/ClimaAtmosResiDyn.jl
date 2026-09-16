@@ -25,7 +25,8 @@ run. The docs and comment changes are safe to read. The test and source
 changes need one CI run:
 
 - `pr72`: item 9 also compares `uₕ`; both `AtmosTagging` refusals get a
-  config-level test, and the `enthalpy` key a positive case.
+  config-level test, and the `enthalpy` key a positive case; the page's two
+  unconditional passive-tracer statements name the transport in use.
 - `pr74`: three sentence fixes (startup warnings of the recommended layout,
   where sedimentation lands for each family, when the numerics set the gap).
 - `pr75`: the restart compares every field of the state; after the solve every
