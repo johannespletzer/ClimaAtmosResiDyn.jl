@@ -228,6 +228,43 @@ end
     @test result.ret_code == :success
     Y = simulation.integrator.u
 
+    # The tags change none of the model's own fields. The same run without
+    # them is a new model type, so this costs a compile, and every other field
+    # must come out bit for bit. `isequal` tells signed zeros apart, which `==`
+    # does not. See "Fork parity with upstream" in `docs/clima_atmos_specific.md`.
+    @testset "The model's fields do not depend on the tags" begin
+        local plain_dict = merge(
+            filter(
+                entry -> !(first(entry) in ("energy_tracers", "energy_closure_check")),
+                test_dict,
+            ),
+            Dict{String, Any}("output_dir" => mktempdir(pwd())),
+        )
+        local plain = CA.get_simulation(
+            CA.AtmosConfig(plain_dict; job_id = "tagged_tracers_restart_plain"),
+        )
+        @test CA.solve_atmos!(plain).ret_code == :success
+        local Y_plain = plain.integrator.u
+        # The run with them has its own fields and nothing else besides.
+        @test all(
+            name -> hasproperty(Y_plain.c, name) || CA.is_tagged_tracer_name(name),
+            propertynames(Y.c),
+        )
+        @test propertynames(Y.f) == propertynames(Y_plain.f)
+        for name in propertynames(Y_plain.c)
+            @test isequal(
+                parent(getproperty(Y.c, name)),
+                parent(getproperty(Y_plain.c, name)),
+            )
+        end
+        for name in propertynames(Y_plain.f)
+            @test isequal(
+                parent(getproperty(Y.f, name)),
+                parent(getproperty(Y_plain.f, name)),
+            )
+        end
+    end
+
     restart_file = joinpath(simulation.output_dir, "day0.20.hdf5")
     @test isfile(restart_file)
 
