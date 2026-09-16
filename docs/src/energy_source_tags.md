@@ -217,6 +217,10 @@ exactly:
     by the parent, so it is exercised even there.
   - `test/energy_source_tags_tests.jl` covers the **loss algebra** against a
     parent that is positive by construction. That is a kernel-level check.
+  - `test/energy_source_tags_float32_integration.jl` covers the partition of
+    `E = ρe_tot + c·ρ` at t = 0, the sedimentation partition, the repair's
+    non-negativity and a checkpoint round trip in **Float32**, with the
+    process records beside the tags.
   - **Donor-proportional loss through a real bracketed solve** is covered by the
     same integration test with `energy_source_tag_offset` (see below), which
     makes the tags' total positive on this column. It checks that the offset

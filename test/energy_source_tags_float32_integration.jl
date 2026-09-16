@@ -15,9 +15,10 @@ Both families are configured in the same run rather than in two files, for
 two reasons. First, a tag name is a type parameter, so `energy_source_tags`
 and `energy_process_record` together are one `AtmosModel` type and one
 compile of the whole solve pipeline; splitting them would pay for that
-compile twice. Second, `docs/src/energy_source_tags.md` promises the two
-families are independent, and configuring them together is the combination
-most likely to reveal that they are not.
+compile twice. Second, `docs/src/process_record.md` and
+`docs/src/tracer_configuration.md` promise the two families are independent,
+and configuring them together is the combination most likely to reveal that
+they are not.
 
 The offset and 1-moment microphysics are folded into this same run rather
 than run separately, again to keep the compile count at one:
@@ -30,8 +31,9 @@ than run separately, again to keep the compile count at one:
     `E = ρe_tot + c·ρ` at t = 0, bounded in `eps(Float32)` terms relative to
     the scale of `E`. `ρe_tot` alone is non-positive across this column (see
     `energy_source_tags_integration.jl`), so the offset is not optional here;
-    without it the donor loss never runs and the partition check above would
-    be checking a partition of a field the run never touches;
+    without it `energy_source_fraction` returns zero where the parent is not
+    positive, so the donor loss and the sedimentation shares would be inert
+    and items 5 and 6 would check nothing;
  4. a short solve succeeds with the tags, the offset, the repair (on by
     default), 1-moment sedimentation, the closure check and the records all
     active together, and every field involved stays finite;
@@ -40,7 +42,8 @@ than run separately, again to keep the compile count at one:
  6. sedimentation's flux partition adds up to the parent's, in Float32, the
     same check `energy_source_tags_integration.jl` makes in Float64 at
     `100 eps`;
- 7. state and masks survive a checkpoint round trip in Float32.
+ 7. the state, the tags, the records and the masks survive a checkpoint
+    round trip in Float32.
 
 What this file does not repeat: the with-versus-without-offset comparison of
 the loss half's effect on the column residual (`energy_source_tags_integration.jl`,
@@ -111,10 +114,10 @@ import ClimaAtmos as CA
         "energy_source_tag_offset" => c,
         "energy_process_record" => ["radiation", "surface_flux"],
         # Exercises the closure check's own reductions and CSV write in
-        # Float32. The default tolerance (1e-6) is far below the residual
-        # this family is known to carry (bound 5e-2 in the Float64
-        # integration test), so this checks the check runs and stays
-        # finite, not that it passes its own tolerance.
+        # Float32. This family is known to carry a residual (bound 5e-2 in
+        # the Float64 integration test) that a tolerance would flag, so this
+        # checks that the check runs and stays finite, not that it passes a
+        # tolerance. The explicit period makes rows appear within 60 s.
         "energy_source_closure_check" => Dict{String, Any}("period" => "20secs"),
     )
 
@@ -186,6 +189,17 @@ import ClimaAtmos as CA
         @test all(isfinite, parent(getproperty(Y.c, name)))
     end
 
+    # The repair keeps every tag non-negative wherever `E = ρe_tot + c·ρ` is
+    # positive, after each state update, so the state after the last step
+    # holds no negative tag there. The ledger alone cannot show this, since
+    # it is zero when the repair never acted.
+    ᶜE = @. Y.c.ρe_tot + FT(c) * Y.c.ρ
+    positive = parent(ᶜE) .> 0
+    @test any(positive)
+    for name in (:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
+        @test all(>=(0), parent(getproperty(Y.c, name))[positive])
+    end
+
     # 5. Production reached the source tag: a source tag starts at zero, so
     # anything nonzero came through the `radiation` bracket.
     @test maximum(abs.(parent(Y.c.ρe_src_rad))) > 0
@@ -243,16 +257,13 @@ import ClimaAtmos as CA
         ),
     )
     Y_restart = restarted.integrator.u
-    for name in (
-        :ρe_src_strat,
-        :ρe_src_tropo,
-        :ρe_src_rad,
-        :prc_e_radiation,
-        :prc_e_surface_flux,
-    )
+    # The checkpoint holds the whole state, so the model fields, the tags and
+    # the records all come back bit for bit.
+    for name in propertynames(Y.c)
         @test parent(getproperty(Y_restart.c, name)) ==
               parent(getproperty(Y.c, name))
     end
+    @test parent(Y_restart.f.u₃) == parent(Y.f.u₃)
     # The restored records are genuinely carried over, not zeroed and
     # refilled.
     @test !all(iszero, parent(Y_restart.c.prc_e_radiation))
