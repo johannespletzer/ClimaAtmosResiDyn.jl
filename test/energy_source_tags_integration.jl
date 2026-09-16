@@ -10,10 +10,12 @@ family is wired into a simulation at all, which is what this file covers:
  2. the region masks reach `p.tagging.ᶜenergy_source_masks` and partition unity;
  3. at t = 0 the region tags partition `ρe_tot` to machine precision;
  4. the generic tracer machinery transports the tags, they stay finite, and the
-    closure residual stays a small bounded monitor;
+    closure residual stays a small bounded monitor; masked *production* reaches
+    a source tag through a real bracketed process, which is the one thing here
+    that a plain-array unit test cannot show;
  5. state and masks survive a checkpoint round trip;
- 6. masked *production* reaches a source tag through a real bracketed process,
-    which is the one thing here that a plain-array unit test cannot show;
+ 6. the implicit Jacobian solves the tags apart from the rest, and the split
+    solver gives the increments of the unsplit one exactly, without allocating;
  7. with `energy_source_tag_offset`, the donor-proportional *loss* runs through
     the same solve, and the offset leaves the model's own state untouched;
  8. under 1-moment microphysics, sedimentation moves the tags with the water.

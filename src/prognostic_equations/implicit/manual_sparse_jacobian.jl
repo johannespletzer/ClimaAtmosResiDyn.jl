@@ -919,17 +919,25 @@ function LinearAlgebra.ldiv!(
         solver.matrix,
         split_solver_view(solver.keys, R),
     )
-    foreach(solver.uncoupled) do field_solve
-        (; name, alg, cache, keys, matrix) = field_solve
-        MatrixFields.run_field_matrix_solver!(
-            alg,
-            cache,
-            MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(ΔY, name),)),
-            matrix,
-            MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(R, name),)),
-        )
-    end
+    solve_uncoupled_fields!(solver.uncoupled, ΔY, R)
     return ΔY
+end
+
+# Solve the uncoupled fields one by one, by recursion over the tuple. A
+# `foreach` with a closure over this tuple allocated on Julia 1.10, since its
+# elements differ in type. The recursion compiles one method per element and
+# captures nothing.
+solve_uncoupled_fields!(::Tuple{}, ΔY, R) = nothing
+function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
+    (; name, alg, cache, keys, matrix) = first(uncoupled)
+    MatrixFields.run_field_matrix_solver!(
+        alg,
+        cache,
+        MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(ΔY, name),)),
+        matrix,
+        MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(R, name),)),
+    )
+    return solve_uncoupled_fields!(Base.tail(uncoupled), ΔY, R)
 end
 
 # ============================================================================
