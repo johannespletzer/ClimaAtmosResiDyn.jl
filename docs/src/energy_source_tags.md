@@ -3,7 +3,9 @@
 Energy source tags split moist total energy ``\rho e_\mathrm{tot}`` by **where the
 energy present now came from**. Each tag adds one grid-scale prognostic field
 `Y.c.ρe_src_<name>`, transported by the automatic tracer machinery (see
-[Tracers](passive_tracers.md)).
+[Tracers](passive_tracers.md)) under the default `tracer` transport, or as
+enthalpy under the audit described in
+[Moving the tags as enthalpy, an audit](@ref).
 
 They are the energy counterpart of the [Tagged Water Tracers](tagged_water.md),
 and a different quantity from the [Tagged Energy Tracers](tagged_tracers.md):
@@ -370,8 +372,10 @@ The tag-closure experiments ran it on a 0-moment column, a 0-moment sphere and a
 
 `e_src_res` is a **monitored residual**, not a machine-precision identity.
 ``\rho e_\mathrm{tot}`` is transported as enthalpy including pressure work and
-has its own diffusion treatment, while the tags ride the generic passive-tracer
-path.
+has its own diffusion treatment, while under the default `tracer` transport the
+tags ride the generic passive-tracer path. The `enthalpy` audit moves them with
+the parent's own fluxes instead, and only their numerics remain in the residual
+(see [Moving the tags as enthalpy, an audit](@ref)).
 
 Two things it is not. It is **not a ratio**: it is divided by density, so it is
 an energy per unit mass in J kg⁻¹, and it is not the same quantity as the
