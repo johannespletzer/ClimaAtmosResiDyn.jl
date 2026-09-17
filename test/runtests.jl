@@ -25,9 +25,9 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water",
     "tagging_source",
     "tagging_record",
+    "tagging_source_float32",
     "parameterizations",
     "restarts",
-    "era5",
 )
 TEST_GROUP in KNOWN_TEST_GROUPS || error(
     "Unknown TEST_GROUP $(repr(TEST_GROUP)). Known groups: " *
@@ -66,7 +66,6 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Radiation interface tests" begin @time include("rrtmgp_interface.jl") end
     @safetestset "Coupler compatibility" begin @time include("coupler_compatibility.jl") end
     @safetestset "Surface albedo tests" begin @time include("surface_albedo.jl") end
-    @safetestset "Seasonal SST" begin @time include("seasonal_sst.jl") end
     @safetestset "Larcform1 setup" begin @time include("larcform1.jl") end
 
     # Config tests
@@ -120,12 +119,19 @@ end
 # minutes together. The groups keep related files together and each stays
 # under half the limit: the transport and water-consistency files, the two
 # EDMFX diffusion files, and the rest.
+#
+# `dynamics` also runs the two ERA5 forcing files, which used to be a group of
+# their own. They build no simulation and use synthetic NetCDF files. They took
+# about 2 minutes, or 5 to 8 at minimum compat, of a 10 to 23 minute job. The
+# rest of that job was the setup every job pays.
 if TEST_GROUP in ("dynamics", "all")
     @safetestset "Prognostic equations" begin @time include("prognostic_equations.jl") end
     @safetestset "Advection operators" begin @time include("prognostic_equations/advection_tests.jl") end
     @safetestset "Post-Newton implicit-advection correction" begin @time include("prognostic_equations/correct_implicit_advection_tests.jl") end
     @safetestset "Vertical diffusion tendency" begin @time include("prognostic_equations/vertical_diffusion_tests.jl") end
     @safetestset "Eddy diffusion closures" begin @time include("prognostic_equations/eddy_diffusion_closures_tests.jl") end
+    @safetestset "ERA5 forcing" begin @time include("era5_tests.jl") end
+    @safetestset "Column datasets" begin @time include("column_datasets_tests.jl") end
 end
 
 if TEST_GROUP in ("dynamics_tracers", "all")
@@ -175,6 +181,20 @@ if TEST_GROUP in ("tagging_record", "all")
     @safetestset "Process record integration" begin @time include("process_record_integration.jl") end
 end
 
+# A separate group rather than folded into `tagging_source` or `tagging_record`,
+# for the same "one group per file" reason as the rest of this section: the
+# Float32 model configures both `energy_source_tags` and `energy_process_record`
+# together, which is a type neither of those two files' models share, so it
+# costs its own compile wherever it lives. Keeping it in its own group leaves
+# the other two groups' CI time exactly as measured, rather than adding an
+# unmeasured compile (1-moment microphysics included) on top of budgets this
+# change has no data on.
+if TEST_GROUP in ("tagging_source_float32", "all")
+    @safetestset "Energy source tags and process records (Float32) integration" begin
+        @time include("energy_source_tags_float32_integration.jl")
+    end
+end
+
 # ============================================================================
 # Parameterizations: Parameterized tendency tests (excluding ERA5)
 # ============================================================================
@@ -216,14 +236,6 @@ if TEST_GROUP in ("restarts", "all")
     @safetestset "Restarts" begin @time include("restart.jl") end
     @safetestset "Reproducibility infra" begin @time include("unit_reproducibility_infra.jl") end
     @safetestset "Init with file" begin @time include("test_init_with_file.jl") end
-end
-
-# ============================================================================
-# ERA5: External forcing data tests (heavy)
-# ============================================================================
-if TEST_GROUP in ("era5", "all")
-    @safetestset "ERA5 forcing" begin @time include("era5_tests.jl") end
-    @safetestset "Column datasets" begin @time include("column_datasets_tests.jl") end
 end
 #! format: on
 

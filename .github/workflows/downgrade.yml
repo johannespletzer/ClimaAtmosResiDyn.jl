@@ -1,15 +1,39 @@
 name: Downgrade
+# The full matrix at minimum compat bounds. It runs weekly, on demand, on tags,
+# and whenever the bounds or this file change. Every pull request still gets
+# the cheap part of the check, `load 1.10 minimum compat` in ci.yml, which
+# resolves at the bounds and loads the package.
 on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
   pull_request:
+    paths:
+      - 'Project.toml'
+      - '.github/workflows/downgrade.yml'
   push:
     branches:
       - main
     tags: '*'
+    paths:
+      - 'Project.toml'
+      - '.github/workflows/downgrade.yml'
 
-# Needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
-  actions: write
   contents: read
+
+# The cached parts of the Julia depot, and why only `main` saves a cache: see
+# `DEPOT_CACHE_PATHS` in ci.yml.
+env:
+  # Package images are built for a target every runner supports, so a cache
+  # saved on one CPU model loads on another. See `JULIA_CPU_TARGET` in ci.yml.
+  JULIA_CPU_TARGET: 'haswell,-rdrnd'
+  DEPOT_CACHE_PATHS: |
+    ~/.julia/artifacts
+    ~/.julia/packages
+    ~/.julia/compiled
+    ~/.julia/scratchspaces
+    ~/.julia/logs
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +43,7 @@ jobs:
   test:
     name: Downgrade ${{ matrix.version }} - ${{ matrix.test_group }}
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     # julia-downgrade-compat rewrites Project.toml (test extras are promoted to
     # deps), which makes Aqua's stale-dependency check meaningless here.
     env:
@@ -46,21 +71,44 @@ jobs:
           - tagging_water
           - tagging_source
           - tagging_record
+          - tagging_source_float32
           - parameterizations
           - restarts
-          - era5
     steps:
       - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@latest
+      - uses: julia-actions/setup-julia@v3
+        id: setup-julia
         with:
           version: ${{ matrix.version }}
-      - uses: julia-actions/cache@v3
+      # One cache per Julia version, shared by every group. The downgraded
+      # depot differs from the ones in ci.yml, so it has a name of its own.
+      - name: Restore the Julia depot
+        if: github.ref != 'refs/heads/main'
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-downgrade-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-downgrade-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+      - name: Restore and save the Julia depot
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-downgrade-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-downgrade-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+      - name: Runner CPU
+        run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: Artifacts, Dates, Downloads, LazyArtifacts, LinearAlgebra, Logging, Printf, Test, Statistics, Random, Pkg, Glib_jll, Musica
           mode: 'forcedeps'
 
-      - uses: julia-actions/julia-buildpkg@latest
-      - uses: julia-actions/julia-runtest@latest
+      - uses: julia-actions/julia-buildpkg@v1
+        with:
+          ignore-no-cache: true
+      # No coverage: nothing uploads it here.
+      - uses: julia-actions/julia-runtest@v1
+        with:
+          coverage: false
         env:
           TEST_GROUP: ${{ matrix.test_group }}

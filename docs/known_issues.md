@@ -209,6 +209,20 @@ not re-derive them.
     `test/restart_AtmosSimulation.jl:156-164`, which names
     `test_restart(simulation, model, grid; job_id, ...)` for a function that
     takes `(simulation, args; comms_ctx, more_ignore)`.
+  - **Restart sweep only on Buildkite.** The sphere, box and column sweep in
+    `test/restart.jl:192-266` runs only with `--manytests`, which upstream's
+    Buildkite passes (`.buildkite/full_pipeline.yml:891`). This fork runs
+    GitHub Actions only, so here only the `amip_target` case from `:267` runs.
+  - **Test files that build the same model twice.** Found by the CI review of
+    2026-09-17. `test/prognostic_equations/edmfx_horizontal_diffusion_tests.jl:57`
+    and `:242` build the same `box_config_dict()`.
+    `test/prognostic_equations/enforce_physical_constraints_tests.jl:33-192`
+    builds the same configuration eight times.
+    `test/prognostic_equations/vertical_water_borrowing_tests.jl:34` and `:59`
+    build the same configuration.
+    `test/parameterized_tendencies/microphysics/allocations.jl:296-376`
+    rebuilds the three models of `tendency.jl:89-218`. A repeat of a type that
+    is already compiled costs seconds, so these cost little CI time.
   - **Inactive pipeline history.** `.buildkite/full_pipeline.yml` carries
     several wholly commented-out jobs.
   - **`perf/flame.jl`.** The `@allocated` pass is labelled "old" and "TODO:
