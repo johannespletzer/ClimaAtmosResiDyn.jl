@@ -8,9 +8,11 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # Cancel superseded runs on branches and pull requests, but not on `main`,
-  # so that the workflow badge does not report a cancellation as "failing".
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  # Cancel superseded runs everywhere, `main` included. Each merged pull
+  # request was already tested on its own branch, and several merges in a
+  # row would otherwise each start the full matrix. The badge can show
+  # "cancelled" until the newest run on `main` finishes.
+  cancel-in-progress: true
 
 # Needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
@@ -70,7 +72,43 @@ jobs:
       - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
+      # A cache of its own. `test` runs after `load` in the same run, so with a
+      # shared name the test jobs would hit this key exactly and skip their
+      # own save. This depot lacks the `--check-bounds=yes` package images
+      # that `Pkg.test` builds, so the test jobs would precompile every time.
       - uses: julia-actions/cache@v3
+        with:
+          cache-name: julia-ci-load;version=${{ matrix.version }}
+          include-matrix: false
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: using ClimaAtmos
+        run: julia --project=. --color=yes -e 'using ClimaAtmos'
+
+  # The minimum-compat check that runs on every pull request. The full
+  # `Downgrade` matrix only runs weekly and when the compat bounds change
+  # (downgrade.yml). This job resolves every dependency at its lowest allowed
+  # version on the oldest supported Julia and loads the package. That catches
+  # a bound that no longer resolves, and code that needs a newer dependency at
+  # load time, such as a name imported from it.
+  load-min-compat:
+    name: load 1.10 minimum compat
+    needs: ci-decide
+    if: needs.ci-decide.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.10'
+      - uses: julia-actions/cache@v3
+        with:
+          cache-name: julia-ci-load-min-compat;version=1.10
+          include-matrix: false
+      - uses: julia-actions/julia-downgrade-compat@v2
+        with:
+          skip: Artifacts, Dates, Downloads, LazyArtifacts, LinearAlgebra, Logging, Printf, Test, Statistics, Random, Pkg, Glib_jll, Musica
+          mode: 'forcedeps'
       - uses: julia-actions/julia-buildpkg@v1
       - name: using ClimaAtmos
         run: julia --project=. --color=yes -e 'using ClimaAtmos'
@@ -112,7 +150,20 @@ jobs:
           - tagging_source_float32
           - parameterizations
           - restarts
-          - era5
+        # The groups that test upstream ClimaAtmos code run on 1.11 only. A
+        # difference between Julia versions inside upstream code is upstream's
+        # to find. The fork's own groups, and `parameterizations`, which holds
+        # the fork's stratospheric tracer test, keep both versions, because
+        # `Project.toml` promises 1.10.
+        exclude:
+          - version: '1.10'
+            test_group: dynamics
+          - version: '1.10'
+            test_group: dynamics_tracers
+          - version: '1.10'
+            test_group: dynamics_edmfx
+          - version: '1.10'
+            test_group: restarts
     env:
       TEST_GROUP: ${{ matrix.test_group }}
     steps:
@@ -120,21 +171,31 @@ jobs:
       - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
+      # One cache per Julia version, shared by every group, since all groups
+      # use the same test environment. The first job of a run to finish saves
+      # it. Package images are built for the runner's CPU, so the model is
+      # printed to explain a cache that restores but still precompiles.
       - uses: julia-actions/cache@v3
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-      - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v7
         with:
-          files: lcov.info
-          token: ${{secrets.CODECOV_TOKEN}}
+          cache-name: julia-ci-test;version=${{ matrix.version }}
+          include-matrix: false
+      - name: Runner CPU
+        run: grep -m1 'model name' /proc/cpuinfo
+      - uses: julia-actions/julia-buildpkg@v1
+      # No coverage. Nothing received it, because the repository has no
+      # Codecov token, and on Julia 1.10 coverage also stops the tests from
+      # using any package image. To restore it, set `CODECOV_TOKEN` and add
+      # `julia-processcoverage` and `codecov-action` on the 1.11 jobs.
+      - uses: julia-actions/julia-runtest@v1
+        with:
+          coverage: false
 
   # Single required status check for branch protection / the merge queue. Set
   # THIS ("ci-required") as the required check instead of the individual matrix
   # jobs, so a reused merge-queue build (matrix skipped) still reports green.
   ci-required:
     name: ci-required
-    needs: [ci-decide, load, test]
+    needs: [ci-decide, load, load-min-compat, test]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -145,6 +206,10 @@ jobs:
           if [[ "${{ needs.load.result }}" != "success" && \
                 "${{ needs.load.result }}" != "skipped" ]]; then
             echo "package-load preflight did not succeed"; exit 1
+          fi
+          if [[ "${{ needs.load-min-compat.result }}" != "success" && \
+                "${{ needs.load-min-compat.result }}" != "skipped" ]]; then
+            echo "minimum-compat load did not succeed"; exit 1
           fi
           if [[ "${{ needs.test.result }}" == "success" ]]; then
             echo "ci matrix passed"; exit 0

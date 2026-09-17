@@ -1,10 +1,23 @@
 name: Downstream
+# Whether ClimaCoupler's AMIP tests still run with this package in place of
+# upstream ClimaAtmos. The coupler only sees the package through its code and
+# its dependencies, so the check runs when those change, on one Julia version.
 on:
   push:
     branches:
       - main
     tags: '*'
+    paths:
+      - 'src/**'
+      - 'ext/**'
+      - 'Project.toml'
+      - '.github/workflows/downstream.yml'
   pull_request:
+    paths:
+      - 'src/**'
+      - 'ext/**'
+      - 'Project.toml'
+      - '.github/workflows/downstream.yml'
 
 # Needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
@@ -19,17 +32,14 @@ jobs:
   test:
     name: downstream ClimaCoupler.jl
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        version:
-          - '1.10'
-          - '1.11'
+    # The coupler environment alone took 44 to 59 minutes to instantiate
+    # without a cache.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
         with:
-          version: ${{ matrix.version }}
+          version: '1.11'
       - uses: julia-actions/cache@v3
 
       - uses: julia-actions/julia-buildpkg@v1
