@@ -16,7 +16,9 @@ simulation. This file covers the paths it cannot reach:
     leaves a nonzero record;
  4. they survive a checkpoint round trip with their values intact, which is the
     contract that makes a window budget the difference of two outputs even
-    across a restart.
+    across a restart;
+ 5. their brackets allocate nothing, on the explicit path and in the implicit
+    tendency.
 
 Records are configured here with no tags at all, which is the combination the
 documentation promises works and the one a tag-shaped guard is most likely to
@@ -30,6 +32,22 @@ compile of the solve pipeline (see the note in `runtests.jl`).
 =#
 using Test
 import ClimaAtmos as CA
+
+# Allocation checks, as in `parameterized_tendencies/microphysics/allocations.jl`:
+# one call to compile, then `@allocated` on a second call. Each is a function, so
+# that `@allocated` does not count the boxing of globals in a test file.
+# The length parameter makes Julia specialize on every argument, so the call
+# inside is static and nothing is boxed at the call itself.
+function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
+    f(args...)
+    return @allocated f(args...)
+end
+
+function explicit_bracket!(Yₜ, Y, p, source)
+    CA.open_applied_update!(Yₜ, p, source)
+    CA.close_applied_update!(Yₜ, Y, p, source)
+    return nothing
+end
 
 @testset "Process record integration" begin
     test_dict = Dict(
@@ -118,4 +136,18 @@ import ClimaAtmos as CA
     end
     # The restored record is genuinely carried over, not zeroed and refilled.
     @test !all(iszero, parent(Y_restart.c.prc_e_radiation))
+
+    # 5. The brackets allocate nothing. The implicit tendency brackets
+    # microphysics and precipitation, which no record here lists, so that
+    # check measures the records' guards and the recursion over them.
+    @testset "The records do not allocate" begin
+        p = simulation.integrator.p
+        t = simulation.integrator.t
+        Yₜ = zero(Y)
+        for source in (:radiation, :surface_flux)
+            @test second_call_allocations(explicit_bracket!, Yₜ, Y, p, source) ==
+                  0
+        end
+        @test second_call_allocations(CA.implicit_tendency!, Yₜ, Y, p, t) == 0
+    end
 end

@@ -18,7 +18,9 @@ family is wired into a simulation at all, which is what this file covers:
     the same solve, and the offset leaves the model's own state untouched;
  8. under 1-moment microphysics, sedimentation moves the tags with the water.
     The partition's fluxes add up to the parent's, and each face takes the
-    shares of the cell that loses the energy, in either direction;
+    shares of the cell that loses the energy, in either direction. On the
+    same column the tag code allocates nothing, in a tendency evaluation or
+    in the repair;
  9. under `energy_source_tag_transport: enthalpy`, the tags' vertical advection
     adds up to the parent's, each face takes the upwind cell's shares, and the
     model's state is untouched;
@@ -46,6 +48,30 @@ item 8 a third, item 9 a fourth and item 10 a fifth.
 =#
 using Test
 import ClimaAtmos as CA
+
+# Allocation checks, as in `parameterized_tendencies/microphysics/allocations.jl`:
+# one call to compile, then `@allocated` on a second call. Each is a function, so
+# that `@allocated` does not count the boxing of globals in a test file.
+# The length parameter makes Julia specialize on every argument, so the call
+# inside is static and nothing is boxed at the call itself.
+function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
+    f(args...)
+    return @allocated f(args...)
+end
+
+function explicit_bracket!(Yₜ, Y, p, source)
+    CA.open_applied_update!(Yₜ, p, source)
+    CA.close_applied_update!(Yₜ, Y, p, source)
+    return nothing
+end
+
+# The implicit path opens the tags' bracket by hand, as `implicit_tendency!`
+# does around microphysics.
+function implicit_bracket!(Yₜ, Y, p, source)
+    CA.snapshot_energy_source_tags!(p, Yₜ)
+    CA.attribute_energy_source_tags!(Yₜ, Y, p, source)
+    return nothing
+end
 
 @testset "Energy source tags integration" begin
     tags = [
@@ -389,6 +415,52 @@ import ClimaAtmos as CA
                 @test all(iszero, strat[.!above])
                 @test count(!iszero, tropo[above]) == 1
             end
+        end
+
+        # The tag code allocates nothing, in a tendency evaluation or in the
+        # repair. This column has what the checks need: a positive total, so
+        # the loss half and the repair run, a source tag, and sedimentation.
+        # Checking it here costs no compile.
+        #
+        # The whole explicit tendency is not checked. Its generic tracer loops
+        # allocate with or without tags, and each tag is one more tracer in
+        # them. On this column with a fourth tag and three records, in
+        # `Float64`, `remaining_tendency!` allocated 58,160 bytes per call,
+        # against 22,576 without tags, all of it in those loops.
+        @testset "The tags do not allocate" begin
+            Yₜ = zero(Y)
+            Y_repair = copy(Y)
+            @test p.atmos.energy_source_tagging_model.repair
+            @test second_call_allocations(
+                explicit_bracket!,
+                Yₜ,
+                Y,
+                p,
+                :radiation,
+            ) == 0
+            @test second_call_allocations(
+                implicit_bracket!,
+                Yₜ,
+                Y,
+                p,
+                :microphysics,
+            ) == 0
+            @test second_call_allocations(CA.energy_source_share_norm!, p, Y) ==
+                  0
+            @test second_call_allocations(
+                CA.vertical_advection_of_water_tendency!,
+                Yₜ,
+                Y,
+                p,
+                t,
+            ) == 0
+            @test second_call_allocations(
+                CA.repair_energy_source_tags!,
+                Y_repair,
+                p,
+            ) == 0
+            @test second_call_allocations(CA.implicit_tendency!, Yₜ, Y, p, t) ==
+                  0
         end
     end
 

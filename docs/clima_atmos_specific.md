@@ -49,11 +49,12 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `parameterizations`, `restarts`, `era5`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `parameterizations`, `restarts`. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
 | Prognostic equations                | `dynamics`          | `sphere_baroclinic_wave_rhoe`            |
+| ERA5 forcing and column datasets    | `dynamics`          | none                                     |
 | Tracer transport and water limiters | `dynamics_tracers`  | `sphere_baroclinic_wave_rhoe_equilmoist` |
 | EDMFX diffusion                     | `dynamics_edmfx`    | `prognostic_edmfx_*`                     |
 | Tagged tracers/water                | `tagging_*`         | `baroclinic_wave_tagged_*`               |
@@ -101,7 +102,61 @@ the other two groups' CI time exactly as already measured.
 matrix starts. It does nothing but `using ClimaAtmos`. A syntax or docstring
 error only surfaces during precompilation, and without this gate one bad
 expression starts every matrix job and fails them all the same way. `test`
-depends on `load`, and `ci-required` aggregates both.
+depends on `load`. `ci-required` aggregates `load`, `test` and the
+minimum-compat load described below.
+
+### Which jobs run when
+
+The layout follows the CI review of 2026-09-17, which found that almost every
+test minute is compilation and that the queue, not the jobs, set the wall time.
+
+  - **`ci`, on every pull request and every push to `main`.** The fork's own
+    groups (`infrastructure`, `parent_budget`, `diagnostics`, the `tagging_*`
+    groups) and `parameterizations` run on Julia 1.10 and 1.11. The groups that
+    test upstream code (`dynamics`, `dynamics_tracers`, `dynamics_edmfx`,
+    `restarts`) run on 1.11 only. A superseded run is cancelled, on `main` too.
+    A manual run (`gh workflow run ci.yml --ref <branch>`) tests every group
+    on both versions. Use it for a pull request that edits upstream code.
+  - **`load 1.10 minimum compat`, in `ci`.** It resolves every dependency at the
+    lowest version `Project.toml` allows and loads the package. A lower bound
+    that no longer fits new code usually shows up here.
+  - **`Downgrade`, the full matrix at minimum compat.** It runs weekly (Monday
+    03:00 UTC), on demand from the Actions tab, on tags, and when
+    `Project.toml` or `downgrade.yml` changes.
+  - **`Downstream`, ClimaCoupler's AMIP tests on 1.11.** It takes about an hour
+    without a cache, so it runs after a merge, not on each pull request. It
+    runs on `main` when `src/`, `ext/`, `config/`, `toml/` or `Project.toml`
+    changes, weekly (Monday 04:00 UTC), and on demand. A pull request runs it
+    only when it changes the workflow.
+  - **Caches.** `ci`, `Documentation` and `Downgrade` keep one depot cache per
+    Julia patch version, shared by all groups, under the paths in
+    `DEPOT_CACHE_PATHS`.
+      + **Who saves.** Only runs on `main` save a cache, the weekly schedule
+        included. The first job of such a run to finish saves it, and jobs
+        that start later in the same run restore it. Every other run, pull
+        requests and tags included, restores the newest cache from `main` and
+        saves nothing. GitHub keeps 10 GB per repository. On 2026-09-17 the
+        caches of pull request runs pushed `main`'s out within half an hour.
+      + **What fits.** A push to `main` saves about 4.4 GB: the two test
+        depots, the minimum-compat depot and the docs depot. The weekly
+        `Downgrade` run adds about 2.3 GB. `Downstream` and `Manifest compat`
+        keep no cache. Theirs were 4.5 GB and 2.8 GB, and would push the
+        others out.
+      + **`load`.** It restores the test cache and never saves. It loads the
+        package with `--check-bounds=yes`, the flag `Pkg.test` sets, so the
+        test jobs' package images fit.
+      + **CPU target.** GitHub's runners mix Intel and AMD models. A package
+        image built for one was rejected on the other, and all its
+        dependencies were built again. So the cached workflows set
+        `JULIA_CPU_TARGET: 'haswell,-rdrnd'`, a target every runner supports.
+        It only affects the images saved to disk, not the code compiled while
+        the tests run. The target is part of each cache name. Each job that
+        uses a cache prints its CPU model.
+  - **No coverage.** Nothing was ever uploaded, because the repository has no
+    Codecov token, and on Julia 1.10 coverage stops the tests from using
+    package images. To restore it, set the `CODECOV_TOKEN` secret and add
+    `julia-processcoverage` and `codecov/codecov-action` after `julia-runtest`,
+    on the 1.11 jobs only.
 
 ### Running a single test group
 
@@ -135,7 +190,7 @@ When reviewing or writing changes, name the validation surface explicitly:
 
 ## Local commands
 
-  - Prefer Julia 1.11.x for local work. CI also runs 1.10 and 1.11.
+  - Prefer Julia 1.11.x for local work. CI runs the fork's own test groups on 1.10 and 1.11 and the upstream ones on 1.11 only (see [Which jobs run when](#which-jobs-run-when)).
   - For runtime validation, prefer `julia +1.11 --project=.buildkite .buildkite/ci_driver.jl ...`.
   - For package tests, prefer `Pkg.test()` over manually `include`ing `test/runtests.jl` because test-only deps are loaded through the package test path.
 

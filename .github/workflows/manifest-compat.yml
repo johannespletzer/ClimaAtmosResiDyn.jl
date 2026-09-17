@@ -38,6 +38,9 @@ jobs:
   resolve:
     name: Resolve ${{ matrix.project }}
     runs-on: ubuntu-latest
+    # No depot cache. Resolving takes a few minutes, and the cache it saved
+    # (2.8 GB for the two projects) would push the test caches out of the
+    # 10 GB GitHub keeps per repository.
     strategy:
       fail-fast: false
       matrix:
@@ -47,8 +50,6 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1.11'
-      - uses: julia-actions/cache@v3
-
       # Pkg only auto-installs the General registry in an interactive session,
       # so a fresh CI depot has none and every package looks unregistered:
       # `expected package ClimaCore [d414da3d] to be registered`, which is not

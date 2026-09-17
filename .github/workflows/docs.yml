@@ -12,6 +12,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The cached parts of the Julia depot, and why only `main` saves a cache: see
+# `DEPOT_CACHE_PATHS` in ci.yml.
+env:
+  # Package images are built for a target every runner supports, so a cache
+  # saved on one CPU model loads on another. See `JULIA_CPU_TARGET` in ci.yml.
+  JULIA_CPU_TARGET: 'haswell,-rdrnd'
+  DEPOT_CACHE_PATHS: |
+    ~/.julia/artifacts
+    ~/.julia/packages
+    ~/.julia/compiled
+    ~/.julia/scratchspaces
+    ~/.julia/logs
+
 jobs:
   # Merge-queue fast path: reuse the doc build from an already-green PR head
   # when the merge group is byte-identical to it (see
@@ -56,9 +69,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
+        id: setup-julia
         with:
           version: '1.11'
-      - uses: julia-actions/cache@v3
+      - name: Restore the Julia depot
+        if: github.ref != 'refs/heads/main'
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-docs-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-docs-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+      - name: Restore and save the Julia depot
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-docs-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-docs-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Install dependencies
         shell: julia --project=docs {0}
         run: |

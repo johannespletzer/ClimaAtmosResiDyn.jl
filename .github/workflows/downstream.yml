@@ -1,14 +1,32 @@
 name: Downstream
+# Whether ClimaCoupler's AMIP tests still run with this package in place of
+# upstream ClimaAtmos. It runs on one Julia version, without a cache, which
+# takes about an hour. So it runs after a merge rather than on each pull
+# request: on `main` when the package's code, dependencies or run-time data
+# change, weekly (Monday 04:00 UTC), and on demand. ClimaCoupler does not use
+# this fork, and the fork keeps the model's results the same as upstream's, so
+# a break here is rare and is found within a week at most. A pull request runs
+# it only when it changes this file.
 on:
   push:
     branches:
       - main
     tags: '*'
+    paths:
+      - 'src/**'
+      - 'ext/**'
+      - 'config/**'
+      - 'toml/**'
+      - 'Project.toml'
+      - '.github/workflows/downstream.yml'
   pull_request:
+    paths:
+      - '.github/workflows/downstream.yml'
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
 
-# Needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
-  actions: write
   contents: read
 
 concurrency:
@@ -19,19 +37,16 @@ jobs:
   test:
     name: downstream ClimaCoupler.jl
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        version:
-          - '1.10'
-          - '1.11'
+    # No depot cache. The coupler environment makes a cache of about 4.5 GB,
+    # nearly half of the 10 GB GitHub keeps per repository, and it would push
+    # the test caches out. Without a cache, instantiating that environment
+    # took 44 to 59 minutes.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
         with:
-          version: ${{ matrix.version }}
-      - uses: julia-actions/cache@v3
-
+          version: '1.11'
       - uses: julia-actions/julia-buildpkg@v1
       - uses: actions/checkout@v7
         with:
