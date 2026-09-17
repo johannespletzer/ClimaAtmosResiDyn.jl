@@ -266,6 +266,10 @@ exactly:
     `E = ρe_tot + c·ρ` at t = 0, the sedimentation partition, the repair's
     non-negativity and a checkpoint round trip in **Float32**, with the
     process records beside the tags.
+  - The integration test also checks that the tag code **allocates nothing**
+    in a tendency evaluation or in the repair, on the 1-moment column with an
+    offset, and `test/process_record_integration.jl` checks the same for the
+    records' brackets.
   - **Donor-proportional loss through a real bracketed solve** is covered by the
     same integration test with `energy_source_tag_offset` (see below), which
     makes the tags' total positive on this column. It checks that the offset
