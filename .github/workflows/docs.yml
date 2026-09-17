@@ -12,7 +12,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# The cached parts of the Julia depot, and why only pushes save a cache: see
+# The cached parts of the Julia depot, and why only `main` saves a cache: see
 # `DEPOT_CACHE_PATHS` in ci.yml.
 env:
   DEPOT_CACHE_PATHS: |
@@ -21,8 +21,6 @@ env:
     ~/.julia/compiled
     ~/.julia/scratchspaces
     ~/.julia/logs
-    !~/.julia/**/*.pid
-    !~/.julia/**/*.pidfile
 
 jobs:
   # Merge-queue fast path: reuse the doc build from an already-green PR head
@@ -68,29 +66,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
+        id: setup-julia
         with:
           version: '1.11'
       - name: Restore the Julia depot
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/main'
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-docs-1.11-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-docs-1.11-
+          key: julia-docs-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-docs-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Restore and save the Julia depot
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-docs-1.11-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-docs-1.11-
+          key: julia-docs-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-docs-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Install dependencies
         shell: julia --project=docs {0}
         run: |
           using Pkg
-          # The registries are not cached, and a non-interactive session does
-          # not install them on its own.
-          Pkg.Registry.add()
           Pkg.develop(PackageSpec(path="."))
           Pkg.instantiate()
       - name: Build and deploy

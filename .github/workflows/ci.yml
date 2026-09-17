@@ -20,10 +20,15 @@ permissions:
 # The parts of the Julia depot that are cached. Every cache step uses this one
 # list, because a cache is only found again under the same paths.
 #
-# Only pushes save a cache. A pull request restores the newest one from `main`
-# and saves nothing: GitHub keeps 10 GB per repository, and on 2026-09-17 the
-# pull requests' own caches pushed `main`'s out within half an hour. The
-# registries are not cached; `julia-buildpkg` installs them in seconds.
+# Only runs on `main` save a cache. Every other run restores the newest cache
+# from `main` and saves nothing. GitHub keeps 10 GB per repository. On
+# 2026-09-17 the caches of pull request runs pushed `main`'s out within half an
+# hour. A tag or merge-queue run could not reuse its own cache either.
+#
+# Each key holds the full Julia version. A new patch release then starts a new
+# cache instead of adding its package images to the old one.
+#
+# The registries are not cached. `julia-buildpkg` installs them in seconds.
 env:
   DEPOT_CACHE_PATHS: |
     ~/.julia/artifacts
@@ -31,8 +36,6 @@ env:
     ~/.julia/compiled
     ~/.julia/scratchspaces
     ~/.julia/logs
-    !~/.julia/**/*.pid
-    !~/.julia/**/*.pidfile
 
 jobs:
   # Merge-queue fast path: decide whether the matrix below can be reused from an
@@ -85,20 +88,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
+        id: setup-julia
         with:
           version: ${{ matrix.version }}
-      # `load` reads the test jobs' cache and never saves. With a cache of its
-      # own it would take a tenth of the 10 GB. With the test jobs' name and a
-      # save, it would save first, the test jobs would hit its key exactly and
-      # skip their own save, and its depot lacks the package images `Pkg.test`
-      # builds. `--check-bounds=yes` is the flag `Pkg.test` sets, so the
-      # restored package images fit this `using` too.
+      # `load` restores the test jobs' cache and never saves. A cache of its
+      # own would take a tenth of the 10 GB. If it saved under the test jobs'
+      # key, it would save first. The test jobs would then hit that key exactly
+      # and skip their own save. `--check-bounds=yes` is the flag `Pkg.test`
+      # sets, so the restored package images fit this `using` too.
       - name: Restore the Julia depot
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-${{ matrix.version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-test-${{ matrix.version }}-
+          key: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-
       - uses: julia-actions/julia-buildpkg@v1
         with:
           ignore-no-cache: true
@@ -120,24 +123,25 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
+        id: setup-julia
         with:
           version: '1.10'
       # A depot of its own, since the versions differ from the test jobs'.
-      # Saved on pushes only, as explained at `DEPOT_CACHE_PATHS`.
+      # Only `main` saves it, as explained at `DEPOT_CACHE_PATHS`.
       - name: Restore the Julia depot
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/main'
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-min-compat-1.10-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-min-compat-1.10-
+          key: julia-ci-min-compat-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-min-compat-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Restore and save the Julia depot
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-min-compat-1.10-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-min-compat-1.10-
+          key: julia-ci-min-compat-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-min-compat-${{ steps.setup-julia.outputs.julia-version }}-
       - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: Artifacts, Dates, Downloads, LazyArtifacts, LinearAlgebra, Logging, Printf, Test, Statistics, Random, Pkg, Glib_jll, Musica
@@ -208,28 +212,29 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
+        id: setup-julia
         with:
           version: ${{ matrix.version }}
       # One cache per Julia version, shared by every group, since all groups
-      # use the same test environment. On a push, the first job of the run to
-      # finish saves it, and jobs that start later restore that exact key. A
-      # pull request only restores (see `DEPOT_CACHE_PATHS`). Package images
-      # are built for the runner's CPU, so the model is printed to explain a
-      # cache that restores but still precompiles.
+      # use the same test environment. On `main`, the first job of the run to
+      # finish saves it, and jobs that start later restore that exact key.
+      # Other runs only restore (see `DEPOT_CACHE_PATHS`). Package images are
+      # built for the runner's CPU. The model is printed to explain a cache
+      # that restores but still precompiles.
       - name: Restore the Julia depot
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/main'
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-${{ matrix.version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-test-${{ matrix.version }}-
+          key: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Restore and save the Julia depot
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-${{ matrix.version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-test-${{ matrix.version }}-
+          key: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Runner CPU
         run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-buildpkg@v1

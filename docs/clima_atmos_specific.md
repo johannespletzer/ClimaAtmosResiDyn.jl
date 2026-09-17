@@ -122,14 +122,20 @@ test minute is compilation and that the queue, not the jobs, set the wall time.
     `Project.toml` or `downgrade.yml` changes.
   - **`Downstream`, ClimaCoupler's AMIP tests on 1.11.** It runs when `src/`,
     `ext/`, `Project.toml` or its workflow changes.
-  - **Caches.** Each workflow keeps one depot cache per Julia version, shared by
-    all its groups, under the paths in `DEPOT_CACHE_PATHS`.
-      - **Who saves.** Only pushes and the schedule save a cache. On a push,
-        the first job of a run to finish saves it, and jobs that start later
-        in the same run restore it. A pull request restores the newest cache
-        from `main` and saves nothing. GitHub keeps 10 GB per repository, and
-        on 2026-09-17 the pull requests' own caches pushed `main`'s out within
-        half an hour.
+  - **Caches.** `ci`, `Documentation` and `Downgrade` keep one depot cache per
+    Julia patch version, shared by all groups, under the paths in
+    `DEPOT_CACHE_PATHS`.
+      - **Who saves.** Only runs on `main` save a cache, the weekly schedule
+        included. The first job of such a run to finish saves it, and jobs
+        that start later in the same run restore it. Every other run, pull
+        requests and tags included, restores the newest cache from `main` and
+        saves nothing. GitHub keeps 10 GB per repository. On 2026-09-17 the
+        caches of pull request runs pushed `main`'s out within half an hour.
+      - **What fits.** A push to `main` saves about 4.4 GB: the two test
+        depots, the minimum-compat depot and the docs depot. The weekly
+        `Downgrade` run adds about 2.3 GB. `Downstream` and `Manifest compat`
+        keep no cache. Theirs were 4.5 GB and 2.8 GB, and would push the
+        others out.
       - **`load`.** It restores the test cache and never saves. It loads the
         package with `--check-bounds=yes`, the flag `Pkg.test` sets, so the
         test jobs' package images fit.

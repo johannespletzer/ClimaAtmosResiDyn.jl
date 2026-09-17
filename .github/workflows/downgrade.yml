@@ -22,7 +22,7 @@ on:
 permissions:
   contents: read
 
-# The cached parts of the Julia depot, and why only pushes save a cache: see
+# The cached parts of the Julia depot, and why only `main` saves a cache: see
 # `DEPOT_CACHE_PATHS` in ci.yml.
 env:
   DEPOT_CACHE_PATHS: |
@@ -31,8 +31,6 @@ env:
     ~/.julia/compiled
     ~/.julia/scratchspaces
     ~/.julia/logs
-    !~/.julia/**/*.pid
-    !~/.julia/**/*.pidfile
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -76,24 +74,25 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
+        id: setup-julia
         with:
           version: ${{ matrix.version }}
       # One cache per Julia version, shared by every group. The downgraded
       # depot differs from the ones in ci.yml, so it has a name of its own.
       - name: Restore the Julia depot
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/main'
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-downgrade-test-${{ matrix.version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-downgrade-test-${{ matrix.version }}-
+          key: julia-downgrade-test-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-downgrade-test-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Restore and save the Julia depot
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-downgrade-test-${{ matrix.version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-downgrade-test-${{ matrix.version }}-
+          key: julia-downgrade-test-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-downgrade-test-${{ steps.setup-julia.outputs.julia-version }}-
       - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: Artifacts, Dates, Downloads, LazyArtifacts, LinearAlgebra, Logging, Printf, Test, Statistics, Random, Pkg, Glib_jll, Musica

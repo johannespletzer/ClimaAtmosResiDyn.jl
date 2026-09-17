@@ -22,18 +22,6 @@ on:
 permissions:
   contents: read
 
-# The cached parts of the Julia depot, and why only pushes save a cache: see
-# `DEPOT_CACHE_PATHS` in ci.yml.
-env:
-  DEPOT_CACHE_PATHS: |
-    ~/.julia/artifacts
-    ~/.julia/packages
-    ~/.julia/compiled
-    ~/.julia/scratchspaces
-    ~/.julia/logs
-    !~/.julia/**/*.pid
-    !~/.julia/**/*.pidfile
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -42,31 +30,17 @@ jobs:
   test:
     name: downstream ClimaCoupler.jl
     runs-on: ubuntu-latest
-    # The coupler environment alone took 44 to 59 minutes to instantiate
-    # without a cache.
+    # No depot cache. The coupler environment makes a cache of about 4.5 GB,
+    # nearly half of the 10 GB GitHub keeps per repository, and it would push
+    # the test caches out. Without a cache, instantiating that environment
+    # took 44 to 59 minutes.
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1.11'
-      - name: Restore the Julia depot
-        if: github.event_name == 'pull_request'
-        uses: actions/cache/restore@v6
-        with:
-          path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-downstream-1.11-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-downstream-1.11-
-      - name: Restore and save the Julia depot
-        if: github.event_name != 'pull_request'
-        uses: actions/cache@v6
-        with:
-          path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-downstream-1.11-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-downstream-1.11-
       - uses: julia-actions/julia-buildpkg@v1
-        with:
-          ignore-no-cache: true
       - uses: actions/checkout@v7
         with:
           repository: 'CliMA/ClimaCoupler.jl'
