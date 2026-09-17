@@ -30,23 +30,21 @@ end
     # all of them as stale in the downgrade job. Skip it there; the regular CI
     # jobs still run it against an unmodified Project.toml.
     in_downgrade_ci = get(ENV, "CLIMAATMOS_DOWNGRADE_CI", "false") == "true"
-    # Aqua 0.8.17 walks the dependency tree itself, with `Base.locate_package`
-    # for every name in each package's `[deps]` section. It does not skip the
-    # names that also appear in `[weakdeps]`, and Pkg does not put a weak
-    # dependency in the manifest, so the walk fails with "Unable to locate
-    # `ChangesOfVariables`, a dependency of `LogExpFunctions`". Aqua 0.8.16
-    # resolved the environment through Pkg instead and did not.
+    # `Project.toml` holds Aqua below 0.8.17, which the persistent-task check
+    # needs. 0.8.17 walks the dependency tree itself, with
+    # `Base.locate_package` for every name in each package's `[deps]` section,
+    # and it does not skip the names that also stand in `[weakdeps]`. Pkg does
+    # not put a weak dependency in the manifest, so the walk asks for a package
+    # that is not there and the check errors. 0.8.16 resolved the environment
+    # through Pkg instead, which filters weak dependencies.
     #
-    # `LogExpFunctions` v1.0.1 lists three names in both sections:
-    # `ChainRulesCore`, `ChangesOfVariables` and `InverseFunctions`. The first
-    # and the last are in the manifest anyway, because other packages depend on
-    # them, so only `ChangesOfVariables` is missing. It is a test-only
-    # dependency of this package for that reason: `[extras]` puts it in the
-    # environment the walk reads. Nothing here loads it.
+    # Many packages list a dependency in both sections, an idiom from before
+    # Julia 1.9. `LogExpFunctions` v1.0.1 lists three names that way and
+    # `IntervalSets` v0.7.11 all three of its own, so naming the missing
+    # packages one by one does not end: the first attempt here added
+    # `ChangesOfVariables` and the walk then stopped at `RecipesBase`.
     #
-    # Remove it once Aqua skips `[weakdeps]` in that walk. Watch for the same
-    # failure under a different name: any package in the closure that lists a
-    # dependency twice can trip it.
+    # Raise the bound once Aqua skips `[weakdeps]` in that walk.
     Aqua.test_all(
         ClimaAtmos;
         persistent_tasks = true,
