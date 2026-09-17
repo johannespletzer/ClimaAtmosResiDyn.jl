@@ -41,3 +41,11 @@ Section 12 of the review is written for you. In short:
 - Re-time `test/energy_source_tags_integration.jl` first. It grew from three model types
   to five when #72 merged, after the measurement in this review, so its 17.3 min is
   already stale.
+
+## The plan, reviewed and executed
+
+[`plan_review.md`](plan_review.md) checks the review's facts again with API access
+and a Julia session. It answers the open questions of section 11 and gives the
+revised plan. `main` is not protected, so the path filters are safe. Phase A and B
+are on the branch `claude/ci-cost-phase-a`. Phase C waits for the first two `main`
+runs after that merge.
