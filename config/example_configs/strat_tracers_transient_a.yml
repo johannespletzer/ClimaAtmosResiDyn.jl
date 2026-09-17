@@ -50,12 +50,7 @@ microphysics_model: "0M"
 turbconv: "edonly_edmfx"
 edmfx_sgs_diffusive_flux: true
 surface_setup: "DefaultMoninObukhov"
-prognostic_surface: "SeasonalSST"    # zonally symmetric SST with a seasonal cycle
-# The seasonal cycle in the lower boundary is a primary driver of the
-# stationary-wave forcing that sets the Brewer-Dobson circulation and the polar
-# vortex life cycle, and the steady profile carries none of it. `SeasonalSST`
-# restores the midlatitude ocean part. The land and sea-ice seasonality stays
-# out of reach, since standalone ClimaAtmos has no model for it.
+prognostic_surface: "PrescribedSST"   # steady analytic zonally symmetric SST
 
 toml: [toml/strat_tracers_transient.toml]
 

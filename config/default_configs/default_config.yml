@@ -483,6 +483,9 @@ energy_source_tag_offset:
 energy_source_tag_repair:
   help: "Experimental. Whether the `energy_source_tags` are kept non-negative where the total they partition is positive [`true` (default), `false`]. The partition tags keep their sum, the tags that carry a source are clipped at zero, and every change is logged in `e_src_fix_<name>`. `false` leaves the tags exactly as the attribution rule and their transport make them, negative values included. See docs/src/energy_source_tags.md."
   value: true
+energy_source_tag_transport:
+  help: "Experimental. How the `energy_source_tags` are transported [`tracer` (default), `enthalpy`]. `tracer` moves each tag as a passive tracer. `enthalpy` is an audit: in vertical and horizontal advection and in hyperdiffusion, each tag takes its share of the parent's own flux of `ρe_tot + c·ρ`, so transport adds nothing to `e_src_res`, up to the timing of the step. `enthalpy` requires `energy_source_tag_offset`. See docs/src/energy_source_tags.md."
+  value: "tracer"
 energy_process_record:
   help: "Record what each listed process did to moist energy, as the signed increment it applied, output as `e_prc_<process>` [`~` (default, off)]. One `source` label, a list of them, or a group name, using the same labels as `energy_tracers`. A prognostic field, so the timestepper integrates it and it is carried through restarts, but not a tracer: the name has no `ρ` prefix, so nothing transports, diffuses or limits it. A record says what a process did rather than where the energy present came from. See docs/src/process_record.md."
   value: ~

@@ -319,6 +319,26 @@ end
     )
     @test isempty(label_warnings(zero_moment, "microphysics"))
     @test length(label_warnings(zero_moment, "precipitation")) == 1
+
+    # The offset and the transport act on the tags, so each is refused alone.
+    @test_throws ErrorException CA.AtmosTagging(
+        tracer_config(
+            ["energy_source_tag_offset" => 110495.0];
+            job_id = "tracer_config_source_offset_alone",
+        ),
+    )
+    @test_throws ErrorException CA.AtmosTagging(
+        tracer_config(
+            ["energy_source_tag_transport" => "enthalpy"];
+            job_id = "tracer_config_source_transport_alone",
+        ),
+    )
+    # With tags, the key reaches the model.
+    enthalpy = CA.AtmosTagging(
+        source_config("enthalpy", "energy_source_tag_transport" => "enthalpy"),
+    )
+    @test enthalpy.energy_source_tagging_model.transport isa
+          CA.EnthalpyEnergySourceTransport
 end
 
 @testset "passive_tracers release grid" begin

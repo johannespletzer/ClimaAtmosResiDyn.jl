@@ -145,10 +145,14 @@ says what happened in this cell, not what arrived here.
     processes in `KNOWN_TAG_SOURCES` and `KNOWN_WATER_TAG_SOURCES` and nothing
     else.
 
-Both limits matter for interpretation: the records of a run do **not** sum to
-the change in the parent variable, and were never intended to. They are a
-per-process history over the processes that are bracketed, not a closed budget
-of the model.
+Both limits matter for interpretation. At a point, the records of a run do
+**not** sum to the change in the parent variable, and were never intended to:
+transport moves the parent and has no record. Summed over a column model, where
+transport only moves energy between levels, they can. With a record for every
+process that changes the column's energy, they add up to its change in
+`ρe_tot`, to rounding under 0-moment microphysics and up to the linearised term
+described under Cost otherwise. The records are a per-process history over the
+processes that are bracketed, not a closed budget of the model.
 
 ## Interpretation limit
 
