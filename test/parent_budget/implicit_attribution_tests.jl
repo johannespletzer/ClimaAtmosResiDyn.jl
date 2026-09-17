@@ -60,26 +60,24 @@ function column_simulation(;
     )
 end
 
+# The moist column of the calibration protocol, `PB.calibration_configuration`:
 # DYCOMS_RF02 is a 1.5 km marine boundary layer, so it gets the geometry the
 # shipped DYCOMS configs use; the default 30 km column extrapolates the profile
 # into negative pressure. Its idealized radiation forces the energy so the water
-# and energy identities carry real updates. `settings` are added to the
+# and energy identities carry real updates, and its slab ocean makes every
+# reservoir the ledger knows part of the run.
+#
+# Taking it from there rather than writing it out again shares one compiled
+# model with `transfer_tests.jl` and `report_tests.jl`, which build the same
+# column. A model is compiled once per type, and this group's cost is almost
+# all compilation. The mode is a field of the adapter, not a type parameter, so
+# `summary` and `audit` share the model too. `settings` are added to the
 # configuration.
 function moist_config(job_id, settings::Pair...)
-    config = Dict(
-        "initial_condition" => "DYCOMS_RF02",
-        "z_max" => 1500.0,
-        "z_elem" => 30,
-        "z_stretch" => false,
-        "rad" => "DYCOMS",
-        "microphysics_model" => "0M",
-        "config" => "column",
-        "FLOAT_TYPE" => "Float64",
-        "dt" => "10secs",
-        "t_end" => "600secs",
-        "output_default_diagnostics" => false,
-        "output_dir" => mktempdir(),
-        settings...,
+    config = merge(
+        PB.calibration_configuration(),
+        Dict("output_dir" => mktempdir()),
+        Dict(settings...),
     )
     return CA.AtmosConfig(config; job_id)
 end

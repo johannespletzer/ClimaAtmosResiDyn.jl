@@ -329,22 +329,18 @@ status(component) = PB.component_status(component)
     end
 
     @testset "The configuration path carries the attribution key" begin
+        # The moist column of the calibration protocol, which
+        # `implicit_attribution_tests.jl`, `transfer_tests.jl` and
+        # `report_tests.jl` also build. One compiled model then serves all
+        # four files, and this group's cost is almost all compilation.
         config = CA.AtmosConfig(
-            Dict(
-                "initial_condition" => "DYCOMS_RF02",
-                "z_max" => 1500.0,
-                "z_elem" => 30,
-                "z_stretch" => false,
-                "rad" => "DYCOMS",
-                "microphysics_model" => "0M",
-                "config" => "column",
-                "FLOAT_TYPE" => "Float64",
-                "dt" => "10secs",
-                "t_end" => "600secs",
-                "output_default_diagnostics" => false,
-                "output_dir" => mktempdir(),
-                "parent_budget_mode" => "audit",
-                "parent_budget_attribution" => "gross",
+            merge(
+                PB.calibration_configuration(),
+                Dict{String, Any}(
+                    "output_dir" => mktempdir(),
+                    "parent_budget_mode" => "audit",
+                    "parent_budget_attribution" => "gross",
+                ),
             );
             job_id = "parent_budget_explicit_moist",
         )
