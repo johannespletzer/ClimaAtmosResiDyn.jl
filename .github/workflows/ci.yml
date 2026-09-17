@@ -110,8 +110,12 @@ jobs:
           skip: Artifacts, Dates, Downloads, LazyArtifacts, LinearAlgebra, Logging, Printf, Test, Statistics, Random, Pkg, Glib_jll, Musica
           mode: 'forcedeps'
       - uses: julia-actions/julia-buildpkg@v1
+      # The downgrade step resolves the packages but does not install their
+      # artifacts, and `julia-buildpkg` only builds. The `Downgrade` matrix
+      # never noticed, because `Pkg.test` instantiates first. Without this,
+      # loading fails on the first missing artifact (NVTX_jll on 2026-09-17).
       - name: using ClimaAtmos
-        run: julia --project=. --color=yes -e 'using ClimaAtmos'
+        run: julia --project=. --color=yes -e 'using Pkg; Pkg.instantiate(); using ClimaAtmos'
 
   test:
     name: ci ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.test_group }}
