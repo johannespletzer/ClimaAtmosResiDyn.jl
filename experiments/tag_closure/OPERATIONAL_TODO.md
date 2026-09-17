@@ -199,6 +199,13 @@ On 2026-09-14:
     it does not change at all (`analysis/parent_budget_dry_defects.jl`).
     Branch `claude/parent-budget-defect-test`, pushed, 133 of 133 locally at
     `4c15038f` and at `e88f5c31`, the fixes for the three nits of its review.
+    The owner asked to move the convergence check to a dry column with
+    implicit diffusion. In 64 runs it never stood above rounding (at most 8
+    units): at rest, with a uniform 10 m/s wind and with a sheared wind, on
+    the test grid and on a 50 m grid, for both diffusion models
+    (`analysis/parent_budget_defect_dry_{diffusion,wind,shear}.jl`). A dry
+    column's implicit problem is close to linear, so one Newton iteration
+    already solves it. Open: how to go on.
     Draft PR #81, opened 2026-09-17; the text is also in
     [PARENT_BUDGET_DEFECT_PR.md](PARENT_BUDGET_DEFECT_PR.md).
 
