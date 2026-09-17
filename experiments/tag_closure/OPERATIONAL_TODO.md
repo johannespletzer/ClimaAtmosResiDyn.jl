@@ -50,9 +50,10 @@ three Newton iterations larger than that of one (5.37e-7 against 3.43e-7).
 That test is on `main`, #72 does not touch it, the same job passed at #72's
 previous head with the same `src/`, and it passes on #74 and #75. The runner
 was in another Azure region, so the test looks hardware-sensitive (decision 13).
-A `gh run rerun` failed with a permission error. It most likely went to
-`CliMA/ClimaAtmos.jl`, as the first PR attempt did (section 0); not retried.
-Whether the
+A `gh run rerun` failed with a permission error. On 2026-09-17, `gh run cancel`
+with `-R johannespletzer/ClimaAtmosResiDyn.jl` also got HTTP 403. So the token
+cannot write to Actions on the fork either, and the owner reruns and cancels
+runs. Whether the
 recursion removes #76's 1,056 bytes on Julia 1.10 is also for CI to show.
 
 Measured so far: 0M on a column and a sphere, and 1M on a warm column, a day
@@ -90,6 +91,10 @@ day, 2M and P3, more than one node, and the GPU.
     read the cache lines on the first two `main` runs after #82 merges, then
     phase C (fewer model types in the heaviest fork-owned test files, one PR
     per file, each reviewed by the owner).
+  - **#83,** a fix for #82. The new `load 1.10 minimum compat` job failed on
+    #82's own run, because the downgrade step installs no artifacts
+    (`Artifact "NVTX" was not found`). #83 instantiates first. Until it
+    merges, that job and `ci-required` fail on `main` and on every PR.
   - **#77:** the "under the default `tracer` transport" qualifier is in
     (`7d6cec6b`). Another session had already merged `main` into #77 and #78.
 
