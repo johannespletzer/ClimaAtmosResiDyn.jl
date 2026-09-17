@@ -125,21 +125,21 @@ test minute is compilation and that the queue, not the jobs, set the wall time.
   - **Caches.** `ci`, `Documentation` and `Downgrade` keep one depot cache per
     Julia patch version, shared by all groups, under the paths in
     `DEPOT_CACHE_PATHS`.
-      - **Who saves.** Only runs on `main` save a cache, the weekly schedule
+      + **Who saves.** Only runs on `main` save a cache, the weekly schedule
         included. The first job of such a run to finish saves it, and jobs
         that start later in the same run restore it. Every other run, pull
         requests and tags included, restores the newest cache from `main` and
         saves nothing. GitHub keeps 10 GB per repository. On 2026-09-17 the
         caches of pull request runs pushed `main`'s out within half an hour.
-      - **What fits.** A push to `main` saves about 4.4 GB: the two test
+      + **What fits.** A push to `main` saves about 4.4 GB: the two test
         depots, the minimum-compat depot and the docs depot. The weekly
         `Downgrade` run adds about 2.3 GB. `Downstream` and `Manifest compat`
         keep no cache. Theirs were 4.5 GB and 2.8 GB, and would push the
         others out.
-      - **`load`.** It restores the test cache and never saves. It loads the
+      + **`load`.** It restores the test cache and never saves. It loads the
         package with `--check-bounds=yes`, the flag `Pkg.test` sets, so the
         test jobs' package images fit.
-      - **Runner CPU.** Each test job prints its CPU model. A job that restores
+      + **Runner CPU.** Each test job prints its CPU model. A job that restores
         the cache but still precompiles most dependencies may have run on a
         different CPU from the job that saved it.
   - **No coverage.** Nothing was ever uploaded, because the repository has no
