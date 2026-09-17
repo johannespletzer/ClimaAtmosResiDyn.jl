@@ -39,6 +39,14 @@ gives the revised plan. Phase A and B of that plan are implemented in draft PR #
    works, and a second push to the same pull request reuses its own cache. No
    change is needed. The point is recorded so nobody reads a full store as a
    failure.
+   **Falsified on 2026-09-17, after #82 merged.** On `main`'s Downgrade run
+   35227540243, the 1.10 cache saved at 13:59 was restored at 14:04 and 14:18.
+   It was gone for the jobs that started from 14:34 on. At 15:36 the store held
+   10 caches, 11.4 GB, all used after 15:03, and four of them belonged to pull
+   requests. Where a job found the cache, it worked: `414 already precompiled`.
+   **Fix, #84:** only pushes and the schedule save. Pull requests restore
+   `main`'s cache and save nothing, and `load` reuses the test cache without
+   saving.
 3. **Item 2 may also miss a fourth trap: the CPU.** Package images are built for
    the runner's own CPU by default. GitHub's `ubuntu-latest` pool mixes AMD and
    Intel machines. Julia rejects a package image built for a CPU the current
