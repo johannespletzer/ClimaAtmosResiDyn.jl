@@ -1,6 +1,6 @@
 # Draft PR: the parent-budget solve defect test (decision 13)
 
-Branch `claude/parent-budget-defect-test` (`4c15038f`) is pushed to `origin`. Opened as draft PR #81 on 2026-09-17, with this title and body. A first attempt failed because `gh` sent it to the `upstream` remote, `CliMA/ClimaAtmos.jl`.
+Branch `claude/parent-budget-defect-test` on `origin`. Opened as draft PR #81 on 2026-09-17 at `4c15038f`; the review fixes are `e88f5c31`. This is the body after those fixes. A first attempt failed because `gh` sent it to the `upstream` remote, `CliMA/ClimaAtmos.jl`.
 
 **Title:** Test the parent-budget solve defect where it stands above rounding
 
@@ -14,6 +14,7 @@ Branch `claude/parent-budget-defect-test` (`4c15038f`) is pushed to `origin`. Op
 |:--|--:|--:|
 | 1 Newton iteration | 2.005e-7 | 1.95 |
 | 3 Newton iterations | 1.951e-7 | 1.90 |
+| 1 Newton iteration, 2 approximate solve iterations | 2.005e-7 | 1.95, bit for bit the first row |
 
 A 3% margin on terrabyte and the opposite order on the CI runner: the two numbers are rounding noise, and their order depends on how a machine rounds.
 
@@ -29,13 +30,15 @@ Test code only.
   | 3 Newton iterations | 3.7e-4 | 2.3e4 |
 
   The test requires the one-iteration defect to exceed 1e4 rounding units, and three iterations to leave less than a tenth of it. Both hold with a wide margin.
-- **The dry column** keeps its check that a second approximate solver iteration changes the defect by rounding only. The tolerance is now four rounding units, instead of the strict `<=` that the same rounding could break.
+- **The dry column** keeps its check that a second approximate solver iteration changes the defect by rounding only. The bound is now eight rounding units, instead of the strict `<=` that the same rounding could break. On terrabyte the two defects are identical; on the CI runner above, the dry defects were about 3.3 and 5.2 units, so eight units leaves room for such a spread.
+- **The moist column settings** now come from one helper, `moist_config`, which both moist test sets use.
 - **Unchanged:** the parent identity is still checked in every run.
 
 ## Cost and checks
 
-The moist column in audit mode is one more compile in the `parent_budget` group. Locally, Julia 1.11.9: `implicit_attribution_tests.jl` 133 of 133.
+The moist column in audit mode is one more compile in the `parent_budget` group. Locally, Julia 1.11.9: `implicit_attribution_tests.jl` 133 of 133, before and after the review fixes (`e88f5c31`).
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 https://claude.ai/code/session_01XNjVD5YEniWtoQBjqDMLL5
+

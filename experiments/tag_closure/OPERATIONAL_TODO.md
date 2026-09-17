@@ -194,10 +194,12 @@ On 2026-09-14:
     order is noise (`analysis/parent_budget_defect_size.jl`). On the owner's
     request the test now runs where the defect is real: a moist DYCOMS column
     at dt 10 s, 2.5e6 rounding units at one iteration and 110 times less at
-    three. The dry column keeps a check that the defect stays within four
-    rounding units for one and two inner iterations. Branch
-    `claude/parent-budget-defect-test` (`4c15038f`), pushed, 133 of 133
-    locally. Draft PR #81, opened 2026-09-17; the text is also in
+    three. The dry column keeps a check that the defect changes by at most
+    eight rounding units between one and two inner iterations; on terrabyte
+    it does not change at all (`analysis/parent_budget_dry_defects.jl`).
+    Branch `claude/parent-budget-defect-test`, pushed, 133 of 133 locally at
+    `4c15038f` and at `e88f5c31`, the fixes for the three nits of its review.
+    Draft PR #81, opened 2026-09-17; the text is also in
     [PARENT_BUDGET_DEFECT_PR.md](PARENT_BUDGET_DEFECT_PR.md).
 
 ## 2. Blocking operation (B), in dependency order
