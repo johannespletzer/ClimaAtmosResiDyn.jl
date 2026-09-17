@@ -60,6 +60,30 @@ function column_simulation(;
     )
 end
 
+# DYCOMS_RF02 is a 1.5 km marine boundary layer, so it gets the geometry the
+# shipped DYCOMS configs use; the default 30 km column extrapolates the profile
+# into negative pressure. Its idealized radiation forces the energy so the water
+# and energy identities carry real updates. `settings` are added to the
+# configuration.
+function moist_config(job_id, settings::Pair...)
+    config = Dict(
+        "initial_condition" => "DYCOMS_RF02",
+        "z_max" => 1500.0,
+        "z_elem" => 30,
+        "z_stretch" => false,
+        "rad" => "DYCOMS",
+        "microphysics_model" => "0M",
+        "config" => "column",
+        "FLOAT_TYPE" => "Float64",
+        "dt" => "10secs",
+        "t_end" => "600secs",
+        "output_default_diagnostics" => false,
+        "output_dir" => mktempdir(),
+        settings...,
+    )
+    return CA.AtmosConfig(config; job_id)
+end
+
 adapter_of(simulation) = simulation.integrator.p.parent_budget
 step!(simulation, n) = foreach(_ -> CTS.step!(simulation.integrator), 1:n)
 
@@ -136,27 +160,9 @@ defect_energy(adapter) = sum(
     end
 
     @testset "A moist column built from the configuration passes for water too" begin
-        # DYCOMS_RF02 is a 1.5 km marine boundary layer, so it gets the geometry
-        # the shipped DYCOMS configs use; the default 30 km column extrapolates
-        # the profile into negative pressure. Its idealized radiation forces the
-        # energy so the water and energy identities carry real updates.
-        config = CA.AtmosConfig(
-            Dict(
-                "initial_condition" => "DYCOMS_RF02",
-                "z_max" => 1500.0,
-                "z_elem" => 30,
-                "z_stretch" => false,
-                "rad" => "DYCOMS",
-                "microphysics_model" => "0M",
-                "config" => "column",
-                "FLOAT_TYPE" => "Float64",
-                "dt" => "10secs",
-                "t_end" => "600secs",
-                "output_default_diagnostics" => false,
-                "output_dir" => mktempdir(),
-                "parent_budget_mode" => "summary",
-            );
-            job_id = "parent_budget_moist_column",
+        config = moist_config(
+            "parent_budget_moist_column",
+            "parent_budget_mode" => "summary",
         )
         simulation = CA.get_simulation(config)
         adapter = adapter_of(simulation)
@@ -223,35 +229,21 @@ defect_energy(adapter) = sum(
 
     @testset "The solve defect shrinks when the solve converges" begin
         # The size of rounding in the column's energy integral.
-        rounding(simulation) =
+        rounding_unit(simulation) =
             eps(FT) * sum(abs.(simulation.integrator.u.c.ρe_tot))
 
         # On the dry column the defect is already rounding at one Newton
-        # iteration, about two units of `rounding`, so more iterations cannot
+        # iteration, about two rounding units, so more iterations cannot
         # shrink it, and their order is set by how a machine rounds. The
         # moist column's implicit microphysics leaves a defect far above
         # rounding, and a converged solve removes most of it. On terrabyte it
         # is 2.5e6 rounding units at one iteration and 110 times smaller at
         # three.
         function moist_defect(max_newton_iters_ode)
-            config = CA.AtmosConfig(
-                Dict(
-                    "initial_condition" => "DYCOMS_RF02",
-                    "z_max" => 1500.0,
-                    "z_elem" => 30,
-                    "z_stretch" => false,
-                    "rad" => "DYCOMS",
-                    "microphysics_model" => "0M",
-                    "config" => "column",
-                    "FLOAT_TYPE" => "Float64",
-                    "dt" => "10secs",
-                    "t_end" => "600secs",
-                    "max_newton_iters_ode" => max_newton_iters_ode,
-                    "output_default_diagnostics" => false,
-                    "output_dir" => mktempdir(),
-                    "parent_budget_mode" => "audit",
-                );
-                job_id = "parent_budget_moist_defect",
+            config = moist_config(
+                "parent_budget_moist_defect",
+                "parent_budget_mode" => "audit",
+                "max_newton_iters_ode" => max_newton_iters_ode,
             )
             simulation = CA.get_simulation(config)
             adapter = adapter_of(simulation)
@@ -260,7 +252,7 @@ defect_energy(adapter) = sum(
             # solver did: the stored tendency contains the defect.
             @test parent_row(adapter, :energy).status === :pass
             @test parent_row(adapter, :mass).status === :pass
-            return (; defect = defect_energy(adapter), rounding = rounding(simulation))
+            return (; defect = defect_energy(adapter), rounding = rounding_unit(simulation))
         end
         one_iteration = moist_defect(1)
         three_iterations = moist_defect(3)
@@ -269,7 +261,11 @@ defect_energy(adapter) = sum(
 
         # On the dry column without implicit diffusion the manual Jacobian's
         # approximate solve is exact, so a second approximate iteration may
-        # change the defect by rounding only.
+        # change the defect by rounding only. On terrabyte the two defects are
+        # identical, 1.95 rounding units. On the CI runner where the old test
+        # failed, the dry defects at one and three Newton iterations were about
+        # 3.3 and 5.2 units. The bound of eight units leaves room for such a
+        # spread and still says rounding.
         dry = map((1, 2)) do approximate_solve_iters
             simulation = column_simulation(;
                 parent_budget_mode = "audit",
@@ -279,9 +275,9 @@ defect_energy(adapter) = sum(
             step!(simulation, 2)
             @test parent_row(adapter, :energy).status === :pass
             @test parent_row(adapter, :mass).status === :pass
-            (; defect = defect_energy(adapter), rounding = rounding(simulation))
+            (; defect = defect_energy(adapter), rounding = rounding_unit(simulation))
         end
-        @test abs(dry[2].defect - dry[1].defect) <= 4 * dry[1].rounding
+        @test abs(dry[2].defect - dry[1].defect) <= 8 * dry[1].rounding
     end
 
     @testset "Without the correction hook the defect is unknown, not zero" begin
