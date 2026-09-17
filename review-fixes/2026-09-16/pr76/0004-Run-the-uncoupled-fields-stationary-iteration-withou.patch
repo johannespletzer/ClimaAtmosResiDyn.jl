@@ -1,7 +1,7 @@
-From a021dfe317e6e05c0c6eb3f4e4bbde51d772fba2 Mon Sep 17 00:00:00 2001
+From 4b95fa9a5c20608b63fe325233673ff31f9be1af Mon Sep 17 00:00:00 2001
 From: review <review@local>
-Date: Thu, 17 Sep 2026 07:07:47 +0000
-Subject: [PATCH 3/3] Run the uncoupled fields' stationary iteration without
+Date: Thu, 17 Sep 2026 07:09:42 +0000
+Subject: [PATCH 4/4] Run the uncoupled fields' stationary iteration without
  ClimaCore's CUDA probe
 
 ClimaCore's run_field_matrix_solver! for a StationaryIterativeSolve
@@ -12,30 +12,31 @@ per uncoupled field, where the test asserts zero. The recursion pushed
 earlier did not remove those bytes.
 
 solve_uncoupled_field! now runs the same loop, with the same operations
-in the same order, and leaves the probe out. The test logs the unsplit
-solve's bytes beside the split's.
+in the same order and the same correlated-solves start, and leaves the
+probe out. The test logs the unsplit solve's bytes beside the split's.
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01LA3FukgbRCMkra999BhdDw
 ---
- .../implicit/manual_sparse_jacobian.jl        | 44 ++++++++++++++++---
- test/energy_source_tags_integration.jl        |  8 +++-
- 2 files changed, 46 insertions(+), 6 deletions(-)
+ .../implicit/manual_sparse_jacobian.jl        | 52 ++++++++++++++++---
+ test/energy_source_tags_integration.jl        |  8 ++-
+ 2 files changed, 53 insertions(+), 7 deletions(-)
 
 diff --git a/src/prognostic_equations/implicit/manual_sparse_jacobian.jl b/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
-index f71cbc1..e005fe4 100644
+index c92f543..a7acfe9 100644
 --- a/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
 +++ b/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
-@@ -861,6 +861,8 @@ function split_jacobian_solver(
-     cache = MatrixFields.field_matrix_solver_cache(alg, coupled_matrix, b)
-     MatrixFields.check_field_matrix_solver(alg, cache, coupled_matrix, b)
- 
-+    # `solve_uncoupled_field!` runs this iteration itself, without correlated
-+    # solves and without debug output, so both stay at their defaults here.
-     uncoupled_alg =
-         alg isa MatrixFields.SchurComplementReductionSolve ?
-         MatrixFields.StationaryIterativeSolve(;
-@@ -923,14 +925,12 @@ function LinearAlgebra.ldiv!(
+@@ -867,7 +867,8 @@ end
+ # system. There the field falls into the group that `alg` leaves to its second
+ # algorithm, whose block diagonal part inverts the field's block exactly. The
+ # iterative arrowhead solve repeats that inverse as often as its own iterative
+-# second algorithm does, so the count and the start are read from it.
++# second algorithm does, so the count and the start are read from it. The loop
++# itself is run by `solve_uncoupled_field!`, which reads the same two settings.
+ uncoupled_field_algorithm(::MatrixFields.BlockArrowheadSolve) =
+     MatrixFields.BlockDiagonalSolve()
+ function uncoupled_field_algorithm(
+@@ -912,14 +913,12 @@ function LinearAlgebra.ldiv!(
      return ΔY
  end
  
@@ -53,7 +54,7 @@ index f71cbc1..e005fe4 100644
          alg,
          cache,
          MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(ΔY, name),)),
-@@ -940,6 +940,40 @@ function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
+@@ -929,6 +928,47 @@ function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
      return solve_uncoupled_fields!(Base.tail(uncoupled), ΔY, R)
  end
  
@@ -66,8 +67,8 @@ index f71cbc1..e005fe4 100644
 +# the result is the same to the bit. ClimaCore's loop first rebuilds a
 +# `FieldVector` from `b` to test for a CUDA array, which only its debug output
 +# uses. On Julia 1.10 that temporary is not elided and allocates once per field
-+# per solve. This copy leaves the test out. It can go back to
-+# `run_field_matrix_solver!` once a ClimaCore PR moves that test under
++# per solve. This copy leaves the test out, and has no debug output. It can go
++# back to `run_field_matrix_solver!` once a ClimaCore PR moves that test under
 +# `get_debug(alg)`.
 +function solve_uncoupled_field!(
 +    alg::MatrixFields.StationaryIterativeSolve,
@@ -77,7 +78,11 @@ index f71cbc1..e005fe4 100644
 +    b,
 +)
 +    P = MatrixFields.lazy_or_concrete_preconditioner(alg.P_alg, cache.P_cache, A)
-+    @. x = zero(x)
++    if alg.correlated_solves
++        @. x = cache.previous_x
++    else
++        @. x = zero(x)
++    end
 +    for _ in 1:(alg.n_iters)
 +        lazy_Δb = MatrixFields.lazy_sub(b, MatrixFields.lazy_mul(A, x))
 +        lazy_Δx = MatrixFields.apply_preconditioner(
@@ -88,6 +93,9 @@ index f71cbc1..e005fe4 100644
 +        )
 +        @. x += lazy_Δx
 +    end
++    if alg.correlated_solves
++        @. cache.previous_x = x
++    end
 +    return x
 +end
 +
@@ -95,10 +103,10 @@ index f71cbc1..e005fe4 100644
  # Jacobian matrix entries
  # ============================================================================
 diff --git a/test/energy_source_tags_integration.jl b/test/energy_source_tags_integration.jl
-index 57b6928..e5943ab 100644
+index 5db697e..284e87d 100644
 --- a/test/energy_source_tags_integration.jl
 +++ b/test/energy_source_tags_integration.jl
-@@ -233,7 +233,13 @@ import ClimaAtmos as CA
+@@ -234,7 +234,13 @@ import ClimaAtmos as CA
              return @allocated CA.invert_jacobian!(alg, cache, ΔY, R)
          end
          @test update_allocations(jacobian_alg, split_cache, Y, p, dtγ, t) == 0

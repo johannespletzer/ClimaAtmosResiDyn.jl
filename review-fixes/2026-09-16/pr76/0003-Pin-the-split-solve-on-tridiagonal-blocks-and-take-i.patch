@@ -1,0 +1,327 @@
+From 932878c6916085e8a2b2019e1b477cbe8b0bbc10 Mon Sep 17 00:00:00 2001
+From: Johannes Pletzer <johannes.pletzer@posteo.de>
+Date: Wed, 16 Sep 2026 21:21:31 +0200
+Subject: [PATCH 3/4] Pin the split solve on tridiagonal blocks, and take its
+ iterations from the algorithm
+
+A unit test builds a small column with two coupled scalars, a face velocity,
+a tag and a record whose own blocks are tridiagonal, and solves it with the
+split and the nested solver under the one- and two-iteration arrowhead solve
+and the direct one. The increments agree bit for bit in every case, and a
+second iteration changes the tag, so a split with the wrong count would
+fail. The integration test showed neither, because its tag blocks are -I.
+
+The split no longer takes the iteration count as a separate argument. It
+reads the count and the start from the arrowhead solve own iterative
+algorithm, and refuses any other algorithm. The integration comparison uses
+isequal, which tells signed zeros apart.
+
+Locally: energy source tags 229 of 229, integration 52 of 52.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XNjVD5YEniWtoQBjqDMLL5
+---
+ .../implicit/manual_sparse_jacobian.jl        |  79 ++++------
+ test/energy_source_tags_integration.jl        |   5 +-
+ test/energy_source_tags_tests.jl              | 146 ++++++++++++++++++
+ 3 files changed, 183 insertions(+), 47 deletions(-)
+
+diff --git a/src/prognostic_equations/implicit/manual_sparse_jacobian.jl b/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
+index f71cbc1..c92f543 100644
+--- a/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
++++ b/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
+@@ -603,7 +603,7 @@ function jacobian_solver_algorithm(
+ end
+ 
+ """
+-    jacobian_cache(alg::ManualSparseJacobian, Y, atmos; split_uncoupled_fields = true)
++    jacobian_cache(alg::ManualSparseJacobian, Y, atmos; split_uncoupled_fields = true, verbose = false)
+ 
+ Allocate the sparse `∂R/∂Y` matrix and its solver for a
+ [`ManualSparseJacobian`](@ref).
+@@ -673,47 +673,21 @@ function jacobian_cache(
+     build_solver =
+         isempty(uncoupled_names) ? build_unsplit_jacobian_solver :
+         build_split_jacobian_solver
+-    (matrix, solver) = Base.invokelatest(
+-        build_solver,
+-        matrix,
+-        Y,
+-        full_alg,
+-        uncoupled_names,
+-        alg.approximate_solve_iters,
+-    )
++    (matrix, solver) =
++        Base.invokelatest(build_solver, matrix, Y, full_alg, uncoupled_names)
+     return (; matrix, solver, derivative_flags)
+ end
+ 
+ # Without uncoupled fields, the matrix and its solver are one
+ # `FieldMatrixWithSolver`, as before the split existed.
+-function build_unsplit_jacobian_solver(
+-    matrix,
+-    Y,
+-    full_alg,
+-    uncoupled_names,
+-    approximate_solve_iters,
+-)
++function build_unsplit_jacobian_solver(matrix, Y, full_alg, uncoupled_names)
+     matrix_with_solver = MatrixFields.FieldMatrixWithSolver(matrix, Y, full_alg)
+     return (matrix_with_solver, matrix_with_solver)
+ end
+ 
+ # With them, the whole matrix is kept for the updates, and the solver splits.
+-build_split_jacobian_solver(
+-    matrix,
+-    Y,
+-    full_alg,
+-    uncoupled_names,
+-    approximate_solve_iters,
+-) = (
+-    matrix,
+-    split_jacobian_solver(
+-        matrix,
+-        Y,
+-        full_alg,
+-        uncoupled_names,
+-        approximate_solve_iters,
+-    ),
+-)
++build_split_jacobian_solver(matrix, Y, full_alg, uncoupled_names) =
++    (matrix, split_jacobian_solver(matrix, Y, full_alg, uncoupled_names))
+ 
+ # ============================================================================
+ # Solving the tags and the records apart from the rest
+@@ -817,13 +791,7 @@ end
+ 
+ # Build a `SplitJacobianSolver` from the whole matrix, the state, the model's
+ # nested solver algorithm and the names `uncoupled_jacobian_names` found.
+-function split_jacobian_solver(
+-    matrix,
+-    Y,
+-    alg,
+-    uncoupled_names,
+-    approximate_solve_iters,
+-)
++function split_jacobian_solver(matrix, Y, alg, uncoupled_names)
+     uncoupled_chains = map(jacobian_name_chain, collect(uncoupled_names))
+     is_uncoupled(name) = jacobian_name_chain(name) in uncoupled_chains
+ 
+@@ -861,12 +829,7 @@ function split_jacobian_solver(
+     cache = MatrixFields.field_matrix_solver_cache(alg, coupled_matrix, b)
+     MatrixFields.check_field_matrix_solver(alg, cache, coupled_matrix, b)
+ 
+-    uncoupled_alg =
+-        alg isa MatrixFields.SchurComplementReductionSolve ?
+-        MatrixFields.StationaryIterativeSolve(;
+-            P_alg = MatrixFields.BlockDiagonalPreconditioner(),
+-            n_iters = approximate_solve_iters,
+-        ) : MatrixFields.BlockDiagonalSolve()
++    uncoupled_alg = uncoupled_field_algorithm(alg)
+     uncoupled = map(uncoupled_names) do name
+         field = MatrixFields.get_field(Y, name)
+         field_tree = MatrixFields.FieldNameTree(Fields.FieldVector(; field))
+@@ -900,6 +863,32 @@ function split_jacobian_solver(
+     return SplitJacobianSolver(alg, cache, coupled_keys, coupled_matrix, uncoupled)
+ end
+ 
++# The algorithm that solves one uncoupled field as `alg` solves it in the whole
++# system. There the field falls into the group that `alg` leaves to its second
++# algorithm, whose block diagonal part inverts the field's block exactly. The
++# iterative arrowhead solve repeats that inverse as often as its own iterative
++# second algorithm does, so the count and the start are read from it.
++uncoupled_field_algorithm(::MatrixFields.BlockArrowheadSolve) =
++    MatrixFields.BlockDiagonalSolve()
++function uncoupled_field_algorithm(
++    alg::MatrixFields.SchurComplementReductionSolve{
++        <:Any,
++        <:Any,
++        <:MatrixFields.StationaryIterativeSolve,
++    },
++)
++    return MatrixFields.StationaryIterativeSolve(;
++        P_alg = MatrixFields.BlockDiagonalPreconditioner(),
++        n_iters = alg.alg₂.n_iters,
++        correlated_solves = alg.alg₂.correlated_solves,
++    )
++end
++uncoupled_field_algorithm(alg) = error(
++    "The tags and records cannot be solved apart under a \
++    $(nameof(typeof(alg))). Only the block arrowhead solves that \
++    `jacobian_solver_algorithm` builds are supported.",
++)
++
+ # The view of a state-like `FieldVector` under the given keys, whose name tree
+ # decides which fields a solve can see.
+ split_solver_view(keys, x) = MatrixFields.FieldNameDict(
+diff --git a/test/energy_source_tags_integration.jl b/test/energy_source_tags_integration.jl
+index 57b6928..5db697e 100644
+--- a/test/energy_source_tags_integration.jl
++++ b/test/energy_source_tags_integration.jl
+@@ -217,8 +217,9 @@ import ClimaAtmos as CA
+         ΔY_unsplit = zero(Y)
+         CA.invert_jacobian!(jacobian_alg, split_cache, ΔY_split, Y)
+         CA.invert_jacobian!(jacobian_alg, unsplit_cache, ΔY_unsplit, Y)
+-        @test parent(ΔY_split.c) == parent(ΔY_unsplit.c)
+-        @test parent(ΔY_split.f) == parent(ΔY_unsplit.f)
++        # `isequal` rather than `==`, which would let a signed zero differ.
++        @test isequal(parent(ΔY_split.c), parent(ΔY_unsplit.c))
++        @test isequal(parent(ΔY_split.f), parent(ΔY_unsplit.f))
+         @test !all(iszero, parent(ΔY_split.c.ρe_src_rad))
+ 
+         # The split solver runs in every Newton iteration, so neither its
+diff --git a/test/energy_source_tags_tests.jl b/test/energy_source_tags_tests.jl
+index 01f16ad..dea1733 100644
+--- a/test/energy_source_tags_tests.jl
++++ b/test/energy_source_tags_tests.jl
+@@ -583,4 +583,150 @@ import ClimaAtmos as CA
+             )),
+         )
+     end
++
++    # The split must give the nested solver's increments bit for bit when a tag
++    # block is not a scaled identity and the solve iterates more than once. With
++    # the `-I` blocks of the integration test's column every solver gives `-R`
++    # exactly, so that test cannot tell a wrong iteration count from a right
++    # one. The state here is a column with two coupled scalars, a face velocity,
++    # a tag and a record, whose own blocks are tridiagonal. The two algorithms
++    # have the shapes `jacobian_solver_algorithm` builds.
++    @testset "The split solver matches the nested one on tridiagonal blocks" begin
++        CC = CA.ClimaCore
++        MF = CA.MatrixFields
++        FT = Float64
++        column(staggering) = CC.CommonSpaces.ColumnSpace(
++            FT;
++            z_min = 0,
++            z_max = 1000,
++            z_elem = 12,
++            staggering,
++        )
++        ᶜspace = column(CC.CommonSpaces.CellCenter())
++        ᶠspace = column(CC.CommonSpaces.CellFace())
++        ᶜnames = (:ρ, :ρe_tot, :ρe_src_upper, :prc_e_radiation)
++        Y = CC.Fields.FieldVector(;
++            c = similar(
++                CC.Fields.coordinate_field(ᶜspace),
++                NamedTuple{ᶜnames, NTuple{4, FT}},
++            ),
++            f = similar(
++                CC.Fields.coordinate_field(ᶠspace),
++                NamedTuple{(:u₃,), Tuple{FT}},
++            ),
++        )
++        # Values that differ from point to point and from field to field,
++        # without random numbers.
++        fill_pattern!(values, shift) =
++            values .= sin.(shift .+ 0.7 .* reshape(1:length(values), size(values)))
++        R = similar(Y)
++        fill_pattern!(parent(R.c), 0)
++        fill_pattern!(parent(R.f), 1)
++
++        # A block of the given row type: a pattern of size 0.1 in every entry,
++        # plus `diagonal` on the main diagonal. Entries that would reach past
++        # an end of the column are zero.
++        function band_block(space, row_type, diagonal, shift)
++            block = fill(zero(row_type), space)
++            # One row per level and one column per entry of the band. A column
++            # Field's parent array has singleton dimensions around those two.
++            n_levels = size(parent(block), 1)
++            values = reshape(parent(block), n_levels, :)
++            fill_pattern!(values, shift)
++            values .*= 0.1
++            n_entries = size(values, 2)
++            if isodd(n_entries)
++                values[:, (n_entries + 1) ÷ 2] .+= diagonal
++            end
++            if n_entries > 1
++                values[1, 1] = 0
++                values[end, end] = 0
++            end
++            return block
++        end
++        ᶜdiagonal(shift) =
++            band_block(ᶜspace, MF.DiagonalMatrixRow{FT}, -1, shift)
++        ᶜtridiagonal(shift) =
++            band_block(ᶜspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
++        ᶠtridiagonal(shift) =
++            band_block(ᶠspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
++        # Faces to centres and back, as for a divergence and a gradient.
++        ᶜᶠbidiagonal(shift) =
++            band_block(ᶜspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
++        ᶠᶜbidiagonal(shift) =
++            band_block(ᶠspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
++        block_pairs = (
++            (CA.MatrixFields.@name(c.ρ), CA.MatrixFields.@name(c.ρ)) => ᶜdiagonal(2),
++            (CA.MatrixFields.@name(c.ρe_tot), CA.MatrixFields.@name(c.ρe_tot)) =>
++                ᶜdiagonal(3),
++            (CA.MatrixFields.@name(c.ρ), CA.MatrixFields.@name(f.u₃)) =>
++                ᶜᶠbidiagonal(4),
++            (CA.MatrixFields.@name(c.ρe_tot), CA.MatrixFields.@name(f.u₃)) =>
++                ᶜᶠbidiagonal(5),
++            (CA.MatrixFields.@name(f.u₃), CA.MatrixFields.@name(c.ρ)) =>
++                ᶠᶜbidiagonal(6),
++            (CA.MatrixFields.@name(f.u₃), CA.MatrixFields.@name(c.ρe_tot)) =>
++                ᶠᶜbidiagonal(7),
++            (CA.MatrixFields.@name(f.u₃), CA.MatrixFields.@name(f.u₃)) =>
++                ᶠtridiagonal(8),
++            (
++                CA.MatrixFields.@name(c.ρe_src_upper),
++                CA.MatrixFields.@name(c.ρe_src_upper)
++            ) =>
++                ᶜtridiagonal(9),
++            (
++                CA.MatrixFields.@name(c.prc_e_radiation),
++                CA.MatrixFields.@name(c.prc_e_radiation)
++            ) =>
++                ᶜtridiagonal(10),
++        )
++        uncoupled_names = CA.uncoupled_jacobian_names(block_pairs)
++        @test uncoupled_names ==
++              (
++            CA.MatrixFields.@name(c.ρe_src_upper),
++            CA.MatrixFields.@name(c.prc_e_radiation)
++        )
++
++        velocity_alg = MF.BlockLowerTriangularSolve(CA.MatrixFields.@name(f.u₃))
++        iterative_alg(n_iters) = MF.ApproximateBlockArrowheadIterativeSolve(
++            CA.MatrixFields.@name(c.ρ),
++            CA.MatrixFields.@name(c.ρe_tot);
++            alg₂ = velocity_alg,
++            P_alg₁ = MF.MainDiagonalPreconditioner(),
++            n_iters,
++        )
++        direct_alg = MF.BlockArrowheadSolve(
++            CA.MatrixFields.@name(c.ρ),
++            CA.MatrixFields.@name(c.ρe_tot);
++            alg₂ = velocity_alg,
++        )
++
++        function increments(alg, split)
++            matrix = MF.FieldMatrix(block_pairs...)
++            solver =
++                split ? CA.split_jacobian_solver(matrix, Y, alg, uncoupled_names) :
++                MF.FieldMatrixWithSolver(matrix, Y, alg)
++            ΔY = zero(Y)
++            CA.LinearAlgebra.ldiv!(ΔY, solver, R)
++            return ΔY
++        end
++        same_bits(a, b) =
++            isequal(parent(a.c), parent(b.c)) && isequal(parent(a.f), parent(b.f))
++        for alg in (iterative_alg(1), iterative_alg(2), direct_alg)
++            @test same_bits(increments(alg, true), increments(alg, false))
++        end
++        # The count matters on these blocks: a second iteration changes the
++        # tags' bits, so a split that ignored it would fail the check above.
++        one_iteration = increments(iterative_alg(1), false)
++        two_iterations = increments(iterative_alg(2), false)
++        @test !isequal(
++            parent(one_iteration.c.ρe_src_upper),
++            parent(two_iterations.c.ρe_src_upper),
++        )
++        @test all(isfinite, parent(two_iterations.c))
++        # Only the arrowhead solves are supported.
++        @test_throws ErrorException CA.uncoupled_field_algorithm(
++            MF.BlockDiagonalSolve(),
++        )
++    end
+ end
