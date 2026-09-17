@@ -411,8 +411,13 @@ The default for energy is looser than the one for water by four orders of
 magnitude, and that is not arbitrary. The water tags ride the same transport
 operators as `ρq_tot` apart from the implicit-versus-explicit vertical
 advection split, so very little escapes them. The energy tags follow their
-parent less closely. They ride the passive-tracer path, while `ρe_tot` is moved
-as enthalpy, pressure work included, and vertically on the implicit path.
+parent less closely. The `ρe_tag_*` family rides the passive-tracer path, and
+so do the energy source tags under the default
+`energy_source_tag_transport: tracer`. Meanwhile `ρe_tot` is moved as enthalpy,
+pressure work included, and vertically on the implicit path. The `enthalpy`
+audit moves the source tags with the parent's own advective and hyperdiffusive
+fluxes instead, but still explicitly (see
+[Moving the tags as enthalpy, an audit](@ref)).
 Transport is not attributed on top of that. Each tag is already transported in
 its own right, and attributing the `ρe_tot` version as well would count it
 twice. Neither energy family receives the EDMFX sub-grid mass flux, because the
