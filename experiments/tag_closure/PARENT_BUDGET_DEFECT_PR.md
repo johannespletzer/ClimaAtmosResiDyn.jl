@@ -1,6 +1,6 @@
 # Draft PR: the parent-budget solve defect test (decision 13)
 
-Branch `claude/parent-budget-defect-test` (`4c15038f`) is pushed to `origin`. The PR could not be opened: the token now gets "Resource not accessible by personal access token" on `createPullRequest`. Open it against `main` with this title and body.
+Branch `claude/parent-budget-defect-test` (`4c15038f`) is pushed to `origin`. Opened as draft PR #81 on 2026-09-17, with this title and body. A first attempt failed because `gh` sent it to the `upstream` remote, `CliMA/ClimaAtmos.jl`.
 
 **Title:** Test the parent-budget solve defect where it stands above rounding
 

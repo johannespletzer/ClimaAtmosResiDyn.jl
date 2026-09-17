@@ -50,7 +50,9 @@ three Newton iterations larger than that of one (5.37e-7 against 3.43e-7).
 That test is on `main`, #72 does not touch it, the same job passed at #72's
 previous head with the same `src/`, and it passes on #74 and #75. The runner
 was in another Azure region, so the test looks hardware-sensitive (decision 13).
-The token cannot rerun a job; #72's next push starts a new run. Whether the
+A `gh run rerun` failed with a permission error. It most likely went to
+`CliMA/ClimaAtmos.jl`, as the first PR attempt did (section 0); not retried.
+Whether the
 recursion removes #76's 1,056 bytes on Julia 1.10 is also for CI to show.
 
 Measured so far: 0M on a column and a sphere, and 1M on a warm column, a day
@@ -68,8 +70,14 @@ day, 2M and P3, more than one node, and the GPU.
 
   - **CI** on the seven open PRs. Nothing runs on Slurm.
   - Nothing runs locally.
-  - **Two PRs to open,** both by the owner: decision 13's test (the token
-    cannot create PRs any more) and decision 12's upstream fix.
+  - **One PR to open,** by the owner: decision 12's upstream fix. Decision
+    13's test is draft #81.
+  - **`gh` and the `upstream` remote.** With no default repository, `gh`
+    prefers a remote named `upstream`. So `gh pr create` without `-R` went to
+    `CliMA/ClimaAtmos.jl` and failed with "Resource not accessible by personal
+    access token"; the token was fine. The fork is now `gh`'s default for this
+    clone (`gh repo set-default`, 2026-09-17). Pass
+    `-R johannespletzer/ClimaAtmosResiDyn.jl` anyway in other clones.
   - **New worktrees:** `../ClimaAtmosResiDyn-defect` (decision 13) and
     `../ClimaAtmos-upstream-vwb` (decision 12, on the new `upstream` remote).
 
@@ -189,7 +197,7 @@ On 2026-09-14:
     three. The dry column keeps a check that the defect stays within four
     rounding units for one and two inner iterations. Branch
     `claude/parent-budget-defect-test` (`4c15038f`), pushed, 133 of 133
-    locally. The token could not open the PR; the title and body are in
+    locally. Draft PR #81, opened 2026-09-17; the text is also in
     [PARENT_BUDGET_DEFECT_PR.md](PARENT_BUDGET_DEFECT_PR.md).
 
 ## 2. Blocking operation (B), in dependency order

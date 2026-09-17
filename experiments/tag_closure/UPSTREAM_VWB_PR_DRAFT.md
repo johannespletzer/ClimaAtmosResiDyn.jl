@@ -15,7 +15,9 @@ public, and the owner decides.
     (one new test set, run for two cases), `NEWS.md` (one bugfix entry).
   - **To open it:** `johannespletzer/ClimaAtmosResiDyn.jl` is a GitHub fork of
     `CliMA/ClimaAtmos.jl`, so the branch can be pushed there and the PR opened
-    against `CliMA/ClimaAtmos.jl:main`. Upstream runs a CLA check
+    against `CliMA/ClimaAtmos.jl:main`. The clone's `gh` default is now the
+    fork, so the command needs `-R CliMA/ClimaAtmos.jl --head
+    johannespletzer:upstream-vwb-species-guard`. Upstream runs a CLA check
     (`.github/workflows/cla.yml`), so the owner may need to sign it.
 
 ## How it was tested
