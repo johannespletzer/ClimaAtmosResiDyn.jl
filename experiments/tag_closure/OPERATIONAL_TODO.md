@@ -80,6 +80,18 @@ day, 2M and P3, more than one node, and the GPU.
     `-R johannespletzer/ClimaAtmosResiDyn.jl` anyway in other clones.
   - **New worktrees:** `../ClimaAtmosResiDyn-defect` (decision 13) and
     `../ClimaAtmos-upstream-vwb` (decision 12, on the new `upstream` remote).
+  - **CI cost (2026-09-17).** A CI review was handed over on
+    `claude/review-open-prs-tasks-wxiw0k` (`review-fixes/2026-09-17/`). Its
+    plan was reviewed there (`plan_review.md`), and phases A and B are draft
+    PR #82 (`claude/ci-cost-phase-a`, worktree `../ClimaAtmosResiDyn-ci-phase-a`):
+    shared caches, no coverage, upstream groups on 1.11 only, `Downgrade`
+    weekly plus a minimum-compat load on every PR, `Downstream` filtered,
+    `era5` folded into `dynamics`. `main` has no branch protection. Next:
+    read the cache lines on the first two `main` runs after #82 merges, then
+    phase C (fewer model types in the heaviest fork-owned test files, one PR
+    per file, each reviewed by the owner).
+  - **#77:** the "under the default `tracer` transport" qualifier is in
+    (`7d6cec6b`). Another session had already merged `main` into #77 and #78.
 
 ## Decided
 
