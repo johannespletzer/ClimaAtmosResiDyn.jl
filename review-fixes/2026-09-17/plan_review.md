@@ -15,6 +15,7 @@ gives the revised plan. Phase A and B of that plan are implemented on the branch
 | The two cache traps of section 10 | `julia-actions/cache@v3`, `src/post.js` | Both hold. An exact key hit skips the save (`post.js:44-46`). Old caches are only deleted off the default branch (`post.js:102-106`). |
 | Branch protection might require checks (question 8) | `GET /repos/.../branches/main` and `/rules/branches/main` | `main` is not protected. No status check is required. The only ruleset ("Avoid deletion") is disabled. So no path filter can leave a pull request unmergeable. |
 | `energy_source_tags_integration.jl` grew after the measurement | job `105121736013` | Holds. Its test time is now 25.8 min on 1.11 (12:14:15 to 12:40:05), against 17.3 min measured at three model types. |
+| Section 7: the `MANYTESTS` sweep of `test/restart.jl` is dead | `.buildkite/full_pipeline.yml:888-898` | Only in GitHub Actions. Upstream's Buildkite runs it with `--manytests`, and this fork does not run Buildkite. The known-issues entry says so. |
 | ClimaCoupler still supports 1.10 | `CliMA/ClimaCoupler.jl` `Project.toml` | `julia = "1.10"`. One version is enough for the coupler check; 1.11 is the one this repository prefers. |
 
 ## 2. Where the plan is weak
