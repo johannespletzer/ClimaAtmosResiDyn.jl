@@ -1,0 +1,115 @@
+From a021dfe317e6e05c0c6eb3f4e4bbde51d772fba2 Mon Sep 17 00:00:00 2001
+From: review <review@local>
+Date: Thu, 17 Sep 2026 07:07:47 +0000
+Subject: [PATCH 3/3] Run the uncoupled fields' stationary iteration without
+ ClimaCore's CUDA probe
+
+ClimaCore's run_field_matrix_solver! for a StationaryIterativeSolve
+rebuilds a FieldVector from b on every solve to test for a CUDA array,
+which only its debug output uses. On Julia 1.10 that temporary is not
+elided, so the split solver allocated 1056 bytes per solve, one FieldVector
+per uncoupled field, where the test asserts zero. The recursion pushed
+earlier did not remove those bytes.
+
+solve_uncoupled_field! now runs the same loop, with the same operations
+in the same order, and leaves the probe out. The test logs the unsplit
+solve's bytes beside the split's.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LA3FukgbRCMkra999BhdDw
+---
+ .../implicit/manual_sparse_jacobian.jl        | 44 ++++++++++++++++---
+ test/energy_source_tags_integration.jl        |  8 +++-
+ 2 files changed, 46 insertions(+), 6 deletions(-)
+
+diff --git a/src/prognostic_equations/implicit/manual_sparse_jacobian.jl b/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
+index f71cbc1..e005fe4 100644
+--- a/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
++++ b/src/prognostic_equations/implicit/manual_sparse_jacobian.jl
+@@ -861,6 +861,8 @@ function split_jacobian_solver(
+     cache = MatrixFields.field_matrix_solver_cache(alg, coupled_matrix, b)
+     MatrixFields.check_field_matrix_solver(alg, cache, coupled_matrix, b)
+ 
++    # `solve_uncoupled_field!` runs this iteration itself, without correlated
++    # solves and without debug output, so both stay at their defaults here.
+     uncoupled_alg =
+         alg isa MatrixFields.SchurComplementReductionSolve ?
+         MatrixFields.StationaryIterativeSolve(;
+@@ -923,14 +925,12 @@ function LinearAlgebra.ldiv!(
+     return ΔY
+ end
+ 
+-# Solve the uncoupled fields one by one, by recursion over the tuple. A
+-# `foreach` with a closure over this tuple allocated on Julia 1.10, since its
+-# elements differ in type. The recursion compiles one method per element and
+-# captures nothing.
++# Solve the uncoupled fields one by one, by recursion over the tuple. The
++# recursion compiles one method per element and captures nothing.
+ solve_uncoupled_fields!(::Tuple{}, ΔY, R) = nothing
+ function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
+     (; name, alg, cache, keys, matrix) = first(uncoupled)
+-    MatrixFields.run_field_matrix_solver!(
++    solve_uncoupled_field!(
+         alg,
+         cache,
+         MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(ΔY, name),)),
+@@ -940,6 +940,40 @@ function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
+     return solve_uncoupled_fields!(Base.tail(uncoupled), ΔY, R)
+ end
+ 
++# One exact inverse of the field's block, as ClimaCore does it.
++solve_uncoupled_field!(alg::MatrixFields.BlockDiagonalSolve, cache, x, A, b) =
++    MatrixFields.run_field_matrix_solver!(alg, cache, x, A, b)
++
++# The loop of ClimaCore's `run_field_matrix_solver!` for a
++# `StationaryIterativeSolve`, with the same operations in the same order, so
++# the result is the same to the bit. ClimaCore's loop first rebuilds a
++# `FieldVector` from `b` to test for a CUDA array, which only its debug output
++# uses. On Julia 1.10 that temporary is not elided and allocates once per field
++# per solve. This copy leaves the test out. It can go back to
++# `run_field_matrix_solver!` once a ClimaCore PR moves that test under
++# `get_debug(alg)`.
++function solve_uncoupled_field!(
++    alg::MatrixFields.StationaryIterativeSolve,
++    cache,
++    x,
++    A,
++    b,
++)
++    P = MatrixFields.lazy_or_concrete_preconditioner(alg.P_alg, cache.P_cache, A)
++    @. x = zero(x)
++    for _ in 1:(alg.n_iters)
++        lazy_Δb = MatrixFields.lazy_sub(b, MatrixFields.lazy_mul(A, x))
++        lazy_Δx = MatrixFields.apply_preconditioner(
++            alg.P_alg,
++            cache.P_cache,
++            P,
++            lazy_Δb,
++        )
++        @. x += lazy_Δx
++    end
++    return x
++end
++
+ # ============================================================================
+ # Jacobian matrix entries
+ # ============================================================================
+diff --git a/test/energy_source_tags_integration.jl b/test/energy_source_tags_integration.jl
+index 57b6928..e5943ab 100644
+--- a/test/energy_source_tags_integration.jl
++++ b/test/energy_source_tags_integration.jl
+@@ -233,7 +233,13 @@ import ClimaAtmos as CA
+             return @allocated CA.invert_jacobian!(alg, cache, ΔY, R)
+         end
+         @test update_allocations(jacobian_alg, split_cache, Y, p, dtγ, t) == 0
+-        @test invert_allocations(jacobian_alg, split_cache, ΔY_split, Y) == 0
++        # The unsplit solve's bytes are what ClimaCore allocates on this Julia
++        # version; both numbers go to the log so a failure is easy to place.
++        unsplit_bytes =
++            invert_allocations(jacobian_alg, unsplit_cache, ΔY_unsplit, Y)
++        split_bytes = invert_allocations(jacobian_alg, split_cache, ΔY_split, Y)
++        @info "Jacobian solve allocations per call" unsplit_bytes split_bytes
++        @test split_bytes == 0
+     end
+ 
+     # 7. The loss half through a real solve. The run above never reaches it,

@@ -36,9 +36,11 @@ changes need one CI run:
 - `pr75`: the restart compares every field of the state; after the solve every
   tag is asserted non-negative where `E` is positive; header, comment and docs.
 - `pr76`: the two `@docs` entries the docs build needs; the `foreach` closure
-  in `ldiv!(::SplitJacobianSolver)` replaced by a recursion over the tuple,
-  as the likely cause of the 1056 bytes on Julia 1.10; the test header names
-  item 6. Whether the recursion removes the bytes needs the 1.10 job.
+  in `ldiv!(::SplitJacobianSolver)` replaced by a recursion over the tuple
+  (which did not remove the 1056 bytes on Julia 1.10); the test header names
+  item 6; then the uncoupled fields' stationary iteration run without
+  ClimaCore's per-solve CUDA probe, the probable source of those bytes, with
+  the unsplit solve's bytes logged beside the split's (pushed 2026-09-17).
 - `pr77`: the two `@docs` entries the docs build needs; a NEWS entry for the
   new defaults and the corrected sentence about the offset; the zero guard on
   `relative_since_spin_up`; five reworded docstrings and help texts.
