@@ -331,8 +331,11 @@ status(component) = PB.component_status(component)
     @testset "The configuration path carries the attribution key" begin
         # The moist column of the calibration protocol, which
         # `implicit_attribution_tests.jl`, `transfer_tests.jl` and
-        # `report_tests.jl` also build. One compiled model then serves all
-        # four files, and this group's cost is almost all compilation.
+        # `report_tests.jl` also build. One compiled model then serves the
+        # four files' audit runs, and this group's cost is almost all
+        # compilation. `summary` compiles the column a second time, because
+        # the adapter's scratch tendency and snapshot are type parameters and
+        # only `audit` fills them.
         config = CA.AtmosConfig(
             merge(
                 PB.calibration_configuration(),
@@ -357,9 +360,17 @@ status(component) = PB.component_status(component)
         @test adapter.tolerance_source === :calibration_table
         @test r.status === :pass
         @test isempty(r.blocked_by)
+        # The atmosphere's own leg of each. The slab carries a leg of the
+        # surface flux and of the surface radiation too, and a leg there would
+        # not say that this channel was attributed.
         for event in
             ("xfer.surface_turbulent_flux", "xfer.radiation_toa", "xfer.radiation_surface")
-            @test any(l -> String(l.event) == event, adapter.last_legs)
+            @test any(
+                l ->
+                    String(l.event) == event &&
+                    PB.reservoir_name(l.reservoir) === ATMOS,
+                adapter.last_legs,
+            )
         end
         @test attribution_row(adapter, :explicit_limited, :water).status === :pass
     end

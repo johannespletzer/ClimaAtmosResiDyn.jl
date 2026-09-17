@@ -68,16 +68,23 @@ end
 # reservoir the ledger knows part of the run.
 #
 # Taking it from there rather than writing it out again shares one compiled
-# model with `transfer_tests.jl` and `report_tests.jl`, which build the same
-# column. A model is compiled once per type, and this group's cost is almost
-# all compilation. The mode is a field of the adapter, not a type parameter, so
-# `summary` and `audit` share the model too. `settings` are added to the
-# configuration.
+# model with `explicit_attribution_tests.jl`, `transfer_tests.jl` and
+# `report_tests.jl`, which build the same column. A model is compiled once per
+# type, and this group's cost is almost all compilation.
+#
+# The mode still splits the model. `audit` gives the adapter a scratch tendency
+# and a snapshot of the state, `summary` leaves both `nothing`
+# (`adapter.jl:858` and `:874`), those are type parameters of the adapter, and
+# the adapter is a type parameter of the cache every tendency specialises on.
+# So this column is compiled twice for the group, once per mode, which is the
+# floor while the protocol runs in `summary`.
+#
+# `settings` are added to the configuration.
 function moist_config(job_id, settings::Pair...)
     config = merge(
         PB.calibration_configuration(),
-        Dict("output_dir" => mktempdir()),
-        Dict(settings...),
+        Dict{String, Any}("output_dir" => mktempdir()),
+        Dict{String, Any}(settings...),
     )
     return CA.AtmosConfig(config; job_id)
 end
@@ -109,9 +116,13 @@ legs_of(adapter, process) = filter(l -> l.process === process, adapter.last_legs
 final_map_legs(adapter) = filter(l -> l.level isa PB.FinalMap, adapter.last_legs)
 
 # The size of the solve defect over one step, as the sum of the absolute energy
-# amounts of its per-stage legs.
+# amounts of its per-stage legs. The atmosphere's legs only: a slab column
+# books its own solve defect beside them, and the scale below is the
+# atmosphere's energy. `transfer_tests.jl` checks the slab's.
 defect_energy(adapter) = sum(
-    abs(PB.budget_component(l, :energy).amount) for l in legs_of(adapter, :solve_defect);
+    abs(PB.budget_component(l, :energy).amount) for
+    l in legs_of(adapter, :solve_defect) if
+    PB.reservoir_name(l.reservoir) === PB.ATMOSPHERE_ENDPOINT_GROUP;
     init = 0.0,
 )
 
@@ -234,9 +245,9 @@ defect_energy(adapter) = sum(
         # iteration, about two rounding units, so more iterations cannot
         # shrink it, and their order is set by how a machine rounds. The
         # moist column's implicit microphysics leaves a defect far above
-        # rounding, and a converged solve removes most of it. On terrabyte it
-        # is 2.5e6 rounding units at one iteration and 110 times smaller at
-        # three.
+        # rounding, and a converged solve removes most of it. On terrabyte the
+        # atmosphere's defect is 2.5e6 rounding units at one iteration and
+        # about 110 times smaller at three.
         function moist_defect(max_newton_iters_ode)
             config = moist_config(
                 "parent_budget_moist_defect",
