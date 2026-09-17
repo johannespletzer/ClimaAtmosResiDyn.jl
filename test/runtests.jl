@@ -28,7 +28,6 @@ const KNOWN_TEST_GROUPS = (
     "tagging_source_float32",
     "parameterizations",
     "restarts",
-    "era5",
 )
 TEST_GROUP in KNOWN_TEST_GROUPS || error(
     "Unknown TEST_GROUP $(repr(TEST_GROUP)). Known groups: " *
@@ -120,12 +119,19 @@ end
 # minutes together. The groups keep related files together and each stays
 # under half the limit: the transport and water-consistency files, the two
 # EDMFX diffusion files, and the rest.
+#
+# `dynamics` also runs the two ERA5 forcing files, which used to be a group of
+# their own. They build no simulation and use synthetic NetCDF files. They took
+# about 2 minutes, or 5 to 8 at minimum compat, of a 10 to 23 minute job. The
+# rest of that job was the setup every job pays.
 if TEST_GROUP in ("dynamics", "all")
     @safetestset "Prognostic equations" begin @time include("prognostic_equations.jl") end
     @safetestset "Advection operators" begin @time include("prognostic_equations/advection_tests.jl") end
     @safetestset "Post-Newton implicit-advection correction" begin @time include("prognostic_equations/correct_implicit_advection_tests.jl") end
     @safetestset "Vertical diffusion tendency" begin @time include("prognostic_equations/vertical_diffusion_tests.jl") end
     @safetestset "Eddy diffusion closures" begin @time include("prognostic_equations/eddy_diffusion_closures_tests.jl") end
+    @safetestset "ERA5 forcing" begin @time include("era5_tests.jl") end
+    @safetestset "Column datasets" begin @time include("column_datasets_tests.jl") end
 end
 
 if TEST_GROUP in ("dynamics_tracers", "all")
@@ -230,14 +236,6 @@ if TEST_GROUP in ("restarts", "all")
     @safetestset "Restarts" begin @time include("restart.jl") end
     @safetestset "Reproducibility infra" begin @time include("unit_reproducibility_infra.jl") end
     @safetestset "Init with file" begin @time include("test_init_with_file.jl") end
-end
-
-# ============================================================================
-# ERA5: External forcing data tests (heavy)
-# ============================================================================
-if TEST_GROUP in ("era5", "all")
-    @safetestset "ERA5 forcing" begin @time include("era5_tests.jl") end
-    @safetestset "Column datasets" begin @time include("column_datasets_tests.jl") end
 end
 #! format: on
 

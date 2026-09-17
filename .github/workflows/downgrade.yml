@@ -1,10 +1,23 @@
 name: Downgrade
+# The full matrix at minimum compat bounds. It runs weekly, on demand, on tags,
+# and whenever the bounds or this file change. Every pull request still gets
+# the cheap part of the check, `load 1.10 minimum compat` in ci.yml, which
+# resolves at the bounds and loads the package.
 on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
   pull_request:
+    paths:
+      - 'Project.toml'
+      - '.github/workflows/downgrade.yml'
   push:
     branches:
       - main
     tags: '*'
+    paths:
+      - 'Project.toml'
+      - '.github/workflows/downgrade.yml'
 
 # Needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
@@ -19,6 +32,7 @@ jobs:
   test:
     name: Downgrade ${{ matrix.version }} - ${{ matrix.test_group }}
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     # julia-downgrade-compat rewrites Project.toml (test extras are promoted to
     # deps), which makes Aqua's stale-dependency check meaningless here.
     env:
@@ -49,19 +63,26 @@ jobs:
           - tagging_source_float32
           - parameterizations
           - restarts
-          - era5
     steps:
       - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@latest
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
+      # One cache per Julia version, shared by every group. The downgraded
+      # depot differs from the ones in ci.yml, so it has a name of its own.
       - uses: julia-actions/cache@v3
+        with:
+          cache-name: julia-downgrade-test;version=${{ matrix.version }}
+          include-matrix: false
       - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: Artifacts, Dates, Downloads, LazyArtifacts, LinearAlgebra, Logging, Printf, Test, Statistics, Random, Pkg, Glib_jll, Musica
           mode: 'forcedeps'
 
-      - uses: julia-actions/julia-buildpkg@latest
-      - uses: julia-actions/julia-runtest@latest
+      - uses: julia-actions/julia-buildpkg@v1
+      # No coverage: nothing uploads it here.
+      - uses: julia-actions/julia-runtest@v1
+        with:
+          coverage: false
         env:
           TEST_GROUP: ${{ matrix.test_group }}

@@ -14,7 +14,6 @@ This repository is a fork of [CliMA/ClimaAtmos.jl](https://github.com/CliMA/Clim
 | -----------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Documentation** | [![dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://johannespletzer.github.io/ClimaAtmosResiDyn.jl/dev/)                                                                                                     |
 | **Tests**         | [![gha ci](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/actions/workflows/ci.yml?query=branch%3Amain) |
-| **Code Coverage** | [![codecov](https://codecov.io/gh/johannespletzer/ClimaAtmosResiDyn.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/johannespletzer/ClimaAtmosResiDyn.jl)                                                          |
 | **License**       | [![license](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/blob/main/LICENSE)                                                                       |
 | **Upstream**      | [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl)                                                                                                                                                             |
 
