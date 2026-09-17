@@ -1,0 +1,297 @@
+workflow	version	group	testset	seconds	compile_pct
+Downgrade	1.10	infrastructure	Aqua	330.8	2.58
+Downgrade	1.10	infrastructure	Dependencies	0.4	93.94
+Downgrade	1.10	infrastructure	Callbacks	1.4	98.22
+Downgrade	1.10	infrastructure	Configuration tests	5.5	97.47
+Downgrade	1.10	infrastructure	Grids	15.4	99.8
+Downgrade	1.10	infrastructure	Utilities	85.0	98.66
+Downgrade	1.10	infrastructure	Variable manipulations	6.3	96.59
+Downgrade	1.10	infrastructure	Tracer processes	13.7	98.0
+Downgrade	1.10	infrastructure	Tagged tracers	6.8	96.61
+Downgrade	1.10	infrastructure	Tagged water	8.1	96.97
+Downgrade	1.10	infrastructure	Energy source tags	7.2	97.11
+Downgrade	1.10	infrastructure	Process records	2.4	96.25
+Downgrade	1.10	infrastructure	Parent-budget packets	2.5	96.99
+Downgrade	1.10	infrastructure	Parent-budget registry	8.8	97.38
+Downgrade	1.10	infrastructure	Parent-budget journal	4.5	71.86
+Downgrade	1.10	infrastructure	Parent-budget endpoints	12.7	98.25
+Downgrade	1.10	infrastructure	Parameter tests	13.2	82.61
+Downgrade	1.10	infrastructure	Check TOML path	93.0	99.89
+Downgrade	1.10	infrastructure	Radiation interface tests	5.4	97.85
+Downgrade	1.10	infrastructure	Coupler compatibility	200.9	99.64
+Downgrade	1.10	infrastructure	Surface albedo tests	99.8	98.13
+Downgrade	1.10	infrastructure	Larcform1 setup	31.5	99.68
+Downgrade	1.10	infrastructure	SlabOcean SST warning	1.4	90.31
+Downgrade	1.10	infrastructure	Model getters	0.3	15.51
+Downgrade	1.10	infrastructure	Tracer config	13.5	93.72
+Downgrade	1.10	infrastructure	AtmosModel Constructor	1.2	93.05
+Downgrade	1.10	infrastructure	Presets	240.1	99.67
+Downgrade	1.10	infrastructure	Topography tests	2.5	97.02
+Downgrade	1.10	parent_budget	Parent-budget envelopes	317.0	98.61
+Downgrade	1.10	parent_budget	Parent-budget implicit attribution	307.6	99.73
+Downgrade	1.10	parent_budget	Parent-budget explicit attribution	128.4	99.35
+Downgrade	1.10	parent_budget	Parent-budget transfers	246.8	99.68
+Downgrade	1.10	parent_budget	Parent-budget restarts	105.6	99.45
+Downgrade	1.10	parent_budget	Parent-budget report	373.2	96.82
+Downgrade	1.10	diagnostics	Diagnostics unit tests	1527.7	99.64
+Downgrade	1.10	diagnostics	DiagnosticsConfig	0.3	84.71
+Downgrade	1.10	diagnostics	COSP subcolumn tests	290.4	91.64
+Downgrade	1.10	diagnostics	COSP CloudSat optics tests	35.2	72.42
+Downgrade	1.10	diagnostics	COSP CloudSat reflectivity tests	6.3	62.98
+Downgrade	1.10	diagnostics	COSP CloudSat cloud fraction tests	8.7	42.69
+Downgrade	1.10	diagnostics	COSP CloudSat CFAD tests	6.7	88.26
+Downgrade	1.10	dynamics	Prognostic equations	7.4	46.1
+Downgrade	1.10	dynamics	Advection operators	132.5	99.8
+Downgrade	1.10	dynamics	Post-Newton implicit-advection correction	143.3	99.84
+Downgrade	1.10	dynamics	Vertical diffusion tendency	34.2	98.75
+Downgrade	1.10	dynamics	Eddy diffusion closures	10.6	98.12
+Downgrade	1.10	dynamics_tracers	Tracer/mass transport consistency	1601.2	99.72
+Downgrade	1.10	dynamics_tracers	Vertical water borrowing limiter	215.7	99.62
+Downgrade	1.10	dynamics_tracers	Enforce physical constraints	530.0	99.85
+Downgrade	1.10	dynamics_edmfx	EDMFX SGS diffusive flux	621.2	99.49
+Downgrade	1.10	dynamics_edmfx	EDMFX horizontal diffusive flux	1674.8	99.94
+Downgrade	1.10	tagging_energy	Tagged tracers integration	551.9	97.73
+Downgrade	1.10	tagging_water	Tagged water integration	1123.5	98.2
+Downgrade	1.10	tagging_source	Energy source tags integration	725.9	98.95
+Downgrade	1.10	tagging_record	Process record integration	210.9	97.9
+Downgrade	1.10	parameterizations	Sponge layers	33.3	90.5
+Downgrade	1.10	parameterizations	Microphysics tendency tests	231.5	99.88
+Downgrade	1.10	parameterizations	Microphysics wrappers tests	3.0	95.4
+Downgrade	1.10	parameterizations	SGS quadrature tests	11.0	93.03
+Downgrade	1.10	parameterizations	SGS moments tests	2.2	95.99
+Downgrade	1.10	parameterizations	Tendency limiters tests	0.1	33.17
+Downgrade	1.10	parameterizations	Moisture fixers tests	0.4	95.2
+Downgrade	1.10	parameterizations	Cloud fraction tests	0.4	78.75
+Downgrade	1.10	parameterizations	SGS saturation tests	1.6	96.45
+Downgrade	1.10	parameterizations	BMT integration tests	3.3	95.38
+Downgrade	1.10	parameterizations	Allocation tests	1.8	84.57
+Downgrade	1.10	parameterizations	Chemistry tendency tests	4.5	10.74
+Downgrade	1.10	parameterizations	Passive stratospheric tracers	157.3	96.56
+Downgrade	1.10	parameterizations	Beres NOGW unit tests	2.9	92.32
+Downgrade	1.10	restarts	Restarts	1165.8	90.17
+Downgrade	1.10	restarts	Reproducibility infra	30.2	96.68
+Downgrade	1.10	restarts	Init with file	132.0	93.84
+Downgrade	1.10	era5	ERA5 forcing	223.9	23.06
+Downgrade	1.10	era5	Column datasets	103.9	19.08
+Downgrade	1.11	infrastructure	Aqua	546.2	2.81
+Downgrade	1.11	infrastructure	Dependencies	0.5	96.01
+Downgrade	1.11	infrastructure	Callbacks	1.0	97.79
+Downgrade	1.11	infrastructure	Configuration tests	7.2	98.24
+Downgrade	1.11	infrastructure	Grids	16.3	99.82
+Downgrade	1.11	infrastructure	Utilities	93.5	99.01
+Downgrade	1.11	infrastructure	Variable manipulations	4.0	95.37
+Downgrade	1.11	infrastructure	Tracer processes	13.8	98.24
+Downgrade	1.11	infrastructure	Tagged tracers	9.2	97.84
+Downgrade	1.11	infrastructure	Tagged water	12.3	98.52
+Downgrade	1.11	infrastructure	Energy source tags	11.6	98.61
+Downgrade	1.11	infrastructure	Process records	2.8	97.24
+Downgrade	1.11	infrastructure	Parent-budget packets	3.0	97.68
+Downgrade	1.11	infrastructure	Parent-budget registry	10.1	98.11
+Downgrade	1.11	infrastructure	Parent-budget journal	4.4	76.84
+Downgrade	1.11	infrastructure	Parent-budget endpoints	13.9	98.52
+Downgrade	1.11	infrastructure	Parameter tests	13.2	87.19
+Downgrade	1.11	infrastructure	Check TOML path	93.7	99.9
+Downgrade	1.11	infrastructure	Radiation interface tests	7.5	98.63
+Downgrade	1.11	infrastructure	Coupler compatibility	199.6	99.74
+Downgrade	1.11	infrastructure	Surface albedo tests	128.7	98.93
+Downgrade	1.11	infrastructure	Larcform1 setup	39.4	99.78
+Downgrade	1.11	infrastructure	SlabOcean SST warning	1.4	94.0
+Downgrade	1.11	infrastructure	Model getters	0.1	37.93
+Downgrade	1.11	infrastructure	Tracer config	16.0	96.39
+Downgrade	1.11	infrastructure	AtmosModel Constructor	1.6	96.87
+Downgrade	1.11	infrastructure	Presets	277.7	99.54
+Downgrade	1.11	infrastructure	Topography tests	3.9	98.28
+Downgrade	1.11	parent_budget	Parent-budget envelopes	592.7	99.02
+Downgrade	1.11	parent_budget	Parent-budget implicit attribution	538.9	99.81
+Downgrade	1.11	parent_budget	Parent-budget explicit attribution	158.2	99.42
+Downgrade	1.11	parent_budget	Parent-budget transfers	496.4	99.89
+Downgrade	1.11	parent_budget	Parent-budget restarts	137.2	99.55
+Downgrade	1.11	parent_budget	Parent-budget report	533.2	94.38
+Downgrade	1.11	diagnostics	Diagnostics unit tests	1371.5	99.54
+Downgrade	1.11	diagnostics	DiagnosticsConfig	0.3	85.52
+Downgrade	1.11	diagnostics	COSP subcolumn tests	252.3	92.42
+Downgrade	1.11	diagnostics	COSP CloudSat optics tests	28.4	71.41
+Downgrade	1.11	diagnostics	COSP CloudSat reflectivity tests	8.9	78.05
+Downgrade	1.11	diagnostics	COSP CloudSat cloud fraction tests	7.6	45.67
+Downgrade	1.11	diagnostics	COSP CloudSat CFAD tests	6.3	89.56
+Downgrade	1.11	dynamics	Prognostic equations	6.5	38.25
+Downgrade	1.11	dynamics	Advection operators	128.9	99.88
+Downgrade	1.11	dynamics	Post-Newton implicit-advection correction	134.3	99.9
+Downgrade	1.11	dynamics	Vertical diffusion tendency	41.6	99.21
+Downgrade	1.11	dynamics	Eddy diffusion closures	10.4	98.44
+Downgrade	1.11	dynamics_tracers	Tracer/mass transport consistency	1360.4	99.65
+Downgrade	1.11	dynamics_tracers	Vertical water borrowing limiter	153.3	99.83
+Downgrade	1.11	dynamics_tracers	Enforce physical constraints	285.2	99.79
+Downgrade	1.11	dynamics_edmfx	EDMFX SGS diffusive flux	614.3	99.16
+Downgrade	1.11	dynamics_edmfx	EDMFX horizontal diffusive flux	996.1	99.9
+Downgrade	1.11	tagging_energy	Tagged tracers integration	1309.5	97.59
+Downgrade	1.11	tagging_water	Tagged water integration	1749.8	97.75
+Downgrade	1.11	tagging_source	Energy source tags integration	1010.2	99.21
+Downgrade	1.11	tagging_record	Process record integration	462.5	98.75
+Downgrade	1.11	parameterizations	Sponge layers	34.6	88.51
+Downgrade	1.11	parameterizations	Microphysics tendency tests	246.7	99.89
+Downgrade	1.11	parameterizations	Microphysics wrappers tests	2.9	95.5
+Downgrade	1.11	parameterizations	SGS quadrature tests	11.5	93.12
+Downgrade	1.11	parameterizations	SGS moments tests	2.2	96.33
+Downgrade	1.11	parameterizations	Tendency limiters tests	0.1	35.26
+Downgrade	1.11	parameterizations	Moisture fixers tests	0.6	96.52
+Downgrade	1.11	parameterizations	Cloud fraction tests	0.5	82.54
+Downgrade	1.11	parameterizations	SGS saturation tests	1.9	96.75
+Downgrade	1.11	parameterizations	BMT integration tests	4.0	96.25
+Downgrade	1.11	parameterizations	Allocation tests	2.3	89.34
+Downgrade	1.11	parameterizations	Chemistry tendency tests	6.1	8.5
+Downgrade	1.11	parameterizations	Passive stratospheric tracers	172.8	96.73
+Downgrade	1.11	parameterizations	Beres NOGW unit tests	9.1	95.89
+Downgrade	1.11	restarts	Restarts	1179.2	84.96
+Downgrade	1.11	restarts	Reproducibility infra	41.0	97.23
+Downgrade	1.11	restarts	Init with file	150.2	91.35
+Downgrade	1.11	era5	ERA5 forcing	324.0	29.03
+Downgrade	1.11	era5	Column datasets	146.9	22.51
+ci	1.10	infrastructure	Aqua	40.3	23.54
+ci	1.10	infrastructure	Dependencies	0.4	94.01
+ci	1.10	infrastructure	Callbacks	1.0	97.22
+ci	1.10	infrastructure	Configuration tests	5.2	95.76
+ci	1.10	infrastructure	Grids	16.8	99.81
+ci	1.10	infrastructure	Utilities	86.9	98.42
+ci	1.10	infrastructure	Variable manipulations	5.4	95.07
+ci	1.10	infrastructure	Tracer processes	13.5	97.63
+ci	1.10	infrastructure	Tagged tracers	6.8	96.25
+ci	1.10	infrastructure	Tagged water	8.3	96.8
+ci	1.10	infrastructure	Energy source tags	7.6	97.04
+ci	1.10	infrastructure	Process records	2.4	95.72
+ci	1.10	infrastructure	Parent-budget packets	2.5	96.19
+ci	1.10	infrastructure	Parent-budget registry	8.9	97.07
+ci	1.10	infrastructure	Parent-budget journal	4.6	68.8
+ci	1.10	infrastructure	Parent-budget endpoints	13.7	97.84
+ci	1.10	infrastructure	Parameter tests	13.6	81.55
+ci	1.10	infrastructure	Check TOML path	96.4	99.89
+ci	1.10	infrastructure	Radiation interface tests	5.7	97.68
+ci	1.10	infrastructure	Coupler compatibility	212.2	99.76
+ci	1.10	infrastructure	Surface albedo tests	111.8	98.82
+ci	1.10	infrastructure	Larcform1 setup	32.1	99.67
+ci	1.10	infrastructure	SlabOcean SST warning	1.5	91.7
+ci	1.10	infrastructure	Model getters	0.2	29.91
+ci	1.10	infrastructure	Tracer config	13.3	94.87
+ci	1.10	infrastructure	AtmosModel Constructor	1.2	94.56
+ci	1.10	infrastructure	Presets	270.9	99.71
+ci	1.10	infrastructure	Topography tests	2.5	96.5
+ci	1.10	parent_budget	Parent-budget envelopes	329.2	98.62
+ci	1.10	parent_budget	Parent-budget implicit attribution	314.8	99.75
+ci	1.10	parent_budget	Parent-budget explicit attribution	129.6	99.24
+ci	1.10	parent_budget	Parent-budget transfers	247.9	99.74
+ci	1.10	parent_budget	Parent-budget restarts	103.5	99.35
+ci	1.10	parent_budget	Parent-budget report	368.5	96.93
+ci	1.10	diagnostics	Diagnostics unit tests	1257.2	99.63
+ci	1.10	diagnostics	DiagnosticsConfig	0.3	85.28
+ci	1.10	diagnostics	COSP subcolumn tests	262.7	92.28
+ci	1.10	diagnostics	COSP CloudSat optics tests	31.4	73.29
+ci	1.10	diagnostics	COSP CloudSat reflectivity tests	5.1	62.05
+ci	1.10	diagnostics	COSP CloudSat cloud fraction tests	6.0	35.54
+ci	1.10	diagnostics	COSP CloudSat CFAD tests	5.9	88.64
+ci	1.10	dynamics	Prognostic equations	7.5	45.81
+ci	1.10	dynamics	Advection operators	138.1	99.87
+ci	1.10	dynamics	Post-Newton implicit-advection correction	151.0	99.89
+ci	1.10	dynamics	Vertical diffusion tendency	32.3	98.6
+ci	1.10	dynamics	Eddy diffusion closures	10.9	97.47
+ci	1.10	dynamics_tracers	Tracer/mass transport consistency	1606.1	99.73
+ci	1.10	dynamics_tracers	Vertical water borrowing limiter	261.7	99.88
+ci	1.10	dynamics_tracers	Enforce physical constraints	686.8	99.24
+ci	1.10	dynamics_edmfx	EDMFX SGS diffusive flux	849.4	99.53
+ci	1.10	dynamics_edmfx	EDMFX horizontal diffusive flux	1988.4	99.74
+ci	1.10	tagging_energy	Tagged tracers integration	837.6	98.1
+ci	1.10	tagging_water	Tagged water integration	890.6	98.08
+ci	1.10	tagging_source	Energy source tags integration	529.0	98.49
+ci	1.10	tagging_record	Process record integration	276.2	97.99
+ci	1.10	parameterizations	Sponge layers	41.0	89.89
+ci	1.10	parameterizations	Microphysics tendency tests	305.9	99.88
+ci	1.10	parameterizations	Microphysics wrappers tests	3.8	95.41
+ci	1.10	parameterizations	SGS quadrature tests	13.5	93.15
+ci	1.10	parameterizations	SGS moments tests	2.6	95.64
+ci	1.10	parameterizations	Tendency limiters tests	0.1	32.47
+ci	1.10	parameterizations	Moisture fixers tests	0.5	94.82
+ci	1.10	parameterizations	Cloud fraction tests	0.5	77.97
+ci	1.10	parameterizations	SGS saturation tests	2.0	96.11
+ci	1.10	parameterizations	BMT integration tests	4.3	95.5
+ci	1.10	parameterizations	Allocation tests	2.3	86.44
+ci	1.10	parameterizations	Chemistry tendency tests	6.3	12.74
+ci	1.10	parameterizations	Passive stratospheric tracers	200.4	96.91
+ci	1.10	parameterizations	Beres NOGW unit tests	4.2	93.37
+ci	1.10	restarts	Restarts	1184.0	91.08
+ci	1.10	restarts	Reproducibility infra	31.1	96.45
+ci	1.10	restarts	Init with file	135.3	94.53
+ci	1.10	era5	ERA5 forcing	78.9	89.84
+ci	1.10	era5	Column datasets	25.3	95.17
+ci	1.11	infrastructure	Aqua	51.6	34.36
+ci	1.11	infrastructure	Dependencies	0.6	96.26
+ci	1.11	infrastructure	Callbacks	1.2	97.56
+ci	1.11	infrastructure	Configuration tests	7.4	98.11
+ci	1.11	infrastructure	Grids	19.9	99.82
+ci	1.11	infrastructure	Utilities	115.2	98.96
+ci	1.11	infrastructure	Variable manipulations	4.3	94.12
+ci	1.11	infrastructure	Tracer processes	16.3	97.72
+ci	1.11	infrastructure	Tagged tracers	11.1	97.51
+ci	1.11	infrastructure	Tagged water	14.9	98.22
+ci	1.11	infrastructure	Energy source tags	14.7	98.38
+ci	1.11	infrastructure	Process records	3.3	96.67
+ci	1.11	infrastructure	Parent-budget packets	3.8	97.43
+ci	1.11	infrastructure	Parent-budget registry	13.0	97.89
+ci	1.11	infrastructure	Parent-budget journal	5.4	71.96
+ci	1.11	infrastructure	Parent-budget endpoints	17.0	98.4
+ci	1.11	infrastructure	Parameter tests	16.6	86.78
+ci	1.11	infrastructure	Check TOML path	116.2	99.91
+ci	1.11	infrastructure	Radiation interface tests	9.8	98.55
+ci	1.11	infrastructure	Coupler compatibility	249.2	99.71
+ci	1.11	infrastructure	Surface albedo tests	151.9	99.1
+ci	1.11	infrastructure	Larcform1 setup	45.6	99.76
+ci	1.11	infrastructure	SlabOcean SST warning	1.7	93.31
+ci	1.11	infrastructure	Model getters	0.2	36.97
+ci	1.11	infrastructure	Tracer config	18.8	96.59
+ci	1.11	infrastructure	AtmosModel Constructor	1.7	96.08
+ci	1.11	infrastructure	Presets	353.7	99.54
+ci	1.11	infrastructure	Topography tests	3.4	97.09
+ci	1.11	parent_budget	Parent-budget envelopes	543.9	99.0
+ci	1.11	parent_budget	Parent-budget implicit attribution	521.1	99.84
+ci	1.11	parent_budget	Parent-budget explicit attribution	154.6	99.45
+ci	1.11	parent_budget	Parent-budget transfers	523.1	99.89
+ci	1.11	parent_budget	Parent-budget restarts	143.0	99.53
+ci	1.11	parent_budget	Parent-budget report	558.8	94.7
+ci	1.11	diagnostics	Diagnostics unit tests	1387.8	99.53
+ci	1.11	diagnostics	DiagnosticsConfig	0.3	86.55
+ci	1.11	diagnostics	COSP subcolumn tests	244.6	92.9
+ci	1.11	diagnostics	COSP CloudSat optics tests	23.4	71.19
+ci	1.11	diagnostics	COSP CloudSat reflectivity tests	7.6	78.13
+ci	1.11	diagnostics	COSP CloudSat cloud fraction tests	6.1	42.74
+ci	1.11	diagnostics	COSP CloudSat CFAD tests	5.6	89.69
+ci	1.11	dynamics	Prognostic equations	8.4	38.66
+ci	1.11	dynamics	Advection operators	163.6	99.87
+ci	1.11	dynamics	Post-Newton implicit-advection correction	178.3	99.9
+ci	1.11	dynamics	Vertical diffusion tendency	51.2	99.19
+ci	1.11	dynamics	Eddy diffusion closures	13.5	93.67
+ci	1.11	dynamics_tracers	Tracer/mass transport consistency	1218.6	99.65
+ci	1.11	dynamics_tracers	Vertical water borrowing limiter	145.7	99.82
+ci	1.11	dynamics_tracers	Enforce physical constraints	290.9	99.8
+ci	1.11	dynamics_edmfx	EDMFX SGS diffusive flux	691.1	99.25
+ci	1.11	dynamics_edmfx	EDMFX horizontal diffusive flux	1058.9	99.91
+ci	1.11	tagging_energy	Tagged tracers integration	1318.3	97.61
+ci	1.11	tagging_water	Tagged water integration	2493.7	98.91
+ci	1.11	tagging_source	Energy source tags integration	1035.7	99.17
+ci	1.11	tagging_record	Process record integration	462.8	98.74
+ci	1.11	parameterizations	Sponge layers	35.8	88.82
+ci	1.11	parameterizations	Microphysics tendency tests	269.1	99.88
+ci	1.11	parameterizations	Microphysics wrappers tests	3.0	95.56
+ci	1.11	parameterizations	SGS quadrature tests	11.3	93.39
+ci	1.11	parameterizations	SGS moments tests	2.3	96.38
+ci	1.11	parameterizations	Tendency limiters tests	0.1	34.43
+ci	1.11	parameterizations	Moisture fixers tests	0.6	96.15
+ci	1.11	parameterizations	Cloud fraction tests	0.6	83.78
+ci	1.11	parameterizations	SGS saturation tests	1.9	96.9
+ci	1.11	parameterizations	BMT integration tests	3.9	96.14
+ci	1.11	parameterizations	Allocation tests	2.3	89.43
+ci	1.11	parameterizations	Chemistry tendency tests	6.8	9.63
+ci	1.11	parameterizations	Passive stratospheric tracers	188.8	96.89
+ci	1.11	parameterizations	Beres NOGW unit tests	13.2	97.45
+ci	1.11	restarts	Restarts	1155.2	84.71
+ci	1.11	restarts	Reproducibility infra	39.7	97.09
+ci	1.11	restarts	Init with file	145.0	90.56
+ci	1.11	era5	ERA5 forcing	78.7	93.08
+ci	1.11	era5	Column datasets	21.0	95.83

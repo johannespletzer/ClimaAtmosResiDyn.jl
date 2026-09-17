@@ -577,6 +577,10 @@ they landed after the measurement: `Seasonal SST` (`runtests.jl:69`) and the who
 
 ## Appendix B. How to reproduce the numbers
 
+The parsed measurement sits beside this file: `ci_job_timings.tsv` with one row per job,
+`ci_file_timings.tsv` with one row per test file per job variant, and `parse_logs.py`,
+the parser that produced them. The sources are below.
+
 - Job minutes and queue waits: `GET /repos/johannespletzer/ClimaAtmosResiDyn.jl/actions/runs/<run>/jobs?per_page=100`
   for runs 35121778373 (`ci`), 35121778370 (`Downgrade`), 35121778624 and 35195666887
   (`Downstream`), 35121778393 and 35195666804 (`Documentation`), 35196935505

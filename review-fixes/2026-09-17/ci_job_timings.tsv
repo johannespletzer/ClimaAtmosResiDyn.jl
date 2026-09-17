@@ -1,0 +1,55 @@
+workflow	version	group	job_id	job_min	precompile_s	precompile_deps	already_precompiled	test_wall_s	cache	cache_saved_bytes	codecov_token_len	codecov_upload_failed
+Downgrade	1.10	infrastructure	104881072902	29.2	389	407	9	1217.1	No cache found	1271048297		0
+Downgrade	1.10	parent_budget	104881072908	33.8	416	407	9	1480.0	No cache found	1105328046		0
+Downgrade	1.10	diagnostics	104881072879	40.2	403	407	9	1876.8	No cache found	1104784139		0
+Downgrade	1.10	dynamics	104881072819	14.2	404	407	9	329.5	No cache found	1104761073		0
+Downgrade	1.10	dynamics_tracers	104881072840	48.1	413	407	9	2348.7	No cache found	1105080353		0
+Downgrade	1.10	dynamics_edmfx	104881072868	45.6	319	407	9	2297.2	No cache found	1104890055		0
+Downgrade	1.10	tagging_energy	104881072847	16.3	298	407	9	554.1	No cache found	1105035452		0
+Downgrade	1.10	tagging_water	104881072917	27.6	415	407	9	1124.8	No cache found	1105191654		0
+Downgrade	1.10	tagging_source	104881072554	21.1	418	407	9	727.2	No cache found	1105300587		0
+Downgrade	1.10	tagging_record	104881072927	10.3	303	407	9	211.9	No cache found	1104713732		0
+Downgrade	1.10	parameterizations	104881072962	14.7	321	407	9	455.0	No cache found	1104921637		0
+Downgrade	1.10	restarts	104881072873	31.4	393	407	9	1359.5	No cache found	1793002094		0
+Downgrade	1.10	era5	104881072976	13.0	344	407	9	328.6	No cache found	1104945606		0
+Downgrade	1.11	infrastructure	104881072743	37.9	598	406	40	1536.5	No cache found	1457799546		0
+Downgrade	1.11	parent_budget	104881072850	56.8	782	406	40	2458.8	No cache found	1207098887		0
+Downgrade	1.11	diagnostics	104881073146	43.0	745	406	40	1676.8	No cache found	1207667140		0
+Downgrade	1.11	dynamics	104881072915	17.2	573	406	40	322.5	No cache found	1206893429		0
+Downgrade	1.11	dynamics_tracers	104881072913	43.5	663	406	40	1800.0	No cache found	1207665361		0
+Downgrade	1.11	dynamics_edmfx	104881073022	41.7	739	406	40	1611.4	No cache found	1208173255		0
+Downgrade	1.11	tagging_energy	104881073012	37.2	748	406	40	1311.8	No cache found	1207333553		0
+Downgrade	1.11	tagging_water	104881073125	44.8	754	406	40	1752.1	No cache found	1207690866		0
+Downgrade	1.11	tagging_source	104881072863	31.8	745	406	40	1011.8	No cache found	1207212776		0
+Downgrade	1.11	tagging_record	104881073248	22.7	749	406	40	464.0	No cache found	1208104746		0
+Downgrade	1.11	parameterizations	104881072940	19.5	537	406	40	498.2	No cache found	1205639424		0
+Downgrade	1.11	restarts	104881073030	38.5	744	406	40	1406.3	No cache found	1896151492		0
+Downgrade	1.11	era5	104881073171	22.8	739	406	40	471.9	No cache found	1207625257		0
+ci	1.10	infrastructure	104959632983	24.3	346	443	9	988.2	No cache found	1103851787	0	1
+ci	1.10	parent_budget	104959632964	32.9	359	444	9	1495.1	No cache found	1132998605	0	1
+ci	1.10	diagnostics	104959632986	32.9	293	444	9	1570.0	No cache found	1133201216	0	1
+ci	1.10	dynamics	104959633064	13.6	366	444	9	341.1	No cache found	1133137103	0	1
+ci	1.10	dynamics_tracers	104959633054	50.3	350	444	9	2556.1	No cache found	1132774907	0	1
+ci	1.10	dynamics_edmfx	104959632997	55.3	355	444	9	2841.4	No cache found	1132695009	0	1
+ci	1.10	tagging_energy	104959633076	21.6	348	444	9	839.1	No cache found	1133084547	0	1
+ci	1.10	tagging_water	104959633012	21.0	264	444	9	891.5	No cache found	1132722127	0	1
+ci	1.10	tagging_source	104959632968	15.4	278	444	9	530.0	No cache found	1132716471	0	1
+ci	1.10	tagging_record	104959633129	12.5	355	444	9	277.6	No cache found	1133115113	0	1
+ci	1.10	parameterizations	104959633040	17.9	354	444	9	589.4	No cache found	1132818113	0	1
+ci	1.10	restarts	104959633049	31.2	368	444	9	1383.8	No cache found	1820830364	0	1
+ci	1.10	era5	104959634022	9.6	352	444	9	105.2	No cache found	1132696624	0	1
+ci	1.10	load	104937304979	6.0	0	0	0		No cache found	803010400		0
+ci	1.11	infrastructure	104959633035	35.5	725	445	40	1272.9	No cache found	1234661467	0	1
+ci	1.11	parent_budget	104959633045	54.7	700	445	40	2446.7	No cache found	1235173592	0	1
+ci	1.11	diagnostics	104959633155	42.0	696	445	40	1676.7	No cache found	1234901946	0	1
+ci	1.11	dynamics	104959633128	21.7	752	445	40	415.9	No cache found	1234613887	0	1
+ci	1.11	dynamics_tracers	104959633161	39.0	562	445	40	1656.3	No cache found	1235499569	0	1
+ci	1.11	dynamics_edmfx	104959633265	44.2	747	445	40	1751.1	No cache found	1234909675	0	1
+ci	1.11	tagging_energy	104959633347	36.4	711	445	40	1320.5	No cache found	1235195995	0	1
+ci	1.11	tagging_water	104959633096	52.7	543	445	40	2496.0	No cache found	1233147514	0	1
+ci	1.11	tagging_source	104959633250	31.6	723	445	40	1037.7	No cache found	1235057464	0	1
+ci	1.11	tagging_record	104959633200	22.4	730	444	40	464.0	No cache found	1204610346	0	1
+ci	1.11	parameterizations	104959633299	20.3	555	445	40	543.3	No cache found	1234875087	0	1
+ci	1.11	restarts	104959633165	37.6	722	444	40	1384.3	No cache found	1891933850	0	1
+ci	1.11	era5	104959633247	11.4	465	445	40	100.6	No cache found	1232968213	0	1
+ci	1.11	load	104937304917	5.9	254	254	37		No cache found	835193591		0
