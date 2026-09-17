@@ -867,7 +867,8 @@ end
 # system. There the field falls into the group that `alg` leaves to its second
 # algorithm, whose block diagonal part inverts the field's block exactly. The
 # iterative arrowhead solve repeats that inverse as often as its own iterative
-# second algorithm does, so the count and the start are read from it.
+# second algorithm does, so the count and the start are read from it. The loop
+# itself is run by `solve_uncoupled_field!`, which reads the same two settings.
 uncoupled_field_algorithm(::MatrixFields.BlockArrowheadSolve) =
     MatrixFields.BlockDiagonalSolve()
 function uncoupled_field_algorithm(
@@ -912,14 +913,12 @@ function LinearAlgebra.ldiv!(
     return ΔY
 end
 
-# Solve the uncoupled fields one by one, by recursion over the tuple. A
-# `foreach` with a closure over this tuple allocated on Julia 1.10, since its
-# elements differ in type. The recursion compiles one method per element and
-# captures nothing.
+# Solve the uncoupled fields one by one, by recursion over the tuple. The
+# recursion compiles one method per element and captures nothing.
 solve_uncoupled_fields!(::Tuple{}, ΔY, R) = nothing
 function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
     (; name, alg, cache, keys, matrix) = first(uncoupled)
-    MatrixFields.run_field_matrix_solver!(
+    solve_uncoupled_field!(
         alg,
         cache,
         MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(ΔY, name),)),
@@ -927,6 +926,47 @@ function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
         MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(R, name),)),
     )
     return solve_uncoupled_fields!(Base.tail(uncoupled), ΔY, R)
+end
+
+# One exact inverse of the field's block, as ClimaCore does it.
+solve_uncoupled_field!(alg::MatrixFields.BlockDiagonalSolve, cache, x, A, b) =
+    MatrixFields.run_field_matrix_solver!(alg, cache, x, A, b)
+
+# The loop of ClimaCore's `run_field_matrix_solver!` for a
+# `StationaryIterativeSolve`, with the same operations in the same order, so
+# the result is the same to the bit. ClimaCore's loop first rebuilds a
+# `FieldVector` from `b` to test for a CUDA array, which only its debug output
+# uses. On Julia 1.10 that temporary is not elided and allocates once per field
+# per solve. This copy leaves the test out, and has no debug output. It can go
+# back to `run_field_matrix_solver!` once a ClimaCore PR moves that test under
+# `get_debug(alg)`.
+function solve_uncoupled_field!(
+    alg::MatrixFields.StationaryIterativeSolve,
+    cache,
+    x,
+    A,
+    b,
+)
+    P = MatrixFields.lazy_or_concrete_preconditioner(alg.P_alg, cache.P_cache, A)
+    if alg.correlated_solves
+        @. x = cache.previous_x
+    else
+        @. x = zero(x)
+    end
+    for _ in 1:(alg.n_iters)
+        lazy_Δb = MatrixFields.lazy_sub(b, MatrixFields.lazy_mul(A, x))
+        lazy_Δx = MatrixFields.apply_preconditioner(
+            alg.P_alg,
+            cache.P_cache,
+            P,
+            lazy_Δb,
+        )
+        @. x += lazy_Δx
+    end
+    if alg.correlated_solves
+        @. cache.previous_x = x
+    end
+    return x
 end
 
 # ============================================================================
