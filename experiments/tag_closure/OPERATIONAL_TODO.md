@@ -95,6 +95,12 @@ day, 2M and P3, more than one node, and the GPU.
     #82's own run, because the downgrade step installs no artifacts
     (`Artifact "NVTX" was not found`). #83 instantiates first. Until it
     merges, that job and `ci-required` fail on `main` and on every PR.
+  - **#84, the cache fix for #82 (draft).** #83 merged. On `main` the shared
+    caches worked when found (414 dependencies already precompiled), but pull
+    request runs saved caches of their own and pushed `main`'s out of the
+    10 GB within half an hour. #84 saves from pushes only and lets `load`
+    reuse the test cache. A collector writes the cache lines of `main`'s runs
+    to the session scratchpad (`cache_check/main_runs.tsv`).
   - **#77:** the "under the default `tracer` transport" qualifier is in
     (`7d6cec6b`). Another session had already merged `main` into #77 and #78.
 
