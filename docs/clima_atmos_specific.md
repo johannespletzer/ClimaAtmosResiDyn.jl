@@ -123,11 +123,19 @@ test minute is compilation and that the queue, not the jobs, set the wall time.
   - **`Downstream`, ClimaCoupler's AMIP tests on 1.11.** It runs when `src/`,
     `ext/`, `Project.toml` or its workflow changes.
   - **Caches.** Each workflow keeps one depot cache per Julia version, shared by
-    all its groups. `load` has a cache of its own: with a shared name, the test
-    jobs would restore the `load` depot, which lacks the package images
-    `Pkg.test` needs, and then skip their own save. Each test job prints its
-    CPU model. A job that restores the cache but still precompiles most
-    dependencies may have run on a different CPU from the job that saved it.
+    all its groups, under the paths in `DEPOT_CACHE_PATHS`.
+      - **Who saves.** Only pushes and the schedule save a cache. On a push,
+        the first job of a run to finish saves it, and jobs that start later
+        in the same run restore it. A pull request restores the newest cache
+        from `main` and saves nothing. GitHub keeps 10 GB per repository, and
+        on 2026-09-17 the pull requests' own caches pushed `main`'s out within
+        half an hour.
+      - **`load`.** It restores the test cache and never saves. It loads the
+        package with `--check-bounds=yes`, the flag `Pkg.test` sets, so the
+        test jobs' package images fit.
+      - **Runner CPU.** Each test job prints its CPU model. A job that restores
+        the cache but still precompiles most dependencies may have run on a
+        different CPU from the job that saved it.
   - **No coverage.** Nothing was ever uploaded, because the repository has no
     Codecov token, and on Julia 1.10 coverage stops the tests from using
     package images. To restore it, set the `CODECOV_TOKEN` secret and add

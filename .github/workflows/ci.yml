@@ -14,10 +14,25 @@ concurrency:
   # "cancelled" until the newest run on `main` finishes.
   cancel-in-progress: true
 
-# Needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
-  actions: write
   contents: read
+
+# The parts of the Julia depot that are cached. Every cache step uses this one
+# list, because a cache is only found again under the same paths.
+#
+# Only pushes save a cache. A pull request restores the newest one from `main`
+# and saves nothing: GitHub keeps 10 GB per repository, and on 2026-09-17 the
+# pull requests' own caches pushed `main`'s out within half an hour. The
+# registries are not cached; `julia-buildpkg` installs them in seconds.
+env:
+  DEPOT_CACHE_PATHS: |
+    ~/.julia/artifacts
+    ~/.julia/packages
+    ~/.julia/compiled
+    ~/.julia/scratchspaces
+    ~/.julia/logs
+    !~/.julia/**/*.pid
+    !~/.julia/**/*.pidfile
 
 jobs:
   # Merge-queue fast path: decide whether the matrix below can be reused from an
@@ -72,17 +87,23 @@ jobs:
       - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
-      # A cache of its own. `test` runs after `load` in the same run, so with a
-      # shared name the test jobs would hit this key exactly and skip their
-      # own save. This depot lacks the `--check-bounds=yes` package images
-      # that `Pkg.test` builds, so the test jobs would precompile every time.
-      - uses: julia-actions/cache@v3
+      # `load` reads the test jobs' cache and never saves. With a cache of its
+      # own it would take a tenth of the 10 GB. With the test jobs' name and a
+      # save, it would save first, the test jobs would hit its key exactly and
+      # skip their own save, and its depot lacks the package images `Pkg.test`
+      # builds. `--check-bounds=yes` is the flag `Pkg.test` sets, so the
+      # restored package images fit this `using` too.
+      - name: Restore the Julia depot
+        uses: actions/cache/restore@v6
         with:
-          cache-name: julia-ci-load;version=${{ matrix.version }}
-          include-matrix: false
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-ci-test-${{ matrix.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-test-${{ matrix.version }}-
       - uses: julia-actions/julia-buildpkg@v1
+        with:
+          ignore-no-cache: true
       - name: using ClimaAtmos
-        run: julia --project=. --color=yes -e 'using ClimaAtmos'
+        run: julia --project=. --color=yes --check-bounds=yes -e 'using ClimaAtmos'
 
   # The minimum-compat check that runs on every pull request. The full
   # `Downgrade` matrix only runs weekly and when the compat bounds change
@@ -101,15 +122,29 @@ jobs:
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1.10'
-      - uses: julia-actions/cache@v3
+      # A depot of its own, since the versions differ from the test jobs'.
+      # Saved on pushes only, as explained at `DEPOT_CACHE_PATHS`.
+      - name: Restore the Julia depot
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v6
         with:
-          cache-name: julia-ci-load-min-compat;version=1.10
-          include-matrix: false
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-ci-min-compat-1.10-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-min-compat-1.10-
+      - name: Restore and save the Julia depot
+        if: github.event_name != 'pull_request'
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-ci-min-compat-1.10-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-min-compat-1.10-
       - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: Artifacts, Dates, Downloads, LazyArtifacts, LinearAlgebra, Logging, Printf, Test, Statistics, Random, Pkg, Glib_jll, Musica
           mode: 'forcedeps'
       - uses: julia-actions/julia-buildpkg@v1
+        with:
+          ignore-no-cache: true
       # The downgrade step resolves the packages but does not install their
       # artifacts, and `julia-buildpkg` only builds. The `Downgrade` matrix
       # never noticed, because `Pkg.test` instantiates first. Without this,
@@ -176,16 +211,30 @@ jobs:
         with:
           version: ${{ matrix.version }}
       # One cache per Julia version, shared by every group, since all groups
-      # use the same test environment. The first job of a run to finish saves
-      # it. Package images are built for the runner's CPU, so the model is
-      # printed to explain a cache that restores but still precompiles.
-      - uses: julia-actions/cache@v3
+      # use the same test environment. On a push, the first job of the run to
+      # finish saves it, and jobs that start later restore that exact key. A
+      # pull request only restores (see `DEPOT_CACHE_PATHS`). Package images
+      # are built for the runner's CPU, so the model is printed to explain a
+      # cache that restores but still precompiles.
+      - name: Restore the Julia depot
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v6
         with:
-          cache-name: julia-ci-test;version=${{ matrix.version }}
-          include-matrix: false
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-ci-test-${{ matrix.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-test-${{ matrix.version }}-
+      - name: Restore and save the Julia depot
+        if: github.event_name != 'pull_request'
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-ci-test-${{ matrix.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-test-${{ matrix.version }}-
       - name: Runner CPU
         run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-buildpkg@v1
+        with:
+          ignore-no-cache: true
       # No coverage. Nothing received it, because the repository has no
       # Codecov token, and on Julia 1.10 coverage also stops the tests from
       # using any package image. To restore it, set `CODECOV_TOKEN` and add

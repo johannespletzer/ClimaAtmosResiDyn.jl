@@ -19,10 +19,20 @@ on:
       - 'Project.toml'
       - '.github/workflows/downstream.yml'
 
-# Needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
-  actions: write
   contents: read
+
+# The cached parts of the Julia depot, and why only pushes save a cache: see
+# `DEPOT_CACHE_PATHS` in ci.yml.
+env:
+  DEPOT_CACHE_PATHS: |
+    ~/.julia/artifacts
+    ~/.julia/packages
+    ~/.julia/compiled
+    ~/.julia/scratchspaces
+    ~/.julia/logs
+    !~/.julia/**/*.pid
+    !~/.julia/**/*.pidfile
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -40,9 +50,23 @@ jobs:
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1.11'
-      - uses: julia-actions/cache@v3
-
+      - name: Restore the Julia depot
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-downstream-1.11-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-downstream-1.11-
+      - name: Restore and save the Julia depot
+        if: github.event_name != 'pull_request'
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-downstream-1.11-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-downstream-1.11-
       - uses: julia-actions/julia-buildpkg@v1
+        with:
+          ignore-no-cache: true
       - uses: actions/checkout@v7
         with:
           repository: 'CliMA/ClimaCoupler.jl'

@@ -12,6 +12,18 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The cached parts of the Julia depot, and why only pushes save a cache: see
+# `DEPOT_CACHE_PATHS` in ci.yml.
+env:
+  DEPOT_CACHE_PATHS: |
+    ~/.julia/artifacts
+    ~/.julia/packages
+    ~/.julia/compiled
+    ~/.julia/scratchspaces
+    ~/.julia/logs
+    !~/.julia/**/*.pid
+    !~/.julia/**/*.pidfile
+
 jobs:
   # Merge-queue fast path: reuse the doc build from an already-green PR head
   # when the merge group is byte-identical to it (see
@@ -58,11 +70,27 @@ jobs:
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1.11'
-      - uses: julia-actions/cache@v3
+      - name: Restore the Julia depot
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-docs-1.11-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-docs-1.11-
+      - name: Restore and save the Julia depot
+        if: github.event_name != 'pull_request'
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-docs-1.11-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-docs-1.11-
       - name: Install dependencies
         shell: julia --project=docs {0}
         run: |
           using Pkg
+          # The registries are not cached, and a non-interactive session does
+          # not install them on its own.
+          Pkg.Registry.add()
           Pkg.develop(PackageSpec(path="."))
           Pkg.instantiate()
       - name: Build and deploy
