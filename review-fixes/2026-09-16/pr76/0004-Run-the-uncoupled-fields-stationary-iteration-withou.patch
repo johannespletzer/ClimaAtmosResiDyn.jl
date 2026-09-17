@@ -1,7 +1,7 @@
 From 4b95fa9a5c20608b63fe325233673ff31f9be1af Mon Sep 17 00:00:00 2001
 From: review <review@local>
 Date: Thu, 17 Sep 2026 07:09:42 +0000
-Subject: [PATCH 4/4] Run the uncoupled fields' stationary iteration without
+Subject: [PATCH 4/5] Run the uncoupled fields' stationary iteration without
  ClimaCore's CUDA probe
 
 ClimaCore's run_field_matrix_solver! for a StationaryIterativeSolve

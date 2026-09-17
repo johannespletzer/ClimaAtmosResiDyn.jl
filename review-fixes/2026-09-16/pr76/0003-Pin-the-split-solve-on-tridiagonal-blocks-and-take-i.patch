@@ -1,7 +1,7 @@
 From 932878c6916085e8a2b2019e1b477cbe8b0bbc10 Mon Sep 17 00:00:00 2001
 From: Johannes Pletzer <johannes.pletzer@posteo.de>
 Date: Wed, 16 Sep 2026 21:21:31 +0200
-Subject: [PATCH 3/4] Pin the split solve on tridiagonal blocks, and take its
+Subject: [PATCH 3/5] Pin the split solve on tridiagonal blocks, and take its
  iterations from the algorithm
 
 A unit test builds a small column with two coupled scalars, a face velocity,
