@@ -25,6 +25,9 @@ permissions:
 # The cached parts of the Julia depot, and why only `main` saves a cache: see
 # `DEPOT_CACHE_PATHS` in ci.yml.
 env:
+  # Package images are built for a target every runner supports, so a cache
+  # saved on one CPU model loads on another. See `JULIA_CPU_TARGET` in ci.yml.
+  JULIA_CPU_TARGET: 'haswell,-rdrnd'
   DEPOT_CACHE_PATHS: |
     ~/.julia/artifacts
     ~/.julia/packages
@@ -84,15 +87,17 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-downgrade-test-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-downgrade-test-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-downgrade-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-downgrade-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Restore and save the Julia depot
         if: github.ref == 'refs/heads/main'
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-downgrade-test-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-downgrade-test-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-downgrade-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-downgrade-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+      - name: Runner CPU
+        run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: Artifacts, Dates, Downloads, LazyArtifacts, LinearAlgebra, Logging, Printf, Test, Statistics, Random, Pkg, Glib_jll, Musica

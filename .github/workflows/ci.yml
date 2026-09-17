@@ -5,6 +5,10 @@ on:
     tags: '*'
   pull_request:
   merge_group:
+  # A manual run tests every group on both Julia versions. Use it for a pull
+  # request that edits upstream code, since the upstream groups run on 1.11
+  # only otherwise: `gh workflow run ci.yml --ref <branch>`.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,6 +34,13 @@ permissions:
 #
 # The registries are not cached. `julia-buildpkg` installs them in seconds.
 env:
+  # Package images are built for this target instead of the runner's own CPU.
+  # GitHub's runners mix Intel and AMD models, and Julia rebuilt all 317
+  # dependencies when a cache saved on one was restored on the other. Every
+  # runner supports this target. It does not change the code compiled while
+  # the tests run. The target is part of each cache name, so a new target
+  # starts new caches.
+  JULIA_CPU_TARGET: 'haswell,-rdrnd'
   DEPOT_CACHE_PATHS: |
     ~/.julia/artifacts
     ~/.julia/packages
@@ -100,8 +111,10 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+      - name: Runner CPU
+        run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-buildpkg@v1
         with:
           ignore-no-cache: true
@@ -133,15 +146,17 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-min-compat-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-min-compat-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-min-compat-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-min-compat-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Restore and save the Julia depot
         if: github.ref == 'refs/heads/main'
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-min-compat-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-min-compat-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-min-compat-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-min-compat-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+      - name: Runner CPU
+        run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: Artifacts, Dates, Downloads, LazyArtifacts, LinearAlgebra, Logging, Printf, Test, Statistics, Random, Pkg, Glib_jll, Musica
@@ -197,16 +212,8 @@ jobs:
         # difference between Julia versions inside upstream code is upstream's
         # to find. The fork's own groups, and `parameterizations`, which holds
         # the fork's stratospheric tracer test, keep both versions, because
-        # `Project.toml` promises 1.10.
-        exclude:
-          - version: '1.10'
-            test_group: dynamics
-          - version: '1.10'
-            test_group: dynamics_tracers
-          - version: '1.10'
-            test_group: dynamics_edmfx
-          - version: '1.10'
-            test_group: restarts
+        # `Project.toml` promises 1.10. A manual run excludes nothing.
+        exclude: ${{ github.event_name == 'workflow_dispatch' && fromJSON('[]') || fromJSON('[{"version":"1.10","test_group":"dynamics"},{"version":"1.10","test_group":"dynamics_tracers"},{"version":"1.10","test_group":"dynamics_edmfx"},{"version":"1.10","test_group":"restarts"}]') }}
     env:
       TEST_GROUP: ${{ matrix.test_group }}
     steps:
@@ -226,15 +233,15 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Restore and save the Julia depot
         if: github.ref == 'refs/heads/main'
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-test-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Runner CPU
         run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-buildpkg@v1
