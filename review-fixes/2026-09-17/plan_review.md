@@ -3,7 +3,7 @@
 Date: 2026-09-17. This reviews [`ci_pipeline_review.md`](ci_pipeline_review.md),
 sections 9 to 12, from a session with Julia and GitHub API access. It checks the
 review's facts again, answers its open questions with a recommendation each, and
-gives the revised plan. Phase A and B of that plan are implemented on the branch
+gives the revised plan. Phase A and B of that plan are implemented in draft PR #82, branch
 `claude/ci-cost-phase-a`.
 
 ## 1. Facts checked again
