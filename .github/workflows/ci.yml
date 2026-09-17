@@ -109,6 +109,7 @@ jobs:
           - tagging_water
           - tagging_source
           - tagging_record
+          - tagging_source_float32
           - parameterizations
           - restarts
           - era5

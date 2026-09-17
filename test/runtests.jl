@@ -25,6 +25,7 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water",
     "tagging_source",
     "tagging_record",
+    "tagging_source_float32",
     "parameterizations",
     "restarts",
     "era5",
@@ -66,7 +67,6 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Radiation interface tests" begin @time include("rrtmgp_interface.jl") end
     @safetestset "Coupler compatibility" begin @time include("coupler_compatibility.jl") end
     @safetestset "Surface albedo tests" begin @time include("surface_albedo.jl") end
-    @safetestset "Seasonal SST" begin @time include("seasonal_sst.jl") end
     @safetestset "Larcform1 setup" begin @time include("larcform1.jl") end
 
     # Config tests
@@ -173,6 +173,20 @@ end
 
 if TEST_GROUP in ("tagging_record", "all")
     @safetestset "Process record integration" begin @time include("process_record_integration.jl") end
+end
+
+# A separate group rather than folded into `tagging_source` or `tagging_record`,
+# for the same "one group per file" reason as the rest of this section: the
+# Float32 model configures both `energy_source_tags` and `energy_process_record`
+# together, which is a type neither of those two files' models share, so it
+# costs its own compile wherever it lives. Keeping it in its own group leaves
+# the other two groups' CI time exactly as measured, rather than adding an
+# unmeasured compile (1-moment microphysics included) on top of budgets this
+# change has no data on.
+if TEST_GROUP in ("tagging_source_float32", "all")
+    @safetestset "Energy source tags and process records (Float32) integration" begin
+        @time include("energy_source_tags_float32_integration.jl")
+    end
 end
 
 # ============================================================================

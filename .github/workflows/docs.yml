@@ -47,7 +47,12 @@ jobs:
     needs: docs-decide
     if: needs.docs-decide.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
+    # The deploy in docs/make.jl pushes gh-pages with this token, which needs
+    # write access to the contents. Without it, every push to main failed at
+    # the deploy with 403, after a build that passed.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3

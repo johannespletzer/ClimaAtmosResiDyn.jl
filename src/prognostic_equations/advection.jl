@@ -119,9 +119,13 @@ NVTX.@annotate function horizontal_tracer_advection_tendency!(Yₜ, Y, p, t)
     end
 
     for ρχ_name in filter(is_tracer_var, propertynames(Y.c))
+        # Under enthalpy transport the energy source tags take their shares of
+        # the parent's own flux instead, just below.
+        energy_source_tag_moves_as_enthalpy(p, ρχ_name) && continue
         ᶜχ = @. lazy(specific(Y.c.:($$ρχ_name), Y.c.ρ))
         @. Yₜ.c.:($$ρχ_name) -= split_divₕ(Y.c.ρ * ᶜu, ᶜχ)
     end
+    enthalpy_horizontal_advection_of_energy_source_tags!(Yₜ, Y, p)
 
     if p.atmos.turbconv_model isa PrognosticEDMFX
         for j in 1:n
@@ -247,12 +251,16 @@ NVTX.@annotate function explicit_vertical_advection_tendency!(Yₜ, Y, p, t)
     # corrections ρᵏaᵏ(u³ᵏ - u³)(χᵏ - χ) are added on top of this in
     # edmfx_sgs_mass_flux_tendency!.
     foreach_gs_tracer(Yₜ, Y) do ᶜρχₜ, ᶜρχ, ρχ_name
-        if !(ρχ_name in (@name(ρe_tot), @name(ρq_tot)))
+        # Under enthalpy transport the energy source tags take their shares of
+        # the parent's own flux instead, just below.
+        if !(ρχ_name in (@name(ρe_tot), @name(ρq_tot))) &&
+           !energy_source_tag_moves_as_enthalpy(p, ρχ_name)
             ᶜχ = @. lazy(specific(ᶜρχ, Y.c.ρ))
             vtt = vertical_transport(ᶜρ, ᶠu³, ᶜχ, dt, tracer_upwinding)
             @. ᶜρχₜ += vtt
         end
     end
+    enthalpy_vertical_advection_of_energy_source_tags!(Yₜ, Y, p)
     if !(p.atmos.microphysics_model isa DryModel)
         vtt_bc =
             ᶜρq_tot_vertical_transport_bc(prescribed_flow, thermo_params, t, ᶠu³)
