@@ -81,26 +81,35 @@ day, 2M and P3, more than one node, and the GPU.
     `-R johannespletzer/ClimaAtmosResiDyn.jl` anyway in other clones.
   - **New worktrees:** `../ClimaAtmosResiDyn-defect` (decision 13) and
     `../ClimaAtmos-upstream-vwb` (decision 12, on the new `upstream` remote).
-  - **CI cost (2026-09-17).** A CI review was handed over on
-    `claude/review-open-prs-tasks-wxiw0k` (`review-fixes/2026-09-17/`). Its
-    plan was reviewed there (`plan_review.md`), and phases A and B are draft
-    PR #82 (`claude/ci-cost-phase-a`, worktree `../ClimaAtmosResiDyn-ci-phase-a`):
-    shared caches, no coverage, upstream groups on 1.11 only, `Downgrade`
-    weekly plus a minimum-compat load on every PR, `Downstream` filtered,
-    `era5` folded into `dynamics`. `main` has no branch protection. Next:
-    read the cache lines on the first two `main` runs after #82 merges, then
-    phase C (fewer model types in the heaviest fork-owned test files, one PR
-    per file, each reviewed by the owner).
-  - **#83,** a fix for #82. The new `load 1.10 minimum compat` job failed on
-    #82's own run, because the downgrade step installs no artifacts
-    (`Artifact "NVTX" was not found`). #83 instantiates first. Until it
-    merges, that job and `ci-required` fail on `main` and on every PR.
-  - **#84, the cache fix for #82 (draft).** #83 merged. On `main` the shared
-    caches worked when found (414 dependencies already precompiled), but pull
-    request runs saved caches of their own and pushed `main`'s out of the
-    10 GB within half an hour. #84 saves from pushes only and lets `load`
-    reuse the test cache. A collector writes the cache lines of `main`'s runs
-    to the session scratchpad (`cache_check/main_runs.tsv`).
+  - **CI cost (2026-09-17).** The CI review and its plan are on
+    `claude/review-open-prs-tasks-wxiw0k` (`review-fixes/2026-09-17/`,
+    `plan_review.md` sections 1 to 5, with the owner's decisions). `main` has
+    no branch protection.
+      + **Merged:**
+          * #82: shared caches, no coverage, upstream groups on 1.11 only, a
+            per-PR minimum-compat load, `Downgrade` weekly, `era5` folded into
+            `dynamics`.
+          * #83: instantiate before that load.
+      + **#84, ready, head `7063df2c`:**
+          * only `main` saves caches;
+          * `JULIA_CPU_TARGET: 'haswell,-rdrnd'`, also part of the cache names;
+          * Downstream and Manifest compat keep no cache;
+          * Downstream runs on `main`, weekly and on demand;
+          * a manual `ci` run tests every group on both versions.
+
+        Two agent reviews found the eviction and the CPU trap. A cache saved
+        on an Intel runner was rejected on AMD, and 317 packages were rebuilt.
+      + **Measured on `main`:**
+          * 15 of 16 restores reused over 400 packages.
+          * `Downgrade 1.11 - parent_budget` failed on the fragile defect test,
+            which #81 fixes.
+          * The job rows are in the session scratchpad,
+            `cache_check/main_runs_fixed.tsv`.
+      + **Next:**
+          * Merge #84 and read the cache lines of the next `main` and PR runs.
+          * Merge the tag PRs in the order of `plan_review.md` section 5.
+          * Then the `parent_budget` type audit, and after #76 to #79, phase C
+            on the tagging files.
   - **#77:** the "under the default `tracer` transport" qualifier is in
     (`7d6cec6b`). Another session had already merged `main` into #77 and #78.
 
