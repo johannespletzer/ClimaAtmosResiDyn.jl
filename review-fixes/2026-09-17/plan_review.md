@@ -138,3 +138,78 @@ which claim each removed model type carried, and where that claim is tested
 now.
 
 **Phase D, only if the numbers still call for it:** items 7, 9 and 11.
+
+## 5. After #82 and #83: a second review, and the plan as it stands
+
+A second review of the whole plan (2026-09-17, about 16:25 UTC) read the runs
+since #82 merged. It corrected this document in several places. The owner
+decided the open points the same day.
+
+**Corrections**
+
+- **§2.3, the CPU trap, is real.** Eight of 21 restores rebuilt every
+  dependency, one of them on `ci`. Job 105257646217 saved the 1.11 test cache
+  on an Intel Xeon 6973P-C. Job 105257646541 restored that exact key on an AMD
+  EPYC 7763 and rebuilt 317 packages. Julia rejects a package image built for a
+  CPU the machine does not match ("target mismatch", `base/loading.jl`,
+  v1.11.9).
+- **§2.6: the heaviest job is 64 min, not 40.** `parent_budget` on 1.11 took
+  64.3 min, 54.0 of them tests (job 105257646138). That is over the
+  half-limit rule.
+- **Item 4 saved no test time on 1.10.** The 1.10 test minutes stayed the same.
+  An uncached 1.10 precompile got longer instead, because it now builds
+  package images. Once the cache works this evens out.
+- **§3 Q4 missed run-time data.** The package reads `config/` and `toml/` at
+  run time (`src/config/yaml_helper.jl`).
+- **§3 Q5 conflicts with Phase C and D.** `test/diagnostics/unit_diagnostics.jl`,
+  `test/surface_albedo.jl` and `test/aqua.jl` are upstream-owned files. They
+  leave Phase C, and item 9 is dropped.
+- **§4's estimate left out Downstream.** Without a cache it costs about an
+  hour, and 13 of the last 20 merged pull requests touched `src/`, `ext/` or
+  `Project.toml`.
+- **Cache sizes were too low.** Downstream saved 4.5 GB and Manifest compat
+  2.8 GB, the latter on every push.
+
+**Decisions and what implements them (#84)**
+
+| point | decision |
+|:--|:--|
+| Eviction | Only runs on `main` save a cache. Everything else restores. `load` saves nothing. Downstream and Manifest compat keep no cache. A push saves about 4.4 GB. |
+| CPU trap | `JULIA_CPU_TARGET: 'haswell,-rdrnd'` in every cached workflow, in the cache names, and a CPU print in every cached job. |
+| Downstream | On `main` for `src/`, `ext/`, `config/`, `toml/`, `Project.toml`; weekly; on demand. Not on pull requests. |
+| 1.10 for upstream code | `ci` gets `workflow_dispatch`. A manual run tests every group on both versions. |
+| `parent_budget` headroom | A type audit of its six files comes first, as the start of Phase C. |
+| Item 7 | Dropped: after #79 the merged group would exceed half the limit. |
+
+**Remaining, in order**
+
+1. **Owner:** cancel the runs of merged pull requests (#82, #83) that still
+   hold runners, and merge #84.
+   **Check:** on the first `main` run after the merge, the first test job of
+   each version prints `Cache saved`. Later jobs print
+   `Cache restored from key: julia-ci-test-haswell-…` and precompile at most a
+   few packages.
+2. **Agent:** on the first pull request run after that, check four things.
+   The run restores those keys. `gh cache list` shows no new `refs/pull/*`
+   cache. The `load` jobs take a few minutes. No job that restored a cache
+   rebuilds 400 or more dependencies, whatever its CPU. Record the per-PR
+   runner minutes; the target is 600 or fewer.
+3. **Owner:** merge the tag pull requests in this order:
+   - #81, then #78;
+   - #76, after `main` is merged into it and a manual `ci` run passes, since
+     it edits upstream code;
+   - #77;
+   - #79, after `main` is merged into it and its `AGENTS.md` conflict is
+     resolved.
+4. **Agent, owner reviews:** the `parent_budget` type audit. Which settings of
+   the six files' column models are type parameters, and which models can be
+   shared without dropping a claim.
+5. **Agent, owner reviews each PR:** Phase C on the fork-owned tagging files,
+   after #76 to #79 are merged, since they all edit
+   `energy_source_tags_integration.jl`.
+   - First `tagged_water_integration.jl`. The restart can move onto the tag
+     set of `:105`.
+   - Then `tagged_tracers_integration.jl` and
+     `energy_source_tags_integration.jl`. Each merge there drops a claim, so
+     the owner decides each one.
+6. **Phase D:** item 11 is measured once the docs cache works.
