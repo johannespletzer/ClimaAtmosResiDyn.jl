@@ -27,6 +27,7 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   [Fork parity with upstream](docs/clima_atmos_specific.md#fork-parity-with-upstream).
 - Prefer Julia 1.11.x for local work. CI runs the fork's own test groups on 1.10 and 1.11 and the upstream ones on 1.11 only. See [Which jobs run when](docs/clima_atmos_specific.md#which-jobs-run-when).
 - For runtime validation, prefer `julia +1.11 --project=.buildkite .buildkite/ci_driver.jl ...`.
+- `.buildkite/LocalPreferences.toml` is generated per machine and is not tracked. Run the setup script for your machine once before using the `.buildkite` environment, `./runscripts/setup-julia-levante.tcsh {cpu,gpu}` on Levante. Never commit the file: it records that machine's libmpi path, and on another cluster every package downstream of MPI then fails to precompile. See [runscripts/README.md](runscripts/README.md).
 - For package tests, prefer `Pkg.test()` over manually `include`ing `test/runtests.jl` because test-only deps are loaded through the package test path.
 - Keep edits inside the owning subtree when possible; use [src/ClimaAtmos.jl](src/ClimaAtmos.jl) to trace where a feature is wired.
 - Match existing style: explicit names, narrow imports, comments that explain why.
