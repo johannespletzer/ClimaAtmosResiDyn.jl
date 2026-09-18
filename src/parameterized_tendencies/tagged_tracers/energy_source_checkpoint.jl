@@ -1,11 +1,11 @@
 #####
 ##### The restart guard of the energy source tags
 #####
-##### A restart may change nothing that decides what the tags in the checkpoint
-##### mean: the offset, the tags and their definitions, the transport and the
-##### repair. The checkpoint records them, and a restart that changes one stops
-##### with an error that names it. The fields of the energy source tags and of
-##### the process records must also match, which needs no record at all.
+##### A restart may not change what the tags in a checkpoint mean. That is
+##### decided by the offset, the tags and their definitions, the transport and
+##### the repair. The checkpoint records them, and a restart that changes one
+##### stops with an error that names it. The fields of the energy source tags and
+##### of the process records must also match. That needs no record at all.
 
 import ClimaCore: InputOutput
 
@@ -13,11 +13,15 @@ import ClimaCore: InputOutput
     ENERGY_SOURCE_CHECKPOINT_VERSION
 
 The version of the energy source tags' checkpoint attributes. A checkpoint
-without it predates the restart guard.
+without it predates the restart guard. A checkpoint with another version is
+refused, because its attributes may mean something else.
 """
 const ENERGY_SOURCE_CHECKPOINT_VERSION = 1
 
 # The checkpoint attributes, each named after the configuration key it records.
+# Each tag's definition has attributes of its own, under `TAG_KEY_PREFIX` and
+# the tag's name, because one attribute holding every tag could pass HDF5's
+# limit of about 64 KB for an attribute.
 const ENERGY_SOURCE_CHECKPOINT_KEYS = (;
     version = "energy_source_tag_checkpoint",
     offset = "energy_source_tag_offset",
@@ -25,33 +29,58 @@ const ENERGY_SOURCE_CHECKPOINT_KEYS = (;
     transport = "energy_source_tag_transport",
     repair = "energy_source_tag_repair",
 )
+const ENERGY_SOURCE_TAG_KEY_PREFIX = "energy_source_tag."
 
-energy_source_offset_text(::Nothing) = "none"
-energy_source_offset_text(offset) = repr(Float64(offset))
+# A tag's definition is split into parts of at most this many bytes. The first
+# attribute holds the number of parts, and each part is an attribute of its own,
+# so that no attribute passes the limit, however many vertices a polygon has.
+const ENERGY_SOURCE_TAG_PART_BYTES = 32_000
+
+energy_source_tag_key(name) = string(ENERGY_SOURCE_TAG_KEY_PREFIX, name)
+energy_source_tag_part_key(name, part) =
+    string(ENERGY_SOURCE_TAG_KEY_PREFIX, name, ".", part)
+
+# The offset as a number and as text. No offset is an offset of zero: the
+# configuration turns `energy_source_tag_offset: 0` into `nothing`. The text is
+# in the offset's own float type, so `Float32` prints as it was configured.
+energy_source_offset_value(::Nothing) = 0.0
+energy_source_offset_value(offset) = offset
+energy_source_offset_text(offset) = string(energy_source_offset_value(offset))
 energy_source_transport_text(::TracerEnergySourceTransport) = "tracer"
 energy_source_transport_text(::EnthalpyEnergySourceTransport) = "enthalpy"
 
-# One tag as it is written into a checkpoint: its name, its region and its
-# sources, separated by tabs, because a region's text holds spaces.
+# A tag's definition: its region and its sources, separated by a tab, because a
+# region's text holds spaces. A tag matches a source by membership, so the
+# sources are sorted, and their order in the configuration does not count.
 energy_source_tag_sources_text(tag) =
-    isempty(tag.sources) ? "none" : join(tag.sources, ",")
-energy_source_tag_line(tag) = join(
-    (
-        string(tag_name(tag)),
-        tag_region_text(tag.region),
-        energy_source_tag_sources_text(tag),
-    ),
-    "\t",
-)
+    isempty(tag.sources) ? "none" : join(sort!(collect(string.(tag.sources))), ",")
+energy_source_tag_definition(tag) =
+    string(tag_region_text(tag.region), "\t", energy_source_tag_sources_text(tag))
+
+# Split a text into parts of at most `bytes` bytes. The parts are joined back
+# as they were, so a split inside a character does no harm.
+function energy_source_text_parts(text, bytes = ENERGY_SOURCE_TAG_PART_BYTES)
+    units = codeunits(text)
+    return [
+        String(units[first:min(first + bytes - 1, end)]) for
+        first in 1:bytes:max(length(units), 1)
+    ]
+end
 
 """
     write_energy_source_checkpoint_attributes!(file, model)
 
 Write the settings that decide what the energy source tags in a checkpoint
-mean as attributes of `file`: the offset, one line per tag with its name,
-region and sources, the transport, the repair, and a version. Each is a string,
-so a restart compares strings and can quote both values. A no-op without
-energy source tags. Called by `save_state_to_disk_func`.
+mean as attributes of `file`:
+
+  - a version, an integer;
+  - the offset, the transport and the repair, each as text;
+  - the tags' names, in state order;
+  - each tag's definition, its region and its sources. It is split into parts
+    of at most 32,000 bytes, so that no attribute passes HDF5's limit.
+
+A restart compares the text, so its error can quote both values. A no-op
+without energy source tags. Called by `save_state_to_disk_func`.
 """
 write_energy_source_checkpoint_attributes!(file, ::Nothing) = nothing
 function write_energy_source_checkpoint_attributes!(
@@ -62,9 +91,17 @@ function write_energy_source_checkpoint_attributes!(
     put(key, value) = InputOutput.HDF5.write_attribute(file, key, value)
     put(K.version, ENERGY_SOURCE_CHECKPOINT_VERSION)
     put(K.offset, energy_source_offset_text(model.offset))
-    put(K.tags, join(map(energy_source_tag_line, model.tags), "\n"))
     put(K.transport, energy_source_transport_text(model.transport))
     put(K.repair, string(model.repair))
+    put(K.tags, join(map(tag -> string(tag_name(tag)), model.tags), ","))
+    for tag in model.tags
+        name = tag_name(tag)
+        parts = energy_source_text_parts(energy_source_tag_definition(tag))
+        put(energy_source_tag_key(name), length(parts))
+        for (part, text) in enumerate(parts)
+            put(energy_source_tag_part_key(name, part), text)
+        end
+    end
     return nothing
 end
 
@@ -75,13 +112,14 @@ Refuse a restart that would change what the energy source tags or the process
 records in `restart_file` mean. It checks, in this order, and stops at the
 first mismatch:
 
- 1. the energy source tag fields in `Y`, then the energy and water process
+ 1. The energy source tag fields in `Y`, then the energy and water process
     record fields, against what `model` configures. This needs no attribute,
-    so it covers every checkpoint;
- 2. the version attribute. A checkpoint without it predates this guard. It
-    warns that the offset, the tags' definitions, the transport and the repair
-    cannot be checked, and lets the restart go on;
- 3. the offset, then each tag's region and sources, then the transport, then
+    so it covers every checkpoint.
+ 2. The version attribute. A checkpoint without it predates this guard. Then
+    it warns that the offset, the tags' definitions, the transport and the
+    repair cannot be checked, and lets the restart go on. A checkpoint with
+    another version is refused.
+ 3. The offset, then each tag's region and sources, then the transport, then
     the repair.
 
 Each error names the setting, the file, both values and what to do. `Y` is the
@@ -126,40 +164,41 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
     K = ENERGY_SOURCE_CHECKPOINT_KEYS
     reader = InputOutput.HDF5Reader(restart_file, context)
     recorded = try
-        attributes = InputOutput.HDF5.attrs(reader.file)
-        if !(K.version in keys(attributes))
-            nothing
-        else
-            Dict(
-                name => InputOutput.HDF5.read_attribute(reader.file, key) for
-                (name, key) in pairs(K)
-            )
-        end
+        read_energy_source_checkpoint(reader.file, source_model.tags)
     finally
         Base.close(reader)
     end
     if isnothing(recorded)
         @warn "The restart file $restart_file was written before the energy \
                source tags recorded their settings in a checkpoint. The tag \
-               fields match, but the offset, the tags' regions and sources, the \
-               transport and the repair cannot be checked. Make sure they are \
-               the ones the file was written with." maxlog = 1
+               fields match. But the offset, the tags' regions and sources, \
+               the transport and the repair cannot be checked. Make sure they \
+               are the ones the file was written with."
         return nothing
     end
+    if recorded.version != ENERGY_SOURCE_CHECKPOINT_VERSION
+        error(
+            "The restart file $restart_file records the energy source tags' \
+            settings in version $(recorded.version) of the checkpoint format, \
+            and this run reads version $ENERGY_SOURCE_CHECKPOINT_VERSION. \
+            Restart with the version of ClimaAtmos that wrote the file, or \
+            start a new run.",
+        )
+    end
 
-    check_restart_offset(restart_file, recorded[:offset], source_model.offset)
-    check_restart_tags(restart_file, recorded[:tags], source_model.tags)
+    check_restart_offset(restart_file, recorded.offset, source_model.offset)
+    check_restart_tags(restart_file, recorded.tags, source_model.tags)
     check_restart_setting(
         restart_file,
         K.transport,
-        recorded[:transport],
+        recorded.transport,
         energy_source_transport_text(source_model.transport),
         "The closure residual in the file was made by the other transport.",
     )
     check_restart_setting(
         restart_file,
         K.repair,
-        recorded[:repair],
+        recorded.repair,
         string(source_model.repair),
         source_model.repair ?
         "The tags in the file were not kept non-negative by the repair, and \
@@ -168,6 +207,33 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
         not be from here on.",
     )
     return nothing
+end
+
+# The recorded settings, or `nothing` when the file has no version attribute.
+# A tag the file records no definition for maps to `nothing`.
+function read_energy_source_checkpoint(file, tags)
+    K = ENERGY_SOURCE_CHECKPOINT_KEYS
+    attributes = InputOutput.HDF5.attrs(file)
+    K.version in keys(attributes) || return nothing
+    get_attribute(key) = InputOutput.HDF5.read_attribute(file, key)
+    definitions = Dict{String, Union{Nothing, String}}()
+    for tag in tags
+        name = tag_name(tag)
+        key = energy_source_tag_key(name)
+        definitions[string(name)] =
+            key in keys(attributes) ?
+            join(
+                get_attribute(energy_source_tag_part_key(name, part)) for
+                part in 1:get_attribute(key)
+            ) : nothing
+    end
+    return (;
+        version = get_attribute(K.version),
+        offset = get_attribute(K.offset),
+        transport = get_attribute(K.transport),
+        repair = get_attribute(K.repair),
+        tags = definitions,
+    )
 end
 
 # Step 1: the fields of one family in the restart state against the ones the
@@ -190,7 +256,8 @@ function check_restart_fields(
     not_configured = setdiff(in_file, configured)
     difference =
         isempty(missing_from_file) && isempty(not_configured) ?
-        "They are the same, in a different order." :
+        "They are the same, in a different order, and the order of the \
+        fields in the state is part of the configuration." :
         "Missing from the file: $(listed(missing_from_file)). Not \
         configured: $(listed(not_configured))."
     error(
@@ -200,37 +267,38 @@ function check_restart_fields(
     )
 end
 
+# The offset compares as a number in the configured offset's type, so a
+# `Float32` run compares in its own precision, and no offset equals zero.
 function check_restart_offset(restart_file, recorded, offset)
-    configured = energy_source_offset_text(offset)
-    same =
-        recorded == configured || (
-            !isnothing(offset) &&
-            recorded != "none" &&
-            typeof(offset)(parse(Float64, recorded)) == offset
-        )
-    same && return nothing
-    old = recorded == "none" ? 0.0 : parse(Float64, recorded)
-    new = isnothing(offset) ? 0.0 : Float64(offset)
+    value = energy_source_offset_value(offset)
+    old = parse(Float64, recorded)
+    convert(typeof(value), old) == value && return nothing
     error(
         "The restart file $restart_file was written with \
         `energy_source_tag_offset: $recorded`, and this run sets \
-        $configured. The tags in the file partition `ρe_tot + $old·ρ`. Under \
-        the new offset they no longer add up to the total they partition, \
-        and `e_src_res` would jump by the difference, $(new - old) J/kg. \
-        Restart with the same offset, or start a new run from the initial \
-        condition.",
+        $(energy_source_offset_text(offset)). The tags in the file partition \
+        `ρe_tot + $recorded·ρ`. Under the new offset they no longer add up to \
+        the total they partition, and `e_src_res` would jump by the \
+        difference, $(Float64(value) - old) J/kg. Restart with the same \
+        offset, or start a new run from the initial condition.",
     )
 end
 
 function check_restart_tags(restart_file, recorded, tags)
-    lines = split(recorded, "\n")
-    by_name = Dict(first(split(line, "\t")) => line for line in lines)
     for tag in tags
         name = string(tag_name(tag))
-        line = energy_source_tag_line(tag)
-        old = get(by_name, name, nothing)
-        (isnothing(old) || old == line) && continue
-        _, old_region, old_sources = split(old, "\t")
+        old = recorded[name]
+        if isnothing(old)
+            error(
+                "The restart file $restart_file records no definition for the \
+                energy source tag `$name`, although it holds the tag's field. \
+                The file does not come from this version of the restart \
+                guard. Restart with the version of ClimaAtmos that wrote it, \
+                or start a new run.",
+            )
+        end
+        old == energy_source_tag_definition(tag) && continue
+        old_region, old_sources = split(old, "\t")
         error(
             "The energy source tag `$name` in the restart file $restart_file \
             was defined as `$old_region`, with sources `$old_sources`. This \

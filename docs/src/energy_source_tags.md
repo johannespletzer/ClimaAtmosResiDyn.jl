@@ -492,8 +492,9 @@ family as a whole.
     restart that changes one stops with an error that names it and both
     values. A restart whose tag or process-record fields differ from the ones
     configured is refused as well. A checkpoint written before these records
-    existed is checked by its fields alone, with a warning. There is no
-    override: to change a setting, start a new run.
+    existed is checked by its fields alone, with a warning. One written in
+    another version of the format is refused. There is no override: to change
+    a setting, start a new run.
 
 ## Interpretation limit
 
