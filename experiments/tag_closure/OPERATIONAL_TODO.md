@@ -588,7 +588,18 @@ Found on 2026-09-18:
     one-line NEWS fix.
  2. **A manual `ci.yml` run on `main`,** for R1: the upstream groups on Julia
     1.10 with the new packages.
- 3. **Decisions, none urgent:**
+ 3. **The attribution path** ([ATTRIBUTION_PATH.md](ATTRIBUTION_PATH.md), an
+    agent's discussion of 2026-09-18, reviewed in part). It asks three things
+    first:
+      + whether to rebuild the tags' implicit channel on the parent's stage
+        increment, rather than its tendency. That replaces the question of
+        where C1c's share goes, and reopens C1b's SGS mass flux and
+        sedimentation, which follow implicit fluxes the same way (E59);
+      + the conventions: whether the enthalpy form is the reference
+        definition and not only an audit, and how `c` is chosen (U8);
+      + whether a logged correction may bring `e_src_res` to rounding by
+        construction, leaving only the column-integral part visible.
+ 4. **Decisions, none urgent:**
       + section 2, item 14: the NaN tags under file-based initial conditions,
         first a refusal, then the fix. Needed before any tagged run from a
         file;
