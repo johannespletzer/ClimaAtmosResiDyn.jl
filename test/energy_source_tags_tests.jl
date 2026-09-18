@@ -964,3 +964,214 @@ column_atmos_model(; kwargs...) =
         )
     end
 end
+
+# The restart guard. A checkpoint records the settings that decide what the tags
+# in it mean, and a restart that changes one is refused by name. This needs no
+# simulation: a small checkpoint, and a model and a state that carry only what
+# the check reads.
+@testset "The restart guard" begin
+    context = CA.ClimaComms.context()
+    HDF5 = CA.InputOutput.HDF5
+    tags(width = 100.0; sources = (:radiation,)) = (
+        CA.EnergySourceTag{:strat}(CA.TanhAltitudeRegion(750.0, width, true)),
+        CA.EnergySourceTag{:tropo}(CA.TanhAltitudeRegion(750.0, width, false)),
+        CA.EnergySourceTag{:rad}(nothing, sources),
+    )
+    source_model(;
+        offset = 50000.0,
+        width = 100.0,
+        sources = (:radiation,),
+        repair = true,
+        transport = CA.TracerEnergySourceTransport(),
+    ) = CA.EnergySourceTaggingModel(tags(width; sources), offset; repair, transport)
+    atmos(model; energy_process_record = nothing, water_process_record = nothing) =
+        (; energy_source_tagging_model = model, energy_process_record, water_process_record)
+    state(names...) =
+        (; c = NamedTuple{(:ρ, :ρe_tot, names...)}(Tuple(zeros(2 + length(names)))))
+    tagged = state(:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
+    directory = mktempdir()
+    # A checkpoint with the attributes a run writes. `edit` changes the file
+    # afterwards, to stand in for a file from another version.
+    function checkpoint(model, name; record = true, edit = file -> nothing)
+        path = joinpath(directory, "$name.hdf5")
+        writer = CA.InputOutput.HDF5Writer(path, context)
+        record && CA.write_energy_source_checkpoint_attributes!(writer.file, model)
+        edit(writer.file)
+        Base.close(writer)
+        return path
+    end
+    check(path, model, Y = tagged; kwargs...) =
+        CA.check_energy_source_checkpoint(path, atmos(model; kwargs...), Y, context)
+
+    written = checkpoint(source_model(), "written")
+    # The same settings restart.
+    @test isnothing(check(written, source_model()))
+    # Each changed setting is refused, and the error names it with both values.
+    @test_throws r"`energy_source_tag_offset: 50000\.0`.*sets 60000\.0" check(
+        written,
+        source_model(; offset = 60000.0),
+    )
+    @test_throws r"tag `strat`.*width = 100\.0.*width = 200\.0" check(
+        written,
+        source_model(; width = 200.0),
+    )
+    @test_throws r"tag `rad`.*sources `radiation`.*sources `surface_flux`" check(
+        written,
+        source_model(; sources = (:surface_flux,)),
+    )
+    @test_throws r"`energy_source_tag_transport: tracer`.*sets enthalpy" check(
+        written,
+        source_model(; transport = CA.EnthalpyEnergySourceTransport()),
+    )
+    @test_throws r"`energy_source_tag_repair: true`.*sets false" check(
+        written,
+        source_model(; repair = false),
+    )
+    unrepaired = checkpoint(source_model(; repair = false), "unrepaired")
+    @test_throws r"`energy_source_tag_repair: false`.*sets true" check(
+        unrepaired,
+        source_model(),
+    )
+    # A tag matches a source by membership, so the order of its sources does
+    # not count.
+    two_sources = checkpoint(
+        source_model(; sources = (:radiation, :surface_flux)),
+        "two_sources",
+    )
+    @test isnothing(
+        check(two_sources, source_model(; sources = (:surface_flux, :radiation))),
+    )
+    # No offset is an offset of zero, as `energy_source_tag_offset: 0` is read.
+    unshifted = checkpoint(source_model(; offset = nothing), "unshifted")
+    @test isnothing(check(unshifted, source_model(; offset = nothing)))
+    @test isnothing(check(unshifted, source_model(; offset = 0.0)))
+    @test_throws r"`energy_source_tag_offset: 0\.0`.*sets 50000\.0" check(
+        unshifted,
+        source_model(),
+    )
+    # A `Float32` offset is written and compared in its own type.
+    single = checkpoint(source_model(; offset = 110495.3f0), "single")
+    @test isnothing(check(single, source_model(; offset = 110495.3f0)))
+
+    # The fields, which need no attribute. A tag set that differs names what
+    # is missing and what is not configured.
+    other_tags = CA.EnergySourceTaggingModel(
+        (tags()[1], tags()[2], CA.EnergySourceTag{:sfc}(nothing, :surface_flux)),
+        50000.0,
+    )
+    @test_throws r"Missing from the file: sfc\. Not configured: rad\." check(
+        written,
+        other_tags,
+    )
+    reordered = CA.EnergySourceTaggingModel((tags()[2], tags()[1], tags()[3]), 50000.0)
+    @test_throws r"same, in a different order" check(written, reordered)
+    # Tags in the file, none in the run, and the reverse.
+    @test_throws r"energy source tags strat, tropo, rad, and this run configures none" check(
+        written,
+        nothing,
+    )
+    @test_throws r"energy source tags none, and this run configures strat" check(
+        written,
+        source_model(),
+        state(),
+    )
+    @test isnothing(check(written, nothing, state()))
+    # The process records are checked the same way, energy and water.
+    record = CA.ProcessRecordModel((CA.RecordedProcess{:radiation}(),))
+    @test_throws r"energy process records none, and this run configures radiation" check(
+        written,
+        source_model(),
+        tagged;
+        energy_process_record = record,
+    )
+    @test isnothing(
+        check(
+            written,
+            source_model(),
+            state(:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad, :prc_e_radiation);
+            energy_process_record = record,
+        ),
+    )
+    @test_throws r"water process records none, and this run configures radiation" check(
+        written,
+        source_model(),
+        tagged;
+        water_process_record = record,
+    )
+
+    # A checkpoint from before the guard is checked by its fields, with a
+    # warning, and restarts.
+    unrecorded = checkpoint(source_model(), "unrecorded"; record = false)
+    @test_logs (:warn, r"written before") check(unrecorded, source_model())
+    # A checkpoint in another version of the format is refused.
+    newer = checkpoint(
+        source_model(),
+        "newer";
+        edit = file -> begin
+            HDF5.delete_attribute(file, "energy_source_tag_checkpoint")
+            HDF5.write_attribute(file, "energy_source_tag_checkpoint", 2)
+        end,
+    )
+    @test_throws r"version 2 of the checkpoint format.*reads version 1" check(
+        newer,
+        source_model(),
+    )
+    # A tag the file holds but records no definition for is refused.
+    undefined = checkpoint(
+        source_model(),
+        "undefined";
+        edit = file -> HDF5.delete_attribute(file, "energy_source_tag.rad"),
+    )
+    @test_throws r"no definition for the energy source tag `rad`" check(
+        undefined,
+        source_model(),
+    )
+    # A polygon too long for one HDF5 attribute is written in parts.
+    long_polygon = CA.EnergySourceTaggingModel(
+        (
+            CA.EnergySourceTag{:strat}(
+                CA.TanhPolygonRegion(
+                    Tuple((k / 10, sin(k / 100)) for k in 1:1600),
+                    1.0,
+                    true,
+                ),
+            ),
+        ),
+        50000.0,
+    )
+    long = checkpoint(long_polygon, "long")
+    @test HDF5.h5open(file -> HDF5.read_attribute(file, "energy_source_tag.strat"), long) >
+          1
+    @test isnothing(check(long, long_polygon, state(:ρe_src_strat)))
+
+    # The region a checkpoint records reads back to the same region, for every
+    # region type, in `Float64` and in `Float32`.
+    for FT in (Float64, Float32)
+        regions = (
+            CA.EntireDomain(),
+            CA.TanhAltitudeRegion(FT(750.3), FT(100), false),
+            CA.TanhLatitudeRegion(FT(20), FT(2), true),
+            CA.TanhBoxRegion(FT(170), FT(-170), FT(-10), FT(10), FT(2), false),
+            CA.TanhPolygonRegion(
+                ((FT(0), FT(0)), (FT(10), FT(0)), (FT(5), FT(8))),
+                FT(1.5),
+                true,
+            ),
+        )
+        for region in regions
+            @test CA.tag_region_from_config(Dict(CA.tag_region_spec(region)), FT) ==
+                  region
+        end
+    end
+    @test CA.tag_region_text(nothing) == "none"
+    @test CA.tag_region_text(CA.EntireDomain()) == "everywhere"
+    @test CA.tag_region_text(CA.TanhAltitudeRegion(750.0, 100.0, true)) ==
+          "tanh_altitude(z_center = 750.0, width = 100.0, above = true)"
+    # A `Float32` region prints as it was configured, not widened.
+    @test CA.tag_region_text(CA.TanhAltitudeRegion(750.3f0, 100.0f0, true)) ==
+          "tanh_altitude(z_center = 750.3, width = 100.0, above = true)"
+    @test CA.tag_region_text(
+        CA.TanhPolygonRegion(((0.0, 1.5), (2.0, 3.0), (4.0, 5.0)), 1.0, false),
+    ) ==
+          "tanh_polygon(vertices = [[0.0, 1.5], [2.0, 3.0], [4.0, 5.0]], width = 1.0, inside = false)"
+end

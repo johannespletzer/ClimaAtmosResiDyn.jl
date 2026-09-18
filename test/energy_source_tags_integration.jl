@@ -17,7 +17,9 @@ family is wired into a simulation at all, which is what this file covers:
  6. the implicit Jacobian solves the tags apart from the rest, and the split
     solver gives the increments of the unsplit one exactly, without allocating;
  7. with `energy_source_tag_offset`, the donor-proportional *loss* runs through
-    the same solve, and the offset leaves the model's own state untouched;
+    the same solve, and the offset leaves the model's own state untouched. A
+    restart from its checkpoint with the same settings loads the state bit for
+    bit, and one that changes the offset or a region is refused by name;
  8. under 1-moment microphysics, sedimentation moves the tags with the water.
     The partition's fluxes add up to the parent's, and each face takes the
     shares of the cell that loses the energy, in either direction. On the
@@ -416,6 +418,40 @@ end
         @test rows[3][10] == rows[2][4]
         @test rows[3][11] == rows[3][4] - rows[2][4]
         @test rows[3][12] == rows[3][11] / rows[3][8]
+
+        # The restart guard. The run above wrote a checkpoint at 20 s with its
+        # settings. A restart with the same settings loads that state bit for
+        # bit. One that changes the offset, or a region, is refused before the
+        # cache is built, so neither costs a compile.
+        checkpoint = joinpath(offset_simulation.output_dir, "day0.20.hdf5")
+        @test isfile(checkpoint)
+        restart_config(changes...) = CA.AtmosConfig(
+            merge(
+                test_dict,
+                Dict{String, Any}(
+                    "energy_source_tag_offset" => c,
+                    "output_dir" => mktempdir(pwd()),
+                    "energy_source_closure_check" => Dict{String, Any}(
+                        "period" => "10secs",
+                        "spin_up" => "10secs",
+                    ),
+                    "restart_file" => checkpoint,
+                ),
+                Dict{String, Any}(changes...),
+            );
+            job_id = "energy_source_tags_integration_restart_guard",
+        )
+        restarted = CA.get_simulation(restart_config())
+        @test isequal(parent(restarted.integrator.u.c), parent(Y_offset.c))
+        @test isequal(parent(restarted.integrator.u.f), parent(Y_offset.f))
+        @test_throws r"energy_source_tag_offset: 50000.0" CA.get_simulation(
+            restart_config("energy_source_tag_offset" => 60000.0),
+        )
+        wider = deepcopy(tags)
+        wider[1]["region"]["width"] = 200.0
+        @test_throws r"tag `strat`" CA.get_simulation(
+            restart_config("energy_source_tags" => wider),
+        )
     end
 
     # 8. Sedimentation moves the tags. Under 1-moment microphysics the cloud and

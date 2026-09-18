@@ -518,8 +518,16 @@ family as a whole.
   - Latitude regions require spherical geometry; altitude regions also work in
     columns and boxes.
   - Tagged state is carried through restarts like any other prognostic field,
-    and the masks are rebuilt from the configuration, so the
-    `energy_source_tags` block must match the one used to write the checkpoint.
+    and the masks are rebuilt from the configuration. So a restart must keep
+    what the tags in the checkpoint mean, and it is refused when it does not.
+    A checkpoint records `energy_source_tag_offset`, each tag's region and
+    sources, `energy_source_tag_transport` and `energy_source_tag_repair`. A
+    restart that changes one stops with an error that names it and both
+    values. A restart whose tag or process-record fields differ from the ones
+    configured is refused as well. A checkpoint written before these records
+    existed is checked by its fields alone, with a warning. One written in
+    another version of the format is refused. There is no override: to change
+    a setting, start a new run.
 
 ## Interpretation limit
 
@@ -553,6 +561,8 @@ ClimaAtmos.moves_as_enthalpy
 ClimaAtmos.enthalpy_vertical_advection_of_energy_source_tags!
 ClimaAtmos.enthalpy_horizontal_advection_of_energy_source_tags!
 ClimaAtmos.enthalpy_hyperdiffusion_of_energy_source_tags!
+ClimaAtmos.write_energy_source_checkpoint_attributes!
+ClimaAtmos.check_energy_source_checkpoint
 ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
 ClimaAtmos.keep_energy_source_sediment_correction!
 ClimaAtmos.sediment_energy_source_tags_with_corrections!

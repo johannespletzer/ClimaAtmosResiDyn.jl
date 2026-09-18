@@ -64,6 +64,10 @@ increments — the same caveat `q_tag_fix_<name>` carries.
     from it. A record can, because it is prognostic and travels in the
     checkpoint.
 
+    A restart must configure the same records. One whose `prc_e_*` or
+    `prc_q_*` fields differ from the configuration is refused before the run
+    is built, by the restart guard described under the energy source tags.
+
 ## How the record is integrated
 
 The bracket does not hand a record an amount. `snapshot_process_record!` copies
