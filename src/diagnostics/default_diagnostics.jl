@@ -732,6 +732,20 @@ function default_diagnostics(
             ],
         )
     end
+    # The repair's ledgers are running totals too, so they are sampled like the
+    # records. Without them a run with the repair on cannot say how much energy
+    # the repair moved between the tags, or where. With the repair off they are
+    # zero, so they are left out.
+    if !isnothing(energy_source_tagging_model) &&
+       energy_source_tagging_model.repair
+        append!(
+            record_diagnostics,
+            [
+                "e_src_fix_$(tag_name(tag))" for
+                tag in energy_source_tagging_model.tags
+            ],
+        )
+    end
     isempty(tag_diagnostics) && isempty(record_diagnostics) && return []
     average_func = frequency_averages(duration)
     snapshot_func = frequency_snapshots(duration)

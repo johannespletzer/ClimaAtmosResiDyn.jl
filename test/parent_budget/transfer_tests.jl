@@ -65,22 +65,18 @@ function column_simulation(;
 end
 
 function moist_slab_simulation()
+    # The moist column of the calibration protocol, which
+    # `implicit_attribution_tests.jl`, `explicit_attribution_tests.jl` and
+    # `report_tests.jl` also build. Taken from there rather than written out
+    # again, so that one compiled model serves all four. The group's cost is
+    # almost all compilation, and a copy that drifted would cost another model.
     config = CA.AtmosConfig(
-        Dict(
-            "initial_condition" => "DYCOMS_RF02",
-            "z_max" => 1500.0,
-            "z_elem" => 30,
-            "z_stretch" => false,
-            "rad" => "DYCOMS",
-            "microphysics_model" => "0M",
-            "prognostic_surface" => "SlabOceanSST",
-            "config" => "column",
-            "FLOAT_TYPE" => "Float64",
-            "dt" => "10secs",
-            "t_end" => "600secs",
-            "output_default_diagnostics" => false,
-            "output_dir" => mktempdir(),
-            "parent_budget_mode" => "audit",
+        merge(
+            PB.calibration_configuration(),
+            Dict{String, Any}(
+                "output_dir" => mktempdir(),
+                "parent_budget_mode" => "audit",
+            ),
         );
         job_id = "parent_budget_transfers_moist_slab",
     )

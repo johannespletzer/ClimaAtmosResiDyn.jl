@@ -1,19 +1,20 @@
-# Tag-closure experiments: plan for the preparing agent
+# Tag-closure experiments: the preparation plan
 
-This page is an instruction for an agent. The agent prepares the experiments
-that [tag_closure_memo.md](tag_closure_memo.md) names, on one branch, so that
-the owner can run them on Levante. It is written so the work can start
-without repeating the memo's research.
+This page is the preparation plan for the experiments that
+[tag_closure_memo.md](tag_closure_memo.md) names. It says what has to exist
+before any of them can be submitted, so that the work can start without
+repeating the memo's research. The runs themselves are described in "How a
+run is submitted" below.
 
 ## Who does what
 
-**The experiments are started manually by the owner only.** The agent
-prepares configurations, runscripts, a driver, analysis scripts and plot
-scripts. It never submits a job, never runs on Levante and never commits run
+**The experiments are started manually by the owner only.** Preparation
+covers configurations, runscripts, a driver, analysis scripts and plot
+scripts. It submits no job, runs nothing on Levante and commits no run
 output. The owner submits each job with `sbatch` from the repository root on
 Levante, copies the small result files into the branch and commits them. The
-agent then runs the analysis on the committed files, produces the plots, and
-writes the learning entries.
+analysis then runs on the committed files, produces the plots, and writes the
+learning entries.
 
 Everything that changes model code, a default, a tolerance, an energy
 reference or a reproducibility reference needs the owner's approval before it
@@ -34,7 +35,8 @@ questions. What barrier did the run show, if any. Is the barrier numerical (a
 residual, a negative tag, a non-positive parent, a `Float32` floor),
 structural (a process that no bracket covers) or a cost (walltime, memory,
 Jacobian size). Does it carry over to the source tags. The entries are
-collected in one file, `LEARNINGS.md`, on the experiment branch.
+collected in one file, `LEARNINGS.md`, on the experiment branch described
+below.
 
 The barriers the memo predicts, to be confirmed or refuted:
 
@@ -53,12 +55,14 @@ The barriers the memo predicts, to be confirmed or refuted:
 
 ## One branch
 
-All of it lives on one branch, `claude/tag-closure-experiments`, stacked on
-the branch of this page. If a step needs a second branch, for example a code
-change that should be reviewed on its own, the agent proposes it and waits
-for the discussion instead of creating it.
+All of it lives on a single experiment branch, kept separate from this page
+and not merged into `main`: the configurations, output and analysis are a
+working record rather than part of the package. The paths named below are
+paths on that branch, so they do not resolve in a checkout of `main`. If a
+step needs a second branch, for example a code change that should be reviewed
+on its own, that branch is proposed and discussed rather than simply created.
 
-Layout on the branch:
+Layout on the experiment branch:
 
 ```
 experiments/tag_closure/
@@ -269,8 +273,8 @@ waits for A and B.
 | C3  | C0 with `energy_process_record` for the same source labels beside the source tags                                                                     | What each of the two readings says about the same run, and where they disagree                         |
 
 C1 is the run the memo names as the one that can decide the family's future.
-Two shapes of the shift exist and the agent must put both to the owner before
-writing either. The first shifts only the share's denominator, so the loss
+Two shapes of the shift exist and both go to the owner before either is
+written. The first shifts only the share's denominator, so the loss
 rule reads `e_tot + c` with a constant chosen from the initial state; the
 parent is untouched and no reproducibility reference changes, but the shares
 then depend on `c`. The second shifts the model's energy reference itself;
@@ -296,7 +300,8 @@ reference either way, so whichever is chosen is reported with the value.
     pressure exactly unchanged while moving `e_int` by `−cp_d·δ`, which is what
     makes it a change of reference rather than of atmosphere. So C1 is three
     TOML entries and the owner's approval. The derivation, the magnitudes and
-    the acceptance test are in `experiments/tag_closure/C1_reference_shift.md`.
+    the acceptance test are in `C1_reference_shift.md` on the experiment
+    branch.
 
 C2 is the small structural fix the memo recommends. It is a code change on
 the implicit path and belongs in its own pull request after the measurement
@@ -347,7 +352,7 @@ here.
  7. Commit and push. One commit per phase is enough, with the run names in
     the message, and tick those runs in the register.
 
- 8. The agent then runs `analysis/<phase>.jl` over `output/`, writes
+ 8. The analysis then runs `analysis/<phase>.jl` over `output/`, writes
     `output/summary_<phase>.csv` and the plots, fills `LEARNINGS.md`, applies
     the phase's decision rule and reports.
 
@@ -429,14 +434,14 @@ A1 and A2 are submitted together and read together. A1's slope on its own
 does not answer the question it was written for, so neither ladder is
 reported before the other has run.
 
-## Steps for the preparing agent
+## Steps to prepare
 
  1. Read this page, the memo, `tracer_configuration.md`, `tagged_water.md`,
     `tagged_tracers.md`, `energy_source_tags.md`, `process_record.md`, the
     three integration tests, `runscripts/README.md` and
     `runscripts/run_test_as_job.sh`.
- 2. Create `claude/tag-closure-experiments` from the branch of this page and
-    the layout above. Write `README.md` with the run order, one `sbatch` line
+ 2. Create the experiment branch from the branch of this page, with the
+    layout above. Write `README.md` with the run order, one `sbatch` line
     per run, and the run register the owner ticks as results land.
  3. Write the configs for A1 to A5, B1 to B3 and C0 and C3. Take the test
     configurations as the base and change only the keys the tables name. Set
@@ -444,16 +449,16 @@ reported before the other has run.
     itself. Do not write the C2 config until the code it needs exists, or the
     C1 config until the owner has approved the reference change and its
     values.
- 4. Write the driver and the runscripts. If Julia is available, check every
-    config with `CA.AtmosConfig` and one `get_simulation` on the column. If
-    not, check the YAML parses and say so in the report.
+ 4. Write the driver and the runscripts. Check every config with
+    `CA.AtmosConfig` and one `get_simulation` on the column, and report
+    which configs were checked that way.
  5. Write `analysis/reduce_run.jl`, which the owner runs on Levante, and the
     per-phase analysis scripts. Run both on synthetic input, the reducer on a
     small synthetic NetCDF and the phase scripts on synthetic CSVs, so they
     are tested before anything real exists.
  6. Push the branch, open a draft pull request against the branch of this
-    page, and stop. Report what is ready to run and what is waiting on a
-    decision.
+    page, and stop there. Report what is ready to run and what is waiting on
+    a decision.
  7. After the owner commits results, follow the hand-back section above. Run
     the analysis, write the plots, fill `LEARNINGS.md`, and report the phase
     with its decision rule applied. Say which runs are still missing, and

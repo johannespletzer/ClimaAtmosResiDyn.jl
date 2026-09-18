@@ -192,8 +192,6 @@ fault with `inject_fault!` on a short column and check the log with
 
 ## How to resume
 
-  - Branch `claude/parent-budget-9-closure-plan`, stacked on
-    `claude/parent-budget-8-report` (PR #60); merge the stack below first.
   - Local checks: `.dev/preflight.sh` (parse, hygiene, links, identity
     shapes, the pinned formatter), then
     `TEST_GROUP=parent_budget julia +1.11 --project -e 'import Pkg; Pkg.test()'`

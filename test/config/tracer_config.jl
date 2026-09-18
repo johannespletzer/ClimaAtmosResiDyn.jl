@@ -271,6 +271,27 @@ end
         first(Test.collect_test_logs(() -> CA.AtmosTagging(config))),
     )
 
+    # Every run with these tags states its offset. Without the key the tags are
+    # refused, and the message quotes the offsets that were tested. `0` keeps
+    # the tags on `ρe_tot`.
+    without_offset = tracer_config(
+        ["energy_source_tags" => entries];
+        job_id = "tracer_config_source_no_offset",
+    )
+    @test_throws r"needs `energy_source_tag_offset`" CA.AtmosTagging(
+        without_offset,
+    )
+    @test_throws r"110495 J/kg" CA.AtmosTagging(without_offset)
+    no_offset = source_config("zero_offset", "energy_source_tag_offset" => 0)
+    @test isnothing(CA.AtmosTagging(no_offset).energy_source_tagging_model.offset)
+    # An offset without tags is still refused.
+    @test_throws ErrorException CA.AtmosTagging(
+        tracer_config(
+            ["energy_source_tag_offset" => 110495.0];
+            job_id = "tracer_config_source_offset_alone",
+        ),
+    )
+
     # The tags have no updraft copy, so EDMF's updrafts are refused.
     @test_throws ErrorException CA.AtmosTagging(
         source_config("edmf", "turbconv" => "prognostic_edmfx"),
@@ -298,6 +319,26 @@ end
     )
     @test isempty(label_warnings(zero_moment, "microphysics"))
     @test length(label_warnings(zero_moment, "precipitation")) == 1
+
+    # The offset and the transport act on the tags, so each is refused alone.
+    @test_throws ErrorException CA.AtmosTagging(
+        tracer_config(
+            ["energy_source_tag_offset" => 110495.0];
+            job_id = "tracer_config_source_offset_alone",
+        ),
+    )
+    @test_throws ErrorException CA.AtmosTagging(
+        tracer_config(
+            ["energy_source_tag_transport" => "enthalpy"];
+            job_id = "tracer_config_source_transport_alone",
+        ),
+    )
+    # With tags, the key reaches the model.
+    enthalpy = CA.AtmosTagging(
+        source_config("enthalpy", "energy_source_tag_transport" => "enthalpy"),
+    )
+    @test enthalpy.energy_source_tagging_model.transport isa
+          CA.EnthalpyEnergySourceTransport
 end
 
 @testset "passive_tracers release grid" begin
@@ -703,9 +744,9 @@ end
 
 @testset "Energy source closure check" begin
     tolerances = CA.DEFAULT_CLOSURE_TOLERANCES
-    # The energy source family shares the energy tolerance: both ride the same
-    # explicit-only transport, so their residuals are the same size.
-    @test tolerances.energy_source == tolerances.energy
+    # The energy source family has no default tolerance, so its check reports
+    # without warning until a calibrated level is set.
+    @test isnothing(tolerances.energy_source)
 
     # Parsing, and the default that applies when the block is bare.
     bare = CA.closure_check_from_config(
@@ -716,8 +757,58 @@ end
         default_abort_above = CA.DEFAULT_CLOSURE_ABORT_LEVELS.energy_source,
     )
     @test bare.period == "1days"
-    @test bare.tolerance == FT(tolerances.energy_source)
+    @test isnothing(bare.tolerance)
     @test isnothing(bare.abort_above)
+    @test isnothing(bare.spin_up)
+    @test_throws ErrorException CA.closure_check_from_config(
+        Dict{String, Any}("spin_up" => "0secs"),
+        "`energy_source_closure_check`",
+        FT;
+        default_tolerance = nothing,
+        default_abort_above = nothing,
+    )
+
+    # With the tags, the check is on by default: daily, report-only, from a
+    # spin-up reference an hour in. `false` switches it off, and tags without a
+    # pure region tag get no check, since there is no partition to close.
+    partition_entries = [
+        Dict{String, Any}("name" => "trop", "region" => "tropics"),
+        Dict{String, Any}("name" => "rad", "source" => "radiation"),
+    ]
+    default_check = CA.energy_source_closure_check_from_config(
+        nothing,
+        partition_entries,
+        FT,
+    )
+    @test default_check.period == "1days"
+    @test isnothing(default_check.tolerance)
+    @test default_check.spin_up == "1hours"
+    @test !default_check.audit
+    @test isnothing(
+        CA.energy_source_closure_check_from_config(false, partition_entries, FT),
+    )
+    @test isnothing(
+        CA.energy_source_closure_check_from_config(
+            nothing,
+            [Dict{String, Any}("name" => "rad", "source" => "radiation")],
+            FT,
+        ),
+    )
+    @test isnothing(CA.energy_source_closure_check_from_config(nothing, nothing, FT))
+    # `source: none` still makes a pure region tag.
+    @test !isnothing(
+        CA.energy_source_closure_check_from_config(
+            nothing,
+            [
+                Dict{String, Any}(
+                    "name" => "trop",
+                    "region" => "tropics",
+                    "source" => "none",
+                ),
+            ],
+            FT,
+        ),
+    )
 
     # The key reaches the config, with the run's float type rather than this
     # file's, exactly as the other two families do.
@@ -730,6 +821,7 @@ end
                     "region" => "extratropics",
                 ),
             ],
+            "energy_source_tag_offset" => 0,
             "energy_source_closure_check" =>
                 Dict("period" => "6hours", "tolerance" => 1.0e-5),
         ];
@@ -837,6 +929,45 @@ end
     @test basename(path) == "energy_source_tag_closure.csv"
     @test isfile(path)
     @test path != CA.tag_closure_path(dir, "energy")
+
+    # A check with a spin-up reference writes three more columns, `NaN` until
+    # the reference is taken and the residual since afterwards.
+    reference_dir = mktempdir()
+    reference = Ref{Any}(nothing)
+    CA.write_tag_closure!(reference_dir, 0.0, "energy_source", closure; reference)
+    reference[] = 0.25
+    CA.write_tag_closure!(
+        reference_dir,
+        86400.0,
+        "energy_source",
+        closure;
+        reference,
+    )
+    lines = readlines(CA.tag_closure_path(reference_dir, "energy_source"))
+    @test endswith(
+        lines[1],
+        "residual_at_spin_up,residual_since_spin_up,relative_since_spin_up",
+    )
+    before = parse.(Float64, split(lines[2], ","))
+    after = parse.(Float64, split(lines[3], ","))
+    @test length(before) == length(after) == 12
+    @test all(isnan, before[10:12])
+    @test after[10] == 0.25
+    @test after[11] == closure.residual - 0.25
+    @test after[12] == (closure.residual - 0.25) / closure.scale
+
+    # An identically zero parent gives a zero ratio, as the other columns do,
+    # and not `Inf` or `NaN`.
+    zero_dir = mktempdir()
+    zero_closure = merge(closure, (; scale = 0.0))
+    CA.write_tag_closure!(zero_dir, 0.0, "energy_source", zero_closure; reference)
+    zero_row =
+        parse.(
+            Float64,
+            split(readlines(CA.tag_closure_path(zero_dir, "energy_source"))[2], ","),
+        )
+    @test zero_row[11] == closure.residual - 0.25
+    @test zero_row[12] == 0
 end
 
 @testset "Closure table" begin
@@ -907,6 +1038,18 @@ end
     @test startswith(rows[3], "86400.0,")
     # Every header column is filled in.
     @test all(row -> length(split(row, ",")) == 10, rows)
+
+    # A family's own columns go after the common ones, under their own names.
+    extra_dir = mktempdir()
+    extra = (; source_negative = 9.0, source_minimum = -3.0)
+    CA.write_tag_audit!(extra_dir, 0.0, "energy_source", audit; extra)
+    extra_rows = readlines(CA.tag_audit_path(extra_dir, "energy_source"))
+    @test endswith(
+        extra_rows[1],
+        ",nonpositive_mass_fraction,source_negative,source_minimum",
+    )
+    @test length(split(extra_rows[2], ",")) == 12
+    @test endswith(extra_rows[2], ",9.0,-3.0")
 end
 
 @testset "Shipped tracer configs still build a model" begin
@@ -938,4 +1081,18 @@ end
         job_id = "baroclinic_wave_tagged_water",
     )
     @test length(CA.AtmosTagging(water).water_tagging_model.tags) == 5
+
+    # The energy source tags' example sets the offset they require, and its
+    # layout gets the closure check by default.
+    source = CA.AtmosConfig(
+        joinpath(
+            CA.config_path,
+            "model_configs/baroclinic_wave_energy_source_tags.yml",
+        );
+        job_id = "baroclinic_wave_energy_source_tags",
+    )
+    source_model = CA.AtmosTagging(source).energy_source_tagging_model
+    @test length(source_model.tags) == 7
+    @test source_model.offset == eltype(source)(110495)
+    @test CA.closure_checks_from_config(source).energy_source.spin_up == "1hours"
 end

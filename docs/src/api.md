@@ -379,6 +379,8 @@ See the [Implicit Solver](implicit_solver.md) page for the algorithms.
 ClimaAtmos.Jacobian
 ClimaAtmos.JacobianAlgorithm
 ClimaAtmos.ManualSparseJacobian
+ClimaAtmos.SplitJacobianSolver
+ClimaAtmos.uncoupled_jacobian_names
 ClimaAtmos.AutoDenseJacobian
 ClimaAtmos.AutoSparseJacobian
 ClimaAtmos.AutoSparseJacobian()

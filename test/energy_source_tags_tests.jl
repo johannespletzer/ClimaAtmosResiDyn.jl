@@ -1,5 +1,7 @@
 using Test
 import ClimaAtmos as CA
+import ClimaDiagnostics
+import Dates
 
 @testset "Energy source tags" begin
     for FT in (Float32, Float64)
@@ -584,5 +586,374 @@ import ClimaAtmos as CA
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_extratropics")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_res")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fix_tropics")
+
+        # With the repair on, the default output carries its ledgers, sampled
+        # rather than averaged, because each is a running total. With the
+        # repair off they would read zero, so they are left out.
+        scheduled_names(repair) = begin
+            tagging = CA.AtmosTagging(;
+                energy_source_tagging_model = CA.EnergySourceTaggingModel(
+                    tags;
+                    repair,
+                ),
+            )
+            scheduled = CA.Diagnostics.default_diagnostics(
+                tagging,
+                86400.0,
+                Dates.DateTime(2010, 1, 1),
+                0;
+                output_writer = ClimaDiagnostics.Writers.DictWriter(),
+            )
+            Dict(
+                ClimaDiagnostics.DiagnosticVariables.short_name(d.variable) =>
+                    d for d in scheduled
+            )
+        end
+        with_repair = scheduled_names(true)
+        @test haskey(with_repair, "e_src_fix_tropics")
+        @test haskey(with_repair, "e_src_fix_extratropics")
+        @test isnothing(with_repair["e_src_fix_tropics"].reduction_time_func)
+        @test !isnothing(with_repair["e_src_tropics"].reduction_time_func)
+        @test !haskey(scheduled_names(false), "e_src_fix_tropics")
+    end
+
+    @testset "Processes that no tag follows" begin
+        tropics = CA.EnergySourceTag{:tropics}(CA.TanhLatitudeRegion(20.0, 2.0, true))
+        extratropics =
+            CA.EnergySourceTag{:extratropics}(CA.TanhLatitudeRegion(20.0, 2.0, false))
+        rad = CA.EnergySourceTag{:rad}(nothing, :radiation)
+        sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        mp = CA.EnergySourceTag{:mp}(nothing, :microphysics)
+        new_tropics = CA.EnergySourceTag{:new_tropics}(
+            CA.TanhLatitudeRegion(20.0, 2.0, true),
+            CA.KNOWN_TAG_SOURCES,
+        )
+        # A stand-in for the model, with only the properties the check reads: a
+        # sphere with gray radiation, surface fluxes and 0-moment microphysics,
+        # which is C6's sphere of the tag-closure experiments.
+        sphere(tags; subsidence = nothing) = (;
+            energy_source_tagging_model = CA.EnergySourceTaggingModel(tags),
+            radiation_mode = :gray,
+            disable_surface_flux_tendency = false,
+            subsidence,
+            ls_adv = nothing,
+            external_forcing = nothing,
+            microphysics_model = CA.EquilibriumMicrophysics0M(),
+        )
+        @test CA.active_energy_source_processes(sphere(())) ==
+              (:radiation, :surface_flux, :microphysics)
+
+        # Without a tag for the rain-out, it is warned about, and nothing else.
+        c6 = sphere((tropics, extratropics, sfc, rad, new_tropics))
+        @test_logs (:warn, r"`microphysics` changes `ρe_tot`") CA.warn_untagged_energy_source_processes(
+            c6,
+        )
+        # With one, as in C7, nothing is.
+        @test_logs CA.warn_untagged_energy_source_processes(
+            sphere((tropics, extratropics, sfc, rad, mp, new_tropics)),
+        )
+        # A tag listing every process follows none in particular.
+        @test_logs (:warn, r"`subsidence`") match_mode = :any CA.warn_untagged_energy_source_processes(
+            sphere((tropics, extratropics, sfc, rad, mp, new_tropics); subsidence = :on),
+        )
+        # Region tags alone do not split energy by process, so they get no warning.
+        @test_logs CA.warn_untagged_energy_source_processes(
+            sphere((tropics, extratropics, new_tropics)),
+        )
+
+        # Clipping `ρq_tot` changes `ρe_tot` outside the brackets, which is warned
+        # about with the tags and not without them.
+        clipping = CA.TracerNonnegativityElementConstraint{true}()
+        @test_logs (:warn, r"clips") CA._warn_unbracketed_energy_source_constraints(
+            CA.EnergySourceTaggingModel((tropics, extratropics)),
+            clipping,
+        )
+        @test_logs CA._warn_unbracketed_energy_source_constraints(nothing, clipping)
+        @test_logs CA._warn_unbracketed_energy_source_constraints(
+            CA.EnergySourceTaggingModel((tropics, extratropics)),
+            CA.TracerNonnegativityElementConstraint{false}(),
+        )
+
+        # The two limiters that clip `ρq_tot` are warned about too. A stand-in
+        # for the model, with only the properties the check reads.
+        limited(; limiter = nothing, method = nothing,
+            microphysics_model =
+            CA.EquilibriumMicrophysics0M(), tags = (tropics, extratropics)) = (;
+            energy_source_tagging_model = isnothing(tags) ? nothing :
+                                          CA.EnergySourceTaggingModel(tags),
+            water = (; tracer_nonnegativity_method = method, microphysics_model),
+            numerics = (; limiter),
+        )
+        quasimonotone = CA.QuasiMonotoneLimiter()
+        borrowing = CA.TracerNonnegativityVerticalWaterBorrowing()
+        @test_logs CA.warn_unbracketed_energy_source_constraints(limited())
+        @test_logs (:warn, r"apply_sem_quasimonotone_limiter") CA.warn_unbracketed_energy_source_constraints(
+            limited(; limiter = quasimonotone),
+        )
+        # Borrowing clips `ρq_tot` when every tracer is selected, or `ρq_tot`
+        # is, and not otherwise.
+        @test_logs (:warn, r"vertical_water_borrowing") CA.warn_unbracketed_energy_source_constraints(
+            limited(; method = borrowing),
+        )
+        @test_logs (:warn, r"vertical_water_borrowing") CA.warn_unbracketed_energy_source_constraints(
+            limited(; method = borrowing),
+            (:ρq_tot, :ρq_lcl),
+        )
+        @test_logs CA.warn_unbracketed_energy_source_constraints(
+            limited(; method = borrowing),
+            (:ρq_lcl,),
+        )
+        # Neither without the tags, nor in a dry model.
+        @test_logs CA.warn_unbracketed_energy_source_constraints(
+            limited(; limiter = quasimonotone, method = borrowing, tags = nothing),
+        )
+        @test_logs CA.warn_unbracketed_energy_source_constraints(
+            limited(;
+                limiter = quasimonotone,
+                method = borrowing,
+                microphysics_model = CA.DryModel(),
+            ),
+        )
+    end
+
+    # The audit table's energy source columns, on a column of four unit-height
+    # cells, where a volume integral is the plain sum of the cells' values.
+    @testset "The audit's energy source columns" begin
+        CC = CA.ClimaCore
+        FT = Float64
+        space = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 4,
+            z_elem = 4,
+            staggering = CC.CommonSpaces.CellCenter(),
+        )
+        function cells(values)
+            field = zeros(space)
+            parent(field) .= reshape(FT.(values), size(parent(field)))
+            return field
+        end
+        tropics = CA.EnergySourceTag{:tropics}(CA.TanhLatitudeRegion(20.0, 2.0, true))
+        rad = CA.EnergySourceTag{:rad}(nothing, :radiation)
+        sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        model = CA.EnergySourceTaggingModel((tropics, rad, sfc))
+
+        ᶜnames = (:ρ, :ρe_src_tropics, :ρe_src_rad, :ρe_src_sfc)
+        ᶜY = similar(
+            CC.Fields.coordinate_field(space),
+            NamedTuple{ᶜnames, NTuple{4, FT}},
+        )
+        ᶜY.ρ .= cells([2, 2, 2, 2])
+        # The region tag is negative too, and no source column counts it.
+        ᶜY.ρe_src_tropics .= cells([-100, -100, 5, 5])
+        ᶜY.ρe_src_rad .= cells([-2, 4, -6, 8])
+        ᶜY.ρe_src_sfc .= cells([1, -1, 3, 5])
+        Y = CC.Fields.FieldVector(; c = ᶜY)
+        fix = (;
+            ρe_src_tropics = cells([-1, 0, 0, 0]),
+            ρe_src_rad = cells([1, 0, -2, 0]),
+            ρe_src_sfc = cells([0, 0, 0, 3]),
+        )
+        p = (;
+            scratch = (; ᶜtemp_scalar = zeros(space)),
+            tagging = (; ᶜenergy_source_fix = fix),
+        )
+
+        audit = CA.energy_source_audit(Y, p, model, FT(10))
+        # The negative parts of the source tags: -2, -6 and -1.
+        @test audit.source_negative == 9
+        @test audit.source_negative_relative == 0.9
+        # The smallest source tag per unit mass: -6 / 2.
+        @test audit.source_minimum == -3
+        # Every tag's ledger counts, the region tag's too: 1 + 2 + 3 + 1.
+        @test audit.repair_moved == 7
+        @test audit.repair_moved_relative == 0.7
+
+        # A zero scale gives zero ratios, as the rest of the audit does.
+        zero_scale = CA.energy_source_audit(Y, p, model, FT(0))
+        @test zero_scale.source_negative_relative == 0
+        @test zero_scale.repair_moved_relative == 0
+
+        # Without a source tag there is nothing to take a minimum of.
+        region_only = CA.EnergySourceTaggingModel((tropics,))
+        no_sources = CA.energy_source_audit(Y, p, region_only, FT(10))
+        @test no_sources.source_negative == 0
+        @test isnan(no_sources.source_minimum)
+        @test no_sources.repair_moved == 1
+    end
+
+    @testset "Fields the Jacobian solves apart" begin
+        name(chain...) = CA.MatrixFields.FieldName(chain...)
+        block_pairs = (
+            (name(:c, :ρ), name(:c, :ρ)) => :block,
+            (name(:c, :ρe_tot), name(:c, :ρ)) => :block,
+            (name(:c, :ρe_tot), name(:c, :ρe_tot)) => :block,
+            # A tag with only its own diagonal is solved apart.
+            (name(:c, :ρe_src_tropics), name(:c, :ρe_src_tropics)) => :block,
+            # So is a record.
+            (name(:c, :prc_e_radiation), name(:c, :prc_e_radiation)) => :block,
+            # A tag another block names is not.
+            (name(:c, :ρq_tag_rain), name(:c, :ρq_tag_rain)) => :block,
+            (name(:c, :ρq_tag_rain), name(:f, :u₃)) => :block,
+            # Nor is a field that is neither a tag nor a record, even when it
+            # couples to nothing.
+            (name(:c, :ρq_lcl), name(:c, :ρq_lcl)) => :block,
+            (name(:f, :u₃), name(:f, :u₃)) => :block,
+        )
+        @test CA.uncoupled_jacobian_names(block_pairs) ==
+              (name(:c, :ρe_src_tropics), name(:c, :prc_e_radiation))
+        # A block that names a part of a tag also couples it.
+        @test isempty(
+            CA.uncoupled_jacobian_names((
+                (name(:c, :ρe_src_x), name(:c, :ρe_src_x)) => :block,
+                (name(:c, :ρ), name(:c, :ρe_src_x, :components)) => :block,
+            )),
+        )
+    end
+
+    # The split must give the nested solver's increments bit for bit when a tag
+    # block is not a scaled identity and the solve iterates more than once. With
+    # the `-I` blocks of the integration test's column every solver gives `-R`
+    # exactly, so that test cannot tell a wrong iteration count from a right
+    # one. The state here is a column with two coupled scalars, a face velocity,
+    # a tag and a record, whose own blocks are tridiagonal. The two algorithms
+    # have the shapes `jacobian_solver_algorithm` builds.
+    @testset "The split solver matches the nested one on tridiagonal blocks" begin
+        CC = CA.ClimaCore
+        MF = CA.MatrixFields
+        FT = Float64
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 12,
+            staggering,
+        )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜnames = (:ρ, :ρe_tot, :ρe_src_upper, :prc_e_radiation)
+        Y = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{4, FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        # Values that differ from point to point and from field to field,
+        # without random numbers.
+        fill_pattern!(values, shift) =
+            values .= sin.(shift .+ 0.7 .* reshape(1:length(values), size(values)))
+        R = similar(Y)
+        fill_pattern!(parent(R.c), 0)
+        fill_pattern!(parent(R.f), 1)
+
+        # A block of the given row type: a pattern of size 0.1 in every entry,
+        # plus `diagonal` on the main diagonal. Entries that would reach past
+        # an end of the column are zero.
+        function band_block(space, row_type, diagonal, shift)
+            block = fill(zero(row_type), space)
+            # One row per level and one column per entry of the band. A column
+            # Field's parent array has singleton dimensions around those two.
+            n_levels = size(parent(block), 1)
+            values = reshape(parent(block), n_levels, :)
+            fill_pattern!(values, shift)
+            values .*= 0.1
+            n_entries = size(values, 2)
+            if isodd(n_entries)
+                values[:, (n_entries + 1) ÷ 2] .+= diagonal
+            end
+            if n_entries > 1
+                values[1, 1] = 0
+                values[end, end] = 0
+            end
+            return block
+        end
+        ᶜdiagonal(shift) =
+            band_block(ᶜspace, MF.DiagonalMatrixRow{FT}, -1, shift)
+        ᶜtridiagonal(shift) =
+            band_block(ᶜspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
+        ᶠtridiagonal(shift) =
+            band_block(ᶠspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
+        # Faces to centres and back, as for a divergence and a gradient.
+        ᶜᶠbidiagonal(shift) =
+            band_block(ᶜspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+        ᶠᶜbidiagonal(shift) =
+            band_block(ᶠspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+        block_pairs = (
+            (CA.MatrixFields.@name(c.ρ), CA.MatrixFields.@name(c.ρ)) => ᶜdiagonal(2),
+            (CA.MatrixFields.@name(c.ρe_tot), CA.MatrixFields.@name(c.ρe_tot)) =>
+                ᶜdiagonal(3),
+            (CA.MatrixFields.@name(c.ρ), CA.MatrixFields.@name(f.u₃)) =>
+                ᶜᶠbidiagonal(4),
+            (CA.MatrixFields.@name(c.ρe_tot), CA.MatrixFields.@name(f.u₃)) =>
+                ᶜᶠbidiagonal(5),
+            (CA.MatrixFields.@name(f.u₃), CA.MatrixFields.@name(c.ρ)) =>
+                ᶠᶜbidiagonal(6),
+            (CA.MatrixFields.@name(f.u₃), CA.MatrixFields.@name(c.ρe_tot)) =>
+                ᶠᶜbidiagonal(7),
+            (CA.MatrixFields.@name(f.u₃), CA.MatrixFields.@name(f.u₃)) =>
+                ᶠtridiagonal(8),
+            (
+                CA.MatrixFields.@name(c.ρe_src_upper),
+                CA.MatrixFields.@name(c.ρe_src_upper)
+            ) =>
+                ᶜtridiagonal(9),
+            (
+                CA.MatrixFields.@name(c.prc_e_radiation),
+                CA.MatrixFields.@name(c.prc_e_radiation)
+            ) =>
+                ᶜtridiagonal(10),
+        )
+        uncoupled_names = CA.uncoupled_jacobian_names(block_pairs)
+        @test uncoupled_names ==
+              (
+            CA.MatrixFields.@name(c.ρe_src_upper),
+            CA.MatrixFields.@name(c.prc_e_radiation)
+        )
+
+        velocity_alg = MF.BlockLowerTriangularSolve(CA.MatrixFields.@name(f.u₃))
+        iterative_alg(n_iters) = MF.ApproximateBlockArrowheadIterativeSolve(
+            CA.MatrixFields.@name(c.ρ),
+            CA.MatrixFields.@name(c.ρe_tot);
+            alg₂ = velocity_alg,
+            P_alg₁ = MF.MainDiagonalPreconditioner(),
+            n_iters,
+        )
+        direct_alg = MF.BlockArrowheadSolve(
+            CA.MatrixFields.@name(c.ρ),
+            CA.MatrixFields.@name(c.ρe_tot);
+            alg₂ = velocity_alg,
+        )
+
+        function increments(alg, split)
+            matrix = MF.FieldMatrix(block_pairs...)
+            solver =
+                split ? CA.split_jacobian_solver(matrix, Y, alg, uncoupled_names) :
+                MF.FieldMatrixWithSolver(matrix, Y, alg)
+            ΔY = zero(Y)
+            CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+            return ΔY
+        end
+        same_bits(a, b) =
+            isequal(parent(a.c), parent(b.c)) && isequal(parent(a.f), parent(b.f))
+        for alg in (iterative_alg(1), iterative_alg(2), direct_alg)
+            @test same_bits(increments(alg, true), increments(alg, false))
+        end
+        # The count matters on these blocks: a second iteration changes the
+        # tags' bits, so a split that ignored it would fail the check above.
+        one_iteration = increments(iterative_alg(1), false)
+        two_iterations = increments(iterative_alg(2), false)
+        @test !isequal(
+            parent(one_iteration.c.ρe_src_upper),
+            parent(two_iterations.c.ρe_src_upper),
+        )
+        @test all(isfinite, parent(two_iterations.c))
+        # Only the arrowhead solves are supported.
+        @test_throws ErrorException CA.uncoupled_field_algorithm(
+            MF.BlockDiagonalSolve(),
+        )
     end
 end

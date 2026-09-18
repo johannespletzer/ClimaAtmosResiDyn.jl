@@ -10,15 +10,19 @@ family is wired into a simulation at all, which is what this file covers:
  2. the region masks reach `p.tagging.ᶜenergy_source_masks` and partition unity;
  3. at t = 0 the region tags partition `ρe_tot` to machine precision;
  4. the generic tracer machinery transports the tags, they stay finite, and the
-    closure residual stays a small bounded monitor;
+    closure residual stays a small bounded monitor; masked *production* reaches
+    a source tag through a real bracketed process, which is the one thing here
+    that a plain-array unit test cannot show;
  5. state and masks survive a checkpoint round trip;
- 6. masked *production* reaches a source tag through a real bracketed process,
-    which is the one thing here that a plain-array unit test cannot show;
+ 6. the implicit Jacobian solves the tags apart from the rest, and the split
+    solver gives the increments of the unsplit one exactly, without allocating;
  7. with `energy_source_tag_offset`, the donor-proportional *loss* runs through
     the same solve, and the offset leaves the model's own state untouched;
  8. under 1-moment microphysics, sedimentation moves the tags with the water.
     The partition's fluxes add up to the parent's, and each face takes the
-    shares of the cell that loses the energy, in either direction;
+    shares of the cell that loses the energy, in either direction. On the
+    same column the tag code allocates nothing, in a tendency evaluation or
+    in the repair;
  9. under `energy_source_tag_transport: enthalpy`, the tags' vertical advection
     adds up to the parent's, each face takes the upwind cell's shares, and the
     model's state is untouched;
@@ -46,6 +50,30 @@ item 8 a third, item 9 a fourth and item 10 a fifth.
 =#
 using Test
 import ClimaAtmos as CA
+
+# Allocation checks, as in `parameterized_tendencies/microphysics/allocations.jl`:
+# one call to compile, then `@allocated` on a second call. Each is a function, so
+# that `@allocated` does not count the boxing of globals in a test file.
+# The length parameter makes Julia specialize on every argument, so the call
+# inside is static and nothing is boxed at the call itself.
+function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
+    f(args...)
+    return @allocated f(args...)
+end
+
+function explicit_bracket!(Yₜ, Y, p, source)
+    CA.open_applied_update!(Yₜ, p, source)
+    CA.close_applied_update!(Yₜ, Y, p, source)
+    return nothing
+end
+
+# The implicit path opens the tags' bracket by hand, as `implicit_tendency!`
+# does around microphysics.
+function implicit_bracket!(Yₜ, Y, p, source)
+    CA.snapshot_energy_source_tags!(p, Yₜ)
+    CA.attribute_energy_source_tags!(Yₜ, Y, p, source)
+    return nothing
+end
 
 @testset "Energy source tags integration" begin
     tags = [
@@ -96,6 +124,9 @@ import ClimaAtmos as CA
         "output_default_diagnostics" => false,
         "output_dir" => mktempdir(pwd()),
         "energy_source_tags" => tags,
+        # Items 1 to 6 test the tags on `ρe_tot` itself. The tags refuse to run
+        # without the key, and `0` is how a run asks for no offset.
+        "energy_source_tag_offset" => 0,
     )
 
     simulation = CA.get_simulation(
@@ -170,6 +201,40 @@ import ClimaAtmos as CA
         @test tag_scale < 10 * parent_scale
     end
 
+    # The tags change none of the model's own fields. The same run without
+    # them is a new model type, so this costs a compile, and every other field
+    # must come out bit for bit. `isequal` tells signed zeros apart, which `==`
+    # does not. See "Fork parity with upstream" in `docs/clima_atmos_specific.md`.
+    @testset "The model's fields do not depend on the tags" begin
+        local plain_dict = merge(
+            filter(entry -> !(startswith(first(entry), "energy_source_")), test_dict),
+            Dict{String, Any}("output_dir" => mktempdir(pwd())),
+        )
+        local plain = CA.get_simulation(
+            CA.AtmosConfig(plain_dict; job_id = "energy_source_tags_integration_plain"),
+        )
+        @test CA.solve_atmos!(plain).ret_code == :success
+        local Y_plain = plain.integrator.u
+        # The run with them has its own fields and nothing else besides.
+        @test all(
+            name -> hasproperty(Y_plain.c, name) || CA.is_energy_source_tag_name(name),
+            propertynames(Y.c),
+        )
+        @test propertynames(Y.f) == propertynames(Y_plain.f)
+        for name in propertynames(Y_plain.c)
+            @test isequal(
+                parent(getproperty(Y.c, name)),
+                parent(getproperty(Y_plain.c, name)),
+            )
+        end
+        for name in propertynames(Y_plain.f)
+            @test isequal(
+                parent(getproperty(Y.f, name)),
+                parent(getproperty(Y_plain.f, name)),
+            )
+        end
+    end
+
     # 5. Checkpoint round trip: the state survives bit-for-bit and the masks,
     # which are rebuilt from the config rather than stored, are reproduced.
     restart_file = joinpath(simulation.output_dir, "day0.20.hdf5")
@@ -192,6 +257,66 @@ import ClimaAtmos as CA
               parent(getproperty(masks, name))
     end
 
+    # 6. The implicit Jacobian solves the tags apart from the rest. They couple
+    # to nothing, so the split solver must give the increments of the unsplit
+    # one exactly, in every field. The state after the run holds nonzero tags,
+    # and the right-hand side is the state itself, so no field is zero.
+    @testset "The split Jacobian solver matches the unsplit one" begin
+        p = simulation.integrator.p
+        jacobian_alg = CA.ManualSparseJacobian()
+        split_cache = CA.jacobian_cache(jacobian_alg, Y, p.atmos)
+        unsplit_cache = CA.jacobian_cache(
+            jacobian_alg,
+            Y,
+            p.atmos;
+            split_uncoupled_fields = false,
+        )
+        @test split_cache.solver isa CA.SplitJacobianSolver
+        @test map(field -> field.name, split_cache.solver.uncoupled) == (
+            CA.MatrixFields.@name(c.ρe_src_strat),
+            CA.MatrixFields.@name(c.ρe_src_tropo),
+            CA.MatrixFields.@name(c.ρe_src_rad),
+        )
+        dtγ = FT(5)
+        t = simulation.integrator.t
+        for cache in (split_cache, unsplit_cache)
+            CA.update_jacobian!(jacobian_alg, cache, Y, p, dtγ, t)
+        end
+        ΔY_split = zero(Y)
+        ΔY_unsplit = zero(Y)
+        CA.invert_jacobian!(jacobian_alg, split_cache, ΔY_split, Y)
+        CA.invert_jacobian!(jacobian_alg, unsplit_cache, ΔY_unsplit, Y)
+        # `isequal` rather than `==`, which would let a signed zero differ.
+        @test isequal(parent(ΔY_split.c), parent(ΔY_unsplit.c))
+        @test isequal(parent(ΔY_split.f), parent(ΔY_unsplit.f))
+        @test !all(iszero, parent(ΔY_split.c.ρe_src_rad))
+
+        # The split solver runs in every Newton iteration, so neither its
+        # update nor its solve may allocate. Each check is a function that is
+        # given everything it uses, so `@allocated` counts the call alone.
+        function update_allocations(alg, cache, Y, p, dtγ, t)
+            CA.update_jacobian!(alg, cache, Y, p, dtγ, t)
+            return @allocated CA.update_jacobian!(alg, cache, Y, p, dtγ, t)
+        end
+        function invert_allocations(alg, cache, ΔY, R)
+            CA.invert_jacobian!(alg, cache, ΔY, R)
+            return @allocated CA.invert_jacobian!(alg, cache, ΔY, R)
+        end
+        @test update_allocations(jacobian_alg, split_cache, Y, p, dtγ, t) == 0
+        # The unsplit solve's bytes are what ClimaCore's own solver allocates
+        # on this Julia version; the split may add nothing to them. On Julia
+        # 1.10 the coupled solve, which both paths run, allocates 1056 bytes
+        # per call, so zero is out of reach there until ClimaCore or Julia
+        # removes them; on 1.11 the unsplit solve allocates 48 bytes and the
+        # split none. Both numbers go to the log.
+        unsplit_bytes =
+            invert_allocations(jacobian_alg, unsplit_cache, ΔY_unsplit, Y)
+        split_bytes = invert_allocations(jacobian_alg, split_cache, ΔY_split, Y)
+        @info "Jacobian solve allocations per call" unsplit_bytes split_bytes
+        @test split_bytes <= unsplit_bytes
+        @test split_bytes == 0 broken = VERSION < v"1.11"
+    end
+
     # 7. The loss half through a real solve. The run above never reaches it,
     # because `ρe_tot` is negative across this column. With an offset of
     # 50 kJ/kg the tags partition `ρe_tot + c·ρ`, which is positive everywhere,
@@ -205,6 +330,13 @@ import ClimaAtmos as CA
                     Dict{String, Any}(
                         "energy_source_tag_offset" => c,
                         "output_dir" => mktempdir(pwd()),
+                        # A spin-up of one step, so that the reference is taken
+                        # inside this 20 s run. The check is a callback, so the
+                        # model type and its compile are unchanged.
+                        "energy_source_closure_check" => Dict{String, Any}(
+                            "period" => "10secs",
+                            "spin_up" => "10secs",
+                        ),
                     ),
                 );
                 job_id = "energy_source_tags_integration_offset",
@@ -263,6 +395,24 @@ import ClimaAtmos as CA
         )
         @test all(isfinite, parent(ledger))
         @test minimum(parent(ledger)) >= 0
+
+        # The spin-up reference. The check writes rows at 0, 10 and 20 s. The
+        # reference is taken at 10 s, before that row is written, so the row at
+        # 10 s holds its own residual as the reference and nothing since, and
+        # the row at 20 s holds what changed after it. The row at 0 s has no
+        # reference yet. Column 4 is the residual, 10 to 12 the new columns.
+        closure_path =
+            CA.tag_closure_path(offset_simulation.output_dir, "energy_source")
+        rows = map(readlines(closure_path)[2:end]) do line
+            parse.(Float64, split(line, ","))
+        end
+        @test first.(rows) ≈ [0, 10, 20]
+        @test all(isnan, rows[1][10:12])
+        @test rows[2][10] == rows[2][4]
+        @test rows[2][11] == 0
+        @test rows[3][10] == rows[2][4]
+        @test rows[3][11] == rows[3][4] - rows[2][4]
+        @test rows[3][12] == rows[3][11] / rows[3][8]
     end
 
     # 8. Sedimentation moves the tags. Under 1-moment microphysics the cloud and
@@ -362,6 +512,52 @@ import ClimaAtmos as CA
                 @test count(!iszero, tropo[above]) == 1
             end
         end
+
+        # The tag code allocates nothing, in a tendency evaluation or in the
+        # repair. This column has what the checks need: a positive total, so
+        # the loss half and the repair run, a source tag, and sedimentation.
+        # Checking it here costs no compile.
+        #
+        # The whole explicit tendency is not checked. Its generic tracer loops
+        # allocate with or without tags, and each tag is one more tracer in
+        # them. On this column with a fourth tag and three records, in
+        # `Float64`, `remaining_tendency!` allocated 58,160 bytes per call,
+        # against 22,576 without tags, all of it in those loops.
+        @testset "The tags do not allocate" begin
+            Yₜ = zero(Y)
+            Y_repair = copy(Y)
+            @test p.atmos.energy_source_tagging_model.repair
+            @test second_call_allocations(
+                explicit_bracket!,
+                Yₜ,
+                Y,
+                p,
+                :radiation,
+            ) == 0
+            @test second_call_allocations(
+                implicit_bracket!,
+                Yₜ,
+                Y,
+                p,
+                :microphysics,
+            ) == 0
+            @test second_call_allocations(CA.energy_source_share_norm!, p, Y) ==
+                  0
+            @test second_call_allocations(
+                CA.vertical_advection_of_water_tendency!,
+                Yₜ,
+                Y,
+                p,
+                t,
+            ) == 0
+            @test second_call_allocations(
+                CA.repair_energy_source_tags!,
+                Y_repair,
+                p,
+            ) == 0
+            @test second_call_allocations(CA.implicit_tendency!, Yₜ, Y, p, t) ==
+                  0
+        end
     end
 
     # 9. Enthalpy-form transport, the audit, on the column. The tags take their
@@ -390,12 +586,22 @@ import ClimaAtmos as CA
         p_audit = audit_simulation.integrator.p
         t_audit = audit_simulation.integrator.t
 
-        # The tags never act on the model, so its state is the first run's.
+        # The tags never act on the model, so every other field is the first
+        # run's, bit for bit. `isequal` tells signed zeros apart.
         Y_base = simulation.integrator.u
-        @test parent(Y_audit.c.ρ) == parent(Y_base.c.ρ)
-        @test parent(Y_audit.c.ρe_tot) == parent(Y_base.c.ρe_tot)
-        @test parent(Y_audit.c.ρq_tot) == parent(Y_base.c.ρq_tot)
-        @test parent(Y_audit.f.u₃) == parent(Y_base.f.u₃)
+        for name in propertynames(Y_base.c)
+            CA.is_energy_source_tag_name(name) && continue
+            @test isequal(
+                parent(getproperty(Y_audit.c, name)),
+                parent(getproperty(Y_base.c, name)),
+            )
+        end
+        for name in propertynames(Y_base.f)
+            @test isequal(
+                parent(getproperty(Y_audit.f, name)),
+                parent(getproperty(Y_base.f, name)),
+            )
+        end
         for name in (:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
             @test all(isfinite, parent(getproperty(Y_audit.c, name)))
         end
@@ -429,6 +635,33 @@ import ClimaAtmos as CA
         @test scale > 0
         @test maximum(abs, strat .+ tropo .- parent(ᶜexpected)) <
               100 * eps(FT) * scale
+
+        # That reference reconstructs `h_tot + c`. The parent moves `h_tot`
+        # with the same reconstruction and `ρ` with the central flux. The two
+        # agree because each reconstruction reproduces a constant, which is
+        # asserted here rather than assumed. Rounding scales with the face
+        # fluxes over the level spacing.
+        upwinding = p_audit.atmos.numerics.energy_q_tot_upwinding
+        ᶜJ = CA.Fields.local_geometry_field(Y_audit.c).J
+        ᶠJ = CA.Fields.local_geometry_field(Y_audit.f).J
+        vtt_h = CA.vertical_transport(
+            Y_audit.c.ρ,
+            ᶠu³,
+            ᶜh_tot,
+            p_audit.dt,
+            upwinding,
+        )
+        ᶜparent_E = zero.(Y_audit.c.ρ)
+        @. ᶜparent_E +=
+            vtt_h -
+            c * CA.ᶜadvdivᵥ(CA.ᶠinterp(Y_audit.c.ρ * ᶜJ) / ᶠJ * ᶠu³)
+        ᶠmass_flux = @. CA.ᶠinterp(Y_audit.c.ρ * ᶜJ) / ᶠJ * ᶠu³
+        flux_scale =
+            (maximum(abs, parent(ᶜh_tot)) + c) *
+            maximum(abs, parent(ᶠmass_flux)) /
+            minimum(parent(CA.Fields.Δz_field(Y_audit.c)))
+        @test maximum(abs, parent(ᶜexpected) .- parent(ᶜparent_E)) <
+              100 * eps(FT) * flux_scale
 
         # The donor, on a step partition: all of `E` above 750 m in `strat` and
         # all below in `tropo`, moved by a flow of one sign in a band around
@@ -529,6 +762,29 @@ import ClimaAtmos as CA
         @test tags_scale(Yₜ_sphere) > 0
         @test maximum(abs, tags_sum(Yₜ_sphere) .- parent(ᶜexpected)) <
               100 * eps(FT) * tags_scale(Yₜ_sphere)
+
+        # The same against the parent's own horizontal tendency, into a second
+        # buffer. It moves `h_tot` in `ρe_tot` and one in `ρ`, so `E` changes by
+        # the first plus `c` times the second. Rounding scales with the larger
+        # of the two terms.
+        Yₜ_parent = zero(Y_sphere)
+        CA.horizontal_dynamics_tendency!(
+            Yₜ_parent,
+            Y_sphere,
+            p_sphere,
+            t_sphere,
+        )
+        ᶜρe_totₜ = parent(Yₜ_parent.c.ρe_tot)
+        ᶜρₜ_horizontal = parent(Yₜ_parent.c.ρ)
+        @test maximum(abs, ᶜρₜ_horizontal) > 0
+        term_scale = max(
+            maximum(abs, ᶜρe_totₜ),
+            c * maximum(abs, ᶜρₜ_horizontal),
+        )
+        @test maximum(
+            abs,
+            tags_sum(Yₜ_sphere) .- (ᶜρe_totₜ .+ c .* ᶜρₜ_horizontal),
+        ) < 100 * eps(FT) * term_scale
 
         # Hyperdiffusion. The parent's is the only hyperdiffusion of `E`, and
         # the tags take none as tracers. The parent takes the water part out of

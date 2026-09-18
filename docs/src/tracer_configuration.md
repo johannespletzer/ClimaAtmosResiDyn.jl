@@ -310,6 +310,7 @@ energy_closure_check:
 ```
 
 Every key is optional inside each block, and both blocks are off by default.
+Both also accept `spin_up`, described under the energy source tags.
 Each writes `water_tag_closure.csv` / `energy_tag_closure.csv` to the output
 directory, with columns `time`, `total`, `tagged`, `residual`, `relative`,
 `gross_residual`, `gross_relative`, `scale` and `nonpositive_fraction`.
@@ -409,15 +410,29 @@ cell that holds negligible mass can still be where a scheme breaks.
 The default for energy is looser than the one for water by four orders of
 magnitude, and that is not arbitrary. The water tags ride the same transport
 operators as `ρq_tot` apart from the implicit-versus-explicit vertical
-advection split, so very little escapes them. The energy tags never receive
-implicit transport or EDMFX sub-grid mass fluxes at all — that is deliberate,
-because each tag is already transported in its own right and attributing the
-`ρe_tot` version on top would count it twice — so a visibly larger residual is
-the expected, correct behaviour, not a bug.
+advection split, so very little escapes them. The energy tags follow their
+parent less closely. The `ρe_tag_*` family rides the passive-tracer path, and
+so do the energy source tags under the default
+`energy_source_tag_transport: tracer`. Meanwhile `ρe_tot` is moved as enthalpy,
+pressure work included, and vertically on the implicit path. The `enthalpy`
+audit moves the source tags with the parent's own advective and hyperdiffusive
+fluxes instead, but still explicitly (see
+[Moving the tags as enthalpy, an audit](@ref)).
+Transport is not attributed on top of that. Each tag is already transported in
+its own right, and attributing the `ρe_tot` version as well would count it
+twice. Neither energy family receives the EDMFX sub-grid mass flux, because the
+tags have no updraft copy, and the energy source tags refuse
+`turbconv: prognostic_edmfx` for that reason. Sedimentation reaches both
+families: the `ρe_tag_*` family attributes it under `precipitation`, and the
+energy source tags follow it on the implicit path as transport of their own
+(see [Energy Source Tags](energy_source_tags.md)). So a visibly larger residual
+is the expected, correct behaviour, not a bug.
 
 !!! tip "Calibrate on your own configuration"
 
-    Treat both defaults as starting points. Run once, read the `relative`
+    Treat the water and energy defaults as starting points. The energy source
+    tags have none, and their check never warns about the residual until you
+    set one. Run once, read the `relative`
     column, and set a tolerance a little above the level your configuration
     settles at. A tolerance tuned that way turns the warning into news; one
     left at a default that your setup never meets is just noise.
@@ -546,6 +561,7 @@ energy_tracers:
   - `config/example_configs/strat_tracers_transient_a.yml` — an explicit box list
   - `config/model_configs/baroclinic_wave_tagged_water.yml` — water tags with a closure check
   - `config/model_configs/baroclinic_wave_tagged_tracers.yml` — the same for energy tags
+  - `config/model_configs/baroclinic_wave_energy_source_tags.yml` — energy source tags laid out for the per-process checks, with records
 
 ## API
 
@@ -563,4 +579,5 @@ ClimaAtmos.tag_closure
 ClimaAtmos.tag_audit
 ClimaAtmos.tag_closure_callback
 ClimaAtmos.tag_closure_callback!
+ClimaAtmos.write_tag_closure!
 ```

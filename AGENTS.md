@@ -25,7 +25,7 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   fields and output may differ. A change that moves model output is a defect
   here, not a new reference. See
   [Fork parity with upstream](docs/clima_atmos_specific.md#fork-parity-with-upstream).
-- Prefer Julia 1.11.x for local work. CI also runs 1.10 and 1.11.
+- Prefer Julia 1.11.x for local work. CI runs the fork's own test groups on 1.10 and 1.11 and the upstream ones on 1.11 only. See [Which jobs run when](docs/clima_atmos_specific.md#which-jobs-run-when).
 - For runtime validation, prefer `julia +1.11 --project=.buildkite .buildkite/ci_driver.jl ...`.
 - That command needs a prepared environment on a cluster, and it fails in
   confusing ways without one. `.buildkite/LocalPreferences.toml` is generated,
