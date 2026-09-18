@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `parameterizations`, `restarts`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `parameterizations`, `restarts`. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -78,8 +78,9 @@ The `tagging_*` groups are one file each: `tagging_energy` runs
 `test/tagged_tracers_integration.jl`, `tagging_water` runs
 `test/tagged_water_integration.jl`, `tagging_source` runs
 `test/energy_source_tags_integration.jl`, `tagging_record` runs
-`test/process_record_integration.jl` and `tagging_source_float32` runs
-`test/energy_source_tags_float32_integration.jl`. They are split because a tag
+`test/process_record_integration.jl`, `tagging_source_float32` runs
+`test/energy_source_tags_float32_integration.jl` and `tagging_source_edmf`
+runs `test/energy_source_tags_edmf_integration.jl`. They are split because a tag
 name is a type parameter, so each tag set recompiles the whole tendency and
 solve pipeline, roughly seven minutes per simulation on Julia 1.11, and the
 files share no compilation between them. Combined they overran the 90-minute
@@ -95,6 +96,13 @@ a separate group from `tagging_source` and `tagging_record` rather than folded
 into either, because the combined model is a type neither of those two files'
 models share, so it costs its own compile wherever it lives, and this keeps
 the other two groups' CI time exactly as already measured.
+
+`tagging_source_edmf` runs the energy source tags on the DYCOMS RF02 column
+under `PrognosticEDMFX`, with 1-moment microphysics and the updrafts' vertical
+diffusion on. It checks that the tags take their shares of the sub-grid mass
+flux and of the sedimentation corrections. The EDMF column is the most
+expensive model in the suite to build, and the file builds it twice, with the
+tags and without them, to check that the model's own fields do not move.
 
 ### The package-load preflight
 

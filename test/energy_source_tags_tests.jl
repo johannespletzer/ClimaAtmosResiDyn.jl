@@ -273,7 +273,9 @@ column_atmos_model(; kwargs...) =
             p = (;
                 atmos = (; energy_source_tagging_model = model),
                 tagging = (; ᶜenergy_source_masks = masks),
-                scratch = CA.energy_source_scratch(Y, model),
+                # The bracket needs only the cell-center scratch. The face
+                # fluxes need a face space, which this state has not.
+                scratch = CA.energy_source_cell_scratch(Y.c.ρ, model.offset),
             )
             CA.snapshot_energy_source_tags!(p, Yₜ)
             # The bracketed process gains energy in the first cell and loses it
