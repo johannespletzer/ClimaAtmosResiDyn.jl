@@ -58,6 +58,8 @@ CONTROLS = {
     "c0_column_notags",
     "d4_column_edmf_notags",
     "p1_sphere_notags",
+    "v5_c5_continuous_notags",
+    "v5_c5_restarted_notags",
 }
 # P4's split test builds D4's EDMF column with only part of what D4 adds, to
 # find what makes its build slow (FINDINGS E44). These runs carry tags without a

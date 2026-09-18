@@ -17,6 +17,11 @@ against upstream d331fe30, job 13503291) and for C1b against `main`. A review
 of those runs asked for every component of `Y`, a finiteness check,
 provenance in each file and an explicit list of configurations, which this
 version has.
+
+#89's review (R2) asked for the paths those runs did not cover: a restart, the
+vertical water borrowing limiter and a prescribed flow. `restart_first` writes
+a checkpoint at 5 minutes, and `restart_column` restarts from it in the same
+process, so run the two together and in that order.
 =#
 import ClimaAtmos as CA
 import SHA
@@ -91,17 +96,95 @@ configs = [
         "dt" => "10secs",
         "t_end" => "10mins",
     ),
+    # The restart path: `column_1m` with a checkpoint at 5 minutes, then the
+    # same column restarted from it. Both end at 10 minutes. It reads the
+    # checkpoint's attributes and model hash, which the fork writes more of.
+    "restart_first" => Dict{String, Any}(
+        "config" => "column",
+        "initial_condition" => "DYCOMS_RF02",
+        "z_max" => 1500.0,
+        "z_elem" => 30,
+        "z_stretch" => false,
+        "rad" => "DYCOMS",
+        "microphysics_model" => "1M",
+        "fixed_terminal_velocity_liquid" => false,
+        "dt" => "10secs",
+        "t_end" => "10mins",
+        "dt_save_state_to_disk" => "5mins",
+        "output_dir" => mktempdir(pwd()),
+    ),
+    "restart_column" => Dict{String, Any}(
+        "config" => "column",
+        "initial_condition" => "DYCOMS_RF02",
+        "z_max" => 1500.0,
+        "z_elem" => 30,
+        "z_stretch" => false,
+        "rad" => "DYCOMS",
+        "microphysics_model" => "1M",
+        "fixed_terminal_velocity_liquid" => false,
+        "dt" => "10secs",
+        "t_end" => "10mins",
+        "output_dir" => mktempdir(pwd()),
+        "restart_from" => ("restart_first", "day0.300.hdf5"),
+    ),
+    # `column_1m` with the vertical water borrowing limiter, where the fork
+    # decides which tracers the limiter applies to.
+    "column_1m_borrowing" => Dict{String, Any}(
+        "config" => "column",
+        "initial_condition" => "DYCOMS_RF02",
+        "z_max" => 1500.0,
+        "z_elem" => 30,
+        "z_stretch" => false,
+        "rad" => "DYCOMS",
+        "microphysics_model" => "1M",
+        "fixed_terminal_velocity_liquid" => false,
+        "tracer_nonnegativity_method" => "vertical_water_borrowing",
+        "dt" => "10secs",
+        "t_end" => "10mins",
+    ),
+    # `config/model_configs/kinematic_driver.yml`, the Shipway-Hill column with
+    # a prescribed flow, for 5 minutes instead of 20. The fork's
+    # `prescribe_flow!` keeps a copy of `ρq_tot` in a scratch field.
+    "prescribed_flow" => Dict{String, Any}(
+        "config" => "column",
+        "initial_condition" => "ShipwayHill2012",
+        "energy_q_tot_upwinding" => "first_order",
+        "tracer_upwinding" => "first_order",
+        "microphysics_model" => "1M",
+        "cloud_model" => "grid_scale",
+        "implicit_microphysics" => false,
+        "use_sgs_quadrature" => false,
+        "hyperdiff" => nothing,
+        "z_max" => 8e3,
+        "z_elem" => 512,
+        "z_stretch" => false,
+        "dt" => "1secs",
+        "t_end" => "5mins",
+        "toml" => [joinpath(pkgdir(CA), "toml", "kinematic_driver.toml")],
+        "check_nan_every" => 1,
+    ),
 ]
 
 @info "ClimaAtmos source" pkgdir(CA)
+output_dirs = Dict{String, String}()
 for (name, config) in configs
     isempty(selected) || name in selected || continue
     t0 = time()
+    # A restart reads the checkpoint that an earlier configuration of this
+    # run wrote.
+    if haskey(config, "restart_from")
+        config = copy(config)
+        (source, file) = pop!(config, "restart_from")
+        haskey(output_dirs, source) ||
+            error("$name restarts from $source, which has not run")
+        config["restart_file"] = joinpath(output_dirs[source], file)
+    end
     simulation = CA.get_simulation(
         CA.AtmosConfig(merge(common, config); job_id = "parity_$name"),
     )
     result = CA.solve_atmos!(simulation)
     @assert result.ret_code == :success "$name did not finish"
+    output_dirs[name] = simulation.output_dir
     Y = simulation.integrator.u
     p = simulation.integrator.p
     t = simulation.integrator.t

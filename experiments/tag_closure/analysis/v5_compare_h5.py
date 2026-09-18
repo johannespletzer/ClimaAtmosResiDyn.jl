@@ -15,7 +15,11 @@ and audit tables are compared row by row after the restart, as text and as a
 relative difference.
 
 The component names are those of C5's column, in state order: `ρ`, the two
-components of `uₕ`, `ρe_tot`, `ρq_tot`, six tags and two records.
+components of `uₕ`, `ρe_tot`, `ρq_tot`, six tags and two records. A run without
+tags has the first five. Two states with different numbers of components, a run
+with tags and its twin without, are compared on the components they share,
+which are the model's own. A run without tags writes no closure tables, and
+then they are not compared.
 """
 import csv, os, subprocess, sys, tempfile
 
@@ -46,15 +50,26 @@ def dump(path, dataset):
         return np.fromfile(out.name, "<f8")
 
 
+def components(path):
+    """The cell state as one row per component."""
+    listing = subprocess.run(
+        ["h5ls", f"{path}/fields/Y/c"], check=True, capture_output=True,
+        text=True,
+    ).stdout
+    dims = [int(d) for d in listing.split("{")[1].split("}")[0].split(",")]
+    return dump(path, "/fields/Y/c").reshape(dims[1], -1)
+
+
 def compare_states(continuous, restarted):
     end_c = os.path.join(continuous, "day1.0.hdf5")
     end_r = os.path.join(restarted, "day1.0.hdf5")
     mid_c = os.path.join(continuous, "day0.43200.hdf5")
-    a = dump(end_c, "/fields/Y/c").reshape(len(NAMES), -1)
-    b = dump(end_r, "/fields/Y/c").reshape(len(NAMES), -1)
-    m = dump(mid_c, "/fields/Y/c").reshape(len(NAMES), -1)
+    a, b, m = components(end_c), components(end_r), components(mid_c)
+    shared = min(len(a), len(b))
+    if len(a) != len(b):
+        print(f"{len(a)} against {len(b)} components; the first {shared} are compared")
     identical = True
-    for i, name in enumerate(NAMES):
+    for i, name in enumerate(NAMES[:shared]):
         same = np.array_equal(a[i].view("<u8"), b[i].view("<u8"))
         identical &= same
         diff = np.abs(a[i] - b[i]).max()
@@ -82,6 +97,9 @@ def compare_table(name, continuous, restarted):
         rows = csv.DictReader(open(os.path.join(directory, name)))
         return {float(r["time"]): r for r in rows}
 
+    if not all(os.path.isfile(os.path.join(d, name)) for d in (continuous, restarted)):
+        print(f"{name}: not in both directories, not compared")
+        return
     a, b = load(continuous), load(restarted)
     times = sorted(t for t in b if t > RESTART_TIME)
     print(f"{name}: {len(times)} rows after the restart")

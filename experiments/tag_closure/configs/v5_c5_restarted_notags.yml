@@ -1,0 +1,23 @@
+# V5's follow-up, the restarted run without tags: `v5_c5_continuous_notags`,
+# restarted from that run's checkpoint at 12 hours and run to the same end. See
+# that file for what the pair decides. Submit this only after the twin has
+# finished.
+job_id: "v5_c5_restarted_notags"
+
+restart_file: "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v5_c5_continuous_notags/output_active/day0.43200.hdf5"
+dt_save_state_to_disk: "12hours"
+reproducible_restart: true
+
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+rad: "DYCOMS"
+
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false

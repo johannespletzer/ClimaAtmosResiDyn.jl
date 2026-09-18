@@ -1,0 +1,28 @@
+# V5's follow-up, the run without a restart and without tags:
+# `v5_c5_continuous` with the tags, the records and the closure check left out,
+# and nothing else changed. Its twin, `v5_c5_restarted_notags`, restarts from
+# this run's checkpoint at 12 hours.
+#
+# What it decides: whether the model itself restarts C5's column bit for bit.
+# With the tags on it did not (E54): every model field differed after 12 hours.
+# The model never reads the tags (E17), so the two runs without them must give
+# the same model fields as the two with them, bit for bit. If this pair also
+# differs, the difference is the model's restart and not the tags'.
+job_id: "v5_c5_continuous_notags"
+
+dt_save_state_to_disk: "12hours"
+reproducible_restart: true
+
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+rad: "DYCOMS"
+
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
