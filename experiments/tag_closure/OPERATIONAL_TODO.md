@@ -36,9 +36,10 @@ Merged into `main`:
     `parent_budget` group; #79, the parity rule (`730b5b18`).
 
 Also on 2026-09-18: #87, the parity exception recorded; #77, the safe
-defaults (`2eb7b4a9`); #76, the split solver (`38661891`). #89 is open as a
-draft: the merge of upstream v0.42.11 (see section 0). #76 and #77 were merged a minute apart, each tested on its own branch,
-so `main`'s run at `38661891` is the first to test them together.
+defaults (`2eb7b4a9`); #76, the split solver (`38661891`); #90,
+`.buildkite/LocalPreferences.toml` untracked (`23a57f02`); and #89, the merge
+of upstream v0.42.11 (`369c8f28`, a merge commit whose second parent,
+d331fe30, is the parity reference).
 
 The table below is the review round of 2026-09-16, kept for its record.
 
@@ -71,134 +72,75 @@ on 4 MPI ranks (E47), each closing as C7 does, to rounding; the tag cost on that
 sphere, 1.46× (T9); where the repair's trades sit (E46), and that 10° masks
 remove them (E48).
 
-Not yet run: EDMF with tags past its build, a restart, anything longer than a
-day, 2M and P3, more than one node, and the GPU.
+Since then: B1, the energy tag family for ten days (E50); the fork's parity
+with upstream across #89 and C1b (E51); EDMF with the energy source tags, in
+Float64 (E53) and Float32 (E55); a restart through C2's guard (E54); and the
+EDMF build time, which is upstream's (E56).
+
+Not yet run: the energy source tags for longer than a day, 2M and P3, a
+file-based initial condition (section 2, item 14), more than one node, and the
+GPU.
 
 ## 0. In flight
 
-  - **#89, the merge of upstream v0.42.11** (d331fe30), opened on 2026-09-18 as
-    a draft on `claude/merge-upstream-v0.42.11`. It replaces #88, whose head
-    was upstream's own `main`. Two commits: the resolutions of 12 conflicting
-    files, then the port that the merge forces (13 test files off the removed
-    `AtmosModel(; …)` and `AtmosSimulation{FT}(; …)`, and two names ClimaCore
-    1.0 removed). Aqua takes upstream's bound. Upstream moved its own output
-    (`ref_counter` 409 to 413), so the parity reference becomes d331fe30.
-    Before it leaves draft: CI, the owner's manual `ci.yml` run, and a bitwise
-    run against d331fe30 on one machine. C1b is rebased onto it afterwards,
-    where `sgs_mass_flux` becomes a `Bool`.
-  - **CI:** `main`'s run at `38661891` tests #76 and #77 together, and
-    `Downstream` runs there for the first time under its new trigger.
-  - **#76's allocation, settled:** on Julia 1.11 the split and the unsplit
-    solve allocate nothing; on 1.10 both allocate 1,056 bytes, which ClimaCore's
-    own coupled solve does and the split does not add to. The test marks
-    "split allocates zero" broken on 1.10 only. Its comment still says the
-    unsplit solve allocates 48 bytes on 1.11; it measured 0 (run 35310991660).
-  - **B1 ran** on 2026-09-18 as job 13501290 on `hpda2_test` (2 CPUs,
-    32 GB), in 69 minutes (E50, `output/b1_base/`). Model code `main` at `38661891`, from the worktree
-    `../ClimaAtmosResiDyn-b1`; its driver, runscript, configuration and
-    `runscripts/terrabyte_stacks.env` are copied in from this branch at
-    `58d9b0c8`, because `main` has none of them. Output:
-    `$SCRATCH/tag_closure/output/b1_base/`.
-  - **C1b is draft PR #91** (`fe69cd06`, six commits). The work:
-      + B1, B2 and B4;
-      + the refusal narrowed to `updraft_number` > 1;
-      + T6, `test/energy_source_tags_edmf_integration.jl`, in a new group
-        `tagging_source_edmf`;
-      + T5, item 11 of the source-tag integration test;
-      + M3.
+State at the end of 2026-09-18.
 
-    Locally, T6 passes 41 of 41, T5 10 of 10, and the configuration and
-    species-list tests 282 of 282. Without tags it is bit for bit `main`
-    (E51). Its validation ran on 2026-09-18, 4 of the 5 approved jobs: the D4
-    pair, D4 with the updrafts' vertical diffusion, and D5 (E53). All four
-    finished in 23 minutes. The residual is zero-sum at about 0.5%, and the
-    records close the column. After #89 merges it is rebased, and
-    `sgs_mass_flux isa Val{true}` becomes a `Bool` test.
-  - **V5 and C1b in Float32 ran on 2026-09-18,** with the owner's approval
-    (jobs 13503985 to 13503987). V5 (E54): the tags are restored exactly,
-    but the model does not restart bit for bit here. C1b in Float32 (E55):
-    the residual keeps its Float64 size over the day but tilts toward
-    overclaiming. The records still close the column, to 6e-5, and form A's
-    gap cancels less than in Float64, which points to rounding.
-  - **#89 was reviewed** on 2026-09-18 by an agent, reading only. No blocking
-    defect. The fork's `src` differs from d331fe30 exactly as it differed from
-    the old base, apart from the resolved hunks. No fork code tests a flag
-    that became a `Bool` as a `Val`. The port builds the same models. The
-    rescaled audit check of `c068d564` has about 100 ulps of margin and still
-    catches a missing `c·ρ` flux. Open:
-      + R1: the upstream groups have not run on 1.10 with the new packages;
-        that is the owner's manual `ci.yml` run;
+  - **#91, C1b, the EDMF sharing** (`77773b25`). `main` with #89 is merged in
+    (`aea9bca4`), and the tags' gate reads the SGS flag as the `Bool` it now
+    is (`81012a84`). The review's fixes are `9dd30a90`. CI's first run on the
+    new base failed only the unit test of the offset bracket, whose state has
+    no face space; the cell scratch is now built on its own (`77773b25`). CI
+    is running again, with the downgrade matrix. Locally, on the old base:
+    T6 52 of 52, the configuration tests 204 of 204. Validation: E53 in
+    Float64, E55 in Float32. Watch its first full run against the 90-minute
+    limit (P8).
+  - **#92, C2, the restart guard** (`a916979c`). `main` with #89 is merged in;
+    only `restart.jl` conflicted. Locally, on the old base: unit tests 309 of
+    309, the source-tag integration file 105 of 105. A real restart passed the
+    guard (E54). CI is running.
+  - **#89 is merged.** An agent's review, reading only, found no blocking
+    defect. Open from it:
+      + R1: the upstream groups have not run on Julia 1.10 with the new
+        packages. Neither #89 nor `main` had a manual `ci.yml` run, which is
+        the one that runs them. The owner starts it;
       + R2: E51's parity did not cover the restart path, the vertical water
         borrowing limiter or the prescribed-flow column. One more parity job
         would, and it needs approval;
       + R3: the committed `.buildkite` manifest keeps upstream's
-        `project_hash`, so every setup rewrites two lines. Taking upstream's
-        manifest was the owner's decision, and the two lines stay uncommitted
-        unless the owner decides otherwise;
-      + nits for a follow-up PR after the merge: a vacuous `===` test in
-        `test/coupler_compatibility.jl`, NEWS's stale Aqua headline, docstrings
-        without the tagging keywords, a species list parsed twice, and an
-        unmatched `@test_throws`;
-      + merge #89 as a merge commit, because the parity reference is the
-        second parent of the last upstream merge.
-
-    It also found the NaN tags of section 2, item 14.
-  - **C2 is draft PR #92** (`e0813505`, from `main` at `23a57f02`). It passes
-    locally: unit tests 291 of 291, the source-tag integration file 105 of 105.
-    It unlocks V5, restart equivalence (up to 2 jobs, approved). After #89 it
-    needs a small rebase, because the merge changes the lines beside both call
-    sites.
-  - **The pause of 2026-09-18 at about 12:15** ended the same afternoon. #90,
-    untracking `.buildkite/LocalPreferences.toml`, is merged (`23a57f02`).
-  - **This branch has `main` merged in** (`5db75854`, main at `38661891`), so
-    runs launched from here use current model code. Every conflict took
-    `main`'s side, with the owner's agreement for the two protected pages,
-    which now match `main` exactly.
+        `project_hash`, so every setup rewrites two lines. They stay
+        uncommitted unless the owner decides otherwise;
+      + nits for a follow-up PR: a vacuous `===` test in
+        `test/coupler_compatibility.jl`, NEWS's stale Aqua headline,
+        docstrings without the tagging keywords, a species list parsed twice,
+        and an unmatched `@test_throws`;
+      + the NaN tags under file-based initial conditions, section 2, item 14.
+  - **CI after #89 is slower (P8),** 1.4 to 2.1 times on the same runner CPUs.
+    Accepted for now by the owner.
+  - **P7 is closed (E56):** the build time is upstream's.
+  - **Runs of 2026-09-18,** all with the owner's approval: B1 (E50), C1b's
+    validation (E53), V5 and C1b in Float32 (E54, E55).
+  - **Worktrees for runs:** `../ClimaAtmosResiDyn-c1b-val` at #91's
+    `9dd30a90` and `../ClimaAtmosResiDyn-c2-val` at #92's `e4e9e5b3`, both
+    detached, with this branch's run files copied in. Remove them once the
+    PRs merge, with `../ClimaAtmos-upstream-d331fe3` and `-localprefs`.
+  - **#76's allocation, settled:** on Julia 1.11 the split and the unsplit
+    solve allocate nothing; on 1.10 both allocate 1,056 bytes, which ClimaCore's
+    own coupled solve does and the split does not add to. The test marks
+    "split allocates zero" broken on 1.10 only.
+  - **This branch has `main` merged in only up to `38661891`,** before #89.
+    Runs launched from here use that model code. Runs of the open PRs go
+    through the worktrees above.
   - **`gh` and the `upstream` remote.** With no default repository, `gh`
-    prefers a remote named `upstream`. So `gh pr create` without `-R` went to
-    `CliMA/ClimaAtmos.jl` and failed with "Resource not accessible by personal
-    access token"; the token was fine. The fork is now `gh`'s default for this
-    clone (`gh repo set-default`, 2026-09-17). Pass
-    `-R johannespletzer/ClimaAtmosResiDyn.jl` anyway in other clones.
+    prefers a remote named `upstream`, and `gh pr create` without `-R` goes to
+    `CliMA/ClimaAtmos.jl`. The fork is `gh`'s default for this clone. Pass
+    `-R johannespletzer/ClimaAtmosResiDyn.jl` anyway in other clones. The
+    token cannot cancel, rerun or dispatch Actions runs.
   - **CI cost.** The CI review and its plan are on
     `claude/review-open-prs-tasks-wxiw0k` (`review-fixes/2026-09-17/`,
-    `plan_review.md` sections 1 to 5, with the owner's decisions). `main` has
-    no branch protection.
-      + **Merged:**
-          * #82: shared caches, no coverage, upstream groups on 1.11 only, a
-            per-PR minimum-compat load, `Downgrade` weekly, `era5` folded into
-            `dynamics`.
-          * #83: instantiate before that load.
-          * #84: only `main` saves caches; `JULIA_CPU_TARGET:
-            'haswell,-rdrnd'`, also part of the cache names; Downstream and
-            Manifest compat keep no cache; Downstream runs on `main`, weekly
-            and on demand; a manual `ci` run tests every group on both
-            versions.
-          * #85, the first phase C step: the `parent_budget` group builds one
-            moist column, the calibration one, compiled once per ledger mode.
-            Its test time on `ci 1.11` fell from 41m01s to 36m20s, which is
-            under half of the 90-minute limit, so the group needs no split.
-          * #86: Aqua held at `0.8.9 - 0.8.16`. Aqua 0.8.17 walks each
-            `[deps]` section with `Base.locate_package` and does not skip the
-            names that also stand in `[weakdeps]`, so both `infrastructure`
-            jobs failed. Naming the missing packages one by one did not end
-            (`ChangesOfVariables`, then `RecipesBase`).
-      + **Measured:** on `main` after #84, cache restores reused over 400
-        packages on Intel and AMD runners alike, so the CPU target works.
-        #84's manual trigger runs the upstream groups on 1.10, as #76's run
-        shows. The job rows are in the session scratchpad,
-        `cache_check/after84_main.tsv`.
-      + **Next:**
-          * Measured on #77's run of 2026-09-18: 571 runner-minutes in 33
-            jobs, against about 1,820 in 68 before (`plan_review.md`
-            section 6). Under the 600 target.
-          * Phase C on the tagging files, one PR per file, each reviewed by
-            the owner, after #76 and #77 merge, since both edit
-            `energy_source_tags_integration.jl`. First
-            `tagged_water_integration.jl`, whose restart can move onto the
-            tag set of `:105`.
-  - **#77:** the "under the default `tracer` transport" qualifier is in
-    (`7d6cec6b`).
+    `plan_review.md` sections 1 to 5, with the owner's decisions). Merged:
+    #82 to #86. #77's run used 571 runner-minutes in 33 jobs, against about
+    1,820 in 68 before. Next: phase C on the tagging files, one PR per file,
+    each reviewed by the owner, first `tagged_water_integration.jl`.
 
 ## Decided
 
@@ -622,11 +564,22 @@ Found on 2026-09-18:
 
 ### A. Waiting for the owner
 
- 1. #89's manual `ci.yml` run, which the token cannot start.
- 2. C1b's validation submissions, once C1b is pushed: each is prepared
-    and shown first.
-
-Every other decision was made on 2026-09-18.
+ 1. **Merge #91 and #92** once their CI is green. The second to merge needs a
+    one-line NEWS fix.
+ 2. **A manual `ci.yml` run on `main`,** for R1: the upstream groups on Julia
+    1.10 with the new packages.
+ 3. **Decisions, none urgent:**
+      + section 2, item 14: the NaN tags under file-based initial conditions,
+        first a refusal, then the fix. Needed before any tagged run from a
+        file;
+      + U8 and U9: how to choose the offset, and a headroom column. Before the
+        first production run that spans a winter;
+      + U7: starting tags from a checkpoint;
+      + R2: one more parity job, for the restart path, the vertical water
+        borrowing limiter and the prescribed-flow column;
+      + V5's follow-up: the same pair without tags, 2 jobs, to show that the
+        model's restart is not bit for bit here (E54);
+      + P7's optional fix (E56), which saves seconds.
 
 ### B. Can be done now, without a new approval
 
@@ -658,16 +611,15 @@ All seven were done on 2026-09-14.
 
 ### C. Unlocked by merges, already approved
 
- 1. **Now:** C2, the restart guard with T1, as a draft PR (#72 merged, design
-    approved on 2026-09-18); then V5, restart equivalence, up to 2 jobs.
+ 1. ~~**C2**~~, the restart guard with T1, is #92, and V5 ran (E54).
  2. ~~**B1**~~, phase B's ten-day run of the energy tag family: ran on
     2026-09-18 (E50).
- 3. **Now, #76 merged:** C1b, the EDMF sharing, with T6 and T5, as a draft PR; then
-    its validation, up to 5 jobs: the D4 pair, D4 with
-    `edmfx_vertical_diffusion: true`, D5. With those, the D4 column's residual
-    under EDMF can be measured for the first time.
- 4. **After C1b:**
-      + C1c, the audit's share of the SGS diffusive flux, as a draft PR;
+ 3. ~~**C1b**~~, the EDMF sharing, is #91. Its validation ran: the D4 pair,
+    D4 with the updrafts' vertical diffusion and D5 (E53), and D4 in Float32
+    (E55).
+ 4. **After #91 merges:**
+      + C1c, the audit's share of the SGS diffusive flux, as a draft PR. E53
+        points to the eddy diffusion as D4's remaining residual;
       + V2 as a ten-day Float32 run with the production physics, V1 folded in,
         and V6, topography (both approved);
       + then the calibration of U2's tolerance, and D1 with D3.
@@ -696,5 +648,8 @@ All seven were done on 2026-09-14.
   - **Pull requests opened on 2026-09-14:** #74 (D2), #75 (T2), #76 (P4's
     fix), #77 (B9).
   - **Merged on 2026-09-17 and 2026-09-18:** #72, #74, #75, #76, #77, #78,
-    #79, #81, #85, #87; the CI work #82, #83, #84 and #86.
+    #79, #81, #85, #87, #89, #90; the CI work #82, #83, #84 and #86.
+  - **Runs of 2026-09-18:** B1 (E50), the parity of #89 and of C1b (E51),
+    C1b's validation (E53), V5 (E54), C1b in Float32 (E55), and P7's
+    measurement (E56).
   - #72 merged into this branch (`57ed9c1f`).
