@@ -235,21 +235,25 @@ the closure check fills with the offset total. They live in `p.scratch`
 because the implicit tendency, where sedimentation runs, may be evaluated with
 `ForwardDiff.Dual` numbers, and `p.scratch` is converted for that.
 """
-energy_source_scratch(Y, model::EnergySourceTaggingModel) =
-    _energy_source_scratch(Y, model.offset)
-_energy_source_scratch(Y, ::Nothing) = (;
-    ᶜe_src_snapshot = similar(Y.c.ρ),
-    ᶜe_src_share_norm = similar(Y.c.ρ),
-    ᶠe_src_sgs_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
-    ᶠe_src_sediment_flux = Fields.Field(Geometry.WVector{eltype(Y.c.ρ)}, axes(Y.f)),
+energy_source_scratch(Y, model::EnergySourceTaggingModel) = merge(
+    energy_source_cell_scratch(Y.c.ρ, model.offset),
+    (;
+        ᶠe_src_sgs_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
+        ᶠe_src_sediment_flux = Fields.Field(
+            Geometry.WVector{eltype(Y.c.ρ)},
+            axes(Y.f),
+        ),
+    ),
 )
-_energy_source_scratch(Y, offset) = (;
-    ᶜe_src_snapshot = similar(Y.c.ρ),
-    ᶜe_src_share_norm = similar(Y.c.ρ),
-    ᶠe_src_sgs_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
-    ᶠe_src_sediment_flux = Fields.Field(Geometry.WVector{eltype(Y.c.ρ)}, axes(Y.f)),
-    ᶜe_src_ρ_snapshot = similar(Y.c.ρ),
-    ᶜe_src_parent = similar(Y.c.ρ),
+# The cell-center scratch alone: the bracket's snapshots, the share
+# denominator and the offset total. It needs no face space.
+energy_source_cell_scratch(ᶜρ, ::Nothing) =
+    (; ᶜe_src_snapshot = similar(ᶜρ), ᶜe_src_share_norm = similar(ᶜρ))
+energy_source_cell_scratch(ᶜρ, offset) = (;
+    ᶜe_src_snapshot = similar(ᶜρ),
+    ᶜe_src_share_norm = similar(ᶜρ),
+    ᶜe_src_ρ_snapshot = similar(ᶜρ),
+    ᶜe_src_parent = similar(ᶜρ),
 )
 
 """
