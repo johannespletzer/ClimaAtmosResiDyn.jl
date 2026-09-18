@@ -92,6 +92,10 @@ day, 2M and P3, more than one node, and the GPU.
     `$SCRATCH/tag_closure/output/b1_base/`.
   - **Next, approved:** C1b as a draft PR, unblocked by #76; then C2 as a
     draft PR.
+  - **This branch has `main` merged in** (`5db75854`, main at `38661891`), so
+    runs launched from here use current model code. Every conflict took
+    `main`'s side, with the owner's agreement for the two protected pages,
+    which now match `main` exactly.
   - **`gh` and the `upstream` remote.** With no default repository, `gh`
     prefers a remote named `upstream`. So `gh pr create` without `-R` went to
     `CliMA/ClimaAtmos.jl` and failed with "Resource not accessible by personal
