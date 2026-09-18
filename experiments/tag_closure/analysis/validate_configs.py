@@ -108,6 +108,7 @@ AUDIT_REQUIRED = {
     "d3_column_p3",
     "d4_column_edmf",
     "d4_column_edmf_enthalpy",
+    "d4_column_edmf_vd",
     "d5_column_edmf_ice",
 }
 # Runs allowed one model-state diagnostic besides their tags. The two C4 runs
@@ -140,6 +141,7 @@ STATE_CHECK = {
     "d3_column_p3",
     "d4_column_edmf",
     "d4_column_edmf_enthalpy",
+    "d4_column_edmf_vd",
     "d5_column_edmf_ice",
 }
 STATE_DIAGNOSTICS = {"ta"}
@@ -158,6 +160,7 @@ DENSITY_CHECK = {
     "d3_column_p3",
     "d4_column_edmf",
     "d4_column_edmf_enthalpy",
+    "d4_column_edmf_vd",
     "d5_column_edmf_ice",
 }
 DENSITY_DIAGNOSTICS = {"rhoa"}
