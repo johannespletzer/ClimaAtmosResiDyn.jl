@@ -386,8 +386,26 @@ Found on 2026-09-18:
     the tendency function, 397 s against 22 s (E52). `main` before the merge
     took 413 s there too. Candidates: #76's split-solver construction and the
     ledger's meters. First step: time `get_jacobian` alone in both checkouts
-    on the login node. Every EDMF build pays it, in CI and in production. Not
-    approved yet; it touches the solver and needs the owner's go-ahead.
+    on the login node. Every EDMF build pays it, in CI and in production. The
+    measurement was approved on 2026-09-18 and runs as a background agent,
+    with scratch copies only. The fix needs the owner's go-ahead, because it
+    touches the solver.
+  - **P8. #89 makes CI's test groups slower.** Measured on 2026-09-18 by
+    comparing #89's run at `c068d564` with `main`'s at `38661891`. On
+    identical runner CPUs #89's jobs took 1.4 to 2.1 times as long, in six
+    pairs; for example, `tagging_source` on 1.10 took 44 minutes against 21.
+    Precompiling the new package versions adds only 1.5 to 2.5 minutes, and
+    that goes once `main` saves a cache after the merge. The rest is in the
+    tests: `tagging_source` on 1.11 tested for 61 minutes against 35. The EDMF
+    column's tendency function built as fast after the merge as before it on
+    the login node (397 s against 413 s), so the time goes elsewhere. Whether
+    upstream v0.42.11 and ClimaCore 1.0 cause it, or the fork's code on them,
+    is not known. `ci 1.11 parent_budget` took 72 minutes and `tagging_source`
+    on 1.11 64, near the 90-minute limit. #91 adds a sixth compile to
+    `tagging_source` and a group that builds the EDMF column twice. **Accepted
+    for now by the owner on 2026-09-18:** watch #91's first run after the
+    rebase. The options, if it goes over: raise the limit, or split the two
+    groups, in a PR of their own.
 
 ## 4. Nice to have (N)
 
