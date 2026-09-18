@@ -2456,7 +2456,8 @@ EnergySourceTag{name}(region, source::Symbol) where {name} =
 
 How the energy source tags are transported, from the
 `energy_source_tag_transport` config key: [`TracerEnergySourceTransport`](@ref),
-the default, or [`EnthalpyEnergySourceTransport`](@ref), an audit.
+the default, [`EnthalpyEnergySourceTransport`](@ref), an audit, or
+[`EnthalpyIncrementEnergySourceTransport`](@ref), a prototype of that audit.
 """
 abstract type AbstractEnergySourceTransport end
 
@@ -2480,6 +2481,19 @@ an `energy_source_tag_offset`. Everything else the tags see is as under
 [`TracerEnergySourceTransport`](@ref). See `docs/src/energy_source_tags.md`.
 """
 struct EnthalpyEnergySourceTransport <: AbstractEnergySourceTransport end
+
+"""
+    EnthalpyIncrementEnergySourceTransport()
+
+A prototype of the enthalpy audit whose implicit part follows the parent's own
+increment. The tags take their shares of the parent's explicit fluxes, as under
+[`EnthalpyEnergySourceTransport`](@ref). In each implicit stage they then take
+the parent's increment of `ρe_tot + c·ρ`: after the Newton solve, the difference
+between the parent's increment and theirs is moved as a vertical flux and
+shared out by the cell it leaves. See `correct_energy_source_increment!`. It
+needs an `energy_source_tag_offset`.
+"""
+struct EnthalpyIncrementEnergySourceTransport <: AbstractEnergySourceTransport end
 
 """
     EnergySourceTaggingModel(tags::Tuple, offset = nothing; repair = true,
@@ -2522,7 +2536,7 @@ function EnergySourceTaggingModel(
     repair::Bool = true,
     transport::AbstractEnergySourceTransport = TracerEnergySourceTransport(),
 )
-    transport isa EnthalpyEnergySourceTransport && isnothing(offset) &&
+    !(transport isa TracerEnergySourceTransport) && isnothing(offset) &&
         error(
             "`energy_source_tag_transport: enthalpy` needs \
             `energy_source_tag_offset`. Each tag moves by its share of the total \

@@ -31,6 +31,9 @@ This routine acts as a general hook for implicit-stage initialization.
 Returns `nothing`.
 """
 function initialize_implicit_stage_problem!(Y, p, dtγ)
+    # The energy source tags may follow the parent's increment over this
+    # stage; `Y` is still the stage value before the solve.
+    snapshot_energy_source_increment!(Y, p, dtγ)
 
     if p.atmos.turbconv_model isa PrognosticEDMFX
 

@@ -1201,9 +1201,11 @@ function energy_source_transport_from_config(value)
     (isnothing(value) || value == "tracer") &&
         return TracerEnergySourceTransport()
     value == "enthalpy" && return EnthalpyEnergySourceTransport()
+    value == "enthalpy_increment" &&
+        return EnthalpyIncrementEnergySourceTransport()
     return error(
-        "`energy_source_tag_transport` must be `tracer` or `enthalpy`, got \
-        $(repr(value)).",
+        "`energy_source_tag_transport` must be `tracer`, `enthalpy` or \
+        `enthalpy_increment`, got $(repr(value)).",
     )
 end
 
@@ -1296,7 +1298,7 @@ function AtmosTagging(config::AtmosConfig)
                 is not, so there are no tags for it to offset. Configure \
                 `energy_source_tags`, or drop `energy_source_tag_offset`.",
             )
-            source_transport isa EnthalpyEnergySourceTransport && error(
+            !(source_transport isa TracerEnergySourceTransport) && error(
                 "`energy_source_tag_transport: enthalpy` is set but \
                 `energy_source_tags` is not, so there are no tags for it to \
                 move. Configure `energy_source_tags`, or drop the key.",

@@ -198,6 +198,7 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         ᶜenergy_source_pos,
         ᶜenergy_source_neg,
         ᶠenergy_source_interior,
+        _energy_source_increment_cache(Y, model)...,
     )
 end
 
@@ -1164,7 +1165,8 @@ answer is a property of the model's type, so it folds away at compile time.
 """
 moves_as_enthalpy(::Nothing) = false
 moves_as_enthalpy(model::EnergySourceTaggingModel) =
-    model.transport isa EnthalpyEnergySourceTransport
+    model.transport isa
+    Union{EnthalpyEnergySourceTransport, EnthalpyIncrementEnergySourceTransport}
 
 """
     energy_source_tag_moves_as_enthalpy(p, name)
@@ -1220,7 +1222,11 @@ difference lands in `e_src_res`. A no-op under the default `tracer` transport,
 where the generic tracer loop moves the tags.
 """
 enthalpy_vertical_advection_of_energy_source_tags!(Yₜ, Y, p) =
-    moves_as_enthalpy(p.atmos.energy_source_tagging_model) ?
+# When the tags follow the parent's implicit increment, that increment
+# carries the parent's vertical advection, which is implicit, so the tags
+# take no explicit share of it.
+    moves_as_enthalpy(p.atmos.energy_source_tagging_model) &&
+    !follows_implicit_increment(p.atmos.energy_source_tagging_model) ?
     _enthalpy_vertical_advection!(
         Yₜ,
         Y,
@@ -1473,6 +1479,193 @@ function _sgs_energy_source_tag_fluxes!(
         Base.tail(tags),
     )
 end
+
+# ============================================================================
+# The implicit channel: following the parent's increment (a prototype)
+# ============================================================================
+
+"""
+    follows_implicit_increment(model)
+
+Whether the energy source tags of `model` take the parent's own increment in
+each implicit stage (`energy_source_tag_transport: enthalpy_increment`). A tag
+that follows an implicit term by its tendency lags the parent's Newton solve,
+and for a stiff term the gap grows step by step (FINDINGS E59). The parent's
+increment has no such gap, whatever the solver does. The answer is a property
+of the model's type, so it folds away at compile time.
+"""
+follows_implicit_increment(::Nothing) = false
+follows_implicit_increment(model::EnergySourceTaggingModel) =
+    model.transport isa EnthalpyIncrementEnergySourceTransport
+
+# The fields the correction needs. `dtγ` is the stage's implicit weight, which
+# the post-solve hook is not given, so the snapshot keeps it.
+_energy_source_increment_cache(Y, model) =
+    follows_implicit_increment(model) ?
+    (;
+        ᶜe_src_E_snapshot = similar(Y.c.ρ),
+        ᶜe_src_partition_snapshot = similar(Y.c.ρ),
+        ᶜe_src_mismatch = similar(Y.c.ρ),
+        ᶜe_src_abs_mismatch = similar(Y.c.ρ),
+        ᶠe_src_mismatch_integral = Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
+        ᶠe_src_abs_mismatch_integral = Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
+        e_src_mismatch_total = zeros(axes(Fields.level(Y.f, half))),
+        e_src_abs_mismatch_total = zeros(axes(Fields.level(Y.f, half))),
+        ᶠe_src_increment_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
+        e_src_dtγ = Ref(zero(eltype(Y.c.ρ))),
+    ) : (;)
+
+# The sum of the partition tags of `ᶜY`, plus `dtγ` times that of `ᶜdY`.
+function _energy_source_partition_sum!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
+    ᶜsum .= zero(eltype(ᶜsum))
+    return _add_energy_source_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
+end
+_add_energy_source_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, ::Tuple{}) = ᶜsum
+function _add_energy_source_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, tags::Tuple)
+    tag = first(tags)
+    if _is_energy_partition_tag(tag)
+        ᶜtag = tag_field(ᶜY, tag)
+        ᶜtag_increment = tag_field(ᶜdY, tag)
+        @. ᶜsum += ᶜtag + dtγ * ᶜtag_increment
+    end
+    return _add_energy_source_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, Base.tail(tags))
+end
+
+"""
+    snapshot_energy_source_increment!(Y, p, dtγ)
+
+At the start of an implicit stage, keep `E = ρe_tot + c·ρ`, the sum of the
+partition tags and the stage's weight `dtγ`, for
+`correct_energy_source_increment!`. Called first thing in
+`initialize_implicit_stage_problem!`, where `Y` is still the stage value before
+the solve. A no-op unless the tags follow the parent's implicit increment.
+"""
+snapshot_energy_source_increment!(Y, p, dtγ) =
+    follows_implicit_increment(p.atmos.energy_source_tagging_model) ?
+    _snapshot_energy_source_increment!(
+        Y,
+        p,
+        dtγ,
+        p.atmos.energy_source_tagging_model,
+    ) : nothing
+function _snapshot_energy_source_increment!(Y, p, dtγ, model)
+    (; ᶜe_src_E_snapshot, ᶜe_src_partition_snapshot, e_src_dtγ) = p.tagging
+    ᶜe_src_E_snapshot .= _energy_source_parent_field(Y, model.offset)
+    _energy_source_partition_sum!(
+        ᶜe_src_partition_snapshot,
+        Y.c,
+        Y.c,
+        false,
+        model.tags,
+    )
+    e_src_dtγ[] = dtγ
+    return nothing
+end
+
+"""
+    correct_energy_source_increment!(dY, U, p)
+
+After the Newton solve of an implicit stage, make the partition tags take the
+parent's increment of `E`. `U` is the solved stage value, and `dY` already holds
+the parent's own post-solve correction, which the stepper adds as `dtγ·dY`.
+
+In each cell, the mismatch `m` is the parent's increment of `E` since the
+snapshot less the partition's. The part of `m` that changes a column's total
+cannot be moved within the column; it is left where it arises, in proportion to
+`|m|`, and stays in `e_src_res`. The rest integrates up the column to a face flux
+that is zero at both boundaries, whose divergence is that rest. Each tag takes
+the flux times its share in the cell the flux leaves, as with the sub-grid mass
+flux, and the flux is added to `dY` divided by `dtγ`. The partition's shares add
+up to one, so the partition then follows the parent's increment, up to the part
+left in place. A tag that carries a source takes its own share of the flux.
+"""
+function correct_energy_source_increment!(dY, U, p)
+    model = p.atmos.energy_source_tagging_model
+    (; ᶜe_src_E_snapshot, ᶜe_src_partition_snapshot, e_src_dtγ) = p.tagging
+    (; ᶜe_src_mismatch, ᶜe_src_abs_mismatch, ᶠe_src_increment_flux) = p.tagging
+    (; ᶠe_src_mismatch_integral, ᶠe_src_abs_mismatch_integral) = p.tagging
+    (; e_src_mismatch_total, e_src_abs_mismatch_total) = p.tagging
+    FT = eltype(ᶜe_src_mismatch)
+    dtγ = e_src_dtγ[]
+    c = _mass_energy(model.offset)
+    ᶜm = ᶜe_src_mismatch
+    # The partition after the stage, with the parent's post-solve correction,
+    # which moves no tag.
+    _energy_source_partition_sum!(ᶜm, U.c, dY.c, dtγ, model.tags)
+    @. ᶜm =
+        (
+            U.c.ρe_tot + dtγ * dY.c.ρe_tot + c * (U.c.ρ + dtγ * dY.c.ρ) -
+            ᶜe_src_E_snapshot
+        ) - (ᶜm - ᶜe_src_partition_snapshot)
+    @. ᶜe_src_abs_mismatch = abs(ᶜm)
+    Operators.column_integral_indefinite!(ᶠe_src_mismatch_integral, ᶜm)
+    Operators.column_integral_indefinite!(
+        ᶠe_src_abs_mismatch_integral,
+        ᶜe_src_abs_mismatch,
+    )
+    Operators.column_integral_definite!(e_src_mismatch_total, ᶜm)
+    Operators.column_integral_definite!(
+        e_src_abs_mismatch_total,
+        ᶜe_src_abs_mismatch,
+    )
+    # Upward positive. It is zero at the bottom face and, having taken out the
+    # column's total, at the top face too.
+    @. ᶠe_src_increment_flux = CT3(
+        Geometry.WVector(
+            -(
+                ᶠe_src_mismatch_integral -
+                ifelse(
+                    e_src_abs_mismatch_total > 0,
+                    e_src_mismatch_total / e_src_abs_mismatch_total,
+                    FT(0),
+                ) * ᶠe_src_abs_mismatch_integral
+            ) / dtγ,
+        ),
+    )
+    energy_source_share_norm!(p, U)
+    _sgs_energy_source_tag_fluxes!(
+        dY.c,
+        U.c,
+        _energy_source_parent_field(U, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        ᶠe_src_increment_flux,
+        model.tags,
+    )
+    return nothing
+end
+
+"""
+    EnergySourceIncrementCorrection(post)
+
+The post-solve hook when the tags follow the parent's implicit increment. It
+runs the parent's own post-solve correction `post`, if there is one, and then
+`correct_energy_source_increment!`. See `energy_source_post_implicit`.
+"""
+struct EnergySourceIncrementCorrection{F}
+    post::F
+end
+function (correction::EnergySourceIncrementCorrection)(dY, U, p, t)
+    if isnothing(correction.post)
+        # The stepper adds `dtγ·dY` to every field. `-0.0` leaves every value as
+        # it is, signed zeros included, so the model's fields stay bit for bit.
+        dY .= -zero(eltype(dY))
+    else
+        correction.post(dY, U, p, t)
+    end
+    correct_energy_source_increment!(dY, U, p)
+    return nothing
+end
+
+"""
+    energy_source_post_implicit(post, atmos)
+
+The post-solve hook to give the stepper: `post` itself, or wrapped in
+[`EnergySourceIncrementCorrection`](@ref) when the energy source tags follow the
+parent's implicit increment.
+"""
+energy_source_post_implicit(post, atmos) =
+    follows_implicit_increment(atmos.energy_source_tagging_model) ?
+    EnergySourceIncrementCorrection(post) : post
 
 """
     enthalpy_horizontal_advection_of_energy_source_tags!(Yₜ, Y, p)

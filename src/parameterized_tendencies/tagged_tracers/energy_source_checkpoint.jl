@@ -48,6 +48,9 @@ energy_source_offset_value(offset) = offset
 energy_source_offset_text(offset) = string(energy_source_offset_value(offset))
 energy_source_transport_text(::TracerEnergySourceTransport) = "tracer"
 energy_source_transport_text(::EnthalpyEnergySourceTransport) = "enthalpy"
+energy_source_transport_text(
+    ::EnthalpyIncrementEnergySourceTransport,
+) = "enthalpy_increment"
 
 # A tag's definition: its region and its sources, separated by a tab, because a
 # region's text holds spaces. A tag matches a source by membership, so the
