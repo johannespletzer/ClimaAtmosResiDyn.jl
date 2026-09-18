@@ -229,22 +229,31 @@ _energy_source_fix_fields(ᶜρ, tags::Tuple) = merge(
 
 Scratch fields of the energy source tags, merged into `p.scratch`: the
 bracket's snapshot of `Yₜ.c.ρe_tot`, the partition-share denominator that
-sedimentation divides by, and with an offset also a snapshot of `Yₜ.c.ρ` and a
-field the closure check fills with the offset total. They live in `p.scratch`
+sedimentation divides by, the two face fluxes of `E` that the tags share under
+`PrognosticEDMFX`, and with an offset also a snapshot of `Yₜ.c.ρ` and a field
+the closure check fills with the offset total. They live in `p.scratch`
 because the implicit tendency, where sedimentation runs, may be evaluated with
 `ForwardDiff.Dual` numbers, and `p.scratch` is converted for that.
 """
-energy_source_scratch(Y, model::EnergySourceTaggingModel) =
-    _energy_source_scratch(Y, model.offset)
-_energy_source_scratch(Y, ::Nothing) = (;
-    ᶜe_src_snapshot = similar(Y.c.ρ),
-    ᶜe_src_share_norm = similar(Y.c.ρ),
+energy_source_scratch(Y, model::EnergySourceTaggingModel) = merge(
+    energy_source_cell_scratch(Y.c.ρ, model.offset),
+    (;
+        ᶠe_src_sgs_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
+        ᶠe_src_sediment_flux = Fields.Field(
+            Geometry.WVector{eltype(Y.c.ρ)},
+            axes(Y.f),
+        ),
+    ),
 )
-_energy_source_scratch(Y, offset) = (;
-    ᶜe_src_snapshot = similar(Y.c.ρ),
-    ᶜe_src_share_norm = similar(Y.c.ρ),
-    ᶜe_src_ρ_snapshot = similar(Y.c.ρ),
-    ᶜe_src_parent = similar(Y.c.ρ),
+# The cell-center scratch alone: the bracket's snapshots, the share
+# denominator and the offset total. It needs no face space.
+energy_source_cell_scratch(ᶜρ, ::Nothing) =
+    (; ᶜe_src_snapshot = similar(ᶜρ), ᶜe_src_share_norm = similar(ᶜρ))
+energy_source_cell_scratch(ᶜρ, offset) = (;
+    ᶜe_src_snapshot = similar(ᶜρ),
+    ᶜe_src_share_norm = similar(ᶜρ),
+    ᶜe_src_ρ_snapshot = similar(ᶜρ),
+    ᶜe_src_parent = similar(ᶜρ),
 )
 
 """
@@ -979,6 +988,160 @@ function _sediment_energy_source_tag_fluxes!(
     )
 end
 
+"""
+    keep_energy_source_sediment_correction!(p, ᶠcorrection)
+
+Keep the updraft's correction for
+`sediment_energy_source_tags_with_corrections!`, which moves the energy source
+tags with one sedimenting species under `PrognosticEDMFX`. There the parent's
+energy flux has two corrections besides the grid mean's, one for the updraft
+and one for the environment. Each moves the subdomain's specific energy minus
+the grid mean's with the subdomain's own mass flux. The subdomain mass fluxes
+sum to the grid mean's, so the corrections move no mass and carry no `c` part.
+
+The tags take the species' whole face flux of `E`, the grid mean's flux as
+`sediment_energy_source_tags!` builds it plus both corrections. They share it
+once, by its direction, as that function shares the grid mean's flux alone.
+Shared apart, a correction that points against the grid mean's flux would take
+its shares from the other cell. A tag could then lose energy from a cell that
+gains it.
+
+`vertical_advection_of_water_tendency!` computes the updraft's correction and
+then the environment's in the same scratch field. So the updraft's face flux is
+kept first, with `keep_energy_source_sediment_correction!`, and the
+environment's face flux is `ᶠcorrection`. Both are no-ops when energy source
+tagging is disabled.
+"""
+keep_energy_source_sediment_correction!(p, ᶠcorrection) =
+    _keep_energy_source_sediment_correction!(
+        p,
+        ᶠcorrection,
+        p.atmos.energy_source_tagging_model,
+    )
+_keep_energy_source_sediment_correction!(p, ᶠcorrection, ::Nothing) = nothing
+function _keep_energy_source_sediment_correction!(
+    p,
+    ᶠcorrection,
+    ::EnergySourceTaggingModel,
+)
+    ᶠflux = p.scratch.ᶠe_src_sediment_flux
+    @. ᶠflux = ᶠcorrection
+    return nothing
+end
+
+"""
+    sediment_energy_source_tags_with_corrections!(Yₜ, Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ, ᶠcorrection)
+
+Move the energy source tags with one sedimenting species under
+`PrognosticEDMFX`. Each tag takes its share of the species' whole face flux of
+`E`: the grid mean's, the updraft's correction kept by
+`keep_energy_source_sediment_correction!`, and the environment's correction
+`ᶠcorrection`. The flux is shared once, by its direction. See
+`keep_energy_source_sediment_correction!` for why. A no-op when energy source
+tagging is disabled.
+"""
+sediment_energy_source_tags_with_corrections!(
+    Yₜ,
+    Y,
+    p,
+    ᶜq,
+    ᶜw,
+    ᶜenergy_flux,
+    ᶠρ,
+    ᶠcorrection,
+) = _sediment_energy_source_tags_with_corrections!(
+    Yₜ,
+    Y,
+    p,
+    ᶜq,
+    ᶜw,
+    ᶜenergy_flux,
+    ᶠρ,
+    ᶠcorrection,
+    p.atmos.energy_source_tagging_model,
+)
+_sediment_energy_source_tags_with_corrections!(
+    Yₜ,
+    Y,
+    p,
+    ᶜq,
+    ᶜw,
+    ᶜenergy_flux,
+    ᶠρ,
+    ᶠcorrection,
+    ::Nothing,
+) = nothing
+function _sediment_energy_source_tags_with_corrections!(
+    Yₜ,
+    Y,
+    p,
+    ᶜq,
+    ᶜw,
+    ᶜenergy_flux,
+    ᶠρ,
+    ᶠcorrection,
+    model::EnergySourceTaggingModel,
+)
+    c = _mass_energy(model.offset)
+    # The updraft's correction is already in `ᶠflux`.
+    ᶠflux = p.scratch.ᶠe_src_sediment_flux
+    @. ᶠflux +=
+        ᶠρ * ᶠtop_bias(Geometry.WVector(ᶜenergy_flux - c * ᶜw * ᶜq)) +
+        ᶠcorrection
+    _sediment_energy_source_tag_face_fluxes!(
+        Yₜ.c,
+        Y.c,
+        _energy_source_parent_field(Y, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        p.tagging.ᶠenergy_source_interior,
+        ᶠflux,
+        model.tags,
+    )
+    return nothing
+end
+
+_sediment_energy_source_tag_face_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶠinterior,
+    ᶠflux,
+    ::Tuple{},
+) = nothing
+function _sediment_energy_source_tag_face_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶠinterior,
+    ᶠflux,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
+    ᶜshare =
+        _energy_source_share_field(tag_field(ᶜY, tag), ᶜparent, ᶜnorm, tag)
+    # The shares of the cell above, or, on interior faces where the energy
+    # moves up, of the cell below.
+    @. ᶜρe_srcₜ -= ᶜprecipdivᵥ(
+        ᶠflux * ifelse(
+            _is_upward(ᶠflux) & (ᶠinterior > 0),
+            ᶠbottom_bias_zero(ᶜshare),
+            ᶠtop_bias(ᶜshare),
+        ),
+    )
+    return _sediment_energy_source_tag_face_fluxes!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜparent,
+        ᶜnorm,
+        ᶠinterior,
+        ᶠflux,
+        Base.tail(tags),
+    )
+end
+
 # The partition and source forms of the share, selected on the tag's type, so
 # the branch folds away at compile time. Sedimentation and the enthalpy-form
 # transport below both share out a flux with it.
@@ -1019,7 +1182,8 @@ energy_source_tag_moves_as_enthalpy(p, name) =
 const ᶠtop_bias_zero = Operators.TopBiasedC2F(top = Operators.SetValue(0))
 
 # Whether the flow through a face points up. `u³` is contravariant, and its one
-# component has the sign of the vertical velocity.
+# component has the sign of the vertical velocity. A `WVector` flux, as in
+# sedimentation, is read the same way.
 @inline _is_upward(u³) = u³.components.data.:1 > 0
 
 # The face flux per unit density, `u³` times the face value of `ᶜχ`, as
@@ -1130,6 +1294,181 @@ function _enthalpy_vertical_tag_fluxes!(
         ᶜnorm,
         ᶠρ,
         ᶠu³,
+        ᶠflux,
+        Base.tail(tags),
+    )
+end
+
+# ============================================================================
+# The sub-grid mass flux under PrognosticEDMFX
+# ============================================================================
+
+"""
+    sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model)
+
+Under `PrognosticEDMFX` with its SGS mass flux on, move the energy source tags
+by their shares of the parent's own sub-grid mass flux of `E = ρe_tot + c·ρ`.
+
+The tags have no copy in the updrafts, so the SGS tracer loop of
+`edmfx_sgs_mass_flux_tendency!` never reaches them. For each subdomain `k`, the
+parent moves `ρe_tot` with the difference-form flux `ρᵏ aᵏ (u³ᵏ - u³)(χᵏ - h_tot)`, where `χᵏ` is the subdomain's moist static energy plus its kinetic
+energy, and, when the air is moist, `ρ` with the same flux of `q_totᵏ - q_tot`.
+The flux of `E` is the first plus `c` times the second. It is rebuilt here face
+by face, each part with the parent's own reconstruction, and summed over the
+subdomains. The two parts are reconstructed apart, because the van Leer option
+is not linear.
+
+Each tag takes that face flux times its share in the cell the flux leaves: the
+cell below where it points up, the cell above where it points down. The
+partition's shares add up to one, so its fluxes add up to the parent's at every
+face. The divergence has the parent's zero-flux boundaries.
+
+It runs in the implicit tendency, right after the parent's flux, so the tags
+follow the parent at the Newton iterate. The tags have no Jacobian block for it:
+the flux moves the energy anomaly, not the air, which against the tags' total
+is a Courant number of order 1e-2 on the columns this was designed on. That
+keeps every tag uncoupled in the split solver. It runs under both transports,
+because there is no tracer form of this flux for a field without an updraft
+copy.
+
+A tag's composition in an updraft is taken as that of the cell it leaves. So
+the flux moves the energy convection carries, but it does not mix provenance
+the way it mixes the air. A no-op without energy source tags, without
+`PrognosticEDMFX`, and with the SGS mass flux off.
+"""
+sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model) = nothing
+sgs_mass_flux_of_energy_source_tags!(
+    Yₜ,
+    Y,
+    p,
+    turbconv_model::PrognosticEDMFX,
+) =
+    p.atmos.edmfx_model.sgs_mass_flux ?
+    _sgs_mass_flux_of_energy_source_tags!(
+        Yₜ,
+        Y,
+        p,
+        turbconv_model,
+        p.atmos.energy_source_tagging_model,
+    ) : nothing
+_sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, ::Nothing) =
+    nothing
+function _sgs_mass_flux_of_energy_source_tags!(
+    Yₜ,
+    Y,
+    p,
+    turbconv_model,
+    model::EnergySourceTaggingModel,
+)
+    energy_source_share_norm!(p, Y)
+    n = n_mass_flux_subdomains(turbconv_model)
+    (; edmfx_sgsflux_upwinding) = p.atmos.numerics
+    (; ᶠu³, ᶜh_tot, ᶠu³ʲs, ᶜKʲs, ᶜρʲs) = p.precomputed
+    (; ᶜp, ᶠu³⁰, ᶜK⁰, ᶜT⁰, ᶜq_tot_nonneg⁰, ᶜq_liq⁰, ᶜq_ice⁰) = p.precomputed
+    (; dt) = p
+    thermo_params = CAP.thermodynamics_params(p.params)
+    ᶜρ⁰ = @. lazy(
+        TD.air_density(
+            thermo_params,
+            ᶜT⁰,
+            ᶜp,
+            ᶜq_tot_nonneg⁰,
+            ᶜq_liq⁰,
+            ᶜq_ice⁰,
+        ),
+    )
+    ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
+    ᶜJ = Fields.local_geometry_field(Y.c).J
+    ᶠJ = Fields.local_geometry_field(Y.f).J
+    # `false` is a strong zero, so without an offset the flux is `ρe_tot`'s.
+    c = _mass_energy(model.offset)
+    moist = !(p.atmos.microphysics_model isa DryModel)
+
+    # The environment's part first, so that it sets `ᶠflux` and the updrafts
+    # add to it. Zeroing a vector field would need a `Ref`, which allocates.
+    # The velocity differences stay lazy. The parent keeps them in the shared
+    # `ᶠtemp_CT3`, and a diagnostic writes no scratch field the model reads.
+    ᶠflux = p.scratch.ᶠe_src_sgs_flux
+    ᶠu³_diff⁰ = @. lazy(ᶠu³⁰ - ᶠu³)
+    ᶜa⁰ = @. lazy(draft_area(ᶜρa⁰, ᶜρ⁰))
+    ᶠρ⁰ = @. lazy(ᶠinterp(ᶜρ⁰ * ᶜJ) / ᶠJ)
+    ᶜmse⁰ = ᶜspecific_env_mse(Y, p)
+    ᶜenergy⁰ = @. lazy((ᶜmse⁰ + ᶜK⁰ - ᶜh_tot) * ᶜa⁰)
+    ᶠenergy_flux⁰ =
+        _face_value_flux(ᶠu³_diff⁰, ᶜenergy⁰, dt, edmfx_sgsflux_upwinding)
+    @. ᶠflux = ᶠρ⁰ * ᶠenergy_flux⁰
+    if moist
+        ᶜq_tot⁰ = ᶜspecific_env_value(@name(q_tot), Y, p)
+        ᶜwater⁰ = @. lazy((ᶜq_tot⁰ - specific(Y.c.ρq_tot, Y.c.ρ)) * ᶜa⁰)
+        ᶠwater_flux⁰ =
+            _face_value_flux(ᶠu³_diff⁰, ᶜwater⁰, dt, edmfx_sgsflux_upwinding)
+        @. ᶠflux += c * ᶠρ⁰ * ᶠwater_flux⁰
+    end
+    for j in 1:n
+        ᶠu³_diffʲ = @. lazy(ᶠu³ʲs.:($$j) - ᶠu³)
+        ᶜaʲ = @. lazy(draft_area(Y.c.sgsʲs.:($$j).ρa, ᶜρʲs.:($$j)))
+        ᶠρʲ = @. lazy(ᶠinterp(ᶜρʲs.:($$j) * ᶜJ) / ᶠJ)
+        ᶜenergy = @. lazy(
+            (Y.c.sgsʲs.:($$j).mse + ᶜKʲs.:($$j) - ᶜh_tot) * ᶜaʲ,
+        )
+        ᶠenergy_flux = _face_value_flux(
+            ᶠu³_diffʲ,
+            ᶜenergy,
+            dt,
+            edmfx_sgsflux_upwinding,
+        )
+        @. ᶠflux += ᶠρʲ * ᶠenergy_flux
+        if moist
+            ᶜwater = @. lazy(
+                (Y.c.sgsʲs.:($$j).q_tot - specific(Y.c.ρq_tot, Y.c.ρ)) * ᶜaʲ,
+            )
+            ᶠwater_flux = _face_value_flux(
+                ᶠu³_diffʲ,
+                ᶜwater,
+                dt,
+                edmfx_sgsflux_upwinding,
+            )
+            @. ᶠflux += c * ᶠρʲ * ᶠwater_flux
+        end
+    end
+
+    _sgs_energy_source_tag_fluxes!(
+        Yₜ.c,
+        Y.c,
+        _energy_source_parent_field(Y, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        ᶠflux,
+        model.tags,
+    )
+    return nothing
+end
+
+_sgs_energy_source_tag_fluxes!(ᶜYₜ, ᶜY, ᶜparent, ᶜnorm, ᶠflux, ::Tuple{}) =
+    nothing
+function _sgs_energy_source_tag_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶠflux,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
+    ᶜshare =
+        _energy_source_share_field(tag_field(ᶜY, tag), ᶜparent, ᶜnorm, tag)
+    @. ᶜρe_srcₜ -= ᶜadvdivᵥ(
+        ᶠflux * ifelse(
+            _is_upward(ᶠflux),
+            ᶠbottom_bias_zero(ᶜshare),
+            ᶠtop_bias_zero(ᶜshare),
+        ),
+    )
+    return _sgs_energy_source_tag_fluxes!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜparent,
+        ᶜnorm,
         ᶠflux,
         Base.tail(tags),
     )

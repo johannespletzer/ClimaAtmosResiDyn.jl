@@ -420,13 +420,14 @@ fluxes instead, but still explicitly (see
 [Moving the tags as enthalpy, an audit](@ref)).
 Transport is not attributed on top of that. Each tag is already transported in
 its own right, and attributing the `ρe_tot` version as well would count it
-twice. Neither energy family receives the EDMFX sub-grid mass flux, because the
-tags have no updraft copy, and the energy source tags refuse
-`turbconv: prognostic_edmfx` for that reason. Sedimentation reaches both
-families: the `ρe_tag_*` family attributes it under `precipitation`, and the
-energy source tags follow it on the implicit path as transport of their own
-(see [Energy Source Tags](energy_source_tags.md)). So a visibly larger residual
-is the expected, correct behaviour, not a bug.
+twice. The tags have no updraft copy, so the EDMFX sub-grid mass flux does not
+reach them through the updrafts. The `ρe_tag_*` family does not receive it. The
+energy source tags take their shares of the parent's own sub-grid flux instead,
+with one updraft. Sedimentation reaches both families: the `ρe_tag_*` family
+attributes it under `precipitation`, and the energy source tags follow it on
+the implicit path as transport of their own (see
+[Energy Source Tags](energy_source_tags.md)). So a visibly larger residual is
+the expected, correct behaviour, not a bug.
 
 !!! tip "Calibrate on your own configuration"
 

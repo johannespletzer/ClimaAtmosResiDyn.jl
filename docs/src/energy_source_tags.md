@@ -102,6 +102,28 @@ initialization. And the tags have no Jacobian block for it, so within a step
 they lag the parent's implicit flux slightly, and that gap lands in
 `e_src_res`.
 
+Under `turbconv: prognostic_edmfx` the parent's energy flux in sedimentation
+has two corrections besides the grid mean's, one for the updraft and one for
+the environment. Each moves the subdomain's specific energy minus the grid
+mean's with the subdomain's own mass flux, so the corrections move no mass. The
+tags take the species' whole face flux, the grid mean's and both corrections,
+and share it once, by its direction. Shared apart, a correction that points
+against the grid mean's flux would take its shares from the other cell.
+
+The tags have no updraft copy, so the parent's sub-grid mass flux reaches no
+tag through the updrafts. Instead each tag takes its share of the parent's own
+sub-grid flux of `E`, face by face, from the cell the flux leaves. The flux is
+the one of `ρe_tot`, `ρᵏ aᵏ (u³ᵏ - u³)(mseᵏ + Kᵏ - h_tot)` summed over the
+subdomains, plus `c` times the one of `ρ`, which is the same form in
+`q_totᵏ - q_tot`. Each part is built with the parent's own reconstruction,
+`edmfx_sgsflux_upwinding`. So the partition's fluxes add up to the parent's in
+every evaluation of the tendency. A tag's composition in an updraft is taken as
+that of the cell the flux leaves. The flux moves the energy convection carries,
+but it does not mix provenance the way it mixes the air. It runs in the
+implicit tendency beside the parent's flux. The parent's flux has Jacobian
+blocks and the tags' has none, as in sedimentation. So within a step the tags
+lag the parent's implicit flux slightly, and that gap lands in `e_src_res`.
+
 ## Negative tags, and the repair
 
 The donor-proportional loss bounds the *rate* at which a tag is depleted, not
@@ -305,6 +327,13 @@ exactly:
     tendencies add up to the parent's to 100 eps, and on a step partition the
     donor is the cell above where the energy falls and the cell below where it
     rises.
+  - **The sub-grid fluxes under `prognostic_edmfx`** are covered by
+    `test/energy_source_tags_edmf_integration.jl`, on the DYCOMS RF02 column
+    with 1-moment microphysics and the updrafts' vertical diffusion on. The
+    partition's tendencies from the sub-grid mass flux and from sedimentation
+    with its corrections add up to the parent's to 100 eps. The split solver
+    solves every tag and record apart, and the model's own fields are bit for
+    bit those of the run without tags.
 
 Without an offset only the first two hold. That is also the strongest argument
 on the table for the fallback: water source tracing, whose parent is
@@ -379,10 +408,10 @@ audit's residual in its first hour, during the initial adjustment, and a
 converged Newton solve removed 99% of it on a column.
 
 Everything else the tags see stays as under `tracer`: the brackets, the repair,
-sedimentation, vertical diffusion, the sponges and the SGS closures. The EDMF
-sub-grid mass flux reaches the tags in neither mode, so `prognostic_edmfx` stays
-refused. The model itself is untouched, so its state is the same with the
-switch on and off.
+sedimentation, vertical diffusion, the sponges and the SGS closures. Under
+`prognostic_edmfx` the tags take their shares of the sub-grid mass flux in both
+modes, as described under [Attribution](#Attribution). The model itself is
+untouched, so its state is the same with the switch on and off.
 
 It needs an `energy_source_tag_offset`. A share is zero wherever `E` is not
 positive, and there the tags would not move at all, so `enthalpy` without an
@@ -474,10 +503,14 @@ family as a whole.
 
 ## Caveats
 
-  - Tags are **grid-scale only**, with no sub-grid updraft counterpart. So
-    `turbconv: prognostic_edmfx` is refused: its sub-grid mass flux of energy,
-    and the updraft and environment corrections to sedimentation, would reach
-    no tag. Under `edonly_edmfx` the eddy diffusion moves the tags as passive
+  - Tags are **grid-scale only**, with no sub-grid updraft counterpart. Under
+    `turbconv: prognostic_edmfx` they take their shares of the sub-grid mass
+    flux and of the sedimentation corrections instead, as described under
+    [Attribution](#Attribution). The model runs `prognostic_edmfx` with one
+    updraft only. The tags refuse more at configuration time, and would refuse
+    them even if the model allowed more, because the model computes the
+    sedimentation corrections for the first updraft only.
+    Under both EDMF variants the eddy diffusion moves the tags as passive
     tracers while it moves `ρe_tot` in enthalpy form, and the model warns.
   - Tags are excluded from both tracer limiters, through
     `is_tagged_tracer_name`. The repair above keeps them non-negative instead,
@@ -520,4 +553,7 @@ ClimaAtmos.moves_as_enthalpy
 ClimaAtmos.enthalpy_vertical_advection_of_energy_source_tags!
 ClimaAtmos.enthalpy_horizontal_advection_of_energy_source_tags!
 ClimaAtmos.enthalpy_hyperdiffusion_of_energy_source_tags!
+ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
+ClimaAtmos.keep_energy_source_sediment_correction!
+ClimaAtmos.sediment_energy_source_tags_with_corrections!
 ```
