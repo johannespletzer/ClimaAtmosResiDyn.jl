@@ -1888,6 +1888,31 @@ to test this; its outputs are set in `OPERATIONAL_TODO.md`, item 10.
 *Scripts in `analysis/displacement_check/`, outputs and notes in
 `output/displacement_check/`. They read the runs' NetCDF on scratch.*
 
+**E61. Most of C1c's drift is the implicit timing gap: with a converged Newton
+solve, option 1's residual at 12 h is 14 times smaller.** C1c's option 1 on D4
+under `enthalpy`, run again with up to ten Newton iterations to a relative
+tolerance of 1e-8, for 12 hours.
+
+| gross residual, J/m² | 1 h | 4 h | 8 h | 12 h |
+|:-- | --:| --:| --:| --:|
+| base, `main` (E59) | 1.68e5 | 3.27e5 | 3.20e5 | 4.61e5 |
+| option 1, one Newton iteration (E59) | 1.98e5 | 9.29e5 | 2.00e6 | 3.25e6 |
+| option 1, converged | 4.51e4 | 8.49e4 | 1.66e5 | 2.32e5 |
+
+  - **The gap was the drift's bulk.** Converged, option 1 grows about 1.7e4
+    J/m² an hour against 2.8e5, and at 12 h it is half the base.
+  - **Not all of it.** It still grows, from 4.5e4 at 1 h to 2.3e5 at 12 h.
+    What is left is not separated: the solve stops at its tolerance, and the
+    base's cloud and free-troposphere parts, which C1c does not touch
+    (ATTRIBUTION_PATH.md section 1.3), are still there.
+  - **This supports following the parent's increment,** which removes the gap
+    without iterating. A converged solve changes the model's trajectory and
+    costs several times the step, so it is a diagnostic, not the path (R5).
+
+*Job `13504771` on terrabyte, `hpda2_test`, 2026-09-19, from
+`../ClimaAtmosResiDyn-c1c-opt1` at `9aeb5205`. The outputs are in
+`output/c1c_opt1_newton_d4_enthalpy/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

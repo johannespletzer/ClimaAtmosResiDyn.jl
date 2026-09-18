@@ -142,9 +142,10 @@ State on 2026-09-19.
     C9's column (running), a review agent with its findings fixed, then the
     D4 run `inc_d4_enthalpy_increment` (approved), analysed against
     `c1c_base_d4_enthalpy`.
-  - **The diagnostic job 13504771** runs C1c's option 1 with a converged
-    Newton solve for 12 hours (`c1c_opt1_newton_d4_enthalpy`). If its drift
-    stops, E59's gap is the implicit timing gap, as the prototype assumes.
+  - **The diagnostic (E61):** with a converged Newton solve, C1c's option 1
+    reaches 2.3e5 J/m² at 12 h against 3.2e6 with one iteration, and half the
+    base's 4.6e5. So the implicit timing gap was most of E59's drift, as the
+    prototype assumes. A slow growth remains, not separated.
   - **Recorded on 2026-09-18:** E57 (#89's remaining parity paths, bit for
     bit), E58 (V5 without tags: the model's own restart is not bit for bit on
     C5's column), E59 (C1c), E60 (how mislabelled energy evolves: it is flushed
