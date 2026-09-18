@@ -1,0 +1,46 @@
+continuous: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v5_c5_continuous/output_active
+restarted:  /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v5_c5_restarted/output_active
+Y.c.ρ                  differs     max diff 1.758e-10  of max 1.45e-10  of the 12 h change 3.49e-09
+Y.c.uₕ_1               differs     max diff 6.624e-11  of max 1.53e-11  of the 12 h change 1.31e-09
+Y.c.uₕ_2               differs     max diff 1.144e-10  of max 2.40e-11  of the 12 h change 1.18e-09
+Y.c.ρe_tot             differs     max diff 1.604e-04  of max 1.67e-09  of the 12 h change 2.46e-09
+Y.c.ρq_tot             differs     max diff 4.761e-11  of max 8.33e-10  of the 12 h change 2.21e-09
+Y.c.ρe_src_strat       differs     max diff 2.417e-06  of max 3.55e-11  of the 12 h change 1.30e-09
+Y.c.ρe_src_tropo       differs     max diff 1.616e-04  of max 7.00e-10  of the 12 h change 2.44e-09
+Y.c.ρe_src_rad         differs     max diff 9.401e-05  of max 1.44e-08  of the 12 h change 9.40e-08
+Y.c.ρe_src_sfc         differs     max diff 1.818e-05  of max 1.10e-10  of the 12 h change 2.42e-10
+Y.c.ρe_src_new_strat   differs     max diff 1.806e-05  of max 2.80e-09  of the 12 h change 6.84e-09
+Y.c.ρe_src_new_tropo   differs     max diff 1.821e-04  of max 1.06e-09  of the 12 h change 2.39e-09
+Y.c.prc_e_radiation    differs     max diff 2.597e-04  of max 1.11e-08  of the 12 h change 1.62e-08
+Y.c.prc_e_surface_flux bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.f.u₃                differs     max diff 1.543e-11  of max 3.43e-09
+energy_source_tag_closure.csv: 12 rows after the restart
+  row at the restart, t = 43200 s: same text in every column but those that start over
+  total                        largest relative difference 3.52e-11
+  tagged                       largest relative difference 3.42e-11
+  residual                     largest relative difference 4.09e-09
+  relative                     largest relative difference 4.08e-09
+  gross_residual               largest relative difference 7.66e-10
+  gross_relative               largest relative difference 7.63e-10
+  scale                        largest relative difference 3.52e-11
+  nonpositive_fraction         same text
+  residual_at_spin_up          starts over at a restart, not compared
+  residual_since_spin_up       starts over at a restart, not compared
+  relative_since_spin_up       starts over at a restart, not compared
+energy_source_tag_audit.csv: 12 rows after the restart
+  row at the restart, t = 43200 s: same text in every column but those that start over
+  untagged                     largest relative difference 5.30e-10
+  untagged_relative            largest relative difference 5.58e-10
+  overclaimed                  largest relative difference 9.72e-10
+  overclaimed_relative         largest relative difference 9.70e-10
+  orphaned                     same text
+  orphaned_relative            same text
+  orphaned_volume_fraction     same text
+  nonpositive_mass             same text
+  nonpositive_mass_fraction    same text
+  source_negative              same text
+  source_negative_relative     same text
+  source_minimum               largest relative difference 2.24e-07
+  repair_moved                 starts over at a restart, not compared
+  repair_moved_relative        starts over at a restart, not compared
+states at 24 h: NOT bit for bit

@@ -114,6 +114,11 @@ day, 2M and P3, more than one node, and the GPU.
     finished in 23 minutes. The residual is zero-sum at about 0.5%, and the
     records close the column. After #89 merges it is rebased, and
     `sgs_mass_flux isa Val{true}` becomes a `Bool` test.
+  - **V5 and C1b in Float32 ran on 2026-09-18,** with the owner's approval
+    (jobs 13503985 to 13503987). V5 (E54): the tags are restored exactly,
+    but the model does not restart bit for bit here. C1b in Float32 (E55):
+    the residual keeps its Float64 size over the day but tilts toward
+    overclaiming; forms A and B are not reduced yet.
   - **#89 was reviewed** on 2026-09-18 by an agent, reading only. No blocking
     defect. The fork's `src` differs from d331fe30 exactly as it differed from
     the old base, apart from the resolved hunks. No fork code tests a flag
@@ -336,7 +341,14 @@ None open. Every decision of this section was made on 2026-09-18; see
     set, the transport and the repair setting into the checkpoint, and fail with
     a named key on a mismatch (`restart.jl:34-39`). With T1. Size S to M.
  6. **V5, restart equivalence** (approved, after C2). Two segments against one
-    run, with the offset and the repair. Size S.
+    run, with the offset and the repair. Size S. **Ran on 2026-09-18 (E54).**
+    The guard passed, and the restart restored the tags exactly. But the
+    model itself does not restart this column bit for bit, even with
+    `reproducible_restart: true`: every model field differs by 1e-11 to 1e-9
+    after 12 hours, and the tags only as much. So the state criterion is not
+    met, for a reason outside the tags. Next, if wanted: the same pair
+    without tags, to show that upstream's restart is not bit for bit here
+    (2 jobs, needs approval).
  7. **Float32.** ~~V3~~ is done (E45). ~~T2~~, the Float32 test group, is
     merged (#75). Runs longer than a day are untested; that is U6. Size S.
  8. ~~**MP1, more than one process.**~~ Done (E47): on 4 ranks C7's sphere

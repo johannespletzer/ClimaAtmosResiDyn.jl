@@ -1,0 +1,400 @@
+Precompiling ClimaAtmos...
+    ClimaAtmos Being precompiled by another process (pid: 14391, pidfile: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu/compiled/v1.11/ClimaAtmos/4EXdy_nHqaE.ji.pidfile)
+  96783.9 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 121 seconds. 276 already precompiled.
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-c1b-val/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-c1b-val/experiments/tag_closure/configs/d4_column_edmf_vd_float32.yml
+┌ Info: numerics 
+│        `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│              `tracer_upwinding`::`Val{:vanleer_limiter}`
+│     `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│       `edmfx_sgsflux_upwinding`::`Val{:none}`
+│        `edmfx_tracer_upwinding`::`Val{:first_order}`
+│       `test_dycore_consistency`::`Nothing`
+│          `reproducible_restart`::`Nothing`
+│                       `limiter`::`Nothing`
+│                     `diff_mode`::`ClimaAtmos.Implicit`
+└                     `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float32}`
+┌ Warning: `energy_source_tags` with `turbconv: prognostic_edmfx`: the eddy diffusion moves the tags as passive tracers, while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-c1b-val/src/config/tracer_config.jl:1178
+┌ Warning: `energy_source_tags` tag `mp` lists `microphysics`, which cannot contribute under NonEquilibriumMicrophysics1M. Only 0-moment microphysics changes `ρe_tot`. The other schemes move water between species, and the energy leaves with sedimentation, which the tags follow as transport. Note `moist` and `all` both expand to include `microphysics`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-c1b-val/src/config/tracer_config.jl:566
+┌ Warning: `energy_source_tags` tag `new_strat` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-c1b-val/src/config/tracer_config.jl:553
+┌ Warning: `energy_source_tags` tag `new_strat` lists `microphysics`, which cannot contribute under NonEquilibriumMicrophysics1M. Only 0-moment microphysics changes `ρe_tot`. The other schemes move water between species, and the energy leaves with sedimentation, which the tags follow as transport. Note `moist` and `all` both expand to include `microphysics`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-c1b-val/src/config/tracer_config.jl:566
+┌ Warning: `energy_source_tags` tag `new_tropo` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-c1b-val/src/config/tracer_config.jl:553
+┌ Warning: `energy_source_tags` tag `new_tropo` lists `microphysics`, which cannot contribute under NonEquilibriumMicrophysics1M. Only 0-moment microphysics changes `ρe_tot`. The other schemes move water between species, and the energy leaves with sedimentation, which the tags follow as transport. Note `moist` and `all` both expand to include `microphysics`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-c1b-val/src/config/tracer_config.jl:566
+┌ Warning: `energy_process_record` lists `microphysics`, which records nothing under NonEquilibriumMicrophysics1M. Only 0-moment microphysics changes `ρe_tot` and `ρq_tot`. The other schemes move water between species, so this record stays zero, which reads the same as a process that did nothing. Their rain-out is in the `precipitation` record.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-c1b-val/src/config/tracer_config.jl:1052
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float32}, StaticArraysCore.SVector{3, Float32}, ClimaAtmos.GaussianSGS, Float32}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#25#26"{Float32}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float32}, prof_vg::Returns{Float32}, coriolis_param::Float32}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float32}, ClimaAtmos.IdealizedInsolation}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{true}, Val{true}, Val{false}, Val{true}, Val{true}, Val{false}, Val{true}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float32}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float32, ClimaAtmos.SurfaceConditions.HeatFluxes{Float32, Float32}, Float32}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float32}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float32, Float32, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float32}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float32}}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, ClimaAtmos.EnergySourceTaggingModel{Tuple{ClimaAtmos.EnergySourceTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float32}, Tuple{}}, ClimaAtmos.EnergySourceTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float32}, Tuple{}}, ClimaAtmos.EnergySourceTag{:rad, Nothing, Tuple{Symbol}}, ClimaAtmos.EnergySourceTag{:sfc, Nothing, Tuple{Symbol}}, ClimaAtmos.EnergySourceTag{:sub, Nothing, Tuple{Symbol}}, ClimaAtmos.EnergySourceTag{:mp, Nothing, Tuple{Symbol}}, ClimaAtmos.EnergySourceTag{:new_strat, ClimaAtmos.TanhAltitudeRegion{Float32}, NTuple{8, Symbol}}, ClimaAtmos.EnergySourceTag{:new_tropo, ClimaAtmos.TanhAltitudeRegion{Float32}, NTuple{8, Symbol}}}, Float32, ClimaAtmos.TracerEnergySourceTransport}, ClimaAtmos.ProcessRecordModel{Tuple{ClimaAtmos.RecordedProcess{:radiation}, ClimaAtmos.RecordedProcess{:surface_flux}, ClimaAtmos.RecordedProcess{:subsidence}, ClimaAtmos.RecordedProcess{:microphysics}, ClimaAtmos.RecordedProcess{:precipitation}}}, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (75.233 μs, 3.99 KiB)
+[ Info: Built cache (158.649 s, 29.24 GiB)
+[ Info: Assembled callbacks (606.322 ms, 34.6 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (558.235 s, 21.33 GiB)
+[ Info: Initialized integrator (85.762 s, 9.03 GiB)
+[ Info: Added 24 user-provided YAML-style diagnostics
+[ Info: Set up diagnostics (10.789 s, 357.76 MiB)
+[ Info: Initialized 24 total diagnostics
+┌ Info: Simulation info
+│   job_id = "d4_column_edmf_vd_float32"
+└   output_dir = "output/d4_column_edmf_vd_float32/output_0000"
+┌ Info: Running
+│   job_id = "d4_column_edmf_vd_float32"
+│   output_dir = "output/d4_column_edmf_vd_float32/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 86400.0 seconds (2010-01-02T00:00:00) [counter = 86400, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "0.1%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-18T17:00:42.997
+└   estimated_finish_date = 2026-09-18T17:00:42.997
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "0.3%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.057"
+│   date_now = 2026-09-18T17:00:48.689
+└   estimated_finish_date = 2026-09-18T17:00:48.689
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "6 milliseconds, 343 microseconds"
+│   wall_time_total = "4 seconds, 567 milliseconds"
+│   wall_time_remaining = "4 seconds, 541 milliseconds"
+│   wall_time_spent = "25 milliseconds, 373 microseconds"
+│   percent_complete = "0.6%"
+│   estimated_sypd = "51.792"
+│   instantaneous_sypd = "51.792"
+│   date_now = 2026-09-18T17:00:49.012
+└   estimated_finish_date = 2026-09-18T17:00:54.012
+┌ Info: Progress
+│   simulation_time = "16 minutes"
+│   n_steps_completed = 8
+│   wall_time_per_step = "45 milliseconds, 945 microseconds"
+│   wall_time_total = "33 seconds, 80 milliseconds"
+│   wall_time_remaining = "32 seconds, 713 milliseconds"
+│   wall_time_spent = "367 milliseconds, 564 microseconds"
+│   percent_complete = "1.1%"
+│   estimated_sypd = "7.151"
+│   instantaneous_sypd = "3.84"
+│   date_now = 2026-09-18T17:00:49.044
+└   estimated_finish_date = 2026-09-18T17:01:22.044
+┌ Info: Progress
+│   simulation_time = "32 minutes"
+│   n_steps_completed = 16
+│   wall_time_per_step = "26 milliseconds, 554 microseconds"
+│   wall_time_total = "19 seconds, 119 milliseconds"
+│   wall_time_remaining = "18 seconds, 694 milliseconds"
+│   wall_time_spent = "424 milliseconds, 868 microseconds"
+│   percent_complete = "2.2%"
+│   estimated_sypd = "12.372"
+│   instantaneous_sypd = "45.867"
+│   date_now = 2026-09-18T17:00:49.101
+└   estimated_finish_date = 2026-09-18T17:01:08.101
+┌ Info: Progress
+│   simulation_time = "1 hour, 4 minutes"
+│   n_steps_completed = 32
+│   wall_time_per_step = "101 milliseconds, 361 microseconds"
+│   wall_time_total = "1 minute, 12 seconds"
+│   wall_time_remaining = "1 minute, 9 seconds"
+│   wall_time_spent = "3 seconds, 243 milliseconds"
+│   percent_complete = "4.4%"
+│   estimated_sypd = "3.241"
+│   instantaneous_sypd = "1.865"
+│   date_now = 2026-09-18T17:00:51.953
+└   estimated_finish_date = 2026-09-18T17:02:01.953
+┌ Info: Progress
+│   simulation_time = "2 hours, 8 minutes"
+│   n_steps_completed = 64
+│   wall_time_per_step = "55 milliseconds, 338 microseconds"
+│   wall_time_total = "39 seconds, 844 milliseconds"
+│   wall_time_remaining = "36 seconds, 302 milliseconds"
+│   wall_time_spent = "3 seconds, 541 milliseconds"
+│   percent_complete = "8.9%"
+│   estimated_sypd = "5.937"
+│   instantaneous_sypd = "35.264"
+│   date_now = 2026-09-18T17:00:52.218
+└   estimated_finish_date = 2026-09-18T17:01:29.218
+┌ Info: Progress
+│   simulation_time = "3 hours, 22 minutes"
+│   n_steps_completed = 101
+│   wall_time_per_step = "37 milliseconds, 960 microseconds"
+│   wall_time_total = "27 seconds, 331 milliseconds"
+│   wall_time_remaining = "23 seconds, 497 milliseconds"
+│   wall_time_spent = "3 seconds, 833 milliseconds"
+│   percent_complete = "14.0%"
+│   estimated_sypd = "8.655"
+│   instantaneous_sypd = "41.587"
+│   date_now = 2026-09-18T17:00:52.511
+└   estimated_finish_date = 2026-09-18T17:01:16.511
+┌ Info: Progress
+│   simulation_time = "4 hours, 16 minutes"
+│   n_steps_completed = 128
+│   wall_time_per_step = "31 milliseconds, 670 microseconds"
+│   wall_time_total = "22 seconds, 802 milliseconds"
+│   wall_time_remaining = "18 seconds, 748 milliseconds"
+│   wall_time_spent = "4 seconds, 53 milliseconds"
+│   percent_complete = "17.8%"
+│   estimated_sypd = "10.374"
+│   instantaneous_sypd = "40.358"
+│   date_now = 2026-09-18T17:00:52.730
+└   estimated_finish_date = 2026-09-18T17:01:11.730
+┌ Info: Progress
+│   simulation_time = "5 hours, 30 minutes"
+│   n_steps_completed = 165
+│   wall_time_per_step = "26 milliseconds, 400 microseconds"
+│   wall_time_total = "19 seconds, 8 milliseconds"
+│   wall_time_remaining = "14 seconds, 652 milliseconds"
+│   wall_time_spent = "4 seconds, 356 milliseconds"
+│   percent_complete = "22.9%"
+│   estimated_sypd = "12.445"
+│   instantaneous_sypd = "40.219"
+│   date_now = 2026-09-18T17:00:53.033
+└   estimated_finish_date = 2026-09-18T17:01:08.033
+┌ Info: Progress
+│   simulation_time = "6 hours, 44 minutes"
+│   n_steps_completed = 202
+│   wall_time_per_step = "23 milliseconds, 3 microseconds"
+│   wall_time_total = "16 seconds, 562 milliseconds"
+│   wall_time_remaining = "11 seconds, 915 milliseconds"
+│   wall_time_spent = "4 seconds, 646 milliseconds"
+│   percent_complete = "28.1%"
+│   estimated_sypd = "14.283"
+│   instantaneous_sypd = "41.833"
+│   date_now = 2026-09-18T17:00:53.324
+└   estimated_finish_date = 2026-09-18T17:01:05.324
+┌ Info: Progress
+│   simulation_time = "7 hours, 58 minutes"
+│   n_steps_completed = 239
+│   wall_time_per_step = "20 milliseconds, 707 microseconds"
+│   wall_time_total = "14 seconds, 909 milliseconds"
+│   wall_time_remaining = "9 seconds, 960 milliseconds"
+│   wall_time_spent = "4 seconds, 949 milliseconds"
+│   percent_complete = "33.2%"
+│   estimated_sypd = "15.866"
+│   instantaneous_sypd = "40.179"
+│   date_now = 2026-09-18T17:00:53.626
+└   estimated_finish_date = 2026-09-18T17:01:03.626
+┌ Info: Progress
+│   simulation_time = "8 hours, 32 minutes"
+│   n_steps_completed = 256
+│   wall_time_per_step = "19 milliseconds, 922 microseconds"
+│   wall_time_total = "14 seconds, 344 milliseconds"
+│   wall_time_remaining = "9 seconds, 244 milliseconds"
+│   wall_time_spent = "5 seconds, 100 milliseconds"
+│   percent_complete = "35.6%"
+│   estimated_sypd = "16.491"
+│   instantaneous_sypd = "36.97"
+│   date_now = 2026-09-18T17:00:53.777
+└   estimated_finish_date = 2026-09-18T17:01:03.777
+┌ Info: Progress
+│   simulation_time = "9 hours, 46 minutes"
+│   n_steps_completed = 293
+│   wall_time_per_step = "18 milliseconds, 432 microseconds"
+│   wall_time_total = "13 seconds, 271 milliseconds"
+│   wall_time_remaining = "7 seconds, 870 milliseconds"
+│   wall_time_spent = "5 seconds, 400 milliseconds"
+│   percent_complete = "40.7%"
+│   estimated_sypd = "17.824"
+│   instantaneous_sypd = "40.465"
+│   date_now = 2026-09-18T17:00:54.077
+└   estimated_finish_date = 2026-09-18T17:01:02.077
+┌ Info: Progress
+│   simulation_time = "11 hours"
+│   n_steps_completed = 330
+│   wall_time_per_step = "17 milliseconds, 260 microseconds"
+│   wall_time_total = "12 seconds, 427 milliseconds"
+│   wall_time_remaining = "6 seconds, 731 milliseconds"
+│   wall_time_spent = "5 seconds, 696 milliseconds"
+│   percent_complete = "45.8%"
+│   estimated_sypd = "19.034"
+│   instantaneous_sypd = "41.151"
+│   date_now = 2026-09-18T17:00:54.373
+└   estimated_finish_date = 2026-09-18T17:01:01.373
+┌ Info: Progress
+│   simulation_time = "12 hours, 14 minutes"
+│   n_steps_completed = 367
+│   wall_time_per_step = "16 milliseconds, 416 microseconds"
+│   wall_time_total = "11 seconds, 819 milliseconds"
+│   wall_time_remaining = "5 seconds, 794 milliseconds"
+│   wall_time_spent = "6 seconds, 24 milliseconds"
+│   percent_complete = "51.0%"
+│   estimated_sypd = "20.013"
+│   instantaneous_sypd = "36.977"
+│   date_now = 2026-09-18T17:00:54.702
+└   estimated_finish_date = 2026-09-18T17:01:00.702
+┌ Info: Progress
+│   simulation_time = "13 hours, 28 minutes"
+│   n_steps_completed = 404
+│   wall_time_per_step = "15 milliseconds, 664 microseconds"
+│   wall_time_total = "11 seconds, 278 milliseconds"
+│   wall_time_remaining = "4 seconds, 949 milliseconds"
+│   wall_time_spent = "6 seconds, 328 milliseconds"
+│   percent_complete = "56.1%"
+│   estimated_sypd = "20.974"
+│   instantaneous_sypd = "40.059"
+│   date_now = 2026-09-18T17:00:55.005
+└   estimated_finish_date = 2026-09-18T17:01:00.005
+┌ Info: Progress
+│   simulation_time = "14 hours, 42 minutes"
+│   n_steps_completed = 441
+│   wall_time_per_step = "15 milliseconds, 69 microseconds"
+│   wall_time_total = "10 seconds, 849 milliseconds"
+│   wall_time_remaining = "4 seconds, 204 milliseconds"
+│   wall_time_spent = "6 seconds, 645 milliseconds"
+│   percent_complete = "61.3%"
+│   estimated_sypd = "21.802"
+│   instantaneous_sypd = "38.314"
+│   date_now = 2026-09-18T17:00:55.322
+└   estimated_finish_date = 2026-09-18T17:01:00.322
+┌ Info: Progress
+│   simulation_time = "15 hours, 56 minutes"
+│   n_steps_completed = 478
+│   wall_time_per_step = "15 milliseconds, 12 microseconds"
+│   wall_time_total = "10 seconds, 808 milliseconds"
+│   wall_time_remaining = "3 seconds, 632 milliseconds"
+│   wall_time_spent = "7 seconds, 175 milliseconds"
+│   percent_complete = "66.4%"
+│   estimated_sypd = "21.885"
+│   instantaneous_sypd = "22.919"
+│   date_now = 2026-09-18T17:00:55.853
+└   estimated_finish_date = 2026-09-18T17:00:59.852
+┌ Info: Progress
+│   simulation_time = "17 hours, 4 minutes"
+│   n_steps_completed = 512
+│   wall_time_per_step = "14 milliseconds, 570 microseconds"
+│   wall_time_total = "10 seconds, 490 milliseconds"
+│   wall_time_remaining = "3 seconds, 30 milliseconds"
+│   wall_time_spent = "7 seconds, 459 milliseconds"
+│   percent_complete = "71.1%"
+│   estimated_sypd = "22.549"
+│   instantaneous_sypd = "39.329"
+│   date_now = 2026-09-18T17:00:56.137
+└   estimated_finish_date = 2026-09-18T17:01:00.137
+┌ Info: Progress
+│   simulation_time = "18 hours, 18 minutes"
+│   n_steps_completed = 549
+│   wall_time_per_step = "14 milliseconds, 84 microseconds"
+│   wall_time_total = "10 seconds, 140 milliseconds"
+│   wall_time_remaining = "2 seconds, 408 milliseconds"
+│   wall_time_spent = "7 seconds, 732 milliseconds"
+│   percent_complete = "76.2%"
+│   estimated_sypd = "23.327"
+│   instantaneous_sypd = "44.653"
+│   date_now = 2026-09-18T17:00:56.409
+└   estimated_finish_date = 2026-09-18T17:00:59.409
+┌ Info: Progress
+│   simulation_time = "19 hours, 32 minutes"
+│   n_steps_completed = 586
+│   wall_time_per_step = "13 milliseconds, 838 microseconds"
+│   wall_time_total = "9 seconds, 963 milliseconds"
+│   wall_time_remaining = "1 second, 854 milliseconds"
+│   wall_time_spent = "8 seconds, 109 milliseconds"
+│   percent_complete = "81.4%"
+│   estimated_sypd = "23.741"
+│   instantaneous_sypd = "32.218"
+│   date_now = 2026-09-18T17:00:56.786
+└   estimated_finish_date = 2026-09-18T17:00:58.786
+┌ Info: Progress
+│   simulation_time = "20 hours, 46 minutes"
+│   n_steps_completed = 623
+│   wall_time_per_step = "13 milliseconds, 477 microseconds"
+│   wall_time_total = "9 seconds, 704 milliseconds"
+│   wall_time_remaining = "1 second, 307 milliseconds"
+│   wall_time_spent = "8 seconds, 396 milliseconds"
+│   percent_complete = "86.5%"
+│   estimated_sypd = "24.377"
+│   instantaneous_sypd = "42.329"
+│   date_now = 2026-09-18T17:00:57.073
+└   estimated_finish_date = 2026-09-18T17:00:59.073
+┌ Info: Progress
+│   simulation_time = "22 hours"
+│   n_steps_completed = 660
+│   wall_time_per_step = "13 milliseconds, 224 microseconds"
+│   wall_time_total = "9 seconds, 521 milliseconds"
+│   wall_time_remaining = "793 milliseconds, 494 microseconds"
+│   wall_time_spent = "8 seconds, 728 milliseconds"
+│   percent_complete = "91.7%"
+│   estimated_sypd = "24.843"
+│   instantaneous_sypd = "36.641"
+│   date_now = 2026-09-18T17:00:57.405
+└   estimated_finish_date = 2026-09-18T17:00:58.405
+┌ Info: Progress
+│   simulation_time = "23 hours, 14 minutes"
+│   n_steps_completed = 697
+│   wall_time_per_step = "12 milliseconds, 992 microseconds"
+│   wall_time_total = "9 seconds, 354 milliseconds"
+│   wall_time_remaining = "298 milliseconds, 820 microseconds"
+│   wall_time_spent = "9 seconds, 55 milliseconds"
+│   percent_complete = "96.8%"
+│   estimated_sypd = "25.288"
+│   instantaneous_sypd = "37.159"
+│   date_now = 2026-09-18T17:00:57.732
+└   estimated_finish_date = 2026-09-18T17:00:58.732
+[ Info: solve! walltime = 9.312
+[ Info: sypd: 25.419
+[ Info: wall_time_per_timestep: 12 milliseconds, 933 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 12.51 GiB
+┌ Info: Tag-closure run finished
+│   simulation.job_id = "d4_column_edmf_vd_float32"
+└   result.ret_code = :success
+┌ Info: Where it went
+│   config = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-c1b-val/experiments/tag_closure/configs/d4_column_edmf_vd_float32.yml"
+└   simulation.output_dir = "output/d4_column_edmf_vd_float32/output_0000"
+┌ Info: energy_source tag closure (25 rows)
+│   columns: time,total,tagged,residual,relative,gross_residual,gross_relative,scale,nonpositive_fraction,residual_at_spin_up,residual_since_spin_up,relative_since_spin_up
+│   first:   0.0,1.1298741e8,1.12987416e8,-8.0,-7.080435e-8,2.1541002,1.9064958e-8,1.1298741e8,0.0,NaN,NaN,NaN
+│   last:    86400.0,1.1416398e8,1.1421624e8,-52256.0,-0.00045772755,791320.4,0.0069314362,1.1416398e8,0.0,712.0,-52968.0,-0.00046396418
+└   path = "output/d4_column_edmf_vd_float32/output_0000/energy_source_tag_closure.csv"

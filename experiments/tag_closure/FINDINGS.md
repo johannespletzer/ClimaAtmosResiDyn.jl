@@ -1626,6 +1626,69 @@ worktree `../ClimaAtmosResiDyn-c1b-val` at `fe69cd06`. The reductions are
 in `output/d4_column_edmf/`, `output/d4_column_edmf_enthalpy/`,
 `output/d4_column_edmf_vd/` and `output/d5_column_edmf_ice/`.*
 
+**E54. A restart carries the tags and the records exactly, but the model
+itself does not restart this column bit for bit, even with
+`reproducible_restart: true`.** V5 ran C5's column for a day in one run, and
+again from that run's checkpoint at 12 h. Both ran from #92 at `e4e9e5b3`,
+with `reproducible_restart: true`.
+
+  - **The guard passed** the real restart with the same settings, with no
+    warning. The restarted run loaded the checkpoint in 9.9 s.
+  - **At the restart the tags are restored exactly.** The closure and audit
+    rows at 12 h are the continuous run's text for text. The exceptions are
+    the columns that start over by design: the spin-up reference, `NaN` until
+    it is taken again at 13 h, and the repair's ledger, zero.
+  - **At 24 h the states are not bit for bit.** Every model field differs:
+    `ρ` by 1.5e-10 of its largest value, `uₕ` by 2e-11, `ρe_tot` by 1.7e-9,
+    `ρq_tot` by 8e-10 and `u₃` by 3e-9. The tags differ at the same level,
+    4e-11 to 1.4e-8. `rad` and `prc_e_radiation` differ most, 1.4e-8 and
+    1.1e-8, which is 9e-8 and 2e-8 of their change over the second 12 hours.
+    The surface-flux record is bit for bit, because its flux is prescribed.
+  - **The closure continues without a jump.** After the restart the rows
+    agree to 4e-9 in `residual` and 8e-10 in `gross_residual`.
+  - **The difference is the model's, not the tags'.** The model never reads
+    the tags (E17), so they cannot move `ρ`. Whether upstream restarts this
+    column bit for bit is not measured; a pair without tags would show it.
+    `reproducible_restart` acts only on the cloud fraction
+    (`cloud_fraction.jl:51`), and upstream's restart test compares a state
+    read back, not a continued run.
+  - **So V5's criterion, the state bit for bit at the end, is not met,** for a
+    reason outside the tags. For the tags V5 shows that a restart restores
+    them exactly, and that afterwards they differ only as much as the model's
+    own fields do.
+
+*Jobs `13503985` and `13503986` on terrabyte, `hpda2_test`, 2026-09-18, from
+the worktree `../ClimaAtmosResiDyn-c2-val` at `e4e9e5b3`. Compared with
+`analysis/v5_compare_h5.py`, because the login node's one core was taken by
+P7's timing. The outputs are in `output/v5_c5_continuous/` and
+`output/v5_c5_restarted/`, with the comparison in `compare.txt`.*
+
+**E55. In Float32, C1b's EDMF column keeps the size of the Float64 residual
+over the day, but the residual tilts toward overclaiming.**
+`d4_column_edmf_vd_float32` is `d4_column_edmf_vd` in Float32. It ran from #91
+at `9dd30a90`.
+
+  - **It runs cleanly:** no NaN, nothing orphaned, no non-positive total and
+    no negative source tag. The repair moved 6.5e-9 of the scale by 24 h,
+    against 8.2e-9 in Float64. The tendency function took 558 s to build.
+  - **The size is the same.** At 24 h `gross_relative` is 6.93e-3 against
+    5.98e-3. But over the day the two series cross: their means are 4.68e-3
+    and 4.80e-3, and their ranges 1.7e-3 to 7.7e-3 and 1.5e-3 to 8.6e-3. The
+    atmospheres drift apart, and the totals differ by up to 1.2e-4. So the
+    difference at 24 h is within the day's variation.
+  - **The balance differs.** Float64 is net untagged at every hour:
+    overclaimed over untagged runs from 0.73 to 0.99, with a mean of 0.85.
+    Float32 is net overclaimed in 12 of 24 hours: 0.91 to 1.14, with a mean
+    of 1.02. At 24 h untagged is 3.70e5 against 3.67e5 J/m², and overclaimed
+    is 4.22e5 against 3.16e5.
+  - **Not separated:** whether the tilt is Float32 rounding in the tags or the
+    different atmosphere. Forms A and B are not reduced yet
+    (`analysis/reduce_run.jl` and `analysis/c5_process_closure.jl` need Julia).
+
+*Job `13503987` on terrabyte, `hpda2_test`, 2026-09-18, from the worktree
+`../ClimaAtmosResiDyn-c1b-val` at `9dd30a90`. The outputs are in
+`output/d4_column_edmf_vd_float32/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
