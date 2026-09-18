@@ -213,3 +213,35 @@ decided the open points the same day.
      `energy_source_tags_integration.jl`. Each merge there drops a claim, so
      the owner decides each one.
 6. **Phase D:** item 11 is measured once the docs cache works.
+
+## 6. Measured: one whole pull request after the changes
+
+#77's run of 2026-09-18 is the first pull request run with #82 to #86 all in
+place. It touched `src/`, so it is a full run, not a docs-only one.
+
+| workflow | jobs | runner-minutes |
+|:--|--:|--:|
+| `ci` (run 35310438327) | 27 | 551 |
+| Documentation | 4 | 14 |
+| Invalidations | 1 | 5 |
+| Prek checks | 1 | 1 |
+| **total** | **33** | **571** |
+
+That is under the 600-minute target. Before the changes it was about 1,820
+runner-minutes in 68 jobs, so this is 69% less. No `Downgrade` or `Downstream`
+ran, as their new triggers intend.
+
+Per job, from the job start to its end:
+
+- **The cache works in pull requests.** The two `load` jobs took 1.3 and
+  2.0 minutes, and the minimum-compat load 4.2.
+- **The heaviest jobs** are the 1.11 fork groups: `parent_budget` 46.3 min,
+  `tagging_water` 43.5, `tagging_source` 35.7.
+- **Among the upstream groups,** `dynamics_tracers` took 38.5 and
+  `dynamics_edmfx` 33.9.
+- **Every job is inside half of the 90-minute limit.**
+
+The rows are in the session scratchpad, `cache_check/pr77_minutes.tsv`.
+
+What is left of the plan is Phase C on the tagging files, one pull request per
+file, after #76 and #77 merge. `tagged_water_integration.jl` comes first.
