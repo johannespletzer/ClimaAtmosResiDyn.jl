@@ -1,0 +1,126 @@
+# run.log for b1_base, trimmed from SLURM job 13501290's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    b1_base
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-b1/experiments/tag_closure/configs/b1_base.yml
+SLURM job:       13501290
+Partition:       hpda2_test
+Nodes:           hpdar03c01s11
+CPUs per task:   2
+Tasks:           1
+Launch:          (direct)
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-b1
+Commit:          38661891fac34b2a6b05470bc82199c5af9be0ec (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-b1/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-b1/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/b1_base
+Start time:      2026-09-18T10:34:59+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/b1_base/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-18T11:44:25+02:00
+
+# Every distinct warning, first occurrence, first line only:
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 0.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.00858084765463333 exceeds the configured tolerance 1.0e-6 at t = 21600.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 21600.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.009740280437476316 exceeds the configured tolerance 1.0e-6 at t = 43200.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 43200.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.010954183224820797 exceeds the configured tolerance 1.0e-6 at t = 64800.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 64800.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.012046603440941774 exceeds the configured tolerance 1.0e-6 at t = 86400.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 86400.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.01302120629704416 exceeds the configured tolerance 1.0e-6 at t = 108000.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 108000.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.013936212607620246 exceeds the configured tolerance 1.0e-6 at t = 129600.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 129600.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.01480114680056853 exceeds the configured tolerance 1.0e-6 at t = 151200.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 151200.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.015570923510330563 exceeds the configured tolerance 1.0e-6 at t = 172800.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 172800.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.016290223068557225 exceeds the configured tolerance 1.0e-6 at t = 194400.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 194400.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.017031186400254535 exceeds the configured tolerance 1.0e-6 at t = 216000.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 216000.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.01775879562598539 exceeds the configured tolerance 1.0e-6 at t = 237600.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 237600.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.018471466970882543 exceeds the configured tolerance 1.0e-6 at t = 259200.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 259200.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.019190502143113665 exceeds the configured tolerance 1.0e-6 at t = 280800.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 280800.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.019832241447297887 exceeds the configured tolerance 1.0e-6 at t = 302400.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 302400.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.020488493776445016 exceeds the configured tolerance 1.0e-6 at t = 324000.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 324000.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.02110045930484299 exceeds the configured tolerance 1.0e-6 at t = 345600.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 345600.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.021706375524178163 exceeds the configured tolerance 1.0e-6 at t = 367200.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 367200.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.0222987094554055 exceeds the configured tolerance 1.0e-6 at t = 388800.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 388800.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.02285982003770656 exceeds the configured tolerance 1.0e-6 at t = 410400.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 410400.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.023418294519880242 exceeds the configured tolerance 1.0e-6 at t = 432000.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 432000.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.0239475123100503 exceeds the configured tolerance 1.0e-6 at t = 453600.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 453600.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.02449160858015279 exceeds the configured tolerance 1.0e-6 at t = 475200.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 475200.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.02499800343159439 exceeds the configured tolerance 1.0e-6 at t = 496800.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 496800.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.025498154850699662 exceeds the configured tolerance 1.0e-6 at t = 518400.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 518400.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.02599250068615396 exceeds the configured tolerance 1.0e-6 at t = 540000.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 540000.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.026481672367784502 exceeds the configured tolerance 1.0e-6 at t = 561600.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 561600.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.026945914049758386 exceeds the configured tolerance 1.0e-6 at t = 583200.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 583200.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.027415157965634217 exceeds the configured tolerance 1.0e-6 at t = 604800.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 604800.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.027746207218959477 exceeds the configured tolerance 1.0e-6 at t = 626400.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 626400.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.02810301450175245 exceeds the configured tolerance 1.0e-6 at t = 648000.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 648000.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.029635611622158265 exceeds the configured tolerance 1.0e-6 at t = 669600.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 669600.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.03331247639716516 exceeds the configured tolerance 1.0e-6 at t = 691200.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.27600052941769% of the domain volume at t = 691200.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.04025802641091405 exceeds the configured tolerance 1.0e-6 at t = 712800.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 43.227917463529806% of the domain volume at t = 712800.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.05170613893037769 exceeds the configured tolerance 1.0e-6 at t = 734400.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 42.80045309275723% of the domain volume at t = 734400.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.06424707649372505 exceeds the configured tolerance 1.0e-6 at t = 756000.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 42.09912401858674% of the domain volume at t = 756000.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.0715993294327615 exceeds the configured tolerance 1.0e-6 at t = 777600.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 40.51845433752118% of the domain volume at t = 777600.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.07306305691428361 exceeds the configured tolerance 1.0e-6 at t = 799200.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 40.30374876339254% of the domain volume at t = 799200.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.07224531196186969 exceeds the configured tolerance 1.0e-6 at t = 820800.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 40.515658359169635% of the domain volume at t = 820800.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.07130234140826153 exceeds the configured tolerance 1.0e-6 at t = 842400.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 40.525595421842155% of the domain volume at t = 842400.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+┌ Warning: energy tag closure residual 0.0697875786545546 exceeds the configured tolerance 1.0e-6 at t = 864000.0 s. The tags no longer account for the field they partition; see output/b1_base/output_0000/energy_tag_closure.csv.
+┌ Warning: energy tag parent is non-positive over 41.18341345290934% of the domain volume at t = 864000.0 s, and closure will not show it. This family applies the whole signed increment by mask and uses no donor share, so its attribution is unaffected. It does mean the closure denominator is degenerate where this happens.
+
+# The end of the run:
+[ Info: solve! walltime = 3768.781
+[ Info: sypd: 0.628
+[ Info: wall_time_per_timestep: 1 second, 744 milliseconds
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/b1_base/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-18T11:44:25+02:00

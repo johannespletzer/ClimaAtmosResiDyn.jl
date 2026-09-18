@@ -1459,6 +1459,52 @@ model's `rhoa` times the level spacing. Every sphere run's largest pointwise gap
 is at 24 h. *Login node, from the runs' hourly NetCDF on scratch;
 `analysis/c5_process_closure.jl`; `output/a7_gap_cancellation/`.*
 
+**E50. The energy tags (`ρe_tag_*`) on a moist baroclinic wave with vertical
+diffusion miss `ρe_tot` by 7% of its gross after ten days, and pointwise by 7%
+of the largest `|e_tot|` after a week. More than half of the gross comes in
+the 30 hours from day 8 to day 9.25.** B1, `b1_base`: `MoistBaroclinicWave`, 0M,
+`h_elem` 6, `z_elem` 10, `dt` 400 s, hyperdiffusion and
+`DecayWithHeightDiffusion`, two latitude tags, 10 days, `Float64`. It is the
+baseline of the four-run split. B1a to B1c were not run: the owner approved
+B1 alone (decision 7 of 2026-09-17).
+
+| day | `relative` | `gross_relative` | `max \|e_tag_res\|`, J/kg | over `max \|e_tot\|` |
+| ---:| ----------:| ----------------:| -------------------------:| --------------------:|
+|   1 |    3.63e-5 |           0.0120 |                     4,093 |                0.037 |
+|   5 |    2.49e-4 |           0.0234 |                     7,324 |                0.067 |
+|   8 |    3.79e-4 |           0.0333 |                     9,282 |                0.085 |
+|   9 |    9.06e-4 |           0.0716 |                    27,483 |                0.252 |
+|  10 |    1.04e-3 |           0.0698 |                    17,278 |                0.159 |
+
+  - **The gross grows steadily for eight days,** by about 0.003 a day after
+    the first. From day 8.0 to 9.25 it more than doubles, 0.033 to 0.073,
+    and then stays there. Over the same interval the volume where `ρe_tot` is
+    not positive falls from 43.3% to 40.3%. Both fit the wave breaking, but
+    no run here separates a cause.
+  - **The docs' figure does not carry over.** `tagged_tracers.md` says that in
+    a 10-day dry baroclinic wave the residual stayed below one percent of the
+    pointwise energy scale. Here it is 3.7% of the largest `|e_tot|` after one
+    day. The 99th percentile of `|e_tag_res|` over that scale is within 1% of
+    the maximum from day 1 to day 7. So the residual is broad, not a few
+    extreme points. B1 is moist and has vertical diffusion, and the docs' run
+    was dry, so this does not falsify the docs' figure. B2, the dry case, would
+    test it, and B2 has not run.
+  - **The signed integral stays small.** `relative` is 1.04e-3 at ten days.
+    The residual cancels in the integral, as a transport error does (E49).
+  - **Which operator carries it is not known.** That is what the split would
+    have answered.
+  - **Cost:** 0.628 SYPD on 2 CPUs of `hpda2_test`, 63 minutes of solve, 69
+    in all.
+
+The gross and the signed integral are from the closure table. The pointwise
+numbers are from the NetCDF writer's bilinear remap to 72 × 36 × 10 points,
+not from the model's own nodes, and the scale is `max |e_tot|` there, 1.09e5 to
+1.12e5 J/kg. *Job `13501290` on terrabyte, `hpda2_test`, 2026-09-18. Model code:
+`main` at `38661891`. Driver, runscript and configuration: this branch at
+`58d9b0c8`, copied into the worktree `../ClimaAtmosResiDyn-b1`.
+`analysis/reduce_run.jl` and `analysis/b1_residual_scale.jl`;
+`output/b1_base/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
@@ -2108,11 +2154,9 @@ Kept because a later reader will otherwise re-derive them.
     [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md). The GPU comes last, by the
     owner's decision of 2026-09-11.
 
- 4. **Phase B.** No technical objection left after W9 — B1 configures no limiter
-    and the energy family has no rescale. C1 solved a simulated day in 5.8
-    minutes on this grid, so ten days is about an hour of solve if B1 runs at
-    that speed, which fits `hpda2_test`'s two-hour limit. Whether it is worth
-    running is the owner's call.
+ 4. **Phase B.** B1 ran once, as the owner decided on 2026-09-17 (E50): 7% of
+    the gross after ten days, and 63 minutes of solve. The split B1a to B1c,
+    B2 and B3 have not run and are not approved.
 
  5. **C2.** Built: the implicit-path brackets are in #69. This is not the
     restart guard that `OPERATIONAL_TODO.md` also calls C2.

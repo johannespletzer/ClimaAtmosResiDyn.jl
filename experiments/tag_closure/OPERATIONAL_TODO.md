@@ -36,8 +36,8 @@ Merged into `main`:
     `parent_budget` group; #79, the parity rule (`730b5b18`).
 
 Also on 2026-09-18: #87, the parity exception recorded; #77, the safe
-defaults (`2eb7b4a9`); #76, the split solver (`38661891`). No pull request is
-open. #76 and #77 were merged a minute apart, each tested on its own branch,
+defaults (`2eb7b4a9`); #76, the split solver (`38661891`). #89 is open as a
+draft: the merge of upstream v0.42.11 (see section 0). #76 and #77 were merged a minute apart, each tested on its own branch,
 so `main`'s run at `38661891` is the first to test them together.
 
 The table below is the review round of 2026-09-16, kept for its record.
@@ -76,22 +76,37 @@ day, 2M and P3, more than one node, and the GPU.
 
 ## 0. In flight
 
+  - **#89, the merge of upstream v0.42.11** (d331fe30), opened on 2026-09-18 as
+    a draft on `claude/merge-upstream-v0.42.11`. It replaces #88, whose head
+    was upstream's own `main`. Two commits: the resolutions of 12 conflicting
+    files, then the port that the merge forces (13 test files off the removed
+    `AtmosModel(; …)` and `AtmosSimulation{FT}(; …)`, and two names ClimaCore
+    1.0 removed). Aqua takes upstream's bound. Upstream moved its own output
+    (`ref_counter` 409 to 413), so the parity reference becomes d331fe30.
+    Before it leaves draft: CI, the owner's manual `ci.yml` run, and a bitwise
+    run against d331fe30 on one machine. C1b is rebased onto it afterwards,
+    where `sgs_mass_flux` becomes a `Bool`.
   - **CI:** `main`'s run at `38661891` tests #76 and #77 together, and
-    `Downstream` runs there for the first time under its new trigger. Nothing
-    runs on Slurm or locally.
+    `Downstream` runs there for the first time under its new trigger.
   - **#76's allocation, settled:** on Julia 1.11 the split and the unsplit
     solve allocate nothing; on 1.10 both allocate 1,056 bytes, which ClimaCore's
     own coupled solve does and the split does not add to. The test marks
     "split allocates zero" broken on 1.10 only. Its comment still says the
     unsplit solve allocates 48 bytes on 1.11; it measured 0 (run 35310991660).
-  - **B1 submitted** on 2026-09-18 as job 13501290 on `hpda2_test` (2 CPUs,
-    32 GB, 1 h 55 min). Model code `main` at `38661891`, from the worktree
+  - **B1 ran** on 2026-09-18 as job 13501290 on `hpda2_test` (2 CPUs,
+    32 GB), in 69 minutes (E50, `output/b1_base/`). Model code `main` at `38661891`, from the worktree
     `../ClimaAtmosResiDyn-b1`; its driver, runscript, configuration and
     `runscripts/terrabyte_stacks.env` are copied in from this branch at
     `58d9b0c8`, because `main` has none of them. Output:
     `$SCRATCH/tag_closure/output/b1_base/`.
-  - **Next, approved:** C1b as a draft PR, unblocked by #76; then C2 as a
-    draft PR.
+  - **C1b, in progress** in `../ClimaAtmosResiDyn-c1b` on
+    `claude/energy-source-tag-edmf-sharing`, not yet pushed. B1, B2 and B4
+    are written, the refusal is narrowed to `updraft_number` > 1, T6 is
+    `test/energy_source_tags_edmf_integration.jl` in a new group
+    `tagging_source_edmf`, and T5 is item 11 of the source-tag integration
+    test. T6 passed 40 of 41 locally: `sgs_mass_flux_of_energy_source_tags!`
+    allocates 32 bytes per call, which is being traced. The model's fields came
+    out bit for bit those of the run without tags. Then C2 as a draft PR.
   - **This branch has `main` merged in** (`5db75854`, main at `38661891`), so
     runs launched from here use current model code. Every conflict took
     `main`'s side, with the owner's agreement for the two protected pages,
@@ -451,7 +466,9 @@ With D1 (B12):
 
 ### A. Waiting for the owner
 
- 1. Nothing. B1 was submitted on 2026-09-18 (job 13501290).
+ 1. #89's manual `ci.yml` run, which the token cannot start.
+ 2. C1b's validation submissions, once C1b is pushed: each is prepared
+    and shown first.
 
 Every other decision was made on 2026-09-18.
 
@@ -487,7 +504,8 @@ All seven were done on 2026-09-14.
 
  1. **Now:** C2, the restart guard with T1, as a draft PR (#72 merged, design
     approved on 2026-09-18); then V5, restart equivalence, up to 2 jobs.
- 2. **Now:** B1, phase B's ten-day run of the energy tag family, one job.
+ 2. ~~**B1**~~, phase B's ten-day run of the energy tag family: ran on
+    2026-09-18 (E50).
  3. **Now, #76 merged:** C1b, the EDMF sharing, with T6 and T5, as a draft PR; then
     its validation, up to 5 jobs: the D4 pair, D4 with
     `edmfx_vertical_diffusion: true`, D5. With those, the D4 column's residual

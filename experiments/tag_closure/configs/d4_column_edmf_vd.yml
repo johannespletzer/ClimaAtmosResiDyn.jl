@@ -1,0 +1,100 @@
+# D4 with the updrafts' vertical diffusion on: `d4_column_edmf` with
+# `edmfx_vertical_diffusion: true`, and nothing else changed
+# (SUBGRID_AND_MICROPHYSICS_DESIGN.md, "Order of the work", item 7).
+#
+# Before C1b this config could not run. The updrafts' vertical diffusion
+# asked each updraft for a copy of every grid-scale tracer, and the tags have
+# none. C1b's guard (B4) skips a tracer the updraft does not carry. So this is
+# the shipped DYCOMS RF02 EDMF physics with tags.
+#
+# What it decides: whether the residual stays at the D4 run's level with the
+# shipped physics. The diffusion gives the updrafts' `mse` and `q_tot` the grid
+# mean's specific tendency. It moves no grid-mean field and no tag, so the tags
+# see no new flux. It changes the updrafts, and through them the sub-grid mass
+# flux, which the tags share (B1). A residual well above D4's would point at B4
+# or B1.
+#
+# The model never reads the tags, so `ta` must be identical to the one of a run
+# without tags under the same physics, to the last bit.
+job_id: "d4_column_edmf_vd"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+
+# `config/model_configs/prognostic_edmfx_dycoms_rf02_column.yml`, with C8's
+# cloud fall speed and radiation. The updrafts' vertical diffusion is on, as
+# the shipped config has it.
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: rad
+    source: radiation
+  - name: sfc
+    source: surface_flux
+  - name: sub
+    source: subsidence
+  - name: mp
+    source: microphysics
+  - name: new_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: all
+  - name: new_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: all
+
+energy_process_record:
+  [radiation, surface_flux, subsidence, microphysics, precipitation]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_strat, e_src_tropo, e_src_rad, e_src_sfc, e_src_sub]
+    period: "1hours"
+  - short_name: [e_src_mp, e_src_new_strat, e_src_new_tropo]
+    period: "1hours"
+  - short_name: [e_src_fix_strat, e_src_fix_tropo, e_src_fix_rad, e_src_fix_sfc]
+    period: "1hours"
+  - short_name: [e_src_fix_sub, e_src_fix_mp, e_src_fix_new_strat]
+    period: "1hours"
+  - short_name: [e_src_fix_new_tropo]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_subsidence]
+    period: "1hours"
+  - short_name: [e_prc_microphysics, e_prc_precipitation]
+    period: "1hours"
+  - short_name: [rhoa, ta]
+    period: "1hours"
