@@ -35,9 +35,10 @@ Merged into `main`:
   - **2026-09-18:** #86, Aqua held below 0.8.17; #85, one moist column in the
     `parent_budget` group; #79, the parity rule (`730b5b18`).
 
-Open: #76, the split solver, and #77, the safe defaults. Both have `main`
-merged in. #76's manual full `ci` run, with the upstream groups on Julia 1.10,
-was running on 2026-09-18.
+Also on 2026-09-18: #87, the parity exception recorded; #77, the safe
+defaults (`2eb7b4a9`); #76, the split solver (`38661891`). No pull request is
+open. #76 and #77 were merged a minute apart, each tested on its own branch,
+so `main`'s run at `38661891` is the first to test them together.
 
 The table below is the review round of 2026-09-16, kept for its record.
 
@@ -75,16 +76,16 @@ day, 2M and P3, more than one node, and the GPU.
 
 ## 0. In flight
 
-  - **CI** on the two open PRs, #76 and #77. Nothing runs on Slurm or
-    locally.
-      + **#76:** the owner's manual full `ci` run (35310991660) includes the
-        upstream groups on Julia 1.10, because #76 edits upstream code. Its
-        PR run was cancelled before the matrix started, which shows as five
-        failed checks that never ran. The run also answers whether #76's
-        latest commits removed the 1,056 bytes its split solve allocated on
-        Julia 1.10.
-      + **#77:** all 33 checks pass (2026-09-18). Ready to merge.
-  - **Next, approved on 2026-09-18:** C2 as a draft PR; B1, one job.
+  - **CI:** `main`'s run at `38661891` tests #76 and #77 together, and
+    `Downstream` runs there for the first time under its new trigger. Nothing
+    runs on Slurm or locally.
+  - **#76's allocation, settled:** on Julia 1.11 the split and the unsplit
+    solve allocate nothing; on 1.10 both allocate 1,056 bytes, which ClimaCore's
+    own coupled solve does and the split does not add to. The test marks
+    "split allocates zero" broken on 1.10 only. Its comment still says the
+    unsplit solve allocates 48 bytes on 1.11; it measured 0 (run 35310991660).
+  - **Next, approved:** B1, one job; C2 as a draft PR; C1b as a draft PR,
+    unblocked by #76.
   - **`gh` and the `upstream` remote.** With no default repository, `gh`
     prefers a remote named `upstream`. So `gh pr create` without `-R` went to
     `CliMA/ClimaAtmos.jl` and failed with "Resource not accessible by personal
@@ -234,10 +235,8 @@ On 2026-09-18, going through section 1 with the owner:
 
 ## 1. Decisions for the owner
 
- 1. **Merges:** #76 once its manual full run is green, and #77 once its CI
-    is.
-
-Every other decision of this section was made on 2026-09-18; see "Decided".
+None open. Every decision of this section was made on 2026-09-18; see
+"Decided". #76, #77 and #87 merged the same day.
 
 ## 2. Blocking operation (B), in dependency order
 
@@ -253,8 +252,8 @@ Every other decision of this section was made on 2026-09-18; see "Decided".
     identical to the unsplit solver's, with and without implicit diffusion, and
     the Jacobian cache builds in 20.8 s against 97.4 s. On the EDMF column with
     8 tags and 5 records the whole build now takes 21 minutes, and 8 tags add
-    37 s to `get_simulation` against 1,891 s before (E44e). Left: CI and the
-    merge.
+    37 s to `get_simulation` against 1,891 s before (E44e). Merged as #76 on
+    2026-09-18.
  4. **C1b, share EDMF's sub-grid fluxes among the tags** (design option B).
     Needs #72 and #76 merged.
       - B1, the SGS mass flux, with the donor from the sign of the flux of `E`;
@@ -284,9 +283,8 @@ Every other decision of this section was made on 2026-09-18; see "Decided".
     with a spin-up reference at 1 h and `false` to switch it off; A2, a warning
     at configuration for a process that runs with no tag following it (flags
     subsidence on C5's column and microphysics on C6's sphere, nothing on C7).
-    With U3, U4, R3 and T4. #77, with `main` merged in; its tests pass
-    locally (config tests, 233 unit tests, 45 integration assertions). Left:
-    CI, and the owner's review of the three choices under decision 2. Size M.
+    With U3, U4, R3 and T4. Merged as #77 on 2026-09-18, with its three
+    choices accepted.
 10. **V2, the production physics on a sphere:** EDMF with
     `edmfx_vertical_diffusion: true`, vertical diffusion, sponges, topography
     and 1M, with `analysis/transport_ledger.jl`. It sizes C4. Needs C1b and
@@ -410,9 +408,11 @@ With D1 (B12):
         `-pr65`, `-split`, `-b3` and `-b5`; also `-c1b-check`, a detached
         scratch merge. None held uncommitted work; the ignored files were
         manifests, a docs build and local test output.
-      + **Keep:** `-buildtime` (#76); `-buildtime-edmf` (#76's validation,
-        detached, with a local change that must never be committed);
-        `-defaults` (#77); `-m3` (M3, local only, until C1b); `-p4` (detached
+      + **Also removed on 2026-09-18:** `-buildtime` (#76), `-defaults` (#77)
+        and `-parity-doc` (#87).
+      + **Keep:** `-buildtime-edmf` (#76's validation, detached, with a
+        local change that must never be committed; C1b's validation may
+        reuse it); `-m3` (M3, local only, until C1b); `-p4` (detached
         at `edd44e1d`, P4's diagnosis); `-ci-review` (the CI review's branch);
         `../ClimaAtmos-upstream-vwb` (decision 12).
   - ~~**The known defects** in `LEVANTE_TASKS.md`.~~ Fixed on 2026-09-14: the
@@ -441,9 +441,8 @@ With D1 (B12):
 
 ### A. Waiting for the owner
 
- 1. **Merges:** #76 once its manual full run is green, then #77. #76 goes
-    before C1b, whose validation needs the EDMF build to fit in two hours.
- 2. **B1's submission.** Approved, one job; the command is prepared first.
+ 1. **B1's submission.** Approved, one job; the command is prepared first
+    and shown to the owner.
 
 Every other decision was made on 2026-09-18.
 
@@ -480,7 +479,7 @@ All seven were done on 2026-09-14.
  1. **Now:** C2, the restart guard with T1, as a draft PR (#72 merged, design
     approved on 2026-09-18); then V5, restart equivalence, up to 2 jobs.
  2. **Now:** B1, phase B's ten-day run of the energy tag family, one job.
- 3. **After #76:** C1b, the EDMF sharing, with T6 and T5, as a draft PR; then
+ 3. **Now, #76 merged:** C1b, the EDMF sharing, with T6 and T5, as a draft PR; then
     its validation, up to 5 jobs: the D4 pair, D4 with
     `edmfx_vertical_diffusion: true`, D5. With those, the D4 column's residual
     under EDMF can be measured for the first time.
@@ -513,6 +512,6 @@ All seven were done on 2026-09-14.
     (#72, #74).
   - **Pull requests opened on 2026-09-14:** #74 (D2), #75 (T2), #76 (P4's
     fix), #77 (B9).
-  - **Merged on 2026-09-17 and 2026-09-18:** #72, #74, #75, #78, #79, #81,
-    #85; the CI work #82, #83, #84 and #86.
+  - **Merged on 2026-09-17 and 2026-09-18:** #72, #74, #75, #76, #77, #78,
+    #79, #81, #85, #87; the CI work #82, #83, #84 and #86.
   - #72 merged into this branch (`57ed9c1f`).
