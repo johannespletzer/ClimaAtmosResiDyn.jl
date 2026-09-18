@@ -149,6 +149,56 @@ is_energy_source_tag_name(name::Symbol) = startswith(string(name), "ρe_src_")
 is_energy_source_tag_name(name::MatrixFields.FieldName) =
     is_energy_source_tag_name(MatrixFields.extract_first(name))
 
+"""
+    energy_source_increment_ledger_variables(ρe_parent, model)
+
+The ledger of [`correct_energy_source_increment!`](@ref), for a single grid
+point, as zeros of the type of `ρe_parent`. Only under
+`energy_source_tag_transport: enthalpy_increment`, and `(;)` otherwise:
+
+  - `e_src_inc_left`: the energy the correction has left out of the tags, in
+    J/m³, since the start of the run. In each column it sums to the part of the
+    parent's implicit increment of `E` that changes the column's total and that
+    the tags' own implicit tendencies did not take. That part lands in
+    `e_src_res`.
+  - `e_src_inc_moved`: the energy the correction has moved between levels, in
+    J/m³, since the start of the run. It sums to zero in each column. It is
+    what the tags' own implicit tendencies missed of the parent's vertical
+    transport.
+
+Both are prognostic, so the stepper weights each stage's entry as it weights
+the tags. That makes the ledger exact. Like the process records, their names
+carry no `ρ` prefix, so no transport or limiter reaches them, and they are
+carried through a restart.
+"""
+energy_source_increment_ledger_variables(ρe_parent, ::Nothing) = (;)
+energy_source_increment_ledger_variables(
+    ρe_parent,
+    model::EnergySourceTaggingModel,
+) =
+    follows_implicit_increment(model) ?
+    (; e_src_inc_left = zero(ρe_parent), e_src_inc_moved = zero(ρe_parent)) :
+    (;)
+
+"""
+    energy_source_increment_ledger_names(model)
+
+`Tuple` of the state-field `Symbol`s of the increment correction's ledger:
+`(:e_src_inc_left, :e_src_inc_moved)` under `enthalpy_increment`, and `()`
+otherwise. See [`energy_source_increment_ledger_variables`](@ref).
+"""
+energy_source_increment_ledger_names(model) =
+    follows_implicit_increment(model) ? (:e_src_inc_left, :e_src_inc_moved) :
+    ()
+
+"""
+    is_energy_source_ledger_name(name)
+
+Whether `name`, a `Symbol`, is a field of the increment correction's ledger.
+"""
+is_energy_source_ledger_name(name::Symbol) =
+    name in (:e_src_inc_left, :e_src_inc_moved)
+
 # ============================================================================
 # Cache
 # ============================================================================
@@ -296,6 +346,13 @@ The energy source family's own columns of the audit table, beside those
     segment, in J, and over `scale`. Zero with the repair off. At
     `update_constrain_state_every: stage` or `dss` the ledger also counts the
     in-step repairs the stepper discards; see `repair_energy_source_tags!`.
+  - under `energy_source_tag_transport: enthalpy_increment` only, the integrals
+    of the increment correction's ledger since the start of the run, in J:
+    `increment_left`, what it left out of the tags, which is signed and lands
+    in the closure residual; `increment_left_gross`, the same with each cell's
+    absolute value; and `increment_moved_gross`, the absolute value of what it
+    moved between levels. Each also over `scale`. See
+    [`energy_source_increment_ledger_variables`](@ref).
 
 Every reduction is collective, so every process must call it.
 """
@@ -342,6 +399,26 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         source_minimum,
         repair_moved,
         repair_moved_relative = per_scale(repair_moved),
+        _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale)...,
+    )
+end
+
+_energy_source_ledger_audit(Y, ᶜtmp, model, per_scale) =
+    follows_implicit_increment(model) ?
+    __energy_source_ledger_audit(Y, ᶜtmp, per_scale) : (;)
+function __energy_source_ledger_audit(Y, ᶜtmp, per_scale)
+    increment_left = sum(Y.c.e_src_inc_left)
+    @. ᶜtmp = abs(Y.c.e_src_inc_left)
+    increment_left_gross = sum(ᶜtmp)
+    @. ᶜtmp = abs(Y.c.e_src_inc_moved)
+    increment_moved_gross = sum(ᶜtmp)
+    return (;
+        increment_left,
+        increment_left_relative = per_scale(increment_left),
+        increment_left_gross,
+        increment_left_gross_relative = per_scale(increment_left_gross),
+        increment_moved_gross,
+        increment_moved_gross_relative = per_scale(increment_moved_gross),
     )
 end
 
@@ -1586,6 +1663,10 @@ the flux times its share in the cell the flux leaves, as with the sub-grid mass
 flux, and the flux is added to `dY` divided by `dtγ`. The partition's shares add
 up to one, so the partition then follows the parent's increment, up to the part
 left in place. A tag that carries a source takes its own share of the flux.
+
+The part left in place and the part moved are added to the ledger,
+`e_src_inc_left` and `e_src_inc_moved` (see
+[`energy_source_increment_ledger_variables`](@ref)).
 """
 function correct_energy_source_increment!(dY, U, p)
     model = p.atmos.energy_source_tagging_model
@@ -1639,6 +1720,15 @@ function correct_energy_source_increment!(dY, U, p)
         ᶠe_src_increment_flux,
         model.tags,
     )
+    # The ledger. What is left in place stays out of the tags, and the rest is
+    # what the flux moved. The stepper adds `dtγ·dY`, as it does for the tags.
+    @. ᶜe_src_abs_mismatch *= ifelse(
+        e_src_abs_mismatch_total > 0,
+        e_src_mismatch_total / e_src_abs_mismatch_total,
+        FT(0),
+    )
+    @. dY.c.e_src_inc_left += ᶜe_src_abs_mismatch / dtγ
+    @. dY.c.e_src_inc_moved += (ᶜm - ᶜe_src_abs_mismatch) / dtγ
     return nothing
 end
 

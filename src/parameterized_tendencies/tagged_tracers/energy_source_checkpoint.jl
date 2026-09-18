@@ -144,6 +144,16 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
     check_restart_fields(
         restart_file,
         Y,
+        is_energy_source_ledger_name,
+        isnothing(source_model) ? () :
+        energy_source_increment_ledger_names(source_model),
+        "fields of the energy source tags' increment ledger",
+        "energy_source_tag_transport",
+        "e_src_inc_",
+    )
+    check_restart_fields(
+        restart_file,
+        Y,
         name -> startswith(string(name), "prc_e_"),
         isnothing(model.energy_process_record) ? () :
         energy_process_record_state_names(model.energy_process_record),

@@ -69,6 +69,13 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
             local_geometry,
             atmos_model.energy_source_tagging_model,
         )...,
+        # The increment correction's ledger, under
+        # `energy_source_tag_transport: enthalpy_increment` only. Like the
+        # process records below, its names carry no `ρ` prefix.
+        energy_source_increment_ledger_variables(
+            ρe_tot,
+            atmos_model.energy_source_tagging_model,
+        )...,
         # Uses the same `ρ * q_tot` that `moisture_variables` puts in the state,
         # so that a partition-of-unity set of region tags sums to `ρq_tot`
         # exactly at t = 0. Water tagging requires a moist model, which

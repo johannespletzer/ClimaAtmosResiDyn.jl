@@ -27,6 +27,7 @@ const KNOWN_TEST_GROUPS = (
     "tagging_record",
     "tagging_source_float32",
     "tagging_source_edmf",
+    "tagging_source_increment",
     "parameterizations",
     "restarts",
 )
@@ -202,6 +203,15 @@ end
 if TEST_GROUP in ("tagging_source_edmf", "all")
     @safetestset "Energy source tags under EDMF integration" begin
         @time include("energy_source_tags_edmf_integration.jl")
+    end
+end
+
+# `energy_source_tag_transport: enthalpy_increment` is a model type of its own,
+# and its check against `enthalpy` needs a second. The file builds the EDMF
+# column twice and a column without EDMF twice, so it has a group of its own.
+if TEST_GROUP in ("tagging_source_increment", "all")
+    @safetestset "Energy source tags following the implicit increment" begin
+        @time include("energy_source_tags_increment_integration.jl")
     end
 end
 

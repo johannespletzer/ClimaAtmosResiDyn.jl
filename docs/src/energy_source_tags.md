@@ -407,31 +407,6 @@ two differ by that linearisation. In the tag-closure experiments this made the
 audit's residual in its first hour, during the initial adjustment, and a
 converged Newton solve removed 99% of it on a column.
 
-### Following the parent's implicit increment, a prototype
-
-`energy_source_tag_transport: enthalpy_increment` is the audit with its
-implicit part rebuilt. A tag that follows an implicit term by its tendency, as
-the audit does for sedimentation and the sub-grid mass flux, lags the parent's
-Newton solve. For a stiff term, such as the EDMF eddy diffusion, that gap grows
-step by step. In this mode the tags take the parent's own increment instead:
-
-  - at the start of each implicit stage the model keeps `ρe_tot`, `ρ` and the
-    partition's sum;
-  - after the Newton solve, each cell's mismatch between the parent's
-    increment of `E` and the partition's is formed;
-  - the part of the mismatch that changes a column's total cannot move within
-    the column; it stays where it arises, in proportion to the mismatch, and in
-    `e_src_res`;
-  - the rest integrates up the column into a face flux that is zero at both
-    boundaries, and each tag takes that flux times its share in the cell it
-    leaves.
-
-The tags then take no explicit share of the vertical advection, which the
-parent does implicitly and the increment carries. The model is untouched. It
-needs an offset, and an ARS algorithm such as the default ARS343: the
-correction runs after each Newton solve, so every implicit tendency must go
-through one, and the model refuses other algorithms.
-
 Everything else the tags see stays as under `tracer`: the brackets, the repair,
 sedimentation, vertical diffusion, the sponges and the SGS closures. Under
 `prognostic_edmfx` the tags take their shares of the sub-grid mass flux in both
@@ -499,6 +474,58 @@ The tag-closure experiments ran it on a 0-moment column, a 0-moment sphere and a
     advection on the column, and from horizontal advection and hyperdiffusion
     on the sphere, add up to the parent's to 100 eps.
 
+### Following the parent's implicit increment, a prototype
+
+`energy_source_tag_transport: enthalpy_increment` is the audit with its
+implicit part rebuilt. A tag that follows an implicit term by its tendency, as
+the audit does for sedimentation and the sub-grid mass flux, lags the parent's
+Newton solve. For a stiff term, such as the EDMF eddy diffusion, that gap grows
+step by step. In this mode the tags take the parent's own increment instead:
+
+  - at the start of each implicit stage the model keeps `ρe_tot`, `ρ` and the
+    partition's sum;
+  - after the Newton solve, each cell's mismatch between the parent's
+    increment of `E` and the partition's is formed;
+  - the part of the mismatch that changes a column's total cannot move within
+    the column; it stays where it arises, in proportion to the mismatch, and in
+    `e_src_res`;
+  - the rest integrates up the column into a face flux that is zero at both
+    boundaries, and each tag takes that flux times its share in the cell it
+    leaves.
+
+The tags then take no explicit share of the vertical advection, which the
+parent does implicitly and the increment carries. The model is untouched. It
+needs an offset, and an ARS algorithm such as the default ARS343: the
+correction runs after each Newton solve, so every implicit tendency must go
+through one, and the model refuses other algorithms.
+
+The correction keeps a ledger, as two prognostic fields that the stepper
+integrates with the tags:
+
+  - `e_src_inc_left`: what it has left out of the tags. In each column it sums
+    to the part of the parent's implicit increment that changes the column's
+    total and that the tags' own implicit tendencies did not take, such as a
+    boundary flux the tags do not follow. That part lands in `e_src_res`;
+  - `e_src_inc_moved`: what it has moved between levels. It sums to zero in
+    each column, and it is what the tags' own implicit tendencies missed of the
+    parent's vertical transport.
+
+Both are cumulative since the start of the run, carried through a restart, and
+reported per unit mass as diagnostics of the same names. The closure check's
+audit table gets their integrals, `increment_left`, `increment_left_gross` and
+`increment_moved_gross`. So the residual's column total splits into what the
+correction left and what everything else leaves.
+
+```yaml
+energy_source_tag_offset: 110495.0
+energy_source_tag_transport: enthalpy_increment
+```
+
+`test/energy_source_tags_increment_integration.jl` checks the correction on a
+set increment, and that the model's state is bit for bit the one under
+`enthalpy`, on the EDMF column and on a column where the parent has no
+post-solve correction of its own.
+
 ## Diagnostics
 
   - `e_src_<name>`: specific tagged energy ``\rho e_{\mathrm{src}} / \rho``
@@ -511,6 +538,11 @@ The tag-closure experiments ran it on a 0-moment column, a 0-moment sphere and a
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
     under an offset.
+  - `e_src_inc_left` and `e_src_inc_moved`, under
+    `energy_source_tag_transport: enthalpy_increment` only: the increment
+    correction's ledger per unit mass (J kg⁻¹), cumulative since the start of
+    the run (see
+    [Following the parent's implicit increment, a prototype](@ref)).
 
 `e_src_res` is a **monitored residual**, not a machine-precision identity.
 ``\rho e_\mathrm{tot}`` is transported as enthalpy including pressure work and
