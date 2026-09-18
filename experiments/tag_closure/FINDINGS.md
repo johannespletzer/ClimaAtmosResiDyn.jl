@@ -1684,12 +1684,21 @@ at `9dd30a90`.
     Float32 is net overclaimed in 12 of 24 hours: 0.91 to 1.14, with a mean
     of 1.02. At 24 h untagged is 3.70e5 against 3.67e5 J/m², and overclaimed
     is 4.22e5 against 3.16e5.
-  - **Not separated:** whether the tilt is Float32 rounding in the tags or the
-    different atmosphere. Forms A and B are not reduced yet
-    (`analysis/reduce_run.jl` and `analysis/c5_process_closure.jl` need Julia).
+  - **The records still close the column.** Form B misses by 56 J/m² in
+    8.8e5 at 24 h, against 1.4 in 9.3e5 in Float64. That is 6e-5 of the
+    change, the size Float32 sums reach over 720 steps.
+  - **Form A's gap is larger and cancels less.** Its largest pointwise value
+    is 11.8 J/kg against 6.2, and its weighted gross 2,781 against 1,303. Over
+    the column it keeps 0.11 of that gross, against 0.005 in Float64, so its
+    integral is −318 against −6, or 2.4e-5 of the new energy. A transport
+    error cancels in the column (E49) and rounding does not, so part of
+    Float32's form A gap is rounding.
+  - **Not separated:** whether the residual's tilt toward overclaiming is
+    Float32 rounding in the tags or the different atmosphere.
 
 *Job `13503987` on terrabyte, `hpda2_test`, 2026-09-18, from the worktree
-`../ClimaAtmosResiDyn-c1b-val` at `9dd30a90`. The outputs are in
+`../ClimaAtmosResiDyn-c1b-val` at `9dd30a90`. Forms A and B are
+`analysis/c5_process_closure.jl`. The outputs are in
 `output/d4_column_edmf_vd_float32/`.*
 
 **E56. The fork does not build the EDMF column more slowly than upstream.

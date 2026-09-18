@@ -118,7 +118,8 @@ day, 2M and P3, more than one node, and the GPU.
     (jobs 13503985 to 13503987). V5 (E54): the tags are restored exactly,
     but the model does not restart bit for bit here. C1b in Float32 (E55):
     the residual keeps its Float64 size over the day but tilts toward
-    overclaiming; forms A and B are not reduced yet.
+    overclaiming. The records still close the column, to 6e-5, and form A's
+    gap cancels less than in Float64, which points to rounding.
   - **#89 was reviewed** on 2026-09-18 by an agent, reading only. No blocking
     defect. The fork's `src` differs from d331fe30 exactly as it differed from
     the old base, apart from the resolved hunks. No fork code tests a flag
