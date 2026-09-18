@@ -133,15 +133,32 @@ State on 2026-09-19.
     `claude/energy-source-tag-sgs-diffusion` (`9aeb5205`) stays local.
   - **The increment prototype, toward G1.** The owner chose on 2026-09-19 to
     rebuild the tags' implicit channel on the parent's own increment (question
-    1 of the attribution path). Branch `claude/energy-source-tag-implicit-increment`,
-    worktree `../ClimaAtmosResiDyn-inc`, not committed yet. It is the opt-in
-    `energy_source_tag_transport: enthalpy_increment`: after each Newton
-    solve, the tags take the parent's increment of `E`, as a donor-shared
-    vertical flux built from the per-cell mismatch, and the part that changes a
-    column's total stays visible in `e_src_res`. Next, in order: the check on
-    C9's column (running), a review agent with its findings fixed, then the
-    D4 run `inc_d4_enthalpy_increment` (approved), analysed against
-    `c1c_base_d4_enthalpy`.
+    1 of the attribution path). It is the opt-in
+    `energy_source_tag_transport: enthalpy_increment`, on
+    `claude/energy-source-tag-implicit-increment` (worktree
+    `../ClimaAtmosResiDyn-inc`, pushed to `faa98974`): after each Newton solve,
+    the tags take the parent's increment of `E`, as a donor-shared vertical
+    flux built from the per-cell mismatch, and the part that changes a
+    column's total stays in `e_src_res`.
+      + C9's column closes to rounding (1.1e-6 J/m² at 1 h), model bit for bit.
+      + An agent's review found two defects, both fixed in `faa98974`: the
+        stepper check (it refuses SSP333, the IMKG algorithms, prescribed flow
+        and algorithms without Newton) and the parent-budget ledger's hook
+        flag. Unit tests 521/521.
+      + **D4 meets criterion 1 (E62):** 267 J/m² at 24 h against the base's
+        6.32e5, the second 12 hours adding 75 against the first's 192, and
+        `ta` and `rhoa` bit for bit.
+      + **Uncommitted in the worktree:** the ledger `e_src_inc_left` and
+        `e_src_inc_moved` (criterion 2), its diagnostics and audit columns,
+        the restart guard for it, the new test group `tagging_source_increment`
+        with `test/energy_source_tags_increment_integration.jl` (criteria 3
+        and 6), and the docs section moved to the end of the enthalpy section.
+        The integration test is running (job `13504842`).
+      + **Running for criteria 4 and 5:** `g1_ref_newton_d4` (C1c option 1,
+        converged, a day; the reference) and `g1_base_d4_float32`. Their twins,
+        `g1_inc_newton_d4`, `g1_inc_d4_float32` and the ledger run `g1_inc_d4`,
+        go from a frozen worktree of the ledger commit once the integration
+        test passes.
   - **The diagnostic (E61):** with a converged Newton solve, C1c's option 1
     reaches 2.3e5 J/m² at 12 h against 3.2e6 with one iteration, and half the
     base's 4.6e5. So the implicit timing gap was most of E59's drift, as the

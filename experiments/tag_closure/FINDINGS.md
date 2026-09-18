@@ -1913,6 +1913,44 @@ tolerance of 1e-8, for 12 hours.
 `../ClimaAtmosResiDyn-c1c-opt1` at `9aeb5205`. The outputs are in
 `output/c1c_opt1_newton_d4_enthalpy/`.*
 
+**E62. Following the parent's increment closes the EDMF column: 267 J/m² at
+24 h against 6.32e5, with the model bit for bit.** D4 under
+`energy_source_tag_transport: enthalpy_increment`, the prototype at `35042f33`,
+set against `c1c_base_d4_enthalpy` (E59), the same configuration under
+`enthalpy` on the same `main`.
+
+| gross residual, J/m² | 1 h | 4 h | 12 h | 24 h | `gross_relative` at 24 h |
+|:-- | --:| --:| --:| --:| --:|
+| base, `enthalpy` (E59) | 1.68e5 | 3.27e5 | 4.61e5 | 6.32e5 | 5.5e-3 |
+| prototype, `enthalpy_increment` | 92.8 | 112 | 192 | 267 | 2.4e-6 |
+
+  - **G1's criterion 1 is met.** 267 J/m² is 37 times below the target of
+    1e4, and 2,370 times below the base. The first 12 hours add 192 J/m² and
+    the second 75, so the residual does not grow systematically.
+  - **It is zero-sum.** The signed residual at 24 h is −0.53 J/m², against
+    +4.5e4 in the base. The audit splits the gross into 133 untagged and 134
+    overclaimed. By layer it is 143 J/m² below 550 m (+118 signed), 103 in the
+    cloud layer (−98) and 20 above (−20). The base's free-troposphere step,
+    row 3d of ATTRIBUTION_PATH.md, is gone.
+  - **The model is untouched.** `ta` and `rhoa` are bit for bit the base's at
+    all 25 hours (criterion 3, the run half).
+  - **The tags stay close to the base's.** Pointwise the prototype's tags
+    differ from the base's by at most 1.7% at 24 h (L∞; L1 0.4 to 0.8%), and
+    their column integrals by under 1e-3. The tags still diffuse as tracers,
+    and the correction moves only the net mismatch, so provenance still
+    mixes as under the base. That is unlike C1c's options, whose tags differed
+    by 67 to 132% (E60). `mp` stays zero in both: under 1M the microphysics
+    only removes energy on this column.
+  - **The repair is unchanged:** 0.83 J/m² moved, as in the base.
+
+What makes the remaining 267 J/m² is not yet split. The ledger that splits it
+(`e_src_inc_left`, `e_src_inc_moved`) is built and runs in `g1_inc_d4`.
+*Job `13504818` on terrabyte, `hpda2_test`, 2026-09-19, from the frozen
+worktree `../ClimaAtmosResiDyn-inc-run` at `35042f33`. The outputs are in
+`output/inc_d4_enthalpy_increment/`, with `compare_base.txt` and
+`tags_against_base.txt` from `analysis/increment/d4_compare.py` and
+`tag_correctness.py`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

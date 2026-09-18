@@ -83,6 +83,8 @@ for run in runs:
     res, z = field(run, "e_src_res")
     rho, _ = field(run, "rhoa")
     dz = np.gradient(z)
+    # The files hold (z, time).
+    res, rho = res.T, rho.T
     t = min(24, res.shape[0] - 1)
     parts = []
     for label, mask in (
