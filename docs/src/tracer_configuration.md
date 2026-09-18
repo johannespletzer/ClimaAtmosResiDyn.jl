@@ -568,6 +568,8 @@ energy_tracers:
 ```@docs
 ClimaAtmos.NAMED_TAG_REGIONS
 ClimaAtmos.tag_region_from_config
+ClimaAtmos.tag_region_spec
+ClimaAtmos.tag_region_text
 ClimaAtmos.tag_sources_from_config
 ClimaAtmos.passive_tracer_model
 ClimaAtmos.energy_tracer_tuple

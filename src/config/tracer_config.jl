@@ -344,6 +344,61 @@ function tag_region_from_config(region_config, ::Type{FT}) where {FT}
     end
 end
 
+"""
+    tag_region_spec(region)
+
+The configuration `region` is built from, as `type` and then the type's keys in
+the order the type declares them, each a `String => value` pair. It is the
+inverse of [`tag_region_from_config`](@ref): `Dict(tag_region_spec(region))`
+reads back to the same region, in `Float64`. The restart guard writes it into a
+checkpoint in the words a configuration uses, so that a changed region can be
+named. A named region such as `tropics` comes back as its mapping.
+"""
+tag_region_spec(::EntireDomain) = ["type" => "everywhere"]
+tag_region_spec(region::TanhAltitudeRegion) = [
+    "type" => "tanh_altitude",
+    "z_center" => Float64(region.z_center),
+    "width" => Float64(region.width),
+    "above" => region.above,
+]
+tag_region_spec(region::TanhLatitudeRegion) = [
+    "type" => "tanh_latitude",
+    "lat_bound" => Float64(region.lat_bound),
+    "width" => Float64(region.width),
+    "inside" => region.inside,
+]
+tag_region_spec(region::TanhBoxRegion) = [
+    "type" => "tanh_box",
+    "lon_min" => Float64(region.lon_min),
+    "lon_max" => Float64(region.lon_max),
+    "lat_min" => Float64(region.lat_min),
+    "lat_max" => Float64(region.lat_max),
+    "width" => Float64(region.width),
+    "inside" => region.inside,
+]
+tag_region_spec(region::TanhPolygonRegion) = [
+    "type" => "tanh_polygon",
+    "vertices" => [[Float64(lon), Float64(lat)] for (lon, lat) in region.vertices],
+    "width" => Float64(region.width),
+    "inside" => region.inside,
+]
+
+"""
+    tag_region_text(region)
+
+`region` on one line, in the words of its configuration, for example
+`tanh_altitude(z_center = 750.0, width = 100.0, above = true)`, and
+`everywhere` for the whole domain. `none` for a tag without a region.
+"""
+tag_region_text(::Nothing) = "none"
+function tag_region_text(region)
+    spec = tag_region_spec(region)
+    type = last(first(spec))
+    length(spec) == 1 && return type
+    keys = join((string(key, " = ", repr(value)) for (key, value) in spec[2:end]), ", ")
+    return string(type, "(", keys, ")")
+end
+
 # ============================================================================
 # Tag sources
 # ============================================================================

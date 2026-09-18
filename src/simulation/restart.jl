@@ -45,7 +45,9 @@ end
     handle_restart(restart_file, t_start_original, start_date, model, context; verbose = false)
 
 Load a restart file, warning when a nonzero `t_start_original` is passed, since the
-restart time from the file takes precedence.
+restart time from the file takes precedence. A restart that changes the energy
+source tags' settings or the process records is refused, see
+[`check_energy_source_checkpoint`](@ref).
 
 # Returns
 
@@ -72,6 +74,9 @@ function handle_restart(
     (Y, t_start) = get_state_restart(
         restart_file, start_date, hash(model), context,
     )
+    # A restart may not change what the energy source tags or the process
+    # records in the file mean. This runs before the cache is built.
+    check_energy_source_checkpoint(restart_file, model, Y, context)
 
     if verbose
         @info "Restarting simulation from file" restart_file restart_time =
