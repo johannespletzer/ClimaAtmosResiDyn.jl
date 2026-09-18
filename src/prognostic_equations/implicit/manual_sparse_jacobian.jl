@@ -386,7 +386,7 @@ grid-mean scalars.
 These are the `(grid-mean tracer, updraft tracer)` blocks, the
 `(sedimenting tracer, f.u₃)` blocks, and the `ρe_tot` couplings to the updraft
 `mse` and to `ρ`. Returns `()` unless `atmos.turbconv_model` is a
-`PrognosticEDMFX` with `edmfx_model.sgs_mass_flux` set to `Val(true)`.
+`PrognosticEDMFX` with `edmfx_model.sgs_mass_flux` enabled.
 
 # Returns
 
@@ -395,7 +395,7 @@ These are the `(grid-mean tracer, updraft tracer)` blocks, the
 function sgs_massflux_jacobian_blocks(Y, atmos)
     (
         atmos.turbconv_model isa PrognosticEDMFX &&
-        atmos.edmfx_model.sgs_mass_flux isa Val{true}
+        atmos.edmfx_model.sgs_mass_flux
     ) || return ()
     FT = Spaces.undertype(axes(Y.c))
     (; TridiagonalRow, BidiagonalRow_ACT3) = jacobian_row_types(FT)
@@ -1046,22 +1046,22 @@ function update_advection_jacobian!(matrix, Y, p, dtγ, topography_flag)
         @. ∂ᶜK_∂ᶜuₕ = DiagonalMatrixRow(adjoint(CT12(ᶜuₕ)))
     end
     @. ∂ᶜK_∂ᶠu₃ =
-        ᶜinterp_matrix() ⋅ DiagonalMatrixRow(adjoint(CT3(ᶠu₃))) +
-        DiagonalMatrixRow(adjoint(CT3(ᶜuₕ))) ⋅ ᶜinterp_matrix()
+        ᶜinterp_matrix() * DiagonalMatrixRow(adjoint(CT3(ᶠu₃))) +
+        DiagonalMatrixRow(adjoint(CT3(ᶜuₕ))) * ᶜinterp_matrix()
 
-    @. ᶠp_grad_matrix = DiagonalMatrixRow(-1 / ᶠinterp(ᶜρ)) ⋅ ᶠgradᵥ_matrix()
+    @. ᶠp_grad_matrix = DiagonalMatrixRow(-1 / ᶠinterp(ᶜρ)) * ᶠgradᵥ_matrix()
 
     @. ᶜadvection_matrix =
-        -(ᶜadvdivᵥ_matrix()) ⋅ DiagonalMatrixRow(ᶠinterp(ᶜρ * ᶜJ) / ᶠJ)
+        -(ᶜadvdivᵥ_matrix()) * DiagonalMatrixRow(ᶠinterp(ᶜρ * ᶜJ) / ᶠJ)
     @. p.scratch.ᶠbidiagonal_matrix_ct3xct12 =
-        ᶠwinterp_matrix(ᶜJ * ᶜρ) ⋅ DiagonalMatrixRow(g³ʰ(ᶜgⁱʲ))
+        ᶠwinterp_matrix(ᶜJ * ᶜρ) * DiagonalMatrixRow(g³ʰ(ᶜgⁱʲ))
     if use_derivative(topography_flag)
         ∂ᶜρ_err_∂ᶜuₕ = matrix[@name(c.ρ), @name(c.uₕ)]
         @. ∂ᶜρ_err_∂ᶜuₕ =
-            dtγ * ᶜadvection_matrix ⋅ p.scratch.ᶠbidiagonal_matrix_ct3xct12
+            dtγ * ᶜadvection_matrix * p.scratch.ᶠbidiagonal_matrix_ct3xct12
     end
     ∂ᶜρ_err_∂ᶠu₃ = matrix[@name(c.ρ), @name(f.u₃)]
-    @. ∂ᶜρ_err_∂ᶠu₃ = dtγ * ᶜadvection_matrix ⋅ DiagonalMatrixRow(g³³(ᶠgⁱʲ))
+    @. ∂ᶜρ_err_∂ᶠu₃ = dtγ * ᶜadvection_matrix * DiagonalMatrixRow(g³³(ᶠgⁱʲ))
 
     tracer_info = (@name(c.ρe_tot), @name(c.ρq_tot))
 
@@ -1072,13 +1072,13 @@ function update_advection_jacobian!(matrix, Y, p, dtγ, topography_flag)
         if use_derivative(topography_flag)
             ∂ᶜρχ_err_∂ᶜuₕ = matrix[ρχ_name, @name(c.uₕ)]
             @. ∂ᶜρχ_err_∂ᶜuₕ =
-                dtγ * ᶜadvection_matrix ⋅ DiagonalMatrixRow(ᶠinterp(ᶜχ)) ⋅
+                dtγ * ᶜadvection_matrix * DiagonalMatrixRow(ᶠinterp(ᶜχ)) *
                 p.scratch.ᶠbidiagonal_matrix_ct3xct12
         end
 
         ∂ᶜρχ_err_∂ᶠu₃ = matrix[ρχ_name, @name(f.u₃)]
         @. ∂ᶜρχ_err_∂ᶠu₃ =
-            dtγ * ᶜadvection_matrix ⋅ DiagonalMatrixRow(ᶠinterp(ᶜχ) * g³³(ᶠgⁱʲ))
+            dtγ * ᶜadvection_matrix * DiagonalMatrixRow(ᶠinterp(ᶜχ) * g³³(ᶠgⁱʲ))
     end
 
     ∂ᶠu₃_err_∂ᶜρ = matrix[@name(f.u₃), @name(c.ρ)]
@@ -1114,16 +1114,16 @@ function update_advection_jacobian!(matrix, Y, p, dtγ, topography_flag)
     )
     @. ∂ᶠu₃_err_∂ᶜρ =
         dtγ * (
-            ᶠp_grad_matrix ⋅ DiagonalMatrixRow(ᶜ∂p∂ρ) +
-            DiagonalMatrixRow(cp_d * ᶠinterp(ᶜθ_v) * ᶠgradᵥ(ᶜΠ) / ᶠinterp(ᶜρ)) ⋅
+            ᶠp_grad_matrix * DiagonalMatrixRow(ᶜ∂p∂ρ) +
+            DiagonalMatrixRow(cp_d * ᶠinterp(ᶜθ_v) * ᶠgradᵥ(ᶜΠ) / ᶠinterp(ᶜρ)) *
             ᶠinterp_matrix()
         )
-    @. ∂ᶠu₃_err_∂ᶜρe_tot = dtγ * ᶠp_grad_matrix ⋅ DiagonalMatrixRow(ᶜkappa_m)
+    @. ∂ᶠu₃_err_∂ᶜρe_tot = dtγ * ᶠp_grad_matrix * DiagonalMatrixRow(ᶜkappa_m)
 
     if MatrixFields.has_field(Y, @name(c.ρq_tot))
         ∂ᶠu₃_err_∂ᶜρq_tot = matrix[@name(f.u₃), @name(c.ρq_tot)]
         @. ∂ᶠu₃_err_∂ᶜρq_tot =
-            dtγ * ᶠp_grad_matrix ⋅ DiagonalMatrixRow(ᶜ∂p∂ρq_tot)
+            dtγ * ᶠp_grad_matrix * DiagonalMatrixRow(ᶜ∂p∂ρq_tot)
     end
 
     if p.atmos.microphysics_model isa Union{
@@ -1141,7 +1141,7 @@ function update_advection_jacobian!(matrix, Y, p, dtγ, topography_flag)
                 ᶜkappa_m * (e_int_q - ∂cv∂q * (ᶜT - T_0)) - R_v * ᶜT,
             )
             @. ∂ᶠu₃_err_∂ᶜρq =
-                dtγ * ᶠp_grad_matrix ⋅ DiagonalMatrixRow(ᶜ∂p∂ρχ)
+                dtγ * ᶠp_grad_matrix * DiagonalMatrixRow(ᶜ∂p∂ρχ)
         end
     end
 
@@ -1149,17 +1149,17 @@ function update_advection_jacobian!(matrix, Y, p, dtγ, topography_flag)
     ∂ᶠu₃_err_∂ᶠu₃ = matrix[@name(f.u₃), @name(f.u₃)]
     I_u₃ = DiagonalMatrixRow(one_C3xACT3)
     @. ∂ᶠu₃_err_∂ᶜuₕ =
-        dtγ * ᶠp_grad_matrix ⋅ DiagonalMatrixRow(-(ᶜkappa_m) * ᶜρ) ⋅ ∂ᶜK_∂ᶜuₕ
+        dtγ * ᶠp_grad_matrix * DiagonalMatrixRow(-(ᶜkappa_m) * ᶜρ) * ∂ᶜK_∂ᶜuₕ
     if rs isa RayleighSponge
         @. ∂ᶠu₃_err_∂ᶠu₃ =
             dtγ * (
-                ᶠp_grad_matrix ⋅ DiagonalMatrixRow(-(ᶜkappa_m) * ᶜρ) ⋅
+                ᶠp_grad_matrix * DiagonalMatrixRow(-(ᶜkappa_m) * ᶜρ) *
                 ∂ᶜK_∂ᶠu₃ +
                 DiagonalMatrixRow(-β_rayleigh_u₃(rs, ᶠz, zmax) * (one_C3xACT3,))
             ) - (I_u₃,)
     else
         @. ∂ᶠu₃_err_∂ᶠu₃ =
-            dtγ * ᶠp_grad_matrix ⋅ DiagonalMatrixRow(-(ᶜkappa_m) * ᶜρ) ⋅
+            dtγ * ᶠp_grad_matrix * DiagonalMatrixRow(-(ᶜkappa_m) * ᶜρ) *
             ∂ᶜK_∂ᶠu₃ - (I_u₃,)
     end
     return nothing
@@ -1207,7 +1207,7 @@ function update_sedimentation_jacobian!(matrix, Y, p, dtγ)
 
     # This scratch variable computation could be skipped if no tracers are present
     @. p.scratch.ᶜbidiagonal_adjoint_matrix_c3 =
-        dtγ * (-(ᶜprecipdivᵥ_matrix())) ⋅
+        dtγ * (-(ᶜprecipdivᵥ_matrix())) *
         DiagonalMatrixRow(ᶠinterp(ᶜρ * ᶜJ) / ᶠJ)
 
     MatrixFields.unrolled_foreach(sedimenting_tracer_names(Y)) do ρχₚ_name
@@ -1218,17 +1218,17 @@ function update_sedimentation_jacobian!(matrix, Y, p, dtγ)
         ᶜwₚ = MatrixFields.get_field(p.precomputed, wₚ_name)
         # TODO: come up with read-able names for the intermediate computations...
         @. p.scratch.ᶠband_matrix_wvec =
-            ᶠtop_bias_matrix() ⋅
+            ᶠtop_bias_matrix() *
             DiagonalMatrixRow(ClimaCore.Geometry.WVector(-(ᶜwₚ) / ᶜρ))
         @. ∂ᶜρχₚ_err_∂ᶜρχₚ =
-            p.scratch.ᶜbidiagonal_adjoint_matrix_c3 ⋅
+            p.scratch.ᶜbidiagonal_adjoint_matrix_c3 *
             p.scratch.ᶠband_matrix_wvec - (I,)
 
         phase = condensate_phase(ρχₚ_name)
         if !isnothing(phase)
             ∂ᶜρq_tot_err_∂ᶜρq = matrix[@name(c.ρq_tot), ρχₚ_state_name]
             @. ∂ᶜρq_tot_err_∂ᶜρq =
-                p.scratch.ᶜbidiagonal_adjoint_matrix_c3 ⋅
+                p.scratch.ᶜbidiagonal_adjoint_matrix_c3 *
                 p.scratch.ᶠband_matrix_wvec
 
             # Sedimentation moves (moist air) mass: the same vtt is added
@@ -1236,7 +1236,7 @@ function update_sedimentation_jacobian!(matrix, Y, p, dtγ)
             # `vertical_advection_of_water_tendency!`.
             ∂ᶜρ_err_∂ᶜρq = matrix[@name(c.ρ), ρχₚ_state_name]
             @. ∂ᶜρ_err_∂ᶜρq =
-                p.scratch.ᶜbidiagonal_adjoint_matrix_c3 ⋅
+                p.scratch.ᶜbidiagonal_adjoint_matrix_c3 *
                 p.scratch.ᶠband_matrix_wvec
 
             # This block carries only the grid-mean sedimentation energy flux
@@ -1250,8 +1250,8 @@ function update_sedimentation_jacobian!(matrix, Y, p, dtγ)
             ∂ᶜρe_tot_err_∂ᶜρq = matrix[@name(c.ρe_tot), ρχₚ_state_name]
             e_int_func = internal_energy_function(phase)
             @. ∂ᶜρe_tot_err_∂ᶜρq =
-                p.scratch.ᶜbidiagonal_adjoint_matrix_c3 ⋅
-                p.scratch.ᶠband_matrix_wvec ⋅
+                p.scratch.ᶜbidiagonal_adjoint_matrix_c3 *
+                p.scratch.ᶠband_matrix_wvec *
                 DiagonalMatrixRow(
                     e_int_func(thermo_params, ᶜT) + ᶜΦ + $(Kin(ᶜwₚ, ᶜu)),
                 )
@@ -1312,13 +1312,13 @@ function update_water_tag_sedimentation_block!(matrix, Y, p, tag)
         # parent flux with qₚ φ̂ replaced by qₚ ∂φ̂/∂ρq_tag.
         ᶜdshare = water_tag_sediment_dshare_field(Y, p, tag)
         @. p.scratch.ᶠband_matrix_wvec =
-            ᶠtop_bias_matrix() ⋅ DiagonalMatrixRow(
+            ᶠtop_bias_matrix() * DiagonalMatrixRow(
                 ClimaCore.Geometry.WVector(
                     -(ᶜwₚ) * specific(ᶜρqₚ, Y.c.ρ) * ᶜdshare,
                 ),
             )
         @. ∂ᶜρq_tag_err_∂ᶜρq_tag +=
-            p.scratch.ᶜbidiagonal_adjoint_matrix_c3 ⋅
+            p.scratch.ᶜbidiagonal_adjoint_matrix_c3 *
             p.scratch.ᶠband_matrix_wvec
     end
     return nothing
@@ -1434,17 +1434,17 @@ function update_diffusion_jacobian!(
     if turbconv_model isa AbstractEDMF
         (; ᶠK_h, ᶠK_entr) = p.precomputed
         @. ∂ᶠρχ_dif_flux_∂ᶜχ =
-            DiagonalMatrixRow(ᶠinterp(ᶜρ) * (ᶠK_h + ᶠK_entr)) ⋅
+            DiagonalMatrixRow(ᶠinterp(ᶜρ) * (ᶠK_h + ᶠK_entr)) *
             ᶠgradᵥ_matrix()
     elseif is_smagorinsky_vertical(p.atmos.smagorinsky_lilly)
         @. ∂ᶠρχ_dif_flux_∂ᶜχ =
-            DiagonalMatrixRow(ᶠinterp(ᶜρ) * ᶠinterp(ᶜK_h)) ⋅ ᶠgradᵥ_matrix()
+            DiagonalMatrixRow(ᶠinterp(ᶜρ) * ᶠinterp(ᶜK_h)) * ᶠgradᵥ_matrix()
     else
         @. ∂ᶠρχ_dif_flux_∂ᶜχ =
-            DiagonalMatrixRow(ᶠinterp(ᶜρ) / ᶠinterp(1 / max(ᶜK_h, ϵK))) ⋅
+            DiagonalMatrixRow(ᶠinterp(ᶜρ) / ᶠinterp(1 / max(ᶜK_h, ϵK))) *
             ᶠgradᵥ_matrix()
     end
-    @. ᶜdiffusion_h_matrix = ᶜadvdivᵥ_matrix() ⋅ ∂ᶠρχ_dif_flux_∂ᶜχ
+    @. ᶜdiffusion_h_matrix = ᶜadvdivᵥ_matrix() * ∂ᶠρχ_dif_flux_∂ᶜχ
     if (
         MatrixFields.has_field(Y, @name(c.ρtke)) ||
         !isnothing(p.atmos.turbconv_model) ||
@@ -1453,18 +1453,18 @@ function update_diffusion_jacobian!(
         if turbconv_model isa AbstractEDMF
             (; ᶠK_u, ᶠK_entr) = p.precomputed
             @. ∂ᶠρχ_dif_flux_∂ᶜχ =
-                DiagonalMatrixRow(ᶠinterp(ᶜρ) * (ᶠK_u + ᶠK_entr)) ⋅
+                DiagonalMatrixRow(ᶠinterp(ᶜρ) * (ᶠK_u + ᶠK_entr)) *
                 ᶠgradᵥ_matrix()
         elseif is_smagorinsky_vertical(p.atmos.smagorinsky_lilly)
             @. ∂ᶠρχ_dif_flux_∂ᶜχ =
-                DiagonalMatrixRow(ᶠinterp(ᶜρ) * ᶠinterp(ᶜK_u)) ⋅
+                DiagonalMatrixRow(ᶠinterp(ᶜρ) * ᶠinterp(ᶜK_u)) *
                 ᶠgradᵥ_matrix()
         else
             @. ∂ᶠρχ_dif_flux_∂ᶜχ =
-                DiagonalMatrixRow(ᶠinterp(ᶜρ) / ᶠinterp(1 / max(ᶜK_u, ϵK))) ⋅
+                DiagonalMatrixRow(ᶠinterp(ᶜρ) / ᶠinterp(1 / max(ᶜK_u, ϵK))) *
                 ᶠgradᵥ_matrix()
         end
-        @. ᶜdiffusion_u_matrix = ᶜadvdivᵥ_matrix() ⋅ ∂ᶠρχ_dif_flux_∂ᶜχ
+        @. ᶜdiffusion_u_matrix = ᶜadvdivᵥ_matrix() * ∂ᶠρχ_dif_flux_∂ᶜχ
     end
 
     # Jacobian of the diffusive enthalpy flux
@@ -1497,7 +1497,7 @@ function update_diffusion_jacobian!(
     ∂ᶜρe_tot_err_∂ᶜρ = matrix[@name(c.ρe_tot), @name(c.ρ)]
     @. ∂ᶜρe_tot_err_∂ᶜρ = zero(typeof(∂ᶜρe_tot_err_∂ᶜρ))
     @. ∂ᶜρe_tot_err_∂ᶜρe_tot +=
-        dtγ * ᶜdiffusion_h_matrix ⋅ DiagonalMatrixRow(cp_d / (ᶜcv_m * ᶜρ))
+        dtγ * ᶜdiffusion_h_matrix * DiagonalMatrixRow(cp_d / (ᶜcv_m * ᶜρ))
 
     if MatrixFields.has_field(Y, @name(c.ρq_tot))
         ∂ᶜρe_tot_err_∂ᶜρq_tot = matrix[@name(c.ρe_tot), @name(c.ρq_tot)]
@@ -1516,7 +1516,8 @@ function update_diffusion_jacobian!(
             ᶜq_icl,
         )
         @. ∂ᶜρe_tot_err_∂ᶜρq_tot +=
-            dtγ * ᶜdiffusion_h_matrix ⋅ DiagonalMatrixRow(
+            dtγ * ᶜdiffusion_h_matrix *
+            DiagonalMatrixRow(
                 (
                     ᶜh_eff_plus_Φ -
                     cp_d * (e_int_v0 + Δcv_v * (ᶜT - T_0)) / ᶜcv_m
@@ -1524,7 +1525,7 @@ function update_diffusion_jacobian!(
             )
         @. ∂ᶜρq_tot_err_∂ᶜρ = zero(typeof(∂ᶜρq_tot_err_∂ᶜρ))
         @. ∂ᶜρq_tot_err_∂ᶜρq_tot +=
-            dtγ * ᶜdiffusion_h_matrix ⋅ DiagonalMatrixRow(1 / ᶜρ)
+            dtγ * ᶜdiffusion_h_matrix * DiagonalMatrixRow(1 / ᶜρ)
     end
 
     # Sedimenting mass and number tracers (cloud + precip): K_h diffusion is
@@ -1536,13 +1537,13 @@ function update_diffusion_jacobian!(
     if turbconv_model isa AbstractEDMF
         ᶜtracer_diffusion_matrix = p.scratch.ᶜtridiagonal_matrix_scalar
         @. ∂ᶠρχ_dif_flux_∂ᶜχ =
-            DiagonalMatrixRow(ᶠinterp(ᶜρ) * ᶠK_entr) ⋅ ᶠgradᵥ_matrix()
-        @. ᶜtracer_diffusion_matrix = ᶜadvdivᵥ_matrix() ⋅ ∂ᶠρχ_dif_flux_∂ᶜχ
+            DiagonalMatrixRow(ᶠinterp(ᶜρ) * ᶠK_entr) * ᶠgradᵥ_matrix()
+        @. ᶜtracer_diffusion_matrix = ᶜadvdivᵥ_matrix() * ∂ᶠρχ_dif_flux_∂ᶜχ
         MatrixFields.unrolled_foreach(sedimenting_tracer_names(Y)) do ρχ_name
             ρχ_state_name = center_state_name(ρχ_name)
             ∂ᶜρχ_err_∂ᶜρχ = matrix[ρχ_state_name, ρχ_state_name]
             @. ∂ᶜρχ_err_∂ᶜρχ +=
-                dtγ * ᶜtracer_diffusion_matrix ⋅ DiagonalMatrixRow(1 / ᶜρ)
+                dtγ * ᶜtracer_diffusion_matrix * DiagonalMatrixRow(1 / ᶜρ)
         end
     end
 
@@ -1561,10 +1562,10 @@ function update_diffusion_jacobian!(
         ∂ᶜρχ_err_∂ᶜρχ = matrix[ρχ_state_name, ρχ_state_name]
         if ρχ_name in sedimenting_tag_names
             @. ∂ᶜρχ_err_∂ᶜρχ +=
-                dtγ * ᶜdiffusion_h_matrix ⋅ DiagonalMatrixRow(1 / ᶜρ)
+                dtγ * ᶜdiffusion_h_matrix * DiagonalMatrixRow(1 / ᶜρ)
         else
             @. ∂ᶜρχ_err_∂ᶜρχ =
-                dtγ * ᶜdiffusion_h_matrix ⋅ DiagonalMatrixRow(1 / ᶜρ) - (I,)
+                dtγ * ᶜdiffusion_h_matrix * DiagonalMatrixRow(1 / ᶜρ) - (I,)
         end
     end
 
@@ -1603,13 +1604,13 @@ function update_diffusion_jacobian!(
         @. ∂ᶜρtke_err_∂ᶜρ =
             dtγ * (
                 DiagonalMatrixRow(ᶜdissipation_matrix_diagonal)
-            ) ⋅ DiagonalMatrixRow(ᶜtke / Y.c.ρ)
+            ) * DiagonalMatrixRow(ᶜtke / Y.c.ρ)
         @. ∂ᶜρtke_err_∂ᶜρtke =
             dtγ * (
                 (
                     ᶜdiffusion_u_matrix -
                     DiagonalMatrixRow(ᶜdissipation_matrix_diagonal)
-                ) ⋅ DiagonalMatrixRow(1 / Y.c.ρ) - DiagonalMatrixRow(
+                ) * DiagonalMatrixRow(1 / Y.c.ρ) - DiagonalMatrixRow(
                     tke_dissipation_rate_tendency(
                         ᶜtke,
                         ᶜmixing_length_field,
@@ -1624,7 +1625,7 @@ function update_diffusion_jacobian!(
     )
         ∂ᶜuₕ_err_∂ᶜuₕ = matrix[@name(c.uₕ), @name(c.uₕ)]
         @. ∂ᶜuₕ_err_∂ᶜuₕ =
-            dtγ * DiagonalMatrixRow(1 / ᶜρ) ⋅ ᶜdiffusion_u_matrix - (I,)
+            dtγ * DiagonalMatrixRow(1 / ᶜρ) * ᶜdiffusion_u_matrix - (I,)
     end
     return nothing
 end
@@ -1714,7 +1715,7 @@ function update_sgs_advection_jacobian!(matrix, Y, p, dtγ)
         @. ∂ᶜχʲ_err_∂ᶜχʲ =
             dtγ * (
                 DiagonalMatrixRow(ᶜadvdivᵥ(ᶠu³ʲs.:(1))) -
-                ᶜadvdivᵥ_matrix() ⋅
+                ᶜadvdivᵥ_matrix() *
                 ᶠset_upwind_matrix_bcs(ᶠupwind_matrix(ᶠu³ʲs.:(1)))
             ) - (I,)
     end
@@ -1726,7 +1727,7 @@ function update_sgs_advection_jacobian!(matrix, Y, p, dtγ)
         @. ∂ᶜχʲ_err_∂ᶜχʲ =
             dtγ * (
                 DiagonalMatrixRow(ᶜadvdivᵥ(ᶠu³ʲs.:(1))) -
-                ᶜadvdivᵥ_matrix() ⋅
+                ᶜadvdivᵥ_matrix() *
                 ᶠset_tracer_upwind_matrix_bcs(
                     ᶠtracer_upwind_matrix(ᶠu³ʲs.:(1)),
                 )
@@ -1762,7 +1763,7 @@ function update_sgs_advection_jacobian!(matrix, Y, p, dtγ)
             @. ∂ᶜχʲ_err_∂ᶜχʲ =
                 dtγ * (
                     DiagonalMatrixRow(ᶜadvdivᵥ(ᶠu³ʲs.:(1))) -
-                    ᶜadvdivᵥ_matrix() ⋅
+                    ᶜadvdivᵥ_matrix() *
                     ᶠset_tracer_upwind_matrix_bcs(
                         ᶠtracer_upwind_matrix(ᶠu³ʲs.:(1)),
                     )
@@ -1776,29 +1777,29 @@ function update_sgs_advection_jacobian!(matrix, Y, p, dtγ)
             #   ∂(ρ⁰w⁰χ⁰)/∂χʲ = −ρa¹·w¹/(1−a) and
             #   ∂/∂χʲ of correction = α_lat · ∂a/∂z · ρ¹w¹/(1−a)
             @. ᶠsed_tracer_advection =
-                DiagonalMatrixRow(ᶠinterp(ᶜρʲs.:(1) * ᶜJ) / ᶠJ) ⋅
-                ᶠtop_bias_matrix() ⋅
+                DiagonalMatrixRow(ᶠinterp(ᶜρʲs.:(1) * ᶜJ) / ᶠJ) *
+                ᶠtop_bias_matrix() *
                 DiagonalMatrixRow(-Geometry.WVector(ᶜwʲ))
             @. ᶜtridiagonal_matrix_scalar =
                 dtγ * ifelse(ᶜ∂a∂z < 0,
-                    -(ᶜprecipdivᵥ_matrix()) ⋅ ᶠsed_tracer_advection *
+                    -(ᶜprecipdivᵥ_matrix()) * ᶠsed_tracer_advection *
                     DiagonalMatrixRow(ᶜa) +
                     DiagonalMatrixRow(
                         α_lat * ᶜ∂a∂z * ᶜρʲs.:(1) * ᶜwʲ / max(1 - ᶜa, eps(eltype(ᶜa))),
                     ),
-                    -DiagonalMatrixRow(ᶜa) ⋅ ᶜprecipdivᵥ_matrix() ⋅ ᶠsed_tracer_advection,
+                    -DiagonalMatrixRow(ᶜa) * ᶜprecipdivᵥ_matrix() * ᶠsed_tracer_advection,
                 )
             # sedimentation
             # (pull out common subexpression for performance)
 
             @. ∂ᶜχʲ_err_∂ᶜχʲ +=
-                DiagonalMatrixRow(ᶜinv_ρ̂) ⋅ ᶜtridiagonal_matrix_scalar
+                DiagonalMatrixRow(ᶜinv_ρ̂) * ᶜtridiagonal_matrix_scalar
 
             if !isnothing(condensate_phase(χ_name))
                 ∂ᶜq_totʲ_err_∂ᶜχʲ =
                     matrix[@name(c.sgsʲs.:(1).q_tot), χ_state_name]
                 @. ∂ᶜq_totʲ_err_∂ᶜχʲ =
-                    DiagonalMatrixRow(ᶜinv_ρ̂) ⋅ ᶜtridiagonal_matrix_scalar
+                    DiagonalMatrixRow(ᶜinv_ρ̂) * ᶜtridiagonal_matrix_scalar
             end
         end
     end
@@ -1812,7 +1813,7 @@ Update the Jacobian blocks for implicit vertical diffusion of the updraft
 scalars under the unified grid-mean tendency.
 
 No-op unless `p.atmos.turbconv_model` is a `PrognosticEDMFX`, `diffusion_flag`
-is `UseDerivative()`, and `edmfx_model.sgs_diffusive_flux` is `Val(true)` —
+is `UseDerivative()`, and `edmfx_model.sgs_diffusive_flux` is enabled —
 the same gate as the tendency being linearized. The updraft `mse`, `q_tot`,
 and passive tracer diagonals accumulate the full `ρ(K_h + K_entr)` diffusion
 matrix built by `update_diffusion_jacobian!`, while the sedimenting SGS tracers
@@ -1840,7 +1841,7 @@ function update_sgs_diffusion_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
     # (`edmfx_sgs_diffusive_flux_tendency!` inside the sgs_diffusive_flux
     # branch): without it, the updraft scalar diagonals would carry
     # diffusion terms that have no tendency counterpart.
-    p.atmos.edmfx_model.sgs_diffusive_flux isa Val{true} || return nothing
+    p.atmos.edmfx_model.sgs_diffusive_flux || return nothing
     (; params) = p
     (; ᶜdiffusion_h_matrix) = p.scratch
     ᶜρ = Y.c.ρ
@@ -1852,9 +1853,9 @@ function update_sgs_diffusion_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
     ∂ᶜq_totʲ_err_∂ᶜq_totʲ =
         matrix[@name(c.sgsʲs.:(1).q_tot), @name(c.sgsʲs.:(1).q_tot)]
     @. ∂ᶜmseʲ_err_∂ᶜmseʲ +=
-        dtγ * DiagonalMatrixRow(1 / ᶜρ) ⋅ ᶜdiffusion_h_matrix
+        dtγ * DiagonalMatrixRow(1 / ᶜρ) * ᶜdiffusion_h_matrix
     @. ∂ᶜq_totʲ_err_∂ᶜq_totʲ +=
-        dtγ * DiagonalMatrixRow(1 / ᶜρ) ⋅ ᶜdiffusion_h_matrix
+        dtγ * DiagonalMatrixRow(1 / ᶜρ) * ᶜdiffusion_h_matrix
 
     # Sedimenting SGS tracers: K_h piece contributes 0 to the self-diagonal
     # (lagged ratio distribution). K_e piece (per-species entrainment)
@@ -1866,15 +1867,15 @@ function update_sgs_diffusion_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
         (; ᶠK_entr) = p.precomputed
         ᶜsgs_tracer_diffusion_matrix = p.scratch.ᶜtridiagonal_matrix_scalar
         @. ᶜsgs_tracer_diffusion_matrix =
-            ᶜadvdivᵥ_matrix() ⋅
-            DiagonalMatrixRow(ᶠinterp(ᶜρ) * ᶠK_entr) ⋅ ᶠgradᵥ_matrix()
+            ᶜadvdivᵥ_matrix() *
+            DiagonalMatrixRow(ᶠinterp(ᶜρ) * ᶠK_entr) * ᶠgradᵥ_matrix()
         MatrixFields.unrolled_foreach(
             sedimenting_sgs_tracer_names(Y),
         ) do χ_name
             χ_state_name = sgs_state_name(χ_name)
             ∂ᶜχʲ_err_∂ᶜχʲ = matrix[χ_state_name, χ_state_name]
             @. ∂ᶜχʲ_err_∂ᶜχʲ +=
-                dtγ * DiagonalMatrixRow(1 / ᶜρ) ⋅
+                dtγ * DiagonalMatrixRow(1 / ᶜρ) *
                 ᶜsgs_tracer_diffusion_matrix
         end
     end
@@ -1884,7 +1885,7 @@ function update_sgs_diffusion_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
         χ_state_name = sgs_state_name(χ_name)
         ∂ᶜχʲ_err_∂ᶜχʲ = matrix[χ_state_name, χ_state_name]
         @. ∂ᶜχʲ_err_∂ᶜχʲ +=
-            dtγ * DiagonalMatrixRow(1 / ᶜρ) ⋅ ᶜdiffusion_h_matrix
+            dtγ * DiagonalMatrixRow(1 / ᶜρ) * ᶜdiffusion_h_matrix
     end
     return nothing
 end
@@ -2024,14 +2025,14 @@ were already zeroed by `update_diffusion_jacobian!`; when diffusion is
 explicit they are zeroed here so that both can safely use `+=`.
 
 No-op unless `p.atmos.turbconv_model` is a `PrognosticEDMFX` with
-`edmfx_model.sgs_mass_flux` set to `Val(true)`. Writes
+`edmfx_model.sgs_mass_flux` enabled. Writes
 `ᶠbidiagonal_matrix_ct3` and `ᶜtridiagonal_matrix_scalar` in `p.scratch`,
 mutates `matrix`, and returns `nothing`.
 """
 function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
     (
         p.atmos.turbconv_model isa PrognosticEDMFX &&
-        p.atmos.edmfx_model.sgs_mass_flux isa Val{true}
+        p.atmos.edmfx_model.sgs_mass_flux
     ) || return nothing
     (; params) = p
     (; ᶜΦ) = p.core
@@ -2064,10 +2065,10 @@ function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
     @. ∂ᶜupdraft_mass_flux_∂ᶜscalar =
         DiagonalMatrixRow(
             (ᶠinterp(ᶜρʲs.:(1) * ᶜJ) / ᶠJ) * (ᶠu³ʲs.:(1) - ᶠu³),
-        ) ⋅ ᶠinterp_matrix() ⋅
+        ) * ᶠinterp_matrix() *
         DiagonalMatrixRow(Y.c.sgsʲs.:(1).ρa / ᶜρʲs.:(1))
     @. p.scratch.ᶜtridiagonal_matrix_scalar =
-        dtγ * ᶜadvdivᵥ_matrix() ⋅ ∂ᶜupdraft_mass_flux_∂ᶜscalar
+        dtγ * ᶜadvdivᵥ_matrix() * ∂ᶜupdraft_mass_flux_∂ᶜscalar
 
     # Derivative of total energy tendency with respect to updraft MSE
     ## grid-mean ρe_tot
@@ -2076,7 +2077,7 @@ function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
 
     ᶜq_tot = @. lazy(specific(Y.c.ρq_tot, Y.c.ρ))
     @. ∂ᶜρe_tot_err_∂ᶜρ +=
-        p.scratch.ᶜtridiagonal_matrix_scalar ⋅
+        p.scratch.ᶜtridiagonal_matrix_scalar *
         DiagonalMatrixRow(
             (
                 -(ᶜh_tot) +
@@ -2087,7 +2088,7 @@ function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
 
     ∂ᶜρe_tot_err_∂ᶜρq_tot = matrix[@name(c.ρe_tot), @name(c.ρq_tot)]
     @. ∂ᶜρe_tot_err_∂ᶜρq_tot +=
-        p.scratch.ᶜtridiagonal_matrix_scalar ⋅
+        p.scratch.ᶜtridiagonal_matrix_scalar *
         DiagonalMatrixRow(ᶜ∂p∂ρq_tot / ᶜρ)
 
     if p.atmos.microphysics_model isa Union{
@@ -2101,7 +2102,7 @@ function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
             ∂ᶜρe_tot_err_∂ᶜρq =
                 matrix[@name(c.ρe_tot), center_state_name(ρq_name)]
             @. ∂ᶜρe_tot_err_∂ᶜρq +=
-                p.scratch.ᶜtridiagonal_matrix_scalar ⋅
+                p.scratch.ᶜtridiagonal_matrix_scalar *
                 DiagonalMatrixRow(
                     (ᶜkappa_m * (e_int_q - ∂cv∂q * (ᶜT - T_0)) - R_v * ᶜT) / ᶜρ,
                 )
@@ -2110,7 +2111,7 @@ function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
 
     ∂ᶜρe_tot_err_∂ᶜρe_tot = matrix[@name(c.ρe_tot), @name(c.ρe_tot)]
     @. ∂ᶜρe_tot_err_∂ᶜρe_tot +=
-        p.scratch.ᶜtridiagonal_matrix_scalar ⋅
+        p.scratch.ᶜtridiagonal_matrix_scalar *
         DiagonalMatrixRow((1 + ᶜkappa_m) / ᶜρ)
 
     ∂ᶜρe_tot_err_∂ᶜmseʲ =
@@ -2120,12 +2121,12 @@ function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
 
     ## grid-mean ρq_tot
     @. ∂ᶜρq_tot_err_∂ᶜρ +=
-        p.scratch.ᶜtridiagonal_matrix_scalar ⋅
+        p.scratch.ᶜtridiagonal_matrix_scalar *
         DiagonalMatrixRow(-(ᶜq_tot) / ᶜρ)
 
     ∂ᶜρq_tot_err_∂ᶜρq_tot = matrix[@name(c.ρq_tot), @name(c.ρq_tot)]
     @. ∂ᶜρq_tot_err_∂ᶜρq_tot +=
-        p.scratch.ᶜtridiagonal_matrix_scalar ⋅
+        p.scratch.ᶜtridiagonal_matrix_scalar *
         DiagonalMatrixRow(1 / ᶜρ)
 
     ∂ᶜρq_tot_err_∂ᶜq_totʲ =
@@ -2136,7 +2137,8 @@ function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
     # grid-mean ∂/∂(u₃ʲ)
     ∂ᶜρe_tot_err_∂ᶠu₃ = matrix[@name(c.ρe_tot), @name(f.u₃)]
     @. ∂ᶜρe_tot_err_∂ᶠu₃ +=
-        dtγ * ᶜadvdivᵥ_matrix() ⋅ DiagonalMatrixRow(
+        dtγ * ᶜadvdivᵥ_matrix() *
+        DiagonalMatrixRow(
             ᶠinterp(
                 (Y.c.sgsʲs.:(1).mse + ᶜKʲs.:(1) - ᶜh_tot) *
                 ᶜρʲs.:(1) *
@@ -2147,7 +2149,8 @@ function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
 
     ∂ᶜρq_tot_err_∂ᶠu₃ = matrix[@name(c.ρq_tot), @name(f.u₃)]
     @. ∂ᶜρq_tot_err_∂ᶠu₃ +=
-        dtγ * ᶜadvdivᵥ_matrix() ⋅ DiagonalMatrixRow(
+        dtγ * ᶜadvdivᵥ_matrix() *
+        DiagonalMatrixRow(
             ᶠinterp(
                 (Y.c.sgsʲs.:(1).q_tot - ᶜq_tot) *
                 ᶜρʲs.:(1) *
@@ -2186,12 +2189,13 @@ function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
 
             ∂ᶜρχ_err_∂ᶜρχ = matrix[ρχ_state_name, ρχ_state_name]
             @. ∂ᶜρχ_err_∂ᶜρχ +=
-                p.scratch.ᶜtridiagonal_matrix_scalar ⋅
+                p.scratch.ᶜtridiagonal_matrix_scalar *
                 DiagonalMatrixRow(1 / ᶜρ)
 
             ∂ᶜρχ_err_∂ᶠu₃ = matrix[ρχ_state_name, @name(f.u₃)]
             @. ∂ᶜρχ_err_∂ᶠu₃ =
-                dtγ * ᶜadvdivᵥ_matrix() ⋅ DiagonalMatrixRow(
+                dtγ * ᶜadvdivᵥ_matrix() *
+                DiagonalMatrixRow(
                     ᶠinterp(
                         (ᶜχʲ - specific(ᶜρχ, Y.c.ρ)) *
                         ᶜρʲs.:(1) *

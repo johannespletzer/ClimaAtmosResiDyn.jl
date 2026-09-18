@@ -18,6 +18,16 @@ import ClimaTimeSteppers as CTS
 # converges, which is the test that separates a solver from a bookkeeping error.
 
 const FT = Float64
+
+# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# the model. The parameters follow the model's microphysics, as the removed
+# `AtmosSimulation{FT}` constructor chose them.
+function column_model(; kwargs...)
+    grid = CA.ColumnGrid(FT; z_elem = 10)
+    (; microphysics_model) = CA.AtmosModel(grid; kwargs...)
+    params = CA.ClimaAtmosParameters(FT; microphysics_model)
+    return CA.AtmosModel(grid; params, kwargs...)
+end
 const ATMOS = PB.ATMOSPHERE_ENDPOINT_GROUP
 
 # A provisional tolerance for these tests: no floor, no relative term, and the
@@ -38,12 +48,11 @@ function column_simulation(;
     update_constrain_state_every = "step",
     max_iters = 1,
     approximate_solve_iters = 1,
-    model = CA.AtmosModel(),
+    model = column_model(),
     kwargs...,
 )
-    return CA.AtmosSimulation{FT}(;
-        model,
-        grid = CA.ColumnGrid(FT; z_elem = 10),
+    return CA.AtmosSimulation(
+        model;
         dt = 60,
         t_end = 600,
         job_id = "parent_budget_implicit",
@@ -297,7 +306,7 @@ defect_energy(adapter) = sum(
         numerics = CA.AtmosNumerics(; energy_q_tot_upwinding = :none)
         simulation = column_simulation(;
             parent_budget_mode = "audit",
-            model = CA.AtmosModel(; numerics),
+            model = column_model(; numerics),
         )
         adapter = adapter_of(simulation)
         @test isempty(adapter.template.per_hook[:T_post_imp!])

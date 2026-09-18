@@ -563,7 +563,7 @@ energy_tracers:
   - `config/model_configs/baroclinic_wave_tagged_tracers.yml` — the same for energy tags
   - `config/model_configs/baroclinic_wave_energy_source_tags.yml` — energy source tags laid out for the per-process checks, with records
 
-## API
+## Tracer configuration API
 
 ```@docs
 ClimaAtmos.NAMED_TAG_REGIONS

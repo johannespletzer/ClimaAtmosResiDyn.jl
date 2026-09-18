@@ -5,7 +5,7 @@ main
 ----
 - ![][badge-🐛bugfix] Stop tracking `.buildkite/LocalPreferences.toml`. It recorded a Levante `libmpi` path and a CUDA 13 pin, so every checkout on another cluster inherited them, and there every package downstream of MPI failed to precompile until the setup script overwrote the file. The file is now ignored. Run `runscripts/setup-julia-levante.tcsh {cpu,gpu}`, or the setup script for your machine, before instantiating `.buildkite`. `AGENTS.md` says so and asks never to commit the file.
 - ![][badge-💥breaking] The energy source tags are now safe by default. **`energy_source_tags` without `energy_source_tag_offset` is refused at configuration time**, with the numbers a run needs to choose one; `energy_source_tag_offset: 0` keeps the tags on `ρe_tot` exactly as before. With a pure region tag, `energy_source_closure_check` now runs by default, once a day, without a tolerance: the family has no default `tolerance` any more (it was 1e-6) and `abort_above` stays off, so only the existing warning about a non-positive partitioned total can fire. The block gains `spin_up` (`1hours` by default, `~` for none), after which the check takes a reference residual, and `energy_source_tag_closure.csv` gains three columns, `residual_at_spin_up`, `residual_since_spin_up` and `relative_since_spin_up`, so anything parsing that file by column count needs updating. With `audit` on, `energy_source_tag_audit.csv` gains five columns: `source_negative`, `source_negative_relative`, `source_minimum`, `repair_moved` and `repair_moved_relative`. The repair's ledger `e_src_fix_<name>` joins the default output. At configuration time the tags now warn about a process that changes `ρe_tot` and that no tag follows, and about a `tracer_nonnegativity_method` or a limiter whose clip of `ρq_tot` changes `ρe_tot` outside every bracket. `config/model_configs/baroclinic_wave_energy_source_tags.yml` is a worked example.
-- ![][badge-🐛bugfix] Hold Aqua below 0.8.17, so that the persistent-task check keeps working. 0.8.17 walks the dependency tree itself, with `Base.locate_package` for every name in each package's `[deps]` section, and does not skip the names that also stand in `[weakdeps]`. Pkg keeps a weak dependency out of the manifest, so the walk asks for a package that is not there: both `infrastructure` jobs failed with "Unable to locate `ChangesOfVariables`, a dependency of `LogExpFunctions`". Listing the missing packages as test dependencies does not end, because the idiom is common: with `ChangesOfVariables` added the walk stopped at `RecipesBase`, a weak dependency of `IntervalSets`. 0.8.16 resolved the environment through Pkg, which filters weak dependencies. Raise the bound once Aqua skips them in that walk.
+- ![][badge-🐛bugfix] Hold Aqua below 0.8.17, so that the persistent-task check keeps working. 0.8.17 walks the dependency tree itself, with `Base.locate_package` for every name in each package's `[deps]` section, and does not skip the names that also stand in `[weakdeps]`. Pkg keeps a weak dependency out of the manifest, so the walk asks for a package that is not there: both `infrastructure` jobs failed with "Unable to locate `ChangesOfVariables`, a dependency of `LogExpFunctions`". Listing the missing packages as test dependencies does not end, because the idiom is common: with `ChangesOfVariables` added the walk stopped at `RecipesBase`, a weak dependency of `IntervalSets`. 0.8.16 resolved the environment through Pkg, which filters weak dependencies. The merge of upstream v0.42.11 takes upstream's bound, `0.8.9 - 0.8.16, 0.8.18`: 0.8.18 no longer fails on such a weak dependency (Aqua #400), and 0.8.17 stays excluded.
 - ![][badge-✨feature/enhancement] Add `energy_source_tag_transport`, `tracer` by default. `enthalpy` is an audit. In vertical and horizontal advection and in hyperdiffusion, each energy source tag takes its share of the parent's own flux of `ρe_tot + c·ρ`, so the partition's fluxes add up to the parent's and transport adds nothing to `e_src_res`, up to the timing of the step. It needs `energy_source_tag_offset` and is refused without one. The default path is unchanged.
 - ![][badge-✨feature/enhancement] The energy source tags now follow precipitation sedimentation under 1-moment and 2-moment microphysics. Sedimentation moves energy between levels, so the tags move with the falling water rather than being credited with new energy. Each face's energy flux, with `c` times the mass it carries under an offset, is shared out by the shares of the cell that loses the energy, which is the cell below where the water carries negative energy, as ice can. The partition tags' fluxes add up to the parent's exactly. It needs an `energy_source_tag_offset`, and warns without one. Under 0-moment microphysics nothing sediments and nothing changes.
 - ![][badge-✨feature/enhancement] The energy source tags and the process records now see precipitation on the implicit path. Under 0-moment microphysics, which is stepped implicitly by default, rain leaves the column through the implicit microphysics sink, and that sink is now bracketed for both families, as it already was for the water tags. The records also take precipitation sedimentation from the implicit path. The source tags do not, because sedimentation moves energy between levels and a bracket would count what arrives as new energy. The `ρe_tag_*` family is unchanged.
@@ -88,6 +88,33 @@ main
 - ![][badge-✨feature/enhancement] Add `post_processing/plot_tracer_burdens.jl`, which plots every tracer's burden against time in one panel at 300 dpi. Colour encodes the height box and dash pattern the latitude box, so the legend has `n_latitude + n_height` entries rather than their product — the default configuration carries 48 tracers, which no categorical palette can distinguish. Written automatically by the experiment script and the CI job.
 - ![][badge-✨feature/enhancement] Register the stratospheric passive tracer diagnostics from the model at simulation setup instead of statically at package load. The source-region grid previously had to fit a fixed set of variables registered when ClimaAtmos loaded, which capped it at 12 latitude by 12 height bands; it is now unbounded, and a run that carries no passive tracers no longer pays for their diagnostics. Mirrors how the tagged tracers already register theirs.
 - ![][badge-✨feature/enhancement] Diagnose the WMO lapse-rate (thermal) tropopause online from the model temperature, as the new `ztrop` diagnostic and as the lower boundary of the stratospheric passive tracers. Two column sweeps, so it is GPU-compatible; columns where no tropopause exists fall back to a latitude-dependent climatology.
+
+0.42.11
+-------
+
+- [#4802](https://github.com/CliMA/ClimaAtmos.jl/pull/4802) ![][badge-✨feature/enhancement] Horizontal resolved-gradient (geometric) SGS variance term
+  `c_g (c_Δx Δx_h)² |∇_h ψ|²` for the SGS quadrature (`sgs_variance_horizontal_scale_factor` switches it on), with a closure-validity bound on
+  σ_q (`sgs_variance_max_rel_std`); The new parameters default to the historical closure.
+- [#4828](https://github.com/CliMA/ClimaAtmos.jl/pull/4828) Update to ClimaTimeSteppers v1 and update benchmark test
+
+0.42.10
+-------
+- [#4803](https://github.com/CliMA/ClimaAtmos.jl/pull/4803)
+  ![][badge-✨feature/enhancement] Generate comparison plots for the
+  reproducibility tests, so a failing job shows the reference and the candidate
+  side by side instead of only the RMSE table.
+- [#4800](https://github.com/CliMA/ClimaAtmos.jl/pull/4800)
+  ![][badge-🔥behavioralΔ] Add tke source due to entr/detr mixing; delete
+  stability-biased buoygrad at cell centers and use unbiased buoygrad instead.
+
+- [#4737](https://github.com/CliMA/ClimaAtmos.jl/pull/4737) ![][badge-💥breaking] `AtmosModel` is now built on a grid and owns the
+  parameters and case setup. `AtmosSimulation` wraps a model and carries only
+  run control:
+
+  ```julia
+  model = AtmosModel(grid; params, setup, microphysics_model = ..., ...)
+  sim   = AtmosSimulation(model; dt, t_end, ...)
+  ```
 
 0.42.9
 -------

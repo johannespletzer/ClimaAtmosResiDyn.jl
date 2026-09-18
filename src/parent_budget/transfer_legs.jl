@@ -148,7 +148,7 @@ radiation_flux_field(p, _, _) = nothing
 # The upward radiative flux at one face level as a scalar boundary field.
 function radiation_level(flux, level)
     layer = Fields.level(flux, level)
-    return eltype(layer) <: Geometry.AxisVector ? layer.components.data.:1 : layer
+    return eltype(layer) <: Geometry.Tensor{1} ? layer.components.data.:1 : layer
 end
 
 surface_level(Y) = half

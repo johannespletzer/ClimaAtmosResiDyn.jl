@@ -66,16 +66,10 @@ const T2 = 290
         overrides_field,
         p.atmos.surface.surface_albedo,
     )
-    # AtmosModel is immutable, so swapping in `new_surface` requires rebuilding
-    # the whole struct positionally — the kwarg form would reset every other
-    # field (microphysics, radiation, ...) to its default and lose the config.
-    a = p.atmos
-    new_atmos = CA.AtmosModel(
-        a.water, a.scm_setup, a.radiation, a.turbconv, a.prescribed_flow,
-        a.gravity_wave, a.vertical_diffusion, a.sponge, new_surface, a.numerics,
-        a.chemistry, a.tagging, a.cosp, a.disable_surface_flux_tendency,
-    )
-    @test new_atmos.tagging === a.tagging
+    # Swap in `new_surface` with the copy-with-changes constructor: untouched
+    # fields (microphysics, radiation, cosp, ...) are preserved, not reset.
+    new_atmos = CA.AtmosModel(p.atmos; surface = new_surface)
+    @test new_atmos.tagging === p.atmos.tagging
     p_overwritten = CA.AtmosCache(
         p.dt,
         new_atmos,

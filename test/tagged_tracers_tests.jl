@@ -1,6 +1,11 @@
 using Test
 import ClimaAtmos as CA
 
+# `AtmosModel` takes a grid. These tests read only the model's tagging fields,
+# so the smallest column serves.
+column_atmos_model(; kwargs...) =
+    CA.AtmosModel(CA.ColumnGrid(Float64; z_elem = 10); kwargs...)
+
 @testset "Tagged tracers" begin
     for FT in (Float32, Float64)
         @testset "Smooth spatial masks ($FT)" begin
@@ -463,13 +468,13 @@ import ClimaAtmos as CA
 
     @testset "AtmosModel integration" begin
         # Disabled by default
-        model = CA.AtmosModel()
+        model = column_atmos_model()
         @test isnothing(model.tagging_model)
         @test isnothing(model.tagging.tagging_model)
 
         # Enabled via the grouped kwarg interface
         tags = (CA.TracerTag{:rad}(nothing, :radiation),)
-        model = CA.AtmosModel(; tagging_model = CA.TaggingModel(tags))
+        model = column_atmos_model(; tagging_model = CA.TaggingModel(tags))
         @test model.tagging_model isa CA.TaggingModel
         @test CA.tag_name(model.tagging_model.tags[1]) == :rad
     end
