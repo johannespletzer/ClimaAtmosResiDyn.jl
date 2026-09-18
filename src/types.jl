@@ -2538,7 +2538,8 @@ function EnergySourceTaggingModel(
 )
     !(transport isa TracerEnergySourceTransport) && isnothing(offset) &&
         error(
-            "`energy_source_tag_transport: enthalpy` needs \
+            "`energy_source_tag_transport: \
+            $(energy_source_transport_text(transport))` needs \
             `energy_source_tag_offset`. Each tag moves by its share of the total \
             the tags partition, and a share is zero wherever that total is not \
             positive, which under the default energy reference is much of the \

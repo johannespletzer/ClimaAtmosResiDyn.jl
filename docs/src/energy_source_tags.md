@@ -407,6 +407,31 @@ two differ by that linearisation. In the tag-closure experiments this made the
 audit's residual in its first hour, during the initial adjustment, and a
 converged Newton solve removed 99% of it on a column.
 
+### Following the parent's implicit increment, a prototype
+
+`energy_source_tag_transport: enthalpy_increment` is the audit with its
+implicit part rebuilt. A tag that follows an implicit term by its tendency, as
+the audit does for sedimentation and the sub-grid mass flux, lags the parent's
+Newton solve. For a stiff term, such as the EDMF eddy diffusion, that gap grows
+step by step. In this mode the tags take the parent's own increment instead:
+
+  - at the start of each implicit stage the model keeps `ρe_tot`, `ρ` and the
+    partition's sum;
+  - after the Newton solve, each cell's mismatch between the parent's
+    increment of `E` and the partition's is formed;
+  - the part of the mismatch that changes a column's total cannot move within
+    the column; it stays where it arises, in proportion to the mismatch, and in
+    `e_src_res`;
+  - the rest integrates up the column into a face flux that is zero at both
+    boundaries, and each tag takes that flux times its share in the cell it
+    leaves.
+
+The tags then take no explicit share of the vertical advection, which the
+parent does implicitly and the increment carries. The model is untouched. It
+needs an offset, and an ARS algorithm such as the default ARS343: the
+correction runs after each Newton solve, so every implicit tendency must go
+through one, and the model refuses other algorithms.
+
 Everything else the tags see stays as under `tracer`: the brackets, the repair,
 sedimentation, vertical diffusion, the sponges and the SGS closures. Under
 `prognostic_edmfx` the tags take their shares of the sub-grid mass flux in both

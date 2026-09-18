@@ -172,6 +172,10 @@ when they are disabled. Contains:
   - `ᶠenergy_source_interior`: one on every face but the bottom one, where it
     is zero. `sediment_energy_source_tags!` uses it to keep the lowest cell as
     the donor at the surface, where there is no cell below.
+  - Under `energy_source_tag_transport: enthalpy_increment` only, the fields of
+    `snapshot_energy_source_increment!` and `correct_energy_source_increment!`:
+    the snapshots of `ρe_tot`, `ρ` and the partition's sum at the start of an
+    implicit stage, the stage weight `dtγ`, and the correction's work fields.
 """
 _energy_source_tagging_cache(Y, ::Nothing) = nothing
 function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
@@ -1159,7 +1163,8 @@ _energy_source_share_field(ᶜρe_src, ᶜparent, ᶜnorm, tag) =
     moves_as_enthalpy(model)
 
 Whether the energy source tags of `model` move by their shares of the parent's
-own flux, which `energy_source_tag_transport: enthalpy` selects. `false` when
+own flux, which `energy_source_tag_transport: enthalpy` and `enthalpy_increment`
+select. `false` when
 energy source tagging is off, and under the default `tracer` transport. The
 answer is a property of the model's type, so it folds away at compile time.
 """
@@ -1219,12 +1224,11 @@ moves `ρe_tot` vertically in the implicit step. With one Newton iteration
 the stage's first guess, not its flux at the solved state, and its upwind
 correction comes after the solve. The two differ by that linearisation, and the
 difference lands in `e_src_res`. A no-op under the default `tracer` transport,
-where the generic tracer loop moves the tags.
+where the generic tracer loop moves the tags. A no-op too under
+`enthalpy_increment`: there the tags take the parent's implicit increment,
+which carries its vertical advection (see `correct_energy_source_increment!`).
 """
 enthalpy_vertical_advection_of_energy_source_tags!(Yₜ, Y, p) =
-# When the tags follow the parent's implicit increment, that increment
-# carries the parent's vertical advection, which is implicit, so the tags
-# take no explicit share of it.
     moves_as_enthalpy(p.atmos.energy_source_tagging_model) &&
     !follows_implicit_increment(p.atmos.energy_source_tagging_model) ?
     _enthalpy_vertical_advection!(
@@ -1503,7 +1507,8 @@ follows_implicit_increment(model::EnergySourceTaggingModel) =
 _energy_source_increment_cache(Y, model) =
     follows_implicit_increment(model) ?
     (;
-        ᶜe_src_E_snapshot = similar(Y.c.ρ),
+        ᶜe_src_ρe_tot_snapshot = similar(Y.c.ρ),
+        ᶜe_src_ρ_snapshot = similar(Y.c.ρ),
         ᶜe_src_partition_snapshot = similar(Y.c.ρ),
         ᶜe_src_mismatch = similar(Y.c.ρ),
         ᶜe_src_abs_mismatch = similar(Y.c.ρ),
@@ -1534,9 +1539,10 @@ end
 """
     snapshot_energy_source_increment!(Y, p, dtγ)
 
-At the start of an implicit stage, keep `E = ρe_tot + c·ρ`, the sum of the
-partition tags and the stage's weight `dtγ`, for
-`correct_energy_source_increment!`. Called first thing in
+At the start of an implicit stage, keep `ρe_tot`, `ρ`, the sum of the partition
+tags and the stage's weight `dtγ`, for `correct_energy_source_increment!`.
+`ρe_tot` and `ρ` are kept apart, and not as `E = ρe_tot + c·ρ`, so that in
+Float32 the parent's increment is not the difference of two large totals. Called first thing in
 `initialize_implicit_stage_problem!`, where `Y` is still the stage value before
 the solve. A no-op unless the tags follow the parent's implicit increment.
 """
@@ -1549,8 +1555,10 @@ snapshot_energy_source_increment!(Y, p, dtγ) =
         p.atmos.energy_source_tagging_model,
     ) : nothing
 function _snapshot_energy_source_increment!(Y, p, dtγ, model)
-    (; ᶜe_src_E_snapshot, ᶜe_src_partition_snapshot, e_src_dtγ) = p.tagging
-    ᶜe_src_E_snapshot .= _energy_source_parent_field(Y, model.offset)
+    (; ᶜe_src_ρe_tot_snapshot, ᶜe_src_ρ_snapshot) = p.tagging
+    (; ᶜe_src_partition_snapshot, e_src_dtγ) = p.tagging
+    @. ᶜe_src_ρe_tot_snapshot = Y.c.ρe_tot
+    @. ᶜe_src_ρ_snapshot = Y.c.ρ
     _energy_source_partition_sum!(
         ᶜe_src_partition_snapshot,
         Y.c,
@@ -1581,7 +1589,8 @@ left in place. A tag that carries a source takes its own share of the flux.
 """
 function correct_energy_source_increment!(dY, U, p)
     model = p.atmos.energy_source_tagging_model
-    (; ᶜe_src_E_snapshot, ᶜe_src_partition_snapshot, e_src_dtγ) = p.tagging
+    (; ᶜe_src_ρe_tot_snapshot, ᶜe_src_ρ_snapshot) = p.tagging
+    (; ᶜe_src_partition_snapshot, e_src_dtγ) = p.tagging
     (; ᶜe_src_mismatch, ᶜe_src_abs_mismatch, ᶠe_src_increment_flux) = p.tagging
     (; ᶠe_src_mismatch_integral, ᶠe_src_abs_mismatch_integral) = p.tagging
     (; e_src_mismatch_total, e_src_abs_mismatch_total) = p.tagging
@@ -1593,10 +1602,9 @@ function correct_energy_source_increment!(dY, U, p)
     # which moves no tag.
     _energy_source_partition_sum!(ᶜm, U.c, dY.c, dtγ, model.tags)
     @. ᶜm =
-        (
-            U.c.ρe_tot + dtγ * dY.c.ρe_tot + c * (U.c.ρ + dtγ * dY.c.ρ) -
-            ᶜe_src_E_snapshot
-        ) - (ᶜm - ᶜe_src_partition_snapshot)
+        (U.c.ρe_tot + dtγ * dY.c.ρe_tot - ᶜe_src_ρe_tot_snapshot) +
+        c * (U.c.ρ + dtγ * dY.c.ρ - ᶜe_src_ρ_snapshot) -
+        (ᶜm - ᶜe_src_partition_snapshot)
     @. ᶜe_src_abs_mismatch = abs(ᶜm)
     Operators.column_integral_indefinite!(ᶠe_src_mismatch_integral, ᶜm)
     Operators.column_integral_indefinite!(
@@ -1632,6 +1640,55 @@ function correct_energy_source_increment!(dY, U, p)
         model.tags,
     )
     return nothing
+end
+
+"""
+    check_energy_source_increment_supported(atmos, ode_algo, T_imp!)
+
+Refuse `energy_source_tag_transport: enthalpy_increment` where the tags would
+miss part of the parent's implicit tendency. The tags take the parent's
+increment after each Newton solve. So every implicit tendency must go through
+one: the algorithm must be an IMEX algorithm with a Newton method, the flow must
+not be prescribed, and a stage whose implicit diagonal is zero must not use
+the implicit tendency in a later stage or in the step's result. The ARS family,
+such as the default ARS343, meets this; SSP333 and the IMKG algorithms do not,
+and neither do explicit or Rosenbrock algorithms. Called when the integrator is
+built. A no-op for every other transport.
+"""
+check_energy_source_increment_supported(atmos, ode_algo, T_imp!) =
+    follows_implicit_increment(atmos.energy_source_tagging_model) ?
+    _check_energy_source_increment_supported(ode_algo, T_imp!) : nothing
+function _check_energy_source_increment_supported(ode_algo, T_imp!)
+    reason =
+        if isnothing(T_imp!)
+            "the flow is prescribed, so there is no implicit tendency"
+        elseif !(ode_algo isa CTS.IMEXAlgorithm) ||
+               isnothing(ode_algo.newtons_method)
+            "`ode_algo` is not an IMEX algorithm with a Newton method"
+        else
+            (; a_imp, b_imp) = ode_algo.tableau
+            s = length(b_imp)
+            unsolved = filter(
+                i ->
+                    iszero(a_imp[i, i]) && (
+                        !iszero(b_imp[i]) ||
+                        any(j -> !iszero(a_imp[j, i]), 1:s)
+                    ),
+                1:s,
+            )
+            isempty(unsolved) ? nothing :
+            "stages $(join(unsolved, ", ")) of `ode_algo` use the implicit \
+            tendency without a solve"
+        end
+    isnothing(reason) && return nothing
+    error(
+        "`energy_source_tag_transport: enthalpy_increment` needs every \
+        implicit tendency to go through a Newton solve, after which the tags \
+        take the parent's increment. Here $reason, so the tags would miss \
+        that part of the parent's vertical transport. Use an ARS algorithm, \
+        such as the default ARS343, or `energy_source_tag_transport: \
+        enthalpy`.",
+    )
 end
 
 """

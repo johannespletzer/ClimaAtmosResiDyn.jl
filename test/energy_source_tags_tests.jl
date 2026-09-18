@@ -474,6 +474,61 @@ column_atmos_model(; kwargs...) =
             "Enthalpy",
         )
         @test_throws ErrorException CA.energy_source_transport_from_config(true)
+        @test CA.energy_source_transport_from_config("enthalpy_increment") isa
+              CA.EnthalpyIncrementEnergySourceTransport
+    end
+
+    # The increment mode takes the parent's increment after each Newton solve,
+    # so it refuses a stepper that applies an implicit tendency without one.
+    @testset "The increment mode refuses steppers it cannot follow" begin
+        CTS = CA.CTS
+        tags = (
+            CA.EnergySourceTag{:strat}(CA.TanhAltitudeRegion(750.0, 100.0)),
+            CA.EnergySourceTag{:tropo}(
+                CA.TanhAltitudeRegion(750.0, 100.0, false),
+            ),
+        )
+        atmos(transport) = (;
+            energy_source_tagging_model = CA.EnergySourceTaggingModel(
+                tags,
+                50000.0;
+                transport,
+            )
+        )
+        increment = atmos(CA.EnthalpyIncrementEnergySourceTransport())
+        newton = CTS.NewtonsMethod()
+        T_imp! = (Yₜ, Y, p, t) -> nothing
+        check = CA.check_energy_source_increment_supported
+        @test isnothing(check(increment, CTS.IMEXAlgorithm(CTS.ARS343(), newton), T_imp!))
+        @test isnothing(check(increment, CTS.IMEXAlgorithm(CTS.ARS222(), newton), T_imp!))
+        @test_throws r"implicit tendency without a solve" check(
+            increment,
+            CTS.IMEXAlgorithm(CTS.SSP333(), newton),
+            T_imp!,
+        )
+        @test_throws r"flow is prescribed" check(
+            increment,
+            CTS.IMEXAlgorithm(CTS.ARS343(), newton),
+            nothing,
+        )
+        @test_throws r"not an IMEX algorithm with a Newton method" check(
+            increment,
+            CTS.ExplicitAlgorithm(CTS.SSP33ShuOsher()),
+            T_imp!,
+        )
+        # Every other transport is left alone.
+        @test isnothing(
+            check(
+                atmos(CA.EnthalpyEnergySourceTransport()),
+                CTS.IMEXAlgorithm(CTS.SSP333(), newton),
+                T_imp!,
+            ),
+        )
+        # And the model refuses the mode without an offset.
+        @test_throws r"enthalpy_increment` needs `energy_source_tag_offset`" CA.EnergySourceTaggingModel(
+            tags;
+            transport = CA.EnthalpyIncrementEnergySourceTransport(),
+        )
     end
 
     @testset "Repair on fields ($FT)" for FT in (Float32, Float64)

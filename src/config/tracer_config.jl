@@ -1299,7 +1299,8 @@ function AtmosTagging(config::AtmosConfig)
                 `energy_source_tags`, or drop `energy_source_tag_offset`.",
             )
             !(source_transport isa TracerEnergySourceTransport) && error(
-                "`energy_source_tag_transport: enthalpy` is set but \
+                "`energy_source_tag_transport: \
+                $(energy_source_transport_text(source_transport))` is set but \
                 `energy_source_tags` is not, so there are no tags for it to \
                 move. Configure `energy_source_tags`, or drop the key.",
             )
