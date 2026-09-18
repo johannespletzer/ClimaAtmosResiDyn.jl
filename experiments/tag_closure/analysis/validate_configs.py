@@ -72,10 +72,16 @@ BUILD_SPLIT = {
     "p4_column_0m_tags",
     "p4_column_0m_tags_vdiff",
 }
-# The runs allowed a limiter, and the runs allowed Float32: A4, and V3, which
-# tests Float32 with the energy source tags.
+# The runs allowed a limiter, and the runs allowed Float32: A4, V3, which
+# tests Float32 with the energy source tags, and the Float32 D4 runs.
 LIMITER_OK = {"a5_sphere_limiter", "b3_limiter"}
-FLOAT32_OK = {"a4_float32", "v3_sphere_float32", "d4_column_edmf_vd_float32"}
+FLOAT32_OK = {
+    "a4_float32",
+    "v3_sphere_float32",
+    "d4_column_edmf_vd_float32",
+    "g1_base_d4_float32",
+    "g1_inc_d4_float32",
+}
 # Runs that must set `audit: true` on their closure block, and no others. The
 # audit costs a handful of global reductions and answers a question that run
 # has and the rest do not; see each config's own comment. It is checked in both
@@ -116,6 +122,10 @@ AUDIT_REQUIRED = {
     "c1c_opt1_d4_enthalpy",
     "c1c_opt1_newton_d4_enthalpy",
     "inc_d4_enthalpy_increment",
+    "g1_ref_newton_d4",
+    "g1_inc_newton_d4",
+    "g1_base_d4_float32",
+    "g1_inc_d4_float32",
     "c1c_opt2_d4_enthalpy",
     "c1c_opt3_d4_enthalpy",
     "d4_column_edmf_vd",
@@ -156,6 +166,10 @@ STATE_CHECK = {
     "c1c_opt1_d4_enthalpy",
     "c1c_opt1_newton_d4_enthalpy",
     "inc_d4_enthalpy_increment",
+    "g1_ref_newton_d4",
+    "g1_inc_newton_d4",
+    "g1_base_d4_float32",
+    "g1_inc_d4_float32",
     "c1c_opt2_d4_enthalpy",
     "c1c_opt3_d4_enthalpy",
     "d4_column_edmf_vd",
@@ -184,6 +198,10 @@ DENSITY_CHECK = {
     "c1c_opt1_d4_enthalpy",
     "c1c_opt1_newton_d4_enthalpy",
     "inc_d4_enthalpy_increment",
+    "g1_ref_newton_d4",
+    "g1_inc_newton_d4",
+    "g1_base_d4_float32",
+    "g1_inc_d4_float32",
     "c1c_opt2_d4_enthalpy",
     "c1c_opt3_d4_enthalpy",
     "d4_column_edmf_vd",

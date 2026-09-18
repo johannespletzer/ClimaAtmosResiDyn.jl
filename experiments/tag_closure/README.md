@@ -573,6 +573,10 @@ run today.
 | `c1c_opt1_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt1` | the C1c comparison: option 1, the tags' share beside the parent's flux, no Jacobian block |
 | `c1c_opt1_newton_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt1` | the C1c diagnostic: option 1 with a converged Newton solve, 12 hours |
 | `inc_d4_enthalpy_increment` | `phase_c.sh`, from `../ClimaAtmosResiDyn-inc` | the increment prototype: D4 under `enthalpy_increment` |
+| `g1_ref_newton_d4` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt1` | G1's reference for the tags' correctness: option 1 with a converged Newton solve, a day |
+| `g1_inc_newton_d4` | `phase_c.sh`, from a worktree of the prototype | the prototype with the reference's converged solve, a day |
+| `g1_base_d4_float32` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-base` | `c1c_base_d4_enthalpy` in Float32, the baseline of G1's Float32 twin |
+| `g1_inc_d4_float32` | `phase_c.sh`, from a worktree of the prototype | the prototype in Float32, G1's Float32 twin |
 | `c1c_opt2_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt2` | the C1c comparison: option 1 with the tags' tracer-diffusion blocks kept |
 | `c1c_opt3_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt3` | the C1c comparison: option 1 with the tags' share in the explicit tendency |
 | `d4_column_edmf_notags` | `phase_c.sh` | D4's column with no tags, for an hour: does the EDMF build take over two hours without them too? |
