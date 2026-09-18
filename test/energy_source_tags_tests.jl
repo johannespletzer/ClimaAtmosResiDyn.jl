@@ -3,6 +3,11 @@ import ClimaAtmos as CA
 import ClimaDiagnostics
 import Dates
 
+# `AtmosModel` takes a grid. These tests read only the model's tagging fields,
+# so the smallest column serves.
+column_atmos_model(; kwargs...) =
+    CA.AtmosModel(CA.ColumnGrid(Float64; z_elem = 10); kwargs...)
+
 @testset "Energy source tags" begin
     for FT in (Float32, Float64)
         @testset "State construction ($FT)" begin
@@ -548,12 +553,12 @@ import Dates
     end
 
     @testset "AtmosModel integration" begin
-        model = CA.AtmosModel()
+        model = column_atmos_model()
         @test isnothing(model.energy_source_tagging_model)
         @test isnothing(model.tagging.energy_source_tagging_model)
 
         tags = (CA.EnergySourceTag{:everywhere}(CA.EntireDomain()),)
-        model = CA.AtmosModel(;
+        model = column_atmos_model(;
             energy_source_tagging_model = CA.EnergySourceTaggingModel(tags),
         )
         @test model.energy_source_tagging_model isa
@@ -565,7 +570,7 @@ import Dates
     @testset "Diagnostics registration" begin
         @test isnothing(
             CA.Diagnostics.register_energy_source_tagging_diagnostics!(
-                CA.AtmosModel(),
+                column_atmos_model(),
             ),
         )
 
@@ -578,7 +583,7 @@ import Dates
             ),
         )
         CA.Diagnostics.register_energy_source_tagging_diagnostics!(
-            CA.AtmosModel(;
+            column_atmos_model(;
                 energy_source_tagging_model = CA.EnergySourceTaggingModel(tags),
             ),
         )
