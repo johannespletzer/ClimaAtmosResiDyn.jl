@@ -1,0 +1,40 @@
+/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/displacement_check/tag_pair.py:44: RuntimeWarning: invalid value encountered in scalar divide
+  print(f"{n:10s} {h:4d} {Ia:13.4e} {Ia/IE[i]:9.2e} {(Ib-Ia)/Ia:+11.3e} {l1:9.3e}")
+rhoa max rel diff between runs: 0.00e+00
+tag        hour  int_ref J/m2  int/intE  d(int)/int    L1 rel
+G_res         1 ref 1.557e+05 other 2.008e+05 (over intE ref 1.38e-03, other 1.78e-03)
+strat         1    5.2422e+07  4.64e-01  -3.108e-05 1.945e-03
+tropo         1    6.0638e+07  5.36e-01  +3.982e-06 1.206e-03
+rad           1    7.8364e+04  6.93e-04  +7.268e-07 1.651e-03
+sfc           1    4.0708e+05  3.60e-03  -3.439e-09 1.015e-04
+sub           1    2.2064e+04  1.95e-04  -5.712e-06 1.352e-03
+mp            1    0.0000e+00  0.00e+00        +nan 0.000e+00
+new_strat     1    1.2604e+04  1.11e-04  -6.062e-06 1.737e-03
+new_tropo     1    4.9490e+05  4.38e-03  +1.638e-08 2.786e-04
+G_res         6 ref 4.011e+05 other 5.047e+05 (over intE ref 3.54e-03, other 4.45e-03)
+strat         6    5.1462e+07  4.54e-01  -2.868e-04 4.687e-03
+tropo         6    6.1932e+07  5.46e-01  +3.776e-05 3.101e-03
+rad           6    4.1773e+05  3.68e-03  +1.082e-04 2.083e-03
+sfc           6    2.4386e+06  2.15e-02  +7.094e-06 9.198e-04
+sub           6    2.4529e+05  2.16e-03  +6.294e-05 4.162e-03
+mp            6    0.0000e+00  0.00e+00        +nan 0.000e+00
+new_strat     6    1.0380e+05  9.15e-04  -6.962e-06 8.692e-03
+new_tropo     6    2.9978e+06  2.64e-02  +2.593e-05 9.452e-04
+G_res        12 ref 3.298e+05 other 5.040e+05 (over intE ref 2.90e-03, other 4.43e-03)
+strat        12    5.0791e+07  4.47e-01  -4.727e-04 6.766e-03
+tropo        12    6.2916e+07  5.53e-01  +3.742e-04 8.688e-03
+rad          12    8.6503e+05  7.61e-03  +4.066e-04 6.944e-03
+sfc          12    4.8635e+06  4.28e-02  +1.352e-04 4.105e-03
+sub          12    7.0481e+05  6.20e-03  +3.031e-04 1.354e-02
+mp           12    0.0000e+00  0.00e+00        +nan 0.000e+00
+new_strat    12    3.4436e+05  3.03e-03  +1.709e-04 1.485e-02
+new_tropo    12    6.0890e+06  5.35e-02  +1.913e-04 4.473e-03
+G_res        24 ref 5.414e+05 other 6.705e+05 (over intE ref 4.74e-03, other 5.87e-03)
+strat        24    4.8955e+07  4.29e-01  -1.322e-03 1.217e-02
+tropo        24    6.5164e+07  5.71e-01  +1.473e-03 8.686e-03
+rad          24    1.6402e+06  1.44e-02  +1.423e-03 7.170e-03
+sfc          24    9.6484e+06  8.45e-02  +5.155e-04 3.692e-03
+sub          24    1.7870e+06  1.57e-02  -2.559e-04 1.762e-02
+mp           24    0.0000e+00  0.00e+00        +nan 0.000e+00
+new_strat    24    8.2406e+05  7.22e-03  -9.525e-04 2.428e-02
+new_tropo    24    1.2251e+07  1.07e-01  +6.169e-04 3.391e-03

@@ -1,0 +1,16 @@
+days 0.25-7.5: n=30 best=satexp dAIC const+230 linear+113 sqrt+49 satexp+0 satexp a,b,tau(d)= ['1.33e+21', '5.19e+21', '6.96']
+days 0.25-2.0: n=8 best=satexp dAIC const+69 linear+30 sqrt+28 satexp+0 satexp a,b,tau(d)= ['1.23e+21', '3.14e+21', '3.3']
+   extrapolated to day 5: satexp 3.67e+21, sqrt 3.72e+21, actual 3.98e+21
+   extrapolated to day 7: satexp 3.99e+21, sqrt 4.26e+21, actual 4.64e+21
+   extrapolated to day 10: satexp 4.21e+21, sqrt 4.95e+21, actual 1.19e+22
+days 0.25-10: n=40 best=linear dAIC const+52 linear+0 sqrt+14 satexp+3 satexp a,b,tau(d)= ['3.85e+19', '1.97e+23', '200']
+day 1: G=2.050e+21 dG=2.05e+21  (4.28e-03 of C-sphere intE)
+day 2: G=2.649e+21 dG=5.99e+20  (1.25e-03 of C-sphere intE)
+day 3: G=3.141e+21 dG=4.92e+20  (1.03e-03 of C-sphere intE)
+day 4: G=3.585e+21 dG=4.44e+20  (9.27e-04 of C-sphere intE)
+day 5: G=3.975e+21 dG=3.90e+20  (8.14e-04 of C-sphere intE)
+day 6: G=4.323e+21 dG=3.48e+20  (7.27e-04 of C-sphere intE)
+day 7: G=4.643e+21 dG=3.20e+20  (6.68e-04 of C-sphere intE)
+day 8: G=5.640e+21 dG=9.97e+20  (2.08e-03 of C-sphere intE)
+day 9: G=1.220e+22 dG=6.56e+21  (1.37e-02 of C-sphere intE)
+day 10: G=1.187e+22 dG=-3.31e+20  (-6.91e-04 of C-sphere intE)

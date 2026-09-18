@@ -1,0 +1,4 @@
+p1_sphere_tags             satexp a=1.29e+21 b=4.9e+21 tau=62 h -> asymptote 6.2e+21 = 1.29% of E (G24 0.59%)
+c6_column_no_repair        satexp a=1.15e+05 b=8.4e+06 tau=70 h -> asymptote 8.52e+06 = 7.43% of E (G24 2.13%)
+c8_column_1m               satexp a=1.46e+05 b=3.02e+07 tau=288 h -> asymptote 3.03e+07 = 26.56% of E (G24 2.16%)
+d4_column_edmf_enthalpy    satexp a=1.96e+05 b=3.04e+05 tau=8 h -> asymptote 5e+05 = 0.44% of E (G24 0.47%)

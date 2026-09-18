@@ -1,0 +1,8 @@
+radiation      column net -7.283e+06  per-level gross 1.062e+07  per-level loss 8.953e+06 J/m2/day
+surface_flux   column net +9.418e+06  per-level gross 9.418e+06  per-level loss 0.000e+00 J/m2/day
+subsidence     column net -1.195e+06  per-level gross 5.111e+06  per-level loss 3.153e+06 J/m2/day
+microphysics   column net +0.000e+00  per-level gross 0.000e+00  per-level loss 0.000e+00 J/m2/day
+precipitation  column net -4.775e+04  per-level gross 9.449e+04  per-level loss 7.112e+04 J/m2/day
+sum |net| records 1.794e+07; sum per-level gross records 2.525e+07
+gross local change of E, sum_h int|dE| dz: 3.180e+07 J/m2/day; net change +1.174e+06
+int E at 24h 1.142e+08

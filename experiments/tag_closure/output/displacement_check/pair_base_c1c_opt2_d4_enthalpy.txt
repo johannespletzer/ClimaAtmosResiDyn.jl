@@ -1,0 +1,10 @@
+rhoa max rel diff between runs: 0.00e+00
+tag        hour  int_ref J/m2  int/intE  d(int)/int    L1 rel
+G_res        24 ref 6.322e+05 other 1.182e+06 (over intE ref 5.54e-03, other 1.04e-02)
+strat        24    4.9854e+07  4.37e-01  -3.610e-02 1.137e-01
+tropo        24    6.4261e+07  5.63e-01  +2.553e-02 9.122e-02
+rad          24    1.5243e+06  1.34e-02  +3.043e-02 6.804e-01
+sfc          24    9.3715e+06  8.21e-02  +3.011e-02 1.262e+00
+sub          24    5.8760e+05  5.15e-03  -1.660e-01 1.020e+00
+new_strat    24    3.4276e+05  3.00e-03  -1.109e-01 8.171e-01
+new_tropo    24    1.1141e+07  9.76e-02  +2.412e-02 1.011e+00

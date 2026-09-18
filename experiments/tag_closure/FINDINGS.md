@@ -1831,6 +1831,63 @@ increment of the implicit stage. Both are design questions (see
 C1c at `9aeb5205` with the variants' patches. The outputs are in
 `output/c1c_*_d4_enthalpy/`.*
 
+**E60. The tags' mislabelled energy is flushed only as fast as it is lost,
+often slowly, and the one-day plateau is mixing, not the rule. So over long
+runs the error can keep growing, and the column integral hides most of it.**
+An analysis of the recorded runs, with no new run. It checks an estimate
+given to the owner: that 3 to 6% of a day's process energy, misplaced each
+day, would level off at 0.5 to 5% of `E` within weeks.
+
+  - **The loss rule does flush the residual, in proportion.** In each bracket
+    the residual `R = E − Σ region tags` changes by `−(R/E)·Δ⁻`, untagged and
+    overclaimed alike, and gains leave it unchanged, because the masks sum to
+    one (`energy_source_tags.jl:609-636, 430-432`). The repair keeps the sum,
+    so it does not touch `R` (`:673-675`). On C9's column, where nothing else
+    moves `R`, the hourly records predict its decay exactly: 2.661e3
+    predicted against 2.660e3 observed at 1 h, and 2.284e3 against 2.284e3 at
+    23 h.
+  - **But the flushing time is `E` over the losses where `R` sits, not over
+    the throughput.** On D4 that rate is 0.05 to 0.26 a day, or 4 to 20 days;
+    in the surface layer it is about zero, so `R` there does not decay. On C9's
+    sphere 91% of `|R|` sits above 10 km, where the rate is 0.0013 to 0.0025 a
+    day, or 1 to 2 years.
+  - **Under the enthalpy audit `R` is not transported,** because the shares
+    are normalised (`:831-833`, `:1240-1330`): the partition carries exactly
+    the parent's flux. Under the default `tracer` transport, and in the EDMF
+    eddy diffusion before C1c, `R` moves and mixes like a tracer.
+  - **The one-day plateau on D4 is mixing, not the loss.** Between jumps the
+    residual falls 3.5 to 4% an hour, 10 to 40 times faster than the loss
+    allows: the EDMF eddy diffusion mixes `R` as a tracer. Even so it trends
+    upward, best fitted by √t. The free-troposphere residual grows from −31
+    to −237 J/kg over the day. Without that mixing it grows about linearly
+    (C1c's options, E59), and so does every run under `tracer` transport,
+    whose second-half slope is 0.75 to 0.9 of the first half's.
+  - **B1, ten days of the `ρe_tag_*` family, is a fair proxy for `R`,** since
+    the rule difference acts on `R` only through the loss rate, under 2% in
+    ten days there. A saturating fit to its first two days was exceeded by day
+    7, and by 2.8 times at day 10: 0.43% of the sphere's `E` at day 1, 0.97%
+    at day 7 and 2.5% at day 10.
+  - **The 24 h residual is a state, not a daily rate:** 29% of D4's is the
+    first hour. Against the day's process energy it is 1.2 to 4.1% depending
+    on the denominator (`output/displacement_check/throughput_d4.txt`).
+  - **The column integral hides most of the per-tag error.** Take two runs
+    with bit-identical `rhoa` and a residual of 2.1% of `E` (C6 and C9). Their
+    small tags differ pointwise by 5 to 10% (`rad` 10%, `sfc` 8.5%, `sub`
+    4.8%), but their column integrals by 0.1 to 0.3%. Between C1c's base and
+    options 2 and 3 the tags differ pointwise by 67 to 132%. A share of the
+    parent's net diffusive flux does not mix provenance where turbulence moves
+    little net energy: `sfc` stays below about 300 m, where tracer diffusion
+    spreads it through the boundary layer. `R` cannot see this.
+
+So the estimate does not hold. Over a year, under stationary conditions: about
+0.1% of `∫E` under the audit on a sphere without stiff shared fluxes; at least
+5% under the default `tracer` transport on a sphere, and possibly 25% or more
+if event-driven jumps continue while the loss takes months; small tags off
+pointwise by 4 to 9 times the gross fraction. V2 is the first run long enough
+to test this; its outputs are set in `OPERATIONAL_TODO.md`, item 10.
+*Scripts in `analysis/displacement_check/`, outputs and notes in
+`output/displacement_check/`. They read the runs' NetCDF on scratch.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

@@ -1,0 +1,74 @@
+Displacement estimate check, 2026-09-18. Read-only on the repo.
+Scripts in this directory: fit_series.py (+ _scratch variant), profile_decay.py,
+sphere_decay.py, tag_pair.py, throughput.py, b1_fit.py. Outputs: *.txt here.
+
+== Code (ClimaAtmosResiDyn-c1c, energy_source_tags.jl) ==
+- Loss: min(Δ,0)·φ_k for every tag (609-613, 632-636); φ = clamp(T/E,0,1), 0 if E<=0 (430-432).
+- Gains: M_k·max(Δ,0) (632-634); pure region masks sum to 1.
+  => per bracket, R = E - Σ region tags changes by -(R/E)·Δ⁻ (untagged and
+     overclaimed alike, while no φ clamps at 1). Gains leave R unchanged.
+- Repair keeps the partition sum (673-675), so it leaves R unchanged unless all
+  region tags are zeroed. Source-tag clip adds energy outside R (689-690).
+- Audit transport: shares divided by the partition's sum of clamped shares
+  (831-833, 850-878, 1240-1330) => the partition carries exactly the parent's
+  flux, so R is NOT transported under the audit. Under tracer transport (and the
+  EDMF eddy diffusion before C1c) R is advected/diffused as a tracer.
+
+== Loss rule verified: C9 column (audit, no EDMF, R static) ==
+Predicted G(t+1h) = G·exp(-λ_R/24), λ_R from hourly record decrements where R sits:
+ 1h 2.661e3 pred / 2.660e3 obs; 12h 2.387/2.388; 23h 2.284/2.284. λ_R 0.35 -> 0.10 /day.
+
+== Residual-weighted loss rate λ_R (1/day) ==
+D4 C1b enthalpy: 0.05-0.26 (mean h12-24 0.10); E-weighted 0.09-0.16.
+  Surface layer (25-325 m) λ ~ 0-0.002: R there (-400 -> -700 J/kg) never decays.
+  Column E / per-level losses = 1.14e8 / 1.22e7 = 9.4 d (not E/throughput = 6 d).
+C1c base 0.14; opt1 0.11 (R centroid ~200 m); opt2 0.50, opt3 0.43 (R at cloud top 725-775 m).
+C9 sphere: λ_R 0.0025 -> 0.0013 (91% of |R| above 10 km); E-weighted 0.013 -> 0.007
+  => τ ~ 1-2 yr where R sits, 2.5-4.5 months for E on average (rho approximated).
+
+== Generation net of loss decay, h12-24, and G_ss = g/λ_R ==
+D4 C1b     4.7e5 /day  -> 4.7e6 (4.1% E)  [mixing, not loss, bounds it; see below]
+C1c base   4.2e5 /day  -> 2.9e6
+C1c opt1   7.5e6 /day  -> 6.5e7 (57% E), τ ~ 9 d
+C1c opt2   1.5e6 /day  -> 3.0e6 (2.6% E), τ ~ 2 d
+C1c opt3   1.8e6 /day  -> 4.2e6 (3.7% E), τ ~ 2.4 d
+C9 column  16 /day     -> 1.5e2 (1e-6 E)
+
+== Plateau (fits on t >= 1 h; fit_series.txt, fit_c1c.txt) ==
+D4 x4 (C1b): best sqrt(t); dAIC const +30..35; slope h12-24 = 0.6-0.8 of h1-12;
+  Kendall p (h12-24) 0.02-0.06. Sawtooth: jumps at 3 h (+1.5e5), 14 h (+1.8e5),
+  then -3.5 to -4 %/h, 10-40x faster than λ_R allows => mixing by the tracer-form
+  EDMF eddy diffusion (R diffused as tracer against its own form-mismatch source).
+  Free troposphere R grows steadily: -31 (1h), -82 (7h), -105 (14h), -237 (24h) J/kg.
+C1c opt1/opt3 best linear, opt2 satexp tau 87 h; no plateau (E59).
+Tracer C-runs (c0/c3/c5/c6/c8 columns, all tracer spheres incl. v3 Float32, p1,
+  mp1, c4, c7): satexp tau 40-110 h (c8 288 h), slope 2nd half 0.75-0.9 of 1st.
+  One-day satexp asymptote: p1 sphere 1.3% E, c6 column 7.4%, c8 26.6%.
+Audit without EDMF (c9 column/sphere, c10): flat after 1 h; sphere +1.8e-6 of E/day.
+D5 (6 h): linear.
+
+== B1 (b1_fit.txt) ==
+Rule difference acts on R only through λ_R (~0.002/day on this sphere) -> <2% in 10 d;
+brackets create no R in either family. So B1 is a fair proxy for R under tracer transport.
+Days 1-7 sqrt-like; satexp fitted to days 0.25-2 predicts 4.2e21 by day 10;
+actual 4.64e21 at day 7 and 1.19e22 at day 10 (2.8x). Fitted tau grows with the
+window (3.3 d -> 7 d -> >200 d). Days 8-9 (wave breaking) add more than days 1-7.
+In C-sphere units (∫E = 4.79e23 J): 0.43% (d1), 0.97% (d7), 2.5% (d10).
+
+== Denominators, D4 C1b (throughput_d4.txt) ==
+G24 5.41e5 of which 1.56e5 (29%) is the first hour. Post-spin-up growth 3.86e5/23 h;
+sum of positive hourly jumps 5.4e5. Over: Σ|net records| 1.79e7 -> 2.2%;
+per-level gross records 2.53e7 -> 1.5%; per-level losses 1.22e7 -> 3.2%;
+gross local change of E 3.18e7 -> 1.2%; new energy (∫new_*) 1.31e7 -> 4.1% (G24);
+rad tag integral 1.64e6 -> G24 is 33% of it.
+
+== Per-tag errors (tag_pair.py; twins with bit-identical rhoa) ==
+C9 audit vs C6 tracer, G = 2.13% of E at 24 h: L1 pointwise rad 10.0%, sfc 8.5%,
+  new_tropo 7.8%, new_strat 5.4%, sub 4.8%, strat 1.5%, tropo 3.1%;
+  column integrals 0.1-0.3%. At 6 h (G 0.6%): rad 4.3%, sfc 5.3%.
+D4 C1b audit vs tracer (only grid-scale advection differs): L1 0.4-2.4%.
+C1c base vs opt2 / opt3: L1 rad 0.68, sfc 1.26-1.32, sub 0.97-1.02, new_* 0.82-1.06;
+  column integrals 3% (rad, sfc) to 16% (sub), 11% (new_strat).
+  sfc profile at 24 h: base ~11,500 J/kg to 725 m; opt2 65,800 (25 m), 1,840 (325 m),
+  265 (425 m). A share of the parent's NET diffusive flux does not mix provenance
+  where turbulence moves little net energy; tracer diffusion does. R cannot see this.

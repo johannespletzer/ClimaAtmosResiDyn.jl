@@ -309,7 +309,19 @@ None open. Every decision of this section was made on 2026-09-18; see
     `edmfx_vertical_diffusion: true`, vertical diffusion, sponges, topography
     and 1M, with `analysis/transport_ledger.jl`. It sizes C4. Needs C1b and
     #76. Approved on 2026-09-18 as a ten-day Float32 run, with V1 folded in
-    and V6.
+    and V6. Its configuration is not written yet. **It must write,** as the
+    owner decided on 2026-09-18 after E60:
+      + `e_src_res`, `rhoa`, every tag `e_src_<name>` and the 3-D process
+        records `e_prc_<process>`, every 6 hours, so that the residual's
+        growth can be set against its loss rate, `λ_R·G`, cell by cell;
+      + the closure check with `audit: true` at a 6-hour period, so the
+        gross residual is a time series and not one row a day.
+
+    E60 predicts no levelling within ten days, since the loss rate is near
+    0.002 a day where the residual sits on a sphere. If the residual levels
+    off, mixing and not the rule bounds it. A twin under `enthalpy` on the
+    same atmosphere would give the per-tag pointwise error, the number a user
+    needs; it is a second job and needs its own approval.
 11. **Calibrate** U2's tolerance per transport from V2 and V3, and add the
     warning.
 12. **D1, the user guide into the docs,** with D3.
