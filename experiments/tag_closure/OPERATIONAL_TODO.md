@@ -21,6 +21,46 @@ Priorities: **B** blocks operation, **S** should be fixed, **N** is nice to
 have. Sizes: S is under a day, M one to three days, L several PRs or a
 campaign.
 
+## The current goal: G1, a closed and explained EDMF column
+
+Proposed on 2026-09-19, for the owner to confirm. An intermediate goal on the
+way to production: the smallest setup that holds every stiff implicit process
+production has. That is the EDMF column D4: the DYCOMS RF02 column with one
+updraft, 1M microphysics, implicit diffusion and implicit vertical advection,
+for a day. A run takes about 40 minutes, and E59 showed the gap there.
+
+**G1 is met when, on D4 under the enthalpy form:**
+
+ 1. **Closure.** The gross residual at 24 h is at most 1e4 J/m². Today it is
+    6.32e5 (`c1c_base_d4_enthalpy`, E59). It does not grow systematically: the
+    second 12 hours add no more than the first.
+ 2. **The remainder is explained.** What is left is split into named parts:
+    the column-integral part, which implicit sources and sinks leave, and each
+    process the tags do not yet follow. Each part is reported with its size.
+ 3. **The model is untouched.** `ta` and `rhoa` are bit for bit those of the
+    same run without the change, and a CI test checks the model's fields.
+ 4. **Correctness is measured, not only closure.** The tags are compared
+    pointwise with a reference run that has a converged Newton solve. The
+    per-tag difference is reported for `rad`, `sfc`, `sub`, `mp` and the region
+    tags. A threshold is set once the first numbers exist (E60 shows why the
+    column integral is not enough).
+ 5. **Float32 holds too.** A Float32 twin meets 1 to 3 within ten times the
+    Float64 residual.
+ 6. **It is reviewed and tested.** An agent's review with its findings fixed,
+    unit and integration tests in CI, and a pull request ready for the owner.
+
+**Out of G1:** the sphere, horizontal transport and hyperdiffusion, runs
+longer than a day, the conventions of question 2 (the reference form as the
+default, and the choice of `c`), and the GPU.
+
+**The path to G1:** the increment prototype (`enthalpy_increment`, below),
+then the correctness checks. If the prototype cannot reach criterion 1, the
+remainder analysis says which process to share next.
+
+**The next goal, G2:** the sphere. V2 with the prototype: ten days in
+Float32, with the outputs of item 10, the residual's growth set against its
+loss rate (E60), and a twin that gives the per-tag pointwise error.
+
 ## Where things stand (2026-09-18)
 
 Merged into `main`:
@@ -83,22 +123,36 @@ GPU.
 
 ## 0. In flight
 
-State at the end of 2026-09-18.
+State on 2026-09-19.
 
-  - **#91, C1b, the EDMF sharing** (`77773b25`). `main` with #89 is merged in
-    (`aea9bca4`), and the tags' gate reads the SGS flag as the `Bool` it now
-    is (`81012a84`). The review's fixes are `9dd30a90`. CI's first run on the
-    new base failed only the unit test of the offset bracket, whose state has
-    no face space; the cell scratch is now built on its own (`77773b25`).
-    **All 63 checks pass** at `77773b25`, the downgrade matrix included, so
-    T6's allocation bound holds on 1.10 and at the lowest versions. The
-    longest jobs: `parent_budget` on 1.11 72 minutes, `tagging_source` on 1.11
-    61, `tagging_source_edmf` on 1.10 51, all under the 90-minute limit (P8).
-    Validation: E53 in Float64, E55 in Float32. Ready for the owner.
-  - **#92, C2, the restart guard** (`a916979c`). `main` with #89 is merged in;
-    only `restart.jl` conflicted. Locally, on the old base: unit tests 309 of
-    309, the source-tag integration file 105 of 105. A real restart passed the
-    guard (E54). **All 33 checks pass** at `a916979c`. Ready for the owner.
+  - **#91 (C1b) and #92 (C2) are merged,** and `main`'s CI at `50b2a4d2`,
+    which has both, passes.
+  - **C1c is shelved (E59).** Each of its three placements made D4's residual
+    larger, because the tags' share lags the parent's stiff implicit
+    diffusion and the gap accumulates. Its branch
+    `claude/energy-source-tag-sgs-diffusion` (`9aeb5205`) stays local.
+  - **The increment prototype, toward G1.** The owner chose on 2026-09-19 to
+    rebuild the tags' implicit channel on the parent's own increment (question
+    1 of the attribution path). Branch `claude/energy-source-tag-implicit-increment`,
+    worktree `../ClimaAtmosResiDyn-inc`, not committed yet. It is the opt-in
+    `energy_source_tag_transport: enthalpy_increment`: after each Newton
+    solve, the tags take the parent's increment of `E`, as a donor-shared
+    vertical flux built from the per-cell mismatch, and the part that changes a
+    column's total stays visible in `e_src_res`. Next, in order: the check on
+    C9's column (running), a review agent with its findings fixed, then the
+    D4 run `inc_d4_enthalpy_increment` (approved), analysed against
+    `c1c_base_d4_enthalpy`.
+  - **The diagnostic job 13504771** runs C1c's option 1 with a converged
+    Newton solve for 12 hours (`c1c_opt1_newton_d4_enthalpy`). If its drift
+    stops, E59's gap is the implicit timing gap, as the prototype assumes.
+  - **Recorded on 2026-09-18:** E57 (#89's remaining parity paths, bit for
+    bit), E58 (V5 without tags: the model's own restart is not bit for bit on
+    C5's column), E59 (C1c), E60 (how mislabelled energy evolves: it is flushed
+    only as fast as it is lost, and the column integral hides per-tag errors),
+    and the attribution discussion
+    ([ATTRIBUTION_PATH.md](ATTRIBUTION_PATH.md)).
+  - **V2's outputs are set** (item 10 of section 2). Its configuration is not
+    written yet. It should run on the prototype, if G1 is met.
   - **#89 is merged.** An agent's review, reading only, found no blocking
     defect. Open from it:
       + R1: the upstream groups have not run on Julia 1.10 with the new
@@ -584,21 +638,21 @@ Found on 2026-09-18:
 
 ### A. Waiting for the owner
 
- 1. **Merge #91 and #92** once their CI is green. The second to merge needs a
-    one-line NEWS fix.
+ 1. **Confirm G1,** the intermediate goal at the top of this list, or adjust
+    its criteria.
  2. **A manual `ci.yml` run on `main`,** for R1: the upstream groups on Julia
     1.10 with the new packages.
- 3. **The attribution path** ([ATTRIBUTION_PATH.md](ATTRIBUTION_PATH.md), an
-    agent's discussion of 2026-09-18, reviewed in part). It asks three things
-    first:
-      + whether to rebuild the tags' implicit channel on the parent's stage
-        increment, rather than its tendency. That replaces the question of
-        where C1c's share goes, and reopens C1b's SGS mass flux and
-        sedimentation, which follow implicit fluxes the same way (E59);
-      + the conventions: whether the enthalpy form is the reference
-        definition and not only an audit, and how `c` is chosen (U8);
-      + whether a logged correction may bring `e_src_res` to rounding by
-        construction, leaving only the column-integral part visible.
+ 3. **The attribution path** ([ATTRIBUTION_PATH.md](ATTRIBUTION_PATH.md)).
+    Question 1, rebuilding the implicit channel on the parent's increment, was
+    decided on 2026-09-19: the prototype is under way. Still open:
+      + question 2, the conventions: whether the enthalpy form is the
+        reference definition and not only an audit, and how `c` is chosen
+        (U8; recommended: `c = c_p,d·T₀` = 274,388 J/kg, which counts dry
+        internal energy from 0 K);
+      + question 3, whether the prototype's correction may bring `e_src_res`
+        to rounding by construction. Recommended: yes, with its own ledger,
+        a switch, and a warning past a stated size. Needed before the
+        prototype becomes a pull request.
  4. **Decisions, none urgent:**
       + section 2, item 14: the NaN tags under file-based initial conditions,
         first a refusal, then the fix. Needed before any tagged run from a
