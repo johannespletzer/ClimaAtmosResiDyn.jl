@@ -265,6 +265,72 @@ function _fill_energy_source_parent!(ᶜparent, Y, offset)
     return ᶜparent
 end
 
+"""
+    energy_source_audit(Y, p, model, scale)
+
+The energy source family's own columns of the audit table, beside those
+[`tag_audit`](@ref) writes for every family:
+
+  - `source_negative`, `source_negative_relative`: the integral of the negative
+    parts of the tags that carry a source, in J, and over `scale`. The closure
+    residual does not see those tags at all, so this is where a source tag going
+    negative shows;
+  - `source_minimum`: the smallest value of any tag that carries a source, per
+    unit mass, in J/kg, over the whole domain, or `NaN` when there is none;
+  - `repair_moved`, `repair_moved_relative`: the integral over all tags of the
+    absolute value of what the repair has moved since the start of the run
+    segment, in J, and over `scale`. Zero with the repair off. At
+    `update_constrain_state_every: stage` or `dss` the ledger also counts the
+    in-step repairs the stepper discards; see `repair_energy_source_tags!`.
+
+Every reduction is collective, so every process must call it.
+"""
+function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
+    ᶜtmp = p.scratch.ᶜtemp_scalar
+    FT = eltype(ᶜtmp)
+    source_names = Tuple(
+        Symbol(:ρe_src_, tag_name(tag)) for
+        tag in model.tags if !isempty(tag.sources)
+    )
+
+    @. ᶜtmp = zero(ᶜtmp)
+    for name in source_names
+        ᶜtag = getproperty(Y.c, name)
+        @. ᶜtmp += min(ᶜtag, zero(ᶜtag))
+    end
+    source_negative = -sum(ᶜtmp)
+
+    source_minimum = if isempty(source_names)
+        FT(NaN)
+    else
+        @. ᶜtmp = typemax(FT)
+        for name in source_names
+            ᶜtag = getproperty(Y.c, name)
+            @. ᶜtmp = min(ᶜtmp, ᶜtag / Y.c.ρ)
+        end
+        buffer = [minimum(parent(ᶜtmp))]
+        ClimaComms.allreduce!(ClimaComms.context(Y.c), buffer, min)
+        buffer[1]
+    end
+
+    (; ᶜenergy_source_fix) = p.tagging
+    @. ᶜtmp = zero(ᶜtmp)
+    for name in energy_source_tag_state_names(model)
+        ᶜfix = getproperty(ᶜenergy_source_fix, name)
+        @. ᶜtmp += abs(ᶜfix)
+    end
+    repair_moved = sum(ᶜtmp)
+
+    per_scale(x) = iszero(scale) ? zero(x) : x / scale
+    return (;
+        source_negative,
+        source_negative_relative = per_scale(source_negative),
+        source_minimum,
+        repair_moved,
+        repair_moved_relative = per_scale(repair_moved),
+    )
+end
+
 # The donor share `φ_k = ρe_src_k / ρe_tot` needs a positive parent to mean
 # anything. Moist total energy has no physical zero, so a shifted thermodynamic
 # or gravitational reference can put part of the domain at or below it, and

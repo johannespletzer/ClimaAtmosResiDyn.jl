@@ -771,11 +771,12 @@ end
 Install the online closure checks of the three tag families.
 
 The families are checked separately, on their own cadence and against their own
-tolerance, because their residuals are not comparable: the energy tags never
-receive implicit transport or EDMFX SGS mass fluxes, so theirs is legitimately
-the larger one. The energy source tags are looser again, and their residual is
-normalized by a quantity whose zero is a convention, so it is not comparable
-across runs that use different energy references.
+tolerance, where one is set, because their residuals are not comparable: the
+energy tags never receive implicit transport or EDMFX SGS mass fluxes, so theirs
+is legitimately the larger one. The energy source tags have no default
+tolerance, so by default their check only reports: their residual is normalized
+by a quantity whose zero is a convention, so it is not comparable across runs
+that use different energy references.
 
 Each block also carries an `abort_above` level at which the run ends instead of
 warning. Only water has a default one, for the same reason: see
@@ -829,12 +830,21 @@ function default_model_callbacks(
             state_names = energy_source_region_tag_state_names,
             config_key = "energy_source_closure_check",
             tracer_key = "energy_source_tags",
+            extra_audit = energy_source_extra_audit(
+                tagging.energy_source_tagging_model,
+            ),
             scheduling...,
         )...,
     )
 end
 
 tag_closure_callback(::Nothing, tagging_model; kwargs...) = ()
+
+# The energy source family's own audit columns, as a function of `(Y, p, scale)`,
+# or `nothing` without the tags.
+energy_source_extra_audit(::Nothing) = nothing
+energy_source_extra_audit(model) =
+    (Y, p, scale) -> energy_source_audit(Y, p, model, scale)
 
 """
     tag_closure_callback(check, tagging_model; family, total_name, state_names,
@@ -866,6 +876,7 @@ function tag_closure_callback(
     t_start,
     t_end,
     checkpoint_frequency,
+    extra_audit = nothing,
 )
     isnothing(tagging_model) && error(
         "`$config_key` is set but `$tracer_key` is not, so there are no tags \
@@ -891,6 +902,11 @@ function tag_closure_callback(
     period = ITime(period_seconds)
     period, _, _, _ = promote(period, t_start, dt, t_end)
 
+    # A check with a spin-up reference takes the residual once, at the spin-up
+    # time, and every row reports the residual since. That callback comes first,
+    # so that a row due at the same time already has the reference.
+    spin_up = get(check, :spin_up, nothing)
+    reference = isnothing(spin_up) ? nothing : Ref{Any}(nothing)
     affect!(integrator) = tag_closure_callback!(
         integrator,
         output_dir,
@@ -899,9 +915,24 @@ function tag_closure_callback(
         tag_state_names,
         check.tolerance,
         check.abort_above,
-        check.audit,
+        check.audit;
+        reference,
+        extra_audit,
     )
-    return (call_every_dt(affect!, period),)
+    periodic = call_every_dt(affect!, period)
+    isnothing(spin_up) && return (periodic,)
+    spin_up_time = ITime(time_to_seconds(spin_up))
+    spin_up_time, _, _, _ = promote(spin_up_time, t_start, dt, t_end)
+    reference_affect!(integrator) = take_tag_closure_reference!(
+        integrator,
+        reference,
+        total_name,
+        tag_state_names,
+    )
+    return (
+        call_every_dt(reference_affect!, spin_up_time; skip_first = true),
+        periodic,
+    )
 end
 
 """
