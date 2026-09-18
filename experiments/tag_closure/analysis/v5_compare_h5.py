@@ -64,7 +64,10 @@ def compare_states(continuous, restarted):
     end_c = os.path.join(continuous, "day1.0.hdf5")
     end_r = os.path.join(restarted, "day1.0.hdf5")
     mid_c = os.path.join(continuous, "day0.43200.hdf5")
-    a, b, m = components(end_c), components(end_r), components(mid_c)
+    a, b = components(end_c), components(end_r)
+    # A restarted run has no checkpoint at 12 hours, and then the change over
+    # the second 12 hours is not shown.
+    m = components(mid_c) if os.path.isfile(mid_c) else None
     shared = min(len(a), len(b))
     if len(a) != len(b):
         print(f"{len(a)} against {len(b)} components; the first {shared} are compared")
@@ -74,7 +77,7 @@ def compare_states(continuous, restarted):
         identical &= same
         diff = np.abs(a[i] - b[i]).max()
         scale = np.abs(a[i]).max()
-        change = np.abs(a[i] - m[i]).max()
+        change = np.abs(a[i] - m[i]).max() if m is not None else 0
         print(
             f"Y.c.{name:18s} {'bit for bit' if same else 'differs':11s} "
             f"max diff {diff:.3e}  of max {diff / scale if scale else 0:.2e}  "

@@ -1,0 +1,11 @@
+continuous: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v5_c5_continuous_notags/output_active
+restarted:  /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v5_c5_restarted_notags/output_active
+Y.c.ρ                  differs     max diff 1.758e-10  of max 1.45e-10  of the 12 h change 3.49e-09
+Y.c.uₕ_1               differs     max diff 6.624e-11  of max 1.53e-11  of the 12 h change 1.31e-09
+Y.c.uₕ_2               differs     max diff 1.144e-10  of max 2.40e-11  of the 12 h change 1.18e-09
+Y.c.ρe_tot             differs     max diff 1.604e-04  of max 1.67e-09  of the 12 h change 2.46e-09
+Y.c.ρq_tot             differs     max diff 4.761e-11  of max 8.33e-10  of the 12 h change 2.21e-09
+Y.f.u₃                differs     max diff 1.543e-11  of max 3.43e-09
+energy_source_tag_closure.csv: not in both directories, not compared
+energy_source_tag_audit.csv: not in both directories, not compared
+states at 24 h: NOT bit for bit

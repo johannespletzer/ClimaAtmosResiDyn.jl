@@ -1740,6 +1740,57 @@ the ODE function's few seconds; the build's wall time does not change.
 *Measured on the login node, one core, runs strictly one at a time,
 2026-09-18. Scripts, patches and logs are in `$SCRATCH/claude_work/p7/`.*
 
+**E57. #89's fork is bit for bit upstream on a restart and under the vertical
+water borrowing limiter. The prescribed-flow column does not run upstream.**
+The paths #89's review found uncovered (R2), run in the fork at `c068d564`,
+whose tree is `main`'s `369c8f28`, and in upstream d331fe30, on one node with
+one environment, as in E51.
+
+  - **A restart in two stages is bit for bit:** the 1M DYCOMS column to 10
+    minutes with a checkpoint at 5, and the same column restarted from that
+    checkpoint to 10 minutes. The state and the implicit, remaining and
+    limiter tendencies are identical under `isequal`, in both stages.
+  - **The 1M column with `tracer_nonnegativity_method:
+    vertical_water_borrowing`** is bit for bit, state and tendencies.
+  - **Within one checkout the restart is exact:** the restarted column equals
+    the uninterrupted one at 10 minutes, in every field and tendency, with
+    `reproducible_restart` at its default.
+  - **The Shipway-Hill column fails in both checkouts,** at the first step.
+    `ShipwayHill2012VelocityProfile` compares the model time, an `ITime`, with
+    a `Float64` (`src/types.jl:1715`), and no method exists for that. So the
+    fork's `prescribe_flow!` hook cannot be run. By reading it copies `ρq_tot`
+    into `ᶜtemp_scalar_2` before it clamps, and without tags
+    `rescale_water_tags!` does nothing. The failure is upstream's.
+
+*Job `13504311` on terrabyte, `hpda2_test`, 2026-09-18. The Shipway-Hill
+failure stopped the job before its comparison, so the three finished
+configurations were compared on the login node. The outputs are in
+`output/parity_89_r2/`.*
+
+**E58. The model itself does not restart C5's column bit for bit; the tags
+change nothing across a restart.** V5's pair was run again without tags,
+records or closure check, from the same checkout (#92 at `e4e9e5b3`), with
+`reproducible_restart: true`.
+
+  - **Without tags the restart differs exactly as with them:** `ρ` by 1.758e-10,
+    `ρe_tot` by 1.604e-4 and `u₃` by 1.543e-11 at 24 h, the same numbers as E54.
+  - **The model's fields do not depend on the tags,** in either run. With tags
+    and without, the uninterrupted runs are bit for bit in `ρ`, `uₕ`,
+    `ρe_tot`, `ρq_tot` and `u₃`, and so are the restarted runs.
+  - **So E54's difference is the model's restart.** The tags neither cause it
+    nor change it.
+  - **Not every restart differs:** in E57 a 1M column restarted after 5
+    minutes is exact, at the post-#89 code and the default
+    `reproducible_restart`. This pair differs in the microphysics (0M), the
+    length (12 hours before the restart), the code (before #89) and
+    `reproducible_restart: true`. Which of these matters is not separated.
+
+*Jobs `13504312` and `13504313` on terrabyte, `hpda2_test`, 2026-09-18, from
+the worktree `../ClimaAtmosResiDyn-c2-val` at `e4e9e5b3`. Compared with
+`analysis/v5_compare_h5.py`. The outputs are in `output/v5_c5_continuous_notags/`
+and `output/v5_c5_restarted_notags/`, with the comparisons in `compare.txt` and
+`compare_with_tags.txt`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

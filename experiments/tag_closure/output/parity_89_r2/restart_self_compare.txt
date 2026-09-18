@@ -1,0 +1,14 @@
+# restart_first (0 to 10 min) against restart_column (restarted at 5 min), fork checkout
+== restart.jls
+   a: (julia = "1.11.9", host = "hpdar03c01s11", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-pr88", commit = "c068d564", manifest_sha1 = "e8551eb5b6b40a71e077925ba9eb9608e505883a")
+   b: (julia = "1.11.9", host = "hpdar03c01s11", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-pr88", commit = "c068d564", manifest_sha1 = "e8551eb5b6b40a71e077925ba9eb9608e505883a")
+   field names and time equal: true
+   state.c         bit for bit
+   state.f         bit for bit
+   implicit.c      bit for bit
+   implicit.f      bit for bit
+   remaining.c     bit for bit
+   remaining.f     bit for bit
+   lim.c           bit for bit
+   lim.f           bit for bit
+ALL BIT FOR BIT

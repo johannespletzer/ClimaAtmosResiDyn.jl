@@ -1,0 +1,27 @@
+# The continuous runs, with tags against without, on the model's components
+continuous: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v5_c5_continuous/output_active
+restarted:  /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v5_c5_continuous_notags/output_active
+13 against 5 components; the first 5 are compared
+Y.c.ρ                  bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.c.uₕ_1               bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.c.uₕ_2               bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.c.ρe_tot             bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.c.ρq_tot             bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.f.u₃                bit for bit max diff 0.000e+00  of max 0.00e+00
+energy_source_tag_closure.csv: not in both directories, not compared
+energy_source_tag_audit.csv: not in both directories, not compared
+states at 24 h: bit for bit
+
+# The restarted runs, with tags against without, on the model's components
+continuous: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v5_c5_restarted/output_active
+restarted:  /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v5_c5_restarted_notags/output_active
+13 against 5 components; the first 5 are compared
+Y.c.ρ                  bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.c.uₕ_1               bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.c.uₕ_2               bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.c.ρe_tot             bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.c.ρq_tot             bit for bit max diff 0.000e+00  of max 0.00e+00  of the 12 h change 0.00e+00
+Y.f.u₃                bit for bit max diff 0.000e+00  of max 0.00e+00
+energy_source_tag_closure.csv: not in both directories, not compared
+energy_source_tag_audit.csv: not in both directories, not compared
+states at 24 h: bit for bit

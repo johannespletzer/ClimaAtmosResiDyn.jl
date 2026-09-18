@@ -103,9 +103,9 @@ State at the end of 2026-09-18.
       + R1: the upstream groups have not run on Julia 1.10 with the new
         packages. Neither #89 nor `main` had a manual `ci.yml` run, which is
         the one that runs them. The owner starts it;
-      + R2: E51's parity did not cover the restart path, the vertical water
-        borrowing limiter or the prescribed-flow column. One more parity job
-        would, and it needs approval;
+      + ~~R2~~: done (E57). A restart and the vertical water borrowing
+        limiter are bit for bit. The prescribed-flow column fails upstream
+        too, on `ITime`, so the fork's hook there cannot be run;
       + R3: the committed `.buildkite` manifest keeps upstream's
         `project_hash`, so every setup rewrites two lines. They stay
         uncommitted unless the owner decides otherwise;
@@ -289,9 +289,10 @@ None open. Every decision of this section was made on 2026-09-18; see
     model itself does not restart this column bit for bit, even with
     `reproducible_restart: true`: every model field differs by 1e-11 to 1e-9
     after 12 hours, and the tags only as much. So the state criterion is not
-    met, for a reason outside the tags. Next, if wanted: the same pair
-    without tags, to show that upstream's restart is not bit for bit here
-    (2 jobs, needs approval).
+    met, for a reason outside the tags. The same pair without tags differs
+    by exactly as much, and its model fields equal the tagged pair's bit for
+    bit (E58). So the tags pass V5; the model's own restart of this column
+    does not.
  7. **Float32.** ~~V3~~ is done (E45). ~~T2~~, the Float32 test group, is
     merged (#75). Runs longer than a day are untested; that is U6. Size S.
  8. ~~**MP1, more than one process.**~~ Done (E47): on 4 ranks C7's sphere
@@ -575,10 +576,12 @@ Found on 2026-09-18:
       + U8 and U9: how to choose the offset, and a headroom column. Before the
         first production run that spans a winter;
       + U7: starting tags from a checkpoint;
-      + R2: one more parity job, for the restart path, the vertical water
-        borrowing limiter and the prescribed-flow column;
-      + V5's follow-up: the same pair without tags, 2 jobs, to show that the
-        model's restart is not bit for bit here (E54);
+      + where the model's restart of C5's column stops being bit for bit
+        (E58): 0M, the 12 hours, the code before #89, or
+        `reproducible_restart: true`. It is upstream's, not the tags'. Short
+        runs on the login node would separate it;
+      + report upstream: `ShipwayHill2012VelocityProfile` fails on `ITime`
+        (E57);
       + P7's optional fix (E56), which saves seconds.
 
 ### B. Can be done now, without a new approval

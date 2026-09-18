@@ -1,0 +1,14 @@
+node hpdar03c01s11, model name	: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz, start 2026-09-18T20:25:25+02:00
+a: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-pr88 at c068d564
+b: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmos-upstream-d331fe3 at d331fe30
+precompiled 2026-09-18T20:25:54+02:00
+runs done 2026-09-18T20:47:21+02:00: a exited 1, b exited 1
+==> /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/parity_89_r2/a.log <==
+ [20] top-level scope
+    @ ~/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/analysis/parity/parity_run.jl:185
+in expression starting at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/analysis/parity/parity_run.jl:170
+
+==> /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/parity_89_r2/b.log <==
+ [20] top-level scope
+    @ ~/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/analysis/parity/parity_run.jl:185
+in expression starting at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn.jl/experiments/tag_closure/analysis/parity/parity_run.jl:170
