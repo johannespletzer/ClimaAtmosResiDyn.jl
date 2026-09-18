@@ -84,7 +84,8 @@ day, 2M and P3, more than one node, and the GPU.
         latest commits removed the 1,056 bytes its split solve allocated on
         Julia 1.10.
       + **#77:** 30 checks pass, 2 were pending on 2026-09-18.
-  - **One PR to open,** by the owner: decision 12's upstream fix.
+  - **Next, approved on 2026-09-18:** C2 as a draft PR; B1, one job; the
+    whole-PR CI minutes from #77's run.
   - **`gh` and the `upstream` remote.** With no default repository, `gh`
     prefers a remote named `upstream`. So `gh pr create` without `-R` went to
     `CliMA/ClimaAtmos.jl` and failed with "Resource not accessible by personal
@@ -196,93 +197,47 @@ On 2026-09-17:
   - **Aqua:** first add the missing weak dependency as a test extra. When the
     walk stopped at the next package, the bound on Aqua replaced it (#86).
 
+On 2026-09-18, going through section 1 with the owner:
+
+  - **#77's three choices** (decision 2): accepted as written.
+  - **C2's design** (decision 11): approved, minimal.
+      + The check also covers the process-record fields.
+      + The spin-up reference follows #77: it is taken again after a
+        restart.
+      + No override key.
+      + Starting tags from a tagless checkpoint is an N item, U7.
+  - **The parity break** (decision 12): `dd06318f` stays as a named exception.
+    No upstream PR is opened. The local branch `upstream-vwb-species-guard` and
+    [UPSTREAM_VWB_PR_DRAFT.md](UPSTREAM_VWB_PR_DRAFT.md) stay as a record.
+  - **ClimaCore** (decision 3): #76 keeps the `MatrixFields` internals. The
+    drafted issue is not filed.
+  - **The named regions' width** (decision 10): 2° stays. The docs should say
+    that a mask narrower than the grid spacing makes the repair trade, and
+    that a 10° mask avoids it on coarse grids (with D3).
+  - **V1** (decision 5): folded into V2, which becomes a 10-day Float32 run.
+  - **Phase B** (decision 7): B1 is approved, one job, at the plan's
+    settings.
+  - **Runs** (decision 8): V2 and V6 are approved, to run once C1b is merged.
+    MP1 on two nodes is not.
+  - **B3** (decision 6, the design's decision 5): extend the audit to the SGS
+    diffusive flux, as C1c, after C1b. This changes the decision of 2026-09-11.
+  - **2M and P3** (decision 6, the design's decision 6): upstream lifts the
+    model's gate. When it does, the tags accept 2M and refuse P3 at
+    configuration until the parent's P3 sedimentation is fixed.
+  - **A4** (decision 4): later, as N.
+  - **D1** (decision 9): after V2.
+  - **Aqua's walk upstream** (14): not reported.
+  - **One moist model in `parent_budget`** (15): no.
+  - **#80's NEWS entry:** none.
+  - **Worktrees:** the 17 whose branches are merged are removed.
+  - **CI minutes:** collected from #77's run and recorded in `plan_review.md`.
+
 ## 1. Decisions for the owner
 
  1. **Merges:** #76 once its manual full run is green, and #77 once its CI
-    is. Every other PR of the list is merged.
- 2. **#77's three choices, for review in the PR:**
-      - A2 warns only in a run with at least one per-process tag, and a tag
-        listing `all` counts as following no process. Otherwise a run with
-        region tags alone would warn about every process.
-      - The default check has no tolerance and never warns. The old default,
-        1e-6, warned at every check of every run (24 times a day on C7).
-      - After a restart, the spin-up reference is taken again one `spin_up`
-        after the restart.
- 3. **#76 uses ClimaCore `MatrixFields` internals,** since the public
-    `FieldMatrixWithSolver` cannot solve on part of a state. Whether to keep
-    that, or also ask ClimaCore upstream to make its name-set work scale (N).
-    A draft of that issue, with a ClimaCore-only reproducer, is in
-    [CLIMACORE_ISSUE_DRAFT.md](CLIMACORE_ISSUE_DRAFT.md). It is not filed.
- 4. **A4.** Signed overlay shares under the audit: model code and a C9 twin.
- 5. **V1's scope.** A 0M 10-day sphere is not production physics. Either fold
-    it into a 10-day Float32 run with V2's physics, or make it S.
- 6. **The design's open decisions:** 5, whether to share the SGS diffusive
-    flux under `enthalpy` (C1c); 6, who lifts the 2M gate and fixes the
-    parent's P3, and whether the tags refuse P3 until then.
- 7. **Phase B.** FINDINGS §8 item 4 still lists it as the owner's call.
- 8. **Runs not yet approved:** V2, V6, and a second node for MP1.
- 9. **Docs:** whether to move `USER_GUIDE_DRAFT.md` into `docs/src/` (D1).
-10. **The named regions' width.** E48: with `tropics` and `extratropics` 10°
-    wide instead of 2°, no region tag goes negative on the 5° sphere, and the
-    repair trades nothing between them, against ±30,915 J/kg. The price is
-    blurrier provenance: a 10° mask leaves 3.6% of the total in the extratropics
-    tag at the equator. Options: keep 2°; widen the named regions; or tie the
-    width to the grid spacing. Changing it is a default.
-11. **C2's design,** [RESTART_GUARD_DESIGN.md](RESTART_GUARD_DESIGN.md), for
-    review before the code: the keys, where they are read, the error texts,
-    and four questions (the records, #77's spin-up reference, an override, and
-    tags from a restart without them).
-12. **The one known break of parity.** `dd06318f` (2026-08-16) fixed an
-    upstream defect in `limiters_func!`: the water-borrowing guard compared
-    `@name(ρq_tot)` with the `Symbol`s of `vertical_water_borrowing_species`,
-    so with an explicit species list upstream skips
-    `enforce_mass_energy_consistency!`. The fork runs it, so `ρ` and `ρe_tot`
-    differ from upstream in that configuration (upstream `v0.42.9` still has
-    `@name(ρq_tot)`, `limited_tendencies.jl:97`, `:113`). No shipped config
-    sets the list. Options: revert it here and fix it upstream, so that it
-    comes back with the next merge, as the rule says; or keep it as a named
-    exception until upstream has the fix. Upstream `main` at `eb010645`
-    (2026-09-16) still has the defect, and no upstream issue names it.
-    **Prepared, not opened:** an upstream fix with a test, on the local branch
-    `upstream-vwb-species-guard` (`527cdf06`, worktree
-    `../ClimaAtmos-upstream-vwb`). The test fails on upstream `main` (`ρ`
-    misses an increment of 1e-3, `ρe_tot` misses 2,564) and passes with the
-    fix, 13 of 13. The PR text and the steps are in
-    [UPSTREAM_VWB_PR_DRAFT.md](UPSTREAM_VWB_PR_DRAFT.md), and the check is
-    `analysis/vwb_guard_check.jl`. Opening it is the owner's call, and upstream
-    may ask for a CLA.
-13. **A fragile test on `main`.** `test/parent_budget/implicit_attribution_tests.jl:241`
-    asserts that three Newton iterations leave a smaller defect than one. On
-    one CI runner it did not (5.37e-7 against 3.43e-7). On that dry column
-    both defects are about two rounding units of the column energy, so their
-    order is noise (`analysis/parent_budget_defect_size.jl`). On the owner's
-    request the test now runs where the defect is real: a moist DYCOMS column
-    at dt 10 s, 2.5e6 rounding units at one iteration and 110 times less at
-    three. The dry column keeps a check that the defect changes by at most
-    eight rounding units between one and two inner iterations; on terrabyte
-    it does not change at all (`analysis/parent_budget_dry_defects.jl`).
-    Branch `claude/parent-budget-defect-test`, pushed, 133 of 133 locally at
-    `4c15038f` and at `e88f5c31`, the fixes for the three nits of its review.
-    The owner asked to move the convergence check to a dry column with
-    implicit diffusion. In 64 runs it never stood above rounding (at most 8
-    units): at rest, with a uniform 10 m/s wind and with a sheared wind, on
-    the test grid and on a 50 m grid, for both diffusion models
-    (`analysis/parent_budget_defect_dry_{diffusion,wind,shear}.jl`). A dry
-    column's implicit problem is close to linear, so one Newton iteration
-    already solves it. **Decided:** the check stays on the moist column.
-    Merged as #81 on 2026-09-17; the text is also in
-    [PARENT_BUDGET_DEFECT_PR.md](PARENT_BUDGET_DEFECT_PR.md). Since #85 the
-    moist column has a slab ocean, and the test sums the atmosphere's solve
-    defect only, so the recorded numbers still hold.
-14. **Report Aqua's weak-dependency walk upstream?** Aqua 0.8.17 does not skip
-    `[weakdeps]` when it walks `[deps]` for the persistent-task check (#86).
-    No issue names it there yet. Filing one is outward-facing. Until Aqua
-    fixes it, `Project.toml` holds Aqua at `0.8.16`.
-15. **One moist model in `parent_budget` instead of two (optional).** The
-    moist identity test in `implicit_attribution_tests.jl` runs in `summary`,
-    so the calibration column is compiled once per mode. `report_tests.jl`
-    already runs that column in `summary`. Moving the identity test to `audit`
-    would save roughly five more minutes and drop `summary` from that file.
+    is.
+
+Every other decision of this section was made on 2026-09-18; see "Decided".
 
 ## 2. Blocking operation (B), in dependency order
 
@@ -335,7 +290,8 @@ On 2026-09-17:
 10. **V2, the production physics on a sphere:** EDMF with
     `edmfx_vertical_diffusion: true`, vertical diffusion, sponges, topography
     and 1M, with `analysis/transport_ledger.jl`. It sizes C4. Needs C1b and
-    #76. V1 as decided. Its run is not approved yet.
+    #76. Approved on 2026-09-18 as a ten-day Float32 run, with V1 folded in
+    and V6.
 11. **Calibrate** U2's tolerance per transport from V2 and V3, and add the
     warning.
 12. **D1, the user guide into the docs,** with D3.
@@ -418,8 +374,10 @@ With D1 (B12):
   - **The region masks' width.** With 10° masks the repair never trades between
     the region tags, against ±30,915 J/kg with the named regions' 2° (E48). A
     wider mask blurs provenance: each region tag keeps a few percent of the
-    other region's energy. The width is a default (decision 10).
-  - **C1c.** B3, the SGS diffusive flux under `enthalpy` (decision 6).
+    other region's energy. Decided on 2026-09-18: 2° stays, and the docs say
+    so with D3.
+  - **C1c.** B3, the SGS diffusive flux under `enthalpy`. Approved on
+    2026-09-18, after C1b (plan C4).
   - **C1d.** Option C, per-updraft tag shares; about three times B.
   - **C6.** Review leftovers: `isfinite` before the conversion to `FT`, `nothing`
     inside a broadcast at init, `parent` shadowed in tests. The Float32 rounding
@@ -430,6 +388,8 @@ With D1 (B12):
   - **P2.** Compute `energy_source_share_norm!` once per evaluation, and skip it
     when nothing sediments. **P3.** A string allocation per tracer per
     evaluation under the audit (`energy_source_tags.jl:148`).
+  - **U7.** Start the tags from a tagless checkpoint, each region tag set to
+    its mask times `E`. Model code; out of C2's scope (C2's question 4).
   - **U5.** A clear error when the tag list changes across a restart (C2 covers
     most of it). **U6.** Records in Float64, or reset at each output, for long
     Float32 runs; over a day they match Float64 to 4e-4 at 24 h (E45).
@@ -443,12 +403,13 @@ With D1 (B12):
   - **Worktrees** beside the repository. Each has a copied
     `.buildkite/LocalPreferences.toml`, which `main` tracks: never commit it.
     Checked on 2026-09-18 against `origin/main`.
-      + **Removable, their branch is merged:** `-audit` (#72), `-docs` (#74),
-        `-float32` (#75), `-t3` (#78), `-parity` (#79), `-noseasonal` (#80),
-        `-defect` (#81), `-ci-phase-a` (#82 to #84, #86), `-pb-audit` (#85),
-        `-docsfix` (#73), `-repair` (#70), `-offset` (#68), `-pr65`,
-        `-split`, `-b3` and `-b5`; also `-c1b-check`, a detached scratch
-        merge.
+      + **Removed on 2026-09-18, their branch merged:** `-audit` (#72),
+        `-docs` (#74), `-float32` (#75), `-t3` (#78), `-parity` (#79),
+        `-noseasonal` (#80), `-defect` (#81), `-ci-phase-a` (#82 to #84, #86),
+        `-pb-audit` (#85), `-docsfix` (#73), `-repair` (#70), `-offset` (#68),
+        `-pr65`, `-split`, `-b3` and `-b5`; also `-c1b-check`, a detached
+        scratch merge. None held uncommitted work; the ignored files were
+        manifests, a docs build and local test output.
       + **Keep:** `-buildtime` (#76); `-buildtime-edmf` (#76's validation,
         detached, with a local change that must never be committed);
         `-defaults` (#77); `-m3` (M3, local only, until C1b); `-p4` (detached
@@ -482,15 +443,9 @@ With D1 (B12):
 
  1. **Merges:** #76 once its manual full run is green, then #77. #76 goes
     before C1b, whose validation needs the EDMF build to fit in two hours.
- 2. ~~**#76 out of draft.**~~ Done.
- 3. **#77's three choices** (decision 2).
- 4. **The named regions' width** (decision 10, E48).
- 5. **The other decisions of section 1:** ClimaCore upstream (3), A4 (4), V1's
-    scope (5), the design's decisions 5 and 6 (6), Phase B (7), the runs not
-    yet approved (8), moving the guide into the docs (9), C2's design (11),
-    the parity break (12, an upstream PR is ready to open), reporting Aqua's
-    walk upstream (14), and one moist model in `parent_budget` (15, optional).
-    #80 merged without a NEWS entry, which its review left to the owner.
+ 2. **B1's submission.** Approved, one job; the command is prepared first.
+
+Every other decision was made on 2026-09-18.
 
 ### B. Can be done now, without a new approval
 
@@ -522,30 +477,28 @@ All seven were done on 2026-09-14.
 
 ### C. Unlocked by merges, already approved
 
- 1. **After #72, which merged on 2026-09-17:** C2, the restart guard with T1,
-    as a draft PR; then V5, restart equivalence, up to 2 jobs. It still waits
-    for the owner's review of its design (decision 11).
- 2. **After #72 and #76:** C1b, the EDMF sharing, with T6 and T5, as a draft PR;
-    then its validation, up to 5 jobs: the D4 pair, D4 with
+ 1. **Now:** C2, the restart guard with T1, as a draft PR (#72 merged, design
+    approved on 2026-09-18); then V5, restart equivalence, up to 2 jobs.
+ 2. **Now:** B1, phase B's ten-day run of the energy tag family, one job.
+ 3. **After #76:** C1b, the EDMF sharing, with T6 and T5, as a draft PR; then
+    its validation, up to 5 jobs: the D4 pair, D4 with
     `edmfx_vertical_diffusion: true`, D5. With those, the D4 column's residual
     under EDMF can be measured for the first time.
- 3. **After #77 and the owner's review:** nothing further is approved; U2's
-    tolerance is calibrated later, from V2 and V3.
- 4. **After all merges:** remove the worktrees (section 5).
+ 4. **After C1b:**
+      + C1c, the audit's share of the SGS diffusive flux, as a draft PR;
+      + V2 as a ten-day Float32 run with the production physics, V1 folded in,
+        and V6, topography (both approved);
+      + then the calibration of U2's tolerance, and D1 with D3.
+ 5. **Done on 2026-09-18:** the worktrees of merged branches are removed
+    (section 5).
 
 ### D. Needs a new approval
 
- 1. **V2,** the production physics on a sphere (EDMF with
-    `edmfx_vertical_diffusion: true`, vertical diffusion, sponges, topography,
-    1M), with C4 and V6. It needs C1b. Then the calibration of U2's tolerance.
- 2. **A change of the named regions' width,** if decision 10 asks for one: a
-    default.
- 3. **A4,** signed overlay shares: model code and a C9 twin.
- 4. **Runs:** MP1 on more than one node; an audit twin of D1 (section 6).
- 5. **The N items that change model code:** C6's leftovers, C7, A6, P2, P3,
-    U5, U6, R5, A2's runtime part and A3.
- 6. **D1 and D3,** the user guide into the docs (decision 9).
- 7. **The GPU,** last, with T3.
+ 1. **A4,** signed overlay shares: model code and a C9 twin (N, later).
+ 2. **Runs:** MP1 on more than one node; an audit twin of D1 (section 6).
+ 3. **The N items that change model code:** C6's leftovers, C7, A6, P2, P3,
+    U5, U6, U7, R5, A2's runtime part and A3.
+ 4. **The GPU,** last, with T3.
 
 ## Done, for reference
 
