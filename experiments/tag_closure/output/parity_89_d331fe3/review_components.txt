@@ -1,0 +1,44 @@
+#### /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/parity_89/fork/edmf_column.jls
+ρ          Y: min=1.025 max=1.215 nz=30  impl nz=30 maxabs=1.22e-6  rem nz=1
+uₕ1        Y: min=-0.9436 max=4.342 nz=30  impl nz=30 maxabs=0.000349  rem nz=30
+uₕ2        Y: min=-2.019 max=4.76 nz=30  impl nz=30 maxabs=0.000754  rem nz=30
+ρe_tot     Y: min=-51530.0 max=-45740.0 nz=30  impl nz=30 maxabs=2.01  rem nz=30
+ρq_tot     Y: min=0.002839 max=0.01181 nz=30  impl nz=30 maxabs=6.66e-7  rem nz=29
+ρq_lcl     Y: min=0.0 max=0.0006581 nz=25  impl nz=27 maxabs=1.05e-7  rem nz=27
+ρq_icl     Y: min=0.0 max=0.0 nz=0  impl nz=0 maxabs=0.0  rem nz=0
+ρq_rai     Y: min=0.0 max=7.265e-6 nz=28  impl nz=30 maxabs=5.47e-9  rem nz=29
+ρq_sno     Y: min=0.0 max=0.0 nz=0  impl nz=0 maxabs=0.0  rem nz=0
+ρtke       Y: min=-0.0002707 max=0.3454 nz=30  impl nz=30 maxabs=0.00128  rem nz=30
+sgs ρa     Y: min=3.4590000000000005e-42 max=0.1196 nz=30  impl nz=30 maxabs=4.36e-5  rem nz=0
+sgs mse    Y: min=38880.0 max=41960.0 nz=30  impl nz=30 maxabs=1.57  rem nz=1
+sgs q_tot  Y: min=0.002774 max=0.009977 nz=30  impl nz=30 maxabs=5.61e-7  rem nz=1
+sgs q_lcl  Y: min=0.0 max=0.0004906 nz=25  impl nz=27 maxabs=3.01e-8  rem nz=0
+sgs q_icl  Y: min=0.0 max=0.0 nz=0  impl nz=0 maxabs=0.0  rem nz=0
+sgs q_rai  Y: min=0.0 max=4.184e-7 nz=12  impl nz=30 maxabs=1.61e-7  rem nz=0
+sgs q_sno  Y: min=0.0 max=0.0 nz=0  impl nz=0 maxabs=0.0  rem nz=0
+levels with ρa>0 and sgs q_lcl>0: 25, with ρa>0 and sgs q_rai>0: 12, with ρa>0 and sgs q_sno>0: 0
+ρa/ρ max: 0.09842778716784183
+Y_f comp 1: nz=29 max=0.004236118121598809
+Y_f comp 2: nz=22 max=80.4800187947324
+#### /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/parity_c1b/main/edmf_column.jls
+ρ          Y: min=1.025 max=1.215 nz=30  impl nz=30 maxabs=9.16e-7  rem nz=1
+uₕ1        Y: min=-0.9736 max=4.342 nz=30  impl nz=30 maxabs=0.000356  rem nz=30
+uₕ2        Y: min=-2.056 max=4.76 nz=30  impl nz=30 maxabs=0.000761  rem nz=30
+ρe_tot     Y: min=-51570.0 max=-45740.0 nz=30  impl nz=30 maxabs=2.05  rem nz=30
+ρq_tot     Y: min=0.002839 max=0.01179 nz=30  impl nz=30 maxabs=6.88e-7  rem nz=29
+ρq_lcl     Y: min=0.0 max=0.0007126 nz=27  impl nz=29 maxabs=5.32e-8  rem nz=29
+ρq_icl     Y: min=0.0 max=0.0 nz=0  impl nz=0 maxabs=0.0  rem nz=0
+ρq_rai     Y: min=0.0 max=5.727e-6 nz=25  impl nz=30 maxabs=5.76e-9  rem nz=27
+ρq_sno     Y: min=0.0 max=0.0 nz=0  impl nz=0 maxabs=0.0  rem nz=0
+ρtke       Y: min=-0.0001806 max=0.349 nz=30  impl nz=30 maxabs=0.000903  rem nz=30
+sgs ρa     Y: min=5.567e-43 max=0.12 nz=30  impl nz=30 maxabs=5.4e-5  rem nz=0
+sgs mse    Y: min=38880.0 max=41940.0 nz=30  impl nz=30 maxabs=1.63  rem nz=1
+sgs q_tot  Y: min=0.002773 max=0.009965 nz=30  impl nz=30 maxabs=6.49e-7  rem nz=1
+sgs q_lcl  Y: min=0.0 max=0.0005198 nz=27  impl nz=29 maxabs=3.23e-8  rem nz=0
+sgs q_icl  Y: min=0.0 max=0.0 nz=0  impl nz=0 maxabs=0.0  rem nz=0
+sgs q_rai  Y: min=0.0 max=2.598e-6 nz=12  impl nz=30 maxabs=1.3e-7  rem nz=0
+sgs q_sno  Y: min=0.0 max=0.0 nz=0  impl nz=0 maxabs=0.0  rem nz=0
+levels with ρa>0 and sgs q_lcl>0: 27, with ρa>0 and sgs q_rai>0: 12, with ρa>0 and sgs q_sno>0: 0
+ρa/ρ max: 0.09877353341515387
+Y_f comp 1: nz=29 max=0.005043787744205035
+Y_f comp 2: nz=21 max=85.79653055229784

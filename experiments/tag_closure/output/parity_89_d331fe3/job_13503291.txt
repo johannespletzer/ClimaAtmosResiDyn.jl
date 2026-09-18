@@ -1,0 +1,4 @@
+node hpdar03c01s11, model name	: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz, start 2026-09-18T12:13:44+02:00
+precompiled 2026-09-18T12:19:56+02:00
+runs done 2026-09-18T13:07:11+02:00
+compare exit status 1, end 2026-09-18T13:07:14+02:00

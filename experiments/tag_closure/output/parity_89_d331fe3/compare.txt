@@ -1,0 +1,33 @@
+# compare.jl re-run on dlr-login at 2026-09-18T13:34:47+02:00, after the in-job compare crashed (ClimaUtilities not loaded)
+== column_1m.jls  t = 600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00] and 600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00]
+   field names equal: true
+   Y_c         bit for bit
+   Y_f         bit for bit
+   implicit_c  bit for bit
+   implicit_f  bit for bit
+   remaining_c bit for bit
+   remaining_f bit for bit
+   lim_c       bit for bit
+   lim_f       bit for bit
+== edmf_column.jls  t = 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00] and 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00]
+   field names equal: true
+   Y_c         bit for bit
+   Y_f         bit for bit
+   implicit_c  bit for bit
+   implicit_f  bit for bit
+   remaining_c bit for bit
+   remaining_f bit for bit
+   lim_c       bit for bit
+   lim_f       bit for bit
+== moist_sphere.jls  t = 86400.0 seconds (2010-01-02T00:00:00) [counter = 86400, period = 1 second, epoch = 2010-01-01T00:00:00] and 86400.0 seconds (2010-01-02T00:00:00) [counter = 86400, period = 1 second, epoch = 2010-01-01T00:00:00]
+   field names equal: true
+   Y_c         bit for bit
+   Y_f         bit for bit
+   implicit_c  bit for bit
+   implicit_f  bit for bit
+   remaining_c bit for bit
+   remaining_f bit for bit
+   lim_c       bit for bit
+   lim_f       bit for bit
+ALL BIT FOR BIT
+exit 0

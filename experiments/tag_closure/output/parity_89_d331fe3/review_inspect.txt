@@ -1,0 +1,47 @@
+######## /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/parity_89/fork  vs  /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/parity_89/upstream
+== column_1m.jls  t=600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00] / 600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00]  names_c=(:ρ, :uₕ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno) names_f=(:u₃,)
+   Y_c          size=(30, 1, 1, 9, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=210/270 maxabs=51944.56527883414
+   Y_f          size=(31, 1, 1, 1, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=2 nonzero=29/31 maxabs=0.005009262748056008
+   implicit_c   size=(30, 1, 1, 9, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=150/270 maxabs=0.08979227564039792
+   implicit_f   size=(31, 1, 1, 1, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=29/31 maxabs=0.005021562464840201
+   remaining_c  size=(30, 1, 1, 9, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=180/270 maxabs=2.182182424591601
+   remaining_f  size=(31, 1, 1, 1, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=29/31 maxabs=2.4289192879223265e-9
+   lim_c        size=(30, 1, 1, 9, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=0/270 maxabs=0.0
+   lim_f        size=(31, 1, 1, 1, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=0/31 maxabs=0.0
+== edmf_column.jls  t=3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00] / 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00]  names_c=(:ρ, :uₕ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno, :ρtke, :sgsʲs) names_f=(:u₃, :sgsʲs)
+   Y_c          size=(30, 1, 1, 17, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=360/510 maxabs=51533.810835877506
+   Y_f          size=(31, 1, 1, 2, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=4 nonzero=51/62 maxabs=80.4800187947324
+   implicit_c   size=(30, 1, 1, 17, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=384/510 maxabs=2.007135558616488
+   implicit_f   size=(31, 1, 1, 2, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=59/62 maxabs=0.21640551548022557
+   remaining_c  size=(30, 1, 1, 17, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=208/510 maxabs=2.189222652350804
+   remaining_f  size=(31, 1, 1, 2, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=57/62 maxabs=1.5277470261088055e-9
+   lim_c        size=(30, 1, 1, 17, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=0/510 maxabs=0.0
+   lim_f        size=(31, 1, 1, 2, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=0/62 maxabs=0.0
+== moist_sphere.jls  t=86400.0 seconds (2010-01-02T00:00:00) [counter = 86400, period = 1 second, epoch = 2010-01-01T00:00:00] / 86400.0 seconds (2010-01-02T00:00:00) [counter = 86400, period = 1 second, epoch = 2010-01-01T00:00:00]  names_c=(:ρ, :uₕ, :ρe_tot, :ρq_tot) names_f=(:u₃,)
+   Y_c          size=(10, 4, 4, 5, 216) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=172800/172800 maxabs=1.8237851788253017e7
+   Y_f          size=(11, 4, 4, 1, 216) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=6912 nonzero=31104/38016 maxabs=20.323181956148375
+   implicit_c   size=(10, 4, 4, 5, 216) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=103680/172800 maxabs=0.05975227522389348
+   implicit_f   size=(11, 4, 4, 1, 216) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=31104/38016 maxabs=12.329413248444553
+   remaining_c  size=(10, 4, 4, 5, 216) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=172800/172800 maxabs=6198.71497329769
+   remaining_f  size=(11, 4, 4, 1, 216) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=38016/38016 maxabs=12.413989352237587
+   lim_c        size=(10, 4, 4, 5, 216) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=69120/172800 maxabs=8.167638224518469e-7
+   lim_f        size=(11, 4, 4, 1, 216) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=0/38016 maxabs=0.0
+######## /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/parity_c1b/main  vs  /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/parity_c1b/c1b
+== column_1m.jls  t=600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00] / 600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00]  names_c=(:ρ, :uₕ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno) names_f=(:u₃,)
+   Y_c          size=(30, 1, 1, 9, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=208/270 maxabs=51944.45856473044
+   Y_f          size=(31, 1, 1, 1, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=2 nonzero=29/31 maxabs=0.00501434627814547
+   implicit_c   size=(30, 1, 1, 9, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=148/270 maxabs=0.08983763607020215
+   implicit_f   size=(31, 1, 1, 1, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=29/31 maxabs=0.005002101587100682
+   remaining_c  size=(30, 1, 1, 9, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=180/270 maxabs=2.1821420029346825
+   remaining_f  size=(31, 1, 1, 1, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=29/31 maxabs=2.4347330818130786e-9
+   lim_c        size=(30, 1, 1, 9, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=0/270 maxabs=0.0
+   lim_f        size=(31, 1, 1, 1, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=0/31 maxabs=0.0
+== edmf_column.jls  t=3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00] / 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00]  names_c=(:ρ, :uₕ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno, :ρtke, :sgsʲs) names_f=(:u₃, :sgsʲs)
+   Y_c          size=(30, 1, 1, 17, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=361/510 maxabs=51565.41582982155
+   Y_f          size=(31, 1, 1, 2, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=4 nonzero=50/62 maxabs=85.79653055229784
+   implicit_c   size=(30, 1, 1, 17, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=388/510 maxabs=2.0488060258438767
+   implicit_f   size=(31, 1, 1, 2, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=59/62 maxabs=0.372612524106926
+   remaining_c  size=(30, 1, 1, 17, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=208/510 maxabs=2.1869354949646946
+   remaining_f  size=(31, 1, 1, 2, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=55/62 maxabs=2.0717636495248826e-9
+   lim_c        size=(30, 1, 1, 17, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=0/510 maxabs=0.0
+   lim_f        size=(31, 1, 1, 2, 1) eltype=Float64 isequal=true bitpattern_equal=true NaN=0 Inf=0 -0.0=0 nonzero=0/62 maxabs=0.0

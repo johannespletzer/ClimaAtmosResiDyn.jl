@@ -1505,6 +1505,77 @@ not from the model's own nodes, and the scale is `max |e_tot|` there, 1.09e5 to
 `analysis/reduce_run.jl` and `analysis/b1_residual_scale.jl`;
 `output/b1_base/`.*
 
+**E51. With no diagnostic on, the fork after the merge of upstream v0.42.11
+gives upstream's results bit for bit, and so does C1b against `main`.** Both
+checks compare the state at the end of the run and one implicit, remaining and
+limiter tendency at that state. They use `isequal` on the parent arrays, and the
+bit patterns are also equal. The three configurations are ones upstream can run:
+
+  - the DYCOMS RF02 prognostic-EDMF column with 1M and the updrafts' vertical
+    diffusion on, for 1 h;
+  - a DYCOMS 1M column without EDMF, for 10 min;
+  - B1's 0M moist baroclinic wave without tags, `h_elem` 6, for 1 day.
+
+| check | a | b | where | configurations | result |
+|:-- |:-- |:-- |:-- |:-- |:-- |
+| #89 | the fork at `d83ffcc3` | upstream `d331fe30` | job `13503291`, one node, both at once | all three | all bit for bit |
+| C1b | `main` at `38661891` | C1b at `fe69cd06` | login node, one after the other | the two columns | all bit for bit |
+
+  - **The environments were the same.** In each check both checkouts used one
+    resolved `.buildkite` manifest and the same preferences. For #89 its package
+    versions equal upstream's committed manifest. Only `project_hash` and
+    ClimaAtmos's own version line differ.
+  - **Each run loaded its own code.** `pkgdir` in each log names its checkout,
+    and only the fork's log shows the fork's `tagging` group.
+  - **Every updraft field is in the compared state.** The EDMF column's `Y.c`
+    holds 17 fields, 7 of them the updraft's. The updraft has area at all 30
+    levels, cloud liquid at 25 and rain at 12, so the sedimentation corrections
+    and the updrafts' vertical diffusion ran on real data. Ice and snow are
+    zero in this warm case.
+  - **No NaN and no Inf anywhere.** Signed zeros occur and match, in `Y.f` at 2,
+    4 and 6,912 entries.
+  - **C1b's change also holds with tags on.** The model's fields with tags on
+    are those of the run without them. That is T6's last item, on the EDMF
+    column.
+  - **The job's own comparison crashed.** It read the results without
+    ClimaUtilities, which the saved `ITime` needs. The comparison was re-run on
+    the login node from the saved files, and a review agent recomputed it
+    independently.
+  - **Not covered:** diagnostic output, restarts, MPI, GPU, `Float32`, the SEM
+    limiter, the non-negativity methods, a prescribed flow, radiation other
+    than DYCOMS, a slab surface, topography, and any `Y` component besides `c`
+    and `f`. `analysis/parity/` now saves every component, refuses a NaN,
+    records its provenance and checks both runs' exit status. It was written
+    after these runs and has not run yet.
+
+*Job `13503291` on terrabyte, `hpda2_test`, node `hpdar03c01s11`, 2026-09-18;
+the C1b check on the login node. `analysis/parity/` holds the hardened
+successors of the scripts that ran; `output/parity_89_d331fe3/` and
+`output/parity_c1b_main/` hold the comparisons and the review's inspection.*
+
+**E52. With no diagnostic on, the fork builds the EDMF column in 635 s where
+upstream takes 249 s. The difference is in building the tendency function.**
+From the logs of E51's job. Both checkouts ran at once on one node, one run
+each, so the numbers are single measurements.
+
+| stage, EDMF column | fork `d83ffcc3`, s | upstream `d331fe30`, s |
+|:-- | --:| --:|
+| built cache | 150.1 | 150.9 |
+| built tendency function | 396.7 | 21.8 |
+| initialized integrator | 88.0 | 76.2 |
+
+  - On the 1M column the tendency function takes 22.4 s against 7.0 s.
+  - The timed block builds the Jacobian's cache and solver (`get_jacobian`)
+    and the ODE function. The fork changes `manual_sparse_jacobian.jl` by about
+    400 lines, the split solver of #76 among them, and wraps the hooks in the
+    ledger's meters. Which of these costs the time is not separated.
+  - `main` before the merge took 413 s in the same block, on the login node
+    in the C1b check. So the gap predates the merge.
+  - This is run time, which the parity rule allows to differ, but every EDMF
+    build pays it, in CI and in production.
+
+*The same job and logs as E51.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

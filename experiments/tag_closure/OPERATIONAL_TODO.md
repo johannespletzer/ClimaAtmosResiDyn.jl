@@ -370,6 +370,16 @@ With D1 (B12):
   - **D3, caveats:** C1 and C4, what is untested, stitching `e_src_fix` across
     restarts, choosing `c`, and ice passing provenance upward (E41).
 
+Found on 2026-09-18:
+
+  - **P7. The fork builds the EDMF column 2.5 times slower than upstream,**
+    with no diagnostic on: 635 s against 249 s, almost all of it in building
+    the tendency function, 397 s against 22 s (E52). `main` before the merge
+    took 413 s there too. Candidates: #76's split-solver construction and the
+    ledger's meters. First step: time `get_jacobian` alone in both checkouts
+    on the login node. Every EDMF build pays it, in CI and in production. Not
+    approved yet; it touches the solver and needs the owner's go-ahead.
+
 ## 4. Nice to have (N)
 
   - **ClimaCore upstream.** Its field-name sets check every pair against every

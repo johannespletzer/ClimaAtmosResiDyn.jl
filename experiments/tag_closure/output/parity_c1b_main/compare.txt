@@ -1,0 +1,23 @@
+# compare.jl on dlr-login at 2026-09-18T13:37:45+02:00: main 38661891 (worktree -b1) against C1b fe69cd06 (worktree -c1b), runs on the login node
+== column_1m.jls  t = 600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00] and 600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00]
+   field names equal: true
+   Y_c         bit for bit
+   Y_f         bit for bit
+   implicit_c  bit for bit
+   implicit_f  bit for bit
+   remaining_c bit for bit
+   remaining_f bit for bit
+   lim_c       bit for bit
+   lim_f       bit for bit
+== edmf_column.jls  t = 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00] and 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00]
+   field names equal: true
+   Y_c         bit for bit
+   Y_f         bit for bit
+   implicit_c  bit for bit
+   implicit_f  bit for bit
+   remaining_c bit for bit
+   remaining_f bit for bit
+   lim_c       bit for bit
+   lim_f       bit for bit
+ALL BIT FOR BIT
+exit 0
