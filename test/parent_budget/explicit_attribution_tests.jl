@@ -329,22 +329,21 @@ status(component) = PB.component_status(component)
     end
 
     @testset "The configuration path carries the attribution key" begin
+        # The moist column of the calibration protocol, which
+        # `implicit_attribution_tests.jl`, `transfer_tests.jl` and
+        # `report_tests.jl` also build. One compiled model then serves the
+        # four files' audit runs, and this group's cost is almost all
+        # compilation. `summary` compiles the column a second time, because
+        # the adapter's scratch tendency and snapshot are type parameters and
+        # only `audit` fills them.
         config = CA.AtmosConfig(
-            Dict(
-                "initial_condition" => "DYCOMS_RF02",
-                "z_max" => 1500.0,
-                "z_elem" => 30,
-                "z_stretch" => false,
-                "rad" => "DYCOMS",
-                "microphysics_model" => "0M",
-                "config" => "column",
-                "FLOAT_TYPE" => "Float64",
-                "dt" => "10secs",
-                "t_end" => "600secs",
-                "output_default_diagnostics" => false,
-                "output_dir" => mktempdir(),
-                "parent_budget_mode" => "audit",
-                "parent_budget_attribution" => "gross",
+            merge(
+                PB.calibration_configuration(),
+                Dict{String, Any}(
+                    "output_dir" => mktempdir(),
+                    "parent_budget_mode" => "audit",
+                    "parent_budget_attribution" => "gross",
+                ),
             );
             job_id = "parent_budget_explicit_moist",
         )
@@ -361,9 +360,17 @@ status(component) = PB.component_status(component)
         @test adapter.tolerance_source === :calibration_table
         @test r.status === :pass
         @test isempty(r.blocked_by)
+        # The atmosphere's own leg of each. The slab carries a leg of the
+        # surface flux and of the surface radiation too, and a leg there would
+        # not say that this channel was attributed.
         for event in
             ("xfer.surface_turbulent_flux", "xfer.radiation_toa", "xfer.radiation_surface")
-            @test any(l -> String(l.event) == event, adapter.last_legs)
+            @test any(
+                l ->
+                    String(l.event) == event &&
+                    PB.reservoir_name(l.reservoir) === ATMOS,
+                adapter.last_legs,
+            )
         end
         @test attribution_row(adapter, :explicit_limited, :water).status === :pass
     end
