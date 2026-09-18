@@ -292,10 +292,11 @@ end
         ),
     )
 
-    # The tags share the updraft corrections to sedimentation, which the model
-    # computes for the first updraft only. So one updraft is allowed and two
-    # are refused. Eddy diffusion moves the tags as tracers under both EDMF
-    # variants. That is allowed, and warned.
+    # The model runs `prognostic_edmfx` with one updraft only, and the tags
+    # share the updraft corrections to sedimentation, which it computes for
+    # the first updraft only. So one updraft is allowed, and two are refused
+    # when the tags are configured. Eddy diffusion moves the tags as tracers
+    # under both EDMF variants. That is allowed, and warned.
     @test_logs (:warn, r"prognostic_edmfx") match_mode = :any CA.AtmosTagging(
         source_config("edmf", "turbconv" => "prognostic_edmfx"),
     )

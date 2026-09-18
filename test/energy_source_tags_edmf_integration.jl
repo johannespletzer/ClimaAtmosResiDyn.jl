@@ -7,9 +7,10 @@ on the shipped DYCOMS RF02 EDMF column, with 1-moment microphysics and the
 updrafts' vertical diffusion on:
 
  1. the run completes. The updrafts' vertical diffusion skips the tags, which
-    they do not carry;
+    they do not carry, and still reaches the fields they do carry;
  2. the partition's tendencies from the sub-grid mass flux add up to the
-    parent's, and each face takes the shares of the cell the flux leaves;
+    parent's, and each face takes the shares of the cell the flux leaves. The
+    flux is rebuilt with each of the parent's reconstructions;
  3. the partition's tendencies from sedimentation add up to the parent's, with
     the updraft and environment corrections. The whole flux is shared once, by
     its direction;
@@ -124,6 +125,24 @@ end
     ᶠJ = CA.Fields.local_geometry_field(Y.f).J
     model = p.atmos.energy_source_tagging_model
 
+    # The updrafts' vertical diffusion alone, into a zeroed tendency. The grid
+    # mean diffuses the tags, and the updraft, which has no copy of them, is
+    # skipped. A field the updraft carries still takes the grid mean's
+    # specific tendency. Here that is `q_tot`, which this function moves by
+    # `K_h` and by `K_e` alike in the grid mean and in the updraft.
+    @testset "The updrafts' vertical diffusion skips only the tags" begin
+        Yₜ = zero(Y)
+        CA.edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y, p, t, turbconv_model)
+        @test maximum(abs, parent(Yₜ.c.ρe_src_strat)) > 0
+        ᶜq_totₜ = @. Yₜ.c.ρq_tot / Y.c.ρ
+        scale = maximum(abs, parent(ᶜq_totₜ))
+        @test scale > 0
+        @test maximum(
+            abs,
+            parent(Yₜ.c.sgsʲs.:(1).q_tot) .- parent(ᶜq_totₜ),
+        ) < 100 * eps(FT) * scale
+    end
+
     # A step partition, as in the sedimentation item of
     # `energy_source_tags_integration.jl`: all of `E` above 750 m in `strat`,
     # and all below in `tropo`. A flux of one sign in a band around the step
@@ -169,6 +188,40 @@ end
             parent(ᶜpartition_tendency) .- parent(ᶜE_tendency),
         ) < 100 * eps(FT) * scale
         @test all(isfinite, parent(Yₜ.c.ρe_src_rad))
+
+        # The column runs `edmfx_sgsflux_upwinding: none`. The tags rebuild
+        # the flux with whichever reconstruction the parent uses, so each is
+        # checked here against the parent's `vertical_transport`, on the
+        # updraft's energy flux. Rounding scales with the face flux over the
+        # level spacing.
+        (; ᶠu³, ᶠu³ʲs, ᶜρʲs, ᶜKʲs, ᶜh_tot) = p.precomputed
+        ᶠu³_diff = @. ᶠu³ʲs.:(1) - ᶠu³
+        ᶜenergy = @. (Y.c.sgsʲs.:(1).mse + ᶜKʲs.:(1) - ᶜh_tot) *
+           CA.draft_area(Y.c.sgsʲs.:(1).ρa, ᶜρʲs.:(1))
+        ᶠρʲ = @. CA.ᶠinterp(ᶜρʲs.:(1) * ᶜJ) / ᶠJ
+        Δz_min = minimum(parent(CA.Fields.Δz_field(Y.c)))
+        for upwinding in (:none, :first_order, :vanleer_limiter, :third_order)
+            vtt = CA.vertical_transport(
+                ᶜρʲs.:(1),
+                ᶠu³_diff,
+                ᶜenergy,
+                p.dt,
+                Val(upwinding),
+            )
+            ᶜparent_tendency = zero.(Y.c.ρ)
+            @. ᶜparent_tendency += vtt
+            # The helper returns a lazy face value. It is not broadcast over.
+            ᶠface_value =
+                CA._face_value_flux(ᶠu³_diff, ᶜenergy, p.dt, Val(upwinding))
+            ᶠrebuilt_flux = @. ᶠρʲ * ᶠface_value
+            ᶜrebuilt_tendency = @. -CA.ᶜadvdivᵥ(ᶠrebuilt_flux)
+            flux_scale = maximum(abs, parent(ᶠrebuilt_flux)) / Δz_min
+            @test flux_scale > 0
+            @test maximum(
+                abs,
+                parent(ᶜrebuilt_tendency) .- parent(ᶜparent_tendency),
+            ) < 100 * eps(FT) * flux_scale
+        end
 
         # Each face takes the shares of the cell the flux leaves.
         CA.energy_source_share_norm!(p, Y_step)

@@ -1154,8 +1154,11 @@ The tags have no updraft copy. Under `prognostic_edmfx` they take their shares
 of the parent's sub-grid mass flux of energy
 (`sgs_mass_flux_of_energy_source_tags!`) and of the updraft and environment
 corrections to sedimentation (`sediment_energy_source_tags_with_corrections!`).
-The model computes those corrections for the first updraft only, and the
-sharing has been checked with one updraft. So more than one is refused.
+The model itself runs `prognostic_edmfx` with one updraft only, and asserts
+that when it builds its cache. This check refuses more at configuration time,
+with a message. It would refuse them even if the model allowed more, because
+the model computes those corrections for the first updraft only, and the
+sharing has been checked with one updraft.
 
 Both EDMF variants have eddy diffusion. It moves the tags as passive tracers,
 while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, as
@@ -1165,7 +1168,8 @@ function check_energy_source_tagging_supported(turbconv, updraft_number)
     if turbconv == "prognostic_edmfx" && updraft_number > 1
         error(
             "`energy_source_tags` with `turbconv: prognostic_edmfx` need \
-            `updraft_number: 1`, got $updraft_number. The tags take their \
+            `updraft_number: 1`, got $updraft_number. The model runs \
+            `prognostic_edmfx` with one updraft only. The tags take their \
             shares of the updraft and environment corrections to \
             sedimentation, and the model computes those for the first \
             updraft only.",
@@ -1191,9 +1195,9 @@ being `~` (null) or an empty list disables that feature entirely, at no runtime
 cost.
 
 Energy source tags are refused without `energy_source_tag_offset`, see
-`check_energy_source_offset_given`, and under `turbconv: prognostic_edmfx`, see
-`check_energy_source_tagging_supported`. The label warnings of the energy source
-tags and the records see the microphysics model.
+`check_energy_source_offset_given`, and under `turbconv: prognostic_edmfx` with
+more than one updraft, see `check_energy_source_tagging_supported`. The label
+warnings of the energy source tags and the records see the microphysics model.
 """
 function AtmosTagging(config::AtmosConfig)
     FT = eltype(config)

@@ -116,12 +116,13 @@ sub-grid flux of `E`, face by face, from the cell the flux leaves. The flux is
 the one of `ρe_tot`, `ρᵏ aᵏ (u³ᵏ - u³)(mseᵏ + Kᵏ - h_tot)` summed over the
 subdomains, plus `c` times the one of `ρ`, which is the same form in
 `q_totᵏ - q_tot`. Each part is built with the parent's own reconstruction,
-`edmfx_sgsflux_upwinding`. So the partition's fluxes add up to the parent's, and
-the sub-grid mass flux adds nothing to `e_src_res`. A tag's composition in an
-updraft is taken as that of the cell the flux leaves. The flux moves the energy
-convection carries, but it does not mix provenance the way it mixes the air. It
-runs in the implicit tendency beside the parent's flux and has no Jacobian
-block, as sedimentation has none.
+`edmfx_sgsflux_upwinding`. So the partition's fluxes add up to the parent's in
+every evaluation of the tendency. A tag's composition in an updraft is taken as
+that of the cell the flux leaves. The flux moves the energy convection carries,
+but it does not mix provenance the way it mixes the air. It runs in the
+implicit tendency beside the parent's flux. The parent's flux has Jacobian
+blocks and the tags' has none, as in sedimentation. So within a step the tags
+lag the parent's implicit flux slightly, and that gap lands in `e_src_res`.
 
 ## Negative tags, and the repair
 
@@ -505,8 +506,10 @@ family as a whole.
   - Tags are **grid-scale only**, with no sub-grid updraft counterpart. Under
     `turbconv: prognostic_edmfx` they take their shares of the sub-grid mass
     flux and of the sedimentation corrections instead, as described under
-    [Attribution](#Attribution). More than one updraft is refused, because the
-    model computes the sedimentation corrections for the first updraft only.
+    [Attribution](#Attribution). The model runs `prognostic_edmfx` with one
+    updraft only. The tags refuse more at configuration time, and would refuse
+    them even if the model allowed more, because the model computes the
+    sedimentation corrections for the first updraft only.
     Under both EDMF variants the eddy diffusion moves the tags as passive
     tracers while it moves `ρe_tot` in enthalpy form, and the model warns.
   - Tags are excluded from both tracer limiters, through
@@ -552,4 +555,5 @@ ClimaAtmos.enthalpy_horizontal_advection_of_energy_source_tags!
 ClimaAtmos.enthalpy_hyperdiffusion_of_energy_source_tags!
 ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
 ClimaAtmos.keep_energy_source_sediment_correction!
+ClimaAtmos.sediment_energy_source_tags_with_corrections!
 ```

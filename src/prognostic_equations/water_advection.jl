@@ -70,7 +70,9 @@ function vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
     energy_source_share_norm!(p, Y)
     # Under PrognosticEDMFX, a species the updraft carries gets subdomain
     # corrections below. The energy source tags move with that species there,
-    # with the corrections.
+    # with the corrections. This restates the gate of the corrections loop:
+    # `PrognosticEDMFX`, and the species in the first updraft. Keep the two in
+    # step. A species gated here but not there would move no tag at all.
     has_subdomain_corrections(ρq_name) =
         p.atmos.turbconv_model isa PrognosticEDMFX &&
         MatrixFields.has_field(Y.c.sgsʲs.:(1), specific_tracer_name(ρq_name))

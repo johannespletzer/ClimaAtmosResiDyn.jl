@@ -986,14 +986,14 @@ end
 
 """
     keep_energy_source_sediment_correction!(p, ᶠcorrection)
-    sediment_energy_source_tags_with_corrections!(Yₜ, Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ, ᶠcorrection)
 
-Move the energy source tags with one sedimenting species under
-`PrognosticEDMFX`. There the parent's energy flux has two corrections besides
-the grid mean's, one for the updraft and one for the environment. Each moves the
-subdomain's specific energy minus the grid mean's with the subdomain's own mass
-flux. The subdomain mass fluxes sum to the grid mean's, so the corrections move
-no mass and carry no `c` part.
+Keep the updraft's correction for
+`sediment_energy_source_tags_with_corrections!`, which moves the energy source
+tags with one sedimenting species under `PrognosticEDMFX`. There the parent's
+energy flux has two corrections besides the grid mean's, one for the updraft
+and one for the environment. Each moves the subdomain's specific energy minus
+the grid mean's with the subdomain's own mass flux. The subdomain mass fluxes
+sum to the grid mean's, so the corrections move no mass and carry no `c` part.
 
 The tags take the species' whole face flux of `E`, the grid mean's flux as
 `sediment_energy_source_tags!` builds it plus both corrections. They share it
@@ -1025,6 +1025,17 @@ function _keep_energy_source_sediment_correction!(
     return nothing
 end
 
+"""
+    sediment_energy_source_tags_with_corrections!(Yₜ, Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ, ᶠcorrection)
+
+Move the energy source tags with one sedimenting species under
+`PrognosticEDMFX`. Each tag takes its share of the species' whole face flux of
+`E`: the grid mean's, the updraft's correction kept by
+`keep_energy_source_sediment_correction!`, and the environment's correction
+`ᶠcorrection`. The flux is shared once, by its direction. See
+`keep_energy_source_sediment_correction!` for why. A no-op when energy source
+tagging is disabled.
+"""
 sediment_energy_source_tags_with_corrections!(
     Yₜ,
     Y,
@@ -1321,6 +1332,11 @@ the flux moves the energy convection carries, but it does not mix provenance
 the way it mixes the air. A no-op without energy source tags, without
 `PrognosticEDMFX`, and with the SGS mass flux off.
 """
+# The EDMF flags are a `Val` here and a `Bool` from upstream v0.42.11 on. The
+# tags read both, so their gate stays the parent's across that change. A
+# rebase would not flag this line, and `true isa Val{true}` is false.
+_edmfx_flag_on(flag::Bool) = flag
+_edmfx_flag_on(::Val{flag}) where {flag} = flag
 sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model) = nothing
 sgs_mass_flux_of_energy_source_tags!(
     Yₜ,
@@ -1328,7 +1344,7 @@ sgs_mass_flux_of_energy_source_tags!(
     p,
     turbconv_model::PrognosticEDMFX,
 ) =
-    p.atmos.edmfx_model.sgs_mass_flux isa Val{true} ?
+    _edmfx_flag_on(p.atmos.edmfx_model.sgs_mass_flux) ?
     _sgs_mass_flux_of_energy_source_tags!(
         Yₜ,
         Y,
@@ -1371,32 +1387,33 @@ function _sgs_mass_flux_of_energy_source_tags!(
 
     # The environment's part first, so that it sets `ᶠflux` and the updrafts
     # add to it. Zeroing a vector field would need a `Ref`, which allocates.
-    ᶠu³_diff = p.scratch.ᶠtemp_CT3
+    # The velocity differences stay lazy. The parent keeps them in the shared
+    # `ᶠtemp_CT3`, and a diagnostic writes no scratch field the model reads.
     ᶠflux = p.scratch.ᶠe_src_sgs_flux
-    @. ᶠu³_diff = ᶠu³⁰ - ᶠu³
+    ᶠu³_diff⁰ = @. lazy(ᶠu³⁰ - ᶠu³)
     ᶜa⁰ = @. lazy(draft_area(ᶜρa⁰, ᶜρ⁰))
     ᶠρ⁰ = @. lazy(ᶠinterp(ᶜρ⁰ * ᶜJ) / ᶠJ)
     ᶜmse⁰ = ᶜspecific_env_mse(Y, p)
     ᶜenergy⁰ = @. lazy((ᶜmse⁰ + ᶜK⁰ - ᶜh_tot) * ᶜa⁰)
     ᶠenergy_flux⁰ =
-        _face_value_flux(ᶠu³_diff, ᶜenergy⁰, dt, edmfx_sgsflux_upwinding)
+        _face_value_flux(ᶠu³_diff⁰, ᶜenergy⁰, dt, edmfx_sgsflux_upwinding)
     @. ᶠflux = ᶠρ⁰ * ᶠenergy_flux⁰
     if moist
         ᶜq_tot⁰ = ᶜspecific_env_value(@name(q_tot), Y, p)
         ᶜwater⁰ = @. lazy((ᶜq_tot⁰ - specific(Y.c.ρq_tot, Y.c.ρ)) * ᶜa⁰)
         ᶠwater_flux⁰ =
-            _face_value_flux(ᶠu³_diff, ᶜwater⁰, dt, edmfx_sgsflux_upwinding)
+            _face_value_flux(ᶠu³_diff⁰, ᶜwater⁰, dt, edmfx_sgsflux_upwinding)
         @. ᶠflux += c * ᶠρ⁰ * ᶠwater_flux⁰
     end
     for j in 1:n
-        @. ᶠu³_diff = ᶠu³ʲs.:($$j) - ᶠu³
+        ᶠu³_diffʲ = @. lazy(ᶠu³ʲs.:($$j) - ᶠu³)
         ᶜaʲ = @. lazy(draft_area(Y.c.sgsʲs.:($$j).ρa, ᶜρʲs.:($$j)))
         ᶠρʲ = @. lazy(ᶠinterp(ᶜρʲs.:($$j) * ᶜJ) / ᶠJ)
         ᶜenergy = @. lazy(
             (Y.c.sgsʲs.:($$j).mse + ᶜKʲs.:($$j) - ᶜh_tot) * ᶜaʲ,
         )
         ᶠenergy_flux = _face_value_flux(
-            ᶠu³_diff,
+            ᶠu³_diffʲ,
             ᶜenergy,
             dt,
             edmfx_sgsflux_upwinding,
@@ -1407,7 +1424,7 @@ function _sgs_mass_flux_of_energy_source_tags!(
                 (Y.c.sgsʲs.:($$j).q_tot - specific(Y.c.ρq_tot, Y.c.ρ)) * ᶜaʲ,
             )
             ᶠwater_flux = _face_value_flux(
-                ᶠu³_diff,
+                ᶠu³_diffʲ,
                 ᶜwater,
                 dt,
                 edmfx_sgsflux_upwinding,

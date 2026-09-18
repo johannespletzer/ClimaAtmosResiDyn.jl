@@ -401,9 +401,12 @@ function edmfx_sgs_diffusive_flux_tendency!(
             # Uniform vertical diffusion: apply the same grid-mean specific
             # tendency to the matching subdomain field in each updraft. A
             # tracer the updraft does not carry is skipped, as on the
-            # horizontal path below. The grid-scale-only tracers are such
-            # tracers: the water and energy tags, the energy source tags, the
-            # process records and the stratospheric passive tracers.
+            # horizontal path below. The fork's grid-scale-only tracers are
+            # such tracers: the water and energy tags, the energy source tags
+            # and the stratospheric passive tracers. The skip covers any
+            # tracer, as the horizontal path's does. Under EDMF every tracer
+            # upstream has on the grid has an updraft copy, so upstream's runs
+            # take the same path as before.
             if apply_sgs_updraft
                 χ_name = specific_tracer_name(ρχ_name)
                 for j in 1:n
