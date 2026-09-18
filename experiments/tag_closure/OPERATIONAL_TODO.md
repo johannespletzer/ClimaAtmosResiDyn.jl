@@ -105,8 +105,14 @@ day, 2M and P3, more than one node, and the GPU.
     `test/energy_source_tags_edmf_integration.jl` in a new group
     `tagging_source_edmf`, and T5 is item 11 of the source-tag integration
     test. T6 passed 40 of 41 locally: `sgs_mass_flux_of_energy_source_tags!`
-    allocates 32 bytes per call, which is being traced. The model's fields came
-    out bit for bit those of the run without tags. Then C2 as a draft PR.
+    allocated 32 bytes per call. 16 were a zeroing `Ref`, now removed, and 16
+    are closures in upstream's `ᶜenv_value`, which the parent pays as well. The
+    check is now `<= 16`. The model's fields came out bit for bit those of the
+    run without tags. Local commit `268800c8`. Then C2 as a draft PR.
+  - **Paused on 2026-09-18 at about 12:15.** The resume steps are at the top
+    of [NEXT_SESSION.md](NEXT_SESSION.md): #89's parity job `13503291`, the T6
+    and T5 reruns, and C1b's remaining steps. #90, untracking
+    `.buildkite/LocalPreferences.toml`, is open for the owner.
   - **This branch has `main` merged in** (`5db75854`, main at `38661891`), so
     runs launched from here use current model code. Every conflict took
     `main`'s side, with the owner's agreement for the two protected pages,

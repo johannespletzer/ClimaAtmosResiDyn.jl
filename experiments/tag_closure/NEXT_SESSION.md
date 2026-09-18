@@ -68,6 +68,120 @@ one agent has worked this branch at once.
 
 ## Where the last session stopped
 
+**Paused by the owner on 2026-09-18 at about 12:15 CEST, in the middle of the
+work. Resume from this block.** Everything below it is older history.
+`$SCRATCH` is `/dss/dsstbyfs02/scratch/0D/di38kez`, and the session's working
+files are in `$SCRATCH/claude_work/`.
+
+**1. Check what ran on during the pause.**
+
+  - **Slurm job `13503291` (`parity_89`),** submitted with the owner's approval.
+    It is #89's bitwise parity check: the fork after the upstream merge
+    (`d83ffcc3`, worktree `../ClimaAtmosResiDyn-pr88`) against upstream
+    `d331fe30` (worktree `../ClimaAtmos-upstream-d331fe3`). It runs three
+    configurations upstream can run, an EDMF column, B1's moist sphere without
+    tags and a 1M column. It compares each one's state and its implicit and
+    remaining tendencies with `isequal`.
+      + Read the end of `$SCRATCH/claude_work/parity_89/parity_89-13503291.out`.
+        It ends in `ALL BIT FOR BIT` or `DIFFERENCES FOUND`, with a line per
+        array. The per-checkout logs are `fork.log` and `upstream.log` beside
+        it, and the scripts are `parity.jl`, `compare.jl` and `parity_89.sh`.
+      + If it is bit for bit, tick that box in #89's description and record it
+        in `OPERATIONAL_TODO.md`. #89 leaves draft only when the owner's manual
+        `ci.yml` run is also green. The owner starts that run, because the
+        token cannot.
+      + If it differs, find the first differing field before anything else.
+        The fork must match upstream exactly.
+  - **Login node: T6 again, then T5,** started at about 11:55. The logs are
+    `$SCRATCH/claude_work/t6_run2.log` and `t5_run1.log`. Look for `Test
+    Summary`. If either log is empty and no `julia` process is left, the run
+    died with the session. Rerun both from `../ClimaAtmosResiDyn-c1b` with
+    `.buildkite` and the terrabyte depot and modules (see the C1b notes below).
+    `$SCRATCH/claude_work/t5_only.jl` runs item 11 on its own.
+
+**2. C1b** (worktree `../ClimaAtmosResiDyn-c1b`, branch
+`claude/energy-source-tag-edmf-sharing`, local commit `268800c8`, not pushed).
+It is approved as a draft PR.
+
+  - **What is in it:**
+      + B1 is `sgs_mass_flux_of_energy_source_tags!` in `energy_source_tags.jl`,
+        called in `implicit_tendency!`.
+      + B2 shares each species' whole EDMF sedimentation flux once, in
+        `water_advection.jl`.
+      + B4 is the guard in `edmfx_sgs_flux.jl`.
+      + The refusal now stops only `updraft_number > 1`.
+      + T6 is `test/energy_source_tags_edmf_integration.jl`, in the new group
+        `tagging_source_edmf`, and T5 is item 11 of the source-tag
+        integration test.
+      + Docs, NEWS and the CI matrices are updated.
+  - **The expected outcome:**
+      + T6 passes 41 of 41. The first run passed 40. Its one failure was 32
+        bytes per call:
+          * 16 of them were a `Ref` used for zeroing, now removed;
+          * the other 16 are closures inside upstream's `ᶜenv_value`, which
+            the parent's own flux also pays, found with `Profile.Allocs`.
+
+        So the check is now `<= 16`.
+      + The first run also measured the partition's sedimentation tendency
+        against the parent's: 1.3e-17 against a scale of 0.032. Without the
+        corrections the tags would miss by 1.8e-5.
+      + The model's fields were bit for bit those of the run without tags.
+  - **Then, in order:**
+     1. Check C1b's two parent-code changes against `main`: the named `lazy`
+        fluxes in `water_advection.jl` and the B4 guard. Run the EDMF column
+        without tags on `main` (worktree `../ClimaAtmosResiDyn-b1`, `main` at
+        `38661891`) and on the branch, and compare with `isequal`. The
+        `edmf_column` entry of `$SCRATCH/claude_work/parity_89/parity.jl`
+        and its `compare.jl` do this. Use each worktree's own `.buildkite`
+        (ClimaCore 0.16).
+     2. Cherry-pick M3 (`68cfe17f`, branch
+        `claude/energy-source-tag-species-lists`). Split or reword the WIP
+        commit, push, and open the draft PR with
+        `$SCRATCH/claude_work/c1b_pr_body.md`. Fill in its `RESULTS`,
+        `PARITY` and `TIMING` placeholders first.
+     3. When #89 has merged, rebase. Upstream's EDMF flags are `Bool` there,
+        so `sgs_mass_flux isa Val{true}` in `energy_source_tags.jl` becomes
+        `sgs_mass_flux`. T6 catches a miss, because the tags would then take
+        no flux.
+     4. The validation, approved for up to 5 jobs: the D4 pair, D5, and D4
+        with vertical diffusion (`configs/d4_column_edmf_vd.yml`, committed
+        in `89dd4b42`). Prepare each command and show it to the owner before
+        submitting. The D configs' headers still describe the state before
+        C1b.
+
+**3. PR #89, the merge of upstream v0.42.11.**
+
+  - It is open as a draft. It replaces #88, which is closed. The owner
+    decided the following:
+      + a new PR;
+      + upstream's Aqua bound;
+      + the test constructors ported;
+      + upstream's `.buildkite` manifest.
+  - At the pause, `load 1.11`, prek and both manifest resolves had passed, and
+    the rest of CI was pending.
+  - `../ClimaAtmosResiDyn-pr88` carries two uncommitted files for the parity
+    job. **Never commit them:**
+      + `.buildkite/LocalPreferences.toml`, the terrabyte copy;
+      + `.buildkite/Manifest-v1.11.toml`, re-resolved. Only `project_hash` and
+        ClimaAtmos's own version line differ from upstream's.
+  - `../ClimaAtmos-upstream-d331fe3` exists only for the parity check. Remove
+    it afterwards.
+
+**4. PR #90** stops tracking `.buildkite/LocalPreferences.toml`. It is open,
+and the owner merges it while no run uses `-b1` or `-c1b`.
+
+  - **In a clone with local changes to the file,** a pull stops. Copy the file
+    aside, `git checkout --` it, pull, and copy it back.
+  - **Where the tracked copy was unmodified,** the pull deletes it. Copy it
+    back, or re-run the setup script, before the next Julia run.
+  - **#89 and #90** both add a NEWS line at the top of `main`'s list. The
+    second to merge needs a one-line fix.
+
+**5. Done on 2026-09-18:**
+
+  - B1 (job `13501290`) is recorded as E50 in `89dd4b42`.
+  - After B1 and C1b comes C2, the restart guard, as a draft PR.
+
 **The state on the night of 2026-09-14 is in
 [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md).** Read it first; the bullets below
 are the history that led there. In short:
