@@ -388,6 +388,10 @@ function edmfx_sgs_diffusive_flux_tendency!(
         # (`α = 1`) receive the full ρ·(K_h + K_e) diffusion.
         ᶜρχₜ_diffusion = p.scratch.ᶜtemp_scalar
         foreach_gs_tracer(Yₜ, Y) do ᶜρχₜ, ᶜρχ, ρχ_name
+            # Under the enthalpy audit the energy source tags take their shares
+            # of this function's energy flux instead, in
+            # `sgs_diffusive_flux_of_energy_source_tags!`.
+            energy_source_tag_moves_as_enthalpy(p, ρχ_name) && return
             α = ρχ_name in microphysics_tracer_names(Y) ? FT(0) : FT(1)
             ᶜχ = (@. lazy(specific(ᶜρχ, Y.c.ρ)))
             ᶠρK = @. lazy(α * ᶠρK_h + ᶠρK_e)

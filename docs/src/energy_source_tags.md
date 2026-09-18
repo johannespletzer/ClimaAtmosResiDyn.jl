@@ -380,8 +380,8 @@ tag-closure experiments it was all of the residual's growth on a column after
 its first ten minutes, and at least 93% of it on a sphere.
 
 `energy_source_tag_transport: enthalpy` removes that part, as an audit. In three
-transport terms, each tag takes its share of the parent's own flux of
-`E = ρe_tot + c·ρ`:
+transport terms, and in the EDMF eddy diffusion, each tag takes its share of the
+parent's own flux of `E = ρe_tot + c·ρ`:
 
   - **vertical advection:** the parent's flux through each face, `ρ u³` times the
     face value of `h_tot + c` under `energy_q_tot_upwinding`, times the tag's
@@ -390,7 +390,15 @@ transport terms, each tag takes its share of the parent's own flux of
     in the value it moves;
   - **hyperdiffusion:** the parent's hyperdiffusion flux of `E` times the
     share, before the divergence. Its water part moves `ρ` too, so it carries
-    `h_eff + Φ + c`.
+    `h_eff + Φ + c`;
+  - **the EDMF eddy diffusion,** vertically, under `prognostic_edmfx` and
+    `edonly_edmfx`: the parent's diffusive flux of `ρe_tot`,
+    `-ρK_h ∇s_d - ρK_e ∇h_tot - ρK_h (h_eff + Φ) ∇q_tot_eff`, plus `c` times its
+    flux of `ρ`, `-ρK_h ∇q_tot_eff - ρK_e ∇q_tot`, times the share of the cell
+    the flux leaves. It runs beside the parent's flux, in the implicit step
+    when the diffusion is implicit, and the tags have no Jacobian block for
+    it. So within a step they lag the parent's implicit flux, and that gap
+    lands in `e_src_res`, as it does for the sub-grid mass flux.
 
 The shares are the ones sedimentation uses. A partition tag's clamped share of
 `E` is divided by the partition's sum, and a tag with a source keeps its plain
@@ -408,7 +416,8 @@ audit's residual in its first hour, during the initial adjustment, and a
 converged Newton solve removed 99% of it on a column.
 
 Everything else the tags see stays as under `tracer`: the brackets, the repair,
-sedimentation, vertical diffusion, the sponges and the SGS closures. Under
+sedimentation, vertical diffusion outside EDMF, the sponges and the horizontal
+eddy diffusion. Under
 `prognostic_edmfx` the tags take their shares of the sub-grid mass flux in both
 modes, as described under [Attribution](#Attribution). The model itself is
 untouched, so its state is the same with the switch on and off.
@@ -510,8 +519,10 @@ family as a whole.
     updraft only. The tags refuse more at configuration time, and would refuse
     them even if the model allowed more, because the model computes the
     sedimentation corrections for the first updraft only.
-    Under both EDMF variants the eddy diffusion moves the tags as passive
-    tracers while it moves `ρe_tot` in enthalpy form, and the model warns.
+    Under the default `tracer` transport, the eddy diffusion of both EDMF
+    variants moves the tags as passive tracers while it moves `ρe_tot` in
+    enthalpy form, and the model warns. Under the enthalpy audit the tags take
+    their shares of its vertical flux instead.
   - Tags are excluded from both tracer limiters, through
     `is_tagged_tracer_name`. The repair above keeps them non-negative instead,
     unless it is switched off.
@@ -566,4 +577,6 @@ ClimaAtmos.check_energy_source_checkpoint
 ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
 ClimaAtmos.keep_energy_source_sediment_correction!
 ClimaAtmos.sediment_energy_source_tags_with_corrections!
+ClimaAtmos.shares_sgs_diffusion
+ClimaAtmos.sgs_diffusive_flux_of_energy_source_tags!
 ```

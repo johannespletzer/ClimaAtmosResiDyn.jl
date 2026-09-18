@@ -149,6 +149,14 @@ is_energy_source_tag_name(name::Symbol) = startswith(string(name), "ρe_src_")
 is_energy_source_tag_name(name::MatrixFields.FieldName) =
     is_energy_source_tag_name(MatrixFields.extract_first(name))
 
+# The same test, answered from the name's type. A filter over names with it
+# folds at compile time, so a list of Jacobian blocks built from it has a
+# concrete type. For names relative to `Y.c`.
+@generated is_energy_source_tag_field_name(
+    ::MatrixFields.FieldName{name_chain},
+) where {name_chain} =
+    length(name_chain) == 1 && startswith(string(name_chain[1]), "ρe_src_")
+
 # ============================================================================
 # Cache
 # ============================================================================
@@ -230,8 +238,9 @@ _energy_source_fix_fields(ᶜρ, tags::Tuple) = merge(
 Scratch fields of the energy source tags, merged into `p.scratch`: the
 bracket's snapshot of `Yₜ.c.ρe_tot`, the partition-share denominator that
 sedimentation divides by, the two face fluxes of `E` that the tags share under
-`PrognosticEDMFX`, and with an offset also a snapshot of `Yₜ.c.ρ` and a field
-the closure check fills with the offset total. They live in `p.scratch`
+`PrognosticEDMFX`, the enthalpy coefficient of the diffusive flux that they
+share under the enthalpy audit, and with an offset also a snapshot of `Yₜ.c.ρ`
+and a field the closure check fills with the offset total. They live in `p.scratch`
 because the implicit tendency, where sedimentation runs, may be evaluated with
 `ForwardDiff.Dual` numbers, and `p.scratch` is converted for that.
 """
@@ -243,6 +252,7 @@ energy_source_scratch(Y, model::EnergySourceTaggingModel) = merge(
             Geometry.WVector{eltype(Y.c.ρ)},
             axes(Y.f),
         ),
+        ᶜe_src_h_eff_plus_Φ = similar(Y.c.ρ),
     ),
 )
 # The cell-center scratch alone: the bracket's snapshots, the share
@@ -1472,6 +1482,133 @@ function _sgs_energy_source_tag_fluxes!(
         ᶠflux,
         Base.tail(tags),
     )
+end
+
+"""
+    shares_sgs_diffusion(atmos)
+
+Whether the energy source tags take their shares of the parent's own EDMF
+diffusive flux of energy, rather than diffuse as tracers. That is so under the
+enthalpy audit (`energy_source_tag_transport: enthalpy`) with
+`turbconv: prognostic_edmfx` or `edonly_edmfx`. Then the tracer loop of
+`edmfx_sgs_diffusive_flux_tendency!` skips the tags,
+`sgs_diffusive_flux_of_energy_source_tags!` moves them, and the implicit
+Jacobian gives them no diffusion block. The answer is a property of the
+model's type, so it folds away at compile time.
+"""
+shares_sgs_diffusion(atmos) =
+    moves_as_enthalpy(atmos.energy_source_tagging_model) &&
+    atmos.turbconv_model isa Union{EDOnlyEDMFX, PrognosticEDMFX}
+
+"""
+    without_shared_diffusion_tags(names, atmos)
+
+`names` without the energy source tags when they share the parent's EDMF
+diffusive flux (see `shares_sgs_diffusion`), and `names` as it is otherwise.
+The implicit Jacobian builds and updates the tracers' diffusion blocks from
+this list, so the tags have no such block when the diffusion they get is not
+a tracer's. The choice folds at compile time, so the list has a concrete type.
+"""
+without_shared_diffusion_tags(names, atmos) =
+    _without_shared_diffusion_tags(names, Val(shares_sgs_diffusion(atmos)))
+_without_shared_diffusion_tags(names, ::Val{false}) = names
+_without_shared_diffusion_tags(names, ::Val{true}) =
+    unrolled_filter(name -> !is_energy_source_tag_field_name(name), names)
+
+"""
+    sgs_diffusive_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model)
+
+Under the enthalpy audit with EDMF, move the energy source tags by their
+shares of the parent's own vertical SGS diffusive flux of `E = ρe_tot + c·ρ`
+(see `shares_sgs_diffusion`).
+
+`edmfx_sgs_diffusive_flux_tendency!` moves `ρe_tot` with the face flux
+
+    F = -ρK_h ∇s_d - ρK_e ∇h_tot - ρK_h (h_eff + Φ) ∇q_tot_eff,
+
+the last term only when the air is moist. With moist air it also moves `ρ`,
+with `-ρK_h ∇q_tot_eff - ρK_e ∇q_tot`. The flux of `E` is the first plus `c`
+times the second, and it is rebuilt here from the same fields. Each tag takes
+it times its share in the cell the flux leaves, as with the SGS mass flux
+(`sgs_mass_flux_of_energy_source_tags!`). The partition's shares add up to
+one, so its fluxes add up to the parent's at every face, and the divergence
+has the parent's zero-flux boundaries.
+
+It runs beside the parent's flux: in the implicit tendency when the diffusion
+is implicit, in the explicit one otherwise. The tags have no Jacobian block for
+it. So when the diffusion is implicit, the tags follow the parent's flux at the
+Newton iterate, and within a step they lag the parent's implicit flux; that
+gap lands in `e_src_res`.
+
+Under the default `tracer` transport the tags diffuse as tracers, and this is
+a no-op. So it is without energy source tags, without EDMF, and with the SGS
+diffusive flux off. The horizontal SGS diffusion moves the tags as tracers in
+any case.
+"""
+sgs_diffusive_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model) = nothing
+sgs_diffusive_flux_of_energy_source_tags!(
+    Yₜ,
+    Y,
+    p,
+    turbconv_model::Union{EDOnlyEDMFX, PrognosticEDMFX},
+) =
+    shares_sgs_diffusion(p.atmos) && p.atmos.edmfx_model.sgs_diffusive_flux ?
+    _sgs_diffusive_flux_of_energy_source_tags!(
+        Yₜ,
+        Y,
+        p,
+        p.atmos.energy_source_tagging_model,
+    ) : nothing
+function _sgs_diffusive_flux_of_energy_source_tags!(
+    Yₜ,
+    Y,
+    p,
+    model::EnergySourceTaggingModel,
+)
+    energy_source_share_norm!(p, Y)
+    (; ᶠK_h, ᶠK_entr, ᶜT, ᶜh_tot) = p.precomputed
+    (; ᶜΦ) = p.core
+    thermo_params = CAP.thermodynamics_params(p.params)
+    # `false` is a strong zero, so without an offset the flux is `ρe_tot`'s.
+    c = _mass_energy(model.offset)
+    ᶠρK_h = @. lazy(ᶠinterp(Y.c.ρ) * ᶠK_h)
+    ᶠρK_e = @. lazy(ᶠinterp(Y.c.ρ) * ᶠK_entr)
+    # The flux is kept contravariant, as the tags' sharing takes it. The
+    # parent's divergence and this one both hold the boundary fluxes at zero.
+    ᶠflux = p.scratch.ᶠe_src_sgs_flux
+    @. ᶠflux = CT3(
+        -(
+            ᶠρK_h * ᶠgradᵥ(TD.dry_static_energy(thermo_params, ᶜT, ᶜΦ)) +
+            ᶠρK_e * ᶠgradᵥ(ᶜh_tot)
+        ),
+    )
+    if !(p.atmos.microphysics_model isa DryModel)
+        ᶜq_vap, ᶜq_lcl, ᶜq_icl = ᶜsuspended_water(Y, p)
+        ᶜh_eff_plus_Φ = ᶜh_eff_plus_Φ!(
+            p.scratch.ᶜe_src_h_eff_plus_Φ,
+            thermo_params,
+            ᶜT,
+            ᶜΦ,
+            ᶜq_vap,
+            ᶜq_lcl,
+            ᶜq_icl,
+        )
+        ᶜq_tot_eff = ᶜdiffusing_water(Y, p)
+        ᶜq_tot = @. lazy(specific(Y.c.ρq_tot, Y.c.ρ))
+        @. ᶠflux += CT3(
+            -(ᶠρK_h * ᶠinterp(ᶜh_eff_plus_Φ) * ᶠgradᵥ(ᶜq_tot_eff)) -
+            c * (ᶠρK_h * ᶠgradᵥ(ᶜq_tot_eff) + ᶠρK_e * ᶠgradᵥ(ᶜq_tot)),
+        )
+    end
+    _sgs_energy_source_tag_fluxes!(
+        Yₜ.c,
+        Y.c,
+        _energy_source_parent_field(Y, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        ᶠflux,
+        model.tags,
+    )
+    return nothing
 end
 
 """

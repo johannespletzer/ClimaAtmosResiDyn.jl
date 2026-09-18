@@ -310,6 +310,16 @@ end
     @test_logs (:warn, r"edonly_edmfx") match_mode = :any CA.AtmosTagging(
         source_config("edonly", "turbconv" => "edonly_edmfx"),
     )
+    # Under the enthalpy audit the tags take their shares of the vertical eddy
+    # diffusion, and the warning says so.
+    @test_logs (:warn, r"shares of the vertical eddy diffusion") match_mode =
+        :any CA.AtmosTagging(
+        source_config(
+            "edmf_enthalpy",
+            "turbconv" => "prognostic_edmfx",
+            "energy_source_tag_transport" => "enthalpy",
+        ),
+    )
 
     # Only 0-moment microphysics changes `ρe_tot`. So under 1M the `mp` tag and
     # a `microphysics` record stay zero, and each says so.

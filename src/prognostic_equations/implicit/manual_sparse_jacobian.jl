@@ -218,9 +218,14 @@ function diffusion_jacobian_blocks(Y, atmos, diffusion_flag)
     # `sedimentation_jacobian_blocks`, which this update accumulates into.
     sedimenting_tag_names =
         unrolled_map(center_state_name, sedimenting_water_tag_names(Y))
+    # Under the enthalpy audit with EDMF the energy source tags take their
+    # shares of the parent's diffusive flux, so they have no diffusion block.
     passive_names = unrolled_filter(
         name -> !(name in sedimenting_tag_names),
-        unrolled_map(center_state_name, passive_gs_tracer_names(Y)),
+        unrolled_map(
+            center_state_name,
+            without_shared_diffusion_tags(passive_gs_tracer_names(Y), atmos),
+        ),
     )
     ρtke_if_available =
         is_in_Y(@name(c.ρtke)) ? (@name(c.ρtke),) : ()
@@ -1557,7 +1562,9 @@ function update_diffusion_jacobian!(
     # `update_sedimentation_jacobian!` has already initialized with the
     # mirrored sedimentation flux, and which are accumulated into instead.
     sedimenting_tag_names = sedimenting_water_tag_names(Y)
-    MatrixFields.unrolled_foreach(passive_gs_tracer_names(Y)) do ρχ_name
+    diffused_passive_names =
+        without_shared_diffusion_tags(passive_gs_tracer_names(Y), p.atmos)
+    MatrixFields.unrolled_foreach(diffused_passive_names) do ρχ_name
         ρχ_state_name = center_state_name(ρχ_name)
         ∂ᶜρχ_err_∂ᶜρχ = matrix[ρχ_state_name, ρχ_state_name]
         if ρχ_name in sedimenting_tag_names

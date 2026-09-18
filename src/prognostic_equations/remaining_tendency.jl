@@ -214,6 +214,14 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
         )
         close_applied_update!(Yₜ, Y, p, :vertical_diffusion)
         edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
+        # Under the enthalpy audit the tracer loop above skips the energy
+        # source tags. They take their shares of the parent's flux of `E` here.
+        sgs_diffusive_flux_of_energy_source_tags!(
+            Yₜ,
+            Y,
+            p,
+            p.atmos.turbconv_model,
+        )
     end
 
     open_applied_update!(Yₜ, p, :surface_flux)

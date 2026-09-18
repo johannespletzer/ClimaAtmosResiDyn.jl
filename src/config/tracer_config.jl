@@ -1208,7 +1208,7 @@ function energy_source_transport_from_config(value)
 end
 
 """
-    check_energy_source_tagging_supported(turbconv, updraft_number)
+    check_energy_source_tagging_supported(turbconv, updraft_number, transport)
 
 Refuse `energy_source_tags` under `turbconv: prognostic_edmfx` with more than
 one updraft, and warn under `prognostic_edmfx` with one and under
@@ -1224,11 +1224,18 @@ with a message. It would refuse them even if the model allowed more, because
 the model computes those corrections for the first updraft only, and the
 sharing has been checked with one updraft.
 
-Both EDMF variants have eddy diffusion. It moves the tags as passive tracers,
-while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, as
-it does under vertical diffusion, so this is a warning.
+Both EDMF variants have eddy diffusion. Under the default `tracer` transport it
+moves the tags as passive tracers, while it moves `ρe_tot` in enthalpy form.
+The difference goes to `e_src_res`, as it does under vertical diffusion, so
+this is a warning. Under the enthalpy audit the tags take their shares of its
+vertical flux instead (`sgs_diffusive_flux_of_energy_source_tags!`), and only
+the horizontal eddy diffusion, when it is on, still moves them as tracers.
 """
-function check_energy_source_tagging_supported(turbconv, updraft_number)
+function check_energy_source_tagging_supported(
+    turbconv,
+    updraft_number,
+    transport = TracerEnergySourceTransport(),
+)
     if turbconv == "prognostic_edmfx" && updraft_number > 1
         error(
             "`energy_source_tags` with `turbconv: prognostic_edmfx` need \
@@ -1237,6 +1244,15 @@ function check_energy_source_tagging_supported(turbconv, updraft_number)
             shares of the updraft and environment corrections to \
             sedimentation, and the model computes those for the first \
             updraft only.",
+        )
+    elseif turbconv in ("prognostic_edmfx", "edonly_edmfx") &&
+           transport isa EnthalpyEnergySourceTransport
+        @warn(
+            "`energy_source_tags` with `turbconv: $turbconv` and \
+            `energy_source_tag_transport: enthalpy`: the tags take their \
+            shares of the vertical eddy diffusion's energy flux. The \
+            horizontal eddy diffusion, when it is on, still moves them as \
+            passive tracers, and the difference goes to `e_src_res`.",
         )
     elseif turbconv in ("prognostic_edmfx", "edonly_edmfx")
         @warn(
@@ -1307,6 +1323,7 @@ function AtmosTagging(config::AtmosConfig)
             check_energy_source_tagging_supported(
                 get(config.parsed_args, "turbconv", nothing),
                 get(config.parsed_args, "updraft_number", 1),
+                source_transport,
             )
             EnergySourceTaggingModel(
                 energy_source_tracer_tuple(

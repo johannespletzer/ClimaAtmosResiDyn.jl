@@ -16,7 +16,10 @@ updrafts' vertical diffusion on:
     its direction;
  4. the tag code allocates nothing of its own;
  5. the split Jacobian solver solves every tag and record apart;
- 6. the model's own fields are those of the same run without tags, bit for bit.
+ 6. the model's own fields are those of the same run without tags, bit for bit;
+ 7. under the enthalpy audit the tags take their shares of the parent's eddy
+    diffusion instead of diffusing as tracers, and have no diffusion block in
+    the Jacobian.
 
 The EDMF column is the most expensive model in the test suite to build, and the
 run without tags is a second model type. So this file has its own test group.
@@ -374,6 +377,10 @@ end
         @test length(diagnostic_names) == 4
         @test Set(map(field -> field.name, cache.solver.uncoupled)) ==
               Set(map(name -> CA.MatrixFields.FieldName(:c, name), diagnostic_names))
+        # Under the default transport the tags diffuse as tracers, so each has
+        # a tridiagonal diffusion block. Item 7 checks the enthalpy audit.
+        strat = CA.MatrixFields.FieldName(:c, :ρe_src_strat)
+        @test cache.matrix[(strat, strat)] isa CA.Fields.Field
     end
 
     # 6. The tags and the record change none of the model's own fields. The
@@ -411,6 +418,91 @@ end
             @test isequal(
                 parent(getproperty(Y.f, name)),
                 parent(getproperty(Y_plain.f, name)),
+            )
+        end
+    end
+
+    # 7. Under the enthalpy audit the parent's eddy diffusion leaves the tags
+    # alone, and they take their shares of its vertical flux of `E` instead.
+    # They have no diffusion block in the Jacobian, so the split solver keeps
+    # the identity for them. The model never reads the tags, so its fields are
+    # the tracer run's, bit for bit. This is a third build.
+    @testset "The tags share the eddy diffusion under the enthalpy audit" begin
+        audit = CA.get_simulation(
+            CA.AtmosConfig(
+                merge(
+                    test_dict,
+                    tag_dict,
+                    Dict{String, Any}(
+                        "energy_source_tag_transport" => "enthalpy",
+                        "output_dir" => mktempdir(pwd()),
+                    ),
+                );
+                job_id = "energy_source_tags_edmf_integration_enthalpy",
+            ),
+        )
+        @test CA.solve_atmos!(audit).ret_code == :success
+        Y_audit = audit.integrator.u
+        p_audit = audit.integrator.p
+        t_audit = audit.integrator.t
+        @test CA.shares_sgs_diffusion(p_audit.atmos)
+
+        Yₜ = zero(Y_audit)
+        CA.edmfx_sgs_diffusive_flux_tendency!(
+            Yₜ,
+            Y_audit,
+            p_audit,
+            t_audit,
+            turbconv_model,
+        )
+        @test all(iszero, parent(Yₜ.c.ρe_src_strat))
+        @test all(iszero, parent(Yₜ.c.ρe_src_rad))
+        ᶜE_tendency = @. Yₜ.c.ρe_tot + c * Yₜ.c.ρ
+        # Rounding scales with the larger of the two terms added.
+        term_scale = max(
+            maximum(abs, parent(Yₜ.c.ρe_tot)),
+            c * maximum(abs, parent(Yₜ.c.ρ)),
+        )
+        @test term_scale > 0
+        CA.sgs_diffusive_flux_of_energy_source_tags!(
+            Yₜ,
+            Y_audit,
+            p_audit,
+            turbconv_model,
+        )
+        ᶜpartition_tendency = @. Yₜ.c.ρe_src_strat + Yₜ.c.ρe_src_tropo
+        @test maximum(
+            abs,
+            parent(ᶜpartition_tendency) .- parent(ᶜE_tendency),
+        ) < 100 * eps(FT) * term_scale
+        @test maximum(abs, parent(Yₜ.c.ρe_src_strat)) > 0
+        @test all(isfinite, parent(Yₜ.c.ρe_src_rad))
+
+        Yₜ = zero(Y_audit)
+        @test second_call_allocations(
+            CA.sgs_diffusive_flux_of_energy_source_tags!,
+            Yₜ,
+            Y_audit,
+            p_audit,
+            turbconv_model,
+        ) == 0
+
+        cache = CA.jacobian_cache(
+            CA.ManualSparseJacobian(; approximate_solve_iters = 2),
+            Y_audit,
+            p_audit.atmos,
+        )
+        @test cache.solver isa CA.SplitJacobianSolver
+        strat = CA.MatrixFields.FieldName(:c, :ρe_src_strat)
+        @test cache.matrix[(strat, strat)] isa CA.LinearAlgebra.UniformScaling
+        @test strat in map(field -> field.name, cache.solver.uncoupled)
+
+        for part in (:c, :f), name in propertynames(getproperty(Y, part))
+            CA.is_energy_source_tag_name(name) && continue
+            startswith(string(name), "prc_") && continue
+            @test isequal(
+                parent(getproperty(getproperty(Y_audit, part), name)),
+                parent(getproperty(getproperty(Y, part), name)),
             )
         end
     end
