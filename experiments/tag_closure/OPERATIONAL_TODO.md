@@ -186,6 +186,7 @@ On 2026-09-14:
     explicit `0` keeps today's behaviour. The refusal quotes the tested values:
     110,495 J/kg, and the smallest offsets that made the total positive, 45.4
     kJ/kg on the DYCOMS column and 100.4 kJ/kg on the moist sphere (E6).
+    How to choose it for a long run is open: U8.
   - **The closure check (U2, R1):** on by default whenever the tags are set,
     daily, reported from a spin-up reference, report-only until V2 and V3
     calibrate a tolerance per transport.
@@ -435,11 +436,70 @@ Found on 2026-09-18:
   - **P2.** Compute `energy_source_share_norm!` once per evaluation, and skip it
     when nothing sediments. **P3.** A string allocation per tracer per
     evaluation under the audit (`energy_source_tags.jl:148`).
-  - **U7.** Start the tags from a tagless checkpoint, each region tag set to
-    its mask times `E`. Model code; out of C2's scope (C2's question 4).
+  - **U7. Start tagging from a checkpoint, a future opportunity.** Today the
+    tags can start only at t = 0. A restart cannot switch them on. C2's guard
+    (#92) refuses a checkpoint whose tag fields differ from the configuration,
+    and nothing gives a tag a value from a restored state. So a climate run
+    cannot spin up for months or years without tags and then start tagging.
+    The opportunity is a new tag experiment whose clock starts at the restart,
+    with an offset of its own (U8). It needs:
+      + an explicit start mode, off by default. In it a pure region tag starts
+        as its mask times `E` of the restored state, and a source tag at zero,
+        as at t = 0 (`tag_initial_value`);
+      + the process records started at zero the same way;
+      + the guard to accept a checkpoint without these fields in that mode
+        only, and to record the settings from that start on.
+
+    Changing the settings of tags already in a checkpoint stays refused. Model
+    code: the initialization path and the guard. Out of C2's scope (C2's
+    question 4). Size M. Added on 2026-09-18 at the owner's request, not to be
+    built now.
   - **U5.** A clear error when the tag list changes across a restart (C2 covers
     most of it). **U6.** Records in Float64, or reset at each output, for long
     Float32 runs; over a day they match Float64 to 4e-4 at 24 h (E45).
+  - **U8. Choosing the offset, options.** The offset `c` belongs to a tag
+    experiment. It is fixed at t = 0 and kept through every restart, which
+    C2's guard enforces. The atmosphere does not depend on it (E17), but the
+    tags do (E19).
+      + **The risk.** The guidance today is the 110,495 J/kg the experiments
+        used, and the refusal message quotes the minima of two initial
+        states. On the moist sphere that leaves about 10 kJ/kg. For dry, still
+        air, `e_tot + c > 0` needs `T > T₀ − (c − R_d T₀ − g z) / cv_d`. At
+        110,495 J/kg that is 228 K at sea level, 215 K at 1 km and 187 K at
+        3 km. A production run over a continental winter can plausibly go
+        colder near the surface. No run with an offset has crossed yet, but
+        none lasted more than a day.
+      + **What happens there.** The shares are zero where `e_tot + c ≤ 0`. The
+        tags stop losing energy but keep gaining it. Sedimentation, the EDMF
+        sub-grid flux and the `enthalpy` audit move no tag out of such a
+        cell. The repair does not act there. The residual shows all of it. By
+        the formula, the overclaim outlasts the cold spell, and later losses
+        relax it only in part. That is not measured.
+      + **Option 1: choose `c` from a temperature floor** over the whole run,
+        not from the initial state: `c ≥ R_d T₀ + cv_d (T₀ − T_floor) − g z`.
+        The refusal message and the docs would say so. 150 kJ/kg keeps dry air
+        at sea level positive down to 173 K. The cost, measured for a doubled
+        `c` (E19): the source tag moves by about 1%, and the region tags'
+        negative undershoots grow 1.5 times, which the repair absorbs.
+      + **Option 2: one `c` for every setup whose tags are compared,** since
+        the tags depend on it. It is reported with the results, as part of
+        the energy reference.
+      + **A new `c` needs a new tag experiment,** from t = 0, or from a
+        checkpoint with U7. A new `c` at a restart would leave
+        `(c_new − c_old)·ρ` that no tag holds.
+
+    `c` is an energy reference, so this needs the owner's approval. Decide
+    before the first production run that spans a winter. Added on 2026-09-18,
+    not to be built now.
+  - **U9. The offset's headroom in the closure table.** Today the table shows
+    only `nonpositive_fraction`. So a drift toward `e_tot + c = 0` shows only
+    once a cell has crossed. A column with the domain's minimum of `e_tot + c`
+    shows the margin before that. It needs a minimum reduced across
+    processes, and it changes the table's column count, which parsers notice.
+    Optionally, add an `abort_above` for `nonpositive_fraction`. A run with
+    only source tags has no closure check by default. It is checked only when
+    the cache is built, at the start and at each restart. Size S. Added on
+    2026-09-18, not to be built now.
   - **R5.** A converged Newton solve for closure studies; its cost is not
     measured.
   - **M4,** when 2M returns: D2 and one integration item. **M5,** when the
