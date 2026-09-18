@@ -20,6 +20,16 @@ import ClimaTimeSteppers as CTS
 
 const FT = Float64
 
+# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# the model. The parameters follow the model's microphysics, as the removed
+# `AtmosSimulation{FT}` constructor chose them.
+function column_model(; kwargs...)
+    grid = CA.ColumnGrid(FT; z_elem = 10)
+    (; microphysics_model) = CA.AtmosModel(grid; kwargs...)
+    params = CA.ClimaAtmosParameters(FT; microphysics_model)
+    return CA.AtmosModel(grid; params, kwargs...)
+end
+
 provisional_tolerances() = Dict(
     quantity =>
         PB.BudgetTolerance(; absolute = 0.0, relative = 0.0, scale = 1.0, kappa = 64.0)
@@ -36,8 +46,8 @@ function column_simulation(;
     output_dir = mktempdir(),
     kwargs...,
 )
-    return CA.AtmosSimulation{FT}(;
-        grid = CA.ColumnGrid(FT; z_elem = 10),
+    return CA.AtmosSimulation(
+        column_model();
         dt = 60,
         t_end = 600,
         job_id = "parent_budget_restarts",

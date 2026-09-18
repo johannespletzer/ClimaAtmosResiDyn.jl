@@ -143,7 +143,7 @@ change the return code.
 
 ```julia
 import ClimaAtmos as CA
-simulation = CA.AtmosSimulation{Float64}(; t_end = 86400)
+simulation = CA.AtmosSimulation(CA.AtmosModel(CA.SphereGrid(Float64)); t_end = 86400)
 results = CA.solve_atmos!(simulation)
 results.ret_code == :success
 ```

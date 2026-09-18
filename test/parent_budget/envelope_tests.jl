@@ -19,6 +19,16 @@ import ClimaCore: Fields
 # the one the stepper runs.
 
 const FT = Float64
+
+# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# the model. The parameters follow the model's microphysics, as the removed
+# `AtmosSimulation{FT}` constructor chose them.
+function column_model(; kwargs...)
+    grid = CA.ColumnGrid(FT; z_elem = 10)
+    (; microphysics_model) = CA.AtmosModel(grid; kwargs...)
+    params = CA.ClimaAtmosParameters(FT; microphysics_model)
+    return CA.AtmosModel(grid; params, kwargs...)
+end
 const ATMOS = PB.ATMOSPHERE_ENDPOINT_GROUP
 
 newton() = CTS.NewtonsMethod(;
@@ -32,8 +42,8 @@ function column_simulation(;
     ode_config = CTS.IMEXAlgorithm(CTS.ARS343(), newton()),
     kwargs...,
 )
-    return CA.AtmosSimulation{FT}(;
-        grid = CA.ColumnGrid(FT; z_elem = 10),
+    return CA.AtmosSimulation(
+        column_model();
         dt = 60,
         t_end = 600,
         job_id = "parent_budget_envelopes",

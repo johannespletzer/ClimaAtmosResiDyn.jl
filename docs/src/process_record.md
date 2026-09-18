@@ -163,7 +163,7 @@ processes would have responded. Splitting one physical process into two
 bracketed steps, or merging two, changes the records without changing the
 simulation.
 
-## API
+## Process record API
 
 ```@docs
 ClimaAtmos.ProcessRecordModel

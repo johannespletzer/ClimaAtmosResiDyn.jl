@@ -3,6 +3,11 @@ import ClimaAtmos as CA
 import ClimaDiagnostics
 import Dates
 
+# `AtmosModel` takes a grid. These tests read only the model's tagging fields,
+# so the smallest column serves.
+column_atmos_model(; kwargs...) =
+    CA.AtmosModel(CA.ColumnGrid(Float64; z_elem = 10); kwargs...)
+
 @testset "Process records" begin
     for FT in (Float32, Float64)
         @testset "Names and state fields ($FT)" begin
@@ -215,7 +220,7 @@ import Dates
 
     @testset "AtmosModel integration" begin
         # Disabled by default
-        model = CA.AtmosModel()
+        model = column_atmos_model()
         @test isnothing(model.energy_process_record)
         @test isnothing(model.water_process_record)
         @test isnothing(model.tagging.energy_process_record)
@@ -224,7 +229,7 @@ import Dates
         # forwarded property name
         record =
             CA.ProcessRecordModel((CA.RecordedProcess{:radiation}(),))
-        model = CA.AtmosModel(; energy_process_record = record)
+        model = column_atmos_model(; energy_process_record = record)
         @test model.energy_process_record isa CA.ProcessRecordModel
         @test CA.process_name(model.energy_process_record.processes[1]) ==
               :radiation
@@ -235,7 +240,7 @@ import Dates
         # No-op when disabled
         @test isnothing(
             CA.Diagnostics.register_process_record_diagnostics!(
-                CA.AtmosModel(),
+                column_atmos_model(),
             ),
         )
 
@@ -244,7 +249,7 @@ import Dates
             CA.RecordedProcess{:surface_flux}(),
         ))
         CA.Diagnostics.register_process_record_diagnostics!(
-            CA.AtmosModel(; energy_process_record = record),
+            column_atmos_model(; energy_process_record = record),
         )
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_prc_radiation")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_prc_surface_flux")
@@ -265,7 +270,7 @@ import Dates
         )
         CA.Diagnostics.register_tagging_diagnostics!(CA.TaggingModel(tags))
         CA.Diagnostics.register_process_record_diagnostics!(
-            CA.AtmosModel(; energy_process_record = record),
+            column_atmos_model(; energy_process_record = record),
         )
 
         # A day, so the ladder picks a real period rather than the empty tuple

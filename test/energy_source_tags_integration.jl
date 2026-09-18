@@ -642,8 +642,7 @@ end
         # That reference reconstructs `h_tot + c`. The parent moves `h_tot`
         # with the same reconstruction and `ρ` with the central flux. The two
         # agree because each reconstruction reproduces a constant, which is
-        # asserted here rather than assumed. Rounding scales with the face
-        # fluxes over the level spacing.
+        # asserted here rather than assumed.
         upwinding = p_audit.atmos.numerics.energy_q_tot_upwinding
         ᶜJ = CA.Fields.local_geometry_field(Y_audit.c).J
         ᶠJ = CA.Fields.local_geometry_field(Y_audit.f).J
@@ -658,13 +657,23 @@ end
         @. ᶜparent_E +=
             vtt_h -
             c * CA.ᶜadvdivᵥ(CA.ᶠinterp(Y_audit.c.ρ * ᶜJ) / ᶠJ * ᶠu³)
-        ᶠmass_flux = @. CA.ᶠinterp(Y_audit.c.ρ * ᶜJ) / ᶠJ * ᶠu³
-        flux_scale =
-            (maximum(abs, parent(ᶜh_tot)) + c) *
-            maximum(abs, parent(ᶠmass_flux)) /
-            minimum(parent(CA.Fields.Δz_field(Y_audit.c)))
+        # Rounding scales with the larger of the two terms added: the
+        # parent's flux of `h_tot` and `c` times the mass-flux divergence, as
+        # in the sphere item below. The earlier scale was built from `u³` over
+        # Δz. It sat below one ulp of these terms, so the check asked for
+        # equality, and after the merge of upstream v0.42.11 one cell differed
+        # by about one ulp.
+        ᶜh_part = zero.(Y_audit.c.ρ)
+        @. ᶜh_part += vtt_h
+        ᶜmass_part = @. c * CA.ᶜadvdivᵥ(
+            CA.ᶠinterp(Y_audit.c.ρ * ᶜJ) / ᶠJ * ᶠu³,
+        )
+        term_scale = max(
+            maximum(abs, parent(ᶜh_part)),
+            maximum(abs, parent(ᶜmass_part)),
+        )
         @test maximum(abs, parent(ᶜexpected) .- parent(ᶜparent_E)) <
-              100 * eps(FT) * flux_scale
+              100 * eps(FT) * term_scale
 
         # The donor, on a step partition: all of `E` above 750 m in `strat` and
         # all below in `tropo`, moved by a flow of one sign in a band around

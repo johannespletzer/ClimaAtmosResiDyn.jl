@@ -2,6 +2,11 @@ using Test
 import ClimaAtmos as CA
 import ClimaAtmos.Internals.ParentBudget as PB
 
+# `AtmosModel` takes a grid. The schema reads only the model's physics, so the
+# smallest column serves.
+column_model(; kwargs...) =
+    CA.AtmosModel(CA.ColumnGrid(Float64; z_elem = 10); kwargs...)
+
 # The coverage registry and the schema it builds.
 #
 # Two things are pinned here. The page `docs/src/parent_budget/coverage.md`
@@ -58,18 +63,18 @@ end
 
 slab(FT) = CA.AtmosSurface(; temperature = CA.SurfaceConditions.SlabOceanTemperature{FT}())
 
-dry_model() = CA.AtmosModel()
-dry_slab_model() = CA.AtmosModel(; surface = slab(Float64))
-moist_model() = CA.AtmosModel(;
+dry_model() = column_model()
+dry_slab_model() = column_model(; surface = slab(Float64))
+moist_model() = column_model(;
     microphysics_model = CA.EquilibriumMicrophysics0M(),
     microphysics_tendency_timestepping = CA.Implicit(),
 )
-moist_slab_model() = CA.AtmosModel(;
+moist_slab_model() = column_model(;
     microphysics_model = CA.EquilibriumMicrophysics0M(),
     microphysics_tendency_timestepping = CA.Implicit(),
     surface = slab(Float64),
 )
-one_moment_slab_model() = CA.AtmosModel(;
+one_moment_slab_model() = column_model(;
     microphysics_model = CA.NonEquilibriumMicrophysics1M(),
     microphysics_tendency_timestepping = CA.Implicit(),
     surface = slab(Float64),
@@ -146,19 +151,19 @@ end
     @testset "Unsupported configurations are refused at setup" begin
         @test PB.is_supported(dry_model())
         @test_throws ErrorException PB.budget_schema(
-            CA.AtmosModel(; turbconv_model = CA.EDOnlyEDMFX());
+            column_model(; turbconv_model = CA.EDOnlyEDMFX());
             dss = false, implicit_solve = true,
         )
         @test_throws ErrorException PB.budget_schema(
-            CA.AtmosModel(; prescribed_flow = CA.ShipwayHill2012VelocityProfile{Float64}());
+            column_model(; prescribed_flow = CA.ShipwayHill2012VelocityProfile{Float64}());
             dss = false, implicit_solve = true,
         )
         @test_throws ErrorException PB.budget_schema(
-            CA.AtmosModel(; chemistry_model = CA.GasPhaseChem());
+            column_model(; chemistry_model = CA.GasPhaseChem());
             dss = false, implicit_solve = true,
         )
         @test_throws ErrorException PB.budget_schema(
-            CA.AtmosModel(; microphysics_model = CA.NonEquilibriumMicrophysics2M());
+            column_model(; microphysics_model = CA.NonEquilibriumMicrophysics2M());
             dss = false, implicit_solve = true,
         )
     end
@@ -278,7 +283,7 @@ end
         # explicit channel while the fallout stays implicit: one event, two
         # channels, each leg explaining its own.
         split = schema_for(
-            CA.AtmosModel(;
+            column_model(;
                 microphysics_model = CA.NonEquilibriumMicrophysics1M(),
                 microphysics_tendency_timestepping = CA.Explicit(),
                 surface = slab(Float64),
@@ -325,7 +330,7 @@ end
         @test :subsidence in PB.REGISTRY_EVENTS
         @test !(:horizontal_dynamics in PB.REGISTRY_EVENTS)
         # The schema carries the event onto the roster row.
-        schema = schema_for(CA.AtmosModel(;
+        schema = schema_for(column_model(;
             subsidence = CA.LargeScaleSubsidence(z -> -0.001),
         ))
         row = PB.process_row(
@@ -346,7 +351,7 @@ end
 
     @testset "Idealized radiation is declared by its form" begin
         dycoms = schema_for(
-            CA.AtmosModel(;
+            column_model(;
                 microphysics_model = CA.EquilibriumMicrophysics0M(),
                 radiation_mode = CA.RadiationDYCOMS{Float64}(),
             ),
@@ -355,7 +360,7 @@ end
         @test has_event(dycoms, "xfer.radiation_surface")
         @test !(:prescribed_radiative_heating in processes(dycoms, :explicit_main))
         trmm = schema_for(
-            CA.AtmosModel(;
+            column_model(;
                 microphysics_model = CA.EquilibriumMicrophysics0M(),
                 radiation_mode = CA.RadiationTRMM_LBA(Float64),
             ),
