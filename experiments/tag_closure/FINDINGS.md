@@ -1573,6 +1573,9 @@ each, so the numbers are single measurements.
     in the C1b check. So the gap predates the merge.
   - This is run time, which the parity rule allows to differ, but every EDMF
     build pays it, in CI and in production.
+  - **Corrected by E56:** the stage times are right, but their sum is not the
+    build time. Upstream compiles the same Jacobian solver before the timed
+    block, where no stage counts it. The whole build takes the same time.
 
 *The same job and logs as E51.*
 
@@ -1688,6 +1691,45 @@ at `9dd30a90`.
 *Job `13503987` on terrabyte, `hpda2_test`, 2026-09-18, from the worktree
 `../ClimaAtmosResiDyn-c1b-val` at `9dd30a90`. The outputs are in
 `output/d4_column_edmf_vd_float32/`.*
+
+**E56. The fork does not build the EDMF column more slowly than upstream.
+E52's gap is where the compile is counted.** Both checkouts spend about 400 s
+compiling the same Jacobian solver (`FieldMatrixWithSolver`). Upstream compiles
+it while Julia infers `args_integrator`, before the timed block "Built tendency
+function" starts, so no logged stage counts it. The fork compiles it at run
+time, inside that block. E52 summed the logged stages.
+
+  - **The whole build takes the same time.** `get_simulation` took 788 and
+    834 s upstream, in two runs, and 823 s in the fork. Upstream's log has a
+    425 s gap without a line between "Assembled callbacks" and the block's
+    first line.
+  - **The Jacobian alone costs the same:** the first `get_jacobian` took 400 s
+    upstream and 406 s in the fork, nearly all of it compile. SnoopCompile finds
+    388 s of inference upstream and 368 s in the fork. Most of it is
+    `UnrolledUtilities` and the `FieldNameSet` work of MatrixFields'
+    `partition_blocks`. No ClimaAtmos or MatrixFields method differs by more
+    than 9 s.
+  - **Two breaks in inference move the compile into the block.** One is #76's
+    `invokelatest`. The other is the fork's tag-name predicates on a
+    `FieldName`, which call `startswith(string(name), …)` at run time. So
+    `sedimenting_water_tag_names` infers as an abstract tuple, and so do the
+    Jacobian's block pairs, its matrix and its solver. Removing either halves
+    the block. Removing both gives upstream's 22.4 s. The parent-budget
+    ledger's meters play no part.
+  - **A small real cost:** without tags the fork's cache holds the same
+    `FieldMatrixWithSolver` twice, as matrix and as solver. The Jacobian's
+    type doubles, and the ODE function compiles in 11.1 s against 4.3 s.
+  - **Not explained:** a whole `edmf_column` parity run is 5 to 6% slower in the
+    fork (1476 against 1395 s in job 13503291). Two identical upstream runs
+    differed by 46 s.
+
+A fix that puts the untagged fork on upstream's path was tried in the session
+and not committed. It makes the tag predicates `@generated`, chooses the
+solver builder from the model's type, and keeps the unsplit solver once. The
+`edmf_column` parity run was bit for bit, and the block took 22.4 s. It saves
+the ODE function's few seconds; the build's wall time does not change.
+*Measured on the login node, one core, runs strictly one at a time,
+2026-09-18. Scripts, patches and logs are in `$SCRATCH/claude_work/p7/`.*
 
 ## 3. The energy reference
 

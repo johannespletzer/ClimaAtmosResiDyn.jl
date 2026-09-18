@@ -432,15 +432,17 @@ With D1 (B12):
 
 Found on 2026-09-18:
 
-  - **P7. The fork builds the EDMF column 2.5 times slower than upstream,**
-    with no diagnostic on: 635 s against 249 s, almost all of it in building
-    the tendency function, 397 s against 22 s (E52). `main` before the merge
-    took 413 s there too. Candidates: #76's split-solver construction and the
-    ledger's meters. First step: time `get_jacobian` alone in both checkouts
-    on the login node. Every EDMF build pays it, in CI and in production. The
-    measurement was approved on 2026-09-18 and runs as a background agent,
-    with scratch copies only. The fix needs the owner's go-ahead, because it
-    touches the solver.
+  - ~~**P7.**~~ **Not a regression (E56).** The fork builds the EDMF column in
+    the same wall time as upstream. E52 summed the logged stages, and upstream
+    compiles the Jacobian solver before the timed block, where no stage counts
+    it. What is real is small: without tags the cache holds the solver twice,
+    and the ODE function compiles in 11 s against 4 s. A fix was tried in
+    scratch and was bit for bit on `edmf_column`: `@generated` tag predicates,
+    the solver builder chosen from the model's type, and the solver kept once.
+    It saves seconds, so it is optional and not approved. Before it merges it
+    needs parity on `moist_sphere` and `column_1m`, testset 6 of the source-tag
+    integration file, and a tagged build with water tags. Unexplained: whole
+    parity runs are 5 to 6% slower in the fork.
   - **P8. #89 makes CI's test groups slower.** Measured on 2026-09-18 by
     comparing #89's run at `c068d564` with `main`'s at `38661891`. On
     identical runner CPUs #89's jobs took 1.4 to 2.1 times as long, in six
