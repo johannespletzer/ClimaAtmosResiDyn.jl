@@ -114,6 +114,29 @@ day, 2M and P3, more than one node, and the GPU.
     finished in 23 minutes. The residual is zero-sum at about 0.5%, and the
     records close the column. After #89 merges it is rebased, and
     `sgs_mass_flux isa Val{true}` becomes a `Bool` test.
+  - **#89 was reviewed** on 2026-09-18 by an agent, reading only. No blocking
+    defect. The fork's `src` differs from d331fe30 exactly as it differed from
+    the old base, apart from the resolved hunks. No fork code tests a flag
+    that became a `Bool` as a `Val`. The port builds the same models. The
+    rescaled audit check of `c068d564` has about 100 ulps of margin and still
+    catches a missing `c·ρ` flux. Open:
+      + R1: the upstream groups have not run on 1.10 with the new packages;
+        that is the owner's manual `ci.yml` run;
+      + R2: E51's parity did not cover the restart path, the vertical water
+        borrowing limiter or the prescribed-flow column. One more parity job
+        would, and it needs approval;
+      + R3: the committed `.buildkite` manifest keeps upstream's
+        `project_hash`, so every setup rewrites two lines. Taking upstream's
+        manifest was the owner's decision, and the two lines stay uncommitted
+        unless the owner decides otherwise;
+      + nits for a follow-up PR after the merge: a vacuous `===` test in
+        `test/coupler_compatibility.jl`, NEWS's stale Aqua headline, docstrings
+        without the tagging keywords, a species list parsed twice, and an
+        unmatched `@test_throws`;
+      + merge #89 as a merge commit, because the parity reference is the
+        second parent of the last upstream merge.
+
+    It also found the NaN tags of section 2, item 14.
   - **C2 is draft PR #92** (`e0813505`, from `main` at `23a57f02`). It passes
     locally: unit tests 291 of 291, the source-tag integration file 105 of 105.
     It unlocks V5, restart equivalence (up to 2 jobs, approved). After #89 it
@@ -335,6 +358,22 @@ None open. Every decision of this section was made on 2026-09-18; see
 12. **D1, the user guide into the docs,** with D3.
 13. **The GPU, last.** Run the diagnostic on a GPU on Levante, with Float32 and
     T3, and fix what that forces.
+14. **File-based initial conditions start the region tags as NaN.** Found by
+    #89's review on 2026-09-18, and confirmed by reading; not run. `WeatherModel`,
+    `AMIPFromERA5` and `MoistFromFile` build the pointwise state from NaN
+    placeholders, and `overwrite_initial_state!` (`src/types.jl:3229`) then
+    rewrites `ρ`, `ρe_tot`, `ρq_tot`, the condensates and the winds from the
+    file. The tags were built from the placeholders
+    (`src/setups/common/prognostic_variables.jl:60-92`), and nothing builds
+    them again. So every region tag of `ρe_tag_*`, `ρe_src_*` and `ρq_tag_*`
+    starts as NaN, and the run stops at the first NaN check where upstream
+    runs. Source tags and records start at zero and are unaffected, as are the
+    stratospheric passive tracers. No experiment used such an initial
+    condition. It blocks any production run that starts from a file. The fix
+    builds the tags again from the overwritten state, a hook after
+    `overwrite_initial_state!`, with a test on a file-based column. Model
+    code; needs the owner's approval. Before that, a refusal at configuration
+    time would turn the NaN into a clear error.
 
 ## 3. Should fix (S)
 
