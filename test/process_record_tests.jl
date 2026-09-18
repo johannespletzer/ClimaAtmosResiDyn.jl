@@ -53,7 +53,16 @@ column_atmos_model(; kwargs...) =
                 CA.water_process_record_state_names(model)...,
             )
                 @test !startswith(String(name), "ρ")
+                # The horizontal advection of tracers and the SEM limiter do
+                # not use `gs_tracer_names`. They take every name
+                # `is_tracer_var` accepts, which on a sphere moved the records
+                # with the air until the prefix was excluded.
+                @test CA.is_process_record_var(name)
+                @test !CA.is_tracer_var(name)
             end
+            @test CA.is_tracer_var(:ρq_tot)
+            @test CA.is_tracer_var(:ρe_src_tropics)
+            @test !CA.is_process_record_var(:ρq_tot)
         end
 
         @testset "Accumulation is signed and per process ($FT)" begin

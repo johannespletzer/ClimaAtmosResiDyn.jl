@@ -44,23 +44,32 @@ end
     is_energy_var(symbol)
     is_momentum_var(symbol)
     is_sgs_var(symbol)
+    is_process_record_var(symbol)
     is_tracer_var(symbol)
 
 Classify a top-level field name of `Y.c` or `Y.f` by the role it plays in the
 state.
 
+`is_process_record_var` is a process record, `prc_e_<process>` or
+`prc_q_<process>`. A record is prognostic, but it is the history of what one
+process did in a cell, not a quantity the air carries. So nothing may advect or
+limit it (see `docs/src/process_record.md`).
+
 `is_tracer_var` is the complement: every name that is not `ρ`, `ρtke`, an energy,
-a momentum, or an SGS variable.
+a momentum, an SGS variable, or a process record. The horizontal advection of
+tracers and the SEM limiter loop over these names.
 """
 is_energy_var(symbol) = symbol in (:ρe_tot,)
 is_momentum_var(symbol) = symbol in (:uₕ, :u₃)
 is_sgs_var(symbol) = symbol in (:sgsʲs,)
+is_process_record_var(symbol) = startswith(string(symbol), "prc_")
 is_tracer_var(symbol) = !(
     symbol == :ρ ||
     symbol == :ρtke ||
     is_energy_var(symbol) ||
     is_momentum_var(symbol) ||
-    is_sgs_var(symbol)
+    is_sgs_var(symbol) ||
+    is_process_record_var(symbol)
 )
 
 # we may be hitting a slow path:
