@@ -1332,11 +1332,6 @@ the flux moves the energy convection carries, but it does not mix provenance
 the way it mixes the air. A no-op without energy source tags, without
 `PrognosticEDMFX`, and with the SGS mass flux off.
 """
-# The EDMF flags are a `Val` here and a `Bool` from upstream v0.42.11 on. The
-# tags read both, so their gate stays the parent's across that change. A
-# rebase would not flag this line, and `true isa Val{true}` is false.
-_edmfx_flag_on(flag::Bool) = flag
-_edmfx_flag_on(::Val{flag}) where {flag} = flag
 sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model) = nothing
 sgs_mass_flux_of_energy_source_tags!(
     Yₜ,
@@ -1344,7 +1339,7 @@ sgs_mass_flux_of_energy_source_tags!(
     p,
     turbconv_model::PrognosticEDMFX,
 ) =
-    _edmfx_flag_on(p.atmos.edmfx_model.sgs_mass_flux) ?
+    p.atmos.edmfx_model.sgs_mass_flux ?
     _sgs_mass_flux_of_energy_source_tags!(
         Yₜ,
         Y,
