@@ -47,7 +47,7 @@ SCRIPT=experiments/my_run.jl sbatch runscripts/xmodel.2gpus
 
 `setup-julia-levante.tcsh cpu` and `... gpu` build separate depots but write to
 the same `.buildkite/LocalPreferences.toml`. **Only the stack set up last
-works.** Switching between CPU and GPU jobs means re-running the setup script.
+works.** The file is not tracked, because it records this machine's paths. Switching between CPU and GPU jobs means re-running the setup script.
 
 The GPU runscripts detect this before launching any ranks: they compare the
 `libmpi` recorded in the preferences against the module actually loaded and
