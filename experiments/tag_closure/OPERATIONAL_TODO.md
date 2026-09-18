@@ -84,8 +84,14 @@ day, 2M and P3, more than one node, and the GPU.
     own coupled solve does and the split does not add to. The test marks
     "split allocates zero" broken on 1.10 only. Its comment still says the
     unsplit solve allocates 48 bytes on 1.11; it measured 0 (run 35310991660).
-  - **Next, approved:** B1, one job; C2 as a draft PR; C1b as a draft PR,
-    unblocked by #76.
+  - **B1 submitted** on 2026-09-18 as job 13501290 on `hpda2_test` (2 CPUs,
+    32 GB, 1 h 55 min). Model code `main` at `38661891`, from the worktree
+    `../ClimaAtmosResiDyn-b1`; its driver, runscript, configuration and
+    `runscripts/terrabyte_stacks.env` are copied in from this branch at
+    `58d9b0c8`, because `main` has none of them. Output:
+    `$SCRATCH/tag_closure/output/b1_base/`.
+  - **Next, approved:** C1b as a draft PR, unblocked by #76; then C2 as a
+    draft PR.
   - **`gh` and the `upstream` remote.** With no default repository, `gh`
     prefers a remote named `upstream`. So `gh pr create` without `-R` went to
     `CliMA/ClimaAtmos.jl` and failed with "Resource not accessible by personal
@@ -441,8 +447,7 @@ With D1 (B12):
 
 ### A. Waiting for the owner
 
- 1. **B1's submission.** Approved, one job; the command is prepared first
-    and shown to the owner.
+ 1. Nothing. B1 was submitted on 2026-09-18 (job 13501290).
 
 Every other decision was made on 2026-09-18.
 
