@@ -292,11 +292,20 @@ end
         ),
     )
 
-    # The tags have no updraft copy, so EDMF's updrafts are refused.
-    @test_throws ErrorException CA.AtmosTagging(
+    # The tags share the updraft corrections to sedimentation, which the model
+    # computes for the first updraft only. So one updraft is allowed and two
+    # are refused. Eddy diffusion moves the tags as tracers under both EDMF
+    # variants. That is allowed, and warned.
+    @test_logs (:warn, r"prognostic_edmfx") match_mode = :any CA.AtmosTagging(
         source_config("edmf", "turbconv" => "prognostic_edmfx"),
     )
-    # Eddy diffusion alone moves them as tracers. That is allowed, and warned.
+    @test_throws r"updraft_number: 1" CA.AtmosTagging(
+        source_config(
+            "edmf_two",
+            "turbconv" => "prognostic_edmfx",
+            "updraft_number" => 2,
+        ),
+    )
     @test_logs (:warn, r"edonly_edmfx") match_mode = :any CA.AtmosTagging(
         source_config("edonly", "turbconv" => "edonly_edmfx"),
     )

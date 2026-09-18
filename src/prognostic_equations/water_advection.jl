@@ -68,6 +68,12 @@ function vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
     # depend on the species.
     water_tag_share_norm!(p, Y)
     energy_source_share_norm!(p, Y)
+    # Under PrognosticEDMFX, a species the updraft carries gets subdomain
+    # corrections below. The energy source tags move with that species there,
+    # with the corrections.
+    has_subdomain_corrections(ρq_name) =
+        p.atmos.turbconv_model isa PrognosticEDMFX &&
+        MatrixFields.has_field(Y.c.sgsʲs.:(1), specific_tracer_name(ρq_name))
     MatrixFields.unrolled_foreach(microphysics_tracers) do (ρq_name, w_name)
         MatrixFields.has_field(Y.c, ρq_name) || return
 
@@ -96,15 +102,17 @@ function vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
         )
         # Move the energy source tags with the same flux, each by its share of
         # what the losing cell holds.
-        sediment_energy_source_tags!(
-            Yₜ,
-            Y,
-            p,
-            ᶜq,
-            ᶜw,
-            p.scratch.ᶜtemp_scalar_3,
-            ᶠρ,
-        )
+        if !has_subdomain_corrections(ρq_name)
+            sediment_energy_source_tags!(
+                Yₜ,
+                Y,
+                p,
+                ᶜq,
+                ᶜw,
+                p.scratch.ᶜtemp_scalar_3,
+                ᶠρ,
+            )
+        end
     end
 
     # For prognostic edmf, augment the energy tendencies with the additional energy contributions
@@ -157,14 +165,17 @@ function vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
             @. p.scratch.ᶜtemp_scalar_3 =
                 e_int_func(thp, ᶜTʲs.:(1)) + $(Kin(ᶜwʲ, ᶜuʲ)) -
                 p.scratch.ᶜtemp_scalar_2
-            @. Yₜ.c.ρe_tot -=
-                ᶜprecipdivᵥ(
-                    ᶠinterp(ᶜρʲs.:(1) * ᶜJ) / ᶠJ * ᶠtop_bias(
-                        Geometry.WVector(-(ᶜwʲ)) *
-                        draft_area(Y.c.sgsʲs.:(1).ρa, ᶜρʲs.:(1)) * ᶜqʲ *
-                        p.scratch.ᶜtemp_scalar_3,
-                    ),
-                )
+            ᶠupdraft_flux = @. lazy(
+                ᶠinterp(ᶜρʲs.:(1) * ᶜJ) / ᶠJ * ᶠtop_bias(
+                    Geometry.WVector(-(ᶜwʲ)) *
+                    draft_area(Y.c.sgsʲs.:(1).ρa, ᶜρʲs.:(1)) * ᶜqʲ *
+                    p.scratch.ᶜtemp_scalar_3,
+                ),
+            )
+            @. Yₜ.c.ρe_tot -= ᶜprecipdivᵥ(ᶠupdraft_flux)
+            # The environment's correction reuses the scratch field, so keep
+            # this one for the energy source tags now.
+            keep_energy_source_sediment_correction!(p, ᶠupdraft_flux)
             # Environment correction: (e_int⁰ + Kin⁰) - (e_int + Kin). The
             # environment sedimentation velocity is not stored separately
             # (the environment mass flux is the residual ρqw - ρaʲqʲwʲ), so
@@ -175,13 +186,29 @@ function vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
                 e_int_func(thp, ᶜT⁰) + $(Kin(ᶜw, ᶜu⁰)) -
                 p.scratch.ᶜtemp_scalar_2
             ᶜwaq⁰ = @. lazy((ᶜρq * ᶜw - Y.c.sgsʲs.:(1).ρa * ᶜqʲ * ᶜwʲ) / ᶜρ⁰)
-            @. Yₜ.c.ρe_tot -=
-                ᶜprecipdivᵥ(
-                    ᶠinterp(ᶜρ⁰ * ᶜJ) / ᶠJ * ᶠtop_bias(
-                        Geometry.WVector(-(ᶜwaq⁰)) *
-                        p.scratch.ᶜtemp_scalar_3,
-                    ),
-                )
+            ᶠenvironment_flux = @. lazy(
+                ᶠinterp(ᶜρ⁰ * ᶜJ) / ᶠJ * ᶠtop_bias(
+                    Geometry.WVector(-(ᶜwaq⁰)) * p.scratch.ᶜtemp_scalar_3,
+                ),
+            )
+            @. Yₜ.c.ρe_tot -= ᶜprecipdivᵥ(ᶠenvironment_flux)
+            # Move the energy source tags with this species' whole flux: the
+            # grid mean's, rebuilt as the first loop builds it, and both
+            # corrections.
+            ᶜq_mean = @. lazy(specific(ᶜρq, Y.c.ρ))
+            ᶜenergy_flux_mean = @. lazy(
+                -(ᶜw) * ᶜq_mean * (e_int_func(thp, ᶜT) + ᶜΦ + $(Kin(ᶜw, ᶜu))),
+            )
+            sediment_energy_source_tags_with_corrections!(
+                Yₜ,
+                Y,
+                p,
+                ᶜq_mean,
+                ᶜw,
+                ᶜenergy_flux_mean,
+                ᶠρ,
+                ᶠenvironment_flux,
+            )
         end
     end
 

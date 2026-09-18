@@ -1144,37 +1144,35 @@ function energy_source_transport_from_config(value)
 end
 
 """
-    check_energy_source_tagging_supported(turbconv)
+    check_energy_source_tagging_supported(turbconv, updraft_number)
 
-Refuse `energy_source_tags` under `turbconv: prognostic_edmfx`, and warn under
+Refuse `energy_source_tags` under `turbconv: prognostic_edmfx` with more than
+one updraft, and warn under `prognostic_edmfx` with one and under
 `edonly_edmfx`.
 
-The tags have no updraft copy. So the parent's sub-grid mass flux of energy
-reaches no tag, and neither do the updraft and environment corrections to
-sedimentation. Both would land in `e_src_res`. With
-`edmfx_vertical_diffusion: true`, as every shipped EDMF configuration has it,
-the run would also fail: the updrafts' vertical diffusion asks each updraft for
-a copy of every grid-scale tracer. Sharing those fluxes among the tags is not
-built yet, so this refuses until it is.
+The tags have no updraft copy. Under `prognostic_edmfx` they take their shares
+of the parent's sub-grid mass flux of energy
+(`sgs_mass_flux_of_energy_source_tags!`) and of the updraft and environment
+corrections to sedimentation (`sediment_energy_source_tags_with_corrections!`).
+The model computes those corrections for the first updraft only, and the
+sharing has been checked with one updraft. So more than one is refused.
 
-`edonly_edmfx` has no updraft. Its eddy diffusion moves the tags as passive
-tracers, while it moves `ρe_tot` in enthalpy form. The difference goes to
-`e_src_res`, as it does under vertical diffusion, so this is a warning.
+Both EDMF variants have eddy diffusion. It moves the tags as passive tracers,
+while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, as
+it does under vertical diffusion, so this is a warning.
 """
-function check_energy_source_tagging_supported(turbconv)
-    if turbconv == "prognostic_edmfx"
+function check_energy_source_tagging_supported(turbconv, updraft_number)
+    if turbconv == "prognostic_edmfx" && updraft_number > 1
         error(
-            "`energy_source_tags` cannot be used with `turbconv: \
-            prognostic_edmfx` yet. The tags have no updraft copy, so the \
-            sub-grid mass flux of energy and the updraft and environment \
-            corrections to sedimentation reach no tag. With \
-            `edmfx_vertical_diffusion: true` the run would also fail. Use \
-            `turbconv: edonly_edmfx` or no `turbconv`, or drop \
-            `energy_source_tags`.",
+            "`energy_source_tags` with `turbconv: prognostic_edmfx` need \
+            `updraft_number: 1`, got $updraft_number. The tags take their \
+            shares of the updraft and environment corrections to \
+            sedimentation, and the model computes those for the first \
+            updraft only.",
         )
-    elseif turbconv == "edonly_edmfx"
+    elseif turbconv in ("prognostic_edmfx", "edonly_edmfx")
         @warn(
-            "`energy_source_tags` with `turbconv: edonly_edmfx`: the eddy \
+            "`energy_source_tags` with `turbconv: $turbconv`: the eddy \
             diffusion moves the tags as passive tracers, while it moves \
             `ρe_tot` in enthalpy form. The difference goes to `e_src_res`.",
         )
@@ -1240,6 +1238,7 @@ function AtmosTagging(config::AtmosConfig)
             check_energy_source_offset_given(source_offset_value)
             check_energy_source_tagging_supported(
                 get(config.parsed_args, "turbconv", nothing),
+                get(config.parsed_args, "updraft_number", 1),
             )
             EnergySourceTaggingModel(
                 energy_source_tracer_tuple(
