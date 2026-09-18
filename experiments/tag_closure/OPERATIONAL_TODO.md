@@ -21,12 +21,25 @@ Priorities: **B** blocks operation, **S** should be fixed, **N** is nice to
 have. Sizes: S is under a day, M one to three days, L several PRs or a
 campaign.
 
-## Where things stand (2026-09-16, after the reviews)
+## Where things stand (2026-09-18)
 
-Merged into `main`: #65 and the offset (#68); #69, the implicit bracket and the
-repair (`08682fd8`); #70, sedimentation as transport, the EDMF refusal and the
-label warnings (`3b4b6056`); #73, the docs deploy (`327cd207`); #80,
-`SeasonalSST` removed (`2f60df85`).
+Merged into `main`:
+
+  - **Before the review round:** #65 and the offset (#68); #69, the implicit
+    bracket and the repair (`08682fd8`); #70, sedimentation as transport, the
+    EDMF refusal and the label warnings (`3b4b6056`); #73, the docs deploy
+    (`327cd207`); #80, `SeasonalSST` removed (`2f60df85`).
+  - **2026-09-17:** #72, the enthalpy audit; #74, the docs after #70; #75, the
+    Float32 group; #78, the allocation checks; #81, the defect test on the
+    moist column; and the CI work, #82, #83 and #84.
+  - **2026-09-18:** #86, Aqua held below 0.8.17; #85, one moist column in the
+    `parent_budget` group; #79, the parity rule (`730b5b18`).
+
+Open: #76, the split solver, and #77, the safe defaults. Both have `main`
+merged in. #76's manual full `ci` run, with the upstream groups on Julia 1.10,
+was running on 2026-09-18.
+
+The table below is the review round of 2026-09-16, kept for its record.
 
 On 2026-09-16 each open PR got a review, and the owner had another session
 push patches for the findings with a clear fix (the record is on
@@ -44,17 +57,10 @@ and ran the patched files locally.
 | #78 | T3: the tag and record code allocates nothing                         | `Vararg{Any, N}`, comments and docs                                                               | records 17/17, source tags 52/52          |
 | #79 | The parity rule, now with a test per family                           | known departures, `isequal`, scope; then an on/off test in each of the four tag and record families | records 22/22, source tags 53/53, water 111/111, energy tags 32/32 |
 
-CI is slow. At the last check nothing had failed except `Downgrade 1.11 -
-parent_budget` on #72: `implicit_attribution_tests.jl:241` found the defect of
-three Newton iterations larger than that of one (5.37e-7 against 3.43e-7).
-That test is on `main`, #72 does not touch it, the same job passed at #72's
-previous head with the same `src/`, and it passes on #74 and #75. The runner
-was in another Azure region, so the test looks hardware-sensitive (decision 13).
-A `gh run rerun` failed with a permission error. On 2026-09-17, `gh run cancel`
-with `-R johannespletzer/ClimaAtmosResiDyn.jl` also got HTTP 403. So the token
-cannot write to Actions on the fork either, and the owner reruns and cancels
-runs. Whether the
-recursion removes #76's 1,056 bytes on Julia 1.10 is also for CI to show.
+The fragile defect test that failed `Downgrade 1.11 - parent_budget` on #72
+(decision 13) is fixed by #81. The token cannot write to Actions on the fork
+(`gh run rerun` and `gh run cancel` get HTTP 403), so the owner reruns,
+cancels and dispatches runs.
 
 Measured so far: 0M on a column and a sphere, and 1M on a warm column, a day
 each (E26 to E39, E43); 1M with ice on a cold column for an hour, with a twin
@@ -69,19 +75,23 @@ day, 2M and P3, more than one node, and the GPU.
 
 ## 0. In flight
 
-  - **CI** on the seven open PRs. Nothing runs on Slurm.
-  - Nothing runs locally.
-  - **One PR to open,** by the owner: decision 12's upstream fix. Decision
-    13's test is draft #81.
+  - **CI** on the two open PRs, #76 and #77. Nothing runs on Slurm or
+    locally.
+      + **#76:** the owner's manual full `ci` run (35310991660) includes the
+        upstream groups on Julia 1.10, because #76 edits upstream code. Its
+        PR run was cancelled before the matrix started, which shows as five
+        failed checks that never ran. The run also answers whether #76's
+        latest commits removed the 1,056 bytes its split solve allocated on
+        Julia 1.10.
+      + **#77:** 30 checks pass, 2 were pending on 2026-09-18.
+  - **One PR to open,** by the owner: decision 12's upstream fix.
   - **`gh` and the `upstream` remote.** With no default repository, `gh`
     prefers a remote named `upstream`. So `gh pr create` without `-R` went to
     `CliMA/ClimaAtmos.jl` and failed with "Resource not accessible by personal
     access token"; the token was fine. The fork is now `gh`'s default for this
     clone (`gh repo set-default`, 2026-09-17). Pass
     `-R johannespletzer/ClimaAtmosResiDyn.jl` anyway in other clones.
-  - **New worktrees:** `../ClimaAtmosResiDyn-defect` (decision 13) and
-    `../ClimaAtmos-upstream-vwb` (decision 12, on the new `upstream` remote).
-  - **CI cost (2026-09-17).** The CI review and its plan are on
+  - **CI cost.** The CI review and its plan are on
     `claude/review-open-prs-tasks-wxiw0k` (`review-fixes/2026-09-17/`,
     `plan_review.md` sections 1 to 5, with the owner's decisions). `main` has
     no branch protection.
@@ -90,28 +100,35 @@ day, 2M and P3, more than one node, and the GPU.
             per-PR minimum-compat load, `Downgrade` weekly, `era5` folded into
             `dynamics`.
           * #83: instantiate before that load.
-      + **#84, ready, head `7063df2c`:**
-          * only `main` saves caches;
-          * `JULIA_CPU_TARGET: 'haswell,-rdrnd'`, also part of the cache names;
-          * Downstream and Manifest compat keep no cache;
-          * Downstream runs on `main`, weekly and on demand;
-          * a manual `ci` run tests every group on both versions.
-
-        Two agent reviews found the eviction and the CPU trap. A cache saved
-        on an Intel runner was rejected on AMD, and 317 packages were rebuilt.
-      + **Measured on `main`:**
-          * 15 of 16 restores reused over 400 packages.
-          * `Downgrade 1.11 - parent_budget` failed on the fragile defect test,
-            which #81 fixes.
-          * The job rows are in the session scratchpad,
-            `cache_check/main_runs_fixed.tsv`.
+          * #84: only `main` saves caches; `JULIA_CPU_TARGET:
+            'haswell,-rdrnd'`, also part of the cache names; Downstream and
+            Manifest compat keep no cache; Downstream runs on `main`, weekly
+            and on demand; a manual `ci` run tests every group on both
+            versions.
+          * #85, the first phase C step: the `parent_budget` group builds one
+            moist column, the calibration one, compiled once per ledger mode.
+            Its test time on `ci 1.11` fell from 41m01s to 36m20s, which is
+            under half of the 90-minute limit, so the group needs no split.
+          * #86: Aqua held at `0.8.9 - 0.8.16`. Aqua 0.8.17 walks each
+            `[deps]` section with `Base.locate_package` and does not skip the
+            names that also stand in `[weakdeps]`, so both `infrastructure`
+            jobs failed. Naming the missing packages one by one did not end
+            (`ChangesOfVariables`, then `RecipesBase`).
+      + **Measured:** on `main` after #84, cache restores reused over 400
+        packages on Intel and AMD runners alike, so the CPU target works.
+        #84's manual trigger runs the upstream groups on 1.10, as #76's run
+        shows. The job rows are in the session scratchpad,
+        `cache_check/after84_main.tsv`.
       + **Next:**
-          * Merge #84 and read the cache lines of the next `main` and PR runs.
-          * Merge the tag PRs in the order of `plan_review.md` section 5.
-          * Then the `parent_budget` type audit, and after #76 to #79, phase C
-            on the tagging files.
+          * Measure the runner minutes per pull request on a PR run after
+            #84 (target: 600 or fewer).
+          * Phase C on the tagging files, one PR per file, each reviewed by
+            the owner, after #76 and #77 merge, since both edit
+            `energy_source_tags_integration.jl`. First
+            `tagged_water_integration.jl`, whose restart can move onto the
+            tag set of `:105`.
   - **#77:** the "under the default `tracer` transport" qualifier is in
-    (`7d6cec6b`). Another session had already merged `main` into #77 and #78.
+    (`7d6cec6b`).
 
 ## Decided
 
@@ -164,10 +181,25 @@ On 2026-09-14:
   - **The binary comparison against an upstream checkout is skipped for now**
     (P6).
 
+On 2026-09-17:
+
+  - **The fragile defect test (decision 13):** the convergence check stays on
+    the moist DYCOMS column. A dry column with implicit diffusion never stood
+    above rounding in 64 runs. Merged as #81.
+  - **The CI plan** (`plan_review.md` section 5):
+      + fork-owned groups keep Julia 1.10 and 1.11, upstream groups run on
+        1.11, and a manual `ci` run covers 1.10 for a PR that edits upstream
+        code;
+      + `Downstream` runs after merges, weekly and on demand;
+      + package images are built for a portable CPU target, now;
+      + the `parent_budget` group gets a type audit before any split.
+  - **Aqua:** first add the missing weak dependency as a test extra. When the
+    walk stopped at the next package, the bound on Aqua replaced it (#86).
+
 ## 1. Decisions for the owner
 
- 1. **Merges:** #73, #72 and #74 are ready. #75, #76 and #77 after their CI.
-    #76's EDMF validation is done (E44e); it can come out of draft.
+ 1. **Merges:** #76 once its manual full run is green, and #77 once its CI
+    is. Every other PR of the list is merged.
  2. **#77's three choices, for review in the PR:**
       - A2 warns only in a run with at least one per-process tag, and a tag
         listing `all` counts as following no process. Otherwise a run with
@@ -237,16 +269,26 @@ On 2026-09-14:
     the test grid and on a 50 m grid, for both diffusion models
     (`analysis/parent_budget_defect_dry_{diffusion,wind,shear}.jl`). A dry
     column's implicit problem is close to linear, so one Newton iteration
-    already solves it. Open: how to go on.
-    Draft PR #81, opened 2026-09-17; the text is also in
-    [PARENT_BUDGET_DEFECT_PR.md](PARENT_BUDGET_DEFECT_PR.md).
+    already solves it. **Decided:** the check stays on the moist column.
+    Merged as #81 on 2026-09-17; the text is also in
+    [PARENT_BUDGET_DEFECT_PR.md](PARENT_BUDGET_DEFECT_PR.md). Since #85 the
+    moist column has a slab ocean, and the test sums the atmosphere's solve
+    defect only, so the recorded numbers still hold.
+14. **Report Aqua's weak-dependency walk upstream?** Aqua 0.8.17 does not skip
+    `[weakdeps]` when it walks `[deps]` for the persistent-task check (#86).
+    No issue names it there yet. Filing one is outward-facing. Until Aqua
+    fixes it, `Project.toml` holds Aqua at `0.8.16`.
+15. **One moist model in `parent_budget` instead of two (optional).** The
+    moist identity test in `implicit_attribution_tests.jl` runs in `summary`,
+    so the calibration column is compiled once per mode. `report_tests.jl`
+    already runs that column in `summary`. Moving the identity test to `audit`
+    would save roughly five more minutes and drop `summary` from that file.
 
 ## 2. Blocking operation (B), in dependency order
 
  1. ~~**Merge #70.**~~ Done (`3b4b6056`).
- 2. **Merge #72.** Its docs carry E34 to E43 and the audit's scope, it targets
-    `main` and is ready. It comes before C1b and C2, which both use
-    `energy_source_tag_transport`. Size S; waits for the owner.
+ 2. ~~**Merge #72.**~~ Done on 2026-09-17. C2 and C1b can build on
+    `energy_source_tag_transport` now.
  3. **P4, the EDMF build time with tags.** The D4 column with 8 tags and 5
     records did not build in two hours (E44, E44b). E44d names the cause:
     ClimaCore builds the implicit Jacobian's nested solver with compile-time
@@ -278,8 +320,8 @@ On 2026-09-14:
     a named key on a mismatch (`restart.jl:34-39`). With T1. Size S to M.
  6. **V5, restart equivalence** (approved, after C2). Two segments against one
     run, with the offset and the repair. Size S.
- 7. **Float32.** ~~V3~~ is done (E45). T2, the Float32 test group, is draft
-    #75. Runs longer than a day are untested; that is U6. Size S.
+ 7. **Float32.** ~~V3~~ is done (E45). ~~T2~~, the Float32 test group, is
+    merged (#75). Runs longer than a day are untested; that is U6. Size S.
  8. ~~**MP1, more than one process.**~~ Done (E47): on 4 ranks C7's sphere
     closes as on one process, to rounding. More than one node is untested.
  9. **The decided defaults and checks (B9).** Written: U1, the offset
@@ -287,9 +329,9 @@ On 2026-09-14:
     with a spin-up reference at 1 h and `false` to switch it off; A2, a warning
     at configuration for a process that runs with no tag following it (flags
     subsidence on C5's column and microphysics on C6's sphere, nothing on C7).
-    With U3, U4, R3 and T4. Draft #77; its tests pass locally (config tests,
-    233 unit tests, 45 integration assertions). Left: CI, and the owner's review
-    of the three choices under decision 2. Size M.
+    With U3, U4, R3 and T4. #77, with `main` merged in; its tests pass
+    locally (config tests, 233 unit tests, 45 integration assertions). Left:
+    CI, and the owner's review of the three choices under decision 2. Size M.
 10. **V2, the production physics on a sphere:** EDMF with
     `edmfx_vertical_diffusion: true`, vertical diffusion, sponges, topography
     and 1M, with `analysis/transport_ledger.jl`. It sizes C4. Needs C1b and
@@ -307,8 +349,8 @@ Done or in a pull request:
   - ~~**C5.**~~ Where the repair's large trades sit: just beyond the 20° edge
     where the region tags meet (E46). With 10° masks there are none (E48).
   - ~~**P1.**~~ The tag cost on a sphere: 1.46× (T9).
-  - **D2,** the stale docs: #74 (fixes 3, 7, 9, 10) and #72 (fixes 5, 7). Fix
-    4 needs no change.
+  - ~~**D2,**~~ the stale docs: merged in #74 (fixes 3, 7, 9, 10) and #72
+    (fixes 5, 7). Fix 4 needs no change.
   - **U3,** `e_src_fix_<name>` in the default output when the repair is on;
     **U4,** the source tags' negative parts and minimum, and the energy the
     repair moved, in the audit table; **R3,** a warning when clipping `ρq_tot`
@@ -355,7 +397,7 @@ With D1 (B12):
     negative, and where a member exceeds its group's sum.
   - ~~**A7.**~~ Done (E49): a transport error cancels along the direction it
     moved, and a process no tag follows, or the repair, keeps its sum.
-  - **Parity checks (P6).** The on/off half is done in #79: each tag and
+  - **Parity checks (P6).** The on/off half is merged (#79): each tag and
     record family now runs the same column with and without it and compares
     every model field with `isequal`, as the ledger's envelope test already
     did. All four match bit for bit locally. Still open: the stratospheric
@@ -398,14 +440,20 @@ With D1 (B12):
 
 ## 5. Housekeeping
 
-  - **Worktrees** beside the repository, to remove once their PRs merge:
-    `-repair` (#70, merged), `-audit` (#72), `-docs` (#74), `-float32` (#75),
-    `-buildtime` (#76), `-buildtime-edmf` (#76's validation, with a local
-    change that must never be committed), `-defaults` (#77), and `-p4`
-    (detached at `edd44e1d`, for P4's diagnosis), `-t3` (#78), `-m3` (M3,
-    local only, until C1b), and `-c1b-check` (a scratch merge of #76 into #72,
-    detached, removable at any time), `-parity` (#79) and `-noseasonal` (#80). Each has a copied
+  - **Worktrees** beside the repository. Each has a copied
     `.buildkite/LocalPreferences.toml`, which `main` tracks: never commit it.
+    Checked on 2026-09-18 against `origin/main`.
+      + **Removable, their branch is merged:** `-audit` (#72), `-docs` (#74),
+        `-float32` (#75), `-t3` (#78), `-parity` (#79), `-noseasonal` (#80),
+        `-defect` (#81), `-ci-phase-a` (#82 to #84, #86), `-pb-audit` (#85),
+        `-docsfix` (#73), `-repair` (#70), `-offset` (#68), `-pr65`,
+        `-split`, `-b3` and `-b5`; also `-c1b-check`, a detached scratch
+        merge.
+      + **Keep:** `-buildtime` (#76); `-buildtime-edmf` (#76's validation,
+        detached, with a local change that must never be committed);
+        `-defaults` (#77); `-m3` (M3, local only, until C1b); `-p4` (detached
+        at `edd44e1d`, P4's diagnosis); `-ci-review` (the CI review's branch);
+        `../ClimaAtmos-upstream-vwb` (decision 12).
   - ~~**The known defects** in `LEVANTE_TASKS.md`.~~ Fixed on 2026-09-14: the
     validator now follows the model's `if`/`elseif` chain, so ISDAC skips the
     `implicit_diffusion` rule, and it checks the ISDAC and prescribed-flow
@@ -432,19 +480,17 @@ With D1 (B12):
 
 ### A. Waiting for the owner
 
- 1. **Merges,** in this order, each once its CI passes: #73, #72, #74, then
-    #76 and #75, then #77. #72 goes before #77 and the C1b and C2 work, because
-    they build on `energy_source_tag_transport`. #76 goes before C1b, whose
-    validation needs the EDMF build to fit in two hours.
- 2. **#76 out of draft:** its EDMF validation is done (E44e).
+ 1. **Merges:** #76 once its manual full run is green, then #77. #76 goes
+    before C1b, whose validation needs the EDMF build to fit in two hours.
+ 2. ~~**#76 out of draft.**~~ Done.
  3. **#77's three choices** (decision 2).
  4. **The named regions' width** (decision 10, E48).
  5. **The other decisions of section 1:** ClimaCore upstream (3), A4 (4), V1's
     scope (5), the design's decisions 5 and 6 (6), Phase B (7), the runs not
     yet approved (8), moving the guide into the docs (9), C2's design (11),
-    the parity break (12, an upstream PR is ready to open), the fragile ledger
-    test (13, a PR is ready to open). #80 merged without a
-    NEWS entry, which its review left to the owner.
+    the parity break (12, an upstream PR is ready to open), reporting Aqua's
+    walk upstream (14), and one moist model in `parent_budget` (15, optional).
+    #80 merged without a NEWS entry, which its review left to the owner.
 
 ### B. Can be done now, without a new approval
 
@@ -476,8 +522,9 @@ All seven were done on 2026-09-14.
 
 ### C. Unlocked by merges, already approved
 
- 1. **After #72:** C2, the restart guard with T1, as a draft PR; then V5,
-    restart equivalence, up to 2 jobs.
+ 1. **After #72, which merged on 2026-09-17:** C2, the restart guard with T1,
+    as a draft PR; then V5, restart equivalence, up to 2 jobs. It still waits
+    for the owner's review of its design (decision 11).
  2. **After #72 and #76:** C1b, the EDMF sharing, with T6 and T5, as a draft PR;
     then its validation, up to 5 jobs: the D4 pair, D4 with
     `edmfx_vertical_diffusion: true`, D5. With those, the D4 column's residual
@@ -513,4 +560,6 @@ All seven were done on 2026-09-14.
     (#72, #74).
   - **Pull requests opened on 2026-09-14:** #74 (D2), #75 (T2), #76 (P4's
     fix), #77 (B9).
+  - **Merged on 2026-09-17 and 2026-09-18:** #72, #74, #75, #78, #79, #81,
+    #85; the CI work #82, #83, #84 and #86.
   - #72 merged into this branch (`57ed9c1f`).
