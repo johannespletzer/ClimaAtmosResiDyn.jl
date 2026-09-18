@@ -571,6 +571,7 @@ run today.
 | `d4_column_edmf_enthalpy` | `phase_c.sh` | `d4_column_edmf` with the tags moved as enthalpy |
 | `c1c_base_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-base` | the C1c comparison: `d4_column_edmf_enthalpy` on `main` without C1c |
 | `c1c_opt1_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt1` | the C1c comparison: option 1, the tags' share beside the parent's flux, no Jacobian block |
+| `c1c_opt1_newton_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt1` | the C1c diagnostic: option 1 with a converged Newton solve, 12 hours |
 | `c1c_opt2_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt2` | the C1c comparison: option 1 with the tags' tracer-diffusion blocks kept |
 | `c1c_opt3_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt3` | the C1c comparison: option 1 with the tags' share in the explicit tendency |
 | `d4_column_edmf_notags` | `phase_c.sh` | D4's column with no tags, for an hour: does the EDMF build take over two hours without them too? |
