@@ -115,6 +115,40 @@ end
     # every step, so this is not a marginal signal.
     @test maximum(abs.(parent(Y.c.prc_e_radiation))) > 0
 
+    # The records change none of the model's own fields. The same run without
+    # them is a new model type, so this costs a compile, and every other field
+    # must come out bit for bit. `isequal` tells signed zeros apart, which `==`
+    # does not. See "Fork parity with upstream" in `docs/clima_atmos_specific.md`.
+    @testset "The model's fields do not depend on the records" begin
+        local plain_dict = merge(
+            filter(entry -> !(endswith(first(entry), "_process_record")), test_dict),
+            Dict{String, Any}("output_dir" => mktempdir(pwd())),
+        )
+        local plain = CA.get_simulation(
+            CA.AtmosConfig(plain_dict; job_id = "process_record_integration_plain"),
+        )
+        @test CA.solve_atmos!(plain).ret_code == :success
+        local Y_plain = plain.integrator.u
+        # The run with them has its own fields and nothing else besides.
+        @test all(
+            name -> hasproperty(Y_plain.c, name) || startswith(string(name), "prc_"),
+            propertynames(Y.c),
+        )
+        @test propertynames(Y.f) == propertynames(Y_plain.f)
+        for name in propertynames(Y_plain.c)
+            @test isequal(
+                parent(getproperty(Y.c, name)),
+                parent(getproperty(Y_plain.c, name)),
+            )
+        end
+        for name in propertynames(Y_plain.f)
+            @test isequal(
+                parent(getproperty(Y.f, name)),
+                parent(getproperty(Y_plain.f, name)),
+            )
+        end
+    end
+
     # 4. Checkpoint round trip. Records live in `Y`, so they are written to the
     # checkpoint and restored with their values rather than restarting at
     # zero. This is what makes a budget over a window the difference of two

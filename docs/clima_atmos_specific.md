@@ -179,8 +179,32 @@ When reviewing or writing changes, name the validation surface explicitly:
 
   - **`test/runtests.jl` test groups** for unit-level coverage.
   - **`.buildkite/ci_driver.jl` jobs** for config or runtime-workflow changes. Check `.buildkite/pipeline.yml` to identify the affected jobs.
-  - **`reproducibility_tests/`** for changes that may shift simulation output. The reference counter in `reproducibility_tests/ref_counter.jl` must be incremented when output intentionally changes; do not edit it without explicit direction from the user.
+  - **`reproducibility_tests/`** for changes that may shift simulation output. The reference counter in `reproducibility_tests/ref_counter.jl` must be incremented when output intentionally changes; do not edit it without explicit direction from the user. In this fork only an upstream merge may change output; see [Fork parity with upstream](#fork-parity-with-upstream).
   - **`perf/` allocation benchmarks** are not run by this repository's GitHub Actions CI. Allocation regressions must be caught during review using the `@allocated` pattern.
+
+## Fork parity with upstream
+
+ClimaAtmosResiDyn develops diagnostics on top of upstream [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl): the stratospheric passive tracers, the tagged energy and water tracers, the energy source tags, the process records and the parent-budget ledger. It must not change the simulation. This is a boundary condition on every change in this repository.
+
+  - **Without a diagnostic.** A configuration that upstream can run gives bit-for-bit the same results here as at the upstream commit last merged into `main`. That commit is the second parent of the last "Merge upstream CliMA/ClimaAtmos.jl main" commit (currently 4a10f18, release v0.42.9). Compare the prognostic state and every output field with `isequal` on the parent arrays, not with a tolerance; `==` accepts a signed-zero difference and rejects matching `NaN`s.
+  - **With a diagnostic.** Every field upstream has stays bit for bit the same as in the same run without the diagnostic. Only the diagnostic's own prognostic fields (such as `ρe_tag_*`, `ρq_tag_*`, `ρe_src_*` and `prc_*`), its cache, callbacks and output may differ, and so may the run time. A diagnostic is off when its family key is at its default; the defaults of its sub-keys do not count. This clause is claimed for the default solver, a fixed number of Newton iterations with the direct block solver. With `use_krylov_method` or `use_newton_rtol` the residual norm spans the diagnostic's fields too, so a tagged run there is not expected to match, and that mismatch is not a defect of the diagnostic.
+  - **What is compared.** Bit-for-bit holds within one machine, one Julia and `Manifest`, one float type and one process count. The same run on Levante and on terrabyte agrees only to rounding, so compare two runs from one machine.
+
+What follows for a change:
+
+  - A diagnostic reads the model's state, tendencies and cache, and writes only its own fields. It never writes a model field, or a shared scratch field that the model reads afterwards.
+  - A hook in shared code is a no-op when its diagnostic is off. When it is on, it must not reorder, split or fuse arithmetic on model fields. An equal formula with different rounding is a different result.
+  - A change to a solver or a loop that the model uses, such as solving the tags apart from the implicit Jacobian, must give bitwise identical model fields, and a test must show it.
+  - A diagnostic that needs another energy reference moves its own reference, as `energy_source_tag_offset` does, and not the model's. A moved thermodynamic reference reaches the model's numerics, and the atmosphere drifts from the first step (see [`energy_source_tags.md`](src/energy_source_tags.md)).
+  - A refusal or a warning at configuration may only concern the diagnostic's own keys. A configuration without them runs as it does upstream.
+  - A defect found in upstream code is fixed upstream, and reaches this fork with the next merge. Fixing it here first breaks parity.
+  - `reproducibility_tests/ref_counter.jl` changes only with an upstream merge. A change of this fork's own that would need a new reference breaks this rule.
+
+Known departures, to be removed as they are resolved:
+
+  - dd06318f changed two guards in `limiters_func!` from `@name(ρq_tot)` to `:ρq_tot` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`, where upstream v0.42.9 skips it. No shipped config sets the list. The decision is pending: revert here and fix upstream, or keep it as a named exception.
+
+A test runs the same column with a diagnostic off and on and compares every model field with `isequal`: for the parent-budget ledger in `test/parent_budget/envelope_tests.jl` ("The trajectory is unchanged"), and for the tagged energy and water tracers, the energy source tags and the process records in their integration tests ("The model's fields do not depend on the tags", and "... on the records"). The stratospheric passive tracers have no such test yet. A new diagnostic gets one. These cover the default solver on one column each. No CI job compares the fork with upstream, so the fork-versus-upstream clause is checked by a run against the last merged upstream commit on one machine.
 
 ## MSE / reproducibility
 
