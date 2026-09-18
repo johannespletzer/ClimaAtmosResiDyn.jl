@@ -89,15 +89,16 @@ State at the end of 2026-09-18.
     (`aea9bca4`), and the tags' gate reads the SGS flag as the `Bool` it now
     is (`81012a84`). The review's fixes are `9dd30a90`. CI's first run on the
     new base failed only the unit test of the offset bracket, whose state has
-    no face space; the cell scratch is now built on its own (`77773b25`). CI
-    is running again, with the downgrade matrix. Locally, on the old base:
-    T6 52 of 52, the configuration tests 204 of 204. Validation: E53 in
-    Float64, E55 in Float32. Watch its first full run against the 90-minute
-    limit (P8).
+    no face space; the cell scratch is now built on its own (`77773b25`).
+    **All 63 checks pass** at `77773b25`, the downgrade matrix included, so
+    T6's allocation bound holds on 1.10 and at the lowest versions. The
+    longest jobs: `parent_budget` on 1.11 72 minutes, `tagging_source` on 1.11
+    61, `tagging_source_edmf` on 1.10 51, all under the 90-minute limit (P8).
+    Validation: E53 in Float64, E55 in Float32. Ready for the owner.
   - **#92, C2, the restart guard** (`a916979c`). `main` with #89 is merged in;
     only `restart.jl` conflicted. Locally, on the old base: unit tests 309 of
     309, the source-tag integration file 105 of 105. A real restart passed the
-    guard (E54). CI is running.
+    guard (E54). **All 33 checks pass** at `a916979c`. Ready for the owner.
   - **#89 is merged.** An agent's review, reading only, found no blocking
     defect. Open from it:
       + R1: the upstream groups have not run on Julia 1.10 with the new
