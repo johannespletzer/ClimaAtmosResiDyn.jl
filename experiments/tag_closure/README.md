@@ -569,6 +569,10 @@ run today.
 | `d3_column_p3` | `phase_c.sh` | D1 under 2MP3. It cannot run: the 2M gate, then gaps in the parent's P3 sedimentation |
 | `d4_column_edmf` | `phase_c.sh` | D4, the DYCOMS RF02 EDMF column with C8's tags, and `edmfx_vertical_diffusion: false` |
 | `d4_column_edmf_enthalpy` | `phase_c.sh` | `d4_column_edmf` with the tags moved as enthalpy |
+| `c1c_base_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-base` | the C1c comparison: `d4_column_edmf_enthalpy` on `main` without C1c |
+| `c1c_opt1_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt1` | the C1c comparison: option 1, the tags' share beside the parent's flux, no Jacobian block |
+| `c1c_opt2_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt2` | the C1c comparison: option 1 with the tags' tracer-diffusion blocks kept |
+| `c1c_opt3_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt3` | the C1c comparison: option 1 with the tags' share in the explicit tendency |
 | `d4_column_edmf_notags` | `phase_c.sh` | D4's column with no tags, for an hour: does the EDMF build take over two hours without them too? |
 | `d4_column_edmf_vd` | `phase_c.sh`, from a worktree of C1b | `d4_column_edmf` with the updrafts' vertical diffusion on, as shipped. It runs only with C1b's guard |
 | `d4_column_edmf_vd_float32` | `phase_c.sh`, from a worktree of C1b | `d4_column_edmf_vd` in Float32: C1b's sharing at production precision |
