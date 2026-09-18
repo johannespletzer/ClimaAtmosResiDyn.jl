@@ -1,0 +1,70 @@
+# V5, restart equivalence, the restarted run. `v5_c5_continuous`, restarted
+# from that run's checkpoint at 12 hours and run to the same end. See that file
+# for what the pair decides.
+#
+# The restart goes through C2's guard (#92). With the same offset, tags,
+# transport and repair it must pass, with no warning. The checkpoint is the
+# twin's, on scratch under `$SCRATCH/tag_closure/output/`, where the phase
+# scripts run. Submit this only after the twin has finished.
+job_id: "v5_c5_restarted"
+
+restart_file: "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v5_c5_continuous/output_active/day0.43200.hdf5"
+dt_save_state_to_disk: "12hours"
+reproducible_restart: true
+
+energy_source_tag_offset: 110495.0
+
+# C3's column, unchanged.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+rad: "DYCOMS"
+
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+# `strat` and `tropo` partition the offset total, as in C3. `rad` and `sfc` split
+# the new energy by process, `new_strat` and `new_tropo` by region.
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: rad
+    source: radiation
+  - name: sfc
+    source: surface_flux
+  - name: new_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: all
+  - name: new_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: all
+
+# The same processes as the source tags, so the two readings are of the same
+# processes. If the surface flux does not fire in this column, `sfc` and its
+# record stay zero and form A reduces to radiation alone.
+energy_process_record: [radiation, surface_flux]
+
+# The audit splits the residual by sign, which is how C4 and the smoke run were
+# read.
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_strat, e_src_tropo, e_src_rad, e_src_sfc]
+    period: "1hours"
+  - short_name: [e_src_new_strat, e_src_new_tropo]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux]
+    period: "1hours"
+  - short_name: [rhoa]
+    period: "1hours"

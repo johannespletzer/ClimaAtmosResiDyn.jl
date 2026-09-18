@@ -571,6 +571,9 @@ run today.
 | `d4_column_edmf_enthalpy` | `phase_c.sh` | `d4_column_edmf` with the tags moved as enthalpy |
 | `d4_column_edmf_notags` | `phase_c.sh` | D4's column with no tags, for an hour: does the EDMF build take over two hours without them too? |
 | `d4_column_edmf_vd` | `phase_c.sh`, from a worktree of C1b | `d4_column_edmf` with the updrafts' vertical diffusion on, as shipped. It runs only with C1b's guard |
+| `d4_column_edmf_vd_float32` | `phase_c.sh`, from a worktree of C1b | `d4_column_edmf_vd` in Float32: C1b's sharing at production precision |
+| `v5_c5_continuous` | `phase_c.sh`, from a worktree of C2 | V5, C5's column for a day with a checkpoint every 12 hours, and `reproducible_restart: true` |
+| `v5_c5_restarted` | `phase_c.sh`, from a worktree of C2, after `v5_c5_continuous` | V5, the same run restarted from its twin's checkpoint at 12 hours, through C2's guard |
 | `p4_edmf_two_tags` | `phase_c.sh`, from a worktree at `edd44e1d` | P4, D4's column with its two region tags only, for build time |
 | `p4_edmf_tags` | `phase_c.sh`, from a worktree at `edd44e1d` | P4, D4's column with its 8 tags only |
 | `p4_edmf_tags_records` | `phase_c.sh`, from a worktree at `edd44e1d` | P4, D4's column with its 8 tags and 5 records |

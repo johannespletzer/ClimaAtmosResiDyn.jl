@@ -73,7 +73,7 @@ BUILD_SPLIT = {
 # The runs allowed a limiter, and the runs allowed Float32: A4, and V3, which
 # tests Float32 with the energy source tags.
 LIMITER_OK = {"a5_sphere_limiter", "b3_limiter"}
-FLOAT32_OK = {"a4_float32", "v3_sphere_float32"}
+FLOAT32_OK = {"a4_float32", "v3_sphere_float32", "d4_column_edmf_vd_float32"}
 # Runs that must set `audit: true` on their closure block, and no others. The
 # audit costs a handful of global reductions and answers a question that run
 # has and the rest do not; see each config's own comment. It is checked in both
@@ -87,6 +87,8 @@ AUDIT_REQUIRED = {
     "c4_sphere_tag_offset",
     "c4_sphere_tag_offset_2x",
     "c5_column_offset",
+    "v5_c5_continuous",
+    "v5_c5_restarted",
     "c5_sphere_gray",
     "c6_column_repair",
     "c6_column_no_repair",
@@ -109,6 +111,7 @@ AUDIT_REQUIRED = {
     "d4_column_edmf",
     "d4_column_edmf_enthalpy",
     "d4_column_edmf_vd",
+    "d4_column_edmf_vd_float32",
     "d5_column_edmf_ice",
 }
 # Runs allowed one model-state diagnostic besides their tags. The two C4 runs
@@ -142,6 +145,7 @@ STATE_CHECK = {
     "d4_column_edmf",
     "d4_column_edmf_enthalpy",
     "d4_column_edmf_vd",
+    "d4_column_edmf_vd_float32",
     "d5_column_edmf_ice",
 }
 STATE_DIAGNOSTICS = {"ta"}
@@ -150,6 +154,8 @@ STATE_DIAGNOSTICS = {"ta"}
 # that needs `rhoa`.
 DENSITY_CHECK = {
     "c5_column_offset",
+    "v5_c5_continuous",
+    "v5_c5_restarted",
     "c6_column_repair",
     "c6_column_no_repair",
     "c8_column_1m",
@@ -161,6 +167,7 @@ DENSITY_CHECK = {
     "d4_column_edmf",
     "d4_column_edmf_enthalpy",
     "d4_column_edmf_vd",
+    "d4_column_edmf_vd_float32",
     "d5_column_edmf_ice",
 }
 DENSITY_DIAGNOSTICS = {"rhoa"}

@@ -1,0 +1,78 @@
+# V5, restart equivalence, the run without a restart. C5's column
+# (`c5_column_offset`) for a day, with a checkpoint every 12 hours. Its twin,
+# `v5_c5_restarted`, restarts from this run's checkpoint at 12 hours and runs
+# to the same end (RESTART_GUARD_DESIGN.md, "V5, after C2").
+#
+# What it decides: whether a restart continues the tags and the records
+# exactly. At 24 hours the two runs' states must be identical, every field bit
+# for bit, the tags and the records included. The closure tables' rows after the
+# restart must be the same, except the three spin-up columns, whose reference
+# the restarted run takes again an hour after its restart.
+#
+# `reproducible_restart: true` in both runs. Without it the model does not
+# promise a reproducible restart (`config/default_configs/default_config.yml`),
+# and a difference would then not point at the tags.
+#
+# Run it from a worktree of C2 (#92), whose guard checks the restart. The other
+# settings are C5's, unchanged.
+job_id: "v5_c5_continuous"
+
+dt_save_state_to_disk: "12hours"
+reproducible_restart: true
+
+energy_source_tag_offset: 110495.0
+
+# C3's column, unchanged.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+rad: "DYCOMS"
+
+dt: "10secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+# `strat` and `tropo` partition the offset total, as in C3. `rad` and `sfc` split
+# the new energy by process, `new_strat` and `new_tropo` by region.
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: rad
+    source: radiation
+  - name: sfc
+    source: surface_flux
+  - name: new_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: all
+  - name: new_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: all
+
+# The same processes as the source tags, so the two readings are of the same
+# processes. If the surface flux does not fire in this column, `sfc` and its
+# record stay zero and form A reduces to radiation alone.
+energy_process_record: [radiation, surface_flux]
+
+# The audit splits the residual by sign, which is how C4 and the smoke run were
+# read.
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res]
+    period: "1hours"
+  - short_name: [e_src_strat, e_src_tropo, e_src_rad, e_src_sfc]
+    period: "1hours"
+  - short_name: [e_src_new_strat, e_src_new_tropo]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux]
+    period: "1hours"
+  - short_name: [rhoa]
+    period: "1hours"
