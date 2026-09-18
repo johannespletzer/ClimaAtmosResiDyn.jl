@@ -124,6 +124,7 @@ AUDIT_REQUIRED = {
     "inc_d4_enthalpy_increment",
     "g1_ref_newton_d4",
     "g1_inc_newton_d4",
+    "g1_inc_d4",
     "g1_base_d4_float32",
     "g1_inc_d4_float32",
     "c1c_opt2_d4_enthalpy",
@@ -168,6 +169,7 @@ STATE_CHECK = {
     "inc_d4_enthalpy_increment",
     "g1_ref_newton_d4",
     "g1_inc_newton_d4",
+    "g1_inc_d4",
     "g1_base_d4_float32",
     "g1_inc_d4_float32",
     "c1c_opt2_d4_enthalpy",
@@ -200,6 +202,7 @@ DENSITY_CHECK = {
     "inc_d4_enthalpy_increment",
     "g1_ref_newton_d4",
     "g1_inc_newton_d4",
+    "g1_inc_d4",
     "g1_base_d4_float32",
     "g1_inc_d4_float32",
     "c1c_opt2_d4_enthalpy",
@@ -380,6 +383,9 @@ def check(path):
         covered.add("e_prc_" + label)
     for label in config.get("water_process_record", []) or []:
         covered.add("q_prc_" + label)
+    # The increment prototype's ledger registers two diagnostics of its own.
+    if config.get("energy_source_tag_transport") == "enthalpy_increment":
+        covered |= {"e_src_inc_left", "e_src_inc_moved"}
     if name in STATE_CHECK:
         covered |= STATE_DIAGNOSTICS
     if name in DENSITY_CHECK:

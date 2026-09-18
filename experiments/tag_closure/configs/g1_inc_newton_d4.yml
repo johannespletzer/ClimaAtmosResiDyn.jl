@@ -90,5 +90,7 @@ diagnostics:
     period: "1hours"
   - short_name: [e_prc_microphysics, e_prc_precipitation]
     period: "1hours"
+  - short_name: [e_src_inc_left, e_src_inc_moved]
+    period: "1hours"
   - short_name: [rhoa, ta]
     period: "1hours"

@@ -1,12 +1,13 @@
-# The increment prototype in Float32: `inc_d4_enthalpy_increment` with
-# `FLOAT_TYPE: "Float32"`, and nothing else changed. It runs from a worktree of
-# the prototype at `faa98974`, which snapshots `ρe_tot` and `ρ` apart so that
-# the parent's increment is not the difference of two large Float32 totals.
+# The increment prototype on D4 with its ledger: `inc_d4_enthalpy_increment`
+# again, from a worktree of the prototype that has the ledger, with its two
+# fields written hourly. Nothing else changed.
 #
-# What it decides: G1's criterion 5. Against `g1_base_d4_float32`, `ta` and
-# `rhoa` must be bit for bit. The gross residual must stay within ten times
-# the Float64 run's, and must not grow systematically.
-job_id: "g1_inc_d4_float32"
+# What it decides: G1's criterion 2. The ledger's `e_src_inc_left` is what the
+# correction leaves out of the tags, and it lands in `e_src_res`. Set against
+# the residual, it splits the remainder into the implicit column totals and
+# everything else. `ta` and `rhoa` must match `c1c_base_d4_enthalpy` bit for
+# bit (criterion 3).
+job_id: "g1_inc_d4"
 
 energy_source_tag_offset: 110495.0
 energy_source_tag_repair: true
@@ -38,7 +39,7 @@ ode_algo: "ARS222"
 
 dt: "120secs"
 t_end: "1days"
-FLOAT_TYPE: "Float32"
+FLOAT_TYPE: "Float64"
 
 energy_source_tags:
   - name: strat

@@ -398,6 +398,20 @@ None open. Every decision of this section was made on 2026-09-18; see
     `overwrite_initial_state!`, with a test on a file-based column. Model
     code; needs the owner's approval. Before that, a refusal at configuration
     time would turn the NaN into a clear error.
+15. **The process records are advected horizontally on a sphere.** Found on
+    2026-09-19 while building the prototype's ledger. The horizontal
+    advection of tracers (`advection.jl:121`) and the SEM limiter
+    (`limited_tendencies.jl:88`) loop over every field `is_tracer_var`
+    accepts, not over `gs_tracer_names`. `is_tracer_var` excludes only `ρ`,
+    `ρtke`, energy, momentum and SGS names, so `prc_e_*` and `prc_q_*` pass.
+    On a sphere the records were moved with the air, against
+    `docs/src/process_record.md`. The global integral is kept, so form B
+    closed; pointwise records were wrong. Columns have no horizontal
+    advection and are unaffected. It blocks V2, which writes the 3-D records.
+    The fix, `is_process_record_var` excluded from `is_tracer_var`, is on
+    `claude/process-records-not-advected` (`61d8dc3d`), with a unit test. A
+    sphere check on the fixed and unfixed code is running. The prototype's
+    ledger fields need the same exclusion before G2.
 
 ## 3. Should fix (S)
 

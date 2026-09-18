@@ -574,6 +574,7 @@ run today.
 | `c1c_opt1_newton_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt1` | the C1c diagnostic: option 1 with a converged Newton solve, 12 hours |
 | `inc_d4_enthalpy_increment` | `phase_c.sh`, from `../ClimaAtmosResiDyn-inc` | the increment prototype: D4 under `enthalpy_increment` |
 | `g1_ref_newton_d4` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt1` | G1's reference for the tags' correctness: option 1 with a converged Newton solve, a day |
+| `g1_inc_d4` | `phase_c.sh`, from a worktree of the prototype with the ledger | the prototype on D4 with its ledger written hourly, a day |
 | `g1_inc_newton_d4` | `phase_c.sh`, from a worktree of the prototype | the prototype with the reference's converged solve, a day |
 | `g1_base_d4_float32` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-base` | `c1c_base_d4_enthalpy` in Float32, the baseline of G1's Float32 twin |
 | `g1_inc_d4_float32` | `phase_c.sh`, from a worktree of the prototype | the prototype in Float32, G1's Float32 twin |
