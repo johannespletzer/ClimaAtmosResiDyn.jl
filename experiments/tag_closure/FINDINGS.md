@@ -1951,6 +1951,34 @@ worktree `../ClimaAtmosResiDyn-inc-run` at `35042f33`. The outputs are in
 `tags_against_base.txt` from `analysis/increment/d4_compare.py` and
 `tag_correctness.py`.*
 
+**E63. On a sphere the process records were advected with the air.** Two loops
+select their fields by `is_tracer_var`, not by `gs_tracer_names`: the
+horizontal advection of tracers (`advection.jl:121`) and the SEM limiter
+(`limited_tendencies.jl:88`). `is_tracer_var` excludes only `ρ`, `ρtke`,
+energy, momentum and SGS names, so the records `prc_e_*` and `prc_q_*` passed.
+
+  - **Measured on the smallest sphere of the test suite** (2 elements, 4
+    levels, moist baroclinic wave, 0M), with a record set to `ρe_tot` so that
+    it varies horizontally. The horizontal tracer advection alone, into a
+    zeroed tendency, moved it by up to 2.6 J m⁻³ s⁻¹ on the code before the
+    fix. With the fix the record's tendency is exactly zero, and `ρq_tot`'s is
+    not.
+  - **What it touched:** every record on every sphere run, pointwise. The
+    global integral is kept, because the advection is in flux form, so form B
+    closed on the spheres (C7, C9). Columns have no horizontal advection and
+    are unaffected, and so is every other field: the records feed back into
+    nothing.
+  - **The fix** excludes the records from `is_tracer_var`
+    (`is_process_record_var`, the `prc_` prefix): draft PR #93, with a unit
+    test. It must merge before V2, which writes the 3-D records. The
+    prototype's ledger fields, `e_src_inc_*`, need the same exclusion before
+    the sphere.
+
+*Jobs `13504847` (fixed, `claude/process-records-not-advected` at
+`61d8dc3d`) and `13504848` (the prototype at `faa98974`, which has `main`'s
+loops) on terrabyte, `hpda2_test`, 2026-09-19. The script is
+`analysis/increment/sphere_record_advection.jl`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

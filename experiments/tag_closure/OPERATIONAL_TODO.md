@@ -425,10 +425,10 @@ None open. Every decision of this section was made on 2026-09-18; see
     `docs/src/process_record.md`. The global integral is kept, so form B
     closed; pointwise records were wrong. Columns have no horizontal
     advection and are unaffected. It blocks V2, which writes the 3-D records.
-    The fix, `is_process_record_var` excluded from `is_tracer_var`, is on
-    `claude/process-records-not-advected` (`61d8dc3d`), with a unit test. A
-    sphere check on the fixed and unfixed code is running. The prototype's
-    ledger fields need the same exclusion before G2.
+    Confirmed on a sphere (E63). The fix, `is_process_record_var` excluded
+    from `is_tracer_var`, is draft PR #93 (`61d8dc3d`), with a unit test; the
+    owner merges. The prototype's ledger fields need the same exclusion
+    before G2.
 
 ## 3. Should fix (S)
 

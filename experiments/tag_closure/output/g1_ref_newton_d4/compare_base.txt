@@ -1,0 +1,36 @@
+gross residual, J/m²
+hour                   g1_ref_newton_d4              c1c_base_d4_enthalpy
+   1                         4.5061e+04                        1.6772e+05
+   2                         5.1813e+04                        1.6379e+05
+   4                         8.4884e+04                        3.2736e+05
+   8                         1.6562e+05                        3.1964e+05
+  12                         2.3153e+05                        4.6058e+05
+  16                         3.8830e+05                        6.0948e+05
+  20                         5.0963e+05                        5.9098e+05
+  24                         5.5415e+05                        6.3221e+05
+
+signed residual, J/m²
+   1                        -8.6105e+02                       -8.0914e+02
+   2                        -1.7821e+03                       -7.5105e+02
+   4                        -3.6865e+03                        4.2498e+03
+   8                        -6.4931e+03                        1.0312e+04
+  12                        -5.7819e+03                        1.3510e+04
+  16                        -4.3981e+03                        2.5209e+04
+  20                        -2.3670e+03                        3.4272e+04
+  24                        -9.9204e+02                        4.5272e+04
+
+G1 criterion 1, per run: gross at 24 h, and the second 12 h against the first
+  g1_ref_newton_d4: gross(24 h) = 5.5415e+05, first 12 h +2.3153e+05, second 12 h +3.2262e+05, misses the target
+  c1c_base_d4_enthalpy: gross(24 h) = 6.3221e+05, first 12 h +4.6058e+05, second 12 h +1.7162e+05, misses the target
+
+audit at 24 h
+  g1_ref_newton_d4: untagged 2.766e+05, overclaimed 2.776e+05, orphaned 0.000e+00, orphaned_volume_fraction 0.000e+00, nonpositive_mass 0.000e+00, nonpositive_mass_fraction 0.000e+00, source_negative -0.000e+00, repair_moved 2.532e-01
+  c1c_base_d4_enthalpy: untagged 3.387e+05, overclaimed 2.935e+05, orphaned 0.000e+00, orphaned_volume_fraction 0.000e+00, nonpositive_mass 0.000e+00, nonpositive_mass_fraction 0.000e+00, source_negative -0.000e+00, repair_moved 8.304e-01
+
+residual by layer at 24 h, gross (signed), J/m²
+  g1_ref_newton_d4: <550 m 3.594e+05 (+1.596e+05), 550-800 m 4.695e+04 (-1.527e+04), >800 m 1.478e+05 (-1.453e+05)
+  c1c_base_d4_enthalpy: <550 m 2.768e+05 (+1.133e+05), 550-800 m 1.996e+05 (+7.949e+04), >800 m 1.558e+05 (-1.475e+05)
+
+the model's fields, g1_ref_newton_d4 against c1c_base_d4_enthalpy
+  ta: DIFFERS (max |diff| 8.165e+00, shape (30, 25))
+  rhoa: DIFFERS (max |diff| 2.857e-02, shape (30, 25))
