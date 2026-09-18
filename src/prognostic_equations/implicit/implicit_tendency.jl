@@ -116,6 +116,9 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
     edmfx_entr_detr_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
 
     edmfx_sgs_mass_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
+    # The energy source tags have no updraft copy, so the SGS tracer loop above
+    # skips them. They take their shares of the parent's flux of `E` here.
+    sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, p.atmos.turbconv_model)
 
     edmfx_boundary_condition_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
 
