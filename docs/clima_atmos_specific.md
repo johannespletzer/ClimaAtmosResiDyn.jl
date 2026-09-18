@@ -202,7 +202,7 @@ What follows for a change:
 
 Known departures, to be removed as they are resolved:
 
-  - dd06318f changed two guards in `limiters_func!` from `@name(ρq_tot)` to `:ρq_tot` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`, where upstream v0.42.9 skips it. No shipped config sets the list. The decision is pending: revert here and fix upstream, or keep it as a named exception.
+  - dd06318f changed two guards in `limiters_func!` from `@name(ρq_tot)` to `:ρq_tot` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`, where upstream v0.42.9 skips it. No shipped config sets the list. It stays as a named exception, as the owner decided on 2026-09-18, and no upstream fix is proposed from this fork.
 
 A test runs the same column with a diagnostic off and on and compares every model field with `isequal`: for the parent-budget ledger in `test/parent_budget/envelope_tests.jl` ("The trajectory is unchanged"), and for the tagged energy and water tracers, the energy source tags and the process records in their integration tests ("The model's fields do not depend on the tags", and "... on the records"). The stratospheric passive tracers have no such test yet. A new diagnostic gets one. These cover the default solver on one column each. No CI job compares the fork with upstream, so the fork-versus-upstream clause is checked by a run against the last merged upstream commit on one machine.
 
