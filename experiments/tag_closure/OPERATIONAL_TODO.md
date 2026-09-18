@@ -441,7 +441,13 @@ Found on 2026-09-18:
     other region's energy. Decided on 2026-09-18: 2° stays, and the docs say
     so with D3.
   - **C1c.** B3, the SGS diffusive flux under `enthalpy`. Approved on
-    2026-09-18, after C1b (plan C4).
+    2026-09-18, after C1b (plan C4). Built on 2026-09-18
+    (`claude/energy-source-tag-sgs-diffusion`, `9aeb5205`, not pushed), and
+    compared in three placements (E59): each makes D4's residual larger,
+    because the tags' share lags the parent's stiff implicit diffusion and the
+    gap accumulates. Not to be opened in this form. Open: a Jacobian block for
+    the shared flux, or sharing the parent's implicit increment. Both need
+    the owner's decision.
   - **C1d.** Option C, per-updraft tag shares; about three times B.
   - **C6.** Review leftovers: `isfinite` before the conversion to `FT`, `nothing`
     inside a broadcast at init, `parent` shadowed in tests. The Float32 rounding

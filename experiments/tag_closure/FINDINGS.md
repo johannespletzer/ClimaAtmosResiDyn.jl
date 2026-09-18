@@ -1791,6 +1791,46 @@ the worktree `../ClimaAtmosResiDyn-c2-val` at `e4e9e5b3`. Compared with
 and `output/v5_c5_restarted_notags/`, with the comparisons in `compare.txt` and
 `compare_with_tags.txt`.*
 
+**E59. C1c, as built, makes the EDMF column's residual under the enthalpy
+audit larger, in all three placements.** D4 under `enthalpy` for a day, from
+four checkouts that differ only in C1c: `main` without it, and its options 1,
+2 and 3.
+
+| gross residual, J/m² | 1 h | 4 h | 12 h | 24 h | `gross_relative` at 24 h |
+|:-- | --:| --:| --:| --:| --:|
+| base, `main`: the tags diffuse as tracers | 1.68e5 | 3.27e5 | 4.61e5 | 6.32e5 | 5.5e-3 |
+| option 1: the share beside the parent, no Jacobian block | 1.98e5 | 9.29e5 | 3.25e6 | 6.71e6 | 5.9e-2 |
+| option 2: option 1 with the tracer-diffusion blocks kept | 5.05e4 | 2.26e5 | 6.49e5 | 1.18e6 | 1.0e-2 |
+| option 3: option 1 with the share in the explicit tendency | 5.67e4 | 2.52e5 | 7.90e5 | 1.46e6 | 1.3e-2 |
+
+  - **C1c removes the form mismatch at first.** At 1 h options 2 and 3 leave a
+    third of the base residual.
+  - **But each option grows about linearly, with no plateau:** option 1 by
+    about 2.8e5 J/m² an hour, options 2 and 3 by 5e4 to 6e4. They pass the
+    base after 4 to 6 hours. The base levels off between 4 and 8 hours, near
+    3.2e5, and then rises to 6.3e5.
+  - **So C1c adds a systematic timing error that outweighs the mismatch it
+    removes.** The parent's eddy diffusion is implicit and stiff. The tags'
+    share follows the parent's flux at the Newton iterate (option 1) or at the
+    stage state (option 3), not the parent's implicit update, and the gap
+    accumulates each step. Keeping the tracer-diffusion blocks (option 2)
+    damps it most, although that Jacobian is not the tags' true derivative.
+    Option 2 also moves the repair 400 times more (3.4e-6 of the scale
+    against 8e-9), so it drives the tags negative.
+  - **The model is untouched:** `ta` is identical in all four runs.
+  - **The base is 17% above E53's 5.41e5** at 24 h. E53 ran before #89, with
+    ClimaCore 0.16 and upstream v0.42.9's model, so the two atmospheres differ.
+
+C1c is not to be opened as a pull request in this form. Sharing a stiff
+implicit flux needs the tags to follow the parent's implicit update, for
+example a Jacobian block for the shared flux, or sharing the parent's
+increment of the implicit stage. Both are design questions (see
+`OPERATIONAL_TODO.md`).
+*Jobs `13504651` to `13504654` on terrabyte, `hpda2_test`, 2026-09-18, from
+`../ClimaAtmosResiDyn-c1c-{base,opt1,opt2,opt3}`: `main` at `50b2a4d2`, and
+C1c at `9aeb5205` with the variants' patches. The outputs are in
+`output/c1c_*_d4_enthalpy/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
