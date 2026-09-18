@@ -83,9 +83,8 @@ day, 2M and P3, more than one node, and the GPU.
         failed checks that never ran. The run also answers whether #76's
         latest commits removed the 1,056 bytes its split solve allocated on
         Julia 1.10.
-      + **#77:** 30 checks pass, 2 were pending on 2026-09-18.
-  - **Next, approved on 2026-09-18:** C2 as a draft PR; B1, one job; the
-    whole-PR CI minutes from #77's run.
+      + **#77:** all 33 checks pass (2026-09-18). Ready to merge.
+  - **Next, approved on 2026-09-18:** C2 as a draft PR; B1, one job.
   - **`gh` and the `upstream` remote.** With no default repository, `gh`
     prefers a remote named `upstream`. So `gh pr create` without `-R` went to
     `CliMA/ClimaAtmos.jl` and failed with "Resource not accessible by personal
@@ -121,8 +120,9 @@ day, 2M and P3, more than one node, and the GPU.
         shows. The job rows are in the session scratchpad,
         `cache_check/after84_main.tsv`.
       + **Next:**
-          * Measure the runner minutes per pull request on a PR run after
-            #84 (target: 600 or fewer).
+          * Measured on #77's run of 2026-09-18: 571 runner-minutes in 33
+            jobs, against about 1,820 in 68 before (`plan_review.md`
+            section 6). Under the 600 target.
           * Phase C on the tagging files, one PR per file, each reviewed by
             the owner, after #76 and #77 merge, since both edit
             `energy_source_tags_integration.jl`. First
