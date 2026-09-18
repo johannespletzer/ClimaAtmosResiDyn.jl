@@ -2,6 +2,11 @@ using Test
 import ClimaAtmos as CA
 import ClimaCore.MatrixFields: @name
 
+# `AtmosModel` takes a grid. These tests read only the model's tagging fields,
+# so the smallest column serves.
+column_atmos_model(; kwargs...) =
+    CA.AtmosModel(CA.ColumnGrid(Float64; z_elem = 10); kwargs...)
+
 # Unit tests for the tagged water tracers. The region/mask machinery is shared
 # with the energy tags and is covered by `tagged_tracers_tests.jl`; what is
 # tested here is what differs: the water source table, the initial partition,
@@ -646,12 +651,12 @@ import ClimaCore.MatrixFields: @name
     end
 
     @testset "AtmosModel integration" begin
-        model = CA.AtmosModel()
+        model = column_atmos_model()
         @test isnothing(model.water_tagging_model)
         @test isnothing(model.tagging.water_tagging_model)
 
         tags = (CA.WaterTag{:evap}(nothing, :surface_flux),)
-        model = CA.AtmosModel(; water_tagging_model = CA.WaterTaggingModel(tags))
+        model = column_atmos_model(; water_tagging_model = CA.WaterTaggingModel(tags))
         @test model.water_tagging_model isa CA.WaterTaggingModel
         @test CA.tag_name(model.water_tagging_model.tags[1]) == :evap
         # The two families are independent

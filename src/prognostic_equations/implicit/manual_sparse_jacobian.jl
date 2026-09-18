@@ -1312,13 +1312,13 @@ function update_water_tag_sedimentation_block!(matrix, Y, p, tag)
         # parent flux with qₚ φ̂ replaced by qₚ ∂φ̂/∂ρq_tag.
         ᶜdshare = water_tag_sediment_dshare_field(Y, p, tag)
         @. p.scratch.ᶠband_matrix_wvec =
-            ᶠtop_bias_matrix() ⋅ DiagonalMatrixRow(
+            ᶠtop_bias_matrix() * DiagonalMatrixRow(
                 ClimaCore.Geometry.WVector(
                     -(ᶜwₚ) * specific(ᶜρqₚ, Y.c.ρ) * ᶜdshare,
                 ),
             )
         @. ∂ᶜρq_tag_err_∂ᶜρq_tag +=
-            p.scratch.ᶜbidiagonal_adjoint_matrix_c3 ⋅
+            p.scratch.ᶜbidiagonal_adjoint_matrix_c3 *
             p.scratch.ᶠband_matrix_wvec
     end
     return nothing

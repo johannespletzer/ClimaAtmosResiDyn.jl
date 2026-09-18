@@ -24,6 +24,16 @@ import ClimaTimeSteppers as CTS
 # adapter's half of the bracket, so the ledger's answer to each is on record.
 
 const FT = Float64
+
+# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# the model. The parameters follow the model's microphysics, as the removed
+# `AtmosSimulation{FT}` constructor chose them.
+function column_model(; kwargs...)
+    grid = CA.ColumnGrid(FT; z_elem = 10)
+    (; microphysics_model) = CA.AtmosModel(grid; kwargs...)
+    params = CA.ClimaAtmosParameters(FT; microphysics_model)
+    return CA.AtmosModel(grid; params, kwargs...)
+end
 const ATMOS = PB.ATMOSPHERE_ENDPOINT_GROUP
 
 provisional_tolerances() = Dict(
@@ -40,7 +50,7 @@ newton() = CTS.NewtonsMethod(;
 # A weak prescribed descent, strongest above 1.5 km.
 subsidence_profile(z) = -0.001 * min(z, 1500.0) / 1500.0
 
-forced_model(; kwargs...) = CA.AtmosModel(;
+forced_model(; kwargs...) = column_model(;
     subsidence = CA.LargeScaleSubsidence(subsidence_profile),
     disable_surface_flux_tendency = true,
     kwargs...,
@@ -52,9 +62,8 @@ function column_simulation(;
     model = forced_model(),
     kwargs...,
 )
-    return CA.AtmosSimulation{FT}(;
-        model,
-        grid = CA.ColumnGrid(FT; z_elem = 10),
+    return CA.AtmosSimulation(
+        model;
         dt = 60,
         t_end = 600,
         job_id = "parent_budget_explicit",

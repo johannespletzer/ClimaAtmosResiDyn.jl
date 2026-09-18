@@ -349,15 +349,15 @@ end
         band_depth = 5_000,
         production_rate = 1e-10,
     )
-    simulation = CA.AtmosSimulation{FT}(;
-        model = CA.AtmosModel(; chemistry_model),
-        grid = CA.SphereGrid(
-            FT;
-            h_elem = 2,
-            z_elem = 30,
-            z_max = 60_000,
-            z_stretch = false,
-        ),
+    grid = CA.SphereGrid(
+        FT;
+        h_elem = 2,
+        z_elem = 30,
+        z_max = 60_000,
+        z_stretch = false,
+    )
+    simulation = CA.AtmosSimulation(
+        CA.AtmosModel(grid; chemistry_model);
         dt = 5,
         t_end = 5,
         job_id = "passive_stratospheric_tracers_test",

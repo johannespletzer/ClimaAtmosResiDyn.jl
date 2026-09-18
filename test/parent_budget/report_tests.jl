@@ -18,14 +18,24 @@ import YAML
 
 const FT = Float64
 
+# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# the model. The parameters follow the model's microphysics, as the removed
+# `AtmosSimulation{FT}` constructor chose them.
+function column_model(; kwargs...)
+    grid = CA.ColumnGrid(FT; z_elem = 10)
+    (; microphysics_model) = CA.AtmosModel(grid; kwargs...)
+    params = CA.ClimaAtmosParameters(FT; microphysics_model)
+    return CA.AtmosModel(grid; params, kwargs...)
+end
+
 newton() = CTS.NewtonsMethod(;
     max_iters = 1,
     update_j = CTS.UpdateEvery(CTS.NewNewtonIteration),
 )
 
 function column_simulation(; parent_budget_mode = "summary", t_end = 600, kwargs...)
-    return CA.AtmosSimulation{FT}(;
-        grid = CA.ColumnGrid(FT; z_elem = 10),
+    return CA.AtmosSimulation(
+        column_model();
         dt = 60,
         t_end,
         job_id = "parent_budget_report",
