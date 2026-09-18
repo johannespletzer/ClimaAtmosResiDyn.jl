@@ -305,7 +305,7 @@ NVTX.@annotate function save_state_to_disk_func(integrator, output_dir)
     InputOutput.HDF5.write_attribute(
         hdfwriter.file,
         "atmos_model_hash",
-        hash(p.atmos),
+        hash_physics(p.atmos),
     )
     # The parent-budget ledger's endpoint of this state, for the restart check.
     Internals.ParentBudget.write_checkpoint_attributes!(hdfwriter.file, p.parent_budget)

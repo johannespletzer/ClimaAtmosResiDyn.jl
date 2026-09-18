@@ -88,6 +88,33 @@ main
 - ![][badge-✨feature/enhancement] Register the stratospheric passive tracer diagnostics from the model at simulation setup instead of statically at package load. The source-region grid previously had to fit a fixed set of variables registered when ClimaAtmos loaded, which capped it at 12 latitude by 12 height bands; it is now unbounded, and a run that carries no passive tracers no longer pays for their diagnostics. Mirrors how the tagged tracers already register theirs.
 - ![][badge-✨feature/enhancement] Diagnose the WMO lapse-rate (thermal) tropopause online from the model temperature, as the new `ztrop` diagnostic and as the lower boundary of the stratospheric passive tracers. Two column sweeps, so it is GPU-compatible; columns where no tropopause exists fall back to a latitude-dependent climatology.
 
+0.42.11
+-------
+
+- [#4802](https://github.com/CliMA/ClimaAtmos.jl/pull/4802) ![][badge-✨feature/enhancement] Horizontal resolved-gradient (geometric) SGS variance term
+  `c_g (c_Δx Δx_h)² |∇_h ψ|²` for the SGS quadrature (`sgs_variance_horizontal_scale_factor` switches it on), with a closure-validity bound on
+  σ_q (`sgs_variance_max_rel_std`); The new parameters default to the historical closure.
+- [#4828](https://github.com/CliMA/ClimaAtmos.jl/pull/4828) Update to ClimaTimeSteppers v1 and update benchmark test
+
+0.42.10
+-------
+- [#4803](https://github.com/CliMA/ClimaAtmos.jl/pull/4803)
+  ![][badge-✨feature/enhancement] Generate comparison plots for the
+  reproducibility tests, so a failing job shows the reference and the candidate
+  side by side instead of only the RMSE table.
+- [#4800](https://github.com/CliMA/ClimaAtmos.jl/pull/4800)
+  ![][badge-🔥behavioralΔ] Add tke source due to entr/detr mixing; delete
+  stability-biased buoygrad at cell centers and use unbiased buoygrad instead.
+
+- [#4737](https://github.com/CliMA/ClimaAtmos.jl/pull/4737) ![][badge-💥breaking] `AtmosModel` is now built on a grid and owns the
+  parameters and case setup. `AtmosSimulation` wraps a model and carries only
+  run control:
+
+  ```julia
+  model = AtmosModel(grid; params, setup, microphysics_model = ..., ...)
+  sim   = AtmosSimulation(model; dt, t_end, ...)
+  ```
+
 0.42.9
 -------
 - Update to ClimaCore.jl v0.16 (support for v0.15 is dropped). The biased
