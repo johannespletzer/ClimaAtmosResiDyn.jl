@@ -1,0 +1,57 @@
+# run.log for d5_column_edmf_ice, trimmed from SLURM job 13503561's .out and .err on terrabyte.
+# The runscript's header:
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    d5_column_edmf_ice
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-c1b-val/experiments/tag_closure/configs/d5_column_edmf_ice.yml
+SLURM job:       13503561
+Partition:       hpda2_test
+Nodes:           hpdar03c01s11
+CPUs per task:   2
+Tasks:           1
+Launch:          (direct)
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-c1b-val
+Commit:          fe69cd068e9e67b1fe98ec2dbb60fb1b49eeb2bf (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-c1b-val/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-c1b-val/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/d5_column_edmf_ice
+Start time:      2026-09-18T13:29:49+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) openmpi/4.1.8-gcc13(default)  
+ 2) gcc/13.2.0(default)                    
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/d5_column_edmf_ice/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-18T13:52:11+02:00
+
+# The build:
+[ Info: Built cache (140.888 s, 29.14 GiB)
+[ Info: Built tendency function (445.995 s, 21.21 GiB)
+[ Info: Initialized integrator (76.081 s, 9.0 GiB)
+
+# Every distinct warning, first occurrence, first line only:
+┌ Warning: `energy_source_tags` with `turbconv: prognostic_edmfx`: the eddy diffusion moves the tags as passive tracers, while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`.
+┌ Warning: `energy_source_tags` tag `mp` lists `microphysics`, which cannot contribute under NonEquilibriumMicrophysics1M. Only 0-moment microphysics changes `ρe_tot`. The other schemes move water between species, and the energy leaves with sedimentation, which the tags follow as transport. Note `moist` and `all` both expand to include `microphysics`.
+┌ Warning: `energy_source_tags` tag `new_upper` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+┌ Warning: `energy_source_tags` tag `new_upper` lists `microphysics`, which cannot contribute under NonEquilibriumMicrophysics1M. Only 0-moment microphysics changes `ρe_tot`. The other schemes move water between species, and the energy leaves with sedimentation, which the tags follow as transport. Note `moist` and `all` both expand to include `microphysics`.
+┌ Warning: `energy_source_tags` tag `new_lower` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+┌ Warning: `energy_source_tags` tag `new_lower` lists `microphysics`, which cannot contribute under NonEquilibriumMicrophysics1M. Only 0-moment microphysics changes `ρe_tot`. The other schemes move water between species, and the energy leaves with sedimentation, which the tags follow as transport. Note `moist` and `all` both expand to include `microphysics`.
+┌ Warning: `energy_process_record` lists `microphysics`, which records nothing under NonEquilibriumMicrophysics1M. Only 0-moment microphysics changes `ρe_tot` and `ρq_tot`. The other schemes move water between species, so this record stays zero, which reads the same as a process that did nothing. Their rain-out is in the `precipitation` record.
+
+# The end of the run:
+[ Info: solve! walltime = 4.567
+[ Info: sypd: 12.957
+[ Info: wall_time_per_timestep: 25 milliseconds, 373 microseconds
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/d5_column_edmf_ice/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-18T13:52:11+02:00

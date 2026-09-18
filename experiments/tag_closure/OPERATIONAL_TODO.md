@@ -99,20 +99,27 @@ day, 2M and P3, more than one node, and the GPU.
     `runscripts/terrabyte_stacks.env` are copied in from this branch at
     `58d9b0c8`, because `main` has none of them. Output:
     `$SCRATCH/tag_closure/output/b1_base/`.
-  - **C1b, in progress** in `../ClimaAtmosResiDyn-c1b` on
-    `claude/energy-source-tag-edmf-sharing`, not yet pushed. B1, B2 and B4
-    are written, the refusal is narrowed to `updraft_number` > 1, T6 is
-    `test/energy_source_tags_edmf_integration.jl` in a new group
-    `tagging_source_edmf`, and T5 is item 11 of the source-tag integration
-    test. T6 passed 40 of 41 locally: `sgs_mass_flux_of_energy_source_tags!`
-    allocated 32 bytes per call. 16 were a zeroing `Ref`, now removed, and 16
-    are closures in upstream's `ᶜenv_value`, which the parent pays as well. The
-    check is now `<= 16`. The model's fields came out bit for bit those of the
-    run without tags. Local commit `268800c8`. Then C2 as a draft PR.
-  - **Paused on 2026-09-18 at about 12:15.** The resume steps are at the top
-    of [NEXT_SESSION.md](NEXT_SESSION.md): #89's parity job `13503291`, the T6
-    and T5 reruns, and C1b's remaining steps. #90, untracking
-    `.buildkite/LocalPreferences.toml`, is open for the owner.
+  - **C1b is draft PR #91** (`fe69cd06`, six commits). The work:
+      + B1, B2 and B4;
+      + the refusal narrowed to `updraft_number` > 1;
+      + T6, `test/energy_source_tags_edmf_integration.jl`, in a new group
+        `tagging_source_edmf`;
+      + T5, item 11 of the source-tag integration test;
+      + M3.
+
+    Locally, T6 passes 41 of 41, T5 10 of 10, and the configuration and
+    species-list tests 282 of 282. Without tags it is bit for bit `main`
+    (E51). Its validation ran on 2026-09-18, 4 of the 5 approved jobs: the D4
+    pair, D4 with the updrafts' vertical diffusion, and D5 (E53). All four
+    finished in 23 minutes. The residual is zero-sum at about 0.5%, and the
+    records close the column. After #89 merges it is rebased, and
+    `sgs_mass_flux isa Val{true}` becomes a `Bool` test.
+  - **C2 is written** in `../ClimaAtmosResiDyn-c2`, branch
+    `claude/energy-source-tag-restart-guard` from `main` at `23a57f02`, local
+    commit `e0813505`. Its unit tests pass locally, 291 of 291. It opens as a
+    draft PR once its integration file passes.
+  - **The pause of 2026-09-18 at about 12:15** ended the same afternoon. #90,
+    untracking `.buildkite/LocalPreferences.toml`, is merged (`23a57f02`).
   - **This branch has `main` merged in** (`5db75854`, main at `38661891`), so
     runs launched from here use current model code. Every conflict took
     `main`'s side, with the owner's agreement for the two protected pages,

@@ -1576,6 +1576,56 @@ each, so the numbers are single measurements.
 
 *The same job and logs as E51.*
 
+**E53. With C1b, the EDMF columns run with tags. The gross residual is zero-sum
+and stays near half a percent, and the records close the column's budget.**
+These are C1b's validation runs, submitted with the owner's approval. They
+ran from the C1b branch at `fe69cd06`, with this branch's run files. D4 is the
+DYCOMS RF02 EDMF column with 1M, 8 tags and 5 records, for a day at `dt`
+120 s. D5 is TRMM LBA deep convection with ice, 82 levels, for 6 h.
+
+| run | residual `relative` | `gross_residual`, J/m² | `gross_relative` | untagged / overclaimed, J/m² | form B gap, J/m² |
+|:-- | --:| --:| --:|:-- | --:|
+| `d4_column_edmf`, tracer | 9.2e-5 | 6.71e5 | 5.9e-3 | 3.41e5 / 3.30e5 | 0.49 of 8.9e5 |
+| `d4_column_edmf_enthalpy` | 3.7e-4 | 5.41e5 | 4.7e-3 | 2.92e5 / 2.50e5 | 0.49 of 8.9e5 |
+| `d4_column_edmf_vd`, the updrafts' diffusion on | 4.5e-4 | 6.83e5 | 6.0e-3 | 3.67e5 / 3.16e5 | 1.4 of 9.3e5 |
+| `d5_column_edmf_ice`, 6 h | -8.2e-7 | 2.76e6 | 3.1e-3 | 1.380e6 / 1.381e6 | -317 of 1.05e7 |
+
+  - **The runs build and finish.** Each took 23 minutes on two cores. The
+    tendency function took 450 s of that. Before #76 the D4 pair did not
+    build in two hours (E44).
+  - **The residual moves energy but does not lose it.** Untagged and
+    overclaimed energy are about equal in every run. No energy is orphaned,
+    and no mass sits where the total is not positive. That is the pattern of
+    a transport mismatch, not of a process that no tag follows.
+  - **The records close the column.** Form B, the change of `∫ρe_tot` against
+    the sum of the records, misses by 0.5 J/m² in 8.9e5 on D4, and by 317 J/m²
+    in 1.05e7 on D5. The D5 remainder is not assigned.
+  - **Form A's gap cancels in the column,** as a transport error does. Over
+    levels it keeps 0.05 of its weighted gross on D4, 0.005 with the updrafts'
+    diffusion, and 8e-12 on D5. Under the enthalpy audit it does not cancel,
+    but its integral is 4.5e-8 of the new energy.
+  - **The model is untouched.** `ta` and `rhoa` are bit for bit the same in
+    the D4 pair, which differ only in how the tags move.
+  - **The audit leaves most of D4's residual.** Under enthalpy, D4 keeps 5.4e5
+    J/m², against 2,284 J/m² for C9, the same tags on a column without EDMF
+    (E34). The audit does not reach the EDMF eddy diffusion. That diffusion
+    moves the tags as tracers and `ρe_tot` as enthalpy (C1c). That this is
+    where the remainder comes from is inferred, not separated.
+  - **The updrafts' diffusion adds little:** 6.83e5 against 6.71e5.
+  - **How much C1b removed is not measured here.** There is no D4 run
+    without C1b's sharing, because before #76 it did not build (E44). T6 shows
+    the sharing at the tendency level: from the SGS mass flux and from
+    sedimentation, the partition matches the parent to 100 eps. C8, the same
+    tags on a column without EDMF, had 2.46e6 J/m² at `dt` 10 s (E33). The
+    time step and the turbulence differ, so this is no like-for-like
+    comparison.
+
+*Jobs `13503558` to `13503561` on terrabyte, `hpda2_test`, 2026-09-18, from the
+worktree `../ClimaAtmosResiDyn-c1b-val` at `fe69cd06`. The reductions are
+`analysis/reduce_run.jl` and `analysis/c5_process_closure.jl`. The outputs are
+in `output/d4_column_edmf/`, `output/d4_column_edmf_enthalpy/`,
+`output/d4_column_edmf_vd/` and `output/d5_column_edmf_ice/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

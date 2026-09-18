@@ -1,0 +1,14 @@
+# process_record_extrema.csv, from analysis/reduce_run.jl
+# run: d5_column_edmf_ice
+# generated: 1789732595 (unix)
+# geometry: column
+# Column geometry: no horizontal remapping, so the reductions are over the model's own levels.
+# min and max of every e_prc_<process>. A record is a signed running total of what a process applied, not a share of what is present, so it is not comparable with a tag value directly.
+time,geometry,remapped,min_e_prc_radiation,min_e_prc_surface_flux,min_e_prc_microphysics,min_e_prc_precipitation,max_e_prc_radiation,max_e_prc_surface_flux,max_e_prc_microphysics,max_e_prc_precipitation
+0.0,column,false,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+3600.0,column,false,-57.47825173118811,0.0,0.0,0.0,9.854086300131577,1021.0056413629678,0.0,0.0
+7200.0,column,false,-100.69647157486659,0.0,0.0,-0.004947314510590719,20.32700163343431,5176.8555335472265,0.0,0.0053006042535357146
+10800.0,column,false,-133.1092902173014,0.0,0.0,-0.7642285190296046,31.194766616999054,12883.645273926812,0.0,0.39536927538491806
+14400.0,column,false,-158.3980981396969,0.0,0.0,-19.649157330320225,42.8167831778788,23658.20373290616,0.0,18.374804877942026
+18000.0,column,false,-180.56153692522142,0.0,0.0,-38.274160341287924,54.56290906935684,36353.725864587606,0.0,79.1481519002508
+21600.0,column,false,-204.1961212358488,0.0,0.0,-99.25579694355899,64.86129041410044,49450.30736770286,0.0,183.7139353702823
