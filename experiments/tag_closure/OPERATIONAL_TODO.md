@@ -114,10 +114,11 @@ day, 2M and P3, more than one node, and the GPU.
     finished in 23 minutes. The residual is zero-sum at about 0.5%, and the
     records close the column. After #89 merges it is rebased, and
     `sgs_mass_flux isa Val{true}` becomes a `Bool` test.
-  - **C2 is written** in `../ClimaAtmosResiDyn-c2`, branch
-    `claude/energy-source-tag-restart-guard` from `main` at `23a57f02`, local
-    commit `e0813505`. Its unit tests pass locally, 291 of 291. It opens as a
-    draft PR once its integration file passes.
+  - **C2 is draft PR #92** (`e0813505`, from `main` at `23a57f02`). It passes
+    locally: unit tests 291 of 291, the source-tag integration file 105 of 105.
+    It unlocks V5, restart equivalence (up to 2 jobs, approved). After #89 it
+    needs a small rebase, because the merge changes the lines beside both call
+    sites.
   - **The pause of 2026-09-18 at about 12:15** ended the same afternoon. #90,
     untracking `.buildkite/LocalPreferences.toml`, is merged (`23a57f02`).
   - **This branch has `main` merged in** (`5db75854`, main at `38661891`), so
