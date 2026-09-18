@@ -10,10 +10,12 @@ family is wired into a simulation at all, which is what this file covers:
  2. the region masks reach `p.tagging.ᶜenergy_source_masks` and partition unity;
  3. at t = 0 the region tags partition `ρe_tot` to machine precision;
  4. the generic tracer machinery transports the tags, they stay finite, and the
-    closure residual stays a small bounded monitor;
+    closure residual stays a small bounded monitor; masked *production* reaches
+    a source tag through a real bracketed process, which is the one thing here
+    that a plain-array unit test cannot show;
  5. state and masks survive a checkpoint round trip;
- 6. masked *production* reaches a source tag through a real bracketed process,
-    which is the one thing here that a plain-array unit test cannot show;
+ 6. the implicit Jacobian solves the tags apart from the rest, and the split
+    solver gives the increments of the unsplit one exactly, without allocating;
  7. with `energy_source_tag_offset`, the donor-proportional *loss* runs through
     the same solve, and the offset leaves the model's own state untouched;
  8. under 1-moment microphysics, sedimentation moves the tags with the water.
@@ -253,6 +255,66 @@ end
     for name in (:ρe_src_strat, :ρe_src_tropo)
         @test parent(getproperty(restarted_masks, name)) ==
               parent(getproperty(masks, name))
+    end
+
+    # 6. The implicit Jacobian solves the tags apart from the rest. They couple
+    # to nothing, so the split solver must give the increments of the unsplit
+    # one exactly, in every field. The state after the run holds nonzero tags,
+    # and the right-hand side is the state itself, so no field is zero.
+    @testset "The split Jacobian solver matches the unsplit one" begin
+        p = simulation.integrator.p
+        jacobian_alg = CA.ManualSparseJacobian()
+        split_cache = CA.jacobian_cache(jacobian_alg, Y, p.atmos)
+        unsplit_cache = CA.jacobian_cache(
+            jacobian_alg,
+            Y,
+            p.atmos;
+            split_uncoupled_fields = false,
+        )
+        @test split_cache.solver isa CA.SplitJacobianSolver
+        @test map(field -> field.name, split_cache.solver.uncoupled) == (
+            CA.MatrixFields.@name(c.ρe_src_strat),
+            CA.MatrixFields.@name(c.ρe_src_tropo),
+            CA.MatrixFields.@name(c.ρe_src_rad),
+        )
+        dtγ = FT(5)
+        t = simulation.integrator.t
+        for cache in (split_cache, unsplit_cache)
+            CA.update_jacobian!(jacobian_alg, cache, Y, p, dtγ, t)
+        end
+        ΔY_split = zero(Y)
+        ΔY_unsplit = zero(Y)
+        CA.invert_jacobian!(jacobian_alg, split_cache, ΔY_split, Y)
+        CA.invert_jacobian!(jacobian_alg, unsplit_cache, ΔY_unsplit, Y)
+        # `isequal` rather than `==`, which would let a signed zero differ.
+        @test isequal(parent(ΔY_split.c), parent(ΔY_unsplit.c))
+        @test isequal(parent(ΔY_split.f), parent(ΔY_unsplit.f))
+        @test !all(iszero, parent(ΔY_split.c.ρe_src_rad))
+
+        # The split solver runs in every Newton iteration, so neither its
+        # update nor its solve may allocate. Each check is a function that is
+        # given everything it uses, so `@allocated` counts the call alone.
+        function update_allocations(alg, cache, Y, p, dtγ, t)
+            CA.update_jacobian!(alg, cache, Y, p, dtγ, t)
+            return @allocated CA.update_jacobian!(alg, cache, Y, p, dtγ, t)
+        end
+        function invert_allocations(alg, cache, ΔY, R)
+            CA.invert_jacobian!(alg, cache, ΔY, R)
+            return @allocated CA.invert_jacobian!(alg, cache, ΔY, R)
+        end
+        @test update_allocations(jacobian_alg, split_cache, Y, p, dtγ, t) == 0
+        # The unsplit solve's bytes are what ClimaCore's own solver allocates
+        # on this Julia version; the split may add nothing to them. On Julia
+        # 1.10 the coupled solve, which both paths run, allocates 1056 bytes
+        # per call, so zero is out of reach there until ClimaCore or Julia
+        # removes them; on 1.11 the unsplit solve allocates 48 bytes and the
+        # split none. Both numbers go to the log.
+        unsplit_bytes =
+            invert_allocations(jacobian_alg, unsplit_cache, ΔY_unsplit, Y)
+        split_bytes = invert_allocations(jacobian_alg, split_cache, ΔY_split, Y)
+        @info "Jacobian solve allocations per call" unsplit_bytes split_bytes
+        @test split_bytes <= unsplit_bytes
+        @test split_bytes == 0 broken = VERSION < v"1.11"
     end
 
     # 7. The loss half through a real solve. The run above never reaches it,
