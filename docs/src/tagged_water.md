@@ -336,7 +336,7 @@ policy are modeling choices, and conclusions are conditional on them.
 See `config/model_configs/baroclinic_wave_tagged_water.yml` for a complete example,
 and `test/tagged_water_integration.jl` for the closure assertions.
 
-## API
+## Tagged water API
 
 Rendered here so that the `@ref` links in these docstrings resolve; Documenter
 resolves `@ref` only against docstrings a `@docs` block splices into a page.

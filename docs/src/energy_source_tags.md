@@ -498,7 +498,7 @@ physically complete. Nor does it turn the tags into counterfactual
 sensitivities — tagging says what contributed to the simulated energy, not what
 would change if a process were altered.
 
-## API
+## Energy source tag API
 
 ```@docs
 ClimaAtmos.EnergySourceTag

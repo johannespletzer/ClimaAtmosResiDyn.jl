@@ -294,7 +294,7 @@ they have different units and scales.
 See `config/model_configs/baroclinic_wave_tagged_tracers.yml` for a complete
 example, and `test/tagged_tracers_integration.jl` for the closure assertions.
 
-## API
+## Tagged tracer API
 
 Rendered here so that the `@ref` links in these docstrings resolve; Documenter
 resolves `@ref` only against docstrings a `@docs` block splices into a page.
