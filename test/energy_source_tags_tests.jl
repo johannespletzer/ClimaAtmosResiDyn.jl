@@ -612,6 +612,8 @@ column_atmos_model(; kwargs...) =
               FT.((0, 0, 0))
         @test CA._share_differences(εᵏ, FT.((0, 0, 1)), partition) ==
               FT.((0, 0, 0))
+        # The callable form, which a broadcast uses, is the same.
+        @test CA.ShareDifferences(partition)(εᵏ, ε̄) === Δφ
         @test CA._nonnegative_specific(FT(2), FT(4), FT(-1), FT(6)) ==
               FT.((2, 0, 3))
         # Without a rising updraft the plume starts again from the grid mean.

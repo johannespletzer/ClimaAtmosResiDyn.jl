@@ -1777,7 +1777,7 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
         ) + ᶜturb_entrʲs.:(1),
     )
     ᶜwʲ = @. lazy(get_physical_w(ᶜuʲs.:(1), ᶜlg))
-    partition = _energy_partition_flags(model.tags)
+    share_differences = ShareDifferences(_energy_partition_flags(model.tags))
     # The grid mean's specific tag values, negative ones as zero. They are
     # stored as one tuple per cell, so the tag fields are read once, and each
     # tag's kernel below reads a few tuple fields rather than every tag.
@@ -1822,13 +1822,12 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # values follow from the grid mean and the updraft. Its differences are
     # formed first, since the updraft's then replace the updraft's values.
     ᶜΔφ⁰ = p.scratch.ᶜe_src_environment
-    @. ᶜΔφ⁰ = _share_differences(
+    @. ᶜΔφ⁰ = share_differences(
         _environment_specific(ᶜε̄, ᶜεʲ, Y.c.ρ, ᶜρaʲ, ᶜρa⁰),
         ᶜε̄,
-        partition,
     )
     ᶜΔφʲ = ᶜεʲ
-    @. ᶜΔφʲ = _share_differences(ᶜεʲ, ᶜε̄, partition)
+    @. ᶜΔφʲ = share_differences(ᶜεʲ, ᶜε̄)
 
     subdomains = (;
         ᶜΔφʲ,
@@ -1939,6 +1938,15 @@ end
         min(e / totalᵏ, one(FT)) - min(e_mean / total, one(FT)) : zero(FT)
     end
 end
+
+# `_share_differences` for one partition, as a callable type. A broadcast then
+# carries the partition in its function's type. As an argument, ClimaCore would
+# wrap it in a `Ref`, and the broadcast allocates.
+struct ShareDifferences{partition} end
+ShareDifferences(::Val{partition}) where {partition} =
+    ShareDifferences{partition}()
+@inline (::ShareDifferences{partition})(εᵏ, ε̄) where {partition} =
+    _share_differences(εᵏ, ε̄, Val(partition))
 
 _sgs_energy_source_tag_fluxes!(ᶜYₜ, ᶜY, ᶜparent, ᶜnorm, ᶠflux, ::Tuple{}) =
     nothing
