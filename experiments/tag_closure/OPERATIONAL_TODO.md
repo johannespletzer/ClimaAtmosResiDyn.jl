@@ -56,7 +56,7 @@ for a day. A run takes about 40 minutes, and E59 showed the gap there.
 | 1 | closure ≤ 1e4 J/m², no systematic growth | **met** (E62): 267 J/m² at 24 h; the second 12 h add 75, the first 192 |
 | 2 | the remainder in named parts | **met** (E64): the one-iteration solve's column totals, 313 gross, less the loss rule's flushing, +44; nothing else above 1 J/m² |
 | 3 | `ta`, `rhoa` bit for bit, and a CI test | **met** (E62, E65); the test is `tagging_source_increment` in #94 (every model field against the column without tags) |
-| 4 | per-tag correctness against a converged reference | **measured** (E66); **waits for the updraft gap to be closed** (the owner, 2026-09-19); the threshold once proposed: the one-iteration solve's effect at 1 h, L1 ≤ 1% (region) and ≤ 10% (source tags), L∞ ≤ 25% |
+| 4 | per-tag correctness against a converged reference | **measured** (E66); **waits for the updraft gap to be closed** (the owner, 2026-09-19); the gap is closed on D4 (E73: the default within 0.7% of the updraft copies after a day), and the threshold is asked again once its PR is up; the threshold once proposed: the one-iteration solve's effect at 1 h, L1 ≤ 1% (region) and ≤ 10% (source tags), L∞ ≤ 25% |
 | 5 | Float32 within 10× | **met** (E65): 607 J/m², bit for bit against the Float32 base |
 | 6 | reviewed, tested, PR ready | **met**: review fixed (three blocking findings); unit 630/630 and integration 71/71 locally; **draft PR #94**, which contains #93, with CI all green (67 checks, the new group on 1.10 and 1.11 and in the downgrade jobs, and the docs build); #93 green too (35 checks) |
 
@@ -324,15 +324,20 @@ On 2026-09-19:
     updraft copies of the tags (the audit mode) and a zero-sum exchange (the
     default). The design is in UPDRAFT_GAP.md, "The chosen way". Branch
     `claude/energy-source-tag-updraft`.
-    **Built** at `3ec098f1` (worktree `../ClimaAtmosResiDyn-upd`, frozen run
-    worktree `../ClimaAtmosResiDyn-upd-run`). The smoke test (job `13519152`,
-    the EDMF column for an hour) passed: in both modes every model field is
-    that of the run without tags, bit for bit; the closure is 109 J/m² gross
-    (default) and 119 (copies); `sfc` differs by 2.2% between the modes.
-    Running: the unit and integration tests (`13523323`, `13523324`) and D4
-    for a day in both modes, with V3's passive tracer (`v3_upd_default`
-    `13523325`, `v3_upd_copies` `13523326`). The configs validate against the
-    run worktree's schema, which has the new key.
+    **Built and measured (E73).** Branch head `78e19e23` (worktree
+    `../ClimaAtmosResiDyn-upd`, run worktree `../ClimaAtmosResiDyn-upd-run`).
+    On D4 for a day both modes keep `ta` bit for bit; the default stays
+    within 0.7% (L1) of the copies after a day and 2.6% after six hours,
+    where the tags without updraft mixing were 14% and 71% off. Two defects
+    were found by the tests and fixed: the shares were normalised over all
+    tags, not the partition (`e010f780`; the first default run is
+    superseded), and a `Val` built at run time made the exchange allocate
+    (`78e19e23`, numerics unchanged).
+    **Open, in order:** the unit, increment and EDMF test groups at
+    `78e19e23` (jobs `13533280` to `13533282`); the review agent's report
+    (`review/agent_reviews/updraft_78e19e23.md`); a PR from
+    `claude/energy-source-tag-updraft`; then criterion 4's threshold is asked
+    again, with E73's numbers.
   - **Question 2a, the mixing convention: the hybrid, as built.** Tracer-like
     mixing for turbulent exchange, and the enthalpy flux form for resolved
     transport and pressure work (TRACER_AND_FLUX.md, recommendation).
