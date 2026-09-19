@@ -76,6 +76,7 @@ BUILD_SPLIT = {
 # tests Float32 with the energy source tags, and the Float32 D4 runs.
 LIMITER_OK = {"a5_sphere_limiter", "b3_limiter"}
 FLOAT32_OK = {
+    "g2_v2_sphere_test",
     "a4_float32",
     "v3_sphere_float32",
     "d4_column_edmf_vd_float32",
@@ -126,6 +127,7 @@ AUDIT_REQUIRED = {
     "g1_inc_newton_d4",
     "g1_ref_newton10_d4",
     "g1_inc_newton10_d4",
+    "g2_v2_sphere_test",
     "g1_inc_d4",
     "g1_base_d4_float32",
     "g1_inc_d4_float32",
@@ -173,6 +175,7 @@ STATE_CHECK = {
     "g1_inc_newton_d4",
     "g1_ref_newton10_d4",
     "g1_inc_newton10_d4",
+    "g2_v2_sphere_test",
     "g1_inc_d4",
     "g1_base_d4_float32",
     "g1_inc_d4_float32",
@@ -208,6 +211,7 @@ DENSITY_CHECK = {
     "g1_inc_newton_d4",
     "g1_ref_newton10_d4",
     "g1_inc_newton10_d4",
+    "g2_v2_sphere_test",
     "g1_inc_d4",
     "g1_base_d4_float32",
     "g1_inc_d4_float32",
