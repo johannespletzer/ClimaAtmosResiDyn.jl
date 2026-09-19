@@ -119,3 +119,38 @@ With the mass flux `M = ρaʲ(wʲ − w̄)`:
 Order followed: the estimate from V2's checkpoints, then V3, approved by the
 owner. If the gap matters at the sphere's scale, option 1 is the principled
 fix and option 3 the pragmatic one.
+
+## The chosen way (the owner, 2026-09-19)
+
+One logical switches between two ways, on branch
+`claude/energy-source-tag-updraft` (worktree `../ClimaAtmosResiDyn-upd`):
+
+- **Audit mode: updraft copies of the tags.** Each tag gets a specific copy
+  in every updraft, `sgsʲs.e_src_<tag>`. Any scalar there that is not `ρa`,
+  `mse` or `q_tot` is already a passive SGS tracer to the model. So the
+  copies get the model's own treatment: implicit advection by the updraft,
+  entrainment of the environment's value, the sponge, the limiter, and the
+  difference-form SGS flux `Σₖ ρᵏaᵏ(u³ᵏ − u³)(εᵏ − ε̄)` on the grid-mean tag.
+  C1b's donor-share flux is then switched off, so nothing counts twice.
+  Every EDMF term runs in the implicit tendency, so under
+  `enthalpy_increment` the correction closes the sum after each solve. The
+  mode refuses `enthalpy`, which has no correction. It measures the gap
+  exactly under the hybrid convention: tracer-like exchange, and the
+  parent's net flux.
+- **Default mode: a zero-sum exchange.** No new state. C1b stays, and each
+  tag also takes `X_i = Σₖ Mᵏ (φᵏ_i − φ̄_i) Aᵏ` at the faces, with
+  `Aᵏ = e_totᵏ + c` the subdomain's energy content. The shares sum to one in
+  every subdomain, so `Σᵢ X_i = 0` and closure is untouched under every
+  transport. The updraft's shares `φʲ` come from a steady entraining plume,
+  marched up each column with the model's own entrainment:
+  `εʲ(k) = (εʲ(k−1) + λ ε⁰(k)) / (1 + λ)`, `λ = (ε_entr + ε_turb) Δz / wʲ`,
+  in specific tag contents, then normalised. The plume restarts from the
+  environment where the updraft is absent. It is non-local like the updraft,
+  which a local exchange between adjacent levels would not be (E72).
+- **What each approximates.** The copies ignore that the surface's buoyant
+  air, injected at the lowest level, carries surface-flux energy; they take
+  the environment's composition there. The plume adds the steady-state
+  assumption: it is exact when the updraft adjusts faster than the shares
+  change.
+- **The test:** D4 with both modes, set against each other and against V3's
+  passive tracer. Then criterion 4's threshold is asked again.

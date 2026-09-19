@@ -63,7 +63,8 @@ for a day. A run takes about 40 minutes, and E59 showed the gap there.
 Decided by the owner on 2026-09-19 (see "Decided"): the hybrid mixing
 convention, `c` kept at 110,495 J/kg, and the correction as built. #93 and
 #94 are merged. Criterion 4's threshold is asked again once the updraft gap
-is closed; the way to close it is the owner's choice.
+is closed: one logical, updraft copies (audit) against a zero-sum exchange
+(default), UPDRAFT_GAP.md "The chosen way".
 
 **On the way to G2:**
   - #93 must merge before any sphere run; the prototype's branch has it.
@@ -318,8 +319,11 @@ On 2026-09-19:
   - **Criterion 4 of G1 waits for the updraft gap.** The owner: "Accuracy is
     highly important. Lets ask that question again after the updraft gap is
     closed." So no threshold is set now, and G1 stays open on criterion 4.
-    Closing the gap needs model code (UPDRAFT_GAP.md, "Ways to close it"),
-    and so the owner's choice of the way.
+    Closing the gap needs model code (UPDRAFT_GAP.md, "Ways to close it").
+  - **The way to close the updraft gap: one logical** that switches between
+    updraft copies of the tags (the audit mode) and a zero-sum exchange (the
+    default). The design is in UPDRAFT_GAP.md, "The chosen way". Branch
+    `claude/energy-source-tag-updraft`.
   - **Question 2a, the mixing convention: the hybrid, as built.** Tracer-like
     mixing for turbulent exchange, and the enthalpy flux form for resolved
     transport and pressure work (TRACER_AND_FLUX.md, recommendation).
