@@ -55,7 +55,8 @@ With the mass flux `M = ρaʲ(wʲ − w̄)`:
 - It shows most where the mass flux dominates the eddy diffusion: in cumulus
   layers, in deep convection, and above the boundary layer. On V2's sphere,
   90 to 93% of the tropical area turns over the air below its updraft's top
-  within a day, and 2 to 20% of the rest.
+  within a day in the first four days, and 61 to 75% after. Outside the
+  tropics the share grows from 2 to 4% to 20 to 43% (E72).
 - It is measured on D4 by V3 (FINDINGS E68): 58 points of share at the
   inversion after an hour, and about 3 points through the boundary layer
   after a day.

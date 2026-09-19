@@ -106,14 +106,17 @@ question 3. And merging #93, then #94.
     `g2_v2_sphere_n2` (job `13505896`, submitted 12:20); its per-tag twin
     stays `g2_v2_sphere_newton10`.
   - **The converged twin does not close the sphere better:** 2.78e-5 of the
-    scale at 24 h against V2's 2.45e-5. So on the sphere the residual is not
-    the one-iteration solve's, unlike D4 (E64). It is the explicit processes
-    the tags do not yet follow, and Float32: step 3 of the attribution path.
-  - V2 and its converged twin ran (see section 0). What is left of G2:
-    the diagnosis of V2's top-level collapse (three variants running), then,
-    if a stable configuration is found and the owner agrees, V2 again for ten
-    days; the entries for V2, the twin, the updraft estimate and V3; and the
-    condensing of CONDENSE_PLAN.md after those entries.
+    scale at 24 h against V2's 2.45e-5, because both are Float32. The same
+    two hours in Float64 close to 5.7e-15, and without the sponges nothing
+    changes (E70). So on the sphere the residual is Float32 rounding; the
+    explicit processes add nothing measurable.
+  - Recorded: V2's ten days and the Float64 twin (E70), the offset doubled on
+    D4 (E71, the remainder ∝ `c`, the source tags 4 to 6%), and the updraft
+    estimate over nine days (E72, the gap as large as the `sfc` tag's own
+    rise). What is left of G2: `g2_v2_sphere_n2` (running, about 15 h), then
+    its entries: closure, the residual against its loss rate, the per-tag
+    error against `g2_v2_sphere_newton10` at 1 h, and the updraft estimate.
+    The condensing of CONDENSE_PLAN.md is on hold.
 
 **Out of G1:** the sphere, horizontal transport and hyperdiffusion, runs
 longer than a day, the conventions of question 2 (the reference form as the

@@ -1,0 +1,4 @@
+time,untagged,untagged_relative,overclaimed,overclaimed_relative,orphaned,orphaned_relative,orphaned_volume_fraction,nonpositive_mass,nonpositive_mass_fraction,source_negative,source_negative_relative,source_minimum,repair_moved,repair_moved_relative,increment_left,increment_left_relative,increment_left_gross,increment_left_gross_relative,increment_moved_gross,increment_moved_gross_relative
+0.0,2.79063e15,6.460075e-9,1.7147523e15,3.969508e-9,0.0,0.0,0.0,0.0,0.0,-0.0,-0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+3600.0,5.182319e17,1.1996322e-6,4.947381e17,1.1452474e-6,0.0,0.0,0.0,0.0,0.0,-0.0,-0.0,0.0,1.3521911e18,3.1301274e-6,3.724539e16,8.621771e-8,1.9149522e17,4.4328385e-7,2.974738e20,0.00068860897
+7200.0,8.484288e17,1.9642416e-6,8.217158e17,1.9023971e-6,0.0,0.0,0.0,0.0,0.0,-0.0,-0.0,0.0,3.8230602e18,8.850966e-6,6.7808583e16,1.5698718e-7,2.8680637e17,6.6400037e-7,6.784756e20,0.0015707741

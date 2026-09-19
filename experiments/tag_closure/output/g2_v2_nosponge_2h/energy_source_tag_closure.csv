@@ -1,0 +1,4 @@
+time,total,tagged,residual,relative,gross_residual,gross_relative,scale,nonpositive_fraction,residual_at_spin_up,residual_since_spin_up,relative_since_spin_up
+0.0,4.3198106e23,4.3198102e23,3.6028797e16,8.340365e-8,4.505382e15,1.04295825e-8,4.3198106e23,0.0,NaN,NaN,NaN
+3600.0,4.3199234e23,4.3199234e23,0.0,0.0,1.01297e18,2.3448797e-6,4.3199234e23,0.0,0.0,0.0,0.0
+7200.0,4.3193707e23,4.3193707e23,0.0,0.0,1.6701447e18,3.866639e-6,4.3193707e23,0.0,0.0,0.0,0.0

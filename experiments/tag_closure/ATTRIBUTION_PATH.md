@@ -952,17 +952,20 @@ What is below was confirmed by search on 2026-09-18 unless it is marked
   E62 and E64). E59's drift, E39's Newton lag and D4's cloud and
   free-troposphere parts are gone.
 - Step 1a: E61 answered the first job with option 1, not option 3. The `2c`
-  job did not run; the free-troposphere part it was to explain is gone.
+  job ran later as V5 (E71): the prototype's remainder scales with `c`.
 - Step 2 is superseded for closure. The correction absorbs the diffusion's
   form mismatch, so the subcloud ramp is gone too. Rebuilding C1c would now
   only change the mixing convention, toward the per-flux donor that E66
   argues against.
-- Step 3 is being measured by V2 on the sphere (running). At 1 h the ledger's
-  left part is 19% of the gross, and the rest is what no share follows yet,
-  and Float32. The registry test is not written.
+- Step 3 is answered for the sphere by a Float64 twin (E70): with two Newton
+  iterations the residual is Float32 rounding, and no explicit process opens
+  the closure. The registry test is not written. V2 runs again with two
+  iterations (`g2_v2_sphere_n2`).
 - Steps 4 to 6 are open. The prototype's tracer diffusion mixes provenance
   through the boundary layer (E66), which covers the eddy diffusion's part of
-  4(b). V3 is the next validation that would inform question 2.
+  4(b). V3 measured the updraft gap on D4 (E68), and the estimate on V2's
+  sphere puts it at the size of the `sfc` tag's own vertical motion (E72).
+  V5 ran (E71): the source tags move 4 to 6% in a day when `c` doubles.
 - Not on the path, and found on the way: the records' horizontal advection
   (E63, #93) and the correction under a deep atmosphere (E67, #94).
 

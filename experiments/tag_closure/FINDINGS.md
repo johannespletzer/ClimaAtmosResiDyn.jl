@@ -2219,6 +2219,98 @@ dt 20 s, 24 ranks.
 `../ClimaAtmosResiDyn-inc-run3` at `04d63916`. The outputs are in
 `output/g2_v2_*`.*
 
+*Erratum, 2026-09-19: the third point's explanation is wrong. With two
+iterations the sphere's residual is Float32 rounding alone (E70).*
+
+**E70. On the sphere, V2's residual is Float32 rounding. The explicit
+processes and the sponges add nothing measurable.** Two hours of
+`g2_v2_diag_newton2` (two iterations, one process) were run again: once in
+Float64, and once in Float32 without the sponges.
+
+| gross residual, of the scale | 0 h | 1 h | 2 h |
+|:--|--:|--:|--:|
+| Float32, two iterations (`g2_v2_diag_newton2`) | 1.0e-8 | 2.36e-6 | 3.85e-6 |
+| the same without the sponges | 1.0e-8 | 2.34e-6 | 3.87e-6 |
+| the same in Float64 (`g2_v2_f64_2h`) | 2.6e-17 | 3.6e-15 | 5.7e-15 |
+
+  - **Float64 closes to rounding.** It has the same explicit processes as
+    the Float32 run, so none of them opens the closure. The correction's
+    column totals fall with it: 1.5e-15 of the scale in Float64 against
+    6.6e-7 in Float32. What the correction moves is the same in both
+    (1.57e-3 of the scale in 2 h), so the moves are the implicit channel's,
+    and only what is left over is rounding.
+  - **The sponges' share is nil.** The two Float32 runs agree to 1%.
+  - **So E69's twin closes no better because it too is Float32.** V2's
+    one-iteration column totals, 16% of its gross at ten days, are not
+    decided by this run: on D4 in Float64 they are real (E64), and a Float64
+    run with one iteration would tell for the sphere.
+  - **V2's ten days, as it ran** (one iteration, with the collapsed top of
+    E69; `output/g2_v2_sphere/v2_sphere_analysis.txt`). The gross residual is
+    2.45e-5 of the scale at 1 day, 9.4e-5 at 5 and 1.58e-4 at 10. The second
+    five days add 2.85e19 J, the first 4.07e19, so it slows. The loss rule
+    flushes it at 0.011 to 0.015 a day, a time of about 70 days. At day 9 it
+    stands at a seventh of where that rate would level it off (`G*/G` 7.0).
+    About 30% of `|R|` sits above 10 km and 26 to 38% below 2 km. The
+    correction moved 1.6 times the scale gross over the ten days, and the
+    repair 4.9%.
+*Jobs `13509165` (Float64) and `13509166` (no sponges), `hpda2_test`,
+terrabyte, 2026-09-19, from `../ClimaAtmosResiDyn-inc-run3` at `04d63916`.
+The outputs are in `output/g2_v2_f64_2h` and `output/g2_v2_nosponge_2h`.*
+
+**E71. Doubling the offset `c` leaves the model bit for bit and nearly
+doubles the prototype's remainder on D4. The source tags change by 4 to 6%
+in a day (ATTRIBUTION_PATH.md's V5).** `g1_inc_d4_2c` is `g1_inc_d4` with
+`c` = 220,990 J/kg. `ta` and `rhoa` are `g1_inc_d4`'s bit for bit.
+
+  - **The remainder scales with `c`:** 509 J/m² gross at 24 h against 267
+    (368 in the first 12 h, 141 in the second). Written as `A + c·B`, about
+    90% is `c·B`. So the one-iteration column totals of E64 are mostly
+    `c` times a change of the column's mass that the tags' tendencies do not
+    have. This fits E64's two candidates, sedimentation through the surface
+    and the 1M sink, which both change the mass.
+  - **The shares are a convention, and the tags depend on it.** Against the
+    run with `c`, in integral at 24 h:
+
+    | `rad` | `sfc` | `sub` | `new_strat` | `new_tropo` | `strat` | `tropo` |
+    |--:|--:|--:|--:|--:|--:|--:|
+    | +4.4% | +6.3% | +4.5% | +4.2% | +6.0% | +177% | +152% |
+
+    The initial tags grow with the partition's total, which `c·ρ` enlarges.
+    The source tags keep more, because the loss rule takes each loss in
+    proportion to the shares and they now hold less of it. So `c` sets the
+    loss rule's memory, and a per-tag result must state its `c`.
+*Job `13509167`, `hpda2_test`, terrabyte, 2026-09-19, from
+`../ClimaAtmosResiDyn-inc-run2` at `c0bc637f`. The output is in
+`output/g1_inc_d4_2c`.*
+
+**E72. Over V2's nine days, the updraft gap would lift the tropical `sfc`
+tag's centroid by about as much as the tag itself rises.** The estimate of
+UPDRAFT_GAP.md (`updraft_gap_estimate.jl`, reviewed) run on days 1 to 9 of
+V2, one iteration, with E69's caveat. It gives the initial rate at which a
+tag with an updraft copy would diverge, and its days cannot be added up.
+
+| tropics | days 1 to 4 | days 5 to 9 |
+|:--|--:|--:|
+| updraft top, area mean | 1.8 to 2.6 km | 2.8 to 3.4 km |
+| area whose air below the top turns over in a day | 90 to 93% | 61 to 75% |
+| `sfc` relocated a day, upwind to centred | 7 to 17%, 15 to 53% | 11 to 18%, 15 to 22% |
+| `sfc` centroid rise from the gap, m a day, upwind to centred | 86 to 185, 158 to 507 | 137 to 261, 166 to 285 |
+| `sfc` centroid's actual change, m a day | 142 to 699 | 265 to 372 |
+
+  - Outside the tropics convection spreads after day 3: the area turned over
+    in a day grows from 2 to 4% to 20 to 43%, and the centred estimate
+    relocates 7 to 46% of `sfc` a day.
+  - In the tropics the `new_*` tags move like `sfc` (6 to 19% a day upwind),
+    and `rad` about half as much. The region tags move under 5% a day.
+  - **Reading.** The gap is of the same order as the tag's own vertical
+    motion, not a small correction to it. Where the surface's energy sits in
+    the vertical is therefore uncertain at order one in convective regions.
+    The column totals and the horizontal split are not affected
+    (UPDRAFT_GAP.md). V3 measured the same on D4 (E68).
+*Run on a login node from `analysis/increment/updraft_gap_estimate.jl` on
+V2's daily checkpoints. The output is in
+`output/g2_v2_sphere/updraft_gap_estimate_days1-9.txt`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
