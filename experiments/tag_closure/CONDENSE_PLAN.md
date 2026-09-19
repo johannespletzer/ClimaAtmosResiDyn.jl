@@ -2,6 +2,7 @@
 
 Approved by the owner on 2026-09-19, to run once V2's findings are written.
 Updated the same day at 12:00, after V2's model top collapsed and V3 ran.
+**On hold by the owner since 2026-09-19, 13:10, until further notice.**
 Archive this file with the others when the plan is done.
 
 ## Why
