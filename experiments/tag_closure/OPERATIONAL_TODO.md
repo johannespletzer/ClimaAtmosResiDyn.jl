@@ -78,6 +78,10 @@ question 3. And merging #93, then #94.
     days, 24 ranks on `hpda2_compute`), and its twin `g2_v2_sphere_newton10`
     (job `13505000`, one day, ten fixed Newton iterations), both from
     `../ClimaAtmosResiDyn-inc-run3` at `04d63916`.
+    On 24 ranks the build took 43 minutes and the first step with the
+    callbacks' compile another 50. Then V2 steps at 0.71 s per step, nine
+    times one process, so its ten days end near 14:40 on 2026-09-19. Its
+    first hour closes to 2.31e-6 of the scale, as on one process.
   - V2's configuration, with the outputs of item 10 and the ledger; the
     Float32 run and its twin under `enthalpy` for the per-tag error; the
     partition and time limit a ten-day EDMF sphere needs on terrabyte.
