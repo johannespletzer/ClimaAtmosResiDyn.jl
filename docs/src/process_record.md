@@ -86,8 +86,11 @@ the IMEX schemes actually in use.
 
 A record **is** a prognostic field, but it is not a tracer. Its name carries no
 `ρ` prefix, and `gs_tracer_names` discovers grid-scale tracers by exactly that
-lexical test, so nothing advects, diffuses, hyperdiffuses, sponges or limits a
-record. It needs no hand-written Jacobian block either: `jacobian_cache`
+lexical test. Two loops select their fields with `is_tracer_var` instead: the
+horizontal advection of tracers and the SEM limiter. It asks for the same `ρ`
+prefix. So nothing advects, diffuses, hyperdiffuses, sponges or limits a
+record. Before it asked, the horizontal advection moved the records with the
+air on a sphere. A column has no horizontal advection, so no column run was affected. It needs no hand-written Jacobian block either: `jacobian_cache`
 completes the matrix with `fallback_identity_blocks`, giving these variables the
 implicit residual `-ΔY`. So a record takes each bracketed increment as it is
 evaluated, with no Jacobian correction. Those are the explicit brackets'

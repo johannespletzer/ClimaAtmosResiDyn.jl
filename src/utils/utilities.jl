@@ -49,19 +49,20 @@ end
 Classify a top-level field name of `Y.c` or `Y.f` by the role it plays in the
 state.
 
-`is_tracer_var` is the complement: every name that is not `ρ`, `ρtke`, an energy,
-a momentum, or an SGS variable.
+`is_tracer_var` is a grid-scale tracer: a density-weighted name, one that starts
+with `ρ`, other than `ρ`, `ρtke` and the energy. That is the rule
+`gs_tracer_names` uses. The horizontal advection of tracers and the SEM limiter
+loop over these names. Every tracer the model carries is density-weighted. A
+field of `Y.c` without the `ρ` prefix is a diagnostic the air does not carry,
+such as a process record `prc_e_<process>`, so neither loop may reach it (see
+`docs/src/process_record.md`).
 """
 is_energy_var(symbol) = symbol in (:ρe_tot,)
 is_momentum_var(symbol) = symbol in (:uₕ, :u₃)
 is_sgs_var(symbol) = symbol in (:sgsʲs,)
-is_tracer_var(symbol) = !(
-    symbol == :ρ ||
-    symbol == :ρtke ||
-    is_energy_var(symbol) ||
-    is_momentum_var(symbol) ||
-    is_sgs_var(symbol)
-)
+is_tracer_var(symbol) =
+    startswith(string(symbol), "ρ") &&
+    !(symbol == :ρ || symbol == :ρtke || is_energy_var(symbol))
 
 # we may be hitting a slow path:
 # https://stackoverflow.com/questions/14687665/very-slow-stdpow-for-bases-very-close-to-1
