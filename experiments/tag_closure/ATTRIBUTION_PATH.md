@@ -1042,6 +1042,7 @@ with its own ledger and a switch.
 - (a) A partition by label.
 - (b) Exchange fluxes `X_k` that sum to zero, for EDMF diffusion and the SGS
   flux, or option C.
+  The SGS flux's part is set out in [UPDRAFT_GAP.md](UPDRAFT_GAP.md).
 - (c) Higher-order shares that stay non-negative.
 - (d) Subsidence as transport in single-column cases.
 
