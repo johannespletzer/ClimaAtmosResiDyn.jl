@@ -38,8 +38,9 @@ With the mass flux `M = ρaʲ(wʲ − w̄)`:
   a passive tracer's mixing ratio would move. That does not depend on the
   offset `c`.
 - **It is non-local.** An updraft takes the surface layer's composition to
-  cloud base, or to 10 km in deep convection, in one pass. Local eddy
-  diffusion does not.
+  cloud base, or higher in deep convection, in one pass. Local eddy diffusion
+  does not. On V2's sphere in its first days the tropical updrafts end at 1.8
+  to 2.6 km, so there the gap acts in the lowest few kilometres.
 
 ## How it meets the prototype
 
@@ -52,10 +53,12 @@ With the mass flux `M = ρaʲ(wʲ − w̄)`:
   between 25 m and 275 m while the air was well mixed (ATTRIBUTION_PATH.md,
   summary).
 - It shows most where the mass flux dominates the eddy diffusion: in cumulus
-  layers, in deep convection, and above the boundary layer. An updraft turns
-  over a stratocumulus boundary layer in about 5 to 12 hours, and the tropical
-  troposphere in about 3 to 10 days. These are typical values, not measured
-  here. Over V2's ten days the gap is not small.
+  layers, in deep convection, and above the boundary layer. On V2's sphere,
+  90 to 93% of the tropical area turns over the air below its updraft's top
+  within a day, and 2 to 20% of the rest.
+- It is measured on D4 by V3 (FINDINGS E68): 58 points of share at the
+  inversion after an hour, and about 3 points through the boundary layer
+  after a day.
 
 ## What to expect in V2
 
@@ -79,24 +82,27 @@ With the mass flux `M = ρaʲ(wʲ − w̄)`:
 
 ## How to measure it
 
-1. **A bound from V2's daily checkpoints.** They hold the whole state,
-   including the updraft's `ρa`, `u₃`, `mse` and `q_tot`. Per column:
+1. **An estimate from V2's daily checkpoints** (`updraft_gap_estimate.jl`;
+   reviewed, `review/agent_reviews/updraft_gap_bound/`). It gives the initial
+   rate at which a copy would diverge, not a bound, and it cannot be added up
+   over days. The checkpoints hold the whole state, including the updraft's
+   `ρa`, `u₃`, `mse` and `q_tot`. Per column:
    - the mass flux `M(z)`, and the turnover time `ρH/M`;
    - the fraction `f(z)` of surface air left in the updraft, from the mixing
      line of a conserved variable (`q_tot` or `mse`);
    - an updraft share estimated as `φʲ ≈ f·φ(surface layer) + (1 − f)·φ̄(z)`,
      and from it the gap's share tendency, set against the tags' own.
 
-   No new run is needed, only a Julia script that reads the checkpoints. It
-   gives a size, not an exact answer.
-2. **V3 on D4, which measures it without model code.**
+   The face value is bracketed, upwind and centred as the model's own flux,
+   and they differ by a factor of 2 to 4 with updrafts two to four cells deep.
+2. **V3 on D4, which measures it without model code** (ran on 2026-09-19;
+   FINDINGS E68).
    `chemistry_model: passive` already carries `q_gas_A` with an updraft copy.
    A driver script sets its initial value to the `tropo` mask. The ratio
    `ψ = tropo/(tropo + strat)` changes only by transport, mixing and the
    repair: the loss rule and new production leave it as it is. So `ψ` should
    follow `q_gas_A`, and `ψ − q_gas_A` is the tags' mixing error against the
-   air's own, the updraft included. One column job; it lies beyond G2, so it
-   needs the owner's approval.
+   air's own, the updraft included. One column job, approved by the owner.
 
 ## Ways to close it
 
@@ -109,6 +115,6 @@ With the mass flux `M = ρaʲ(wʲ − w̄)`:
    4(b)'s `X_k`). Cheap and closing; it approximates the cycle of updraft and
    compensating subsidence.
 
-Recommended order: the bound from V2's checkpoints, then V3 with the owner's
-approval. If the gap matters at the sphere's scale, option 1 is the principled
+Order followed: the estimate from V2's checkpoints, then V3, approved by the
+owner. If the gap matters at the sphere's scale, option 1 is the principled
 fix and option 3 the pragmatic one.

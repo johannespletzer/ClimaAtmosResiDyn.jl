@@ -2144,6 +2144,81 @@ is 1/0.9906 times the bottom one.
 from `../ClimaAtmosResiDyn-inc-run2`), terrabyte, `hpda2_test`, 2026-09-19.
 The script is `analysis/increment/sphere_increment_deep.jl`.*
 
+**E68. V3: the tags' mixing against the air's own on D4. The updraft moves
+boundary-layer air to the inversion that the tags leave behind, and after a day
+the tags hold 7.0% air from above the inversion where the air holds 10.1%.**
+V3, approved by the owner on 2026-09-19: D4 under the prototype with
+`chemistry_model: passive`. Its tracer `q_gas_A` has an updraft copy. Before
+the solve the driver sets the tracer and its copy to the mask of the region tag
+`tropo`. The ratio `ψ = tropo/(tropo + strat)` starts equal to it. The loss rule
+and new production leave `ψ` as it is, and subsidence moves neither. So only
+transport, mixing and the repair change them.
+
+| hour | L1 of `ψ − q_gas_A` | largest difference, and where |
+|--:|--:|:--|
+| 1 | 7.8% | −0.58 at 775 m, the inversion cell |
+| 3 | 6.6% | −0.27 at 775 m |
+| 6 | 3.9% | +0.08 at 25 m |
+| 24 | 3.2% | +0.04 at 875 m |
+
+  - **The model is untouched:** `ta` is bit for bit `g1_inc_d4`'s, and the
+    closure residual is the same to every digit, 266.94240759 J/m² at 24 h.
+  - **In the first hours the updraft is the difference.** At 1 h the updraft
+    carries air that is 99% from the boundary layer up to 725 m. The tracer at
+    the inversion then holds 58 points more boundary-layer air than the tags,
+    whose updraft share is the grid mean's (UPDRAFT_GAP.md).
+  - **After a day the boundary layer is mixed,** and the updraft's tracer
+    equals the grid mean's (0.8994 against 0.8993). What remains is a uniform
+    offset through the layer: the tracer has 10.1% air from above the
+    inversion, and the tags 7.0%. The tags take in about a third less of the
+    entrained air.
+  - So on this column the updraft gap is large for hours at the inversion, and
+    leaves a lasting error of about 3 points of share in the boundary layer.
+*Job `13505756` on terrabyte, `hpda2_test`, 2026-09-19, from
+`../ClimaAtmosResiDyn-inc-run3` at `04d63916`, with
+`analysis/increment/v3_driver.jl`. The outputs and `compare_tracer.txt` from
+`analysis/increment/v3_compare.py` are in `output/v3_d4_passive_tracer/`.*
+
+**E69. With one Newton iteration, V2's model top collapses to the 150 K floor
+within 6 h; two iterations prevent it. And on the sphere the residual is not
+the solver's.** V2 (`g2_v2_sphere`) is the production physics on a sphere under
+the prototype: EDMF with the updrafts' vertical diffusion, implicit eddy
+diffusion, both sponges, a DCMIP200 mountain, 1M, Float32, 10 levels to 30 km,
+dt 20 s, 24 ranks.
+
+| top level (27 km), mean | 1 h | 2 h | 3 h | 6 h |
+|:--|--:|--:|--:|--:|
+| V2, one iteration | 216.2 K | 205.1 | 190.1 | 156.0, 18% at the floor |
+| without sponges | 216.2 | 205.1 | 190.1 | |
+| without the mountain | 215.5 | 203.1 | 188.7 | |
+| two iterations | 219.3 | 218.9 | | |
+| ten iterations (the twin) | 219.3 | 218.9 | 218.7 | 218.5 |
+
+  - **The one-iteration solve alone makes the collapse.** Radiation warms that
+    level by about 0.05 K an hour in both V2 and the twin. So the cooling of 4
+    to 15 K an hour is the implicit dynamics' under one iteration. Turning off
+    the sponges changes nothing to the printed digit, and removing the
+    mountain little. With two iterations the level holds what ten give. From
+    12 h on the whole top level of V2 sits at the floor, and the level below
+    settles near 198 K.
+  - **It is the model's own.** The tags feed back into nothing, and `E` stays
+    positive. The first V2 is kept as a record of the tags' bookkeeping over
+    ten days on that atmosphere, with this caveat on every reading. V2 runs
+    again with two iterations, `g2_v2_sphere_n2`.
+  - **On the sphere the converged twin does not close better:** 2.78e-5 of
+    the scale at 24 h, against 2.45e-5 with one iteration. On D4 the converged
+    solve took the residual to 0.0016 J/m² (E66). So the sphere's residual is
+    not the one-iteration solve's. It is the explicit processes the tags do not
+    yet follow, and Float32: step 3 of the attribution path.
+  - **The twin cannot measure the per-tag error of one iteration here.** The
+    atmospheres differ by 4 K at the top already at 1 h, and the tags with
+    them (region tags 0.1% in L1, source tags 4 to 10%). The two-iteration
+    rerun, whose top follows the twin's, is the one to compare.
+*Jobs `13504999` (V2), `13505000` (the twin, a day), `13505762` to
+`13505764` (the three-hour variants), terrabyte, 2026-09-19, from
+`../ClimaAtmosResiDyn-inc-run3` at `04d63916`. The outputs are in
+`output/g2_v2_*`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
