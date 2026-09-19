@@ -3,8 +3,9 @@
     python v3_compare.py [run, default v3_d4_passive_tracer] [reference, default g1_inc_d4]
 
 The passive tracer `q_gas_A` and the ratio `ψ = tropo / (tropo + strat)` start
-equal, the mask of `tropo`, and only transport, mixing and the repair change
-either (analysis/increment/v3_driver.jl). The tracer has an updraft copy,
+equal, the mask of `tropo`. Transport, mixing and the repair change either,
+and new energy, which the region tags take by their mask, changes `ψ` as well
+(analysis/increment/v3_driver.jl; FINDINGS E68, erratum). The tracer has an updraft copy,
 `q_gas_Aup`; the tags have none. So `ψ - q_gas_A` is how the tags' mixing
 differs from the air's, the updraft included.
 

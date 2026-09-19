@@ -5,10 +5,10 @@ updraft, are set to the mask of the region tag `tropo`. So at the start the
 tracer is the fraction of the air that began in that region, as the ratio
 `ψ = tropo / (tropo + strat)` of the tags is.
 
-The loss rule and new production leave `ψ` as it is, and subsidence moves
-neither. So `ψ` changes only by transport, mixing and the repair, and the
-tracer by transport and mixing, with its own updraft copy. `ψ - q_gas_A`
-measures how the tags' mixing differs from the air's, the updraft included
+The loss rule leaves `ψ` as it is, and subsidence moves neither. But the
+region tags take new energy by their mask, so new energy in the boundary layer
+raises `ψ` (FINDINGS E68, erratum). So `ψ - q_gas_A` is how the tags' mixing
+differs from the air's, the updraft included, plus that attribution
 (UPDRAFT_GAP.md). The tracer feeds back into nothing, so the model's own fields
 should be those of the same run without it.
 

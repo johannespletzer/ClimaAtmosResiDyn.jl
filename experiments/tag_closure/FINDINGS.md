@@ -2178,6 +2178,15 @@ transport, mixing and the repair change them.
 `../ClimaAtmosResiDyn-inc-run3` at `04d63916`, with
 `analysis/increment/v3_driver.jl`. The outputs and `compare_tracer.txt` from
 `analysis/increment/v3_compare.py` are in `output/v3_d4_passive_tracer/`.*
+*Erratum, 2026-09-19: the premise is wrong. The region tags `strat` and
+`tropo` have no sources, so they take every source's gain by their mask
+(`tag_receives_source` is true for an empty list), while a loss takes from
+every tag in proportion. So new energy in the boundary layer goes to `tropo`,
+and `ψ` rises above the tracer even with the air's own mixing. `ψ − q_gas_A`
+is the updraft gap plus that attribution. With updraft copies of the tags
+(E73) the gap in the boundary layer is 0.3 points at 6 h, and 1.3 points at
+24 h, most of it the attribution. The size of the updraft gap alone is the
+tags without copies against the tags with them (E73).*
 
 **E69. With one Newton iteration, V2's model top collapses to the 150 K floor
 within 6 h; two iterations prevent it. And on the sphere the residual is not

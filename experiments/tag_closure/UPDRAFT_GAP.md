@@ -100,10 +100,11 @@ With the mass flux `M = ρaʲ(wʲ − w̄)`:
    FINDINGS E68).
    `chemistry_model: passive` already carries `q_gas_A` with an updraft copy.
    A driver script sets its initial value to the `tropo` mask. The ratio
-   `ψ = tropo/(tropo + strat)` changes only by transport, mixing and the
-   repair: the loss rule and new production leave it as it is. So `ψ` should
-   follow `q_gas_A`, and `ψ − q_gas_A` is the tags' mixing error against the
-   air's own, the updraft included. One column job, approved by the owner.
+   `ψ = tropo/(tropo + strat)` changes by transport, mixing and the repair,
+   and also by new energy, which the region tags take by their mask. So
+   `ψ − q_gas_A` is the updraft gap plus that attribution (FINDINGS E68,
+   erratum). The gap alone is the tags without copies against the tags with
+   them (E73). One column job, approved by the owner.
 
 ## Ways to close it
 
