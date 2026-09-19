@@ -1,0 +1,34 @@
+g2_v2_sphere: the closure, J and over the scale
+       0 h  gross 4.5054e+15  relative 1.043e-08
+      24 h  gross 1.0548e+19  relative 2.446e-05
+      48 h  gross 1.9706e+19  relative 4.576e-05
+      72 h  gross 2.6945e+19  relative 6.258e-05
+      96 h  gross 3.3895e+19  relative 7.866e-05
+     120 h  gross 4.0658e+19  relative 9.412e-05
+     144 h  gross 4.6643e+19  relative 1.076e-04
+     168 h  gross 5.2224e+19  relative 1.201e-04
+     192 h  gross 5.8116e+19  relative 1.332e-04
+     216 h  gross 6.3769e+19  relative 1.458e-04
+     240 h  gross 6.9171e+19  relative 1.578e-04
+  first half (120 h) +4.065e+19, second half +2.851e+19: slowing
+
+the audit at the last row
+  untagged               +3.1184e+19  (+7.115e-05 of the scale)
+  overclaimed            +3.7986e+19  (+8.667e-05 of the scale)
+  repair_moved           +2.1368e+22  (+4.875e-02 of the scale)
+  increment_left         +7.7776e+18  (+1.775e-05 of the scale)
+  increment_left_gross   +1.1353e+19  (+2.590e-05 of the scale)
+  increment_moved_gross  +7.1578e+23  (+1.633e+00 of the scale)
+
+the residual against its loss rate (E60); rates per day
+  hour   G (arb.)     dG/dt/G   λ_R      P/G      G*/G   |R| above 10 km, below 2 km
+      1  2.6588e+06  +19.5813  0.0106  +19.5920  1841.50  0.31, 0.29
+     24  3.2759e+07  +0.9212  0.0152  +0.9364    61.52  0.28, 0.37
+     48  6.1946e+07  +0.3936  0.0135  +0.4071    30.08  0.28, 0.38
+     72  8.5299e+07  +0.2744  0.0135  +0.2879    21.31  0.28, 0.35
+     96  1.0732e+08  +0.2069  0.0137  +0.2206    16.07  0.28, 0.33
+    120  1.3018e+08  +0.1696  0.0144  +0.1840    12.81  0.29, 0.32
+    144  1.5151e+08  +0.1320  0.0147  +0.1467     9.98  0.30, 0.30
+    168  1.7132e+08  +0.1135  0.0145  +0.1280     8.83  0.31, 0.29
+    192  1.9127e+08  +0.1031  0.0142  +0.1173     8.27  0.32, 0.27
+    216  2.1099e+08  +0.0895  0.0150  +0.1045     6.98  0.33, 0.26
