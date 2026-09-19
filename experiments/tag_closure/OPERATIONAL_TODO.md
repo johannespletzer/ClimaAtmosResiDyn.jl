@@ -333,11 +333,18 @@ On 2026-09-19:
     tags, not the partition (`e010f780`; the first default run is
     superseded), and a `Val` built at run time made the exchange allocate
     (`78e19e23`, numerics unchanged).
-    **Open, in order:** the unit, increment and EDMF test groups at
-    `78e19e23` (jobs `13533280` to `13533282`); the review agent's report
-    (`review/agent_reviews/updraft_78e19e23.md`); a PR from
-    `claude/energy-source-tag-updraft`; then criterion 4's threshold is asked
-    again, with E73's numbers.
+    **Reviewed** at `78e19e23` by an agent
+    (`review/agent_reviews/updraft_78e19e23.md`): the physics and the parity
+    hold. One blocker (CI time: the copies' run now has its own group,
+    `tagging_source_updraft`) and six should-fix items, all addressed in
+    `c87ad5ff` and `38278c2d`: the exchange is refused without a partition,
+    the plume's weight cannot overflow in Float32, the shares are stored once
+    per call, the zero sum holds everywhere, the restart guard's copy check is
+    tested, and stale text is updated.
+    **Open, in order:** the four test groups at `38278c2d` (jobs `13536384`,
+    `13536385`, `13536454`, `13536455`); the default D4 day again at the head
+    for provenance (`13536456`); a PR from `claude/energy-source-tag-updraft`;
+    then criterion 4's threshold is asked again, with E73's numbers.
   - **Question 2a, the mixing convention: the hybrid, as built.** Tracer-like
     mixing for turbulent exchange, and the enthalpy flux form for resolved
     transport and pressure work (TRACER_AND_FLUX.md, recommendation).
