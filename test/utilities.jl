@@ -131,6 +131,16 @@ end
     @test CA.is_sgs_var(:sgsʲs) == true
     @test CA.is_tracer_var(:ρq_tot) == true
     @test CA.is_tracer_var(:ρ) == false
+    # A tracer is density-weighted, as for `gs_tracer_names`. The rest of `Y.c`
+    # is the air itself, the updrafts, or diagnostics the air does not carry.
+    @test CA.is_tracer_var(:ρq_gas_y01z01) == true
+    @test CA.is_tracer_var(:ρe_src_tropics) == true
+    @test CA.is_tracer_var(:ρtke) == false
+    @test CA.is_tracer_var(:ρe_tot) == false
+    @test CA.is_tracer_var(:uₕ) == false
+    @test CA.is_tracer_var(:sgsʲs) == false
+    @test CA.is_tracer_var(:prc_e_radiation) == false
+    @test CA.is_tracer_var(:prc_q_surface_flux) == false
 end
 
 #####
