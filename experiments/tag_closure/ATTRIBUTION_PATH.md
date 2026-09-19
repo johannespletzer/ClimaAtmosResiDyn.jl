@@ -942,6 +942,30 @@ What is below was confirmed by search on 2026-09-18 unless it is marked
 
 ## 7. The ranked path
 
+**Status on 2026-09-19.**
+
+- Question 1 is decided and built: the prototype `enthalpy_increment`, draft
+  PR #94. Questions 2 and 3 are open. [TRACER_AND_FLUX.md](TRACER_AND_FLUX.md)
+  sets out question 2.
+- Step 1 is done and meets its acceptance: D4 closes to 267 J/m² at 24 h,
+  with `ta` bit for bit and its remainder explained by the ledger (FINDINGS
+  E62 and E64). E59's drift, E39's Newton lag and D4's cloud and
+  free-troposphere parts are gone.
+- Step 1a: E61 answered the first job with option 1, not option 3. The `2c`
+  job did not run; the free-troposphere part it was to explain is gone.
+- Step 2 is superseded for closure. The correction absorbs the diffusion's
+  form mismatch, so the subcloud ramp is gone too. Rebuilding C1c would now
+  only change the mixing convention, toward the per-flux donor that E66
+  argues against.
+- Step 3 is being measured by V2 on the sphere (running). At 1 h the ledger's
+  left part is 19% of the gross, and the rest is what no share follows yet,
+  and Float32. The registry test is not written.
+- Steps 4 to 6 are open. The prototype's tracer diffusion mixes provenance
+  through the boundary layer (E66), which covers the eddy diffusion's part of
+  4(b). V3 is the next validation that would inform question 2.
+- Not on the path, and found on the way: the records' horizontal advection
+  (E63, #93) and the correction under a deep atmosphere (E67, #94).
+
 Each step has four entries:
 
 - **gain:** in J/m² on D4 unless it says otherwise;
