@@ -366,10 +366,9 @@ function _check_exchange_partition(
     atmos.edmfx_model.sgs_mass_flux || return nothing
     has_energy_source_updraft_copies(model) && return nothing
     names = energy_source_region_tag_state_names(model)
-    advice =
-        "Add a region and its complement, for example with `above: false` \
-        or `inside: false`, or set `energy_source_tag_updraft_copy: true`, \
-        whose copies need no partition."
+    advice = "Add a region and its complement, for example with `above: false` \
+             or `inside: false`, or set `energy_source_tag_updraft_copy: true`, \
+             whose copies need no partition."
     isempty(names) && error(
         "The energy source tags exchange provenance at the updraft's mass \
         flux under `turbconv: prognostic_edmfx`, and a tag's share there is \
