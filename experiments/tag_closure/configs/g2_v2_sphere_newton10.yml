@@ -1,0 +1,86 @@
+# G2, V2's twin: `g2_v2_sphere` with ten Newton iterations, fixed, for its
+# first day. A fixed count keeps the atmosphere independent of the tags (E66).
+# It runs on 24 MPI ranks from the same worktree as `g2_v2_sphere`.
+#
+# What it decides: the per-tag error of the one-iteration solve on the sphere.
+# The two runs share their atmosphere closely only in the first hours, so the
+# comparison is made there, as on D4 (E66, at 1 h). It also shows how closely
+# the converged prototype closes on a sphere.
+max_newton_iters_ode: 10
+job_id: "g2_v2_sphere_newton10"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+energy_source_tag_transport: "enthalpy_increment"
+
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "20secs"
+ode_algo: "ARS222"
+topography: "DCMIP200"
+rayleigh_sponge: true
+viscous_sponge: true
+surface_setup: "DefaultMoninObukhov"
+rad: "clearsky"
+dt_rad: "1hours"
+turbconv: "prognostic_edmfx"
+prognostic_tke: true
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+toml: [toml/prognostic_edmfx_1M.toml]
+t_end: "1days"
+FLOAT_TYPE: "Float32"
+
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+  - name: mp
+    source: microphysics
+  - name: new_tropics
+    region: tropics
+    source: all
+  - name: new_extratropics
+    region: extratropics
+    source: all
+
+energy_process_record: [radiation, surface_flux, microphysics, precipitation]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res, rhoa]
+    period: "1hours"
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_mp, e_src_new_tropics, e_src_new_extratropics]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_microphysics]
+    period: "1hours"
+  - short_name: [e_prc_precipitation]
+    period: "1hours"
+  - short_name: [e_src_inc_left, e_src_inc_moved]
+    period: "1hours"
+  - short_name: [ta]
+    period: "1hours"

@@ -579,6 +579,8 @@ run today.
 | `g1_ref_newton10_d4` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt1` | the reference again, with ten Newton iterations fixed, so its atmosphere does not depend on the tags |
 | `g1_inc_newton10_d4` | `phase_c.sh`, from a worktree of the prototype with the ledger | the prototype with the reference's fixed ten iterations, a day |
 | `g2_v2_sphere_test` | `phase_c.sh`, from a worktree of the prototype with the deep-atmosphere scaling | V2's feasibility run: the production physics on a sphere under the prototype, Float32, two hours |
+| `g2_v2_sphere` | `phase_c.sh`, 24 MPI ranks, from a worktree of the prototype | V2: the production physics on a sphere under the prototype, Float32, ten days |
+| `g2_v2_sphere_newton10` | `phase_c.sh`, 24 MPI ranks, from the same worktree | V2's twin with ten fixed Newton iterations, its first day |
 | `g1_base_d4_float32` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-base` | `c1c_base_d4_enthalpy` in Float32, the baseline of G1's Float32 twin |
 | `g1_inc_d4_float32` | `phase_c.sh`, from a worktree of the prototype | the prototype in Float32, G1's Float32 twin |
 | `c1c_opt2_d4_enthalpy` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt2` | the C1c comparison: option 1 with the tags' tracer-diffusion blocks kept |
