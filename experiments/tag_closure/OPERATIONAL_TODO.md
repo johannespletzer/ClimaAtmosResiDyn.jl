@@ -88,6 +88,20 @@ question 3. And merging #93, then #94.
     their total daily change of 40 to 140%; elsewhere under 4%. The share of
     columns whose air below 10 km the mass flux turns over within a day grows
     from 15% to 27%. An agent reviews the method.
+  - **V2's model top collapses (found 2026-09-19, 10:40).** With one Newton
+    iteration the top level (27 km) cools by 4 to 15 K an hour from the start
+    and sits at the 150 K floor from 6 h on; the level below settles near
+    198 K. The converged twin holds 218 K. Radiation warms the level slightly
+    in both, so the cooling is the implicit dynamics' under a one-iteration
+    solve. It is the model's own behaviour in V2's configuration; the tags
+    feed back into nothing, `E` stays positive, and the closure is unaffected.
+    But V2 is then not the production-physics test G2 asks for. Three
+    three-hour variants look for the cause: sponges off, two Newton
+    iterations, no mountain (jobs `13505762` to `13505764`). V2 runs on.
+  - **The converged twin does not close the sphere better:** 2.78e-5 of the
+    scale at 24 h against V2's 2.45e-5. So on the sphere the residual is not
+    the one-iteration solve's, unlike D4 (E64). It is the explicit processes
+    the tags do not yet follow, and Float32: step 3 of the attribution path.
   - V2's configuration, with the outputs of item 10 and the ledger; the
     Float32 run and its twin under `enthalpy` for the per-tag error; the
     partition and time limit a ten-day EDMF sphere needs on terrabyte.
