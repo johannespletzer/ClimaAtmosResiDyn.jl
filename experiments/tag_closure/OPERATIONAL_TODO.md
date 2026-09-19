@@ -324,6 +324,15 @@ On 2026-09-19:
     updraft copies of the tags (the audit mode) and a zero-sum exchange (the
     default). The design is in UPDRAFT_GAP.md, "The chosen way". Branch
     `claude/energy-source-tag-updraft`.
+    **Built** at `3ec098f1` (worktree `../ClimaAtmosResiDyn-upd`, frozen run
+    worktree `../ClimaAtmosResiDyn-upd-run`). The smoke test (job `13519152`,
+    the EDMF column for an hour) passed: in both modes every model field is
+    that of the run without tags, bit for bit; the closure is 109 J/m² gross
+    (default) and 119 (copies); `sfc` differs by 2.2% between the modes.
+    Running: the unit and integration tests (`13523323`, `13523324`) and D4
+    for a day in both modes, with V3's passive tracer (`v3_upd_default`
+    `13523325`, `v3_upd_copies` `13523326`). The configs validate against the
+    run worktree's schema, which has the new key.
   - **Question 2a, the mixing convention: the hybrid, as built.** Tracer-like
     mixing for turbulent exchange, and the enthalpy flux form for resolved
     transport and pressure work (TRACER_AND_FLUX.md, recommendation).
