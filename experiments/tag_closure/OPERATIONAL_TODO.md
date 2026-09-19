@@ -102,9 +102,11 @@ question 3. And merging #93, then #94.
     scale at 24 h against V2's 2.45e-5. So on the sphere the residual is not
     the one-iteration solve's, unlike D4 (E64). It is the explicit processes
     the tags do not yet follow, and Float32: step 3 of the attribution path.
-  - V2's configuration, with the outputs of item 10 and the ledger; the
-    Float32 run and its twin under `enthalpy` for the per-tag error; the
-    partition and time limit a ten-day EDMF sphere needs on terrabyte.
+  - V2 and its converged twin ran (see section 0). What is left of G2:
+    the diagnosis of V2's top-level collapse (three variants running), then,
+    if a stable configuration is found and the owner agrees, V2 again for ten
+    days; the entries for V2, the twin, the updraft estimate and V3; and the
+    condensing of CONDENSE_PLAN.md after those entries.
 
 **Out of G1:** the sphere, horizontal transport and hyperdiffusion, runs
 longer than a day, the conventions of question 2 (the reference form as the
