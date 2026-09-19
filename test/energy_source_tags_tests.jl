@@ -498,31 +498,98 @@ column_atmos_model(; kwargs...) =
         increment = atmos(CA.EnthalpyIncrementEnergySourceTransport())
         newton = CTS.NewtonsMethod()
         T_imp! = (Yₜ, Y, p, t) -> nothing
+        # The parent's own post-solve correction, which it has unless
+        # `energy_q_tot_upwinding` is `none`.
+        post = (dY, U, p, t) -> nothing
         check = CA.check_energy_source_increment_supported
-        @test isnothing(check(increment, CTS.IMEXAlgorithm(CTS.ARS343(), newton), T_imp!))
-        @test isnothing(check(increment, CTS.IMEXAlgorithm(CTS.ARS222(), newton), T_imp!))
+        imex(tableau) = CTS.IMEXAlgorithm(tableau, newton)
+        # Every stage the algorithm uses is solved: the ARS algorithms, and
+        # SSP222, whose implicit diagonal has no zero.
+        for tableau in (CTS.ARS343(), CTS.ARS222(), CTS.SSP222())
+            @test isnothing(check(increment, imex(tableau), T_imp!, post))
+        end
         @test_throws r"implicit tendency without a solve" check(
             increment,
-            CTS.IMEXAlgorithm(CTS.SSP333(), newton),
+            imex(CTS.SSP333()),
             T_imp!,
+            post,
         )
         @test_throws r"flow is prescribed" check(
             increment,
-            CTS.IMEXAlgorithm(CTS.ARS343(), newton),
+            imex(CTS.ARS343()),
+            nothing,
             nothing,
         )
         @test_throws r"not an IMEX algorithm with a Newton method" check(
             increment,
             CTS.ExplicitAlgorithm(CTS.SSP33ShuOsher()),
             T_imp!,
+            post,
+        )
+        # Without the parent's own post-solve correction, a hook would make
+        # the stepper refresh the cache the model's constraints read.
+        @test_throws r"energy_q_tot_upwinding: none" check(
+            increment,
+            imex(CTS.ARS343()),
+            T_imp!,
+            nothing,
         )
         # Every other transport is left alone.
         @test isnothing(
             check(
                 atmos(CA.EnthalpyEnergySourceTransport()),
-                CTS.IMEXAlgorithm(CTS.SSP333(), newton),
+                imex(CTS.SSP333()),
                 T_imp!,
+                nothing,
             ),
+        )
+
+        # The ledger exists in this mode only, and its names are not a
+        # tracer's, so no transport reaches it.
+        ledger = CA.energy_source_increment_ledger_variables(
+            1.0,
+            increment.energy_source_tagging_model,
+        )
+        @test keys(ledger) == (:e_src_inc_left, :e_src_inc_moved)
+        @test all(iszero, values(ledger))
+        @test CA.energy_source_increment_ledger_names(
+            increment.energy_source_tagging_model,
+        ) == keys(ledger)
+        enthalpy = atmos(CA.EnthalpyEnergySourceTransport())
+        @test CA.energy_source_increment_ledger_variables(
+            1.0,
+            enthalpy.energy_source_tagging_model,
+        ) == (;)
+        @test CA.energy_source_increment_ledger_names(
+            enthalpy.energy_source_tagging_model,
+        ) == ()
+        for name in keys(ledger)
+            @test CA.is_energy_source_ledger_name(name)
+            @test !CA.is_energy_source_tag_name(name)
+            @test !startswith(string(name), "ρ")
+        end
+
+        # A restart checks the ledger's fields against the configuration, in
+        # both directions.
+        state(names...) = (; c = NamedTuple{(:ρ, names...)}(zeros(1 + length(names))))
+        check_ledger(Y, expected) = CA.check_restart_fields(
+            "restart.hdf5",
+            Y,
+            CA.is_energy_source_ledger_name,
+            expected,
+            "fields of the energy source tags' increment ledger",
+            "energy_source_tag_transport",
+            "",
+        )
+        @test isnothing(check_ledger(state(keys(ledger)...), keys(ledger)))
+        @test isnothing(check_ledger(state(), ()))
+        @test_throws r"Missing from the file: e_src_inc_left, e_src_inc_moved" check_ledger(
+            state(),
+            keys(ledger),
+        )
+        @test_throws r"Not configured: e_src_inc_left, e_src_inc_moved" check_ledger(
+            state(keys(ledger)...),
+            (),
         )
         # And the model refuses the mode without an offset.
         @test_throws r"enthalpy_increment` needs `energy_source_tag_offset`" CA.EnergySourceTaggingModel(

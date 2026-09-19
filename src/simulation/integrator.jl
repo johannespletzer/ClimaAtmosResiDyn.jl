@@ -214,7 +214,12 @@ function args_integrator(Y, p, tspan, ode_algo, callback,
             nothing : correct_implicit_advection_tendency!
         # The energy source tags may follow the parent's implicit increment,
         # which they take after the solve.
-        check_energy_source_increment_supported(atmos, ode_algo, T_imp!)
+        check_energy_source_increment_supported(
+            atmos,
+            ode_algo,
+            T_imp!,
+            T_post_imp!,
+        )
         T_post_imp! =
             isnothing(T_imp!) ? T_post_imp! :
             energy_source_post_implicit(T_post_imp!, atmos)

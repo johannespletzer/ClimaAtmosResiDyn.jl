@@ -25,7 +25,11 @@ are cached in `p.precomputed.ᶠu₃_tendencyʲs` and `p.precomputed.ᶜρa_tend
 and are returned as the implicit tendencies of these variables by
 `sgs_u₃_implicit_tendency!` and `sgs_ρa_implicit_tendency!`, so that the solver
 reproduces the analytic stage state. For all other turbulence-convection models
-this is a no-op.
+this part is a no-op.
+
+Under `energy_source_tag_transport: enthalpy_increment` it also keeps the
+stage's starting state for the energy source tags
+(`snapshot_energy_source_increment!`).
 
 This routine acts as a general hook for implicit-stage initialization.
 Returns `nothing`.

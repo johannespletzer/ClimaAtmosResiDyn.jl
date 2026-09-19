@@ -494,10 +494,20 @@ step by step. In this mode the tags take the parent's own increment instead:
     leaves.
 
 The tags then take no explicit share of the vertical advection, which the
-parent does implicitly and the increment carries. The model is untouched. It
-needs an offset, and an ARS algorithm such as the default ARS343: the
-correction runs after each Newton solve, so every implicit tendency must go
-through one, and the model refuses other algorithms.
+parent does implicitly and the increment carries. The model is untouched.
+
+The mode has three requirements, and the model refuses a configuration that
+misses one:
+
+  - an `energy_source_tag_offset`;
+  - an algorithm that solves every stage whose implicit tendency it uses, such
+    as the default ARS343 or ARS222. The correction runs after each Newton
+    solve, so a stage without one would escape it. SSP333 and the IMKG
+    algorithms have such stages;
+  - an `energy_q_tot_upwinding` other than `none`, such as the default
+    `vanleer_limiter`. The correction runs in the parent's own post-solve hook.
+    Without one, a new hook would make the stepper refresh the implicit cache
+    after each solve, and the model's constraints read that cache.
 
 The correction keeps a ledger, as two prognostic fields that the stepper
 integrates with the tags:
@@ -507,14 +517,24 @@ integrates with the tags:
     total and that the tags' own implicit tendencies did not take, such as a
     boundary flux the tags do not follow. That part lands in `e_src_res`;
   - `e_src_inc_moved`: what it has moved between levels. It sums to zero in
-    each column, and it is what the tags' own implicit tendencies missed of the
-    parent's vertical transport.
+    each column. It is mostly the vertical transport the tags' own implicit
+    tendencies did not take.
 
-Both are cumulative since the start of the run, carried through a restart, and
-reported per unit mass as diagnostics of the same names. The closure check's
-audit table gets their integrals, `increment_left`, `increment_left_gross` and
+Both are cumulative since the start of the run and carried through a restart.
+The diagnostics of the same names report them per unit mass, on request; they
+are not among the default outputs. The closure check's audit table gets their
+integrals, `increment_left`, `increment_left_gross` and
 `increment_moved_gross`. So the residual's column total splits into what the
 correction left and what everything else leaves.
+
+The ledger records what the correction intends. A face whose donor cell has no
+share of the partition moves no tag, and under a deep atmosphere the flux does
+not yet account for the face areas growing with height. In both cases a cell's
+change differs a little from the ledger, and the difference lands in
+`e_src_res`. The column totals are right. On the tag-closure experiments' EDMF
+column, D4, the residual at 24 h was 267 J/m², against 6.3e5 under `enthalpy`,
+and it was the one-iteration solve's column totals less what the loss rule
+flushes.
 
 ```yaml
 energy_source_tag_offset: 110495.0
@@ -522,9 +542,8 @@ energy_source_tag_transport: enthalpy_increment
 ```
 
 `test/energy_source_tags_increment_integration.jl` checks the correction on a
-set increment, and that the model's state is bit for bit the one under
-`enthalpy`, on the EDMF column and on a column where the parent has no
-post-solve correction of its own.
+set increment, with its donors, its ledger and its audit columns. On the EDMF
+column it checks that the model's state is bit for bit the one without tags.
 
 ## Diagnostics
 
@@ -614,6 +633,16 @@ ClimaAtmos.energy_source_audit
 ClimaAtmos.AbstractEnergySourceTransport
 ClimaAtmos.TracerEnergySourceTransport
 ClimaAtmos.EnthalpyEnergySourceTransport
+ClimaAtmos.EnthalpyIncrementEnergySourceTransport
+ClimaAtmos.follows_implicit_increment
+ClimaAtmos.snapshot_energy_source_increment!
+ClimaAtmos.correct_energy_source_increment!
+ClimaAtmos.check_energy_source_increment_supported
+ClimaAtmos.EnergySourceIncrementCorrection
+ClimaAtmos.energy_source_post_implicit
+ClimaAtmos.energy_source_increment_ledger_variables
+ClimaAtmos.energy_source_increment_ledger_names
+ClimaAtmos.is_energy_source_ledger_name
 ClimaAtmos.moves_as_enthalpy
 ClimaAtmos.enthalpy_vertical_advection_of_energy_source_tags!
 ClimaAtmos.enthalpy_horizontal_advection_of_energy_source_tags!

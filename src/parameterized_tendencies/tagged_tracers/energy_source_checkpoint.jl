@@ -149,7 +149,7 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
         energy_source_increment_ledger_names(source_model),
         "fields of the energy source tags' increment ledger",
         "energy_source_tag_transport",
-        "e_src_inc_",
+        "",
     )
     check_restart_fields(
         restart_file,

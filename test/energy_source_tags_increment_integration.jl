@@ -9,21 +9,20 @@ step by step. The parent's increment has no such gap. This file checks:
  1. the correction on a set increment. The partition takes the parent's
     increment in every cell, up to the part left in place. That part sums to
     the column's change of `E` and sits where the mismatch is. The part moved
-    sums to zero in the column. The ledger holds both, and nothing else in the
-    tendency changes;
+    sums to zero in the column. Each face takes the shares of the cell the
+    flux leaves. The ledger holds both parts, and nothing else in the tendency
+    changes. The stepper's hook runs the parent's own correction unchanged,
+    and none of it allocates;
  2. on the DYCOMS RF02 EDMF column with 1-moment microphysics, where the parent
     has its own post-solve correction (the default `energy_q_tot_upwinding`):
-    the model's fields are those of the same run under `enthalpy`, bit for bit.
-    The closure residual is far below that run's. The ledger's moved part sums
-    to zero, and the split solver solves the ledger apart. The correction
-    allocates nothing;
- 3. on a column without EDMF under `energy_q_tot_upwinding: none`, where the
-    parent has no post-solve correction and the hook fills its tendency with
-    `-0.0`: the model's fields are bit for bit, and the partition closes to
-    rounding.
+    the closure residual is small, and the ledger explains its column total.
+    The audit, the diagnostics and the split solver read the ledger. The
+    model's fields are those of the same column without tags, bit for bit.
 
-Each transport is its own model type, so this file compiles four models, two of
-them EDMF. So it has its own test group. See `docs/src/energy_source_tags.md`.
+The mode refuses `energy_q_tot_upwinding: none`, which
+`energy_source_tags_tests.jl` checks. The file compiles the EDMF column twice,
+with the tags and without them, so it has its own test group. See
+`docs/src/energy_source_tags.md`.
 =#
 using Test
 import ClimaAtmos as CA
@@ -171,45 +170,42 @@ tags = [
 
     # 1. The correction on a set increment: the parent gains a profile whose
     # column total is not zero, and the tags gain nothing. So the mismatch is
-    # that profile.
+    # that profile, as the state's arithmetic applies it.
     @testset "The correction on a set increment" begin
         ᶜz = CA.Fields.coordinate_field(Y.c).z
         z_max = maximum(parent(ᶜz))
-        ᶜδ = @. FT(100) * (sin(2 * FT(π) * ᶜz / z_max) + FT(0.2))
         dtγ = FT(60)
+        function set_increment(Y₀)
+            CA.snapshot_energy_source_increment!(Y₀, p, dtγ)
+            U = copy(Y₀)
+            @. U.c.ρe_tot += FT(100) * (sin(2 * FT(π) * ᶜz / z_max) + FT(0.2))
+            dY = similar(Y₀)
+            dY .= zero(FT)
+            CA.correct_energy_source_increment!(dY, U, p)
+            # The increment as applied, exact by Sterbenz's lemma.
+            return U, dY, U.c.ρe_tot .- Y₀.c.ρe_tot
+        end
         Y₀ = copy(Y)
-        CA.snapshot_energy_source_increment!(Y₀, p, dtγ)
-        U = copy(Y₀)
-        @. U.c.ρe_tot += ᶜδ
-        dY = similar(Y)
-        dY .= -zero(FT)
-        CA.correct_energy_source_increment!(dY, U, p)
+        U, dY, ᶜδ = set_increment(Y₀)
 
-        # Nothing but the tags and the ledger changes, and a stepper adding
-        # `dtγ·dY` keeps every other field as it is, signed zeros included.
+        # Only the tags and the ledger change.
         for name in propertynames(Y.c)
             (
                 CA.is_energy_source_tag_name(name) ||
                 CA.is_energy_source_ledger_name(name)
             ) && continue
-            @test all(
-                x -> iszero(x) && signbit(x),
-                parent(getproperty(dY.c, name)),
-            )
+            @test all(iszero, parent(getproperty(dY.c, name)))
         end
-        @test all(x -> iszero(x) && signbit(x), parent(dY.f))
+        @test all(iszero, parent(dY.f))
 
         # The part left in place is the column's total of the mismatch, spread
-        # in proportion to its absolute value.
+        # in proportion to its absolute value. Rounding scales with the
+        # increment, since the partition's part is exactly zero here.
         δ_total = sum(ᶜδ)
         ᶜabs_δ = abs.(ᶜδ)
         ᶜleft = @. δ_total / $(sum(ᶜabs_δ)) * ᶜabs_δ
-        # The correction forms the mismatch from totals of the size of `E`,
-        # so its rounding scales with `E`, not with the increment. The
-        # increment is 1e-3 of `E` here, so these bounds still fail when the
-        # left part lands a level off.
-        scale = maximum(abs, parent(partition_sum(Y₀, model)))
-        @test maximum(abs, parent(ᶜδ)) > 1e-4 * scale
+        scale = maximum(abs, parent(ᶜδ))
+        @test abs(δ_total) > 0.1 * sum(ᶜabs_δ)
         @test maximum(
             abs,
             parent(dtγ .* dY.c.e_src_inc_left) .- parent(ᶜleft),
@@ -224,18 +220,82 @@ tags = [
         @test abs(sum(ᶜmoved)) < 100 * eps(FT) * sum(ᶜabs_δ)
         @test isapprox(sum(dtγ .* dY.c.e_src_inc_left), δ_total; rtol = 1e-12)
 
-        # The partition takes the part moved, cell by cell.
+        # The partition takes the part moved, cell by cell. Its tags are of the
+        # size of `E`, so that sets the rounding here.
         U_new = copy(U)
         @. U_new += dtγ * dY
-        ᶜpartition_increment = partition_sum(U_new, model) .- partition_sum(Y₀, model)
+        ᶜpartition = partition_sum(Y₀, model)
+        ᶜpartition_increment = partition_sum(U_new, model) .- ᶜpartition
         @test maximum(
             abs,
             parent(ᶜpartition_increment) .- parent(ᶜmoved),
-        ) < 1000 * eps(FT) * maximum(abs, parent(partition_sum(Y₀, model)))
+        ) < 1000 * eps(FT) * maximum(abs, parent(ᶜpartition))
         # A tag that carries a source only moves within the column.
-        @test abs(sum(U_new.c.ρe_src_rad) - sum(Y₀.c.ρe_src_rad)) <
-              100 * eps(FT) * sum(abs.(Y₀.c.ρe_src_rad)) + eps(FT)
+        @test sum(abs.(Y₀.c.ρe_src_sfc)) > 0
+        @test abs(sum(U_new.c.ρe_src_sfc) - sum(Y₀.c.ρe_src_sfc)) <
+              1000 * eps(FT) * sum(abs.(Y₀.c.ρe_src_sfc))
 
+        # Each face takes the shares of the cell the flux leaves. With all of
+        # `E` above 750 m in `strat` and all below in `tropo`, the face at the
+        # step shows which cell that is. The flux there is built from the
+        # mismatch, so its direction is read from the correction's own flux.
+        Y_step = copy(Y)
+        ᶜE_step = @. Y_step.c.ρe_tot + c * Y_step.c.ρ
+        @. Y_step.c.ρe_src_strat = ifelse(ᶜz > 750, ᶜE_step, FT(0))
+        @. Y_step.c.ρe_src_tropo = ᶜE_step - Y_step.c.ρe_src_strat
+        _, dY_step, _ = set_increment(Y_step)
+        ᶠz = CA.Fields.coordinate_field(Y.f).z
+        ᶠflux = p.tagging.ᶠe_src_increment_flux
+        step_face = argmin(abs.(vec(parent(ᶠz)) .- 750))
+        rises = vec(parent(ᶠflux))[step_face] > 0
+        above = vec(parent(ᶜz)) .> 750
+        strat = vec(parent(dY_step.c.ρe_src_strat))
+        tropo = vec(parent(dY_step.c.ρe_src_tropo))
+        @test !iszero(vec(parent(ᶠflux))[step_face])
+        if rises
+            # The cell below is the donor, so `strat` stays above the step
+            # and `tropo` reaches only the first cell above it.
+            @test all(iszero, strat[.!above])
+            @test count(!iszero, tropo[above]) == 1
+        else
+            @test all(iszero, tropo[above])
+            @test count(!iszero, strat[.!above]) == 1
+        end
+
+        # The hook the stepper got runs the parent's own correction and then
+        # the tags'. The parent's part of `dY` is what its correction alone
+        # gives, bit for bit.
+        hook = increment.integrator.sol.prob.f.T_post_imp!
+        @test hook isa CA.EnergySourceIncrementCorrection{
+            typeof(CA.correct_implicit_advection_tendency!),
+        }
+        t = increment.integrator.t
+        CA.snapshot_energy_source_increment!(Y₀, p, dtγ)
+        dY_hook = similar(Y)
+        hook(dY_hook, U, p, t)
+        dY_parent = similar(Y)
+        CA.correct_implicit_advection_tendency!(dY_parent, U, p, t)
+        for name in propertynames(Y.c)
+            (
+                CA.is_energy_source_tag_name(name) ||
+                CA.is_energy_source_ledger_name(name)
+            ) && continue
+            @test isequal(
+                parent(getproperty(dY_hook.c, name)),
+                parent(getproperty(dY_parent.c, name)),
+            )
+        end
+        @test maximum(abs, parent(dY_parent.c.ρe_tot)) > 0
+
+        # The hook allocates nothing beyond the parent's own correction.
+        @test second_call_allocations(hook, dY_hook, U, p, t) <=
+              second_call_allocations(
+            CA.correct_implicit_advection_tendency!,
+            dY_parent,
+            U,
+            p,
+            t,
+        )
         @test second_call_allocations(
             CA.correct_energy_source_increment!,
             dY,
@@ -250,13 +310,40 @@ tags = [
         ) == 0
     end
 
-    # 2. The run. The ledger's moved part sums to zero in the column, since
-    # each stage's does.
+    # 2. The run.
     @testset "The EDMF column" begin
+        # The moved part sums to zero in the column, since each stage's does.
         ᶜabs = abs.(Y.c.e_src_inc_moved)
         @test sum(ᶜabs) > 0
         @test abs(sum(Y.c.e_src_inc_moved)) < 1e-10 * sum(ᶜabs)
-        @test all(isfinite, parent(Y.c.e_src_inc_left))
+
+        # The left part explains the residual's column total, less what the
+        # loss rule flushes from it. On this column after an hour that is
+        # about 1% of the gross residual (FINDINGS E64 in the tag-closure
+        # experiments).
+        closure_increment = closure(increment)
+        left = sum(Y.c.e_src_inc_left)
+        @info "EDMF column after an hour, J/m²" closure_increment.gross_residual closure_increment.residual left
+        @test abs(left) > 0.5 * closure_increment.gross_residual
+        @test abs(closure_increment.residual - left) <
+              0.05 * closure_increment.gross_residual
+        # Under `enthalpy` this column's `gross_relative` is 1.5e-3 after an
+        # hour; here it is 8e-7.
+        @test closure_increment.gross_relative < 1e-5
+
+        # The audit's columns and the diagnostics read the ledger.
+        audit = CA.energy_source_audit(Y, p, model, FT(1))
+        @test isequal(audit.increment_left, left)
+        @test audit.increment_left_gross ≈ sum(abs.(Y.c.e_src_inc_left))
+        @test audit.increment_moved_gross ≈ sum(ᶜabs)
+        ᶜleft_specific = CA.Diagnostics.compute_e_src_ledger!(
+            nothing,
+            Y,
+            p,
+            increment.integrator.t,
+            :e_src_inc_left,
+        )
+        @test parent(ᶜleft_specific) ≈ parent(Y.c.e_src_inc_left ./ Y.c.ρ)
 
         cache = CA.jacobian_cache(
             CA.ManualSparseJacobian(; approximate_solve_iters = 2),
@@ -269,64 +356,16 @@ tags = [
             @test CA.MatrixFields.FieldName(:c, name) in uncoupled
         end
 
-        enthalpy = run_simulation(
-            merge(
+        # The model's own fields are those of the same column without tags,
+        # bit for bit.
+        plain = run_simulation(
+            filter(
+                entry -> !startswith(first(entry), "energy_"),
                 edmf_dict,
-                Dict{String, Any}("energy_source_tag_transport" => "enthalpy"),
             ),
-            "energy_source_tags_increment_edmf_enthalpy",
+            "energy_source_tags_increment_edmf_plain",
         )
-        check_same_model(Y, enthalpy.integrator.u)
-        gross_increment = closure(increment).gross_residual
-        gross_enthalpy = closure(enthalpy).gross_residual
-        @info "EDMF column after an hour, gross residual in J/m²" gross_increment gross_enthalpy sum(
-            Y.c.e_src_inc_left,
-        ) closure(increment).residual
-        @test gross_increment < 0.1 * gross_enthalpy
-    end
-
-    # 3. No post-solve correction in the parent: the `-0.0` path. A column
-    # without EDMF, with 0-moment microphysics.
-    @testset "Without the parent's post-solve correction" begin
-        column_dict = Dict{String, Any}(
-            "config" => "column",
-            "initial_condition" => "DYCOMS_RF02",
-            "z_max" => 1500.0,
-            "z_elem" => 30,
-            "z_stretch" => false,
-            "microphysics_model" => "0M",
-            "rad" => "DYCOMS",
-            "dt" => "10secs",
-            "t_end" => "10mins",
-            "FLOAT_TYPE" => "Float64",
-            "energy_q_tot_upwinding" => "none",
-            "output_default_diagnostics" => false,
-            "energy_source_tags" => tags,
-            "energy_source_tag_offset" => c,
-        )
-        increment = run_simulation(
-            merge(
-                column_dict,
-                Dict{String, Any}(
-                    "energy_source_tag_transport" => "enthalpy_increment",
-                ),
-            ),
-            "energy_source_tags_increment_column",
-        )
-        @test increment.integrator.p.atmos.numerics.energy_q_tot_upwinding ==
-              Val(:none)
-        enthalpy = run_simulation(
-            merge(
-                column_dict,
-                Dict{String, Any}("energy_source_tag_transport" => "enthalpy"),
-            ),
-            "energy_source_tags_increment_column_enthalpy",
-        )
-        check_same_model(increment.integrator.u, enthalpy.integrator.u)
-        closure_increment = closure(increment)
-        closure_enthalpy = closure(enthalpy)
-        @info "Column without EDMF after 10 minutes, gross residual in J/m²" closure_increment.gross_residual closure_enthalpy.gross_residual
-        @test closure_increment.gross_relative < 1e-13
-        @test closure_enthalpy.gross_relative > 1e-8
+        @test isnothing(plain.integrator.p.atmos.energy_source_tagging_model)
+        check_same_model(Y, plain.integrator.u)
     end
 end

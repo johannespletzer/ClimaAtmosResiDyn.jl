@@ -162,14 +162,21 @@ point, as zeros of the type of `ρe_parent`. Only under
     the tags' own implicit tendencies did not take. That part lands in
     `e_src_res`.
   - `e_src_inc_moved`: the energy the correction has moved between levels, in
-    J/m³, since the start of the run. It sums to zero in each column. It is
-    what the tags' own implicit tendencies missed of the parent's vertical
-    transport.
+    J/m³, since the start of the run. It is the part of the mismatch that sums
+    to zero in each column. That is mostly vertical transport the tags' own
+    implicit tendencies did not take, and also the column-neutral part of
+    their lag behind the parent's other implicit terms.
 
 Both are prognostic, so the stepper weights each stage's entry as it weights
-the tags. That makes the ledger exact. Like the process records, their names
-carry no `ρ` prefix, so no transport or limiter reaches them, and they are
-carried through a restart.
+the tags. They record what the correction intends. Two cases leave a cell's
+actual change different, and the difference lands in `e_src_res` but in
+neither field. A face whose donor cell has no share of the partition moves no
+tag. And under a deep atmosphere the face areas grow with height, which the
+flux does not yet account for. The column totals are right in both cases.
+
+Like the process records, their names carry no `ρ` prefix. So `gs_tracer_names`
+and `is_tracer_var` skip them, and no transport or limiter reaches them. They
+are carried through a restart.
 """
 energy_source_increment_ledger_variables(ρe_parent, ::Nothing) = (;)
 energy_source_increment_ledger_variables(
@@ -405,8 +412,8 @@ end
 
 _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale) =
     follows_implicit_increment(model) ?
-    __energy_source_ledger_audit(Y, ᶜtmp, per_scale) : (;)
-function __energy_source_ledger_audit(Y, ᶜtmp, per_scale)
+    _energy_source_ledger_columns(Y, ᶜtmp, per_scale) : (;)
+function _energy_source_ledger_columns(Y, ᶜtmp, per_scale)
     increment_left = sum(Y.c.e_src_inc_left)
     @. ᶜtmp = abs(Y.c.e_src_inc_left)
     increment_left_gross = sum(ᶜtmp)
@@ -1618,8 +1625,11 @@ end
 
 At the start of an implicit stage, keep `ρe_tot`, `ρ`, the sum of the partition
 tags and the stage's weight `dtγ`, for `correct_energy_source_increment!`.
-`ρe_tot` and `ρ` are kept apart, and not as `E = ρe_tot + c·ρ`, so that in
-Float32 the parent's increment is not the difference of two large totals. Called first thing in
+`ρe_tot` and `ρ` are kept apart, and not as `E = ρe_tot + c·ρ`, so that the
+parent's increment is not the difference of two totals of the size of `E`. The
+partition's increment still is, so in Float32 the correction has a floor of
+about one unit in the last place of `E` per cell and stage, as the tags' own
+updates do. Called first thing in
 `initialize_implicit_stage_problem!`, where `Y` is still the stage value before
 the solve. A no-op unless the tags follow the parent's implicit increment.
 """
@@ -1733,25 +1743,49 @@ function correct_energy_source_increment!(dY, U, p)
 end
 
 """
-    check_energy_source_increment_supported(atmos, ode_algo, T_imp!)
+    check_energy_source_increment_supported(atmos, ode_algo, T_imp!, T_post_imp!)
 
-Refuse `energy_source_tag_transport: enthalpy_increment` where the tags would
-miss part of the parent's implicit tendency. The tags take the parent's
-increment after each Newton solve. So every implicit tendency must go through
-one: the algorithm must be an IMEX algorithm with a Newton method, the flow must
-not be prescribed, and a stage whose implicit diagonal is zero must not use
-the implicit tendency in a later stage or in the step's result. The ARS family,
-such as the default ARS343, meets this; SSP333 and the IMKG algorithms do not,
-and neither do explicit or Rosenbrock algorithms. Called when the integrator is
-built. A no-op for every other transport.
+Refuse `energy_source_tag_transport: enthalpy_increment` where it cannot follow
+the parent, or where following it would change the model. `T_post_imp!` is the
+parent's own post-solve correction, or `nothing`.
+
+  - The tags take the parent's increment after each Newton solve. So every
+    implicit tendency must go through one. The algorithm must be an IMEX
+    algorithm with a Newton method, and the flow must not be prescribed. A
+    stage whose implicit diagonal is zero must not use the implicit tendency
+    in a later stage or in the step's result. The ARS algorithms, such as the
+    default ARS343, meet this. SSP333 and the IMKG algorithms do not, and
+    neither do explicit or Rosenbrock algorithms.
+  - The parent must have a post-solve correction of its own, which it has
+    unless `energy_q_tot_upwinding` is `none`. Whenever there is a post-solve
+    hook, the stepper refreshes the implicit cache on the solved state. The
+    parent's `constrain_state!` can read that cache before the next refresh:
+    at the end of a step of an FSAL tableau such as ARS222, or at every stage
+    under `update_constrain_state_every: stage`. So a hook the parent does not
+    have would change the model's fields.
+
+Called when the integrator is built. A no-op for every other transport.
 """
-check_energy_source_increment_supported(atmos, ode_algo, T_imp!) =
+check_energy_source_increment_supported(atmos, ode_algo, T_imp!, T_post_imp!) =
     follows_implicit_increment(atmos.energy_source_tagging_model) ?
-    _check_energy_source_increment_supported(ode_algo, T_imp!) : nothing
-function _check_energy_source_increment_supported(ode_algo, T_imp!)
+    _check_energy_source_increment_supported(ode_algo, T_imp!, T_post_imp!) :
+    nothing
+function _check_energy_source_increment_supported(ode_algo, T_imp!, T_post_imp!)
     reason =
         if isnothing(T_imp!)
             "the flow is prescribed, so there is no implicit tendency"
+        elseif isnothing(T_post_imp!)
+            error(
+                "`energy_source_tag_transport: enthalpy_increment` takes the \
+                parent's increment in a post-solve hook. With \
+                `energy_q_tot_upwinding: none` the parent has no post-solve \
+                correction of its own. A hook would make the stepper refresh \
+                the implicit cache after each solve, which the model's \
+                constraints read, so the model's fields would change. Use an \
+                `energy_q_tot_upwinding` other than `none`, such as the \
+                default `vanleer_limiter`, or `energy_source_tag_transport: \
+                enthalpy`.",
+            )
         elseif !(ode_algo isa CTS.IMEXAlgorithm) ||
                isnothing(ode_algo.newtons_method)
             "`ode_algo` is not an IMEX algorithm with a Newton method"
@@ -1767,17 +1801,19 @@ function _check_energy_source_increment_supported(ode_algo, T_imp!)
                 1:s,
             )
             isempty(unsolved) ? nothing :
-            "stages $(join(unsolved, ", ")) of `ode_algo` use the implicit \
-            tendency without a solve"
+            "$(length(unsolved) == 1 ? "stage" : "stages") \
+            $(join(unsolved, ", ")) of `ode_algo` \
+            $(length(unsolved) == 1 ? "uses" : "use") the implicit tendency \
+            without a solve"
         end
     isnothing(reason) && return nothing
     error(
         "`energy_source_tag_transport: enthalpy_increment` needs every \
         implicit tendency to go through a Newton solve, after which the tags \
         take the parent's increment. Here $reason, so the tags would miss \
-        that part of the parent's vertical transport. Use an ARS algorithm, \
-        such as the default ARS343, or `energy_source_tag_transport: \
-        enthalpy`.",
+        that part of the parent's vertical transport. Use an algorithm that \
+        solves every stage it uses, such as the default ARS343, or \
+        `energy_source_tag_transport: enthalpy`.",
     )
 end
 
@@ -1785,20 +1821,16 @@ end
     EnergySourceIncrementCorrection(post)
 
 The post-solve hook when the tags follow the parent's implicit increment. It
-runs the parent's own post-solve correction `post`, if there is one, and then
-`correct_energy_source_increment!`. See `energy_source_post_implicit`.
+runs the parent's own post-solve correction `post`, which sets every field of
+`dY`, and then `correct_energy_source_increment!`. `post` is never `nothing`:
+`check_energy_source_increment_supported` refuses the mode where the parent has
+no correction. See `energy_source_post_implicit`.
 """
 struct EnergySourceIncrementCorrection{F}
     post::F
 end
 function (correction::EnergySourceIncrementCorrection)(dY, U, p, t)
-    if isnothing(correction.post)
-        # The stepper adds `dtγ·dY` to every field. `-0.0` leaves every value as
-        # it is, signed zeros included, so the model's fields stay bit for bit.
-        dY .= -zero(eltype(dY))
-    else
-        correction.post(dY, U, p, t)
-    end
+    correction.post(dY, U, p, t)
     correct_energy_source_increment!(dY, U, p)
     return nothing
 end
