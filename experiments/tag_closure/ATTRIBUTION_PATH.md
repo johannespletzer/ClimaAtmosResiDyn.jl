@@ -606,6 +606,9 @@ grid cell that holds an updraft and an environment, this is false.
 
 ### 3.5 Mixing as exchange, not only transport
 
+The tracer and flux conventions are compared with D4's numbers in
+[TRACER_AND_FLUX.md](TRACER_AND_FLUX.md) (2026-09-19).
+
 This point matters for the next design.
 
 - An eddy diffusion is a parameterized *exchange* of air. It moves a small net
