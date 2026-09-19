@@ -48,6 +48,9 @@ energy_source_offset_value(offset) = offset
 energy_source_offset_text(offset) = string(energy_source_offset_value(offset))
 energy_source_transport_text(::TracerEnergySourceTransport) = "tracer"
 energy_source_transport_text(::EnthalpyEnergySourceTransport) = "enthalpy"
+energy_source_transport_text(
+    ::EnthalpyIncrementEnergySourceTransport,
+) = "enthalpy_increment"
 
 # A tag's definition: its region and its sources, separated by a tab, because a
 # region's text holds spaces. A tag matches a source by membership, so the
@@ -112,9 +115,10 @@ Refuse a restart that would change what the energy source tags or the process
 records in `restart_file` mean. It checks, in this order, and stops at the
 first mismatch:
 
- 1. The energy source tag fields in `Y`, then the energy and water process
-    record fields, against what `model` configures. This needs no attribute,
-    so it covers every checkpoint.
+ 1. The energy source tag fields in `Y`, then the fields of the increment
+    correction's ledger, then the energy and water process record fields,
+    against what `model` configures. This needs no attribute, so it covers
+    every checkpoint.
  2. The version attribute. A checkpoint without it predates this guard. Then
     it warns that the offset, the tags' definitions, the transport and the
     repair cannot be checked, and lets the restart go on. A checkpoint with
@@ -137,6 +141,16 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
         "energy source tags",
         "energy_source_tags",
         "ρe_src_",
+    )
+    check_restart_fields(
+        restart_file,
+        Y,
+        is_energy_source_ledger_name,
+        isnothing(source_model) ? () :
+        energy_source_increment_ledger_names(source_model),
+        "fields of the energy source tags' increment ledger",
+        "energy_source_tag_transport",
+        "",
     )
     check_restart_fields(
         restart_file,

@@ -26,7 +26,11 @@ Register the diagnostics of the energy source tags:
   - `e_src_res`: closure residual `(ρe_tot - Σᵢ ρe_src_i) / ρ`, summed over the
     pure region tags (only registered when at least one exists). With
     `energy_source_tag_offset` `c` the parent is the total the tags partition,
-    so the residual is `(ρe_tot + c·ρ - Σᵢ ρe_src_i) / ρ`.
+    so the residual is `(ρe_tot + c·ρ - Σᵢ ρe_src_i) / ρ`;
+  - `e_src_inc_left` and `e_src_inc_moved`, under
+    `energy_source_tag_transport: enthalpy_increment` only: the increment
+    correction's ledger per unit mass, cumulative since the start of the run.
+    See `energy_source_increment_ledger_variables`.
 
 A no-op when energy source tagging is disabled. Per-tag entries already in the
 catalog are kept, since their compute function depends only on the tag name; the
@@ -101,6 +105,8 @@ function register_energy_source_tagging_diagnostics!(
         end
     end
 
+    register_energy_source_ledger_diagnostics!(model)
+
     region_names = energy_source_region_tag_state_names(model)
     offset = model.offset
     # Drop any stale entry first, then decide whether to register a new one. An
@@ -126,6 +132,60 @@ function register_energy_source_tagging_diagnostics!(
         )
     end
     return nothing
+end
+
+# The increment correction's ledger. Its entries are keyed by field name alone,
+# so an entry already in the catalog is kept.
+function register_energy_source_ledger_diagnostics!(model)
+    follows_implicit_increment(model) || return nothing
+    if !haskey(ALL_DIAGNOSTICS, "e_src_inc_left")
+        add_diagnostic_variable!(;
+            short_name = "e_src_inc_left",
+            units = "J kg^-1",
+            long_name = "Energy Left Out of the Energy Source Tags by the Increment Correction",
+            comments = "The energy that the energy source tags' increment " *
+                       "correction left out of the tags, per unit mass of " *
+                       "moist air, cumulative since the start of the run. In " *
+                       "each column it sums to the part of the parent's " *
+                       "implicit increment that changes the column's total " *
+                       "and that the tags' own implicit tendencies did not " *
+                       "take. It lands in e_src_res. Only under " *
+                       "energy_source_tag_transport: enthalpy_increment. " *
+                       "Each increment is kept at its own step's density and " *
+                       "divided by the current density here.",
+            compute! = (out, u, p, t) ->
+                compute_e_src_ledger!(out, u, p, t, :e_src_inc_left),
+        )
+    end
+    if !haskey(ALL_DIAGNOSTICS, "e_src_inc_moved")
+        add_diagnostic_variable!(;
+            short_name = "e_src_inc_moved",
+            units = "J kg^-1",
+            long_name = "Energy Moved Among the Energy Source Tags by the Increment Correction",
+            comments = "The energy that the energy source tags' increment " *
+                       "correction moved between levels, per unit mass of " *
+                       "moist air, cumulative since the start of the run. It " *
+                       "sums to zero in each column. It is mostly the " *
+                       "vertical transport the tags' own implicit tendencies " *
+                       "did not take. Only under " *
+                       "energy_source_tag_transport: enthalpy_increment. " *
+                       "Each increment is kept at its own step's density and " *
+                       "divided by the current density here.",
+            compute! = (out, u, p, t) ->
+                compute_e_src_ledger!(out, u, p, t, :e_src_inc_moved),
+        )
+    end
+    return nothing
+end
+
+# One field of the increment ledger, per unit mass.
+function compute_e_src_ledger!(out, state, cache, time, name)
+    ᶜledger = getproperty(state.c, name)
+    if isnothing(out)
+        return specific.(ᶜledger, state.c.ρ)
+    else
+        out .= specific.(ᶜledger, state.c.ρ)
+    end
 end
 
 # `e_src_res` against the total the tags partition. With an offset `c` that is

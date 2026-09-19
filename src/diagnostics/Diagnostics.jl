@@ -89,6 +89,7 @@ import ..water_tag_fraction
 # energy_source_tagging_model
 import ..EnergySourceTaggingModel
 import ..energy_source_region_tag_state_names
+import ..follows_implicit_increment
 
 # process records
 import ..ProcessRecordModel
