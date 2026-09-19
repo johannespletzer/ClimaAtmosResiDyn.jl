@@ -148,17 +148,24 @@ State on 2026-09-19.
       + **D4 meets criterion 1 (E62):** 267 J/m² at 24 h against the base's
         6.32e5, the second 12 hours adding 75 against the first's 192, and
         `ta` and `rhoa` bit for bit.
-      + **Uncommitted in the worktree:** the ledger `e_src_inc_left` and
-        `e_src_inc_moved` (criterion 2), its diagnostics and audit columns,
-        the restart guard for it, the new test group `tagging_source_increment`
-        with `test/energy_source_tags_increment_integration.jl` (criteria 3
-        and 6), and the docs section moved to the end of the enthalpy section.
-        The integration test is running (job `13504842`).
-      + **Running for criteria 4 and 5:** `g1_ref_newton_d4` (C1c option 1,
-        converged, a day; the reference) and `g1_base_d4_float32`. Their twins,
-        `g1_inc_newton_d4`, `g1_inc_d4_float32` and the ledger run `g1_inc_d4`,
-        go from a frozen worktree of the ledger commit once the integration
-        test passes.
+      + **The ledger and the test group are committed** (`c0bc637f`, pushed):
+        `e_src_inc_left` and `e_src_inc_moved`, their diagnostics and audit
+        columns, the restart guard for them, and the group
+        `tagging_source_increment` with
+        `test/energy_source_tags_increment_integration.jl`. The integration
+        test is running (job `13504842`), and so is an agent's review.
+      + **Criterion 2 is met (E64):** the 267 J/m² are the one-iteration
+        solve's column totals (313 gross), less the loss rule's flushing
+        (+44); nothing else shows above 1 J/m². Converged, the prototype
+        closes to 0.08 J/m².
+      + **Criterion 5 is met (E65):** Float32 gives 607 J/m², with `ta` and
+        `rhoa` bit for bit the Float32 base's.
+      + **Criterion 4, in progress.** `g1_ref_newton_d4` and its twin used
+        `use_newton_rtol`, whose norm spans the tags, so their atmospheres
+        differ by up to 4 K. Rerun with ten iterations fixed:
+        `g1_ref_newton10_d4` and `g1_inc_newton10_d4` (jobs `13504926`,
+        `13504927`). The reference alone leaves 5.5e5 J/m², so it can
+        resolve per-tag errors only to about 0.5% of `E`.
   - **The diagnostic (E61):** with a converged Newton solve, C1c's option 1
     reaches 2.3e5 J/m² at 12 h against 3.2e6 with one iteration, and half the
     base's 4.6e5. So the implicit timing gap was most of E59's drift, as the

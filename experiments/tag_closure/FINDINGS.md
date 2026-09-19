@@ -1979,6 +1979,87 @@ energy, momentum and SGS names, so the records `prc_e_*` and `prc_q_*` passed.
 loops) on terrabyte, `hpda2_test`, 2026-09-19. The script is
 `analysis/increment/sphere_record_advection.jl`.*
 
+**E64. The prototype's remainder on D4 is the one-iteration solve's column
+totals, less what the loss rule flushes. No process the tags miss shows above
+1 J/m².** `g1_inc_d4` reruns E62 with the ledger (`c0bc637f`) and gives the
+same residual to nine digits, 266.942 J/m² at 24 h, with `ta` and `rhoa` bit
+for bit the base's. The ledger's `e_src_inc_left` is what the correction leaves
+out of the tags; `other = e_src_res − e_src_inc_left` is everything else.
+
+| 24 h, J/m², signed (gross) | below 550 m | 550 to 800 m | above 800 m | column |
+|:-- | --:| --:| --:| --:|
+| residual `e_src_res` | +117.6 (143) | −97.8 (103) | −20.3 (20) | −0.5 (267) |
+| left in place by the correction | +117.8 (144) | −142.3 (148) | −21.0 (21) | −45.5 (313) |
+| other | −0.24 | +44.5 | +0.76 | +45.0 (46) |
+| the loss rule's flushing, predicted | −0.24 | +43.5 | +0.73 | +44.0 |
+
+  - **The column-total part** is what the correction cannot move within a
+    column: the part of the parent's implicit increment that changes the
+    column's total and that the tags' own implicit tendencies do not take. It
+    is 313 J/m² gross at 24 h. It lands in `e_src_res` as it is made.
+  - **It comes from the one-iteration Newton solve.** With ten iterations to a
+    relative tolerance of 1e-8 (`g1_inc_newton_d4`) the whole residual is
+    0.080 J/m² at 24 h, and `left` 0.094. Nearly all of that is made in the
+    first hour, and the rest flushes it slowly. So with one iteration the
+    parent's linearised increment changes the column's total by terms the
+    tags' own tendencies, taken at the stage's first guess, do not have. The
+    candidates are the implicit terms that change a column's total: the
+    energy that sedimentation carries through the surface, and the 1M
+    sink. They are not separated.
+  - **`other` is the loss rule acting on the residual.** The rule removes
+    `R/E` of each loss from the residual, whatever made it, and the ledger is
+    not flushed. Predicted from the hourly records it gives 98% of `other` in
+    the cloud layer, where the losses are fastest, and matches the other two
+    layers to 0.03 J/m². The same holds in the converged twin (−0.0113
+    predicted against −0.0122 J/m² in the cloud layer). What is left, about
+    1 J/m², is made in the first hour, where the hourly prediction starts from
+    zero.
+  - **No explicit process the tags miss is visible:** outside the loss rule,
+    under 1 J/m² in a day.
+  - **The correction moves much more than it leaves:** `e_src_inc_moved` is
+    3.3e7 J/m² gross at 24 h, up to 81,000 J/kg in the lowest cell. That is
+    the vertical transport the tags take from the increment and not from
+    their own tendencies: all of the grid-mean vertical advection, which
+    they no longer share by tendency, and the difference between their
+    tracer diffusion and the parent's diffusion of `h_tot`.
+
+So G1's criterion 2 is met. The parts, with their sizes at 24 h: the
+one-iteration column totals, 313 J/m² gross and −45.5 signed; the loss rule's
+flushing of them, +44 J/m²; and nothing else above 1 J/m².
+*Jobs `13504889` (`g1_inc_d4`) and `13504890` (`g1_inc_newton_d4`) on
+terrabyte, `hpda2_test`, 2026-09-19, from `../ClimaAtmosResiDyn-inc-run2` at
+`c0bc637f`. The outputs, with `remainder_split.txt` from
+`analysis/increment/remainder_split.py`, are in `output/g1_inc_d4/` and
+`output/g1_inc_newton_d4/`.*
+
+**E65. In Float32 the prototype closes D4 to 607 J/m², 2.3 times its Float64
+residual, with the model bit for bit.** `g1_inc_d4_float32` against
+`g1_base_d4_float32`, the same configuration under `enthalpy` in Float32.
+
+| gross residual, J/m² | 1 h | 4 h | 12 h | 24 h |
+|:-- | --:| --:| --:| --:|
+| base, `enthalpy`, Float32 | 1.68e5 | 3.12e5 | 5.19e5 | 7.53e5 |
+| prototype, Float32 | 120 | 222 | 439 | 607 |
+| prototype, Float64 (E62) | 92.8 | 112 | 192 | 267 |
+
+  - **G1's criterion 5 is met.** 607 J/m² is within ten times the Float64
+    residual (2,670). The first 12 hours add 437 and the second 168. `ta` and
+    `rhoa` are bit for bit the Float32 base's at all 25 hours.
+  - **The split:** `left` is 408 J/m² gross (−363 signed). `other` is 455
+    gross (+52 signed), and unlike in Float64 it does not follow the loss
+    rule: +54, +82 and −84 J/m² in the three layers against a predicted
+    +0.02, +42.5 and +1.6. Its size fits Float32 rounding: about 0.5 J/m²
+    per cell and step in the tags' updates, which a random walk over 720
+    steps and 30 levels takes to a few hundred J/m². Inferred from its size,
+    not separated.
+  - **The ledger agrees with itself:** the audit's `increment_left`, −363.2
+    J/m², equals the integral of the field.
+
+*Jobs `13504891` (prototype, `c0bc637f`) and `13504828` (base, `main` at
+`50b2a4d2`, from `../ClimaAtmosResiDyn-c1c-base`), terrabyte, `hpda2_test`,
+2026-09-19. The outputs are in `output/g1_inc_d4_float32/` and
+`output/g1_base_d4_float32/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
