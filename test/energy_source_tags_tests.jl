@@ -632,7 +632,7 @@ column_atmos_model(; kwargs...) =
         εʲ = CA._plume_step(FT.((40, 0)), rising)
         @test collect(εʲ) ≈ [(40 + a * 10) / (1 + a), (0 + a * 30) / (1 + a)]
         # Its environment keeps the grid mean's total: ρ ε̄ = ρaʲ εʲ + ρa⁰ ε⁰.
-        ε⁰ = CA._environment_specific(ε̄, εʲ, FT(1), FT(0.1), FT(0.9))
+        ε⁰ = CA._environment_specific(ε̄, εʲ, FT(1), FT(0.1), FT(0.9), Val(2))
         @test collect(FT(0.1) .* εʲ .+ FT(0.9) .* ε⁰) ≈ collect(ε̄)
         # A vanishing updraft velocity, which would overflow `a` in Float32,
         # takes the grid mean, and nothing is `Inf` or `NaN`.

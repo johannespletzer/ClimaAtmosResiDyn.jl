@@ -1822,10 +1822,7 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # values follow from the grid mean and the updraft. Its differences are
     # formed first, since the updraft's then replace the updraft's values.
     ᶜΔφ⁰ = p.scratch.ᶜe_src_environment
-    @. ᶜΔφ⁰ = share_differences(
-        _environment_specific(ᶜε̄, ᶜεʲ, Y.c.ρ, ᶜρaʲ, ᶜρa⁰),
-        ᶜε̄,
-    )
+    @. ᶜΔφ⁰ = share_differences(ᶜε̄, ᶜεʲ, Y.c.ρ, ᶜρaʲ, ᶜρa⁰)
     ᶜΔφʲ = ᶜεʲ
     @. ᶜΔφʲ = share_differences(ᶜεʲ, ᶜε̄)
 
@@ -1916,26 +1913,42 @@ end
     return map((εʲ, ε) -> εʲ + weight * (ε - εʲ), εʲ_below, ε̄)
 end
 
-@inline _environment_specific(ε̄, εʲ, ρ, ρaʲ, ρa⁰) =
-    ρa⁰ > zero(ρa⁰) ?
-    map((ε, e) -> max((ρ * ε - ρaʲ * e) / ρa⁰, zero(ε)), ε̄, εʲ) : ε̄
+# The environment's specific tag values, from the grid mean and the updraft.
+# `N` is the number of tags.
+@inline function _environment_specific(ε̄, εʲ, ρ, ρaʲ, ρa⁰, ::Val{N}) where {N}
+    ρa⁰ > zero(ρa⁰) || return ntuple(i -> ε̄[i], Val(N))
+    return ntuple(Val(N)) do i
+        max((ρ * ε̄[i] - ρaʲ * εʲ[i]) / ρa⁰, zero(ρa⁰))
+    end
+end
 
-# The sum of the partition's values, which `Val(partition)` marks.
-@inline _partition_total(ε, partition) =
-    sum(map((e, in_partition) -> in_partition ? e : zero(e), ε, partition))
+# The sum of the partition's values, which `partition`, a tuple of `Bool`s,
+# marks. The loop is over a tuple of one type, so it unrolls and allocates
+# nothing.
+@inline function _partition_total(ε, partition)
+    total = zero(ε[1])
+    for i in 1:length(partition)
+        total += partition[i] ? ε[i] : zero(total)
+    end
+    return total
+end
 
 # Each tag's share in a subdomain less its share in the grid mean. A share is
 # the tag's value over the partition's sum, capped at one. Where either sum is
 # not positive, every difference is zero. So the partition's differences sum to
 # zero in every cell.
+#
+# These helpers index the tuples rather than `map` over them. Inside a
+# ClimaCore broadcast a tuple is an `AutoBroadcaster`, and its `map` and
+# `mapreduce` build a new one, which allocates.
 @inline function _share_differences(εᵏ, ε̄, ::Val{partition}) where {partition}
     totalᵏ = _partition_total(εᵏ, partition)
     total = _partition_total(ε̄, partition)
     FT = typeof(total)
     positive = (totalᵏ > zero(FT)) & (total > zero(FT))
-    return map(εᵏ, ε̄) do e, e_mean
+    return ntuple(Val(length(partition))) do i
         positive ?
-        min(e / totalᵏ, one(FT)) - min(e_mean / total, one(FT)) : zero(FT)
+        min(εᵏ[i] / totalᵏ, one(FT)) - min(ε̄[i] / total, one(FT)) : zero(FT)
     end
 end
 
@@ -1947,6 +1960,18 @@ ShareDifferences(::Val{partition}) where {partition} =
     ShareDifferences{partition}()
 @inline (::ShareDifferences{partition})(εᵏ, ε̄) where {partition} =
     _share_differences(εᵏ, ε̄, Val(partition))
+# The environment's differences, from the grid mean and the updraft.
+@inline (::ShareDifferences{partition})(
+    ε̄,
+    εʲ,
+    ρ,
+    ρaʲ,
+    ρa⁰,
+) where {partition} = _share_differences(
+    _environment_specific(ε̄, εʲ, ρ, ρaʲ, ρa⁰, Val(length(partition))),
+    ε̄,
+    Val(partition),
+)
 
 _sgs_energy_source_tag_fluxes!(ᶜYₜ, ᶜY, ᶜparent, ᶜnorm, ᶠflux, ::Tuple{}) =
     nothing
