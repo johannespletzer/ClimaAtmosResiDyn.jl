@@ -567,6 +567,7 @@ column_atmos_model(; kwargs...) =
             @test CA.is_energy_source_ledger_name(name)
             @test !CA.is_energy_source_tag_name(name)
             @test !startswith(string(name), "ρ")
+            @test !CA.is_tracer_var(name)
         end
 
         # A restart checks the ledger's fields against the configuration, in
