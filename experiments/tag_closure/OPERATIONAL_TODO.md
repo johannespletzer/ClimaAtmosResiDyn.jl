@@ -82,6 +82,12 @@ question 3. And merging #93, then #94.
     callbacks' compile another 50. Then V2 steps at 0.71 s per step, nine
     times one process, so its ten days end near 14:40 on 2026-09-19. Its
     first hour closes to 2.31e-6 of the scale, as on one process.
+  - **The updraft gap's bound from V2's checkpoints** (days 1 to 3,
+    `analysis/increment/updraft_gap_bound.jl`, preliminary): in the tropics
+    the gap would move 15 to 30% a day of the surface-sourced tags, against
+    their total daily change of 40 to 140%; elsewhere under 4%. The share of
+    columns whose air below 10 km the mass flux turns over within a day grows
+    from 15% to 27%. An agent reviews the method.
   - V2's configuration, with the outputs of item 10 and the ledger; the
     Float32 run and its twin under `enthalpy` for the per-tag error; the
     partition and time limit a ten-day EDMF sphere needs on terrabyte.
@@ -270,6 +276,16 @@ State on 2026-09-19.
     each reviewed by the owner, first `tagged_water_integration.jl`.
 
 ## Decided
+
+On 2026-09-19:
+
+  - **V3 is approved** by the owner: the passive tracer with an updraft copy
+    beside the tags on D4, to measure the tags' mixing against the air's own
+    (UPDRAFT_GAP.md, "How to measure it", item 2).
+  - **The documents are to be corroborated and condensed** after V2's entries,
+    by the plan in [CONDENSE_PLAN.md](CONDENSE_PLAN.md), approved by the owner.
+    The originals are archived in the tree; the scope is `experiments/tag_closure/`.
+
 
 On 2026-09-11:
 
