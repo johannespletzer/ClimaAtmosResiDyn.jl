@@ -133,6 +133,7 @@ AUDIT_REQUIRED = {
     "g2_v2_sphere",
     "g2_v2_sphere_newton10",
     "g1_inc_d4",
+    "v3_d4_passive_tracer",
     "g1_base_d4_float32",
     "g1_inc_d4_float32",
     "c1c_opt2_d4_enthalpy",
@@ -183,6 +184,7 @@ STATE_CHECK = {
     "g2_v2_sphere",
     "g2_v2_sphere_newton10",
     "g1_inc_d4",
+    "v3_d4_passive_tracer",
     "g1_base_d4_float32",
     "g1_inc_d4_float32",
     "c1c_opt2_d4_enthalpy",
@@ -221,6 +223,7 @@ DENSITY_CHECK = {
     "g2_v2_sphere",
     "g2_v2_sphere_newton10",
     "g1_inc_d4",
+    "v3_d4_passive_tracer",
     "g1_base_d4_float32",
     "g1_inc_d4_float32",
     "c1c_opt2_d4_enthalpy",
@@ -401,6 +404,9 @@ def check(path):
         covered.add("e_prc_" + label)
     for label in config.get("water_process_record", []) or []:
         covered.add("q_prc_" + label)
+    # V3 writes its passive tracer and the updraft's area and velocity.
+    if config.get("chemistry_model") == "passive":
+        covered |= {"q_gas_A", "q_gas_Aup", "arup", "waup"}
     # The increment prototype's ledger registers two diagnostics of its own.
     if config.get("energy_source_tag_transport") == "enthalpy_increment":
         covered |= {"e_src_inc_left", "e_src_inc_moved"}

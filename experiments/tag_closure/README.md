@@ -578,6 +578,7 @@ run today.
 | `g1_inc_newton_d4` | `phase_c.sh`, from a worktree of the prototype | the prototype with the reference's converged solve, a day |
 | `g1_ref_newton10_d4` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-opt1` | the reference again, with ten Newton iterations fixed, so its atmosphere does not depend on the tags |
 | `g1_inc_newton10_d4` | `phase_c.sh`, from a worktree of the prototype with the ledger | the prototype with the reference's fixed ten iterations, a day |
+| `v3_d4_passive_tracer` | `phase_c.sh` with `DRIVER=.../analysis/increment/v3_driver.jl`, from a worktree of the prototype | V3: a passive tracer with an updraft copy beside the tags on D4, for the updraft gap |
 | `g2_v2_sphere_test` | `phase_c.sh`, from a worktree of the prototype with the deep-atmosphere scaling | V2's feasibility run: the production physics on a sphere under the prototype, Float32, two hours |
 | `g2_v2_sphere` | `phase_c.sh`, 24 MPI ranks, from a worktree of the prototype | V2: the production physics on a sphere under the prototype, Float32, ten days |
 | `g2_v2_sphere_newton10` | `phase_c.sh`, 24 MPI ranks, from the same worktree | V2's twin with ten fixed Newton iterations, its first day |
