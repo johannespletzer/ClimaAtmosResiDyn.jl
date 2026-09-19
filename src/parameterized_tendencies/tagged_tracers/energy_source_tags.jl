@@ -66,8 +66,7 @@ end
 """
     energy_source_updraft_copy_variables(gs, model)
 
-The energy source tags' copies for one updraft at a single grid point, `(;
-e_src_<name₁> = ..., ...)`, under `energy_source_tag_updraft_copy: true`, and
+The energy source tags' copies for one updraft at a single grid point, `(; e_src_<name₁> = ..., ...)`, under `energy_source_tag_updraft_copy: true`, and
 `(;)` otherwise. `gs` holds the grid-scale center variables of that point. Each
 copy starts as its tag's specific value, `ρe_src_<name> / ρ`, so the updrafts
 begin with the grid mean's composition, as they begin with its other tracers.

@@ -1230,8 +1230,7 @@ end
 """
     check_energy_source_updraft_copy_supported(turbconv)
 
-Refuse `energy_source_tag_updraft_copy: true` without `turbconv:
-prognostic_edmfx`, the only model with updrafts that carry tracers.
+Refuse `energy_source_tag_updraft_copy: true` without `turbconv: prognostic_edmfx`, the only model with updrafts that carry tracers.
 """
 function check_energy_source_updraft_copy_supported(turbconv)
     turbconv == "prognostic_edmfx" && return nothing
