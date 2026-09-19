@@ -58,7 +58,7 @@ for a day. A run takes about 40 minutes, and E59 showed the gap there.
 | 3 | `ta`, `rhoa` bit for bit, and a CI test | **met** (E62, E65); the test is `tagging_source_increment` in #94 (every model field against the column without tags) |
 | 4 | per-tag correctness against a converged reference | **measured** (E66); a threshold is proposed for the owner: the one-iteration solve's effect at 1 h, L1 ≤ 1% (region) and ≤ 10% (source tags), L∞ ≤ 25% |
 | 5 | Float32 within 10× | **met** (E65): 607 J/m², bit for bit against the Float32 base |
-| 6 | reviewed, tested, PR ready | review fixed (three blocking findings); unit 630/630 and integration 71/71 locally; **draft PR #94**, which contains #93; CI running |
+| 6 | reviewed, tested, PR ready | **met**: review fixed (three blocking findings); unit 630/630 and integration 71/71 locally; **draft PR #94**, which contains #93, with CI all green (67 checks, the new group on 1.10 and 1.11 and in the downgrade jobs, and the docs build); #93 green too (35 checks) |
 
 Open for the owner in G1: the threshold of criterion 4, which mixing
 convention the tags follow (question 2; E66 shows the difference), and
