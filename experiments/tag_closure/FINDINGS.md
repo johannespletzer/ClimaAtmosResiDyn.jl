@@ -2121,6 +2121,29 @@ and `13504927` (prototype, `c0bc637f`), terrabyte, `hpda2_test`,
 and `output/inc_d4_enthalpy_increment/tags_against_converged.txt`, from
 `analysis/increment/tag_correctness.py`.*
 
+**E67. Under a deep atmosphere the correction put 0.4% of each cell's move in
+the wrong place, until its flux was scaled by the face areas.** The column
+integrals are per unit area of the bottom face, and the divergence weights each
+face by its own area. On a sphere with a deep atmosphere, the default, the
+faces grow with height: on the smallest test sphere, 30 km deep, the top face
+is 1/0.9906 times the bottom one.
+
+  - **Measured with a set increment** on that sphere (2 elements, 4 levels, 0M,
+    one step), as in the integration test's first item. Each cell's partition
+    change is set against the part the ledger says was moved. Before the fix
+    they differ by up to 4.7e-6 J/m³, 0.41% of the move. After it, by 2e-11,
+    the rounding of totals of about 1e5.
+  - **Where it would have gone:** into `e_src_res`, every stage, with the sign
+    of the transport. The column totals were right, since the flux is zero at
+    both ends.
+  - **The fix** scales the flux by the bottom face's area over each face's own,
+    kept in the cache (`04d63916`, on #94). On a flat grid the ratio is 1, so
+    G1's columns are unchanged. It was the previous review's F7 and this
+    review's S4.
+*Jobs `13504953` (fixed, the prototype's worktree) and `13504956` (`c0bc637f`,
+from `../ClimaAtmosResiDyn-inc-run2`), terrabyte, `hpda2_test`, 2026-09-19.
+The script is `analysis/increment/sphere_increment_deep.jl`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

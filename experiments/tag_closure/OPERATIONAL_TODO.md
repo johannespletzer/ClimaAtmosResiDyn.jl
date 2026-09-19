@@ -66,11 +66,12 @@ question 3. And merging #93, then #94.
 
 **On the way to G2:**
   - #93 must merge before any sphere run; the prototype's branch has it.
-  - Under a deep atmosphere the correction's face flux does not yet scale
-    with the face areas (the review's S4, first found as F7). The error is
-    about 1e-5 of the flux per stage, of one sign where the transport keeps
-    one. It lands in `e_src_res`, and over ten days it could grow large. Fix
-    and test it before V2.
+  - ~~Under a deep atmosphere the correction's face flux did not scale with
+    the face areas.~~ Fixed in `04d63916` on #94 (E67): 0.41% of each move
+    before, rounding after.
+  - V2's feasibility run, `g2_v2_sphere_test` (job `13504957`): two hours of
+    the production physics on a sphere under the prototype, in Float32, to
+    size the ten-day run.
   - V2's configuration, with the outputs of item 10 and the ledger; the
     Float32 run and its twin under `enthalpy` for the per-tag error; the
     partition and time limit a ten-day EDMF sphere needs on terrabyte.
