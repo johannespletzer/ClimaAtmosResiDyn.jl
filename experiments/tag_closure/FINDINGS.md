@@ -2356,6 +2356,9 @@ both, `ta` and `rhoa` are `g1_inc_d4`'s bit for bit.
   - Cost: the copies add a field per tag to the updraft and double the time
     to build the tendency on the EDMF column (789 s against 402 s). The
     default adds no state.
+*Rerun at the branch head after the review's fixes (`38278c2d`, job
+`13536456`): `ta` bit for bit and every tag within 2e-14, so the fixes changed
+nothing but rounding.*
 *Jobs `13528772` (default, at `e010f780`) and `13523326` (copies, at
 `3ec098f1`, which differs only in the exchange the copies switch off), on
 terrabyte, `hpda2_test`, 2026-09-19, from `../ClimaAtmosResiDyn-upd-run`, with
