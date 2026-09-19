@@ -19,7 +19,8 @@ step by step. The parent's increment has no such gap. This file checks:
     The audit, the diagnostics and the split solver read the ledger. The
     model's fields are those of the same column without tags, bit for bit;
  3. the updraft's mixing of provenance on that column: the default exchange
-    sums to zero over the tags and allocates nothing, and with
+    sums to zero over the partition and allocates only the parent helper's
+    8 bytes, and with
     `energy_source_tag_updraft_copy: true` the tags stay closed and the model's
     fields are still those without tags, bit for bit.
 
@@ -383,26 +384,30 @@ tags = [
         check_same_model(Y, plain.integrator.u)
 
         # 3. The updraft's mixing of provenance. By default the tags exchange
-        # provenance at the mass flux. The exchange sums to zero over the tags
-        # in every cell and touches nothing else.
+        # provenance at the mass flux. The partition's exchange sums to zero in
+        # every cell, a source tag's stands alone, and nothing else changes.
         dY = similar(Y)
         dY .= zero(FT)
         exchange! = CA.sgs_exchange_of_energy_source_tags!
         exchange!(dY, Y, p, p.atmos.turbconv_model, model)
         ᶜsum = zero.(Y.c.ρ)
         ᶜgross = zero.(Y.c.ρ)
-        for name in CA.energy_source_tag_state_names(model)
+        for name in CA.energy_source_region_tag_state_names(model)
             ᶜsum .+= getproperty(dY.c, name)
             ᶜgross .+= abs.(getproperty(dY.c, name))
         end
         @test maximum(parent(ᶜgross)) > 0
         @test maximum(abs, parent(ᶜsum)) < 1e-10 * maximum(parent(ᶜgross))
+        # The updraft lifts the surface's energy.
+        @test maximum(abs, parent(dY.c.ρe_src_sfc)) > 0
         for name in propertynames(Y.c)
             (name == :sgsʲs || CA.is_energy_source_tag_name(name)) && continue
             @test all(iszero, parent(getproperty(dY.c, name)))
         end
         @test all(iszero, parent(dY.c.sgsʲs))
         @test all(iszero, parent(dY.f))
+        # It reads the environment's `mse` through the parent's helper, whose
+        # closure Julia wraps in a `Ref`, 8 bytes. That is all it allocates.
         @test second_call_allocations(
             exchange!,
             dY,
@@ -410,7 +415,7 @@ tags = [
             p,
             p.atmos.turbconv_model,
             model,
-        ) == 0
+        ) <= 8
 
         # With updraft copies the model's own tracer flux moves the tags,
         # and the correction after each solve keeps them closed. The model's

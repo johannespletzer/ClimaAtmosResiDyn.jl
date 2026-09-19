@@ -544,10 +544,14 @@ column_atmos_model(; kwargs...) =
     end
 
     @testset "The exchange's plume ($FT)" for FT in (Float32, Float64)
-        # The shares of a tuple add up to one, and are zero where it is.
-        ε = FT.((3, 1, 0))
-        @test sum(i -> CA._share_of(ε, i), 1:3) ≈ 1
-        @test CA._share_of(FT.((0, 0, 0)), 2) == 0
+        # The partition's shares add up to one, and are zero where it holds
+        # nothing. A source tag's share is its fraction of the partition's sum.
+        partition = Val((true, true, false))
+        ε = FT.((3, 1, 2))
+        @test CA._share_of(ε, 1, partition) + CA._share_of(ε, 2, partition) ≈ 1
+        @test CA._share_of(ε, 3, partition) ≈ FT(0.5)
+        @test CA._share_of(FT.((1, 1, 5)), 3, partition) == 1
+        @test CA._share_of(FT.((0, 0, 1)), 3, partition) == 0
         @test CA._nonnegative_specific(FT(2), FT(4), FT(-1), FT(6)) ==
               FT.((2, 0, 3))
         # Without a rising updraft the plume starts again from the grid mean.

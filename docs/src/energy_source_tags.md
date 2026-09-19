@@ -137,8 +137,10 @@ Xᵢ = Σₖ ρᵏ aᵏ (u³ᵏ - u³) (φᵏᵢ - φ̄ᵢ) Aᵏ,
 
 over the updraft and the environment `k`, with `φᵏᵢ` the tag's share of the
 subdomain's energy, `φ̄ᵢ` its share in the grid mean, and `Aᵏ = e_totᵏ + c` the
-subdomain's energy per unit mass. The shares add up to one in every subdomain,
-so the exchange sums to zero over the tags at every face, and closure is
+subdomain's energy per unit mass. A share is the tag's specific value over the
+sum of the partition's in that subdomain, so a source tag's share is its
+fraction of the energy there. The partition's shares add up to one in every
+subdomain, so its exchange sums to zero at every face, and closure is
 untouched. The updraft's shares come from a steady entraining plume, marched up
 each column with the model's own entrainment rate and updraft velocity. It is
 exact when the updraft adjusts faster than the shares change. See

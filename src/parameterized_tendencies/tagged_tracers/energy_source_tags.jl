@@ -1636,14 +1636,18 @@ as an updraft copy of the tags would, without one. Each tag `i` takes
 
 at each face, over the updraft and the environment `k`. `φᵏᵢ` is the tag's share
 of the energy in subdomain `k`, `φ̄ᵢ` its share in the grid mean, and
-`Aᵏ = e_totᵏ + c` the subdomain's energy per unit mass. Each term is
+`Aᵏ = e_totᵏ + c` the subdomain's energy per unit mass. A share is the tag's
+specific value over the sum of the partition's, the region tags without
+sources, in each subdomain. So a source tag's share is its fraction of the
+energy there, as in `energy_source_source_sediment_share`. Each term is
 reconstructed as the parent reconstructs its own SGS flux. `X` is the part of
 the flux an updraft copy would add to the donor-share flux of
 `sgs_mass_flux_of_energy_source_tags!`: air of one composition rises and air of
 another sinks, each with its whole energy.
 
-The shares add up to one in every subdomain, so the `Xᵢ` add up to zero at every
-face, and the partition's closure is untouched under every transport. The van
+The partition's shares add up to one in every subdomain, so its `Xᵢ` add up to
+zero at every face, and its closure is untouched under every transport. A
+source tag's exchange stands alone, as its other fluxes do. The van
 Leer reconstruction is not linear, so under it `X` is reconstructed first-order
 upwind, which keeps that sum zero.
 
@@ -1755,6 +1759,9 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
         ᶠρ⁰,
         ᶠu³_diffʲ,
         ᶠu³_diff⁰,
+        # Which tags form the partition, as a type, so that a broadcast takes
+        # it as one value.
+        partition = Val(map(_is_energy_partition_tag, model.tags)),
     )
     _exchange_energy_source_tags!(Yₜ.c, subdomains, dt, upwinding, model.tags, 1)
     return nothing
@@ -1771,10 +1778,18 @@ function _exchange_energy_source_tags!(
     i,
 )
     (; ᶜεʲ, ᶜε⁰, ᶜε̄, ᶜAʲ, ᶜA⁰, ᶜaʲ, ᶜa⁰) = subdomains
-    (; ᶠρʲ, ᶠρ⁰, ᶠu³_diffʲ, ᶠu³_diff⁰) = subdomains
+    (; ᶠρʲ, ᶠρ⁰, ᶠu³_diffʲ, ᶠu³_diff⁰, partition) = subdomains
     ᶜρe_srcₜ = tag_field(ᶜYₜ, first(tags))
-    ᶜvalueʲ = @. lazy((_share_of(ᶜεʲ, i) - _share_of(ᶜε̄, i)) * ᶜAʲ * ᶜaʲ)
-    ᶜvalue⁰ = @. lazy((_share_of(ᶜε⁰, i) - _share_of(ᶜε̄, i)) * ᶜA⁰ * ᶜa⁰)
+    ᶜvalueʲ = @. lazy(
+        (_share_of(ᶜεʲ, i, partition) - _share_of(ᶜε̄, i, partition)) *
+        ᶜAʲ *
+        ᶜaʲ,
+    )
+    ᶜvalue⁰ = @. lazy(
+        (_share_of(ᶜε⁰, i, partition) - _share_of(ᶜε̄, i, partition)) *
+        ᶜA⁰ *
+        ᶜa⁰,
+    )
     ᶠfluxʲ = _face_value_flux(ᶠu³_diffʲ, ᶜvalueʲ, dt, upwinding)
     ᶠflux⁰ = _face_value_flux(ᶠu³_diff⁰, ᶜvalue⁰, dt, upwinding)
     @. ᶜρe_srcₜ -= ᶜadvdivᵥ(ᶠρʲ * ᶠfluxʲ + ᶠρ⁰ * ᶠflux⁰)
@@ -1819,11 +1834,12 @@ end
     ρa⁰ > zero(ρa⁰) ?
     map((ε, e) -> max((ρ * ε - ρaʲ * e) / ρa⁰, zero(ε)), ε̄, εʲ) : ε̄
 
-# Tag `i`'s share of a tuple of non-negative specific values, zero where they
-# are all zero.
-@inline function _share_of(ε, i)
-    total = sum(ε)
-    return total > zero(total) ? ε[i] / total : zero(total)
+# Tag `i`'s share of a tuple of non-negative specific values: its value over
+# the sum of the partition's, which `Val(partition)` marks, capped at one. Zero
+# where the partition holds nothing.
+@inline function _share_of(ε, i, ::Val{partition}) where {partition}
+    total = sum(map((e, in_partition) -> in_partition ? e : zero(e), ε, partition))
+    return total > zero(total) ? min(ε[i] / total, one(total)) : zero(total)
 end
 
 _sgs_energy_source_tag_fluxes!(ᶜYₜ, ᶜY, ᶜparent, ᶜnorm, ᶠflux, ::Tuple{}) =
