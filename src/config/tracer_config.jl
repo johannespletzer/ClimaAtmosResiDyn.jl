@@ -1273,7 +1273,8 @@ function check_energy_source_tagging_supported(turbconv, updraft_number)
             `prognostic_edmfx` with one updraft only. The tags take their \
             shares of the updraft and environment corrections to \
             sedimentation, and the model computes those for the first \
-            updraft only.",
+            updraft only. The tags' exchange at the mass flux also takes the \
+            environment as the grid mean less one updraft.",
         )
     elseif turbconv in ("prognostic_edmfx", "edonly_edmfx")
         @warn(

@@ -184,8 +184,8 @@ end
         @test scale > 0
         CA.sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model)
         ᶜpartition_tendency = @. Yₜ.c.ρe_src_strat + Yₜ.c.ρe_src_tropo
-        # The partition's exchange of provenance sums to zero, to rounding of
-        # its own size, which can pass the net flux's.
+        # The partition's exchange of provenance sums to zero. Its rounding
+        # scales with the exchange, which can be larger than the net flux.
         Yₜ_exchange = zero(Y)
         CA.sgs_exchange_of_energy_source_tags!(
             Yₜ_exchange,

@@ -2537,7 +2537,7 @@ struct EnergySourceTaggingModel{
     T <: Tuple,
     O <: Union{Nothing, AbstractFloat},
     TR <: AbstractEnergySourceTransport,
-    UC,
+    UpdraftCopies,
 }
     tags::T
     offset::O
@@ -2614,8 +2614,8 @@ time. `false` without energy source tags.
 """
 has_energy_source_updraft_copies(::Nothing) = false
 has_energy_source_updraft_copies(
-    ::EnergySourceTaggingModel{T, O, TR, UC},
-) where {T, O, TR, UC} = UC
+    ::EnergySourceTaggingModel{T, O, TR, UpdraftCopies},
+) where {T, O, TR, UpdraftCopies} = UpdraftCopies
 
 """
     RecordedProcess{name}()

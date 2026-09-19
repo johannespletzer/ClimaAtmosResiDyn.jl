@@ -28,6 +28,7 @@ const KNOWN_TEST_GROUPS = (
     "tagging_source_float32",
     "tagging_source_edmf",
     "tagging_source_increment",
+    "tagging_source_updraft",
     "parameterizations",
     "restarts",
 )
@@ -212,6 +213,15 @@ end
 if TEST_GROUP in ("tagging_source_increment", "all")
     @safetestset "Energy source tags following the implicit increment" begin
         @time include("energy_source_tags_increment_integration.jl")
+    end
+end
+
+# The tags' updraft copies are a model type of their own, and the check against
+# the column without tags needs a second. With the increment's two builds in one
+# group, the three overran the job's budget, so this file has a group of its own.
+if TEST_GROUP in ("tagging_source_updraft", "all")
+    @safetestset "Energy source tags with updraft copies" begin
+        @time include("energy_source_tags_updraft_integration.jl")
     end
 end
 

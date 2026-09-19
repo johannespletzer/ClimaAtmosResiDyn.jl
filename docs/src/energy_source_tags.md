@@ -141,7 +141,10 @@ subdomain's energy per unit mass. A share is the tag's specific value over the
 sum of the partition's in that subdomain, so a source tag's share is its
 fraction of the energy there. The partition's shares add up to one in every
 subdomain, so its exchange sums to zero at every face, and closure is
-untouched. The updraft's shares come from a steady entraining plume, marched up
+untouched. Where a subdomain's partition holds nothing, the tags exchange
+nothing there. So the exchange needs region tags without sources that
+partition the domain, and it is refused at initialization without them, under
+every transport, unless the tags have updraft copies. The updraft's shares come from a steady entraining plume, marched up
 each column with the model's own entrainment rate and updraft velocity. It is
 exact when the updraft adjusts faster than the shares change. See
 [`ClimaAtmos.sgs_exchange_of_energy_source_tags!`](@ref).
@@ -155,10 +158,18 @@ nor the exchange runs. The tags then move by the model's tracer flux
 of `E`. Under `energy_source_tag_transport: enthalpy_increment` the correction
 after each solve takes the difference, since every sub-grid term runs in the
 implicit tendency. Under `enthalpy` nothing would, so the copies are refused
-there. The copies ignore that the surface's buoyant air, which the model
-injects into the lowest level, carries surface-flux energy: they take the
-environment's composition there. A restart refuses a change of the switch,
-since the copies are part of the state.
+there. The model injects the surface's buoyant air into the lowest level of
+the updraft. That air carries surface-flux energy, but the copies do not see
+it. They take the environment's composition there. A restart refuses a change
+of the switch, since the copies are part of the state.
+
+The copies have costs. Their state names are nested in the updraft, so the
+split Jacobian solver does not solve them apart. They join the nested solver,
+which doubles the time to build the model on the EDMF column. With
+`edmfx_filter: true` the model clamps each copy to between zero and its grid
+mean's value over the updraft's area density, as it clamps every updraft
+tracer. With a centred SGS flux, `edmfx_sgsflux_upwinding: none`, the copies'
+flux is not monotone, and the repair then acts more often.
 
 ## Negative tags, and the repair
 

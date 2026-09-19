@@ -20,14 +20,12 @@ step by step. The parent's increment has no such gap. This file checks:
     model's fields are those of the same column without tags, bit for bit;
  3. the updraft's mixing of provenance on that column: the default exchange
     sums to zero over the partition and allocates only the parent helper's
-    8 bytes, and with
-    `energy_source_tag_updraft_copy: true` the tags stay closed and the model's
-    fields are still those without tags, bit for bit.
+    8 bytes. The audit with updraft copies is
+    `energy_source_tags_updraft_integration.jl`.
 
 The mode refuses `energy_q_tot_upwinding: none`, which
-`energy_source_tags_tests.jl` checks. The file compiles the EDMF column three
-times, with the tags, with their updraft copies and without tags, so it has its
-own test group. See
+`energy_source_tags_tests.jl` checks. The file compiles the EDMF column twice,
+with the tags and without them, so it has its own test group. See
 `docs/src/energy_source_tags.md`.
 =#
 using Test
@@ -416,31 +414,5 @@ tags = [
             p.atmos.turbconv_model,
             model,
         ) <= 8
-
-        # With updraft copies the model's own tracer flux moves the tags,
-        # and the correction after each solve keeps them closed. The model's
-        # fields are still those without tags.
-        copies = run_simulation(
-            merge(
-                edmf_dict,
-                Dict{String, Any}(
-                    "energy_source_tag_transport" => "enthalpy_increment",
-                    "energy_source_tag_updraft_copy" => true,
-                ),
-            ),
-            "energy_source_tags_increment_edmf_copies",
-        )
-        Y_copies = copies.integrator.u
-        copies_model = copies.integrator.p.atmos.energy_source_tagging_model
-        @test CA.has_energy_source_updraft_copies(copies_model)
-        @test !CA.has_energy_source_updraft_copies(model)
-        @test hasproperty(Y_copies.c.sgsʲs.:(1), :e_src_sfc)
-        @test !hasproperty(Y.c.sgsʲs.:(1), :e_src_sfc)
-        # The copies take up energy from the surface in the updraft.
-        @test maximum(parent(Y_copies.c.sgsʲs.:(1).e_src_sfc)) > 0
-        closure_copies = closure(copies)
-        @info "EDMF column with updraft copies after an hour, J/m²" closure_copies.gross_residual closure_copies.residual
-        @test closure_copies.gross_relative < 1e-5
-        check_same_model(Y_copies, plain.integrator.u)
     end
 end

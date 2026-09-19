@@ -317,6 +317,7 @@ function tagging_cache(Y, atmos::AtmosModel)
     energy = _tagging_cache(Y, atmos.tagging_model)
     water = _water_tagging_cache(Y, atmos.water_tagging_model)
     sources = _energy_source_tagging_cache(Y, atmos.energy_source_tagging_model)
+    check_energy_source_exchange_partition(sources, atmos)
     # The process records hold no cache of their own: they are prognostic, and
     # their only scratch lives in `tagging_scratch`.
     isnothing(energy) &&

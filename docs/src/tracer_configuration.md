@@ -420,10 +420,12 @@ fluxes instead, but still explicitly (see
 [Moving the tags as enthalpy, an audit](@ref)).
 Transport is not attributed on top of that. Each tag is already transported in
 its own right, and attributing the `ρe_tot` version as well would count it
-twice. The tags have no updraft copy, so the EDMFX sub-grid mass flux does not
-reach them through the updrafts. The `ρe_tag_*` family does not receive it. The
-energy source tags take their shares of the parent's own sub-grid flux instead,
-with one updraft. Sedimentation reaches both families: the `ρe_tag_*` family
+twice. The `ρe_tag_*` family has no updraft copy, so the EDMFX sub-grid mass
+flux does not reach it through the updrafts. By default the energy source tags
+have none either. They take their shares of the parent's own sub-grid flux
+instead, with one updraft, and exchange provenance at the mass flux. With
+`energy_source_tag_updraft_copy: true` they have copies, and the model's SGS
+tracer flux moves them. Sedimentation reaches both families: the `ρe_tag_*` family
 attributes it under `precipitation`, and the energy source tags follow it on
 the implicit path as transport of their own (see
 [Energy Source Tags](energy_source_tags.md)). So a visibly larger residual is

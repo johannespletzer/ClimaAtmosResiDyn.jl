@@ -74,6 +74,7 @@ jobs:
           - tagging_source_float32
           - tagging_source_edmf
           - tagging_source_increment
+          - tagging_source_updraft
           - parameterizations
           - restarts
     steps:
