@@ -109,11 +109,11 @@ tags and without them, to check that the model's own fields do not move.
 `tagging_source_increment` runs the tags under
 `energy_source_tag_transport: enthalpy_increment`, where they take the parent's
 increment after each implicit solve. It checks the correction on a set
-increment, and that the model's fields are those of the same run under
-`enthalpy`, bit for bit. It does so on the EDMF column, where the parent has
-its own post-solve correction, and on a column without EDMF under
-`energy_q_tot_upwinding: none`, where it has none. So it builds four models,
-two of them EDMF.
+increment, with its donors, its ledger and its audit columns, and that on the
+EDMF column the model's fields are those of the same column without tags, bit
+for bit. So it builds the EDMF column twice. The face-area scaling under a
+deep atmosphere is checked in the unit tests, on a small sphere built with
+ClimaCore alone.
 
 ### The package-load preflight
 

@@ -115,9 +115,10 @@ Refuse a restart that would change what the energy source tags or the process
 records in `restart_file` mean. It checks, in this order, and stops at the
 first mismatch:
 
- 1. The energy source tag fields in `Y`, then the energy and water process
-    record fields, against what `model` configures. This needs no attribute,
-    so it covers every checkpoint.
+ 1. The energy source tag fields in `Y`, then the fields of the increment
+    correction's ledger, then the energy and water process record fields,
+    against what `model` configures. This needs no attribute, so it covers
+    every checkpoint.
  2. The version attribute. A checkpoint without it predates this guard. Then
     it warns that the offset, the tags' definitions, the transport and the
     repair cannot be checked, and lets the restart go on. A checkpoint with

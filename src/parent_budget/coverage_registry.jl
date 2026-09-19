@@ -129,10 +129,7 @@ explicit_diffusion(c::RegistryContext) =
 implicit_diffusion(c::RegistryContext) =
     c.atmos.diff_mode == Implicit() && !isnothing(c.atmos.vertical_diffusion)
 post_implicit_correction(c::RegistryContext) =
-    c.implicit_solve && (
-        c.atmos.numerics.energy_q_tot_upwinding != Val(:none) ||
-        follows_implicit_increment(c.atmos.energy_source_tagging_model)
-    )
+    c.implicit_solve && c.atmos.numerics.energy_q_tot_upwinding != Val(:none)
 folded_dss(c::RegistryContext) = c.implicit_solve && c.dss
 folded_constraint(c::RegistryContext) =
     c.implicit_solve && c.constraint_cadence !== :step

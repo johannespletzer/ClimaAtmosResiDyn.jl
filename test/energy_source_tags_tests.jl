@@ -1,5 +1,10 @@
 using Test
 import ClimaAtmos as CA
+import ClimaComms
+import ClimaCore
+import ClimaCore:
+    Domains, Fields, Geometry, Grids, Hypsography, Meshes, Operators,
+    Quadratures, Spaces, Topologies
 import ClimaDiagnostics
 import Dates
 
@@ -570,33 +575,160 @@ column_atmos_model(; kwargs...) =
             @test !CA.is_tracer_var(name)
         end
 
-        # A restart checks the ledger's fields against the configuration, in
-        # both directions.
-        state(names...) = (; c = NamedTuple{(:ρ, names...)}(zeros(1 + length(names))))
-        check_ledger(Y, expected) = CA.check_restart_fields(
+        # A restart checks the ledger's fields, through the checkpoint's own
+        # check, in both directions. Both stop before the file is opened.
+        restart_model(source) = (;
+            energy_source_tagging_model = source,
+            energy_process_record = nothing,
+            water_process_record = nothing,
+        )
+        state(names...) = (;
+            c = NamedTuple{(:ρ, :ρe_src_strat, :ρe_src_tropo, names...)}(
+                zeros(3 + length(names)),
+            )
+        )
+        @test_throws r"Missing from the file: e_src_inc_left, e_src_inc_moved" CA.check_energy_source_checkpoint(
             "restart.hdf5",
-            Y,
-            CA.is_energy_source_ledger_name,
-            expected,
-            "fields of the energy source tags' increment ledger",
-            "energy_source_tag_transport",
-            "",
-        )
-        @test isnothing(check_ledger(state(keys(ledger)...), keys(ledger)))
-        @test isnothing(check_ledger(state(), ()))
-        @test_throws r"Missing from the file: e_src_inc_left, e_src_inc_moved" check_ledger(
+            restart_model(increment.energy_source_tagging_model),
             state(),
-            keys(ledger),
+            nothing,
         )
-        @test_throws r"Not configured: e_src_inc_left, e_src_inc_moved" check_ledger(
+        @test_throws r"Not configured: e_src_inc_left, e_src_inc_moved" CA.check_energy_source_checkpoint(
+            "restart.hdf5",
+            restart_model(enthalpy.energy_source_tagging_model),
             state(keys(ledger)...),
-            (),
+            nothing,
+        )
+
+        # The mode needs region tags that partition the domain: at least one,
+        # checked when the model is built, and masks that sum to 1, checked
+        # when the cache is built.
+        @test_throws r"needs region tags without sources" CA.EnergySourceTaggingModel(
+            (CA.EnergySourceTag{:sfc}(nothing, :surface_flux),),
+            50000.0;
+            transport = CA.EnthalpyIncrementEnergySourceTransport(),
+        )
+        masks(a, b) = (; ρe_src_strat = fill(a, 3), ρe_src_tropo = fill(b, 3))
+        partition = (:ρe_src_strat, :ρe_src_tropo)
+        @test isnothing(
+            CA._check_increment_partition(
+                masks(0.25, 0.75),
+                partition,
+                increment.energy_source_tagging_model,
+            ),
+        )
+        @test_throws r"partition the domain" CA._check_increment_partition(
+            masks(0.25, 0.5),
+            partition,
+            increment.energy_source_tagging_model,
+        )
+        @test isnothing(
+            CA._check_increment_partition(
+                masks(0.25, 0.5),
+                partition,
+                enthalpy.energy_source_tagging_model,
+            ),
         )
         # And the model refuses the mode without an offset.
         @test_throws r"enthalpy_increment` needs `energy_source_tag_offset`" CA.EnergySourceTaggingModel(
             tags;
             transport = CA.EnthalpyIncrementEnergySourceTransport(),
         )
+    end
+
+    @testset "The increment's flux under a deep atmosphere" begin
+        # On a deep sphere the faces grow with height. The correction's column
+        # integrals are per unit area of the bottom face, and the divergence
+        # weights each face by its own area. So the flux is scaled by the
+        # bottom face's area over each face's own, and then each cell takes
+        # exactly its part of the mismatch. On ClimaCore's grids alone, deep
+        # and shallow, with and without a mountain.
+        FT = Float64
+        radius = FT(6.371e6)
+        function sphere_spaces(deep, mountain)
+            context = ClimaComms.SingletonCommsContext()
+            horizontal = Spaces.SpectralElementSpace2D(
+                Topologies.Topology2D(
+                    context,
+                    Meshes.EquiangularCubedSphere(Domains.SphereDomain(radius), 2),
+                ),
+                Quadratures.GLL{3}(),
+            )
+            vertical = Grids.FiniteDifferenceGrid(
+                Topologies.IntervalTopology(
+                    context,
+                    Meshes.IntervalMesh(
+                        Domains.IntervalDomain(
+                            Geometry.ZPoint(FT(0)),
+                            Geometry.ZPoint(FT(30000));
+                            boundary_names = (:bottom, :top),
+                        );
+                        nelems = 10,
+                    ),
+                ),
+            )
+            hypsography = if mountain
+                coordinates = Fields.coordinate_field(horizontal)
+                Hypsography.LinearAdaption(
+                    @. Geometry.ZPoint(
+                        FT(3000) * exp(
+                            -((coordinates.lat - 30)^2 + (coordinates.long - 40)^2) /
+                            400,
+                        ),
+                    )
+                )
+            else
+                Grids.Flat()
+            end
+            grid = Grids.ExtrudedFiniteDifferenceGrid(
+                Spaces.grid(horizontal),
+                vertical,
+                hypsography;
+                deep,
+            )
+            return (
+                Spaces.CenterExtrudedFiniteDifferenceSpace(grid),
+                Spaces.FaceExtrudedFiniteDifferenceSpace(grid),
+            )
+        end
+        half = ClimaCore.Utilities.half
+        for deep in (true, false), mountain in (false, true)
+            ᶜspace, ᶠspace = sphere_spaces(deep, mountain)
+            ᶜz = Fields.coordinate_field(ᶜspace).z
+            ᶠz = Fields.coordinate_field(ᶠspace).z
+            ᶜm = @. FT(100) * (sin(2 * FT(π) * ᶜz / 30000) + FT(0.3))
+            ᶜabs = abs.(ᶜm)
+            ᶠI = Fields.Field(FT, ᶠspace)
+            ᶠA = Fields.Field(FT, ᶠspace)
+            Operators.column_integral_indefinite!(ᶠI, ᶜm)
+            Operators.column_integral_indefinite!(ᶠA, ᶜabs)
+            M = zeros(axes(Fields.level(ᶠI, half)))
+            A = zeros(axes(Fields.level(ᶠI, half)))
+            Operators.column_integral_definite!(M, ᶜm)
+            Operators.column_integral_definite!(A, ᶜabs)
+            ᶠratio = CA._energy_source_face_area_ratio(ᶠI)
+            # The ratio is the square of the radii, and 1 when shallow.
+            ᶠz_bottom = Fields.level(ᶠz, half)
+            ᶠexpected = @. ifelse(deep, ((radius + ᶠz_bottom) / (radius + ᶠz))^2, FT(1))
+            @test maximum(abs, parent(ᶠratio) .- parent(ᶠexpected)) < 100 * eps(FT)
+            @test deep == (minimum(parent(ᶠratio)) < 1 - 1e-4)
+            # Each cell takes the mismatch less the part left in place.
+            dtγ = FT(60)
+            r = @. M / A
+            ᶜexpected = @. ᶜm - r * ᶜabs
+            function change(ratio)
+                ᶠflux = @. CA.CT3(Geometry.WVector(-(ᶠI - r * ᶠA) / dtγ * ratio))
+                return @. -dtγ * CA.ᶜadvdivᵥ(ᶠflux)
+            end
+            scale = maximum(abs, parent(ᶜm))
+            @test maximum(abs, parent(change(ᶠratio)) .- parent(ᶜexpected)) <
+                  1000 * eps(FT) * scale
+            # Without the ratio a deep atmosphere misses, so the test can fail.
+            deep && @test maximum(
+                abs,
+                parent(change(one(FT))) .- parent(ᶜexpected),
+            ) > 1e-4 * scale
+        end
     end
 
     @testset "Repair on fields ($FT)" for FT in (Float32, Float64)

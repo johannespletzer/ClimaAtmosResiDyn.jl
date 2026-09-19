@@ -149,6 +149,9 @@ is_energy_source_tag_name(name::Symbol) = startswith(string(name), "ρe_src_")
 is_energy_source_tag_name(name::MatrixFields.FieldName) =
     is_energy_source_tag_name(MatrixFields.extract_first(name))
 
+# The names of the increment correction's ledger, in the state's order.
+const ENERGY_SOURCE_LEDGER_NAMES = (:e_src_inc_left, :e_src_inc_moved)
+
 """
     energy_source_increment_ledger_variables(ρe_parent, model)
 
@@ -183,7 +186,7 @@ energy_source_increment_ledger_variables(
     model::EnergySourceTaggingModel,
 ) =
     follows_implicit_increment(model) ?
-    (; e_src_inc_left = zero(ρe_parent), e_src_inc_moved = zero(ρe_parent)) :
+    NamedTuple{ENERGY_SOURCE_LEDGER_NAMES}((zero(ρe_parent), zero(ρe_parent))) :
     (;)
 
 """
@@ -194,8 +197,7 @@ energy_source_increment_ledger_variables(
 otherwise. See [`energy_source_increment_ledger_variables`](@ref).
 """
 energy_source_increment_ledger_names(model) =
-    follows_implicit_increment(model) ? (:e_src_inc_left, :e_src_inc_moved) :
-    ()
+    follows_implicit_increment(model) ? ENERGY_SOURCE_LEDGER_NAMES : ()
 
 """
     is_energy_source_ledger_name(name)
@@ -203,7 +205,7 @@ energy_source_increment_ledger_names(model) =
 Whether `name`, a `Symbol`, is a field of the increment correction's ledger.
 """
 is_energy_source_ledger_name(name::Symbol) =
-    name in (:e_src_inc_left, :e_src_inc_moved)
+    name in ENERGY_SOURCE_LEDGER_NAMES
 
 # ============================================================================
 # Cache
@@ -243,6 +245,11 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         "e_src_res",
         "ρe_src",
     )
+    _check_increment_partition(
+        ᶜenergy_source_masks,
+        energy_source_region_tag_state_names(model),
+        model,
+    )
     _check_parent_positivity(Y, model)
     _check_sedimentation_offset(Y, model)
     # The ledger exists whether or not the repair is on, so that
@@ -261,6 +268,31 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         ᶠenergy_source_interior,
         _energy_source_increment_cache(Y, model)...,
     )
+end
+
+# The increment correction gives the partition the parent's increment of `E`,
+# less what the partition's own tendencies moved. So under
+# `enthalpy_increment` the region tags must partition all of `E`, where the
+# other transports only warn (`_check_region_partition`). That there is a
+# region tag at all is checked when the model is built.
+function _check_increment_partition(ᶜmasks, names, model)
+    follows_implicit_increment(model) || return nothing
+    isempty(names) && return nothing
+    mask_sum = reduce(
+        (a, b) -> a .+ b,
+        map(name -> parent(getproperty(ᶜmasks, name)), names),
+    )
+    deviation = maximum(abs.(mask_sum .- 1))
+    deviation > 0.01 && error(
+        "`energy_source_tag_transport: enthalpy_increment` needs region tags \
+        that partition the domain, and the masks of these sum to 1 only to \
+        within $deviation. The correction gives the region tags the parent's \
+        increment of the total they partition, so where their masks leave a \
+        gap or overlap, the tags would take too much or too little. Use \
+        regions that sum to 1, such as a region and its complement via \
+        `inside: false` or `above: false`.",
+    )
+    return nothing
 end
 
 # Sedimentation moves each tag by its share of the total the tags partition,
@@ -1606,8 +1638,9 @@ _energy_source_increment_cache(Y, model) =
     ) : (;)
 
 # The area of a column's bottom face over each face's own, `J/Δz` at the bottom
-# over `J/Δz` at the face. 1 on a flat grid; below 1 under a deep atmosphere,
-# whose faces grow with height. Static, so kept.
+# over `J/Δz` at the face. 1 to rounding under a shallow atmosphere, with or
+# without topography; below 1 under a deep atmosphere, whose faces grow with
+# height. Static, so kept.
 function _energy_source_face_area_ratio(Yf)
     ᶠJ = Fields.local_geometry_field(Yf).J
     ᶠΔz = Fields.Δz_field(Yf)
@@ -1702,7 +1735,9 @@ function correct_energy_source_increment!(dY, U, p)
     c = _mass_energy(model.offset)
     ᶜm = ᶜe_src_mismatch
     # The partition after the stage, with the parent's post-solve correction,
-    # which moves no tag.
+    # which moves no tag. That correction zeroes `dY` and writes only `ρe_tot`
+    # and `ρq_tot`, so the `dY` terms of the partition and of `ρ` are zero; they
+    # are kept so the mismatch stays right if it ever writes more.
     _energy_source_partition_sum!(ᶜm, U.c, dY.c, dtγ, model.tags)
     @. ᶜm =
         (U.c.ρe_tot + dtγ * dY.c.ρe_tot - ᶜe_src_ρe_tot_snapshot) +
@@ -1786,21 +1821,19 @@ check_energy_source_increment_supported(atmos, ode_algo, T_imp!, T_post_imp!) =
     _check_energy_source_increment_supported(ode_algo, T_imp!, T_post_imp!) :
     nothing
 function _check_energy_source_increment_supported(ode_algo, T_imp!, T_post_imp!)
+    !isnothing(T_imp!) && isnothing(T_post_imp!) &&
+        error(
+            "`energy_source_tag_transport: enthalpy_increment` takes the parent's \
+            increment in a post-solve hook. With `energy_q_tot_upwinding: none` \
+            the parent has no post-solve correction of its own. A hook would make \
+            the stepper refresh the implicit cache after each solve, which the \
+            model's constraints read, so the model's fields would change. Use an \
+            `energy_q_tot_upwinding` other than `none`, such as the default \
+            `vanleer_limiter`, or `energy_source_tag_transport: enthalpy`.",
+        )
     reason =
         if isnothing(T_imp!)
             "the flow is prescribed, so there is no implicit tendency"
-        elseif isnothing(T_post_imp!)
-            error(
-                "`energy_source_tag_transport: enthalpy_increment` takes the \
-                parent's increment in a post-solve hook. With \
-                `energy_q_tot_upwinding: none` the parent has no post-solve \
-                correction of its own. A hook would make the stepper refresh \
-                the implicit cache after each solve, which the model's \
-                constraints read, so the model's fields would change. Use an \
-                `energy_q_tot_upwinding` other than `none`, such as the \
-                default `vanleer_limiter`, or `energy_source_tag_transport: \
-                enthalpy`.",
-            )
         elseif !(ode_algo isa CTS.IMEXAlgorithm) ||
                isnothing(ode_algo.newtons_method)
             "`ode_algo` is not an IMEX algorithm with a Newton method"

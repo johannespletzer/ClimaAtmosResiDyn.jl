@@ -1194,8 +1194,10 @@ end
 
 Parse `energy_source_tag_transport`. `tracer`, the default, and `~` move the
 energy source tags as passive tracers. `enthalpy` moves them by their shares of
-the parent's own flux, as an audit. It needs `energy_source_tag_offset`, which
-`EnergySourceTaggingModel` checks. Anything else is an error.
+the parent's own flux, as an audit. `enthalpy_increment` is that audit with the
+tags following the parent's implicit increment after each Newton solve. Both
+need `energy_source_tag_offset`, which `EnergySourceTaggingModel` checks.
+Anything else is an error.
 """
 function energy_source_transport_from_config(value)
     (isnothing(value) || value == "tracer") &&
@@ -1228,7 +1230,9 @@ sharing has been checked with one updraft.
 
 Both EDMF variants have eddy diffusion. It moves the tags as passive tracers,
 while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, as
-it does under vertical diffusion, so this is a warning.
+it does under vertical diffusion, so this is a warning. Under
+`energy_source_tag_transport: enthalpy_increment` with implicit diffusion, the
+correction after each solve takes it instead.
 """
 function check_energy_source_tagging_supported(turbconv, updraft_number)
     if turbconv == "prognostic_edmfx" && updraft_number > 1
@@ -1244,7 +1248,9 @@ function check_energy_source_tagging_supported(turbconv, updraft_number)
         @warn(
             "`energy_source_tags` with `turbconv: $turbconv`: the eddy \
             diffusion moves the tags as passive tracers, while it moves \
-            `ρe_tot` in enthalpy form. The difference goes to `e_src_res`.",
+            `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, \
+            unless `energy_source_tag_transport: enthalpy_increment` takes \
+            it after each implicit solve.",
         )
     end
     return nothing

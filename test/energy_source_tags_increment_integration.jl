@@ -230,8 +230,9 @@ tags = [
             abs,
             parent(ᶜpartition_increment) .- parent(ᶜmoved),
         ) < 1000 * eps(FT) * maximum(abs, parent(ᶜpartition))
-        # A tag that carries a source only moves within the column.
+        # A tag that carries a source moves, and only within the column.
         @test sum(abs.(Y₀.c.ρe_src_sfc)) > 0
+        @test !all(iszero, parent(dY.c.ρe_src_sfc))
         @test abs(sum(U_new.c.ρe_src_sfc) - sum(Y₀.c.ρe_src_sfc)) <
               1000 * eps(FT) * sum(abs.(Y₀.c.ρe_src_sfc))
 

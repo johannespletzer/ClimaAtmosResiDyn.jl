@@ -165,9 +165,9 @@ function register_energy_source_ledger_diagnostics!(model)
             comments = "The energy that the energy source tags' increment " *
                        "correction moved between levels, per unit mass of " *
                        "moist air, cumulative since the start of the run. It " *
-                       "sums to zero in each column. It is what the tags' " *
-                       "own implicit tendencies missed of the parent's " *
-                       "vertical transport. Only under " *
+                       "sums to zero in each column. It is mostly the " *
+                       "vertical transport the tags' own implicit tendencies " *
+                       "did not take. Only under " *
                        "energy_source_tag_transport: enthalpy_increment. " *
                        "Each increment is kept at its own step's density and " *
                        "divided by the current density here.",

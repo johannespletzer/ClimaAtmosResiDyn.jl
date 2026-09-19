@@ -845,13 +845,8 @@ function build_parent_budget(
     dss = do_dss(axes(Y.c))
     schema = budget_schema(atmos; dss, implicit_solve, restart, constraint_cadence)
     check_roster_events(schema)
-    # The post-solve hook is wired for the upwind correction, and for the
-    # energy source tags when they follow the parent's implicit increment.
     has_post_implicit =
-        implicit_solve && (
-            atmos.numerics.energy_q_tot_upwinding != Val(:none) ||
-            follows_implicit_increment(atmos.energy_source_tagging_model)
-        )
+        implicit_solve && atmos.numerics.energy_q_tot_upwinding != Val(:none)
     template = hook_template(
         ode_config.tableau,
         constraint_cadence,

@@ -487,8 +487,8 @@ step by step. In this mode the tags take the parent's own increment instead:
   - after the Newton solve, each cell's mismatch between the parent's
     increment of `E` and the partition's is formed;
   - the part of the mismatch that changes a column's total cannot move within
-    the column; it stays where it arises, in proportion to the mismatch, and in
-    `e_src_res`;
+    the column; it stays where it arises, in proportion to the mismatch's
+    absolute value, and in `e_src_res`;
   - the rest integrates up the column into a face flux that is zero at both
     boundaries, and each tag takes that flux times its share in the cell it
     leaves.
@@ -496,10 +496,14 @@ step by step. In this mode the tags take the parent's own increment instead:
 The tags then take no explicit share of the vertical advection, which the
 parent does implicitly and the increment carries. The model is untouched.
 
-The mode has three requirements, and the model refuses a configuration that
+The mode has four requirements, and the model refuses a configuration that
 misses one:
 
   - an `energy_source_tag_offset`;
+  - region tags without sources whose masks partition the domain. The
+    correction gives them the parent's increment, less what their own
+    tendencies moved, so without a partition the tags that carry a source
+    would take the whole implicit transport twice;
   - an algorithm that solves every stage whose implicit tendency it uses, such
     as the default ARS343 or ARS222. The correction runs after each Newton
     solve, so a stage without one would escape it. SSP333 and the IMKG

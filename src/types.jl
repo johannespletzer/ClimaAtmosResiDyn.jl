@@ -2515,10 +2515,13 @@ and their transport make them, which is how to measure what the repair changes.
 See `repair_energy_source_tags!`.
 
 `transport`, from the `energy_source_tag_transport` config key, is how the tags
-move: as passive tracers by default, or by their shares of the parent's own
-flux, as an audit. The audit needs an offset, because a share is zero wherever
-the total is not positive, and there the tags would not move. So it is refused
-without one. See [`EnthalpyEnergySourceTransport`](@ref).
+move: as passive tracers by default, by their shares of the parent's own flux
+as an audit, or by the parent's implicit increment as well. The last two need
+an offset, because a share is zero wherever the total is not positive, and
+there the tags would not move. So they are refused without one. The increment
+also needs region tags without sources that partition the domain, and is
+refused without them. See [`EnthalpyEnergySourceTransport`](@ref) and
+[`EnthalpyIncrementEnergySourceTransport`](@ref).
 """
 struct EnergySourceTaggingModel{
     T <: Tuple,
@@ -2545,6 +2548,21 @@ function EnergySourceTaggingModel(
             positive, which under the default energy reference is much of the \
             domain. There the tags would not move at all. Set an offset large \
             enough to make the total positive everywhere.",
+        )
+    # The increment correction gives the partition the parent's increment,
+    # less what the partition's own tendencies moved. Without a partition the
+    # tags that carry a source would take the parent's whole implicit
+    # transport on top of their own.
+    transport isa EnthalpyIncrementEnergySourceTransport &&
+        !any(_is_energy_partition_tag, tags) &&
+        error(
+            "`energy_source_tag_transport: enthalpy_increment` needs region \
+            tags without sources that partition the domain. The correction \
+            gives them the parent's increment of the total, less what their \
+            own tendencies moved. Without them the tags that carry a source \
+            would take the parent's whole implicit transport on top of their \
+            own. Add a region and its complement, for example with \
+            `above: false` or `inside: false`.",
         )
     return EnergySourceTaggingModel(tags, offset, repair, transport)
 end

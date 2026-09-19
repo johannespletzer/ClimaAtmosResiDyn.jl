@@ -65,7 +65,6 @@ import ...RadiationDYCOMS
 import ...RadiationISDAC
 import ...RadiationTRMM_LBA
 import ...Explicit
-import ...follows_implicit_increment
 import ...Implicit
 import ...AbstractEDMF
 import ...GasPhaseChem
