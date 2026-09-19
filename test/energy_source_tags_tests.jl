@@ -483,6 +483,96 @@ column_atmos_model(; kwargs...) =
               CA.EnthalpyIncrementEnergySourceTransport
     end
 
+    @testset "Updraft copy switch" begin
+        region = CA.EnergySourceTag{:everywhere}(CA.EntireDomain())
+        source = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        tags = (region, source)
+        # No copies by default.
+        @test !CA.has_energy_source_updraft_copies(
+            CA.EnergySourceTaggingModel(tags),
+        )
+        @test !CA.has_energy_source_updraft_copies(nothing)
+        @test CA.energy_source_updraft_copy_names(nothing) == ()
+        increment = CA.EnergySourceTaggingModel(
+            tags,
+            50000.0;
+            transport = CA.EnthalpyIncrementEnergySourceTransport(),
+            updraft_copies = true,
+        )
+        @test CA.has_energy_source_updraft_copies(increment)
+        @test CA.energy_source_updraft_copy_names(increment) ==
+              (:e_src_everywhere, :e_src_sfc)
+        @test CA.has_energy_source_updraft_copies(
+            CA.EnergySourceTaggingModel(tags; updraft_copies = true),
+        )
+        # Under `enthalpy` nothing corrects the copies' flux to the parent's.
+        @test_throws r"does not work with" CA.EnergySourceTaggingModel(
+            tags,
+            50000.0;
+            transport = CA.EnthalpyEnergySourceTransport(),
+            updraft_copies = true,
+        )
+        @test CA.energy_source_updraft_copy_from_config(nothing) == false
+        @test CA.energy_source_updraft_copy_from_config(false) == false
+        @test CA.energy_source_updraft_copy_from_config(true) == true
+        @test_throws ErrorException CA.energy_source_updraft_copy_from_config(
+            "true",
+        )
+        @test isnothing(
+            CA.check_energy_source_updraft_copy_supported("prognostic_edmfx"),
+        )
+        @test_throws r"needs `turbconv: prognostic_edmfx`" CA.check_energy_source_updraft_copy_supported(
+            "edonly_edmfx",
+        )
+        @test_throws r"needs `turbconv: prognostic_edmfx`" CA.check_energy_source_updraft_copy_supported(
+            nothing,
+        )
+        # Each copy starts as its tag's specific value.
+        gs = (; ρ = 1.25, ρe_src_everywhere = 250.0, ρe_src_sfc = 0.0)
+        @test CA.energy_source_updraft_copy_variables(gs, increment) ==
+              (; e_src_everywhere = 200.0, e_src_sfc = 0.0)
+        @test CA.energy_source_updraft_copy_variables(
+            gs,
+            CA.EnergySourceTaggingModel(tags),
+        ) == (;)
+        @test CA.Setups.with_updraft_tracers((; ρtke = 1.0), (; e_src_sfc = 0.0)) ==
+              (; ρtke = 1.0)
+        sgs = (; ρtke = 1.0, sgsʲs = ((; ρa = 0.1, mse = 3.0e5),))
+        @test CA.Setups.with_updraft_tracers(sgs, (; e_src_sfc = 2.0)).sgsʲs ==
+              ((; ρa = 0.1, mse = 3.0e5, e_src_sfc = 2.0),)
+        @test CA.Setups.with_updraft_tracers(sgs, (;)) === sgs
+    end
+
+    @testset "The exchange's plume ($FT)" for FT in (Float32, Float64)
+        # The shares of a tuple add up to one, and are zero where it is.
+        ε = FT.((3, 1, 0))
+        @test sum(i -> CA._share_of(ε, i), 1:3) ≈ 1
+        @test CA._share_of(FT.((0, 0, 0)), 2) == 0
+        @test CA._nonnegative_specific(FT(2), FT(4), FT(-1), FT(6)) ==
+              FT.((2, 0, 3))
+        # Without a rising updraft the plume starts again from the grid mean.
+        ε̄ = FT.((10, 30))
+        level = CA._plume_level(ε̄, FT(1), FT(0.1), FT(0.9), FT(1e-3), FT(-1), FT(50))
+        @test level[3]
+        @test CA._plume_step(FT.((1, 2)), level) == ε̄
+        # The lowest level takes the grid mean's composition.
+        rising = CA._plume_level(ε̄, FT(1), FT(0.1), FT(0.9), FT(1e-3), FT(1), FT(50))
+        @test !rising[3]
+        @test CA._plume_step((FT(NaN), FT(NaN)), rising) == ε̄
+        # Above, the updraft relaxes toward the environment at the weight `a`,
+        # the steady updraft equation taken implicitly in `z`.
+        a = FT(1e-3) * FT(50) / FT(1) * FT(1) / FT(0.9)
+        @test rising[2] ≈ a
+        εʲ = CA._plume_step(FT.((40, 0)), rising)
+        @test collect(εʲ) ≈ [(40 + a * 10) / (1 + a), (0 + a * 30) / (1 + a)]
+        # Its environment keeps the grid mean's total: ρ ε̄ = ρaʲ εʲ + ρa⁰ ε⁰.
+        ε⁰ = CA._environment_specific(ε̄, εʲ, FT(1), FT(0.1), FT(0.9))
+        @test collect(FT(0.1) .* εʲ .+ FT(0.9) .* ε⁰) ≈ collect(ε̄)
+        # The van Leer limiter is not linear, so the exchange does not use it.
+        @test CA._exchange_upwinding(Val(:vanleer_limiter)) == Val(:first_order)
+        @test CA._exchange_upwinding(Val(:none)) == Val(:none)
+    end
+
     # The increment mode takes the parent's increment after each Newton solve,
     # so it refuses a stepper that applies an implicit tendency without one.
     @testset "The increment mode refuses steppers it cannot follow" begin

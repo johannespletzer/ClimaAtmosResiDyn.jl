@@ -1212,16 +1212,48 @@ function energy_source_transport_from_config(value)
 end
 
 """
+    energy_source_updraft_copy_from_config(value)
+
+Parse `energy_source_tag_updraft_copy`. `false`, the default, and `~` give the
+energy source tags no copy in the updrafts; `true` gives them one. Anything
+else is an error, so that a quoted `"true"` cannot silently read as off.
+"""
+function energy_source_updraft_copy_from_config(value)
+    isnothing(value) && return false
+    value isa Bool || error(
+        "`energy_source_tag_updraft_copy` must be `true` or `false`, got \
+        $(repr(value)).",
+    )
+    return value
+end
+
+"""
+    check_energy_source_updraft_copy_supported(turbconv)
+
+Refuse `energy_source_tag_updraft_copy: true` without `turbconv:
+prognostic_edmfx`, the only model with updrafts that carry tracers.
+"""
+function check_energy_source_updraft_copy_supported(turbconv)
+    turbconv == "prognostic_edmfx" && return nothing
+    return error(
+        "`energy_source_tag_updraft_copy: true` needs `turbconv: \
+        prognostic_edmfx`, got `turbconv: $(repr(turbconv))`. Only that model \
+        has updrafts that carry tracers, and so a copy of the tags.",
+    )
+end
+
+"""
     check_energy_source_tagging_supported(turbconv, updraft_number)
 
 Refuse `energy_source_tags` under `turbconv: prognostic_edmfx` with more than
 one updraft, and warn under `prognostic_edmfx` with one and under
 `edonly_edmfx`.
 
-The tags have no updraft copy. Under `prognostic_edmfx` they take their shares
-of the parent's sub-grid mass flux of energy
-(`sgs_mass_flux_of_energy_source_tags!`) and of the updraft and environment
-corrections to sedimentation (`sediment_energy_source_tags_with_corrections!`).
+Under `prognostic_edmfx` the tags take their shares of the parent's sub-grid
+mass flux of energy, and exchange provenance at the updraft's mass flux
+(`sgs_mass_flux_of_energy_source_tags!`), unless they have updraft copies. They
+also take their shares of the updraft and environment corrections to
+sedimentation (`sediment_energy_source_tags_with_corrections!`).
 The model itself runs `prognostic_edmfx` with one updraft only, and asserts
 that when it builds its cache. This check refuses more at configuration time,
 with a message. It would refuse them even if the model allowed more, because
@@ -1260,8 +1292,9 @@ end
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
-`energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`
-and `energy_source_tag_transport`), `energy_process_record` and
+`energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`,
+`energy_source_tag_transport` and `energy_source_tag_updraft_copy`),
+`energy_process_record` and
 `water_process_record` config keys. Any of them
 being `~` (null) or an empty list disables that feature entirely, at no runtime
 cost.
@@ -1297,6 +1330,9 @@ function AtmosTagging(config::AtmosConfig)
     source_transport = energy_source_transport_from_config(
         get(config.parsed_args, "energy_source_tag_transport", "tracer"),
     )
+    source_updraft_copies = energy_source_updraft_copy_from_config(
+        get(config.parsed_args, "energy_source_tag_updraft_copy", false),
+    )
     energy_source_tagging_model =
         if isnothing(source_entries) || isempty(source_entries)
             isnothing(source_offset) || error(
@@ -1310,12 +1346,20 @@ function AtmosTagging(config::AtmosConfig)
                 `energy_source_tags` is not, so there are no tags for it to \
                 move. Configure `energy_source_tags`, or drop the key.",
             )
+            source_updraft_copies && error(
+                "`energy_source_tag_updraft_copy: true` is set but \
+                `energy_source_tags` is not, so there are no tags to copy. \
+                Configure `energy_source_tags`, or drop the key.",
+            )
             nothing
         else
             check_energy_source_offset_given(source_offset_value)
             check_energy_source_tagging_supported(
                 get(config.parsed_args, "turbconv", nothing),
                 get(config.parsed_args, "updraft_number", 1),
+            )
+            source_updraft_copies && check_energy_source_updraft_copy_supported(
+                get(config.parsed_args, "turbconv", nothing),
             )
             EnergySourceTaggingModel(
                 energy_source_tracer_tuple(
@@ -1326,6 +1370,7 @@ function AtmosTagging(config::AtmosConfig)
                 source_offset;
                 repair = source_repair,
                 transport = source_transport,
+                updraft_copies = source_updraft_copies,
             )
         end
     energy_process_record = process_record_from_config(

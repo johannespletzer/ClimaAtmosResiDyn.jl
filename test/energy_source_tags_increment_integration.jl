@@ -17,11 +17,16 @@ step by step. The parent's increment has no such gap. This file checks:
     has its own post-solve correction (the default `energy_q_tot_upwinding`):
     the closure residual is small, and the ledger explains its column total.
     The audit, the diagnostics and the split solver read the ledger. The
-    model's fields are those of the same column without tags, bit for bit.
+    model's fields are those of the same column without tags, bit for bit;
+ 3. the updraft's mixing of provenance on that column: the default exchange
+    sums to zero over the tags and allocates nothing, and with
+    `energy_source_tag_updraft_copy: true` the tags stay closed and the model's
+    fields are still those without tags, bit for bit.
 
 The mode refuses `energy_q_tot_upwinding: none`, which
-`energy_source_tags_tests.jl` checks. The file compiles the EDMF column twice,
-with the tags and without them, so it has its own test group. See
+`energy_source_tags_tests.jl` checks. The file compiles the EDMF column three
+times, with the tags, with their updraft copies and without tags, so it has its
+own test group. See
 `docs/src/energy_source_tags.md`.
 =#
 using Test
@@ -57,7 +62,8 @@ function closure(simulation)
 end
 
 # Every field the model has without tags, compared with `isequal`, which tells
-# signed zeros apart.
+# signed zeros apart. The updrafts are compared field by field, since with
+# updraft copies they hold the tags' copies as well.
 function check_same_model(Y, Y_ref)
     is_diagnostic(name) =
         CA.is_energy_source_tag_name(name) ||
@@ -67,9 +73,16 @@ function check_same_model(Y, Y_ref)
           Set(filter(!is_diagnostic, propertynames(Y_ref.c)))
     @test propertynames(Y.f) == propertynames(Y_ref.f)
     for name in filter(!is_diagnostic, propertynames(Y_ref.c))
+        name == :sgsʲs && continue
         @test isequal(
             parent(getproperty(Y.c, name)),
             parent(getproperty(Y_ref.c, name)),
+        )
+    end
+    for name in propertynames(Y_ref.c.sgsʲs.:(1))
+        @test isequal(
+            parent(getproperty(Y.c.sgsʲs.:(1), name)),
+            parent(getproperty(Y_ref.c.sgsʲs.:(1), name)),
         )
     end
     for name in propertynames(Y_ref.f)
@@ -368,5 +381,61 @@ tags = [
         )
         @test isnothing(plain.integrator.p.atmos.energy_source_tagging_model)
         check_same_model(Y, plain.integrator.u)
+
+        # 3. The updraft's mixing of provenance. By default the tags exchange
+        # provenance at the mass flux. The exchange sums to zero over the tags
+        # in every cell and touches nothing else.
+        dY = similar(Y)
+        dY .= zero(FT)
+        exchange! = CA.sgs_exchange_of_energy_source_tags!
+        exchange!(dY, Y, p, p.atmos.turbconv_model, model)
+        ᶜsum = zero.(Y.c.ρ)
+        ᶜgross = zero.(Y.c.ρ)
+        for name in CA.energy_source_tag_state_names(model)
+            ᶜsum .+= getproperty(dY.c, name)
+            ᶜgross .+= abs.(getproperty(dY.c, name))
+        end
+        @test maximum(parent(ᶜgross)) > 0
+        @test maximum(abs, parent(ᶜsum)) < 1e-10 * maximum(parent(ᶜgross))
+        for name in propertynames(Y.c)
+            (name == :sgsʲs || CA.is_energy_source_tag_name(name)) && continue
+            @test all(iszero, parent(getproperty(dY.c, name)))
+        end
+        @test all(iszero, parent(dY.c.sgsʲs))
+        @test all(iszero, parent(dY.f))
+        @test second_call_allocations(
+            exchange!,
+            dY,
+            Y,
+            p,
+            p.atmos.turbconv_model,
+            model,
+        ) == 0
+
+        # With updraft copies the model's own tracer flux moves the tags,
+        # and the correction after each solve keeps them closed. The model's
+        # fields are still those without tags.
+        copies = run_simulation(
+            merge(
+                edmf_dict,
+                Dict{String, Any}(
+                    "energy_source_tag_transport" => "enthalpy_increment",
+                    "energy_source_tag_updraft_copy" => true,
+                ),
+            ),
+            "energy_source_tags_increment_edmf_copies",
+        )
+        Y_copies = copies.integrator.u
+        copies_model = copies.integrator.p.atmos.energy_source_tagging_model
+        @test CA.has_energy_source_updraft_copies(copies_model)
+        @test !CA.has_energy_source_updraft_copies(model)
+        @test hasproperty(Y_copies.c.sgsʲs.:(1), :e_src_sfc)
+        @test !hasproperty(Y.c.sgsʲs.:(1), :e_src_sfc)
+        # The copies take up energy from the surface in the updraft.
+        @test maximum(parent(Y_copies.c.sgsʲs.:(1).e_src_sfc)) > 0
+        closure_copies = closure(copies)
+        @info "EDMF column with updraft copies after an hour, J/m²" closure_copies.gross_residual closure_copies.residual
+        @test closure_copies.gross_relative < 1e-5
+        check_same_model(Y_copies, plain.integrator.u)
     end
 end

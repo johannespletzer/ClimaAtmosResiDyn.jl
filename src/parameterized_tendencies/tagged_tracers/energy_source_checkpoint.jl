@@ -116,8 +116,8 @@ records in `restart_file` mean. It checks, in this order, and stops at the
 first mismatch:
 
  1. The energy source tag fields in `Y`, then the fields of the increment
-    correction's ledger, then the energy and water process record fields,
-    against what `model` configures. This needs no attribute, so it covers
+    correction's ledger, then the tags' updraft copies, then the energy and
+    water process record fields, against what `model` configures. This needs no attribute, so it covers
     every checkpoint.
  2. The version attribute. A checkpoint without it predates this guard. Then
     it warns that the offset, the tags' definitions, the transport and the
@@ -151,6 +151,18 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
         "fields of the energy source tags' increment ledger",
         "energy_source_tag_transport",
         "",
+    )
+    # The tags' updraft copies live in each updraft, so the first stands for
+    # all of them.
+    hasproperty(Y.c, :sgsʲs) && check_restart_fields(
+        restart_file,
+        (; c = Y.c.sgsʲs.:(1)),
+        name -> startswith(string(name), "e_src_"),
+        isnothing(source_model) ? () :
+        energy_source_updraft_copy_names(source_model),
+        "updraft copies of the energy source tags",
+        "energy_source_tag_updraft_copy",
+        "e_src_",
     )
     check_restart_fields(
         restart_file,

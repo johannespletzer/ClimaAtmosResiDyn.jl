@@ -2497,7 +2497,8 @@ struct EnthalpyIncrementEnergySourceTransport <: AbstractEnergySourceTransport e
 
 """
     EnergySourceTaggingModel(tags::Tuple, offset = nothing; repair = true,
-                             transport = TracerEnergySourceTransport())
+                             transport = TracerEnergySourceTransport(),
+                             updraft_copies = false)
 
 Model component holding a `Tuple` of [`EnergySourceTag`](@ref)s. Constructed
 from the `energy_source_tags` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2522,11 +2523,21 @@ there the tags would not move. So they are refused without one. The increment
 also needs region tags without sources that partition the domain, and is
 refused without them. See [`EnthalpyEnergySourceTransport`](@ref) and
 [`EnthalpyIncrementEnergySourceTransport`](@ref).
+
+`updraft_copies`, from the `energy_source_tag_updraft_copy` config key, gives
+each tag a copy in the updraft under `PrognosticEDMFX`. It is off by default.
+Off, the sub-grid mass flux moves each tag by its share in the cell the flux
+leaves, and the tags exchange provenance at the updraft's mass flux, from a
+steady entraining plume (`sgs_mass_flux_of_energy_source_tags!`). On, it is an
+audit: the copies are passive updraft tracers, and the model moves them as it
+moves any other. It is refused with the `enthalpy` transport. See
+[`has_energy_source_updraft_copies`](@ref).
 """
 struct EnergySourceTaggingModel{
     T <: Tuple,
     O <: Union{Nothing, AbstractFloat},
     TR <: AbstractEnergySourceTransport,
+    UC,
 }
     tags::T
     offset::O
@@ -2538,6 +2549,7 @@ function EnergySourceTaggingModel(
     offset = nothing;
     repair::Bool = true,
     transport::AbstractEnergySourceTransport = TracerEnergySourceTransport(),
+    updraft_copies::Bool = false,
 )
     !(transport isa TracerEnergySourceTransport) && isnothing(offset) &&
         error(
@@ -2564,8 +2576,46 @@ function EnergySourceTaggingModel(
             own. Add a region and its complement, for example with \
             `above: false` or `inside: false`.",
         )
-    return EnergySourceTaggingModel(tags, offset, repair, transport)
+    # The copies move each tag by the model's tracer flux. Its sum over the
+    # tags is not the parent's flux of the total, and under `enthalpy` nothing
+    # would correct it. Under `enthalpy_increment` the correction after each
+    # solve does.
+    updraft_copies &&
+        transport isa EnthalpyEnergySourceTransport &&
+        error(
+            "`energy_source_tag_updraft_copy: true` does not work with \
+            `energy_source_tag_transport: enthalpy`. The copies move each tag \
+            by the model's tracer flux of its updraft value, and the sum of \
+            those fluxes is not the parent's flux of the total. Under \
+            `enthalpy` nothing corrects that, so the difference would go to \
+            `e_src_res`. Use `enthalpy_increment`, whose correction after \
+            each solve takes it, or `tracer`.",
+        )
+    return EnergySourceTaggingModel{
+        typeof(tags),
+        typeof(offset),
+        typeof(transport),
+        updraft_copies,
+    }(
+        tags,
+        offset,
+        repair,
+        transport,
+    )
 end
+
+"""
+    has_energy_source_updraft_copies(model)
+
+Whether the energy source tags have a copy in each updraft, from the
+`energy_source_tag_updraft_copy` config key. It is a type parameter of
+[`EnergySourceTaggingModel`](@ref), so the state can be built from it at compile
+time. `false` without energy source tags.
+"""
+has_energy_source_updraft_copies(::Nothing) = false
+has_energy_source_updraft_copies(
+    ::EnergySourceTaggingModel{T, O, TR, UC},
+) where {T, O, TR, UC} = UC
 
 """
     RecordedProcess{name}()

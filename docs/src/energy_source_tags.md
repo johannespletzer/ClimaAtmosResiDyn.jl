@@ -110,9 +110,9 @@ tags take the species' whole face flux, the grid mean's and both corrections,
 and share it once, by its direction. Shared apart, a correction that points
 against the grid mean's flux would take its shares from the other cell.
 
-The tags have no updraft copy, so the parent's sub-grid mass flux reaches no
-tag through the updrafts. Instead each tag takes its share of the parent's own
-sub-grid flux of `E`, face by face, from the cell the flux leaves. The flux is
+By default the tags have no updraft copy, so the parent's sub-grid mass flux
+reaches no tag through the updrafts. Instead each tag takes its share of the
+parent's own sub-grid flux of `E`, face by face, from the cell the flux leaves. The flux is
 the one of `ρe_tot`, `ρᵏ aᵏ (u³ᵏ - u³)(mseᵏ + Kᵏ - h_tot)` summed over the
 subdomains, plus `c` times the one of `ρ`, which is the same form in
 `q_totᵏ - q_tot`. Each part is built with the parent's own reconstruction,
@@ -123,6 +123,40 @@ but it does not mix provenance the way it mixes the air. It runs in the
 implicit tendency beside the parent's flux. The parent's flux has Jacobian
 blocks and the tags' has none, as in sedimentation. So within a step the tags
 lag the parent's implicit flux slightly, and that gap lands in `e_src_res`.
+
+### The updraft's mixing of provenance
+
+The donor share moves the net energy convection carries, but not the exchange
+of air behind it. An updraft lifts air of one composition and the environment
+sinks to make room, each with its whole energy. So each tag also takes an
+exchange,
+
+```
+Xᵢ = Σₖ ρᵏ aᵏ (u³ᵏ - u³) (φᵏᵢ - φ̄ᵢ) Aᵏ,
+```
+
+over the updraft and the environment `k`, with `φᵏᵢ` the tag's share of the
+subdomain's energy, `φ̄ᵢ` its share in the grid mean, and `Aᵏ = e_totᵏ + c` the
+subdomain's energy per unit mass. The shares add up to one in every subdomain,
+so the exchange sums to zero over the tags at every face, and closure is
+untouched. The updraft's shares come from a steady entraining plume, marched up
+each column with the model's own entrainment rate and updraft velocity. It is
+exact when the updraft adjusts faster than the shares change. See
+[`ClimaAtmos.sgs_exchange_of_energy_source_tags!`](@ref).
+
+`energy_source_tag_updraft_copy: true` is an audit of that. Each tag gets a
+copy in the updraft, `e_src_<name>` in `Y.c.sgsʲs`, a passive updraft tracer
+that starts as its tag's specific value. The model advects, entrains, filters
+and fluxes it as any other updraft tracer, and neither the donor-share flux
+nor the exchange runs. The tags then move by the model's tracer flux
+`Σₖ ρᵏ aᵏ (u³ᵏ - u³)(εᵏ - ε̄)`, whose sum over the tags is not the parent's flux
+of `E`. Under `energy_source_tag_transport: enthalpy_increment` the correction
+after each solve takes the difference, since every sub-grid term runs in the
+implicit tendency. Under `enthalpy` nothing would, so the copies are refused
+there. The copies ignore that the surface's buoyant air, which the model
+injects into the lowest level, carries surface-flux energy: they take the
+environment's composition there. A restart refuses a change of the switch,
+since the copies are part of the state.
 
 ## Negative tags, and the repair
 
@@ -584,10 +618,13 @@ family as a whole.
 
 ## Caveats
 
-  - Tags are **grid-scale only**, with no sub-grid updraft counterpart. Under
-    `turbconv: prognostic_edmfx` they take their shares of the sub-grid mass
-    flux and of the sedimentation corrections instead, as described under
-    [Attribution](#Attribution). The model runs `prognostic_edmfx` with one
+  - Tags are **grid-scale only** by default, with no sub-grid updraft
+    counterpart. Under `turbconv: prognostic_edmfx` they take their shares of
+    the sub-grid mass flux and of the sedimentation corrections instead, and
+    exchange provenance at the mass flux, as described under
+    [Attribution](#Attribution). `energy_source_tag_updraft_copy: true` gives
+    them updraft copies, as an audit. The sedimentation corrections take the
+    grid mean's shares either way. The model runs `prognostic_edmfx` with one
     updraft only. The tags refuse more at configuration time, and would refuse
     them even if the model allowed more, because the model computes the
     sedimentation corrections for the first updraft only.
@@ -655,6 +692,9 @@ ClimaAtmos.enthalpy_hyperdiffusion_of_energy_source_tags!
 ClimaAtmos.write_energy_source_checkpoint_attributes!
 ClimaAtmos.check_energy_source_checkpoint
 ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
+ClimaAtmos.sgs_exchange_of_energy_source_tags!
+ClimaAtmos.has_energy_source_updraft_copies
+ClimaAtmos.energy_source_updraft_copy_variables
 ClimaAtmos.keep_energy_source_sediment_correction!
 ClimaAtmos.sediment_energy_source_tags_with_corrections!
 ```
