@@ -49,6 +49,32 @@ for a day. A run takes about 40 minutes, and E59 showed the gap there.
  6. **It is reviewed and tested.** An agent's review with its findings fixed,
     unit and integration tests in CI, and a pull request ready for the owner.
 
+**G1's status on 2026-09-19,** with the prototype `enthalpy_increment`:
+
+| # | criterion | status |
+|:--|:--|:--|
+| 1 | closure ≤ 1e4 J/m², no systematic growth | **met** (E62): 267 J/m² at 24 h; the second 12 h add 75, the first 192 |
+| 2 | the remainder in named parts | **met** (E64): the one-iteration solve's column totals, 313 gross, less the loss rule's flushing, +44; nothing else above 1 J/m² |
+| 3 | `ta`, `rhoa` bit for bit, and a CI test | **met** (E62, E65); the test is `tagging_source_increment` in #94 (every model field against the column without tags) |
+| 4 | per-tag correctness against a converged reference | **measured** (E66); a threshold is proposed for the owner: the one-iteration solve's effect at 1 h, L1 ≤ 1% (region) and ≤ 10% (source tags), L∞ ≤ 25% |
+| 5 | Float32 within 10× | **met** (E65): 607 J/m², bit for bit against the Float32 base |
+| 6 | reviewed, tested, PR ready | review fixed (three blocking findings); unit 630/630 and integration 71/71 locally; **draft PR #94**, which contains #93; CI running |
+
+Open for the owner in G1: the threshold of criterion 4, which mixing
+convention the tags follow (question 2; E66 shows the difference), and
+question 3. And merging #93, then #94.
+
+**On the way to G2:**
+  - #93 must merge before any sphere run; the prototype's branch has it.
+  - Under a deep atmosphere the correction's face flux does not yet scale
+    with the face areas (the review's S4, first found as F7). The error is
+    about 1e-5 of the flux per stage, of one sign where the transport keeps
+    one. It lands in `e_src_res`, and over ten days it could grow large. Fix
+    and test it before V2.
+  - V2's configuration, with the outputs of item 10 and the ledger; the
+    Float32 run and its twin under `enthalpy` for the per-tag error; the
+    partition and time limit a ten-day EDMF sphere needs on terrabyte.
+
 **Out of G1:** the sphere, horizontal transport and hyperdiffusion, runs
 longer than a day, the conventions of question 2 (the reference form as the
 default, and the choice of `c`), and the GPU.
