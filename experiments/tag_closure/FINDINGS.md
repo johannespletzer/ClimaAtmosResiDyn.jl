@@ -2320,6 +2320,51 @@ tag with an updraft copy would diverge, and its days cannot be added up.
 V2's daily checkpoints. The output is in
 `output/g2_v2_sphere/updraft_gap_estimate_days1-9.txt`.*
 
+**E73. The updraft gap is closed on D4. The default exchange stays within 1%
+of the audit's updraft copies after a day, and within 3% after six hours.**
+The owner chose one switch (UPDRAFT_GAP.md, "The chosen way"): updraft copies
+of the tags as the audit, and a zero-sum exchange at the mass flux, with the
+updraft's shares from a steady entraining plume, as the default. Both ran for
+a day on D4 with V3's passive tracer (`v3_upd_default`, `v3_upd_copies`). In
+both, `ta` and `rhoa` are `g1_inc_d4`'s bit for bit.
+
+| L1 against the copies, `sfc` (region tags) | 1 h | 6 h | 12 h | 24 h |
+|:--|--:|--:|--:|--:|
+| no updraft mixing (V3, E68) | 61% (8.6%) | 71% (4.6%) | 33% (2.4%) | 14% (2.3%) |
+| the default exchange | 16% (0.14%) | 2.5% (0.42%) | 1.6% (0.09%) | 0.66% (0.07%) |
+
+  - **The default tracks the audit.** At 24 h every tag is within 0.7% in L1
+    and 2.5% at its largest point, and every tag's integral within 0.6%. The
+    first hour differs most (16% for `sfc`), because the copies start at the
+    grid mean and fill in over the updraft's turnover, while the plume is
+    steady from the start.
+  - **The updraft gap was large.** Without the updraft's mixing, `sfc`
+    differs from the copies by 61 to 71% in the first six hours and by 14% at
+    24 h, and the integrals of the source tags by up to 6%.
+  - **Closure is kept.** The default closes to 267.07 J/m² at 24 h, as
+    before (266.94). The copies close to 365, because the model's tracer flux
+    of the copies differs more from the parent's flux; the correction moves
+    twice as much, and its column totals are the same, −45.52 J/m².
+  - **The repair acts at the inversion in the first three hours,** in both
+    modes: 4.8e5 J/m² (default) and 5.3e5 (copies) moved in all, against 0.8
+    without the mixing, and nothing after 3 h. The flux is centred on this
+    column (`edmfx_sgsflux_upwinding: none`), which is not monotone. Most of
+    it moves within the partition, which keeps its sum.
+  - **Against the tracer,** the copies bring `ψ` to within 0.3 points of
+    `q_gas_A` through the boundary layer at 6 h and 1.3 points at 24 h. The
+    rest is the attribution of new energy by mask (E68, erratum).
+  - Cost: the copies add a field per tag to the updraft and double the time
+    to build the tendency on the EDMF column (789 s against 402 s). The
+    default adds no state.
+*Jobs `13528772` (default, at `e010f780`) and `13523326` (copies, at
+`3ec098f1`, which differs only in the exchange the copies switch off), on
+terrabyte, `hpda2_test`, 2026-09-19, from `../ClimaAtmosResiDyn-upd-run`, with
+`analysis/increment/v3_driver.jl`. A first default run at `3ec098f1`, whose
+shares were normalised over all tags, is superseded
+(`v3_upd_default_prefix_e010f780_superseded` on scratch). The outputs and the
+comparisons (`tag_correctness.py`, `v3_compare.py`) are in
+`output/v3_upd_default/` and `output/v3_upd_copies/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
