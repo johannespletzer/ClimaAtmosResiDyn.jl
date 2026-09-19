@@ -98,6 +98,13 @@ question 3. And merging #93, then #94.
     But V2 is then not the production-physics test G2 asks for. Three
     three-hour variants look for the cause: sponges off, two Newton
     iterations, no mountain (jobs `13505762` to `13505764`). V2 runs on.
+    **Diagnosed:** without sponges the top level cools exactly as in V2
+    (216.2, 205.1 and 190.1 K at 1, 2 and 3 h), and without the mountain
+    nearly so (215.5, 203.1, 188.7 K). With two Newton iterations it holds
+    219.3 and 218.9 K, as the ten-iteration twin does. So the one-iteration
+    solve alone makes the collapse. V2 runs again with two iterations,
+    `g2_v2_sphere_n2` (job `13505896`, submitted 12:20); its per-tag twin
+    stays `g2_v2_sphere_newton10`.
   - **The converged twin does not close the sphere better:** 2.78e-5 of the
     scale at 24 h against V2's 2.45e-5. So on the sphere the residual is not
     the one-iteration solve's, unlike D4 (E64). It is the explicit processes

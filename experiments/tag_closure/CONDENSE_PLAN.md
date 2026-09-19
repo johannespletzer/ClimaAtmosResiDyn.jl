@@ -21,10 +21,10 @@ approval waits for.
 1. **V2's diagnosis.** In V2 the model top (27 km) cools to the 150 K floor
    within 6 h under one Newton iteration, while the converged twin holds
    218 K. Three three-hour variants look for the cause: sponges off, two
-   Newton iterations, no mountain (jobs `13505762` to `13505764`). Their result
-   decides whether V2 needs a rerun with a stable configuration. A rerun is
-   ten days on 24 ranks, about nine hours, and needs the owner's choice of
-   configuration.
+   Newton iterations, no mountain (jobs `13505762` to `13505764`). Done:
+   only the second keeps the top at 219 K, so the one-iteration solve makes
+   the collapse. V2 runs again with two iterations, `g2_v2_sphere_n2` (job
+   `13505896`). Its entries follow as a delta if the condensing has started.
 2. **The entries for the new results,** in FINDINGS, with their outputs under
    `output/`:
    - V2 as it ran: ten days of closure, the residual against its loss rate,

@@ -581,6 +581,7 @@ run today.
 | `v3_d4_passive_tracer` | `phase_c.sh` with `DRIVER=.../analysis/increment/v3_driver.jl`, from a worktree of the prototype | V3: a passive tracer with an updraft copy beside the tags on D4, for the updraft gap |
 | `g2_v2_sphere_test` | `phase_c.sh`, from a worktree of the prototype with the deep-atmosphere scaling | V2's feasibility run: the production physics on a sphere under the prototype, Float32, two hours |
 | `g2_v2_sphere` | `phase_c.sh`, 24 MPI ranks, from a worktree of the prototype | V2: the production physics on a sphere under the prototype, Float32, ten days |
+| `g2_v2_sphere_n2` | `phase_c.sh`, 24 MPI ranks, from a worktree of the prototype | V2 again with two Newton iterations, after one iteration collapsed the model top |
 | `g2_v2_sphere_newton10` | `phase_c.sh`, 24 MPI ranks, from the same worktree | V2's twin with ten fixed Newton iterations, its first day |
 | `g1_base_d4_float32` | `phase_c.sh`, from `../ClimaAtmosResiDyn-c1c-base` | `c1c_base_d4_enthalpy` in Float32, the baseline of G1's Float32 twin |
 | `g1_inc_d4_float32` | `phase_c.sh`, from a worktree of the prototype | the prototype in Float32, G1's Float32 twin |
