@@ -168,11 +168,10 @@ point, as zeros of the type of `ρe_parent`. Only under
     their lag behind the parent's other implicit terms.
 
 Both are prognostic, so the stepper weights each stage's entry as it weights
-the tags. They record what the correction intends. Two cases leave a cell's
-actual change different, and the difference lands in `e_src_res` but in
-neither field. A face whose donor cell has no share of the partition moves no
-tag. And under a deep atmosphere the face areas grow with height, which the
-flux does not yet account for. The column totals are right in both cases.
+the tags. They record what the correction intends. A face whose donor cell has
+no share of the partition moves no tag, so there a cell's actual change
+differs, and the difference lands in `e_src_res` but in neither field. The
+column totals are right.
 
 Like the process records, their names carry no `ρ` prefix. So `gs_tracer_names`
 and `is_tracer_var` skip them, and no transport or limiter reaches them. They
@@ -232,7 +231,8 @@ when they are disabled. Contains:
   - Under `energy_source_tag_transport: enthalpy_increment` only, the fields of
     `snapshot_energy_source_increment!` and `correct_energy_source_increment!`:
     the snapshots of `ρe_tot`, `ρ` and the partition's sum at the start of an
-    implicit stage, the stage weight `dtγ`, and the correction's work fields.
+    implicit stage, the stage weight `dtγ`, the correction's work fields, and
+    each face's area relative to the bottom face's.
 """
 _energy_source_tagging_cache(Y, ::Nothing) = nothing
 function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
@@ -1601,8 +1601,19 @@ _energy_source_increment_cache(Y, model) =
         e_src_mismatch_total = zeros(axes(Fields.level(Y.f, half))),
         e_src_abs_mismatch_total = zeros(axes(Fields.level(Y.f, half))),
         ᶠe_src_increment_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
+        ᶠe_src_area_ratio = _energy_source_face_area_ratio(Y.f),
         e_src_dtγ = Ref(zero(eltype(Y.c.ρ))),
     ) : (;)
+
+# The area of a column's bottom face over each face's own, `J/Δz` at the bottom
+# over `J/Δz` at the face. 1 on a flat grid; below 1 under a deep atmosphere,
+# whose faces grow with height. Static, so kept.
+function _energy_source_face_area_ratio(Yf)
+    ᶠJ = Fields.local_geometry_field(Yf).J
+    ᶠΔz = Fields.Δz_field(Yf)
+    ΔA_bot = Fields.level(ᶠJ, half) ./ Fields.level(ᶠΔz, half)
+    return @. ΔA_bot * ᶠΔz / ᶠJ
+end
 
 # The sum of the partition tags of `ᶜY`, plus `dtγ` times that of `ᶜdY`.
 function _energy_source_partition_sum!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
@@ -1685,6 +1696,7 @@ function correct_energy_source_increment!(dY, U, p)
     (; ᶜe_src_mismatch, ᶜe_src_abs_mismatch, ᶠe_src_increment_flux) = p.tagging
     (; ᶠe_src_mismatch_integral, ᶠe_src_abs_mismatch_integral) = p.tagging
     (; e_src_mismatch_total, e_src_abs_mismatch_total) = p.tagging
+    (; ᶠe_src_area_ratio) = p.tagging
     FT = eltype(ᶜe_src_mismatch)
     dtγ = e_src_dtγ[]
     c = _mass_energy(model.offset)
@@ -1708,7 +1720,10 @@ function correct_energy_source_increment!(dY, U, p)
         ᶜe_src_abs_mismatch,
     )
     # Upward positive. It is zero at the bottom face and, having taken out the
-    # column's total, at the top face too.
+    # column's total, at the top face too. The integrals are per unit area of
+    # the bottom face, and the divergence weights each face by its own area.
+    # Under a deep atmosphere the faces grow with height, so the flux is
+    # scaled by the bottom face's area over its own. On a flat grid that is 1.
     @. ᶠe_src_increment_flux = CT3(
         Geometry.WVector(
             -(
@@ -1718,7 +1733,7 @@ function correct_energy_source_increment!(dY, U, p)
                     e_src_mismatch_total / e_src_abs_mismatch_total,
                     FT(0),
                 ) * ᶠe_src_abs_mismatch_integral
-            ) / dtγ,
+            ) / dtγ * ᶠe_src_area_ratio,
         ),
     )
     energy_source_share_norm!(p, U)

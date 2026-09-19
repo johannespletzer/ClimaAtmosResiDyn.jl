@@ -528,10 +528,11 @@ integrals, `increment_left`, `increment_left_gross` and
 correction left and what everything else leaves.
 
 The ledger records what the correction intends. A face whose donor cell has no
-share of the partition moves no tag, and under a deep atmosphere the flux does
-not yet account for the face areas growing with height. In both cases a cell's
-change differs a little from the ledger, and the difference lands in
-`e_src_res`. The column totals are right. On the tag-closure experiments' EDMF
+share of the partition moves no tag, so there a cell's change differs a little
+from the ledger, and the difference lands in `e_src_res`. The column totals are
+right. Under a deep atmosphere the faces grow with height, and the flux is
+scaled by the bottom face's area over each face's own, so each cell takes its
+part of the mismatch exactly. On the tag-closure experiments' EDMF
 column, D4, the residual at 24 h was 267 J/m², against 6.3e5 under `enthalpy`,
 and it was the one-iteration solve's column totals less what the loss rule
 flushes.
