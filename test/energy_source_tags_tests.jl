@@ -544,6 +544,14 @@ column_atmos_model(; kwargs...) =
     end
 
     @testset "The exchange's plume ($FT)" for FT in (Float32, Float64)
+        # The partition's flags are a constant of the tags' types.
+        tags = (
+            CA.EnergySourceTag{:a}(CA.EntireDomain()),
+            CA.EnergySourceTag{:b}(nothing, :surface_flux),
+            CA.EnergySourceTag{:c}(CA.EntireDomain(), :radiation),
+        )
+        @test (@inferred CA._energy_partition_flags(tags)) ===
+              Val((true, false, false))
         # The partition's shares add up to one, and are zero where it holds
         # nothing. A source tag's share is its fraction of the partition's sum.
         partition = Val((true, true, false))

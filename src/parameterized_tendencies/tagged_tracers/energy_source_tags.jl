@@ -1761,7 +1761,7 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
         ᶠu³_diff⁰,
         # Which tags form the partition, as a type, so that a broadcast takes
         # it as one value.
-        partition = Val(map(_is_energy_partition_tag, model.tags)),
+        partition = _energy_partition_flags(model.tags),
     )
     _exchange_energy_source_tags!(Yₜ.c, subdomains, dt, upwinding, model.tags, 1)
     return nothing
@@ -1802,6 +1802,16 @@ function _exchange_energy_source_tags!(
         i + 1,
     )
 end
+
+# Which tags form the partition, as `Val` of a tuple of `Bool`s. It is built from
+# the tags' types, so it is a constant: a `Val` of a value computed at run time
+# would leave every broadcast that reads it to dynamic dispatch.
+@generated _energy_partition_flags(::T) where {T <: Tuple} = :(Val(
+    $(Tuple(
+        tag <: EnergySourceTag{<:Any, <:AbstractTagRegion, Tuple{}} for
+        tag in T.parameters
+    )),
+))
 
 # A linear reconstruction keeps the exchange's sum over the tags zero at every
 # face. The van Leer limiter is not linear, so the exchange uses first-order
