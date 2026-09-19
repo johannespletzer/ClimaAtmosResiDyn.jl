@@ -69,9 +69,15 @@ question 3. And merging #93, then #94.
   - ~~Under a deep atmosphere the correction's face flux did not scale with
     the face areas.~~ Fixed in `04d63916` on #94 (E67): 0.41% of each move
     before, rounding after.
-  - V2's feasibility run, `g2_v2_sphere_test` (job `13504957`): two hours of
-    the production physics on a sphere under the prototype, in Float32, to
-    size the ten-day run.
+  - V2's feasibility run, `g2_v2_sphere_test` (job `13504957`): the
+    production physics on a sphere under the prototype, in Float32. It builds
+    in about 15 minutes, steps at 6.3 s per 20 s step on one process, and
+    peaks at 17 GB. After an hour it closes to 2.3e-6 of the scale, zero-sum,
+    with the ledger's left part at 19% of the gross.
+  - **Submitted on 2026-09-19:** V2, `g2_v2_sphere` (job `13504999`, ten
+    days, 24 ranks on `hpda2_compute`), and its twin `g2_v2_sphere_newton10`
+    (job `13505000`, one day, ten fixed Newton iterations), both from
+    `../ClimaAtmosResiDyn-inc-run3` at `04d63916`.
   - V2's configuration, with the outputs of item 10 and the ledger; the
     Float32 run and its twin under `enthalpy` for the per-tag error; the
     partition and time limit a ten-day EDMF sphere needs on terrabyte.
