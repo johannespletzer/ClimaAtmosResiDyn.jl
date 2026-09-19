@@ -160,12 +160,22 @@ State on 2026-09-19.
         closes to 0.08 J/m².
       + **Criterion 5 is met (E65):** Float32 gives 607 J/m², with `ta` and
         `rhoa` bit for bit the Float32 base's.
-      + **Criterion 4, in progress.** `g1_ref_newton_d4` and its twin used
-        `use_newton_rtol`, whose norm spans the tags, so their atmospheres
-        differ by up to 4 K. Rerun with ten iterations fixed:
-        `g1_ref_newton10_d4` and `g1_inc_newton10_d4` (jobs `13504926`,
-        `13504927`). The reference alone leaves 5.5e5 J/m², so it can
-        resolve per-tag errors only to about 0.5% of `E`.
+      + **Criterion 4 is measured (E66).** Against the converged per-flux
+        reference, on the same atmosphere, the tags differ by 8 to 12% (region,
+        L1) and 68 to 126% (source tags). That is the mixing convention: the
+        reference keeps `sfc` in the lowest cell, the prototype's tags mix it
+        through the boundary layer. The one-iteration solve's own effect, at
+        1 h against the converged prototype, is 0.1% (region) and 1 to 6%
+        (source tags). Proposed threshold, for the owner: L1 ≤ 1% and ≤ 10%,
+        L∞ ≤ 25%. Which convention is right is question 2; V3 would measure
+        it.
+      + **The review of the ledger (agent, 2026-09-19)** found three blocking
+        defects, all fixed in `f7beca97`: the docs' `@ref` targets, a test
+        tolerance, and the `-0.0` path, which could change model fields under
+        `energy_q_tot_upwinding: none` (the mode now refuses it). Also fixed:
+        the ledger in the tracer loops (the positive rule, now in #93 and
+        merged into the branch), and the tests and docs it asked for.
+        Unit tests 630/630. The integration test is running (job `13504941`).
   - **The diagnostic (E61):** with a converged Newton solve, C1c's option 1
     reaches 2.3e5 J/m² at 12 h against 3.2e6 with one iteration, and half the
     base's 4.6e5. So the implicit timing gap was most of E59's drift, as the

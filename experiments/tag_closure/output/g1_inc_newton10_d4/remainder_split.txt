@@ -1,0 +1,28 @@
+g1_inc_newton10_d4: the closure residual split into parts, J/m², signed (gross)
+hour               residual                   left                  other  moved, gross
+   1 +2.422e-03 (2.422e-03) +2.452e-03 (2.452e-03) -2.959e-05 (2.961e-05)     7.758e+05
+     audit: increment_left +2.452e-03, gross 2.452e-03, moved gross 7.758e+05
+   6 +2.119e-03 (2.119e-03) +2.286e-03 (2.286e-03) -1.671e-04 (1.671e-04)     5.824e+06
+     audit: increment_left +2.286e-03, gross 2.286e-03, moved gross 5.824e+06
+  12 +1.335e-03 (1.596e-03) +1.606e-03 (1.867e-03) -2.715e-04 (2.716e-04)     1.443e+07
+     audit: increment_left +1.606e-03, gross 1.867e-03, moved gross 1.443e+07
+  24 +6.693e-04 (1.594e-03) +1.059e-03 (1.982e-03) -3.901e-04 (3.910e-04)     3.279e+07
+     audit: increment_left +1.059e-03, gross 1.982e-03, moved gross 3.279e+07
+
+by layer at 24 h, signed (gross)
+  below 550 m   residual +7.648e-05 (9.597e-04), left +7.701e-05 (9.593e-04), other -5.291e-07 (1.474e-06)
+  550 to 800 m  residual +2.032e-04 (2.445e-04), left +5.757e-04 (6.156e-04), other -3.725e-04 (3.725e-04)
+  above 800 m   residual +3.895e-04 (3.895e-04), left +4.066e-04 (4.066e-04), other -1.708e-05 (1.708e-05)
+
+lowest five levels at 24 h, J/kg
+  z     25 m: residual    +0.000, left    +0.000, other    -0.000, moved -81125.310
+  z     75 m: residual    +0.000, left    +0.000, other    -0.000, moved -49653.895
+  z    125 m: residual    -0.000, left    -0.000, other    -0.000, moved  +6426.274
+  z    175 m: residual    -0.000, left    -0.000, other    +0.000, moved +30294.297
+  z    225 m: residual    -0.000, left    -0.000, other    +0.000, moved   -932.113
+
+the loss rule's flushing, predicted from the hourly records, against `other`, J/m², signed
+   1 below 550 m: other -1.064e-07, predicted -4.463e-14; 550 to 800 m: other -2.872e-05, predicted -5.796e-11; above 800 m: other -7.667e-07, predicted -2.885e-12
+   6 below 550 m: other -8.865e-07, predicted -6.304e-07; 550 to 800 m: other -1.620e-04, predicted -1.397e-04; above 800 m: other -4.225e-06, predicted -3.424e-06
+  12 below 550 m: other -1.170e-06, predicted -8.700e-07; 550 to 800 m: other -2.616e-04, predicted -2.445e-04; above 800 m: other -8.646e-06, predicted -7.834e-06
+  24 below 550 m: other -5.291e-07, predicted -6.121e-07; 550 to 800 m: other -3.725e-04, predicted -3.600e-04; above 800 m: other -1.708e-05, predicted -1.647e-05

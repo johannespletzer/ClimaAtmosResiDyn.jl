@@ -1,0 +1,27 @@
+run: g1_inc_newton10_d4
+machine: terrabyte
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-inc-run2/experiments/tag_closure/configs/g1_inc_newton10_d4.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-inc-run2/experiments/tag_closure/run_tag_closure.jl
+commit: c0bc637f9c7749a6d42e7fc1d355843c2c30cd64
+commit_source: git-files
+commit_dirty: unknown
+branch: detached
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-inc-run2/.buildkite
+started: 2026-09-19T02:00:33+02:00
+finished: 2026-09-19T02:30:20+02:00
+exit_status: 0
+slurm_job_id: 13504927
+slurm_job_name: g1_inc_newton10_d4
+partition: hpda2_test
+nodelist: hpdar03c01s12
+cpus_per_task: 2
+ntasks: 1
+launch: direct
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/g1_inc_newton10_d4/output_0000
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/g1_inc_newton10_d4/output_0000 (left on scratch, not committed)

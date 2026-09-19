@@ -2060,6 +2060,67 @@ residual, with the model bit for bit.** `g1_inc_d4_float32` against
 2026-09-19. The outputs are in `output/g1_inc_d4_float32/` and
 `output/g1_base_d4_float32/`.*
 
+**E66. Per tag, the prototype's error from its one-iteration solve is 0.1%
+for the region tags and 1 to 6% for the source tags. Against a reference that
+shares each flux by its donor, the tags differ by far more, and that
+difference is the mixing convention, not an error.** G1's criterion 4, on D4
+for a day.
+
+The reference is C1c's option 1 with a converged solve: every implicit flux of
+`E` shared among the tags at the tendency level, at the solved state, each by
+its own donor. Its first version stopped Newton at a relative tolerance, whose
+norm spans the tags, so its twin under the prototype took other iteration
+counts and the two atmospheres differed by up to 4 K. With ten iterations,
+fixed, `g1_ref_newton10_d4` and `g1_inc_newton10_d4` have `ta` and `rhoa` bit
+for bit at all 25 hours.
+
+| per tag at 24 h | `rad` | `sfc` | `sub` | `strat` | `tropo` | `new_strat` | `new_tropo` |
+|:-- | --:| --:| --:| --:| --:| --:| --:|
+| against the reference, L1 | 0.68 | 1.26 | 1.17 | 0.12 | 0.08 | 0.97 | 1.03 |
+| against the reference, integral | −3.2% | −2.4% | +18% | +3.4% | −2.5% | +12% | −2.0% |
+| one iteration against converged, at 1 h, L1 | 0.010 | 0.056 | 0.046 | 0.0011 | 0.0014 | 0.034 | 0.047 |
+| one iteration against converged, at 1 h, L∞ | 0.014 | 0.12 | 0.038 | 0.0051 | 0.0059 | 0.023 | 0.12 |
+
+`mp` is zero in every run (E62).
+
+  - **The reference mixes no provenance where the net flux is small.** At 24 h
+    it holds `sfc` at 63,080 J/kg in the lowest cell and almost none above 475
+    m, and `strat` at 0.04 J/kg at 25 m. The prototype's tags still diffuse as
+    tracers: `sfc` is near 12,000 J/kg from the surface to cloud top, and
+    `strat`, the air above the inversion, is 4,700 J/kg at the surface. The
+    boundary layer is well mixed, so the prototype's profiles are the
+    physically expected ones. The reference's are what E60 described for a
+    share of the net diffusive flux. So the first two rows measure the mixing
+    convention (ATTRIBUTION_PATH.md, sections 3.4 and 3.5). The reference
+    also leaves 5.99e5 J/m² of its own residual, so it is not closed either.
+  - **The solve's effect is measured on the prototype itself.** A one-iteration
+    and a converged run cannot share an atmosphere. But at 1 h they still
+    nearly do: `ta` within 0.04 K, and `E` within 2.5e-4 in L1. The tags then
+    differ 4 to 200 times more than `E` (rows 3 and 4). That is the effect of
+    the one-iteration solve on the split among the tags, since the partition's
+    sum follows the parent either way. Later the two atmospheres drift apart,
+    by up to 0.85 K and 5.8e-3 of `E` at 12 h, and the tags with them: 0.5 to 2%
+    for the region tags and up to 28% (`sfc` at 12 h) for the source tags
+    (`output/inc_d4_enthalpy_increment/tags_against_converged.txt`).
+  - **The converged prototype closes to 0.0016 J/m²** at 24 h with ten fixed
+    iterations, and 0.080 with the tolerance (E64). What is left is still the
+    column totals the correction leaves.
+
+**The proposed threshold,** for the owner to confirm. A convention cannot be
+thresholded as an error, so the per-flux reference sets none. The threshold is
+on the solve instead, against the prototype's own converged twin at 1 h, with
+about twice the room the numbers need: L1 at most 1% for the region tags and
+10% for the source tags, and L∞ at most 25%. Today 0.14%, 5.6% and 12%.
+Which mixing convention is right is a question for question 2 of the
+attribution path. The measurement that would settle it is the passive-tracer
+twin V3 (ATTRIBUTION_PATH.md, section 5): a tracer with an updraft copy, set
+to the surface or a region, beside the tags.
+*Jobs `13504926` (reference, `../ClimaAtmosResiDyn-c1c-opt1` at `9aeb5205`)
+and `13504927` (prototype, `c0bc637f`), terrabyte, `hpda2_test`,
+2026-09-19. The tables are `output/g1_inc_newton10_d4/tags_against_reference.txt`
+and `output/inc_d4_enthalpy_increment/tags_against_converged.txt`, from
+`analysis/increment/tag_correctness.py`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
