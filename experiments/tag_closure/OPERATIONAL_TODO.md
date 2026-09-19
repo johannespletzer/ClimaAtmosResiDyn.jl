@@ -56,13 +56,14 @@ for a day. A run takes about 40 minutes, and E59 showed the gap there.
 | 1 | closure ≤ 1e4 J/m², no systematic growth | **met** (E62): 267 J/m² at 24 h; the second 12 h add 75, the first 192 |
 | 2 | the remainder in named parts | **met** (E64): the one-iteration solve's column totals, 313 gross, less the loss rule's flushing, +44; nothing else above 1 J/m² |
 | 3 | `ta`, `rhoa` bit for bit, and a CI test | **met** (E62, E65); the test is `tagging_source_increment` in #94 (every model field against the column without tags) |
-| 4 | per-tag correctness against a converged reference | **measured** (E66); a threshold is proposed for the owner: the one-iteration solve's effect at 1 h, L1 ≤ 1% (region) and ≤ 10% (source tags), L∞ ≤ 25% |
+| 4 | per-tag correctness against a converged reference | **measured** (E66); **waits for the updraft gap to be closed** (the owner, 2026-09-19); the threshold once proposed: the one-iteration solve's effect at 1 h, L1 ≤ 1% (region) and ≤ 10% (source tags), L∞ ≤ 25% |
 | 5 | Float32 within 10× | **met** (E65): 607 J/m², bit for bit against the Float32 base |
 | 6 | reviewed, tested, PR ready | **met**: review fixed (three blocking findings); unit 630/630 and integration 71/71 locally; **draft PR #94**, which contains #93, with CI all green (67 checks, the new group on 1.10 and 1.11 and in the downgrade jobs, and the docs build); #93 green too (35 checks) |
 
-Open for the owner in G1: the threshold of criterion 4, which mixing
-convention the tags follow (question 2; E66 shows the difference), and
-question 3. And merging #93, then #94.
+Decided by the owner on 2026-09-19 (see "Decided"): the hybrid mixing
+convention, `c` kept at 110,495 J/kg, and the correction as built. #93 and
+#94 are merged. Criterion 4's threshold is asked again once the updraft gap
+is closed; the way to close it is the owner's choice.
 
 **On the way to G2:**
   - #93 must merge before any sphere run; the prototype's branch has it.
@@ -311,6 +312,24 @@ On 2026-09-19:
   - **The documents are to be corroborated and condensed** after V2's entries,
     by the plan in [CONDENSE_PLAN.md](CONDENSE_PLAN.md), approved by the owner.
     The originals are archived in the tree; the scope is `experiments/tag_closure/`.
+    On hold by the owner since 13:10, until further notice.
+  - **#93 and #94 are merged** by the owner (#94 at 13:40 UTC). The
+    prototype `enthalpy_increment` is on `main`.
+  - **Criterion 4 of G1 waits for the updraft gap.** The owner: "Accuracy is
+    highly important. Lets ask that question again after the updraft gap is
+    closed." So no threshold is set now, and G1 stays open on criterion 4.
+    Closing the gap needs model code (UPDRAFT_GAP.md, "Ways to close it"),
+    and so the owner's choice of the way.
+  - **Question 2a, the mixing convention: the hybrid, as built.** Tracer-like
+    mixing for turbulent exchange, and the enthalpy flux form for resolved
+    transport and pressure work (TRACER_AND_FLUX.md, recommendation).
+  - **Question 2b, the offset: keep 110,495 J/kg** for every G1 and G2 run,
+    stated with each per-tag result (E71 gives the sensitivity). U8's
+    temperature-floor rule comes before any run whose surface air could fall
+    below about 228 K.
+  - **Question 3, the correction: keep it as built.** It moves only the
+    column-local part, logged in `e_src_inc_moved`; the column totals stay
+    visible in `e_src_res` and the ledger.
 
 
 On 2026-09-11:
