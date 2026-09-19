@@ -204,7 +204,12 @@ tags = [
         δ_total = sum(ᶜδ)
         ᶜabs_δ = abs.(ᶜδ)
         ᶜleft = @. δ_total / $(sum(ᶜabs_δ)) * ᶜabs_δ
-        scale = maximum(abs, parent(ᶜδ))
+        # The correction forms the mismatch from totals of the size of `E`,
+        # so its rounding scales with `E`, not with the increment. The
+        # increment is 1e-3 of `E` here, so these bounds still fail when the
+        # left part lands a level off.
+        scale = maximum(abs, parent(partition_sum(Y₀, model)))
+        @test maximum(abs, parent(ᶜδ)) > 1e-4 * scale
         @test maximum(
             abs,
             parent(dtγ .* dY.c.e_src_inc_left) .- parent(ᶜleft),
