@@ -880,14 +880,16 @@ owner asked for items 1, 2 and 4 to be prepared.
     E74 computes where it would level off (`G*/G`). Both come from quantities
     the audit already reduces. A run would then say "this settles near X", not
     only "the residual is X now".
- 5. **A memory number for every run.** E60's `τ = E/L` says how long a tag
-    remembers, and E71 shows the offset acts through exactly that. It is the
-    most important interpretive number for a reader of the tags, and nothing
-    reports it. It falls out of the same reduction as item 4.
- 6. **One per-process budget across both families.** E23 left 1.37 MJ/m² of a
-    column's energy change unexplained. The process records say what each
-    process did, and the ledger says what the solve left behind. Crossing them
-    is an analysis over outputs that already exist, with no model code.
+ 5. **A memory number for every run.** *Prepared, see below.* E60's `τ = E/L`
+    says how long a tag remembers, and E71 shows the offset acts through
+    exactly that. It is the most important interpretive number for a reader of
+    the tags, and nothing reports it. It falls out of the same reduction as
+    item 4.
+ 6. **One per-process budget across both families.** *Prepared, see below.*
+    E23 left 1.37 MJ/m² of a column's energy change unexplained. The process
+    records say what each process did, and the ledger says what the solve left
+    behind. Crossing them needs no model code, but no committed run pairs the
+    full record list with the ledger, so it needs one short run of its own.
 
 ### Prepared: item 1, the ledger as a solver diagnostic
 
@@ -940,6 +942,59 @@ owner asked for items 1, 2 and 4 to be prepared.
     ran from 0.0105 to 0.0165 a day (E74). The forecast is an order of
     magnitude, not a number.
   - **Cost.** Analysis only for the first step.
+
+### Prepared: item 5, a memory number for every run
+
+  - **What it is.** `τ = E / L`: the partitioned total over the rate at which
+    the loss rule takes from it, in days. It says how long a tag's energy stays
+    before the rule flushes it, and so how far back a reading of the tags
+    reaches. E60 measured it by hand: 4 to 20 days on D4, about zero in the
+    surface layer, and 1 to 2 years above 10 km on C9's sphere, where most of
+    the residual sits. The initial-energy tags lose 8.6% and 12.3% a day on
+    D4, a memory of 8 to 11 days.
+  - **Step 1, from what is on disk.** A script forms `L` per cell from the
+    process records, which log each process's applied increment, as the sum of
+    the negative parts, and divides `E` by it. Output: `τ` per level, the
+    mass-weighted median, and `τ` where the residual sits, which is the number
+    that matters for the closure. `analysis/increment/memory_time.py`, over
+    the runs that already carry records and tags (`c6_column_repair`,
+    `c1c_base_d4_enthalpy`, `c5_sphere_gray`).
+  - **Its own check.** `τ` must scale with `e + c`: doubling the offset should
+    multiply it by about 2.6 on D4 (E60's formula, E71's run). Both runs exist,
+    `g1_inc_d4` and `g1_inc_d4_2c`, so the script can be validated the day it
+    is written.
+  - **Step 2, in the run.** The attribution rule already sums each bracket's
+    loss before sharing it out, so accumulating it per cell costs one field and
+    gives `L` exactly, rather than from the records. Then `τ` joins the audit
+    table beside item 4's forecast, and the guide reads it as "this run
+    remembers about N days".
+  - **Cost.** Step 1 is analysis only. Step 2 is one accumulator field and one
+    audit column.
+
+### Prepared: item 6, one per-process budget across both families
+
+  - **What it closes.** Over an interval, the change of the partitioned total
+    `E` should equal the sum of what each process did, plus what the implicit
+    solve left behind, plus what the repair moved. The process records give the
+    first (E9, E26), the increment ledger the second (E64), and
+    `e_src_fix_<name>` the third. Nothing has added them up. E23's 1.37 MJ/m²
+    of unexplained change on a column is the gap this would name.
+  - **The data gap.** No committed run has both. The runs with the full record
+    list use the `tracer` or `enthalpy` transport, so they have no ledger
+    (`c1c_base_d4_enthalpy`, `c6_column_repair`); the runs with the ledger
+    record only precipitation (`g1_inc_d4`). So it needs one D4 run with
+    `energy_source_tag_transport: enthalpy_increment` and
+    `energy_process_record` listing every process the column has. About 40
+    minutes, after G2.
+  - **What to build.** `analysis/increment/process_budget.py`: read the
+    records, the ledger, the repair's ledger and the closure table, and print
+    the budget per layer and for the column, with the remainder named as such.
+    Each process's term must include `c` times its change of mass, as the
+    offset's rule requires (E71 showed the remainder scales with `c`).
+  - **What it would settle.** Whether the residual on a column is fully
+    accounted for by the processes plus the solve, which is the question E23
+    left open and which sections 6 and 7 of FINDINGS still list.
+  - **Cost.** One short run and one analysis script.
 
 ## Plan
 
