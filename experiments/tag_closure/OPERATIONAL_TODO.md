@@ -326,9 +326,12 @@ On 2026-09-19:
     review's polish.** In order: `g2_v2_sphere_mix`, the ten days with the
     updraft mixing, and its entry; then the three small items of
     `review/agent_reviews/updraft_78e19e23.md` (N1 the exchange's scratch only
-    under prognostic EDMF, N2 the plume on the lower face's velocity, S3 a GPU
-    compile of the exchange). N2 changes the tags a little, so its effect is
-    measured on D4 against the copies, not by another sphere run. Nothing
+    under prognostic EDMF, N2 the plume on the lower face's velocity), and
+    housekeeping: every run's small text outputs kept in the repository, and
+    the README's register saying whose NetCDF is only on scratch. The GPU
+    compile is dropped (the owner, 2026-09-20). N2 changes the tags a little,
+    so its effect is measured on D4 against the copies, not by another sphere
+    run. Nothing
     beyond G2. The condensing stays on hold. Keep token use low: long polls,
     one entry per result, no agents unless asked.
   - **Criterion 4's threshold, set on 2026-09-20** (the owner): two parts, as
