@@ -56,7 +56,7 @@ for a day. A run takes about 40 minutes, and E59 showed the gap there.
 | 1 | closure ≤ 1e4 J/m², no systematic growth | **met** (E62): 267 J/m² at 24 h; the second 12 h add 75, the first 192 |
 | 2 | the remainder in named parts | **met** (E64): the one-iteration solve's column totals, 313 gross, less the loss rule's flushing, +44; nothing else above 1 J/m² |
 | 3 | `ta`, `rhoa` bit for bit, and a CI test | **met** (E62, E65); the test is `tagging_source_increment` in #94 (every model field against the column without tags) |
-| 4 | per-tag correctness against a converged reference | **measured** (E66); **waits for the updraft gap to be closed** (the owner, 2026-09-19); the gap is closed on D4 (E73: the default within 0.7% of the updraft copies after a day), and the threshold is asked again once its PR is up; the threshold once proposed: the one-iteration solve's effect at 1 h, L1 ≤ 1% (region) and ≤ 10% (source tags), L∞ ≤ 25% |
+| 4 | per-tag correctness against a converged reference | **met** (E66, E73), threshold set by the owner on 2026-09-20: (a) the one-iteration solve's effect at 1 h, L1 ≤ 1% (region) and ≤ 10% (source), L∞ ≤ 25%, measured 0.1% and 1 to 6%; (b) the default's mixing against the audit's updraft copies at 24 h, L1 ≤ 2% every tag and L∞ ≤ 5%, measured 0.66% and 2.5% |
 | 5 | Float32 within 10× | **met** (E65): 607 J/m², bit for bit against the Float32 base |
 | 6 | reviewed, tested, PR ready | **met**: review fixed (three blocking findings); unit 630/630 and integration 71/71 locally; **draft PR #94**, which contains #93, with CI all green (67 checks, the new group on 1.10 and 1.11 and in the downgrade jobs, and the docs build); #93 green too (35 checks) |
 
@@ -320,6 +320,18 @@ On 2026-09-19:
     highly important. Lets ask that question again after the updraft gap is
     closed." So no threshold is set now, and G1 stays open on criterion 4.
     Closing the gap needs model code (UPDRAFT_GAP.md, "Ways to close it").
+  - **Criterion 4's threshold, set on 2026-09-20** (the owner): two parts, as
+    in the goal table's row 4. Both parts are met, so **G1 is met**. The
+    updraft gap's PR is #95, whose CI is green (71 checks, 1 skipped). It
+    stays a draft: this token cannot mark a pull request ready for review.
+  - **The exchange keeps the parent's face scheme** (the owner, 2026-09-20),
+    centred where the parent is centred, which matches the audit most
+    closely. The repair therefore acts at the inversion in the first hours,
+    in both modes (E73).
+  - **G2 reports two ten-day runs** (the owner, 2026-09-20): the one now
+    running, `g2_v2_sphere_n2`, for closure and the residual, which the
+    exchange does not change, and then a rerun with the updraft mixing on for
+    the per-tag numbers that match the merged default.
   - **The way to close the updraft gap: one logical** that switches between
     updraft copies of the tags (the audit mode) and a zero-sum exchange (the
     default). The design is in UPDRAFT_GAP.md, "The chosen way". Branch
