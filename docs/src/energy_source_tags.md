@@ -18,6 +18,10 @@ and a different quantity from the [Tagged Energy Tracers](tagged_tracers.md):
 Both accept the same `source` labels. The rule applied to them differs, and that
 is the whole distinction.
 
+For running the tags and reading their output, start with
+[Energy Source Tags: a user guide](energy_source_tags_guide.md). This page is
+the reference behind it.
+
 ## Enabling tags
 
 ```yaml
