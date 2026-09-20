@@ -638,8 +638,11 @@ the same configuration* below says why.
 ## What goes in `output/<run>/`
 
 Reduce before copying. The run's `output_dir` also holds the NetCDF diagnostics
-and the checkpoints; those stay on Levante scratch and `provenance.txt` is what
-points back to them. Nothing else is committed.
+and the checkpoints; those stay on the machine's scratch and `provenance.txt`
+is what points back to them. Nothing else is committed.
+[`output/SCRATCH_INVENTORY.md`](output/SCRATCH_INVENTORY.md) lists which runs
+still had their NetCDF and checkpoints there on 2026-09-20, so a later session
+knows which runs can be reanalysed and which have only their tables left.
 
   - `<family>_tag_closure.csv`, verbatim from `output_dir`. The table the
     closure check wrote, one row per firing.
