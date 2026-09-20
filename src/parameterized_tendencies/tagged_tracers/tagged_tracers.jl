@@ -921,7 +921,12 @@ function rebuild_tags_from_state!(Y, atmos)
         atmos.water_tagging_model,
     )
     source_model = atmos.energy_source_tagging_model
-    isnothing(source_model) || _rebuild_energy_source_tags!(Y, ᶜcoord, source_model)
+    isnothing(source_model) || _rebuild_energy_source_tags!(
+        Y,
+        ᶜcoord,
+        source_model,
+        atmos.turbconv_model,
+    )
     return nothing
 end
 

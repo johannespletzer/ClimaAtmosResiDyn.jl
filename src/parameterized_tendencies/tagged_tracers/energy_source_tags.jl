@@ -779,12 +779,17 @@ end
 # The energy source tags partition `ρe_tot + c·ρ`, so they are rebuilt from
 # that total, and their updraft copies from the tags themselves. See
 # `rebuild_tags_from_state!`.
-function _rebuild_energy_source_tags!(Y, ᶜcoord, model::EnergySourceTaggingModel)
+function _rebuild_energy_source_tags!(
+    Y,
+    ᶜcoord,
+    model::EnergySourceTaggingModel,
+    turbconv_model,
+)
     ᶜparent = _energy_source_parent_field(Y, model.offset)
     _rebuild_tag_fields!(Y.c, ᶜcoord, ᶜparent, model.tags)
     (has_energy_source_updraft_copies(model) && hasproperty(Y.c, :sgsʲs)) ||
         return nothing
-    for j in 1:length(Y.c.sgsʲs)
+    for j in 1:n_mass_flux_subdomains(turbconv_model)
         _rebuild_updraft_copies!(Y.c.sgsʲs.:($j), Y.c, model.tags)
     end
     return nothing

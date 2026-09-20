@@ -578,6 +578,8 @@ ClimaAtmos.passive_tracer_model
 ClimaAtmos.energy_tracer_tuple
 ClimaAtmos.water_tracer_tuple
 ClimaAtmos.DEFAULT_CLOSURE_TOLERANCES
+ClimaAtmos.ENERGY_SOURCE_CLOSURE_TOLERANCES
+ClimaAtmos.energy_source_closure_tolerance
 ClimaAtmos.DEFAULT_CLOSURE_ABORT_LEVELS
 ClimaAtmos.closure_check_from_config
 ClimaAtmos.tag_closure
