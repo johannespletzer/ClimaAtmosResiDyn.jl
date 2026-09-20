@@ -113,12 +113,14 @@ is closed: one logical, updraft copies (audit) against a zero-sum exchange
     changes (E70). So on the sphere the residual is Float32 rounding; the
     explicit processes add nothing measurable.
   - Recorded: V2's ten days and the Float64 twin (E70), the offset doubled on
-    D4 (E71, the remainder ∝ `c`, the source tags 4 to 6%), and the updraft
-    estimate over nine days (E72, the gap as large as the `sfc` tag's own
-    rise). What is left of G2: `g2_v2_sphere_n2` (running, about 15 h), then
-    its entries: closure, the residual against its loss rate, the per-tag
-    error against `g2_v2_sphere_newton10` at 1 h, and the updraft estimate.
-    The condensing of CONDENSE_PLAN.md is on hold.
+    D4 (E71, the remainder ∝ `c`, the source tags 4 to 6%), the updraft
+    estimate over nine days (E72), the updraft gap closed on D4 (E73), and
+    **G2's ten days, `g2_v2_sphere_n2` (E74)**: the model top holds at 218 to
+    220 K, the gross residual reaches 2.0e-4 of the scale and slows, and
+    every tag is within 3.1e-4 of the converged twin at 1 h. What is left of
+    G2: a second ten-day run with the updraft mixing on, for the per-tag
+    numbers that match the merged default (the owner, 2026-09-20). The
+    condensing of CONDENSE_PLAN.md is on hold.
 
 **Out of G1:** the sphere, horizontal transport and hyperdiffusion, runs
 longer than a day, the conventions of question 2 (the reference form as the

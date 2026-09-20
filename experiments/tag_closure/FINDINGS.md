@@ -2368,6 +2368,48 @@ shares were normalised over all tags, is superseded
 comparisons (`tag_correctness.py`, `v3_compare.py`) are in
 `output/v3_upd_default/` and `output/v3_upd_copies/`.*
 
+**E74. G2: the sphere closes over ten days. With two Newton iterations the
+model top holds, and the tags' gross residual reaches 2.0e-4 of the scale,
+still slowing.** `g2_v2_sphere_n2` is V2's configuration with two Newton
+iterations: the production physics on a sphere under the prototype, EDMF with
+the updrafts' vertical diffusion, implicit eddy diffusion, both sponges, a
+DCMIP200 mountain, 1M, Float32, 10 levels to 30 km, dt 20 s, 24 ranks, ten
+days.
+
+| of the scale | 1 d | 3 d | 5 d | 7 d | 10 d |
+|:--|--:|--:|--:|--:|--:|
+| gross residual | 2.77e-5 | 7.95e-5 | 1.24e-4 | 1.57e-4 | 2.01e-4 |
+
+  - **The model top holds.** The top level (27 km) stays at 218 to 220 K over
+    the ten days, with a global minimum of 210.7 K, where V2 with one
+    iteration fell to the 150 K floor within a day and stayed there (E69).
+    This run is what G2 asks for.
+  - **The residual slows.** The first five days add 5.32e19 J, the second
+    3.45e19. The loss rule flushes it at 0.0105 to 0.0165 a day, a time of 60
+    to 95 days, and at day 9 it stands at a sixth of where that rate would
+    level it off (`G*/G` 5.7). About a third of `|R|` sits above 10 km and
+    28 to 36% below 2 km.
+  - **It is Float32 rounding.** The same two hours in Float64 close to 5.7e-15
+    (E70). The ten-day value is what that rounding accumulates to.
+  - **The ledger.** The correction's column totals are 3.21e19 J, 37% of the
+    gross residual, against 16% in V2 with one iteration; their gross is 51%.
+    The correction moved 1.57 times the scale over the ten days, and the
+    repair 6.6% of it.
+  - **Criterion 4's solver part, on the sphere.** Against the converged twin
+    (`g2_v2_sphere_newton10`, ten fixed iterations) at 1 h, every tag is
+    within 3.1e-4 in L1 and 3.5e-4 at its largest point, far inside the
+    threshold of 1% (region) and 10% (source). At 24 h the two atmospheres are
+    0.5 K apart and every tag is within 0.6%.
+  - **Caveat.** This run predates the updraft's mixing of provenance (E73),
+    which is now the default. The exchange sums to zero over the partition, so
+    the closure and the residual above are unchanged by it, but the per-tag
+    fields are not. The owner asked for a second ten-day run with the mixing
+    on for those.
+*Job `13505896` on terrabyte, `hpda2_compute`, 2026-09-19 to 2026-09-20, from
+`../ClimaAtmosResiDyn-inc-run3` at `04d63916`. The outputs, the analysis
+(`v2_sphere.py`) and the per-tag comparison with the twin
+(`tag_correctness_sphere.py`) are in `output/g2_v2_sphere_n2/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
