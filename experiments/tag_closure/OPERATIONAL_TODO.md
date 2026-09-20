@@ -565,7 +565,14 @@ None open. Every decision of this section was made on 2026-09-18; see
 12. **D1, the user guide into the docs,** with D3.
 13. **The GPU, last.** Run the diagnostic on a GPU on Levante, with Float32 and
     T3, and fix what that forces.
-14. **File-based initial conditions start the region tags as NaN.** Found by
+14. ~~**File-based initial conditions start the region tags as NaN.**~~
+    **Fixed on 2026-09-20** in `claude/energy-source-tag-updraft` (`92e9ac26`):
+    `initial_state` calls `rebuild_tags_from_state!` after the setup's
+    overwrite, which sets each tag by the rule that built it and the updraft
+    copies from their tags. Idempotent where nothing overwrote the state, and
+    a restart does not go through it. A unit test covers it. No run from a
+    file has been made with tags on. The description below is what it was.
+14b. **The defect, as found.** Found by
     #89's review on 2026-09-18, and confirmed by reading; not run. `WeatherModel`,
     `AMIPFromERA5` and `MoistFromFile` build the pointwise state from NaN
     placeholders, and `overwrite_initial_state!` (`src/types.jl:3229`) then
@@ -618,8 +625,13 @@ With C1b (B4):
     committed only locally, on `claude/energy-source-tag-species-lists`
     (`68cfe17f`), to open with C1b. Four mutations of the source each fail
     it.
-  - **T5.** The cold column as an integration item, from
-    `analysis/subgrid_check_cold.jl`, covering both sedimentation branches.
+  - ~~**T5.** The cold column as an integration item.~~ **Done on
+    2026-09-20:** `test/energy_source_tags_cold_column.jl` runs the 1-moment
+    cold precipitating column and checks the upward branch on the initial
+    state, where every cell of falling ice carries negative `E`, and that a
+    minute of it leaves every tag finite, non-negative and the partitioned
+    total positive. The 2-moment schemes stay in
+    `analysis/subgrid_check_cold.jl`, since the model refuses to build them.
 
 Before the GPU (B13):
 
@@ -632,7 +644,13 @@ With V2 (B10):
   - **C4.** `c·Δρ` from processes the tags do not bracket: vertical diffusion,
     sponges, hyperdiffusion, EDMF, LES (`energy_source_tags.jl:102-111`).
     Measure on V2, then share them as transport or document the size.
-  - **V6.** Topography.
+  - ~~**V6.** Topography.~~ **Covered on 2026-09-20.** G2's ten days
+    (`g2_v2_sphere_n2`, E74) ran with `topography: "DCMIP200"` and closed to
+    2.0e-4 of the scale, and the unit tests check the increment correction's
+    face-area scaling on deep and shallow spheres with and without a mountain
+    (E67). A dedicated topography experiment is not needed.
+  - **T5's cold column** is now a test,
+    `test/energy_source_tags_cold_column.jl`, in the `tagging_source` group.
 
 With D1 (B12):
 
