@@ -588,6 +588,46 @@ column_atmos_model(; kwargs...) =
         )
     end
 
+    # A setup that takes its state from a file builds the tags from `NaN`
+    # placeholders and then rewrites the state. `rebuild_tags_from_state!`
+    # builds them again from what the file wrote.
+    @testset "Tags rebuilt from an overwritten state" begin
+        FT = Float64
+        atmos = column_atmos_model(;
+            energy_source_tagging_model = CA.EnergySourceTaggingModel(
+                (
+                    CA.EnergySourceTag{:lower}(
+                        CA.TanhAltitudeRegion(FT(500), FT(100), false),
+                    ),
+                    CA.EnergySourceTag{:upper}(
+                        CA.TanhAltitudeRegion(FT(500), FT(100), true),
+                    ),
+                    CA.EnergySourceTag{:sfc}(nothing, :surface_flux),
+                ),
+                50000.0,
+            ),
+        )
+        Y = CA.initial_state(atmos)
+        ᶜz = CA.Fields.coordinate_field(Y.c).z
+        # The state a file would write, and tags left as a placeholder.
+        @. Y.c.ρe_tot = FT(2e5) + FT(10) * ᶜz
+        @. Y.c.ρ = FT(1)
+        for name in (:ρe_src_lower, :ρe_src_upper, :ρe_src_sfc)
+            getproperty(Y.c, name) .= FT(NaN)
+        end
+        CA.rebuild_tags_from_state!(Y, atmos)
+        model = atmos.energy_source_tagging_model
+        ᶜparent = @. Y.c.ρe_tot + FT(50000) * Y.c.ρ
+        ᶜpartition = Y.c.ρe_src_lower .+ Y.c.ρe_src_upper
+        @test all(isfinite, parent(ᶜpartition))
+        @test parent(ᶜpartition) ≈ parent(ᶜparent)
+        @test all(iszero, parent(Y.c.ρe_src_sfc))
+        # The masked share, at a level well inside each region.
+        lower = vec(parent(Y.c.ρe_src_lower)) ./ vec(parent(ᶜparent))
+        @test lower[1] > 0.99
+        @test lower[end] < 0.01
+    end
+
     @testset "The exchange's plume ($FT)" for FT in (Float32, Float64)
         # The partition's flags are a constant of the tags' types.
         tags = (

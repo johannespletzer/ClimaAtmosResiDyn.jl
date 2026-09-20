@@ -776,6 +776,29 @@ end
 
 # The total the donor share divides by, as a field: `Y.c.ρe_tot` itself without
 # an offset, so that path is unchanged, and a lazy sum with one.
+# The energy source tags partition `ρe_tot + c·ρ`, so they are rebuilt from
+# that total, and their updraft copies from the tags themselves. See
+# `rebuild_tags_from_state!`.
+function _rebuild_energy_source_tags!(Y, ᶜcoord, model::EnergySourceTaggingModel)
+    ᶜparent = _energy_source_parent_field(Y, model.offset)
+    _rebuild_tag_fields!(Y.c, ᶜcoord, ᶜparent, model.tags)
+    (has_energy_source_updraft_copies(model) && hasproperty(Y.c, :sgsʲs)) ||
+        return nothing
+    for j in 1:length(Y.c.sgsʲs)
+        _rebuild_updraft_copies!(Y.c.sgsʲs.:($j), Y.c, model.tags)
+    end
+    return nothing
+end
+
+_rebuild_updraft_copies!(ᶜsgsʲ, ᶜY, ::Tuple{}) = nothing
+function _rebuild_updraft_copies!(ᶜsgsʲ, ᶜY, tags::Tuple)
+    tag = first(tags)
+    ᶜcopy = updraft_copy_field(ᶜsgsʲ, tag)
+    ᶜρe_src = tag_field(ᶜY, tag)
+    @. ᶜcopy = ᶜρe_src / ᶜY.ρ
+    return _rebuild_updraft_copies!(ᶜsgsʲ, ᶜY, Base.tail(tags))
+end
+
 _energy_source_parent_field(Y, ::Nothing) = Y.c.ρe_tot
 _energy_source_parent_field(Y, offset) = @. lazy(Y.c.ρe_tot + offset * Y.c.ρ)
 

@@ -3314,6 +3314,10 @@ function initial_state(model::AtmosModel)
         Y,
         model.params.thermodynamics_params,
     )
+    # A setup that takes the state from a file builds the tags from the `NaN`
+    # placeholders it starts with, so they are built again from what the file
+    # wrote. Idempotent where nothing overwrote the state.
+    rebuild_tags_from_state!(Y, model)
     return Y
 end
 

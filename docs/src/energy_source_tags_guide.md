@@ -131,8 +131,8 @@ there, because the two air masses carry different energy per kilogram.
     flip that direction. It is the reference speaking, not the physics.
   - **Untested ground.** Topography with the tags, more than one updraft
     (refused), 2-moment microphysics, and the GPU. A run that takes its initial
-    state from a file starts the region tags as `NaN`, which stops the run; use
-    an analytic initial condition until that is fixed.
+    state from a file now builds the tags from what the file wrote, but no such
+    run has been made with tags on.
   - **Provenance of energy is not provenance of air.** Ask the tags where the
     energy came from. For where the air came from, carry a passive tracer.
 
