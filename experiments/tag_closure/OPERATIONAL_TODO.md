@@ -850,6 +850,97 @@ Found on 2026-09-18:
     C1b).
   - E14, E16's remainder and E24.
 
+## 7. Synergies: what the findings give when combined
+
+Written on 2026-09-20, after reading FINDINGS end to end. Each item reuses
+machinery that already exists; none is a new experiment from scratch. The
+owner asked for items 1, 2 and 4 to be prepared.
+
+ 1. **The increment ledger as a diagnostic of the parent's own solver.**
+    *Prepared, see below.* `e_src_inc_left` is the part of the parent's
+    implicit increment that changes a column's total and that no tendency
+    accounts for (E64). E69 then found that one Newton iteration destroys V2's
+    model top within a day, and E74 that two iterations hold it. So the ledger
+    already measures the solver's non-conservation, and would have flagged
+    that collapse in the first hour. Nothing uses it that way. This is the one
+    item here that could be offered upstream.
+ 2. **A two-hour Float64 twin as a standard recipe.** *Prepared, see below.*
+    E70 split the sphere's residual into rounding and structure with two hours
+    in Float64; E45, E55 and E65 did the same by hand elsewhere. Together they
+    are a method, not four measurements. It costs one short run and answers
+    the first question anyone asks of a residual.
+ 3. **The updraft exchange belongs to the water tags too.** The energy tags now
+    mix provenance through the updrafts (E73). The water tags have the same
+    gap under EDMF and it has never been examined. The plume and the exchange
+    are family-agnostic in shape, so most of the work is wiring. It is the
+    largest scientific gain here and the largest piece of work, and it is
+    beyond G2.
+ 4. **The closure check could forecast, not only report.** *Prepared, see
+    below.* E60 gives the rate at which the loss rule flushes the residual, and
+    E74 computes where it would level off (`G*/G`). Both come from quantities
+    the audit already reduces. A run would then say "this settles near X", not
+    only "the residual is X now".
+ 5. **A memory number for every run.** E60's `τ = E/L` says how long a tag
+    remembers, and E71 shows the offset acts through exactly that. It is the
+    most important interpretive number for a reader of the tags, and nothing
+    reports it. It falls out of the same reduction as item 4.
+ 6. **One per-process budget across both families.** E23 left 1.37 MJ/m² of a
+    column's energy change unexplained. The process records say what each
+    process did, and the ledger says what the solve left behind. Crossing them
+    is an analysis over outputs that already exist, with no model code.
+
+### Prepared: item 1, the ledger as a solver diagnostic
+
+  - **What to build.** A probe configuration and a warning. The probe is the
+    cheapest tag set that makes the ledger meaningful: two region tags that
+    partition the domain, no source tags, `energy_source_tag_transport:
+    enthalpy_increment`. The warning fires when `increment_left`, over the
+    partitioned total, passes a level, or when it grows over a run.
+  - **Where.** The audit already carries `increment_left` and
+    `increment_left_gross` (`energy_source_tags.jl`,
+    `_energy_source_ledger_audit`). The check would sit beside the closure
+    check's warning, in `get_callbacks.jl`, with its own key.
+  - **Calibration.** D4 with one iteration gives 313 J/m² gross in a day and
+    0.094 with ten iterations (E64); V2's sphere gives 37% of the residual
+    with two iterations (E74). So the level is a fraction of the partitioned
+    total, and the growth matters more than the size.
+  - **Cost.** Small: no new state, one reduction per check.
+  - **Beyond this repo.** Upstream has no such monitor. Offering it would need
+    the probe to be described in the tags' own terms, since the ledger only
+    exists with the tags on.
+
+### Prepared: item 2, the Float64 twin recipe
+
+  - **What to build.** A documented recipe and a helper. Given a run's config,
+    the helper writes the twin: `FLOAT_TYPE: Float64`, `t_end` two hours, one
+    process, everything else the same. The comparison reads both closure
+    tables and reports the residual in each, and their ratio.
+  - **Where.** `experiments/tag_closure/analysis/increment/float64_twin.py`
+    for the comparison, and a section in
+    `docs/src/energy_source_tags_guide.md` under "Is the answer
+    trustworthy?".
+  - **What it decides.** Whether a residual is rounding or structure. On the
+    sphere the twin closed to 5.7e-15 against 3.85e-6 in Float32 (E70), so the
+    answer there was rounding; on D4 the Float32 residual is 2.3 times the
+    Float64 one (E65), so there it is structure.
+  - **Cost.** An hour of wall time per configuration, and no model code.
+
+### Prepared: item 4, the closure check as a forecast
+
+  - **What to build.** Two more columns in the audit table: the flush rate the
+    loss rule gives, and the level the residual would settle at, `G*`, with
+    the ratio to the present residual.
+  - **How.** `analysis/increment/v2_sphere.py` already computes both from the
+    closure and audit tables. The first step is to lift that computation into
+    a helper the repository owns, so the experiment scripts and the docs share
+    it. The second, if it proves stable, is to compute the flush rate in the
+    run itself from the tags' own losses, which the attribution rule already
+    sums, and write it to the audit table.
+  - **What it needs to be honest about.** The rate is not constant: on V2 it
+    ran from 0.0105 to 0.0165 a day (E74). The forecast is an order of
+    magnitude, not a number.
+  - **Cost.** Analysis only for the first step.
+
 ## Plan
 
 ### A. Waiting for the owner
