@@ -77,7 +77,8 @@ out of `infrastructure`, which still runs the ledger's state-free unit tests.
 The `tagging_*` groups are one file each: `tagging_energy` runs
 `test/tagged_tracers_integration.jl`, `tagging_water` runs
 `test/tagged_water_integration.jl`, `tagging_source` runs
-`test/energy_source_tags_integration.jl`, `tagging_record` runs
+`test/energy_source_tags_integration.jl` and
+`test/energy_source_tags_cold_column.jl`, `tagging_record` runs
 `test/process_record_integration.jl`, `tagging_source_float32` runs
 `test/energy_source_tags_float32_integration.jl`, `tagging_source_edmf`
 runs `test/energy_source_tags_edmf_integration.jl`,

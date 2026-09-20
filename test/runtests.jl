@@ -178,6 +178,9 @@ end
 
 if TEST_GROUP in ("tagging_source", "all")
     @safetestset "Energy source tags integration" begin @time include("energy_source_tags_integration.jl") end
+    # The cold precipitating column is the only state that reaches
+    # sedimentation's upward branch, where falling ice carries negative energy.
+    @safetestset "Energy source tags on a cold column" begin @time include("energy_source_tags_cold_column.jl") end
 end
 
 if TEST_GROUP in ("tagging_record", "all")
