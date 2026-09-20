@@ -844,6 +844,7 @@ end
                     "source" => "none",
                 ),
             ],
+            CA.TracerEnergySourceTransport(),
             FT,
         ),
     )

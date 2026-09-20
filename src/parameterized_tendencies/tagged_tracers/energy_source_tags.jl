@@ -1429,7 +1429,7 @@ const ᶠtop_bias_zero = Operators.TopBiasedC2F(top = Operators.SetValue(0))
 
 # The face below each cell. The lowest cell's is the surface face, so this
 # needs no boundary value.
-const ᶜleft_bias = Operators.LeftBiasedF2C()
+const ᶜbottom_bias = Operators.BottomBiasedF2C()
 
 # Whether the flow through a face points up. `u³` is contravariant, and its one
 # component has the sign of the vertical velocity. A `WVector` flux, as in
@@ -1796,7 +1796,7 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # The model advects an updraft tracer with the velocity at the face below
     # each cell, so the plume marches with that one.
     ᶠlg = Fields.local_geometry_field(Y.f)
-    ᶜwʲ = @. lazy(ᶜleft_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
+    ᶜwʲ = @. lazy(ᶜbottom_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
     share_differences = ShareDifferences(_energy_partition_flags(model.tags))
     # The grid mean's specific tag values, negative ones as zero. They are
     # stored as one tuple per cell, so the tag fields are read once, and each
