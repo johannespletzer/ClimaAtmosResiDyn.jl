@@ -322,6 +322,15 @@ On 2026-09-19:
     highly important. Lets ask that question again after the updraft gap is
     closed." So no threshold is set now, and G1 stays open on criterion 4.
     Closing the gap needs model code (UPDRAFT_GAP.md, "Ways to close it").
+  - **The short-term goal (the owner, 2026-09-20): finish G2, then the
+    review's polish.** In order: `g2_v2_sphere_mix`, the ten days with the
+    updraft mixing, and its entry; then the three small items of
+    `review/agent_reviews/updraft_78e19e23.md` (N1 the exchange's scratch only
+    under prognostic EDMF, N2 the plume on the lower face's velocity, S3 a GPU
+    compile of the exchange). N2 changes the tags a little, so its effect is
+    measured on D4 against the copies, not by another sphere run. Nothing
+    beyond G2. The condensing stays on hold. Keep token use low: long polls,
+    one entry per result, no agents unless asked.
   - **Criterion 4's threshold, set on 2026-09-20** (the owner): two parts, as
     in the goal table's row 4. Both parts are met, so **G1 is met**. The
     updraft gap's PR is #95, whose CI is green (71 checks, 1 skipped). It
