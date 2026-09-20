@@ -369,7 +369,7 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
     )...,
     (
         isnothing(atmos.energy_source_tagging_model) ? (;) :
-        energy_source_scratch(Y, atmos.energy_source_tagging_model)
+        energy_source_scratch(Y, atmos.energy_source_tagging_model, atmos)
     )...,
     process_record_scratch(Y, atmos)...,
 )

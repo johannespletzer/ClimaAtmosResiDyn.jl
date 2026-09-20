@@ -145,7 +145,8 @@ untouched. Where a subdomain's partition holds nothing, the tags exchange
 nothing there. So the exchange needs region tags without sources that
 partition the domain, and it is refused at initialization without them, under
 every transport, unless the tags have updraft copies. The updraft's shares come from a steady entraining plume, marched up
-each column with the model's own entrainment rate and updraft velocity. It is
+each column with the model's own entrainment rate and the updraft's velocity
+at the face below each cell. It is
 exact when the updraft adjusts faster than the shares change. See
 [`ClimaAtmos.sgs_exchange_of_energy_source_tags!`](@ref).
 

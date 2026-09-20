@@ -415,41 +415,53 @@ _energy_source_fix_fields(ᶜρ, tags::Tuple) = merge(
 )
 
 """
-    energy_source_scratch(Y, model)
+    energy_source_scratch(Y, model, atmos)
 
 Scratch fields of the energy source tags, merged into `p.scratch`: the
 bracket's snapshot of `Yₜ.c.ρe_tot`, the partition-share denominator that
 sedimentation divides by, the two face fluxes of `E` that the tags share under
-`PrognosticEDMFX`, the grid mean's, the updraft's and the environment's tag
-values for the exchange at the mass flux (`sgs_exchange_of_energy_source_tags!`),
-and with an offset also a snapshot of
-`Yₜ.c.ρ` and a field
-the closure check fills with the offset total. They live in `p.scratch`
-because the implicit tendency, where sedimentation runs, may be evaluated with
+`PrognosticEDMFX`, and with an offset also a snapshot of `Yₜ.c.ρ` and a field
+the closure check fills with the offset total. Where the exchange at the mass
+flux runs, three more hold one value per tag in each cell: the grid mean's tag
+values, the updraft's from the plume, and the environment's share differences
+(`sgs_exchange_of_energy_source_tags!`). They live in `p.scratch` because the
+implicit tendency, where sedimentation runs, may be evaluated with
 `ForwardDiff.Dual` numbers, and `p.scratch` is converted for that.
 """
-energy_source_scratch(Y, model::EnergySourceTaggingModel) = merge(
+energy_source_scratch(Y, model::EnergySourceTaggingModel, atmos) = merge(
     energy_source_cell_scratch(Y.c.ρ, model.offset),
+    _energy_source_exchange_scratch(Y, model, atmos.turbconv_model, atmos),
     (;
         ᶠe_src_sgs_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
-        ᶜe_src_mean = Fields.Field(
-            NTuple{length(model.tags), eltype(Y.c.ρ)},
-            axes(Y.c),
-        ),
-        ᶜe_src_plume = Fields.Field(
-            NTuple{length(model.tags), eltype(Y.c.ρ)},
-            axes(Y.c),
-        ),
-        ᶜe_src_environment = Fields.Field(
-            NTuple{length(model.tags), eltype(Y.c.ρ)},
-            axes(Y.c),
-        ),
         ᶠe_src_sediment_flux = Fields.Field(
             Geometry.WVector{eltype(Y.c.ρ)},
             axes(Y.f),
         ),
     ),
 )
+
+# One tuple of tag values per cell, three times, for the exchange at the mass
+# flux. Nothing without it: no prognostic EDMF, no sub-grid mass flux, or
+# updraft copies, whose own tracer flux moves the tags instead.
+_energy_source_exchange_scratch(Y, model, turbconv_model, atmos) = (;)
+function _energy_source_exchange_scratch(
+    Y,
+    model,
+    ::PrognosticEDMFX,
+    atmos,
+)
+    (
+        atmos.edmfx_model.sgs_mass_flux &&
+        !has_energy_source_updraft_copies(model)
+    ) || return (;)
+    tag_values() =
+        Fields.Field(NTuple{length(model.tags), eltype(Y.c.ρ)}, axes(Y.c))
+    return (;
+        ᶜe_src_mean = tag_values(),
+        ᶜe_src_plume = tag_values(),
+        ᶜe_src_environment = tag_values(),
+    )
+end
 # The cell-center scratch alone: the bracket's snapshots, the share
 # denominator and the offset total. It needs no face space.
 energy_source_cell_scratch(ᶜρ, ::Nothing) =
@@ -1415,6 +1427,10 @@ energy_source_tag_moves_as_enthalpy(p, name) =
 # where there is no cell above. The counterpart of `ᶠbottom_bias_zero`.
 const ᶠtop_bias_zero = Operators.TopBiasedC2F(top = Operators.SetValue(0))
 
+# The face below each cell. The lowest cell's is the surface face, so this
+# needs no boundary value.
+const ᶜleft_bias = Operators.LeftBiasedF2C()
+
 # Whether the flow through a face points up. `u³` is contravariant, and its one
 # component has the sign of the vertical velocity. A `WVector` flux, as in
 # sedimentation, is read the same way.
@@ -1718,7 +1734,8 @@ Leer reconstruction is not linear, so under it `X` is reconstructed first-order
 upwind, which keeps that sum zero.
 
 The updraft's shares come from a steady entraining plume, marched up each column
-with the model's own entrainment rate `ε + ε_turb` and updraft velocity `wʲ`. In
+with the model's own entrainment rate `ε + ε_turb` and the updraft's velocity
+`wʲ` at the face below each cell, as the model advects an updraft tracer. In
 the specific tag values `εʲ`, which mix by mass,
 
     εʲ(k) = (εʲ(k - 1) + a ε̄(k)) / (1 + a),    a = (ε + ε_turb) Δz / wʲ · ρ / ρa⁰,
@@ -1776,7 +1793,10 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
             get_physical_w(ᶜuʲs.:(1), ᶜlg),
         ) + ᶜturb_entrʲs.:(1),
     )
-    ᶜwʲ = @. lazy(get_physical_w(ᶜuʲs.:(1), ᶜlg))
+    # The model advects an updraft tracer with the velocity at the face below
+    # each cell, so the plume marches with that one.
+    ᶠlg = Fields.local_geometry_field(Y.f)
+    ᶜwʲ = @. lazy(ᶜleft_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
     share_differences = ShareDifferences(_energy_partition_flags(model.tags))
     # The grid mean's specific tag values, negative ones as zero. They are
     # stored as one tuple per cell, so the tag fields are read once, and each
