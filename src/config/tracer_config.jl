@@ -806,14 +806,55 @@ These are starting points, not derived numbers. Read the first run's closure
 table and set a tolerance that sits above the level your configuration settles
 at, so that the warning means something changed.
 
-The energy source tags have no default tolerance, so their check never warns
-about the residual.
-It is on by default with the tags, and a fixed level would warn in every run:
-their residual depends on the transport and the configuration, and no tolerance
-has been calibrated for either yet. Set `tolerance` in the block to warn.
+The energy source tags take their default from
+[`ENERGY_SOURCE_CLOSURE_TOLERANCES`](@ref) instead, one level per transport,
+because their residual depends on how the tags move. The entry here is
+`nothing` so that nothing reads a single level for them.
 """
 const DEFAULT_CLOSURE_TOLERANCES =
     (; water = 1.0e-10, energy = 1.0e-6, energy_source = nothing)
+
+"""
+    ENERGY_SOURCE_CLOSURE_TOLERANCES
+
+Default `tolerance` of the energy source tags' closure check, one per
+`energy_source_tag_transport`. The check compares them against
+`gross_relative`, the partition's residual over the total it partitions.
+
+They are runaway guards, not fine thresholds. Each sits about an order of
+magnitude above the largest value measured in a healthy run of that transport,
+over the 59 runs of the tag-closure experiments:
+
+| transport            | typical | largest measured                        | default |
+|:-------------------- | -------:| ---------------------------------------:| -------:|
+| `tracer`             | 6e-3    | 1.4e-1                                  | 1.0     |
+| `enthalpy`           | 5e-3    | 5.9e-2                                  | 0.1     |
+| `enthalpy_increment` | 3e-6    | 2.0e-4 (ten days, Float32, on a sphere) | 0.01    |
+
+The residual grows with the length of a run, so a level that suits a day is too
+tight for a season. These warn only when the tags hold energy that is far from
+what the parent has, which is what a broken run looks like. Read your own first
+run's closure table and set `tolerance` in the block to something tighter that
+means "this configuration changed".
+
+The normalization's zero is a convention, so a level tuned under one energy
+reference means something else under another.
+"""
+const ENERGY_SOURCE_CLOSURE_TOLERANCES =
+    (; tracer = 1.0, enthalpy = 0.1, enthalpy_increment = 0.01)
+
+"""
+    energy_source_closure_tolerance(transport)
+
+The default closure tolerance for `transport`, from
+[`ENERGY_SOURCE_CLOSURE_TOLERANCES`](@ref).
+"""
+energy_source_closure_tolerance(::TracerEnergySourceTransport) =
+    ENERGY_SOURCE_CLOSURE_TOLERANCES.tracer
+energy_source_closure_tolerance(::EnthalpyEnergySourceTransport) =
+    ENERGY_SOURCE_CLOSURE_TOLERANCES.enthalpy
+energy_source_closure_tolerance(::EnthalpyIncrementEnergySourceTransport) =
+    ENERGY_SOURCE_CLOSURE_TOLERANCES.enthalpy_increment
 
 """
     DEFAULT_CLOSURE_ABORT_LEVELS
@@ -956,6 +997,7 @@ one is on by default whenever the tags include a pure region tag, a tag with a
 function energy_source_closure_check_from_config(
     value,
     entries,
+    transport,
     ::Type{FT},
 ) where {FT}
     value === false && return nothing
@@ -967,7 +1009,7 @@ function energy_source_closure_check_from_config(
         value,
         "`energy_source_closure_check`",
         FT;
-        default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy_source,
+        default_tolerance = energy_source_closure_tolerance(transport),
         default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy_source,
         default_spin_up = "1hours",
     )
@@ -1028,6 +1070,9 @@ function closure_checks_from_config(config::AtmosConfig)
         energy_source = energy_source_closure_check_from_config(
             pa["energy_source_closure_check"],
             pa["energy_source_tags"],
+            energy_source_transport_from_config(
+                get(pa, "energy_source_tag_transport", "tracer"),
+            ),
             FT,
         ),
         energy = closure_check_from_config(

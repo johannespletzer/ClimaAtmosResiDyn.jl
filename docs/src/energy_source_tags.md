@@ -256,9 +256,13 @@ Reduces `e_src_res` to a pair of numbers on its own cadence and appends them to
 `energy_closure_check`, see [Configuring Tracers](tracer_configuration.md), with
 two differences:
 
-  - `tolerance` has no default, so the check warns only when one is set. No
-    level has been calibrated for this family yet, and a fixed default would
-    warn in every run.
+  - `tolerance` defaults to the level of the transport in use: 1.0 under
+    `tracer`, 0.1 under `enthalpy` and 0.01 under `enthalpy_increment`. These
+    are runaway guards, about an order of magnitude above the largest value
+    measured in a healthy run of that transport, so they warn when the tags
+    hold energy far from the parent's. Set `tolerance` yourself for a level
+    that means "this configuration changed", and `~` to warn about nothing.
+    See `ENERGY_SOURCE_CLOSURE_TOLERANCES`.
   - `spin_up`, `"1hours"` by default and `~` for none, takes the residual once at
     that time. Each row then also carries `residual_at_spin_up`,
     `residual_since_spin_up` and `relative_since_spin_up`, `NaN` before the

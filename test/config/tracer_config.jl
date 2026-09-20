@@ -788,23 +788,51 @@ end
     default_check = CA.energy_source_closure_check_from_config(
         nothing,
         partition_entries,
+        CA.TracerEnergySourceTransport(),
         FT,
     )
     @test default_check.period == "1days"
-    @test isnothing(default_check.tolerance)
+    # The default tolerance follows the transport: a runaway guard, calibrated
+    # from the tag-closure runs.
+    @test default_check.tolerance == FT(CA.ENERGY_SOURCE_CLOSURE_TOLERANCES.tracer)
+    @test CA.energy_source_closure_check_from_config(
+        nothing,
+        partition_entries,
+        CA.EnthalpyIncrementEnergySourceTransport(),
+        FT,
+    ).tolerance == FT(CA.ENERGY_SOURCE_CLOSURE_TOLERANCES.enthalpy_increment)
+    @test CA.energy_source_closure_check_from_config(
+        Dict{String, Any}("tolerance" => 1.0e-3),
+        partition_entries,
+        CA.TracerEnergySourceTransport(),
+        FT,
+    ).tolerance == FT(1.0e-3)
     @test default_check.spin_up == "1hours"
     @test !default_check.audit
     @test isnothing(
-        CA.energy_source_closure_check_from_config(false, partition_entries, FT),
+        CA.energy_source_closure_check_from_config(
+            false,
+            partition_entries,
+            CA.TracerEnergySourceTransport(),
+            FT,
+        ),
     )
     @test isnothing(
         CA.energy_source_closure_check_from_config(
             nothing,
             [Dict{String, Any}("name" => "rad", "source" => "radiation")],
+            CA.TracerEnergySourceTransport(),
             FT,
         ),
     )
-    @test isnothing(CA.energy_source_closure_check_from_config(nothing, nothing, FT))
+    @test isnothing(
+        CA.energy_source_closure_check_from_config(
+            nothing,
+            nothing,
+            CA.TracerEnergySourceTransport(),
+            FT,
+        ),
+    )
     # `source: none` still makes a pure region tag.
     @test !isnothing(
         CA.energy_source_closure_check_from_config(

@@ -42,29 +42,34 @@ the partition freely. The entry schema and the named regions are in
 
 ## What you get
 
-| Where | What |
-|:--|:--|
-| `e_src_<name>` | the tag's energy per unit mass, J kg⁻¹ |
-| `e_src_res` | the partition's closure residual, J kg⁻¹ |
-| `e_src_fix_<name>` | what the repair moved into or out of the tag, cumulative in the run segment |
-| `energy_source_tag_closure.csv` | one row per check: the residual, gross and relative |
-| `energy_source_tag_audit.csv` | with `audit: true`: untagged, overclaimed, the repair's total, and the correction's ledger |
+| Where                           | What                                                                                       |
+|:------------------------------- |:------------------------------------------------------------------------------------------ |
+| `e_src_<name>`                  | the tag's energy per unit mass, J kg⁻¹                                                     |
+| `e_src_res`                     | the partition's closure residual, J kg⁻¹                                                   |
+| `e_src_fix_<name>`              | what the repair moved into or out of the tag, cumulative in the run segment                |
+| `energy_source_tag_closure.csv` | one row per check: the residual, gross and relative                                        |
+| `energy_source_tag_audit.csv`   | with `audit: true`: untagged, overclaimed, the repair's total, and the correction's ledger |
 
 Add the tags to a `diagnostics` block the same way as any other short name.
 
 ## The choices, and what to set them to
 
-| Key | Default | Set it to |
-|:--|:--|:--|
-| `energy_source_tag_offset` | none, required | 110495.0 unless you have a reason. It makes the partitioned total positive, which the donor rule needs. It is a convention, and the tags depend on it |
-| `energy_source_tag_transport` | `tracer` | `enthalpy_increment` under EDMF or implicit diffusion. `tracer` only when you want the tags to ride the plain tracer path |
-| `energy_source_tag_repair` | `true` | leave on, unless you want to see what the attribution rule alone produces |
-| `energy_source_tag_updraft_copy` | `false` | leave off. `true` is the audit: a copy of each tag in the updraft, exact but about twice the build time |
+| Key                              | Default        | Set it to                                                                                                                                             |
+|:-------------------------------- |:-------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `energy_source_tag_offset`       | none, required | 110495.0 unless you have a reason. It makes the partitioned total positive, which the donor rule needs. It is a convention, and the tags depend on it |
+| `energy_source_tag_transport`    | `tracer`       | `enthalpy_increment` under EDMF or implicit diffusion. `tracer` only when you want the tags to ride the plain tracer path                             |
+| `energy_source_tag_repair`       | `true`         | leave on, unless you want to see what the attribution rule alone produces                                                                             |
+| `energy_source_tag_updraft_copy` | `false`        | leave off. `true` is the audit: a copy of each tag in the updraft, exact but about twice the build time                                               |
 
 Under `prognostic_edmfx` the tags need `updraft_number: 1`, and the model
 refuses more.
 
 ## Reading the result
+
+The check warns above a default level that follows the transport, 1.0 under
+`tracer`, 0.1 under `enthalpy` and 0.01 under `enthalpy_increment`. Those are
+guards against a runaway, not a judgement on a run. Set `tolerance` in the
+block once you know where your own configuration settles.
 
 **Start with the closure table.** `gross_relative` is the partition's residual
 over the total it partitions. On the tested configurations it runs from about
@@ -85,18 +90,18 @@ there, because the two air masses carry different energy per kilogram.
 
 ## Is the answer trustworthy? A checklist
 
-1. `nonpositive_fraction` in the closure table is zero. Where the partitioned
-   total is not positive, the shares mean nothing, and the offset is what fixes
-   it.
-2. `gross_relative` is small for your purpose and slowing.
-3. `repair_moved` is small against the tags you are reading.
-4. Under `enthalpy_increment`, `increment_left` accounts for most of the
-   residual. What it does not account for is what no share follows yet.
-5. You know your `c`, and you quote it with the result. Doubling it moved a
-   column's source tags by 4 to 6% in a day.
-6. If the run has convection, you know which mixing convention you used: the
-   default exchange, or the audit's updraft copies. On a column they agree to
-   better than 1% after a day.
+ 1. `nonpositive_fraction` in the closure table is zero. Where the partitioned
+    total is not positive, the shares mean nothing, and the offset is what fixes
+    it.
+ 2. `gross_relative` is small for your purpose and slowing.
+ 3. `repair_moved` is small against the tags you are reading.
+ 4. Under `enthalpy_increment`, `increment_left` accounts for most of the
+    residual. What it does not account for is what no share follows yet.
+ 5. You know your `c`, and you quote it with the result. Doubling it moved a
+    column's source tags by 4 to 6% in a day.
+ 6. If the run has convection, you know which mixing convention you used: the
+    default exchange, or the audit's updraft copies. On a column they agree to
+    better than 1% after a day.
 
 ## Caveats
 
