@@ -2356,9 +2356,14 @@ both, `ta` and `rhoa` are `g1_inc_d4`'s bit for bit.
   - Cost: the copies add a field per tag to the updraft and double the time
     to build the tendency on the EDMF column (789 s against 402 s). The
     default adds no state.
-*Rerun at the branch head after the review's fixes (`38278c2d`, job
-`13536456`): `ta` bit for bit and every tag within 2e-14, so the fixes changed
-nothing but rounding.*
+*Rerun twice at the branch head. After the review's fixes (`38278c2d`, job
+`13536456`): `ta` bit for bit and every tag within 2e-14, so those fixes
+changed nothing but rounding. After the plume was moved to the velocity at the
+face below each cell (`846ef55d`, job `13538433`): `ta` and `rhoa` still bit
+for bit, the closure 267.047 J/m² against 267.068, and the agreement with the
+copies a little better at every hour, `sfc` 15.4% against 15.8% at 1 h and
+0.64% against 0.66% at 24 h. The tables are in
+`output/v3_upd_default/head_846ef55d/`. So criterion 4's numbers stand.*
 *Jobs `13528772` (default, at `e010f780`) and `13523326` (copies, at
 `3ec098f1`, which differs only in the exchange the copies switch off), on
 terrabyte, `hpda2_test`, 2026-09-19, from `../ClimaAtmosResiDyn-upd-run`, with
