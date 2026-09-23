@@ -1,0 +1,34 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/d4_column_edmf/output_0001
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/d4_column_edmf_enthalpy/output_0001
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 1500.000 m (YAML z_max 1500.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  ta         bitwise identical (750 elements)
+  rhoa       bitwise identical (750 elements)
+
+tag        hour    ∫ref J/m²        Δ∫/∫        L1        L∞  max|Δe| J/kg
+mp            1   0.0000e+00           ref zero (run zero) 0.0000e+00
+mp           24   0.0000e+00           ref zero (run zero) 0.0000e+00
+
+new_strat     1   1.2604e+04   +6.06e-06  1.74e-03  1.22e-03  1.1197e-01
+new_strat    24   8.2327e+05   +9.53e-04  2.43e-02  3.50e-02  1.0006e+02
+
+new_tropo     1   4.9490e+05   -1.64e-08  2.79e-04  2.79e-04  4.2221e-01
+new_tropo    24   1.2259e+07   -6.16e-04  3.39e-03  7.95e-03  1.1943e+02
+
+rad           1   7.8364e+04   -7.27e-07  1.65e-03  1.66e-03  4.5089e-01
+rad          24   1.6425e+06   -1.42e-03  7.16e-03  1.52e-02  3.8268e+01
+
+sfc           1   4.0708e+05   +3.44e-09  1.02e-04  9.80e-05  1.4615e-01
+sfc          24   9.6533e+06   -5.15e-04  3.69e-03  6.34e-03  8.2649e+01
+
+strat         1   5.2421e+07   +3.11e-05  1.94e-03  8.59e-03  5.6551e+02
+strat        24   4.8891e+07   +1.32e-03  1.22e-02  2.28e-02  1.4504e+03
+
+sub           1   2.2064e+04   +5.71e-06  1.35e-03  8.45e-04  1.3409e-01
+sub          24   1.7865e+06   +2.56e-04  1.76e-02  2.90e-02  1.4818e+02
+
+tropo         1   6.0638e+07   -3.98e-06  1.21e-03  4.09e-03  2.8190e+02
+tropo        24   6.5260e+07   -1.47e-03  8.67e-03  2.52e-02  1.7578e+03
+

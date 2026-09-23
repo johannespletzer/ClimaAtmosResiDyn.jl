@@ -482,7 +482,7 @@ set. None submits jobs, pushes or merges. Reports go to
    (1e-8) is designed to catch it.
  - **Cost.** Rain and snow tags triple the fields per tag, and copies triple
    them again. At 32 tags the copies may not build within `hpda2_test`
-   (E73: eight energy copies took the build from 402 to 789 s). They are the
+   (E73 with its erratum: eight energy copies took the EDMF column's build from 600 s to 3504 s in separate cold jobs, about 5.8×; about 2× when built after the default in one process). They are the
    audit, not the default.
  - **Composition assumptions:**
    - cloud condensate carries the non-precipitating composition of its

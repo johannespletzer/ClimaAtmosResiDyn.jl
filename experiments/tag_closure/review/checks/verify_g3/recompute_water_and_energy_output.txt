@@ -1,0 +1,43 @@
+=== W1: van Leer flat, first_order and none converge, dt10 ratio ===
+  vanleer slope     : -0.011   (FINDINGS: -0.011)
+  first_order slope : 0.255   (FINDINGS: +0.255)
+  none slope        : 0.464   (FINDINGS: +0.464)
+  vanleer/none @dt10: 13.85x  (FINDINGS: 13.8x)
+
+=== W3: ledger sum is 0.0 for every water column run (11 in A1-A3) ===
+  11 runs, ledger sums: {0.0} (FINDINGS: identically zero)
+
+=== W4: Float32 vs Float64 gross_relative, same config ===
+  a4_float32: 2.7453e-05  (FINDINGS: 2.745e-5)
+  a1_dt10   : 2.6598e-05  (FINDINGS: 2.660e-5)
+  diff      : 3.2%  (FINDINGS: 3%)
+
+=== W5 / W5b: vertical diffusion vs 1M factoring ===
+  vert_diff on, 0M held (a1->a3_0m): 0.037  (FINDINGS: 0.037)
+  1M on, vert_diff held (a3_0m->a3_1m): 0.934  (FINDINGS: 0.934)
+  both (a1->a3_1m): 0.035  (FINDINGS: 0.035, '29x below')
+  a1/a3_1m ratio: 28.9x  (FINDINGS: 29x)
+
+=== W12: pre-fix ledger, extratropics/tropics, factor ===
+  extratropics @24h: 1.027e+115  (FINDINGS: 1.027e115)
+  tropics @24h     : 4.551e+109  (FINDINGS: 4.55e109)
+  ratio            : 2.26e+05  (FINDINGS: 2e5)
+
+=== W13/W14: post-fix operator_residual.csv, 6h/17h/24h ===
+  t= 6h  q_tag_res=1.473e-05  ledger_sum=6.310e-05
+  t=17h  q_tag_res=1.912e-05  ledger_sum=3.648e-04
+  t=24h  q_tag_res=1.925e-05  ledger_sum=6.246e-04
+  ledger/q_tag_res @24h = 32.5x  (FINDINGS W14: '32x')
+
+=== E55: D4-vd Float32 vs Float64, mean/range/ratio over the day ===
+  f32 gross_relative range/mean: (0.0016602293, 0.007747038, 0.004679507833333333)  (FINDINGS: 1.7e-3 to 7.7e-3, mean 4.68e-3)
+  f64 gross_relative range/mean: (0.0014927592321614446, 0.008577058856704126, 0.004802648040148936)  (FINDINGS: 1.5e-3 to 8.6e-3, mean 4.80e-3)
+  f32 overclaimed/untagged: range 0.91-1.14, mean 1.02, net-overclaimed 12/24 hours  (FINDINGS: 0.91-1.14, mean 1.02, 12/24)
+  f64 overclaimed/untagged: range 0.73-0.99, mean 0.85, net-overclaimed 0/24 hours  (FINDINGS: 0.73-0.99, mean 0.85, 0/24)
+
+=== E59: C1c gross residual/relative, base vs opt1/opt2/opt3 ===
+  c1c_base_d4_enthalpy     h1=1.677e+05 h4=3.274e+05 h12=4.606e+05 h24=6.322e+05  grel24=5.538e-03
+  c1c_opt1_d4_enthalpy     h1=1.981e+05 h4=9.289e+05 h12=3.245e+06 h24=6.713e+06  grel24=5.881e-02
+  c1c_opt2_d4_enthalpy     h1=5.049e+04 h4=2.262e+05 h12=6.491e+05 h24=1.182e+06  grel24=1.036e-02
+  c1c_opt3_d4_enthalpy     h1=5.668e+04 h4=2.515e+05 h12=7.900e+05 h24=1.456e+06  grel24=1.275e-02
+  base/E53 ratio: 1.168 -> 16.8% above (FINDINGS: '17% above')

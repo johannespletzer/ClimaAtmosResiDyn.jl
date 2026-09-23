@@ -73,6 +73,10 @@ rather than a measurement: `ρq_tot_after = r · ρq_tot_before` is what `r` mea
 so the same `r` multiplies the difference. *Verified against
 `tagged_water.jl:800`. The randomised sequences it was first found with are not
 in the tree.*
+*Erratum, 2026-09-23 (H3): the line reference has moved. Before the fix, the
+multiplicative rule was in `_rescale_water_tags!` (about lines 695-741 of the
+pre-fix `tagged_water.jl`). Today's docstring near line 814 restates the same
+fact. The mechanism holds in both.*
 
 **W8. The existing test could not see it.** The "Tagged water limiter rescale"
 testset runs this configuration for one hour (`tagged_water_integration.jl:237`)
@@ -2356,6 +2360,14 @@ both, `ta` and `rhoa` are `g1_inc_d4`'s bit for bit.
   - Cost: the copies add a field per tag to the updraft and double the time
     to build the tendency on the EDMF column (789 s against 402 s). The
     default adds no state.
+    *Erratum, 2026-09-23 (housekeeping re-check H3,
+    `review/verify_g3.md`): the 402 s and 789 s come from the smoke test (job
+    `13519152`, `claude_work/upd_run/upd_smoke-13519152.out`), which built
+    both models in one process, the copies second. The D4 runs cited below
+    built separately and cold: 600.3 s with the default (`13528772`) and
+    3504.1 s with the copies (`13523326`). So the copies' cost is about 2× after
+    the default's build in one process, and about 5.8× across two separate
+    jobs. Neither is a controlled benchmark; G3's V-W10 measures it.*
 *Rerun twice at the branch head. After the review's fixes (`38278c2d`, job
 `13536456`): `ta` bit for bit and every tag within 2e-14, so those fixes
 changed nothing but rounding. After the plume was moved to the velocity at the
@@ -2437,6 +2449,10 @@ iterations, Float32, 24 ranks.
     | `rad` | 0.15% | 1.7% | 8.4% | 9.1% |
     | `new_extratropics` | 0.06% | 2.9% | 8.8% | 19.1% |
     | region tags | 1e-8 | 0.008% | 0.5% | 1.2 to 1.9% |
+
+    *Erratum, 2026-09-23 (H3): `rad` at 1 h is 0.108%, not 0.15%
+    (`output/g2_v2_sphere_mix/tags_vs_no_mixing.txt`, L1 1.08e-03). Every other
+    cell matches.*
 
     The largest pointwise differences reach 39 to 59% of the reference's
     largest value at ten days. The integrals move by about 1%: `sfc` −0.73%,
