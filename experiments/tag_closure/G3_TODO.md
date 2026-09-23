@@ -56,7 +56,17 @@ The twelve criteria of the plan, section 2, in short:
   - [ ] **The default mode's cost budget**, proposed from V-W10's first
     measurements and set by the owner before V-W11.
   - [ ] **WP5's default transport under EDMF**, by the rule fixed in plan 4.3,
-    after V-W3.
+    after V-W3. V-W3 has run: the one-iteration part is 5.8e-3, twelve times
+    the rule's threshold, so the rule selects the follower (FINDINGS W21).
+    The owner confirms.
+  - [ ] **The copies' repair** moves 0.6% of D4-W's water in a day, 0.27%
+    with ten Newton iterations, over plan 6.1's 0.2%, so the audit is flagged
+    (W21). Whether the audit stands as it is, or its repair's cause is
+    isolated first, is the owner's.
+  - [ ] **The surface rule in the first hour.** A surface-layer tag differs
+    between the modes by 14% (L1) at 1 h, against a 1% budget, and meets it
+    from 6 h (W21). Whether the plume's start should model the surface flux
+    (plan 4.1, review S4) is the owner's.
   - [ ] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. The recommended option is the
     non-precipitating, rain and snow parts.
@@ -227,16 +237,27 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
         terms off;
       + manufactured mixing tests on a frozen parent.
 
+    At #101's head `4a1c91a4` the copies group fails, in CI (downgrade 1.11)
+    and locally. Since `73fa27bd` it steps the microphysics explicitly, and
+    the partition then misses by 0.8 to 0.9% net and 1.0% gross after an
+    hour, against 1e-4 and 1e-3. Its bounds came from an implicit run
+    (3.7e-5 net). The composition check also gives NaN. Probes of the
+    explicit path in both modes are queued (`claude_work/g3/wp3/explicit_probe.jl`).
+
   - [ ] Review by `clima-numerics-reviewer` (xhigh).
 
-  - [ ] **V-W3:**
+  - [x] **V-W3:**
 
       + D4-W, default against copies, each with a 10-Newton twin;
       + bound activation;
       + a surface pulse;
       + the TRMM 0M development case, default against copies.
 
-    Record the result as a FINDINGS entry. Apply WP5's rule.
+    Record the result as a FINDINGS entry. Apply WP5's rule. Done: FINDINGS
+    W21. Every tag within budget on the plain day; the default's closure
+    fails at one iteration (0.71%) and passes at ten (0.13%), so the rule
+    selects the follower; the copies' repair is over its bound; the pulse's
+    surface tag fails its first hour.
 
 ## WP5: following the parent's increment (draft PR-W5)
 

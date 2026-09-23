@@ -1,0 +1,67 @@
+ERROR: --judge: at least one tag failed its budget
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w3_d4w_pulse_copies/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w3_d4w_pulse_default/output_0000
+family:    water
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 1500.000 m (YAML z_max 1500.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  aren       bitwise identical (750 elements)
+  arup       bitwise identical (750 elements)
+  cli        bitwise identical (750 elements)
+  cliup      bitwise identical (750 elements)
+  clw        bitwise identical (750 elements)
+  clwup      bitwise identical (750 elements)
+  detr       bitwise identical (750 elements)
+  edt        bitwise identical (750 elements)
+  entr       bitwise identical (750 elements)
+  env_q_tot_variance bitwise identical (750 elements)
+  evspsbl    bitwise identical (25 elements)
+  evu        bitwise identical (750 elements)
+  hfls       bitwise identical (25 elements)
+  hfss       bitwise identical (25 elements)
+  hus        bitwise identical (750 elements)
+  husen      bitwise identical (750 elements)
+  husra      bitwise identical (750 elements)
+  husraen    bitwise identical (750 elements)
+  husraup    bitwise identical (750 elements)
+  hussn      bitwise identical (750 elements)
+  hussnen    bitwise identical (750 elements)
+  hussnup    bitwise identical (750 elements)
+  husup      bitwise identical (750 elements)
+  lwp        bitwise identical (25 elements)
+  pr         bitwise identical (25 elements)
+  prra       bitwise identical (25 elements)
+  prsn       bitwise identical (25 elements)
+  q_gas_A    bitwise identical (750 elements)
+  rhoa       bitwise identical (750 elements)
+  rhoaen     bitwise identical (750 elements)
+  rhoaup     bitwise identical (750 elements)
+  rwp        bitwise identical (25 elements)
+  ta         bitwise identical (750 elements)
+  tke        bitwise identical (750 elements)
+  wa         bitwise identical (750 elements)
+  waen       bitwise identical (750 elements)
+  waup       bitwise identical (750 elements)
+
+tag        hour   ∫ref kg/m²        Δ∫/∫        L1        L∞     max|Δq|
+sfc           1   7.0330e-01   +1.14e-02  1.44e-01  1.74e-01  2.1273e-04
+sfc           6   1.2865e+00   +4.59e-03  5.14e-03  1.63e-02  2.6918e-05
+sfc          12   1.9689e+00   +2.62e-03  7.52e-03  2.05e-02  5.0876e-05
+sfc          24   3.1624e+00   -4.90e-04  9.81e-03  4.06e-02  1.4065e-04
+
+air           1   1.0876e+01   -7.35e-04  9.22e-03  2.38e-02  2.1278e-04
+air           6   1.0226e+01   -7.21e-04  1.54e-03  7.30e-03  6.1645e-05
+air          12   9.5920e+00   -8.38e-04  2.73e-03  1.11e-02  8.8511e-05
+air          24   8.4393e+00   -2.17e-03  4.98e-03  2.89e-02  1.9526e-04
+
+evap          1   1.3245e-01   -7.81e-04  6.57e-02  7.15e-02  2.4147e-05
+evap          6   7.5945e-01   -7.43e-04  1.04e-02  1.57e-02  1.6943e-05
+evap         12   1.4815e+00   -5.85e-04  7.18e-03  2.07e-02  4.0464e-05
+evap         24   2.7532e+00   -2.16e-03  9.55e-03  4.14e-02  1.2656e-04
+
+NOTICE: --judge: no --closure-remainder-fields given; the 'what the named parts leave' remainder (R7) is skipped
+
+--judge: FAIL
+  FAIL sfc@1h (region): region tag: L1=1.436e-01 (budget 0.01), Linf=1.743e-01 (budget 0.25)
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w3_d4w/judge_pulse_default_vs_pulse_copies.json

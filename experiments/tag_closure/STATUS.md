@@ -31,6 +31,18 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, late on 2026-09-23.** WP1 is draft PR #100, green, waiting for
+    the owner. WP3 is PR #101: built, reviewed by `clima-numerics-reviewer`
+    and by the owner, whose points are addressed at `4a1c91a4`. **V-W3 is
+    done (FINDINGS W21).** Every tag meets its budget against the copies on
+    D4-W. The default's closure is 0.71% at 24 h with one Newton iteration and
+    0.13% with ten, so WP5's rule selects the follower. The copies' repair
+    (0.6% a day) is over its bound, and a surface-layer tag fails its first
+    hour. Three owner decisions follow (G3_TODO, Decisions). **#101's CI is
+    red:** the copies group misses closure on the explicit microphysics path
+    it switched to in `73fa27bd`, 0.9% after an hour. Probes are queued.
+    **The owner added WP5 to the session's goal**, after WP3's open items.
+    Upstream needs: [UPSTREAM_REQUIREMENTS.md](UPSTREAM_REQUIREMENTS.md).
   - **G3's WP0 is done, and WP1 waits only for CI.** **This session's
     goal**, set by the owner on 2026-09-23, is WP0 and WP1. WP0: the plan
     checked against the merged #95; V-W0a, V-W0c and V-W1 run, recorded as

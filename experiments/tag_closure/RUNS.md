@@ -244,9 +244,26 @@ Every G3 run is stamped with a manifest at submission, kept as
 | `w0a_0m_explicit_newton10_2h` | 0000   | same   | 2a6f1294 | 2026-09-23 | `13831764` | explicit microphysics, ten iterations                                                   | W16      | yes  | 15 nc   | not yet |
 | `w0c_d4w_untagged`            | 0000   | same   | c537903b | 2026-09-23 | `13829852` | V-W0c and V-W1's twin: D4-W with no water tags, with the EDMF diagnostics that size WP3 | W17, W18 | yes  | 37 nc   | not yet |
 | `w1_d4w_grid_tags`            | 0000   | same   | c537903b | 2026-09-23 | `13829853` | V-W1: D4-W with grid-scale water tags on `main` after #95, the "before"                 | W17      | yes  | 48 nc   | not yet |
+| `w3_d4w_default`              | 0000   | same   | 9085e264 | 2026-09-23 | `13857585` | V-W3: D4-W, WP3's default mode (exchange), a day, one Newton iteration                  | W21      | yes  | 52 nc   | not yet |
+| `w3_d4w_default_n10`          | 0000   | same   | 9085e264 | 2026-09-23 | `13857591` | its 10-Newton twin, for WP5's rule                                                      | W21      | yes  | 52 nc   | not yet |
+| `w3_d4w_copies`               | 0000   | same   | b5f40586 | 2026-09-23 | `13862420` | V-W3: D4-W, updraft copies started from the plume, one iteration: the audit             | W21      | yes  | 56 nc   | not yet |
+| `w3_d4w_copies_n10`           | 0000   | same   | b5f40586 | 2026-09-23 | `13862422` | its 10-Newton twin                                                                      | W21      | yes  | 56 nc   | not yet |
+| `w3_d4w_pulse_default`        | 0000   | same   | 9085e264 | 2026-09-23 | `13857587` | V-W3's surface pulse: the partition split at 50 m, default mode                         | W21      | yes  | 48 nc   | not yet |
+| `w3_d4w_pulse_copies`         | 0000   | same   | b5f40586 | 2026-09-23 | `13862421` | the surface pulse, copies                                                               | W21      | yes  | 52 nc   | not yet |
+| `w3_trmm0m_default`           | 0000   | same   | 9085e264 | 2026-09-23 | `13857589` | V-W3: the TRMM 0M development case, 3 h, default mode                                   | W21      | yes  | 32 nc   | not yet |
+| `w3_trmm0m_copies`            | 0000   | same   | 9085e264 | 2026-09-23 | `13857590` | the TRMM case, copies                                                                   | W21      | yes  | 35 nc   | not yet |
+| `w3_trmm0m_default_n10`       | 0000   | same   | d06e48f1 | 2026-09-23 | `13863850` | the TRMM Newton ladder: default, ten iterations                                         | W21      | yes  | 32 nc   | not yet |
+| `w3_trmm0m_copies_n2`         | 0000   | same   | d06e48f1 | 2026-09-23 | `13863847` | the ladder: copies, two iterations                                                      | W21      | yes  | 35 nc   | not yet |
+| `w3_trmm0m_copies_n10`        | 0000   | same   | d06e48f1 | 2026-09-23 | `13863849` | the ladder: copies, ten iterations                                                      | W21      | yes  | 35 nc   | not yet |
 
-The two D4-W runs use the driver `analysis/water/d4w_driver.jl`, which sets the
-passive tracer to the `tropo` mask.
+The commits of the `w3_*` rows are the run tree's. They carry WP3 at
+`9aab6690` (`9085e264`) or at `fe1331f2` (`b5f40586`, `d06e48f1`); W21 says
+why the runs describe #101's head too. The verifier's reports are in
+`output/w3_d4w/` and `output/w3_trmm0m/`.
+
+The D4-W runs use the driver `analysis/water/d4w_driver.jl`, which sets the
+passive tracer to the `tropo` mask. For the `w3_*` copies it also starts the
+copies from the default mode's plume.
 
 ### Analysis outputs, not model runs
 

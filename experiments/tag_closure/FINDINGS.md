@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W19                                           | 1. Water tags                                       |
+| W1–W21                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -387,6 +387,93 @@ mirrors, 3d5ab52e), `13851540` (copies, five mirrors, 6b687e0a); tables and
 configs in `output/wp3_dev/`. The numbers are the model's own tables; the
 verifier was not run on them. The CI group's result: job `13846383`, and
 `13851548` with the mirror.*
+
+**W21. V-W3: on D4-W every tag meets its budget against the copies, but the
+default mode's closure does not with one Newton iteration, 0.71% at 24 h
+against 0.2%. With ten it is 0.13%. So WP5's rule selects the follower. The
+copies' repair moves 0.6% of the water in a day, three times its bound, so
+the audit is flagged.** D4-W for a day, default against copies on one
+atmosphere, each at one and ten Newton iterations. The copies start from the
+plume. The verifier judged each pair with `--judge` (G3_PLAN 6.1). In all
+three D4-W pairs the parent fields are bit for bit the same, and the default
+days match the untagged twin `w0c_d4w_untagged`.
+
+Per tag, default against copies (L1 / L∞):
+
+| tag, iterations | 1 h           | 24 h          | budget 1 h / 24 h (L1, L∞)    |
+|:--------------- | -------------:| -------------:|:----------------------------- |
+| `tropo`, 1      | 0.22% / 1.4%  | 0.73% / 3.4%  | region: 1%, 25% / 2%, 5%      |
+| `tropo`, 10     | 0.21% / 1.4%  | 0.17% / 0.49% |                               |
+| `strat`, 1      | 0.62% / 3.7%  | 0.47% / 1.1%  |                               |
+| `strat`, 10     | 0.55% / 3.4%  | 0.23% / 0.84% |                               |
+| `evap`, 1       | 6.6% / 7.2%   | 0.96% / 4.2%  | source: 10%, 25% / 2%, 5%     |
+| `evap`, 10      | 4.6% / 7.3%   | 0.22% / 0.28% |                               |
+
+The gross closure residual, relative to the column's water, from each run's
+`water_tag_closure.csv`:
+
+| run            | 1 h     | 12 h    | 24 h    |
+|:-------------- | -------:| -------:| -------:|
+| default, 1     | 5.4e-4  | 3.0e-3  | 7.1e-3  |
+| default, 10    | 9.9e-5  | 5.8e-4  | 1.3e-3  |
+| copies, 1      | 3.7e-4  | 2.1e-3  | 1.8e-3  |
+| copies, 10     | 9.6e-5  | 7.4e-4  | 1.8e-3  |
+
+  - **WP5's rule.** The one-iteration part of the default's residual is
+    7.1e-3 − 1.3e-3 = 5.8e-3, twelve times a quarter of the budget (5e-4).
+    By G3_PLAN 4.3 the follower becomes the default transport under EDMF.
+  - **The second 12 h** add more than the first in the default runs at both
+    iteration counts (4.1e-3 against 3.0e-3, and 7.3e-4 against 5.8e-4) and
+    in the copies at ten (1.0e-3 against 7.4e-4). The copies at one iteration
+    peak before 24 h.
+  - **The one-iteration lag is not the same in both modes.** G3_PLAN 4.3
+    says both lag alike, so comparing them cannot show the lag. Here ten
+    iterations cut the default's residual 5.4 times and the copies' by 4%. The
+    modes' disagreement at 24 h falls about fourfold (`tropo` 0.73% to 0.17%,
+    `evap` 0.96% to 0.22%). These pairs change only the iteration count, in
+    both modes at once, so they bound the lag's effect on the comparison. They
+    do not isolate it in either mode.
+  - **The copies' own partition.** The residual before the repair is 1.0e-5
+    at 24 h with one iteration and 6.5e-6 with ten, inside 6.1's 2e-4. The
+    repair, cumulative, moves 0.60% of the column's water over the day with
+    one iteration and 0.27% with ten. 6.1 bounds it at 0.2%, so the audit is
+    flagged at both: the repair shapes the copies. W20's development runs
+    extrapolated 0.24 to 1.2% a day. What makes it is still not isolated.
+  - **Bound activation** (default mode, the fraction of the 30 levels where
+    a tag's admissibility bound acts, over the audit's rows): `evap` at most
+    0.3 and 2.5% on average, with one iteration or ten. The partition's bound
+    never acted with one iteration, and on one level at most with ten.
+  - **The surface pulse.** The same pair at one iteration with the partition
+    split at 50 m: `sfc` below, `air` above. `sfc` misses its first-hour
+    budget, L1 14.4% and L∞ 17.4% against 1% and 25%. It is within budget
+    from 6 h on (L1 0.51% at 6 h, 0.98% and L∞ 4.1% at 24 h). `air` and
+    `evap` pass. So in the first hour the two modes' surface rules move a
+    surface-layer tag differently by an order of magnitude more than the
+    budget. The pair does not say which mode is nearer the truth. The
+    default's partition bound acted on up to 27% of the levels here, 1.6% on
+    average. The closure is as on the plain day (6.9e-3 and 1.6e-3 at 24 h).
+  - **TRMM 0M, 3 h**, the development case, both modes at one iteration, and
+    the copies at two and ten and the default at ten. The gross residual at
+    3 h is 7.8e-5 to 1.2e-4 on every rung. Default against copies at 3 h
+    (L1): `evap` 1.05% with one iteration and 1.04% with ten, `pbl` 0.25%
+    and `free` 0.12% with ten. The copies' own residual stays below 7.1e-7
+    and their repair below 1e-5. Across iteration counts the atmosphere
+    changes (`hus` by up to 2% at 3 h), and the tags move with it by the same
+    amount in both modes (`pbl` L1 2.0%, `evap` 7%, one against ten
+    iterations). So the ladder does not bound the 0M copies' own Newton lag,
+    and known issue 4 stays as it is.
+
+*V-W3, `hpda2_test`, 2026-09-23, launched with `analysis/water/d4w_driver.jl`
+(copies started from the plume) from `../ClimaAtmosResiDyn-wedmf-run`. The
+default days, the pulse's default and the TRMM pair ran WP3 at `9aab6690`
+(run tree `9085e264`): jobs `13857585`, `13857591`, `13857587`, `13857589`,
+`13857590`. The copies days and the pulse's copies ran WP3 at `fe1331f2`
+(run tree `b5f40586`): jobs `13862420`, `13862422`, `13862421`. The TRMM
+ladder ran at `fe1331f2` (run tree `d06e48f1`): jobs `13863847`, `13863849`,
+`13863850`. `fe1331f2` changes only the copies' Jacobian block, and the head
+of #101, `4a1c91a4`, only a refusal, docstrings and diagnostic metadata, so
+the tags evolve in these runs as at `4a1c91a4`. Verifier reports in
+`output/w3_d4w/` and `output/w3_trmm0m/`.*
 
 ## 2. Energy source tags: closure by transport
 
