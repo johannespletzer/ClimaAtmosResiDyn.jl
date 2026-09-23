@@ -94,7 +94,7 @@ changes, which [RUNS.md](RUNS.md) records.
 | E7–E9, E20–E24, E26, E28, E30, E38, E49, E63     | 7. The process records and the per-process checks   |
 | E50, E60, E69, E70, E74, E75                     | 8. The sphere and long runs                         |
 | E68, E72, E73, E76                               | 9. Mixing: V3 and the updraft gap                   |
-| T1–T10, E44, E44b–E44e, E52, E56                 | 10. Cost                                            |
+| T1–T10, E44, E44b–E44e, E52, E56, E77, E78       | 10. Cost                                            |
 | M1–M6                                            | 11. Method                                          |
 | old claims, errata, conflicts                    | 12. Superseded and falsified claims                 |
 | FQ-1 to FQ-24                                    | 13. What is not established                         |
@@ -1499,7 +1499,57 @@ the floor, with the reason in `NEWS.md`. Both downgrade groups pass with it.
 *2026-09-23, login node, in `$SCRATCH/claude_work/dg_atmos`, a full ClimaAtmos
 environment resolved offline against the terrabyte-cpu depot with ClimaCore
 pinned; the probe is `$SCRATCH/claude_work/upd_run/alloc_types.jl` and its log
-is beside it.*
+is beside it.* *Erratum, 2026-09-23 (E78): the premise is wrong. At `afd470e7`
+the exchange allocates 17,416 bytes per call with ClimaCore 1.0.0 and 1.0.1 as
+well, so the version does not decide it. The bound scoped by the version failed
+in CI, where ClimaCore resolves to 1.0.1. The only 8-byte figure in the probe's
+logs is `alloc_login2.log` of 2026-09-20, from the kernel before `e71430fb`;
+that the 8 bytes came from there is inferred. The cause is the kernel's lazy
+inputs, and E78 has the fix. The downgrade groups that failed were
+`tagging_source_increment` and `tagging_source_edmf` (run `35836620186`, at
+`dcf7d086`), not `tagging_source_updraft`.* The first reading is in section 12.
+
+**E78. The exchange's 17 kB per call came from its own kernel, with every
+ClimaCore version. With its inputs written to scratch, the exchange allocates
+only the parent helper's 8 bytes again.** At `afd470e7` the exchange allocated
+17,416 bytes per call on the DYCOMS column with ClimaCore 0.16.0, 1.0.0 and 1.0.1
+alike, on Julia 1.11.9. CI on Julia 1.10 measured 17,736. The profile puts it
+at the two share-difference broadcasts, 8,376 bytes in 31 allocations each.
+Since `9e7a9638` their inputs `ᶜroom` and `ᶜenergy_ratio` were lazy. They
+reached through both subdomains' energies and the environment's density, and
+ClimaCore boxed each broadcast in its `DataScope` reduction (E77).
+`foreach_point` runs that reduction once before its loop, so the cost is per
+call, not per cell.
+
+  - **Forms tried**, with bytes on all three versions. Each was bit for bit
+    `afd470e7` in the tags' tendency. With the two ratios written to scratch,
+    424 bytes; with the density, 13,848; with both, 216; with the two
+    subdomain energies, 4,824.
+  - **The fix writes the environment's density with `TD.air_density`, and the
+    two ratios, to three scalar fields of the exchange's scratch.** The
+    exchange then allocates 8 bytes per call, and the tags' whole SGS flux 24.
+    That is the `Ref` around the closure in `ᶜspecific_env_mse`. It holds on
+    all three versions with Julia 1.11.9, and with ClimaCore 1.0.1 on Julia
+    1.10.12. The Julia 1.10 run with the floor's packages is left to the
+    downgrade CI. The probe's 216 bytes came from
+    writing its lazy density object, not from the direct write. The parent's
+    own write of the same density, `microphysics_cache.jl:990`, allocates
+    nothing.
+  - **Nothing else moves.** The tags' tendency is bit for bit that of
+    `afd470e7`, so E76 describes the head. `tagging_source_increment` (96 of
+    96) and `tagging_source_edmf` (53 of 53) pass with ClimaCore 1.0.1 on
+    Julia 1.11 and 1.10. Those runs still had the provisional bounds of 216
+    and 232 bytes. The tests' bounds are 8 and 24 bytes again, without the
+    version gate, on the measurements above.
+
+*2026-09-23, jobs `13812434`–`13812436` (the forms), `13816955`–`13816957` and
+`13822248` (the fix), and `13816958`, `13816959`, `13816961` and `13816962`
+(the two test files), `hpda2_test`;
+`$SCRATCH/claude_work/upd_run/alloc_forms.jl`, `alloc_verify.jl` and
+`forms_def.jl`, with the environments `cc101_env`, `upd_testenv`, `dg_atmos`
+and `j110_env` in `$SCRATCH/claude_work/`. The fix is `b9c6e7b0` on
+`claude/energy-source-tag-updraft`. Reviewed by an agent, which found
+the change bit-identical by reading.*
 
 ## 11. Method
 
@@ -1595,6 +1645,8 @@ re-check (G4_TODO.md).
 | E75: `rad` L1 at 1 h is 0.15%.                                                                                                                                                           | 0.108%. Erratum 2026-09-23.                                                                                                                                                          | E75                                                   |
 | The updraft-gap-bound script's headline: 15 to 30% a day of the tropical surface tags, elsewhere under 4%.                                                                               | Under the centred reconstruction 46% and 27% for `sfc`, and 9 to 51% elsewhere.                                                                                                      | review/agent_reviews/updraft_gap_bound/review.md; E72 |
 | That `dd06318f`'s fixes "change no simulation results".                                                                                                                                  | With an explicit species list the fork runs `enforce_mass_energy_consistency!`, which upstream `v0.42.9` skips. Read from the code, not run; a named parity exception (decision 12). | [DECISIONS.md](DECISIONS.md)                          |
+| E77: the exchange allocates 17,416 bytes only at ClimaCore's compat floor and 8 bytes with 1.0.0, so the test's bound can follow the ClimaCore version.                                  | 17,416 bytes with 0.16.0, 1.0.0 and 1.0.1 alike, from the kernel's lazy inputs. Written to scratch, 8 bytes on all three. Erratum 2026-09-23.                                        | E77, E78                                              |
+| E77: the downgrade CI failed in `tagging_source_updraft`.                                                                                                                                | In `tagging_source_increment` and `tagging_source_edmf`, run `35836620186`. Erratum 2026-09-23.                                                                                      | E77                                                   |
 
 ## 13. What is not established
 
