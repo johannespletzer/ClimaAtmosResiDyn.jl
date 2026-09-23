@@ -229,11 +229,14 @@ end
 
 # A tag's share of the local water, as the sedimentation mirror takes it: the
 # partition's shares renormalized to sum to one, a source tag's its own clamped
-# share. `_is_partition_tag` resolves on the tag's type.
-_water_tag_share_field(ᶜY, ᶜnorm, tag) =
-    _is_partition_tag(tag) ?
-    (@. lazy(water_tag_sediment_share(tag_field(ᶜY, tag), ᶜY.ρq_tot, ᶜnorm))) :
-    (@. lazy(water_tag_source_sediment_share(tag_field(ᶜY, tag), ᶜY.ρq_tot)))
+# share. `_is_partition_tag` resolves on the tag's type. The tag's field is
+# looked up outside the broadcast, which cannot take the tag itself.
+function _water_tag_share_field(ᶜY, ᶜnorm, tag)
+    ᶜρq_tag = tag_field(ᶜY, tag)
+    return _is_partition_tag(tag) ?
+           (@. lazy(water_tag_sediment_share(ᶜρq_tag, ᶜY.ρq_tot, ᶜnorm))) :
+           (@. lazy(water_tag_source_sediment_share(ᶜρq_tag, ᶜY.ρq_tot)))
+end
 
 _sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, ::Tuple{}) = nothing
 function _sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, tags::Tuple)
@@ -600,7 +603,8 @@ _rebuild_water_tag_copies!(ᶜsgsʲ, ᶜY, ::Tuple{}) = nothing
 function _rebuild_water_tag_copies!(ᶜsgsʲ, ᶜY, tags::Tuple)
     tag = first(tags)
     ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
-    @. ᶜχʲ = ᶜsgsʲ.q_tot * water_tag_fraction(tag_field(ᶜY, tag), ᶜY.ρq_tot)
+    ᶜρq_tag = tag_field(ᶜY, tag)
+    @. ᶜχʲ = ᶜsgsʲ.q_tot * water_tag_fraction(ᶜρq_tag, ᶜY.ρq_tot)
     return _rebuild_water_tag_copies!(ᶜsgsʲ, ᶜY, Base.tail(tags))
 end
 
@@ -1035,7 +1039,8 @@ function _water_tag_edmf_audit(
     inputs = water_exchange_inputs!(Y, p, turbconv_model, model)
     (; ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio, flags) = inputs
     ᶜθ = p.scratch.ᶜq_tag_environment
-    @. ᶜθ = WaterBlendFactors(flags)(ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio)
+    blend_factors = WaterBlendFactors(flags)
+    @. ᶜθ = blend_factors(ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio)
     first_index = findfirst(identity, _flag_values(flags))
     @. ᶜtmp = one(ᶜtmp)
     volume = sum(ᶜtmp)
