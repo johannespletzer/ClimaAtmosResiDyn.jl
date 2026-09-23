@@ -254,10 +254,13 @@ The water family's own columns of `water_tag_audit.csv`: those of
 [`water_tag_edmf_audit`](@ref) under prognostic EDMF, and under
 `water_tag_transport: increment` the integrals of the increment's ledger since
 the start of the run, over the domain as `scale` is: `increment_left`, what it
-left out of the tags, which is signed and lands in the closure residual; `increment_left_gross`, the same with each cell's absolute value; and
+left out of the tags, which is signed and lands in the closure residual;
+`increment_left_gross`, the same with each cell's absolute value; and
 `increment_moved_gross`, the absolute value of what it moved between levels.
-Each also over `scale`. `nothing` when there are no such columns. Collective,
-as `tag_audit` is.
+The two "gross" columns are gross over the cells but net over time in each
+cell, as the energy source tags' are: a cell whose ledger went up and down
+again counts only what is left. Each also over `scale`. `nothing` when there
+are no such columns. Collective, as `tag_audit` is.
 """
 function water_tag_extra_audit(Y, p, model, scale)
     edmf = water_tag_edmf_audit(Y, p, model, scale)
