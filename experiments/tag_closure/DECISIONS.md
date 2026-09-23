@@ -14,7 +14,7 @@ memory, outside the repository.
 
 Short names for the sources:
 
-  - CP: [CONDENSE_PLAN.md, the owner's decisions of 2026-09-23](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
+  - CP: [CONDENSE_PLAN.md, the owner's decisions of 2026-09-23](archive/2026-09-23/CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
   - G3P: [G3_PLAN.md, section 0](G3_PLAN.md#0-decisions-this-plan-rests-on)
   - G3T: [G3_TODO.md, Decisions](G3_TODO.md#decisions)
   - OT: [archived OPERATIONAL_TODO.md, "Decided"](archive/2026-09-23/OPERATIONAL_TODO.md#decided)
@@ -39,24 +39,24 @@ Short names for the sources:
 
   - **Revive the condense plan.** Results are re-checked now only where G3
     relies on them. The full re-check moves to the start of G4. **In force.**
-    [CP 1](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
+    [CP 1](archive/2026-09-23/CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
   - **Rebuild the record branch on `main`** (`claude/tag-closure-record`).
-    **Done.** [CP 2](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
+    **Done.** [CP 2](archive/2026-09-23/CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
   - **Take the terrabyte setup to `main` in a small PR** (#96). **In force**;
-    #96 was merged on 2026-09-23 (`3ecb6d25`). [CP 3](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
+    #96 was merged on 2026-09-23 (`3ecb6d25`). [CP 3](archive/2026-09-23/CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
   - **The durable archive is `~/git/Clima/ClimaAtmosResiDyn-archive/`.** The
     workspace `AGENTS.md` records it as an exception to "no data in `$HOME`".
-    **In force.** [CP 4](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
+    **In force.** [CP 4](archive/2026-09-23/CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
   - **`$HOME` holds code and configs only**, with the archive directory as the
     recorded exception. **In force.** Workspace `~/git/AGENTS.md`, "Storage"
     (outside this repository).
   - **Worktrees and branches are removed only by a list the owner approves**
-    (H7). **In force.** [CP 5](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
+    (H7). **In force.** [CP 5](archive/2026-09-23/CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
   - **`docs/src/tag_closure_memo.md` and `tag_closure_experiments.md` are
     marked historical**, and move to the archive later (#97). **In force.** It
     replaces the older rule that the owner is asked about each change there
     (the archived NEXT_SESSION.md, register item `NS-1`).
-    [CP 6](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
+    [CP 6](archive/2026-09-23/CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
   - **Set G3**, re-scoped the same day: the water tags under EDMF, operational
     in production. G4, the energy tags, follows with G3's learnings. **In
     force.** Memory: `programme-after-g2.md`
@@ -267,7 +267,7 @@ These decisions are in the documents but have no row in `decisions.csv`.
 
   - **2026-09-23. H7's list of worktree and branch fates is approved**, and
     partly carried out the same day. **In force** for what waits.
-    [CONDENSE_PLAN.md, H7](CONDENSE_PLAN.md#h7-approved-by-the-owner-on-2026-09-23-and-partly-done)
+    [CONDENSE_PLAN.md, H7](archive/2026-09-23/CONDENSE_PLAN.md#h7-approved-by-the-owner-on-2026-09-23)
   - **2026-09-23. Every job within G3 is approved, and the agents as
     proposed.** Model code goes into draft PRs that only the owner merges.
     **In force.** [G3_TODO.md](G3_TODO.md)

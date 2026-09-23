@@ -1,7 +1,7 @@
 # The archive of 2026-09-23
 
 The documents of `experiments/tag_closure/` as they were on 2026-09-23, before
-the condensing of [CONDENSE_PLAN.md](../../CONDENSE_PLAN.md). Each was moved
+the condensing of [CONDENSE_PLAN.md](CONDENSE_PLAN.md). Each was moved
 here unchanged, with `git mv`, so its history follows it. README.md and
 OPERATIONAL_TODO.md were moved the same way, and new files took their old
 names. FINDINGS.md is a copy of the record branch's version at `eec7f363`,
@@ -52,9 +52,11 @@ The branches of that time are kept as tags on origin, among them
 | [CLIMACORE_ISSUE_DRAFT.md](CLIMACORE_ISSUE_DRAFT.md) | a draft ClimaCore issue on compile-time scaling (E44d, E44e) | a draft, not filed (decision 3 of 2026-09-18) | the item in [BACKLOG.md](../../BACKLOG.md), upstream |
 | [UPSTREAM_VWB_PR_DRAFT.md](UPSTREAM_VWB_PR_DRAFT.md) | a draft upstream PR for the vertical-water-borrowing guard | a draft, not opened (decision 12); `dd06318f` stays a named parity exception | [DECISIONS.md](../../DECISIONS.md), 2026-09-18; the tag `archive/upstream-vwb-species-guard` |
 | [PARENT_BUDGET_DEFECT_PR.md](PARENT_BUDGET_DEFECT_PR.md) | the PR body of the parent-budget defect test fix (decision 13) | done, merged as #81 | [DECISIONS.md](../../DECISIONS.md), 2026-09-17 |
+| [CONDENSE_PLAN.md](CONDENSE_PLAN.md) | the plan of the housekeeping of 2026-09-23, H0 to H7, with the owner's six decisions, each step's outcome, the approved worktree and branch fates, and what was lost | done on 2026-09-23; archived last, with its final state written in first | the open items in [STATUS.md](../../STATUS.md); the decisions in [DECISIONS.md](../../DECISIONS.md) |
 | [USER_GUIDE_DRAFT.md](USER_GUIDE_DRAFT.md) | a full user's guide draft for the energy source tags and the process records, 2026-09-11 | checked against #95's guide on 2026-09-23 | #95's `docs/src/energy_source_tags_guide.md`; what that does not cover is listed under G4.1 in [G4_TODO.md](../../G4_TODO.md) |
 
-Still to come here: CONDENSE_PLAN.md, once the plan is done, and
-`docs/src/tag_closure_memo.md` and `tag_closure_experiments.md`. #97 marked them
-historical and has merged. Moving them needs a PR to `main` that also edits
+CONDENSE_PLAN.md came last, when the plan was done. Unlike the others, it was
+brought up to date before the move. Still to come here:
+`docs/src/tag_closure_memo.md` and `tag_closure_experiments.md`. #97 marked
+them historical and has merged. Moving them needs a PR to `main` that also edits
 `docs/make.jl` (the owner's decision 6 of 2026-09-23).

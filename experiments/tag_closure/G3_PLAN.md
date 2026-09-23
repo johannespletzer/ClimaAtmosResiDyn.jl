@@ -406,7 +406,7 @@ WP6 runs in parallel from WP0 on.
 **Branches:** model code on `claude/water-tags-edmf` from `main`, with
 worktree `../ClimaAtmosResiDyn-wedmf` and run worktree
 `../ClimaAtmosResiDyn-wedmf-run`. Experiments, configs and analysis stay on
-`claude/g3-programme`.
+`claude/tag-closure-record` (until 2026-09-23 `claude/g3-programme`, now retired).
 
 ## 6. Experiments
 

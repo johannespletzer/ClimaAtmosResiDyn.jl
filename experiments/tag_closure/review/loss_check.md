@@ -1,6 +1,6 @@
 # H5: the loss check of the condensing
 
-Step H5 of [CONDENSE_PLAN.md](../CONDENSE_PLAN.md). An independent agent that
+Step H5 of [CONDENSE_PLAN.md](../archive/2026-09-23/CONDENSE_PLAN.md). An independent agent that
 wrote none of the condensed documents compared them with the originals. Written
 on 2026-09-23.
 

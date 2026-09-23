@@ -1,6 +1,6 @@
 # H5b: a collective review of the housekeeping, H0 to H7
 
-Step H5b of [CONDENSE_PLAN.md](../../CONDENSE_PLAN.md), added by the owner on
+Step H5b of [CONDENSE_PLAN.md](../../archive/2026-09-23/CONDENSE_PLAN.md), added by the owner on
 2026-09-23. An independent agent that wrote none of H0 to H7 reviewed all of
 it together, before the owner's review of the condense PR (H6). Written on
 2026-09-23, between 12:25 and 12:45 CEST.

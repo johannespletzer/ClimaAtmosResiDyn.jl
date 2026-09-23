@@ -3,8 +3,11 @@
 First approved by the owner on 2026-09-19 and put on hold the same day.
 **Revived on 2026-09-23 in this form**, as the housekeeping before G3's
 development. The version of 2026-09-19 is in the archive tag
-`archive/tag-closure-experiments-2026-09-23`. Archive this file when the plan
-is done.
+`archive/tag-closure-experiments-2026-09-23`.
+
+**Done on 2026-09-23, and archived the same day.** H6 merged as #98, and
+`main` was merged into the record branch after #99. What still waits on others
+is listed at the end of the H7 section, and tracked in `STATUS.md`.
 
 ## The owner's decisions of 2026-09-23
 
@@ -138,7 +141,7 @@ The agent definitions in `~/.claude/agents/` load only when a session starts.
 Until then the agents run as `general-purpose` with the model set, and their
 effort is the default.
 
-## H7, approved by the owner on 2026-09-23 and partly done
+## H7, approved by the owner on 2026-09-23
 
 Done the same day:
 
@@ -172,21 +175,38 @@ Done the same day:
     test fix), and its branch was gone from origin. It is now tagged
     `archive/tagged-tracers`. The branch itself stays; it was not on the list.
 
-Still to do, when their conditions are met:
+Done after H6, on 2026-09-23, once #98 and #99 had merged:
 
-  - `-upd` and `-upd-run`: after #95 merges.
-  - `-setup` and `-histdocs`: due, since #96 and #97 merged at 12:12.
-  - `-condense` and its branch: after H6. Then CONDENSE_PLAN.md is archived.
-  - Remote `claude/tag-closure-experiments` and `claude/g3-programme` are
-    deleted at H6. Their tips are tagged `archive/tag-closure-experiments-final`
-    (`8726d2cb`, E76 as first written) and `archive/g3-programme-final`
-    (`a52b17f7`). The earlier archive tags stopped one commit short.
+  - `origin/main` was merged into the record branch (`30913645`). Outside
+    `experiments/`, only `toml/tag_closure_c1_reference.toml` differs from
+    `main`.
+  - The worktrees `-condense`, `-setup`, `-histdocs` and `-prekexcl` were
+    captured with their ignored files, then removed. None had local changes,
+    untracked files, or ignored files the capture keeps. Their local branches
+    were deleted too.
+  - Six remote branches were deleted, and their local branches with them:
+      + `claude/tag-closure-condense` (in the record branch);
+      + `claude/terrabyte-setup`, `claude/historical-tag-closure-pages` and
+        `claude/prek-exclude-experiment-records` (in `main`);
+      + `claude/tag-closure-experiments` and `claude/g3-programme`.
+
+    The last two are tagged at their tips:
+    `archive/tag-closure-experiments-final` (`8726d2cb`, E76 as first
+    written) and `archive/g3-programme-final` (`a52b17f7`). The earlier
+    archive tags stopped one commit short.
+  - This file was archived.
+
+Still waiting, tracked in `STATUS.md`:
+
+  - `-upd` and `-upd-run`: after #95 merges, each with a capture that keeps
+    ignored files.
   - `claude_work` is left alone while the job session uses it (its test
     environment and run scripts). It is in the archive.
   - Three local branches that were not on the list stay:
     `claude/review-open-prs-tasks-wxiw0k` (on origin),
     `claude/terrabyte-julia-setup` (nothing unique) and `tagged-tracers`
     (tagged).
+  - The owner is to confirm the wider local-branch rule, above.
 
 ## Worktrees and branches: the approved fates (H7)
 
