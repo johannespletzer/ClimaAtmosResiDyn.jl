@@ -7,7 +7,7 @@
 # `prek run --all-files` for a whole-repo sweep.
 #
 # Setup instructions live in docs/src/contributor_guide.md ("Pre-commit hooks").
-exclude: .*docs/dev-guides.*|\.github.*
+exclude: .*docs/dev-guides.*|\.github.*|^experiments/tag_closure/(archive|output|review|reference|configs)/
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
