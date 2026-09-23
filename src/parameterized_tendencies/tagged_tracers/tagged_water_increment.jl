@@ -25,7 +25,8 @@ and `(;)` otherwise:
     kg/m³, since the start of the run. In each column it sums to the part of
     the parent's implicit increment of `ρq_tot` that changes the column's total
     and that the tags' own implicit tendencies did not take. That part lands in
-    `q_tag_res`.
+    `q_tag_res`. It is spread in proportion to `|m|`, so its column total is
+    exact but its profile does not show where the lag arose.
   - `q_tag_inc_moved`: the water the correction has moved between levels, in
     kg/m³, since the start of the run. It is the part of the mismatch that sums
     to zero in each column: mostly the parent's vertical advection, which the
@@ -73,7 +74,14 @@ carries that transport to them.
 """
 water_tag_follows_increment(p, name) =
     follows_water_increment(p.atmos.water_tagging_model) &&
-    is_water_tag_name(name)
+    _is_water_tag_field(name)
+
+# The name test at compile time where the name is a `FieldName`, as in the
+# tracer loops, so the explicit tendency does not build a string per tracer and
+# call.
+@generated _is_water_tag_field(::MatrixFields.FieldName{chain}) where {chain} =
+    startswith(string(first(chain)), "ρq_tag_")
+_is_water_tag_field(name::Symbol) = is_water_tag_name(name)
 
 # The fields the correction needs, in `p.tagging`. `dtγ` is the stage's
 # implicit weight, which the post-solve hook is not given, so the snapshot
@@ -166,17 +174,41 @@ holds the parent's own post-solve correction, which the stepper adds as
 `dtγ·dY`.
 
 In each cell, the mismatch `m` is the parent's increment of `ρq_tot` since the
-snapshot less the partition's. The part of `m` that changes a column's total
-cannot be moved within the column. It is left where it arises, in proportion to
-`|m|`, and stays in `q_tag_res`. The rest integrates up the column to a face
-flux that is zero at both boundaries, whose divergence is that rest. Each tag
-takes the flux times its share in the cell the flux leaves, as with the default
-mode's sub-grid mass flux (`_sgs_water_tag_fluxes!`), and the flux is added to
-`dY` divided by `dtγ`. The partition's shares add up to one, so the partition
-then follows the parent's increment, up to the part left in place. A tag that
-carries a source takes its own share of the flux.
+snapshot less the partition's. The part of `m` that changes a column's total,
+`M = ∫m`, cannot be moved within the column. It is left out of the tags,
+spread over the column in proportion to `|m|`, and stays in `q_tag_res`. The
+rest integrates up the column to a face flux that is zero at both boundaries,
+whose divergence is that rest. Each tag takes the flux times its share in the
+cell the flux leaves, as with the default mode's sub-grid mass flux
+(`_sgs_water_tag_fluxes!`), and the flux is added to `dY` divided by `dtγ`.
+The partition's shares add up to one, so the partition then follows the
+parent's increment, up to the part left out. A tag that carries a source takes
+its own share of the flux. This is `correct_energy_source_increment!` for
+water, without the offset.
 
-The part left in place and the part moved are added to the ledger,
+What it cannot do:
+
+  - **Change a column's total.** The flux vanishes at both boundaries, so each
+    stage changes the partition's column total by exactly its own implicit
+    tendencies. A lag that changes the total, such as the linearized surface
+    outflow of sedimentation (FINDINGS W23 on the record branch), stays in the
+    net closure residual, and `q_tag_inc_left` records it.
+  - **Say where that part arose.** `|m|` is dominated by the parent's vertical
+    advection, which the tags no longer take, so the part left out lands
+    wherever the advection is strong, not where the lag arose. The column
+    totals of `q_tag_inc_left` are exact; its profile is not a map of the lag.
+  - **Move water a partition does not hold.** The shares are normalized, so a
+    donor cell sends the parent's whole flux whatever its partition holds. A
+    residual pinned in a cell stays there, and a draining cell's partition can
+    go negative while the parent does not; the partition repair then moves it.
+  - **Follow explicit processes, the copies, or a donor cell with an empty
+    partition**, whose faces move nothing.
+
+Under `update_constrain_state_every: dss` the constraints run inside the
+window between the snapshot and the solve, so their changes to `ρq_tot` and
+the tags' repair enter `m` too.
+
+The part left out and the part moved are added to the ledger,
 `q_tag_inc_left` and `q_tag_inc_moved` (see
 [`water_tag_increment_ledger_variables`](@ref)).
 """

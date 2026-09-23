@@ -301,6 +301,12 @@ end
             job_id = "water_copies_without_tags",
         ),
     )
+    @test_throws "no tags for it to move" CA.AtmosTagging(
+        tracer_config(
+            ["microphysics_model" => "0M", "water_tag_transport" => "increment"];
+            job_id = "water_increment_without_tags",
+        ),
+    )
     @test_throws "must be `true` or `false`" CA.water_tag_updraft_copy_from_config(
         "true",
     )
