@@ -1461,6 +1461,46 @@ does so was tried and not committed; it waits in [BACKLOG.md](BACKLOG.md).
 *Login node, one core, 2026-09-18; scripts, patches and logs in
 `$SCRATCH/claude_work/p7/`.*
 
+**E77. The exchange allocates 17,416 bytes per call when ClimaCore is pinned to
+the compat floor, and nothing of ours is the cause. The allocation is
+ClimaCore's own `DataScope` reduction over a broadcast's layout arguments.**
+The downgrade jobs of CI pin every dependency to its oldest allowed version,
+and there the `tagging_source_updraft` group's allocation test failed while the
+same test passed on current versions. Pinning ClimaCore to 0.16.0 in a local
+environment with everything else current reproduces the CI figure exactly:
+`exchange: 17416`, against 8 bytes with ClimaCore 1.0.0.
+
+  - **The allocation is entirely at two lines of ClimaCore.** An allocation
+    profile of the exchange attributes all of it to
+    `DataLayouts/scopes.jl:76`, `DataScope(arg1, arg2, args...) = DataScope(DataScope(arg1), DataScope(arg2, args...))`, reached from
+    `DataLayouts/broadcast.jl:131`, `DataScope(bc) = DataScope(layout_args(bc)...)`, inside `foreach_point`.
+  - **What is allocated is the broadcast itself, not our data.** The five
+    largest entries, 16,096 of the 17,416 bytes in ten allocations, are
+    `Broadcasted` objects and tuples of them. The vararg reduction over the
+    broadcast's layout arguments is materialised on the heap instead of being
+    unrolled away.
+  - **Raising the compat floor to 0.16.1 would not help.** The two lines are
+    textually identical in 0.16.0, 0.16.1 and 1.0.0, and the whole
+    `src/DataLayouts` tree is byte-identical between 0.16.0 and 0.16.1. What
+    changed by 1.0.0 is around them: 0.16.0 carries a local `Utilities.Unrolled`
+    module of hand-written unrolled shims, which 1.0.0 removes in favour of
+    UnrolledUtilities. Pinning 0.16.1 also fails for an unrelated reason, a
+    callback condition returning `nothing` inside ClimaTimeSteppers, so it is
+    not a usable floor either way.
+  - **What was ruled out first.** The kernel's own shape allocates nothing on
+    both versions, in both layouts; `column_accumulate!` allocates nothing on
+    both; nested lazy inputs cost 480 bytes on both; and materialising the
+    intermediate ratios or subdomain energies makes current versions worse, 424
+    and 4,824 bytes. Thermodynamics is cleared by the pin experiment itself.
+
+The test's bound is therefore scoped by the resolved ClimaCore version in
+`afd470e7`, strict at 8 and 24 bytes on current versions and loose at 32,768 on
+the floor, with the reason in `NEWS.md`. Both downgrade groups pass with it.
+*2026-09-23, login node, in `$SCRATCH/claude_work/dg_atmos`, a full ClimaAtmos
+environment resolved offline against the terrabyte-cpu depot with ClimaCore
+pinned; the probe is `$SCRATCH/claude_work/upd_run/alloc_types.jl` and its log
+is beside it.*
+
 ## 11. Method
 
 **M1. Volume fractions and mass fractions can differ by six orders of
