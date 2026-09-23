@@ -213,6 +213,10 @@ is exact.
 Before any correction is written, an exact diagnostic of each path's leak,
 computed from the state in closed form, sizes it on D4-W and on the sphere. A
 path gets its correction when its leak exceeds a tenth of the closure budget.
+V-W0c's estimate for the grid-scale vertical diffusion on D4-W is 0.9% of the
+column's water a day (FINDINGS W18), 45 times that level. So that path needs
+its correction, or the rain and snow tags, before criterion 4 is judged on
+D4-W.
 
 ### 4.3 Following the parent's increment (WP5)
 

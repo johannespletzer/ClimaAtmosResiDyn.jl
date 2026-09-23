@@ -238,8 +238,8 @@ Every G3 run is stamped with a manifest at submission, kept as
 | `w0a_0m_implicit_newton10_2h` | 0000   | same   | 2a6f1294 | 2026-09-23 | `13831762` | implicit microphysics, ten iterations                                                   | W16      | yes  | 15 nc   | not yet |
 | `w0a_0m_explicit_newton1_2h`  | 0000   | same   | 2a6f1294 | 2026-09-23 | `13831763` | explicit microphysics, one iteration: the control, with the 0M sink off the Newton path | W16      | yes  | 15 nc   | not yet |
 | `w0a_0m_explicit_newton10_2h` | 0000   | same   | 2a6f1294 | 2026-09-23 | `13831764` | explicit microphysics, ten iterations                                                   | W16      | yes  | 15 nc   | not yet |
-| `w0c_d4w_untagged`            | 0000   | same   | c537903b | 2026-09-23 | `13829852` | V-W0c and V-W1's twin: D4-W with no water tags, with the EDMF diagnostics that size WP3 | running  | —    | —       | —       |
-| `w1_d4w_grid_tags`            | 0000   | same   | c537903b | 2026-09-23 | `13829853` | V-W1: D4-W with grid-scale water tags on `main` after #95, the "before"                 | running  | —    | —       | —       |
+| `w0c_d4w_untagged`            | 0000   | same   | c537903b | 2026-09-23 | `13829852` | V-W0c and V-W1's twin: D4-W with no water tags, with the EDMF diagnostics that size WP3 | W17, W18 | yes  | 37 nc   | not yet |
+| `w1_d4w_grid_tags`            | 0000   | same   | c537903b | 2026-09-23 | `13829853` | V-W1: D4-W with grid-scale water tags on `main` after #95, the "before"                 | W17      | yes  | 48 nc   | not yet |
 
 The two D4-W runs use the driver `analysis/water/d4w_driver.jl`, which sets the
 passive tracer to the `tropo` mask.

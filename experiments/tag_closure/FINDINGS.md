@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W16                                           | 1. Water tags                                       |
+| W1–W18                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -244,6 +244,65 @@ the split (G3_PLAN 4.3). *Jobs `13831761` to `13831764`, `hpda2_test`,
 2026-09-23, from `../ClimaAtmosResiDyn-wedmf-run` at `2a6f1294`;
 `output/w0a_0m_{implicit,explicit}_newton{1,10}_2h/`,
 `analysis/water/w0a_newton_2x2.py` (`output/w0a_0m_implicit_newton10_2h/newton_2x2.txt`).
+Not yet through the verifier.*
+
+**W17. V-W1, the "before": with grid-scale tags only, D4-W's water partition
+drifts to 15% of the column's water in a day, and the model is untouched.**
+D4-W is D4 (DYCOMS RF02, prognostic EDMF, one updraft, 1M, dt 120 s) with
+`edmfx_vertical_diffusion: true`, water tags instead of energy tags, and V3's
+passive tracer set to the `tropo` mask. On `main` after #95 the tags have no
+updraft fields.
+
+| `water_tag_closure.csv`        | 1 h         | 5 h     | 12 h               | 24 h        |
+|:------------------------------ | -----------:| -------:| ------------------:| -----------:|
+| `gross_relative`               | 0.022       | 0.078   | 0.123              | 0.151       |
+| `relative` (signed)            | −2.4e-4     | −5.0e-3 | −0.016             | −0.052      |
+| untagged / overclaimed, kg m⁻² | 0.13 / 0.13 |         | 0.62 / 0.79 (11 h) | 0.57 / 1.18 |
+
+The gross residual is 75 times the closure budget of 0.2% at 24 h; the second
+12 h add less than the first. The tags overclaim more than they miss, so they
+hold water the column has lost. Against the passive tracer, which mixes as the
+air does, the `tropo` share differs by 0.088 in L1 at 1 h and 0.23 at 24 h; its
+column mean is 0.83 against the tracer's 0.74. That gap is the missing
+sub-grid flux plus the region attribution of new water (E68's erratum), not
+separated. The split `evap_tropo + evap_strat = evap` holds to 1e-15, as it
+must for tags that all see the same operators. **Parity:** all 37 fields the
+untagged twin writes, the updraft and environment fields and the tracer among
+them, are bit for bit the same at all 25 outputs. *Jobs `13829853` (tagged) and
+`13829852` (twin), `hpda2_test`, 2026-09-23, from `../ClimaAtmosResiDyn-wedmf-run`
+at `c537903b`, driver `analysis/water/d4w_driver.jl`;
+`output/w1_d4w_grid_tags/` (with `parity.txt`), `analysis/water/d4w_parity.py`,
+`analysis/water/d4w_before_and_sizing.py`. Not yet through the verifier.*
+
+**W18. V-W0c sizes WP3: on D4-W the updraft holds no rain worth tagging and
+there is no snow, but the 1M diffusion leak alone would fail the closure
+budget.** The untagged D4-W day of W17, with the EDMF diagnostics.
+
+  - **Rain and snow in the updraft.** The rain water path is 3.6e-3 to
+    7.0e-3 kg m⁻², and the updraft holds under 0.01% of it at every hour.
+    There is no snow. Surface precipitation averages 1.2e-5 kg m⁻² s⁻¹ over
+    the hourly samples. So D4-W cannot exercise the rain and snow tags'
+    updraft composition; the deep and continental cases of V-W5 and V-W6
+    have to.
+  - **The surface excess.** At the first level the updraft is moister than
+    the environment by 2.9e-4 to 3.0e-4 kg kg⁻¹, about 3% of `q_tot`, while
+    the environment's standard deviation there is 2.0e-5 to 3.1e-5. The
+    updraft covers 10% of the area.
+  - **The 1M `q_tot_eff` leak.** On a column only the grid-scale vertical
+    diffusion leaks; hyperdiffusion and the sponge are off. The tags diffuse
+    their whole value while `ρq_tot` diffuses without rain and snow, so the
+    partition's sum is off by `∂z(ρ K ∂z q_p)`. With `K` the model's `edt`
+    (up to 225 m² s⁻¹) and the hourly samples, the net change per level over
+    the day sums to 0.9% of the column's water, 0.85% with the environment's
+    area. That is 4.5 times the closure budget and 45 times the level at which
+    G3_PLAN 4.2 corrects a path, and 6% of W17's residual. *An estimate:*
+    hourly samples of a quantity that varies within the hour, and `edt` in
+    place of the operator's own coefficients. WP4c's exact diagnostic replaces
+    it. Consequence: D4-W's closure (criterion 4) can pass only with WP4c's
+    correction or with the rain and snow tags, which remove the leak by
+    construction.
+
+*Job `13829852`, as W17; `output/w0c_d4w_untagged/before_and_sizing.txt`.
 Not yet through the verifier.*
 
 ## 2. Energy source tags: closure by transport

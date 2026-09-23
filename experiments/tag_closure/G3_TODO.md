@@ -100,8 +100,13 @@ The twelve criteria of the plan, section 2, in short:
     screen and decides no cause (G4_TODO, prepared item 2).
   - [ ] Check that V-W8's ERA5 forcing is on disk, and that the copies against
     tracer test (plan S3) can be configured.
-  - [ ] V-W0c: one untagged D4-W day with EDMF diagnostics, to size the
-    updraft's rain and snow, the surface excess and the five 1M leaks.
+  - [x] V-W0c: one untagged D4-W day with EDMF diagnostics, to size the
+    updraft's rain and snow, the surface excess and the five 1M leaks (W18).
+    The updraft holds under 0.01% of the rain and there is no snow, so D4-W
+    cannot test the rain and snow tags' updraft composition. The updraft is
+    3% moister than the environment at the surface. The vertical diffusion
+    leak is about 0.9% of the column's water a day, 45 times the correction
+    level, so WP4c's correction of it comes before criterion 4 on D4-W.
   - [x] V-W0a: known issue 4, a precipitating 0M column, 1 against 10 Newton
     iterations. The day-long pair rained only in its first hour (W15), so a
     controlled 2×2 over that hour followed (W16): the missing diagonal
@@ -109,8 +114,10 @@ The twelve criteria of the plan, section 2, in short:
     restated in PR-W1. The sensitivity itself is the implicit and explicit
     advection split, which grows as the solve converges; WP5 addresses it.
     Both entries still go through the verifier once it covers water.
-  - [ ] V-W1: D4-W with grid-scale tags on `main` + #95, before WP1's refusal,
-    and its untagged twin: the "before" numbers.
+  - [x] V-W1: D4-W with grid-scale tags on `main` + #95, before WP1's refusal,
+    and its untagged twin: the "before" numbers (W17). The gross residual is
+    15% of the column's water at 24 h, 75 times the budget; parity holds bit
+    for bit in all 37 fields. The twin is V-W0c's run.
   - [ ] Checksummed minimal datasets for headline tables, in the archive's
     `reference_data/`, within 5 GB.
 

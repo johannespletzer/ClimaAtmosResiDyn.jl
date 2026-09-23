@@ -1,0 +1,33 @@
+== V-W1: the tropo share against the passive tracer (the air below 750 m at t=0)
+   1 h: column water-weighted mean of φ_tropo 0.720, of the tracer 0.720; L1 |φ − tracer| 0.088; max |φ − tracer| 0.650
+   6 h: column water-weighted mean of φ_tropo 0.741, of the tracer 0.724; L1 |φ − tracer| 0.154; max |φ − tracer| 0.345
+  12 h: column water-weighted mean of φ_tropo 0.768, of the tracer 0.731; L1 |φ − tracer| 0.171; max |φ − tracer| 0.357
+  24 h: column water-weighted mean of φ_tropo 0.826, of the tracer 0.739; L1 |φ − tracer| 0.227; max |φ − tracer| 0.769
+== V-W1: evap_tropo + evap_strat against evap (not an identity under the EDMF gap)
+   1 h: evap share of the column 0.0114; Σ|split − evap| / Σ evap = 3.00e-16
+   6 h: evap share of the column 0.0656; Σ|split − evap| / Σ evap = 1.32e-15
+  12 h: evap share of the column 0.1288; Σ|split − evap| / Σ evap = 1.53e-15
+  24 h: evap share of the column 0.2459; Σ|split − evap| / Σ evap = 1.13e-15
+== V-W0c: the updraft's share of rain and snow (column integrals)
+  husra  1 h: grid-mean column 5.086e-03 kg m-2, updraft's part 2.710e-07 (0.0%)
+  husra  6 h: grid-mean column 7.018e-03 kg m-2, updraft's part 2.885e-11 (0.0%)
+  husra 12 h: grid-mean column 4.746e-03 kg m-2, updraft's part 2.398e-12 (0.0%)
+  husra 24 h: grid-mean column 3.634e-03 kg m-2, updraft's part 7.525e-37 (0.0%)
+  hussn  1 h: grid-mean column 0.000e+00 kg m-2, updraft's part 0.000e+00 (nan%)
+  hussn  6 h: grid-mean column 0.000e+00 kg m-2, updraft's part 0.000e+00 (nan%)
+  hussn 12 h: grid-mean column 0.000e+00 kg m-2, updraft's part 0.000e+00 (nan%)
+  hussn 24 h: grid-mean column 0.000e+00 kg m-2, updraft's part 0.000e+00 (nan%)
+  rwp kg m-2 at 1,6,12,24 h: ['5.09e-03', '7.02e-03', '4.75e-03', '3.63e-03']  pr kg m-2 s-1: ['-1.61e-05', '-2.10e-05', '-1.22e-05', '-8.69e-06']
+  daily mean of the hourly pr samples: -1.24e-05 kg m-2 s-1
+== V-W0c: the updraft's surface excess of water at the first level
+   1 h: husup − hus = 2.60e-04, husup − husen = 2.88e-04, σ_env = 2.40e-05 kg/kg, arup = 0.098
+   6 h: husup − hus = 2.70e-04, husup − husen = 3.00e-04, σ_env = 3.06e-05 kg/kg, arup = 0.100
+  12 h: husup − hus = 2.63e-04, husup − husen = 2.93e-04, σ_env = 2.04e-05 kg/kg, arup = 0.102
+  24 h: husup − hus = 2.65e-04, husup − husen = 2.95e-04, σ_env = 2.16e-05 kg/kg, arup = 0.100
+== V-W0c: the 1M leak of grid-scale vertical diffusion, |∂z(ρ K ∂z q_p)| with K = edt
+  gross leak rate at 1,6,12,24 h: ['5.67e-07', '2.76e-06', '1.19e-06', '1.28e-06'] kg m-2 s-1
+  over the day: 1.553e-01 kg m-2, i.e. 1.34e-02 of the column water (closure budget 2e-3, leak rule 2e-4)
+  net per level over the day, Σ|∫ dt| dz: 1.055e-01 kg m-2, i.e. 9.09e-03 of the column water
+  with the environment's area, (1 − arup): 8.48e-03
+  against V-W1's gross residual at 24 h, 0.151: the leak's net is 6.0% of it
+  max edt 224.9 m2/s, max husra 1.20e-05 kg/kg at z = 575 m

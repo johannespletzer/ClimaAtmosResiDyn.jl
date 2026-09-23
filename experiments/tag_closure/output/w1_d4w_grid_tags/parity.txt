@@ -1,0 +1,2 @@
+37 fields compared, 37 bitwise identical over 25 outputs
+only in the tagged run: ['q_tag_evap', 'q_tag_evap_strat', 'q_tag_evap_tropo', 'q_tag_fix_evap', 'q_tag_fix_evap_strat', 'q_tag_fix_evap_tropo', 'q_tag_fix_strat', 'q_tag_fix_tropo', 'q_tag_res', 'q_tag_strat', 'q_tag_tropo']
