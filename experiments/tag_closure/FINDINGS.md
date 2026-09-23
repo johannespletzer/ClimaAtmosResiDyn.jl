@@ -27,7 +27,7 @@ only LEARNINGS held are here, with their register IDs (`LEARNINGS:A2:1` and so
 on, from `review/register/claims.csv`).
 
 **Numbering from here on.** G3's water findings continue at W15, W16, … in
-section 1. G4's energy findings continue at E76, E77, … in the section of their
+section 1. G4's energy findings continue at E77, E78, … (E76, the R2 ladder, is the last before G4) in the section of their
 topic. A finding that concerns both families is filed where its measurement was
 made, with a pointer from the other section. A correction is a dated erratum
 beside its entry, and the claim it replaces goes into section 12.
@@ -90,7 +90,7 @@ changes, which [RUNS.md](RUNS.md) records.
 | E45, E47, E51, E54, E55, E57, E58 | 6. Parity, Float32, MPI and restarts |
 | E7–E9, E20–E24, E26, E28, E30, E38, E49, E63 | 7. The process records and the per-process checks |
 | E50, E60, E69, E70, E74, E75 | 8. The sphere and long runs |
-| E68, E72, E73 | 9. Mixing: V3 and the updraft gap |
+| E68, E72, E73, E76 | 9. Mixing: V3 and the updraft gap |
 | T1–T10, E44, E44b–E44e, E52, E56 | 10. Cost |
 | M1–M6 | 11. Method |
 | old claims, errata, conflicts | 12. Superseded and falsified claims |
@@ -1271,6 +1271,42 @@ default run at `3ec098f1` is superseded
 (`v3_upd_default_prefix_e010f780_superseded` on scratch). `output/v3_upd_default/`,
 `output/v3_upd_copies/`.*
 
+**E76. The exchange's ladder: its agreement with the audit holds at 24 h across
+the time step and the Newton count, and the first hour does not converge. R2 of
+the review of #95.** Five pairs of D4 days, each a default run and an
+updraft-copies run on one atmosphere, so each pair's difference is the
+exchange's error against the audit at that setting. `ta` and `rhoa` are bit for
+bit in every pair.
+
+| L1 against the copies | `sfc` 1 h | `sfc` 6 h | `sfc` 24 h | `strat` 24 h |
+|:--|--:|--:|--:|--:|
+| 120 s, 1 Newton, centred | 14.3% | 2.6% | 0.64% | 0.91% |
+| 60 s | 19.4% | 3.1% | 0.53% | 1.25% |
+| 30 s | 21.3% | 2.5% | 1.36% | 1.09% |
+| 2 Newton iterations | 15.5% | 2.2% | 0.88% | 1.13% |
+| first-order upwind | 14.7% | 11.0% | 6.5% | 0.22% |
+
+At 24 h every tag is within 1.6% in L1 and 2.6% at its largest point, at every
+time step and Newton count. That meets G1's criterion 4b (L1 ≤ 2%, L∞ ≤ 5%) with
+margin: the worst tag is `sub` at 1.54% and `sfc` at 2.51%. The first hour gets
+worse as the step shrinks, 14.3% to 21.3% for `sfc`, so it is not a
+discretisation error. It is the copies' spin-up from the grid mean against a
+plume that is steady from the first step, and the two schemes' different
+bounds. It is a difference of convention, and a first-hour reading should say
+which convention it used. One Newton iteration against two moves `sfc` at 24 h
+from 0.64% to 0.88%, and the region tags from 0.91% to 1.13%, so the error is
+not the solver's. First-order upwinding of the sub-grid flux costs an order of
+magnitude (6.5% against 0.64% for `sfc` at 24 h), which supports keeping the
+parent's reconstruction. The blend factor's fix (`dcf7d086`) takes the region
+tags' first-hour L1 from 1.89% to 0.13% at the baseline, and from 1.73% to
+0.12% with two Newton iterations. Late-time numbers move little, the region
+tags from about 0.5% to about 1%. *Jobs `13782601` to `13782605` (the default
+runs at `dcf7d086`) and `13768363` to `13768369` (the copies runs at
+`dbe7435c`, which the fix does not touch), terrabyte, 2026-09-23, from
+`../ClimaAtmosResiDyn-upd-run`. The earlier default runs at `dbe7435c` are
+superseded. `output/v3_upd_default*`, `output/v3_upd_copies*`; RUNS.md lists
+each output.*
+
 ## 10. Cost
 
 Other costs sit beside their findings: the audit, about 5% per step (E34);
@@ -1530,7 +1566,7 @@ their entries as "not separated".
 | FQ-22 | Whether 1M changes the water residual on a sphere (W5b). | G3_TODO or BACKLOG |
 | FQ-23 | The tag cost on a GPU, and under EDMF (T4, T9). | BACKLOG (M6); G3_TODO WP9 |
 | FQ-24 | R11's suppression cost over long runs (E19). | G4_TODO G4.10 |
-| LEARNINGS:A2:1 | Why the linear water ladders are sub-first-order (W1). | no row in `items.csv` |
+| LEARNINGS:A2:1 | Why the linear water ladders are sub-first-order (W1). | BACKLOG, "M0 to M5, not energy-specific" |
 
 Settled, and struck in the original: FQ-1 (E9b), FQ-2 (R8), FQ-7 (E28, E30),
 FQ-8 (E37), FQ-9 (E39), FQ-12 (E53), FQ-14 (E43), FQ-16 (E39, E39b), FQ-18

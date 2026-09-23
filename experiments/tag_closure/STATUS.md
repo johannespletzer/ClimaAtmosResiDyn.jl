@@ -105,7 +105,7 @@ The plan is [CONDENSE_PLAN.md](CONDENSE_PLAN.md).
 | H1 | the job session writes its R2 entry, then stops editing the record documents until H6 merges, and moves to the record branch. The owner relays this | done: E76 is written and ported (`eec7f363`), and the main clone is on the record branch since 2026-09-23 |
 | H2 | the register, `review/register/` | done (`52710619`) |
 | H3 | re-check what G3 relies on | done (`388d2f3a`) |
-| H4 | write the new structure on the condense branch | in progress, not committed |
+| H4 | write the new structure on the condense branch | done (`2a9d4619`), with E76 merged in from the record branch |
 | H5 | the loss check, by an agent that did not write | next |
 | H5b | a collective review of H1 to H7 by an independent agent, the owner's request | after H5 |
 | H6 | the owner reviews a PR of the condense branch into the record branch; the G3 branch and the old experiment branch retire | waiting |

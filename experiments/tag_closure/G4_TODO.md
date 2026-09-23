@@ -175,8 +175,7 @@ parent source). The offline EDMF column budget.
 
 State on 2026-09-23: the job session reran the ladder's default runs at
 #95's head `dcf7d086` (jobs `13782601` to `13782605`) and recorded the result
-as E76, in commit `8726d2cb` on the old branch `claude/tag-closure-experiments`.
-That commit reaches the record branch at H6. #95 has not merged yet, so the
+as E76 (`8726d2cb`, ported to the record branch as `eec7f363`). #95 has not merged yet, so the
 ladder at the merged head is still to do.
 
 ### G4.8 A surface pulse, and convection switched on and off, for energy

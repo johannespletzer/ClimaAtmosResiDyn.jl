@@ -65,6 +65,7 @@ here (ROADMAP). The sweep itself is G4.10.
 | P6 | `OT-P6` | Parity checks: the on/off half is merged (#79). The stratospheric passive tracers have no such test. Nothing compares the fork with an upstream checkout, skipped for now (decision of 2026-09-14) | M1 | OT section 4 |
 | LT-4 | `LT-4` | Whether to lengthen `test/tagged_water_integration.jl` past A5's onset. The issue-64 fix strengthened the test instead; the coverage gap is narrowed, not closed. Related to G3 WP1's known issue 1 | outside (register) | LT, "0. Checked 2026-09-10"; old README, "Open items" |
 | P7 | `OT-P7` | Not a regression (E56). An optional fix saves seconds and is not approved. Before it merges it needs parity on `moist_sphere` and `column_1m`, testset 6 of the source-tag integration file, and a tagged build with water tags. Unexplained: whole parity runs are 5 to 6% slower in the fork | M3 to M5 (ROADMAP) | OT section 3 (shelved); Plan A.4 |
+| A2 (water) | `LEARNINGS:A2:1` | Both linear water ladders of phase A are sub-first-order, and `none` stops converging near dt 2.5 s, with a floor near 1e-7 (FINDINGS W1). Candidates are listed, none tested | M3 | `archive/2026-09-23/LEARNINGS.md`, A2 |
 
 ## Outside the roadmap: open questions
 

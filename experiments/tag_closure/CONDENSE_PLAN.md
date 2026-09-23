@@ -70,7 +70,7 @@ experiments/tag_closure/
                   milestone and source
   FINDINGS.md     condensed by topic, with dated errata and a table of
                   superseded and falsified claims. The numbering is kept, and
-                  G3 continues at W15 for water and E76 for energy
+                  G3 continues at W15 for water and G4 at E77 for energy (E76 is the R2 ladder)
   RUNS.md         the run register: config, commit, worktree, purpose,
                   finding, and where its data lives (repo, scratch, archive)
   README.md       a short operator guide for terrabyte: manifest, verifier,
@@ -193,5 +193,5 @@ reviewed one by one.
 ## Numbering from here on
 
 G3's findings continue as W15, W16, … in the water section. G4's continue as
-E76, E77, …. A finding that concerns both families is filed where its
+E77, E78, …, since E76 went to the R2 ladder on 2026-09-23. A finding that concerns both families is filed where its
 measurement was made, with a pointer from the other section.
