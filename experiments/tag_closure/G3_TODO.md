@@ -5,18 +5,18 @@ tagged water tracers to work under prognostic EDMF, operational in the
 production configuration (a sphere with EDMF and 1M), with precipitation
 provenance.** G4, the energy source tags, follows and uses what G3 learns.
 
-The plan is [G3_WATER_PLAN.md](G3_WATER_PLAN.md). It has been reviewed
+The plan is [G3_PLAN.md](G3_PLAN.md). It has been reviewed
 (`review/agent_reviews/g3_water_plan_review.md`) and finalised. This list
 tracks its work. Where the two differ, the plan holds. The overview is the
-roadmap at the top of [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md).
+roadmap, [ROADMAP.md](ROADMAP.md).
 
 **Approved by the owner on 2026-09-23:** every job within the programme, and
 agents as proposed. Model code goes into draft PRs that only the owner
 merges. The parity rule of `AGENTS.md` holds for every change. GPU is outside
 G3.
 
-**Who does what.** This session runs G3, including its jobs, in the worktree
-`ClimaAtmosResiDyn-exp` on branch `claude/g3-programme`. Model code goes on
+**Who does what.** This session runs G3, including its jobs, from the worktree
+`ClimaAtmosResiDyn-exp`, and records on branch `claude/tag-closure-record`. Model code goes on
 `claude/water-tags-edmf`. A separate session runs the energy jobs and owns
 PR #95, in the worktrees `../ClimaAtmosResiDyn-upd` and `-upd-run`.
 
@@ -70,7 +70,7 @@ The twelve criteria of the plan, section 2, in short:
      - `runs_inventory.csv`, 93 output directories, not yet classified.
  - [x] OPERATIONAL_TODO's open items matched to milestones.
  - [x] The instruction for #95's partition-only factor
-   (`review/pr95_blend_factor_instruction.md`, `2ecc1d86`), passed to the job
+   (`2ecc1d86`; carried out in #95 at `dcf7d086` and then removed at the owner's request (`a52b17f7`). Its text is kept under the tag `archive/g3-programme-2026-09-23`), passed to the job
    session through the owner.
  - [x] G3's plan, reviewed and finalised.
 
@@ -260,43 +260,9 @@ The twelve criteria of the plan, section 2, in short:
 
 ## G4: the energy source tags, after G3
 
-These items come from the former G3 and from plan section 9. They wait for
-G3, except where the job session runs them now.
-
- - **G4.1** #95's follow-ups: D1 with D3 closes when #95 merges. U5, a clear
-   error when the tag list changes across a restart.
- - **G4.2** The early-warning probe, looking back (synergy 1): does
-   `increment_left` flag V2's one-iteration collapse against the two-iteration
-   run?
- - **G4.3** Claim contracts for energy source tags, process records and the
-   parent-budget ledger.
- - **G4.4** The residual report: rate and settling forecast (synergy 4),
-   vertical and local maxima, headroom (U9), overlay bounds (A5).
- - **G4.5** Warnings, abort rules and acceptance kept apart, for both
-   families' closure checks. U2's calibration (OPERATIONAL_TODO item 11).
- - **G4.6** The D4 process budget with every record and the ledger (synergy 6,
-   C4's `c Δρ`, repair never a parent source). The offline EDMF column budget.
- - **G4.7** The energy reference suite:
-   - the R2 ladder (the job session's runs, redone at #95's merged head);
-   - 60 and 120 levels, and Newton 4 and 10;
-   - a Float64 twin;
-   - the cold precipitating column;
-   - a forced column without EDMF.
- - **G4.8** A surface pulse, and convection switched on and off, for energy.
- - **G4.9** Alternative placements of the increment correction on a shared
-   parent.
- - **G4.10** The offset sweep (U8), and a check for leaving the tested regime.
- - **G4.11** Carried over from G3:
-   - the plume rescale, to `Aʲ`;
-   - one surface rule;
-   - the per-subdomain split for precipitation energy and EDMF's
-     sedimentation corrections;
-   - compartments for the energy falling water carries.
- - **G4.12** Held-out columns for energy, a red team, and the owner's choice
-   of the energy default.
- - **G4.13** Ten days of the energy sphere at the chosen default, against
-   E75.
- - **G4.14** A memory number for every run (synergy 5), after WP6.
+G4's items, G4.1 to G4.14, are in [G4_TODO.md](G4_TODO.md), with the energy
+items of the former OPERATIONAL_TODO. The prepared design of synergy 2, the
+Float64 twin that WP0 builds, is at the end of that file.
 
 ## Agents
 

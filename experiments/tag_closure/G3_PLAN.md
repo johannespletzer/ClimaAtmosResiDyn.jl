@@ -23,8 +23,8 @@ The owner decided on 2026-09-23:
     one switch, as for the energy tags in #95. Measuring the exchange against
     the copies confirms the choice.
  5. **The bound takes its factor from the partition only**, and each source
-    tag gets its own. This applies to both families. The instruction for #95 is
-    `review/pr95_blend_factor_instruction.md` (`2ecc1d86`).
+    tag gets its own. This applies to both families. The instruction for #95 (`2ecc1d86`) was
+    carried out in #95 at `dcf7d086` and then removed at the owner's request (`a52b17f7`). Its text is kept under the tag `archive/g3-programme-2026-09-23`.
  6. **This session runs G3's jobs.** A separate session runs the energy jobs.
 
 The plan assumes **PR #95 is merged into `main` with decision 5**. Code

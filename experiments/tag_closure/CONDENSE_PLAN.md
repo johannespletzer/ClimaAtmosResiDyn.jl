@@ -121,6 +121,7 @@ OPERATIONAL_TODO.md   a stub pointing to STATUS.md, so links keep working
 | H3 | **Re-check what G3 relies on**: W1–W14, E40, E44, E53, E55, E59, E64, E66, E73, E75. Each gets a verdict: recomputed, consistent, unverifiable, discrepant, stale or superseded. Report to `review/verify_g3.md` | agent (Sonnet, high) |
 | H4 | **Write the new structure** on `claude/tag-closure-condense`, from the register and H3's verdicts. AGENTS.md's style; the main session adjudicates every discrepant or stale claim first | agent (Opus, high) |
 | H5 | **The loss check**, by an agent that did not write: every register row has a home; every number is unchanged; every run directory is referenced; nothing new is claimed. Repeated until clean | agent (Opus, high) |
+| H5b | **A collective review of H1 to H7**, added by the owner on 2026-09-23. The documents, the loss check, the register, the branches and tags, the archive, PRs #96 and #97, and H7's removals are reviewed together, before the owner sees the PR. Report to `review/agent_reviews/` | independent agent (Opus) |
 | H6 | The owner reviews a PR of the condense branch into the record branch. The G3 branch is retired. The job session's commits since `eead88c3` are ported, since they touch only `experiments/` | this session, owner |
 | H7 | The approved cleanup: worktrees (below), local branches, remote branches merged into `main`, `claude_work`, the memory files | this session, after approval |
 

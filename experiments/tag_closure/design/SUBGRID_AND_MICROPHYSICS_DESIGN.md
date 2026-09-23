@@ -5,12 +5,12 @@ A design for the owner's OK, written on 2026-09-11 against
 owner asked for three things before the tags are used operationally:
 sub-grid transport with ice, the other microphysics schemes, and user docs.
 This file covers the first two. The user guide is a separate draft,
-[USER_GUIDE_DRAFT.md](USER_GUIDE_DRAFT.md). The validation configs are the `d*`
+[USER_GUIDE_DRAFT.md](../archive/2026-09-23/USER_GUIDE_DRAFT.md). The validation configs are the `d*`
 files in `configs/`. FINDINGS E40 and E41 record the build checks.
 
 Line numbers are at `17badbe7`. The review fixes merged since (`602153b9`) moved
 some of them in `energy_source_tags.jl` and in the docs. "E" and "T" numbers are
-entries in [FINDINGS.md](FINDINGS.md).
+entries in [FINDINGS.md](../FINDINGS.md).
 
 ## Why
 
