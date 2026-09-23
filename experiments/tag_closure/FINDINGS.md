@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W23                                           | 1. Water tags                                       |
+| W1–W24                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -545,6 +545,61 @@ variants. Closure after the hour, relative to the column's water:
     `q_tag_inc_left`. *Corrected on 2026-09-24; this entry first said the
     follower is built to remove the lag.* The explicit-path probe with the
     follower measures it.
+
+**W24. WP5's follower closes D4-W's water partition to 1.5e-4 of the column
+in a day with one Newton iteration, 47 times less than without it, and to
+6e-10 with ten; every tag meets its budget against the copies, closer than
+before. On the explicit 1M path it removes only the column-neutral half of
+W23's lag.** The validation of #102 (`water_tag_transport: increment`), on
+D4-W as V-W3's default day otherwise, and the explicit-path probes of W23 with
+the follower.
+
+| D4-W, default mode, 24 h                  | gross   | net      |
+|:----------------------------------------- | -------:| --------:|
+| tracer transport, 1 iteration (W21)       | 7.1e-3  | 2.0e-3   |
+| **follower, 1 iteration**                 | 1.5e-4  | 2.4e-5   |
+| tracer transport, 10 iterations (W21)     | 1.3e-3  | 1.1e-4   |
+| **follower, 10 iterations**               | 5.6e-10 | 1.1e-10  |
+| copies, 1 iteration (W21)                 | 1.8e-3  | 3.1e-4   |
+
+  - **Against the copies** (the verifier, `--judge`, on one atmosphere; every
+    parent field bit for bit): PASS at both iteration counts. At 24 h, one
+    iteration, `tropo` L1 0.25% (0.73% under the tracer transport, W21),
+    `strat` 0.41% (0.47%), `evap` 0.41% (0.96%); at 1 h `evap` 6.5% (6.6%).
+    With ten iterations 0.25%, 0.32% and 0.25%.
+  - **The closure's growth.** With one iteration the gross residual is 4.1e-5
+    at 1 h, 1.1e-4 at 12 h and 1.5e-4 at 24 h: the second 12 h add less than
+    the first, as 6.1 asks. The part left out at 24 h is −2.6e-5 of the column
+    net and 2.0e-4 gross over the cells.
+  - **What remains with one iteration** is the part of the parent's increment
+    that changes a column's total, which the follower cannot move (the review
+    of #102, S1). With ten iterations the Newton solve converges and that part
+    vanishes with the rest.
+  - **The partition's negativity (review S3).** Its minimum stays at 1.4e-9
+    kg/kg, and the partition repair's ledger (gross over the cells, net over
+    time) reaches 2.9e-3 of the column's water with the follower, as under the
+    tracer transport; the copies' run has 5.2e-3. Nearly all of it arrives in
+    the first 12 h, in every mode.
+  - **The explicit 1M path, W23's column, an hour, one iteration:**
+
+    | mode, transport       | net     | gross   |
+    |:--------------------- | -------:| -------:|
+    | default, tracer (W23) | 7.7e-3  | 1.6e-2  |
+    | default, follower     | 7.9e-3  | 8.0e-3  |
+    | copies, tracer (W23)  | 7.8e-3  | 9.7e-3  |
+    | copies, follower      | 7.9e-3  | 8.0e-3  |
+
+    The follower removes the column-neutral part and leaves the net, as its
+    invariant says. Closing the net needs the column-total part routed out
+    through the bottom face, or the tags' sedimentation cross blocks (for the
+    owner).
+
+*Jobs `13868824` (one iteration) and `13868825` (ten), `hpda2_compute`,
+2026-09-24, D4-W driver, from `../ClimaAtmosResiDyn-wedmf-run` at `9acb4956`
+(the record branch with WP5 at `867a5264`; `fd07d902` changes no numerics);
+the verifier's reports in `output/w5_d4w/`. Probes `13868842`, `13868843` with
+`analysis/water/explicit_probe.jl` (a transport argument added) from the WP5
+worktree at `867a5264`.*
 
 *Probes: `analysis/water/explicit_probe.jl` from the WP3 test snapshot at
 `4a1c91a4`, `hpda2_compute`, 2026-09-24, jobs `13865359`, `13865360`,

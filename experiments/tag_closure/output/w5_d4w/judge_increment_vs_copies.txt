@@ -1,0 +1,76 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w3_d4w_copies/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w5_d4w_increment/output_0000
+family:    water
+NOTICE: pairing: YAML 'water_tag_transport' differs between reference and run (outside the allowed keys)
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 1500.000 m (YAML z_max 1500.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  aren       bitwise identical (750 elements)
+  arup       bitwise identical (750 elements)
+  cli        bitwise identical (750 elements)
+  cliup      bitwise identical (750 elements)
+  clw        bitwise identical (750 elements)
+  clwup      bitwise identical (750 elements)
+  detr       bitwise identical (750 elements)
+  edt        bitwise identical (750 elements)
+  entr       bitwise identical (750 elements)
+  env_q_tot_variance bitwise identical (750 elements)
+  evspsbl    bitwise identical (25 elements)
+  evu        bitwise identical (750 elements)
+  hfls       bitwise identical (25 elements)
+  hfss       bitwise identical (25 elements)
+  hus        bitwise identical (750 elements)
+  husen      bitwise identical (750 elements)
+  husra      bitwise identical (750 elements)
+  husraen    bitwise identical (750 elements)
+  husraup    bitwise identical (750 elements)
+  hussn      bitwise identical (750 elements)
+  hussnen    bitwise identical (750 elements)
+  hussnup    bitwise identical (750 elements)
+  husup      bitwise identical (750 elements)
+  lwp        bitwise identical (25 elements)
+  pr         bitwise identical (25 elements)
+  prra       bitwise identical (25 elements)
+  prsn       bitwise identical (25 elements)
+  q_gas_A    bitwise identical (750 elements)
+  rhoa       bitwise identical (750 elements)
+  rhoaen     bitwise identical (750 elements)
+  rhoaup     bitwise identical (750 elements)
+  rwp        bitwise identical (25 elements)
+  ta         bitwise identical (750 elements)
+  tke        bitwise identical (750 elements)
+  wa         bitwise identical (750 elements)
+  waen       bitwise identical (750 elements)
+  waup       bitwise identical (750 elements)
+
+tag        hour   ∫ref kg/m²        Δ∫/∫        L1        L∞     max|Δq|
+tropo         1   8.3210e+00   +8.67e-04  2.73e-03  1.65e-02  1.6061e-04
+tropo         6   8.3949e+00   +1.60e-03  1.84e-03  3.94e-03  3.6673e-05
+tropo        12   8.6309e+00   +1.55e-03  2.91e-03  7.77e-03  7.4635e-05
+tropo        24   8.9379e+00   +1.60e-03  2.54e-03  6.41e-03  6.0606e-05
+
+strat         1   3.2582e+00   -2.20e-03  6.33e-03  3.54e-02  1.4687e-04
+strat         6   3.1166e+00   -4.22e-03  4.76e-03  1.04e-02  4.0541e-05
+strat        12   2.9290e+00   -4.23e-03  4.91e-03  7.51e-03  2.7009e-05
+strat        24   2.6618e+00   -4.12e-03  4.12e-03  1.35e-02  4.1736e-05
+
+evap          1   1.3245e-01   -7.76e-04  6.50e-02  7.06e-02  2.3842e-05
+evap          6   7.5945e-01   -5.73e-04  8.49e-03  1.54e-02  1.6588e-05
+evap         12   1.4815e+00   -3.04e-04  6.35e-03  9.98e-03  1.9537e-05
+evap         24   2.7532e+00   -2.88e-04  4.05e-03  8.48e-03  2.5915e-05
+
+evap_tropo    1   1.3245e-01   -7.76e-04  6.50e-02  7.06e-02  2.3842e-05
+evap_tropo    6   7.5945e-01   -5.73e-04  8.49e-03  1.54e-02  1.6588e-05
+evap_tropo   12   1.4815e+00   -3.04e-04  6.35e-03  9.98e-03  1.9537e-05
+evap_tropo   24   2.7532e+00   -2.88e-04  4.05e-03  8.48e-03  2.5915e-05
+
+evap_strat    1   6.6800e-08   -7.76e-04  6.50e-02  7.06e-02  1.2025e-11
+evap_strat    6   3.8302e-07   -5.73e-04  8.49e-03  1.54e-02  8.3664e-12
+evap_strat   12   7.4719e-07   -3.04e-04  6.35e-03  9.98e-03  9.8536e-12
+evap_strat   24   1.3886e-06   -2.88e-04  4.05e-03  8.48e-03  1.3070e-11
+
+NOTICE: --judge: no --closure-remainder-fields given; the 'what the named parts leave' remainder (R7) is skipped
+
+--judge: PASS
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w5_d4w/judge_increment_vs_copies.json

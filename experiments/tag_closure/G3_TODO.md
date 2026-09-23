@@ -279,7 +279,13 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
       + the hook composes with the energy one;
       + the stepper check is reused.
 
-  - [ ] Its default under EDMF, by the rule in plan 4.3.
+  - [ ] Its default under EDMF, by the rule in plan 4.3. The rule selects it
+    (W21), and the validation (W24) supports it: D4-W closes to 1.5e-4 in a
+    day with one iteration. The owner confirms.
+  - [x] Built: draft PR #102 (`fd07d902`), reviewed (xhigh, nothing
+    blocking; `review/agent_reviews/wp5_numerics_review_2026-09-24.md`),
+    validated on D4-W (W24). Its invariant: it never changes a column's
+    total, so the explicit path's net lag stays (W23, W24).
 
   - [ ] Review (xhigh).
 
