@@ -322,9 +322,11 @@ the design note states how.
 parent's coefficients. The list is verified in the design note:
 
   - grid-scale advection;
-  - hyperdiffusion, with the sedimenting-species coefficient;
   - vertical diffusion (`α = 0`, `K_e` only, under EDMF);
-  - the sponge;
+  - *corrected 2026-09-24 (WP4b-D):* not hyperdiffusion and not the viscous
+    sponge, which leave rain and snow alone (`hyperdiffusion.jl:531-544`,
+    `viscous_sponge.jl:224-229`); the Rayleigh sponge on the updraft's species
+    and DSS, which were missing;
   - the SGS mass flux, since the species have updraft copies;
   - sedimentation, grid-mean and updraft;
   - microphysics;

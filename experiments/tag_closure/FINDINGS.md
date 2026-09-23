@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W22                                           | 1. Water tags                                       |
+| W1–W23                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -502,6 +502,49 @@ with no energy tag following them; the configuration chose that. *Jobs
 `../ClimaAtmosResiDyn-wedmf-run` at `837db55b` (the record branch with WP3 at
 `4a1c91a4`); `output/w8_gcm/parity.txt`. The closure numbers are the model's
 own tables.*
+
+**W23. With the 1M microphysics on the explicit path and one Newton iteration,
+the water tags lag the parent's solve by 0.8% of the column's water in an
+hour, in both EDMF modes. Ten iterations close it.** The CI group
+`tagging_water_edmf_copies` failed at `4a1c91a4` for this reason. Its column
+(DYCOMS RF02, prognostic EDMF, 1M, 30 levels, dt 120 s, ARS222), an hour, with
+the partition `tropo`/`strat` at 750 m and `evap`, run as a probe in six
+variants. Closure after the hour, relative to the column's water:
+
+| mode, microphysics, iterations | net       | gross    |
+|:------------------------------ | ---------:| --------:|
+| copies, implicit, 1            | −3.7e-5   | 3.7e-4   |
+| copies, explicit, 1            | 7.8e-3    | 9.7e-3   |
+| copies, explicit, 10           | −4.3e-7   | 7.5e-4   |
+| default, implicit, 1           | −3.5e-5   | 5.4e-4   |
+| default, explicit, 1           | 7.7e-3    | 1.6e-2   |
+| default, explicit, 10          | −4.4e-7   | 7.7e-4   |
+
+  - **The mechanism.** The parent's `ρq_tot` row carries a cross block from
+    each sedimenting species (`update_sedimentation_jacobian!`,
+    `manual_sparse_jacobian.jl:1233-1236`); the tags' rows carry only their
+    own diagonal, and the cross terms are dropped on purpose
+    (`update_water_tag_sedimentation_jacobian!`, 1283-1288). With one
+    iteration the tags therefore miss part of the parent's sedimentation
+    update. The table bounds the effect to the explicit path and one
+    iteration, and ten iterations remove it. Why the explicit path makes it
+    200 times larger than the implicit one is not isolated.
+  - **The copies' residual** before the repair was 9.3e-5 with ten
+    iterations, 1.9e-4 on the explicit path with one, and 5.6e-5 on the
+    implicit path with one.
+  - **The fix in #101** (`06adcf1c`): the copies group keeps the explicit path,
+    which its parity check needs, and runs ten iterations. The composition
+    check's NaN was the test dividing by `ρaʲ`, which is exactly zero on 8 of
+    the 30 levels; it now takes the leak only where there is an updraft.
+  - **What it leaves.** The lag is a property of the tags on this path, not
+    of the copies. WP5's follower is built to remove it; its D4-W validation
+    runs with the default, implicit path. A run with explicit 1M microphysics
+    and the follower is still to be done.
+
+*Probes: `analysis/water/explicit_probe.jl` from the WP3 test snapshot at
+`4a1c91a4`, `hpda2_compute`, 2026-09-24, jobs `13865359`, `13865360`,
+`13865367`, `13866583`, `13866584`, `13866585`; the model's own
+`tag_closure` after the hour; `output/wp3_explicit_probe/results.txt`.*
 
 ## 2. Energy source tags: closure by transport
 

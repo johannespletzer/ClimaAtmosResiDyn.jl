@@ -1,0 +1,75 @@
+== probe-copies-implicit-13865360.err
+┌ Info: closure after an hour
+│   mode = "copies"
+│   path = "implicit"
+│   newton = 1
+│   closure.relative = -3.724052844302988e-5
+└   closure.gross_relative = 0.00037169365250883357
+┌ Info: copies audit
+└   audit = (copy_residual = 0.0006444312185032167, copy_residual_relative = 5.565628307855125e-5, copy_repair = 0.002970186694773996, copy_repair_relative = 0.00025652008582769)
+┌ Info: updraft area
+│   minimum(ρa) = 3.458838446376397e-42
+│   count(iszero, ρa) = 0
+│   count((<)(1.0e-10), ρa) = 12
+└   length(ρa) = 30
+== probe-copies-explicit-13865359.err
+┌ Info: closure after an hour
+│   mode = "copies"
+│   path = "explicit"
+│   newton = 1
+│   closure.relative = 0.007808908159954942
+└   closure.gross_relative = 0.009712491149522905
+┌ Info: copies audit
+└   audit = (copy_residual = 0.002243443741325291, copy_residual_relative = 0.00019376460040337708, copy_repair = 0.019423566441181435, copy_repair_relative = 0.0016775992731873268)
+┌ Info: updraft area
+│   minimum(ρa) = 0.0
+│   count(iszero, ρa) = 10
+│   count((<)(1.0e-10), ρa) = 12
+└   length(ρa) = 30
+== probe-copies-explicit-n10-13865367.err
+┌ Info: closure after an hour
+│   mode = "copies"
+│   path = "explicit"
+│   newton = 10
+│   closure.relative = -4.338328085621849e-7
+└   closure.gross_relative = 0.0007515290265285503
+┌ Info: copies audit
+└   audit = (copy_residual = 0.0010723415137303466, copy_residual_relative = 9.262619763690899e-5, copy_repair = 0.007460103922874364, copy_repair_relative = 0.0006443852555407097)
+┌ Info: updraft area
+│   minimum(ρa) = 0.0
+│   count(iszero, ρa) = 8
+│   count((<)(1.0e-10), ρa) = 12
+└   length(ρa) = 30
+== probe-default-implicit 1-n-13866583.err
+┌ Info: closure after an hour
+│   mode = "default"
+│   path = "implicit"
+│   newton = 1
+│   closure.relative = -3.5394443363265704e-5
+└   closure.gross_relative = 0.0005376366914921726
+
+real	32m41.736s
+user	32m13.141s
+sys	0m26.063s
+== probe-default-explicit 1-n-13866584.err
+┌ Info: closure after an hour
+│   mode = "default"
+│   path = "explicit"
+│   newton = 1
+│   closure.relative = 0.0077073802997670755
+└   closure.gross_relative = 0.01586733834558182
+
+real	34m47.955s
+user	34m17.695s
+sys	0m27.758s
+== probe-default-explicit 10-n-13866585.err
+┌ Info: closure after an hour
+│   mode = "default"
+│   path = "explicit"
+│   newton = 10
+│   closure.relative = -4.359061953562199e-7
+└   closure.gross_relative = 0.0007673652256280299
+
+real	34m48.910s
+user	34m14.848s
+sys	0m28.430s

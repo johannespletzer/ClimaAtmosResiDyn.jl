@@ -69,7 +69,16 @@ The twelve criteria of the plan, section 2, in short:
     (plan 4.1, review S4) is the owner's.
   - [ ] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. The recommended option is the
-    non-precipitating, rain and snow parts.
+    non-precipitating, rain and snow parts. The note
+    ([design/RAIN_SNOW_TAGS.md](design/RAIN_SNOW_TAGS.md), reviewed xhigh and
+    revised on 2026-09-24) asks four things in its section 15: the fields;
+    `ρq_tag_<name>` holding the non-precipitating water under the key; the
+    microphysics attribution, net-flow rule or gross flows; and 4.2's rule
+    restated to measure a leak's imprint.
+  - [ ] **WP6's two points**
+    ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), section 8):
+    a pre-WP6 checkpoint refused or zero-filled; loss and residence time moved
+    to WP4a and WP4b.
   - [x] **A durable archive** for the minimal reference datasets:
     `~/git/Clima/ClimaAtmosResiDyn-archive/reference_data/`, at most 5 GB.
     Decided by the owner on 2026-09-23.
