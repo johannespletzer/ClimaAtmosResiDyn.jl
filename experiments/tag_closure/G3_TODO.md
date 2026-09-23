@@ -17,8 +17,8 @@ G3.
 
 **Who does what.** This session runs G3, including its jobs, from the worktree
 `ClimaAtmosResiDyn-exp`, and records on branch `claude/tag-closure-record`. Model code goes on
-`claude/water-tags-edmf`. A separate session runs the energy jobs and owns
-PR #95, in the worktrees `../ClimaAtmosResiDyn-upd` and `-upd-run`.
+`claude/water-tags-edmf`. A separate session runs the energy jobs. It owned
+PR #95, which merged on 2026-09-23.
 
 Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
 
@@ -82,8 +82,9 @@ The twelve criteria of the plan, section 2, in short:
 
 ## WP0: foundations
 
-  - [ ] #95 merged with decision 5 (job session, owner). Record its head, and
-    check the plan's assumptions against the merged code.
+  - [~] #95 merged with decision 5 on 2026-09-23 at 16:32: merge `0b2b1032`,
+    head `b9c6e7b0`. Next, check the plan's assumptions against the merged
+    code.
   - [ ] Review the phase-1 tools (the old item 1.8), then write a FINDINGS
     entry. From here on every headline number goes through the verifier.
   - [ ] Extend the verifier to `q_tag_*`, the copies in `sgsʲs`, the rain and
