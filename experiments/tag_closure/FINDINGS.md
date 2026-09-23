@@ -95,7 +95,7 @@ changes, which [RUNS.md](RUNS.md) records.
 | E50, E60, E69, E70, E74, E75                     | 8. The sphere and long runs                         |
 | E68, E72, E73, E76                               | 9. Mixing: V3 and the updraft gap                   |
 | T1–T10, E44, E44b–E44e, E52, E56, E77, E78       | 10. Cost                                            |
-| M1–M6                                            | 11. Method                                          |
+| M1–M7                                            | 11. Method                                          |
 | old claims, errata, conflicts                    | 12. Superseded and falsified claims                 |
 | FQ-1 to FQ-24                                    | 13. What is not established                         |
 
@@ -1727,6 +1727,15 @@ re-run of `c0_sphere_audit` differs from Levante's in the last digits from t = 0
 1.5e-14 in `gross_residual` over the day; `nonpositive_mass_fraction` at 24 h agrees to every digit. On
 one machine runs are deterministic. *`c0_sphere_audit` on both machines, and the
 twin test.*
+
+**M7. A control that changes more than the variable in question bounds an
+effect; it does not isolate it.** W16 compared implicit with explicit
+microphysics to isolate a missing Jacobian entry, but moving microphysics also
+changes the operator splitting and the integration path. So the result is a
+bound on this case, stated with its least favourable number (the source tag's
+24%), not a cause. To isolate an effect, change only it: here, the same
+implicit residual and integration with and without the entry. The owner's
+review of #100, 2026-09-23.
 
 ## 12. Superseded and falsified claims
 
