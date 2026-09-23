@@ -1,0 +1,45 @@
+# V-W0a, the other of the pair: `w0a_0m_newton1` with ten Newton iterations,
+# fixed, as E64's converged twins. Everything else is the same.
+job_id: "w0a_0m_newton10"
+
+max_newton_iters_ode: 10
+
+# The DYCOMS RF02 0M column of the A series, kept cloudy by the DYCOMS
+# radiation and mixed by the decaying diffusion, so that the 0M sink removes
+# water all day. No EDMF.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+implicit_microphysics: true
+rad: "DYCOMS"
+vert_diff: "DecayWithHeightDiffusion"
+implicit_diffusion: true
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+water_tracers:
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: evap
+    source: surface_flux
+
+water_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, pr, evspsbl, lwp]
+    period: "1hours"
+  - short_name: [q_tag_res, q_tag_tropo, q_tag_strat, q_tag_evap]
+    period: "1hours"
+  - short_name: [q_tag_fix_tropo, q_tag_fix_strat, q_tag_fix_evap]
+    period: "1hours"

@@ -1,0 +1,54 @@
+# V-W0a, one of a pair: known issue 4 on a precipitating 0M column without
+# EDMF, with one Newton iteration, the production setting.
+#
+# Known issue 4 (docs/known_issues.md): the tags' share of the implicit 0M
+# sink, `min(Δ, 0) ρq_tag / ρq_tot`, has no Jacobian diagonal. With a fixed
+# Newton count that is an error in the answer, not only slower convergence.
+# But the parent's 0M sink has no Jacobian block either, so parent and tags
+# may take it at the same iterate (G3_PLAN 4.3). The twin `w0a_0m_newton10`
+# converges the solve. If the tags' closure and their shares differ between
+# the two by more than the model's own fields do, the issue stands as written;
+# if not, it is restated.
+job_id: "w0a_0m_newton1"
+
+max_newton_iters_ode: 1
+
+# The DYCOMS RF02 0M column of the A series, kept cloudy by the DYCOMS
+# radiation and mixed by the decaying diffusion, so that the 0M sink removes
+# water all day. No EDMF.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+implicit_microphysics: true
+rad: "DYCOMS"
+vert_diff: "DecayWithHeightDiffusion"
+implicit_diffusion: true
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+water_tracers:
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: evap
+    source: surface_flux
+
+water_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, pr, evspsbl, lwp]
+    period: "1hours"
+  - short_name: [q_tag_res, q_tag_tropo, q_tag_strat, q_tag_evap]
+    period: "1hours"
+  - short_name: [q_tag_fix_tropo, q_tag_fix_strat, q_tag_fix_evap]
+    period: "1hours"

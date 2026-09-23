@@ -1,0 +1,62 @@
+# V-W0c, and V-W1's untagged twin: one D4-W day with no water tags, and the
+# EDMF diagnostics that size WP3 before its details are fixed (G3_PLAN 6).
+#
+# D4-W is D4 (DYCOMS RF02, prognostic EDMF, one updraft, 1M, 30 levels, dt
+# 120 s, one day, Float64) with `edmfx_vertical_diffusion: true`, as every
+# shipped EDMF column and the sphere set it, and the passive tracer of V3. The
+# driver `analysis/water/d4w_driver.jl` sets the tracer to the `tropo` region's
+# mask before the solve, as in the tagged run, so the two stay twins.
+#
+# What it decides:
+#   - the updraft's share of rain and snow, `ρaʲ qʲ` against `ρ q`, which
+#     decides how much WP3's default mode gets wrong by treating rain and snow
+#     as grid-scale;
+#   - the surface excess of the updraft's water, `husup - hus` at the first
+#     level, against the environment's variance;
+#   - the size of the five 1M `q_tot_eff` leaks, from the eddy diffusivity and
+#     the rain and snow profiles (G3_PLAN 4.2).
+# As V-W1's twin, every model field here must equal the tagged run's bit for
+# bit (G3 criterion 3).
+job_id: "w0c_d4w_untagged"
+
+chemistry_model: "passive"
+
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, husra, hussn, wa, q_gas_A]
+    period: "1hours"
+  - short_name: [pr, prra, prsn, evspsbl, hfls, hfss, lwp, rwp]
+    period: "1hours"
+  - short_name: [arup, rhoaup, waup, husup, clwup, cliup, husraup, hussnup]
+    period: "1hours"
+  - short_name: [aren, rhoaen, waen, husen, husraen, hussnen]
+    period: "1hours"
+  - short_name: [tke, edt, evu, entr, detr, env_q_tot_variance]
+    period: "1hours"
