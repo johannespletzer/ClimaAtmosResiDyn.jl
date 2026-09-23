@@ -83,9 +83,14 @@ The twelve criteria of the plan, section 2, in short:
 
 ## WP0: foundations
 
-  - [~] #95 merged with decision 5 on 2026-09-23 at 16:32: merge `0b2b1032`,
-    head `b9c6e7b0`. Next, check the plan's assumptions against the merged
-    code.
+  - [x] #95 merged with decision 5 on 2026-09-23 at 16:32: merge `0b2b1032`,
+    head `b9c6e7b0`. The plan's assumptions were checked against the merged
+    code the same day
+    (`review/agent_reviews/plan_assumptions_check_2026-09-23.md`). Most
+    hold; five points changed the plan: the vertical skip is at
+    `advection.jl:257`, no water restart guard exists, WP1's refusals need
+    their own check, a sixth leak path exists on the sphere, and the tags'
+    sedimentation already has a Jacobian diagonal.
   - [ ] Review the phase-1 tools (the old item 1.8), then write a FINDINGS
     entry. From here on every headline number goes through the verifier.
   - [ ] Extend the verifier to `q_tag_*`, the copies in `sgsʲs`, the rain and

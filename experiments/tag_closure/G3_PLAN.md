@@ -120,7 +120,9 @@ implicit tendency, right after the parent's SGS mass flux, each tag takes:
     follow from the updraft's.
 
 Neither term has a Jacobian block (see 4.3). Under van Leer the exchange is
-first-order upwind.
+first-order upwind. The tags' sedimentation does have one today, a diagonal
+(`manual_sparse_jacobian.jl:1265-1329`). WP3 and WP4b extend it rather than
+build a new one.
 
 **The water plume** differs from the energy plume in two ways:
 
@@ -194,7 +196,10 @@ are:
   - grid-scale hyperdiffusion;
   - the viscous sponge;
   - the updraft's diffusion mirror;
-  - the updraft's hyperdiffusion.
+  - the updraft's hyperdiffusion;
+  - on the sphere only, the horizontal SGS diffusive flux
+    (`edmfx_sgs_flux.jl:444-595`), found by WP0's check of the merged code. A
+    column has no horizontal gradient, so V-W0c cannot size it.
 
 **Without the rain and snow tags,** each leak is corrected by subtracting the
 tag's precipitation part: `ρq_tagₜ −= ∇·(ρK ∇(ψᵢ q_p))` per species. `ψᵢ` is
@@ -231,10 +236,11 @@ Hence:
     solve the tags take the parent's increment of `ρq_tot`. The part that
     changes a column's total stays in place, with ledgers `q_tag_inc_left` and
     `q_tag_inc_moved`.
-  - The tags' explicit vertical advection is then skipped, as `advection.jl:124`
+  - The tags' explicit vertical advection is then skipped, as `advection.jl:257`
     does for the energy tags. Otherwise it would count twice.
   - Its post-solve hook composes with `EnergySourceIncrementCorrection` in one
-    hook. It reuses the stepper check, which ARS222 passes.
+    hook. It reuses the stepper check. ARS222 passes it in practice, since
+    D4's increment runs used it, but no test asserts that; WP5 adds one.
   - **Known issue 4 is not claimed as fixed.** The parent's 0M sink has no
     Jacobian block either, so parent and tags take it at the same iterate. It
     also changes the column's total, which the follower leaves in place.
@@ -347,8 +353,10 @@ E73's outputs.
 
 ### 4.7 Restart
 
-The restart guard checks the water copies, the rain and snow parts and their
-copies, and refuses:
+No restart guard exists for `water_tracers` today. `restart.jl` checks the
+energy families and `water_process_record` only (WP0's check of the merged
+code). WP3 builds one, on the energy guard's model. It checks the water tags,
+the copies, the rain and snow parts and their copies, and refuses:
 
   - missing or extra copies;
   - a changed switch;
@@ -364,6 +372,8 @@ metadata (WP6).
       + Refuse them with the AMD LES model always.
       + Warn under `PrescribedFlow`.
       + `water_process_record` is not refused: the records are not transported.
+        `check_water_tagging_supported` serves both families, so these
+        refusals get a check of their own.
       + Reserve the tag names that collide with diagnostics: `res`, `fix_*`,
         `upfix_*`, `inc_*`, `rtag_*`, `stag_*`.
   - **After WP3:**
