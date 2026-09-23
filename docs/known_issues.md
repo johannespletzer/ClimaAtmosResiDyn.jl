@@ -96,55 +96,83 @@ produce have not been collected. The measurement protocol is in
 
 ## 3. Tagged water does not close under AMD LES or under PrognosticEDMFX
 
-**Status:** diagnosed, not fixed. Neither combination is exercised by any test,
-so nothing currently fails.
+**Status:** guarded. Both combinations are refused at configuration by
+`check_water_tracers_transport_supported` (`config/tracer_config.jl`), with a
+test each in `test/config/tracer_config.jl`. The refusal under prognostic EDMF
+lasts until the tags follow the updrafts.
 
 Two transport paths move `ρq_tot` in ways the water tags do not follow, so
 `Σᵢ ρq_tag_i = ρq_tot` stops holding. Both are properties of the tagged-water
 implementation rather than of any particular run, and both predate the merge of
 the passive-tracer line.
 
-  - **AMD LES.** `parameterized_tendencies/les_sgs_models/anisotropic_minimum_dissipation.jl:135-152`
-    (horizontal) and `:282-300` (vertical) recompute `ᶜD_amd` inside
+  - **AMD LES.** `parameterized_tendencies/les_sgs_models/anisotropic_minimum_dissipation.jl:135-155`
+    (horizontal) and `:282-303` (vertical) recompute `ᶜD_amd` inside
     `foreach_gs_tracer` from *each tracer's own* gradient. So `ρq_tot` is
     diffused with `D(∇q_tot)` and each `ρq_tag_k` with `D(∇χ_k)`, and
     `Σₖ ∇⋅(ρ Dₖ ∇χₖ) ≠ ∇⋅(ρ D_tot ∇q_tot)` because the operator is nonlinear.
     This is not transport "the tags receive in their own right" — it is a
     genuine break of the partition that no bracket or repair corrects.
-    Smagorinsky–Lilly (`smagorinsky_lilly.jl:167-179`) shares one `ᶜD_h` and
+    Smagorinsky–Lilly (`smagorinsky_lilly.jl:170-178`) shares one `ᶜD_h` and
     does close, as does constant horizontal diffusion.
 
-  - **PrognosticEDMFX.** The SGS mass-flux loops in `edmfx_sgs_flux.jl:106,121`
-    are driven by `sgs_tracer_names(Y)`. Tags have no `sgsʲs` entries, so they
-    are skipped — safely, but they never receive that first-order water
-    transport. `check_water_tagging_supported` screens only the microphysics
-    model, so the combination is accepted silently. The claim in
-    `tagged_tracers/tagged_water.jl:18-20` that the implicit/explicit
-    vertical-advection split is "the one irreducible source of closure leakage"
+  - **PrognosticEDMFX.** The SGS mass-flux loop over tracers in
+    `edmfx_sgs_flux.jl:134-171` is driven by `sgs_tracer_names(Y)`. Tags have
+    no `sgsʲs` entries, so they are skipped. That is safe, but they never
+    receive that first-order water transport. Their sedimentation still
+    closes: under 1M `ρq_tot` sediments with the grid mean's flux only, and
+    the tags' fluxes sum to it (`water_advection.jl:85-95`). The EDMF
+    corrections to sedimentation (`:117-213`) change only `ρe_tot` and the
+    energy source tags. So the updraft's rain falls with the grid mean's
+    composition, which affects provenance, not closure. The claim in
+    `tagged_tracers/tagged_water.jl:23-24` that the implicit/explicit
+    vertical-advection split is "the one unavoidable source of closure drift"
     is not true under EDMF.
 
-Either guard the combinations in `check_water_tagging_supported`, or give the
-tags the matching transport. Until then, read `q_tag_res` as a closure monitor
-only for configurations that use a shared diffusivity and no prognostic EDMF.
+The combination used to be accepted silently, because
+`check_water_tagging_supported` screens only the microphysics model. The new
+check is separate from it, since that function also gates
+`water_process_record`, whose records are not transported and stay allowed.
+The refusal under prognostic EDMF lifts when the tags take their share of the
+updraft's water flux.
 
 ## 4. The implicit water-microphysics attribution has no Jacobian diagonal
 
-**Status:** diagnosed, not fixed.
+**Status:** diagnosed and measured; not visible in the answer on a raining 0M
+column. Not fixed.
 
-`implicit/implicit_tendency.jl:55-64` puts the `:microphysics` water bracket on
+`implicit/implicit_tendency.jl:66-78` puts the `:microphysics` water bracket on
 the implicit path. Its increment is `min(Δ, 0) · ρq_tag / ρq_tot`, which is
 proportional to `ρq_tag`, so `∂/∂ρq_tag = Δ⁻/ρq_tot` — the same O(1/dt)
 quantity the file's own positivity argument names. Nothing supplies that entry:
 under 0M the tags get the ordinary passive diagonal
-(`manual_sparse_jacobian.jl:1286`), or a plain `-I` when diffusion is explicit;
+(`manual_sparse_jacobian.jl:216-253`, in `update_diffusion_jacobian!`), or a
+plain `-I` when diffusion is explicit;
 under 1M the sedimentation diagonal carries no microphysics term.
 
-The comment at `:300-303` justifying the *energy* bracket's `-I` ("the
-attributed increment does not depend on the tags themselves") is true for
-`:precipitation` and false for the water bracket added directly above it. With
-a fixed Newton iteration count this is error in the answer rather than only
-slower convergence. Needs a precipitating run to show up; no GitHub CI job
-reaches it.
+The comment at `implicit_tendency.jl:322-328` justifying the *energy* bracket's `-I` ("the attributed
+increment does not depend on the tags themselves") is true for
+`:precipitation` and false for the water bracket. With a fixed Newton
+iteration count this is in principle error in the answer rather than only
+slower convergence.
+
+**Measured on 2026-09-23.** The DYCOMS RF02 column under 0M without EDMF, at
+`dt` 120 s, rains out its initial cloud (0.15 kg m⁻² of liquid) in the first
+hour. Four runs covered that hour: implicit or explicit microphysics, each
+with 1 and 10 Newton iterations. With explicit microphysics the sink is off the
+Newton path, so that pair is the control. The region tags' shares differ
+between 1 and 10 iterations by 1e-3 to 2e-3 in L1, 25 times more than
+`ρq_tot` itself. But the implicit and explicit pairs differ from each other by
+less than 4% of that, with no fixed sign. So the missing diagonal is not what
+makes the tags sensitive to the Newton count. A proportional loss leaves each
+cell's shares unchanged, so a missing derivative of it acts only through what
+else changes the shares within the step, which fits a small effect. The
+sensitivity itself matches the change in `q_tag_res`, which is larger with the
+converged solve: the split between the parent's implicit and the tags'
+explicit vertical advection. The runs and their analysis are in the fork's
+tag-closure record (`experiments/tag_closure/FINDINGS.md`, W15 and W16, on the
+branch `claude/tag-closure-record`). A 1M column and a sphere were not
+measured. No GitHub CI job reaches this path.
 
 ## 5. `fill_with_nans!` would destroy the tag masks if it ever descended into the cache
 

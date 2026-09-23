@@ -251,6 +251,114 @@ end
     end
 end
 
+@testset "water_tracers refusals" begin
+    evap = [Dict("name" => "evap", "source" => "surface_flux")]
+    water_config(extra, job_id) = tracer_config(
+        ["microphysics_model" => "0M", "water_tracers" => evap, extra...];
+        job_id,
+    )
+
+    @test isnothing(CA.check_water_tracers_transport_supported(nothing, false))
+    # The tags have no updraft fields, so they would miss the updraft's mass
+    # flux of water and drift from ρq_tot.
+    @test_throws "turbconv: prognostic_edmfx" CA.AtmosTagging(
+        water_config(["turbconv" => "prognostic_edmfx"], "water_tags_edmf"),
+    )
+    # AMD's diffusivity comes from each tracer's own gradient, so the tags'
+    # diffusion does not add up to the parent's.
+    @test_throws "amd_les: true" CA.AtmosTagging(
+        water_config(["amd_les" => true], "water_tags_amd"),
+    )
+    # Eddy diffusion alone shares one diffusivity, so the sum holds under 0M.
+    # Under 1M the known q_tot_eff leak applies, as under any diffusion, and is
+    # not refused.
+    edonly = CA.AtmosTagging(
+        water_config(["turbconv" => "edonly_edmfx"], "water_tags_edonly"),
+    )
+    @test edonly.water_tagging_model isa CA.WaterTaggingModel
+    # The records are not transported, so they stay allowed under EDMF.
+    records = CA.AtmosTagging(
+        tracer_config(
+            [
+                "microphysics_model" => "0M",
+                "turbconv" => "prognostic_edmfx",
+                "water_process_record" => ["surface_flux"],
+            ];
+            job_id = "water_records_edmf",
+        ),
+    )
+    @test records.water_process_record !== nothing
+    @test records.water_tagging_model === nothing
+    # The prescribed flow's surface moisture flux enters ρq_tot untagged. The
+    # warning sees the built model, since the setup can bring the flow.
+    flow = CA.ShipwayHill2012VelocityProfile{FT}()
+    tagging = CA.WaterTaggingModel(CA.water_tracer_tuple(evap, FT))
+    @test_logs (:warn, r"prescribed flow") CA.warn_water_tags_under_prescribed_flow(
+        flow,
+        tagging,
+    )
+    @test_logs CA.warn_water_tags_under_prescribed_flow(nothing, tagging)
+    @test_logs CA.warn_water_tags_under_prescribed_flow(flow, nothing)
+    # Both routes to a flow reach the warning through `get_atmos`: the setup's
+    # own, as the shipped kinematic driver uses it, and the key.
+    for (entries, job_id) in (
+        (["initial_condition" => "ShipwayHill2012"], "water_tags_flow_setup"),
+        (
+            [
+                "initial_condition" => "DYCOMS_RF02",
+                "prescribed_flow" => "ShipwayHill2012",
+                # The model runs a prescribed flow explicitly only.
+                "implicit_microphysics" => false,
+            ],
+            "water_tags_flow_key",
+        ),
+    )
+        config = tracer_config(
+            [
+                "config" => "column",
+                "z_max" => 2000.0,
+                "z_elem" => 10,
+                "z_stretch" => false,
+                "microphysics_model" => "1M",
+                "water_tracers" => evap,
+                entries...,
+            ];
+            job_id,
+        )
+        params = CA.ClimaAtmosParameters(config)
+        setup = CA.get_setup_type(
+            config.parsed_args,
+            CA.Parameters.thermodynamics_params(params),
+        )
+        grid = CA.get_grid(config.parsed_args, params, config.comms_ctx)
+        @test_logs (:warn, r"prescribed flow") match_mode = :any CA.get_atmos(
+            config,
+            params,
+            grid;
+            setup_type = setup,
+        )
+    end
+
+    # Names that would take the name of another diagnostic of the family.
+    @test_throws "`res` is a reserved tag name" CA.water_tracer_tuple(
+        [Dict("name" => "res", "source" => "surface_flux")],
+        FT,
+    )
+    for name in ("fix_a", "upfix_a", "inc_left", "rtag_a", "stag_a")
+        @test_throws "`$name` is refused" CA.water_tracer_tuple(
+            [Dict("name" => name, "source" => "surface_flux")],
+            FT,
+        )
+    end
+    # A reserved prefix counts only as a prefix, with its underscore.
+    for name in ("evap_fix", "fixed", "income", "stagnant", "rtagged")
+        @test CA.water_tracer_tuple(
+            [Dict("name" => name, "source" => "surface_flux")],
+            FT,
+        )[1] isa CA.WaterTag
+    end
+end
+
 @testset "energy_source_tags against the scheme" begin
     entries = [
         Dict{String, Any}("name" => "a", "region" => "tropics"),

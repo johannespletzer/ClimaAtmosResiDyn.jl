@@ -465,14 +465,29 @@ end
 # ============================================================================
 
 """
-    tracer_tag_tuple(entries, FT; tag_type, key, known, groups)
+    RESERVED_WATER_TAG_PREFIXES
+
+Name prefixes that a `water_tracers` tag may not take. A tag's diagnostic is
+`q_tag_<name>`. `fix_` starts the ledger `q_tag_fix_<name>` of the limiters
+and constraints, so a tag named `fix_a` would take the name of tag `a`'s
+ledger, and the first registered diagnostic would win silently. `upfix_` is
+held for the updraft copies' repair ledger, which collides the same way.
+`inc_` is held for an increment follower's ledgers, `q_tag_inc_left` and
+`q_tag_inc_moved`. `rtag_` and `stag_` are held for the rain and snow parts,
+whose output names are not fixed yet. Refusing them now keeps configurations
+valid when those diagnostics arrive.
+"""
+const RESERVED_WATER_TAG_PREFIXES = ("fix_", "upfix_", "inc_", "rtag_", "stag_")
+
+"""
+    tracer_tag_tuple(entries, FT; tag_type, key, known, groups, reserved_prefixes = ())
 
 Shared reader for the `water_tracers` and `energy_tracers` lists, which have the
 same entry schema: a unique `name`, plus a `region`, a `source`, or both.
 
 `tag_type` is [`TracerTag`](@ref) or [`WaterTag`](@ref), `key` is the config key
 being read (used in error messages), and `known` / `groups` are that family's
-source tables.
+source tables. A name starting with one of `reserved_prefixes` is refused.
 """
 function tracer_tag_tuple(
     entries,
@@ -481,6 +496,7 @@ function tracer_tag_tuple(
     key,
     known,
     groups,
+    reserved_prefixes = (),
 ) where {FT}
     entries isa AbstractVector || error(
         "`$key` must be a list of tracer entries, got a $(typeof(entries)).",
@@ -517,6 +533,13 @@ function tracer_tag_tuple(
         "`res` is a reserved tag name in `$key`: it collides with the closure \
         residual diagnostic. Choose another name.",
     )
+    for name in names, prefix in reserved_prefixes
+        startswith(String(name), prefix) && error(
+            "Tag names starting with `$prefix` are reserved in `$key`, so \
+            `$name` is refused. Such a name can take, or will be able to take, \
+            the name of another diagnostic of the family. Choose another name.",
+        )
+    end
     return Tuple(tags)
 end
 
@@ -548,6 +571,7 @@ water_tracer_tuple(entries, ::Type{FT}) where {FT} = tracer_tag_tuple(
     key = "water_tracers",
     known = KNOWN_WATER_TAG_SOURCES,
     groups = WATER_TAG_SOURCE_GROUPS,
+    reserved_prefixes = RESERVED_WATER_TAG_PREFIXES,
 )
 
 """
@@ -1337,6 +1361,75 @@ function check_energy_source_tagging_supported(turbconv, updraft_number)
 end
 
 """
+    check_water_tracers_transport_supported(turbconv, amd_les)
+
+Refuse `water_tracers` where the model moves `ρq_tot` in a way the tags do not
+follow.
+
+  - `turbconv: prognostic_edmfx` is refused. The tags have no updraft fields,
+    so they miss the updraft's mass flux of water, and the partition drifts
+    from `ρq_tot`. Their sedimentation still closes: under 1M `ρq_tot`
+    sediments with the grid mean's flux, and the tags' fluxes sum to it. The
+    updraft's rain then falls with the grid mean's composition, which affects
+    provenance, not closure. The refusal also covers
+    `edmfx_sgs_mass_flux: false`, where this reason does not apply, to keep
+    one rule until the tags follow the updrafts.
+  - `amd_les: true` is refused. AMD diffuses each tracer with a diffusivity
+    taken from that tracer's own gradient. The operator is nonlinear, so in
+    general the tags' diffusion does not add up to that of `ρq_tot`, and no
+    repair restores the partition. Smagorinsky–Lilly and constant horizontal
+    diffusion share one diffusivity and keep it.
+
+`docs/known_issues.md`, issue 3, describes both. The check is kept apart from
+[`check_water_tagging_supported`](@ref), which also gates
+`water_process_record`. The records are not transported, so neither applies to
+them. A prescribed flow is warned about once the model is built, since the
+setup can bring one without the key; see
+[`warn_water_tags_under_prescribed_flow`](@ref).
+"""
+function check_water_tracers_transport_supported(turbconv, amd_les)
+    turbconv == "prognostic_edmfx" && error(
+        "`water_tracers` with `turbconv: prognostic_edmfx` are not supported \
+        yet. The tags have no updraft fields, so they miss the updraft's mass \
+        flux of water, and the partition drifts from `ρq_tot`. \
+        `water_process_record` is allowed. See docs/known_issues.md, issue 3.",
+    )
+    amd_les === true && error(
+        "`water_tracers` with `amd_les: true` are not supported. AMD diffuses \
+        each tracer with a diffusivity taken from that tracer's own gradient, \
+        so in general the tags' diffusion does not add up to that of \
+        `ρq_tot`, and the partition breaks. `smagorinsky_lilly` and \
+        `constant_horizontal_diffusion` share one diffusivity and keep it. \
+        See docs/known_issues.md, issue 3.",
+    )
+    return nothing
+end
+
+"""
+    warn_water_tags_under_prescribed_flow(prescribed_flow, water_tagging_model)
+
+Warn when a run with water tags has a prescribed flow. The flow's surface
+moisture flux enters `ρq_tot` with no tagged counterpart, so that water is
+untagged, and the closure residual `q_tag_res` grows by it where region tags
+partition the domain. The flow also clips negative `ρq_tot` to zero whenever
+the state is constrained. The tags follow the clip through
+[`rescale_water_tags!`](@ref), and `q_tag_fix_<name>` records what it moved.
+
+It takes the built model's fields, because the flow comes from the setup, as
+`initial_condition: ShipwayHill2012` gives it, or from the `prescribed_flow`
+key. `get_atmos` calls it.
+"""
+warn_water_tags_under_prescribed_flow(prescribed_flow, water_tagging_model) =
+    isnothing(prescribed_flow) || isnothing(water_tagging_model) ? nothing :
+    @warn(
+        "`water_tracers` with a prescribed flow: the flow's surface moisture \
+        flux enters `ρq_tot` untagged, so `q_tag_res`, where region tags are \
+        configured, grows by it. The flow also clips negative `ρq_tot` when \
+        the state is constrained, which the tags follow and \
+        `q_tag_fix_<name>` records.",
+    )
+
+"""
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
@@ -1349,8 +1442,12 @@ cost.
 
 Energy source tags are refused without `energy_source_tag_offset`, see
 `check_energy_source_offset_given`, and under `turbconv: prognostic_edmfx` with
-more than one updraft, see `check_energy_source_tagging_supported`. The label
-warnings of the energy source tags and the records see the microphysics model.
+more than one updraft, see `check_energy_source_tagging_supported`. Water
+tags are refused under `turbconv: prognostic_edmfx` and `amd_les: true`, see
+`check_water_tracers_transport_supported`. The label warnings of the energy
+source tags and the records see the microphysics model, and the warning for
+water tags under a prescribed flow sees the built model
+(`warn_water_tags_under_prescribed_flow`).
 """
 function AtmosTagging(config::AtmosConfig)
     FT = eltype(config)
@@ -1366,6 +1463,10 @@ function AtmosTagging(config::AtmosConfig)
         nothing
     else
         check_water_tagging_supported(microphysics_model)
+        check_water_tracers_transport_supported(
+            get(config.parsed_args, "turbconv", nothing),
+            get(config.parsed_args, "amd_les", false),
+        )
         WaterTaggingModel(water_tracer_tuple(water_entries, FT))
     end
     source_entries = config.parsed_args["energy_source_tags"]

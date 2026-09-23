@@ -270,10 +270,11 @@ separate that operator disagreement from numerical corrections.
 
 It is not the *only* contributor, though. Any tendency that writes
 ``\rho q_\mathrm{tot}`` by name without an attribution bracket and without a
-tagged counterpart also lands here — see the Caveats below for the two known
-cases (`PrognosticEDMFX` SGS mass flux, and the `PrescribedFlow` surface water
-inflow). If `q_tag_res` grows faster than expected, check those before
-concluding the advection split is responsible.
+tagged counterpart also lands here — see the Caveats below for the known
+case, the `PrescribedFlow` surface water inflow. The `PrognosticEDMFX` SGS mass
+flux was the other, and that combination is now refused. If `q_tag_res` grows
+faster than expected, check those before concluding the advection split is
+responsible.
 
 A sharper *process closure* check is available by splitting a source tag across
 a partition: with `evap`, `evap_tropics` and `evap_extratropics`, linearity of
@@ -286,7 +287,11 @@ this identity.
 ## Scope
 
 Water tagging supports `microphysics_model: "0M"` and `"1M"`, and
-`check_water_tagging_supported` errors otherwise.
+`check_water_tagging_supported` errors otherwise. It is refused under
+`turbconv: prognostic_edmfx` and `amd_les: true`, and warns when the run has
+a prescribed flow; see `check_water_tracers_transport_supported`,
+`warn_water_tags_under_prescribed_flow` and the Caveats below. `water_process_record` is not refused under any of them, since
+its records are not transported.
 
   - **0-moment**: every writer of ``\rho q_\mathrm{tot}`` is a local source or
     sink, so bracketed attribution alone is exact and nothing sediments.
@@ -305,17 +310,17 @@ Water tagging supports `microphysics_model: "0M"` and `"1M"`, and
   - Tags are **grid-scale only**: they have no sub-grid (updraft) counterpart.
     With `PrognosticEDMFX` the SGS mass flux moves ``\rho q_\mathrm{tot}`` in a
     way the tags never receive, so `q_tag_res` grows; the grid-mean surface
-    evaporation is still attributed correctly. Nothing rejects this combination
-    at configuration time, so watch `q_tag_res` if you enable it.
+    evaporation is still attributed correctly. The combination is therefore
+    refused at configuration time, until the tags follow the updrafts
+    (`docs/known_issues.md`, issue 3).
   - With a **`PrescribedFlow`** setup (e.g. `ShipwayHill2012`), the surface
     water inflow imposed as a vertical-transport boundary condition adds to
     ``\rho q_\mathrm{tot}`` outside every attribution bracket and has no tagged
     counterpart. That water enters the domain untagged and `q_tag_res` drifts
-    monotonically. The combination is accepted by
-    `check_water_tagging_supported` (`ShipwayHill2012` is 1-moment), and
-    `prescribe_flow!` does rescale the tags after its clip — so the tags stay
-    consistent with each other, they are just collectively short of
-    ``\rho q_\mathrm{tot}`` by the injected amount.
+    monotonically. The combination is accepted, with a warning when the model
+    is built, and `prescribe_flow!` does rescale the tags after its
+    clip — so the tags stay consistent with each other, they are just
+    collectively short of ``\rho q_\mathrm{tot}`` by the injected amount.
   - The `ρe_tag_*` family's `microphysics` label still fires only when
     microphysics is stepped explicitly. The water tags are bracketed on the
     implicit path too, because `implicit_microphysics` defaults to `true` and
