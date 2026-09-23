@@ -259,28 +259,51 @@ end
     )
 
     @test isnothing(CA.check_water_tracers_transport_supported(nothing, false))
-    # Prognostic EDMF is refused whatever the mass flux is, until the tags
-    # follow the updrafts. The message names the mass flux only where it is on,
-    # since only then do the tags miss it.
-    refusal_message(entries, job_id) =
-        try
-            CA.AtmosTagging(water_config(entries, job_id))
-            ""
-        catch err
-            err isa ErrorException ? err.msg : rethrow()
-        end
-    no_mass_flux = refusal_message(
-        ["turbconv" => "prognostic_edmfx"],
-        "water_tags_edmf_no_mass_flux",
+    # Under prognostic EDMF the tags follow one updraft, by default through a
+    # donor share and an exchange, or through copies. More than one updraft is
+    # refused.
+    edmf = CA.AtmosTagging(
+        water_config(["turbconv" => "prognostic_edmfx"], "water_tags_edmf"),
     )
-    @test occursin("turbconv: prognostic_edmfx", no_mass_flux)
-    @test occursin("whatever `edmfx_sgs_mass_flux` is", no_mass_flux)
-    @test !occursin("miss the updraft's mass flux", no_mass_flux)
-    with_mass_flux = refusal_message(
-        ["turbconv" => "prognostic_edmfx", "edmfx_sgs_mass_flux" => true],
-        "water_tags_edmf_mass_flux",
+    @test edmf.water_tagging_model isa CA.WaterTaggingModel
+    @test !CA.has_water_tag_updraft_copies(edmf.water_tagging_model)
+    @test_throws "`updraft_number: 1`" CA.AtmosTagging(
+        water_config(
+            ["turbconv" => "prognostic_edmfx", "updraft_number" => 2],
+            "water_tags_edmf_two_updrafts",
+        ),
     )
-    @test occursin("miss the updraft's mass flux", with_mass_flux)
+    # The copies: under prognostic EDMF only, with one reconstruction for the
+    # updraft's water and its tracers, and only with tags to copy.
+    copies = CA.AtmosTagging(
+        water_config(
+            ["turbconv" => "prognostic_edmfx", "water_tag_updraft_copy" => true],
+            "water_tags_copies",
+        ),
+    )
+    @test CA.has_water_tag_updraft_copies(copies.water_tagging_model)
+    @test_throws "needs `turbconv: prognostic_edmfx`" CA.AtmosTagging(
+        water_config(["water_tag_updraft_copy" => true], "water_tags_copies_no_edmf"),
+    )
+    @test_throws "`edmfx_mse_q_tot_upwinding` equal" CA.AtmosTagging(
+        water_config(
+            [
+                "turbconv" => "prognostic_edmfx",
+                "water_tag_updraft_copy" => true,
+                "edmfx_mse_q_tot_upwinding" => "third_order",
+            ],
+            "water_tags_copies_upwinding",
+        ),
+    )
+    @test_throws "no tags to copy" CA.AtmosTagging(
+        tracer_config(
+            ["microphysics_model" => "0M", "water_tag_updraft_copy" => true];
+            job_id = "water_copies_without_tags",
+        ),
+    )
+    @test_throws "must be `true` or `false`" CA.water_tag_updraft_copy_from_config(
+        "true",
+    )
     # AMD's diffusivity comes from each tracer's own gradient, so the tags'
     # diffusion does not add up to the parent's.
     @test_throws "amd_les: true" CA.AtmosTagging(

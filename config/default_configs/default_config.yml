@@ -471,6 +471,9 @@ passive_tracers:
 water_tracers:
   help: "Tracers that split total water by where it came from, adding one prognostic field `ρq_tag_<name>` each [`~` (default, off)]. A list of entries, each with a unique `name` and a `region`, a `source`, or both. Requires `microphysics_model: 0M` or `1M`. See docs/src/tracer_configuration.md."
   value: ~
+water_tag_updraft_copy:
+  help: "Experimental. Whether the `water_tracers` have a copy in each updraft under `turbconv: prognostic_edmfx` [`false` (default), `true`]. `false` moves each tag by its share of the parent's sub-grid mass flux of water, plus an exchange of provenance at the updraft's mass flux that sums to zero over the tags, with the updraft's shares from a steady entraining plume rescaled to the updraft's water. `true` is an audit: each tag gets a tracer in the updraft, `q_tag_<name>`, which the model advects, entrains and fluxes as any other updraft tracer, with the updraft's rain-out, sedimentation and surface exchange mirrored. See docs/src/tagged_water.md."
+  value: false
 energy_tracers:
   help: "Tracers that split moist energy by where it came from, adding one prognostic field `ρe_tag_<name>` each [`~` (default, off)]. Same entry schema as `water_tracers`, with its own set of `source` labels. See docs/src/tracer_configuration.md."
   value: ~

@@ -121,6 +121,8 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
     # here, and exchange provenance at the mass flux. With updraft copies the
     # loop above moves them, and this call does nothing.
     sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, p.atmos.turbconv_model)
+    # The water tags likewise, unless they have updraft copies.
+    sgs_mass_flux_of_water_tags!(Yₜ, Y, p, p.atmos.turbconv_model)
 
     edmfx_boundary_condition_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
 
