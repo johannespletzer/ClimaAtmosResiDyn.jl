@@ -1763,8 +1763,11 @@ upwind, which keeps that sum zero.
 
 The updraft's shares come from a steady entraining plume, marched up each column
 with the model's own entrainment rate `ε + ε_turb` and the updraft's velocity
-`wʲ` at the face below each cell, as the model advects an updraft tracer. In
-the specific tag values `εʲ`, which mix by mass,
+`wʲ` at the face below each cell, as the model advects an updraft tracer. The
+plume is then bounded by the cell's inventory, `0 ≤ ρaʲ εʲᵢ ≤ ρ ε̄ᵢ`, so that
+the environment that follows from the grid mean is non-negative and
+`ρ ε̄ᵢ = ρaʲ εʲᵢ + ρa⁰ ε⁰ᵢ` holds. In the specific tag values `εʲ`, which mix
+by mass,
 
     εʲ(k) = (εʲ(k - 1) + a ε̄(k)) / (1 + a),    a = (ε + ε_turb) Δz / wʲ · ρ / ρa⁰,
 
@@ -1866,6 +1869,15 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     ᶠρ⁰ = @. lazy(ᶠinterp(ᶜρ⁰ * ᶜJ) / ᶠJ)
     ᶠu³_diffʲ = @. lazy(ᶠu³ʲs.:(1) - ᶠu³)
     ᶠu³_diff⁰ = @. lazy(ᶠu³⁰ - ᶠu³)
+    # The plume may not hold more of a tag than the cell does. Otherwise the
+    # environment that follows from the grid mean is negative, and clipping it
+    # breaks the inventory `ρ ε̄ = ρaʲ εʲ + ρa⁰ ε⁰`: the subdomains would then
+    # exchange provenance the cell does not have. It is the bound the model
+    # puts on an updraft tracer of its own,
+    # `enforce_edmf_updraft_constraints!`.
+    bound_plume = BoundPlume{length(model.tags)}()
+    @. ᶜεʲ = bound_plume(ᶜεʲ, ᶜε̄, Y.c.ρ, ᶜρaʲ)
+
     # Each subdomain's shares less the grid mean's. The environment's specific
     # values follow from the grid mean and the updraft. Its differences are
     # formed first, since the updraft's then replace the updraft's values.
@@ -1959,6 +1971,20 @@ end
     (ε̄, weight, restart) = level
     (restart | isnan(first(εʲ_below))) && return ε̄
     return map((εʲ, ε) -> εʲ + weight * (ε - εʲ), εʲ_below, ε̄)
+end
+
+# The plume, bounded by the cell's own inventory: `0 ≤ ρaʲ εʲᵢ ≤ ρ ε̄ᵢ` for
+# every tag. A callable type, so a broadcast carries `N` in the function's
+# type. See `sgs_exchange_of_energy_source_tags!`.
+struct BoundPlume{N} end
+@inline (::BoundPlume{N})(εʲ, ε̄, ρ, ρaʲ) where {N} =
+    _bounded_plume(εʲ, ε̄, ρ, ρaʲ, Val(N))
+
+@inline function _bounded_plume(εʲ, ε̄, ρ, ρaʲ, ::Val{N}) where {N}
+    ρaʲ > zero(ρaʲ) || return ntuple(i -> εʲ[i], Val(N))
+    return ntuple(Val(N)) do i
+        min(max(εʲ[i], zero(ρ)), max(ρ * ε̄[i], zero(ρ)) / ρaʲ)
+    end
 end
 
 # The environment's specific tag values, from the grid mean and the updraft.

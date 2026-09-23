@@ -821,9 +821,12 @@ Default `tolerance` of the energy source tags' closure check, one per
 `energy_source_tag_transport`. The check compares them against
 `gross_relative`, the partition's residual over the total it partitions.
 
-They are runaway guards, not fine thresholds. Each sits about an order of
-magnitude above the largest value measured in a healthy run of that transport,
-over the 59 runs of the tag-closure experiments:
+They are runaway guards, not fine thresholds. Each sits above the largest value
+measured in a healthy run of that transport, over the 59 runs of the
+tag-closure experiments, but not by the same margin: 7.1 times for `tracer`,
+1.7 for `enthalpy` and 50 for `enthalpy_increment`. The `enthalpy` margin is
+the thinnest because its largest run, a rebuilt sub-grid diffusion that was
+later shelved, sat far above its own typical level.
 
 | transport            | typical | largest measured                        | default |
 |:-------------------- | -------:| ---------------------------------------:| -------:|

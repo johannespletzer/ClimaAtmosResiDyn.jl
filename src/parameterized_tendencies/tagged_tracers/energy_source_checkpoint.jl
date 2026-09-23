@@ -153,10 +153,11 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
         "",
     )
     # The tags' updraft copies live in each updraft, so the first stands for
-    # all of them.
-    hasproperty(Y.c, :sgsʲs) && check_restart_fields(
+    # all of them. A file with no updrafts at all holds none, and a run that
+    # configures them is refused rather than passed over.
+    check_restart_fields(
         restart_file,
-        (; c = Y.c.sgsʲs.:(1)),
+        (; c = hasproperty(Y.c, :sgsʲs) ? Y.c.sgsʲs.:(1) : (;)),
         name -> startswith(string(name), "e_src_"),
         isnothing(source_model) ? () :
         energy_source_updraft_copy_names(source_model),

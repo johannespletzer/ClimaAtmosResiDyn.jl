@@ -8,8 +8,11 @@ The tags answer one question: **of the moist energy in this cell now, how much
 came from each place or process?** They split the total into named parts that
 add up to it, and they follow it as the model moves it.
 
-They do not change the simulation. Every model field is bit for bit what it
-would be without them.
+They do not change the simulation: every model field is bit for bit what it
+would be without them, under the solver settings the tags support. A Newton
+solve that stops on a residual norm taken over the whole state is the
+exception, since the tags are part of that state; use a fixed iteration count
+or a direct solve, which the increment transport requires anyway.
 
 ## A first configuration
 
@@ -59,7 +62,7 @@ Add the tags to a `diagnostics` block the same way as any other short name.
 | `energy_source_tag_offset`       | none, required | 110495.0 unless you have a reason. It makes the partitioned total positive, which the donor rule needs. It is a convention, and the tags depend on it |
 | `energy_source_tag_transport`    | `tracer`       | `enthalpy_increment` under EDMF or implicit diffusion. `tracer` only when you want the tags to ride the plain tracer path                             |
 | `energy_source_tag_repair`       | `true`         | leave on, unless you want to see what the attribution rule alone produces                                                                             |
-| `energy_source_tag_updraft_copy` | `false`        | leave off. `true` is the audit: a copy of each tag in the updraft, exact but about twice the build time                                               |
+| `energy_source_tag_updraft_copy` | `false`        | leave off. `true` is the audit: a copy of each tag in the updraft, moved by the model's own tracer machinery, at about twice the build time           |
 
 Under `prognostic_edmfx` the tags need `updraft_number: 1`, and the model
 refuses more.
@@ -67,20 +70,27 @@ refuses more.
 ## Reading the result
 
 The check warns above a default level that follows the transport, 1.0 under
-`tracer`, 0.1 under `enthalpy` and 0.01 under `enthalpy_increment`. Those are
-guards against a runaway, not a judgement on a run. Set `tolerance` in the
-block once you know where your own configuration settles.
+`tracer`, 0.1 under `enthalpy` and 0.01 under `enthalpy_increment`. They sit
+7.1, 1.7 and 50 times above the largest value each transport reached in the
+runs they were calibrated from, so they are guards against a runaway, not a
+judgement on a run, and the margin differs by transport. Set `tolerance` in
+the block once you know where your own configuration settles.
 
 **Start with the closure table.** `gross_relative` is the partition's residual
-over the total it partitions. On the tested configurations it runs from about
-1e-6 after an hour on a column to 2e-4 after ten days on a sphere in Float32.
+over the total it partitions, which the offset enters, and it covers the
+partition only, not the source tags. Under `enthalpy_increment` it runs from
+about 1e-6 after an hour on a column to 2e-4 after ten days on a sphere in
+Float32; under `tracer` and `enthalpy` it is 1e-3 to 1e-1, since those
+transports do not follow the parent's own fluxes.
 What matters is less its size than its trend: it should slow, and the rows
 since the spin-up should not grow faster than the first ones.
 
 **Then the audit table.** `untagged` and `overclaimed` split the residual by
-sign. `repair_moved` says how much the repair had to move; if it is a large
-fraction of a tag, that tag's profile is being held up by the repair rather
-than by the attribution. Under `enthalpy_increment`, `increment_left` is the
+sign. `repair_moved` is the size of the repair's *net* accumulated correction
+per tag: it adds each change with its sign and takes the absolute value at the
+end. A large value means the repair is holding a tag's profile up. A small one
+does not mean the repair was idle, since corrections in opposite directions
+cancel in it. Under `enthalpy_increment`, `increment_left` is the
 part of the parent's implicit increment that the correction could not move
 inside a column. It usually explains most of the residual.
 
@@ -94,7 +104,8 @@ there, because the two air masses carry different energy per kilogram.
     total is not positive, the shares mean nothing, and the offset is what fixes
     it.
  2. `gross_relative` is small for your purpose and slowing.
- 3. `repair_moved` is small against the tags you are reading.
+ 3. `repair_moved` is small against the tags you are reading. It is a net
+    figure, so treat it as a lower bound on how much the repair did.
  4. Under `enthalpy_increment`, `increment_left` accounts for most of the
     residual. What it does not account for is what no share follows yet.
  5. You know your `c`, and you quote it with the result. Doubling it moved a
@@ -116,7 +127,10 @@ there, because the two air masses carry different energy per kilogram.
     updraft copy. They take their share of the parent's sub-grid flux and
     exchange provenance at the mass flux, from a steady plume.
     `energy_source_tag_updraft_copy: true` is the audit that measures how good
-    that is. The sedimentation corrections take the grid mean's shares either
+    that is. The copies are a comparator, not ground truth: they take the
+    environment's composition for the surface's buoyant air, the model filters
+    them, and their flux needs the same post-solve correction. The plume adds
+    the assumption that the updraft adjusts faster than the shares change. The sedimentation corrections take the grid mean's shares either
     way.
   - **`e_src_fix_<name>` restarts at zero.** It is cumulative within a run
     segment, not across restarts. Stitch the segments yourself if you want the

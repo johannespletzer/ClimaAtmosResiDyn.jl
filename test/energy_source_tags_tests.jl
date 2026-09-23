@@ -674,6 +674,35 @@ column_atmos_model(; kwargs...) =
         # Its environment keeps the grid mean's total: ρ ε̄ = ρaʲ εʲ + ρa⁰ ε⁰.
         ε⁰ = CA._environment_specific(ε̄, εʲ, FT(1), FT(0.1), FT(0.9), Val(2))
         @test collect(FT(0.1) .* εʲ .+ FT(0.9) .* ε⁰) ≈ collect(ε̄)
+        # The plume may not hold more of a tag than the cell does. Without the
+        # bound the environment goes negative, and clipping it would leave the
+        # subdomains holding 0.094 of a tag the cell has 0.01 of.
+        bound = CA.BoundPlume{2}()
+        ε̄_step = FT.((0.01, 0.99))
+        raw = CA._plume_step(
+            FT.((0.99, 0.01)),
+            CA._plume_level(ε̄_step, FT(1), FT(0.1), FT(0.9), FT(1e-3), FT(1), FT(50)),
+        )
+        @test raw[1] > FT(0.9)
+        @test CA._environment_specific(
+            ε̄_step,
+            raw,
+            FT(1),
+            FT(0.1),
+            FT(0.9),
+            Val(2),
+        )[1] == 0
+        bounded = bound(raw, ε̄_step, FT(1), FT(0.1))
+        @test bounded[1] ≈ FT(0.1)
+        @test bounded[2] == raw[2]
+        # With the bound the inventory holds: ρ ε̄ = ρaʲ εʲ + ρa⁰ ε⁰.
+        ε⁰_step =
+            CA._environment_specific(ε̄_step, bounded, FT(1), FT(0.1), FT(0.9), Val(2))
+        @test all(ε⁰_step .>= 0)
+        @test collect(FT(0.1) .* bounded .+ FT(0.9) .* ε⁰_step) ≈ collect(ε̄_step)
+        # Where there is no updraft the plume passes through.
+        @test bound(raw, ε̄_step, FT(1), FT(0)) === raw
+
         # A vanishing updraft velocity, which would overflow `a` in Float32,
         # takes the grid mean, and nothing is `Inf` or `NaN`.
         slow = CA._plume_level(ε̄, FT(1), FT(0.1), FT(0.9), FT(1e-3), FT(1e-40), FT(3000))
@@ -1556,6 +1585,13 @@ end
         source_model(),
         copied,
     )
+    # A file with no updrafts at all, restarted into a run that wants copies.
+    @test_throws r"updraft copies of the energy source tags none, and this run configures strat, tropo, rad" check(
+        written,
+        copies_model,
+        tagged,
+    )
+    @test isnothing(check(written, source_model(), tagged))
     # The process records are checked the same way, energy and water.
     record = CA.ProcessRecordModel((CA.RecordedProcess{:radiation}(),))
     @test_throws r"energy process records none, and this run configures radiation" check(
