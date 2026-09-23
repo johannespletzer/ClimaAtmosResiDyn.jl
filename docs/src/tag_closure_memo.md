@@ -1,5 +1,13 @@
 # Tag closure memo
 
+!!! note "Historical"
+
+    This page is the memo of early September 2026 that set up the tag-closure
+    experiments. It is kept as a record and will move to the experiments'
+    archive. It is not updated. The goals, findings and runs since then are in
+    [`experiments/tag_closure/`](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/tree/claude/tag-closure-record/experiments/tag_closure)
+    on branch `claude/tag-closure-record`.
+
 What is enforced, what floating-point closure would cost, and whether it is
 worth it. The experiments that follow from this memo are planned in
 [tag_closure_experiments.md](tag_closure_experiments.md).
