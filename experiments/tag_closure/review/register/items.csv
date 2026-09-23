@@ -1,0 +1,196 @@
+item_id,doc,section,one_line_summary,status,milestone,target
+OT-B1,OPERATIONAL_TODO.md,2. Blocking operation (B),Merge #70.,done,outside,archive
+OT-B2,OPERATIONAL_TODO.md,2. Blocking operation (B),Merge #72.,done,outside,archive
+OT-B3,OPERATIONAL_TODO.md,2. Blocking operation (B),P4: the EDMF build time with tags (>2h). #76 splits tags/records from the nested solver; build falls to 21 min.,done,outside,archive
+OT-B4,OPERATIONAL_TODO.md,2. Blocking operation (B),"C1b: share EDMF's sub-grid fluxes among the tags (SGS mass flux donor share, sedimentation face flux, guard B4); validation D4 pair/D5/vd variant.",done,outside,archive
+OT-B5,OPERATIONAL_TODO.md,2. Blocking operation (B),"C2: a restart guard writing offset/tag set/transport/repair into the checkpoint, failing on mismatch (T1 tests).",done,outside,archive
+OT-B6,OPERATIONAL_TODO.md,2. Blocking operation (B),"V5: restart equivalence, two segments against one run, offset+repair. Ran (E54): tags exact; model's own restart of this column not bit for bit (E58).",done,outside,archive
+OT-B7,OPERATIONAL_TODO.md,2. Blocking operation (B),Float32 (V3 done E45; T2 Float32 test group merged #75); runs longer than a day untested (U6).,done_not_struck,outside,archive
+OT-B8,OPERATIONAL_TODO.md,2. Blocking operation (B),"MP1, more than one process. Done (E47) on 4 ranks; more than one node untested.",done_not_struck,M6,BACKLOG (multi-node MPI)
+OT-B9,OPERATIONAL_TODO.md,2. Blocking operation (B),"The decided defaults and checks (B9): U1 offset required, U2+R1 closure check daily report-only with spin-up ref, A2 label-check warning. Merged as #77.",done,outside,archive
+OT-B10,OPERATIONAL_TODO.md,2. Blocking operation (B),"V2, the production physics on a sphere (EDMF vd:true, sponges, topography, 1M); write e_src_res/rhoa/tags/records every 6h, audit at 6h period.",done,M5/sphere,"archive (met as G2, E74/E75)"
+OT-B11,OPERATIONAL_TODO.md,2. Blocking operation (B),"Calibrate U2's tolerance per transport from V2 and V3, add the warning.",open,M5,G4.5
+OT-B12,OPERATIONAL_TODO.md,2. Blocking operation (B),"D1: the user guide into the docs, with D3.",open,M1,G4_TODO (USER_GUIDE_DRAFT check)
+OT-B13,OPERATIONAL_TODO.md,2. Blocking operation (B),"The GPU, last: run the diagnostic on a GPU on Levante, Float32, T3, fix what that forces.",open,M6,BACKLOG
+OT-B14,OPERATIONAL_TODO.md,2. Blocking operation (B),File-based initial conditions started the region tags as NaN.,done,M1,"archive (fixed 2026-09-20, rebuild_tags_from_state!)"
+OT-B15,OPERATIONAL_TODO.md,2. Blocking operation (B),The process records are advected horizontally on a sphere (bug). Fix is draft PR #93.,done,M1,archive
+OT-S-C5,OPERATIONAL_TODO.md,3. Should fix (S),"C5: where the repair's large trades sit (just beyond the 20-degree edge, E46; none with 10-degree masks, E48).",done,outside,archive
+OT-S-P1,OPERATIONAL_TODO.md,3. Should fix (S),"P1: the tag cost on a sphere, 1.46x (T9).",done,outside,archive
+OT-S-D2,OPERATIONAL_TODO.md,3. Should fix (S),"D2, the stale docs: merged in #74 (fixes 3,7,9,10) and #72 (fixes 5,7); fix 4 needs no change.",done,outside,archive
+OT-U3,OPERATIONAL_TODO.md,3. Should fix (S),U3: e_src_fix_<name> in the default output when the repair is on. In #77.,done,outside,archive
+OT-U4,OPERATIONAL_TODO.md,3. Should fix (S),U4: the source tags' negative parts/minimum and repair-moved energy in the audit table. In #77.,done,outside,archive
+OT-R3,OPERATIONAL_TODO.md,3. Should fix (S),R3: a warning when clipping rho*q_tot changes rho*e_tot outside every bracket. In #77.,done,outside,archive
+OT-T4,OPERATIONAL_TODO.md,3. Should fix (S),T4: config/model_configs/baroclinic_wave_energy_source_tags.yml. In #77.,done,outside,archive
+OT-M3,OPERATIONAL_TODO.md,3. Should fix (S),"M3: a test that water_advection.jl and gs_sedimenting_mass_candidates list the same species. Written on claude/energy-source-tag-species-lists, to open with C1b.",done,outside,archive
+OT-T5,OPERATIONAL_TODO.md,3. Should fix (S),T5: the cold column as an integration item. Done 2026-09-20 as test/energy_source_tags_cold_column.jl.,done,outside,archive
+OT-T3,OPERATIONAL_TODO.md,3. Should fix (S),T3: the tag and record code allocates nothing in a tendency evaluation or the repair (#78); #76's split solver allocates nothing either.,done,outside,archive
+OT-C4,OPERATIONAL_TODO.md,3. Should fix (S),"C4: c*delta-rho from processes the tags do not bracket (vertical diffusion, sponges, hyperdiffusion, EDMF, LES). Measure on V2, then share as transport or document.",open,M2,G4.6
+OT-V6,OPERATIONAL_TODO.md,3. Should fix (S),V6: topography. Covered on 2026-09-20 by G2's ten days with DCMIP200 mountain (E74) and unit tests of the increment correction's face-area scaling (E67); a dedicated topography experiment not needed.,done,outside,archive
+OT-P7,OPERATIONAL_TODO.md,3. Should fix (S),P7: not a regression (E56); the fork builds EDMF in the same wall time as upstream. An optional fix saving seconds was tried and not merged.,shelved,outside,BACKLOG
+OT-P8,OPERATIONAL_TODO.md,3. Should fix (S),"P8: #89 makes CI's test groups 1.4-2.1x slower; accepted for now by the owner on 2026-09-18; watch #91's first run, options are raising the limit or splitting groups.",waiting_owner,M1,BACKLOG
+OT-N-ClimaCore,OPERATIONAL_TODO.md,4. Nice to have (N),ClimaCore upstream: field-name-set compile-time scaling (E44d); would let #76 use public API only. Draft not filed.,shelved,outside,BACKLOG (upstream)
+OT-A4,OPERATIONAL_TODO.md,4. Nice to have (N),A4 (decision 4): signed overlay shares; accept when a C9 twin gives form A <=5 J/kg (or <=1e-6 with signed loss) and sfc no longer freezes at a node.,shelved,M5,BACKLOG
+OT-A5,OPERATIONAL_TODO.md,4. Nice to have (N),"A5: an overlay-bound diagnostic (mass fraction where an overlay is negative, or a member exceeds its group's sum).",open,M2,G4.4
+OT-A7,OPERATIONAL_TODO.md,4. Nice to have (N),"A7: done (E49) -- a transport error cancels along the direction it moved; a process no tag follows, or the repair, keeps its sum.",done,outside,archive
+OT-P6,OPERATIONAL_TODO.md,4. Nice to have (N),"Parity checks (P6): on/off half merged (#79); stratospheric passive tracers have no such test; nothing compares the fork with an upstream checkout (skipped for now, decision 2026-09-14).",done_not_struck,M1,BACKLOG (stratospheric-tracer parity test)
+OT-P5,OPERATIONAL_TODO.md,4. Nice to have (N),"P5: the explicit tendency's generic tracer loops allocate (22,576 B without tags, 58,160 with four, on a 1M column); shared model code, not tag code.",shelved,outside,BACKLOG (upstream)
+OT-A2A3,OPERATIONAL_TODO.md,4. Nice to have (N),"A2's runtime part and A3 as optional validation features: sum Delta+ per label at runtime, form A as a global integral online. Accept A3 at ~1.2e-3 on C6-type, <=1e-4 on C7/C9/C10 at 24h.",open,M2,G4.4
+OT-regionmask,OPERATIONAL_TODO.md,4. Nice to have (N),"The region masks' width: decided 2026-09-18, 2 degrees stays, docs to say so with D3.",done,outside,archive
+OT-C1c,OPERATIONAL_TODO.md,4. Nice to have (N),"C1c: B3, the SGS diffusive flux under enthalpy. Built 2026-09-18, compared in 3 placements (E59): each makes D4's residual larger; not to be opened in this form.",shelved,M3-M5,BACKLOG (shelved; replaced by increment prototype)
+OT-C1d,OPERATIONAL_TODO.md,4. Nice to have (N),"C1d: option C, per-updraft tag shares; about 3x the cost of B.",shelved,M8,BACKLOG
+OT-C6leftover,OPERATIONAL_TODO.md,4. Nice to have (N),"C6 review leftovers: isfinite before FT conversion, nothing inside a broadcast at init, parent shadowed in tests. Float32 rounding floor stays N (E45).",open,outside,BACKLOG
+OT-C7jac,OPERATIONAL_TODO.md,4. Nice to have (N),C7: Jacobian blocks for the tags' sedimentation and the implicit bracket.,shelved,outside,BACKLOG
+OT-A6,OPERATIONAL_TODO.md,4. Nice to have (N),A6: a tag-only vertical upwinding key (E37).,shelved,M3-M5,BACKLOG
+OT-P2P3,OPERATIONAL_TODO.md,4. Nice to have (N),"P2: compute energy_source_share_norm! once per evaluation, skip when nothing sediments. P3: a string allocation per tracer per evaluation under the audit.",open,M3-M5,G3 WP9 (P2/P3 only if the profile shows them)
+OT-U7,OPERATIONAL_TODO.md,4. Nice to have (N),"U7: start tagging from a checkpoint (a future opportunity); needs an explicit start mode, records started at zero, guard changes. Out of C2's scope. Added 2026-09-18, not to be built now.",shelved,outside,BACKLOG
+OT-U5U6,OPERATIONAL_TODO.md,4. Nice to have (N),"U5: a clear error when the tag list changes across a restart (C2 covers most). U6: records in Float64 or reset per output for long Float32 runs (match Float64 to 4e-4 at 24h, E45).",open,M1/M6,G4.1 (U5); BACKLOG (U6)
+OT-U8,OPERATIONAL_TODO.md,4. Nice to have (N),"U8: choosing the offset c -- options (temperature-floor rule, one c per compared setup); risk of cold spells below ~228K sea level at c=110,495. Added 2026-09-18, not built now.",open,M3-M5,G4.10
+OT-U9,OPERATIONAL_TODO.md,4. Nice to have (N),"U9: the offset's headroom in the closure table (minimum of e_tot+c reduced across processes); optional abort_above. Added 2026-09-18, not built now.",open,M2,G4.4
+OT-R5,OPERATIONAL_TODO.md,4. Nice to have (N),R5: a converged Newton solve for closure studies; its cost is not measured.,shelved,M3-M5,"BACKLOG (diagnostic only, not a production path)"
+OT-M4M5design,OPERATIONAL_TODO.md,4. Nice to have (N),"N items M4 (when 2M returns: D2 and one integration item) and M5 (when parent's P3 is fixed: D3), from SUBGRID_AND_MICROPHYSICS_DESIGN.md's own M1-M5 list.",open,outside,BACKLOG (2M/P3 gate)
+OT-H-worktrees,OPERATIONAL_TODO.md,5. Housekeeping,"Worktrees beside the repository, checked 2026-09-18 against origin/main; removed ones listed, kept ones listed (-buildtime-edmf, -m3, -p4, -ci-review, ClimaAtmos-upstream-vwb).",done,outside,archive (superseded by the 2026-09-23 housekeeping list in CONDENSE_PLAN)
+OT-H-defects,OPERATIONAL_TODO.md,5. Housekeeping,"The known defects in LEVANTE_TASKS.md. Fixed 2026-09-14 (validator if/elseif chain, c0_sphere_deep provenance reconstructed, failed-exit skip).",done,outside,archive
+OT-H-phasec,OPERATIONAL_TODO.md,5. Housekeeping,"analysis/phase_c.jl reads only runs named c*; the D, P, V and MP runs are in FINDINGS only.",open,outside,BACKLOG (or superseded by the G3 verifier)
+OT-Q1,OPERATIONAL_TODO.md,"6. Open questions, not blocking","What makes D1's zero-sum gross residual (E42, E42b). Candidate: pressure work in grid-mean vertical advection under tracer transport. An audit twin of D1 would test it.",open,outside,BACKLOG
+OT-Q2,OPERATIONAL_TODO.md,"6. Open questions, not blocking",What the sphere's remaining 17% of the audit's first-hour residual is (E39b).,open,outside,BACKLOG
+OT-Q3,OPERATIONAL_TODO.md,"6. Open questions, not blocking","How much provenance the upward branch moves where ice persists (D5, after C1b).",open,M8,G4.11 (ice provenance where ice lasts)
+OT-Q4,OPERATIONAL_TODO.md,"6. Open questions, not blocking","E14, E16's remainder and E24 (unresolved mechanisms).",open,outside,BACKLOG
+OT-SYN1,OPERATIONAL_TODO.md,7. Synergies,The increment ledger as a diagnostic of the parent's own solver (prepared). Would have flagged V2's one-iteration collapse (E69) in the first hour.,open,M0,G4.2
+OT-SYN2,OPERATIONAL_TODO.md,7. Synergies,A two-hour Float64 twin as a standard recipe (prepared): distinguishes rounding from structural residual.,open,M0,G3 WP0 (Float64-twin helper)
+OT-SYN3,OPERATIONAL_TODO.md,7. Synergies,The updraft exchange belongs to the water tags too; largest scientific gain and largest piece of work here; beyond G2.,open,outside,now G3 itself
+OT-SYN4,OPERATIONAL_TODO.md,7. Synergies,"The closure check could forecast, not only report (prepared): flush rate and settling level G* from E60/E74.",open,M2,G4.4
+OT-SYN5,OPERATIONAL_TODO.md,7. Synergies,"A memory number for every run, tau=E/L (prepared): E60 measured it by hand; step 2 would compute it in-run.",open,M2/M8,G4.14
+OT-SYN6,OPERATIONAL_TODO.md,7. Synergies,One per-process budget across both families (prepared): crosses process records with the increment ledger and the repair ledger; E23's 1.37 MJ/m2 gap is the motivating example (now resolved by E26).,open,M2,G4.6
+OT-PA1,OPERATIONAL_TODO.md,Plan A: waiting for the owner,"Confirm G1, or adjust its criteria.",done,outside,archive (G1 met 2026-09-20)
+OT-PA2,OPERATIONAL_TODO.md,Plan A: waiting for the owner,"A manual ci.yml run on main, for R1: the upstream groups on Julia 1.10 with the new packages.",open,M1,BACKLOG
+OT-PA3,OPERATIONAL_TODO.md,Plan A: waiting for the owner,"The attribution path: question 1 decided (prototype under way); question 2 (conventions, c) and question 3 (whether the correction may bring e_src_res to rounding by construction) open.",open,M2/M5,"G4.9, G4.10"
+OT-PA4,OPERATIONAL_TODO.md,Plan A: waiting for the owner,"Decisions, none urgent: item 14 NaN tags fix (done); U8/U9 before a winter run; U7; where the model's restart stops being bit for bit (E58); report ShipwayHill2012VelocityProfile upstream (E57); P7's optional fix (E56).",open,M1/M3-M5/M6,"G4.1, G4.10, BACKLOG (upstream reports)"
+OT-PB1,OPERATIONAL_TODO.md,Plan B: can be done now,"T3: tag/record code allocates nothing, checked in integration files (#78); #76's split solver check too.",done,outside,archive
+OT-PB2,OPERATIONAL_TODO.md,Plan B: can be done now,"M3: species-list equality test, written and committed locally, to open with C1b.",done,outside,archive
+OT-PB3,OPERATIONAL_TODO.md,Plan B: can be done now,C2's design: RESTART_GUARD_DESIGN.md (decision 11).,done,outside,archive
+OT-PB4,OPERATIONAL_TODO.md,Plan B: can be done now,C1b's plan checked against #72 and #76 (new last section of SUBGRID_AND_MICROPHYSICS_DESIGN.md).,done,outside,archive
+OT-PB5,OPERATIONAL_TODO.md,Plan B: can be done now,"A7: E49, output/a7_gap_cancellation/.",done,outside,archive
+OT-PB6,OPERATIONAL_TODO.md,Plan B: can be done now,Housekeeping (section 5).,done,outside,archive
+OT-PB7,OPERATIONAL_TODO.md,Plan B: can be done now,"A draft of the ClimaCore issue: CLIMACORE_ISSUE_DRAFT.md, with a reproducer. Not filed.",done,outside,archive
+OT-PC1,OPERATIONAL_TODO.md,Plan C: unlocked by merges,"C2, the restart guard with T1, is #92; V5 ran (E54).",done,outside,archive
+OT-PC2,OPERATIONAL_TODO.md,Plan C: unlocked by merges,"B1, phase B's ten-day run of the energy tag family: ran 2026-09-18 (E50).",done,outside,archive
+OT-PC3,OPERATIONAL_TODO.md,Plan C: unlocked by merges,"C1b, the EDMF sharing, is #91; its validation ran (D4 pair/vd/D5 E53, Float32 E55).",done,outside,archive
+OT-PC4,OPERATIONAL_TODO.md,Plan C: unlocked by merges,After #91 merges: C1c as a draft PR; V2 as a 10-day Float32 run with V1 folded in and V6 (both approved); then U2 calibration and D1 with D3.,done_not_struck,M3-M5/M1,archive (V2 ran); G4.5 (U2 calibration still open)
+OT-PC5,OPERATIONAL_TODO.md,Plan C: unlocked by merges,Done 2026-09-18: worktrees of merged branches removed (section 5).,done,outside,archive
+OT-PD1,OPERATIONAL_TODO.md,Plan D: needs a new approval,"A4, signed overlay shares: model code and a C9 twin (N, later).",shelved,M5,BACKLOG
+OT-PD2,OPERATIONAL_TODO.md,Plan D: needs a new approval,Runs: MP1 on more than one node; an audit twin of D1 (section 6).,open,M6/outside,BACKLOG
+OT-PD3,OPERATIONAL_TODO.md,Plan D: needs a new approval,"The N items that change model code: C6's leftovers, C7, A6, P2, P3, U5, U6, U7, R5, A2's runtime part and A3.",open,various,BACKLOG / G4 items as listed above
+OT-PD4,OPERATIONAL_TODO.md,Plan D: needs a new approval,"The GPU, last, with T3.",open,M6,BACKLOG
+FQ-1,FINDINGS.md,7. What is not established,The energy family's mass-weighted non-positive fraction (M1).,done,outside,"archive (settled: 0.7839 on c0_sphere_audit, E9b)"
+FQ-2,FINDINGS.md,7. What is not established,Whether p_sat is in fact invariant under R6's map.,done,outside,"archive (settled in Thermodynamics, R8; model invariance is the next item, open)"
+FQ-3,FINDINGS.md,7. What is not established,"What is left of E16 once the limiter is off (3.7e-8 in rho after one step, growing to 5.8e-6 by 5h); not the surface-flux code path.",open,outside,"G4.9 (attribution path, question 1 area) or BACKLOG"
+FQ-4,FINDINGS.md,7. What is not established,Why a tag goes negative under a positive parent (E14): finite-step donor loss vs unlimited explicit transport; E19 points at transport for region tags.,open,outside,BACKLOG
+FQ-5,FINDINGS.md,7. What is not established,"What makes the residual's first-minute jump (E13, E25); a ledger weighted by the stepper's own stages would split it.",open,outside,BACKLOG
+FQ-6,FINDINGS.md,7. What is not established,Why C5's radiation tag outgrows C3's after four hours (E24); runs differ in machine and code.,open,outside,BACKLOG
+FQ-7,FINDINGS.md,7. What is not established,Whether the sphere's per-process gap is the per-tag limiter or the clamp (E20).,done,outside,"archive (settled: the rain-out's production, E28, closed to 20.2 J/kg by a microphysics tag, E30)"
+FQ-8,FINDINGS.md,7. What is not established,What the sphere's last per-process gap is (E30).,done,outside,"archive (settled: the per-tag van Leer limiter with a small clamp part, E37)"
+FQ-9,FINDINGS.md,7. What is not established,What the 1M column's last signed residual is (E32).,done,outside,"archive (settled: the loss rule acting on the residual tracer transport makes, not the missing Jacobian block, E39)"
+FQ-10,FINDINGS.md,7. What is not established,"How much provenance sedimentation's upward branch moves in a run (E32, E41, E42).",done_not_struck,outside,"archive on D1 (~1/5, E42b); open where ice persists (deep convection, D5) -> G4.11"
+FQ-11,FINDINGS.md,7. What is not established,"What makes D1's gross residual (E42, E42b): a zero-sum 3.7e-3 spread over the column, not vertical diffusion; pressure work in grid-mean vertical advection is the next candidate.",open,outside,G3 WP0 (V-W0a/V-W0c area) or BACKLOG
+FQ-12,FINDINGS.md,7. What is not established,"Anything under prognostic_edmfx (E40): how much the missing sub-grid mass flux/sedimentation corrections add to e_src_res, measured by the D4 pair with edmfx_vertical_diffusion:false.",done,outside,"archive (D4 pair ran under C1b, E53)"
+FQ-13,FINDINGS.md,7. What is not established,2M and P3: the model disables both on this branch (E41); by the code the tags need nothing more for 2M than 1M; P3 has gaps in the parent's own sedimentation.,open,outside,BACKLOG (upstream CloudMicrophysics gate)
+FQ-14,FINDINGS.md,7. What is not established,What C8's form-A gap is (E33).,done,outside,"archive (settled: the per-tag transport; enthalpy keeps form A below 4.4e-7 J/kg for a day, E43)"
+FQ-15,FINDINGS.md,7. What is not established,Whether the audit's transport clamp is the whole of its form-A gap on the sphere (E36); a C9 twin with signed shares for the overlays would decide it.,open,outside,BACKLOG
+FQ-16,FINDINGS.md,7. What is not established,What makes the audit's first-hour residual (E34).,done,outside,"archive (settled: the one-iteration Newton increment during initial adjustment, E39/E39b)"
+FQ-17,FINDINGS.md,7. What is not established,"What the sphere's converged 17% is (E39b): 4.24e19 J at 1h, made in the first step, nearly flat after.",open,outside,BACKLOG
+FQ-18,FINDINGS.md,7. What is not established,How the column's unrecorded 1.37 MJ/m2 splits (E23).,done,outside,"archive (settled: subsidence -1,277,826 + rain-out -87,651 J/m2, E26)"
+FQ-19,FINDINGS.md,7. What is not established,What the column's last per-process gap is (E26).,done,outside,"archive (settled: the tags' per-tag transport; enthalpy closes to 6.6e-6 J/kg, E34)"
+FQ-20,FINDINGS.md,7. What is not established,"Where the repair's large ledgers sit on the sphere (E27), and whether that is where the two region tags meet (E19's undershoots).",done,outside,"archive (settled: just beyond the edge, one to two rows out, E46; whether a wider mask removes them: open)"
+FQ-21,FINDINGS.md,7. What is not established,Float32 on a sphere (W4).,done,outside,"archive (settled for a day, E45; longer runs/audit/1M/GPU in Float32 still open, G3 V-W7 for water)"
+FQ-22,FINDINGS.md,7. What is not established,Whether 1M changes the residual (W5).,done_not_struck,outside,"archive on a column (7% down, W5b); a sphere is still open -> G3/BACKLOG"
+FQ-23,FINDINGS.md,7. What is not established,The tag cost on anything but one column on one node (T4 bounds it at 1.32x there).,done_not_struck,outside,"archive on a sphere too (1.46x, T9); GPU and EDMF-once-it-builds still open -> M6/M4, G3 WP9"
+FQ-24,FINDINGS.md,7. What is not established,Whether C1's suppression cost (R11) matters in practice.,done_not_struck,outside,"archive (measured on C4: E19, ~1% over a day); full practical impact over long runs -> G4.10"
+G3-crit-1,G3_TODO.md,G3 is met when,Evidence: every headline number goes through the verifier and a manifest,open,M0-M5/sphere,G3
+G3-crit-2,G3_TODO.md,G3 is met when,"Refusals with tests, known issues settled, a file-based start, restart round trips",open,M0-M5/sphere,G3
+G3-crit-3,G3_TODO.md,G3 is met when,"Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks",open,M0-M5/sphere,G3
+G3-crit-4,G3_TODO.md,G3 is met when,"Closure on D4-W, including the copies' own residual and the rain and snow parts",open,M0-M5/sphere,G3
+G3-crit-5,G3_TODO.md,G3 is met when,"Per-tag accuracy against the copies, at 24h and in the first hour",open,M0-M5/sphere,G3
+G3-crit-6,G3_TODO.md,G3 is met when,Convergence of the default's error and of the copies,open,M0-M5/sphere,G3
+G3-crit-7,G3_TODO.md,G3 is met when,"Precipitation provenance: the 0M split, rain and snow tags, sum(pr_tag)=pr, the audit",open,M0-M5/sphere,G3
+G3-crit-8,G3_TODO.md,G3 is met when,"Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M",open,M0-M5/sphere,G3
+G3-crit-9,G3_TODO.md,G3 is met when,Float32 twin,open,M0-M5/sphere,G3
+G3-crit-10,G3_TODO.md,G3 is met when,"Cost, both modes and both families",open,M0-M5/sphere,G3
+G3-crit-11,G3_TODO.md,G3 is met when,"Ten days on the sphere, a copies twin, a restart",open,M0-M5/sphere,G3
+G3-crit-12,G3_TODO.md,G3 is met when,"Reviews, CI, draft PRs, docs",open,M0-M5/sphere,G3
+G3-done-1,G3_TODO.md,Done before the re-scope,G3 is water and G4 is energy; production target; precipitation provenance with rain/snow tags; exchange by default with copies as audit; the partition-only factor; this session runs G3's jobs (owner decision).,done,M0,G3
+G3-done-2,G3_TODO.md,Done before the re-scope,"Branch claude/g3-programme, the roadmap, the frozen assessments, the agent definitions in ~/.claude/agents/.",done,M0,G3
+G3-done-3,G3_TODO.md,Done before the re-scope,"The evidence tools in analysis/evidence/: compare_runs.py (verifier, 6/6 mutation tests), E73's table reproduced exactly, manifest.py (detects dirty run worktree), runs_inventory.csv (93 output directories, not yet classified).",done,M0,G3
+G3-done-4,G3_TODO.md,Done before the re-scope,OPERATIONAL_TODO's open items matched to milestones.,done,M0,G3
+G3-done-5,G3_TODO.md,Done before the re-scope,"The instruction for #95's partition-only factor (review/pr95_blend_factor_instruction.md), passed to the job session through the owner.",done,M0,G3
+G3-done-6,G3_TODO.md,Done before the re-scope,"G3's plan, reviewed and finalised.",done,M0,G3
+G3-WP0-1,G3_TODO.md,WP0: foundations,"#95 merged with decision 5 (job session, owner); record its head, check the plan's assumptions against the merged code.",open,M0,G3
+G3-WP0-2,G3_TODO.md,WP0: foundations,"Review the phase-1 tools (old item 1.8), then write a FINDINGS entry.",open,M0,G3
+G3-WP0-3,G3_TODO.md,WP0: foundations,"Extend the verifier to q_tag_*, the copies in sgs^js, rain and snow parts, and pr_tag_*.",open,M0,G3
+G3-WP0-4,G3_TODO.md,WP0: foundations,The manifest in this session's submit path; classify the run inventory.,open,M0,G3
+G3-WP0-5,G3_TODO.md,WP0: foundations,"The Float64-twin helper (synergy 2), for V-W7.",open,M0,G3
+G3-WP0-6,G3_TODO.md,WP0: foundations,"Check that V-W8's ERA5 forcing is on disk, and that the copies-against-tracer test (plan S3) can be configured.",open,M0,G3
+G3-WP0-7,G3_TODO.md,WP0: foundations,"V-W0c: one untagged D4-W day with EDMF diagnostics, to size the updraft's rain/snow, surface excess and the five 1M leaks.",open,M0,G3
+G3-WP0-8,G3_TODO.md,WP0: foundations,"V-W0a: known issue 4, a precipitating 0M column, 1 against 10 Newton iterations; close or restate the issue.",open,M0,G3
+G3-WP0-9,G3_TODO.md,WP0: foundations,"V-W1: D4-W with grid-scale tags on main+#95, before WP1's refusal, and its untagged twin (the 'before' numbers).",open,M0,G3
+G3-WP0-10,G3_TODO.md,WP0: foundations,Checksummed minimal datasets for headline tables (after the archive decision).,open,M0,G3
+G3-WP1-1,G3_TODO.md,"WP1: refusals, reserved names, known issues","Refuse water_tracers with prognostic_edmfx until WP3 lands, and with the AMD LES model always; warn under PrescribedFlow; do not refuse water_process_record.",open,M1,G3
+G3-WP1-2,G3_TODO.md,"WP1: refusals, reserved names, known issues","Reserve colliding tag names: res, fix_*, upfix_*, inc_*, rtag_*, stag_*.",open,M1,G3
+G3-WP1-3,G3_TODO.md,"WP1: refusals, reserved names, known issues",Known issue 1 closed with the post-#64 numbers from the CI log; issue 3 updated.,open,M1,G3
+G3-WP1-4,G3_TODO.md,"WP1: refusals, reserved names, known issues",Tests for each refusal; review by clima-reviewer (high).,open,M1,G3
+G3-WP3-1,G3_TODO.md,WP3: total water under EDMF,The switch water_tag_updraft_copy.,open,M1/M3,G3
+G3-WP3-2,G3_TODO.md,WP3: total water under EDMF,"Default mode: donor share of the parent's rho*q_tot SGS flux; the exchange with weight q_tot^k and decision 5's bound; the water plume rescaled to sgs^js.q_tot at each level from the grid mean's composition; plume computed once, at the top of implicit_tendency!, into the tags' own scratch.",open,M1/M3,G3
+G3-WP3-3,G3_TODO.md,WP3: total water under EDMF,"Copies mode: q_tag_<name> in sgs^js with four mirrors -- the updraft's 0M sink, its 1M sedimentation with lateral inflow, the surface relaxation target, and the residual repair after the filter.",open,M1/M3,G3
+G3-WP3-4,G3_TODO.md,WP3: total water under EDMF,Copies initialised and rebuilt as q_tot^j * phi-bar_i; the comparison driver starts them from the plume.,open,M1/M3,G3
+G3-WP3-5,G3_TODO.md,WP3: total water under EDMF,"The restart guard for copies, refusing updraft_number>1, copies without prognostic EDMF, copies with unequal updraft upwinding, and the exchange without a region partition; lift the WP1 refusal for one updraft.",open,M1/M3,G3
+G3-WP3-6,G3_TODO.md,WP3: total water under EDMF,"Bound activation in the water audit, per source tag.",open,M1/M3,G3
+G3-WP3-7,G3_TODO.md,WP3: total water under EDMF,"Diagnostics of the five 1M leaks, in closed form (plan 4.2).",open,M1/M3,G3
+G3-WP3-8,G3_TODO.md,WP3: total water under EDMF,"CI group tagging_water_edmf (Julia 1.10/1.11, downgrade): parity in both modes on 1M/0M EDMF columns and explicit microphysics; copies against a passive tracer at rounding; manufactured mixing tests on a frozen parent.",open,M1/M3,G3
+G3-WP3-9,G3_TODO.md,WP3: total water under EDMF,V-W3: D4-W default against copies each with a 10-Newton twin; bound activation; a surface pulse; the TRMM 0M development case default against copies. Record as a FINDINGS entry; apply WP5's rule.,open,M1/M3,G3
+G3-WP3-review,G3_TODO.md,WP3: total water under EDMF,Review by clima-numerics-reviewer (xhigh).,open,M1,G3
+G3-WP5-1,G3_TODO.md,WP5: following the parent's increment,water_tag_transport: increment -- tags take the parent's rho*q_tot increment after each solve; the column-total part stays in place with ledgers q_tag_inc_left/q_tag_inc_moved; explicit vertical advection skipped; hook composes with the energy one; stepper check reused.,open,M3/M5,G3
+G3-WP5-2,G3_TODO.md,WP5: following the parent's increment,"Its default under EDMF, by the rule in plan 4.3.",open,M3/M5,G3
+G3-WP5-3,G3_TODO.md,WP5: following the parent's increment,Review (xhigh).,open,M3/M5,G3
+G3-WP5-4,G3_TODO.md,WP5: following the parent's increment,"V-W4, the ladder: default and copies at dt 60/30, Newton 2/4/10, 60/120 levels, first-order upwinding; records wall time of each rung (R5) and the copies' own convergence.",open,M3/M5,G3
+G3-WP4a-1,G3_TODO.md,WP4a: the 0M split,"Production sum(max(Delta^k,0)) by mask and loss sum(min(Delta^k,0)*phi^k), with the environment's term as the model weights it, in the implicit and explicit microphysics paths.",open,M5,G3
+G3-WP4a-2,G3_TODO.md,WP4a: the 0M split,pr_tag_<name> under 0M.,open,M5,G3
+G3-WP4a-3,G3_TODO.md,WP4a: the 0M split,Review (xhigh).,open,M5,G3
+G3-WP4b-1,G3_TODO.md,WP4b: rain and snow carry their own tags,"WP4b-D, the design note: prognostic fields, operator list with file:line refs, net-flow attribution between compartments, updraft's rain composition (default mode), sedimentation by parent's flux split, Jacobian entries, scratch, audit method, cost. Review by clima-numerics-reviewer (xhigh) before any code.",open,M5,G3
+G3-WP4b-2,G3_TODO.md,WP4b: rain and snow carry their own tags,Stage 1: a 1M column without EDMF; key water_tag_precipitation with its restart guard; pr_tag_* and sum(pr_tag)=pr.,open,M5,G3
+G3-WP4b-3,G3_TODO.md,WP4b: rain and snow carry their own tags,"Stage 2: EDMF, default mode.",open,M5,G3
+G3-WP4b-4,G3_TODO.md,WP4b: rain and snow carry their own tags,Stage 3: copies of the rain and snow parts.,open,M5,G3
+G3-WP4b-5,G3_TODO.md,WP4b: rain and snow carry their own tags,"The audit script: gross 1M process rates recomputed offline for a column, compared with the net-flow attribution.",open,M5,G3
+G3-WP4b-6,G3_TODO.md,WP4b: rain and snow carry their own tags,"WP4c, beside it: the leak corrections that plan 4.2's rule selects, for runs without rain/snow tags.",open,M5,G3
+G3-WP4b-7,G3_TODO.md,WP4b: rain and snow carry their own tags,Review (xhigh) of each stage.,open,M5,G3
+G3-WP4b-8,G3_TODO.md,WP4b: rain and snow carry their own tags,V-W5: the 0M split on/off; rain and snow tags on/off on a 1M column without EDMF and on D4-W in both modes; the audit; sum(pr_tag)=pr.,open,M5,G3
+G3-QUAL-VW6,G3_TODO.md,Qualification runs,"V-W6, held out, default and copies each: RICO 1M, BOMEX (bomex_column with the passive tracer), ARM SGP 1M, GCM-driven 0M column.",open,M3/M5,G3
+G3-QUAL-redteam,G3_TODO.md,Qualification runs,"Red team before the default is confirmed (clima-numerics-reviewer, xhigh).",open,M3/M5,G3
+G3-QUAL-VW7,G3_TODO.md,Qualification runs,"V-W7, the Float32 twin of D4-W.",open,M3/M5,G3
+G3-QUAL-VW8,G3_TODO.md,Qualification runs,"V-W8, the file-based column with water and energy tags, 3h.",open,M3/M5,G3
+G3-QUAL-VW9,G3_TODO.md,Qualification runs,"V-W9, restart round trips: D4-W in both modes, and with rain and snow tags.",open,M3/M5,G3
+G3-WP6-1,G3_TODO.md,"WP6: gross accumulators, both families","A design note, then code: absolute repair/fix throughput with event counts, per-step |m_left|, positive/negative loss for tau, attempted vs retained, restart segments. Tests: alternating signs, invariance under output interval, restart stitching, model fields unchanged. Review (high).",open,M2,G3
+G3-WP289-1,G3_TODO.md,"WP2, WP8, WP9: consolidation, docs, cost","WP2: move only the identical helpers into shared code, with a CI test running old and new side by side, bit for bit; the energy reference is a merged-main run with decision 5.",open,M4/M2/M1,G3
+G3-WP289-2,G3_TODO.md,"WP2, WP8, WP9: consolidation, docs, cost","WP8: docs -- tagged_water.md gets the EDMF section, precipitation, and the corrected diffusion-operators claim; also a claim contract for tagged water, known_issues.md and NEWS. Review (high).",open,M4/M2/M1,G3
+G3-WP289-3,G3_TODO.md,"WP2, WP8, WP9: consolidation, docs, cost","WP9 and V-W10: cost at 2/4/8/32 tags where they build in time, both modes, with/without rain and snow tags, both families; P2 and P3 only if the profile shows them.",open,M4/M2/M1,G3
+G3-sphere-1,G3_TODO.md,The sphere,"The sphere budget, set by the owner.",open,sphere,G3
+G3-sphere-2,G3_TODO.md,The sphere,V-W11: ten days of g2_v2_sphere_n2 with water/rain/snow tags under the chosen default; a one-day copies twin; a restart after day 1; a two-rank parity pair.,open,sphere,G3
+G3-sphere-3,G3_TODO.md,The sphere,"G3's closing entry, and the question of what comes next.",open,sphere,G3
+G4.1,G3_TODO.md,"G4: the energy source tags, after G3","#95's follow-ups: D1 with D3 closes when #95 merges; U5, a clear error when the tag list changes across a restart.",open,M2-M5/sphere/M8,G4
+G4.2,G3_TODO.md,"G4: the energy source tags, after G3","The early-warning probe, looking back (synergy 1): does increment_left flag V2's one-iteration collapse against the two-iteration run?",open,M2-M5/sphere/M8,G4
+G4.3,G3_TODO.md,"G4: the energy source tags, after G3","Claim contracts for energy source tags, process records and the parent-budget ledger.",open,M2-M5/sphere/M8,G4
+G4.4,G3_TODO.md,"G4: the energy source tags, after G3","The residual report: rate and settling forecast (synergy 4), vertical/local maxima, headroom (U9), overlay bounds (A5).",open,M2-M5/sphere/M8,G4
+G4.5,G3_TODO.md,"G4: the energy source tags, after G3","Warnings, abort rules and acceptance kept apart, for both families' closure checks; U2's calibration.",open,M2-M5/sphere/M8,G4
+G4.6,G3_TODO.md,"G4: the energy source tags, after G3","The D4 process budget with every record and the ledger (synergy 6, C4's c*delta-rho, repair never a parent source); the offline EDMF column budget.",open,M2-M5/sphere/M8,G4
+G4.7,G3_TODO.md,"G4: the energy source tags, after G3",The energy reference suite: the R2 ladder redone at #95's merged head; 60/120 levels and Newton 4/10; a Float64 twin; the cold precipitating column; a forced column without EDMF.,open,M2-M5/sphere/M8,G4
+G4.8,G3_TODO.md,"G4: the energy source tags, after G3","A surface pulse, and convection switched on/off, for energy.",open,M2-M5/sphere/M8,G4
+G4.9,G3_TODO.md,"G4: the energy source tags, after G3",Alternative placements of the increment correction on a shared parent.,open,M2-M5/sphere/M8,G4
+G4.10,G3_TODO.md,"G4: the energy source tags, after G3","The offset sweep (U8), and a check for leaving the tested regime.",open,M2-M5/sphere/M8,G4
+G4.11,G3_TODO.md,"G4: the energy source tags, after G3",Carried over from G3: the plume rescale to A^j; one surface rule; the per-subdomain split for precipitation energy and EDMF's sedimentation corrections; compartments for the energy falling water carries.,open,M2-M5/sphere/M8,G4
+G4.12,G3_TODO.md,"G4: the energy source tags, after G3","Held-out columns for energy, a red team, and the owner's choice of the energy default.",open,M2-M5/sphere/M8,G4
+G4.13,G3_TODO.md,"G4: the energy source tags, after G3","Ten days of the energy sphere at the chosen default, against E75.",open,M2-M5/sphere/M8,G4
+G4.14,G3_TODO.md,"G4: the energy source tags, after G3","A memory number for every run (synergy 5), after WP6.",open,M2-M5/sphere/M8,G4
+LT-1,LEVANTE_TASKS.md,"Not yet, and why","c0_sphere_deep, dropped 2026-09-10: written as a depth control; where_negative.jl and c0_sphere_audit already answer its two purposes; config stays in the tree if wanted.",shelved,outside,archive
+LT-2,LEVANTE_TASKS.md,"Not yet, and why",Phase B: no technical objection left after the #64 fix; whether it is worth running was the owner's call.,done,outside,"archive (B1 ran, E50; B1a-c/B2/B3 not approved)"
+LT-3,LEVANTE_TASKS.md,"Not yet, and why",C2 needs a code change and the owner's approval; no configuration written (as of 2026-09-10).,done,outside,archive (C2 built as #92)
+LT-4,LEVANTE_TASKS.md,0. Checked 2026-09-10,"Whether to lengthen test/tagged_water_integration.jl past A5's onset: the fix strengthened the test instead of lengthening it; coverage gap narrowed, not closed (open item, also in README.md).",open,outside,BACKLOG
+NS-1,NEXT_SESSION.md,Rules of engagement,docs/src/ tag_closure_memo.md and tag_closure_experiments.md: while PR #63 was open the owner asked for each change there; keep asking (superseded 2026-09-23 by decision to mark them historical and archive later).,superseded,outside,archive
+NS-2,NEXT_SESSION.md,How this series writes things down,"Documentation conventions (load-bearing): cite the run, state the bound with the claim, never cite an unverified script, record falsified claims, recompute before repeating. Carried forward into FINDINGS.md and AGENTS.md self-correction norms.",done,outside,FINDINGS.md / AGENTS.md conventions
