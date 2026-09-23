@@ -1379,11 +1379,11 @@ follow.
     diffusion share one diffusivity and keep it.
 
 `docs/known_issues.md`, issue 3, describes both. The check is kept apart from
-[`check_water_tagging_supported`](@ref), which also gates
+`check_water_tagging_supported`, which also gates
 `water_process_record`. The records are not transported, so neither applies to
 them. A prescribed flow is warned about once the model is built, since the
 setup can bring one without the key; see
-[`warn_water_tags_under_prescribed_flow`](@ref).
+`warn_water_tags_under_prescribed_flow`.
 """
 function check_water_tracers_transport_supported(
     turbconv,
