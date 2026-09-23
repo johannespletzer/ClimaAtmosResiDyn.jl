@@ -57,12 +57,12 @@ Add the tags to a `diagnostics` block the same way as any other short name.
 
 ## The choices, and what to set them to
 
-| Key                              | Default        | Set it to                                                                                                                                             |
-|:-------------------------------- |:-------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `energy_source_tag_offset`       | none, required | 110495.0 unless you have a reason. It makes the partitioned total positive, which the donor rule needs. It is a convention, and the tags depend on it |
-| `energy_source_tag_transport`    | `tracer`       | `enthalpy_increment` under EDMF or implicit diffusion. `tracer` only when you want the tags to ride the plain tracer path                             |
-| `energy_source_tag_repair`       | `true`         | leave on, unless you want to see what the attribution rule alone produces                                                                             |
-| `energy_source_tag_updraft_copy` | `false`        | leave off. `true` is the audit: a copy of each tag in the updraft, moved by the model's own tracer machinery, at about twice the build time           |
+| Key                              | Default        | Set it to                                                                                                                                                |
+|:-------------------------------- |:-------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `energy_source_tag_offset`       | none, required | 110495.0 unless you have a reason. It makes the partitioned total positive, which the donor rule needs. It is a convention, and the tags depend on it    |
+| `energy_source_tag_transport`    | `tracer`       | `enthalpy_increment` under EDMF or implicit diffusion. `tracer` only when you want the tags to ride the plain tracer path                                |
+| `energy_source_tag_repair`       | `true`         | leave on, unless you want to see what the attribution rule alone produces                                                                                |
+| `energy_source_tag_updraft_copy` | `false`        | leave off. `true` is the audit: a copy of each tag in the updraft, moved by the model's own tracer machinery. A cold build takes about six times as long |
 
 Under `prognostic_edmfx` the tags need `updraft_number: 1`, and the model
 refuses more.
