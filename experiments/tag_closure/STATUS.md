@@ -118,7 +118,7 @@ The plan is [CONDENSE_PLAN.md](CONDENSE_PLAN.md).
 | H3 | re-check what G3 relies on | done (`388d2f3a`) |
 | H4 | write the new structure on the condense branch | done (`2a9d4619`), with E76 merged in from the record branch |
 | H5 | the loss check, by an agent that did not write | done: nothing lost; its 2 blocking and 21 minor gaps are fixed and re-verified ([review/loss_check.md](review/loss_check.md)) |
-| H5b | a collective review of H1 to H7 by an independent agent, the owner's request | next |
+| H5b | a collective review of H1 to H7 by an independent agent, the owner's request | done: sound ([report](review/agent_reviews/housekeeping_review_2026-09-23.md)). It checked the documents, a sample for losses, the branches and tags, the archive's checksums and scratch copy, #96, #97, H7's removals and H1. Its fixes are in `466c1297`. Its follow-ups: merge `origin/main` at H6; the conditional H7 items; the owner to confirm the wider branch rule; an optional LRZ restore; CI reruns |
 | H6 | the owner reviews a PR of the condense branch into the record branch; the G3 branch and the old experiment branch retire | waiting |
 | H7 | the approved cleanup | partly done (CONDENSE_PLAN, H7). The first capture missed git-ignored files, so 34 Slurm `.out` logs of the removed worktrees are lost; the archive README says what, and the capture is fixed. The local-branch rule applied was wider than the list: every merged local branch went; nothing unique was lost. Due now: `-setup` and `-histdocs`, since #96 and #97 merged. Waiting: `-upd` and `-upd-run` for #95's merge, after a capture with ignored files; `-condense` and the two old remote branches at H6 (their tips are tagged `archive/*-final`); `claude_work` while the job session uses it |
 

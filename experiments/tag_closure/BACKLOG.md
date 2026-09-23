@@ -8,8 +8,9 @@ milestones are in [ROADMAP.md](ROADMAP.md).
 
 Each item keeps its original ID. "Register" is its row in
 `review/register/items.csv`. Sources: "OT" is the archived
-[OPERATIONAL_TODO.md](archive/2026-09-23/OPERATIONAL_TODO.md), "FQ" is
-FINDINGS section 7, "What is not established", "LT" is the archived
+[OPERATIONAL_TODO.md](archive/2026-09-23/OPERATIONAL_TODO.md), "FQ" is an
+open question from the archived FINDINGS' section 7, "What is not established"
+(the live queue is [FINDINGS section 13](FINDINGS.md#13-what-is-not-established)), "LT" is the archived
 [LEVANTE_TASKS.md](archive/2026-09-23/LEVANTE_TASKS.md), and "old README" is
 the archived [README.md](archive/2026-09-23/README.md).
 
@@ -24,7 +25,7 @@ the owner.
 | MP1 | `OT-B8`, `OT-PD2` | More than one node. MP1 ran on 4 ranks on one node and closed as on one process (E47). More than one node is untested, and not approved (decision 8 of 2026-09-18) | OT section 2, item 8; Plan D.2 |
 | U6 | `OT-U5U6`, `OT-B7` | Records in Float64, or reset at each output, for long Float32 runs. Over a day they match Float64 to 4e-4 at 24 h (E45). Float32 runs longer than a day are untested | OT section 4; OT section 2, item 7 |
 | E58 | `OT-PA4` | Where the model's own restart of C5's column stops being bit for bit: 0M, the 12 hours, the code before #89, or `reproducible_restart: true`. It is upstream's, not the tags'. Short runs on the login node would separate it | Plan A.4 |
-| FQ-23 (GPU) | `FQ-23` | The tag cost on a GPU. The EDMF part is G3 WP9 and V-W10 | FINDINGS section 7 |
+| FQ-23 (GPU) | `FQ-23` | The tag cost on a GPU. The EDMF part is G3 WP9 and V-W10 | archived FINDINGS §7; live: FINDINGS §13 |
 
 ## M7: a production trial and a supported envelope
 
@@ -47,7 +48,7 @@ here (ROADMAP). The sweep itself is G4.10.
 | P5 | `OT-P5` | The explicit tendency's generic tracer loops allocate: 22,576 bytes per call without tags, 58,160 with four, on a 1M column. Shared model code, not tag code | OT section 4 (shelved) |
 | ShipwayHill report | `OT-PA4` | Report upstream that `ShipwayHill2012VelocityProfile` fails on `ITime` (E57) | Plan A.4 |
 | M4, M5 (N items) | `OT-M4M5design` | When 2M returns: D2 and one integration item (M4). When the parent's P3 is fixed: D3 (M5). From SUBGRID_AND_MICROPHYSICS_DESIGN's own list | OT section 4 |
-| FQ-13 | `FQ-13` | 2M and P3: the model disables both (E41). By the code the tags need nothing more for 2M than for 1M; P3 has gaps in the parent's own sedimentation. The owner's rule for when the gate lifts is in DECISIONS.md (2026-09-18) | FINDINGS section 7 |
+| FQ-13 | `FQ-13` | 2M and P3: the model disables both (E41). By the code the tags need nothing more for 2M than for 1M; P3 has gaps in the parent's own sedimentation. The owner's rule for when the gate lifts is in DECISIONS.md (2026-09-18) | archived FINDINGS §7; live: FINDINGS §13 |
 
 ## CI
 
@@ -72,10 +73,10 @@ here (ROADMAP). The sweep itself is G4.10.
 | ID | Register | Summary | Source |
 |:--|:--|:--|:--|
 | open question 4 | `OT-Q4` | E14, E16's remainder and E24, the unresolved mechanisms. Too terse to place (ROADMAP) | OT section 6 |
-| FQ-3 | `FQ-3` | What is left of E16 once the limiter is off: 3.7e-8 in ρ after one step, growing to 5.8e-6 by 5 h. Not the surface-flux code path | FINDINGS section 7 |
-| FQ-4 | `FQ-4` | Why a tag goes negative under a positive parent (E14): the finite-step donor loss or the unlimited explicit transport. E19 points at transport for the region tags | FINDINGS section 7 |
-| FQ-5 | `FQ-5` | What makes the residual's first-minute jump (E13, E25). A ledger weighted by the stepper's own stages would split it | FINDINGS section 7 |
-| FQ-6 | `FQ-6` | Why C5's radiation tag outgrows C3's after four hours (E24). The runs differ in machine and code | FINDINGS section 7 |
+| FQ-3 | `FQ-3` | What is left of E16 once the limiter is off: 3.7e-8 in ρ after one step, growing to 5.8e-6 by 5 h. Not the surface-flux code path | archived FINDINGS §7; live: FINDINGS §13 |
+| FQ-4 | `FQ-4` | Why a tag goes negative under a positive parent (E14): the finite-step donor loss or the unlimited explicit transport. E19 points at transport for the region tags | archived FINDINGS §7; live: FINDINGS §13 |
+| FQ-5 | `FQ-5` | What makes the residual's first-minute jump (E13, E25). A ledger weighted by the stepper's own stages would split it | archived FINDINGS §7; live: FINDINGS §13 |
+| FQ-6 | `FQ-6` | Why C5's radiation tag outgrows C3's after four hours (E24). The runs differ in machine and code | archived FINDINGS §7; live: FINDINGS §13 |
 | C3 on a sphere | (not in the register) | Whether C3 also wants a sphere counterpart. As registered it is the column only | old README, "Open items" |
 
 ## Code housekeeping, not in the register

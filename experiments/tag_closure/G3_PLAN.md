@@ -76,7 +76,7 @@ test it (6.1).
 | 6 | **Convergence.** Successive refinements of time step, grid and Newton count change the default's per-tag error, *and the copies themselves*, by less than a quarter of the per-tag budget. | M3 |
 | 7 | **Precipitation provenance.** Under 0M the sink is split by subdomain. Under 1M rain and snow carry tags. `Σᵢ pr_tagᵢ = pr` within budget. The net-flow attribution between compartments is audited against gross process rates on a column, within budget. Surface precipitation by tag is reported with its assumptions. | M5 |
 | 8 | **Held-out columns.** RICO (1M), BOMEX (1M), ARM SGP (1M, deep, continental) and the GCM-driven column (0M) meet criteria 4 and 5 without retuning. | M5 |
-| 9 | **Float32.** A Float32 twin of D4-W meets criteria 3 and 4 within 10× the Float64 residual. | M3 |
+| 9 | **Float32.** A Float32 twin of D4-W meets criteria 3 and 4 within 10× the Float64 residual. This is a precision-sensitivity check. It decides no cause: that needs tagged and untagged pairs at each precision, and refinement. | M3 |
 | 10 | **Cost.** Build time, step time and peak memory are measured in both modes and with the rain and snow tags. The copies are measured at 2, 4 and 8 tags and extrapolated, with a time limit. The allocation gates pass. | M4 |
 | 11 | **Sphere.** Ten days of the G2 sphere with water tags under the chosen default meet a sphere budget set before the run. A one-day copies twin gives the per-tag error there. A restart holds. | — |
 | 12 | Reviewed and tested: agent reviews with their findings fixed, CI green, and draft PRs ready. The docs are updated: `tagged_water.md`, whose "same diffusion operators" claim is wrong under 1M; `known_issues.md`; NEWS; and a claim contract for tagged water. | M1, M2 |

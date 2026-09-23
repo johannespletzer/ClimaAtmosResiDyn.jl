@@ -83,7 +83,8 @@ The twelve criteria of the plan, section 2, in short:
  - [ ] Extend the verifier to `q_tag_*`, the copies in `sgsʲs`, the rain and
    snow parts, and `pr_tag_*` (`clima-analysis-builder`).
  - [ ] The manifest in this session's submit path. Classify the run inventory.
- - [ ] The Float64-twin helper (synergy 2), for V-W7.
+ - [ ] The Float64-twin helper (synergy 2), for V-W7. It is a precision-sensitivity
+   screen and decides no cause (G4_TODO, prepared item 2).
  - [ ] Check that V-W8's ERA5 forcing is on disk, and that the copies against
    tracer test (plan S3) can be configured.
  - [ ] V-W0c: one untagged D4-W day with EDMF diagnostics, to size the

@@ -11,15 +11,19 @@ This file holds:
 - G4.1 to G4.14, moved from G3_TODO.md on 2026-09-23 (only their layout and
   pointers changed);
 - under each, the open energy items of the former OPERATIONAL_TODO (sections
-  2 to 7 and the Plan, A to D) and of FINDINGS section 7 that belong to it;
+  2 to 7 and the Plan, A to D) and of the original FINDINGS section 7 (its
+  live queue is [FINDINGS section 13](FINDINGS.md#13-what-is-not-established))
+  that belong to it;
 - the energy items within M1 to M5 that no G4.n takes up yet;
 - the items that G3 takes up;
 - the prepared designs of section 7 of the former OPERATIONAL_TODO.
 
 Each item keeps its original ID. The register ID from
 `review/register/items.csv` follows in code font. "OT" is the archived
-[OPERATIONAL_TODO.md](archive/2026-09-23/OPERATIONAL_TODO.md), and "FQ" is
-FINDINGS section 7, "What is not established". Open items beyond G4 (M6 to
+[OPERATIONAL_TODO.md](archive/2026-09-23/OPERATIONAL_TODO.md), and "FQ" is an
+open question from the archived FINDINGS' section 7, "What is not
+established". The live queue is
+[FINDINGS section 13](FINDINGS.md#13-what-is-not-established). Open items beyond G4 (M6 to
 M8, upstream, CI, outside) are in [BACKLOG.md](BACKLOG.md).
 
 The full re-check of the energy findings moves to the start of G4, by the
@@ -157,8 +161,10 @@ For both families' closure checks. U2's calibration.
 With every record and the ledger (synergy 6, C4's `c Δρ`, repair never a
 parent source). The offline EDMF column budget.
 
- - **Synergy 6, one per-process budget across both families** (`OT-SYN6`; OT
-   section 7, prepared). Design at the end of this file.
+ - **Synergy 6, one combined budget of records, ledger and repair**
+   (`OT-SYN6`; OT section 7, prepared, revised after the review of PR #98). A
+   new question with an acceptance test set in advance. It does not explain
+   E23's remainder, which E26 settled. Design at the end of this file.
  - **C4, `c·Δρ` from processes the tags do not bracket**: vertical diffusion,
    sponges, hyperdiffusion, EDMF, LES (`OT-C4`; OT section 3). Measure it,
    then share it as transport or document its size.
@@ -224,10 +230,13 @@ upward where it lasts (open question 3, FQ-10's remainder).
 
 ### G4.13 Ten days of the energy sphere at the chosen default, against E75
 
-### G4.14 A memory number for every run, after WP6
+### G4.14 A loss timescale for every run, after WP6
 
- - **Synergy 5, a memory number for every run**, τ = E/L (`OT-SYN5`; OT
-   section 7, prepared). Design at the end of this file.
+ - **Synergy 5, a loss timescale for every run**, τ = E/L (`OT-SYN5`; OT
+   section 7, prepared, revised after the review of PR #98). It needs WP6's
+   per-step gross-loss accumulators and passes an output-cadence test first.
+   It is an instantaneous loss timescale, not a residence time. Design at the
+   end of this file.
 
 ## Energy items within M1 to M5 that no G4.n takes up yet
 
@@ -239,7 +248,7 @@ approval before any model code (Plan D, `OT-PD1`, `OT-PD3`).
 | A2, A3 | `OT-A2A3` | A2's runtime part (∫Δ⁺ per label at runtime) and A3 (form A as a global integral online), as optional validation features. Accept A3 at about 1.2e-3 on a C6-type run and ≤ 1e-4 on C7, C9 and C10 at 24 h | M2 | open | OT section 4; decision of 2026-09-14 |
 | C6 | `OT-C6leftover` | C6's review leftovers: `isfinite` before the conversion to `FT`, `nothing` inside a broadcast at init, `parent` shadowed in tests. The Float32 rounding floor stays N (E45) | M1 | open | OT section 4 |
 | A4 | `OT-A4`, `OT-PD1` | Signed overlay shares. Accept when a C9 twin gives form A ≤ 5 J/kg (or ≤ 1e-6 with the loss signed too), and `sfc` no longer freezes at a node | M5 | shelved (decision 4, later) | OT section 4; Plan D.1 |
-| FQ-15 | `FQ-15` | Whether the audit's transport clamp is the whole of its form-A gap on the sphere (E36). A4's C9 twin would decide it | M5 | open | FINDINGS section 7 |
+| FQ-15 | `FQ-15` | Whether the audit's transport clamp is the whole of its form-A gap on the sphere (E36). A4's C9 twin would decide it | M5 | open | archived FINDINGS §7; live: FINDINGS §13 |
 | A6 | `OT-A6` | A tag-only vertical upwinding key (E37) | M3 to M5 | shelved | OT section 4 |
 | C7 | `OT-C7jac` | Jacobian blocks for the tags' sedimentation and the implicit bracket | M3 to M5 | shelved | OT section 4 |
 | C1c | `OT-C1c` | B3, the SGS diffusive flux under `enthalpy`. Built, and each of three placements made D4's residual larger (E59). Not to be opened in this form. Tagged `archive/c1c-sgs-diffusion` | M3 to M5 | shelved; the increment prototype replaced it | OT section 4 |
@@ -283,7 +292,9 @@ G3 WP0 first.
     the probe to be described in the tags' own terms, since the ledger only
     exists with the tags on.
 
-### Prepared: item 2, the Float64 twin recipe
+### Prepared: item 2, the Float64 twin as a precision-sensitivity screen
+
+*Revised on 2026-09-23 after the owner's review of PR #98. The original text is in the archived OPERATIONAL_TODO, section 7.*
 
   - **What to build.** A documented recipe and a helper. Given a run's config,
     the helper writes the twin: `FLOAT_TYPE: Float64`, `t_end` two hours, one
@@ -293,11 +304,23 @@ G3 WP0 first.
     for the comparison, and a section in
     `docs/src/energy_source_tags_guide.md` under "Is the answer
     trustworthy?".
-  - **What it decides.** Whether a residual is rounding or structure. On the
-    sphere the twin closed to 5.7e-15 against 3.85e-6 in Float32 (E70), so the
-    answer there was rounding; on D4 the Float32 residual is 2.3 times the
-    Float64 one (E65), so there it is structure.
-  - **Cost.** An hour of wall time per configuration, and no model code.
+  - **What it shows, and what it does not.** It is a screen for precision
+    sensitivity. If the residual falls by orders of magnitude in Float64, the
+    Float32 residual is sensitive to precision. On the sphere it closed to
+    5.7e-15 against 3.85e-6 in Float32 (E70). If it hardly falls, most of the
+    residual is not. On D4 the Float32 residual is 2.3 times the Float64 one
+    (E65). The twin does not decide a cause:
+      - Float64 also changes the parent's trajectory;
+      - a small residual in either run does not show that the tags' provenance
+        is right.
+  - **For a causal conclusion,** add, at each precision:
+      - a tagged and an untagged run, whose parent fields must be bit for bit
+        within that precision;
+      - the difference between the two precisions' parent states, reported;
+      - a refinement of the time step or the solver;
+      - a per-tag comparison against a reference.
+  - **Cost.** An hour of wall time per configuration, and no model code, for
+    the screen.
 
 ### Prepared: item 4, the closure check as a forecast
 
@@ -315,56 +338,71 @@ G3 WP0 first.
     magnitude, not a number.
   - **Cost.** Analysis only for the first step.
 
-### Prepared: item 5, a memory number for every run
+### Prepared: item 5, a loss timescale for every run
+
+*Revised on 2026-09-23 after the owner's review of PR #98. The original text is in the archived OPERATIONAL_TODO, section 7.*
 
   - **What it is.** `τ = E / L`: the partitioned total over the rate at which
-    the loss rule takes from it, in days. It says how long a tag's energy stays
-    before the rule flushes it, and so how far back a reading of the tags
-    reaches. E60 measured it by hand: 4 to 20 days on D4, about zero in the
-    surface layer, and 1 to 2 years above 10 km on C9's sphere, where most of
-    the residual sits. The initial-energy tags lose 8.6% and 12.3% a day on
-    D4, a memory of 8 to 11 days.
-  - **Step 1, from what is on disk.** A script forms `L` per cell from the
-    process records, which log each process's applied increment, as the sum of
-    the negative parts, and divides `E` by it. Output: `τ` per level, the
-    mass-weighted median, and `τ` where the residual sits, which is the number
-    that matters for the closure. `analysis/increment/memory_time.py`, over
-    the runs that already carry records and tags (`c6_column_repair`,
+    the loss rule takes from it, in days. It is an instantaneous loss
+    timescale under donor-proportional loss, local to a cell and a moment. It
+    is not a residence time, nor an air age, and it leaves out transport. E60
+    estimated it by hand: 4 to 20 days on D4, about zero in the surface layer,
+    and 1 to 2 years above 10 km on C9's sphere. The initial-energy tags lose
+    8.6% and 12.3% a day on D4, a timescale of 8 to 11 days.
+  - **It depends on WP6.** `L` must be the gross loss, accumulated at each
+    accepted step. WP6 of G3 builds the positive and negative loss
+    accumulators, per cell and for both families. A net process record can
+    hold a gain and a loss that cancel between two outputs. `L` taken from
+    the negative parts of net records is then too small and `τ` too large, in
+    the limit infinite. So an estimate from the records is never reported as
+    `τ`.
+  - **The output-cadence test, before any use in guidance.** `L` from the
+    accumulators must not change when the output interval changes from one
+    step to one hour, on a column with alternating signs and on D4. The
+    estimate from net records is the test's control: it should underestimate
+    `L`, and by more at the longer interval. Scripts: an accumulator reader,
+    and `analysis/increment/memory_time.py` for the control over the runs that
+    already carry records and tags (`c6_column_repair`,
     `c1c_base_d4_enthalpy`, `c5_sphere_gray`).
   - **Its own check.** `τ` must scale with `e + c`: doubling the offset should
-    multiply it by about 2.6 on D4 (E60's formula, E71's run). Both runs exist,
-    `g1_inc_d4` and `g1_inc_d4_2c`, so the script can be validated the day it
-    is written.
-  - **Step 2, in the run.** The attribution rule already sums each bracket's
-    loss before sharing it out, so accumulating it per cell costs one field and
-    gives `L` exactly, rather than from the records. Then `τ` joins the audit
-    table beside item 4's forecast, and the guide reads it as "this run
-    remembers about N days".
-  - **Cost.** Step 1 is analysis only. Step 2 is one accumulator field and one
-    audit column.
+    multiply it by about 2.6 on D4 (E60's formula, E71's run; `g1_inc_d4` and
+    `g1_inc_d4_2c`).
+  - **Then, in the run.** Once the test passes, `τ` joins the audit table beside
+    item 4's forecast. The guide reads it as "the loss rule takes about 1/N of
+    a tag's energy a day here", not as how long energy stays.
+  - **Cost.** One audit column on top of WP6's accumulators. The test is two
+    short runs.
 
-### Prepared: item 6, one per-process budget across both families
+### Prepared: item 6, one combined budget: records, ledger and repair
 
-  - **What it closes.** Over an interval, the change of the partitioned total
-    `E` should equal the sum of what each process did, plus what the implicit
-    solve left behind, plus what the repair moved. The process records give the
-    first (E9, E26), the increment ledger the second (E64), and
-    `e_src_fix_<name>` the third. Nothing has added them up. E23's 1.37 MJ/m²
-    of unexplained change on a column is the gap this would name.
-  - **The data gap.** No committed run has both. The runs with the full record
-    list use the `tracer` or `enthalpy` transport, so they have no ledger
-    (`c1c_base_d4_enthalpy`, `c6_column_repair`); the runs with the ledger
-    record only precipitation (`g1_inc_d4`). So it needs one D4 run with
+*Revised on 2026-09-23 after the owner's review of PR #98. The original text is in the archived OPERATIONAL_TODO, section 7.*
+
+  - **The question.** On an EDMF column under `enthalpy_increment`, does the
+    change of the partitioned total `E` over an interval equal the sum of:
+      - what each process did, from the process records, each with `c` times
+        its change of mass;
+      - what the implicit solve left, from the increment ledger;
+      - what the repair moved, from `e_src_fix_<name>`;
+      - a named remainder?
+
+    No run has combined the full records with the ledger. The runs with every
+    record used the `tracer` or `enthalpy` transport, which has no ledger
+    (`c1c_base_d4_enthalpy`, `c6_column_repair`). The runs with the ledger
+    record only precipitation (`g1_inc_d4`). This is a new question. E23's
+    1.37 MJ/m² is not part of it: E26 settled that amount to the joule, as
+    subsidence's −1,277,826 J/m² and the rain-out's −87,651.
+  - **The acceptance test, set by the owner on 2026-09-23 before the run.**
+      - Every term is named, and reported with its sign, per layer and for the
+        column.
+      - At 24 h on the D4 column, the unexplained remainder is at most
+        1 J/m², the level of G1's criterion 2 (E64).
+      - The identity also holds at the offset 2c. E71 showed that the
+        remainder scales with `c`, so this is where a missing `c Δρ` shows.
+  - **The run.** One D4 day with
     `energy_source_tag_transport: enthalpy_increment` and
-    `energy_process_record` listing every process the column has. About 40
-    minutes, after G2.
-  - **What to build.** `analysis/increment/process_budget.py`: read the
-    records, the ledger, the repair's ledger and the closure table, and print
-    the budget per layer and for the column, with the remainder named as such.
-    Each process's term must include `c` times its change of mass, as the
-    offset's rule requires (E71 showed the remainder scales with `c`).
-  - **What it would settle.** Whether the residual on a column is fully
-    accounted for by the processes plus the solve, which is the question E23
-    left open and which sections 6 and 7 of FINDINGS still list.
-  - **Cost.** One short run and one analysis script.
-
+    `energy_process_record` listing every process the column has, and the same
+    at 2c. About 40 minutes each.
+  - **What to build.** `analysis/increment/process_budget.py`. It reads the
+    records, the ledger, the repair's ledger and the closure table, and prints
+    the budget per layer and for the column, with the remainder named.
+  - **Cost.** Two short runs and one analysis script.
