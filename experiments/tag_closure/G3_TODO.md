@@ -352,7 +352,9 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
   - [ ] Red team before the default is confirmed (`clima-numerics-reviewer`,
     xhigh).
   - [ ] **V-W7**, the Float32 twin of D4-W.
-  - [ ] **V-W8**, the file-based column with water and energy tags, 3 h.
+  - [x] **V-W8**, the file-based column with water and energy tags, 3 h.
+    Done: FINDINGS W22. Parity bit for bit; water gross 4.2e-4 at 3 h,
+    energy source 1.3e-3; `evap` and the forcing tag fill.
   - [ ] **V-W9**, restart round trips: D4-W in both modes, and with rain and
     snow tags.
 

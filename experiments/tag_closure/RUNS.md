@@ -255,6 +255,8 @@ Every G3 run is stamped with a manifest at submission, kept as
 | `w3_trmm0m_default_n10`       | 0000   | same   | d06e48f1 | 2026-09-23 | `13863850` | the TRMM Newton ladder: default, ten iterations                                         | W21      | yes  | 32 nc   | not yet |
 | `w3_trmm0m_copies_n2`         | 0000   | same   | d06e48f1 | 2026-09-23 | `13863847` | the ladder: copies, two iterations                                                      | W21      | yes  | 35 nc   | not yet |
 | `w3_trmm0m_copies_n10`        | 0000   | same   | d06e48f1 | 2026-09-23 | `13863849` | the ladder: copies, ten iterations                                                      | W21      | yes  | 35 nc   | not yet |
+| `w8_gcm_tags`                 | 0000   | same   | 837db55b | 2026-09-24 | `13866552` | V-W8: the GCM-driven file-based column with water and energy source tags, 3 h           | W22      | yes  | 39 nc   | not yet |
+| `w8_gcm_untagged`             | 0000   | same   | 837db55b | 2026-09-24 | `13866551` | its untagged twin, for parity                                                           | W22      | yes  | 25 nc   | not yet |
 
 The commits of the `w3_*` rows are the run tree's. They carry WP3 at
 `9aab6690` (`9085e264`) or at `fe1331f2` (`b5f40586`, `d06e48f1`); W21 says

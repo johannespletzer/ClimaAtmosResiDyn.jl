@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W21                                           | 1. Water tags                                       |
+| W1–W22                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -474,6 +474,34 @@ ladder ran at `fe1331f2` (run tree `d06e48f1`): jobs `13863847`, `13863849`,
 of #101, `4a1c91a4`, only a refusal, docstrings and diagnostic metadata, so
 the tags evolve in these runs as at `4a1c91a4`. Verifier reports in
 `output/w3_d4w/` and `output/w3_trmm0m/`.*
+
+**W22. V-W8: on the GCM-driven file-based column, water and energy source tags
+run together under EDMF with the model untouched, and the water partition
+closes to 4.2e-4 gross after 3 h.** The column of
+`prognostic_edmfx_gcmdriven_column.yml` (HadGEM2-A AMIP forcing, site 23, 0M,
+prognostic EDMF, 60 stretched levels to 40 km, the sponge on, dt 10 s), for
+3 h. Water tags `pbl` and `free` split at 1 km, `evap` (`surface_flux`) and
+`fcg` (the forcing group: large-scale advection, subsidence and the external
+forcing with its nudging), in WP3's default mode; energy source tags `pbl`,
+`free`, `sfc` and `rad` with the offset 110495 J/kg.
+
+  - **Parity.** All 24 fields the untagged twin writes are bit for bit the
+    same at every half-hourly output (the verifier, `--parity-only`).
+  - **Water.** The gross residual is 3.4e-4 of the column's water at 30 min
+    and 4.2e-4 at 3 h, the net 4.0e-6. `evap` holds 2.0% of the column's water
+    at 3 h, `fcg` 0.048%; their minima are −4.4e-10 and −2.5e-14 kg/kg. The
+    exchange runs on 3.7% of the volume, and neither bound acted.
+  - **Energy source tags.** The gross residual is 1.2e-3 at 30 min and 1.3e-3
+    at 3 h, so nearly all of it arrives in the first half hour.
+  - **Cost.** 19.3 ms a step with the eight tags against 13.5 ms without,
+    43% more.
+
+The model warns that the external forcing and the microphysics change `ρe_tot`
+with no energy tag following them; the configuration chose that. *Jobs
+`13866552` (tags) and `13866551` (twin), `hpda2_compute`, 2026-09-24, from
+`../ClimaAtmosResiDyn-wedmf-run` at `837db55b` (the record branch with WP3 at
+`4a1c91a4`); `output/w8_gcm/parity.txt`. The closure numbers are the model's
+own tables.*
 
 ## 2. Energy source tags: closure by transport
 
