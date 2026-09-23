@@ -802,3 +802,111 @@ column_atmos_model(; kwargs...) =
         @test isnothing(CA.condensate_phase(@name(ρq_tag_tropics)))
     end
 end
+
+# The water tags' restart guard. As the energy source tags' guard, it needs no
+# simulation: a small checkpoint, and a model and a state that carry only what
+# the check reads.
+@testset "The water tags' restart guard" begin
+    context = CA.ClimaComms.context()
+    HDF5 = CA.InputOutput.HDF5
+    tags(width = 100.0; sources = (:surface_flux,)) = (
+        CA.WaterTag{:tropo}(CA.TanhAltitudeRegion(750.0, width, false)),
+        CA.WaterTag{:strat}(CA.TanhAltitudeRegion(750.0, width, true)),
+        CA.WaterTag{:evap}(nothing, sources),
+    )
+    water_model(; width = 100.0, sources = (:surface_flux,), copies = false) =
+        CA.WaterTaggingModel(tags(width; sources); updraft_copies = copies)
+    atmos(model) = (; water_tagging_model = model)
+    names = (:ρq_tag_tropo, :ρq_tag_strat, :ρq_tag_evap)
+    copy_names = (:q_tag_tropo, :q_tag_strat, :q_tag_evap)
+    updraft(names...) = NamedTuple{(:ρa, names...)}(Tuple(zeros(1 + length(names))))
+    state(names...; updrafts = ()) = (;
+        c = (;
+            NamedTuple{(:ρ, :ρq_tot, names...)}(Tuple(zeros(2 + length(names))))...,
+            (isempty(updrafts) ? (;) : (; sgsʲs = updrafts))...,
+        ),
+    )
+    tagged = state(names...)
+    directory = mktempdir()
+    function checkpoint(model, name; record = true, edit = file -> nothing)
+        path = joinpath(directory, "$name.hdf5")
+        writer = CA.InputOutput.HDF5Writer(path, context)
+        record && CA.write_water_tag_checkpoint_attributes!(writer.file, model)
+        edit(writer.file)
+        Base.close(writer)
+        return path
+    end
+    check(path, model, Y = tagged) =
+        CA.check_water_tag_checkpoint(path, atmos(model), Y, context)
+
+    written = checkpoint(water_model(), "written")
+    # The same tags restart.
+    @test isnothing(check(written, water_model()))
+    # A changed region or source is refused, and the error names both.
+    @test_throws r"water tag `tropo`.*width = 100\.0.*width = 200\.0" check(
+        written,
+        water_model(; width = 200.0),
+    )
+    @test_throws r"water tag `evap`.*sources `surface_flux`.*sources `none`" check(
+        written,
+        water_model(; sources = ()),
+    )
+    # A tag field missing from the file, or one the run does not configure.
+    @test_throws r"water tags tropo, strat, and this run.*Missing from the file: evap" check(
+        written,
+        water_model(),
+        state(:ρq_tag_tropo, :ρq_tag_strat),
+    )
+    @test_throws r"Not configured: tropo, strat, evap.*`water_tracers`" check(
+        written,
+        nothing,
+    )
+    # The copies: a changed `water_tag_updraft_copy` is refused either way.
+    with_copies = state(names...; updrafts = (updraft(copy_names...),))
+    without_copies = state(names...; updrafts = (updraft(),))
+    @test isnothing(check(written, water_model(; copies = true), with_copies))
+    @test isnothing(check(written, water_model(), without_copies))
+    @test_throws r"updraft copies of the water tags none.*`water_tag_updraft_copy`" check(
+        written,
+        water_model(; copies = true),
+        without_copies,
+    )
+    @test_throws r"Not configured: tropo, strat, evap.*`water_tag_updraft_copy`" check(
+        written,
+        water_model(),
+        with_copies,
+    )
+    # A file with no updrafts does not pass a run with copies.
+    @test_throws r"updraft copies of the water tags none" check(
+        written,
+        water_model(; copies = true),
+    )
+
+    # A checkpoint from before the guard is checked by its fields, with a
+    # warning, and restarts.
+    unrecorded = checkpoint(water_model(), "unrecorded"; record = false)
+    @test_logs (:warn, r"written before") check(unrecorded, water_model())
+    # A checkpoint in another version of the format is refused.
+    newer = checkpoint(
+        water_model(),
+        "newer";
+        edit = file -> begin
+            HDF5.delete_attribute(file, "water_tag_checkpoint")
+            HDF5.write_attribute(file, "water_tag_checkpoint", 2)
+        end,
+    )
+    @test_throws r"version 2 of the checkpoint format.*reads version 1" check(
+        newer,
+        water_model(),
+    )
+    # A tag the file holds but records no definition for is refused.
+    undefined = checkpoint(
+        water_model(),
+        "undefined";
+        edit = file -> HDF5.delete_attribute(file, "water_tag.evap"),
+    )
+    @test_throws r"no definition for the water tag `evap`" check(
+        undefined,
+        water_model(),
+    )
+end
