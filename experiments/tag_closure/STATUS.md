@@ -28,7 +28,9 @@ not checked, it says so.
 ## Where things stand
 
   - **G3 starts with WP0.** Its plan is final, reviewed, and its budgets are
-    set. Nothing in it has run yet. #95 merged on 2026-09-23 at 16:32
+    set. Nothing in it has run yet. **This session's goal**, set by the owner
+    on 2026-09-23, is WP0 and WP1: the tools and the first runs, then draft
+    PR-W1. WP3 comes after it, sized by V-W0c. #95 merged on 2026-09-23 at 16:32
     (`0b2b1032`), which WP0 was waiting for.
   - **#95 brought the partition-only factor to `main`** (from `dcf7d086`;
     head `b9c6e7b0`), as the owner decided (decision 5 of G3_PLAN). The job session reran the R2 ladder's
@@ -164,8 +166,6 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
     WP4b-D and its review ([G3_TODO](G3_TODO.md#decisions)).
   - **WP5's default transport under EDMF**, by the rule of G3_PLAN 4.3, after
     V-W3.
-  - **A durable archive for the minimal reference datasets**, and its size
-    budget. The archive directory may answer part of this.
   - **ERA5 forcing for V-W8**, if WP0 finds it is not on disk. A download needs
     the owner.
   - **`main`'s CI at `0b2b1032`**, after #95's merge, which was queued at

@@ -30,15 +30,19 @@ Short names for the sources:
   - **The prognostic fields of the rain and snow tags**, settled in design note
     WP4b-D and its review. Recommended: the non-precipitating, rain and snow
     parts. **Waiting.** [G3T](G3_TODO.md#decisions)
-  - **A durable archive for the minimal reference datasets**, and its size
-    budget. It blocks WP0's archive item only. **Waiting.** The archive
-    directory of 2026-09-23 (CP decision 4) may answer part of it. Whether it
-    does is for the owner to say. [G3T](G3_TODO.md#decisions)
   - **ERA5 forcing for V-W8**, if it is not on disk. A download needs the
     owner. **Waiting.** [G3T](G3_TODO.md#decisions)
 
 ## 2026-09-23
 
+  - **This session's goal is G3's WP0 and WP1.** Done when the plan's
+    assumptions are checked against the merged #95, the verifier and tools
+    are extended, V-W0a, V-W0c and V-W1 are run and recorded, and draft PR-W1
+    is open, reviewed and green. Jobs stay within WP0 and WP1, and the only
+    model code is WP1's. **In force.** Memory: `session-goal-wp0-wp1.md`
+  - **The minimal reference datasets go to
+    `~/git/Clima/ClimaAtmosResiDyn-archive/reference_data/`**, at most 5 GB.
+    **In force.** [G3T](G3_TODO.md#decisions)
   - **G3's budgets are set** (G3_PLAN 6.1). Per tag at 24 h: L1 ≤ 2%, L∞ ≤ 5%.
     First hour: L1 ≤ 1% for region tags and ≤ 10% for source tags, L∞ ≤ 25%.
     Tags below 1% of the partition pass on absolute error. Closure: 0.2% gross

@@ -60,8 +60,9 @@ The twelve criteria of the plan, section 2, in short:
   - [ ] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. The recommended option is the
     non-precipitating, rain and snow parts.
-  - [!] **A durable archive** for the minimal reference datasets, and its size
-    budget. Blocks WP0's archive item only.
+  - [x] **A durable archive** for the minimal reference datasets:
+    `~/git/Clima/ClimaAtmosResiDyn-archive/reference_data/`, at most 5 GB.
+    Decided by the owner on 2026-09-23.
   - [!] **ERA5 forcing for V-W8**, if it is not on disk. A download needs the
     owner.
 
@@ -100,8 +101,8 @@ The twelve criteria of the plan, section 2, in short:
     iterations. Close or restate the issue.
   - [ ] V-W1: D4-W with grid-scale tags on `main` + #95, before WP1's refusal,
     and its untagged twin: the "before" numbers.
-  - [ ] Checksummed minimal datasets for headline tables (after the archive
-    decision).
+  - [ ] Checksummed minimal datasets for headline tables, in the archive's
+    `reference_data/`, within 5 GB.
 
 ## WP1: refusals, reserved names, known issues (draft PR-W1)
 
