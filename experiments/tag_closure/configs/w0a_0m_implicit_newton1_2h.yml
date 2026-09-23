@@ -1,0 +1,55 @@
+# V-W0a, the controlled pair of pairs: the first two hours of `w0a_0m_newton1`,
+# when the initial DYCOMS cloud (0.15 kg m-2 of liquid) rains out under 0M.
+# The day-long pair found the column dry after that hour, so this is the one
+# precipitation event it has. Output every five minutes.
+#
+# Four runs: implicit or explicit microphysics, each with 1 or 10 Newton
+# iterations. With explicit microphysics the 0M sink is off the Newton path,
+# so that pair's difference is everything else the solve changes, such as the
+# implicit diffusion. The difference between the implicit pair's difference
+# and the explicit pair's is known issue 4's own part: the tags' share of the
+# implicit sink has no Jacobian diagonal.
+#
+# This run: implicit microphysics, 1 Newton iteration(s).
+job_id: "w0a_0m_implicit_newton1_2h"
+
+max_newton_iters_ode: 1
+# The DYCOMS RF02 0M column of the A series, kept cloudy by the DYCOMS
+# radiation and mixed by the decaying diffusion, so that the 0M sink removes
+# water all day. No EDMF.
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+implicit_microphysics: true
+rad: "DYCOMS"
+vert_diff: "DecayWithHeightDiffusion"
+implicit_diffusion: true
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "2hours"
+FLOAT_TYPE: "Float64"
+
+water_tracers:
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: evap
+    source: surface_flux
+
+water_closure_check:
+  period: "300secs"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, pr, evspsbl, lwp]
+    period: "300secs"
+  - short_name: [q_tag_res, q_tag_tropo, q_tag_strat, q_tag_evap]
+    period: "300secs"
+  - short_name: [q_tag_fix_tropo, q_tag_fix_strat, q_tag_fix_evap]
+    period: "300secs"
