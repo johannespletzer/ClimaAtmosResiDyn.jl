@@ -29,8 +29,7 @@ this part is a no-op.
 
 Under `energy_source_tag_transport: enthalpy_increment` it also keeps the
 stage's starting state for the energy source tags
-(`snapshot_energy_source_increment!`), and under `water_tag_transport:
-increment` for the water tags (`snapshot_water_tag_increment!`).
+(`snapshot_energy_source_increment!`), and under `water_tag_transport: increment` for the water tags (`snapshot_water_tag_increment!`).
 
 This routine acts as a general hook for implicit-stage initialization.
 Returns `nothing`.

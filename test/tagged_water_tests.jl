@@ -1188,7 +1188,9 @@ end
                 nothing,
             ),
         )
-        @test isnothing(check((; water_tagging_model = nothing), imex(CTS.SSP333()), T_imp!, nothing))
+        @test isnothing(
+            check((; water_tagging_model = nothing), imex(CTS.SSP333()), T_imp!, nothing),
+        )
     end
 
     @testset "One hook for both families" begin

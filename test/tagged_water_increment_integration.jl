@@ -264,7 +264,9 @@ altitude_region(above) = Dict{String, Any}(
             CA.water_region_tag_state_names(model),
         )
         left = sum(Y.c.q_tag_inc_left)
-        @info "Water tags following the increment on the EDMF column after an hour" closure.relative closure.gross_relative left sum(ᶜabs)
+        @info "Water tags following the increment on the EDMF column after an hour" closure.relative closure.gross_relative left sum(
+            ᶜabs,
+        )
         # Without the follower this column's gross residual after an hour is
         # 5.4e-4 (FINDINGS W23's probe of the default mode); with it, 4.1e-5.
         @test closure.gross_relative < 1e-4

@@ -136,8 +136,7 @@ during simulation setup rather than at package load time:
   - `q_tag_res`: closure residual `(ρq_tot - Σᵢ ρq_tag_i) / ρ`, where the sum
     runs over the pure region tags (only registered when at least one exists);
 
-  - `q_tag_inc_left` and `q_tag_inc_moved`, under `water_tag_transport:
-    increment` only: the increment correction's ledger per unit mass,
+  - `q_tag_inc_left` and `q_tag_inc_moved`, under `water_tag_transport: increment` only: the increment correction's ledger per unit mass,
     cumulative since the start of the run. See
     `water_tag_increment_ledger_variables`.
 
