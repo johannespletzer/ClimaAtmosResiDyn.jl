@@ -46,9 +46,9 @@ is done.
    - Of the 146 files that had differed, 139 held old versions `main` had
      already had. The other seven were the terrabyte setup and the TOML, so
      nothing was dropped.
- - **PR #96** (draft): the terrabyte setup script, its stack file, and the
+ - **PR #96** (merged on 2026-09-23 at 12:12): the terrabyte setup script, its stack file, and the
    docs that name both machines.
- - **PR #97** (draft): the "Historical" notes on the two doc pages.
+ - **PR #97** (merged on 2026-09-23 at 12:12): the "Historical" notes on the two doc pages.
  - The check scripts behind the G3 plan's review and the #95 instruction are
    in `review/checks/`.
 
@@ -95,7 +95,7 @@ OPERATIONAL_TODO.md   a stub pointing to STATUS.md, so links keep working
  - USER_GUIDE_DRAFT is archived only after a check that #95's
    `energy_source_tags_guide.md` covers it (D1 with D3). What it does not cover
    goes to G4_TODO.
- - The two historical doc pages move into `archive/` once PR #97 has merged.
+ - The two historical doc pages move into `archive/` later. #97 has merged, and the move needs a PR to `main` that also edits `docs/make.jl`.
 
 ## Safeguards
 
@@ -134,24 +134,42 @@ effort is the default.
 Done the same day:
  - The archive was synced again, and each worktree captured again (its
    untracked files and patch, checked by count and size). Then the 22
-   worktrees marked "remove" below were removed. Seven remain: the main clone,
+   worktrees marked "remove" below were removed. Seven remained: the main clone,
    `-exp`, `-upd`, `-upd-run`, `ClimaAtmos-upstream-d331fe3`, `-setup` and
-   `-histdocs`.
+   `-histdocs`. `-condense` was added afterwards for H4.
  - Local branches deleted: 37 merged into `main`, `list`, and the four that
    are now tagged.
  - Remote branches deleted: the six merged into `main`. The earlier count of
    55 was mostly stale references to branches GitHub had already deleted on
    merge.
+ - **What was lost (found by the collective review, H5b).** The capture used
+   `git ls-files --others --exclude-standard`, which leaves out ignored files.
+   The repository ignores `*.out`, so the 34 Slurm `.out` logs of the removed
+   worktrees are gone: headers of about 1.5 KB each, whose content 33 runs'
+   `provenance.txt` mostly repeats. The 34th, job `13505763`
+   (`g2_v2_diag_newton2`), has only its `.err`. What else git ignored there is
+   unknown. The archive README records this; an LRZ backup restore, if one
+   exists, is the owner's to request. The capture now includes ignored files,
+   and the main clone's and `-upd-run`'s were captured with it.
+ - **The local-branch rule was wider than the list.** The list named `list`,
+   the removed worktrees' merged branches and the four tagged ones. All 37
+   merged local branches were deleted, 30 of them not named, among them
+   `passive-tracers`. Every tip is in `origin/main`, so nothing unique was
+   lost. The owner is asked to confirm.
+ - A git bundle of every branch and tag, and of the 57 unreachable commits,
+   is in the archive (`git/ClimaAtmosResiDyn-all-2026-09-23.bundle`, 35 MB).
  - `tagged-tracers` held two commits found nowhere else (PR #31's merge and a
    test fix), and its branch was gone from origin. It is now tagged
    `archive/tagged-tracers`. The branch itself stays; it was not on the list.
 
 Still to do, when their conditions are met:
  - `-upd` and `-upd-run`: after #95 merges.
- - `-setup` and `-histdocs`: after #96 and #97 merge.
- - The main clone moves to the record branch in H1.
+ - `-setup` and `-histdocs`: due, since #96 and #97 merged at 12:12.
+ - `-condense` and its branch: after H6. Then CONDENSE_PLAN.md is archived.
  - Remote `claude/tag-closure-experiments` and `claude/g3-programme` are
-   deleted at H6. Both are tagged.
+   deleted at H6. Their tips are tagged `archive/tag-closure-experiments-final`
+   (`8726d2cb`, E76 as first written) and `archive/g3-programme-final`
+   (`a52b17f7`). The earlier archive tags stopped one commit short.
  - `claude_work` is left alone while the job session uses it (its test
    environment and run scripts). It is in the archive.
  - Three local branches that were not on the list stay:

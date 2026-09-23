@@ -30,9 +30,9 @@ process records go with the energy family in G4.
 | Milestone | Outcome | Water tags (G3) | Energy source tags (G4) |
 |:--|:--|:--|:--|
 | M0 | Every result traceable: manifests, a verifier, a run inventory, archived data | the tools are built (verifier, mutation tests, manifest, inventory) and serve both families; review open (G3 WP0) | uses G3's tools |
-| M1 | Correctness gaps closed, claims narrowed | refusals, known issues, EDMF support in both modes, restarts, a file-based start (G3 WP1, WP3, V-W8, V-W9) | #95: R3 to R6 fixed in `e71430fb`, R1 in `dbe7435c`; the partition-only factor sent to the job session (G4.1) |
+| M1 | Correctness gaps closed, claims narrowed | refusals, known issues, EDMF support in both modes, restarts, a file-based start (G3 WP1, WP3, V-W8, V-W9) | #95: R3 to R6 fixed in `e71430fb`, R1 in `dbe7435c`; the partition-only factor is in `dcf7d086`, and #95 is open at `afd470e7` (G4.1) |
 | M2 | A claim contract per family, independent accounting, gross diagnostics | closure on D4-W, the copies' residual, leaks named; gross accumulators for both families (G3 WP3, WP6) | the process budget, the residual report, warnings apart from acceptance (G4.3 to G4.6) |
-| M3 | A suite of small reference cases, each converged | D4-W and TRMM 0M, the ladder, Float32 (G3 V-W3, V-W4, V-W7) | the R2 ladder is running in the job session; the rest waits (G4.7, G4.8) |
+| M3 | A suite of small reference cases, each converged | D4-W and TRMM 0M, the ladder, Float32 (G3 V-W3, V-W4, V-W7) | the R2 ladder is done (E76); the ladder at #95's merged head and the rest wait (G4.7, G4.8) |
 | M4 | Cost measured and budgeted | both families, both modes (G3 WP9) | from G3 |
 | M5 | The mixing closure and precipitation provenance chosen by experiment | exchange against copies, the follower's default, the 0M split, rain and snow tags, held-out columns (G3 WP5, WP4a, WP4b, V-W5, V-W6) | offset, placement variants, carried-over design, held-out columns, the energy default (G4.9 to G4.12) |
 | sphere | Ten days in the production configuration | V-W11 | G4.13 |
@@ -103,5 +103,5 @@ list is [G3_TODO.md](G3_TODO.md). The owner approved every job within G3, and
 the agents listed there.
 
 **The next goal, G4: the energy source tags,** with what G3 learns. Its
-items are listed in [G4_TODO.md](G4_TODO.md). The job session continues the
-energy work in flight: #95 and the R2 ladder.
+items are listed in [G4_TODO.md](G4_TODO.md). The job session carries #95 to its
+merge, and runs the ladder at the merged head.

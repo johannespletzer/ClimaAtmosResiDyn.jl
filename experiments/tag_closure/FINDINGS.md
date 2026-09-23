@@ -13,7 +13,8 @@ E1–E76 with sub-entries for the energy source tags and the `ρe_tag_*` family,
 R1–R11 for the energy reference, T1–T10 for cost and M1–M6 for method. G1, a
 closed and explained EDMF column, was met on 2026-09-20 (E62, E64, E65, E66,
 E73). G2, ten days on the sphere, was met on 2026-09-22 (E74, E75). G3, the
-water tags under EDMF, is under way by [G3_PLAN.md](G3_PLAN.md). G4, the energy
+water tags under EDMF, is set by [G3_PLAN.md](G3_PLAN.md), and its work starts
+with WP0. G4, the energy
 source tags, follows by [G4_TODO.md](G4_TODO.md). Where things stand is in
 [STATUS.md](STATUS.md), and what waits beyond G4 in [BACKLOG.md](BACKLOG.md).
 

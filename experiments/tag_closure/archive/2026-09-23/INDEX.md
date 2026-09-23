@@ -53,5 +53,6 @@ The branches of that time are kept as tags on origin, among them
 | [USER_GUIDE_DRAFT.md](USER_GUIDE_DRAFT.md) | a full user's guide draft for the energy source tags and the process records, 2026-09-11 | checked against #95's guide on 2026-09-23 | #95's `docs/src/energy_source_tags_guide.md`; what that does not cover is listed under G4.1 in [G4_TODO.md](../../G4_TODO.md) |
 
 Still to come here: CONDENSE_PLAN.md, once the plan is done, and
-`docs/src/tag_closure_memo.md` and `tag_closure_experiments.md`, once #97 has
-merged (the owner's decision 6 of 2026-09-23).
+`docs/src/tag_closure_memo.md` and `tag_closure_experiments.md`. #97 marked them
+historical and has merged. Moving them needs a PR to `main` that also edits
+`docs/make.jl` (the owner's decision 6 of 2026-09-23).

@@ -29,8 +29,12 @@ The archive's own `README.md` describes it. In short:
    working files for past PRs: PR bodies, test logs, test environments.
  - `worktrees/<name>/` holds, for each of the 27 worktrees of 2026-09-23, its
    commit (`HEAD.txt`), its local patch (`modified.patch`) and its untracked
-   files (`untracked/`): job `.out` and `.err` logs, and copies of
-   `experiments/` with results written there.
+   files (`untracked/`): job `.err` logs, and copies of `experiments/` with
+   results written there. Git ignores `.out` logs, so for the 22 removed
+   worktrees they were not captured and are lost (the archive README, "What
+   was lost"). For the main clone and `-upd-run` they are in `ignored/`.
+ - `git/ClimaAtmosResiDyn-all-2026-09-23.bundle` holds every branch and tag,
+   and the 57 commits no ref reached on 2026-09-23.
  - `SHA256SUMS` lists every file. It is refreshed after each sync.
 
 To use it, read from it in place. Do not write into it except to sync it.

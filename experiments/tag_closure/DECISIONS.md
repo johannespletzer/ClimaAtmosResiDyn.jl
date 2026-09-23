@@ -42,7 +42,7 @@ Short names for the sources:
  - **Rebuild the record branch on `main`** (`claude/tag-closure-record`).
    **Done.** [CP 2](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
  - **Take the terrabyte setup to `main` in a small PR** (#96). **In force**;
-   #96 is a draft. [CP 3](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
+   #96 was merged on 2026-09-23 (`3ecb6d25`). [CP 3](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)
  - **The durable archive is `~/git/Clima/ClimaAtmosResiDyn-archive/`.** The
    workspace `AGENTS.md` records it as an exception to "no data in `$HOME`".
    **In force.** [CP 4](CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)

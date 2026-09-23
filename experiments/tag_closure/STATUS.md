@@ -79,13 +79,21 @@ The archive tags on origin: `archive/tag-closure-experiments-2026-09-23`,
 `archive/c1c-sgs-diffusion`, `archive/m3-species-lists`,
 `archive/upstream-vwb-species-guard` and `archive/tagged-tracers`.
 
+**Where G3 works.** Model code goes on `claude/water-tags-edmf` in the worktree
+`../ClimaAtmosResiDyn-wedmf`, and G3's runs launch from
+`../ClimaAtmosResiDyn-wedmf-run`. Neither exists yet; WP1 creates them
+(G3_PLAN, section 5). Records go on `claude/tag-closure-record`. At H6,
+`origin/main` is merged into the record branch. The terrabyte scripts are in
+`main` since #96, so afterwards only the C1 TOML differs from `main` outside
+`experiments/`.
+
 ## Pull requests
 
 | PR | Branch | State | What |
 |:--|:--|:--|:--|
-| #95 | `claude/energy-source-tag-updraft` | open, at `cd21af3a`: two docs-only commits after `dcf7d086`. CI started there at 11:30 and was still running at 12:20 | the updraft gap: the exchange by default, updraft copies as the audit, with the partition-only factor. Its CI at `dcf7d086` was not checked here |
-| #96 | `claude/terrabyte-setup` | draft | the terrabyte setup script, its stack file, and the docs that name both machines |
-| #97 | `claude/historical-tag-closure-pages` | draft | the "Historical" notes on `docs/src/tag_closure_memo.md` and `tag_closure_experiments.md` |
+| #95 | `claude/energy-source-tag-updraft` | open, at `afd470e7`: after `dcf7d086`, two docs commits and one that takes the allocation test's bound from the dependency versions. The CI runs at `dcf7d086`, `2044350e` and `cd21af3a` were cancelled. The run at `afd470e7` has been queued since 12:31. `src/` and `config/` are unchanged since `dcf7d086`, so E76 describes the head | the updraft gap: the exchange by default, updraft copies as the audit, with the partition-only factor. Its CI at `dcf7d086` was not checked here |
+| #96 | `claude/terrabyte-setup` | merged 2026-09-23, 12:12 (`3ecb6d25`) | the terrabyte setup script, its stack file, and the docs that name both machines |
+| #97 | `claude/historical-tag-closure-pages` | merged 2026-09-23, 12:12 (`b1a088a4`) | the "Historical" notes on `docs/src/tag_closure_memo.md` and `tag_closure_experiments.md` |
 
 Only the owner merges. The token cannot mark a PR ready for review.
 
@@ -112,7 +120,7 @@ The plan is [CONDENSE_PLAN.md](CONDENSE_PLAN.md).
 | H5 | the loss check, by an agent that did not write | done: nothing lost; its 2 blocking and 21 minor gaps are fixed and re-verified ([review/loss_check.md](review/loss_check.md)) |
 | H5b | a collective review of H1 to H7 by an independent agent, the owner's request | next |
 | H6 | the owner reviews a PR of the condense branch into the record branch; the G3 branch and the old experiment branch retire | waiting |
-| H7 | the approved cleanup | partly done. Waiting: `-upd` and `-upd-run` for #95's merge; `-setup` and `-histdocs` for #96 and #97; the two old remote branches for H6; `claude_work` while the job session uses it |
+| H7 | the approved cleanup | partly done (CONDENSE_PLAN, H7). The first capture missed git-ignored files, so 34 Slurm `.out` logs of the removed worktrees are lost; the archive README says what, and the capture is fixed. The local-branch rule applied was wider than the list: every merged local branch went; nothing unique was lost. Due now: `-setup` and `-histdocs`, since #96 and #97 merged. Waiting: `-upd` and `-upd-run` for #95's merge, after a capture with ignored files; `-condense` and the two old remote branches at H6 (their tips are tagged `archive/*-final`); `claude_work` while the job session uses it |
 
 ## What needs approval
 
@@ -134,7 +142,10 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
    budget. The archive directory may answer part of this.
  - **ERA5 forcing for V-W8**, if WP0 finds it is not on disk. A download needs
    the owner.
- - **The merges of #95, #96 and #97.**
+ - **The merge of #95.** #96 and #97 are merged. They were merged with
+   `ci-required` failing on cancelled checks, not on a failed test, and `main`'s
+   own CI runs were cancelled too. A rerun of `main`'s CI is the owner's to
+   start.
  - **H6:** the review of the condense PR.
 
 Every decision taken so far is in [DECISIONS.md](DECISIONS.md).

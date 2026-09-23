@@ -38,7 +38,7 @@ From the repository root:
 
     ./runscripts/setup-julia-terrabyte.tcsh cpu
 
-The script is on this branch and in PR #96. It builds the Julia depot on
+The script is in `main` since PR #96 (merged 2026-09-23). It builds the Julia depot on
 scratch, `/dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu`,
 against the stack in `runscripts/terrabyte_stacks.env`: `gcc/13.2.0` and
 `openmpi/4.1.8-gcc13`. It points `OpenMPI_jll` at the system MPI, writes the

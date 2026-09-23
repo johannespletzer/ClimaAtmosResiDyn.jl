@@ -1,8 +1,9 @@
 # G4: the energy source tags, after G3
 
 G4 brings the energy source tags and the process records to operation, with
-what G3 learns about the water tags. It waits for G3, except where the job
-session runs energy work now: PR #95 and the R2 ladder. The roadmap is
+what G3 learns about the water tags. It waits for G3, except the job session's
+work on PR #95 and the ladder at #95's merged head. E76 is the ladder at
+`dcf7d086`. The roadmap is
 [ROADMAP.md](ROADMAP.md). What G3 hands over, and what is energy-specific, is
 in [G3_PLAN.md, section 9](G3_PLAN.md#9-g4-the-energy-source-tags-with-what-g3-learns).
 
