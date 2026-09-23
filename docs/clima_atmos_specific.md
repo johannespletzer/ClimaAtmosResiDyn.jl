@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `parameterizations`, `restarts`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `parameterizations`, `restarts`. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -83,8 +83,12 @@ The `tagging_*` groups are one file each: `tagging_energy` runs
 `test/energy_source_tags_float32_integration.jl`, `tagging_source_edmf`
 runs `test/energy_source_tags_edmf_integration.jl`,
 `tagging_source_increment` runs
-`test/energy_source_tags_increment_integration.jl` and `tagging_source_updraft`
-runs `test/energy_source_tags_updraft_integration.jl`. They are split because a tag
+`test/energy_source_tags_increment_integration.jl`, `tagging_source_updraft`
+runs `test/energy_source_tags_updraft_integration.jl`, and
+`tagging_water_edmf`, `tagging_water_edmf_copies` and `tagging_water_edmf_0m`
+run `test/tagged_water_edmf_integration.jl`,
+`test/tagged_water_edmf_copies_integration.jl` and
+`test/tagged_water_edmf_0m_integration.jl`. They are split because a tag
 name is a type parameter, so each tag set recompiles the whole tendency and
 solve pipeline, roughly seven minutes per simulation on Julia 1.11, and the
 files share no compilation between them. Combined they overran the 90-minute
@@ -127,6 +131,23 @@ while the donor-share flux and the exchange do nothing, that the partition
 stays closed, and that the model's fields are those without tags, bit for bit.
 It builds the EDMF column twice. The copies double the time to build it, so
 with the increment's two builds in one group the three would overrun the job.
+
+The three `tagging_water_edmf*` groups run the water tags under
+`PrognosticEDMFX`, each on the EDMF column with and without the tags, so each
+builds it twice.
+
+  - `tagging_water_edmf` runs the default mode under 1M. It checks that the
+    partition's sub-grid tendencies sum to the parent's, that one composition
+    everywhere moves as the parent does, that the vertical diffusion's leak in
+    closed form is the difference the diffusion makes, and the audit's columns.
+  - `tagging_water_edmf_copies` runs the copies under 1M. It checks the
+    rebuild, that the default mode's flux does nothing, the copies' residual,
+    and that one composition moves with `q_totʲ` up to the diffusion's leak.
+  - `tagging_water_edmf_0m` runs the copies under 0M with the microphysics
+    explicit and a passive chemistry tracer. It checks that a copy holding the
+    tracer's values takes the tracer's tendency apart from its two mirrors.
+
+Each checks that the model's fields are those without tags, bit for bit.
 
 ### The package-load preflight
 

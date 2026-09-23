@@ -75,6 +75,33 @@ function compute_q_tag_copy_res!(out, state, cache, time)
     end
 end
 
+function compute_q_tag_leak!(out, state, cache, time, path)
+    if isnothing(out)
+        return water_tag_leak!(similar(state.c.ρ), state, cache, path)
+    else
+        water_tag_leak!(out, state, cache, path)
+    end
+end
+
+# What each leak diagnostic's path is, for its long name and comment.
+const WATER_TAG_LEAK_DESCRIPTIONS = (;
+    vdiff = ("Vertical Diffusion", "the grid mean's vertical diffusion"),
+    hdiff = (
+        "Horizontal Diffusion",
+        "the grid mean's horizontal EDMF diffusive flux",
+    ),
+    hyperdiff = ("Hyperdiffusion", "the grid mean's hyperdiffusion"),
+    sponge = ("Viscous Sponge", "the viscous sponge"),
+    diffusion_up = (
+        "Updraft Diffusion",
+        "the updrafts' mirror of the EDMF diffusive fluxes on the copies",
+    ),
+    hyperdiff_up = (
+        "Updraft Hyperdiffusion",
+        "the updrafts' hyperdiffusion of the copies",
+    ),
+)
+
 function compute_q_tag_fix!(out, state, cache, time, ρq_tag_name)
     ᶜfix = getproperty(cache.tagging.ᶜwater_fix, ρq_tag_name)
     if isnothing(out)
@@ -227,6 +254,32 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                        "before repairing it.",
             compute! = (out, u, p, t) ->
                 compute_q_tag_copy_res!(out, u, p, t),
+        )
+    end
+
+    # The rate at which each path that moves the tags on their whole value,
+    # and the parent on its diffusing water, drifts their sum from the parent
+    # (G3_PLAN 4.2). The updrafts' paths only with copies.
+    for path in WATER_TAG_LEAK_PATHS
+        short_name = "q_tag_leak_$path"
+        delete!(ALL_DIAGNOSTICS, short_name)
+        endswith(string(path), "_up") &&
+            !has_water_tag_updraft_copies(model) &&
+            continue
+        (title, what) = getproperty(WATER_TAG_LEAK_DESCRIPTIONS, path)
+        add_diagnostic_variable!(;
+            short_name,
+            units = "kg kg^-1 s^-1",
+            long_name = "Tagged Water Leak by $title",
+            comments = "The rate at which $what moves the sum of a " *
+                       "partition of water tags away from total water, per " *
+                       "unit mass of grid-mean air, computed from the state " *
+                       "in closed form. The path moves the tags on their " *
+                       "whole value, and total water only by the water that " *
+                       "diffuses, without rain and snow. Zero where the path " *
+                       "is off. See `water_tag_leak!`.",
+            compute! = (out, u, p, t) ->
+                compute_q_tag_leak!(out, u, p, t, Val(path)),
         )
     end
 

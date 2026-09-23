@@ -29,6 +29,9 @@ const KNOWN_TEST_GROUPS = (
     "tagging_source_edmf",
     "tagging_source_increment",
     "tagging_source_updraft",
+    "tagging_water_edmf",
+    "tagging_water_edmf_copies",
+    "tagging_water_edmf_0m",
     "parameterizations",
     "restarts",
 )
@@ -225,6 +228,29 @@ end
 if TEST_GROUP in ("tagging_source_updraft", "all")
     @safetestset "Energy source tags with updraft copies" begin
         @time include("energy_source_tags_updraft_integration.jl")
+    end
+end
+
+# The water tags under prognostic EDMF. Each file builds the EDMF column twice,
+# with the tags and without them, and two builds fill a job's budget, as they
+# do for the energy source tags. So each has a group of its own: the default
+# mode and the copies under 1M, and the copies under 0M with the microphysics
+# explicit.
+if TEST_GROUP in ("tagging_water_edmf", "all")
+    @safetestset "Water tags under EDMF" begin
+        @time include("tagged_water_edmf_integration.jl")
+    end
+end
+
+if TEST_GROUP in ("tagging_water_edmf_copies", "all")
+    @safetestset "Water tags with updraft copies" begin
+        @time include("tagged_water_edmf_copies_integration.jl")
+    end
+end
+
+if TEST_GROUP in ("tagging_water_edmf_0m", "all")
+    @safetestset "Water tags with updraft copies under 0M" begin
+        @time include("tagged_water_edmf_0m_integration.jl")
     end
 end
 

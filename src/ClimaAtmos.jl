@@ -103,6 +103,8 @@ include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water.jl"
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_tags.jl"))
 # After the energy source tags, whose weight-free exchange helpers it uses.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_edmf.jl"))
+# It calls the diffusion and hyperdiffusion helpers, which load later.
+include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_leaks.jl"))
 # Process-change records (signed per-process increments, prognostic but not transported)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "process_record.jl"))
 include(
