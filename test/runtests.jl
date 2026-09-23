@@ -234,8 +234,8 @@ end
 # The water tags under prognostic EDMF. Each file builds the EDMF column twice,
 # with the tags and without them, and two builds fill a job's budget, as they
 # do for the energy source tags. So each has a group of its own: the default
-# mode and the copies under 1M, and the copies under 0M with the microphysics
-# explicit.
+# mode under 1M, the copies under 1M with the microphysics explicit, and the
+# copies under 0M with the microphysics implicit, the default.
 if TEST_GROUP in ("tagging_water_edmf", "all")
     @safetestset "Water tags under EDMF" begin
         @time include("tagged_water_edmf_integration.jl")

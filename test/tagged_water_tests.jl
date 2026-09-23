@@ -938,6 +938,11 @@ end
     # Without water in the updraft the values are left as mixed.
     @test step(start, (ε̄, 0.5, false, 0.0)) ==
           CA._plume_step(start, (ε̄, 0.5, false))
+    # A partition that holds a denormal amount is still scaled to finite
+    # values: the share is taken before the water.
+    tiny = step((NaN, NaN, NaN), ((1e-322, 1e-322, 0.0), 0.0, false, 0.010))
+    @test all(isfinite, tiny)
+    @test tiny[1] + tiny[2] ≈ 0.010
 
     # The audit's factors are those the exchange applies, and `-1` where it
     # does not run.
@@ -961,4 +966,65 @@ end
     # The copies' sedimentation Jacobian: the falling share's derivative.
     @test CA.water_tag_copy_fall_share_derivative(0.002, 0.010) ≈ 0.2
     @test CA.water_tag_copy_fall_share_derivative(0.002, 0.0) == 0
+end
+
+# The default mode's exchange needs region tags that partition the domain. It
+# reads only the masks, so plain vectors stand in for the fields.
+@testset "The exchange needs a region partition" begin
+    edmf = CA.PrognosticEDMFX{1, true}(1e-5)
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    tags = (
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+        CA.WaterTag{:evap}(nothing, (:surface_flux,)),
+    )
+    atmos(model; sgs_mass_flux = true) = (;
+        water_tagging_model = model,
+        turbconv_model = edmf,
+        edmfx_model = (; sgs_mass_flux),
+    )
+    masks(tropo, strat) = (; ᶜwater_masks = (; ρq_tag_tropo = tropo, ρq_tag_strat = strat))
+    closed = masks([1.0, 0.5, 0.0], [0.0, 0.5, 1.0])
+    gap = masks([1.0, 0.3, 0.0], [0.0, 0.5, 1.0])
+    model = CA.WaterTaggingModel(tags)
+    @test isnothing(CA.check_water_tag_exchange_partition(closed, atmos(model)))
+    @test_throws r"masks sum to 1\s+only to within" CA.check_water_tag_exchange_partition(
+        gap,
+        atmos(model),
+    )
+    # Without region tags there is nothing to exchange.
+    sources_only = CA.WaterTaggingModel((tags[3],))
+    @test_throws r"These tags have\s+none" CA.check_water_tag_exchange_partition(
+        (; ᶜwater_masks = (;)),
+        atmos(sources_only),
+    )
+    # The copies, and a run without the SGS mass flux, need no partition.
+    copies = CA.WaterTaggingModel(tags; updraft_copies = true)
+    @test isnothing(CA.check_water_tag_exchange_partition(gap, atmos(copies)))
+    @test isnothing(
+        CA.check_water_tag_exchange_partition(
+            gap,
+            atmos(model; sgs_mass_flux = false),
+        ),
+    )
+end
+
+# The copies' names come from the model's type. The Jacobian asks for them in
+# every update of every EDMF run, so the call must infer and not allocate.
+@testset "The copies' names are a constant" begin
+    tags = (
+        CA.WaterTag{:tropo}(CA.TanhAltitudeRegion(750.0, 100.0, false)),
+        CA.WaterTag{:evap}(nothing, (:surface_flux,)),
+    )
+    copies = CA.WaterTaggingModel(tags; updraft_copies = true)
+    plain = CA.WaterTaggingModel(tags)
+    names = @inferred CA.water_tag_copy_sgs_names(copies)
+    @test names == (
+        CA.MatrixFields.FieldName(:q_tag_tropo),
+        CA.MatrixFields.FieldName(:q_tag_evap),
+    )
+    @test (@inferred CA.water_tag_copy_sgs_names(plain)) == ()
+    @test (@inferred CA.water_tag_copy_sgs_names(nothing)) == ()
+    CA.water_tag_copy_sgs_names(copies)
+    @test (@allocated CA.water_tag_copy_sgs_names(copies)) == 0
 end

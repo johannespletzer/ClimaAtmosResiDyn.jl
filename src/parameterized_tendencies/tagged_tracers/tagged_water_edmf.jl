@@ -549,8 +549,9 @@ WaterPlumeStep(::Val{partition}) where {partition} = WaterPlumeStep{partition}()
     total = _partition_total(mixed, partition)
     FT = typeof(total)
     ((total > zero(FT)) & (q_totʲ > zero(FT))) || return mixed
-    scale = q_totʲ / total
-    return map(ε -> ε * scale, mixed)
+    # Each value's share first, then the water: `q_totʲ / total` can overflow
+    # where the partition holds a denormal amount, and a share cannot.
+    return map(ε -> (ε / total) * q_totʲ, mixed)
 end
 
 # ============================================================================
@@ -678,8 +679,11 @@ Mirror the updraft's 0M rain-out on the copies. The model removes the rain as
 `dq_tot_dt` (`microphysics_tendency!`). A tracer gets neither. Each copy takes
 `χᵢʲ += dq (φʲᵢ - χᵢʲ)` with `φʲᵢ = clamp(χᵢʲ / q_totʲ, 0, 1)`: its share of the
 water lost, plus the concentration of what stays by the mass that left. Summed
-over a partition that holds, this is the parent's term exactly, and a drift of
-the sum decays. Call it right after `microphysics_tendency!`, on the implicit or
+over a partition whose copies lie in `[0, q_totʲ]` and sum to `q_totʲ`, this is
+the parent's term exactly. A drift of the sum keeps its ratio to `q_totʲ`, so
+only its absolute size shrinks as the updraft rains out, and the clamp breaks
+exactness where a copy lies outside that range. Call it right after
+`microphysics_tendency!`, on the implicit or
 the explicit path, wherever that runs. A no-op without copies and other than
 under 0M with prognostic EDMF, where the updraft's microphysics never changes
 `q_totʲ`.
@@ -969,10 +973,13 @@ function water_tag_copies_surface_flux_tendency!(
     has_water_tag_updraft_copies(model) || return nothing
     p.atmos.disable_surface_flux_tendency && return nothing
     # The model's own increment of `q_totʲ`, from the same flux and operator.
+    # The flux goes to the operator as it is, so the model's scratch is not
+    # written.
     ᶜq_tot = @. lazy(specific(Y.c.ρq_tot, Y.c.ρ))
-    ρ_flux = p.scratch.sfc_temp_C3
-    @. ρ_flux = p.precomputed.sfc_conditions.ρ_flux_q_tot
-    btt = boundary_tendency_scalar(ᶜq_tot, ρ_flux)
+    btt = boundary_tendency_scalar(
+        ᶜq_tot,
+        p.precomputed.sfc_conditions.ρ_flux_q_tot,
+    )
     ᶜΔʲ = @. lazy(-specific(btt, p.precomputed.ᶜρʲs.:(1)))
     _surface_flux_of_copies!(
         Yₜ.c.sgsʲs.:(1),
@@ -1091,21 +1098,30 @@ end
 # ---------------------------------------------------------------------------
 
 """
-    water_tag_copy_sgs_names(Y)
+    water_tag_copy_sgs_names(model)
 
 `Tuple` of the `@name`s (relative to `Y.c.sgsʲs.:(1)`) of the water tags'
 updraft copies, empty without them. They are passive updraft tracers, so the
 generic Jacobian blocks of advection, diffusion and entrainment cover them; the
-copies' sedimentation and surface relaxation add to those blocks.
+copies' sedimentation and surface relaxation add to those blocks. The names come
+from the model's type, so the tuple's type is fixed and building it allocates
+nothing, in every Jacobian update of every run.
 """
-water_tag_copy_sgs_names(Y) =
-    unrolled_filter(is_water_tag_copy_name, passive_sgs_tracer_names(Y))
+water_tag_copy_sgs_names(::Nothing) = ()
+water_tag_copy_sgs_names(model::WaterTaggingModel) = _water_tag_copy_sgs_names(
+    Val(has_water_tag_updraft_copies(model)),
+    model.tags,
+)
+_water_tag_copy_sgs_names(::Val{false}, tags) = ()
+_water_tag_copy_sgs_names(::Val{true}, tags) =
+    map(water_tag_copy_field_name, tags)
 
 # The derivative of a copy's falling water `qʲ χ / q_totʲ` with respect to the
-# copy, as the sedimentation Jacobian takes it: without the renormalization's
-# and the clamp's dependence, a convergence aid like the grid tags' diagonal.
+# copy. The sedimentation Jacobian takes it without the renormalization's and
+# the clamp's dependence, as an approximation. It is capped at one, the most a
+# species can hold of the updraft's water.
 @inline water_tag_copy_fall_share_derivative(qʲ, q_totʲ) =
-    q_totʲ > zero(q_totʲ) ? qʲ / q_totʲ : zero(q_totʲ)
+    q_totʲ > zero(q_totʲ) ? min(qʲ / q_totʲ, one(q_totʲ)) : zero(q_totʲ)
 
 # ============================================================================
 # The audit's own columns

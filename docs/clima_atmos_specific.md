@@ -140,12 +140,19 @@ builds it twice.
     partition's sub-grid tendencies sum to the parent's, that one composition
     everywhere moves as the parent does, that the vertical diffusion's leak in
     closed form is the difference the diffusion makes, and the audit's columns.
-  - `tagging_water_edmf_copies` runs the copies under 1M. It checks the
-    rebuild, that the default mode's flux does nothing, the copies' residual,
-    and that one composition moves with `q_totʲ` up to the diffusion's leak.
-  - `tagging_water_edmf_0m` runs the copies under 0M with the microphysics
-    explicit and a passive chemistry tracer. It checks that a copy holding the
-    tracer's values takes the tracer's tendency apart from its mirrors.
+  - `tagging_water_edmf_copies` runs the copies under 1M, with the
+    microphysics explicit, so that parity covers the explicit path. It checks
+    the rebuild and the start from the plume, that the default mode's flux
+    does nothing, the copies' residual, the surface-flux mirror, and that one
+    composition moves with `q_totʲ` up to the diffusion's leak.
+  - `tagging_water_edmf_0m` runs the copies under 0M, with the microphysics
+    implicit, the default, and a passive chemistry tracer. It checks that the
+    tracer, set to a copy's values, takes the copy's tendency apart from its
+    mirrors.
+
+The tagged runs write the closure audit and the leak diagnostics, which use
+scratch from callbacks, so parity covers them too. The default mode under 0M
+runs in V-W3's TRMM pair, not in CI.
 
 Each checks that the model's fields are those without tags, bit for bit.
 

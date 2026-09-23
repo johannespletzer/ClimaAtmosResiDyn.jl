@@ -1,6 +1,6 @@
 #=
 Integration test for the water tags' updraft copies under 0-moment
-microphysics, with the microphysics explicit.
+microphysics, with the microphysics implicit, the default.
 
 Under 0M the updraft rains out: `microphysics_tendency!` takes water from
 `q_totʲ` and air from `ρaʲ`. The copies' mirror takes each copy's share of
@@ -16,8 +16,10 @@ chemistry tracer in the updraft, after an hour:
     goes by region and source;
  3. the model's fields are those of the same column without tags, bit for bit.
 
-The implicit microphysics runs the rain-out's other hook, which the other two
-water EDMF groups cover under 1M. See `docs/src/tagged_water.md`.
+The rain-out mirror runs on the implicit path here, where the 0M sink lives by
+default. Its explicit hook is the same function; `tagging_water_edmf_copies`
+runs 1M explicitly, where that hook is a no-op, for the parity of the explicit
+path. See `docs/src/tagged_water.md`.
 =#
 using Test
 import ClimaAtmos as CA
@@ -71,7 +73,6 @@ end
         "edmfx_filter" => true,
         "prognostic_tke" => true,
         "microphysics_model" => "0M",
-        "implicit_microphysics" => false,
         "chemistry_model" => "passive",
         "z_elem" => 30,
         "z_max" => 1500.0,
@@ -92,6 +93,14 @@ end
             Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
         ],
         "water_tag_updraft_copy" => true,
+        "water_closure_check" =>
+            Dict{String, Any}("period" => "10mins", "audit" => true),
+        "diagnostics" => [
+            Dict{String, Any}(
+                "short_name" => ["q_tag_copy_res", "q_tag_leak_vdiff"],
+                "period" => "10mins",
+            ),
+        ],
     )
     copies = run_simulation(merge(edmf_dict, tag_dict), "water_tags_edmf_0m")
     Y = copies.integrator.u

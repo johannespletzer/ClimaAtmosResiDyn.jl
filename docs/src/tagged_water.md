@@ -268,9 +268,22 @@ updraft's water gets and a tracer does not:
     flux to ``q_\mathrm{tot}^j``. Each copy takes that water by the grid-scale
     tags' rule for the label `surface_flux`: new water by region and source,
     dew by the copy's share;
-  - the repair after the filter. The partition's copies are rescaled to sum to
-    ``q_\mathrm{tot}^j``. The correction goes to `q_tag_upfix_<name>`, and the
-    residual the repair found to `q_tag_copy_res`.
+  - the repair after the filter, which runs with or without the filter. The
+    residual ``q_\mathrm{tot}^j - \sum_i \chi_i^j`` is added to the
+    partition's copies by their shares, floored at what each holds, and where
+    their sum is not positive they are zeroed. The correction goes to
+    `q_tag_upfix_<name>`, and the residual the repair found to
+    `q_tag_copy_res`.
+
+`q_tag_copy_res` and `q_tag_upfix` bound the sum of everything that parts the
+copies from ``q_\mathrm{tot}^j``, not the filter alone. That sum includes the
+grid partition's own residual, which reaches the copies through the terms that
+read the grid tags, such as the entrainment of the environment's values and the
+Rayleigh sponge. It includes the Newton iterations, since ``q_\mathrm{tot}^j``
+couples to the updraft's condensates in the Jacobian and the copies have only a
+diagonal. And it includes the leaks and the rain-out's clamp. The ledger is
+signed and cumulative, so repairs of opposite sign cancel in it, and its size
+can understate the water the repair moved.
 
 The copies start, and are rebuilt from a file, as ``q_\mathrm{tot}^j`` times
 the grid mean's share. They cost one updraft tracer per tag, and they are the

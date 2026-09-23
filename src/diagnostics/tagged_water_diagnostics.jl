@@ -217,9 +217,13 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             )
         end
 
+        # The copies' repair moves only the partition's copies. A stale entry
+        # from an earlier model with copies would read a ledger this model
+        # does not have, so it is dropped first, as for `q_tag_copy_res`.
         short_name = "q_tag_upfix_$name"
+        delete!(ALL_DIAGNOSTICS, short_name)
         if has_water_tag_updraft_copies(model) &&
-           !haskey(ALL_DIAGNOSTICS, short_name)
+           ρq_tag_name in water_region_tag_state_names(model)
             add_diagnostic_variable!(;
                 short_name,
                 units = "kg kg^-1",

@@ -6,7 +6,8 @@ Each tag gets a copy in the updraft, `q_tag_<name>`, which the model moves as
 any other updraft tracer. Five mirrors give the copies what the updraft's water
 gets and a tracer does not: the 0M rain-out, the 1M sedimentation, the
 relaxation at the surface, the surface flux and the repair after the filter. This file checks,
-on the DYCOMS RF02 EDMF column with 1-moment microphysics, after an hour:
+on the DYCOMS RF02 EDMF column with 1-moment microphysics, stepped explicitly
+so that parity covers the tags' brackets on the explicit path, after an hour:
 
  1. the copies exist, and the rebuild sets them to `q_totʲ φ̄ᵢ`;
  2. the default mode's flux and exchange do nothing, and the model's SGS
@@ -81,6 +82,7 @@ end
         "edmfx_filter" => true,
         "prognostic_tke" => true,
         "microphysics_model" => "1M",
+        "implicit_microphysics" => false,
         "fixed_terminal_velocity_liquid" => false,
         "z_elem" => 30,
         "z_max" => 1500.0,
@@ -101,6 +103,21 @@ end
             Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
         ],
         "water_tag_updraft_copy" => true,
+        # The audit and the diagnostics write scratch from callbacks, so the
+        # parity check below covers them too.
+        "water_closure_check" =>
+            Dict{String, Any}("period" => "10mins", "audit" => true),
+        "diagnostics" => [
+            Dict{String, Any}(
+                "short_name" => [
+                    "q_tag_leak_vdiff",
+                    "q_tag_leak_diffusion_up",
+                    "q_tag_copy_res",
+                    "q_tag_upfix_tropo",
+                ],
+                "period" => "10mins",
+            ),
+        ],
     )
     copies = run_simulation(merge(edmf_dict, tag_dict), "water_tags_edmf_copies")
     Y = copies.integrator.u
@@ -122,12 +139,19 @@ end
         @test maximum(parent(ᶜsgsʲ.q_tag_evap)) > 0
         @test all(isfinite, parent(Y.c.sgsʲs))
         # The rebuild sets each copy to the updraft's water times the grid
-        # mean's share.
+        # mean's share: on a grid mean with set shares, those shares.
         Y_rebuilt = copy(Y)
+        Y_rebuilt.c.ρq_tag_tropo .= 0.3 .* Y.c.ρq_tot
+        Y_rebuilt.c.ρq_tag_strat .= 0.7 .* Y.c.ρq_tot
         CA.rebuild_water_tag_updraft_copies!(Y_rebuilt, model, turbconv_model)
         @test isapprox(
             parent(Y_rebuilt.c.sgsʲs.:(1).q_tag_tropo),
-            parent(ᶜsgsʲ.q_tot .* CA.water_tag_fraction.(Y.c.ρq_tag_tropo, Y.c.ρq_tot));
+            parent(0.3 .* ᶜsgsʲ.q_tot);
+            rtol = 1e-14,
+        )
+        @test isapprox(
+            parent(Y_rebuilt.c.sgsʲs.:(1).q_tag_strat),
+            parent(0.7 .* ᶜsgsʲ.q_tot);
             rtol = 1e-14,
         )
         # The comparison runs' driver starts the copies from the default
@@ -209,11 +233,18 @@ end
         )
         ᶜq_totʲₜ_surface = Yₜ_surface.c.sgsʲs.:(1).q_tot
         @test maximum(abs, parent(ᶜq_totʲₜ_surface)) > 0
-        # The partition's copies take the updraft's whole surface flux.
+        # The partition's copies take the updraft's whole surface flux, and
+        # `evap`, which receives the surface flux and has no region, all the
+        # new water and its share of any dew.
         @test relative_difference(
             Yₜ_surface.c.sgsʲs.:(1).q_tag_tropo .+
             Yₜ_surface.c.sgsʲs.:(1).q_tag_strat,
             ᶜq_totʲₜ_surface,
+        ) < 1e-12
+        @test relative_difference(
+            Yₜ_surface.c.sgsʲs.:(1).q_tag_evap,
+            max.(ᶜq_totʲₜ_surface, 0) .+
+            min.(ᶜq_totʲₜ_surface, 0) .* shares.evap,
         ) < 1e-12
         ᶜq_totʲₜ = Yₜ.c.sgsʲs.:(1).q_tot .- ᶜq_totʲₜ_surface
         ᶜleak = similar(Y.c.ρ)

@@ -50,9 +50,11 @@ more than one guarded. `check_water_tracers_transport_supported`
 (`config/tracer_config.jl`) refuses AMD LES, and prognostic EDMF with more than
 one updraft, with a test each in `test/config/tracer_config.jl`. With one
 updraft the tags now follow the updraft's water, in one of two modes; see
-"Under prognostic EDMF" in `docs/src/tagged_water.md`. The default mode's
-partition takes the parent's sub-grid flux exactly, and its exchange sums to
-zero, so the flux itself no longer drifts the partition. How well its plume
+"Under prognostic EDMF" in `docs/src/tagged_water.md`. At a given state the
+default mode's partition takes the parent's sub-grid flux exactly, and its
+exchange sums to zero. Over a step it can still part from the parent, since
+the tags' flux has no Jacobian block and the parent's has; WP5's increment
+follower is the planned answer where that matters. How well its plume
 gives the updraft's composition is what the copies audit, and that is not
 settled yet. The diffusion paths that act on the water without rain and snow
 still drift the partition under 1M, with and without EDMF;

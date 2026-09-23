@@ -96,6 +96,16 @@ relative_difference(a, b) =
             Dict{String, Any}("name" => "strat", "region" => altitude_region(true)),
             Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
         ],
+        # The audit and the leak's diagnostic write scratch from callbacks, so
+        # the parity check below covers them too.
+        "water_closure_check" =>
+            Dict{String, Any}("period" => "10mins", "audit" => true),
+        "diagnostics" => [
+            Dict{String, Any}(
+                "short_name" => ["q_tag_leak_vdiff", "q_tag_tropo"],
+                "period" => "10mins",
+            ),
+        ],
     )
     tagged = run_simulation(merge(edmf_dict, tag_dict), "water_tags_edmf")
     Y = tagged.integrator.u
