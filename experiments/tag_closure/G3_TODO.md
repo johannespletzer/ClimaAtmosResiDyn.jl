@@ -63,8 +63,14 @@ The twelve criteria of the plan, section 2, in short:
   - [x] **A durable archive** for the minimal reference datasets:
     `~/git/Clima/ClimaAtmosResiDyn-archive/reference_data/`, at most 5 GB.
     Decided by the owner on 2026-09-23.
-  - [!] **ERA5 forcing for V-W8**, if it is not on disk. A download needs the
-    owner.
+  - [!] **ERA5 forcing for V-W8.** Not on disk (checked 2026-09-23). The
+    ERA5 column reads the ClimaArtifacts artifact `era5_hourly_atmos_processed`,
+    which has no download entry: CliMA provides it on its own cluster only. So
+    it needs a CDS retrieval and processing, which needs the owner. The
+    alternative: V-W8's purpose, a file-based start with finite water tags, is
+    also served by the GCM-driven column, whose `cfsite_gcm_forcing` artifact
+    downloads through the package manager (a network install) and is needed
+    for V-W6 anyway.
 
 ## Done before the re-scope
 
@@ -96,10 +102,17 @@ The twelve criteria of the plan, section 2, in short:
   - [ ] Extend the verifier to `q_tag_*`, the copies in `sgsʲs`, the rain and
     snow parts, and `pr_tag_*` (`clima-analysis-builder`).
   - [ ] The manifest in this session's submit path. Classify the run inventory.
-  - [ ] The Float64-twin helper (synergy 2), for V-W7. It is a precision-sensitivity
-    screen and decides no cause (G4_TODO, prepared item 2).
-  - [ ] Check that V-W8's ERA5 forcing is on disk, and that the copies against
-    tracer test (plan S3) can be configured.
+  - [x] The Float64-twin helper (synergy 2), for V-W7. It is a precision-sensitivity
+    screen and decides no cause (G4_TODO, prepared item 2):
+    `analysis/increment/float64_twin.py`, `make` and `compare`. On E65's pair
+    it gives ratios of 1.3 to 2.4 over the first eight hours. The docs section
+    in `energy_source_tags_guide.md` belongs to G4.
+  - [x] Check that V-W8's ERA5 forcing is on disk, and that the copies against
+    tracer test (plan S3) can be configured. The forcing is not on disk and
+    cannot be fetched by the package manager (the decision above). The
+    tracer test can be configured: `chemistry_model: passive` gives the
+    tracer an updraft copy, and `analysis/water/d4w_driver.jl` sets it; the
+    water copies arrive with WP3.
   - [x] V-W0c: one untagged D4-W day with EDMF diagnostics, to size the
     updraft's rain and snow, the surface excess and the five 1M leaks (W18).
     The updraft holds under 0.01% of the rain and there is no snow, so D4-W
