@@ -174,8 +174,13 @@ it. They take the environment's composition there. A restart refuses a change
 of the switch, since the copies are part of the state.
 
 The copies have costs. Their state names are nested in the updraft, so the
-split Jacobian solver does not solve them apart. They join the nested solver,
-which doubles the time to build the model on the EDMF column. With
+split Jacobian solver does not solve them apart. They join the nested solver, and the
+model takes longer to build. How much longer depends on what is being compared.
+Built one after the other in a single process, where the second build reuses
+what the first compiled, the copies take about twice as long as the default,
+789 s against 402 s on the EDMF column. Built cold, each in a run of its own,
+which is what a user meets, they take about six times as long, 3,504 s against
+600 s. With
 `edmfx_filter: true` the model clamps each copy to between zero and its grid
 mean's value over the updraft's area density, as it clamps every updraft
 tracer. With a centred SGS flux, `edmfx_sgsflux_upwinding: none`, the copies'
