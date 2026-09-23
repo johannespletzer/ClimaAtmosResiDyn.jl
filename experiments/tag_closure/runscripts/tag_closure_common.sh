@@ -483,7 +483,20 @@ node_type="$(
     echo "climacomms_device: ${CLIMACOMMS_DEVICE}"
     echo "output_dir: ${PROVENANCE_DIR}"
     echo "netcdf_and_checkpoints: ${PROVENANCE_DIR} (left on scratch, not committed)"
+    # MANIFEST_PATH travels from runscripts/submit_g3.sh through sbatch's
+    # exported environment (S9): the compute node has no git, so this is the
+    # only way a run ties itself back to the login-node manifest that pinned
+    # its worktree state. A run submitted by hand, without the wrapper, has
+    # no MANIFEST_PATH, and this stays silent rather than failing.
+    [[ -z "${MANIFEST_PATH:-}" ]] || echo "manifest_path: ${MANIFEST_PATH}"
 } > "${PROVENANCE_DIR}/provenance.txt"
+
+# Hand the manifest itself back with the run's own small files, next to
+# provenance.txt, so a reader does not have to go find it on the manifests
+# directory by job id (README.md, "Where results go").
+if [[ -n "${MANIFEST_PATH:-}" && -f "${MANIFEST_PATH}" ]]; then
+    cp "${MANIFEST_PATH}" "${PROVENANCE_DIR}/manifest.json"
+fi
 
 echo
 echo "Wrote ${PROVENANCE_DIR}/provenance.txt"

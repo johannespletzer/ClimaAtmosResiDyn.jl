@@ -1,0 +1,27 @@
+{
+  "branch": "detached",
+  "buildkite_files": {
+    "LocalPreferences.toml": "8526a30f4bae0b5d6f062a9998a8141a0b3d65bf94349e21617cb4fddd70de76",
+    "Manifest-v1.11.toml": "d9653513f0038dddacb701ff096df93e1d2a811d87b6a5e3cb24a878560a2ed9",
+    "Project.toml": "ee8cf81147f2b886dead56c62013acde26222d9230030aa70fe4fdd2d76768b7"
+  },
+  "command": "CONFIG=experiments/tag_closure/configs/w0a_0m_explicit_newton1_2h.yml sbatch --account=hpda-c --partition=hpda2_test --time=01:00:00 --cpus-per-task=2 --mem=48G --job-name=g3-w0a_0m_explicit_newton1_2h --output=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/%x-%j.out --error=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/%x-%j.err experiments/tag_closure/runscripts/phase_c.sh",
+  "config": {
+    "path": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wedmf-run/experiments/tag_closure/configs/w0a_0m_explicit_newton1_2h.yml",
+    "sha256": "ff249ee4cb4c3754027ee688e980c274a59c8ee6e2fa458539bd2be15d3fe0ea"
+  },
+  "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "driver": null,
+  "extra": [],
+  "head_sha": "2a6f12946a74639554c45528a73f8beb3e9312ff",
+  "hostname": "dlr-login2",
+  "julia_version": "julia version 1.11.9",
+  "manifest_tool_sha256": "a3fedf4146326d07c1430f655f3865fe01eb8946118d2ac4693f2b4cb0040a70",
+  "repo": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wedmf-run",
+  "status_lines": [],
+  "untracked": {
+    "count": 0,
+    "sha256": null
+  },
+  "utc_time": "2026-09-23T15:09:35.401254+00:00"
+}

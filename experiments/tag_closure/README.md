@@ -66,6 +66,28 @@ use. The configuration travels in the environment as `CONFIG`. Give the
 account and the partition on the command line, since the scripts' `#SBATCH`
 blocks are Levante's.
 
+**Preferred: `runscripts/submit_g3.sh`.** It stamps a manifest
+(`analysis/evidence/manifest.py`) on the login node and submits in one step,
+so the manifest and the run it describes cannot drift apart (G3 WP0, review
+finding S9). From bash or zsh:
+
+    env CONFIG=experiments/tag_closure/configs/d4_column_edmf.yml \
+        experiments/tag_closure/runscripts/submit_g3.sh \
+            --account=hpda-c --partition=hpda2_test --time=02:00:00 \
+            --cpus-per-task=2 --mem=48G \
+            --output=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/%x-%j.out \
+            --error=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/%x-%j.err
+
+Add `--dry-run` to write the manifest and print the `sbatch` line without
+submitting, to check it costs no queue slot. `DRIVER=...` and
+`SCRIPT=path/to/phase_x.sh` (default `phase_c.sh`) work as environment
+variables, the same as below. See `analysis/evidence/README.md` for what the
+wrapper records and where the manifest ends up.
+
+**Without the wrapper**, `sbatch` directly, the same as before WP0. The
+manifest step is then a separate command you must remember to run (see
+"Provenance" below); `submit_g3.sh` exists so that step cannot be skipped.
+
 From a tcsh login shell:
 
     env CONFIG=experiments/tag_closure/configs/d4_column_edmf.yml \
@@ -80,7 +102,8 @@ Give `--output` and `--error` on scratch. The runscripts' own
 worktree's root.
 
 From bash or zsh, `CONFIG=... sbatch ...` works as well. Use the `.sh`
-scripts. The `.tcsh` variants are Levante-only and have never run.
+scripts (`submit_g3.sh` is bash only, like them). The `.tcsh` variants are
+Levante-only and have never run.
 
 `phase_c.sh` serves every run since phase C. Phase A used `phase_a.sh` and B1
 `phase_b.sh`; they differ only in their `#SBATCH` block. The runscript knows
@@ -121,10 +144,17 @@ to the job session.
 ## Provenance: the manifest, at submission
 
 Compute nodes have no git, so a run's `provenance.txt` records the commit
-with `commit_dirty: unknown`. Stamp each submission on the login node with
-`analysis/evidence/manifest.py`. It records the worktree's `HEAD`, every
-changed and untracked file, the hashes of the `.buildkite` manifest, project
-and preferences, and of the config and driver. Load `python/3.12` first
+with `commit_dirty: unknown`. `runscripts/submit_g3.sh` (see "Submitting a
+run") stamps this automatically as part of submission; this section is for
+when you need the manifest on its own, or submit by hand instead.
+
+`analysis/evidence/manifest.py` records the worktree's `HEAD` (and whether it
+is reachable from a remote ref), every changed and untracked file (with the
+diff itself and each untracked file's own hash, not just a hash of a hash),
+the hashes of every `.buildkite` Manifest, Project and Preferences file, of
+the config and driver, and of every path the config itself names
+(`restart_file`, `toml`, ...), plus the Julia binary/channel, loaded modules
+and depot path the job will actually use. Load `python/3.12` first
 (`source $MODULESHOME/init/zsh; module load python/3.12`); bare `python3` is 3.6
 here:
 
@@ -133,9 +163,17 @@ here:
         --command "<the sbatch line>" --out <path>.json
     python3 experiments/tag_closure/analysis/evidence/manifest.py --verify <path>.json
 
-The manifest is not yet in the runscripts' path. G3 WP0 puts it there and
-fixes where the JSON lives. Until then, keep it with the run's hand-back
-files, as `output/<run>/manifest.json`. This place is a proposal.
+**Submitted through `submit_g3.sh`:** the manifest lives at
+`$SCRATCH/tag_closure/manifests/<job_id>.<timestamp>.json`, exported to the
+job as `MANIFEST_PATH`; the runscript copies it into
+`output_XXXX/manifest.json` and records its path in `provenance.txt`, so it
+travels with the run's other small files into `output/<run>/` at hand-back
+(step 3 below) with no extra step.
+
+**Submitted by hand:** stamp it yourself before `sbatch`, and keep it with
+the run's hand-back files as `output/<run>/manifest.json` -- the same place
+`submit_g3.sh` puts it, so a reader does not need to know which path a given
+run took.
 
 ## Comparing runs: the verifier
 
@@ -160,7 +198,8 @@ number goes through the verifier and a manifest (G3's criterion 1).
     index for each submission, with `output_active` pointing at the newest.
     The NetCDF diagnostics and the checkpoints stay there.
  2. The runscript writes `provenance.txt` into that directory, whether the
-    run succeeded or not.
+    run succeeded or not, and `manifest.json` beside it if the run was
+    submitted through `submit_g3.sh` (see "Provenance" above).
  3. Run the reducer before copying anything back. It turns the NetCDF into
     the small tables: the operator residual and the per-tag extrema, which
     exist nowhere else once scratch is cleaned. With the scratch depot (Setup):
@@ -172,8 +211,9 @@ number goes through the verifier and a manifest (G3's criterion 1).
     Then copy the small files into `output/<run>/` here: the closure table
     (`<family>_tag_closure.csv`), the reducer's tables, the audit table if
     `audit: true`, the merged `<run>.yml`, `<run>_parameters.toml`, `run.log` trimmed to its info lines, warnings and final
-    status, `provenance.txt`, and any analysis text. A crashed run is handed
-    back too: where its table stops is itself a measurement.
+    status, `provenance.txt`, `manifest.json` if present, and any analysis
+    text. A crashed run is handed back too: where its table stops is itself
+    a measurement.
  4. When a configuration runs again on changed code, keep the earlier reading.
     Move it into a subdirectory of its run directory, named for what changed,
     as `output/a5_sphere_limiter/before_issue_64_fix/` does. Never overwrite
