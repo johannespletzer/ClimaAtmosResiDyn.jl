@@ -63,14 +63,11 @@ The twelve criteria of the plan, section 2, in short:
   - [x] **A durable archive** for the minimal reference datasets:
     `~/git/Clima/ClimaAtmosResiDyn-archive/reference_data/`, at most 5 GB.
     Decided by the owner on 2026-09-23.
-  - [!] **ERA5 forcing for V-W8.** Not on disk (checked 2026-09-23). The
-    ERA5 column reads the ClimaArtifacts artifact `era5_hourly_atmos_processed`,
-    which has no download entry: CliMA provides it on its own cluster only. So
-    it needs a CDS retrieval and processing, which needs the owner. The
-    alternative: V-W8's purpose, a file-based start with finite water tags, is
-    also served by the GCM-driven column, whose `cfsite_gcm_forcing` artifact
-    downloads through the package manager (a network install) and is needed
-    for V-W6 anyway.
+  - [x] **The file-based column of V-W8:** the GCM-driven column, chosen by the
+    owner on 2026-09-23. The ERA5 column's forcing is not on disk and has no
+    download entry (CliMA provides it on its own cluster only). The GCM
+    column's `cfsite_gcm_forcing` artifact was fetched into the scratch depot
+    the same day (97 MB); V-W6 uses it too.
 
 ## Done before the re-scope
 

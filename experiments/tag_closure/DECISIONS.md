@@ -30,11 +30,13 @@ Short names for the sources:
   - **The prognostic fields of the rain and snow tags**, settled in design note
     WP4b-D and its review. Recommended: the non-precipitating, rain and snow
     parts. **Waiting.** [G3T](G3_TODO.md#decisions)
-  - **ERA5 forcing for V-W8**, if it is not on disk. A download needs the
-    owner. **Waiting.** [G3T](G3_TODO.md#decisions)
 
 ## 2026-09-23
 
+  - **V-W8's file-based column is the GCM-driven one** (`prognostic_edmfx_gcmdriven_column`),
+    not the ERA5 column, whose forcing is not on disk and has no download
+    entry. Its forcing artifact was fetched the same day. **In force.**
+    [G3T](G3_TODO.md#decisions), [G3_PLAN 6](G3_PLAN.md#6-experiments)
   - **How G3's budgets are read** (G3_PLAN 6.1): the share from the reference
     at the same hour; for a small tag the absolute test replaces L1 and L∞; a
     tag that is region and source is judged as a source tag; the gross

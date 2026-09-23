@@ -171,8 +171,6 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
     WP4b-D and its review ([G3_TODO](G3_TODO.md#decisions)).
   - **WP5's default transport under EDMF**, by the rule of G3_PLAN 4.3, after
     V-W3.
-  - **ERA5 forcing for V-W8**, if WP0 finds it is not on disk. A download needs
-    the owner.
   - **`main`'s CI at `0b2b1032`**, after #95's merge, which was queued at
     16:40. V-W1 runs on it.
   - **A rerun of `main`'s CI.** #96 and #97 were merged with `ci-required`
