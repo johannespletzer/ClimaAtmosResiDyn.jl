@@ -147,7 +147,7 @@ generic machinery moves them. Four terms are not generic and are mirrored:
  1. **The updraft's 0M sink.** `χᵢʲ += dq (φʲᵢ − χᵢʲ)`, with
     `φʲᵢ = clamp(χᵢʲ / q_totʲ, 0, 1)`. Summed over a partition that holds, it
     is the parent's `q_totʲ += dq (1 − q_totʲ)` exactly (checked to 3e-18). A
-    drift decays.
+    drift keeps its ratio to `q_totʲ` (WP3 review, S6; "decays" was wrong).
  2. **The updraft's 1M sedimentation.** The falling updraft condensate
     carries the copies' composition, and the lateral inflow the environment's.
     The term is linear in `χ` and in `ρ⁰w⁰χ⁰`, so the copies sum to the
@@ -185,6 +185,15 @@ the dynamics and not a spin-up.
     copies are qualified under first-order or centred reconstruction.
   - Copies need `edmfx_mse_q_tot_upwinding` equal to `edmfx_tracer_upwinding`.
     They are refused otherwise.
+  - **Added in WP3, after the review:** the copies take the updraft's share
+    of the surface moisture flux by region and source (the fifth mirror,
+    FINDINGS W20). The default mode's plume starts at level 1 from the grid
+    mean's composition and has no counterpart. So `evap` in the updraft can
+    differ severalfold between the modes near the surface. By the reviewer's
+    estimate, fresh surface water is 0.3 to 1% of the updraft's water at
+    level 1, and `evap` holds about 1% of the column in the first hour. This
+    alone could fail the first-hour source-tag budget. V-W3 measures it. The
+    owner decides whether the plume's start should model it.
 
 ### 4.2 The `q_tot_eff` leaks under 1M
 
@@ -502,6 +511,11 @@ The verifier computes both (WP0).
     0.02%. It holds by construction, so **their repair** is bounded too: over
     the day, `q_tag_upfix_*` moves at most 0.2% of `∫ρq_tot`. Beyond that the
     audit is flagged, since the repair then shapes it.
+    *Note from WP3's review (2026-09-23), the numbers unchanged:* the residual
+    does not hold by construction. It also carries the grid partition's
+    residual, the Newton mismatch, the leaks and the rain-out's clamp
+    (`review/agent_reviews/wp3_numerics_review_2026-09-23.md`, S5). The
+    ledger is signed, so its size can understate what the repair moved.
 
   - **Convergence, as robustness** (criterion 6):
 

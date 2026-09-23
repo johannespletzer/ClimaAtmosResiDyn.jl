@@ -54,6 +54,14 @@ changes across a restart.
     untested, stitching `e_src_fix` across restarts, choosing `c`, and ice
     passing provenance upward (E41).
 
+  - **The energy copies' missing mirrors** (WP3's numerics review, N5;
+    `review/agent_reviews/wp3_numerics_review_2026-09-23.md`). #95's updraft
+    copies get nothing of what `mseʲ` gets and a tracer does not: the surface
+    enthalpy flux into the updraft (`surface_flux.jl`, the counterpart of the
+    water's fifth mirror, W20), the radiation into `mseʲ`, the buoyancy and
+    pressure-work terms. List every writer of `mseʲ`, as the review listed
+    those of `q_totʲ`, and mirror or bound each.
+
   - **The region masks' width in the docs** (decision 10 of 2026-09-18,
     `OT-regionmask`): 2° stays. Say that a mask narrower than the grid spacing
     makes the repair trade, and that a 10° mask avoids it on coarse grids

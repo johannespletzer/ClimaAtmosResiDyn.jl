@@ -333,6 +333,61 @@ inside its bound. Known issue 1 is closed with these (#100). *Job `13831751`,
 `hpda2_test`, 2026-09-23, the test file with two `@info` lines added, against
 `../ClimaAtmosResiDyn-wedmf-run`; `output/ki1_integration/`.*
 
+**W20. WP3's development runs: the tags following the updraft cut D4-W's
+closure residual 27 to 77 times in the first three hours, 27 at 3 h, and the
+copies needed a fifth mirror, the surface moisture flux into the updraft.** Three-hour D4-W
+columns, as V-W1's but with WP3's code, before V-W3. Relative to the column's
+water, from each run's `water_tag_closure.csv` and `water_tag_audit.csv`:
+
+| gross residual                  | 1 h     | 2 h     | 3 h     |
+|:------------------------------- | -------:| -------:| -------:|
+| V-W1, grid-scale tags (W17)     | 2.2e-2  | 2.3e-2  | 4.4e-2  |
+| default mode                    | 5.4e-4  | 3.0e-4  | 1.6e-3  |
+| copies, four mirrors            | 3.8e-4  | 2.0e-4  | 4.0e-4  |
+| copies, five mirrors            | 3.7e-4  | 2.0e-4  | 3.9e-4  |
+
+| copies                                  | 1 h     | 2 h     | 3 h     |
+|:--------------------------------------- | -------:| -------:| -------:|
+| residual before repair, four mirrors    | 9.0e-5  | 4.1e-5  | 4.3e-5  |
+| residual before repair, five mirrors    | 5.6e-5  | 6.2e-6  | 8.6e-6  |
+| repair, cumulative, four mirrors        | 1.5e-3  | 3.1e-3  | 4.3e-3  |
+| repair, cumulative, five mirrors        | 2.6e-4  | 7.8e-4  | 9.9e-4  |
+
+  - **The fifth mirror.** `surface_flux_tendency!` adds the surface moisture
+    flux to `q_totʲ` in the lowest cell and gives every other updraft tracer
+    a zero flux. The copies missed it, and G3_PLAN 4.1 lists only four
+    mirrors. The 0M CI group found it: with one composition everywhere, each
+    copy's whole tendency missed its share of `q_totʲ`'s by 60% of the
+    largest, the same for every share. The mirror gives the copies the
+    updraft's increment by the grid tags' rule for `surface_flux`. With it
+    the group passes, a passive tracer set to a copy's values taking the
+    copy's tendency apart from its mirrors to 1e-10. The numerics review
+    found the term independently and lists every writer of `q_totʲ`, with no
+    further term missed.
+  - **What the repair still moves.** With the fifth mirror the repair moved
+    about 0.1% of the column's water in 3 h, 4.4 times less than without it.
+    At 0.02 to 0.05% an hour it would pass G3_PLAN 6.1's 0.2% over the day
+    within 4 to 10 h. What makes it is not isolated. The review lists
+    candidates (S5): the grid partition's residual reaching the copies
+    through entrainment and the filter, the Newton mismatch, the leaks and
+    the rain-out's clamp. V-W3's day measures it against the budget.
+  - **The column is the same.** The column's total water is identical in
+    every run at every hour. The default mode's run after `water_tag_plume!`
+    was split out matches the one before byte for byte, in both tables and in
+    all 48 NetCDF files.
+  - The default mode's gross residual at 3 h is already 0.16%, near the
+    day's budget. W18's estimate of the vertical diffusion's leak, 0.9% a day,
+    would account for it, but these runs do not split it.
+
+*Development runs, not V-W3: 3 h, `hpda2_test`, 2026-09-23, from frozen
+snapshots of `claude/water-tags-edmf-wp3` with `claude_work/g3/wp3/dev_driver.jl`
+(no passive tracer set, copies started from the grid mean). Jobs `13845275`
+(default, 3d5ab52e), `13851541` (default, 6b687e0a), `13845274` (copies, four
+mirrors, 3d5ab52e), `13851540` (copies, five mirrors, 6b687e0a); tables and
+configs in `output/wp3_dev/`. The numbers are the model's own tables; the
+verifier was not run on them. The CI group's result: job `13846383`, and
+`13851548` with the mirror.*
+
 ## 2. Energy source tags: closure by transport
 
 Under the default `tracer` transport the tags move as passive tracers while the

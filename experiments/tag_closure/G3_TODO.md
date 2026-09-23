@@ -269,6 +269,10 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
     the environment's term as the model weights it, in the implicit and
     explicit microphysics paths.
   - [ ] `pr_tag_<name>` under 0M.
+  - [ ] Under copies, the grid tags rain out by the grid mean's share `φ̄` and
+    the updraft copies by their own `φʲ`, so the environment's implied tag
+    values can move the wrong way (WP3 review, N6). The split's attribution
+    must be one rule for both.
   - [ ] Isolate known issue 4 (the owner's review of #100): runs with the
     same implicit residual and time integration that differ only in whether
     the analytic diagonal `Δ⁻/ρq_tot` is present, across a Newton ladder with

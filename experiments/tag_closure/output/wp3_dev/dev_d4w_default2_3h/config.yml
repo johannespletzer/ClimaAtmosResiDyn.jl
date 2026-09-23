@@ -1,0 +1,86 @@
+# V-W1, the "before": D4-W with the water tags as `main` has them after #95,
+# which is grid-scale only. Under EDMF the tags take none of the updraft's
+# water flux, and sediment with the grid mean's flux alone (G3_PLAN 3). WP1
+# then refuses this combination until WP3 lands, so this run records what the
+# refusal protects against. Its twin is `w0c_d4w_untagged`.
+#
+# The tags are D4-W's (G3_PLAN 6):
+#   - `tropo` and `strat`, the partition, below and above 750 m;
+#   - `evap`, the surface flux, and its split `evap_tropo` and `evap_strat`.
+# The passive tracer, set to the `tropo` mask by the driver, mixes as the air
+# does, the updraft included. So `tropo`'s share against the tracer shows the
+# mixing the grid-scale tags miss, plus the attribution of new water by region
+# (FINDINGS E68's erratum).
+#
+# What it decides: the closure residual and its growth without the SGS flux;
+# the per-tag gap to the tracer; and parity, every model field bit for bit the
+# twin's.
+job_id: "dev_d4w_default2_3h"
+
+water_tracers:
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: evap
+    source: surface_flux
+  - name: evap_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: surface_flux
+  - name: evap_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: surface_flux
+
+water_closure_check:
+  period: "1hours"
+  audit: true
+
+chemistry_model: "passive"
+
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "3hours"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, husra, hussn, wa, q_gas_A]
+    period: "1hours"
+  - short_name: [pr, prra, prsn, evspsbl, hfls, hfss, lwp, rwp]
+    period: "1hours"
+  - short_name: [arup, rhoaup, waup, husup, clwup, cliup, husraup, hussnup]
+    period: "1hours"
+  - short_name: [aren, rhoaen, waen, husen, husraen, hussnen]
+    period: "1hours"
+  - short_name: [tke, edt, evu, entr, detr, env_q_tot_variance]
+    period: "1hours"
+  - short_name: [q_tag_res, q_tag_tropo, q_tag_strat, q_tag_evap]
+    period: "1hours"
+  - short_name: [q_tag_evap_tropo, q_tag_evap_strat]
+    period: "1hours"
+  - short_name: [q_tag_fix_tropo, q_tag_fix_strat, q_tag_fix_evap]
+    period: "1hours"
+  - short_name: [q_tag_fix_evap_tropo, q_tag_fix_evap_strat]
+    period: "1hours"
