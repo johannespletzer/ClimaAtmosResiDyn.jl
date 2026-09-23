@@ -137,10 +137,10 @@ Draft PR #100 from `claude/water-tags-edmf`, opened on 2026-09-23 at `6e7264ae`.
   - [x] Reserve colliding tag names: `res`, `fix_*`, `upfix_*`, `inc_*`,
     `rtag_*`, `stag_*`.
 
-  - [~] Known issue 1 closed with the post-#64 numbers. The CI log does not
-    print them, since the assertions pass, so job `13831751` runs the
-    integration test with the two quantities printed. Issues 3 and 4 are
-    restated in the PR.
+  - [x] Known issue 1 closed with the post-#64 numbers (W19, `92696f6e` on
+    #100). The CI log does not print them, since the assertions pass, so job
+    `13831751` ran the integration test with the two quantities printed.
+    Issues 3 and 4 are restated in the PR.
 
   - [x] Tests for each refusal (22, all passing locally). Review by
     `clima-reviewer` (high): nothing blocking; its two should-fix findings are

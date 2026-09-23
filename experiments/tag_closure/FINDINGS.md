@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W18                                           | 1. Water tags                                       |
+| W1–W19                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -304,6 +304,17 @@ budget.** The untagged D4-W day of W17, with the EDMF diagnostics.
 
 *Job `13829852`, as W17; `output/w0c_d4w_untagged/before_and_sizing.txt`.
 Not yet through the verifier.*
+
+**W19. After #64's fix, the water integration test's two closure quantities
+sit well inside their bounds.** On `main` at `0b2b1032` and Julia 1.11,
+`test/tagged_water_integration.jl` passes all 111 tests. The sphere's
+limiter-rescale residual, `maximum(abs.(residual)) / scale`, is 7.4e-4 against
+1.17e-3 before the fix and a bound of 1e-2. The 1M sedimentation `norm` lies
+between 0.9996 and 1.0003, against 1.00006 on `ci 1.10` before the fix and a
+bound of 1 + 1e-2: the drift grew fivefold with the fix and stays 30 times
+inside its bound. Known issue 1 is closed with these (#100). *Job `13831751`,
+`hpda2_test`, 2026-09-23, the test file with two `@info` lines added, against
+`../ClimaAtmosResiDyn-wedmf-run`; `output/ki1_integration/`.*
 
 ## 2. Energy source tags: closure by transport
 

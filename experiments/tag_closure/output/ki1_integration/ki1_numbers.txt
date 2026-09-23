@@ -1,0 +1,12 @@
+code: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wedmf-run
+Test Summary:            | Pass  Total      Time
+tagged water integration |  111    111  34m01.2s
+[ Info: Memory currently used (after solve!) by the process (RSS): 7.2 GiB
+┌ Info: KI1 sphere residual
+└   maximum(abs.(residual)) / scale = 0.0007407976743229034
+--
+[ Info: Memory currently used (after solve!) by the process (RSS): 7.2 GiB
+┌ Info: KI1 sedimentation norm
+│   maximum(norm) = 1.0003016713454866
+└   minimum(norm) = 0.9996467403960396
+
