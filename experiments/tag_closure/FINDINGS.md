@@ -2479,6 +2479,56 @@ days need 500 GB. Its directory is kept as
 `g2_v2_sphere_mix_oom_13538434` on scratch. The outputs, the analysis and the
 comparison are in `output/g2_v2_sphere_mix/`.*
 
+**E76. The exchange's ladder: its agreement with the audit holds at 24 h across
+the timestep and the Newton count, and the first hour does not converge. R2 of
+the review of #95.** Five pairs of D4 days, each pair a default run and an
+updraft-copies run sharing one atmosphere, so the difference between them is
+the exchange's error against the audit at that setting. In every pair `ta` and
+`rhoa` are bit for bit.
+
+| L1 against the copies | `sfc` 1 h | `sfc` 6 h | `sfc` 24 h | `strat` 24 h |
+|:--|--:|--:|--:|--:|
+| 120 s, 1 Newton, centred | 14.3% | 2.6% | 0.64% | 0.91% |
+| 60 s | 19.4% | 3.1% | 0.53% | 1.25% |
+| 30 s | 21.3% | 2.5% | 1.36% | 1.09% |
+| 2 Newton iterations | 15.5% | 2.2% | 0.88% | 1.13% |
+| first-order upwind | 14.7% | 11.0% | 6.5% | 0.22% |
+
+  - **After a day the agreement is a property of the method, not of one
+    operating point.** Every tag is within 1.6% in L1 and 2.6% at its largest
+    point at 24 h, at every timestep and Newton count. G1's criterion 4b, L1
+    ≤ 2% and L∞ ≤ 5% at 24 h, is met with margin: the worst tag is `sub` at
+    1.54% and `sfc` at 2.51%.
+  - **The first hour does not converge, and it is not meant to.** Shortening
+    the step from 120 s to 30 s makes `sfc`'s first-hour difference larger,
+    14.3% to 21.3%, not smaller. So it is not a discretisation error that
+    refinement removes. Two things make it: the copies begin at the grid mean
+    and fill over the updraft's turnover, while the plume is steady from the
+    first step; and each scheme is bounded in the quantity its own flux
+    carries, the copies in the specific value by the model's filter, the
+    exchange in the energy it moves. It is a difference of convention, and a
+    per-tag reading of the first hour should say which convention it used.
+  - **The Newton count does not matter.** One iteration against two changes
+    `sfc` at 24 h from 0.64% to 0.88% and the region tags from 0.91% to 1.13%.
+    The exchange's error is not the solver's.
+  - **First-order upwinding for the sub-grid flux costs an order of
+    magnitude,** 6.5% against 0.64% for `sfc` at 24 h, because the copies'
+    own flux changes with it too. It supports keeping the parent's
+    reconstruction, as the owner chose on 2026-09-20.
+  - **The blend factor's two defects, found by the G3 session's review and
+    fixed in `dcf7d086`, show where they should.** With one factor for every
+    tag, four overlays throttled the region tags: their first-hour L1 was
+    1.89% at the baseline and 1.73% with two Newton iterations. With the
+    partition on its own factor they are 0.13% and 0.12%, a factor of
+    fourteen. The late-time numbers move little, the region tags from about
+    0.5% to about 1%.
+*Jobs `13782601` to `13782605` (the default runs at `dcf7d086`) and `13768363`
+to `13768369` (the copies runs at `dbe7435c`, which the change does not
+touch, since neither the donor flux nor the exchange runs in copies mode), on
+terrabyte, 2026-09-23, from `../ClimaAtmosResiDyn-upd-run`. The earlier
+default runs at `dbe7435c` are superseded. The outputs are in
+`output/v3_upd_default*` and `output/v3_upd_copies*`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**
