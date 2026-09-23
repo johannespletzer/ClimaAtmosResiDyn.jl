@@ -28,7 +28,7 @@ python3 compare_runs.py --reference DIR --run DIR [--hours 1,6,12,24] \
                          [--family water|energy] [--expect-parity] \
                          [--allow-missing NAME ...] [--judge] \
                          [--bitwise-tags] [--closure-remainder-fields NAME,...] \
-                         [--ladder-share] [--json PATH]
+                         [--ladder-share] [--parity-only] [--json PATH]
 ```
 
 `DIR` must be an explicit `output_XXXX` directory (an absolute or relative
@@ -53,7 +53,11 @@ problem:
     (the epoch) agree. If the two runs have different lengths, this fails
     unless `--hours` was given on the command line *and* every requested
     hour is present in both runs at exactly `h*3600` seconds — only then is
-    the common-length prefix compared, with an explicit `NOTICE:` line;
+    the common-length prefix compared, with an explicit `NOTICE:` line.
+    `--hours` accepts a fractional hour (e.g. `0.1` for a 360s output, the
+    V-W0a 2h configs' cadence), matched at exactly `h*3600` s like a whole
+    hour; a whole-number entry still parses to a plain `int`, so existing
+    JSON keys, the printed table and every existing caller are unchanged;
   - (c) `z` is exactly equal, and its `units` agree (its dimension is found
     by name, never by position, so a file with dimensions written
     `(time, z)` is still read correctly);
@@ -240,25 +244,65 @@ which formula it used in the output and the JSON (`"mode"`):
     difference of the two scalars -- the parent's own change is not
     reported here (it would need one grid too).
 
+### `--parity-only` (criterion 3: a tagged run against its untagged twin)
+
+Another separate mode (skips family detection, the tag list, per-tag
+metrics, `--judge`). Today's default flow needs a family and a tag block in
+both runs; the untagged twin (`w0c_d4w_untagged`) has neither, so
+`--family` autodetection dies with "cannot autodetect --family" and
+`--expect-parity` cannot be used for this pairing at all. `--parity-only`
+is the fix:
+
+  - the parent set is the *union* of both runs' fields, minus a fixed,
+    family-agnostic list of tag-family output prefixes (`q_tag_`,
+    `qv_tag_`, `e_src_`, `e_tag_`, `e_prc_`, `q_prc_`, `pr_tag_` --
+    `q_tag_res` and `q_tag_fix_*` are covered by the plain `q_tag_` prefix,
+    not listed separately, since prefix matching already catches them);
+  - a field present in only one run must itself be a tag-family output (by
+    that same prefix list) -- reported, per side, under
+    `tag_only_fields` in the JSON, and *not* compared. Any other
+    one-run-only field is a hard failure (S1's fix, without needing
+    `--family`);
+  - every remaining common field is compared bit for bit,
+    **unconditionally fatal** on any break (this mode's whole point is a
+    parity claim, so there is no `--expect-parity` opt-in here);
+  - the S2 pairing checks (`provenance.txt`, `FLOAT_TYPE`, the YAML-diff
+    allowlist) still run, widened with the tag family's own config keys,
+    which legitimately differ between a tagged run and its untagged twin:
+    `water_tracers`, `water_closure_check`, `water_process_record`,
+    `energy_tracers`, `energy_closure_check`, `energy_source_tags`,
+    every `energy_source_tag_*` key, `energy_source_closure_check`,
+    `energy_process_record` (plus `diagnostics`, already allowed).
+
+Tried on the real pair: reference `w0c_d4w_untagged/output_0000`, run
+`w1_d4w_grid_tags/output_0000` -- 37 fields bit for bit (25 outputs), 11
+tag fields (`q_tag_*`, `q_tag_fix_*`, `q_tag_res`) reported as run-only,
+exit 0, matching a by-hand check of the same pair.
+
 ## test_compare_runs.py
 
 ```sh
 python3 test_compare_runs.py            # or: python3 -m unittest test_compare_runs -v
 ```
 
-45 tests (about 12s, mostly the E73 fixture rebuild and the synthetic
+55 tests (about 15s, mostly the E73 fixture rebuild and the synthetic
 netCDF writes), in four
 groups:
 
   1. **`CompareRunsCLIMutationTests`** -- the original six mutation tests
-     (a real energy run pair copied from `v3_upd_copies/output_0000` on
-     scratch, mutated with netCDF4 in `r+` mode, run through the real CLI as
-     a subprocess), plus three more: a within-run time shift in a
-     **non-`rhoa`** file (kills the "RunCoords disabled" mutant, which a
-     shift in `rhoa` alone cannot), `output_active`/a bare run root/the same
-     directory twice refused. `--tags sfc,rad,mp` pins these to the three
-     tag files actually copied, since the tag list now defaults to *every*
-     tag in the YAML (8, for this config).
+     (a real energy run pair copied from `v3_upd_copies/output_0000`, on
+     scratch when reachable, else the archive's durable copy under
+     `~/git/Clima/ClimaAtmosResiDyn-archive/scratch_tag_closure/`, mutated
+     with netCDF4 in `r+` mode, run through the real CLI as a subprocess),
+     plus four more: a within-run time shift in a **non-`rhoa`** file
+     (kills the "RunCoords disabled" mutant, which a shift in `rhoa` alone
+     cannot), `output_active`/a bare run root/the same directory twice
+     refused, and a run written with another output period
+     (`_5m_inst.nc`, not `_1h_inst.nc`) still read correctly, with a
+     mismatched pair (one run renamed, one not) refused by name. `--tags
+     sfc,rad,mp` pins these to the three tag files actually copied, since
+     the tag list now defaults to *every* tag in the YAML (8, for this
+     config).
   2. **`AnalyticMetricTests`** (B1) -- pure calls into `compare_runs.py`'s
      own functions (`compute_faces_and_dz`, `tag_row_metrics`, `bit_compare`,
      `parse_tag_block`, `detect_family`), no subprocess, no files. A
@@ -286,10 +330,18 @@ groups:
      writes a bare `NaN`); `--judge` (pass on identical runs, fail on a
      broken budget, the small-tag share boundary at 1% built so the
      perturbation would fail L1/L∞ but must pass the absolute bound,
-     `--judge` refusing a non-water `--family`); `--bitwise-tags`; and
+     `--judge` refusing a non-water `--family`); `--bitwise-tags`;
      `--ladder-share` on two different `z` grids (3 vs. 5 levels), checking
      it falls back to the column-integrals-only mode and does not attempt a
-     level-wise comparison.
+     level-wise comparison; `--parity-only` (a synthetic untagged/tagged
+     pair: passes and reports the tag-only fields, fails unconditionally on
+     a bitwise break with no `--expect-parity` needed, fails on a
+     non-tag-family field present in only one run, refuses the same
+     directory twice); and fractional `--hours` (a 360s-cadence pair,
+     `--hours 0.1,0.2` matched and JSON-keyed as `"0.1"`/`"0.2"`, an
+     all-integer `--hours` still parsing to plain `int`s and keyed
+     `"0"`/`"1"`/... as before, and a fractional hour absent from the data
+     refused by name).
   4. **`E73RegressionTest`** (B1) -- rebuilds the E73 fixture
      (`fixtures/e73/`, five hours × 30 levels × 12 variables, as `.npz`
      arrays plus the two real `.yml` files, **not** `.nc`/`.json`, which

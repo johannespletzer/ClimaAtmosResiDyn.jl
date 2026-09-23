@@ -1,0 +1,131 @@
+{
+  "hours": [
+    1,
+    6,
+    12,
+    24
+  ],
+  "input_file_sha256": {
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton1/output_0000/hus_1h_inst.nc": "d145558ea12d84098c4cbd77576cb3857a9c0fa483fcf3a044b166594024e250",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton1/output_0000/q_tag_evap_1h_inst.nc": "3a23cffc684e38872a966f8849bbde9baa8cfa6480e19d3e3eceb5f24f519356",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton1/output_0000/q_tag_strat_1h_inst.nc": "35850650dab3ca5164274f5d6c480dde0105b0fa3a76539f8821d2df2d48be42",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton1/output_0000/q_tag_tropo_1h_inst.nc": "64c711dbc645f1aabb2fb1326ffdf493b8377bef2a4749f970bbe3c491ffb5ad",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton1/output_0000/rhoa_1h_inst.nc": "549e257784a4a7ba695265daba97b73c4a5fd1d1e407801ebc8e0e35a815054f",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton1/output_0000/w0a_0m_newton1.yml": "11ee050abe0f748a43cfa7e3acef8f449e5a37a8a58f65f7c3420fe86d23ef4c",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton10/output_0000/hus_1h_inst.nc": "93023159700a966e04fe894b6eb9710b5498843f1a6b10686e985d63a6e4f515",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton10/output_0000/q_tag_evap_1h_inst.nc": "7b9fc09a59cd70a5ebd845829359e030011442d342a88c701d897750d624938f",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton10/output_0000/q_tag_strat_1h_inst.nc": "65c5462fc7d2c98b5447d7a9c78ca84d8d66eb3d0e342f619dd6fb10f468136d",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton10/output_0000/q_tag_tropo_1h_inst.nc": "3d48c038cad04f113e288477b77cbeaf03ad1900ad4124d0dcf44bca266a2327",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton10/output_0000/rhoa_1h_inst.nc": "8562acad5dfad8a0a1336353df79262b1b2edd33b14871f13d3d1091fede8e0b",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton10/output_0000/w0a_0m_newton10.yml": "174efcddb3f2d7a5dbc109375ad756e3ee022f49b255dbca8c6e27ed57464e37"
+  },
+  "mode": "level_wise_and_column_integrals",
+  "parent_L1": {
+    "hus": {
+      "1": 4.198031322526023e-05,
+      "6": 2.351141288542293e-05,
+      "12": 1.839516007511476e-05,
+      "24": 1.2733924112987643e-05
+    },
+    "rhoa": {
+      "1": 1.2233193396765478e-05,
+      "6": 1.6137300698633182e-06,
+      "12": 1.2859827498966452e-06,
+      "24": 8.827704704760374e-07
+    }
+  },
+  "same_grid": true,
+  "script_sha256": "f0b8fda630eef23d5749e467cd3031305da02b1691f8a723b163f20921936eed",
+  "tags": {
+    "evap": {
+      "1": {
+        "L1_phi_level_wise": 2.1989323290330307e-05,
+        "hour": 1,
+        "phi_ref_column": 0.01156046387218397,
+        "phi_run_column": 0.011560211101709338,
+        "share_delta_column": -2.527704746312087e-07
+      },
+      "6": {
+        "L1_phi_level_wise": 2.7235557243790176e-05,
+        "hour": 6,
+        "phi_ref_column": 0.06735067904781929,
+        "phi_run_column": 0.06734936967736899,
+        "share_delta_column": -1.309370450300329e-06
+      },
+      "12": {
+        "L1_phi_level_wise": 2.6029562548677994e-05,
+        "hour": 12,
+        "phi_ref_column": 0.12866801286489388,
+        "phi_run_column": 0.12866579951136295,
+        "share_delta_column": -2.213353530927664e-06
+      },
+      "24": {
+        "L1_phi_level_wise": 1.8549707191127562e-05,
+        "hour": 24,
+        "phi_ref_column": 0.23337697911202412,
+        "phi_run_column": 0.23337366363589238,
+        "share_delta_column": -3.3154761317488735e-06
+      }
+    },
+    "strat": {
+      "1": {
+        "L1_phi_level_wise": 0.0011666649745442953,
+        "hour": 1,
+        "phi_ref_column": 0.28004452349670156,
+        "phi_run_column": 0.2800368216784246,
+        "share_delta_column": -7.701818276972805e-06
+      },
+      "6": {
+        "L1_phi_level_wise": 0.0005681632581099296,
+        "hour": 6,
+        "phi_ref_column": 0.25869880351155505,
+        "phi_run_column": 0.25869322616166585,
+        "share_delta_column": -5.57734988920755e-06
+      },
+      "12": {
+        "L1_phi_level_wise": 0.000358819708163392,
+        "hour": 12,
+        "phi_ref_column": 0.23985266684059106,
+        "phi_run_column": 0.2398484559909791,
+        "share_delta_column": -4.210849611968603e-06
+      },
+      "24": {
+        "L1_phi_level_wise": 0.00015736744125072706,
+        "hour": 24,
+        "phi_ref_column": 0.21030384561326854,
+        "phi_run_column": 0.21030094778955116,
+        "share_delta_column": -2.897823717373793e-06
+      }
+    },
+    "tropo": {
+      "1": {
+        "L1_phi_level_wise": 0.0010374667034014498,
+        "hour": 1,
+        "phi_ref_column": 0.7200160015625011,
+        "phi_run_column": 0.7200110728430166,
+        "share_delta_column": -4.928719484542654e-06
+      },
+      "6": {
+        "L1_phi_level_wise": 0.0003468214376916885,
+        "hour": 6,
+        "phi_ref_column": 0.7413791157263705,
+        "phi_run_column": 0.7413631621873297,
+        "share_delta_column": -1.595353904082497e-05
+      },
+      "12": {
+        "L1_phi_level_wise": 0.00018047913533410806,
+        "hour": 12,
+        "phi_ref_column": 0.7602242772062012,
+        "phi_run_column": 0.760205993764716,
+        "share_delta_column": -1.8283441485245078e-05
+      },
+      "24": {
+        "L1_phi_level_wise": 6.604235104580788e-05,
+        "hour": 24,
+        "phi_ref_column": 0.7897637965642367,
+        "phi_run_column": 0.7897463942877982,
+        "share_delta_column": -1.74022764384274e-05
+      }
+    }
+  }
+}

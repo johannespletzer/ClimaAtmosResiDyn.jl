@@ -1,0 +1,131 @@
+{
+  "hours": [
+    0.1,
+    0.5,
+    1,
+    2
+  ],
+  "input_file_sha256": {
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton10_2h/output_0000/hus_5m_inst.nc": "34f26d259cbc96feaeac852c5161e4847672462202d1adf9f1459987d6d4baec",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton10_2h/output_0000/q_tag_evap_5m_inst.nc": "bf99d759d69ed5111a92dfdd8892d7449a38e18ac385b1205a5351c8869b7f12",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton10_2h/output_0000/q_tag_strat_5m_inst.nc": "bf38a23ba20c9efe374572225fbb1e8f52d33717d23692954a99dd376c079a41",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton10_2h/output_0000/q_tag_tropo_5m_inst.nc": "bae33226acc25457d1c33f81231fccc31e590400cfc57c9a90cc5202c07bde68",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton10_2h/output_0000/rhoa_5m_inst.nc": "259d117f6852b0c07b00b2823bc5044b524c126a1bdd137d348297554b7cb794",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton10_2h/output_0000/w0a_0m_explicit_newton10_2h.yml": "d93aa9ac37b4420e4dd49aa1d6969a0857773bab231078d9cdcd6bbe1f3ac3f7",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton1_2h/output_0000/hus_5m_inst.nc": "f30135aa376b2394fb2925f973ff1164e0e7b267812d9e845f38e06c143b4fc1",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton1_2h/output_0000/q_tag_evap_5m_inst.nc": "8196e5fa5eb3451ba30e1d37b78a4cd6cbd68c8abc04e28112aa1b7e5ac504de",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton1_2h/output_0000/q_tag_strat_5m_inst.nc": "9228c49a09dbd7817dca56483f39c00e18a43a99baa74fc1153b95ad90a4c262",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton1_2h/output_0000/q_tag_tropo_5m_inst.nc": "78367f83a9a2911d07c2a7eb3c1944e3c5efbf007717b6627478cf693f5293e2",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton1_2h/output_0000/rhoa_5m_inst.nc": "a1553fe94e8060fada7aa872f542d1c203b9965b939e63c083961fa8bd1fa3b4",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_explicit_newton1_2h/output_0000/w0a_0m_explicit_newton1_2h.yml": "e335872ae86e6d17fb70afe5a909b477c5d27ded84181715516c4eccaba63d84"
+  },
+  "mode": "level_wise_and_column_integrals",
+  "parent_L1": {
+    "hus": {
+      "0.1": 7.361278563050297e-05,
+      "0.5": 6.368104728284623e-05,
+      "1": 5.3743681670099494e-05,
+      "2": 4.377235442954284e-05
+    },
+    "rhoa": {
+      "0.1": 3.9151426834084684e-05,
+      "0.5": 1.607496351048987e-05,
+      "1": 1.225493161478785e-05,
+      "2": 5.6219939191950405e-06
+    }
+  },
+  "same_grid": true,
+  "script_sha256": "f0b8fda630eef23d5749e467cd3031305da02b1691f8a723b163f20921936eed",
+  "tags": {
+    "evap": {
+      "0.1": {
+        "L1_phi_level_wise": 0.0005290307829614212,
+        "hour": 0.1,
+        "phi_ref_column": 0.0011585744588817357,
+        "phi_run_column": 0.0011585646835978202,
+        "share_delta_column": -9.775283915441565e-09
+      },
+      "0.5": {
+        "L1_phi_level_wise": 3.215025036383902e-05,
+        "hour": 0.5,
+        "phi_ref_column": 0.005792569404305577,
+        "phi_run_column": 0.0057923545492902075,
+        "share_delta_column": -2.1485501536938623e-07
+      },
+      "1": {
+        "L1_phi_level_wise": 1.7675391820075455e-05,
+        "hour": 1,
+        "phi_ref_column": 0.011560450836019196,
+        "phi_run_column": 0.011560003920956283,
+        "share_delta_column": -4.469150629137636e-07
+      },
+      "2": {
+        "L1_phi_level_wise": 1.5953753118706952e-05,
+        "hour": 2,
+        "phi_ref_column": 0.023009122554533204,
+        "phi_run_column": 0.023008251577510897,
+        "share_delta_column": -8.709770223068458e-07
+      }
+    },
+    "strat": {
+      "0.1": {
+        "L1_phi_level_wise": 0.0023546155264342694,
+        "hour": 0.1,
+        "phi_ref_column": 0.28494443959023447,
+        "phi_run_column": 0.2849438560797894,
+        "share_delta_column": -5.835104450735429e-07
+      },
+      "0.5": {
+        "L1_phi_level_wise": 0.00136423715430882,
+        "hour": 0.5,
+        "phi_ref_column": 0.28276318674653317,
+        "phi_run_column": 0.2827520805758166,
+        "share_delta_column": -1.110617071659048e-05
+      },
+      "1": {
+        "L1_phi_level_wise": 0.0011447693831253593,
+        "hour": 1,
+        "phi_ref_column": 0.28003985812661997,
+        "phi_run_column": 0.2800277090692206,
+        "share_delta_column": -1.2149057399379881e-05
+      },
+      "2": {
+        "L1_phi_level_wise": 0.0009099656488323505,
+        "hour": 2,
+        "phi_ref_column": 0.27502716162916474,
+        "phi_run_column": 0.2750154109817203,
+        "share_delta_column": -1.1750647444463969e-05
+      }
+    },
+    "tropo": {
+      "0.1": {
+        "L1_phi_level_wise": 0.0019524608484113935,
+        "hour": 0.1,
+        "phi_ref_column": 0.7150656142755486,
+        "phi_run_column": 0.7150644551529032,
+        "share_delta_column": -1.1591226454221726e-06
+      },
+      "0.5": {
+        "L1_phi_level_wise": 0.0012677815109733341,
+        "hour": 0.5,
+        "phi_ref_column": 0.7172810276066431,
+        "phi_run_column": 0.7172816456487869,
+        "share_delta_column": 6.18042143796238e-07
+      },
+      "1": {
+        "L1_phi_level_wise": 0.0010248767682178334,
+        "hour": 1,
+        "phi_ref_column": 0.7200112172463589,
+        "phi_run_column": 0.7200100822811796,
+        "share_delta_column": -1.1349651792835758e-06
+      },
+      "2": {
+        "L1_phi_level_wise": 0.0007369701801439857,
+        "hour": 2,
+        "phi_ref_column": 0.7250307981500923,
+        "phi_run_column": 0.7250260235026552,
+        "share_delta_column": -4.774647437089108e-06
+      }
+    }
+  }
+}

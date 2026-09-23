@@ -148,6 +148,43 @@ YAML_DIFF_ALLOWED_KEYS = {
 # fork's parity rule.
 PARITY_BREAKING_YAML_FLAGS = ("use_krylov_method", "use_newton_rtol")
 
+# --parity-only (criterion 3): a tagged run against its untagged twin. No
+# family is known (the untagged twin has no tag block at all), so the
+# tag-family output prefixes are a fixed, family-agnostic list rather than
+# FAMILY_TABLES's per-family one. Covers both families' tags, ledgers and
+# process records; q_tag_res and q_tag_fix_* are covered by the plain
+# "q_tag_" prefix, not listed separately.
+PARITY_ONLY_EXCLUDED_PREFIXES = ("q_tag_", "qv_tag_", "e_src_", "e_tag_", "e_prc_", "q_prc_", "pr_tag_")
+# The tag-family's own config keys, which legitimately differ between a
+# tagged run and its untagged twin (the untagged twin has no tags to name).
+PARITY_ONLY_EXTRA_ALLOWED_KEYS = {
+    "water_tracers",
+    "water_closure_check",
+    "water_process_record",
+    "energy_tracers",
+    "energy_closure_check",
+    "energy_source_tags",
+    "energy_source_closure_check",
+    "energy_process_record",
+}
+PARITY_ONLY_EXTRA_ALLOWED_PREFIXES = ("energy_source_tag_",)
+
+
+def parse_hour(raw):
+    """One --hours entry. A whole number becomes a plain int, exactly as
+    before (so JSON keys, dict lookups and the printed table's "%4d" are
+    unchanged for every existing caller). A fractional hour (the V-W0a 2h
+    runs write every 360 s = 0.1 h) stays a float; format_hour below prints
+    it without assuming an int."""
+    value = float(raw)
+    return int(value) if value.is_integer() else value
+
+
+def format_hour(hour):
+    """Right-justified, width 4, for both the int and float cases (the old
+    code used a bare '%4d', which cannot format a float)."""
+    return f"{hour!s:>4}"
+
 
 def die(message):
     """Fail loudly: name the problem and exit nonzero. Never fall back silently."""
@@ -187,9 +224,35 @@ def resolve_output_dir(raw, label):
     return resolved
 
 
+# The model names each diagnostic file '<name>_<period>_inst.nc', with the
+# period the config asked for: '1h' for hourly output, '5m' for a
+# five-minute one. Both runs must use one period, and a directory with more
+# than one is refused, since hour h would then have two readings.
+SUFFIX = "_1h_inst.nc"
+_SUFFIX_RE = re.compile(r"^.+(_\d+[a-z]+_inst\.nc)$")
+
+
+def output_suffix(directory, label):
+    """The one '_<period>_inst.nc' suffix of a run's diagnostic files."""
+    suffixes = {m.group(1) for p in directory.glob("*_inst.nc") if (m := _SUFFIX_RE.match(p.name))}
+    if len(suffixes) != 1:
+        die(f"{label} has {len(suffixes)} kinds of instantaneous output ({sorted(suffixes)}); expected one")
+    return suffixes.pop()
+
+
+def set_suffix(ref_dir, run_dir):
+    """Fix SUFFIX for this comparison from the two runs, which must agree."""
+    global SUFFIX
+    ref_suffix = output_suffix(ref_dir, "reference")
+    run_suffix = output_suffix(run_dir, "run")
+    if ref_suffix != run_suffix:
+        die(f"the runs write different output periods: {ref_suffix} and {run_suffix}")
+    SUFFIX = ref_suffix
+
+
 def list_var_names(directory):
-    """Variable stems for every '<name>_1h_inst.nc' file directly in a directory."""
-    return {p.name[: -len("_1h_inst.nc")] for p in directory.glob("*_1h_inst.nc")}
+    """Variable stems for every '<name><SUFFIX>' file directly in a directory."""
+    return {p.name[: -len(SUFFIX)] for p in directory.glob(f"*{SUFFIX}")}
 
 
 # --- Minimal YAML reading ---------------------------------------------
@@ -334,7 +397,7 @@ def discover_default_parent(ref_dir, run_dir, family_table, allow_missing):
 def require_file(directory, stem, label, file_hashes):
     """Check (a): the file must exist. Record its hash now so a later
     failure elsewhere still reports what this run actually read."""
-    path = directory / f"{stem}_1h_inst.nc"
+    path = directory / f"{stem}{SUFFIX}"
     if not path.is_file():
         die(f"{label} is missing '{stem}': no file at {path}")
     file_hashes[str(path)] = sha256_file(path)
@@ -395,7 +458,7 @@ def check_finite(data, var, varname, label, source):
 
 
 def open_var(path, varname, label, coords, file_hashes, require_z=True):
-    """Open one '<var>_1h_inst.nc' file and return (data, dims, units).
+    """Open one '<var><SUFFIX>' file and return (data, dims, units).
     Dimensions are matched by name, never by position, so a file that
     happens to write (time, z) is still read correctly. Supports the column
     geometry ('z','time') and a surface field ('time',) alone; anything else
@@ -635,11 +698,11 @@ def format_tag_row(row):
     if row["ref_zero"]:
         note = f"ref zero (run {'zero' if row['run_zero'] else 'nonzero'})"
         return (
-            f"{tag:10s} {hour:4d}   {row['integral_ref']:10.4e}  {note:>28s} "
+            f"{tag:10s} {format_hour(hour)}   {row['integral_ref']:10.4e}  {note:>28s} "
             f"{row['max_abs_error']:10.4e}"
         )
     return (
-        f"{tag:10s} {hour:4d}   {row['integral_ref']:10.4e}  "
+        f"{tag:10s} {format_hour(hour)}   {row['integral_ref']:10.4e}  "
         f"{row['rel_integral_change']:+10.2e} {row['L1_mass_weighted']:9.2e} "
         f"{row['Linf_peak_normalized']:9.2e}  {row['max_abs_error']:10.4e}"
     )
@@ -671,12 +734,25 @@ def toml_paths_from_yaml(text):
     return re.findall(r'^\s*-\s*"(.+)"\s*$', blocks["toml"], re.MULTILINE)
 
 
-def check_pairing(ref_dir, run_dir, ref_prov, run_prov, ref_yaml_text, run_yaml_text, expect_parity):
+def check_pairing(
+    ref_dir,
+    run_dir,
+    ref_prov,
+    run_prov,
+    ref_yaml_text,
+    run_yaml_text,
+    expect_parity,
+    extra_allowed_keys=(),
+    extra_allowed_prefixes=(),
+):
     """S2: can this pair be compared at all? Refuses the same directory
     twice unconditionally. Everything else that must match only for a
     bitwise-parity claim is a NOTICE without --expect-parity, and a hard
-    failure with it. Returns the list of mismatch messages found (empty if
-    none)."""
+    failure with it. `extra_allowed_keys`/`extra_allowed_prefixes` widen the
+    YAML-diff allowlist for --parity-only (a tagged run against its
+    untagged twin legitimately differs in every tag-family config key, not
+    just the mode key). Returns the list of mismatch messages found (empty
+    if none)."""
     if ref_dir == run_dir:
         die(f"--reference and --run resolve to the same directory: {ref_dir}")
 
@@ -708,7 +784,7 @@ def check_pairing(ref_dir, run_dir, ref_prov, run_prov, ref_yaml_text, run_yaml_
             if ref_hashes != run_hashes:
                 mismatches.append("YAML 'toml': the referenced parameter files' content differs")
             continue
-        if key in YAML_DIFF_ALLOWED_KEYS:
+        if key in YAML_DIFF_ALLOWED_KEYS or key in extra_allowed_keys or key.startswith(tuple(extra_allowed_prefixes)):
             continue
         if ref_blocks.get(key) != run_blocks.get(key):
             mismatches.append(f"YAML '{key}' differs between reference and run (outside the allowed keys)")
@@ -811,6 +887,7 @@ def run_ladder_share(args):
     reason."""
     ref_dir = resolve_output_dir(args.reference, "reference")
     run_dir = resolve_output_dir(args.run, "run")
+    set_suffix(ref_dir, run_dir)
     print(f"reference: {ref_dir}")
     print(f"run:       {run_dir}")
     if ref_dir == run_dir:
@@ -824,14 +901,14 @@ def run_ladder_share(args):
     if not family_table["total_var"]:
         die("--ladder-share needs a family with a total field (R4's total_ref); energy has none")
     tags, _, _ = discover_tags(ref_yaml_text, run_yaml_text, family_table)
-    hours = [int(h) for h in (args.hours or "1,6,12,24").split(",")]
+    hours = [parse_hour(h) for h in (args.hours or "1,6,12,24").split(",")]
 
     ref_coords, run_coords = RunCoords("reference"), RunCoords("run")
-    ref_rhoa, _, _ = open_var(ref_dir / "rhoa_1h_inst.nc", "rhoa", "reference", ref_coords, file_hashes)
-    run_rhoa, _, _ = open_var(run_dir / "rhoa_1h_inst.nc", "rhoa", "run", run_coords, file_hashes)
+    ref_rhoa, _, _ = open_var(ref_dir / f"rhoa{SUFFIX}", "rhoa", "reference", ref_coords, file_hashes)
+    run_rhoa, _, _ = open_var(run_dir / f"rhoa{SUFFIX}", "rhoa", "run", run_coords, file_hashes)
     total_var = family_table["total_var"]
-    ref_total, _, _ = open_var(ref_dir / f"{total_var}_1h_inst.nc", total_var, "reference", ref_coords, file_hashes)
-    run_total, _, _ = open_var(run_dir / f"{total_var}_1h_inst.nc", total_var, "run", run_coords, file_hashes)
+    ref_total, _, _ = open_var(ref_dir / f"{total_var}{SUFFIX}", total_var, "reference", ref_coords, file_hashes)
+    run_total, _, _ = open_var(run_dir / f"{total_var}{SUFFIX}", total_var, "run", run_coords, file_hashes)
 
     def hour_index(coords, h):
         hits = np.nonzero(coords.time == h * 3600)[0]
@@ -848,8 +925,8 @@ def run_ladder_share(args):
     tag_results = {}
     for tag in tags:
         stem = f"{family_table['tag_var_prefix']}{tag}"
-        e_ref, _, _ = open_var(ref_dir / f"{stem}_1h_inst.nc", stem, "reference", ref_coords, file_hashes)
-        e_run, _, _ = open_var(run_dir / f"{stem}_1h_inst.nc", stem, "run", run_coords, file_hashes)
+        e_ref, _, _ = open_var(ref_dir / f"{stem}{SUFFIX}", stem, "reference", ref_coords, file_hashes)
+        e_run, _, _ = open_var(run_dir / f"{stem}{SUFFIX}", stem, "run", run_coords, file_hashes)
         tag_results[tag] = {}
         for h in hours:
             i_ref, i_run = hour_index(ref_coords, h), hour_index(run_coords, h)
@@ -875,7 +952,7 @@ def run_ladder_share(args):
                 row["L1_phi_level_wise"] = (num / den) if den else None
             tag_results[tag][h] = row
             extra = f" L1_phi={row['L1_phi_level_wise']:.3e}" if same_grid and row["L1_phi_level_wise"] is not None else ""
-            print(f"  {tag:10s} {h:4d}h  phi_ref={phi_ref}  phi_run={phi_run}  delta={row['share_delta_column']}{extra}")
+            print(f"  {tag:10s} {format_hour(h)}h  phi_ref={phi_ref}  phi_run={phi_run}  delta={row['share_delta_column']}{extra}")
 
     parent_l1 = {}
     if same_grid:
@@ -906,6 +983,121 @@ def run_ladder_share(args):
         print(f"json report: {Path(args.json).resolve()}")
 
 
+# --- Criterion 3: --parity-only (a tagged run against its untagged twin) --
+
+
+def _var_has_z(directory, name):
+    with Dataset(directory / f"{name}{SUFFIX}") as ds:
+        return "z" in ds.variables[name].dimensions
+
+
+def run_parity_only(args):
+    """Criterion 3: parent-state parity between a tagged run and its
+    untagged twin. No family, no tags, no per-tag metrics -- the untagged
+    twin has no tag block to detect a family from. The parent set is the
+    union of both runs' fields minus every tag-family output (fixed,
+    family-agnostic prefixes, since the family is not known here); a
+    non-tag-family field present in only one run is a hard failure (S1's
+    fix, without needing --family), and every tag-family field present in
+    only one run is reported, not compared. Every compared field must be
+    bit for bit, unconditionally (this mode's whole point is a parity
+    claim), unlike the default main() flow where --expect-parity opts in."""
+    ref_dir = resolve_output_dir(args.reference, "reference")
+    run_dir = resolve_output_dir(args.run, "run")
+    set_suffix(ref_dir, run_dir)
+    print(f"reference: {ref_dir}")
+    print(f"run:       {run_dir}")
+
+    file_hashes = {}
+    ref_yaml_text, _ = read_yaml_file(ref_dir, "reference", file_hashes)
+    run_yaml_text, _ = read_yaml_file(run_dir, "run", file_hashes)
+    ref_prov = read_provenance(ref_dir, "reference")
+    run_prov = read_provenance(run_dir, "run")
+    pairing_mismatches = check_pairing(
+        ref_dir,
+        run_dir,
+        ref_prov,
+        run_prov,
+        ref_yaml_text,
+        run_yaml_text,
+        expect_parity=True,
+        extra_allowed_keys=PARITY_ONLY_EXTRA_ALLOWED_KEYS,
+        extra_allowed_prefixes=PARITY_ONLY_EXTRA_ALLOWED_PREFIXES,
+    )
+
+    ref_vars, run_vars = list_var_names(ref_dir), list_var_names(run_dir)
+    only_ref = ref_vars - run_vars
+    only_run = run_vars - ref_vars
+    unexplained_ref = sorted(n for n in only_ref if not n.startswith(PARITY_ONLY_EXCLUDED_PREFIXES))
+    unexplained_run = sorted(n for n in only_run if not n.startswith(PARITY_ONLY_EXCLUDED_PREFIXES))
+    if unexplained_ref or unexplained_run:
+        die(
+            "--parity-only: non-tag-family field(s) present in only one run "
+            f"(every one-run-only field must be a tag-family output): only "
+            f"in reference: {unexplained_ref}; only in run: {unexplained_run}"
+        )
+    tag_only_ref = sorted(n for n in only_ref if n.startswith(PARITY_ONLY_EXCLUDED_PREFIXES))
+    tag_only_run = sorted(n for n in only_run if n.startswith(PARITY_ONLY_EXCLUDED_PREFIXES))
+    print(f"\nfields only in reference (tag-family, not compared): {tag_only_ref}")
+    print(f"fields only in run (tag-family, not compared): {tag_only_run}")
+
+    common_vars = {n for n in (ref_vars & run_vars) if not n.startswith(PARITY_ONLY_EXCLUDED_PREFIXES)}
+    if not common_vars:
+        die("--parity-only: no non-tag-family field is common to both runs; nothing to compare")
+    # Open a column field first if one exists, so RunCoords fixes a real z
+    # (see RunCoords.check_or_set: once time is set from a surface-only
+    # field, a later column field's z would never be recorded).
+    ordered_vars = sorted(common_vars, key=lambda v: (not _var_has_z(ref_dir, v), v))
+
+    ref_coords, run_coords = RunCoords("reference"), RunCoords("run")
+    parity = {}
+    overlap = None
+    for name in ordered_vars:
+        a, a_dims, a_units = open_var(ref_dir / f"{name}{SUFFIX}", name, "reference", ref_coords, file_hashes, require_z=False)
+        b, b_dims, b_units = open_var(run_dir / f"{name}{SUFFIX}", name, "run", run_coords, file_hashes, require_z=False)
+        if overlap is None:
+            # Checks (b)/(c): time, date and z alignment, once, from the
+            # first field opened. hours=[] since --parity-only has no hour
+            # lookup of its own; hours_given=True tolerates a length
+            # mismatch as a compared common prefix, with a NOTICE.
+            _, overlap = check_time_and_z(ref_coords, run_coords, [], True)
+        if a_dims != b_dims:
+            die(f"{name}: dimension mismatch, reference {a_dims} vs run {b_dims}")
+        if a_units != b_units:
+            die(f"units: '{name}' differs between reference ({a_units!r}) and run ({b_units!r})")
+        sl = (slice(None), slice(0, overlap)) if a_dims == ("z", "time") else (slice(0, overlap),)
+        result = bit_compare(a[sl], b[sl], name)
+        parity[name] = result
+        print("  " + format_parity_line(name, result))
+
+    parity_breaks = [n for n, r in parity.items() if not r["identical"]]
+    if parity_breaks:
+        die(f"--parity-only: parent parity broke for {parity_breaks}")
+    print(f"\n--parity-only: PASS ({len(parity)} fields bit for bit)")
+
+    if args.json:
+        report = {
+            "mode": "parity_only",
+            "resolved_paths": {"reference": str(ref_dir), "run": str(run_dir)},
+            "parent_parity": parity,
+            "tag_only_fields": {"reference": tag_only_ref, "run": tag_only_run},
+            "pairing": {
+                "reference_provenance": ref_prov,
+                "run_provenance": run_prov,
+                "mismatches": pairing_mismatches,
+            },
+            "input_file_sha256": file_hashes,
+            "script_sha256": sha256_file(Path(__file__).resolve()),
+            "run_context": {
+                "hostname": socket.gethostname(),
+                "utc_time": datetime.now(timezone.utc).isoformat(),
+                "command": " ".join(sys.argv),
+            },
+        }
+        Path(args.json).write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False))
+        print(f"json report: {Path(args.json).resolve()}")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -916,7 +1108,9 @@ def parse_args():
         "--hours",
         default=None,
         help="comma-separated hours, default 1,6,12,24; also the opt-in to "
-        "compare runs of different length (a common-length prefix)",
+        "compare runs of different length (a common-length prefix). A "
+        "fractional hour (e.g. 0.1 for a 360s output) is accepted, matched "
+        "at exactly h*3600 s like a whole hour",
     )
     parser.add_argument(
         "--tags",
@@ -979,6 +1173,16 @@ def parse_args():
         "lengths; skips every other check in this file (its own mode, not "
         "combinable with --judge, --expect-parity, etc.)",
     )
+    parser.add_argument(
+        "--parity-only",
+        action="store_true",
+        help="criterion 3: a tagged run against its untagged twin. No "
+        "--family, no tags, no per-tag metrics; parent parity only, over "
+        "the union of both runs' fields minus every tag-family output "
+        "(q_tag_*, qv_tag_*, e_src_*, e_tag_*, e_prc_*, q_prc_*, pr_tag_*), "
+        "bit for bit, unconditionally fatal on any break; its own mode, "
+        "like --ladder-share, not combinable with --judge/--tags/--family/etc.",
+    )
     parser.add_argument("--json", default=None, help="write the full report to this path")
     return parser.parse_args()
 
@@ -1007,8 +1211,12 @@ def main():
     if args.ladder_share:
         run_ladder_share(args)
         return
+    if args.parity_only:
+        run_parity_only(args)
+        return
     ref_dir = resolve_output_dir(args.reference, "reference")
     run_dir = resolve_output_dir(args.run, "run")
+    set_suffix(ref_dir, run_dir)
     print(f"reference: {ref_dir}")
     print(f"run:       {run_dir}")
 
@@ -1027,7 +1235,7 @@ def main():
     )
 
     hours_given = args.hours is not None
-    hours = [int(h) for h in (args.hours if hours_given else "1,6,12,24").split(",")]
+    hours = [parse_hour(h) for h in (args.hours if hours_given else "1,6,12,24").split(",")]
     if args.tags:
         tags = [t.strip() for t in args.tags.split(",")]
         region_tags, source_tags = set(), set(tags)  # unclassified; --judge needs discover_tags's split
@@ -1063,8 +1271,8 @@ def main():
     ref_coords = RunCoords("reference")
     run_coords = RunCoords("run")
 
-    ref_rhoa, _, ref_rhoa_units = open_var(ref_dir / "rhoa_1h_inst.nc", "rhoa", "reference", ref_coords, file_hashes)
-    run_rhoa, _, run_rhoa_units = open_var(run_dir / "rhoa_1h_inst.nc", "rhoa", "run", run_coords, file_hashes)
+    ref_rhoa, _, ref_rhoa_units = open_var(ref_dir / f"rhoa{SUFFIX}", "rhoa", "reference", ref_coords, file_hashes)
+    run_rhoa, _, run_rhoa_units = open_var(run_dir / f"rhoa{SUFFIX}", "rhoa", "run", run_coords, file_hashes)
     if ref_rhoa_units != run_rhoa_units:
         die(f"units: rhoa differs between reference ({ref_rhoa_units!r}) and run ({run_rhoa_units!r})")
 
@@ -1088,8 +1296,8 @@ def main():
     print("\nParent parity (bitwise, dtype-width unsigned-int view):")
     parity = {}
     for name in parent_vars:
-        a, a_dims, a_units = open_var(ref_dir / f"{name}_1h_inst.nc", name, "reference", ref_coords, file_hashes, require_z=False)
-        b, b_dims, b_units = open_var(run_dir / f"{name}_1h_inst.nc", name, "run", run_coords, file_hashes, require_z=False)
+        a, a_dims, a_units = open_var(ref_dir / f"{name}{SUFFIX}", name, "reference", ref_coords, file_hashes, require_z=False)
+        b, b_dims, b_units = open_var(run_dir / f"{name}{SUFFIX}", name, "run", run_coords, file_hashes, require_z=False)
         if a_dims != b_dims:
             die(f"{name}: dimension mismatch, reference {a_dims} vs run {b_dims}")
         if a_units != b_units:
@@ -1113,15 +1321,15 @@ def main():
     tag_bitwise = {}
     total_ref_by_hour = {}
     if args.judge and family_table["total_var"]:
-        total_full, _, _ = open_var(ref_dir / f"{family_table['total_var']}_1h_inst.nc", family_table["total_var"], "reference", ref_coords, file_hashes)
+        total_full, _, _ = open_var(ref_dir / f"{family_table['total_var']}{SUFFIX}", family_table["total_var"], "reference", ref_coords, file_hashes)
         for h in hours:
             i = idx_map[h]
             total_ref_by_hour[h] = float(np.sum(total_full[:, i] * ref_rhoa[:, i] * dz))
 
     for tag in tags:
         stem = f"{prefix}{tag}"
-        e_ref_full, _, e_ref_units = open_var(ref_dir / f"{stem}_1h_inst.nc", stem, "reference", ref_coords, file_hashes)
-        e_run_full, _, e_run_units = open_var(run_dir / f"{stem}_1h_inst.nc", stem, "run", run_coords, file_hashes)
+        e_ref_full, _, e_ref_units = open_var(ref_dir / f"{stem}{SUFFIX}", stem, "reference", ref_coords, file_hashes)
+        e_run_full, _, e_run_units = open_var(run_dir / f"{stem}{SUFFIX}", stem, "run", run_coords, file_hashes)
         if e_ref_units != e_run_units:
             die(f"units: '{stem}' differs between reference ({e_ref_units!r}) and run ({e_run_units!r})")
         if e_ref_units is not None and e_ref_units != family_table["unit"]:
@@ -1150,11 +1358,11 @@ def main():
     if args.judge:
         abs_residual_by_hour = {}
         res_stem = f"{prefix}{family_table['residual_name']}"
-        if (ref_dir / f"{res_stem}_1h_inst.nc").is_file():
+        if (ref_dir / f"{res_stem}{SUFFIX}").is_file():
             require_file(ref_dir, res_stem, "reference", file_hashes)
             require_file(run_dir, res_stem, "run", file_hashes)
-            res_ref_full, _, _ = open_var(ref_dir / f"{res_stem}_1h_inst.nc", res_stem, "reference", ref_coords, file_hashes)
-            res_run_full, _, _ = open_var(run_dir / f"{res_stem}_1h_inst.nc", res_stem, "run", run_coords, file_hashes)
+            res_ref_full, _, _ = open_var(ref_dir / f"{res_stem}{SUFFIX}", res_stem, "reference", ref_coords, file_hashes)
+            res_run_full, _, _ = open_var(run_dir / f"{res_stem}{SUFFIX}", res_stem, "run", run_coords, file_hashes)
             for h in hours:
                 if h not in idx_map:
                     continue
@@ -1176,7 +1384,7 @@ def main():
                 for f in remainder_fields:
                     require_file(run_dir, f, "run", file_hashes)
                 field_arrays = {
-                    f: open_var(run_dir / f"{f}_1h_inst.nc", f, "run", run_coords, file_hashes)[0]
+                    f: open_var(run_dir / f"{f}{SUFFIX}", f, "run", run_coords, file_hashes)[0]
                     for f in remainder_fields
                 }
                 for h in hours:

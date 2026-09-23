@@ -60,9 +60,23 @@ sys.path.insert(0, str(HERE / "fixtures" / "e73"))
 import data as e73_data  # noqa: E402
 from expected_e73 import EXPECTED as E73_EXPECTED  # noqa: E402
 
-SOURCE_RUN = Path(
-    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v3_upd_copies/output_0000"
+# A real D4 run. Scratch is not durable, so the archive's copy of the same
+# output (~/git/Clima/ClimaAtmosResiDyn-archive, the owner's decision of
+# 2026-09-23) is the fallback.
+SOURCE_RUN = next(
+    (
+        path
+        for path in (
+            Path("/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v3_upd_copies/output_0000"),
+            Path.home()
+            / "git/Clima/ClimaAtmosResiDyn-archive/scratch_tag_closure/output/v3_upd_copies/output_0000",
+        )
+        if (path / "ta_1h_inst.nc").is_file()
+    ),
+    None,
 )
+if SOURCE_RUN is None:
+    raise SystemExit("v3_upd_copies/output_0000 is neither on scratch nor in the archive")
 TMP_BASE = Path("/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/g3_evidence/test_runs")
 FILES_TO_COPY = [
     "ta_1h_inst.nc",
@@ -200,6 +214,20 @@ def make_tag_yaml(family, tag_specs, z_max=350.0, float_type="Float64", mode_tru
     return "\n".join(lines) + "\n"
 
 
+def make_untagged_yaml(z_max=350.0, float_type="Float64", extra_lines=()):
+    """An untagged twin's merged YAML: both tag blocks empty ('~'), like a
+    real generator writes for a run with no tags at all (--parity-only's
+    target case)."""
+    lines = [
+        "water_tracers: ~",
+        "energy_source_tags: ~",
+        f'FLOAT_TYPE: "{float_type}"',
+        f"z_max: {z_max}",
+    ]
+    lines.extend(extra_lines)
+    return "\n".join(lines) + "\n"
+
+
 def write_synthetic_run(directory, *, z, time, date, column_vars, yaml_text, surface_vars=None, yaml_name="synthetic.yml"):
     """column_vars: {name: (data, units)}. surface_vars: {name: (data, units)}."""
     directory.mkdir(parents=True, exist_ok=True)
@@ -246,6 +274,21 @@ class CompareRunsCLIMutationTests(unittest.TestCase):
                     self.assertEqual(row["rel_integral_change"], 0.0, msg=f"{tag}@{hour}: {row}")
                     self.assertEqual(row["L1_mass_weighted"], 0.0, msg=f"{tag}@{hour}: {row}")
                     self.assertEqual(row["Linf_peak_normalized"], 0.0, msg=f"{tag}@{hour}: {row}")
+
+    def test_1b_another_output_period_is_read(self):
+        # A run with five-minute output writes '<name>_5m_inst.nc'. Both runs
+        # renamed alike compare as before; one renamed alone is refused.
+        ref, run = make_run_pair(self.tmp)
+        for directory in (ref, run):
+            for path in directory.glob("*_1h_inst.nc"):
+                path.rename(directory / path.name.replace("_1h_inst", "_5m_inst"))
+        proc = run_compare(ref, run, extra_args=["--tags", MINIMAL_TAGS])
+        self.assertEqual(proc.returncode, 0, msg=proc.stderr)
+        path = next(run.glob("ta_5m_inst.nc"))
+        path.rename(run / "ta_1h_inst.nc")
+        proc = run_compare(ref, run, extra_args=["--tags", MINIMAL_TAGS])
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("kinds of instantaneous output", proc.stderr)
 
     def test_2_deleted_variable_fails(self):
         ref, run = make_run_pair(self.tmp)
@@ -335,6 +378,20 @@ class AnalyticMetricTests(unittest.TestCase):
     """B1: closed-form values for compute_faces_and_dz and tag_row_metrics,
     called directly (no subprocess, no files), so a wrong weight or formula
     cannot hide behind file I/O."""
+
+    def test_parse_hour_int_vs_fractional(self):
+        self.assertEqual(compare_runs.parse_hour("1"), 1)
+        self.assertIsInstance(compare_runs.parse_hour("1"), int)
+        self.assertEqual(compare_runs.parse_hour("24"), 24)
+        self.assertEqual(compare_runs.parse_hour("0.1"), 0.1)
+        self.assertIsInstance(compare_runs.parse_hour("0.1"), float)
+        self.assertEqual(compare_runs.parse_hour("2.0"), 2)
+        self.assertIsInstance(compare_runs.parse_hour("2.0"), int)
+
+    def test_format_hour_handles_int_and_float(self):
+        self.assertEqual(compare_runs.format_hour(1), "   1")
+        self.assertEqual(compare_runs.format_hour(24), "  24")
+        self.assertIn("0.1", compare_runs.format_hour(0.1))
 
     def test_faces_and_dz_nonuniform(self):
         faces, dz = compare_runs.compute_faces_and_dz(NONUNIFORM_Z, "test")
@@ -919,6 +976,129 @@ class SyntheticRunTests(unittest.TestCase):
         self.assertAlmostEqual(row["phi_run_column"], 0.2, delta=1e-9)
         self.assertAlmostEqual(row["share_delta_column"], 0.0, delta=1e-9)
         self.assertNotIn("L1_phi_level_wise", row)
+
+    # --- criterion 3: --parity-only (a tagged run against its untagged twin) ---
+
+    def make_parity_only_pair(self, *, break_common=False, extra_only_in_run=None):
+        """An untagged reference and a tagged run, sharing every non-tag
+        field, on a small water grid. break_common perturbs a shared field
+        (ta) so it is no longer bit for bit; extra_only_in_run adds one
+        more field, present in the run only, under the given name."""
+        time = np.arange(3) * 3600.0
+        date = time.copy()
+        n = (3, 3)
+        common = {
+            "rhoa": (np.ones(n) * 1.2, "kg m^-3"),
+            "ta": (np.ones(n) * 280.0, "K"),
+            "hus": (np.ones(n) * 5.0, "kg kg^-1"),
+        }
+        ref = self.tmp / "output_0000"
+        run = self.tmp / "output_0001"
+        write_synthetic_run(
+            ref, z=NONUNIFORM_Z, time=time, date=date, column_vars=dict(common),
+            yaml_text=make_untagged_yaml(), yaml_name="untagged.yml",
+        )
+        run_vars = dict(common)
+        if break_common:
+            run_vars["ta"] = (np.ones(n) * 280.0 + 0.5, "K")
+        run_vars["q_tag_tropo"] = (np.ones(n) * 3.0, "kg kg^-1")
+        run_vars["q_tag_res"] = (np.zeros(n), "kg kg^-1")
+        if extra_only_in_run:
+            run_vars[extra_only_in_run] = (np.ones(n), "kg kg^-1")
+        write_synthetic_run(
+            run, z=NONUNIFORM_Z, time=time, date=date, column_vars=run_vars,
+            yaml_text=make_tag_yaml("water", [("tropo", True, None)]), yaml_name="tagged.yml",
+        )
+        return ref, run
+
+    def test_parity_only_passes_and_reports_tag_only_fields(self):
+        ref, run = self.make_parity_only_pair()
+        json_path = self.tmp / "report.json"
+        proc = run_compare(ref, run, extra_args=["--parity-only"], json_path=json_path)
+        self.assertEqual(proc.returncode, 0, msg=proc.stderr)
+        self.assertIn("PASS", proc.stdout)
+        report = json.loads(json_path.read_text())
+        self.assertNotIn("tags", report)  # no per-tag metrics in this mode
+        self.assertEqual(report["mode"], "parity_only")
+        self.assertEqual(sorted(report["tag_only_fields"]["run"]), ["q_tag_res", "q_tag_tropo"])
+        self.assertEqual(report["tag_only_fields"]["reference"], [])
+        for name in ("rhoa", "ta", "hus"):
+            self.assertTrue(report["parent_parity"][name]["identical"], msg=name)
+        self.assertNotIn("q_tag_tropo", report["parent_parity"])
+
+    def test_parity_only_fails_on_bitwise_break_unconditionally(self):
+        """--parity-only is fatal on any break even without --expect-parity
+        (unlike the default main() flow)."""
+        ref, run = self.make_parity_only_pair(break_common=True)
+        proc = run_compare(ref, run, extra_args=["--parity-only"])
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("ta", proc.stderr)
+
+    def test_parity_only_fails_on_non_tag_field_in_only_one_run(self):
+        """A one-run-only field that is not a tag-family output (e.g. clw,
+        forgotten in the reference) must fail, unlike the tag fields."""
+        ref, run = self.make_parity_only_pair(extra_only_in_run="clw")
+        proc = run_compare(ref, run, extra_args=["--parity-only"])
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("clw", proc.stderr)
+        self.assertIn("only one run", proc.stderr)
+
+    def test_parity_only_same_directory_refused(self):
+        ref, _ = self.make_parity_only_pair()
+        proc = run_compare(ref, ref, extra_args=["--parity-only"])
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("same directory", proc.stderr)
+
+    # --- fractional --hours ---
+
+    def make_fractional_run_pair(self, *, perturb_last=0.0):
+        """Two runs at a 360s cadence (hours 0, 0.1, 0.2), like the V-W0a 2h
+        configs' 5-minute-labelled, 360s-stepped output."""
+        time = np.array([0.0, 360.0, 720.0])
+        date = time.copy()
+        tag_ref = np.array([[1.0, 2.0, 3.0], [0.5, 1.0, 1.5], [0.1, 0.2, 0.3]])
+        tag_run = tag_ref.copy()
+        tag_run[:, -1] += perturb_last
+        common_ref = {"rhoa": (np.ones((3, 3)), "kg m^-3"), "q_tag_t": (tag_ref, "kg kg^-1")}
+        common_run = {"rhoa": (np.ones((3, 3)), "kg m^-3"), "q_tag_t": (tag_run, "kg kg^-1")}
+        yaml_text = make_tag_yaml("water", [("t", True, None)])
+        ref = self.tmp / "output_0000"
+        run = self.tmp / "output_0001"
+        write_synthetic_run(ref, z=NONUNIFORM_Z, time=time, date=date, column_vars=common_ref, yaml_text=yaml_text, yaml_name="a.yml")
+        write_synthetic_run(run, z=NONUNIFORM_Z, time=time, date=date, column_vars=common_run, yaml_text=yaml_text, yaml_name="a.yml")
+        return ref, run
+
+    def test_fractional_hours_are_matched_and_keyed_as_given(self):
+        ref, run = self.make_fractional_run_pair(perturb_last=1.0)
+        json_path = self.tmp / "report.json"
+        proc = run_compare(ref, run, extra_args=["--hours", "0.1,0.2"], json_path=json_path)
+        self.assertEqual(proc.returncode, 0, msg=proc.stderr)
+        report = json.loads(json_path.read_text())
+        self.assertEqual(report["hours"], [0.1, 0.2])
+        rows = report["tag_metrics"]["t"]
+        self.assertIn("0.1", rows)
+        self.assertIn("0.2", rows)
+        # 0.1h (t=360s) is unperturbed; 0.2h (t=720s) has the +1.0 delta at
+        # the top level.
+        self.assertEqual(rows["0.1"]["max_abs_error"], 0.0)
+        self.assertAlmostEqual(rows["0.2"]["max_abs_error"], 1.0, delta=1e-12)
+
+    def test_integral_hour_still_ints_and_unchanged(self):
+        """Regression guard: an all-integer --hours still parses and prints
+        exactly as before (no accidental float creep for the common case)."""
+        ref, run = self.make_fractional_run_pair()
+        json_path = self.tmp / "report.json"
+        proc = run_compare(ref, run, extra_args=["--hours", "0"], json_path=json_path)
+        self.assertEqual(proc.returncode, 0, msg=proc.stderr)
+        report = json.loads(json_path.read_text())
+        self.assertEqual(report["hours"], [0])
+        self.assertIn("0", report["tag_metrics"]["t"])
+
+    def test_fractional_hour_not_present_refused(self):
+        ref, run = self.make_fractional_run_pair()
+        proc = run_compare(ref, run, extra_args=["--hours", "0.15"])
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("0.15", proc.stderr)
 
 
 class E73RegressionTest(unittest.TestCase):

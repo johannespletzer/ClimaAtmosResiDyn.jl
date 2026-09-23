@@ -1,0 +1,19 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton10/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w0a_0m_newton1/output_0000
+
+ladder-share mode: level_wise_and_column_integrals (same z grid: True)
+  tropo         1h  phi_ref=0.7200160015625011  phi_run=0.7200110728430166  delta=-4.928719484542654e-06 L1_phi=1.037e-03
+  tropo         6h  phi_ref=0.7413791157263705  phi_run=0.7413631621873297  delta=-1.595353904082497e-05 L1_phi=3.468e-04
+  tropo        12h  phi_ref=0.7602242772062012  phi_run=0.760205993764716  delta=-1.8283441485245078e-05 L1_phi=1.805e-04
+  tropo        24h  phi_ref=0.7897637965642367  phi_run=0.7897463942877982  delta=-1.74022764384274e-05 L1_phi=6.604e-05
+  strat         1h  phi_ref=0.28004452349670156  phi_run=0.2800368216784246  delta=-7.701818276972805e-06 L1_phi=1.167e-03
+  strat         6h  phi_ref=0.25869880351155505  phi_run=0.25869322616166585  delta=-5.57734988920755e-06 L1_phi=5.682e-04
+  strat        12h  phi_ref=0.23985266684059106  phi_run=0.2398484559909791  delta=-4.210849611968603e-06 L1_phi=3.588e-04
+  strat        24h  phi_ref=0.21030384561326854  phi_run=0.21030094778955116  delta=-2.897823717373793e-06 L1_phi=1.574e-04
+  evap          1h  phi_ref=0.01156046387218397  phi_run=0.011560211101709338  delta=-2.527704746312087e-07 L1_phi=2.199e-05
+  evap          6h  phi_ref=0.06735067904781929  phi_run=0.06734936967736899  delta=-1.309370450300329e-06 L1_phi=2.724e-05
+  evap         12h  phi_ref=0.12866801286489388  phi_run=0.12866579951136295  delta=-2.213353530927664e-06 L1_phi=2.603e-05
+  evap         24h  phi_ref=0.23337697911202412  phi_run=0.23337366363589238  delta=-3.3154761317488735e-06 L1_phi=1.855e-05
+
+parent's own change (L1, same grid): {'hus': {1: 4.198031322526023e-05, 6: 2.351141288542293e-05, 12: 1.839516007511476e-05, 24: 1.2733924112987643e-05}, 'rhoa': {1: 1.2233193396765478e-05, 6: 1.6137300698633182e-06, 12: 1.2859827498966452e-06, 24: 8.827704704760374e-07}}
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w0a_0m_newton1/verifier_share.json
