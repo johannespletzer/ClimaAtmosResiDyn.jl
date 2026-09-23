@@ -114,6 +114,11 @@ function temporary_quantities(Y, atmos)
             Fields.level(Fields.Field(FT, center_space), 1),
         ),
         ᶜtemp_C12 = Fields.Field(C12{FT}, center_space), # ᶜuₕ_mean
+        # DSS buffer for the horizontal gradient vector of the geometric SGS variance
+        # (`hgrad_invariant!`); `nothing` on spaces that need no DSS (single columns).
+        ᶜC12_dss_buffer = (uses_covariances(atmos) && do_dss(center_space)) ?
+                          Spaces.create_dss_buffer(Fields.Field(C12{FT}, center_space)) :
+                          nothing,
         ᶜtemp_C3 = Fields.Field(C3{FT}, center_space), # ᶜ∇Φ₃
         ᶜtemp_CT3 = Fields.Field(CT3{FT}, center_space), # ᶜω³, ᶜ∇Φ³
         ᶜtemp_CT123 = Fields.Field(CT123{FT}, center_space),
@@ -164,12 +169,12 @@ function temporary_quantities(Y, atmos)
         ᶠbidiagonal_matrix_ct3xct12 = similar(
             Y.f,
             BidiagonalMatrixRow{
-                ClimaCore.Geometry.AxisTensor{
-                    FT,
+                ClimaCore.Geometry.Tensor{
                     2,
+                    FT,
                     Tuple{
-                        ClimaCore.Geometry.ContravariantAxis{(3,)},
-                        ClimaCore.Geometry.ContravariantAxis{(1, 2)},
+                        ClimaCore.Geometry.Contravariant3Axis,
+                        ClimaCore.Geometry.Contravariant12Axis,
                     },
                     SMatrix{1, 2, FT, 2},
                 },

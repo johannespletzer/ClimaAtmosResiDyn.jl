@@ -1,7 +1,17 @@
 using Test
 import ClimaAtmos as CA
+import ClimaComms
+import ClimaCore
+import ClimaCore:
+    Domains, Fields, Geometry, Grids, Hypsography, Meshes, Operators,
+    Quadratures, Spaces, Topologies
 import ClimaDiagnostics
 import Dates
+
+# `AtmosModel` takes a grid. These tests read only the model's tagging fields,
+# so the smallest column serves.
+column_atmos_model(; kwargs...) =
+    CA.AtmosModel(CA.ColumnGrid(Float64; z_elem = 10); kwargs...)
 
 @testset "Energy source tags" begin
     for FT in (Float32, Float64)
@@ -268,7 +278,9 @@ import Dates
             p = (;
                 atmos = (; energy_source_tagging_model = model),
                 tagging = (; ᶜenergy_source_masks = masks),
-                scratch = CA.energy_source_scratch(Y, model),
+                # The bracket needs only the cell-center scratch. The face
+                # fluxes need a face space, which this state has not.
+                scratch = CA.energy_source_cell_scratch(Y.c.ρ, model.offset),
             )
             CA.snapshot_energy_source_tags!(p, Yₜ)
             # The bracketed process gains energy in the first cell and loses it
@@ -467,6 +479,256 @@ import Dates
             "Enthalpy",
         )
         @test_throws ErrorException CA.energy_source_transport_from_config(true)
+        @test CA.energy_source_transport_from_config("enthalpy_increment") isa
+              CA.EnthalpyIncrementEnergySourceTransport
+    end
+
+    # The increment mode takes the parent's increment after each Newton solve,
+    # so it refuses a stepper that applies an implicit tendency without one.
+    @testset "The increment mode refuses steppers it cannot follow" begin
+        CTS = CA.CTS
+        tags = (
+            CA.EnergySourceTag{:strat}(CA.TanhAltitudeRegion(750.0, 100.0)),
+            CA.EnergySourceTag{:tropo}(
+                CA.TanhAltitudeRegion(750.0, 100.0, false),
+            ),
+        )
+        atmos(transport) = (;
+            energy_source_tagging_model = CA.EnergySourceTaggingModel(
+                tags,
+                50000.0;
+                transport,
+            )
+        )
+        increment = atmos(CA.EnthalpyIncrementEnergySourceTransport())
+        newton = CTS.NewtonsMethod()
+        T_imp! = (Yₜ, Y, p, t) -> nothing
+        # The parent's own post-solve correction, which it has unless
+        # `energy_q_tot_upwinding` is `none`.
+        post = (dY, U, p, t) -> nothing
+        check = CA.check_energy_source_increment_supported
+        imex(tableau) = CTS.IMEXAlgorithm(tableau, newton)
+        # Every stage the algorithm uses is solved: the ARS algorithms, and
+        # SSP222, whose implicit diagonal has no zero.
+        for tableau in (CTS.ARS343(), CTS.ARS222(), CTS.SSP222())
+            @test isnothing(check(increment, imex(tableau), T_imp!, post))
+        end
+        @test_throws r"implicit tendency without a solve" check(
+            increment,
+            imex(CTS.SSP333()),
+            T_imp!,
+            post,
+        )
+        @test_throws r"flow is prescribed" check(
+            increment,
+            imex(CTS.ARS343()),
+            nothing,
+            nothing,
+        )
+        @test_throws r"not an IMEX algorithm with a Newton method" check(
+            increment,
+            CTS.ExplicitAlgorithm(CTS.SSP33ShuOsher()),
+            T_imp!,
+            post,
+        )
+        # Without the parent's own post-solve correction, a hook would make
+        # the stepper refresh the cache the model's constraints read.
+        @test_throws r"energy_q_tot_upwinding: none" check(
+            increment,
+            imex(CTS.ARS343()),
+            T_imp!,
+            nothing,
+        )
+        # Every other transport is left alone.
+        @test isnothing(
+            check(
+                atmos(CA.EnthalpyEnergySourceTransport()),
+                imex(CTS.SSP333()),
+                T_imp!,
+                nothing,
+            ),
+        )
+
+        # The ledger exists in this mode only, and its names are not a
+        # tracer's, so no transport reaches it.
+        ledger = CA.energy_source_increment_ledger_variables(
+            1.0,
+            increment.energy_source_tagging_model,
+        )
+        @test keys(ledger) == (:e_src_inc_left, :e_src_inc_moved)
+        @test all(iszero, values(ledger))
+        @test CA.energy_source_increment_ledger_names(
+            increment.energy_source_tagging_model,
+        ) == keys(ledger)
+        enthalpy = atmos(CA.EnthalpyEnergySourceTransport())
+        @test CA.energy_source_increment_ledger_variables(
+            1.0,
+            enthalpy.energy_source_tagging_model,
+        ) == (;)
+        @test CA.energy_source_increment_ledger_names(
+            enthalpy.energy_source_tagging_model,
+        ) == ()
+        for name in keys(ledger)
+            @test CA.is_energy_source_ledger_name(name)
+            @test !CA.is_energy_source_tag_name(name)
+            @test !startswith(string(name), "ρ")
+            @test !CA.is_tracer_var(name)
+        end
+
+        # A restart checks the ledger's fields, through the checkpoint's own
+        # check, in both directions. Both stop before the file is opened.
+        restart_model(source) = (;
+            energy_source_tagging_model = source,
+            energy_process_record = nothing,
+            water_process_record = nothing,
+        )
+        state(names...) = (;
+            c = NamedTuple{(:ρ, :ρe_src_strat, :ρe_src_tropo, names...)}(
+                zeros(3 + length(names)),
+            )
+        )
+        @test_throws r"Missing from the file: e_src_inc_left, e_src_inc_moved" CA.check_energy_source_checkpoint(
+            "restart.hdf5",
+            restart_model(increment.energy_source_tagging_model),
+            state(),
+            nothing,
+        )
+        @test_throws r"Not configured: e_src_inc_left, e_src_inc_moved" CA.check_energy_source_checkpoint(
+            "restart.hdf5",
+            restart_model(enthalpy.energy_source_tagging_model),
+            state(keys(ledger)...),
+            nothing,
+        )
+
+        # The mode needs region tags that partition the domain: at least one,
+        # checked when the model is built, and masks that sum to 1, checked
+        # when the cache is built.
+        @test_throws r"needs region tags without sources" CA.EnergySourceTaggingModel(
+            (CA.EnergySourceTag{:sfc}(nothing, :surface_flux),),
+            50000.0;
+            transport = CA.EnthalpyIncrementEnergySourceTransport(),
+        )
+        masks(a, b) = (; ρe_src_strat = fill(a, 3), ρe_src_tropo = fill(b, 3))
+        partition = (:ρe_src_strat, :ρe_src_tropo)
+        @test isnothing(
+            CA._check_increment_partition(
+                masks(0.25, 0.75),
+                partition,
+                increment.energy_source_tagging_model,
+            ),
+        )
+        @test_throws r"partition the domain" CA._check_increment_partition(
+            masks(0.25, 0.5),
+            partition,
+            increment.energy_source_tagging_model,
+        )
+        @test isnothing(
+            CA._check_increment_partition(
+                masks(0.25, 0.5),
+                partition,
+                enthalpy.energy_source_tagging_model,
+            ),
+        )
+        # And the model refuses the mode without an offset.
+        @test_throws r"enthalpy_increment` needs `energy_source_tag_offset`" CA.EnergySourceTaggingModel(
+            tags;
+            transport = CA.EnthalpyIncrementEnergySourceTransport(),
+        )
+    end
+
+    @testset "The increment's flux under a deep atmosphere" begin
+        # On a deep sphere the faces grow with height. The correction's column
+        # integrals are per unit area of the bottom face, and the divergence
+        # weights each face by its own area. So the flux is scaled by the
+        # bottom face's area over each face's own, and then each cell takes
+        # exactly its part of the mismatch. On ClimaCore's grids alone, deep
+        # and shallow, with and without a mountain.
+        FT = Float64
+        radius = FT(6.371e6)
+        function sphere_spaces(deep, mountain)
+            context = ClimaComms.SingletonCommsContext()
+            horizontal = Spaces.SpectralElementSpace2D(
+                Topologies.Topology2D(
+                    context,
+                    Meshes.EquiangularCubedSphere(Domains.SphereDomain(radius), 2),
+                ),
+                Quadratures.GLL{3}(),
+            )
+            vertical = Grids.FiniteDifferenceGrid(
+                Topologies.IntervalTopology(
+                    context,
+                    Meshes.IntervalMesh(
+                        Domains.IntervalDomain(
+                            Geometry.ZPoint(FT(0)),
+                            Geometry.ZPoint(FT(30000));
+                            boundary_names = (:bottom, :top),
+                        );
+                        nelems = 10,
+                    ),
+                ),
+            )
+            hypsography = if mountain
+                coordinates = Fields.coordinate_field(horizontal)
+                Hypsography.LinearAdaption(
+                    @. Geometry.ZPoint(
+                        FT(3000) * exp(
+                            -((coordinates.lat - 30)^2 + (coordinates.long - 40)^2) /
+                            400,
+                        ),
+                    )
+                )
+            else
+                Grids.Flat()
+            end
+            grid = Grids.ExtrudedFiniteDifferenceGrid(
+                Spaces.grid(horizontal),
+                vertical,
+                hypsography;
+                deep,
+            )
+            return (
+                Spaces.CenterExtrudedFiniteDifferenceSpace(grid),
+                Spaces.FaceExtrudedFiniteDifferenceSpace(grid),
+            )
+        end
+        half = ClimaCore.Utilities.half
+        for deep in (true, false), mountain in (false, true)
+            ᶜspace, ᶠspace = sphere_spaces(deep, mountain)
+            ᶜz = Fields.coordinate_field(ᶜspace).z
+            ᶠz = Fields.coordinate_field(ᶠspace).z
+            ᶜm = @. FT(100) * (sin(2 * FT(π) * ᶜz / 30000) + FT(0.3))
+            ᶜabs = abs.(ᶜm)
+            ᶠI = Fields.Field(FT, ᶠspace)
+            ᶠA = Fields.Field(FT, ᶠspace)
+            Operators.column_integral_indefinite!(ᶠI, ᶜm)
+            Operators.column_integral_indefinite!(ᶠA, ᶜabs)
+            M = zeros(axes(Fields.level(ᶠI, half)))
+            A = zeros(axes(Fields.level(ᶠI, half)))
+            Operators.column_integral_definite!(M, ᶜm)
+            Operators.column_integral_definite!(A, ᶜabs)
+            ᶠratio = CA._energy_source_face_area_ratio(ᶠI)
+            # The ratio is the square of the radii, and 1 when shallow.
+            ᶠz_bottom = Fields.level(ᶠz, half)
+            ᶠexpected = @. ifelse(deep, ((radius + ᶠz_bottom) / (radius + ᶠz))^2, FT(1))
+            @test maximum(abs, parent(ᶠratio) .- parent(ᶠexpected)) < 100 * eps(FT)
+            @test deep == (minimum(parent(ᶠratio)) < 1 - 1e-4)
+            # Each cell takes the mismatch less the part left in place.
+            dtγ = FT(60)
+            r = @. M / A
+            ᶜexpected = @. ᶜm - r * ᶜabs
+            function change(ratio)
+                ᶠflux = @. CA.CT3(Geometry.WVector(-(ᶠI - r * ᶠA) / dtγ * ratio))
+                return @. -dtγ * CA.ᶜadvdivᵥ(ᶠflux)
+            end
+            scale = maximum(abs, parent(ᶜm))
+            @test maximum(abs, parent(change(ᶠratio)) .- parent(ᶜexpected)) <
+                  1000 * eps(FT) * scale
+            # Without the ratio a deep atmosphere misses, so the test can fail.
+            deep && @test maximum(
+                abs,
+                parent(change(one(FT))) .- parent(ᶜexpected),
+            ) > 1e-4 * scale
+        end
     end
 
     @testset "Repair on fields ($FT)" for FT in (Float32, Float64)
@@ -548,12 +810,12 @@ import Dates
     end
 
     @testset "AtmosModel integration" begin
-        model = CA.AtmosModel()
+        model = column_atmos_model()
         @test isnothing(model.energy_source_tagging_model)
         @test isnothing(model.tagging.energy_source_tagging_model)
 
         tags = (CA.EnergySourceTag{:everywhere}(CA.EntireDomain()),)
-        model = CA.AtmosModel(;
+        model = column_atmos_model(;
             energy_source_tagging_model = CA.EnergySourceTaggingModel(tags),
         )
         @test model.energy_source_tagging_model isa
@@ -565,7 +827,7 @@ import Dates
     @testset "Diagnostics registration" begin
         @test isnothing(
             CA.Diagnostics.register_energy_source_tagging_diagnostics!(
-                CA.AtmosModel(),
+                column_atmos_model(),
             ),
         )
 
@@ -578,7 +840,7 @@ import Dates
             ),
         )
         CA.Diagnostics.register_energy_source_tagging_diagnostics!(
-            CA.AtmosModel(;
+            column_atmos_model(;
                 energy_source_tagging_model = CA.EnergySourceTaggingModel(tags),
             ),
         )
@@ -956,4 +1218,215 @@ import Dates
             MF.BlockDiagonalSolve(),
         )
     end
+end
+
+# The restart guard. A checkpoint records the settings that decide what the tags
+# in it mean, and a restart that changes one is refused by name. This needs no
+# simulation: a small checkpoint, and a model and a state that carry only what
+# the check reads.
+@testset "The restart guard" begin
+    context = CA.ClimaComms.context()
+    HDF5 = CA.InputOutput.HDF5
+    tags(width = 100.0; sources = (:radiation,)) = (
+        CA.EnergySourceTag{:strat}(CA.TanhAltitudeRegion(750.0, width, true)),
+        CA.EnergySourceTag{:tropo}(CA.TanhAltitudeRegion(750.0, width, false)),
+        CA.EnergySourceTag{:rad}(nothing, sources),
+    )
+    source_model(;
+        offset = 50000.0,
+        width = 100.0,
+        sources = (:radiation,),
+        repair = true,
+        transport = CA.TracerEnergySourceTransport(),
+    ) = CA.EnergySourceTaggingModel(tags(width; sources), offset; repair, transport)
+    atmos(model; energy_process_record = nothing, water_process_record = nothing) =
+        (; energy_source_tagging_model = model, energy_process_record, water_process_record)
+    state(names...) =
+        (; c = NamedTuple{(:ρ, :ρe_tot, names...)}(Tuple(zeros(2 + length(names)))))
+    tagged = state(:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
+    directory = mktempdir()
+    # A checkpoint with the attributes a run writes. `edit` changes the file
+    # afterwards, to stand in for a file from another version.
+    function checkpoint(model, name; record = true, edit = file -> nothing)
+        path = joinpath(directory, "$name.hdf5")
+        writer = CA.InputOutput.HDF5Writer(path, context)
+        record && CA.write_energy_source_checkpoint_attributes!(writer.file, model)
+        edit(writer.file)
+        Base.close(writer)
+        return path
+    end
+    check(path, model, Y = tagged; kwargs...) =
+        CA.check_energy_source_checkpoint(path, atmos(model; kwargs...), Y, context)
+
+    written = checkpoint(source_model(), "written")
+    # The same settings restart.
+    @test isnothing(check(written, source_model()))
+    # Each changed setting is refused, and the error names it with both values.
+    @test_throws r"`energy_source_tag_offset: 50000\.0`.*sets 60000\.0" check(
+        written,
+        source_model(; offset = 60000.0),
+    )
+    @test_throws r"tag `strat`.*width = 100\.0.*width = 200\.0" check(
+        written,
+        source_model(; width = 200.0),
+    )
+    @test_throws r"tag `rad`.*sources `radiation`.*sources `surface_flux`" check(
+        written,
+        source_model(; sources = (:surface_flux,)),
+    )
+    @test_throws r"`energy_source_tag_transport: tracer`.*sets enthalpy" check(
+        written,
+        source_model(; transport = CA.EnthalpyEnergySourceTransport()),
+    )
+    @test_throws r"`energy_source_tag_repair: true`.*sets false" check(
+        written,
+        source_model(; repair = false),
+    )
+    unrepaired = checkpoint(source_model(; repair = false), "unrepaired")
+    @test_throws r"`energy_source_tag_repair: false`.*sets true" check(
+        unrepaired,
+        source_model(),
+    )
+    # A tag matches a source by membership, so the order of its sources does
+    # not count.
+    two_sources = checkpoint(
+        source_model(; sources = (:radiation, :surface_flux)),
+        "two_sources",
+    )
+    @test isnothing(
+        check(two_sources, source_model(; sources = (:surface_flux, :radiation))),
+    )
+    # No offset is an offset of zero, as `energy_source_tag_offset: 0` is read.
+    unshifted = checkpoint(source_model(; offset = nothing), "unshifted")
+    @test isnothing(check(unshifted, source_model(; offset = nothing)))
+    @test isnothing(check(unshifted, source_model(; offset = 0.0)))
+    @test_throws r"`energy_source_tag_offset: 0\.0`.*sets 50000\.0" check(
+        unshifted,
+        source_model(),
+    )
+    # A `Float32` offset is written and compared in its own type.
+    single = checkpoint(source_model(; offset = 110495.3f0), "single")
+    @test isnothing(check(single, source_model(; offset = 110495.3f0)))
+
+    # The fields, which need no attribute. A tag set that differs names what
+    # is missing and what is not configured.
+    other_tags = CA.EnergySourceTaggingModel(
+        (tags()[1], tags()[2], CA.EnergySourceTag{:sfc}(nothing, :surface_flux)),
+        50000.0,
+    )
+    @test_throws r"Missing from the file: sfc\. Not configured: rad\." check(
+        written,
+        other_tags,
+    )
+    reordered = CA.EnergySourceTaggingModel((tags()[2], tags()[1], tags()[3]), 50000.0)
+    @test_throws r"same, in a different order" check(written, reordered)
+    # Tags in the file, none in the run, and the reverse.
+    @test_throws r"energy source tags strat, tropo, rad, and this run configures none" check(
+        written,
+        nothing,
+    )
+    @test_throws r"energy source tags none, and this run configures strat" check(
+        written,
+        source_model(),
+        state(),
+    )
+    @test isnothing(check(written, nothing, state()))
+    # The process records are checked the same way, energy and water.
+    record = CA.ProcessRecordModel((CA.RecordedProcess{:radiation}(),))
+    @test_throws r"energy process records none, and this run configures radiation" check(
+        written,
+        source_model(),
+        tagged;
+        energy_process_record = record,
+    )
+    @test isnothing(
+        check(
+            written,
+            source_model(),
+            state(:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad, :prc_e_radiation);
+            energy_process_record = record,
+        ),
+    )
+    @test_throws r"water process records none, and this run configures radiation" check(
+        written,
+        source_model(),
+        tagged;
+        water_process_record = record,
+    )
+
+    # A checkpoint from before the guard is checked by its fields, with a
+    # warning, and restarts.
+    unrecorded = checkpoint(source_model(), "unrecorded"; record = false)
+    @test_logs (:warn, r"written before") check(unrecorded, source_model())
+    # A checkpoint in another version of the format is refused.
+    newer = checkpoint(
+        source_model(),
+        "newer";
+        edit = file -> begin
+            HDF5.delete_attribute(file, "energy_source_tag_checkpoint")
+            HDF5.write_attribute(file, "energy_source_tag_checkpoint", 2)
+        end,
+    )
+    @test_throws r"version 2 of the checkpoint format.*reads version 1" check(
+        newer,
+        source_model(),
+    )
+    # A tag the file holds but records no definition for is refused.
+    undefined = checkpoint(
+        source_model(),
+        "undefined";
+        edit = file -> HDF5.delete_attribute(file, "energy_source_tag.rad"),
+    )
+    @test_throws r"no definition for the energy source tag `rad`" check(
+        undefined,
+        source_model(),
+    )
+    # A polygon too long for one HDF5 attribute is written in parts.
+    long_polygon = CA.EnergySourceTaggingModel(
+        (
+            CA.EnergySourceTag{:strat}(
+                CA.TanhPolygonRegion(
+                    Tuple((k / 10, sin(k / 100)) for k in 1:1600),
+                    1.0,
+                    true,
+                ),
+            ),
+        ),
+        50000.0,
+    )
+    long = checkpoint(long_polygon, "long")
+    @test HDF5.h5open(file -> HDF5.read_attribute(file, "energy_source_tag.strat"), long) >
+          1
+    @test isnothing(check(long, long_polygon, state(:ρe_src_strat)))
+
+    # The region a checkpoint records reads back to the same region, for every
+    # region type, in `Float64` and in `Float32`.
+    for FT in (Float64, Float32)
+        regions = (
+            CA.EntireDomain(),
+            CA.TanhAltitudeRegion(FT(750.3), FT(100), false),
+            CA.TanhLatitudeRegion(FT(20), FT(2), true),
+            CA.TanhBoxRegion(FT(170), FT(-170), FT(-10), FT(10), FT(2), false),
+            CA.TanhPolygonRegion(
+                ((FT(0), FT(0)), (FT(10), FT(0)), (FT(5), FT(8))),
+                FT(1.5),
+                true,
+            ),
+        )
+        for region in regions
+            @test CA.tag_region_from_config(Dict(CA.tag_region_spec(region)), FT) ==
+                  region
+        end
+    end
+    @test CA.tag_region_text(nothing) == "none"
+    @test CA.tag_region_text(CA.EntireDomain()) == "everywhere"
+    @test CA.tag_region_text(CA.TanhAltitudeRegion(750.0, 100.0, true)) ==
+          "tanh_altitude(z_center = 750.0, width = 100.0, above = true)"
+    # A `Float32` region prints as it was configured, not widened.
+    @test CA.tag_region_text(CA.TanhAltitudeRegion(750.3f0, 100.0f0, true)) ==
+          "tanh_altitude(z_center = 750.3, width = 100.0, above = true)"
+    @test CA.tag_region_text(
+        CA.TanhPolygonRegion(((0.0, 1.5), (2.0, 3.0), (4.0, 5.0)), 1.0, false),
+    ) ==
+          "tanh_polygon(vertices = [[0.0, 1.5], [2.0, 3.0], [4.0, 5.0]], width = 1.0, inside = false)"
 end

@@ -26,6 +26,8 @@ const KNOWN_TEST_GROUPS = (
     "tagging_source",
     "tagging_record",
     "tagging_source_float32",
+    "tagging_source_edmf",
+    "tagging_source_increment",
     "parameterizations",
     "restarts",
 )
@@ -72,7 +74,7 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "SlabOcean SST warning" begin @time include("slab_ocean_warning.jl") end
     @safetestset "Model getters" begin @time include("config/model_from_config.jl") end
     @safetestset "Tracer config" begin @time include("config/tracer_config.jl") end
-    @safetestset "AtmosModel Constructor" begin @time include("config/atmos_model_constructor.jl") end
+    @safetestset "AtmosModel" begin @time include("config/atmos_model.jl") end
     @safetestset "Presets" begin @time include("presets.jl") end
     @safetestset "Topography tests" begin @time include("topography.jl") end
 end
@@ -192,6 +194,24 @@ end
 if TEST_GROUP in ("tagging_source_float32", "all")
     @safetestset "Energy source tags and process records (Float32) integration" begin
         @time include("energy_source_tags_float32_integration.jl")
+    end
+end
+
+# The EDMF column is the most expensive model in the suite to build, and this
+# file builds it twice, with the tags and without them. A group of its own
+# keeps that out of the other groups' budgets.
+if TEST_GROUP in ("tagging_source_edmf", "all")
+    @safetestset "Energy source tags under EDMF integration" begin
+        @time include("energy_source_tags_edmf_integration.jl")
+    end
+end
+
+# `energy_source_tag_transport: enthalpy_increment` is a model type of its own,
+# and its check against the column without tags needs a second. The file builds
+# the EDMF column twice, so it has a group of its own.
+if TEST_GROUP in ("tagging_source_increment", "all")
+    @safetestset "Energy source tags following the implicit increment" begin
+        @time include("energy_source_tags_increment_integration.jl")
     end
 end
 

@@ -149,6 +149,64 @@ is_energy_source_tag_name(name::Symbol) = startswith(string(name), "ρe_src_")
 is_energy_source_tag_name(name::MatrixFields.FieldName) =
     is_energy_source_tag_name(MatrixFields.extract_first(name))
 
+# The names of the increment correction's ledger, in the state's order.
+const ENERGY_SOURCE_LEDGER_NAMES = (:e_src_inc_left, :e_src_inc_moved)
+
+"""
+    energy_source_increment_ledger_variables(ρe_parent, model)
+
+The ledger of [`correct_energy_source_increment!`](@ref), for a single grid
+point, as zeros of the type of `ρe_parent`. Only under
+`energy_source_tag_transport: enthalpy_increment`, and `(;)` otherwise:
+
+  - `e_src_inc_left`: the energy the correction has left out of the tags, in
+    J/m³, since the start of the run. In each column it sums to the part of the
+    parent's implicit increment of `E` that changes the column's total and that
+    the tags' own implicit tendencies did not take. That part lands in
+    `e_src_res`.
+  - `e_src_inc_moved`: the energy the correction has moved between levels, in
+    J/m³, since the start of the run. It is the part of the mismatch that sums
+    to zero in each column. That is mostly vertical transport the tags' own
+    implicit tendencies did not take, and also the column-neutral part of
+    their lag behind the parent's other implicit terms.
+
+Both are prognostic, so the stepper weights each stage's entry as it weights
+the tags. They record what the correction intends. A face whose donor cell has
+no share of the partition moves no tag, so there a cell's actual change
+differs, and the difference lands in `e_src_res` but in neither field. The
+column totals are right.
+
+Like the process records, their names carry no `ρ` prefix. So `gs_tracer_names`
+and `is_tracer_var` skip them, and no transport or limiter reaches them. They
+are carried through a restart.
+"""
+energy_source_increment_ledger_variables(ρe_parent, ::Nothing) = (;)
+energy_source_increment_ledger_variables(
+    ρe_parent,
+    model::EnergySourceTaggingModel,
+) =
+    follows_implicit_increment(model) ?
+    NamedTuple{ENERGY_SOURCE_LEDGER_NAMES}((zero(ρe_parent), zero(ρe_parent))) :
+    (;)
+
+"""
+    energy_source_increment_ledger_names(model)
+
+`Tuple` of the state-field `Symbol`s of the increment correction's ledger:
+`(:e_src_inc_left, :e_src_inc_moved)` under `enthalpy_increment`, and `()`
+otherwise. See [`energy_source_increment_ledger_variables`](@ref).
+"""
+energy_source_increment_ledger_names(model) =
+    follows_implicit_increment(model) ? ENERGY_SOURCE_LEDGER_NAMES : ()
+
+"""
+    is_energy_source_ledger_name(name)
+
+Whether `name`, a `Symbol`, is a field of the increment correction's ledger.
+"""
+is_energy_source_ledger_name(name::Symbol) =
+    name in ENERGY_SOURCE_LEDGER_NAMES
+
 # ============================================================================
 # Cache
 # ============================================================================
@@ -172,6 +230,11 @@ when they are disabled. Contains:
   - `ᶠenergy_source_interior`: one on every face but the bottom one, where it
     is zero. `sediment_energy_source_tags!` uses it to keep the lowest cell as
     the donor at the surface, where there is no cell below.
+  - Under `energy_source_tag_transport: enthalpy_increment` only, the fields of
+    `snapshot_energy_source_increment!` and `correct_energy_source_increment!`:
+    the snapshots of `ρe_tot`, `ρ` and the partition's sum at the start of an
+    implicit stage, the stage weight `dtγ`, the correction's work fields, and
+    each face's area relative to the bottom face's.
 """
 _energy_source_tagging_cache(Y, ::Nothing) = nothing
 function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
@@ -181,6 +244,11 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         energy_source_region_tag_state_names(model),
         "e_src_res",
         "ρe_src",
+    )
+    _check_increment_partition(
+        ᶜenergy_source_masks,
+        energy_source_region_tag_state_names(model),
+        model,
     )
     _check_parent_positivity(Y, model)
     _check_sedimentation_offset(Y, model)
@@ -198,7 +266,33 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         ᶜenergy_source_pos,
         ᶜenergy_source_neg,
         ᶠenergy_source_interior,
+        _energy_source_increment_cache(Y, model)...,
     )
+end
+
+# The increment correction gives the partition the parent's increment of `E`,
+# less what the partition's own tendencies moved. So under
+# `enthalpy_increment` the region tags must partition all of `E`, where the
+# other transports only warn (`_check_region_partition`). That there is a
+# region tag at all is checked when the model is built.
+function _check_increment_partition(ᶜmasks, names, model)
+    follows_implicit_increment(model) || return nothing
+    isempty(names) && return nothing
+    mask_sum = reduce(
+        (a, b) -> a .+ b,
+        map(name -> parent(getproperty(ᶜmasks, name)), names),
+    )
+    deviation = maximum(abs.(mask_sum .- 1))
+    deviation > 0.01 && error(
+        "`energy_source_tag_transport: enthalpy_increment` needs region tags \
+        that partition the domain, and the masks of these sum to 1 only to \
+        within $deviation. The correction gives the region tags the parent's \
+        increment of the total they partition, so where their masks leave a \
+        gap or overlap, the tags would take too much or too little. Use \
+        regions that sum to 1, such as a region and its complement via \
+        `inside: false` or `above: false`.",
+    )
+    return nothing
 end
 
 # Sedimentation moves each tag by its share of the total the tags partition,
@@ -229,22 +323,31 @@ _energy_source_fix_fields(ᶜρ, tags::Tuple) = merge(
 
 Scratch fields of the energy source tags, merged into `p.scratch`: the
 bracket's snapshot of `Yₜ.c.ρe_tot`, the partition-share denominator that
-sedimentation divides by, and with an offset also a snapshot of `Yₜ.c.ρ` and a
-field the closure check fills with the offset total. They live in `p.scratch`
+sedimentation divides by, the two face fluxes of `E` that the tags share under
+`PrognosticEDMFX`, and with an offset also a snapshot of `Yₜ.c.ρ` and a field
+the closure check fills with the offset total. They live in `p.scratch`
 because the implicit tendency, where sedimentation runs, may be evaluated with
 `ForwardDiff.Dual` numbers, and `p.scratch` is converted for that.
 """
-energy_source_scratch(Y, model::EnergySourceTaggingModel) =
-    _energy_source_scratch(Y, model.offset)
-_energy_source_scratch(Y, ::Nothing) = (;
-    ᶜe_src_snapshot = similar(Y.c.ρ),
-    ᶜe_src_share_norm = similar(Y.c.ρ),
+energy_source_scratch(Y, model::EnergySourceTaggingModel) = merge(
+    energy_source_cell_scratch(Y.c.ρ, model.offset),
+    (;
+        ᶠe_src_sgs_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
+        ᶠe_src_sediment_flux = Fields.Field(
+            Geometry.WVector{eltype(Y.c.ρ)},
+            axes(Y.f),
+        ),
+    ),
 )
-_energy_source_scratch(Y, offset) = (;
-    ᶜe_src_snapshot = similar(Y.c.ρ),
-    ᶜe_src_share_norm = similar(Y.c.ρ),
-    ᶜe_src_ρ_snapshot = similar(Y.c.ρ),
-    ᶜe_src_parent = similar(Y.c.ρ),
+# The cell-center scratch alone: the bracket's snapshots, the share
+# denominator and the offset total. It needs no face space.
+energy_source_cell_scratch(ᶜρ, ::Nothing) =
+    (; ᶜe_src_snapshot = similar(ᶜρ), ᶜe_src_share_norm = similar(ᶜρ))
+energy_source_cell_scratch(ᶜρ, offset) = (;
+    ᶜe_src_snapshot = similar(ᶜρ),
+    ᶜe_src_share_norm = similar(ᶜρ),
+    ᶜe_src_ρ_snapshot = similar(ᶜρ),
+    ᶜe_src_parent = similar(ᶜρ),
 )
 
 """
@@ -282,6 +385,13 @@ The energy source family's own columns of the audit table, beside those
     segment, in J, and over `scale`. Zero with the repair off. At
     `update_constrain_state_every: stage` or `dss` the ledger also counts the
     in-step repairs the stepper discards; see `repair_energy_source_tags!`.
+  - under `energy_source_tag_transport: enthalpy_increment` only, the integrals
+    of the increment correction's ledger since the start of the run, in J:
+    `increment_left`, what it left out of the tags, which is signed and lands
+    in the closure residual; `increment_left_gross`, the same with each cell's
+    absolute value; and `increment_moved_gross`, the absolute value of what it
+    moved between levels. Each also over `scale`. See
+    [`energy_source_increment_ledger_variables`](@ref).
 
 Every reduction is collective, so every process must call it.
 """
@@ -328,6 +438,26 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         source_minimum,
         repair_moved,
         repair_moved_relative = per_scale(repair_moved),
+        _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale)...,
+    )
+end
+
+_energy_source_ledger_audit(Y, ᶜtmp, model, per_scale) =
+    follows_implicit_increment(model) ?
+    _energy_source_ledger_columns(Y, ᶜtmp, per_scale) : (;)
+function _energy_source_ledger_columns(Y, ᶜtmp, per_scale)
+    increment_left = sum(Y.c.e_src_inc_left)
+    @. ᶜtmp = abs(Y.c.e_src_inc_left)
+    increment_left_gross = sum(ᶜtmp)
+    @. ᶜtmp = abs(Y.c.e_src_inc_moved)
+    increment_moved_gross = sum(ᶜtmp)
+    return (;
+        increment_left,
+        increment_left_relative = per_scale(increment_left),
+        increment_left_gross,
+        increment_left_gross_relative = per_scale(increment_left_gross),
+        increment_moved_gross,
+        increment_moved_gross_relative = per_scale(increment_moved_gross),
     )
 end
 
@@ -979,6 +1109,160 @@ function _sediment_energy_source_tag_fluxes!(
     )
 end
 
+"""
+    keep_energy_source_sediment_correction!(p, ᶠcorrection)
+
+Keep the updraft's correction for
+`sediment_energy_source_tags_with_corrections!`, which moves the energy source
+tags with one sedimenting species under `PrognosticEDMFX`. There the parent's
+energy flux has two corrections besides the grid mean's, one for the updraft
+and one for the environment. Each moves the subdomain's specific energy minus
+the grid mean's with the subdomain's own mass flux. The subdomain mass fluxes
+sum to the grid mean's, so the corrections move no mass and carry no `c` part.
+
+The tags take the species' whole face flux of `E`, the grid mean's flux as
+`sediment_energy_source_tags!` builds it plus both corrections. They share it
+once, by its direction, as that function shares the grid mean's flux alone.
+Shared apart, a correction that points against the grid mean's flux would take
+its shares from the other cell. A tag could then lose energy from a cell that
+gains it.
+
+`vertical_advection_of_water_tendency!` computes the updraft's correction and
+then the environment's in the same scratch field. So the updraft's face flux is
+kept first, with `keep_energy_source_sediment_correction!`, and the
+environment's face flux is `ᶠcorrection`. Both are no-ops when energy source
+tagging is disabled.
+"""
+keep_energy_source_sediment_correction!(p, ᶠcorrection) =
+    _keep_energy_source_sediment_correction!(
+        p,
+        ᶠcorrection,
+        p.atmos.energy_source_tagging_model,
+    )
+_keep_energy_source_sediment_correction!(p, ᶠcorrection, ::Nothing) = nothing
+function _keep_energy_source_sediment_correction!(
+    p,
+    ᶠcorrection,
+    ::EnergySourceTaggingModel,
+)
+    ᶠflux = p.scratch.ᶠe_src_sediment_flux
+    @. ᶠflux = ᶠcorrection
+    return nothing
+end
+
+"""
+    sediment_energy_source_tags_with_corrections!(Yₜ, Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ, ᶠcorrection)
+
+Move the energy source tags with one sedimenting species under
+`PrognosticEDMFX`. Each tag takes its share of the species' whole face flux of
+`E`: the grid mean's, the updraft's correction kept by
+`keep_energy_source_sediment_correction!`, and the environment's correction
+`ᶠcorrection`. The flux is shared once, by its direction. See
+`keep_energy_source_sediment_correction!` for why. A no-op when energy source
+tagging is disabled.
+"""
+sediment_energy_source_tags_with_corrections!(
+    Yₜ,
+    Y,
+    p,
+    ᶜq,
+    ᶜw,
+    ᶜenergy_flux,
+    ᶠρ,
+    ᶠcorrection,
+) = _sediment_energy_source_tags_with_corrections!(
+    Yₜ,
+    Y,
+    p,
+    ᶜq,
+    ᶜw,
+    ᶜenergy_flux,
+    ᶠρ,
+    ᶠcorrection,
+    p.atmos.energy_source_tagging_model,
+)
+_sediment_energy_source_tags_with_corrections!(
+    Yₜ,
+    Y,
+    p,
+    ᶜq,
+    ᶜw,
+    ᶜenergy_flux,
+    ᶠρ,
+    ᶠcorrection,
+    ::Nothing,
+) = nothing
+function _sediment_energy_source_tags_with_corrections!(
+    Yₜ,
+    Y,
+    p,
+    ᶜq,
+    ᶜw,
+    ᶜenergy_flux,
+    ᶠρ,
+    ᶠcorrection,
+    model::EnergySourceTaggingModel,
+)
+    c = _mass_energy(model.offset)
+    # The updraft's correction is already in `ᶠflux`.
+    ᶠflux = p.scratch.ᶠe_src_sediment_flux
+    @. ᶠflux +=
+        ᶠρ * ᶠtop_bias(Geometry.WVector(ᶜenergy_flux - c * ᶜw * ᶜq)) +
+        ᶠcorrection
+    _sediment_energy_source_tag_face_fluxes!(
+        Yₜ.c,
+        Y.c,
+        _energy_source_parent_field(Y, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        p.tagging.ᶠenergy_source_interior,
+        ᶠflux,
+        model.tags,
+    )
+    return nothing
+end
+
+_sediment_energy_source_tag_face_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶠinterior,
+    ᶠflux,
+    ::Tuple{},
+) = nothing
+function _sediment_energy_source_tag_face_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶠinterior,
+    ᶠflux,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
+    ᶜshare =
+        _energy_source_share_field(tag_field(ᶜY, tag), ᶜparent, ᶜnorm, tag)
+    # The shares of the cell above, or, on interior faces where the energy
+    # moves up, of the cell below.
+    @. ᶜρe_srcₜ -= ᶜprecipdivᵥ(
+        ᶠflux * ifelse(
+            _is_upward(ᶠflux) & (ᶠinterior > 0),
+            ᶠbottom_bias_zero(ᶜshare),
+            ᶠtop_bias(ᶜshare),
+        ),
+    )
+    return _sediment_energy_source_tag_face_fluxes!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜparent,
+        ᶜnorm,
+        ᶠinterior,
+        ᶠflux,
+        Base.tail(tags),
+    )
+end
+
 # The partition and source forms of the share, selected on the tag's type, so
 # the branch folds away at compile time. Sedimentation and the enthalpy-form
 # transport below both share out a flux with it.
@@ -995,13 +1279,15 @@ _energy_source_share_field(ᶜρe_src, ᶜparent, ᶜnorm, tag) =
     moves_as_enthalpy(model)
 
 Whether the energy source tags of `model` move by their shares of the parent's
-own flux, which `energy_source_tag_transport: enthalpy` selects. `false` when
+own flux, which `energy_source_tag_transport: enthalpy` and `enthalpy_increment`
+select. `false` when
 energy source tagging is off, and under the default `tracer` transport. The
 answer is a property of the model's type, so it folds away at compile time.
 """
 moves_as_enthalpy(::Nothing) = false
 moves_as_enthalpy(model::EnergySourceTaggingModel) =
-    model.transport isa EnthalpyEnergySourceTransport
+    model.transport isa
+    Union{EnthalpyEnergySourceTransport, EnthalpyIncrementEnergySourceTransport}
 
 """
     energy_source_tag_moves_as_enthalpy(p, name)
@@ -1019,7 +1305,8 @@ energy_source_tag_moves_as_enthalpy(p, name) =
 const ᶠtop_bias_zero = Operators.TopBiasedC2F(top = Operators.SetValue(0))
 
 # Whether the flow through a face points up. `u³` is contravariant, and its one
-# component has the sign of the vertical velocity.
+# component has the sign of the vertical velocity. A `WVector` flux, as in
+# sedimentation, is read the same way.
 @inline _is_upward(u³) = u³.components.data.:1 > 0
 
 # The face flux per unit density, `u³` times the face value of `ᶜχ`, as
@@ -1053,10 +1340,13 @@ moves `ρe_tot` vertically in the implicit step. With one Newton iteration
 the stage's first guess, not its flux at the solved state, and its upwind
 correction comes after the solve. The two differ by that linearisation, and the
 difference lands in `e_src_res`. A no-op under the default `tracer` transport,
-where the generic tracer loop moves the tags.
+where the generic tracer loop moves the tags. A no-op too under
+`enthalpy_increment`: there the tags take the parent's implicit increment,
+which carries its vertical advection (see `correct_energy_source_increment!`).
 """
 enthalpy_vertical_advection_of_energy_source_tags!(Yₜ, Y, p) =
-    moves_as_enthalpy(p.atmos.energy_source_tagging_model) ?
+    moves_as_enthalpy(p.atmos.energy_source_tagging_model) &&
+    !follows_implicit_increment(p.atmos.energy_source_tagging_model) ?
     _enthalpy_vertical_advection!(
         Yₜ,
         Y,
@@ -1134,6 +1424,475 @@ function _enthalpy_vertical_tag_fluxes!(
         Base.tail(tags),
     )
 end
+
+# ============================================================================
+# The sub-grid mass flux under PrognosticEDMFX
+# ============================================================================
+
+"""
+    sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model)
+
+Under `PrognosticEDMFX` with its SGS mass flux on, move the energy source tags
+by their shares of the parent's own sub-grid mass flux of `E = ρe_tot + c·ρ`.
+
+The tags have no copy in the updrafts, so the SGS tracer loop of
+`edmfx_sgs_mass_flux_tendency!` never reaches them. For each subdomain `k`, the
+parent moves `ρe_tot` with the difference-form flux `ρᵏ aᵏ (u³ᵏ - u³)(χᵏ - h_tot)`, where `χᵏ` is the subdomain's moist static energy plus its kinetic
+energy, and, when the air is moist, `ρ` with the same flux of `q_totᵏ - q_tot`.
+The flux of `E` is the first plus `c` times the second. It is rebuilt here face
+by face, each part with the parent's own reconstruction, and summed over the
+subdomains. The two parts are reconstructed apart, because the van Leer option
+is not linear.
+
+Each tag takes that face flux times its share in the cell the flux leaves: the
+cell below where it points up, the cell above where it points down. The
+partition's shares add up to one, so its fluxes add up to the parent's at every
+face. The divergence has the parent's zero-flux boundaries.
+
+It runs in the implicit tendency, right after the parent's flux, so the tags
+follow the parent at the Newton iterate. The tags have no Jacobian block for it:
+the flux moves the energy anomaly, not the air, which against the tags' total
+is a Courant number of order 1e-2 on the columns this was designed on. That
+keeps every tag uncoupled in the split solver. It runs under both transports,
+because there is no tracer form of this flux for a field without an updraft
+copy.
+
+A tag's composition in an updraft is taken as that of the cell it leaves. So
+the flux moves the energy convection carries, but it does not mix provenance
+the way it mixes the air. A no-op without energy source tags, without
+`PrognosticEDMFX`, and with the SGS mass flux off.
+"""
+sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model) = nothing
+sgs_mass_flux_of_energy_source_tags!(
+    Yₜ,
+    Y,
+    p,
+    turbconv_model::PrognosticEDMFX,
+) =
+    p.atmos.edmfx_model.sgs_mass_flux ?
+    _sgs_mass_flux_of_energy_source_tags!(
+        Yₜ,
+        Y,
+        p,
+        turbconv_model,
+        p.atmos.energy_source_tagging_model,
+    ) : nothing
+_sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, ::Nothing) =
+    nothing
+function _sgs_mass_flux_of_energy_source_tags!(
+    Yₜ,
+    Y,
+    p,
+    turbconv_model,
+    model::EnergySourceTaggingModel,
+)
+    energy_source_share_norm!(p, Y)
+    n = n_mass_flux_subdomains(turbconv_model)
+    (; edmfx_sgsflux_upwinding) = p.atmos.numerics
+    (; ᶠu³, ᶜh_tot, ᶠu³ʲs, ᶜKʲs, ᶜρʲs) = p.precomputed
+    (; ᶜp, ᶠu³⁰, ᶜK⁰, ᶜT⁰, ᶜq_tot_nonneg⁰, ᶜq_liq⁰, ᶜq_ice⁰) = p.precomputed
+    (; dt) = p
+    thermo_params = CAP.thermodynamics_params(p.params)
+    ᶜρ⁰ = @. lazy(
+        TD.air_density(
+            thermo_params,
+            ᶜT⁰,
+            ᶜp,
+            ᶜq_tot_nonneg⁰,
+            ᶜq_liq⁰,
+            ᶜq_ice⁰,
+        ),
+    )
+    ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
+    ᶜJ = Fields.local_geometry_field(Y.c).J
+    ᶠJ = Fields.local_geometry_field(Y.f).J
+    # `false` is a strong zero, so without an offset the flux is `ρe_tot`'s.
+    c = _mass_energy(model.offset)
+    moist = !(p.atmos.microphysics_model isa DryModel)
+
+    # The environment's part first, so that it sets `ᶠflux` and the updrafts
+    # add to it. Zeroing a vector field would need a `Ref`, which allocates.
+    # The velocity differences stay lazy. The parent keeps them in the shared
+    # `ᶠtemp_CT3`, and a diagnostic writes no scratch field the model reads.
+    ᶠflux = p.scratch.ᶠe_src_sgs_flux
+    ᶠu³_diff⁰ = @. lazy(ᶠu³⁰ - ᶠu³)
+    ᶜa⁰ = @. lazy(draft_area(ᶜρa⁰, ᶜρ⁰))
+    ᶠρ⁰ = @. lazy(ᶠinterp(ᶜρ⁰ * ᶜJ) / ᶠJ)
+    ᶜmse⁰ = ᶜspecific_env_mse(Y, p)
+    ᶜenergy⁰ = @. lazy((ᶜmse⁰ + ᶜK⁰ - ᶜh_tot) * ᶜa⁰)
+    ᶠenergy_flux⁰ =
+        _face_value_flux(ᶠu³_diff⁰, ᶜenergy⁰, dt, edmfx_sgsflux_upwinding)
+    @. ᶠflux = ᶠρ⁰ * ᶠenergy_flux⁰
+    if moist
+        ᶜq_tot⁰ = ᶜspecific_env_value(@name(q_tot), Y, p)
+        ᶜwater⁰ = @. lazy((ᶜq_tot⁰ - specific(Y.c.ρq_tot, Y.c.ρ)) * ᶜa⁰)
+        ᶠwater_flux⁰ =
+            _face_value_flux(ᶠu³_diff⁰, ᶜwater⁰, dt, edmfx_sgsflux_upwinding)
+        @. ᶠflux += c * ᶠρ⁰ * ᶠwater_flux⁰
+    end
+    for j in 1:n
+        ᶠu³_diffʲ = @. lazy(ᶠu³ʲs.:($$j) - ᶠu³)
+        ᶜaʲ = @. lazy(draft_area(Y.c.sgsʲs.:($$j).ρa, ᶜρʲs.:($$j)))
+        ᶠρʲ = @. lazy(ᶠinterp(ᶜρʲs.:($$j) * ᶜJ) / ᶠJ)
+        ᶜenergy = @. lazy(
+            (Y.c.sgsʲs.:($$j).mse + ᶜKʲs.:($$j) - ᶜh_tot) * ᶜaʲ,
+        )
+        ᶠenergy_flux = _face_value_flux(
+            ᶠu³_diffʲ,
+            ᶜenergy,
+            dt,
+            edmfx_sgsflux_upwinding,
+        )
+        @. ᶠflux += ᶠρʲ * ᶠenergy_flux
+        if moist
+            ᶜwater = @. lazy(
+                (Y.c.sgsʲs.:($$j).q_tot - specific(Y.c.ρq_tot, Y.c.ρ)) * ᶜaʲ,
+            )
+            ᶠwater_flux = _face_value_flux(
+                ᶠu³_diffʲ,
+                ᶜwater,
+                dt,
+                edmfx_sgsflux_upwinding,
+            )
+            @. ᶠflux += c * ᶠρʲ * ᶠwater_flux
+        end
+    end
+
+    _sgs_energy_source_tag_fluxes!(
+        Yₜ.c,
+        Y.c,
+        _energy_source_parent_field(Y, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        ᶠflux,
+        model.tags,
+    )
+    return nothing
+end
+
+_sgs_energy_source_tag_fluxes!(ᶜYₜ, ᶜY, ᶜparent, ᶜnorm, ᶠflux, ::Tuple{}) =
+    nothing
+function _sgs_energy_source_tag_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜparent,
+    ᶜnorm,
+    ᶠflux,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
+    ᶜshare =
+        _energy_source_share_field(tag_field(ᶜY, tag), ᶜparent, ᶜnorm, tag)
+    @. ᶜρe_srcₜ -= ᶜadvdivᵥ(
+        ᶠflux * ifelse(
+            _is_upward(ᶠflux),
+            ᶠbottom_bias_zero(ᶜshare),
+            ᶠtop_bias_zero(ᶜshare),
+        ),
+    )
+    return _sgs_energy_source_tag_fluxes!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜparent,
+        ᶜnorm,
+        ᶠflux,
+        Base.tail(tags),
+    )
+end
+
+# ============================================================================
+# The implicit channel: following the parent's increment (a prototype)
+# ============================================================================
+
+"""
+    follows_implicit_increment(model)
+
+Whether the energy source tags of `model` take the parent's own increment in
+each implicit stage (`energy_source_tag_transport: enthalpy_increment`). A tag
+that follows an implicit term by its tendency lags the parent's Newton solve,
+and for a stiff term the gap grows step by step (FINDINGS E59). The parent's
+increment has no such gap, whatever the solver does. The answer is a property
+of the model's type, so it folds away at compile time.
+"""
+follows_implicit_increment(::Nothing) = false
+follows_implicit_increment(model::EnergySourceTaggingModel) =
+    model.transport isa EnthalpyIncrementEnergySourceTransport
+
+# The fields the correction needs. `dtγ` is the stage's implicit weight, which
+# the post-solve hook is not given, so the snapshot keeps it.
+_energy_source_increment_cache(Y, model) =
+    follows_implicit_increment(model) ?
+    (;
+        ᶜe_src_ρe_tot_snapshot = similar(Y.c.ρ),
+        ᶜe_src_ρ_snapshot = similar(Y.c.ρ),
+        ᶜe_src_partition_snapshot = similar(Y.c.ρ),
+        ᶜe_src_mismatch = similar(Y.c.ρ),
+        ᶜe_src_abs_mismatch = similar(Y.c.ρ),
+        ᶠe_src_mismatch_integral = Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
+        ᶠe_src_abs_mismatch_integral = Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
+        e_src_mismatch_total = zeros(axes(Fields.level(Y.f, half))),
+        e_src_abs_mismatch_total = zeros(axes(Fields.level(Y.f, half))),
+        ᶠe_src_increment_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
+        ᶠe_src_area_ratio = _energy_source_face_area_ratio(Y.f),
+        e_src_dtγ = Ref(zero(eltype(Y.c.ρ))),
+    ) : (;)
+
+# The area of a column's bottom face over each face's own, `J/Δz` at the bottom
+# over `J/Δz` at the face. 1 to rounding under a shallow atmosphere, with or
+# without topography; below 1 under a deep atmosphere, whose faces grow with
+# height. Static, so kept.
+function _energy_source_face_area_ratio(Yf)
+    ᶠJ = Fields.local_geometry_field(Yf).J
+    ᶠΔz = Fields.Δz_field(Yf)
+    ΔA_bot = Fields.level(ᶠJ, half) ./ Fields.level(ᶠΔz, half)
+    return @. ΔA_bot * ᶠΔz / ᶠJ
+end
+
+# The sum of the partition tags of `ᶜY`, plus `dtγ` times that of `ᶜdY`.
+function _energy_source_partition_sum!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
+    ᶜsum .= zero(eltype(ᶜsum))
+    return _add_energy_source_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
+end
+_add_energy_source_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, ::Tuple{}) = ᶜsum
+function _add_energy_source_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, tags::Tuple)
+    tag = first(tags)
+    if _is_energy_partition_tag(tag)
+        ᶜtag = tag_field(ᶜY, tag)
+        ᶜtag_increment = tag_field(ᶜdY, tag)
+        @. ᶜsum += ᶜtag + dtγ * ᶜtag_increment
+    end
+    return _add_energy_source_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, Base.tail(tags))
+end
+
+"""
+    snapshot_energy_source_increment!(Y, p, dtγ)
+
+At the start of an implicit stage, keep `ρe_tot`, `ρ`, the sum of the partition
+tags and the stage's weight `dtγ`, for `correct_energy_source_increment!`.
+`ρe_tot` and `ρ` are kept apart, and not as `E = ρe_tot + c·ρ`, so that the
+parent's increment is not the difference of two totals of the size of `E`. The
+partition's increment still is, so in Float32 the correction has a floor of
+about one unit in the last place of `E` per cell and stage, as the tags' own
+updates do. Called first thing in
+`initialize_implicit_stage_problem!`, where `Y` is still the stage value before
+the solve. A no-op unless the tags follow the parent's implicit increment.
+"""
+snapshot_energy_source_increment!(Y, p, dtγ) =
+    follows_implicit_increment(p.atmos.energy_source_tagging_model) ?
+    _snapshot_energy_source_increment!(
+        Y,
+        p,
+        dtγ,
+        p.atmos.energy_source_tagging_model,
+    ) : nothing
+function _snapshot_energy_source_increment!(Y, p, dtγ, model)
+    (; ᶜe_src_ρe_tot_snapshot, ᶜe_src_ρ_snapshot) = p.tagging
+    (; ᶜe_src_partition_snapshot, e_src_dtγ) = p.tagging
+    @. ᶜe_src_ρe_tot_snapshot = Y.c.ρe_tot
+    @. ᶜe_src_ρ_snapshot = Y.c.ρ
+    _energy_source_partition_sum!(
+        ᶜe_src_partition_snapshot,
+        Y.c,
+        Y.c,
+        false,
+        model.tags,
+    )
+    e_src_dtγ[] = dtγ
+    return nothing
+end
+
+"""
+    correct_energy_source_increment!(dY, U, p)
+
+After the Newton solve of an implicit stage, make the partition tags take the
+parent's increment of `E`. `U` is the solved stage value, and `dY` already holds
+the parent's own post-solve correction, which the stepper adds as `dtγ·dY`.
+
+In each cell, the mismatch `m` is the parent's increment of `E` since the
+snapshot less the partition's. The part of `m` that changes a column's total
+cannot be moved within the column; it is left where it arises, in proportion to
+`|m|`, and stays in `e_src_res`. The rest integrates up the column to a face flux
+that is zero at both boundaries, whose divergence is that rest. Each tag takes
+the flux times its share in the cell the flux leaves, as with the sub-grid mass
+flux, and the flux is added to `dY` divided by `dtγ`. The partition's shares add
+up to one, so the partition then follows the parent's increment, up to the part
+left in place. A tag that carries a source takes its own share of the flux.
+
+The part left in place and the part moved are added to the ledger,
+`e_src_inc_left` and `e_src_inc_moved` (see
+[`energy_source_increment_ledger_variables`](@ref)).
+"""
+function correct_energy_source_increment!(dY, U, p)
+    model = p.atmos.energy_source_tagging_model
+    (; ᶜe_src_ρe_tot_snapshot, ᶜe_src_ρ_snapshot) = p.tagging
+    (; ᶜe_src_partition_snapshot, e_src_dtγ) = p.tagging
+    (; ᶜe_src_mismatch, ᶜe_src_abs_mismatch, ᶠe_src_increment_flux) = p.tagging
+    (; ᶠe_src_mismatch_integral, ᶠe_src_abs_mismatch_integral) = p.tagging
+    (; e_src_mismatch_total, e_src_abs_mismatch_total) = p.tagging
+    (; ᶠe_src_area_ratio) = p.tagging
+    FT = eltype(ᶜe_src_mismatch)
+    dtγ = e_src_dtγ[]
+    c = _mass_energy(model.offset)
+    ᶜm = ᶜe_src_mismatch
+    # The partition after the stage, with the parent's post-solve correction,
+    # which moves no tag. That correction zeroes `dY` and writes only `ρe_tot`
+    # and `ρq_tot`, so the `dY` terms of the partition and of `ρ` are zero; they
+    # are kept so the mismatch stays right if it ever writes more.
+    _energy_source_partition_sum!(ᶜm, U.c, dY.c, dtγ, model.tags)
+    @. ᶜm =
+        (U.c.ρe_tot + dtγ * dY.c.ρe_tot - ᶜe_src_ρe_tot_snapshot) +
+        c * (U.c.ρ + dtγ * dY.c.ρ - ᶜe_src_ρ_snapshot) -
+        (ᶜm - ᶜe_src_partition_snapshot)
+    @. ᶜe_src_abs_mismatch = abs(ᶜm)
+    Operators.column_integral_indefinite!(ᶠe_src_mismatch_integral, ᶜm)
+    Operators.column_integral_indefinite!(
+        ᶠe_src_abs_mismatch_integral,
+        ᶜe_src_abs_mismatch,
+    )
+    Operators.column_integral_definite!(e_src_mismatch_total, ᶜm)
+    Operators.column_integral_definite!(
+        e_src_abs_mismatch_total,
+        ᶜe_src_abs_mismatch,
+    )
+    # Upward positive. It is zero at the bottom face and, having taken out the
+    # column's total, at the top face too. The integrals are per unit area of
+    # the bottom face, and the divergence weights each face by its own area.
+    # Under a deep atmosphere the faces grow with height, so the flux is
+    # scaled by the bottom face's area over its own. On a flat grid that is 1.
+    @. ᶠe_src_increment_flux = CT3(
+        Geometry.WVector(
+            -(
+                ᶠe_src_mismatch_integral -
+                ifelse(
+                    e_src_abs_mismatch_total > 0,
+                    e_src_mismatch_total / e_src_abs_mismatch_total,
+                    FT(0),
+                ) * ᶠe_src_abs_mismatch_integral
+            ) / dtγ * ᶠe_src_area_ratio,
+        ),
+    )
+    energy_source_share_norm!(p, U)
+    _sgs_energy_source_tag_fluxes!(
+        dY.c,
+        U.c,
+        _energy_source_parent_field(U, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        ᶠe_src_increment_flux,
+        model.tags,
+    )
+    # The ledger. What is left in place stays out of the tags, and the rest is
+    # what the flux moved. The stepper adds `dtγ·dY`, as it does for the tags.
+    @. ᶜe_src_abs_mismatch *= ifelse(
+        e_src_abs_mismatch_total > 0,
+        e_src_mismatch_total / e_src_abs_mismatch_total,
+        FT(0),
+    )
+    @. dY.c.e_src_inc_left += ᶜe_src_abs_mismatch / dtγ
+    @. dY.c.e_src_inc_moved += (ᶜm - ᶜe_src_abs_mismatch) / dtγ
+    return nothing
+end
+
+"""
+    check_energy_source_increment_supported(atmos, ode_algo, T_imp!, T_post_imp!)
+
+Refuse `energy_source_tag_transport: enthalpy_increment` where it cannot follow
+the parent, or where following it would change the model. `T_post_imp!` is the
+parent's own post-solve correction, or `nothing`.
+
+  - The tags take the parent's increment after each Newton solve. So every
+    implicit tendency must go through one. The algorithm must be an IMEX
+    algorithm with a Newton method, and the flow must not be prescribed. A
+    stage whose implicit diagonal is zero must not use the implicit tendency
+    in a later stage or in the step's result. The ARS algorithms, such as the
+    default ARS343, meet this. SSP333 and the IMKG algorithms do not, and
+    neither do explicit or Rosenbrock algorithms.
+  - The parent must have a post-solve correction of its own, which it has
+    unless `energy_q_tot_upwinding` is `none`. Whenever there is a post-solve
+    hook, the stepper refreshes the implicit cache on the solved state. The
+    parent's `constrain_state!` can read that cache before the next refresh:
+    at the end of a step of an FSAL tableau such as ARS222, or at every stage
+    under `update_constrain_state_every: stage`. So a hook the parent does not
+    have would change the model's fields.
+
+Called when the integrator is built. A no-op for every other transport.
+"""
+check_energy_source_increment_supported(atmos, ode_algo, T_imp!, T_post_imp!) =
+    follows_implicit_increment(atmos.energy_source_tagging_model) ?
+    _check_energy_source_increment_supported(ode_algo, T_imp!, T_post_imp!) :
+    nothing
+function _check_energy_source_increment_supported(ode_algo, T_imp!, T_post_imp!)
+    !isnothing(T_imp!) && isnothing(T_post_imp!) &&
+        error(
+            "`energy_source_tag_transport: enthalpy_increment` takes the parent's \
+            increment in a post-solve hook. With `energy_q_tot_upwinding: none` \
+            the parent has no post-solve correction of its own. A hook would make \
+            the stepper refresh the implicit cache after each solve, which the \
+            model's constraints read, so the model's fields would change. Use an \
+            `energy_q_tot_upwinding` other than `none`, such as the default \
+            `vanleer_limiter`, or `energy_source_tag_transport: enthalpy`.",
+        )
+    reason =
+        if isnothing(T_imp!)
+            "the flow is prescribed, so there is no implicit tendency"
+        elseif !(ode_algo isa CTS.IMEXAlgorithm) ||
+               isnothing(ode_algo.newtons_method)
+            "`ode_algo` is not an IMEX algorithm with a Newton method"
+        else
+            (; a_imp, b_imp) = ode_algo.tableau
+            s = length(b_imp)
+            unsolved = filter(
+                i ->
+                    iszero(a_imp[i, i]) && (
+                        !iszero(b_imp[i]) ||
+                        any(j -> !iszero(a_imp[j, i]), 1:s)
+                    ),
+                1:s,
+            )
+            isempty(unsolved) ? nothing :
+            "$(length(unsolved) == 1 ? "stage" : "stages") \
+            $(join(unsolved, ", ")) of `ode_algo` \
+            $(length(unsolved) == 1 ? "uses" : "use") the implicit tendency \
+            without a solve"
+        end
+    isnothing(reason) && return nothing
+    error(
+        "`energy_source_tag_transport: enthalpy_increment` needs every \
+        implicit tendency to go through a Newton solve, after which the tags \
+        take the parent's increment. Here $reason, so the tags would miss \
+        that part of the parent's vertical transport. Use an algorithm that \
+        solves every stage it uses, such as the default ARS343, or \
+        `energy_source_tag_transport: enthalpy`.",
+    )
+end
+
+"""
+    EnergySourceIncrementCorrection(post)
+
+The post-solve hook when the tags follow the parent's implicit increment. It
+runs the parent's own post-solve correction `post`, which sets every field of
+`dY`, and then `correct_energy_source_increment!`. `post` is never `nothing`:
+`check_energy_source_increment_supported` refuses the mode where the parent has
+no correction. See `energy_source_post_implicit`.
+"""
+struct EnergySourceIncrementCorrection{F}
+    post::F
+end
+function (correction::EnergySourceIncrementCorrection)(dY, U, p, t)
+    correction.post(dY, U, p, t)
+    correct_energy_source_increment!(dY, U, p)
+    return nothing
+end
+
+"""
+    energy_source_post_implicit(post, atmos)
+
+The post-solve hook to give the stepper: `post` itself, or wrapped in
+[`EnergySourceIncrementCorrection`](@ref) when the energy source tags follow the
+parent's implicit increment.
+"""
+energy_source_post_implicit(post, atmos) =
+    follows_implicit_increment(atmos.energy_source_tagging_model) ?
+    EnergySourceIncrementCorrection(post) : post
 
 """
     enthalpy_horizontal_advection_of_energy_source_tags!(Yₜ, Y, p)

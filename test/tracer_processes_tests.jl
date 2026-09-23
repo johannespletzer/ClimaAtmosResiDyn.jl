@@ -151,6 +151,64 @@ end
     end
 end
 
+# `vertical_advection_of_water_tendency!` does not use the candidate lists. It
+# loops over its own tuples of species and velocities, which are local to the
+# function, so this test reads them from the source. A species added to one list
+# and not the other would move `ρ`, `ρq_tot` and `ρe_tot` with a sedimentation
+# flux that the lists above, and everything built on them, never see. That
+# includes the Jacobian's sedimentation blocks and the energy source tags.
+function find_tuple_assignment(expr, name::Symbol)
+    expr isa Expr || return nothing
+    if expr.head == :(=) && expr.args[1] == name
+        value = expr.args[2]
+        return value isa Expr && value.head == :tuple ? value : nothing
+    end
+    for arg in expr.args
+        found = find_tuple_assignment(arg, name)
+        isnothing(found) || return found
+    end
+    return nothing
+end
+
+@testset "The water advection loops sediment the candidate species" begin
+    path = joinpath(
+        pkgdir(CA),
+        "src",
+        "prognostic_equations",
+        "water_advection.jl",
+    )
+    source = Meta.parseall(read(path, String); filename = path)
+
+    # Each entry of a list is a tuple of `@name` calls. Evaluating them gives the
+    # `FieldName`s the function uses.
+    function names_in(list_name)
+        list = find_tuple_assignment(source, list_name)
+        @test !isnothing(list)
+        isnothing(list) && return ()
+        return Tuple(
+            Tuple(Core.eval(@__MODULE__, entry) for entry in pair.args) for
+            pair in list.args
+        )
+    end
+
+    gs_entries = names_in(:microphysics_tracers)
+    gs_species = first.(gs_entries)
+    @test length(gs_species) == length(CA.gs_sedimenting_mass_candidates)
+    @test issetequal(gs_species, CA.gs_sedimenting_mass_candidates)
+    for (ρq_name, w_name) in gs_entries
+        @test CA.sedimentation_velocity_name(ρq_name) == w_name
+    end
+
+    sgs_entries = names_in(:sgs_microphysics_tracers)
+    sgs_species = first.(sgs_entries)
+    @test length(sgs_species) == length(CA.sgs_sedimenting_mass_candidates)
+    @test issetequal(sgs_species, CA.sgs_sedimenting_mass_candidates)
+    for (q_name, wʲ_name, w_name) in sgs_entries
+        @test CA.sgs_sedimentation_velocity_name(q_name) == wʲ_name
+        @test CA.sedimentation_velocity_name(CA.get_ρχ_name(q_name)) == w_name
+    end
+end
+
 @testset "Name lifting" begin
     @test CA.center_state_name(@name(ρq_rai)) == @name(c.ρq_rai)
     @test CA.sgs_state_name(@name(q_rai)) == @name(c.sgsʲs.:(1).q_rai)

@@ -25,6 +25,16 @@ import ClimaTimeSteppers as CTS
 # and the top-of-atmosphere radiation is a crossing.
 
 const FT = Float64
+
+# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# the model. The parameters follow the model's microphysics, as the removed
+# `AtmosSimulation{FT}` constructor chose them.
+function column_model(; kwargs...)
+    grid = CA.ColumnGrid(FT; z_elem = 10)
+    (; microphysics_model) = CA.AtmosModel(grid; kwargs...)
+    params = CA.ClimaAtmosParameters(FT; microphysics_model)
+    return CA.AtmosModel(grid; params, kwargs...)
+end
 const ATMOS = PB.ATMOSPHERE_ENDPOINT_GROUP
 const SLAB = PB.SLAB_SURFACE_ENDPOINT_GROUP
 
@@ -44,12 +54,11 @@ slab_surface() =
 
 function column_simulation(;
     parent_budget_mode = "audit",
-    model = CA.AtmosModel(),
+    model = column_model(),
     kwargs...,
 )
-    return CA.AtmosSimulation{FT}(;
-        model,
-        grid = CA.ColumnGrid(FT; z_elem = 10),
+    return CA.AtmosSimulation(
+        model;
         dt = 60,
         t_end = 600,
         job_id = "parent_budget_transfers",
@@ -146,7 +155,7 @@ status(component) = PB.component_status(component)
     end
 
     @testset "A slab makes the surface flux a coupled exchange" begin
-        simulation = column_simulation(; model = CA.AtmosModel(; surface = slab_surface()))
+        simulation = column_simulation(; model = column_model(; surface = slab_surface()))
         adapter = adapter_of(simulation)
         step!(simulation, 2)
         # Both views exist. In the atmosphere-only view the same event crosses
@@ -190,7 +199,7 @@ status(component) = PB.component_status(component)
     end
 
     @testset "A missing or a sign-reversed leg is caught where it shows" begin
-        simulation = column_simulation(; model = CA.AtmosModel(; surface = slab_surface()))
+        simulation = column_simulation(; model = column_model(; surface = slab_surface()))
         adapter = adapter_of(simulation)
         # A slab leg that was not read blocks the event, naming the leg, and
         # the atmosphere's leg is still recorded.
@@ -252,7 +261,7 @@ status(component) = PB.component_status(component)
     @testset "Summary mode records no leg and blocks every transfer by name" begin
         simulation = column_simulation(;
             parent_budget_mode = "summary",
-            model = CA.AtmosModel(; surface = slab_surface()),
+            model = column_model(; surface = slab_surface()),
         )
         adapter = adapter_of(simulation)
         step!(simulation, 1)

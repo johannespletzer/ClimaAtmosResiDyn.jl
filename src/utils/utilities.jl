@@ -49,19 +49,20 @@ end
 Classify a top-level field name of `Y.c` or `Y.f` by the role it plays in the
 state.
 
-`is_tracer_var` is the complement: every name that is not `ρ`, `ρtke`, an energy,
-a momentum, or an SGS variable.
+`is_tracer_var` is a grid-scale tracer: a density-weighted name, one that starts
+with `ρ`, other than `ρ`, `ρtke` and the energy. That is the rule
+`gs_tracer_names` uses. The horizontal advection of tracers and the SEM limiter
+loop over these names. Every tracer the model carries is density-weighted. A
+field of `Y.c` without the `ρ` prefix is a diagnostic the air does not carry,
+such as a process record `prc_e_<process>`, so neither loop may reach it (see
+`docs/src/process_record.md`).
 """
 is_energy_var(symbol) = symbol in (:ρe_tot,)
 is_momentum_var(symbol) = symbol in (:uₕ, :u₃)
 is_sgs_var(symbol) = symbol in (:sgsʲs,)
-is_tracer_var(symbol) = !(
-    symbol == :ρ ||
-    symbol == :ρtke ||
-    is_energy_var(symbol) ||
-    is_momentum_var(symbol) ||
-    is_sgs_var(symbol)
-)
+is_tracer_var(symbol) =
+    startswith(string(symbol), "ρ") &&
+    !(symbol == :ρ || symbol == :ρtke || is_energy_var(symbol))
 
 # we may be hitting a slow path:
 # https://stackoverflow.com/questions/14687665/very-slow-stdpow-for-bases-very-close-to-1
@@ -380,7 +381,7 @@ end
     g³³_field(space)
 
 Extract `g³³` from `space`, the `(3, 3)` component of the metric tensor `gⁱʲ`
-that converts covariant to contravariant `AxisTensor`s.
+that converts covariant to contravariant `Tensor`s.
 
 The component is the last one of `gⁱʲ` in both 2D (4 components) and 3D (9
 components) spaces.
@@ -449,7 +450,7 @@ end
     g³³(gⁱʲ)
 
 Extract the `g³³` sub-tensor of the metric tensor `gⁱʲ`, reshaped as a
-`Contravariant3Axis × Contravariant3Axis` `AxisTensor`.
+`Contravariant3Axis × Contravariant3Axis` `Tensor`.
 """
 g³³(gⁱʲ) = reshape(
     gⁱʲ,
@@ -464,14 +465,14 @@ Extract the `g³ʰ` sub-tensor of the metric tensor `gⁱʲ`, the coupling betwe
 the vertical and horizontal contravariant directions that is non-zero over
 sloped terrain.
 
-The result is always a `Contravariant3Axis × Contravariant12Axis` `AxisTensor`;
+The result is always a `Contravariant3Axis × Contravariant12Axis` `Tensor`;
 in 2D spaces the missing horizontal component is filled with zero. Throws if
 `gⁱʲ` has no vertical or no horizontal sub-axis.
 """
 function g³ʰ(gⁱʲ)
     full_CT_axis = axes(gⁱʲ)[1]
     N = length(full_CT_axis)
-    gⁱʲ_components = Geometry.components(gⁱʲ)
+    gⁱʲ_components = parent(gⁱʲ)
     FT = eltype(gⁱʲ_components)
     g³ʰ_components = if full_CT_axis == Geometry.Contravariant123Axis()
         @inbounds SMatrix{1, 2, FT, 2}(
@@ -488,7 +489,7 @@ function g³ʰ(gⁱʲ)
         error("$full_CT_axis is missing either vertical or horizontal sub-axes")
     end
     axes_tuple = (Geometry.Contravariant3Axis(), Geometry.Contravariant12Axis())
-    return Geometry.AxisTensor(axes_tuple, g³ʰ_components)
+    return Geometry.Tensor(g³ʰ_components, axes_tuple)
 end
 
 """

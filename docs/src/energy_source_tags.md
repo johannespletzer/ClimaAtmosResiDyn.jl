@@ -102,6 +102,28 @@ initialization. And the tags have no Jacobian block for it, so within a step
 they lag the parent's implicit flux slightly, and that gap lands in
 `e_src_res`.
 
+Under `turbconv: prognostic_edmfx` the parent's energy flux in sedimentation
+has two corrections besides the grid mean's, one for the updraft and one for
+the environment. Each moves the subdomain's specific energy minus the grid
+mean's with the subdomain's own mass flux, so the corrections move no mass. The
+tags take the species' whole face flux, the grid mean's and both corrections,
+and share it once, by its direction. Shared apart, a correction that points
+against the grid mean's flux would take its shares from the other cell.
+
+The tags have no updraft copy, so the parent's sub-grid mass flux reaches no
+tag through the updrafts. Instead each tag takes its share of the parent's own
+sub-grid flux of `E`, face by face, from the cell the flux leaves. The flux is
+the one of `ρe_tot`, `ρᵏ aᵏ (u³ᵏ - u³)(mseᵏ + Kᵏ - h_tot)` summed over the
+subdomains, plus `c` times the one of `ρ`, which is the same form in
+`q_totᵏ - q_tot`. Each part is built with the parent's own reconstruction,
+`edmfx_sgsflux_upwinding`. So the partition's fluxes add up to the parent's in
+every evaluation of the tendency. A tag's composition in an updraft is taken as
+that of the cell the flux leaves. The flux moves the energy convection carries,
+but it does not mix provenance the way it mixes the air. It runs in the
+implicit tendency beside the parent's flux. The parent's flux has Jacobian
+blocks and the tags' has none, as in sedimentation. So within a step the tags
+lag the parent's implicit flux slightly, and that gap lands in `e_src_res`.
+
 ## Negative tags, and the repair
 
 The donor-proportional loss bounds the *rate* at which a tag is depleted, not
@@ -305,6 +327,13 @@ exactly:
     tendencies add up to the parent's to 100 eps, and on a step partition the
     donor is the cell above where the energy falls and the cell below where it
     rises.
+  - **The sub-grid fluxes under `prognostic_edmfx`** are covered by
+    `test/energy_source_tags_edmf_integration.jl`, on the DYCOMS RF02 column
+    with 1-moment microphysics and the updrafts' vertical diffusion on. The
+    partition's tendencies from the sub-grid mass flux and from sedimentation
+    with its corrections add up to the parent's to 100 eps. The split solver
+    solves every tag and record apart, and the model's own fields are bit for
+    bit those of the run without tags.
 
 Without an offset only the first two hold. That is also the strongest argument
 on the table for the fallback: water source tracing, whose parent is
@@ -379,10 +408,10 @@ audit's residual in its first hour, during the initial adjustment, and a
 converged Newton solve removed 99% of it on a column.
 
 Everything else the tags see stays as under `tracer`: the brackets, the repair,
-sedimentation, vertical diffusion, the sponges and the SGS closures. The EDMF
-sub-grid mass flux reaches the tags in neither mode, so `prognostic_edmfx` stays
-refused. The model itself is untouched, so its state is the same with the
-switch on and off.
+sedimentation, vertical diffusion, the sponges and the SGS closures. Under
+`prognostic_edmfx` the tags take their shares of the sub-grid mass flux in both
+modes, as described under [Attribution](#Attribution). The model itself is
+untouched, so its state is the same with the switch on and off.
 
 It needs an `energy_source_tag_offset`. A share is zero wherever `E` is not
 positive, and there the tags would not move at all, so `enthalpy` without an
@@ -445,6 +474,82 @@ The tag-closure experiments ran it on a 0-moment column, a 0-moment sphere and a
     advection on the column, and from horizontal advection and hyperdiffusion
     on the sphere, add up to the parent's to 100 eps.
 
+### Following the parent's implicit increment, a prototype
+
+`energy_source_tag_transport: enthalpy_increment` is the audit with its
+implicit part rebuilt. A tag that follows an implicit term by its tendency, as
+the audit does for sedimentation and the sub-grid mass flux, lags the parent's
+Newton solve. For a stiff term, such as the EDMF eddy diffusion, that gap grows
+step by step. In this mode the tags take the parent's own increment instead:
+
+  - at the start of each implicit stage the model keeps `ρe_tot`, `ρ` and the
+    partition's sum;
+  - after the Newton solve, each cell's mismatch between the parent's
+    increment of `E` and the partition's is formed;
+  - the part of the mismatch that changes a column's total cannot move within
+    the column; it stays where it arises, in proportion to the mismatch's
+    absolute value, and in `e_src_res`;
+  - the rest integrates up the column into a face flux that is zero at both
+    boundaries, and each tag takes that flux times its share in the cell it
+    leaves.
+
+The tags then take no explicit share of the vertical advection, which the
+parent does implicitly and the increment carries. The model is untouched.
+
+The mode has four requirements, and the model refuses a configuration that
+misses one:
+
+  - an `energy_source_tag_offset`;
+  - region tags without sources whose masks partition the domain. The
+    correction gives them the parent's increment, less what their own
+    tendencies moved, so without a partition the tags that carry a source
+    would take the whole implicit transport twice;
+  - an algorithm that solves every stage whose implicit tendency it uses, such
+    as the default ARS343 or ARS222. The correction runs after each Newton
+    solve, so a stage without one would escape it. SSP333 and the IMKG
+    algorithms have such stages;
+  - an `energy_q_tot_upwinding` other than `none`, such as the default
+    `vanleer_limiter`. The correction runs in the parent's own post-solve hook.
+    Without one, a new hook would make the stepper refresh the implicit cache
+    after each solve, and the model's constraints read that cache.
+
+The correction keeps a ledger, as two prognostic fields that the stepper
+integrates with the tags:
+
+  - `e_src_inc_left`: what it has left out of the tags. In each column it sums
+    to the part of the parent's implicit increment that changes the column's
+    total and that the tags' own implicit tendencies did not take, such as a
+    boundary flux the tags do not follow. That part lands in `e_src_res`;
+  - `e_src_inc_moved`: what it has moved between levels. It sums to zero in
+    each column. It is mostly the vertical transport the tags' own implicit
+    tendencies did not take.
+
+Both are cumulative since the start of the run and carried through a restart.
+The diagnostics of the same names report them per unit mass, on request; they
+are not among the default outputs. The closure check's audit table gets their
+integrals, `increment_left`, `increment_left_gross` and
+`increment_moved_gross`. So the residual's column total splits into what the
+correction left and what everything else leaves.
+
+The ledger records what the correction intends. A face whose donor cell has no
+share of the partition moves no tag, so there a cell's change differs a little
+from the ledger, and the difference lands in `e_src_res`. The column totals are
+right. Under a deep atmosphere the faces grow with height, and the flux is
+scaled by the bottom face's area over each face's own, so each cell takes its
+part of the mismatch exactly. On the tag-closure experiments' EDMF
+column, D4, the residual at 24 h was 267 J/m², against 6.3e5 under `enthalpy`,
+and it was the one-iteration solve's column totals less what the loss rule
+flushes.
+
+```yaml
+energy_source_tag_offset: 110495.0
+energy_source_tag_transport: enthalpy_increment
+```
+
+`test/energy_source_tags_increment_integration.jl` checks the correction on a
+set increment, with its donors, its ledger and its audit columns. On the EDMF
+column it checks that the model's state is bit for bit the one without tags.
+
 ## Diagnostics
 
   - `e_src_<name>`: specific tagged energy ``\rho e_{\mathrm{src}} / \rho``
@@ -457,6 +562,11 @@ The tag-closure experiments ran it on a 0-moment column, a 0-moment sphere and a
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
     under an offset.
+  - `e_src_inc_left` and `e_src_inc_moved`, under
+    `energy_source_tag_transport: enthalpy_increment` only: the increment
+    correction's ledger per unit mass (J kg⁻¹), cumulative since the start of
+    the run (see
+    [Following the parent's implicit increment, a prototype](@ref)).
 
 `e_src_res` is a **monitored residual**, not a machine-precision identity.
 ``\rho e_\mathrm{tot}`` is transported as enthalpy including pressure work and
@@ -474,10 +584,14 @@ family as a whole.
 
 ## Caveats
 
-  - Tags are **grid-scale only**, with no sub-grid updraft counterpart. So
-    `turbconv: prognostic_edmfx` is refused: its sub-grid mass flux of energy,
-    and the updraft and environment corrections to sedimentation, would reach
-    no tag. Under `edonly_edmfx` the eddy diffusion moves the tags as passive
+  - Tags are **grid-scale only**, with no sub-grid updraft counterpart. Under
+    `turbconv: prognostic_edmfx` they take their shares of the sub-grid mass
+    flux and of the sedimentation corrections instead, as described under
+    [Attribution](#Attribution). The model runs `prognostic_edmfx` with one
+    updraft only. The tags refuse more at configuration time, and would refuse
+    them even if the model allowed more, because the model computes the
+    sedimentation corrections for the first updraft only.
+    Under both EDMF variants the eddy diffusion moves the tags as passive
     tracers while it moves `ρe_tot` in enthalpy form, and the model warns.
   - Tags are excluded from both tracer limiters, through
     `is_tagged_tracer_name`. The repair above keeps them non-negative instead,
@@ -485,8 +599,16 @@ family as a whole.
   - Latitude regions require spherical geometry; altitude regions also work in
     columns and boxes.
   - Tagged state is carried through restarts like any other prognostic field,
-    and the masks are rebuilt from the configuration, so the
-    `energy_source_tags` block must match the one used to write the checkpoint.
+    and the masks are rebuilt from the configuration. So a restart must keep
+    what the tags in the checkpoint mean, and it is refused when it does not.
+    A checkpoint records `energy_source_tag_offset`, each tag's region and
+    sources, `energy_source_tag_transport` and `energy_source_tag_repair`. A
+    restart that changes one stops with an error that names it and both
+    values. A restart whose tag or process-record fields differ from the ones
+    configured is refused as well. A checkpoint written before these records
+    existed is checked by its fields alone, with a warning. One written in
+    another version of the format is refused. There is no override: to change
+    a setting, start a new run.
 
 ## Interpretation limit
 
@@ -498,7 +620,7 @@ physically complete. Nor does it turn the tags into counterfactual
 sensitivities — tagging says what contributed to the simulated energy, not what
 would change if a process were altered.
 
-## API
+## Energy source tag API
 
 ```@docs
 ClimaAtmos.EnergySourceTag
@@ -516,8 +638,23 @@ ClimaAtmos.energy_source_audit
 ClimaAtmos.AbstractEnergySourceTransport
 ClimaAtmos.TracerEnergySourceTransport
 ClimaAtmos.EnthalpyEnergySourceTransport
+ClimaAtmos.EnthalpyIncrementEnergySourceTransport
+ClimaAtmos.follows_implicit_increment
+ClimaAtmos.snapshot_energy_source_increment!
+ClimaAtmos.correct_energy_source_increment!
+ClimaAtmos.check_energy_source_increment_supported
+ClimaAtmos.EnergySourceIncrementCorrection
+ClimaAtmos.energy_source_post_implicit
+ClimaAtmos.energy_source_increment_ledger_variables
+ClimaAtmos.energy_source_increment_ledger_names
+ClimaAtmos.is_energy_source_ledger_name
 ClimaAtmos.moves_as_enthalpy
 ClimaAtmos.enthalpy_vertical_advection_of_energy_source_tags!
 ClimaAtmos.enthalpy_horizontal_advection_of_energy_source_tags!
 ClimaAtmos.enthalpy_hyperdiffusion_of_energy_source_tags!
+ClimaAtmos.write_energy_source_checkpoint_attributes!
+ClimaAtmos.check_energy_source_checkpoint
+ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
+ClimaAtmos.keep_energy_source_sediment_correction!
+ClimaAtmos.sediment_energy_source_tags_with_corrections!
 ```

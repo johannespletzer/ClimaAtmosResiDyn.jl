@@ -9,8 +9,7 @@ import ClimaAtmos as CA
     # Default: no chemistry model → no-op tendency
     # ========================================================================
     @testset "Default chemistry model is nothing" begin
-        model = CA.AtmosModel()
-        @test isnothing(model.chemistry_model)
+        @test isnothing(CA.AtmosChem().chemistry_model)
     end
 
     @testset "chemistry_tendency! with nothing is a no-op" begin

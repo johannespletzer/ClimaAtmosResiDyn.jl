@@ -27,7 +27,7 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
   - `perf/`: allocation and performance benchmarks run separately from unit tests. This repository's CI is GitHub Actions, which does not run them, so regressions must be caught in review.
   - `reproducibility_tests/`: reproducibility test infrastructure. `ref_counter.jl` holds a single integer counter that partitions commit history into reference bins — increment it when simulation output intentionally changes.
   - `post_processing/`, `calibration/`, `runscripts/`, `examples/`: analysis scripts, calibration workflows, launch scripts, and smaller usage examples.
-    `runscripts/` targets two clusters, and they are not interchangeable. DKRZ Levante has the full CPU and GPU story, including the `xmodel.*` submission scripts and the rank wrapper. LRZ terrabyte has `setup-julia-terrabyte.tcsh` and a CPU stack only, with its depot on scratch and no submission scripts yet. Each machine's `setup-julia-<machine>.tcsh` generates `.buildkite/LocalPreferences.toml`, which is not tracked in git because it records an absolute `libmpi` path. See [runscripts/README.md](../runscripts/README.md) for the setup-then-submit order, the CPU/GPU stack split, and the node layout the GPU scripts are built around.
+    `runscripts/` targets DKRZ Levante specifically; see [runscripts/README.md](../runscripts/README.md) for the setup-then-submit order, the CPU/GPU stack split, and the node layout the GPU scripts are built around.
 
 ## Mapping the architectural layers to ClimaAtmos directories
 
@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `parameterizations`, `restarts`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `parameterizations`, `restarts`. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -78,8 +78,11 @@ The `tagging_*` groups are one file each: `tagging_energy` runs
 `test/tagged_tracers_integration.jl`, `tagging_water` runs
 `test/tagged_water_integration.jl`, `tagging_source` runs
 `test/energy_source_tags_integration.jl`, `tagging_record` runs
-`test/process_record_integration.jl` and `tagging_source_float32` runs
-`test/energy_source_tags_float32_integration.jl`. They are split because a tag
+`test/process_record_integration.jl`, `tagging_source_float32` runs
+`test/energy_source_tags_float32_integration.jl`, `tagging_source_edmf`
+runs `test/energy_source_tags_edmf_integration.jl` and
+`tagging_source_increment` runs
+`test/energy_source_tags_increment_integration.jl`. They are split because a tag
 name is a type parameter, so each tag set recompiles the whole tendency and
 solve pipeline, roughly seven minutes per simulation on Julia 1.11, and the
 files share no compilation between them. Combined they overran the 90-minute
@@ -95,6 +98,22 @@ a separate group from `tagging_source` and `tagging_record` rather than folded
 into either, because the combined model is a type neither of those two files'
 models share, so it costs its own compile wherever it lives, and this keeps
 the other two groups' CI time exactly as already measured.
+
+`tagging_source_edmf` runs the energy source tags on the DYCOMS RF02 column
+under `PrognosticEDMFX`, with 1-moment microphysics and the updrafts' vertical
+diffusion on. It checks that the tags take their shares of the sub-grid mass
+flux and of the sedimentation corrections. The EDMF column is the most
+expensive model in the suite to build, and the file builds it twice, with the
+tags and without them, to check that the model's own fields do not move.
+
+`tagging_source_increment` runs the tags under
+`energy_source_tag_transport: enthalpy_increment`, where they take the parent's
+increment after each implicit solve. It checks the correction on a set
+increment, with its donors, its ledger and its audit columns, and that on the
+EDMF column the model's fields are those of the same column without tags, bit
+for bit. So it builds the EDMF column twice. The face-area scaling under a
+deep atmosphere is checked in the unit tests, on a small sphere built with
+ClimaCore alone.
 
 ### The package-load preflight
 
@@ -186,7 +205,7 @@ When reviewing or writing changes, name the validation surface explicitly:
 
 ClimaAtmosResiDyn develops diagnostics on top of upstream [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl): the stratospheric passive tracers, the tagged energy and water tracers, the energy source tags, the process records and the parent-budget ledger. It must not change the simulation. This is a boundary condition on every change in this repository.
 
-  - **Without a diagnostic.** A configuration that upstream can run gives bit-for-bit the same results here as at the upstream commit last merged into `main`. That commit is the second parent of the last "Merge upstream CliMA/ClimaAtmos.jl main" commit (currently 4a10f18, release v0.42.9). Compare the prognostic state and every output field with `isequal` on the parent arrays, not with a tolerance; `==` accepts a signed-zero difference and rejects matching `NaN`s.
+  - **Without a diagnostic.** A configuration that upstream can run gives bit-for-bit the same results here as at the upstream commit last merged into `main`. That commit is the second parent of the last "Merge upstream CliMA/ClimaAtmos.jl main" commit (currently d331fe3, release v0.42.11). Compare the prognostic state and every output field with `isequal` on the parent arrays, not with a tolerance; `==` accepts a signed-zero difference and rejects matching `NaN`s.
   - **With a diagnostic.** Every field upstream has stays bit for bit the same as in the same run without the diagnostic. Only the diagnostic's own prognostic fields (such as `ρe_tag_*`, `ρq_tag_*`, `ρe_src_*` and `prc_*`), its cache, callbacks and output may differ, and so may the run time. A diagnostic is off when its family key is at its default; the defaults of its sub-keys do not count. This clause is claimed for the default solver, a fixed number of Newton iterations with the direct block solver. With `use_krylov_method` or `use_newton_rtol` the residual norm spans the diagnostic's fields too, so a tagged run there is not expected to match, and that mismatch is not a defect of the diagnostic.
   - **What is compared.** Bit-for-bit holds within one machine, one Julia and `Manifest`, one float type and one process count. The same run on Levante and on terrabyte agrees only to rounding, so compare two runs from one machine.
 
@@ -202,7 +221,7 @@ What follows for a change:
 
 Known departures, to be removed as they are resolved:
 
-  - dd06318f changed two guards in `limiters_func!` from `@name(ρq_tot)` to `:ρq_tot` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`, where upstream v0.42.9 skips it. No shipped config sets the list. It stays as a named exception, as the owner decided on 2026-09-18, and no upstream fix is proposed from this fork.
+  - dd06318f changed two guards in `limiters_func!` from `@name(ρq_tot)` to `:ρq_tot` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`, where upstream skips it, still at v0.42.11. No shipped config sets the list. It stays as a named exception, as the owner decided on 2026-09-18, and no upstream fix is proposed from this fork.
 
 A test runs the same column with a diagnostic off and on and compares every model field with `isequal`: for the parent-budget ledger in `test/parent_budget/envelope_tests.jl` ("The trajectory is unchanged"), and for the tagged energy and water tracers, the energy source tags and the process records in their integration tests ("The model's fields do not depend on the tags", and "... on the records"). The stratospheric passive tracers have no such test yet. A new diagnostic gets one. These cover the default solver on one column each. No CI job compares the fork with upstream, so the fork-versus-upstream clause is checked by a run against the last merged upstream commit on one machine.
 

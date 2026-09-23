@@ -7,12 +7,14 @@ import ClimaUtilities.TimeManager: ITime
 #####
 
 """
-    get_state_restart(restart_file, start_date, atmos_model_hash, comms_ctx)
+    get_state_restart(restart_file, start_date, model::AtmosModel, comms_ctx)
 
 Read the state and start time from an HDF5 restart file.
 
-Warns when the file records a different `AtmosModel` hash than `atmos_model_hash`, since
-the restart is then not guaranteed to be compatible.
+Warns when the file records a different physics hash than `hash_physics(model)`,
+since the restart is then not guaranteed to be compatible. The hash covers the
+physics fields only: the grid is checked separately by the caller, and the
+setup and params do not affect whether a checkpoint can be resumed.
 
 # Returns
 
@@ -22,10 +24,11 @@ the restart is then not guaranteed to be compatible.
 function get_state_restart(
     restart_file,
     start_date,
-    atmos_model_hash,
+    model::AtmosModel,
     comms_ctx,
 )
     @assert !isnothing(restart_file)
+    atmos_model_hash = hash_physics(model)
     reader = InputOutput.HDF5Reader(restart_file, comms_ctx)
     Y = InputOutput.read_field(reader, "Y")
     # TODO: Do not use InputOutput.HDF5 directly
@@ -45,7 +48,9 @@ end
     handle_restart(restart_file, t_start_original, start_date, model, context; verbose = false)
 
 Load a restart file, warning when a nonzero `t_start_original` is passed, since the
-restart time from the file takes precedence.
+restart time from the file takes precedence. A restart that changes the energy
+source tags' settings or the process records is refused, see
+[`check_energy_source_checkpoint`](@ref).
 
 # Returns
 
@@ -69,9 +74,10 @@ function handle_restart(
         @warn "Non zero `t_start` passed with a restarting simulation. The provided `t_start` will be ignored."
     end
 
-    (Y, t_start) = get_state_restart(
-        restart_file, start_date, hash(model), context,
-    )
+    (Y, t_start) = get_state_restart(restart_file, start_date, model, context)
+    # A restart may not change what the energy source tags or the process
+    # records in the file mean. This runs before the cache is built.
+    check_energy_source_checkpoint(restart_file, model, Y, context)
 
     if verbose
         @info "Restarting simulation from file" restart_file restart_time =

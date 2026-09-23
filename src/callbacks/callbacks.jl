@@ -283,6 +283,9 @@ The file is named `day\$day.\$sec.hdf5` from the elapsed simulation time, and th
 written under the field name `"Y"`. Two attributes are attached: `"time"`, the simulation
 time in seconds, and `"atmos_model_hash"`, a hash of `p.atmos` that a restart checks
 against so a checkpoint is not silently loaded into a different model configuration.
+With energy source tags, their offset, definitions, transport and repair are
+attached as well, and a restart that changes one is refused (see
+[`write_energy_source_checkpoint_attributes!`](@ref)).
 
 Returns `nothing`. Installed by `checkpoint_callback` when `checkpoint_frequency` is
 finite.
@@ -305,10 +308,15 @@ NVTX.@annotate function save_state_to_disk_func(integrator, output_dir)
     InputOutput.HDF5.write_attribute(
         hdfwriter.file,
         "atmos_model_hash",
-        hash(p.atmos),
+        hash_physics(p.atmos),
     )
     # The parent-budget ledger's endpoint of this state, for the restart check.
     Internals.ParentBudget.write_checkpoint_attributes!(hdfwriter.file, p.parent_budget)
+    # The energy source tags' settings, for the restart guard.
+    write_energy_source_checkpoint_attributes!(
+        hdfwriter.file,
+        p.atmos.energy_source_tagging_model,
+    )
     InputOutput.write!(hdfwriter, Y, "Y")
     Base.close(hdfwriter)
     return nothing

@@ -2,8 +2,7 @@ import ClimaAtmos as CA
 import ClimaCore
 import ClimaCore: DataLayouts, Fields, Geometry
 import ClimaCore.Fields: Field, FieldVector, field_values
-import ClimaCore.DataLayouts: AbstractData
-import ClimaCore.Geometry: AxisTensor
+import ClimaCore.DataLayouts: DataLayout
 import ClimaCore.Spaces: AbstractSpace
 import ClimaComms
 import ClimaUtilities.OutputPathGenerator: maybe_wait_filesystem
@@ -86,6 +85,10 @@ function test_restart(test_dict; job_id, comms_ctx, more_ignore = Symbol[])
         simulation_restarted.integrator.p;
         name = "integrator.p",
         ignore = Set([
+            # p.atmos is rebuilt from the same config, not read from the
+            # checkpoint, and it carries grid, params, and setup, so
+            # walking it is expensive and does not test restart reproducibility
+            :atmos,
             :ghost_buffer,
             :hyperdiffusion_ghost_buffer,
             :scratch,
@@ -149,6 +152,11 @@ function test_restart(test_dict; job_id, comms_ctx, more_ignore = Symbol[])
         simulation_restarted2.integrator.p;
         name = "integrator.p",
         ignore = Set([
+            # p.atmos is rebuilt from the same config, not read from the
+            # checkpoint, and it carries grid, params, and setup, so
+            # walking it is expensive and does not test restart reproducibility
+            # The checkpoint's atmos_model_hash check covers these.
+            :atmos,
             :scratch,
             :output_dir,
             :ghost_buffer,

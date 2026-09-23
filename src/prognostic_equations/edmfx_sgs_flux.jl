@@ -53,7 +53,7 @@ function edmfx_sgs_mass_flux_tendency!(
     )
     ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
 
-    if p.atmos.edmfx_model.sgs_mass_flux isa Val{true}
+    if p.atmos.edmfx_model.sgs_mass_flux
 
         # Enthalpy fluxes. First sum up the draft fluxes
         # TODO: Isolate assembly of flux term pattern to a function and
@@ -230,9 +230,9 @@ function edmfx_sgs_diffusive_flux_tendency!(
     # opt in/out just like the old subdomain-native diffusion did.
     apply_sgs_updraft =
         turbconv_model isa PrognosticEDMFX &&
-        p.atmos.edmfx_model.vertical_diffusion isa Val{true}
+        p.atmos.edmfx_model.vertical_diffusion
 
-    if p.atmos.edmfx_model.sgs_diffusive_flux isa Val{true}
+    if p.atmos.edmfx_model.sgs_diffusive_flux
 
         # Face-native eddy diffusivity/viscosity and interfacial entrainment
         # diffusivity, evaluated at the faces where the fluxes live (see
@@ -399,12 +399,21 @@ function edmfx_sgs_diffusive_flux_tendency!(
                 @. Yₜ.c.ρ -= ᶜρχₜ_diffusion
             end
             # Uniform vertical diffusion: apply the same grid-mean specific
-            # tendency to the matching subdomain field in each updraft.
+            # tendency to the matching subdomain field in each updraft. A
+            # tracer the updraft does not carry is skipped, as on the
+            # horizontal path below. The fork's grid-scale-only tracers are
+            # such tracers: the water and energy tags, the energy source tags
+            # and the stratospheric passive tracers. The skip covers any
+            # tracer, as the horizontal path's does. Under EDMF every tracer
+            # upstream has on the grid has an updraft copy, so upstream's runs
+            # take the same path as before.
             if apply_sgs_updraft
                 χ_name = specific_tracer_name(ρχ_name)
                 for j in 1:n
-                    ᶜχⱼₜ = MatrixFields.get_field(Yₜ.c.sgsʲs.:($j), χ_name)
-                    @. ᶜχⱼₜ -= ᶜρχₜ_diffusion / Y.c.ρ
+                    if MatrixFields.has_field(Y.c.sgsʲs.:($j), χ_name)
+                        ᶜχⱼₜ = MatrixFields.get_field(Yₜ.c.sgsʲs.:($j), χ_name)
+                        @. ᶜχⱼₜ -= ᶜρχₜ_diffusion / Y.c.ρ
+                    end
                 end
             end
         end

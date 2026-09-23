@@ -17,7 +17,9 @@ family is wired into a simulation at all, which is what this file covers:
  6. the implicit Jacobian solves the tags apart from the rest, and the split
     solver gives the increments of the unsplit one exactly, without allocating;
  7. with `energy_source_tag_offset`, the donor-proportional *loss* runs through
-    the same solve, and the offset leaves the model's own state untouched;
+    the same solve, and the offset leaves the model's own state untouched. A
+    restart from its checkpoint with the same settings loads the state bit for
+    bit, and one that changes the offset or a region is refused by name;
  8. under 1-moment microphysics, sedimentation moves the tags with the water.
     The partition's fluxes add up to the parent's, and each face takes the
     shares of the cell that loses the energy, in either direction. On the
@@ -27,7 +29,10 @@ family is wired into a simulation at all, which is what this file covers:
     adds up to the parent's, each face takes the upwind cell's shares, and the
     model's state is untouched;
  10. on a small sphere, the same audit adds up to the parent's in horizontal
-     advection and in hyperdiffusion.
+     advection and in hyperdiffusion;
+ 11. on a cold column's initial state, falling ice carries negative energy,
+     so the energy it moves rises and each face under it takes the shares of
+     the cell below. The partition still adds up to the parent's.
 
 Items 1 to 6 run on `ρe_tot` itself. It is non-positive across this column, so
 `energy_source_fraction` returns zero and the loss never runs there. Production
@@ -46,7 +51,7 @@ builds the smallest one. Each tag set is a fresh `AtmosModel` type and costs a
 full compile of the solve pipeline, which is why these files have their own
 test group (see the note in `runtests.jl`). The offset is part of that type, and
 so are the microphysics and the transport. So item 7 costs a second compile,
-item 8 a third, item 9 a fourth and item 10 a fifth.
+item 8 a third, item 9 a fourth, item 10 a fifth and item 11 a sixth.
 =#
 using Test
 import ClimaAtmos as CA
@@ -413,6 +418,40 @@ end
         @test rows[3][10] == rows[2][4]
         @test rows[3][11] == rows[3][4] - rows[2][4]
         @test rows[3][12] == rows[3][11] / rows[3][8]
+
+        # The restart guard. The run above wrote a checkpoint at 20 s with its
+        # settings. A restart with the same settings loads that state bit for
+        # bit. One that changes the offset, or a region, is refused before the
+        # cache is built, so neither costs a compile.
+        checkpoint = joinpath(offset_simulation.output_dir, "day0.20.hdf5")
+        @test isfile(checkpoint)
+        restart_config(changes...) = CA.AtmosConfig(
+            merge(
+                test_dict,
+                Dict{String, Any}(
+                    "energy_source_tag_offset" => c,
+                    "output_dir" => mktempdir(pwd()),
+                    "energy_source_closure_check" => Dict{String, Any}(
+                        "period" => "10secs",
+                        "spin_up" => "10secs",
+                    ),
+                    "restart_file" => checkpoint,
+                ),
+                Dict{String, Any}(changes...),
+            );
+            job_id = "energy_source_tags_integration_restart_guard",
+        )
+        restarted = CA.get_simulation(restart_config())
+        @test isequal(parent(restarted.integrator.u.c), parent(Y_offset.c))
+        @test isequal(parent(restarted.integrator.u.f), parent(Y_offset.f))
+        @test_throws r"energy_source_tag_offset: 50000.0" CA.get_simulation(
+            restart_config("energy_source_tag_offset" => 60000.0),
+        )
+        wider = deepcopy(tags)
+        wider[1]["region"]["width"] = 200.0
+        @test_throws r"tag `strat`" CA.get_simulation(
+            restart_config("energy_source_tags" => wider),
+        )
     end
 
     # 8. Sedimentation moves the tags. Under 1-moment microphysics the cloud and
@@ -639,8 +678,7 @@ end
         # That reference reconstructs `h_tot + c`. The parent moves `h_tot`
         # with the same reconstruction and `ρ` with the central flux. The two
         # agree because each reconstruction reproduces a constant, which is
-        # asserted here rather than assumed. Rounding scales with the face
-        # fluxes over the level spacing.
+        # asserted here rather than assumed.
         upwinding = p_audit.atmos.numerics.energy_q_tot_upwinding
         ᶜJ = CA.Fields.local_geometry_field(Y_audit.c).J
         ᶠJ = CA.Fields.local_geometry_field(Y_audit.f).J
@@ -655,13 +693,23 @@ end
         @. ᶜparent_E +=
             vtt_h -
             c * CA.ᶜadvdivᵥ(CA.ᶠinterp(Y_audit.c.ρ * ᶜJ) / ᶠJ * ᶠu³)
-        ᶠmass_flux = @. CA.ᶠinterp(Y_audit.c.ρ * ᶜJ) / ᶠJ * ᶠu³
-        flux_scale =
-            (maximum(abs, parent(ᶜh_tot)) + c) *
-            maximum(abs, parent(ᶠmass_flux)) /
-            minimum(parent(CA.Fields.Δz_field(Y_audit.c)))
+        # Rounding scales with the larger of the two terms added: the
+        # parent's flux of `h_tot` and `c` times the mass-flux divergence, as
+        # in the sphere item below. The earlier scale was built from `u³` over
+        # Δz. It sat below one ulp of these terms, so the check asked for
+        # equality, and after the merge of upstream v0.42.11 one cell differed
+        # by about one ulp.
+        ᶜh_part = zero.(Y_audit.c.ρ)
+        @. ᶜh_part += vtt_h
+        ᶜmass_part = @. c * CA.ᶜadvdivᵥ(
+            CA.ᶠinterp(Y_audit.c.ρ * ᶜJ) / ᶠJ * ᶠu³,
+        )
+        term_scale = max(
+            maximum(abs, parent(ᶜh_part)),
+            maximum(abs, parent(ᶜmass_part)),
+        )
         @test maximum(abs, parent(ᶜexpected) .- parent(ᶜparent_E)) <
-              100 * eps(FT) * flux_scale
+              100 * eps(FT) * term_scale
 
         # The donor, on a step partition: all of `E` above 750 m in `strat` and
         # all below in `tropo`, moved by a flow of one sign in a band around
@@ -807,5 +855,93 @@ end
             parent(Yₜ_sphere.c.ρe_tot) .+ parent(Yₜ_lim.c.ρe_tot) .+ c .* ᶜρₜ
         @test maximum(abs, tags_sum(Yₜ_sphere) .- ᶜEₜ) <
               100 * eps(FT) * tags_scale(Yₜ_sphere)
+    end
+
+    # 11. Falling ice on a real state. Ice carries negative energy against the
+    # reference plus the offset. So the energy it moves rises while it falls,
+    # and each face under it takes the shares of the cell below. Item 8
+    # reaches that branch only with a flux set by hand. `PrecipitatingColumn`
+    # starts with cloud ice at 6 to 9 km and snow at 5 to 8 km, well below
+    # freezing, and with cloud liquid and rain lower down. So its initial state
+    # has both branches. Most of the ice sublimates within a minute, so the
+    # checks run on the initial state, and the column is not stepped. A new
+    # case brings a new surface, so this is a sixth compile.
+    @testset "Falling ice moves the tags up" begin
+        local c = 50000.0
+        cold_simulation = CA.get_simulation(
+            CA.AtmosConfig(
+                merge(
+                    test_dict,
+                    Dict{String, Any}(
+                        "initial_condition" => "PrecipitatingColumn",
+                        "surface_setup" => "DefaultMoninObukhov",
+                        "z_max" => 10000.0,
+                        "z_elem" => 100,
+                        "microphysics_model" => "1M",
+                        "fixed_terminal_velocity_liquid" => false,
+                        "energy_source_tag_offset" => c,
+                        "output_dir" => mktempdir(pwd()),
+                    ),
+                );
+                job_id = "energy_source_tags_integration_cold",
+            ),
+        )
+        local Y = cold_simulation.integrator.u
+        local p = cold_simulation.integrator.p
+        local t = cold_simulation.integrator.t
+        ᶜz = CA.Fields.coordinate_field(Y.c).z
+        ᶜE = @. Y.c.ρe_tot + c * Y.c.ρ
+        # The shares are defined everywhere.
+        @test all(>(0), parent(ᶜE))
+
+        # Both branches are there. Falling ice carries negative energy per
+        # kilogram, geopotential and offset included, and falling liquid
+        # positive.
+        thermo_params = CA.CAP.thermodynamics_params(p.params)
+        (; ᶜT) = p.precomputed
+        ᶜΦ = p.core.ᶜΦ
+        function falling_cells(ᶜρq, internal_energy)
+            ᶜe = @. internal_energy(thermo_params, ᶜT) + ᶜΦ + c
+            wet = parent(ᶜρq) .> 1e-9 .* parent(Y.c.ρ)
+            return count(wet .& (parent(ᶜe) .< 0)),
+            count(wet .& (parent(ᶜe) .> 0))
+        end
+        ice_rising, ice_falling =
+            falling_cells(Y.c.ρq_icl, CA.TD.internal_energy_ice)
+        liquid_rising, liquid_falling =
+            falling_cells(Y.c.ρq_lcl, CA.TD.internal_energy_liquid)
+        @test ice_rising > 0
+        @test ice_falling == 0
+        @test liquid_rising == 0
+        @test liquid_falling > 0
+
+        # The partition's sedimentation tendencies add up to the parent's.
+        Yₜ = zero(Y)
+        CA.vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
+        ᶜE_tendency = @. Yₜ.c.ρe_tot + c * Yₜ.c.ρ
+        scale = maximum(abs, parent(ᶜE_tendency))
+        @test scale > 0
+        @test maximum(
+            abs,
+            parent(Yₜ.c.ρe_src_strat) .+ parent(Yₜ.c.ρe_src_tropo) .-
+            parent(ᶜE_tendency),
+        ) < 100 * eps(FT) * scale
+
+        # A step partition inside the ice, at 6.5 km. Where the energy falls,
+        # `tropo` could never move above the step. Here it moves in the one
+        # cell above it, and `strat` in no cell below it.
+        Y_step = copy(Y)
+        @. Y_step.c.ρe_src_strat = ifelse(ᶜz > 6500, ᶜE, FT(0))
+        @. Y_step.c.ρe_src_tropo = ᶜE - Y_step.c.ρe_src_strat
+        Yₜ_step = zero(Y_step)
+        CA.vertical_advection_of_water_tendency!(Yₜ_step, Y_step, p, t)
+        above = parent(ᶜz) .> 6500
+        strat = parent(Yₜ_step.c.ρe_src_strat)
+        tropo = parent(Yₜ_step.c.ρe_src_tropo)
+        @test count(!iszero, tropo[above]) == 1
+        @test all(iszero, strat[.!above])
+        ᶜE_step_tendency = @. Yₜ_step.c.ρe_tot + c * Yₜ_step.c.ρ
+        @test maximum(abs, strat .+ tropo .- parent(ᶜE_step_tendency)) <
+              100 * eps(FT) * maximum(abs, parent(ᶜE_step_tendency))
     end
 end
