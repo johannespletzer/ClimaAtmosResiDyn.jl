@@ -31,14 +31,17 @@ const WATER_TAG_LEAK_PATHS =
 """
     water_tag_leak!(ᶜleak, Y, p, ::Val{path})
 
-Write into `ᶜleak` the rate at which `path` moves the sum of a partition of
-water tags away from the parent, per unit mass of grid-mean air, in
-kg kg⁻¹ s⁻¹. It is the path's tendency of `Σᵢ ρq_tagᵢ` minus its tendency of
-`ρq_tot`, over `ρ`, for tags that sum to `ρq_tot`. A positive value means the
-tags gain water the parent does not.
+Write into `ᶜleak` the rate at which `path` would move the sum of a partition
+of water tags away from the parent if the partition were exactly closed, per
+unit mass of grid-mean air, in kg kg⁻¹ s⁻¹. It is the path's tendency of
+`Σᵢ ρq_tagᵢ` minus its tendency of `ρq_tot`, over `ρ`, evaluated at
+`Σᵢ ρq_tagᵢ = ρq_tot`. So it is the source the path adds to the closure
+residual. It does not read the tags: the path's transport of a residual already
+there, `L(Σᵢ q_tagᵢ - q_tot)` for the path's operator `L`, is not in it. A
+positive value means the tags gain water the parent does not.
 
 For the updrafts' paths, the tendency is the copies' `Σᵢ χᵢʲ` minus `q_totʲ`,
-times `ρaʲ / ρ`, summed over the updrafts. That is the water the copies gain
+evaluated at `Σᵢ χᵢʲ = q_totʲ`, times `ρaʲ / ρ`, summed over the updrafts. That is the water the copies gain
 that the updraft does not, per unit mass of grid-mean air. The copies' repair
 takes it out again, into `q_tag_upfix_<name>`.
 

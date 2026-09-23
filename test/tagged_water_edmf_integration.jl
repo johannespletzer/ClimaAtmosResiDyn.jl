@@ -191,6 +191,12 @@ relative_difference(a, b) =
             Yₜ.c.ρq_tag_tropo .+ Yₜ.c.ρq_tag_strat .- Yₜ.c.ρq_tot,
             ᶜleak .* Y.c.ρ,
         ) < 1e-8
+        # It is the source from an exactly closed partition, so it does not
+        # read the tags: the tags as the run left them give the same value.
+        ᶜleak_run = similar(Y.c.ρ)
+        CA.water_tag_leak!(ᶜleak_run, Y, p, Val(:vdiff))
+        CA.water_tag_leak!(ᶜleak, Y_uniform, p, Val(:vdiff))
+        @test isequal(parent(ᶜleak_run), parent(ᶜleak))
         # The paths this column does not have leak nothing.
         for path in (:hdiff, :hyperdiff, :sponge)
             CA.water_tag_leak!(ᶜleak, Y_uniform, p, Val(path))

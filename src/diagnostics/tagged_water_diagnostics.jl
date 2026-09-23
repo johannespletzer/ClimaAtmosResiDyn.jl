@@ -243,10 +243,15 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
         end
     end
 
-    # As for `q_tag_res`: a stale entry from an earlier model with copies would
-    # report a residual this model does not have.
+    # The diagnostics below describe a partition: the region tags without
+    # sources. A model with source tags only has none, so they are not
+    # registered, as `q_tag_res` is not. A stale entry from an earlier model
+    # would report a residual this model does not have, so each is dropped
+    # first.
+    region_names = water_region_tag_state_names(model)
+    has_partition = !isempty(region_names)
     delete!(ALL_DIAGNOSTICS, "q_tag_copy_res")
-    if has_water_tag_updraft_copies(model)
+    if has_water_tag_updraft_copies(model) && has_partition
         add_diagnostic_variable!(;
             short_name = "q_tag_copy_res",
             units = "kg kg^-1",
@@ -262,11 +267,13 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
     end
 
     # The rate at which each path that moves the tags on their whole value,
-    # and the parent on its diffusing water, drifts their sum from the parent
-    # (G3_PLAN 4.2). The updrafts' paths only with copies.
+    # and the parent on its diffusing water, would drift an exactly closed
+    # partition from the parent (G3_PLAN 4.2). The updrafts' paths only with
+    # copies.
     for path in WATER_TAG_LEAK_PATHS
         short_name = "q_tag_leak_$path"
         delete!(ALL_DIAGNOSTICS, short_name)
+        has_partition || continue
         endswith(string(path), "_up") &&
             !has_water_tag_updraft_copies(model) &&
             continue
@@ -275,19 +282,21 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             short_name,
             units = "kg kg^-1 s^-1",
             long_name = "Tagged Water Leak by $title",
-            comments = "The rate at which $what moves the sum of a " *
-                       "partition of water tags away from total water, per " *
-                       "unit mass of grid-mean air, computed from the state " *
-                       "in closed form. The path moves the tags on their " *
-                       "whole value, and total water only by the water that " *
-                       "diffuses, without rain and snow. Zero where the path " *
-                       "is off. See `water_tag_leak!`.",
+            comments = "The rate at which $what would move the sum of " *
+                       "a partition of water tags away from total water if " *
+                       "the partition were exactly closed, per unit mass of " *
+                       "grid-mean air, in closed form from the state. The " *
+                       "path moves the tags on their whole value, and total " *
+                       "water only by the water that diffuses, without rain " *
+                       "and snow. It is the source the path adds to the " *
+                       "closure residual; the path's transport of a residual " *
+                       "already there is not in it. Zero where the path is " *
+                       "off. See `water_tag_leak!`.",
             compute! = (out, u, p, t) ->
                 compute_q_tag_leak!(out, u, p, t, Val(path)),
         )
     end
 
-    region_names = water_region_tag_state_names(model)
     # Drop any stale entry first, then decide whether to register a new one. An
     # earlier simulation in this process may have registered `q_tag_res` over a
     # different set of region tags. If every tag in this model carries a
@@ -301,13 +310,17 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             units = "kg kg^-1",
             long_name = "Tagged Water Closure Residual",
             comments = "Total water minus the sum of the region tags, " *
-                       "(ρq_tot - Σᵢ ρq_tag_i) / ρ. Nonzero because the tags " *
-                       "are advected vertically on the explicit passive-tracer " *
-                       "path while ρq_tot is advected implicitly with a " *
-                       "post-Newton upwind correction; their diffusion and " *
-                       "hyperdiffusion operators, by contrast, are identical. " *
-                       "Subtract `q_tag_fix_*` to isolate operator " *
-                       "disagreement from numerical corrections.",
+                       "(ρq_tot - Σᵢ ρq_tag_i) / ρ. One contributor is the " *
+                       "vertical advection split: the tags are advected on " *
+                       "the explicit passive-tracer path while ρq_tot is " *
+                       "advected implicitly with a post-Newton upwind " *
+                       "correction. Others are the paths that move the tags " *
+                       "on their whole value and ρq_tot without rain and " *
+                       "snow, or relative to a reference profile: the " *
+                       "diffusion, the hyperdiffusion, the sponge and their " *
+                       "updraft counterparts, whose sources `q_tag_leak_*` " *
+                       "gives. Subtract `q_tag_fix_*` to separate numerical " *
+                       "corrections.",
             compute! = (out, u, p, t) ->
                 compute_q_tag_res!(out, u, p, t, region_names),
         )

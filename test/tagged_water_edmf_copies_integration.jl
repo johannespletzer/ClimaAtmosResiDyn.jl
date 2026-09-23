@@ -267,6 +267,75 @@ end
         end
     end
 
+    # 4b. The sedimentation mirror takes the updraft's share for the falling
+    # updraft water and the environment's for the inflow. With one composition
+    # everywhere a swap would not show, so here the shares differ between the
+    # subdomains, and the mirror is compared with the model's own operator fed
+    # the shares by hand: falling water only, inflow only, and both.
+    @testset "The sedimentation mirror takes each subdomain's share" begin
+        # Updraft shares, and environment shares, per tag.
+        up = (; tropo = 0.3, strat = 0.7, evap = 0.6)
+        env = (; tropo = 0.8, strat = 0.2, evap = 0.1)
+        Y_m = copy(Y)
+        ᶜρaq_totʲ = ᶜsgsʲ.ρa .* ᶜsgsʲ.q_tot
+        for name in (:tropo, :strat, :evap)
+            getproperty(Y_m.c.sgsʲs.:(1), Symbol(:q_tag_, name)) .=
+                getproperty(up, name) .* ᶜsgsʲ.q_tot
+            getproperty(Y_m.c, Symbol(:ρq_tag_, name)) .=
+                getproperty(up, name) .* ᶜρaq_totʲ .+
+                getproperty(env, name) .* (Y.c.ρq_tot .- ᶜρaq_totʲ)
+        end
+        ᶜρʲ = p.precomputed.ᶜρʲs.:(1)
+        ᶜa = CA.draft_area.(ᶜsgsʲ.ρa, ᶜρʲ)
+        ᶜw = zero.(Y.c.ρ) .+ 3.0
+        ᶜinv_ρ̂ = zero.(Y.c.ρ) .+ 1.0
+        ᶠJ = CA.Fields.local_geometry_field(Y.f).J
+        α_lat = 1.0
+        ᶜq_rain = ᶜsgsʲ.q_rai .+ 1e-6
+        ᶜinflow = Y.c.ρ .* 1e-6
+        ᶜzero = zero.(Y.c.ρ)
+        expected_vtt = similar(Y.c.ρ)
+        for (ᶜqʲ, ᶜρ⁰w⁰q⁰, what) in (
+            (ᶜq_rain, ᶜzero, "falling only"),
+            (ᶜzero, ᶜinflow, "inflow only"),
+            (ᶜq_rain, ᶜinflow, "both"),
+        )
+            Yₜ = zero(Y)
+            CA.sediment_water_tag_copies!(
+                Yₜ,
+                Y_m,
+                p,
+                1,
+                ᶜqʲ,
+                ᶜw,
+                ᶜa,
+                ᶜρ⁰w⁰q⁰,
+                α_lat,
+                ᶜinv_ρ̂,
+                ᶠJ,
+            )
+            for name in (:tropo, :strat, :evap)
+                CA.updraft_sedimentation!(
+                    expected_vtt,
+                    p,
+                    ᶜρʲ,
+                    ᶜw,
+                    ᶜa,
+                    ᶜqʲ .* getproperty(up, name),
+                    ᶠJ,
+                    ᶜρ⁰w⁰q⁰ .* getproperty(env, name),
+                    α_lat,
+                )
+                ᶜχₜ = getproperty(Yₜ.c.sgsʲs.:(1), Symbol(:q_tag_, name))
+                @test maximum(abs, parent(ᶜχₜ)) > 0
+                # The environment's shares come through the model's
+                # regularized environment values, so they agree to about the
+                # regularization, far below a swapped share's error.
+                @test relative_difference(ᶜχₜ, expected_vtt) < 1e-4
+            end
+        end
+    end
+
     # 5. The copies' own code.
     @testset "The copies do not allocate" begin
         Yₜ = zero(Y)

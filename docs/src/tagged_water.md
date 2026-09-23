@@ -347,8 +347,10 @@ Under 1-moment microphysics the rain and snow make the difference. The
 hyperdiffusion also takes ``\rho q_\mathrm{tot}`` as a perturbation from a
 reference profile ``q_\mathrm{tot,r}(p)`` and the tags not, so it drifts the
 partition under 0-moment too, wherever that profile varies along a model level.
-`q_tag_leak_<path>` is each path's rate, in closed form from the state
-(`water_tag_leak!`). No path corrects it yet.
+`q_tag_leak_<path>` is each path's source, in closed form from the state
+(`water_tag_leak!`): the rate at which the path would drift an exactly closed
+partition. It does not read the tags, so it leaves out the path's transport of
+a residual already there. No path corrects it yet.
 
 It is not the *only* contributor, though. Any tendency that writes
 ``\rho q_\mathrm{tot}`` by name without an attribution bracket and without a

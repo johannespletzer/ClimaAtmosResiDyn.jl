@@ -67,11 +67,11 @@ function _check_water_tag_exchange_partition(
         over the sum of the region tags without sources. These tags have \
         none, so the exchange would do nothing. $advice",
     )
-    mask_sum = reduce(
-        (a, b) -> a .+ b,
-        map(name -> parent(getproperty(cache.ᶜwater_masks, name)), names),
-    )
-    deviation = maximum(abs.(mask_sum .- 1))
+    masks = map(name -> getproperty(cache.ᶜwater_masks, name), names)
+    mask_sum = reduce((a, b) -> a .+ b, map(parent, masks))
+    # The largest deviation over every process, so that all of them refuse
+    # together, rather than some while the others go on and wait for them.
+    deviation = _collective_maximum(maximum(abs.(mask_sum .- 1)), first(masks))
     deviation > 0.01 && error(
         "The water tags exchange provenance at the updraft's mass flux under \
         `turbconv: prognostic_edmfx`, and a tag's share there is its value \
@@ -81,6 +81,12 @@ function _check_water_tag_exchange_partition(
     )
     return nothing
 end
+
+# The maximum of a local value over the processes that hold `field`. Arrays
+# that are not fields, as in the unit tests, are one process's.
+_collective_maximum(value, field::Fields.Field) =
+    ClimaComms.allreduce(ClimaComms.context(field), value, max)
+_collective_maximum(value, field) = value
 
 # ============================================================================
 # Scratch
@@ -687,6 +693,10 @@ exactness where a copy lies outside that range. Call it right after
 the explicit path, wherever that runs. A no-op without copies and other than
 under 0M with prognostic EDMF, where the updraft's microphysics never changes
 `q_totʲ`.
+
+It has no Jacobian entry, deliberately: `q_totʲ`'s rain-out has none, and an
+entry for the copies alone would part their Newton updates from `q_totʲ`'s.
+See `docs/known_issues.md`, issue 4.
 """
 water_tag_copies_microphysics_tendency!(Yₜ, Y, p, microphysics_model, turbconv_model) =
     nothing

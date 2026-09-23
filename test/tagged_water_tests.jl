@@ -747,12 +747,33 @@ column_atmos_model(; kwargs...) =
         # closure.
         source_only_tags =
             (CA.WaterTag{:forced}(nothing, :external_forcing),)
+        # The copies' residual and the leaks describe a partition too, so a
+        # region model with copies registers them first, and the source-only
+        # model with copies must clear them.
         CA.Diagnostics.register_water_tagging_diagnostics!(
-            CA.WaterTaggingModel(source_only_tags),
+            CA.WaterTaggingModel(tags; updraft_copies = true),
         )
-        @test_throws ErrorException CA.Diagnostics.get_diagnostic_variable(
+        @test !isnothing(CA.Diagnostics.get_diagnostic_variable("q_tag_copy_res"))
+        @test !isnothing(CA.Diagnostics.get_diagnostic_variable("q_tag_leak_vdiff"))
+        # The residual's metadata no longer says the operators are identical.
+        @test !occursin(
+            "identical",
+            CA.Diagnostics.get_diagnostic_variable("q_tag_res").comments,
+        )
+        CA.Diagnostics.register_water_tagging_diagnostics!(
+            CA.WaterTaggingModel(source_only_tags; updraft_copies = true),
+        )
+        for short_name in (
             "q_tag_res",
+            "q_tag_copy_res",
+            "q_tag_leak_vdiff",
+            "q_tag_leak_diffusion_up",
+            "q_tag_upfix_forced",
         )
+            @test_throws ErrorException CA.Diagnostics.get_diagnostic_variable(
+                short_name,
+            )
+        end
 
         # A later region model installs a fresh residual over its own tags.
         # The earlier field stays in the state with a large value, so this
