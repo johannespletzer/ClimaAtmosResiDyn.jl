@@ -142,8 +142,6 @@ lost. Captures now keep ignored files.
     keeps ignored files (the archive README gives the commands).
   - `$SCRATCH/claude_work`: cleaned when the job session no longer uses it. It
     is in the archive.
-  - The owner is to confirm the wider local-branch rule: all 37 merged local
-    branches were deleted, not only the listed ones. Nothing unique was lost.
   - An LRZ backup restore of the lost logs, if the owner wants one.
   - A PR to `main` that moves `docs/src/tag_closure_memo.md` and
     `tag_closure_experiments.md` into the archive and edits `docs/make.jl`
@@ -173,7 +171,6 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
   - **A rerun of `main`'s CI.** #96 and #97 were merged with `ci-required`
     failing on cancelled checks, not on a failed test, and `main`'s own CI
     runs were cancelled too. A rerun is the owner's to start.
-  - **The wider local-branch rule of H7**, above.
 
 Every decision taken so far is in [DECISIONS.md](DECISIONS.md).
 

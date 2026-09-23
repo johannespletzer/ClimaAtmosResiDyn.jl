@@ -265,6 +265,10 @@ Short names for the sources:
 
 These decisions are in the documents but have no row in `decisions.csv`.
 
+  - **2026-09-23. The wider local-branch deletion of H7 is accepted, in this
+    case.** All 37 merged local branches were deleted, not only the listed
+    ones. Every tip is in `origin/main`. The rule that removal goes by an
+    approved list stays in force. **Done.** The owner, in this session.
   - **2026-09-23. H7's list of worktree and branch fates is approved**, and
     partly carried out the same day. **In force** for what waits.
     [CONDENSE_PLAN.md, H7](archive/2026-09-23/CONDENSE_PLAN.md#h7-approved-by-the-owner-on-2026-09-23)
