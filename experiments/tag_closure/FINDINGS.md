@@ -2415,6 +2415,54 @@ days.
 (`v2_sphere.py`) and the per-tag comparison with the twin
 (`tag_correctness_sphere.py`) are in `output/g2_v2_sphere_n2/`.*
 
+**E75. G2 complete: with the updraft's mixing the sphere closes as before, and
+the source tags move by 10 to 19% over ten days.** `g2_v2_sphere_mix` is
+`g2_v2_sphere_n2` again from the branch that mixes provenance through the
+updrafts (E73), the default the fork now runs. Ten days, two Newton
+iterations, Float32, 24 ranks.
+
+  - **The closure is the same.** 2.003e-4 of the scale at ten days against
+    2.009e-4 without the mixing, and the same at every day between. The
+    exchange sums to zero over the partition, so it cannot move the closure,
+    and it does not. The flush rate (0.0153 to 0.0166 a day), the slowing, and
+    the share of `|R|` above 10 km are all unchanged. The correction's column
+    totals fall a little, 6.78e-5 of the scale against 7.35e-5, and the repair
+    moves 6.36e-2 against 6.63e-2.
+  - **The tags move, and the longer the run the more.** Against the run
+    without the mixing, on the same atmosphere:
+
+    | L1 | 1 h | 24 h | 5 d | 10 d |
+    |:--|--:|--:|--:|--:|
+    | `sfc` | 0.27% | 4.9% | 10.0% | 12.1% |
+    | `rad` | 0.15% | 1.7% | 8.4% | 9.1% |
+    | `new_extratropics` | 0.06% | 2.9% | 8.8% | 19.1% |
+    | region tags | 1e-8 | 0.008% | 0.5% | 1.2 to 1.9% |
+
+    The largest pointwise differences reach 39 to 59% of the reference's
+    largest value at ten days. The integrals move by about 1%: `sfc` −0.73%,
+    `rad` −1.25%, `new_extratropics` −1.31%.
+  - **So the gap grows with the run.** On D4 it was 14% in `sfc` after a day
+    (E73). Here it is 4.9% after a day and 12% after ten, because a sphere
+    keeps convecting where a single column's boundary layer settles. The
+    reading of a ten-day sphere's source tags depends on the mixing convention
+    at the 10% level, which is well above the solver's 3.1e-4 (E74) and the
+    Float32 rounding.
+  - **The model is untouched.** `ta` agrees to under 0.0005 K and `E` to 6e-8
+    in L1 over the ten days, below Float32's own resolution. The two runs are
+    not bit for bit, because they ran on different nodes and the MPI reduction
+    order differs; the bit-for-bit parity of the tags is checked in the test
+    suite on a column.
+  - **G2 is met.** The sphere runs ten days under the prototype with the
+    production physics, closes to 2e-4 of the scale and slowing, its per-tag
+    error against a converged solve is 3.1e-4 (E74), and its mixing convention
+    is now measured against the audit (E73) and against the run without it.
+*Job `13548198` on terrabyte, `hpda2_compute`, 2026-09-21 to 2026-09-22, 16.5 h
+of wall time, from `../ClimaAtmosResiDyn-upd-run` at `846ef55d`. A first
+attempt (`13538434`) was killed for memory: it asked for 200 GB where the ten
+days need 500 GB. Its directory is kept as
+`g2_v2_sphere_mix_oom_13538434` on scratch. The outputs, the analysis and the
+comparison are in `output/g2_v2_sphere_mix/`.*
+
 ## 3. The energy reference
 
 **R1. The convention is enthalpy zero, not internal-energy zero.**

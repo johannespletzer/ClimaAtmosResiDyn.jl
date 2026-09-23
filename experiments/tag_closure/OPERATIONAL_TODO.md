@@ -117,10 +117,14 @@ is closed: one logical, updraft copies (audit) against a zero-sum exchange
     estimate over nine days (E72), the updraft gap closed on D4 (E73), and
     **G2's ten days, `g2_v2_sphere_n2` (E74)**: the model top holds at 218 to
     220 K, the gross residual reaches 2.0e-4 of the scale and slows, and
-    every tag is within 3.1e-4 of the converged twin at 1 h. What is left of
-    G2: a second ten-day run with the updraft mixing on, for the per-tag
-    numbers that match the merged default (the owner, 2026-09-20). The
-    condensing of CONDENSE_PLAN.md is on hold.
+    every tag is within 3.1e-4 of the converged twin at 1 h. **G2 is met (E75).** The
+    second ten-day run with the updraft mixing, `g2_v2_sphere_mix`, closes as
+    the first did, 2.003e-4 of the scale against 2.009e-4, and moves the
+    source tags by 10 to 19% in L1 over the ten days, with their integrals
+    about 1%. So the sphere's per-tag reading depends on the mixing
+    convention at the 10% level, well above the solver's 3.1e-4. Nothing of
+    G1 or G2 is open. The condensing of CONDENSE_PLAN.md is on hold, and the
+    synergies of section 7 are prepared but not started.
 
 **Out of G1:** the sphere, horizontal transport and hyperdiffusion, runs
 longer than a day, the conventions of question 2 (the reference form as the
@@ -130,9 +134,12 @@ default, and the choice of `c`), and the GPU.
 then the correctness checks. If the prototype cannot reach criterion 1, the
 remainder analysis says which process to share next.
 
-**The next goal, G2:** the sphere. V2 with the prototype: ten days in
-Float32, with the outputs of item 10, the residual's growth set against its
-loss rate (E60), and a twin that gives the per-tag pointwise error.
+**The next goal, G2: met on 2026-09-22.** The sphere. V2 with the prototype:
+ten days in Float32, with the outputs of item 10, the residual's growth set
+against its loss rate (E60), and a twin that gives the per-tag pointwise
+error. Delivered by `g2_v2_sphere_n2` (E74, closure and the solver's per-tag
+error) and `g2_v2_sphere_mix` (E75, the per-tag fields under the default the
+fork now runs).
 
 ## Where things stand (2026-09-18)
 

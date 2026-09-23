@@ -1,0 +1,300 @@
+│   simulation_time = "1 hour, 25 minutes"
+│   n_steps_completed = 256
+│   wall_time_per_step = "1 second, 263 milliseconds"
+│   wall_time_total = "15 hours, 9 minutes"
+│   wall_time_remaining = "15 hours, 4 minutes"
+│   wall_time_spent = "5 minutes, 23 seconds"
+│   percent_complete = "0.6%"
+│   estimated_sypd = "0.043"
+│   instantaneous_sypd = "0.042"
+│   date_now = 2026-09-21T14:09:51.382
+└   estimated_finish_date = 2026-09-22T05:13:56.382
+┌ Info: Progress
+│   simulation_time = "2 hours, 50 minutes"
+│   n_steps_completed = 512
+│   wall_time_per_step = "1 second, 228 milliseconds"
+│   wall_time_total = "14 hours, 44 minutes"
+│   wall_time_remaining = "14 hours, 34 minutes"
+│   wall_time_spent = "10 minutes, 29 seconds"
+│   percent_complete = "1.2%"
+│   estimated_sypd = "0.045"
+│   instantaneous_sypd = "0.046"
+│   date_now = 2026-09-21T14:14:57.250
+└   estimated_finish_date = 2026-09-22T04:49:20.250
+┌ Info: Progress
+│   simulation_time = "5 hours, 41 minutes"
+│   n_steps_completed = 1024
+│   wall_time_per_step = "1 second, 202 milliseconds"
+│   wall_time_total = "14 hours, 25 minutes"
+│   wall_time_remaining = "14 hours, 5 minutes"
+│   wall_time_spent = "20 minutes, 31 seconds"
+│   percent_complete = "2.4%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.047"
+│   date_now = 2026-09-21T14:24:59.346
+└   estimated_finish_date = 2026-09-22T04:30:14.346
+┌ Info: Progress
+│   simulation_time = "11 hours, 22 minutes"
+│   n_steps_completed = 2048
+│   wall_time_per_step = "1 second, 181 milliseconds"
+│   wall_time_total = "14 hours, 10 minutes"
+│   wall_time_remaining = "13 hours, 30 minutes"
+│   wall_time_spent = "40 minutes, 20 seconds"
+│   percent_complete = "4.7%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.047"
+│   date_now = 2026-09-21T14:44:48.073
+└   estimated_finish_date = 2026-09-22T04:15:16.073
+┌ Info: Progress
+│   simulation_time = "22 hours, 45 minutes"
+│   n_steps_completed = 4096
+│   wall_time_per_step = "1 second, 167 milliseconds"
+│   wall_time_total = "14 hours, 28 seconds"
+│   wall_time_remaining = "12 hours, 40 minutes"
+│   wall_time_spent = "1 hour, 19 minutes"
+│   percent_complete = "9.5%"
+│   estimated_sypd = "0.047"
+│   instantaneous_sypd = "0.047"
+│   date_now = 2026-09-21T15:24:09.425
+└   estimated_finish_date = 2026-09-22T04:04:57.425
+[ Info: Saving state to HDF5 file on day 1 second 0
+┌ Info: Progress
+│   simulation_time = "1 day, 10 hours"
+│   n_steps_completed = 6257
+│   wall_time_per_step = "1 second, 169 milliseconds"
+│   wall_time_total = "14 hours, 2 minutes"
+│   wall_time_remaining = "12 hours, 2 seconds"
+│   wall_time_spent = "2 hours, 1 minute"
+│   percent_complete = "14.5%"
+│   estimated_sypd = "0.047"
+│   instantaneous_sypd = "0.047"
+│   date_now = 2026-09-21T16:06:25.357
+└   estimated_finish_date = 2026-09-22T04:06:28.357
+┌ Info: Progress
+│   simulation_time = "1 day, 21 hours"
+│   n_steps_completed = 8192
+│   wall_time_per_step = "1 second, 169 milliseconds"
+│   wall_time_total = "14 hours, 2 minutes"
+│   wall_time_remaining = "11 hours, 22 minutes"
+│   wall_time_spent = "2 hours, 39 minutes"
+│   percent_complete = "19.0%"
+│   estimated_sypd = "0.047"
+│   instantaneous_sypd = "0.047"
+│   date_now = 2026-09-21T16:44:11.658
+└   estimated_finish_date = 2026-09-22T04:06:47.658
+[ Info: Saving state to HDF5 file on day 2 second 0
+┌ Info: Progress
+│   simulation_time = "2 days, 9 hours"
+│   n_steps_completed = 10353
+│   wall_time_per_step = "1 second, 171 milliseconds"
+│   wall_time_total = "14 hours, 3 minutes"
+│   wall_time_remaining = "10 hours, 41 minutes"
+│   wall_time_spent = "3 hours, 22 minutes"
+│   percent_complete = "24.0%"
+│   estimated_sypd = "0.047"
+│   instantaneous_sypd = "0.047"
+│   date_now = 2026-09-21T17:26:35.446
+└   estimated_finish_date = 2026-09-22T04:07:52.446
+┌ Info: Progress
+│   simulation_time = "2 days, 21 hours"
+│   n_steps_completed = 12514
+│   wall_time_per_step = "1 second, 173 milliseconds"
+│   wall_time_total = "14 hours, 4 minutes"
+│   wall_time_remaining = "10 hours, 11 seconds"
+│   wall_time_spent = "4 hours, 4 minutes"
+│   percent_complete = "29.0%"
+│   estimated_sypd = "0.047"
+│   instantaneous_sypd = "0.046"
+│   date_now = 2026-09-21T18:09:13.830
+└   estimated_finish_date = 2026-09-22T04:09:25.830
+[ Info: Saving state to HDF5 file on day 3 second 0
+┌ Info: Progress
+│   simulation_time = "3 days, 9 hours"
+│   n_steps_completed = 14675
+│   wall_time_per_step = "1 second, 176 milliseconds"
+│   wall_time_total = "14 hours, 6 minutes"
+│   wall_time_remaining = "9 hours, 19 minutes"
+│   wall_time_spent = "4 hours, 47 minutes"
+│   percent_complete = "34.0%"
+│   estimated_sypd = "0.047"
+│   instantaneous_sypd = "0.046"
+│   date_now = 2026-09-21T18:52:07.558
+└   estimated_finish_date = 2026-09-22T04:11:16.558
+┌ Info: Progress
+│   simulation_time = "3 days, 19 hours"
+│   n_steps_completed = 16384
+│   wall_time_per_step = "1 second, 177 milliseconds"
+│   wall_time_total = "14 hours, 7 minutes"
+│   wall_time_remaining = "8 hours, 46 minutes"
+│   wall_time_spent = "5 hours, 21 minutes"
+│   percent_complete = "37.9%"
+│   estimated_sypd = "0.047"
+│   instantaneous_sypd = "0.046"
+│   date_now = 2026-09-21T19:26:00.308
+└   estimated_finish_date = 2026-09-22T04:12:17.308
+[ Info: Saving state to HDF5 file on day 4 second 0
+┌ Info: Progress
+│   simulation_time = "4 days, 7 hours"
+│   n_steps_completed = 18545
+│   wall_time_per_step = "1 second, 179 milliseconds"
+│   wall_time_total = "14 hours, 9 minutes"
+│   wall_time_remaining = "8 hours, 4 minutes"
+│   wall_time_spent = "6 hours, 4 minutes"
+│   percent_complete = "42.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.046"
+│   date_now = 2026-09-21T20:08:56.902
+└   estimated_finish_date = 2026-09-22T04:13:30.902
+┌ Info: Progress
+│   simulation_time = "4 days, 19 hours"
+│   n_steps_completed = 20706
+│   wall_time_per_step = "1 second, 180 milliseconds"
+│   wall_time_total = "14 hours, 10 minutes"
+│   wall_time_remaining = "7 hours, 22 minutes"
+│   wall_time_spent = "6 hours, 47 minutes"
+│   percent_complete = "47.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.046"
+│   date_now = 2026-09-21T20:51:53.386
+└   estimated_finish_date = 2026-09-22T04:14:30.386
+[ Info: Saving state to HDF5 file on day 5 second 0
+┌ Info: Progress
+│   simulation_time = "5 days, 7 hours"
+│   n_steps_completed = 22867
+│   wall_time_per_step = "1 second, 181 milliseconds"
+│   wall_time_total = "14 hours, 11 minutes"
+│   wall_time_remaining = "6 hours, 40 minutes"
+│   wall_time_spent = "7 hours, 30 minutes"
+│   percent_complete = "52.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.046"
+│   date_now = 2026-09-21T21:34:56.812
+└   estimated_finish_date = 2026-09-22T04:15:30.812
+┌ Info: Progress
+│   simulation_time = "5 days, 19 hours"
+│   n_steps_completed = 25028
+│   wall_time_per_step = "1 second, 183 milliseconds"
+│   wall_time_total = "14 hours, 12 minutes"
+│   wall_time_remaining = "5 hours, 58 minutes"
+│   wall_time_spent = "8 hours, 13 minutes"
+│   percent_complete = "57.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.046"
+│   date_now = 2026-09-21T22:18:06.925
+└   estimated_finish_date = 2026-09-22T04:16:32.925
+[ Info: Saving state to HDF5 file on day 6 second 0
+┌ Info: Progress
+│   simulation_time = "6 days, 7 hours"
+│   n_steps_completed = 27189
+│   wall_time_per_step = "1 second, 184 milliseconds"
+│   wall_time_total = "14 hours, 12 minutes"
+│   wall_time_remaining = "5 hours, 16 minutes"
+│   wall_time_spent = "8 hours, 56 minutes"
+│   percent_complete = "62.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.046"
+│   date_now = 2026-09-21T23:01:15.430
+└   estimated_finish_date = 2026-09-22T04:17:22.430
+┌ Info: Progress
+│   simulation_time = "6 days, 19 hours"
+│   n_steps_completed = 29350
+│   wall_time_per_step = "1 second, 185 milliseconds"
+│   wall_time_total = "14 hours, 13 minutes"
+│   wall_time_remaining = "4 hours, 33 minutes"
+│   wall_time_spent = "9 hours, 40 minutes"
+│   percent_complete = "67.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.046"
+│   date_now = 2026-09-21T23:44:28.518
+└   estimated_finish_date = 2026-09-22T04:18:11.518
+[ Info: Saving state to HDF5 file on day 7 second 0
+┌ Info: Progress
+│   simulation_time = "1 week, 7 hours"
+│   n_steps_completed = 31511
+│   wall_time_per_step = "1 second, 187 milliseconds"
+│   wall_time_total = "14 hours, 14 minutes"
+│   wall_time_remaining = "3 hours, 51 minutes"
+│   wall_time_spent = "10 hours, 23 minutes"
+│   percent_complete = "72.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.045"
+│   date_now = 2026-09-22T00:27:53.831
+└   estimated_finish_date = 2026-09-22T04:19:09.831
+┌ Info: Progress
+│   simulation_time = "1 week, 14 hours"
+│   n_steps_completed = 32768
+│   wall_time_per_step = "1 second, 188 milliseconds"
+│   wall_time_total = "14 hours, 15 minutes"
+│   wall_time_remaining = "3 hours, 26 minutes"
+│   wall_time_spent = "10 hours, 48 minutes"
+│   percent_complete = "75.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.045"
+│   date_now = 2026-09-22T00:53:22.389
+└   estimated_finish_date = 2026-09-22T04:19:58.389
+[ Info: Saving state to HDF5 file on day 8 second 0
+┌ Info: Progress
+│   simulation_time = "1 week, 1 day"
+│   n_steps_completed = 34929
+│   wall_time_per_step = "1 second, 189 milliseconds"
+│   wall_time_total = "14 hours, 16 minutes"
+│   wall_time_remaining = "2 hours, 43 minutes"
+│   wall_time_spent = "11 hours, 32 minutes"
+│   percent_complete = "80.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.045"
+│   date_now = 2026-09-22T01:37:01.875
+└   estimated_finish_date = 2026-09-22T04:21:01.875
+┌ Info: Progress
+│   simulation_time = "1 week, 1 day"
+│   n_steps_completed = 37090
+│   wall_time_per_step = "1 second, 191 milliseconds"
+│   wall_time_total = "14 hours, 17 minutes"
+│   wall_time_remaining = "2 hours, 1 minute"
+│   wall_time_spent = "12 hours, 16 minutes"
+│   percent_complete = "85.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.045"
+│   date_now = 2026-09-22T02:20:45.207
+└   estimated_finish_date = 2026-09-22T04:22:03.207
+[ Info: Saving state to HDF5 file on day 9 second 0
+┌ Info: Progress
+│   simulation_time = "1 week, 2 days"
+│   n_steps_completed = 39251
+│   wall_time_per_step = "1 second, 192 milliseconds"
+│   wall_time_total = "14 hours, 18 minutes"
+│   wall_time_remaining = "1 hour, 18 minutes"
+│   wall_time_spent = "12 hours, 59 minutes"
+│   percent_complete = "90.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.045"
+│   date_now = 2026-09-22T03:04:23.439
+└   estimated_finish_date = 2026-09-22T04:22:52.439
+┌ Info: Progress
+│   simulation_time = "1 week, 2 days"
+│   n_steps_completed = 41412
+│   wall_time_per_step = "1 second, 193 milliseconds"
+│   wall_time_total = "14 hours, 19 minutes"
+│   wall_time_remaining = "35 minutes, 33 seconds"
+│   wall_time_spent = "13 hours, 43 minutes"
+│   percent_complete = "95.9%"
+│   estimated_sypd = "0.046"
+│   instantaneous_sypd = "0.045"
+│   date_now = 2026-09-22T03:48:03.723
+└   estimated_finish_date = 2026-09-22T04:23:37.723
+[ Info: Saving state to HDF5 file on day 10 second 0
+[ Info: solve! walltime = 51591.1
+[ Info: sypd: 0.046
+[ Info: wall_time_per_timestep: 1 second, 194 milliseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 16.52 GiB
+┌ Info: Tag-closure run finished
+│   simulation.job_id = "g2_v2_sphere_mix"
+└   result.ret_code = :success
+┌ Info: Where it went
+│   config = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-upd-run/experiments/tag_closure/configs/g2_v2_sphere_mix.yml"
+└   simulation.output_dir = "output/g2_v2_sphere_mix/output_0000"
+┌ Info: energy_source tag closure (241 rows)
+│   columns: time,total,tagged,residual,relative,gross_residual,gross_relative,scale,nonpositive_fraction,residual_at_spin_up,residual_since_spin_up,relative_since_spin_up
+│   first:   0.0,4.319811e23,4.3198102e23,7.2057594e16,1.6680728e-7,4.505382e15,1.0429582e-8,4.319811e23,0.0,NaN,NaN,NaN
+│   last:    864000.0,4.3654386e23,4.3653103e23,1.2826252e19,2.938136e-5,8.741981e19,0.00020025436,4.3654386e23,0.0,7.2057594e16,1.2754194e19,2.9216295e-5
+└   path = "output/g2_v2_sphere_mix/output_0000/energy_source_tag_closure.csv"
