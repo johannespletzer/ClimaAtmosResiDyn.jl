@@ -2,7 +2,7 @@
 
 Four standalone tools (`compare_runs.py`, `test_compare_runs.py`,
 `manifest.py`, `inventory.py`), built for G3_TODO.md phase 1, items 1.1-1.5.
-Background: `../../untapped-potential-assessment-extended.md`, "New insight
+Background: `../../reference/untapped-potential-assessment-extended.md`, "New insight
 D" — the old comparator, `../increment/tag_correctness.py`, picks the latest
 `output_0*` by glob, compares only the common-length prefix of `ta` and
 `rhoa`, takes the reference's time index for both runs without checking

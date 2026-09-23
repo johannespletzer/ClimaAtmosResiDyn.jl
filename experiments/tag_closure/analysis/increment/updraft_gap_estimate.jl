@@ -157,7 +157,8 @@ function day_report(run, c, day)
             push!(depth, zf[k, index])
         end
         isempty(turnover) && continue
-        fast = sum(weights[turnover .< 1]) / sum(area[1, :, :, 1, :][in_region[1, :, :, 1, :]])
+        fast =
+            sum(weights[turnover .< 1]) / sum(area[1, :, :, 1, :][in_region[1, :, :, 1, :]])
         println(
             "  $label: updraft top, area-weighted mean $(round(sum(depth .* weights) / sum(weights), sigdigits = 3)) m; ",
             "area whose air below the top turns over within a day: $(round(100 * fast, digits = 1))%",
@@ -202,10 +203,15 @@ function day_report(run, c, day)
             area_region =
                 parent(Fields.local_geometry_field(Fields.level(Y.c, 1)).WJ) ./
                 parent(Fields.level(Fields.Δz_field(Y.c), 1)) .* columns
-            values = map(((ᶜtendency = upwind, ᶠflux = ᶠupwind), (ᶜtendency = centred, ᶠflux = ᶠcentred))) do case
+            values = map((
+                (ᶜtendency = upwind, ᶠflux = ᶠupwind),
+                (ᶜtendency = centred, ᶠflux = ᶠcentred),
+            )) do case
                 relocated = 0.5 * sum(@. abs(case.ᶜtendency) * mask) * 86400 / amount
                 lift = parent(Geometry.WVector.(case.ᶠflux))[reference, :, :, :, :]
-                lifted = below > 0 ? sum(lift .* area_region[1, :, :, :, :]) * 86400 / below : NaN
+                lifted =
+                    below > 0 ?
+                    sum(lift .* area_region[1, :, :, :, :]) * 86400 / below : NaN
                 rise = sum(@. ᶜz * case.ᶜtendency * mask) / sum(@. ᶜtag * mask) * 86400
                 (relocated, lifted, rise)
             end

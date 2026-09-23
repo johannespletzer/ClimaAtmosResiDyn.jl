@@ -1,9 +1,10 @@
 # Untapped potential assessment — extended
 
 > **Frozen record.** Written on 2026-09-21 and kept as written. Its code links
-> pin PR #95 at `974f3e16`, which has since moved. The living plan is the
-> roadmap at the top of [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md) and
-> [G3_TODO.md](G3_TODO.md).
+> pin PR #95 at `974f3e16`, which has since moved. The living plan is
+> [ROADMAP.md](../ROADMAP.md), [G3_TODO.md](../G3_TODO.md) and
+> [G4_TODO.md](../G4_TODO.md). Until 2026-09-23 the roadmap stood at the top of
+> OPERATIONAL_TODO.md.
 
 Prepared 2026-09-21. This is an assessment and proposed experiment programme, not a record of new atmospheric runs.
 

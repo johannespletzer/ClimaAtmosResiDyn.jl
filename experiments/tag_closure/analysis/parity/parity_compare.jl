@@ -18,10 +18,12 @@ Base.require(
 )
 
 a_dir, b_dir = ARGS
-files = sort(union(
-    filter(endswith(".jls"), readdir(a_dir)),
-    filter(endswith(".jls"), readdir(b_dir)),
-))
+files = sort(
+    union(
+        filter(endswith(".jls"), readdir(a_dir)),
+        filter(endswith(".jls"), readdir(b_dir)),
+    ),
+)
 isempty(files) && error("No results in $a_dir or $b_dir")
 all_equal = true
 for file in files
@@ -55,10 +57,16 @@ for file in files
             x, y = getproperty(x_group, key), getproperty(y_group, key)
             equal = size(x) == size(y) && isequal(x, y)
             global all_equal &= equal
-            detail = equal ? "" :
+            detail =
+                equal ? "" :
                 size(x) != size(y) ? "  sizes $(size(x)) and $(size(y))" :
                 "  max abs difference $(maximum(abs, x .- y)), differing entries $(count(!, isequal.(x, y)))"
-            println("   ", rpad("$label.$key", 16), equal ? "bit for bit" : "DIFFERENT", detail)
+            println(
+                "   ",
+                rpad("$label.$key", 16),
+                equal ? "bit for bit" : "DIFFERENT",
+                detail,
+            )
         end
     end
 end
