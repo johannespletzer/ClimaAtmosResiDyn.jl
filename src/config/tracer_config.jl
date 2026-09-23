@@ -1361,19 +1361,21 @@ function check_energy_source_tagging_supported(turbconv, updraft_number)
 end
 
 """
-    check_water_tracers_transport_supported(turbconv, amd_les)
+    check_water_tracers_transport_supported(turbconv, amd_les, sgs_mass_flux = false)
 
 Refuse `water_tracers` where the model moves `ρq_tot` in a way the tags do not
-follow.
+follow, or where no closure rule for them has been validated yet.
 
-  - `turbconv: prognostic_edmfx` is refused. The tags have no updraft fields,
-    so they miss the updraft's mass flux of water, and the partition drifts
-    from `ρq_tot`. Their sedimentation still closes: under 1M `ρq_tot`
-    sediments with the grid mean's flux, and the tags' fluxes sum to it. The
-    updraft's rain then falls with the grid mean's composition, which affects
-    provenance, not closure. The refusal also covers
-    `edmfx_sgs_mass_flux: false`, where this reason does not apply, to keep
-    one rule until the tags follow the updrafts.
+  - `turbconv: prognostic_edmfx` is refused for now, whatever
+    `edmfx_sgs_mass_flux` is, until the tags follow the EDMF updrafts and a
+    closure rule for them is validated. One rule for every prognostic EDMF
+    configuration is simpler to lift than several. With the mass flux on,
+    `sgs_mass_flux = true`, there is also a known break: the tags have no
+    updraft fields, so they miss the updraft's mass flux of water, and the
+    partition drifts from `ρq_tot`. The message says so only then. Their
+    sedimentation still closes: under 1M `ρq_tot` sediments with the grid
+    mean's flux, and the tags' fluxes sum to it. The updraft's rain then falls
+    with the grid mean's composition, which affects provenance, not closure.
   - `amd_les: true` is refused. AMD diffuses each tracer with a diffusivity
     taken from that tracer's own gradient. The operator is nonlinear, so in
     general the tags' diffusion does not add up to that of `ρq_tot`, and no
@@ -1387,13 +1389,26 @@ them. A prescribed flow is warned about once the model is built, since the
 setup can bring one without the key; see
 [`warn_water_tags_under_prescribed_flow`](@ref).
 """
-function check_water_tracers_transport_supported(turbconv, amd_les)
-    turbconv == "prognostic_edmfx" && error(
-        "`water_tracers` with `turbconv: prognostic_edmfx` are not supported \
-        yet. The tags have no updraft fields, so they miss the updraft's mass \
-        flux of water, and the partition drifts from `ρq_tot`. \
-        `water_process_record` is allowed. See docs/known_issues.md, issue 3.",
-    )
+function check_water_tracers_transport_supported(
+    turbconv,
+    amd_les,
+    sgs_mass_flux = false,
+)
+    if turbconv == "prognostic_edmfx"
+        mass_flux_reason =
+            sgs_mass_flux === true ?
+            " With `edmfx_sgs_mass_flux: true`, as here, the tags also miss \
+            the updraft's mass flux of water, because they have no updraft \
+            fields, so the partition drifts from `ρq_tot`." : ""
+        error(
+            "`water_tracers` with `turbconv: prognostic_edmfx` are unsupported \
+            for now, until the tags follow the EDMF updrafts and a closure \
+            rule for them is validated. This applies whatever \
+            `edmfx_sgs_mass_flux` is.$mass_flux_reason \
+            `water_process_record` is allowed. See docs/known_issues.md, \
+            issue 3.",
+        )
+    end
     amd_les === true && error(
         "`water_tracers` with `amd_les: true` are not supported. AMD diffuses \
         each tracer with a diffusivity taken from that tracer's own gradient, \
@@ -1466,6 +1481,7 @@ function AtmosTagging(config::AtmosConfig)
         check_water_tracers_transport_supported(
             get(config.parsed_args, "turbconv", nothing),
             get(config.parsed_args, "amd_les", false),
+            get(config.parsed_args, "edmfx_sgs_mass_flux", false),
         )
         WaterTaggingModel(water_tracer_tuple(water_entries, FT))
     end

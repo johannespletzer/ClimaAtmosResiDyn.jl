@@ -87,8 +87,8 @@ updraft's water flux.
 
 ## 4. The implicit water-microphysics attribution has no Jacobian diagonal
 
-**Status:** diagnosed and measured; not visible in the answer on a raining 0M
-column. Not fixed.
+**Status:** diagnosed, not fixed. Open: whether the missing entry changes the
+answer after a fixed number of Newton iterations has not been isolated.
 
 `implicit/implicit_tendency.jl:66-78` puts the `:microphysics` water bracket on
 the implicit path. Its increment is `min(Δ, 0) · ρq_tag / ρq_tot`, which is
@@ -105,23 +105,32 @@ increment does not depend on the tags themselves") is true for
 iteration count this is in principle error in the answer rather than only
 slower convergence.
 
-**Measured on 2026-09-23.** The DYCOMS RF02 column under 0M without EDMF, at
-`dt` 120 s, rains out its initial cloud (0.15 kg m⁻² of liquid) in the first
-hour. Four runs covered that hour: implicit or explicit microphysics, each
-with 1 and 10 Newton iterations. With explicit microphysics the sink is off the
-Newton path, so that pair is the control. The region tags' shares differ
-between 1 and 10 iterations by 1e-3 to 2e-3 in L1, 25 times more than
-`ρq_tot` itself. But the implicit and explicit pairs differ from each other by
-less than 4% of that, with no fixed sign. So the missing diagonal is not what
-makes the tags sensitive to the Newton count. A proportional loss leaves each
-cell's shares unchanged, so a missing derivative of it acts only through what
-else changes the shares within the step, which fits a small effect. The
-sensitivity itself matches the change in `q_tag_res`, which is larger with the
-converged solve: the split between the parent's implicit and the tags'
-explicit vertical advection. The runs and their analysis are in the fork's
-tag-closure record (`experiments/tag_closure/FINDINGS.md`, W15 and W16, on the
-branch `claude/tag-closure-record`). A 1M column and a sphere were not
-measured. No GitHub CI job reaches this path.
+**A first measurement, 2026-09-23, which does not isolate the entry.** The
+DYCOMS RF02 column under 0M without EDMF, at `dt` 120 s, rains out its initial
+cloud (0.15 kg m⁻² of liquid) in the first hour. Four runs covered that hour:
+implicit or explicit microphysics, each with 1 and 10 Newton iterations.
+
+  - On this column, the region tags' difference between the 1- and
+    10-iteration runs changed by at most 4% when microphysics moved from the
+    implicit to the explicit path, with no fixed sign. That difference is 1e-3
+    to 2e-3 in L1 of the shares, 25 times `ρq_tot`'s own.
+  - The small `evap` source tag's difference changed by up to 24%, at an
+    absolute size near 2e-5.
+  - This comparison does not isolate the missing diagonal. Moving
+    microphysics off the implicit path also changes the operator splitting and
+    the discrete integration path.
+  - The share differences were recomputed by the verifier
+    (`experiments/tag_closure/analysis/evidence/compare_runs.py`); runs,
+    manifests and output are in the fork's tag-closure record, FINDINGS W15 and
+    W16, on the branch `claude/tag-closure-record`.
+  - A 1M column and a sphere were not measured. No GitHub CI job reaches this
+    path.
+
+To isolate it, compare runs with the same implicit residual and time
+integration that differ only in whether the analytic diagonal is present,
+across a Newton-iteration ladder with a tightly converged reference and a time
+step ladder, reading the region tags, the source tags, `q_tag_res` and the
+nonlinear convergence.
 
 ## 5. `fill_with_nans!` would destroy the tag masks if it ever descended into the cache
 

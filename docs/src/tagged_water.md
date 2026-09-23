@@ -310,9 +310,12 @@ its records are not transported.
   - Tags are **grid-scale only**: they have no sub-grid (updraft) counterpart.
     With `PrognosticEDMFX` the SGS mass flux moves ``\rho q_\mathrm{tot}`` in a
     way the tags never receive, so `q_tag_res` grows; the grid-mean surface
-    evaporation is still attributed correctly. The combination is therefore
-    refused at configuration time, until the tags follow the updrafts
-    (`docs/known_issues.md`, issue 3).
+    evaporation is still attributed correctly. `turbconv: prognostic_edmfx`
+    is therefore refused at configuration time, whatever
+    `edmfx_sgs_mass_flux` is, until the tags follow the updrafts and a closure
+    rule for them is validated (`docs/known_issues.md`, issue 3).
+  - Tag names are restricted; see [Tag entries](@ref) in the tracer
+    configuration page.
   - With a **`PrescribedFlow`** setup (e.g. `ShipwayHill2012`), the surface
     water inflow imposed as a vertical-transport boundary condition adds to
     ``\rho q_\mathrm{tot}`` outside every attribution bracket and has no tagged

@@ -259,11 +259,28 @@ end
     )
 
     @test isnothing(CA.check_water_tracers_transport_supported(nothing, false))
-    # The tags have no updraft fields, so they would miss the updraft's mass
-    # flux of water and drift from ρq_tot.
-    @test_throws "turbconv: prognostic_edmfx" CA.AtmosTagging(
-        water_config(["turbconv" => "prognostic_edmfx"], "water_tags_edmf"),
+    # Prognostic EDMF is refused whatever the mass flux is, until the tags
+    # follow the updrafts. The message names the mass flux only where it is on,
+    # since only then do the tags miss it.
+    refusal_message(entries, job_id) =
+        try
+            CA.AtmosTagging(water_config(entries, job_id))
+            ""
+        catch err
+            err isa ErrorException ? err.msg : rethrow()
+        end
+    no_mass_flux = refusal_message(
+        ["turbconv" => "prognostic_edmfx"],
+        "water_tags_edmf_no_mass_flux",
     )
+    @test occursin("turbconv: prognostic_edmfx", no_mass_flux)
+    @test occursin("whatever `edmfx_sgs_mass_flux` is", no_mass_flux)
+    @test !occursin("miss the updraft's mass flux", no_mass_flux)
+    with_mass_flux = refusal_message(
+        ["turbconv" => "prognostic_edmfx", "edmfx_sgs_mass_flux" => true],
+        "water_tags_edmf_mass_flux",
+    )
+    @test occursin("miss the updraft's mass flux", with_mass_flux)
     # AMD's diffusivity comes from each tracer's own gradient, so the tags'
     # diffusion does not add up to the parent's.
     @test_throws "amd_les: true" CA.AtmosTagging(
@@ -289,6 +306,19 @@ end
     )
     @test records.water_process_record !== nothing
     @test records.water_tagging_model === nothing
+    # And under AMD, which breaks only the transported tags.
+    records_amd = CA.AtmosTagging(
+        tracer_config(
+            [
+                "microphysics_model" => "0M",
+                "amd_les" => true,
+                "water_process_record" => ["surface_flux"],
+            ];
+            job_id = "water_records_amd",
+        ),
+    )
+    @test records_amd.water_process_record !== nothing
+    @test records_amd.water_tagging_model === nothing
     # The prescribed flow's surface moisture flux enters ρq_tot untagged. The
     # warning sees the built model, since the setup can bring the flow.
     flow = CA.ShipwayHill2012VelocityProfile{FT}()
