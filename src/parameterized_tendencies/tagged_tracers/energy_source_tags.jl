@@ -1753,8 +1753,12 @@ the flux an updraft copy would add to the donor-share flux of
 `sgs_mass_flux_of_energy_source_tags!`: air of one composition rises and air of
 another sinks, each with its whole energy.
 
-The partition's shares add up to one in every subdomain, so its `Xᵢ` add up to
-zero at every face, and its closure is untouched under every transport. That
+No subdomain may carry more of a tag's energy than the cell holds,
+`ρaʲ φʲᵢ Aʲ ≤ ρ φ̄ᵢ Ā`. The plume is blended toward the grid mean by the largest
+factor that keeps every tag inside that bound, and the environment's shares
+follow from the updraft's, reversed and scaled by the energy each subdomain
+carries. Both leave the shares summing to one, so the `Xᵢ` add up to zero at
+every face and closure is untouched under every transport. That also
 needs region tags that partition the domain, which
 `check_energy_source_exchange_partition` enforces. A
 source tag's exchange stands alone, as its other fluxes do. The van
@@ -1763,11 +1767,8 @@ upwind, which keeps that sum zero.
 
 The updraft's shares come from a steady entraining plume, marched up each column
 with the model's own entrainment rate `ε + ε_turb` and the updraft's velocity
-`wʲ` at the face below each cell, as the model advects an updraft tracer. The
-plume is then bounded by the cell's inventory, `0 ≤ ρaʲ εʲᵢ ≤ ρ ε̄ᵢ`, so that
-the environment that follows from the grid mean is non-negative and
-`ρ ε̄ᵢ = ρaʲ εʲᵢ + ρa⁰ ε⁰ᵢ` holds. In the specific tag values `εʲ`, which mix
-by mass,
+`wʲ` at the face below each cell, as the model advects an updraft tracer. In the specific tag values `εʲ`, which
+mix by mass,
 
     εʲ(k) = (εʲ(k - 1) + a ε̄(k)) / (1 + a),    a = (ε + ε_turb) Δz / wʲ · ρ / ρa⁰,
 
@@ -1828,7 +1829,9 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # each cell, so the plume marches with that one.
     ᶠlg = Fields.local_geometry_field(Y.f)
     ᶜwʲ = @. lazy(ᶜbottom_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
-    share_differences = ShareDifferences(_energy_partition_flags(model.tags))
+    flags = _energy_partition_flags(model.tags)
+    updraft_differences = ShareDifferences(flags, false)
+    environment_differences = ShareDifferences(flags, true)
     # The grid mean's specific tag values, negative ones as zero. They are
     # stored as one tuple per cell, so the tag fields are read once, and each
     # tag's kernel below reads a few tuple fields rather than every tag.
@@ -1869,22 +1872,16 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     ᶠρ⁰ = @. lazy(ᶠinterp(ᶜρ⁰ * ᶜJ) / ᶠJ)
     ᶠu³_diffʲ = @. lazy(ᶠu³ʲs.:(1) - ᶠu³)
     ᶠu³_diff⁰ = @. lazy(ᶠu³⁰ - ᶠu³)
-    # The plume may not hold more of a tag than the cell does. Otherwise the
-    # environment that follows from the grid mean is negative, and clipping it
-    # breaks the inventory `ρ ε̄ = ρaʲ εʲ + ρa⁰ ε⁰`: the subdomains would then
-    # exchange provenance the cell does not have. It is the bound the model
-    # puts on an updraft tracer of its own,
-    # `enforce_edmf_updraft_constraints!`.
-    bound_plume = BoundPlume{length(model.tags)}()
-    @. ᶜεʲ = bound_plume(ᶜεʲ, ᶜε̄, Y.c.ρ, ᶜρaʲ)
-
-    # Each subdomain's shares less the grid mean's. The environment's specific
-    # values follow from the grid mean and the updraft. Its differences are
-    # formed first, since the updraft's then replace the updraft's values.
+    # Each subdomain's shares less the grid mean's, bounded so that no
+    # subdomain carries more of a tag's energy than the cell holds. The
+    # environment's differences follow from the updraft's, so both sum to zero
+    # over the partition.
+    ᶜĀ = @. lazy(Y.c.ρe_tot / Y.c.ρ + c)
     ᶜΔφ⁰ = p.scratch.ᶜe_src_environment
-    @. ᶜΔφ⁰ = share_differences(ᶜε̄, ᶜεʲ, Y.c.ρ, ᶜρaʲ, ᶜρa⁰)
+    @. ᶜΔφ⁰ =
+        environment_differences(ᶜεʲ, ᶜε̄, Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜAʲ, ᶜA⁰, ᶜĀ)
     ᶜΔφʲ = ᶜεʲ
-    @. ᶜΔφʲ = share_differences(ᶜεʲ, ᶜε̄)
+    @. ᶜΔφʲ = updraft_differences(ᶜεʲ, ᶜε̄, Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜAʲ, ᶜA⁰, ᶜĀ)
 
     subdomains = (;
         ᶜΔφʲ,
@@ -1973,32 +1970,11 @@ end
     return map((εʲ, ε) -> εʲ + weight * (ε - εʲ), εʲ_below, ε̄)
 end
 
-# The plume, bounded by the cell's own inventory: `0 ≤ ρaʲ εʲᵢ ≤ ρ ε̄ᵢ` for
-# every tag. A callable type, so a broadcast carries `N` in the function's
-# type. See `sgs_exchange_of_energy_source_tags!`.
-struct BoundPlume{N} end
-@inline (::BoundPlume{N})(εʲ, ε̄, ρ, ρaʲ) where {N} =
-    _bounded_plume(εʲ, ε̄, ρ, ρaʲ, Val(N))
-
-@inline function _bounded_plume(εʲ, ε̄, ρ, ρaʲ, ::Val{N}) where {N}
-    ρaʲ > zero(ρaʲ) || return ntuple(i -> εʲ[i], Val(N))
-    return ntuple(Val(N)) do i
-        min(max(εʲ[i], zero(ρ)), max(ρ * ε̄[i], zero(ρ)) / ρaʲ)
-    end
-end
-
-# The environment's specific tag values, from the grid mean and the updraft.
-# `N` is the number of tags.
-@inline function _environment_specific(ε̄, εʲ, ρ, ρaʲ, ρa⁰, ::Val{N}) where {N}
-    ρa⁰ > zero(ρa⁰) || return ntuple(i -> ε̄[i], Val(N))
-    return ntuple(Val(N)) do i
-        max((ρ * ε̄[i] - ρaʲ * εʲ[i]) / ρa⁰, zero(ρa⁰))
-    end
-end
-
 # The sum of the partition's values, which `partition`, a tuple of `Bool`s,
 # marks. The loop is over a tuple of one type, so it unrolls and allocates
-# nothing.
+# nothing. These helpers index the tuples rather than `map` over them: inside a
+# ClimaCore broadcast a tuple is an `AutoBroadcaster`, whose `map` builds a new
+# one and allocates.
 @inline function _partition_total(ε, partition)
     total = zero(ε[1])
     for i in 1:length(partition)
@@ -2007,45 +1983,63 @@ end
     return total
 end
 
-# Each tag's share in a subdomain less its share in the grid mean. A share is
-# the tag's value over the partition's sum, capped at one. Where either sum is
-# not positive, every difference is zero. So the partition's differences sum to
-# zero in every cell.
-#
-# These helpers index the tuples rather than `map` over them. Inside a
-# ClimaCore broadcast a tuple is an `AutoBroadcaster`, and its `map` and
-# `mapreduce` build a new one, which allocates.
-@inline function _share_differences(εᵏ, ε̄, ::Val{partition}) where {partition}
-    totalᵏ = _partition_total(εᵏ, partition)
-    total = _partition_total(ε̄, partition)
-    FT = typeof(total)
-    positive = (totalᵏ > zero(FT)) & (total > zero(FT))
-    return ntuple(Val(length(partition))) do i
-        positive ?
-        min(εᵏ[i] / totalᵏ, one(FT)) - min(ε̄[i] / total, one(FT)) : zero(FT)
-    end
-end
+# Each tag's share difference between one subdomain and the grid mean, as a
+# callable type: a broadcast then carries the partition and the branch in the
+# function's type rather than as arguments, which ClimaCore would wrap in a
+# `Ref`. `environment` picks the environment's differences over the updraft's.
+struct ShareDifferences{partition, environment} end
+ShareDifferences(::Val{partition}, environment::Bool) where {partition} =
+    ShareDifferences{partition, environment}()
 
-# `_share_differences` for one partition, as a callable type. A broadcast then
-# carries the partition in its function's type. As an argument, ClimaCore would
-# wrap it in a `Ref`, and the broadcast allocates.
-struct ShareDifferences{partition} end
-ShareDifferences(::Val{partition}) where {partition} =
-    ShareDifferences{partition}()
-@inline (::ShareDifferences{partition})(εᵏ, ε̄) where {partition} =
-    _share_differences(εᵏ, ε̄, Val(partition))
-# The environment's differences, from the grid mean and the updraft.
-@inline (::ShareDifferences{partition})(
-    ε̄,
+@inline function (::ShareDifferences{partition, environment})(
     εʲ,
+    ε̄,
     ρ,
     ρaʲ,
     ρa⁰,
-) where {partition} = _share_differences(
-    _environment_specific(ε̄, εʲ, ρ, ρaʲ, ρa⁰, Val(length(partition))),
-    ε̄,
-    Val(partition),
-)
+    Aʲ,
+    A⁰,
+    Ā,
+) where {partition, environment}
+    FT = typeof(ρ)
+    N = length(partition)
+    total = _partition_total(ε̄, partition)
+    totalʲ = _partition_total(εʲ, partition)
+    no_exchange =
+        (ρaʲ <= zero(FT)) |
+        (ρa⁰ <= zero(FT)) |
+        (Aʲ <= zero(FT)) |
+        (A⁰ <= zero(FT)) |
+        (Ā <= zero(FT)) |
+        (total <= zero(FT)) |
+        (totalʲ <= zero(FT))
+    no_exchange && return ntuple(_ -> zero(FT), Val(N))
+    # The updraft may hold at most the cell's own energy of each tag,
+    # `ρaʲ φʲᵢ Aʲ ≤ ρ φ̄ᵢ Ā`. The plume is blended toward the grid mean by the
+    # largest `θ` that keeps every tag inside that bound, which leaves the
+    # shares summing to one, and so the exchange summing to zero over the
+    # partition.
+    headroom = ρ * Ā / (ρaʲ * Aʲ)
+    θ = one(FT)
+    for i in 1:N
+        mean_share = _subdomain_share(ε̄, total, i)
+        difference = _subdomain_share(εʲ, totalʲ, i) - mean_share
+        limit = mean_share * (headroom - one(FT))
+        difference > limit && (θ = min(θ, max(limit, zero(FT)) / difference))
+    end
+    # The environment makes room for what the updraft takes, in proportion to
+    # the energy each carries. So its differences are the updraft's, reversed
+    # and scaled, and they sum to zero over the partition as well.
+    scale = environment ? -θ * (ρaʲ * Aʲ) / (ρa⁰ * A⁰) : θ
+    return ntuple(Val(N)) do i
+        scale *
+        (_subdomain_share(εʲ, totalʲ, i) - _subdomain_share(ε̄, total, i))
+    end
+end
+
+# Tag `i`'s share of a subdomain: its value over the partition's sum there,
+# capped at one.
+@inline _subdomain_share(ε, total, i) = min(ε[i] / total, one(total))
 
 _sgs_energy_source_tag_fluxes!(ᶜYₜ, ᶜY, ᶜparent, ᶜnorm, ᶠflux, ::Tuple{}) =
     nothing

@@ -639,69 +639,71 @@ column_atmos_model(; kwargs...) =
               Val((true, false, false))
         # A share is a tag's value over the partition's sum, capped at one.
         # The partition's differences sum to zero, a source tag's stands
-        # alone, and where either sum is zero every difference is zero.
+        # alone, and where a sum is zero nothing is exchanged.
         partition = Val((true, true, false))
-        εᵏ = FT.((3, 1, 2))
+        updraft = CA.ShareDifferences(partition, false)
+        environment = CA.ShareDifferences(partition, true)
+        # A cell whose subdomains carry the same energy per unit mass, with
+        # the updraft over a tenth of it, so the bound does not bind.
+        ρ, ρaʲ, ρa⁰, A = FT(1), FT(0.1), FT(0.9), FT(66e3)
+        εʲ = FT.((3, 1, 2))
         ε̄ = FT.((1, 1, 1))
-        Δφ = CA._share_differences(εᵏ, ε̄, partition)
-        @test collect(Δφ) ≈ [FT(0.75) - FT(0.5), FT(0.25) - FT(0.5), FT(0.5) - FT(0.5)]
-        @test Δφ[1] + Δφ[2] == 0
-        @test CA._share_differences(FT.((1, 1, 5)), ε̄, partition)[3] ==
-              1 - FT(0.5)
-        @test CA._share_differences(FT.((0, 0, 1)), ε̄, partition) ==
-              FT.((0, 0, 0))
-        @test CA._share_differences(εᵏ, FT.((0, 0, 1)), partition) ==
-              FT.((0, 0, 0))
-        # The callable form, which a broadcast uses, is the same.
-        @test CA.ShareDifferences(partition)(εᵏ, ε̄) === Δφ
+        Δφʲ = updraft(εʲ, ε̄, ρ, ρaʲ, ρa⁰, A, A, A)
+        @test collect(Δφʲ) ≈
+              [FT(0.75) - FT(0.5), FT(0.25) - FT(0.5), FT(0.5) - FT(0.5)]
+        @test Δφʲ[1] + Δφʲ[2] == 0
+        # The environment gives up what the updraft takes, by the energy each
+        # carries, and its partition differences sum to zero as well.
+        Δφ⁰ = environment(εʲ, ε̄, ρ, ρaʲ, ρa⁰, A, A, A)
+        @test collect(Δφ⁰) ≈ -collect(Δφʲ) .* ((ρaʲ * A) / (ρa⁰ * A))
+        @test Δφ⁰[1] + Δφ⁰[2] == 0
+        # A source tag's share is its fraction of the partition's energy.
+        @test updraft(FT.((1, 1, 5)), ε̄, ρ, ρaʲ, ρa⁰, A, A, A)[3] ≈ 1 - FT(0.5)
+        # Nothing to exchange: no updraft, no area, no energy, no partition.
+        for degenerate in (
+            (εʲ, ε̄, ρ, FT(0), ρa⁰, A, A, A),
+            (εʲ, ε̄, ρ, ρaʲ, FT(0), A, A, A),
+            (εʲ, ε̄, ρ, ρaʲ, ρa⁰, FT(0), A, A),
+            (FT.((0, 0, 1)), ε̄, ρ, ρaʲ, ρa⁰, A, A, A),
+            (εʲ, FT.((0, 0, 1)), ρ, ρaʲ, ρa⁰, A, A, A),
+        )
+            @test updraft(degenerate...) == FT.((0, 0, 0))
+            @test environment(degenerate...) == FT.((0, 0, 0))
+        end
         @test CA._nonnegative_specific(FT(2), FT(4), FT(-1), FT(6)) ==
               FT.((2, 0, 3))
-        # Without a rising updraft the plume starts again from the grid mean.
-        ε̄ = FT.((10, 30))
-        level = CA._plume_level(ε̄, FT(1), FT(0.1), FT(0.9), FT(1e-3), FT(-1), FT(50))
-        @test level[3]
-        @test CA._plume_step(FT.((1, 2)), level) == ε̄
-        # The lowest level takes the grid mean's composition.
-        rising = CA._plume_level(ε̄, FT(1), FT(0.1), FT(0.9), FT(1e-3), FT(1), FT(50))
-        @test !rising[3]
-        @test CA._plume_step((FT(NaN), FT(NaN)), rising) == ε̄
-        # Above, the updraft relaxes toward the environment: the steady updraft
-        # equation taken implicitly in `z`, with the weight `a / (1 + a)`.
-        a = FT(1e-3) * FT(50) / FT(1) * FT(1) / FT(0.9)
-        @test rising[2] ≈ a / (1 + a)
-        εʲ = CA._plume_step(FT.((40, 0)), rising)
-        @test collect(εʲ) ≈ [(40 + a * 10) / (1 + a), (0 + a * 30) / (1 + a)]
-        # Its environment keeps the grid mean's total: ρ ε̄ = ρaʲ εʲ + ρa⁰ ε⁰.
-        ε⁰ = CA._environment_specific(ε̄, εʲ, FT(1), FT(0.1), FT(0.9), Val(2))
-        @test collect(FT(0.1) .* εʲ .+ FT(0.9) .* ε⁰) ≈ collect(ε̄)
-        # The plume may not hold more of a tag than the cell does. Without the
-        # bound the environment goes negative, and clipping it would leave the
-        # subdomains holding 0.094 of a tag the cell has 0.01 of.
-        bound = CA.BoundPlume{2}()
+
+        # No subdomain may carry more of a tag's energy than the cell holds.
+        # The review of #95 gave this cell: the plume is nearly all of a tag
+        # the cell has one percent of, and unbounded it would claim six times
+        # the cell's energy of it.
+        two = Val((true, true))
+        bounded_updraft = CA.ShareDifferences(two, false)
+        bounded_environment = CA.ShareDifferences(two, true)
         ε̄_step = FT.((0.01, 0.99))
         raw = CA._plume_step(
             FT.((0.99, 0.01)),
-            CA._plume_level(ε̄_step, FT(1), FT(0.1), FT(0.9), FT(1e-3), FT(1), FT(50)),
+            CA._plume_level(ε̄_step, ρ, ρaʲ, ρa⁰, FT(1e-3), FT(1), FT(50)),
         )
         @test raw[1] > FT(0.9)
-        @test CA._environment_specific(
-            ε̄_step,
-            raw,
-            FT(1),
-            FT(0.1),
-            FT(0.9),
-            Val(2),
-        )[1] == 0
-        bounded = bound(raw, ε̄_step, FT(1), FT(0.1))
-        @test bounded[1] ≈ FT(0.1)
-        @test bounded[2] == raw[2]
-        # With the bound the inventory holds: ρ ε̄ = ρaʲ εʲ + ρa⁰ ε⁰.
-        ε⁰_step =
-            CA._environment_specific(ε̄_step, bounded, FT(1), FT(0.1), FT(0.9), Val(2))
-        @test all(ε⁰_step .>= 0)
-        @test collect(FT(0.1) .* bounded .+ FT(0.9) .* ε⁰_step) ≈ collect(ε̄_step)
-        # Where there is no updraft the plume passes through.
-        @test bound(raw, ε̄_step, FT(1), FT(0)) === raw
+        Δφʲ_step = bounded_updraft(raw, ε̄_step, ρ, ρaʲ, ρa⁰, A, A, A)
+        Δφ⁰_step = bounded_environment(raw, ε̄_step, ρ, ρaʲ, ρa⁰, A, A, A)
+        share(ε, i) = ε[i] / sum(ε)
+        for i in 1:2
+            φʲ = share(ε̄_step, i) + Δφʲ_step[i]
+            φ⁰ = share(ε̄_step, i) + Δφ⁰_step[i]
+            # The cell's energy of this tag, and what each subdomain claims.
+            cell = ρ * share(ε̄_step, i) * A
+            @test ρaʲ * φʲ * A <= cell * (1 + 10 * eps(FT))
+            @test φ⁰ >= -10 * eps(FT)
+            # And the two subdomains still add up to the cell.
+            @test ρaʲ * φʲ * A + ρa⁰ * φ⁰ * A ≈ cell
+        end
+        # The bound binds here, so the exchange is smaller than the raw plume
+        # would give, and both branches still sum to zero.
+        @test abs(Δφʲ_step[1]) < abs(share(raw, 1) - share(ε̄_step, 1))
+        @test Δφʲ_step[1] + Δφʲ_step[2] ≈ 0 atol = 10 * eps(FT)
+        @test Δφ⁰_step[1] + Δφ⁰_step[2] ≈ 0 atol = 10 * eps(FT)
 
         # A vanishing updraft velocity, which would overflow `a` in Float32,
         # takes the grid mean, and nothing is `Inf` or `NaN`.
