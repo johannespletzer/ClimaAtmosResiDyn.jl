@@ -646,26 +646,32 @@ column_atmos_model(; kwargs...) =
         # A cell whose subdomains carry the same energy per unit mass, with
         # the updraft over a tenth of it, so the bound does not bind.
         ρ, ρaʲ, ρa⁰, A = FT(1), FT(0.1), FT(0.9), FT(66e3)
+        headroom = CA._exchange_headroom(ρ, ρaʲ, A, A)
+        energy_ratio = CA._exchange_energy_ratio(ρaʲ, ρa⁰, A, A)
+        @test headroom ≈ ρ / ρaʲ
+        @test energy_ratio ≈ ρaʲ / ρa⁰
         εʲ = FT.((3, 1, 2))
         ε̄ = FT.((1, 1, 1))
-        Δφʲ = updraft(εʲ, ε̄, ρ, ρaʲ, ρa⁰, A, A, A)
+        Δφʲ = updraft(εʲ, ε̄, headroom, energy_ratio)
         @test collect(Δφʲ) ≈
               [FT(0.75) - FT(0.5), FT(0.25) - FT(0.5), FT(0.5) - FT(0.5)]
         @test Δφʲ[1] + Δφʲ[2] == 0
         # The environment gives up what the updraft takes, by the energy each
         # carries, and its partition differences sum to zero as well.
-        Δφ⁰ = environment(εʲ, ε̄, ρ, ρaʲ, ρa⁰, A, A, A)
-        @test collect(Δφ⁰) ≈ -collect(Δφʲ) .* ((ρaʲ * A) / (ρa⁰ * A))
+        Δφ⁰ = environment(εʲ, ε̄, headroom, energy_ratio)
+        @test collect(Δφ⁰) ≈ -collect(Δφʲ) .* energy_ratio
         @test Δφ⁰[1] + Δφ⁰[2] == 0
         # A source tag's share is its fraction of the partition's energy.
-        @test updraft(FT.((1, 1, 5)), ε̄, ρ, ρaʲ, ρa⁰, A, A, A)[3] ≈ 1 - FT(0.5)
+        @test updraft(FT.((1, 1, 5)), ε̄, headroom, energy_ratio)[3] ≈ 1 - FT(0.5)
         # Nothing to exchange: no updraft, no area, no energy, no partition.
         for degenerate in (
-            (εʲ, ε̄, ρ, FT(0), ρa⁰, A, A, A),
-            (εʲ, ε̄, ρ, ρaʲ, FT(0), A, A, A),
-            (εʲ, ε̄, ρ, ρaʲ, ρa⁰, FT(0), A, A),
-            (FT.((0, 0, 1)), ε̄, ρ, ρaʲ, ρa⁰, A, A, A),
-            (εʲ, FT.((0, 0, 1)), ρ, ρaʲ, ρa⁰, A, A, A),
+            # no updraft, no environment, no energy in the updraft
+            (εʲ, ε̄, CA._exchange_headroom(ρ, FT(0), A, A), energy_ratio),
+            (εʲ, ε̄, headroom, CA._exchange_energy_ratio(ρaʲ, FT(0), A, A)),
+            (εʲ, ε̄, CA._exchange_headroom(ρ, ρaʲ, A, FT(0)), energy_ratio),
+            # no partition in one subdomain or the other
+            (FT.((0, 0, 1)), ε̄, headroom, energy_ratio),
+            (εʲ, FT.((0, 0, 1)), headroom, energy_ratio),
         )
             @test updraft(degenerate...) == FT.((0, 0, 0))
             @test environment(degenerate...) == FT.((0, 0, 0))
@@ -686,8 +692,8 @@ column_atmos_model(; kwargs...) =
             CA._plume_level(ε̄_step, ρ, ρaʲ, ρa⁰, FT(1e-3), FT(1), FT(50)),
         )
         @test raw[1] > FT(0.9)
-        Δφʲ_step = bounded_updraft(raw, ε̄_step, ρ, ρaʲ, ρa⁰, A, A, A)
-        Δφ⁰_step = bounded_environment(raw, ε̄_step, ρ, ρaʲ, ρa⁰, A, A, A)
+        Δφʲ_step = bounded_updraft(raw, ε̄_step, headroom, energy_ratio)
+        Δφ⁰_step = bounded_environment(raw, ε̄_step, headroom, energy_ratio)
         share(ε, i) = ε[i] / sum(ε)
         for i in 1:2
             φʲ = share(ε̄_step, i) + Δφʲ_step[i]

@@ -1876,12 +1876,16 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # subdomain carries more of a tag's energy than the cell holds. The
     # environment's differences follow from the updraft's, so both sum to zero
     # over the partition.
+    # The two ratios the bound needs, formed here rather than inside the
+    # kernel: a broadcast of four arguments specialises on every version of
+    # ClimaCore the package supports, where one of eight did not.
     ᶜĀ = @. lazy(Y.c.ρe_tot / Y.c.ρ + c)
+    ᶜheadroom = @. lazy(_exchange_headroom(Y.c.ρ, ᶜρaʲ, ᶜĀ, ᶜAʲ))
+    ᶜenergy_ratio = @. lazy(_exchange_energy_ratio(ᶜρaʲ, ᶜρa⁰, ᶜAʲ, ᶜA⁰))
     ᶜΔφ⁰ = p.scratch.ᶜe_src_environment
-    @. ᶜΔφ⁰ =
-        environment_differences(ᶜεʲ, ᶜε̄, Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜAʲ, ᶜA⁰, ᶜĀ)
+    @. ᶜΔφ⁰ = environment_differences(ᶜεʲ, ᶜε̄, ᶜheadroom, ᶜenergy_ratio)
     ᶜΔφʲ = ᶜεʲ
-    @. ᶜΔφʲ = updraft_differences(ᶜεʲ, ᶜε̄, Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜAʲ, ᶜA⁰, ᶜĀ)
+    @. ᶜΔφʲ = updraft_differences(ᶜεʲ, ᶜε̄, ᶜheadroom, ᶜenergy_ratio)
 
     subdomains = (;
         ᶜΔφʲ,
@@ -1983,6 +1987,23 @@ end
     return total
 end
 
+# How much of a tag's energy the updraft may hold, over what the cell holds:
+# `ρ Ā / (ρaʲ Aʲ)`. Zero where there is no updraft or no energy, which switches
+# the exchange off there.
+@inline function _exchange_headroom(ρ, ρaʲ, Ā, Aʲ)
+    FT = typeof(ρ)
+    ((ρaʲ > zero(FT)) & (Aʲ > zero(FT)) & (Ā > zero(FT))) || return zero(FT)
+    return ρ * Ā / (ρaʲ * Aʲ)
+end
+
+# The energy the updraft carries over the environment's, `ρaʲ Aʲ / (ρa⁰ A⁰)`,
+# which is how much the environment gives up for what the updraft takes.
+@inline function _exchange_energy_ratio(ρaʲ, ρa⁰, Aʲ, A⁰)
+    FT = typeof(ρaʲ)
+    ((ρa⁰ > zero(FT)) & (A⁰ > zero(FT))) || return zero(FT)
+    return ρaʲ * Aʲ / (ρa⁰ * A⁰)
+end
+
 # Each tag's share difference between one subdomain and the grid mean, as a
 # callable type: a broadcast then carries the partition and the branch in the
 # function's type rather than as arguments, which ClimaCore would wrap in a
@@ -1994,23 +2015,16 @@ ShareDifferences(::Val{partition}, environment::Bool) where {partition} =
 @inline function (::ShareDifferences{partition, environment})(
     εʲ,
     ε̄,
-    ρ,
-    ρaʲ,
-    ρa⁰,
-    Aʲ,
-    A⁰,
-    Ā,
+    headroom,
+    energy_ratio,
 ) where {partition, environment}
-    FT = typeof(ρ)
+    FT = typeof(headroom)
     N = length(partition)
     total = _partition_total(ε̄, partition)
     totalʲ = _partition_total(εʲ, partition)
     no_exchange =
-        (ρaʲ <= zero(FT)) |
-        (ρa⁰ <= zero(FT)) |
-        (Aʲ <= zero(FT)) |
-        (A⁰ <= zero(FT)) |
-        (Ā <= zero(FT)) |
+        (headroom <= zero(FT)) |
+        (energy_ratio <= zero(FT)) |
         (total <= zero(FT)) |
         (totalʲ <= zero(FT))
     no_exchange && return ntuple(_ -> zero(FT), Val(N))
@@ -2019,7 +2033,6 @@ ShareDifferences(::Val{partition}, environment::Bool) where {partition} =
     # largest `θ` that keeps every tag inside that bound, which leaves the
     # shares summing to one, and so the exchange summing to zero over the
     # partition.
-    headroom = ρ * Ā / (ρaʲ * Aʲ)
     θ = one(FT)
     for i in 1:N
         mean_share = _subdomain_share(ε̄, total, i)
@@ -2030,7 +2043,7 @@ ShareDifferences(::Val{partition}, environment::Bool) where {partition} =
     # The environment makes room for what the updraft takes, in proportion to
     # the energy each carries. So its differences are the updraft's, reversed
     # and scaled, and they sum to zero over the partition as well.
-    scale = environment ? -θ * (ρaʲ * Aʲ) / (ρa⁰ * A⁰) : θ
+    scale = environment ? -θ * energy_ratio : θ
     return ntuple(Val(N)) do i
         scale *
         (_subdomain_share(εʲ, totalʲ, i) - _subdomain_share(ε̄, total, i))
