@@ -638,40 +638,40 @@ column_atmos_model(; kwargs...) =
         @test (@inferred CA._energy_partition_flags(tags)) ===
               Val((true, false, false))
         # A share is a tag's value over the partition's sum, capped at one.
-        # The partition's differences sum to zero, a source tag's stands
-        # alone, and where a sum is zero nothing is exchanged.
+        # The partition's tags share one blend factor, so their differences sum
+        # to zero; each source tag has its own, so a scarce one cannot slow
+        # them.
         partition = Val((true, true, false))
         updraft = CA.ShareDifferences(partition, false)
         environment = CA.ShareDifferences(partition, true)
-        # A cell whose subdomains carry the same energy per unit mass, with
-        # the updraft over a tenth of it, so the bound does not bind.
         ρ, ρaʲ, ρa⁰, A = FT(1), FT(0.1), FT(0.9), FT(66e3)
-        headroom = CA._exchange_headroom(ρ, ρaʲ, A, A)
+        room = CA._exchange_room(ρ, ρaʲ, ρa⁰, A, A, A)
         energy_ratio = CA._exchange_energy_ratio(ρaʲ, ρa⁰, A, A)
-        @test headroom ≈ ρ / ρaʲ
+        # The updraft's bound leaves `ρĀ - ρaʲAʲ` and the environment's `ρa⁰A⁰`;
+        # with the energies adding up they are the same room.
+        @test room ≈ (ρ - ρaʲ) / ρaʲ
         @test energy_ratio ≈ ρaʲ / ρa⁰
         εʲ = FT.((3, 1, 2))
         ε̄ = FT.((1, 1, 1))
-        Δφʲ = updraft(εʲ, ε̄, headroom, energy_ratio)
+        Δφʲ = updraft(εʲ, ε̄, room, energy_ratio)
         @test collect(Δφʲ) ≈
               [FT(0.75) - FT(0.5), FT(0.25) - FT(0.5), FT(0.5) - FT(0.5)]
         @test Δφʲ[1] + Δφʲ[2] == 0
         # The environment gives up what the updraft takes, by the energy each
         # carries, and its partition differences sum to zero as well.
-        Δφ⁰ = environment(εʲ, ε̄, headroom, energy_ratio)
+        Δφ⁰ = environment(εʲ, ε̄, room, energy_ratio)
         @test collect(Δφ⁰) ≈ -collect(Δφʲ) .* energy_ratio
         @test Δφ⁰[1] + Δφ⁰[2] == 0
         # A source tag's share is its fraction of the partition's energy.
-        @test updraft(FT.((1, 1, 5)), ε̄, headroom, energy_ratio)[3] ≈ 1 - FT(0.5)
-        # Nothing to exchange: no updraft, no area, no energy, no partition.
+        @test updraft(FT.((1, 1, 5)), ε̄, room, energy_ratio)[3] ≈ 1 - FT(0.5)
+        # Nothing to exchange: no updraft, no environment, no energy, no
+        # partition in one subdomain or the other.
         for degenerate in (
-            # no updraft, no environment, no energy in the updraft
-            (εʲ, ε̄, CA._exchange_headroom(ρ, FT(0), A, A), energy_ratio),
-            (εʲ, ε̄, headroom, CA._exchange_energy_ratio(ρaʲ, FT(0), A, A)),
-            (εʲ, ε̄, CA._exchange_headroom(ρ, ρaʲ, A, FT(0)), energy_ratio),
-            # no partition in one subdomain or the other
-            (FT.((0, 0, 1)), ε̄, headroom, energy_ratio),
-            (εʲ, FT.((0, 0, 1)), headroom, energy_ratio),
+            (εʲ, ε̄, CA._exchange_room(ρ, FT(0), ρa⁰, A, A, A), energy_ratio),
+            (εʲ, ε̄, room, CA._exchange_energy_ratio(ρaʲ, FT(0), A, A)),
+            (εʲ, ε̄, CA._exchange_room(ρ, ρaʲ, ρa⁰, A, FT(0), A), energy_ratio),
+            (FT.((0, 0, 1)), ε̄, room, energy_ratio),
+            (εʲ, FT.((0, 0, 1)), room, energy_ratio),
         )
             @test updraft(degenerate...) == FT.((0, 0, 0))
             @test environment(degenerate...) == FT.((0, 0, 0))
@@ -679,11 +679,36 @@ column_atmos_model(; kwargs...) =
         @test CA._nonnegative_specific(FT(2), FT(4), FT(-1), FT(6)) ==
               FT.((2, 0, 3))
 
-        # No subdomain may carry more of a tag's energy than the cell holds.
-        # The review of #95 gave this cell: the plume is nearly all of a tag
-        # the cell has one percent of, and unbounded it would claim six times
-        # the cell's energy of it.
+        # A scarce source tag leaves the partition alone. Its own bound binds
+        # hard, at one eleventh, while the region tags move freely.
         two = Val((true, true))
+        three = Val((true, true, false))
+        unit_room = CA._exchange_room(FT(1), FT(0.1), FT(0.9), FT(1), FT(1), FT(1))
+        unit_ratio = CA._exchange_energy_ratio(FT(0.1), FT(0.9), FT(1), FT(1))
+        pair = CA.ShareDifferences(two, false)(
+            FT.((0.3, 0.7)),
+            FT.((0.2, 0.8)),
+            unit_room,
+            unit_ratio,
+        )
+        with_overlay = CA.ShareDifferences(three, false)(
+            FT.((0.3, 0.7, 1.0e-4)),
+            FT.((0.2, 0.8, 1.0e-6)),
+            unit_room,
+            unit_ratio,
+        )
+        @test with_overlay[1] == pair[1]
+        @test with_overlay[2] == pair[2]
+        @test pair[1] ≈ FT(0.1)
+        # The overlay's own factor is a ninth of its excess, and its bound holds.
+        overlay_mean = FT(1.0e-6) / (FT(0.2) + FT(0.8))
+        overlay_updraft = overlay_mean + with_overlay[3]
+        @test FT(0.1) * overlay_updraft <= overlay_mean * (1 + 10 * eps(FT))
+        @test with_overlay[3] < FT(1.0e-4)
+
+        # The review's counterexample. The plume is nearly all of a tag the
+        # cell has one percent of, and unbounded it would claim six times the
+        # cell's energy of it.
         bounded_updraft = CA.ShareDifferences(two, false)
         bounded_environment = CA.ShareDifferences(two, true)
         ε̄_step = FT.((0.01, 0.99))
@@ -692,24 +717,32 @@ column_atmos_model(; kwargs...) =
             CA._plume_level(ε̄_step, ρ, ρaʲ, ρa⁰, FT(1e-3), FT(1), FT(50)),
         )
         @test raw[1] > FT(0.9)
-        Δφʲ_step = bounded_updraft(raw, ε̄_step, headroom, energy_ratio)
-        Δφ⁰_step = bounded_environment(raw, ε̄_step, headroom, energy_ratio)
+        Δφʲ_step = bounded_updraft(raw, ε̄_step, room, energy_ratio)
+        Δφ⁰_step = bounded_environment(raw, ε̄_step, room, energy_ratio)
         share(ε, i) = ε[i] / sum(ε)
         for i in 1:2
             φʲ = share(ε̄_step, i) + Δφʲ_step[i]
             φ⁰ = share(ε̄_step, i) + Δφ⁰_step[i]
-            # The cell's energy of this tag, and what each subdomain claims.
             cell = ρ * share(ε̄_step, i) * A
             @test ρaʲ * φʲ * A <= cell * (1 + 10 * eps(FT))
             @test φ⁰ >= -10 * eps(FT)
-            # And the two subdomains still add up to the cell.
             @test ρaʲ * φʲ * A + ρa⁰ * φ⁰ * A ≈ cell
         end
-        # The bound binds here, so the exchange is smaller than the raw plume
-        # would give, and both branches still sum to zero.
-        @test abs(Δφʲ_step[1]) < abs(share(raw, 1) - share(ε̄_step, 1))
+        @test share(ε̄_step, 1) + Δφʲ_step[1] ≈ FT(0.1)
         @test Δφʲ_step[1] + Δφʲ_step[2] ≈ 0 atol = 10 * eps(FT)
         @test Δφ⁰_step[1] + Δφ⁰_step[2] ≈ 0 atol = 10 * eps(FT)
+
+        # Where the subdomains' energies do not add up, the environment's room
+        # binds instead, and its shares stay non-negative.
+        thin = FT(0.99) * A
+        thin_room = CA._exchange_room(ρ, ρaʲ, ρa⁰, A, A, thin)
+        thin_ratio = CA._exchange_energy_ratio(ρaʲ, ρa⁰, A, thin)
+        @test thin_room < room
+        Δφ⁰_thin = bounded_environment(raw, ε̄_step, thin_room, thin_ratio)
+        for i in 1:2
+            @test share(ε̄_step, i) + Δφ⁰_thin[i] >= -10 * eps(FT)
+        end
+        @test Δφ⁰_thin[1] + Δφ⁰_thin[2] ≈ 0 atol = 10 * eps(FT)
 
         # A vanishing updraft velocity, which would overflow `a` in Float32,
         # takes the grid mean, and nothing is `Inf` or `NaN`.

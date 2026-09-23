@@ -1754,11 +1754,16 @@ the flux an updraft copy would add to the donor-share flux of
 another sinks, each with its whole energy.
 
 No subdomain may carry more of a tag's energy than the cell holds,
-`ρaʲ φʲᵢ Aʲ ≤ ρ φ̄ᵢ Ā`. The plume is blended toward the grid mean by the largest
-factor that keeps every tag inside that bound, and the environment's shares
-follow from the updraft's, reversed and scaled by the energy each subdomain
-carries. Both leave the shares summing to one, so the `Xᵢ` add up to zero at
-every face and closure is untouched under every transport. That also
+`ρaʲ φʲᵢ Aʲ ≤ ρ φ̄ᵢ Ā`, and no share may go negative. The plume is blended toward
+the grid mean by the largest factor that keeps a tag inside the smaller of those
+two bounds. The partition's tags share one factor, so their shares keep summing
+to one and their `Xᵢ` add up to zero at every face, and closure is untouched
+under every transport. Each source tag has its own factor, since its exchange
+stands alone, so a tag the cell holds little of cannot slow the partition's
+mixing. The environment's shares follow from the updraft's, reversed and scaled
+by the energy each subdomain carries, and are non-negative by construction.
+Where the subdomains' energies do not add up to the cell's, the share-weighted
+inventory is off by that mismatch. The zero sum also
 needs region tags that partition the domain, which
 `check_energy_source_exchange_partition` enforces. A
 source tag's exchange stands alone, as its other fluxes do. The van
@@ -1880,12 +1885,12 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # kernel: a broadcast of four arguments specialises on every version of
     # ClimaCore the package supports, where one of eight did not.
     ᶜĀ = @. lazy(Y.c.ρe_tot / Y.c.ρ + c)
-    ᶜheadroom = @. lazy(_exchange_headroom(Y.c.ρ, ᶜρaʲ, ᶜĀ, ᶜAʲ))
+    ᶜroom = @. lazy(_exchange_room(Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜĀ, ᶜAʲ, ᶜA⁰))
     ᶜenergy_ratio = @. lazy(_exchange_energy_ratio(ᶜρaʲ, ᶜρa⁰, ᶜAʲ, ᶜA⁰))
     ᶜΔφ⁰ = p.scratch.ᶜe_src_environment
-    @. ᶜΔφ⁰ = environment_differences(ᶜεʲ, ᶜε̄, ᶜheadroom, ᶜenergy_ratio)
+    @. ᶜΔφ⁰ = environment_differences(ᶜεʲ, ᶜε̄, ᶜroom, ᶜenergy_ratio)
     ᶜΔφʲ = ᶜεʲ
-    @. ᶜΔφʲ = updraft_differences(ᶜεʲ, ᶜε̄, ᶜheadroom, ᶜenergy_ratio)
+    @. ᶜΔφʲ = updraft_differences(ᶜεʲ, ᶜε̄, ᶜroom, ᶜenergy_ratio)
 
     subdomains = (;
         ᶜΔφʲ,
@@ -1987,13 +1992,19 @@ end
     return total
 end
 
-# How much of a tag's energy the updraft may hold, over what the cell holds:
-# `ρ Ā / (ρaʲ Aʲ)`. Zero where there is no updraft or no energy, which switches
-# the exchange off there.
-@inline function _exchange_headroom(ρ, ρaʲ, Ā, Aʲ)
+# How far a tag's share in the updraft may exceed its share in the grid mean,
+# per unit of that share. Two bounds meet here. The updraft may hold at most the
+# cell's own energy of a tag, `ρaʲ φʲᵢ Aʲ ≤ ρ φ̄ᵢ Ā`, which leaves the room
+# `ρĀ - ρaʲAʲ`. And the environment may not be left with a negative share, which
+# leaves `ρa⁰A⁰`. The two agree when the subdomains' energies add up to the
+# cell's, which they do not quite: the environment is diagnosed, and the kinetic
+# energy and `p/ρ` differ by subdomain. So the smaller one binds. Negative where
+# there is no updraft or no energy, which switches the exchange off there.
+@inline function _exchange_room(ρ, ρaʲ, ρa⁰, Ā, Aʲ, A⁰)
     FT = typeof(ρ)
-    ((ρaʲ > zero(FT)) & (Aʲ > zero(FT)) & (Ā > zero(FT))) || return zero(FT)
-    return ρ * Ā / (ρaʲ * Aʲ)
+    ((ρaʲ > zero(FT)) & (Aʲ > zero(FT)) & (Ā > zero(FT))) ||
+        return -one(FT)
+    return min(ρ * Ā - ρaʲ * Aʲ, ρa⁰ * A⁰) / (ρaʲ * Aʲ)
 end
 
 # The energy the updraft carries over the environment's, `ρaʲ Aʲ / (ρa⁰ A⁰)`,
@@ -2015,39 +2026,56 @@ ShareDifferences(::Val{partition}, environment::Bool) where {partition} =
 @inline function (::ShareDifferences{partition, environment})(
     εʲ,
     ε̄,
-    headroom,
+    room,
     energy_ratio,
 ) where {partition, environment}
-    FT = typeof(headroom)
+    FT = typeof(room)
     N = length(partition)
     total = _partition_total(ε̄, partition)
     totalʲ = _partition_total(εʲ, partition)
     no_exchange =
-        (headroom <= zero(FT)) |
+        (room < zero(FT)) |
         (energy_ratio <= zero(FT)) |
         (total <= zero(FT)) |
         (totalʲ <= zero(FT))
     no_exchange && return ntuple(_ -> zero(FT), Val(N))
-    # The updraft may hold at most the cell's own energy of each tag,
-    # `ρaʲ φʲᵢ Aʲ ≤ ρ φ̄ᵢ Ā`. The plume is blended toward the grid mean by the
-    # largest `θ` that keeps every tag inside that bound, which leaves the
-    # shares summing to one, and so the exchange summing to zero over the
-    # partition.
-    θ = one(FT)
-    for i in 1:N
-        mean_share = _subdomain_share(ε̄, total, i)
-        difference = _subdomain_share(εʲ, totalʲ, i) - mean_share
-        limit = mean_share * (headroom - one(FT))
-        difference > limit && (θ = min(θ, max(limit, zero(FT)) / difference))
-    end
-    # The environment makes room for what the updraft takes, in proportion to
-    # the energy each carries. So its differences are the updraft's, reversed
-    # and scaled, and they sum to zero over the partition as well.
-    scale = environment ? -θ * energy_ratio : θ
+    # The partition's tags share one factor, so their shares keep summing to
+    # one and their exchange sums to zero at every face. A source tag's
+    # exchange stands alone, so each has its own factor, and a scarce one
+    # cannot slow the partition's mixing.
+    θ = _partition_blend_factor(ε̄, εʲ, total, totalʲ, room, partition)
     return ntuple(Val(N)) do i
+        θᵢ = partition[i] ? θ : _blend_factor(ε̄, εʲ, total, totalʲ, room, i)
+        # The environment makes room for what the updraft takes, in proportion
+        # to the energy each carries. So its difference is the updraft's,
+        # reversed and scaled.
+        scale = environment ? -θᵢ * energy_ratio : θᵢ
         scale *
         (_subdomain_share(εʲ, totalʲ, i) - _subdomain_share(ε̄, total, i))
     end
+end
+
+# The partition's common factor: the smallest over its tags. A helper, so that
+# the factor is bound once. A variable reassigned in a loop and captured by the
+# `ntuple` closure is boxed, and the kernel then allocates.
+@inline function _partition_blend_factor(ε̄, εʲ, total, totalʲ, room, partition)
+    θ = one(room)
+    for i in 1:length(partition)
+        θ = partition[i] ?
+            min(θ, _blend_factor(ε̄, εʲ, total, totalʲ, room, i)) : θ
+    end
+    return θ
+end
+
+# The largest factor in `[0, 1]` by which tag `i`'s share in the updraft may
+# move from its share in the grid mean, so that the tag stays inside `room`.
+@inline function _blend_factor(ε̄, εʲ, total, totalʲ, room, i)
+    mean_share = _subdomain_share(ε̄, total, i)
+    difference = _subdomain_share(εʲ, totalʲ, i) - mean_share
+    limit = mean_share * room
+    FT = typeof(limit)
+    return difference > limit ?
+           min(one(FT), max(limit, zero(FT)) / difference) : one(FT)
 end
 
 # Tag `i`'s share of a subdomain: its value over the partition's sum there,

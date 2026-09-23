@@ -143,7 +143,12 @@ over the updraft and the environment `k`, with `φᵏᵢ` the tag's share of the
 subdomain's energy, `φ̄ᵢ` its share in the grid mean, and `Aᵏ = e_totᵏ + c` the
 subdomain's energy per unit mass. A share is the tag's specific value over the
 sum of the partition's in that subdomain, so a source tag's share is its
-fraction of the energy there. The partition's shares add up to one in every
+fraction of the energy there. No subdomain may carry more of a tag's energy
+than the cell holds, and no share may go negative: the plume is blended toward
+the grid mean by the largest factor that respects the smaller of those two
+bounds. The partition's tags share one factor, which keeps their shares summing
+to one, and each source tag has its own, so a tag the cell holds little of
+cannot slow the region tags' mixing. The partition's shares add up to one in every
 subdomain, so its exchange sums to zero at every face, and closure is
 untouched. Where a subdomain's partition holds nothing, the tags exchange
 nothing there. So the exchange needs region tags without sources that
