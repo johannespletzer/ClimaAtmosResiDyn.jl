@@ -21,6 +21,9 @@ not checked, it says so.
   - **G4, next: the energy source tags**, with what G3 learns:
     [G4_TODO.md](G4_TODO.md). The full re-check of the findings happens at its
     start.
+  - **What upstream must change** for the tags, since the fork cannot:
+    [UPSTREAM_REQUIREMENTS.md](UPSTREAM_REQUIREMENTS.md), started on
+    2026-09-23 with the 0M rain-out's Jacobian diagonal (UP1).
   - **Later, sketched and not approved:** M6 (devices, precision, input data
     and restarts at scale, with the GPU decision), M7 (a production trial and a
     supported envelope), M8 (air age, memory and forecasts). Each needs the

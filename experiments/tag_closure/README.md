@@ -19,6 +19,7 @@ experiments/tag_closure/
   STATUS.md  ROADMAP.md  DECISIONS.md    the entry point, the milestones, the owner's decisions
   G3_PLAN.md  G3_TODO.md  G4_TODO.md     the current goal and the next
   BACKLOG.md                             open items beyond G3 and G4
+  UPSTREAM_REQUIREMENTS.md               changes the programme needs from upstream ClimaAtmos
   FINDINGS.md                            every established claim, numbered, with its run
   RUNS.md                                every run: commit, job, purpose, findings, where its data is
   design/  reference/                    live design notes; the frozen external reviews
