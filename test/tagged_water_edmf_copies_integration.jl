@@ -91,6 +91,14 @@ end
         "rad" => "DYCOMS",
         "toml" => [joinpath(pkgdir(CA), "toml", "prognostic_edmfx_1M.toml")],
         "ode_algo" => "ARS222",
+        # On the explicit microphysics path with one Newton iteration the
+        # tags lag the parent's solve: the parent's rows carry the
+        # sedimenting species' cross blocks and the tags' do not
+        # (`update_water_tag_sedimentation_jacobian!`). After an hour the
+        # partition then misses by 0.8% net. With ten iterations it closes to
+        # 4e-7 net and 8e-4 gross. That lag is WP5's to follow; this file
+        # checks the copies, so it converges the solve.
+        "max_newton_iters_ode" => 10,
         "dt" => "120secs",
         "t_end" => "1hours",
         "FLOAT_TYPE" => "Float64",
@@ -183,12 +191,11 @@ end
     end
 
     # 3. The partition closes, and the copies' repair finds only a small
-    # residual. A 3 h development run of this column, with the microphysics
-    # implicit, gave 3.7e-5 net and 3.7e-4 gross after an hour, and a copies'
-    # residual of 5.6e-5; the bounds leave room for the explicit path. The
-    # copies' bound is G3_PLAN 6.1's budget for it. What the repair moves is
-    # printed, not bounded here: it bounds a sum of several parts
-    # (`docs/src/tagged_water.md`).
+    # residual. This column with ten Newton iterations gave -4.3e-7 net,
+    # 7.5e-4 gross and a copies' residual of 9.3e-5 after an hour (a probe
+    # run of the WP3 branch). The copies' bound is G3_PLAN 6.1's budget for
+    # it. What the repair moves is printed, not bounded here: it bounds a sum
+    # of several parts (`docs/src/tagged_water.md`).
     @testset "The partition and the copies stay closed" begin
         closure = CA.tag_closure(
             Y,
@@ -255,8 +262,15 @@ end
         ᶜleak = similar(Y.c.ρ)
         CA.water_tag_leak!(ᶜleak, Y_uniform, p, Val(:diffusion_up))
         @test maximum(abs, parent(ᶜleak)) > 0
-        # The leak per unit mass of updraft air.
-        ᶜleakʲ = ᶜleak .* Y.c.ρ ./ ᶜsgsʲ.ρa
+        # The leak per unit mass of updraft air, where there is an updraft.
+        # Above the cloud `ρaʲ` is exactly zero on some levels, and there the
+        # leak is zero too.
+        ᶜleakʲ = @. ifelse(
+            ᶜsgsʲ.ρa > 0,
+            ᶜleak * Y.c.ρ / ᶜsgsʲ.ρa,
+            zero(ᶜleak),
+        )
+        @test all(isfinite, parent(ᶜleakʲ))
         for (name, share) in pairs(shares)
             copy_name = Symbol(:q_tag_, name)
             ᶜχₜ =

@@ -141,7 +141,10 @@ builds it twice.
     everywhere moves as the parent does, that the vertical diffusion's leak in
     closed form is the difference the diffusion makes, and the audit's columns.
   - `tagging_water_edmf_copies` runs the copies under 1M, with the
-    microphysics explicit, so that parity covers the explicit path. It checks
+    microphysics explicit, so that parity covers the explicit path, and ten
+    Newton iterations: with one, the tags lag the parent's solve there by
+    0.8% of the column's water in an hour, which the closure bounds would
+    fail (WP5 follows that lag). It checks
     the rebuild and the start from the plume, that the default mode's flux
     does nothing, the copies' residual, the surface-flux mirror, and that one
     composition moves with `q_totʲ` up to the diffusion's leak.
