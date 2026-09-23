@@ -123,20 +123,30 @@ The twelve criteria of the plan, section 2, in short:
 
 ## WP1: refusals, reserved names, known issues (draft PR-W1)
 
-  - [ ] Refuse `water_tracers`:
+Draft PR #100 from `claude/water-tags-edmf`, opened on 2026-09-23 at `6e7264ae`.
+
+  - [x] Refuse `water_tracers`:
 
       + with `prognostic_edmfx`, until WP3 lands;
       + with the AMD LES model, always.
 
-    Warn under `PrescribedFlow`. Do not refuse `water_process_record`.
+    Warn under a prescribed flow, from `get_atmos`, so that the setup's own
+    flow is caught as well as the key. Do not refuse `water_process_record`:
+    the refusals have their own check, `check_water_tracers_transport_supported`.
 
-  - [ ] Reserve colliding tag names: `res`, `fix_*`, `upfix_*`, `inc_*`,
+  - [x] Reserve colliding tag names: `res`, `fix_*`, `upfix_*`, `inc_*`,
     `rtag_*`, `stag_*`.
 
-  - [ ] Known issue 1 closed with the post-#64 numbers from the CI log. Issue 3
-    updated.
+  - [~] Known issue 1 closed with the post-#64 numbers. The CI log does not
+    print them, since the assertions pass, so job `13831751` runs the
+    integration test with the two quantities printed. Issues 3 and 4 are
+    restated in the PR.
 
-  - [ ] Tests for each refusal. Review by `clima-reviewer` (high).
+  - [x] Tests for each refusal (22, all passing locally). Review by
+    `clima-reviewer` (high): nothing blocking; its two should-fix findings are
+    fixed (`review/agent_reviews/wp1_refusals_review_2026-09-23.md`).
+
+  - [ ] CI green on #100.
 
 ## WP3: total water under EDMF (draft PR-W3)
 
