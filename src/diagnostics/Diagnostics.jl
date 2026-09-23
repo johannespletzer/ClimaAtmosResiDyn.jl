@@ -85,6 +85,7 @@ import ..region_tag_state_names
 import ..WaterTaggingModel
 import ..water_region_tag_state_names
 import ..water_tag_fraction
+import ..has_water_tag_updraft_copies
 
 # energy_source_tagging_model
 import ..EnergySourceTaggingModel

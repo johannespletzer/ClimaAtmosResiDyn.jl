@@ -808,6 +808,7 @@ function default_model_callbacks(
             state_names = water_region_tag_state_names,
             config_key = "water_closure_check",
             tracer_key = "water_tracers",
+            extra_audit = water_extra_audit(tagging.water_tagging_model),
             scheduling...,
         )...,
         tag_closure_callback(
@@ -839,6 +840,12 @@ function default_model_callbacks(
 end
 
 tag_closure_callback(::Nothing, tagging_model; kwargs...) = ()
+
+# The water family's own audit columns under prognostic EDMF, as a function of
+# `(Y, p, scale)`, or `nothing` without the tags.
+water_extra_audit(::Nothing) = nothing
+water_extra_audit(model) =
+    (Y, p, scale) -> water_tag_edmf_audit(Y, p, model, scale)
 
 # The energy source family's own audit columns, as a function of `(Y, p, scale)`,
 # or `nothing` without the tags.

@@ -57,6 +57,24 @@ function compute_q_tag_res!(out, state, cache, time, ρq_tag_names)
     return ᶜres
 end
 
+function compute_q_tag_upfix!(out, state, cache, time, ρq_tag_name)
+    ᶜupfix = getproperty(cache.tagging.ᶜwater_upfix, ρq_tag_name)
+    if isnothing(out)
+        return specific.(ᶜupfix, state.c.ρ)
+    else
+        out .= specific.(ᶜupfix, state.c.ρ)
+    end
+end
+
+function compute_q_tag_copy_res!(out, state, cache, time)
+    ᶜresidual = cache.tagging.ᶜwater_copy_residual
+    if isnothing(out)
+        return copy(ᶜresidual)
+    else
+        out .= ᶜresidual
+    end
+end
+
 function compute_q_tag_fix!(out, state, cache, time, ρq_tag_name)
     ᶜfix = getproperty(cache.tagging.ᶜwater_fix, ρq_tag_name)
     if isnothing(out)
@@ -171,6 +189,45 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                     compute_q_tag_fix!(out, u, p, t, ρq_tag_name),
             )
         end
+
+        short_name = "q_tag_upfix_$name"
+        if has_water_tag_updraft_copies(model) &&
+           !haskey(ALL_DIAGNOSTICS, short_name)
+            add_diagnostic_variable!(;
+                short_name,
+                units = "kg kg^-1",
+                long_name = "Cumulative Tagged Water Updraft Copy Repair ($name)",
+                comments = "Water moved into (positive) or out of (negative) " *
+                           "the updraft copy of the tag `$name` by the " *
+                           "copies' repair after the updraft filter, times " *
+                           "the updraft's density-area `ρaʲ`, per unit mass " *
+                           "of grid-mean moist air. Cumulative since the " *
+                           "start of the simulation segment and reset on " *
+                           "restart. Written only under " *
+                           "`water_tag_updraft_copy: true`, for the tags of " *
+                           "the partition.",
+                compute! = (out, u, p, t) ->
+                    compute_q_tag_upfix!(out, u, p, t, ρq_tag_name),
+            )
+        end
+    end
+
+    # As for `q_tag_res`: a stale entry from an earlier model with copies would
+    # report a residual this model does not have.
+    delete!(ALL_DIAGNOSTICS, "q_tag_copy_res")
+    if has_water_tag_updraft_copies(model)
+        add_diagnostic_variable!(;
+            short_name = "q_tag_copy_res",
+            units = "kg kg^-1",
+            long_name = "Tagged Water Updraft Copy Residual",
+            comments = "The updraft's water minus the sum of the partition's " *
+                       "updraft copies, `q_totʲ - Σᵢ χᵢʲ`, per unit mass of " *
+                       "updraft air, as the copies' repair found it after " *
+                       "the updraft filter at the last state constraint, " *
+                       "before repairing it.",
+            compute! = (out, u, p, t) ->
+                compute_q_tag_copy_res!(out, u, p, t),
+        )
     end
 
     region_names = water_region_tag_state_names(model)

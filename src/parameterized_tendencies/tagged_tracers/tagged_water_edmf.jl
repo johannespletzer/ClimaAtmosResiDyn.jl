@@ -288,6 +288,43 @@ It needs one updraft and region tags that partition the domain, which
 [`check_water_tag_exchange_partition`](@ref) enforce.
 """
 function sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
+    inputs = water_exchange_inputs!(Y, p, turbconv_model, model)
+    (; ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio, flags, upwinding, dt) = inputs
+    updraft_differences = ShareDifferences(flags, false)
+    environment_differences = ShareDifferences(flags, true)
+    ᶜΔφ⁰ = p.scratch.ᶜq_tag_environment
+    @. ᶜΔφ⁰ = environment_differences(ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio)
+    ᶜΔφʲ = ᶜεʲ
+    @. ᶜΔφʲ = updraft_differences(ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio)
+
+    (; ᶜq_totʲ, ᶜq_tot⁰, ᶜaʲ, ᶜa⁰, ᶠρʲ, ᶠρ⁰, ᶠu³_diffʲ, ᶠu³_diff⁰) = inputs
+    subdomains = (;
+        ᶜΔφʲ,
+        ᶜΔφ⁰,
+        ᶜq_totʲ,
+        ᶜq_tot⁰,
+        ᶜaʲ,
+        ᶜa⁰,
+        ᶠρʲ,
+        ᶠρ⁰,
+        ᶠu³_diffʲ,
+        ᶠu³_diff⁰,
+    )
+    _exchange_water_tags!(Yₜ.c, subdomains, dt, upwinding, model.tags, 1)
+    return nothing
+end
+
+"""
+    water_exchange_inputs!(Y, p, turbconv_model, model)
+
+Fill the scratch the water tags' exchange reads, for the current state, and
+return it with the lazy fields the exchange needs: the grid mean's specific tag
+values `ᶜε̄`, the updraft's from the rescaled plume `ᶜεʲ`, and the bound's room
+and water ratio. [`sgs_exchange_of_water_tags!`](@ref) applies the exchange from
+these; the audit ([`water_tag_edmf_audit`](@ref)) recomputes them to report
+where the bound binds.
+"""
+function water_exchange_inputs!(Y, p, turbconv_model, model)
     (; edmfx_sgsflux_upwinding) = p.atmos.numerics
     (; ᶠu³, ᶠu³ʲs, ᶜρʲs, ᶜuʲs) = p.precomputed
     (; ᶜp, ᶠu³⁰, ᶜT⁰, ᶜq_tot_nonneg⁰, ᶜq_liq⁰, ᶜq_ice⁰) = p.precomputed
@@ -333,8 +370,6 @@ function sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
     ᶠlg = Fields.local_geometry_field(Y.f)
     ᶜwʲ = @. lazy(ᶜbottom_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
     flags = _water_partition_flags(model.tags)
-    updraft_differences = ShareDifferences(flags, false)
-    environment_differences = ShareDifferences(flags, true)
     # The grid mean's specific tag values, negative ones as zero, one tuple per
     # cell, so each tag's kernel below reads a few tuple fields.
     ᶜε̄ = p.scratch.ᶜq_tag_mean
@@ -383,14 +418,14 @@ function sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
     @. ᶜroom = _exchange_room(Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜq̄, ᶜq_totʲ, ᶜq_tot⁰)
     ᶜwater_ratio = p.scratch.ᶜq_tag_water_ratio
     @. ᶜwater_ratio = _exchange_energy_ratio(ᶜρaʲ, ᶜρa⁰, ᶜq_totʲ, ᶜq_tot⁰)
-    ᶜΔφ⁰ = p.scratch.ᶜq_tag_environment
-    @. ᶜΔφ⁰ = environment_differences(ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio)
-    ᶜΔφʲ = ᶜεʲ
-    @. ᶜΔφʲ = updraft_differences(ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio)
-
-    subdomains = (;
-        ᶜΔφʲ,
-        ᶜΔφ⁰,
+    return (;
+        ᶜεʲ,
+        ᶜε̄,
+        ᶜroom,
+        ᶜwater_ratio,
+        flags,
+        upwinding,
+        dt,
         ᶜq_totʲ,
         ᶜq_tot⁰,
         ᶜaʲ,
@@ -400,8 +435,6 @@ function sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
         ᶠu³_diffʲ,
         ᶠu³_diff⁰,
     )
-    _exchange_water_tags!(Yₜ.c, subdomains, dt, upwinding, model.tags, 1)
-    return nothing
 end
 
 _exchange_water_tags!(ᶜYₜ, subdomains, dt, upwinding, ::Tuple{}, i) = nothing
@@ -943,3 +976,119 @@ water_tag_copy_sgs_names(Y) =
 # and the clamp's dependence, a convergence aid like the grid tags' diagonal.
 @inline water_tag_copy_fall_share_derivative(qʲ, q_totʲ) =
     q_totʲ > zero(q_totʲ) ? qʲ / q_totʲ : zero(q_totʲ)
+
+# ============================================================================
+# The audit's own columns
+# ============================================================================
+
+"""
+    water_tag_edmf_audit(Y, p, model, scale)
+
+The water tags' own columns for `water_tag_audit.csv` under prognostic EDMF, or
+`nothing` otherwise. Collective, as [`tag_audit`](@ref) is.
+
+In the default mode, where the exchange runs: where its bound binds. The
+exchange blends the plume toward the grid mean where a tag would otherwise
+carry more water in a subdomain than the cell holds (decision 5 of G3_PLAN).
+From the current state, `exchange_volume_fraction` is the fraction of the
+volume where the exchange runs at all, `bound_partition` the fraction of that
+where the partition's factor is below one, and `bound_<name>` the same for each
+source tag's own factor. Where the partition's bound binds, the partition mixes
+less than a copy would; where a source tag's binds, that tag does, and an
+identity such as `evap_tropo + evap_strat = evap` stops holding exactly.
+
+With updraft copies: `copy_residual`, the integral of `|q_totʲ - Σᵢ χᵢʲ| ρaʲ`
+before the last repair, and `copy_repair`, the integral of the repair ledgers'
+magnitudes, cumulative, each also relative to `scale`.
+"""
+water_tag_edmf_audit(Y, p, model, scale) =
+    _water_tag_edmf_audit(Y, p, model, p.atmos.turbconv_model, scale)
+_water_tag_edmf_audit(Y, p, model, turbconv_model, scale) = nothing
+function _water_tag_edmf_audit(
+    Y,
+    p,
+    model::WaterTaggingModel,
+    turbconv_model::PrognosticEDMFX,
+    scale,
+)
+    per_scale(x) = iszero(scale) ? zero(x) : x / scale
+    ᶜtmp = p.scratch.ᶜtemp_scalar
+    if has_water_tag_updraft_copies(model)
+        (; ᶜwater_copy_residual, ᶜwater_upfix) = p.tagging
+        @. ᶜtmp = abs(ᶜwater_copy_residual) * Y.c.sgsʲs.:(1).ρa
+        copy_residual = sum(ᶜtmp)
+        @. ᶜtmp = 0
+        for tag in model.tags
+            _is_partition_tag(tag) || continue
+            ᶜfix = tag_field(ᶜwater_upfix, tag)
+            @. ᶜtmp += abs(ᶜfix)
+        end
+        copy_repair = sum(ᶜtmp)
+        return (;
+            copy_residual,
+            copy_residual_relative = per_scale(copy_residual),
+            copy_repair,
+            copy_repair_relative = per_scale(copy_repair),
+        )
+    end
+    p.atmos.edmfx_model.sgs_mass_flux || return nothing
+    inputs = water_exchange_inputs!(Y, p, turbconv_model, model)
+    (; ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio, flags) = inputs
+    ᶜθ = p.scratch.ᶜq_tag_environment
+    @. ᶜθ = WaterBlendFactors(flags)(ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio)
+    first_index = findfirst(identity, _flag_values(flags))
+    @. ᶜtmp = one(ᶜtmp)
+    volume = sum(ᶜtmp)
+    @. ᶜtmp = ifelse(getindex(ᶜθ, $first_index) >= 0, one(ᶜtmp), zero(ᶜtmp))
+    active = sum(ᶜtmp)
+    fraction_bound(i) = begin
+        @. ᶜtmp = ifelse(
+            (getindex(ᶜθ, $i) >= 0) & (getindex(ᶜθ, $i) < 1),
+            one(ᶜtmp),
+            zero(ᶜtmp),
+        )
+        iszero(active) ? zero(active) : sum(ᶜtmp) / active
+    end
+    source_indices =
+        Tuple(i for (i, tag) in enumerate(model.tags) if !_is_partition_tag(tag))
+    source_names =
+        Tuple(Symbol(:bound_, tag_name(model.tags[i])) for i in source_indices)
+    return (;
+        exchange_volume_fraction = iszero(volume) ? zero(volume) :
+                                   active / volume,
+        bound_partition = fraction_bound(first_index),
+        NamedTuple{source_names}(map(fraction_bound, source_indices))...,
+    )
+end
+
+_flag_values(::Val{partition}) where {partition} = partition
+
+# The blend factors of the exchange's bound per tag, as `ShareDifferences`
+# takes them: the partition's common factor for its tags, and each source tag's
+# own. `-1` where the exchange does not run.
+struct WaterBlendFactors{partition} end
+WaterBlendFactors(::Val{partition}) where {partition} =
+    WaterBlendFactors{partition}()
+@inline function (::WaterBlendFactors{partition})(
+    εʲ,
+    ε̄,
+    room,
+    ratio,
+) where {partition}
+    FT = typeof(room)
+    N = length(partition)
+    total = _partition_total(ε̄, partition)
+    totalʲ = _partition_total(εʲ, partition)
+    no_exchange =
+        (room < zero(FT)) |
+        (ratio <= zero(FT)) |
+        (total <= zero(FT)) |
+        (totalʲ <= zero(FT))
+    no_exchange && return ntuple(_ -> -one(FT), Val(N))
+    θ = _partition_blend_factor(ε̄, εʲ, total, totalʲ, room, partition)
+    return ntuple(
+        i ->
+            partition[i] ? θ : _blend_factor(ε̄, εʲ, total, totalʲ, room, i),
+        Val(N),
+    )
+end
