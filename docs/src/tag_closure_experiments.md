@@ -1,5 +1,14 @@
 # Tag-closure experiments: the preparation plan
 
+!!! note "Historical"
+
+    This page is the preparation plan of early September 2026 for the
+    tag-closure experiments. It is kept as a record and will move to the
+    experiments' archive. It is not updated. The goals, findings and runs since
+    then are in
+    [`experiments/tag_closure/`](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/tree/claude/tag-closure-record/experiments/tag_closure)
+    on branch `claude/tag-closure-record`.
+
 This page is the preparation plan for the experiments that
 [tag_closure_memo.md](tag_closure_memo.md) names. It says what has to exist
 before any of them can be submitted, so that the work can start without
