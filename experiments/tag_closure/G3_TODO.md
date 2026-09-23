@@ -119,11 +119,13 @@ The twelve criteria of the plan, section 2, in short:
     level, so WP4c's correction of it comes before criterion 4 on D4-W.
   - [x] V-W0a: known issue 4, a precipitating 0M column, 1 against 10 Newton
     iterations. The day-long pair rained only in its first hour (W15), so a
-    controlled 2×2 over that hour followed (W16): the missing diagonal
-    changes the region tags' Newton sensitivity by less than 4%. The issue is
-    restated in PR-W1. The sensitivity itself is the implicit and explicit
-    advection split, which grows as the solve converges; WP5 addresses it.
-    Both entries still go through the verifier once it covers water.
+    controlled 2×2 over that hour followed (W16): moving microphysics off the
+    implicit path changes the region tags' Newton sensitivity by at most 4%,
+    and `evap`'s by up to 24% near 2e-5. That does not isolate the missing
+    diagonal (W16's erratum, the owner's review of #100), so the issue stays
+    open and PR-W1 states the bounded result. The sensitivity matches the
+    change of the closure residual, the implicit and explicit advection
+    split; WP5 addresses it. W15 to W17 went through the verifier.
   - [x] V-W1: D4-W with grid-scale tags on `main` + #95, before WP1's refusal,
     and its untagged twin: the "before" numbers (W17). The gross residual is
     15% of the column's water at 24 h, 75 times the budget; parity holds bit
@@ -248,6 +250,13 @@ Draft PR #100 from `claude/water-tags-edmf`, opened on 2026-09-23 at `6e7264ae`.
     the environment's term as the model weights it, in the implicit and
     explicit microphysics paths.
   - [ ] `pr_tag_<name>` under 0M.
+  - [ ] Isolate known issue 4 (the owner's review of #100): runs with the
+    same implicit residual and time integration that differ only in whether
+    the analytic diagonal `Δ⁻/ρq_tot` is present, across a Newton ladder with
+    a tightly converged reference and a time step ladder, reading the region
+    tags, the source tags, `q_tag_res` and the nonlinear convergence; stamped
+    and verified. The diagonal is model code, so it belongs here, where the
+    0M sink's attribution is rewritten anyway.
   - [ ] Review (xhigh).
 
 ## WP4b: rain and snow carry their own tags (draft PR-W4b)

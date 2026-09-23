@@ -207,13 +207,22 @@ differ by 1.0e-3 to 1.2e-3 in L1 at 1 h and by 6.6e-5 to 1.6e-4 at 24 h, while
 `hus` differs by 4.2e-5 and 1.3e-5. *Jobs `13829854`, `13829855`,
 `hpda2_test`, 2026-09-23, from `../ClimaAtmosResiDyn-wedmf-run` at `c537903b`
 (`main` after #95); `output/w0a_0m_newton1/`, `output/w0a_0m_newton10/`,
-`analysis/water/w0a_newton_day.py`. Not yet through the verifier, whose water
-extension is being built.*
+`analysis/water/w0a_newton_day.py`. The share differences were recomputed by
+the verifier (`compare_runs.py --ladder-share`) and agree to the digits given;
+`output/w0a_0m_newton1/verifier_share.txt` and `.json`.*
 
 **W16. Known issue 4 is real in the code but not visible in the answer: its
 missing Jacobian diagonal changes the tags' Newton sensitivity by less than
 4% on a raining 0M column. That sensitivity is the closure residual, which
-grows as the solve converges.** V-W0a's controlled pairs: the first two hours
+grows as the solve converges.** *Erratum, 2026-09-23, after the owner's review
+of #100: the headline claims more than the runs show. Moving microphysics
+from the implicit to the explicit path also changes the operator splitting and
+the discrete integration path, so the comparison below does not isolate the
+missing diagonal. What it shows is narrower: on this 0M column the region
+tags' 1-against-10-iteration difference changed by at most 4% between the two
+paths, and `evap`'s by up to 24% at a size near 2e-5. Known issue 4 stays
+open; isolating it needs runs that differ only in the diagonal (G3_TODO,
+WP4a).* V-W0a's controlled pairs: the first two hours
 of W15's column, when its cloud rains out, at 6-minute output, with implicit
 or explicit microphysics, each at 1 and 10 Newton iterations. With explicit
 microphysics the 0M sink is off the Newton path.
@@ -244,7 +253,10 @@ the split (G3_PLAN 4.3). *Jobs `13831761` to `13831764`, `hpda2_test`,
 2026-09-23, from `../ClimaAtmosResiDyn-wedmf-run` at `2a6f1294`;
 `output/w0a_0m_{implicit,explicit}_newton{1,10}_2h/`,
 `analysis/water/w0a_newton_2x2.py` (`output/w0a_0m_implicit_newton10_2h/newton_2x2.txt`).
-Not yet through the verifier.*
+The share differences at 6 and 30 minutes and 1 and 2 hours were recomputed by
+the verifier (`compare_runs.py --ladder-share --hours 0.1,0.5,1,2`) and agree
+to the digits given; `verifier_share.txt` and `.json` in the two `_newton1_2h`
+output directories.*
 
 **W17. V-W1, the "before": with grid-scale tags only, D4-W's water partition
 drifts to 15% of the column's water in a day, and the model is untouched.**
@@ -272,7 +284,11 @@ them, are bit for bit the same at all 25 outputs. *Jobs `13829853` (tagged) and
 `13829852` (twin), `hpda2_test`, 2026-09-23, from `../ClimaAtmosResiDyn-wedmf-run`
 at `c537903b`, driver `analysis/water/d4w_driver.jl`;
 `output/w1_d4w_grid_tags/` (with `parity.txt`), `analysis/water/d4w_parity.py`,
-`analysis/water/d4w_before_and_sizing.py`. Not yet through the verifier.*
+`analysis/water/d4w_before_and_sizing.py`. The parity was recomputed by the
+verifier (`compare_runs.py --parity-only`): 37 fields bit for bit;
+`output/w1_d4w_grid_tags/verifier_parity.txt`. The closure numbers are the
+model's own table; the tracer comparison is a single-run analysis, which the
+verifier does not cover.*
 
 **W18. V-W0c sizes WP3: on D4-W the updraft holds no rain worth tagging and
 there is no snow, but the 1M diffusion leak alone would fail the closure
@@ -303,7 +319,8 @@ budget.** The untagged D4-W day of W17, with the EDMF diagnostics.
     construction.
 
 *Job `13829852`, as W17; `output/w0c_d4w_untagged/before_and_sizing.txt`.
-Not yet through the verifier.*
+Single-run estimates, which the verifier does not cover; the script is
+`analysis/water/d4w_before_and_sizing.py`.*
 
 **W19. After #64's fix, the water integration test's two closure quantities
 sit well inside their bounds.** On `main` at `0b2b1032` and Julia 1.11,
