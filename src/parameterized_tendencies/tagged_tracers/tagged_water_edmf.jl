@@ -1060,8 +1060,8 @@ function _repair_water_tag_copies!(
     ::PrognosticEDMFX,
 )
     has_water_tag_updraft_copies(model) || return nothing
-    (; ᶜwater_upfix, ᶜwater_copy_residual, ᶜwater_copy_sum, ᶜwater_copy_pos) =
-        p.tagging
+    (; ᶜwater_upfix, ᶜwater_upfix_gross, ᶜwater_upfix_count) = p.tagging
+    (; ᶜwater_copy_residual, ᶜwater_copy_sum, ᶜwater_copy_pos) = p.tagging
     ᶜsgsʲ = Y.c.sgsʲs.:(1)
     @. ᶜwater_copy_sum = 0
     @. ᶜwater_copy_pos = 0
@@ -1069,7 +1069,7 @@ function _repair_water_tag_copies!(
     @. ᶜwater_copy_residual = ᶜsgsʲ.q_tot - ᶜwater_copy_sum
     _apply_copy_repair!(
         ᶜsgsʲ,
-        ᶜwater_upfix,
+        tag_ledger(ᶜwater_upfix, ᶜwater_upfix_gross, ᶜwater_upfix_count),
         ᶜwater_copy_sum,
         ᶜwater_copy_pos,
         model.tags,
@@ -1088,19 +1088,28 @@ function _accumulate_copy_sums!(ᶜsum, ᶜpos, ᶜsgsʲ, tags::Tuple)
 end
 # `ᶜsum` and `ᶜpos` come from the pre-repair copies and are only read here, so
 # each copy can be rewritten in place.
-_apply_copy_repair!(ᶜsgsʲ, ᶜupfix, ᶜsum, ᶜpos, ::Tuple{}) = nothing
-function _apply_copy_repair!(ᶜsgsʲ, ᶜupfix, ᶜsum, ᶜpos, tags::Tuple)
+_apply_copy_repair!(ᶜsgsʲ, ledger, ᶜsum, ᶜpos, ::Tuple{}) = nothing
+function _apply_copy_repair!(ᶜsgsʲ, ledger, ᶜsum, ᶜpos, tags::Tuple)
     tag = first(tags)
     if _is_partition_tag(tag)
         ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
-        ᶜfix = tag_field(ᶜupfix, tag)
-        # Ledger first, so it records the correction itself.
+        (ᶜfix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
+        # Ledger first, so it records the correction itself. The gross twin
+        # and the count take the same change, the count against the updraft's
+        # water.
+        @. ᶜgross += abs(
+            ᶜsgsʲ.ρa * water_tag_rescale_shift(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜsum, ᶜpos),
+        )
+        @. ᶜcount += tag_event(
+            water_tag_rescale_shift(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜsum, ᶜpos),
+            ᶜsgsʲ.q_tot,
+        )
         @. ᶜfix +=
             ᶜsgsʲ.ρa *
             water_tag_rescale_shift(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜsum, ᶜpos)
         @. ᶜχʲ += water_tag_rescale_shift(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜsum, ᶜpos)
     end
-    return _apply_copy_repair!(ᶜsgsʲ, ᶜupfix, ᶜsum, ᶜpos, Base.tail(tags))
+    return _apply_copy_repair!(ᶜsgsʲ, ledger, ᶜsum, ᶜpos, Base.tail(tags))
 end
 
 # ---------------------------------------------------------------------------

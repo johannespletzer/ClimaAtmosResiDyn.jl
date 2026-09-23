@@ -397,8 +397,25 @@ end
         [Dict("name" => "res", "source" => "surface_flux")],
         FT,
     )
-    for name in ("fix_a", "upfix_a", "inc_left", "rtag_a", "stag_a")
+    for name in (
+        "fix_a",
+        "upfix_a",
+        "inc_left",
+        "rtag_a",
+        "stag_a",
+        "fixgross_a",
+        "fixcount_a",
+        "upfixgross_a",
+        "upfixcount_a",
+    )
         @test_throws "`$name` is refused" CA.water_tracer_tuple(
+            [Dict("name" => name, "source" => "surface_flux")],
+            FT,
+        )
+    end
+    # The energy source tags reserve their ledgers' prefixes too.
+    for name in ("fix_a", "fixgross_a", "fixcount_a", "inc_left")
+        @test_throws "`$name` is refused" CA.energy_source_tracer_tuple(
             [Dict("name" => name, "source" => "surface_flux")],
             FT,
         )

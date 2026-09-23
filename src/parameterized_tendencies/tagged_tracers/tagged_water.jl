@@ -218,6 +218,10 @@ when water tagging is disabled. Contains:
     [`rescale_water_tags!`](@ref) and [`repair_water_tag_partition!`](@ref)).
     Cumulative since the start of the simulation segment, and reset on restart,
     so a budget over an interval is the difference of two outputs.
+  - `ᶜwater_fix_gross`, `ᶜwater_fix_count`: the gross twin and the count of
+    `ᶜwater_fix`, in Float64: the absolute value of every change, and one per
+    cell-event above rounding (`tag_event`). What was attempted, including
+    changes inside a step the stepper discards. See `tag_throughput.jl`.
   - `ᶜwater_pos`, `ᶜwater_neg`: the positive and negative parts of the partition
     sum, `Σₖ max(ρq_tagₖ, 0)` and `Σₖ min(ρq_tagₖ, 0)`. Both corrections use
     them. [`rescale_water_tags!`](@ref) needs only the positive part, as the
@@ -241,6 +245,8 @@ _water_copy_cache(Y, model) =
     has_water_tag_updraft_copies(model) ?
     (;
         ᶜwater_upfix = _water_fix_fields(Y.c.ρ, model.tags),
+        ᶜwater_upfix_gross = tag_throughput_fields(Y.c.ρ, model.tags),
+        ᶜwater_upfix_count = tag_throughput_fields(Y.c.ρ, model.tags),
         ᶜwater_copy_residual = zero.(Y.c.ρ),
         ᶜwater_copy_sum = zero.(Y.c.ρ),
         ᶜwater_copy_pos = zero.(Y.c.ρ),
@@ -264,6 +270,8 @@ function _water_tagging_cache(Y, model::WaterTaggingModel)
     return (;
         ᶜwater_masks,
         ᶜwater_fix,
+        ᶜwater_fix_gross = tag_throughput_fields(Y.c.ρ, model.tags),
+        ᶜwater_fix_count = tag_throughput_fields(Y.c.ρ, model.tags),
         ᶜwater_pos,
         ᶜwater_neg,
         _water_copy_cache(Y, model)...,
@@ -849,12 +857,12 @@ rescale_water_tags!(Y, p, ᶜρq_tot_before) =
     _rescale_water_tags!(Y, p, ᶜρq_tot_before, p.atmos.water_tagging_model)
 _rescale_water_tags!(Y, p, ᶜρq_tot_before, ::Nothing) = nothing
 function _rescale_water_tags!(Y, p, ᶜρq_tot_before, model::WaterTaggingModel)
-    (; ᶜwater_fix, ᶜwater_pos) = p.tagging
+    (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count, ᶜwater_pos) = p.tagging
     ᶜwater_pos .= zero(eltype(ᶜwater_pos))
     _accumulate_partition_pos!(ᶜwater_pos, Y.c, model.tags)
     _apply_water_tag_rescale!(
         Y.c,
-        ᶜwater_fix,
+        tag_ledger(ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count),
         ᶜwater_pos,
         ᶜρq_tot_before,
         model.tags,
@@ -865,23 +873,31 @@ end
 # `ᶜpos` is read-only here and comes from the pre-correction state, so each tag
 # can be rewritten in place and a later tag's share still holds. Same reasoning
 # as `_apply_partition_repair!` below.
-_apply_water_tag_rescale!(ᶜY, ᶜwater_fix, ᶜpos, ᶜρq_tot_before, ::Tuple{}) =
+_apply_water_tag_rescale!(ᶜY, ledger, ᶜpos, ᶜρq_tot_before, ::Tuple{}) =
     nothing
 function _apply_water_tag_rescale!(
     ᶜY,
-    ᶜwater_fix,
+    ledger,
     ᶜpos,
     ᶜρq_tot_before,
     tags::Tuple,
 )
     tag = first(tags)
     ᶜρq_tag = tag_field(ᶜY, tag)
-    ᶜfix = tag_field(ᶜwater_fix, tag)
+    (ᶜfix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
     # Accumulate the signed change before applying it, so the ledger records the
     # correction itself and not its effect on an already-corrected tag. The
     # shift is recomputed on the spot. A few comparisons and a divide cost less
-    # than a scratch field per tag, and this stays allocation free.
+    # than a scratch field per tag, and this stays allocation free. The gross
+    # twin and the count take the same shift.
     if _is_partition_tag(tag)
+        @. ᶜgross += abs(
+            water_tag_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before, ᶜpos),
+        )
+        @. ᶜcount += tag_event(
+            water_tag_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before, ᶜpos),
+            ᶜρq_tot_before,
+        )
         @. ᶜfix += water_tag_rescale_shift(
             ᶜρq_tag,
             ᶜY.ρq_tot,
@@ -895,6 +911,13 @@ function _apply_water_tag_rescale!(
             ᶜpos,
         )
     else
+        @. ᶜgross += abs(
+            water_tag_source_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before),
+        )
+        @. ᶜcount += tag_event(
+            water_tag_source_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before),
+            ᶜρq_tot_before,
+        )
         @. ᶜfix += water_tag_source_rescale_shift(
             ᶜρq_tag,
             ᶜY.ρq_tot,
@@ -908,7 +931,7 @@ function _apply_water_tag_rescale!(
     end
     return _apply_water_tag_rescale!(
         ᶜY,
-        ᶜwater_fix,
+        ledger,
         ᶜpos,
         ᶜρq_tot_before,
         Base.tail(tags),
@@ -980,14 +1003,15 @@ repair_water_tag_partition!(Y, p) =
     _repair_water_tag_partition!(Y, p, p.atmos.water_tagging_model)
 _repair_water_tag_partition!(Y, p, ::Nothing) = nothing
 function _repair_water_tag_partition!(Y, p, model::WaterTaggingModel)
-    (; ᶜwater_fix, ᶜwater_pos, ᶜwater_neg) = p.tagging
+    (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count) = p.tagging
+    (; ᶜwater_pos, ᶜwater_neg) = p.tagging
     ᶜwater_pos .= zero(eltype(ᶜwater_pos))
     ᶜwater_neg .= zero(eltype(ᶜwater_neg))
     _accumulate_partition_pos!(ᶜwater_pos, Y.c, model.tags)
     _accumulate_partition_neg!(ᶜwater_neg, Y.c, model.tags)
     _apply_partition_repair!(
         Y.c,
-        ᶜwater_fix,
+        tag_ledger(ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count),
         ᶜwater_pos,
         ᶜwater_neg,
         model.tags,
@@ -997,21 +1021,31 @@ end
 
 # `ᶜpos` and `ᶜneg` are read-only here and come from the pre-repair state, so
 # each tag can be rewritten in place and a later tag's factor still holds.
-_apply_partition_repair!(ᶜY, ᶜwater_fix, ᶜpos, ᶜneg, ::Tuple{}) = nothing
-function _apply_partition_repair!(ᶜY, ᶜwater_fix, ᶜpos, ᶜneg, tags::Tuple)
+_apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, ::Tuple{}) = nothing
+function _apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, tags::Tuple)
     tag = first(tags)
     if _is_partition_tag(tag)
         ᶜρq_tag = tag_field(ᶜY, tag)
-        ᶜfix = tag_field(ᶜwater_fix, tag)
+        (ᶜfix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
         # Ledger first, so it records the correction itself and not its effect
-        # on an already-corrected tag. This matches `rescale_water_tags!`.
+        # on an already-corrected tag. This matches `rescale_water_tags!`. The
+        # repair moves water between the tags, so the gross twin counts each
+        # transfer twice, once out and once in (design/GROSS_ACCUMULATORS.md,
+        # 3.3).
+        @. ᶜgross += abs(
+            max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag,
+        )
+        @. ᶜcount += tag_event(
+            max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag,
+            ᶜpos,
+        )
         @. ᶜfix +=
             max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag
         @. ᶜρq_tag = max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg)
     end
     return _apply_partition_repair!(
         ᶜY,
-        ᶜwater_fix,
+        ledger,
         ᶜpos,
         ᶜneg,
         Base.tail(tags),

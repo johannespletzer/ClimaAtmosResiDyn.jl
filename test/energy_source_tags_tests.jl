@@ -1039,6 +1039,16 @@ column_atmos_model(; kwargs...) =
                     ρe_src_tropo = zeros(FT, 2),
                     ρe_src_sfc = zeros(FT, 2),
                 ),
+                ᶜenergy_source_fix_gross = (;
+                    ρe_src_strat = zeros(2),
+                    ρe_src_tropo = zeros(2),
+                    ρe_src_sfc = zeros(2),
+                ),
+                ᶜenergy_source_fix_count = (;
+                    ρe_src_strat = zeros(2),
+                    ρe_src_tropo = zeros(2),
+                    ρe_src_sfc = zeros(2),
+                ),
                 ᶜenergy_source_pos = zeros(FT, 2),
                 ᶜenergy_source_neg = zeros(FT, 2),
             ),
@@ -1064,6 +1074,14 @@ column_atmos_model(; kwargs...) =
         @test fix.ρe_src_strat[1] + fix.ρe_src_tropo[1] ≈ 0 atol =
             sqrt(eps(FT)) * abs(before.ρe_src_strat[1])
         @test fix.ρe_src_sfc[1] == 5
+        # The gross twin takes each change's absolute value, the count one
+        # event per changed cell, in Float64.
+        for name in tag_state_names
+            @test getproperty(p.tagging.ᶜenergy_source_fix_gross, name) ≈
+                  abs.(getproperty(fix, name))
+            @test getproperty(p.tagging.ᶜenergy_source_fix_count, name) ==
+                  Float64.(getproperty(fix, name) .!= 0)
+        end
         # Where the total is not positive, nothing is touched.
         for name in tag_state_names
             @test getproperty(Y.c, name)[2] == getproperty(before, name)[2]
@@ -1119,6 +1137,8 @@ column_atmos_model(; kwargs...) =
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_extratropics")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_res")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fix_tropics")
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fixgross_tropics")
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fixcount_tropics")
 
         # With the repair on, the default output carries its ledgers, sampled
         # rather than averaged, because each is a running total. With the
@@ -1287,9 +1307,23 @@ column_atmos_model(; kwargs...) =
             ρe_src_rad = cells([1, 0, -2, 0]),
             ρe_src_sfc = cells([0, 0, 0, 3]),
         )
+        gross = (;
+            ρe_src_tropics = cells([1, 0, 0, 0]),
+            ρe_src_rad = cells([3, 0, 2, 0]),
+            ρe_src_sfc = cells([0, 0, 0, 3]),
+        )
+        count = (;
+            ρe_src_tropics = cells([1, 0, 0, 0]),
+            ρe_src_rad = cells([2, 0, 1, 0]),
+            ρe_src_sfc = cells([0, 0, 0, 1]),
+        )
         p = (;
             scratch = (; ᶜtemp_scalar = zeros(space)),
-            tagging = (; ᶜenergy_source_fix = fix),
+            tagging = (;
+                ᶜenergy_source_fix = fix,
+                ᶜenergy_source_fix_gross = gross,
+                ᶜenergy_source_fix_count = count,
+            ),
         )
 
         audit = CA.energy_source_audit(Y, p, model, FT(10))
@@ -1301,6 +1335,11 @@ column_atmos_model(; kwargs...) =
         # Every tag's ledger counts, the region tag's too: 1 + 2 + 3 + 1.
         @test audit.repair_moved == 7
         @test audit.repair_moved_relative == 0.7
+        # The gross twin also counts what cancelled over time in a cell: the
+        # `rad` tag's first cell moved 3 in all, and 1 net.
+        @test audit.repair_gross == 9
+        @test audit.repair_gross_relative == 0.9
+        @test audit.repair_events == 5
 
         # A zero scale gives zero ratios, as the rest of the audit does.
         zero_scale = CA.energy_source_audit(Y, p, model, FT(0))

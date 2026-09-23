@@ -103,6 +103,39 @@ function register_energy_source_tagging_diagnostics!(
                     compute_e_src_fix!(out, u, p, t, ρe_src_name),
             )
         end
+        # The gross twin and the count of the repair's ledger, keyed by the
+        # tag name alone, as the ledger is.
+        for (short_name, per_mass, units) in (
+            ("e_src_fixgross_$name", true, "J kg^-1"),
+            ("e_src_fixcount_$name", false, "1"),
+        )
+            haskey(ALL_DIAGNOSTICS, short_name) && continue
+            add_diagnostic_variable!(;
+                short_name,
+                units,
+                long_name = "Gross Energy Source Tag Repair ($name)",
+                comments = "Beside e_src_fix_$name, which is signed: " *
+                           (per_mass ?
+                            "the absolute value of every change the repair " *
+                            "made to the tag `$name`, per unit mass of moist " *
+                            "air" :
+                            "the number of times the repair changed the tag " *
+                            "`$name` in this cell by more than rounding") *
+                           ". Cumulative since the start of the simulation " *
+                           "segment and reset on restart. It counts what was " *
+                           "attempted, every call, including changes inside a " *
+                           "step that the stepper discards. A transfer between " *
+                           "partition tags counts once out and once in.",
+                compute! = (out, u, p, t) -> compute_tag_throughput!(
+                    out,
+                    u,
+                    per_mass ? p.tagging.ᶜenergy_source_fix_gross :
+                    p.tagging.ᶜenergy_source_fix_count,
+                    ρe_src_name,
+                    per_mass,
+                ),
+            )
+        end
     end
 
     register_energy_source_ledger_diagnostics!(model)

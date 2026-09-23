@@ -475,9 +475,32 @@ held for the updraft copies' repair ledger, which collides the same way.
 `inc_` is held for an increment follower's ledgers, `q_tag_inc_left` and
 `q_tag_inc_moved`. `rtag_` and `stag_` are held for the rain and snow parts,
 whose output names are not fixed yet. Refusing them now keeps configurations
-valid when those diagnostics arrive.
+valid when those diagnostics arrive. `fixgross_`, `fixcount_`, `upfixgross_`
+and `upfixcount_` start the ledgers' gross twins and counts.
 """
-const RESERVED_WATER_TAG_PREFIXES = ("fix_", "upfix_", "inc_", "rtag_", "stag_")
+const RESERVED_WATER_TAG_PREFIXES = (
+    "fix_",
+    "upfix_",
+    "inc_",
+    "rtag_",
+    "stag_",
+    "fixgross_",
+    "fixcount_",
+    "upfixgross_",
+    "upfixcount_",
+)
+
+"""
+    RESERVED_ENERGY_SOURCE_TAG_PREFIXES
+
+Name prefixes that an `energy_source_tags` tag may not take, for the reason
+[`RESERVED_WATER_TAG_PREFIXES`](@ref) gives. A tag's diagnostic is
+`e_src_<name>`, and `fix_` starts the repair's ledger `e_src_fix_<name>`,
+`fixgross_` and `fixcount_` its gross twin and count, and `inc_` the
+increment correction's ledger `e_src_inc_left` and `e_src_inc_moved`.
+"""
+const RESERVED_ENERGY_SOURCE_TAG_PREFIXES =
+    ("fix_", "fixgross_", "fixcount_", "inc_")
 
 """
     tracer_tag_tuple(entries, FT; tag_type, key, known, groups, reserved_prefixes = ())
@@ -602,6 +625,7 @@ function energy_source_tracer_tuple(
         key = "energy_source_tags",
         known = KNOWN_TAG_SOURCES,
         groups = TAG_SOURCE_GROUPS,
+        reserved_prefixes = RESERVED_ENERGY_SOURCE_TAG_PREFIXES,
     )
     warn_inactive_energy_source_labels(tags, microphysics_model)
     return tags

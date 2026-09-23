@@ -111,6 +111,19 @@ function compute_q_tag_fix!(out, state, cache, time, ρq_tag_name)
     end
 end
 
+# A gross twin per unit mass, or a count as it is, in the model's float type.
+# The cache holds both in Float64 (`tag_throughput.jl`).
+function compute_tag_throughput!(out, state, fields, name, per_mass::Bool)
+    ᶜfield = getproperty(fields, name)
+    result = isnothing(out) ? similar(state.c.ρ) : out
+    if per_mass
+        @. result = ᶜfield / state.c.ρ
+    else
+        @. result = ᶜfield
+    end
+    return result
+end
+
 # One field of the increment's ledger, per unit mass.
 function compute_q_tag_ledger!(out, state, cache, time, name)
     ᶜledger = getproperty(state.c, name)
@@ -231,6 +244,47 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             )
         end
 
+        # The gross twin and the count of `q_tag_fix_<name>`, keyed by the tag
+        # name alone, as the ledger is.
+        for (short_name, what, per_mass, units) in (
+            (
+                "q_tag_fixgross_$name",
+                "the absolute value of every change the limiters and state " *
+                "constraints made to the tag `$name`, per unit mass of moist " *
+                "air",
+                true,
+                "kg kg^-1",
+            ),
+            (
+                "q_tag_fixcount_$name",
+                "the number of times a limiter or state constraint changed " *
+                "the tag `$name` in this cell by more than rounding",
+                false,
+                "1",
+            ),
+        )
+            haskey(ALL_DIAGNOSTICS, short_name) && continue
+            add_diagnostic_variable!(;
+                short_name,
+                units,
+                long_name = "Gross Tagged Water Numerical Correction ($name)",
+                comments = "Beside q_tag_fix_$name, which is signed: $what. " *
+                           "Cumulative since the start of the simulation " *
+                           "segment and reset on restart. It counts what was " *
+                           "attempted, every call, including changes inside a " *
+                           "step that the stepper discards. A transfer " *
+                           "between tags counts once out and once in.",
+                compute! = (out, u, p, t) -> compute_tag_throughput!(
+                    out,
+                    u,
+                    per_mass ? p.tagging.ᶜwater_fix_gross :
+                    p.tagging.ᶜwater_fix_count,
+                    ρq_tag_name,
+                    per_mass,
+                ),
+            )
+        end
+
         # The copies' repair moves only the partition's copies. A stale entry
         # from an earlier model with copies would read a ledger this model
         # does not have, so it is dropped first, as for `q_tag_copy_res`.
@@ -253,6 +307,40 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                            "the partition.",
                 compute! = (out, u, p, t) ->
                     compute_q_tag_upfix!(out, u, p, t, ρq_tag_name),
+            )
+        end
+        # Its gross twin and count, under the same conditions.
+        for (short_name, per_mass, units) in (
+            ("q_tag_upfixgross_$name", true, "kg kg^-1"),
+            ("q_tag_upfixcount_$name", false, "1"),
+        )
+            delete!(ALL_DIAGNOSTICS, short_name)
+            (
+                has_water_tag_updraft_copies(model) &&
+                ρq_tag_name in water_region_tag_state_names(model)
+            ) || continue
+            add_diagnostic_variable!(;
+                short_name,
+                units,
+                long_name = "Gross Tagged Water Updraft Copy Repair ($name)",
+                comments = "Beside q_tag_upfix_$name, which is signed: " *
+                           (per_mass ?
+                            "the absolute value of every change the copies' " *
+                            "repair made to the updraft copy of `$name`, " *
+                            "times ρaʲ, per unit mass of grid-mean moist air" :
+                            "the number of times the copies' repair changed " *
+                            "the updraft copy of `$name` in this cell by more " *
+                            "than rounding") *
+                           ". Cumulative since the start of the simulation " *
+                           "segment and reset on restart; every call counts.",
+                compute! = (out, u, p, t) -> compute_tag_throughput!(
+                    out,
+                    u,
+                    per_mass ? p.tagging.ᶜwater_upfix_gross :
+                    p.tagging.ᶜwater_upfix_count,
+                    ρq_tag_name,
+                    per_mass,
+                ),
             )
         end
     end

@@ -297,6 +297,9 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
     # The ledger exists whether or not the repair is on, so that
     # `e_src_fix_<name>` reads zero rather than failing when it is off.
     ᶜenergy_source_fix = _energy_source_fix_fields(Y.c.ρ, model.tags)
+    # Its gross twin and count, in Float64 (`tag_throughput.jl`).
+    ᶜenergy_source_fix_gross = tag_throughput_fields(Y.c.ρ, model.tags)
+    ᶜenergy_source_fix_count = tag_throughput_fields(Y.c.ρ, model.tags)
     ᶜenergy_source_pos = zero.(Y.c.ρ)
     ᶜenergy_source_neg = zero.(Y.c.ρ)
     ᶠenergy_source_interior = one.(Fields.coordinate_field(Y.f).z)
@@ -305,6 +308,8 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
     return (;
         ᶜenergy_source_masks,
         ᶜenergy_source_fix,
+        ᶜenergy_source_fix_gross,
+        ᶜenergy_source_fix_count,
         ᶜenergy_source_pos,
         ᶜenergy_source_neg,
         ᶠenergy_source_interior,
@@ -509,7 +514,10 @@ The energy source family's own columns of the audit table, beside those
     unit mass, in J/kg, over the whole domain, or `NaN` when there is none;
   - `repair_moved`, `repair_moved_relative`: the integral over all tags of the
     absolute value of what the repair has moved since the start of the run
-    segment, in J, and over `scale`. Zero with the repair off. At
+    segment, in J, and over `scale`. Gross over the cells, net over time.
+  - `repair_gross`, `repair_gross_relative`, `repair_events`: the same from the
+    ledger's gross twin, gross over time too, and the number of cell-events
+    (`tag_throughput.jl`). Zero with the repair off. At
     `update_constrain_state_every: stage` or `dss` the ledger also counts the
     in-step repairs the stepper discards; see `repair_energy_source_tags!`.
   - under `energy_source_tag_transport: enthalpy_increment` only, the integrals
@@ -557,6 +565,7 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         @. ᶜtmp += abs(ᶜfix)
     end
     repair_moved = sum(ᶜtmp)
+    repair_gross = tag_gross_total(p.tagging.ᶜenergy_source_fix_gross)
 
     per_scale(x) = iszero(scale) ? zero(x) : x / scale
     return (;
@@ -565,6 +574,9 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         source_minimum,
         repair_moved,
         repair_moved_relative = per_scale(repair_moved),
+        repair_gross,
+        repair_gross_relative = per_scale(repair_gross),
+        repair_events = tag_event_total(p.tagging.ᶜenergy_source_fix_count),
         _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale)...,
     )
 end
@@ -999,6 +1011,7 @@ _repair_energy_source_tags!(Y, p, ::Nothing) = nothing
 function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
     model.repair || return nothing
     (; ᶜenergy_source_fix, ᶜenergy_source_pos, ᶜenergy_source_neg) = p.tagging
+    (; ᶜenergy_source_fix_gross, ᶜenergy_source_fix_count) = p.tagging
     ᶜparent = _energy_source_parent_field(Y, model.offset)
     ᶜenergy_source_pos .= zero(eltype(ᶜenergy_source_pos))
     ᶜenergy_source_neg .= zero(eltype(ᶜenergy_source_neg))
@@ -1010,7 +1023,11 @@ function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
     )
     _apply_energy_source_repair!(
         Y.c,
-        ᶜenergy_source_fix,
+        tag_ledger(
+            ᶜenergy_source_fix,
+            ᶜenergy_source_fix_gross,
+            ᶜenergy_source_fix_count,
+        ),
         ᶜenergy_source_pos,
         ᶜenergy_source_neg,
         ᶜparent,
@@ -1040,11 +1057,11 @@ end
 # `ᶜpos` and `ᶜneg` come from the state before the repair and are only read
 # here, so each tag can be rewritten in place and a later tag's factor still
 # holds. The ledger is written first, so it records the correction itself.
-_apply_energy_source_repair!(ᶜY, ᶜfix, ᶜpos, ᶜneg, ᶜparent, ::Tuple{}) =
+_apply_energy_source_repair!(ᶜY, ledger, ᶜpos, ᶜneg, ᶜparent, ::Tuple{}) =
     nothing
 function _apply_energy_source_repair!(
     ᶜY,
-    ᶜfix,
+    ledger,
     ᶜpos,
     ᶜneg,
     ᶜparent,
@@ -1052,20 +1069,36 @@ function _apply_energy_source_repair!(
 )
     tag = first(tags)
     ᶜρe_src = tag_field(ᶜY, tag)
-    ᶜtag_fix = tag_field(ᶜfix, tag)
+    (ᶜtag_fix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
+    # The gross twin and the count take the same change as the ledger, the
+    # count against the total the tags partition.
     if _is_energy_partition_tag(tag)
+        @. ᶜgross += abs(
+            energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
+            ᶜρe_src,
+        )
+        @. ᶜcount += tag_event(
+            energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
+            ᶜρe_src,
+            ᶜparent,
+        )
         @. ᶜtag_fix +=
             energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
             ᶜρe_src
         @. ᶜρe_src =
             energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent)
     else
+        @. ᶜgross += abs(energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src)
+        @. ᶜcount += tag_event(
+            energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src,
+            ᶜparent,
+        )
         @. ᶜtag_fix += energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src
         @. ᶜρe_src = energy_source_overlay_repair(ᶜρe_src, ᶜparent)
     end
     return _apply_energy_source_repair!(
         ᶜY,
-        ᶜfix,
+        ledger,
         ᶜpos,
         ᶜneg,
         ᶜparent,

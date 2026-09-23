@@ -259,15 +259,36 @@ left out of the tags, which is signed and lands in the closure residual;
 `increment_moved_gross`, the absolute value of what it moved between levels.
 The two "gross" columns are gross over the cells but net over time in each
 cell, as the energy source tags' are: a cell whose ledger went up and down
-again counts only what is left. Each also over `scale`. `nothing` when there
-are no such columns. Collective, as `tag_audit` is.
+again counts only what is left. Each also over `scale`.
+
+Always, the gross throughput of the cache ledgers since the segment started
+(`tag_throughput.jl`): `fix_gross` and `fix_events`, for the limiters' and the
+constraints' corrections of the tags, and with copies `copy_repair_events`,
+the copies' repair's count, beside the EDMF audit's `copy_repair`. The gross
+is an amount over the domain, a transfer counting once out and once in, and
+also over `scale`. Collective, as `tag_audit` is.
 """
 function water_tag_extra_audit(Y, p, model, scale)
+    per_scale(x) = iszero(scale) ? zero(x) : x / scale
+    fix_gross = tag_gross_total(p.tagging.ᶜwater_fix_gross)
+    throughput = (;
+        fix_gross,
+        fix_gross_relative = per_scale(fix_gross),
+        fix_events = tag_event_total(p.tagging.ᶜwater_fix_count),
+        _water_copy_events(p, model)...,
+    )
     edmf = water_tag_edmf_audit(Y, p, model, scale)
-    follows_water_increment(model) || return edmf
-    ledger = _water_tag_ledger_columns(Y, p.scratch.ᶜtemp_scalar, scale)
-    return isnothing(edmf) ? ledger : merge(edmf, ledger)
+    columns = isnothing(edmf) ? throughput : merge(edmf, throughput)
+    follows_water_increment(model) || return columns
+    return merge(
+        columns,
+        _water_tag_ledger_columns(Y, p.scratch.ᶜtemp_scalar, scale),
+    )
 end
+_water_copy_events(p, model) =
+    has_water_tag_updraft_copies(model) ?
+    (; copy_repair_events = tag_event_total(p.tagging.ᶜwater_upfix_count)) :
+    (;)
 function _water_tag_ledger_columns(Y, ᶜtmp, scale)
     per_scale(x) = iszero(scale) ? zero(x) : x / scale
     increment_left = sum(Y.c.q_tag_inc_left)

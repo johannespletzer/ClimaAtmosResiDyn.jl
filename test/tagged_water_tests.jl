@@ -329,8 +329,22 @@ column_atmos_model(; kwargs...) =
                 ρq_tag_tropics = zeros(FT, 9),
                 ρq_tag_extratropics = zeros(FT, 9),
             )
+            # The gross twin and the count are Float64 whatever `FT` is.
+            ᶜgross = (;
+                ρq_tag_tropics = zeros(9),
+                ρq_tag_extratropics = zeros(9),
+            )
+            ᶜcount = (;
+                ρq_tag_tropics = zeros(9),
+                ρq_tag_extratropics = zeros(9),
+            )
             p = (;
-                tagging = (; ᶜwater_fix = ᶜfix, ᶜwater_pos = zeros(FT, 9)),
+                tagging = (;
+                    ᶜwater_fix = ᶜfix,
+                    ᶜwater_fix_gross = ᶜgross,
+                    ᶜwater_fix_count = ᶜcount,
+                    ᶜwater_pos = zeros(FT, 9),
+                ),
             )
             model = CA.WaterTaggingModel(tags)
             before_tropics = copy(ᶜY.ρq_tag_tropics)
@@ -345,6 +359,15 @@ column_atmos_model(; kwargs...) =
             before_residual = ᶜρq_tot_before .- tagged(ᶜY)
 
             CA._rescale_water_tags!((; c = ᶜY), p, ᶜρq_tot_before, model)
+
+            # After one call the gross twin is the ledger's absolute value, and
+            # the count marks every cell the correction changed.
+            for name in (:ρq_tag_tropics, :ρq_tag_extratropics)
+                @test getproperty(ᶜgross, name) ≈ abs.(getproperty(ᶜfix, name))
+                @test getproperty(ᶜcount, name) ==
+                      Float64.(getproperty(ᶜfix, name) .!= 0)
+                @test eltype(getproperty(ᶜgross, name)) == Float64
+            end
 
             # Handing the parent's increment out in proportion to what each tag
             # holds preserves the partition wherever it was already closed
@@ -450,6 +473,14 @@ column_atmos_model(; kwargs...) =
                         ρq_tag_tropics = zeros(FT, 1),
                         ρq_tag_extratropics = zeros(FT, 1),
                     ),
+                    ᶜwater_fix_gross = (;
+                        ρq_tag_tropics = zeros(1),
+                        ρq_tag_extratropics = zeros(1),
+                    ),
+                    ᶜwater_fix_count = (;
+                        ρq_tag_tropics = zeros(1),
+                        ρq_tag_extratropics = zeros(1),
+                    ),
                     ᶜwater_pos = zeros(FT, 1),
                 ),
             )
@@ -509,9 +540,21 @@ column_atmos_model(; kwargs...) =
             before_tropics = copy(ᶜY.ρq_tag_tropics)
             before_extra = copy(ᶜY.ρq_tag_extratropics)
             before_evap = copy(ᶜY.ρq_tag_evap)
+            ᶜwater_fix_gross = (;
+                ρq_tag_tropics = zeros(3),
+                ρq_tag_extratropics = zeros(3),
+                ρq_tag_evap = zeros(3),
+            )
+            ᶜwater_fix_count = (;
+                ρq_tag_tropics = zeros(3),
+                ρq_tag_extratropics = zeros(3),
+                ρq_tag_evap = zeros(3),
+            )
             p = (;
                 tagging = (;
                     ᶜwater_fix,
+                    ᶜwater_fix_gross,
+                    ᶜwater_fix_count,
                     ᶜwater_pos = zeros(FT, 3),
                     ᶜwater_neg = zeros(FT, 3),
                 ),
@@ -539,6 +582,14 @@ column_atmos_model(; kwargs...) =
                   fill(FT(0.5), 3) .+ ᶜY.ρq_tag_tropics .- before_tropics
             @test ᶜwater_fix.ρq_tag_extratropics ≈
                   fill(FT(0.5), 3) .+ ᶜY.ρq_tag_extratropics .- before_extra
+            # The gross twin takes the change, not the ledger's prior value;
+            # the source tag's stays at zero, since the repair leaves it.
+            @test ᶜwater_fix_gross.ρq_tag_tropics ≈
+                  abs.(ᶜY.ρq_tag_tropics .- before_tropics)
+            @test ᶜwater_fix_gross.ρq_tag_extratropics ≈
+                  abs.(ᶜY.ρq_tag_extratropics .- before_extra)
+            @test all(iszero, ᶜwater_fix_gross.ρq_tag_evap)
+            @test ᶜwater_fix_count.ρq_tag_extratropics == [1.0, 1.0, 0.0]
         end
 
         @testset "Sedimentation shares ($FT)" begin
@@ -723,6 +774,9 @@ column_atmos_model(; kwargs...) =
         # Residual sums only the region tag, so the source tag is left out
         @test q_res.compute!(nothing, state, cache, 0.0) == [0.006, 0.008]
         @test q_fix.compute!(nothing, state, cache, 0.0) == [-0.001, 0.0]
+        # Beside each ledger, its gross twin and its count.
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "q_tag_fixgross_tropics")
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "q_tag_fixcount_evap")
 
         # Vapor share: all vapor in the first column, half condensed in the
         # second (ρq_liq = 2 * 0.0025 = 0.005 of ρq_tot = 0.02)
@@ -1234,4 +1288,64 @@ end
             ),
         )
     end
+end
+
+# WP6: the gross twin and the count of the cache ledgers.
+@testset "The ledgers' gross throughput" begin
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    tags = (
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+    )
+    model = CA.WaterTaggingModel(tags)
+    ledger_pair() = (; ρq_tag_tropo = zeros(1), ρq_tag_strat = zeros(1))
+    function run_rescales(FT, ρq_tots)
+        ᶜY = (;
+            ρq_tot = FT[ρq_tots[1]],
+            ρq_tag_tropo = FT[0.3 * ρq_tots[1]],
+            ρq_tag_strat = FT[0.7 * ρq_tots[1]],
+        )
+        p = (;
+            tagging = (;
+                ᶜwater_fix = (;
+                    ρq_tag_tropo = zeros(FT, 1),
+                    ρq_tag_strat = zeros(FT, 1),
+                ),
+                ᶜwater_fix_gross = ledger_pair(),
+                ᶜwater_fix_count = ledger_pair(),
+                ᶜwater_pos = zeros(FT, 1),
+            ),
+        )
+        for ρq_tot in ρq_tots[2:end]
+            ᶜρq_tot_before = copy(ᶜY.ρq_tot)
+            ᶜY.ρq_tot .= FT(ρq_tot)
+            CA._rescale_water_tags!((; c = ᶜY), p, ᶜρq_tot_before, model)
+        end
+        return p.tagging
+    end
+
+    # Alternating signs: a correction up and back down leaves the signed ledger
+    # at zero, while the gross twin holds both and the count two events.
+    tagging = run_rescales(Float64, (10.0, 12.0, 10.0))
+    @test abs(tagging.ᶜwater_fix.ρq_tag_tropo[1]) < 1e-14
+    @test tagging.ᶜwater_fix_gross.ρq_tag_tropo[1] ≈ 2 * 0.3 * 2
+    @test tagging.ᶜwater_fix_gross.ρq_tag_strat[1] ≈ 2 * 0.7 * 2
+    @test tagging.ᶜwater_fix_count.ρq_tag_tropo[1] == 2
+
+    # A change at rounding level is not an event.
+    @test CA.tag_event(1e-15, 10.0) == 0
+    @test CA.tag_event(1e-10, 10.0) == 1
+    @test CA.tag_event(1e-3, 0.0) == 1
+
+    # In Float32 the tags move in Float32, but the gross twin sums in Float64,
+    # so the small changes after a large one are kept.
+    steps = (1.0f0, 1001.0f0, (1001.0f0 + k * 1.0f-2 for k in 1:1000)...)
+    tagging = run_rescales(Float32, steps)
+    gross = tagging.ᶜwater_fix_gross.ρq_tag_tropo[1] +
+            tagging.ᶜwater_fix_gross.ρq_tag_strat[1]
+    expected = Float64(1000.0f0) + sum(
+        abs(Float64(steps[k + 1]) - Float64(steps[k])) for k in 2:(length(steps) - 1)
+    )
+    @test isapprox(gross, expected; rtol = 1e-5)
+    @test eltype(tagging.ᶜwater_fix_gross.ρq_tag_tropo) == Float64
 end
