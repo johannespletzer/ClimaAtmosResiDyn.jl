@@ -298,6 +298,42 @@ parent's. AMD LES stays refused; see `docs/known_issues.md`, issue 3.
 changes one, or that adds or drops the copies, is refused before the run
 starts (`check_water_tag_checkpoint`).
 
+## Following the parent's implicit increment
+
+`water_tag_transport: increment` (default `tracer`) makes the tags follow the
+parent's own implicit increment. ``\rho q_\mathrm{tot}`` is advected
+vertically in the implicit step, and its sub-grid flux, diffusion and
+sedimentation have Jacobian blocks the tags' terms lack. So with one Newton
+iteration the tags lag the parent's solve. On a day of the DYCOMS RF02 EDMF
+column that lag was most of a 0.7% closure residual.
+
+Under the key the tags skip their explicit vertical advection. After each
+Newton solve, `correct_water_tag_increment!` takes the difference `m` between
+the parent's increment and the partition's in each cell. The part that sums to
+zero in the column is moved as a vertical flux, and each tag takes it by its
+share in the cell the flux leaves. The part that changes the column's total,
+`∫m`, is left out of the tags and stays in `q_tag_res`. The ledger
+`q_tag_inc_left` and `q_tag_inc_moved` records both parts, and the audit
+integrates them. The energy source tags' `enthalpy_increment` does the same
+for their total, and one hook runs both.
+
+What the follower cannot do:
+
+  - change a column's total, so a lag in the surface outflow of sedimentation
+    stays in the net residual;
+  - say where the part left out arose: it is spread in proportion to `|m|`,
+    which the parent's vertical advection dominates;
+  - move water a partition does not hold: a residual pinned in a cell stays
+    there, and a draining cell's partition can go negative, which the
+    partition repair then moves;
+  - follow explicit processes, the copies, or a donor cell with an empty
+    partition.
+
+It needs region tags that partition the domain, an algorithm that solves every
+implicit stage it uses (ARS222, ARS343), and the parent's own post-solve
+correction (`energy_q_tot_upwinding` other than `none`). A restart that changes
+`water_tag_transport` is refused.
+
 ## Diagnostics and closure
 
   - `q_tag_<name>`: tagged **total** water ``\rho q_\mathrm{tag}/\rho``;
@@ -464,6 +500,17 @@ ClimaAtmos.water_tag_copy_sgs_names
 ClimaAtmos.water_tag_edmf_audit
 ClimaAtmos.WATER_TAG_LEAK_PATHS
 ClimaAtmos.water_tag_leak!
+ClimaAtmos.IncrementWaterTagTransport
+ClimaAtmos.TracerWaterTagTransport
+ClimaAtmos.follows_water_increment
+ClimaAtmos.snapshot_water_tag_increment!
+ClimaAtmos.correct_water_tag_increment!
+ClimaAtmos.WaterTagIncrementCorrection
+ClimaAtmos.tag_post_implicit
+ClimaAtmos.water_tag_post_implicit
+ClimaAtmos.check_water_tag_increment_supported
+ClimaAtmos.water_tag_increment_ledger_variables
+ClimaAtmos.water_tag_extra_audit
 ClimaAtmos.WATER_TAG_CHECKPOINT_VERSION
 ClimaAtmos.write_water_tag_checkpoint_attributes!
 ClimaAtmos.check_water_tag_checkpoint

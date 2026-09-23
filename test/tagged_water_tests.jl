@@ -902,6 +902,21 @@ end
         written,
         water_model(; copies = true),
     )
+    # The increment's ledger: a changed `water_tag_transport` is refused either
+    # way, since the ledger is in the file or is not.
+    increment_model = CA.WaterTaggingModel(
+        tags();
+        transport = CA.IncrementWaterTagTransport(),
+    )
+    with_ledger =
+        (; c = (; tagged.c..., q_tag_inc_left = 0.0, q_tag_inc_moved = 0.0))
+    @test isnothing(check(written, increment_model, with_ledger))
+    @test_throws r"water_tag_transport" check(written, increment_model)
+    @test_throws r"water_tag_transport" check(
+        written,
+        water_model(),
+        with_ledger,
+    )
 
     # A checkpoint from before the guard is checked by its fields, with a
     # warning, and restarts.

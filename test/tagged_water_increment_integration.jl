@@ -7,18 +7,22 @@ blocks than the parent's, so with one Newton iteration they lag its solve, and
 the gap grows over a day (FINDINGS W21 in the tag-closure experiments). The
 parent's increment has no such gap. This file checks, on the DYCOMS RF02 EDMF
 column with 1-moment microphysics and the updrafts' vertical diffusion, as the
-D4-W column of the experiments:
+D4-W column of the experiments, with energy source tags following their own
+parent's increment beside them, so that one hook runs both corrections:
 
  1. the correction on a set increment. The partition takes the parent's
-    increment in every cell, up to the part left in place. That part sums to
-    the column's change of `ρq_tot` and sits where the mismatch is. The part
-    moved sums to zero in the column. Each face takes the shares of the cell
-    the flux leaves. The ledger holds both parts, and nothing else in the
-    tendency changes. The stepper's hook runs the parent's own correction
-    unchanged, and none of it allocates;
- 2. after an hour: the closure residual is small, the ledger's moved part
-    sums to zero in the column, and the audit, the diagnostics and the split
-    solver read the ledger;
+    increment in every cell, up to the part left out. That part sums to the
+    column's change of `ρq_tot` and is spread in proportion to the mismatch.
+    The part moved sums to zero in the column. Each face takes the shares of
+    the cell the flux leaves. The ledger holds both parts, and nothing else in
+    the tendency changes. The stepper's hook runs the parent's own correction
+    unchanged, then both families'; with it the partition takes the parent's
+    whole increment less the part left out, cell by cell; none of it
+    allocates;
+ 2. after an hour: both families' closure residuals are small, what remains
+    of the water's is the part left out, the ledger's moved part sums to zero
+    in the column, and the audit, the diagnostics and the split solver read
+    the ledger;
  3. the model's fields are those of the same column without tags, bit for bit.
 
 The file compiles the EDMF column twice, with the tags and without them, so it
@@ -98,6 +102,15 @@ altitude_region(above) = Dict{String, Any}(
             Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
         ],
         "water_tag_transport" => "increment",
+        # The energy source tags follow their parent's increment too, so the
+        # run exercises the one hook both families' corrections share.
+        "energy_source_tags" => [
+            Dict{String, Any}("name" => "strat", "region" => altitude_region(true)),
+            Dict{String, Any}("name" => "tropo", "region" => altitude_region(false)),
+            Dict{String, Any}("name" => "sfc", "source" => "surface_flux"),
+        ],
+        "energy_source_tag_offset" => 110495.0,
+        "energy_source_tag_transport" => "enthalpy_increment",
         # The audit and the diagnostics write scratch from callbacks, so the
         # parity check below covers them too.
         "water_closure_check" =>
@@ -118,8 +131,13 @@ altitude_region(above) = Dict{String, Any}(
     @test p.atmos.numerics.energy_q_tot_upwinding != Val(:none)
     @test hasproperty(Y.c, :q_tag_inc_left)
     @test hasproperty(Y.c, :q_tag_inc_moved)
+    energy_model = p.atmos.energy_source_tagging_model
+    @test CA.follows_implicit_increment(energy_model)
     is_diagnostic(name) =
-        CA.is_water_tag_name(name) || CA.is_water_tag_ledger_name(name)
+        CA.is_water_tag_name(name) ||
+        CA.is_water_tag_ledger_name(name) ||
+        CA.is_energy_source_tag_name(name) ||
+        CA.is_energy_source_ledger_name(name)
 
     # 1. The correction on a set increment: the parent gains a profile whose
     # column total is not zero, and the tags gain nothing. So the mismatch is
@@ -206,19 +224,36 @@ altitude_region(above) = Dict{String, Any}(
             @test count(!iszero, strat[.!above]) == 1
         end
 
-        # The hook the stepper got runs the parent's own correction and then
-        # the tags'. The parent's part of `dY` is what its correction alone
-        # gives, bit for bit.
+        # The hook the stepper got runs the parent's own correction, then the
+        # energy source tags' and then the water tags'. The parent's part of
+        # `dY` is what its correction alone gives, bit for bit.
         hook = increment.integrator.sol.prob.f.T_post_imp!
         @test hook isa CA.WaterTagIncrementCorrection{
-            typeof(CA.correct_implicit_advection_tendency!),
+            CA.EnergySourceIncrementCorrection{
+                typeof(CA.correct_implicit_advection_tendency!),
+            },
         }
         t = increment.integrator.t
+        CA.snapshot_energy_source_increment!(Y₀, p, dtγ)
         CA.snapshot_water_tag_increment!(Y₀, p, dtγ)
         dY_hook = similar(Y)
         hook(dY_hook, U, p, t)
         dY_parent = similar(Y)
         CA.correct_implicit_advection_tendency!(dY_parent, U, p, t)
+        # With the parent's own correction in `dY`, the partition takes the
+        # parent's whole increment, that correction included, less the part
+        # left out, cell by cell.
+        U_hook = copy(U)
+        @. U_hook += dtγ * dY_hook
+        ᶜparent_increment = @. U.c.ρq_tot + dtγ * dY_parent.c.ρq_tot -
+                               Y₀.c.ρq_tot
+        @test maximum(
+            abs,
+            parent(partition_sum(U_hook, model) .- ᶜpartition) .- (
+                parent(ᶜparent_increment) .-
+                parent(dtγ .* dY_hook.c.q_tag_inc_left)
+            ),
+        ) < 1000 * eps(FT) * maximum(abs, parent(ᶜpartition))
         for name in propertynames(Y.c)
             is_diagnostic(name) && continue
             @test isequal(
@@ -267,6 +302,15 @@ altitude_region(above) = Dict{String, Any}(
         @info "Water tags following the increment on the EDMF column after an hour" closure.relative closure.gross_relative left sum(
             ᶜabs,
         )
+        # The energy source tags close as well.
+        energy_closure = CA.tag_closure(
+            Y,
+            p,
+            CA.energy_source_closure_total(energy_model),
+            CA.energy_source_region_tag_state_names(energy_model),
+        )
+        @info "Energy source tags on the same column" energy_closure.relative energy_closure.gross_relative
+        @test energy_closure.gross_relative < 1e-3
         # Without the follower this column's gross residual after an hour is
         # 5.4e-4 (FINDINGS W23's probe of the default mode); with it, 4.1e-5.
         @test closure.gross_relative < 1e-4

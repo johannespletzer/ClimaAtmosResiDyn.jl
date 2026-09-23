@@ -2233,8 +2233,10 @@ the parent's own post-solve correction, which the stepper adds as `dtγ·dY`.
 
 In each cell, the mismatch `m` is the parent's increment of `E` since the
 snapshot less the partition's. The part of `m` that changes a column's total
-cannot be moved within the column; it is left where it arises, in proportion to
-`|m|`, and stays in `e_src_res`. The rest integrates up the column to a face flux
+cannot be moved within the column; it is left out of the tags, spread over the
+column in proportion to `|m|`, and stays in `e_src_res`. Its column total is
+exact, but `|m|` is dominated by the parent's vertical transport, so its
+profile does not show where it arose. The rest integrates up the column to a face flux
 that is zero at both boundaries, whose divergence is that rest. Each tag takes
 the flux times its share in the cell the flux leaves, as with the sub-grid mass
 flux, and the flux is added to `dY` divided by `dtγ`. The partition's shares add
