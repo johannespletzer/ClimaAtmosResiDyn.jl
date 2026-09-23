@@ -253,6 +253,11 @@ function _water_tagging_cache(Y, model::WaterTaggingModel)
         "q_tag_res",
         "ρq_tag",
     )
+    _check_water_increment_partition(
+        ᶜwater_masks,
+        water_region_tag_state_names(model),
+        model,
+    )
     ᶜwater_fix = _water_fix_fields(Y.c.ρ, model.tags)
     ᶜwater_pos = zero.(Y.c.ρ)
     ᶜwater_neg = zero.(Y.c.ρ)
@@ -262,6 +267,7 @@ function _water_tagging_cache(Y, model::WaterTaggingModel)
         ᶜwater_pos,
         ᶜwater_neg,
         _water_copy_cache(Y, model)...,
+        _water_tag_increment_cache(Y, model)...,
     )
 end
 

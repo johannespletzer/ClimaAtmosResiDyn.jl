@@ -841,11 +841,12 @@ end
 
 tag_closure_callback(::Nothing, tagging_model; kwargs...) = ()
 
-# The water family's own audit columns under prognostic EDMF, as a function of
-# `(Y, p, scale)`, or `nothing` without the tags.
+# The water family's own audit columns, under prognostic EDMF and under the
+# increment follower, as a function of `(Y, p, scale)`, or `nothing` without
+# the tags.
 water_extra_audit(::Nothing) = nothing
 water_extra_audit(model) =
-    (Y, p, scale) -> water_tag_edmf_audit(Y, p, model, scale)
+    (Y, p, scale) -> water_tag_extra_audit(Y, p, model, scale)
 
 # The energy source family's own audit columns, as a function of `(Y, p, scale)`,
 # or `nothing` without the tags.

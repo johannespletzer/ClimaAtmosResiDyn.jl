@@ -105,6 +105,10 @@ include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_ta
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_edmf.jl"))
 # It calls the diffusion and hyperdiffusion helpers, which load later.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_leaks.jl"))
+# The increment follower, after the default mode's flux helper it reuses.
+include(
+    joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_increment.jl"),
+)
 # Process-change records (signed per-process increments, prognostic but not transported)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "process_record.jl"))
 include(

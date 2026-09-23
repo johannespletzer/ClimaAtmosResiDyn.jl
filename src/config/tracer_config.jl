@@ -1427,6 +1427,30 @@ function water_tag_updraft_copy_from_config(value)
 end
 
 """
+    water_tag_transport_from_config(value)
+
+Parse `water_tag_transport`. `tracer`, the default, and `~` move the water tags
+as tracers. `increment` makes them follow the parent's implicit increment after
+each Newton solve. Anything else is an error.
+"""
+function water_tag_transport_from_config(value)
+    (isnothing(value) || value == "tracer") && return TracerWaterTagTransport()
+    value == "increment" && return IncrementWaterTagTransport()
+    return error(
+        "`water_tag_transport` must be `tracer` or `increment`, got \
+        $(repr(value)).",
+    )
+end
+
+"""
+    water_tag_transport_text(transport)
+
+The config value of a water tag transport, for messages and the restart guard.
+"""
+water_tag_transport_text(::TracerWaterTagTransport) = "tracer"
+water_tag_transport_text(::IncrementWaterTagTransport) = "increment"
+
+"""
     check_water_tag_updraft_copy_supported(turbconv, mse_q_tot_upwinding, tracer_upwinding)
 
 Refuse `water_tag_updraft_copy: true` without `turbconv: prognostic_edmfx`, the
@@ -1513,11 +1537,20 @@ function AtmosTagging(config::AtmosConfig)
     water_updraft_copies = water_tag_updraft_copy_from_config(
         get(config.parsed_args, "water_tag_updraft_copy", false),
     )
+    water_transport = water_tag_transport_from_config(
+        get(config.parsed_args, "water_tag_transport", "tracer"),
+    )
     water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
         water_updraft_copies && error(
             "`water_tag_updraft_copy: true` is set but `water_tracers` is \
             not, so there are no tags to copy. Configure `water_tracers`, or \
             drop the key.",
+        )
+        water_transport isa TracerWaterTagTransport || error(
+            "`water_tag_transport: \
+            $(water_tag_transport_text(water_transport))` is set but \
+            `water_tracers` is not, so there are no tags for it to move. \
+            Configure `water_tracers`, or drop the key.",
         )
         nothing
     else
@@ -1535,6 +1568,7 @@ function AtmosTagging(config::AtmosConfig)
         WaterTaggingModel(
             water_tracer_tuple(water_entries, FT);
             updraft_copies = water_updraft_copies,
+            transport = water_transport,
         )
     end
     source_entries = config.parsed_args["energy_source_tags"]

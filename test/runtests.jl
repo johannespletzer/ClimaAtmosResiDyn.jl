@@ -32,6 +32,7 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_edmf",
     "tagging_water_edmf_copies",
     "tagging_water_edmf_0m",
+    "tagging_water_increment",
     "parameterizations",
     "restarts",
 )
@@ -251,6 +252,14 @@ end
 if TEST_GROUP in ("tagging_water_edmf_0m", "all")
     @safetestset "Water tags with updraft copies under 0M" begin
         @time include("tagged_water_edmf_0m_integration.jl")
+    end
+end
+
+# `water_tag_transport: increment` builds the EDMF column twice as well, with
+# the tags following the parent's increment and without tags.
+if TEST_GROUP in ("tagging_water_increment", "all")
+    @safetestset "Water tags following the implicit increment" begin
+        @time include("tagged_water_increment_integration.jl")
     end
 end
 

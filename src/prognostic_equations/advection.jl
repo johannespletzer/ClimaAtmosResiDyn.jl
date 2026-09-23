@@ -252,9 +252,12 @@ NVTX.@annotate function explicit_vertical_advection_tendency!(Yₜ, Y, p, t)
     # edmfx_sgs_mass_flux_tendency!.
     foreach_gs_tracer(Yₜ, Y) do ᶜρχₜ, ᶜρχ, ρχ_name
         # Under enthalpy transport the energy source tags take their shares of
-        # the parent's own flux instead, just below.
+        # the parent's own flux instead, just below. Water tags that follow
+        # the parent's implicit increment take its vertical advection from
+        # that increment, after each solve (`correct_water_tag_increment!`).
         if !(ρχ_name in (@name(ρe_tot), @name(ρq_tot))) &&
-           !energy_source_tag_moves_as_enthalpy(p, ρχ_name)
+           !energy_source_tag_moves_as_enthalpy(p, ρχ_name) &&
+           !water_tag_follows_increment(p, ρχ_name)
             ᶜχ = @. lazy(specific(ᶜρχ, Y.c.ρ))
             vtt = vertical_transport(ᶜρ, ᶠu³, ᶜχ, dt, tracer_upwinding)
             @. ᶜρχₜ += vtt
