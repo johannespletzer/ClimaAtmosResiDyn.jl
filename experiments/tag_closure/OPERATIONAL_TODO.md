@@ -56,6 +56,39 @@ inventory as historical results. The pathway puts M4 before M5. G3 reverses
 that: it chooses the closure on columns, where runs are cheap, and measures
 the cost before its sphere run.
 
+### Where the open items below go
+
+An agent matched every open item of sections 2 to 7 and of the Plan to a
+milestone on 2026-09-23. This session checked the doubtful ones. Items marked
+"G3 n.n" are in `G3_TODO.md`. The rest wait for a later goal or lie outside
+the roadmap. Beware of reused names: the milestones M3 to M5 are not the N
+items M3 to M5 of section 4, and G3's R1 to R6 are PR #95's review items, not
+this list's R items.
+
+| Milestone | Open items |
+|:--|:--|
+| M0 | synergy 1 (G3 1.7), synergy 2 (G3 1.6); `analysis/phase_c.jl`, which reads only `c*` runs, is replaced by the verifier (G3 1.2) |
+| M1 | the file-based run of item 14 (G3 2.9); U5 (G3 2.10); D1 with D3 (G3 2.11). Later: C6's leftovers, a parity test for the stratospheric tracers (P6) |
+| M2 | C4 (G3 3.7); synergy 6 (G3 3.7); synergy 5 (G3 3.3); U9, A5 and synergy 4 (G3 3.8); U2's calibration, item 11 (G3 3.9). Later: A2's runtime part and A3; the open questions on D1's residual and the sphere's 17%, unless 3.7 names them |
+| M3 to M5 | R5 (G3 4.4); U8 (G3 4.12, while the choice for a winter run belongs to M7); P2 and P3 (G3 5.5). Later: A4, A6, C7, P7's optional fix. C1c stays shelved, since the increment prototype replaced it |
+| M6 | MP1 on more than one node, U6, the model's own restart drift (E58), the GPU (item 13) |
+| M8 | synergy 3, ice provenance where ice lasts (open question 3), C1d, U7 |
+| outside | upstream: the ClimaCore issue, P5, the `ShipwayHill2012VelocityProfile` report, the N items M4 and M5 (2M and P3); CI: P8, Plan A.2's manual run; too terse to place: open question 4 |
+
+**Done, not yet struck through below:**
+ - C1b (#91) and C2 (#92), in section 2, items 4 and 5;
+ - V2 (E74, E75), in item 10;
+ - item 15 (#93);
+ - B9 and the items bundled with it (#77);
+ - T6: `test/energy_source_tags_edmf_integration.jl` on `main` checks the
+   partition against the parent to 100 eps;
+ - the N item M3: `test/tracer_processes_tests.jl` on `main`;
+ - Plan A.1 (G1 is met), A.3 (questions 2 and 3, decided on 2026-09-19), A.4's
+   NaN decision (fixed on 2026-09-20), and C.4 (V2 and V6 ran).
+
+Striking them where they stand is left for the next condensing, which is on
+hold.
+
 ## The current goal: G3
 
 The owner set G3 on 2026-09-23. It covers milestones M0 to M5 on single columns

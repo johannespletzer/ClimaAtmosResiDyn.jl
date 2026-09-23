@@ -83,8 +83,10 @@ the runs that test them.
    keep their old pins. Current commits are named here and in the roadmap.
  - [x] The review's status: R3 to R6 fixed in `e71430fb`; R1 in `dbe7435c`, with
    the points of Q4 open; R2 open (the ladder, phase 4).
- - [ ] Match OPERATIONAL_TODO's open items to milestones, so that the roadmap
-   replaces the old list rather than running beside it (an agent, read-only).
+ - [x] OPERATIONAL_TODO's open items matched to milestones, so that the roadmap
+   replaces the old list rather than running beside it. See the roadmap's
+   "Where the open items below go". An agent read them, and this session
+   checked the doubtful ones.
  - [ ] Merge this branch into the experiment branch at each gate, coordinating
    with the job session, which commits there.
 
@@ -156,7 +158,12 @@ the runs that test them.
    and pass the first accepted step's checks. The rebuild of `92e9ac26` has
    only a unit test so far.
  - [ ] 2.10 A real checkpoint round trip, default and copies: the continuous
-   run against the restarted one, with the prognostic state bit for bit.
+   run against the restarted one, with the prognostic state bit for bit. Also
+   a clear error when the tag list changes across a restart (U5).
+ - [ ] 2.11 D1 with D3: PR #95's user guide covers D3's caveats. Those are the
+   `c·Δρ` no bracket reaches, `e_src_fix` restarting at zero, the choice of
+   `c`, ice passing provenance upward, and untested ground. D1 closes when
+   #95 merges.
 
 ## Phase 3: accounting (M2, ranks 3 and 4, insight C, synergy 6)
 
@@ -180,12 +187,17 @@ the runs that test them.
    budget whose remainder is named. Every process term includes `c Δρ`. The
    tags' repair is never booked as a parent energy source, since it moves
    energy between tags only.
- - [ ] 3.8 The residual report completed. It gains the residual's rate over a
-   stated interval, its vertical and local maxima, and the headroom of the
-   positive total (U9).
+ - [ ] 3.8 The residual report completed. It gains:
+     - the residual's rate over a stated interval, and where it would settle,
+       as a range (synergy 4);
+     - its vertical and local maxima;
+     - the headroom of the positive total (U9);
+     - where an overlay is negative, and where a member exceeds its group's
+       sum (A5).
  - [ ] 3.9 Warnings, abort rules and acceptance thresholds kept apart, in the
    configuration and in the guide. A small aggregate residual never passes a
-   per-tag test.
+   per-tag test. The runaway warning's tolerance per transport is calibrated
+   from V2 and V3 (U2, OPERATIONAL_TODO item 11).
 
 ## Phase 4: reference suite and choice of closure (M3 and M5; ranks 1, 5, 6)
 
@@ -200,6 +212,9 @@ the runs that test them.
      - grids of 30, 60 and 120 levels;
      - first-order upwinding;
      - a Float64 twin.
+
+   Each setting's wall time is recorded, which also answers R5: what a
+   converged Newton solve costs.
 
    The job session holds dt 60 and 30, Newton 2 and upwind (`eead88c3`),
    cancelled at 08:20 for the fix.
@@ -231,6 +246,8 @@ the runs that test them.
  - [ ] 5.3 Precompile workloads.
  - [ ] 5.4 Moving the nested copies out of the large solver, only with a
    dependency proof (`clima-numerics-reviewer`) and a parity test.
+ - [ ] 5.5 P2 (the share norm once per evaluation) and P3 (a string allocation
+   per tracer under the audit), taken up only if 5.2's profile shows them.
 
 ## Phase 6: G3's sphere run
 
