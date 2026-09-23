@@ -2,8 +2,8 @@
 
 The entry point for every session. Written on 2026-09-23 around 11:30, during
 the housekeeping (step H4). Updated at 13:55 the same day, when the
-housekeeping was done, at 16:45 after #95 merged, and at 17:40 during WP0 and
-WP1. Update it when something here changes. Where a fact was
+housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
+done. Update it when something here changes. Where a fact was
 not checked, it says so.
 
 ## The goals
@@ -28,13 +28,16 @@ not checked, it says so.
 
 ## Where things stand
 
-  - **G3 is in WP0 and WP1.** **This session's goal**, set by the owner on
-    2026-09-23, is WP0 and WP1: the tools and the first runs, then draft
-    PR-W1. WP3 comes after it, sized by V-W0c. So far: the plan checked
-    against the merged #95; V-W0a, V-W0c and V-W1 run and recorded (W15 to
-    W18); the manifest in the submit path and the inventory classified; the
-    verifier being fixed and extended to water; draft PR-W1 open as #100.
-    See G3_TODO for each item. #95 merged on 2026-09-23 at 16:32
+  - **G3's WP0 is done, and WP1 waits only for CI.** **This session's
+    goal**, set by the owner on 2026-09-23, is WP0 and WP1. WP0: the plan
+    checked against the merged #95; V-W0a, V-W0c and V-W1 run, recorded as
+    W15 to W19 and put through the verifier; the verifier fixed and extended
+    to water (M8); the manifest in the submit path; the inventory classified;
+    the Float64-twin helper; the reference datasets in the archive; V-W8
+    moved to the GCM-driven column, whose forcing is fetched. WP1: draft PR
+    #100, reviewed by `clima-reviewer` and by the owner, whose four points
+    are addressed at `30dcfee9`; its CI is queued on GitHub. WP3 comes next,
+    sized by V-W0c (W18). See G3_TODO for each item. #95 merged on 2026-09-23 at 16:32
     (`0b2b1032`), which WP0 was waiting for.
   - **#95 brought the partition-only factor to `main`** (from `dcf7d086`;
     head `b9c6e7b0`), as the owner decided (decision 5 of G3_PLAN). The job session reran the R2 ladder's
@@ -104,7 +107,7 @@ section 5). Records go on `claude/tag-closure-record`. Outside
 | #97  | `claude/historical-tag-closure-pages`    | merged 2026-09-23, 12:12 (`b1a088a4`)                                                                                                                                                                                                                                                                                                                                                 | the "Historical" notes on `docs/src/tag_closure_memo.md` and `tag_closure_experiments.md`                                                            |
 | #98  | `claude/tag-closure-condense`            | merged into the record branch 2026-09-23, 13:47 (`859d38f8`)                                                                                                                                                                                                                                                                                                                          | H6, the condensed documents                                                                                                                          |
 | #99  | `claude/prek-exclude-experiment-records` | merged 2026-09-23, 13:30 (`e8fcc0f1`)                                                                                                                                                                                                                                                                                                                                                 | excludes the record's frozen files (`archive/`, `output/`, `review/`, `reference/`, `configs/` under `experiments/tag_closure/`) from the prek hooks |
-| #100 | `claude/water-tags-edmf`                 | draft, opened 2026-09-23 at `6e7264ae`; CI running                                                                                                                                                                                                                                                                                                                                    | G3 WP1: water tags refused under prognostic EDMF and AMD LES, warned under a prescribed flow; reserved name prefixes; known issues 3 and 4 restated  |
+| #100 | `claude/water-tags-edmf`                 | draft; at `30dcfee9` after the owner's review (request changes, 2026-09-23) was addressed; CI queued on GitHub at 18:10                                                                                                                                                                                                                                                               | G3 WP1: water tags refused under prognostic EDMF and AMD LES, warned under a prescribed flow; reserved name prefixes; known issues 3 and 4 restated  |
 
 Only the owner merges. The token cannot mark a PR ready for review.
 
@@ -114,9 +117,9 @@ Only the owner merges. The token cannot mark a PR ready for review.
     `13782601` to `13782605`. All five had finished with exit status 0 by 11:05
     (read from their provenance on scratch at 11:25). E76 records them. Their
     small tables are not yet in `output/`.
-  - **G3:** V-W0a (six runs), V-W0c and V-W1 ran on 2026-09-23 and are
-    recorded as W15 to W18. Job `13831751` measures known issue 1's numbers.
-  - Slurm was queried at 16:40: no job of this account was queued or running.
+  - **G3:** V-W0a (six runs), V-W0c, V-W1 and the known-issue-1 test run
+    finished on 2026-09-23 and are recorded as W15 to W19.
+  - Slurm was queried at 18:10: no job of this account was queued or running.
 
 ## The housekeeping, H0 to H7: done
 
