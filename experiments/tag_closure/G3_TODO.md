@@ -47,8 +47,14 @@ The twelve criteria of the plan, section 2, in short:
     provenance with rain and snow tags; exchange by default with copies as the
     audit; the partition-only factor; this session runs G3's jobs. All decided
     by the owner on 2026-09-23.
-  - [!] **The budgets of plan 6.1**, set by the owner before V-W3. The
-    sphere's budget is set before V-W11.
+  - [x] **The budgets of plan 6.1**, set by the owner on 2026-09-23: per tag
+    2% and 5% at 24 h with G1's first-hour split; closure 0.2% with at most
+    1e-6 left after the named parts; convergence as robustness; rain and snow
+    as proposed; the sphere's form.
+  - [ ] **The sphere's numbers**, set by the owner before V-W11, in the form of
+    plan 6.1.
+  - [ ] **The default mode's cost budget**, proposed from V-W10's first
+    measurements and set by the owner before V-W11.
   - [ ] **WP5's default transport under EDMF**, by the rule fixed in plan 4.3,
     after V-W3.
   - [ ] **The prognostic fields of the rain and snow tags**, settled in the
@@ -279,11 +285,12 @@ The twelve criteria of the plan, section 2, in short:
     contract for tagged water, `known_issues.md` and NEWS. Review (high).
   - [ ] WP9 and **V-W10**: cost at 2, 4, 8 and 32 tags where they build in
     time, both modes, with and without rain and snow tags, both families. P2
-    and P3 only if the profile shows them.
+    and P3 only if the profile shows them. Then propose the default mode's
+    cost budget to the owner, before V-W11.
 
 ## The sphere
 
-  - [ ] The sphere budget, set by the owner.
+  - [ ] The sphere's numbers, set by the owner before V-W11 (plan 6.1 fixes the form).
   - [ ] **V-W11**:
       + ten days of `g2_v2_sphere_n2` with water, rain and snow tags under the
         chosen default;

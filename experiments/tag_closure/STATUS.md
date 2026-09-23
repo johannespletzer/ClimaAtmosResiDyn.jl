@@ -157,8 +157,10 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
 
 ## The owner's open decisions
 
-  - **The budgets of G3_PLAN 6.1**, before V-W3, and **the sphere's budget**,
-    before V-W11 ([G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)).
+  - **The sphere's numbers**, before V-W11, and **the default mode's cost
+    budget**, after V-W10's first measurements and before V-W11. The other
+    budgets were set on 2026-09-23
+    ([G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)).
   - **The rain and snow tags' prognostic fields**, after the design note
     WP4b-D and its review ([G3_TODO](G3_TODO.md#decisions)).
   - **WP5's default transport under EDMF**, by the rule of G3_PLAN 4.3, after

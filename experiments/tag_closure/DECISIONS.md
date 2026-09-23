@@ -21,8 +21,10 @@ Short names for the sources:
 
 ## Waiting for the owner
 
-  - **The budgets of G3_PLAN 6.1**, before V-W3. The sphere's budget before
-    V-W11. **Waiting.** [G3T](G3_TODO.md#decisions), [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
+  - **The sphere's numbers**, in the form G3_PLAN 6.1 fixes, before V-W11.
+    **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
+  - **The default mode's cost budget**, proposed from V-W10's first
+    measurements, set before V-W11. **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
   - **WP5's default transport under EDMF**, by the rule fixed in G3_PLAN 4.3,
     after V-W3. The rule decides; the owner confirms. **Waiting.** [G3T](G3_TODO.md#decisions)
   - **The prognostic fields of the rain and snow tags**, settled in design note
@@ -37,6 +39,15 @@ Short names for the sources:
 
 ## 2026-09-23
 
+  - **G3's budgets are set** (G3_PLAN 6.1). Per tag at 24 h: L1 ≤ 2%, L∞ ≤ 5%.
+    First hour: L1 ≤ 1% for region tags and ≤ 10% for source tags, L∞ ≤ 25%.
+    Tags below 1% of the partition pass on absolute error. Closure: 0.2% gross
+    at 24 h, with no growth, and at most 1e-6 left after the named parts. The
+    copies' repair moves at most 0.2%. Convergence is judged as robustness,
+    not between rungs. Rain and snow: 1e-8 in Float64, and the audit within
+    10% on the column without EDMF. The sphere's form is fixed, and its
+    numbers come before V-W11. The default mode gets a cost budget, set
+    before V-W11. **In force.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
   - **Revive the condense plan.** Results are re-checked now only where G3
     relies on them. The full re-check moves to the start of G4. **In force.**
     [CP 1](archive/2026-09-23/CONDENSE_PLAN.md#the-owners-decisions-of-2026-09-23)

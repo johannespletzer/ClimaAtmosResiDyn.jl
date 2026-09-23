@@ -64,23 +64,24 @@ The standing rules hold:
 
 ## 2. G3 is met when
 
-Every threshold is *proposed* until the owner sets it, before the runs that
-test it (6.1).
+The owner set the thresholds on 2026-09-23, before any G3 run (6.1). The
+sphere's numbers and the default mode's cost budget are set later, in a form
+fixed now.
 
-| #  | Criterion                                                                                                                                                                                                                                                                                                                                                   | Milestone |
-|:-- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:--------- |
-| 1  | Every G3 headline number is recomputed by the verifier from runs stamped with a manifest. The verifier covers `q_tag_*`, the copies, the rain and snow tags and `pr_tag_*`.                                                                                                                                                                                 | M0        |
-| 2  | Unsupported combinations are refused at configuration, with a test for each (4.8). Known issues 1, 3 and 4 are closed or restated. A file-based column starts with finite water tags. A checkpoint round trip holds in both modes, on the column and on the sphere.                                                                                         | M1        |
-| 3  | **Parity.** With water tags on, every model field is bit for bit that of the run without them, in both modes. Checked on the 1M EDMF column (D4-W), a 0M EDMF column, with implicit and explicit microphysics, and on two MPI ranks. The column checks run in CI.                                                                                           | M1        |
-| 4  | **Closure.** On D4-W the water partition's gross residual at 24 h is within budget (6.1), and the second 12 h add no more than the first. What remains is split into named parts. The copies' own residual, `q_totʲ − Σᵢ χᵢʲ`, is within its budget. Under 1M the rain and snow tags close against `ρq_rai` and `ρq_sno`.                                   | M2        |
-| 5  | **Per-tag accuracy.** Against the copies, the default's per-tag error on D4-W and on the deep development column is within budget at 24 h and in the first hour. Absolute errors are reported where the reference is small. A CI test shows the copies and a passive tracer agree to rounding without water-specific terms. Manufactured mixing tests pass. | M3, M5    |
-| 6  | **Convergence.** Successive refinements of time step, grid and Newton count change the default's per-tag error, *and the copies themselves*, by less than a quarter of the per-tag budget.                                                                                                                                                                  | M3        |
-| 7  | **Precipitation provenance.** Under 0M the sink is split by subdomain. Under 1M rain and snow carry tags. `Σᵢ pr_tagᵢ = pr` within budget. The net-flow attribution between compartments is audited against gross process rates on a column, within budget. Surface precipitation by tag is reported with its assumptions.                                  | M5        |
-| 8  | **Held-out columns.** RICO (1M), BOMEX (1M), ARM SGP (1M, deep, continental) and the GCM-driven column (0M) meet criteria 4 and 5 without retuning.                                                                                                                                                                                                         | M5        |
-| 9  | **Float32.** A Float32 twin of D4-W meets criteria 3 and 4 within 10× the Float64 residual. This is a precision-sensitivity check. It decides no cause: that needs tagged and untagged pairs at each precision, and refinement.                                                                                                                             | M3        |
-| 10 | **Cost.** Build time, step time and peak memory are measured in both modes and with the rain and snow tags. The copies are measured at 2, 4 and 8 tags and extrapolated, with a time limit. The allocation gates pass.                                                                                                                                      | M4        |
-| 11 | **Sphere.** Ten days of the G2 sphere with water tags under the chosen default meet a sphere budget set before the run. A one-day copies twin gives the per-tag error there. A restart holds.                                                                                                                                                               | —         |
-| 12 | Reviewed and tested: agent reviews with their findings fixed, CI green, and draft PRs ready. The docs are updated: `tagged_water.md`, whose "same diffusion operators" claim is wrong under 1M; `known_issues.md`; NEWS; and a claim contract for tagged water.                                                                                             | M1, M2    |
+| #  | Criterion                                                                                                                                                                                                                                                                                                                                                                                                         | Milestone |
+|:-- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:--------- |
+| 1  | Every G3 headline number is recomputed by the verifier from runs stamped with a manifest. The verifier covers `q_tag_*`, the copies, the rain and snow tags and `pr_tag_*`.                                                                                                                                                                                                                                       | M0        |
+| 2  | Unsupported combinations are refused at configuration, with a test for each (4.8). Known issues 1, 3 and 4 are closed or restated. A file-based column starts with finite water tags. A checkpoint round trip holds in both modes, on the column and on the sphere.                                                                                                                                               | M1        |
+| 3  | **Parity.** With water tags on, every model field is bit for bit that of the run without them, in both modes. Checked on the 1M EDMF column (D4-W), a 0M EDMF column, with implicit and explicit microphysics, and on two MPI ranks. The column checks run in CI.                                                                                                                                                 | M1        |
+| 4  | **Closure.** On D4-W the water partition's gross residual at 24 h is within budget (6.1), and the second 12 h add no more than the first. What remains is split into named parts, and what the named parts leave is within its budget. The copies' own residual, `q_totʲ − Σᵢ χᵢʲ`, is within its budget, and so is what their repair moves. Under 1M the rain and snow tags close against `ρq_rai` and `ρq_sno`. | M2        |
+| 5  | **Per-tag accuracy.** Against the copies, the default's per-tag error on D4-W and on the deep development column is within budget at 24 h and in the first hour. A tag below 1% of the partition is judged on its absolute error. A CI test shows the copies and a passive tracer agree to rounding without water-specific terms. Manufactured mixing tests pass.                                                 | M3, M5    |
+| 6  | **Convergence, as robustness.** At every rung of time step, grid and Newton count, the default meets the per-tag budget. The copies' shares move by less than the per-tag L1 budget between the baseline and the finest rung, with the parent's own change reported beside them.                                                                                                                                  | M3        |
+| 7  | **Precipitation provenance.** Under 0M the sink is split by subdomain. Under 1M rain and snow carry tags. `Σᵢ pr_tagᵢ = pr` within budget. The net-flow attribution between compartments is audited against gross process rates on a column, within budget. Surface precipitation by tag is reported with its assumptions.                                                                                        | M5        |
+| 8  | **Held-out columns.** RICO (1M), BOMEX (1M), ARM SGP (1M, deep, continental) and the GCM-driven column (0M) meet criteria 4 and 5 without retuning.                                                                                                                                                                                                                                                               | M5        |
+| 9  | **Float32.** A Float32 twin of D4-W meets criteria 3 and 4 within 10× the Float64 residual. This is a precision-sensitivity check. It decides no cause: that needs tagged and untagged pairs at each precision, and refinement.                                                                                                                                                                                   | M3        |
+| 10 | **Cost.** Build time, step time and peak memory are measured in both modes and with the rain and snow tags. The copies are measured at 2, 4 and 8 tags and extrapolated, with a time limit. The allocation gates pass. The default mode meets its cost budget, set before V-W11.                                                                                                                                  | M4        |
+| 11 | **Sphere.** Ten days of the G2 sphere with water tags under the chosen default meet the sphere budget: its form is fixed in 6.1, its numbers before the run. A one-day copies twin gives the per-tag error there. A restart holds.                                                                                                                                                                                | —         |
+| 12 | Reviewed and tested: agent reviews with their findings fixed, CI green, and draft PRs ready. The docs are updated: `tagged_water.md`, whose "same diffusion operators" claim is wrong under 1M; `known_issues.md`; NEWS; and a claim contract for tagged water.                                                                                                                                                   | M1, M2    |
 
 ## 3. What EDMF does to the water, and what the tags miss today
 
@@ -447,29 +448,93 @@ That makes about 70 column-scale jobs and 5 sphere jobs. Column runs go to
 
 ### 6.1 Budgets, fixed before the runs
 
-For the owner to set before V-W3, except the sphere's, which is set before
-V-W11:
+**Set by the owner on 2026-09-23**, before any G3 run. Two parts are set
+later, in the form fixed here: the sphere's numbers before V-W11, and the
+default mode's cost budget after V-W10's first measurements. The measures are
+those of `analysis/increment/tag_correctness.py`:
 
-  - **Per tag, default against copies:** L1 ≤ 2% and peak-normalised L∞ ≤ 5% at
-    24 h. These are E73's energy numbers. The pathway calls them historical, so
-    they are a proposal. The first hour: L1 ≤ 10% and L∞ ≤ 25%, since the
-    copies start from the plume. Absolute errors are reported where a tag is
-    below 1% of the partition.
-  - **Closure:** at 24 h the gross residual over `∫ρq_tot` is at most a tenth of
-    the per-tag L1 budget (0.2%), with no systematic growth. WP5's rule uses
-    this budget (4.3).
-  - **The copies' own residual** is at most a tenth of the closure budget.
-  - **Convergence:** a quarter of the per-tag budget between rungs, for the
-    default's error and for the copies.
-  - **Rain and snow:** their closure against `ρq_rai` and `ρq_sno` within 1e-8
-    relative. `Σ pr_tag = pr` within 1e-8 relative. The net-flow audit within
-    10% of each tag's precipitation over the day.
+  - L1 is `∫ρ|Δq|dz / ∫ρ|q_ref|dz`;
+  - L∞ is `max |Δq| / max |q_ref|`, normalised by the peak.
+
+The verifier computes both (WP0).
+
+  - **Per tag, default against copies, at 24 h:** L1 ≤ 2% and L∞ ≤ 5%. These
+    are G1's criterion 4b for energy. E76 met them at every time step and
+    Newton count, with 1.6% and 2.6% at worst. A looser budget would let the
+    default's error exceed the spread from the mixing convention alone, about
+    1% in L1 (E66).
+
+  - **Per tag, in the first hour:** L1 ≤ 1% for the region tags and ≤ 10% for
+    the source tags, and L∞ ≤ 25%. This is G1's split of 2026-09-20. It
+    applies because the copies start from the plume. E76's first hour
+    measured the copies' spin-up from the grid mean instead.
+
+  - **Small tags.** A tag with less than 1% of the partition passes on its
+    absolute error, `∫ρ|Δq|dz ≤ 2e-4 ∫ρq_tot dz`. Its relative error is
+    reported. `evap` starts at zero, so its relative error is unstable early.
+
+  - **Closure:** at 24 h the gross residual is at most 0.2% of `∫ρq_tot`. A
+    residual `R` shifts the shares by about `R/ρq_tot`, so this is a tenth of
+    the per-tag L1 budget. The second 12 h add no more than the first. WP5's
+    rule (4.3) and the leak rule (4.2) use this budget.
+
+  - **What the named parts leave:** at most 1e-6 of `∫ρq_tot` at 24 h. The
+    named parts are the one-iteration part from the 10-Newton twin, the loss
+    rule's flushing, the leaks and the ledgers. The 0.2% alone would pass a
+    missed process worth 0.1% of the water. On D4's energy the same remainder
+    was about 1e-8 (E64).
+
+  - **The copies' own residual** is at most a tenth of the closure budget,
+    0.02%. It holds by construction, so **their repair** is bounded too: over
+    the day, `q_tag_upfix_*` moves at most 0.2% of `∫ρq_tot`. Beyond that the
+    audit is flagged, since the repair then shapes it.
+
+  - **Convergence, as robustness** (criterion 6):
+
+      + at every rung of V-W4, the default meets the per-tag budgets;
+      + the copies' shares `q_tagᵢ/q_tot` move by less than 2% in L1 between
+        the baseline and the finest rung of each ladder. The parent's own
+        change is reported beside them, since each rung is a different
+        atmosphere;
+      + first-order upwinding is another scheme, not a refinement. It is
+        reported and not judged (E76: 6.5% for `sfc`).
+
+    The proposal this replaces, a quarter of the per-tag budget between
+    rungs, would fail on E76's energy ladder: `sfc` goes from 0.53% to 1.36%
+    between dt 60 and 30 s. W1 found the water residual flat in the time
+    step, bounded by the limiter.
+
+  - **Rain and snow:** in Float64, their closure against `ρq_rai` and
+    `ρq_sno` within 1e-8 relative, and `Σ pr_tag = pr` within 1e-8 relative.
+    Float32 comes under criterion 9. The net-flow audit is within 10% of each
+    tag's precipitation over the day. It passes or fails on the 1M column
+    without EDMF. Under EDMF it is reported, since the environment's
+    quadrature makes the audit approximate there. A tag with less than 1% of
+    the precipitation passes within 0.1% of the total. If the audit fails,
+    the attribution is labelled approximate, and process rates are needed
+    (section 8).
+
   - **Leak corrections:** a path is corrected when its leak exceeds a tenth of
     the closure budget.
-  - **The sphere:** set from the column results before V-W11.
+
+  - **The sphere.** The form is fixed now. The plateau's numbers are set from
+    the column results before V-W11.
+
+      + At every output, `Σᵢ ρq_tagᵢ ≤ ρq_tot (1 + 1e-6)` at every point, and
+        the non-positive fraction does not grow. Issue #64 went to 1e130 and
+        still exited 0 (W6).
+      + The gross residual plateaus after day 1.
+      + The one-day copies twin meets the per-tag budgets.
+      + The restart carries the tags bit for bit.
+
+  - **The default mode's cost:** a budget for step time and build time per
+    tag. This session proposes it from V-W10's first measurements, and the
+    owner sets it before V-W11. The copies are measured, not budgeted.
 
 A threshold is not changed after a failure without a recorded decision and a
-new validation.
+new validation. If the default fails the per-tag budgets on a case, the
+exchange is not accepted as the default there, and the options go to the
+owner.
 
 ## 7. Agents
 
