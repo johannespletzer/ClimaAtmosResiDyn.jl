@@ -324,13 +324,15 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                 units,
                 long_name = "Gross Tagged Water Updraft Copy Repair ($name)",
                 comments = "Beside q_tag_upfix_$name, which is signed: " *
-                           (per_mass ?
-                            "the absolute value of every change the copies' " *
-                            "repair made to the updraft copy of `$name`, " *
-                            "times ρaʲ, per unit mass of grid-mean moist air" :
-                            "the number of times the copies' repair changed " *
-                            "the updraft copy of `$name` in this cell by more " *
-                            "than rounding") *
+                           (
+                               per_mass ?
+                               "the absolute value of every change the copies' " *
+                               "repair made to the updraft copy of `$name`, " *
+                               "times ρaʲ, per unit mass of grid-mean moist air" :
+                               "the number of times the copies' repair changed " *
+                               "the updraft copy of `$name` in this cell by more " *
+                               "than rounding"
+                           ) *
                            ". Cumulative since the start of the simulation " *
                            "segment and reset on restart; every call counts.",
                 compute! = (out, u, p, t) -> compute_tag_throughput!(

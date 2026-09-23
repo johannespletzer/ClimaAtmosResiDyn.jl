@@ -115,12 +115,14 @@ function register_energy_source_tagging_diagnostics!(
                 units,
                 long_name = "Gross Energy Source Tag Repair ($name)",
                 comments = "Beside e_src_fix_$name, which is signed: " *
-                           (per_mass ?
-                            "the absolute value of every change the repair " *
-                            "made to the tag `$name`, per unit mass of moist " *
-                            "air" :
-                            "the number of times the repair changed the tag " *
-                            "`$name` in this cell by more than rounding") *
+                           (
+                               per_mass ?
+                               "the absolute value of every change the repair " *
+                               "made to the tag `$name`, per unit mass of moist " *
+                               "air" :
+                               "the number of times the repair changed the tag " *
+                               "`$name` in this cell by more than rounding"
+                           ) *
                            ". Cumulative since the start of the simulation " *
                            "segment and reset on restart. It counts what was " *
                            "attempted, every call, including changes inside a " *

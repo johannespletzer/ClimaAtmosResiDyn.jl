@@ -1341,11 +1341,13 @@ end
     # so the small changes after a large one are kept.
     steps = (1.0f0, 1001.0f0, (1001.0f0 + k * 1.0f-2 for k in 1:1000)...)
     tagging = run_rescales(Float32, steps)
-    gross = tagging.ᶜwater_fix_gross.ρq_tag_tropo[1] +
-            tagging.ᶜwater_fix_gross.ρq_tag_strat[1]
-    expected = Float64(1000.0f0) + sum(
-        abs(Float64(steps[k + 1]) - Float64(steps[k])) for k in 2:(length(steps) - 1)
-    )
+    gross =
+        tagging.ᶜwater_fix_gross.ρq_tag_tropo[1] +
+        tagging.ᶜwater_fix_gross.ρq_tag_strat[1]
+    expected =
+        Float64(1000.0f0) + sum(
+            abs(Float64(steps[k + 1]) - Float64(steps[k])) for k in 2:(length(steps) - 1)
+        )
     @test isapprox(gross, expected; rtol = 1e-5)
     @test eltype(tagging.ᶜwater_fix_gross.ρq_tag_tropo) == Float64
 end
