@@ -75,7 +75,15 @@ function report(label, build; nsteps = 2)
     foreach(_ -> CTS.step!(simulation.integrator), 1:nsteps)
     floor = eps(FT) * sum(abs.(simulation.integrator.u.c.ρe_tot))
     d = defect(adapter)
-    println(rpad(label, 40), " defect ", d, "   rounding floor ", floor, "   ratio ", d / floor)
+    println(
+        rpad(label, 40),
+        " defect ",
+        d,
+        "   rounding floor ",
+        floor,
+        "   ratio ",
+        d / floor,
+    )
     flush(stdout)
 end
 

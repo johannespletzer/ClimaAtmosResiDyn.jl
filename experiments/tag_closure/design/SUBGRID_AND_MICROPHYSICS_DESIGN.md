@@ -34,21 +34,21 @@ Outside that path nothing has been run, and nothing refuses to run.
 
 ### Under `PrognosticEDMFX`
 
-| term | the parent, `ρe_tot` and `ρ` | the tags | effect |
-|:-- |:-- |:-- |:-- |
-| grid-mean vertical advection | implicit, central, with the upwind correction after Newton (`implicit_tendency.jl:242-243`, `:383-385`) | explicit tracer (`advection.jl:253-262`), or the audit's share (`advection.jl:263`) | as without EDMF |
-| grid-mean horizontal advection | `split_divₕ(ρu, h_tot)` (`advection.jl:59`) | tracer (`advection.jl:121-127`), or the share (`:128`) | as without EDMF |
-| **SGS mass flux** | `ρe_tot` gets `Σₖ` of the difference-form flux of `aᵏ(mseᵏ + Kᵏ - h_tot)` (`edmfx_sgs_flux.jl:65-90`). `ρ` gets the `q_tot` flux (`:107`, `:122`) | **nothing** | all of it lands in `e_src_res` |
-| SGS diffusive flux, vertical | enthalpy form: `K_h` on `s_d` and `q_tot_eff`, `K_e` on `h_tot` (`edmfx_sgs_flux.jl:270-317`, `:376`). `ρ` through `q_tot_eff` (`:327`) and `K_e` on `ρq_tot` (`:398-400`) | tracer form, `ρ(K_h + K_e) ∇(ρe_src/ρ)` (`:390-396`, `α = 1`) | form mismatch in `e_src_res` |
-| **SGS diffusive flux, with `edmfx_vertical_diffusion: true`** | the same, and applied to the updraft's `mse` (`:377-381`) | the loop asks the updraft for `e_src_<name>` with no guard (`:403-409`, `get_field` at `:406`) | **the run fails**; see *Build checks* |
-| SGS diffusive flux, horizontal | enthalpy form (`:465-481`, `:535`) | tracer form, guarded by `has_field` (`:547-562`) | form mismatch |
-| entrainment and detrainment | act on the updraft's scalars inside a cell (`edmfx_entr_detr.jl:587-630`); detrainment sits in the `ρa` solve | nothing | none directly. They leave the grid mean unchanged. They reach it only through `mseʲ` in the SGS mass flux |
-| updraft advection, buoyancy and sedimentation | updraft scalars only (`advection.jl:330-497`) | nothing | none directly, as above |
-| sedimentation, grid-mean flux | `water_advection.jl:71-108` | shared (`:99-107`) | none |
-| **sedimentation, subdomain corrections** | updraft (`water_advection.jl:157-167`) and environment (`:174-184`) corrections, one updraft only (`:135`) | **nothing** | lands in `e_src_res` |
-| microphysics, 0M | environment and updraft sinks summed into the grid mean (`microphysics/tendency.jl:101-133`) | bracketed as one grid-mean increment (`implicit_tendency.jl:65-80`, `remaining_tendency.jl:233-242`) | closes. An updraft's rain-out takes energy by the grid mean's shares |
-| `pressure_work_tendency!` | a no-op for every model (`pressure_work.jl:17-19`) | — | none |
-| Jacobian | SGS blocks for `ρe_tot`, `ρq_tot` and the updraft's own tracers | diffusion blocks only, as passive tracers (`manual_sparse_jacobian.jl:221-223`) | — |
+| term                                                          | the parent, `ρe_tot` and `ρ`                                                                                                                                               | the tags                                                                                             | effect                                                                                                    |
+|:------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------- |
+| grid-mean vertical advection                                  | implicit, central, with the upwind correction after Newton (`implicit_tendency.jl:242-243`, `:383-385`)                                                                    | explicit tracer (`advection.jl:253-262`), or the audit's share (`advection.jl:263`)                  | as without EDMF                                                                                           |
+| grid-mean horizontal advection                                | `split_divₕ(ρu, h_tot)` (`advection.jl:59`)                                                                                                                                | tracer (`advection.jl:121-127`), or the share (`:128`)                                               | as without EDMF                                                                                           |
+| **SGS mass flux**                                             | `ρe_tot` gets `Σₖ` of the difference-form flux of `aᵏ(mseᵏ + Kᵏ - h_tot)` (`edmfx_sgs_flux.jl:65-90`). `ρ` gets the `q_tot` flux (`:107`, `:122`)                          | **nothing**                                                                                          | all of it lands in `e_src_res`                                                                            |
+| SGS diffusive flux, vertical                                  | enthalpy form: `K_h` on `s_d` and `q_tot_eff`, `K_e` on `h_tot` (`edmfx_sgs_flux.jl:270-317`, `:376`). `ρ` through `q_tot_eff` (`:327`) and `K_e` on `ρq_tot` (`:398-400`) | tracer form, `ρ(K_h + K_e) ∇(ρe_src/ρ)` (`:390-396`, `α = 1`)                                        | form mismatch in `e_src_res`                                                                              |
+| **SGS diffusive flux, with `edmfx_vertical_diffusion: true`** | the same, and applied to the updraft's `mse` (`:377-381`)                                                                                                                  | the loop asks the updraft for `e_src_<name>` with no guard (`:403-409`, `get_field` at `:406`)       | **the run fails**; see *Build checks*                                                                     |
+| SGS diffusive flux, horizontal                                | enthalpy form (`:465-481`, `:535`)                                                                                                                                         | tracer form, guarded by `has_field` (`:547-562`)                                                     | form mismatch                                                                                             |
+| entrainment and detrainment                                   | act on the updraft's scalars inside a cell (`edmfx_entr_detr.jl:587-630`); detrainment sits in the `ρa` solve                                                              | nothing                                                                                              | none directly. They leave the grid mean unchanged. They reach it only through `mseʲ` in the SGS mass flux |
+| updraft advection, buoyancy and sedimentation                 | updraft scalars only (`advection.jl:330-497`)                                                                                                                              | nothing                                                                                              | none directly, as above                                                                                   |
+| sedimentation, grid-mean flux                                 | `water_advection.jl:71-108`                                                                                                                                                | shared (`:99-107`)                                                                                   | none                                                                                                      |
+| **sedimentation, subdomain corrections**                      | updraft (`water_advection.jl:157-167`) and environment (`:174-184`) corrections, one updraft only (`:135`)                                                                 | **nothing**                                                                                          | lands in `e_src_res`                                                                                      |
+| microphysics, 0M                                              | environment and updraft sinks summed into the grid mean (`microphysics/tendency.jl:101-133`)                                                                               | bracketed as one grid-mean increment (`implicit_tendency.jl:65-80`, `remaining_tendency.jl:233-242`) | closes. An updraft's rain-out takes energy by the grid mean's shares                                      |
+| `pressure_work_tendency!`                                     | a no-op for every model (`pressure_work.jl:17-19`)                                                                                                                         | —                                                                                                    | none                                                                                                      |
+| Jacobian                                                      | SGS blocks for `ρe_tot`, `ρq_tot` and the updraft's own tracers                                                                                                            | diffusion blocks only, as passive tracers (`manual_sparse_jacobian.jl:221-223`)                      | —                                                                                                         |
 
 Why the SGS mass flux reaches no tag: the tracer loop of
 `edmfx_sgs_mass_flux_tendency!` runs over `sgs_tracer_names(Y)`, the scalars the
@@ -66,15 +66,15 @@ mirror only the grid-mean sedimentation flux (`tagged_water.jl:396-398`).
 
 ### Which EDMF configurations run with tags
 
-| `turbconv` | settings | with energy source tags today |
-|:-- |:-- |:-- |
-| `~` or `edmfx` | no turbulence-convection model (`model_getters.jl:951-961`) | supported; the series' runs |
-| `edonly_edmfx` | eddy diffusivity and TKE, no updraft | builds by reading: no updraft, no guard to trip. Its eddy diffusion moves the tags as tracers. Not build-checked |
-| `prognostic_edmfx` | `edmfx_vertical_diffusion: true`, as in every shipped EDMF config | fails in `edmfx_sgs_diffusive_flux_tendency!`, build-checked; see *Build checks* |
-| `prognostic_edmfx` | `edmfx_vertical_diffusion: false` | should run, by the code: nothing else asks the updraft for a tag. Not stepped here, because the full EDMF build did not finish within 15 minutes on the login node. The tags see no SGS mass flux and no sedimentation corrections, build-checked |
-| `prognostic_edmfx` | `updraft_number` > 1 | the parent itself errors in updraft sedimentation under 1M and 2M (`advection.jl:388-390`) |
-| `prognostic_edmfx` | `2MP3` | the parent has no P3 microphysics with EDMF (`microphysics/tendency.jl:19`, `:266`) |
-| diagnostic EDMF | — | removed from the model (`edmfx_entr_detr.jl:632-634`) |
+| `turbconv`         | settings                                                          | with energy source tags today                                                                                                                                                                                                                     |
+|:------------------ |:----------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `~` or `edmfx`     | no turbulence-convection model (`model_getters.jl:951-961`)       | supported; the series' runs                                                                                                                                                                                                                       |
+| `edonly_edmfx`     | eddy diffusivity and TKE, no updraft                              | builds by reading: no updraft, no guard to trip. Its eddy diffusion moves the tags as tracers. Not build-checked                                                                                                                                  |
+| `prognostic_edmfx` | `edmfx_vertical_diffusion: true`, as in every shipped EDMF config | fails in `edmfx_sgs_diffusive_flux_tendency!`, build-checked; see *Build checks*                                                                                                                                                                  |
+| `prognostic_edmfx` | `edmfx_vertical_diffusion: false`                                 | should run, by the code: nothing else asks the updraft for a tag. Not stepped here, because the full EDMF build did not finish within 15 minutes on the login node. The tags see no SGS mass flux and no sedimentation corrections, build-checked |
+| `prognostic_edmfx` | `updraft_number` > 1                                              | the parent itself errors in updraft sedimentation under 1M and 2M (`advection.jl:388-390`)                                                                                                                                                        |
+| `prognostic_edmfx` | `2MP3`                                                            | the parent has no P3 microphysics with EDMF (`microphysics/tendency.jl:19`, `:266`)                                                                                                                                                               |
+| diagnostic EDMF    | —                                                                 | removed from the model (`edmfx_entr_detr.jl:632-634`)                                                                                                                                                                                             |
 
 Nothing refuses any of these for the energy source tags. The parent-budget
 ledger refuses every `AbstractEDMF` and both 2M schemes at setup, because "their
@@ -147,6 +147,7 @@ partition's sum, and a source tag's plain clamped share
     `ᶠinterp(ρᵏ J)/J`, so the parent's code is not touched. A new face scratch
     field holds the sum over subdomains. It lives in `energy_source_scratch`,
     because `p.scratch` is dual-converted for the implicit tendency.
+
   - **B2, the sedimentation corrections.** Under `PrognosticEDMFX`, build each
     species' total face flux, the grid-mean one plus the two corrections, and
     share it once, by its sign. So `sediment_energy_source_tags!` takes a face
@@ -154,12 +155,14 @@ partition's sum, and a source tag's plain clamped share
     corrections. The corrections move no mass, since the subdomain mass fluxes
     sum to the grid mean's (`water_advection.jl:177`). So they carry no `c`
     part. Without EDMF the flux and the result are today's.
+
   - **B3, optional: the SGS diffusive flux under `enthalpy`.** Share the
     parent's face flux, `-ρK_h ∇s_d - ρK_h (h_eff + Φ) ∇q_tot_eff - ρK_e ∇h_tot`
     plus `c` times its `ρ` part, by its sign. Then skip the tags in the tracer
     loop (`edmfx_sgs_flux.jl:390-410`) under `enthalpy`. This extends the audit
     beyond the scope decided on 2026-09-11, where the SGS closures stay in
     tracer form. It is listed so that the owner can defer it knowingly.
+
   - **B4, the guard.** `edmfx_sgs_flux.jl:403-409` applies the grid mean's
     specific tendency to the updraft's copy of every grid-scale tracer, and
     assumes the copy exists. Skip a tracer the updraft does not carry, as the
@@ -176,6 +179,7 @@ partition's sum, and a source tag's plain clamped share
     sees this term without its derivative. That is sedimentation's arrangement,
     and E32 measured it working. The alternative is the explicit tendency, as
     the audit does, with the audit's timing gap.
+
   - **Why no Jacobian block.** The SGS flux moves the energy anomaly
     `a(χʲ - χ)`, not the air. Against the tags' total, the anomaly is small:
     `|F|/E ≈ a (wʲ - w)(χʲ - χ⁰)/(χ + c)`, about 0.1 × 2 m/s × 2 kJ/kg /
@@ -185,11 +189,13 @@ partition's sum, and a source tag's plain clamped share
     about 0.5 on that column. That is why the updraft's tracers need implicit
     blocks and B does not. The numbers are an estimate from typical sizes, not
     read from a run.
+
   - **Both transports.** B applies under `tracer` and `enthalpy`. There is no
     tracer form of the SGS mass flux for a field without an updraft copy, so
     there is nothing else for `tracer` to be consistent with. Under `tracer`,
     B makes the SGS part exact, while grid-mean advection keeps its pressure
     work gap.
+
   - **Its limit, for the guide.** A tag's composition in the updraft is taken as
     that of the cell it leaves. The parent's flux moves the energy anomaly, about
     fifty times less than the air the overturning exchanges (`χ + c` against
@@ -231,12 +237,12 @@ provenance mixed by convection.
 
 ### What the code does today
 
-| scheme | species that sediment with energy | numbers and rime | does microphysics write `ρe_tot`? | status |
-|:-- |:-- |:-- |:-- |:-- |
-| 0M | none. The rain-out is the microphysics sink (`microphysics/tendency.jl:77-87`) | — | yes, bracketed on both paths | measured (C6, C7) |
-| 1M | `ρq_lcl`, `ρq_icl`, `ρq_rai`, `ρq_sno` | — | no (`:153-162`) | measured, warm only (E32, E33) |
-| 2M | the same four. `ρq_icl` and `ρq_sno` are in the state (`prognostic_variables.jl:112-116`, `:144-149`) with no warm-rain sources (`microphysics/tendency.jl:206-209`) | `ρn_lcl`, `ρn_rai` sediment (`implicit_tendency.jl:284-293`) and carry no energy | no (`:213-223`) | **disabled in the parent** on this branch (`precomputed_quantities.jl:160-167`); build-checked |
-| 2MP3 | the same four; `ρq_icl` includes the rime | `ρn_ice`, `ρq_rim`, `ρb_rim` sediment with the ice (`implicit_tendency.jl:305-315`) and carry no energy of their own | no (`:266-283`) | **disabled in the parent**, and broken behind that gate; see below |
+| scheme | species that sediment with energy                                                                                                                                    | numbers and rime                                                                                                     | does microphysics write `ρe_tot`? | status                                                                                         |
+|:------ |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------- |:--------------------------------- |:---------------------------------------------------------------------------------------------- |
+| 0M     | none. The rain-out is the microphysics sink (`microphysics/tendency.jl:77-87`)                                                                                       | —                                                                                                                    | yes, bracketed on both paths      | measured (C6, C7)                                                                              |
+| 1M     | `ρq_lcl`, `ρq_icl`, `ρq_rai`, `ρq_sno`                                                                                                                               | —                                                                                                                    | no (`:153-162`)                   | measured, warm only (E32, E33)                                                                 |
+| 2M     | the same four. `ρq_icl` and `ρq_sno` are in the state (`prognostic_variables.jl:112-116`, `:144-149`) with no warm-rain sources (`microphysics/tendency.jl:206-209`) | `ρn_lcl`, `ρn_rai` sediment (`implicit_tendency.jl:284-293`) and carry no energy                                     | no (`:213-223`)                   | **disabled in the parent** on this branch (`precomputed_quantities.jl:160-167`); build-checked |
+| 2MP3   | the same four; `ρq_icl` includes the rime                                                                                                                            | `ρn_ice`, `ρq_rim`, `ρb_rim` sediment with the ice (`implicit_tendency.jl:305-315`) and carry no energy of their own | no (`:266-283`)                   | **disabled in the parent**, and broken behind that gate; see below                             |
 
 **2M and 2MP3 are switched off on this branch.** `precomputed_quantities`
 asserts that the microphysics is neither, "temporarily disabled: incompatible
@@ -303,12 +309,12 @@ first. The tags then need nothing beyond 2M.
     `check_water_tagging_supported` in pattern, called from `AtmosTagging`
     (`tracer_config.jl:876-883`) with the parsed `microphysics_model`,
     `turbconv`, `updraft_number` and `edmfx_vertical_diffusion`:
-      - dry, 0M, 1M and 2M: accepted;
-      - 2MP3: refused, naming the parent's gaps above, until D3 passes;
-      - `prognostic_edmfx`: refused (option A). Once B is in, only
+      + dry, 0M, 1M and 2M: accepted;
+      + 2MP3: refused, naming the parent's gaps above, until D3 passes;
+      + `prognostic_edmfx`: refused (option A). Once B is in, only
         `updraft_number` > 1 is refused, and `edmfx_vertical_diffusion: true`
         too unless B4 is in;
-      - `edonly_edmfx`: accepted, with a warning that its eddy diffusion moves
+      + `edonly_edmfx`: accepted, with a warning that its eddy diffusion moves
         the tags as tracers.
   - **M2. Exact label warnings.** Pass the microphysics model to
     `warn_inactive_energy_source_labels` and `warn_inactive_record_labels`.
@@ -428,19 +434,21 @@ the `.buildkite` environment and the terrabyte CPU depot. The scripts are
     its Jacobian were still compiling when the time limit ended it (exit 124).
     So `subgrid_light_check.jl` builds what `get_simulation` builds up to the cache, and
     calls single tendency functions on it.
+
   - **EDMF, the DYCOMS RF02 column** under 1M, with the shipped settings,
     `edmfx_vertical_diffusion: true` included. The model, the state and the
     cache build, the cache at 198 s. The updraft carries `ρa`, `mse`, `q_tot`,
     `q_lcl`, `q_icl`, `q_rai` and `q_sno`, and no tag field. With the offset,
     `E` is positive in every cell.
-      - **The SGS diffusive flux fails**, with
+
+      + **The SGS diffusive flux fails**, with
         `type NamedTuple has no field e_src_strat`. That is the lookup at
         `edmfx_sgs_flux.jl:406`, on the first grid-scale tracer the updraft
         does not carry. The water species before it pass, because the updraft
         carries them. So every shipped EDMF config fails with tags. The
         integrator would hit this in its first implicit evaluation, since
         `implicit_diffusion: true` puts the call in `implicit_tendency!`.
-      - **The SGS mass flux reaches no tag.** On a synthetic updraft (a tenth
+      + **The SGS mass flux reaches no tag.** On a synthetic updraft (a tenth
         of the area, rising, 1.5 kJ/kg warmer and 1 g/kg moister below 800 m,
         and 0.5 kJ/kg cooler above), `edmfx_sgs_mass_flux_tendency!` changes
         `E` by a summed absolute tendency of 11.5 W/m³ over the column's
@@ -451,34 +459,37 @@ the `.buildkite` environment and the terrabyte CPU depot. The scripts are
         "11.5 W/m² gross over the column, 0.60 of it the `c·ρ` part". The
         script sums over cells without a layer depth, and 0.60 is in the same
         unit, not a fraction.*
-      - **Sedimentation under EDMF does not close.** With rain in the grid mean
+      + **Sedimentation under EDMF does not close.** With rain in the grid mean
         and three times as much in the updraft between 300 and 900 m,
         `vertical_advection_of_water_tendency!` gives the partition a tendency
         that misses the parent's by 3.4e-3 of its largest value. Without EDMF
         the integration test holds the same comparison to 100 eps. The miss is
         the two corrections, which the tags do not share.
-      - The whole light check took 256 s.
+      + The whole light check took 256 s.
+
   - **1M, the cold column** (`PrecipitatingColumn`, 100 levels to 10 km, with
     the offset), at t = 0. It has cloud ice, snow, cloud liquid and rain, and
     `E` is positive in every cell. The whole check took 131 s.
-      - **The upward branch is real and universal for ice.** All 79 cells
+
+      + **The upward branch is real and universal for ice.** All 79 cells
         holding cloud ice and all 69 holding snow carry negative energy per
         kilogram, geopotential and offset included, down to −193 kJ/kg. None of
         the 55 liquid cells or the 50 rain cells does.
-      - **On a step partition at 6.5 km**, inside the ice layer,
+      + **On a step partition at 6.5 km**, inside the ice layer,
         sedimentation moves `lower` in the one cell above the step, and moves
         `upper` in no cell below it. So the step's face takes the lower cell's
         shares, which only the upward branch does.
-      - **Closure holds:** the partition's sedimentation tendency matches the
+      + **Closure holds:** the partition's sedimentation tendency matches the
         parent's to 5.7e-15 of its largest value, within 100 eps. On the step
         partition, 5.9e-15.
-      - Each species' own sedimentation adds up exactly to what `ρq_tot` is
+      + Each species' own sedimentation adds up exactly to what `ρq_tot` is
         moved by.
+
   - **2M and 2MP3, the same cold column.** The model and the state build. The
-    cache does not: `AssertionError: 2M and 2M+P3 microphysics are temporarily
-    disabled: incompatible with CloudMicrophysics 0.37 pending a fix.`
+    cache does not: `AssertionError: 2M and 2M+P3 microphysics are temporarily disabled: incompatible with CloudMicrophysics 0.37 pending a fix.`
     (`precomputed_quantities.jl:160-167`). This is the model's own gate, and
     the tags play no part in it. So the P3 gaps listed above were not reached.
+
   - **The six D configs validate.** `validate_d_configs.jl` applies the checks
     of `analysis/validate_configs.py`, with the D runs added to its three sets.
     Then it runs the model's own parsing on each: `AtmosConfig`,
@@ -489,19 +500,20 @@ the `.buildkite` environment and the terrabyte CPU depot. The scripts are
   - **1M, the cold column, stepped.** `subgrid_check_cold.jl 1M` builds the full
     simulation of the same 100-level column, in 246 s, and steps it six times
     at 10 s. It succeeds, with the repair on.
-      - `E` stays positive in every cell, and every tag stays non-negative.
-      - After the minute, sedimentation still closes to 1.6e-15, within 100
+
+      + `E` stays positive in every cell, and every tag stays non-negative.
+      + After the minute, sedimentation still closes to 1.6e-15, within 100
         eps. The 16 cells still holding cloud ice and the 17 holding snow all
         carry negative energy, so they still take the upward branch.
-      - Most of the initial ice is gone within that minute: 16 cells above
+      + Most of the initial ice is gone within that minute: 16 cells above
         1e-9 kg/kg against 79 at the start. Nothing falls through the 6.5 km
         step any more. The profile's air is below ice saturation there, so the
         ice sublimates rather than falls. D1's header says so. A case that
         keeps making ice, such as D5, tests the branch for longer.
-      - The closure residual after the minute is 1.8e-3 of `∫|E|`, gross. That
+      + The closure residual after the minute is 1.8e-3 of `∫|E|`, gross. That
         is the first-minute jump the series knows (E13, E25), not separated
         here.
-      - 38 ms per step on the login node, compile excluded.
+      + 38 ms per step on the login node, compile excluded.
 
 ## Decisions for the owner
 
@@ -556,8 +568,7 @@ that tree.
     (`:1050`, `:1121`, `:1218`).
   - **B1's face scratch field** goes into `_energy_source_scratch`
     (`energy_source_tags.jl:239-248`), which is merged into `p.scratch`.
-  - **B2's kernel** takes a cell value today: `sediment_energy_source_tags!(Yₜ,
-    Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ)` (`energy_source_tags.jl:827`), and forms the
+  - **B2's kernel** takes a cell value today: `sediment_energy_source_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ)` (`energy_source_tags.jl:827`), and forms the
     face flux with the grid mean's `ᶠρ` inside. The corrections use their own
     face densities, `ᶠinterp(ᶜρʲ J)/J` and `ᶠinterp(ᶜρ⁰ J)/J`
     (`water_advection.jl:168-184`). So B2 changes the kernel to take a face flux

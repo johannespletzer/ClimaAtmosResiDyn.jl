@@ -63,41 +63,41 @@ The series' short names, where an entry cites a run by name only. Jobs and
 commits are from `review/register/runs.csv`; phase A's worktrees had local
 changes, which [RUNS.md](RUNS.md) records.
 
-| name | run directories | jobs | commit |
-|:--|:--|:--|:--|
-| A1 | `a1_dt10`, `a1_dt5`, `a1_dt2p5`; control `a1_dt10_notags` | `27360483`, `27360484`, `27360496`; `27368035` | `3659746d`; `c7c00de9` |
-| A2 | `a2_none_dt{10,5,2p5}`, `a2_first_order_dt{10,5,2p5}` | `27360825` to `27360830` | `66d6dedc` |
-| A3 | `a3_1m`; companion `a3_0m_vert_diff` | `27361330`; `27369130` | `49b2ec97`; `af9cee7d` |
-| A4 | `a4_float32` | `27361268` | `49b2ec97` |
-| A5 | `a5_sphere_limiter`; pre-fix in `before_issue_64_fix/` | `27367905` | `8ed98b63`; pre-fix `49b2ec97` |
-| C0 | `c0_column`, `c0_sphere`, `c0_sphere_audit`, with its terrabyte reading in `terrabyte/` | `27361326`, `27361327`, `27369268` | `49b2ec97`, `bcbe190f` |
-| C1 | `c1_sphere_shift` | `13383684` | `72a1bc6a` |
-| C3 | `c3_column_record` | `27367733` | `1a9a419e` |
-| C4 | `c4_sphere_tag_offset`, `c4_sphere_tag_offset_2x` | `13384913`, `13384914` | `29430612` |
-| C5 | `c5_column_offset`, `c5_sphere_gray` | `13385401`, `13385402` | `bca389ba` |
-| C6 | `c6_column_repair`, `c6_column_no_repair`, `c6_sphere_repair`, `c6_sphere_no_repair`, `c6_sphere_first_order` | `13385450` to `13385454` | `f3bbdb7b` |
-| C7 | `c7_sphere_mp` | `13399601` | `414f5f1b` |
-| C8 | `c8_column_1m` | `13401744` | `c11d1d3b` |
-| C9 | `c9_column_enthalpy`, `c9_sphere_enthalpy` | `13402392`, `13402393` | `0bfb5037` |
-| C10 | `c10_sphere_enthalpy_repair` | `13403083` | `7dc0a302` |
+| name | run directories                                                                                               | jobs                                           | commit                         |
+|:---- |:------------------------------------------------------------------------------------------------------------- |:---------------------------------------------- |:------------------------------ |
+| A1   | `a1_dt10`, `a1_dt5`, `a1_dt2p5`; control `a1_dt10_notags`                                                     | `27360483`, `27360484`, `27360496`; `27368035` | `3659746d`; `c7c00de9`         |
+| A2   | `a2_none_dt{10,5,2p5}`, `a2_first_order_dt{10,5,2p5}`                                                         | `27360825` to `27360830`                       | `66d6dedc`                     |
+| A3   | `a3_1m`; companion `a3_0m_vert_diff`                                                                          | `27361330`; `27369130`                         | `49b2ec97`; `af9cee7d`         |
+| A4   | `a4_float32`                                                                                                  | `27361268`                                     | `49b2ec97`                     |
+| A5   | `a5_sphere_limiter`; pre-fix in `before_issue_64_fix/`                                                        | `27367905`                                     | `8ed98b63`; pre-fix `49b2ec97` |
+| C0   | `c0_column`, `c0_sphere`, `c0_sphere_audit`, with its terrabyte reading in `terrabyte/`                       | `27361326`, `27361327`, `27369268`             | `49b2ec97`, `bcbe190f`         |
+| C1   | `c1_sphere_shift`                                                                                             | `13383684`                                     | `72a1bc6a`                     |
+| C3   | `c3_column_record`                                                                                            | `27367733`                                     | `1a9a419e`                     |
+| C4   | `c4_sphere_tag_offset`, `c4_sphere_tag_offset_2x`                                                             | `13384913`, `13384914`                         | `29430612`                     |
+| C5   | `c5_column_offset`, `c5_sphere_gray`                                                                          | `13385401`, `13385402`                         | `bca389ba`                     |
+| C6   | `c6_column_repair`, `c6_column_no_repair`, `c6_sphere_repair`, `c6_sphere_no_repair`, `c6_sphere_first_order` | `13385450` to `13385454`                       | `f3bbdb7b`                     |
+| C7   | `c7_sphere_mp`                                                                                                | `13399601`                                     | `414f5f1b`                     |
+| C8   | `c8_column_1m`                                                                                                | `13401744`                                     | `c11d1d3b`                     |
+| C9   | `c9_column_enthalpy`, `c9_sphere_enthalpy`                                                                    | `13402392`, `13402393`                         | `0bfb5037`                     |
+| C10  | `c10_sphere_enthalpy_repair`                                                                                  | `13403083`                                     | `7dc0a302`                     |
 
 ## Index
 
-| IDs | section |
-|:--|:--|
-| W1–W14 | 1. Water tags |
-| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport |
-| E1–E6, E9b, E9c, E10–E19, E71, R1–R11 | 3. The energy reference and the offset |
-| E40, E53 | 4. EDMF and the updrafts |
-| E39, E39b, E43, E59, E61, E62, E64–E67 | 5. The implicit channel and the increment prototype |
-| E45, E47, E51, E54, E55, E57, E58 | 6. Parity, Float32, MPI and restarts |
-| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63 | 7. The process records and the per-process checks |
-| E50, E60, E69, E70, E74, E75 | 8. The sphere and long runs |
-| E68, E72, E73, E76 | 9. Mixing: V3 and the updraft gap |
-| T1–T10, E44, E44b–E44e, E52, E56 | 10. Cost |
-| M1–M6 | 11. Method |
-| old claims, errata, conflicts | 12. Superseded and falsified claims |
-| FQ-1 to FQ-24 | 13. What is not established |
+| IDs                                              | section                                             |
+|:------------------------------------------------ |:--------------------------------------------------- |
+| W1–W14                                           | 1. Water tags                                       |
+| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
+| E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
+| E40, E53                                         | 4. EDMF and the updrafts                            |
+| E39, E39b, E43, E59, E61, E62, E64–E67           | 5. The implicit channel and the increment prototype |
+| E45, E47, E51, E54, E55, E57, E58                | 6. Parity, Float32, MPI and restarts                |
+| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63     | 7. The process records and the per-process checks   |
+| E50, E60, E69, E70, E74, E75                     | 8. The sphere and long runs                         |
+| E68, E72, E73, E76                               | 9. Mixing: V3 and the updraft gap                   |
+| T1–T10, E44, E44b–E44e, E52, E56                 | 10. Cost                                            |
+| M1–M6                                            | 11. Method                                          |
+| old claims, errata, conflicts                    | 12. Superseded and falsified claims                 |
+| FQ-1 to FQ-24                                    | 13. What is not established                         |
 
 ## 1. Water tags
 
@@ -236,14 +236,14 @@ stops growing, and on the column form A closes to 7e-6 J kg⁻¹.** C9 is C6's
 column and C7's sphere with only the transport changed, repair off; `ta` is
 identical to the reference.
 
-| closure residual | tracer, the reference | enthalpy, C9 |
-|:--|--:|--:|
-| column, gross at 1 h, J m⁻² | 166,016 | 2,695 |
-| column, gross at 24 h, J m⁻² | 2,442,276 | 2,284 |
-| column, signed at 24 h, J m⁻² | −187,999 | +199 |
-| sphere, gross at 1 h, J | 1.30e21 | 2.54e20 |
-| sphere, gross at 24 h, J | 2.82e21 | 2.54e20 |
-| sphere, signed at 24 h, J | −2.82e19 | −1.16e17 |
+| closure residual              | tracer, the reference | enthalpy, C9 |
+|:----------------------------- | ---------------------:| ------------:|
+| column, gross at 1 h, J m⁻²   | 166,016               | 2,695        |
+| column, gross at 24 h, J m⁻²  | 2,442,276             | 2,284        |
+| column, signed at 24 h, J m⁻² | −187,999              | +199         |
+| sphere, gross at 1 h, J       | 1.30e21               | 2.54e20      |
+| sphere, gross at 24 h, J      | 2.82e21               | 2.54e20      |
+| sphere, signed at 24 h, J     | −2.82e19              | −1.16e17     |
 
 After the first hour the residual does not grow: at 24 h it is 1,069 times
 smaller on the column and 11 times on the sphere. What makes the first hour's residual is not
@@ -580,12 +580,12 @@ cause is the limiter on vertical energy transport, most but not all of it.**
 `run_c1_twin.jl` runs C1 with and without the shift in one process. The
 differences after one 400 s step, relative to each field's maximum:
 
-| both halves with | `ρ` | `ρq_tot` | `uₕ` | `u₃` |
-|:--|--:|--:|--:|--:|
-| C1's settings | 3.8e-5 | 7.8e-6 | 1.3e-4 | 3.5e-4 |
-| a converged Newton solve | 3.6e-5 | 7.4e-6 | 1.3e-4 | 4.1e-4 |
-| `energy_q_tot_upwinding: none` | 3.7e-8 | 5.7e-10 | 1.8e-7 | 4.7e-5 |
-| that, and no surface-flux tendency | 3.71e-8 | 4.4e-10 | 1.75e-7 | 4.67e-5 |
+| both halves with                   | `ρ`     | `ρq_tot` | `uₕ`    | `u₃`    |
+|:---------------------------------- | -------:| --------:| -------:| -------:|
+| C1's settings                      | 3.8e-5  | 7.8e-6   | 1.3e-4  | 3.5e-4  |
+| a converged Newton solve           | 3.6e-5  | 7.4e-6   | 1.3e-4  | 4.1e-4  |
+| `energy_q_tot_upwinding: none`     | 3.7e-8  | 5.7e-10  | 1.8e-7  | 4.7e-5  |
+| that, and no surface-flux tendency | 3.71e-8 | 4.4e-10  | 1.75e-7 | 4.67e-5 |
 
 So it is not the implicit solve. It is mostly the `T_post_imp!` hook
 (`implicit_tendency.jl:335-372`), whose van Leer limiter acts on `h_tot`, to
@@ -665,12 +665,12 @@ and stays near half a percent, and the records close the column's budget.**
 C1b's validation runs, from `fe69cd06`. D5 is TRMM LBA deep convection with ice,
 82 levels, for 6 h.
 
-| run | `relative` | `gross_residual`, J/m² | `gross_relative` | untagged / overclaimed, J/m² | form B gap, J/m² |
-|:-- | --:| --:| --:|:-- | --:|
-| `d4_column_edmf`, tracer | 9.2e-5 | 6.71e5 | 5.9e-3 | 3.41e5 / 3.30e5 | 0.49 of 8.9e5 |
-| `d4_column_edmf_enthalpy` | 3.7e-4 | 5.41e5 | 4.7e-3 | 2.92e5 / 2.50e5 | 0.49 of 8.9e5 |
-| `d4_column_edmf_vd`, the updrafts' diffusion on | 4.5e-4 | 6.83e5 | 6.0e-3 | 3.67e5 / 3.16e5 | 1.4 of 9.3e5 |
-| `d5_column_edmf_ice`, 6 h | -8.2e-7 | 2.76e6 | 3.1e-3 | 1.380e6 / 1.381e6 | -317 of 1.05e7 |
+| run                                             | `relative` | `gross_residual`, J/m² | `gross_relative` | untagged / overclaimed, J/m² | form B gap, J/m² |
+|:----------------------------------------------- | ----------:| ----------------------:| ----------------:|:---------------------------- | ----------------:|
+| `d4_column_edmf`, tracer                        | 9.2e-5     | 6.71e5                 | 5.9e-3           | 3.41e5 / 3.30e5              | 0.49 of 8.9e5    |
+| `d4_column_edmf_enthalpy`                       | 3.7e-4     | 5.41e5                 | 4.7e-3           | 2.92e5 / 2.50e5              | 0.49 of 8.9e5    |
+| `d4_column_edmf_vd`, the updrafts' diffusion on | 4.5e-4     | 6.83e5                 | 6.0e-3           | 3.67e5 / 3.16e5              | 1.4 of 9.3e5     |
+| `d5_column_edmf_ice`, 6 h                       | -8.2e-7    | 2.76e6                 | 3.1e-3           | 1.380e6 / 1.381e6            | -317 of 1.05e7   |
 
 Untagged and overclaimed are about equal, and nothing is orphaned: a transport
 mismatch, not a missing process. Form A's gap cancels in the column. `ta` and
@@ -699,13 +699,13 @@ section 2.
 **E39. The audit's first-hour residual and C8's form-B remainder are the
 one-iteration Newton increment.** A reviewer stepped C9's column:
 
-| variant | gross after the first step | gross at 1 h, J m⁻² |
-|:-- | --:| --:|
-| one Newton iteration, as run | 2,675 | 2,695 |
-| Newton converged (10 iterations, rtol 1e-10) | 25 | 20.5 |
-| no post-Newton upwind correction | 2,729 | 2,757 |
-| both | 7.8 | 13.1 |
-| a 5 s step | 2,169 at 5 s | 2,239 |
+| variant                                      | gross after the first step | gross at 1 h, J m⁻² |
+|:-------------------------------------------- | --------------------------:| -------------------:|
+| one Newton iteration, as run                 | 2,675                      | 2,695               |
+| Newton converged (10 iterations, rtol 1e-10) | 25                         | 20.5                |
+| no post-Newton upwind correction             | 2,729                      | 2,757               |
+| both                                         | 7.8                        | 13.1                |
+| a 5 s step                                   | 2,169 at 5 s               | 2,239               |
 
 98% of the first hour's residual is made in the first 10 s step, during the
 initial adjustment, and converging removes 99% of it. After the first hour the
@@ -731,12 +731,12 @@ is, is open (section 13). *Job `13408404` at `78586e39`;
 `analysis/c8_variants.jl`, C8's column in four variants; converged is 10
 iterations to rtol 1e-10.
 
-| variant | length | gross residual at the end, J m⁻² | form B at the end, J m⁻² | form A, largest, J kg⁻¹ |
-|:-- |:-- | --:| --:| --:|
-| tracer, one Newton iteration, as C8 ran | 1 h | 177,377 | −0.80 | 7.9e-3 |
-| tracer, converged | 1 h | 177,342 | −1.8e-4 | 7.9e-3 |
-| enthalpy, one Newton iteration | 24 h | 193 | −5.29 | 4.3e-7 |
-| enthalpy, converged | 24 h | 12.0 | −3.8e-3 | 2.8e-7 |
+| variant                                 | length | gross residual at the end, J m⁻² | form B at the end, J m⁻² | form A, largest, J kg⁻¹ |
+|:--------------------------------------- |:------ | --------------------------------:| ------------------------:| -----------------------:|
+| tracer, one Newton iteration, as C8 ran | 1 h    | 177,377                          | −0.80                    | 7.9e-3                  |
+| tracer, converged                       | 1 h    | 177,342                          | −1.8e-4                  | 7.9e-3                  |
+| enthalpy, one Newton iteration          | 24 h   | 193                              | −5.29                    | 4.3e-7                  |
+| enthalpy, converged                     | 24 h   | 12.0                             | −3.8e-3                  | 2.8e-7                  |
 
 So C8's form-A gap is the per-tag transport, and its form-B remainder the Newton
 lag. Under tracer transport a converged solve does not shrink the residual,
@@ -747,12 +747,12 @@ because pressure work makes it. *Job `13408403` at `78586e39`;
 larger, in all three placements.** D4 under `enthalpy` for a day, from four
 checkouts that differ only in C1c.
 
-| gross residual, J/m² | 1 h | 4 h | 12 h | 24 h | `gross_relative` at 24 h |
-|:-- | --:| --:| --:| --:| --:|
-| base, `main`: the tags diffuse as tracers | 1.68e5 | 3.27e5 | 4.61e5 | 6.32e5 | 5.5e-3 |
-| option 1: the share beside the parent, no Jacobian block | 1.98e5 | 9.29e5 | 3.25e6 | 6.71e6 | 5.9e-2 |
-| option 2: option 1 with the tracer-diffusion blocks kept | 5.05e4 | 2.26e5 | 6.49e5 | 1.18e6 | 1.0e-2 |
-| option 3: option 1 with the share in the explicit tendency | 5.67e4 | 2.52e5 | 7.90e5 | 1.46e6 | 1.3e-2 |
+| gross residual, J/m²                                       | 1 h    | 4 h    | 12 h   | 24 h   | `gross_relative` at 24 h |
+|:---------------------------------------------------------- | ------:| ------:| ------:| ------:| ------------------------:|
+| base, `main`: the tags diffuse as tracers                  | 1.68e5 | 3.27e5 | 4.61e5 | 6.32e5 | 5.5e-3                   |
+| option 1: the share beside the parent, no Jacobian block   | 1.98e5 | 9.29e5 | 3.25e6 | 6.71e6 | 5.9e-2                   |
+| option 2: option 1 with the tracer-diffusion blocks kept   | 5.05e4 | 2.26e5 | 6.49e5 | 1.18e6 | 1.0e-2                   |
+| option 3: option 1 with the share in the explicit tendency | 5.67e4 | 2.52e5 | 7.90e5 | 1.46e6 | 1.3e-2                   |
 
 C1c removes the form mismatch at first, then each option grows about linearly
 and passes the base after 4 to 6 hours. The parent's eddy diffusion is implicit
@@ -782,10 +782,10 @@ R5). *Job `13504771`, `hpda2_test`, 2026-09-19, from
 against 6.32e5, with the model bit for bit.** D4 under `enthalpy_increment`,
 the prototype at `35042f33`, against `c1c_base_d4_enthalpy` (E59).
 
-| gross residual, J/m² | 1 h | 4 h | 12 h | 24 h | `gross_relative` at 24 h |
-|:-- | --:| --:| --:| --:| --:|
-| base, `enthalpy` (E59) | 1.68e5 | 3.27e5 | 4.61e5 | 6.32e5 | 5.5e-3 |
-| prototype, `enthalpy_increment` | 92.8 | 112 | 192 | 267 | 2.4e-6 |
+| gross residual, J/m²            | 1 h    | 4 h    | 12 h   | 24 h   | `gross_relative` at 24 h |
+|:------------------------------- | ------:| ------:| ------:| ------:| ------------------------:|
+| base, `enthalpy` (E59)          | 1.68e5 | 3.27e5 | 4.61e5 | 6.32e5 | 5.5e-3                   |
+| prototype, `enthalpy_increment` | 92.8   | 112    | 192    | 267    | 2.4e-6                   |
 
 G1's criterion 1 is met: 37 times below the target of 1e4, and the second
 12 hours add 75 J/m² to the first's 192. The residual is zero-sum, −0.53 J/m²
@@ -801,12 +801,12 @@ totals, less what the loss rule flushes. No process the tags miss shows above
 1 J/m².** `g1_inc_d4` reruns E62 with the ledger and gives 266.942 J/m² at
 24 h, with `ta` and `rhoa` bit for bit. `other = e_src_res − e_src_inc_left`.
 
-| 24 h, J/m², signed (gross) | below 550 m | 550 to 800 m | above 800 m | column |
-|:-- | --:| --:| --:| --:|
-| residual `e_src_res` | +117.6 (143) | −97.8 (103) | −20.3 (20) | −0.5 (267) |
-| left in place by the correction | +117.8 (144) | −142.3 (148) | −21.0 (21) | −45.5 (313) |
-| other | −0.24 | +44.5 | +0.76 | +45.0 (46) |
-| the loss rule's flushing, predicted | −0.24 | +43.5 | +0.73 | +44.0 |
+| 24 h, J/m², signed (gross)          | below 550 m  | 550 to 800 m | above 800 m | column      |
+|:----------------------------------- | ------------:| ------------:| -----------:| -----------:|
+| residual `e_src_res`                | +117.6 (143) | −97.8 (103)  | −20.3 (20)  | −0.5 (267)  |
+| left in place by the correction     | +117.8 (144) | −142.3 (148) | −21.0 (21)  | −45.5 (313) |
+| other                               | −0.24        | +44.5        | +0.76       | +45.0 (46)  |
+| the loss rule's flushing, predicted | −0.24        | +43.5        | +0.73       | +44.0       |
 
 The column-total part, 313 J/m² gross, is what the correction cannot move within
 a column. With ten iterations to rtol 1e-8 (`g1_inc_newton_d4`) the whole
@@ -838,12 +838,12 @@ C1c's option 1 converged, every implicit flux shared at the tendency level by
 its donor. With ten fixed iterations, `g1_ref_newton10_d4` and
 `g1_inc_newton10_d4` have `ta` and `rhoa` bit for bit.
 
-| per tag at 24 h | `rad` | `sfc` | `sub` | `strat` | `tropo` | `new_strat` | `new_tropo` |
-|:-- | --:| --:| --:| --:| --:| --:| --:|
-| against the reference, L1 | 0.68 | 1.26 | 1.17 | 0.12 | 0.08 | 0.97 | 1.03 |
-| against the reference, integral | −3.2% | −2.4% | +18% | +3.4% | −2.5% | +12% | −2.0% |
-| one iteration against converged, at 1 h, L1 | 0.010 | 0.056 | 0.046 | 0.0011 | 0.0014 | 0.034 | 0.047 |
-| one iteration against converged, at 1 h, L∞ | 0.014 | 0.12 | 0.038 | 0.0051 | 0.0059 | 0.023 | 0.12 |
+| per tag at 24 h                             | `rad` | `sfc` | `sub` | `strat` | `tropo` | `new_strat` | `new_tropo` |
+|:------------------------------------------- | -----:| -----:| -----:| -------:| -------:| -----------:| -----------:|
+| against the reference, L1                   | 0.68  | 1.26  | 1.17  | 0.12    | 0.08    | 0.97        | 1.03        |
+| against the reference, integral             | −3.2% | −2.4% | +18%  | +3.4%   | −2.5%   | +12%        | −2.0%       |
+| one iteration against converged, at 1 h, L1 | 0.010 | 0.056 | 0.046 | 0.0011  | 0.0014  | 0.034       | 0.047       |
+| one iteration against converged, at 1 h, L∞ | 0.014 | 0.12  | 0.038 | 0.0051  | 0.0059  | 0.023       | 0.12        |
 
 The reference mixes no provenance where the net flux is small; the prototype's
 tags diffuse as tracers through the well-mixed boundary layer. So the first two
@@ -1037,12 +1037,12 @@ record 270.7. Nothing else changes. *C7, job `13399601` at `414f5f1b`;
 **E38. Form A's global integral separates a missing process from numerical
 noise. Its largest pointwise gap does not.**
 
-| run | largest gap / largest new energy | ∫ gap / ∫ new energy |
-|:-- | --:| --:|
-| C6, no `mp` tag | 7.0e-3 | 1.26e-3 |
-| C7, tracer | 9.5e-4 | 5.2e-5 |
-| C9, audit | 4.1e-3 | 4.7e-5 |
-| C10, audit with repair | 1.5e-2 | 6.0e-4 |
+| run                    | largest gap / largest new energy | ∫ gap / ∫ new energy |
+|:---------------------- | --------------------------------:| --------------------:|
+| C6, no `mp` tag        | 7.0e-3                           | 1.26e-3              |
+| C7, tracer             | 9.5e-4                           | 5.2e-5               |
+| C9, audit              | 4.1e-3                           | 4.7e-5               |
+| C10, audit with repair | 1.5e-2                           | 6.0e-4               |
 
 Transport errors cancel in the integral; a missing process does not. `mp`'s own
 integral is 1.21e-3, and the repair's created energy 5.8e-4. A check of labels
@@ -1056,16 +1056,16 @@ transport error moved. A process that no tag follows, and the repair, keep most
 of their sum.** The fraction kept is the absolute value of the gap's
 mass-weighted sums over its weighted gross; one means nothing cancels.
 
-| run, at 24 h | what makes the gap | kept over levels | kept over columns | kept overall | ∫ gap / ∫ new energy |
-|:-- |:-- | --:| --:| --:| --:|
-| C7, sphere, tracer | the per-tag limiter (E37) | 0.037 | 0.99 | 0.035 | 5.2e-5 |
-| C9, sphere, audit | the loss clamp, horizontally (E36) | 0.88 | 0.073 | 0.041 | 4.7e-5 |
-| C10, sphere, audit and repair | the repair's created energy (E38) | 0.92 | 0.93 | 0.23 | 6.0e-4 |
-| C6, sphere, no repair | the rain-out has no tag (E28) | 0.47 | 0.99 | 0.46 | 1.26e-3 |
-| C6, sphere, repair | the same, and the repair | 0.62 | 0.70 | 0.42 | 3.5e-3 |
-| C5, column, 0M | subsidence has no tag (E20) | 1.00 | — | 1.00 | 0.26 |
-| C8, column, 1M, tracer | not separated (E33); later, the per-tag transport (E43) | 0.011 | — | 0.011 | −1.5e-5 |
-| C9, column, audit | rounding (E34) | 0.066 | — | 0.066 | 2.6e-12 |
+| run, at 24 h                  | what makes the gap                                      | kept over levels | kept over columns | kept overall | ∫ gap / ∫ new energy |
+|:----------------------------- |:------------------------------------------------------- | ----------------:| -----------------:| ------------:| --------------------:|
+| C7, sphere, tracer            | the per-tag limiter (E37)                               | 0.037            | 0.99              | 0.035        | 5.2e-5               |
+| C9, sphere, audit             | the loss clamp, horizontally (E36)                      | 0.88             | 0.073             | 0.041        | 4.7e-5               |
+| C10, sphere, audit and repair | the repair's created energy (E38)                       | 0.92             | 0.93              | 0.23         | 6.0e-4               |
+| C6, sphere, no repair         | the rain-out has no tag (E28)                           | 0.47             | 0.99              | 0.46         | 1.26e-3              |
+| C6, sphere, repair            | the same, and the repair                                | 0.62             | 0.70              | 0.42         | 3.5e-3               |
+| C5, column, 0M                | subsidence has no tag (E20)                             | 1.00             | —                 | 1.00         | 0.26                 |
+| C8, column, 1M, tracer        | not separated (E33); later, the per-tag transport (E43) | 0.011            | —                 | 0.011        | −1.5e-5              |
+| C9, column, audit             | rounding (E34)                                          | 0.066            | —                 | 0.066        | 2.6e-12              |
 
 A transport error cancels along the way it moved. A process no tag follows, and
 the repair, keep their sums; the repair ledgers and the label check tell those
@@ -1096,11 +1096,11 @@ under 2026-09-18, "going through section 1", and so does DECISIONS.md.*
 
 | day | `relative` | `gross_relative` | `max \|e_tag_res\|`, J/kg | over `max \|e_tot\|` |
 | ---:| ----------:| ----------------:| -------------------------:| --------------------:|
-|   1 |    3.63e-5 |           0.0120 |                     4,093 |                0.037 |
-|   5 |    2.49e-4 |           0.0234 |                     7,324 |                0.067 |
-|   8 |    3.79e-4 |           0.0333 |                     9,282 |                0.085 |
-|   9 |    9.06e-4 |           0.0716 |                    27,483 |                0.252 |
-|  10 |    1.04e-3 |           0.0698 |                    17,278 |                0.159 |
+| 1   | 3.63e-5    | 0.0120           | 4,093                     | 0.037                |
+| 5   | 2.49e-4    | 0.0234           | 7,324                     | 0.067                |
+| 8   | 3.79e-4    | 0.0333           | 9,282                     | 0.085                |
+| 9   | 9.06e-4    | 0.0716           | 27,483                    | 0.252                |
+| 10  | 1.04e-3    | 0.0698           | 17,278                    | 0.159                |
 
 More than half of the gross comes in the 30 hours from day 8 to day 9.25, which
 fits the wave breaking; no run separates a cause. The docs' figure for a dry
@@ -1132,13 +1132,13 @@ physics on a sphere under the prototype: EDMF with the updrafts' vertical
 diffusion, implicit eddy diffusion, both sponges, a DCMIP200 mountain, 1M,
 Float32, 10 levels to 30 km, `dt` 20 s, 24 ranks.
 
-| top level (27 km), mean | 1 h | 2 h | 3 h | 6 h |
-|:--|--:|--:|--:|--:|
-| V2, one iteration | 216.2 K | 205.1 | 190.1 | 156.0, 18% at the floor |
-| without sponges | 216.2 | 205.1 | 190.1 | |
-| without the mountain | 215.5 | 203.1 | 188.7 | |
-| two iterations | 219.3 | 218.9 | | |
-| ten iterations (the twin) | 219.3 | 218.9 | 218.7 | 218.5 |
+| top level (27 km), mean   | 1 h     | 2 h   | 3 h   | 6 h                     |
+|:------------------------- | -------:| -----:| -----:| -----------------------:|
+| V2, one iteration         | 216.2 K | 205.1 | 190.1 | 156.0, 18% at the floor |
+| without sponges           | 216.2   | 205.1 | 190.1 |                         |
+| without the mountain      | 215.5   | 203.1 | 188.7 |                         |
+| two iterations            | 219.3   | 218.9 |       |                         |
+| ten iterations (the twin) | 219.3   | 218.9 | 218.7 | 218.5                   |
 
 The one-iteration solve alone makes the collapse; it is the model's own, since
 the tags feed back into nothing. The first V2 is kept as a record of the tags'
@@ -1184,12 +1184,12 @@ the source tags move by 10 to 19% over ten days.** `g2_v2_sphere_mix` is
 (E73), the fork's default. The closure is 2.003e-4 of the scale at ten days
 against 2.009e-4 without the mixing. Against that run, in L1:
 
-| L1 | 1 h | 24 h | 5 d | 10 d |
-|:--|--:|--:|--:|--:|
-| `sfc` | 0.27% | 4.9% | 10.0% | 12.1% |
-| `rad` | 0.108%, erratum below | 1.7% | 8.4% | 9.1% |
-| `new_extratropics` | 0.06% | 2.9% | 8.8% | 19.1% |
-| region tags | 1e-8 | 0.008% | 0.5% | 1.2 to 1.9% |
+| L1                 | 1 h                   | 24 h   | 5 d   | 10 d        |
+|:------------------ | ---------------------:| ------:| -----:| -----------:|
+| `sfc`              | 0.27%                 | 4.9%   | 10.0% | 12.1%       |
+| `rad`              | 0.108%, erratum below | 1.7%   | 8.4%  | 9.1%        |
+| `new_extratropics` | 0.06%                 | 2.9%   | 8.8%  | 19.1%       |
+| region tags        | 1e-8                  | 0.008% | 0.5%  | 1.2 to 1.9% |
 
 *Erratum, 2026-09-23 (H3): `rad` at 1 h is 0.108%, not 0.15% as first written
 (`output/g2_v2_sphere_mix/tags_vs_no_mixing.txt`, L1 1.08e-03). Every other
@@ -1234,11 +1234,11 @@ centroid by about as much as the tag itself rises.** UPDRAFT_GAP.md's estimate
 (`updraft_gap_estimate.jl`, reviewed) on days 1 to 9 of V2, with E69's caveat.
 It gives an initial rate, and its days cannot be added.
 
-| tropics | days 1 to 4 | days 5 to 9 |
-|:--|--:|--:|
-| updraft top, area mean | 1.8 to 2.6 km | 2.8 to 3.4 km |
+| tropics                                                      | days 1 to 4           | days 5 to 9            |
+|:------------------------------------------------------------ | ---------------------:| ----------------------:|
+| updraft top, area mean                                       | 1.8 to 2.6 km         | 2.8 to 3.4 km          |
 | `sfc` centroid rise from the gap, m a day, upwind to centred | 86 to 185, 158 to 507 | 137 to 261, 166 to 285 |
-| `sfc` centroid's actual change, m a day | 142 to 699 | 265 to 372 |
+| `sfc` centroid's actual change, m a day                      | 142 to 699            | 265 to 372             |
 
 So where the surface's energy sits in the vertical is uncertain at order one in
 convective regions. The column totals and the horizontal split are not affected.
@@ -1251,10 +1251,10 @@ the audit's updraft copies after a day, and within 3% after six hours.** Both
 modes ran a day on D4 with V3's tracer (`v3_upd_default`, `v3_upd_copies`); `ta`
 and `rhoa` are `g1_inc_d4`'s bit for bit.
 
-| L1 against the copies, `sfc` (region tags) | 1 h | 6 h | 12 h | 24 h |
-|:--|--:|--:|--:|--:|
-| no updraft mixing (V3, E68) | 61% (8.6%) | 71% (4.6%) | 33% (2.4%) | 14% (2.3%) |
-| the default exchange | 16% (0.14%) | 2.5% (0.42%) | 1.6% (0.09%) | 0.66% (0.07%) |
+| L1 against the copies, `sfc` (region tags) | 1 h         | 6 h          | 12 h         | 24 h          |
+|:------------------------------------------ | -----------:| ------------:| ------------:| -------------:|
+| no updraft mixing (V3, E68)                | 61% (8.6%)  | 71% (4.6%)   | 33% (2.4%)   | 14% (2.3%)    |
+| the default exchange                       | 16% (0.14%) | 2.5% (0.42%) | 1.6% (0.09%) | 0.66% (0.07%) |
 
 At 24 h every tag is within 0.7% in L1 and 2.5% at its largest point, which
 meets G1's criterion 4(b), L1 at most 2% and L∞ at most 5%, set by the owner on
@@ -1286,13 +1286,13 @@ updraft-copies run on one atmosphere, so each pair's difference is the
 exchange's error against the audit at that setting. `ta` and `rhoa` are bit for
 bit in every pair.
 
-| L1 against the copies | `sfc` 1 h | `sfc` 6 h | `sfc` 24 h | `strat` 24 h |
-|:--|--:|--:|--:|--:|
-| 120 s, 1 Newton, centred | 14.3% | 2.6% | 0.64% | 0.91% |
-| 60 s | 19.4% | 3.1% | 0.53% | 1.25% |
-| 30 s | 21.3% | 2.5% | 1.36% | 1.09% |
-| 2 Newton iterations | 15.5% | 2.2% | 0.88% | 1.13% |
-| first-order upwind | 14.7% | 11.0% | 6.5% | 0.22% |
+| L1 against the copies    | `sfc` 1 h | `sfc` 6 h | `sfc` 24 h | `strat` 24 h |
+|:------------------------ | ---------:| ---------:| ----------:| ------------:|
+| 120 s, 1 Newton, centred | 14.3%     | 2.6%      | 0.64%      | 0.91%        |
+| 60 s                     | 19.4%     | 3.1%      | 0.53%      | 1.25%        |
+| 30 s                     | 21.3%     | 2.5%      | 1.36%      | 1.09%        |
+| 2 Newton iterations      | 15.5%     | 2.2%      | 0.88%      | 1.13%        |
+| first-order upwind       | 14.7%     | 11.0%     | 6.5%       | 0.22%        |
 
 At 24 h every tag is within 1.6% in L1 and 2.6% at its largest point, at every
 time step and Newton count. That meets G1's criterion 4b (L1 ≤ 2%, L∞ ≤ 5%) with
@@ -1505,56 +1505,56 @@ inconsistencies, found while condensing, are the rows of `conflicts.csv` marked
 H4-B. They are not settled: the entries stand as recorded until G4's full
 re-check (G4_TODO.md).
 
-| old claim | what replaced it | where |
-|:--|:--|:--|
-| The operator residual's sign, as first written in the plan. | Corrected by 20,000 randomised states, verified independently. | [archive](archive/2026-09-23/FINDINGS.md), §6 |
-| The #64 mechanism as the docstring's precondition failing, with `water_tag_rescale_ratio` unclamped above (LEARNINGS:A5:1). | The multiplicative rescale scales the error whether or not the precondition holds. | W7 |
-| W7's citation `tagged_water.jl:800`. | Pre-fix lines about 695-741; today's docstring near 814. Erratum 2026-09-23. | W7 |
-| A3 alone as evidence about 1M: 9.844e-8 against A1's 2.844e-6 (LEARNINGS:A3:1). | Two keys moved; vertical diffusion is 27× of the 29×. | W5 |
-| Phase B gated on A5's divergence. | `b1_base` has no limiter, and the energy family no rescale and no partition repair. | E50 |
-| E2's negative source tag as a product of the inert donor rule; C1's expectation that a positive parent keeps the tags non-negative. | With the loss running everywhere the tag reaches −219.9 J kg⁻¹ and the region tags go negative. | E14 |
-| The −100 kJ kg⁻¹ offset as an initialisation error. | A convention. | R2 |
-| An "effective reference near 381 K". | An artifact of reading the gap as a temperature in the wrong convention. | R1, R2 |
-| A factor of 2.5 for the `T_0` shift, in the wrong direction. | `γ` = 1.4 the other way. | R4 |
-| `cv_d` in the moisture coefficient. | `cp_d` on the dry part. | R9 |
-| R9's `c(q) = q_d·cp_d + q_v·cp_v + q_l·cp_l + q_i·cp_i`, 1021.6 at `q_tot` = 0.02, spread 1.7%. | `(1 − q_tot)·cp_d + q_tot·cp_l`, 1068.0, spread 6.3%; the error was on the safe side. | R9 |
-| R9's "the largest `c(q)` sits in the warm moist low levels, which are the most negative". | The most negative cells are cold and dry. | R9 |
-| `T_0`, `T_triple` and `T_freeze` "all 273.16". | `T_freeze` is 273.15. | [archive](archive/2026-09-23/FINDINGS.md), §6 |
-| The acceptance test in the C1 TOML's header. | It could not run, and never read the file. | R8 |
-| "The shift grows `∫\|ρe_tot\|` about 2.2×". | 2.84× at t = 0 and 2.85× at 24 h. | E15, R11 |
-| That the only alternative to shifting the model's reference was shifting the share's denominator. | Rebasing the tags onto the shifted total, the offset, leaves the model alone. | R10, E17 |
-| The one-iteration implicit solve as the cause of E16. | Converged, `ρ`'s one-step difference is 3.6e-5 against 3.8e-5. | E16 |
-| The limiter as all of E16. | Off, it brought `ρ` from 3.6e-5 to 3.7e-8, not to rounding. | E16 |
-| The surface-flux code path as the rest of E16. | Off as well, `ρ`'s difference stays 3.71e-8. | E16 |
-| "A source tag went negative", naming `extratropics`. | `phase_c.jl` called a region tag a source tag. | M5 |
-| `.out` for the timing figures. | They are in `.err`. | M4 |
-| An estimate at each step's start as enough to screen the operators. | Over the first ten minutes it missed by more than the change, 346,100 against 142,700 J m⁻²; after them by 1.4%. | E25 |
-| Evaluating the tendencies on the run's own cache between steps as harmless. | It changed the run; the script now uses a second simulation. | E25, E31 |
-| E20's reading of the sphere's gap as the per-tag limiter or the share clamp. | The rain-out's production; then the per-tag limiter. | E28, E30, E37 |
-| E20 and E23: the column's 17,954 J kg⁻¹ gap and 1.37 MJ m⁻² unrecorded. | Subsidence and the rain-out, to the joule; form A 60.7 with them listed. | E26 |
-| E28: a 149 J kg⁻¹ sphere gap with no tag for it. | An `mp` tag closes it to 20.2. | E30 |
-| E34's reading of the audit's first-hour residual as the initial adjustment. | The one-iteration Newton increment. | E39, E39b |
-| E32's +196 J m⁻² as possibly the tags' missing Jacobian block. | The loss rule; the block's lag is −7.8 J m⁻². | E39 |
-| E33's open points: form A 117 J kg⁻¹ and form B −5.3 J m⁻². | The per-tag transport, and the Newton lag. | E43 |
-| That under the audit the tags follow the parent's vertical flux at the stage state. | At the solved stage state; the parent's side is the one-iteration increment. | E39 |
-| That the repair would bring the audit's sphere form A back to C7's 20 J kg⁻¹. | 274 J kg⁻¹ with the repair. | E35 |
-| E35 as first written: form A "with the repair's ledgers taken back out" is 54.9 J kg⁻¹, so the clamp is at most part of C9's gap. | The ledgers are not transported; off by up to 22.0 J kg⁻¹ against C9, 219 under tracer transport. Corrected 2026-09-11. | E35 |
-| LEARNINGS, C9's carry-over: read form A with the repair on. | C10's entry: read it as a global integral, and without the repair. | E38 |
-| That `ρ` is not hyperdiffused, so the offset adds nothing to the audit's hyperdiffusion. | `hyperdiffusion.jl:495-497` takes the water flux out of `ρ`; fixed in #72, `7a290c98`, 2026-09-11. | archive/2026-09-23/ENTHALPY_AUDIT_DESIGN.md |
-| That vertical diffusion makes D1's gross residual, and cannot be told apart from the upward branch (E42). | The twin without it has the same gross, 2.350e6 against 2.370e6 J m⁻²; the branch lifts a fifth. | E42b |
-| That the tag code's recursion makes the EDMF build slow (E44c's candidate). | ClimaCore's Jacobian solver. | E44d |
-| That solving the tags in a group of their own removes the growth. | The prototype took as long. | E44d |
-| E52: the fork builds the EDMF column in 635 s where upstream takes 249 s. | The whole build takes the same time. | E56 |
-| E53's 5.41e5 J/m² and E59's base, 6.32e5, as one D4 baseline. | 17% apart, since E53 ran before #89 with ClimaCore 0.16 and upstream v0.42.9. Not interchangeable. | E59 |
-| C1c, the SGS diffusive flux under the audit (decision 6 of 2026-09-18). | Each placement makes D4's residual larger; shelved. | E59, E61, E62 |
-| An estimate given to the owner: misplaced energy levels off at 0.5 to 5% of `E` within weeks. | It does not hold. | E60 |
-| E68's premise that `ψ − q_gas_A` is the updraft gap alone; a lasting error of about 3 points of share in the boundary layer, the tags taking in about a third less of the entrained air. | Attribution by mask adds to it; the gap alone is 0.3 points at 6 h and 1.3 at 24 h. Erratum 2026-09-19. | E68, E73 |
-| E69's third point: the sphere's residual is the explicit processes the tags do not follow, and Float32. | Float32 rounding alone. Erratum 2026-09-19. | E70 |
-| The old to-do list's plan to compare V2's one-iteration run with `g2_v2_sphere_newton10`. | The atmospheres differ by 4 K at 1 h; `g2_v2_sphere_n2` is the run to compare. | E69, E74 |
-| E73's cost: the copies double the tendency build, 789 s against 402 s. | A smoke test's numbers; the D4 runs took 3504.1 s against 600.3 s. Erratum 2026-09-23. | E73 |
-| E75: `rad` L1 at 1 h is 0.15%. | 0.108%. Erratum 2026-09-23. | E75 |
-| The updraft-gap-bound script's headline: 15 to 30% a day of the tropical surface tags, elsewhere under 4%. | Under the centred reconstruction 46% and 27% for `sfc`, and 9 to 51% elsewhere. | review/agent_reviews/updraft_gap_bound/review.md; E72 |
-| That `dd06318f`'s fixes "change no simulation results". | With an explicit species list the fork runs `enforce_mass_energy_consistency!`, which upstream `v0.42.9` skips. Read from the code, not run; a named parity exception (decision 12). | [DECISIONS.md](DECISIONS.md) |
+| old claim                                                                                                                                                                                | what replaced it                                                                                                                                                                     | where                                                 |
+|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |:----------------------------------------------------- |
+| The operator residual's sign, as first written in the plan.                                                                                                                              | Corrected by 20,000 randomised states, verified independently.                                                                                                                       | [archive](archive/2026-09-23/FINDINGS.md), §6         |
+| The #64 mechanism as the docstring's precondition failing, with `water_tag_rescale_ratio` unclamped above (LEARNINGS:A5:1).                                                              | The multiplicative rescale scales the error whether or not the precondition holds.                                                                                                   | W7                                                    |
+| W7's citation `tagged_water.jl:800`.                                                                                                                                                     | Pre-fix lines about 695-741; today's docstring near 814. Erratum 2026-09-23.                                                                                                         | W7                                                    |
+| A3 alone as evidence about 1M: 9.844e-8 against A1's 2.844e-6 (LEARNINGS:A3:1).                                                                                                          | Two keys moved; vertical diffusion is 27× of the 29×.                                                                                                                                | W5                                                    |
+| Phase B gated on A5's divergence.                                                                                                                                                        | `b1_base` has no limiter, and the energy family no rescale and no partition repair.                                                                                                  | E50                                                   |
+| E2's negative source tag as a product of the inert donor rule; C1's expectation that a positive parent keeps the tags non-negative.                                                      | With the loss running everywhere the tag reaches −219.9 J kg⁻¹ and the region tags go negative.                                                                                      | E14                                                   |
+| The −100 kJ kg⁻¹ offset as an initialisation error.                                                                                                                                      | A convention.                                                                                                                                                                        | R2                                                    |
+| An "effective reference near 381 K".                                                                                                                                                     | An artifact of reading the gap as a temperature in the wrong convention.                                                                                                             | R1, R2                                                |
+| A factor of 2.5 for the `T_0` shift, in the wrong direction.                                                                                                                             | `γ` = 1.4 the other way.                                                                                                                                                             | R4                                                    |
+| `cv_d` in the moisture coefficient.                                                                                                                                                      | `cp_d` on the dry part.                                                                                                                                                              | R9                                                    |
+| R9's `c(q) = q_d·cp_d + q_v·cp_v + q_l·cp_l + q_i·cp_i`, 1021.6 at `q_tot` = 0.02, spread 1.7%.                                                                                          | `(1 − q_tot)·cp_d + q_tot·cp_l`, 1068.0, spread 6.3%; the error was on the safe side.                                                                                                | R9                                                    |
+| R9's "the largest `c(q)` sits in the warm moist low levels, which are the most negative".                                                                                                | The most negative cells are cold and dry.                                                                                                                                            | R9                                                    |
+| `T_0`, `T_triple` and `T_freeze` "all 273.16".                                                                                                                                           | `T_freeze` is 273.15.                                                                                                                                                                | [archive](archive/2026-09-23/FINDINGS.md), §6         |
+| The acceptance test in the C1 TOML's header.                                                                                                                                             | It could not run, and never read the file.                                                                                                                                           | R8                                                    |
+| "The shift grows `∫\|ρe_tot\|` about 2.2×".                                                                                                                                              | 2.84× at t = 0 and 2.85× at 24 h.                                                                                                                                                    | E15, R11                                              |
+| That the only alternative to shifting the model's reference was shifting the share's denominator.                                                                                        | Rebasing the tags onto the shifted total, the offset, leaves the model alone.                                                                                                        | R10, E17                                              |
+| The one-iteration implicit solve as the cause of E16.                                                                                                                                    | Converged, `ρ`'s one-step difference is 3.6e-5 against 3.8e-5.                                                                                                                       | E16                                                   |
+| The limiter as all of E16.                                                                                                                                                               | Off, it brought `ρ` from 3.6e-5 to 3.7e-8, not to rounding.                                                                                                                          | E16                                                   |
+| The surface-flux code path as the rest of E16.                                                                                                                                           | Off as well, `ρ`'s difference stays 3.71e-8.                                                                                                                                         | E16                                                   |
+| "A source tag went negative", naming `extratropics`.                                                                                                                                     | `phase_c.jl` called a region tag a source tag.                                                                                                                                       | M5                                                    |
+| `.out` for the timing figures.                                                                                                                                                           | They are in `.err`.                                                                                                                                                                  | M4                                                    |
+| An estimate at each step's start as enough to screen the operators.                                                                                                                      | Over the first ten minutes it missed by more than the change, 346,100 against 142,700 J m⁻²; after them by 1.4%.                                                                     | E25                                                   |
+| Evaluating the tendencies on the run's own cache between steps as harmless.                                                                                                              | It changed the run; the script now uses a second simulation.                                                                                                                         | E25, E31                                              |
+| E20's reading of the sphere's gap as the per-tag limiter or the share clamp.                                                                                                             | The rain-out's production; then the per-tag limiter.                                                                                                                                 | E28, E30, E37                                         |
+| E20 and E23: the column's 17,954 J kg⁻¹ gap and 1.37 MJ m⁻² unrecorded.                                                                                                                  | Subsidence and the rain-out, to the joule; form A 60.7 with them listed.                                                                                                             | E26                                                   |
+| E28: a 149 J kg⁻¹ sphere gap with no tag for it.                                                                                                                                         | An `mp` tag closes it to 20.2.                                                                                                                                                       | E30                                                   |
+| E34's reading of the audit's first-hour residual as the initial adjustment.                                                                                                              | The one-iteration Newton increment.                                                                                                                                                  | E39, E39b                                             |
+| E32's +196 J m⁻² as possibly the tags' missing Jacobian block.                                                                                                                           | The loss rule; the block's lag is −7.8 J m⁻².                                                                                                                                        | E39                                                   |
+| E33's open points: form A 117 J kg⁻¹ and form B −5.3 J m⁻².                                                                                                                              | The per-tag transport, and the Newton lag.                                                                                                                                           | E43                                                   |
+| That under the audit the tags follow the parent's vertical flux at the stage state.                                                                                                      | At the solved stage state; the parent's side is the one-iteration increment.                                                                                                         | E39                                                   |
+| That the repair would bring the audit's sphere form A back to C7's 20 J kg⁻¹.                                                                                                            | 274 J kg⁻¹ with the repair.                                                                                                                                                          | E35                                                   |
+| E35 as first written: form A "with the repair's ledgers taken back out" is 54.9 J kg⁻¹, so the clamp is at most part of C9's gap.                                                        | The ledgers are not transported; off by up to 22.0 J kg⁻¹ against C9, 219 under tracer transport. Corrected 2026-09-11.                                                              | E35                                                   |
+| LEARNINGS, C9's carry-over: read form A with the repair on.                                                                                                                              | C10's entry: read it as a global integral, and without the repair.                                                                                                                   | E38                                                   |
+| That `ρ` is not hyperdiffused, so the offset adds nothing to the audit's hyperdiffusion.                                                                                                 | `hyperdiffusion.jl:495-497` takes the water flux out of `ρ`; fixed in #72, `7a290c98`, 2026-09-11.                                                                                   | archive/2026-09-23/ENTHALPY_AUDIT_DESIGN.md           |
+| That vertical diffusion makes D1's gross residual, and cannot be told apart from the upward branch (E42).                                                                                | The twin without it has the same gross, 2.350e6 against 2.370e6 J m⁻²; the branch lifts a fifth.                                                                                     | E42b                                                  |
+| That the tag code's recursion makes the EDMF build slow (E44c's candidate).                                                                                                              | ClimaCore's Jacobian solver.                                                                                                                                                         | E44d                                                  |
+| That solving the tags in a group of their own removes the growth.                                                                                                                        | The prototype took as long.                                                                                                                                                          | E44d                                                  |
+| E52: the fork builds the EDMF column in 635 s where upstream takes 249 s.                                                                                                                | The whole build takes the same time.                                                                                                                                                 | E56                                                   |
+| E53's 5.41e5 J/m² and E59's base, 6.32e5, as one D4 baseline.                                                                                                                            | 17% apart, since E53 ran before #89 with ClimaCore 0.16 and upstream v0.42.9. Not interchangeable.                                                                                   | E59                                                   |
+| C1c, the SGS diffusive flux under the audit (decision 6 of 2026-09-18).                                                                                                                  | Each placement makes D4's residual larger; shelved.                                                                                                                                  | E59, E61, E62                                         |
+| An estimate given to the owner: misplaced energy levels off at 0.5 to 5% of `E` within weeks.                                                                                            | It does not hold.                                                                                                                                                                    | E60                                                   |
+| E68's premise that `ψ − q_gas_A` is the updraft gap alone; a lasting error of about 3 points of share in the boundary layer, the tags taking in about a third less of the entrained air. | Attribution by mask adds to it; the gap alone is 0.3 points at 6 h and 1.3 at 24 h. Erratum 2026-09-19.                                                                              | E68, E73                                              |
+| E69's third point: the sphere's residual is the explicit processes the tags do not follow, and Float32.                                                                                  | Float32 rounding alone. Erratum 2026-09-19.                                                                                                                                          | E70                                                   |
+| The old to-do list's plan to compare V2's one-iteration run with `g2_v2_sphere_newton10`.                                                                                                | The atmospheres differ by 4 K at 1 h; `g2_v2_sphere_n2` is the run to compare.                                                                                                       | E69, E74                                              |
+| E73's cost: the copies double the tendency build, 789 s against 402 s.                                                                                                                   | A smoke test's numbers; the D4 runs took 3504.1 s against 600.3 s. Erratum 2026-09-23.                                                                                               | E73                                                   |
+| E75: `rad` L1 at 1 h is 0.15%.                                                                                                                                                           | 0.108%. Erratum 2026-09-23.                                                                                                                                                          | E75                                                   |
+| The updraft-gap-bound script's headline: 15 to 30% a day of the tropical surface tags, elsewhere under 4%.                                                                               | Under the centred reconstruction 46% and 27% for `sfc`, and 9 to 51% elsewhere.                                                                                                      | review/agent_reviews/updraft_gap_bound/review.md; E72 |
+| That `dd06318f`'s fixes "change no simulation results".                                                                                                                                  | With an explicit species list the fork runs `enforce_mass_energy_consistency!`, which upstream `v0.42.9` skips. Read from the code, not run; a named parity exception (decision 12). | [DECISIONS.md](DECISIONS.md)                          |
 
 ## 13. What is not established
 
@@ -1562,22 +1562,22 @@ The open questions of the old section 7, with the IDs of
 `review/register/items.csv` and where each is tracked now. Other bounds stay in
 their entries as "not separated".
 
-| ID | open question | tracked in |
-|:--|:--|:--|
-| FQ-3 | What starts E16's remainder once the limiter is off: 3.7e-8 in `ρ` after one step, 5.8e-6 by 5 h. | [BACKLOG.md](BACKLOG.md) |
-| FQ-4 | Why a tag goes negative under a positive parent (E14). | BACKLOG |
-| FQ-5 | What makes the residual's first-minute jump (E13, E25). | BACKLOG |
-| FQ-6 | Why C5's radiation tag outgrows C3's after four hours (E24). | BACKLOG |
-| FQ-10 | How much provenance the upward branch moves where ice persists (D1: a fifth, E42b). | G4_TODO G4.11 |
-| FQ-11 | What makes D1's zero-sum gross residual (E42, E42b). | [G4_TODO.md](G4_TODO.md) G4.6 |
-| FQ-13 | 2M and P3, behind the model's gate (E41). | BACKLOG (upstream gate) |
-| FQ-15 | Whether the audit's transport clamp is all of its sphere form-A gap (E36). | [G4_TODO.md](G4_TODO.md), "Energy items within M1 to M5" |
-| FQ-17 | What the sphere's converged 17% is (E39b). | [G4_TODO.md](G4_TODO.md) G4.6 |
-| FQ-21 | Float32 beyond a day, under the audit, with 1M, on a GPU (E45). | [G4_TODO.md](G4_TODO.md), "Items that G3 takes up" (G3_TODO V-W7 for water) |
-| FQ-22 | Whether 1M changes the water residual on a sphere (W5b). | [G4_TODO.md](G4_TODO.md), "Items that G3 takes up" (G3_TODO) |
-| FQ-23 | The tag cost on a GPU, and under EDMF (T4, T9). | BACKLOG (M6); G3_TODO WP9 |
-| FQ-24 | R11's suppression cost over long runs (E19). | G4_TODO G4.10 |
-| LEARNINGS:A2:1 | Why the linear water ladders are sub-first-order (W1). | BACKLOG, "M0 to M5, not energy-specific" |
+| ID             | open question                                                                                     | tracked in                                                                  |
+|:-------------- |:------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------- |
+| FQ-3           | What starts E16's remainder once the limiter is off: 3.7e-8 in `ρ` after one step, 5.8e-6 by 5 h. | [BACKLOG.md](BACKLOG.md)                                                    |
+| FQ-4           | Why a tag goes negative under a positive parent (E14).                                            | BACKLOG                                                                     |
+| FQ-5           | What makes the residual's first-minute jump (E13, E25).                                           | BACKLOG                                                                     |
+| FQ-6           | Why C5's radiation tag outgrows C3's after four hours (E24).                                      | BACKLOG                                                                     |
+| FQ-10          | How much provenance the upward branch moves where ice persists (D1: a fifth, E42b).               | G4_TODO G4.11                                                               |
+| FQ-11          | What makes D1's zero-sum gross residual (E42, E42b).                                              | [G4_TODO.md](G4_TODO.md) G4.6                                               |
+| FQ-13          | 2M and P3, behind the model's gate (E41).                                                         | BACKLOG (upstream gate)                                                     |
+| FQ-15          | Whether the audit's transport clamp is all of its sphere form-A gap (E36).                        | [G4_TODO.md](G4_TODO.md), "Energy items within M1 to M5"                    |
+| FQ-17          | What the sphere's converged 17% is (E39b).                                                        | [G4_TODO.md](G4_TODO.md) G4.6                                               |
+| FQ-21          | Float32 beyond a day, under the audit, with 1M, on a GPU (E45).                                   | [G4_TODO.md](G4_TODO.md), "Items that G3 takes up" (G3_TODO V-W7 for water) |
+| FQ-22          | Whether 1M changes the water residual on a sphere (W5b).                                          | [G4_TODO.md](G4_TODO.md), "Items that G3 takes up" (G3_TODO)                |
+| FQ-23          | The tag cost on a GPU, and under EDMF (T4, T9).                                                   | BACKLOG (M6); G3_TODO WP9                                                   |
+| FQ-24          | R11's suppression cost over long runs (E19).                                                      | G4_TODO G4.10                                                               |
+| LEARNINGS:A2:1 | Why the linear water ladders are sub-first-order (W1).                                            | BACKLOG, "M0 to M5, not energy-specific"                                    |
 
 Settled, and struck in the original: FQ-1 (E9b), FQ-2 (R8), FQ-7 (E28, E30),
 FQ-8 (E37), FQ-9 (E39), FQ-12 (E53), FQ-14 (E43), FQ-16 (E39, E39b), FQ-18

@@ -43,7 +43,13 @@ diffusion_models = (
     ),
 )
 
-function column_simulation(; vertical_diffusion, max_iters, approximate_solve_iters, dt, grid)
+function column_simulation(;
+    vertical_diffusion,
+    max_iters,
+    approximate_solve_iters,
+    dt,
+    grid,
+)
     return CA.AtmosSimulation{FT}(;
         model = CA.AtmosModel(; vertical_diffusion, diff_mode = CA.Implicit()),
         grid,
@@ -82,6 +88,7 @@ grids = (
 for (gname, grid) in pairs(grids),
     (name, vertical_diffusion) in pairs(diffusion_models),
     dt in (60, 600)
+
     for (max_iters, approximate_solve_iters) in ((1, 1), (3, 1), (1, 2))
         label = "$gname $name dt=$dt newton=$max_iters approx=$approximate_solve_iters"
         try

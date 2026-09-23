@@ -195,7 +195,8 @@ for (name, config) in configs
     CA.remaining_tendency!(Yₜ_remaining, Yₜ_lim, Y, p, t)
     # Every component of the state, not only `c` and `f`, so that a surface
     # state such as `Y.sfc` is compared as well.
-    arrays(x) = (; (name => copy(parent(getproperty(x, name))) for name in propertynames(x))...)
+    arrays(x) =
+        (; (name => copy(parent(getproperty(x, name))) for name in propertynames(x))...)
     state = arrays(Y)
     tendencies = (;
         implicit = arrays(Yₜ_implicit),
@@ -206,7 +207,10 @@ for (name, config) in configs
     for (label, group) in pairs((; state, tendencies...)), (key, a) in pairs(group)
         all(isfinite, a) || error("$name: $label.$key holds a NaN or an Inf")
     end
-    manifest = joinpath(dirname(Base.active_project()), "Manifest-v$(VERSION.major).$(VERSION.minor).toml")
+    manifest = joinpath(
+        dirname(Base.active_project()),
+        "Manifest-v$(VERSION.major).$(VERSION.minor).toml",
+    )
     serialize(
         joinpath(out, "$name.jls"),
         (;
@@ -220,7 +224,8 @@ for (name, config) in configs
                 cpu = Sys.cpu_info()[1].model,
                 climaatmos = pkgdir(CA),
                 commit = get(ENV, "PARITY_COMMIT", "unknown"),
-                manifest_sha1 = isfile(manifest) ? bytes2hex(SHA.sha1(read(manifest))) : "none",
+                manifest_sha1 = isfile(manifest) ? bytes2hex(SHA.sha1(read(manifest))) :
+                                "none",
             ),
         ),
     )

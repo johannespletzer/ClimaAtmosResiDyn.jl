@@ -36,7 +36,7 @@ const NEWTON = Dict{String, Any}(
 const CENTRAL = Dict{String, Any}("energy_q_tot_upwinding" => "none")
 const VARIANTS = [
     ("base", Dict{String, Any}()),
-    ("newton", NEWTON),]
+    ("newton", NEWTON)]
 
 function simulation(name, overrides)
     config = CA.load_yaml_file(BASE)
