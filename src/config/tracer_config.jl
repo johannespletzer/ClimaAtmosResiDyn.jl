@@ -806,14 +806,58 @@ These are starting points, not derived numbers. Read the first run's closure
 table and set a tolerance that sits above the level your configuration settles
 at, so that the warning means something changed.
 
-The energy source tags have no default tolerance, so their check never warns
-about the residual.
-It is on by default with the tags, and a fixed level would warn in every run:
-their residual depends on the transport and the configuration, and no tolerance
-has been calibrated for either yet. Set `tolerance` in the block to warn.
+The energy source tags take their default from
+[`ENERGY_SOURCE_CLOSURE_TOLERANCES`](@ref) instead, one level per transport,
+because their residual depends on how the tags move. The entry here is
+`nothing` so that nothing reads a single level for them.
 """
 const DEFAULT_CLOSURE_TOLERANCES =
     (; water = 1.0e-10, energy = 1.0e-6, energy_source = nothing)
+
+"""
+    ENERGY_SOURCE_CLOSURE_TOLERANCES
+
+Default `tolerance` of the energy source tags' closure check, one per
+`energy_source_tag_transport`. The check compares them against
+`gross_relative`, the partition's residual over the total it partitions.
+
+They are runaway guards, not fine thresholds. Each sits above the largest value
+measured in a healthy run of that transport, over the 59 runs of the
+tag-closure experiments, but not by the same margin: 7.1 times for `tracer`,
+1.7 for `enthalpy` and 50 for `enthalpy_increment`. The `enthalpy` margin is
+the thinnest because its largest run, a rebuilt sub-grid diffusion that was
+later shelved, sat far above its own typical level.
+
+| transport            | typical | largest measured                        | default |
+|:-------------------- | -------:| ---------------------------------------:| -------:|
+| `tracer`             | 6e-3    | 1.4e-1                                  | 1.0     |
+| `enthalpy`           | 5e-3    | 5.9e-2                                  | 0.1     |
+| `enthalpy_increment` | 3e-6    | 2.0e-4 (ten days, Float32, on a sphere) | 0.01    |
+
+The residual grows with the length of a run, so a level that suits a day is too
+tight for a season. These warn only when the tags hold energy that is far from
+what the parent has, which is what a broken run looks like. Read your own first
+run's closure table and set `tolerance` in the block to something tighter that
+means "this configuration changed".
+
+The normalization's zero is a convention, so a level tuned under one energy
+reference means something else under another.
+"""
+const ENERGY_SOURCE_CLOSURE_TOLERANCES =
+    (; tracer = 1.0, enthalpy = 0.1, enthalpy_increment = 0.01)
+
+"""
+    energy_source_closure_tolerance(transport)
+
+The default closure tolerance for `transport`, from
+[`ENERGY_SOURCE_CLOSURE_TOLERANCES`](@ref).
+"""
+energy_source_closure_tolerance(::TracerEnergySourceTransport) =
+    ENERGY_SOURCE_CLOSURE_TOLERANCES.tracer
+energy_source_closure_tolerance(::EnthalpyEnergySourceTransport) =
+    ENERGY_SOURCE_CLOSURE_TOLERANCES.enthalpy
+energy_source_closure_tolerance(::EnthalpyIncrementEnergySourceTransport) =
+    ENERGY_SOURCE_CLOSURE_TOLERANCES.enthalpy_increment
 
 """
     DEFAULT_CLOSURE_ABORT_LEVELS
@@ -956,6 +1000,7 @@ one is on by default whenever the tags include a pure region tag, a tag with a
 function energy_source_closure_check_from_config(
     value,
     entries,
+    transport,
     ::Type{FT},
 ) where {FT}
     value === false && return nothing
@@ -967,7 +1012,7 @@ function energy_source_closure_check_from_config(
         value,
         "`energy_source_closure_check`",
         FT;
-        default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy_source,
+        default_tolerance = energy_source_closure_tolerance(transport),
         default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy_source,
         default_spin_up = "1hours",
     )
@@ -1028,6 +1073,9 @@ function closure_checks_from_config(config::AtmosConfig)
         energy_source = energy_source_closure_check_from_config(
             pa["energy_source_closure_check"],
             pa["energy_source_tags"],
+            energy_source_transport_from_config(
+                get(pa, "energy_source_tag_transport", "tracer"),
+            ),
             FT,
         ),
         energy = closure_check_from_config(
@@ -1212,16 +1260,47 @@ function energy_source_transport_from_config(value)
 end
 
 """
+    energy_source_updraft_copy_from_config(value)
+
+Parse `energy_source_tag_updraft_copy`. `false`, the default, and `~` give the
+energy source tags no copy in the updrafts; `true` gives them one. Anything
+else is an error, so that a quoted `"true"` cannot silently read as off.
+"""
+function energy_source_updraft_copy_from_config(value)
+    isnothing(value) && return false
+    value isa Bool || error(
+        "`energy_source_tag_updraft_copy` must be `true` or `false`, got \
+        $(repr(value)).",
+    )
+    return value
+end
+
+"""
+    check_energy_source_updraft_copy_supported(turbconv)
+
+Refuse `energy_source_tag_updraft_copy: true` without `turbconv: prognostic_edmfx`, the only model with updrafts that carry tracers.
+"""
+function check_energy_source_updraft_copy_supported(turbconv)
+    turbconv == "prognostic_edmfx" && return nothing
+    return error(
+        "`energy_source_tag_updraft_copy: true` needs `turbconv: \
+        prognostic_edmfx`, got `turbconv: $(repr(turbconv))`. Only that model \
+        has updrafts that carry tracers, and so a copy of the tags.",
+    )
+end
+
+"""
     check_energy_source_tagging_supported(turbconv, updraft_number)
 
 Refuse `energy_source_tags` under `turbconv: prognostic_edmfx` with more than
 one updraft, and warn under `prognostic_edmfx` with one and under
 `edonly_edmfx`.
 
-The tags have no updraft copy. Under `prognostic_edmfx` they take their shares
-of the parent's sub-grid mass flux of energy
-(`sgs_mass_flux_of_energy_source_tags!`) and of the updraft and environment
-corrections to sedimentation (`sediment_energy_source_tags_with_corrections!`).
+Under `prognostic_edmfx` the tags take their shares of the parent's sub-grid
+mass flux of energy, and exchange provenance at the updraft's mass flux
+(`sgs_mass_flux_of_energy_source_tags!`), unless they have updraft copies. They
+also take their shares of the updraft and environment corrections to
+sedimentation (`sediment_energy_source_tags_with_corrections!`).
 The model itself runs `prognostic_edmfx` with one updraft only, and asserts
 that when it builds its cache. This check refuses more at configuration time,
 with a message. It would refuse them even if the model allowed more, because
@@ -1242,7 +1321,8 @@ function check_energy_source_tagging_supported(turbconv, updraft_number)
             `prognostic_edmfx` with one updraft only. The tags take their \
             shares of the updraft and environment corrections to \
             sedimentation, and the model computes those for the first \
-            updraft only.",
+            updraft only. The tags' exchange at the mass flux also takes the \
+            environment as the grid mean less one updraft.",
         )
     elseif turbconv in ("prognostic_edmfx", "edonly_edmfx")
         @warn(
@@ -1260,8 +1340,9 @@ end
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
-`energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`
-and `energy_source_tag_transport`), `energy_process_record` and
+`energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`,
+`energy_source_tag_transport` and `energy_source_tag_updraft_copy`),
+`energy_process_record` and
 `water_process_record` config keys. Any of them
 being `~` (null) or an empty list disables that feature entirely, at no runtime
 cost.
@@ -1297,6 +1378,9 @@ function AtmosTagging(config::AtmosConfig)
     source_transport = energy_source_transport_from_config(
         get(config.parsed_args, "energy_source_tag_transport", "tracer"),
     )
+    source_updraft_copies = energy_source_updraft_copy_from_config(
+        get(config.parsed_args, "energy_source_tag_updraft_copy", false),
+    )
     energy_source_tagging_model =
         if isnothing(source_entries) || isempty(source_entries)
             isnothing(source_offset) || error(
@@ -1310,12 +1394,20 @@ function AtmosTagging(config::AtmosConfig)
                 `energy_source_tags` is not, so there are no tags for it to \
                 move. Configure `energy_source_tags`, or drop the key.",
             )
+            source_updraft_copies && error(
+                "`energy_source_tag_updraft_copy: true` is set but \
+                `energy_source_tags` is not, so there are no tags to copy. \
+                Configure `energy_source_tags`, or drop the key.",
+            )
             nothing
         else
             check_energy_source_offset_given(source_offset_value)
             check_energy_source_tagging_supported(
                 get(config.parsed_args, "turbconv", nothing),
                 get(config.parsed_args, "updraft_number", 1),
+            )
+            source_updraft_copies && check_energy_source_updraft_copy_supported(
+                get(config.parsed_args, "turbconv", nothing),
             )
             EnergySourceTaggingModel(
                 energy_source_tracer_tuple(
@@ -1326,6 +1418,7 @@ function AtmosTagging(config::AtmosConfig)
                 source_offset;
                 repair = source_repair,
                 transport = source_transport,
+                updraft_copies = source_updraft_copies,
             )
         end
     energy_process_record = process_record_from_config(

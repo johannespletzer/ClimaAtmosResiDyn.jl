@@ -1,8 +1,9 @@
 #=
 Integration test for the energy source tags under `PrognosticEDMFX`.
 
-The tags have no updraft copy. So under `PrognosticEDMFX` they take their shares
-of the parent's own sub-grid fluxes of `E = ρe_tot + c·ρ`. This file checks that
+By default the tags have no updraft copy. So under `PrognosticEDMFX` they take
+their shares of the parent's own sub-grid fluxes of `E = ρe_tot + c·ρ`, and
+exchange provenance at the mass flux, which sums to zero over the partition. This file checks that
 on the shipped DYCOMS RF02 EDMF column, with 1-moment microphysics and the
 updrafts' vertical diffusion on:
 
@@ -183,10 +184,22 @@ end
         @test scale > 0
         CA.sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model)
         ᶜpartition_tendency = @. Yₜ.c.ρe_src_strat + Yₜ.c.ρe_src_tropo
+        # The partition's exchange of provenance sums to zero. Its rounding
+        # scales with the exchange, which can be larger than the net flux.
+        Yₜ_exchange = zero(Y)
+        CA.sgs_exchange_of_energy_source_tags!(
+            Yₜ_exchange,
+            Y,
+            p,
+            turbconv_model,
+            model,
+        )
+        exchange_scale = maximum(abs, parent(Yₜ_exchange.c.ρe_src_strat))
+        @test exchange_scale > 0
         @test maximum(
             abs,
             parent(ᶜpartition_tendency) .- parent(ᶜE_tendency),
-        ) < 100 * eps(FT) * scale
+        ) < 100 * eps(FT) * (scale + exchange_scale)
         @test all(isfinite, parent(Yₜ.c.ρe_src_rad))
 
         # The column runs `edmfx_sgsflux_upwinding: none`. The tags rebuild
@@ -328,9 +341,12 @@ end
 
     # 4. The tag code allocates nothing of its own. The sub-grid flux reads the
     # environment's `mse` and `q_tot` through the parent's helpers, as the
-    # parent's own flux does. Their `ᶜenv_value` broadcasts over a closure,
-    # which Julia wraps in a `Ref`, 8 bytes each. That is all the tags'
-    # function allocates, by Julia's allocation profiler. The parent's
+    # parent's own flux does, and the exchange reads `mse` once more. Their
+    # `ᶜenv_value` broadcasts over a closure, which Julia wraps in a `Ref`, 8
+    # bytes each. That is all the tags' function allocates, by Julia's
+    # allocation profiler, on ClimaCore 0.16.0, 1.0.0 and 1.0.1 alike. When the
+    # exchange's kernel read the environment's density and two ratios lazily
+    # rather than from scratch, it allocated 17 kB per call here. The parent's
     # `edmfx_sgs_mass_flux_tendency!` allocated 62,928 bytes per call on this
     # column. The sedimentation check includes the parent's own corrections,
     # which run with or without tags.
@@ -342,7 +358,7 @@ end
             Y,
             p,
             turbconv_model,
-        ) <= 16
+        ) <= 24
         @test second_call_allocations(
             CA.vertical_advection_of_water_tendency!,
             Yₜ,

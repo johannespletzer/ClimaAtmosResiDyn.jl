@@ -25,8 +25,21 @@ function center_prognostic_variables(physical_state, local_geometry, params, atm
         atmos_model.turbconv_model, atmos_model.microphysics_model,
         atmos_model.chemistry_model,
     )
-    return (; gs..., sgs...)
+    # The energy source tags' updraft copies start from the grid-scale tags,
+    # so they join the updrafts once both are built.
+    copies = energy_source_updraft_copy_variables(
+        gs,
+        atmos_model.energy_source_tagging_model,
+    )
+    return (; gs..., with_updraft_tracers(sgs, copies)...)
 end
+
+# Add `tracers` to every updraft's state. Without updrafts, or without tracers,
+# the subgrid-scale state is returned as it is.
+with_updraft_tracers(sgs, ::NamedTuple{()}) = sgs
+with_updraft_tracers(sgs, tracers) =
+    haskey(sgs, :sgsʲs) ?
+    (; sgs..., sgsʲs = map(sgsʲ -> (; sgsʲ..., tracers...), sgs.sgsʲs)) : sgs
 
 """
     grid_scale_center_variables(physical_state, local_geometry, params, atmos_model)

@@ -126,6 +126,7 @@ makedocs(;
             "Tagged Energy Tracers" => "tagged_tracers.md",
             "Tagged Water Tracers" => "tagged_water.md",
             "Energy Source Tags" => "energy_source_tags.md",
+            "Energy Source Tags: a user guide" => "energy_source_tags_guide.md",
             "Process-Change Records" => "process_record.md",
             "Tag Closure Memo" => "tag_closure_memo.md",
             "Tag Closure Experiments" => "tag_closure_experiments.md",

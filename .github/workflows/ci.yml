@@ -208,6 +208,7 @@ jobs:
           - tagging_source_float32
           - tagging_source_edmf
           - tagging_source_increment
+          - tagging_source_updraft
           - parameterizations
           - restarts
         # The groups that test upstream ClimaAtmos code run on 1.11 only. A

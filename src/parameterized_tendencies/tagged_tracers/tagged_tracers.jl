@@ -317,6 +317,7 @@ function tagging_cache(Y, atmos::AtmosModel)
     energy = _tagging_cache(Y, atmos.tagging_model)
     water = _water_tagging_cache(Y, atmos.water_tagging_model)
     sources = _energy_source_tagging_cache(Y, atmos.energy_source_tagging_model)
+    check_energy_source_exchange_partition(sources, atmos)
     # The process records hold no cache of their own: they are prognostic, and
     # their only scratch lives in `tagging_scratch`.
     isnothing(energy) &&
@@ -368,7 +369,7 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
     )...,
     (
         isnothing(atmos.energy_source_tagging_model) ? (;) :
-        energy_source_scratch(Y, atmos.energy_source_tagging_model)
+        energy_source_scratch(Y, atmos.energy_source_tagging_model, atmos)
     )...,
     process_record_scratch(Y, atmos)...,
 )
@@ -890,6 +891,55 @@ function _check_region_partition(ᶜmasks, names, residual_name, tag_prefix)
         )
     end
     return nothing
+end
+
+"""
+    rebuild_tags_from_state!(Y, atmos)
+
+Set every tag field in `Y` from the state `Y` now holds, by the same rule that
+built it: a pure region tag takes its masked share of the parent, and every
+other tag zero (`tag_initial_value`).
+
+`initial_state` calls this after a setup has overwritten the state from a file.
+`WeatherModel`, `AMIPFromERA5` and `MoistFromFile` build the state from `NaN`
+placeholders and then rewrite `ρ`, `ρe_tot`, `ρq_tot`, the condensates and the
+winds from the file. The tags were built from the placeholders, so every region
+tag held `NaN` and the run stopped at the first check. Rebuilding them here is
+what the file-based path was missing.
+
+It is idempotent: where nothing overwrote the state, it writes the values that
+are already there. A restart does not go through it, so a checkpoint's tags are
+never touched.
+"""
+function rebuild_tags_from_state!(Y, atmos)
+    ᶜcoord = Fields.coordinate_field(Y.c)
+    _rebuild_tags_of_family!(Y.c, ᶜcoord, Y.c.ρe_tot, atmos.tagging_model)
+    hasproperty(Y.c, :ρq_tot) && _rebuild_tags_of_family!(
+        Y.c,
+        ᶜcoord,
+        Y.c.ρq_tot,
+        atmos.water_tagging_model,
+    )
+    source_model = atmos.energy_source_tagging_model
+    isnothing(source_model) || _rebuild_energy_source_tags!(
+        Y,
+        ᶜcoord,
+        source_model,
+        atmos.turbconv_model,
+    )
+    return nothing
+end
+
+_rebuild_tags_of_family!(ᶜY, ᶜcoord, ᶜparent, ::Nothing) = nothing
+_rebuild_tags_of_family!(ᶜY, ᶜcoord, ᶜparent, model) =
+    _rebuild_tag_fields!(ᶜY, ᶜcoord, ᶜparent, model.tags)
+
+_rebuild_tag_fields!(ᶜY, ᶜcoord, ᶜparent, ::Tuple{}) = nothing
+function _rebuild_tag_fields!(ᶜY, ᶜcoord, ᶜparent, tags::Tuple)
+    tag = first(tags)
+    ᶜρχ_tag = tag_field(ᶜY, tag)
+    ᶜρχ_tag .= tag_initial_value.(Ref(tag), ᶜparent, ᶜcoord)
+    return _rebuild_tag_fields!(ᶜY, ᶜcoord, ᶜparent, Base.tail(tags))
 end
 
 _tag_masks(ᶜcoord, ::Tuple{}) = (;)

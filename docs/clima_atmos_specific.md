@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `parameterizations`, `restarts`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `parameterizations`, `restarts`. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -77,12 +77,14 @@ out of `infrastructure`, which still runs the ledger's state-free unit tests.
 The `tagging_*` groups are one file each: `tagging_energy` runs
 `test/tagged_tracers_integration.jl`, `tagging_water` runs
 `test/tagged_water_integration.jl`, `tagging_source` runs
-`test/energy_source_tags_integration.jl`, `tagging_record` runs
+`test/energy_source_tags_integration.jl` and
+`test/energy_source_tags_cold_column.jl`, `tagging_record` runs
 `test/process_record_integration.jl`, `tagging_source_float32` runs
 `test/energy_source_tags_float32_integration.jl`, `tagging_source_edmf`
-runs `test/energy_source_tags_edmf_integration.jl` and
+runs `test/energy_source_tags_edmf_integration.jl`,
 `tagging_source_increment` runs
-`test/energy_source_tags_increment_integration.jl`. They are split because a tag
+`test/energy_source_tags_increment_integration.jl` and `tagging_source_updraft`
+runs `test/energy_source_tags_updraft_integration.jl`. They are split because a tag
 name is a type parameter, so each tag set recompiles the whole tendency and
 solve pipeline, roughly seven minutes per simulation on Julia 1.11, and the
 files share no compilation between them. Combined they overran the 90-minute
@@ -102,7 +104,8 @@ the other two groups' CI time exactly as already measured.
 `tagging_source_edmf` runs the energy source tags on the DYCOMS RF02 column
 under `PrognosticEDMFX`, with 1-moment microphysics and the updrafts' vertical
 diffusion on. It checks that the tags take their shares of the sub-grid mass
-flux and of the sedimentation corrections. The EDMF column is the most
+flux and of the sedimentation corrections, and that the exchange of provenance
+at the mass flux sums to zero over the partition. The EDMF column is the most
 expensive model in the suite to build, and the file builds it twice, with the
 tags and without them, to check that the model's own fields do not move.
 
@@ -111,9 +114,19 @@ tags and without them, to check that the model's own fields do not move.
 increment after each implicit solve. It checks the correction on a set
 increment, with its donors, its ledger and its audit columns, and that on the
 EDMF column the model's fields are those of the same column without tags, bit
-for bit. So it builds the EDMF column twice. The face-area scaling under a
-deep atmosphere is checked in the unit tests, on a small sphere built with
-ClimaCore alone.
+for bit. It also checks that the exchange of provenance at the mass flux sums
+to zero over the partition and allocates only the parent helper's 8 bytes. So
+it builds the EDMF column twice. The face-area scaling under a deep atmosphere
+is checked in the unit tests, on a small sphere built with ClimaCore alone.
+
+`tagging_source_updraft` runs the tags with
+`energy_source_tag_updraft_copy: true`, the audit with a copy of each tag in the
+updraft, on the EDMF column with the updrafts' vertical diffusion on. It checks
+that the copies exist and fill, that the model's SGS tracer flux moves the tags
+while the donor-share flux and the exchange do nothing, that the partition
+stays closed, and that the model's fields are those without tags, bit for bit.
+It builds the EDMF column twice. The copies double the time to build it, so
+with the increment's two builds in one group the three would overrun the job.
 
 ### The package-load preflight
 
