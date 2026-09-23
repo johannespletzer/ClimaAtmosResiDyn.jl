@@ -266,8 +266,13 @@ altitude_region(above) = Dict{String, Any}(
         left = sum(Y.c.q_tag_inc_left)
         @info "Water tags following the increment on the EDMF column after an hour" closure.relative closure.gross_relative left sum(ᶜabs)
         # Without the follower this column's gross residual after an hour is
-        # of the order of 5e-4 (FINDINGS W20's development runs).
+        # 5.4e-4 (FINDINGS W23's probe of the default mode); with it, 4.1e-5.
         @test closure.gross_relative < 1e-4
+        # What remains is nearly all the part left in place: the parent's
+        # change of the column's total that the tags' own implicit tendencies
+        # did not take. Its column total explains the residual's to about 2%.
+        @test abs(left) > 0.5 * closure.gross_residual
+        @test abs(closure.residual - left) < 0.05 * closure.gross_residual
 
         # The audit's columns and the diagnostics read the ledger.
         audit = CA.water_tag_extra_audit(Y, p, model, FT(1))
