@@ -28,6 +28,10 @@ The archive's own `README.md` describes it. In short:
     matches this register.
   - `scratch_claude_work/` is a copy of `$SCRATCH/claude_work/`, the agents'
     working files for past PRs: PR bodies, test logs, test environments.
+  - `reference_data/` holds the minimal datasets behind the headline tables
+    G3 relies on (W15 to W18, E73, E76, E62 to E66): hard links into the
+    scratch copy, one directory per finding, with SHA-256 sums in its
+    `MANIFEST.tsv`. At most 5 GB, by the owner's decision of 2026-09-23.
   - `worktrees/<name>/` holds, for each of the 27 worktrees of 2026-09-23, its
     commit (`HEAD.txt`), its local patch (`modified.patch`) and its untracked
     files (`untracked/`): job `.err` logs, and copies of `experiments/` with

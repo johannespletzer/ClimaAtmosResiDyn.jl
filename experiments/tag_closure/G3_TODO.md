@@ -128,8 +128,10 @@ The twelve criteria of the plan, section 2, in short:
     and its untagged twin: the "before" numbers (W17). The gross residual is
     15% of the column's water at 24 h, 75 times the budget; parity holds bit
     for bit in all 37 fields. The twin is V-W0c's run.
-  - [ ] Checksummed minimal datasets for headline tables, in the archive's
-    `reference_data/`, within 5 GB.
+  - [x] Checksummed minimal datasets for headline tables, in the archive's
+    `reference_data/`, within 5 GB: W15 to W18, E73, E76 and E62 to E66,
+    901 files and 29 MB, hard links into the archive's scratch copy, with a
+    `MANIFEST.tsv` of SHA-256 sums (2026-09-23).
 
 ## WP1: refusals, reserved names, known issues (draft PR-W1)
 
