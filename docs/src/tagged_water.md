@@ -255,7 +255,7 @@ updraft, `q_tag_<name>`: the tag's water per unit mass of updraft air. The model
 moves it as any other updraft tracer, by advection, entrainment and
 detrainment, the sub-grid flux, the filter, diffusion and hyperdiffusion. The
 grid-scale tags then take their sub-grid flux from the copies, and the default
-mode's flux and exchange do not run. Four mirrors give the copies what the
+mode's flux and exchange do not run. Five mirrors give the copies what the
 updraft's water gets and a tracer does not:
 
   - the 0-moment rain-out. Each copy loses its share of the water rained out;
@@ -264,6 +264,10 @@ updraft's water gets and a tracer does not:
     composition;
   - the relaxation at the surface. Each copy relaxes toward the buoyant surface
     water times the grid mean's share;
+  - the surface flux. `surface_flux_tendency!` also adds the surface moisture
+    flux to ``q_\mathrm{tot}^j``. Each copy takes that water by the grid-scale
+    tags' rule for the label `surface_flux`: new water by region and source,
+    dew by the copy's share;
   - the repair after the filter. The partition's copies are rescaled to sum to
     ``q_\mathrm{tot}^j``. The correction goes to `q_tag_upfix_<name>`, and the
     residual the repair found to `q_tag_copy_res`.
@@ -437,6 +441,7 @@ ClimaAtmos.rebuild_water_tag_updraft_copies!
 ClimaAtmos.water_tag_copies_microphysics_tendency!
 ClimaAtmos.sediment_water_tag_copies!
 ClimaAtmos.water_tag_copies_boundary_condition_tendency!
+ClimaAtmos.water_tag_copies_surface_flux_tendency!
 ClimaAtmos.repair_water_tag_copies!
 ClimaAtmos.water_tag_copy_sgs_names
 ClimaAtmos.water_tag_edmf_audit

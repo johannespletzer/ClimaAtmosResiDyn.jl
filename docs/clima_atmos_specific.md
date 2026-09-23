@@ -145,7 +145,7 @@ builds it twice.
     and that one composition moves with `q_totʲ` up to the diffusion's leak.
   - `tagging_water_edmf_0m` runs the copies under 0M with the microphysics
     explicit and a passive chemistry tracer. It checks that a copy holding the
-    tracer's values takes the tracer's tendency apart from its two mirrors.
+    tracer's values takes the tracer's tendency apart from its mirrors.
 
 Each checks that the model's fields are those without tags, bit for bit.
 

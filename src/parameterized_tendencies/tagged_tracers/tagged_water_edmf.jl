@@ -506,14 +506,17 @@ end
 ##### specific value, in every updraft. `sgs_tracer_names` finds it, so the
 ##### model's updraft machinery moves it as any updraft tracer: advection,
 ##### entrainment and detrainment, the SGS mass flux of the grid-mean tag, the
-##### diffusion mirror, hyperdiffusion and the filter. Four things the model
+##### diffusion mirror, hyperdiffusion and the filter. Five things the model
 ##### does to the updraft's water it does not do to a tracer, and they are
 ##### mirrored here, so that the copies keep summing to `q_totʲ`:
 #####
 #####   1. the updraft's 0M rain-out, `water_tag_copies_microphysics_tendency!`;
 #####   2. the updraft's 1M sedimentation, `sediment_water_tag_copies!`;
 #####   3. the relaxation at the surface, `water_tag_copies_boundary_condition_tendency!`;
-#####   4. the filter's clamps, which the copies' repair after it undoes for the
+#####   4. the surface moisture flux into the updraft,
+#####      `water_tag_copies_surface_flux_tendency!`. G3_PLAN 4.1 lists four
+#####      mirrors; the CI group `tagging_water_edmf_0m` found this one;
+#####   5. the filter's clamps, which the copies' repair after it undoes for the
 #####      partition's sum, `repair_water_tag_copies!`.
 
 # The copy's entry `(; q_tag_<name> = value)` and its field, from the tag's
@@ -881,6 +884,74 @@ function _relax_water_tag_copies!(
         Base.tail(tags),
     )
 end
+
+# ---------------------------------------------------------------------------
+# 3b. The surface flux into the updraft
+# ---------------------------------------------------------------------------
+
+"""
+    water_tag_copies_surface_flux_tendency!(Yₜ, Y, p, turbconv_model)
+
+Mirror the updraft's share of the surface moisture flux on the copies.
+`surface_flux_tendency!` adds the flux to `q_totʲ` in the lowest cell, as the
+grid mean's boundary tendency over the updraft's density. It gives every other
+updraft tracer a zero flux, the copies included. Each copy takes that
+increment `Δʲ` by the grid-scale tags' rule for the label `surface_flux`
+(`attribute_tagged_ρq_tot!`). A tag that receives the surface flux gains its
+mask times `max(Δʲ, 0)`. Every copy loses its share `φʲᵢ = clamp(χᵢʲ / q_totʲ)`
+of `min(Δʲ, 0)`, the dew. The partition's masks sum to one, so its copies take
+the whole gain, and their shares the whole loss. The model's own term assumes
+one updraft, and so does this one. A no-op without copies.
+"""
+water_tag_copies_surface_flux_tendency!(Yₜ, Y, p, turbconv_model) = nothing
+function water_tag_copies_surface_flux_tendency!(
+    Yₜ,
+    Y,
+    p,
+    ::PrognosticEDMFX,
+)
+    model = p.atmos.water_tagging_model
+    has_water_tag_updraft_copies(model) || return nothing
+    p.atmos.disable_surface_flux_tendency && return nothing
+    # The model's own increment of `q_totʲ`, from the same flux and operator.
+    ᶜq_tot = @. lazy(specific(Y.c.ρq_tot, Y.c.ρ))
+    ρ_flux = p.scratch.sfc_temp_C3
+    @. ρ_flux = p.precomputed.sfc_conditions.ρ_flux_q_tot
+    btt = boundary_tendency_scalar(ᶜq_tot, ρ_flux)
+    ᶜΔʲ = @. lazy(-specific(btt, p.precomputed.ᶜρʲs.:(1)))
+    _surface_flux_of_copies!(
+        Yₜ.c.sgsʲs.:(1),
+        Y.c.sgsʲs.:(1),
+        p.tagging.ᶜwater_masks,
+        ᶜΔʲ,
+        model.tags,
+    )
+    return nothing
+end
+_surface_flux_of_copies!(ᶜsgsʲₜ, ᶜsgsʲ, ᶜmasks, ᶜΔʲ, ::Tuple{}) = nothing
+function _surface_flux_of_copies!(ᶜsgsʲₜ, ᶜsgsʲ, ᶜmasks, ᶜΔʲ, tags::Tuple)
+    tag = first(tags)
+    ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
+    ᶜχʲₜ = updraft_copy_field(ᶜsgsʲₜ, tag)
+    receives = tag_receives_source(tag, :surface_flux)
+    ᶜgain = _surface_gain_weight(ᶜmasks, tag)
+    @. ᶜχʲₜ +=
+        receives * ᶜgain * max(ᶜΔʲ, 0) +
+        min(ᶜΔʲ, 0) * water_tag_fraction(ᶜχʲ, ᶜsgsʲ.q_tot)
+    return _surface_flux_of_copies!(
+        ᶜsgsʲₜ,
+        ᶜsgsʲ,
+        ᶜmasks,
+        ᶜΔʲ,
+        Base.tail(tags),
+    )
+end
+# The weight of a gain for a tag that receives the surface flux, as
+# `_accumulate_water_tag!` gives it: one without a region, the region's mask
+# with one. Whether it receives the flux is known only at run time, so it is a
+# factor in the broadcast, which keeps the weight's type fixed.
+_surface_gain_weight(ᶜmasks, tag::WaterTag{name, Nothing}) where {name} = true
+_surface_gain_weight(ᶜmasks, tag::WaterTag) = tag_field(ᶜmasks, tag)
 
 # ---------------------------------------------------------------------------
 # 4. The copies' repair after the filter

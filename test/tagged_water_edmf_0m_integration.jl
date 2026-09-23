@@ -8,11 +8,12 @@ that water. No rain or snow is prognostic, so no path leaks. This file checks,
 on the DYCOMS RF02 EDMF column with 0-moment microphysics and a passive
 chemistry tracer in the updraft, after an hour:
 
- 1. a copy that holds what the passive tracer holds takes the tracer's
-    tendency, apart from its two mirrors, at rounding. So the copies get the
-    whole of the tracer machinery;
+ 1. a passive tracer set to what a tag and its copy hold takes the copy's
+    tendency, apart from the copy's three mirrors that act under 0M, at
+    rounding. So the copies get the whole of the tracer machinery;
  2. with one composition everywhere, each copy's whole tendency is its share
-    of `q_totʲ`'s, at rounding;
+    of `q_totʲ`'s, at rounding, apart from the surface flux, whose new water
+    goes by region and source;
  3. the model's fields are those of the same column without tags, bit for bit.
 
 The implicit microphysics runs the rain-out's other hook, which the other two
@@ -101,13 +102,15 @@ end
     @test hasproperty(ᶜsgsʲ, :q_gas_A)
     @test all(isfinite, parent(Y.c))
 
-    # 1. The copy of `tropo` set to what the tracer holds, in the grid mean
-    # and in the updraft. The tracer machinery then gives both the same
-    # tendency, and the copy has its two mirrors on top.
+    # 1. The tracer set to what `tropo` and its copy hold, in the grid mean and
+    # in the updraft. The tracer machinery then gives both the same tendency,
+    # and the copy has its mirrors on top: the rain-out, the relaxation at the
+    # surface and the surface flux.
     @testset "A copy moves as a passive tracer, apart from its mirrors" begin
         Y_same = copy(Y)
-        Y_same.c.ρq_tag_tropo .= Y.c.ρq_gas_A
-        Y_same.c.sgsʲs.:(1).q_tag_tropo .= ᶜsgsʲ.q_gas_A
+        Y_same.c.ρq_gas_A .= Y.c.ρq_tag_tropo
+        Y_same.c.sgsʲs.:(1).q_gas_A .= ᶜsgsʲ.q_tag_tropo
+        @test maximum(parent(ᶜsgsʲ.q_tag_tropo)) > 0
         CA.set_precomputed_quantities!(Y_same, p, t)
         Yₜ = whole_tendency(Y_same, p, t)
         Yₜ_mirrors = zero(Y)
@@ -124,7 +127,13 @@ end
             p,
             turbconv_model,
         )
-        # The rain-out mirror did something, so it is not vacuous.
+        CA.water_tag_copies_surface_flux_tendency!(
+            Yₜ_mirrors,
+            Y_same,
+            p,
+            turbconv_model,
+        )
+        # The mirrors did something, so the check is not vacuous.
         @test maximum(abs, parent(Yₜ_mirrors.c.sgsʲs.:(1).q_tag_tropo)) > 0
         @test relative_difference(
             Yₜ.c.sgsʲs.:(1).q_tag_tropo .- Yₜ_mirrors.c.sgsʲs.:(1).q_tag_tropo,
@@ -132,7 +141,8 @@ end
         ) < 1e-10
     end
 
-    # 2. Under 0M nothing leaks, so the copies' shares move with `q_totʲ`.
+    # 2. Under 0M nothing leaks, so the copies' shares move with `q_totʲ`,
+    # apart from the surface flux, which is taken out of both sides.
     @testset "One composition moves as the updraft's water" begin
         shares = (; tropo = 0.3, strat = 0.7, evap = 0.2)
         Y_uniform = copy(Y)
@@ -144,10 +154,20 @@ end
         end
         CA.set_precomputed_quantities!(Y_uniform, p, t)
         Yₜ = whole_tendency(Y_uniform, p, t)
-        ᶜq_totʲₜ = Yₜ.c.sgsʲs.:(1).q_tot
+        Yₜ_surface = zero(Y)
+        CA.surface_flux_tendency!(Yₜ_surface, Y_uniform, p, t)
+        CA.water_tag_copies_surface_flux_tendency!(
+            Yₜ_surface,
+            Y_uniform,
+            p,
+            turbconv_model,
+        )
+        ᶜq_totʲₜ = Yₜ.c.sgsʲs.:(1).q_tot .- Yₜ_surface.c.sgsʲs.:(1).q_tot
         for (name, share) in pairs(shares)
+            copy_name = Symbol(:q_tag_, name)
             @test relative_difference(
-                getproperty(Yₜ.c.sgsʲs.:(1), Symbol(:q_tag_, name)),
+                getproperty(Yₜ.c.sgsʲs.:(1), copy_name) .-
+                getproperty(Yₜ_surface.c.sgsʲs.:(1), copy_name),
                 share .* ᶜq_totʲₜ,
             ) < 1e-10
         end

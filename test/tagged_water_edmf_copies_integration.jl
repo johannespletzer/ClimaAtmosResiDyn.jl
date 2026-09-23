@@ -3,9 +3,9 @@ Integration test for `water_tag_updraft_copy: true`, the audit of the water
 tags' mixing through the updrafts.
 
 Each tag gets a copy in the updraft, `q_tag_<name>`, which the model moves as
-any other updraft tracer. Four mirrors give the copies what the updraft's water
+any other updraft tracer. Five mirrors give the copies what the updraft's water
 gets and a tracer does not: the 0M rain-out, the 1M sedimentation, the
-relaxation at the surface and the repair after the filter. This file checks,
+relaxation at the surface, the surface flux and the repair after the filter. This file checks,
 on the DYCOMS RF02 EDMF column with 1-moment microphysics, after an hour:
 
  1. the copies exist, and the rebuild sets them to `q_totʲ φ̄ᵢ`;
@@ -13,7 +13,9 @@ on the DYCOMS RF02 EDMF column with 1-moment microphysics, after an hour:
     tracer flux moves the tags;
  3. the partition and the copies stay closed;
  4. with one composition everywhere, each copy's whole tendency is its share
-    of `q_totʲ`'s, up to the diffusion's leak, whose closed form it checks;
+    of `q_totʲ`'s, up to the diffusion's leak, whose closed form it checks, and
+    up to the surface flux, whose new water goes by region and source. The
+    partition's copies take all of the updraft's surface flux;
  5. the copies' own code allocates next to nothing;
  6. the model's fields are those of the same column without tags, bit for bit.
 
@@ -164,10 +166,12 @@ end
     end
 
     # 4. With one composition everywhere, every term the copies take from the
-    # tracer machinery or from the mirrors is its share of `q_totʲ`'s. The one
-    # exception is the diffusion's mirror: a copy takes its grid-mean tag's
-    # diffusion, on the whole value, and `q_totʲ` the parent's, on the water
-    # without rain and snow. That difference is the closed form's leak.
+    # tracer machinery or from the mirrors is its share of `q_totʲ`'s. There
+    # are two exceptions. The diffusion's mirror: a copy takes its grid-mean
+    # tag's diffusion, on the whole value, and `q_totʲ` the parent's, on the
+    # water without rain and snow. That difference is the closed form's leak.
+    # And the surface flux: new water goes to the tags by region and source,
+    # not by share. So it is taken out of both sides, and checked on its own.
     @testset "One composition moves as the updraft's water" begin
         shares = (; tropo = 0.3, strat = 0.7, evap = 0.2)
         Y_uniform = copy(Y)
@@ -180,14 +184,33 @@ end
         end
         CA.set_precomputed_quantities!(Y_uniform, p, t)
         Yₜ = whole_tendency(Y_uniform, p, t)
-        ᶜq_totʲₜ = Yₜ.c.sgsʲs.:(1).q_tot
+        Yₜ_surface = zero(Y)
+        CA.surface_flux_tendency!(Yₜ_surface, Y_uniform, p, t)
+        CA.water_tag_copies_surface_flux_tendency!(
+            Yₜ_surface,
+            Y_uniform,
+            p,
+            turbconv_model,
+        )
+        ᶜq_totʲₜ_surface = Yₜ_surface.c.sgsʲs.:(1).q_tot
+        @test maximum(abs, parent(ᶜq_totʲₜ_surface)) > 0
+        # The partition's copies take the updraft's whole surface flux.
+        @test relative_difference(
+            Yₜ_surface.c.sgsʲs.:(1).q_tag_tropo .+
+            Yₜ_surface.c.sgsʲs.:(1).q_tag_strat,
+            ᶜq_totʲₜ_surface,
+        ) < 1e-12
+        ᶜq_totʲₜ = Yₜ.c.sgsʲs.:(1).q_tot .- ᶜq_totʲₜ_surface
         ᶜleak = similar(Y.c.ρ)
         CA.water_tag_leak!(ᶜleak, Y_uniform, p, Val(:diffusion_up))
         @test maximum(abs, parent(ᶜleak)) > 0
         # The leak per unit mass of updraft air.
         ᶜleakʲ = ᶜleak .* Y.c.ρ ./ ᶜsgsʲ.ρa
         for (name, share) in pairs(shares)
-            ᶜχₜ = getproperty(Yₜ.c.sgsʲs.:(1), Symbol(:q_tag_, name))
+            copy_name = Symbol(:q_tag_, name)
+            ᶜχₜ =
+                getproperty(Yₜ.c.sgsʲs.:(1), copy_name) .-
+                getproperty(Yₜ_surface.c.sgsʲs.:(1), copy_name)
             @test relative_difference(ᶜχₜ, share .* (ᶜq_totʲₜ .+ ᶜleakʲ)) <
                   1e-10
         end
