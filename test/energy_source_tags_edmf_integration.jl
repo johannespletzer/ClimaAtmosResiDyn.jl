@@ -344,10 +344,9 @@ end
     # parent's own flux does, and the exchange reads `mse` once more. Their
     # `ᶜenv_value` broadcasts over a closure, which Julia wraps in a `Ref`, 8
     # bytes each. That is all the tags' function allocates, by Julia's
-    # allocation profiler, on the versions the fork runs. On the oldest
-    # versions its compat allows, the exchange's broadcasts reach through the
-    # environment's thermodynamic density, stop inferring and allocate per
-    # cell, so the bound follows the environment. NEWS records it. The parent's
+    # allocation profiler, on ClimaCore 0.16.0, 1.0.0 and 1.0.1 alike. When the
+    # exchange's kernel read the environment's density and two ratios lazily
+    # rather than from scratch, it allocated 17 kB per call here. The parent's
     # `edmfx_sgs_mass_flux_tendency!` allocated 62,928 bytes per call on this
     # column. The sedimentation check includes the parent's own corrections,
     # which run with or without tags.
@@ -359,7 +358,7 @@ end
             Y,
             p,
             turbconv_model,
-        ) <= (pkgversion(CA.ClimaCore) >= v"1" ? 24 : 32_768)
+        ) <= 24
         @test second_call_allocations(
             CA.vertical_advection_of_water_tendency!,
             Yₜ,

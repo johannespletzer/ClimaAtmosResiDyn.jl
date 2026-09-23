@@ -405,13 +405,11 @@ tags = [
         @test all(iszero, parent(dY.c.sgsʲs))
         @test all(iszero, parent(dY.f))
         # It reads the environment's `mse` through the parent's helper, whose
-        # closure Julia wraps in a `Ref`, 8 bytes. That is all it allocates on
-        # the versions the fork runs. On the oldest versions its compat
-        # allows, the broadcasts that reach through the environment's
-        # thermodynamic density stop inferring and allocate per cell, about
-        # 17 kB on this column. The kernel is allocation-free on both,
-        # measured in isolation, and writing that chain to scratch costs more
-        # on the current versions rather than less. NEWS records it.
+        # closure Julia wraps in a `Ref`, 8 bytes. That is all it allocates,
+        # on ClimaCore 0.16.0, 1.0.0 and 1.0.1 alike. Its kernel reads the
+        # environment's density and two ratios from scratch. When it read them
+        # lazily, ClimaCore boxed the kernel's broadcast on every call, 17 kB
+        # here with each of those versions.
         @test second_call_allocations(
             exchange!,
             dY,
@@ -419,6 +417,6 @@ tags = [
             p,
             p.atmos.turbconv_model,
             model,
-        ) <= (pkgversion(CA.ClimaCore) >= v"1" ? 8 : 32_768)
+        ) <= 8
     end
 end

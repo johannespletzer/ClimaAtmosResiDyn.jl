@@ -424,8 +424,9 @@ sedimentation divides by, the two face fluxes of `E` that the tags share under
 the closure check fills with the offset total. Where the exchange at the mass
 flux runs, three more hold one value per tag in each cell: the grid mean's tag
 values, the updraft's from the plume, and the environment's share differences
-(`sgs_exchange_of_energy_source_tags!`). They live in `p.scratch` because the
-implicit tendency, where sedimentation runs, may be evaluated with
+(`sgs_exchange_of_energy_source_tags!`). Three scalars hold the environment's
+density and the two ratios the exchange's bound needs. They live in `p.scratch`
+because the implicit tendency, where sedimentation runs, may be evaluated with
 `ForwardDiff.Dual` numbers, and `p.scratch` is converted for that.
 """
 energy_source_scratch(Y, model::EnergySourceTaggingModel, atmos) = merge(
@@ -440,8 +441,8 @@ energy_source_scratch(Y, model::EnergySourceTaggingModel, atmos) = merge(
     ),
 )
 
-# One tuple of tag values per cell, three times, for the exchange at the mass
-# flux. Nothing without it: no prognostic EDMF, no sub-grid mass flux, or
+# Three tuples of tag values per cell and three scalars, for the exchange at the
+# mass flux. Nothing without it: no prognostic EDMF, no sub-grid mass flux, or
 # updraft copies, whose own tracer flux moves the tags instead.
 _energy_source_exchange_scratch(Y, model, turbconv_model, atmos) = (;)
 function _energy_source_exchange_scratch(
@@ -460,6 +461,9 @@ function _energy_source_exchange_scratch(
         ᶜe_src_mean = tag_values(),
         ᶜe_src_plume = tag_values(),
         ᶜe_src_environment = tag_values(),
+        ᶜe_src_environment_density = similar(Y.c.ρ),
+        ᶜe_src_room = similar(Y.c.ρ),
+        ᶜe_src_energy_ratio = similar(Y.c.ρ),
     )
 end
 # The cell-center scratch alone: the bracket's snapshots, the share
@@ -1812,15 +1816,17 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     ᶜρaʲ = Y.c.sgsʲs.:(1).ρa
     ᶜρʲ = ᶜρʲs.:(1)
     ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
-    ᶜρ⁰ = @. lazy(
-        TD.air_density(
-            thermo_params,
-            ᶜT⁰,
-            ᶜp,
-            ᶜq_tot_nonneg⁰,
-            ᶜq_liq⁰,
-            ᶜq_ice⁰,
-        ),
+    # The environment's density is written once, as the parent's microphysics
+    # does. Most broadcasts below read it. Left lazy, it would add five fields
+    # and a thermodynamic call to each of them (see the ratios below).
+    ᶜρ⁰ = p.scratch.ᶜe_src_environment_density
+    @. ᶜρ⁰ = TD.air_density(
+        thermo_params,
+        ᶜT⁰,
+        ᶜp,
+        ᶜq_tot_nonneg⁰,
+        ᶜq_liq⁰,
+        ᶜq_ice⁰,
     )
     ᶜentrʲ = @. lazy(
         compute_entrainment(
@@ -1881,12 +1887,16 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # subdomain carries more of a tag's energy than the cell holds. The
     # environment's differences follow from the updraft's, so both sum to zero
     # over the partition.
-    # The two ratios the bound needs, formed here rather than inside the
-    # kernel: a broadcast of four arguments specialises on every version of
-    # ClimaCore the package supports, where one of eight did not.
+    # The bound needs two ratios, which are written to scratch before the
+    # kernel reads them. Left lazy, they would bring every field of both
+    # subdomains' energies into the kernel's broadcast, and ClimaCore then
+    # boxes that broadcast on every call. The values are the same either way.
+    # The allocation tests on the EDMF column guard this.
     ᶜĀ = @. lazy(Y.c.ρe_tot / Y.c.ρ + c)
-    ᶜroom = @. lazy(_exchange_room(Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜĀ, ᶜAʲ, ᶜA⁰))
-    ᶜenergy_ratio = @. lazy(_exchange_energy_ratio(ᶜρaʲ, ᶜρa⁰, ᶜAʲ, ᶜA⁰))
+    ᶜroom = p.scratch.ᶜe_src_room
+    @. ᶜroom = _exchange_room(Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜĀ, ᶜAʲ, ᶜA⁰)
+    ᶜenergy_ratio = p.scratch.ᶜe_src_energy_ratio
+    @. ᶜenergy_ratio = _exchange_energy_ratio(ᶜρaʲ, ᶜρa⁰, ᶜAʲ, ᶜA⁰)
     ᶜΔφ⁰ = p.scratch.ᶜe_src_environment
     @. ᶜΔφ⁰ = environment_differences(ᶜεʲ, ᶜε̄, ᶜroom, ᶜenergy_ratio)
     ᶜΔφʲ = ᶜεʲ
