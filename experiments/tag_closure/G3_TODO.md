@@ -19,16 +19,43 @@ agents. Results go into FINDINGS as usual.
 
 Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
 
+## G3 is met when
+
+The roadmap at the top of [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md) places G3
+within milestones M0 to M8. The criteria below are the pathway's acceptance
+criteria, cut down to G3's slice. The numbers come from Q5 and are fixed before
+the runs that test them.
+
+| # | Criterion | Milestone | Status |
+|:--|:--|:--|:--|
+| 1 | The verifier recomputes every G3 headline number from runs stamped with a manifest, and the mutation tests pass. | M0 | tools built, tests pass, review (1.8) open |
+| 2 | #95 is merged with a bounded exchange. The share-space, restart and file-based-initialisation tests run in CI. | M1 | R1 in `dbe7435c`, Q4 open |
+| 3 | On D4 the energy budget of each accepted step closes to a named remainder, within a bound set beforehand. The gross accumulators pass their tests. | M2 | open |
+| 4 | Each column case has a reference converged in time step, grid and Newton count, to a set fraction of the Q5 budget. | M3 | open |
+| 5 | The chosen default meets the Q5 per-tag budgets on D4 and on the held-out columns. How often the bound acts, and the spread across other closures, are reported. | M5 | open |
+| 6 | Startup and step time and peak memory are measured on CPU at 2, 8 and 32 tags, and the allocation gates pass. | M4 | open |
+| 7 | Ten days on the sphere at the chosen default are compared with E75 through the verifier. | — | open |
+| 8 | Every run with and without tags keeps the model's fields bit for bit. | standing | holds |
+
+**Left out of G3,** for the goals after it:
+ - M1's GPU and autodiff checks;
+ - M2's contracts for tagged water and the stratospheric tracers, and EDMF in
+   the parent-budget ledger;
+ - M3's sphere cases, and a file-based run with a restart;
+ - M4 on the production grid, the GPU and scaling;
+ - M6 to M8.
+
 ## Decisions
 
  - [!] **Q4, how the plume is bounded (R1).** Recommended: the energy-weighted
-   blend that the job session wrote on 2026-09-23 (uncommitted in
-   `../ClimaAtmosResiDyn-upd`), with one change. Its single factor per cell is
-   set by every tag, the source overlays included. In a scalar check an overlay
-   holding 1e-6 of a cell's energy cut the region tags' mixing there from
-   θ = 1 to 0.09. The factor should come from the partition only, and each
-   overlay should get its own. Both must be settled before the D4 default runs
-   are made again.
+   blend the job session committed as `dbe7435c` on 2026-09-23, with one change.
+   Its single factor per cell is set by every tag, the source overlays
+   included. In a scalar check an overlay holding 1e-6 of a cell's energy cut
+   the region tags' mixing there from θ = 1 to 0.09. The factor should come from
+   the partition only, and each overlay should get its own. The commit also
+   says the environment's shares stay non-negative without clipping. That
+   holds only when the subdomains' energies add up to the cell's; with a 1%
+   mismatch the check gave −0.0001. Both points go to the review, 2.5.
  - [!] **Q5, the science error budget.** What the per-tag numbers are for, how
    accurate they must be, and whether a first-hour product is needed. Blocks
    phase 4.
@@ -47,36 +74,48 @@ Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
 ## Phase 0: re-baseline
 
  - [x] Branch `claude/g3-programme` from the experiment branch at `eead88c3`.
- - [x] Agent definitions in `~/.claude/agents/` (table below).
- - [ ] Commit the two assessment documents and this list. Re-pin their code
-   links to PR #95's head once the fix is committed. The assessment pins
-   `974f3e16`, and the head is now `e71430fb`.
- - [ ] Record the review's status: R3 to R6 closed at `e71430fb`; R1 being
-   fixed (Q4); R2 open (the ladder, phase 4).
+ - [x] Agent definitions in `~/.claude/agents/` (table below). They load when a
+   session starts. Until then an agent runs as `general-purpose` with the
+   definition's model and rules in its prompt.
+ - [x] Commit the two assessment documents and this list (`6096d103`).
+ - [x] The roadmap at the top of OPERATIONAL_TODO.md, and G3 as the current
+   goal there. The two assessment documents carry a "Frozen record" header and
+   keep their old pins. Current commits are named here and in the roadmap.
+ - [x] The review's status: R3 to R6 fixed in `e71430fb`; R1 in `dbe7435c`, with
+   the points of Q4 open; R2 open (the ladder, phase 4).
+ - [ ] Match OPERATIONAL_TODO's open items to milestones, so that the roadmap
+   replaces the old list rather than running beside it (an agent, read-only).
  - [ ] Merge this branch into the experiment branch at each gate, coordinating
    with the job session, which commits there.
 
 ## Phase 1: the evidence pipeline (M0, rank 2, insight D)
 
- - [ ] 1.1 A manifest written on the login node at submission. Compute nodes
+ - [~] 1.1 A manifest written on the login node at submission. Compute nodes
    have no git, which is why provenance reads `commit_dirty: unknown`. The run
    worktree is in fact dirty (`.buildkite/Manifest-v1.11.toml`), and its
-   `experiments/` is an untracked copy. It records the tree, the diff, the
-   Manifest, the config, the driver and the command, with hashes. It ships as a
-   standalone tool, and the job session adds one line to its submit path.
- - [ ] 1.2 A verifier to replace `analysis/increment/tag_correctness.py`. It
-   takes explicit run directories, not "the latest". It requires every
-   expected variable, identical times and identical coordinates. Its parity
-   check is bitwise, so it sees signed zeros. Its metrics are named exactly
-   (mass-weighted L1, peak-normalised L∞, absolute error) and use the grid's
-   own cell weights.
- - [ ] 1.3 Five mutation tests: a missing variable, a shifted timestamp, a
-   truncated run, a moved coordinate and a flipped signed zero must each be
-   rejected.
- - [ ] 1.4 A machine-readable inventory of the runs on scratch, with a status:
+   `experiments/` is an untracked copy. The manifest records the tree, the
+   diff, the Manifest, the config, the driver and the command, with hashes.
+   Built as `analysis/evidence/manifest.py`, and it detects that dirty
+   Manifest. Open: the one line in the job session's submit path that calls it.
+ - [x] 1.2 A verifier to replace `analysis/increment/tag_correctness.py`:
+   `analysis/evidence/compare_runs.py`.
+     - It takes explicit run directories, not "the latest".
+     - It requires every expected variable, identical times and identical
+       coordinates.
+     - Its parity check is bitwise, so it sees signed zeros.
+     - Its metrics are named exactly (mass-weighted L1, peak-normalised L∞,
+       absolute error) and use the grid's own cell weights.
+ - [x] 1.3 Mutation tests: a missing variable, a shifted timestamp, a truncated
+   run, a moved coordinate and a flipped signed zero are each caught.
+   `test_compare_runs.py`: 6 of 6 pass, rerun by this session.
+ - [~] 1.4 A machine-readable inventory of the runs on scratch, with a status:
    PR head, historical, superseded, failed or proposed.
- - [ ] 1.5 E73's table reproduced from its inputs (`v3_upd_default/output_0002`
-   against `v3_upd_copies/output_0000`).
+   `runs_inventory.csv` lists 93 output directories. The statuses are not set
+   yet.
+ - [x] 1.5 E73's table reproduced from its inputs (`v3_upd_default/output_0002`
+   against `v3_upd_copies/output_0000`). `e73_reproduction.txt`: all 32 rows
+   match exactly. The old script's glob now picks `output_0003`, a later
+   commit's run.
  - [ ] 1.6 The Float64-twin helper (synergy 2).
  - [ ] 1.7 A retrospective test of the early-warning probe (synergy 1): does
    `increment_left` flag V2's one-iteration collapse before the model top
@@ -111,6 +150,13 @@ Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
    The copies runs stay valid: copies mode runs neither the donor flux nor the
    exchange.
  - [ ] 2.8 The owner merges #95.
+ - [ ] 2.9 A file-based column with the tags on. First check that the tags
+   accept `prognostic_edmfx_tv_era5driven_column` (0M, initial state and
+   forcing from a file). Then run it briefly: it must start with finite tags
+   and pass the first accepted step's checks. The rebuild of `92e9ac26` has
+   only a unit test so far.
+ - [ ] 2.10 A real checkpoint round trip, default and copies: the continuous
+   run against the restarted one, with the prognostic state bit for bit.
 
 ## Phase 3: accounting (M2, ranks 3 and 4, insight C, synergy 6)
 
@@ -131,7 +177,15 @@ Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
  - [ ] 3.5 Its review (`clima-reviewer`, high).
  - [ ] 3.6 One D4 run with every process record and the increment ledger.
  - [ ] 3.7 `analysis/increment/process_budget.py`, and an offline EDMF column
-   budget whose remainder is named.
+   budget whose remainder is named. Every process term includes `c Δρ`. The
+   tags' repair is never booked as a parent energy source, since it moves
+   energy between tags only.
+ - [ ] 3.8 The residual report completed. It gains the residual's rate over a
+   stated interval, its vertical and local maxima, and the headroom of the
+   positive total (U9).
+ - [ ] 3.9 Warnings, abort rules and acceptance thresholds kept apart, in the
+   configuration and in the guide. A small aggregate residual never passes a
+   per-tag test.
 
 ## Phase 4: reference suite and choice of closure (M3 and M5; ranks 1, 5, 6)
 
@@ -155,13 +209,25 @@ Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
  - [ ] 4.7 Check that the tags accept the held-out columns, then run default
    and copies on each.
  - [ ] 4.8 Comparison tables through the verifier (`clima-analysis-builder`).
+   Startup and later windows are reported separately. Where the reference is
+   small, the absolute error is given as well.
  - [ ] 4.9 A red team on the choice of default (`clima-numerics-reviewer`).
  - [ ] 4.10 The owner chooses the default.
+ - [ ] 4.11 Two more reference cases, each with an untagged twin: the cold
+   precipitating column (T5's test, run long enough for its ice to last) and a
+   forced column without EDMF.
+ - [ ] 4.12 A sweep of the offset `c` within the range where every total stays
+   positive, one offset per run and per restart lineage. It reports the tags'
+   change in J as well as the normalised residual, and it feeds U8.
+ - [ ] 4.13 A check that says when a run leaves the tested regime, for example
+   when composition changes faster than the plume adjusts.
 
 ## Phase 5: cost (M4, rank 7); finish before the sphere run
 
  - [ ] 5.1 A benchmark harness (`clima-analysis-builder`).
- - [ ] 5.2 Cold and warm timings and peak memory at 2, 8 and 32 tags.
+ - [ ] 5.2 Cold and warm timings and peak memory at 2, 8 and 32 tags. The
+   allocation gates still pass: at most 8 bytes for the exchange, and at most
+   24 for the donor flux with the exchange.
  - [ ] 5.3 Precompile workloads.
  - [ ] 5.4 Moving the nested copies out of the large solver, only with a
    dependency proof (`clima-numerics-reviewer`) and a parity test.

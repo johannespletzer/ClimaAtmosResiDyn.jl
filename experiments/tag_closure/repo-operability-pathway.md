@@ -1,5 +1,10 @@
 # Repository operability pathway
 
+> **Frozen record.** Written on 2026-09-21 and kept as written. Its code links
+> pin PR #95 at `974f3e16`, which has since moved. The living plan is the
+> roadmap at the top of [OPERATIONAL_TODO.md](OPERATIONAL_TODO.md) and
+> [G3_TODO.md](G3_TODO.md).
+
 Prepared 2026-09-21 for `johannespletzer/ClimaAtmosResiDyn.jl`. This is an ordered implementation and validation proposal. No repository code, defaults, tolerances, GitHub state or atmospheric runs were changed by this review.
 
 Reference code: PR #95 head `974f3e1659cddea96a69527017e30a6249ef8666`, base `c99ff7bd5005dd568a86a36b1ddff1389ac0c721`. Historical experimental context: `claude/tag-closure-experiments` at `f69ec02a6eac325b61cb6f30a6f259b1299293ec`. These are divergent branches, not interchangeable release candidates.

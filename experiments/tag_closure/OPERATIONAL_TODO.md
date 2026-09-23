@@ -21,7 +21,49 @@ Priorities: **B** blocks operation, **S** should be fixed, **N** is nice to
 have. Sizes: S is under a day, M one to three days, L several PRs or a
 campaign.
 
-## The current goal: G1, a closed and explained EDMF column
+## The roadmap
+
+Set on 2026-09-23. It divides what is left of the owner's goal of 2026-09-10
+into milestones M0 to M8. The milestones come from
+[repo-operability-pathway.md](repo-operability-pathway.md), a review of
+2026-09-21 that is kept as written. Its reasoning is in
+[untapped-potential-assessment-extended.md](untapped-potential-assessment-extended.md).
+The status lives here, not in those two files.
+
+**Operational** means, in the pathway's words, that a declared configuration:
+runs reproducibly; leaves the parent atmosphere unchanged by the diagnostics,
+within the parity contract; meets independently justified scientific
+criteria; and has a measured, affordable cost. It does not mean that every
+configuration upstream supports has been validated for every diagnostic.
+
+| Milestone | Outcome | Goal | Status on 2026-09-23 |
+|:--|:--|:--|:--|
+| M0 | Every result traceable: manifests, a verifier, a run inventory, archived data | G3 | the tools are built (G3 1.1 to 1.5), not yet reviewed |
+| M1 | Correctness gaps closed, claims narrowed | G3 | PR #95: R3 to R6 fixed in `e71430fb`, R1 in `dbe7435c` with one point open (G3 Q4) |
+| M2 | A claim contract per family, independent accounting, gross diagnostics | G3: energy source tags, process records, ledger | open |
+| M3 | A suite of small reference cases, each converged | G3: the columns | open; the D4 ladder is running (R2) |
+| M4 | Cost measured and budgeted | G3: CPU | open |
+| M5 | The residual and mixing closures chosen by experiment | G3 | open |
+| M6 | Devices, precision, input data and restarts qualified | later (G4), including the GPU decision | not started |
+| M7 | A production trial and a supported envelope | later (G5) | not started |
+| M8 | Extensions: water tags in the updrafts, air age, memory and forecasts | one goal each | not started |
+
+The later goals are sketched, not approved. Each needs the owner.
+
+G1 and G2 were met before the roadmap existed. They covered parts of M1, M3
+and M5 on D4 and on the sphere (E62 to E75), and their numbers enter M0's
+inventory as historical results. The pathway puts M4 before M5. G3 reverses
+that: it chooses the closure on columns, where runs are cheap, and measures
+the cost before its sphere run.
+
+## The current goal: G3
+
+The owner set G3 on 2026-09-23. It covers milestones M0 to M5 on single columns
+and ends with one ten-day sphere run at the chosen default. Its criteria,
+decisions and to-do list are in [G3_TODO.md](G3_TODO.md). The owner approved
+every job within G3, and the agents listed there.
+
+## G1, a closed and explained EDMF column (met on 2026-09-20)
 
 Proposed on 2026-09-19, for the owner to confirm. An intermediate goal on the
 way to production: the smallest setup that holds every stiff implicit process
