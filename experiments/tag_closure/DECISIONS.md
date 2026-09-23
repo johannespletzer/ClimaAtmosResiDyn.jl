@@ -33,6 +33,10 @@ Short names for the sources:
 
 ## 2026-09-23
 
+  - **The session goal extends to WP3** (18:20): draft PR-W3 with the switch,
+    both modes, the restart guard, the refusals lifted for one updraft, bound
+    activation, leak diagnostics and the CI group, reviewed and green; V-W3
+    validates it. **In force.** Memory: `session-goal-wp0-wp1.md`
   - **V-W8's file-based column is the GCM-driven one** (`prognostic_edmfx_gcmdriven_column`),
     not the ERA5 column, whose forcing is not on disk and has no download
     entry. Its forcing artifact was fetched the same day. **In force.**

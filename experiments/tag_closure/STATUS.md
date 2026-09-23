@@ -36,8 +36,10 @@ not checked, it says so.
     the Float64-twin helper; the reference datasets in the archive; V-W8
     moved to the GCM-driven column, whose forcing is fetched. WP1: draft PR
     #100, reviewed by `clima-reviewer` and by the owner, whose four points
-    are addressed at `30dcfee9`; its CI is queued on GitHub. WP3 comes next,
-    sized by V-W0c (W18). See G3_TODO for each item. #95 merged on 2026-09-23 at 16:32
+    are addressed at `30dcfee9`; its CI is queued on GitHub. **The owner
+    extended the goal to WP3 at 18:20**: draft PR-W3 on
+    `claude/water-tags-edmf-wp3`, stacked on #100, then V-W3. See G3_TODO for
+    each item. #95 merged on 2026-09-23 at 16:32
     (`0b2b1032`), which WP0 was waiting for.
   - **#95 brought the partition-only factor to `main`** (from `dcf7d086`;
     head `b9c6e7b0`), as the owner decided (decision 5 of G3_PLAN). The job session reran the R2 ladder's
