@@ -4,85 +4,34 @@ Open problems that are understood but not yet fixed. Each entry records what is
 established, so the next person does not have to re-derive it. GitHub Issues are
 disabled on this repository, so this file is where they live.
 
-Remove an entry when it is fixed.
+Remove an entry when it is fixed. Mark it closed instead when other entries or
+error messages cite its number, so that the numbers stay stable.
 
-## 1. Tagged water closure assertions fail in the dynamics test group
+## 1. Tagged water closure assertions failed in the dynamics test group (closed)
 
-**Status:** diagnosed; the two assertions are corrected in
-`test/tagged_water_integration.jl`, awaiting a dynamics run that reaches them.
+**Status:** closed on 2026-09-23. The entry keeps its number because other
+entries and error messages cite issues by number.
 
-Two assertions in `test/tagged_water_integration.jl` failed deterministically on
-`ci 1.10 - dynamics` (run
-[32335353545](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/actions/runs/32335353545)):
+Two assertions in `test/tagged_water_integration.jl` failed on `ci 1.10 - dynamics` in run
+[32335353545](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/actions/runs/32335353545):
+the sphere's limiter-rescale residual (`1.17e-3` against a bound of `1e-3`) and
+the 1M sedimentation `norm` (`1.00006` against `1 + 100 eps`). Neither measured
+a statement the implementation makes. The repair declines to renormalize the
+tags onto `ρq_tot`, so both are leakage monitors, not identities. The bounds
+became `1e-2` and `1 + 1e-2`, and the shares themselves are asserted to lie in
+`[0, 1]`.
 
-```
-Tagged water limiter rescale: Test Failed at test/tagged_water_integration.jl:267
-  Expression: maximum(abs.(residual)) / scale < 0.001
-   Evaluated: 0.0011732894309513337 < 0.001
+Both numbers predated the fix of issue #64, which changed `rescale_water_tags!`
+from scaling the tags to adding the parent's increment. After it, on `main` at
+`0b2b1032` and Julia 1.11, the whole file passes, 111 tests, and the two
+quantities are:
 
-Tagged water 1M sedimentation closure: Test Failed at test/tagged_water_integration.jl:441
-  Expression: maximum(norm) <= 1 + 100 * eps(FT)
-   Evaluated: 1.000060085395493 <= 1.0000000000000222
-```
+  - the sphere residual, `maximum(abs.(residual)) / scale`: `7.4e-4`;
+  - the 1M sedimentation `norm`: at most `1.0003`, at least `0.9996`.
 
-Both measure the same quantity — how far the partition tags have drifted from
-`ρq_tot` — and neither is a statement the implementation makes.
-
-  - `norm` is `Σₖ clamp(ρq_tagₖ / ρq_tot, 0, 1)` over the partition tags. Once
-    `repair_water_tag_partition!` has made the tags non-negative, that is
-    `Σₖ ρq_tagₖ / ρq_tot` wherever no single tag exceeds the parent, i.e. the
-    *pointwise relative* closure residual. Bounding it by `1 + 100 · eps` asserts
-    exact pointwise closure, which `bfd5b4a` deliberately declines to provide:
-    the repair does not renormalize the tags onto `ρq_tot`, because doing so
-    would drive `q_tag_res` to zero by construction and destroy the leakage
-    monitor. The same file budgets that leakage at `5e-3` (column) and `1e-3`
-    (sphere), and `norm` is the harsher measure of the two because it normalizes
-    by the local `ρq_tot` rather than by the column maximum.
-
-    The property the assertion's comment claims — that the denominator cannot
-    amplify the shares it divides — needs no bound on `norm` at all: each clamped
-    share is one of its non-negative terms, so every share is in `[0, 1]` and the
-    partition's shares sum to 1 for any positive `norm`. That is now asserted
-    directly on the shares, and `norm` keeps a drift monitor at `1 + 1e-2`.
-
-  - The sphere residual tolerance of `1e-3` predates the repair. The test was
-    added in `cadb2ec`, the repair in `bfd5b4a` ten hours later, and the repair
-    changes exactly what the assertion measures: it zeroes the tags of a cell
-    whose negatives outweigh its positives, and empties them when a constraint
-    clips a non-positive `ρq_tot`, so the removed water surfaces in the residual
-    by design. The repair was committed unrun ("no Julia toolchain in this
-    environment"), and this repository's Actions history begins on 2026-08-19,
-    after it — so no CI run has ever observed these tests green. The tolerance is
-    now `1e-2`, which keeps the residual nearly two orders inside the `1e-1`
-    excursion bound the individual tags get in the same testset.
-
-Also established:
-
-  - Deterministic, not flaky. The same two assertions failed on every run that
-    reached them.
-
-  - Resolution-dependent magnitude: `ci 1.10 - dynamics` evaluates `norm` at
-    `1.000060085395493`, `Downgrade 1.10` at `1.0001545917163408`. Both are
-    inside the new bound.
-
-  - Not caused by the Levante GPU runscript work in #21. It reproduces
-    identically before and after the only source changes on that branch, which
-    were five blank lines inside docstrings in
-    `src/diagnostics/tagged_water_diagnostics.jl` and
-    `src/prognostic_equations/constrain_state.jl`.
-
-What is not settled: whether a pointwise drift of `6e-5` in `norm`, and `1.2e-3`
-in the sphere residual, is the right amount of leakage for this scheme. The
-corrected assertions bound it and record it; tightening it would mean changing
-the closure, not the test.
-
-Both numbers predate the fix for issue #64, which changed `rescale_water_tags!`
-from scaling the tags to adding the parent's increment to them. That changes what
-the sphere residual does over a run — it no longer rides the limiter's ratio —
-so `1.2e-3` is a measurement of the old rule and the first run to reach these
-assertions will produce a new one. Neither assertion was retuned for it, because
-retuning a tolerance against a number nobody has measured is how this entry came
-to exist.
+Both are well inside their bounds. The `norm` drift is larger than the
+`6.0e-5` measured before the fix, and 30 times inside its bound. The test's
+comments record both readings. The `tagging_water` CI group runs the file.
 
 ## 2. Levante 1/2/4 GPU scaling has not been measured
 

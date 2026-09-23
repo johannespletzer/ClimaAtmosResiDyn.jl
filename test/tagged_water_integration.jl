@@ -303,9 +303,10 @@ end
     # identity, and its budget is set by what leaves the partition rather than
     # by roundoff. `repair_water_tag_partition!` zeroes the tags of a cell whose
     # negatives outweigh its positives, and that removed water surfaces here by
-    # design. See the repair's docstring. `ci 1.10` measures 1.2e-3, nearly two
-    # orders inside the 1e-1 excursion bound the tags get above, which is the
-    # property asserted here.
+    # design. See the repair's docstring. `ci 1.10` measured 1.2e-3 before the
+    # fix of issue #64, and Julia 1.11 measures 7.4e-4 after it (2026-09-23),
+    # over two orders inside the 1e-1 excursion bound the tags get above, which
+    # is the property asserted here.
     residual =
         ρq_tot .- parent(Y.c.ρq_tag_tropics) .-
         parent(Y.c.ρq_tag_extratropics)
@@ -536,9 +537,10 @@ and nothing else in the timestep can mask or fake it.
     # single tag stays under the parent. That is the pointwise relative closure
     # residual, which the design keeps as a monitor rather than driving to zero.
     # It is a harsher measure than `q_tag_res` above, which normalizes by the
-    # column maximum instead of the local `ρq_tot`. Measured overshoot is 6.0e-5
-    # on `ci 1.10` and 1.5e-4 on `Downgrade 1.10`. The bound below is a drift
-    # monitor with two orders of headroom over the larger.
+    # column maximum instead of the local `ρq_tot`. Measured overshoot was
+    # 6.0e-5 on `ci 1.10` and 1.5e-4 on `Downgrade 1.10` before the fix of issue
+    # #64, and is 3.0e-4 on Julia 1.11 after it (2026-09-23). The bound below is
+    # a drift monitor with 30 times headroom over that.
     norm = parent(p.scratch.ᶜtagging_q_share_norm)
     @test all(isfinite, norm)
     @test minimum(norm) >= 0
