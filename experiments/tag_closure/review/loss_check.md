@@ -301,3 +301,105 @@ The scripts are in this session's scratchpad, not in the repository:
 - The file comparisons used `cmp`, and the renames `git diff -M`.
 - Scratch and archive files were counted with `os.walk`, without following
   links.
+
+## Re-check after the fixes
+
+Checked read-only on `claude/tag-closure-condense` at `274f55b0`, 2026-09-23,
+12:20. The fix commit changed only FINDINGS, STATUS, RUNS, README, G4_TODO,
+DECISIONS, `archive/2026-09-23/INDEX.md` and this file. The archive's other
+files, `design/`, `reference/` and G3_PLAN.md are unchanged since `89a1954b`.
+One correction to the report above: its verdict says "24 minor gaps", and the
+list has 21, m1 to m21.
+
+**Verdict: no blocking gap remains.** B1 and B2 are fixed. Checks 2 and 8 are
+clean on the new head. Of the 21 minor gaps, 15 are fixed and 4 were accepted.
+The other 2, m12 and m13, are only partly fixed. The fixes added two more
+small errors, n1 and n2. n3 and n4 are older slips that surfaced during the
+re-check. None of these touches a finding.
+
+### B1 and B2
+
+- **B1, fixed.** E50 keeps "decision 7 of 2026-09-18". A dated erratum gives
+  the original's 2026-09-17 and the source of the new date: the archived
+  OPERATIONAL_TODO and DECISIONS.md (FINDINGS.md:1091-1093).
+- **B2, fixed.** §12's row now reads "E34's reading of the audit's first-hour
+  residual as the initial adjustment" (FINDINGS.md:1534). E13 is no longer
+  listed. E13's entry and FQ-5 are unchanged.
+
+### m1 to m21
+
+| # | State | Note |
+|:--|:--|:--|
+| m1 | fixed | E22 has "at 24 h (−20,566 J kg⁻¹, as in C3)", and M6 "from t = 0 on". |
+| m2 | fixed | E73's erratum keeps "about 2× after the default's build" and says the old figures are "now in §12". |
+| m3 | fixed | E33, E34 and E49's C8 cell again say what they measured, and give the later answer as later. E34's "99% on the column (E39), 83% on the sphere (E39b)" matches both entries. |
+| m4 | fixed | The header reads E1–E76. |
+| m5 | fixed | DECISIONS notes both departures from the register, rows 57 and 59. |
+| m6 | fixed | FQ-3 → BACKLOG, FQ-11 and FQ-17 → G4_TODO G4.6, FQ-15 → G4_TODO "Energy items within M1 to M5", FQ-21 and FQ-22 → G4_TODO "Items that G3 takes up". Each place was checked, and each holds the ID. |
+| m7 | accepted | — |
+| m8 | fixed | RUNS.md:70-74 says the counts agree with the corrected register. RUNS.md:250 and STATUS.md:37-38 say E76 is ported and on the condense branch. |
+| m9 | fixed | RUNS gives `v3_upd_default` 0000 to 0005. The ladder rungs point to the second table. The OOM run's config correction is listed. |
+| m10 | fixed | STATUS.md:46-50 and RUNS.md:50-54: 2,697 files in the copy of scratch, 678 in `claude_work`, 2,058 in the worktree captures, 5,434 in all. The counts match `find`: the copy of scratch has 2,697 files, the same as scratch. |
+| m11 | fixed, with one slip (n1) | STATUS gives #95 as open at `cd21af3a`, no longer a draft. `gh pr view 95` confirms: `isDraft: false`, head `cd21af3a`. |
+| m12 | partly | Sources are now given. `sinfo -p hpda2_compute`: 160 CPUs and 1,020,721 MB, so "about 1 TB" holds. The per-rank figure is converted wrongly; see n2. README.md:196-197 says the 30 to 55% CPU was "not recorded elsewhere". It is recorded in the owner's memory note `mpi-runs-terrabyte.md`, which does not say `top`. |
+| m13 | partly | INDEX now says README.md and OPERATIONAL_TODO.md were moved too. `git log --follow` does follow their history. But the new sentence at INDEX.md:8-10 says the moved live files "changed only in links". G3_PLAN.md, moved from G3_WATER_PLAN.md, changed in its #95 sentence, which is not a link (G3_PLAN.md:26-27). The `reference/` banners also gained the sentence "Until 2026-09-23 the roadmap stood at the top of OPERATIONAL_TODO.md". |
+| m14 | accepted | INDEX gives the link changes (with m13's caveat). |
+| m15 | accepted, with a caveat | The header note (FINDINGS.md:9-10) names "the register, RUNS.md or `review/verify_g3.md`" as the sources of added dates and commits. E16's "2026-09-10" comes from the original FINDINGS §8, item 2. E41's date comes from the original E40. Both are supported, but by sources the note does not name. |
+| m16 | accepted | — |
+| m17 | fixed | §12's intro (FINDINGS.md:1500-1503) and G4_TODO.md:24-31 point to the 11 rows marked H4-B. G4_TODO says E58's and E54's restart differences "differ by orders of magnitude". That holds for `ρe_tot` (1.604e-4 against 1.7e-9) and `u₃` (1.543e-11 against 3e-9), not for `ρ` (1.758e-10 against 1.5e-10). |
+| m18 | fixed | The approval rule is in STATUS, "What needs approval", and in README, "Approval". Both match the archived OPERATIONAL_TODO.md:14-16. |
+| m19 | fixed | README's sbatch example gives `--output` and `--error` under `$SCRATCH/tag_closure/logs/`, which exists. |
+| m20 | fixed | The hand-back list now has `<run>_parameters.toml` and the reducer's tables. |
+| m21 | fixed | README, "Where results go", step 3 runs `reduce_run.jl` before the copy. |
+
+### New or left by the fixes (all minor)
+
+- **n1. STATUS.md:86: "CI was running there at about 13:00".** The fix was
+  committed at 12:18 CEST, so 13:00 had not come yet. #95's checks at
+  `cd21af3a` started at 11:29:58 CEST (09:29:58 UTC). At 12:20 CEST, 59 of 71
+  were still running.
+- **n2. README.md:107: "16.75 GB" per rank.** `sacct -j 13504999,13505896 -o
+  JobID,NTasks,MaxRSS` gives step `.0`, with 24 tasks, at 16,752,519K and
+  16,749,911K. Slurm's K is KiB. So the peak is 15.98 GiB, or 17.15 GB. The
+  README read K as 1,000 bytes. The old "about 17 GB" was right in GB.
+- **n3. RUNS.md:201: the OOM run's Output column still says "0001".**
+  Scratch has only `output_0000`, and RUNS.md:272-274 says so. The
+  corrections list at RUNS.md:75-78 does not mention the index. This dates
+  from H4, and I missed it in the first check.
+- **n4. STATUS reports H5 as closed.** STATUS.md:46 says "its gaps are
+  fixed", and STATUS.md:112 marks H5 "done ... fixed". The report above
+  counted 21 minor gaps, not 24. With n1 to n4 and the partial m12, m13 and
+  m15, that holds for the blocking gaps only.
+
+### Checks 2 and 8, on the new head
+
+- **Check 2, numbers: clean.**
+  - No number in the new FINDINGS is missing from the original FINDINGS or
+    the register. The same value-matching script as above was used, and the
+    rows it flags are the same parse artefacts as before.
+  - The edited entries gained two numbers, E34's 99 and 83, both from E39 and
+    E39b. The one new date is E50's erratum date, 2026-09-23. No other value
+    changed: every line of `git diff 89a1954b 274f55b0 -- FINDINGS.md` was
+    read.
+  - The FINDINGS header, section intros, §12 and §13 have no number or date
+    that is missing from the originals or the register.
+  - Numbers added to STATUS, RUNS and README were checked against their
+    sources: 2,697, 678, 2,058 and 5,434 against `find`; 160 and "about
+    1 TB" against `sinfo`; 16.75 against `sacct` (n2).
+- **Check 1, re-run: unchanged.** All 130 IDs, register numbers and evidence
+  pointers are present.
+- **Check 8, links: clean.** 219 relative Markdown links, anchors included, in
+  every live `.md` outside `archive/`: 0 broken.
+
+### Checked now that could not be checked before
+
+- **All seven archive tags are on origin**, as annotated tags, and each
+  matches the local tag object:
+  - `archive/g3-programme-2026-09-23`: tag object `79906aa9`, commit `2d7fa835`;
+  - `archive/tag-closure-experiments-2026-09-23`: tag object `cc397f1c`,
+    commit `eead88c3`;
+  - `archive/c1b-wip-backup`, `archive/c1c-sgs-diffusion`,
+    `archive/m3-species-lists`, `archive/tagged-tracers` and
+    `archive/upstream-vwb-species-guard`.
+
+  The source is the GitHub API, `git/matching-refs/tags/archive`.

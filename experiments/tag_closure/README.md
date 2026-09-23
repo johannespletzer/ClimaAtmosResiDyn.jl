@@ -104,7 +104,8 @@ these variables:
  - The standing approval of 2026-09-14 sized a column job at 2 CPUs, 48G and
    2 h. A one-day D4 column takes about 40 minutes.
  - A sphere on MPI: `--ntasks=24` on `hpda2_compute`, with `--mem=500G`. Each
-   rank peaked at 16.75 GB (`sacct` MaxRSS of jobs `13504999` and `13505896`).
+   rank peaked at 16,752,519 KiB, about 17.2 GB or 16.0 GiB (`sacct` MaxRSS of
+   jobs `13504999` and `13505896`).
    A first attempt with 200 GB was killed for memory. A node has 160 cores and
    about 1 TB (`sinfo`, checked 2026-09-23).
  - With more than one task, the runscript launches through `srun --mpi=pmix`
@@ -194,7 +195,7 @@ number goes through the verifier and a manifest (G3's criterion 1).
  - **An MPI run looks stuck for about an hour.** `srun` buffers Julia's log.
    With 24 ranks the build took 43 minutes and the first step with the
    callbacks' compile another 50, at 30 to 55% CPU per rank (seen with `top` during V2's build on
-   2026-09-19; not recorded elsewhere). Judge progress by
+   2026-09-19; recorded in the agents' memory notes, not in FINDINGS). Judge progress by
    the hourly NetCDF and the closure CSV, which are written as the run steps.
  - **Parity.** With a diagnostic on, every model field upstream has must stay
    bit for bit the same (`AGENTS.md`, "Fork parity with upstream"). Compare

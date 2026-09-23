@@ -42,8 +42,8 @@ fact was not checked, it says so.
    errata are in FINDINGS (`388d2f3a`). G3_PLAN's cost risk already cites
    E73's corrected figures.
  - **The documents are condensed** on `claude/tag-closure-condense` (H4,
-   `2a9d4619` and `89a1954b`). The loss check (H5) found nothing lost, and
-   its gaps are fixed.
+   `2a9d4619` and `89a1954b`). The loss check (H5) found nothing lost. Its
+   2 blocking and 21 minor gaps are fixed and were re-verified.
  - **The archive was synced again** after the day's reruns finished. Its copy
    of scratch holds 2,697 files, identical to scratch; with `claude_work` and
    the worktree captures the archive holds 5,434 files (RUNS.md, "Where the
@@ -83,7 +83,7 @@ The archive tags on origin: `archive/tag-closure-experiments-2026-09-23`,
 
 | PR | Branch | State | What |
 |:--|:--|:--|:--|
-| #95 | `claude/energy-source-tag-updraft` | open, at `cd21af3a`: two docs-only commits after `dcf7d086`. CI was running there at about 13:00 | the updraft gap: the exchange by default, updraft copies as the audit, with the partition-only factor. Its CI at `dcf7d086` was not checked here |
+| #95 | `claude/energy-source-tag-updraft` | open, at `cd21af3a`: two docs-only commits after `dcf7d086`. CI started there at 11:30 and was still running at 12:20 | the updraft gap: the exchange by default, updraft copies as the audit, with the partition-only factor. Its CI at `dcf7d086` was not checked here |
 | #96 | `claude/terrabyte-setup` | draft | the terrabyte setup script, its stack file, and the docs that name both machines |
 | #97 | `claude/historical-tag-closure-pages` | draft | the "Historical" notes on `docs/src/tag_closure_memo.md` and `tag_closure_experiments.md` |
 
@@ -109,7 +109,7 @@ The plan is [CONDENSE_PLAN.md](CONDENSE_PLAN.md).
 | H2 | the register, `review/register/` | done (`52710619`) |
 | H3 | re-check what G3 relies on | done (`388d2f3a`) |
 | H4 | write the new structure on the condense branch | done (`2a9d4619`), with E76 merged in from the record branch |
-| H5 | the loss check, by an agent that did not write | done: nothing lost; its 2 blocking and 21 minor gaps are fixed ([review/loss_check.md](review/loss_check.md)) |
+| H5 | the loss check, by an agent that did not write | done: nothing lost; its 2 blocking and 21 minor gaps are fixed and re-verified ([review/loss_check.md](review/loss_check.md)) |
 | H5b | a collective review of H1 to H7 by an independent agent, the owner's request | next |
 | H6 | the owner reviews a PR of the condense branch into the record branch; the G3 branch and the old experiment branch retire | waiting |
 | H7 | the approved cleanup | partly done. Waiting: `-upd` and `-upd-run` for #95's merge; `-setup` and `-histdocs` for #96 and #97; the two old remote branches for H6; `claude_work` while the job session uses it |

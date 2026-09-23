@@ -7,7 +7,8 @@ geometry, one resolution or an uncontrolled comparison, the bound is part of
 the finding. An inference is marked as one.
 
 **State as of 2026-09-23.** Where an entry gained a date or a commit in the
-condensing, its source is the register, RUNS.md or `review/verify_g3.md`. The register holds W1–W14 for the water tags,
+condensing, its source is another part of the original FINDINGS (such as
+its old section 8), the register, RUNS.md or `review/verify_g3.md`. The register holds W1–W14 for the water tags,
 E1–E76 with sub-entries for the energy source tags and the `ρe_tag_*` family,
 R1–R11 for the energy reference, T1–T10 for cost and M1–M6 for method. G1, a
 closed and explained EDMF column, was met on 2026-09-20 (E62, E64, E65, E66,

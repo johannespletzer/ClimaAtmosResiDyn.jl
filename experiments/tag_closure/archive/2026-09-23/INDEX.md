@@ -6,8 +6,10 @@ here unchanged, with `git mv`, so its history follows it. README.md and
 OPERATIONAL_TODO.md were moved the same way, and new files took their old
 names. FINDINGS.md is a copy of the record branch's version at `eec7f363`,
 since the live FINDINGS.md goes on. Outside the archive, the moved live files
-changed only in links: two in `design/SUBGRID_AND_MICROPHYSICS_DESIGN.md`, and
-the banner links of both files in `reference/`. Nothing here is edited. A committed measurement never changes; a correction goes into the
+changed in these ways only: links, two of them in
+`design/SUBGRID_AND_MICROPHYSICS_DESIGN.md`; a banner sentence in each file in
+`reference/`, pointing to ROADMAP, G3_TODO and G4_TODO; and G3_PLAN.md's
+sentence on the removed #95 instruction. Nothing here is edited. A committed measurement never changes; a correction goes into the
 live FINDINGS.md as a dated erratum.
 
 This index is `INDEX.md` because `README.md` here is the archived operator's
