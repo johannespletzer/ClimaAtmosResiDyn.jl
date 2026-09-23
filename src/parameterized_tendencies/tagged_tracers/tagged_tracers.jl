@@ -922,6 +922,11 @@ function rebuild_tags_from_state!(Y, atmos)
         Y.c.ρq_tot,
         atmos.water_tagging_model,
     )
+    rebuild_water_tag_updraft_copies!(
+        Y,
+        atmos.water_tagging_model,
+        atmos.turbconv_model,
+    )
     source_model = atmos.energy_source_tagging_model
     isnothing(source_model) || _rebuild_energy_source_tags!(
         Y,

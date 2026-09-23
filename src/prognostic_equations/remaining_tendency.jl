@@ -239,6 +239,13 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
+        water_tag_copies_microphysics_tendency!(
+            Yₜ,
+            Y,
+            p,
+            p.atmos.microphysics_model,
+            p.atmos.turbconv_model,
+        )
         close_applied_update!(Yₜ, Y, p, :microphysics)
     end
 

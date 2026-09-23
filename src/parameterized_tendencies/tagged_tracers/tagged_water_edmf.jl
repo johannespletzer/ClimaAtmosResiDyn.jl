@@ -103,10 +103,13 @@ water_tag_edmf_scratch(Y, model, atmos) =
     _water_tag_edmf_scratch(Y, model, atmos.turbconv_model, atmos)
 _water_tag_edmf_scratch(Y, model, turbconv_model, atmos) = (;)
 function _water_tag_edmf_scratch(Y, model, ::PrognosticEDMFX, atmos)
-    (
-        atmos.edmfx_model.sgs_mass_flux &&
-        !has_water_tag_updraft_copies(model)
-    ) || return (;)
+    # With copies: the partition's summed shares in the updraft and the
+    # environment, which the copies' sedimentation renormalizes by.
+    has_water_tag_updraft_copies(model) && return (;
+        ᶜq_tag_copy_normʲ = similar(Y.c.ρ),
+        ᶜq_tag_copy_norm⁰ = similar(Y.c.ρ),
+    )
+    atmos.edmfx_model.sgs_mass_flux || return (;)
     FT = eltype(Y.c.ρ)
     tag_values() = Fields.Field(NTuple{length(model.tags), FT}, axes(Y.c))
     return (;
@@ -458,3 +461,485 @@ WaterPlumeStep(::Val{partition}) where {partition} = WaterPlumeStep{partition}()
     scale = q_totʲ / total
     return map(ε -> ε * scale, mixed)
 end
+
+# ============================================================================
+# The audit mode: updraft copies
+# ============================================================================
+
+##### Under `water_tag_updraft_copy: true` each tag has a copy `q_tag_<name>`, a
+##### specific value, in every updraft. `sgs_tracer_names` finds it, so the
+##### model's updraft machinery moves it as any updraft tracer: advection,
+##### entrainment and detrainment, the SGS mass flux of the grid-mean tag, the
+##### diffusion mirror, hyperdiffusion and the filter. Four things the model
+##### does to the updraft's water it does not do to a tracer, and they are
+##### mirrored here, so that the copies keep summing to `q_totʲ`:
+#####
+#####   1. the updraft's 0M rain-out, `water_tag_copies_microphysics_tendency!`;
+#####   2. the updraft's 1M sedimentation, `sediment_water_tag_copies!`;
+#####   3. the relaxation at the surface, `water_tag_copies_boundary_condition_tendency!`;
+#####   4. the filter's clamps, which the copies' repair after it undoes for the
+#####      partition's sum, `repair_water_tag_copies!`.
+
+# The copy's entry `(; q_tag_<name> = value)` and its field, from the tag's
+# type, so that the name is a compile-time constant.
+@generated function updraft_copy_entry(::WaterTag{name}, value) where {name}
+    field_name = Symbol(:q_tag_, name)
+    return :(NamedTuple{($(QuoteNode(field_name)),)}((value,)))
+end
+@generated updraft_copy_field(obj, ::WaterTag{name}) where {name} =
+    :(obj.$(Symbol(:q_tag_, name)))
+
+"""
+    water_tag_updraft_copy_names(model)
+
+`Tuple` of the `Symbol`s (`:q_tag_<name>`) of the water tags' updraft copies,
+empty without them.
+"""
+water_tag_updraft_copy_names(model) =
+    has_water_tag_updraft_copies(model) ?
+    Tuple(Symbol(:q_tag_, tag_name(tag)) for tag in model.tags) : ()
+
+# Whether an updraft tracer's name is a water tag's copy.
+is_water_tag_copy_name(name::Symbol) = startswith(string(name), "q_tag_")
+is_water_tag_copy_name(name::MatrixFields.FieldName) =
+    is_water_tag_copy_name(MatrixFields.extract_first(name))
+
+"""
+    with_water_tag_updraft_copies(sgs, gs, model)
+
+Add the water tags' copies to every updraft's state at a single grid point,
+under `water_tag_updraft_copy: true`; return `sgs` unchanged otherwise. Each
+copy starts as `q_totʲ φ̄ᵢ`: the updraft's own water, split by the grid mean's
+shares, so that the partition's copies sum to `q_totʲ` from the start. The
+energy source tags' copies start from the grid mean's specific values instead;
+for water that would give the copies the grid mean's water where the updraft
+holds more.
+"""
+with_water_tag_updraft_copies(sgs, gs, model) = _with_water_tag_updraft_copies(
+    Val(has_water_tag_updraft_copies(model)),
+    sgs,
+    gs,
+    model,
+)
+_with_water_tag_updraft_copies(::Val{false}, sgs, gs, model) = sgs
+_with_water_tag_updraft_copies(::Val{true}, sgs, gs, model) =
+    haskey(sgs, :sgsʲs) ?
+    (;
+        sgs...,
+        sgsʲs = map(
+            sgsʲ -> (;
+                sgsʲ...,
+                _water_tag_copy_entries(gs, sgsʲ.q_tot, model.tags)...,
+            ),
+            sgs.sgsʲs,
+        ),
+    ) : sgs
+_water_tag_copy_entries(gs, q_totʲ, ::Tuple{}) = (;)
+_water_tag_copy_entries(gs, q_totʲ, tags::Tuple) = merge(
+    updraft_copy_entry(
+        first(tags),
+        q_totʲ * water_tag_fraction(tag_field(gs, first(tags)), gs.ρq_tot),
+    ),
+    _water_tag_copy_entries(gs, q_totʲ, Base.tail(tags)),
+)
+
+"""
+    rebuild_water_tag_updraft_copies!(Y, model, turbconv_model)
+
+Set every copy to `q_totʲ φ̄ᵢ` from the current state, after the grid-scale tags
+are rebuilt: for a fresh run and a file-based start, where the state is written
+after the tags were first built. Not on a restart, which reads the copies from
+the checkpoint. A no-op without copies.
+"""
+rebuild_water_tag_updraft_copies!(Y, model, turbconv_model) = nothing
+function rebuild_water_tag_updraft_copies!(
+    Y,
+    model::WaterTaggingModel,
+    turbconv_model::PrognosticEDMFX,
+)
+    has_water_tag_updraft_copies(model) || return nothing
+    for j in 1:n_mass_flux_subdomains(turbconv_model)
+        _rebuild_water_tag_copies!(Y.c.sgsʲs.:($j), Y.c, model.tags)
+    end
+    return nothing
+end
+_rebuild_water_tag_copies!(ᶜsgsʲ, ᶜY, ::Tuple{}) = nothing
+function _rebuild_water_tag_copies!(ᶜsgsʲ, ᶜY, tags::Tuple)
+    tag = first(tags)
+    ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
+    @. ᶜχʲ = ᶜsgsʲ.q_tot * water_tag_fraction(tag_field(ᶜY, tag), ᶜY.ρq_tot)
+    return _rebuild_water_tag_copies!(ᶜsgsʲ, ᶜY, Base.tail(tags))
+end
+
+# ---------------------------------------------------------------------------
+# 1. The updraft's 0M rain-out
+# ---------------------------------------------------------------------------
+
+"""
+    water_tag_copies_microphysics_tendency!(Yₜ, Y, p, microphysics_model, turbconv_model)
+
+Mirror the updraft's 0M rain-out on the copies. The model removes the rain as
+`ρaʲ += ρaʲ dq` and `q_totʲ += dq (1 - q_totʲ)`, with `dq ≤ 0` the updraft's
+`dq_tot_dt` (`microphysics_tendency!`). A tracer gets neither. Each copy takes
+`χᵢʲ += dq (φʲᵢ - χᵢʲ)` with `φʲᵢ = clamp(χᵢʲ / q_totʲ, 0, 1)`: its share of the
+water lost, plus the concentration of what stays by the mass that left. Summed
+over a partition that holds, this is the parent's term exactly, and a drift of
+the sum decays. Call it right after `microphysics_tendency!`, on the implicit or
+the explicit path, wherever that runs. A no-op without copies and other than
+under 0M with prognostic EDMF, where the updraft's microphysics never changes
+`q_totʲ`.
+"""
+water_tag_copies_microphysics_tendency!(Yₜ, Y, p, microphysics_model, turbconv_model) =
+    nothing
+function water_tag_copies_microphysics_tendency!(
+    Yₜ,
+    Y,
+    p,
+    ::EquilibriumMicrophysics0M,
+    turbconv_model::PrognosticEDMFX,
+)
+    model = p.atmos.water_tagging_model
+    has_water_tag_updraft_copies(model) || return nothing
+    (; ᶜmp_tendencyʲs) = p.precomputed
+    for j in 1:n_mass_flux_subdomains(turbconv_model)
+        _copies_rain_out!(
+            Yₜ.c.sgsʲs.:($j),
+            Y.c.sgsʲs.:($j),
+            ᶜmp_tendencyʲs.:($j),
+            model.tags,
+        )
+    end
+    return nothing
+end
+_copies_rain_out!(ᶜsgsʲₜ, ᶜsgsʲ, ᶜmp_tendencyʲ, ::Tuple{}) = nothing
+function _copies_rain_out!(ᶜsgsʲₜ, ᶜsgsʲ, ᶜmp_tendencyʲ, tags::Tuple)
+    tag = first(tags)
+    ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
+    ᶜχʲₜ = updraft_copy_field(ᶜsgsʲₜ, tag)
+    @. ᶜχʲₜ +=
+        ᶜmp_tendencyʲ.dq_tot_dt *
+        (water_tag_fraction(ᶜχʲ, ᶜsgsʲ.q_tot) - ᶜχʲ)
+    return _copies_rain_out!(ᶜsgsʲₜ, ᶜsgsʲ, ᶜmp_tendencyʲ, Base.tail(tags))
+end
+
+# ---------------------------------------------------------------------------
+# 2. The updraft's 1M sedimentation
+# ---------------------------------------------------------------------------
+
+"""
+    sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, α_lat, ᶜinv_ρ̂, ᶠJ)
+
+Mirror one sedimenting species' updraft sedimentation on the copies of updraft
+`j`. The model moves the species `qʲ` and `q_totʲ` by
+`ᶜinv_ρ̂ * updraft_sedimentation!(…, qʲ, …, ρ⁰w⁰q⁰, α_lat)`: the flux within the
+updraft, and where the updraft narrows with height, the environment's falling
+water flowing in (`edmfx_sgs_vertical_advection_tendency!`). The falling updraft
+water carries the updraft's composition, and the inflow the environment's. So
+each copy takes the same term with `qʲ φʲᵢ` and `ρ⁰w⁰q⁰ φ⁰ᵢ`. The term is
+linear in both, and the partition's shares in each subdomain are renormalized to
+sum to one, so the copies' terms sum to the parent's. A source tag's copy takes
+its own clamped share. Call it inside the species loop, after the species' own
+update, since it reuses that update's scratch. A no-op without copies.
+"""
+sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, α_lat, ᶜinv_ρ̂, ᶠJ) =
+    _sediment_water_tag_copies!(
+        Yₜ,
+        Y,
+        p,
+        j,
+        ᶜqʲ,
+        ᶜwʲ,
+        ᶜa,
+        ᶜρ⁰w⁰q⁰,
+        α_lat,
+        ᶜinv_ρ̂,
+        ᶠJ,
+        p.atmos.water_tagging_model,
+    )
+_sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, α_lat, ᶜinv_ρ̂, ᶠJ, model) =
+    nothing
+function _sediment_water_tag_copies!(
+    Yₜ,
+    Y,
+    p,
+    j,
+    ᶜqʲ,
+    ᶜwʲ,
+    ᶜa,
+    ᶜρ⁰w⁰q⁰,
+    α_lat,
+    ᶜinv_ρ̂,
+    ᶠJ,
+    model::WaterTaggingModel,
+)
+    has_water_tag_updraft_copies(model) || return nothing
+    ᶜsgsʲ = Y.c.sgsʲs.:($j)
+    ᶜq_totʲ = ᶜsgsʲ.q_tot
+    ᶜq_tot⁰ = ᶜspecific_env_value(@name(q_tot), Y, p)
+    # The partition's shares in the updraft and the environment, summed, to
+    # renormalize by. The copies are specific values, so the updraft's share is
+    # the copy over `q_totʲ`, and the environment's its value there over `q_tot⁰`.
+    (ᶜnormʲ, ᶜnorm⁰) =
+        (p.scratch.ᶜq_tag_copy_normʲ, p.scratch.ᶜq_tag_copy_norm⁰)
+    @. ᶜnormʲ = 0
+    @. ᶜnorm⁰ = 0
+    _accumulate_copy_norms!(ᶜnormʲ, ᶜnorm⁰, ᶜsgsʲ, Y, p, model.tags)
+    vtt = p.scratch.ᶜtemp_scalar_4
+    _sediment_water_tag_copies_each!(
+        Yₜ.c.sgsʲs.:($j),
+        Y,
+        p,
+        ᶜsgsʲ,
+        (;
+            ᶜρʲ = p.precomputed.ᶜρʲs.:($j),
+            ᶜqʲ,
+            ᶜwʲ,
+            ᶜa,
+            ᶜρ⁰w⁰q⁰,
+            α_lat,
+            ᶜinv_ρ̂,
+            ᶠJ,
+            ᶜnormʲ,
+            ᶜnorm⁰,
+            ᶜq_tot⁰,
+            vtt,
+        ),
+        model.tags,
+    )
+    return nothing
+end
+
+@generated water_tag_copy_field_name(::WaterTag{name}) where {name} =
+    :(MatrixFields.FieldName($(QuoteNode(Symbol(:q_tag_, name)))))
+
+_accumulate_copy_norms!(ᶜnormʲ, ᶜnorm⁰, ᶜsgsʲ, Y, p, ::Tuple{}) = nothing
+function _accumulate_copy_norms!(ᶜnormʲ, ᶜnorm⁰, ᶜsgsʲ, Y, p, tags::Tuple)
+    tag = first(tags)
+    if _is_partition_tag(tag)
+        ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
+        ᶜχ⁰ = ᶜspecific_env_value(water_tag_copy_field_name(tag), Y, p)
+        ᶜq_tot⁰ = ᶜspecific_env_value(@name(q_tot), Y, p)
+        @. ᶜnormʲ += water_tag_fraction(ᶜχʲ, ᶜsgsʲ.q_tot)
+        @. ᶜnorm⁰ += water_tag_fraction(ᶜχ⁰, ᶜq_tot⁰)
+    end
+    return _accumulate_copy_norms!(ᶜnormʲ, ᶜnorm⁰, ᶜsgsʲ, Y, p, Base.tail(tags))
+end
+
+# A copy's share of its subdomain's water: renormalized for the partition, its
+# own clamped share for a source tag.
+_copy_share(χ, q, norm, ::Val{true}) = water_tag_sediment_share(χ, q, norm)
+_copy_share(χ, q, norm, ::Val{false}) = water_tag_source_sediment_share(χ, q)
+
+_sediment_water_tag_copies_each!(ᶜsgsʲₜ, Y, p, ᶜsgsʲ, args, ::Tuple{}) = nothing
+function _sediment_water_tag_copies_each!(ᶜsgsʲₜ, Y, p, ᶜsgsʲ, args, tags::Tuple)
+    (; ᶜρʲ, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, α_lat, ᶜinv_ρ̂, ᶠJ) = args
+    (; ᶜnormʲ, ᶜnorm⁰, ᶜq_tot⁰, vtt) = args
+    tag = first(tags)
+    partition = Val(_is_partition_tag(tag))
+    ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
+    ᶜχʲₜ = updraft_copy_field(ᶜsgsʲₜ, tag)
+    ᶜχ⁰ = ᶜspecific_env_value(water_tag_copy_field_name(tag), Y, p)
+    ᶜfalling = @. lazy(ᶜqʲ * _copy_share(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜnormʲ, partition))
+    ᶜinflow = @. lazy(ᶜρ⁰w⁰q⁰ * _copy_share(ᶜχ⁰, ᶜq_tot⁰, ᶜnorm⁰, partition))
+    updraft_sedimentation!(
+        vtt,
+        p,
+        ᶜρʲ,
+        ᶜwʲ,
+        ᶜa,
+        ᶜfalling,
+        ᶠJ,
+        ᶜinflow,
+        α_lat,
+    )
+    @. ᶜχʲₜ += ᶜinv_ρ̂ * vtt
+    return _sediment_water_tag_copies_each!(
+        ᶜsgsʲₜ,
+        Y,
+        p,
+        ᶜsgsʲ,
+        args,
+        Base.tail(tags),
+    )
+end
+
+# ---------------------------------------------------------------------------
+# 3. The relaxation at the surface
+# ---------------------------------------------------------------------------
+
+"""
+    water_tag_copies_boundary_condition_tendency!(Yₜ, Y, p, turbconv_model)
+
+Mirror the updraft's relaxation at the lowest level on the copies. The model
+relaxes `q_totʲ` toward the buoyant surface value `q_b = q̄ + C√σ²` at the rate
+`mass_flux_source / max(ρa, ρ a_min)` (`edmfx_boundary_condition_tendency!`); a
+tracer gets nothing. Each copy relaxes at the same rate toward `q_b φ̄ᵢ`, the
+grid mean's composition in that cell, the partition's renormalized. So the
+partition's copies relax toward `q_b` together, and no copy gets water the cell
+does not hold: a surface-evaporation tag gets only its share of the cell's
+water, not the excess `C√σ²` as its own. A no-op without copies.
+"""
+water_tag_copies_boundary_condition_tendency!(Yₜ, Y, p, turbconv_model) = nothing
+function water_tag_copies_boundary_condition_tendency!(
+    Yₜ,
+    Y,
+    p,
+    turbconv_model::PrognosticEDMFX,
+)
+    model = p.atmos.water_tagging_model
+    has_water_tag_updraft_copies(model) || return nothing
+    (; params) = p
+    (; ᶜρʲs, sfc_mass_flux_sourceʲs, sfc_q_tot_buoyantʲs) = p.precomputed
+    FT = eltype(params)
+    a_min = CAP.min_area(CAP.turbconv_params(params))
+    water_tag_share_norm!(p, Y)
+    ᶜnorm = p.scratch.ᶜtagging_q_share_norm
+    for j in 1:n_mass_flux_subdomains(turbconv_model)
+        level_values(field) = Fields.field_values(Fields.level(field, 1))
+        values = (;
+            ρ = level_values(ᶜρʲs.:($j)),
+            ρa = level_values(Y.c.sgsʲs.:($j).ρa),
+            source = level_values(sfc_mass_flux_sourceʲs.:($j)),
+            q_b = level_values(sfc_q_tot_buoyantʲs.:($j)),
+            ρq_tot = level_values(Y.c.ρq_tot),
+            norm = level_values(ᶜnorm),
+            a_min = FT(a_min),
+        )
+        _relax_water_tag_copies!(
+            Yₜ.c.sgsʲs.:($j),
+            Y.c.sgsʲs.:($j),
+            Y.c,
+            values,
+            level_values,
+            model.tags,
+        )
+    end
+    return nothing
+end
+_relax_water_tag_copies!(ᶜsgsʲₜ, ᶜsgsʲ, ᶜY, values, level_values, ::Tuple{}) =
+    nothing
+function _relax_water_tag_copies!(
+    ᶜsgsʲₜ,
+    ᶜsgsʲ,
+    ᶜY,
+    values,
+    level_values,
+    tags::Tuple,
+)
+    tag = first(tags)
+    (; ρ, ρa, source, q_b, ρq_tot, norm, a_min) = values
+    χ = level_values(updraft_copy_field(ᶜsgsʲ, tag))
+    χₜ = level_values(updraft_copy_field(ᶜsgsʲₜ, tag))
+    ρq_tag = level_values(tag_field(ᶜY, tag))
+    partition = Val(_is_partition_tag(tag))
+    @. χₜ +=
+        source * (q_b * _copy_share(ρq_tag, ρq_tot, norm, partition) - χ) /
+        max(ρa, ρ * a_min)
+    return _relax_water_tag_copies!(
+        ᶜsgsʲₜ,
+        ᶜsgsʲ,
+        ᶜY,
+        values,
+        level_values,
+        Base.tail(tags),
+    )
+end
+
+# ---------------------------------------------------------------------------
+# 4. The copies' repair after the filter
+# ---------------------------------------------------------------------------
+
+"""
+    repair_water_tag_copies!(Y, p)
+
+After the updraft filter (`enforce_edmf_updraft_constraints!`), close the
+partition's copies onto `q_totʲ` again. The filter clamps each copy and
+`q_totʲ` apart, so their sum and `q_totʲ` part. The residual
+`r = q_totʲ - Σᵢ∈P χᵢʲ` is handed to the partition's copies by their shares,
+floored at what they hold, by [`water_tag_rescale_shift`](@ref), the rule the
+grid-scale tags follow after a limiter. The filter's own increment is not
+handed on as well: the filter already clamped each copy, and doing both would
+count it twice. `r` before the repair is kept in `p.tagging.ᶜwater_copy_residual`
+for the diagnostic `q_tag_copy_res`, and the water moved, times `ρaʲ`, in the
+ledger `q_tag_upfix_<name>`, cumulative since the segment started. Source tags'
+copies are not part of the sum and are left as the filter left them. A no-op
+without copies.
+"""
+repair_water_tag_copies!(Y, p) =
+    _repair_water_tag_copies!(
+        Y,
+        p,
+        p.atmos.water_tagging_model,
+        p.atmos.turbconv_model,
+    )
+_repair_water_tag_copies!(Y, p, model, turbconv_model) = nothing
+function _repair_water_tag_copies!(
+    Y,
+    p,
+    model::WaterTaggingModel,
+    ::PrognosticEDMFX,
+)
+    has_water_tag_updraft_copies(model) || return nothing
+    (; ᶜwater_upfix, ᶜwater_copy_residual, ᶜwater_copy_sum, ᶜwater_copy_pos) =
+        p.tagging
+    ᶜsgsʲ = Y.c.sgsʲs.:(1)
+    @. ᶜwater_copy_sum = 0
+    @. ᶜwater_copy_pos = 0
+    _accumulate_copy_sums!(ᶜwater_copy_sum, ᶜwater_copy_pos, ᶜsgsʲ, model.tags)
+    @. ᶜwater_copy_residual = ᶜsgsʲ.q_tot - ᶜwater_copy_sum
+    _apply_copy_repair!(
+        ᶜsgsʲ,
+        ᶜwater_upfix,
+        ᶜwater_copy_sum,
+        ᶜwater_copy_pos,
+        model.tags,
+    )
+    return nothing
+end
+_accumulate_copy_sums!(ᶜsum, ᶜpos, ᶜsgsʲ, ::Tuple{}) = nothing
+function _accumulate_copy_sums!(ᶜsum, ᶜpos, ᶜsgsʲ, tags::Tuple)
+    tag = first(tags)
+    if _is_partition_tag(tag)
+        ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
+        @. ᶜsum += ᶜχʲ
+        @. ᶜpos += max(ᶜχʲ, 0)
+    end
+    return _accumulate_copy_sums!(ᶜsum, ᶜpos, ᶜsgsʲ, Base.tail(tags))
+end
+# `ᶜsum` and `ᶜpos` come from the pre-repair copies and are only read here, so
+# each copy can be rewritten in place.
+_apply_copy_repair!(ᶜsgsʲ, ᶜupfix, ᶜsum, ᶜpos, ::Tuple{}) = nothing
+function _apply_copy_repair!(ᶜsgsʲ, ᶜupfix, ᶜsum, ᶜpos, tags::Tuple)
+    tag = first(tags)
+    if _is_partition_tag(tag)
+        ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
+        ᶜfix = tag_field(ᶜupfix, tag)
+        # Ledger first, so it records the correction itself.
+        @. ᶜfix +=
+            ᶜsgsʲ.ρa *
+            water_tag_rescale_shift(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜsum, ᶜpos)
+        @. ᶜχʲ += water_tag_rescale_shift(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜsum, ᶜpos)
+    end
+    return _apply_copy_repair!(ᶜsgsʲ, ᶜupfix, ᶜsum, ᶜpos, Base.tail(tags))
+end
+
+# ---------------------------------------------------------------------------
+# The copies in the Jacobian
+# ---------------------------------------------------------------------------
+
+"""
+    water_tag_copy_sgs_names(Y)
+
+`Tuple` of the `@name`s (relative to `Y.c.sgsʲs.:(1)`) of the water tags'
+updraft copies, empty without them. They are passive updraft tracers, so the
+generic Jacobian blocks of advection, diffusion and entrainment cover them; the
+copies' sedimentation and surface relaxation add to those blocks.
+"""
+water_tag_copy_sgs_names(Y) =
+    unrolled_filter(is_water_tag_copy_name, passive_sgs_tracer_names(Y))
+
+# The derivative of a copy's falling water `qʲ χ / q_totʲ` with respect to the
+# copy, as the sedimentation Jacobian takes it: without the renormalization's
+# and the clamp's dependence, a convergence aid like the grid tags' diagonal.
+@inline water_tag_copy_fall_share_derivative(qʲ, q_totʲ) =
+    q_totʲ > zero(q_totʲ) ? qʲ / q_totʲ : zero(q_totʲ)

@@ -439,6 +439,21 @@ function edmfx_sgs_vertical_advection_tendency!(
                 )
                 @. ᶜqʲₜ += ᶜinv_ρ̂ * vtt
                 @. Yₜ.c.sgsʲs.:($$j).q_tot += ᶜinv_ρ̂ * vtt
+                # The water tags' updraft copies fall with their share of this
+                # species. After the species' own update, since it reuses `vtt`.
+                sediment_water_tag_copies!(
+                    Yₜ,
+                    Y,
+                    p,
+                    j,
+                    ᶜqʲ,
+                    ᶜwʲ,
+                    ᶜa,
+                    ᶜρ⁰w⁰χ⁰,
+                    α_lat,
+                    ᶜinv_ρ̂,
+                    ᶠJ,
+                )
             end
         end
 
