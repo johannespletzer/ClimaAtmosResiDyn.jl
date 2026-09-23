@@ -128,7 +128,37 @@ The agent definitions in `~/.claude/agents/` load only when a session starts.
 Until then the agents run as `general-purpose` with the model set, and their
 effort is the default.
 
-## Worktrees and branches: proposed fates, for the owner's approval (H7)
+## H7, approved by the owner on 2026-09-23 and partly done
+
+Done the same day:
+ - The archive was synced again, and each worktree captured again (its
+   untracked files and patch, checked by count and size). Then the 22
+   worktrees marked "remove" below were removed. Seven remain: the main clone,
+   `-exp`, `-upd`, `-upd-run`, `ClimaAtmos-upstream-d331fe3`, `-setup` and
+   `-histdocs`.
+ - Local branches deleted: 37 merged into `main`, `list`, and the four that
+   are now tagged.
+ - Remote branches deleted: the six merged into `main`. The earlier count of
+   55 was mostly stale references to branches GitHub had already deleted on
+   merge.
+ - `tagged-tracers` held two commits found nowhere else (PR #31's merge and a
+   test fix), and its branch was gone from origin. It is now tagged
+   `archive/tagged-tracers`. The branch itself stays; it was not on the list.
+
+Still to do, when their conditions are met:
+ - `-upd` and `-upd-run`: after #95 merges.
+ - `-setup` and `-histdocs`: after #96 and #97 merge.
+ - The main clone moves to the record branch in H1.
+ - Remote `claude/tag-closure-experiments` and `claude/g3-programme` are
+   deleted at H6. Both are tagged.
+ - `claude_work` is left alone while the job session uses it (its test
+   environment and run scripts). It is in the archive.
+ - Three local branches that were not on the list stay:
+   `claude/review-open-prs-tasks-wxiw0k` (on origin),
+   `claude/terrabyte-julia-setup` (nothing unique) and `tagged-tracers`
+   (tagged).
+
+## Worktrees and branches: the approved fates (H7)
 
 Every worktree's commit is reachable from a branch or tag, and its local patch
 and untracked files are in the archive. A worktree's removal keeps its branch.
