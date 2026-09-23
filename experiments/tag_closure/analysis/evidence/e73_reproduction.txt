@@ -1,0 +1,136 @@
+G3 1.5: E73's table reproduced from its inputs
+================================================
+Built by: experiments/tag_closure/analysis/evidence/compare_runs.py
+Run on terrabyte login node, 2026-09-23, python/3.12 module.
+
+Command
+-------
+python3 experiments/tag_closure/analysis/evidence/compare_runs.py \
+  --reference /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v3_upd_copies/output_0000 \
+  --run /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v3_upd_default/output_0002 \
+  --hours 1,6,12,24 \
+  --json <tmp>/e73_repro_report.json
+
+Exit status: 0.
+
+Verdict
+-------
+The table in experiments/tag_closure/output/v3_upd_default/head_846ef55d/default_vs_copies.txt
+is reproduced exactly at its printed precision. All 32 rows (8 tags x 4
+hours) match: the largest disagreement in every column (integral_ref,
+Delta-integral/integral, L1, Linf) is 0 -- every formatted token from
+compare_runs.py's output is character-identical to the corresponding token
+in the old table. This was checked programmatically (parsed both the text
+table and compare_runs.py's --json output, reformatted the new numbers with
+the old table's exact format specifiers, and diffed token by token); zero
+mismatches.
+
+The one visible difference is the `mp` tag. The old script printed
+`+nan` for `Δ∫/∫` there (dividing 0/0, since e_src_mp is identically zero in
+both runs at every requested hour) and 0.00e+00 for L1 and L∞. compare_runs.py
+recognizes `mp` as the "reference is identically zero" case and prints
+"ref zero (run zero)" for those three columns instead, per spec (never a
+stray 0 or NaN). This is the corrected form of the same fact, not a
+disagreement in the underlying numbers.
+
+compare_runs.py also checks `arup` and `waup`, which the old script did not
+(it only checked `ta` and `rhoa`). Both are bitwise identical between the two
+runs as well:
+
+  arup       bitwise identical (750 elements)
+  rhoa       bitwise identical (750 elements)
+  ta         bitwise identical (750 elements)
+  waup       bitwise identical (750 elements)
+
+Full reproduced table
+----------------------
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v3_upd_copies/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/v3_upd_default/output_0002
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 1500.000 m (YAML z_max 1500.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  arup       bitwise identical (750 elements)
+  rhoa       bitwise identical (750 elements)
+  ta         bitwise identical (750 elements)
+  waup       bitwise identical (750 elements)
+
+tag        hour    ∫ref J/m²        Δ∫/∫        L1        L∞  max|Δe| J/kg
+mp            1   0.0000e+00           ref zero (run zero) 0.0000e+00
+mp            6   0.0000e+00           ref zero (run zero) 0.0000e+00
+mp           12   0.0000e+00           ref zero (run zero) 0.0000e+00
+mp           24   0.0000e+00           ref zero (run zero) 0.0000e+00
+
+new_strat     1   1.1968e+04   +2.12e-03  2.59e-03  1.87e-03  1.6995e-01
+new_strat     6   9.4893e+04   -1.37e-02  1.37e-02  6.51e-03  2.6069e+00
+new_strat    12   1.7103e+05   -7.92e-03  7.97e-03  1.74e-02  6.0129e+00
+new_strat    24   3.5180e+05   -3.96e-03  5.22e-03  5.65e-03  3.7840e+00
+
+new_tropo     1   4.9387e+05   +1.75e-02  1.34e-01  2.16e-01  2.6004e+02
+new_tropo     6   2.8965e+06   +2.42e-03  2.30e-02  5.40e-02  2.2784e+02
+new_tropo    12   5.6523e+06   +1.26e-03  1.42e-02  3.06e-02  2.1675e+02
+new_tropo    24   1.0893e+07   +4.30e-04  6.32e-03  2.06e-02  2.4191e+02
+
+rad           1   7.7754e+04   +5.37e-03  5.34e-02  1.45e-01  2.4016e+01
+rad           6   4.2285e+05   +3.27e-05  1.86e-02  4.51e-02  2.2746e+01
+rad          12   8.0279e+05   -6.02e-04  5.08e-03  1.57e-02  1.4167e+01
+rad          24   1.5333e+06   -7.99e-04  6.64e-03  9.29e-03  1.5481e+01
+
+sfc           1   4.0929e+05   +2.12e-02  1.54e-01  2.62e-01  3.0030e+02
+sfc           6   2.3995e+06   +3.07e-03  2.49e-02  5.93e-02  2.2491e+02
+sfc          12   4.7222e+06   +1.70e-03  1.60e-02  3.22e-02  2.0030e+02
+sfc          24   9.1118e+06   +6.99e-04  6.36e-03  2.49e-02  2.4737e+02
+
+strat         1   5.2465e+07   +7.83e-04  1.38e-03  3.88e-03  2.5568e+02
+strat         6   5.2295e+07   -1.08e-03  4.23e-03  6.92e-03  4.5392e+02
+strat        12   5.1694e+07   -1.02e-03  1.02e-03  9.92e-03  6.4793e+02
+strat        24   5.0593e+07   -9.89e-04  9.89e-04  7.45e-03  4.8136e+02
+
+sub           1   2.0168e+04   +8.11e-04  5.03e-03  2.60e-03  2.8930e-01
+sub           6   1.7412e+05   -2.17e-02  2.17e-02  1.87e-02  9.1804e+00
+sub          12   3.0331e+05   -1.25e-02  1.25e-02  1.73e-02  7.7710e+00
+sub          24   6.0408e+05   -6.22e-03  6.40e-03  1.05e-02  7.7250e+00
+
+tropo         1   6.0593e+07   -6.78e-04  1.19e-03  3.69e-03  2.5563e+02
+tropo         6   6.1097e+07   +9.24e-04  3.62e-03  6.98e-03  4.5365e+02
+tropo        12   6.2024e+07   +8.52e-04  8.52e-04  9.80e-03  6.4795e+02
+tropo        24   6.3567e+07   +7.88e-04  7.88e-04  7.27e-03  4.8138e+02
+
+Largest disagreement per column (this reproduction vs. the committed table)
+-----------------------------------------------------------------------------
+  ∫ref J/m² : 0 (32/32 rows match at printed precision)
+  Δ∫/∫      : 0 (32/32 rows match; mp's old "+nan" is now "ref zero", same fact)
+  L1        : 0 (32/32 rows match)
+  L∞        : 0 (32/32 rows match)
+
+Provenance check
+-----------------
+v3_upd_default/output_0002/provenance.txt:
+  commit: 846ef55d0aea31856403db4d0add994c45208500
+This is the commit E73 is recorded against (846ef55d). Confirmed.
+
+The evidence-pipeline hazard, demonstrated (old script NOT run)
+------------------------------------------------------------------
+The old script picks a run directory independently per variable with
+    sorted(glob(f"{ROOT}/{run}/output_0*/{name}_1h_inst.nc"))[-1]
+For run="v3_upd_default" today, that glob resolves to:
+
+  output_0000/ta_1h_inst.nc
+  output_0001/ta_1h_inst.nc
+  output_0002/ta_1h_inst.nc
+  output_0003/ta_1h_inst.nc
+
+sorted(...)[-1] picks output_0003 -- not output_0002, the directory E73 was
+actually computed from. output_0003's provenance.txt names commit
+e71430fbfbab06a36903aab4da8a37ed4c762d4a, a different code version than
+846ef55d (E73's commit). Anyone re-running the old script today with
+`v3_upd_default` as the bare run name, intending to reproduce E73, would
+silently get output_0003 against a different commit instead, with no
+warning that the code version had changed. This is exactly the flaw
+described in "New insight D": explicit output_XXXX directories (which
+compare_runs.py requires, and output_active/bare run roots it refuses) are
+the fix.
+
+compare_runs.py's --reference/--run flags require an explicit output_XXXX
+directory for this reason; this reproduction used output_0002 explicitly,
+not "v3_upd_default" or "output_active".
