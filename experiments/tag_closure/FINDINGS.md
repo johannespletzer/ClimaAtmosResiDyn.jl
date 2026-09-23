@@ -537,9 +537,14 @@ variants. Closure after the hour, relative to the column's water:
     check's NaN was the test dividing by `ρaʲ`, which is exactly zero on 8 of
     the 30 levels; it now takes the leak only where there is an updraft.
   - **What it leaves.** The lag is a property of the tags on this path, not
-    of the copies. WP5's follower is built to remove it; its D4-W validation
-    runs with the default, implicit path. A run with explicit 1M microphysics
-    and the follower is still to be done.
+    of the copies. WP5's follower removes only its column-neutral part: its
+    flux vanishes at both boundaries, so it never changes the partition's
+    column total (the review of #102, S1). The net part, about half the gross
+    in the default row and 80% in the copies row, most likely the linearized
+    surface outflow of sedimentation, would stay and land in
+    `q_tag_inc_left`. *Corrected on 2026-09-24; this entry first said the
+    follower is built to remove the lag.* The explicit-path probe with the
+    follower measures it.
 
 *Probes: `analysis/water/explicit_probe.jl` from the WP3 test snapshot at
 `4a1c91a4`, `hpda2_compute`, 2026-09-24, jobs `13865359`, `13865360`,

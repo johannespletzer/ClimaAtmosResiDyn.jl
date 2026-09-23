@@ -247,8 +247,11 @@ Hence:
     decides only the default.
   - The follower is the key `water_tag_transport: increment`. After each Newton
     solve the tags take the parent's increment of `ρq_tot`. The part that
-    changes a column's total stays in place, with ledgers `q_tag_inc_left` and
-    `q_tag_inc_moved`.
+    changes a column's total stays out of the tags, with ledgers
+    `q_tag_inc_left` and `q_tag_inc_moved`. *Added 2026-09-24 (the review of
+    #102):* so the follower never changes the partition's column total, and a
+    lag in the surface outflow stays in the net residual; the part left out is
+    spread by `|m|` and its profile does not show where it arose.
   - The tags' explicit vertical advection is then skipped, as `advection.jl:257`
     does for the energy tags. Otherwise it would count twice.
   - Its post-solve hook composes with `EnergySourceIncrementCorrection` in one
