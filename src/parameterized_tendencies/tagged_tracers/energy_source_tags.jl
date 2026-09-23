@@ -54,6 +54,48 @@ end
 @generated tag_field(obj, ::EnergySourceTag{name}) where {name} =
     :(obj.$(Symbol(:ρe_src_, name)))
 
+# The same for a tag's updraft copy, `e_src_<name>` in `Y.c.sgsʲs.:(j)`. Like
+# every updraft tracer, it holds the specific value.
+@generated function updraft_copy_entry(::EnergySourceTag{name}, value) where {name}
+    field_name = Symbol(:e_src_, name)
+    return :(NamedTuple{($(QuoteNode(field_name)),)}((value,)))
+end
+@generated updraft_copy_field(obj, ::EnergySourceTag{name}) where {name} =
+    :(obj.$(Symbol(:e_src_, name)))
+
+"""
+    energy_source_updraft_copy_variables(gs, model)
+
+The energy source tags' copies for one updraft at a single grid point, `(; e_src_<name₁> = ..., ...)`, under `energy_source_tag_updraft_copy: true`, and
+`(;)` otherwise. `gs` holds the grid-scale center variables of that point. Each
+copy starts as its tag's specific value, `ρe_src_<name> / ρ`, so the updrafts
+begin with the grid mean's composition, as they begin with its other tracers.
+"""
+energy_source_updraft_copy_variables(gs, model) =
+    _energy_source_updraft_copy_variables(
+        Val(has_energy_source_updraft_copies(model)),
+        gs,
+        model,
+    )
+_energy_source_updraft_copy_variables(::Val{false}, gs, model) = (;)
+_energy_source_updraft_copy_variables(::Val{true}, gs, model) =
+    _energy_source_copy_entries(gs, model.tags)
+_energy_source_copy_entries(gs, ::Tuple{}) = (;)
+_energy_source_copy_entries(gs, tags::Tuple) = merge(
+    updraft_copy_entry(first(tags), tag_field(gs, first(tags)) / gs.ρ),
+    _energy_source_copy_entries(gs, Base.tail(tags)),
+)
+
+"""
+    energy_source_updraft_copy_names(model)
+
+`Tuple` of the `Symbol`s (`:e_src_<name>`) of the tags' updraft copies, empty
+without them.
+"""
+energy_source_updraft_copy_names(model) =
+    has_energy_source_updraft_copies(model) ?
+    Tuple(Symbol(:e_src_, tag_name(tag)) for tag in model.tags) : ()
+
 # Region-less tags carry no mask, exactly as for the other two families.
 _tag_mask_entry(ᶜcoord, ::EnergySourceTag{name, Nothing}) where {name} = (;)
 _tag_mask_entry(ᶜcoord, tag::EnergySourceTag) =
@@ -295,6 +337,60 @@ function _check_increment_partition(ᶜmasks, names, model)
     return nothing
 end
 
+"""
+    check_energy_source_exchange_partition(cache, atmos)
+
+Refuse the exchange of provenance at the sub-grid mass flux without region tags
+that partition the domain. The exchange (`sgs_exchange_of_energy_source_tags!`)
+runs under `PrognosticEDMFX` with the SGS mass flux on and without updraft
+copies. A tag's share there is its value over the sum of the region tags without
+sources. Without such tags that sum is zero, and the exchange would silently do
+nothing. Where their masks leave a gap, the sum is too small, and a tag could
+take the updraft's whole energy flux. A no-op in every other case, and without
+energy source tags.
+"""
+check_energy_source_exchange_partition(cache, atmos) =
+    _check_exchange_partition(
+        cache,
+        atmos.energy_source_tagging_model,
+        atmos.turbconv_model,
+        atmos,
+    )
+_check_exchange_partition(cache, model, turbconv_model, atmos) = nothing
+function _check_exchange_partition(
+    cache,
+    model::EnergySourceTaggingModel,
+    ::PrognosticEDMFX,
+    atmos,
+)
+    atmos.edmfx_model.sgs_mass_flux || return nothing
+    has_energy_source_updraft_copies(model) && return nothing
+    names = energy_source_region_tag_state_names(model)
+    advice = "Add a region and its complement, for example with `above: false` \
+             or `inside: false`, or set `energy_source_tag_updraft_copy: true`, \
+             whose copies need no partition."
+    isempty(names) && error(
+        "The energy source tags exchange provenance at the updraft's mass \
+        flux under `turbconv: prognostic_edmfx`, and a tag's share there is \
+        its value over the sum of the region tags without sources. These \
+        tags have none, so the exchange would do nothing. $advice",
+    )
+    mask_sum = reduce(
+        (a, b) -> a .+ b,
+        map(name -> parent(getproperty(cache.ᶜenergy_source_masks, name)), names),
+    )
+    deviation = maximum(abs.(mask_sum .- 1))
+    deviation > 0.01 && error(
+        "The energy source tags exchange provenance at the updraft's mass \
+        flux under `turbconv: prognostic_edmfx`, and a tag's share there is \
+        its value over the sum of the region tags without sources. Their \
+        masks sum to 1 only to within $deviation. Where they leave a gap, \
+        that sum is too small, and a tag could take the updraft's whole \
+        energy flux. $advice",
+    )
+    return nothing
+end
+
 # Sedimentation moves each tag by its share of the total the tags partition,
 # and a share is zero wherever that total is not positive. Without an offset,
 # under the default energy reference, that is much of a moist troposphere, and
@@ -319,18 +415,23 @@ _energy_source_fix_fields(ᶜρ, tags::Tuple) = merge(
 )
 
 """
-    energy_source_scratch(Y, model)
+    energy_source_scratch(Y, model, atmos)
 
 Scratch fields of the energy source tags, merged into `p.scratch`: the
 bracket's snapshot of `Yₜ.c.ρe_tot`, the partition-share denominator that
 sedimentation divides by, the two face fluxes of `E` that the tags share under
 `PrognosticEDMFX`, and with an offset also a snapshot of `Yₜ.c.ρ` and a field
-the closure check fills with the offset total. They live in `p.scratch`
+the closure check fills with the offset total. Where the exchange at the mass
+flux runs, three more hold one value per tag in each cell: the grid mean's tag
+values, the updraft's from the plume, and the environment's share differences
+(`sgs_exchange_of_energy_source_tags!`). Three scalars hold the environment's
+density and the two ratios the exchange's bound needs. They live in `p.scratch`
 because the implicit tendency, where sedimentation runs, may be evaluated with
 `ForwardDiff.Dual` numbers, and `p.scratch` is converted for that.
 """
-energy_source_scratch(Y, model::EnergySourceTaggingModel) = merge(
+energy_source_scratch(Y, model::EnergySourceTaggingModel, atmos) = merge(
     energy_source_cell_scratch(Y.c.ρ, model.offset),
+    _energy_source_exchange_scratch(Y, model, atmos.turbconv_model, atmos),
     (;
         ᶠe_src_sgs_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
         ᶠe_src_sediment_flux = Fields.Field(
@@ -339,6 +440,32 @@ energy_source_scratch(Y, model::EnergySourceTaggingModel) = merge(
         ),
     ),
 )
+
+# Three tuples of tag values per cell and three scalars, for the exchange at the
+# mass flux. Nothing without it: no prognostic EDMF, no sub-grid mass flux, or
+# updraft copies, whose own tracer flux moves the tags instead.
+_energy_source_exchange_scratch(Y, model, turbconv_model, atmos) = (;)
+function _energy_source_exchange_scratch(
+    Y,
+    model,
+    ::PrognosticEDMFX,
+    atmos,
+)
+    (
+        atmos.edmfx_model.sgs_mass_flux &&
+        !has_energy_source_updraft_copies(model)
+    ) || return (;)
+    tag_values() =
+        Fields.Field(NTuple{length(model.tags), eltype(Y.c.ρ)}, axes(Y.c))
+    return (;
+        ᶜe_src_mean = tag_values(),
+        ᶜe_src_plume = tag_values(),
+        ᶜe_src_environment = tag_values(),
+        ᶜe_src_environment_density = similar(Y.c.ρ),
+        ᶜe_src_room = similar(Y.c.ρ),
+        ᶜe_src_energy_ratio = similar(Y.c.ρ),
+    )
+end
 # The cell-center scratch alone: the bracket's snapshots, the share
 # denominator and the offset total. It needs no face space.
 energy_source_cell_scratch(ᶜρ, ::Nothing) =
@@ -653,6 +780,34 @@ end
 
 # The total the donor share divides by, as a field: `Y.c.ρe_tot` itself without
 # an offset, so that path is unchanged, and a lazy sum with one.
+# The energy source tags partition `ρe_tot + c·ρ`, so they are rebuilt from
+# that total, and their updraft copies from the tags themselves. See
+# `rebuild_tags_from_state!`.
+function _rebuild_energy_source_tags!(
+    Y,
+    ᶜcoord,
+    model::EnergySourceTaggingModel,
+    turbconv_model,
+)
+    ᶜparent = _energy_source_parent_field(Y, model.offset)
+    _rebuild_tag_fields!(Y.c, ᶜcoord, ᶜparent, model.tags)
+    (has_energy_source_updraft_copies(model) && hasproperty(Y.c, :sgsʲs)) ||
+        return nothing
+    for j in 1:n_mass_flux_subdomains(turbconv_model)
+        _rebuild_updraft_copies!(Y.c.sgsʲs.:($j), Y.c, model.tags)
+    end
+    return nothing
+end
+
+_rebuild_updraft_copies!(ᶜsgsʲ, ᶜY, ::Tuple{}) = nothing
+function _rebuild_updraft_copies!(ᶜsgsʲ, ᶜY, tags::Tuple)
+    tag = first(tags)
+    ᶜcopy = updraft_copy_field(ᶜsgsʲ, tag)
+    ᶜρe_src = tag_field(ᶜY, tag)
+    @. ᶜcopy = ᶜρe_src / ᶜY.ρ
+    return _rebuild_updraft_copies!(ᶜsgsʲ, ᶜY, Base.tail(tags))
+end
+
 _energy_source_parent_field(Y, ::Nothing) = Y.c.ρe_tot
 _energy_source_parent_field(Y, offset) = @. lazy(Y.c.ρe_tot + offset * Y.c.ρ)
 
@@ -1304,6 +1459,10 @@ energy_source_tag_moves_as_enthalpy(p, name) =
 # where there is no cell above. The counterpart of `ᶠbottom_bias_zero`.
 const ᶠtop_bias_zero = Operators.TopBiasedC2F(top = Operators.SetValue(0))
 
+# The face below each cell. The lowest cell's is the surface face, so this
+# needs no boundary value.
+const ᶜbottom_bias = Operators.BottomBiasedF2C()
+
 # Whether the flow through a face points up. `u³` is contravariant, and its one
 # component has the sign of the vertical velocity. A `WVector` flux, as in
 # sedimentation, is read the same way.
@@ -1459,8 +1618,14 @@ copy.
 
 A tag's composition in an updraft is taken as that of the cell it leaves. So
 the flux moves the energy convection carries, but it does not mix provenance
-the way it mixes the air. A no-op without energy source tags, without
-`PrognosticEDMFX`, and with the SGS mass flux off.
+the way it mixes the air. `sgs_exchange_of_energy_source_tags!` adds that
+mixing, as an exchange that sums to zero over the tags.
+
+Under `energy_source_tag_updraft_copy: true` neither runs. The tags then have
+copies in the updraft, and the model's SGS tracer flux moves them, as it moves
+any tracer with an updraft copy (`edmfx_sgs_mass_flux_tendency!`). A no-op
+without energy source tags, without `PrognosticEDMFX`, and with the SGS mass
+flux off.
 """
 sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, turbconv_model) = nothing
 sgs_mass_flux_of_energy_source_tags!(
@@ -1486,6 +1651,8 @@ function _sgs_mass_flux_of_energy_source_tags!(
     turbconv_model,
     model::EnergySourceTaggingModel,
 )
+    # The copies' own SGS tracer flux moves the tags.
+    has_energy_source_updraft_copies(model) && return nothing
     energy_source_share_norm!(p, Y)
     n = n_mass_flux_subdomains(turbconv_model)
     (; edmfx_sgsflux_upwinding) = p.atmos.numerics
@@ -1566,8 +1733,364 @@ function _sgs_mass_flux_of_energy_source_tags!(
         ᶠflux,
         model.tags,
     )
+    sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     return nothing
 end
+
+"""
+    sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
+
+Exchange provenance between the energy source tags at the sub-grid mass flux,
+as an updraft copy of the tags would, without one. Each tag `i` takes
+
+    Xᵢ = Σₖ ρᵏ aᵏ (u³ᵏ - u³) (φᵏᵢ - φ̄ᵢ) Aᵏ
+
+at each face, over the updraft and the environment `k`. `φᵏᵢ` is the tag's share
+of the energy in subdomain `k`, `φ̄ᵢ` its share in the grid mean, and
+`Aᵏ = e_totᵏ + c` the subdomain's energy per unit mass. A share is the tag's
+specific value over the sum of the partition's, the region tags without
+sources, in each subdomain. So a source tag's share is its fraction of the
+partition's energy there. Where a subdomain's sum or the grid mean's is not
+positive, the tags exchange nothing. Each term is
+reconstructed as the parent reconstructs its own SGS flux. `X` is the part of
+the flux an updraft copy would add to the donor-share flux of
+`sgs_mass_flux_of_energy_source_tags!`: air of one composition rises and air of
+another sinks, each with its whole energy.
+
+No subdomain may carry more of a tag's energy than the cell holds,
+`ρaʲ φʲᵢ Aʲ ≤ ρ φ̄ᵢ Ā`, and no share may go negative. The plume is blended toward
+the grid mean by the largest factor that keeps a tag inside the smaller of those
+two bounds. The partition's tags share one factor, so their shares keep summing
+to one and their `Xᵢ` add up to zero at every face, and closure is untouched
+under every transport. Each source tag has its own factor, since its exchange
+stands alone, so a tag the cell holds little of cannot slow the partition's
+mixing. The environment's shares follow from the updraft's, reversed and scaled
+by the energy each subdomain carries, and are non-negative by construction.
+Where the subdomains' energies do not add up to the cell's, the share-weighted
+inventory is off by that mismatch. The zero sum also
+needs region tags that partition the domain, which
+`check_energy_source_exchange_partition` enforces. A
+source tag's exchange stands alone, as its other fluxes do. The van
+Leer reconstruction is not linear, so under it `X` is reconstructed first-order
+upwind, which keeps that sum zero.
+
+The updraft's shares come from a steady entraining plume, marched up each column
+with the model's own entrainment rate `ε + ε_turb` and the updraft's velocity
+`wʲ` at the face below each cell, as the model advects an updraft tracer. In the specific tag values `εʲ`, which
+mix by mass,
+
+    εʲ(k) = (εʲ(k - 1) + a ε̄(k)) / (1 + a),    a = (ε + ε_turb) Δz / wʲ · ρ / ρa⁰,
+
+which is the steady updraft equation `wʲ ∂εʲ/∂z = (ε + ε_turb)(ε⁰ - εʲ)`, taken
+implicitly in `z`, with the environment `ε⁰` from the grid mean and the updraft.
+The plume starts in the lowest cell with the grid mean's composition, and
+starts again wherever the updraft is absent or does not rise. It assumes one
+updraft, since the environment is the grid mean less that updraft. It is exact when
+the updraft adjusts faster than the shares change. The environment's shares
+follow from the grid mean and the updraft. Negative tags count as zero in every
+share.
+
+It runs in the implicit tendency, after the donor-share flux, and has no
+Jacobian block, as the model's SGS flux of a passive tracer has none. It needs
+one updraft, which `check_energy_source_tagging_supported` enforces.
+"""
+function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
+    (; edmfx_sgsflux_upwinding) = p.atmos.numerics
+    (; ᶠu³, ᶠu³ʲs, ᶜKʲs, ᶜρʲs, ᶜuʲs) = p.precomputed
+    (; ᶜp, ᶠu³⁰, ᶜK⁰, ᶜT⁰, ᶜq_tot_nonneg⁰, ᶜq_liq⁰, ᶜq_ice⁰) = p.precomputed
+    (;
+        ᶜturb_entrʲs,
+        ᶜentr_vel_scaleʲs,
+        ᶜentr_nonvel_rateʲs,
+        ᶜarea_bounding_entr_detrʲs,
+    ) = p.precomputed
+    (; dt) = p
+    FT = eltype(Y.c.ρ)
+    thermo_params = CAP.thermodynamics_params(p.params)
+    c = _mass_energy(model.offset)
+    upwinding = _exchange_upwinding(edmfx_sgsflux_upwinding)
+    ᶜlg = Fields.local_geometry_field(Y.c)
+    ᶜJ = ᶜlg.J
+    ᶠJ = Fields.local_geometry_field(Y.f).J
+    ᶜΔz = Fields.Δz_field(Y.c)
+    ᶜρaʲ = Y.c.sgsʲs.:(1).ρa
+    ᶜρʲ = ᶜρʲs.:(1)
+    ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
+    # The environment's density is written once, as the parent's microphysics
+    # does. Most broadcasts below read it. Left lazy, it would add five fields
+    # and a thermodynamic call to each of them (see the ratios below).
+    ᶜρ⁰ = p.scratch.ᶜe_src_environment_density
+    @. ᶜρ⁰ = TD.air_density(
+        thermo_params,
+        ᶜT⁰,
+        ᶜp,
+        ᶜq_tot_nonneg⁰,
+        ᶜq_liq⁰,
+        ᶜq_ice⁰,
+    )
+    ᶜentrʲ = @. lazy(
+        compute_entrainment(
+            ᶜentr_vel_scaleʲs.:(1),
+            ᶜentr_nonvel_rateʲs.:(1),
+            ᶜarea_bounding_entr_detrʲs.:(1),
+            get_physical_w(ᶜuʲs.:(1), ᶜlg),
+        ) + ᶜturb_entrʲs.:(1),
+    )
+    # The model advects an updraft tracer with the velocity at the face below
+    # each cell, so the plume marches with that one.
+    ᶠlg = Fields.local_geometry_field(Y.f)
+    ᶜwʲ = @. lazy(ᶜbottom_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
+    flags = _energy_partition_flags(model.tags)
+    updraft_differences = ShareDifferences(flags, false)
+    environment_differences = ShareDifferences(flags, true)
+    # The grid mean's specific tag values, negative ones as zero. They are
+    # stored as one tuple per cell, so the tag fields are read once, and each
+    # tag's kernel below reads a few tuple fields rather than every tag.
+    ᶜε̄ = p.scratch.ᶜe_src_mean
+    tag_fields = map(tag -> tag_field(Y.c, tag), model.tags)
+    Base.Broadcast.materialize!(
+        ᶜε̄,
+        Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, tag_fields...),
+    )
+
+    # The updraft's specific tag values, from the plume.
+    ᶜεʲ = p.scratch.ᶜe_src_plume
+    ᶜplume_input = Base.Broadcast.broadcasted(
+        _plume_level,
+        ᶜε̄,
+        Y.c.ρ,
+        ᶜρaʲ,
+        ᶜρa⁰,
+        ᶜentrʲ,
+        ᶜwʲ,
+        ᶜΔz,
+    )
+    Operators.column_accumulate!(
+        _plume_step,
+        ᶜεʲ,
+        ᶜplume_input;
+        init = ntuple(_ -> FT(NaN), Val(length(model.tags))),
+    )
+
+    # Each subdomain's energy per unit mass, `e_tot + c`, with `e_tot = mse +
+    # K - p/ρ`, and its area fraction and face density.
+    ᶜmse⁰ = ᶜspecific_env_mse(Y, p)
+    ᶜAʲ = @. lazy(Y.c.sgsʲs.:(1).mse + ᶜKʲs.:(1) - ᶜp / ᶜρʲ + c)
+    ᶜA⁰ = @. lazy(ᶜmse⁰ + ᶜK⁰ - ᶜp / ᶜρ⁰ + c)
+    ᶜaʲ = @. lazy(draft_area(ᶜρaʲ, ᶜρʲ))
+    ᶜa⁰ = @. lazy(draft_area(ᶜρa⁰, ᶜρ⁰))
+    ᶠρʲ = @. lazy(ᶠinterp(ᶜρʲ * ᶜJ) / ᶠJ)
+    ᶠρ⁰ = @. lazy(ᶠinterp(ᶜρ⁰ * ᶜJ) / ᶠJ)
+    ᶠu³_diffʲ = @. lazy(ᶠu³ʲs.:(1) - ᶠu³)
+    ᶠu³_diff⁰ = @. lazy(ᶠu³⁰ - ᶠu³)
+    # Each subdomain's shares less the grid mean's, bounded so that no
+    # subdomain carries more of a tag's energy than the cell holds. The
+    # environment's differences follow from the updraft's, so both sum to zero
+    # over the partition.
+    # The bound needs two ratios, which are written to scratch before the
+    # kernel reads them. Left lazy, they would bring every field of both
+    # subdomains' energies into the kernel's broadcast, and ClimaCore then
+    # boxes that broadcast on every call. The values are the same either way.
+    # The allocation tests on the EDMF column guard this.
+    ᶜĀ = @. lazy(Y.c.ρe_tot / Y.c.ρ + c)
+    ᶜroom = p.scratch.ᶜe_src_room
+    @. ᶜroom = _exchange_room(Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜĀ, ᶜAʲ, ᶜA⁰)
+    ᶜenergy_ratio = p.scratch.ᶜe_src_energy_ratio
+    @. ᶜenergy_ratio = _exchange_energy_ratio(ᶜρaʲ, ᶜρa⁰, ᶜAʲ, ᶜA⁰)
+    ᶜΔφ⁰ = p.scratch.ᶜe_src_environment
+    @. ᶜΔφ⁰ = environment_differences(ᶜεʲ, ᶜε̄, ᶜroom, ᶜenergy_ratio)
+    ᶜΔφʲ = ᶜεʲ
+    @. ᶜΔφʲ = updraft_differences(ᶜεʲ, ᶜε̄, ᶜroom, ᶜenergy_ratio)
+
+    subdomains = (;
+        ᶜΔφʲ,
+        ᶜΔφ⁰,
+        ᶜAʲ,
+        ᶜA⁰,
+        ᶜaʲ,
+        ᶜa⁰,
+        ᶠρʲ,
+        ᶠρ⁰,
+        ᶠu³_diffʲ,
+        ᶠu³_diff⁰,
+    )
+    _exchange_energy_source_tags!(Yₜ.c, subdomains, dt, upwinding, model.tags, 1)
+    return nothing
+end
+
+_exchange_energy_source_tags!(ᶜYₜ, subdomains, dt, upwinding, ::Tuple{}, i) =
+    nothing
+function _exchange_energy_source_tags!(
+    ᶜYₜ,
+    subdomains,
+    dt,
+    upwinding,
+    tags::Tuple,
+    i,
+)
+    (; ᶜΔφʲ, ᶜΔφ⁰, ᶜAʲ, ᶜA⁰, ᶜaʲ, ᶜa⁰) = subdomains
+    (; ᶠρʲ, ᶠρ⁰, ᶠu³_diffʲ, ᶠu³_diff⁰) = subdomains
+    ᶜρe_srcₜ = tag_field(ᶜYₜ, first(tags))
+    ᶜvalueʲ = @. lazy(getindex(ᶜΔφʲ, i) * ᶜAʲ * ᶜaʲ)
+    ᶜvalue⁰ = @. lazy(getindex(ᶜΔφ⁰, i) * ᶜA⁰ * ᶜa⁰)
+    ᶠfluxʲ = _face_value_flux(ᶠu³_diffʲ, ᶜvalueʲ, dt, upwinding)
+    ᶠflux⁰ = _face_value_flux(ᶠu³_diff⁰, ᶜvalue⁰, dt, upwinding)
+    @. ᶜρe_srcₜ -= ᶜadvdivᵥ(ᶠρʲ * ᶠfluxʲ + ᶠρ⁰ * ᶠflux⁰)
+    return _exchange_energy_source_tags!(
+        ᶜYₜ,
+        subdomains,
+        dt,
+        upwinding,
+        Base.tail(tags),
+        i + 1,
+    )
+end
+
+# Which tags form the partition, as `Val` of a tuple of `Bool`s. It is built from
+# the tags' types, so it is a constant: a `Val` of a value computed at run time
+# would leave every broadcast that reads it to dynamic dispatch.
+@generated _energy_partition_flags(::T) where {T <: Tuple} = :(Val(
+    $(Tuple(
+        tag <: EnergySourceTag{<:Any, <:AbstractTagRegion, Tuple{}} for
+        tag in T.parameters
+    )),
+))
+
+# A linear reconstruction keeps the exchange's sum over the tags zero at every
+# face. The van Leer limiter is not linear, so the exchange uses first-order
+# upwinding under it.
+_exchange_upwinding(upwinding) = upwinding
+_exchange_upwinding(::Val{:vanleer_limiter}) = Val(:first_order)
+
+@inline _nonnegative_specific(ρ, ρχs...) =
+    map(ρχ -> max(ρχ, zero(ρχ)) / ρ, ρχs)
+
+# One level of the plume: the grid mean's specific values, the grid mean's
+# weight in the step, and whether the plume starts again here, because there is
+# no rising updraft. The step `(εʲ + a ε̄) / (1 + a)`, with
+# `a = (ε + ε_turb) Δz / wʲ · ρ / ρa⁰`, is written with the weight
+# `a / (1 + a)`. That form cannot overflow where `wʲ` is tiny, as `a` can in
+# Float32.
+@inline function _plume_level(ε̄, ρ, ρaʲ, ρa⁰, entr, wʲ, Δz)
+    FT = typeof(ρ)
+    rising = (ρaʲ > ϵ_numerics(FT)) & (wʲ > zero(FT)) & (ρa⁰ > zero(FT))
+    mixing = max(entr, zero(FT)) * Δz * ρ
+    weight =
+        rising & (mixing > zero(FT)) ? mixing / (mixing + wʲ * ρa⁰) :
+        zero(FT)
+    return (ε̄, weight, !rising)
+end
+
+# The plume's step from the level below. The `NaN` it starts from marks the
+# lowest level, where it takes the grid mean's composition.
+@inline function _plume_step(εʲ_below, level)
+    (ε̄, weight, restart) = level
+    (restart | isnan(first(εʲ_below))) && return ε̄
+    return map((εʲ, ε) -> εʲ + weight * (ε - εʲ), εʲ_below, ε̄)
+end
+
+# The sum of the partition's values, which `partition`, a tuple of `Bool`s,
+# marks. The loop is over a tuple of one type, so it unrolls and allocates
+# nothing. These helpers index the tuples rather than `map` over them: inside a
+# ClimaCore broadcast a tuple is an `AutoBroadcaster`, whose `map` builds a new
+# one and allocates.
+@inline function _partition_total(ε, partition)
+    total = zero(ε[1])
+    for i in 1:length(partition)
+        total += partition[i] ? ε[i] : zero(total)
+    end
+    return total
+end
+
+# How far a tag's share in the updraft may exceed its share in the grid mean,
+# per unit of that share. Two bounds meet here. The updraft may hold at most the
+# cell's own energy of a tag, `ρaʲ φʲᵢ Aʲ ≤ ρ φ̄ᵢ Ā`, which leaves the room
+# `ρĀ - ρaʲAʲ`. And the environment may not be left with a negative share, which
+# leaves `ρa⁰A⁰`. The two agree when the subdomains' energies add up to the
+# cell's, which they do not quite: the environment is diagnosed, and the kinetic
+# energy and `p/ρ` differ by subdomain. So the smaller one binds. Negative where
+# there is no updraft or no energy, which switches the exchange off there.
+@inline function _exchange_room(ρ, ρaʲ, ρa⁰, Ā, Aʲ, A⁰)
+    FT = typeof(ρ)
+    ((ρaʲ > zero(FT)) & (Aʲ > zero(FT)) & (Ā > zero(FT))) ||
+        return -one(FT)
+    return min(ρ * Ā - ρaʲ * Aʲ, ρa⁰ * A⁰) / (ρaʲ * Aʲ)
+end
+
+# The energy the updraft carries over the environment's, `ρaʲ Aʲ / (ρa⁰ A⁰)`,
+# which is how much the environment gives up for what the updraft takes.
+@inline function _exchange_energy_ratio(ρaʲ, ρa⁰, Aʲ, A⁰)
+    FT = typeof(ρaʲ)
+    ((ρa⁰ > zero(FT)) & (A⁰ > zero(FT))) || return zero(FT)
+    return ρaʲ * Aʲ / (ρa⁰ * A⁰)
+end
+
+# Each tag's share difference between one subdomain and the grid mean, as a
+# callable type: a broadcast then carries the partition and the branch in the
+# function's type rather than as arguments, which ClimaCore would wrap in a
+# `Ref`. `environment` picks the environment's differences over the updraft's.
+struct ShareDifferences{partition, environment} end
+ShareDifferences(::Val{partition}, environment::Bool) where {partition} =
+    ShareDifferences{partition, environment}()
+
+@inline function (::ShareDifferences{partition, environment})(
+    εʲ,
+    ε̄,
+    room,
+    energy_ratio,
+) where {partition, environment}
+    FT = typeof(room)
+    N = length(partition)
+    total = _partition_total(ε̄, partition)
+    totalʲ = _partition_total(εʲ, partition)
+    no_exchange =
+        (room < zero(FT)) |
+        (energy_ratio <= zero(FT)) |
+        (total <= zero(FT)) |
+        (totalʲ <= zero(FT))
+    no_exchange && return ntuple(_ -> zero(FT), Val(N))
+    # The partition's tags share one factor, so their shares keep summing to
+    # one and their exchange sums to zero at every face. A source tag's
+    # exchange stands alone, so each has its own factor, and a scarce one
+    # cannot slow the partition's mixing.
+    θ = _partition_blend_factor(ε̄, εʲ, total, totalʲ, room, partition)
+    return ntuple(Val(N)) do i
+        θᵢ = partition[i] ? θ : _blend_factor(ε̄, εʲ, total, totalʲ, room, i)
+        # The environment makes room for what the updraft takes, in proportion
+        # to the energy each carries. So its difference is the updraft's,
+        # reversed and scaled.
+        scale = environment ? -θᵢ * energy_ratio : θᵢ
+        scale *
+        (_subdomain_share(εʲ, totalʲ, i) - _subdomain_share(ε̄, total, i))
+    end
+end
+
+# The partition's common factor: the smallest over its tags. A helper, so that
+# the factor is bound once. A variable reassigned in a loop and captured by the
+# `ntuple` closure is boxed, and the kernel then allocates.
+@inline function _partition_blend_factor(ε̄, εʲ, total, totalʲ, room, partition)
+    θ = one(room)
+    for i in 1:length(partition)
+        θ = partition[i] ?
+            min(θ, _blend_factor(ε̄, εʲ, total, totalʲ, room, i)) : θ
+    end
+    return θ
+end
+
+# The largest factor in `[0, 1]` by which tag `i`'s share in the updraft may
+# move from its share in the grid mean, so that the tag stays inside `room`.
+@inline function _blend_factor(ε̄, εʲ, total, totalʲ, room, i)
+    mean_share = _subdomain_share(ε̄, total, i)
+    difference = _subdomain_share(εʲ, totalʲ, i) - mean_share
+    limit = mean_share * room
+    FT = typeof(limit)
+    return difference > limit ?
+           min(one(FT), max(limit, zero(FT)) / difference) : one(FT)
+end
+
+# Tag `i`'s share of a subdomain: its value over the partition's sum there,
+# capped at one.
+@inline _subdomain_share(ε, total, i) = min(ε[i] / total, one(total))
 
 _sgs_energy_source_tag_fluxes!(ᶜYₜ, ᶜY, ᶜparent, ᶜnorm, ᶠflux, ::Tuple{}) =
     nothing

@@ -17,7 +17,11 @@ step by step. The parent's increment has no such gap. This file checks:
     has its own post-solve correction (the default `energy_q_tot_upwinding`):
     the closure residual is small, and the ledger explains its column total.
     The audit, the diagnostics and the split solver read the ledger. The
-    model's fields are those of the same column without tags, bit for bit.
+    model's fields are those of the same column without tags, bit for bit;
+ 3. the updraft's mixing of provenance on that column: the default exchange
+    sums to zero over the partition and allocates only the parent helper's
+    8 bytes. The audit with updraft copies is
+    `energy_source_tags_updraft_integration.jl`.
 
 The mode refuses `energy_q_tot_upwinding: none`, which
 `energy_source_tags_tests.jl` checks. The file compiles the EDMF column twice,
@@ -57,7 +61,8 @@ function closure(simulation)
 end
 
 # Every field the model has without tags, compared with `isequal`, which tells
-# signed zeros apart.
+# signed zeros apart. The updrafts are compared field by field, since with
+# updraft copies they hold the tags' copies as well.
 function check_same_model(Y, Y_ref)
     is_diagnostic(name) =
         CA.is_energy_source_tag_name(name) ||
@@ -67,9 +72,16 @@ function check_same_model(Y, Y_ref)
           Set(filter(!is_diagnostic, propertynames(Y_ref.c)))
     @test propertynames(Y.f) == propertynames(Y_ref.f)
     for name in filter(!is_diagnostic, propertynames(Y_ref.c))
+        name == :sgsʲs && continue
         @test isequal(
             parent(getproperty(Y.c, name)),
             parent(getproperty(Y_ref.c, name)),
+        )
+    end
+    for name in propertynames(Y_ref.c.sgsʲs.:(1))
+        @test isequal(
+            parent(getproperty(Y.c.sgsʲs.:(1), name)),
+            parent(getproperty(Y_ref.c.sgsʲs.:(1), name)),
         )
     end
     for name in propertynames(Y_ref.f)
@@ -368,5 +380,43 @@ tags = [
         )
         @test isnothing(plain.integrator.p.atmos.energy_source_tagging_model)
         check_same_model(Y, plain.integrator.u)
+
+        # 3. The updraft's mixing of provenance. By default the tags exchange
+        # provenance at the mass flux. The partition's exchange sums to zero in
+        # every cell, a source tag's stands alone, and nothing else changes.
+        dY = similar(Y)
+        dY .= zero(FT)
+        exchange! = CA.sgs_exchange_of_energy_source_tags!
+        exchange!(dY, Y, p, p.atmos.turbconv_model, model)
+        ᶜsum = zero.(Y.c.ρ)
+        ᶜgross = zero.(Y.c.ρ)
+        for name in CA.energy_source_region_tag_state_names(model)
+            ᶜsum .+= getproperty(dY.c, name)
+            ᶜgross .+= abs.(getproperty(dY.c, name))
+        end
+        @test maximum(parent(ᶜgross)) > 0
+        @test maximum(abs, parent(ᶜsum)) < 1e-10 * maximum(parent(ᶜgross))
+        # The updraft lifts the surface's energy.
+        @test maximum(abs, parent(dY.c.ρe_src_sfc)) > 0
+        for name in propertynames(Y.c)
+            (name == :sgsʲs || CA.is_energy_source_tag_name(name)) && continue
+            @test all(iszero, parent(getproperty(dY.c, name)))
+        end
+        @test all(iszero, parent(dY.c.sgsʲs))
+        @test all(iszero, parent(dY.f))
+        # It reads the environment's `mse` through the parent's helper, whose
+        # closure Julia wraps in a `Ref`, 8 bytes. That is all it allocates,
+        # on ClimaCore 0.16.0, 1.0.0 and 1.0.1 alike. Its kernel reads the
+        # environment's density and two ratios from scratch. When it read them
+        # lazily, ClimaCore boxed the kernel's broadcast on every call, 17 kB
+        # here with each of those versions.
+        @test second_call_allocations(
+            exchange!,
+            dY,
+            Y,
+            p,
+            p.atmos.turbconv_model,
+            model,
+        ) <= 8
     end
 end

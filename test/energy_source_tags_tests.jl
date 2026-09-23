@@ -483,6 +483,277 @@ column_atmos_model(; kwargs...) =
               CA.EnthalpyIncrementEnergySourceTransport
     end
 
+    @testset "Updraft copy switch" begin
+        region = CA.EnergySourceTag{:everywhere}(CA.EntireDomain())
+        source = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        tags = (region, source)
+        # No copies by default.
+        @test !CA.has_energy_source_updraft_copies(
+            CA.EnergySourceTaggingModel(tags),
+        )
+        @test !CA.has_energy_source_updraft_copies(nothing)
+        @test CA.energy_source_updraft_copy_names(nothing) == ()
+        increment = CA.EnergySourceTaggingModel(
+            tags,
+            50000.0;
+            transport = CA.EnthalpyIncrementEnergySourceTransport(),
+            updraft_copies = true,
+        )
+        @test CA.has_energy_source_updraft_copies(increment)
+        @test CA.energy_source_updraft_copy_names(increment) ==
+              (:e_src_everywhere, :e_src_sfc)
+        @test CA.has_energy_source_updraft_copies(
+            CA.EnergySourceTaggingModel(tags; updraft_copies = true),
+        )
+        # Under `enthalpy` nothing corrects the copies' flux to the parent's.
+        @test_throws r"does not work with" CA.EnergySourceTaggingModel(
+            tags,
+            50000.0;
+            transport = CA.EnthalpyEnergySourceTransport(),
+            updraft_copies = true,
+        )
+        @test CA.energy_source_updraft_copy_from_config(nothing) == false
+        @test CA.energy_source_updraft_copy_from_config(false) == false
+        @test CA.energy_source_updraft_copy_from_config(true) == true
+        @test_throws ErrorException CA.energy_source_updraft_copy_from_config(
+            "true",
+        )
+        @test isnothing(
+            CA.check_energy_source_updraft_copy_supported("prognostic_edmfx"),
+        )
+        @test_throws r"needs `turbconv: prognostic_edmfx`" CA.check_energy_source_updraft_copy_supported(
+            "edonly_edmfx",
+        )
+        @test_throws r"needs `turbconv: prognostic_edmfx`" CA.check_energy_source_updraft_copy_supported(
+            nothing,
+        )
+        # Each copy starts as its tag's specific value.
+        gs = (; ρ = 1.25, ρe_src_everywhere = 250.0, ρe_src_sfc = 0.0)
+        @test CA.energy_source_updraft_copy_variables(gs, increment) ==
+              (; e_src_everywhere = 200.0, e_src_sfc = 0.0)
+        @test CA.energy_source_updraft_copy_variables(
+            gs,
+            CA.EnergySourceTaggingModel(tags),
+        ) == (;)
+        @test CA.Setups.with_updraft_tracers((; ρtke = 1.0), (; e_src_sfc = 0.0)) ==
+              (; ρtke = 1.0)
+        sgs = (; ρtke = 1.0, sgsʲs = ((; ρa = 0.1, mse = 3.0e5),))
+        @test CA.Setups.with_updraft_tracers(sgs, (; e_src_sfc = 2.0)).sgsʲs ==
+              ((; ρa = 0.1, mse = 3.0e5, e_src_sfc = 2.0),)
+        @test CA.Setups.with_updraft_tracers(sgs, (;)) === sgs
+
+        # The exchange at the mass flux needs region tags that partition the
+        # domain. The masks here are plain vectors, which is all the check
+        # reads.
+        edmf = CA.PrognosticEDMFX{1, true}(1e-5)
+        exchange_atmos(model; sgs_mass_flux = true) = (;
+            energy_source_tagging_model = model,
+            turbconv_model = edmf,
+            edmfx_model = (; sgs_mass_flux),
+        )
+        check_exchange(masks, atmos) = CA.check_energy_source_exchange_partition(
+            (; ᶜenergy_source_masks = masks),
+            atmos,
+        )
+        whole = (; ρe_src_everywhere = [1.0, 1.0])
+        with_gap = (; ρe_src_everywhere = [0.5, 1.0])
+        default_model = CA.EnergySourceTaggingModel(tags)
+        @test isnothing(check_exchange(whole, exchange_atmos(default_model)))
+        @test_throws r"These tags have none" check_exchange(
+            (;),
+            exchange_atmos(CA.EnergySourceTaggingModel((source,))),
+        )
+        @test_throws r"sum to 1 only to within 0\.5" check_exchange(
+            with_gap,
+            exchange_atmos(default_model),
+        )
+        # With copies, without the SGS mass flux and without prognostic EDMF
+        # there is no exchange, and nothing is checked.
+        copies_model = CA.EnergySourceTaggingModel(tags; updraft_copies = true)
+        @test isnothing(check_exchange(with_gap, exchange_atmos(copies_model)))
+        @test isnothing(
+            check_exchange(
+                with_gap,
+                exchange_atmos(default_model; sgs_mass_flux = false),
+            ),
+        )
+        @test isnothing(
+            check_exchange(
+                with_gap,
+                (;
+                    energy_source_tagging_model = default_model,
+                    turbconv_model = nothing,
+                ),
+            ),
+        )
+    end
+
+    # A setup that takes its state from a file builds the tags from `NaN`
+    # placeholders and then rewrites the state. `rebuild_tags_from_state!`
+    # builds them again from what the file wrote.
+    @testset "Tags rebuilt from an overwritten state" begin
+        FT = Float64
+        atmos = column_atmos_model(;
+            energy_source_tagging_model = CA.EnergySourceTaggingModel(
+                (
+                    CA.EnergySourceTag{:lower}(
+                        CA.TanhAltitudeRegion(FT(500), FT(100), false),
+                    ),
+                    CA.EnergySourceTag{:upper}(
+                        CA.TanhAltitudeRegion(FT(500), FT(100), true),
+                    ),
+                    CA.EnergySourceTag{:sfc}(nothing, :surface_flux),
+                ),
+                50000.0,
+            ),
+        )
+        Y = CA.initial_state(atmos)
+        ᶜz = CA.Fields.coordinate_field(Y.c).z
+        # The state a file would write, and tags left as a placeholder.
+        @. Y.c.ρe_tot = FT(2e5) + FT(10) * ᶜz
+        @. Y.c.ρ = FT(1)
+        for name in (:ρe_src_lower, :ρe_src_upper, :ρe_src_sfc)
+            getproperty(Y.c, name) .= FT(NaN)
+        end
+        CA.rebuild_tags_from_state!(Y, atmos)
+        model = atmos.energy_source_tagging_model
+        ᶜparent = @. Y.c.ρe_tot + FT(50000) * Y.c.ρ
+        ᶜpartition = Y.c.ρe_src_lower .+ Y.c.ρe_src_upper
+        @test all(isfinite, parent(ᶜpartition))
+        @test parent(ᶜpartition) ≈ parent(ᶜparent)
+        @test all(iszero, parent(Y.c.ρe_src_sfc))
+        # The masked share, at a level well inside each region.
+        lower = vec(parent(Y.c.ρe_src_lower)) ./ vec(parent(ᶜparent))
+        @test lower[1] > 0.99
+        @test lower[end] < 0.01
+    end
+
+    @testset "The exchange's plume ($FT)" for FT in (Float32, Float64)
+        # The partition's flags are a constant of the tags' types.
+        tags = (
+            CA.EnergySourceTag{:a}(CA.EntireDomain()),
+            CA.EnergySourceTag{:b}(nothing, :surface_flux),
+            CA.EnergySourceTag{:c}(CA.EntireDomain(), :radiation),
+        )
+        @test (@inferred CA._energy_partition_flags(tags)) ===
+              Val((true, false, false))
+        # A share is a tag's value over the partition's sum, capped at one.
+        # The partition's tags share one blend factor, so their differences sum
+        # to zero; each source tag has its own, so a scarce one cannot slow
+        # them.
+        partition = Val((true, true, false))
+        updraft = CA.ShareDifferences(partition, false)
+        environment = CA.ShareDifferences(partition, true)
+        ρ, ρaʲ, ρa⁰, A = FT(1), FT(0.1), FT(0.9), FT(66e3)
+        room = CA._exchange_room(ρ, ρaʲ, ρa⁰, A, A, A)
+        energy_ratio = CA._exchange_energy_ratio(ρaʲ, ρa⁰, A, A)
+        # The updraft's bound leaves `ρĀ - ρaʲAʲ` and the environment's `ρa⁰A⁰`;
+        # with the energies adding up they are the same room.
+        @test room ≈ (ρ - ρaʲ) / ρaʲ
+        @test energy_ratio ≈ ρaʲ / ρa⁰
+        εʲ = FT.((3, 1, 2))
+        ε̄ = FT.((1, 1, 1))
+        Δφʲ = updraft(εʲ, ε̄, room, energy_ratio)
+        @test collect(Δφʲ) ≈
+              [FT(0.75) - FT(0.5), FT(0.25) - FT(0.5), FT(0.5) - FT(0.5)]
+        @test Δφʲ[1] + Δφʲ[2] == 0
+        # The environment gives up what the updraft takes, by the energy each
+        # carries, and its partition differences sum to zero as well.
+        Δφ⁰ = environment(εʲ, ε̄, room, energy_ratio)
+        @test collect(Δφ⁰) ≈ -collect(Δφʲ) .* energy_ratio
+        @test Δφ⁰[1] + Δφ⁰[2] == 0
+        # A source tag's share is its fraction of the partition's energy.
+        @test updraft(FT.((1, 1, 5)), ε̄, room, energy_ratio)[3] ≈ 1 - FT(0.5)
+        # Nothing to exchange: no updraft, no environment, no energy, no
+        # partition in one subdomain or the other.
+        for degenerate in (
+            (εʲ, ε̄, CA._exchange_room(ρ, FT(0), ρa⁰, A, A, A), energy_ratio),
+            (εʲ, ε̄, room, CA._exchange_energy_ratio(ρaʲ, FT(0), A, A)),
+            (εʲ, ε̄, CA._exchange_room(ρ, ρaʲ, ρa⁰, A, FT(0), A), energy_ratio),
+            (FT.((0, 0, 1)), ε̄, room, energy_ratio),
+            (εʲ, FT.((0, 0, 1)), room, energy_ratio),
+        )
+            @test updraft(degenerate...) == FT.((0, 0, 0))
+            @test environment(degenerate...) == FT.((0, 0, 0))
+        end
+        @test CA._nonnegative_specific(FT(2), FT(4), FT(-1), FT(6)) ==
+              FT.((2, 0, 3))
+
+        # A scarce source tag leaves the partition alone. Its own bound binds
+        # hard, at one eleventh, while the region tags move freely.
+        two = Val((true, true))
+        three = Val((true, true, false))
+        unit_room = CA._exchange_room(FT(1), FT(0.1), FT(0.9), FT(1), FT(1), FT(1))
+        unit_ratio = CA._exchange_energy_ratio(FT(0.1), FT(0.9), FT(1), FT(1))
+        pair = CA.ShareDifferences(two, false)(
+            FT.((0.3, 0.7)),
+            FT.((0.2, 0.8)),
+            unit_room,
+            unit_ratio,
+        )
+        with_overlay = CA.ShareDifferences(three, false)(
+            FT.((0.3, 0.7, 1.0e-4)),
+            FT.((0.2, 0.8, 1.0e-6)),
+            unit_room,
+            unit_ratio,
+        )
+        @test with_overlay[1] == pair[1]
+        @test with_overlay[2] == pair[2]
+        @test pair[1] ≈ FT(0.1)
+        # The overlay's own factor is a ninth of its excess, and its bound holds.
+        overlay_mean = FT(1.0e-6) / (FT(0.2) + FT(0.8))
+        overlay_updraft = overlay_mean + with_overlay[3]
+        @test FT(0.1) * overlay_updraft <= overlay_mean * (1 + 10 * eps(FT))
+        @test with_overlay[3] < FT(1.0e-4)
+
+        # The review's counterexample. The plume is nearly all of a tag the
+        # cell has one percent of, and unbounded it would claim six times the
+        # cell's energy of it.
+        bounded_updraft = CA.ShareDifferences(two, false)
+        bounded_environment = CA.ShareDifferences(two, true)
+        ε̄_step = FT.((0.01, 0.99))
+        raw = CA._plume_step(
+            FT.((0.99, 0.01)),
+            CA._plume_level(ε̄_step, ρ, ρaʲ, ρa⁰, FT(1e-3), FT(1), FT(50)),
+        )
+        @test raw[1] > FT(0.9)
+        Δφʲ_step = bounded_updraft(raw, ε̄_step, room, energy_ratio)
+        Δφ⁰_step = bounded_environment(raw, ε̄_step, room, energy_ratio)
+        share(ε, i) = ε[i] / sum(ε)
+        for i in 1:2
+            φʲ = share(ε̄_step, i) + Δφʲ_step[i]
+            φ⁰ = share(ε̄_step, i) + Δφ⁰_step[i]
+            cell = ρ * share(ε̄_step, i) * A
+            @test ρaʲ * φʲ * A <= cell * (1 + 10 * eps(FT))
+            @test φ⁰ >= -10 * eps(FT)
+            @test ρaʲ * φʲ * A + ρa⁰ * φ⁰ * A ≈ cell
+        end
+        @test share(ε̄_step, 1) + Δφʲ_step[1] ≈ FT(0.1)
+        @test Δφʲ_step[1] + Δφʲ_step[2] ≈ 0 atol = 10 * eps(FT)
+        @test Δφ⁰_step[1] + Δφ⁰_step[2] ≈ 0 atol = 10 * eps(FT)
+
+        # Where the subdomains' energies do not add up, the environment's room
+        # binds instead, and its shares stay non-negative.
+        thin = FT(0.99) * A
+        thin_room = CA._exchange_room(ρ, ρaʲ, ρa⁰, A, A, thin)
+        thin_ratio = CA._exchange_energy_ratio(ρaʲ, ρa⁰, A, thin)
+        @test thin_room < room
+        Δφ⁰_thin = bounded_environment(raw, ε̄_step, thin_room, thin_ratio)
+        for i in 1:2
+            @test share(ε̄_step, i) + Δφ⁰_thin[i] >= -10 * eps(FT)
+        end
+        @test Δφ⁰_thin[1] + Δφ⁰_thin[2] ≈ 0 atol = 10 * eps(FT)
+
+        # A vanishing updraft velocity, which would overflow `a` in Float32,
+        # takes the grid mean, and nothing is `Inf` or `NaN`.
+        slow = CA._plume_level(ε̄, FT(1), FT(0.1), FT(0.9), FT(1e-3), FT(1e-40), FT(3000))
+        @test slow[2] ≈ 1
+        @test all(isfinite, CA._plume_step(FT.((40, 0)), slow))
+        # The van Leer limiter is not linear, so the exchange does not use it.
+        @test CA._exchange_upwinding(Val(:vanleer_limiter)) == Val(:first_order)
+        @test CA._exchange_upwinding(Val(:none)) == Val(:none)
+    end
+
     # The increment mode takes the parent's increment after each Newton solve,
     # so it refuses a stepper that applies an implicit tendency without one.
     @testset "The increment mode refuses steppers it cannot follow" begin
@@ -1331,6 +1602,37 @@ end
         state(),
     )
     @test isnothing(check(written, nothing, state()))
+    # The updraft copies are part of the state, so a restart may not add or
+    # drop them. The first updraft stands for all of them.
+    updraft(names...) =
+        NamedTuple{(:ρa, names...)}(Tuple(zeros(1 + length(names))))
+    with_updraft(Y, sgs) = (; c = (; Y.c..., sgsʲs = (sgs,)))
+    copied = with_updraft(tagged, updraft(:e_src_strat, :e_src_tropo, :e_src_rad))
+    plain_updraft = with_updraft(tagged, updraft())
+    copies_model = CA.EnergySourceTaggingModel(
+        tags(),
+        50000.0;
+        updraft_copies = true,
+    )
+    @test isnothing(check(written, copies_model, copied))
+    @test isnothing(check(written, source_model(), plain_updraft))
+    @test_throws r"updraft copies of the energy source tags none, and this run configures strat, tropo, rad" check(
+        written,
+        copies_model,
+        plain_updraft,
+    )
+    @test_throws r"updraft copies of the energy source tags strat, tropo, rad, and this run configures none" check(
+        written,
+        source_model(),
+        copied,
+    )
+    # A file with no updrafts at all, restarted into a run that wants copies.
+    @test_throws r"updraft copies of the energy source tags none, and this run configures strat, tropo, rad" check(
+        written,
+        copies_model,
+        tagged,
+    )
+    @test isnothing(check(written, source_model(), tagged))
     # The process records are checked the same way, energy and water.
     record = CA.ProcessRecordModel((CA.RecordedProcess{:radiation}(),))
     @test_throws r"energy process records none, and this run configures radiation" check(
