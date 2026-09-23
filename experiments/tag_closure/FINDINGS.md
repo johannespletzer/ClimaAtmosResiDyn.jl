@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W14                                           | 1. Water tags                                       |
+| W1–W16                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -191,6 +191,60 @@ sum-preserving redistribution. Domain maxima, so a signature, not a proof. *A5.*
 
 **W14. The ledger keeps growing while the residual does not:** 6.2e-4 at 24 h,
 32× the residual, still rising. *A5.*
+
+**W15. V-W0a's first pair did not test known issue 4: the 0M column rains only
+in its first hour.** DYCOMS RF02 under 0M without EDMF, with the DYCOMS
+radiation and the decaying diffusion, dt 120 s, one day, tags `tropo`,
+`strat` and `evap`, with 1 and with 10 Newton iterations. The initial cloud,
+0.15 kg m⁻² of liquid, rains out within the hour; after that `pr` is zero at
+every output and the liquid water path is zero from 2 h on. Column water grows
+from 11.57 to 13.28 kg m⁻² by evaporation. The closure's `gross_relative` is
+3.9e-3 at 1 h, 1.0e-3 at 5 h and 8.3e-5 at 24 h with one iteration, and 4.9e-3,
+1.3e-3 and 7.4e-5 with ten. The signed residual is −5.5e-4 to −6.7e-4 kg m⁻²
+from the first hour on with one iteration and −7.0e-4 to −9.5e-4 with ten, an
+overclaim. Between the two runs the region tags' shares
+differ by 1.0e-3 to 1.2e-3 in L1 at 1 h and by 6.6e-5 to 1.6e-4 at 24 h, while
+`hus` differs by 4.2e-5 and 1.3e-5. *Jobs `13829854`, `13829855`,
+`hpda2_test`, 2026-09-23, from `../ClimaAtmosResiDyn-wedmf-run` at `c537903b`
+(`main` after #95); `output/w0a_0m_newton1/`, `output/w0a_0m_newton10/`,
+`analysis/water/w0a_newton_day.py`. Not yet through the verifier, whose water
+extension is being built.*
+
+**W16. Known issue 4 is real in the code but not visible in the answer: its
+missing Jacobian diagonal changes the tags' Newton sensitivity by less than
+4% on a raining 0M column. That sensitivity is the closure residual, which
+grows as the solve converges.** V-W0a's controlled pairs: the first two hours
+of W15's column, when its cloud rains out, at 6-minute output, with implicit
+or explicit microphysics, each at 1 and 10 Newton iterations. With explicit
+microphysics the 0M sink is off the Newton path.
+
+| L1 of the share, 1 against 10 iterations | 6 min  | 30 min | 60 min | 120 min |
+|:---------------------------------------- | ------:| ------:| ------:| -------:|
+| `tropo`, implicit microphysics           | 1.9e-3 | 1.3e-3 | 1.0e-3 | 7.4e-4  |
+| `tropo`, explicit microphysics           | 2.0e-3 | 1.3e-3 | 1.0e-3 | 7.4e-4  |
+| `strat`, implicit                        | 2.3e-3 | 1.4e-3 | 1.2e-3 | 9.2e-4  |
+| `strat`, explicit                        | 2.4e-3 | 1.4e-3 | 1.1e-3 | 9.1e-4  |
+| `hus` itself, implicit                   | 6.6e-5 | 5.0e-5 | 4.2e-5 | 3.2e-5  |
+
+For the region tags the implicit and explicit rows differ by at most 4%,
+with no fixed sign. `evap`, which holds 1% of the water in the first hour,
+differs by up to 24%, of a quantity near 2e-5. So the region tags' 25-fold
+larger sensitivity than the parent's comes from elsewhere.
+It matches the change in the closure residual: `gross_relative` is 3.9e-3 at
+1 h with one iteration and 4.9e-3 with ten, in both modes. A converged solve
+makes the parent's implicit vertical advection more implicit, while the tags
+are advected explicitly, so the split between them grows (the header of
+`tagged_water.jl`). A proportional loss leaves each cell's shares unchanged,
+so a missing diagonal on it acts only through what else changes the shares in
+the step, which fits a small effect. *Inferred, not separated:* whether the
+residual's early peak (7e-3 at 6 minutes, falling to 2.6e-3 at 2 h) is the
+advection split at this step, or the initial adjustment, needs a `dt` ladder.
+WP5's follower, which takes the parent's increment, is the planned cure for
+the split (G3_PLAN 4.3). *Jobs `13831761` to `13831764`, `hpda2_test`,
+2026-09-23, from `../ClimaAtmosResiDyn-wedmf-run` at `2a6f1294`;
+`output/w0a_0m_{implicit,explicit}_newton{1,10}_2h/`,
+`analysis/water/w0a_newton_2x2.py` (`output/w0a_0m_implicit_newton10_2h/newton_2x2.txt`).
+Not yet through the verifier.*
 
 ## 2. Energy source tags: closure by transport
 

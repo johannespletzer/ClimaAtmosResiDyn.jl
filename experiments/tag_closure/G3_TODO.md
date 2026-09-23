@@ -102,8 +102,13 @@ The twelve criteria of the plan, section 2, in short:
     tracer test (plan S3) can be configured.
   - [ ] V-W0c: one untagged D4-W day with EDMF diagnostics, to size the
     updraft's rain and snow, the surface excess and the five 1M leaks.
-  - [ ] V-W0a: known issue 4, a precipitating 0M column, 1 against 10 Newton
-    iterations. Close or restate the issue.
+  - [x] V-W0a: known issue 4, a precipitating 0M column, 1 against 10 Newton
+    iterations. The day-long pair rained only in its first hour (W15), so a
+    controlled 2×2 over that hour followed (W16): the missing diagonal
+    changes the region tags' Newton sensitivity by less than 4%. The issue is
+    restated in PR-W1. The sensitivity itself is the implicit and explicit
+    advection split, which grows as the solve converges; WP5 addresses it.
+    Both entries still go through the verifier once it covers water.
   - [ ] V-W1: D4-W with grid-scale tags on `main` + #95, before WP1's refusal,
     and its untagged twin: the "before" numbers.
   - [ ] Checksummed minimal datasets for headline tables, in the archive's
