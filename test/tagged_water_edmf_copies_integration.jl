@@ -130,6 +130,21 @@ end
             parent(ᶜsgsʲ.q_tot .* CA.water_tag_fraction.(Y.c.ρq_tag_tropo, Y.c.ρq_tot));
             rtol = 1e-14,
         )
+        # The comparison runs' driver starts the copies from the default
+        # mode's plume instead, which is rescaled so that the partition holds
+        # the updraft's water.
+        Y_plume = copy(Y)
+        CA.start_water_tag_copies_from_plume!(Y_plume, p)
+        ᶜsgsʲ_plume = Y_plume.c.sgsʲs.:(1)
+        @test isapprox(
+            parent(ᶜsgsʲ_plume.q_tag_tropo .+ ᶜsgsʲ_plume.q_tag_strat),
+            parent(ᶜsgsʲ.q_tot);
+            rtol = 1e-14,
+        )
+        @test !isequal(
+            parent(ᶜsgsʲ_plume.q_tag_tropo),
+            parent(ᶜsgsʲ.q_tag_tropo),
+        )
     end
 
     # 2. The default mode's flux and exchange do nothing, and the model's own

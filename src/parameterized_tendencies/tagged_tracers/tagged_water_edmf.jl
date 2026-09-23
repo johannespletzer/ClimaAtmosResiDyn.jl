@@ -329,22 +329,13 @@ where the bound binds.
 """
 function water_exchange_inputs!(Y, p, turbconv_model, model)
     (; edmfx_sgsflux_upwinding) = p.atmos.numerics
-    (; ᶠu³, ᶠu³ʲs, ᶜρʲs, ᶜuʲs) = p.precomputed
+    (; ᶠu³, ᶠu³ʲs, ᶜρʲs) = p.precomputed
     (; ᶜp, ᶠu³⁰, ᶜT⁰, ᶜq_tot_nonneg⁰, ᶜq_liq⁰, ᶜq_ice⁰) = p.precomputed
-    (;
-        ᶜturb_entrʲs,
-        ᶜentr_vel_scaleʲs,
-        ᶜentr_nonvel_rateʲs,
-        ᶜarea_bounding_entr_detrʲs,
-    ) = p.precomputed
     (; dt) = p
-    FT = eltype(Y.c.ρ)
     thermo_params = CAP.thermodynamics_params(p.params)
     upwinding = _exchange_upwinding(edmfx_sgsflux_upwinding)
-    ᶜlg = Fields.local_geometry_field(Y.c)
-    ᶜJ = ᶜlg.J
+    ᶜJ = Fields.local_geometry_field(Y.c).J
     ᶠJ = Fields.local_geometry_field(Y.f).J
-    ᶜΔz = Fields.Δz_field(Y.c)
     ᶜρaʲ = Y.c.sgsʲs.:(1).ρa
     ᶜρʲ = ᶜρʲs.:(1)
     ᶜq_totʲ = Y.c.sgsʲs.:(1).q_tot
@@ -360,48 +351,10 @@ function water_exchange_inputs!(Y, p, turbconv_model, model)
         ᶜq_liq⁰,
         ᶜq_ice⁰,
     )
-    ᶜentrʲ = @. lazy(
-        compute_entrainment(
-            ᶜentr_vel_scaleʲs.:(1),
-            ᶜentr_nonvel_rateʲs.:(1),
-            ᶜarea_bounding_entr_detrʲs.:(1),
-            get_physical_w(ᶜuʲs.:(1), ᶜlg),
-        ) + ᶜturb_entrʲs.:(1),
-    )
-    # The model advects an updraft tracer with the velocity at the face below
-    # each cell, so the plume marches with that one.
-    ᶠlg = Fields.local_geometry_field(Y.f)
-    ᶜwʲ = @. lazy(ᶜbottom_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
     flags = _water_partition_flags(model.tags)
-    # The grid mean's specific tag values, negative ones as zero, one tuple per
-    # cell, so each tag's kernel below reads a few tuple fields.
     ᶜε̄ = p.scratch.ᶜq_tag_mean
-    tag_fields = map(tag -> tag_field(Y.c, tag), model.tags)
-    Base.Broadcast.materialize!(
-        ᶜε̄,
-        Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, tag_fields...),
-    )
-
-    # The updraft's specific tag values, from the plume, rescaled at each level
-    # to the updraft's water.
     ᶜεʲ = p.scratch.ᶜq_tag_plume
-    ᶜplume_input = Base.Broadcast.broadcasted(
-        _water_plume_level,
-        ᶜε̄,
-        ᶜq_totʲ,
-        Y.c.ρ,
-        ᶜρaʲ,
-        ᶜρa⁰,
-        ᶜentrʲ,
-        ᶜwʲ,
-        ᶜΔz,
-    )
-    Operators.column_accumulate!(
-        WaterPlumeStep(flags),
-        ᶜεʲ,
-        ᶜplume_input;
-        init = ntuple(_ -> FT(NaN), Val(length(model.tags))),
-    )
+    water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
 
     # Each subdomain's water per unit mass, its area fraction and face density.
     ᶜq_tot⁰ = ᶜspecific_env_value(@name(q_tot), Y, p)
@@ -438,6 +391,108 @@ function water_exchange_inputs!(Y, p, turbconv_model, model)
         ᶠu³_diffʲ,
         ᶠu³_diff⁰,
     )
+end
+
+"""
+    water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
+
+Write the default mode's plume into `ᶜεʲ`: the updraft's specific tag values
+from a steady entraining plume, rescaled at each level so that the partition
+holds `q_totʲ` (`WaterPlumeStep`). `ᶜε̄` gets the grid mean's specific tag
+values, negative ones as zero, which the plume mixes in. Both hold one tuple of
+the tags' values per cell. It reads only the state and the precomputed
+quantities, so [`start_water_tag_copies_from_plume!`](@ref) can call it with
+fields of its own.
+"""
+function water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
+    (; ᶠu³ʲs, ᶜuʲs) = p.precomputed
+    (;
+        ᶜturb_entrʲs,
+        ᶜentr_vel_scaleʲs,
+        ᶜentr_nonvel_rateʲs,
+        ᶜarea_bounding_entr_detrʲs,
+    ) = p.precomputed
+    FT = eltype(Y.c.ρ)
+    ᶜlg = Fields.local_geometry_field(Y.c)
+    ᶜΔz = Fields.Δz_field(Y.c)
+    ᶜρaʲ = Y.c.sgsʲs.:(1).ρa
+    ᶜq_totʲ = Y.c.sgsʲs.:(1).q_tot
+    ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
+    ᶜentrʲ = @. lazy(
+        compute_entrainment(
+            ᶜentr_vel_scaleʲs.:(1),
+            ᶜentr_nonvel_rateʲs.:(1),
+            ᶜarea_bounding_entr_detrʲs.:(1),
+            get_physical_w(ᶜuʲs.:(1), ᶜlg),
+        ) + ᶜturb_entrʲs.:(1),
+    )
+    # The model advects an updraft tracer with the velocity at the face below
+    # each cell, so the plume marches with that one.
+    ᶠlg = Fields.local_geometry_field(Y.f)
+    ᶜwʲ = @. lazy(ᶜbottom_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
+    flags = _water_partition_flags(model.tags)
+    # The grid mean's specific tag values, negative ones as zero, one tuple per
+    # cell, so each tag's kernel below reads a few tuple fields.
+    tag_fields = map(tag -> tag_field(Y.c, tag), model.tags)
+    Base.Broadcast.materialize!(
+        ᶜε̄,
+        Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, tag_fields...),
+    )
+
+    # The updraft's specific tag values, from the plume, rescaled at each level
+    # to the updraft's water.
+    ᶜplume_input = Base.Broadcast.broadcasted(
+        _water_plume_level,
+        ᶜε̄,
+        ᶜq_totʲ,
+        Y.c.ρ,
+        ᶜρaʲ,
+        ᶜρa⁰,
+        ᶜentrʲ,
+        ᶜwʲ,
+        ᶜΔz,
+    )
+    Operators.column_accumulate!(
+        WaterPlumeStep(flags),
+        ᶜεʲ,
+        ᶜplume_input;
+        init = ntuple(_ -> FT(NaN), Val(length(model.tags))),
+    )
+    return nothing
+end
+
+"""
+    start_water_tag_copies_from_plume!(Y, p)
+
+Set each updraft copy to the default mode's plume ([`water_tag_plume!`](@ref)),
+not to `q_totʲ φ̄ᵢ`, the grid mean's composition, which the model starts them
+with. The comparison runs of G3_PLAN 6 call it once, after the simulation is
+built, so that a default run and its copies twin start from one updraft
+composition, and the first hour measures the dynamics, not a spin-up. The model
+never calls it. It allocates two fields. Where the updraft holds no water, or
+the partition nothing, the plume is left as mixed, and the copies' repair
+closes the partition at the first step. Errors without copies.
+"""
+function start_water_tag_copies_from_plume!(Y, p)
+    model = p.atmos.water_tagging_model
+    turbconv_model = p.atmos.turbconv_model
+    has_water_tag_updraft_copies(model) || error(
+        "`start_water_tag_copies_from_plume!` needs the water tags' updraft \
+        copies, `water_tag_updraft_copy: true`.",
+    )
+    FT = eltype(Y.c.ρ)
+    tag_values() = Fields.Field(NTuple{length(model.tags), FT}, axes(Y.c))
+    ᶜεʲ = tag_values()
+    ᶜε̄ = tag_values()
+    water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
+    _copies_from_plume!(Y.c.sgsʲs.:(1), ᶜεʲ, model.tags, 1)
+    return nothing
+end
+_copies_from_plume!(ᶜsgsʲ, ᶜεʲ, ::Tuple{}, i) = nothing
+function _copies_from_plume!(ᶜsgsʲ, ᶜεʲ, tags::Tuple, i)
+    ᶜχʲ = updraft_copy_field(ᶜsgsʲ, first(tags))
+    @. ᶜχʲ = getindex(ᶜεʲ, i)
+    return _copies_from_plume!(ᶜsgsʲ, ᶜεʲ, Base.tail(tags), i + 1)
 end
 
 _exchange_water_tags!(ᶜYₜ, subdomains, dt, upwinding, ::Tuple{}, i) = nothing
