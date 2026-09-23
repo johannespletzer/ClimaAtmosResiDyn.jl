@@ -910,3 +910,55 @@ end
         water_model(),
     )
 end
+
+# The default mode's plume and the audit's blend factors, point by point. The
+# EDMF column in `tagged_water_edmf_integration.jl` checks them in the model.
+@testset "The water plume and the exchange's bound" begin
+    partition = Val((true, true, false))
+    step = CA.WaterPlumeStep(partition)
+    # tropo, strat, and the source tag evap; the partition holds 0.008.
+    ε̄ = (0.006, 0.002, 0.001)
+    # The lowest level starts from the grid mean's composition, scaled so the
+    # partition holds the updraft's water. The source tag keeps its share.
+    start = step((NaN, NaN, NaN), (ε̄, 0.0, false, 0.010))
+    @test start[1] + start[2] ≈ 0.010
+    @test start[1] / start[2] ≈ 3
+    @test start[3] / (start[1] + start[2]) ≈ ε̄[3] / (ε̄[1] + ε̄[2])
+    # A level that mixes nothing keeps the composition and takes the new water.
+    kept = step(start, ((0.001, 0.003, 0.0), 0.0, false, 0.012))
+    @test kept[1] + kept[2] ≈ 0.012
+    @test kept[1] / kept[2] ≈ 3
+    # Full mixing takes the grid mean's composition.
+    mixed = step(start, ((0.001, 0.003, 0.0), 1.0, false, 0.008))
+    @test mixed[1] / mixed[2] ≈ 1 / 3
+    @test mixed[1] + mixed[2] ≈ 0.008
+    # Where the plume starts again, it takes the grid mean's composition.
+    restarted = step(start, (ε̄, 0.5, true, 0.010))
+    @test collect(restarted) ≈ collect(ε̄ .* (0.010 / 0.008))
+    # Without water in the updraft the values are left as mixed.
+    @test step(start, (ε̄, 0.5, false, 0.0)) ==
+          CA._plume_step(start, (ε̄, 0.5, false))
+
+    # The audit's factors are those the exchange applies, and `-1` where it
+    # does not run.
+    factors = CA.WaterBlendFactors(partition)
+    differences = CA.ShareDifferences(partition, false)
+    @test factors(start, ε̄, -1.0, 1.0) == (-1.0, -1.0, -1.0)
+    @test factors(start, ε̄, 1.0, 0.0) == (-1.0, -1.0, -1.0)
+    # The same composition leaves nothing to bound.
+    @test factors(ε̄ .* 2, ε̄, 0.5, 1.0) == (1.0, 1.0, 1.0)
+    @test all(abs.(differences(ε̄ .* 2, ε̄, 0.5, 1.0)) .< 1e-16)
+    # A plume far richer in `tropo` than the grid mean, with little room,
+    # binds the partition's common factor below one.
+    rich = (0.0099, 0.0001, 0.001)
+    θ = factors(rich, ε̄, 0.05, 1.0)
+    @test 0 <= θ[1] < 1
+    @test θ[1] == θ[2]
+    unbound = differences(rich, ε̄, Inf, 1.0)
+    bound = differences(rich, ε̄, 0.05, 1.0)
+    @test bound[1] ≈ θ[1] * unbound[1]
+
+    # The copies' sedimentation Jacobian: the falling share's derivative.
+    @test CA.water_tag_copy_fall_share_derivative(0.002, 0.010) ≈ 0.2
+    @test CA.water_tag_copy_fall_share_derivative(0.002, 0.0) == 0
+end

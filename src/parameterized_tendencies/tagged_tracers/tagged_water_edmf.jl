@@ -38,7 +38,7 @@ over the sum of the region tags without sources. Without such tags that sum is
 zero, and the exchange would silently do nothing. Where their masks leave a gap,
 the sum is too small, and a tag could take the updraft's whole water flux. A
 no-op in every other case, and without water tags. The energy tags' version is
-[`check_energy_source_exchange_partition`](@ref).
+`check_energy_source_exchange_partition`.
 """
 check_water_tag_exchange_partition(cache, atmos) =
     _check_water_tag_exchange_partition(
@@ -287,7 +287,7 @@ heavily. The plume starts in the lowest cell with the grid mean's composition,
 and again wherever the updraft is absent or does not rise.
 
 It needs one updraft and region tags that partition the domain, which
-[`check_water_tracers_transport_supported`](@ref) and
+`check_water_tracers_transport_supported` and
 [`check_water_tag_exchange_partition`](@ref) enforce.
 """
 function sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)

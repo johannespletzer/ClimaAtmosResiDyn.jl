@@ -45,10 +45,18 @@ produce have not been collected. The measurement protocol is in
 
 ## 3. Tagged water does not close under AMD LES or under PrognosticEDMFX
 
-**Status:** guarded. Both combinations are refused at configuration by
-`check_water_tracers_transport_supported` (`config/tracer_config.jl`), with a
-test each in `test/config/tracer_config.jl`. The refusal under prognostic EDMF
-lasts until the tags follow the updrafts.
+**Status:** AMD LES guarded; prognostic EDMF with one updraft lifted, with
+more than one guarded. `check_water_tracers_transport_supported`
+(`config/tracer_config.jl`) refuses AMD LES, and prognostic EDMF with more than
+one updraft, with a test each in `test/config/tracer_config.jl`. With one
+updraft the tags now follow the updraft's water, in one of two modes; see
+"Under prognostic EDMF" in `docs/src/tagged_water.md`. The default mode's
+partition takes the parent's sub-grid flux exactly, and its exchange sums to
+zero, so the flux itself no longer drifts the partition. How well its plume
+gives the updraft's composition is what the copies audit, and that is not
+settled yet. The diffusion paths that act on the water without rain and snow
+still drift the partition under 1M, with and without EDMF;
+`q_tag_leak_<path>` gives their rates.
 
 Two transport paths move `ρq_tot` in ways the water tags do not follow, so
 `Σᵢ ρq_tag_i = ρq_tot` stops holding. Both are properties of the tagged-water
@@ -82,8 +90,8 @@ The combination used to be accepted silently, because
 `check_water_tagging_supported` screens only the microphysics model. The new
 check is separate from it, since that function also gates
 `water_process_record`, whose records are not transported and stay allowed.
-The refusal under prognostic EDMF lifts when the tags take their share of the
-updraft's water flux.
+The description of prognostic EDMF above is of the code before the tags
+followed the updrafts.
 
 ## 4. The implicit water-microphysics attribution has no Jacobian diagonal
 
