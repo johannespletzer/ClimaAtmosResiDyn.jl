@@ -95,7 +95,7 @@ changes, which [RUNS.md](RUNS.md) records.
 | E50, E60, E69, E70, E74, E75                     | 8. The sphere and long runs                         |
 | E68, E72, E73, E76                               | 9. Mixing: V3 and the updraft gap                   |
 | T1–T10, E44, E44b–E44e, E52, E56, E77, E78       | 10. Cost                                            |
-| M1–M7                                            | 11. Method                                          |
+| M1–M8                                            | 11. Method                                          |
 | old claims, errata, conflicts                    | 12. Superseded and falsified claims                 |
 | FQ-1 to FQ-24                                    | 13. What is not established                         |
 
@@ -1736,6 +1736,20 @@ bound on this case, stated with its least favourable number (the source tag's
 24%), not a cause. To isolate an effect, change only it: here, the same
 implicit residual and integration with and without the entry. The owner's
 review of #100, 2026-09-23.
+
+**M8. The phase-1 verifier printed right numbers that its tests could not
+defend; it is fixed, and no published number changed.** A review of the
+evidence tools (`review/agent_reviews/phase1_tools_review_2026-09-23.md`)
+recomputed all 28 non-zero rows of E73's table independently and found them
+exact. But 17 of 19 planted defects passed the six tests, among them wrong
+weights, an unweighted L1, a flipped sign and the lowest level only, and a NaN
+or a fill value gave exit 0 with `nan` metrics that a budget check would pass.
+After the fixes (`82c0c32f` and its successor) the tests pin every metric on a
+nonuniform grid and reproduce E73 from a fixture in the repository, a
+mutation check catches 16 of 16 planted defects, and non-finite values are
+refused. The verifier now covers the water family, judges G3's budgets, checks
+parity against an untagged twin, reads any output period and fractional hours.
+From here on every G3 headline number goes through it (criterion 1).
 
 ## 12. Superseded and falsified claims
 

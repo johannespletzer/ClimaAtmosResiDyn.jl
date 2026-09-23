@@ -94,11 +94,16 @@ The twelve criteria of the plan, section 2, in short:
     `advection.jl:257`, no water restart guard exists, WP1's refusals need
     their own check, a sixth leak path exists on the sphere, and the tags'
     sedimentation already has a Jacobian diagonal.
-  - [ ] Review the phase-1 tools (the old item 1.8), then write a FINDINGS
-    entry. From here on every headline number goes through the verifier.
-  - [ ] Extend the verifier to `q_tag_*`, the copies in `sgsʲs`, the rain and
-    snow parts, and `pr_tag_*` (`clima-analysis-builder`).
-  - [ ] The manifest in this session's submit path. Classify the run inventory.
+  - [x] Review the phase-1 tools (the old item 1.8), then write a FINDINGS
+    entry (M8). From here on every headline number goes through the verifier.
+  - [x] Extend the verifier to `q_tag_*`, the copies in `sgsʲs`, the rain and
+    snow parts, and `pr_tag_*` (`clima-analysis-builder`): the water family,
+    `--judge` with the owner's 6.1 definitions, `--parity-only`,
+    `--ladder-share`, any output period and fractional hours; 55 tests. The
+    copies, rain, snow and `pr_tag` checks are stubs until WP3 and WP4b name
+    their fields; restart pairs (S6) and the checkpoint comparison stay open.
+  - [x] The manifest in this session's submit path (`runscripts/submit_g3.sh`).
+    Classify the run inventory (`runs_inventory.csv`, 140 rows).
   - [x] The Float64-twin helper (synergy 2), for V-W7. It is a precision-sensitivity
     screen and decides no cause (G4_TODO, prepared item 2):
     `analysis/increment/float64_twin.py`, `make` and `compare`. On E65's pair
