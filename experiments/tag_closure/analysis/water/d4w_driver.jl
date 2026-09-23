@@ -15,6 +15,15 @@ twins stay comparable. The tracer feeds back into nothing.
 
 The NetCDF output at t = 0 is written while the simulation is built, before the
 tracer is set, so its first `q_gas_A` sample is zero.
+
+A run without the passive tracer, such as V-W3's TRMM pair, skips that step.
+
+**With `water_tag_updraft_copy: true`,** the driver then starts the copies from
+the default mode's plume (`CA.start_water_tag_copies_from_plume!`), not from
+the grid mean's composition the model starts them with (G3_PLAN 4.1). So a
+default run and its copies twin start from one updraft composition, and the
+first hour measures the dynamics, not a spin-up. The copies' output at t = 0 is
+from before this step too.
 =#
 include(joinpath(@__DIR__, "..", "..", "run_tag_closure.jl"))
 
@@ -39,7 +48,13 @@ function main_d4w()
     path = config_path()
     config = CA.AtmosConfig(path)
     simulation = CA.get_simulation(config)
-    set_passive_tracer_to_region!(simulation, TROPO_REGION)
+    Y = simulation.integrator.u
+    hasproperty(Y.c, :ρq_gas_A) &&
+        set_passive_tracer_to_region!(simulation, TROPO_REGION)
+    if CA.has_water_tag_updraft_copies(simulation.integrator.p.atmos.water_tagging_model)
+        CA.start_water_tag_copies_from_plume!(Y, simulation.integrator.p)
+        @info "The water tags' updraft copies start from the default mode's plume"
+    end
     result = CA.solve_atmos!(simulation)
     if CC.iamroot(CC.context(simulation))
         @info "D4-W finished" simulation.job_id result.ret_code

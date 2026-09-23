@@ -169,9 +169,12 @@ Draft PR #100 from `claude/water-tags-edmf`, opened on 2026-09-23 at `6e7264ae`.
 
 ## WP3: total water under EDMF (draft PR-W3)
 
-  - [ ] The switch `water_tag_updraft_copy`.
+Branch `claude/water-tags-edmf-wp3`, stacked on #100. Dev runs and test
+jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
 
-  - [ ] Default mode:
+  - [x] The switch `water_tag_updraft_copy`.
+
+  - [x] Default mode:
 
       + the donor share of the parent's `ρq_tot` SGS flux;
       + the exchange with weight `q_totᵏ` and decision 5's bound;
@@ -180,7 +183,7 @@ Draft PR #100 from `claude/water-tags-edmf`, opened on 2026-09-23 at `6e7264ae`.
       + the plume computed once, at the top of `implicit_tendency!`, into the
         tags' own scratch.
 
-  - [ ] Copies mode: `q_tag_<name>` in `sgsʲs`, with the four mirrors:
+  - [x] Copies mode: `q_tag_<name>` in `sgsʲs`, with the four mirrors:
 
       + the updraft's 0M sink, `χᵢʲ += dq (φʲᵢ − χᵢʲ)` with φ clamped;
       + the updraft's 1M sedimentation, including the lateral inflow, with a
@@ -189,23 +192,34 @@ Draft PR #100 from `claude/water-tags-edmf`, opened on 2026-09-23 at `6e7264ae`.
       + the residual repair after the filter, with its ledger `q_tag_upfix_*`
         and `r` as a diagnostic.
 
-  - [ ] Copies initialised and rebuilt as `q_totʲ φ̄ᵢ`. The comparison driver
-    starts them from the plume.
+  - [x] Copies initialised and rebuilt as `q_totʲ φ̄ᵢ`.
+  - [x] The comparison driver starts them from the plume
+    (`start_water_tag_copies_from_plume!`, called by `d4w_driver.jl`).
+  - [x] A fifth mirror, the surface moisture flux into the updraft
+    (`water_tag_copies_surface_flux_tendency!`). 4.1 lists four; the 0M CI
+    test found it (FINDINGS W20).
 
-  - [ ] The restart guard for copies. Refusals:
+  - [x] The restart guard for the tags and the copies
+    (`water_tag_checkpoint.jl`). Refusals:
 
       + `updraft_number > 1`;
       + copies without prognostic EDMF;
       + copies with unequal updraft upwinding;
       + the exchange without a region partition.
 
-    Lift the WP1 refusal for one updraft.
+    Lift the WP1 refusal for one updraft. Done.
 
-  - [ ] Bound activation in the water audit, per source tag.
+  - [x] Bound activation in the water audit, per source tag.
 
-  - [ ] Diagnostics of the five 1M leaks, in closed form (plan 4.2).
+  - [x] Diagnostics of the five 1M leaks, and the sphere's horizontal EDMF
+    flux, in closed form (plan 4.2): `q_tag_leak_<path>`. The hyperdiffusion
+    also leaks under 0M, by the reference profile `q_tot_r(p)`.
 
-  - [ ] CI group `tagging_water_edmf` (Julia 1.10 and 1.11, downgrade):
+  - [ ] CI groups `tagging_water_edmf`, `tagging_water_edmf_copies` and
+    `tagging_water_edmf_0m` (Julia 1.10 and 1.11, downgrade). Three groups,
+    not one: each builds the EDMF column twice, and two builds fill a job's
+    budget, as for the energy source tags. The default mode under 0M runs in
+    V-W3's TRMM pair, not in CI:
 
       + parity in both modes, on the 1M and 0M EDMF columns and with explicit
         microphysics;

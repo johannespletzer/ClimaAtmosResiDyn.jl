@@ -1,0 +1,87 @@
+# V-W3, the copies' 10-Newton twin, as `w3_d4w_default_n10` is the default
+# mode's.
+job_id: "w3_d4w_copies_n10"
+
+water_tracers:
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: evap
+    source: surface_flux
+  - name: evap_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: surface_flux
+  - name: evap_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: surface_flux
+
+water_closure_check:
+  period: "1hours"
+  audit: true
+
+chemistry_model: "passive"
+
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, husra, hussn, wa, q_gas_A]
+    period: "1hours"
+  - short_name: [pr, prra, prsn, evspsbl, hfls, hfss, lwp, rwp]
+    period: "1hours"
+  - short_name: [arup, rhoaup, waup, husup, clwup, cliup, husraup, hussnup]
+    period: "1hours"
+  - short_name: [aren, rhoaen, waen, husen, husraen, hussnen]
+    period: "1hours"
+  - short_name: [tke, edt, evu, entr, detr, env_q_tot_variance]
+    period: "1hours"
+  - short_name: [q_tag_res, q_tag_tropo, q_tag_strat, q_tag_evap]
+    period: "1hours"
+  - short_name: [q_tag_evap_tropo, q_tag_evap_strat]
+    period: "1hours"
+  - short_name: [q_tag_fix_tropo, q_tag_fix_strat, q_tag_fix_evap]
+    period: "1hours"
+  - short_name: [q_tag_fix_evap_tropo, q_tag_fix_evap_strat]
+    period: "1hours"
+  # From V-W3 on: precipitation as hourly means, so a day's total is their
+  # sum (G3_PLAN 6.1), and the vertical diffusion's leak in closed form.
+  - short_name: [pr, prra, prsn]
+    period: "1hours"
+    reduction_time: average
+  - short_name: [q_tag_leak_vdiff]
+    period: "1hours"
+    reduction_time: average
+  - short_name: [q_tag_copy_res, q_tag_leak_diffusion_up]
+    period: "1hours"
+  - short_name: [q_tag_upfix_tropo, q_tag_upfix_strat]
+    period: "1hours"
+
+water_tag_updraft_copy: true
+
+max_newton_iters_ode: 10
