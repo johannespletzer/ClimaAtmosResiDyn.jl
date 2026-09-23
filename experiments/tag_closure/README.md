@@ -71,7 +71,13 @@ From a tcsh login shell:
     env CONFIG=experiments/tag_closure/configs/d4_column_edmf.yml \
         sbatch --account=hpda-c --partition=hpda2_test --time=02:00:00 \
             --cpus-per-task=2 --mem=48G \
+            --output=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/%x-%j.out \
+            --error=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/%x-%j.err \
             experiments/tag_closure/runscripts/phase_c.sh
+
+Give `--output` and `--error` on scratch. The runscripts' own
+`#SBATCH --output` is relative, so without them the logs land in the
+worktree's root.
 
 From bash or zsh, `CONFIG=... sbatch ...` works as well. Use the `.sh`
 scripts. The `.tcsh` variants are Levante-only and have never run.
@@ -98,12 +104,16 @@ these variables:
  - The standing approval of 2026-09-14 sized a column job at 2 CPUs, 48G and
    2 h. A one-day D4 column takes about 40 minutes.
  - A sphere on MPI: `--ntasks=24` on `hpda2_compute`, with `--mem=500G`. Each
-   rank peaked at about 17 GB. A first attempt with 200 GB was killed for
-   memory. A node has 160 cores and 1 TB.
+   rank peaked at 16.75 GB (`sacct` MaxRSS of jobs `13504999` and `13505896`).
+   A first attempt with 200 GB was killed for memory. A node has 160 cores and
+   about 1 TB (`sinfo`, checked 2026-09-23).
  - With more than one task, the runscript launches through `srun --mpi=pmix`
    with the MPI context. `pmi2` does not work here.
 
-**Approval.** Every job needs the owner's approval, or a standing one. Today
+**Approval.** Model code, a default, a tolerance and an energy reference need
+the owner's approval before they are written, and model code goes into draft
+PRs that only the owner merges. Every job needs the owner's approval, or a
+standing one. Today
 the owner has approved every job within G3 (G3_TODO.md). Energy jobs belong
 to the job session.
 
@@ -113,7 +123,9 @@ Compute nodes have no git, so a run's `provenance.txt` records the commit
 with `commit_dirty: unknown`. Stamp each submission on the login node with
 `analysis/evidence/manifest.py`. It records the worktree's `HEAD`, every
 changed and untracked file, the hashes of the `.buildkite` manifest, project
-and preferences, and of the config and driver:
+and preferences, and of the config and driver. Load `python/3.12` first
+(`source $MODULESHOME/init/zsh; module load python/3.12`); bare `python3` is 3.6
+here:
 
     python3 experiments/tag_closure/analysis/evidence/manifest.py \
         --repo . --config experiments/tag_closure/configs/<run>.yml \
@@ -148,9 +160,17 @@ number goes through the verifier and a manifest (G3's criterion 1).
     The NetCDF diagnostics and the checkpoints stay there.
  2. The runscript writes `provenance.txt` into that directory, whether the
     run succeeded or not.
- 3. Copy the small files into `output/<run>/` here: the closure table
-    (`<family>_tag_closure.csv`), the audit table if `audit: true`, the merged
-    `<run>.yml`, `run.log` trimmed to its info lines, warnings and final
+ 3. Run the reducer before copying anything back. It turns the NetCDF into
+    the small tables: the operator residual and the per-tag extrema, which
+    exist nowhere else once scratch is cleaned. With the scratch depot (Setup):
+
+        julia +1.11 --project=.buildkite \
+            experiments/tag_closure/analysis/reduce_run.jl \
+            /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/<run>/output_XXXX
+
+    Then copy the small files into `output/<run>/` here: the closure table
+    (`<family>_tag_closure.csv`), the reducer's tables, the audit table if
+    `audit: true`, the merged `<run>.yml`, `<run>_parameters.toml`, `run.log` trimmed to its info lines, warnings and final
     status, `provenance.txt`, and any analysis text. A crashed run is handed
     back too: where its table stops is itself a measurement.
  4. When a configuration runs again on changed code, keep the earlier reading.
@@ -173,7 +193,8 @@ number goes through the verifier and a manifest (G3's criterion 1).
    and in a batch job also `module load gcc/13.2.0 openmpi/4.1.8-gcc13`.
  - **An MPI run looks stuck for about an hour.** `srun` buffers Julia's log.
    With 24 ranks the build took 43 minutes and the first step with the
-   callbacks' compile another 50, at 30 to 55% CPU per rank. Judge progress by
+   callbacks' compile another 50, at 30 to 55% CPU per rank (seen with `top` during V2's build on
+   2026-09-19; not recorded elsewhere). Judge progress by
    the hourly NetCDF and the closure CSV, which are written as the run steps.
  - **Parity.** With a diagnostic on, every model field upstream has must stay
    bit for bit the same (`AGENTS.md`, "Fork parity with upstream"). Compare

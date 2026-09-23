@@ -22,7 +22,13 @@ FINDINGS section 7, "What is not established". Open items beyond G4 (M6 to
 M8, upstream, CI, outside) are in [BACKLOG.md](BACKLOG.md).
 
 The full re-check of the energy findings moves to the start of G4, by the
-owner's decision of 2026-09-23 (CONDENSE_PLAN decision 1).
+owner's decision of 2026-09-23 (CONDENSE_PLAN decision 1). It starts from the
+22 rows of `review/register/conflicts.csv`: 11 are settled in FINDINGS §12, and
+11 were found while condensing (marked H4-B) and stand unmarked in FINDINGS
+until then. Among them: ±30,920 against ±30,915 J kg⁻¹ (E27 and E35 against
+E46 and E48); 17 ms against 13.7 and 14.7 ms (E44b against E44c); and E58's
+restart differences, which it calls the same as E54's but which differ by
+orders of magnitude.
 
 ## G4.1 to G4.14
 

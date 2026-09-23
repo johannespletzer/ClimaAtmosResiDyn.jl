@@ -179,11 +179,14 @@ Short names for the sources:
  - **2M and P3** (decision 6, the design's decision 6): once upstream lifts
    the model's gate, the tags accept 2M, and refuse P3 at configuration until
    the parent's P3 sedimentation is fixed. **In force, waiting for upstream**
-   (the gate is still closed). [OT](archive/2026-09-23/OPERATIONAL_TODO.md#decided)
+   (the gate is still closed). The register files it as waiting for the owner;
+   nothing is the owner's to do until upstream lifts the gate. [OT](archive/2026-09-23/OPERATIONAL_TODO.md#decided)
  - **A4** (decision 4): later, as an N item. **In force** (A4 is shelved in
    G4_TODO.md). [OT](archive/2026-09-23/OPERATIONAL_TODO.md#decided)
  - **D1** (decision 9): after V2. Here D1 is the user guide, not the run
-   `d1_column_1m_ice`. V2 has run. The guide is in #95 and closes when #95
+   `d1_column_1m_ice`. The register reads it as the run; the archived
+   OPERATIONAL_TODO's section 2, item 12, "D1, the user guide into the docs",
+   shows it is the guide. V2 has run. The guide is in #95 and closes when #95
    merges (G4_TODO.md, G4.1). **Done in part.** [OT](archive/2026-09-23/OPERATIONAL_TODO.md#decided)
  - **Aqua's walk upstream** (item 14): not reported. **In force.**
    [OT](archive/2026-09-23/OPERATIONAL_TODO.md#decided)

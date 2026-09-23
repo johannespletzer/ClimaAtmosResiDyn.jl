@@ -48,8 +48,10 @@ For a worktree, capture its `HEAD.txt`, `modified.patch` and untracked files
 again into `worktrees/<name>/`. The commands are in the archive's README.
 
 **Last synced on 2026-09-23, after the day's reruns had finished.** That
-includes the five default reruns at `dcf7d086` (10:57 to 11:05): 5,434 files,
-identical to scratch.
+includes the five default reruns at `dcf7d086` (10:57 to 11:05). The copy of
+scratch, `scratch_tag_closure/`, holds 2,697 files, identical to scratch. With
+`claude_work` (678) and the worktree captures (2,058) the archive holds 5,434
+files.
 
 ## How to read the table
 
@@ -65,12 +67,15 @@ identical to scratch.
    under the run's directory, each counted once, as checked on 2026-09-23
    around 11:30. "dir only" is a directory without them, and "none" no
    directory. The two columns agree for every run.
- - **The counts differ from the register's.** `runs.csv`, and
-   `output/SCRATCH_INVENTORY.md` of 2026-09-20, count the files of the newest
-   output twice: once in `output_XXXX`, once through the `output_active` link.
-   This table counts each file once. For example, `c1c_base_d4_enthalpy` has
-   24 NetCDF files, not 48. The v3 ladder's counts also include the reruns of
-   2026-09-23.
+ - **The counts agree with the register,** which was corrected on this branch.
+   An earlier version, and `output/SCRATCH_INVENTORY.md` of 2026-09-20, counted
+   the newest output twice, through the `output_active` link. Each file is
+   counted once: `c1c_base_d4_enthalpy` has 24 NetCDF files, not 48. The v3
+   ladder's counts include the reruns of 2026-09-23.
+ - **Corrections to the register:** `v3_upd_default` has outputs 0000 to 0005.
+   The ladder rungs' commits and jobs are in the second table.
+   `g2_v2_sphere_mix_oom_13538434` ran `configs/g2_v2_sphere_mix.yml`; the
+   register names a file that does not exist.
 
 ## The runs
 
@@ -193,7 +198,7 @@ identical to scratch.
 | `g2_v2_nosponge_2h` | 0000 | same | 04d63916 | 2026-09-19 | 13509166 | The same 2 hours in Float32 without sponges. | E70 | yes | 16 nc | 16 nc |
 | `g2_v2_sphere` | 0000 | same | 04d63916 | 2026-09-19 | 13504999 | V2: the production physics on a sphere under the prototype, Float32, ten days, one Newton iteration (model-top collapse found). | E69, E72 | yes | 16 nc, 10 hdf5 | 16 nc, 10 hdf5 |
 | `g2_v2_sphere_mix` | 0000 | same | 846ef55d | 2026-09-21 | 13548198 | V2's ten days again from the branch that mixes provenance through the updrafts (E73's default), two Newton iterations. | E75 | yes | 16 nc, 10 hdf5 | 16 nc, 10 hdf5 |
-| `g2_v2_sphere_mix_oom_13538434` | 0001 (per runs_inventory.csv; ladder rung on scratch) | `configs/g2_v2_sphere_mix.yml` | 846ef55d | 2026-09-21 | 13538434 | Killed for memory. First attempt at g2_v2_sphere_mix, killed for memory (asked 200GB, needed ~500GB); superseded by job 13548198. The register names `configs/g2_v2_sphere_mix_oom_13538434.yml`, which does not exist; the run's provenance names `g2_v2_sphere_mix.yml`. | (supersedes into E75's run) | no | 16 nc | 16 nc |
+| `g2_v2_sphere_mix_oom_13538434` | 0001 (per runs_inventory.csv) | `configs/g2_v2_sphere_mix.yml` | 846ef55d | 2026-09-21 | 13538434 | Killed for memory. First attempt at g2_v2_sphere_mix, killed for memory (asked 200GB, needed ~500GB); superseded by job 13548198. The register names `configs/g2_v2_sphere_mix_oom_13538434.yml`, which does not exist; the run's provenance names `g2_v2_sphere_mix.yml`. | (supersedes into E75's run) | no | 16 nc | 16 nc |
 | `g2_v2_sphere_n2` | 0000 | same | 04d63916 | 2026-09-19 | 13505896 | V2 again with two Newton iterations, after one iteration collapsed the model top; ten days. | E74 | yes | 16 nc, 10 hdf5 | 16 nc, 10 hdf5 |
 | `g2_v2_sphere_newton10` | 0000 | same | 04d63916 | 2026-09-19 | 13505000 | V2's twin with ten fixed Newton iterations, first day, for per-tag correctness. | E74 | yes | 16 nc | 16 nc |
 | `g2_v2_sphere_test` | 0000 | same | 04d63916 | 2026-09-19 | 13504957 | V2's feasibility run: production physics on a sphere under the prototype, Float32, two hours. | (feasibility check, referenced in OPERATIONAL_TODO G1 'On the way to G2') | yes | 16 nc | 16 nc |
@@ -204,16 +209,16 @@ identical to scratch.
 |:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|
 | `v3_d4_passive_tracer` | 0000 | same | 04d63916 | 2026-09-19 | 13505756 | V3: a passive tracer with an updraft copy beside the tags on D4, for the updraft gap. | E68 | yes | 30 nc | 30 nc |
 | `v3_upd_copies` | 0000 | same | 3ec098f1 | 2026-09-19 | 13523326 | D4 under the updraft-gap fix, audit mode (updraft copies of the tags). | E73 | yes | 30 nc | 30 nc |
-| `v3_upd_copies_dt30` | 0001 (per runs_inventory.csv; ladder rung on scratch) | same | — | 2026-09-19/23 | — | V-W4-style ladder rung: copies mode at dt 30s (scratch only, not yet copied back). | (R2 ladder, job session; not yet a FINDINGS entry) | no | 30 nc | 30 nc |
-| `v3_upd_copies_dt60` | 0001 (per runs_inventory.csv; ladder rung on scratch) | same | — | 2026-09-19/23 | — | Ladder rung: copies mode at dt 60s (scratch only). | (R2 ladder, job session) | no | 30 nc | 30 nc |
-| `v3_upd_copies_newton2` | 0001 (per runs_inventory.csv; ladder rung on scratch) | same | — | 2026-09-19/23 | — | Ladder rung: copies mode with two Newton iterations (scratch only). | (R2 ladder, job session) | no | 30 nc | 30 nc |
-| `v3_upd_copies_upwind` | 0001 (per runs_inventory.csv; ladder rung on scratch) | same | — | 2026-09-19/23 | — | Ladder rung: copies mode with first-order upwinding (scratch only). | (R2 ladder, job session) | no | 30 nc | 30 nc |
-| `v3_upd_default` | 0000-0004 (reran at e010f780, 38278c2d, 846ef55d, e71430fb, plus a live one) | same | e010f780 | 2026-09-19 | 13528772 | D4 under the updraft-gap fix, default mode (zero-sum exchange); reran multiple times at head as the plume/blend-factor code changed. | E73 | yes | 180 nc | 180 nc |
-| `v3_upd_default_dt30` | 0001 (per runs_inventory.csv; ladder rung on scratch) | same | — | 2026-09-19/23 | — | Ladder rung: default mode at dt 30s (scratch only). | (R2 ladder, job session) | no | 90 nc | 90 nc |
-| `v3_upd_default_dt60` | 0001 (per runs_inventory.csv; ladder rung on scratch) | same | — | 2026-09-19/23 | — | Ladder rung: default mode at dt 60s (scratch only). | (R2 ladder, job session) | no | 90 nc | 90 nc |
-| `v3_upd_default_newton2` | 0001 (per runs_inventory.csv; ladder rung on scratch) | same | — | 2026-09-19/23 | — | Ladder rung: default mode with two Newton iterations (scratch only). | (R2 ladder, job session) | no | 90 nc | 90 nc |
+| `v3_upd_copies_dt30` | 0001 (below) | same | below | 2026-09-23 | below | V-W4-style ladder rung: copies mode at dt 30s (scratch only, not yet copied back). | (R2 ladder, job session; not yet a FINDINGS entry) | no | 30 nc | 30 nc |
+| `v3_upd_copies_dt60` | 0001 (below) | same | below | 2026-09-23 | below | Ladder rung: copies mode at dt 60s (scratch only). | (R2 ladder, job session) | no | 30 nc | 30 nc |
+| `v3_upd_copies_newton2` | 0001 (below) | same | below | 2026-09-23 | below | Ladder rung: copies mode with two Newton iterations (scratch only). | (R2 ladder, job session) | no | 30 nc | 30 nc |
+| `v3_upd_copies_upwind` | 0001 (below) | same | below | 2026-09-23 | below | Ladder rung: copies mode with first-order upwinding (scratch only). | (R2 ladder, job session) | no | 30 nc | 30 nc |
+| `v3_upd_default` | 0000-0005 (at e010f780, 38278c2d, 846ef55d, e71430fb, dbe7435c and dcf7d086; the last two in the table below) | same | e010f780 | 2026-09-19 | 13528772 | D4 under the updraft-gap fix, default mode (zero-sum exchange); reran multiple times at head as the plume/blend-factor code changed. | E73 | yes | 180 nc | 180 nc |
+| `v3_upd_default_dt30` | 0001, 0002 (below) | same | below | 2026-09-23 | below | Ladder rung: default mode at dt 30s (scratch only). | (R2 ladder, job session) | no | 90 nc | 90 nc |
+| `v3_upd_default_dt60` | 0001, 0002 (below) | same | below | 2026-09-23 | below | Ladder rung: default mode at dt 60s (scratch only). | (R2 ladder, job session) | no | 90 nc | 90 nc |
+| `v3_upd_default_newton2` | 0001, 0002 (below) | same | below | 2026-09-23 | below | Ladder rung: default mode with two Newton iterations (scratch only). | (R2 ladder, job session) | no | 90 nc | 90 nc |
 | `v3_upd_default_prefix_e010f780_superseded` | 0000 | same | 3ec098f1 | 2026-09-19 | 13523325 | Superseded by `v3_upd_default`. First default-mode run at e010f780, whose shares were normalised over all tags rather than the partition; superseded. | E73 (superseded run, noted in its evidence) | yes | 30 nc | 30 nc |
-| `v3_upd_default_upwind` | 0001 (per runs_inventory.csv; ladder rung on scratch) | same | — | 2026-09-19/23 | — | Ladder rung: default mode with first-order upwinding (scratch only). | (R2 ladder, job session) | no | 90 nc | 90 nc |
+| `v3_upd_default_upwind` | 0001, 0002 (below) | same | below | 2026-09-23 | below | Ladder rung: default mode with first-order upwinding (scratch only). | (R2 ladder, job session) | no | 90 nc | 90 nc |
 
 ### Analysis outputs, not model runs
 
@@ -243,8 +248,7 @@ The register leaves the ladder's commit, date and job blank, and gives
 `v3_upd_default` several outputs in one row. This table is read from each
 output's `provenance.txt` on scratch, on 2026-09-23. An `output_0000` without
 a provenance file is not listed. The R2 ladder is FINDINGS E76, written by the
-job session in `8726d2cb` on the old experiment branch. It reaches the record
-branch at H6.
+job session in `8726d2cb` and ported to the record branch as `eec7f363`.
 
 | Run | Output | Commit | Started | Job | Note |
 |:--|:--|:--|:--|:--|:--|

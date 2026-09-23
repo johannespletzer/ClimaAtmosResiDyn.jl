@@ -6,8 +6,9 @@ directory, the job, the script and the commit. Where a claim is bounded, to one
 geometry, one resolution or an uncontrolled comparison, the bound is part of
 the finding. An inference is marked as one.
 
-**State as of 2026-09-23.** The register holds W1–W14 for the water tags,
-E1–E75 with sub-entries for the energy source tags and the `ρe_tag_*` family,
+**State as of 2026-09-23.** Where an entry gained a date or a commit in the
+condensing, its source is the register, RUNS.md or `review/verify_g3.md`. The register holds W1–W14 for the water tags,
+E1–E76 with sub-entries for the energy source tags and the `ρe_tag_*` family,
 R1–R11 for the energy reference, T1–T10 for cost and M1–M6 for method. G1, a
 closed and explained EDMF column, was met on 2026-09-20 (E62, E64, E65, E66,
 E73). G2, ten days on the sphere, was met on 2026-09-22 (E74, E75). G3, the
@@ -243,8 +244,10 @@ identical to the reference.
 | sphere, signed at 24 h, J | −2.82e19 | −1.16e17 |
 
 After the first hour the residual does not grow: at 24 h it is 1,069 times
-smaller on the column and 11 times on the sphere. The first hour's residual is
-the one-iteration Newton increment (E39, E39b). Column form A closes to
+smaller on the column and 11 times on the sphere. What makes the first hour's residual is not
+separated here; the initial adjustment of E13 and E25 is the candidate. Later
+entries answer it: the one-iteration Newton increment, 99% of it on the column
+(E39) and 83% on the sphere (E39b). Column form A closes to
 6.6e-6 J kg⁻¹, against 60.7 under tracer transport (E26), so that gap was the
 per-tag transport; form B stays at 3.3e-7 J m⁻². Sphere form A gets worse,
 76.8 J kg⁻¹ at 24 h against C7's 20.2, where negative source tags are clamped
@@ -368,9 +371,9 @@ work makes it (E25). Bounded to one warm column, one hour, liquid only.
 **E33. On a 1M column for a day, with sedimentation moving the tags, both
 per-process checks hold, less tightly than on the 0M column.** C8 is C6's column
 under 1M, repair on, with an `mp` tag and a `precipitation` record. Form B
-closes to −5.3 J m⁻² of 897,043, 6e-6; that is the Newton lag (E43). Form A's
-two splits agree to 117 J kg⁻¹ at 24 h, 7.1e-4, at 75 m, against C6's 60.7; that
-gap is the per-tag transport (E43). The rain took 158,979 J m⁻² out of the column. The
+closes to −5.3 J m⁻² of 897,043, 6e-6; what that is, is not separated here (later: the Newton lag, E43). Form A's
+two splits agree to 117 J kg⁻¹ at 24 h, 7.1e-4, at 75 m, against C6's 60.7; it is not
+separated here either (later: the per-tag transport, E43). The rain took 158,979 J m⁻² out of the column. The
 gross residual at 24 h is 2.46e6 J m⁻², against 2.44e6 on the 0M column. *C8,
 job `13401744` at `c11d1d3b`; `analysis/c5_process_closure.jl`;
 `output/c8_column_1m/`.*
@@ -989,7 +992,7 @@ same differences reach −9,617 and −11,638 J kg⁻¹, where the region tags a
 negative (E14). *C5.*
 
 **E22. The radiation tag holds nothing where radiation cools, with the loss
-running.** At 675 m, where the radiation record is most negative, the `rad` tag
+running.** At 675 m, where the radiation record is most negative at 24 h (−20,566 J kg⁻¹, as in C3), the `rad` tag
 holds 0.0044 J kg⁻¹ of a total of 61,718 J kg⁻¹, a share of 7.1e-8. The loss
 takes by share, and radiation added almost nothing there. So a source tag cannot
 show where its process removed energy. *C5, `cloud_top.csv`.*
@@ -1059,7 +1062,7 @@ mass-weighted sums over its weighted gross; one means nothing cancels.
 | C6, sphere, no repair | the rain-out has no tag (E28) | 0.47 | 0.99 | 0.46 | 1.26e-3 |
 | C6, sphere, repair | the same, and the repair | 0.62 | 0.70 | 0.42 | 3.5e-3 |
 | C5, column, 0M | subsidence has no tag (E20) | 1.00 | — | 1.00 | 0.26 |
-| C8, column, 1M, tracer | not separated in E33; the per-tag transport (E43) | 0.011 | — | 0.011 | −1.5e-5 |
+| C8, column, 1M, tracer | not separated (E33); later, the per-tag transport (E43) | 0.011 | — | 0.011 | −1.5e-5 |
 | C9, column, audit | rounding (E34) | 0.066 | — | 0.066 | 2.6e-12 |
 
 A transport error cancels along the way it moved. A process no tag follows, and
@@ -1085,7 +1088,9 @@ diffusion miss `ρe_tot` by 7% of its gross after ten days, and pointwise by 7%
 of the largest `|e_tot|` after a week.** B1, `b1_base`: `MoistBaroclinicWave`,
 0M, `h_elem` 6, `z_elem` 10, `dt` 400 s, two latitude tags, 10 days, Float64.
 The owner approved B1 alone (decision 7 of 2026-09-18); B1a to B1c, B2 and B3
-are not approved.
+are not approved. *Erratum, 2026-09-23 (condensing, loss check): the original
+entry dated decision 7 to 2026-09-17. The archived OPERATIONAL_TODO records it
+under 2026-09-18, "going through section 1", and so does DECISIONS.md.*
 
 | day | `relative` | `gross_relative` | `max \|e_tag_res\|`, J/kg | over `max \|e_tot\|` |
 | ---:| ----------:| ----------------:| -------------------------:| --------------------:|
@@ -1262,8 +1267,9 @@ for bit, the closure 267.047 against 267.068, and `sfc` 0.64% against 0.66% at
 no state. *Erratum, 2026-09-23 (housekeeping re-check H3, `review/verify_g3.md`):
 the D4 runs cited below built separately and cold, and their tendency build took
 600.3 s with the default (`13528772`) and 3504.1 s with the copies (`13523326`),
-about 5.8×. The 402 s and 789 s first quoted here come from a smoke test, job
-`13519152`, that built both in one process. Neither is a controlled benchmark;
+about 5.8×. The 402 s and 789 s first quoted in this entry (now in §12) come from a smoke
+test, job `13519152`, that built both in one process, the copies second: about
+2× after the default's build. Neither is a controlled benchmark;
 G3's V-W10 measures it.* *Jobs `13528772` (default, at `e010f780`) and
 `13523326` (copies, at `3ec098f1`), `hpda2_test`, 2026-09-19, from
 `../ClimaAtmosResiDyn-upd-run`, with `analysis/increment/v3_driver.jl`. A first
@@ -1484,15 +1490,18 @@ reports the most negative source tag on its own. *C0, from
 `source_tag_extrema.csv`.*
 
 **M6. Levante and terrabyte agree to rounding, not bit for bit.** The terrabyte
-re-run of `c0_sphere_audit` differs from Levante's by at most 1.5e-14 in
-`gross_residual`; `nonpositive_mass_fraction` at 24 h agrees to every digit. On
+re-run of `c0_sphere_audit` differs from Levante's in the last digits from t = 0 on, and by at most
+1.5e-14 in `gross_residual` over the day; `nonpositive_mass_fraction` at 24 h agrees to every digit. On
 one machine runs are deterministic. *`c0_sphere_audit` on both machines, and the
 twin test.*
 
 ## 12. Superseded and falsified claims
 
 Kept because a later reader would otherwise re-derive them. From the old section
-6, the errata, `review/register/conflicts.csv` and LEARNINGS.
+6, the errata, `review/register/conflicts.csv` and LEARNINGS. Eleven more
+inconsistencies, found while condensing, are the rows of `conflicts.csv` marked
+H4-B. They are not settled: the entries stand as recorded until G4's full
+re-check (G4_TODO.md).
 
 | old claim | what replaced it | where |
 |:--|:--|:--|
@@ -1522,7 +1531,7 @@ Kept because a later reader would otherwise re-derive them. From the old section
 | E20's reading of the sphere's gap as the per-tag limiter or the share clamp. | The rain-out's production; then the per-tag limiter. | E28, E30, E37 |
 | E20 and E23: the column's 17,954 J kg⁻¹ gap and 1.37 MJ m⁻² unrecorded. | Subsidence and the rain-out, to the joule; form A 60.7 with them listed. | E26 |
 | E28: a 149 J kg⁻¹ sphere gap with no tag for it. | An `mp` tag closes it to 20.2. | E30 |
-| E13's and E34's reading of the audit's first-hour residual as the initial adjustment. | The one-iteration Newton increment. | E39, E39b |
+| E34's reading of the audit's first-hour residual as the initial adjustment. | The one-iteration Newton increment. | E39, E39b |
 | E32's +196 J m⁻² as possibly the tags' missing Jacobian block. | The loss rule; the block's lag is −7.8 J m⁻². | E39 |
 | E33's open points: form A 117 J kg⁻¹ and form B −5.3 J m⁻². | The per-tag transport, and the Newton lag. | E43 |
 | That under the audit the tags follow the parent's vertical flux at the stage state. | At the solved stage state; the parent's side is the one-iteration increment. | E39 |
@@ -1553,17 +1562,17 @@ their entries as "not separated".
 
 | ID | open question | tracked in |
 |:--|:--|:--|
-| FQ-3 | What starts E16's remainder once the limiter is off: 3.7e-8 in `ρ` after one step, 5.8e-6 by 5 h. | [G4_TODO.md](G4_TODO.md) G4.9, or [BACKLOG.md](BACKLOG.md) |
+| FQ-3 | What starts E16's remainder once the limiter is off: 3.7e-8 in `ρ` after one step, 5.8e-6 by 5 h. | [BACKLOG.md](BACKLOG.md) |
 | FQ-4 | Why a tag goes negative under a positive parent (E14). | BACKLOG |
 | FQ-5 | What makes the residual's first-minute jump (E13, E25). | BACKLOG |
 | FQ-6 | Why C5's radiation tag outgrows C3's after four hours (E24). | BACKLOG |
 | FQ-10 | How much provenance the upward branch moves where ice persists (D1: a fifth, E42b). | G4_TODO G4.11 |
-| FQ-11 | What makes D1's zero-sum gross residual (E42, E42b). | [G3_TODO.md](G3_TODO.md) WP0, or BACKLOG |
+| FQ-11 | What makes D1's zero-sum gross residual (E42, E42b). | [G4_TODO.md](G4_TODO.md) G4.6 |
 | FQ-13 | 2M and P3, behind the model's gate (E41). | BACKLOG (upstream gate) |
-| FQ-15 | Whether the audit's transport clamp is all of its sphere form-A gap (E36). | BACKLOG |
-| FQ-17 | What the sphere's converged 17% is (E39b). | BACKLOG |
-| FQ-21 | Float32 beyond a day, under the audit, with 1M, on a GPU (E45). | G3_TODO V-W7 for water; BACKLOG |
-| FQ-22 | Whether 1M changes the water residual on a sphere (W5b). | G3_TODO or BACKLOG |
+| FQ-15 | Whether the audit's transport clamp is all of its sphere form-A gap (E36). | [G4_TODO.md](G4_TODO.md), "Energy items within M1 to M5" |
+| FQ-17 | What the sphere's converged 17% is (E39b). | [G4_TODO.md](G4_TODO.md) G4.6 |
+| FQ-21 | Float32 beyond a day, under the audit, with 1M, on a GPU (E45). | [G4_TODO.md](G4_TODO.md), "Items that G3 takes up" (G3_TODO V-W7 for water) |
+| FQ-22 | Whether 1M changes the water residual on a sphere (W5b). | [G4_TODO.md](G4_TODO.md), "Items that G3 takes up" (G3_TODO) |
 | FQ-23 | The tag cost on a GPU, and under EDMF (T4, T9). | BACKLOG (M6); G3_TODO WP9 |
 | FQ-24 | R11's suppression cost over long runs (E19). | G4_TODO G4.10 |
 | LEARNINGS:A2:1 | Why the linear water ladders are sub-first-order (W1). | BACKLOG, "M0 to M5, not energy-specific" |
