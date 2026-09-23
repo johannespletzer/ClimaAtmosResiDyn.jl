@@ -35,6 +35,13 @@ Short names for the sources:
 
 ## 2026-09-23
 
+  - **How G3's budgets are read** (G3_PLAN 6.1): the share from the reference
+    at the same hour; for a small tag the absolute test replaces L1 and L∞; a
+    tag that is region and source is judged as a source tag; the gross
+    residual is `Σ |q_tag_res| ρΔz` over the column water, and "the second 12 h
+    add no more" is `G(24) − G(12) ≤ G(12) − G(0)`; the precipitation audit
+    needs averaged or accumulated output. Accepted as the phase-1 review
+    proposed them. **In force.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
   - **This session's goal is G3's WP0 and WP1.** Done when the plan's
     assumptions are checked against the merged #95, the verifier and tools
     are extended, V-W0a, V-W0c and V-W1 are run and recorded, and draft PR-W1

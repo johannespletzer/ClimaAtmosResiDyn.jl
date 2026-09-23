@@ -541,6 +541,31 @@ The verifier computes both (WP0).
     tag. This session proposes it from V-W10's first measurements, and the
     owner sets it before V-W11. The copies are measured, not budgeted.
 
+**How the budgets are read**, set by the owner on 2026-09-23 on the proposals
+of the phase-1 tools review (`review/agent_reviews/phase1_tools_review_2026-09-23.md`,
+R5 and R7). `w` is `ρ_ref Δz`, and `total_ref` is the reference's
+`Σ q_tot w`.
+
+  - A tag's share `S` of the partition is taken from the reference run at the
+    same hour.
+  - For a small tag, `S < 0.01`, the absolute test replaces both L1 and L∞.
+    The relative numbers are still reported. A tag whose reference is zero
+    at that hour counts as small.
+  - A tag that is both a region and a source tag, such as `evap_tropo`, is
+    judged as a source tag.
+  - A non-finite value or a missing hour is a failure. The 6 h and 12 h
+    outputs are reported, not judged.
+  - The gross residual is `G(t) = Σ |q_tag_res| w / total_ref`. "The second
+    12 h add no more than the first" means `G(24) − G(12) ≤ G(12) − G(0)`.
+  - The remainder after the named parts is taken over a list of fields,
+    since the parts' output names are fixed later.
+  - The precipitation audit over the day needs averaged or accumulated
+    precipitation output, not hourly samples. The D4-W configs write it from
+    V-W3 on.
+
+The copies' definitions (R8) and those of the rain and snow parts (R9) stay
+proposals until WP3 and WP4b fix their fields.
+
 A threshold is not changed after a failure without a recorded decision and a
 new validation. If the default fails the per-tag budgets on a case, the
 exchange is not accepted as the default there, and the options go to the
