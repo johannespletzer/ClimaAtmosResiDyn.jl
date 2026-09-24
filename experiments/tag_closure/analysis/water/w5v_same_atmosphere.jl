@@ -55,6 +55,11 @@ while CA.time_to_seconds(reference.t) < t_end - 1e-6
     for (n, trial) in trials
         trial.u .= Yₖ
         trial.t = tₖ
+        # The stepper does not refresh the cache at a step's first stage: it
+        # holds what the previous step left, here the trial's own. So it is
+        # rebuilt for the copied state (the first submission missed this, and
+        # its trials stepped with their own previous cache).
+        CA.set_precomputed_quantities!(trial.u, trial.p, trial.t)
         CA.CTS.step!(trial)
         @assert trial.t == reference.t
         for name in names
