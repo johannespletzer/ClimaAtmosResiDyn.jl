@@ -259,28 +259,57 @@ end
     )
 
     @test isnothing(CA.check_water_tracers_transport_supported(nothing, false))
-    # Prognostic EDMF is refused whatever the mass flux is, until the tags
-    # follow the updrafts. The message names the mass flux only where it is on,
-    # since only then do the tags miss it.
-    refusal_message(entries, job_id) =
-        try
-            CA.AtmosTagging(water_config(entries, job_id))
-            ""
-        catch err
-            err isa ErrorException ? err.msg : rethrow()
-        end
-    no_mass_flux = refusal_message(
-        ["turbconv" => "prognostic_edmfx"],
-        "water_tags_edmf_no_mass_flux",
+    # Under prognostic EDMF the tags follow one updraft, by default through a
+    # donor share and an exchange, or through copies. More than one updraft is
+    # refused.
+    edmf = CA.AtmosTagging(
+        water_config(["turbconv" => "prognostic_edmfx"], "water_tags_edmf"),
     )
-    @test occursin("turbconv: prognostic_edmfx", no_mass_flux)
-    @test occursin("whatever `edmfx_sgs_mass_flux` is", no_mass_flux)
-    @test !occursin("miss the updraft's mass flux", no_mass_flux)
-    with_mass_flux = refusal_message(
-        ["turbconv" => "prognostic_edmfx", "edmfx_sgs_mass_flux" => true],
-        "water_tags_edmf_mass_flux",
+    @test edmf.water_tagging_model isa CA.WaterTaggingModel
+    @test !CA.has_water_tag_updraft_copies(edmf.water_tagging_model)
+    @test_throws "`updraft_number: 1`" CA.AtmosTagging(
+        water_config(
+            ["turbconv" => "prognostic_edmfx", "updraft_number" => 2],
+            "water_tags_edmf_two_updrafts",
+        ),
     )
-    @test occursin("miss the updraft's mass flux", with_mass_flux)
+    # The copies: under prognostic EDMF only, with one reconstruction for the
+    # updraft's water and its tracers, and only with tags to copy.
+    copies = CA.AtmosTagging(
+        water_config(
+            ["turbconv" => "prognostic_edmfx", "water_tag_updraft_copy" => true],
+            "water_tags_copies",
+        ),
+    )
+    @test CA.has_water_tag_updraft_copies(copies.water_tagging_model)
+    @test_throws "needs `turbconv: prognostic_edmfx`" CA.AtmosTagging(
+        water_config(["water_tag_updraft_copy" => true], "water_tags_copies_no_edmf"),
+    )
+    @test_throws "`edmfx_mse_q_tot_upwinding` equal" CA.AtmosTagging(
+        water_config(
+            [
+                "turbconv" => "prognostic_edmfx",
+                "water_tag_updraft_copy" => true,
+                "edmfx_mse_q_tot_upwinding" => "third_order",
+            ],
+            "water_tags_copies_upwinding",
+        ),
+    )
+    @test_throws "no tags to copy" CA.AtmosTagging(
+        tracer_config(
+            ["microphysics_model" => "0M", "water_tag_updraft_copy" => true];
+            job_id = "water_copies_without_tags",
+        ),
+    )
+    @test_throws "no tags for it to move" CA.AtmosTagging(
+        tracer_config(
+            ["microphysics_model" => "0M", "water_tag_transport" => "increment"];
+            job_id = "water_increment_without_tags",
+        ),
+    )
+    @test_throws "must be `true` or `false`" CA.water_tag_updraft_copy_from_config(
+        "true",
+    )
     # AMD's diffusivity comes from each tracer's own gradient, so the tags'
     # diffusion does not add up to the parent's.
     @test_throws "amd_les: true" CA.AtmosTagging(
@@ -1272,4 +1301,70 @@ end
     @test length(source_model.tags) == 7
     @test source_model.offset == eltype(source)(110495)
     @test CA.closure_checks_from_config(source).energy_source.spin_up == "1hours"
+end
+
+# `water_tag_transport`'s default (the owner's review of #102, point 1). G3_PLAN
+# 4.3's rule makes the follower the default in the default mode under EDMF,
+# where the configuration supports it, and keeps `tracer` elsewhere.
+@testset "water_tag_transport's default" begin
+    region(above) = Dict{String, Any}(
+        "type" => "tanh_altitude",
+        "z_center" => 750.0,
+        "width" => 100.0,
+        "above" => above,
+    )
+    partition = [
+        Dict{String, Any}("name" => "tropo", "region" => region(false)),
+        Dict{String, Any}("name" => "strat", "region" => region(true)),
+        Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
+    ]
+    edmf = ["turbconv" => "prognostic_edmfx"]
+    config(extra, job_id; tags = partition) = tracer_config(
+        ["microphysics_model" => "0M", "water_tracers" => tags, extra...];
+        job_id,
+    )
+    transport(extra, job_id; kwargs...) =
+        CA.AtmosTagging(config(extra, job_id; kwargs...)).water_tagging_model.transport
+    increment = CA.IncrementWaterTagTransport
+    tracer = CA.TracerWaterTagTransport
+    @test transport(edmf, "water_default_edmf") isa increment
+    # An explicit key overrides it, either way.
+    @test transport([edmf..., "water_tag_transport" => "tracer"], "water_edmf_tracer") isa
+          tracer
+    @test transport(["water_tag_transport" => "increment"], "water_increment") isa
+          increment
+    # Elsewhere the default is `tracer`: without EDMF, with copies, without the
+    # parent's post-solve correction, without a region tag, and with 1M
+    # microphysics stepped explicitly.
+    @test transport([], "water_default_plain") isa tracer
+    @test transport(
+        [edmf..., "water_tag_updraft_copy" => true],
+        "water_default_copies",
+    ) isa tracer
+    @test transport(
+        [edmf..., "energy_q_tot_upwinding" => "none"],
+        "water_default_no_correction",
+    ) isa tracer
+    @test transport(
+        edmf,
+        "water_default_sources_only";
+        tags = [partition[3]],
+    ) isa tracer
+    explicit_one_moment =
+        [edmf..., "microphysics_model" => "1M", "implicit_microphysics" => false]
+    @test transport(explicit_one_moment, "water_default_explicit_1m") isa tracer
+    @test transport(
+        [edmf..., "microphysics_model" => "1M"],
+        "water_default_implicit_1m",
+    ) isa increment
+    # And the follower is refused there, with the reason.
+    @test_throws "stepped explicitly" CA.AtmosTagging(
+        config(
+            [explicit_one_moment..., "water_tag_transport" => "increment"],
+            "water_increment_explicit_1m",
+        ),
+    )
+    @test_throws "must be `tracer` or `increment`" CA.water_tag_transport_from_config(
+        "follow",
+    )
 end

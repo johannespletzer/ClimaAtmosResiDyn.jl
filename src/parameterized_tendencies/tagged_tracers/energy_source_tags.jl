@@ -2233,8 +2233,10 @@ the parent's own post-solve correction, which the stepper adds as `dtγ·dY`.
 
 In each cell, the mismatch `m` is the parent's increment of `E` since the
 snapshot less the partition's. The part of `m` that changes a column's total
-cannot be moved within the column; it is left where it arises, in proportion to
-`|m|`, and stays in `e_src_res`. The rest integrates up the column to a face flux
+cannot be moved within the column; it is left out of the tags, spread over the
+column in proportion to `|m|`, and stays in `e_src_res`. Its column total is
+exact, but `|m|` is dominated by the parent's vertical transport, so its
+profile does not show where it arose. The rest integrates up the column to a face flux
 that is zero at both boundaries, whose divergence is that rest. Each tag takes
 the flux times its share in the cell the flux leaves, as with the sub-grid mass
 flux, and the flux is added to `dY` divided by `dtγ`. The partition's shares add
@@ -2354,29 +2356,7 @@ function _check_energy_source_increment_supported(ode_algo, T_imp!, T_post_imp!)
             `energy_q_tot_upwinding` other than `none`, such as the default \
             `vanleer_limiter`, or `energy_source_tag_transport: enthalpy`.",
         )
-    reason =
-        if isnothing(T_imp!)
-            "the flow is prescribed, so there is no implicit tendency"
-        elseif !(ode_algo isa CTS.IMEXAlgorithm) ||
-               isnothing(ode_algo.newtons_method)
-            "`ode_algo` is not an IMEX algorithm with a Newton method"
-        else
-            (; a_imp, b_imp) = ode_algo.tableau
-            s = length(b_imp)
-            unsolved = filter(
-                i ->
-                    iszero(a_imp[i, i]) && (
-                        !iszero(b_imp[i]) ||
-                        any(j -> !iszero(a_imp[j, i]), 1:s)
-                    ),
-                1:s,
-            )
-            isempty(unsolved) ? nothing :
-            "$(length(unsolved) == 1 ? "stage" : "stages") \
-            $(join(unsolved, ", ")) of `ode_algo` \
-            $(length(unsolved) == 1 ? "uses" : "use") the implicit tendency \
-            without a solve"
-        end
+    reason = implicit_increment_gap(ode_algo, T_imp!)
     isnothing(reason) && return nothing
     error(
         "`energy_source_tag_transport: enthalpy_increment` needs every \
@@ -2386,6 +2366,40 @@ function _check_energy_source_increment_supported(ode_algo, T_imp!, T_post_imp!)
         solves every stage it uses, such as the default ARS343, or \
         `energy_source_tag_transport: enthalpy`.",
     )
+end
+
+"""
+    implicit_increment_gap(ode_algo, T_imp!)
+
+Why a tag family that takes the parent's increment after each Newton solve
+would miss part of the parent's implicit transport under `ode_algo`, as text
+for an error message, or `nothing` when it would not. It misses part when the
+flow is prescribed (`T_imp!` is `nothing`), when `ode_algo` is not an IMEX
+algorithm with a Newton method, and when a stage whose implicit diagonal is
+zero uses the implicit tendency in a later stage or in the step's result. The
+ARS algorithms, such as ARS222 and ARS343, solve every stage they use. The
+energy source tags' and the water tags' increments share it.
+"""
+function implicit_increment_gap(ode_algo, T_imp!)
+    isnothing(T_imp!) &&
+        return "the flow is prescribed, so there is no implicit tendency"
+    (ode_algo isa CTS.IMEXAlgorithm && !isnothing(ode_algo.newtons_method)) ||
+        return "`ode_algo` is not an IMEX algorithm with a Newton method"
+    (; a_imp, b_imp) = ode_algo.tableau
+    s = length(b_imp)
+    unsolved = filter(
+        i ->
+            iszero(a_imp[i, i]) && (
+                !iszero(b_imp[i]) ||
+                any(j -> !iszero(a_imp[j, i]), 1:s)
+            ),
+        1:s,
+    )
+    isempty(unsolved) && return nothing
+    return "$(length(unsolved) == 1 ? "stage" : "stages") \
+        $(join(unsolved, ", ")) of `ode_algo` \
+        $(length(unsolved) == 1 ? "uses" : "use") the implicit tendency \
+        without a solve"
 end
 
 """

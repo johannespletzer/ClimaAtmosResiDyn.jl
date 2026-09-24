@@ -31,7 +31,14 @@ function center_prognostic_variables(physical_state, local_geometry, params, atm
         gs,
         atmos_model.energy_source_tagging_model,
     )
-    return (; gs..., with_updraft_tracers(sgs, copies)...)
+    # The water tags' copies start from each updraft's own water, split by the
+    # grid mean's shares, so they are added updraft by updraft.
+    sgs = with_water_tag_updraft_copies(
+        with_updraft_tracers(sgs, copies),
+        gs,
+        atmos_model.water_tagging_model,
+    )
+    return (; gs..., sgs...)
 end
 
 # Add `tracers` to every updraft's state. Without updrafts, or without tracers,
@@ -96,6 +103,12 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
         water_tagging_variables(
             ρ * q_tot,
             local_geometry,
+            atmos_model.water_tagging_model,
+        )...,
+        # The water tags' increment ledger, under `water_tag_transport:
+        # increment` only. Its names carry no `ρ` prefix either.
+        water_tag_increment_ledger_variables(
+            ρ * q_tot,
             atmos_model.water_tagging_model,
         )...,
         # Process records are prognostic so that the timestepper integrates
