@@ -1,0 +1,89 @@
+# W25's isolation (design/W25_ISOLATION.md): D4-W with the surface pulse, the default mode under the follower,
+# 60 levels, centred SGS reconstruction, each tag's ledgers on. From `w3_d4w_pulse_default`.
+# Run with the D4-W driver, from the W25 run tree.
+job_id: "w25i_d4w_pulse_default_z60_c"
+
+
+water_tracers:
+  - name: sfc
+    region: {type: tanh_altitude, z_center: 50.0, width: 10.0, above: false}
+  - name: air
+    region: {type: tanh_altitude, z_center: 50.0, width: 10.0}
+  - name: evap
+    source: surface_flux
+
+water_tag_transport: "increment"
+
+water_tag_ledger_per_tag: true
+
+water_closure_check:
+  period: "1hours"
+  audit: true
+
+chemistry_model: "passive"
+
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 60
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, husra, hussn, wa, q_gas_A]
+    period: "1hours"
+  - short_name: [pr, prra, prsn, evspsbl, hfls, hfss, lwp, rwp]
+    period: "1hours"
+  - short_name: [arup, rhoaup, waup, husup, clwup, cliup, husraup, hussnup]
+    period: "1hours"
+  - short_name: [aren, rhoaen, waen, husen, husraen, hussnen]
+    period: "1hours"
+  - short_name: [tke, edt, evu, entr, detr, env_q_tot_variance]
+    period: "1hours"
+  - short_name: [q_tag_res, q_tag_sfc, q_tag_air, q_tag_evap]
+    period: "1hours"
+  - short_name: [q_tag_fix_sfc, q_tag_fix_air, q_tag_fix_evap]
+    period: "1hours"
+  # From V-W3 on: precipitation as hourly means, so a day's total is their
+  # sum (G3_PLAN 6.1), and the vertical diffusion's leak in closed form.
+  - short_name: [pr, prra, prsn]
+    period: "1hours"
+    reduction_time: average
+  - short_name: [q_tag_leak_vdiff]
+    period: "1hours"
+    reduction_time: average
+  # W25's isolation: each tag's own ledgers and the ledgers per mechanism
+  # (WP6 step 3), hourly; on in every validation run (the owner, 2026-09-24).
+  - short_name: [q_tag_led_fix_sfc, q_tag_led_fix_air, q_tag_led_fix_evap]
+    period: "1hours"
+  - short_name: [q_tag_led_fixgross_sfc, q_tag_led_fixgross_air, q_tag_led_fixgross_evap]
+    period: "1hours"
+  - short_name: [q_tag_led_rescale_gross, q_tag_led_empty_gross, q_tag_led_repair_gross, q_tag_led_repairnet_gross]
+    period: "1hours"
+  - short_name: [q_tag_led_inc_sfc, q_tag_led_inc_air, q_tag_led_inc_evap]
+    period: "1hours"
+  - short_name: [q_tag_led_incgross_sfc, q_tag_led_incgross_air, q_tag_led_incgross_evap]
+    period: "1hours"
+  - short_name: [q_tag_inc_left_gross, q_tag_inc_moved_gross]
+    period: "1hours"

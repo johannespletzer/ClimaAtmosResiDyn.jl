@@ -1,0 +1,59 @@
+# W25's isolation (design/W25_ISOLATION.md): the untagged twin of D4-W at 30 levels, first-order SGS reconstruction.
+# Parity reference for the tagged runs of this rung, and OD2's startup window. Run with the D4-W driver.
+job_id: "w25i_d4w_untagged_z30_fo"
+
+
+
+
+
+chemistry_model: "passive"
+
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, husra, hussn, wa, q_gas_A]
+    period: "1hours"
+  - short_name: [pr, prra, prsn, evspsbl, hfls, hfss, lwp, rwp]
+    period: "1hours"
+  - short_name: [arup, rhoaup, waup, husup, clwup, cliup, husraup, hussnup]
+    period: "1hours"
+  - short_name: [aren, rhoaen, waen, husen, husraen, hussnen]
+    period: "1hours"
+  - short_name: [tke, edt, evu, entr, detr, env_q_tot_variance]
+    period: "1hours"
+  # From V-W3 on: precipitation as hourly means, so a day's total is their
+  # sum (G3_PLAN 6.1), and the vertical diffusion's leak in closed form.
+  - short_name: [pr, prra, prsn]
+    period: "1hours"
+    reduction_time: average
+  # OD2's window rule reads the parent's water every 10 minutes.
+  - short_name: [rhoa, hus]
+    period: "10mins"
+
+edmfx_sgsflux_upwinding: "first_order"
