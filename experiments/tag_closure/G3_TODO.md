@@ -382,6 +382,10 @@ run. Acceptance criteria, fixed before the runs:
     nonlinear convergence and parity pass. The follower stays opt-in there.
     Criterion 3 compared runs whose atmospheres differ; a same-atmosphere
     check would isolate the lag. For the owner.
+  - [x] The same-atmosphere check (section 6, W35) **passes**: at 120 s two
+    iterations cut the tags' one-step error 20-fold, and one iteration's
+    halves at 60 s. [ ] The owner revisits W33's verdict; the default does not
+    change before that.
 
 ### WP5b-P: provenance, not only closure
 
