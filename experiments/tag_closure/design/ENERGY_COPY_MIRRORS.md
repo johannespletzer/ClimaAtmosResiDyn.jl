@@ -32,7 +32,7 @@ copies get.
 | #  | process                                   | writer of `mseʲ`                         | on D4 (DYCOMS, 1M, a column) | the copies get                                                                 | status |
 |:-- |:----------------------------------------- |:---------------------------------------- |:--------------------------- |:------------------------------------------------------------------------------ |:------ |
 | 1  | vertical advection by the updraft          | `advection.jl:364`                        | yes | the SGS tracer loop, `advection.jl:376`, with `edmfx_tracer_upwinding`; `mseʲ` uses `edmfx_mse_q_tot_upwinding` | mirrored; the two schemes may differ, bounded |
-| 2  | buoyancy, `u₃ʲ ρ_diffʲ ∇Φ`                 | `advection.jl:353`                        | yes | nothing | an exchange between `mseʲ` and `Kʲ`: the updraft velocity's buoyancy takes from `Kʲ` what this adds to `mseʲ`, so `Aʲ` does not change, up to the interpolation between faces and centres. No mirror; bounded |
+| 2  | buoyancy, `u₃ʲ ρ_diffʲ ∇Φ`                 | `advection.jl:353`                        | yes | nothing | energy the updraft trades: its velocity equation takes the part `1 − α_b` from `Kʲ` (`solve_sgs_u₃_implicit_stage_analytic!`), and the rest is work through the non-hydrostatic pressure. No tag's label; not mirrored; bounded by `e_src_copy_res` |
 | 3  | horizontal advection                        | `advection.jl:63`                         | no (sphere) | the SGS tracer loop, `advection.jl:137` | mirrored |
 | 4  | entrainment                                 | `edmfx_entr_detr.jl:615`                  | yes | `edmfx_entr_detr.jl:622`, the environment's value | mirrored |
 | 5  | the EDMF diffusive flux's updraft mirror    | `edmfx_sgs_flux.jl:379`                   | yes (`edmfx_vertical_diffusion`) | the grid-mean tag's specific diffusive tendency, `edmfx_sgs_flux.jl:415` | mirrored in form; the tags' operator is a tracer's, `ρe_tot`'s is not. The energy counterpart of water's `diffusion_up` leak. Bounded |
@@ -101,9 +101,11 @@ would then have to cover it.
     because the excess is air the cell holds, not new water. The same holds
     for energy. **This is the one choice the owner may want to make.** The
     note builds composition, as water has it.
-  - Row 2 is not mirrored, on the argument in section 2. If the residual
-    diagnostic shows a drift from it, the mirror would be an exchange
-    between the copies, not a source, and needs no label.
+  - Row 2 is not mirrored. Its part `1 − α_b` moves energy between `mseʲ`
+    and `Kʲ` within `Aʲ`. Its part `α_b`, with the pressure drag, is work
+    the updraft exchanges with the environment through pressure: a transfer,
+    not a source, and no tag is labelled with it. If `e_src_copy_res` shows it
+    matters, a mirror would share it by composition, not by a label.
 
 ## 5. Tests and validation
 

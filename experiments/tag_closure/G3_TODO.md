@@ -651,6 +651,11 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     provenance becomes a default only with an eligible comparator or a
     documented mechanistic argument. The rest are deferred with their
     numbers, not deleted. Step 6 of the revised order.
+    *Pre-registered 2026-09-25:* [design/WP4C_GATE.md](design/WP4C_GATE.md),
+    with `analysis/water/wp4c_gate_probe.jl`, `wp4c_gate_score.py` and
+    `configs/wp4c_gate_d4w_{default,copies}.yml`. Every trial configuration
+    builds its model on the login node. Two readings of OD3 for the rule's
+    parts 1 and 2b wait for the owner's confirmation (the note, section 4).
 
   - [ ] Review (xhigh) of each stage.
 

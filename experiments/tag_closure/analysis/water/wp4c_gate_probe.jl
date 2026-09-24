@@ -251,7 +251,8 @@ function gate()
                     append!(row, [net(ᶜexcess), gross(ᶜexcess)])
                     inc = Symbol(:q_tag_led_inc_, Symbol(replace(string(t), "ρq_tag_" => "")))
                     ᶜfollower = get(ledger_change, inc, zero(ᶜexcess))
-                    @. ᶜD[t] += -(ᶜexcess) - ᶜfollower
+                    ᶜDₜ = ᶜD[t]
+                    @. ᶜDₜ += -(ᶜexcess) - ᶜfollower
                 end
             end
         end

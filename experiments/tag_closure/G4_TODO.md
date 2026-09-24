@@ -77,6 +77,14 @@ changes across a restart.
     audit's closure against the Newton count and has no copies, so the label
     does not apply to it. *2026-09-24 (OD8):* the tag count is 8, and copies
     at 8 are the direct audit where they pass eligibility.
+    *2026-09-25:* the inventory and the design,
+    [design/ENERGY_COPY_MIRRORS.md](design/ENERGY_COPY_MIRRORS.md). Four
+    writers of `mseʲ` had no mirror: the surface enthalpy flux into the
+    updraft, the surface relaxation, RRTMGP radiation and the 0M rain-out.
+    Built on `claude/energy-copies-mirrors` (from `main` at `3eac4d44`; not
+    pushed), with a residual diagnostic `e_src_copy_res` for what is not
+    mirrored. The validation on D4 at 8 tags is pre-registered
+    (`configs/g411_d4_*.yml`, `analysis/increment/g411_eligibility.py`).
 
   - **The region masks' width in the docs** (decision 10 of 2026-09-18,
     `OT-regionmask`): 2° stays. Say that a mask narrower than the grid spacing
@@ -374,15 +382,24 @@ Newton iteration, 1.5e-6 with it implicit, and 4.9e-12 with ten iterations
 (the N5 measurement of G4.15, configs `g415_n5_*`). So the energy tags lag the
 parent's sedimentation on the explicit path as the water tags did (W23).
 
-  - [ ] Design: `ρe_tot`'s row has the cross block `∂(ρe_tot)ₜ/∂ρqₚ`, the
+  - [x] Design: `ρe_tot`'s row has the cross block `∂(ρe_tot)ₜ/∂ρqₚ`, the
     sedimentation energy flux (`update_sedimentation_jacobian!`); each energy
     tag's row gets it times the tag's share, solved after the model's fields
     by the split solver's back-substitution, as the water tags' are. Mind
     B1: only with the split, and the offset `c·ρ` in the total `E`.
-  - [ ] Tests as #105's: the assembled blocks against a finite difference of
+    *2026-09-25:* built on `claude/energy-tags-sed-cross` (`939fd9b1`, from
+    #105 at `464f6fd0`; not pushed). The tags share the block of `E`, the
+    parent's `ρe_tot` block plus `c` times its `ρ` block. Ice and snow carry
+    energy below `-c` even with the offset, so their faces take the cell
+    below's share. [design/ENERGY_SEDIMENTATION_CROSS_BLOCKS.md](design/ENERGY_SEDIMENTATION_CROSS_BLOCKS.md)
+  - [x] Tests as #105's: the assembled blocks against a finite difference of
     the tags' real tendency, both float types; the partition's sum against
-    the parent's.
+    the parent's. *2026-09-25:* and the blocks only with the split. Pass on
+    the login node (216 and 22), with the rest of the energy and water tests.
   - [ ] Measure on W23's explicit column, one iteration, against 2.1e-4.
+    *Pre-registered 2026-09-25* (the design note, section 6): nine runs,
+    `configs/g416_*.yml`, from two run trees; pass at a gross of at most
+    1e-7, with parity bit for bit. `analysis/increment/g416_compare.py`.
   - [x] Until then, `enthalpy_increment` with 1M stepped explicitly: refuse,
     or document the lag. The owner decided in rev. 2 (2026-09-24): refuse,
     with an explicit opt-in for development runs, off by default, and a test
