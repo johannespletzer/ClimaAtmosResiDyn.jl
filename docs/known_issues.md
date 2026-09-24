@@ -264,9 +264,11 @@ same-sign rule, and its `|m|` twin.
   - **The end.** The tagged runs stop with `simulation_crashed`, the water
     closure at −1.02: the copies run at day 48, and both follower rules at
     day 74.5 (t = 6.4368e6 s). The untagged twin completes 90 days.
-  - **Parity holds until then.** Every parent field is bit for bit the
-    untagged twin's up to each crash. So the tags change nothing in the model
-    until they end it.
+  - **Parity holds until then.** The ten daily output fields (density,
+    temperature, humidity, cloud water and ice, vertical velocity,
+    precipitation, liquid water path, updraft area and humidity) are bit for
+    bit the untagged twin's at every output up to each crash. The runs keep
+    no checkpoints, so the full state is compared only through these.
 
 What is not established: which of the tags' operators makes the divergence,
 and whether the water closure check's `abort_above`, 1.0 by default, ends the
