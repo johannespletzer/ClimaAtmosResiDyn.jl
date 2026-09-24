@@ -1965,27 +1965,31 @@ _exchange_upwinding(::Val{:vanleer_limiter}) = Val(:first_order)
     set_nonnegative_specific!(ᶜε̄, ᶜY, tags)
 
 Write every tag's specific value in `ᶜY`, negative ones as zero, into the tuple
-field `ᶜε̄`, as `_nonnegative_specific` does. One broadcast over `ρ` and every
-tag field would take one argument more than there are tags, and past 32 Julia
-does not specialize it: with 32 tags it allocated at every level (FINDINGS W34
-on the record branch). So the broadcast takes the whole state `ᶜY`, one
-argument, and `NonnegativeSpecificTags` reads each tag from it.
+field `ᶜε̄` (`_nonnegative_specific`). Up to 31 tags this is one broadcast over
+`ρ` and the tag fields. From 32 tags on that broadcast would take more than 32
+arguments, which Julia does not specialize: with 32 tags it allocated at every
+level (FINDINGS W34 on the record branch). So there each tag's component is
+written by its own broadcast. The number of tags is a constant of the type, so
+the choice costs nothing at run time.
 """
 function set_nonnegative_specific!(ᶜε̄, ᶜY, tags)
-    values = NonnegativeSpecificTags(tags)
-    @. ᶜε̄ = values(ᶜY)
+    if length(tags) < 32
+        tag_fields = unrolled_map(tag -> tag_field(ᶜY, tag), tags)
+        Base.Broadcast.materialize!(
+            ᶜε̄,
+            Base.Broadcast.broadcasted(_nonnegative_specific, ᶜY.ρ, tag_fields...),
+        )
+    else
+        _set_nonnegative_specific!(ᶜε̄, ᶜY, tags, Val(1))
+    end
     return nothing
 end
-
-# A cell's tuple of the tags' specific values, negative ones as zero, from the
-# cell's state. A callable type holding the tags, so that each tag's field is
-# found by the tag's type, with the index a constant of the `ntuple`.
-struct NonnegativeSpecificTags{T}
-    tags::T
-end
-@inline (f::NonnegativeSpecificTags)(Y) = ntuple(Val(length(f.tags))) do i
-    ρχ = tag_field(Y, f.tags[i])
-    max(ρχ, zero(ρχ)) / Y.ρ
+_set_nonnegative_specific!(ᶜε̄, ᶜY, ::Tuple{}, ::Val) = nothing
+function _set_nonnegative_specific!(ᶜε̄, ᶜY, tags::Tuple, ::Val{i}) where {i}
+    ᶜε̄ᵢ = getproperty(ᶜε̄, i)
+    ᶜρχ = tag_field(ᶜY, first(tags))
+    @. ᶜε̄ᵢ = max(ᶜρχ, zero(ᶜρχ)) / ᶜY.ρ
+    return _set_nonnegative_specific!(ᶜε̄, ᶜY, Base.tail(tags), Val(i + 1))
 end
 
 # One level of the plume: the grid mean's specific values, the grid mean's
