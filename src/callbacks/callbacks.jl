@@ -285,7 +285,9 @@ time in seconds, and `"atmos_model_hash"`, a hash of `p.atmos` that a restart ch
 against so a checkpoint is not silently loaded into a different model configuration.
 With energy source tags, their offset, definitions, transport and repair are
 attached as well, and a restart that changes one is refused (see
-[`write_energy_source_checkpoint_attributes!`](@ref)).
+[`write_energy_source_checkpoint_attributes!`](@ref)). With water tags, their
+definitions are, for the same reason (see
+[`write_water_tag_checkpoint_attributes!`](@ref)).
 
 Returns `nothing`. Installed by `checkpoint_callback` when `checkpoint_frequency` is
 finite.
@@ -316,6 +318,11 @@ NVTX.@annotate function save_state_to_disk_func(integrator, output_dir)
     write_energy_source_checkpoint_attributes!(
         hdfwriter.file,
         p.atmos.energy_source_tagging_model,
+    )
+    # The water tags' definitions, for their restart guard.
+    write_water_tag_checkpoint_attributes!(
+        hdfwriter.file,
+        p.atmos.water_tagging_model,
     )
     InputOutput.write!(hdfwriter, Y, "Y")
     Base.close(hdfwriter)

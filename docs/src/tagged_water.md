@@ -229,6 +229,131 @@ Under 1-moment this is the only microphysical writer of ``\rho q_\mathrm{tot}``
 `microphysics` attribution bracket is a no-op there, and the `precipitation`
 label that the energy tags carry has no water counterpart.
 
+## Under prognostic EDMF
+
+With `turbconv: prognostic_edmfx` and one updraft, the tags follow the
+updraft's water. The model's sub-grid mass flux moves ``\rho q_\mathrm{tot}``
+between the updraft, the environment and the grid mean. The switch
+`water_tag_updraft_copy` picks how the tags follow it.
+
+**The default mode** (`water_tag_updraft_copy: false`). The tags have no
+updraft state. At each face, each tag takes its share of the parent's sub-grid
+flux of water, from the donor cell. The partition's shares are renormalized to
+sum to one, so the partition's fluxes sum to the parent's. That share is the
+grid mean's composition, not the updraft's. So an exchange of provenance at
+the updraft's mass flux adds the difference between the two. The updraft's
+composition comes from a steady entraining plume. The plume starts from the
+grid mean's composition at the lowest level. It mixes in the grid mean's
+composition at the entrainment rate, and at each level it is rescaled to the
+updraft's water ``q_\mathrm{tot}^j``. The exchange sums to zero over the
+partition. It is bounded, so that no tag moves more water than a subdomain
+holds, and the audit reports where the bound binds. The exchange needs region
+tags that partition the domain, and a run without them is refused.
+
+**The copies** (`water_tag_updraft_copy: true`). Each tag gets a copy in the
+updraft, `q_tag_<name>`: the tag's water per unit mass of updraft air. The model
+moves it as any other updraft tracer, by advection, entrainment and
+detrainment, the sub-grid flux, the filter, diffusion and hyperdiffusion. The
+grid-scale tags then take their sub-grid flux from the copies, and the default
+mode's flux and exchange do not run. Five mirrors give the copies what the
+updraft's water gets and a tracer does not:
+
+  - the 0-moment rain-out. Each copy loses its share of the water rained out;
+  - the 1-moment sedimentation. Each copy's rain and snow fall with its share,
+    and the environment's falling water enters with the environment's
+    composition;
+  - the relaxation at the surface. Each copy relaxes toward the buoyant surface
+    water times the grid mean's share;
+  - the surface flux. `surface_flux_tendency!` also adds the surface moisture
+    flux to ``q_\mathrm{tot}^j``. Each copy takes that water by the grid-scale
+    tags' rule for the label `surface_flux`: new water by region and source,
+    dew by the copy's share;
+  - the repair after the filter, which runs with or without the filter. The
+    residual ``q_\mathrm{tot}^j - \sum_i \chi_i^j`` is added to the
+    partition's copies by their shares, floored at what each holds, and where
+    their sum is not positive they are zeroed. The correction goes to
+    `q_tag_upfix_<name>`, and the residual the repair found to
+    `q_tag_copy_res`.
+
+`q_tag_copy_res` and `q_tag_upfix` bound the sum of everything that parts the
+copies from ``q_\mathrm{tot}^j``, not the filter alone. That sum includes the
+grid partition's own residual, which reaches the copies through the terms that
+read the grid tags, such as the entrainment of the environment's values and the
+Rayleigh sponge. It includes the Newton iterations, since ``q_\mathrm{tot}^j``
+couples to the updraft's condensates in the Jacobian and the copies have only a
+diagonal. And it includes the leaks and the rain-out's clamp. The ledger is
+signed and cumulative, so repairs of opposite sign cancel in it, and its size
+can understate the water the repair moved.
+
+The copies start, and are rebuilt from a file, as ``q_\mathrm{tot}^j`` times
+the grid mean's share. They cost one updraft tracer per tag, and they are the
+audit of the default mode's plume.
+
+**Refusals.** Both modes refuse more than one updraft. The copies are refused
+without prognostic EDMF, and when `edmfx_mse_q_tot_upwinding` differs from
+`edmfx_tracer_upwinding`, because the copies' fluxes then do not sum to the
+parent's. AMD LES stays refused; see `docs/known_issues.md`, issue 3.
+
+**Restart.** A checkpoint records each tag's region and sources. A restart that
+changes one, or that adds or drops the copies, is refused before the run
+starts (`check_water_tag_checkpoint`).
+
+## Following the parent's implicit increment
+
+`water_tag_transport: increment` makes the tags follow the parent's own
+implicit increment. It is the default in the default mode under
+`turbconv: prognostic_edmfx`, where the configuration supports it (below).
+G3_PLAN 4.3 fixed that rule before the runs: the follower becomes the default
+under EDMF if the default mode's one-iteration part of the closure residual
+exceeds a quarter of the 0.2% budget. V-W3 measured twelve times that. With
+copies, and without prognostic EDMF, the default is `tracer`. ``\rho q_\mathrm{tot}`` is advected
+vertically in the implicit step, and its sub-grid flux, diffusion and
+sedimentation have Jacobian blocks the tags' terms lack. So with one Newton
+iteration the tags lag the parent's solve. On a day of the DYCOMS RF02 EDMF
+column that lag was most of a 0.7% closure residual.
+
+Under the key the tags skip their explicit vertical advection. After each
+Newton solve, `correct_water_tag_increment!` takes the difference `m` between
+the parent's increment and the partition's in each cell. The part that sums to
+zero in the column is moved as a vertical flux, and each tag takes it by its
+share in the cell the flux leaves. The part that changes the column's total,
+`∫m`, is left out of the tags and stays in `q_tag_res`. The ledger
+`q_tag_inc_left` and `q_tag_inc_moved` records both parts, and the audit
+integrates them. The energy source tags' `enthalpy_increment` does the same
+for their total, and one hook runs both.
+
+What the follower cannot do:
+
+  - change a column's total, so a lag in the surface outflow of sedimentation
+    stays in the net residual;
+  - say where the part left out arose: it is spread over the cells whose `m`
+    has the column total's sign, in proportion to `m`, which the parent's
+    vertical advection dominates. No cell leaves out or moves more than its
+    own `m`;
+  - move water a partition does not hold: a residual pinned in a cell stays
+    there, and a draining cell's partition can go negative, which the
+    partition repair then moves;
+  - follow explicit processes, the copies, or a donor cell with an empty
+    partition.
+
+It needs:
+
+  - region tags that partition the domain, their masks summing to 1 within
+    100 rounding units;
+  - an algorithm that solves every implicit stage it uses (ARS222, ARS343);
+  - the parent's own post-solve correction (`energy_q_tot_upwinding` other
+    than `none`);
+  - microphysics other than 1M stepped explicitly. There the tags'
+    sedimentation lags the parent's by a change of the column's total, about
+    0.8% of the water an hour with one Newton iteration, which the follower
+    cannot take. `tracer` lags there alike.
+
+The default takes `increment` only where the configuration shows these, and
+the model refuses it where they fail. A restart that changes
+`water_tag_transport` is refused. So a checkpoint of an EDMF run written
+before the default changed restarts only with `water_tag_transport: tracer`
+set.
+
 ## Diagnostics and closure
 
   - `q_tag_<name>`: tagged **total** water ``\rho q_\mathrm{tag}/\rho``;
@@ -237,7 +362,49 @@ label that the energy tags carry has no water counterpart.
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
     state constraints, cumulative since the start of the simulation segment (and
     reset on restart), so a budget over an interval is the difference of two
-    outputs, and a time *average* of it is not meaningful.
+    outputs, and a time *average* of it is not meaningful;
+  - `q_tag_upfix_<name>` and `q_tag_copy_res`: with updraft copies, the copies'
+    repair, cumulative as `q_tag_fix` is, and the residual it found;
+  - `q_tag_leak_<path>`: the rate at which one path drifts the partition's sum
+    from ``\rho q_\mathrm{tot}``, computed from the state; see below;
+  - `q_tag_fixgross_<name>` and `q_tag_fixcount_<name>`, and with copies
+    `q_tag_upfixgross_<name>` and `q_tag_upfixcount_<name>`: beside each
+    ledger, the sum of the absolute values of its changes and the number of
+    cell-events larger than rounding. A ledger's `+x` then `−x` reads zero, and
+    its gross twin reads `2|x|`. These count every call, including those
+    inside a step that the stepper later discards, so they record what was
+    attempted. They are kept in Float64 and restart at zero;
+  - `q_tag_led_<mechanism>`: what each correction moved, as the steps
+    retained it. These are state fields, which the stepper weights as it
+    weights the tags, and they go through restarts.
+      + `rescale` is the limiters' and constraints' change where the parent
+        held water, and `empty` the removal where it did not.
+      + `repair` is the partition repair's transfer between the tags: half
+        the sum of the tags' changes, less their net. `repairnet` is that net,
+        the water the repair adds where it zeroes every tag.
+      + With copies, `uprepair` is the copies' repair and `upfilter` the
+        updraft filter's change of the copies, net over the copies in a cell.
+      + All but `repair` are signed.
+  - `<ledger>_gross` and `<ledger>_colgross`, for each `q_tag_led_*` and the
+    increment follower's `q_tag_inc_left` and `q_tag_inc_moved`: the sum over
+    the steps of the ledger's change per cell, ``|\Delta L|``, and per
+    column, ``|\int \Delta L \, dz|``, in Float64. They restart at zero, so
+    after a restart a gross can be smaller than its ledger. They are kept by a
+    default callback, and read zero without the default callbacks.
+
+What "retained" means depends on `update_constrain_state_every`. At the
+default, `step`, the corrections fire once per step on the accepted state, so
+the per-step gross is what each step kept. At `stage` or `dss` the stepper
+weights each stage's firing by its tableau weight, which is negative once
+under ARS343. A transfer's ledger can then fall within a step, and its
+per-step change is neither what the step moved nor a bound on it.
+
+In Float32 the state ledgers lose any increment below one rounding unit of
+their value, about 6e-8 of it. The Float64 grosses cannot recover what the
+state lost. A cell-event in the counts is a change above 1e-12 of the cell's
+total, or 16 rounding units of the float type if larger.
+
+A checkpoint written before the `q_tag_led_*` fields existed is refused.
 
 !!! note "What `q_tag_fix` includes"
 
@@ -259,21 +426,36 @@ label that the energy tags carry has no water counterpart.
     diagnosis of the grid mean. This is stated in the diagnostic's `comments`
     field as well, so it travels with the output.
 
-`q_tag_res` is a **monitored residual**, not a machine-precision identity — but
-a much tighter one than the energy tags' `e_tag_res`. The tags use *identical*
-vertical diffusion (unscaled ``K_h``) and hyperdiffusion (unscaled
-``\nu_4``) operators to ``\rho q_\mathrm{tot}``, because ``\rho q_\mathrm{tot}``
-is likewise absent from the sedimenting-species list that receives the scaled
-coefficients. The dominant contributor is the vertical advection split: ``\rho q_\mathrm{tot}`` is advected implicitly with a post-Newton upwind correction,
-while the tags ride the explicit passive-tracer path. Subtract `q_tag_fix_*` to
-separate that operator disagreement from numerical corrections.
+`q_tag_res` is a **monitored residual**, not a machine-precision identity.
+Under `water_tag_transport: tracer`, one contributor is the vertical advection
+split: ``\rho q_\mathrm{tot}`` is advected implicitly with a post-Newton
+upwind correction, while the tags ride the explicit passive-tracer path. Under
+`increment` the tags skip that explicit path. After each Newton solve the
+follower moves the part of the mismatch that sums to zero in each column, and
+the part that changes a column's total stays in `q_tag_res` and in
+`q_tag_inc_left`. Subtract `q_tag_fix_*` to separate the operators'
+disagreement from numerical corrections.
+
+Another is the paths that move the tags as passive tracers, on their whole
+value, and ``\rho q_\mathrm{tot}`` only by the water that diffuses,
+``q_\mathrm{tot} - q_\mathrm{rai} - q_\mathrm{sno}``. They are the vertical
+diffusion, the horizontal EDMF diffusive flux, the hyperdiffusion, the viscous
+sponge, and, with updraft copies, the updrafts' diffusion and hyperdiffusion.
+Under 1-moment microphysics the rain and snow make the difference. The
+hyperdiffusion also takes ``\rho q_\mathrm{tot}`` as a perturbation from a
+reference profile ``q_\mathrm{tot,r}(p)`` and the tags not, so it drifts the
+partition under 0-moment too, wherever that profile varies along a model level.
+`q_tag_leak_<path>` is each path's source, in closed form from the state
+(`water_tag_leak!`): the rate at which the path would drift an exactly closed
+partition. It does not read the tags, so it leaves out the path's transport of
+a residual already there. No path corrects it yet.
 
 It is not the *only* contributor, though. Any tendency that writes
 ``\rho q_\mathrm{tot}`` by name without an attribution bracket and without a
-tagged counterpart also lands here — see the Caveats below for the two known
-cases (`PrognosticEDMFX` SGS mass flux, and the `PrescribedFlow` surface water
-inflow). If `q_tag_res` grows faster than expected, check those before
-concluding the advection split is responsible.
+tagged counterpart also lands here — see the Caveats below for the known
+case, the `PrescribedFlow` surface water inflow. If `q_tag_res` grows faster
+than expected, check that and the leaks before concluding the advection split
+is responsible.
 
 A sharper *process closure* check is available by splitting a source tag across
 a partition: with `evap`, `evap_tropics` and `evap_extratropics`, linearity of
@@ -286,7 +468,12 @@ this identity.
 ## Scope
 
 Water tagging supports `microphysics_model: "0M"` and `"1M"`, and
-`check_water_tagging_supported` errors otherwise.
+`check_water_tagging_supported` errors otherwise. It is refused under
+`turbconv: prognostic_edmfx` with more than one updraft and under
+`amd_les: true`, and warns when the run has a prescribed flow; see
+`check_water_tracers_transport_supported`,
+`warn_water_tags_under_prescribed_flow` and the Caveats below. `water_process_record` is not refused under any of them, since
+its records are not transported.
 
   - **0-moment**: every writer of ``\rho q_\mathrm{tot}`` is a local source or
     sink, so bracketed attribution alone is exact and nothing sediments.
@@ -302,29 +489,29 @@ Water tagging supports `microphysics_model: "0M"` and `"1M"`, and
 
 ## Caveats
 
-  - Tags are **grid-scale only**: they have no sub-grid (updraft) counterpart.
-    With `PrognosticEDMFX` the SGS mass flux moves ``\rho q_\mathrm{tot}`` in a
-    way the tags never receive, so `q_tag_res` grows; the grid-mean surface
-    evaporation is still attributed correctly. Nothing rejects this combination
-    at configuration time, so watch `q_tag_res` if you enable it.
+  - Under `PrognosticEDMFX` the default mode's updraft composition is a model,
+    a steady entraining plume, not a prognostic field. The copies audit it.
+    Which of the two a study should use is not settled yet.
+  - Tag names are restricted; see [Tag entries](@ref) in the tracer
+    configuration page.
   - With a **`PrescribedFlow`** setup (e.g. `ShipwayHill2012`), the surface
     water inflow imposed as a vertical-transport boundary condition adds to
     ``\rho q_\mathrm{tot}`` outside every attribution bracket and has no tagged
     counterpart. That water enters the domain untagged and `q_tag_res` drifts
-    monotonically. The combination is accepted by
-    `check_water_tagging_supported` (`ShipwayHill2012` is 1-moment), and
-    `prescribe_flow!` does rescale the tags after its clip — so the tags stay
-    consistent with each other, they are just collectively short of
-    ``\rho q_\mathrm{tot}`` by the injected amount.
+    monotonically. The combination is accepted, with a warning when the model
+    is built, and `prescribe_flow!` does rescale the tags after its
+    clip — so the tags stay consistent with each other, they are just
+    collectively short of ``\rho q_\mathrm{tot}`` by the injected amount.
   - The `ρe_tag_*` family's `microphysics` label still fires only when
     microphysics is stepped explicitly. The water tags are bracketed on the
     implicit path too, because `implicit_microphysics` defaults to `true` and
     that is where the 0-moment water sink lives, and so are the energy source
     tags and the process records.
-  - Tagged state is carried through restarts like any other prognostic field;
-    the masks are rebuilt from the configuration, so the `water_tracers` block
-    must match the one used to write the checkpoint. The `q_tag_fix` ledger is
-    cache-resident and restarts at zero.
+  - Tagged state is carried through restarts like any other prognostic field.
+    The masks are rebuilt from the configuration, so the `water_tracers` block
+    must match the one used to write the checkpoint, and the restart guard
+    refuses one that does not. The `q_tag_fix` and `q_tag_upfix` ledgers are
+    cache-resident and restart at zero.
 
 ## Interpretation limit
 
@@ -356,4 +543,40 @@ ClimaAtmos.rescale_water_tags!
 ClimaAtmos.water_tag_rescale_shift
 ClimaAtmos.water_tag_source_rescale_shift
 ClimaAtmos.repair_water_tag_partition!
+ClimaAtmos.check_water_tag_exchange_partition
+ClimaAtmos.water_tag_edmf_scratch
+ClimaAtmos.sgs_mass_flux_of_water_tags!
+ClimaAtmos.sgs_exchange_of_water_tags!
+ClimaAtmos.water_exchange_inputs!
+ClimaAtmos.water_tag_plume!
+ClimaAtmos.start_water_tag_copies_from_plume!
+ClimaAtmos.water_tag_updraft_copy_names
+ClimaAtmos.with_water_tag_updraft_copies
+ClimaAtmos.rebuild_water_tag_updraft_copies!
+ClimaAtmos.water_tag_copies_microphysics_tendency!
+ClimaAtmos.sediment_water_tag_copies!
+ClimaAtmos.water_tag_copies_boundary_condition_tendency!
+ClimaAtmos.water_tag_copies_surface_flux_tendency!
+ClimaAtmos.repair_water_tag_copies!
+ClimaAtmos.water_tag_copy_sgs_names
+ClimaAtmos.water_tag_edmf_audit
+ClimaAtmos.WATER_TAG_LEAK_PATHS
+ClimaAtmos.water_tag_leak!
+ClimaAtmos.IncrementWaterTagTransport
+ClimaAtmos.TracerWaterTagTransport
+ClimaAtmos.follows_water_increment
+ClimaAtmos.snapshot_water_tag_increment!
+ClimaAtmos.correct_water_tag_increment!
+ClimaAtmos.WaterTagIncrementCorrection
+ClimaAtmos.tag_post_implicit
+ClimaAtmos.water_tag_post_implicit
+ClimaAtmos.check_water_tag_increment_supported
+ClimaAtmos.default_water_tag_transport
+ClimaAtmos.water_increment_partition_tolerance
+ClimaAtmos.water_increment_left_weight
+ClimaAtmos.water_tag_increment_ledger_variables
+ClimaAtmos.water_tag_extra_audit
+ClimaAtmos.WATER_TAG_CHECKPOINT_VERSION
+ClimaAtmos.write_water_tag_checkpoint_attributes!
+ClimaAtmos.check_water_tag_checkpoint
 ```

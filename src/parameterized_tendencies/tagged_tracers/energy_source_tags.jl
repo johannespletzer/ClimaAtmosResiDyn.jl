@@ -297,6 +297,9 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
     # The ledger exists whether or not the repair is on, so that
     # `e_src_fix_<name>` reads zero rather than failing when it is off.
     ᶜenergy_source_fix = _energy_source_fix_fields(Y.c.ρ, model.tags)
+    # Its gross twin and count, in Float64 (`tag_throughput.jl`).
+    ᶜenergy_source_fix_gross = tag_throughput_fields(Y.c.ρ, model.tags)
+    ᶜenergy_source_fix_count = tag_throughput_fields(Y.c.ρ, model.tags)
     ᶜenergy_source_pos = zero.(Y.c.ρ)
     ᶜenergy_source_neg = zero.(Y.c.ρ)
     ᶠenergy_source_interior = one.(Fields.coordinate_field(Y.f).z)
@@ -305,6 +308,8 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
     return (;
         ᶜenergy_source_masks,
         ᶜenergy_source_fix,
+        ᶜenergy_source_fix_gross,
+        ᶜenergy_source_fix_count,
         ᶜenergy_source_pos,
         ᶜenergy_source_neg,
         ᶠenergy_source_interior,
@@ -509,7 +514,10 @@ The energy source family's own columns of the audit table, beside those
     unit mass, in J/kg, over the whole domain, or `NaN` when there is none;
   - `repair_moved`, `repair_moved_relative`: the integral over all tags of the
     absolute value of what the repair has moved since the start of the run
-    segment, in J, and over `scale`. Zero with the repair off. At
+    segment, in J, and over `scale`. Gross over the cells, net over time.
+  - `repair_gross`, `repair_gross_relative`, `repair_events`: the same from the
+    ledger's gross twin, gross over time too, and the number of cell-events
+    (`tag_throughput.jl`). Zero with the repair off. At
     `update_constrain_state_every: stage` or `dss` the ledger also counts the
     in-step repairs the stepper discards; see `repair_energy_source_tags!`.
   - under `energy_source_tag_transport: enthalpy_increment` only, the integrals
@@ -557,6 +565,7 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         @. ᶜtmp += abs(ᶜfix)
     end
     repair_moved = sum(ᶜtmp)
+    repair_gross = tag_gross_total(p.tagging.ᶜenergy_source_fix_gross)
 
     per_scale(x) = iszero(scale) ? zero(x) : x / scale
     return (;
@@ -565,6 +574,9 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         source_minimum,
         repair_moved,
         repair_moved_relative = per_scale(repair_moved),
+        repair_gross,
+        repair_gross_relative = per_scale(repair_gross),
+        repair_events = tag_event_total(p.tagging.ᶜenergy_source_fix_count),
         _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale)...,
     )
 end
@@ -999,6 +1011,7 @@ _repair_energy_source_tags!(Y, p, ::Nothing) = nothing
 function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
     model.repair || return nothing
     (; ᶜenergy_source_fix, ᶜenergy_source_pos, ᶜenergy_source_neg) = p.tagging
+    (; ᶜenergy_source_fix_gross, ᶜenergy_source_fix_count) = p.tagging
     ᶜparent = _energy_source_parent_field(Y, model.offset)
     ᶜenergy_source_pos .= zero(eltype(ᶜenergy_source_pos))
     ᶜenergy_source_neg .= zero(eltype(ᶜenergy_source_neg))
@@ -1010,11 +1023,28 @@ function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
     )
     _apply_energy_source_repair!(
         Y.c,
-        ᶜenergy_source_fix,
+        tag_ledger(
+            ᶜenergy_source_fix,
+            ᶜenergy_source_fix_gross,
+            ᶜenergy_source_fix_count,
+        ),
         ᶜenergy_source_pos,
         ᶜenergy_source_neg,
         ᶜparent,
         model.tags,
+    )
+    # Where the parent is positive and every tag is zeroed, the repair adds
+    # `max(-(pos + neg), 0)` to the partition's sum. That part is not moved
+    # between tags, so it goes to its own ledger (WP6, the code review's S1).
+    @. Y.c.e_src_led_repair -= ifelse(
+        ᶜparent > 0,
+        max(-(ᶜenergy_source_pos + ᶜenergy_source_neg), 0) / 2,
+        zero(ᶜenergy_source_pos),
+    )
+    @. Y.c.e_src_led_repairnet += ifelse(
+        ᶜparent > 0,
+        max(-(ᶜenergy_source_pos + ᶜenergy_source_neg), 0),
+        zero(ᶜenergy_source_pos),
     )
     return nothing
 end
@@ -1040,11 +1070,11 @@ end
 # `ᶜpos` and `ᶜneg` come from the state before the repair and are only read
 # here, so each tag can be rewritten in place and a later tag's factor still
 # holds. The ledger is written first, so it records the correction itself.
-_apply_energy_source_repair!(ᶜY, ᶜfix, ᶜpos, ᶜneg, ᶜparent, ::Tuple{}) =
+_apply_energy_source_repair!(ᶜY, ledger, ᶜpos, ᶜneg, ᶜparent, ::Tuple{}) =
     nothing
 function _apply_energy_source_repair!(
     ᶜY,
-    ᶜfix,
+    ledger,
     ᶜpos,
     ᶜneg,
     ᶜparent,
@@ -1052,20 +1082,43 @@ function _apply_energy_source_repair!(
 )
     tag = first(tags)
     ᶜρe_src = tag_field(ᶜY, tag)
-    ᶜtag_fix = tag_field(ᶜfix, tag)
+    (ᶜtag_fix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
+    # The gross twin and the count take the same change as the ledger, the
+    # count against the total the tags partition.
     if _is_energy_partition_tag(tag)
+        # The partition's changes are transfers, so the state ledger takes
+        # half of their size, the energy moved (WP6).
+        @. ᶜY.e_src_led_repair +=
+            abs(
+                energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
+                ᶜρe_src,
+            ) / 2
+        @. ᶜgross += abs(
+            energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
+            ᶜρe_src,
+        )
+        @. ᶜcount += tag_event(
+            energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
+            ᶜρe_src,
+            ᶜparent,
+        )
         @. ᶜtag_fix +=
             energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
             ᶜρe_src
         @. ᶜρe_src =
             energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent)
     else
+        @. ᶜgross += abs(energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src)
+        @. ᶜcount += tag_event(
+            energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src,
+            ᶜparent,
+        )
         @. ᶜtag_fix += energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src
         @. ᶜρe_src = energy_source_overlay_repair(ᶜρe_src, ᶜparent)
     end
     return _apply_energy_source_repair!(
         ᶜY,
-        ᶜfix,
+        ledger,
         ᶜpos,
         ᶜneg,
         ᶜparent,
@@ -1847,11 +1900,7 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # stored as one tuple per cell, so the tag fields are read once, and each
     # tag's kernel below reads a few tuple fields rather than every tag.
     ᶜε̄ = p.scratch.ᶜe_src_mean
-    tag_fields = map(tag -> tag_field(Y.c, tag), model.tags)
-    Base.Broadcast.materialize!(
-        ᶜε̄,
-        Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, tag_fields...),
-    )
+    set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
 
     # The updraft's specific tag values, from the plume.
     ᶜεʲ = p.scratch.ᶜe_src_plume
@@ -1964,6 +2013,37 @@ _exchange_upwinding(::Val{:vanleer_limiter}) = Val(:first_order)
 
 @inline _nonnegative_specific(ρ, ρχs...) =
     map(ρχ -> max(ρχ, zero(ρχ)) / ρ, ρχs)
+
+"""
+    set_nonnegative_specific!(ᶜε̄, ᶜY, tags)
+
+Write every tag's specific value in `ᶜY`, negative ones as zero, into the tuple
+field `ᶜε̄` (`_nonnegative_specific`). Up to 31 tags this is one broadcast over
+`ρ` and the tag fields. From 32 tags on that broadcast would take more than 32
+arguments, which Julia does not specialize: with 32 tags it allocated at every
+level (FINDINGS W34 on the record branch). So there each tag's component is
+written by its own broadcast. The number of tags is a constant of the type, so
+the choice costs nothing at run time.
+"""
+function set_nonnegative_specific!(ᶜε̄, ᶜY, tags)
+    if length(tags) < 32
+        tag_fields = unrolled_map(tag -> tag_field(ᶜY, tag), tags)
+        Base.Broadcast.materialize!(
+            ᶜε̄,
+            Base.Broadcast.broadcasted(_nonnegative_specific, ᶜY.ρ, tag_fields...),
+        )
+    else
+        _set_nonnegative_specific!(ᶜε̄, ᶜY, tags, Val(1))
+    end
+    return nothing
+end
+_set_nonnegative_specific!(ᶜε̄, ᶜY, ::Tuple{}, ::Val) = nothing
+function _set_nonnegative_specific!(ᶜε̄, ᶜY, tags::Tuple, ::Val{i}) where {i}
+    ᶜε̄ᵢ = getproperty(ᶜε̄, i)
+    ᶜρχ = tag_field(ᶜY, first(tags))
+    @. ᶜε̄ᵢ = max(ᶜρχ, zero(ᶜρχ)) / ᶜY.ρ
+    return _set_nonnegative_specific!(ᶜε̄, ᶜY, Base.tail(tags), Val(i + 1))
+end
 
 # One level of the plume: the grid mean's specific values, the grid mean's
 # weight in the step, and whether the plume starts again here, because there is
@@ -2233,8 +2313,10 @@ the parent's own post-solve correction, which the stepper adds as `dtγ·dY`.
 
 In each cell, the mismatch `m` is the parent's increment of `E` since the
 snapshot less the partition's. The part of `m` that changes a column's total
-cannot be moved within the column; it is left where it arises, in proportion to
-`|m|`, and stays in `e_src_res`. The rest integrates up the column to a face flux
+cannot be moved within the column; it is left out of the tags, spread over the
+column in proportion to `|m|`, and stays in `e_src_res`. Its column total is
+exact, but `|m|` is dominated by the parent's vertical transport, so its
+profile does not show where it arose. The rest integrates up the column to a face flux
 that is zero at both boundaries, whose divergence is that rest. Each tag takes
 the flux times its share in the cell the flux leaves, as with the sub-grid mass
 flux, and the flux is added to `dY` divided by `dtγ`. The partition's shares add
@@ -2354,29 +2436,7 @@ function _check_energy_source_increment_supported(ode_algo, T_imp!, T_post_imp!)
             `energy_q_tot_upwinding` other than `none`, such as the default \
             `vanleer_limiter`, or `energy_source_tag_transport: enthalpy`.",
         )
-    reason =
-        if isnothing(T_imp!)
-            "the flow is prescribed, so there is no implicit tendency"
-        elseif !(ode_algo isa CTS.IMEXAlgorithm) ||
-               isnothing(ode_algo.newtons_method)
-            "`ode_algo` is not an IMEX algorithm with a Newton method"
-        else
-            (; a_imp, b_imp) = ode_algo.tableau
-            s = length(b_imp)
-            unsolved = filter(
-                i ->
-                    iszero(a_imp[i, i]) && (
-                        !iszero(b_imp[i]) ||
-                        any(j -> !iszero(a_imp[j, i]), 1:s)
-                    ),
-                1:s,
-            )
-            isempty(unsolved) ? nothing :
-            "$(length(unsolved) == 1 ? "stage" : "stages") \
-            $(join(unsolved, ", ")) of `ode_algo` \
-            $(length(unsolved) == 1 ? "uses" : "use") the implicit tendency \
-            without a solve"
-        end
+    reason = implicit_increment_gap(ode_algo, T_imp!)
     isnothing(reason) && return nothing
     error(
         "`energy_source_tag_transport: enthalpy_increment` needs every \
@@ -2386,6 +2446,40 @@ function _check_energy_source_increment_supported(ode_algo, T_imp!, T_post_imp!)
         solves every stage it uses, such as the default ARS343, or \
         `energy_source_tag_transport: enthalpy`.",
     )
+end
+
+"""
+    implicit_increment_gap(ode_algo, T_imp!)
+
+Why a tag family that takes the parent's increment after each Newton solve
+would miss part of the parent's implicit transport under `ode_algo`, as text
+for an error message, or `nothing` when it would not. It misses part when the
+flow is prescribed (`T_imp!` is `nothing`), when `ode_algo` is not an IMEX
+algorithm with a Newton method, and when a stage whose implicit diagonal is
+zero uses the implicit tendency in a later stage or in the step's result. The
+ARS algorithms, such as ARS222 and ARS343, solve every stage they use. The
+energy source tags' and the water tags' increments share it.
+"""
+function implicit_increment_gap(ode_algo, T_imp!)
+    isnothing(T_imp!) &&
+        return "the flow is prescribed, so there is no implicit tendency"
+    (ode_algo isa CTS.IMEXAlgorithm && !isnothing(ode_algo.newtons_method)) ||
+        return "`ode_algo` is not an IMEX algorithm with a Newton method"
+    (; a_imp, b_imp) = ode_algo.tableau
+    s = length(b_imp)
+    unsolved = filter(
+        i ->
+            iszero(a_imp[i, i]) && (
+                !iszero(b_imp[i]) ||
+                any(j -> !iszero(a_imp[j, i]), 1:s)
+            ),
+        1:s,
+    )
+    isempty(unsolved) && return nothing
+    return "$(length(unsolved) == 1 ? "stage" : "stages") \
+        $(join(unsolved, ", ")) of `ode_algo` \
+        $(length(unsolved) == 1 ? "uses" : "use") the implicit tendency \
+        without a solve"
 end
 
 """
