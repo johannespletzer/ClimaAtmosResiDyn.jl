@@ -1372,7 +1372,8 @@ end
     model_pairs = (
         (c(:ρ), c(:ρ)) => ᶜdiagonal(2),
         (c(:ρe_tot), c(:ρe_tot)) => ᶜdiagonal(3),
-        (c(:ρq_rai), c(:ρq_rai)) => ᶜtridiagonal(4),
+        # Diagonal, as the direct arrowhead solve needs for its first group.
+        (c(:ρq_rai), c(:ρq_rai)) => ᶜdiagonal(4),
         (c(:ρ), u₃) => ᶜᶠbidiagonal(5),
         (c(:ρe_tot), u₃) => ᶜᶠbidiagonal(6),
         (u₃, c(:ρ)) => ᶠᶜbidiagonal(7),
