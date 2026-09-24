@@ -2047,10 +2047,13 @@ function update_sgs_boundary_condition_jacobian!(matrix, Y, p, dtγ)
     @. ∂ᶜq_totʲ_err_∂ᶜq_totʲ -=
         dtγ * DiagonalMatrixRow(ᶜsfc_bc_rate)
     # The water tags' updraft copies relax at the same rate
-    # (`water_tag_copies_boundary_condition_tendency!`).
-    MatrixFields.unrolled_foreach(
-        water_tag_copy_sgs_names(p.atmos.water_tagging_model),
-    ) do copy_name
+    # (`water_tag_copies_boundary_condition_tendency!`), and so do the energy
+    # source tags' (`energy_source_copies_boundary_condition_tendency!`).
+    copy_names = (
+        water_tag_copy_sgs_names(p.atmos.water_tagging_model)...,
+        energy_source_copy_sgs_names(p.atmos.energy_source_tagging_model)...,
+    )
+    MatrixFields.unrolled_foreach(copy_names) do copy_name
         copy_state_name = sgs_state_name(copy_name)
         ∂ᶜcopy_err_∂ᶜcopy = matrix[copy_state_name, copy_state_name]
         @. ∂ᶜcopy_err_∂ᶜcopy -= dtγ * DiagonalMatrixRow(ᶜsfc_bc_rate)

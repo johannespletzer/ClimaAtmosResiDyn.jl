@@ -96,6 +96,8 @@ import ..WATER_TAG_ALL_MECHANISM_NAMES
 import ..ENERGY_SOURCE_MECHANISM_NAMES
 import ..tag_state_ledger_names
 import ..energy_source_region_tag_state_names
+import ..has_energy_source_updraft_copies
+import ..energy_source_copy_residual!
 import ..follows_implicit_increment
 
 # process records

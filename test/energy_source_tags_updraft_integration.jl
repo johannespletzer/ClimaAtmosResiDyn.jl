@@ -16,6 +16,9 @@ column with 1-moment microphysics and the updrafts' vertical diffusion on:
  3. the partition stays closed;
  4. the model's fields are those of the same column without tags, bit for bit.
 
+Between 2 and 3 it checks that the copies' mirrors of `mseʲ` run: the surface
+enthalpy flux reaches the surface-flux tag's copy in the lowest cell.
+
 The copies are a model type of their own, and the check against the column
 without tags needs a second. So the file builds the EDMF column twice and has a
 test group of its own. See `docs/src/energy_source_tags.md`.
@@ -145,6 +148,25 @@ altitude_region(above) = Dict{String, Any}(
         CA.edmfx_sgs_mass_flux_tendency!(Yₜ, Y, p, t, turbconv_model)
         @test maximum(abs, parent(Yₜ.c.ρe_src_sfc)) > 0
         @test maximum(abs, parent(Yₜ.c.ρe_src_strat)) > 0
+    end
+
+    # 2b. The mirrors of `mseʲ`: the surface flux reaches the surface-flux
+    # tag's copy in the lowest cell, and the copies' residual is finite. Its
+    # size is what the mirrors leave (the tag-closure record's
+    # `design/ENERGY_COPY_MIRRORS.md`), reported, not bounded here.
+    @testset "The copies' mirrors of mseʲ" begin
+        Yₜ = zero(Y)
+        CA.energy_source_copies_surface_flux_tendency!(Yₜ, Y, p, turbconv_model)
+        sfcₜ = parent(Yₜ.c.sgsʲs.:(1).e_src_sfc)
+        @test sfcₜ[1] != 0
+        @test all(iszero, sfcₜ[2:end])
+        @test all(iszero, parent(Yₜ.c.ρe_tot))
+        ᶜresidual = CA.energy_source_copy_residual!(similar(Y.c.ρ), Y, p)
+        @test all(isfinite, parent(ᶜresidual))
+        @info "The copies' residual after an hour, J/kg" maximum(
+            abs,
+            parent(ᶜresidual),
+        )
     end
 
     # 3. The partition stays closed. After an hour the column without copies
