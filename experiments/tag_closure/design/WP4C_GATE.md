@@ -134,7 +134,8 @@ builds, and the probe runs two steps of case A with `T_END=240secs`
 (`output/wp4c_gate/`).
 
 **Jobs.** `hpda2_compute`, 2 CPUs, 48 GB, with
-`$SCRATCH/claude_work/plan2/wp4c_gate_job.sh`:
+`$SCRATCH/claude_work/plan2/wp4c_gate_job.sh`, which sets `OPERATORS` and
+`T_END` from `RUNCFG`:
 
 | case | `RUNCFG`               | `OPERATORS`          | `T_END`   | integrators | limit |
 |:---- |:---------------------- |:-------------------- |:--------- |:----------- |:----- |
@@ -145,5 +146,6 @@ Expected wall time: the default mode compiles in about 12 minutes per
 configuration and the copies in 28 to 41 (W25); each integrator's step takes
 about 3 s in the default mode. Case A about 5 h, case B about 10 h.
 
-Then `python3 analysis/water/wp4c_gate_score.py` reads both CSVs and the
+Then `python3 analysis/water/wp4c_gate_score.py
+$SCRATCH/tag_closure/output/wp4c_gate` reads both cases' CSVs and the
 window's boundary and prints each part's number against its threshold.
