@@ -280,6 +280,11 @@ and before a hand-over or the end of a session.
    with bit patterns, as `compare_runs.py` does, not with `==`, which cannot
    see a signed zero. Bitwise agreement is expected only within one machine,
    one Julia and Manifest, one float type and one process count.
+ - **All-sky radiation needs `radiation_reset_rng_seed: true` in any run that
+   is compared.** The cloud optics sample at random. Without the reset each
+   run draws its own numbers, and twins differ from the first cloudy call,
+   which looks like a parity failure but is not. It voided the long runs'
+   first submission (`design/INCREMENT_RULE_LONG_RUNS.md`, section 7).
  - **`.buildkite/LocalPreferences.toml` is generated.** Never commit it. It is
    shared by every stack on every machine, so run the setup script again after
    working on another cluster.
