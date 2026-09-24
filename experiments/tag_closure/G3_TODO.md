@@ -330,11 +330,13 @@ on #102.
     Commit `c2bf8a62`.
   - [x] For the experiment, the refusal of `increment` with 1M stepped
     explicitly is lifted (`f8da0913`, the control without the cross blocks).
-  - [ ] The distinguishing experiment (`analysis/water/wp5b_probe.jl`): W23's
-    column, off and on, default and copies, tracer and follower. Running.
-  - [ ] By its result: restore or drop the refusal, and fix the docs and the
-    config tests; add an integration test. Then a draft PR, the xhigh review,
-    and a D4-W implicit-1M check.
+  - [x] The distinguishing experiment (FINDINGS W29). With the cross blocks,
+    the follower closes the explicit column to 2e-8 in an hour, and the parent
+    is bit for bit the same.
+  - [x] The refusal is dropped for good. The docs, the config tests and an
+    integration test on the explicit column are at `0aad20ee`. Draft PR #105.
+  - [ ] The review (xhigh), the increment integration test, a day of D4-W in
+    both modes on the implicit path, and CI. Running.
   - [ ] The copies' cross blocks, as a second step.
 
 ## WP4a: the 0M split (draft PR-W4a)

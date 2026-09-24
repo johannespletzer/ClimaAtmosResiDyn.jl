@@ -1,0 +1,20 @@
+run | commit | net | gross | left out | smallest tag | repair / scale
+wp5b_off_copies_increment_n1 | ? | +7.91e-03 | 8.31e-03 | +7.93e-03 | 0.00e+00 | 2.37e-04
+wp5b_off_copies_tracer_n1 | ? | +7.81e-03 | 9.71e-03 | +nan | 0.00e+00 | 2.70e-04
+wp5b_off_default_increment_n1 | ? | +7.90e-03 | 8.47e-03 | +7.93e-03 | 0.00e+00 | 1.84e-04
+wp5b_off_default_tracer_n1 | ? | +7.71e-03 | 1.59e-02 | +nan | 0.00e+00 | 2.33e-04
+wp5b_on_copies_increment_n1 | ? | -1.18e-08 | 5.30e-08 | -1.18e-08 | 0.00e+00 | 2.59e-04
+wp5b_on_copies_tracer_n1 | ? | -1.28e-05 | 7.39e-03 | +nan | 0.00e+00 | 2.65e-04
+wp5b_on_default_increment_n1 | ? | -2.11e-08 | 5.70e-08 | -2.12e-08 | 0.00e+00 | 2.22e-04
+wp5b_on_default_tracer_n1 | ? | -1.51e-05 | 6.80e-03 | +nan | 0.00e+00 | 2.27e-04
+parent parity wp5b_off_copies_tracer_n1 against wp5b_off_copies_increment_n1: bit for bit
+parent parity wp5b_off_default_increment_n1 against wp5b_off_copies_increment_n1: bit for bit
+parent parity wp5b_off_default_tracer_n1 against wp5b_off_copies_increment_n1: bit for bit
+parent parity wp5b_on_copies_increment_n1 against wp5b_off_copies_increment_n1: bit for bit
+parent parity wp5b_on_copies_tracer_n1 against wp5b_off_copies_increment_n1: bit for bit
+parent parity wp5b_on_default_increment_n1 against wp5b_off_copies_increment_n1: bit for bit
+parent parity wp5b_on_default_tracer_n1 against wp5b_off_copies_increment_n1: bit for bit
+default against copies, cross blocks off, tracer: _tropo 1.844%, _strat 0.652%, _evap 6.202%
+default against copies, cross blocks off, increment: _tropo 0.547%, _strat 0.872%, _evap 3.801%
+default against copies, cross blocks on, tracer: _tropo 0.464%, _strat 0.762%, _evap 6.382%
+default against copies, cross blocks on, increment: _tropo 0.292%, _strat 0.724%, _evap 5.838%

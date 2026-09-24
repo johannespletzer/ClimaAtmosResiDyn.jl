@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W28                                           | 1. Water tags                                       |
+| W1–W29                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -831,6 +831,56 @@ The copies' runs are the references.
 at `71bd4061` (#102 at `fd07d902`). TRMM same-sign: job `13887331`, from
 `5d1afcc0`. Reports and `analysis/water/w5r_rule_compare.py`'s output are in
 `output/w5r/`.*
+
+**W29. The tags' sedimentation cross blocks close W23's explicit-1M lag. With
+one Newton iteration, the follower's residual after an hour falls from 7.9e-3
+of the water to 2e-8. The model's fields are bit for bit the same.** This is
+the owner's distinguishing experiment for #102's point 3, run on W23's column:
+DYCOMS RF02, 1M, prognostic EDMF, microphysics stepped explicitly, ARS222, one
+Newton iteration, one hour. Eight runs cover every combination of:
+  - the cross blocks off (WP5b's control, `f8da0913`, the refusal lifted) or
+    on (`c2bf8a62`);
+  - the default mode or copies;
+  - the tracer transport or the follower.
+
+| run                        | net      | gross   | left out | repair  |
+|:-------------------------- | --------:| -------:| --------:| -------:|
+| default, follower, off     | +7.9e-3  | 8.5e-3  | +7.9e-3  | 1.8e-4  |
+| default, follower, **on**  | −2.1e-8  | 5.7e-8  | −2.1e-8  | 2.2e-4  |
+| default, tracer, off       | +7.7e-3  | 1.6e-2  |          | 2.3e-4  |
+| default, tracer, on        | −1.5e-5  | 6.8e-3  |          | 2.3e-4  |
+| copies, follower, off      | +7.9e-3  | 8.3e-3  | +7.9e-3  | 2.4e-4  |
+| copies, follower, on       | −1.2e-8  | 5.3e-8  | −1.2e-8  | 2.6e-4  |
+| copies, tracer, off        | +7.8e-3  | 9.7e-3  |          | 2.7e-4  |
+| copies, tracer, on         | −1.3e-5  | 7.4e-3  |          | 2.7e-4  |
+
+`repair` is the partition repair's ledger, summed as absolute values over the
+cells, over the column's water. No tag goes negative in any run.
+
+  - **The parent's fields** (ρ, ρq_tot, ρe_tot, ρq_rai, ρq_sno) are the same,
+    value for value, in all eight runs.
+  - **The net lag is gone under both transports.** Under the tracer transport
+    the gross stays at 7e-3. That is its explicit advection's mismatch, which
+    the follower removes.
+  - **Default against copies** (L1 over the column, per tag, `tropo`, `strat`,
+    `evap`):
+
+    | transport | cross blocks off     | on                   |
+    |:--------- |:-------------------- |:-------------------- |
+    | follower  | 0.55%, 0.87%, 3.8%   | 0.29%, 0.72%, 5.8%   |
+    | tracer    | 1.8%, 0.65%, 6.2%    | 0.46%, 0.76%, 6.4%   |
+
+    The region tags agree better. The small source tag `evap` does not, but
+    its first-hour budget is 10%. The copies' own rows in the updraft do not
+    have the cross blocks yet, so the audit is not yet symmetric in the modes.
+  - One column for one hour does not bound the lag elsewhere. D4-W for a day
+    on the implicit path, in both modes, is the next check.
+
+*`hpda2_compute`, 2026-09-24, jobs `13892249` to `13892256`. The script is
+`analysis/water/wp5b_probe.jl`, run from `../ClimaAtmosResiDyn-wedmf5b-off` at
+`f8da0913` and `../ClimaAtmosResiDyn-wedmf5b` at `c2bf8a62`. The compute nodes
+print no commit. The final columns, the RESULT lines and
+`analysis/water/wp5b_compare.py`'s output are in `output/wp5b_probe/`.*
 
 ## 2. Energy source tags: closure by transport
 

@@ -1,0 +1,48 @@
+probe: copies increment newton 1 on at 
+RESULT run=wp5b_on_copies_increment_n1 commit=? ret=success
+RESULT closure net=-1.1783672138254239e-8 gross=5.2989762486020726e-8
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.0030029321926845704 scale=11.578191974462383
+RESULT audit=(copy_residual = 0.001163637214013415, copy_residual_relative = 0.00010050249784940595, copy_repair = 0.010605411588548387, copy_repair_relative = 0.0009159816672534344, increment_left = -1.3643142108734234e-7, increment_left_relative = -1.1783482376891348e-8, increment_left_net_abs = 6.136412117033591e-7, increment_left_net_abs_relative = 5.2999744092760453e-8, increment_moved_net_abs = 0.043800946524789296, increment_moved_net_abs_relative = 0.0037830558191986733)
+probe: default tracer newton 1 on at 
+RESULT run=wp5b_on_default_tracer_n1 commit=? ret=success
+RESULT closure net=-1.5131086505703637e-5 gross=0.006804968576513204
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.0026225444081017495 scale=11.578191974462383
+RESULT audit=(exchange_volume_fraction = 0.6666666666666666, bound_partition = 0.05, bound_evap = 0.05)
+probe: default increment newton 1 off at 
+RESULT run=wp5b_off_default_increment_n1 commit=? ret=success
+RESULT closure net=0.007900322178302438 gross=0.008466447597722955
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.0021279608414846015 scale=11.578191974462383
+RESULT audit=(exchange_volume_fraction = 0.6666666666666666, bound_partition = 0.05, bound_evap = 0.05, increment_left = 0.09181381071547974, increment_left_relative = 0.007929891896592342, increment_left_net_abs = 0.09837170630717686, increment_left_net_abs_relative = 0.008496292557953082, increment_moved_net_abs = 0.3718266644442882, increment_moved_net_abs_relative = 0.032114397935741036)
+probe: copies tracer newton 1 on at 
+RESULT run=wp5b_on_copies_tracer_n1 commit=? ret=success
+RESULT closure net=-1.2789593944481804e-5 gross=0.007389383318641063
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.0030660854631734346 scale=11.578191974462383
+RESULT audit=(copy_residual = 0.0014283916910368902, copy_residual_relative = 0.00012336914901630964, copy_repair = 0.009659047483472669, copy_repair_relative = 0.0008342448894246438)
+probe: copies tracer newton 1 off at 
+RESULT run=wp5b_off_copies_tracer_n1 commit=? ret=success
+RESULT closure net=0.007808908159954942 gross=0.009712491149522905
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.003122981309233236 scale=11.578191974462383
+RESULT audit=(copy_residual = 0.002243443741325291, copy_residual_relative = 0.00019376460040337708, copy_repair = 0.019423566441181435, copy_repair_relative = 0.0016775992731873268)
+probe: copies increment newton 1 off at 
+RESULT run=wp5b_off_copies_increment_n1 commit=? ret=success
+RESULT closure net=0.00791136968510151 gross=0.008314012542818763
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.0027395002705290477 scale=11.578191974462383
+RESULT audit=(copy_residual = 0.0035147435629407893, copy_residual_relative = 0.00030356583918224344, copy_repair = 0.028884365551340906, copy_repair_relative = 0.002494721595137665, increment_left = 0.09181405709073293, increment_left_relative = 0.007929913175843345, increment_left_net_abs = 0.09647903584971682, increment_left_net_abs_relative = 0.008332823990353354, increment_moved_net_abs = 0.3284280430633647, increment_moved_net_abs_relative = 0.028366090645911474)
+probe: default tracer newton 1 off at 
+RESULT run=wp5b_off_default_tracer_n1 commit=? ret=success
+RESULT closure net=0.0077073802997670755 gross=0.01586733834558182
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.002702921355261634 scale=11.578191974462383
+RESULT audit=(exchange_volume_fraction = 0.6666666666666666, bound_partition = 0.05, bound_evap = 0.05)
+probe: default increment newton 1 on at 
+RESULT run=wp5b_on_default_increment_n1 commit=? ret=success
+RESULT closure net=-2.1149490532157945e-8 gross=5.703592628247658e-8
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.0025648729596645333 scale=11.578191974462383
+RESULT audit=(exchange_volume_fraction = 0.6666666666666666, bound_partition = 0.05, bound_evap = 0.05, increment_left = -2.4487942262916234e-7, increment_left_relative = -2.115005720835208e-8, increment_left_net_abs = 6.604830532934075e-7, increment_left_net_abs_relative = 5.704543980184575e-8, increment_moved_net_abs = 0.046624480606241386, increment_moved_net_abs_relative = 0.004026922399376292)
