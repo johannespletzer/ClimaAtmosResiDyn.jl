@@ -494,7 +494,7 @@ const RESERVED_WATER_TAG_PREFIXES = (
     RESERVED_ENERGY_SOURCE_TAG_PREFIXES
 
 Name prefixes that an `energy_source_tags` tag may not take, for the reason
-[`RESERVED_WATER_TAG_PREFIXES`](@ref) gives. A tag's diagnostic is
+`RESERVED_WATER_TAG_PREFIXES` gives. A tag's diagnostic is
 `e_src_<name>`, and `fix_` starts the repair's ledger `e_src_fix_<name>`,
 `fixgross_` and `fixcount_` its gross twin and count, and `inc_` the
 increment correction's ledger `e_src_inc_left` and `e_src_inc_moved`.
