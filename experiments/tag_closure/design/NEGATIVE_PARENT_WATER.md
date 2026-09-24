@@ -21,7 +21,9 @@ shows that the water tags do. The facts, as the parent session measured them:
   - The tagged runs end with `simulation_crashed`, the water closure at −1.02:
     the copies run at day 48, both follower rules at day 74.5
     (t = 6.4368e6 s). The untagged twin completes 90 days.
-  - Every parent field is bit for bit the twin's up to each crash.
+  - The ten daily output fields are bit for bit the twin's at every output
+    up to each crash (prefix parity, `analysis/water/lr_parity.py`; the runs
+    keep no checkpoints, so the full state is not compared directly).
 
 So the tags change nothing in the model until they end it. The runs used
 `claude/long-run-samesign`, #102 and #103 with G4.15b.
