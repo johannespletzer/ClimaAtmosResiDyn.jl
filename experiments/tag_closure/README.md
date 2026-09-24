@@ -224,6 +224,43 @@ number goes through the verifier and a manifest (G3's criterion 1).
     E77 on for energy (E76 is the R2 ladder).
  6. Sync the archive before scratch is cleaned (RUNS.md says how).
 
+## Closing a work package or a goal
+
+The owner asked for this on 2026-09-24. That day W25 to W28 were recorded, but
+`STATUS.md` was not updated, and one validation log stayed in scratch.
+
+**When.** Go through the list at each milestone of a work package: a PR
+opened, a review taken, a validation done. Go through it at a goal's end too,
+and before a hand-over or the end of a session.
+
+ 1. **FINDINGS.** One entry for each experiment, under the next free number.
+    It cites its runs and states its bounds (see "How the record is written").
+ 2. **RUNS.md.** One row for each run, with its commit, its jobs and its
+    finding.
+ 3. **`output/<topic>/`.** Everything a claim rests on goes here, never only
+    in `$SCRATCH`:
+      + the verifier's reports, both `.txt` and `.json`;
+      + the reducer's tables;
+      + the raw log of a test-like script.
+    The script itself goes under `analysis/`.
+ 4. **Reviews.** An agent's review goes under `review/agent_reviews/`,
+    condensed. Name the owner's reviews and the replies to them in the WP's
+    section of the goal's TODO file.
+ 5. **The TODO file** (G3_TODO.md for G3). In the WP's section, tick what is
+    done, with its commits and PR numbers. Put anything that waits on the
+    owner under "Decisions".
+ 6. **STATUS.md.** Add a dated update line. Give each WP's state, the open
+    decisions, and where the next session starts.
+ 7. **Commit and push the record branch.** Where a PR body or a reply rests
+    on the record, name the record's commit.
+
+**At a goal's end,** also:
+  - tick each of the goal's "is met when" criteria in its TODO file, with the
+    evidence;
+  - update the list of goals in STATUS.md;
+  - sync the archive (step 6 above);
+  - write a hand-over note for the next session.
+
 ## Traps that are still live
 
  - **Never `module purge` on terrabyte.** It drops `stack/24.4.0`, and the

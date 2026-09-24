@@ -3,7 +3,9 @@
 The entry point for every session. Written on 2026-09-23 around 11:30, during
 the housekeeping (step H4). Updated at 13:55 the same day, when the
 housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
-done. Update it when something here changes. Where a fact was
+done. Update it when something here changes, and at each milestone of a work
+package and at each goal's end. The checklist for those moments is in
+[README.md](README.md), "Closing a work package or a goal". Where a fact was
 not checked, it says so.
 
 ## The goals
