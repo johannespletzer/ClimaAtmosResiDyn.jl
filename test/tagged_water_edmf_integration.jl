@@ -91,6 +91,10 @@ relative_difference(a, b) =
         "output_default_diagnostics" => false,
     )
     tag_dict = Dict{String, Any}(
+        # The default mode's tracer transport, whose sub-grid flux and exchange
+        # this file tests. Under EDMF `increment` is the default, which
+        # `tagged_water_increment_integration.jl` tests.
+        "water_tag_transport" => "tracer",
         "water_tracers" => [
             Dict{String, Any}("name" => "tropo", "region" => altitude_region(false)),
             Dict{String, Any}("name" => "strat", "region" => altitude_region(true)),

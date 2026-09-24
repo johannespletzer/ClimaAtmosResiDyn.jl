@@ -1319,3 +1319,69 @@ end
     @test source_model.offset == eltype(source)(110495)
     @test CA.closure_checks_from_config(source).energy_source.spin_up == "1hours"
 end
+
+# `water_tag_transport`'s default (the owner's review of #102, point 1). G3_PLAN
+# 4.3's rule makes the follower the default in the default mode under EDMF,
+# where the configuration supports it, and keeps `tracer` elsewhere.
+@testset "water_tag_transport's default" begin
+    region(above) = Dict{String, Any}(
+        "type" => "tanh_altitude",
+        "z_center" => 750.0,
+        "width" => 100.0,
+        "above" => above,
+    )
+    partition = [
+        Dict{String, Any}("name" => "tropo", "region" => region(false)),
+        Dict{String, Any}("name" => "strat", "region" => region(true)),
+        Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
+    ]
+    edmf = ["turbconv" => "prognostic_edmfx"]
+    config(extra, job_id; tags = partition) = tracer_config(
+        ["microphysics_model" => "0M", "water_tracers" => tags, extra...];
+        job_id,
+    )
+    transport(extra, job_id; kwargs...) =
+        CA.AtmosTagging(config(extra, job_id; kwargs...)).water_tagging_model.transport
+    increment = CA.IncrementWaterTagTransport
+    tracer = CA.TracerWaterTagTransport
+    @test transport(edmf, "water_default_edmf") isa increment
+    # An explicit key overrides it, either way.
+    @test transport([edmf..., "water_tag_transport" => "tracer"], "water_edmf_tracer") isa
+          tracer
+    @test transport(["water_tag_transport" => "increment"], "water_increment") isa
+          increment
+    # Elsewhere the default is `tracer`: without EDMF, with copies, without the
+    # parent's post-solve correction, without a region tag, and with 1M
+    # microphysics stepped explicitly.
+    @test transport([], "water_default_plain") isa tracer
+    @test transport(
+        [edmf..., "water_tag_updraft_copy" => true],
+        "water_default_copies",
+    ) isa tracer
+    @test transport(
+        [edmf..., "energy_q_tot_upwinding" => "none"],
+        "water_default_no_correction",
+    ) isa tracer
+    @test transport(
+        edmf,
+        "water_default_sources_only";
+        tags = [partition[3]],
+    ) isa tracer
+    explicit_one_moment =
+        [edmf..., "microphysics_model" => "1M", "implicit_microphysics" => false]
+    @test transport(explicit_one_moment, "water_default_explicit_1m") isa tracer
+    @test transport(
+        [edmf..., "microphysics_model" => "1M"],
+        "water_default_implicit_1m",
+    ) isa increment
+    # And the follower is refused there, with the reason.
+    @test_throws "stepped explicitly" CA.AtmosTagging(
+        config(
+            [explicit_one_moment..., "water_tag_transport" => "increment"],
+            "water_increment_explicit_1m",
+        ),
+    )
+    @test_throws "must be `tracer` or `increment`" CA.water_tag_transport_from_config(
+        "follow",
+    )
+end
