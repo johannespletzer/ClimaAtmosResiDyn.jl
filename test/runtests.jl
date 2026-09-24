@@ -32,6 +32,7 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_edmf",
     "tagging_water_edmf_copies",
     "tagging_water_edmf_0m",
+    "tagging_water_edmf_0m_explicit",
     "tagging_water_increment",
     "parameterizations",
     "restarts",
@@ -252,6 +253,15 @@ end
 if TEST_GROUP in ("tagging_water_edmf_0m", "all")
     @safetestset "Water tags with updraft copies under 0M" begin
         @time include("tagged_water_edmf_0m_integration.jl")
+    end
+end
+
+# The 0M rain-out split with the microphysics stepped explicitly, in both
+# modes. Its three builds compile the explicit path, so it has a group of its
+# own.
+if TEST_GROUP in ("tagging_water_edmf_0m_explicit", "all")
+    @safetestset "The 0M rain-out split, microphysics explicit" begin
+        @time include("tagged_water_edmf_0m_explicit_integration.jl")
     end
 end
 

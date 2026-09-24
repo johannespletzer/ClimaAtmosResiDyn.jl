@@ -6,7 +6,9 @@
 ##### `Δ⁰ = ρa⁰ dq_tot_dt⁰` in the environment (`microphysics/tendency.jl`). The
 ##### `:microphysics` bracket sees only their sum. Here each subdomain's part
 ##### goes to the tags by that subdomain's composition, `Σₖ Δᵏ φᵏᵢ`, for both
-##### signs, instead of by the grid mean's. The design, its review and the
+##### signs, instead of by the grid mean's. In the default mode that
+##### composition is reconstructed from the exchange's plume. Where an area is
+##### negative its rain-out is a gain, so the split is a signed attribution. The design, its review and the
 ##### reasons for each guard are in design/ZERO_M_SPLIT.md on the record branch.
 
 """
@@ -82,8 +84,9 @@ alone, its part of the 0M rain-out split by subdomain: `Δʲ φʲᵢ + Δ⁰ φ�
 `ᶜdest` is `Yₜ.c` in the bracket, or one scratch field for `pr_tag`. Call only
 where [`splits_rainout`](@ref) holds.
 
-  - **Default mode.** The shares come from the exchange's plume and bound,
-    computed here into the exchange's scratch, which the exchange later
+  - **Default mode.** The model holds no subdomain composition, so the
+    shares are reconstructed from the exchange's plume and bound, a modelled
+    estimate. They are computed here into the exchange's scratch, which the exchange later
     recomputes and overwrites: `SplitShare`. So the plume is computed twice
     per implicit evaluation, about 4.5% of `implicit_tendency!` on the 0M
     EDMF column. Where the exchange does not run (no updraft, no room, a
@@ -272,27 +275,95 @@ add_rainout_increments!(ᶜdest, Y, p, model, target = nothing) =
     )
 
 """
-    water_tag_precipitation!(out, Y, p, tag, phase)
+    update_water_tag_rainouts!(Y, p, t)
+
+Compute every tag's part of the 0M rain-out at the state `Y`, by the rule the
+`:microphysics` bracket applies ([`add_rainout_increments!`](@ref)), into
+`p.scratch.ᶜtagging_q_rainouts`, one field per tag. Also compute the part no
+region tag takes, `ᶜρ_dq_tot_dt` less the partition's parts, into
+`p.scratch.ᶜtagging_q_rainout_res`. Mark both as computed at `t`.
+
+The work shared between the tags (the share denominator, and the exchange's
+plume or the copies' norms) is done once here for all of them. So emitting
+`pr_tag`, `prra_tag` and `prsn_tag` for every tag costs one batch per output
+time, and then one column integral per diagnostic: linear in the number of
+tags.
+"""
+function update_water_tag_rainouts!(Y, p, t)
+    model = p.atmos.water_tagging_model
+    (; ᶜtagging_q_rainouts, ᶜtagging_q_rainout_res) = p.scratch
+    foreach(ᶜx -> fill!(parent(ᶜx), 0), values(ᶜtagging_q_rainouts))
+    add_rainout_increments!(ᶜtagging_q_rainouts, Y, p, model)
+    @. ᶜtagging_q_rainout_res = p.precomputed.ᶜρ_dq_tot_dt
+    _subtract_partition_rainouts!(
+        ᶜtagging_q_rainout_res,
+        ᶜtagging_q_rainouts,
+        model.tags,
+    )
+    p.scratch.tagging_q_rainout_time[] = time_to_seconds(t)
+    return nothing
+end
+_subtract_partition_rainouts!(ᶜres, ᶜrainouts, ::Tuple{}) = nothing
+function _subtract_partition_rainouts!(ᶜres, ᶜrainouts, tags::Tuple)
+    tag = first(tags)
+    _is_partition_tag(tag) && (@. ᶜres -= $(tag_field(ᶜrainouts, tag)))
+    return _subtract_partition_rainouts!(ᶜres, ᶜrainouts, Base.tail(tags))
+end
+
+# The diagnostics at one output time share one batch. They are computed in one
+# pass over the diagnostics after a step, so the state is the same for all of
+# them. A new time starts a new batch.
+function _current_water_tag_rainouts!(Y, p, t)
+    p.scratch.tagging_q_rainout_time[] == time_to_seconds(t) ||
+        update_water_tag_rainouts!(Y, p, t)
+    return p.scratch.ᶜtagging_q_rainouts
+end
+
+"""
+    water_tag_precipitation!(out, Y, p, t, tag, phase)
 
 The column integral of `tag`'s part of the 0M rain-out into `out`, a level
 field, as `pr` integrates `ᶜρ_dq_tot_dt` (`set_precipitation_surface_fluxes!`):
 upward-positive, so negative, and split into rain and snow by the grid mean's
-temperature for `phase` `Val(:rain)` and `Val(:snow)`; `Val(:all)` is both. Over
-a closed partition the tags' sum is `pr`, up to the partition's residual, and
-with copies up to the copies' own. It reads the state at output time, so it is
-the rate at the step's end, not the one applied during it. It computes `tag`'s
-part alone, into the scratch field `ᶜtagging_q_rainout`.
+temperature for `phase` `Val(:rain)` and `Val(:snow)`; `Val(:all)` is both.
+
+It reads the batch of [`update_water_tag_rainouts!`](@ref) for the time `t`,
+and computes the batch first if it holds another time. It reads the state at
+output time, so it is the rate at the step's end, not the one applied during
+it. Both signs are attributed, as the bracket attributes them (see
+[`add_split_rainout!`](@ref)). Over a closed partition the tags' sum is `pr`
+less [`water_tag_precipitation_residual!`](@ref).
 """
-function water_tag_precipitation!(out, Y, p, tag, phase)
-    model = p.atmos.water_tagging_model
-    ᶜincrement = p.scratch.ᶜtagging_q_rainout
-    @. ᶜincrement = 0
-    add_rainout_increments!(tag_entry(tag, ᶜincrement), Y, p, model, tag)
+function water_tag_precipitation!(out, Y, p, t, tag, phase)
+    ᶜrainouts = _current_water_tag_rainouts!(Y, p, t)
     T_freeze = TD.Parameters.T_freeze(CAP.thermodynamics_params(p.params))
     Operators.column_integral_definite!(
         out,
-        _precipitation_phase(ᶜincrement, p.precomputed.ᶜT, T_freeze, phase),
+        _precipitation_phase(
+            tag_field(ᶜrainouts, tag),
+            p.precomputed.ᶜT,
+            T_freeze,
+            phase,
+        ),
     )
+    return out
+end
+
+"""
+    water_tag_precipitation_residual!(out, Y, p, t)
+
+`pr` less the region tags' `pr_tag`, into `out`, a level field: the column
+integral of the part of the 0M rain-out that no region tag takes, from the
+batch of [`update_water_tag_rainouts!`](@ref) for the time `t`. Under the split
+by subdomain it is `∫ (Δʲ (1 - Sʲ) + Δ⁰ (1 - S))`, where `S` is the grid
+partition's sum of shares and `Sʲ` that of the updraft's shares: `S` in the
+default mode, the copies' own sum with copies. On the grid rule it is
+`∫ ρ_dq_tot_dt (1 - S)` where the sink is a loss, and zero up to the masks'
+rounding where it is a gain.
+"""
+function water_tag_precipitation_residual!(out, Y, p, t)
+    _current_water_tag_rainouts!(Y, p, t)
+    Operators.column_integral_definite!(out, p.scratch.ᶜtagging_q_rainout_res)
     return out
 end
 _precipitation_phase(ᶜx, ᶜT, T_freeze, ::Val{:all}) = ᶜx

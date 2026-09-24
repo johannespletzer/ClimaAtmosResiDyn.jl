@@ -297,14 +297,22 @@ grid-scale tags take each part by that subdomain's composition,
 ``\sum_k \Delta^k \varphi_i^k``, not by the grid mean's
 (`splits_rainout`, `add_split_rainout!`). With the copies, the updraft's share
 is the copy's, ``\chi_i^j / q_\mathrm{tot}^j``, and the environment's is what
-the grid tags and the copies leave for it. In the default mode, the shares are
-the grid mean's plus the exchange's difference for that subdomain. The
+the grid tags and the copies leave for it. In the default mode, the model holds
+no subdomain composition, so the split reconstructs one: the grid mean's shares
+plus the exchange's difference for that subdomain, from the steady-plume
+closure the exchange uses. It is a modelled estimate, not a prognosed value. On
+TRMM it moved the tags' water by under 0.5% in 6 h and left the agreement with
+the copies as it was (FINDINGS W26). So it is not yet shown to be closer to a
+converged reference than the grid rule. The
 partition's shares, both of them in the default mode and the environment's
 with the copies, are scaled by the partition's sum of grid shares. So a
 drifted partition keeps losing in proportion to what it holds.
 Where a subdomain's share is not defined, the grid mean's applies. The split
 applies to both signs, since a subdomain's area can go negative in the Newton
-iterates. In the default mode without the SGS mass flux there is no
+iterates. Where it does, the subdomain's rain-out is a gain, and the split
+attributes that gain too. So the split, and `pr_tag` below, are signed
+attributions, which close with the sink, not a record of physical rain-out
+alone. In the default mode without the SGS mass flux there is no
 exchange, and the grid mean's share applies to all the rain-out, as it does
 without EDMF. The model's fields do not change.
 
@@ -390,11 +398,19 @@ set.
     microphysics only: the tag's part of `pr`, `prra` and `prsn`, the column
     integral of its part of the rain-out (`water_tag_precipitation!`). It is
     upward-positive as `pr` is, so negative, and split into rain and snow by
-    the grid mean's temperature as `pr` is. Over a partition the tags' sum is
-    `pr`, up to the partition's residual, and with copies up to the copies'
-    own residual. It is computed from the state at
+    the grid mean's temperature as `pr` is. It is computed from the state at
     output time, so it is the rate at the step's end, not the one the step
-    applied. Under 1-moment it waits on rain and snow tags.
+    applied. All the tags' parts are computed together, once per output time
+    (`update_water_tag_rainouts!`), so the cost of the whole set grows
+    linearly with the number of tags. Under 1-moment it waits on rain and snow
+    tags;
+  - `pr_tag_res`, with a region tag, under 0-moment: `pr` less the region
+    tags' `pr_tag`, the rain-out no region tag takes. Under the split it is the
+    rain-out times one less the partition's sum of shares, in each subdomain:
+    ``\int (\Delta^j (1 - S^j) + \Delta^0 (1 - S))``. ``S`` is the grid
+    partition's sum of shares, and ``S^j`` is ``S`` in the default mode and the
+    copies' own sum with copies. So it shows the partition's residual and the
+    copies' at the surface.
 
 !!! note "What `q_tag_fix` includes"
 
@@ -555,7 +571,9 @@ ClimaAtmos.water_tag_leak!
 ClimaAtmos.splits_rainout
 ClimaAtmos.add_split_rainout!
 ClimaAtmos.add_rainout_increments!
+ClimaAtmos.update_water_tag_rainouts!
 ClimaAtmos.water_tag_precipitation!
+ClimaAtmos.water_tag_precipitation_residual!
 ClimaAtmos.IncrementWaterTagTransport
 ClimaAtmos.TracerWaterTagTransport
 ClimaAtmos.follows_water_increment

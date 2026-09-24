@@ -18,16 +18,19 @@ chemistry tracer in the updraft, after an hour:
     part, taken from the real code, is that subdomain's rain times the tag's
     share there: the copy's own share in the updraft, and in the environment
     shares that sum to `S` and are not the grid mean's. `pr_tag` integrates
-    the same increments, one tag at a time, without allocating;
+    the same increments, from one batch per output time, without allocating.
+    `pr` less the partition's `pr_tag` is `pr_tag_res`, and that is the
+    rain-out the shares leave, `∫ (Δʲ (1 - Sʲ) + Δ⁰ (1 - S))`, to rounding;
  4. the model's fields are those of the same column without tags, bit for bit;
  5. in the default mode, each subdomain's shares are the exchange's, the
-    exchange's tendency is unchanged by the split, and the model's fields are
-    the untagged column's.
+    exchange's tendency is unchanged by the split, `pr` less the partition's
+    `pr_tag` is `∫ (1 - S) (Δʲ + Δ⁰)`, and with the partition closed it is
+    zero to rounding. The model's fields are the untagged column's.
 
 The rain-out mirror and the split run on the implicit path here, where the 0M
-sink lives by default. The copies' mirror has the same explicit hook, which
-`tagging_water_edmf_copies` reaches under 1M, where it is a no-op. The split's
-explicit path is not run in this file. See `docs/src/tagged_water.md`.
+sink lives by default. The explicit path runs in
+`tagged_water_edmf_0m_explicit_integration.jl`, group
+`tagging_water_edmf_0m_explicit`. See `docs/src/tagged_water.md`.
 =#
 using Test
 import ClimaAtmos as CA
@@ -112,6 +115,12 @@ end
 # cell, so the identities below hold to a few eps of the largest rate.
 same_to_rounding(a, b, scale) =
     maximum(abs, parent(a) .- parent(b)) <= 100 * eps(Float64) * scale
+
+column_integral(p, ᶜx) = (
+    out = similar(p.scratch.ᶠtemp_field_level);
+    CA.Operators.column_integral_definite!(out, ᶜx);
+    out
+)
 
 function whole_tendency(Y, p, t)
     Yₜ = zero(Y)
@@ -297,57 +306,100 @@ end
             parent(parts.environment.ρq_tag_tropo) .-
             parent(ᶜΔ⁰ .* ᶜgrid_share),
         ) > 1e-6 * scale
-        # The tags' precipitation integrates the same increments: `tag`'s part
-        # alone, computed into scratch, without allocating.
+        # The tags' precipitation integrates the same increments, from one
+        # batch per output time, which holds every tag's part.
+        CA.update_water_tag_rainouts!(Y, p, t)
         tag_pr(tag, phase) = copy(
             CA.water_tag_precipitation!(
                 similar(p.scratch.ᶠtemp_field_level),
                 Y,
                 p,
+                t,
                 tag,
                 phase,
             ),
         )
-        column(ᶜx) = (
-            out = similar(p.scratch.ᶠtemp_field_level);
-            CA.Operators.column_integral_definite!(out, ᶜx);
-            out
-        )
         for tag in model.tags
             @test isapprox(
                 parent(tag_pr(tag, Val(:all))),
-                parent(column(CA.tag_field(ᶜincrements, tag)));
+                parent(column_integral(p, CA.tag_field(ᶜincrements, tag)));
                 rtol = 1e-12,
             )
         end
+        # A second diagnostic at the same time reads the batch and does not
+        # redo the shared work: a changed rate shows only after a new batch.
+        tropo_pr = tag_pr(tropo, Val(:all))
+        ᶜdq⁰ = p.precomputed.ᶜmp_tendency⁰.dq_tot_dt
+        saved⁰ = copy(ᶜdq⁰)
+        ᶜdq⁰ .*= 2
+        @test isequal(parent(tag_pr(tropo, Val(:all))), parent(tropo_pr))
+        CA.update_water_tag_rainouts!(Y, p, t)
+        @test !isapprox(parent(tag_pr(tropo, Val(:all))), parent(tropo_pr))
+        ᶜdq⁰ .= saved⁰
+        CA.update_water_tag_rainouts!(Y, p, t)
+        @test isequal(parent(tag_pr(tropo, Val(:all))), parent(tropo_pr))
+
         pr = p.precomputed.surface_rain_flux .+ p.precomputed.surface_snow_flux
         prra = p.precomputed.surface_rain_flux
         @test maximum(abs, parent(pr)) > 0
-        # Over the partition, `pr` and `prra` up to the partition's residual
-        # and the copies' own. DYCOMS is warm, so the rain is all of it.
-        @test relative_difference(
-            tag_pr(tropo, Val(:all)) .+ tag_pr(strat, Val(:all)),
-            pr,
-        ) < 1e-2
-        @test relative_difference(
-            tag_pr(tropo, Val(:rain)) .+ tag_pr(strat, Val(:rain)),
-            prra,
-        ) < 1e-2
+        # Over the partition, `pr` less the rain-out the shares leave: the
+        # copies' sum `Sʲ` in the updraft and the grid partition's `S` in the
+        # environment. `pr_tag_res` is that part. DYCOMS is warm, so the rain
+        # is all of it.
+        ᶜSʲ = zero.(ᶜS)
+        for tag in (tropo, strat)
+            ᶜSʲ .+= CA.water_tag_fraction.(
+                CA.updraft_copy_field(ᶜsgsʲ, tag),
+                ᶜsgsʲ.q_tot,
+            )
+        end
+        residual = CA.water_tag_precipitation_residual!(
+            similar(p.scratch.ᶠtemp_field_level),
+            Y,
+            p,
+            t,
+        )
+        column_scale =
+            maximum(abs, parent(column_integral(p, abs.(ᶜΔʲ) .+ abs.(ᶜΔ⁰))))
+        @test maximum(
+            abs,
+            parent(
+                column_integral(p, ᶜΔʲ .* (1 .- ᶜSʲ) .+ ᶜΔ⁰ .* (1 .- ᶜS)) .-
+                residual,
+            ),
+        ) <= 1e-12 * column_scale
+        @test maximum(
+            abs,
+            parent(pr .- tag_pr(tropo, Val(:all)) .- tag_pr(strat, Val(:all)) .- residual),
+        ) <= 1e-12 * column_scale
+        @test maximum(
+            abs,
+            parent(
+                prra .- tag_pr(tropo, Val(:rain)) .- tag_pr(strat, Val(:rain)) .- residual,
+            ),
+        ) <= 1e-12 * column_scale
+        # The residual is not zero here: the copies' partition and the grid
+        # partition have drifted apart from their parents in an hour.
+        @test maximum(abs, parent(residual)) > 0
         @test all(iszero, parent(tag_pr(tropo, Val(:snow))))
         out = similar(p.scratch.ᶠtemp_field_level)
-        CA.water_tag_precipitation!(out, Y, p, tropo, Val(:all))
+        CA.water_tag_precipitation!(out, Y, p, t, tropo, Val(:all))
         @test (@allocated CA.water_tag_precipitation!(
             out,
             Y,
             p,
+            t,
             tropo,
             Val(:all),
         )) <= 64
+        CA.update_water_tag_rainouts!(Y, p, t)
+        @test (@allocated CA.update_water_tag_rainouts!(Y, p, t)) <= 64
         # The split on the implicit path allocates next to nothing.
         CA.add_rainout_increments!(ᶜincrements, Y, p, model)
         @test (@allocated CA.add_rainout_increments!(ᶜincrements, Y, p, model)) <= 64
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "pr_tag_tropo")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "prsn_tag_evap")
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "pr_tag_res")
     end
 
     # 4. The model's own fields.
@@ -440,6 +492,62 @@ end
         partition(ᶜx) = ᶜx.ρq_tag_tropo .+ ᶜx.ρq_tag_strat
         @test same_to_rounding(partition(parts.updraft), ᶜS .* ᶜΔʲ, scale)
         @test same_to_rounding(partition(parts.environment), ᶜS .* ᶜΔ⁰, scale)
+
+        # At the surface, `pr` less the partition's `pr_tag` is `pr_tag_res`,
+        # the rain-out times `1 - S`.
+        (tropo, strat, _) = model.tags
+        function surface_parts(Y_state)
+            CA.update_water_tag_rainouts!(Y_state, p_default, t_default)
+            tag_pr(tag) = copy(
+                CA.water_tag_precipitation!(
+                    similar(p_default.scratch.ᶠtemp_field_level),
+                    Y_state,
+                    p_default,
+                    t_default,
+                    tag,
+                    Val(:all),
+                ),
+            )
+            pr =
+                p_default.precomputed.surface_rain_flux .+
+                p_default.precomputed.surface_snow_flux
+            residual = copy(
+                CA.water_tag_precipitation_residual!(
+                    similar(p_default.scratch.ᶠtemp_field_level),
+                    Y_state,
+                    p_default,
+                    t_default,
+                ),
+            )
+            return (; pr, tags = tag_pr(tropo) .+ tag_pr(strat), residual)
+        end
+        column_scale = maximum(
+            abs,
+            parent(column_integral(p_default, abs.(ᶜΔʲ) .+ abs.(ᶜΔ⁰))),
+        )
+        surface = surface_parts(Y_default)
+        @test maximum(abs, parent(surface.pr .- surface.tags .- surface.residual)) <=
+              1e-12 * column_scale
+        @test maximum(
+            abs,
+            parent(
+                surface.residual .-
+                column_integral(p_default, (1 .- ᶜS) .* (ᶜΔʲ .+ ᶜΔ⁰)),
+            ),
+        ) <= 1e-12 * column_scale
+        # With the partition closed, the region tags' `pr_tag` is `pr` to
+        # rounding. The tags are set to a closed partition of the same
+        # composition; the model's fields, and so `pr`, do not change.
+        Y_closed = copy(Y_default)
+        ᶜtropo_share = clamp.(Y_default.c.ρq_tag_tropo ./ Y_default.c.ρq_tot, 0, 1)
+        Y_closed.c.ρq_tag_tropo .= ᶜtropo_share .* Y_default.c.ρq_tot
+        Y_closed.c.ρq_tag_strat .= Y_default.c.ρq_tot .- Y_closed.c.ρq_tag_tropo
+        CA.set_precomputed_quantities!(Y_closed, p_default, t_default)
+        closed = surface_parts(Y_closed)
+        @test isequal(parent(closed.pr), parent(surface.pr))
+        @test maximum(abs, parent(closed.pr .- closed.tags)) <= 1e-12 * column_scale
+        @test maximum(abs, parent(closed.residual)) <= 1e-12 * column_scale
+        CA.set_precomputed_quantities!(Y_default, p_default, t_default)
         ᶜincrements = CA._water_fix_fields(Y_default.c.ρ, model.tags)
         CA.add_rainout_increments!(ᶜincrements, Y_default, p_default, model)
         # Julia 1.10 allocates 696 bytes here (CI, 2026-09-24), 1.11 at most
