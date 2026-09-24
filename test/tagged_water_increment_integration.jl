@@ -173,7 +173,7 @@ altitude_region(above) = Dict{String, Any}(
         # where it differs from spreading by |m|.
         δ_total = sum(ᶜδ)
         ᶜabs_δ = abs.(ᶜδ)
-        ᶜweight = δ_total >= 0 ? max.(ᶜδ, 0) : max.(.-ᶜδ, 0)
+        ᶜweight = δ_total >= 0 ? max.(ᶜδ, 0) : max.(zero(FT) .- ᶜδ, 0)
         ᶜleft = @. δ_total / $(sum(ᶜweight)) * ᶜweight
         scale = maximum(abs, parent(ᶜδ))
         @test abs(δ_total) > 0.1 * sum(ᶜabs_δ)
