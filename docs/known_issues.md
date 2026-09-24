@@ -242,3 +242,38 @@ not re-derive them.
     values rather than restoring as scaffolds.
   - **Julia 1.9 compatibility.** Upstream still declares `julia = "1.9"` while
     testing only 1.10 and 1.11. This fork raised its own floor to 1.10.
+
+## 7. Tagged water ends a run where the parent's water goes negative (open, parity class)
+
+**Status:** open; a defect. To be fixed before the sphere. The fix is not
+chosen yet.
+
+A diagnostic must never end a run that upstream completes. This one does.
+The tag-closure long runs (the record branch's
+`design/INCREMENT_RULE_LONG_RUNS.md`, second submission, jobs `13917157` to
+`13917199`) ran the GCM-driven column for 90 days at site 23. They ran
+`claude/long-run-samesign`, which is #102 and #103 with the energy follower's
+same-sign rule, and its `|m|` twin.
+
+  - **The parent.** The model's own `q_tot` goes below zero from day 10, in
+    the untagged twin too, down to −6e-4 kg/kg, on 66 of 91 daily outputs.
+    That is upstream's behavior at this site, not the tags'.
+  - **The tags.** The water tags then diverge. On day 48 the copies run's
+    column tags hold 28 kg/m² of water against the parent's 13, and
+    `q_tag_pbl` reaches 0.13 kg/kg against a `hus` maximum of 0.016.
+  - **The end.** The tagged runs stop with `simulation_crashed`, the water
+    closure at −1.02: the copies run at day 48, and both follower rules at
+    day 74.5 (t = 6.4368e6 s). The untagged twin completes 90 days.
+  - **Parity holds until then.** Every parent field is bit for bit the
+    untagged twin's up to each crash. So the tags change nothing in the model
+    until they end it.
+
+What is not established: which of the tags' operators makes the divergence,
+and whether the water closure check's `abort_above`, 1.0 by default, ends the
+run or something else does. That default assumes a non-negative parent: then
+non-negative tags miss it by at most the parent itself. Here the parent is
+negative. The runs bound the problem to negative parent water on a long
+column; they do not isolate the mechanism.
+
+The options for the fix are drafted in the record branch's
+`design/NEGATIVE_PARENT_WATER.md`. The choice is the owner's.
