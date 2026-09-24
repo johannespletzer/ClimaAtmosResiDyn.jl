@@ -1258,8 +1258,8 @@ end
     partition = (true, true, false)
     flags = Val(partition)
     share(i) = CA.SplitShare(flags, Val(i))
-    # A random grid composition and random bounded differences that sum to
-    # zero over the partition, many times.
+    # Grid compositions, and bounded differences that sum to zero over the
+    # partition, including an empty tag and a clamp that binds.
     rng_values = [
         (0.3, 0.6, 0.2),
         (0.0, 0.9, 0.5),
