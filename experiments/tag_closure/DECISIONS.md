@@ -25,13 +25,16 @@ Short names for the sources:
     the thresholds, the energy scale, *not assessable* at M5, the sphere,
     G4.15, and the audit's feasibility. ~~**Waiting.**~~ Answered on
     2026-09-24 (below), except:
-      + **the OD3 draft**, with OD2's levels, OD6's ceiling and the 60-level
-        stretching: **waiting for approval**. Step 2 waits for it.
-        [ROADMAP.md, "The OD3 threshold draft"](ROADMAP.md#the-od3-threshold-draft-pending-the-owners-approval)
+      + ~~**the OD3 draft**, with OD2's levels, OD6's ceiling and the 60-level
+        stretching: **waiting for approval**. Step 2 waits for it.~~
+        **Approved** 2026-09-24 (below).
+        [ROADMAP.md, "The OD3 thresholds"](ROADMAP.md#the-od3-thresholds-approved-2026-09-24)
       + **OD7**: **open, deferred**.
     [ROADMAP.md, "The decision register"](ROADMAP.md#the-decision-register)
   - **Known issue 7's fix**, one of the options in
-    `design/NEGATIVE_PARENT_WATER.md`, before the sphere. **Waiting.**
+    `design/NEGATIVE_PARENT_WATER.md`, before the sphere. ~~**Waiting.**~~
+    A chosen 2026-09-24 (below). **Waiting:** the choice among B, C and D,
+    after the probe.
   - **OD4's throughput source** for the existing records: the process records
     as a lower bound, or a new per-step accumulator. **Waiting.**
     [review/od4_denominator_audit.md](review/od4_denominator_audit.md)
@@ -65,6 +68,20 @@ Short names for the sources:
     [FINDINGS W25](FINDINGS.md)
 
 ## 2026-09-24
+
+  - **The owner's answers, later on 2026-09-24.** **In force.**
+    [ROADMAP.md, "The owner's answers, later on 2026-09-24"](ROADMAP.md#the-owners-answers-later-on-2026-09-24)
+      + OD3: approved as drafted. Every row of the threshold table is a
+        scoring threshold from 2026-09-24, its numbers unchanged. Step 2 is
+        unblocked.
+      + OD2's window rule and OD6's ceiling: approved as drafted.
+      + The sphere's cost: a 1 to 2 day run of the 60-level sphere on the
+        proposed grid, untagged and with 8 water and 8 energy tags, measures
+        step time, memory per rank and the ranks needed, before the 90-day
+        run is planned. After step 8a, within step 9.
+      + Known issue 7: option A now (the tags cannot end a run), then the
+        probe, then a choice among B, C and D, which the parent session
+        brings back.
 
   - **The owner's answers to rev. 2's register** (evening, through the parent
     session). **In force**, each as recorded in

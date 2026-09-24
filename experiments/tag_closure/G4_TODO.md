@@ -171,6 +171,8 @@ apart from the stored source provenance: a source tag cannot show where its
 process removed energy (E22). Every energy percentage is restated against an
 offset-invariant scale (OD4). The first step is an audit of the denominators
 of the existing E-records, E39, E62 to E66, E73 to E76, E79 and E80 first.
+*2026-09-24:* the OD3 energy rows (closure, small tags, the comparator's
+repair, in OD4 units) are approved with the rest of the table.
 *Set on 2026-09-24 (OD4):* the scale is the cumulative gross energy the
 sources put into the tags over the same window. The audit's first pass sorts
 the records' denominators into four classes and restates no number yet
@@ -283,7 +285,8 @@ upward where it lasts (open question 3, FQ-10's remainder).
 
 *Superseded 2026-09-24 (OD1, OD6):* ninety days of `g2_v2_sphere_n2` at 60
 levels, with 8 energy tags, judged by the level observed against OD6's
-ceiling. Step 11 of the revised order.
+ceiling. Step 11 of the revised order. The short 60-level run of step 9
+measures the cost first (the owner, 2026-09-24).
 
 ### G4.14 A loss timescale for every run, after WP6
 

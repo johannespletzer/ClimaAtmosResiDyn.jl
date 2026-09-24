@@ -4,8 +4,9 @@ The entry point for every session. Written on 2026-09-23 around 11:30, during
 the housekeeping (step H4). Updated at 13:55 the same day, when the
 housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
 done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for), 12:40 and
-20:00 (rev. 2 of the work plan, steps 0 and 1) and 21:10 (the owner's answers
-to the register). Update it when something here changes, and at each milestone of a work
+20:00 (rev. 2 of the work plan, steps 0 and 1), 21:10 (the owner's answers
+to the register) and later that evening (OD3 approved; known issue 7's option
+A; step 2 pre-registered). Update it when something here changes, and at each milestone of a work
 package and at each goal's end. The checklist for those moments is in
 [README.md](README.md), "Closing a work package or a goal". Where a fact was
 not checked, it says so.
@@ -70,6 +71,24 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-09-24, later: OD3 approved, option A, step 2 ready.**
+      + The owner approved the OD3 thresholds, OD2's window rule and OD6's
+        ceiling, as drafted (ROADMAP.md, "The OD3 thresholds"). Step 2 is
+        unblocked.
+      + Known issue 7: option A is built. No closure check ends a run by
+        default; water's old level, 1.0, marks its rows void
+        (`claude/tag-closure-no-abort`, `00c9eedb`, for a PR against `main`).
+        The closure check ended the follower runs (job `13917157`'s `.err`,
+        line 1401). The probe is pre-registered and its run tree prepared
+        (`design/NEGATIVE_PARENT_WATER.md`, section 5); then the owner chooses
+        among B, C and D.
+      + Step 2 is pre-registered, with its configs and scripts
+        (`design/W25_ISOLATION.md`); its 46 jobs are not submitted.
+      + The sphere: a 1 to 2 day 60-level run, untagged and with 8 + 8 tags,
+        measures its cost first, after step 8a.
+      + Draft PRs #108 (the guard) and #109 (WP6 step 3) are open; all 16
+        validation jobs passed (`output/wp6_step3/jobs/`,
+        `output/g416_guard/jobs/`).
   - **Update, 2026-09-24, 21:10: the owner's answers.** The owner answered
     the register (ROADMAP.md, "The owner's answers"): OD1 the sphere at 60
     levels; OD2 physical windows; OD4 gross source throughput; OD5 bounded
@@ -346,12 +365,14 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
     decision register"). ~~All eight are open. Steps 2 and 3 of the revised
     order wait on OD1, OD2 and OD3.~~ *Superseded 2026-09-24, 21:10:* OD1,
     OD4, OD5 and OD8 are set, and OD2 and OD6 are set in form. Still open:
-      + **the approval of the OD3 draft** (ROADMAP.md, "The OD3 threshold
+      + ~~**the approval of the OD3 draft** (ROADMAP.md, "The OD3 threshold
         draft"), which includes OD2's levels, OD6's ceiling and the proposed
-        60-level stretching. Step 2 waits for it;
+        60-level stretching. Step 2 waits for it;~~ *Approved 2026-09-24, as
+        drafted.* The stretching is used for the short sphere run;
       + **OD7**, deferred by the owner until, for example, known issue 7 is
         fixed and site 23 can be scored;
-      + **known issue 7's fix**: which option
+      + **known issue 7's fix**: ~~which option~~ A is chosen and built; the
+        choice among B, C and D follows the probe
         (`design/NEGATIVE_PARENT_WATER.md`);
       + **OD4's throughput source**: the process records as a lower bound, or
         a new per-step accumulator (`review/od4_denominator_audit.md`).

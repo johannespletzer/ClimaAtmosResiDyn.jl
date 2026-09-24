@@ -63,11 +63,12 @@ The twelve criteria of the plan, section 2, in short:
   - [ ] **The sphere's numbers**, set by the owner before V-W11, in the form of
     plan 6.1. *Rev. 2:* the form is now OD6's ceiling and growth bound, not a
     plateau after day one. *2026-09-24 (OD6):* 90 days, judged by the level
-    observed; the ceiling's value is in ROADMAP.md's OD3 draft, pending
-    approval.
+    observed; the ceiling's value is in ROADMAP.md's OD3 draft, ~~pending
+    approval~~ approved 2026-09-24.
   - [ ] **The default mode's cost budget**, proposed from V-W10's first
     measurements and set by the owner before V-W11. *2026-09-24:* proposed in
-    ROADMAP.md's OD3 draft, at 8 + 8 tags, pending approval.
+    ROADMAP.md's OD3 draft, at 8 + 8 tags, ~~pending approval~~ approved
+    2026-09-24.
   - [x] **The explicit-1M water default: opt-in until M5** (the owner,
     2026-09-24). W33 stays a failure, and W35 is recorded beside it. The
     default is decided at M5 under the contract.
@@ -80,8 +81,9 @@ The twelve criteria of the plan, section 2, in short:
     whatever the transport (`check_water_tagging_supported`; checked on the
     login node for 2M and 2MP3 under both transports). Nothing changes for
     water. The energy guard is G4_TODO's G4.16.
-  - [ ] **Known issue 7's fix** (the site 23 crash): the option is the
-    owner's (`design/NEGATIVE_PARENT_WATER.md`; WP3 below).
+  - [~] **Known issue 7's fix** (the site 23 crash): the option is the
+    owner's (`design/NEGATIVE_PARENT_WATER.md`; WP3 below). *2026-09-24:* A
+    now, then the probe, then a choice among B, C and D.
   - [x] **WP5's default transport under EDMF**, by the rule fixed in plan 4.3.
     The owner's review of #102 (2026-09-24) asked for it to be applied. It is
     applied in #102 where the configuration supports the follower, and
@@ -310,8 +312,23 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
         tags cannot end a run; no tag water where the parent has none; the
         tags partition the parent's non-negative part; a cap; stop the tags,
         not the run. A probe that finds which ledger grows is proposed first.
-      + [ ] The owner chooses. Then the fix, with its tests, before the
-        sphere (step 8a of the revised order).
+      + [x] The owner chose on 2026-09-24: option A now, then the probe, then
+        a choice among B, C and D.
+      + [x] Option A: no closure check ends a run by default; water's old
+        level, 1.0, is its void level, and the check marks its rows void and
+        goes on. An explicit `abort_above` still ends a run.
+        `claude/tag-closure-no-abort` (`00c9eedb`), from `main`, where the
+        abort lives, for a PR against `main`; the water stack gets it by
+        merge. Config tests pass on the login node (the new testset 9/9).
+        Known issue 7 updated on `claude/water-tags-wp6-step3` (`b1b82e6a`).
+      + [x] What ended the runs: the closure check (job `13917157`'s `.err`,
+        line 1401).
+      + [~] The probe: pre-registered (`design/NEGATIVE_PARENT_WATER.md`,
+        section 5), its config `lr_s23_probe_ledgers.yml`, its run tree
+        `../ClimaAtmosResiDyn-issue7-probe-run` (the record, #109 and
+        `claude/long-run-samesign`; one conflict, resolved). Not submitted.
+      + [ ] The owner's choice among B, C and D, then the fix and its tests,
+        before the sphere (step 8a).
 
   - [x] **V-W3:**
 
@@ -368,8 +385,11 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
     sphere's count. W25's 60-level rung missed the first hour's budget
     (`strat` 1.36%, `evap` 11.8%). That rung was a uniform 25 m grid over
     1.5 km, and the sphere's 60 levels are stretched over 30 km, so it is the
-    nearest measured case, not the same grid. Step 2 waits for the owner's
-    approval of the OD3 draft.
+    nearest measured case, not the same grid. ~~Step 2 waits for the owner's
+    approval of the OD3 draft.~~ *2026-09-24:* OD3 approved; step 2 is
+    unblocked and pre-registered in `design/W25_ISOLATION.md`, with its
+    configs (`w25i_*`), scripts (`w25_probes.jl`, `w25_compare.py`) and run
+    tree (`../ClimaAtmosResiDyn-w25i-run`). Its 46 jobs are not submitted.
     It comes before WP4b and the sphere, and is scored against OD1 and OD2.
       + Fixed-parent one-step probes at 30, 60 and 120 levels, with centred
         and first-order reconstruction.
@@ -796,6 +816,10 @@ owner's points in the note's section 8.
         chosen default, judged by the level observed against OD6's ceiling;
         its cost is M4's estimate, about 37 days on 24 ranks if cost grows in
         proportion (ROADMAP.md); after known issue 7's fix;
+      + *first (the owner, 2026-09-24):* a 1 to 2 day run of the 60-level
+        sphere on the proposed grid, untagged and with 8 water and 8 energy
+        tags, to measure step time, memory per rank and the ranks needed,
+        after step 8a;
       + a one-day copies twin;
       + a restart after day 1;
       + a two-rank parity pair.
