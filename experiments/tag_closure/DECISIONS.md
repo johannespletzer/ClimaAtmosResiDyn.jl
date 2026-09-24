@@ -49,6 +49,13 @@ Short names for the sources:
 
 ## 2026-09-24
 
+  - **Batch 3 approved (about 15:45):** WP5b-V, WP4a-V, WP5b-C, WP5b-P, the
+    WP9 cost items (the plume, the copies' build time) and G4.15, done as WP
+    PR batches. Where a criterion was left to the owner (WP4a-V's "material",
+    WP5b-P's per-source bound), the design note proposes a value, fixed in the
+    record before the runs; the owner may change it before a merge. **In
+    force.**
+
   - **The explicit-1M path under the follower: the tags get the parent's
     sedimentation cross blocks**, not a route through the bottom face. Until
     then the follower is refused there (#102). **In force; in progress.**
