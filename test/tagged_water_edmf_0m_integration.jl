@@ -57,7 +57,10 @@ relative_difference(a, b) =
     maximum(abs, parent(a) .- parent(b)) / maximum(abs, parent(b))
 
 function test_same_model_fields(Y, Y_plain)
-    is_tag(name) = startswith(string(name), "ρq_tag_")
+    # The tags, and in the default mode under `increment`, the default under
+    # EDMF, the follower's ledger.
+    is_tag(name) =
+        startswith(string(name), "ρq_tag_") || CA.is_water_tag_ledger_name(name)
     @test Set(filter(!is_tag, propertynames(Y.c))) ==
           Set(propertynames(Y_plain.c))
     for name in propertynames(Y_plain.c)
@@ -375,6 +378,9 @@ end
         model = p_default.atmos.water_tagging_model
         turbconv_model = p_default.atmos.turbconv_model
         @test !CA.has_water_tag_updraft_copies(model)
+        # Under EDMF the default mode follows the implicit increment by
+        # default (#102); the split does not depend on the transport.
+        @test model.transport isa CA.IncrementWaterTagTransport
         @test CA.splits_rainout(p_default, :microphysics)
         (; ᶜΔʲ, ᶜΔ⁰, ᶜS, scale) = rainout_inputs(Y_default, p_default)
         @test maximum(abs, parent(ᶜΔʲ)) > 0
