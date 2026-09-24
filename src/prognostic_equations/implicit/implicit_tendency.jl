@@ -74,6 +74,14 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
+        # The water tags' updraft copies lose their share of the updraft's rain.
+        water_tag_copies_microphysics_tendency!(
+            Yₜ,
+            Y,
+            p,
+            p.atmos.microphysics_model,
+            p.atmos.turbconv_model,
+        )
         close_ledger_event!(p.parent_budget, Yₜ, Y, p, :microphysics)
         attribute_tagged_ρq_tot!(Yₜ, Y, p, :microphysics)
         attribute_energy_source_tags!(Yₜ, Y, p, :microphysics)
@@ -121,8 +129,16 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
     # here, and exchange provenance at the mass flux. With updraft copies the
     # loop above moves them, and this call does nothing.
     sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, p.atmos.turbconv_model)
+    # The water tags likewise, unless they have updraft copies.
+    sgs_mass_flux_of_water_tags!(Yₜ, Y, p, p.atmos.turbconv_model)
 
     edmfx_boundary_condition_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
+    water_tag_copies_boundary_condition_tendency!(
+        Yₜ,
+        Y,
+        p,
+        p.atmos.turbconv_model,
+    )
 
     # NOTE: All ρa tendencies should be applied before calling this function
     pressure_work_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)

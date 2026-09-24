@@ -212,9 +212,15 @@ function args_integrator(Y, p, tspan, ode_algo, callback,
         T_post_imp! =
             (isnothing(T_imp!) || atmos.numerics.energy_q_tot_upwinding == Val(:none)) ?
             nothing : correct_implicit_advection_tendency!
-        # The energy source tags may follow the parent's implicit increment,
-        # which they take after the solve.
+        # The energy source tags and the water tags may follow the parent's
+        # implicit increment, which they take after the solve, in one hook.
         check_energy_source_increment_supported(
+            atmos,
+            ode_algo,
+            T_imp!,
+            T_post_imp!,
+        )
+        check_water_tag_increment_supported(
             atmos,
             ode_algo,
             T_imp!,
@@ -222,7 +228,17 @@ function args_integrator(Y, p, tspan, ode_algo, callback,
         )
         T_post_imp! =
             isnothing(T_imp!) ? T_post_imp! :
-            energy_source_post_implicit(T_post_imp!, atmos)
+            tag_post_implicit(T_post_imp!, atmos)
+        # The water tags skip their explicit vertical advection only because
+        # this hook gives them the parent's. A stepper built without it would
+        # drop that transport silently.
+        follows_water_increment(atmos.water_tagging_model) &&
+            !(T_post_imp! isa WaterTagIncrementCorrection) &&
+            error(
+                "`water_tag_transport: increment` needs the water tags' \
+                post-solve correction in the stepper's hook, and it is not \
+                there. The tags would lose their vertical advection.",
+            )
         # With the parent-budget ledger on, the explicit tendency, the
         # state-writing hooks, the implicit-stage initialiser and the
         # post-implicit correction sit behind meters that read the state around

@@ -7,7 +7,7 @@ implicit term by its tendency lags the parent's Newton solve, and the gap grows
 step by step. The parent's increment has no such gap. This file checks:
 
  1. the correction on a set increment. The partition takes the parent's
-    increment in every cell, up to the part left in place. That part sums to
+    increment in every cell, up to the part left out. That part sums to
     the column's change of `E` and sits where the mismatch is. The part moved
     sums to zero in the column. Each face takes the shares of the cell the
     flux leaves. The ledger holds both parts, and nothing else in the tendency
@@ -67,6 +67,7 @@ function check_same_model(Y, Y_ref)
     is_diagnostic(name) =
         CA.is_energy_source_tag_name(name) ||
         CA.is_energy_source_ledger_name(name) ||
+        CA.is_tag_mechanism_ledger_name(name) ||
         startswith(string(name), "prc_")
     @test Set(filter(!is_diagnostic, propertynames(Y.c))) ==
           Set(filter(!is_diagnostic, propertynames(Y_ref.c)))
@@ -210,14 +211,21 @@ tags = [
         end
         @test all(iszero, parent(dY.f))
 
-        # The part left in place is the column's total of the mismatch, spread
-        # in proportion to its absolute value. Rounding scales with the
+        # The part left out is the column's total of the mismatch, spread over
+        # the cells whose mismatch has the total's sign, in proportion to it
+        # there, as for the water tags (G4.15). Rounding scales with the
         # increment, since the partition's part is exactly zero here.
         δ_total = sum(ᶜδ)
         ᶜabs_δ = abs.(ᶜδ)
-        ᶜleft = @. δ_total / $(sum(ᶜabs_δ)) * ᶜabs_δ
+        ᶜweight = CA.water_increment_left_weight.(ᶜδ, δ_total)
+        ᶜleft = @. δ_total / $(sum(ᶜweight)) * ᶜweight
         scale = maximum(abs, parent(ᶜδ))
         @test abs(δ_total) > 0.1 * sum(ᶜabs_δ)
+        # Both signs occur, so the rule differs from spreading by |δ|, and no
+        # cell leaves out more than its own mismatch, or with the other sign.
+        @test any(<(0), parent(ᶜδ)) && any(>(0), parent(ᶜδ))
+        @test all(parent(abs.(ᶜleft)) .<= parent(ᶜabs_δ) .* (1 + 100 * eps(FT)))
+        @test all(parent(ᶜleft) .* parent(ᶜδ) .>= 0)
         @test maximum(
             abs,
             parent(dtγ .* dY.c.e_src_inc_left) .- parent(ᶜleft),
@@ -347,8 +355,8 @@ tags = [
         # The audit's columns and the diagnostics read the ledger.
         audit = CA.energy_source_audit(Y, p, model, FT(1))
         @test isequal(audit.increment_left, left)
-        @test audit.increment_left_gross ≈ sum(abs.(Y.c.e_src_inc_left))
-        @test audit.increment_moved_gross ≈ sum(ᶜabs)
+        @test audit.increment_left_net_abs ≈ sum(abs.(Y.c.e_src_inc_left))
+        @test audit.increment_moved_net_abs ≈ sum(ᶜabs)
         ᶜleft_specific = CA.Diagnostics.compute_e_src_ledger!(
             nothing,
             Y,
