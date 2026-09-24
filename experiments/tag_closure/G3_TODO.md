@@ -488,6 +488,11 @@ the truth. Acceptance criteria, fixed before the runs:
 If it fails, the default mode's split is documented as a modelled estimate
 only, or reverted to the grid rule, as the owner decides.
 
+  - [x] Pre-registered (`design/ZERO_M_RECONSTRUCTION_CHECK.md`, `ae18d56c`),
+    run, and **passed** on all four rungs (FINDINGS W32): `E_recon/E_grid`
+    0.086 to 0.25 against the 0.75 threshold. The docs on #104 say so at
+    `4d3d56b9` (pushed after the running CI).
+
 ### WP4a-J: known issue 4's Jacobian switch
 
 The switch and the experiment of `design/ZERO_M_SPLIT.md`, sections 4 and 5,

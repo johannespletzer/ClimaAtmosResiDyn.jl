@@ -1,0 +1,36 @@
+RESULT run=w4v_dt75 all tag=pbl E_grid=0.15893323182507668 E_recon=0.013644279160266639 ratio=0.08584912672815748
+RESULT run=w4v_dt75 all tag=free E_grid=0.15918173952058956 E_recon=0.013880816542957544 ratio=0.08720106077972664
+RESULT run=w4v_dt75 all tag=evap E_grid=0.022191017235514754 E_recon=0.0014424710162637918 ratio=0.06500247379174871
+RESULT run=w4v_dt75 all exchange_off_fraction=0.0 bound_binding_fraction=0.0
+RESULT run=w4v_dt75 hours3to6 tag=pbl E_grid=0.15901904066115313 E_recon=0.013652589970392185 ratio=0.08585506435977
+RESULT run=w4v_dt75 hours3to6 tag=free E_grid=0.15926779216351508 E_recon=0.013889305515648317 ratio=0.08720724590310523
+RESULT run=w4v_dt75 hours3to6 tag=evap E_grid=0.022168690742571665 E_recon=0.0014417164800102273 ratio=0.06503390284756988
+RESULT run=w4v_dt75 hours3to6 exchange_off_fraction=0.0 bound_binding_fraction=0.0
+RESULT run=w4v_dt75 closure_gross=0.000749746403107005 partition_repair=4.668657384530805e-10 copies_residual_final=3.188384654877065e-17 steps=288
+RESULT run=w4v_z164 all tag=pbl E_grid=0.15035663169286984 E_recon=0.038178674650146786 ratio=0.25392078966050213
+RESULT run=w4v_z164 all tag=free E_grid=0.15052323617844496 E_recon=0.03817309207868471 ratio=0.25360265330351117
+RESULT run=w4v_z164 all tag=evap E_grid=0.020414177422490923 E_recon=0.008165825890272767 ratio=0.40000758890614063
+RESULT run=w4v_z164 all exchange_off_fraction=0.0 bound_binding_fraction=0.0
+RESULT run=w4v_z164 hours3to6 tag=pbl E_grid=0.15096306991543057 E_recon=0.038385753287268405 ratio=0.2542724741141796
+RESULT run=w4v_z164 hours3to6 tag=free E_grid=0.15113091934659004 E_recon=0.03838007791471383 ratio=0.25395252064004464
+RESULT run=w4v_z164 hours3to6 tag=evap E_grid=0.02031055249487695 E_recon=0.008199220293161096 ratio=0.40369262703361875
+RESULT run=w4v_z164 hours3to6 exchange_off_fraction=0.0 bound_binding_fraction=0.0
+RESULT run=w4v_z164 closure_gross=0.00026532088210563245 partition_repair=3.0322897043259324e-10 copies_residual_final=2.2797982404495302e-17 steps=144
+RESULT run=w4v_N2 all tag=pbl E_grid=0.18893088664612978 E_recon=0.02605611983012896 ratio=0.1379134999717248
+RESULT run=w4v_N2 all tag=free E_grid=0.1891783499171734 E_recon=0.026299866429020703 ratio=0.1390215446986158
+RESULT run=w4v_N2 all tag=evap E_grid=0.026109257188565382 E_recon=0.003744177627548993 ratio=0.14340421868412118
+RESULT run=w4v_N2 all exchange_off_fraction=0.0 bound_binding_fraction=0.0
+RESULT run=w4v_N2 hours3to6 tag=pbl E_grid=0.1894806039872266 E_recon=0.026152523790168997 ratio=0.13802216817892352
+RESULT run=w4v_N2 hours3to6 tag=free E_grid=0.18972832187006503 E_recon=0.02639909568387265 ratio=0.1391415652848709
+RESULT run=w4v_N2 hours3to6 tag=evap E_grid=0.02606876339688827 E_recon=0.0037489930505196878 ratio=0.14381169499459998
+RESULT run=w4v_N2 hours3to6 exchange_off_fraction=0.0 bound_binding_fraction=0.0
+RESULT run=w4v_N2 closure_gross=0.0007482181702670166 partition_repair=9.484975210452307e-10 copies_residual_final=8.173443963801233e-17 steps=144
+RESULT run=w4v_base all tag=pbl E_grid=0.18469987127139897 E_recon=0.029511200421442386 ratio=0.15977921488682834
+RESULT run=w4v_base all tag=free E_grid=0.1850664569809441 E_recon=0.029729538416864026 ratio=0.1606425005473856
+RESULT run=w4v_base all tag=evap E_grid=0.02462236127425746 E_recon=0.004346560570153114 ratio=0.17652899012156964
+RESULT run=w4v_base all exchange_off_fraction=0.0 bound_binding_fraction=0.0
+RESULT run=w4v_base hours3to6 tag=pbl E_grid=0.18522331857534555 E_recon=0.029620556764527867 ratio=0.15991807614913645
+RESULT run=w4v_base hours3to6 tag=free E_grid=0.18559143234549902 E_recon=0.02984089893163811 ratio=0.1607881277411878
+RESULT run=w4v_base hours3to6 tag=evap E_grid=0.02457638734763146 E_recon=0.00435651735108001 ratio=0.1772643509177059
+RESULT run=w4v_base hours3to6 exchange_off_fraction=0.0 bound_binding_fraction=0.0
+RESULT run=w4v_base closure_gross=0.0010634439000183258 partition_repair=5.84056946225365e-10 copies_residual_final=0.0 steps=144

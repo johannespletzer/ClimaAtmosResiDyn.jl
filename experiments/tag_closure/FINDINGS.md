@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W31                                           | 1. Water tags                                       |
+| W1–W32                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -962,6 +962,41 @@ reference, both D4-W for 24 h with one Newton iteration:
 from `../ClimaAtmosResiDyn-wedmf5b-run` at `0d130367` (the record with WP5b at
 `0aad20ee`). `compare_runs.py`'s and `w5r_rule_compare.py`'s output are in
 `output/wp5b_d4w/`.*
+
+**W32. WP4a-V passes: on TRMM 0M the default mode's reconstructed subdomain
+composition is much closer to the copies' own than the grid rule is, on every
+rung.** The pre-registered check (`design/ZERO_M_RECONSTRUCTION_CHECK.md`):
+on a copies run's own state, after every step, the rain-weighted error of each
+rule's shares against the copies', `E = Σ|Δᵏ||φ_cand − φ_ref| / Σ|Δᵏ|`, over
+6 h. Pass: `E_recon ≤ 0.75 E_grid` for `pbl` and `free` on every rung.
+
+| rung                     | `E_grid` pbl | `E_recon` pbl | ratio pbl / free / evap |
+|:------------------------ | ------------:| -------------:|:----------------------- |
+| base (150 s, 82, n 10)   | 0.185        | 0.030         | 0.16 / 0.16 / 0.18      |
+| N2 (150 s, 82, n 2)      | 0.189        | 0.026         | 0.14 / 0.14 / 0.14      |
+| dt75 (75 s, 82, n 10)    | 0.159        | 0.014         | 0.086 / 0.087 / 0.065   |
+| z164 (150 s, 164, n 10)  | 0.150        | 0.038         | 0.25 / 0.25 / 0.40      |
+
+  - **Valid:** `E_grid` is 0.15 to 0.19, far above the 1e-2 bar. The updraft's
+    composition where the rain forms differs from the grid mean's by about a
+    fifth of the rain-weighted share.
+  - **The reference converged:** its rain-weighted share moves by 7.3e-3
+    between 2 and 10 Newton iterations, 4% of `E_grid`.
+  - The ratio worsens with resolution (0.16 to 0.25 at twice the levels) and
+    improves with a shorter step (0.086). Hours 3 to 6 alone give the same
+    ratios to two digits.
+  - The exchange's bound did not bind, and the exchange was never off, in any
+    raining cell, as the probe measures it. That measure is not checked
+    independently.
+  - The copies' residual at 6 h is at rounding, and the partition repair moved
+    at most 9.5e-10 of the water, so neither rule's agreement comes from a
+    repair.
+  - It bounds this case only: one deep-convection column, one partition at
+    1 km.
+
+*`hpda2_compute`, 2026-09-24, jobs `13911230` to `13911233`, #104 at
+`dfd93d7c`, `analysis/water/w4v_reconstruction_probe.jl`; per-step columns and
+RESULT lines in `output/w4v/`.*
 
 ## 2. Energy source tags: closure by transport
 
