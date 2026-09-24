@@ -1,0 +1,32 @@
+Internal error: during type inference of
+(::Main.var"#run_rescales#52"{Main.var"#ledger_pair#51", ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}}, false, ClimaAtmos.TracerWaterTagTransport, false}})(Type{Float32}, NTuple{1002, Float32})
+Encountered stack overflow.
+This might be caused by recursion over very long tuples or argument lists.
+Precompiling ClimaAtmos...
+  28224.0 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 37 seconds. 277 already precompiled.
+┌ Warning: `update_constrain_state_every: dss`: the tags' ledgers per mechanism record what each correction retained, but their change over a step is not what the step moved, since a firing inside the step is weighted by its tableau weight, which can be negative. Their per-step gross and the audit's `_retained` columns are exact only at `step`. Each tag's own ledgers, where kept, are exact at every cadence.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tag_throughput.jl:319
+Test Summary: | Pass  Total   Time
+Tagged water  |  328    328  37.3s
+Test Summary:                 | Pass  Total  Time
+The water tags' restart guard |   20     20  6.7s
+Test Summary:                            | Pass  Total  Time
+The water plume and the exchange's bound |   20     20  0.1s
+Test Summary:                         | Pass  Total  Time
+The exchange needs a region partition |    5      5  0.3s
+Test Summary:                    | Pass  Total  Time
+The copies' names are a constant |    4      4  0.1s
+Test Summary:                                   | Pass  Total  Time
+The water tags following the implicit increment |   57     57  6.3s
+Test Summary:                 | Pass  Total  Time
+The ledgers' gross throughput |    9      9  3.0s
+Test Summary:                     | Pass  Total  Time
+The state ledgers' gross per step |   19     19  7.1s
+Test Summary:          | Pass  Total   Time
+Each tag's own ledgers |   40     40  11.0s
+Test Summary:                          | Pass  Total   Time
+Attempted beside retained, on a column |   53     53  21.9s
+Test Summary:                 | Pass  Total   Time
+The follower's ledger per tag |   12     12  17.6s
+161.88 s

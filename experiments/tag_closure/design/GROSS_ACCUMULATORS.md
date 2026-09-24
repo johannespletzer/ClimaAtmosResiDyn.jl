@@ -250,3 +250,141 @@ over the partition's tags. It keeps the sign where 3.3's measure has one.
   - **A cell-event** is a change above `max(1e-12, 16 eps(FT))` of the cell's
     total (review S3). The audit's event total counts nodes. It was wrong in
     Float32 before (review B1, in #103).
+
+## 10. Step 3, built for rev. 2 (2026-09-24)
+
+Rev. 2 of the work plan (ROADMAP.md) made step 3 step 1 of its order, before
+the sphere and the default decisions, and added Insight 10's per-tag ledger.
+It needs no owner decision. Where a choice is the owner's, the code takes the
+conservative side and the question is listed in 10.6. Built on
+`claude/water-tags-wp6-step3` (worktree `../ClimaAtmosResiDyn-wp6s3`), on #103
+at `f22cfb27`.
+
+### 10.1 Accepted-step throughput, attempted beside retained, events
+
+  - **Retained.** The per-step gross of every state ledger, `Σ |ΔL|` over the
+    accepted steps (section 9's callback), is now reported in the audit table
+    as `<L>_retained`, integrated over the domain, and over the column's water
+    or energy as `<L>_retained_relative`. `<L>` is the ledger's name without
+    its `q_tag_` or `e_src_` prefix.
+  - **Attempted.** Each ledger per mechanism gets a Float64 accumulator. The
+    kernel that writes the ledger keeps it before the call and adds the
+    absolute value of the call's change afterwards (`before_tag_ledgers!`,
+    `after_tag_ledgers!`). A call on a stage value the stepper discards counts.
+    The increment corrections add the absolute value of each stage's entry to
+    `q_tag_inc_left`, `q_tag_inc_moved` and their energy twins. Reported as
+    `<L>_attempted`. For a transfer, attempted and retained use the same
+    measure, section 9's `½ Σ_P |Δᵢ|` less the net.
+  - **Events.** The callback also counts, per cell, the steps in which `|ΔL|`
+    exceeded rounding against the cell's water, or the partitioned energy for
+    the energy ledgers (`tag_event`). Reported as `<L>_events`.
+  - **Validity by cadence.** `AtmosSimulation` records
+    `update_constrain_state_every` in the cache, and the audit writes
+    `ledger_cadence_step`, 1 at `step`. At `step` the corrections fire once per
+    step on the accepted state, so `<L>_retained` is what the steps moved, and
+    `<L>_attempted` less it is the work the steps discarded. At `stage` or
+    `dss` the model warns once at setup: a transfer's per-step change is
+    neither what the step moved nor a bound on it (section 9, the code
+    review's S2). For the follower's ledgers attempted and retained differ by
+    how the tableau combines the stages at every cadence, so their difference
+    is not a discarded amount.
+
+### 10.2 Each tag's own ledgers (Insight 10)
+
+  - Opt-in per family: `water_tag_ledger_per_tag` and
+    `energy_source_tag_ledger_per_tag`, off by default. A type parameter of the
+    tagging model, so the state is built at compile time.
+  - `q_tag_led_fix_<name>`, for every water tag: the change the limiters'
+    rescale, the emptying and the partition repair made to that tag. The
+    kernels write it beside the tag, from the same expression, through a
+    `TagLedgerView` of the state. `e_src_led_fix_<name>` does the same for the
+    energy repair, the partition's transfers and the overlay tags' clamp.
+  - `q_tag_led_inc_<name>` under `water_tag_transport: increment`, and
+    `e_src_led_inc_<name>` under `enthalpy_increment`: what the correction after
+    each solve moved into or out of the tag. The same flux kernel writes it
+    into the ledger's tendency, from a zero entry as the tag's is, so it is the
+    tag's change bit for bit (`_sgs_water_tag_fluxes!` with a `TagLedgerView`).
+  - State fields, without the `ρ` prefix, split-solvable, carried through a
+    restart and guarded by the restart check (a changed key is refused). The
+    stepper weights each as it weights its tag, so a ledger's change over a
+    step is the step's net correction of that tag at **every** cadence. This is
+    the per-tag option of section 8's third point, but per tag and kind, not
+    per tag and mechanism.
+  - The audit writes, for each, `_retained`, `_attempted` (for a `led_fix`
+    ledger, the cache ledger's gross twin, which takes the same changes),
+    `_events`, and `_inventory_fraction`: `_retained` over the tag's integral
+    at the audit's time.
+  - **What it bounds.** Under the follower, most of `led_inc` is the parent's
+    vertical advection, which the tags no longer take explicitly (W24). So the
+    per-tag fraction bounds the follower's intervention on that tag from
+    above. It does not isolate the intervention. A tag whose fraction is small
+    was moved little by the corrections; a large fraction is not by itself an
+    error.
+  - Diagnostics: `<L>` per unit mass, and `q_tag_led_fixgross_<name>`,
+    `q_tag_led_fixcolgross_<name>` (and `inc` alike, and `attempted`). The
+    kind comes before the tag's name so that no tag's name can collide.
+
+### 10.3 Restart stitching (3.5)
+
+The checkpoint carries every accumulator in the cache beside the state: the
+cache ledgers `ᶜwater_fix`, `ᶜwater_upfix`, `ᶜenergy_source_fix`, their gross
+twins and counts, and per state ledger the per-step gross, the column gross,
+the events and the attempted total (`tag_ledger_checkpoint_fields`, written by
+`save_state_to_disk_func`). `AtmosSimulation` reads them back after the cache
+is built. So a restarted run continues them. `ᶜprev` is not carried: it is the
+ledger itself, which the state carries, so the first step after a restart
+counts nothing twice.
+
+  - A checkpoint written before step 3 holds none of them. They then start at
+    zero, with a warning, as every cache ledger did before; the audit's grosses
+    cover only that segment.
+  - A checkpoint with some but not all is refused: another configuration of
+    the ledgers wrote it.
+  - The diagnostics `q_tag_fix_<name>`, `e_src_fix_<name>` and the twins no
+    longer reset at a restart. Their documentation says so.
+
+### 10.4 Parity
+
+Every new write goes to the cache or to the ledgers' own state fields. Without
+the new keys the state is the one #103 builds. The kernels' changes to the
+tags and to the model's fields are unchanged; the new broadcasts read them.
+The integration test `tagged_water_increment_integration.jl` now runs its
+tagged column with both families' ledgers per tag, so its parity check covers
+them without another build.
+
+### 10.5 Tests
+
+  - Unit tests on the login node (`output/wp6_step3/`): names, state and
+    Jacobian split; the rescale and the repair write each tag's change, equal
+    to the cache ledger bit for bit, in both float types, and nothing without
+    the key; attempted against retained with a discarded stage; events; the
+    audit's columns and cadence flag; the checkpoint round trip bit for bit,
+    the warning without the accumulators and the refusal of a partial set; the
+    follower's flux into each tag's ledger bit for bit, both families; the
+    restart guard; the config keys.
+  - Integration: `tagging_water_increment` checks the ledgers per tag on the
+    EDMF column (their partition sum against `q_tag_inc_moved`, the `fix`
+    ledgers against the cache ledgers, the audit) and the model's fields.
+  - The check script `analysis/water/wp6_step3_checks.jl`, for a compute node:
+    the model's fields at `step`, `stage` and `dss` with the ledgers per tag
+    on; the per-step gross and events against stepping by hand; attempted
+    against retained per cadence; and the restart continuation of every
+    accumulator.
+
+### 10.6 Open questions, with the conservative default taken
+
+ 1. **A pre-WP6 checkpoint** (section 8, point 1): still refused, as built in
+    step 2. A checkpoint from after step 2 but before step 3 restarts, with
+    the cache accumulators at zero and a warning.
+ 2. **Loss and τ** (point 2): not in WP6, as proposed.
+ 3. **Transfer ledgers per tag** (point 3): the ledgers per mechanism stay as
+    they are, exact per step at `step` only. The ledgers per tag of 10.2 are
+    exact at every cadence, per tag and kind. Per tag and mechanism is not
+    built.
+ 4. **The ledgers per tag on or off by default.** Off: each adds a state
+    field per tag, or two under the follower, which costs build time (W34)
+    and memory. The owner may want them on in qualification runs.
+ 5. **The per-tag fraction's denominator.** The tag's integral at the audit's
+    time, as rev. 2 words it. A time mean or the maximum can be formed offline
+    from `_retained` and the tag's output. It belongs with OD3's per-tag
+    threshold.

@@ -1,0 +1,23 @@
+Internal error: during type inference of
+(::Main.var"#run_rescales#52"{Main.var"#ledger_pair#51", ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}}, false, ClimaAtmos.TracerWaterTagTransport}})(Type{Float32}, NTuple{1002, Float32})
+Encountered stack overflow.
+This might be caused by recursion over very long tuples or argument lists.
+Precompiling ClimaAtmos...
+  27493.3 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 45 seconds. 277 already precompiled.
+Test Summary: | Pass  Total   Time
+Tagged water  |  328    328  37.6s
+Test Summary:                 | Pass  Total  Time
+The water tags' restart guard |   17     17  6.2s
+Test Summary:                            | Pass  Total  Time
+The water plume and the exchange's bound |   20     20  0.2s
+Test Summary:                         | Pass  Total  Time
+The exchange needs a region partition |    5      5  0.3s
+Test Summary:                    | Pass  Total  Time
+The copies' names are a constant |    4      4  0.1s
+Test Summary:                                   | Pass  Total  Time
+The water tags following the implicit increment |   57     57  6.4s
+Test Summary:                 | Pass  Total  Time
+The ledgers' gross throughput |    9      9  2.9s
+Test Summary:                     | Pass  Total  Time
+The state ledgers' gross per step |   17     17  6.6s

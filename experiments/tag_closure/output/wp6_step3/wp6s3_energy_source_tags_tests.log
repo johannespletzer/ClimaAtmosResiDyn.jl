@@ -1,0 +1,9 @@
+Test Summary:      | Pass  Total     Time
+Energy source tags |  453    453  2m10.5s
+Test Summary:     | Pass  Total   Time
+The restart guard |   47     47  11.6s
+Test Summary:                        | Pass  Total  Time
+Each energy source tag's own ledgers |   36     36  8.4s
+Test Summary:                          | Pass  Total   Time
+The energy correction's ledger per tag |   12     12  17.5s
+182.41 s
