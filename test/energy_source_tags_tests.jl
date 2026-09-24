@@ -1029,6 +1029,7 @@ column_atmos_model(; kwargs...) =
                 ρe_src_strat = FT[12000, -3000],
                 ρe_src_tropo = FT[-2000, -7000],
                 ρe_src_sfc = FT[-5, -5],
+                e_src_led_repair = zeros(FT, 2),
             ),
         )
         cache(model) = (;
@@ -1074,6 +1075,13 @@ column_atmos_model(; kwargs...) =
         @test fix.ρe_src_strat[1] + fix.ρe_src_tropo[1] ≈ 0 atol =
             sqrt(eps(FT)) * abs(before.ρe_src_strat[1])
         @test fix.ρe_src_sfc[1] == 5
+        # The state ledger (WP6) takes the energy moved between the partition's
+        # tags, half the sum of their changes; the overlay tag's clamp is not
+        # in it.
+        @test Y.c.e_src_led_repair[1] ≈
+              (abs(fix.ρe_src_strat[1]) + abs(fix.ρe_src_tropo[1])) / 2
+        @test Y.c.e_src_led_repair[1] ≈ 2000
+        @test Y.c.e_src_led_repair[2] == 0
         # The gross twin takes each change's absolute value, the count one
         # event per changed cell, in Float64.
         for name in tag_state_names
@@ -1096,6 +1104,7 @@ column_atmos_model(; kwargs...) =
             @test getproperty(Y.c, name) == getproperty(before, name)
             @test all(iszero, getproperty(p.tagging.ᶜenergy_source_fix, name))
         end
+        @test all(iszero, Y.c.e_src_led_repair)
     end
 
     @testset "AtmosModel integration" begin

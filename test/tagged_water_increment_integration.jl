@@ -136,6 +136,7 @@ altitude_region(above) = Dict{String, Any}(
     is_diagnostic(name) =
         CA.is_water_tag_name(name) ||
         CA.is_water_tag_ledger_name(name) ||
+        CA.is_tag_mechanism_ledger_name(name) ||
         CA.is_energy_source_tag_name(name) ||
         CA.is_energy_source_ledger_name(name)
 

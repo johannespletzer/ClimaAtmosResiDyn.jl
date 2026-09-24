@@ -97,7 +97,8 @@ include(
 
 # Tagged prognostic energy tracers (masks, state builders, config parsing)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_tracers.jl"))
-# The gross twins and counts of the tags' cache ledgers (WP6).
+# The gross twins and counts of the tags' cache ledgers, and their state ledgers
+# per mechanism with the gross per step (WP6).
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tag_throughput.jl"))
 # Tagged prognostic water tracers (reuses the regions and masks defined above)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water.jl"))

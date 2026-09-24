@@ -152,6 +152,15 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
         "energy_source_tag_transport",
         "",
     )
+    # The ledger per mechanism (WP6), present whenever the tags are.
+    check_tag_mechanism_ledgers(
+        restart_file,
+        Y,
+        energy_source_mechanism_names(source_model),
+        "energy source",
+        "e_src_",
+        "energy_source_tags",
+    )
     # The tags' updraft copies live in each updraft, so the first stands for
     # all of them. A file with no updrafts at all holds none, and a run that
     # configures them is refused rather than passed over.

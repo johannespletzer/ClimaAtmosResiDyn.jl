@@ -384,10 +384,11 @@ end
         diagnostic_names = filter(
             name ->
                 CA.is_energy_source_tag_name(name) ||
+                CA.is_tag_mechanism_ledger_name(name) ||
                 startswith(string(name), "prc_"),
             propertynames(Y.c),
         )
-        @test length(diagnostic_names) == 4
+        @test length(diagnostic_names) == 5
         @test Set(map(field -> field.name, cache.solver.uncoupled)) ==
               Set(map(name -> CA.MatrixFields.FieldName(:c, name), diagnostic_names))
     end
@@ -413,6 +414,7 @@ end
             name ->
                 hasproperty(Y_plain.c, name) ||
                 CA.is_energy_source_tag_name(name) ||
+                CA.is_tag_mechanism_ledger_name(name) ||
                 startswith(string(name), "prc_"),
             propertynames(Y.c),
         )

@@ -800,6 +800,7 @@ function default_model_callbacks(
 )
     scheduling = (; output_dir, dt, t_start, t_end, checkpoint_frequency)
     return (
+        tag_ledger_gross_callback(tagging)...,
         tag_closure_callback(
             water_closure_check,
             tagging.water_tagging_model;
@@ -840,6 +841,12 @@ function default_model_callbacks(
 end
 
 tag_closure_callback(::Nothing, tagging_model; kwargs...) = ()
+
+# The per-step gross of the tags' state ledgers, after every step, where the
+# tags keep any (WP6). It reads the state and writes only its own cache.
+tag_ledger_gross_callback(tagging) =
+    isempty(tag_state_ledger_names(tagging)) ? () :
+    (call_every_n_steps(accumulate_tag_ledger_gross!, 1; skip_first = true),)
 
 # The water family's own audit columns, under prognostic EDMF and under the
 # increment follower, as a function of `(Y, p, scale)`, or `nothing` without

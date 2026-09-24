@@ -1073,6 +1073,13 @@ function _apply_energy_source_repair!(
     # The gross twin and the count take the same change as the ledger, the
     # count against the total the tags partition.
     if _is_energy_partition_tag(tag)
+        # The partition's changes are transfers, so the state ledger takes
+        # half of their size, the energy moved (WP6).
+        @. ᶜY.e_src_led_repair +=
+            abs(
+                energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
+                ᶜρe_src,
+            ) / 2
         @. ᶜgross += abs(
             energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
             ᶜρe_src,

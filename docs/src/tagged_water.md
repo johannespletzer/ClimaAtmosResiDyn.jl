@@ -346,7 +346,28 @@ correction (`energy_q_tot_upwinding` other than `none`). A restart that changes
   - `q_tag_upfix_<name>` and `q_tag_copy_res`: with updraft copies, the copies'
     repair, cumulative as `q_tag_fix` is, and the residual it found;
   - `q_tag_leak_<path>`: the rate at which one path drifts the partition's sum
-    from ``\rho q_\mathrm{tot}``, computed from the state; see below.
+    from ``\rho q_\mathrm{tot}``, computed from the state; see below;
+  - `q_tag_fixgross_<name>` and `q_tag_fixcount_<name>`, and with copies
+    `q_tag_upfixgross_<name>` and `q_tag_upfixcount_<name>`: beside each
+    ledger, the sum of the absolute values of its changes and the number of
+    cell-events larger than rounding. A ledger's `+x` then `−x` reads zero, and
+    its gross twin reads `2|x|`. These count every call, including those
+    inside a step that the stepper later discards, so they record what was
+    attempted. They are kept in Float64 and restart at zero;
+  - `q_tag_led_<mechanism>`: what each correction moved, as the steps
+    retained it. These are state fields, which the stepper weights as it
+    weights the tags, and they go through restarts. `rescale` is the
+    limiters' and constraints' change where the parent held water, `empty`
+    the removal where it did not, `repair` the partition repair, and with
+    copies `uprepair` the copies' repair and `upfilter` the updraft filter's
+    change of the copies. The transfers `repair` adds half the sum of the
+    tags' changes. The others are signed;
+  - `<ledger>_gross` and `<ledger>_colgross`, for each `q_tag_led_*` and the
+    increment follower's `q_tag_inc_left` and `q_tag_inc_moved`: the sum over
+    the steps of the ledger's change per cell, ``|\Delta L|``, and per
+    column, ``|\int \Delta L \, dz|``. They restart at zero.
+
+A checkpoint written before the `q_tag_led_*` fields existed is refused.
 
 !!! note "What `q_tag_fix` includes"
 

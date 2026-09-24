@@ -122,6 +122,9 @@ end
                     "q_tag_leak_diffusion_up",
                     "q_tag_copy_res",
                     "q_tag_upfix_tropo",
+                    "q_tag_led_upfilter",
+                    "q_tag_led_repair_gross",
+                    "q_tag_led_uprepair_colgross",
                 ],
                 "period" => "10mins",
             ),
@@ -214,6 +217,46 @@ end
             :copy_repair_relative,
         )
         @test audit.copy_residual_relative < 2e-4
+    end
+
+    # WP6: the state ledgers per mechanism. The repairs run in
+    # `constrain_state!`, which at the default cadence fires once per step, on
+    # the accepted state. So what the steps retained is what the repairs
+    # attempted, and the cache ledgers give it. No limiter acts here, so the
+    # partition's cache gross is the repair's alone.
+    @testset "The state ledgers per mechanism" begin
+        (; ᶜwater_fix_gross, ᶜwater_upfix) = p.tagging
+        close(a, b) = isapprox(
+            parent(a),
+            parent(b);
+            rtol = 1e-10,
+            atol = 1e-12 * maximum(abs, parent(Y.c.ρq_tot)),
+        )
+        @test close(
+            Y.c.q_tag_led_repair,
+            (ᶜwater_fix_gross.ρq_tag_tropo .+ ᶜwater_fix_gross.ρq_tag_strat) ./
+            2,
+        )
+        @test close(
+            Y.c.q_tag_led_uprepair,
+            ᶜwater_upfix.ρq_tag_tropo .+ ᶜwater_upfix.ρq_tag_strat,
+        )
+        @test maximum(abs, parent(Y.c.q_tag_led_uprepair)) > 0
+        @test maximum(abs, parent(Y.c.q_tag_led_upfilter)) > 0
+        # The gross per step is at least what the ledger holds, per cell and
+        # per column, since each ledger starts at zero.
+        (; ledgers) = p.tagging.tag_ledger_steps
+        @test propertynames(ledgers) == CA.water_tag_mechanism_names(model)
+        for name in propertynames(ledgers)
+            ᶜL = getproperty(Y.c, name)
+            (; ᶜgross, colgross) = getproperty(ledgers, name)
+            @test all(parent(ᶜgross) .>= abs.(parent(ᶜL)) .* (1 - 1e-12))
+            column_total = similar(colgross)
+            CA.Operators.column_integral_definite!(column_total, ᶜL)
+            @test all(
+                parent(colgross) .>= abs.(parent(column_total)) .* (1 - 1e-12),
+            )
+        end
     end
 
     # 4. With one composition everywhere, every term the copies take from the
@@ -369,7 +412,9 @@ end
         plain = run_simulation(edmf_dict, "water_tags_edmf_copies_plain")
         Y_plain = plain.integrator.u
         @test isnothing(plain.integrator.p.atmos.water_tagging_model)
-        is_tag(name) = startswith(string(name), "ρq_tag_")
+        is_tag(name) =
+            startswith(string(name), "ρq_tag_") ||
+            CA.is_tag_mechanism_ledger_name(name)
         @test Set(filter(!is_tag, propertynames(Y.c))) ==
               Set(propertynames(Y_plain.c))
         for name in propertynames(Y_plain.c)

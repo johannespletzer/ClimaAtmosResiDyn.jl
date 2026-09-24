@@ -42,7 +42,10 @@ timestepper runs them through its own `dss!` and `cache!` hooks. Returns `nothin
 NVTX.@annotate function constrain_state!(Y, p, t)
     prescribe_flow!(Y, p, t, p.atmos.prescribed_flow)
     tracer_nonnegativity_constraint!(Y, p, t, p.atmos.water.tracer_nonnegativity_method)
+    # The water tags' ledger of the updraft filter reads the copies around it.
+    snapshot_water_tag_copy_water!(Y, p)
     enforce_physical_constraints!(Y, p, t, p.atmos)
+    record_water_tag_copy_filter!(Y, p)
     # Last: the corrections above can still move ρq_tot (and rescale the tags to
     # follow it), while the repair only needs the tags to be self-consistent.
     repair_water_tag_partition!(Y, p)

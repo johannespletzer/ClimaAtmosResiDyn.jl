@@ -96,6 +96,13 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
             ρe_tot,
             atmos_model.energy_source_tagging_model,
         )...,
+        # The energy source tags' ledgers per mechanism (WP6).
+        tag_mechanism_variables(
+            ρe_tot,
+            energy_source_mechanism_names(
+                atmos_model.energy_source_tagging_model,
+            ),
+        )...,
         # Uses the same `ρ * q_tot` that `moisture_variables` puts in the state,
         # so that a partition-of-unity set of region tags sums to `ρq_tot`
         # exactly at t = 0. Water tagging requires a moist model, which
@@ -110,6 +117,11 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
         water_tag_increment_ledger_variables(
             ρ * q_tot,
             atmos_model.water_tagging_model,
+        )...,
+        # The water tags' ledgers per mechanism (WP6).
+        tag_mechanism_variables(
+            ρ * q_tot,
+            water_tag_mechanism_names(atmos_model.water_tagging_model),
         )...,
         # Process records are prognostic so that the timestepper integrates
         # them, but they are not tracers: their names carry no `ρ` prefix, so

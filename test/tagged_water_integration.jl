@@ -376,7 +376,10 @@ end
         local Y_plain = plain.integrator.u
         # The run with them has its own fields and nothing else besides.
         @test all(
-            name -> hasproperty(Y_plain.c, name) || CA.is_tagged_tracer_name(name),
+            name ->
+                hasproperty(Y_plain.c, name) ||
+                CA.is_tagged_tracer_name(name) ||
+                CA.is_tag_mechanism_ledger_name(name),
             propertynames(Y.c),
         )
         @test propertynames(Y.f) == propertynames(Y_plain.f)

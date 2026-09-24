@@ -240,7 +240,8 @@ only `p.precomputed` and `p.scratch` are converted to dual-typed fields.
 _water_tagging_cache(Y, ::Nothing) = nothing
 # With updraft copies, the copies' repair (`repair_water_tag_copies!`) keeps its
 # ledger `ᶜwater_upfix`, one field per tag like `ᶜwater_fix`, the residual it
-# repaired, for the diagnostic `q_tag_copy_res`, and two sums it reads.
+# repaired, for the diagnostic `q_tag_copy_res`, and two sums it reads. The
+# updraft filter's ledger keeps the copies' water from before the filter.
 _water_copy_cache(Y, model) =
     has_water_tag_updraft_copies(model) ?
     (;
@@ -250,6 +251,7 @@ _water_copy_cache(Y, model) =
         ᶜwater_copy_residual = zero.(Y.c.ρ),
         ᶜwater_copy_sum = zero.(Y.c.ρ),
         ᶜwater_copy_pos = zero.(Y.c.ρ),
+        ᶜwater_copy_before = zero.(Y.c.ρ),
     ) : (;)
 function _water_tagging_cache(Y, model::WaterTaggingModel)
     ᶜwater_masks = _tag_masks(Fields.coordinate_field(Y.c), model.tags)
@@ -891,6 +893,19 @@ function _apply_water_tag_rescale!(
     # than a scratch field per tag, and this stays allocation free. The gross
     # twin and the count take the same shift.
     if _is_partition_tag(tag)
+        # The state ledgers per mechanism take the partition's shift: the
+        # rescale where the parent held water, the emptying where it did not
+        # (WP6, design/GROSS_ACCUMULATORS.md section 9).
+        @. ᶜY.q_tag_led_rescale += ifelse(
+            ᶜρq_tot_before > 0,
+            water_tag_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before, ᶜpos),
+            zero(ᶜρq_tot_before),
+        )
+        @. ᶜY.q_tag_led_empty += ifelse(
+            ᶜρq_tot_before > 0,
+            zero(ᶜρq_tot_before),
+            water_tag_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before, ᶜpos),
+        )
         @. ᶜgross += abs(
             water_tag_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before, ᶜpos),
         )
@@ -1031,7 +1046,12 @@ function _apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, tags::Tuple)
         # on an already-corrected tag. This matches `rescale_water_tags!`. The
         # repair moves water between the tags, so the gross twin counts each
         # transfer twice, once out and once in (design/GROSS_ACCUMULATORS.md,
-        # 3.3).
+        # 3.3). The state ledger takes half of it, the water moved (WP6).
+        @. ᶜY.q_tag_led_repair +=
+            abs(
+                max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) -
+                ᶜρq_tag,
+            ) / 2
         @. ᶜgross += abs(
             max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag,
         )

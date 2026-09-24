@@ -324,6 +324,8 @@ column_atmos_model(; kwargs...) =
                 ρq_tot = FT[4, 8, 12, 2, 0, 14, 14, 2, 12],
                 ρq_tag_tropics = FT[6, 4, 2, 0, -1, 3, 7, 1, -1],
                 ρq_tag_extratropics = FT[2, 4, 6, 0, -1, 3, 5, 1, 5],
+                q_tag_led_rescale = zeros(FT, 9),
+                q_tag_led_empty = zeros(FT, 9),
             )
             ᶜfix = (;
                 ρq_tag_tropics = zeros(FT, 9),
@@ -440,6 +442,15 @@ column_atmos_model(; kwargs...) =
             @test ᶜfix.ρq_tag_tropics[2] == 0 # untouched
             @test ᶜfix.ρq_tag_tropics[3] > 0  # borrowed up
 
+            # The state ledgers per mechanism (WP6) take the partition's
+            # change: the rescale where the parent held water, the emptying
+            # where it did not (cell 5, whose negative tags are removed).
+            ᶜpartition_fix = ᶜfix.ρq_tag_tropics .+ ᶜfix.ρq_tag_extratropics
+            held = ᶜρq_tot_before .> 0
+            @test ᶜY.q_tag_led_rescale ≈ ifelse.(held, ᶜpartition_fix, FT(0))
+            @test ᶜY.q_tag_led_empty ≈ ifelse.(held, FT(0), ᶜpartition_fix)
+            @test ᶜY.q_tag_led_empty[5] ≈ FT(2)
+
             # The ledger accumulates across calls rather than being overwritten
             CA._rescale_water_tags!((; c = ᶜY), p, copy(ᶜY.ρq_tot), model)
             @test ᶜfix.ρq_tag_tropics ≈ ᶜY.ρq_tag_tropics .- before_tropics
@@ -466,6 +477,8 @@ column_atmos_model(; kwargs...) =
                 ρq_tot = FT[10],
                 ρq_tag_tropics = FT[3],
                 ρq_tag_extratropics = FT[3],
+                q_tag_led_rescale = zeros(FT, 1),
+                q_tag_led_empty = zeros(FT, 1),
             )
             p = (;
                 tagging = (;
@@ -531,6 +544,7 @@ column_atmos_model(; kwargs...) =
                 ρq_tag_tropics = FT[6, 1, 2],
                 ρq_tag_extratropics = FT[-2, -3, 2],
                 ρq_tag_evap = FT[-1, 3, 1],
+                q_tag_led_repair = zeros(FT, 3),
             )
             ᶜwater_fix = (;
                 ρq_tag_tropics = fill(FT(0.5), 3),
@@ -590,6 +604,14 @@ column_atmos_model(; kwargs...) =
                   abs.(ᶜY.ρq_tag_extratropics .- before_extra)
             @test all(iszero, ᶜwater_fix_gross.ρq_tag_evap)
             @test ᶜwater_fix_count.ρq_tag_extratropics == [1.0, 1.0, 0.0]
+            # The state ledger (WP6) takes the water moved between the
+            # partition's tags, half the sum of their changes.
+            @test ᶜY.q_tag_led_repair ≈
+                  (
+                abs.(ᶜY.ρq_tag_tropics .- before_tropics) .+
+                abs.(ᶜY.ρq_tag_extratropics .- before_extra)
+            ) ./ 2
+            @test ᶜY.q_tag_led_repair[1] ≈ FT(2)
         end
 
         @testset "Sedimentation shares ($FT)" begin
@@ -1319,6 +1341,8 @@ end
             ρq_tot = FT[ρq_tots[1]],
             ρq_tag_tropo = FT[0.3 * ρq_tots[1]],
             ρq_tag_strat = FT[0.7 * ρq_tots[1]],
+            q_tag_led_rescale = zeros(FT, 1),
+            q_tag_led_empty = zeros(FT, 1),
         )
         p = (;
             tagging = (;
@@ -1365,4 +1389,92 @@ end
         )
     @test isapprox(gross, expected; rtol = 1e-5)
     @test eltype(tagging.ᶜwater_fix_gross.ρq_tag_tropo) == Float64
+end
+
+# WP6, step 2: the per-step gross of the state ledgers, on a real column, and
+# the refusal of a checkpoint written before them.
+@testset "The state ledgers' gross per step" begin
+    CC = CA.ClimaCore
+    FT = Float64
+    column(staggering) = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering,
+    )
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    model = CA.WaterTaggingModel((
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+    ))
+    names = CA.water_tag_mechanism_names(model)
+    @test names == (:q_tag_led_rescale, :q_tag_led_empty, :q_tag_led_repair)
+    ᶜnames = (:ρ, names...)
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(column(CC.CommonSpaces.CellCenter())),
+            NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+        ),
+        f = similar(
+            CC.Fields.coordinate_field(column(CC.CommonSpaces.CellFace())),
+            NamedTuple{(:u₃,), Tuple{FT}},
+        ),
+    )
+    parent(Y) .= 0
+    Y.c.ρ .= 1
+    Y.c.q_tag_led_repair .= 1
+    atmos = (; water_tagging_model = model, energy_source_tagging_model = nothing)
+    # The gross starts from the state the cache is built from, as after a
+    # restart, so the ledger's value then is not counted.
+    integrator = (; u = Y, p = (; tagging = CA.tag_ledger_step_cache(Y, atmos)))
+    (; ledgers) = integrator.p.tagging.tag_ledger_steps
+    CA.accumulate_tag_ledger_gross!(integrator)
+    @test all(iszero, parent(ledgers.q_tag_led_repair.ᶜgross))
+    # Up by 2, then down by 0.5, as a negative stage weight can take a
+    # transfer's ledger down within a step. The ledger moved 1.5 net, the
+    # gross 2.5 per cell and 2500 per column of 1000 m.
+    Y.c.q_tag_led_repair .= 3
+    CA.accumulate_tag_ledger_gross!(integrator)
+    Y.c.q_tag_led_repair .= 2.5
+    CA.accumulate_tag_ledger_gross!(integrator)
+    (; ᶜgross, colgross) = ledgers.q_tag_led_repair
+    @test all(≈(2.5), parent(ᶜgross))
+    @test all(≈(2500), parent(colgross))
+    @test eltype(ᶜgross) == Float64
+    @test all(iszero, parent(ledgers.q_tag_led_rescale.ᶜgross))
+
+    # A checkpoint without the ledgers predates them and is refused with its
+    # own message. One with them passes, and one without the copies' ledgers
+    # fails when the run has copies.
+    old = (; c = (; ρ = 1.0, ρq_tag_tropo = 1.0))
+    @test_throws "before the water tags kept their ledgers per mechanism" CA.check_tag_mechanism_ledgers(
+        "old.hdf5",
+        old,
+        names,
+        "water",
+        "q_tag_",
+        "water_tag_updraft_copy",
+    )
+    current = (; c = NamedTuple{names}(ntuple(_ -> 0.0, length(names))))
+    @test isnothing(
+        CA.check_tag_mechanism_ledgers(
+            "current.hdf5",
+            current,
+            names,
+            "water",
+            "q_tag_",
+            "water_tag_updraft_copy",
+        ),
+    )
+    @test_throws "water_tag_updraft_copy" CA.check_tag_mechanism_ledgers(
+        "current.hdf5",
+        current,
+        (names..., CA.WATER_TAG_COPY_MECHANISM_NAMES...),
+        "water",
+        "q_tag_",
+        "water_tag_updraft_copy",
+    )
+    @test CA.is_tag_mechanism_ledger_name(:e_src_led_repair)
+    @test !CA.is_tag_mechanism_ledger_name(:q_tag_inc_left)
 end
