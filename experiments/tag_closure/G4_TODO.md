@@ -252,6 +252,22 @@ upward where it lasts (open question 3, FQ-10's remainder).
     It is an instantaneous loss timescale, not a residence time. Design at the
     end of this file.
 
+### G4.15 The energy follower after the owner's review of #102
+
+Added on 2026-09-24. The review of the water follower (#102) changed three
+things that the energy source tags' `enthalpy_increment` still does the old
+way:
+  - its partition check accepts a 1% gap (`_check_increment_partition`); the
+    water check now accepts 100 rounding units;
+  - it spreads the column's total mismatch by |m|; the water follower now
+    leaves it out only where the mismatch has its sign, which halved the water
+    moved on D4-W (FINDINGS W28);
+  - its audit's `increment_*_gross` columns are net over time; water's are now
+    named `_net_abs`, and WP6 gives both families a per-step throughput.
+
+Changing the first two changes the energy tags' results, so each needs its own
+validation against the G2 runs.
+
 ## Energy items within M1 to M5 that no G4.n takes up yet
 
 ROADMAP.md lists these as "later" within their milestones. They need a new

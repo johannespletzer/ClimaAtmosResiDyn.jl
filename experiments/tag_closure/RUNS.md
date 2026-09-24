@@ -279,6 +279,9 @@ Every G3 run is stamped with a manifest at submission, kept as
 | `w4a_trmm0m_copies_6h`        | 0000   | same   | 34f9a334 | 2026-09-24 | `13877543` | the same with copies | W26      | yes  | 40 nc   | not yet |
 | `w4a_trmm0m_default_6h_grid`  | 0000   | same   | 9abb1f62 | 2026-09-24 | `13877544` | the grid rule's twin at #102's head, default mode | W26      | yes  | 32 nc   | not yet |
 | `w4a_trmm0m_copies_6h_grid`   | 0000   | same   | 9abb1f62 | 2026-09-24 | `13877545` | the same with copies | W26      | yes  | 35 nc   | not yet |
+| `w5r_d4w_increment_samesign`  | 0000   | same   | 5d1afcc0 | 2026-09-24 | `13887329` | the owner's review of #102, point 4: D4-W, the follower's same-sign rule | W28      | yes  | 54 nc   | not yet |
+| `w5r_trmm0m_increment_absm_6h`| 0000   | same   | 71bd4061 | 2026-09-24 | `13887330` | TRMM 0M, 6 h, the follower, the |m| rule | W28      | yes  | 34 nc   | not yet |
+| `w5r_trmm0m_increment_samesign_6h`| 0000   | same   | 5d1afcc0 | 2026-09-24 | `13887331` | the same, the same-sign rule | W28      | yes  | 34 nc   | not yet |
 
 The commits of the `w3_*` rows are the run tree's. They carry WP3 at
 `9aab6690` (`9085e264`) or at `fe1331f2` (`b5f40586`, `d06e48f1`); W21 says

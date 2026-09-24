@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W27                                           | 1. Water tags                                       |
+| W1–W28                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -786,6 +786,50 @@ follower or with copies.
 *`hpda2_compute`, 2026-09-24, job `13877977`, from `../ClimaAtmosResiDyn-wedmf6`
 at `e65009ef`; `1b976a97` changes only how the callback finds its fields. The
 output is in `output/wp6_cadence/results.txt`.*
+
+**W28. The owner's review of #102, point 4: leaving the column's total out only
+where the mismatch has its sign, instead of spreading it by |m|, halves the
+water the follower moves on D4-W. Nothing else measured changes beyond a
+fifth. On TRMM 0M the two rules coincide, and the follower closes the
+partition to 4e-15 where the tracer transport reaches 5e-4.** The same-sign
+rule is #102 at `5bfa7cea`. W24's D4-W day under the |m| rule is the reference.
+TRMM 0M ran for 6 h under both rules, in the default mode with the follower.
+The copies' runs are the references.
+
+| D4-W, 24 h, one Newton iteration                       | \|m\| (W24) | same sign |
+|:------------------------------------------------------- | ----------:| ---------:|
+| gross closure residual                                  | 1.53e-4    | 1.35e-4   |
+| net closure residual                                    | +2.4e-5    | +4.2e-5   |
+| left out (`increment_left_relative`)                    | −2.57e-5   | −2.55e-5  |
+| moved, the cells' absolute ledgers summed               | 4.8e-2     | 2.4e-2    |
+| the partition repair's ledger, the same way             | 2.9e-3     | 2.9e-3    |
+| smallest tag value, kg/kg                               | 1.4e-9     | 1.4e-9    |
+| against the copies, L1 at 24 h, `tropo`/`strat`/`evap`  | 0.25/0.41/0.41% | 0.25/0.41/0.42% |
+
+  - The model's fields are bit for bit the same under both rules (37 fields
+    on D4-W, 24 on TRMM).
+  - The part left out is the same, since it is the columns' total by
+    construction. Only where it lands differs.
+  - The moved ledger's gross over the cells is net over time in each cell
+    (the review's point 5), so the halving is a lower bound on what the |m|
+    rule moved beyond the same-sign rule's.
+  - **On TRMM 0M, 6 h,** the follower leaves out about 1e-16 of the column's
+    water, so there is no column total to place, and the rules agree to
+    rounding.
+      + The gross residual is 1.6e-15 under |m| and 3.6e-15 under the
+        same-sign rule.
+      + The moved ledger is 6.9e-3 in both. No tag goes negative.
+      + Against the copies at 6 h: `pbl` 1.52%, `free` 0.83%, `evap` 1.72%, in
+        both.
+      + The tracer transport's and the copies' own gross residuals on the same
+        case are 5.0e-4 at 6 h.
+
+*`hpda2_compute`, 2026-09-24, D4-W driver. D4-W same-sign: job `13887329`, from
+`../ClimaAtmosResiDyn-wedmf5r-run` at `5d1afcc0` (the record with #102 at
+`5bfa7cea`). TRMM |m|: job `13887330`, from `../ClimaAtmosResiDyn-wedmf5-run`
+at `71bd4061` (#102 at `fd07d902`). TRMM same-sign: job `13887331`, from
+`5d1afcc0`. Reports and `analysis/water/w5r_rule_compare.py`'s output are in
+`output/w5r/`.*
 
 ## 2. Energy source tags: closure by transport
 

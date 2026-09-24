@@ -55,10 +55,15 @@ The twelve criteria of the plan, section 2, in short:
     plan 6.1.
   - [ ] **The default mode's cost budget**, proposed from V-W10's first
     measurements and set by the owner before V-W11.
-  - [ ] **WP5's default transport under EDMF**, by the rule fixed in plan 4.3,
-    after V-W3. V-W3 has run: the one-iteration part is 5.8e-3, twelve times
-    the rule's threshold, so the rule selects the follower (FINDINGS W21).
-    The owner confirms.
+  - [x] **WP5's default transport under EDMF**, by the rule fixed in plan 4.3.
+    The owner's review of #102 (2026-09-24) asked for it to be applied. It is
+    applied in #102 where the configuration supports the follower, and
+    `tracer` stays the default elsewhere and with copies.
+  - [ ] **The explicit-1M path under the follower** (the owner's review of
+    #102, point 3). It is refused for now. The fix is the owner's choice:
+    route the column's total through the bottom face, or give the tags the
+    parent's sedimentation cross blocks. The latter is recommended, as a
+    follow-up with the review's distinguishing experiment.
   - [ ] **The copies' repair** moves 0.6% of D4-W's water in a day, 0.27%
     with ten Newton iterations, over plan 6.1's 0.2%, so the audit is flagged
     (W21). Whether the audit stands as it is, or its repair's cause is

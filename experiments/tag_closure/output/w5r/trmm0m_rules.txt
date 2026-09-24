@@ -1,0 +1,12 @@
+w5r_trmm0m_increment_absm_6h: partition tags ['pbl', 'free'], smallest tag value over the run 0.000e+00 kg/kg
+    1.0 h  gross residual 4.08e-16  net -5.04e-16  left out -5.08e-17  moved (net abs over cells) 2.16e-04
+    3.0 h  gross residual 9.92e-16  net -2.49e-16  left out +3.36e-16  moved (net abs over cells) 1.97e-03
+    4.0 h  gross residual 1.09e-15  net +0.00e+00  left out +3.35e-16  moved (net abs over cells) 3.69e-03
+    5.0 h  gross residual 1.36e-15  net -2.44e-16  left out +6.67e-16  moved (net abs over cells) 5.36e-03
+    6.0 h  gross residual 1.55e-15  net -6.06e-16  left out -1.94e-17  moved (net abs over cells) 6.92e-03
+w5r_trmm0m_increment_samesign_6h: partition tags ['pbl', 'free'], smallest tag value over the run 0.000e+00 kg/kg
+    1.0 h  gross residual 9.53e-16  net -2.52e-16  left out -9.81e-18  moved (net abs over cells) 2.16e-04
+    3.0 h  gross residual 2.66e-15  net -3.73e-16  left out +4.68e-16  moved (net abs over cells) 1.97e-03
+    4.0 h  gross residual 2.91e-15  net +1.23e-16  left out +2.69e-16  moved (net abs over cells) 3.69e-03
+    5.0 h  gross residual 3.53e-15  net +0.00e+00  left out +8.38e-16  moved (net abs over cells) 5.36e-03
+    6.0 h  gross residual 3.62e-15  net -4.85e-16  left out +5.98e-16  moved (net abs over cells) 6.92e-03

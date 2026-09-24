@@ -1,0 +1,32 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4a_trmm0m_default_6h_grid/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w5r_trmm0m_increment_absm_6h/output_0000
+
+fields only in reference (tag-family, not compared): []
+fields only in run (tag-family, not compared): ['q_tag_inc_left', 'q_tag_inc_moved']
+  aren       bitwise identical (1066 elements)
+  arup       bitwise identical (1066 elements)
+  cli        bitwise identical (1066 elements)
+  cliup      bitwise identical (1066 elements)
+  clw        bitwise identical (1066 elements)
+  clwup      bitwise identical (1066 elements)
+  detr       bitwise identical (1066 elements)
+  entr       bitwise identical (1066 elements)
+  hus        bitwise identical (1066 elements)
+  husen      bitwise identical (1066 elements)
+  husup      bitwise identical (1066 elements)
+  rhoa       bitwise identical (1066 elements)
+  rhoaen     bitwise identical (1066 elements)
+  rhoaup     bitwise identical (1066 elements)
+  ta         bitwise identical (1066 elements)
+  tke        bitwise identical (1066 elements)
+  wa         bitwise identical (1066 elements)
+  waen       bitwise identical (1066 elements)
+  waup       bitwise identical (1066 elements)
+  evspsbl    bitwise identical (13 elements)
+  hfls       bitwise identical (13 elements)
+  hfss       bitwise identical (13 elements)
+  lwp        bitwise identical (13 elements)
+  pr         bitwise identical (13 elements)
+
+--parity-only: PASS (24 fields bit for bit)
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w5r/parity_trmm_absm.json
