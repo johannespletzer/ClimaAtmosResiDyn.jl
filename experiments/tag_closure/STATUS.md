@@ -33,6 +33,17 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-09-24, 09:50.**
+      + The owner confirmed the session's scope: finish it, and leave WP5b
+        to the other session.
+      + #102's reviewed head (`e29384ee`) is merged into WP4a (#104,
+        `53cd2db3`) and WP6 (#103, `f22cfb27`), and both are pushed.
+      + Their unit and config tests pass at the merges. Two integration tests
+        are running, jobs `13892718` and `13892721`, and so is CI on
+        #102–#104.
+      + Next session: read those two tests and the CI.
+      + Otherwise every open item waits on the owner (DECISIONS.md) or
+        belongs to WP5b.
   - **Update, 2026-09-24, 09:30.** The session's goal grew twice overnight.
     Late on 2026-09-23 it added WP5. On 2026-09-24 it added WP4b-D and
     Batch 2: V-W8, WP6, WP4a and V-W4.

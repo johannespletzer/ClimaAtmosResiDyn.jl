@@ -373,7 +373,12 @@ rule: each subdomain's rain-out `Δᵏ` goes by `φᵏ` for both signs (review S
   - [x] The TRMM validation, 3 h and 6 h, with grid-rule twins (FINDINGS W26):
     parity bit for bit, and the split moves the tags by at most 0.47%. Both
     modes move alike, and `Σ pr_tag = pr` to 1.8e-3.
-  - [ ] CI on #104.
+  - [x] #102's reviewed head (`e29384ee`) merged in, at `53cd2db3`
+    (2026-09-24). Under EDMF the default mode now follows the increment by
+    default, so the 0M test's default-mode run carries the follower's ledger,
+    and its parity filter skips it. The unit tests passed 521/521 at the
+    merge. The 0M integration test (job `13892718`) is running.
+  - [ ] CI on #104 at `53cd2db3`.
 
 ## WP4b: rain and snow carry their own tags (draft PR-W4b)
 
@@ -445,9 +450,12 @@ EDMF 53 (at `e65009ef`), and copies integration 99 (at `1b976a97`). Pushed to
 #103. The review's cadence script (`analysis/water/wp6_cadence_checks.jl`)
 passed 153/153 (FINDINGS W27). At `dss` the follower and the repair work far
 harder than at `stage`, which is for the owner to weigh; `dss` is not the
-default. Step 3, the
-per-mechanism report and the checkpointed cache ledgers, waits on the owner's
-points in the note's section 8.
+default. #102's reviewed head (`e29384ee`) is merged in at `f22cfb27`
+(2026-09-24). The audit's net-over-time columns take WP5's new names. The unit
+tests passed 457/457 at the merge, and the config tests 257/257. The increment
+integration test (job `13892721`) is running, and so is CI on #103. Step 3,
+the per-mechanism report and the checkpointed cache ledgers, waits on the
+owner's points in the note's section 8.
 
   - [ ] A design note, then the code:
 
