@@ -1,0 +1,72 @@
+# WP4a's validation (G3_TODO, WP4a): V-W3's TRMM 0M pair, `w3_trmm0m_copies`,
+# unchanged apart from the job id and the tags' precipitation diagnostics, run
+# at WP4a's head, where the 0M rain-out is split by subdomain. The model's
+# fields must match V-W3's run bit for bit; the tags change. Its pair is
+# `w4a_trmm0m_default`.
+
+job_id: "w4a_trmm0m_copies"
+
+water_tracers:
+  - name: pbl
+    region: {type: tanh_altitude, z_center: 1000.0, width: 200.0, above: false}
+  - name: free
+    region: {type: tanh_altitude, z_center: 1000.0, width: 200.0}
+  - name: evap
+    source: surface_flux
+
+water_closure_check:
+  period: "30mins"
+  audit: true
+
+initial_condition: TRMM_LBA
+turbconv: prognostic_edmfx
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "PiGroups"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+cloud_model: "grid_scale"
+microphysics_model: "0M"
+config: column
+z_max: 16400
+x_elem: 2
+y_elem: 2
+z_elem: 82
+z_stretch: false
+dz_bottom: 30
+dt: 150secs
+t_end: 3hours
+toml: [toml/prognostic_edmfx_implicit_scm_calibrated_5_cases_shallow_deep_v1.toml]
+ode_algo: "ARS222"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, wa]
+    period: "30mins"
+  - short_name: [pr, evspsbl, hfls, hfss, lwp]
+    period: "30mins"
+  - short_name: [pr]
+    period: "30mins"
+    reduction_time: average
+  - short_name: [arup, rhoaup, waup, husup, clwup, cliup]
+    period: "30mins"
+  - short_name: [aren, rhoaen, waen, husen]
+    period: "30mins"
+  - short_name: [tke, entr, detr]
+    period: "30mins"
+  - short_name: [q_tag_res, q_tag_pbl, q_tag_free, q_tag_evap]
+    period: "30mins"
+  - short_name: [q_tag_fix_pbl, q_tag_fix_free, q_tag_fix_evap]
+    period: "30mins"
+  - short_name: [pr_tag_pbl, pr_tag_free, pr_tag_evap, prra_tag_pbl, prsn_tag_pbl]
+    period: "30mins"
+  - short_name: [q_tag_copy_res, q_tag_upfix_pbl, q_tag_upfix_free]
+    period: "30mins"
+
+water_tag_updraft_copy: true

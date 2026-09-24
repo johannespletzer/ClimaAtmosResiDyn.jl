@@ -80,6 +80,15 @@ bit for bit what it was. On the explicit path, which has no exchange, the
 bracket computes them itself. Everything the split writes lives in
 `p.scratch`, which the autodiff Jacobian converts to dual numbers.
 
+*As built (the code review, S3, 2026-09-24):* the exchange was not split. The
+bracket calls `water_exchange_inputs!` itself, and the exchange calls it again,
+so the plume is computed twice per implicit evaluation. Each consumer rewrites
+all of the scratch before it reads it, so neither reads a stale value; a test
+checks the exchange's tendency bit for bit around the split. The cost the
+reviewer measured on the 0M EDMF column is 8.0 µs per evaluation, 4.5% of
+`implicit_tendency!`. Sharing one computation would need a flag through the
+exchange's path, and is not done.
+
 **The copies' updraft share is unnormalized**, as `_copies_rain_out!`'s is, so
 the partition's updraft loss is `Δʲ·Σ_P φʲᵢ`, which equals `Δʲ` where the
 copies' partition holds `q_totʲ` (the repair keeps it so up to W21's
@@ -209,9 +218,10 @@ ladder, which V-W4's pattern gives on TRMM (W21) and is proposed as a follow-up.
 
 ## 7. Cost
 
-The shares once per implicit evaluation, where the exchange already computes
-them, so none extra on the implicit path; once per explicit evaluation on the
-explicit path. `pr_tag` at output only. The switch: one diagonal block per tag
+The shares once more per implicit evaluation, beside the exchange's own: 4.5%
+of `implicit_tendency!` on the 0M EDMF column (the code review, S3). Once per
+explicit evaluation on the explicit path. `pr_tag` at output only, one tag per
+call into one scratch field. The switch: one diagonal block per tag
 where there was the `-I` fallback.
 
 ## 8. For the owner

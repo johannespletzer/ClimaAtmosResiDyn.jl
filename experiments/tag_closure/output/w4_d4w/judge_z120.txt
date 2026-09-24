@@ -1,0 +1,85 @@
+ERROR: --judge: at least one tag failed its budget
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4_d4w_copies_z120/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4_d4w_default_z120/output_0000
+family:    water
+NOTICE: pairing: YAML 'water_tag_transport' differs between reference and run (outside the allowed keys)
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 1500.000 m (YAML z_max 1500.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  aren       bitwise identical (3000 elements)
+  arup       bitwise identical (3000 elements)
+  cli        bitwise identical (3000 elements)
+  cliup      bitwise identical (3000 elements)
+  clw        bitwise identical (3000 elements)
+  clwup      bitwise identical (3000 elements)
+  detr       bitwise identical (3000 elements)
+  edt        bitwise identical (3000 elements)
+  entr       bitwise identical (3000 elements)
+  env_q_tot_variance bitwise identical (3000 elements)
+  evspsbl    bitwise identical (25 elements)
+  evu        bitwise identical (3000 elements)
+  hfls       bitwise identical (25 elements)
+  hfss       bitwise identical (25 elements)
+  hus        bitwise identical (3000 elements)
+  husen      bitwise identical (3000 elements)
+  husra      bitwise identical (3000 elements)
+  husraen    bitwise identical (3000 elements)
+  husraup    bitwise identical (3000 elements)
+  hussn      bitwise identical (3000 elements)
+  hussnen    bitwise identical (3000 elements)
+  hussnup    bitwise identical (3000 elements)
+  husup      bitwise identical (3000 elements)
+  lwp        bitwise identical (25 elements)
+  pr         bitwise identical (25 elements)
+  prra       bitwise identical (25 elements)
+  prsn       bitwise identical (25 elements)
+  q_gas_A    bitwise identical (3000 elements)
+  rhoa       bitwise identical (3000 elements)
+  rhoaen     bitwise identical (3000 elements)
+  rhoaup     bitwise identical (3000 elements)
+  rwp        bitwise identical (25 elements)
+  ta         bitwise identical (3000 elements)
+  tke        bitwise identical (3000 elements)
+  wa         bitwise identical (3000 elements)
+  waen       bitwise identical (3000 elements)
+  waup       bitwise identical (3000 elements)
+
+tag        hour   ∫ref kg/m²        Δ∫/∫        L1        L∞     max|Δq|
+tropo         1   9.8300e+00   -2.04e-01  2.30e-01  7.75e-01  2.8275e-02
+tropo         6   9.7997e+00   -2.13e-01  2.15e-01  6.84e-01  1.4657e-02
+tropo        12   1.0142e+01   -2.04e-01  2.08e-01  6.52e-01  1.3461e-02
+tropo        24   1.0656e+01   -1.91e-01  1.91e-01  5.83e-01  9.4733e-03
+
+strat         1   3.3803e+00   +6.21e-02  8.01e-02  1.40e-01  8.0003e-04
+strat         6   3.1797e+00   +9.12e-02  1.05e-01  1.61e-01  6.2582e-04
+strat        12   2.9971e+00   +9.03e-02  9.52e-02  9.82e-02  3.4765e-04
+strat        24   2.7213e+00   +8.50e-02  9.15e-02  1.24e-01  3.7421e-04
+
+evap          1   1.2251e-01   -3.71e-03  3.10e-01  4.80e-01  3.0910e-04
+evap          6   7.4717e-01   +3.22e-03  3.58e-02  2.04e-01  2.0987e-04
+evap         12   1.4833e+00   +1.21e-03  4.10e-02  2.48e-01  4.7073e-04
+evap         24   2.8069e+00   +3.04e-05  3.80e-02  3.31e-01  9.8094e-04
+
+evap_tropo    1   1.2251e-01   -3.71e-03  3.10e-01  4.80e-01  3.0910e-04
+evap_tropo    6   7.4717e-01   +3.22e-03  3.58e-02  2.04e-01  2.0987e-04
+evap_tropo   12   1.4833e+00   +1.21e-03  4.10e-02  2.48e-01  4.7073e-04
+evap_tropo   24   2.8069e+00   +3.04e-05  3.80e-02  3.31e-01  9.8094e-04
+
+evap_strat    1   4.2465e-08   -3.71e-03  3.10e-01  4.80e-01  1.0714e-10
+evap_strat    6   2.5899e-07   +3.22e-03  3.58e-02  2.04e-01  7.2747e-11
+evap_strat   12   5.1416e-07   +1.21e-03  4.10e-02  2.48e-01  1.6317e-10
+evap_strat   24   9.7295e-07   +3.04e-05  3.80e-02  3.31e-01  3.4002e-10
+
+NOTICE: --judge: no --closure-remainder-fields given; the 'what the named parts leave' remainder (R7) is skipped
+
+--judge: FAIL
+  FAIL tropo@1h (region): region tag: L1=2.304e-01 (budget 0.01), Linf=7.747e-01 (budget 0.25)
+  FAIL tropo@24h (region): region tag: L1=1.913e-01 (budget 0.02), Linf=5.826e-01 (budget 0.05)
+  FAIL strat@1h (region): region tag: L1=8.012e-02 (budget 0.01), Linf=1.396e-01 (budget 0.25)
+  FAIL strat@24h (region): region tag: L1=9.148e-02 (budget 0.02), Linf=1.242e-01 (budget 0.05)
+  FAIL evap@1h (source): source tag: L1=3.096e-01 (budget 0.1), Linf=4.800e-01 (budget 0.25)
+  FAIL evap@24h (source): source tag: L1=3.803e-02 (budget 0.02), Linf=3.311e-01 (budget 0.05)
+  FAIL evap_tropo@1h (source): source tag: L1=3.096e-01 (budget 0.1), Linf=4.800e-01 (budget 0.25)
+  FAIL evap_tropo@24h (source): source tag: L1=3.803e-02 (budget 0.02), Linf=3.311e-01 (budget 0.05)
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w4_d4w/judge_z120.json

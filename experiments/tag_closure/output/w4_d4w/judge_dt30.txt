@@ -1,0 +1,76 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4_d4w_copies_dt30/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4_d4w_default_dt30/output_0000
+family:    water
+NOTICE: pairing: YAML 'water_tag_transport' differs between reference and run (outside the allowed keys)
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 1500.000 m (YAML z_max 1500.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  aren       bitwise identical (750 elements)
+  arup       bitwise identical (750 elements)
+  cli        bitwise identical (750 elements)
+  cliup      bitwise identical (750 elements)
+  clw        bitwise identical (750 elements)
+  clwup      bitwise identical (750 elements)
+  detr       bitwise identical (750 elements)
+  edt        bitwise identical (750 elements)
+  entr       bitwise identical (750 elements)
+  env_q_tot_variance bitwise identical (750 elements)
+  evspsbl    bitwise identical (25 elements)
+  evu        bitwise identical (750 elements)
+  hfls       bitwise identical (25 elements)
+  hfss       bitwise identical (25 elements)
+  hus        bitwise identical (750 elements)
+  husen      bitwise identical (750 elements)
+  husra      bitwise identical (750 elements)
+  husraen    bitwise identical (750 elements)
+  husraup    bitwise identical (750 elements)
+  hussn      bitwise identical (750 elements)
+  hussnen    bitwise identical (750 elements)
+  hussnup    bitwise identical (750 elements)
+  husup      bitwise identical (750 elements)
+  lwp        bitwise identical (25 elements)
+  pr         bitwise identical (25 elements)
+  prra       bitwise identical (25 elements)
+  prsn       bitwise identical (25 elements)
+  q_gas_A    bitwise identical (750 elements)
+  rhoa       bitwise identical (750 elements)
+  rhoaen     bitwise identical (750 elements)
+  rhoaup     bitwise identical (750 elements)
+  rwp        bitwise identical (25 elements)
+  ta         bitwise identical (750 elements)
+  tke        bitwise identical (750 elements)
+  wa         bitwise identical (750 elements)
+  waen       bitwise identical (750 elements)
+  waup       bitwise identical (750 elements)
+
+tag        hour   ∫ref kg/m²        Δ∫/∫        L1        L∞     max|Δq|
+tropo         1   8.1922e+00   +1.29e-03  2.98e-03  6.84e-03  6.6651e-05
+tropo         6   8.2794e+00   +2.12e-03  2.79e-03  6.31e-03  5.7919e-05
+tropo        12   8.5290e+00   +2.00e-03  2.55e-03  5.80e-03  5.3841e-05
+tropo        24   9.1538e+00   +1.24e-03  2.32e-03  6.84e-03  6.3804e-05
+
+strat         1   3.3834e+00   -3.10e-03  7.52e-03  1.65e-02  6.8369e-05
+strat         6   3.2551e+00   -5.36e-03  6.14e-03  1.36e-02  5.3037e-05
+strat        12   3.0621e+00   -5.35e-03  5.82e-03  6.85e-03  2.4632e-05
+strat        24   2.7987e+00   -3.34e-03  5.81e-03  2.27e-02  6.9075e-05
+
+evap          1   1.3186e-01   -2.05e-04  8.56e-02  9.49e-02  3.5210e-05
+evap          6   7.5933e-01   -9.53e-04  1.07e-02  1.73e-02  1.9412e-05
+evap         12   1.4778e+00   -2.11e-04  8.87e-03  1.10e-02  2.0198e-05
+evap         24   2.8307e+00   -2.56e-04  4.47e-03  1.01e-02  3.1956e-05
+
+evap_tropo    1   1.3186e-01   -2.05e-04  8.56e-02  9.49e-02  3.5210e-05
+evap_tropo    6   7.5932e-01   -9.53e-04  1.07e-02  1.73e-02  1.9412e-05
+evap_tropo   12   1.4778e+00   -2.11e-04  8.87e-03  1.10e-02  2.0198e-05
+evap_tropo   24   2.8307e+00   -2.56e-04  4.47e-03  1.01e-02  3.1956e-05
+
+evap_strat    1   6.6502e-08   -2.05e-04  8.56e-02  9.49e-02  1.7758e-11
+evap_strat    6   3.8296e-07   -9.53e-04  1.07e-02  1.73e-02  9.7902e-12
+evap_strat   12   7.4531e-07   -2.11e-04  8.87e-03  1.10e-02  1.0187e-11
+evap_strat   24   1.4276e-06   -2.56e-04  4.47e-03  1.01e-02  1.6117e-11
+
+NOTICE: --judge: no --closure-remainder-fields given; the 'what the named parts leave' remainder (R7) is skipped
+
+--judge: PASS
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w4_d4w/judge_dt30.json

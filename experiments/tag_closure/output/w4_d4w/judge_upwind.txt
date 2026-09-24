@@ -1,0 +1,74 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4_d4w_copies_upwind/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4_d4w_default_upwind/output_0000
+family:    water
+NOTICE: pairing: YAML 'water_tag_transport' differs between reference and run (outside the allowed keys)
+NOTICE: reference has 24 times, run has 25; only the common prefix of 24 times was compared (--hours given)
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 1500.000 m (YAML z_max 1500.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  aren       bitwise identical (720 elements)
+  arup       bitwise identical (720 elements)
+  cli        bitwise identical (720 elements)
+  cliup      bitwise identical (720 elements)
+  clw        bitwise identical (720 elements)
+  clwup      bitwise identical (720 elements)
+  detr       bitwise identical (720 elements)
+  edt        bitwise identical (720 elements)
+  entr       bitwise identical (720 elements)
+  env_q_tot_variance bitwise identical (720 elements)
+  evspsbl    bitwise identical (24 elements)
+  evu        bitwise identical (720 elements)
+  hfls       bitwise identical (24 elements)
+  hfss       bitwise identical (24 elements)
+  hus        bitwise identical (720 elements)
+  husen      bitwise identical (720 elements)
+  husra      bitwise identical (720 elements)
+  husraen    bitwise identical (720 elements)
+  husraup    bitwise identical (720 elements)
+  hussn      bitwise identical (720 elements)
+  hussnen    bitwise identical (720 elements)
+  hussnup    bitwise identical (720 elements)
+  husup      bitwise identical (720 elements)
+  lwp        bitwise identical (24 elements)
+  pr         bitwise identical (24 elements)
+  prra       bitwise identical (24 elements)
+  prsn       bitwise identical (24 elements)
+  q_gas_A    bitwise identical (720 elements)
+  rhoa       bitwise identical (720 elements)
+  rhoaen     bitwise identical (720 elements)
+  rhoaup     bitwise identical (720 elements)
+  rwp        bitwise identical (24 elements)
+  ta         bitwise identical (720 elements)
+  tke        bitwise identical (720 elements)
+  wa         bitwise identical (720 elements)
+  waen       bitwise identical (720 elements)
+  waup       bitwise identical (720 elements)
+
+tag        hour   ∫ref kg/m²        Δ∫/∫        L1        L∞     max|Δq|
+tropo         1   8.3360e+00   -3.57e-05  1.54e-03  8.88e-03  8.6212e-05
+tropo         6   8.5110e+00   +8.89e-04  1.15e-02  3.44e-02  4.1373e-04
+tropo        12   8.7492e+00   +1.77e-03  3.78e-02  5.88e-02  5.9818e-04
+tropo        23   1.1484e+01   -2.02e-01  7.72e-01  6.23e-01  1.5005e-02
+
+strat         1   3.2458e+00   +9.62e-05  3.91e-03  2.11e-02  8.7567e-05
+strat         6   3.1296e+00   -9.96e-04  7.05e-03  4.76e-02  1.8434e-04
+strat        12   2.9753e+00   +4.76e-04  1.38e-02  2.85e-02  1.0216e-04
+strat        23   3.9315e+00   -3.14e-01  3.56e-01  6.95e-01  2.2919e-03
+
+evap          1   1.3258e-01   -2.06e-04  4.31e-02  6.37e-02  2.1243e-05
+evap          6   7.5933e-01   +2.97e-03  7.54e-02  1.23e-01  3.0395e-04
+evap         12   1.4647e+00   +5.89e-03  2.58e-02  6.21e-02  1.1102e-04
+evap         23   2.6597e+00   +6.66e-03  4.78e-02  1.18e-01  3.0813e-04
+
+evap_tropo    1   1.3258e-01   -2.06e-04  4.31e-02  6.37e-02  2.1243e-05
+evap_tropo    6   7.5933e-01   +2.97e-03  7.54e-02  1.23e-01  3.0395e-04
+evap_tropo   12   1.4647e+00   +5.89e-03  2.58e-02  6.21e-02  1.1102e-04
+evap_tropo   23   2.6597e+00   +6.66e-03  4.78e-02  1.18e-01  3.0813e-04
+
+evap_strat    1   6.6868e-08   -2.06e-04  4.31e-02  6.37e-02  1.0714e-11
+evap_strat    6   3.8296e-07   +2.97e-03  7.54e-02  1.23e-01  1.5330e-10
+evap_strat   12   7.3872e-07   +5.89e-03  2.58e-02  6.21e-02  5.5991e-11
+evap_strat   23   1.3414e-06   +6.66e-03  4.78e-02  1.18e-01  1.5540e-10
+
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w4_d4w/judge_upwind.json

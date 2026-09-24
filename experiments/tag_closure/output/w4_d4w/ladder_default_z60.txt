@@ -1,0 +1,27 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w5_d4w_increment/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4_d4w_default_z60/output_0000
+
+ladder-share mode: column_integrals_only (same z grid: False)
+  tropo         1h  phi_ref=0.7192629093023273  phi_run=0.7080603267752672  delta=-0.011202582527060079
+  tropo         6h  phi_ref=0.7304444386131367  phi_run=0.7196442445296732  delta=-0.010800194083463444
+  tropo        12h  phi_ref=0.7477260118113973  phi_run=0.7390306146559409  delta=-0.008695397155456419
+  tropo        24h  phi_ref=0.7715189344921761  phi_run=0.7694211923926418  delta=-0.0020977420995342833
+  strat         1h  phi_ref=0.28077775414241896  phi_run=0.29197701177351426  delta=0.011199257631095305
+  strat         6h  phi_ref=0.2695984428593709  phi_run=0.28034817849848154  delta=0.010749735639110636
+  strat        12h  phi_ref=0.2522849771436649  phi_run=0.26095607194184245  delta=0.00867109479817757
+  strat        24h  phi_ref=0.22845676694172184  phi_run=0.230562360162782  delta=0.002105593221060159
+  evap          1h  phi_ref=0.011429974082978777  phi_run=0.011366808651829007  delta=-6.316543114977084e-05
+  evap          6h  phi_ref=0.06593609803654452  phi_run=0.0657234883155372  delta=-0.0002126097210073119
+  evap         12h  phi_ref=0.12811001565795177  phi_run=0.12765731083777573  delta=-0.0004527048201760364
+  evap         24h  phi_ref=0.23720650247333935  phi_run=0.23684053812763636  delta=-0.0003659643457029904
+  evap_tropo    1h  phi_ref=0.011429968318300973  phi_run=0.011366804187103433  delta=-6.316413119753991e-05
+  evap_tropo    6h  phi_ref=0.06593606478184436  phi_run=0.06572346250025797  delta=-0.0002126022815863854
+  evap_tropo   12h  phi_ref=0.12810995104599737  phi_run=0.1276572606957456  delta=-0.0004526903502517776
+  evap_tropo   24h  phi_ref=0.2372063828388545  phi_run=0.23684044509994143  delta=-0.00036593773891308023
+  evap_strat    1h  phi_ref=5.764677804835905e-09  phi_run=4.464725579744326e-09  delta=-1.299952225091579e-09
+  evap_strat    6h  phi_ref=3.325470015323899e-08  phi_run=2.5815279245084314e-08  delta=-7.439420908154679e-09
+  evap_strat   12h  phi_ref=6.461195436482649e-08  phi_run=5.014203006286023e-08  delta=-1.4469924301966259e-08
+  evap_strat   24h  phi_ref=1.1963448473668346e-07  phi_run=9.302769504514546e-08  delta=-2.6606789691537997e-08
+
+NOTICE: z grids differ; the parent's own change is not reported (needs one grid)
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w4_d4w/ladder_default_z60.json

@@ -182,3 +182,43 @@ per-step grosses of 3.2 get their own names.
 
  1. A pre-WP6 checkpoint: refused (proposed), or the new fields start at zero.
  2. Loss and τ move from WP6 to WP4a and WP4b (3.6).
+
+## 9. Step 2: what each state ledger adds
+
+Written on 2026-09-24, before step 2's code. Section 3.1 says one signed
+field per mechanism, summed over the tags. For a transfer between tags that
+sum is zero in every cell, so it would record nothing. Each field therefore
+adds, per application, the water that mechanism moved in section 3.3's sense,
+over the partition's tags. It keeps the sign where 3.3's measure has one.
+
+| state ledger | mechanism | adds per application |
+|:------------ |:--------- |:-------------------- |
+| `q_tag_led_rescale` | `rescale_water_tags!` where `ρq_tot_before > 0` | `Σ_P shiftᵢ`, signed: one way |
+| `q_tag_led_empty` | the same where `ρq_tot_before ≤ 0`, which empties the tags | `Σ_P shiftᵢ`, signed |
+| `q_tag_led_repair` | `repair_water_tag_partition!` | `½ Σ_P |Δᵢ|`: a transfer |
+| `q_tag_led_uprepair` | `repair_water_tag_copies!` | `ρaʲ Σ_P shiftᵢʲ`, signed: the residual handed to the copies |
+| `q_tag_led_upfilter` | the updraft filter, across `enforce_physical_constraints!` | `Δ(ρaʲ Σ_P χᵢʲ)`, signed, from one snapshot |
+| `e_src_led_repair` | `repair_energy_source_tags!`, partition tags | `½ Σ_P |Δᵢ|` |
+
+  - **The stepper weights each as it weights the tags.** A transfer's field
+    adds a non-negative amount per application. It can still fall within a
+    step, through a negative stage weight. The callback's `|L − L_prev|` per
+    step is then what the step retained, in 3.3's sense.
+  - **Left out, and recorded only in the cache ledgers:** the source tags'
+    rescale and the energy overlay tags' clamp. They are not the partition,
+    and 6.1's budgets are for the partition.
+  - **The filter's field is net over the copies** in a cell, from one snapshot
+    of `ρaʲ Σ_P χᵢʲ`. A clamp up and a clamp down of two copies in one cell
+    cancel in it. One scratch field instead of one per copy.
+  - **The callback** keeps, per state ledger `L`, including WP5's
+    `q_tag_inc_left`, `q_tag_inc_moved` and their energy twins, `L_prev`, the
+    per-cell gross `G += |L − L_prev|` and the column gross
+    `G_col += |∫(L − L_prev) dz|`, in Float64. `L_prev` starts from the state
+    the cache is built from, so a restarted run's first step does not count
+    the restored ledger. `G` restarts at zero until step 3.
+  - **Diagnostics:** `<L>` for each new state ledger, `<L>_gross` and
+    `<L>_colgross` for every state ledger. `led_` is reserved in both
+    families.
+  - **Restart:** the new fields are in a checkpoint or are not. A pre-WP6
+    checkpoint is refused with its own message (8.1's proposal), until the
+    owner decides.

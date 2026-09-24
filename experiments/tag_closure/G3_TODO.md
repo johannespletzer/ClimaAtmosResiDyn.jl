@@ -296,34 +296,54 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
 
   - [ ] Review (xhigh).
 
-  - [ ] **V-W4**, the ladder, default and copies at each rung:
-
-      + dt 60 and 30;
-      + Newton 2, 4 and 10;
-      + 60 and 120 levels;
-      + first-order upwinding.
-
-    It also records the wall time of each rung (R5), and gives the copies'
-    own convergence.
+  - [x] **V-W4**, the ladder, default and copies at each rung: dt 60 and 30;
+    Newton 2, 4 and 10; 60 and 120 levels; first-order upwinding. Ran on
+    2026-09-24, FINDINGS W25.
+      + The default meets the per-tag budgets at the time-step and Newton
+        rungs. At 60 levels it misses the first hour's, and at 120 levels
+        every hour's.
+      + At 120 levels both modes lose the partition. With first-order
+        upwinding the copies do, and the default does not.
+      + The copies' shares converge on the Newton ladder. On the time-step
+        ladder they move as far as the atmosphere does.
+      + R5, the cost, is not answered; V-W10 measures it.
+  - [ ] **Follow-up from V-W4, for the owner to schedule** (not in this
+    session's scope):
+      + what parts the partition at 120 levels, in both modes;
+      + what parts the copies under first-order upwinding.
 
 ## WP4a: the 0M split (draft PR-W4a)
 
-  - [ ] Production `Σₖ max(Δᵏ, 0)` by mask and loss `Σₖ min(Δᵏ, 0) φᵏ`, with
-    the environment's term as the model weights it, in the implicit and
-    explicit microphysics paths.
-  - [ ] `pr_tag_<name>` under 0M.
-  - [ ] Under copies, the grid tags rain out by the grid mean's share `φ̄` and
-    the updraft copies by their own `φʲ`, so the environment's implied tag
-    values can move the wrong way (WP3 review, N6). The split's attribution
-    must be one rule for both.
-  - [ ] Isolate known issue 4 (the owner's review of #100): runs with the
-    same implicit residual and time integration that differ only in whether
-    the analytic diagonal `Δ⁻/ρq_tot` is present, across a Newton ladder with
-    a tightly converged reference and a time step ladder, reading the region
-    tags, the source tags, `q_tag_res` and the nonlinear convergence; stamped
-    and verified. The diagonal is model code, so it belongs here, where the
-    0M sink's attribution is rewritten anyway.
-  - [ ] Review (xhigh).
+Built on `claude/water-tags-edmf-wp4a` (905b7ff5, from WP5's fd07d902) to the
+revised note `design/ZERO_M_SPLIT.md`. The note replaced the first two items'
+rule: each subdomain's rain-out `Δᵏ` goes by `φᵏ` for both signs (review S3).
+
+  - [x] The split, `Σₖ Δᵏ φᵏᵢ`, in the bracket shared by the implicit and
+    explicit paths: the copies' own shares in the updraft, the exchange's in
+    the default mode, the grid rule elsewhere.
+  - [x] `pr_tag_<name>`, `prra_tag_<name>`, `prsn_tag_<name>` under 0M.
+  - [x] Under copies, one rule for the grid tags and the copies (WP3 review,
+    N6): the grid tags' updraft part goes by the copies' shares.
+  - [x] Known issue 4 restated in `docs/known_issues.md` (review B1).
+  - [ ] Isolate known issue 4: the switch and the experiment (the note's
+    sections 4 and 5), after the owner picks (i) the pair or (ii) the
+    diagonal alone.
+  - [x] Review of the code (xhigh, 2026-09-24,
+    `review/agent_reviews/wp4a_code_review_2026-09-24.md`). It found no
+    parity break and no wrong result. It asked for S1 to S5, taken at
+    `63a1ddaa`:
+      + S1: the tests take each subdomain's part from the real code and
+        check it against that subdomain's shares, to rounding;
+      + S2: allocation gates, the exchange bit for bit, random cells
+        through `ShareDifferences`, and the grid rule for non-EDMF and
+        EDOnly;
+      + S3: the plume stays computed twice, and the note's sections 2 and 7
+        say so, with its cost;
+      + S4: the docstrings;
+      + S5: `pr_tag` computes one tag, into scratch.
+  - [ ] Tests at `63a1ddaa`, and the review's explicit-path parity script
+    (`analysis/water/wp4a_explicit_parity.jl`), running.
+  - [ ] Draft PR-W4a; CI; the TRMM validation (`configs/w4a_trmm0m_*.yml`).
 
 ## WP4b: rain and snow carry their own tags (draft PR-W4b)
 
@@ -381,6 +401,12 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
     snow tags.
 
 ## WP6: gross accumulators, both families (draft PR-W6)
+
+Step 1, the cache ledgers' gross twins and counts, is #103. Step 2, the state
+ledgers per mechanism and their gross per step (the note's sections 3.1, 3.2
+and 9), is built at `bdc75731`. Its unit tests passed, water 425 and energy
+498, and its integration tests are running. Step 3, the per-mechanism report
+and the checkpointed cache ledgers, waits on the owner's two points.
 
   - [ ] A design note, then the code:
 

@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W24                                           | 1. Water tags                                       |
+| W1–W25                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -605,6 +605,100 @@ worktree at `867a5264`.*
 `4a1c91a4`, `hpda2_compute`, 2026-09-24, jobs `13865359`, `13865360`,
 `13865367`, `13866583`, `13866584`, `13866585`; the model's own
 `tag_closure` after the hour; `output/wp3_explicit_probe/results.txt`.*
+
+**W25. V-W4: under the follower, the default meets every per-tag budget
+against the copies at the time-step and Newton rungs. At 60 levels it misses
+the first hour's budget, and at 120 levels it misses every hour's. At 120
+levels both modes lose the partition. With first-order upwinding the copies
+lose it, and the default does not. The parent fields are bit for bit the same
+in every pair.** D4-W ran for a day at seven rungs: dt 60 and 30 s, Newton 2
+and 4, 60 and 120 levels, and first-order upwinding of the sub-grid flux. W24
+has the Newton-10 rung. Each rung ran in two modes:
+  - the default mode under the follower (`water_tag_transport: increment`);
+  - with copies, started from the plume.
+
+The verifier judged each pair (`--judge`, G3_PLAN 6.1). It also compared each
+run's shares with its mode's baseline (`--ladder-share`). The baselines are
+V-W3's copies day and W24's follower day.
+
+Default against copies, L1 in percent, at 1 h / 24 h:
+
+| rung        | `tropo`     | `strat`     | `evap`      | judge                          |
+|:----------- | -----------:| -----------:| -----------:|:------------------------------ |
+| dt 60 s     | 0.29 / 0.24 | 0.73 / 0.40 | 5.4 / 0.47  | pass                           |
+| dt 30 s     | 0.30 / 0.23 | 0.75 / 0.58 | 8.6 / 0.45  | pass                           |
+| Newton 2    | 0.21 / 0.24 | 0.56 / 0.28 | 4.7 / 0.41  | pass                           |
+| Newton 4    | 0.22 / 0.21 | 0.56 / 0.31 | 4.6 / 0.39  | pass                           |
+| 60 levels   | 0.57 / 0.40 | 1.36 / 1.72 | 11.8 / 0.22 | fail at 1 h: `strat`, `evap`   |
+| 120 levels  | 23 / 19     | 8.0 / 9.2   | 31 / 3.8    | fail at 1 h and 24 h           |
+| first order | 0.15 / 77   | 0.39 / 36   | 4.3 / 4.8   | reported, not judged; 23 h     |
+
+The gross closure residual at 24 h, relative to the column's water, and the
+copies' repair over the day:
+
+| rung        | default | copies | copies' repair |
+|:----------- | -------:| ------:| --------------:|
+| baseline    | 1.5e-4  | 1.8e-3 | 0.60%          |
+| dt 60 s     | 8.2e-5  | 1.7e-3 | 1.6%           |
+| dt 30 s     | 2.3e-5  | 1.6e-3 | 1.8%           |
+| Newton 2    | 5.7e-5  | 1.9e-3 | 0.30%          |
+| Newton 4    | 4.3e-7  | 1.5e-3 | 0.28%          |
+| 60 levels   | 8.3e-5  | 1.6e-3 | 0.62%          |
+| 120 levels  | 3.0e-2  | 0.12   | 88%            |
+| first order | 7.8e-5  | 1.06   | 95%            |
+
+  - **G3_PLAN 6.1's convergence criterion has two parts.**
+      + *The default meets the per-tag budgets at every rung.* It does at dt
+        60 and 30 s and at 2, 4 and 10 Newton iterations. It does not at 60
+        levels in the first hour: `strat` L1 is 1.36% against 1%, and `evap`
+        11.8% against 10%. It does not at 120 levels at any hour.
+      + *The copies' shares move by less than 2% in L1 between the baseline
+        and the finest rung.*
+          * On the Newton ladder they do. At ten iterations and 24 h the
+            moves are 0.1%, 0.4% and 1.7%.
+          * On the time-step ladder they do not. At dt 30 s and 24 h they are
+            5.0%, 17% and 7.9%.
+          * But there the parent's `hus` moves 7.9% as well, and the
+            default's shares move as the copies' do (5.1%, 17% and 8.1%).
+            This pair changes the atmosphere with the time step, so it does
+            not separate the tags' convergence from the atmosphere's.
+          * The level ladder can be compared only by column totals. At 120
+            levels and 24 h the copies' `tropo` column share is 12.3 points
+            above the baseline, and the default's is 4.9 points below.
+  - **At 120 levels both modes lose the partition.**
+      + In the default mode the follower leaves out 3.0e-2 of the column's
+        water by 12 h (`q_tag_inc_left`). That is the whole gross residual.
+      + With copies, the gross residual is 0.17 at 1 h, and the copies'
+        repair moves 88% of the water over the day.
+      + At 30 and 60 levels the same modes close to about 1e-4 (default) and
+        1.6e-3 (copies).
+      + Which operator parts the partition at 120 levels is not isolated.
+  - **First-order upwinding of the sub-grid flux.**
+      + The default closes to 7.8e-5 at 24 h.
+      + The copies' gross residual grows from 2.4e-4 at 1 h to 8.8e-3 at 5 h,
+        3.2e-2 at 12 h and 1.06 at 24 h. There the closure check's abort
+        level of 1.0 ended the run, at its last check.
+      + Their repair moves 95% of the water.
+      + This is not isolated either. The parent reconstructs `q_tot` and the
+        tracers with the same scheme (`edmfx_sgs_flux.jl`).
+      + So on this column the copies are no audit under first-order upwinding
+        or at 120 levels.
+  - **The copies' repair grows as the time step shrinks.** It moves 0.60% of
+    the water at dt 120 s, 1.6% at 60 s and 1.8% at 30 s. It shrinks with
+    more Newton iterations, to 0.28% at four. It is over G3_PLAN 6.1's 0.2%
+    bound at every rung.
+  - **The cost (R5) is not answered here.** The progress logger's time per
+    step is not consistent across rungs: dt 30 s takes less per step than dt
+    60 s. Compiling dominated each job, 12 to 13 min in the default mode and
+    28 to 41 min with copies. V-W10 measures cost.
+
+*V-W4, `hpda2_compute`, 2026-09-24, run with the D4-W driver from
+`../ClimaAtmosResiDyn-wedmf-run` at `1db57be5`. That tree is the record branch
+at `b53c2a55` with WP5 at `867a5264`. `fd07d902` changes only docs, a
+compile-time form of one predicate and a refusal, so the tags evolve as at
+#102's head. Jobs `13870216` to `13870229`. Script
+`analysis/water/vw4_verify.sh`; its reports are in `output/w4_d4w/`. The
+first-order pair was compared over 23 h, the copies' last output.*
 
 ## 2. Energy source tags: closure by transport
 

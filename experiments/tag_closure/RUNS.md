@@ -259,6 +259,20 @@ Every G3 run is stamped with a manifest at submission, kept as
 | `w8_gcm_untagged`             | 0000   | same   | 837db55b | 2026-09-24 | `13866551` | its untagged twin, for parity                                                           | W22      | yes  | 25 nc   | not yet |
 | `w5_d4w_increment`            | 0000   | same   | 9acb4956 | 2026-09-24 | `13868824` | WP5's validation: D4-W, the default mode with the follower, one Newton iteration        | W24      | yes  | 54 nc   | not yet |
 | `w5_d4w_increment_n10`        | 0000   | same   | 9acb4956 | 2026-09-24 | `13868825` | its 10-Newton twin                                                                      | W24      | yes  | 54 nc   | not yet |
+| `w4_d4w_default_dt60`         | 0000   | same   | 1db57be5 | 2026-09-24 | `13870224` | V-W4: D4-W, dt 60 s, the default mode with the follower | W25      | yes  | 54 nc   | not yet |
+| `w4_d4w_copies_dt60`          | 0000   | same   | 1db57be5 | 2026-09-24 | `13870217` | the same rung with copies | W25      | yes  | 56 nc   | not yet |
+| `w4_d4w_default_dt30`         | 0000   | same   | 1db57be5 | 2026-09-24 | `13870223` | V-W4: D4-W, dt 30 s, the default mode with the follower | W25      | yes  | 54 nc   | not yet |
+| `w4_d4w_copies_dt30`          | 0000   | same   | 1db57be5 | 2026-09-24 | `13870216` | the same rung with copies | W25      | yes  | 56 nc   | not yet |
+| `w4_d4w_default_n2`           | 0000   | same   | 1db57be5 | 2026-09-24 | `13870225` | V-W4: D4-W, two Newton iterations, the default mode with the follower | W25      | yes  | 54 nc   | not yet |
+| `w4_d4w_copies_n2`            | 0000   | same   | 1db57be5 | 2026-09-24 | `13870218` | the same rung with copies | W25      | yes  | 56 nc   | not yet |
+| `w4_d4w_default_n4`           | 0000   | same   | 1db57be5 | 2026-09-24 | `13870226` | V-W4: D4-W, four Newton iterations, the default mode with the follower | W25      | yes  | 54 nc   | not yet |
+| `w4_d4w_copies_n4`            | 0000   | same   | 1db57be5 | 2026-09-24 | `13870219` | the same rung with copies | W25      | yes  | 56 nc   | not yet |
+| `w4_d4w_default_z60`          | 0000   | same   | 1db57be5 | 2026-09-24 | `13870229` | V-W4: D4-W, 60 levels, the default mode with the follower | W25      | yes  | 54 nc   | not yet |
+| `w4_d4w_copies_z60`           | 0000   | same   | 1db57be5 | 2026-09-24 | `13870222` | the same rung with copies | W25      | yes  | 56 nc   | not yet |
+| `w4_d4w_default_z120`         | 0000   | same   | 1db57be5 | 2026-09-24 | `13870228` | V-W4: D4-W, 120 levels, the default mode with the follower | W25      | yes  | 54 nc   | not yet |
+| `w4_d4w_copies_z120`          | 0000   | same   | 1db57be5 | 2026-09-24 | `13870221` | the same rung with copies | W25      | yes  | 56 nc   | not yet |
+| `w4_d4w_default_upwind`       | 0000   | same   | 1db57be5 | 2026-09-24 | `13870227` | V-W4: D4-W, first-order SGS-flux upwinding, the default mode with the follower | W25      | yes  | 54 nc   | not yet |
+| `w4_d4w_copies_upwind`        | 0000   | same   | 1db57be5 | 2026-09-24 | `13870220` | the same rung with copies; aborted at 24 h by the closure check (1.06) | W25      | no  | 56 nc   | not yet |
 
 The commits of the `w3_*` rows are the run tree's. They carry WP3 at
 `9aab6690` (`9085e264`) or at `fe1331f2` (`b5f40586`, `d06e48f1`); W21 says
