@@ -436,12 +436,16 @@ end
         @test same_to_rounding(partition(parts.environment), ᶜS .* ᶜΔ⁰, scale)
         ᶜincrements = CA._water_fix_fields(Y_default.c.ρ, model.tags)
         CA.add_rainout_increments!(ᶜincrements, Y_default, p_default, model)
-        @test (@allocated CA.add_rainout_increments!(
+        # Julia 1.10 allocates 696 bytes here (CI, 2026-09-24), 1.11 at most
+        # 64, as `energy_source_tags_integration.jl`'s split solve does.
+        split_bytes = @allocated CA.add_rainout_increments!(
             ᶜincrements,
             Y_default,
             p_default,
             model,
-        )) <= 64
+        )
+        @info "The default mode's split allocates" split_bytes
+        @test split_bytes <= 64 broken = VERSION < v"1.11"
         test_same_model_fields(Y_default, Y_plain)
     end
 end
