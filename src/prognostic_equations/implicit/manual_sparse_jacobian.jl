@@ -300,7 +300,11 @@ Tagged water tracers mirror the sedimentation flux (see
 [`sediment_water_tags!`](@ref)), so their diagonals are allocated here too and
 excluded from `diffusion_jacobian_blocks`, which would otherwise allocate them
 a second time as passive tracers. With `water_tag_cross_flag` set, so are their
-cross blocks to each sedimenting mass, the tag's share of `ρq_tot`'s.
+cross blocks to each sedimenting mass, the tag's share of `ρq_tot`'s. The same
+flag gives the energy source tags their cross blocks to each sedimenting mass,
+the tag's share of the offset total's (G4.16; see
+`update_energy_source_sedimentation_jacobian!`). Their diagonals come from the
+diffusion blocks or the fallback identity, as before.
 
 # Returns
 
@@ -334,12 +338,34 @@ function sedimentation_jacobian_blocks(Y, atmos, water_tag_cross_flag)
                 ),
             ),
         )
+    # The energy source tags fall with their shares of each species' energy
+    # flux (`sediment_energy_source_tags!`), so their rows get the same one-way
+    # cross blocks, under the same flag (G4.16).
+    energy_tag_names = unrolled_map(
+        center_state_name,
+        sedimenting_energy_source_tag_names(Y),
+    )
+    energy_tag_cross_blocks =
+        !use_derivative(water_tag_cross_flag) ? () :
+        Tuple(
+            Iterators.flatten(
+                map(
+                    tag_name -> map(
+                        mass_name ->
+                            (tag_name, mass_name) => similar(Y.c, TridiagonalRow),
+                        mass_names,
+                    ),
+                    energy_tag_names,
+                ),
+            ),
+        )
     return (
         map(
             name -> (name, name) => similar(Y.c, TridiagonalRow),
             water_tag_names,
         )...,
         water_tag_cross_blocks...,
+        energy_tag_cross_blocks...,
         (@name(c.ρe_tot), @name(c.ρe_tot)) => similar(Y.c, TridiagonalRow),
         (@name(c.ρq_tot), @name(c.ρq_tot)) => similar(Y.c, TridiagonalRow),
         (@name(c.ρe_tot), @name(c.ρq_tot)) => similar(Y.c, TridiagonalRow),
@@ -699,10 +725,15 @@ function jacobian_cache(
     # Only the back-substitution solves the tags' cross blocks. A tag that some
     # other row named would stay in the nested solve with them, where they fail.
     if use_derivative(water_tag_cross_flag)
-        for name in
-            unrolled_map(center_state_name, sedimenting_water_tag_names(Y))
+        for name in unrolled_map(
+            center_state_name,
+            (
+                sedimenting_water_tag_names(Y)...,
+                sedimenting_energy_source_tag_names(Y)...,
+            ),
+        )
             name in uncoupled_names || error(
-                "The water tag $name carries sedimentation cross blocks, " *
+                "The tag $name carries sedimentation cross blocks, " *
                 "but another Jacobian row names it, so the split solver " *
                 "cannot solve it apart.",
             )
@@ -1364,6 +1395,124 @@ function update_sedimentation_jacobian!(matrix, Y, p, dtγ, water_tag_cross_flag
     end
 
     update_water_tag_sedimentation_jacobian!(matrix, Y, p, water_tag_cross_flag)
+    update_energy_source_sedimentation_jacobian!(
+        matrix,
+        Y,
+        p,
+        water_tag_cross_flag,
+    )
+    return nothing
+end
+
+"""
+    update_energy_source_sedimentation_jacobian!(matrix, Y, p, cross_flag)
+
+The energy source tags' sedimentation cross blocks (G4.16), with `cross_flag`
+set, the flag the water tags' blocks use. A no-op without the flag, without
+energy source tags, and where nothing sediments.
+
+A tag's sedimentation tendency (`sediment_energy_source_tags!`) is its share of
+each species' flux of the offset total `E = ρe_tot + c·ρ`, the flux
+`-w q (e_int + Φ + K + c)`, taken from the cell that loses the energy. At fixed
+shares and fixed `e_int + Φ + K`, its derivative in the species' mass `ρqₚ` is
+
+    ∂(ρe_srcᵢ)ₜ/∂ρqₚ = B · Diag(ᶠsᵢ) · ᶠtop_bias · Diag(WVector(-wₚ (hₚ + c) / ρ)),
+
+with `B = p.scratch.ᶜbidiagonal_adjoint_matrix_c3`, `hₚ = e_int + Φ + K` as the
+parent's block takes it, and `ᶠsᵢ` the face's share: the cell above's, or, on an
+interior face where the flux points up, the cell below's, as the tendency takes
+it. **The offset.** The shares are fractions of `E`, and the flux the tags share
+carries `c` per unit of falling mass. So over a closed partition, whose shares
+add up to one on every face, the tags' blocks add up to the parent's `ρe_tot`
+block plus `c` times its `ρ` block, the block of `E`.
+
+What stays out, as for the water tags and the parent: the shares' own
+dependence on the state, `e_int`'s on the temperature, and, under prognostic
+EDMF, the subdomain corrections, which the tendency adds explicitly. There the
+tendency takes the face's share by the direction of the whole flux, corrections
+included, and the block by the grid mean's. Both are convergence-rate
+approximations, not a change to what is solved.
+
+The rows name only coupled columns, so the split solver solves the tags after
+the coupled fields, by back-substitution, and the parent's increments are the
+same, bit for bit (`split_jacobian_solver`).
+"""
+function update_energy_source_sedimentation_jacobian!(matrix, Y, p, cross_flag)
+    use_derivative(cross_flag) || return nothing
+    # The state decides first, so a state without energy tags never reads the
+    # model.
+    isempty(sedimenting_energy_source_tag_names(Y)) && return nothing
+    model = p.atmos.energy_source_tagging_model
+    isnothing(model) && return nothing
+    # The share denominator is a property of the current state, so it is
+    # rebuilt here, as the tendency builds it.
+    energy_source_share_norm!(p, Y)
+    MatrixFields.unrolled_foreach(model.tags) do tag
+        update_energy_source_sedimentation_block!(matrix, Y, p, model, tag)
+    end
+    return nothing
+end
+
+# One tag's cross blocks, split out of the loop above so that neither closure
+# captures more than it needs.
+function update_energy_source_sedimentation_block!(matrix, Y, p, model, tag)
+    thermo_params = CAP.thermodynamics_params(p.params)
+    (; ᶜΦ) = p.core
+    (; ᶜu, ᶜT) = p.precomputed
+    c = _mass_energy(model.offset)
+    ᶜshare = _energy_source_share_field(
+        tag_field(Y.c, tag),
+        _energy_source_parent_field(Y, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        tag,
+    )
+    ᶠinterior = p.tagging.ᶠenergy_source_interior
+    tag_state_name = center_state_name(energy_source_tag_field_name(tag))
+    MatrixFields.unrolled_foreach(sedimenting_mass_names(Y)) do ρqₚ_name
+        ᶜwₚ = MatrixFields.get_field(
+            p.precomputed,
+            sedimentation_velocity_name(ρqₚ_name),
+        )
+        ᶜρqₚ = MatrixFields.get_field(Y.c, ρqₚ_name)
+        e_int_func = internal_energy_function(condensate_phase(ρqₚ_name))
+        ∂ᶜρe_src_err_∂ᶜρqₚ =
+            matrix[tag_state_name, center_state_name(ρqₚ_name)]
+        # The face's share: the cell above's, or, on an interior face where the
+        # flux `-w q (h + c)` of the cell above points up, the cell below's.
+        @. p.scratch.ᶠband_matrix_wvec =
+            DiagonalMatrixRow(
+                ifelse(
+                    (ᶠinterior > 0) & (
+                        ᶠtop_bias(
+                            -(ᶜwₚ) *
+                            specific(ᶜρqₚ, Y.c.ρ) *
+                            (
+                                e_int_func(thermo_params, ᶜT) +
+                                ᶜΦ +
+                                $(Kin(ᶜwₚ, ᶜu)) +
+                                c
+                            ),
+                        ) > 0
+                    ),
+                    ᶠbottom_bias_zero(ᶜshare),
+                    ᶠtop_bias(ᶜshare),
+                ),
+            ) *
+            ᶠtop_bias_matrix() *
+            DiagonalMatrixRow(
+                ClimaCore.Geometry.WVector(
+                    -(ᶜwₚ) * (
+                        e_int_func(thermo_params, ᶜT) +
+                        ᶜΦ +
+                        $(Kin(ᶜwₚ, ᶜu)) +
+                        c
+                    ) / Y.c.ρ,
+                ),
+            )
+        @. ∂ᶜρe_src_err_∂ᶜρqₚ =
+            p.scratch.ᶜbidiagonal_adjoint_matrix_c3 *
+            p.scratch.ᶠband_matrix_wvec
+    end
     return nothing
 end
 

@@ -63,6 +63,16 @@ end
 @generated updraft_copy_field(obj, ::EnergySourceTag{name}) where {name} =
     :(obj.$(Symbol(:e_src_, name)))
 
+# The tag's state field as a `MatrixFields.FieldName` relative to `Y.c`, the
+# form the Jacobian indexes blocks by, as `water_tag_field_name` for the water
+# tags. The result is a singleton type, so this is a compile-time constant.
+@generated function energy_source_tag_field_name(
+    ::EnergySourceTag{name},
+) where {name}
+    field_name = Symbol(:ρe_src_, name)
+    return :(MatrixFields.FieldName($(QuoteNode(field_name))))
+end
+
 """
     energy_source_updraft_copy_variables(gs, model)
 
@@ -190,6 +200,20 @@ Whether `name` (a `Symbol` like `:ρe_src_tropics`, or a
 is_energy_source_tag_name(name::Symbol) = startswith(string(name), "ρe_src_")
 is_energy_source_tag_name(name::MatrixFields.FieldName) =
     is_energy_source_tag_name(MatrixFields.extract_first(name))
+
+"""
+    sedimenting_energy_source_tag_names(Y)
+
+`Tuple` of `@name`s (relative to `Y.c`) of the energy source tags, when some
+species sediments, and `()` otherwise. They fall with their shares of each
+species' energy flux (`sediment_energy_source_tags!`), so with the split solver
+their Jacobian rows carry cross blocks to each sedimenting mass (G4.16). Used
+by both the block allocation and the update, as `sedimenting_water_tag_names`
+is for the water tags.
+"""
+sedimenting_energy_source_tag_names(Y) =
+    isempty(sedimenting_mass_names(Y)) ? () :
+    unrolled_filter(is_energy_source_tag_name, gs_tracer_names(Y))
 
 # The names of the increment correction's ledger, in the state's order.
 const ENERGY_SOURCE_LEDGER_NAMES = (:e_src_inc_left, :e_src_inc_moved)
@@ -1222,11 +1246,17 @@ every face, and sedimentation adds nothing to `e_src_res`. A no-op when energy
 source tagging is disabled, and under 0-moment microphysics, where nothing
 sediments.
 
-The tags have no Jacobian block for this. A tag's own Courant number is the
-species' times the species' share of the total, which is small, so the step is
-not stiff for the tags. The parent's energy flux does enter the Newton solve,
-through the condensate's own blocks, so within a step the tags lag it slightly.
-That gap is bounded and lands in `e_src_res`.
+The tags have no diagonal Jacobian block for this. A tag's own Courant number
+is the species' times the species' share of the total, which is small, so the
+step is not stiff for the tags. The parent's energy flux enters the Newton
+solve through the condensate's own blocks. With the split solver, each tag's
+row carries the matching cross block to each falling mass, its share of the
+parent's (`update_energy_source_sedimentation_jacobian!`, G4.16). So one Newton
+iteration moves the tags with the updated species, as it moves `ρe_tot`.
+Without the split the tags lag it within a step, and the gap lands in
+`e_src_res`. With the microphysics stepped explicitly that lag was 2.1e-4 of
+the partitioned energy in an hour on a DYCOMS RF02 EDMF column (FINDINGS E80 on
+the record branch).
 """
 sediment_energy_source_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ) =
     _sediment_energy_source_tags!(
