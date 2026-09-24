@@ -416,8 +416,11 @@ and 9), was built at `bdc75731`. All its local tests passed there.
 The code review (high, `review/agent_reviews/wp6_code_review_2026-09-24.md`)
 found no parity defect. It found a Float32 bug in step 1's audit event total
 (B1). B1, S1, S3, S4, S5, M1, M2 and M7 were taken at `e65009ef`, and S2 as
-restated claims. Its tests and the review's cadence script
-(`analysis/water/wp6_cadence_checks.jl`) are running. Step 3, the
+restated claims. `1b976a97` makes the gross callback allocation-free. Local
+tests pass: water units 435, energy units 500, energy integration 117, energy
+EDMF 53 (at `e65009ef`), and copies integration 99 (at `1b976a97`). Pushed to
+#103. The review's cadence script (`analysis/water/wp6_cadence_checks.jl`) is
+running. Step 3, the
 per-mechanism report and the checkpointed cache ledgers, waits on the owner's
 points in the note's section 8.
 
