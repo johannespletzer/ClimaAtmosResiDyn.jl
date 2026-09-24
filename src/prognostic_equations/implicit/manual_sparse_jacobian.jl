@@ -750,8 +750,9 @@ function jacobian_name_chains_overlap(a::Vector{Any}, b::Vector{Any})
 end
 
 # Whether a state variable is one the split may solve apart: a tag of any of the
-# three families, a process record, or the ledger of the energy source tags' or
-# the water tags' increment correction. All live directly in `Y.c`.
+# three families, a process record, the ledger of the energy source tags' or
+# the water tags' increment correction, or a ledger per mechanism of either
+# family (WP6). All live directly in `Y.c`.
 function is_splittable_jacobian_field(name::MatrixFields.FieldName)
     chain = jacobian_name_chain(name)
     (length(chain) == 2 && chain[1] === :c && chain[2] isa Symbol) ||
@@ -759,7 +760,8 @@ function is_splittable_jacobian_field(name::MatrixFields.FieldName)
     return is_tagged_tracer_name(chain[2]) ||
            startswith(string(chain[2]), "prc_") ||
            is_energy_source_ledger_name(chain[2]) ||
-           is_water_tag_ledger_name(chain[2])
+           is_water_tag_ledger_name(chain[2]) ||
+           is_tag_mechanism_ledger_name(chain[2])
 end
 
 """
