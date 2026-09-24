@@ -187,8 +187,10 @@ out in a cell is `M` times its weight over the column's. That total is at least
 `|M|`, so a cell leaves out at most `m`, with `m`'s sign, and moves the rest,
 `m` or less.
 """
-@inline water_increment_left_weight(m, M) =
-    M >= zero(M) ? max(m, zero(m)) : max(-m, zero(m))
+# EXPERIMENT ONLY (the long runs' |m| control, not for merge): every cell
+# weighted by its mismatch's absolute value, the rule before the owner's review
+# of #102, for both families.
+@inline water_increment_left_weight(m, M) = abs(m)
 
 """
     correct_water_tag_increment!(dY, U, p)
