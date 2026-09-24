@@ -518,6 +518,8 @@ ClimaAtmos.WATER_TAG_SOURCE_GROUPS
 ClimaAtmos.water_tag_fraction
 ClimaAtmos.water_tag_share_norm!
 ClimaAtmos.water_tag_sediment_share
+ClimaAtmos.water_tag_source_sediment_share
+ClimaAtmos.water_tag_sediment_share_field
 ClimaAtmos.sediment_water_tags!
 ClimaAtmos.snapshot_tagged_ρq_tot!
 ClimaAtmos.attribute_tagged_ρq_tot!
