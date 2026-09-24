@@ -351,3 +351,25 @@ follower's moved ledger holds the parent's vertical advection, which does not
 shrink with the step. So the draft applies the refinement test to the repair
 and to `inc_left`, not to `inc_moved`. Testing the follower's lag alone needs a
 way to separate the advection.
+
+## 11. Addendum, 2026-09-24 late: OD3 approved, option A, the probe, step 2
+
+  - Recorded: OD3, OD2's rule and OD6's ceiling approved as drafted; the short
+    60-level sphere run before the 90-day one; known issue 7's order (A, the
+    probe, then B, C or D). ROADMAP, STATUS, DECISIONS, G3_TODO, G4_TODO.
+  - Option A on `claude/tag-closure-no-abort` (`00c9eedb`, then `origin/main`
+    merged in at `36cd8cee`): the abort lived on `main`, for all three
+    families; only water had a default level. No check ends a run by
+    default; water's old level is its `void_above`; an explicit
+    `abort_above` still ends a run. Config tests pass on the login node.
+  - `claude/water-tags-wp6-step3`: known issue 7 updated (`b1b82e6a`); the
+    docbuild fix (`dfc54fcc`).
+  - The probe: pre-registered in `design/NEGATIVE_PARENT_WATER.md` section 5;
+    config `lr_s23_probe_ledgers.yml`; run tree
+    `../ClimaAtmosResiDyn-issue7-probe-run` (one conflict, in
+    `correct_energy_source_increment!`, G4.15b's names with step 3's
+    additions); its unit tests pass (548, 567).
+  - Step 2: pre-registered in `design/W25_ISOLATION.md`, 22 configs, two
+    scripts, a runscript, a run tree `../ClimaAtmosResiDyn-w25i-run`
+    (conflicts only in `test/tagged_water_tests.jl` and `NEWS.md`). Login-node
+    checks in `output/w25i_smoke/`.
