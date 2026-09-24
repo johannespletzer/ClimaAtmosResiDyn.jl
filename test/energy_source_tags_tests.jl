@@ -1796,3 +1796,146 @@ end
     ) ==
           "tanh_polygon(vertices = [[0.0, 1.5], [2.0, 3.0], [4.0, 5.0]], width = 1.0, inside = false)"
 end
+
+# WP6, step 3: each energy source tag's own ledgers.
+@testset "Each energy source tag's own ledgers" begin
+    for FT in (Float32, Float64)
+        strat = CA.EnergySourceTag{:strat}(CA.TanhAltitudeRegion(FT(750), FT(100)))
+        tropo = CA.EnergySourceTag{:tropo}(
+            CA.TanhAltitudeRegion(FT(750), FT(100), false),
+        )
+        sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        tags = (strat, tropo, sfc)
+        c = FT(50000)
+        plain = CA.EnergySourceTaggingModel(tags, c)
+        per_tag = CA.EnergySourceTaggingModel(tags, c; ledger_per_tag = true)
+        increment = CA.EnergySourceTaggingModel(
+            tags,
+            c;
+            transport = CA.EnthalpyIncrementEnergySourceTransport(),
+            ledger_per_tag = true,
+        )
+        fix_names = (:e_src_led_fix_strat, :e_src_led_fix_tropo, :e_src_led_fix_sfc)
+        inc_names = (:e_src_led_inc_strat, :e_src_led_inc_tropo, :e_src_led_inc_sfc)
+        @test CA.energy_source_per_tag_ledger_names(plain) == ()
+        @test CA.energy_source_per_tag_ledger_names(per_tag) == fix_names
+        @test CA.energy_source_per_tag_ledger_names(increment) ==
+              (fix_names..., inc_names...)
+        @test CA.energy_source_ledger_inc_names(per_tag) == ()
+        @test CA.has_energy_source_ledger_per_tag(increment)
+        @test !CA.has_energy_source_ledger_per_tag(nothing)
+        @test CA.energy_source_per_tag_ledger_variables(FT(1), per_tag) ==
+              NamedTuple{fix_names}((FT(0), FT(0), FT(0)))
+
+        # The repair writes each tag's change into its own ledger: from zero,
+        # the cache ledger bit for bit.
+        state() = (;
+            c = (;
+                ρ = FT[1, 1],
+                ρe_tot = FT[-40000, -60000],
+                ρe_src_strat = FT[12000, -3000],
+                ρe_src_tropo = FT[-2000, -7000],
+                ρe_src_sfc = FT[-5, -5],
+                e_src_led_repair = zeros(FT, 2),
+                e_src_led_repairnet = zeros(FT, 2),
+                e_src_led_fix_strat = zeros(FT, 2),
+                e_src_led_fix_tropo = zeros(FT, 2),
+                e_src_led_fix_sfc = zeros(FT, 2),
+            ),
+        )
+        keyed(f) = (; ρe_src_strat = f(), ρe_src_tropo = f(), ρe_src_sfc = f())
+        cache(model) = (;
+            atmos = (; energy_source_tagging_model = model),
+            tagging = (;
+                ᶜenergy_source_fix = keyed(() -> zeros(FT, 2)),
+                ᶜenergy_source_fix_gross = keyed(() -> zeros(2)),
+                ᶜenergy_source_fix_count = keyed(() -> zeros(2)),
+                ᶜenergy_source_pos = zeros(FT, 2),
+                ᶜenergy_source_neg = zeros(FT, 2),
+            ),
+        )
+        Y = state()
+        before = state().c
+        p = cache(per_tag)
+        CA.repair_energy_source_tags!(Y, p)
+        for name in (:strat, :tropo, :sfc)
+            ᶜL = getproperty(Y.c, Symbol(:e_src_led_fix_, name))
+            ᶜfix = getproperty(p.tagging.ᶜenergy_source_fix, Symbol(:ρe_src_, name))
+            @test ᶜL == ᶜfix
+            @test ᶜL ≈
+                  getproperty(Y.c, Symbol(:ρe_src_, name)) .-
+                  getproperty(before, Symbol(:ρe_src_, name))
+        end
+        @test Y.c.e_src_led_fix_sfc[1] == 5
+        # Without the key nothing is written there, and the tags move alike.
+        Y_plain = state()
+        CA.repair_energy_source_tags!(Y_plain, cache(plain))
+        @test all(iszero, Y_plain.c.e_src_led_fix_strat)
+        for name in (:ρe_src_strat, :ρe_src_tropo, :ρe_src_sfc)
+            @test getproperty(Y_plain.c, name) == getproperty(Y.c, name)
+        end
+    end
+end
+
+# The increment correction's flux, written into each tag's own ledger by the
+# same kernel, is the tag's change bit for bit.
+@testset "The energy correction's ledger per tag" begin
+    CC = CA.ClimaCore
+    for FT in (Float32, Float64)
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 8,
+            staggering,
+        )
+        tags = (
+            CA.EnergySourceTag{:strat}(CA.TanhAltitudeRegion(FT(500), FT(100))),
+            CA.EnergySourceTag{:tropo}(
+                CA.TanhAltitudeRegion(FT(500), FT(100), false),
+            ),
+            CA.EnergySourceTag{:sfc}(nothing, :surface_flux),
+        )
+        names = (
+            :ρ,
+            :ρe_tot,
+            :ρe_src_strat,
+            :ρe_src_tropo,
+            :ρe_src_sfc,
+            :e_src_led_inc_strat,
+            :e_src_led_inc_tropo,
+            :e_src_led_inc_sfc,
+        )
+        ᶜcoord = CC.Fields.coordinate_field(column(CC.CommonSpaces.CellCenter()))
+        ᶠcoord = CC.Fields.coordinate_field(column(CC.CommonSpaces.CellFace()))
+        new_state() = similar(ᶜcoord, NamedTuple{names, NTuple{length(names), FT}})
+        ᶜY = new_state()
+        parent(ᶜY) .= 0
+        c = FT(110495)
+        @. ᶜY.ρ = 1
+        @. ᶜY.ρe_tot = FT(2e5) * (1 - ᶜcoord.z / 2000)
+        ᶜparent = @. ᶜY.ρe_tot + c * ᶜY.ρ
+        @. ᶜY.ρe_src_strat = ᶜparent * ᶜcoord.z / 1000
+        @. ᶜY.ρe_src_tropo = ᶜparent - ᶜY.ρe_src_strat
+        @. ᶜY.ρe_src_sfc = FT(0.1) * ᶜparent
+        ᶜnorm = @. ᶜY.ρe_src_strat + ᶜY.ρe_src_tropo
+        ᶠflux = @. CA.CT3(CA.Geometry.WVector(FT(10) * sinpi(ᶠcoord.z / 1000)))
+        ᶜYₜ = new_state()
+        parent(ᶜYₜ) .= 0
+        CA._sgs_energy_source_tag_fluxes!(ᶜYₜ, ᶜY, ᶜparent, ᶜnorm, ᶠflux, tags)
+        CA._sgs_energy_source_tag_fluxes!(
+            CA.TagLedgerView{:inc}(ᶜYₜ),
+            ᶜY,
+            ᶜparent,
+            ᶜnorm,
+            ᶠflux,
+            tags,
+        )
+        for name in (:strat, :tropo, :sfc)
+            ᶜtag = getproperty(ᶜYₜ, Symbol(:ρe_src_, name))
+            ᶜledger = getproperty(ᶜYₜ, Symbol(:e_src_led_inc_, name))
+            @test maximum(abs, parent(ᶜtag)) > 0
+            @test parent(ᶜledger) == parent(ᶜtag)
+        end
+    end
+end

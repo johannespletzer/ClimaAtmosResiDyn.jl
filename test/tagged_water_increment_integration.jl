@@ -111,13 +111,25 @@ altitude_region(above) = Dict{String, Any}(
         ],
         "energy_source_tag_offset" => 110495.0,
         "energy_source_tag_transport" => "enthalpy_increment",
+        # Each tag keeps its own ledgers (WP6, step 3), in both families, so
+        # the parity check below covers them. The follower without them is
+        # the default mode's, which `tagged_water_edmf_integration.jl` runs.
+        "water_tag_ledger_per_tag" => true,
+        "energy_source_tag_ledger_per_tag" => true,
         # The audit and the diagnostics write scratch from callbacks, so the
         # parity check below covers them too.
         "water_closure_check" =>
             Dict{String, Any}("period" => "10mins", "audit" => true),
         "diagnostics" => [
             Dict{String, Any}(
-                "short_name" => ["q_tag_inc_left", "q_tag_inc_moved", "q_tag_res"],
+                "short_name" => [
+                    "q_tag_inc_left",
+                    "q_tag_inc_moved",
+                    "q_tag_res",
+                    "q_tag_led_fix_tropo",
+                    "q_tag_led_incgross_tropo",
+                    "q_tag_led_repair_attempted",
+                ],
                 "period" => "10mins",
             ),
         ],
@@ -138,7 +150,8 @@ altitude_region(above) = Dict{String, Any}(
         CA.is_water_tag_ledger_name(name) ||
         CA.is_tag_mechanism_ledger_name(name) ||
         CA.is_energy_source_tag_name(name) ||
-        CA.is_energy_source_ledger_name(name)
+        CA.is_energy_source_ledger_name(name) ||
+        CA.is_tag_per_tag_ledger_name(name)
 
     # 1. The correction on a set increment: the parent gains a profile whose
     # column total is not zero, and the tags gain nothing. So the mismatch is
@@ -354,9 +367,85 @@ altitude_region(above) = Dict{String, Any}(
         )
         @test cache.solver isa CA.SplitJacobianSolver
         uncoupled = Set(map(field -> field.name, cache.solver.uncoupled))
-        for name in (:q_tag_inc_left, :q_tag_inc_moved)
+        for name in (
+            :q_tag_inc_left,
+            :q_tag_inc_moved,
+            CA.water_tag_per_tag_ledger_names(model)...,
+            CA.energy_source_per_tag_ledger_names(energy_model)...,
+        )
             @test CA.MatrixFields.FieldName(:c, name) in uncoupled
         end
+    end
+
+    # 2b. Each tag's own ledgers (WP6, step 3), which this run keeps.
+    @testset "Each tag's own ledgers" begin
+        water_names = CA.water_tag_per_tag_ledger_names(model)
+        energy_names = CA.energy_source_per_tag_ledger_names(energy_model)
+        @test length(water_names) == 6
+        @test length(energy_names) == 6
+        @test all(name -> hasproperty(Y.c, name), (water_names..., energy_names...))
+        # The follower's ledgers of the partition's tags sum to what it moved
+        # between levels: the shares sum to one wherever the donor cell holds
+        # partition water, as it does everywhere here.
+        close(a, b) = maximum(abs, parent(a .- b)) <= 1e-10 * maximum(abs, parent(b))
+        @test maximum(abs, parent(Y.c.q_tag_led_inc_tropo)) > 0
+        @test close(
+            Y.c.q_tag_led_inc_tropo .+ Y.c.q_tag_led_inc_strat,
+            Y.c.q_tag_inc_moved,
+        )
+        @test close(
+            Y.c.e_src_led_inc_strat .+ Y.c.e_src_led_inc_tropo,
+            Y.c.e_src_inc_moved,
+        )
+        # The ledger of each tag's limiters' and repair's corrections holds
+        # what the cache ledger holds. At the default cadence both take each
+        # correction once per step on the accepted state, and no limiter acts
+        # on a stage value here.
+        for name in (:tropo, :strat, :evap)
+            @test isapprox(
+                parent(getproperty(Y.c, Symbol(:q_tag_led_fix_, name))),
+                parent(getproperty(p.tagging.ᶜwater_fix, Symbol(:ρq_tag_, name)));
+                rtol = 1e-12,
+                atol = 1e-15 * maximum(abs, parent(Y.c.ρq_tot)),
+            )
+        end
+        for name in (:strat, :tropo, :sfc)
+            @test isapprox(
+                parent(getproperty(Y.c, Symbol(:e_src_led_fix_, name))),
+                parent(
+                    getproperty(p.tagging.ᶜenergy_source_fix, Symbol(:ρe_src_, name)),
+                );
+                rtol = 1e-12,
+                atol = 1e-15 * maximum(abs, parent(Y.c.ρe_tot)),
+            )
+        end
+        # Each ledger started at zero, so its per-step gross is at least its
+        # value, and it counts events.
+        (; ledgers) = p.tagging.tag_ledger_steps
+        for name in (water_names..., energy_names...)
+            ᶜgross = parent(getproperty(ledgers, name).ᶜgross)
+            @test all(ᶜgross .>= abs.(parent(getproperty(Y.c, name))) .* (1 - 1e-12))
+        end
+        @test sum(parent(ledgers.q_tag_led_inc_tropo.ᶜevents)) > 0
+        # The audit reports each ledger, and each tag against its water.
+        audit = CA.water_tag_extra_audit(Y, p, model, FT(1))
+        @test audit.ledger_cadence_step == 1
+        @test audit.led_inc_tropo_retained > 0
+        @test 0 < audit.led_inc_tropo_inventory_fraction < Inf
+        @test audit.inc_moved_attempted > 0
+        @test audit.led_inc_tropo_attempted > 0
+        # At the default cadence the repair fires once per step on the
+        # accepted state, so what it attempted is what the steps retained.
+        @test isapprox(
+            audit.led_repair_attempted,
+            audit.led_repair_retained;
+            rtol = 1e-10,
+            atol = 1e-14 * audit.led_inc_tropo_retained,
+        )
+        energy_audit = CA.energy_source_audit(Y, p, energy_model, FT(1))
+        @test energy_audit.led_inc_strat_retained > 0
+        @test 0 < energy_audit.led_inc_strat_inventory_fraction < Inf
+        @test energy_audit.ledger_cadence_step == 1
     end
 
     # 3. The model's own fields.

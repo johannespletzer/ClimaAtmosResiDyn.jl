@@ -1385,3 +1385,56 @@ end
         "follow",
     )
 end
+
+# WP6, step 3: each tag's own ledgers are opt-in, per family.
+@testset "Ledgers per tag" begin
+    water_entries = [
+        Dict{String, Any}("name" => "tropo", "region" => "tropics"),
+        Dict{String, Any}("name" => "extra", "region" => "extratropics"),
+    ]
+    source_entries = [
+        Dict{String, Any}("name" => "a", "region" => "tropics"),
+        Dict{String, Any}("name" => "b", "region" => "extratropics"),
+    ]
+    config(name, pairs...) =
+        tracer_config(
+            ["microphysics_model" => "0M", pairs...];
+            job_id = "ledger_per_tag_$name",
+        )
+    tagging(name, pairs...) = CA.AtmosTagging(config(name, pairs...))
+    both = (
+        "water_tracers" => water_entries,
+        "energy_source_tags" => source_entries,
+        "energy_source_tag_offset" => 110495.0,
+    )
+    off = tagging("off", both...)
+    @test !CA.has_water_tag_ledger_per_tag(off.water_tagging_model)
+    @test !CA.has_energy_source_ledger_per_tag(off.energy_source_tagging_model)
+    on = tagging(
+        "on",
+        both...,
+        "water_tag_ledger_per_tag" => true,
+        "energy_source_tag_ledger_per_tag" => true,
+    )
+    @test CA.has_water_tag_ledger_per_tag(on.water_tagging_model)
+    @test CA.has_energy_source_ledger_per_tag(on.energy_source_tagging_model)
+    @test CA.water_tag_per_tag_ledger_names(on.water_tagging_model) ==
+          (:q_tag_led_fix_tropo, :q_tag_led_fix_extra)
+    @test CA.energy_source_per_tag_ledger_names(on.energy_source_tagging_model) ==
+          (:e_src_led_fix_a, :e_src_led_fix_b)
+    # A quoted value is refused, and so is the key without its family.
+    @test_throws r"must be `true` or `false`" CA.tag_ledger_per_tag_from_config(
+        "true",
+        "water_tag_ledger_per_tag",
+    )
+    @test CA.tag_ledger_per_tag_from_config(nothing, "water_tag_ledger_per_tag") ==
+          false
+    @test_throws r"no tags to keep ledgers for" tagging(
+        "water_alone",
+        "water_tag_ledger_per_tag" => true,
+    )
+    @test_throws r"no tags to keep ledgers for" tagging(
+        "source_alone",
+        "energy_source_tag_ledger_per_tag" => true,
+    )
+end
