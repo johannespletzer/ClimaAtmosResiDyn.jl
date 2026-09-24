@@ -318,6 +318,25 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
       + what parts the partition at 120 levels, in both modes;
       + what parts the copies under first-order upwinding.
 
+## WP5b: the tags' sedimentation cross blocks
+
+The owner chose this on 2026-09-24 for the explicit-1M lag (W23; the owner's
+review of #102, point 3). Design: `design/SEDIMENTATION_CROSS_BLOCKS.md`. The
+work is on branch `claude/water-tags-sed-cross`, worktree `-wedmf5b`, stacked
+on #102.
+  - [x] Each tag's row gets the parent's cross block to each falling species,
+    times the tag's share. The split solver solves the tags after the coupled
+    fields, by back-substitution, so the parent's increments are unchanged.
+    Commit `c2bf8a62`.
+  - [x] For the experiment, the refusal of `increment` with 1M stepped
+    explicitly is lifted (`f8da0913`, the control without the cross blocks).
+  - [ ] The distinguishing experiment (`analysis/water/wp5b_probe.jl`): W23's
+    column, off and on, default and copies, tracer and follower. Running.
+  - [ ] By its result: restore or drop the refusal, and fix the docs and the
+    config tests; add an integration test. Then a draft PR, the xhigh review,
+    and a D4-W implicit-1M check.
+  - [ ] The copies' cross blocks, as a second step.
+
 ## WP4a: the 0M split (draft PR-W4a)
 
 Built on `claude/water-tags-edmf-wp4a` (905b7ff5, from WP5's fd07d902) to the
