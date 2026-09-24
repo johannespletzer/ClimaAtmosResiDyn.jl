@@ -283,7 +283,11 @@ Measure it on W23's explicit column before either is decided.
     more than its own mismatch) at a fourfold gross, or keep |m| for energy.
   - [x] N5 measured (FINDINGS E80): 2.1e-4 an hour on the explicit path with
     one iteration, 1.5e-6 implicit. The fix is G4.16.
-  - [ ] PR, after the owner's choice above.
+  - [ ] PR, after the owner's choice above. With the same-sign rule,
+    `energy_source_tags_increment_integration.jl:347` (`|left| > 0.5 ×
+    gross`) fails on its hour-long EDMF column: `|left|` is 85.7 J/m² and
+    the gross 176 (a ratio of 0.49), since the rule raises the gross as on D4
+    (E79). The other 98 checks pass. Recalibrate it with the choice.
 
 ### G4.16 Sedimentation cross blocks for the energy source tags
 
