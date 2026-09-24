@@ -41,6 +41,14 @@ orders of magnitude.
 These items come from the former G3 and from plan section 9. They wait for
 G3, except where the job session runs them now.
 
+*Rev. 2 of the work plan (2026-09-24)* changes G4.1, G4.3 to G4.8, G4.11,
+G4.15 and G4.16 in place, each marked "rev. 2". Its step 10 orders G4:
+G4.16's cross blocks, then G4.1 and G4.11's mirrors at the tag counts OD8
+keeps, G4.3 to G4.6 with offset-invariant scales (OD4), the G4.15 decision
+(OD7), G4.7 and G4.8, and the energy default. The energy sphere, G4.13, comes
+last (OD6). ROADMAP.md, "Rev. 2 of the work plan", holds the contract and the
+register.
+
 ### G4.1 #95's follow-ups
 
 D1 with D3 closes when #95 merges. U5, a clear error when the tag list
@@ -61,6 +69,13 @@ changes across a restart.
     water's fifth mirror, W20), the radiation into `mseʲ`, the buoyancy and
     pressure-work terms. List every writer of `mseʲ`, as the review listed
     those of `q_totʲ`, and mirror or bound each.
+    *Scope added (rev. 2, 2026-09-24):* all the `mseʲ` source mirrors are
+    complete before energy copies serve as the audit in held-out cases, at
+    the tag counts OD8 keeps (with G4.11). Until then the default-against-
+    copies `sfc` gaps of E76, and of E73 at the baseline, are labelled
+    "comparator not eligible". Rev. 2 also names E39 here; E39 measures the
+    audit's closure against the Newton count and has no copies, so the label
+    does not apply to it.
 
   - **The region masks' width in the docs** (decision 10 of 2026-09-18,
     `OT-regionmask`): 2° stays. Say that a mask narrower than the grid spacing
@@ -149,6 +164,13 @@ two-iteration run?
 Claim contracts for energy source tags, process records and the parent-budget
 ledger.
 
+*Scope added (rev. 2, 2026-09-24), for G4.3 to G4.6:* these items refer to the
+acceptance contract in ROADMAP.md and do not restate it. Process records stay
+apart from the stored source provenance: a source tag cannot show where its
+process removed energy (E22). Every energy percentage is restated against an
+offset-invariant scale (OD4). The first step is an audit of the denominators
+of the existing E-records, E39, E62 to E66, E73 to E76, E79 and E80 first.
+
 ### G4.4 The residual report
 
 Rate and settling forecast (synergy 4), vertical and local maxima, headroom
@@ -205,6 +227,14 @@ State on 2026-09-23: the job session reran the ladder's default runs at
 as E76 (`8726d2cb`, ported to the record branch as `eec7f363`). #95 has not merged yet, so the
 ladder at the merged head is still to do.
 
+*Scope added (rev. 2, 2026-09-24), for G4.7 and G4.8:* each reference case
+gets a startup or source-pulse window with boundaries fixed beforehand (OD2),
+fixed-parent trial-step comparisons where tag numerics are isolated, and the
+two first-step probes of Insight 4: the first step fully converged, and the
+tags started after it. E39 found that 98% of the audit's first-hour residual
+is made in the first 10 s step. Full-run comparisons stay, reported as
+configuration outcomes. They run after G4.16, the mirrors and OD7.
+
 ### G4.8 A surface pulse, and convection switched on and off, for energy
 
 ### G4.9 Alternative placements of the increment correction on a shared parent
@@ -254,6 +284,13 @@ upward where it lasts (open question 3, FQ-10's remainder).
 
 ### G4.15 The energy follower after the owner's review of #102
 
+*Scope added (rev. 2, 2026-09-24):* water's same-sign choice is not inherited
+automatically. The current comparison stays, and the owner chooses (OD7)
+before the G4.7 and G4.8 runs, after the long runs (DECISIONS.md,
+2026-09-24). The aggregation test's departure is reported for the chosen
+rule: a sign-dependent rule is not linear in the tags, so some departure is
+expected, and its size is evidence.
+
 Added on 2026-09-24. The review of the water follower (#102) changed three
 things that the energy source tags' `enthalpy_increment` still does the old
 way:
@@ -301,6 +338,12 @@ Measure it on W23's explicit column before either is decided.
 
 ### G4.16 Sedimentation cross blocks for the energy source tags
 
+*Scope added (rev. 2, 2026-09-24):* G4.16 moves ahead of G4.7 and of the
+energy-default choice. It reuses the water tags' block and back-substitution
+design (#105), with energy's own finite-difference, partition-sum, offset and
+explicit-against-implicit validation. Its interim guard is step 0 of the
+revised order, below. The guard is removed only when G4.16 passes.
+
 Added on 2026-09-24, at the owner's request. The water tags' rows now carry the
 parent's sedimentation cross block to each falling species, times the tag's
 share (WP5b, #105); the energy source tags' rows do not. Under
@@ -319,8 +362,17 @@ parent's sedimentation on the explicit path as the water tags did (W23).
     the tags' real tendency, both float types; the partition's sum against
     the parent's.
   - [ ] Measure on W23's explicit column, one iteration, against 2.1e-4.
-  - [ ] Until then, `enthalpy_increment` with 1M stepped explicitly: refuse,
-    or document the lag. The owner decides.
+  - [x] Until then, `enthalpy_increment` with 1M stepped explicitly: refuse,
+    or document the lag. The owner decided in rev. 2 (2026-09-24): refuse,
+    with an explicit opt-in for development runs, off by default, and a test
+    that the default configuration errors. Built on
+    `claude/energy-explicit-1m-guard` (`33eeb5cd`, from `main` at
+    `0b2b1032`; not pushed). The opt-in key's name is a proposal:
+    `energy_source_tag_increment_allow_explicit_1m`. It is documented in
+    `default_config.yml`, `energy_source_tags.md`, the guide and NEWS. The
+    config test passes on the login node (`output/g416_guard/`). The
+    record's `g415_n5_explicit_*` configs set this combination, so they need the key
+    to run on a branch with the guard. [ ] A PR to `main`.
 
 ## Energy items within M1 to M5 that no G4.n takes up yet
 

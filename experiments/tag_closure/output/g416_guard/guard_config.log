@@ -1,0 +1,8 @@
+Test Summary:                                                | Pass  Total  Time
+Check that every available config file has a unique `job_id` |  108    108  0.3s
+Test Summary:                                                           | Pass  Total  Time
+Check that entries in `default_config.yml` have `help` and `value` keys |    2      2  0.0s
+Test Summary:                                            | Pass  Total  Time
+Check that config files only set keys the schema defines |  108    108  0.7s
+Test Summary:                              | Pass  Total  Time
+Config files may carry mapping-valued keys |    2      2  0.3s

@@ -21,6 +21,12 @@ Short names for the sources:
 
 ## Waiting for the owner
 
+  - **Rev. 2's register, OD1 to OD8**: the production envelope, the windows,
+    the thresholds, the energy scale, *not assessable* at M5, the sphere,
+    G4.15, and the audit's feasibility. **Waiting.**
+    [ROADMAP.md, "The decision register"](ROADMAP.md#the-decision-register)
+  - **W33's verdict**, after the same-atmosphere check passed (W35).
+    **Waiting.** [G3T](G3_TODO.md#wp5b-v-the-explicit-1m-default)
   - **The sphere's numbers**, in the form G3_PLAN 6.1 fixes, before V-W11.
     **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
   - **The default mode's cost budget**, proposed from V-W10's first
@@ -49,6 +55,26 @@ Short names for the sources:
 
 ## 2026-09-24
 
+  - **Rev. 2 of the work plan** ("Simulation-results synthesis and in-place
+    work-plan revision"). The owner's plan decides, in force from its step 0:
+      + results are reported by the acceptance contract's verdicts; closure
+        never substitutes for provenance;
+      + copies are a provenance comparator only where they pass eligibility
+        in that run; otherwise provenance is *not assessable*;
+      + W33 stays a failure, and no result from a different parent
+        atmosphere is a tag-error reference;
+      + `enthalpy_increment` with 1M stepped explicitly is refused until
+        G4.16 passes, with an explicit opt-in for development runs (G4.16's
+        open question);
+      + M4 stays before M5; the audit's feasibility (OD8) is decided before
+        WP5b-C and G4.1/G4.11;
+      + WP4c's corrections pass an operator-decomposition gate; the ones not
+        retained are deferred, not deleted;
+      + the sphere's "plateau after day one" is replaced by OD6's ceiling and
+        growth bound.
+
+    **In force.** Its open decisions are OD1 to OD8.
+    [ROADMAP.md, "Rev. 2 of the work plan"](ROADMAP.md#rev-2-of-the-work-plan-2026-09-24)
   - **The followers' placement rule (same sign or |m|) is decided after long
     runs**, not after a day. G4.15 is split: G4.15a (the partition check and
     the audit names) goes ahead; G4.15b (the same-sign rule for energy) waits.

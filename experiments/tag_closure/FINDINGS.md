@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W33                                           | 1. Water tags                                       |
+| W1–W35                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -322,6 +322,13 @@ budget.** The untagged D4-W day of W17, with the EDMF diagnostics.
 Single-run estimates, which the verifier does not cover; the script is
 `analysis/water/d4w_before_and_sizing.py`.*
 
+*Annotated 2026-09-24 (rev. 2 of the work plan; the entry is not rewritten).*
+The consequence above predates the follower. The follower closes D4-W to
+1.5e-4 of the water in a day with one Newton iteration (W24), and to 7.3e-6
+with the sedimentation cross blocks (W31), without WP4c's correction. G3_PLAN
+4.2 now makes an operator decomposition the entry gate for WP4c. Whether a
+remainder exists after the follower is not measured.
+
 **W19. After #64's fix, the water integration test's two closure quantities
 sit well inside their bounds.** On `main` at `0b2b1032` and Julia 1.11,
 `test/tagged_water_integration.jl` passes all 111 tests. The sphere's
@@ -475,6 +482,18 @@ of #101, `4a1c91a4`, only a refusal, docstrings and diagnostic metadata, so
 the tags evolve in these runs as at `4a1c91a4`. Verifier reports in
 `output/w3_d4w/` and `output/w3_trmm0m/`.*
 
+*Annotated 2026-09-24 (rev. 2, comparator eligibility; the entry is not
+rewritten).* The D4-W parity and closure results stand. The per-tag verdicts
+against the copies are not provenance verdicts. In these runs the copies'
+repair moves 0.60% of the water in a day with one iteration and 0.27% with
+ten, over the 0.20% bound. Under rev. 2's acceptance contract (ROADMAP.md) the
+copies are then not an eligible comparator on D4-W, and D4-W's provenance is
+*not assessable*. The same holds for the D4-W comparisons against copies in
+W24, W25, W28 and W31. Until a comparator passes on D4-W, Insight 10's tests
+(refinement, per-tag intervention, aggregation) can bound its provenance but
+not validate it. The TRMM pair, whose copies repaired below 1e-5, is not
+covered by this note.
+
 **W22. V-W8: on the GCM-driven file-based column, water and energy source tags
 run together under EDMF with the model untouched, and the water partition
 closes to 4.2e-4 gross after 3 h.** The column of
@@ -606,6 +625,10 @@ worktree at `867a5264`.*
 `13865367`, `13866583`, `13866584`, `13866585`; the model's own
 `tag_closure` after the hour; `output/wp3_explicit_probe/results.txt`.*
 
+*Annotated 2026-09-24 (rev. 2).* The comparisons against the copies above use
+W21's D4-W copies, which are not an eligible comparator there (W21's
+annotation). Closure and parity stand.
+
 **W25. V-W4: under the follower, the default meets every per-tag budget
 against the copies at the time-step and Newton rungs. At 60 levels it misses
 the first hour's budget, and at 120 levels it misses every hour's. At 120
@@ -699,6 +722,12 @@ compile-time form of one predicate and a refusal, so the tags evolve as at
 #102's head. Jobs `13870216` to `13870229`. Script
 `analysis/water/vw4_verify.sh`; its reports are in `output/w4_d4w/`. The
 first-order pair was compared over 23 h, the copies' last output.*
+
+*Annotated 2026-09-24 (rev. 2, comparator eligibility).* At every rung the
+copies' repair is over the 0.20% bound (0.28% to 95% of the water in a day).
+Under rev. 2's contract no rung's default-against-copies judgment is then a
+provenance verdict: a "pass" above is agreement with an ineligible comparator.
+The closure, parity and repair measurements stand.
 
 **W26. WP4a's split of the 0M rain-out, on TRMM 0M for 6 h: the model's fields
 are unchanged bit for bit, the tags move by at most 0.47% of a tag's water,
@@ -832,6 +861,9 @@ at `71bd4061` (#102 at `fd07d902`). TRMM same-sign: job `13887331`, from
 `5d1afcc0`. Reports and `analysis/water/w5r_rule_compare.py`'s output are in
 `output/w5r/`.*
 
+*Annotated 2026-09-24 (rev. 2).* The D4-W comparison against the copies uses
+W21's copies, which are not an eligible comparator there (W21's annotation).
+
 **W29. The tags' sedimentation cross blocks close W23's explicit-1M lag. With
 one Newton iteration, the follower's residual after an hour falls from 7.9e-3
 of the water to 2e-8. The model's fields are bit for bit the same.** This is
@@ -895,6 +927,13 @@ print no commit. The final columns, the RESULT lines and
     (`output/wp5b_probe/EVIDENCE.md`).
   - On the implicit path the blocks also lowered the increment test's one-hour
     gross residual under the follower from 4.1e-5 to 3.2e-8 (job `13893926`).
+
+*Annotated 2026-09-24 (rev. 2, comparator eligibility; the entry is not
+rewritten).* W29 is supporting evidence only. Its default-against-copies
+numbers use copies without their own explicit-1M cross blocks (WP5b-C), so the
+comparator's eligibility on this path is not established. The `evap` gap grew
+from 3.8% to 5.8% with the blocks. That may be the default moving away from a
+flawed reference, and this entry cannot tell. Closure and parity stand.
 
 **W30. `pr_tag`'s cost after the batch, and the rain-out of negative areas on
 TRMM (the owner's review of #104, findings 1 and 5).**
@@ -962,6 +1001,11 @@ reference, both D4-W for 24 h with one Newton iteration:
 from `../ClimaAtmosResiDyn-wedmf5b-run` at `0d130367` (the record with WP5b at
 `0aad20ee`). `compare_runs.py`'s and `w5r_rule_compare.py`'s output are in
 `output/wp5b_d4w/`.*
+
+*Annotated 2026-09-24 (rev. 2).* The comparisons against `w3_d4w_copies` and
+`w5b_d4w_copies` are against D4-W copies whose eligibility is not shown
+(W21's annotation; the second run's repair is not reported here). The closure
+and parity results stand.
 
 **W32. WP4a-V passes: on TRMM 0M the default mode's reconstructed subdomain
 composition is much closer to the copies' own than the grid rule is, on every
@@ -1642,6 +1686,12 @@ agent on the terrabyte login node, 2026-09-11; `analysis/first_hour_0m.jl`,
 `c8_variants.jl`, `formb_vs_flux.py`, `after_first_hour.py`,
 `signed_by_loss_rule.py`, `sphere_levels.py`; `output/newton_lag/`.*
 
+*Annotated 2026-09-24 (rev. 2).* Rev. 2 lists E39 among the energy
+default-against-copies gaps measured against copies without `mseʲ` mirrors.
+E39 has no copies. It measures the audit's closure residual against the Newton
+count and the step, so the comparator label does not apply to it. It remains
+evidence that the first step makes most of the first hour's residual.
+
 **E39b. On the sphere, the one Newton iteration makes 83% of the audit's
 first-hour residual.** `analysis/first_hour_sphere.jl` steps C9's sphere for two
 hours, as run and converged (10 iterations, rtol 1e-10). The gross at 1 h is
@@ -2285,6 +2335,16 @@ runs at `dcf7d086`) and `13768363` to `13768369` (the copies runs at
 `../ClimaAtmosResiDyn-upd-run`. The earlier default runs at `dbe7435c` are
 superseded. `output/v3_upd_default*`, `output/v3_upd_copies*`; RUNS.md lists
 each output.*
+
+*Annotated 2026-09-24 (rev. 2, comparator eligibility; the entry is not
+rewritten).* The copies here lack the `mseʲ` source mirrors (G4.1): the surface
+enthalpy flux into the updraft, radiation, buoyancy and pressure work. Under
+rev. 2's contract they are not an eligible comparator, so these L1 gaps are not
+provenance verdicts. They show that the default-against-copies difference
+depends on the configuration: `sfc` at 1 h grows from 14.3% to 21.3% as the
+step shrinks, and at 24 h it is 6.5% under first-order upwinding against
+0.64%. They do not show which scheme moved. E73's baseline pair is the same
+comparison. The parity of every pair stands.
 
 ## 10. Cost
 

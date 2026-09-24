@@ -3,7 +3,8 @@
 The entry point for every session. Written on 2026-09-23 around 11:30, during
 the housekeeping (step H4). Updated at 13:55 the same day, when the
 housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
-done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for) and 12:40. Update it when something here changes, and at each milestone of a work
+done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for), 12:40 and
+20:00 (rev. 2 of the work plan, steps 0 and 1). Update it when something here changes, and at each milestone of a work
 package and at each goal's end. The checklist for those moments is in
 [README.md](README.md), "Closing a work package or a goal". Where a fact was
 not checked, it says so.
@@ -14,12 +15,44 @@ not checked, it says so.
     source tags on D4 under the increment prototype (FINDINGS E62 to E66, E73).
   - **G2, the sphere: met on 2026-09-22.** Ten days of the production physics
     in Float32 (E74, E75).
-  - **G3, the current goal: the water tags under prognostic EDMF**,
-    operational in the production configuration (a sphere with EDMF and 1M),
-    with precipitation provenance: rain and snow carry their own tags. The
-    exchange is the default and updraft copies are the audit. Plan:
-    [G3_PLAN.md](G3_PLAN.md). To-do list and criteria: [G3_TODO.md](G3_TODO.md).
-    The owner approved every job within G3, and its agents. GPU is outside G3.
+  - **G3, the current goal: the water tags under prognostic EDMF**, with
+    precipitation provenance: rain and snow carry their own tags. The exchange
+    is the default and updraft copies are the audit, where they are eligible.
+    Plan: [G3_PLAN.md](G3_PLAN.md). To-do list and criteria:
+    [G3_TODO.md](G3_TODO.md). The owner approved every job within G3, and its
+    agents. GPU is outside G3.
+      + *Where G3 stands, rev. 2 (2026-09-24).* The goal is operation in the
+        production configuration (a sphere with EDMF and 1M), but only under
+        the contract's verdicts ([ROADMAP.md](ROADMAP.md), "The acceptance
+        contract"). Baseline D4-W and TRMM pass parent parity and partition
+        closure under the follower, the default under EDMF (W24, W26, W28,
+        W31, W33). D4-W's provenance is *not assessable*: the copies fail
+        their own repair criterion there, 0.60% of the water a day against
+        0.20% (W21). Other baseline cases get a provenance verdict only where
+        the comparator passes eligibility in that run.
+      + *Open:* resolution and reconstruction support (W25); the explicit-1M
+        default (W33 failed; the same-atmosphere check passed, W35; the owner
+        decides whether W33's verdict changes); the copies' qualification
+        (WP5b-C); intervention metrics (WP6 step 3, built, not yet validated
+        by the integration tests); the rain and snow fields (WP4b); cost at
+        the intended tag count (WP9, OD8); the sphere (OD6).
+  - **G4 status, rev. 2 (2026-09-24).** Energy is merged (#95), and its use
+    is conditional.
+      + `enthalpy_increment` with 1M stepped explicitly is refused on
+        `claude/energy-explicit-1m-guard` (`33eeb5cd`, not yet a PR) until
+        G4.16 passes, with the opt-in key
+        `energy_source_tag_increment_allow_explicit_1m` (a proposed name) for
+        development runs. `main` still runs it (E80).
+      + The energy copies lack the mseʲ mirrors (G4.1, G4.11). So the
+        default-against-copies gaps of E76, and of E73 at the baseline, are
+        not provenance verdicts: the comparator is not eligible. E39 is a
+        closure result against the Newton count, not a default-against-copies
+        gap.
+      + Energy percentages await restatement against an offset-invariant
+        scale (OD4).
+      + The sphere: the one-Newton parent is not valid (E69); with two
+        iterations the residual still grows at day ten, though more slowly
+        (E70, E74); the long-run criterion waits on OD6.
   - **G4, next: the energy source tags**, with what G3 learns:
     [G4_TODO.md](G4_TODO.md). The full re-check of the findings happens at its
     start.
@@ -32,6 +65,25 @@ not checked, it says so.
     owner. See [ROADMAP.md](ROADMAP.md) and [BACKLOG.md](BACKLOG.md).
 
 ## Where things stand
+
+  - **Update, 2026-09-24, 20:00: rev. 2 of the work plan, steps 0 and 1.**
+    The owner revised the plan (ROADMAP.md, "Rev. 2 of the work plan").
+      + Step 0 is done: the energy explicit-1M guard with its test
+        (`claude/energy-explicit-1m-guard`, `33eeb5cd`), these entries, the
+        in-place edits of G3_PLAN, G3_TODO, G4_TODO and ROADMAP, the decision
+        register OD1 to OD8, and the comparator-eligibility annotations on
+        W21 (D4-W), W29, E39 and E76.
+      + Step 1 is built: WP6 step 3 with the per-tag ledger, on
+        `claude/water-tags-wp6-step3` (on #103; G3_TODO, WP6). Unit tests
+        pass on the login node. The integration tests and the check script
+        wait for a compute node.
+      + Nothing is pushed. Steps 2 and 3 wait on OD1 to OD3; see "The
+        owner's open decisions".
+      + Since the plan's pinned SHA (`65925262`): W35 passed (WP5b-V's
+        same-atmosphere check); WP9a is draft PR #106 and G4.15a draft PR #107,
+        both on #102; the long runs' first submission is void and the second
+        is running (G4_TODO, G4.15); WP5b-C's first build is in
+        `../ClimaAtmosResiDyn-wedmf5c`, not pushed and not in FINDINGS.
 
   - **Update, 2026-09-24, 12:40.** The owner reviewed #104 and #105; both are
     answered on the PRs and pushed.
@@ -198,6 +250,9 @@ section 5). Records go on `claude/tag-closure-record`. Outside
 | #102 | `claude/water-tags-edmf-wp5`             | open, at `e29384ee`; the owner's review (2026-09-24) taken and answered; CI running                                                                                                                                                                                                                                                                                                     | G3 WP5: the increment follower, the default under EDMF where supported                                                                               |
 | #103 | `claude/water-tags-edmf-wp6`             | open, at `88949f60`; steps 1 and 2; green                                                                                                                                                                                                                                                                                                                                               | G3 WP6: gross twins, counts, state ledgers per mechanism, the per-step gross                                                                         |
 | #104 | `claude/water-tags-edmf-wp4a`            | draft, at `b66b0eb1`; green                                                                                                                                                                                                                                                                                                                                                             | G3 WP4a: the 0M rain-out split by subdomain, `pr_tag`, known issue 4 restated                                                                        |
+| #105 | `claude/water-tags-sed-cross`            | draft, on #102; the owner's review answered at `801c52dd` (G3_TODO, WP5b)                                                                                                                                                                                                                                                                                                               | G3 WP5b: the tags' sedimentation cross blocks                                                                                                        |
+| #106 | `claude/water-tags-plume-cost`           | draft, on #102, at `bfd9ff08` (W34)                                                                                                                                                                                                                                                                                                                                                     | G3 WP9a: the plume's allocation at 32 tags                                                                                                           |
+| #107 | (G4.15a)                                 | draft, on #102, at `60a60373` (G4_TODO, G4.15)                                                                                                                                                                                                                                                                                                                                          | G4.15a: the energy follower's partition check and audit names                                                                                        |
 
 Only the owner merges. The token cannot mark a PR ready for review.
 
@@ -212,6 +267,10 @@ Only the owner merges. The token cannot mark a PR ready for review.
   - Slurm was queried at 18:10: no job of this account was queued or running.
   - **2026-09-24, 09:20:** no job of this account is queued or running. Every
     run of the night is recorded, W22 to W28.
+  - **2026-09-24, evening, from the record (not queried with Slurm):** the
+    long runs' second submission, jobs `13917157` to `13917199`
+    (G4_TODO, G4.15), and the 32-copies build, job `13911480`, with an 8 h
+    limit (W34).
 
 ## The housekeeping, H0 to H7: done
 
@@ -258,6 +317,24 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
 
 ## The owner's open decisions
 
+  - **Rev. 2's register, OD1 to OD8** ([ROADMAP.md](ROADMAP.md), "The
+    decision register"). All eight are open. Steps 2 and 3 of the revised
+    order wait on OD1, OD2 and OD3.
+      + OD1, the production envelope: levels, SGS reconstruction, Δt, Newton
+        count, microphysics, the intended tag counts.
+      + OD2, the window boundaries per case.
+      + OD3, the thresholds not yet set.
+      + OD4, the offset-invariant scale for energy percentages.
+      + OD5, how *not assessable* is treated at M5.
+      + OD6, the sphere's ceiling, growth bound and run length.
+      + OD7, G4.15's rule for energy.
+      + OD8, the audit's feasibility at the intended tag count.
+  - **W33's verdict**, after the same-atmosphere check passed (W35).
+  - **WP6 step 3's open questions**
+    ([review/agent_reviews/plan_rev2_steps0-1_2026-09-24.md](review/agent_reviews/plan_rev2_steps0-1_2026-09-24.md)):
+    whether each tag's ledger is on by default, and the denominator of the
+    per-tag fraction.
+
   - **The sphere's numbers**, before V-W11, and **the default mode's cost
     budget**, after V-W10's first measurements and before V-W11. The other
     budgets were set on 2026-09-23
@@ -281,6 +358,7 @@ Every decision taken so far is in [DECISIONS.md](DECISIONS.md).
 |:----------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------- |
 | how to set up, submit a run, compare runs, and the traps                                  | [README.md](README.md)                                                                                        |
 | the milestones M0 to M8 and where each open item goes                                     | [ROADMAP.md](ROADMAP.md)                                                                                      |
+| rev. 2: the acceptance contract, the decision register OD1 to OD8, the execution order    | [ROADMAP.md](ROADMAP.md), "Rev. 2 of the work plan"                                                           |
 | G3's plan, criteria and budgets                                                           | [G3_PLAN.md](G3_PLAN.md)                                                                                      |
 | G3's to-do list                                                                           | [G3_TODO.md](G3_TODO.md)                                                                                      |
 | G4's items, and the energy items of the former OPERATIONAL_TODO                           | [G4_TODO.md](G4_TODO.md)                                                                                      |

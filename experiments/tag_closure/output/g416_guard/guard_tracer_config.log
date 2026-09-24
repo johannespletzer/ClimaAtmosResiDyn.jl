@@ -1,0 +1,116 @@
+Precompiling ClimaAtmos...
+  28930.6 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 53 seconds. 277 already precompiled.
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+[ Info: Using default configuration
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Warning: `energy_source_tags` tag `mp` lists `microphysics`, which cannot contribute under DryModel. Only 0-moment microphysics changes `ρe_tot`. The other schemes move water between species, and the energy leaves with sedimentation, which the tags follow as transport. Note `moist` and `all` both expand to include `microphysics`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/tracer_config.jl:630
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Warning: `energy_source_tags` tag `mp` lists `microphysics`, which cannot contribute under DryModel. Only 0-moment microphysics changes `ρe_tot`. The other schemes move water between species, and the energy leaves with sedimentation, which the tags follow as transport. Note `moist` and `all` both expand to include `microphysics`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/tracer_config.jl:630
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Warning: `energy_source_tags` tag `mp` lists `microphysics`, which cannot contribute under NonEquilibriumMicrophysics1M. Only 0-moment microphysics changes `ρe_tot`. The other schemes move water between species, and the energy leaves with sedimentation, which the tags follow as transport. Note `moist` and `all` both expand to include `microphysics`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/tracer_config.jl:630
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Warning: `energy_source_tags` tag `mp` lists `microphysics`, which cannot contribute under NonEquilibriumMicrophysics1M. Only 0-moment microphysics changes `ρe_tot`. The other schemes move water between species, and the energy leaves with sedimentation, which the tags follow as transport. Note `moist` and `all` both expand to include `microphysics`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/tracer_config.jl:630
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+[ Info: Using default configuration
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/model_configs/passive_stratospheric_tracers_ci.yml
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/example_configs/passive_stratospheric_tracers.yml
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/example_configs/strat_tracers_transient_a.yml
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/example_configs/strat_tracers_transient_b.yml
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/model_configs/baroclinic_wave_tagged_tracers.yml
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/model_configs/baroclinic_wave_tagged_water.yml
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/../../config/model_configs/baroclinic_wave_energy_source_tags.yml
+┌ Warning: `energy_source_tags` tag `new_tropics` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/tracer_config.jl:617
+┌ Warning: `energy_source_tags` tag `new_extratropics` lists `precipitation`, which cannot contribute to a source tag. It is the sedimentation of precipitating species, which moves energy between levels rather than adding it. Where water sediments, the tags follow it as transport instead, so nothing is credited to `precipitation`. The `energy_tracers` family does attribute it. Under 0-moment microphysics, rain leaves through `microphysics` instead. Note `moist` and `all` both expand to include `precipitation`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-g416guard/src/config/tracer_config.jl:617
+Test Summary: | Pass  Total  Time
+Named regions |   18     18  0.1s
+Test Summary:                | Pass  Total  Time
+Region parsing rejects typos |    5      5  0.2s
+Test Summary:                                      | Pass  Total  Time
+Region parsing rejects masks that define no region |   25     25  0.2s
+Test Summary:                    | Pass  Total  Time
+energy_tracers and water_tracers |   16     16  9.5s
+Test Summary:                         | Pass  Total  Time
+energy_source_tags against the scheme |   24     24  2.7s
+Test Summary:                | Pass  Total  Time
+passive_tracers release grid |    8      8  2.7s
+Test Summary:                 | Pass  Total  Time
+passive_tracers release boxes |    6      6  1.4s
+Test Summary:              | Pass  Total  Time
+passive_tracers validation |   11     11  0.7s
+Test Summary: | Pass  Total  Time
+AtmosChem     |    6      6  1.3s
+Test Summary:  | Pass  Total  Time
+Closure checks |   26     26  0.2s
+Test Summary:                                  | Pass  Total  Time
+Closure checks refuse what they cannot compute |    6      6  0.1s
+Test Summary:               | Pass  Total  Time
+Energy source closure check |   37     37  1.0s
+Test Summary: | Pass  Total  Time
+Closure table |    7      7  0.0s
+Test Summary: | Pass  Total  Time
+Audit table   |   12     12  0.2s
+Test Summary:                              | Pass  Total  Time
+Shipped tracer configs still build a model |    9      9  4.4s

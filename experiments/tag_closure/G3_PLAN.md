@@ -6,6 +6,12 @@ finding is handled here; the section "Review" at the end maps each to its
 change. G3's to-do list, `G3_TODO.md`, follows this plan. Nothing in it has
 been run.
 
+*Revised in place on 2026-09-24 by rev. 2 of the work plan* (ROADMAP.md, "Rev.
+2 of the work plan"): sections 2, 4.2, 5 and 6.1 below. Each change says
+"rev. 2". Every result is reported with the verdicts of the acceptance
+contract in ROADMAP.md, and the thresholds rev. 2 adds wait on the owner's
+register, OD1 to OD8.
+
 ## 0. Decisions this plan rests on
 
 The owner decided on 2026-09-23:
@@ -82,6 +88,14 @@ fixed now.
 | 10 | **Cost.** Build time, step time and peak memory are measured in both modes and with the rain and snow tags. The copies are measured at 2, 4 and 8 tags and extrapolated, with a time limit. The allocation gates pass. The default mode meets its cost budget, set before V-W11.                                                                                                                                  | M4        |
 | 11 | **Sphere.** Ten days of the G2 sphere with water tags under the chosen default meet the sphere budget: its form is fixed in 6.1, its numbers before the run. A one-day copies twin gives the per-tag error there. A restart holds.                                                                                                                                                                                | —         |
 | 12 | Reviewed and tested: agent reviews with their findings fixed, CI green, and draft PRs ready. The docs are updated: `tagged_water.md`, whose "same diffusion operators" claim is wrong under 1M; `known_issues.md`; NEWS; and a claim contract for tagged water.                                                                                                                                                   | M1, M2    |
+
+*Rev. 2:* each criterion is judged by the acceptance contract's rows in
+ROADMAP.md, with pass, fail or not assessable. Criterion 4 is the closure row
+and criterion 5 the provenance row. Criterion 5 is judged only against copies
+that pass comparator eligibility in that run. Where they do not, it is not
+assessable, and the Insight 10 tests (refinement, per-tag intervention,
+aggregation) bound it under OD5. Criterion 11's plateau is replaced by OD6's
+ceiling and growth bound (6.1).
 
 ## 3. What EDMF does to the water, and what the tags miss today
 
@@ -220,12 +234,35 @@ exactly as its non-precipitating part. The correction then uses that part and
 is exact.
 
 Before any correction is written, an exact diagnostic of each path's leak,
-computed from the state in closed form, sizes it on D4-W and on the sphere. A
-path gets its correction when its leak exceeds a tenth of the closure budget.
+computed from the state in closed form, sizes it on D4-W and on the sphere.
 V-W0c's estimate for the grid-scale vertical diffusion on D4-W is 0.9% of the
-column's water a day (FINDINGS W18), 45 times that level. So that path needs
-its correction, or the rain and snow tags, before criterion 4 is judged on
-D4-W.
+column's water a day (FINDINGS W18). That is a source on the closed manifold,
+estimated from hourly samples before the follower existed.
+
+*Rev. 2 (2026-09-24) replaces the rule that a path gets its correction when
+its leak exceeds a tenth of the closure budget, and the conclusion that D4-W
+can pass only with the correction or the rain and snow tags.* The follower
+already closes D4-W: 1.5e-4 of the water in a day with one Newton iteration
+(W24), and 7.3e-6 with the sedimentation cross blocks (W31). So whether a
+distinct remainder exists after the follower is not measured. And a
+correction's value may lie in attribution rather than closure. The follower
+compares the partition with the parent's whole implicit increment, so it may
+absorb column-neutral parts of several operator mismatches; that is an
+inference, not a measured decomposition.
+
+**The entry gate for WP4c.** On one parent state, for each operator, measure
+the source before the follower, the residual's actual growth, the follower's
+correction and the remainder after it. A correction is retained if it:
+
+ 1. leaves a remainder after the follower;
+ 2. cuts the follower's share of that operator's transfer by more than the
+    intervention threshold (OD3); or
+ 3. changes per-tag provenance by more than the provenance threshold (OD3).
+
+A correction retained only under 3 becomes a default only with an eligible
+comparator or a documented mechanistic argument for its attribution, for
+example charging the 1M leak to the tags whose condensate leaked. The rest are
+deferred with their decomposition numbers, not deleted.
 
 ### 4.3 Following the parent's increment (WP5)
 
@@ -415,11 +452,11 @@ metadata (WP6).
 | WP4a   | The 0M split (4.4) and `pr_tag` under 0M. **Draft PR-W4a**                                                                                                                                                                                                                                                                                                | model code        | WP5          | Opus, xhigh  |
 | WP4b-D | Design note for rain and snow tags (4.5)                                                                                                                                                                                                                                                                                                                  | design            | WP3          | Opus, xhigh  |
 | WP4b   | Rain and snow tags in three stages (4.5), with the audit script. **Draft PR-W4b**                                                                                                                                                                                                                                                                         | model code        | WP4b-D, WP4a | Opus, xhigh  |
-| WP4c   | The leak corrections that 4.2's rule selects, for runs without rain and snow tags                                                                                                                                                                                                                                                                         | model code        | V-W0c, V-W3  | with WP4b    |
-| WP6    | Gross accumulators for both families: absolute repair and fix throughput with event counts, per-step `\|m_left\|`, attempted against retained, restart segments. **Draft PR-W6**                                                                                                                                                                          | model code        | WP0          | Opus, high   |
+| WP4c   | The leak corrections that 4.2's rule selects, for runs without rain and snow tags. *Scope added (rev. 2):* 4.2's operator decomposition is the entry gate, with the three-part retention rule; corrections not retained are deferred, not deleted                                                                                                          | model code        | V-W0c, V-W3  | with WP4b    |
+| WP6    | Gross accumulators for both families: absolute repair and fix throughput with event counts, per-step `\|m_left\|`, attempted against retained, restart segments. **Draft PR-W6**. *Scope added (rev. 2):* step 3 before the sphere and the default decisions: accepted-step gross throughput, attempted against retained transfer, event counts, restart stitching, validity by cadence, and each tag's cumulative correction against its water | model code        | WP0          | Opus, high   |
 | WP2    | Shared helpers, only the identical parts (4.6)                                                                                                                                                                                                                                                                                                            | refactor          | V-W3, V-W5   | Opus, xhigh  |
 | WP8    | Docs: `tagged_water.md` (EDMF, precipitation, the corrected operator claim), the claim contract, `known_issues.md`, NEWS                                                                                                                                                                                                                                  | docs              | WP4b         | Opus, high   |
-| WP9    | Cost for both families (V-W10)                                                                                                                                                                                                                                                                                                                            | benchmarks        | WP4b         | this session |
+| WP9    | Cost for both families (V-W10). *Scope added (rev. 2):* the audit-feasibility decision (OD8) comes early, before WP5b-C and G4.1/G4.11; then build time, peak memory and per-step scaling at the intended tag count for the default and the comparator, the aggregation test and the sphere's run-length budget | benchmarks        | WP4b         | this session |
 
 Order:
 
@@ -431,6 +468,12 @@ Order:
  6. WP2, WP8 and WP9, before the sphere.
 
 WP6 runs in parallel from WP0 on.
+
+*Rev. 2 (2026-09-24)* reorders what is left, with the decisions each step
+needs: WP6 step 3; then W25's isolation (OD1 to OD3) beside the audit
+feasibility (OD8); WP5b-C at OD8's tag counts; WP5b-V's remaining arms; WP4c's
+gate; WP4b; WP9's cost qualification; the sphere (OD6). The full order, with
+G4's, is in ROADMAP.md, "The execution order".
 
 **Branches:** model code on `claude/water-tags-edmf` from `main`, with
 worktree `../ClimaAtmosResiDyn-wedmf` and run worktree
@@ -475,6 +518,23 @@ That makes about 70 column-scale jobs and 5 sphere jobs. Column runs go to
 `hpda2_test` where they fit in two hours, otherwise `hpda2_compute`.
 
 ### 6.1 Budgets, fixed before the runs
+
+*Rev. 2 (2026-09-24).* A result is no longer given one closure-oriented
+verdict. It is reported with the acceptance contract's rows in ROADMAP.md, each
+pass, fail or not assessable, with the water-specific thresholds below:
+
+  - **Windows.** Startup or source pulse, established flow and long run are
+    scored apart, with boundaries fixed per case before its first scored run
+    (OD2). A 24-hour average does not excuse a failed first-hour process whose
+    whole event happens then.
+  - **Comparator eligibility first.** Before any default-against-copies
+    judgment, the copies are checked in that run: their closure, their repair
+    against 0.20% of the water a day, their Newton and time-step stability,
+    and their mirrors and Jacobian terms. Where they fail, provenance is not
+    assessable.
+  - **Intervention.** The accepted-step repair and follower throughput and
+    the per-tag cumulative correction against each tag's water (WP6 step 3)
+    are reported beside closure. Their thresholds are OD3's.
 
 **Set by the owner on 2026-09-23**, before any G3 run. Two parts are set
 later, in the form fixed here: the sphere's numbers before V-W11, and the
@@ -547,17 +607,36 @@ The verifier computes both (WP0).
     the attribution is labelled approximate, and process rates are needed
     (section 8).
 
-  - **Leak corrections:** a path is corrected when its leak exceeds a tenth of
-    the closure budget.
+  - **Leak corrections:** *rev. 2* replaces "a path is corrected when its leak
+    exceeds a tenth of the closure budget" with 4.2's entry gate and its
+    three-part retention rule.
 
-  - **The sphere.** The form is fixed now. The plateau's numbers are set from
-    the column results before V-W11.
+  - **The sphere.** The form is fixed now. Its numbers are set before V-W11.
 
       + At every output, `Σᵢ ρq_tagᵢ ≤ ρq_tot (1 + 1e-6)` at every point, and
         the non-positive fraction does not grow. Issue #64 went to 1e130 and
         still exited 0 (W6).
-      + The gross residual plateaus after day 1.
-      + The one-day copies twin meets the per-tag budgets.
+      + *Rev. 2 replaces "the gross residual plateaus after day 1".* The
+        residual stays below an absolute ceiling set against the smallest tag
+        that will be analysed, and meets a growth-rate or loss-timescale bound
+        fixed beforehand (OD6). An example of such a bound: the end-of-run
+        source rate times the longest flushing timescale stays below the
+        ceiling. The reason: the two-Newton energy sphere grows from 2.77e-5
+        at day 1 to 2.01e-4 at day 10, still slowing, and its loss rule
+        flushes at 0.0105 to 0.0165 a day, 60 to 95 days (E74). Ten days is
+        11 to 17% of that timescale *(derived)*. Take the residual's net
+        growth over days 1 to 10, 1.9e-5 a day *(derived)*, as its source. If
+        it held, the residual would level off near 1.2e-3 to 1.8e-3
+        *(derived)*, 6 to 9 times the day-10 value. Adding back what the loss
+        rule flushed over those days raises the source to about 2.1e-5 a day
+        and the level to 1.3e-3 to 2.0e-3 *(derived)*. This does not predict
+        the water sphere. It shows that a day-one plateau is not a general
+        criterion.
+      + The accepted-step repair and follower throughput, and each tag's
+        drift, stay bounded, apart from the residual (OD3).
+      + The run length is stated, and budgeted under M4 (OD6).
+      + The one-day copies twin meets the per-tag budgets, where it passes
+        comparator eligibility.
       + The restart carries the tags bit for bit.
 
   - **The default mode's cost:** a budget for step time and build time per

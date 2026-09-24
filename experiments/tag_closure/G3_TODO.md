@@ -43,6 +43,11 @@ The twelve criteria of the plan, section 2, in short:
 
 ## Decisions
 
+  - [!] **Rev. 2's register, OD1 to OD8** (2026-09-24; ROADMAP.md, "The
+    decision register"): the production envelope, the windows, the
+    thresholds, the energy scale, *not assessable* at M5, the sphere, G4.15,
+    and the audit's feasibility. All open. Steps 2 and 3 of the revised order
+    wait on OD1 to OD3.
   - [x] G3 is water and G4 is energy; production target; precipitation
     provenance with rain and snow tags; exchange by default with copies as the
     audit; the partition-only factor; this session runs G3's jobs. All decided
@@ -52,7 +57,8 @@ The twelve criteria of the plan, section 2, in short:
     1e-6 left after the named parts; convergence as robustness; rain and snow
     as proposed; the sphere's form.
   - [ ] **The sphere's numbers**, set by the owner before V-W11, in the form of
-    plan 6.1.
+    plan 6.1. *Rev. 2:* the form is now OD6's ceiling and growth bound, not a
+    plateau after day one.
   - [ ] **The default mode's cost budget**, proposed from V-W10's first
     measurements and set by the owner before V-W11.
   - [x] **WP5's default transport under EDMF**, by the rule fixed in plan 4.3.
@@ -318,6 +324,22 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
       + what parts the partition at 120 levels, in both modes;
       + what parts the copies under first-order upwinding.
 
+    *Scope added (rev. 2, 2026-09-24):* this is step 2 of the revised order.
+    It comes before WP4b and the sphere, and is scored against OD1 and OD2.
+      + Fixed-parent one-step probes at 30, 60 and 120 levels, with centred
+        and first-order reconstruction.
+      + The refinement test (Insight 10): from one saved state, a fixed
+        interval with more Newton iterations and a smaller Δt, reporting the
+        follower's and the repair's throughput per unit time. It should
+        shrink under refinement. A plateau means the follower compensates
+        something other than lag.
+      + Where the case has a source pulse, the two first-step probes
+        (Insight 4): the first step fully converged, and the tags started
+        after the first step.
+      + Then full matched runs, reported as configuration outcomes, since
+        each rung is another atmosphere.
+      + Needs OD1, OD2 and OD3 before any run.
+
 ## WP5b: the tags' sedimentation cross blocks
 
 The owner chose this on 2026-09-24 for the explicit-1M lag (W23; the owner's
@@ -386,6 +408,12 @@ run. Acceptance criteria, fixed before the runs:
     iterations cut the tags' one-step error 20-fold, and one iteration's
     halves at 60 s. [ ] The owner revisits W33's verdict; the default does not
     change before that.
+  - *Scope added (rev. 2, 2026-09-24):* W33 stays recorded as a failure, and
+    no new design overwrites it. The same-atmosphere check that rev. 2 asks
+    to run first is W35, done. The arms still open follow rev. 2's order:
+    arms without copies after W25's isolation (step 2), and any
+    default-against-copies arm after WP5b-C (step 4). The explicit-1M
+    follower stays opt-in unless it passes.
 
 ### WP5b-P: provenance, not only closure
 
@@ -409,6 +437,15 @@ the explicit path (the owner's review of #105, finding 7).
   - [ ] The copies' closure on W23's explicit column with one iteration
     (W23: 7.8e-3 without).
   - [ ] Parity with the untagged column.
+  - *State on 2026-09-24:* a first build is in `../ClimaAtmosResiDyn-wedmf5c`
+    at `d2b3dc60`, not pushed and not in FINDINGS. Its probe output is in
+    `output/wp5c_probe/`. Until it is pushed and recorded, the water updraft
+    copies on every pushed branch lack their own explicit-1M cross blocks.
+  - *Scope added (rev. 2, 2026-09-24):* step 4 of the revised order.
+    WP5b-C is complete before any use of 1M copies as the audit, at the tag
+    counts OD8 keeps. With their blocks, the copies must still pass
+    comparator eligibility in each run where they serve as the audit
+    (ROADMAP.md, the acceptance contract).
 
 ## WP4a: the 0M split (draft PR-W4a)
 
@@ -538,7 +575,16 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     column, compared with the net-flow attribution.
 
   - [ ] WP4c, beside it: the leak corrections that plan 4.2's rule selects, for
-    runs without rain and snow tags.
+    runs without rain and snow tags. *Scope added (rev. 2, 2026-09-24):* the
+    entry gate is plan 4.2's operator decomposition on one parent state: per
+    operator, the source before the follower, the residual's growth, the
+    follower's correction and the remainder. A correction is retained if it
+    leaves a remainder, cuts the follower's share of that operator's transfer
+    by more than the intervention threshold, or changes per-tag provenance by
+    more than the provenance threshold (OD3). One retained only for
+    provenance becomes a default only with an eligible comparator or a
+    documented mechanistic argument. The rest are deferred with their
+    numbers, not deleted. Step 6 of the revised order.
 
   - [ ] Review (xhigh) of each stage.
 
@@ -549,6 +595,15 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
         D4-W in both modes;
       + the audit;
       + `Σ pr_tag = pr`.
+
+  - *Scope added (rev. 2, 2026-09-24):* the implementation stays. "The sum
+    closes to precipitation" no longer validates it scientifically; closure
+    stays a separate invariant. The validation is a same-state,
+    process-weighted comparison in the manner of W32, against a comparator
+    that passes eligibility in that run, plus one held-out case whose rain
+    falls in the established-flow window. 0M DYCOMS does not qualify: it
+    rains only in its first hour (W15). Needs OD2 and OD3. Step 7 of the
+    revised order.
 
 ## Qualification runs
 
@@ -597,6 +652,34 @@ owner's points in the note's section 8.
     Tests: alternating signs, invariance under the output interval, restart
     stitching, model fields unchanged. Review (high).
 
+  - *Scope added (rev. 2, 2026-09-24):* step 3 comes before the sphere and
+    the default decisions (step 1 of the revised order). It requires
+    accepted-step gross throughput, attempted against retained transfer,
+    event counts, restart stitching and a clear validity by cadence, and adds
+    Insight 10's per-tag ledger: each tag's cumulative absolute correction
+    against its own water. No owner decision was needed; the owner's three
+    points of the note's section 8 stay open, and the code takes the
+    conservative side of each.
+  - [~] **Step 3, built on 2026-09-24** on `claude/water-tags-wp6-step3`
+    (worktree `../ClimaAtmosResiDyn-wp6s3`, on #103 at `f22cfb27`); design
+    note section 10; not pushed.
+      + [x] The audit reports, per state ledger, what the accepted steps
+        retained, what its writers attempted, and the events per accepted
+        step. `ledger_cadence_step` marks the runs where a transfer's
+        per-step change is exact.
+      + [x] Each tag's own ledgers, `q_tag_led_fix_<name>` and, under the
+        follower, `q_tag_led_inc_<name>`, and the energy twins: opt-in keys
+        `water_tag_ledger_per_tag` and `energy_source_tag_ledger_per_tag`.
+        The audit reports each against the tag's water or energy.
+      + [x] The cache accumulators travel in the checkpoint. A checkpoint
+        without them starts them at zero, with a warning.
+      + [x] Unit tests on the login node: `tagged_water_tests.jl` 567 passed,
+        `energy_source_tags_tests.jl` 548, `config/tracer_config.jl` 267
+        (`output/wp6_step3/`).
+      + [ ] The integration groups and the check script
+        `analysis/water/wp6_step3_checks.jl` on a compute node.
+      + [ ] Review (high), then a PR on #103.
+
 ## WP2, WP8, WP9: consolidation, docs, cost
 
   - [ ] WP2: move only the identical helpers into shared code, with a CI test
@@ -625,6 +708,18 @@ owner's points in the note's section 8.
         8 copies take about 15 min). Measure the build time against the
         number of copies. 8 copies 699 s, 16 copies 2417 s (W34); 32 running
         with 8 h (`13911480`).
+  - *Scope added (rev. 2, 2026-09-24):* WP9 stays before the held-out
+    default selection.
+      + Its first part is the audit-feasibility decision, OD8, taken before
+        WP5b-C and G4.1/G4.11 (step 3 of the revised order). Copies are not
+        assumed to exist at 32 tags. From 8 to 16 copies the build grew as
+        about N^1.8, which projects 2.3 h at 32; the 4 h attempt did not
+        build (W30, W34), so the growth steepens past that trend.
+      + The cost qualification (step 8) covers build time, peak memory and
+        per-step scaling at the intended tag count, for the default and the
+        comparator; the aggregation test (Insight 10); and the sphere's
+        run-length budget. Its ceilings are OD3's, set before the held-out and
+        default-selection runs.
 
 ## The sphere
 
