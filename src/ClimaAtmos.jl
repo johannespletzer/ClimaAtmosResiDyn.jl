@@ -105,6 +105,8 @@ include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_ta
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_edmf.jl"))
 # It calls the diffusion and hyperdiffusion helpers, which load later.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_leaks.jl"))
+# The 0M rain-out split by subdomain, after the exchange's helpers it reuses.
+include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_rainout.jl"))
 # The increment follower, after the default mode's flux helper it reuses.
 include(
     joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_increment.jl"),

@@ -161,8 +161,56 @@ name); the `q_tag_res` entry is always dropped and re-registered, because the se
 of region tags it sums over can differ between setups — including differing to
 *empty*, in which case no new entry replaces the stale one.
 """
-register_water_tagging_diagnostics!(model::AtmosModel) =
+function register_water_tagging_diagnostics!(model::AtmosModel)
     register_water_tagging_diagnostics!(model.water_tagging_model)
+    register_water_tag_precipitation_diagnostics!(
+        model.water_tagging_model,
+        model.microphysics_model,
+    )
+    return nothing
+end
+
+# `pr_tag_<name>`, `prra_tag_<name>` and `prsn_tag_<name>`: each tag's part of
+# the surface precipitation, under 0M only, where the rain-out is the only
+# sink (WP4a). Under 1M the rain and snow parts of WP4b will give it. A stale
+# entry from an earlier model is dropped first.
+function register_water_tag_precipitation_diagnostics!(model, microphysics_model)
+    tags = isnothing(model) ? () : model.tags
+    zero_moment = microphysics_model isa EquilibriumMicrophysics0M
+    for tag in tags
+        name = tag_name(tag)
+        for (prefix, phase, what) in (
+            ("pr_tag", Val(:all), "Precipitation"),
+            ("prra_tag", Val(:rain), "Rainfall Flux"),
+            ("prsn_tag", Val(:snow), "Snowfall Flux"),
+        )
+            short_name = "$(prefix)_$name"
+            delete!(ALL_DIAGNOSTICS, short_name)
+            zero_moment || continue
+            add_diagnostic_variable!(;
+                short_name,
+                units = "kg m^-2 s^-1",
+                long_name = "Tagged $what ($name)",
+                comments = "The part of the 0M rain-out that the water tag " *
+                           "`$name` loses, integrated over the column as " *
+                           "`pr` integrates the sink: upward-positive, so " *
+                           "negative. Under prognostic EDMF each subdomain's " *
+                           "part goes by that subdomain's composition. Over " *
+                           "a closed partition the tags' sum is `pr`. The rate " *
+                           "at the output's state.",
+                compute = (state, cache, time) ->
+                    water_tag_precipitation!(
+                        cache.scratch.ᶠtemp_field_level,
+                        state,
+                        cache,
+                        tag,
+                        phase,
+                    ),
+            )
+        end
+    end
+    return nothing
+end
 # Water tagging is off. As for the energy tags, the per-tag entries can stay
 # but a stale `q_tag_res` cannot: it would report a residual over a partition
 # this model does not have. See the enabled path below.

@@ -326,6 +326,9 @@ attribute_tagged_ρq_tot!(Yₜ, Y, p, source::Symbol) =
 _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, ::Nothing) = nothing
 function _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, model::WaterTaggingModel)
     source in KNOWN_WATER_TAG_SOURCES || return nothing
+    # Under 0M and prognostic EDMF the rain-out goes to the tags by each
+    # subdomain's composition (`tagged_water_rainout.jl`).
+    splits_rainout(p, source) && return add_split_rainout!(Yₜ.c, Y, p, model)
     (; ᶜwater_masks) = p.tagging
     ᶜρq_tot_snapshot = p.scratch.ᶜtagging_q_snapshot
     ᶜΔρq_tot = @. lazy(Yₜ.c.ρq_tot - ᶜρq_tot_snapshot)

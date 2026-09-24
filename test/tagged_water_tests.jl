@@ -1250,3 +1250,42 @@ end
         )
     end
 end
+
+# WP4a: the 0M rain-out split's shares, on the kernel itself. The partition's
+# shares in a subdomain are its normalized grid shares plus the exchange's
+# differences, which sum to zero over the partition, times `S`.
+@testset "The rain-out split's shares" begin
+    partition = (true, true, false)
+    flags = Val(partition)
+    share(i) = CA.SplitShare(flags, Val(i))
+    # A random grid composition and random bounded differences that sum to
+    # zero over the partition, many times.
+    rng_values = [
+        (0.3, 0.6, 0.2),
+        (0.0, 0.9, 0.5),
+        (1e-3, 0.5, 0.0),
+        (0.45, 0.45, 0.9),
+    ]
+    for ε̄ in rng_values, δ in (0.0, 0.1, -0.2), S in (1.0, 0.98)
+        total = ε̄[1] + ε̄[2]
+        # Differences as the exchange's bound keeps them: a share stays in
+        # [0, 1], and the partition's sum is zero.
+        d = clamp(δ, -ε̄[1] / total, ε̄[2] / total)
+        Δφ = (d, -d, 0.5)
+        φ = map(i -> share(i)(ε̄, Δφ, S, -1.0), (1, 2, 3))
+        @test all(isfinite, φ)
+        @test 0 <= φ[1] <= 1 && 0 <= φ[2] <= 1
+        @test φ[1] + φ[2] ≈ S
+        # A source tag is clamped to [0, 1] whatever its difference.
+        @test 0 <= φ[3] <= 1
+    end
+    # Where the partition holds nothing, the grid mean's share, the fallback.
+    @test share(1)((0.0, 0.0, 0.3), (0.1, -0.1, 0.0), 1.0, 0.25) == 0.25
+    # A value that is not finite falls back too.
+    @test share(1)((0.3, 0.6, 0.2), (NaN, 0.0, 0.0), 1.0, 0.25) == 0.25
+    # Without an exchange the split is the grid rule: the normalized share
+    # times `S` is the clamped grid share where no clamp binds.
+    ε̄ = (0.3, 0.6, 0.2)
+    S = 0.3 / 1.0 + 0.6 / 1.0
+    @test share(1)(ε̄, (0.0, 0.0, 0.0), S, -1.0) ≈ 0.3
+end

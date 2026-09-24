@@ -14,7 +14,10 @@ chemistry tracer in the updraft, after an hour:
  2. with one composition everywhere, each copy's whole tendency is its share
     of `q_totʲ`'s, at rounding, apart from the surface flux, whose new water
     goes by region and source;
- 3. the model's fields are those of the same column without tags, bit for bit.
+ 3. the rain-out goes by each subdomain's composition, and over the
+    partition it is the model's sink; the tags' `pr_tag` add up to `pr`;
+ 4. the model's fields are those of the same column without tags, bit for bit;
+ 5. the same holds in the default mode, without copies.
 
 The rain-out mirror runs on the implicit path here, where the 0M sink lives by
 default. Its explicit hook is the same function; `tagging_water_edmf_copies`
@@ -47,6 +50,26 @@ altitude_region(above) = Dict{String, Any}(
 
 relative_difference(a, b) =
     maximum(abs, parent(a) .- parent(b)) / maximum(abs, parent(b))
+
+function test_same_model_fields(Y, Y_plain)
+    is_tag(name) = startswith(string(name), "ρq_tag_")
+    @test Set(filter(!is_tag, propertynames(Y.c))) ==
+          Set(propertynames(Y_plain.c))
+    for name in propertynames(Y_plain.c)
+        name == :sgsʲs && continue
+        @test isequal(
+            parent(getproperty(Y.c, name)),
+            parent(getproperty(Y_plain.c, name)),
+        )
+    end
+    for name in propertynames(Y_plain.c.sgsʲs.:(1))
+        @test isequal(
+            parent(getproperty(Y.c.sgsʲs.:(1), name)),
+            parent(getproperty(Y_plain.c.sgsʲs.:(1), name)),
+        )
+    end
+    @test isequal(parent(Y.f), parent(Y_plain.f))
+end
 
 function whole_tendency(Y, p, t)
     Yₜ = zero(Y)
@@ -97,7 +120,8 @@ end
             Dict{String, Any}("period" => "10mins", "audit" => true),
         "diagnostics" => [
             Dict{String, Any}(
-                "short_name" => ["q_tag_copy_res", "q_tag_leak_vdiff"],
+                "short_name" =>
+                    ["q_tag_copy_res", "q_tag_leak_vdiff", "pr_tag_tropo"],
                 "period" => "10mins",
             ),
         ],
@@ -182,26 +206,100 @@ end
         end
     end
 
-    # 3. The model's own fields.
+    # 3. The rain-out goes by each subdomain's composition (WP4a): the
+    # copies' own shares in the updraft, the environment's in the
+    # environment. Over the partition that is the model's sink, up to what
+    # parts the copies' partition from `q_totʲ` and the grid partition from
+    # `ρq_tot`. The tags' precipitation adds up to `pr` in the same way.
+    @testset "The rain-out is split by subdomain" begin
+        # The testsets above left the cache at other states.
+        CA.set_precomputed_quantities!(Y, p, t)
+        model = p.atmos.water_tagging_model
+        @test CA.splits_rainout(p, :microphysics)
+        @test !CA.splits_rainout(p, :surface_flux)
+        ᶜincrements = CA._water_fix_fields(Y.c.ρ, model.tags)
+        CA.add_rainout_increments!(ᶜincrements, Y, p, model)
+        @test all(isfinite, parent(ᶜincrements.ρq_tag_tropo))
+        ᶜpartition = ᶜincrements.ρq_tag_tropo .+ ᶜincrements.ρq_tag_strat
+        ᶜsink = p.precomputed.ᶜρ_dq_tot_dt
+        @test maximum(abs, parent(ᶜsink)) > 0
+        @test relative_difference(ᶜpartition, ᶜsink) < 1e-3
+        # The grid rule would give the updraft's rain the grid mean's
+        # composition; the split does not.
+        ᶜgrid = CA._water_fix_fields(Y.c.ρ, model.tags)
+        CA._accumulate_water_tags!(
+            ᶜgrid,
+            Y.c,
+            p.tagging.ᶜwater_masks,
+            ᶜsink,
+            :microphysics,
+            model.tags,
+        )
+        @test !isapprox(
+            parent(ᶜincrements.ρq_tag_tropo),
+            parent(ᶜgrid.ρq_tag_tropo),
+        )
+        # The tags' precipitation over the partition is `pr`, and its rain
+        # and snow parts add up to it.
+        tag_pr(tag, phase) = copy(
+            CA.water_tag_precipitation!(
+                similar(p.scratch.ᶠtemp_field_level),
+                Y,
+                p,
+                tag,
+                phase,
+            ),
+        )
+        (tropo, strat) = (model.tags[1], model.tags[2])
+        pr = p.precomputed.surface_rain_flux .+ p.precomputed.surface_snow_flux
+        @test maximum(abs, parent(pr)) > 0
+        @test relative_difference(
+            tag_pr(tropo, Val(:all)) .+ tag_pr(strat, Val(:all)),
+            pr,
+        ) < 1e-3
+        @test isapprox(
+            parent(tag_pr(tropo, Val(:rain)) .+ tag_pr(tropo, Val(:snow))),
+            parent(tag_pr(tropo, Val(:all)));
+            rtol = 1e-12,
+        )
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "pr_tag_tropo")
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "prsn_tag_evap")
+    end
+
+    # 4. The model's own fields.
+    plain = run_simulation(edmf_dict, "water_tags_edmf_0m_plain")
+    Y_plain = plain.integrator.u
     @testset "The model's fields do not depend on the copies" begin
-        plain = run_simulation(edmf_dict, "water_tags_edmf_0m_plain")
-        Y_plain = plain.integrator.u
-        is_tag(name) = startswith(string(name), "ρq_tag_")
-        @test Set(filter(!is_tag, propertynames(Y.c))) ==
-              Set(propertynames(Y_plain.c))
-        for name in propertynames(Y_plain.c)
-            name == :sgsʲs && continue
-            @test isequal(
-                parent(getproperty(Y.c, name)),
-                parent(getproperty(Y_plain.c, name)),
-            )
-        end
-        for name in propertynames(Y_plain.c.sgsʲs.:(1))
-            @test isequal(
-                parent(getproperty(Y.c.sgsʲs.:(1), name)),
-                parent(getproperty(Y_plain.c.sgsʲs.:(1), name)),
-            )
-        end
-        @test isequal(parent(Y.f), parent(Y_plain.f))
+        test_same_model_fields(Y, Y_plain)
+    end
+
+    # 5. The default mode splits the rain-out by the exchange's shares. They
+    # sum to the grid partition's share in each subdomain, so the partition's
+    # part is the sink up to the partition's residual.
+    @testset "The default mode splits the rain-out" begin
+        default_dict = merge(edmf_dict, tag_dict)
+        delete!(default_dict, "water_tag_updraft_copy")
+        # The copies' diagnostics do not exist without copies.
+        default_dict["diagnostics"] = [
+            Dict{String, Any}(
+                "short_name" => ["pr_tag_tropo", "prsn_tag_evap"],
+                "period" => "10mins",
+            ),
+        ]
+        default = run_simulation(default_dict, "water_tags_edmf_0m_default")
+        Y_default = default.integrator.u
+        p_default = default.integrator.p
+        CA.set_precomputed_quantities!(Y_default, p_default, default.integrator.t)
+        model = p_default.atmos.water_tagging_model
+        @test !CA.has_water_tag_updraft_copies(model)
+        @test CA.splits_rainout(p_default, :microphysics)
+        ᶜincrements = CA._water_fix_fields(Y_default.c.ρ, model.tags)
+        CA.add_rainout_increments!(ᶜincrements, Y_default, p_default, model)
+        @test all(isfinite, parent(ᶜincrements.ρq_tag_strat))
+        @test relative_difference(
+            ᶜincrements.ρq_tag_tropo .+ ᶜincrements.ρq_tag_strat,
+            p_default.precomputed.ᶜρ_dq_tot_dt,
+        ) < 1e-3
+        test_same_model_fields(Y_default, Y_plain)
     end
 end
