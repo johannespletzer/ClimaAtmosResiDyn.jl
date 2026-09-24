@@ -2,9 +2,13 @@
 
 Written on 2026-09-24, at the owner's request, for known issue 7
 (`docs/known_issues.md` on `claude/water-tags-wp6-step3`). It lists options.
-**The choice is the owner's.** Nothing here is built. The FINDINGS entry is the
-parent session's. The fix comes before the sphere (ROADMAP.md, the execution
-order, step 8a).
+**The choice is the owner's.** The FINDINGS entry is the parent session's. The
+fix comes before the sphere (ROADMAP.md, the execution order, step 8a).
+
+*Updated 2026-09-24, later.* The owner chose option A now, then the probe of
+section 5, then a choice among B, C and D. Option A is built on
+`claude/tag-closure-no-abort` (`00c9eedb`), for a PR against `main`. The probe
+is pre-registered in section 5, before it runs.
 
 ## 1. The defect
 
@@ -36,11 +40,15 @@ So the tags change nothing in the model until they end it. The runs used
     follow a negative parent; the limiters' emptying where the parent is
     at or below zero (`q_tag_led_empty`); the copies' repair against a
     negative `q_totʲ`. None is isolated.
-  - **What ends the run.** The water closure check's `abort_above` is 1.0 by
-    default. Its reason assumes a non-negative parent: non-negative tags then
-    miss it by at most the parent itself. The closure at the crash is −1.02,
-    past that level. Whether the check ended the run, or something else did,
-    is not recorded here.
+  - ~~**What ends the run.** Whether the check ended the run, or something
+    else did, is not recorded here.~~ *Established 2026-09-24:* the water
+    closure check ended both follower runs. Job `13917157`'s `.err`, line
+    1401, reads "water tag closure residual 1.0194981558568388 exceeds the
+    configured abort level 1.0 at t = 6.4368e6 s", from
+    `tag_closure_callback!` (`tagged_tracers.jl:841`). That level, 1.0 by
+    default, assumed a non-negative parent: non-negative tags then miss it by
+    at most the parent itself. Here the parent is negative. What ended the
+    copies run at day 48 is not quoted here.
 
 ## 3. What any fix must keep
 
@@ -65,14 +73,71 @@ The options can combine. A is the smallest change that meets the parity rule.
 B, C and D act on the divergence itself. Which of them acts on its cause is not
 known (section 2).
 
-## 5. A probe before the choice (a proposal)
+## 5. The probe, pre-registered before it runs (2026-09-24)
 
-The site 23 samesign run from its day-9 checkpoint, with
-`water_tag_ledger_per_tag: true` and WP6 step 3's ledgers, to day 20. Which
-ledger grows as the parent turns negative (the follower's moved and left, the
-repair, the emptying, the copies' repair) bounds which option acts on the
-cause. It changes no code. It needs the long runs' checkpoints on scratch and a
-job the owner approves.
+~~The site 23 samesign run from its day-9 checkpoint~~. *Corrected:* the long
+runs keep no daily checkpoints, only an HDF5 file written at the crash, so the
+probe runs from the start.
+
+**The run.** `configs/lr_s23_probe_ledgers.yml`: `lr_s23_samesign` with
+`water_tag_ledger_per_tag: true` and `energy_source_tag_ledger_per_tag: true`,
+`t_end` 20 days, `radiation_reset_rng_seed: true` as before, and the ledgers
+written every 6 hours. The run tree `../ClimaAtmosResiDyn-issue7-probe-run` is
+the record merged with `claude/water-tags-wp6-step3` (WP6 step 3 and its
+ledgers) and `claude/long-run-samesign` (the code the long runs ran). It uses
+the long runs' driver, `analysis/water/d4w_driver.jl`. The closure check keeps
+its old abort level of 1.0. The samesign run first passed it at day 74.5, so
+the probe should not reach it; if it does, what the tables hold up to the
+abort is the reading.
+
+**Its validity.** At the daily outputs of days 1 to 20, `rhoa`, `ta` and `hus`
+are bit for bit those of `lr_s23_untagged` (output_0001), compared as
+`analysis/water/lr_parity.py` compares them. If not, the probe's readings do
+not come from the long runs' trajectory, and it is void.
+
+**What it reads.** For each 6-hour interval from day 5 to day 20:
+
+  - two sets of cells: N, where `hus < 0` at either end of the interval, and P,
+    the rest of the column;
+  - per ledger, the interval's increment of its per-step gross, `Δ<L>_gross`,
+    times `ρΔz`, summed over N and over P, in kg/m² per day. The ledgers: the
+    rescale, the emptying, the repair and its net (`q_tag_led_*`), the
+    follower's part left out and part moved (`q_tag_inc_left`,
+    `q_tag_inc_moved`), and each tag's own `led_fix` and `led_inc` for `pbl`,
+    `free`, `evap` and `fcg`;
+  - the tags' overclaim, `Σ_P ρq_tag − ρq_tot` where positive, times `ρΔz`, over
+    N and over P.
+
+The baseline is each quantity's mean rate over days 5 to 8, before the parent
+turns negative (W36: from day 10).
+
+**The pre-registered readings.**
+
+ 1. *Grows.* A ledger grows when its rate over days 10 to 20, in N or in P, is
+    at least 10 times its baseline rate there.
+ 2. *First.* The ledger whose rate first passes 10 times its baseline, by
+    6-hour interval.
+ 3. *Fastest.* The ledger with the largest ratio of its days-10-to-20 rate to
+    its baseline rate.
+ 4. *Where.* Whether the overclaim grows in N, in P, or in both, by the same
+    10-fold rule.
+
+**How the readings bound the options.** They bound; they do not isolate a
+cause, since the probe changes nothing and compares time windows of one run.
+
+| reading | what it bounds | the option it points to |
+|:------- |:-------------- |:----------------------- |
+| the emptying, the rescale or the repair grows first and fastest, in N, and the overclaim grows in N | the tags meet the negative parent through the corrections in the negative cells | B: no tag water where the parent has none |
+| the follower's moved or left part, or `led_inc`, grows first and fastest, in or next to N | the follower carries the parent's increments of a negative field into the tags | C: the tags partition the parent's non-negative part |
+| the overclaim grows in P too, with no single ledger first by a clear margin (less than 2 times the next) | the divergence spreads beyond the negative cells | D: a cap; B alone would not reach it |
+| no ledger grows by the rule while the overclaim does | the growth is in a path the ledgers do not see, such as the tags' own tendencies with shares of a negative total | none of B to D is shown to act on the cause; a further probe is needed |
+
+The parent session brings the reading and the choice among B, C and D to the
+owner.
+
+**Cost.** The samesign run reached day 74.5 in about 2 h of wall time (its
+provenance: 18:14 to 20:10, one process). Twenty days with the ledgers every
+6 hours should take well under a day; the job asks for 24 h.
 
 ## 6. Tests for the fix, whichever is chosen
 
@@ -87,7 +152,9 @@ job the owner approves.
 
 ## 7. For the owner
 
- 1. Which option, or which combination.
- 2. Whether the probe of section 5 runs first.
+ 1. ~~Which option, or which combination.~~ *2026-09-24:* A now, then the
+    probe, then a choice among B, C and D.
+ 2. ~~Whether the probe of section 5 runs first.~~ *2026-09-24:* it does,
+    after A.
  3. Whether results already recorded from runs whose parent went negative
     (site 23's long runs) are kept, flagged or voided.
