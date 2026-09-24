@@ -342,11 +342,17 @@ It needs:
     100 rounding units;
   - an algorithm that solves every implicit stage it uses (ARS222, ARS343);
   - the parent's own post-solve correction (`energy_q_tot_upwinding` other
-    than `none`);
-  - microphysics other than 1M stepped explicitly. There the tags'
-    sedimentation lags the parent's by a change of the column's total, about
-    0.8% of the water an hour with one Newton iteration, which the follower
-    cannot take. `tracer` lags there alike.
+    than `none`).
+
+With 1M microphysics each tag's Jacobian row carries the parent's
+sedimentation cross block to each falling species, times the tag's share. So
+one Newton iteration moves the tags with the updated species, as it moves
+``\rho q_\mathrm{tot}``. Without those blocks the tags lagged the parent's
+surface outflow, about 0.8% of the water an hour with microphysics stepped
+explicitly, and the follower cannot move a change of the column's total. With
+them, the follower closed that column to 2e-8 in an hour. The split Jacobian
+solver solves the tags after the other fields, by back-substitution, so the
+model's fields do not change.
 
 The default takes `increment` only where the configuration shows these, and
 the model refuses it where they fail. A restart that changes

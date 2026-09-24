@@ -1334,8 +1334,7 @@ end
     @test transport(["water_tag_transport" => "increment"], "water_increment") isa
           increment
     # Elsewhere the default is `tracer`: without EDMF, with copies, without the
-    # parent's post-solve correction, without a region tag, and with 1M
-    # microphysics stepped explicitly.
+    # parent's post-solve correction, and without a region tag.
     @test transport([], "water_default_plain") isa tracer
     @test transport(
         [edmf..., "water_tag_updraft_copy" => true],
@@ -1350,20 +1349,16 @@ end
         "water_default_sources_only";
         tags = [partition[3]],
     ) isa tracer
-    explicit_one_moment =
-        [edmf..., "microphysics_model" => "1M", "implicit_microphysics" => false]
-    @test transport(explicit_one_moment, "water_default_explicit_1m") isa tracer
+    # With 1M, on either path: the tags' sedimentation cross blocks let the
+    # follower close the explicit path too (WP5b, FINDINGS W29).
+    @test transport(
+        [edmf..., "microphysics_model" => "1M", "implicit_microphysics" => false],
+        "water_default_explicit_1m",
+    ) isa increment
     @test transport(
         [edmf..., "microphysics_model" => "1M"],
         "water_default_implicit_1m",
     ) isa increment
-    # And the follower is refused there, with the reason.
-    @test_throws "stepped explicitly" CA.AtmosTagging(
-        config(
-            [explicit_one_moment..., "water_tag_transport" => "increment"],
-            "water_increment_explicit_1m",
-        ),
-    )
     @test_throws "must be `tracer` or `increment`" CA.water_tag_transport_from_config(
         "follow",
     )
