@@ -579,9 +579,9 @@ misses one:
     Without one, a new hook would make the stepper refresh the implicit cache
     after each solve, and the model's constraints read that cache.
 
-With 1-moment microphysics stepped explicitly (`implicit_microphysics: false`)
-the mode is refused as well, unless
-`energy_source_tag_increment_allow_explicit_1m: true`. In the implicit Jacobian
+With microphysics that sediments (`microphysics_model` 1M, 2M or 2MP3) stepped
+explicitly (`implicit_microphysics: false`) the mode is refused as well, unless
+`energy_source_tag_increment_allow_explicit_microphysics: true`. In the implicit Jacobian
 the parent's `ρe_tot` row has a cross block from each sedimenting species, for
 the energy the falling water carries. The tags' rows do not. So with one Newton
 iteration the tags miss part of the parent's sedimentation update. The
@@ -589,8 +589,9 @@ correction cannot move the part that changes a column's total, and that part
 lands in `e_src_res`. On the tag-closure experiments' DYCOMS RF02 EDMF column,
 with one Newton iteration, the closure residual after an hour was 2.1e-4 of
 the partitioned energy with the microphysics explicit and 1.5e-6 with it
-implicit. With ten iterations it was 4.9e-12. The water tags lagged in the
-same way and now carry the parent's cross blocks. Until the energy tags carry
+implicit. With ten iterations it was 4.9e-12. 2M and P3 sediment too, and no
+run has measured them, so they are refused until one does. The water tags
+lagged in the same way under 1M and now carry the parent's cross blocks. Until the energy tags carry
 them too, the key is an override for development runs, and the model warns
 when it is used. The refusal concerns only the tags' keys. Without the tags, or
 with another transport, the configuration runs as before.
@@ -598,7 +599,7 @@ with another transport, the configuration runs as before.
 ```yaml
 energy_source_tag_transport: enthalpy_increment
 implicit_microphysics: false
-energy_source_tag_increment_allow_explicit_1m: true # development runs only
+energy_source_tag_increment_allow_explicit_microphysics: true # development runs only
 ```
 
 The correction keeps a ledger, as two prognostic fields that the stepper
