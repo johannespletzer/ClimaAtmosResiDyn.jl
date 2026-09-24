@@ -616,8 +616,8 @@ owner's points in the note's section 8.
         where, before the cost budget.
         **Found and cut (W34, WP9a `bfd9ff08`):** one broadcast of 33
         arguments; per tag from 32 on, the inputs cost 3.4e-4 s and 189 kB at
-        32 tags, bit for bit the same. [ ] EDMF integration tests at
-        `bfd9ff08`, then a draft PR on #102.
+        32 tags, bit for bit the same. Draft PR #106 on #102. [ ] The EDMF
+        integration tests at `bfd9ff08`.
       + [ ] The rest at 32 tags (W34): the per-cell `map` over 32-tuples, the
         tracer name helpers, and the exchange's own work growing faster than
         the number of tags. Before the cost budget.
