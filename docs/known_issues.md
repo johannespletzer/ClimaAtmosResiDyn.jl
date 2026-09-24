@@ -245,8 +245,8 @@ not re-derive them.
 
 ## 7. Tagged water ends a run where the parent's water goes negative (open, parity class)
 
-**Status:** open; a defect. To be fixed before the sphere. The fix is not
-chosen yet.
+**Status:** open. The run no longer ends (option A, below); the cause of the
+divergence is open. To be settled before the sphere.
 
 A diagnostic must never end a run that upstream completes. This one does.
 The tag-closure long runs (the record branch's
@@ -270,12 +270,21 @@ same-sign rule, and its `|m|` twin.
     bit the untagged twin's at every output up to each crash. The runs keep
     no checkpoints, so the full state is compared only through these.
 
-What is not established: which of the tags' operators makes the divergence,
-and whether the water closure check's `abort_above`, 1.0 by default, ends the
-run or something else does. That default assumes a non-negative parent: then
-non-negative tags miss it by at most the parent itself. Here the parent is
-negative. The runs bound the problem to negative parent water on a long
-column; they do not isolate the mechanism.
+**What ended the runs:** the water closure check. Job `13917157`'s `.err`,
+line 1401, reads "water tag closure residual 1.0194981558568388 exceeds the
+configured abort level 1.0 at t = 6.4368e6 s", from `tag_closure_callback!`.
+That level assumed a non-negative parent: then non-negative tags miss it by at
+most the parent itself. Here the parent is negative.
 
-The options for the fix are drafted in the record branch's
-`design/NEGATIVE_PARENT_WATER.md`. The choice is the owner's.
+**Option A, done** (the owner's choice of 2026-09-24):
+`claude/tag-closure-no-abort`, a PR against `main`, which this stack gets by
+merge. No closure check ends a run by default any more. Water's old level,
+1.0, is now its `void_above`: past it the check warns once and marks this and
+every later row `void` in the closure and audit tables, and the run goes on.
+An explicit `abort_above` still ends a run.
+
+**Still open:** which of the tags' operators makes the divergence. The runs
+bound the problem to negative parent water on a long column; they do not
+isolate the mechanism. A probe with the per-tag ledgers runs next, and the
+owner then chooses among options B, C and D of the record branch's
+`design/NEGATIVE_PARENT_WATER.md`.
