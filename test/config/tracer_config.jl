@@ -251,6 +251,190 @@ end
     end
 end
 
+@testset "water_tracers refusals" begin
+    evap = [Dict("name" => "evap", "source" => "surface_flux")]
+    water_config(extra, job_id) = tracer_config(
+        ["microphysics_model" => "0M", "water_tracers" => evap, extra...];
+        job_id,
+    )
+
+    @test isnothing(CA.check_water_tracers_transport_supported(nothing, false))
+    # Under prognostic EDMF the tags follow one updraft, by default through a
+    # donor share and an exchange, or through copies. More than one updraft is
+    # refused.
+    edmf = CA.AtmosTagging(
+        water_config(["turbconv" => "prognostic_edmfx"], "water_tags_edmf"),
+    )
+    @test edmf.water_tagging_model isa CA.WaterTaggingModel
+    @test !CA.has_water_tag_updraft_copies(edmf.water_tagging_model)
+    @test_throws "`updraft_number: 1`" CA.AtmosTagging(
+        water_config(
+            ["turbconv" => "prognostic_edmfx", "updraft_number" => 2],
+            "water_tags_edmf_two_updrafts",
+        ),
+    )
+    # The copies: under prognostic EDMF only, with one reconstruction for the
+    # updraft's water and its tracers, and only with tags to copy.
+    copies = CA.AtmosTagging(
+        water_config(
+            ["turbconv" => "prognostic_edmfx", "water_tag_updraft_copy" => true],
+            "water_tags_copies",
+        ),
+    )
+    @test CA.has_water_tag_updraft_copies(copies.water_tagging_model)
+    @test_throws "needs `turbconv: prognostic_edmfx`" CA.AtmosTagging(
+        water_config(["water_tag_updraft_copy" => true], "water_tags_copies_no_edmf"),
+    )
+    @test_throws "`edmfx_mse_q_tot_upwinding` equal" CA.AtmosTagging(
+        water_config(
+            [
+                "turbconv" => "prognostic_edmfx",
+                "water_tag_updraft_copy" => true,
+                "edmfx_mse_q_tot_upwinding" => "third_order",
+            ],
+            "water_tags_copies_upwinding",
+        ),
+    )
+    @test_throws "no tags to copy" CA.AtmosTagging(
+        tracer_config(
+            ["microphysics_model" => "0M", "water_tag_updraft_copy" => true];
+            job_id = "water_copies_without_tags",
+        ),
+    )
+    @test_throws "no tags for it to move" CA.AtmosTagging(
+        tracer_config(
+            ["microphysics_model" => "0M", "water_tag_transport" => "increment"];
+            job_id = "water_increment_without_tags",
+        ),
+    )
+    @test_throws "must be `true` or `false`" CA.water_tag_updraft_copy_from_config(
+        "true",
+    )
+    # AMD's diffusivity comes from each tracer's own gradient, so the tags'
+    # diffusion does not add up to the parent's.
+    @test_throws "amd_les: true" CA.AtmosTagging(
+        water_config(["amd_les" => true], "water_tags_amd"),
+    )
+    # Eddy diffusion alone shares one diffusivity, so the sum holds under 0M.
+    # Under 1M the known q_tot_eff leak applies, as under any diffusion, and is
+    # not refused.
+    edonly = CA.AtmosTagging(
+        water_config(["turbconv" => "edonly_edmfx"], "water_tags_edonly"),
+    )
+    @test edonly.water_tagging_model isa CA.WaterTaggingModel
+    # The records are not transported, so they stay allowed under EDMF.
+    records = CA.AtmosTagging(
+        tracer_config(
+            [
+                "microphysics_model" => "0M",
+                "turbconv" => "prognostic_edmfx",
+                "water_process_record" => ["surface_flux"],
+            ];
+            job_id = "water_records_edmf",
+        ),
+    )
+    @test records.water_process_record !== nothing
+    @test records.water_tagging_model === nothing
+    # And under AMD, which breaks only the transported tags.
+    records_amd = CA.AtmosTagging(
+        tracer_config(
+            [
+                "microphysics_model" => "0M",
+                "amd_les" => true,
+                "water_process_record" => ["surface_flux"],
+            ];
+            job_id = "water_records_amd",
+        ),
+    )
+    @test records_amd.water_process_record !== nothing
+    @test records_amd.water_tagging_model === nothing
+    # The prescribed flow's surface moisture flux enters ρq_tot untagged. The
+    # warning sees the built model, since the setup can bring the flow.
+    flow = CA.ShipwayHill2012VelocityProfile{FT}()
+    tagging = CA.WaterTaggingModel(CA.water_tracer_tuple(evap, FT))
+    @test_logs (:warn, r"prescribed flow") CA.warn_water_tags_under_prescribed_flow(
+        flow,
+        tagging,
+    )
+    @test_logs CA.warn_water_tags_under_prescribed_flow(nothing, tagging)
+    @test_logs CA.warn_water_tags_under_prescribed_flow(flow, nothing)
+    # Both routes to a flow reach the warning through `get_atmos`: the setup's
+    # own, as the shipped kinematic driver uses it, and the key.
+    for (entries, job_id) in (
+        (["initial_condition" => "ShipwayHill2012"], "water_tags_flow_setup"),
+        (
+            [
+                "initial_condition" => "DYCOMS_RF02",
+                "prescribed_flow" => "ShipwayHill2012",
+                # The model runs a prescribed flow explicitly only.
+                "implicit_microphysics" => false,
+            ],
+            "water_tags_flow_key",
+        ),
+    )
+        config = tracer_config(
+            [
+                "config" => "column",
+                "z_max" => 2000.0,
+                "z_elem" => 10,
+                "z_stretch" => false,
+                "microphysics_model" => "1M",
+                "water_tracers" => evap,
+                entries...,
+            ];
+            job_id,
+        )
+        params = CA.ClimaAtmosParameters(config)
+        setup = CA.get_setup_type(
+            config.parsed_args,
+            CA.Parameters.thermodynamics_params(params),
+        )
+        grid = CA.get_grid(config.parsed_args, params, config.comms_ctx)
+        @test_logs (:warn, r"prescribed flow") match_mode = :any CA.get_atmos(
+            config,
+            params,
+            grid;
+            setup_type = setup,
+        )
+    end
+
+    # Names that would take the name of another diagnostic of the family.
+    @test_throws "`res` is a reserved tag name" CA.water_tracer_tuple(
+        [Dict("name" => "res", "source" => "surface_flux")],
+        FT,
+    )
+    for name in (
+        "fix_a",
+        "upfix_a",
+        "inc_left",
+        "rtag_a",
+        "stag_a",
+        "fixgross_a",
+        "fixcount_a",
+        "upfixgross_a",
+        "upfixcount_a",
+    )
+        @test_throws "`$name` is refused" CA.water_tracer_tuple(
+            [Dict("name" => name, "source" => "surface_flux")],
+            FT,
+        )
+    end
+    # The energy source tags reserve their ledgers' prefixes too.
+    for name in ("fix_a", "fixgross_a", "fixcount_a", "inc_left")
+        @test_throws "`$name` is refused" CA.energy_source_tracer_tuple(
+            [Dict("name" => name, "source" => "surface_flux")],
+            FT,
+        )
+    end
+    # A reserved prefix counts only as a prefix, with its underscore.
+    for name in ("evap_fix", "fixed", "income", "stagnant", "rtagged")
+        @test CA.water_tracer_tuple(
+            [Dict("name" => name, "source" => "surface_flux")],
+            FT,
+        )[1] isa CA.WaterTag
+    end
+end
+
 @testset "energy_source_tags against the scheme" begin
     entries = [
         Dict{String, Any}("name" => "a", "region" => "tropics"),
@@ -1264,4 +1448,70 @@ end
     @test length(source_model.tags) == 7
     @test source_model.offset == eltype(source)(110495)
     @test CA.closure_checks_from_config(source).energy_source.spin_up == "1hours"
+end
+
+# `water_tag_transport`'s default (the owner's review of #102, point 1). G3_PLAN
+# 4.3's rule makes the follower the default in the default mode under EDMF,
+# where the configuration supports it, and keeps `tracer` elsewhere.
+@testset "water_tag_transport's default" begin
+    region(above) = Dict{String, Any}(
+        "type" => "tanh_altitude",
+        "z_center" => 750.0,
+        "width" => 100.0,
+        "above" => above,
+    )
+    partition = [
+        Dict{String, Any}("name" => "tropo", "region" => region(false)),
+        Dict{String, Any}("name" => "strat", "region" => region(true)),
+        Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
+    ]
+    edmf = ["turbconv" => "prognostic_edmfx"]
+    config(extra, job_id; tags = partition) = tracer_config(
+        ["microphysics_model" => "0M", "water_tracers" => tags, extra...];
+        job_id,
+    )
+    transport(extra, job_id; kwargs...) =
+        CA.AtmosTagging(config(extra, job_id; kwargs...)).water_tagging_model.transport
+    increment = CA.IncrementWaterTagTransport
+    tracer = CA.TracerWaterTagTransport
+    @test transport(edmf, "water_default_edmf") isa increment
+    # An explicit key overrides it, either way.
+    @test transport([edmf..., "water_tag_transport" => "tracer"], "water_edmf_tracer") isa
+          tracer
+    @test transport(["water_tag_transport" => "increment"], "water_increment") isa
+          increment
+    # Elsewhere the default is `tracer`: without EDMF, with copies, without the
+    # parent's post-solve correction, without a region tag, and with 1M
+    # microphysics stepped explicitly.
+    @test transport([], "water_default_plain") isa tracer
+    @test transport(
+        [edmf..., "water_tag_updraft_copy" => true],
+        "water_default_copies",
+    ) isa tracer
+    @test transport(
+        [edmf..., "energy_q_tot_upwinding" => "none"],
+        "water_default_no_correction",
+    ) isa tracer
+    @test transport(
+        edmf,
+        "water_default_sources_only";
+        tags = [partition[3]],
+    ) isa tracer
+    explicit_one_moment =
+        [edmf..., "microphysics_model" => "1M", "implicit_microphysics" => false]
+    @test transport(explicit_one_moment, "water_default_explicit_1m") isa tracer
+    @test transport(
+        [edmf..., "microphysics_model" => "1M"],
+        "water_default_implicit_1m",
+    ) isa increment
+    # And the follower is refused there, with the reason.
+    @test_throws "stepped explicitly" CA.AtmosTagging(
+        config(
+            [explicit_one_moment..., "water_tag_transport" => "increment"],
+            "water_increment_explicit_1m",
+        ),
+    )
+    @test_throws "must be `tracer` or `increment`" CA.water_tag_transport_from_config(
+        "follow",
+    )
 end

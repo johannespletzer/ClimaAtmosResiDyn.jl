@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `parameterizations`, `restarts`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `tagging_water_increment`, `parameterizations`, `restarts`. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -83,8 +83,13 @@ The `tagging_*` groups are one file each: `tagging_energy` runs
 `test/energy_source_tags_float32_integration.jl`, `tagging_source_edmf`
 runs `test/energy_source_tags_edmf_integration.jl`,
 `tagging_source_increment` runs
-`test/energy_source_tags_increment_integration.jl` and `tagging_source_updraft`
-runs `test/energy_source_tags_updraft_integration.jl`. They are split because a tag
+`test/energy_source_tags_increment_integration.jl`, `tagging_source_updraft`
+runs `test/energy_source_tags_updraft_integration.jl`,
+`tagging_water_edmf`, `tagging_water_edmf_copies` and `tagging_water_edmf_0m`
+run `test/tagged_water_edmf_integration.jl`,
+`test/tagged_water_edmf_copies_integration.jl` and
+`test/tagged_water_edmf_0m_integration.jl`, and `tagging_water_increment`
+runs `test/tagged_water_increment_integration.jl`. They are split because a tag
 name is a type parameter, so each tag set recompiles the whole tendency and
 solve pipeline, roughly seven minutes per simulation on Julia 1.11, and the
 files share no compilation between them. Combined they overran the 90-minute
@@ -127,6 +132,41 @@ while the donor-share flux and the exchange do nothing, that the partition
 stays closed, and that the model's fields are those without tags, bit for bit.
 It builds the EDMF column twice. The copies double the time to build it, so
 with the increment's two builds in one group the three would overrun the job.
+
+The three `tagging_water_edmf*` groups run the water tags under
+`PrognosticEDMFX`, each on the EDMF column with and without the tags, so each
+builds it twice.
+
+  - `tagging_water_edmf` runs the default mode under 1M. It checks that the
+    partition's sub-grid tendencies sum to the parent's, that one composition
+    everywhere moves as the parent does, that the vertical diffusion's leak in
+    closed form is the difference the diffusion makes, and the audit's columns.
+  - `tagging_water_edmf_copies` runs the copies under 1M, with the
+    microphysics explicit, so that parity covers the explicit path, and ten
+    Newton iterations: with one, the tags lag the parent's solve there by
+    0.8% of the column's water in an hour, which the closure bounds would
+    fail (WP5 follows that lag). It checks
+    the rebuild and the start from the plume, that the default mode's flux
+    does nothing, the copies' residual, the surface-flux mirror, and that one
+    composition moves with `q_totʲ` up to the diffusion's leak.
+  - `tagging_water_edmf_0m` runs the copies under 0M, with the microphysics
+    implicit, the default, and a passive chemistry tracer. It checks that the
+    tracer, set to a copy's values, takes the copy's tendency apart from its
+    mirrors.
+
+The tagged runs write the closure audit and the leak diagnostics, which use
+scratch from callbacks, so parity covers them too. The default mode under 0M
+runs in V-W3's TRMM pair, not in CI.
+
+`tagging_water_increment` runs `water_tag_transport: increment` on the same
+1M column, with the updrafts' vertical diffusion, as D4-W has it. It checks the
+correction on a set increment (what is left in place and what is moved, the
+donor cell at each face, the hook running the parent's own correction
+unchanged, no allocations), the closure after an hour, the ledger in the
+audit, the diagnostics and the split solver, and parity. It also builds the
+column twice.
+
+Each checks that the model's fields are those without tags, bit for bit.
 
 ### The package-load preflight
 

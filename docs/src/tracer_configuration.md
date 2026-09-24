@@ -465,6 +465,17 @@ nothing to close against.
 `water_tracers` and `energy_tracers` take the same kind of entry. Each needs a
 unique `name` and at least one of `region` and `source`.
 
+Some names are reserved, because a tag's name becomes part of a diagnostic's
+name, and another diagnostic of the family would take it:
+
+  - `res` is reserved in both families. It is the closure residual,
+    `q_tag_res` or `e_tag_res`.
+  - A `water_tracers` name may not begin with `fix_`, `upfix_`, `inc_`,
+    `rtag_` or `stag_`. `fix_` begins the ledger `q_tag_fix_<name>`; the
+    others are held for diagnostics still to come.
+  - The underscore is part of each prefix, so names such as `fixed`, `income`
+    and `rtagged` are allowed.
+
 | Field    | Meaning                                                                                     |
 |:-------- |:------------------------------------------------------------------------------------------- |
 | `name`   | what the tag is called. Appears in the output as `q_tag_<name>` / `e_tag_<name>`            |

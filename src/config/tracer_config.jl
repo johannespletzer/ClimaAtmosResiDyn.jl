@@ -465,14 +465,55 @@ end
 # ============================================================================
 
 """
-    tracer_tag_tuple(entries, FT; tag_type, key, known, groups)
+    RESERVED_WATER_TAG_PREFIXES
+
+Name prefixes that a `water_tracers` tag may not take. A tag's diagnostic is
+`q_tag_<name>`. `fix_` starts the ledger `q_tag_fix_<name>` of the limiters
+and constraints, so a tag named `fix_a` would take the name of tag `a`'s
+ledger, and the first registered diagnostic would win silently. `upfix_` is
+held for the updraft copies' repair ledger, which collides the same way.
+`inc_` is held for an increment follower's ledgers, `q_tag_inc_left` and
+`q_tag_inc_moved`. `rtag_` and `stag_` are held for the rain and snow parts,
+whose output names are not fixed yet. Refusing them now keeps configurations
+valid when those diagnostics arrive. `fixgross_`, `fixcount_`, `upfixgross_`
+and `upfixcount_` start the ledgers' gross twins and counts, and `led_` the
+ledgers per mechanism, `q_tag_led_rescale` and the others.
+"""
+const RESERVED_WATER_TAG_PREFIXES = (
+    "fix_",
+    "upfix_",
+    "inc_",
+    "rtag_",
+    "stag_",
+    "fixgross_",
+    "fixcount_",
+    "upfixgross_",
+    "upfixcount_",
+    "led_",
+)
+
+"""
+    RESERVED_ENERGY_SOURCE_TAG_PREFIXES
+
+Name prefixes that an `energy_source_tags` tag may not take, for the reason
+`RESERVED_WATER_TAG_PREFIXES` gives. A tag's diagnostic is
+`e_src_<name>`, and `fix_` starts the repair's ledger `e_src_fix_<name>`,
+`fixgross_` and `fixcount_` its gross twin and count, `inc_` the
+increment correction's ledger `e_src_inc_left` and `e_src_inc_moved`, and
+`led_` the repair's ledger per mechanism `e_src_led_repair`.
+"""
+const RESERVED_ENERGY_SOURCE_TAG_PREFIXES =
+    ("fix_", "fixgross_", "fixcount_", "inc_", "led_")
+
+"""
+    tracer_tag_tuple(entries, FT; tag_type, key, known, groups, reserved_prefixes = ())
 
 Shared reader for the `water_tracers` and `energy_tracers` lists, which have the
 same entry schema: a unique `name`, plus a `region`, a `source`, or both.
 
 `tag_type` is [`TracerTag`](@ref) or [`WaterTag`](@ref), `key` is the config key
 being read (used in error messages), and `known` / `groups` are that family's
-source tables.
+source tables. A name starting with one of `reserved_prefixes` is refused.
 """
 function tracer_tag_tuple(
     entries,
@@ -481,6 +522,7 @@ function tracer_tag_tuple(
     key,
     known,
     groups,
+    reserved_prefixes = (),
 ) where {FT}
     entries isa AbstractVector || error(
         "`$key` must be a list of tracer entries, got a $(typeof(entries)).",
@@ -517,6 +559,13 @@ function tracer_tag_tuple(
         "`res` is a reserved tag name in `$key`: it collides with the closure \
         residual diagnostic. Choose another name.",
     )
+    for name in names, prefix in reserved_prefixes
+        startswith(String(name), prefix) && error(
+            "Tag names starting with `$prefix` are reserved in `$key`, so \
+            `$name` is refused. Such a name can take, or will be able to take, \
+            the name of another diagnostic of the family. Choose another name.",
+        )
+    end
     return Tuple(tags)
 end
 
@@ -548,6 +597,7 @@ water_tracer_tuple(entries, ::Type{FT}) where {FT} = tracer_tag_tuple(
     key = "water_tracers",
     known = KNOWN_WATER_TAG_SOURCES,
     groups = WATER_TAG_SOURCE_GROUPS,
+    reserved_prefixes = RESERVED_WATER_TAG_PREFIXES,
 )
 
 """
@@ -578,6 +628,7 @@ function energy_source_tracer_tuple(
         key = "energy_source_tags",
         known = KNOWN_TAG_SOURCES,
         groups = TAG_SOURCE_GROUPS,
+        reserved_prefixes = RESERVED_ENERGY_SOURCE_TAG_PREFIXES,
     )
     warn_inactive_energy_source_labels(tags, microphysics_model)
     return tags
@@ -1394,6 +1445,193 @@ function check_energy_source_tagging_supported(turbconv, updraft_number)
 end
 
 """
+    check_water_tracers_transport_supported(turbconv, amd_les, updraft_number = 1)
+
+Refuse `water_tracers` where the model moves `ρq_tot` in a way the tags do not
+follow.
+
+  - `turbconv: prognostic_edmfx` with more than one updraft is refused. The
+    tags follow one updraft: by their share of its water flux and an
+    exchange, or by copies (`water_tag_updraft_copy`), and both take the
+    environment as the grid mean less that updraft. The model itself runs one
+    updraft only and asserts that when it builds its cache; this refuses more,
+    with a message. With one updraft the tags follow it.
+  - `amd_les: true` is refused. AMD diffuses each tracer with a diffusivity
+    taken from that tracer's own gradient. The operator is nonlinear, so in
+    general the tags' diffusion does not add up to that of `ρq_tot`, and no
+    repair restores the partition. Smagorinsky–Lilly and constant horizontal
+    diffusion share one diffusivity and keep it.
+
+`docs/known_issues.md`, issue 3, describes both. The check is kept apart from
+`check_water_tagging_supported`, which also gates
+`water_process_record`. The records are not transported, so neither applies to
+them. A prescribed flow is warned about once the model is built, since the
+setup can bring one without the key; see
+`warn_water_tags_under_prescribed_flow`.
+"""
+function check_water_tracers_transport_supported(
+    turbconv,
+    amd_les,
+    updraft_number = 1,
+)
+    turbconv == "prognostic_edmfx" &&
+        updraft_number > 1 &&
+        error(
+            "`water_tracers` with `turbconv: prognostic_edmfx` need \
+            `updraft_number: 1`, got $updraft_number. The tags follow one \
+            updraft, by their share of its water flux and an exchange or by \
+            copies, and take the environment as the grid mean less that \
+            updraft. `water_process_record` is allowed.",
+        )
+    amd_les === true && error(
+        "`water_tracers` with `amd_les: true` are not supported. AMD diffuses \
+        each tracer with a diffusivity taken from that tracer's own gradient, \
+        so in general the tags' diffusion does not add up to that of \
+        `ρq_tot`, and the partition breaks. `smagorinsky_lilly` and \
+        `constant_horizontal_diffusion` share one diffusivity and keep it. \
+        See docs/known_issues.md, issue 3.",
+    )
+    return nothing
+end
+
+"""
+    default_water_tag_transport(parsed_args, updraft_copies, tags)
+
+The transport the water tags take when `water_tag_transport` is not set.
+
+G3_PLAN 4.3 fixed the rule before V-W3 ran. If the default mode's one-iteration
+part of the closure residual exceeds a quarter of the 0.2% budget, the follower
+becomes the default under EDMF. V-W3 measured twelve times that (FINDINGS W21
+on the record branch). So `increment` is the default in the default mode under
+`turbconv: prognostic_edmfx`, where the configuration shows it is supported:
+
+  - an ARS algorithm, which solves every stage it uses;
+  - an `energy_q_tot_upwinding` other than `none`, so the parent has a
+    post-solve correction;
+  - microphysics other than 1M stepped explicitly, where the follower is
+    refused ([`check_water_tag_increment_supported`](@ref));
+  - a region tag without a source, which the follower needs.
+
+Elsewhere, and with copies, `tracer`. The model still checks what the
+configuration cannot show, such as whether the regions partition the domain.
+"""
+function default_water_tag_transport(parsed_args, updraft_copies, tags)
+    tracer = TracerWaterTagTransport()
+    get(parsed_args, "turbconv", nothing) == "prognostic_edmfx" || return tracer
+    updraft_copies && return tracer
+    startswith(string(get(parsed_args, "ode_algo", "ARS343")), "ARS") ||
+        return tracer
+    string(get(parsed_args, "energy_q_tot_upwinding", "vanleer_limiter")) ==
+    "none" && return tracer
+    _explicit_one_moment_config(parsed_args) && return tracer
+    any(_is_partition_tag, tags) || return tracer
+    return IncrementWaterTagTransport()
+end
+_explicit_one_moment_config(parsed_args) =
+    get(parsed_args, "microphysics_model", nothing) == "1M" &&
+    get(parsed_args, "implicit_microphysics", true) == false
+
+"""
+    water_tag_updraft_copy_from_config(value)
+
+Parse `water_tag_updraft_copy`. `false`, the default, and `~` give the water
+tags no copy in the updrafts; `true` gives them one. Anything else is an
+error, so that a quoted `"true"` cannot silently read as off.
+"""
+function water_tag_updraft_copy_from_config(value)
+    isnothing(value) && return false
+    value isa Bool || error(
+        "`water_tag_updraft_copy` must be `true` or `false`, got \
+        $(repr(value)).",
+    )
+    return value
+end
+
+"""
+    water_tag_transport_from_config(value, default = TracerWaterTagTransport())
+
+Parse `water_tag_transport`. `tracer` moves the water tags as tracers.
+`increment` makes them follow the parent's implicit increment after each Newton
+solve. `~`, the default, gives `default`, which
+[`default_water_tag_transport`](@ref) chooses from the configuration. Anything
+else is an error.
+"""
+function water_tag_transport_from_config(
+    value,
+    default = TracerWaterTagTransport(),
+)
+    isnothing(value) && return default
+    value == "tracer" && return TracerWaterTagTransport()
+    value == "increment" && return IncrementWaterTagTransport()
+    return error(
+        "`water_tag_transport` must be `tracer` or `increment`, got \
+        $(repr(value)).",
+    )
+end
+
+"""
+    water_tag_transport_text(transport)
+
+The config value of a water tag transport, for messages and the restart guard.
+"""
+water_tag_transport_text(::TracerWaterTagTransport) = "tracer"
+water_tag_transport_text(::IncrementWaterTagTransport) = "increment"
+
+"""
+    check_water_tag_updraft_copy_supported(turbconv, mse_q_tot_upwinding, tracer_upwinding)
+
+Refuse `water_tag_updraft_copy: true` without `turbconv: prognostic_edmfx`, the
+only model with updrafts that carry tracers, and where the updraft's water and
+its tracers are reconstructed differently. The copies' SGS fluxes sum to the
+parent's only when both use one reconstruction:
+`edmfx_mse_q_tot_upwinding` moves `q_totʲ`, and `edmfx_tracer_upwinding` moves
+every updraft tracer, the copies among them.
+"""
+function check_water_tag_updraft_copy_supported(
+    turbconv,
+    mse_q_tot_upwinding,
+    tracer_upwinding,
+)
+    turbconv == "prognostic_edmfx" || error(
+        "`water_tag_updraft_copy: true` needs `turbconv: prognostic_edmfx`, \
+        got `turbconv: $(repr(turbconv))`. Only that model has updrafts that \
+        carry tracers, and so a copy of the tags.",
+    )
+    mse_q_tot_upwinding == tracer_upwinding || error(
+        "`water_tag_updraft_copy: true` needs `edmfx_mse_q_tot_upwinding` equal \
+        to `edmfx_tracer_upwinding`, got $(repr(mse_q_tot_upwinding)) and \
+        $(repr(tracer_upwinding)). The first reconstructs the updraft's water \
+        and the second its tracers, the copies among them. With two \
+        reconstructions the copies' fluxes do not sum to the parent's.",
+    )
+    return nothing
+end
+
+"""
+    warn_water_tags_under_prescribed_flow(prescribed_flow, water_tagging_model)
+
+Warn when a run with water tags has a prescribed flow. The flow's surface
+moisture flux enters `ρq_tot` with no tagged counterpart, so that water is
+untagged, and the closure residual `q_tag_res` grows by it where region tags
+partition the domain. The flow also clips negative `ρq_tot` to zero whenever
+the state is constrained. The tags follow the clip through
+[`rescale_water_tags!`](@ref), and `q_tag_fix_<name>` records what it moved.
+
+It takes the built model's fields, because the flow comes from the setup, as
+`initial_condition: ShipwayHill2012` gives it, or from the `prescribed_flow`
+key. `get_atmos` calls it.
+"""
+warn_water_tags_under_prescribed_flow(prescribed_flow, water_tagging_model) =
+    isnothing(prescribed_flow) || isnothing(water_tagging_model) ? nothing :
+    @warn(
+        "`water_tracers` with a prescribed flow: the flow's surface moisture \
+        flux enters `ρq_tot` untagged, so `q_tag_res`, where region tags are \
+        configured, grows by it. The flow also clips negative `ρq_tot` when \
+        the state is constrained, which the tags follow and \
+        `q_tag_fix_<name>` records.",
+    )
+
+"""
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
@@ -1406,8 +1644,12 @@ cost.
 
 Energy source tags are refused without `energy_source_tag_offset`, see
 `check_energy_source_offset_given`, and under `turbconv: prognostic_edmfx` with
-more than one updraft, see `check_energy_source_tagging_supported`. The label
-warnings of the energy source tags and the records see the microphysics model.
+more than one updraft, see `check_energy_source_tagging_supported`. Water
+tags are refused under `turbconv: prognostic_edmfx` and `amd_les: true`, see
+`check_water_tracers_transport_supported`. The label warnings of the energy
+source tags and the records see the microphysics model, and the warning for
+water tags under a prescribed flow sees the built model
+(`warn_water_tags_under_prescribed_flow`).
 """
 function AtmosTagging(config::AtmosConfig)
     FT = eltype(config)
@@ -1419,11 +1661,53 @@ function AtmosTagging(config::AtmosConfig)
         TaggingModel(energy_tracer_tuple(entries, FT))
     end
     water_entries = config.parsed_args["water_tracers"]
+    water_updraft_copies = water_tag_updraft_copy_from_config(
+        get(config.parsed_args, "water_tag_updraft_copy", false),
+    )
+    water_transport_value = get(config.parsed_args, "water_tag_transport", nothing)
+    water_transport = water_tag_transport_from_config(water_transport_value)
     water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
+        water_updraft_copies && error(
+            "`water_tag_updraft_copy: true` is set but `water_tracers` is \
+            not, so there are no tags to copy. Configure `water_tracers`, or \
+            drop the key.",
+        )
+        water_transport isa TracerWaterTagTransport || error(
+            "`water_tag_transport: \
+            $(water_tag_transport_text(water_transport))` is set but \
+            `water_tracers` is not, so there are no tags for it to move. \
+            Configure `water_tracers`, or drop the key.",
+        )
         nothing
     else
         check_water_tagging_supported(microphysics_model)
-        WaterTaggingModel(water_tracer_tuple(water_entries, FT))
+        check_water_tracers_transport_supported(
+            get(config.parsed_args, "turbconv", nothing),
+            get(config.parsed_args, "amd_les", false),
+            get(config.parsed_args, "updraft_number", 1),
+        )
+        water_updraft_copies && check_water_tag_updraft_copy_supported(
+            get(config.parsed_args, "turbconv", nothing),
+            get(config.parsed_args, "edmfx_mse_q_tot_upwinding", "first_order"),
+            get(config.parsed_args, "edmfx_tracer_upwinding", "first_order"),
+        )
+        water_tags = water_tracer_tuple(water_entries, FT)
+        water_transport = water_tag_transport_from_config(
+            water_transport_value,
+            default_water_tag_transport(
+                config.parsed_args,
+                water_updraft_copies,
+                water_tags,
+            ),
+        )
+        water_transport isa IncrementWaterTagTransport &&
+            _explicit_one_moment_config(config.parsed_args) &&
+            error(_EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE)
+        WaterTaggingModel(
+            water_tags;
+            updraft_copies = water_updraft_copies,
+            transport = water_transport,
+        )
     end
     source_entries = config.parsed_args["energy_source_tags"]
     source_offset_value =
