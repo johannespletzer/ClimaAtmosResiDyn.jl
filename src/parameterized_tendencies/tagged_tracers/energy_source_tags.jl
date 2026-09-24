@@ -2157,11 +2157,11 @@ _energy_source_increment_cache(Y, model) =
         ᶜe_src_ρ_snapshot = similar(Y.c.ρ),
         ᶜe_src_partition_snapshot = similar(Y.c.ρ),
         ᶜe_src_mismatch = similar(Y.c.ρ),
-        ᶜe_src_abs_mismatch = similar(Y.c.ρ),
+        ᶜe_src_left_weight = similar(Y.c.ρ),
         ᶠe_src_mismatch_integral = Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
-        ᶠe_src_abs_mismatch_integral = Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
+        ᶠe_src_left_weight_integral = Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
         e_src_mismatch_total = zeros(axes(Fields.level(Y.f, half))),
-        e_src_abs_mismatch_total = zeros(axes(Fields.level(Y.f, half))),
+        e_src_left_weight_total = zeros(axes(Fields.level(Y.f, half))),
         ᶠe_src_increment_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
         ᶠe_src_area_ratio = _energy_source_face_area_ratio(Y.f),
         e_src_dtγ = Ref(zero(eltype(Y.c.ρ))),
@@ -2239,11 +2239,14 @@ parent's increment of `E`. `U` is the solved stage value, and `dY` already holds
 the parent's own post-solve correction, which the stepper adds as `dtγ·dY`.
 
 In each cell, the mismatch `m` is the parent's increment of `E` since the
-snapshot less the partition's. The part of `m` that changes a column's total
-cannot be moved within the column; it is left out of the tags, spread over the
-column in proportion to `|m|`, and stays in `e_src_res`. Its column total is
-exact, but `|m|` is dominated by the parent's vertical transport, so its
-profile does not show where it arose. The rest integrates up the column to a face flux
+snapshot less the partition's. The part of `m` that changes a column's total,
+`M = ∫m`, cannot be moved within the column; it is left out of the tags, spread
+over the cells whose `m` has `M`'s sign in proportion to `m` there
+([`water_increment_left_weight`](@ref), the water tags' rule), and stays in
+`e_src_res`. So no cell leaves out or moves more than its own mismatch. Its
+column total is exact, but the mismatch is dominated by the parent's vertical
+transport, so its profile does not show where it arose. The rest integrates up
+the column to a face flux
 that is zero at both boundaries, whose divergence is that rest. Each tag takes
 the flux times its share in the cell the flux leaves, as with the sub-grid mass
 flux, and the flux is added to `dY` divided by `dtγ`. The partition's shares add
@@ -2258,9 +2261,9 @@ function correct_energy_source_increment!(dY, U, p)
     model = p.atmos.energy_source_tagging_model
     (; ᶜe_src_ρe_tot_snapshot, ᶜe_src_ρ_snapshot) = p.tagging
     (; ᶜe_src_partition_snapshot, e_src_dtγ) = p.tagging
-    (; ᶜe_src_mismatch, ᶜe_src_abs_mismatch, ᶠe_src_increment_flux) = p.tagging
-    (; ᶠe_src_mismatch_integral, ᶠe_src_abs_mismatch_integral) = p.tagging
-    (; e_src_mismatch_total, e_src_abs_mismatch_total) = p.tagging
+    (; ᶜe_src_mismatch, ᶜe_src_left_weight, ᶠe_src_increment_flux) = p.tagging
+    (; ᶠe_src_mismatch_integral, ᶠe_src_left_weight_integral) = p.tagging
+    (; e_src_mismatch_total, e_src_left_weight_total) = p.tagging
     (; ᶠe_src_area_ratio) = p.tagging
     FT = eltype(ᶜe_src_mismatch)
     dtγ = e_src_dtγ[]
@@ -2275,16 +2278,21 @@ function correct_energy_source_increment!(dY, U, p)
         (U.c.ρe_tot + dtγ * dY.c.ρe_tot - ᶜe_src_ρe_tot_snapshot) +
         c * (U.c.ρ + dtγ * dY.c.ρ - ᶜe_src_ρ_snapshot) -
         (ᶜm - ᶜe_src_partition_snapshot)
-    @. ᶜe_src_abs_mismatch = abs(ᶜm)
     Operators.column_integral_indefinite!(ᶠe_src_mismatch_integral, ᶜm)
-    Operators.column_integral_indefinite!(
-        ᶠe_src_abs_mismatch_integral,
-        ᶜe_src_abs_mismatch,
-    )
     Operators.column_integral_definite!(e_src_mismatch_total, ᶜm)
+    # The column's total `M` is left out only where the mismatch has `M`'s
+    # sign, in proportion to it there, as for the water tags (the owner's
+    # review of #102, point 4; G4.15). Spreading it by `|m|` moved more than a
+    # cell's mismatch where the signs differ.
+    @. ᶜe_src_left_weight =
+        water_increment_left_weight(ᶜm, e_src_mismatch_total)
+    Operators.column_integral_indefinite!(
+        ᶠe_src_left_weight_integral,
+        ᶜe_src_left_weight,
+    )
     Operators.column_integral_definite!(
-        e_src_abs_mismatch_total,
-        ᶜe_src_abs_mismatch,
+        e_src_left_weight_total,
+        ᶜe_src_left_weight,
     )
     # Upward positive. It is zero at the bottom face and, having taken out the
     # column's total, at the top face too. The integrals are per unit area of
@@ -2296,10 +2304,10 @@ function correct_energy_source_increment!(dY, U, p)
             -(
                 ᶠe_src_mismatch_integral -
                 ifelse(
-                    e_src_abs_mismatch_total > 0,
-                    e_src_mismatch_total / e_src_abs_mismatch_total,
+                    e_src_left_weight_total > 0,
+                    e_src_mismatch_total / e_src_left_weight_total,
                     FT(0),
-                ) * ᶠe_src_abs_mismatch_integral
+                ) * ᶠe_src_left_weight_integral
             ) / dtγ * ᶠe_src_area_ratio,
         ),
     )
@@ -2312,15 +2320,16 @@ function correct_energy_source_increment!(dY, U, p)
         ᶠe_src_increment_flux,
         model.tags,
     )
-    # The ledger. What is left in place stays out of the tags, and the rest is
-    # what the flux moved. The stepper adds `dtγ·dY`, as it does for the tags.
-    @. ᶜe_src_abs_mismatch *= ifelse(
-        e_src_abs_mismatch_total > 0,
-        e_src_mismatch_total / e_src_abs_mismatch_total,
+    # The ledger. What is left out stays out of the tags, and the rest is what
+    # the flux moved. The stepper adds `dtγ·dY`, as it does for the tags. The
+    # weight's total is at least `|M|`, so the factor lies in [-1, 1].
+    @. ᶜe_src_left_weight *= ifelse(
+        e_src_left_weight_total > 0,
+        e_src_mismatch_total / e_src_left_weight_total,
         FT(0),
     )
-    @. dY.c.e_src_inc_left += ᶜe_src_abs_mismatch / dtγ
-    @. dY.c.e_src_inc_moved += (ᶜm - ᶜe_src_abs_mismatch) / dtγ
+    @. dY.c.e_src_inc_left += ᶜe_src_left_weight / dtγ
+    @. dY.c.e_src_inc_moved += (ᶜm - ᶜe_src_left_weight) / dtγ
     return nothing
 end
 

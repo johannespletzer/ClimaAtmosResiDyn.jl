@@ -553,8 +553,9 @@ step by step. In this mode the tags take the parent's own increment instead:
   - after the Newton solve, each cell's mismatch between the parent's
     increment of `E` and the partition's is formed;
   - the part of the mismatch that changes a column's total cannot move within
-    the column; it stays where it arises, in proportion to the mismatch's
-    absolute value, and in `e_src_res`;
+    the column; it stays in the cells whose mismatch has the column total's
+    sign, in proportion to it there, and in `e_src_res`. So no cell leaves out
+    or moves more than its own mismatch, as for the water tags;
   - the rest integrates up the column into a face flux that is zero at both
     boundaries, and each tag takes that flux times its share in the cell it
     leaves.
