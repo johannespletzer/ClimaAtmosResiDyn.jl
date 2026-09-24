@@ -75,6 +75,13 @@ The twelve criteria of the plan, section 2, in short:
     `ρq_tag_<name>` holding the non-precipitating water under the key; the
     microphysics attribution, net-flow rule or gross flows; and 4.2's rule
     restated to measure a leak's imprint.
+  - [ ] **WP4a's two points**
+    ([design/ZERO_M_SPLIT.md](design/ZERO_M_SPLIT.md), section 8, after its
+    xhigh review): known issue 4's Jacobian, the pair (diagonal and cross
+    term, with the split solver's back-substitution) or the diagonal alone as
+    a test; the review showed the diagonal alone makes one Newton iteration
+    worse and today's missing entry costs nothing for the pure sink. And the
+    copies' part of issue 4, a follow-up or in WP4a.
   - [ ] **WP6's two points**
     ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), section 8):
     a pre-WP6 checkpoint refused or zero-filled; loss and residence time moved
