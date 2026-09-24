@@ -222,7 +222,10 @@ end
         local Y_plain = plain.integrator.u
         # The run with them has its own fields and nothing else besides.
         @test all(
-            name -> hasproperty(Y_plain.c, name) || CA.is_energy_source_tag_name(name),
+            name ->
+                hasproperty(Y_plain.c, name) ||
+                CA.is_energy_source_tag_name(name) ||
+                CA.is_tag_mechanism_ledger_name(name),
             propertynames(Y.c),
         )
         @test propertynames(Y.f) == propertynames(Y_plain.f)
@@ -281,6 +284,8 @@ end
             CA.MatrixFields.@name(c.ρe_src_strat),
             CA.MatrixFields.@name(c.ρe_src_tropo),
             CA.MatrixFields.@name(c.ρe_src_rad),
+            CA.MatrixFields.@name(c.e_src_led_repair),
+            CA.MatrixFields.@name(c.e_src_led_repairnet),
         )
         dtγ = FT(5)
         t = simulation.integrator.t

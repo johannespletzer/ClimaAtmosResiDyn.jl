@@ -81,6 +81,7 @@ function setup_diagnostics_and_writers(
     CAD.register_tagging_diagnostics!(model)
     CAD.register_water_tagging_diagnostics!(model)
     CAD.register_energy_source_tagging_diagnostics!(model)
+    CAD.register_tag_ledger_diagnostics!(model)
     CAD.register_process_record_diagnostics!(model)
     CAD.register_stratospheric_tracer_diagnostics!(model)
 

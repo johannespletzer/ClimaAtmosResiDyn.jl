@@ -329,6 +329,8 @@ function tagging_cache(Y, atmos::AtmosModel)
         _or_empty(energy)...,
         _or_empty(water)...,
         _or_empty(sources)...,
+        # The per-step gross of the tags' state ledgers (WP6).
+        tag_ledger_step_cache(Y, atmos)...,
     )
 end
 _or_empty(::Nothing) = (;)

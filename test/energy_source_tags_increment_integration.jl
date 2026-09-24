@@ -67,6 +67,7 @@ function check_same_model(Y, Y_ref)
     is_diagnostic(name) =
         CA.is_energy_source_tag_name(name) ||
         CA.is_energy_source_ledger_name(name) ||
+        CA.is_tag_mechanism_ledger_name(name) ||
         startswith(string(name), "prc_")
     @test Set(filter(!is_diagnostic, propertynames(Y.c))) ==
           Set(filter(!is_diagnostic, propertynames(Y_ref.c)))
