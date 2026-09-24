@@ -273,6 +273,12 @@ Every G3 run is stamped with a manifest at submission, kept as
 | `w4_d4w_copies_z120`          | 0000   | same   | 1db57be5 | 2026-09-24 | `13870221` | the same rung with copies | W25      | yes  | 56 nc   | not yet |
 | `w4_d4w_default_upwind`       | 0000   | same   | 1db57be5 | 2026-09-24 | `13870227` | V-W4: D4-W, first-order SGS-flux upwinding, the default mode with the follower | W25      | yes  | 54 nc   | not yet |
 | `w4_d4w_copies_upwind`        | 0000   | same   | 1db57be5 | 2026-09-24 | `13870220` | the same rung with copies; aborted at 24 h by the closure check (1.06) | W25      | no  | 56 nc   | not yet |
+| `w4a_trmm0m_default`          | 0000   | same   | 3a8f1c70 | 2026-09-24 | `13876508` | WP4a's validation: TRMM 0M, 3 h, the split, default mode | W26      | yes  | 37 nc   | not yet |
+| `w4a_trmm0m_copies`           | 0000   | same   | 3a8f1c70 | 2026-09-24 | `13876509` | the same with copies | W26      | yes  | 40 nc   | not yet |
+| `w4a_trmm0m_default_6h`       | 0000   | same   | 34f9a334 | 2026-09-24 | `13877542` | TRMM 0M, 6 h, the split, default mode | W26      | yes  | 37 nc   | not yet |
+| `w4a_trmm0m_copies_6h`        | 0000   | same   | 34f9a334 | 2026-09-24 | `13877543` | the same with copies | W26      | yes  | 40 nc   | not yet |
+| `w4a_trmm0m_default_6h_grid`  | 0000   | same   | 9abb1f62 | 2026-09-24 | `13877544` | the grid rule's twin at #102's head, default mode | W26      | yes  | 32 nc   | not yet |
+| `w4a_trmm0m_copies_6h_grid`   | 0000   | same   | 9abb1f62 | 2026-09-24 | `13877545` | the same with copies | W26      | yes  | 35 nc   | not yet |
 
 The commits of the `w3_*` rows are the run tree's. They carry WP3 at
 `9aab6690` (`9085e264`) or at `fe1331f2` (`b5f40586`, `d06e48f1`); W21 says

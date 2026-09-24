@@ -1,0 +1,49 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4a_trmm0m_default_6h_grid/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4a_trmm0m_default_6h/output_0000
+family:    water
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 16400.000 m (YAML z_max 16400.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  aren       bitwise identical (1066 elements)
+  arup       bitwise identical (1066 elements)
+  cli        bitwise identical (1066 elements)
+  cliup      bitwise identical (1066 elements)
+  clw        bitwise identical (1066 elements)
+  clwup      bitwise identical (1066 elements)
+  detr       bitwise identical (1066 elements)
+  entr       bitwise identical (1066 elements)
+  evspsbl    bitwise identical (13 elements)
+  hfls       bitwise identical (13 elements)
+  hfss       bitwise identical (13 elements)
+  hus        bitwise identical (1066 elements)
+  husen      bitwise identical (1066 elements)
+  husup      bitwise identical (1066 elements)
+  lwp        bitwise identical (13 elements)
+  pr         bitwise identical (13 elements)
+  rhoa       bitwise identical (1066 elements)
+  rhoaen     bitwise identical (1066 elements)
+  rhoaup     bitwise identical (1066 elements)
+  ta         bitwise identical (1066 elements)
+  tke        bitwise identical (1066 elements)
+  wa         bitwise identical (1066 elements)
+  waen       bitwise identical (1066 elements)
+  waup       bitwise identical (1066 elements)
+
+tag        hour   ∫ref kg/m²        Δ∫/∫        L1        L∞     max|Δq|
+pbl           3   1.8280e+01   -4.17e-06  4.17e-06  1.65e-05  2.8221e-07
+pbl           4   1.8873e+01   -9.80e-04  9.84e-04  1.15e-03  1.7010e-05
+pbl           5   1.9539e+01   -3.10e-03  3.10e-03  3.16e-03  3.9010e-05
+pbl           6   2.0255e+01   -4.40e-03  4.40e-03  4.16e-03  4.7904e-05
+
+free          3   3.8841e+01   +1.96e-06  1.96e-06  2.22e-05  2.8222e-07
+free          4   3.8780e+01   +4.77e-04  4.79e-04  1.57e-03  1.7005e-05
+free          5   3.8608e+01   +1.57e-03  1.57e-03  4.44e-03  3.8996e-05
+free          6   3.8400e+01   +2.32e-03  2.32e-03  5.70e-03  4.7902e-05
+
+evap          3   8.1086e-01   -4.08e-05  4.08e-05  7.91e-05  8.6601e-08
+evap          4   1.4624e+00   -1.42e-03  1.42e-03  1.25e-03  1.8832e-06
+evap          5   2.2185e+00   -3.69e-03  3.69e-03  3.11e-03  5.4323e-06
+evap          6   3.0002e+00   -4.50e-03  4.50e-03  3.56e-03  7.5755e-06
+
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w4a_trmm0m/split_default_6h.json

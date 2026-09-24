@@ -343,9 +343,14 @@ rule: each subdomain's rain-out `Δᵏ` goes by `φᵏ` for both signs (review S
         say so, with its cost;
       + S4: the docstrings;
       + S5: `pr_tag` computes one tag, into scratch.
-  - [ ] Tests at `63a1ddaa`, and the review's explicit-path parity script
-    (`analysis/water/wp4a_explicit_parity.jl`), running.
-  - [ ] Draft PR-W4a; CI; the TRMM validation (`configs/w4a_trmm0m_*.yml`).
+  - [x] Tests: at `63a1ddaa` the 0M integration passed 74/74 and the
+    explicit-path parity script passed 20/20; at `b4c44841` the unit tests
+    passed 499/499.
+  - [x] Draft PR-W4a is #104, stacked on #102.
+  - [x] The TRMM validation, 3 h and 6 h, with grid-rule twins (FINDINGS W26):
+    parity bit for bit, and the split moves the tags by at most 0.47%. Both
+    modes move alike, and `Σ pr_tag = pr` to 1.8e-3.
+  - [ ] CI on #104.
 
 ## WP4b: rain and snow carry their own tags (draft PR-W4b)
 

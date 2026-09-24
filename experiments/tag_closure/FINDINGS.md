@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W25                                           | 1. Water tags                                       |
+| W1–W26                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -699,6 +699,53 @@ compile-time form of one predicate and a refusal, so the tags evolve as at
 #102's head. Jobs `13870216` to `13870229`. Script
 `analysis/water/vw4_verify.sh`; its reports are in `output/w4_d4w/`. The
 first-order pair was compared over 23 h, the copies' last output.*
+
+**W26. WP4a's split of the 0M rain-out, on TRMM 0M for 6 h: the model's fields
+are unchanged bit for bit, the tags move by at most 0.47% of a tag's water,
+and `Σ pr_tag` is `pr` to within 1.8e-3. The split moves both modes alike, so
+their agreement is unchanged.** Two pairs of runs, each on one atmosphere,
+from 0 to 6 h (TRMM rains from about 3 h):
+  - the split: #104 at `b4c44841`;
+  - the grid rule: #102 at `fd07d902`, the twins.
+
+Each pair ran in the default mode and with copies. The verifier compared them.
+
+  - **Parity.** Split against grid rule, in both modes, and #104's 3 h pair
+    against V-W3's `w3_trmm0m_*` runs: every model field bit for bit (24
+    fields, `--parity-only`).
+  - **The split's effect** on each tag, same mode and atmosphere, L1 at 6 h
+    (4 h in brackets):
+
+    | tag    | default         | copies          |
+    |:------ | ---------------:| ---------------:|
+    | `pbl`  | 0.44% (0.098%)  | 0.47% (0.10%)   |
+    | `free` | 0.23% (0.048%)  | 0.25% (0.049%)  |
+    | `evap` | 0.45% (0.14%)   | 0.44% (0.13%)   |
+
+    The split takes more of `pbl`'s water and less of `free`'s, so the
+    updraft's rain carries more boundary-layer water than the grid mean's
+    composition gives it. The effect grows with the rain. At 3 h, before the
+    rain, it is 4e-6.
+  - **Default against copies,** L1 at 6 h, with the split and with the grid
+    rule: `pbl` 1.54% and 1.53%, `free` 0.82% and 0.82%, `evap` 1.72% and
+    1.71%. The split does not narrow or widen the gap between the modes.
+  - **`pr_tag`.** Over the partition, `pr_tag_pbl + pr_tag_free` is `pr` to
+    within 1.8e-3 at every half hour with rain, in both modes. The rain's
+    source moves from `pbl` (95% at 3 h) to `free` (70% at 6 h). The modes
+    differ in `pbl`'s share by at most 6 points (at 5 h), and the surface
+    tag's share is 4 to 7%. No `pbl` water falls as snow at the output
+    times.
+  - **The explicit path.** The same 0M EDMF column with explicit
+    microphysics, an hour, in both modes, matches its untagged twin bit for
+    bit (`analysis/water/wp4a_explicit_parity.jl`, 20 tests).
+
+*`hpda2_compute`, 2026-09-24, D4-W driver. The 3 h pair ran from
+`../ClimaAtmosResiDyn-wedmf-run` at `3a8f1c70`, jobs `13876508` and
+`13876509`. The 6 h split pair ran from `../ClimaAtmosResiDyn-wedmf4a-run` at
+`34f9a334`, jobs `13877542` and `13877543`. The grid-rule twins ran from
+`../ClimaAtmosResiDyn-wedmf5-run` at `9abb1f62`, jobs `13877544` and
+`13877545`. The explicit-path script ran as job `13874414` at `63a1ddaa`.
+Reports are in `output/w4a_trmm0m/`.*
 
 ## 2. Energy source tags: closure by transport
 
