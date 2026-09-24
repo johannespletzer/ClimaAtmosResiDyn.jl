@@ -1,0 +1,69 @@
+# The owner's review of #102, point 4: TRMM 0M, 6 h, the default mode with the
+# follower (`water_tag_transport: increment`), at the review's head (`5bfa7cea`), leaving it out only where the mismatch has its sign. Its copies
+# reference is `w4a_trmm0m_copies_6h_grid`.
+
+job_id: "w5r_trmm0m_increment_samesign_6h"
+
+water_tracers:
+  - name: pbl
+    region: {type: tanh_altitude, z_center: 1000.0, width: 200.0, above: false}
+  - name: free
+    region: {type: tanh_altitude, z_center: 1000.0, width: 200.0}
+  - name: evap
+    source: surface_flux
+
+water_tag_transport: "increment"
+
+water_closure_check:
+  period: "30mins"
+  audit: true
+
+initial_condition: TRMM_LBA
+turbconv: prognostic_edmfx
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "PiGroups"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+cloud_model: "grid_scale"
+microphysics_model: "0M"
+config: column
+z_max: 16400
+x_elem: 2
+y_elem: 2
+z_elem: 82
+z_stretch: false
+dz_bottom: 30
+dt: 150secs
+t_end: 6hours
+toml: [toml/prognostic_edmfx_implicit_scm_calibrated_5_cases_shallow_deep_v1.toml]
+ode_algo: "ARS222"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, wa]
+    period: "30mins"
+  - short_name: [pr, evspsbl, hfls, hfss, lwp]
+    period: "30mins"
+  - short_name: [pr]
+    period: "30mins"
+    reduction_time: average
+  - short_name: [arup, rhoaup, waup, husup, clwup, cliup]
+    period: "30mins"
+  - short_name: [aren, rhoaen, waen, husen]
+    period: "30mins"
+  - short_name: [tke, entr, detr]
+    period: "30mins"
+  - short_name: [q_tag_res, q_tag_pbl, q_tag_free, q_tag_evap]
+    period: "30mins"
+  - short_name: [q_tag_fix_pbl, q_tag_fix_free, q_tag_fix_evap]
+    period: "30mins"
+  - short_name: [q_tag_inc_left, q_tag_inc_moved]
+    period: "30mins"
+
