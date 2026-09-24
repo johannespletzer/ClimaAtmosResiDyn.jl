@@ -1,0 +1,6 @@
+probe: copies tracer newton 1 off at 
+RESULT run=wp5b_off_copies_tracer_n1 commit=? ret=success
+RESULT closure net=0.007808908159954942 gross=0.009712491149522905
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.003122981309233236 scale=11.578191974462383
+RESULT audit=(copy_residual = 0.002243443741325291, copy_residual_relative = 0.00019376460040337708, copy_repair = 0.019423566441181435, copy_repair_relative = 0.0016775992731873268)

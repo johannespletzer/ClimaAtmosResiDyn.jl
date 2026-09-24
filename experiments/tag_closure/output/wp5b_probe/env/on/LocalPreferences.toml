@@ -1,0 +1,8 @@
+[MPIPreferences]
+abi = "OpenMPI"
+_format = "1.0"
+libmpi = "/dss/lrzsys/sys/spack/release/24.4.0/opt/icelake/openmpi/4.1.8-gcc-6wjxy7r/lib/libmpi"
+preloads = []
+mpiexec = "srun"
+cclibs = []
+binary = "system"

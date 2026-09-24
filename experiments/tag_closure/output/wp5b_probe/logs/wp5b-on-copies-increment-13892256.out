@@ -1,0 +1,6 @@
+probe: copies increment newton 1 on at 
+RESULT run=wp5b_on_copies_increment_n1 commit=? ret=success
+RESULT closure net=-1.1783672138254239e-8 gross=5.2989762486020726e-8
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.0030029321926845704 scale=11.578191974462383
+RESULT audit=(copy_residual = 0.001163637214013415, copy_residual_relative = 0.00010050249784940595, copy_repair = 0.010605411588548387, copy_repair_relative = 0.0009159816672534344, increment_left = -1.3643142108734234e-7, increment_left_relative = -1.1783482376891348e-8, increment_left_net_abs = 6.136412117033591e-7, increment_left_net_abs_relative = 5.2999744092760453e-8, increment_moved_net_abs = 0.043800946524789296, increment_moved_net_abs_relative = 0.0037830558191986733)

@@ -1,0 +1,6 @@
+probe: default increment newton 1 off at 
+RESULT run=wp5b_off_default_increment_n1 commit=? ret=success
+RESULT closure net=0.007900322178302438 gross=0.008466447597722955
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.0021279608414846015 scale=11.578191974462383
+RESULT audit=(exchange_volume_fraction = 0.6666666666666666, bound_partition = 0.05, bound_evap = 0.05, increment_left = 0.09181381071547974, increment_left_relative = 0.007929891896592342, increment_left_net_abs = 0.09837170630717686, increment_left_net_abs_relative = 0.008496292557953082, increment_moved_net_abs = 0.3718266644442882, increment_moved_net_abs_relative = 0.032114397935741036)

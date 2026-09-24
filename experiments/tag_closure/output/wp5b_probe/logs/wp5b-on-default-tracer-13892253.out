@@ -1,0 +1,6 @@
+probe: default tracer newton 1 on at 
+RESULT run=wp5b_on_default_tracer_n1 commit=? ret=success
+RESULT closure net=-1.5131086505703637e-5 gross=0.006804968576513204
+RESULT smallest_partition_tag_kg_per_kg=0.0
+RESULT partition_repair_ledger_abs_sum_over_cells=0.0026225444081017495 scale=11.578191974462383
+RESULT audit=(exchange_volume_fraction = 0.6666666666666666, bound_partition = 0.05, bound_evap = 0.05)
