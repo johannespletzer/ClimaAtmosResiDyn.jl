@@ -87,3 +87,29 @@ that is reported, and nothing is chosen from that site.
 
 The result decides G4.15b for energy, and confirms or reopens #102's rule for
 water. The owner makes both calls.
+
+## 7. Addendum after the first submission (2026-09-24, before the second)
+
+The first submission (jobs `13915221` to `13915228`, output in each run's
+`output_0000/`) is void. Every tagged run's model fields differed from its
+untagged twin's from the first daily output on. The runs under the two rules,
+and the copies, differed from each other too. The cause is in the
+configuration: all-sky radiation samples the cloud optics at random, and
+`radiation_reset_rng_seed` was left `false`, so each run drew its own numbers.
+The comparison in section 5 needs one atmosphere for all four runs of a site,
+and criterion 4 of section 4 needs parity. So the configurations now set
+`radiation_reset_rng_seed: true`, the upstream option that seeds each call
+with the step number. Nothing else changes. The runs were cancelled after
+about 12 days at site 23 and 9 at site 26. The second submission writes to
+`output_0001/`.
+
+One thing the first submission showed is added as **reported, not a
+criterion**, because it was seen before this addendum. At site 23 the parent's
+own specific humidity went below zero (to −8e-4 kg/kg) from about day 9 in
+every run, the untagged twin included. Both rules' water closure then jumped
+from 1e-13 to 1e-1. Tags repaired to non-negative values cannot hold negative
+parent water. So each run reports, every 6 hours, the parent's negative water
+(`Σ ρ min(q_tot, 0)` over `∫ρq_tot`, from the output) beside its closure. The
+decision rule of section 5 is unchanged. If negative parent water puts both
+rules over the budget at a site, section 5 already says nothing is chosen from
+that site.

@@ -60,6 +60,10 @@ dt_rad: "30mins"
 t_end: "90days"
 toml: [toml/prognostic_edmfx_gcmdriven.toml]
 rad: allskywithclear
+# The cloud optics sample at random. Without a reset of the seed each run draws
+# its own numbers, and the runs' atmospheres differ from the first day
+# (design section 7).
+radiation_reset_rng_seed: true
 ode_algo: "ARS222"
 FLOAT_TYPE: "Float64"
 
