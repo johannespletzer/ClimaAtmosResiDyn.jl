@@ -317,3 +317,37 @@ node.
   - Step 3's questions 4 and 5 above, and the owner's three points of the
     note's section 8.
   - Everything from step 2 on waits on OD1 to OD3.
+
+## 10. Addendum, 2026-09-24 evening: the owner's answers
+
+The owner answered the register and five more points. The agent recorded them
+(ROADMAP.md, "The owner's answers"; STATUS, DECISIONS, G3_PLAN, G3_TODO,
+G4_TODO) and did the work they asked for:
+
+  - **The OD3 draft** in ROADMAP.md, every number a proposal with its reason
+    and the nearest measured value, with OD2's windows per case, OD6's
+    ceiling, a 60-level stretching (the GCM-driven column's rule scaled to
+    30 km) and M4's estimate for the 90-day, 60-level sphere, about 37 days
+    on 24 ranks if cost grows in proportion *(derived)*. Step 2 waits for its
+    approval.
+  - **The energy guard, extended** to 1M, 2M and P3 stepped explicitly, key
+    renamed to the proposal
+    `energy_source_tag_increment_allow_explicit_microphysics`
+    (`claude/energy-explicit-1m-guard`, `e55ae293`). The config test passes
+    on the login node (testset 36/36), and so does `test/config.jl`.
+  - **Water, unchanged.** The water tags refuse 2M and P3 at configuration,
+    whatever the transport (`check_water_tagging_supported`). Checked on the
+    login node for 2M and 2MP3 under both transports. No water branch was made.
+  - **Known issue 7**, the site 23 crash, on `claude/water-tags-wp6-step3`
+    (`18e7ef1d`), the branch that holds #102 and #103, the water code the long
+    runs ran. The fix options: `design/NEGATIVE_PARENT_WATER.md`.
+  - **OD4's audit**, first pass: `review/od4_denominator_audit.md`. It sorts
+    the denominators and restates no number.
+  - FINDINGS is left to the parent session (W36, E81).
+
+One point for the owner, found while drafting OD3: Insight 10's refinement
+test expects the follower's throughput to shrink under refinement. The
+follower's moved ledger holds the parent's vertical advection, which does not
+shrink with the step. So the draft applies the refinement test to the repair
+and to `inc_left`, not to `inc_moved`. Testing the follower's lag alone needs a
+way to separate the advection.

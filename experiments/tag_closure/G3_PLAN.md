@@ -21,7 +21,9 @@ The owner decided on 2026-09-23:
  2. The water tags are to become **operational in the production
     configuration**: a sphere with prognostic EDMF and 1M. So EDMF support is a
     correctness requirement for this family, not an extension. On the roadmap
-    it moves out of M8 into M1 to M5.
+    it moves out of M8 into M1 to M5. *Set on 2026-09-24 (OD1):* the
+    production configuration is `g2_v2_sphere_n2` at 60 levels, with 1M stepped
+    implicitly and two Newton iterations, and 8 water and 8 energy tags (OD8).
  3. **Precipitation provenance is in scope, and rain and snow carry their own
     tags** (the review's option b). Under 0M the sink is split by subdomain.
     Under 1M falling water keeps the provenance it had where it formed.
@@ -96,6 +98,15 @@ that pass comparator eligibility in that run. Where they do not, it is not
 assessable, and the Insight 10 tests (refinement, per-tag intervention,
 aggregation) bound it under OD5. Criterion 11's plateau is replaced by OD6's
 ceiling and growth bound (6.1).
+
+*The owner's answers, 2026-09-24 (ROADMAP.md, "The owner's answers").*
+Criterion 11's "ten days of the G2 sphere" is superseded: ninety days of
+`g2_v2_sphere_n2` at 60 levels, judged by the level the residual reaches over
+the 90 days against OD6's ceiling. Criteria 5 and 8 are judged at 8 tags, with
+copies at 8 as the direct audit where they pass eligibility (OD8). Criterion
+10's copies at 32 tags are a cost item only, not qualified. Under OD5 a
+configuration whose provenance is not assessable qualifies only as "provenance
+bounded, not validated", and only if the Insight 10 tests pass.
 
 ## 3. What EDMF does to the water, and what the tags miss today
 
@@ -511,8 +522,8 @@ criterion 8 is separate.
 | V-W7  | Float32 twin of D4-W                                                                                                                                                                                                                                                                                                          | 1        | V-W5       |
 | V-W8  | A file-based column with water and energy tags: `prognostic_edmfx_gcmdriven_column` (0M, the GCM start from site 23) for 3 h. Its forcing, the `cfsite_gcm_forcing` artifact, downloads through the package manager and was fetched on 2026-09-23. The owner chose it over the ERA5 column, whose forcing is not downloadable | 1        | WP3        |
 | V-W9  | Restart round trips: D4-W in both modes, and with rain and snow tags                                                                                                                                                                                                                                                          | 4        | WP4b       |
-| V-W10 | Cost: 2, 4, 8 and 32 tags where they build in time, both modes, with and without rain and snow tags, both families                                                                                                                                                                                                            | about 14 | WP4b       |
-| V-W11 | The sphere: `g2_v2_sphere_n2` with water tags and rain and snow tags under the chosen default, 10 days, 24 ranks (about 16.5 h and 500 GB, as E75). A one-day copies twin. A restart after day 1. A two-rank parity pair                                                                                                      | 5        | all above  |
+| V-W10 | Cost: 2, 4, 8 and 32 tags where they build in time, both modes, with and without rain and snow tags, both families. *2026-09-24 (OD8):* qualification is at 8 tags; 32 is a cost item only                                                                                                                                                                                                            | about 14 | WP4b       |
+| V-W11 | The sphere: `g2_v2_sphere_n2` with water tags and rain and snow tags under the chosen default, 10 days, 24 ranks (about 16.5 h and 500 GB, as E75). *Superseded 2026-09-24 (OD1, OD6):* 90 days at 60 levels, with 8 water and 8 energy tags and the per-tag ledgers; its cost is ROADMAP.md's M4 estimate. A one-day copies twin. A restart after day 1. A two-rank parity pair                                                                                                      | 5        | all above  |
 
 That makes about 70 column-scale jobs and 5 sphere jobs. Column runs go to
 `hpda2_test` where they fit in two hours, otherwise `hpda2_compute`.
@@ -534,7 +545,10 @@ pass, fail or not assessable, with the water-specific thresholds below:
     assessable.
   - **Intervention.** The accepted-step repair and follower throughput and
     the per-tag cumulative correction against each tag's water (WP6 step 3)
-    are reported beside closure. Their thresholds are OD3's.
+    are reported beside closure. Their thresholds are OD3's. *Set on
+    2026-09-24:* the per-tag ledgers are on in every validation and
+    qualification run, though off by default. The fraction uses the tag's
+    current inventory, and the absolute amount is reported beside it.
 
 **Set by the owner on 2026-09-23**, before any G3 run. Two parts are set
 later, in the form fixed here: the sphere's numbers before V-W11, and the
@@ -612,6 +626,10 @@ The verifier computes both (WP0).
     three-part retention rule.
 
   - **The sphere.** The form is fixed now. Its numbers are set before V-W11.
+    *Set on 2026-09-24 (OD6):* the sphere runs 90 days, to saturation, and is
+    judged by the level observed, against a ceiling relative to the smallest
+    analysed tag. The ceiling's value is drafted in ROADMAP.md's OD3 table,
+    pending approval.
 
       + At every output, `Σᵢ ρq_tagᵢ ≤ ρq_tot (1 + 1e-6)` at every point, and
         the non-positive fraction does not grow. Issue #64 went to 1e130 and

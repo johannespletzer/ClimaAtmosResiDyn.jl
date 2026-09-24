@@ -4,7 +4,8 @@ The entry point for every session. Written on 2026-09-23 around 11:30, during
 the housekeeping (step H4). Updated at 13:55 the same day, when the
 housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
 done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for), 12:40 and
-20:00 (rev. 2 of the work plan, steps 0 and 1). Update it when something here changes, and at each milestone of a work
+20:00 (rev. 2 of the work plan, steps 0 and 1) and 21:10 (the owner's answers
+to the register). Update it when something here changes, and at each milestone of a work
 package and at each goal's end. The checklist for those moments is in
 [README.md](README.md), "Closing a work package or a goal". Where a fact was
 not checked, it says so.
@@ -42,7 +43,10 @@ not checked, it says so.
         `claude/energy-explicit-1m-guard` (`33eeb5cd`, not yet a PR) until
         G4.16 passes, with the opt-in key
         `energy_source_tag_increment_allow_explicit_1m` (a proposed name) for
-        development runs. `main` still runs it (E80).
+        development runs. `main` still runs it (E80). *Superseded
+        2026-09-24, 21:10:* the guard covers 1M, 2M and P3 stepped explicitly
+        (`e55ae293`), and the proposed key is now
+        `energy_source_tag_increment_allow_explicit_microphysics`.
       + The energy copies lack the mseʲ mirrors (G4.1, G4.11). So the
         default-against-copies gaps of E76, and of E73 at the baseline, are
         not provenance verdicts: the comparator is not eligible. E39 is a
@@ -66,6 +70,25 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-09-24, 21:10: the owner's answers.** The owner answered
+    the register (ROADMAP.md, "The owner's answers"): OD1 the sphere at 60
+    levels; OD2 physical windows; OD4 gross source throughput; OD5 bounded
+    passes; OD6 90 days to saturation; OD8 8 tags with copies at 8; W33
+    opt-in until M5; the per-tag ledgers on in validation and qualification
+    runs; 2M and P3 refused until measured; draft PRs when green. OD7 is
+    deferred. OD3 is drafted in ROADMAP.md and waits for approval; step 2
+    waits for it.
+      + **Known issue 7**, a parity-class defect: at site 23 the tagged long
+        runs end while the untagged twin completes 90 days. The fix is step
+        8a, before the sphere; the options are in
+        `design/NEGATIVE_PARENT_WATER.md`, and the choice is the owner's.
+      + The branches `claude/plan-rev2`, `claude/energy-explicit-1m-guard` and
+        `claude/water-tags-wp6-step3` are pushed by the parent session. Its
+        validation jobs `13924194` to `13924209` run; five had passed by its
+        last report.
+      + New commits, not pushed: the guard's extension (`e55ae293`), known
+        issue 7 on `claude/water-tags-wp6-step3` (`18e7ef1d`), and these
+        records.
   - **Update, 2026-09-24, 20:00: rev. 2 of the work plan, steps 0 and 1.**
     The owner revised the plan (ROADMAP.md, "Rev. 2 of the work plan").
       + Step 0 is done: the energy explicit-1M guard with its test
@@ -318,8 +341,20 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
 ## The owner's open decisions
 
   - **Rev. 2's register, OD1 to OD8** ([ROADMAP.md](ROADMAP.md), "The
-    decision register"). All eight are open. Steps 2 and 3 of the revised
-    order wait on OD1, OD2 and OD3.
+    decision register"). ~~All eight are open. Steps 2 and 3 of the revised
+    order wait on OD1, OD2 and OD3.~~ *Superseded 2026-09-24, 21:10:* OD1,
+    OD4, OD5 and OD8 are set, and OD2 and OD6 are set in form. Still open:
+      + **the approval of the OD3 draft** (ROADMAP.md, "The OD3 threshold
+        draft"), which includes OD2's levels, OD6's ceiling and the proposed
+        60-level stretching. Step 2 waits for it;
+      + **OD7**, deferred by the owner until, for example, known issue 7 is
+        fixed and site 23 can be scored;
+      + **known issue 7's fix**: which option
+        (`design/NEGATIVE_PARENT_WATER.md`);
+      + **OD4's throughput source**: the process records as a lower bound, or
+        a new per-step accumulator (`review/od4_denominator_audit.md`).
+
+    The register's first list, kept as written:
       + OD1, the production envelope: levels, SGS reconstruction, Δt, Newton
         count, microphysics, the intended tag counts.
       + OD2, the window boundaries per case.
@@ -329,8 +364,12 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
       + OD6, the sphere's ceiling, growth bound and run length.
       + OD7, G4.15's rule for energy.
       + OD8, the audit's feasibility at the intended tag count.
-  - **W33's verdict**, after the same-atmosphere check passed (W35).
-  - **WP6 step 3's open questions**
+  - ~~**W33's verdict**, after the same-atmosphere check passed (W35).~~
+    *Decided 2026-09-24:* W33 stays a failure, W35 beside it; the explicit-1M
+    water follower stays opt-in until M5.
+  - ~~**WP6 step 3's open questions**~~ *Decided 2026-09-24:* off by default,
+    on in every validation and qualification run; the fraction uses the tag's
+    current inventory, the absolute amount beside it. Kept as written:
     ([review/agent_reviews/plan_rev2_steps0-1_2026-09-24.md](review/agent_reviews/plan_rev2_steps0-1_2026-09-24.md)):
     whether each tag's ledger is on by default, and the denominator of the
     per-tag fraction.

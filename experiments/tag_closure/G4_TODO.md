@@ -75,7 +75,8 @@ changes across a restart.
     copies `sfc` gaps of E76, and of E73 at the baseline, are labelled
     "comparator not eligible". Rev. 2 also names E39 here; E39 measures the
     audit's closure against the Newton count and has no copies, so the label
-    does not apply to it.
+    does not apply to it. *2026-09-24 (OD8):* the tag count is 8, and copies
+    at 8 are the direct audit where they pass eligibility.
 
   - **The region masks' width in the docs** (decision 10 of 2026-09-18,
     `OT-regionmask`): 2° stays. Say that a mask narrower than the grid spacing
@@ -170,6 +171,12 @@ apart from the stored source provenance: a source tag cannot show where its
 process removed energy (E22). Every energy percentage is restated against an
 offset-invariant scale (OD4). The first step is an audit of the denominators
 of the existing E-records, E39, E62 to E66, E73 to E76, E79 and E80 first.
+*Set on 2026-09-24 (OD4):* the scale is the cumulative gross energy the
+sources put into the tags over the same window. The audit's first pass sorts
+the records' denominators into four classes and restates no number yet
+([review/od4_denominator_audit.md](review/od4_denominator_audit.md)). The
+throughput needs the process records, a lower bound, or a new per-step
+accumulator; which one is the owner's.
 
 ### G4.4 The residual report
 
@@ -274,6 +281,10 @@ upward where it lasts (open question 3, FQ-10's remainder).
 
 ### G4.13 Ten days of the energy sphere at the chosen default, against E75
 
+*Superseded 2026-09-24 (OD1, OD6):* ninety days of `g2_v2_sphere_n2` at 60
+levels, with 8 energy tags, judged by the level observed against OD6's
+ceiling. Step 11 of the revised order.
+
 ### G4.14 A loss timescale for every run, after WP6
 
   - **Synergy 5, a loss timescale for every run**, τ = E/L (`OT-SYN5`; OT
@@ -290,6 +301,13 @@ before the G4.7 and G4.8 runs, after the long runs (DECISIONS.md,
 2026-09-24). The aggregation test's departure is reported for the chosen
 rule: a sign-dependent rule is not linear in the tags, so some departure is
 expected, and its size is evidence.
+
+*OD7, 2026-09-24: open, deferred.* Analysis done: by the registered rule
+(`design/INCREMENT_RULE_LONG_RUNS.md`) same sign is kept. Both criteria hold
+for energy at both sites and for water at site 26. Water at site 23 breaks the
+budget under both rules. The owner deferred the decision, for example until the
+site 23 defect (known issue 7) is fixed and site 23 can be scored. G4.15b
+waits. The metrics are in the parent session's FINDINGS entries.
 
 Added on 2026-09-24. The review of the water follower (#102) changed three
 things that the energy source tags' `enthalpy_increment` still does the old
@@ -373,6 +391,15 @@ parent's sedimentation on the explicit path as the water tags did (W23).
     config test passes on the login node (`output/g416_guard/`). The
     record's `g415_n5_explicit_*` configs set this combination, so they need the key
     to run on a branch with the guard. [ ] A PR to `main`.
+  - [x] *The owner, 2026-09-24: 2M and P3 stepped explicitly are refused
+    until measured.* The guard now covers 1M, 2M and 2MP3 stepped explicitly
+    (`e55ae293`). The key's name generalizes; the proposal is
+    `energy_source_tag_increment_allow_explicit_microphysics`, and
+    ~~`energy_source_tag_increment_allow_explicit_1m`~~ (`33eeb5cd`) is
+    superseded. 0M sediments nothing and stays allowed. The config test
+    passes on the login node (testset 36/36). A draft PR to `main` when its
+    jobs are green. Water tags refuse 2M and P3 already (G3_TODO,
+    Decisions).
 
 ## Energy items within M1 to M5 that no G4.n takes up yet
 

@@ -38,7 +38,7 @@ The twelve criteria of the plan, section 2, in short:
 | 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                  | open                     |
 | 9  | Float32 twin                                                                           | open                     |
 | 10 | Cost, both modes and both families                                                     | open                     |
-| 11 | Ten days on the sphere, a copies twin, a restart                                       | open                     |
+| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | open                     |
 | 12 | Reviews, CI, draft PRs, docs                                                           | open                     |
 
 ## Decisions
@@ -46,8 +46,12 @@ The twelve criteria of the plan, section 2, in short:
   - [!] **Rev. 2's register, OD1 to OD8** (2026-09-24; ROADMAP.md, "The
     decision register"): the production envelope, the windows, the
     thresholds, the energy scale, *not assessable* at M5, the sphere, G4.15,
-    and the audit's feasibility. All open. Steps 2 and 3 of the revised order
-    wait on OD1 to OD3.
+    and the audit's feasibility. ~~All open. Steps 2 and 3 of the revised
+    order wait on OD1 to OD3.~~ *Superseded 2026-09-24:* the owner answered
+    (ROADMAP.md, "The owner's answers"). Set: OD1 (the sphere at 60 levels),
+    OD2 in form, OD4, OD5, OD6 in form, OD8 (8 tags, copies at 8). OD3 is a
+    draft, pending the owner's approval; step 2 waits for it. OD7 is
+    deferred.
   - [x] G3 is water and G4 is energy; production target; precipitation
     provenance with rain and snow tags; exchange by default with copies as the
     audit; the partition-only factor; this session runs G3's jobs. All decided
@@ -58,9 +62,26 @@ The twelve criteria of the plan, section 2, in short:
     as proposed; the sphere's form.
   - [ ] **The sphere's numbers**, set by the owner before V-W11, in the form of
     plan 6.1. *Rev. 2:* the form is now OD6's ceiling and growth bound, not a
-    plateau after day one.
+    plateau after day one. *2026-09-24 (OD6):* 90 days, judged by the level
+    observed; the ceiling's value is in ROADMAP.md's OD3 draft, pending
+    approval.
   - [ ] **The default mode's cost budget**, proposed from V-W10's first
-    measurements and set by the owner before V-W11.
+    measurements and set by the owner before V-W11. *2026-09-24:* proposed in
+    ROADMAP.md's OD3 draft, at 8 + 8 tags, pending approval.
+  - [x] **The explicit-1M water default: opt-in until M5** (the owner,
+    2026-09-24). W33 stays a failure, and W35 is recorded beside it. The
+    default is decided at M5 under the contract.
+  - [x] **The per-tag ledgers** (the owner, 2026-09-24): off by default, as
+    built, and on in every validation and qualification run. The fraction uses
+    the tag's current inventory, and the absolute amount is reported beside
+    it.
+  - [x] **2M and P3 stepped explicitly: refused until measured** (the owner,
+    2026-09-24). Water tags already refuse 2M and P3 at configuration,
+    whatever the transport (`check_water_tagging_supported`; checked on the
+    login node for 2M and 2MP3 under both transports). Nothing changes for
+    water. The energy guard is G4_TODO's G4.16.
+  - [ ] **Known issue 7's fix** (the site 23 crash): the option is the
+    owner's (`design/NEGATIVE_PARENT_WATER.md`; WP3 below).
   - [x] **WP5's default transport under EDMF**, by the rule fixed in plan 4.3.
     The owner's review of #102 (2026-09-24) asked for it to be applied. It is
     applied in #102 where the configuration supports the follower, and
@@ -274,6 +295,24 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
 
   - [ ] Review by `clima-numerics-reviewer` (xhigh).
 
+  - [!] *Scope added (rev. 2, 2026-09-24): known issue 7, a parity-class
+    defect.* A diagnostic ends a run that upstream completes. In the long
+    runs' second submission at site 23, the parent's own `q_tot` goes below
+    zero from day 10, in the untagged twin too. The water tags then diverge,
+    and the tagged runs end with `simulation_crashed` (copies at day 48, both
+    follower rules at day 74.5), while the untagged twin completes 90 days.
+    The parent is bit for bit the twin's up to each crash. The copies, WP3's,
+    and the follower, WP5's, both end the run.
+      + [x] Recorded in `docs/known_issues.md`, issue 7, on
+        `claude/water-tags-wp6-step3` (`18e7ef1d`). The FINDINGS entry is the
+        parent session's.
+      + [x] The options for the fix, `design/NEGATIVE_PARENT_WATER.md`: the
+        tags cannot end a run; no tag water where the parent has none; the
+        tags partition the parent's non-negative part; a cap; stop the tags,
+        not the run. A probe that finds which ledger grows is proposed first.
+      + [ ] The owner chooses. Then the fix, with its tests, before the
+        sphere (step 8a of the revised order).
+
   - [x] **V-W3:**
 
       + D4-W, default against copies, each with a 10-Newton twin;
@@ -325,6 +364,12 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
       + what parts the copies under first-order upwinding.
 
     *Scope added (rev. 2, 2026-09-24):* this is step 2 of the revised order.
+    *2026-09-24 (OD1):* the main case is now 60 levels, the production
+    sphere's count. W25's 60-level rung missed the first hour's budget
+    (`strat` 1.36%, `evap` 11.8%). That rung was a uniform 25 m grid over
+    1.5 km, and the sphere's 60 levels are stretched over 30 km, so it is the
+    nearest measured case, not the same grid. Step 2 waits for the owner's
+    approval of the OD3 draft.
     It comes before WP4b and the sphere, and is scored against OD1 and OD2.
       + Fixed-parent one-step probes at 30, 60 and 120 levels, with centred
         and first-order reconstruction.
@@ -413,7 +458,8 @@ run. Acceptance criteria, fixed before the runs:
     to run first is W35, done. The arms still open follow rev. 2's order:
     arms without copies after W25's isolation (step 2), and any
     default-against-copies arm after WP5b-C (step 4). The explicit-1M
-    follower stays opt-in unless it passes.
+    follower stays opt-in unless it passes. *The owner, 2026-09-24:* it stays
+    opt-in until M5, where the contract decides; W35 is recorded beside W33.
 
 ### WP5b-P: provenance, not only closure
 
@@ -445,7 +491,7 @@ the explicit path (the owner's review of #105, finding 7).
     WP5b-C is complete before any use of 1M copies as the audit, at the tag
     counts OD8 keeps. With their blocks, the copies must still pass
     comparator eligibility in each run where they serve as the audit
-    (ROADMAP.md, the acceptance contract).
+    (ROADMAP.md, the acceptance contract). *2026-09-24 (OD8):* at 8 tags.
 
 ## WP4a: the 0M split (draft PR-W4a)
 
@@ -677,8 +723,18 @@ owner's points in the note's section 8.
         `energy_source_tags_tests.jl` 548, `config/tracer_config.jl` 267
         (`output/wp6_step3/`).
       + [ ] The integration groups and the check script
-        `analysis/water/wp6_step3_checks.jl` on a compute node.
-      + [ ] Review (high), then a PR on #103.
+        `analysis/water/wp6_step3_checks.jl` on a compute node: jobs
+        `13924194` to `13924209`, submitted by the parent session. Passed by
+        its report so far: `tagging_source_float32` 53/53,
+        `tagging_record` 25/25, the parent budget's restart test 34/34,
+        `tagging_water_edmf_0m` 22/22, `restarts` (exit 0).
+      + [ ] Review (high), then a draft PR on #103 when green (the owner,
+        2026-09-24).
+      + [x] *The owner, 2026-09-24:* the per-tag ledgers stay off by default
+        and are on in every validation and qualification run. The fraction
+        uses the tag's current inventory. The audit writes the absolute
+        amount, `<L>_retained` in kg or J over the domain, in the same row as
+        `<L>_inventory_fraction`: checked in `tag_ledger_audit`.
 
 ## WP2, WP8, WP9: consolidation, docs, cost
 
@@ -707,7 +763,8 @@ owner's points in the note's section 8.
       + [ ] Copies mode with 32 tags did not build a TRMM column in 4 h (W30;
         8 copies take about 15 min). Measure the build time against the
         number of copies. 8 copies 699 s, 16 copies 2417 s (W34); 32 running
-        with 8 h (`13911480`).
+        with 8 h (`13911480`). *2026-09-24 (OD8):* 32 tags are a cost item
+        only and are not qualified.
   - *Scope added (rev. 2, 2026-09-24):* WP9 stays before the held-out
     default selection.
       + Its first part is the audit-feasibility decision, OD8, taken before
@@ -720,13 +777,23 @@ owner's points in the note's section 8.
         comparator; the aggregation test (Insight 10); and the sphere's
         run-length budget. Its ceilings are OD3's, set before the held-out and
         default-selection runs.
+      + *Decided 2026-09-24 (OD8):* 8 water and 8 energy tags; copies at 8 are
+        the direct audit where they pass eligibility; no aggregation bridge
+        for qualification, so the aggregation test is reported, not required.
+        ~~Copies at the largest buildable count plus the aggregation
+        bridge~~ is not needed. 32 tags stay a cost item, not qualified.
 
 ## The sphere
 
   - [ ] The sphere's numbers, set by the owner before V-W11 (plan 6.1 fixes the form).
   - [ ] **V-W11**:
-      + ten days of `g2_v2_sphere_n2` with water, rain and snow tags under the
-        chosen default;
+      + ~~ten days of `g2_v2_sphere_n2` with water, rain and snow tags under
+        the chosen default~~ *superseded 2026-09-24 (OD1, OD6):* 90 days of
+        `g2_v2_sphere_n2` at 60 levels (stretching proposed in ROADMAP.md),
+        with 8 water and 8 energy tags and the per-tag ledgers, under the
+        chosen default, judged by the level observed against OD6's ceiling;
+        its cost is M4's estimate, about 37 days on 24 ranks if cost grows in
+        proportion (ROADMAP.md); after known issue 7's fix;
       + a one-day copies twin;
       + a restart after day 1;
       + a two-rank parity pair.

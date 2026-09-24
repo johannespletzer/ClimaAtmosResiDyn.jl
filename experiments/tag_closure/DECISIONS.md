@@ -23,10 +23,21 @@ Short names for the sources:
 
   - **Rev. 2's register, OD1 to OD8**: the production envelope, the windows,
     the thresholds, the energy scale, *not assessable* at M5, the sphere,
-    G4.15, and the audit's feasibility. **Waiting.**
+    G4.15, and the audit's feasibility. ~~**Waiting.**~~ Answered on
+    2026-09-24 (below), except:
+      + **the OD3 draft**, with OD2's levels, OD6's ceiling and the 60-level
+        stretching: **waiting for approval**. Step 2 waits for it.
+        [ROADMAP.md, "The OD3 threshold draft"](ROADMAP.md#the-od3-threshold-draft-pending-the-owners-approval)
+      + **OD7**: **open, deferred**.
     [ROADMAP.md, "The decision register"](ROADMAP.md#the-decision-register)
-  - **W33's verdict**, after the same-atmosphere check passed (W35).
-    **Waiting.** [G3T](G3_TODO.md#wp5b-v-the-explicit-1m-default)
+  - **Known issue 7's fix**, one of the options in
+    `design/NEGATIVE_PARENT_WATER.md`, before the sphere. **Waiting.**
+  - **OD4's throughput source** for the existing records: the process records
+    as a lower bound, or a new per-step accumulator. **Waiting.**
+    [review/od4_denominator_audit.md](review/od4_denominator_audit.md)
+  - ~~**W33's verdict**, after the same-atmosphere check passed (W35).
+    **Waiting.**~~ Decided 2026-09-24 (below).
+    [G3T](G3_TODO.md#wp5b-v-the-explicit-1m-default)
   - **The sphere's numbers**, in the form G3_PLAN 6.1 fixes, before V-W11.
     **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
   - **The default mode's cost budget**, proposed from V-W10's first
@@ -54,6 +65,47 @@ Short names for the sources:
     [FINDINGS W25](FINDINGS.md)
 
 ## 2026-09-24
+
+  - **The owner's answers to rev. 2's register** (evening, through the parent
+    session). **In force**, each as recorded in
+    [ROADMAP.md, "The owner's answers"](ROADMAP.md#the-owners-answers-2026-09-24):
+      + OD1: production is `g2_v2_sphere_n2` at 60 levels instead of 10, the
+        rest of that configuration unchanged (`h_elem` 6, `z_max` 30 km,
+        `dt` 20 s, ARS222, two Newton iterations, 1M implicit, the default
+        SGS reconstruction). W25's 60-level misses are the main case. The
+        stretching was not set; the agent proposes one.
+      + OD2: windows are physical. Startup ends when the parent's
+        domain-mean tendency, or the source pulse, falls below a set level;
+        the levels are part of the OD3 draft.
+      + OD3: the agent drafts, the owner approves. No run is scored before.
+      + OD4: the cumulative gross energy the sources put into the tags over
+        the same window. Also audit the existing E-records' denominators.
+      + OD5: *not assessable* blocks M5 for that configuration unless the
+        Insight 10 tests pass their OD3 thresholds; then it qualifies as
+        "provenance bounded, not validated".
+      + OD6: the sphere runs 90 days to saturation and is judged by the level
+        observed, not by projection. A ceiling relative to the smallest
+        analysed tag is still needed. The 90-day, 60-level sphere's cost goes
+        into M4 as an estimate.
+      + OD7: to be decided by the registered rule. The analysis is done: by
+        that rule same sign is kept (both criteria hold for energy at both
+        sites and for water at site 26; water at site 23 breaks the budget
+        under both rules). The owner **deferred** the decision, for example
+        until the site 23 defect is fixed and site 23 can be scored. **Open.**
+      + OD8: 8 water and 8 energy tags; copies at 8 are the direct audit where
+        they pass eligibility; no aggregation bridge for qualification; 32
+        tags stay a WP9 cost item and are not qualified.
+      + W33 stays a failure, W35 beside it. The explicit-1M water default is
+        decided at M5 under the contract.
+      + The site 23 tag crash is a defect, a diagnostic ending a run that
+        upstream completes, fixed before the sphere. Known issue 7; the fix's
+        option is the owner's.
+      + The per-tag ledgers stay off by default and are on in every
+        validation and qualification run. The fraction uses the tag's current
+        inventory, with the absolute value beside it.
+      + 2M and P3 stepped explicitly are refused until measured, for both
+        families' followers. The water tags already refuse 2M and P3.
+      + Draft PRs when green; the parent session opens them.
 
   - **Rev. 2 of the work plan** ("Simulation-results synthesis and in-place
     work-plan revision"). The owner's plan decides, in force from its step 0:
