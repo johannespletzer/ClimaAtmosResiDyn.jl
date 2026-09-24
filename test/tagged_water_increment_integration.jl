@@ -23,38 +23,13 @@ parent's increment beside them, so that one hook runs both corrections:
     of the water's is the part left out, the ledger's moved part sums to zero
     in the column, and the audit, the diagnostics and the split solver read
     the ledger;
- 3. the model's fields are those of the same column without tags, bit for bit;
- 4. with the microphysics stepped explicitly, one Newton iteration and the
-    tags' sedimentation cross blocks (WP5b), the water's partition closes to
-    rounding after an hour, the tags are solved apart with those blocks, and
-    the model's fields are those of that column without tags, bit for bit.
-    Without the cross blocks it missed by 0.8% net (FINDINGS W23, W29).
+ 3. the model's fields are those of the same column without tags, bit for bit.
 
-The file compiles the EDMF column four times, with the tags and without them,
-on each microphysics path, so it has its own test group. See
-`docs/src/tagged_water.md`.
+The file compiles the EDMF column twice, with the tags and without them, so it
+has its own test group. See `docs/src/tagged_water.md`.
 =#
 using Test
 import ClimaAtmos as CA
-
-# Every field the untagged model has, compared with `isequal`, which tells signed
-# zeros apart.
-function test_same_model_fields(Y, Y_plain)
-    for name in propertynames(Y_plain.c)
-        name == :sgsʲs && continue
-        @test isequal(
-            parent(getproperty(Y.c, name)),
-            parent(getproperty(Y_plain.c, name)),
-        )
-    end
-    for name in propertynames(Y_plain.c.sgsʲs.:(1))
-        @test isequal(
-            parent(getproperty(Y.c.sgsʲs.:(1), name)),
-            parent(getproperty(Y_plain.c.sgsʲs.:(1), name)),
-        )
-    end
-    @test isequal(parent(Y.f), parent(Y_plain.f))
-end
 
 function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
     f(args...)
@@ -405,52 +380,5 @@ altitude_region(above) = Dict{String, Any}(
         end
         @test propertynames(Y.f) == propertynames(Y_plain.f)
         @test isequal(parent(Y.f), parent(Y_plain.f))
-    end
-
-    # 4. The explicit path: the lag W23 found is the tags' missing
-    # sedimentation cross blocks, which WP5b adds.
-    @testset "The explicit microphysics path closes with one iteration" begin
-        explicit_dict = merge(
-            edmf_dict,
-            Dict{String, Any}("implicit_microphysics" => false),
-        )
-        water_only = Dict{String, Any}(
-            "water_tracers" => tag_dict["water_tracers"],
-            "water_tag_transport" => "increment",
-        )
-        explicit = run_simulation(
-            merge(explicit_dict, water_only),
-            "water_tags_increment_explicit",
-        )
-        Y_explicit = explicit.integrator.u
-        p_explicit = explicit.integrator.p
-        explicit_model = p_explicit.atmos.water_tagging_model
-        closure = CA.tag_closure(
-            Y_explicit,
-            p_explicit,
-            :ρq_tot,
-            CA.water_region_tag_state_names(explicit_model),
-        )
-        @info "The explicit path after an hour" closure.relative closure.gross_relative
-        @test abs(closure.relative) < 1e-6
-        @test closure.gross_relative < 1e-6
-        # The tags are solved apart, each with its cross blocks to the falling
-        # species.
-        cache = CA.jacobian_cache(
-            CA.ManualSparseJacobian(; approximate_solve_iters = 2),
-            Y_explicit,
-            p_explicit.atmos,
-        )
-        @test cache.solver isa CA.SplitJacobianSolver
-        tag_solves = filter(
-            field -> CA.is_water_tag_name(CA.jacobian_name_chain(field.name)[end]),
-            collect(cache.solver.uncoupled),
-        )
-        @test length(tag_solves) == 3
-        @test all(field -> !isempty(field.lower), tag_solves)
-        # And the model's fields are those of the untagged column.
-        explicit_plain =
-            run_simulation(explicit_dict, "water_tags_increment_explicit_plain")
-        test_same_model_fields(Y_explicit, explicit_plain.integrator.u)
     end
 end

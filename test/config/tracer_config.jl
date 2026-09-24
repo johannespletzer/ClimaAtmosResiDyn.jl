@@ -1359,6 +1359,30 @@ end
         [edmf..., "microphysics_model" => "1M"],
         "water_default_implicit_1m",
     ) isa increment
+    # Not with the sparse autodiff Jacobian on the explicit path, which does
+    # not carry the cross blocks. There the follower is refused, with the
+    # reason. The dense one wins over it and is exact.
+    explicit_auto = [
+        edmf...,
+        "microphysics_model" => "1M",
+        "implicit_microphysics" => false,
+        "use_auto_jacobian" => true,
+    ]
+    @test transport(explicit_auto, "water_default_explicit_1m_auto") isa tracer
+    @test_throws "use_auto_jacobian" CA.AtmosTagging(
+        config(
+            [explicit_auto..., "water_tag_transport" => "increment"],
+            "water_increment_explicit_1m_auto",
+        ),
+    )
+    @test transport(
+        [explicit_auto..., "use_dense_jacobian" => true],
+        "water_default_explicit_1m_dense",
+    ) isa increment
+    @test transport(
+        [edmf..., "microphysics_model" => "1M", "use_auto_jacobian" => true],
+        "water_default_implicit_1m_auto",
+    ) isa increment
     @test_throws "must be `tracer` or `increment`" CA.water_tag_transport_from_config(
         "follow",
     )

@@ -1376,6 +1376,8 @@ end
         (c(:ρq_rai), c(:ρq_rai)) => ᶜdiagonal(4),
         (c(:ρ), u₃) => ᶜᶠbidiagonal(5),
         (c(:ρe_tot), u₃) => ᶜᶠbidiagonal(6),
+        # Under prognostic EDMF a species' row names `u₃` too.
+        (c(:ρq_rai), u₃) => ᶜᶠbidiagonal(13),
         (u₃, c(:ρ)) => ᶠᶜbidiagonal(7),
         (u₃, c(:ρe_tot)) => ᶠᶜbidiagonal(8),
         (u₃, u₃) => ᶠtridiagonal(9),
@@ -1444,5 +1446,49 @@ end
             parent(ΔY.c.ρq_tag_tropo),
             parent(ΔY_plain.c.ρq_tag_tropo),
         )
+    end
+end
+
+@testset "The tags' cross blocks come only with the split solver" begin
+    # Without the split, the tags' rows would join the nested solve's Schur
+    # complement. Under prognostic EDMF that gives them blocks to `u₃`, which
+    # the solve cannot take, so the unsplit form does not carry the cross
+    # blocks at all.
+    FT = Float64
+    space = CA.ClimaCore.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CA.ClimaCore.CommonSpaces.CellCenter(),
+    )
+    ᶜnames = (:ρ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+    ᶜnames = (ᶜnames..., :ρq_tag_tropo)
+    Y = CA.ClimaCore.Fields.FieldVector(;
+        c = similar(
+            CA.ClimaCore.Fields.coordinate_field(space),
+            NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+        ),
+    )
+    atmos = (;
+        microphysics_model = CA.NonEquilibriumMicrophysics1M(),
+        diff_mode = CA.Implicit(),
+    )
+    split_flags = CA._derivative_flags(atmos, Y)
+    unsplit_flags = CA._derivative_flags(atmos, Y; split_uncoupled_fields = false)
+    @test split_flags.water_tag_cross_flag == CA.UseDerivative()
+    @test unsplit_flags.water_tag_cross_flag == CA.IgnoreDerivative()
+    block_keys(flags) = map(
+        pair -> pair.first,
+        CA.sedimentation_jacobian_blocks(Y, atmos, flags.water_tag_cross_flag),
+    )
+    tag = CA.MatrixFields.FieldName(:c, :ρq_tag_tropo)
+    for flags in (split_flags, unsplit_flags)
+        @test (tag, tag) in block_keys(flags)
+    end
+    for mass in (:ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+        cross_key = (tag, CA.MatrixFields.FieldName(:c, mass))
+        @test cross_key in block_keys(split_flags)
+        @test !(cross_key in block_keys(unsplit_flags))
     end
 end

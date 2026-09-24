@@ -72,20 +72,26 @@ ManualSparseJacobian(; approximate_solve_iters::Int = 1) =
     ManualSparseJacobian(approximate_solve_iters)
 
 """
-    _derivative_flags(atmos, Y)
+    _derivative_flags(atmos, Y; split_uncoupled_fields = true)
 
 Return the `DerivativeFlag`s that specialize the manual Jacobian cache
 at build time, as a `NamedTuple` with fields `topography_flag` (set from
-`has_topography(axes(Y.c))`) and `diffusion_flag` (set from `atmos.diff_mode`).
+`has_topography(axes(Y.c))`), `diffusion_flag` (set from `atmos.diff_mode`)
+and `water_tag_cross_flag` (set from `split_uncoupled_fields`).
 
-The SGS modes (advection, entrainment/detrainment, mass flux, nonhydrostatic
-pressure, and vertical diffusion) are always implicit, so they need no flags.
-Called from `jacobian_cache`.
+The water tags' sedimentation cross blocks are carried only when the
+[`SplitJacobianSolver`](@ref) solves the tags apart, by back-substitution.
+Inside the nested arrowhead solve, the tags' rows would join the Schur
+complement and produce blocks the solve cannot take (a tag's row to `u₃` under
+prognostic EDMF). The SGS modes (advection, entrainment/detrainment, mass flux,
+nonhydrostatic pressure, and vertical diffusion) are always implicit, so they
+need no flags. Called from `jacobian_cache`.
 """
-function _derivative_flags(atmos, Y)
+function _derivative_flags(atmos, Y; split_uncoupled_fields = true)
     return (;
         topography_flag = DerivativeFlag(has_topography(axes(Y.c))),
         diffusion_flag = DerivativeFlag(atmos.diff_mode),
+        water_tag_cross_flag = DerivativeFlag(split_uncoupled_fields),
     )
 end
 
@@ -279,7 +285,7 @@ function diffusion_jacobian_blocks(Y, atmos, diffusion_flag)
 end
 
 """
-    sedimentation_jacobian_blocks(Y, atmos)
+    sedimentation_jacobian_blocks(Y, atmos, water_tag_cross_flag)
 
 Allocate the Jacobian blocks for implicit sedimentation of the condensate
 tracers, including the couplings of the sedimenting condensate masses to
@@ -293,14 +299,14 @@ Returns `()` for `DryModel`.
 Tagged water tracers mirror the sedimentation flux (see
 [`sediment_water_tags!`](@ref)), so their diagonals are allocated here too and
 excluded from `diffusion_jacobian_blocks`, which would otherwise allocate them
-a second time as passive tracers. So are their cross blocks to each sedimenting
-mass, the tag's share of `ρq_tot`'s.
+a second time as passive tracers. With `water_tag_cross_flag` set, so are their
+cross blocks to each sedimenting mass, the tag's share of `ρq_tot`'s.
 
 # Returns
 
 `Tuple` of `(row_name, col_name) => block` pairs.
 """
-function sedimentation_jacobian_blocks(Y, atmos)
+function sedimentation_jacobian_blocks(Y, atmos, water_tag_cross_flag)
     atmos.microphysics_model isa DryModel && return ()
     FT = Spaces.undertype(axes(Y.c))
     (; TridiagonalRow) = jacobian_row_types(FT)
@@ -312,19 +318,22 @@ function sedimentation_jacobian_blocks(Y, atmos)
     # Each tag falls with its share of each species, as `ρq_tot` falls with all
     # of it, so its row has a cross block to each species' column. No other row
     # names a tag, so the split solver still solves the tags apart, by
-    # back-substitution (`split_jacobian_solver`).
-    water_tag_cross_blocks = Tuple(
-        Iterators.flatten(
-            map(
-                tag_name -> map(
-                    mass_name ->
-                        (tag_name, mass_name) => similar(Y.c, TridiagonalRow),
-                    mass_names,
+    # back-substitution (`split_jacobian_solver`). Without the split they are
+    # not carried (`_derivative_flags`).
+    water_tag_cross_blocks =
+        !use_derivative(water_tag_cross_flag) ? () :
+        Tuple(
+            Iterators.flatten(
+                map(
+                    tag_name -> map(
+                        mass_name ->
+                            (tag_name, mass_name) => similar(Y.c, TridiagonalRow),
+                        mass_names,
+                    ),
+                    water_tag_names,
                 ),
-                water_tag_names,
             ),
-        ),
-    )
+        )
     return (
         map(
             name -> (name, name) => similar(Y.c, TridiagonalRow),
@@ -630,12 +639,16 @@ The nonzero blocks are collected from the per-process builders, de-duplicated
 with `merge_jacobian_blocks`, and completed with `fallback_identity_blocks`;
 the solver comes from `jacobian_solver_algorithm`.
 
-When the state holds tags or process records that couple to no other variable,
-and `split_uncoupled_fields` is `true`, they are solved apart from the rest by a
-[`SplitJacobianSolver`](@ref), which gives the same result. That keeps the build
-time of the solver from growing with the number of tags and records.
-`AutoSparseJacobian` asks for the unsplit form, because it builds on the
-`FieldMatrixWithSolver` itself.
+When the state holds tags or process records that enter no other variable's
+equation, and `split_uncoupled_fields` is `true`, they are solved apart from the
+rest by a [`SplitJacobianSolver`](@ref). That keeps the build time of the solver
+from growing with the number of tags and records. `AutoSparseJacobian` asks for
+the unsplit form, because it builds on the `FieldMatrixWithSolver` itself.
+
+The two forms give the same increments for the coupled fields. For a field with
+only its diagonal block, they give the same increment too. The water tags'
+sedimentation cross blocks are carried only with the split (`_derivative_flags`),
+so under 1-moment microphysics the tags' increments differ between the forms.
 
 # Returns
 
@@ -657,15 +670,15 @@ function jacobian_cache(
     split_uncoupled_fields = true,
     verbose = false,
 )
-    derivative_flags = _derivative_flags(atmos, Y)
-    (; topography_flag, diffusion_flag) = derivative_flags
+    derivative_flags = _derivative_flags(atmos, Y; split_uncoupled_fields)
+    (; topography_flag, diffusion_flag, water_tag_cross_flag) = derivative_flags
     FT = Spaces.undertype(axes(Y.c))
 
     process_block_pairs = merge_jacobian_blocks((
         sgs_advection_jacobian_blocks(Y, atmos)...,
         advection_jacobian_blocks(Y, atmos, topography_flag)...,
         diffusion_jacobian_blocks(Y, atmos, diffusion_flag)...,
-        sedimentation_jacobian_blocks(Y, atmos)...,
+        sedimentation_jacobian_blocks(Y, atmos, water_tag_cross_flag)...,
         sgs_massflux_jacobian_blocks(Y, atmos)...,
     ))
     block_pairs = (
@@ -683,6 +696,18 @@ function jacobian_cache(
 
     uncoupled_names =
         split_uncoupled_fields ? uncoupled_jacobian_names(block_pairs) : ()
+    # Only the back-substitution solves the tags' cross blocks. A tag that some
+    # other row named would stay in the nested solve with them, where they fail.
+    if use_derivative(water_tag_cross_flag)
+        for name in
+            unrolled_map(center_state_name, sedimenting_water_tag_names(Y))
+            name in uncoupled_names || error(
+                "The water tag $name carries sedimentation cross blocks, " *
+                "but another Jacobian row names it, so the split solver " *
+                "cannot solve it apart.",
+            )
+        end
+    end
     # The solver is built through `invokelatest`, which inference does not look
     # into. Otherwise the compiler would infer both builders, whichever this
     # run needs, and building the unsplit solver for a state with many tags is
@@ -767,7 +792,9 @@ function uncoupled_jacobian_names(block_pairs)
             j == i && return true
             if rows[j] == rows[i]
                 # A block in the field's own row, to a coupled field's column.
-                return columns[j] != rows[i] &&
+                # A column that contains the field, such as `@name(c)`, names
+                # it too.
+                return !jacobian_name_chains_overlap(rows[i], columns[j]) &&
                        !is_splittable_jacobian_field(block_keys[j][2])
             end
             return !jacobian_name_chains_overlap(rows[i], rows[j]) &&
@@ -788,17 +815,17 @@ ClimaCore's nested block solvers work out, at compile time, which blocks each
 of their nested solves touches. They do it over the names of every field in the
 state, so that work grows faster than the number of fields, and each tag or
 record added makes the build slower by more than the last. The tags and records
-never act on the model and have only their own diagonal blocks. So this solves
-them one field at a time, and the other fields with the model's own nested
-solver, built over a name tree that leaves the tags and records out.
+never act on the model: no other row names them. So this solves them one field
+at a time, and the other fields with the model's own nested solver, built over
+a name tree that leaves the tags and records out.
 
 A field whose row holds blocks to coupled fields' columns, such as a water
 tag's sedimentation cross blocks, is solved after the coupled fields:
 `R − Σ C ΔY` goes into a scratch field, and the field's own block is solved on
 it. The coupled system's rows, name tree and solver do not change, so the
-coupled fields' `ΔY` does not either. The nested solver would reach such a
-field's value through its own iterations, so the two agree only as far as those
-converge.
+coupled fields' `ΔY` does not either. The unsplit form does not carry these
+blocks (`_derivative_flags`): inside the nested solve, a tag's row would join
+the Schur complement and gain blocks the solve cannot take.
 
 A field with only its diagonal block is solved as the nested solver solves it in
 the whole system, so the result does not change. There, such a field falls into
@@ -1242,7 +1269,7 @@ function update_advection_jacobian!(matrix, Y, p, dtγ, topography_flag)
 end
 
 """
-    update_sedimentation_jacobian!(matrix, Y, p, dtγ)
+    update_sedimentation_jacobian!(matrix, Y, p, dtγ, water_tag_cross_flag)
 
 Update the Jacobian blocks for implicit sedimentation of the condensate
 tracers, including the couplings of the sedimenting condensate masses to
@@ -1261,7 +1288,7 @@ mutual coupling (to zero), which diffusion and SGS mass flux accumulate into.
 No-op for `DryModel`. Writes `ᶜbidiagonal_adjoint_matrix_c3` and
 `ᶠband_matrix_wvec` in `p.scratch`, mutates `matrix`, and returns `nothing`.
 """
-function update_sedimentation_jacobian!(matrix, Y, p, dtγ)
+function update_sedimentation_jacobian!(matrix, Y, p, dtγ, water_tag_cross_flag)
     p.atmos.microphysics_model isa DryModel && return nothing
     (; params) = p
     (; ᶜΦ) = p.core
@@ -1334,12 +1361,12 @@ function update_sedimentation_jacobian!(matrix, Y, p, dtγ)
         end
     end
 
-    update_water_tag_sedimentation_jacobian!(matrix, Y, p)
+    update_water_tag_sedimentation_jacobian!(matrix, Y, p, water_tag_cross_flag)
     return nothing
 end
 
 """
-    update_water_tag_sedimentation_jacobian!(matrix, Y, p)
+    update_water_tag_sedimentation_jacobian!(matrix, Y, p, water_tag_cross_flag)
 
 Diagonal Jacobian blocks for the mirrored sedimentation of the tagged water
 tracers (see [`sediment_water_tags!`](@ref)). A no-op under 0-moment
@@ -1352,8 +1379,8 @@ initialized to `-I` and then accumulates a contribution from every species.
 `dtγ` is not needed here: it is already folded into
 `p.scratch.ᶜbidiagonal_adjoint_matrix_c3` by the caller.
 
-The diagonal and the cross block to each sedimenting mass are carried. The
-cross block is the parent's `∂(ρq_tot)ₜ/∂ρqₚ` scaled by the tag's share
+The diagonal is always carried. With `water_tag_cross_flag` set, so is the cross
+block to each sedimenting mass (see `_derivative_flags`). The cross block is the parent's `∂(ρq_tot)ₜ/∂ρqₚ` scaled by the tag's share
 `φ̂` ([`water_tag_sediment_share_field`](@ref)), so over a closed partition the
 tags' cross blocks sum to the parent's. Without it, one Newton iteration moves
 `ρq_tot` with the updated species and the tags with the old ones. That changes
@@ -1363,20 +1390,38 @@ move (FINDINGS W23 on the record branch). The tendency's dependence on
 EDMFX subdomain corrections above: a convergence-rate approximation, not a
 change to what is being solved.
 """
-function update_water_tag_sedimentation_jacobian!(matrix, Y, p)
+function update_water_tag_sedimentation_jacobian!(
+    matrix,
+    Y,
+    p,
+    water_tag_cross_flag,
+)
     isempty(sedimenting_water_tag_names(Y)) && return nothing
     # The share denominator is a property of the current state, so it has to be
     # rebuilt here rather than reused from the tendency evaluation.
     water_tag_share_norm!(p, Y)
     MatrixFields.unrolled_foreach(p.atmos.water_tagging_model.tags) do tag
-        update_water_tag_sedimentation_block!(matrix, Y, p, tag)
+        update_water_tag_sedimentation_block!(
+            matrix,
+            Y,
+            p,
+            tag,
+            water_tag_cross_flag,
+        )
     end
     return nothing
 end
 
-# One tag's diagonal block, accumulated over the sedimenting species. Split out
-# of the loop above so that neither closure captures more than it needs.
-function update_water_tag_sedimentation_block!(matrix, Y, p, tag)
+# One tag's diagonal block, accumulated over the sedimenting species, and its
+# cross blocks. Split out of the loop above so that neither closure captures
+# more than it needs.
+function update_water_tag_sedimentation_block!(
+    matrix,
+    Y,
+    p,
+    tag,
+    water_tag_cross_flag,
+)
     ᶜρq_tag = tag_field(Y.c, tag)
     tag_state_name = center_state_name(water_tag_field_name(tag))
     ∂ᶜρq_tag_err_∂ᶜρq_tag = matrix[tag_state_name, tag_state_name]
@@ -1401,6 +1446,7 @@ function update_water_tag_sedimentation_block!(matrix, Y, p, tag)
             p.scratch.ᶜbidiagonal_adjoint_matrix_c3 *
             p.scratch.ᶠband_matrix_wvec
         # The cross block: the parent's `∂(ρq_tot)ₜ/∂ρqₚ` times the tag's share.
+        use_derivative(water_tag_cross_flag) || return nothing
         ∂ᶜρq_tag_err_∂ᶜρqₚ =
             matrix[tag_state_name, center_state_name(ρqₚ_name)]
         ᶜshare = water_tag_sediment_share_field(Y, p, tag)
@@ -2357,7 +2403,8 @@ quantities set by `set_implicit_precomputed_quantities!`, mutates
 `cache.matrix` and `p.scratch`, and returns `nothing`.
 """
 function update_jacobian!(alg::ManualSparseJacobian, cache, Y, p, dtγ, t)
-    (; topography_flag, diffusion_flag) = cache.derivative_flags
+    (; topography_flag, diffusion_flag, water_tag_cross_flag) =
+        cache.derivative_flags
     (; matrix) = cache
 
     # Ordering contract between the process updates:
@@ -2374,7 +2421,7 @@ function update_jacobian!(alg::ManualSparseJacobian, cache, Y, p, dtγ, t)
     #   - The eddy diffusivities are computed once and shared between the
     #     grid-scale and SGS diffusion updates.
     update_advection_jacobian!(matrix, Y, p, dtγ, topography_flag)
-    update_sedimentation_jacobian!(matrix, Y, p, dtγ)
+    update_sedimentation_jacobian!(matrix, Y, p, dtγ, water_tag_cross_flag)
     eddy_diffusivities =
         use_derivative(diffusion_flag) ? eddy_diffusivity_coefficients!(Y, p) :
         nothing
