@@ -294,7 +294,10 @@ Measure it on W23's explicit column before either is decided.
         does the increment integration test (96/96).
       + **G4.15b**, the same-sign rule (`claude/energy-follower-review`,
         `d6e4021e`, on G4.15a). It waits on the long runs
-        (`design/INCREMENT_RULE_LONG_RUNS.md`, jobs `13915221` to `13915228`).
+        (`design/INCREMENT_RULE_LONG_RUNS.md`). The first submission
+        (`13915221` to `13915228`) is void: without a reset of the radiation's
+        seed the runs did not share an atmosphere (section 7). The second is
+        jobs `13917157` to `13917199`, output in `output_0001/`.
 
 ### G4.16 Sedimentation cross blocks for the energy source tags
 
