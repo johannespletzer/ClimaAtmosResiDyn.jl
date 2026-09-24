@@ -1472,8 +1472,8 @@ end
         end
 
         # Without a species-`u₃` block the unsplit nested solve can take the
-        # cross block too. Its coupled increments are the split's, and its
-        # tag's comes to the split's as the nested iteration converges.
+        # cross block too. Its coupled increments are the split's, and so is
+        # its tag's, to rounding, at every iteration count.
         # (Under prognostic EDMF a species' row does name `u₃`, and the
         # unsplit form does not carry the cross blocks; see `_derivative_flags`.)
         plain_with_cross = (plain_pairs..., cross)
@@ -1501,8 +1501,8 @@ end
                 parent(split_reference.c.ρq_tag_tropo),
             )
         end
-        @test issorted(tag_differences; rev = true)
-        @test last(tag_differences) <=
+        @info "The unsplit tag against the split's" FT tag_differences
+        @test maximum(tag_differences) <=
               sqrt(eps(FT)) * maximum(abs, parent(split_reference.c.ρq_tag_tropo))
     end
 end
