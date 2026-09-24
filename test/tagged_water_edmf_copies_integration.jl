@@ -122,6 +122,9 @@ end
                     "q_tag_leak_diffusion_up",
                     "q_tag_copy_res",
                     "q_tag_upfix_tropo",
+                    "q_tag_led_upfilter",
+                    "q_tag_led_repair_gross",
+                    "q_tag_led_uprepair_colgross",
                 ],
                 "period" => "10mins",
             ),
@@ -214,6 +217,48 @@ end
             :copy_repair_relative,
         )
         @test audit.copy_residual_relative < 2e-4
+    end
+
+    # WP6: the state ledgers per mechanism. The repairs run in
+    # `constrain_state!`, which at the default cadence fires once per step, on
+    # the accepted state. So what the steps retained is what the repairs
+    # attempted, and the cache ledgers give it. No limiter acts here, so the
+    # partition's cache gross is the repair's alone.
+    @testset "The state ledgers per mechanism" begin
+        (; ᶜwater_fix_gross, ᶜwater_upfix) = p.tagging
+        close(a, b) = isapprox(
+            parent(a),
+            parent(b);
+            rtol = 1e-10,
+            atol = 1e-12 * maximum(abs, parent(Y.c.ρq_tot)),
+        )
+        # The repair's transfer ledger and half its net make up half its
+        # gross, since the transfer is half the changes less their net.
+        @test close(
+            Y.c.q_tag_led_repair .+ Y.c.q_tag_led_repairnet ./ 2,
+            (ᶜwater_fix_gross.ρq_tag_tropo .+ ᶜwater_fix_gross.ρq_tag_strat) ./
+            2,
+        )
+        @test close(
+            Y.c.q_tag_led_uprepair,
+            ᶜwater_upfix.ρq_tag_tropo .+ ᶜwater_upfix.ρq_tag_strat,
+        )
+        @test maximum(abs, parent(Y.c.q_tag_led_uprepair)) > 0
+        @test maximum(abs, parent(Y.c.q_tag_led_upfilter)) > 0
+        # The gross per step is at least what the ledger holds, per cell and
+        # per column, since each ledger starts at zero.
+        (; ledgers) = p.tagging.tag_ledger_steps
+        @test propertynames(ledgers) == CA.water_tag_mechanism_names(model)
+        for name in propertynames(ledgers)
+            ᶜL = getproperty(Y.c, name)
+            (; ᶜgross, colgross) = getproperty(ledgers, name)
+            @test all(parent(ᶜgross) .>= abs.(parent(ᶜL)) .* (1 - 1e-12))
+            column_total = similar(colgross)
+            CA.Operators.column_integral_definite!(column_total, ᶜL)
+            @test all(
+                parent(colgross) .>= abs.(parent(column_total)) .* (1 - 1e-12),
+            )
+        end
     end
 
     # 4. With one composition everywhere, every term the copies take from the
@@ -369,7 +414,9 @@ end
         plain = run_simulation(edmf_dict, "water_tags_edmf_copies_plain")
         Y_plain = plain.integrator.u
         @test isnothing(plain.integrator.p.atmos.water_tagging_model)
-        is_tag(name) = startswith(string(name), "ρq_tag_")
+        is_tag(name) =
+            startswith(string(name), "ρq_tag_") ||
+            CA.is_tag_mechanism_ledger_name(name)
         @test Set(filter(!is_tag, propertynames(Y.c))) ==
               Set(propertynames(Y_plain.c))
         for name in propertynames(Y_plain.c)
@@ -387,5 +434,60 @@ end
         end
         @test propertynames(Y.f) == propertynames(Y_plain.f)
         @test isequal(parent(Y.f), parent(Y_plain.f))
+    end
+
+    # WP6, after the parity check, since these step the run on. The updraft
+    # filter's ledger is its change of the partition copies' water, and the
+    # ledgers' kernels allocate nothing.
+    @testset "The filter's ledger and the kernels' allocation" begin
+        Y_filter = copy(Y)
+        # A negative copy, which the filter clamps, so the check is not vacuous.
+        Y_filter.c.sgsʲs.:(1).q_tag_tropo .-= 1e-3
+        copy_water(Y) =
+            Y.c.sgsʲs.:(1).ρa .*
+            (Y.c.sgsʲs.:(1).q_tag_tropo .+ Y.c.sgsʲs.:(1).q_tag_strat)
+        ᶜbefore = copy_water(Y_filter)
+        ᶜledger = copy(Y_filter.c.q_tag_led_upfilter)
+        CA.snapshot_water_tag_copy_water!(Y_filter, p)
+        CA.enforce_physical_constraints!(Y_filter, p, t, p.atmos)
+        CA.record_water_tag_copy_filter!(Y_filter, p)
+        ᶜchange = copy_water(Y_filter) .- ᶜbefore
+        @test maximum(abs, parent(ᶜchange)) > 0
+        @test isapprox(
+            parent(Y_filter.c.q_tag_led_upfilter .- ᶜledger),
+            parent(ᶜchange);
+            rtol = 1e-12,
+            atol = 1e-14 * maximum(abs, parent(ᶜbefore)),
+        )
+        CA.snapshot_water_tag_copy_water!(Y_filter, p)
+        @test (@allocated CA.snapshot_water_tag_copy_water!(Y_filter, p)) == 0
+        CA.record_water_tag_copy_filter!(Y_filter, p)
+        @test (@allocated CA.record_water_tag_copy_filter!(Y_filter, p)) == 0
+        CA.repair_water_tag_partition!(Y_filter, p)
+        @test (@allocated CA.repair_water_tag_partition!(Y_filter, p)) == 0
+        CA.repair_water_tag_copies!(Y_filter, p)
+        @test (@allocated CA.repair_water_tag_copies!(Y_filter, p)) == 0
+    end
+
+    # The gross per step is the ledgers' change over that step, per cell, bit
+    # for bit: one more step, taken by hand.
+    @testset "The ledgers' gross, one step by hand" begin
+        integrator = copies.integrator
+        (; ledgers) = integrator.p.tagging.tag_ledger_steps
+        names = keys(ledgers)
+        @test names == CA.water_tag_mechanism_names(model)
+        L_before = map(n -> Float64.(parent(getproperty(integrator.u.c, n))), names)
+        G_before = map(n -> copy(parent(getproperty(ledgers, n).ᶜgross)), names)
+        CA.CTS.step!(integrator)
+        for (i, n) in enumerate(names)
+            ᶜL = Float64.(parent(getproperty(integrator.u.c, n)))
+            @test parent(getproperty(ledgers, n).ᶜgross) ==
+                  G_before[i] .+ abs.(ᶜL .- L_before[i])
+        end
+        # At most ClimaCore's column integral, about 200 bytes a call where it
+        # allocates, one call per ledger.
+        CA.accumulate_tag_ledger_gross!(integrator)
+        @test (@allocated CA.accumulate_tag_ledger_gross!(integrator)) <=
+              256 * length(names)
     end
 end
