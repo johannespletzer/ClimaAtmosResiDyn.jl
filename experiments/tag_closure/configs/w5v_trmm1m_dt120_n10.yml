@@ -1,0 +1,66 @@
+# WP5b-V (design/EXPLICIT_1M_DEFAULT.md): TRMM 1M, microphysics explicit,
+# dt 120 s, 10 Newton iteration(s), water tags under increment.
+# The upstream column is config/model_configs/prognostic_edmfx_trmm_column.yml.
+
+job_id: "w5v_trmm1m_dt120_n10"
+
+
+water_tracers:
+  - name: pbl
+    region: {type: tanh_altitude, z_center: 1000.0, width: 200.0, above: false}
+  - name: free
+    region: {type: tanh_altitude, z_center: 1000.0, width: 200.0}
+  - name: evap
+    source: surface_flux
+water_tag_transport: increment
+
+water_closure_check:
+  period: "30mins"
+  audit: true
+
+initial_condition: TRMM_LBA
+turbconv: prognostic_edmfx
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+implicit_microphysics: false
+config: column
+z_max: 16400
+x_elem: 2
+y_elem: 2
+z_elem: 82
+z_stretch: false
+perturb_initstate: false
+dt: 120secs
+t_end: 6hours
+max_newton_iters_ode: 10
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, husra, hussn, wa]
+    period: "30mins"
+  - short_name: [pr, evspsbl, hfls, hfss, lwp]
+    period: "30mins"
+  - short_name: [arup, rhoaup, waup, husup, clwup, cliup]
+    period: "30mins"
+  - short_name: [aren, rhoaen, waen, husen]
+    period: "30mins"
+  - short_name: [tke, entr, detr]
+    period: "30mins"
+  - short_name: [q_tag_res, q_tag_pbl, q_tag_free, q_tag_evap]
+    period: "30mins"
+  - short_name: [q_tag_fix_pbl, q_tag_fix_free, q_tag_fix_evap]
+    period: "30mins"
+  - short_name: [q_tag_inc_left, q_tag_inc_moved]
+    period: "30mins"
