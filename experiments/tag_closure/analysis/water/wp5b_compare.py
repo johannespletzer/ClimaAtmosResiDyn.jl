@@ -3,7 +3,8 @@ columns, and compare.
 
     python3 wp5b_compare.py PROBE_DIR LOG_DIR
 
-PROBE_DIR holds `<run>.csv` from `wp5b_probe.jl`; LOG_DIR holds the jobs'
+PROBE_DIR holds `<run>.csv` from `wp5b_probe.jl` (labels `off`, `on`, and `cc`
+for WP5b-C, the copies' cross blocks); LOG_DIR holds the jobs'
 `.out`/`.err` with the RESULT lines. It prints:
   - per run, the closure (net and gross), the part the follower left out, the
     smallest partition tag and the partition repair ledger;
@@ -72,7 +73,7 @@ def main():
         for run in names[1:]:
             differing = [n for n in parent if columns[run][0].get(n) != reference.get(n)]
             print(f"parent parity {run} against {names[0]}: {'bit for bit' if not differing else 'DIFFERS in ' + ', '.join(differing)}")
-    for label in ("off", "on"):
+    for label in ("off", "on", "cc"):
         for transport in ("tracer", "increment"):
             d = f"wp5b_{label}_default_{transport}_n1"
             c = f"wp5b_{label}_copies_{transport}_n1"

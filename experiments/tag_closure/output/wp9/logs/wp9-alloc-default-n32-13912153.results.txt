@@ -1,0 +1,48 @@
+RESULT function=water_exchange_inputs! total_bytes=1299904 allocations=16277
+RESULT   195488 bytes in 82 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (NTuple{33, ClimaCore.DataLayouts.DataF{Float64, ClimaCore.DataLayouts.ThisThread, SubArray{Float64, 1, Array{Float64, 5}, Tuple{Int64, Int64, Int64, UnitRange{Int64}, Int64}, true}}})
+RESULT   194832 bytes in 2706 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (ClimaCore.DataLayouts.DataF{Float64, ClimaCore.DataLayouts.ThisThread, SubArray{Float64, 1, Array{Float64, 5}, Tuple{Int64, Int64, Int64, UnitRange{Int64}, Int64}, true}})
+RESULT   188928 bytes in 82 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (NTuple{32, ClimaCore.DataLayouts.DataF{Float64, ClimaCore.DataLayouts.ThisThread, SubArray{Float64, 1, Array{Float64, 5}, Tuple{Int64, Int64, Int64, UnitRange{Int64}, Int64}, true}}})
+RESULT   138192 bytes in 785 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{Float64, 82, 1, 1, 1, ClimaCore.DataLayouts.ThisThreadPool, SubArray{Float64, 5, Array{Float64, 5}, Tuple{Base.Slice{Base.OneTo{Int64}}, Base.Slice
+RESULT   44608 bytes in 164 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (NTuple{33, Float64})
+RESULT   43296 bytes in 5412 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (Float64)
+RESULT   43280 bytes in 2705 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:560 (Float64)
+RESULT   41984 bytes in 2624 at src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl:1965 (Float64)
+RESULT   41984 bytes in 164 at src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl:1965 (NTuple{32, Float64})
+RESULT   23328 bytes in 81 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:461 (Tuple{ClimaCore.Utilities.AutoBroadcaster{NTuple{32, Float64}}, Float64, Bool, Float64})
+RESULT   22304 bytes in 82 at src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl:1965 (Memory{Any})
+RESULT   22304 bytes in 82 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:560 (Memory{Any})
+RESULT   22304 bytes in 82 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:560 (ClimaCore.Utilities.AutoBroadcaster{NTuple{32, Float64}})
+RESULT   22032 bytes in 81 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:549 (ClimaCore.Utilities.AutoBroadcaster{NTuple{32, Float64}})
+RESULT   21120 bytes in 4 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (NTuple{30, ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{Float64, 82, 1, 1, 1, ClimaCore.DataLayouts.ThisThreadPool, SubArray{Float64, 5, Array{Float64, 5}, Tuple{Base.Slice{Base.OneTo{Int64}}, Ba
+RESULT function=implicit_tendency! total_bytes=1942776 allocations=18875
+RESULT   199584 bytes in 594 at src/utils/tracer_processes.jl:138 (Memory{Symbol})
+RESULT   195488 bytes in 82 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (NTuple{33, ClimaCore.DataLayouts.DataF{Float64, ClimaCore.DataLayouts.ThisThread, SubArray{Float64, 1, Array{Float64, 5}, Tuple{Int64, Int64, Int64, UnitRange{Int64}, Int64}, true}}})
+RESULT   194832 bytes in 2706 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (ClimaCore.DataLayouts.DataF{Float64, ClimaCore.DataLayouts.ThisThread, SubArray{Float64, 1, Array{Float64, 5}, Tuple{Int64, Int64, Int64, UnitRange{Int64}, Int64}, true}})
+RESULT   188928 bytes in 82 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (NTuple{32, ClimaCore.DataLayouts.DataF{Float64, ClimaCore.DataLayouts.ThisThread, SubArray{Float64, 1, Array{Float64, 5}, Tuple{Int64, Int64, Int64, UnitRange{Int64}, Int64}, true}}})
+RESULT   138192 bytes in 785 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{Float64, 82, 1, 1, 1, ClimaCore.DataLayouts.ThisThreadPool, SubArray{Float64, 5, Array{Float64, 5}, Tuple{Base.Slice{Base.OneTo{Int64}}, Base.Slice
+RESULT   95040 bytes in 297 at src/utils/tracer_processes.jl:138 (NTuple{40, Symbol})
+RESULT   59664 bytes in 33 at src/prognostic_equations/edmfx_sgs_flux.jl:395 (Base.Broadcast.Broadcasted{ClimaCore.Operators.ColumnStencilStyle, Nothing, typeof(identity), Tuple{Base.Broadcast.Broadcasted{ClimaCore.Operators.ColumnStencilStyle, Nothing, typeof(adjoint), Tuple{ClimaCore.Operators.Ste
+RESULT   59664 bytes in 33 at src/prognostic_equations/edmfx_sgs_flux.jl:394 (Base.Broadcast.Broadcasted{ClimaCore.Operators.ColumnStencilStyle, Nothing, typeof(adjoint), Tuple{ClimaCore.Operators.StencilBroadcasted{ClimaCore.Operators.ColumnStencilStyle, ClimaCore.MatrixFields.MultiplyColumnwiseBan
+RESULT   44608 bytes in 164 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (NTuple{33, Float64})
+RESULT   44352 bytes in 132 at src/utils/variable_manipulations.jl:242 (Memory{Symbol})
+RESULT   43296 bytes in 5412 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:443 (Float64)
+RESULT   43280 bytes in 2705 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:560 (Float64)
+RESULT   41984 bytes in 2624 at src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl:1965 (Float64)
+RESULT   41984 bytes in 164 at src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl:1965 (NTuple{32, Float64})
+RESULT   23328 bytes in 81 at src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl:461 (Tuple{ClimaCore.Utilities.AutoBroadcaster{NTuple{32, Float64}}, Float64, Bool, Float64})
+RESULT function=remaining_tendency! total_bytes=739960 allocations=2732
+RESULT   170016 bytes in 528 at src/utils/variable_manipulations.jl:242 (Memory{Symbol})
+RESULT   63360 bytes in 198 at src/utils/variable_manipulations.jl:242 (NTuple{40, Symbol})
+RESULT   49104 bytes in 33 at src/prognostic_equations/surface_flux.jl:134 (Base.Broadcast.Broadcasted{ClimaCore.Operators.ColumnStencilStyle, Nothing, typeof(-), Tuple{ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{Float64, 82, 1, 1, 1, ClimaCore.DataLayouts.ThisThreadPool, SubArray{Float64, 5,
+RESULT   41184 bytes in 33 at src/prognostic_equations/surface_flux.jl:133 (Base.Broadcast.Broadcasted{ClimaCore.Operators.ColumnStencilStyle, Nothing, typeof(adjoint), Tuple{ClimaCore.Operators.StencilBroadcasted{ClimaCore.Operators.ColumnStencilStyle, ClimaCore.MatrixFields.MultiplyColumnwiseBandM
+RESULT   33264 bytes in 33 at src/prognostic_equations/advection.jl:126 (Base.Broadcast.Broadcasted{ClimaCore.Operators.SpectralStyle, Nothing, typeof(-), Tuple{ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{Float64, 82, 1, 1, 1, ClimaCore.DataLayouts.ThisThreadPool, SubArray{Float64, 5, Array{F
+RESULT   26928 bytes in 33 at src/prognostic_equations/advection.jl:121 (Base.Broadcast.Broadcasted{ClimaCore.Operators.SpectralStyle, Nothing, ClimaCore.Operators.SplitDivergence, Tuple{Base.Broadcast.Broadcasted{ClimaCore.Fields.FieldStyle{ClimaCore.DataLayouts.DataStyle{4, ClimaCore.DataLayouts.V
+RESULT   24440 bytes in 1 at src/utils/variable_manipulations.jl:238 (ClimaAtmos.var"#128#130"{ClimaAtmos.var"#740#741"{ClimaCore.Fields.FieldVector{Float64, @NamedTuple{c::ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{@NamedTuple{ρ::Float64, uₕ::ClimaCore.Geometry.Covariant12Vector{Float64}, ρ
+RESULT   24352 bytes in 1 at src/utils/variable_manipulations.jl:238 (ClimaAtmos.var"#128#130"{ClimaAtmos.var"#754#755"{ClimaCore.Fields.FieldVector{Float64, @NamedTuple{c::ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{@NamedTuple{ρ::Float64, uₕ::ClimaCore.Geometry.Covariant12Vector{Float64}, ρ
+RESULT   24000 bytes in 1 at src/prognostic_equations/surface_flux.jl:126 (ClimaAtmos.var"#740#741"{ClimaCore.Fields.FieldVector{Float64, @NamedTuple{c::ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{@NamedTuple{ρ::Float64, uₕ::ClimaCore.Geometry.Covariant12Vector{Float64}, ρe_tot::Float64, ρq_t
+RESULT   23944 bytes in 1 at src/utils/variable_manipulations.jl:238 (ClimaAtmos.var"#128#130"{ClimaAtmos.var"#725#726"{ClimaCore.Fields.FieldVector{Float64, @NamedTuple{c::ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{@NamedTuple{ρ::Float64, uₕ::ClimaCore.Geometry.Covariant12Vector{Float64}, ρ
+RESULT   23912 bytes in 1 at src/prognostic_equations/advection.jl:253 (ClimaAtmos.var"#754#755"{ClimaCore.Fields.FieldVector{Float64, @NamedTuple{c::ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{@NamedTuple{ρ::Float64, uₕ::ClimaCore.Geometry.Covariant12Vector{Float64}, ρe_tot::Float64, ρq_tot:
+RESULT   23616 bytes in 1 at src/prognostic_equations/hyperdiffusion.jl:538 (ClimaAtmos.var"#725#726"{ClimaCore.Fields.FieldVector{Float64, @NamedTuple{c::ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{@NamedTuple{ρ::Float64, uₕ::ClimaCore.Geometry.Covariant12Vector{Float64}, ρe_tot::Float64, ρq
+RESULT   22176 bytes in 66 at src/prognostic_equations/surface_flux.jl:143 (Memory{Symbol})
+RESULT   19008 bytes in 99 at src/prognostic_equations/surface_flux.jl:134 (ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{Float64, 82, 1, 1, 1, ClimaCore.DataLayouts.ThisThreadPool, SubArray{Float64, 5, Array{Float64, 5}, Tuple{Base.Slice{Base.OneTo{Int64}}, Base.Slice{Base.OneTo{Int64}}, Base.
+RESULT   17424 bytes in 66 at src/utils/variable_manipulations.jl:242 (NTuple{33, Symbol})

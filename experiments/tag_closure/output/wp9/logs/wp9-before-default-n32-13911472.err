@@ -1,0 +1,48 @@
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wedmf5/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.EquilibriumMicrophysics0M, ClimaAtmos.GridScaleCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{Nothing, Nothing, Nothing, Bool, Nothing}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationTRMM_LBA{AtmosphericProfilesLibrary.TimeZProfile{Interpolations.Extrapolation{Float64, 2, Interpolations.GriddedInterpolation{Float64, 2, Matrix{Float64}, Tuple{Interpolations.Gridded{Interpolations.Linear{Interpolations.Throw{Interpolations.OnGrid}}}, Interpolations.Gridded{Interpolations.Linear{Interpolations.Throw{Interpolations.OnGrid}}}}, Tuple{StepRangeLen{Float64, Base.TwicePrecision{Float64}, Base.TwicePrecision{Float64}, Int64}, Vector{Float64}}}, Tuple{Interpolations.Gridded{Interpolations.Linear{Interpolations.Throw{Interpolations.OnGrid}}}, Interpolations.Gridded{Interpolations.Linear{Interpolations.Throw{Interpolations.OnGrid}}}}, Interpolations.Flat{Nothing}}}}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.PiGroupsEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.Setups.var"#trmm_lba_fluxes#32", Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:pbl, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:free, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:src1, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src2, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src3, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src4, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src5, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src6, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src7, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src8, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src9, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src10, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src11, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src12, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src13, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src14, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src15, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src16, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src17, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src18, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src19, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src20, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src21, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src22, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src23, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src24, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src25, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src26, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src27, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src28, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src29, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:src30, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (4.597 ms, 56.47 KiB)
+[ Info: Built cache (142.948 s, 15.03 GiB)
+[ Info: Assembled callbacks (487.25 ms, 32.06 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (120.876 s, 4.34 GiB)
+[ Info: Initialized integrator (103.837 s, 7.23 GiB)
+[ Info: Set up diagnostics (33.105 s, 295.43 MiB)
+┌ Info: Simulation info
+│   job_id = "wp9_plume_cost_before_default_n32"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/g3/wp9/scripts/wp9_plume_cost/jl_vPAkq9/output_0000"
+
+real	16m15.364s
+user	16m1.649s
+sys	0m9.770s

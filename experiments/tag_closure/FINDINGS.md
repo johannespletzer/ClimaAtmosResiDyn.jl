@@ -1032,6 +1032,50 @@ on TRMM_LBA 1M, microphysics explicit, 6 h, the follower on:
 `1a37e43f`). `compare_runs.py`, `parity_untagged.py`, `w5r_rule_compare.py`
 and `w5v_clamps.py` output in `output/w5v/`.*
 
+**W34. At 32 tags most of the default mode's plume allocation was one
+broadcast of 33 arguments. Split per tag from 32 on, the plume's inputs cost 3.4e-4 s and
+189 kB per call instead of 1.15e-3 s and 1.40 MB, and the plume and the
+exchange are bit for bit the same at 8 and 32 tags.** W30's open item (WP9a),
+on TRMM 0M's initial state in the default mode, per call, `wp9_plume_cost.jl`:
+
+| part                               | 8 tags, #102      | 8 tags, WP9a      | 32 tags, #102      | 32 tags, WP9a      |
+|:---------------------------------- | -----------------:| -----------------:| ------------------:| ------------------:|
+| plume inputs (`water_exchange_inputs!`) | 2.6e-5 s, 5.8 kB | 2.6e-5 s, 5.8 kB | 1.15e-3 s, 1.40 MB | 3.4e-4 s, 189 kB |
+| the exchange                       | 2.9e-4 s, 8 B     | 2.9e-4 s, 8 B     | 3.9e-3 s, 1.40 MB  | 3.1e-3 s, 183 kB   |
+| the implicit tendency              | 6.6e-4 s, 67 kB   | 6.6e-4 s, 67 kB   | 8.7e-3 s, 2.08 MB  | 7.5e-3 s, 864 kB   |
+
+  - **Where.** The grid mean's specific tag values were one broadcast over `ρ`
+    and every tag field. With 32 tags that is 33 arguments, past the 32 that
+    Julia specializes, and it allocated at every level. Rewriting the plume's
+    per-cell kernels without `map` cut 1.40 MB to 1.21 MB at most (four
+    variants, `wp9_variants.jl`), so they were not the cause. WP9a keeps the
+    one broadcast below 32 tags and writes one tag at a time from 32 on
+    (`set_nonnegative_specific!`, both families). Two other forms were
+    measured and dropped: one tag at a time at every size left 568 B per call
+    at 8 tags, and one broadcast over the state 253 kB.
+  - **What remains at 32 tags** (the allocation profile of the same path):
+    the plume's per-cell step, whose `map` over a 32-element tuple takes
+    Base's generic path, and the column march's level tuple, together about
+    185 kB. In the implicit tendency, most of the rest comes from the tracer
+    name helpers (`tracer_processes.jl`), which allocate with 40 fields.
+    Neither is changed here. The exchange's own work beyond its inputs grows
+    from 2.6e-4 s at 8 tags to 2.8e-3 s at 32, faster than the number of tags.
+    The cause of that is not isolated.
+  - **Identity.** The plume and the exchange's tendency at the initial state,
+    written as raw bits, are the same before and after at 8 and 32 tags
+    (`wp9_identity.jl`). The unit tests pass (`energy_source_tags_tests`
+    426/426); the EDMF integration tests are in `output/wp9/` when they finish.
+  - **Copies' build time.** `get_simulation` for the TRMM column with copies:
+    8 copies 699 s, 16 copies 2417 s, 3.5 times as long for twice the copies.
+    32 copies did not build in 4 h (W30); a run with an 8 h limit is running
+    (job `13911480`).
+
+*`hpda2_compute`, 2026-09-24. #102 is `e29384ee`, WP9a `bfd9ff08`
+(`claude/water-tags-plume-cost`, from `../ClimaAtmosResiDyn-wedmf9`). The
+dropped forms are `d4709aa2` and `fcb19107`. Scripts `analysis/water/wp9_*.jl`;
+the RESULT lines, the profiles' top sites and the identity checksums are in
+`output/wp9/`.*
+
 ## 2. Energy source tags: closure by transport
 
 Under the default `tracer` transport the tags move as passive tracers while the
