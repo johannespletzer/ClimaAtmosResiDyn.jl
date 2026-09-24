@@ -256,7 +256,7 @@ The tag-closure long runs (the record branch's
 same-sign rule, and its `|m|` twin.
 
   - **The parent.** The model's own `q_tot` goes below zero from day 10, in
-    the untagged twin too, down to −6e-4 kg/kg, on 66 of 91 daily outputs.
+    the untagged twin too, down to −3.1e-3 kg/kg (day 30), on 66 of 91 daily outputs.
     That is upstream's behavior at this site, not the tags'.
   - **The tags.** The water tags then diverge. On day 48 the copies run's
     column tags hold 28 kg/m² of water against the parent's 13, and
