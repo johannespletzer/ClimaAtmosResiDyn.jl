@@ -1,0 +1,44 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w5v_trmm1m_dt120_n10/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w5v_trmm1m_dt120_n2/output_0000
+family:    water
+NOTICE: pairing: YAML 'max_newton_iters_ode' differs between reference and run (outside the allowed keys)
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 16400.000 m (YAML z_max 16400.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  aren       645 of 1066 elements differ; max|Δ|=1.1209e-02; max relative Δ=1.19e-02; 0 signed-zero-only; np.array_equal would say not equal
+  arup       551 of 1066 elements differ; max|Δ|=1.1209e-02; max relative Δ=2.01e+05; 0 signed-zero-only; np.array_equal would say not equal
+  cli        77 of 1066 elements differ; max|Δ|=3.4269e-06; max relative Δ=5.96e+11; 0 signed-zero-only; np.array_equal would say not equal
+  cliup      73 of 1066 elements differ; max|Δ|=9.5606e-05; max relative Δ=5.96e+11; 0 signed-zero-only; np.array_equal would say not equal
+  clw        213 of 1066 elements differ; max|Δ|=1.1237e-05; max relative Δ=1.20e+12; 0 signed-zero-only; np.array_equal would say not equal
+  clwup      209 of 1066 elements differ; max|Δ|=8.5728e-05; max relative Δ=1.20e+12; 0 signed-zero-only; np.array_equal would say not equal
+  detr       94 of 1066 elements differ; max|Δ|=9.5454e-03; max relative Δ=2.10e+00; 0 signed-zero-only; np.array_equal would say not equal
+  entr       304 of 1066 elements differ; max|Δ|=5.0646e-04; max relative Δ=1.06e+00; 0 signed-zero-only; np.array_equal would say not equal
+  evspsbl    bitwise identical (13 elements)
+  hfls       bitwise identical (13 elements)
+  hfss       bitwise identical (13 elements)
+  hus        984 of 1066 elements differ; max|Δ|=5.4732e-05; max relative Δ=1.14e-01; 0 signed-zero-only; np.array_equal would say not equal
+  husen      984 of 1066 elements differ; max|Δ|=7.4574e-05; max relative Δ=6.27e-02; 0 signed-zero-only; np.array_equal would say not equal
+  husra      237 of 1066 elements differ; max|Δ|=2.4184e-06; max relative Δ=4.33e+29; 0 signed-zero-only; np.array_equal would say not equal
+  hussn      92 of 1066 elements differ; max|Δ|=1.4806e-05; max relative Δ=1.46e+12; 0 signed-zero-only; np.array_equal would say not equal
+  husup      984 of 1066 elements differ; max|Δ|=6.4172e-04; max relative Δ=6.22e-01; 0 signed-zero-only; np.array_equal would say not equal
+  lwp        9 of 13 elements differ; max|Δ|=4.8223e-03; max relative Δ=3.96e-02; 0 signed-zero-only; np.array_equal would say not equal
+  pr         9 of 13 elements differ; max|Δ|=4.6413e-06; max relative Δ=8.27e-02; 0 signed-zero-only; np.array_equal would say not equal
+  rhoa       984 of 1066 elements differ; max|Δ|=9.7306e-05; max relative Δ=1.01e-04; 0 signed-zero-only; np.array_equal would say not equal
+  rhoaen     984 of 1066 elements differ; max|Δ|=1.0115e-04; max relative Δ=9.81e-05; 0 signed-zero-only; np.array_equal would say not equal
+  rhoaup     984 of 1066 elements differ; max|Δ|=1.2801e-03; max relative Δ=2.17e-03; 0 signed-zero-only; np.array_equal would say not equal
+  ta         984 of 1066 elements differ; max|Δ|=2.7920e-02; max relative Δ=1.05e-04; 0 signed-zero-only; np.array_equal would say not equal
+  tke        984 of 1066 elements differ; max|Δ|=9.1777e-02; max relative Δ=9.88e+11; 0 signed-zero-only; np.array_equal would say not equal
+  wa         984 of 1066 elements differ; max|Δ|=3.7552e-04; max relative Δ=1.78e+00; 0 signed-zero-only; np.array_equal would say not equal
+  waen       984 of 1066 elements differ; max|Δ|=1.0743e-02; max relative Δ=8.49e-01; 0 signed-zero-only; np.array_equal would say not equal
+  waup       380 of 1066 elements differ; max|Δ|=4.0845e-01; max relative Δ=3.00e+00; 0 signed-zero-only; np.array_equal would say not equal
+
+tag        hour   ∫ref kg/m²        Δ∫/∫        L1        L∞     max|Δq|
+pbl           6   2.0028e+01   -2.73e-04  8.56e-03  1.12e-02  1.2824e-04
+
+free          6   3.8662e+01   +2.33e-05  2.97e-03  7.71e-03  7.3505e-05
+
+evap          6   2.9624e+00   -1.36e-04  9.37e-03  1.40e-02  2.9283e-05
+
+NOTICE: reference and run rhoa are not bitwise identical, so the two runs do not share one atmosphere; integral_run_ref_weighted mixes the tag's own change with rhoa's change. See integral_run_own_atmosphere for the run's own column integral.
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w5v/vs_n10_dt120_n2.json

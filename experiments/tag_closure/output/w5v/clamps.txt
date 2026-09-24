@@ -1,0 +1,4 @@
+== dt120_n1 RESULT max_over_times clamped_cells=3.415e-01 clamped_water=3.242e-01 clamped_amount=1.011e-15 zero_norm_cells=0.000e+00 zero_norm_water=0.000e+00
+== dt60_n1 RESULT max_over_times clamped_cells=3.415e-01 clamped_water=2.608e-01 clamped_amount=1.203e-15 zero_norm_cells=0.000e+00 zero_norm_water=0.000e+00
+== dt120_n2 RESULT max_over_times clamped_cells=4.878e-01 clamped_water=4.785e-01 clamped_amount=2.105e-09 zero_norm_cells=0.000e+00 zero_norm_water=0.000e+00
+== dt120_n1_tracer RESULT max_over_times clamped_cells=6.707e-01 clamped_water=6.274e-01 clamped_amount=1.216e-04 zero_norm_cells=0.000e+00 zero_norm_water=0.000e+00

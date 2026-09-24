@@ -1,0 +1,4 @@
+w5v_trmm1m_dt120_n1: partition tags ['pbl', 'free'], smallest tag value over the run 0.000e+00 kg/kg
+    6.0 h  gross residual 1.84e-06  net -3.84e-08  left out -3.84e-08  moved (net abs over cells) 5.07e-03
+w5v_trmm1m_dt60_n1: partition tags ['pbl', 'free'], smallest tag value over the run 0.000e+00 kg/kg
+    6.0 h  gross residual 1.55e-06  net +3.26e-08  left out +3.26e-08  moved (net abs over cells) 6.33e-03

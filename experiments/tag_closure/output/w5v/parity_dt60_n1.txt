@@ -1,0 +1,2 @@
+RESULT 26 fields compared, 26 bitwise identical over 13 outputs
+only in the tagged run: ['q_tag_evap', 'q_tag_fix_evap', 'q_tag_fix_free', 'q_tag_fix_pbl', 'q_tag_free', 'q_tag_inc_left', 'q_tag_inc_moved', 'q_tag_pbl', 'q_tag_res']

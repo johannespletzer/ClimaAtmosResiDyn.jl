@@ -377,6 +377,11 @@ run. Acceptance criteria, fixed before the runs:
   - [ ] Passes when one iteration stays below the 0.2% closure budget at every
     rung, and the result converges toward the reference as the timestep or
     the nonlinear error falls. Then the default takes `increment` there.
+  - [x] Pre-registered (`design/EXPLICIT_1M_DEFAULT.md`, `ae18d56c`) and run
+    on TRMM 1M: **fails** criterion 3 for `free` (FINDINGS W33). Budget,
+    nonlinear convergence and parity pass. The follower stays opt-in there.
+    Criterion 3 compared runs whose atmospheres differ; a same-atmosphere
+    check would isolate the lag. For the owner.
 
 ### WP5b-P: provenance, not only closure
 

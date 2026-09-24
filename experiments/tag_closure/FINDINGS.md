@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W32                                           | 1. Water tags                                       |
+| W1–W33                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -997,6 +997,40 @@ rule's shares against the copies', `E = Σ|Δᵏ||φ_cand − φ_ref| / Σ|Δᵏ
 *`hpda2_compute`, 2026-09-24, jobs `13911230` to `13911233`, #104 at
 `dfd93d7c`, `analysis/water/w4v_reconstruction_probe.jl`; per-step columns and
 RESULT lines in `output/w4v/`.*
+
+**W33. WP5b-V fails on its third criterion, so the follower stays opt-in with
+1M stepped explicitly. On TRMM 1M it closes the partition to 1.8e-6 with one
+Newton iteration, 750 times inside the budget, and the model is bit for bit
+the same; but its difference from the ten-iteration run does not shrink at
+the shorter step.** The pre-registered check (`design/EXPLICIT_1M_DEFAULT.md`)
+on TRMM_LBA 1M, microphysics explicit, 6 h, the follower on:
+
+| criterion                                   | result                                                  | pass |
+|:------------------------------------------- |:------------------------------------------------------- |:---- |
+| 1. gross closure < 2e-3 at every check      | max 1.8e-6 (dt 120 s) and 1.5e-6 (dt 60 s), one iteration | yes  |
+| 2. L1 against n10 at 120 s: n2 < n1         | `pbl` 8.6e-3 < 3.4e-2; `free` 3.0e-3 < 1.2e-2            | yes  |
+| 3. L1 against n10: 60 s ≤ 120 s, one iteration | `pbl` 3.41e-2 ≤ 3.42e-2; `free` 1.44e-2 > 1.15e-2     | **no** |
+| 4. parity with the untagged twin            | 26 of 26 fields bit for bit, both steps                  | yes  |
+
+  - **What criterion 3 measured.** Ten Newton iterations change the model:
+    against the one-iteration run, `hus` differs in 984 of 1066 cells, by up
+    to 90% relative, and `tke`, `wa` and the updraft alike. So the tags' L1
+    between the two runs mixes the atmosphere's own difference with the tags'
+    lag, and the check cannot separate them. That weakness is in the design,
+    written before the runs; the verdict stands as registered.
+  - Reported: the part left out is 4e-8 of the water at 6 h at both steps;
+    the moved ledger 5.1e-3 and 6.3e-3; no partition tag goes below zero; the
+    clamps cut at most 1.2e-15 of the water (rounding-level negatives in about
+    a third of the cells), and the partition's norm is never zero.
+  - For scale, the tracer transport on the same rung: gross 1.4e-3, clamps
+    cutting 1.2e-4. Two iterations: gross 6.6e-8.
+  - A check that compares the tags with a reference on the same atmosphere
+    (as WP4a-V does) would test the lag alone. Not run.
+
+*`hpda2_compute`, 2026-09-24, jobs `13910959` to `13910966`, from
+`../ClimaAtmosResiDyn-wedmf5b-run` at `2588623e` (the record with #105 at
+`1a37e43f`). `compare_runs.py`, `parity_untagged.py`, `w5r_rule_compare.py`
+and `w5v_clamps.py` output in `output/w5v/`.*
 
 ## 2. Energy source tags: closure by transport
 
