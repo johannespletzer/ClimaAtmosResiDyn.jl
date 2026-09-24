@@ -1424,8 +1424,6 @@ on the record branch). So `increment` is the default in the default mode under
   - an ARS algorithm, which solves every stage it uses;
   - an `energy_q_tot_upwinding` other than `none`, so the parent has a
     post-solve correction;
-  - microphysics other than 1M stepped explicitly, where the follower is
-    refused ([`check_water_tag_increment_supported`](@ref));
   - a region tag without a source, which the follower needs.
 
 Elsewhere, and with copies, `tracer`. The model still checks what the
@@ -1439,13 +1437,9 @@ function default_water_tag_transport(parsed_args, updraft_copies, tags)
         return tracer
     string(get(parsed_args, "energy_q_tot_upwinding", "vanleer_limiter")) ==
     "none" && return tracer
-    _explicit_one_moment_config(parsed_args) && return tracer
     any(_is_partition_tag, tags) || return tracer
     return IncrementWaterTagTransport()
 end
-_explicit_one_moment_config(parsed_args) =
-    get(parsed_args, "microphysics_model", nothing) == "1M" &&
-    get(parsed_args, "implicit_microphysics", true) == false
 
 """
     water_tag_updraft_copy_from_config(value)
@@ -1616,9 +1610,6 @@ function AtmosTagging(config::AtmosConfig)
                 water_tags,
             ),
         )
-        water_transport isa IncrementWaterTagTransport &&
-            _explicit_one_moment_config(config.parsed_args) &&
-            error(_EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE)
         WaterTaggingModel(
             water_tags;
             updraft_copies = water_updraft_copies,
