@@ -1,0 +1,235 @@
+Precompiling ClimaAtmos...
+    ClimaAtmos Being precompiled by another machine (hostname: hpdar07c04s12, pid: 147757, pidfile: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu/compiled/v1.11/ClimaAtmos/4EXdy_nHqaE.ji.pidfile)
+  51548.8 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 60 seconds. 277 already precompiled.
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wedmf5c/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Explicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (91.21 μs, 5.96 KiB)
+[ Info: Built cache (178.115 s, 29.82 GiB)
+[ Info: Assembled callbacks (440.06 ms, 30.83 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative, water_tag_cross_flag = UseDerivative
+[ Info: Built tendency function (509.045 s, 20.44 GiB)
+[ Info: Initialized integrator (148.621 s, 10.7 GiB)
+[ Info: Set up diagnostics (31.096 s, 295.32 MiB)
+┌ Info: Simulation info
+│   job_id = "wp5b_cc_default_increment_n1"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/g3/wp5c/probe/wp5b_cc_default_increment_n1/output_0000"
+┌ Info: solving
+│   run = "wp5b_cc_default_increment_n1"
+└   commit = "?"
+┌ Info: Running
+│   job_id = "wp5b_cc_default_increment_n1"
+│   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/g3/wp5c/probe/wp5b_cc_default_increment_n1/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 3600.0 seconds (2010-01-01T01:00:00) [counter = 3600, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "3.3%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-24T16:50:43.571
+└   estimated_finish_date = 2026-09-24T16:50:43.571
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "6.7%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.08"
+│   date_now = 2026-09-24T16:50:47.580
+└   estimated_finish_date = 2026-09-24T16:50:47.580
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "8 milliseconds, 342 microseconds"
+│   wall_time_total = "250 milliseconds, 260 microseconds"
+│   wall_time_remaining = "216 milliseconds, 892 microseconds"
+│   wall_time_spent = "33 milliseconds, 368 microseconds"
+│   percent_complete = "13.3%"
+│   estimated_sypd = "39.384"
+│   instantaneous_sypd = "39.384"
+│   date_now = 2026-09-24T16:50:47.802
+└   estimated_finish_date = 2026-09-24T16:50:48.802
+┌ Info: Progress
+│   simulation_time = "14 minutes"
+│   n_steps_completed = 7
+│   wall_time_per_step = "37 milliseconds, 796 microseconds"
+│   wall_time_total = "1 second, 133 milliseconds"
+│   wall_time_remaining = "869 milliseconds, 321 microseconds"
+│   wall_time_spent = "264 milliseconds, 575 microseconds"
+│   percent_complete = "23.3%"
+│   estimated_sypd = "8.692"
+│   instantaneous_sypd = "4.263"
+│   date_now = 2026-09-24T16:50:47.889
+└   estimated_finish_date = 2026-09-24T16:50:48.889
+┌ Info: Progress
+│   simulation_time = "16 minutes"
+│   n_steps_completed = 8
+│   wall_time_per_step = "41 milliseconds, 885 microseconds"
+│   wall_time_total = "1 second, 256 milliseconds"
+│   wall_time_remaining = "921 milliseconds, 480 microseconds"
+│   wall_time_spent = "335 milliseconds, 83 microseconds"
+│   percent_complete = "26.7%"
+│   estimated_sypd = "7.844"
+│   instantaneous_sypd = "4.66"
+│   date_now = 2026-09-24T16:50:47.899
+└   estimated_finish_date = 2026-09-24T16:50:48.899
+┌ Info: Progress
+│   simulation_time = "22 minutes"
+│   n_steps_completed = 11
+│   wall_time_per_step = "32 milliseconds, 712 microseconds"
+│   wall_time_total = "981 milliseconds, 386 microseconds"
+│   wall_time_remaining = "621 milliseconds, 544 microseconds"
+│   wall_time_spent = "359 milliseconds, 841 microseconds"
+│   percent_complete = "36.7%"
+│   estimated_sypd = "10.043"
+│   instantaneous_sypd = "39.811"
+│   date_now = 2026-09-24T16:50:47.923
+└   estimated_finish_date = 2026-09-24T16:50:48.923
+┌ Info: Progress
+│   simulation_time = "28 minutes"
+│   n_steps_completed = 14
+│   wall_time_per_step = "27 milliseconds, 378 microseconds"
+│   wall_time_total = "821 milliseconds, 354 microseconds"
+│   wall_time_remaining = "438 milliseconds, 55 microseconds"
+│   wall_time_spent = "383 milliseconds, 298 microseconds"
+│   percent_complete = "46.7%"
+│   estimated_sypd = "12.0"
+│   instantaneous_sypd = "42.018"
+│   date_now = 2026-09-24T16:50:47.947
+└   estimated_finish_date = 2026-09-24T16:50:48.947
+┌ Warning: water tag closure residual 7.49792116401567e-10 exceeds the configured tolerance 1.0e-10 at t = 1800.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/g3/wp5c/probe/wp5b_cc_default_increment_n1/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wedmf5c/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:822
+┌ Info: Progress
+│   simulation_time = "32 minutes"
+│   n_steps_completed = 16
+│   wall_time_per_step = "26 milliseconds, 14 microseconds"
+│   wall_time_total = "780 milliseconds, 431 microseconds"
+│   wall_time_remaining = "364 milliseconds, 201 microseconds"
+│   wall_time_spent = "416 milliseconds, 229 microseconds"
+│   percent_complete = "53.3%"
+│   estimated_sypd = "12.629"
+│   instantaneous_sypd = "19.953"
+│   date_now = 2026-09-24T16:50:47.980
+└   estimated_finish_date = 2026-09-24T16:50:48.980
+┌ Info: Progress
+│   simulation_time = "38 minutes"
+│   n_steps_completed = 19
+│   wall_time_per_step = "23 milliseconds, 163 microseconds"
+│   wall_time_total = "694 milliseconds, 914 microseconds"
+│   wall_time_remaining = "254 milliseconds, 802 microseconds"
+│   wall_time_spent = "440 milliseconds, 112 microseconds"
+│   percent_complete = "63.3%"
+│   estimated_sypd = "14.183"
+│   instantaneous_sypd = "41.269"
+│   date_now = 2026-09-24T16:50:48.004
+└   estimated_finish_date = 2026-09-24T16:50:49.004
+┌ Warning: water tag closure residual 2.7709993698982493e-9 exceeds the configured tolerance 1.0e-10 at t = 2400.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/g3/wp5c/probe/wp5b_cc_default_increment_n1/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wedmf5c/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:822
+┌ Info: Progress
+│   simulation_time = "44 minutes"
+│   n_steps_completed = 22
+│   wall_time_per_step = "21 milliseconds, 84 microseconds"
+│   wall_time_total = "632 milliseconds, 532 microseconds"
+│   wall_time_remaining = "168 milliseconds, 675 microseconds"
+│   wall_time_spent = "463 milliseconds, 856 microseconds"
+│   percent_complete = "73.3%"
+│   estimated_sypd = "15.582"
+│   instantaneous_sypd = "41.51"
+│   date_now = 2026-09-24T16:50:48.028
+└   estimated_finish_date = 2026-09-24T16:50:49.027
+┌ Warning: water tag closure residual 2.185262387602388e-8 exceeds the configured tolerance 1.0e-10 at t = 3000.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/g3/wp5c/probe/wp5b_cc_default_increment_n1/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wedmf5c/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:822
+┌ Info: Progress
+│   simulation_time = "50 minutes"
+│   n_steps_completed = 25
+│   wall_time_per_step = "19 milliseconds, 510 microseconds"
+│   wall_time_total = "585 milliseconds, 300 microseconds"
+│   wall_time_remaining = "97 milliseconds, 550 microseconds"
+│   wall_time_spent = "487 milliseconds, 750 microseconds"
+│   percent_complete = "83.3%"
+│   estimated_sypd = "16.84"
+│   instantaneous_sypd = "41.25"
+│   date_now = 2026-09-24T16:50:48.051
+└   estimated_finish_date = 2026-09-24T16:50:49.051
+┌ Info: Progress
+│   simulation_time = "56 minutes"
+│   n_steps_completed = 28
+│   wall_time_per_step = "18 milliseconds, 275 microseconds"
+│   wall_time_total = "548 milliseconds, 267 microseconds"
+│   wall_time_remaining = "36 milliseconds, 551 microseconds"
+│   wall_time_spent = "511 milliseconds, 715 microseconds"
+│   percent_complete = "93.3%"
+│   estimated_sypd = "17.977"
+│   instantaneous_sypd = "41.128"
+│   date_now = 2026-09-24T16:50:48.075
+└   estimated_finish_date = 2026-09-24T16:50:49.075
+┌ Warning: water tag closure residual 5.703592628247658e-8 exceeds the configured tolerance 1.0e-10 at t = 3600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/g3/wp5c/probe/wp5b_cc_default_increment_n1/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wedmf5c/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:822
+[ Info: solve! walltime = 0.585
+[ Info: sypd: 16.865
+[ Info: wall_time_per_timestep: 19 milliseconds, 494 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 12.97 GiB
+┌ Info: finished
+│   run = "wp5b_cc_default_increment_n1"
+└   result.ret_code = :success
+
+real	34m5.233s
+user	32m38.759s
+sys	0m28.291s

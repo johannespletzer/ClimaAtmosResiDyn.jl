@@ -49,6 +49,12 @@ Short names for the sources:
 
 ## 2026-09-24
 
+  - **The followers' placement rule (same sign or |m|) is decided after long
+    runs**, not after a day. G4.15 is split: G4.15a (the partition check and
+    the audit names) goes ahead; G4.15b (the same-sign rule for energy) waits.
+    The long runs' setup is approved: the GCM-driven column, 90 days, sites
+    23 and 26, `design/INCREMENT_RULE_LONG_RUNS.md`. **In force; running.**
+
   - **Batch 3 approved (about 15:45):** WP5b-V, WP4a-V, WP5b-C, WP5b-P, the
     WP9 cost items (the plume, the copies' build time) and G4.15, done as WP
     PR batches. Where a criterion was left to the owner (WP4a-V's "material",

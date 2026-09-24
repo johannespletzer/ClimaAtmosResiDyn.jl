@@ -1,0 +1,7 @@
+copies' own audit, relative to the column's water (copy_residual: the last step's, before the repair; copy_repair: cumulative)
+wp5b_off_copies_increment_n1 copy_residual_relative=0.00030356583918224344 copy_repair_relative=0.002494721595137665
+wp5b_off_copies_tracer_n1 copy_residual_relative=0.00019376460040337708 copy_repair_relative=0.0016775992731873268
+wp5b_on_copies_increment_n1 copy_residual_relative=0.00010050249784940595 copy_repair_relative=0.0009159816672534344
+wp5b_on_copies_tracer_n1 copy_residual_relative=0.00012336914901630964 copy_repair_relative=0.0008342448894246438
+wp5b_cc_copies_increment_n1 copy_residual_relative=9.152102566655912e-5 copy_repair_relative=0.0006517784472495966
+wp5b_cc_copies_tracer_n1 copy_residual_relative=0.00011826097741484811 copy_repair_relative=0.0008688907195455608

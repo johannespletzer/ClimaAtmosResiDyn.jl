@@ -382,6 +382,10 @@ run. Acceptance criteria, fixed before the runs:
     nonlinear convergence and parity pass. The follower stays opt-in there.
     Criterion 3 compared runs whose atmospheres differ; a same-atmosphere
     check would isolate the lag. For the owner.
+  - [x] The same-atmosphere check (section 6, W35) **passes**: at 120 s two
+    iterations cut the tags' one-step error 20-fold, and one iteration's
+    halves at 60 s. [ ] The owner revisits W33's verdict; the default does not
+    change before that.
 
 ### WP5b-P: provenance, not only closure
 
@@ -610,9 +614,17 @@ owner's points in the note's section 8.
         split around it allocates 5.7 kB at 8 tags and 1.5 MB at 32 (FINDINGS
         W30). The model's exchange pays it at every implicit evaluation. Find
         where, before the cost budget.
+        **Found and cut (W34, WP9a `bfd9ff08`):** one broadcast of 33
+        arguments; per tag from 32 on, the inputs cost 3.4e-4 s and 189 kB at
+        32 tags, bit for bit the same. Draft PR #106 on #102. [ ] The EDMF
+        integration tests at `bfd9ff08`.
+      + [ ] The rest at 32 tags (W34): the per-cell `map` over 32-tuples, the
+        tracer name helpers, and the exchange's own work growing faster than
+        the number of tags. Before the cost budget.
       + [ ] Copies mode with 32 tags did not build a TRMM column in 4 h (W30;
         8 copies take about 15 min). Measure the build time against the
-        number of copies.
+        number of copies. 8 copies 699 s, 16 copies 2417 s (W34); 32 running
+        with 8 h (`13911480`).
 
 ## The sphere
 
