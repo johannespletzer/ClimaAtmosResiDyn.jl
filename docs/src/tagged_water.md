@@ -301,9 +301,11 @@ the grid tags and the copies leave for it. In the default mode, the model holds
 no subdomain composition, so the split reconstructs one: the grid mean's shares
 plus the exchange's difference for that subdomain, from the steady-plume
 closure the exchange uses. It is a modelled estimate, not a prognosed value. On
-TRMM it moved the tags' water by under 0.5% in 6 h and left the agreement with
-the copies as it was (FINDINGS W26). So it is not yet shown to be closer to a
-converged reference than the grid rule. The
+TRMM 0M it was checked against the copies' own shares on the copies run's
+state, the copies converged over Newton iterations (FINDINGS W32). There the
+grid rule's rain-weighted share error was 0.15 to 0.19, and the
+reconstruction's 9% to 25% of that, on four rungs of timestep, levels and
+iterations. That is one deep-convection column with one partition. The
 partition's shares, both of them in the default mode and the environment's
 with the copies, are scaled by the partition's sum of grid shares. So a
 drifted partition keeps losing in proportion to what it holds.
