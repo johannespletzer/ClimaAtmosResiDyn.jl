@@ -168,6 +168,7 @@ open(joinpath(outdir, "$run_name.csv"), "w") do io
     end
 end
 function report(selected, what)
+    isempty(selected) && return println("RESULT run=$run_name $what no_steps")
     weight = sum(row[2] for row in selected)
     for (i, name) in enumerate(names)
         grid = sum(row[4 + 3(i - 1) + 1] for row in selected) / weight
