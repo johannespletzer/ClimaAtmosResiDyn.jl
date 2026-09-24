@@ -1847,7 +1847,9 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # stored as one tuple per cell, so the tag fields are read once, and each
     # tag's kernel below reads a few tuple fields rather than every tag.
     ᶜε̄ = p.scratch.ᶜe_src_mean
-    tag_fields = map(tag -> tag_field(Y.c, tag), model.tags)
+    # `unrolled_map`: `map` over 32 tags or more returns a tuple whose type is
+    # not inferred, and every kernel it feeds then dispatches at run time.
+    tag_fields = unrolled_map(tag -> tag_field(Y.c, tag), model.tags)
     Base.Broadcast.materialize!(
         ᶜε̄,
         Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, tag_fields...),
@@ -1962,8 +1964,10 @@ end
 _exchange_upwinding(upwinding) = upwinding
 _exchange_upwinding(::Val{:vanleer_limiter}) = Val(:first_order)
 
+# `ntuple` over the index, not `map`: `map` over a tuple of 32 values or more
+# takes Base's generic path, which allocates in every cell (FINDINGS W30).
 @inline _nonnegative_specific(ρ, ρχs...) =
-    map(ρχ -> max(ρχ, zero(ρχ)) / ρ, ρχs)
+    ntuple(i -> max(ρχs[i], zero(ρχs[i])) / ρ, Val(length(ρχs)))
 
 # One level of the plume: the grid mean's specific values, the grid mean's
 # weight in the step, and whether the plume starts again here, because there is
@@ -1986,7 +1990,10 @@ end
 @inline function _plume_step(εʲ_below, level)
     (ε̄, weight, restart) = level
     (restart | isnan(first(εʲ_below))) && return ε̄
-    return map((εʲ, ε) -> εʲ + weight * (ε - εʲ), εʲ_below, ε̄)
+    return ntuple(
+        i -> εʲ_below[i] + weight * (ε̄[i] - εʲ_below[i]),
+        Val(length(ε̄)),
+    )
 end
 
 # The sum of the partition's values, which `partition`, a tuple of `Bool`s,
