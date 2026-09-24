@@ -1213,8 +1213,12 @@ end
     end
 
     @testset "The stepper check, shared with the energy source tags" begin
-        atmos(transport) =
-            (; water_tagging_model = CA.WaterTaggingModel(tags; transport))
+        # 0M, stepped implicitly: the explicit-1M refusal does not apply.
+        atmos(transport) = (;
+            water_tagging_model = CA.WaterTaggingModel(tags; transport),
+            microphysics_model = CA.EquilibriumMicrophysics0M(),
+            microphysics_tendency_timestepping = CA.Implicit(),
+        )
         increment = atmos(CA.IncrementWaterTagTransport())
         newton = CTS.NewtonsMethod()
         imex(tableau) = CTS.IMEXAlgorithm(tableau, newton)
