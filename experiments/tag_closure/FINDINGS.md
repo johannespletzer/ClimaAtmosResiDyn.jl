@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
-| E39, E39b, E43, E59, E61, E62, E64–E67           | 5. The implicit channel and the increment prototype |
+| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80 | 5. The implicit channel and the increment prototype |
 | E45, E47, E51, E54, E55, E57, E58                | 6. Parity, Float32, MPI and restarts                |
 | E7–E9, E20–E24, E26, E28, E30, E38, E49, E63     | 7. The process records and the per-process checks   |
 | E50, E60, E69, E70, E74, E75                     | 8. The sphere and long runs                         |
@@ -1709,6 +1709,53 @@ error would have gone into `e_src_res`. The fix scales the flux by the bottom
 face's area over each face's own (`04d63916`, on #94); on a flat grid nothing
 changes. *Jobs `13504953` (fixed) and `13504956` (`c0bc637f`), `hpda2_test`,
 2026-09-19; `analysis/increment/sphere_increment_deep.jl`.*
+
+**E79. G4.15: with the water tags' same-sign rule the energy follower keeps
+each cell's correction within its own mismatch, but on D4 its day's gross
+closure residual rises from 2.3e-6 to 9.2e-6, and it moves as much as before.
+The model is bit for bit the same.** `g1_inc_d4`'s configuration (E64: D4,
+1M, EDMF, `enthalpy_increment`, a day) at #102's head (`e29384ee`, the |m|
+rule) and at G4.15 (`2b43580d`, the same-sign rule, the 100-unit partition
+check, the `_net_abs` names):
+
+| D4, 24 h, over the partition's energy | |m| rule  | same sign |
+|:------------------------------------- | ---------:| ---------:|
+| net closure residual                  | −8.7e-9   | +9.5e-8   |
+| gross closure residual                | 2.3e-6    | 9.2e-6    |
+| left out (`increment_left`)           | −4.0e-7   | −4.0e-7   |
+| left out, the cells' absolute ledgers | 2.7e-6    | 9.7e-6    |
+| moved, the cells' absolute ledgers    | 0.289     | 0.288     |
+
+  - `ta`, `rhoa` and `hus` are bit for bit the same at every hour.
+  - The part left out is the same, since it is the columns' total by
+    construction; where it lands differs. The same-sign rule puts it in fewer
+    cells, where it cancels less over the day, so the gross rises. On water
+    (W28) the same rule halved the moved ledger; here it moves as much.
+  - The rule's property holds by construction (no cell leaves out or moves
+    more than its own mismatch). Whether that is worth a fourfold gross, at
+    9e-6, is for the owner (G4.15).
+
+*`hpda2_compute`, 2026-09-24, jobs `13911687` (before, from
+`../ClimaAtmosResiDyn-wedmf5-run` at `2e811fb2`) and `13911688` (after, from
+`../ClimaAtmosResiDyn-wedmf5r-run` at `7856501b`); closure and audit tables in
+`output/g415/`.*
+
+**E80. The energy source tags lag the parent's sedimentation on the explicit
+1M path, as the water tags did before their cross blocks: 2.1e-4 of the
+energy an hour with one Newton iteration, against 1.5e-6 on the implicit
+path.** W23's column (DYCOMS RF02, 1M, EDMF, ARS222, `dt` 120 s, an hour)
+with the energy source tags `strat`, `tropo` and `sfc` under
+`enthalpy_increment` (N5 of the review of #105):
+
+| microphysics, Newton iterations | net      | gross    |
+|:------------------------------- | --------:| --------:|
+| explicit, 1                     | 1.5e-4   | 2.1e-4   |
+| explicit, 10                    | 3.7e-12  | 4.9e-12  |
+| implicit, 1                     | −7.7e-7  | 1.5e-6   |
+
+The water tags' fix, cross blocks to each falling species, is G4.16. Until
+then nothing refuses `enthalpy_increment` there. *Jobs `13911689` to
+`13911691`, G4.15 at `7856501b`; `output/g415/`.*
 
 ## 6. Parity, Float32, MPI and restarts
 

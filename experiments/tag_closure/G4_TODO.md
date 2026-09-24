@@ -273,6 +273,18 @@ water tags now carry sedimentation cross blocks, and the energy source tags
 do not. Nothing refuses `enthalpy_increment` there, and no run measures it.
 Measure it on W23's explicit column before either is decided.
 
+  - [x] Built on `claude/energy-follower-review` (`2b43580d`, on #102): the
+    100-unit partition check, the same-sign rule, the `_net_abs` names. Unit
+    tests pass.
+  - [x] Validated against E64's D4 day (FINDINGS E79): the model bit for bit
+    the same; the part left out the same; the moved ledger the same (not
+    halved, as for water); the gross closure residual 2.3e-6 → 9.2e-6.
+    **For the owner:** keep the same-sign rule for its bound (no cell corrects
+    more than its own mismatch) at a fourfold gross, or keep |m| for energy.
+  - [x] N5 measured (FINDINGS E80): 2.1e-4 an hour on the explicit path with
+    one iteration, 1.5e-6 implicit. The fix is G4.16.
+  - [ ] PR, after the owner's choice above.
+
 ### G4.16 Sedimentation cross blocks for the energy source tags
 
 Added on 2026-09-24, at the owner's request. The water tags' rows now carry the
