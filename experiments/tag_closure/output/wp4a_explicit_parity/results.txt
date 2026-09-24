@@ -1,0 +1,36 @@
+# analysis/water/wp4a_explicit_parity.jl, job 13874414, hpda2_compute, 2026-09-24. WP4a's source as at 63a1ddaa; b4c44841, committed while the job queued, changes only a unit test. The job's git lookup printed no commit.
+# stdout:
+script: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/analysis/water/wp4a_explicit_parity.jl at 
+Test Summary:          | Pass  Total     Time
+explicit, default mode |   10     10  9m36.2s
+Test Summary:    | Pass  Total      Time
+explicit, copies |   10     10  11m29.4s
+# stderr, the info lines about the runs and the timing:
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (88.047 μs, 2.82 KiB)
+[ Info: Built cache (88.915 s, 15.17 GiB)
+[ Info: Assembled callbacks (222.294 ms, 15.07 MiB)
+[ Info: Built tendency function (77.715 s, 2.51 GiB)
+[ Info: Initialized integrator (41.83 s, 2.26 GiB)
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (331.622 μs, 3.59 KiB)
+[ Info: Built cache (36.449 s, 3.06 GiB)
+[ Info: Assembled callbacks (91.078 ms, 2.16 MiB)
+[ Info: Built tendency function (16.408 s, 600.35 MiB)
+[ Info: Initialized integrator (41.887 s, 2.22 GiB)
+[ Info: Added 2 user-provided YAML-style diagnostics
+[ Info: Initialized 2 total diagnostics
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (79.948 μs, 4.34 KiB)
+[ Info: Built cache (37.921 s, 4.25 GiB)
+[ Info: Assembled callbacks (89.734 ms, 2.16 MiB)
+[ Info: Built tendency function (82.146 s, 3.42 GiB)
+[ Info: Initialized integrator (42.921 s, 2.24 GiB)
+[ Info: Added 2 user-provided YAML-style diagnostics
+[ Info: Initialized 2 total diagnostics
+real	34m52.662s
+user	34m28.715s
+sys	0m21.747s

@@ -59,11 +59,10 @@ The twelve criteria of the plan, section 2, in short:
     The owner's review of #102 (2026-09-24) asked for it to be applied. It is
     applied in #102 where the configuration supports the follower, and
     `tracer` stays the default elsewhere and with copies.
-  - [ ] **The explicit-1M path under the follower** (the owner's review of
-    #102, point 3). It is refused for now. The fix is the owner's choice:
-    route the column's total through the bottom face, or give the tags the
-    parent's sedimentation cross blocks. The latter is recommended, as a
-    follow-up with the review's distinguishing experiment.
+  - [x] **The explicit-1M path under the follower** (the owner's review of
+    #102, point 3). It is refused for now. The owner chose on 2026-09-24 to
+    give the tags the parent's sedimentation cross blocks. That work is in
+    progress, with the review's distinguishing experiment.
   - [ ] **The copies' repair** moves 0.6% of D4-W's water in a day, 0.27%
     with ten Newton iterations, over plan 6.1's 0.2%, so the audit is flagged
     (W21). Whether the audit stands as it is, or its repair's cause is

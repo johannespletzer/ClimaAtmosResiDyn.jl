@@ -25,11 +25,57 @@ Short names for the sources:
     **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
   - **The default mode's cost budget**, proposed from V-W10's first
     measurements, set before V-W11. **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
-  - **WP5's default transport under EDMF**, by the rule fixed in G3_PLAN 4.3,
-    after V-W3. The rule decides; the owner confirms. **Waiting.** [G3T](G3_TODO.md#decisions)
   - **The prognostic fields of the rain and snow tags**, settled in design note
     WP4b-D and its review. Recommended: the non-precipitating, rain and snow
-    parts. **Waiting.** [G3T](G3_TODO.md#decisions)
+    parts. Three further points of the note's section 15 go with it.
+    **Waiting.** [G3T](G3_TODO.md#decisions)
+  - **WP4a's two points:**
+      + known issue 4's Jacobian, either the pair of entries or the diagonal
+        alone as a test;
+      + where the copies' part of issue 4 goes.
+
+    **Waiting.** [G3T](G3_TODO.md#decisions)
+  - **WP6's three points:**
+      + whether a pre-WP6 checkpoint is refused or zero-filled;
+      + whether loss and τ move to WP4a and WP4b;
+      + whether the transfer ledgers stay as they are or go per tag.
+
+    **Waiting.** [G3T](G3_TODO.md#decisions)
+  - **The copies' repair over its bound, and the surface rule in the first
+    hour** (W21). **Waiting.** [G3T](G3_TODO.md#decisions)
+  - **When to investigate V-W4's two breaks:** the partition at 120 levels,
+    and the copies under first-order upwinding (W25). **Waiting.**
+    [FINDINGS W25](FINDINGS.md)
+
+## 2026-09-24
+
+  - **The explicit-1M path under the follower: the tags get the parent's
+    sedimentation cross blocks**, not a route through the bottom face. Until
+    then the follower is refused there (#102). **In force; in progress.**
+    [G3T](G3_TODO.md#decisions), the owner's review of #102, point 3
+  - **WP5's default transport under EDMF is applied.** `increment` is the
+    default in the default mode under prognostic EDMF, where the
+    configuration supports it; `tracer` elsewhere and with copies. The
+    owner's review of #102 asked for G3_PLAN 4.3's rule to take effect.
+    **Done** (#102 at `a3a23d80`).
+  - **The owner's review of #102, points 2 and 4 to 7, as proposed:**
+      + the partition tolerance at 100 rounding units;
+      + the column's total left out only where the mismatch has its sign;
+      + the net-over-time audit columns renamed;
+      + the docs qualified;
+      + the W24 evidence pinned under the tag `evidence/w24`.
+
+    **Done** (#102), W28.
+  - **A checklist runs at each WP milestone and each goal's end**: STATUS,
+    `output/`, FINDINGS, RUNS, the TODO file, reviews, and a push.
+    **In force.** [README.md, "Closing a work package or a goal"](README.md#closing-a-work-package-or-a-goal)
+  - **The session goal extends** (late on 2026-09-23 and early on 2026-09-24):
+      + WP5;
+      + WP4b-D, the rain and snow tags' design note;
+      + Batch 2: V-W8, WP6, WP4a and V-W4.
+
+    Jobs within these have standing approval. **In force.** Memory:
+    `session-goal-wp0-wp1.md`
 
 ## 2026-09-23
 

@@ -3,7 +3,7 @@
 The entry point for every session. Written on 2026-09-23 around 11:30, during
 the housekeeping (step H4). Updated at 13:55 the same day, when the
 housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
-done. Update it when something here changes, and at each milestone of a work
+done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for). Update it when something here changes, and at each milestone of a work
 package and at each goal's end. The checklist for those moments is in
 [README.md](README.md), "Closing a work package or a goal". Where a fact was
 not checked, it says so.
@@ -33,6 +33,39 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-09-24, 09:30.** The session's goal grew twice overnight.
+    Late on 2026-09-23 it added WP5. On 2026-09-24 it added WP4b-D and
+    Batch 2: V-W8, WP6, WP4a and V-W4.
+      + **WP3, #101: green.** The owner's review is answered on the PR.
+      + **WP5, #102.** Built, reviewed at xhigh, and validated on D4-W (W24).
+        The owner reviewed it on 2026-09-24, and all seven points are taken at
+        `a3a23d80` (docs fix `e29384ee`; CI queued).
+          * `increment` is now the default in the default mode under EDMF,
+            where it is supported.
+          * The follower is refused with 1M stepped explicitly.
+          * Its column total goes only where the mismatch has its sign. That
+            halves the water it moves on D4-W (W28).
+          * The evidence behind the default is tagged `evidence/w24`.
+      + **Explicit 1M.** The owner chose the tags' sedimentation cross blocks
+        for this path. That is the next piece of work.
+      + **WP6, #103: steps 1 and 2 are built and green.** The review at high
+        effort is taken; it found a Float32 bug in step 1's event count.
+        Checks at the other cadences are in W27. Step 3 waits on the owner's
+        three points.
+      + **WP4a, #104: a draft.** The review at xhigh is taken. The split is
+        validated on TRMM 0M, where it moves the tags by at most 0.47%, both
+        modes alike (W26). The explicit path is parity-checked. The Jacobian
+        of known issue 4 waits on the owner.
+      + **WP4b-D:** the design note is reviewed. The fields wait on the owner.
+      + **V-W8 is done (W22).**
+      + **V-W4 is done (W25).**
+          * The default meets its budgets on the time-step and Newton rungs,
+            but not at 60 or 120 levels.
+          * At 120 levels, and for the copies under first-order upwinding,
+            the partition breaks. Neither break is isolated yet.
+      + Every open decision is in [DECISIONS.md](DECISIONS.md), "Waiting for
+        the owner". When a WP reaches a milestone, run the checklist in
+        [README.md](README.md), "Closing a work package or a goal".
   - **Update, late on 2026-09-23.** WP1 is draft PR #100, green, waiting for
     the owner. WP3 is PR #101: built, reviewed by `clima-numerics-reviewer`
     and by the owner, whose points are addressed at `4a1c91a4`. **V-W3 is
@@ -86,6 +119,11 @@ not checked, it says so.
 | `claude/water-tags-edmf`      | `ClimaAtmosResiDyn-wedmf`                                                                                        | this session                     | G3's model code; draft PR #100                               |
 | (detached, the record branch) | `ClimaAtmosResiDyn-wedmf-run`                                                                                    | this session                     | G3's runs launch from here, at a commit the manifest records |
 | (detached, upstream v0.42.11) | `ClimaAtmos-upstream-d331fe3`                                                                                    |                                  | the parity reference for the next upstream merge             |
+| `claude/water-tags-edmf-wp3`  | `ClimaAtmosResiDyn-wedmf3`                                                                                       | this session                     | WP3, #101                                                    |
+| `claude/water-tags-edmf-wp5`  | `ClimaAtmosResiDyn-wedmf5`                                                                                       | this session                     | WP5, #102                                                    |
+| `claude/water-tags-edmf-wp6`  | `ClimaAtmosResiDyn-wedmf6`                                                                                       | this session                     | WP6, #103                                                    |
+| `claude/water-tags-edmf-wp4a` | `ClimaAtmosResiDyn-wedmf4a`                                                                                      | this session                     | WP4a, #104                                                   |
+| (detached run trees)          | `-wedmf-run`, `-wedmf4a-run`, `-wedmf5-run`, `-wedmf5r-run`                                                      | this session                     | the record merged with a PR's head; each run's manifest names its commit |
 
 The old experiment branch `claude/tag-closure-experiments` and the old G3
 branch `claude/g3-programme` are retired. Their remote branches were deleted
@@ -126,7 +164,11 @@ section 5). Records go on `claude/tag-closure-record`. Outside
 | #97  | `claude/historical-tag-closure-pages`    | merged 2026-09-23, 12:12 (`b1a088a4`)                                                                                                                                                                                                                                                                                                                                                 | the "Historical" notes on `docs/src/tag_closure_memo.md` and `tag_closure_experiments.md`                                                            |
 | #98  | `claude/tag-closure-condense`            | merged into the record branch 2026-09-23, 13:47 (`859d38f8`)                                                                                                                                                                                                                                                                                                                          | H6, the condensed documents                                                                                                                          |
 | #99  | `claude/prek-exclude-experiment-records` | merged 2026-09-23, 13:30 (`e8fcc0f1`)                                                                                                                                                                                                                                                                                                                                                 | excludes the record's frozen files (`archive/`, `output/`, `review/`, `reference/`, `configs/` under `experiments/tag_closure/`) from the prek hooks |
-| #100 | `claude/water-tags-edmf`                 | draft; at `30dcfee9` after the owner's review (request changes, 2026-09-23) was addressed; CI queued on GitHub at 18:10                                                                                                                                                                                                                                                               | G3 WP1: water tags refused under prognostic EDMF and AMD LES, warned under a prescribed flow; reserved name prefixes; known issues 3 and 4 restated  |
+| #100 | `claude/water-tags-edmf`                 | open, at `5ef18980`; the owner's review addressed; green (2026-09-24, 09:20)                                                                                                                                                                                                                                                                                                            | G3 WP1: water tags refused under prognostic EDMF and AMD LES, warned under a prescribed flow; reserved name prefixes; known issues 3 and 4 restated  |
+| #101 | `claude/water-tags-edmf-wp3`             | open, at `06adcf1c`; green; the owner's review answered on the PR                                                                                                                                                                                                                                                                                                                       | G3 WP3: water tags under EDMF, the exchange by default and copies as the audit                                                                       |
+| #102 | `claude/water-tags-edmf-wp5`             | open, at `e29384ee`; the owner's review (2026-09-24) taken and answered; CI running                                                                                                                                                                                                                                                                                                     | G3 WP5: the increment follower, the default under EDMF where supported                                                                               |
+| #103 | `claude/water-tags-edmf-wp6`             | open, at `88949f60`; steps 1 and 2; green                                                                                                                                                                                                                                                                                                                                               | G3 WP6: gross twins, counts, state ledgers per mechanism, the per-step gross                                                                         |
+| #104 | `claude/water-tags-edmf-wp4a`            | draft, at `b66b0eb1`; green                                                                                                                                                                                                                                                                                                                                                             | G3 WP4a: the 0M rain-out split by subdomain, `pr_tag`, known issue 4 restated                                                                        |
 
 Only the owner merges. The token cannot mark a PR ready for review.
 
@@ -139,6 +181,8 @@ Only the owner merges. The token cannot mark a PR ready for review.
   - **G3:** V-W0a (six runs), V-W0c, V-W1 and the known-issue-1 test run
     finished on 2026-09-23 and are recorded as W15 to W19.
   - Slurm was queried at 18:10: no job of this account was queued or running.
+  - **2026-09-24, 09:20:** no job of this account is queued or running. Every
+    run of the night is recorded, W22 to W28.
 
 ## The housekeeping, H0 to H7: done
 
@@ -191,8 +235,9 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
     ([G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)).
   - **The rain and snow tags' prognostic fields**, after the design note
     WP4b-D and its review ([G3_TODO](G3_TODO.md#decisions)).
-  - **WP5's default transport under EDMF**, by the rule of G3_PLAN 4.3, after
-    V-W3.
+  - WP4a's, WP6's and WP4b-D's points, the copies' repair, the surface rule,
+    and V-W4's two breaks: [DECISIONS.md](DECISIONS.md), "Waiting for the
+    owner".
   - **`main`'s CI at `0b2b1032`**, after #95's merge, which was queued at
     16:40. V-W1 runs on it.
   - **A rerun of `main`'s CI.** #96 and #97 were merged with `ci-required`

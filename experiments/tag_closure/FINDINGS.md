@@ -744,8 +744,9 @@ Each pair ran in the default mode and with copies. The verifier compared them.
 `13876509`. The 6 h split pair ran from `../ClimaAtmosResiDyn-wedmf4a-run` at
 `34f9a334`, jobs `13877542` and `13877543`. The grid-rule twins ran from
 `../ClimaAtmosResiDyn-wedmf5-run` at `9abb1f62`, jobs `13877544` and
-`13877545`. The explicit-path script ran as job `13874414` at `63a1ddaa`.
-Reports are in `output/w4a_trmm0m/`.*
+`13877545`. The explicit-path script ran as job `13874414` at `63a1ddaa`; its
+log is in `output/wp4a_explicit_parity/`. Reports are in
+`output/w4a_trmm0m/`.*
 
 **W27. WP6's state ledgers under the other cadences: parity holds at `stage`
 and `dss` with ARS343, and the per-step gross is exact bit for bit. At `dss`
