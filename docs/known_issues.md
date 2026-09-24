@@ -90,10 +90,12 @@ screens only the microphysics model. The refusal was kept separate from it,
 since that function also gates `water_process_record`, whose records are not
 transported and stay allowed.
 
-## 4. The implicit water-microphysics attribution has no Jacobian diagonal
+## 4. The implicit water-microphysics attribution has no Jacobian entries
 
-**Status:** diagnosed, not fixed. Open: whether the missing entry changes the
-answer after a fixed number of Newton iterations has not been isolated.
+**Status:** diagnosed; restated on 2026-09-24. For a pure proportional sink
+the missing entries cost nothing, and the diagonal alone would cost. Open:
+which Jacobian to add, if any, which is the owner's choice, and a measurement
+with other implicit processes in the same stage.
 
 **The updraft copies under 0M are affected too.** With
 `water_tag_updraft_copy: true` the copies' rain-out mirror,
@@ -119,9 +121,36 @@ under 1M the sedimentation diagonal carries no microphysics term.
 
 The comment at `implicit_tendency.jl:322-328` justifying the *energy* bracket's `-I` ("the attributed
 increment does not depend on the tags themselves") is true for
-`:precipitation` and false for the water bracket. With a fixed Newton
-iteration count this is in principle error in the answer rather than only
-slower convergence.
+`:precipitation` and false for the water bracket.
+
+**What the analytic Jacobian needs, restated on 2026-09-24.** The loss
+`min(Δ, 0) · ρq_tagᵢ / ρq_tot`, with `ρq_tot` the Newton iterate, has two
+partial derivatives. One is the diagonal `min(Δ, 0) / ρq_tot`. The other is a
+cross term to the parent, `−min(Δ, 0) · ρq_tagᵢ / ρq_tot²`. The parent's own
+sink needs no entry, since `dq` is frozen during the solve
+(`microphysics_cache.jl:681-682, 700-729`). A scalar Newton model that starts
+from the predictor (ClimaTimeSteppers 1.0.1, `imex_ark.jl:212, 312`) gives,
+for a pure proportional sink with `c = dtγ |Δ| / ρq_tot`:
+
+  - no entry, today: one iteration gives `Ŷᵢ (1 − c)`. The shares do not
+    change, so that is the fixed point;
+  - the diagonal alone: `Ŷᵢ / (1 + c)`, off by `Ŷᵢ c² / (1 + c)` per stage.
+    The partition leaves the parent by that much;
+  - the diagonal and the cross term: exact.
+
+So the earlier statement here, that the missing diagonal is in principle an
+error in the answer, was backwards for the pure sink. With other implicit
+processes changing the shares in the same stage, the scalar model's cases
+showed the diagonal alone trading per-tag error against closure, and the pair
+better than both. These are a scalar model's results, not measurements of the
+model. The pair's cross block is one-way, a tag's row with the `ρq_tot`
+column, so the model's own solve is untouched. But the split solver
+(`uncoupled_jacobian_names`) would then need a back-substitution step for the
+tags. Under prognostic EDMF with the 0-moment rain-out split by subdomain
+(`splits_rainout`), the tags' increment is no longer proportional to the grid
+share, and neither entry is its derivative. The analysis, the review and the
+experiment's design are WP4a's note, `design/ZERO_M_SPLIT.md` on the branch
+`claude/tag-closure-record`.
 
 **A first measurement, 2026-09-23, which does not isolate the entry.** The
 DYCOMS RF02 column under 0M without EDMF, at `dt` 120 s, rains out its initial
@@ -145,7 +174,7 @@ implicit or explicit microphysics, each with 1 and 10 Newton iterations.
     path.
 
 To isolate it, compare runs with the same implicit residual and time
-integration that differ only in whether the analytic diagonal is present,
+integration that differ only in whether the analytic entries are present,
 across a Newton-iteration ladder with a tightly converged reference and a time
 step ladder, reading the region tags, the source tags, `q_tag_res` and the
 nonlinear convergence.

@@ -289,6 +289,25 @@ The copies start, and are rebuilt from a file, as ``q_\mathrm{tot}^j`` times
 the grid mean's share. They cost one updraft tracer per tag, and they are the
 audit of the default mode's plume.
 
+**The 0-moment rain-out.** Under 0-moment microphysics, EDMF computes the
+rain-out per subdomain: ``\Delta^j = \rho a^j \, \partial_t q_\mathrm{tot}^j``
+in the updraft and ``\Delta^0 = \rho a^0 \, \partial_t q_\mathrm{tot}^0`` in the
+environment. The model adds their sum to ``\rho q_\mathrm{tot}``. The
+grid-scale tags take each part by that subdomain's composition,
+``\sum_k \Delta^k \varphi_i^k``, not by the grid mean's
+(`splits_rainout`, `add_split_rainout!`). With the copies, the updraft's share
+is the copy's, ``\chi_i^j / q_\mathrm{tot}^j``, and the environment's is what
+the grid tags and the copies leave for it. In the default mode, the shares are
+the grid mean's plus the exchange's difference for that subdomain. The
+partition's shares, both of them in the default mode and the environment's
+with the copies, are scaled by the partition's sum of grid shares. So a
+drifted partition keeps losing in proportion to what it holds.
+Where a subdomain's share is not defined, the grid mean's applies. The split
+applies to both signs, since a subdomain's area can go negative in the Newton
+iterates. In the default mode without the SGS mass flux there is no
+exchange, and the grid mean's share applies to all the rain-out, as it does
+without EDMF. The model's fields do not change.
+
 **Refusals.** Both modes refuse more than one updraft. The copies are refused
 without prognostic EDMF, and when `edmfx_mse_q_tot_upwinding` differs from
 `edmfx_tracer_upwinding`, because the copies' fluxes then do not sum to the
@@ -346,7 +365,15 @@ correction (`energy_q_tot_upwinding` other than `none`). A restart that changes
   - `q_tag_upfix_<name>` and `q_tag_copy_res`: with updraft copies, the copies'
     repair, cumulative as `q_tag_fix` is, and the residual it found;
   - `q_tag_leak_<path>`: the rate at which one path drifts the partition's sum
-    from ``\rho q_\mathrm{tot}``, computed from the state; see below.
+    from ``\rho q_\mathrm{tot}``, computed from the state; see below;
+  - `pr_tag_<name>`, `prra_tag_<name>` and `prsn_tag_<name>`, under 0-moment
+    microphysics only: the tag's part of `pr`, `prra` and `prsn`, the column
+    integral of its part of the rain-out (`water_tag_precipitation!`). It is
+    upward-positive as `pr` is, so negative, and split into rain and snow by
+    the grid mean's temperature as `pr` is. Over a partition the tags' sum is
+    `pr`, up to the partition's residual. It is computed from the state at
+    output time, so it is the rate at the step's end, not the one the step
+    applied. Under 1-moment it waits on rain and snow tags.
 
 !!! note "What `q_tag_fix` includes"
 
@@ -500,6 +527,10 @@ ClimaAtmos.water_tag_copy_sgs_names
 ClimaAtmos.water_tag_edmf_audit
 ClimaAtmos.WATER_TAG_LEAK_PATHS
 ClimaAtmos.water_tag_leak!
+ClimaAtmos.splits_rainout
+ClimaAtmos.add_split_rainout!
+ClimaAtmos.add_rainout_increments!
+ClimaAtmos.water_tag_precipitation!
 ClimaAtmos.IncrementWaterTagTransport
 ClimaAtmos.TracerWaterTagTransport
 ClimaAtmos.follows_water_increment
