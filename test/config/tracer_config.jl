@@ -349,6 +349,64 @@ end
     )
     @test enthalpy.energy_source_tagging_model.transport isa
           CA.EnthalpyEnergySourceTransport
+
+    # `enthalpy_increment` with 1M stepped explicitly: the tags have no
+    # sedimentation cross blocks, so they lag the parent there (FINDINGS E80
+    # on the record branch). The default refuses it. The opt-in key lets it
+    # through the check, with a warning.
+    explicit_1m = (
+        "microphysics_model" => "1M",
+        "implicit_microphysics" => false,
+        "energy_source_tag_transport" => "enthalpy_increment",
+    )
+    @test_throws r"refused with 1M" CA.AtmosTagging(
+        source_config("increment_explicit_1m", explicit_1m...),
+    )
+    @test_throws r"energy_source_tag_increment_allow_explicit_1m: true" CA.AtmosTagging(
+        source_config("increment_explicit_1m", explicit_1m...),
+    )
+    allowed = @test_logs (:warn, r"stepped explicitly") match_mode = :any CA.AtmosTagging(
+        source_config(
+            "increment_explicit_1m_allowed",
+            explicit_1m...,
+            "energy_source_tag_increment_allow_explicit_1m" => true,
+        ),
+    )
+    @test allowed.energy_source_tagging_model.transport isa
+          CA.EnthalpyIncrementEnergySourceTransport
+    # The refusal concerns only that combination. With the microphysics
+    # implicit, the default, or with another transport, nothing changes, and
+    # the key's default is off.
+    implicit_1m = CA.AtmosTagging(
+        source_config(
+            "increment_implicit_1m",
+            "microphysics_model" => "1M",
+            "energy_source_tag_transport" => "enthalpy_increment",
+        ),
+    )
+    @test implicit_1m.energy_source_tagging_model.transport isa
+          CA.EnthalpyIncrementEnergySourceTransport
+    tracer_explicit_1m = CA.AtmosTagging(
+        source_config(
+            "tracer_explicit_1m",
+            "microphysics_model" => "1M",
+            "implicit_microphysics" => false,
+        ),
+    )
+    @test tracer_explicit_1m.energy_source_tagging_model.transport isa
+          CA.TracerEnergySourceTransport
+    @test CA.energy_source_increment_explicit_1m_from_config(nothing) == false
+    @test CA.energy_source_increment_explicit_1m_from_config(true) == true
+    @test_throws r"must be `true` or `false`" CA.energy_source_increment_explicit_1m_from_config(
+        "true",
+    )
+    # As the offset and the transport, the key is refused without tags.
+    @test_throws r"no tags for it to allow" CA.AtmosTagging(
+        tracer_config(
+            ["energy_source_tag_increment_allow_explicit_1m" => true];
+            job_id = "tracer_config_source_explicit_1m_alone",
+        ),
+    )
 end
 
 @testset "passive_tracers release grid" begin
