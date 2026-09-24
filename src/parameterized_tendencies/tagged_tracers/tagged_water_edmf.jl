@@ -1046,6 +1046,8 @@ record_water_tag_copy_filter!(Y, p) =
 _water_tag_copy_filter!(Y, p, model, when) = nothing
 function _water_tag_copy_filter!(Y, p, model::WaterTaggingModel, when)
     has_water_tag_updraft_copies(model) || return nothing
+    # Without the filter nothing changes the copies here.
+    p.atmos.edmfx_model.filter || return nothing
     (; ᶜwater_copy_before, ᶜwater_copy_sum, ᶜwater_copy_pos) = p.tagging
     ᶜsgsʲ = Y.c.sgsʲs.:(1)
     @. ᶜwater_copy_sum = 0

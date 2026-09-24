@@ -388,7 +388,7 @@ end
                 startswith(string(name), "prc_"),
             propertynames(Y.c),
         )
-        @test length(diagnostic_names) == 5
+        @test length(diagnostic_names) == 6
         @test Set(map(field -> field.name, cache.solver.uncoupled)) ==
               Set(map(name -> CA.MatrixFields.FieldName(:c, name), diagnostic_names))
     end

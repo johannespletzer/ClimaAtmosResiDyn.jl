@@ -1030,6 +1030,7 @@ column_atmos_model(; kwargs...) =
                 ρe_src_tropo = FT[-2000, -7000],
                 ρe_src_sfc = FT[-5, -5],
                 e_src_led_repair = zeros(FT, 2),
+                e_src_led_repairnet = zeros(FT, 2),
             ),
         )
         cache(model) = (;
@@ -1082,6 +1083,7 @@ column_atmos_model(; kwargs...) =
               (abs(fix.ρe_src_strat[1]) + abs(fix.ρe_src_tropo[1])) / 2
         @test Y.c.e_src_led_repair[1] ≈ 2000
         @test Y.c.e_src_led_repair[2] == 0
+        @test all(iszero, Y.c.e_src_led_repairnet)
         # The gross twin takes each change's absolute value, the count one
         # event per changed cell, in Float64.
         for name in tag_state_names
@@ -1564,7 +1566,10 @@ end
     state(names...; with_ledger = any(CA.is_energy_source_tag_name, names)) = (;
         c = (;
             NamedTuple{(:ρ, :ρe_tot, names...)}(Tuple(zeros(2 + length(names))))...,
-            (with_ledger ? (; e_src_led_repair = 0.0) : (;))...,
+            (
+                with_ledger ? (; e_src_led_repair = 0.0, e_src_led_repairnet = 0.0) :
+                (;)
+            )...,
         ),
     )
     tagged = state(:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)

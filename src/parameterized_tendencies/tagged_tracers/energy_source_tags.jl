@@ -1033,6 +1033,19 @@ function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
         ᶜparent,
         model.tags,
     )
+    # Where the parent is positive and every tag is zeroed, the repair adds
+    # `max(-(pos + neg), 0)` to the partition's sum. That part is not moved
+    # between tags, so it goes to its own ledger (WP6, the code review's S1).
+    @. Y.c.e_src_led_repair -= ifelse(
+        ᶜparent > 0,
+        max(-(ᶜenergy_source_pos + ᶜenergy_source_neg), 0) / 2,
+        zero(ᶜenergy_source_pos),
+    )
+    @. Y.c.e_src_led_repairnet += ifelse(
+        ᶜparent > 0,
+        max(-(ᶜenergy_source_pos + ᶜenergy_source_neg), 0),
+        zero(ᶜenergy_source_pos),
+    )
     return nothing
 end
 

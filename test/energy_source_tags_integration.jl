@@ -285,6 +285,7 @@ end
             CA.MatrixFields.@name(c.ρe_src_tropo),
             CA.MatrixFields.@name(c.ρe_src_rad),
             CA.MatrixFields.@name(c.e_src_led_repair),
+            CA.MatrixFields.@name(c.e_src_led_repairnet),
         )
         dtγ = FT(5)
         t = simulation.integrator.t

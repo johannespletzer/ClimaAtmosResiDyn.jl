@@ -232,8 +232,10 @@ end
             rtol = 1e-10,
             atol = 1e-12 * maximum(abs, parent(Y.c.ρq_tot)),
         )
+        # The repair's transfer ledger and half its net make up half its
+        # gross, since the transfer is half the changes less their net.
         @test close(
-            Y.c.q_tag_led_repair,
+            Y.c.q_tag_led_repair .+ Y.c.q_tag_led_repairnet ./ 2,
             (ᶜwater_fix_gross.ρq_tag_tropo .+ ᶜwater_fix_gross.ρq_tag_strat) ./
             2,
         )
@@ -432,5 +434,57 @@ end
         end
         @test propertynames(Y.f) == propertynames(Y_plain.f)
         @test isequal(parent(Y.f), parent(Y_plain.f))
+    end
+
+    # WP6, after the parity check, since these step the run on. The updraft
+    # filter's ledger is its change of the partition copies' water, and the
+    # ledgers' kernels allocate nothing.
+    @testset "The filter's ledger and the kernels' allocation" begin
+        Y_filter = copy(Y)
+        # A negative copy, which the filter clamps, so the check is not vacuous.
+        Y_filter.c.sgsʲs.:(1).q_tag_tropo .-= 1e-3
+        copy_water(Y) =
+            Y.c.sgsʲs.:(1).ρa .*
+            (Y.c.sgsʲs.:(1).q_tag_tropo .+ Y.c.sgsʲs.:(1).q_tag_strat)
+        ᶜbefore = copy_water(Y_filter)
+        ᶜledger = copy(Y_filter.c.q_tag_led_upfilter)
+        CA.snapshot_water_tag_copy_water!(Y_filter, p)
+        CA.enforce_physical_constraints!(Y_filter, p, t, p.atmos)
+        CA.record_water_tag_copy_filter!(Y_filter, p)
+        ᶜchange = copy_water(Y_filter) .- ᶜbefore
+        @test maximum(abs, parent(ᶜchange)) > 0
+        @test isapprox(
+            parent(Y_filter.c.q_tag_led_upfilter .- ᶜledger),
+            parent(ᶜchange);
+            rtol = 1e-12,
+            atol = 1e-14 * maximum(abs, parent(ᶜbefore)),
+        )
+        CA.snapshot_water_tag_copy_water!(Y_filter, p)
+        @test (@allocated CA.snapshot_water_tag_copy_water!(Y_filter, p)) == 0
+        CA.record_water_tag_copy_filter!(Y_filter, p)
+        @test (@allocated CA.record_water_tag_copy_filter!(Y_filter, p)) == 0
+        CA.repair_water_tag_partition!(Y_filter, p)
+        @test (@allocated CA.repair_water_tag_partition!(Y_filter, p)) == 0
+        CA.repair_water_tag_copies!(Y_filter, p)
+        @test (@allocated CA.repair_water_tag_copies!(Y_filter, p)) == 0
+    end
+
+    # The gross per step is the ledgers' change over that step, per cell, bit
+    # for bit: one more step, taken by hand.
+    @testset "The ledgers' gross, one step by hand" begin
+        integrator = copies.integrator
+        (; ledgers) = integrator.p.tagging.tag_ledger_steps
+        names = keys(ledgers)
+        @test names == CA.water_tag_mechanism_names(model)
+        L_before = map(n -> Float64.(parent(getproperty(integrator.u.c, n))), names)
+        G_before = map(n -> copy(parent(getproperty(ledgers, n).ᶜgross)), names)
+        CA.CTS.step!(integrator)
+        for (i, n) in enumerate(names)
+            ᶜL = Float64.(parent(getproperty(integrator.u.c, n)))
+            @test parent(getproperty(ledgers, n).ᶜgross) ==
+                  G_before[i] .+ abs.(ᶜL .- L_before[i])
+        end
+        CA.accumulate_tag_ledger_gross!(integrator)
+        @test (@allocated CA.accumulate_tag_ledger_gross!(integrator)) == 0
     end
 end

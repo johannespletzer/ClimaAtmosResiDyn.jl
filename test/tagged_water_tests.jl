@@ -545,6 +545,7 @@ column_atmos_model(; kwargs...) =
                 ρq_tag_extratropics = FT[-2, -3, 2],
                 ρq_tag_evap = FT[-1, 3, 1],
                 q_tag_led_repair = zeros(FT, 3),
+                q_tag_led_repairnet = zeros(FT, 3),
             )
             ᶜwater_fix = (;
                 ρq_tag_tropics = fill(FT(0.5), 3),
@@ -604,14 +605,19 @@ column_atmos_model(; kwargs...) =
                   abs.(ᶜY.ρq_tag_extratropics .- before_extra)
             @test all(iszero, ᶜwater_fix_gross.ρq_tag_evap)
             @test ᶜwater_fix_count.ρq_tag_extratropics == [1.0, 1.0, 0.0]
-            # The state ledger (WP6) takes the water moved between the
-            # partition's tags, half the sum of their changes.
+            # The state ledgers (WP6): the water moved between the partition's
+            # tags, half the sum of their changes less their net, and the net
+            # apart. In cell 2 every tag is zeroed: tropics gives 1 to
+            # extratropics, and 2 more is added.
+            Δ = (
+                ᶜY.ρq_tag_tropics .- before_tropics,
+                ᶜY.ρq_tag_extratropics .- before_extra,
+            )
             @test ᶜY.q_tag_led_repair ≈
-                  (
-                abs.(ᶜY.ρq_tag_tropics .- before_tropics) .+
-                abs.(ᶜY.ρq_tag_extratropics .- before_extra)
-            ) ./ 2
-            @test ᶜY.q_tag_led_repair[1] ≈ FT(2)
+                  (abs.(Δ[1]) .+ abs.(Δ[2]) .- abs.(Δ[1] .+ Δ[2])) ./ 2
+            @test ᶜY.q_tag_led_repairnet ≈ Δ[1] .+ Δ[2]
+            @test ᶜY.q_tag_led_repair ≈ FT[2, 1, 0]
+            @test ᶜY.q_tag_led_repairnet ≈ FT[0, 2, 0]
         end
 
         @testset "Sedimentation shares ($FT)" begin
@@ -1430,7 +1436,12 @@ end
         CA.WaterTag{:strat}(region(true)),
     ))
     names = CA.water_tag_mechanism_names(model)
-    @test names == (:q_tag_led_rescale, :q_tag_led_empty, :q_tag_led_repair)
+    @test names == (
+        :q_tag_led_rescale,
+        :q_tag_led_empty,
+        :q_tag_led_repair,
+        :q_tag_led_repairnet,
+    )
     ᶜnames = (:ρ, names...)
     Y = CC.Fields.FieldVector(;
         c = similar(
@@ -1498,4 +1509,24 @@ end
     )
     @test CA.is_tag_mechanism_ledger_name(:e_src_led_repair)
     @test !CA.is_tag_mechanism_ledger_name(:q_tag_inc_left)
+
+    # The audit's event total counts nodes, in either float type. In Float32 a
+    # Float64 count is stored as two slots per node (the code review, B1). And
+    # a change of one rounding unit is not an event (S3).
+    for FT in (Float32, Float64)
+        ᶜz = CC.Fields.coordinate_field(
+            CC.CommonSpaces.ColumnSpace(
+                FT;
+                z_min = 0,
+                z_max = 1000,
+                z_elem = 4,
+                staggering = CC.CommonSpaces.CellCenter(),
+            ),
+        ).z
+        ᶜcount = CA._throughput_field(ᶜz)
+        ᶜcount .= 3
+        @test CA.tag_event_total((; a = ᶜcount, b = ᶜcount)) ≈ 24
+        @test CA.tag_event(eps(FT(1e-2)), FT(1e-2)) == 0
+        @test CA.tag_event(FT(1e-4), FT(1e-2)) == 1
+    end
 end

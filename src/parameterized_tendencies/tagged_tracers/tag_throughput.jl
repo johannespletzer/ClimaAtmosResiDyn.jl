@@ -17,8 +17,10 @@
     TAG_EVENT_THRESHOLD
 
 A change counts as a cell-event where it exceeds this fraction of the cell's
-total. The copies' residual is nonzero at rounding level almost everywhere, so
-without a threshold the count would approach the number of cells times calls.
+total, or 16 rounding units of the total's float type if that is larger. The
+copies' residual is nonzero at rounding level almost everywhere, so without a
+threshold the count would approach the number of cells times calls. In Float32
+the rounding floor, about 1.9e-6, is the larger one.
 """
 const TAG_EVENT_THRESHOLD = 1e-12
 
@@ -29,7 +31,9 @@ const TAG_EVENT_THRESHOLD = 1e-12
 as a `Float64`.
 """
 @inline tag_event(change, total) =
-    abs(change) > TAG_EVENT_THRESHOLD * abs(total) ? 1.0 : 0.0
+    abs(change) >
+    max(TAG_EVENT_THRESHOLD, 16 * eps(typeof(abs(total)))) * abs(total) ? 1.0 :
+    0.0
 
 # A Float64 center field of zeros on the space of `ᶜρ`.
 function _throughput_field(ᶜρ)
@@ -85,17 +89,20 @@ end
     tag_event_total(fields)
 
 The number of cell-events in the counts, summed over the cells and the tags,
-for the audit. Collective.
+for the audit. Collective, as ClimaCore's `sum` is. The count is divided by the
+quadrature weight before the weighted sum, so each node counts once. It does
+not read the field's storage, which holds a Float64 as two slots when the space
+is Float32. On a sphere, a node on an element boundary counts once per element
+that holds it.
 """
 function tag_event_total(fields)
     isempty(fields) && return 0.0
     total = 0.0
     for ᶜfield in values(fields)
-        total += sum(parent(ᶜfield))
+        ᶜWJ = Fields.local_geometry_field(axes(ᶜfield)).WJ
+        total += sum(ᶜfield ./ ᶜWJ)
     end
-    buffer = [total]
-    ClimaComms.allreduce!(ClimaComms.context(first(values(fields))), buffer, +)
-    return buffer[1]
+    return total
 end
 
 #####
@@ -112,12 +119,17 @@ end
 
 The water tags' state ledgers per mechanism, present whenever water tags are:
 the limiters' rescale where the parent held water, the emptying where it did
-not, and the partition repair. `WATER_TAG_COPY_MECHANISM_NAMES` adds the
+not, the partition repair's transfers, and the water the repair adds where it
+zeroes every tag (`repairnet`). `WATER_TAG_COPY_MECHANISM_NAMES` adds the
 copies' repair and the updraft filter's change to the copies. Their names
 carry no `ρ` prefix, so no transport operator sees them.
 """
-const WATER_TAG_MECHANISM_NAMES =
-    (:q_tag_led_rescale, :q_tag_led_empty, :q_tag_led_repair)
+const WATER_TAG_MECHANISM_NAMES = (
+    :q_tag_led_rescale,
+    :q_tag_led_empty,
+    :q_tag_led_repair,
+    :q_tag_led_repairnet,
+)
 const WATER_TAG_COPY_MECHANISM_NAMES = (:q_tag_led_uprepair, :q_tag_led_upfilter)
 const WATER_TAG_ALL_MECHANISM_NAMES =
     (WATER_TAG_MECHANISM_NAMES..., WATER_TAG_COPY_MECHANISM_NAMES...)
@@ -125,9 +137,10 @@ const WATER_TAG_ALL_MECHANISM_NAMES =
 """
     ENERGY_SOURCE_MECHANISM_NAMES
 
-The energy source tags' state ledger of the partition repair.
+The energy source tags' state ledgers of the partition repair: its transfers,
+and the energy it adds where it zeroes every tag (`repairnet`).
 """
-const ENERGY_SOURCE_MECHANISM_NAMES = (:e_src_led_repair,)
+const ENERGY_SOURCE_MECHANISM_NAMES = (:e_src_led_repair, :e_src_led_repairnet)
 
 """
     water_tag_mechanism_names(model)
@@ -235,16 +248,34 @@ writes only its own cache.
 function accumulate_tag_ledger_gross!(integrator)
     Y = integrator.u
     (; ledgers, ᶜdiff, coldiff) = integrator.p.tagging.tag_ledger_steps
-    MatrixFields.unrolled_foreach(propertynames(ledgers)) do name
-        ᶜL = getproperty(Y.c, name)
-        (; ᶜprev, ᶜgross, colgross) = getproperty(ledgers, name)
-        @. ᶜdiff = ᶜL - ᶜprev
-        @. ᶜgross += abs(ᶜdiff)
-        Operators.column_integral_definite!(coldiff, ᶜdiff)
-        @. colgross += abs(coldiff)
-        @. ᶜprev = ᶜL
-    end
+    _accumulate_ledger_gross!(Y, ledgers, ᶜdiff, coldiff, Val(keys(ledgers)))
     return nothing
+end
+# The names are type parameters, so each field is found without a run-time
+# symbol, and the callback does not allocate.
+_accumulate_ledger_gross!(Y, ledgers, ᶜdiff, coldiff, ::Val{()}) = nothing
+function _accumulate_ledger_gross!(
+    Y,
+    ledgers,
+    ᶜdiff,
+    coldiff,
+    ::Val{names},
+) where {names}
+    name = first(names)
+    ᶜL = getproperty(Y.c, name)
+    (; ᶜprev, ᶜgross, colgross) = getproperty(ledgers, name)
+    @. ᶜdiff = ᶜL - ᶜprev
+    @. ᶜgross += abs(ᶜdiff)
+    Operators.column_integral_definite!(coldiff, ᶜdiff)
+    @. colgross += abs(coldiff)
+    @. ᶜprev = ᶜL
+    return _accumulate_ledger_gross!(
+        Y,
+        ledgers,
+        ᶜdiff,
+        coldiff,
+        Val(Base.tail(names)),
+    )
 end
 
 """

@@ -6,8 +6,7 @@
 # The ledgers of both families that any model can have, so that a stale entry
 # from an earlier model in this process is dropped.
 const _ALL_TAG_STATE_LEDGER_NAMES = (
-    WATER_TAG_MECHANISM_NAMES...,
-    WATER_TAG_COPY_MECHANISM_NAMES...,
+    WATER_TAG_ALL_MECHANISM_NAMES...,
     :q_tag_inc_left,
     :q_tag_inc_moved,
     ENERGY_SOURCE_MECHANISM_NAMES...,
@@ -25,16 +24,20 @@ const _TAG_MECHANISM_TEXT = (;
     q_tag_led_empty = "the partition's water removed where the parent held " *
                       "none (rescale_water_tags!)",
     q_tag_led_repair = "the water the partition repair moved between the " *
-                       "tags, half the sum of the tags' changes " *
-                       "(repair_water_tag_partition!)",
+                       "tags, half the sum of the tags' changes less their " *
+                       "net (repair_water_tag_partition!)",
+    q_tag_led_repairnet = "the water the partition repair added where it " *
+                          "zeroed every tag, the net of its changes",
     q_tag_led_uprepair = "the residual that the copies' repair handed to the " *
                          "partition's copies, times ρaʲ " *
                          "(repair_water_tag_copies!)",
     q_tag_led_upfilter = "the updraft filter's change of the partition " *
                          "copies' water, Δ(ρaʲ Σ χᵢʲ), net over the copies",
     e_src_led_repair = "the energy the partition repair moved between the " *
-                       "tags, half the sum of the tags' changes " *
-                       "(repair_energy_source_tags!)",
+                       "tags, half the sum of the tags' changes less their " *
+                       "net (repair_energy_source_tags!)",
+    e_src_led_repairnet = "the energy the partition repair added where it " *
+                          "zeroed every tag, the net of its changes",
 )
 
 # A state ledger per unit mass.
@@ -79,8 +82,7 @@ The grosses restart at zero. See `tag_ledger_step_cache`.
 function register_tag_ledger_diagnostics!(model::AtmosModel)
     names = tag_state_ledger_names(model)
     for name in _ALL_TAG_STATE_LEDGER_NAMES
-        name in WATER_TAG_MECHANISM_NAMES ||
-            name in WATER_TAG_COPY_MECHANISM_NAMES ||
+        name in WATER_TAG_ALL_MECHANISM_NAMES ||
             name in ENERGY_SOURCE_MECHANISM_NAMES ||
             continue
         delete!(ALL_DIAGNOSTICS, string(name))

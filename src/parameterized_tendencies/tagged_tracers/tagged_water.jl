@@ -1031,6 +1031,12 @@ function _repair_water_tag_partition!(Y, p, model::WaterTaggingModel)
         ᶜwater_neg,
         model.tags,
     )
+    # Where every tag is zeroed, the repair adds `max(-(pos + neg), 0)` to the
+    # partition's sum. That part is not moved between tags, so it leaves the
+    # transfer's ledger, which took half of every change, and goes to its own
+    # (WP6, the code review's S1).
+    @. Y.c.q_tag_led_repair -= max(-(ᶜwater_pos + ᶜwater_neg), 0) / 2
+    @. Y.c.q_tag_led_repairnet += max(-(ᶜwater_pos + ᶜwater_neg), 0)
     return nothing
 end
 
