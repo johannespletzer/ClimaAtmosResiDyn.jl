@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W36                                           | 1. Water tags                                       |
+| W1–W37                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -1259,6 +1259,49 @@ were ρ per level), and the day labels say where a stopped run ended.*
 `7fd0ffab`). `analysis/water/lr_rule_metrics.py` and `lr_parity.py`; the
 closure and audit CSVs, manifests, metrics and parity are in
 `output/long_runs/`, the NetCDF in the archive (its README).*
+
+**W37. WP5b-C: with their own sedimentation cross blocks, the water tags'
+updraft copies change little on W23's column. Their last-step residual moves
+from 1.0e-4 to 9.2e-5 of the water under the follower, and the partition
+copies' blocks sum to the updraft water's to 1e-16.** WP5b-C (#111, on #105)
+gives each copy's row a block to each sedimenting updraft species: the model's
+`(q_totʲ, qʲ)` block with the copy's share of the updraft's water, plus its
+share of the environment's on the lateral inflow. W29's column (DYCOMS RF02,
+1M stepped explicitly, EDMF, ARS222, one Newton iteration, an hour), in copies
+mode:
+
+| transport | copies' residual, last step: #105 → WP5b-C | copies' repair, cumulative: #105 → WP5b-C | grid tags' gross: #105 → WP5b-C |
+|:--------- | ----------------:| ----------------:| ----------------:|
+| follower  | 1.0e-4 → 9.2e-5  | 9.2e-4 → 6.5e-4  | 5.3e-8 → 5.4e-8  |
+| tracer    | 1.2e-4 → 1.2e-4  | 8.3e-4 → 8.7e-4  | 7.4e-3 → 7.4e-3  |
+
+  - Without any cross blocks (`f8da0913`) the copies' residual was 3.0e-4
+    (follower) and 1.9e-4 (tracer). So #105's grid-tag blocks made most of the
+    change, and WP5b-C adds a little under the follower. Under the tracer the
+    cumulative repair rises 4%. This bounds the blocks' effect on this column
+    and hour; it does not isolate why the copies' residual stays near 1e-4.
+  - The default mode's tag and parent values are identical to #105's, and
+    the parent fields are bit for bit the same across all 12 runs (cross
+    blocks off, #105, WP5b-C; both modes and transports).
+  - **The blocks on the model's state** (`analysis/water/wp5c_copy_blocks.jl`,
+    job `13915714`): after the copies column's hour, the tropo and strat
+    copies' blocks summed equal the `(q_totʲ, qʲ)` block to 7e-17, 1.4e-16,
+    1.2e-16 and 1.7e-16 relative for liquid, ice, rain and snow. The unsplit
+    form (`split_uncoupled_fields = false`) builds with them. The script's
+    last part, a solve with each form, stopped on a bug in the script (a sum
+    of fields), so the forms' increments were not compared. #111 adds the
+    block sum to the copies integration test.
+  - The copies integration test passes 68/68 at `d2b3dc60`, parity against
+    the untagged column included.
+  - Verdicts (the contract): parent parity *pass*; closure *pass*;
+    comparator eligibility of these copies *not assessed* (one hour, one
+    column; the plan judges it per run at 8 tags).
+
+*`hpda2_compute`, 2026-09-24, jobs `13912985`, `13912986` (copies),
+`13911314`, `13911315` (default) and `13915714` (blocks), WP5b-C at
+`c8506813` (default) and `d2b3dc60` (copies, blocks), run from
+`../ClimaAtmosResiDyn-wedmf5c`. `analysis/water/wp5b_compare.py` (label
+`cc`); output in `output/wp5c_probe/`.*
 
 ## 2. Energy source tags: closure by transport
 

@@ -1,0 +1,1 @@
+ERROR: LoadError: MethodError: no method matching +(::ClimaCore.Fields.Field{ClimaCore.DataLayouts.VIJFH{Float64, 30, 1, 1, 1, ClimaCore.DataLayouts.ThisThreadPool, SubArray{Float64, 5, Array{Float64,
