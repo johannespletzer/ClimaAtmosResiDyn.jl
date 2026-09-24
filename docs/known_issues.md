@@ -4,85 +4,34 @@ Open problems that are understood but not yet fixed. Each entry records what is
 established, so the next person does not have to re-derive it. GitHub Issues are
 disabled on this repository, so this file is where they live.
 
-Remove an entry when it is fixed.
+Remove an entry when it is fixed. Mark it closed instead when other entries or
+error messages cite its number, so that the numbers stay stable.
 
-## 1. Tagged water closure assertions fail in the dynamics test group
+## 1. Tagged water closure assertions failed in the dynamics test group (closed)
 
-**Status:** diagnosed; the two assertions are corrected in
-`test/tagged_water_integration.jl`, awaiting a dynamics run that reaches them.
+**Status:** closed on 2026-09-23. The entry keeps its number because other
+entries and error messages cite issues by number.
 
-Two assertions in `test/tagged_water_integration.jl` failed deterministically on
-`ci 1.10 - dynamics` (run
-[32335353545](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/actions/runs/32335353545)):
+Two assertions in `test/tagged_water_integration.jl` failed on `ci 1.10 - dynamics` in run
+[32335353545](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/actions/runs/32335353545):
+the sphere's limiter-rescale residual (`1.17e-3` against a bound of `1e-3`) and
+the 1M sedimentation `norm` (`1.00006` against `1 + 100 eps`). Neither measured
+a statement the implementation makes. The repair declines to renormalize the
+tags onto `ρq_tot`, so both are leakage monitors, not identities. The bounds
+became `1e-2` and `1 + 1e-2`, and the shares themselves are asserted to lie in
+`[0, 1]`.
 
-```
-Tagged water limiter rescale: Test Failed at test/tagged_water_integration.jl:267
-  Expression: maximum(abs.(residual)) / scale < 0.001
-   Evaluated: 0.0011732894309513337 < 0.001
+Both numbers predated the fix of issue #64, which changed `rescale_water_tags!`
+from scaling the tags to adding the parent's increment. After it, on `main` at
+`0b2b1032` and Julia 1.11, the whole file passes, 111 tests, and the two
+quantities are:
 
-Tagged water 1M sedimentation closure: Test Failed at test/tagged_water_integration.jl:441
-  Expression: maximum(norm) <= 1 + 100 * eps(FT)
-   Evaluated: 1.000060085395493 <= 1.0000000000000222
-```
+  - the sphere residual, `maximum(abs.(residual)) / scale`: `7.4e-4`;
+  - the 1M sedimentation `norm`: at most `1.0003`, at least `0.9996`.
 
-Both measure the same quantity — how far the partition tags have drifted from
-`ρq_tot` — and neither is a statement the implementation makes.
-
-  - `norm` is `Σₖ clamp(ρq_tagₖ / ρq_tot, 0, 1)` over the partition tags. Once
-    `repair_water_tag_partition!` has made the tags non-negative, that is
-    `Σₖ ρq_tagₖ / ρq_tot` wherever no single tag exceeds the parent, i.e. the
-    *pointwise relative* closure residual. Bounding it by `1 + 100 · eps` asserts
-    exact pointwise closure, which `bfd5b4a` deliberately declines to provide:
-    the repair does not renormalize the tags onto `ρq_tot`, because doing so
-    would drive `q_tag_res` to zero by construction and destroy the leakage
-    monitor. The same file budgets that leakage at `5e-3` (column) and `1e-3`
-    (sphere), and `norm` is the harsher measure of the two because it normalizes
-    by the local `ρq_tot` rather than by the column maximum.
-
-    The property the assertion's comment claims — that the denominator cannot
-    amplify the shares it divides — needs no bound on `norm` at all: each clamped
-    share is one of its non-negative terms, so every share is in `[0, 1]` and the
-    partition's shares sum to 1 for any positive `norm`. That is now asserted
-    directly on the shares, and `norm` keeps a drift monitor at `1 + 1e-2`.
-
-  - The sphere residual tolerance of `1e-3` predates the repair. The test was
-    added in `cadb2ec`, the repair in `bfd5b4a` ten hours later, and the repair
-    changes exactly what the assertion measures: it zeroes the tags of a cell
-    whose negatives outweigh its positives, and empties them when a constraint
-    clips a non-positive `ρq_tot`, so the removed water surfaces in the residual
-    by design. The repair was committed unrun ("no Julia toolchain in this
-    environment"), and this repository's Actions history begins on 2026-08-19,
-    after it — so no CI run has ever observed these tests green. The tolerance is
-    now `1e-2`, which keeps the residual nearly two orders inside the `1e-1`
-    excursion bound the individual tags get in the same testset.
-
-Also established:
-
-  - Deterministic, not flaky. The same two assertions failed on every run that
-    reached them.
-
-  - Resolution-dependent magnitude: `ci 1.10 - dynamics` evaluates `norm` at
-    `1.000060085395493`, `Downgrade 1.10` at `1.0001545917163408`. Both are
-    inside the new bound.
-
-  - Not caused by the Levante GPU runscript work in #21. It reproduces
-    identically before and after the only source changes on that branch, which
-    were five blank lines inside docstrings in
-    `src/diagnostics/tagged_water_diagnostics.jl` and
-    `src/prognostic_equations/constrain_state.jl`.
-
-What is not settled: whether a pointwise drift of `6e-5` in `norm`, and `1.2e-3`
-in the sphere residual, is the right amount of leakage for this scheme. The
-corrected assertions bound it and record it; tightening it would mean changing
-the closure, not the test.
-
-Both numbers predate the fix for issue #64, which changed `rescale_water_tags!`
-from scaling the tags to adding the parent's increment to them. That changes what
-the sphere residual does over a run — it no longer rides the limiter's ratio —
-so `1.2e-3` is a measurement of the old rule and the first run to reach these
-assertions will produce a new one. Neither assertion was retuned for it, because
-retuning a tolerance against a number nobody has measured is how this entry came
-to exist.
+Both are well inside their bounds. The `norm` drift is larger than the
+`6.0e-5` measured before the fix, and 30 times inside its bound. The test's
+comments record both readings. The `tagging_water` CI group runs the file.
 
 ## 2. Levante 1/2/4 GPU scaling has not been measured
 
@@ -96,55 +45,92 @@ produce have not been collected. The measurement protocol is in
 
 ## 3. Tagged water does not close under AMD LES or under PrognosticEDMFX
 
-**Status:** diagnosed, not fixed. Neither combination is exercised by any test,
-so nothing currently fails.
+**Status:** guarded. Both combinations are refused at configuration by
+`check_water_tracers_transport_supported` (`config/tracer_config.jl`), with a
+test each in `test/config/tracer_config.jl`. The refusal under prognostic EDMF
+lasts until the tags follow the updrafts.
 
 Two transport paths move `ρq_tot` in ways the water tags do not follow, so
 `Σᵢ ρq_tag_i = ρq_tot` stops holding. Both are properties of the tagged-water
 implementation rather than of any particular run, and both predate the merge of
 the passive-tracer line.
 
-  - **AMD LES.** `parameterized_tendencies/les_sgs_models/anisotropic_minimum_dissipation.jl:135-152`
-    (horizontal) and `:282-300` (vertical) recompute `ᶜD_amd` inside
+  - **AMD LES.** `parameterized_tendencies/les_sgs_models/anisotropic_minimum_dissipation.jl:135-155`
+    (horizontal) and `:282-303` (vertical) recompute `ᶜD_amd` inside
     `foreach_gs_tracer` from *each tracer's own* gradient. So `ρq_tot` is
     diffused with `D(∇q_tot)` and each `ρq_tag_k` with `D(∇χ_k)`, and
     `Σₖ ∇⋅(ρ Dₖ ∇χₖ) ≠ ∇⋅(ρ D_tot ∇q_tot)` because the operator is nonlinear.
     This is not transport "the tags receive in their own right" — it is a
     genuine break of the partition that no bracket or repair corrects.
-    Smagorinsky–Lilly (`smagorinsky_lilly.jl:167-179`) shares one `ᶜD_h` and
+    Smagorinsky–Lilly (`smagorinsky_lilly.jl:170-178`) shares one `ᶜD_h` and
     does close, as does constant horizontal diffusion.
 
-  - **PrognosticEDMFX.** The SGS mass-flux loops in `edmfx_sgs_flux.jl:106,121`
-    are driven by `sgs_tracer_names(Y)`. Tags have no `sgsʲs` entries, so they
-    are skipped — safely, but they never receive that first-order water
-    transport. `check_water_tagging_supported` screens only the microphysics
-    model, so the combination is accepted silently. The claim in
-    `tagged_tracers/tagged_water.jl:18-20` that the implicit/explicit
-    vertical-advection split is "the one irreducible source of closure leakage"
+  - **PrognosticEDMFX.** The SGS mass-flux loop over tracers in
+    `edmfx_sgs_flux.jl:134-171` is driven by `sgs_tracer_names(Y)`. Tags have
+    no `sgsʲs` entries, so they are skipped. That is safe, but they never
+    receive that first-order water transport. Their sedimentation still
+    closes: under 1M `ρq_tot` sediments with the grid mean's flux only, and
+    the tags' fluxes sum to it (`water_advection.jl:85-95`). The EDMF
+    corrections to sedimentation (`:117-213`) change only `ρe_tot` and the
+    energy source tags. So the updraft's rain falls with the grid mean's
+    composition, which affects provenance, not closure. The claim in
+    `tagged_tracers/tagged_water.jl:23-24` that the implicit/explicit
+    vertical-advection split is "the one unavoidable source of closure drift"
     is not true under EDMF.
 
-Either guard the combinations in `check_water_tagging_supported`, or give the
-tags the matching transport. Until then, read `q_tag_res` as a closure monitor
-only for configurations that use a shared diffusivity and no prognostic EDMF.
+The combination used to be accepted silently, because
+`check_water_tagging_supported` screens only the microphysics model. The new
+check is separate from it, since that function also gates
+`water_process_record`, whose records are not transported and stay allowed.
+The refusal under prognostic EDMF lifts when the tags take their share of the
+updraft's water flux.
 
 ## 4. The implicit water-microphysics attribution has no Jacobian diagonal
 
-**Status:** diagnosed, not fixed.
+**Status:** diagnosed, not fixed. Open: whether the missing entry changes the
+answer after a fixed number of Newton iterations has not been isolated.
 
-`implicit/implicit_tendency.jl:55-64` puts the `:microphysics` water bracket on
+`implicit/implicit_tendency.jl:66-78` puts the `:microphysics` water bracket on
 the implicit path. Its increment is `min(Δ, 0) · ρq_tag / ρq_tot`, which is
 proportional to `ρq_tag`, so `∂/∂ρq_tag = Δ⁻/ρq_tot` — the same O(1/dt)
 quantity the file's own positivity argument names. Nothing supplies that entry:
 under 0M the tags get the ordinary passive diagonal
-(`manual_sparse_jacobian.jl:1286`), or a plain `-I` when diffusion is explicit;
+(`manual_sparse_jacobian.jl:216-253`, in `update_diffusion_jacobian!`), or a
+plain `-I` when diffusion is explicit;
 under 1M the sedimentation diagonal carries no microphysics term.
 
-The comment at `:300-303` justifying the *energy* bracket's `-I` ("the
-attributed increment does not depend on the tags themselves") is true for
-`:precipitation` and false for the water bracket added directly above it. With
-a fixed Newton iteration count this is error in the answer rather than only
-slower convergence. Needs a precipitating run to show up; no GitHub CI job
-reaches it.
+The comment at `implicit_tendency.jl:322-328` justifying the *energy* bracket's `-I` ("the attributed
+increment does not depend on the tags themselves") is true for
+`:precipitation` and false for the water bracket. With a fixed Newton
+iteration count this is in principle error in the answer rather than only
+slower convergence.
+
+**A first measurement, 2026-09-23, which does not isolate the entry.** The
+DYCOMS RF02 column under 0M without EDMF, at `dt` 120 s, rains out its initial
+cloud (0.15 kg m⁻² of liquid) in the first hour. Four runs covered that hour:
+implicit or explicit microphysics, each with 1 and 10 Newton iterations.
+
+  - On this column, the region tags' difference between the 1- and
+    10-iteration runs changed by at most 4% when microphysics moved from the
+    implicit to the explicit path, with no fixed sign. That difference is 1e-3
+    to 2e-3 in L1 of the shares, 25 times `ρq_tot`'s own.
+  - The small `evap` source tag's difference changed by up to 24%, at an
+    absolute size near 2e-5.
+  - This comparison does not isolate the missing diagonal. Moving
+    microphysics off the implicit path also changes the operator splitting and
+    the discrete integration path.
+  - The share differences were recomputed by the verifier
+    (`experiments/tag_closure/analysis/evidence/compare_runs.py`); runs,
+    manifests and output are in the fork's tag-closure record, FINDINGS W15 and
+    W16, on the branch `claude/tag-closure-record`.
+  - A 1M column and a sphere were not measured. No GitHub CI job reaches this
+    path.
+
+To isolate it, compare runs with the same implicit residual and time
+integration that differ only in whether the analytic diagonal is present,
+across a Newton-iteration ladder with a tightly converged reference and a time
+step ladder, reading the region tags, the source tags, `q_tag_res` and the
+nonlinear convergence.
 
 ## 5. `fill_with_nans!` would destroy the tag masks if it ever descended into the cache
 
