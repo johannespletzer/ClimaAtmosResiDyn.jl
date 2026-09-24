@@ -60,11 +60,15 @@ The coupled system's rows, name tree and solver are unchanged, so the parent's
 `manual_sparse_jacobian.jl:790-850`).
 
 Without the split (`split_uncoupled_fields = false`, `AutoSparseJacobian`),
-the nested arrowhead solve sees the new blocks only in the tags' rows. The
-tags' columns enter no other row, so the parent's rows and their iterates are
-unchanged there too. The tags' result can differ from the split's where the
-nested solve is iterative. The split then no longer reproduces the unsplit
-solve for these tags, and its docstring says so.
+the blocks are not carried. This paragraph first said the nested solve would
+take them. The review of #105 (B1) showed it cannot: under prognostic EDMF the
+falling species' rows have blocks to `u₃`, so the arrowhead's Schur complement
+gives the tags' rows `(tag, u₃)` blocks, which the `BlockDiagonalSolve` of the
+second group rejects. The build failed on W23's column. So the cache carries a
+flag (`water_tag_cross_flag`, from `split_uncoupled_fields`), and the blocks
+exist only with the split. With 1M stepped explicitly and
+`use_auto_jacobian: true`, the follower is refused and the default is
+`tracer`.
 
 ## 4. Tests
 
@@ -99,3 +103,27 @@ refusal of `increment` there is lifted, and the default follows G3_PLAN 4.3.
 **Copies.** The copies lag alike (W23: 7.8e-3). Their rows are in the coupled
 system, since they are updraft fields. Their cross blocks to the updraft
 species would enter the nested solve directly, and are the second step.
+
+## 6. After the review of #105
+
+`review/agent_reviews/wp5b_code_review_2026-09-24.md`.
+
+  - **B1**, above (section 3).
+  - **N1. Where the 2e-8 comes from.** In the reviewer's toy (one iteration,
+    CFL 12), the column's mismatch over its total is +1.3e-3 without the cross
+    blocks, −3.6e-9 with them and the diagonal `∂φ̂/∂ρq_tag`, −1.9e-16 with
+    them and without that diagonal, and −3.2e-16 with the full Jacobian. So
+    the remainder comes from the diagonal-only share derivative, not from
+    rounding. Per-cell accuracy is about the same either way (1.0e-4 and
+    9.5e-5 against the full solve). Dropping the diagonal would close the
+    column exactly in the toy. Not done: the toy is a scalar model, and the
+    diagonal is what the tags' own sedimentation needs where they carry a
+    large share. A candidate for the model, measured first.
+  - **N2. Memory.** Each tag adds 12 floats per cell under 1M (4 tridiagonal
+    blocks). Since `C_tag = C_parent · Diag(φ̂)`, storing `φ̂` (one float per
+    cell and tag) and forming `C_parent (φ̂ ΔYₚ)` in the back-substitution
+    would do the same. It matters on the sphere or a GPU with many tags.
+    Deferred to WP9 (cost).
+  - **N3.** Parity is not claimed for `AutoSparseJacobian` beyond B1.
+  - **N5.** The energy source tags on the explicit path have no sedimentation
+    cross blocks and are not measured there; G4's counterpart (G4_TODO).

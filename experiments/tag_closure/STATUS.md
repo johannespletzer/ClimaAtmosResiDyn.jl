@@ -3,7 +3,7 @@
 The entry point for every session. Written on 2026-09-23 around 11:30, during
 the housekeeping (step H4). Updated at 13:55 the same day, when the
 housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
-done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for). Update it when something here changes, and at each milestone of a work
+done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for) and 12:40. Update it when something here changes, and at each milestone of a work
 package and at each goal's end. The checklist for those moments is in
 [README.md](README.md), "Closing a work package or a goal". Where a fact was
 not checked, it says so.
@@ -33,6 +33,23 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-09-24, 12:40.** The owner reviewed #104 and #105; both are
+    answered on the PRs and pushed.
+      + **#104 (WP4a) at `dfd93d7c`.** `pr_tag` reads one batch per output
+        time; `pr_tag_res` added; the residual identities tested to rounding;
+        the explicit path is a CI group, `tagging_water_edmf_0m_explicit`.
+        Local tests pass. W30: the diagnostics' cost after the batch is
+        linear, and the default mode's plume grows superlinearly past 8 tags
+        (a WP9 item); no negative-area rain-out on TRMM. Follow-ups WP4a-V and
+        WP4a-J. The 32-tag copies timing is still building.
+      + **#105 (WP5b) at `801c52dd`.** The xhigh review's B1 (the unsplit
+        solver) is fixed; the real blocks are tested against finite
+        differences in both float types; the follower with 1M stepped
+        explicitly is opt-in again. Evidence tagged `evidence/wp5b-w29`.
+        Follow-ups WP5b-V, WP5b-P and WP5b-C.
+      + Running: `tagged_water_edmf_copies_integration` at `11b8d875`, the
+        32-tag copies timings, CI on #104 and #105. D4-W's two days (jobs
+        `13893927`, `13893928`) are done but not yet judged against W28.
   - **Update, 2026-09-24, 09:50.**
       + The owner confirmed the session's scope: finish it, and leave WP5b
         to the other session.

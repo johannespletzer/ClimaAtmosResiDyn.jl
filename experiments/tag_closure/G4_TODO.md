@@ -268,6 +268,11 @@ way:
 Changing the first two changes the energy tags' results, so each needs its own
 validation against the G2 runs.
 
+A fourth, from the review of #105 (N5): under 1M stepped explicitly, the
+water tags now carry sedimentation cross blocks, and the energy source tags
+do not. Nothing refuses `enthalpy_increment` there, and no run measures it.
+Measure it on W23's explicit column before either is decided.
+
 ## Energy items within M1 to M5 that no G4.n takes up yet
 
 ROADMAP.md lists these as "later" within their milestones. They need a new

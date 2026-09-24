@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W29                                           | 1. Water tags                                       |
+| W1–W30                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -881,6 +881,53 @@ cells, over the column's water. No tag goes negative in any run.
 `f8da0913` and `../ClimaAtmosResiDyn-wedmf5b` at `c2bf8a62`. The compute nodes
 print no commit. The final columns, the RESULT lines and
 `analysis/water/wp5b_compare.py`'s output are in `output/wp5b_probe/`.*
+
+*Qualified 2026-09-24, after the xhigh review and the owner's review of #105.*
+  - "The model's fields are bit for bit the same" rests on the five fields the
+    probe wrote, and `ρq_sno` is zero there. The integration test
+    `tagging_water_increment_explicit` compares every model field of the
+    tagged explicit column with its untagged twin, bit for bit, and passes.
+  - With the cross blocks, the partition repair's ledger under the follower
+    rose from 1.84e-4 to 2.22e-4 of the water (+21%). Not explained.
+  - W29 shows closure and the lag the blocks remove on one column. It does not
+    show that each tag's provenance is more accurate (`evap`, above).
+  - The evidence is pinned as the tag `evidence/wp5b-w29`
+    (`output/wp5b_probe/EVIDENCE.md`).
+  - On the implicit path the blocks also lowered the increment test's one-hour
+    gross residual under the follower from 4.1e-5 to 3.2e-8 (job `13893926`).
+
+**W30. `pr_tag`'s cost after the batch, and the rain-out of negative areas on
+TRMM (the owner's review of #104, findings 1 and 5).**
+  - **The cost.** All 3N `pr_tag`, `prra_tag` and `prsn_tag` at one output
+    time, at TRMM's initial state, now (one batch per output time) and at
+    `53cd2db3` (each call redid the shared work):
+
+    | mode    | tags | now      | at `53cd2db3` |
+    |:------- | ----:| --------:| -------------:|
+    | default | 2    | 2.8e-5 s | 1.5e-4 s      |
+    | default | 8    | 1.7e-4 s | 8.5e-4 s      |
+    | default | 32   | 2.5e-3 s | 1.3e-1 s      |
+    | copies  | 2    | 2.9e-5 s | 1.2e-4 s      |
+    | copies  | 8    | 2.0e-4 s | 5.7e-4 s      |
+
+    After the batch, each diagnostic costs 5 to 8 µs at every size. The batch
+    is one evaluation of the split. In the default mode it grows from 4.5e-5 s
+    at 8 tags to 1.7e-3 s at 32, and 75% of that is the exchange's plume
+    (`water_exchange_inputs!`, 2.6e-5 s to 1.3e-3 s). The split allocates
+    5.7 kB at 8 tags and 1.5 MB at 32; at 3 tags the integration test measures
+    at most 64 bytes on Julia 1.11. The model's exchange calls the same plume
+    at every implicit evaluation. Where in the plume the growth arises is not
+    isolated.
+  - **Negative areas.** On W26's TRMM column over 6 h, after every one of 144
+    steps (80 with rain), both modes: no rain-out from a subdomain whose area
+    is negative, and no gain. So on this run the signed attribution is the
+    physical rain-out at every accepted state. It bounds nothing for other
+    cases.
+
+*`hpda2_compute`, 2026-09-24, WP4a at `8af5f6f4`. Scripts
+`analysis/water/wp4a_pr_tag_scaling.jl`, `wp4a_pr_tag_breakdown.jl` and
+`wp4a_negative_area_probe.jl`; the RESULT lines and columns are in
+`output/wp4a_review/`.*
 
 ## 2. Energy source tags: closure by transport
 

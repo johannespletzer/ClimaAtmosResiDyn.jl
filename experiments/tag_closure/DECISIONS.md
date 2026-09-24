@@ -53,6 +53,15 @@ Short names for the sources:
     sedimentation cross blocks**, not a route through the bottom face. Until
     then the follower is refused there (#102). **In force; in progress.**
     [G3T](G3_TODO.md#decisions), the owner's review of #102, point 3
+  - **With 1M stepped explicitly the follower stays opt-in** until a
+    precipitating case on a timestep and Newton ladder passes (WP5b-V). The
+    owner's review of #105, finding 2, offered this or the evidence first.
+    **In force** (#105 at `c446fe91`).
+  - **#104's scope excludes known issue 4's Jacobian switch** (now WP4a-J)
+    and the test of the default mode's reconstruction against a converged
+    reference (WP4a-V), each with criteria in G3_TODO. The owner's review of
+    #104, findings 2 and 6, asked for the boundary. Proposed in the reply;
+    the owner may object.
   - **WP5's default transport under EDMF is applied.** `increment` is the
     default in the default mode under prognostic EDMF, where the
     configuration supports it; `tracer` elsewhere and with copies. The

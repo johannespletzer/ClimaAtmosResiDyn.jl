@@ -335,9 +335,69 @@ on #102.
     is bit for bit the same.
   - [x] The refusal is dropped for good. The docs, the config tests and an
     integration test on the explicit column are at `0aad20ee`. Draft PR #105.
-  - [ ] The review (xhigh), the increment integration test, a day of D4-W in
-    both modes on the implicit path, and CI. Running.
-  - [ ] The copies' cross blocks, as a second step.
+  - [x] The review (xhigh, `review/agent_reviews/wp5b_code_review_2026-09-24.md`),
+    addressed at `11b8d875`: B1, the unsplit form carries no cross blocks
+    (the reviewer's reproducer now builds, `analysis/water/wp5b_unsplit_build.jl`);
+    S1, the blocks checked on the real column; the explicit test in its own
+    group `tagging_water_increment_explicit`; S2 wording; N4.
+  - [ ] The owner's review of #105 (2026-09-24, a comment on the PR; seven
+    findings), addressed at `c446fe91` to `801c52dd`:
+      + [x] 1: a unit test assembles the real blocks
+        (`update_sedimentation_jacobian!`) in Float32 and Float64, with a drifted
+        partition and binding clamps: the partition's sum is the parent's, and
+        each tag's block matches a finite difference of the real tendency.
+      + [x] 2: with 1M stepped explicitly the follower is opt-in again. The
+        default waits on WP5b-V below.
+      + [x] 3: W29 is stated as closure evidence, not provenance; WP5b-P below.
+      + [x] 4: the evidence pinned, tag `evidence/wp5b-w29` (`4c7d52c8`).
+      + [x] 5: the back-substitution test in both float types, an allocation
+        gate, and the unsplit nested solve against the split.
+      + [x] 6: the docs' numbers labelled net and gross; grid-scale tags.
+      + [x] 7: the PR body; the copies' cross blocks as WP5b-C below.
+      + [x] Pushed at `801c52dd` and answered on the PR. [ ] CI, and
+        `tagged_water_edmf_copies_integration` locally.
+  - [ ] A day of D4-W in both modes on the implicit path (jobs `13893927`,
+    `13893928`, done; to judge against W28's `w5r_d4w_increment_samesign`).
+
+### WP5b-V: the explicit-1M default
+
+The owner's review of #105, finding 2. The cross blocks close W23's column; one
+stratocumulus column does not decide the default for every explicit-1M EDMF
+run. Acceptance criteria, fixed before the runs:
+
+  - [ ] A precipitating convective or sedimentation-heavy 1M column, chosen
+    before any run, microphysics explicit, the follower on.
+  - [ ] Newton iterations 1, 2 and a tightly converged reference (for example
+    10); at least two timesteps.
+  - [ ] Reported: net and gross closure, `q_tag_inc_left`, the smallest tag,
+    the partition repair's volume, how often and how much the share clamps and
+    the zero-normalization fallback act, and the parent's parity bit for bit.
+  - [ ] Passes when one iteration stays below the 0.2% closure budget at every
+    rung, and the result converges toward the reference as the timestep or
+    the nonlinear error falls. Then the default takes `increment` there.
+
+### WP5b-P: provenance, not only closure
+
+The owner's review of #105, finding 3. Closure shows the tags sum to the water,
+not that each label is right. W29's `evap` agreed less with the copies with the
+cross blocks (5.8% against 3.8%), and the copies lack their own blocks.
+
+  - [ ] A per-source acceptance criterion, set with the owner before the runs.
+  - [ ] Precipitation-weighted per-tag errors, besides the column L1.
+  - [ ] The comparison repeated after WP5b-C, or against a tightly converged
+    reference in which neither path's sedimentation lags.
+
+### WP5b-C: the copies' cross blocks
+
+The second step (design note, section 5). The copies are updraft fields in the
+coupled system, so their blocks to the updraft species enter the nested solve
+directly. Until it lands, the copies are not a fully corrected reference on
+the explicit path (the owner's review of #105, finding 7).
+
+  - [ ] Design, with the nested solve's fill-in worked out (B1's lesson).
+  - [ ] The copies' closure on W23's explicit column with one iteration
+    (W23: 7.8e-3 without).
+  - [ ] Parity with the untagged column.
 
 ## WP4a: the 0M split (draft PR-W4a)
 
@@ -354,7 +414,8 @@ rule: each subdomain's rain-out `Δᵏ` goes by `φᵏ` for both signs (review S
   - [x] Known issue 4 restated in `docs/known_issues.md` (review B1).
   - [ ] Isolate known issue 4: the switch and the experiment (the note's
     sections 4 and 5), after the owner picks (i) the pair or (ii) the
-    diagonal alone.
+    diagonal alone. Moved out of #104 to the follow-up WP4a-J below (the
+    owner's review of #104, finding 6).
   - [x] Review of the code (xhigh, 2026-09-24,
     `review/agent_reviews/wp4a_code_review_2026-09-24.md`). It found no
     parity break and no wrong result. It asked for S1 to S5, taken at
@@ -381,6 +442,56 @@ rule: each subdomain's rain-out `Δᵏ` goes by `φᵏ` for both signs (review S
     and its parity filter skips it. The unit tests passed 521/521 at the
     merge. The 0M integration test (job `13892718`) is running.
   - [ ] CI on #104 at `53cd2db3`.
+  - [ ] The owner's review of #104 (2026-09-24, a comment on the PR; six
+    findings), addressed at `8af5f6f4` to `dfd93d7c`:
+      + [x] 1, `pr_tag`'s cost: one batch per output time
+        (`update_water_tag_rainouts!`) does the shared work once for all
+        tags. [x] The scaling benchmark at 2, 8 and 32 tags, both modes
+        (W30; the 32-tag copies still building).
+      + [x] 3, the explicit path in CI: its own group,
+        `tagging_water_edmf_0m_explicit`, both modes; 55/55 locally.
+      + [x] 4, the residual identity: `pr_tag_res`; the tests check
+        `pr − Σ_P pr_tag = pr_tag_res = ∫ (Δʲ (1 − Sʲ) + Δ⁰ (1 − S))` to
+        rounding in both modes, and a closed partition to rounding.
+      + [x] 2, the wording: the default mode's composition is called
+        reconstructed. The distinguishing experiment is WP4a-V below.
+      + [x] 5, the wording: the split and `pr_tag` are signed attributions.
+        [x] Measured on TRMM, both modes: none (W30).
+      + [x] 6: the PR body states the scope; the Jacobian switch is WP4a-J.
+      + [x] Pushed at `dfd93d7c` and answered on the PR. [ ] CI.
+
+### WP4a-V: is the default mode's reconstruction better than the grid rule?
+
+The owner's review of #104, finding 2. W26 showed the split differs from the
+grid rule by under 0.5% on TRMM, and left the default mode's agreement with the
+copies as it was. That does not tell whether the reconstruction is closer to
+the truth. Acceptance criteria, fixed before the runs:
+
+  - [ ] A case with substantial updraft rain-out and a large provenance
+    contrast between the updraft and the environment (for example, a region
+    tag for the boundary layer under deep convection). Chosen and justified
+    before any comparison.
+  - [ ] A reference: the copies, converged on a Newton ladder (known issue 4
+    says one iteration is not a validated audit), or another independently
+    justified tracer reference.
+  - [ ] The metric, per tag and subdomain: `Σ |Δᵏ| |φ_candᵏ − φ_refᵏ| / Σ |Δᵏ|`,
+    for the grid rule and for the reconstruction.
+  - [ ] The criterion: the reconstruction lowers the metric materially (to be
+    set with the owner before the runs) on each rung of a timestep/Newton
+    ladder and a resolution ladder.
+  - [ ] Reported beside it: the repair's and the bound's activation, and the
+    copies' residual, so that agreement does not come from the same
+    regularization on both sides.
+
+If it fails, the default mode's split is documented as a modelled estimate
+only, or reverted to the grid rule, as the owner decides.
+
+### WP4a-J: known issue 4's Jacobian switch
+
+The switch and the experiment of `design/ZERO_M_SPLIT.md`, sections 4 and 5,
+after the owner's decision 1 ("WP4a's two points" above). Separate from #104's
+scope (the split, `pr_tag` and the restatement), by the owner's review of
+#104, finding 6.
 
 ## WP4b: rain and snow carry their own tags (draft PR-W4b)
 
@@ -482,6 +593,11 @@ owner's points in the note's section 8.
     time, both modes, with and without rain and snow tags, both families. P2
     and P3 only if the profile shows them. Then propose the default mode's
     cost budget to the owner, before V-W11.
+      + [ ] The default mode's plume (`water_exchange_inputs!`) grows from
+        2.6e-5 s at 8 tags to 1.3e-3 s at 32 on TRMM's column, and the 0M
+        split around it allocates 5.7 kB at 8 tags and 1.5 MB at 32 (FINDINGS
+        W30). The model's exchange pays it at every implicit evaluation. Find
+        where, before the cost budget.
 
 ## The sphere
 

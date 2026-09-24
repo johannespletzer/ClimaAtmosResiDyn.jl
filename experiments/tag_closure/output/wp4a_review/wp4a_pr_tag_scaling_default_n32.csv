@@ -1,0 +1,2 @@
+mode,ntags,diagnostics,batch_seconds,per_call_seconds,max_abs_difference
+default,32,96,0.002466345,0.126960815,0.0

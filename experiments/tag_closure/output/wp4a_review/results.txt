@@ -1,0 +1,14 @@
+RESULT run=wp4a_negative_area_copies commit=? steps=144 raining_steps=78
+RESULT per_step_max negative_area_fraction=0.0 gain_fraction=0.0
+RESULT run_sum negative_area_fraction=0.0 gain_fraction=0.0
+RESULT run=wp4a_negative_area_default commit=? steps=144 raining_steps=78
+RESULT per_step_max negative_area_fraction=0.0 gain_fraction=0.0
+RESULT run_sum negative_area_fraction=0.0 gain_fraction=0.0
+RESULT run=wp4a_pr_tag_scaling_default_n2 commit=? ntags=2 diagnostics=6 batch_seconds=2.8084e-5 per_call_seconds=0.000145129 max_abs_difference=0.0
+RESULT run=wp4a_pr_tag_scaling_copies_n2 commit=? ntags=2 diagnostics=6 batch_seconds=2.9277e-5 per_call_seconds=0.000120415 max_abs_difference=0.0
+RESULT run=wp4a_pr_tag_scaling_copies_n8 commit=? ntags=8 diagnostics=24 batch_seconds=0.000196767 per_call_seconds=0.000574661 max_abs_difference=0.0
+RESULT run=wp4a_pr_tag_breakdown_default_n8 ntags=8 split_bytes=5688 exchange_inputs=2.5639e-5 integrals_3n=6.685e-6 share_differences_one=7.06e-7 share_norm=1.268e-6 split_all=4.5009e-5 update_batch=4.5355e-5
+RESULT run=wp4a_pr_tag_breakdown_default_n32 ntags=32 split_bytes=1475800 exchange_inputs=0.001276234 integrals_3n=2.666e-5 share_differences_one=2.0176e-5 share_norm=1.287e-6 split_all=0.001712751 update_batch=0.001657378
+RESULT run=wp4a_pr_tag_scaling_default_n32 commit=? ntags=32 diagnostics=96 batch_seconds=0.002466345 per_call_seconds=0.126960815 max_abs_difference=0.0
+RESULT run=wp4a_pr_tag_scaling_default_n8 commit=? ntags=8 diagnostics=24 batch_seconds=0.000165892 per_call_seconds=0.000851976 max_abs_difference=0.0
+RESULT run=wp4a_pr_tag_breakdown_copies_n8 ntags=8 split_bytes=104 integrals_3n=6.928e-6 share_norm=1.26e-6 split_all=6.7588e-5 update_batch=6.8054e-5
