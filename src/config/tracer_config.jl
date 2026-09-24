@@ -1411,13 +1411,6 @@ function check_water_tracers_transport_supported(
 end
 
 """
-    water_tag_updraft_copy_from_config(value)
-
-Parse `water_tag_updraft_copy`. `false`, the default, and `~` give the water
-tags no copy in the updrafts; `true` gives them one. Anything else is an
-error, so that a quoted `"true"` cannot silently read as off.
-"""
-"""
     default_water_tag_transport(parsed_args, updraft_copies, tags)
 
 The transport the water tags take when `water_tag_transport` is not set.
@@ -1454,6 +1447,13 @@ _explicit_one_moment_config(parsed_args) =
     get(parsed_args, "microphysics_model", nothing) == "1M" &&
     get(parsed_args, "implicit_microphysics", true) == false
 
+"""
+    water_tag_updraft_copy_from_config(value)
+
+Parse `water_tag_updraft_copy`. `false`, the default, and `~` give the water
+tags no copy in the updrafts; `true` gives them one. Anything else is an
+error, so that a quoted `"true"` cannot silently read as off.
+"""
 function water_tag_updraft_copy_from_config(value)
     isnothing(value) && return false
     value isa Bool || error(
