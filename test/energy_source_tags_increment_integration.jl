@@ -347,8 +347,8 @@ tags = [
         # The audit's columns and the diagnostics read the ledger.
         audit = CA.energy_source_audit(Y, p, model, FT(1))
         @test isequal(audit.increment_left, left)
-        @test audit.increment_left_gross ≈ sum(abs.(Y.c.e_src_inc_left))
-        @test audit.increment_moved_gross ≈ sum(ᶜabs)
+        @test audit.increment_left_net_abs ≈ sum(abs.(Y.c.e_src_inc_left))
+        @test audit.increment_moved_net_abs ≈ sum(ᶜabs)
         ᶜleft_specific = CA.Diagnostics.compute_e_src_ledger!(
             nothing,
             Y,

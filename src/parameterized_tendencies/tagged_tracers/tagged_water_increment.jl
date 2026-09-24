@@ -329,7 +329,7 @@ cell's ledger; and `increment_moved_net_abs`, the same for what it moved
 between levels. Both are net over time in each cell: a cell whose ledger went
 up and down again counts only what is left. They are not a throughput, and
 understate how much the correction redistributed. The energy source tags'
-columns of the same kind are still named `_gross`. Each also over `scale`.
+columns of the same kind have the same names. Each also over `scale`.
 `nothing` when there are no such columns. Collective, as `tag_audit` is.
 """
 function water_tag_extra_audit(Y, p, model, scale)
