@@ -1,0 +1,4 @@
+== test: parent_budget/restart_ledger_tests in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3 (compute nodes have no git; the commit is in the report)
+Test Summary:                        | Pass  Total      Time
+Parent-budget restarts and callbacks |   34     34  13m12.0s
+--- test summaries from the .err

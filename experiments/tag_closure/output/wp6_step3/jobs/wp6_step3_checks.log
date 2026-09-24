@@ -1,0 +1,1382 @@
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, ClimaAtmos.TracerNonnegativityVerticalWaterBorrowing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS343`
+[ Info: Initialized state (77.369 μs, 4.7 KiB)
+[ Info: Built cache (164.545 s, 29.65 GiB)
+[ Info: Assembled callbacks (199.679 ms, 15.14 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (426.394 s, 18.19 GiB)
+[ Info: Initialized integrator (96.868 s, 7.01 GiB)
+[ Info: Set up diagnostics (24.233 s, 294.15 MiB)
+┌ Info: Simulation info
+│   job_id = "wp6s3_plain_step"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_jz5HDy/output_0000"
+┌ Info: Running
+│   job_id = "wp6s3_plain_step"
+│   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_jz5HDy/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 1800.0 seconds (2010-01-01T00:30:00) [counter = 1800, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "6.7%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-24T20:52:48.931
+└   estimated_finish_date = 2026-09-24T20:52:48.931
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "13.3%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.11"
+│   date_now = 2026-09-24T20:52:51.853
+└   estimated_finish_date = 2026-09-24T20:52:51.853
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "10 milliseconds, 552 microseconds"
+│   wall_time_total = "158 milliseconds, 287 microseconds"
+│   wall_time_remaining = "116 milliseconds, 77 microseconds"
+│   wall_time_spent = "42 milliseconds, 210 microseconds"
+│   percent_complete = "26.7%"
+│   estimated_sypd = "31.134"
+│   instantaneous_sypd = "31.134"
+│   date_now = 2026-09-24T20:52:52.073
+└   estimated_finish_date = 2026-09-24T20:52:53.073
+┌ Info: Progress
+│   simulation_time = "12 minutes"
+│   n_steps_completed = 6
+│   wall_time_per_step = "43 milliseconds, 767 microseconds"
+│   wall_time_total = "656 milliseconds, 507 microseconds"
+│   wall_time_remaining = "393 milliseconds, 904 microseconds"
+│   wall_time_spent = "262 milliseconds, 603 microseconds"
+│   percent_complete = "40.0%"
+│   estimated_sypd = "7.507"
+│   instantaneous_sypd = "2.981"
+│   date_now = 2026-09-24T20:52:52.095
+└   estimated_finish_date = 2026-09-24T20:52:53.095
+┌ Info: Progress
+│   simulation_time = "16 minutes"
+│   n_steps_completed = 8
+│   wall_time_per_step = "35 milliseconds, 370 microseconds"
+│   wall_time_total = "530 milliseconds, 553 microseconds"
+│   wall_time_remaining = "247 milliseconds, 591 microseconds"
+│   wall_time_spent = "282 milliseconds, 962 microseconds"
+│   percent_complete = "53.3%"
+│   estimated_sypd = "9.289"
+│   instantaneous_sypd = "32.275"
+│   date_now = 2026-09-24T20:52:52.115
+└   estimated_finish_date = 2026-09-24T20:52:53.115
+┌ Info: Progress
+│   simulation_time = "20 minutes"
+│   n_steps_completed = 10
+│   wall_time_per_step = "30 milliseconds, 327 microseconds"
+│   wall_time_total = "454 milliseconds, 908 microseconds"
+│   wall_time_remaining = "151 milliseconds, 636 microseconds"
+│   wall_time_spent = "303 milliseconds, 272 microseconds"
+│   percent_complete = "66.7%"
+│   estimated_sypd = "10.833"
+│   instantaneous_sypd = "32.353"
+│   date_now = 2026-09-24T20:52:52.136
+└   estimated_finish_date = 2026-09-24T20:52:53.135
+┌ Info: Progress
+│   simulation_time = "24 minutes"
+│   n_steps_completed = 12
+│   wall_time_per_step = "26 milliseconds, 984 microseconds"
+│   wall_time_total = "404 milliseconds, 767 microseconds"
+│   wall_time_remaining = "80 milliseconds, 953 microseconds"
+│   wall_time_spent = "323 milliseconds, 814 microseconds"
+│   percent_complete = "80.0%"
+│   estimated_sypd = "12.175"
+│   instantaneous_sypd = "31.987"
+│   date_now = 2026-09-24T20:52:52.156
+└   estimated_finish_date = 2026-09-24T20:52:53.156
+┌ Info: Progress
+│   simulation_time = "28 minutes"
+│   n_steps_completed = 14
+│   wall_time_per_step = "24 milliseconds, 603 microseconds"
+│   wall_time_total = "369 milliseconds, 55 microseconds"
+│   wall_time_remaining = "24 milliseconds, 603 microseconds"
+│   wall_time_spent = "344 milliseconds, 452 microseconds"
+│   percent_complete = "93.3%"
+│   estimated_sypd = "13.353"
+│   instantaneous_sypd = "31.839"
+│   date_now = 2026-09-24T20:52:52.177
+└   estimated_finish_date = 2026-09-24T20:52:53.177
+[ Info: solve! walltime = 0.399
+[ Info: sypd: 12.369
+[ Info: wall_time_per_timestep: 26 milliseconds, 579 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 10.47 GiB
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Warning: `energy_source_tags` with `turbconv: prognostic_edmfx`: the eddy diffusion moves the tags as passive tracers, while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, unless `energy_source_tag_transport: enthalpy_increment` takes it after each implicit solve.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:1379
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, ClimaAtmos.TracerNonnegativityVerticalWaterBorrowing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, ClimaAtmos.EnergySourceTaggingModel{Tuple{ClimaAtmos.EnergySourceTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:sfc, Nothing, Tuple{Symbol}}}, Float64, ClimaAtmos.EnthalpyIncrementEnergySourceTransport, false, true}, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Warning: `radiation` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: radiation` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:767
+┌ Warning: `subsidence` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: subsidence` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:767
+┌ Warning: `energy_source_tags` with `tracer_nonnegativity_method: vertical_water_borrowing` on `ρq_tot`: the borrowing changes `ρ` and `ρe_tot` to match, outside every bracket, so no tag takes the change, and it goes to `e_src_res`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:829
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS343`
+[ Info: Initialized state (6.285 ms, 38.05 KiB)
+[ Info: Built cache (120.806 s, 12.38 GiB)
+[ Info: Assembled callbacks (671.12 ms, 39.09 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (74.846 s, 3.16 GiB)
+[ Info: Initialized integrator (199.687 s, 13.05 GiB)
+[ Info: Set up diagnostics (70.199 s, 13.16 MiB)
+┌ Info: Simulation info
+│   job_id = "wp6s3_step"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_nR2jMy/output_0000"
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "6.7%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-24T21:15:33.970
+└   estimated_finish_date = 2026-09-24T21:15:33.970
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "13.3%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.137"
+│   date_now = 2026-09-24T21:15:36.374
+└   estimated_finish_date = 2026-09-24T21:15:36.374
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "23 milliseconds, 933 microseconds"
+│   wall_time_total = "359 milliseconds, 2 microseconds"
+│   wall_time_remaining = "263 milliseconds, 268 microseconds"
+│   wall_time_spent = "95 milliseconds, 734 microseconds"
+│   percent_complete = "26.7%"
+│   estimated_sypd = "13.727"
+│   instantaneous_sypd = "13.727"
+│   date_now = 2026-09-24T21:15:36.422
+└   estimated_finish_date = 2026-09-24T21:15:37.422
+┌ Warning: water tag closure residual 8.448979773684309e-5 exceeds the configured tolerance 1.0e-10 at t = 600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_nR2jMy/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+┌ Info: Progress
+│   simulation_time = "12 minutes"
+│   n_steps_completed = 6
+│   wall_time_per_step = "24 milliseconds, 623 microseconds"
+│   wall_time_total = "369 milliseconds, 347 microseconds"
+│   wall_time_remaining = "221 milliseconds, 608 microseconds"
+│   wall_time_spent = "147 milliseconds, 739 microseconds"
+│   percent_complete = "40.0%"
+│   estimated_sypd = "13.343"
+│   instantaneous_sypd = "12.635"
+│   date_now = 2026-09-24T21:15:36.474
+└   estimated_finish_date = 2026-09-24T21:15:37.474
+┌ Info: Progress
+│   simulation_time = "16 minutes"
+│   n_steps_completed = 8
+│   wall_time_per_step = "24 milliseconds, 540 microseconds"
+│   wall_time_total = "368 milliseconds, 107 microseconds"
+│   wall_time_remaining = "171 milliseconds, 783 microseconds"
+│   wall_time_spent = "196 milliseconds, 324 microseconds"
+│   percent_complete = "53.3%"
+│   estimated_sypd = "13.388"
+│   instantaneous_sypd = "13.524"
+│   date_now = 2026-09-24T21:15:36.523
+└   estimated_finish_date = 2026-09-24T21:15:37.523
+┌ Warning: water tag closure residual 0.003255159546389405 exceeds the configured tolerance 1.0e-10 at t = 1200.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_nR2jMy/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+┌ Info: Progress
+│   simulation_time = "20 minutes"
+│   n_steps_completed = 10
+│   wall_time_per_step = "25 milliseconds, 53 microseconds"
+│   wall_time_total = "375 milliseconds, 805 microseconds"
+│   wall_time_remaining = "125 milliseconds, 268 microseconds"
+│   wall_time_spent = "250 milliseconds, 537 microseconds"
+│   percent_complete = "66.7%"
+│   estimated_sypd = "13.114"
+│   instantaneous_sypd = "12.12"
+│   date_now = 2026-09-24T21:15:36.577
+└   estimated_finish_date = 2026-09-24T21:15:37.577
+┌ Info: Progress
+│   simulation_time = "24 minutes"
+│   n_steps_completed = 12
+│   wall_time_per_step = "25 milliseconds, 124 microseconds"
+│   wall_time_total = "376 milliseconds, 873 microseconds"
+│   wall_time_remaining = "75 milliseconds, 374 microseconds"
+│   wall_time_spent = "301 milliseconds, 499 microseconds"
+│   percent_complete = "80.0%"
+│   estimated_sypd = "13.076"
+│   instantaneous_sypd = "12.894"
+│   date_now = 2026-09-24T21:15:36.628
+└   estimated_finish_date = 2026-09-24T21:15:37.628
+┌ Info: Progress
+│   simulation_time = "28 minutes"
+│   n_steps_completed = 14
+│   wall_time_per_step = "25 milliseconds, 181 microseconds"
+│   wall_time_total = "377 milliseconds, 729 microseconds"
+│   wall_time_remaining = "25 milliseconds, 181 microseconds"
+│   wall_time_spent = "352 milliseconds, 547 microseconds"
+│   percent_complete = "93.3%"
+│   estimated_sypd = "13.047"
+│   instantaneous_sypd = "12.872"
+│   date_now = 2026-09-24T21:15:36.679
+└   estimated_finish_date = 2026-09-24T21:15:37.679
+┌ Warning: water tag closure residual 0.0047067231316856445 exceeds the configured tolerance 1.0e-10 at t = 1800.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_nR2jMy/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+step: 15 steps
+  partition ledgers against moved: water 5.226880954478762e-16, energy 1.5478027750197853e-15
+  q_tag_led_rescale: attempted 3.0878077872387166e-16, retained 7.719519468096792e-17, min over the run of L -3.469446951953614e-18
+  q_tag_led_empty: attempted 0.0, retained 0.0, min over the run of L 0.0
+  q_tag_led_repair: attempted 0.0, retained 0.0, min over the run of L 0.0
+  q_tag_led_repairnet: attempted 0.0, retained 0.0, min over the run of L 0.0
+  q_tag_inc_left: attempted 0.0016098685932505296, retained 0.0014189196921316264, min over the run of L -0.00018053022641374892
+  q_tag_inc_moved: attempted 0.03985595950183123, retained 0.024885065866973477, min over the run of L -0.004978275259427057
+  q_tag_led_inc_tropo: attempted 0.03964018055710718, retained 0.02470901708826781, min over the run of L -0.004978238251270805
+  q_tag_led_inc_strat: attempted 0.0003378240282515383, retained 0.0002621621107837757, min over the run of L -4.893820475339393e-5
+  q_tag_led_inc_evap: attempted 0.00018855731950744842, retained 0.00016044566897884517, min over the run of L -3.344789199940144e-5
+  e_src_led_repair: attempted 0.0, retained 0.0, min over the run of L 0.0
+  e_src_led_repairnet: attempted 0.0, retained 0.0, min over the run of L 0.0
+  e_src_inc_left: attempted 290.1533586353799, retained 186.1760062357938, min over the run of L -5.623060763393724
+  e_src_inc_moved: attempted 21543.562639584812, retained 12795.48227944297, min over the run of L -1042.078510393425
+  e_src_led_inc_strat: attempted 6575.447064332292, retained 4116.926054714595, min over the run of L -518.9428576635444
+  e_src_led_inc_tropo: attempted 18683.606278642783, retained 10678.449195046147, min over the run of L -1042.0769333655162
+  e_src_led_inc_sfc: attempted 41.97716169179601, retained 30.032537947478033, min over the run of L -12.449500909641454
+  tropo: max |cache fix − state fix| = 1.0407875466019954e-17, max |state fix| = 3.469291822006651e-18
+  strat: max |cache fix − state fix| = 4.227424635753692e-18, max |state fix| = 1.4091415452512307e-18
+  evap: max |cache fix − state fix| = 3.1848258445837434e-19, max |state fix| = 1.061608614861248e-19
+  audit led_fix_tropo_inventory_fraction = 4.118609245808006e-16
+  audit led_fix_strat_inventory_fraction = 1.4038394217266163e-16
+  audit led_fix_evap_inventory_fraction = 2.339761462987657e-16
+  audit led_inc_tropo_inventory_fraction = 0.14964123261067094
+  audit led_inc_strat_inventory_fraction = 0.004005583589077748
+  audit led_inc_evap_inventory_fraction = 0.1236624831078559
+Test Summary: | Pass  Total      Time
+step          |   72     72  22m44.1s
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, ClimaAtmos.TracerNonnegativityVerticalWaterBorrowing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS343`
+[ Info: Initialized state (255.505 μs, 4.7 KiB)
+[ Info: Built cache (1.66 ms, 240.82 KiB)
+[ Info: Assembled callbacks (130.831 μs, 79.38 KiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (4.854 s, 3.52 MiB)
+[ Info: Initialized integrator (19.794 s, 37.52 MiB)
+[ Info: Set up diagnostics (293.646 μs, 16.5 KiB)
+┌ Info: Simulation info
+│   job_id = "wp6s3_plain_stage"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_70u4Vy/output_0000"
+┌ Info: Running
+│   job_id = "wp6s3_plain_stage"
+│   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_70u4Vy/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 1800.0 seconds (2010-01-01T00:30:00) [counter = 1800, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "6.7%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-24T21:20:11.940
+└   estimated_finish_date = 2026-09-24T21:20:11.940
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "13.3%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.093"
+│   date_now = 2026-09-24T21:20:15.475
+└   estimated_finish_date = 2026-09-24T21:20:15.475
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "9 milliseconds, 957 microseconds"
+│   wall_time_total = "149 milliseconds, 363 microseconds"
+│   wall_time_remaining = "109 milliseconds, 533 microseconds"
+│   wall_time_spent = "39 milliseconds, 830 microseconds"
+│   percent_complete = "26.7%"
+│   estimated_sypd = "32.994"
+│   instantaneous_sypd = "32.994"
+│   date_now = 2026-09-24T21:20:15.495
+└   estimated_finish_date = 2026-09-24T21:20:16.495
+┌ Info: Progress
+│   simulation_time = "12 minutes"
+│   n_steps_completed = 6
+│   wall_time_per_step = "10 milliseconds, 115 microseconds"
+│   wall_time_total = "151 milliseconds, 727 microseconds"
+│   wall_time_remaining = "91 milliseconds, 36 microseconds"
+│   wall_time_spent = "60 milliseconds, 691 microseconds"
+│   percent_complete = "40.0%"
+│   estimated_sypd = "32.48"
+│   instantaneous_sypd = "31.498"
+│   date_now = 2026-09-24T21:20:15.516
+└   estimated_finish_date = 2026-09-24T21:20:16.516
+┌ Info: Progress
+│   simulation_time = "16 minutes"
+│   n_steps_completed = 8
+│   wall_time_per_step = "10 milliseconds, 127 microseconds"
+│   wall_time_total = "151 milliseconds, 916 microseconds"
+│   wall_time_remaining = "70 milliseconds, 894 microseconds"
+│   wall_time_spent = "81 milliseconds, 22 microseconds"
+│   percent_complete = "53.3%"
+│   estimated_sypd = "32.44"
+│   instantaneous_sypd = "32.319"
+│   date_now = 2026-09-24T21:20:15.536
+└   estimated_finish_date = 2026-09-24T21:20:16.536
+┌ Info: Progress
+│   simulation_time = "20 minutes"
+│   n_steps_completed = 10
+│   wall_time_per_step = "10 milliseconds, 44 microseconds"
+│   wall_time_total = "150 milliseconds, 661 microseconds"
+│   wall_time_remaining = "50 milliseconds, 220 microseconds"
+│   wall_time_spent = "100 milliseconds, 440 microseconds"
+│   percent_complete = "66.7%"
+│   estimated_sypd = "32.71"
+│   instantaneous_sypd = "33.837"
+│   date_now = 2026-09-24T21:20:15.555
+└   estimated_finish_date = 2026-09-24T21:20:16.555
+┌ Info: Progress
+│   simulation_time = "24 minutes"
+│   n_steps_completed = 12
+│   wall_time_per_step = "9 milliseconds, 994 microseconds"
+│   wall_time_total = "149 milliseconds, 923 microseconds"
+│   wall_time_remaining = "29 milliseconds, 984 microseconds"
+│   wall_time_spent = "119 milliseconds, 939 microseconds"
+│   percent_complete = "80.0%"
+│   estimated_sypd = "32.871"
+│   instantaneous_sypd = "33.7"
+│   date_now = 2026-09-24T21:20:15.575
+└   estimated_finish_date = 2026-09-24T21:20:16.575
+┌ Info: Progress
+│   simulation_time = "28 minutes"
+│   n_steps_completed = 14
+│   wall_time_per_step = "9 milliseconds, 980 microseconds"
+│   wall_time_total = "149 milliseconds, 707 microseconds"
+│   wall_time_remaining = "9 milliseconds, 980 microseconds"
+│   wall_time_spent = "139 milliseconds, 727 microseconds"
+│   percent_complete = "93.3%"
+│   estimated_sypd = "32.918"
+│   instantaneous_sypd = "33.206"
+│   date_now = 2026-09-24T21:20:15.595
+└   estimated_finish_date = 2026-09-24T21:20:16.595
+[ Info: solve! walltime = 0.211
+[ Info: sypd: 23.338
+[ Info: wall_time_per_timestep: 14 milliseconds, 87 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 11.62 GiB
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Warning: `energy_source_tags` with `turbconv: prognostic_edmfx`: the eddy diffusion moves the tags as passive tracers, while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, unless `energy_source_tag_transport: enthalpy_increment` takes it after each implicit solve.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:1379
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, ClimaAtmos.TracerNonnegativityVerticalWaterBorrowing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, ClimaAtmos.EnergySourceTaggingModel{Tuple{ClimaAtmos.EnergySourceTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:sfc, Nothing, Tuple{Symbol}}}, Float64, ClimaAtmos.EnthalpyIncrementEnergySourceTransport, false, true}, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Warning: `radiation` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: radiation` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:767
+┌ Warning: `subsidence` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: subsidence` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:767
+┌ Warning: `energy_source_tags` with `tracer_nonnegativity_method: vertical_water_borrowing` on `ρq_tot`: the borrowing changes `ρ` and `ρe_tot` to match, outside every bracket, so no tag takes the change, and it goes to `e_src_res`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:829
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS343`
+[ Info: Initialized state (264.346 μs, 12.46 KiB)
+[ Info: Built cache (2.035 ms, 386.42 KiB)
+┌ Warning: `update_constrain_state_every: stage`: the tags' ledgers per mechanism record what each correction retained, but their change over a step is not what the step moved, since a firing inside the step is weighted by its tableau weight, which can be negative. Their per-step gross and the audit's `_retained` columns are exact only at `step`. Each tag's own ledgers, where kept, are exact at every cadence.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tag_throughput.jl:319
+[ Info: Assembled callbacks (239.622 μs, 110.16 KiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (19.69 ms, 5.33 MiB)
+[ Info: Initialized integrator (88.899 s, 35.57 MiB)
+[ Info: Set up diagnostics (801.19 μs, 91.82 KiB)
+┌ Info: Simulation info
+│   job_id = "wp6s3_stage"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_3UPEDS/output_0000"
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "6.7%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-24T21:29:38.348
+└   estimated_finish_date = 2026-09-24T21:29:38.348
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "13.3%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "2.94"
+│   date_now = 2026-09-24T21:29:38.460
+└   estimated_finish_date = 2026-09-24T21:29:38.460
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "25 milliseconds, 679 microseconds"
+│   wall_time_total = "385 milliseconds, 192 microseconds"
+│   wall_time_remaining = "282 milliseconds, 474 microseconds"
+│   wall_time_spent = "102 milliseconds, 717 microseconds"
+│   percent_complete = "26.7%"
+│   estimated_sypd = "12.794"
+│   instantaneous_sypd = "12.794"
+│   date_now = 2026-09-24T21:29:38.512
+└   estimated_finish_date = 2026-09-24T21:29:39.512
+┌ Warning: water tag closure residual 0.0006563250232895921 exceeds the configured tolerance 1.0e-10 at t = 600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_3UPEDS/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+┌ Info: Progress
+│   simulation_time = "12 minutes"
+│   n_steps_completed = 6
+│   wall_time_per_step = "25 milliseconds, 969 microseconds"
+│   wall_time_total = "389 milliseconds, 539 microseconds"
+│   wall_time_remaining = "233 milliseconds, 723 microseconds"
+│   wall_time_spent = "155 milliseconds, 815 microseconds"
+│   percent_complete = "40.0%"
+│   estimated_sypd = "12.651"
+│   instantaneous_sypd = "12.375"
+│   date_now = 2026-09-24T21:29:38.565
+└   estimated_finish_date = 2026-09-24T21:29:39.564
+┌ Info: Progress
+│   simulation_time = "16 minutes"
+│   n_steps_completed = 8
+│   wall_time_per_step = "25 milliseconds, 783 microseconds"
+│   wall_time_total = "386 milliseconds, 746 microseconds"
+│   wall_time_remaining = "180 milliseconds, 481 microseconds"
+│   wall_time_spent = "206 milliseconds, 264 microseconds"
+│   percent_complete = "53.3%"
+│   estimated_sypd = "12.743"
+│   instantaneous_sypd = "13.025"
+│   date_now = 2026-09-24T21:29:38.615
+└   estimated_finish_date = 2026-09-24T21:29:39.615
+┌ Warning: water tag closure residual 0.0007176291379017594 exceeds the configured tolerance 1.0e-10 at t = 1200.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_3UPEDS/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+┌ Info: Progress
+│   simulation_time = "20 minutes"
+│   n_steps_completed = 10
+│   wall_time_per_step = "25 milliseconds, 985 microseconds"
+│   wall_time_total = "389 milliseconds, 777 microseconds"
+│   wall_time_remaining = "129 milliseconds, 925 microseconds"
+│   wall_time_spent = "259 milliseconds, 851 microseconds"
+│   percent_complete = "66.7%"
+│   estimated_sypd = "12.643"
+│   instantaneous_sypd = "12.262"
+│   date_now = 2026-09-24T21:29:38.669
+└   estimated_finish_date = 2026-09-24T21:29:39.669
+┌ Info: Progress
+│   simulation_time = "24 minutes"
+│   n_steps_completed = 12
+│   wall_time_per_step = "25 milliseconds, 813 microseconds"
+│   wall_time_total = "387 milliseconds, 206 microseconds"
+│   wall_time_remaining = "77 milliseconds, 441 microseconds"
+│   wall_time_spent = "309 milliseconds, 764 microseconds"
+│   percent_complete = "80.0%"
+│   estimated_sypd = "12.727"
+│   instantaneous_sypd = "13.165"
+│   date_now = 2026-09-24T21:29:38.718
+└   estimated_finish_date = 2026-09-24T21:29:39.718
+┌ Info: Progress
+│   simulation_time = "28 minutes"
+│   n_steps_completed = 14
+│   wall_time_per_step = "25 milliseconds, 713 microseconds"
+│   wall_time_total = "385 milliseconds, 697 microseconds"
+│   wall_time_remaining = "25 milliseconds, 713 microseconds"
+│   wall_time_spent = "359 milliseconds, 983 microseconds"
+│   percent_complete = "93.3%"
+│   estimated_sypd = "12.777"
+│   instantaneous_sypd = "13.084"
+│   date_now = 2026-09-24T21:29:38.769
+└   estimated_finish_date = 2026-09-24T21:29:39.769
+┌ Warning: water tag closure residual 0.0007296621653486611 exceeds the configured tolerance 1.0e-10 at t = 1800.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_3UPEDS/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+stage: 15 steps
+  partition ledgers against moved: water 9.580179846650452e-16, energy 6.970947970254339e-16
+  q_tag_led_rescale: attempted 2.931682674400804e-16, retained 7.32920668600201e-17, min over the run of L -3.469446951953614e-18
+  q_tag_led_empty: attempted 0.0, retained 0.0, min over the run of L 0.0
+  q_tag_led_repair: attempted 0.0, retained 0.0, min over the run of L 0.0
+  q_tag_led_repairnet: attempted 0.0, retained 0.0, min over the run of L 0.0
+  q_tag_inc_left: attempted 0.00014531037901428526, retained 0.00018355499218850155, min over the run of L -1.837187811879975e-9
+  q_tag_inc_moved: attempted 0.002656051267422633, retained 0.0017293185357703628, min over the run of L -0.00016413061578773356
+  q_tag_led_inc_tropo: attempted 0.002479195395137646, retained 0.0015900500996549713, min over the run of L -0.00016412939802649666
+  q_tag_led_inc_strat: attempted 0.0002197015222764325, retained 0.00017353475201607353, min over the run of L -2.9378936035787504e-5
+  q_tag_led_inc_evap: attempted 2.1727754954471792e-5, retained 1.5492460893901705e-5, min over the run of L -6.052984592260015e-6
+  e_src_led_repair: attempted 0.0, retained 0.0, min over the run of L 0.0
+  e_src_led_repairnet: attempted 0.0, retained 0.0, min over the run of L 0.0
+  e_src_inc_left: attempted 26.13518768247278, retained 30.986078451709023, min over the run of L 0.06740258624841698
+  e_src_inc_moved: attempted 11241.98389438055, retained 8406.86741692669, min over the run of L -978.5197497390138
+  e_src_led_inc_strat: attempted 4041.1114514876426, retained 3165.283114961596, min over the run of L -441.4641378681865
+  e_src_led_inc_tropo: attempted 8523.396089783637, retained 6232.137394012409, min over the run of L -978.5147862869824
+  e_src_led_inc_sfc: attempted 32.917645709912335, retained 24.31015047658656, min over the run of L -11.970651256276625
+  tropo: max |cache fix − state fix| = 1.0408024362347075e-17, max |state fix| = 3.4693414541156915e-18
+  strat: max |cache fix − state fix| = 6.4531307542132244e-18, max |state fix| = 2.1510435847377416e-18
+  evap: max |cache fix − state fix| = 1.0679776609484172e-19, max |state fix| = 3.559925536494724e-20
+  audit led_fix_tropo_inventory_fraction = 3.8470118453443313e-16
+  audit led_fix_strat_inventory_fraction = 1.4443154599155145e-16
+  audit led_fix_evap_inventory_fraction = 2.0344487418158557e-16
+  audit led_inc_tropo_inventory_fraction = 0.009581802326136724
+  audit led_inc_strat_inventory_fraction = 0.002651446552275014
+  audit led_inc_evap_inventory_fraction = 0.011688273964846509
+Test Summary: | Pass  Total     Time
+stage         |   66     66  9m20.7s
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, ClimaAtmos.TracerNonnegativityVerticalWaterBorrowing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS343`
+[ Info: Initialized state (223.082 μs, 4.7 KiB)
+[ Info: Built cache (1.766 ms, 240.82 KiB)
+[ Info: Assembled callbacks (188.289 μs, 79.38 KiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (4.832 s, 3.52 MiB)
+[ Info: Initialized integrator (20.461 s, 37.53 MiB)
+[ Info: Set up diagnostics (343.521 μs, 16.5 KiB)
+┌ Info: Simulation info
+│   job_id = "wp6s3_plain_dss"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_HTvmLd/output_0000"
+┌ Info: Running
+│   job_id = "wp6s3_plain_dss"
+│   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_HTvmLd/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 1800.0 seconds (2010-01-01T00:30:00) [counter = 1800, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "6.7%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-24T21:34:56.673
+└   estimated_finish_date = 2026-09-24T21:34:56.673
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "13.3%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.104"
+│   date_now = 2026-09-24T21:34:59.832
+└   estimated_finish_date = 2026-09-24T21:34:59.831
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "11 milliseconds, 49 microseconds"
+│   wall_time_total = "165 milliseconds, 749 microseconds"
+│   wall_time_remaining = "121 milliseconds, 549 microseconds"
+│   wall_time_spent = "44 milliseconds, 199 microseconds"
+│   percent_complete = "26.7%"
+│   estimated_sypd = "29.732"
+│   instantaneous_sypd = "29.732"
+│   date_now = 2026-09-24T21:34:59.854
+└   estimated_finish_date = 2026-09-24T21:35:00.854
+┌ Info: Progress
+│   simulation_time = "12 minutes"
+│   n_steps_completed = 6
+│   wall_time_per_step = "10 milliseconds, 774 microseconds"
+│   wall_time_total = "161 milliseconds, 620 microseconds"
+│   wall_time_remaining = "96 milliseconds, 972 microseconds"
+│   wall_time_spent = "64 milliseconds, 648 microseconds"
+│   percent_complete = "40.0%"
+│   estimated_sypd = "30.492"
+│   instantaneous_sypd = "32.134"
+│   date_now = 2026-09-24T21:34:59.874
+└   estimated_finish_date = 2026-09-24T21:35:00.874
+┌ Info: Progress
+│   simulation_time = "16 minutes"
+│   n_steps_completed = 8
+│   wall_time_per_step = "10 milliseconds, 525 microseconds"
+│   wall_time_total = "157 milliseconds, 888 microseconds"
+│   wall_time_remaining = "73 milliseconds, 681 microseconds"
+│   wall_time_spent = "84 milliseconds, 207 microseconds"
+│   percent_complete = "53.3%"
+│   estimated_sypd = "31.213"
+│   instantaneous_sypd = "33.595"
+│   date_now = 2026-09-24T21:34:59.894
+└   estimated_finish_date = 2026-09-24T21:35:00.894
+┌ Info: Progress
+│   simulation_time = "20 minutes"
+│   n_steps_completed = 10
+│   wall_time_per_step = "10 milliseconds, 343 microseconds"
+│   wall_time_total = "155 milliseconds, 153 microseconds"
+│   wall_time_remaining = "51 milliseconds, 717 microseconds"
+│   wall_time_spent = "103 milliseconds, 435 microseconds"
+│   percent_complete = "66.7%"
+│   estimated_sypd = "31.763"
+│   instantaneous_sypd = "34.172"
+│   date_now = 2026-09-24T21:34:59.913
+└   estimated_finish_date = 2026-09-24T21:35:00.913
+┌ Info: Progress
+│   simulation_time = "24 minutes"
+│   n_steps_completed = 12
+│   wall_time_per_step = "10 milliseconds, 199 microseconds"
+│   wall_time_total = "152 milliseconds, 996 microseconds"
+│   wall_time_remaining = "30 milliseconds, 599 microseconds"
+│   wall_time_spent = "122 milliseconds, 396 microseconds"
+│   percent_complete = "80.0%"
+│   estimated_sypd = "32.211"
+│   instantaneous_sypd = "34.655"
+│   date_now = 2026-09-24T21:34:59.932
+└   estimated_finish_date = 2026-09-24T21:35:00.932
+┌ Info: Progress
+│   simulation_time = "28 minutes"
+│   n_steps_completed = 14
+│   wall_time_per_step = "10 milliseconds, 80 microseconds"
+│   wall_time_total = "151 milliseconds, 214 microseconds"
+│   wall_time_remaining = "10 milliseconds, 80 microseconds"
+│   wall_time_spent = "141 milliseconds, 133 microseconds"
+│   percent_complete = "93.3%"
+│   estimated_sypd = "32.59"
+│   instantaneous_sypd = "35.07"
+│   date_now = 2026-09-24T21:34:59.951
+└   estimated_finish_date = 2026-09-24T21:35:00.951
+[ Info: solve! walltime = 0.191
+[ Info: sypd: 25.753
+[ Info: wall_time_per_timestep: 12 milliseconds, 766 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 11.62 GiB
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Warning: `energy_source_tags` with `turbconv: prognostic_edmfx`: the eddy diffusion moves the tags as passive tracers, while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, unless `energy_source_tag_transport: enthalpy_increment` takes it after each implicit solve.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:1379
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, ClimaAtmos.TracerNonnegativityVerticalWaterBorrowing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, ClimaAtmos.EnergySourceTaggingModel{Tuple{ClimaAtmos.EnergySourceTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:sfc, Nothing, Tuple{Symbol}}}, Float64, ClimaAtmos.EnthalpyIncrementEnergySourceTransport, false, true}, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Warning: `radiation` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: radiation` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:767
+┌ Warning: `subsidence` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: subsidence` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:767
+┌ Warning: `energy_source_tags` with `tracer_nonnegativity_method: vertical_water_borrowing` on `ρq_tot`: the borrowing changes `ρ` and `ρe_tot` to match, outside every bracket, so no tag takes the change, and it goes to `e_src_res`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:829
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS343`
+[ Info: Initialized state (305.498 μs, 12.46 KiB)
+[ Info: Built cache (2.562 ms, 386.42 KiB)
+┌ Warning: `update_constrain_state_every: dss`: the tags' ledgers per mechanism record what each correction retained, but their change over a step is not what the step moved, since a firing inside the step is weighted by its tableau weight, which can be negative. Their per-step gross and the audit's `_retained` columns are exact only at `step`. Each tag's own ledgers, where kept, are exact at every cadence.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tag_throughput.jl:319
+[ Info: Assembled callbacks (235.749 μs, 110.16 KiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (19.522 ms, 5.33 MiB)
+[ Info: Initialized integrator (88.526 s, 35.57 MiB)
+[ Info: Set up diagnostics (1.05 ms, 91.82 KiB)
+┌ Info: Simulation info
+│   job_id = "wp6s3_dss"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_Zplmog/output_0000"
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "6.7%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-24T21:45:04.197
+└   estimated_finish_date = 2026-09-24T21:45:04.197
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "13.3%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "3.12"
+│   date_now = 2026-09-24T21:45:04.302
+└   estimated_finish_date = 2026-09-24T21:45:04.302
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "25 milliseconds, 418 microseconds"
+│   wall_time_total = "381 milliseconds, 277 microseconds"
+│   wall_time_remaining = "279 milliseconds, 603 microseconds"
+│   wall_time_spent = "101 milliseconds, 674 microseconds"
+│   percent_complete = "26.7%"
+│   estimated_sypd = "12.925"
+│   instantaneous_sypd = "12.925"
+│   date_now = 2026-09-24T21:45:04.353
+└   estimated_finish_date = 2026-09-24T21:45:05.353
+┌ Warning: water tag closure residual 8.651827592323198e-5 exceeds the configured tolerance 1.0e-10 at t = 600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_Zplmog/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+┌ Info: Progress
+│   simulation_time = "12 minutes"
+│   n_steps_completed = 6
+│   wall_time_per_step = "25 milliseconds, 974 microseconds"
+│   wall_time_total = "389 milliseconds, 620 microseconds"
+│   wall_time_remaining = "233 milliseconds, 772 microseconds"
+│   wall_time_spent = "155 milliseconds, 848 microseconds"
+│   percent_complete = "40.0%"
+│   estimated_sypd = "12.649"
+│   instantaneous_sypd = "12.129"
+│   date_now = 2026-09-24T21:45:04.407
+└   estimated_finish_date = 2026-09-24T21:45:05.407
+┌ Info: Progress
+│   simulation_time = "16 minutes"
+│   n_steps_completed = 8
+│   wall_time_per_step = "25 milliseconds, 973 microseconds"
+│   wall_time_total = "389 milliseconds, 606 microseconds"
+│   wall_time_remaining = "181 milliseconds, 816 microseconds"
+│   wall_time_spent = "207 milliseconds, 790 microseconds"
+│   percent_complete = "53.3%"
+│   estimated_sypd = "12.649"
+│   instantaneous_sypd = "12.65"
+│   date_now = 2026-09-24T21:45:04.459
+└   estimated_finish_date = 2026-09-24T21:45:05.459
+┌ Warning: water tag closure residual 0.06666424790530054 exceeds the configured tolerance 1.0e-10 at t = 1200.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_Zplmog/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+┌ Info: Progress
+│   simulation_time = "20 minutes"
+│   n_steps_completed = 10
+│   wall_time_per_step = "26 milliseconds, 279 microseconds"
+│   wall_time_total = "394 milliseconds, 185 microseconds"
+│   wall_time_remaining = "131 milliseconds, 395 microseconds"
+│   wall_time_spent = "262 milliseconds, 790 microseconds"
+│   percent_complete = "66.7%"
+│   estimated_sypd = "12.502"
+│   instantaneous_sypd = "11.947"
+│   date_now = 2026-09-24T21:45:04.514
+└   estimated_finish_date = 2026-09-24T21:45:05.514
+┌ Info: Progress
+│   simulation_time = "24 minutes"
+│   n_steps_completed = 12
+│   wall_time_per_step = "26 milliseconds, 269 microseconds"
+│   wall_time_total = "394 milliseconds, 45 microseconds"
+│   wall_time_remaining = "78 milliseconds, 809 microseconds"
+│   wall_time_spent = "315 milliseconds, 236 microseconds"
+│   percent_complete = "80.0%"
+│   estimated_sypd = "12.507"
+│   instantaneous_sypd = "12.529"
+│   date_now = 2026-09-24T21:45:04.567
+└   estimated_finish_date = 2026-09-24T21:45:05.567
+┌ Info: Progress
+│   simulation_time = "28 minutes"
+│   n_steps_completed = 14
+│   wall_time_per_step = "26 milliseconds, 309 microseconds"
+│   wall_time_total = "394 milliseconds, 646 microseconds"
+│   wall_time_remaining = "26 milliseconds, 309 microseconds"
+│   wall_time_spent = "368 milliseconds, 337 microseconds"
+│   percent_complete = "93.3%"
+│   estimated_sypd = "12.487"
+│   instantaneous_sypd = "12.374"
+│   date_now = 2026-09-24T21:45:04.620
+└   estimated_finish_date = 2026-09-24T21:45:05.620
+┌ Warning: water tag closure residual 0.06698724340168788 exceeds the configured tolerance 1.0e-10 at t = 1800.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_Zplmog/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+dss: 15 steps
+  partition ledgers against moved: water 6.933323878573468e-16, energy 3.4498865466251195e-16
+  q_tag_led_rescale: attempted 2.445960101127298e-16, retained 6.114900252818245e-17, min over the run of L -6.938893903907228e-18
+  q_tag_led_empty: attempted 0.0, retained 0.0, min over the run of L 0.0
+  q_tag_led_repair: attempted 0.00018176046628429177, retained 0.0001732738100731722, min over the run of L 0.0
+  q_tag_led_repairnet: attempted 0.03530596950451659, retained 0.017871379863905936, min over the run of L 0.0
+  q_tag_inc_left: attempted 0.02120728835625997, retained 0.03325436810123689, min over the run of L -3.628076490325399e-5
+  q_tag_inc_moved: attempted 0.09146583680800727, retained 0.058358196476852954, min over the run of L -0.01501205055201079
+  q_tag_led_inc_tropo: attempted 0.09118630529721872, retained 0.05813689697961492, min over the run of L -0.015002801726876399
+  q_tag_led_inc_strat: attempted 0.0007074467118051886, retained 0.0005855367237067061, min over the run of L -0.00011609779184565062
+  q_tag_led_inc_evap: attempted 0.0012788822188218724, retained 0.0008625070618509476, min over the run of L -0.00036921914376289965
+  e_src_led_repair: attempted 0.0, retained 0.0, min over the run of L 0.0
+  e_src_led_repairnet: attempted 0.0, retained 0.0, min over the run of L 0.0
+  e_src_inc_left: attempted 3895.7179788716285, retained 6081.7254480071115, min over the run of L 2.151130373058878
+  e_src_inc_moved: attempted 42086.61830239768, retained 25403.706710967326, min over the run of L -5437.375394972666
+  e_src_led_inc_strat: attempted 8442.715385272102, retained 5347.057494136551, min over the run of L -769.5738344052909
+  e_src_led_inc_tropo: attempted 39011.272108568955, retained 23141.653876903118, min over the run of L -5437.361999558143
+  e_src_led_inc_sfc: attempted 289.2954177021404, retained 205.438119645896, min over the run of L -94.49220923311523
+  tropo: max |cache fix − state fix| = 0.017432815585778944, max |state fix| = 0.017870347529263045
+  strat: max |cache fix − state fix| = 2.774721191287799e-5, max |state fix| = 0.00010645164878554104
+  evap: max |cache fix − state fix| = 1.672965988124628e-19, max |state fix| = 5.57655329374876e-20
+  audit led_fix_tropo_inventory_fraction = 0.12262516028621746
+  audit led_fix_strat_inventory_fraction = 0.00262875328593051
+  audit led_fix_evap_inventory_fraction = 1.4599278180641207e-16
+  audit led_inc_tropo_inventory_fraction = 0.39516360248600135
+  audit led_inc_strat_inventory_fraction = 0.00892341551039595
+  audit led_inc_evap_inventory_fraction = 0.728572736720034
+Test Summary: | Pass  Total      Time
+dss           |   66     66  10m02.2s
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`ClimaAtmos.ReproducibleRestart`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Warning: `energy_source_tags` with `turbconv: prognostic_edmfx`: the eddy diffusion moves the tags as passive tracers, while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, unless `energy_source_tag_transport: enthalpy_increment` takes it after each implicit solve.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:1379
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, ClimaAtmos.TracerNonnegativityVerticalWaterBorrowing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, ClimaAtmos.ReproducibleRestart, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, ClimaAtmos.EnergySourceTaggingModel{Tuple{ClimaAtmos.EnergySourceTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:sfc, Nothing, Tuple{Symbol}}}, Float64, ClimaAtmos.EnthalpyIncrementEnergySourceTransport, false, true}, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Warning: `radiation` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: radiation` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:767
+┌ Warning: `subsidence` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: subsidence` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:767
+┌ Warning: `energy_source_tags` with `tracer_nonnegativity_method: vertical_water_borrowing` on `ρq_tot`: the borrowing changes `ρ` and `ρe_tot` to match, outside every bracket, so no tag takes the change, and it goes to `e_src_res`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:829
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (210.019 μs, 12.46 KiB)
+[ Info: Built cache (98.938 s, 10.49 GiB)
+┌ Warning: `energy_source_closure_check` period (86400 seconds) is not an even divisor of the checkpoint frequency (600 seconds); the closure table will contain duplicated rows after a restart.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/callbacks/get_callbacks.jl:910
+[ Info: Assembled callbacks (274.43 ms, 15.42 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (12.253 ms, 3.2 MiB)
+[ Info: Initialized integrator (155.617 s, 7.61 GiB)
+[ Info: Set up diagnostics (69.655 s, 8.73 MiB)
+┌ Info: Simulation info
+│   job_id = "wp6s3_restart_whole"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_uA6p1N/output_0000"
+┌ Info: Running
+│   job_id = "wp6s3_restart_whole"
+│   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_uA6p1N/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 1200.0 seconds (2010-01-01T00:20:00) [counter = 1200, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "10.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-24T22:00:26.802
+└   estimated_finish_date = 2026-09-24T22:00:26.802
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "20.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.098"
+│   date_now = 2026-09-24T22:00:30.158
+└   estimated_finish_date = 2026-09-24T22:00:30.158
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "14 milliseconds, 734 microseconds"
+│   wall_time_total = "147 milliseconds, 345 microseconds"
+│   wall_time_remaining = "88 milliseconds, 407 microseconds"
+│   wall_time_spent = "58 milliseconds, 938 microseconds"
+│   percent_complete = "40.0%"
+│   estimated_sypd = "22.297"
+│   instantaneous_sypd = "22.297"
+│   date_now = 2026-09-24T22:00:30.188
+└   estimated_finish_date = 2026-09-24T22:00:31.188
+┌ Warning: water tag closure residual 5.4203970979622914e-5 exceeds the configured tolerance 1.0e-10 at t = 600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_uA6p1N/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+[ Info: Saving state to HDF5 file on day 0 second 600
+┌ Info: Progress
+│   simulation_time = "12 minutes"
+│   n_steps_completed = 6
+│   wall_time_per_step = "447 milliseconds, 196 microseconds"
+│   wall_time_total = "4 seconds, 471 milliseconds"
+│   wall_time_remaining = "1 second, 788 milliseconds"
+│   wall_time_spent = "2 seconds, 683 milliseconds"
+│   percent_complete = "60.0%"
+│   estimated_sypd = "0.735"
+│   instantaneous_sypd = "0.25"
+│   date_now = 2026-09-24T22:00:32.868
+└   estimated_finish_date = 2026-09-24T22:00:34.868
+┌ Info: Progress
+│   simulation_time = "16 minutes"
+│   n_steps_completed = 8
+│   wall_time_per_step = "346 milliseconds, 405 microseconds"
+│   wall_time_total = "3 seconds, 464 milliseconds"
+│   wall_time_remaining = "692 milliseconds, 811 microseconds"
+│   wall_time_spent = "2 seconds, 771 milliseconds"
+│   percent_complete = "80.0%"
+│   estimated_sypd = "0.948"
+│   instantaneous_sypd = "7.461"
+│   date_now = 2026-09-24T22:00:32.900
+└   estimated_finish_date = 2026-09-24T22:00:33.900
+┌ Warning: water tag closure residual 4.5672966112353745e-5 exceeds the configured tolerance 1.0e-10 at t = 1200.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_uA6p1N/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+┌ Info: Progress
+│   simulation_time = "20 minutes"
+│   n_steps_completed = 10
+│   wall_time_per_step = "280 milliseconds, 530 microseconds"
+│   wall_time_total = "2 seconds, 805 milliseconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "2 seconds, 805 milliseconds"
+│   percent_complete = "100.0%"
+│   estimated_sypd = "1.171"
+│   instantaneous_sypd = "19.296"
+│   date_now = 2026-09-24T22:00:32.934
+└   estimated_finish_date = 2026-09-24T22:00:32.934
+[ Info: Saving state to HDF5 file on day 0 second 1200
+[ Info: solve! walltime = 2.838
+[ Info: sypd: 1.158
+[ Info: wall_time_per_timestep: 283 milliseconds, 840 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 11.62 GiB
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`ClimaAtmos.ReproducibleRestart`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Warning: `energy_source_tags` with `turbconv: prognostic_edmfx`: the eddy diffusion moves the tags as passive tracers, while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, unless `energy_source_tag_transport: enthalpy_increment` takes it after each implicit solve.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:1379
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, ClimaAtmos.TracerNonnegativityVerticalWaterBorrowing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, ClimaAtmos.ReproducibleRestart, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, ClimaAtmos.EnergySourceTaggingModel{Tuple{ClimaAtmos.EnergySourceTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:sfc, Nothing, Tuple{Symbol}}}, Float64, ClimaAtmos.EnthalpyIncrementEnergySourceTransport, false, true}, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Warning: `radiation` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: radiation` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:767
+┌ Warning: `subsidence` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: subsidence` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:767
+┌ Warning: `energy_source_tags` with `tracer_nonnegativity_method: vertical_water_borrowing` on `ρq_tot`: the borrowing changes `ρ` and `ρe_tot` to match, outside every bracket, so no tag takes the change, and it goes to `e_src_res`.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/config/tracer_config.jl:829
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+┌ Info: Restarting simulation from file
+│   restart_file = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_uA6p1N/output_0000/day0.600.hdf5"
+└   restart_time = "10.0 minutes (2010-01-01T00:10:00) [counter = 10, period = 1 minute, epoch = 2010-01-01T00:00:00]"
+[ Info: Loaded restart file (7.778 s, 279.47 MiB)
+[ Info: Built cache (2.305 ms, 386.42 KiB)
+┌ Warning: `energy_source_closure_check` period (86400 seconds) is not an even divisor of the checkpoint frequency (600 seconds); the closure table will contain duplicated rows after a restart.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/callbacks/get_callbacks.jl:910
+[ Info: Assembled callbacks (731.583 μs, 129.45 KiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 2,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative
+[ Info: Built tendency function (6.248 ms, 3.2 MiB)
+┌ Warning: water tag closure residual 5.4203970979622914e-5 exceeds the configured tolerance 1.0e-10 at t = 600.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_2w0YFD/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+[ Info: Initialized integrator (4.088 ms, 605.89 KiB)
+[ Info: Set up diagnostics (494.679 μs, 92.13 KiB)
+┌ Info: Simulation info
+│   job_id = "wp6s3_restart_read"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_2w0YFD/output_0000"
+┌ Info: Running
+│   job_id = "wp6s3_restart_read"
+│   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_2w0YFD/output_0000"
+└   tspan = (600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00], 1200.0 seconds (2010-01-01T00:20:00) [counter = 1200, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "12 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "20.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-24T22:00:52.237
+└   estimated_finish_date = 2026-09-24T22:00:52.237
+┌ Info: Progress
+│   simulation_time = "14 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "40.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.105"
+│   date_now = 2026-09-24T22:00:55.374
+└   estimated_finish_date = 2026-09-24T22:00:55.374
+┌ Info: Progress
+│   simulation_time = "18 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "14 milliseconds, 596 microseconds"
+│   wall_time_total = "72 milliseconds, 982 microseconds"
+│   wall_time_remaining = "14 milliseconds, 596 microseconds"
+│   wall_time_spent = "58 milliseconds, 386 microseconds"
+│   percent_complete = "80.0%"
+│   estimated_sypd = "22.508"
+│   instantaneous_sypd = "22.508"
+│   date_now = 2026-09-24T22:00:55.403
+└   estimated_finish_date = 2026-09-24T22:00:56.403
+┌ Warning: water tag closure residual 4.5672966112353745e-5 exceeds the configured tolerance 1.0e-10 at t = 1200.0 s. The tags no longer account for the field they partition; see /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/plan2/jobs/wp6s3_checks/jl_2w0YFD/output_0000/water_tag_closure.csv.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp6s3/src/parameterized_tendencies/tagged_tracers/tagged_tracers.jl:824
+[ Info: Saving state to HDF5 file on day 0 second 1200
+[ Info: solve! walltime = 0.094
+[ Info: sypd: 17.456
+[ Info: wall_time_per_timestep: 18 milliseconds, 833 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 11.62 GiB
+restart: 100 accumulators, largest relative gap 0.0
+Test Summary:                             | Pass  Total      Time
+Restart continuation of every accumulator |  170    170  15m51.7s

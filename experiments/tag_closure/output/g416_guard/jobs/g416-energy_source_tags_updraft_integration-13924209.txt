@@ -1,0 +1,4 @@
+== test: energy_source_tags_updraft_integration in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard (compute nodes have no git; the commit is in the report)
+Test Summary:                          | Pass  Total      Time
+Energy source tags with updraft copies |   33     33  49m29.1s
+--- test summaries from the .err

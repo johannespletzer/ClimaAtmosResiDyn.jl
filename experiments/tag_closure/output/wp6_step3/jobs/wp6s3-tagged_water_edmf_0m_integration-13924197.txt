@@ -1,0 +1,4 @@
+== test: tagged_water_edmf_0m_integration in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3 (compute nodes have no git; the commit is in the report)
+Test Summary:                           | Pass  Total      Time
+Water tags with updraft copies under 0M |   22     22  26m01.6s
+--- test summaries from the .err

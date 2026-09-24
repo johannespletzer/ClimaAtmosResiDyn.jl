@@ -1,0 +1,12 @@
+== test: tagged_water_integration in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3 (compute nodes have no git; the commit is in the report)
+Test Summary:            | Pass  Total      Time
+Tagged water integration |   28     28  13m50.0s
+Test Summary:                | Pass  Total      Time
+Tagged water limiter rescale |   41     41  20m01.5s
+Test Summary:                   | Pass  Total      Time
+Tagged water restart round-trip |   15     15  14m40.1s
+Test Summary:                                 | Pass  Total  Time
+Tagged water rejects unsupported microphysics |    4      4  1.5s
+Test Summary:                         | Pass  Total      Time
+Tagged water 1M sedimentation closure |   23     23  14m54.9s
+--- test summaries from the .err

@@ -1,0 +1,4 @@
+== test: energy_source_tags_float32_integration in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3 (compute nodes have no git; the commit is in the report)
+Test Summary:                                    | Pass  Total      Time
+Energy source tags and process records (Float32) |   53     53  12m43.6s
+--- test summaries from the .err

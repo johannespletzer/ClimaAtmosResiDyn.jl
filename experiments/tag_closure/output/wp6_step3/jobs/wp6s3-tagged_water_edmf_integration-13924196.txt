@@ -1,0 +1,4 @@
+== test: tagged_water_edmf_integration in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3 (compute nodes have no git; the commit is in the report)
+Test Summary:                    | Pass  Total      Time
+Water tags under PrognosticEDMFX |   38     38  42m12.6s
+--- test summaries from the .err

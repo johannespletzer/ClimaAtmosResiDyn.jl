@@ -1,0 +1,4 @@
+== test: process_record_integration in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3 (compute nodes have no git; the commit is in the report)
+Test Summary:              | Pass  Total      Time
+Process record integration |   25     25  13m45.6s
+--- test summaries from the .err

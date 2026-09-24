@@ -1,0 +1,6 @@
+== test: restart in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3 (compute nodes have no git; the commit is in the report)
+job_id = amip_target
+    just reading data
+    reading and simulating
+1276.824585 seconds (2.15 G allocations: 120.008 GiB, 5.40% gc time, 86.51% compilation time: <1% of which was recompilation)
+--- test summaries from the .err

@@ -1,0 +1,4 @@
+== test: tagged_water_increment_integration in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3 (compute nodes have no git; the commit is in the report)
+Test Summary:                               | Pass  Total      Time
+Water tags following the implicit increment |  131    131  46m46.9s
+--- test summaries from the .err

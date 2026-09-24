@@ -1,0 +1,4 @@
+== test: energy_source_tags_increment_integration in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g416guard (compute nodes have no git; the commit is in the report)
+Test Summary:                                       | Pass  Total      Time
+Energy source tags following the implicit increment |   96     96  42m35.4s
+--- test summaries from the .err

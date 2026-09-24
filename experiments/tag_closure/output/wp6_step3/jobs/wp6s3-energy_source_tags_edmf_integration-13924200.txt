@@ -1,0 +1,4 @@
+== test: energy_source_tags_edmf_integration in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp6s3 (compute nodes have no git; the commit is in the report)
+Test Summary:                            | Pass  Total      Time
+Energy source tags under PrognosticEDMFX |   53     53  58m52.2s
+--- test summaries from the .err
