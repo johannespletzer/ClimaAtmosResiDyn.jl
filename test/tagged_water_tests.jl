@@ -1313,3 +1313,135 @@ end
         )
     end
 end
+
+# WP5b: a water tag's sedimentation cross blocks to a falling species. The tag
+# stays uncoupled, is solved after the coupled fields by back-substitution, and
+# the coupled fields' increments do not change.
+@testset "The split solver back-substitutes a tag's cross block" begin
+    CC = CA.ClimaCore
+    MF = CA.MatrixFields
+    FT = Float64
+    column(staggering) = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 12,
+        staggering,
+    )
+    ᶜspace = column(CC.CommonSpaces.CellCenter())
+    ᶠspace = column(CC.CommonSpaces.CellFace())
+    ᶜnames = (:ρ, :ρe_tot, :ρq_rai, :ρq_tag_tropo)
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(ᶜspace),
+            NamedTuple{ᶜnames, NTuple{4, FT}},
+        ),
+        f = similar(
+            CC.Fields.coordinate_field(ᶠspace),
+            NamedTuple{(:u₃,), Tuple{FT}},
+        ),
+    )
+    fill_pattern!(values, shift) =
+        values .= sin.(shift .+ 0.7 .* reshape(1:length(values), size(values)))
+    R = similar(Y)
+    fill_pattern!(parent(R.c), 0)
+    fill_pattern!(parent(R.f), 1)
+    function band_block(space, row_type, diagonal, shift)
+        block = fill(zero(row_type), space)
+        n_levels = size(parent(block), 1)
+        values = reshape(parent(block), n_levels, :)
+        fill_pattern!(values, shift)
+        values .*= 0.1
+        n_entries = size(values, 2)
+        isodd(n_entries) && (values[:, (n_entries + 1) ÷ 2] .+= diagonal)
+        if n_entries > 1
+            values[1, 1] = 0
+            values[end, end] = 0
+        end
+        return block
+    end
+    ᶜdiagonal(shift) = band_block(ᶜspace, MF.DiagonalMatrixRow{FT}, -1, shift)
+    ᶜtridiagonal(shift, diagonal = -1) =
+        band_block(ᶜspace, MF.TridiagonalMatrixRow{FT}, diagonal, shift)
+    ᶠtridiagonal(shift) =
+        band_block(ᶠspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
+    ᶜᶠbidiagonal(shift) = band_block(ᶜspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+    ᶠᶜbidiagonal(shift) = band_block(ᶠspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+    c(n) = MF.FieldName(:c, n)
+    u₃ = CA.MatrixFields.@name(f.u₃)
+    model_pairs = (
+        (c(:ρ), c(:ρ)) => ᶜdiagonal(2),
+        (c(:ρe_tot), c(:ρe_tot)) => ᶜdiagonal(3),
+        (c(:ρq_rai), c(:ρq_rai)) => ᶜtridiagonal(4),
+        (c(:ρ), u₃) => ᶜᶠbidiagonal(5),
+        (c(:ρe_tot), u₃) => ᶜᶠbidiagonal(6),
+        (u₃, c(:ρ)) => ᶠᶜbidiagonal(7),
+        (u₃, c(:ρe_tot)) => ᶠᶜbidiagonal(8),
+        (u₃, u₃) => ᶠtridiagonal(9),
+        (c(:ρq_tag_tropo), c(:ρq_tag_tropo)) => ᶜtridiagonal(10),
+    )
+    cross = (c(:ρq_tag_tropo), c(:ρq_rai)) => ᶜtridiagonal(11, 0)
+    with_cross = (model_pairs..., cross)
+    # The tag stays uncoupled with a block to a coupled column in its own row.
+    @test CA.uncoupled_jacobian_names(with_cross) == (c(:ρq_tag_tropo),)
+    # A block that names the tag in another row, or a column block to another
+    # splittable field, makes it coupled.
+    @test isempty(
+        CA.uncoupled_jacobian_names((
+            with_cross...,
+            (c(:ρq_rai), c(:ρq_tag_tropo)) => ᶜtridiagonal(12, 0),
+        )),
+    )
+
+    velocity_alg = MF.BlockLowerTriangularSolve(u₃)
+    iterative_alg = MF.ApproximateBlockArrowheadIterativeSolve(
+        c(:ρ),
+        c(:ρe_tot),
+        c(:ρq_rai);
+        alg₂ = velocity_alg,
+        P_alg₁ = MF.MainDiagonalPreconditioner(),
+        n_iters = 2,
+    )
+    direct_alg = MF.BlockArrowheadSolve(
+        c(:ρ),
+        c(:ρe_tot),
+        c(:ρq_rai);
+        alg₂ = velocity_alg,
+    )
+    function split_increments(pairs, alg)
+        matrix = MF.FieldMatrix(pairs...)
+        solver = CA.split_jacobian_solver(
+            matrix,
+            Y,
+            alg,
+            CA.uncoupled_jacobian_names(pairs),
+        )
+        ΔY = zero(Y)
+        CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+        return ΔY
+    end
+    for alg in (iterative_alg, direct_alg)
+        ΔY = split_increments(with_cross, alg)
+        ΔY_plain = split_increments(model_pairs, alg)
+        # The coupled fields' increments are those without the cross block.
+        for n in (:ρ, :ρe_tot, :ρq_rai)
+            @test isequal(
+                parent(getproperty(ΔY.c, n)),
+                parent(getproperty(ΔY_plain.c, n)),
+            )
+        end
+        @test isequal(parent(ΔY.f), parent(ΔY_plain.f))
+        # The tag solves its own row: D Δtag + C Δρq_rai = R_tag.
+        D = model_pairs[end].second
+        C = cross.second
+        residual =
+            @. D * ΔY.c.ρq_tag_tropo + C * ΔY.c.ρq_rai - R.c.ρq_tag_tropo
+        @test maximum(abs, parent(residual)) <
+              1e-12 * maximum(abs, parent(R.c.ρq_tag_tropo))
+        # And it differs from the solve without the cross block.
+        @test !isapprox(
+            parent(ΔY.c.ρq_tag_tropo),
+            parent(ΔY_plain.c.ρq_tag_tropo),
+        )
+    end
+end

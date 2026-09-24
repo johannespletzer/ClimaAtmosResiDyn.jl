@@ -293,7 +293,8 @@ Returns `()` for `DryModel`.
 Tagged water tracers mirror the sedimentation flux (see
 [`sediment_water_tags!`](@ref)), so their diagonals are allocated here too and
 excluded from `diffusion_jacobian_blocks`, which would otherwise allocate them
-a second time as passive tracers.
+a second time as passive tracers. So are their cross blocks to each sedimenting
+mass, the tag's share of `ρq_tot`'s.
 
 # Returns
 
@@ -308,11 +309,28 @@ function sedimentation_jacobian_blocks(Y, atmos)
     mass_names = unrolled_map(center_state_name, sedimenting_mass_names(Y))
     water_tag_names =
         unrolled_map(center_state_name, sedimenting_water_tag_names(Y))
+    # Each tag falls with its share of each species, as `ρq_tot` falls with all
+    # of it, so its row has a cross block to each species' column. No other row
+    # names a tag, so the split solver still solves the tags apart, by
+    # back-substitution (`split_jacobian_solver`).
+    water_tag_cross_blocks = Tuple(
+        Iterators.flatten(
+            map(
+                tag_name -> map(
+                    mass_name ->
+                        (tag_name, mass_name) => similar(Y.c, TridiagonalRow),
+                    mass_names,
+                ),
+                water_tag_names,
+            ),
+        ),
+    )
     return (
         map(
             name -> (name, name) => similar(Y.c, TridiagonalRow),
             water_tag_names,
         )...,
+        water_tag_cross_blocks...,
         (@name(c.ρe_tot), @name(c.ρe_tot)) => similar(Y.c, TridiagonalRow),
         (@name(c.ρq_tot), @name(c.ρq_tot)) => similar(Y.c, TridiagonalRow),
         (@name(c.ρe_tot), @name(c.ρq_tot)) => similar(Y.c, TridiagonalRow),
@@ -726,10 +744,16 @@ The fields among the Jacobian's `block_pairs` that a [`SplitJacobianSolver`](@re
 solves apart from the rest, as a `Tuple` of `FieldName`s.
 
 A field qualifies when it is a tag, a process record or a field of an increment
-correction's ledger, its only block is its own diagonal, and no other
-block names it, as a row, a column or a part of one.
-Such a field enters no other variable's equation, and no other variable enters
-its equation. This runs once, when the Jacobian is built, on plain vectors.
+correction's ledger, it has its own diagonal block, and no block names it
+except in its own row: not as a column, and not as a part of another row or
+column. Such a field enters no other variable's equation.
+
+Its own row may hold blocks to the columns of other fields, the coupled ones,
+as a water tag's sedimentation cross blocks do. Then other variables enter its
+equation one way, and the split solves it after them, by back-substitution. A
+block to another splittable field's column would need an order among the
+uncoupled fields, so such a field is not taken. This runs once, when the
+Jacobian is built, on plain vectors.
 """
 function uncoupled_jacobian_names(block_pairs)
     block_keys = Any[pair.first for pair in block_pairs]
@@ -739,11 +763,17 @@ function uncoupled_jacobian_names(block_pairs)
     for (i, key) in enumerate(block_keys)
         (rows[i] == columns[i] && is_splittable_jacobian_field(key[1])) ||
             continue
-        mentions = count(eachindex(block_keys)) do j
-            jacobian_name_chains_overlap(rows[i], rows[j]) ||
-                jacobian_name_chains_overlap(rows[i], columns[j])
+        acceptable = all(eachindex(block_keys)) do j
+            j == i && return true
+            if rows[j] == rows[i]
+                # A block in the field's own row, to a coupled field's column.
+                return columns[j] != rows[i] &&
+                       !is_splittable_jacobian_field(block_keys[j][2])
+            end
+            return !jacobian_name_chains_overlap(rows[i], rows[j]) &&
+                   !jacobian_name_chains_overlap(rows[i], columns[j])
         end
-        mentions == 1 && push!(uncoupled, key[1])
+        acceptable && push!(uncoupled, key[1])
     end
     return Tuple(uncoupled)
 end
@@ -762,10 +792,18 @@ never act on the model and have only their own diagonal blocks. So this solves
 them one field at a time, and the other fields with the model's own nested
 solver, built over a name tree that leaves the tags and records out.
 
-Each field is solved as the nested solver solves it in the whole system, so the
-result does not change. There, such a field falls into the group that the
-arrowhead solve leaves to its second algorithm, whose block diagonal part
-inverts the field's block exactly:
+A field whose row holds blocks to coupled fields' columns, such as a water
+tag's sedimentation cross blocks, is solved after the coupled fields:
+`R − Σ C ΔY` goes into a scratch field, and the field's own block is solved on
+it. The coupled system's rows, name tree and solver do not change, so the
+coupled fields' `ΔY` does not either. The nested solver would reach such a
+field's value through its own iterations, so the two agree only as far as those
+converge.
+
+A field with only its diagonal block is solved as the nested solver solves it in
+the whole system, so the result does not change. There, such a field falls into
+the group that the arrowhead solve leaves to its second algorithm, whose block
+diagonal part inverts the field's block exactly:
 
   - under `ApproximateBlockArrowheadIterativeSolve`, that inverse is repeated
     `n_iters` times from zero, which a `StationaryIterativeSolve` with a
@@ -784,7 +822,9 @@ solve however many there are.
     its cache, the keys `(@name(c), @name(f), ...)` over the coupled fields'
     name tree, and their blocks over the same tree;
   - `uncoupled`: one `NamedTuple` per uncoupled field, holding its `name`, its
-    solver `alg` and `cache`, its `keys` and its one-block `matrix`.
+    solver `alg` and `cache`, its `keys`, its one-block `matrix`, its `lower`
+    blocks as `(column name, block)` pairs, and the `rhs` scratch field that
+    the back-substitution writes when `lower` is not empty.
 """
 struct SplitJacobianSolver{A, C, K, M, U}
     alg::A
@@ -835,6 +875,16 @@ function split_jacobian_solver(matrix, Y, alg, uncoupled_names)
     MatrixFields.check_field_matrix_solver(alg, cache, coupled_matrix, b)
 
     uncoupled_alg = uncoupled_field_algorithm(alg)
+    # One scratch field for the back-substitution, shared by every uncoupled
+    # field with blocks to coupled columns; they are solved one after another.
+    lower_of(name) = Tuple(
+        (name_pair[2], matrix[name_pair]) for name_pair in keys(matrix) if
+        jacobian_name_chain(name_pair[1]) == jacobian_name_chain(name) &&
+            jacobian_name_chain(name_pair[2]) != jacobian_name_chain(name)
+    )
+    rhs =
+        any(name -> !isempty(lower_of(name)), uncoupled_names) ?
+        similar(MatrixFields.get_field(Y, first(uncoupled_names))) : nothing
     uncoupled = map(uncoupled_names) do name
         field = MatrixFields.get_field(Y, name)
         field_tree = MatrixFields.FieldNameTree(Fields.FieldVector(; field))
@@ -857,12 +907,15 @@ function split_jacobian_solver(matrix, Y, alg, uncoupled_names)
             field_matrix,
             field_b,
         )
+        lower = lower_of(name)
         (;
             name,
             alg = uncoupled_alg,
             cache = field_cache,
             keys = field_keys,
             matrix = field_matrix,
+            lower,
+            rhs = isempty(lower) ? nothing : rhs,
         )
     end
     return SplitJacobianSolver(alg, cache, coupled_keys, coupled_matrix, uncoupled)
@@ -918,18 +971,36 @@ function LinearAlgebra.ldiv!(
 end
 
 # Solve the uncoupled fields one by one, by recursion over the tuple. The
-# recursion compiles one method per element and captures nothing.
+# recursion compiles one method per element and captures nothing. A field with
+# blocks to coupled columns is solved on `R − Σ C ΔY`, after the coupled fields.
 solve_uncoupled_fields!(::Tuple{}, ΔY, R) = nothing
 function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
-    (; name, alg, cache, keys, matrix) = first(uncoupled)
+    (; name, alg, cache, keys, matrix, lower, rhs) = first(uncoupled)
+    b = uncoupled_right_hand_side!(rhs, lower, ΔY, MatrixFields.get_field(R, name))
     MatrixFields.run_field_matrix_solver!(
         alg,
         cache,
         MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(ΔY, name),)),
         matrix,
-        MatrixFields.FieldNameDict(keys, (MatrixFields.get_field(R, name),)),
+        MatrixFields.FieldNameDict(keys, (b,)),
     )
     return solve_uncoupled_fields!(Base.tail(uncoupled), ΔY, R)
+end
+
+# The right-hand side of one uncoupled field: `R` itself, or `R − Σ C ΔY` over
+# its blocks to coupled columns, written into the shared scratch field.
+uncoupled_right_hand_side!(::Nothing, ::Tuple{}, ΔY, ᶜR) = ᶜR
+function uncoupled_right_hand_side!(rhs, lower::Tuple, ΔY, ᶜR)
+    rhs .= ᶜR
+    subtract_lower_blocks!(rhs, lower, ΔY)
+    return rhs
+end
+subtract_lower_blocks!(rhs, ::Tuple{}, ΔY) = nothing
+function subtract_lower_blocks!(rhs, lower::Tuple, ΔY)
+    (column, block) = first(lower)
+    ᶜΔY_column = MatrixFields.get_field(ΔY, column)
+    @. rhs -= block * ᶜΔY_column
+    return subtract_lower_blocks!(rhs, Base.tail(lower), ΔY)
 end
 
 # ============================================================================
@@ -1281,12 +1352,16 @@ initialized to `-I` and then accumulates a contribution from every species.
 `dtγ` is not needed here: it is already folded into
 `p.scratch.ᶜbidiagonal_adjoint_matrix_c3` by the caller.
 
-Only the diagonal is carried. The tendency also depends on `ρq_tot` (through the
-donor share), on `ρ`, and on each sedimenting mass (through that species'
-specific content); those cross-terms are dropped, in the same spirit as the
-EDMFX subdomain corrections above — a convergence-rate approximation, not a
-change to what is being solved. The diagonal is the stiff part, because it is
-what couples a tag to its own vertical neighbours at the sedimentation CFL.
+The diagonal and the cross block to each sedimenting mass are carried. The
+cross block is the parent's `∂(ρq_tot)ₜ/∂ρqₚ` scaled by the tag's share
+`φ̂` ([`water_tag_sediment_share_field`](@ref)), so over a closed partition the
+tags' cross blocks sum to the parent's. Without it, one Newton iteration moves
+`ρq_tot` with the updated species and the tags with the old ones. That changes
+a column's total at the surface outflow, which the increment follower cannot
+move (FINDINGS W23 on the record branch). The tendency's dependence on
+`ρq_tot` and `ρ` through the share is still dropped, in the same spirit as the
+EDMFX subdomain corrections above: a convergence-rate approximation, not a
+change to what is being solved.
 """
 function update_water_tag_sedimentation_jacobian!(matrix, Y, p)
     isempty(sedimenting_water_tag_names(Y)) && return nothing
@@ -1323,6 +1398,17 @@ function update_water_tag_sedimentation_block!(matrix, Y, p, tag)
                 ),
             )
         @. ∂ᶜρq_tag_err_∂ᶜρq_tag +=
+            p.scratch.ᶜbidiagonal_adjoint_matrix_c3 *
+            p.scratch.ᶠband_matrix_wvec
+        # The cross block: the parent's `∂(ρq_tot)ₜ/∂ρqₚ` times the tag's share.
+        ∂ᶜρq_tag_err_∂ᶜρqₚ =
+            matrix[tag_state_name, center_state_name(ρqₚ_name)]
+        ᶜshare = water_tag_sediment_share_field(Y, p, tag)
+        @. p.scratch.ᶠband_matrix_wvec =
+            ᶠtop_bias_matrix() * DiagonalMatrixRow(
+                ClimaCore.Geometry.WVector(-(ᶜwₚ) * ᶜshare / Y.c.ρ),
+            )
+        @. ∂ᶜρq_tag_err_∂ᶜρqₚ =
             p.scratch.ᶜbidiagonal_adjoint_matrix_c3 *
             p.scratch.ᶠband_matrix_wvec
     end
