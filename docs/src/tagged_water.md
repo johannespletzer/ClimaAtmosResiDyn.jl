@@ -310,7 +310,8 @@ implicit increment. It is the default in the default mode under
 G3_PLAN 4.3 fixed that rule before the runs: the follower becomes the default
 under EDMF if the default mode's one-iteration part of the closure residual
 exceeds a quarter of the 0.2% budget. V-W3 measured twelve times that. With
-copies, and without prognostic EDMF, the default is `tracer`.
+copies, without prognostic EDMF, and with 1M microphysics stepped explicitly,
+the default is `tracer`.
 ``\rho q_\mathrm{tot}`` is advected vertically in the implicit step, and its
 sub-grid flux and diffusion have Jacobian blocks the tags' terms lack. Its
 sedimentation had them too, until the tags' cross blocks (below). So with one
@@ -349,19 +350,23 @@ It needs:
   - the parent's own post-solve correction (`energy_q_tot_upwinding` other
     than `none`).
 
-With 1M microphysics each tag's Jacobian row carries the parent's
-sedimentation cross block to each falling species, times the tag's share. So
-one Newton iteration moves the tags with the updated species, as it moves
-``\rho q_\mathrm{tot}``. Without those blocks the tags lagged the parent's
-surface outflow, about 0.8% of the water an hour with microphysics stepped
-explicitly, and the follower cannot move a change of the column's total. With
-them, the follower closed that column to 2e-8 net and 6e-8 gross in an hour
-(one column, one hour: W23's DYCOMS RF02 EDMF column, ARS222, `dt` 120 s). The
-split Jacobian solver solves the tags after the other fields, by
-back-substitution, so the model's fields do not change. Only the manual
-Jacobian's split solver carries these blocks. So with 1M stepped explicitly and
-`use_auto_jacobian: true` the follower is refused, and the default is
-`tracer`.
+With 1M microphysics each grid-scale water tag's Jacobian row carries the
+parent's sedimentation cross block to each falling species, times the tag's
+share. The updraft copies' rows do not yet. So one Newton iteration moves the
+tags with the updated species, as it moves ``\rho q_\mathrm{tot}``. Without
+those blocks the tags lagged the parent's surface outflow, about 0.8% of the
+water an hour with microphysics stepped explicitly, and the follower cannot
+move a change of the column's total. With them, on W23's DYCOMS RF02 EDMF
+column (ARS222, `dt` 120 s, one Newton iteration), the follower's net residual
+after an hour was −2.1e-8 and its gross 5.7e-8; the integration test bounds
+both by 1e-6. That validates the closure and the lag it removed, not the
+provenance of each tag. The split Jacobian solver solves the tags after the
+other fields, by back-substitution, so the model's fields do not change.
+
+On that path the follower is still opt-in: one column in one regime does not
+yet decide the default. Only the manual Jacobian's split solver carries the
+cross blocks, so with 1M stepped explicitly and `use_auto_jacobian: true` the
+follower is refused.
 
 The default takes `increment` only where the configuration shows these, and
 the model refuses it where they fail. A restart that changes

@@ -1349,11 +1349,15 @@ end
         "water_default_sources_only";
         tags = [partition[3]],
     ) isa tracer
-    # With 1M, on either path: the tags' sedimentation cross blocks let the
-    # follower close the explicit path too (WP5b, FINDINGS W29).
+    # With 1M stepped explicitly the follower is opt-in: the cross blocks close
+    # the lag on one column (WP5b, FINDINGS W29), which does not yet decide the
+    # default (the owner's review of #105).
+    explicit_1m =
+        [edmf..., "microphysics_model" => "1M", "implicit_microphysics" => false]
+    @test transport(explicit_1m, "water_default_explicit_1m") isa tracer
     @test transport(
-        [edmf..., "microphysics_model" => "1M", "implicit_microphysics" => false],
-        "water_default_explicit_1m",
+        [explicit_1m..., "water_tag_transport" => "increment"],
+        "water_increment_explicit_1m",
     ) isa increment
     @test transport(
         [edmf..., "microphysics_model" => "1M"],
@@ -1362,13 +1366,7 @@ end
     # Not with the sparse autodiff Jacobian on the explicit path, which does
     # not carry the cross blocks. There the follower is refused, with the
     # reason. The dense one wins over it and is exact.
-    explicit_auto = [
-        edmf...,
-        "microphysics_model" => "1M",
-        "implicit_microphysics" => false,
-        "use_auto_jacobian" => true,
-    ]
-    @test transport(explicit_auto, "water_default_explicit_1m_auto") isa tracer
+    explicit_auto = [explicit_1m..., "use_auto_jacobian" => true]
     @test_throws "use_auto_jacobian" CA.AtmosTagging(
         config(
             [explicit_auto..., "water_tag_transport" => "increment"],
@@ -1376,8 +1374,12 @@ end
         ),
     )
     @test transport(
-        [explicit_auto..., "use_dense_jacobian" => true],
-        "water_default_explicit_1m_dense",
+        [
+            explicit_auto...,
+            "use_dense_jacobian" => true,
+            "water_tag_transport" => "increment",
+        ],
+        "water_increment_explicit_1m_dense",
     ) isa increment
     @test transport(
         [edmf..., "microphysics_model" => "1M", "use_auto_jacobian" => true],

@@ -1320,132 +1320,360 @@ end
 @testset "The split solver back-substitutes a tag's cross block" begin
     CC = CA.ClimaCore
     MF = CA.MatrixFields
-    FT = Float64
-    column(staggering) = CC.CommonSpaces.ColumnSpace(
-        FT;
-        z_min = 0,
-        z_max = 1000,
-        z_elem = 12,
-        staggering,
-    )
-    ᶜspace = column(CC.CommonSpaces.CellCenter())
-    ᶠspace = column(CC.CommonSpaces.CellFace())
-    ᶜnames = (:ρ, :ρe_tot, :ρq_rai, :ρq_tag_tropo)
-    Y = CC.Fields.FieldVector(;
-        c = similar(
-            CC.Fields.coordinate_field(ᶜspace),
-            NamedTuple{ᶜnames, NTuple{4, FT}},
-        ),
-        f = similar(
-            CC.Fields.coordinate_field(ᶠspace),
-            NamedTuple{(:u₃,), Tuple{FT}},
-        ),
-    )
-    fill_pattern!(values, shift) =
-        values .= sin.(shift .+ 0.7 .* reshape(1:length(values), size(values)))
-    R = similar(Y)
-    fill_pattern!(parent(R.c), 0)
-    fill_pattern!(parent(R.f), 1)
-    function band_block(space, row_type, diagonal, shift)
-        block = fill(zero(row_type), space)
-        n_levels = size(parent(block), 1)
-        values = reshape(parent(block), n_levels, :)
-        fill_pattern!(values, shift)
-        values .*= 0.1
-        n_entries = size(values, 2)
-        isodd(n_entries) && (values[:, (n_entries + 1) ÷ 2] .+= diagonal)
-        if n_entries > 1
-            values[1, 1] = 0
-            values[end, end] = 0
-        end
-        return block
-    end
-    ᶜdiagonal(shift) = band_block(ᶜspace, MF.DiagonalMatrixRow{FT}, -1, shift)
-    ᶜtridiagonal(shift, diagonal = -1) =
-        band_block(ᶜspace, MF.TridiagonalMatrixRow{FT}, diagonal, shift)
-    ᶠtridiagonal(shift) =
-        band_block(ᶠspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
-    ᶜᶠbidiagonal(shift) = band_block(ᶜspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
-    ᶠᶜbidiagonal(shift) = band_block(ᶠspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
-    c(n) = MF.FieldName(:c, n)
-    u₃ = CA.MatrixFields.@name(f.u₃)
-    model_pairs = (
-        (c(:ρ), c(:ρ)) => ᶜdiagonal(2),
-        (c(:ρe_tot), c(:ρe_tot)) => ᶜdiagonal(3),
-        # Diagonal, as the direct arrowhead solve needs for its first group.
-        (c(:ρq_rai), c(:ρq_rai)) => ᶜdiagonal(4),
-        (c(:ρ), u₃) => ᶜᶠbidiagonal(5),
-        (c(:ρe_tot), u₃) => ᶜᶠbidiagonal(6),
-        # Under prognostic EDMF a species' row names `u₃` too.
-        (c(:ρq_rai), u₃) => ᶜᶠbidiagonal(13),
-        (u₃, c(:ρ)) => ᶠᶜbidiagonal(7),
-        (u₃, c(:ρe_tot)) => ᶠᶜbidiagonal(8),
-        (u₃, u₃) => ᶠtridiagonal(9),
-        (c(:ρq_tag_tropo), c(:ρq_tag_tropo)) => ᶜtridiagonal(10),
-    )
-    cross = (c(:ρq_tag_tropo), c(:ρq_rai)) => ᶜtridiagonal(11, 0)
-    with_cross = (model_pairs..., cross)
-    # The tag stays uncoupled with a block to a coupled column in its own row.
-    @test CA.uncoupled_jacobian_names(with_cross) == (c(:ρq_tag_tropo),)
-    # A block that names the tag in another row, or a column block to another
-    # splittable field, makes it coupled.
-    @test isempty(
-        CA.uncoupled_jacobian_names((
-            with_cross...,
-            (c(:ρq_rai), c(:ρq_tag_tropo)) => ᶜtridiagonal(12, 0),
-        )),
-    )
-
-    velocity_alg = MF.BlockLowerTriangularSolve(u₃)
-    iterative_alg = MF.ApproximateBlockArrowheadIterativeSolve(
-        c(:ρ),
-        c(:ρe_tot),
-        c(:ρq_rai);
-        alg₂ = velocity_alg,
-        P_alg₁ = MF.MainDiagonalPreconditioner(),
-        n_iters = 2,
-    )
-    direct_alg = MF.BlockArrowheadSolve(
-        c(:ρ),
-        c(:ρe_tot),
-        c(:ρq_rai);
-        alg₂ = velocity_alg,
-    )
-    function split_increments(pairs, alg)
-        matrix = MF.FieldMatrix(pairs...)
-        solver = CA.split_jacobian_solver(
-            matrix,
-            Y,
-            alg,
-            CA.uncoupled_jacobian_names(pairs),
+    for FT in (Float32, Float64)
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 12,
+            staggering,
         )
-        ΔY = zero(Y)
-        CA.LinearAlgebra.ldiv!(ΔY, solver, R)
-        return ΔY
-    end
-    for alg in (iterative_alg, direct_alg)
-        ΔY = split_increments(with_cross, alg)
-        ΔY_plain = split_increments(model_pairs, alg)
-        # The coupled fields' increments are those without the cross block.
-        for n in (:ρ, :ρe_tot, :ρq_rai)
-            @test isequal(
-                parent(getproperty(ΔY.c, n)),
-                parent(getproperty(ΔY_plain.c, n)),
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜnames = (:ρ, :ρe_tot, :ρq_rai, :ρq_tag_tropo)
+        Y = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{4, FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        fill_pattern!(values, shift) =
+            values .=
+                sin.(shift .+ FT(0.7) .* reshape(1:length(values), size(values)))
+        R = similar(Y)
+        fill_pattern!(parent(R.c), 0)
+        fill_pattern!(parent(R.f), 1)
+        function band_block(space, row_type, diagonal, shift)
+            block = fill(zero(row_type), space)
+            n_levels = size(parent(block), 1)
+            values = reshape(parent(block), n_levels, :)
+            fill_pattern!(values, shift)
+            values .*= FT(0.1)
+            n_entries = size(values, 2)
+            isodd(n_entries) && (values[:, (n_entries + 1) ÷ 2] .+= diagonal)
+            if n_entries > 1
+                values[1, 1] = 0
+                values[end, end] = 0
+            end
+            return block
+        end
+        ᶜdiagonal(shift) =
+            band_block(ᶜspace, MF.DiagonalMatrixRow{FT}, -1, shift)
+        ᶜtridiagonal(shift, diagonal = -1) =
+            band_block(ᶜspace, MF.TridiagonalMatrixRow{FT}, diagonal, shift)
+        ᶠtridiagonal(shift) =
+            band_block(ᶠspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
+        ᶜᶠbidiagonal(shift) =
+            band_block(ᶜspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+        ᶠᶜbidiagonal(shift) =
+            band_block(ᶠspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+        c(n) = MF.FieldName(:c, n)
+        u₃ = CA.MatrixFields.@name(f.u₃)
+        plain_pairs = (
+            (c(:ρ), c(:ρ)) => ᶜdiagonal(2),
+            (c(:ρe_tot), c(:ρe_tot)) => ᶜdiagonal(3),
+            # Diagonal, as the direct arrowhead solve needs for its first group.
+            (c(:ρq_rai), c(:ρq_rai)) => ᶜdiagonal(4),
+            (c(:ρ), u₃) => ᶜᶠbidiagonal(5),
+            (c(:ρe_tot), u₃) => ᶜᶠbidiagonal(6),
+            (u₃, c(:ρ)) => ᶠᶜbidiagonal(7),
+            (u₃, c(:ρe_tot)) => ᶠᶜbidiagonal(8),
+            (u₃, u₃) => ᶠtridiagonal(9),
+            (c(:ρq_tag_tropo), c(:ρq_tag_tropo)) => ᶜtridiagonal(10),
+        )
+        # Under prognostic EDMF a species' row names `u₃` too.
+        model_pairs = (plain_pairs..., (c(:ρq_rai), u₃) => ᶜᶠbidiagonal(13))
+        cross = (c(:ρq_tag_tropo), c(:ρq_rai)) => ᶜtridiagonal(11, 0)
+        with_cross = (model_pairs..., cross)
+        # The tag stays uncoupled with a block to a coupled column in its own
+        # row.
+        @test CA.uncoupled_jacobian_names(with_cross) == (c(:ρq_tag_tropo),)
+        # A block that names the tag in another row, or a column block to
+        # another splittable field, makes it coupled. So does a column that
+        # contains the tag, such as `@name(c)`.
+        @test isempty(
+            CA.uncoupled_jacobian_names((
+                with_cross...,
+                (c(:ρq_rai), c(:ρq_tag_tropo)) => ᶜtridiagonal(12, 0),
+            )),
+        )
+        @test isempty(
+            CA.uncoupled_jacobian_names((
+                with_cross...,
+                (c(:ρq_tag_tropo), MF.FieldName(:c)) => ᶜtridiagonal(12, 0),
+            )),
+        )
+
+        velocity_alg = MF.BlockLowerTriangularSolve(u₃)
+        iterative_alg(n_iters) = MF.ApproximateBlockArrowheadIterativeSolve(
+            c(:ρ),
+            c(:ρe_tot),
+            c(:ρq_rai);
+            alg₂ = velocity_alg,
+            P_alg₁ = MF.MainDiagonalPreconditioner(),
+            n_iters,
+        )
+        direct_alg = MF.BlockArrowheadSolve(
+            c(:ρ),
+            c(:ρe_tot),
+            c(:ρq_rai);
+            alg₂ = velocity_alg,
+        )
+        function split_solver(pairs, alg)
+            matrix = MF.FieldMatrix(pairs...)
+            return CA.split_jacobian_solver(
+                matrix,
+                Y,
+                alg,
+                CA.uncoupled_jacobian_names(pairs),
             )
         end
-        @test isequal(parent(ΔY.f), parent(ΔY_plain.f))
-        # The tag solves its own row: D Δtag + C Δρq_rai = R_tag.
-        D = model_pairs[end].second
-        C = cross.second
-        residual =
-            @. D * ΔY.c.ρq_tag_tropo + C * ΔY.c.ρq_rai - R.c.ρq_tag_tropo
-        @test maximum(abs, parent(residual)) <
-              1e-12 * maximum(abs, parent(R.c.ρq_tag_tropo))
-        # And it differs from the solve without the cross block.
-        @test !isapprox(
-            parent(ΔY.c.ρq_tag_tropo),
-            parent(ΔY_plain.c.ρq_tag_tropo),
+        function increments(solver)
+            ΔY = zero(Y)
+            CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+            return ΔY
+        end
+        tolerance = 1000 * eps(FT)
+        for alg in (iterative_alg(2), direct_alg)
+            solver = split_solver(with_cross, alg)
+            ΔY = increments(solver)
+            ΔY_plain = increments(split_solver(model_pairs, alg))
+            # The coupled fields' increments are those without the cross
+            # block.
+            for n in (:ρ, :ρe_tot, :ρq_rai)
+                @test isequal(
+                    parent(getproperty(ΔY.c, n)),
+                    parent(getproperty(ΔY_plain.c, n)),
+                )
+            end
+            @test isequal(parent(ΔY.f), parent(ΔY_plain.f))
+            # The tag solves its own row: D Δtag + C Δρq_rai = R_tag.
+            D = plain_pairs[end].second
+            C = cross.second
+            residual =
+                @. D * ΔY.c.ρq_tag_tropo + C * ΔY.c.ρq_rai - R.c.ρq_tag_tropo
+            @test maximum(abs, parent(residual)) <=
+                  tolerance * maximum(abs, parent(R.c.ρq_tag_tropo))
+            # And it differs from the solve without the cross block.
+            @test !isapprox(
+                parent(ΔY.c.ρq_tag_tropo),
+                parent(ΔY_plain.c.ρq_tag_tropo),
+            )
+            # Repeated solves allocate nothing (Julia 1.10 allocates in the
+            # split solve, as `energy_source_tags_integration.jl` records).
+            ΔY_again = zero(Y)
+            CA.LinearAlgebra.ldiv!(ΔY_again, solver, R)
+            bytes = @allocated CA.LinearAlgebra.ldiv!(ΔY_again, solver, R)
+            @test bytes <= 64 skip = VERSION < v"1.11"
+        end
+
+        # Without a species-`u₃` block the unsplit nested solve can take the
+        # cross block too. Its coupled increments are the split's, and its
+        # tag's comes to the split's as the nested iteration converges.
+        # (Under prognostic EDMF a species' row does name `u₃`, and the
+        # unsplit form does not carry the cross blocks; see `_derivative_flags`.)
+        plain_with_cross = (plain_pairs..., cross)
+        split_reference = increments(split_solver(plain_with_cross, direct_alg))
+        tag_differences = map((1, 2, 4)) do n_iters
+            unsplit = MF.FieldMatrixWithSolver(
+                MF.FieldMatrix(plain_with_cross...),
+                Y,
+                iterative_alg(n_iters),
+            )
+            ΔY_unsplit = zero(Y)
+            CA.LinearAlgebra.ldiv!(ΔY_unsplit, unsplit, R)
+            split = increments(split_solver(plain_with_cross, iterative_alg(n_iters)))
+            for n in (:ρ, :ρe_tot, :ρq_rai)
+                @test isapprox(
+                    parent(getproperty(ΔY_unsplit.c, n)),
+                    parent(getproperty(split.c, n));
+                    rtol = tolerance,
+                )
+            end
+            @test isapprox(parent(ΔY_unsplit.f), parent(split.f); rtol = tolerance)
+            maximum(
+                abs,
+                parent(ΔY_unsplit.c.ρq_tag_tropo) .-
+                parent(split_reference.c.ρq_tag_tropo),
+            )
+        end
+        @test issorted(tag_differences; rev = true)
+        @test last(tag_differences) <=
+              sqrt(eps(FT)) * maximum(abs, parent(split_reference.c.ρq_tag_tropo))
+    end
+end
+
+@testset "The tags' sedimentation cross blocks, assembled" begin
+    # The real blocks, from `update_sedimentation_jacobian!` on a small column,
+    # with a cache that holds what it reads. Each tag's cross block is checked
+    # against a finite difference of the tags' real sedimentation tendency
+    # (`_sediment_water_tags!`) in the falling species, at fixed `ρq_tot`, `ρ`
+    # and terminal velocity. The partition's blocks are checked against the
+    # parent's. The partition has drifted, so its shares are renormalized, and
+    # clamps bind in three cells.
+    CC = CA.ClimaCore
+    MF = CA.MatrixFields
+    Geometry = CC.Geometry
+    for FT in (Float32, Float64)
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 2000,
+            z_elem = 16,
+            staggering,
         )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜz = CC.Fields.coordinate_field(ᶜspace).z
+        region(above) = CA.TanhAltitudeRegion(FT(750), FT(100), above)
+        tags = (
+            CA.WaterTag{:tropo}(region(false)),
+            CA.WaterTag{:strat}(region(true)),
+            CA.WaterTag{:evap}(nothing, :surface_flux),
+        )
+        model = CA.WaterTaggingModel(tags)
+        masses = (:ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+        velocities = (:ᶜwₗ, :ᶜwᵢ, :ᶜwᵣ, :ᶜwₛ)
+        ᶜnames = (
+            :ρ,
+            :ρe_tot,
+            :ρq_tot,
+            masses...,
+            :ρq_tag_tropo,
+            :ρq_tag_strat,
+            :ρq_tag_evap,
+        )
+        Y = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        fill!(parent(Y.f), 0)
+        @. Y.c.ρ = FT(1.2) * exp(-(ᶜz) / 8000)
+        @. Y.c.ρe_tot = Y.c.ρ * FT(2.5e5)
+        @. Y.c.ρq_tot = Y.c.ρ * (FT(0.012) - FT(4e-6) * ᶜz)
+        @. Y.c.ρq_lcl = Y.c.ρ * FT(2e-4) * (1 + sin(ᶜz / 300))
+        @. Y.c.ρq_icl = Y.c.ρ * FT(5e-5) * (1 + cos(ᶜz / 400))
+        @. Y.c.ρq_rai = Y.c.ρ * FT(3e-4) * (1 + sin(ᶜz / 200 + 1))
+        @. Y.c.ρq_sno = Y.c.ρ * FT(1e-4) * (1 + cos(ᶜz / 250 + 2))
+        # A drifted partition: `tropo` holds 10% too much, `strat` 5% too
+        # little.
+        ᶜbelow = @. (1 - tanh((ᶜz - 750) / 100)) / 2
+        @. Y.c.ρq_tag_tropo = FT(1.1) * ᶜbelow * Y.c.ρq_tot
+        @. Y.c.ρq_tag_strat = FT(0.95) * (1 - ᶜbelow) * Y.c.ρq_tot
+        @. Y.c.ρq_tag_evap = FT(0.3) * Y.c.ρq_tot
+        # Clamps: `tropo` holds more than the cell's water in one cell, `evap`
+        # more in another and less than none in a third.
+        ρq_tot = parent(Y.c.ρq_tot)
+        parent(Y.c.ρq_tag_tropo)[2] = FT(1.5) * ρq_tot[2]
+        parent(Y.c.ρq_tag_evap)[5] = FT(1.2) * ρq_tot[5]
+        parent(Y.c.ρq_tag_evap)[9] = FT(-0.1) * ρq_tot[9]
+        @test CA.water_tag_fraction(parent(Y.c.ρq_tag_tropo)[2], ρq_tot[2]) == 1
+        @test CA.water_tag_fraction(parent(Y.c.ρq_tag_evap)[5], ρq_tot[5]) == 1
+        @test CA.water_tag_fraction(parent(Y.c.ρq_tag_evap)[9], ρq_tot[9]) == 0
+
+        ᶜvelocity(scale) = @. FT(scale) * (1 + ᶜz / 2000)
+        precomputed = (;
+            ᶜwₗ = ᶜvelocity(0.01),
+            ᶜwᵢ = ᶜvelocity(0.2),
+            ᶜwᵣ = ᶜvelocity(4),
+            ᶜwₛ = ᶜvelocity(1),
+            ᶜT = fill(FT(275), ᶜspace),
+            ᶜu = fill(
+                Geometry.Covariant123Vector(FT(0), FT(0), FT(0)),
+                ᶜspace,
+            ),
+        )
+        scratch = (;
+            ᶜbidiagonal_adjoint_matrix_c3 = CC.Fields.Field(
+                MF.BidiagonalMatrixRow{typeof(Geometry.Covariant3Vector(FT(0))')},
+                ᶜspace,
+            ),
+            ᶠband_matrix_wvec = similar(
+                Y.f,
+                MF.BandMatrixRow{
+                    CC.Utilities.PlusHalf{Int64}(0),
+                    1,
+                    Geometry.WVector{FT},
+                },
+            ),
+            ᶜtagging_q_share_norm = similar(Y.c.ρ),
+        )
+        ᶜΦ = @. FT(9.81) * ᶜz
+        p = (;
+            atmos = (;
+                microphysics_model = CA.NonEquilibriumMicrophysics1M(),
+                water_tagging_model = model,
+            ),
+            params = CA.ClimaAtmosParameters(FT),
+            core = (; ᶜΦ),
+            precomputed,
+            scratch,
+        )
+        matrix = MF.FieldMatrix(
+            CA.sedimentation_jacobian_blocks(Y, p.atmos, CA.UseDerivative())...,
+        )
+        dtγ = FT(60)
+        CA.update_sedimentation_jacobian!(matrix, Y, p, dtγ, CA.UseDerivative())
+        ᶜnorm = p.scratch.ᶜtagging_q_share_norm
+        # The update renormalized the drifted partition.
+        @test maximum(abs, parent(ᶜnorm) .- 1) > FT(0.04)
+
+        # The tags' sedimentation tendency for one species, as the model
+        # computes it (`vertical_advection_of_water_tendency!`).
+        ᶜJ = CC.Fields.local_geometry_field(Y.c).J
+        ᶠJ = CC.Fields.local_geometry_field(Y.f).J
+        ᶠρ = @. CA.ᶠinterp(Y.c.ρ * ᶜJ) / ᶠJ
+        function tag_tendencies(ᶜρqₚ, ᶜw)
+            ᶜYₜ = CA._water_fix_fields(Y.c.ρ, tags)
+            ᶜq = @. ᶜρqₚ / Y.c.ρ
+            CA._sediment_water_tags!(ᶜYₜ, Y.c, ᶜnorm, ᶜq, ᶜw, ᶠρ, tags)
+            return ᶜYₜ
+        end
+        c(n) = MF.FieldName(:c, n)
+        partition_names = (:ρq_tag_tropo, :ρq_tag_strat)
+        for (mass, velocity) in zip(masses, velocities)
+            ᶜρqₚ = getproperty(Y.c, mass)
+            ᶜw = getproperty(precomputed, velocity)
+            parent_block = matrix[c(:ρq_tot), c(mass)]
+            scale = maximum(abs, parent(parent_block))
+            @test scale > 0
+            # The partition's blocks sum to the parent's.
+            ᶜpartition_block = copy(parent_block)
+            @. ᶜpartition_block =
+                matrix[c(:ρq_tag_tropo), c(mass)] +
+                matrix[c(:ρq_tag_strat), c(mass)]
+            @test maximum(
+                abs,
+                parent(ᶜpartition_block) .- parent(parent_block),
+            ) <= 100 * eps(FT) * scale
+            # Each tag's block is the derivative of its tendency in the species.
+            ᶜv = @. ᶜρqₚ * (1 + sin(ᶜz / 170)) / 2
+            h = FT(0.1)
+            base = tag_tendencies(ᶜρqₚ, ᶜw)
+            moved = tag_tendencies((@. ᶜρqₚ + h * ᶜv), ᶜw)
+            for name in (partition_names..., :ρq_tag_evap)
+                block = matrix[c(name), c(mass)]
+                ᶜJv = @. block * ᶜv
+                ᶜfinite_difference =
+                    @. dtγ * (getproperty(moved, name) - getproperty(base, name)) / h
+                Jv_scale = maximum(abs, parent(ᶜJv))
+                @test Jv_scale > 0
+                @test maximum(
+                    abs,
+                    parent(ᶜJv) .- parent(ᶜfinite_difference),
+                ) <= 1000 * eps(FT) * Jv_scale
+            end
+        end
     end
 end
 
