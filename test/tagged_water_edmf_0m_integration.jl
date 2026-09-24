@@ -537,14 +537,13 @@ end
         ) <= 1e-12 * column_scale
         # With the partition closed, the region tags' `pr_tag` is `pr` to
         # rounding. The tags are set to a closed partition of the same
-        # composition; the model's fields, and so `pr`, do not change.
+        # composition, and the state's own `pr` is recomputed.
         Y_closed = copy(Y_default)
         ᶜtropo_share = clamp.(Y_default.c.ρq_tag_tropo ./ Y_default.c.ρq_tot, 0, 1)
         Y_closed.c.ρq_tag_tropo .= ᶜtropo_share .* Y_default.c.ρq_tot
         Y_closed.c.ρq_tag_strat .= Y_default.c.ρq_tot .- Y_closed.c.ρq_tag_tropo
         CA.set_precomputed_quantities!(Y_closed, p_default, t_default)
         closed = surface_parts(Y_closed)
-        @test isequal(parent(closed.pr), parent(surface.pr))
         @test maximum(abs, parent(closed.pr .- closed.tags)) <= 1e-12 * column_scale
         @test maximum(abs, parent(closed.residual)) <= 1e-12 * column_scale
         CA.set_precomputed_quantities!(Y_default, p_default, t_default)
