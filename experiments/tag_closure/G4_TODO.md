@@ -273,6 +273,29 @@ water tags now carry sedimentation cross blocks, and the energy source tags
 do not. Nothing refuses `enthalpy_increment` there, and no run measures it.
 Measure it on W23's explicit column before either is decided.
 
+### G4.16 Sedimentation cross blocks for the energy source tags
+
+Added on 2026-09-24, at the owner's request. The water tags' rows now carry the
+parent's sedimentation cross block to each falling species, times the tag's
+share (WP5b, #105); the energy source tags' rows do not. Under
+`enthalpy_increment` on W23's column (DYCOMS RF02, 1M, EDMF, an hour) the
+energy tags' closure residual is 2.1e-4 with the microphysics explicit and one
+Newton iteration, 1.5e-6 with it implicit, and 4.9e-12 with ten iterations
+(the N5 measurement of G4.15, configs `g415_n5_*`). So the energy tags lag the
+parent's sedimentation on the explicit path as the water tags did (W23).
+
+  - [ ] Design: `ρe_tot`'s row has the cross block `∂(ρe_tot)ₜ/∂ρqₚ`, the
+    sedimentation energy flux (`update_sedimentation_jacobian!`); each energy
+    tag's row gets it times the tag's share, solved after the model's fields
+    by the split solver's back-substitution, as the water tags' are. Mind
+    B1: only with the split, and the offset `c·ρ` in the total `E`.
+  - [ ] Tests as #105's: the assembled blocks against a finite difference of
+    the tags' real tendency, both float types; the partition's sum against
+    the parent's.
+  - [ ] Measure on W23's explicit column, one iteration, against 2.1e-4.
+  - [ ] Until then, `enthalpy_increment` with 1M stepped explicitly: refuse,
+    or document the lag. The owner decides.
+
 ## Energy items within M1 to M5 that no G4.n takes up yet
 
 ROADMAP.md lists these as "later" within their milestones. They need a new
