@@ -76,3 +76,31 @@ The code is #105 at `1a37e43f`, run from the run tree `-wedmf5b-run` (the
 record merged with it). The verifier is `analysis/evidence/compare_runs.py`;
 the rule metrics are `analysis/water/w5r_rule_compare.py`'s; the clamp
 statistics are `analysis/water/w5v_clamps.py`, written before the runs finish.
+
+## 6. After the run: a check on the same atmosphere
+
+Added on 2026-09-24, after W33 and before any run of this part, at the owner's
+request ("Do check against a reference on the same atmosphere, as WP4a-V
+does"). W33's criteria 2 and 3 compared runs whose atmospheres differ, since
+ten Newton iterations change the model, so they mixed the atmosphere's
+difference with the tags' lag. This part compares on one trajectory.
+
+**Design.** The ten-iteration run is the reference trajectory. At every step
+of it, from its own state `Yₖ`, a second integrator (the same configuration,
+one Newton iteration) and a third (two iterations) each take one step. Each
+result is compared with the reference's own step from `Yₖ`. So every
+comparison starts from the same atmosphere, and the difference is the one-step
+error of fewer iterations.
+
+**Metric.** For each tag `i`, and for the parent `ρq_tot`, summed over the
+run: `E = Σₖ Σ_cells |ρq_trial − ρq_ref| / Σₖ Σ_cells |ρq_ref − ρq(Yₖ)|`, the
+local error relative to the step's own increment.
+
+**Passes when**, for `pbl` and `free`:
+  1. at `dt` 120 s, `E` with two iterations is smaller than with one;
+  2. with one iteration, `E` at `dt` 60 s is no larger than at 120 s.
+
+Reported beside it: the parent's `E` at each rung, and each tag's `E` over the
+parent's. The probe is `analysis/water/w5v_same_atmosphere.jl`, run against
+#105 at `1a37e43f`. If it passes, W33's verdict is revisited with the owner;
+the default does not change without the owner.
