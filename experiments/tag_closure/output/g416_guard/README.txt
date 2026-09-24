@@ -6,3 +6,9 @@ environment $SCRATCH/claude_work/plan2/guard_testenv.
 guard_tracer_config.log   test/config/tracer_config.jl: every testset passes; "energy_source_tags against the scheme" 24/24.
                           Run on the working tree before the commit; only a docstring cross-reference changed after.
 guard_config.log          test/config.jl: every testset passes
+
+Extension to 1M, 2M and P3 (e55ae293), same environment:
+guard2_tracer_config.log  test/config/tracer_config.jl: every testset passes; "energy_source_tags against the scheme" 36/36
+guard2_config.log         test/config.jl: every testset passes
+water_2m_check.jl         the check that water tags with 2M or 2MP3 are refused at configuration under both
+                          transports, run against claude/water-tags-wp6-step3 (#102's config code): 4 of 4 passed
