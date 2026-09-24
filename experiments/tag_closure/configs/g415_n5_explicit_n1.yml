@@ -1,0 +1,52 @@
+# G4.15, N5 of #105's review: the energy source tags under `enthalpy_increment`
+# on W23's column (DYCOMS RF02, 1M, EDMF, ARS222, an hour), microphysics
+# explicit, 1 Newton iteration(s). The energy tags carry no
+# sedimentation cross blocks; this measures what that leaves.
+
+job_id: "g415_n5_explicit_n1"
+
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+implicit_microphysics: false
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+max_newton_iters_ode: 1
+dt: "120secs"
+t_end: "1hours"
+FLOAT_TYPE: "Float64"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_transport: "enthalpy_increment"
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: sfc
+    source: surface_flux
+energy_source_closure_check:
+  period: "10mins"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_res, e_src_strat, e_src_tropo, e_src_sfc, e_src_inc_left, e_src_inc_moved]
+    period: "10mins"
