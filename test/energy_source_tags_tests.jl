@@ -1029,6 +1029,8 @@ column_atmos_model(; kwargs...) =
                 ρe_src_strat = FT[12000, -3000],
                 ρe_src_tropo = FT[-2000, -7000],
                 ρe_src_sfc = FT[-5, -5],
+                e_src_led_repair = zeros(FT, 2),
+                e_src_led_repairnet = zeros(FT, 2),
             ),
         )
         cache(model) = (;
@@ -1038,6 +1040,16 @@ column_atmos_model(; kwargs...) =
                     ρe_src_strat = zeros(FT, 2),
                     ρe_src_tropo = zeros(FT, 2),
                     ρe_src_sfc = zeros(FT, 2),
+                ),
+                ᶜenergy_source_fix_gross = (;
+                    ρe_src_strat = zeros(2),
+                    ρe_src_tropo = zeros(2),
+                    ρe_src_sfc = zeros(2),
+                ),
+                ᶜenergy_source_fix_count = (;
+                    ρe_src_strat = zeros(2),
+                    ρe_src_tropo = zeros(2),
+                    ρe_src_sfc = zeros(2),
                 ),
                 ᶜenergy_source_pos = zeros(FT, 2),
                 ᶜenergy_source_neg = zeros(FT, 2),
@@ -1064,6 +1076,22 @@ column_atmos_model(; kwargs...) =
         @test fix.ρe_src_strat[1] + fix.ρe_src_tropo[1] ≈ 0 atol =
             sqrt(eps(FT)) * abs(before.ρe_src_strat[1])
         @test fix.ρe_src_sfc[1] == 5
+        # The state ledger (WP6) takes the energy moved between the partition's
+        # tags, half the sum of their changes; the overlay tag's clamp is not
+        # in it.
+        @test Y.c.e_src_led_repair[1] ≈
+              (abs(fix.ρe_src_strat[1]) + abs(fix.ρe_src_tropo[1])) / 2
+        @test Y.c.e_src_led_repair[1] ≈ 2000
+        @test Y.c.e_src_led_repair[2] == 0
+        @test all(iszero, Y.c.e_src_led_repairnet)
+        # The gross twin takes each change's absolute value, the count one
+        # event per changed cell, in Float64.
+        for name in tag_state_names
+            @test getproperty(p.tagging.ᶜenergy_source_fix_gross, name) ≈
+                  abs.(getproperty(fix, name))
+            @test getproperty(p.tagging.ᶜenergy_source_fix_count, name) ==
+                  Float64.(getproperty(fix, name) .!= 0)
+        end
         # Where the total is not positive, nothing is touched.
         for name in tag_state_names
             @test getproperty(Y.c, name)[2] == getproperty(before, name)[2]
@@ -1078,6 +1106,7 @@ column_atmos_model(; kwargs...) =
             @test getproperty(Y.c, name) == getproperty(before, name)
             @test all(iszero, getproperty(p.tagging.ᶜenergy_source_fix, name))
         end
+        @test all(iszero, Y.c.e_src_led_repair)
     end
 
     @testset "AtmosModel integration" begin
@@ -1119,6 +1148,8 @@ column_atmos_model(; kwargs...) =
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_extratropics")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_res")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fix_tropics")
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fixgross_tropics")
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fixcount_tropics")
 
         # With the repair on, the default output carries its ledgers, sampled
         # rather than averaged, because each is a running total. With the
@@ -1287,9 +1318,23 @@ column_atmos_model(; kwargs...) =
             ρe_src_rad = cells([1, 0, -2, 0]),
             ρe_src_sfc = cells([0, 0, 0, 3]),
         )
+        gross = (;
+            ρe_src_tropics = cells([1, 0, 0, 0]),
+            ρe_src_rad = cells([3, 0, 2, 0]),
+            ρe_src_sfc = cells([0, 0, 0, 3]),
+        )
+        count = (;
+            ρe_src_tropics = cells([1, 0, 0, 0]),
+            ρe_src_rad = cells([2, 0, 1, 0]),
+            ρe_src_sfc = cells([0, 0, 0, 1]),
+        )
         p = (;
             scratch = (; ᶜtemp_scalar = zeros(space)),
-            tagging = (; ᶜenergy_source_fix = fix),
+            tagging = (;
+                ᶜenergy_source_fix = fix,
+                ᶜenergy_source_fix_gross = gross,
+                ᶜenergy_source_fix_count = count,
+            ),
         )
 
         audit = CA.energy_source_audit(Y, p, model, FT(10))
@@ -1301,6 +1346,11 @@ column_atmos_model(; kwargs...) =
         # Every tag's ledger counts, the region tag's too: 1 + 2 + 3 + 1.
         @test audit.repair_moved == 7
         @test audit.repair_moved_relative == 0.7
+        # The gross twin also counts what cancelled over time in a cell: the
+        # `rad` tag's first cell moved 3 in all, and 1 net.
+        @test audit.repair_gross == 9
+        @test audit.repair_gross_relative == 0.9
+        @test audit.repair_events == 5
 
         # A zero scale gives zero ratios, as the rest of the audit does.
         zero_scale = CA.energy_source_audit(Y, p, model, FT(0))
@@ -1512,8 +1562,16 @@ end
     ) = CA.EnergySourceTaggingModel(tags(width; sources), offset; repair, transport)
     atmos(model; energy_process_record = nothing, water_process_record = nothing) =
         (; energy_source_tagging_model = model, energy_process_record, water_process_record)
-    state(names...) =
-        (; c = NamedTuple{(:ρ, :ρe_tot, names...)}(Tuple(zeros(2 + length(names)))))
+    # A state with tags, written with WP6, holds their ledger per mechanism.
+    state(names...; with_ledger = any(CA.is_energy_source_tag_name, names)) = (;
+        c = (;
+            NamedTuple{(:ρ, :ρe_tot, names...)}(Tuple(zeros(2 + length(names))))...,
+            (
+                with_ledger ? (; e_src_led_repair = 0.0, e_src_led_repairnet = 0.0) :
+                (;)
+            )...,
+        ),
+    )
     tagged = state(:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
     directory = mktempdir()
     # A checkpoint with the attributes a run writes. `edit` changes the file
@@ -1633,6 +1691,12 @@ end
         tagged,
     )
     @test isnothing(check(written, source_model(), tagged))
+    # A checkpoint from before the ledger per mechanism is refused (WP6).
+    @test_throws r"before the energy source tags kept their ledgers per mechanism" check(
+        written,
+        source_model(),
+        state(:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad; with_ledger = false),
+    )
     # The process records are checked the same way, energy and water.
     record = CA.ProcessRecordModel((CA.RecordedProcess{:radiation}(),))
     @test_throws r"energy process records none, and this run configures radiation" check(
