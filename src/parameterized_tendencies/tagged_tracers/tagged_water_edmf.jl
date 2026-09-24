@@ -1030,22 +1030,6 @@ _surface_gain_weight(ᶜmasks, tag::WaterTag) = tag_field(ᶜmasks, tag)
 # ---------------------------------------------------------------------------
 
 """
-    repair_water_tag_copies!(Y, p)
-
-After the updraft filter (`enforce_edmf_updraft_constraints!`), close the
-partition's copies onto `q_totʲ` again. The filter clamps each copy and
-`q_totʲ` apart, so their sum and `q_totʲ` part. The residual
-`r = q_totʲ - Σᵢ∈P χᵢʲ` is handed to the partition's copies by their shares,
-floored at what they hold, by [`water_tag_rescale_shift`](@ref), the rule the
-grid-scale tags follow after a limiter. The filter's own increment is not
-handed on as well: the filter already clamped each copy, and doing both would
-count it twice. `r` before the repair is kept in `p.tagging.ᶜwater_copy_residual`
-for the diagnostic `q_tag_copy_res`, and the water moved, times `ρaʲ`, in the
-ledger `q_tag_upfix_<name>`, cumulative since the segment started. Source tags'
-copies are not part of the sum and are left as the filter left them. A no-op
-without copies.
-"""
-"""
     snapshot_water_tag_copy_water!(Y, p)
     record_water_tag_copy_filter!(Y, p)
 
@@ -1076,6 +1060,22 @@ function _water_tag_copy_filter!(Y, p, model::WaterTaggingModel, when)
     return nothing
 end
 
+"""
+    repair_water_tag_copies!(Y, p)
+
+After the updraft filter (`enforce_edmf_updraft_constraints!`), close the
+partition's copies onto `q_totʲ` again. The filter clamps each copy and
+`q_totʲ` apart, so their sum and `q_totʲ` part. The residual
+`r = q_totʲ - Σᵢ∈P χᵢʲ` is handed to the partition's copies by their shares,
+floored at what they hold, by [`water_tag_rescale_shift`](@ref), the rule the
+grid-scale tags follow after a limiter. The filter's own increment is not
+handed on as well: the filter already clamped each copy, and doing both would
+count it twice. `r` before the repair is kept in `p.tagging.ᶜwater_copy_residual`
+for the diagnostic `q_tag_copy_res`, and the water moved, times `ρaʲ`, in the
+ledger `q_tag_upfix_<name>`, cumulative since the segment started. Source tags'
+copies are not part of the sum and are left as the filter left them. A no-op
+without copies.
+"""
 repair_water_tag_copies!(Y, p) =
     _repair_water_tag_copies!(
         Y,
