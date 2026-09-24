@@ -46,6 +46,9 @@ NVTX.@annotate function constrain_state!(Y, p, t)
     # Last: the corrections above can still move ρq_tot (and rescale the tags to
     # follow it), while the repair only needs the tags to be self-consistent.
     repair_water_tag_partition!(Y, p)
+    # After the updraft filter in `enforce_physical_constraints!`, which clamps
+    # each water tag copy and `q_totʲ` apart.
+    repair_water_tag_copies!(Y, p)
     repair_energy_source_tags!(Y, p)
     return nothing
 end

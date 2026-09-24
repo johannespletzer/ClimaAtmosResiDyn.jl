@@ -318,6 +318,7 @@ function tagging_cache(Y, atmos::AtmosModel)
     water = _water_tagging_cache(Y, atmos.water_tagging_model)
     sources = _energy_source_tagging_cache(Y, atmos.energy_source_tagging_model)
     check_energy_source_exchange_partition(sources, atmos)
+    check_water_tag_exchange_partition(water, atmos)
     # The process records hold no cache of their own: they are prognostic, and
     # their only scratch lives in `tagging_scratch`.
     isnothing(energy) &&
@@ -365,6 +366,7 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
         (;
             ᶜtagging_q_snapshot = similar(Y.c.ρ),
             ᶜtagging_q_share_norm = similar(Y.c.ρ),
+            water_tag_edmf_scratch(Y, atmos.water_tagging_model, atmos)...,
         )
     )...,
     (
@@ -919,6 +921,11 @@ function rebuild_tags_from_state!(Y, atmos)
         ᶜcoord,
         Y.c.ρq_tot,
         atmos.water_tagging_model,
+    )
+    rebuild_water_tag_updraft_copies!(
+        Y,
+        atmos.water_tagging_model,
+        atmos.turbconv_model,
     )
     source_model = atmos.energy_source_tagging_model
     isnothing(source_model) || _rebuild_energy_source_tags!(

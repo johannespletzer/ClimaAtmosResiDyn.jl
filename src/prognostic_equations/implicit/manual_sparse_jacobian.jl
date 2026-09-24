@@ -1804,6 +1804,42 @@ function update_sgs_advection_jacobian!(matrix, Y, p, dtγ)
                     matrix[@name(c.sgsʲs.:(1).q_tot), χ_state_name]
                 @. ∂ᶜq_totʲ_err_∂ᶜχʲ =
                     DiagonalMatrixRow(ᶜinv_ρ̂) * ᶜtridiagonal_matrix_scalar
+
+                # The water tags' updraft copies fall with their share of this
+                # species, `qʲ χᵢʲ / q_totʲ` (`sediment_water_tag_copies!`). So
+                # their blocks take the operator's part within the updraft
+                # times that share's derivative. The lateral inflow carries the
+                # environment's composition. Its dependence on the copy runs
+                # through the environment's share, and is left out, as the
+                # renormalization's and the clamp's are. The model's blocks
+                # above are written, so the operator's scratch is reused.
+                copy_names =
+                    water_tag_copy_sgs_names(p.atmos.water_tagging_model)
+                if !isempty(copy_names)
+                    @. ᶜtridiagonal_matrix_scalar =
+                        dtγ * ifelse(
+                            ᶜ∂a∂z < 0,
+                            -(ᶜprecipdivᵥ_matrix()) * ᶠsed_tracer_advection *
+                            DiagonalMatrixRow(ᶜa),
+                            -DiagonalMatrixRow(ᶜa) * ᶜprecipdivᵥ_matrix() *
+                            ᶠsed_tracer_advection,
+                        )
+                    ᶜqʲ_species = MatrixFields.get_field(Y.c.sgsʲs.:(1), χ_name)
+                    MatrixFields.unrolled_foreach(copy_names) do copy_name
+                        copy_state_name = sgs_state_name(copy_name)
+                        ∂ᶜcopy_err_∂ᶜcopy =
+                            matrix[copy_state_name, copy_state_name]
+                        @. ∂ᶜcopy_err_∂ᶜcopy +=
+                            DiagonalMatrixRow(ᶜinv_ρ̂) *
+                            ᶜtridiagonal_matrix_scalar *
+                            DiagonalMatrixRow(
+                                water_tag_copy_fall_share_derivative(
+                                    ᶜqʲ_species,
+                                    Y.c.sgsʲs.:(1).q_tot,
+                                ),
+                            )
+                    end
+                end
             end
         end
     end
@@ -2007,6 +2043,15 @@ function update_sgs_boundary_condition_jacobian!(matrix, Y, p, dtγ)
         dtγ * DiagonalMatrixRow(ᶜsfc_bc_rate)
     @. ∂ᶜq_totʲ_err_∂ᶜq_totʲ -=
         dtγ * DiagonalMatrixRow(ᶜsfc_bc_rate)
+    # The water tags' updraft copies relax at the same rate
+    # (`water_tag_copies_boundary_condition_tendency!`).
+    MatrixFields.unrolled_foreach(
+        water_tag_copy_sgs_names(p.atmos.water_tagging_model),
+    ) do copy_name
+        copy_state_name = sgs_state_name(copy_name)
+        ∂ᶜcopy_err_∂ᶜcopy = matrix[copy_state_name, copy_state_name]
+        @. ∂ᶜcopy_err_∂ᶜcopy -= dtγ * DiagonalMatrixRow(ᶜsfc_bc_rate)
+    end
     return nothing
 end
 

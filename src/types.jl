@@ -2372,15 +2372,35 @@ struct TaggingModel{T <: Tuple}
 end
 
 """
-    WaterTaggingModel(tags::Tuple)
+    WaterTaggingModel(tags::Tuple; updraft_copies = false)
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 `water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
 `config/tracer_config.jl`.
+
+`updraft_copies`, from `water_tag_updraft_copy`, gives each tag a copy in every
+updraft under `turbconv: prognostic_edmfx`, which the model's own updraft
+machinery moves: the audit mode. Without it the tags stay grid-scale and take
+their share of the updraft's water flux by a donor share and an exchange: the
+default. It is a type parameter, so the state is built from it at compile
+time.
 """
-struct WaterTaggingModel{T <: Tuple}
+struct WaterTaggingModel{T <: Tuple, UpdraftCopies}
     tags::T
 end
+WaterTaggingModel(tags::Tuple; updraft_copies::Bool = false) =
+    WaterTaggingModel{typeof(tags), updraft_copies}(tags)
+
+"""
+    has_water_tag_updraft_copies(model)
+
+Whether the water tags have a copy in each updraft, from the
+`water_tag_updraft_copy` config key. `false` without water tags.
+"""
+has_water_tag_updraft_copies(::Nothing) = false
+has_water_tag_updraft_copies(
+    ::WaterTaggingModel{T, UpdraftCopies},
+) where {T, UpdraftCopies} = UpdraftCopies
 
 """
     EnergySourceTag{name}(region, source = :none)

@@ -43,52 +43,70 @@ CUDA/MPI device test passes — but the strong-scaling numbers they exist to
 produce have not been collected. The measurement protocol is in
 `runscripts/README.md`.
 
-## 3. Tagged water does not close under AMD LES or under PrognosticEDMFX
+## 3. Tagged water: refused under AMD LES; under single-updraft PrognosticEDMFX its residual has named sources
 
-**Status:** guarded. Both combinations are refused at configuration by
-`check_water_tracers_transport_supported` (`config/tracer_config.jl`), with a
-test each in `test/config/tracer_config.jl`. The refusal under prognostic EDMF
-lasts until the tags follow the updrafts.
+**Status:** AMD LES guarded. Prognostic EDMF with one updraft supported, with
+more than one guarded. `check_water_tracers_transport_supported`
+(`config/tracer_config.jl`) refuses AMD LES, and prognostic EDMF with more than
+one updraft, with a test each in `test/config/tracer_config.jl`.
 
-Two transport paths move `ρq_tot` in ways the water tags do not follow, so
-`Σᵢ ρq_tag_i = ρq_tot` stops holding. Both are properties of the tagged-water
-implementation rather than of any particular run, and both predate the merge of
-the passive-tracer line.
+**AMD LES.** `parameterized_tendencies/les_sgs_models/anisotropic_minimum_dissipation.jl:135-155`
+(horizontal) and `:282-303` (vertical) recompute `ᶜD_amd` inside
+`foreach_gs_tracer` from *each tracer's own* gradient. So `ρq_tot` is diffused
+with `D(∇q_tot)` and each `ρq_tag_k` with `D(∇χ_k)`, and
+`Σₖ ∇⋅(ρ Dₖ ∇χₖ) ≠ ∇⋅(ρ D_tot ∇q_tot)` because the operator is nonlinear. No
+bracket or repair corrects that. Smagorinsky–Lilly (`smagorinsky_lilly.jl:170-178`)
+shares one `ᶜD_h` and closes, as does constant horizontal diffusion.
 
-  - **AMD LES.** `parameterized_tendencies/les_sgs_models/anisotropic_minimum_dissipation.jl:135-155`
-    (horizontal) and `:282-303` (vertical) recompute `ᶜD_amd` inside
-    `foreach_gs_tracer` from *each tracer's own* gradient. So `ρq_tot` is
-    diffused with `D(∇q_tot)` and each `ρq_tag_k` with `D(∇χ_k)`, and
-    `Σₖ ∇⋅(ρ Dₖ ∇χₖ) ≠ ∇⋅(ρ D_tot ∇q_tot)` because the operator is nonlinear.
-    This is not transport "the tags receive in their own right" — it is a
-    genuine break of the partition that no bracket or repair corrects.
-    Smagorinsky–Lilly (`smagorinsky_lilly.jl:170-178`) shares one `ᶜD_h` and
-    does close, as does constant horizontal diffusion.
+**Single-updraft PrognosticEDMFX, now.** The tags follow the updraft's water in
+one of two modes; see "Under prognostic EDMF" in `docs/src/tagged_water.md`. At
+a given state the default mode's partition takes the parent's sub-grid flux
+exactly, and its exchange sums to zero. The partition still parts from the
+parent, by these mechanisms:
 
-  - **PrognosticEDMFX.** The SGS mass-flux loop over tracers in
-    `edmfx_sgs_flux.jl:134-171` is driven by `sgs_tracer_names(Y)`. Tags have
-    no `sgsʲs` entries, so they are skipped. That is safe, but they never
-    receive that first-order water transport. Their sedimentation still
-    closes: under 1M `ρq_tot` sediments with the grid mean's flux only, and
-    the tags' fluxes sum to it (`water_advection.jl:85-95`). The EDMF
-    corrections to sedimentation (`:117-213`) change only `ρe_tot` and the
-    energy source tags. So the updraft's rain falls with the grid mean's
-    composition, which affects provenance, not closure. The claim in
-    `tagged_tracers/tagged_water.jl:23-24` that the implicit/explicit
-    vertical-advection split is "the one unavoidable source of closure drift"
-    is not true under EDMF.
+  - **The Newton iterations.** The tags' sub-grid flux has no Jacobian block and
+    the parent's has, so with a fixed number of iterations the tags lag. On
+    D4-W the default mode's gross residual after a day is 0.71% with one
+    iteration and 0.13% with ten (V-W3). WP5's increment follower is the
+    planned answer.
+  - **The leaks.** Paths that move the tags on their whole value and `ρq_tot`
+    without rain and snow, or relative to a reference profile.
+    `q_tag_leak_<path>` gives the source each would add to an exactly closed
+    partition. WP4c corrects the ones G3_PLAN 4.2's rule selects.
+  - **The vertical advection split**, as without EDMF.
+  - **The plume model.** The default mode's updraft composition is a steady
+    entraining plume, not a prognostic field. The updraft copies audit it.
 
-The combination used to be accepted silently, because
-`check_water_tagging_supported` screens only the microphysics model. The new
-check is separate from it, since that function also gates
-`water_process_record`, whose records are not transported and stay allowed.
-The refusal under prognostic EDMF lifts when the tags take their share of the
-updraft's water flux.
+**Historical behavior, before the tags followed the updrafts.** The SGS
+mass-flux loop over tracers in `edmfx_sgs_flux.jl` was driven by
+`sgs_tracer_names(Y)`. The tags had no `sgsʲs` entries, so they were skipped and
+never received that first-order water transport. Their sedimentation still
+closed: under 1M `ρq_tot` sediments with the grid mean's flux only, and the
+tags' fluxes sum to it (`water_advection.jl`). So the updraft's rain fell with
+the grid mean's composition, which affected provenance, not closure. On D4-W
+the partition drifted to 15% of the column's water in a day (V-W1). The
+combination was accepted silently, because `check_water_tagging_supported`
+screens only the microphysics model. The refusal was kept separate from it,
+since that function also gates `water_process_record`, whose records are not
+transported and stay allowed.
 
 ## 4. The implicit water-microphysics attribution has no Jacobian diagonal
 
 **Status:** diagnosed, not fixed. Open: whether the missing entry changes the
 answer after a fixed number of Newton iterations has not been isolated.
+
+**The updraft copies under 0M are affected too.** With
+`water_tag_updraft_copy: true` the copies' rain-out mirror,
+`χᵢʲₜ += dq (clamp(χᵢʲ/q_totʲ, 0, 1) - χᵢʲ)`, runs on the implicit path by
+default. Its diagonal, `dq (1/q_totʲ - 1)` away from the clamp, has no Jacobian
+entry. That is deliberate. `q_totʲ`'s own rain-out has no entry either, and
+adding one would change the model's results. Without either, the copies' rows
+and `q_totʲ`'s have the same diagonal blocks, so each Newton update of the
+copies sums to `q_totʲ`'s over a closed partition. An entry for the copies
+alone would part them, and the repair would then reshape their provenance. So
+the copies lag their implicit rain-out as `q_totʲ` does. Until a Newton ladder
+on a raining 0M column (1, 2 and 10 iterations) bounds that lag for the copies,
+`q_tag_copy_res` and `q_tag_upfix_*`, 0M copies are not a validated audit.
 
 `implicit/implicit_tendency.jl:66-78` puts the `:microphysics` water bracket on
 the implicit path. Its increment is `min(Δ, 0) · ρq_tag / ρq_tot`, which is

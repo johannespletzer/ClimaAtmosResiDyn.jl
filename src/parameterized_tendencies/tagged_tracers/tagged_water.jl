@@ -234,6 +234,17 @@ The `ρq_tot` snapshot that [`snapshot_tagged_ρq_tot!`](@ref) records lives in
 only `p.precomputed` and `p.scratch` are converted to dual-typed fields.
 """
 _water_tagging_cache(Y, ::Nothing) = nothing
+# With updraft copies, the copies' repair (`repair_water_tag_copies!`) keeps its
+# ledger `ᶜwater_upfix`, one field per tag like `ᶜwater_fix`, the residual it
+# repaired, for the diagnostic `q_tag_copy_res`, and two sums it reads.
+_water_copy_cache(Y, model) =
+    has_water_tag_updraft_copies(model) ?
+    (;
+        ᶜwater_upfix = _water_fix_fields(Y.c.ρ, model.tags),
+        ᶜwater_copy_residual = zero.(Y.c.ρ),
+        ᶜwater_copy_sum = zero.(Y.c.ρ),
+        ᶜwater_copy_pos = zero.(Y.c.ρ),
+    ) : (;)
 function _water_tagging_cache(Y, model::WaterTaggingModel)
     ᶜwater_masks = _tag_masks(Fields.coordinate_field(Y.c), model.tags)
     _check_region_partition(
@@ -245,7 +256,13 @@ function _water_tagging_cache(Y, model::WaterTaggingModel)
     ᶜwater_fix = _water_fix_fields(Y.c.ρ, model.tags)
     ᶜwater_pos = zero.(Y.c.ρ)
     ᶜwater_neg = zero.(Y.c.ρ)
-    return (; ᶜwater_masks, ᶜwater_fix, ᶜwater_pos, ᶜwater_neg)
+    return (;
+        ᶜwater_masks,
+        ᶜwater_fix,
+        ᶜwater_pos,
+        ᶜwater_neg,
+        _water_copy_cache(Y, model)...,
+    )
 end
 
 # ============================================================================

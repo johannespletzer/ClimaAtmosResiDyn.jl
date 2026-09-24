@@ -31,7 +31,14 @@ function center_prognostic_variables(physical_state, local_geometry, params, atm
         gs,
         atmos_model.energy_source_tagging_model,
     )
-    return (; gs..., with_updraft_tracers(sgs, copies)...)
+    # The water tags' copies start from each updraft's own water, split by the
+    # grid mean's shares, so they are added updraft by updraft.
+    sgs = with_water_tag_updraft_copies(
+        with_updraft_tracers(sgs, copies),
+        gs,
+        atmos_model.water_tagging_model,
+    )
+    return (; gs..., sgs...)
 end
 
 # Add `tracers` to every updraft's state. Without updrafts, or without tracers,
