@@ -152,9 +152,10 @@ stands, marked as superseded.
   - **OD2, set in form: windows are physical.** Startup ends when the parent's
     domain-mean tendency, or the source pulse, falls below a set level. The
     levels are in the OD3 draft.
-  - **OD3: drafted by the agent, approved by the owner.** One threshold table,
-    below, every number a proposal. No run is scored before the owner approves
-    it.
+  - **OD3: drafted at the owner's request; pending the owner's approval.** The
+    owner chose "I draft, you approve". One threshold table, below, every
+    number a proposal. No run is scored before the owner approves it, so step
+    2 stays blocked.
   - **OD4, set: gross source throughput.** An energy percentage is restated
     against the cumulative gross energy the sources put into the tags over the
     same window. The denominators of the existing E-records are audited:
@@ -290,9 +291,10 @@ decision is open and asks the owner.
 | 4    | WP5b-C at the tag counts OD8 keeps; copies pass eligibility in each run before they serve as the audit                                                  | OD8            | A first build exists outside the pushed branches (G3_TODO, WP5b-C)                                                                                                            |
 | 5    | WP5b-V's remaining arms: those without copies after step 2, default-against-copies arms after step 4; the explicit-1M follower stays opt-in unless it passes | step 2, step 4 | The same-atmosphere check is done and passes (W35). W33 stays a failure; the owner decides whether its verdict changes                                                        |
 | 6    | The WP4c operator-decomposition gate, with the three-part retention rule; defer, don't delete                                                           | OD3            | Waits                                                                                                                                                                          |
-| 7    | WP4b, judged by process-weighted same-state evidence and a held-out case that rains in established flow                                                | OD2, OD3       | Waits                                                                                                                                                                          |
-| 8    | WP9's cost qualification at the intended tag count, with the comparator and the aggregation test                                                      | OD3            | Waits. At 8 tags (OD8); the aggregation test is no longer needed for qualification                                                                                            |
+| 7    | WP4b, its implementation only: the rain and snow tag fields and their diagnostics, with closure as an invariant. No held-out evaluation yet                | the owner's rain and snow decision (WP4b-D) | Waits. Split on 2026-09-24 (review of `4507e247`), so that cost qualification comes before any held-out or default evidence                          |
+| 8    | WP9's cost qualification at the intended tag count, with WP4b's fields on, the comparator included; M4's ceilings fixed                              | OD3            | Waits. At 8 tags (OD8); the aggregation test is no longer needed for qualification                                                                                            |
 | 8a   | The fix of known issue 7: tagged water ends a run where the parent's water goes negative (site 23). Added 2026-09-24                                   | the owner's choice of option | Waits on the owner (`design/NEGATIVE_PARENT_WATER.md`)                                                                                                             |
+| 8b   | WP4b's validation, then default selection (M5): process-weighted same-state evidence and a held-out case that rains in established flow, within step 8's cost ceilings | step 8, OD2, OD3 | Waits. This is the part of the former step 7 that produces M5 evidence                                                                                                  |
 | 9    | The water sphere under the revised long-run criterion                                                                                                   | OD6            | Waits. `g2_v2_sphere_n2` at 60 levels, 90 days, judged by the level it reaches (OD1, OD6); after step 8a                                                                      |
 | 10   | G4: G4.16's cross blocks (the refusal stays until they pass), G4.1 and G4.11's mirrors at the OD8 counts, G4.3 to G4.6 with offset-invariant scales, the G4.15 decision, G4.7 and G4.8 with startup windows and fixed-parent comparisons, the energy default | OD4, OD7       | Waits. OD4 set; OD7 deferred                                                                                                                                                   |
 | 11   | The energy sphere, once its comparator, offset, cross-block, intervention and cost contracts are settled                                                | OD6            | Waits. The same sphere as step 9 (OD1, OD6)                                                                                                                                    |

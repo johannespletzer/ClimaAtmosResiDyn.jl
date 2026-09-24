@@ -1162,8 +1162,8 @@ reference's step. `E` is the summed L1 error over the summed L1 increment:
 
 **W36. Over 90 days at site 26 of the GCM-driven column, both placement rules
 keep the water partition closed at rounding level (gross 5.4e-12 under same
-sign, 6.9e-13 under |m|), and the model is bit for bit the same as the
-untagged twin. At site 23 the parent's own water goes negative from day 10,
+sign, 6.9e-13 under |m|), and the ten daily output fields of every tagged
+run are bit for bit the untagged twin's. At site 23 the parent's own water goes negative from day 10,
 and every tagged run's water tags then drift away from it and end the run
 (known issue 7).** The long runs pre-registered in
 `design/INCREMENT_RULE_LONG_RUNS.md`, second submission (section 7, the
@@ -1185,9 +1185,9 @@ Site 26 (ascent, 90 days, every run finished):
     so the rule separates two roundoff residuals; it does not show that one
     rule places the correction better.
   - **Against the copies**, the same under both rules to the digits shown:
-    L1 of `pbl` 6.2%, 8.0%, 8.8% at days 10, 30, 90; `free` 3.2%, 3.5%, 3.8%;
-    `evap` 11.6%, 13.7%, 14.8%; `fcg` 2.6%, 2.8%, 3.0% (weights ρ over the
-    levels; the grid is stretched). The copies' water closure is 6.3e-4 at
+    L1 of `pbl` 6.9%, 7.9%, 9.0% at days 10, 30, 90; `free` 2.5%, 2.6%, 2.9%;
+    `evap` 11.6%, 12.2%, 13.4%; `fcg` 2.0%, 1.9%, 2.2% (weights ρΔz, each
+    cell's mass per area). The copies' water closure is 6.3e-4 at
     day 90. Their repair throughput is not computed here, so their
     eligibility as a comparator (ROADMAP's contract) is not assessed, and the
     provenance verdict is *not assessable*.
@@ -1195,32 +1195,61 @@ Site 26 (ascent, 90 days, every run finished):
 Site 23 (subsidence):
 
   - The untagged twin runs 90 days. Its own specific humidity is below zero
-    on 66 of the 91 daily outputs, from day 10, down to −3.1e-3 kg/kg (day 30). At worst
-    the negative part is 11% of the column's water (weights ρ over the
-    levels).
+    on 66 of the 91 daily outputs, from day 10, down to −3.1e-3 kg/kg on day
+    30. At worst, on day 30, the negative part is 11% of the column's water:
+    −1.22 kg/m² against +12.5, in the levels from about 0.3 to 1.3 km
+    (weights ρΔz).
   - The water closure breaks when the parent goes negative, and the same way
-    under both rules: gross 2.5e-3 at day 10, 0.415 at day 30, 1.02 at day
-    74.5. The two rules' totals agree to four digits.
+    under both rules: gross 2.5e-3 at day 10, 0.415 at day 30, 1.02 at the
+    last check (day 74.5). The slope over days 30 to 74.5 is 1.04 under both.
+    The two rules' totals agree to four digits.
   - Every tagged run ends with `simulation_crashed`: the copies at day 48.5
     (water gross 1.16), both follower rules at day 74.5. At the followers'
     crash the tags hold 25 kg/m² of water against the parent's 12, and on
     day 74 `q_tag_pbl` and `q_tag_evap` reach 0.06 kg/kg against a largest
     `hus` of 0.016. The copies on day 48: 28 kg/m² against 13, `q_tag_pbl`
     0.13 kg/kg.
-  - Up to each crash, every model field is bit for bit the twin's. So the
-    tags end a run that the model without them completes. This is recorded
+  - Up to each crash, the ten daily output fields (`rhoa`, `ta`, `hus`,
+    `clw`, `cli`, `wa`, `pr`, `lwp`, `arup`, `husup`) are bit for bit the
+    twin's: prefix parity to day 74 and day 48. So the tags end a run that
+    the model without them completes. This is recorded
     as known issue 7, a parity-class defect, with fix options in
     `design/NEGATIVE_PARENT_WATER.md`, for the owner.
   - Under section 5 neither rule meets the budget at site 23, so nothing is
     chosen from it. Against the copies at day 10 the tags differ by at most
-    3.2%, and at day 30 by 39–58%, when neither is valid.
+    3.7%, and at day 30 by 1.5–63%, when neither is valid (weights ρΔz).
 
-Verdicts (ROADMAP's contract): parent parity *pass* at both sites; parent
-validity *not assessable* (OD3), with site 23's negative water noted;
-closure *pass* at site 26 and *fail* at site 23; provenance *not assessable*
-(comparator eligibility not assessed); intervention *not assessable* (OD3;
-the moved ledger is net over time); reproducibility *pass* (configs,
-manifests, run-tree commits).
+  - **What the parity covers.** `lr_parity.py` compares the ten fields the
+    twin's config writes daily, as bit patterns, after checking their
+    dimensions, `z` and times, and it fails on any missing or unreadable
+    file (`output/long_runs/parity_mutation.txt` shows it failing). The
+    runs keep no checkpoints, so the full prognostic state (`ρ`, `ρe_tot`,
+    `ρq_tot`, the velocities, the updraft's fields, `ρtke`) is compared only
+    through these diagnostics, not directly. At site 26 the parity is
+    complete, over all 91 outputs. At site 23 it is a prefix, up to each
+    crash.
+
+Verdicts (ROADMAP's contract):
+  - parent parity: *pass*, for the ten daily output fields; completion at
+    site 26, prefix at site 23;
+  - parent validity: *not assessable* (OD3 pending), with site 23's
+    negative water noted;
+  - closure: *pass* at site 26, *fail* at site 23;
+  - provenance: *not assessable*, since the comparator's eligibility is not
+    assessed;
+  - intervention: *not assessable* (OD3 pending); the moved ledger is net
+    over time;
+  - reproducibility: *pass*. The branch holds the configs, the manifests
+    (clean run trees at `b01f926a` and `952d960d`, tagged
+    `evidence/w36-samesign` and `evidence/w36-absm`), the verifier output
+    and machine-readable metrics. The NetCDF they are computed from is in
+    the archive's `reference_data/W36_E81/`, with SHA-256 per file
+    (`output/long_runs/README.md`). Recomputed from that copy, both
+    scripts give the same output.
+
+*Revised on 2026-09-24 after a review of `4507e247`: the parity check now
+fails closed and states what it covers, the column weights are ρΔz (they
+were ρ per level), and the day labels say where a stopped run ended.*
 
 *`hpda2_compute`, 2026-09-24, jobs `13917157` to `13917199`, output
 `output_0001/`; the first submission (`13915221` to `13915228`) is void
@@ -1229,7 +1258,7 @@ manifests, run-tree commits).
 `../ClimaAtmosResiDyn-wedmf5-run` at `952d960d` (`claude/long-run-absm`
 `7fd0ffab`). `analysis/water/lr_rule_metrics.py` and `lr_parity.py`; the
 closure and audit CSVs, manifests, metrics and parity are in
-`output/long_runs/`.*
+`output/long_runs/`, the NetCDF in the archive (its README).*
 
 ## 2. Energy source tags: closure by transport
 
@@ -2295,17 +2324,17 @@ killed for memory, 200 GB against the 500 GB needed; it is kept as
 
 **E81. Over 90 days on the GCM-driven column the energy follower closes to
 rounding level under both placement rules: at site 26 the gross is 7.3e-12
-under same sign and 2.7e-13 under |m|, and at site 23, up to day 74 where the
-water tags ended the runs, 7.6e-12 and 1.6e-12.** The long runs of W36, the
+under same sign and 2.7e-13 under |m|, and at site 23, up to its last check
+on day 74.25 before the water tags ended the runs, 7.6e-12 and 1.6e-12.** The long runs of W36, the
 energy source tags `pbl`, `free`, `sfc` and `rad` under `enthalpy_increment`,
 offset 110495 J/kg:
 
-| site, until | rule      | day 10 gross | day 30 gross | last gross | slope, days 30–90 | moved, net over time |
-|:----------- |:--------- | ------------:| ------------:| ----------:| -----------------:| --------------------:|
-| 26, day 90  | same sign | 1.2e-12      | 3.1e-12      | 7.3e-12    | 0.76              | 1.28                 |
-| 26, day 90  | \|m\|       | 6.0e-14      | 1.4e-13      | 2.7e-13    | 0.65              | 1.28                 |
-| 23, day 74  | same sign | 1.2e-12      | 3.9e-12      | 7.6e-12    | 0.67              | 0.48                 |
-| 23, day 74  | \|m\|       | 5.9e-14      | 7.1e-13      | 1.6e-12    | 0.46              | 0.48                 |
+| site, last check | rule      | day 10 gross | day 30 gross | gross at the last check | slope over          | moved, net over time |
+|:---------------- |:--------- | ------------:| ------------:| -----------------------:|:------------------- | --------------------:|
+| 26, day 90       | same sign | 1.2e-12      | 3.1e-12      | 7.3e-12                 | 0.76, days 30–90    | 1.28                 |
+| 26, day 90       | \|m\|       | 6.0e-14      | 1.4e-13      | 2.7e-13                 | 0.65, days 30–90    | 1.28                 |
+| 23, day 74.25    | same sign | 1.2e-12      | 3.9e-12      | 7.6e-12                 | 0.67, days 30–74.25 | 0.48                 |
+| 23, day 74.25    | \|m\|       | 5.9e-14      | 7.1e-13      | 1.6e-12                 | 0.46, days 30–74.25 | 0.48                 |
 
   - **The decision rule** (section 5, energy budget 1e-4, a proposal). Same
     sign is inside the budget at both sites, and its slope is at most |m|'s
@@ -2313,7 +2342,8 @@ offset 110495 J/kg:
     sign for energy. As for water, both residuals are roundoff. The moved
     ledger is the same under both rules, as on D4 (E79). The owner deferred
     OD7 (DECISIONS, 2026-09-24), for example until known issue 7 is fixed and
-    site 23 can be scored over 90 days.
+    site 23 can be scored over 90 days. At site 23 the rule is applied to
+    days 30 to 74.25, as section 5 allows for a run that stopped.
   - The fractions are of `∫(ρe_tot + cρ)`, which depends on the offset. They
     are restated once OD4's scale (the gross source throughput) is in place.
     The moved ledger above 1 is net over time in each cell, summed over the
@@ -2321,11 +2351,16 @@ offset 110495 J/kg:
   - **The copies are no eligible comparator for energy here.** Their energy
     closure is 5.4e-2 at site 26 and 1.2e-2 at site 23 (day 48), far above
     the proposed budget. The L1 against them is the same under both rules:
-    at site 26, day 90, `pbl` 6.6%, `free` 8.6%, `sfc` 5.3%, `rad` 11.8%.
+    at site 26, day 90, `pbl` 10.3%, `free` 7.4%, `sfc` 9.5%, `rad` 13.4%
+    (weights ρΔz).
   - The energy tags did not end any run. At site 23 they stayed closed while
     the water tags diverged.
 
-*The runs, commits and output of W36; `output/long_runs/`.*
+Verdicts as W36's, with closure *pass* at both sites for energy and
+provenance *not assessable* (no eligible comparator: the copies' energy
+closure fails). *Revised after the review of `4507e247`, as W36: ρΔz weights
+and the actual end of each interval. The runs, commits and output of W36;
+`output/long_runs/`.*
 
 ## 9. Mixing: V3 and the updraft gap
 

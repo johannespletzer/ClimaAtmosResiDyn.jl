@@ -648,8 +648,10 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     process-weighted comparison in the manner of W32, against a comparator
     that passes eligibility in that run, plus one held-out case whose rain
     falls in the established-flow window. 0M DYCOMS does not qualify: it
-    rains only in its first hour (W15). Needs OD2 and OD3. Step 7 of the
-    revised order.
+    rains only in its first hour (W15). Needs OD2 and OD3. The
+    implementation is step 7 of the revised order; the validation is step 8b,
+    after WP9's cost qualification (step 8), so that cost ceilings are fixed
+    before any held-out or default evidence (review of `4507e247`).
 
 ## Qualification runs
 

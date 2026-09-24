@@ -1,6 +1,67 @@
-lr_s23_samesign: days 75, bit for bit
-lr_s23_absm: days 75, bit for bit
-lr_s23_copies: days 49, bit for bit
-lr_s26_samesign: days 91, bit for bit
-lr_s26_absm: days 91, bit for bit
-lr_s26_copies: days 91, bit for bit
+PASS lr_s23_samesign: 10 fields (rhoa, ta, hus, clw, cli, wa, pr, lwp, arup, husup); prefix parity, days 0 to 74 (the twin to 90)
+PASS lr_s23_absm: 10 fields (rhoa, ta, hus, clw, cli, wa, pr, lwp, arup, husup); prefix parity, days 0 to 74 (the twin to 90)
+PASS lr_s23_copies: 10 fields (rhoa, ta, hus, clw, cli, wa, pr, lwp, arup, husup); prefix parity, days 0 to 48 (the twin to 90)
+PASS lr_s26_samesign: 10 fields (rhoa, ta, hus, clw, cli, wa, pr, lwp, arup, husup); completion parity, days 0 to 90 (the twin to 90)
+PASS lr_s26_absm: 10 fields (rhoa, ta, hus, clw, cli, wa, pr, lwp, arup, husup); completion parity, days 0 to 90 (the twin to 90)
+PASS lr_s26_copies: 10 fields (rhoa, ta, hus, clw, cli, wa, pr, lwp, arup, husup); completion parity, days 0 to 90 (the twin to 90)
+  run=lr_s23_samesign field=rhoa times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_samesign field=ta times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_samesign field=hus times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_samesign field=clw times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_samesign field=cli times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_samesign field=wa times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_samesign field=pr times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_samesign field=lwp times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_samesign field=arup times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_samesign field=husup times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_absm field=rhoa times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_absm field=ta times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_absm field=hus times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_absm field=clw times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_absm field=cli times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_absm field=wa times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_absm field=pr times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_absm field=lwp times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_absm field=arup times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_absm field=husup times_compared=75 last_day=74 twin_last_day=90 parity=prefix bitwise_equal_times=75 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_copies field=rhoa times_compared=49 last_day=48 twin_last_day=90 parity=prefix bitwise_equal_times=49 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_copies field=ta times_compared=49 last_day=48 twin_last_day=90 parity=prefix bitwise_equal_times=49 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_copies field=hus times_compared=49 last_day=48 twin_last_day=90 parity=prefix bitwise_equal_times=49 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_copies field=clw times_compared=49 last_day=48 twin_last_day=90 parity=prefix bitwise_equal_times=49 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_copies field=cli times_compared=49 last_day=48 twin_last_day=90 parity=prefix bitwise_equal_times=49 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_copies field=wa times_compared=49 last_day=48 twin_last_day=90 parity=prefix bitwise_equal_times=49 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_copies field=pr times_compared=49 last_day=48 twin_last_day=90 parity=prefix bitwise_equal_times=49 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_copies field=lwp times_compared=49 last_day=48 twin_last_day=90 parity=prefix bitwise_equal_times=49 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_copies field=arup times_compared=49 last_day=48 twin_last_day=90 parity=prefix bitwise_equal_times=49 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s23_copies field=husup times_compared=49 last_day=48 twin_last_day=90 parity=prefix bitwise_equal_times=49 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_samesign field=rhoa times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_samesign field=ta times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_samesign field=hus times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_samesign field=clw times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_samesign field=cli times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_samesign field=wa times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_samesign field=pr times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_samesign field=lwp times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_samesign field=arup times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_samesign field=husup times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_absm field=rhoa times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_absm field=ta times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_absm field=hus times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_absm field=clw times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_absm field=cli times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_absm field=wa times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_absm field=pr times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_absm field=lwp times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_absm field=arup times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_absm field=husup times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_copies field=rhoa times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_copies field=ta times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_copies field=hus times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_copies field=clw times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_copies field=cli times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_copies field=wa times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_copies field=pr times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_copies field=lwp times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_copies field=arup times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+  run=lr_s26_copies field=husup times_compared=91 last_day=90 twin_last_day=90 parity=completion bitwise_equal_times=91 first_differing_day= max_abs_difference=0.000000e+00
+RESULT PASS fields_compared=60
