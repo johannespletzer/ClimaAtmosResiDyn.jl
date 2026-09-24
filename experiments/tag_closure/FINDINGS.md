@@ -1032,6 +1032,90 @@ on TRMM_LBA 1M, microphysics explicit, 6 h, the follower on:
 `1a37e43f`). `compare_runs.py`, `parity_untagged.py`, `w5r_rule_compare.py`
 and `w5v_clamps.py` output in `output/w5v/`.*
 
+**W34. At 32 tags most of the default mode's plume allocation was one
+broadcast of 33 arguments. Split per tag from 32 on, the plume's inputs cost 3.4e-4 s and
+189 kB per call instead of 1.15e-3 s and 1.40 MB, and the plume and the
+exchange are bit for bit the same at 8 and 32 tags.** W30's open item (WP9a),
+on TRMM 0M's initial state in the default mode, per call, `wp9_plume_cost.jl`:
+
+| part                               | 8 tags, #102      | 8 tags, WP9a      | 32 tags, #102      | 32 tags, WP9a      |
+|:---------------------------------- | -----------------:| -----------------:| ------------------:| ------------------:|
+| plume inputs (`water_exchange_inputs!`) | 2.6e-5 s, 5.8 kB | 2.6e-5 s, 5.8 kB | 1.15e-3 s, 1.40 MB | 3.4e-4 s, 189 kB |
+| the exchange                       | 2.9e-4 s, 8 B     | 2.9e-4 s, 8 B     | 3.9e-3 s, 1.40 MB  | 3.1e-3 s, 183 kB   |
+| the implicit tendency              | 6.6e-4 s, 67 kB   | 6.6e-4 s, 67 kB   | 8.7e-3 s, 2.08 MB  | 7.5e-3 s, 864 kB   |
+
+  - **Where.** The grid mean's specific tag values were one broadcast over `ρ`
+    and every tag field. With 32 tags that is 33 arguments, past the 32 that
+    Julia specializes, and it allocated at every level. Rewriting the plume's
+    per-cell kernels without `map` cut 1.40 MB to 1.21 MB at most (four
+    variants, `wp9_variants.jl`), so they were not the cause. WP9a keeps the
+    one broadcast below 32 tags and writes one tag at a time from 32 on
+    (`set_nonnegative_specific!`, both families). Two other forms were
+    measured and dropped: one tag at a time at every size left 568 B per call
+    at 8 tags, and one broadcast over the state 253 kB.
+  - **What remains at 32 tags** (the allocation profile of the same path):
+    the plume's per-cell step, whose `map` over a 32-element tuple takes
+    Base's generic path, and the column march's level tuple, together about
+    185 kB. In the implicit tendency, most of the rest comes from the tracer
+    name helpers (`tracer_processes.jl`), which allocate with 40 fields.
+    Neither is changed here. The exchange's own work beyond its inputs grows
+    from 2.6e-4 s at 8 tags to 2.8e-3 s at 32, faster than the number of tags.
+    The cause of that is not isolated.
+  - **Identity.** The plume and the exchange's tendency at the initial state,
+    written as raw bits, are the same before and after at 8 and 32 tags
+    (`wp9_identity.jl`). The unit tests pass (`energy_source_tags_tests`
+    426/426); the EDMF integration tests are in `output/wp9/` when they finish.
+  - **Copies' build time.** `get_simulation` for the TRMM column with copies:
+    8 copies 699 s, 16 copies 2417 s, 3.5 times as long for twice the copies.
+    32 copies did not build in 4 h (W30); a run with an 8 h limit is running
+    (job `13911480`).
+
+*`hpda2_compute`, 2026-09-24. #102 is `e29384ee`, WP9a `bfd9ff08`
+(`claude/water-tags-plume-cost`, from `../ClimaAtmosResiDyn-wedmf9`). The
+dropped forms are `d4709aa2` and `fcb19107`. Scripts `analysis/water/wp9_*.jl`;
+the RESULT lines, the profiles' top sites and the identity checksums are in
+`output/wp9/`.*
+
+**W35. On one trajectory the tags' one-step error falls with a second Newton
+iteration and with a shorter step, so WP5b-V's same-atmosphere check passes.
+With one iteration the tags' error is 4 to 8 times the parent's, relative to
+their own increments.** The check of `design/EXPLICIT_1M_DEFAULT.md` section 6,
+added at the owner's request after W33: TRMM 1M, microphysics explicit, the
+follower on, 6 h. At every step of the ten-iteration run, trials with one and
+two iterations step from its state, and each result is compared with the
+reference's step. `E` is the summed L1 error over the summed L1 increment:
+
+| `dt`  | iterations | parent `ρq_tot` | `pbl`   | `free`  | `evap`  |
+|:----- | ----------:| ---------------:| -------:| -------:| -------:|
+| 120 s | 1          | 4.9e-3          | 2.6e-2  | 3.9e-2  | 6.7e-2  |
+| 120 s | 2          | 6.3e-4          | 1.2e-3  | 1.7e-3  | 2.1e-3  |
+| 60 s  | 1          | 3.5e-3          | 1.3e-2  | 1.8e-2  | 3.5e-2  |
+| 60 s  | 2          | 2.3e-4          | 4.7e-4  | 5.9e-4  | 1.2e-3  |
+
+| criterion                                         | `pbl`             | `free`            | pass |
+|:------------------------------------------------- |:----------------- |:----------------- |:---- |
+| 1. at 120 s, two iterations below one             | 1.2e-3 < 2.6e-2   | 1.7e-3 < 3.9e-2   | yes  |
+| 2. one iteration, 60 s no larger than 120 s       | 1.3e-2 ≤ 2.6e-2   | 1.8e-2 ≤ 3.9e-2   | yes  |
+
+  - With one iteration, halving the step halves the tags' `E` (ratio 0.50
+    for `pbl`, 0.47 for `free`), and the parent's falls by 0.73. The tags'
+    `E` over the parent's is 5.4 and 7.9 at 120 s, 3.7 and 5.1 at 60 s.
+  - So W33's criterion 3 failed on the atmospheres' difference, which this
+    check removes. It bounds the one-step error on this column's trajectory;
+    it does not show how the errors add up over a run, which W33's closure
+    (1.8e-6 at 6 h) bounds.
+  - Per section 6, W33's verdict is revisited with the owner. The follower
+    stays opt-in with 1M stepped explicitly until the owner decides.
+  - The first submission (jobs `13913371`, `13913372`) is void: the trials
+    stepped with the cache their own previous step left, since the stepper
+    does not refresh it at a step's first stage. The script now rebuilds it
+    for the copied state.
+
+*`hpda2_compute`, 2026-09-24, jobs `13915045` (120 s, 180 steps) and
+`13915046` (60 s, 360 steps), `analysis/water/w5v_same_atmosphere.jl` against
+#105 at `1a37e43f`. The per-step CSV and RESULT lines are in
+`output/w5v/same_atmosphere/`.*
+
 ## 2. Energy source tags: closure by transport
 
 Under the default `tracer` transport the tags move as passive tracers while the

@@ -288,6 +288,13 @@ Measure it on W23's explicit column before either is decided.
     gross`) fails on its hour-long EDMF column: `|left|` is 85.7 J/m² and
     the gross 176 (a ratio of 0.49), since the rule raises the gross as on D4
     (E79). The other 98 checks pass. Recalibrate it with the choice.
+  - [x] Split at the owner's request (DECISIONS, 2026-09-24).
+      + **G4.15a**, the check and the names, which change no result: draft
+        PR #107 on #102 (`60a60373`). The unit tests pass (426/426), and so
+        does the increment integration test (96/96).
+      + **G4.15b**, the same-sign rule (`claude/energy-follower-review`,
+        `d6e4021e`, on G4.15a). It waits on the long runs
+        (`design/INCREMENT_RULE_LONG_RUNS.md`, jobs `13915221` to `13915228`).
 
 ### G4.16 Sedimentation cross blocks for the energy source tags
 
