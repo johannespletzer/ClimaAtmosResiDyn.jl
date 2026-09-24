@@ -1560,8 +1560,13 @@ end
     ) = CA.EnergySourceTaggingModel(tags(width; sources), offset; repair, transport)
     atmos(model; energy_process_record = nothing, water_process_record = nothing) =
         (; energy_source_tagging_model = model, energy_process_record, water_process_record)
-    state(names...) =
-        (; c = NamedTuple{(:ρ, :ρe_tot, names...)}(Tuple(zeros(2 + length(names)))))
+    # A state with tags, written with WP6, holds their ledger per mechanism.
+    state(names...; with_ledger = any(CA.is_energy_source_tag_name, names)) = (;
+        c = (;
+            NamedTuple{(:ρ, :ρe_tot, names...)}(Tuple(zeros(2 + length(names))))...,
+            (with_ledger ? (; e_src_led_repair = 0.0) : (;))...,
+        ),
+    )
     tagged = state(:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad)
     directory = mktempdir()
     # A checkpoint with the attributes a run writes. `edit` changes the file
@@ -1681,6 +1686,12 @@ end
         tagged,
     )
     @test isnothing(check(written, source_model(), tagged))
+    # A checkpoint from before the ledger per mechanism is refused (WP6).
+    @test_throws r"before the energy source tags kept their ledgers per mechanism" check(
+        written,
+        source_model(),
+        state(:ρe_src_strat, :ρe_src_tropo, :ρe_src_rad; with_ledger = false),
+    )
     # The process records are checked the same way, energy and water.
     record = CA.ProcessRecordModel((CA.RecordedProcess{:radiation}(),))
     @test_throws r"energy process records none, and this run configures radiation" check(

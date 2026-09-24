@@ -59,8 +59,8 @@ end
 Refuse a restart that would change what the water tags in `restart_file` mean.
 It checks, in this order, and stops at the first mismatch:
 
- 1. The water tag fields in `Y`, the increment's ledger, the ledgers per
-    mechanism, then the tags' copies in the first updraft, against what
+ 1. The water tag fields in `Y`, the increment's ledger, the tags' copies
+    in the first updraft, then the ledgers per mechanism, against what
     `model` configures. A checkpoint written before the ledgers per mechanism
     is refused here. A changed
     `water_tag_transport` or `water_tag_updraft_copy` fails here, because the
@@ -98,16 +98,6 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "water_tag_transport",
         "",
     )
-    # The ledgers per mechanism (WP6). Only the copies change which exist, so a
-    # changed `water_tag_updraft_copy` fails here too.
-    check_tag_mechanism_ledgers(
-        restart_file,
-        Y,
-        water_tag_mechanism_names(water_model),
-        "water",
-        "q_tag_",
-        "water_tag_updraft_copy",
-    )
     # As for the energy source tags' copies, the first updraft stands for all.
     check_restart_fields(
         restart_file,
@@ -117,6 +107,16 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "updraft copies of the water tags",
         "water_tag_updraft_copy",
         "q_tag_",
+    )
+    # The ledgers per mechanism (WP6). After the copies, so that a
+    # changed `water_tag_updraft_copy` is named by their check first.
+    check_tag_mechanism_ledgers(
+        restart_file,
+        Y,
+        water_tag_mechanism_names(water_model),
+        "water",
+        "q_tag_",
+        "water_tag_updraft_copy",
     )
     isnothing(water_model) && return nothing
 

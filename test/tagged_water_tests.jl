@@ -917,9 +917,23 @@ end
     names = (:ρq_tag_tropo, :ρq_tag_strat, :ρq_tag_evap)
     copy_names = (:q_tag_tropo, :q_tag_strat, :q_tag_evap)
     updraft(names...) = NamedTuple{(:ρa, names...)}(Tuple(zeros(1 + length(names))))
-    state(names...; updrafts = ()) = (;
+    # A state written with WP6 holds the ledgers per mechanism, the copies'
+    # two among them when the updraft holds copies.
+    ledgers(copies) = map(
+        _ -> 0.0,
+        NamedTuple{CA.water_tag_mechanism_names(water_model(; copies))}(
+            CA.water_tag_mechanism_names(water_model(; copies)),
+        ),
+    )
+    state(
+        names...;
+        updrafts = (),
+        copies = !isempty(updrafts) && length(first(updrafts)) > 1,
+        with_ledgers = true,
+    ) = (;
         c = (;
             NamedTuple{(:ρ, :ρq_tot, names...)}(Tuple(zeros(2 + length(names))))...,
+            (with_ledgers ? ledgers(copies) : (;))...,
             (isempty(updrafts) ? (;) : (; sgsʲs = updrafts))...,
         ),
     )
@@ -992,6 +1006,13 @@ end
         written,
         water_model(),
         with_ledger,
+    )
+
+    # A checkpoint from before the ledgers per mechanism is refused (WP6).
+    @test_throws r"before the water tags kept their ledgers per mechanism" check(
+        written,
+        water_model(),
+        state(names...; with_ledgers = false),
     )
 
     # A checkpoint from before the guard is checked by its fields, with a

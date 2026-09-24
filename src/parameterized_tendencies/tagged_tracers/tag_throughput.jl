@@ -119,6 +119,8 @@ carry no `ρ` prefix, so no transport operator sees them.
 const WATER_TAG_MECHANISM_NAMES =
     (:q_tag_led_rescale, :q_tag_led_empty, :q_tag_led_repair)
 const WATER_TAG_COPY_MECHANISM_NAMES = (:q_tag_led_uprepair, :q_tag_led_upfilter)
+const WATER_TAG_ALL_MECHANISM_NAMES =
+    (WATER_TAG_MECHANISM_NAMES..., WATER_TAG_COPY_MECHANISM_NAMES...)
 
 """
     ENERGY_SOURCE_MECHANISM_NAMES
@@ -135,9 +137,9 @@ The names of the water tags' state ledgers per mechanism, in state order, or
 """
 water_tag_mechanism_names(::Nothing) = ()
 water_tag_mechanism_names(model::WaterTaggingModel) =
-    has_water_tag_updraft_copies(model) ?
-    (WATER_TAG_MECHANISM_NAMES..., WATER_TAG_COPY_MECHANISM_NAMES...) :
-    WATER_TAG_MECHANISM_NAMES
+    _water_tag_mechanism_names(Val(has_water_tag_updraft_copies(model)))
+_water_tag_mechanism_names(::Val{false}) = WATER_TAG_MECHANISM_NAMES
+_water_tag_mechanism_names(::Val{true}) = WATER_TAG_ALL_MECHANISM_NAMES
 
 """
     energy_source_mechanism_names(model)
@@ -151,13 +153,24 @@ energy_source_mechanism_names(::EnergySourceTaggingModel) =
     ENERGY_SOURCE_MECHANISM_NAMES
 
 """
-    tag_mechanism_variables(value, names)
+    water_tag_mechanism_variables(value, model)
+    energy_source_mechanism_variables(value, model)
 
-The initial state of the ledgers `names`: zero, in the type of `value`, per
-point, for `grid_scale_center_variables`.
+The initial state of each family's ledgers per mechanism: zero, in the type of
+`value`, per point, for `grid_scale_center_variables`. The names are constants
+chosen by dispatch, so the state's type can be inferred.
 """
-tag_mechanism_variables(value, names) =
-    NamedTuple{names}(ntuple(_ -> zero(value), length(names)))
+water_tag_mechanism_variables(value, ::Nothing) = (;)
+water_tag_mechanism_variables(value, model::WaterTaggingModel) =
+    _mechanism_zeros(
+        value,
+        Val(_water_tag_mechanism_names(Val(has_water_tag_updraft_copies(model)))),
+    )
+energy_source_mechanism_variables(value, ::Nothing) = (;)
+energy_source_mechanism_variables(value, ::EnergySourceTaggingModel) =
+    _mechanism_zeros(value, Val(ENERGY_SOURCE_MECHANISM_NAMES))
+_mechanism_zeros(value, ::Val{names}) where {names} =
+    NamedTuple{names}(ntuple(_ -> zero(value), Val(length(names))))
 
 """
     is_tag_mechanism_ledger_name(name)
