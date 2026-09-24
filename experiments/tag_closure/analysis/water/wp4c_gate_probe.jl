@@ -93,11 +93,31 @@ function start_as_driver!(integrator)
     return nothing
 end
 
+# Copy the fields two states share. The tracer transport's trials have no
+# follower ledgers, so their state is a subset of the reference's; every model
+# field and tag is in both. A field only the destination has keeps its value.
+function copy_common!(dest, src)
+    for name in propertynames(dest.c)
+        name == :sgsʲs && continue
+        hasproperty(src.c, name) &&
+            (parent(getproperty(dest.c, name)) .= parent(getproperty(src.c, name)))
+    end
+    if hasproperty(dest.c, :sgsʲs)
+        ᶜd, ᶜs = dest.c.sgsʲs.:(1), src.c.sgsʲs.:(1)
+        for name in propertynames(ᶜd)
+            hasproperty(ᶜs, name) &&
+                (parent(getproperty(ᶜd, name)) .= parent(getproperty(ᶜs, name)))
+        end
+    end
+    parent(dest.f) .= parent(src.f)
+    return dest
+end
+
 # Copy a state and time into an integrator, refresh its cache (the stepper does
 # not at a step's first stage), and restart its per-step ledger gross from the
 # copied ledgers (`w25_probes.jl`).
 function take_state!(integrator, Y, t)
-    integrator.u .= Y
+    copy_common!(integrator.u, Y)
     integrator.t = t
     CA.set_precomputed_quantities!(integrator.u, integrator.p, integrator.t)
     steps = CA._tag_ledger_steps(integrator.p.tagging)
