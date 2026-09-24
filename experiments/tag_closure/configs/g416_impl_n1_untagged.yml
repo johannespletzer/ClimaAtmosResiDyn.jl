@@ -1,0 +1,47 @@
+# G4.16's validation (design/ENERGY_SEDIMENTATION_CROSS_BLOCKS.md, section 6),
+# pre-registered before any run. E80's case: W23's column (DYCOMS RF02, 1M,
+# EDMF, ARS222, an hour, one Newton iteration), microphysics implicit, the
+# energy source tags under `enthalpy_increment`. Run from the code with the
+# cross blocks and the guard, no energy tags: the parity twin.
+
+job_id: "g416_impl_n1_untagged"
+
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+implicit_microphysics: true
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+max_newton_iters_ode: 1
+dt: "120secs"
+t_end: "1hours"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  # The model's own fields, for parity (bit for bit) between the runs.
+  - short_name: [rhoa, ta, hus, clw, cli, husra, hussn, wa]
+    period: "10mins"
+  - short_name: [pr, prra, prsn, hfls, hfss, lwp, rwp]
+    period: "10mins"
+  - short_name: [arup, rhoaup, waup, husup, clwup, cliup, husraup, hussnup]
+    period: "10mins"
+  - short_name: [tke, edt, evu]
+    period: "10mins"
