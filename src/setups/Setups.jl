@@ -45,10 +45,14 @@ import ..StratosphericPassiveTracers
 import ..stratospheric_tracer_symbols
 import ..tagging_variables
 import ..water_tagging_variables
+import ..water_tag_increment_ledger_variables
 import ..energy_source_tagging_variables
 import ..energy_source_parent
 import ..energy_source_increment_ledger_variables
+import ..water_tag_mechanism_variables
+import ..energy_source_mechanism_variables
 import ..energy_source_updraft_copy_variables
+import ..with_water_tag_updraft_copies
 import ..energy_process_record_variables
 import ..water_process_record_variables
 import ..Parameters.ClimaAtmosParameters

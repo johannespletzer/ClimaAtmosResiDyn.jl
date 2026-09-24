@@ -219,6 +219,8 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
     open_applied_update!(Yₜ, p, :surface_flux)
     surface_flux_tendency!(Yₜ, Y, p, t)
     close_applied_update!(Yₜ, Y, p, :surface_flux)
+    # The water tags' updraft copies take their share of the updraft's part.
+    water_tag_copies_surface_flux_tendency!(Yₜ, Y, p, p.atmos.turbconv_model)
 
     open_applied_update!(Yₜ, p, :radiation)
     radiation_tendency!(Yₜ, Y, p, t, p.atmos.radiation_mode)
@@ -236,6 +238,13 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
             Y,
             p,
             t,
+            p.atmos.microphysics_model,
+            p.atmos.turbconv_model,
+        )
+        water_tag_copies_microphysics_tendency!(
+            Yₜ,
+            Y,
+            p,
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )

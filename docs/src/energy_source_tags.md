@@ -553,8 +553,9 @@ step by step. In this mode the tags take the parent's own increment instead:
   - after the Newton solve, each cell's mismatch between the parent's
     increment of `E` and the partition's is formed;
   - the part of the mismatch that changes a column's total cannot move within
-    the column; it stays where it arises, in proportion to the mismatch's
-    absolute value, and in `e_src_res`;
+    the column; it stays in the cells whose mismatch has the column total's
+    sign, in proportion to it there, and in `e_src_res`. So no cell leaves out
+    or moves more than its own mismatch, as for the water tags;
   - the rest integrates up the column into a face flux that is zero at both
     boundaries, and each tag takes that flux times its share in the cell it
     leaves.
@@ -593,9 +594,11 @@ integrates with the tags:
 Both are cumulative since the start of the run and carried through a restart.
 The diagnostics of the same names report them per unit mass, on request; they
 are not among the default outputs. The closure check's audit table gets their
-integrals, `increment_left`, `increment_left_gross` and
-`increment_moved_gross`. So the residual's column total splits into what the
-correction left and what everything else leaves.
+integrals, `increment_left`, `increment_left_net_abs` and
+`increment_moved_net_abs`. The last two sum each cell's absolute ledger, which
+is net over time in that cell, so they are not a throughput. So the residual's
+column total splits into what the correction left and what everything else
+leaves.
 
 The ledger records what the correction intends. A face whose donor cell has no
 share of the partition moves no tag, so there a cell's change differs a little
