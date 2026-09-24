@@ -1990,9 +1990,10 @@ end
 @inline function _plume_step(εʲ_below, level)
     (ε̄, weight, restart) = level
     (restart | isnan(first(εʲ_below))) && return ε̄
+    # Over the shorter of the two, as `map` would take them.
     return ntuple(
         i -> εʲ_below[i] + weight * (ε̄[i] - εʲ_below[i]),
-        Val(length(ε̄)),
+        Val(min(length(εʲ_below), length(ε̄))),
     )
 end
 
