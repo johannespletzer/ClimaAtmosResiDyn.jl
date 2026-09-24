@@ -354,10 +354,12 @@ on #102.
         gate, and the unsplit nested solve against the split.
       + [x] 6: the docs' numbers labelled net and gross; grid-scale tags.
       + [x] 7: the PR body; the copies' cross blocks as WP5b-C below.
-      + [x] Pushed at `801c52dd` and answered on the PR. [ ] CI, and
-        `tagged_water_edmf_copies_integration` locally.
-  - [ ] A day of D4-W in both modes on the implicit path (jobs `13893927`,
-    `13893928`, done; to judge against W28's `w5r_d4w_increment_samesign`).
+      + [x] Pushed at `801c52dd` and answered on the PR. [ ] CI.
+  - [x] A day of D4-W in both modes on the implicit path (FINDINGS W31): the
+    gross residual falls from 1.35e-4 to 7.3e-6, the parent is bit for bit
+    the same, and the agreement with the copies is unchanged.
+  - [x] The three 1M integration files pass at `11b8d875`
+    (`tagged_water_edmf_copies_integration` 68/68).
 
 ### WP5b-V: the explicit-1M default
 

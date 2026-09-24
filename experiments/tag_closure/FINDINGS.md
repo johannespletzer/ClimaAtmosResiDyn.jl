@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W30                                           | 1. Water tags                                       |
+| W1–W31                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -928,6 +928,33 @@ TRMM (the owner's review of #104, findings 1 and 5).**
 `analysis/water/wp4a_pr_tag_scaling.jl`, `wp4a_pr_tag_breakdown.jl` and
 `wp4a_negative_area_probe.jl`; the RESULT lines and columns are in
 `output/wp4a_review/`.*
+
+**W31. On the implicit path the tags' sedimentation cross blocks cut D4-W's
+one-day gross closure residual under the follower from 1.35e-4 to 7.3e-6,
+and move nothing else measured by more than an eighth. The model's fields are
+bit for bit the same.** WP5b at `0aad20ee` against W28's same-sign run, the
+reference, both D4-W for 24 h with one Newton iteration:
+
+| D4-W, 24 h                                             | W28 (no blocks) | with blocks |
+|:------------------------------------------------------- | ---------:| ---------:|
+| gross closure residual                                  | 1.35e-4   | 7.3e-6    |
+| net closure residual                                    | +4.2e-5   | −5.2e-6   |
+| left out (`increment_left_relative`)                    | −2.55e-5  | −7.1e-6   |
+| moved, the cells' absolute ledgers summed               | 2.40e-2   | 2.68e-2   |
+| smallest tag value, kg/kg                               | 1.4e-9    | 1.4e-9    |
+| against the copies (`w3_d4w_copies`), L1 at 24 h, `tropo`/`strat`/`evap` | 0.25/0.41/0.42% | 0.25/0.41/0.41% |
+
+  - All 37 of the parent's output fields are bit for bit the same.
+  - The tags themselves move by at most 1.6e-4 (L1 at 24 h) against W28's.
+  - Against the copies run with the blocks (`w5b_d4w_copies`) the L1 is
+    0.26/0.41/0.41%.
+  - The moved ledger's gross over the cells is net over time in each cell, so
+    the 12% rise bounds, and does not measure, the extra water moved.
+
+*`hpda2_compute`, 2026-09-24, D4-W driver, jobs `13893927` and `13893928`,
+from `../ClimaAtmosResiDyn-wedmf5b-run` at `0d130367` (the record with WP5b at
+`0aad20ee`). `compare_runs.py`'s and `w5r_rule_compare.py`'s output are in
+`output/wp5b_d4w/`.*
 
 ## 2. Energy source tags: closure by transport
 

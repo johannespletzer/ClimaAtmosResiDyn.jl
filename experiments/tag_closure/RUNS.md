@@ -280,6 +280,8 @@ Every G3 run is stamped with a manifest at submission, kept as
 | `w4a_trmm0m_default_6h_grid`  | 0000   | same   | 9abb1f62 | 2026-09-24 | `13877544` | the grid rule's twin at #102's head, default mode | W26      | yes  | 32 nc   | not yet |
 | `w4a_trmm0m_copies_6h_grid`   | 0000   | same   | 9abb1f62 | 2026-09-24 | `13877545` | the same with copies | W26      | yes  | 35 nc   | not yet |
 | `w5r_d4w_increment_samesign`  | 0000   | same   | 5d1afcc0 | 2026-09-24 | `13887329` | the owner's review of #102, point 4: D4-W, the follower's same-sign rule | W28      | yes  | 54 nc   | not yet |
+| `w5b_d4w_increment`           | 0000   | same   | 0d130367 | 2026-09-24 | `13893927` | WP5b: D4-W, a day, the follower with the tags' sedimentation cross blocks (#105 at `0aad20ee`) | W31      | yes  | 54 nc   | not yet |
+| `w5b_d4w_copies`              | 0000   | same   | 0d130367 | 2026-09-24 | `13893928` | the same with copies (tracer transport; the grid tags carry the blocks) | W31      | yes  | 56 nc   | not yet |
 | `w5r_trmm0m_increment_absm_6h`| 0000   | same   | 71bd4061 | 2026-09-24 | `13887330` | TRMM 0M, 6 h, the follower, the |m| rule | W28      | yes  | 34 nc   | not yet |
 | `w5r_trmm0m_increment_samesign_6h`| 0000   | same   | 5d1afcc0 | 2026-09-24 | `13887331` | the same, the same-sign rule | W28      | yes  | 34 nc   | not yet |
 

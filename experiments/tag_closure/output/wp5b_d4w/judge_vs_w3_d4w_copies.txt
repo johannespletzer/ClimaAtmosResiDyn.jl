@@ -1,0 +1,58 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w3_d4w_copies/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w5b_d4w_increment/output_0000
+family:    water
+NOTICE: pairing: YAML 'water_tag_transport' differs between reference and run (outside the allowed keys)
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 1500.000 m (YAML z_max 1500.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  aren       bitwise identical (750 elements)
+  arup       bitwise identical (750 elements)
+  cli        bitwise identical (750 elements)
+  cliup      bitwise identical (750 elements)
+  clw        bitwise identical (750 elements)
+  clwup      bitwise identical (750 elements)
+  detr       bitwise identical (750 elements)
+  edt        bitwise identical (750 elements)
+  entr       bitwise identical (750 elements)
+  env_q_tot_variance bitwise identical (750 elements)
+  evspsbl    bitwise identical (25 elements)
+  evu        bitwise identical (750 elements)
+  hfls       bitwise identical (25 elements)
+  hfss       bitwise identical (25 elements)
+  hus        bitwise identical (750 elements)
+  husen      bitwise identical (750 elements)
+  husra      bitwise identical (750 elements)
+  husraen    bitwise identical (750 elements)
+  husraup    bitwise identical (750 elements)
+  hussn      bitwise identical (750 elements)
+  hussnen    bitwise identical (750 elements)
+  hussnup    bitwise identical (750 elements)
+  husup      bitwise identical (750 elements)
+  lwp        bitwise identical (25 elements)
+  pr         bitwise identical (25 elements)
+  prra       bitwise identical (25 elements)
+  prsn       bitwise identical (25 elements)
+  q_gas_A    bitwise identical (750 elements)
+  rhoa       bitwise identical (750 elements)
+  rhoaen     bitwise identical (750 elements)
+  rhoaup     bitwise identical (750 elements)
+  rwp        bitwise identical (25 elements)
+  ta         bitwise identical (750 elements)
+  tke        bitwise identical (750 elements)
+  wa         bitwise identical (750 elements)
+  waen       bitwise identical (750 elements)
+  waup       bitwise identical (750 elements)
+
+tag        hour   ∫ref kg/m²        Δ∫/∫        L1        L∞     max|Δq|
+tropo        24   8.9379e+00   +1.63e-03  2.53e-03  6.38e-03  6.0338e-05
+
+strat        24   2.6618e+00   -4.08e-03  4.08e-03  1.34e-02  4.1535e-05
+
+evap         24   2.7532e+00   -2.56e-04  4.09e-03  8.20e-03  2.5052e-05
+
+evap_tropo   24   2.7532e+00   -2.56e-04  4.09e-03  8.20e-03  2.5052e-05
+
+evap_strat   24   1.3886e-06   -2.56e-04  4.09e-03  8.20e-03  1.2635e-11
+
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/wp5b_d4w/judge_vs_w3_d4w_copies.json

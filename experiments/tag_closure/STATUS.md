@@ -47,9 +47,10 @@ not checked, it says so.
         differences in both float types; the follower with 1M stepped
         explicitly is opt-in again. Evidence tagged `evidence/wp5b-w29`.
         Follow-ups WP5b-V, WP5b-P and WP5b-C.
-      + Running: `tagged_water_edmf_copies_integration` at `11b8d875`, the
-        32-tag copies timings, CI on #104 and #105. D4-W's two days (jobs
-        `13893927`, `13893928`) are done but not yet judged against W28.
+      + D4-W with the blocks (W31): the one-day gross residual falls from
+        1.35e-4 to 7.3e-6, parent bit for bit. The three 1M integration files
+        pass at `11b8d875`.
+      + Running: the 32-tag copies timings, CI on #104 and #105.
   - **Update, 2026-09-24, 09:50.**
       + The owner confirmed the session's scope: finish it, and leave WP5b
         to the other session.

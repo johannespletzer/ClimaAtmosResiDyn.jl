@@ -1,0 +1,4 @@
+w5r_d4w_increment_samesign: partition tags ['tropo', 'strat'], smallest tag value over the run 1.397e-09 kg/kg
+   24.0 h  gross residual 1.35e-04  net +4.19e-05  left out -2.55e-05  moved (net abs over cells) 2.40e-02
+w5b_d4w_increment: partition tags ['tropo', 'strat'], smallest tag value over the run 1.397e-09 kg/kg
+   24.0 h  gross residual 7.25e-06  net -5.20e-06  left out -7.10e-06  moved (net abs over cells) 2.68e-02
