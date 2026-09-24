@@ -449,7 +449,7 @@ rule: each subdomain's rain-out `Δᵏ` goes by `φᵏ` for both signs (review S
       + [x] 1, `pr_tag`'s cost: one batch per output time
         (`update_water_tag_rainouts!`) does the shared work once for all
         tags. [x] The scaling benchmark at 2, 8 and 32 tags, both modes
-        (W30; the 32-tag copies still building).
+        (W30; 32 copies did not build in 2 h).
       + [x] 3, the explicit path in CI: its own group,
         `tagging_water_edmf_0m_explicit`, both modes; 55/55 locally.
       + [x] 4, the residual identity: `pr_tag_res`; the tests check
@@ -600,6 +600,9 @@ owner's points in the note's section 8.
         split around it allocates 5.7 kB at 8 tags and 1.5 MB at 32 (FINDINGS
         W30). The model's exchange pays it at every implicit evaluation. Find
         where, before the cost budget.
+      + [ ] Copies mode with 32 tags did not build a TRMM column in 2 h (W30;
+        8 copies take about 15 min). Measure the build time against the
+        number of copies.
 
 ## The sphere
 

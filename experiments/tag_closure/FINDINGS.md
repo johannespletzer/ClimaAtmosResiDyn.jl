@@ -909,6 +909,7 @@ TRMM (the owner's review of #104, findings 1 and 5).**
     | default | 32   | 2.5e-3 s | 1.3e-1 s      |
     | copies  | 2    | 2.9e-5 s | 1.2e-4 s      |
     | copies  | 8    | 2.0e-4 s | 5.7e-4 s      |
+    | copies  | 32   | not built in 2 h | not built in 2 h |
 
     After the batch, each diagnostic costs 5 to 8 µs at every size. The batch
     is one evaluation of the split. In the default mode it grows from 4.5e-5 s
@@ -918,6 +919,11 @@ TRMM (the owner's review of #104, findings 1 and 5).**
     at most 64 bytes on Julia 1.11. The model's exchange calls the same plume
     at every implicit evaluation. Where in the plume the growth arises is not
     isolated.
+  - **32 copies do not build.** With 32 tags and their updraft copies, the
+    TRMM column did not finish `get_simulation` within 2 h (job `13900297`,
+    timed out with nothing logged past start; 8 copies build in about 15 min).
+    So copies mode cannot be timed at 32 tags on this node, and its build
+    time is itself a WP9 item.
   - **Negative areas.** On W26's TRMM column over 6 h, after every one of 144
     steps (80 with rain), both modes: no rain-out from a subdomain whose area
     is negative, and no gain. So on this run the signed attribution is the
