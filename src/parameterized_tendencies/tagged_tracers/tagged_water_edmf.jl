@@ -559,7 +559,11 @@ WaterPlumeStep(::Val{partition}) where {partition} = WaterPlumeStep{partition}()
     ((total > zero(FT)) & (q_totʲ > zero(FT))) || return mixed
     # Each value's share first, then the water: `q_totʲ / total` can overflow
     # where the partition holds a denormal amount, and a share cannot.
-    return ntuple(i -> (mixed[i] / total) * q_totʲ, Val(length(mixed)))
+    # `map`, not `ntuple` over the index: inside the column march the tuple is
+    # ClimaCore's `AutoBroadcaster`, whose `map` unrolls, while `ntuple` builds
+    # a plain tuple that the march converts back, allocating in every cell
+    # (`analysis/water/wp9_variants.jl`).
+    return map(ε -> (ε / total) * q_totʲ, mixed)
 end
 
 # ============================================================================
