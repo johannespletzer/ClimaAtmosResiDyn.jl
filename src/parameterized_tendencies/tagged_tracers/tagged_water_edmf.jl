@@ -439,13 +439,7 @@ function water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
     flags = _water_partition_flags(model.tags)
     # The grid mean's specific tag values, negative ones as zero, one tuple per
     # cell, so each tag's kernel below reads a few tuple fields.
-    # `unrolled_map`: `map` over 32 tags or more returns a tuple whose type is
-    # not inferred, and every kernel it feeds then dispatches at run time.
-    tag_fields = unrolled_map(tag -> tag_field(Y.c, tag), model.tags)
-    Base.Broadcast.materialize!(
-        ᶜε̄,
-        Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, tag_fields...),
-    )
+    set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
 
     # The updraft's specific tag values, from the plume, rescaled at each level
     # to the updraft's water.

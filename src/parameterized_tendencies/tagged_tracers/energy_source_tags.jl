@@ -1847,13 +1847,7 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # stored as one tuple per cell, so the tag fields are read once, and each
     # tag's kernel below reads a few tuple fields rather than every tag.
     ᶜε̄ = p.scratch.ᶜe_src_mean
-    # `unrolled_map`: `map` over 32 tags or more returns a tuple whose type is
-    # not inferred, and every kernel it feeds then dispatches at run time.
-    tag_fields = unrolled_map(tag -> tag_field(Y.c, tag), model.tags)
-    Base.Broadcast.materialize!(
-        ᶜε̄,
-        Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, tag_fields...),
-    )
+    set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
 
     # The updraft's specific tag values, from the plume.
     ᶜεʲ = p.scratch.ᶜe_src_plume
@@ -1964,10 +1958,28 @@ end
 _exchange_upwinding(upwinding) = upwinding
 _exchange_upwinding(::Val{:vanleer_limiter}) = Val(:first_order)
 
-# `ntuple` over the index, not `map`: `map` over a tuple of 32 values or more
-# takes Base's generic path, which allocates in every cell (FINDINGS W30).
 @inline _nonnegative_specific(ρ, ρχs...) =
-    ntuple(i -> max(ρχs[i], zero(ρχs[i])) / ρ, Val(length(ρχs)))
+    map(ρχ -> max(ρχ, zero(ρχ)) / ρ, ρχs)
+
+"""
+    set_nonnegative_specific!(ᶜε̄, ᶜY, tags)
+
+Write each tag's specific value in `ᶜY`, negative ones as zero, into its
+component of the tuple field `ᶜε̄`, one tag at a time: `_nonnegative_specific`
+per component. One broadcast over `ρ`
+and every tag would take one argument more than there are tags, and past 32
+Julia does not specialize it: with 32 tags it allocated at every level
+(FINDINGS W34 on the record branch).
+"""
+set_nonnegative_specific!(ᶜε̄, ᶜY, tags) =
+    _set_nonnegative_specific!(ᶜε̄, ᶜY, tags, Val(1))
+_set_nonnegative_specific!(ᶜε̄, ᶜY, ::Tuple{}, ::Val) = nothing
+function _set_nonnegative_specific!(ᶜε̄, ᶜY, tags::Tuple, ::Val{i}) where {i}
+    ᶜε̄ᵢ = getproperty(ᶜε̄, i)
+    ᶜρχ = tag_field(ᶜY, first(tags))
+    @. ᶜε̄ᵢ = max(ᶜρχ, zero(ᶜρχ)) / ᶜY.ρ
+    return _set_nonnegative_specific!(ᶜε̄, ᶜY, Base.tail(tags), Val(i + 1))
+end
 
 # One level of the plume: the grid mean's specific values, the grid mean's
 # weight in the step, and whether the plume starts again here, because there is
@@ -1990,11 +2002,7 @@ end
 @inline function _plume_step(εʲ_below, level)
     (ε̄, weight, restart) = level
     (restart | isnan(first(εʲ_below))) && return ε̄
-    # Over the shorter of the two, as `map` would take them.
-    return ntuple(
-        i -> εʲ_below[i] + weight * (ε̄[i] - εʲ_below[i]),
-        Val(min(length(εʲ_below), length(ε̄))),
-    )
+    return map((εʲ, ε) -> εʲ + weight * (ε - εʲ), εʲ_below, ε̄)
 end
 
 # The sum of the partition's values, which `partition`, a tuple of `Bool`s,
