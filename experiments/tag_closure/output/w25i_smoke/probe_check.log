@@ -1,0 +1,42 @@
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-issue7-probe-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-issue7-probe-run/experiments/tag_closure/configs/lr_s23_probe_ledgers.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Warning: `energy_source_tags` with `turbconv: prognostic_edmfx`: the eddy diffusion moves the tags as passive tracers, while it moves `ρe_tot` in enthalpy form. The difference goes to `e_src_res`, unless `energy_source_tag_transport: enthalpy_increment` takes it after each implicit solve.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-issue7-probe-run/src/config/tracer_config.jl:1379
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.EquilibriumMicrophysics0M, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{Nothing, ClimaAtmos.ExternalDrivenTVForcing{ClimaAtmos.ColumnDatasets.InMemoryColumnData{@NamedTuple{ta::Vector{Float64}, ua::Vector{Float64}, va::Vector{Float64}, hus::Vector{Float64}, wa::Vector{Float64}, rho::Vector{Float64}, tntha::Vector{Float64}, tnhusha::Vector{Float64}, tntva::Vector{Float64}, tnhusva::Vector{Float64}}, @NamedTuple{ts::Float32, coszen::Float64, rsdt::Float64}, Nothing}, Tuple{ClimaAtmos.HorizontalAdvection, ClimaAtmos.VerticalFluctuation, ClimaAtmos.Nudging{Tuple{Symbol, Symbol}, ClimaAtmos.DefaultTimescale, Nothing}, ClimaAtmos.Nudging{Tuple{Symbol, Symbol}, ClimaAtmos.DefaultTimescale, Nothing}, ClimaAtmos.Subsidence}, ClimaUtilities.TimeVaryingInputs.LinearInterpolation{ClimaUtilities.TimeVaryingInputs.Throw}}, Nothing, Bool, Nothing}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RRTMGPInterface.AllSkyRadiationWithClearSkyDiagnostics{ClimaAtmos.InteractiveCloudInRadiation}, ClimaAtmos.ExternalTVInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, ClimaAtmos.RayleighSponge{Float64}}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, Nothing, Nothing}, ClimaAtmos.SurfaceConditions.ExternalTemperature, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Nothing, Nothing, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:pbl, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:free, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:fcg, Nothing, Tuple{Symbol, Symbol, Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, ClimaAtmos.EnergySourceTaggingModel{Tuple{ClimaAtmos.EnergySourceTag{:pbl, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:free, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.EnergySourceTag{:sfc, Nothing, Tuple{Symbol}}, ClimaAtmos.EnergySourceTag{:rad, Nothing, Tuple{Symbol}}}, Float64, ClimaAtmos.EnthalpyIncrementEnergySourceTransport, false, true}, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Warning: `external_forcing` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: external_forcing` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-issue7-probe-run/src/config/tracer_config.jl:767
+┌ Warning: `microphysics` changes `ρe_tot` in this run, and no `energy_source_tags` tag follows it. Its production goes to the region tags that list `all`, and to no process tag, so the new energy split by process misses it. Add a tag with `source: microphysics` to follow it.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-issue7-probe-run/src/config/tracer_config.jl:767
+water per tag: true (:q_tag_led_fix_pbl, :q_tag_led_fix_free, :q_tag_led_fix_evap, :q_tag_led_fix_fcg, :q_tag_led_inc_pbl, :q_tag_led_inc_free, :q_tag_led_inc_evap, :q_tag_led_inc_fcg)
+energy per tag: true (:e_src_led_fix_pbl, :e_src_led_fix_free, :e_src_led_fix_sfc, :e_src_led_fix_rad, :e_src_led_inc_pbl, :e_src_led_inc_free, :e_src_led_inc_sfc, :e_src_led_inc_rad)
+water transport: ClimaAtmos.IncrementWaterTagTransport; energy: ClimaAtmos.EnthalpyIncrementEnergySourceTransport
+left weight(-1, -2) = 1.0 (same sign keeps -m where M < 0: 1.0)
+water check: (period = "6hours", tolerance = 1.0e-10, abort_above = 1.0, audit = true, spin_up = nothing)
+68 diagnostics asked for; not registered: String[]

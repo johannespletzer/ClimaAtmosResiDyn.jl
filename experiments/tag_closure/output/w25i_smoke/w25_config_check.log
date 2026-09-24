@@ -1,0 +1,1060 @@
+Precompiling ClimaAtmos...
+  35720.5 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 44 seconds. 277 already precompiled.
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_copies_z120_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, true, ClimaAtmos.TracerWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_copies_z120_fo.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:first_order}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:first_order}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, true, ClimaAtmos.TracerWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_copies_z30_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, true, ClimaAtmos.TracerWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_copies_z30_fo.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:first_order}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:first_order}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, true, ClimaAtmos.TracerWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_copies_z60_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, true, ClimaAtmos.TracerWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_copies_z60_fo.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:first_order}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:first_order}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, true, ClimaAtmos.TracerWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_default_z120_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_default_z120_fo.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:first_order}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:first_order}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_default_z30_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_default_z30_fo.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:first_order}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:first_order}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_default_z60_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_default_z60_fo.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:first_order}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:first_order}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}, ClimaAtmos.WaterTag{:evap_strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_pulse_copies_z30_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:sfc, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:air, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, true, ClimaAtmos.TracerWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_pulse_copies_z60_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:sfc, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:air, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, true, ClimaAtmos.TracerWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_pulse_default_z30_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:sfc, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:air, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_pulse_default_z60_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:sfc, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:air, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.IncrementWaterTagTransport, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_untagged_z120_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_untagged_z120_fo.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:first_order}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:first_order}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_untagged_z30_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_untagged_z30_fo.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:first_order}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:first_order}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_untagged_z60_c.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+┌ Info: Making AtmosConfig with config files: 
+│    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/src/config/../../config/default_configs/default_config.yml
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-w25i-run/experiments/tag_closure/configs/w25i_d4w_untagged_z60_fo.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:first_order}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.NonEquilibriumMicrophysics1M{CloudMicrophysics.Parameters.Microphysics1MOptions{CloudMicrophysics.Parameters.CloudLiquidFormation, CloudMicrophysics.Parameters.PrescribedIceNumber, CloudMicrophysics.Parameters.CloudIceMelt, CloudMicrophysics.Parameters.HomogeneousAndHeterogeneous, CloudMicrophysics.Parameters.Kessler1M, CloudMicrophysics.Parameters.NoSupersaturation, CloudMicrophysics.Parameters.RainEvaporation, CloudMicrophysics.Parameters.DepositionAndSublimation, CloudMicrophysics.Parameters.SnowMelt, CloudMicrophysics.Parameters.CloudLiquidRainAccretion, CloudMicrophysics.Parameters.CloudLiquidSnowAccretion, CloudMicrophysics.Parameters.CloudIceRainAccretion, CloudMicrophysics.Parameters.CloudIceSnowAccretion, CloudMicrophysics.Parameters.RainSnowAccretion}}, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, ClimaAtmos.PrognosticEDMFX{1, true, Float64}, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`Nothing`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:first_order}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{ClimaAtmos.GasPhaseChem}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, Nothing, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+┌ Info: Microphysics settings: 
+│                        `n_substeps`::`3`
+│                   `n_substeps_quad`::`2`
+│            `cloud_liquid_formation`::`CloudLiquidFormation`
+│               `cloud_ice_formation`::`PrescribedIceNumber`
+│                    `cloud_ice_melt`::`CloudIceMelt`
+│             `cloud_liquid_freezing`::`HomogeneousAndHeterogeneous`
+│               `rain_autoconversion`::`Kessler1M`
+│               `snow_autoconversion`::`NoSupersaturation`
+│     `rain_condensation_evaporation`::`RainEvaporation`
+│       `snow_deposition_sublimation`::`DepositionAndSublimation`
+│                         `snow_melt`::`SnowMelt`
+│       `cloud_liquid_rain_accretion`::`CloudLiquidRainAccretion`
+│       `cloud_liquid_snow_accretion`::`CloudLiquidSnowAccretion`
+│          `cloud_ice_rain_accretion`::`CloudIceRainAccretion`
+│          `cloud_ice_snow_accretion`::`CloudIceSnowAccretion`
+└               `rain_snow_accretion`::`RainSnowAccretion`
+w25i_d4w_copies_z120_c.yml: z 120, sgsflux none, tags TracerWaterTagTransport copies=true per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_copies_z120_fo.yml: z 120, sgsflux first_order, tags TracerWaterTagTransport copies=true per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_copies_z30_c.yml: z 30, sgsflux none, tags TracerWaterTagTransport copies=true per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_copies_z30_fo.yml: z 30, sgsflux first_order, tags TracerWaterTagTransport copies=true per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_copies_z60_c.yml: z 60, sgsflux none, tags TracerWaterTagTransport copies=true per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_copies_z60_fo.yml: z 60, sgsflux first_order, tags TracerWaterTagTransport copies=true per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_default_z120_c.yml: z 120, sgsflux none, tags IncrementWaterTagTransport copies=false per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_default_z120_fo.yml: z 120, sgsflux first_order, tags IncrementWaterTagTransport copies=false per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_default_z30_c.yml: z 30, sgsflux none, tags IncrementWaterTagTransport copies=false per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_default_z30_fo.yml: z 30, sgsflux first_order, tags IncrementWaterTagTransport copies=false per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_default_z60_c.yml: z 60, sgsflux none, tags IncrementWaterTagTransport copies=false per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_default_z60_fo.yml: z 60, sgsflux first_order, tags IncrementWaterTagTransport copies=false per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_pulse_copies_z30_c.yml: z 30, sgsflux none, tags TracerWaterTagTransport copies=true per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_pulse_copies_z60_c.yml: z 60, sgsflux none, tags TracerWaterTagTransport copies=true per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_pulse_default_z30_c.yml: z 30, sgsflux none, tags IncrementWaterTagTransport copies=false per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_pulse_default_z60_c.yml: z 60, sgsflux none, tags IncrementWaterTagTransport copies=false per_tag=true, void_above 1.0, missing String[]
+w25i_d4w_untagged_z120_c.yml: z 120, sgsflux none, tags none, void_above -, missing String[]
+w25i_d4w_untagged_z120_fo.yml: z 120, sgsflux first_order, tags none, void_above -, missing String[]
+w25i_d4w_untagged_z30_c.yml: z 30, sgsflux none, tags none, void_above -, missing String[]
+w25i_d4w_untagged_z30_fo.yml: z 30, sgsflux first_order, tags none, void_above -, missing String[]
+w25i_d4w_untagged_z60_c.yml: z 60, sgsflux none, tags none, void_above -, missing String[]
+w25i_d4w_untagged_z60_fo.yml: z 60, sgsflux first_order, tags none, void_above -, missing String[]
+RESULT configs_with_missing_diagnostics=String[]

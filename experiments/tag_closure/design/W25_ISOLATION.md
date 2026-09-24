@@ -139,7 +139,9 @@ Probes write to `$SCRATCH/tag_closure/output/w25i_probes/`.
 | 4 | P3, pulse at 30 and 60 levels × 2 modes | 3 h | three one-hour variants: about 1 h |
 
 46 jobs. The expected times are estimates from W25's and W35's jobs. None was
-measured with the per-tag ledgers, which add state fields.
+measured with the per-tag ledgers, which add state fields. On the login node
+all three probes ran two steps of `w25i_d4w_default_z30_c` end to end; the
+first build took about 36 minutes there (`output/w25i_smoke/`, checks only).
 
 ## 6. What this step does not do
 
