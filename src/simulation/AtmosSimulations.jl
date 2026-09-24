@@ -450,6 +450,12 @@ function AtmosSimulation(
         Y, model, params, dt, start_date, resolved_steady_state_velocity;
         parent_budget,
     )
+    # The tags' ledgers: the cadence their audit reports, and, on a restart,
+    # the accumulators the checkpoint carried (WP6, step 3). Both write only
+    # the tags' own cache.
+    set_tag_ledger_cadence!(p, update_constrain_state_every)
+    isnothing(restart_file) ||
+        restore_tag_ledger_checkpoint!(p.tagging, restart_file, context)
 
     # Combine all callbacks. The ledger's callback goes first: it reads the
     # accepted state and the stepper cache before any other callback runs.

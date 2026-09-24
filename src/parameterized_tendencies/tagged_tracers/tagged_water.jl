@@ -216,8 +216,10 @@ when water tagging is disabled. Contains:
   - `ᶜwater_fix`: one center `Field` per tag accumulating the water that the
     limiters and state constraints have moved into or out of that tag (see
     [`rescale_water_tags!`](@ref) and [`repair_water_tag_partition!`](@ref)).
-    Cumulative since the start of the simulation segment, and reset on restart,
-    so a budget over an interval is the difference of two outputs.
+    Cumulative since the start of the run, and carried through a restart by
+    the checkpoint (WP6, step 3; a checkpoint written before that starts it at
+    zero, with a warning), so a budget over an interval is the difference of
+    two outputs.
   - `ᶜwater_fix_gross`, `ᶜwater_fix_count`: the gross twin and the count of
     `ᶜwater_fix`, in Float64: the absolute value of every change, and one per
     cell-event above rounding (`tag_event`). What was attempted, including
@@ -862,13 +864,23 @@ function _rescale_water_tags!(Y, p, ᶜρq_tot_before, model::WaterTaggingModel)
     (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count, ᶜwater_pos) = p.tagging
     ᶜwater_pos .= zero(eltype(ᶜwater_pos))
     _accumulate_partition_pos!(ᶜwater_pos, Y.c, model.tags)
+    # What this call adds to the ledgers per mechanism goes to their
+    # `attempted`, whether or not the stepper keeps it (WP6, step 3).
+    mechanisms = Val((:q_tag_led_rescale, :q_tag_led_empty))
+    before_tag_ledgers!(p, Y, mechanisms)
     _apply_water_tag_rescale!(
         Y.c,
-        tag_ledger(ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count),
+        tag_ledger(
+            ᶜwater_fix,
+            ᶜwater_fix_gross,
+            ᶜwater_fix_count,
+            water_tag_fix_ledger_view(Y, model),
+        ),
         ᶜwater_pos,
         ᶜρq_tot_before,
         model.tags,
     )
+    after_tag_ledgers!(p, Y, mechanisms)
     return nothing
 end
 
@@ -913,6 +925,19 @@ function _apply_water_tag_rescale!(
             water_tag_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before, ᶜpos),
             ᶜρq_tot_before,
         )
+        # The tag's own ledger, where kept, takes the same change (step 3).
+        add_to_tag_ledger!(
+            ledger.state,
+            tag,
+            @. lazy(
+                water_tag_rescale_shift(
+                    ᶜρq_tag,
+                    ᶜY.ρq_tot,
+                    ᶜρq_tot_before,
+                    ᶜpos,
+                ),
+            )
+        )
         @. ᶜfix += water_tag_rescale_shift(
             ᶜρq_tag,
             ᶜY.ρq_tot,
@@ -932,6 +957,17 @@ function _apply_water_tag_rescale!(
         @. ᶜcount += tag_event(
             water_tag_source_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before),
             ᶜρq_tot_before,
+        )
+        add_to_tag_ledger!(
+            ledger.state,
+            tag,
+            @. lazy(
+                water_tag_source_rescale_shift(
+                    ᶜρq_tag,
+                    ᶜY.ρq_tot,
+                    ᶜρq_tot_before,
+                ),
+            )
         )
         @. ᶜfix += water_tag_source_rescale_shift(
             ᶜρq_tag,
@@ -1024,9 +1060,16 @@ function _repair_water_tag_partition!(Y, p, model::WaterTaggingModel)
     ᶜwater_neg .= zero(eltype(ᶜwater_neg))
     _accumulate_partition_pos!(ᶜwater_pos, Y.c, model.tags)
     _accumulate_partition_neg!(ᶜwater_neg, Y.c, model.tags)
+    mechanisms = Val((:q_tag_led_repair, :q_tag_led_repairnet))
+    before_tag_ledgers!(p, Y, mechanisms)
     _apply_partition_repair!(
         Y.c,
-        tag_ledger(ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count),
+        tag_ledger(
+            ᶜwater_fix,
+            ᶜwater_fix_gross,
+            ᶜwater_fix_count,
+            water_tag_fix_ledger_view(Y, model),
+        ),
         ᶜwater_pos,
         ᶜwater_neg,
         model.tags,
@@ -1037,6 +1080,7 @@ function _repair_water_tag_partition!(Y, p, model::WaterTaggingModel)
     # (WP6, the code review's S1).
     @. Y.c.q_tag_led_repair -= max(-(ᶜwater_pos + ᶜwater_neg), 0) / 2
     @. Y.c.q_tag_led_repairnet += max(-(ᶜwater_pos + ᶜwater_neg), 0)
+    after_tag_ledgers!(p, Y, mechanisms)
     return nothing
 end
 
@@ -1064,6 +1108,13 @@ function _apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, tags::Tuple)
         @. ᶜcount += tag_event(
             max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag,
             ᶜpos,
+        )
+        add_to_tag_ledger!(
+            ledger.state,
+            tag,
+            @. lazy(
+                max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag,
+            )
         )
         @. ᶜfix +=
             max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag

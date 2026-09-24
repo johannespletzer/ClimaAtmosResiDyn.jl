@@ -118,6 +118,19 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "q_tag_",
         "water_tag_updraft_copy",
     )
+    # Each tag's own ledgers (WP6, step 3) are in the file or are not, so a
+    # changed `water_tag_ledger_per_tag` fails here.
+    check_restart_fields(
+        restart_file,
+        Y,
+        name ->
+            is_tag_per_tag_ledger_name(name) &&
+            startswith(string(name), "q_tag_"),
+        water_tag_per_tag_ledger_names(water_model),
+        "water tags' own ledgers",
+        "water_tag_ledger_per_tag",
+        "q_tag_led_",
+    )
     isnothing(water_model) && return nothing
 
     reader = InputOutput.HDF5Reader(restart_file, context)

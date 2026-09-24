@@ -56,12 +56,14 @@ tag_throughput_fields(ᶜρ, tags::Tuple) = merge(
 )
 
 """
-    tag_ledger(fix, gross, count)
+    tag_ledger(fix, gross, count, state = nothing)
 
-The three fields a correction writes for each tag: the signed ledger `fix`, its
-gross twin and its count. Each is a `NamedTuple` keyed like the state.
+The fields a correction writes for each tag: the signed ledger `fix`, its gross
+twin and its count, each a `NamedTuple` keyed like the state, and, where each
+tag keeps its own state ledger (WP6, step 3), `state`, a
+[`TagLedgerView`](@ref) of the state, or `nothing`.
 """
-tag_ledger(fix, gross, count) = (; fix, gross, count)
+tag_ledger(fix, gross, count, state = nothing) = (; fix, gross, count, state)
 
 # The three fields of one tag in a ledger bundle.
 tag_ledger_fields(ledger, tag) = (
@@ -199,13 +201,16 @@ is_tag_mechanism_ledger_name(name::Symbol) =
     tag_state_ledger_names(atmos)
 
 Every state ledger of the tags that the per-step gross follows: the ledgers per
-mechanism and the increment corrections' ledgers, of both families.
+mechanism, the increment corrections' ledgers, and each tag's own ledgers where
+the tags keep them (step 3), of both families.
 """
 tag_state_ledger_names(atmos) = (
     water_tag_mechanism_names(atmos.water_tagging_model)...,
     _water_increment_ledger_names(atmos.water_tagging_model)...,
+    water_tag_per_tag_ledger_names(atmos.water_tagging_model)...,
     energy_source_mechanism_names(atmos.energy_source_tagging_model)...,
     _energy_increment_ledger_names(atmos.energy_source_tagging_model)...,
+    energy_source_per_tag_ledger_names(atmos.energy_source_tagging_model)...,
 )
 _water_increment_ledger_names(::Nothing) = ()
 _water_increment_ledger_names(model) = water_tag_increment_ledger_names(model)
@@ -218,9 +223,19 @@ _energy_increment_ledger_names(model) =
 
 Per state ledger `L`, in Float64: `ᶜprev`, the value at the last step, which
 starts from `Y`, so a restarted run does not count the restored ledger; `ᶜgross`,
-the sum over the steps of `|L − L_prev|`; and `colgross`, the sum over the
-steps of `|∫(L − L_prev) dz|` per column. `ᶜdiff` and `coldiff` are scratch.
-`(;)` without state ledgers.
+the sum over the steps of `|L − L_prev|`; `colgross`, the sum over the steps of
+`|∫(L − L_prev) dz|` per column; and `ᶜevents`, the number of steps in which
+the change exceeded rounding against the cell's total (`tag_event`). `ᶜdiff`
+and `coldiff` are scratch. `(;)` without state ledgers.
+
+Beside them (step 3): `attempted`, per ledger that a kernel or the increment
+correction writes, the sum over every call of the absolute value of what that
+call added, including calls on stage values that the stepper discards;
+`before`, per ledger per mechanism, the ledger kept before a call; and
+`cadence`, the run's `update_constrain_state_every`, which
+[`set_tag_ledger_cadence!`](@ref) sets. Each tag's own ledger of the limiters'
+and the repair's corrections has no `attempted`: the cache ledger's gross twin
+takes the same changes.
 """
 function tag_ledger_step_cache(Y, atmos)
     names = tag_state_ledger_names(atmos)
@@ -228,15 +243,101 @@ function tag_ledger_step_cache(Y, atmos)
     ᶜdiff = _throughput_field(Y.c.ρ)
     coldiff = Fields.Field(Float64, axes(Fields.level(Y.f.u₃, half)))
     fill!(parent(coldiff), 0)
-    ledgers = NamedTuple{names}(map(names) do name
-        ᶜprev = _throughput_field(Y.c.ρ)
-        ᶜprev .= getproperty(Y.c, name)
-        colgross = similar(coldiff)
-        fill!(parent(colgross), 0)
-        (; ᶜprev, ᶜgross = _throughput_field(Y.c.ρ), colgross)
-    end)
-    return (; tag_ledger_steps = (; ledgers, ᶜdiff, coldiff))
+    ledgers = NamedTuple{names}(
+        map(names) do name
+            ᶜprev = _throughput_field(Y.c.ρ)
+            ᶜprev .= getproperty(Y.c, name)
+            colgross = similar(coldiff)
+            fill!(parent(colgross), 0)
+            (;
+                ᶜprev,
+                ᶜgross = _throughput_field(Y.c.ρ),
+                colgross,
+                ᶜevents = _throughput_field(Y.c.ρ),
+            )
+        end,
+    )
+    attempted_names = tag_attempted_ledger_names(atmos)
+    attempted = NamedTuple{attempted_names}(
+        map(_ -> _throughput_field(Y.c.ρ), attempted_names),
+    )
+    mechanism_names = (
+        water_tag_mechanism_names(atmos.water_tagging_model)...,
+        energy_source_mechanism_names(atmos.energy_source_tagging_model)...,
+    )
+    before = NamedTuple{mechanism_names}(
+        map(_ -> _throughput_field(Y.c.ρ), mechanism_names),
+    )
+    return (;
+        tag_ledger_steps = (;
+            ledgers,
+            ᶜdiff,
+            coldiff,
+            attempted,
+            before,
+            cadence = Ref(:step),
+        ),
+    )
 end
+
+"""
+    tag_attempted_ledger_names(atmos)
+
+The state ledgers whose writers also add to an `attempted` accumulator: the
+ledgers per mechanism, the increment corrections' ledgers, and each tag's own
+ledger of the increment correction, of both families.
+"""
+tag_attempted_ledger_names(atmos) = (
+    water_tag_mechanism_names(atmos.water_tagging_model)...,
+    _water_increment_ledger_names(atmos.water_tagging_model)...,
+    water_tag_ledger_inc_names(atmos.water_tagging_model)...,
+    energy_source_mechanism_names(atmos.energy_source_tagging_model)...,
+    _energy_increment_ledger_names(atmos.energy_source_tagging_model)...,
+    energy_source_ledger_inc_names(atmos.energy_source_tagging_model)...,
+)
+
+"""
+    set_tag_ledger_cadence!(p, update_constrain_state_every)
+
+Record the run's `update_constrain_state_every` in the tags' ledger cache, for
+the audit, and warn where the per-step gross of a transfer's ledger is not
+exact. At `step`, the default, the corrections fire once per step on the
+accepted state, so the change of a ledger per mechanism over a step is what the
+step moved. At `stage` or `dss` each firing is weighted by its tableau weight,
+which under ARS343 can be negative, so a transfer's ledger can fall within a
+step, and its per-step change is neither what the step moved nor a bound on it.
+Each tag's own ledger follows its tag at every cadence. A no-op without state
+ledgers.
+"""
+set_tag_ledger_cadence!(p, cadence) =
+    _set_tag_ledger_cadence!(_tag_ledger_steps(p.tagging), Symbol(cadence))
+_set_tag_ledger_cadence!(::Nothing, cadence) = nothing
+function _set_tag_ledger_cadence!(steps, cadence)
+    steps.cadence[] = cadence
+    any(is_tag_mechanism_ledger_name, keys(steps.ledgers)) &&
+        cadence != :step &&
+        @warn(
+            "`update_constrain_state_every: $cadence`: the tags' ledgers per \
+            mechanism record what each correction retained, but their change \
+            over a step is not what the step moved, since a firing inside the \
+            step is weighted by its tableau weight, which can be negative. \
+            Their per-step gross and the audit's `_retained` columns are exact \
+            only at `step`. Each tag's own ledgers, where kept, are exact at \
+            every cadence.",
+        )
+    return nothing
+end
+
+# The ledger cache in `p.tagging`, or `nothing` where there is none. The test
+# is on the type, so it folds away at compile time.
+_tag_ledger_steps(::Nothing) = nothing
+_tag_ledger_steps(tagging::NamedTuple) = _tag_ledger_steps(
+    tagging,
+    Val(hasfield(typeof(tagging), :tag_ledger_steps)),
+)
+_tag_ledger_steps(tagging, ::Val{true}) = tagging.tag_ledger_steps
+_tag_ledger_steps(tagging, ::Val{false}) = nothing
+
 
 """
     accumulate_tag_ledger_gross!(integrator)
@@ -247,10 +348,25 @@ writes only its own cache.
 """
 function accumulate_tag_ledger_gross!(integrator)
     Y = integrator.u
+    (; atmos) = integrator.p
     (; ledgers, ᶜdiff, coldiff) = integrator.p.tagging.tag_ledger_steps
-    _accumulate_ledger_gross!(Y, ledgers, ᶜdiff, coldiff, Val(keys(ledgers)))
+    _accumulate_ledger_gross!(
+        Y,
+        ledgers,
+        ᶜdiff,
+        coldiff,
+        _water_ledger_total(Y, atmos.water_tagging_model),
+        _energy_ledger_total(Y, atmos.energy_source_tagging_model),
+        Val(keys(ledgers)),
+    )
     return nothing
 end
+# The total a change of each family's ledger counts as an event against: the
+# parent's water, and the energy the energy source tags partition.
+_water_ledger_total(Y, ::Nothing) = nothing
+_water_ledger_total(Y, model) = Y.c.ρq_tot
+_energy_ledger_total(Y, ::Nothing) = nothing
+_energy_ledger_total(Y, model) = _energy_source_parent_field(Y, model.offset)
 # The names are type parameters, and each field is named by a literal, so the
 # callback needs no run-time symbol and allocates nothing on a column. The one
 # call that has allocated, about 200 bytes, in some measurements is ClimaCore's
@@ -261,13 +377,18 @@ end
     ledgers,
     ᶜdiff,
     coldiff,
+    ᶜwater_total,
+    ᶜenergy_total,
     ::Val{names},
 ) where {names}
     each = map(names) do name
+        total =
+            startswith(string(name), "q_tag_") ? :ᶜwater_total : :ᶜenergy_total
         quote
             let ᶜL = Y.c.$name, ledger = ledgers.$name
                 @. ᶜdiff = ᶜL - ledger.ᶜprev
                 @. ledger.ᶜgross += abs(ᶜdiff)
+                @. ledger.ᶜevents += tag_event(ᶜdiff, $total)
                 Operators.column_integral_definite!(coldiff, ᶜdiff)
                 @. ledger.colgross += abs(coldiff)
                 @. ledger.ᶜprev = ᶜL
@@ -320,4 +441,411 @@ function check_tag_mechanism_ledgers(
         config_key,
         "",
     )
+end
+
+#####
+##### Step 3 (WP6): each tag's own ledgers, what was attempted beside what the
+##### steps retained, the audit's report per ledger, and the accumulators
+##### carried through a restart. design/GROSS_ACCUMULATORS.md on the record
+##### branch, section 10.
+#####
+
+"""
+    TagLedgerView{Kind}(obj)
+
+A view of a state or tendency `obj`, such as `Y.c` or `Yₜ.c`, whose
+`tag_field` for a tag is that tag's own ledger of kind `Kind` rather than the
+tag: `q_tag_led_<Kind>_<name>` for a water tag and `e_src_led_<Kind>_<name>` for
+an energy source tag. `Kind` is `:fix`, for the limiters' rescale and the
+repair, or `:inc`, for the increment correction. A kernel that changes the tags
+writes the same change into it, so each ledger follows its tag's correction.
+"""
+struct TagLedgerView{Kind, O}
+    obj::O
+end
+TagLedgerView{Kind}(obj) where {Kind} = TagLedgerView{Kind, typeof(obj)}(obj)
+@generated tag_field(
+    ledger_view::TagLedgerView{Kind},
+    ::WaterTag{name},
+) where {Kind, name} = :(ledger_view.obj.$(Symbol(:q_tag_led_, Kind, :_, name)))
+@generated tag_field(
+    ledger_view::TagLedgerView{Kind},
+    ::EnergySourceTag{name},
+) where {Kind, name} = :(ledger_view.obj.$(Symbol(:e_src_led_, Kind, :_, name)))
+
+"""
+    add_to_tag_ledger!(ledger_view, tag, change)
+
+Add `change`, a field or a lazy broadcast, to the tag's own ledger in
+`ledger_view`. A no-op for `nothing`, where the tags keep no ledger per tag.
+"""
+@inline add_to_tag_ledger!(::Nothing, tag, change) = nothing
+@inline function add_to_tag_ledger!(ledger_view::TagLedgerView, tag, change)
+    ᶜL = tag_field(ledger_view, tag)
+    @. ᶜL += change
+    return nothing
+end
+
+# The tag's name from its type, for the generated name lists below.
+_tag_type_name(::Type{<:WaterTag{name}}) where {name} = name
+_tag_type_name(::Type{<:EnergySourceTag{name}}) where {name} = name
+@generated _prefixed_tag_names(::Val{prefix}, tags::Tuple) where {prefix} =
+    QuoteNode(Tuple(Symbol(prefix, _tag_type_name(T)) for T in tags.parameters))
+
+"""
+    water_tag_ledger_fix_names(model)
+    water_tag_ledger_inc_names(model)
+    water_tag_per_tag_ledger_names(model)
+
+Each water tag's own state ledgers, in state order, under
+`water_tag_ledger_per_tag: true`, and `()` otherwise: `q_tag_led_fix_<name>`
+for every tag, what the limiters' rescale and the partition repair changed it
+by; and under `water_tag_transport: increment`, `q_tag_led_inc_<name>`, what
+the follower moved into or out of it. Their names carry no `ρ` prefix, so no
+transport operator sees them, and the tag names `led_*` are reserved.
+"""
+water_tag_ledger_fix_names(::Nothing) = ()
+water_tag_ledger_fix_names(model::WaterTaggingModel) =
+    has_water_tag_ledger_per_tag(model) ?
+    _prefixed_tag_names(Val(:q_tag_led_fix_), model.tags) : ()
+water_tag_ledger_inc_names(::Nothing) = ()
+water_tag_ledger_inc_names(model::WaterTaggingModel) =
+    has_water_tag_ledger_per_tag(model) && follows_water_increment(model) ?
+    _prefixed_tag_names(Val(:q_tag_led_inc_), model.tags) : ()
+water_tag_per_tag_ledger_names(model) =
+    (water_tag_ledger_fix_names(model)..., water_tag_ledger_inc_names(model)...)
+
+"""
+    energy_source_ledger_fix_names(model)
+    energy_source_ledger_inc_names(model)
+    energy_source_per_tag_ledger_names(model)
+
+Each energy source tag's own state ledgers, in state order, under
+`energy_source_tag_ledger_per_tag: true`, and `()` otherwise:
+`e_src_led_fix_<name>` for every tag, what the repair changed it by; and under
+`energy_source_tag_transport: enthalpy_increment`, `e_src_led_inc_<name>`, what
+the correction after each solve moved into or out of it.
+"""
+energy_source_ledger_fix_names(::Nothing) = ()
+energy_source_ledger_fix_names(model::EnergySourceTaggingModel) =
+    has_energy_source_ledger_per_tag(model) ?
+    _prefixed_tag_names(Val(:e_src_led_fix_), model.tags) : ()
+energy_source_ledger_inc_names(::Nothing) = ()
+energy_source_ledger_inc_names(model::EnergySourceTaggingModel) =
+    has_energy_source_ledger_per_tag(model) &&
+    model.transport isa EnthalpyIncrementEnergySourceTransport ?
+    _prefixed_tag_names(Val(:e_src_led_inc_), model.tags) : ()
+energy_source_per_tag_ledger_names(model) = (
+    energy_source_ledger_fix_names(model)...,
+    energy_source_ledger_inc_names(model)...,
+)
+
+"""
+    water_tag_per_tag_ledger_variables(value, model)
+    energy_source_per_tag_ledger_variables(value, model)
+
+The initial state of each tag's own ledgers: zero, in the type of `value`, per
+point, for `grid_scale_center_variables`. `(;)` without them.
+"""
+water_tag_per_tag_ledger_variables(value, model) =
+    _mechanism_zeros(value, Val(water_tag_per_tag_ledger_names(model)))
+energy_source_per_tag_ledger_variables(value, model) =
+    _mechanism_zeros(value, Val(energy_source_per_tag_ledger_names(model)))
+
+"""
+    is_tag_per_tag_ledger_name(name)
+
+Whether `name` is one tag's own state ledger, of either family.
+"""
+is_tag_per_tag_ledger_name(name::Symbol) =
+    any(
+        prefix -> startswith(string(name), prefix),
+        ("q_tag_led_fix_", "q_tag_led_inc_", "e_src_led_fix_", "e_src_led_inc_"),
+    )
+
+"""
+    water_tag_fix_ledger_view(Y, model)
+    energy_source_fix_ledger_view(Y, model)
+    water_tag_inc_ledger_view(Yₜ, model)
+    energy_source_inc_ledger_view(Yₜ, model)
+
+The [`TagLedgerView`](@ref) of `Y.c` (or `Yₜ.c`) that the corrections write
+each tag's change into, or `nothing` where the tags keep no ledger per tag.
+Chosen from the model's type, so it folds away at compile time.
+"""
+water_tag_fix_ledger_view(Y, model) =
+    has_water_tag_ledger_per_tag(model) ? TagLedgerView{:fix}(Y.c) : nothing
+energy_source_fix_ledger_view(Y, model) =
+    has_energy_source_ledger_per_tag(model) ? TagLedgerView{:fix}(Y.c) :
+    nothing
+water_tag_inc_ledger_view(Yₜ, model) =
+    has_water_tag_ledger_per_tag(model) ? TagLedgerView{:inc}(Yₜ.c) : nothing
+energy_source_inc_ledger_view(Yₜ, model) =
+    has_energy_source_ledger_per_tag(model) ? TagLedgerView{:inc}(Yₜ.c) :
+    nothing
+
+"""
+    before_tag_ledgers!(p, Y, Val(names))
+    after_tag_ledgers!(p, Y, Val(names))
+
+Around a call of a correction kernel, keep each named ledger per mechanism, and
+afterwards add the absolute value of its change to what that mechanism
+attempted. A call on a stage value that the stepper discards counts too, so
+`attempted` less the per-step gross is the work the steps discarded, at
+`update_constrain_state_every: step`. No-ops without the ledger cache, as in
+the unit tests' mock caches.
+"""
+before_tag_ledgers!(p, Y, names) =
+    _before_tag_ledgers!(_tag_ledger_steps(p.tagging), Y, names)
+after_tag_ledgers!(p, Y, names) =
+    _after_tag_ledgers!(_tag_ledger_steps(p.tagging), Y, names)
+_before_tag_ledgers!(::Nothing, Y, names) = nothing
+_after_tag_ledgers!(::Nothing, Y, names) = nothing
+@generated function _before_tag_ledgers!(
+    steps::NamedTuple,
+    Y,
+    ::Val{names},
+) where {names}
+    each = map(name -> :(@. steps.before.$name = Y.c.$name), names)
+    return quote
+        $(each...)
+        return nothing
+    end
+end
+@generated function _after_tag_ledgers!(
+    steps::NamedTuple,
+    Y,
+    ::Val{names},
+) where {names}
+    each = map(
+        name -> :(@. steps.attempted.$name += abs(Y.c.$name - steps.before.$name)),
+        names,
+    )
+    return quote
+        $(each...)
+        return nothing
+    end
+end
+
+"""
+    add_attempted!(p, Val(name), change)
+
+Add `abs(change)` to the ledger `name`'s `attempted` accumulator, for the
+increment corrections, which write their ledgers' change per stage directly.
+A no-op without the ledger cache.
+"""
+add_attempted!(p, name, change) =
+    _add_attempted!(_tag_ledger_steps(p.tagging), name, change)
+_add_attempted!(::Nothing, name, change) = nothing
+function _add_attempted!(steps::NamedTuple, ::Val{name}, change) where {name}
+    ᶜattempted = getproperty(steps.attempted, name)
+    @. ᶜattempted += abs(change)
+    return nothing
+end
+
+"""
+    add_attempted_per_tag!(p, Yₜ, dtγ, ledger_view, tags)
+
+After the increment correction has written each tag's change per stage into
+`ledger_view` of the tendency `Yₜ`, add `abs(dtγ · Yₜ)` of each tag's ledger to
+its `attempted` accumulator. A no-op without ledgers per tag.
+"""
+add_attempted_per_tag!(p, Yₜ, dtγ, ::Nothing, tags) = nothing
+add_attempted_per_tag!(p, Yₜ, dtγ, ledger_view::TagLedgerView, tags) =
+    _add_attempted_per_tag!(_tag_ledger_steps(p.tagging), dtγ, ledger_view, tags)
+_add_attempted_per_tag!(::Nothing, dtγ, ledger_view, tags) = nothing
+_add_attempted_per_tag!(steps::NamedTuple, dtγ, ledger_view, ::Tuple{}) =
+    nothing
+function _add_attempted_per_tag!(
+    steps::NamedTuple,
+    dtγ,
+    ledger_view,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜattempted = tag_field(TagLedgerView{:inc}(steps.attempted), tag)
+    ᶜLₜ = tag_field(ledger_view, tag)
+    @. ᶜattempted += abs(dtγ * ᶜLₜ)
+    return _add_attempted_per_tag!(steps, dtγ, ledger_view, Base.tail(tags))
+end
+
+"""
+    tag_ledger_audit(Y, p, prefix, scale, fix_gross)
+
+The audit's columns for every state ledger of the family whose names start
+with `prefix` (`"q_tag_"` or `"e_src_"`), each named by the ledger without the
+prefix. Over the domain, as `scale` is:
+
+  - `<L>_retained`, `<L>_retained_relative`: the per-step gross since the start
+    of the run, `Σ |ΔL|` over the accepted steps, integrated, and over `scale`.
+    Exact per step at `update_constrain_state_every: step` for the ledgers per
+    mechanism, and at every cadence for each tag's own ledgers;
+  - `<L>_attempted`, `<L>_attempted_relative`: what the writers of `L` added,
+    in absolute value, over every call, including stage values the stepper
+    discards. For a tag's own ledger of the limiters' and the repair's
+    corrections, the cache ledger's gross twin `fix_gross`, which takes the
+    same changes;
+  - `<L>_events`: the number of cell-steps whose change of `L` exceeded
+    rounding against the cell's total;
+  - for a tag's own ledger, `<L>_inventory_fraction`: `<L>_retained` over the
+    tag's integral now, or `NaN` where that is not positive. It bounds how far
+    the corrections can have moved the tag, relative to what it holds.
+
+And `ledger_cadence_step`: 1 at `update_constrain_state_every: step`, 0
+otherwise. `(;)` without the ledger cache. Collective, as `sum` is.
+"""
+tag_ledger_audit(Y, p, prefix, scale, fix_gross) = _tag_ledger_audit(
+    _tag_ledger_steps(p.tagging),
+    Y,
+    prefix,
+    scale,
+    fix_gross,
+)
+_tag_ledger_audit(::Nothing, Y, prefix, scale, fix_gross) = (;)
+function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross)
+    per_scale(x) = iszero(scale) ? zero(x) : x / scale
+    tag_prefix = prefix == "q_tag_" ? "ρq_tag_" : "ρe_src_"
+    names = Symbol[]
+    values = Float64[]
+    column!(name, value) = (push!(names, Symbol(name)); push!(values, value))
+    for (name, ledger) in pairs(steps.ledgers)
+        long = string(name)
+        startswith(long, prefix) || continue
+        short = chopprefix(long, prefix)
+        retained = Float64(sum(ledger.ᶜgross))
+        column!("$(short)_retained", retained)
+        column!("$(short)_retained_relative", per_scale(retained))
+        per_tag_fix = startswith(short, "led_fix_")
+        attempted =
+            per_tag_fix ?
+            Float64(
+                sum(
+                    getproperty(
+                        fix_gross,
+                        Symbol(tag_prefix, chopprefix(short, "led_fix_")),
+                    ),
+                ),
+            ) :
+            haskey(steps.attempted, name) ?
+            Float64(sum(getproperty(steps.attempted, name))) : NaN
+        column!("$(short)_attempted", attempted)
+        column!("$(short)_attempted_relative", per_scale(attempted))
+        column!("$(short)_events", tag_event_total((ledger.ᶜevents,)))
+        if is_tag_per_tag_ledger_name(name)
+            tag_name = chopprefix(chopprefix(short, "led_fix_"), "led_inc_")
+            inventory = Float64(
+                sum(getproperty(Y.c, Symbol(tag_prefix, tag_name))),
+            )
+            column!(
+                "$(short)_inventory_fraction",
+                inventory > 0 ? retained / inventory : NaN,
+            )
+        end
+    end
+    isempty(names) && return (;)
+    column!("ledger_cadence_step", steps.cadence[] == :step ? 1.0 : 0.0)
+    return NamedTuple{Tuple(names)}(Tuple(values))
+end
+
+"""
+    tag_ledger_checkpoint_fields(tagging)
+
+The tags' accumulators a checkpoint carries (WP6, step 3), as a vector of
+`name => field`: the cache ledgers `ᶜwater_fix`, `ᶜwater_upfix` and
+`ᶜenergy_source_fix` with their gross twins and counts, and, per state ledger,
+the per-step gross, column gross, events and attempted. `ᶜprev` is not carried:
+it is the ledger itself, which the state carries. Empty without tags.
+"""
+function tag_ledger_checkpoint_fields(tagging)
+    fields = Pair{String, Any}[]
+    isnothing(tagging) && return fields
+    for group in (
+        :ᶜwater_fix,
+        :ᶜwater_fix_gross,
+        :ᶜwater_fix_count,
+        :ᶜwater_upfix,
+        :ᶜwater_upfix_gross,
+        :ᶜwater_upfix_count,
+        :ᶜenergy_source_fix,
+        :ᶜenergy_source_fix_gross,
+        :ᶜenergy_source_fix_count,
+    )
+        hasproperty(tagging, group) || continue
+        group_name = replace(string(group), "ᶜ" => "")
+        for (key, ᶜfield) in pairs(getproperty(tagging, group))
+            push!(fields, "tag_ledger.$group_name.$key" => ᶜfield)
+        end
+    end
+    steps = _tag_ledger_steps(tagging)
+    isnothing(steps) && return fields
+    for (name, ledger) in pairs(steps.ledgers)
+        push!(fields, "tag_ledger.gross.$name" => ledger.ᶜgross)
+        push!(fields, "tag_ledger.colgross.$name" => ledger.colgross)
+        push!(fields, "tag_ledger.events.$name" => ledger.ᶜevents)
+    end
+    for (name, ᶜattempted) in pairs(steps.attempted)
+        push!(fields, "tag_ledger.attempted.$name" => ᶜattempted)
+    end
+    return fields
+end
+
+"""
+    write_tag_ledger_checkpoint!(writer, tagging)
+
+Write the tags' accumulators (`tag_ledger_checkpoint_fields`) into the
+checkpoint of `writer`, beside the state. A no-op without tags.
+"""
+function write_tag_ledger_checkpoint!(writer, tagging)
+    for (name, field) in tag_ledger_checkpoint_fields(tagging)
+        InputOutput.write!(writer, field, name)
+    end
+    return nothing
+end
+
+"""
+    restore_tag_ledger_checkpoint!(tagging, restart_file, context)
+
+Read the tags' accumulators back from `restart_file` into the cache just built,
+so that a run continues them rather than starting them again at zero. A
+checkpoint written before they were carried holds none of them. Then they start
+at zero, with a warning, and the audit's grosses cover only this segment.
+Whether such a checkpoint should be refused instead is the owner's
+(design/GROSS_ACCUMULATORS.md, section 8, point 1). A checkpoint that holds some
+but not all of them is refused, since it was written by another configuration.
+"""
+function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
+    fields = tag_ledger_checkpoint_fields(tagging)
+    isempty(fields) && return nothing
+    reader = InputOutput.HDF5Reader(restart_file, context)
+    try
+        present = map(fields) do (name, _)
+            haskey(reader.file, "fields/$name")
+        end
+        if !any(present)
+            @warn(
+                "The restart file $restart_file carries none of the tags' \
+                accumulators: their cache ledgers, gross twins, counts, \
+                per-step grosses and attempted totals. It was written before \
+                they were carried. They start at zero for this segment, so \
+                the audit's grosses cover only this segment.",
+            )
+            return nothing
+        end
+        if !all(present)
+            missing_names = [name for ((name, _), p) in zip(fields, present) if !p]
+            error(
+                "The restart file $restart_file carries some of the tags' \
+                accumulators but not $(join(missing_names, ", ")). It was \
+                written with another configuration of the tags' ledgers. \
+                Restart with the same configuration, or start a new run.",
+            )
+        end
+        for (name, field) in fields
+            restored = InputOutput.read_field(reader, name)
+            parent(field) .= parent(restored)
+        end
+    finally
+        Base.close(reader)
+    end
+    return nothing
 end

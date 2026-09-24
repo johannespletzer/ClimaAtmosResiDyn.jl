@@ -303,6 +303,19 @@ function correct_water_tag_increment!(dY, U, p)
         ᶠq_tag_increment_flux,
         model.tags,
     )
+    # Each tag's own ledger, where kept, takes the same flux, so it holds what
+    # the correction moved into or out of that tag (WP6, step 3). The same
+    # kernel writes it, from a zero entry as the tag's is, so it is the tag's
+    # change bit for bit. Its absolute value per stage goes to `attempted`.
+    ledger_view = water_tag_inc_ledger_view(dY, model)
+    isnothing(ledger_view) || _sgs_water_tag_fluxes!(
+        ledger_view,
+        U.c,
+        p.scratch.ᶜtagging_q_share_norm,
+        ᶠq_tag_increment_flux,
+        model.tags,
+    )
+    add_attempted_per_tag!(p, dY, dtγ, ledger_view, model.tags)
     # The ledger. What is left out stays out of the tags, and the rest is what
     # the flux moved. The stepper adds `dtγ·dY`, as it does for the tags. The
     # weight's total is at least `|M|`, so the factor lies in [-1, 1].
@@ -313,6 +326,10 @@ function correct_water_tag_increment!(dY, U, p)
     )
     @. dY.c.q_tag_inc_left += ᶜq_tag_left_weight / dtγ
     @. dY.c.q_tag_inc_moved += (ᶜm - ᶜq_tag_left_weight) / dtγ
+    # What this stage left out and moved, in absolute value, whether or not
+    # the step keeps it (WP6, step 3).
+    add_attempted!(p, Val(:q_tag_inc_left), ᶜq_tag_left_weight)
+    add_attempted!(p, Val(:q_tag_inc_moved), @. lazy(ᶜm - ᶜq_tag_left_weight))
     return nothing
 end
 
@@ -333,12 +350,18 @@ the diagnostics `q_tag_inc_left_gross` and `q_tag_inc_moved_gross`
 (`tag_throughput.jl`). The energy source tags' columns of the same kind are
 still named `_gross`. Each also over `scale`.
 
-Always, the gross throughput of the cache ledgers since the segment started
-(`tag_throughput.jl`): `fix_gross` and `fix_events`, for the limiters' and the
-constraints' corrections of the tags, and with copies `copy_repair_events`,
-the copies' repair's count, beside the EDMF audit's `copy_repair`. The gross
-is an amount over the domain, a transfer counting once out and once in, and
-also over `scale`. Collective, as `tag_audit` is.
+Always, the gross throughput of the cache ledgers since the start of the run
+(`tag_throughput.jl`), carried through a restart from a checkpoint that holds
+it: `fix_gross` and `fix_events`, for the limiters' and the constraints'
+corrections of the tags, and with copies `copy_repair_events`, the copies'
+repair's count, beside the EDMF audit's `copy_repair`. The gross is an amount
+over the domain, a transfer counting once out and once in, and also over
+`scale`.
+
+And, per state ledger of the water tags, what the accepted steps retained, what
+its writers attempted, and the events, with each tag's own ledgers against the
+tag's water, where kept (`tag_ledger_audit`, WP6 step 3). Collective, as
+`tag_audit` is.
 """
 function water_tag_extra_audit(Y, p, model, scale)
     per_scale(x) = iszero(scale) ? zero(x) : x / scale
@@ -351,10 +374,12 @@ function water_tag_extra_audit(Y, p, model, scale)
     )
     edmf = water_tag_edmf_audit(Y, p, model, scale)
     columns = isnothing(edmf) ? throughput : merge(edmf, throughput)
-    follows_water_increment(model) || return columns
+    ledgers = tag_ledger_audit(Y, p, "q_tag_", scale, p.tagging.ᶜwater_fix_gross)
+    follows_water_increment(model) || return merge(columns, ledgers)
     return merge(
         columns,
         _water_tag_ledger_columns(Y, p.scratch.ᶜtemp_scalar, scale),
+        ledgers,
     )
 end
 _water_copy_events(p, model) =

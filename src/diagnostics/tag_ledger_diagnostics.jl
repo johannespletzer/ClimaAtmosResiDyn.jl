@@ -65,6 +65,28 @@ function compute_tag_ledger_colgross!(out, state, cache, name)
     return result
 end
 
+# What a state ledger's writers attempted, per unit mass (WP6, step 3).
+function compute_tag_ledger_attempted!(out, state, cache, name)
+    ᶜattempted = getproperty(cache.tagging.tag_ledger_steps.attempted, name)
+    result = isnothing(out) ? similar(state.c.ρ) : out
+    @. result = ᶜattempted / state.c.ρ
+    return result
+end
+
+# The name of a diagnostic of kind `kind` (`gross`, `colgross`, `attempted`) of
+# the state ledger `name`. For a tag's own ledger the kind goes before the tag's
+# name, `q_tag_led_fixgross_<tag>`, so that no tag's name can make it collide
+# with another tag's ledger; the tag names `led_*` are reserved.
+function tag_ledger_diagnostic_name(name, kind)
+    long = string(name)
+    for prefix in ("q_tag_led_", "e_src_led_"), part in ("fix_", "inc_")
+        startswith(long, prefix * part) || continue
+        tag = chopprefix(long, prefix * part)
+        return "$(prefix)$(chopsuffix(part, "_"))$(kind)_$(tag)"
+    end
+    return "$(long)_$(kind)"
+end
+
 """
     register_tag_ledger_diagnostics!(model::AtmosModel)
 
@@ -77,10 +99,12 @@ state ledger:
     these and for the increment corrections' ledgers;
   - `<L>_colgross`: the sum over the steps of `|∫ΔL dz|` per column.
 
-The grosses restart at zero. See `tag_ledger_step_cache`.
+The grosses are carried through a restart by the checkpoint (WP6, step 3).
+See `tag_ledger_step_cache`.
 """
 function register_tag_ledger_diagnostics!(model::AtmosModel)
     names = tag_state_ledger_names(model)
+    attempted_names = tag_attempted_ledger_names(model)
     for name in _ALL_TAG_STATE_LEDGER_NAMES
         name in WATER_TAG_ALL_MECHANISM_NAMES ||
             name in ENERGY_SOURCE_MECHANISM_NAMES ||
@@ -90,6 +114,51 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
     for name in _ALL_TAG_STATE_LEDGER_NAMES
         delete!(ALL_DIAGNOSTICS, "$(name)_gross")
         delete!(ALL_DIAGNOSTICS, "$(name)_colgross")
+        delete!(ALL_DIAGNOSTICS, "$(name)_attempted")
+    end
+    # Each tag's own ledgers are named by the tags of an earlier model too.
+    for short_name in collect(keys(ALL_DIAGNOSTICS))
+        any(
+            prefix -> startswith(short_name, prefix),
+            ("q_tag_led_fix", "q_tag_led_inc", "e_src_led_fix", "e_src_led_inc"),
+        ) && delete!(ALL_DIAGNOSTICS, short_name)
+    end
+    for name in names
+        water = _is_water_ledger(name)
+        (units, what) = water ? ("kg kg^-1", "Water") : ("J kg^-1", "Energy")
+        if is_tag_per_tag_ledger_name(name)
+            add_diagnostic_variable!(;
+                short_name = string(name),
+                units,
+                long_name = "$what Retained by the Corrections of One Tag",
+                comments = "What the " *
+                           (
+                               occursin("_led_fix_", string(name)) ?
+                               "limiters' rescale and the partition repair " :
+                               "correction after each implicit solve "
+                           ) *
+                           "changed this tag by, as the steps retained it: " *
+                           "the stepper weights this state field as it " *
+                           "weights the tag. Per unit mass, cumulative since " *
+                           "the start of the run (WP6, step 3).",
+                compute! = (out, u, p, t) ->
+                    compute_tag_state_ledger!(out, u, name),
+            )
+        end
+        if name in attempted_names
+            add_diagnostic_variable!(;
+                short_name = tag_ledger_diagnostic_name(name, "attempted"),
+                units,
+                long_name = "Attempted Change of a Tag Ledger",
+                comments = "The sum over every call of the absolute value " *
+                           "of what the writers of $name added, including " *
+                           "calls on stage values the stepper discards, per " *
+                           "unit mass at the current density. Carried " *
+                           "through a restart (WP6, step 3).",
+                compute! = (out, u, p, t) ->
+                    compute_tag_ledger_attempted!(out, u, p, name),
+            )
+        end
     end
     for name in names
         water = _is_water_ledger(name)
@@ -110,21 +179,22 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
             )
         end
         add_diagnostic_variable!(;
-            short_name = "$(name)_gross",
+            short_name = tag_ledger_diagnostic_name(name, "gross"),
             units,
             long_name = "Gross per Step of a Tag Ledger",
             comments = "The sum over the steps of |ΔL| per cell, for the " *
                        "state ledger $name, per unit mass at the current " *
-                       "density. Restarts at zero.",
+                       "density. Carried through a restart.",
             compute! = (out, u, p, t) ->
                 compute_tag_ledger_gross!(out, u, p, name),
         )
         add_diagnostic_variable!(;
-            short_name = "$(name)_colgross",
+            short_name = tag_ledger_diagnostic_name(name, "colgross"),
             units = area_units,
             long_name = "Column Gross per Step of a Tag Ledger",
             comments = "The sum over the steps of |∫ΔL dz| per column, for " *
-                       "the state ledger $name. Restarts at zero.",
+                       "the state ledger $name. Carried through a " *
+                       "restart.",
             compute! = (out, u, p, t) ->
                 compute_tag_ledger_colgross!(out, u, p, name),
         )

@@ -513,8 +513,8 @@ The energy source family's own columns of the audit table, beside those
   - `source_minimum`: the smallest value of any tag that carries a source, per
     unit mass, in J/kg, over the whole domain, or `NaN` when there is none;
   - `repair_moved`, `repair_moved_relative`: the integral over all tags of the
-    absolute value of what the repair has moved since the start of the run
-    segment, in J, and over `scale`. Gross over the cells, net over time.
+    absolute value of what the repair has moved since the start of the run,
+    in J, and over `scale`. Gross over the cells, net over time.
   - `repair_gross`, `repair_gross_relative`, `repair_events`: the same from the
     ledger's gross twin, gross over time too, and the number of cell-events
     (`tag_throughput.jl`). Zero with the repair off. At
@@ -578,6 +578,15 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         repair_gross_relative = per_scale(repair_gross),
         repair_events = tag_event_total(p.tagging.ᶜenergy_source_fix_count),
         _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale)...,
+        # Per state ledger, retained, attempted and events, and each tag's own
+        # ledgers against its energy, where kept (WP6, step 3).
+        tag_ledger_audit(
+            Y,
+            p,
+            "e_src_",
+            scale,
+            p.tagging.ᶜenergy_source_fix_gross,
+        )...,
     )
 end
 
@@ -1021,12 +1030,17 @@ function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
         Y.c,
         model.tags,
     )
+    # What this call adds to the ledgers per mechanism goes to their
+    # `attempted`, whether or not the stepper keeps it (WP6, step 3).
+    mechanisms = Val((:e_src_led_repair, :e_src_led_repairnet))
+    before_tag_ledgers!(p, Y, mechanisms)
     _apply_energy_source_repair!(
         Y.c,
         tag_ledger(
             ᶜenergy_source_fix,
             ᶜenergy_source_fix_gross,
             ᶜenergy_source_fix_count,
+            energy_source_fix_ledger_view(Y, model),
         ),
         ᶜenergy_source_pos,
         ᶜenergy_source_neg,
@@ -1046,6 +1060,7 @@ function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
         max(-(ᶜenergy_source_pos + ᶜenergy_source_neg), 0),
         zero(ᶜenergy_source_pos),
     )
+    after_tag_ledgers!(p, Y, mechanisms)
     return nothing
 end
 
@@ -1102,6 +1117,15 @@ function _apply_energy_source_repair!(
             ᶜρe_src,
             ᶜparent,
         )
+        # The tag's own ledger, where kept, takes the same change (step 3).
+        add_to_tag_ledger!(
+            ledger.state,
+            tag,
+            @. lazy(
+                energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
+                ᶜρe_src,
+            )
+        )
         @. ᶜtag_fix +=
             energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
             ᶜρe_src
@@ -1112,6 +1136,11 @@ function _apply_energy_source_repair!(
         @. ᶜcount += tag_event(
             energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src,
             ᶜparent,
+        )
+        add_to_tag_ledger!(
+            ledger.state,
+            tag,
+            @. lazy(energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src)
         )
         @. ᶜtag_fix += energy_source_overlay_repair(ᶜρe_src, ᶜparent) - ᶜρe_src
         @. ᶜρe_src = energy_source_overlay_repair(ᶜρe_src, ᶜparent)
@@ -2358,6 +2387,19 @@ function correct_energy_source_increment!(dY, U, p)
         ᶠe_src_increment_flux,
         model.tags,
     )
+    # Each tag's own ledger, where kept, takes the same flux, so it holds what
+    # the correction moved into or out of that tag (WP6, step 3). Its absolute
+    # value per stage goes to `attempted`.
+    ledger_view = energy_source_inc_ledger_view(dY, model)
+    isnothing(ledger_view) || _sgs_energy_source_tag_fluxes!(
+        ledger_view,
+        U.c,
+        _energy_source_parent_field(U, model.offset),
+        p.scratch.ᶜe_src_share_norm,
+        ᶠe_src_increment_flux,
+        model.tags,
+    )
+    add_attempted_per_tag!(p, dY, dtγ, ledger_view, model.tags)
     # The ledger. What is left in place stays out of the tags, and the rest is
     # what the flux moved. The stepper adds `dtγ·dY`, as it does for the tags.
     @. ᶜe_src_abs_mismatch *= ifelse(
@@ -2367,6 +2409,10 @@ function correct_energy_source_increment!(dY, U, p)
     )
     @. dY.c.e_src_inc_left += ᶜe_src_abs_mismatch / dtγ
     @. dY.c.e_src_inc_moved += (ᶜm - ᶜe_src_abs_mismatch) / dtγ
+    # What this stage left out and moved, in absolute value, whether or not
+    # the step keeps it (WP6, step 3).
+    add_attempted!(p, Val(:e_src_inc_left), ᶜe_src_abs_mismatch)
+    add_attempted!(p, Val(:e_src_inc_moved), @. lazy(ᶜm - ᶜe_src_abs_mismatch))
     return nothing
 end
 
