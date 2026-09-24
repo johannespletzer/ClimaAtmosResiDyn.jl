@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W26                                           | 1. Water tags                                       |
+| W1–W27                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -746,6 +746,46 @@ Each pair ran in the default mode and with copies. The verifier compared them.
 `../ClimaAtmosResiDyn-wedmf5-run` at `9abb1f62`, jobs `13877544` and
 `13877545`. The explicit-path script ran as job `13874414` at `63a1ddaa`.
 Reports are in `output/w4a_trmm0m/`.*
+
+**W27. WP6's state ledgers under the other cadences: parity holds at `stage`
+and `dss` with ARS343, and the per-step gross is exact bit for bit. At `dss`
+the follower and the partition repair work orders of magnitude harder than at
+`stage`.** The code review's script (`analysis/water/wp6_cadence_checks.jl`)
+ran four configurations for 30 min each (15 steps of 120 s): the 1M EDMF
+DYCOMS column under ARS343, with the vertical water borrowing limiter and the
+updraft filter, at `update_constrain_state_every` `stage` or `dss`, with the
+follower or with copies.
+  - Each run's model fields equal the untagged run's at the same cadence, bit
+    for bit.
+  - The callback's gross equals `Σ|ΔL|` recorded by stepping by hand, bit for
+    bit.
+  - A run restarted from a mid-run checkpoint (ARS222, 20 min) ends with the
+    state ledgers of the uninterrupted run, bit for bit.
+  - 153 tests passed.
+  - **At `dss` the transfer ledger `q_tag_led_repair` goes negative**, to
+    −5.3e-7 with the follower and −2.6e-6 with copies. The code review
+    predicted this from the negative stage weight (its S2). At `stage` the
+    repair did not act in these 15 steps.
+  - **At `dss` with the follower,** the largest cell values after 15 steps
+    are much larger than at `stage`:
+
+    | ledger                | `dss`   | `stage` |
+    |:--------------------- | -------:| -------:|
+    | `q_tag_led_repairnet` | 1.7e-2  | 0       |
+    | `q_tag_inc_left`      | 2.7e-2  | 5.4e-5  |
+    | `q_tag_inc_moved`     | 1.4e-2  | 1.6e-4  |
+
+    These are state values in kg m⁻³, per cell. With copies at `dss`,
+    `q_tag_led_repairnet` reaches 3.1e-3 and `q_tag_led_upfilter` 2.0e-2.
+  - The follower's note (WP5) says the constraints at `dss` run between its
+    snapshot and its solve, so their changes enter the mismatch. These runs
+    agree with that, but do not isolate it.
+  - `update_constrain_state_every: dss` is not the default, and no G3 run
+    uses it.
+
+*`hpda2_compute`, 2026-09-24, job `13877977`, from `../ClimaAtmosResiDyn-wedmf6`
+at `e65009ef`; `1b976a97` changes only how the callback finds its fields. The
+output is in `output/wp6_cadence/results.txt`.*
 
 ## 2. Energy source tags: closure by transport
 

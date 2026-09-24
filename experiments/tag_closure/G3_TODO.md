@@ -419,8 +419,10 @@ found no parity defect. It found a Float32 bug in step 1's audit event total
 restated claims. `1b976a97` makes the gross callback allocation-free. Local
 tests pass: water units 435, energy units 500, energy integration 117, energy
 EDMF 53 (at `e65009ef`), and copies integration 99 (at `1b976a97`). Pushed to
-#103. The review's cadence script (`analysis/water/wp6_cadence_checks.jl`) is
-running. Step 3, the
+#103. The review's cadence script (`analysis/water/wp6_cadence_checks.jl`)
+passed 153/153 (FINDINGS W27). At `dss` the follower and the repair work far
+harder than at `stage`, which is for the owner to weigh; `dss` is not the
+default. Step 3, the
 per-mechanism report and the checkpointed cache ledgers, waits on the owner's
 points in the note's section 8.
 

@@ -1,0 +1,43 @@
+script: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/analysis/water/wp6_cadence_checks.jl at 
+stage/follower: 15 steps
+  q_tag_led_rescale: min over run = -3.469446951953614e-18, max |L| = 3.469446951953614e-18, max gross = 8.673617379884035e-18
+  q_tag_led_empty: min over run = 0.0, max |L| = 0.0, max gross = 0.0
+  q_tag_led_repair: min over run = 0.0, max |L| = 0.0, max gross = 0.0
+  q_tag_led_repairnet: min over run = 0.0, max |L| = 0.0, max gross = 0.0
+  q_tag_inc_left: min over run = -1.1634736048245563e-7, max |L| = 5.357308173622839e-5, max gross = 5.620915241805495e-5
+  q_tag_inc_moved: min over run = -0.00016318534242021845, max |L| = 0.00016318534242021845, max gross = 0.00026546582045322944
+  attempted (cache gross, partition) = 2.931682674400804e-16, retained (state, per step) ≈ 7.32920668600201e-17
+Test Summary:   | Pass  Total      Time
+stage, follower |   29     29  24m12.1s
+stage/copies: 15 steps
+  q_tag_led_rescale: min over run = -3.469446951953615e-18, max |L| = 3.469446951953615e-18, max gross = 8.673617379884035e-18
+  q_tag_led_empty: min over run = 0.0, max |L| = 0.0, max gross = 0.0
+  q_tag_led_repair: min over run = 0.0, max |L| = 0.0, max gross = 0.0
+  q_tag_led_repairnet: min over run = 0.0, max |L| = 0.0, max gross = 0.0
+  q_tag_led_uprepair: min over run = -1.0497366963245714e-6, max |L| = 2.096782322624177e-5, max gross = 4.007541220297404e-5
+  q_tag_led_upfilter: min over run = 0.0, max |L| = 8.198037767680803e-21, max gross = 8.198037767680803e-21
+  attempted (cache gross, partition) = 2.931682674400804e-16, retained (state, per step) ≈ 7.32920668600201e-17
+Test Summary: | Pass  Total      Time
+stage, copies |   29     29  35m15.6s
+dss/follower: 15 steps
+  q_tag_led_rescale: min over run = -6.938893903907228e-18, max |L| = 6.938893903907228e-18, max gross = 8.673617379884035e-18
+  q_tag_led_empty: min over run = 0.0, max |L| = 0.0, max gross = 0.0
+  q_tag_led_repair: min over run = -5.340704415414399e-7, max |L| = 0.00010419936351834712, max gross = 0.00010419936351834712
+  q_tag_led_repairnet: min over run = 0.0, max |L| = 0.01725730149301112, max gross = 0.01725730149301112
+  q_tag_inc_left: min over run = -2.1968424510790763e-6, max |L| = 0.027021085391410626, max gross = 0.027021267108755166
+  q_tag_inc_moved: min over run = -0.014361466392786957, max |L| = 0.014361466392786957, max gross = 0.015707813812399166
+  attempted (cache gross, partition) = 0.0360030329418362, retained (state, per step) ≈ 0.0003385935733726017
+Test Summary: | Pass  Total      Time
+dss, follower |   29     29  12m22.4s
+dss/copies: 15 steps
+  q_tag_led_rescale: min over run = -6.938893903907228e-18, max |L| = 6.938893903907228e-18, max gross = 8.673617379884035e-18
+  q_tag_led_empty: min over run = 0.0, max |L| = 0.0, max gross = 0.0
+  q_tag_led_repair: min over run = -2.6114848323061663e-6, max |L| = 9.10482452155285e-6, max gross = 9.10482452155285e-6
+  q_tag_led_repairnet: min over run = 0.0, max |L| = 0.003085296112999518, max gross = 0.003085296112999518
+  q_tag_led_uprepair: min over run = -0.00029635277663769924, max |L| = 0.022119216378880827, max gross = 0.022712255512101164
+  q_tag_led_upfilter: min over run = -0.02046368959480889, max |L| = 0.02046368959480889, max gross = 0.02046368959480889
+  attempted (cache gross, partition) = 0.006000380438988631, retained (state, per step) ≈ 4.269064136724108e-5
+Test Summary: | Pass  Total      Time
+dss, copies   |   29     29  12m38.1s
+Test Summary:                             | Pass  Total      Time
+Restart continuation of the state ledgers |   37     37  19m35.0s
