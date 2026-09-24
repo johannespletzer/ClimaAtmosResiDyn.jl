@@ -49,7 +49,7 @@ the partition freely. The entry schema and the named regions are in
 |:------------------------------------------------ |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `e_src_<name>`                                   | the tag's energy per unit mass, J kg⁻¹                                                                                                                                                                                                      |
 | `e_src_res`                                      | the partition's closure residual, J kg⁻¹                                                                                                                                                                                                    |
-| `e_src_fix_<name>`                               | what the repair moved into or out of the tag, cumulative in the run segment                                                                                                                                                                 |
+| `e_src_fix_<name>`                               | what the repair moved into or out of the tag, cumulative since the run started                                                                                                                                                              |
 | `e_src_fixgross_<name>`, `e_src_fixcount_<name>` | beside it, the sum of the absolute changes and the number of changed cells, of every call, in Float64                                                                                                                                       |
 | `e_src_led_repair`, `e_src_led_repairnet`        | the energy the repair moved between the partition's tags, and the energy it added where it zeroed every tag, as the steps retained them: state fields, through restarts; exact per step at the default `update_constrain_state_every: step` |
 | `<ledger>_gross`, `<ledger>_colgross`            | for the ledgers above, `e_src_inc_left` and `e_src_inc_moved`: the sum over the steps of the change per cell and per column, in Float64, from zero at each restart                                                                          |
@@ -135,9 +135,9 @@ there, because the two air masses carry different energy per kilogram.
     them, and their flux needs the same post-solve correction. The plume adds
     the assumption that the updraft adjusts faster than the shares change. The sedimentation corrections take the grid mean's shares either
     way.
-  - **`e_src_fix_<name>` restarts at zero.** It is cumulative within a run
-    segment, not across restarts. Stitch the segments yourself if you want the
-    whole history.
+  - **`e_src_fix_<name>` is carried through a restart.** The checkpoint holds
+    it beside the state. A checkpoint written before it did starts it at zero,
+    with a warning, and then you stitch the segments yourself.
   - **The offset `c` is a choice with consequences.** It sets how long the
     initial-energy tags are remembered, and it is the reference that makes the
     shares meaningful. Keep one `c` across every run you compare. Before a run

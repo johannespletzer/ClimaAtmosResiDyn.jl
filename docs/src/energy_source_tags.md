@@ -622,8 +622,18 @@ column it checks that the model's state is bit for bit the one without tags.
     (J kg⁻¹);
   - `e_src_fix_<name>`: the energy the repair has moved into (positive) or out
     of (negative) each tag, per unit mass, cumulative since the start of the
-    run segment and reset on restart. Zero with the repair off, and exact only
-    at the default `update_constrain_state_every: step`;
+    run and carried through a restart. Zero with the repair off, and exact
+    only at the default `update_constrain_state_every: step`;
+  - `e_src_led_fix_<name>` and, under `enthalpy_increment`,
+    `e_src_led_inc_<name>`, with `energy_source_tag_ledger_per_tag: true`:
+    each tag's own ledgers, what the repair changed the tag by and what the
+    correction after each solve moved into or out of it. They are state
+    fields, so a ledger's change over a step is what the step retained at
+    every cadence. The audit table reports, per state ledger, what the
+    accepted steps retained (`_retained`), what its writers attempted
+    (`_attempted`) and the events (`_events`), and for each tag's own ledgers
+    the retained amount over the tag's energy now (`_inventory_fraction`). The
+    energy is that of `ρe_tot + c·ρ`, so the fraction depends on the offset;
   - `e_src_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
