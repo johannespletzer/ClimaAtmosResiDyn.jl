@@ -2037,7 +2037,8 @@ being the part within the updraft and `ᶜlateral_rate` the diagonal of the
 inflow, both with `dtγ` folded in. Over a closed partition the shares sum to
 one in each subdomain, so the partition's blocks sum to the model's. The
 shares' own dependence on the state is left out, as the copies' diagonal
-leaves out the renormalization's.
+leaves out the renormalization's. Writes `ᶜtemp_scalar_5` and `ᶜtemp_scalar_6`
+in `p.scratch`.
 """
 function update_water_tag_copy_sedimentation_blocks!(
     matrix,
@@ -2062,14 +2063,17 @@ function update_water_tag_copy_sedimentation_blocks!(
         ∂ᶜcopy_err_∂ᶜqʲ = matrix[sgs_state_name(copy_name), χ_state_name]
         ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
         ᶜχ⁰ = ᶜspecific_env_value(copy_name, Y, p)
+        # The shares are written to scratch first: inside the matrix
+        # broadcast ClimaCore cannot infer their type through the
+        # environment's lazy values, and refuses the product.
+        (ᶜshareʲ, ᶜinflow_rate) = (p.scratch.ᶜtemp_scalar_5, p.scratch.ᶜtemp_scalar_6)
+        @. ᶜshareʲ = _copy_share(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜnormʲ, partition)
+        @. ᶜinflow_rate =
+            ᶜlateral_rate * _copy_share(ᶜχ⁰, ᶜq_tot⁰, ᶜnorm⁰, partition)
         @. ∂ᶜcopy_err_∂ᶜqʲ =
             DiagonalMatrixRow(ᶜinv_ρ̂) * (
-                ᶜupdraft_operator * DiagonalMatrixRow(
-                    _copy_share(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜnormʲ, partition),
-                ) + DiagonalMatrixRow(
-                    ᶜlateral_rate *
-                    _copy_share(ᶜχ⁰, ᶜq_tot⁰, ᶜnorm⁰, partition),
-                )
+                ᶜupdraft_operator * DiagonalMatrixRow(ᶜshareʲ) +
+                DiagonalMatrixRow(ᶜinflow_rate)
             )
     end
     return nothing
