@@ -614,6 +614,8 @@ ClimaAtmos.water_increment_partition_tolerance
 ClimaAtmos.water_increment_left_weight
 ClimaAtmos.water_tag_increment_ledger_variables
 ClimaAtmos.water_tag_extra_audit
+ClimaAtmos.TagLedgerView
+ClimaAtmos.set_tag_ledger_cadence!
 ClimaAtmos.WATER_TAG_CHECKPOINT_VERSION
 ClimaAtmos.write_water_tag_checkpoint_attributes!
 ClimaAtmos.check_water_tag_checkpoint
