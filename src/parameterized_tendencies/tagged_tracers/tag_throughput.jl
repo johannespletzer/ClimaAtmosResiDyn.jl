@@ -251,31 +251,33 @@ function accumulate_tag_ledger_gross!(integrator)
     _accumulate_ledger_gross!(Y, ledgers, ᶜdiff, coldiff, Val(keys(ledgers)))
     return nothing
 end
-# The names are type parameters, so each field is found without a run-time
-# symbol, and the callback does not allocate.
-_accumulate_ledger_gross!(Y, ledgers, ᶜdiff, coldiff, ::Val{()}) = nothing
-function _accumulate_ledger_gross!(
+# The names are type parameters, and each field is named by a literal, so the
+# callback needs no run-time symbol and allocates nothing on a column. The one
+# call that has allocated, about 200 bytes, in some measurements is ClimaCore's
+# `column_integral_definite!`, which the model's surface precipitation calls
+# every step too.
+@generated function _accumulate_ledger_gross!(
     Y,
     ledgers,
     ᶜdiff,
     coldiff,
     ::Val{names},
 ) where {names}
-    name = first(names)
-    ᶜL = getproperty(Y.c, name)
-    (; ᶜprev, ᶜgross, colgross) = getproperty(ledgers, name)
-    @. ᶜdiff = ᶜL - ᶜprev
-    @. ᶜgross += abs(ᶜdiff)
-    Operators.column_integral_definite!(coldiff, ᶜdiff)
-    @. colgross += abs(coldiff)
-    @. ᶜprev = ᶜL
-    return _accumulate_ledger_gross!(
-        Y,
-        ledgers,
-        ᶜdiff,
-        coldiff,
-        Val(Base.tail(names)),
-    )
+    each = map(names) do name
+        quote
+            let ᶜL = Y.c.$name, ledger = ledgers.$name
+                @. ᶜdiff = ᶜL - ledger.ᶜprev
+                @. ledger.ᶜgross += abs(ᶜdiff)
+                Operators.column_integral_definite!(coldiff, ᶜdiff)
+                @. ledger.colgross += abs(coldiff)
+                @. ledger.ᶜprev = ᶜL
+            end
+        end
+    end
+    return quote
+        $(each...)
+        return nothing
+    end
 end
 
 """
