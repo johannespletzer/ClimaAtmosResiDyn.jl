@@ -1964,21 +1964,28 @@ _exchange_upwinding(::Val{:vanleer_limiter}) = Val(:first_order)
 """
     set_nonnegative_specific!(ᶜε̄, ᶜY, tags)
 
-Write each tag's specific value in `ᶜY`, negative ones as zero, into its
-component of the tuple field `ᶜε̄`, one tag at a time: `_nonnegative_specific`
-per component. One broadcast over `ρ`
-and every tag would take one argument more than there are tags, and past 32
-Julia does not specialize it: with 32 tags it allocated at every level
-(FINDINGS W34 on the record branch).
+Write every tag's specific value in `ᶜY`, negative ones as zero, into the tuple
+field `ᶜε̄`, as `_nonnegative_specific` does. One broadcast over `ρ` and every
+tag field would take one argument more than there are tags, and past 32 Julia
+does not specialize it: with 32 tags it allocated at every level (FINDINGS W34
+on the record branch). So the broadcast takes the whole state `ᶜY`, one
+argument, and `NonnegativeSpecificTags` reads each tag from it.
 """
-set_nonnegative_specific!(ᶜε̄, ᶜY, tags) =
-    _set_nonnegative_specific!(ᶜε̄, ᶜY, tags, Val(1))
-_set_nonnegative_specific!(ᶜε̄, ᶜY, ::Tuple{}, ::Val) = nothing
-function _set_nonnegative_specific!(ᶜε̄, ᶜY, tags::Tuple, ::Val{i}) where {i}
-    ᶜε̄ᵢ = getproperty(ᶜε̄, i)
-    ᶜρχ = tag_field(ᶜY, first(tags))
-    @. ᶜε̄ᵢ = max(ᶜρχ, zero(ᶜρχ)) / ᶜY.ρ
-    return _set_nonnegative_specific!(ᶜε̄, ᶜY, Base.tail(tags), Val(i + 1))
+function set_nonnegative_specific!(ᶜε̄, ᶜY, tags)
+    values = NonnegativeSpecificTags(tags)
+    @. ᶜε̄ = values(ᶜY)
+    return nothing
+end
+
+# A cell's tuple of the tags' specific values, negative ones as zero, from the
+# cell's state. A callable type holding the tags, so that each tag's field is
+# found by the tag's type, with the index a constant of the `ntuple`.
+struct NonnegativeSpecificTags{T}
+    tags::T
+end
+@inline (f::NonnegativeSpecificTags)(Y) = ntuple(Val(length(f.tags))) do i
+    ρχ = tag_field(Y, f.tags[i])
+    max(ρχ, zero(ρχ)) / Y.ρ
 end
 
 # One level of the plume: the grid mean's specific values, the grid mean's
