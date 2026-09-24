@@ -88,6 +88,7 @@ import ..water_tag_fraction
 import ..has_water_tag_updraft_copies
 import ..water_tag_leak!
 import ..WATER_TAG_LEAK_PATHS
+import ..follows_water_increment
 
 # energy_source_tagging_model
 import ..EnergySourceTaggingModel

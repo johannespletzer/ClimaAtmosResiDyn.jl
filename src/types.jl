@@ -2372,7 +2372,40 @@ struct TaggingModel{T <: Tuple}
 end
 
 """
-    WaterTaggingModel(tags::Tuple; updraft_copies = false)
+    AbstractWaterTagTransport
+
+How the water tags follow the parent's implicit transport, from the
+`water_tag_transport` config key: [`TracerWaterTagTransport`](@ref), the
+default, or [`IncrementWaterTagTransport`](@ref).
+"""
+abstract type AbstractWaterTagTransport end
+
+"""
+    TracerWaterTagTransport()
+
+The default. The tags are moved as tracers, explicitly, while the parent
+`ρq_tot` is advected implicitly. Their implicit terms, such as the sub-grid
+mass flux under EDMF, have no Jacobian block. So with one Newton iteration they
+take those terms at the stage's first guess while the parent takes the solved
+one, and `q_tag_res` grows by the difference.
+"""
+struct TracerWaterTagTransport <: AbstractWaterTagTransport end
+
+"""
+    IncrementWaterTagTransport()
+
+The tags follow the parent's own implicit increment. Their explicit vertical
+advection is skipped. After each Newton solve, the difference between the
+parent's increment of `ρq_tot` and the partition's is moved as a vertical flux,
+and each tag takes its share of it in the cell the flux leaves. See
+`correct_water_tag_increment!`. It needs region tags without sources that
+partition the domain.
+"""
+struct IncrementWaterTagTransport <: AbstractWaterTagTransport end
+
+"""
+    WaterTaggingModel(tags::Tuple; updraft_copies = false,
+                      transport = TracerWaterTagTransport())
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 `water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2384,12 +2417,56 @@ machinery moves: the audit mode. Without it the tags stay grid-scale and take
 their share of the updraft's water flux by a donor share and an exchange: the
 default. It is a type parameter, so the state is built from it at compile
 time.
+
+`transport`, from `water_tag_transport`, is how the tags follow the parent's
+implicit terms: as tracers by default, or by the parent's own increment after
+each Newton solve. The increment needs region tags without sources, and is
+refused without them. See [`IncrementWaterTagTransport`](@ref).
 """
-struct WaterTaggingModel{T <: Tuple, UpdraftCopies}
+struct WaterTaggingModel{
+    T <: Tuple,
+    UpdraftCopies,
+    TR <: AbstractWaterTagTransport,
+}
     tags::T
+    transport::TR
 end
-WaterTaggingModel(tags::Tuple; updraft_copies::Bool = false) =
-    WaterTaggingModel{typeof(tags), updraft_copies}(tags)
+function WaterTaggingModel(
+    tags::Tuple;
+    updraft_copies::Bool = false,
+    transport::AbstractWaterTagTransport = TracerWaterTagTransport(),
+)
+    # The correction gives the partition the parent's increment, less what the
+    # partition's own tendencies moved. Without a partition the tags that carry
+    # a source would take the parent's whole implicit transport on top of
+    # their own.
+    transport isa IncrementWaterTagTransport &&
+        !any(_is_partition_tag, tags) &&
+        error(
+            "`water_tag_transport: increment` needs region tags without \
+            sources that partition the domain. The correction gives them the \
+            parent's increment of `ρq_tot`, less what their own tendencies \
+            moved. Without them the tags that carry a source would take the \
+            parent's whole implicit transport on top of their own. Add a \
+            region and its complement, for example with `above: false` or \
+            `inside: false`.",
+        )
+    return WaterTaggingModel{typeof(tags), updraft_copies, typeof(transport)}(
+        tags,
+        transport,
+    )
+end
+
+"""
+    follows_water_increment(model)
+
+Whether the water tags of `model` take the parent's own increment in each
+implicit stage (`water_tag_transport: increment`). A property of the model's
+type, so it folds away at compile time. `false` without water tags.
+"""
+follows_water_increment(::Nothing) = false
+follows_water_increment(model::WaterTaggingModel) =
+    model.transport isa IncrementWaterTagTransport
 
 """
     has_water_tag_updraft_copies(model)

@@ -707,15 +707,16 @@ function jacobian_name_chains_overlap(a::Vector{Any}, b::Vector{Any})
 end
 
 # Whether a state variable is one the split may solve apart: a tag of any of the
-# three families, a process record, or the ledger of the energy source tags'
-# increment correction. All live directly in `Y.c`.
+# three families, a process record, or the ledger of the energy source tags' or
+# the water tags' increment correction. All live directly in `Y.c`.
 function is_splittable_jacobian_field(name::MatrixFields.FieldName)
     chain = jacobian_name_chain(name)
     (length(chain) == 2 && chain[1] === :c && chain[2] isa Symbol) ||
         return false
     return is_tagged_tracer_name(chain[2]) ||
            startswith(string(chain[2]), "prc_") ||
-           is_energy_source_ledger_name(chain[2])
+           is_energy_source_ledger_name(chain[2]) ||
+           is_water_tag_ledger_name(chain[2])
 end
 
 """
@@ -724,8 +725,8 @@ end
 The fields among the Jacobian's `block_pairs` that a [`SplitJacobianSolver`](@ref)
 solves apart from the rest, as a `Tuple` of `FieldName`s.
 
-A field qualifies when it is a tag, a process record or a field of the energy
-source tags' increment ledger, its only block is its own diagonal, and no other
+A field qualifies when it is a tag, a process record or a field of an increment
+correction's ledger, its only block is its own diagonal, and no other
 block names it, as a row, a column or a part of one.
 Such a field enters no other variable's equation, and no other variable enters
 its equation. This runs once, when the Jacobian is built, on plain vectors.

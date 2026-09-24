@@ -111,6 +111,16 @@ function compute_q_tag_fix!(out, state, cache, time, ρq_tag_name)
     end
 end
 
+# One field of the increment's ledger, per unit mass.
+function compute_q_tag_ledger!(out, state, cache, time, name)
+    ᶜledger = getproperty(state.c, name)
+    if isnothing(out)
+        return specific.(ᶜledger, state.c.ρ)
+    else
+        out .= specific.(ᶜledger, state.c.ρ)
+    end
+end
+
 """
     register_water_tagging_diagnostics!(model::AtmosModel)
 
@@ -125,6 +135,10 @@ during simulation setup rather than at package load time:
 
   - `q_tag_res`: closure residual `(ρq_tot - Σᵢ ρq_tag_i) / ρ`, where the sum
     runs over the pure region tags (only registered when at least one exists);
+
+  - `q_tag_inc_left` and `q_tag_inc_moved`, under `water_tag_transport: increment` only: the increment correction's ledger per unit mass,
+    cumulative since the start of the run. See
+    `water_tag_increment_ledger_variables`.
 
   - `q_tag_fix_<name>`: water that the limiters and state constraints have moved
     into or out of each tag, cumulative since the start of the simulation
@@ -294,6 +308,45 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                        "off. See `water_tag_leak!`.",
             compute! = (out, u, p, t) ->
                 compute_q_tag_leak!(out, u, p, t, Val(path)),
+        )
+    end
+
+    # The increment's ledger. A stale entry from an earlier model would read
+    # state fields this model does not have, so each is dropped first.
+    for (short_name, title, what) in (
+        (
+            "q_tag_inc_left",
+            "Left Out of the Water Tags",
+            "left out of the tags. In each column it sums to the part of the " *
+            "parent's implicit increment of ρq_tot that changes the column's " *
+            "total and that the tags' own implicit tendencies did not take. " *
+            "It lands in q_tag_res.",
+        ),
+        (
+            "q_tag_inc_moved",
+            "Moved Among the Water Tags",
+            "moved between levels. It sums to zero in each column. It is " *
+            "mostly the parent's vertical advection, which the tags no longer " *
+            "take explicitly, and the column-neutral part of their lag behind " *
+            "the parent's other implicit terms.",
+        ),
+    )
+        delete!(ALL_DIAGNOSTICS, short_name)
+        follows_water_increment(model) || continue
+        ledger_name = Symbol(short_name)
+        add_diagnostic_variable!(;
+            short_name,
+            units = "kg kg^-1",
+            long_name = "Water $title by the Increment Correction",
+            comments = "The water that the water tags' increment correction " *
+                       "$what Per unit mass of moist air, cumulative since " *
+                       "the start of the run. Only under " *
+                       "water_tag_transport: increment. Each increment is " *
+                       "kept at its own step's density and divided by the " *
+                       "current density here. See " *
+                       "`water_tag_increment_ledger_variables`.",
+            compute! = (out, u, p, t) ->
+                compute_q_tag_ledger!(out, u, p, t, ledger_name),
         )
     end
 

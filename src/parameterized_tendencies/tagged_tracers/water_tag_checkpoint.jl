@@ -59,10 +59,11 @@ end
 Refuse a restart that would change what the water tags in `restart_file` mean.
 It checks, in this order, and stops at the first mismatch:
 
- 1. The water tag fields in `Y`, then their copies in the first updraft,
-    against what `model` configures. A changed `water_tag_updraft_copy` fails
-    here, because the copies are in the file or are not. This needs no
-    attribute, so it covers every checkpoint.
+ 1. The water tag fields in `Y`, the increment's ledger, then the tags'
+    copies in the first updraft, against what `model` configures. A changed
+    `water_tag_transport` or `water_tag_updraft_copy` fails here, because the
+    ledger or the copies are in the file or are not. This needs no attribute,
+    so it covers every checkpoint.
  2. The version attribute. A checkpoint without it predates this guard. Then
     it warns that the tags' regions and sources cannot be checked, and lets
     the restart go on. A checkpoint with another version is refused.
@@ -82,6 +83,18 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "water tags",
         "water_tracers",
         "ρq_tag_",
+    )
+    # The increment's ledger is in the file or is not, so a changed
+    # `water_tag_transport` fails here, as a changed energy transport does.
+    check_restart_fields(
+        restart_file,
+        Y,
+        is_water_tag_ledger_name,
+        isnothing(water_model) ? () :
+        water_tag_increment_ledger_names(water_model),
+        "fields of the water tags' increment ledger",
+        "water_tag_transport",
+        "",
     )
     # As for the energy source tags' copies, the first updraft stands for all.
     check_restart_fields(
