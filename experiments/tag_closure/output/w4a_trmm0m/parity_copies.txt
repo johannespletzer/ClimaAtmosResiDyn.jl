@@ -1,0 +1,32 @@
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w3_trmm0m_copies/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w4a_trmm0m_copies/output_0000
+
+fields only in reference (tag-family, not compared): []
+fields only in run (tag-family, not compared): ['pr_tag_evap', 'pr_tag_free', 'pr_tag_pbl', 'prra_tag_pbl', 'prsn_tag_pbl']
+  aren       bitwise identical (574 elements)
+  arup       bitwise identical (574 elements)
+  cli        bitwise identical (574 elements)
+  cliup      bitwise identical (574 elements)
+  clw        bitwise identical (574 elements)
+  clwup      bitwise identical (574 elements)
+  detr       bitwise identical (574 elements)
+  entr       bitwise identical (574 elements)
+  hus        bitwise identical (574 elements)
+  husen      bitwise identical (574 elements)
+  husup      bitwise identical (574 elements)
+  rhoa       bitwise identical (574 elements)
+  rhoaen     bitwise identical (574 elements)
+  rhoaup     bitwise identical (574 elements)
+  ta         bitwise identical (574 elements)
+  tke        bitwise identical (574 elements)
+  wa         bitwise identical (574 elements)
+  waen       bitwise identical (574 elements)
+  waup       bitwise identical (574 elements)
+  evspsbl    bitwise identical (7 elements)
+  hfls       bitwise identical (7 elements)
+  hfss       bitwise identical (7 elements)
+  lwp        bitwise identical (7 elements)
+  pr         bitwise identical (7 elements)
+
+--parity-only: PASS (24 fields bit for bit)
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-exp/experiments/tag_closure/output/w4a_trmm0m/parity_copies.json

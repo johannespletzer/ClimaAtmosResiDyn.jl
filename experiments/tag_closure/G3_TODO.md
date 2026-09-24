@@ -82,10 +82,12 @@ The twelve criteria of the plan, section 2, in short:
     a test; the review showed the diagonal alone makes one Newton iteration
     worse and today's missing entry costs nothing for the pure sink. And the
     copies' part of issue 4, a follow-up or in WP4a.
-  - [ ] **WP6's two points**
+  - [ ] **WP6's three points**
     ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), section 8):
     a pre-WP6 checkpoint refused or zero-filled; loss and residence time moved
-    to WP4a and WP4b.
+    to WP4a and WP4b; and, after the code review, the transfer ledgers as they
+    are (exact per step at the default cadence only) or per tag (exact at
+    every cadence).
   - [x] **A durable archive** for the minimal reference datasets:
     `~/git/Clima/ClimaAtmosResiDyn-archive/reference_data/`, at most 5 GB.
     Decided by the owner on 2026-09-23.
@@ -404,9 +406,15 @@ rule: each subdomain's rain-out `Δᵏ` goes by `φᵏ` for both signs (review S
 
 Step 1, the cache ledgers' gross twins and counts, is #103. Step 2, the state
 ledgers per mechanism and their gross per step (the note's sections 3.1, 3.2
-and 9), is built at `bdc75731`. Its unit tests passed, water 425 and energy
-498, and its integration tests are running. Step 3, the per-mechanism report
-and the checkpointed cache ledgers, waits on the owner's two points.
+and 9), was built at `bdc75731`. All its local tests passed there.
+
+The code review (high, `review/agent_reviews/wp6_code_review_2026-09-24.md`)
+found no parity defect. It found a Float32 bug in step 1's audit event total
+(B1). B1, S1, S3, S4, S5, M1, M2 and M7 were taken at `e65009ef`, and S2 as
+restated claims. Its tests and the review's cadence script
+(`analysis/water/wp6_cadence_checks.jl`) are running. Step 3, the
+per-mechanism report and the checkpointed cache ledgers, waits on the owner's
+points in the note's section 8.
 
   - [ ] A design note, then the code:
 

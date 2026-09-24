@@ -182,6 +182,10 @@ per-step grosses of 3.2 get their own names.
 
  1. A pre-WP6 checkpoint: refused (proposed), or the new fields start at zero.
  2. Loss and τ move from WP6 to WP4a and WP4b (3.6).
+ 3. Added after the code review: keep the transfer ledgers as they are, exact
+    per step at the default cadence only, or make them per tag, which is exact
+    at every cadence and costs one state field per partition tag and
+    mechanism.
 
 ## 9. Step 2: what each state ledger adds
 
@@ -222,3 +226,27 @@ over the partition's tags. It keeps the sign where 3.3's measure has one.
   - **Restart:** the new fields are in a checkpoint or are not. A pre-WP6
     checkpoint is refused with its own message (8.1's proposal), until the
     owner decides.
+
+**As built after the code review** (high,
+[review/agent_reviews/wp6_code_review_2026-09-24.md](../review/agent_reviews/wp6_code_review_2026-09-24.md),
+2026-09-24, at `e65009ef`):
+
+  - **Where the repair zeroes every tag** (review S1), its changes do not sum
+    to zero. `q_tag_led_repair` and `e_src_led_repair` now take half the
+    changes less their net, the part moved between tags. The net goes to
+    `q_tag_led_repairnet` and `e_src_led_repairnet`, signed.
+  - **"Retained" is exact per step only at `update_constrain_state_every:
+    step`** (review S2). That is the default, where the corrections fire once
+    per step on the accepted state.
+      + At `stage` or `dss` each firing is weighted by its tableau weight, and
+        under ARS343 one weight is negative.
+      + A transfer's ledger can then fall within a step. Its per-step change
+        is then neither what the step moved nor a bound on it.
+      + The docs say so. Per-tag signed ledgers for the transfers would make
+        the per-step moved amount exact at every cadence (section 8's third
+        point, for the owner).
+  - **In Float32 the state ledgers lose increments below one rounding unit
+    of their value** (review S5). The Float64 grosses cannot recover them.
+  - **A cell-event** is a change above `max(1e-12, 16 eps(FT))` of the cell's
+    total (review S3). The audit's event total counts nodes. It was wrong in
+    Float32 before (review B1, in #103).
