@@ -14,7 +14,7 @@ parity with upstream"). The long runs' second submission
 shows that the water tags do. The facts, as the parent session measured them:
 
   - At site 23 the model's own `q_tot` goes below zero from day 10, in the
-    untagged twin too, down to −6e-4 kg/kg, on 66 of 91 daily outputs.
+    untagged twin too, down to −3.1e-3 kg/kg (day 30), on 66 of 91 daily outputs.
   - The water tags then diverge. On day 48 the copies run's column tags hold
     28 kg/m² against the parent's 13, and `q_tag_pbl` reaches 0.13 kg/kg
     against a `hus` maximum of 0.016.

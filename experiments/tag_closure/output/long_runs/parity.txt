@@ -1,0 +1,6 @@
+lr_s23_samesign: days 75, bit for bit
+lr_s23_absm: days 75, bit for bit
+lr_s23_copies: days 49, bit for bit
+lr_s26_samesign: days 91, bit for bit
+lr_s26_absm: days 91, bit for bit
+lr_s26_copies: days 91, bit for bit

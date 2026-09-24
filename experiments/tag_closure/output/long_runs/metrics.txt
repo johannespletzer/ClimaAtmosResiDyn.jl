@@ -1,0 +1,30 @@
+=== site 23
+parent negative water (untagged, daily): days with any 66 of 91; first day 10; worst -1.081e-01 of the column water
+-- water (budget 2e-03)
+samesign last day  74.5 | d10: net -2.51e-03 gross 2.54e-03 | d30: net -4.15e-01 gross 4.15e-01 | d90: net -1.02e+00 gross 1.02e+00 | slope30-90 1.039 (n=179) | left +2.22e-05 left_net_abs 2.22e-05 moved_net_abs 1.73e+02
+absm     last day  74.5 | d10: net -2.51e-03 gross 2.54e-03 | d30: net -4.15e-01 gross 4.15e-01 | d90: net -1.02e+00 gross 1.02e+00 | slope30-90 1.039 (n=179) | left +2.04e-05 left_net_abs 2.04e-05 moved_net_abs 1.73e+02
+   rule: (1) same-sign gross at its last check 1.02e+00 within budget: False; (2) slope 1.039 <= |m| 1.039 + 0.25: True; |m| within budget: False
+   L1 vs copies, samesign: d10 pbl 0.58% free 1.26% evap 0.40% fcg 3.16% | d30 pbl 57.53% free 53.47% evap 39.40% fcg 1.29% | d90 pbl nan% free nan% evap nan% fcg nan%
+   L1 vs copies, absm: d10 pbl 0.58% free 1.26% evap 0.40% fcg 3.16% | d30 pbl 57.53% free 53.47% evap 39.40% fcg 1.29% | d90 pbl nan% free nan% evap nan% fcg nan%
+-- energy (budget 1e-04)
+samesign last day  74.2 | d10: net -4.42e-14 gross 1.21e-12 | d30: net +4.16e-13 gross 3.94e-12 | d90: net +1.45e-12 gross 7.59e-12 | slope30-90 0.670 (n=178) | left +3.07e-12 left_net_abs 1.75e-11 moved_net_abs 4.80e-01
+absm     last day  74.2 | d10: net +3.59e-14 gross 5.89e-14 | d30: net +6.94e-13 gross 7.14e-13 | d90: net +1.60e-12 gross 1.61e-12 | slope30-90 0.460 (n=178) | left +3.04e-12 left_net_abs 3.04e-12 moved_net_abs 4.80e-01
+   rule: (1) same-sign gross at its last check 7.59e-12 within budget: True; (2) slope 0.670 <= |m| 0.460 + 0.25: True; |m| within budget: True
+   L1 vs copies, samesign: d10 pbl 3.69% free 2.64% sfc 2.25% rad 1.74% | d30 pbl 5.43% free 3.10% sfc 10.12% rad 15.00% | d90 pbl nan% free nan% sfc nan% rad nan%
+   L1 vs copies, absm: d10 pbl 3.69% free 2.64% sfc 2.25% rad 1.74% | d30 pbl 5.43% free 3.10% sfc 10.12% rad 15.00% | d90 pbl nan% free nan% sfc nan% rad nan%
+-- copies: last day 48.5; water gross 1.16e+00; energy gross 1.16e-02
+=== site 26
+parent negative water (untagged, daily): days with any 0 of 91; first day None; worst 0.000e+00 of the column water
+-- water (budget 2e-03)
+samesign last day  90.0 | d10: net -1.06e-13 gross 9.73e-13 | d30: net -1.02e-12 gross 2.46e-12 | d90: net -1.55e-12 gross 5.42e-12 | slope30-90 0.703 (n=241) | left -2.85e-12 left_net_abs 8.04e-12 moved_net_abs 1.23e-01
+absm     last day  90.0 | d10: net -1.13e-13 gross 1.67e-13 | d30: net -2.43e-13 gross 3.83e-13 | d90: net -3.83e-13 gross 6.93e-13 | slope30-90 0.630 (n=241) | left -7.23e-13 left_net_abs 8.07e-13 moved_net_abs 1.23e-01
+   rule: (1) same-sign gross at its last check 5.42e-12 within budget: True; (2) slope 0.703 <= |m| 0.630 + 0.25: True; |m| within budget: True
+   L1 vs copies, samesign: d10 pbl 6.21% free 3.22% evap 11.60% fcg 2.62% | d30 pbl 7.95% free 3.49% evap 13.73% fcg 2.79% | d90 pbl 8.76% free 3.83% evap 14.77% fcg 3.04%
+   L1 vs copies, absm: d10 pbl 6.21% free 3.22% evap 11.60% fcg 2.62% | d30 pbl 7.95% free 3.49% evap 13.73% fcg 2.79% | d90 pbl 8.76% free 3.83% evap 14.77% fcg 3.04%
+-- energy (budget 1e-04)
+samesign last day  90.0 | d10: net -5.72e-14 gross 1.22e-12 | d30: net -3.71e-13 gross 3.09e-12 | d90: net -1.89e-12 gross 7.25e-12 | slope30-90 0.755 (n=241) | left -7.56e-13 left_net_abs 1.17e-11 moved_net_abs 1.28e+00
+absm     last day  90.0 | d10: net -2.63e-14 gross 6.03e-14 | d30: net -1.17e-13 gross 1.35e-13 | d90: net -2.69e-13 gross 2.74e-13 | slope30-90 0.648 (n=241) | left -4.98e-13 left_net_abs 4.98e-13 moved_net_abs 1.28e+00
+   rule: (1) same-sign gross at its last check 7.25e-12 within budget: True; (2) slope 0.755 <= |m| 0.648 + 0.25: True; |m| within budget: True
+   L1 vs copies, samesign: d10 pbl 6.79% free 8.69% sfc 11.06% rad 7.03% | d30 pbl 4.42% free 7.93% sfc 3.20% rad 9.37% | d90 pbl 6.62% free 8.58% sfc 5.32% rad 11.80%
+   L1 vs copies, absm: d10 pbl 6.79% free 8.69% sfc 11.06% rad 7.03% | d30 pbl 4.42% free 7.93% sfc 3.20% rad 9.37% | d90 pbl 6.62% free 8.58% sfc 5.32% rad 11.80%
+-- copies: last day 90.0; water gross 6.26e-04; energy gross 5.38e-02

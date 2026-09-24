@@ -85,14 +85,14 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W35                                           | 1. Water tags                                       |
+| W1–W36                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
 | E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80 | 5. The implicit channel and the increment prototype |
 | E45, E47, E51, E54, E55, E57, E58                | 6. Parity, Float32, MPI and restarts                |
 | E7–E9, E20–E24, E26, E28, E30, E38, E49, E63     | 7. The process records and the per-process checks   |
-| E50, E60, E69, E70, E74, E75                     | 8. The sphere and long runs                         |
+| E50, E60, E69, E70, E74, E75, E81                | 8. The sphere and long runs                         |
 | E68, E72, E73, E76                               | 9. Mixing: V3 and the updraft gap                   |
 | T1–T10, E44, E44b–E44e, E52, E56, E77, E78       | 10. Cost                                            |
 | M1–M8                                            | 11. Method                                          |
@@ -1160,6 +1160,77 @@ reference's step. `E` is the summed L1 error over the summed L1 increment:
 #105 at `1a37e43f`. The per-step CSV and RESULT lines are in
 `output/w5v/same_atmosphere/`.*
 
+**W36. Over 90 days at site 26 of the GCM-driven column, both placement rules
+keep the water partition closed at rounding level (gross 5.4e-12 under same
+sign, 6.9e-13 under |m|), and the model is bit for bit the same as the
+untagged twin. At site 23 the parent's own water goes negative from day 10,
+and every tagged run's water tags then drift away from it and end the run
+(known issue 7).** The long runs pre-registered in
+`design/INCREMENT_RULE_LONG_RUNS.md`, second submission (section 7, the
+radiation's seed reset): prognostic EDMF, 0M, 60 levels to 40 km, `dt` 10 s,
+ARS222, one Newton iteration, HadGEM2-A July forcing with a constant sun, 90
+days. Water tags `pbl`, `free` (a region below and above 1 km), `evap` and
+`fcg` under `increment`, both families on.
+
+Site 26 (ascent, 90 days, every run finished):
+
+| rule      | day 10 gross | day 30 gross | day 90 net | day 90 gross | slope, days 30–90 | moved, net over time |
+|:--------- | ------------:| ------------:| ----------:| ------------:| -----------------:| --------------------:|
+| same sign | 9.7e-13      | 2.5e-12      | −1.5e-12   | 5.4e-12      | 0.70              | 0.123                |
+| \|m\|       | 1.7e-13      | 3.8e-13      | −3.8e-13   | 6.9e-13      | 0.63              | 0.123                |
+
+  - **The decision rule** (section 5). Same sign is inside the budget (0.2%)
+    and its slope is at most |m|'s plus 0.25 (0.70 against 0.88). So the rule
+    keeps same sign for water at this site. Both rules sit at rounding level,
+    so the rule separates two roundoff residuals; it does not show that one
+    rule places the correction better.
+  - **Against the copies**, the same under both rules to the digits shown:
+    L1 of `pbl` 6.2%, 8.0%, 8.8% at days 10, 30, 90; `free` 3.2%, 3.5%, 3.8%;
+    `evap` 11.6%, 13.7%, 14.8%; `fcg` 2.6%, 2.8%, 3.0% (weights ρ over the
+    levels; the grid is stretched). The copies' water closure is 6.3e-4 at
+    day 90. Their repair throughput is not computed here, so their
+    eligibility as a comparator (ROADMAP's contract) is not assessed, and the
+    provenance verdict is *not assessable*.
+
+Site 23 (subsidence):
+
+  - The untagged twin runs 90 days. Its own specific humidity is below zero
+    on 66 of the 91 daily outputs, from day 10, down to −3.1e-3 kg/kg (day 30). At worst
+    the negative part is 11% of the column's water (weights ρ over the
+    levels).
+  - The water closure breaks when the parent goes negative, and the same way
+    under both rules: gross 2.5e-3 at day 10, 0.415 at day 30, 1.02 at day
+    74.5. The two rules' totals agree to four digits.
+  - Every tagged run ends with `simulation_crashed`: the copies at day 48.5
+    (water gross 1.16), both follower rules at day 74.5. At the followers'
+    crash the tags hold 25 kg/m² of water against the parent's 12, and on
+    day 74 `q_tag_pbl` and `q_tag_evap` reach 0.06 kg/kg against a largest
+    `hus` of 0.016. The copies on day 48: 28 kg/m² against 13, `q_tag_pbl`
+    0.13 kg/kg.
+  - Up to each crash, every model field is bit for bit the twin's. So the
+    tags end a run that the model without them completes. This is recorded
+    as known issue 7, a parity-class defect, with fix options in
+    `design/NEGATIVE_PARENT_WATER.md`, for the owner.
+  - Under section 5 neither rule meets the budget at site 23, so nothing is
+    chosen from it. Against the copies at day 10 the tags differ by at most
+    3.2%, and at day 30 by 39–58%, when neither is valid.
+
+Verdicts (ROADMAP's contract): parent parity *pass* at both sites; parent
+validity *not assessable* (OD3), with site 23's negative water noted;
+closure *pass* at site 26 and *fail* at site 23; provenance *not assessable*
+(comparator eligibility not assessed); intervention *not assessable* (OD3;
+the moved ledger is net over time); reproducibility *pass* (configs,
+manifests, run-tree commits).
+
+*`hpda2_compute`, 2026-09-24, jobs `13917157` to `13917199`, output
+`output_0001/`; the first submission (`13915221` to `13915228`) is void
+(design section 7). Same sign from `../ClimaAtmosResiDyn-wedmf5r-run` at
+`b01f926a` (`claude/long-run-samesign` `746cbf0f` with the record), |m| from
+`../ClimaAtmosResiDyn-wedmf5-run` at `952d960d` (`claude/long-run-absm`
+`7fd0ffab`). `analysis/water/lr_rule_metrics.py` and `lr_parity.py`; the
+closure and audit CSVs, manifests, metrics and parity are in
+`output/long_runs/`.*
+
 ## 2. Energy source tags: closure by transport
 
 Under the default `tracer` transport the tags move as passive tracers while the
@@ -2221,6 +2292,40 @@ tags depend on the mixing convention at the 10% level, well above the solver's
 `../ClimaAtmosResiDyn-upd-run` at `846ef55d`. A first attempt, `13538434`, was
 killed for memory, 200 GB against the 500 GB needed; it is kept as
 `g2_v2_sphere_mix_oom_13538434` on scratch. `output/g2_v2_sphere_mix/`.*
+
+**E81. Over 90 days on the GCM-driven column the energy follower closes to
+rounding level under both placement rules: at site 26 the gross is 7.3e-12
+under same sign and 2.7e-13 under |m|, and at site 23, up to day 74 where the
+water tags ended the runs, 7.6e-12 and 1.6e-12.** The long runs of W36, the
+energy source tags `pbl`, `free`, `sfc` and `rad` under `enthalpy_increment`,
+offset 110495 J/kg:
+
+| site, until | rule      | day 10 gross | day 30 gross | last gross | slope, days 30–90 | moved, net over time |
+|:----------- |:--------- | ------------:| ------------:| ----------:| -----------------:| --------------------:|
+| 26, day 90  | same sign | 1.2e-12      | 3.1e-12      | 7.3e-12    | 0.76              | 1.28                 |
+| 26, day 90  | \|m\|       | 6.0e-14      | 1.4e-13      | 2.7e-13    | 0.65              | 1.28                 |
+| 23, day 74  | same sign | 1.2e-12      | 3.9e-12      | 7.6e-12    | 0.67              | 0.48                 |
+| 23, day 74  | \|m\|       | 5.9e-14      | 7.1e-13      | 1.6e-12    | 0.46              | 0.48                 |
+
+  - **The decision rule** (section 5, energy budget 1e-4, a proposal). Same
+    sign is inside the budget at both sites, and its slope is at most |m|'s
+    plus 0.25 (0.76 against 0.90; 0.67 against 0.71). So the rule keeps same
+    sign for energy. As for water, both residuals are roundoff. The moved
+    ledger is the same under both rules, as on D4 (E79). The owner deferred
+    OD7 (DECISIONS, 2026-09-24), for example until known issue 7 is fixed and
+    site 23 can be scored over 90 days.
+  - The fractions are of `∫(ρe_tot + cρ)`, which depends on the offset. They
+    are restated once OD4's scale (the gross source throughput) is in place.
+    The moved ledger above 1 is net over time in each cell, summed over the
+    cells; it is not a throughput.
+  - **The copies are no eligible comparator for energy here.** Their energy
+    closure is 5.4e-2 at site 26 and 1.2e-2 at site 23 (day 48), far above
+    the proposed budget. The L1 against them is the same under both rules:
+    at site 26, day 90, `pbl` 6.6%, `free` 8.6%, `sfc` 5.3%, `rad` 11.8%.
+  - The energy tags did not end any run. At site 23 they stayed closed while
+    the water tags diverged.
+
+*The runs, commits and output of W36; `output/long_runs/`.*
 
 ## 9. Mixing: V3 and the updraft gap
 
