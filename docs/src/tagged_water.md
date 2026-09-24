@@ -371,7 +371,8 @@ correction (`energy_q_tot_upwinding` other than `none`). A restart that changes
     integral of its part of the rain-out (`water_tag_precipitation!`). It is
     upward-positive as `pr` is, so negative, and split into rain and snow by
     the grid mean's temperature as `pr` is. Over a partition the tags' sum is
-    `pr`, up to the partition's residual. It is computed from the state at
+    `pr`, up to the partition's residual, and with copies up to the copies'
+    own residual. It is computed from the state at
     output time, so it is the rate at the step's end, not the one the step
     applied. Under 1-moment it waits on rain and snow tags.
 

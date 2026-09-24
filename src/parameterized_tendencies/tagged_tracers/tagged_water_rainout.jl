@@ -51,10 +51,12 @@ type, so that the partition's flags and the index are constants of the kernel.
 It is the tag's partition-normalized share in the grid mean plus the
 subdomain's difference from `ShareDifferences`, times `S`, the partition's sum
 of clamped grid shares, so that a drifted partition keeps losing in proportion
-to what it holds, as before. A source tag's is clamped to [0, 1], since its
-environment difference is not bounded by the exchange. Where the partition
-holds nothing, or a value is not finite, it is `fallback`, the grid mean's
-share.
+to what it holds, as before. A partition tag's lies in [0, S] up to rounding,
+and can exceed 1 where the partition has drifted. A source tag's is clamped to
+[0, 1], since its environment difference is not bounded by the exchange. Its
+share is relative to the partition's total, `S·min(ε̄ᵢ/total, 1)` without an
+exchange. Where the partition holds nothing, or a value is not finite, it is
+`fallback`, the grid mean's share.
 """
 struct SplitShare{partition, i} end
 SplitShare(::Val{partition}, ::Val{i}) where {partition, i} =
@@ -73,18 +75,21 @@ SplitShare(::Val{partition}, ::Val{i}) where {partition, i} =
 end
 
 """
-    add_split_rainout!(ᶜdest, Y, p, model)
+    add_split_rainout!(ᶜdest, Y, p, model, target = nothing)
 
-Add to `ᶜdest.ρq_tag_<name>`, for every water tag, its part of the 0M rain-out
-split by subdomain: `Δʲ φʲᵢ + Δ⁰ φ⁰ᵢ`. `ᶜdest` is `Yₜ.c` in the bracket, or a
-field of zeros per tag for `pr_tag`. Call only where [`splits_rainout`](@ref)
-holds.
+Add to `ᶜdest.ρq_tag_<name>`, for every water tag, or for the tag `target`
+alone, its part of the 0M rain-out split by subdomain: `Δʲ φʲᵢ + Δ⁰ φ⁰ᵢ`.
+`ᶜdest` is `Yₜ.c` in the bracket, or one scratch field for `pr_tag`. Call only
+where [`splits_rainout`](@ref) holds.
 
   - **Default mode.** The shares come from the exchange's plume and bound,
     computed here into the exchange's scratch, which the exchange later
-    recomputes and overwrites: `SplitShare`. Where the exchange does not run
-    (no updraft, no room, a non-rising cell), the differences are zero and the
-    shares are the grid mean's.
+    recomputes and overwrites: `SplitShare`. So the plume is computed twice
+    per implicit evaluation, about 4.5% of `implicit_tendency!` on the 0M
+    EDMF column. Where the exchange does not run (no updraft, no room, a
+    non-rising cell), the differences are zero. The shares are then the
+    partition-normalized grid shares times `S`, which is the grid mean's share
+    only where no clamp binds.
   - **Copies.** The updraft's share is the copy's clamped share of `q_totʲ`,
     the one the copies' own rain-out takes (`_copies_rain_out!`), so one rule
     serves the copies and the grid tags. The environment's is the model's
@@ -97,13 +102,13 @@ The partition's increment sums to `S·(Δʲ + Δ⁰)` in the default mode, and i
 copies mode to `Δʲ·Σᵢ φʲᵢ + S·Δ⁰`, which is the same where the copies' partition
 holds the updraft's water.
 """
-function add_split_rainout!(ᶜdest, Y, p, model)
+function add_split_rainout!(ᶜdest, Y, p, model, target = nothing)
     water_tag_share_norm!(p, Y)
     ᶜS = p.scratch.ᶜtagging_q_share_norm
     ᶜΔʲ = _rainout_updraft(Y, p)
     ᶜΔ⁰ = _rainout_environment(Y, p)
     if has_water_tag_updraft_copies(model)
-        _add_split_rainout_copies!(ᶜdest, Y, p, ᶜΔʲ, ᶜΔ⁰, ᶜS, model)
+        _add_split_rainout_copies!(ᶜdest, Y, p, ᶜΔʲ, ᶜΔ⁰, ᶜS, model, target)
     else
         turbconv_model = p.atmos.turbconv_model
         inputs = water_exchange_inputs!(Y, p, turbconv_model, model)
@@ -128,10 +133,18 @@ function add_split_rainout!(ᶜdest, Y, p, model)
             flags,
             model.tags,
             Val(1),
+            target,
         )
     end
     return nothing
 end
+
+# The tags a call adds to: all, or the one `pr_tag` asks for. Tag names are
+# type parameters, so the test is a constant of the kernel.
+_selected_tags(tags, ::Nothing) = tags
+_selected_tags(tags, target) = (target,)
+_is_selected(tag, ::Nothing) = true
+_is_selected(tag, target) = tag_name(tag) === tag_name(target)
 
 _add_split_rainout_default!(
     ᶜdest,
@@ -145,6 +158,7 @@ _add_split_rainout_default!(
     flags,
     ::Tuple{},
     ::Val,
+    target,
 ) =
     nothing
 function _add_split_rainout_default!(
@@ -159,14 +173,19 @@ function _add_split_rainout_default!(
     flags,
     tags::Tuple,
     ::Val{i},
+    target,
 ) where {i}
     tag = first(tags)
-    ᶜρq_tagₜ = tag_field(ᶜdest, tag)
-    ᶜρq_tag = tag_field(ᶜY, tag)
-    share = SplitShare(flags, Val(i))
-    @. ᶜρq_tagₜ +=
-        ᶜΔʲ * share(ᶜε̄, ᶜΔφʲ, ᶜS, water_tag_fraction(ᶜρq_tag, ᶜY.ρq_tot)) +
-        ᶜΔ⁰ * share(ᶜε̄, ᶜΔφ⁰, ᶜS, water_tag_fraction(ᶜρq_tag, ᶜY.ρq_tot))
+    if _is_selected(tag, target)
+        ᶜρq_tagₜ = tag_field(ᶜdest, tag)
+        ᶜρq_tag = tag_field(ᶜY, tag)
+        share = SplitShare(flags, Val(i))
+        @. ᶜρq_tagₜ +=
+            ᶜΔʲ *
+            share(ᶜε̄, ᶜΔφʲ, ᶜS, water_tag_fraction(ᶜρq_tag, ᶜY.ρq_tot)) +
+            ᶜΔ⁰ *
+            share(ᶜε̄, ᶜΔφ⁰, ᶜS, water_tag_fraction(ᶜρq_tag, ᶜY.ρq_tot))
+    end
     return _add_split_rainout_default!(
         ᶜdest,
         ᶜY,
@@ -179,10 +198,11 @@ function _add_split_rainout_default!(
         flags,
         Base.tail(tags),
         Val(i + 1),
+        target,
     )
 end
 
-function _add_split_rainout_copies!(ᶜdest, Y, p, ᶜΔʲ, ᶜΔ⁰, ᶜS, model)
+function _add_split_rainout_copies!(ᶜdest, Y, p, ᶜΔʲ, ᶜΔ⁰, ᶜS, model, target)
     ᶜsgsʲ = Y.c.sgsʲs.:(1)
     (ᶜnormʲ, ᶜnorm⁰) =
         (p.scratch.ᶜq_tag_copy_normʲ, p.scratch.ᶜq_tag_copy_norm⁰)
@@ -196,7 +216,7 @@ function _add_split_rainout_copies!(ᶜdest, Y, p, ᶜΔʲ, ᶜΔ⁰, ᶜS, mode
         p,
         ᶜsgsʲ,
         (; ᶜΔʲ, ᶜΔ⁰, ᶜS, ᶜnorm⁰, ᶜq_tot⁰),
-        model.tags,
+        _selected_tags(model.tags, target),
     )
     return nothing
 end
@@ -231,24 +251,24 @@ function _add_split_rainout_copies_each!(ᶜdest, Y, p, ᶜsgsʲ, args, tags::Tu
 end
 
 """
-    add_rainout_increments!(ᶜdest, Y, p, model)
+    add_rainout_increments!(ᶜdest, Y, p, model, target = nothing)
 
-Add to `ᶜdest.ρq_tag_<name>` each tag's part of the 0M rain-out, by the rule
-the `:microphysics` bracket applies: split by subdomain where
-[`splits_rainout`](@ref) holds, and otherwise the grid rule on the cached sink
-`ᶜρ_dq_tot_dt`, production by mask and loss by share. Reads only the state and
-the cache, so the diagnostics can call it at output time.
+Add to `ᶜdest.ρq_tag_<name>` each tag's part of the 0M rain-out, or the tag
+`target`'s alone, by the rule the `:microphysics` bracket applies: split by
+subdomain where [`splits_rainout`](@ref) holds, and otherwise the grid rule on
+the cached sink `ᶜρ_dq_tot_dt`, production by mask and loss by share. Reads
+only the state and the cache, so the diagnostics can call it at output time.
 """
-add_rainout_increments!(ᶜdest, Y, p, model) =
+add_rainout_increments!(ᶜdest, Y, p, model, target = nothing) =
     splits_rainout(p, :microphysics) ?
-    add_split_rainout!(ᶜdest, Y, p, model) :
+    add_split_rainout!(ᶜdest, Y, p, model, target) :
     _accumulate_water_tags!(
         ᶜdest,
         Y.c,
         p.tagging.ᶜwater_masks,
         p.precomputed.ᶜρ_dq_tot_dt,
         :microphysics,
-        model.tags,
+        _selected_tags(model.tags, target),
     )
 
 """
@@ -258,15 +278,16 @@ The column integral of `tag`'s part of the 0M rain-out into `out`, a level
 field, as `pr` integrates `ᶜρ_dq_tot_dt` (`set_precipitation_surface_fluxes!`):
 upward-positive, so negative, and split into rain and snow by the grid mean's
 temperature for `phase` `Val(:rain)` and `Val(:snow)`; `Val(:all)` is both. Over
-a closed partition the tags' sum is `pr`. It reads the state at output time, so
-it is the rate at the step's end, not the one applied during it. It allocates
-one field per tag.
+a closed partition the tags' sum is `pr`, up to the partition's residual, and
+with copies up to the copies' own. It reads the state at output time, so it is
+the rate at the step's end, not the one applied during it. It computes `tag`'s
+part alone, into the scratch field `ᶜtagging_q_rainout`.
 """
 function water_tag_precipitation!(out, Y, p, tag, phase)
     model = p.atmos.water_tagging_model
-    ᶜincrements = _water_fix_fields(Y.c.ρ, model.tags)
-    add_rainout_increments!(ᶜincrements, Y, p, model)
-    ᶜincrement = tag_field(ᶜincrements, tag)
+    ᶜincrement = p.scratch.ᶜtagging_q_rainout
+    @. ᶜincrement = 0
+    add_rainout_increments!(tag_entry(tag, ᶜincrement), Y, p, model, tag)
     T_freeze = TD.Parameters.T_freeze(CAP.thermodynamics_params(p.params))
     Operators.column_integral_definite!(
         out,

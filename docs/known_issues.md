@@ -92,10 +92,11 @@ transported and stay allowed.
 
 ## 4. The implicit water-microphysics attribution has no Jacobian entries
 
-**Status:** diagnosed; restated on 2026-09-24. For a pure proportional sink
-the missing entries cost nothing, and the diagonal alone would cost. Open:
-which Jacobian to add, if any, which is the owner's choice, and a measurement
-with other implicit processes in the same stage.
+**Status:** diagnosed; restated on 2026-09-24. In a scalar Newton model of a
+pure proportional sink on the grid rule, the missing entries cost nothing, and
+the diagonal alone would cost. Open: which Jacobian to add, if any, which is
+the owner's choice, and a measurement in the model, with other implicit
+processes in the same stage.
 
 **The updraft copies under 0M are affected too.** With
 `water_tag_updraft_copy: true` the copies' rain-out mirror,
@@ -110,8 +111,9 @@ the copies lag their implicit rain-out as `q_totʲ` does. Until a Newton ladder
 on a raining 0M column (1, 2 and 10 iterations) bounds that lag for the copies,
 `q_tag_copy_res` and `q_tag_upfix_*`, 0M copies are not a validated audit.
 
-`implicit/implicit_tendency.jl:66-78` puts the `:microphysics` water bracket on
-the implicit path. Its increment is `min(Δ, 0) · ρq_tag / ρq_tot`, which is
+`implicit/implicit_tendency.jl:65-88` puts the `:microphysics` water bracket on
+the implicit path. On the grid rule, its increment is
+`min(Δ, 0) · ρq_tag / ρq_tot`, which is
 proportional to `ρq_tag`, so `∂/∂ρq_tag = Δ⁻/ρq_tot` — the same O(1/dt)
 quantity the file's own positivity argument names. Nothing supplies that entry:
 under 0M the tags get the ordinary passive diagonal
@@ -119,7 +121,7 @@ under 0M the tags get the ordinary passive diagonal
 plain `-I` when diffusion is explicit;
 under 1M the sedimentation diagonal carries no microphysics term.
 
-The comment at `implicit_tendency.jl:322-328` justifying the *energy* bracket's `-I` ("the attributed
+The comment at `implicit_tendency.jl:338-344` justifying the *energy* bracket's `-I` ("the attributed
 increment does not depend on the tags themselves") is true for
 `:precipitation` and false for the water bracket.
 
@@ -139,7 +141,10 @@ for a pure proportional sink with `c = dtγ |Δ| / ρq_tot`:
   - the diagonal and the cross term: exact.
 
 So the earlier statement here, that the missing diagonal is in principle an
-error in the answer, was backwards for the pure sink. With other implicit
+error in the answer, was backwards for the pure sink on the grid rule. There
+the shares do not change during the stage. Under the split they do: the
+default mode's shares depend on the plume below, and with copies the
+environment's shares move with the updraft's rain. With other implicit
 processes changing the shares in the same stage, the scalar model's cases
 showed the diagonal alone trading per-tag error against closure, and the pair
 better than both. These are a scalar model's results, not measurements of the

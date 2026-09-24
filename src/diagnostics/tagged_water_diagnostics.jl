@@ -172,11 +172,17 @@ end
 
 # `pr_tag_<name>`, `prra_tag_<name>` and `prsn_tag_<name>`: each tag's part of
 # the surface precipitation, under 0M only, where the rain-out is the only
-# sink (WP4a). Under 1M the rain and snow parts of WP4b will give it. A stale
-# entry from an earlier model is dropped first.
+# sink (WP4a). Under 1M the rain and snow parts of WP4b will give it. Every
+# entry of an earlier model is dropped first, whatever its tag's name, since
+# each holds its model's tag and would compute that tag's part here.
+const WATER_TAG_PRECIPITATION_PREFIXES = ("pr_tag_", "prra_tag_", "prsn_tag_")
 function register_water_tag_precipitation_diagnostics!(model, microphysics_model)
+    for short_name in collect(keys(ALL_DIAGNOSTICS))
+        any(prefix -> startswith(short_name, prefix), WATER_TAG_PRECIPITATION_PREFIXES) &&
+            delete!(ALL_DIAGNOSTICS, short_name)
+    end
+    microphysics_model isa EquilibriumMicrophysics0M || return nothing
     tags = isnothing(model) ? () : model.tags
-    zero_moment = microphysics_model isa EquilibriumMicrophysics0M
     for tag in tags
         name = tag_name(tag)
         for (prefix, phase, what) in (
@@ -185,8 +191,6 @@ function register_water_tag_precipitation_diagnostics!(model, microphysics_model
             ("prsn_tag", Val(:snow), "Snowfall Flux"),
         )
             short_name = "$(prefix)_$name"
-            delete!(ALL_DIAGNOSTICS, short_name)
-            zero_moment || continue
             add_diagnostic_variable!(;
                 short_name,
                 units = "kg m^-2 s^-1",
@@ -196,8 +200,10 @@ function register_water_tag_precipitation_diagnostics!(model, microphysics_model
                            "`pr` integrates the sink: upward-positive, so " *
                            "negative. Under prognostic EDMF each subdomain's " *
                            "part goes by that subdomain's composition. Over " *
-                           "a closed partition the tags' sum is `pr`. The rate " *
-                           "at the output's state.",
+                           "a closed partition the tags' sum is `pr`, up to " *
+                           "the partition's residual, and with updraft copies " *
+                           "up to the copies' own. The rate at the output's " *
+                           "state.",
                 compute = (state, cache, time) ->
                     water_tag_precipitation!(
                         cache.scratch.ᶠtemp_field_level,

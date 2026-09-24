@@ -14,15 +14,20 @@ chemistry tracer in the updraft, after an hour:
  2. with one composition everywhere, each copy's whole tendency is its share
     of `q_totʲ`'s, at rounding, apart from the surface flux, whose new water
     goes by region and source;
- 3. the rain-out goes by each subdomain's composition, and over the
-    partition it is the model's sink; the tags' `pr_tag` add up to `pr`;
+ 3. the grid tags' rain-out is split by subdomain (WP4a). Each subdomain's
+    part, taken from the real code, is that subdomain's rain times the tag's
+    share there: the copy's own share in the updraft, and in the environment
+    shares that sum to `S` and are not the grid mean's. `pr_tag` integrates
+    the same increments, one tag at a time, without allocating;
  4. the model's fields are those of the same column without tags, bit for bit;
- 5. the same holds in the default mode, without copies.
+ 5. in the default mode, each subdomain's shares are the exchange's, the
+    exchange's tendency is unchanged by the split, and the model's fields are
+    the untagged column's.
 
-The rain-out mirror runs on the implicit path here, where the 0M sink lives by
-default. Its explicit hook is the same function; `tagging_water_edmf_copies`
-runs 1M explicitly, where that hook is a no-op, for the parity of the explicit
-path. See `docs/src/tagged_water.md`.
+The rain-out mirror and the split run on the implicit path here, where the 0M
+sink lives by default. The copies' mirror has the same explicit hook, which
+`tagging_water_edmf_copies` reaches under 1M, where it is a no-op. The split's
+explicit path is not run in this file. See `docs/src/tagged_water.md`.
 =#
 using Test
 import ClimaAtmos as CA
@@ -70,6 +75,40 @@ function test_same_model_fields(Y, Y_plain)
     end
     @test isequal(parent(Y.f), parent(Y_plain.f))
 end
+
+# Each subdomain's part of the split, from the real code: the split with the
+# other subdomain's cached rate set to zero. The split is linear in the two
+# rates, so the parts add up to it.
+function subdomain_parts(Y, p, model)
+    ᶜdqʲ = p.precomputed.ᶜmp_tendencyʲs.:(1).dq_tot_dt
+    ᶜdq⁰ = p.precomputed.ᶜmp_tendency⁰.dq_tot_dt
+    (savedʲ, saved⁰) = (copy(ᶜdqʲ), copy(ᶜdq⁰))
+    function part(ᶜzeroed)
+        ᶜzeroed .= 0
+        ᶜdest = CA._water_fix_fields(Y.c.ρ, model.tags)
+        CA.add_split_rainout!(ᶜdest, Y, p, model)
+        ᶜdqʲ .= savedʲ
+        ᶜdq⁰ .= saved⁰
+        return ᶜdest
+    end
+    return (; updraft = part(ᶜdq⁰), environment = part(ᶜdqʲ))
+end
+
+# The two subdomains' rain-out, as the model adds it to `ρq_tot`, and the
+# partition's sum of clamped grid shares `S`.
+function rainout_inputs(Y, p)
+    ᶜΔʲ = copy(CA._rainout_updraft(Y, p))
+    ᶜΔ⁰ = copy(CA._rainout_environment(Y, p))
+    CA.water_tag_share_norm!(p, Y)
+    ᶜS = copy(p.scratch.ᶜtagging_q_share_norm)
+    scale = maximum(abs, parent(ᶜΔʲ)) + maximum(abs, parent(ᶜΔ⁰))
+    return (; ᶜΔʲ, ᶜΔ⁰, ᶜS, scale)
+end
+
+# To rounding against the rain-out: the split is a sum of a few products per
+# cell, so the identities below hold to a few eps of the largest rate.
+same_to_rounding(a, b, scale) =
+    maximum(abs, parent(a) .- parent(b)) <= 100 * eps(Float64) * scale
 
 function whole_tendency(Y, p, t)
     Yₜ = zero(Y)
@@ -217,30 +256,46 @@ end
         model = p.atmos.water_tagging_model
         @test CA.splits_rainout(p, :microphysics)
         @test !CA.splits_rainout(p, :surface_flux)
+        (; ᶜΔʲ, ᶜΔ⁰, ᶜS, scale) = rainout_inputs(Y, p)
+        # Both subdomains rain here, so no check below is vacuous.
+        @test maximum(abs, parent(ᶜΔʲ)) > 0
+        @test maximum(abs, parent(ᶜΔ⁰)) > 0
+        parts = subdomain_parts(Y, p, model)
         ᶜincrements = CA._water_fix_fields(Y.c.ρ, model.tags)
         CA.add_rainout_increments!(ᶜincrements, Y, p, model)
         @test all(isfinite, parent(ᶜincrements.ρq_tag_tropo))
-        ᶜpartition = ᶜincrements.ρq_tag_tropo .+ ᶜincrements.ρq_tag_strat
-        ᶜsink = p.precomputed.ᶜρ_dq_tot_dt
-        @test maximum(abs, parent(ᶜsink)) > 0
-        @test relative_difference(ᶜpartition, ᶜsink) < 1e-3
-        # The grid rule would give the updraft's rain the grid mean's
-        # composition; the split does not.
-        ᶜgrid = CA._water_fix_fields(Y.c.ρ, model.tags)
-        CA._accumulate_water_tags!(
-            ᶜgrid,
-            Y.c,
-            p.tagging.ᶜwater_masks,
-            ᶜsink,
-            :microphysics,
-            model.tags,
-        )
-        @test !isapprox(
-            parent(ᶜincrements.ρq_tag_tropo),
-            parent(ᶜgrid.ρq_tag_tropo),
-        )
-        # The tags' precipitation over the partition is `pr`, and its rain
-        # and snow parts add up to it.
+        (tropo, strat, evap) = model.tags
+        partition(ᶜx) = ᶜx.ρq_tag_tropo .+ ᶜx.ρq_tag_strat
+        for tag in model.tags
+            # The parts add up to the split.
+            @test same_to_rounding(
+                CA.tag_field(ᶜincrements, tag),
+                CA.tag_field(parts.updraft, tag) .+
+                CA.tag_field(parts.environment, tag),
+                scale,
+            )
+            # The updraft's part goes by the copy's own share of `q_totʲ`.
+            @test same_to_rounding(
+                CA.tag_field(parts.updraft, tag),
+                ᶜΔʲ .*
+                CA.water_tag_fraction.(
+                    CA.updraft_copy_field(ᶜsgsʲ, tag),
+                    ᶜsgsʲ.q_tot,
+                ),
+                scale,
+            )
+        end
+        # The environment's part: the partition's shares sum to `S`, and they
+        # are not the grid mean's, which the grid rule would take.
+        @test same_to_rounding(partition(parts.environment), ᶜS .* ᶜΔ⁰, scale)
+        ᶜgrid_share = CA.water_tag_fraction.(Y.c.ρq_tag_tropo, Y.c.ρq_tot)
+        @test maximum(
+            abs,
+            parent(parts.environment.ρq_tag_tropo) .-
+            parent(ᶜΔ⁰ .* ᶜgrid_share),
+        ) > 1e-6 * scale
+        # The tags' precipitation integrates the same increments: `tag`'s part
+        # alone, computed into scratch, without allocating.
         tag_pr(tag, phase) = copy(
             CA.water_tag_precipitation!(
                 similar(p.scratch.ᶠtemp_field_level),
@@ -250,18 +305,44 @@ end
                 phase,
             ),
         )
-        (tropo, strat) = (model.tags[1], model.tags[2])
+        column(ᶜx) = (
+            out = similar(p.scratch.ᶠtemp_field_level);
+            CA.Operators.column_integral_definite!(out, ᶜx);
+            out
+        )
+        for tag in model.tags
+            @test isapprox(
+                parent(tag_pr(tag, Val(:all))),
+                parent(column(CA.tag_field(ᶜincrements, tag)));
+                rtol = 1e-12,
+            )
+        end
         pr = p.precomputed.surface_rain_flux .+ p.precomputed.surface_snow_flux
+        prra = p.precomputed.surface_rain_flux
         @test maximum(abs, parent(pr)) > 0
+        # Over the partition, `pr` and `prra` up to the partition's residual
+        # and the copies' own. DYCOMS is warm, so the rain is all of it.
         @test relative_difference(
             tag_pr(tropo, Val(:all)) .+ tag_pr(strat, Val(:all)),
             pr,
-        ) < 1e-3
-        @test isapprox(
-            parent(tag_pr(tropo, Val(:rain)) .+ tag_pr(tropo, Val(:snow))),
-            parent(tag_pr(tropo, Val(:all)));
-            rtol = 1e-12,
-        )
+        ) < 1e-2
+        @test relative_difference(
+            tag_pr(tropo, Val(:rain)) .+ tag_pr(strat, Val(:rain)),
+            prra,
+        ) < 1e-2
+        @test all(iszero, parent(tag_pr(tropo, Val(:snow))))
+        out = similar(p.scratch.ᶠtemp_field_level)
+        CA.water_tag_precipitation!(out, Y, p, tropo, Val(:all))
+        @test (@allocated CA.water_tag_precipitation!(
+            out,
+            Y,
+            p,
+            tropo,
+            Val(:all),
+        )) <= 64
+        # The split on the implicit path allocates next to nothing.
+        CA.add_rainout_increments!(ᶜincrements, Y, p, model)
+        @test (@allocated CA.add_rainout_increments!(ᶜincrements, Y, p, model)) <= 64
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "pr_tag_tropo")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "prsn_tag_evap")
     end
@@ -289,17 +370,78 @@ end
         default = run_simulation(default_dict, "water_tags_edmf_0m_default")
         Y_default = default.integrator.u
         p_default = default.integrator.p
-        CA.set_precomputed_quantities!(Y_default, p_default, default.integrator.t)
+        t_default = default.integrator.t
+        CA.set_precomputed_quantities!(Y_default, p_default, t_default)
         model = p_default.atmos.water_tagging_model
+        turbconv_model = p_default.atmos.turbconv_model
         @test !CA.has_water_tag_updraft_copies(model)
         @test CA.splits_rainout(p_default, :microphysics)
+        (; ᶜΔʲ, ᶜΔ⁰, ᶜS, scale) = rainout_inputs(Y_default, p_default)
+        @test maximum(abs, parent(ᶜΔʲ)) > 0
+        @test maximum(abs, parent(ᶜΔ⁰)) > 0
+
+        # The exchange's tendency, before and after the split has written the
+        # exchange's scratch, is the same bit for bit.
+        exchange() = (
+            Yₜ = zero(Y_default);
+            CA.sgs_exchange_of_water_tags!(
+                Yₜ,
+                Y_default,
+                p_default,
+                turbconv_model,
+                model,
+            );
+            Yₜ
+        )
+        before = exchange()
+        parts = subdomain_parts(Y_default, p_default, model)
+        @test isequal(parent(exchange().c), parent(before.c))
+
+        # Each subdomain's shares are the grid mean's, partition-normalized,
+        # plus that subdomain's difference from the exchange, times `S`.
+        inputs = CA.water_exchange_inputs!(
+            Y_default,
+            p_default,
+            turbconv_model,
+            model,
+        )
+        (; ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio, flags) = inputs
+        ᶜΔφ⁰ = CA.ShareDifferences(flags, true).(ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio)
+        ᶜΔφʲ = CA.ShareDifferences(flags, false).(ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio)
+        differs = false
+        for (i, tag) in enumerate(model.tags)
+            share = CA.SplitShare(flags, Val(i))
+            ᶜφ̄ = CA.water_tag_fraction.(
+                CA.tag_field(Y_default.c, tag),
+                Y_default.c.ρq_tot,
+            )
+            ᶜφʲ = share.(ᶜε̄, ᶜΔφʲ, ᶜS, ᶜφ̄)
+            ᶜφ⁰ = share.(ᶜε̄, ᶜΔφ⁰, ᶜS, ᶜφ̄)
+            @test same_to_rounding(
+                CA.tag_field(parts.updraft, tag),
+                ᶜΔʲ .* ᶜφʲ,
+                scale,
+            )
+            @test same_to_rounding(
+                CA.tag_field(parts.environment, tag),
+                ᶜΔ⁰ .* ᶜφ⁰,
+                scale,
+            )
+            differs |= maximum(abs, parent(ᶜφʲ) .- parent(ᶜφ⁰)) > 1e-6
+        end
+        # The exchange acts here, so the two subdomains' shares differ.
+        @test differs
+        partition(ᶜx) = ᶜx.ρq_tag_tropo .+ ᶜx.ρq_tag_strat
+        @test same_to_rounding(partition(parts.updraft), ᶜS .* ᶜΔʲ, scale)
+        @test same_to_rounding(partition(parts.environment), ᶜS .* ᶜΔ⁰, scale)
         ᶜincrements = CA._water_fix_fields(Y_default.c.ρ, model.tags)
         CA.add_rainout_increments!(ᶜincrements, Y_default, p_default, model)
-        @test all(isfinite, parent(ᶜincrements.ρq_tag_strat))
-        @test relative_difference(
-            ᶜincrements.ρq_tag_tropo .+ ᶜincrements.ρq_tag_strat,
-            p_default.precomputed.ᶜρ_dq_tot_dt,
-        ) < 1e-3
+        @test (@allocated CA.add_rainout_increments!(
+            ᶜincrements,
+            Y_default,
+            p_default,
+            model,
+        )) <= 64
         test_same_model_fields(Y_default, Y_plain)
     end
 end
