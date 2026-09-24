@@ -1664,8 +1664,8 @@ end
             for name in (partition_names..., :ρq_tag_evap)
                 block = matrix[c(name), c(mass)]
                 ᶜJv = @. block * ᶜv
-                ᶜfinite_difference =
-                    @. dtγ * (getproperty(moved, name) - getproperty(base, name)) / h
+                (ᶜmoved, ᶜbase) = (getproperty(moved, name), getproperty(base, name))
+                ᶜfinite_difference = @. dtγ * (ᶜmoved - ᶜbase) / h
                 Jv_scale = maximum(abs, parent(ᶜJv))
                 @test Jv_scale > 0
                 @test maximum(
