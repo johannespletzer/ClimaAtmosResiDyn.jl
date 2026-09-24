@@ -105,7 +105,7 @@ FAMILY_TABLES = {
         # records and vapour-share diagnostics, none of which are parent
         # state (S1). q_gas_ is NOT excluded: it is a passive tracer that
         # must be bit for bit, not a diagnostic.
-        "excluded_parent_prefixes": ("e_src_", "e_prc_", "q_prc_", "e_tag_", "q_tag_", "qv_tag_", "pr_tag_"),
+        "excluded_parent_prefixes": ("e_src_", "e_prc_", "q_prc_", "e_tag_", "q_tag_", "qv_tag_", "pr_tag_", "prra_tag_", "prsn_tag_"),
     },
     "water": {
         "tag_var_prefix": "q_tag_",
@@ -115,7 +115,7 @@ FAMILY_TABLES = {
         "mode_key": "water_tag_updraft_copy",
         "total_var": "hus",
         "unit": "kg kg^-1",
-        "excluded_parent_prefixes": ("e_src_", "e_prc_", "q_prc_", "e_tag_", "q_tag_", "qv_tag_", "pr_tag_"),
+        "excluded_parent_prefixes": ("e_src_", "e_prc_", "q_prc_", "e_tag_", "q_tag_", "qv_tag_", "pr_tag_", "prra_tag_", "prsn_tag_"),
     },
 }
 
@@ -154,7 +154,7 @@ PARITY_BREAKING_YAML_FLAGS = ("use_krylov_method", "use_newton_rtol")
 # FAMILY_TABLES's per-family one. Covers both families' tags, ledgers and
 # process records; q_tag_res and q_tag_fix_* are covered by the plain
 # "q_tag_" prefix, not listed separately.
-PARITY_ONLY_EXCLUDED_PREFIXES = ("q_tag_", "qv_tag_", "e_src_", "e_tag_", "e_prc_", "q_prc_", "pr_tag_")
+PARITY_ONLY_EXCLUDED_PREFIXES = ("q_tag_", "qv_tag_", "e_src_", "e_tag_", "e_prc_", "q_prc_", "pr_tag_", "prra_tag_", "prsn_tag_")
 # The tag-family's own config keys, which legitimately differ between a
 # tagged run and its untagged twin (the untagged twin has no tags to name).
 PARITY_ONLY_EXTRA_ALLOWED_KEYS = {
@@ -167,7 +167,9 @@ PARITY_ONLY_EXTRA_ALLOWED_KEYS = {
     "energy_source_closure_check",
     "energy_process_record",
 }
-PARITY_ONLY_EXTRA_ALLOWED_PREFIXES = ("energy_source_tag_",)
+# The water tags' own switches (`water_tag_updraft_copy`, `water_tag_transport`)
+# change only the tags, so they may differ too.
+PARITY_ONLY_EXTRA_ALLOWED_PREFIXES = ("energy_source_tag_", "water_tag_")
 
 
 def parse_hour(raw):
