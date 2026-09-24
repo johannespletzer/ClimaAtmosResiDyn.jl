@@ -1117,6 +1117,26 @@ end
         )
     end
 
+    # The owner's review of #102, point 4: on two equal cells with mismatch
+    # (1, -0.1), spreading the column's total by |m| leaves out (0.818,
+    # 0.082) and moves (0.182, -0.182), more than the second cell's mismatch.
+    # By the same-sign rule it leaves out (0.9, 0) and moves (0.1, -0.1).
+    @testset "The part left out goes where the mismatch has its sign" begin
+        for m in ([1.0, -0.1], [-1.0, 0.1], [0.3, 0.3], [0.5, -0.5])
+            M = sum(m)
+            weight = CA.water_increment_left_weight.(m, M)
+            left = sum(weight) > 0 ? M .* weight ./ sum(weight) : zero(m)
+            moved = m .- left
+            @test sum(left) ≈ M atol = 1e-15
+            @test abs(sum(moved)) < 1e-15
+            @test all(abs.(moved) .<= abs.(m) .+ 1e-15)
+            @test all(left .* m .>= 0)
+        end
+        m = [1.0, -0.1]
+        weight = CA.water_increment_left_weight.(m, sum(m))
+        @test sum(m) .* weight ./ sum(weight) ≈ [0.9, 0.0]
+    end
+
     @testset "The model's refusals" begin
         # Without a partition the source tags would take the parent's whole
         # implicit transport.
@@ -1143,6 +1163,44 @@ end
             names,
             model,
         )
+        # A uniform gap of half a percent, 2.5 times the closure budget, is
+        # refused too (the owner's review of #102).
+        @test_throws r"sum to 1 only to within" CA._check_water_increment_partition(
+            masks([0.5, 0.5, 0.5], [0.495, 0.495, 0.495]),
+            names,
+            model,
+        )
+        # A region and its complement, as the model builds them on a column,
+        # pass in both float types.
+        for FT in (Float32, Float64)
+            region(above) = CA.TanhAltitudeRegion(FT(750), FT(100), above)
+            column_tags = (
+                CA.WaterTag{:tropo}(region(false)),
+                CA.WaterTag{:strat}(region(true)),
+            )
+            column_model = CA.WaterTaggingModel(
+                column_tags;
+                transport = CA.IncrementWaterTagTransport(),
+            )
+            ᶜcoordinates = CA.Fields.coordinate_field(
+                CA.ClimaCore.CommonSpaces.ColumnSpace(
+                    FT;
+                    z_min = 0,
+                    z_max = 1500,
+                    z_elem = 64,
+                    staggering = CA.ClimaCore.CommonSpaces.CellCenter(),
+                ),
+            )
+            column_masks = CA._tag_masks(ᶜcoordinates, column_tags)
+            @test isnothing(
+                CA._check_water_increment_partition(
+                    column_masks,
+                    CA.water_region_tag_state_names(column_model),
+                    column_model,
+                ),
+            )
+            @test CA.water_increment_partition_tolerance(FT) == 100 * eps(FT)
+        end
         # The default transport only warns about a gap, elsewhere.
         @test isnothing(
             CA._check_water_increment_partition(

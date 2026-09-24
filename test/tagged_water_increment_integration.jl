@@ -167,13 +167,17 @@ altitude_region(above) = Dict{String, Any}(
         @test all(iszero, parent(dY.c.sgsʲs))
         @test all(iszero, parent(dY.f))
 
-        # The part left in place is the column's total of the mismatch,
-        # spread in proportion to its absolute value.
+        # The part left out is the column's total of the mismatch, spread over
+        # the cells whose mismatch has the total's sign, in proportion to it.
+        # The manufactured mismatch has both signs, so the rule is tested
+        # where it differs from spreading by |m|.
         δ_total = sum(ᶜδ)
         ᶜabs_δ = abs.(ᶜδ)
-        ᶜleft = @. δ_total / $(sum(ᶜabs_δ)) * ᶜabs_δ
+        ᶜweight = δ_total >= 0 ? max.(ᶜδ, 0) : max.(.-ᶜδ, 0)
+        ᶜleft = @. δ_total / $(sum(ᶜweight)) * ᶜweight
         scale = maximum(abs, parent(ᶜδ))
         @test abs(δ_total) > 0.1 * sum(ᶜabs_δ)
+        @test minimum(parent(ᶜδ)) < 0 < maximum(parent(ᶜδ))
         @test maximum(
             abs,
             parent(dtγ .* dY.c.q_tag_inc_left) .- parent(ᶜleft),
@@ -184,6 +188,13 @@ altitude_region(above) = Dict{String, Any}(
         ) < 100 * eps(FT) * scale
         ᶜmoved = dtγ .* dY.c.q_tag_inc_moved
         @test abs(sum(ᶜmoved)) < 100 * eps(FT) * sum(ᶜabs_δ)
+        # No cell leaves out or moves more than its own mismatch, and what it
+        # leaves out has the mismatch's sign.
+        ᶜleft_run = dtγ .* dY.c.q_tag_inc_left
+        tolerance = 100 * eps(FT) * scale
+        @test all(abs.(parent(ᶜmoved)) .<= abs.(parent(ᶜδ)) .+ tolerance)
+        @test all(abs.(parent(ᶜleft_run)) .<= abs.(parent(ᶜδ)) .+ tolerance)
+        @test all(parent(ᶜleft_run) .* parent(ᶜδ) .>= -tolerance^2)
         @test isapprox(sum(dtγ .* dY.c.q_tag_inc_left), δ_total; rtol = 1e-12)
 
         # The partition takes the part moved, cell by cell.
@@ -323,8 +334,8 @@ altitude_region(above) = Dict{String, Any}(
         # The audit's columns and the diagnostics read the ledger.
         audit = CA.water_tag_extra_audit(Y, p, model, FT(1))
         @test isequal(audit.increment_left, left)
-        @test audit.increment_left_gross ≈ sum(abs.(Y.c.q_tag_inc_left))
-        @test audit.increment_moved_gross ≈ sum(ᶜabs)
+        @test audit.increment_left_net_abs ≈ sum(abs.(Y.c.q_tag_inc_left))
+        @test audit.increment_moved_net_abs ≈ sum(ᶜabs)
         @test hasproperty(audit, :exchange_volume_fraction)
         ᶜleft_specific = CA.Diagnostics.compute_q_tag_ledger!(
             nothing,
