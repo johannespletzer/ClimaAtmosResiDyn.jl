@@ -1335,24 +1335,26 @@ end
             (; negative_updraft = true),
         )
 
-        for _ in 1:2000
+        (finite, sums, sources) = (true, true, true)
+        for _ in 1:2000, environment in (true, false)
             cell = random_cell(FT; kwargs...)
-            for environment in (true, false)
-                Δφ = CA.ShareDifferences(flags, environment)(
-                    cell.εʲ,
-                    cell.ε̄,
-                    cell.room,
-                    cell.ratio,
-                )
-                φ = map(
-                    i -> share(i)(cell.ε̄, Δφ, cell.S, cell.fallbacks[i]),
-                    (1, 2, 3),
-                )
-                @test all(isfinite, φ)
-                @test isapprox(φ[1] + φ[2], cell.S; atol = 100 * eps(FT))
-                @test 0 <= φ[3] <= 1
-            end
+            Δφ = CA.ShareDifferences(flags, environment)(
+                cell.εʲ,
+                cell.ε̄,
+                cell.room,
+                cell.ratio,
+            )
+            φ = map(
+                i -> share(i)(cell.ε̄, Δφ, cell.S, cell.fallbacks[i]),
+                (1, 2, 3),
+            )
+            finite &= all(isfinite, φ)
+            sums &= isapprox(φ[1] + φ[2], cell.S; atol = 100 * eps(FT))
+            sources &= 0 <= φ[3] <= 1
         end
+        @test finite
+        @test sums
+        @test sources
     end
 
     # The split applies under 0M with prognostic EDMF only. Elsewhere,
