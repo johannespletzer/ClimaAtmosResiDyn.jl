@@ -63,7 +63,9 @@ function test_same_model_fields(Y, Y_plain)
     # The tags, and in the default mode under `increment`, the default under
     # EDMF, the follower's ledger.
     is_tag(name) =
-        startswith(string(name), "ρq_tag_") || CA.is_water_tag_ledger_name(name)
+        startswith(string(name), "ρq_tag_") ||
+        CA.is_water_tag_ledger_name(name) ||
+        CA.is_tag_mechanism_ledger_name(name)
     @test Set(filter(!is_tag, propertynames(Y.c))) ==
           Set(propertynames(Y_plain.c))
     for name in propertynames(Y_plain.c)

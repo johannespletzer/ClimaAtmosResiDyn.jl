@@ -94,6 +94,9 @@ import ..water_tag_precipitation_residual!
 
 # energy_source_tagging_model
 import ..EnergySourceTaggingModel
+import ..WATER_TAG_ALL_MECHANISM_NAMES
+import ..ENERGY_SOURCE_MECHANISM_NAMES
+import ..tag_state_ledger_names
 import ..energy_source_region_tag_state_names
 import ..follows_implicit_increment
 
