@@ -1173,10 +1173,11 @@ end
         # A region and its complement, as the model builds them on a column,
         # pass in both float types.
         for FT in (Float32, Float64)
-            region(above) = CA.TanhAltitudeRegion(FT(750), FT(100), above)
+            column_region(above) =
+                CA.TanhAltitudeRegion(FT(750), FT(100), above)
             column_tags = (
-                CA.WaterTag{:tropo}(region(false)),
-                CA.WaterTag{:strat}(region(true)),
+                CA.WaterTag{:tropo}(column_region(false)),
+                CA.WaterTag{:strat}(column_region(true)),
             )
             column_model = CA.WaterTaggingModel(
                 column_tags;
