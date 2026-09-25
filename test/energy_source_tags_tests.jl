@@ -1939,3 +1939,176 @@ end
         end
     end
 end
+
+# The ratios of a tag's own ledgers (the owner's decision of 2026-09-25): the
+# signed inventory for a pure region tag, the absolute burden for a source tag
+# or a tag with negative parts, the parent scale beside them, and an explicit
+# "not applicable" below the small-tag bound.
+@testset "The ratios of each tag's own ledgers" begin
+    # The ratios on their own. A source tag the repair has put back to zero
+    # holds nothing, so no ratio to it applies, and the flag says so.
+    ratios = CA.tag_ledger_normalization(2.0, 0.0, 0.0, 1.0e4)
+    @test isnan(ratios.inventory_fraction) && isnan(ratios.burden_fraction)
+    @test ratios.parent_fraction == 2.0e-4
+    @test ratios.applicable == 0
+    # A negative tag: no inventory ratio, a burden ratio.
+    ratios = CA.tag_ledger_normalization(2.0, -100.0, 100.0, 1.0e4)
+    @test isnan(ratios.inventory_fraction)
+    @test ratios.burden_fraction == 0.02
+    @test ratios.applicable == 1
+    # Below the bound, 2e-4 of the parent, a ratio to the tag does not apply,
+    # and it is still reported.
+    ratios = CA.tag_ledger_normalization(2.0, 1.0, 1.0, 1.0e5)
+    @test ratios.burden_fraction == 2
+    @test ratios.applicable == 0
+    @test CA.tag_ledger_normalization(2.0, 20.0, 20.0, 1.0e5).applicable == 1
+    # Without a parent scale only an empty tag is not applicable.
+    ratios = CA.tag_ledger_normalization(2.0, 1.0, 1.0, NaN)
+    @test isnan(ratios.parent_fraction)
+    @test ratios.applicable == 1
+    @test CA.tag_ledger_normalization(2.0, 0.0, 0.0, NaN).applicable == 0
+    # A tag that is not finite is not reported as not applicable.
+    @test isnan(CA.tag_ledger_normalization(2.0, NaN, NaN, 1.0e4).applicable)
+
+    # On a column, through the audit, with the repair on and off. Four cells of
+    # 1 m, so an integral is the sum of the cells.
+    CC = CA.ClimaCore
+    FT = Float64
+    column(staggering) = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 4,
+        z_elem = 4,
+        staggering,
+    )
+    ᶜspace = column(CC.CommonSpaces.CellCenter())
+    function cells(values)
+        field = zeros(ᶜspace)
+        parent(field) .= reshape(FT.(values), size(parent(field)))
+        return field
+    end
+    tags = (
+        CA.EnergySourceTag{:strat}(CA.TanhAltitudeRegion(FT(2), FT(0.1))),
+        CA.EnergySourceTag{:tropo}(CA.TanhAltitudeRegion(FT(2), FT(0.1), false)),
+        CA.EnergySourceTag{:heat}(nothing, :surface_flux),
+        CA.EnergySourceTag{:cool}(nothing, :radiation),
+    )
+    tag_model(repair) = CA.EnergySourceTaggingModel(
+        tags,
+        FT(100);
+        repair,
+        transport = CA.EnthalpyIncrementEnergySourceTransport(),
+        ledger_per_tag = true,
+    )
+    function column_case(model; heat, cool)
+        names = (
+            :ρ,
+            :ρe_tot,
+            :ρe_src_strat,
+            :ρe_src_tropo,
+            :ρe_src_heat,
+            :ρe_src_cool,
+            :prc_e_radiation,
+            :prc_e_surface_flux,
+            CA.energy_source_mechanism_names(model)...,
+            CA.energy_source_increment_ledger_names(model)...,
+            CA.energy_source_per_tag_ledger_names(model)...,
+        )
+        Y = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{names, NTuple{length(names), FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(column(CC.CommonSpaces.CellFace())),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        parent(Y) .= 0
+        Y.c.ρ .= 1
+        # The offset total is 1100 in each cell, split by height.
+        Y.c.ρe_tot .= 1000
+        Y.c.ρe_src_strat .= cells([0, 0, 1100, 1100])
+        Y.c.ρe_src_tropo .= cells([1100, 1100, 0, 0])
+        Y.c.ρe_src_heat .= cells(heat)
+        Y.c.ρe_src_cool .= cells(cool)
+        # The interim parent scale: Σ ∫|prc_e|, 4 × 10 + 4 × 25000.
+        Y.c.prc_e_radiation .= -10
+        Y.c.prc_e_surface_flux .= 25000
+        atmos = (; water_tagging_model = nothing, energy_source_tagging_model = model)
+        keyed(f) = NamedTuple{CA.energy_source_tag_state_names(model)}(
+            ntuple(_ -> f(), length(tags)),
+        )
+        p = (;
+            atmos,
+            scratch = (; ᶜtemp_scalar = zeros(ᶜspace)),
+            tagging = (;
+                ᶜenergy_source_fix = keyed(() -> zeros(ᶜspace)),
+                ᶜenergy_source_fix_gross = keyed(() -> CA._throughput_field(Y.c.ρ)),
+                ᶜenergy_source_fix_count = keyed(() -> CA._throughput_field(Y.c.ρ)),
+                ᶜenergy_source_pos = zeros(ᶜspace),
+                ᶜenergy_source_neg = zeros(ᶜspace),
+                CA.tag_ledger_step_cache(Y, atmos)...,
+            ),
+        )
+        return Y, p
+    end
+    parent_scale = 4 * 10 + 4 * 25000.0
+    bound = CA.TAG_LEDGER_SMALL_TAG_BOUND * parent_scale
+
+    # Repair on. `heat` dips below zero in one cell, and the repair puts 2 J
+    # back, so its ledger retains 2 and the tag then holds nothing: a source
+    # tag with zero inventory. `cool` is positive and below the bound.
+    Y, p = column_case(tag_model(true); heat = [-2, 0, 0, 0], cool = [3, 1, 2, 4])
+    CA.repair_energy_source_tags!(Y, p)
+    CA.accumulate_tag_ledger_gross!((; u = Y, p))
+    @test all(iszero, parent(Y.c.ρe_src_heat))
+    @test CA.energy_source_ledger_parent_scale(Y) == parent_scale
+    audit = CA.energy_source_audit(Y, p, p.atmos.energy_source_tagging_model, FT(1))
+    @test audit.ledger_parent_scale == parent_scale
+    @test audit.led_fix_heat_retained == 2
+    @test isnan(audit.led_fix_heat_inventory_fraction)
+    @test isnan(audit.led_fix_heat_burden_fraction)
+    @test audit.led_fix_heat_parent_fraction == 2 / parent_scale
+    @test audit.led_fix_heat_applicable == 0
+    # `cool`: 10 J against a bound of about 20. Its ratios are reported, and
+    # flagged as not applicable.
+    @test 10 < bound
+    @test audit.led_fix_cool_burden_fraction == 0
+    @test audit.led_fix_cool_applicable == 0
+    # The region tags hold 2200 J each and have no negative parts, so both
+    # ratios to them are the same number, and they apply.
+    @test audit.led_fix_strat_inventory_fraction ==
+          audit.led_fix_strat_burden_fraction
+    @test audit.led_fix_strat_applicable == 1
+
+    # Repair off. The tags keep their negative values, and the repair's
+    # ledgers stay zero. `cool` is negative throughout, and `heat` has
+    # positive and negative parts whose total is nearly zero. What the
+    # increment correction retained is set by hand, 2 J for `cool` and 1 J for
+    # `heat`, as a run would accumulate it.
+    heat = [500, 500, -500, -500 + 1e-6]
+    cool = [-30, -10, -20, -40]
+    Y, p = column_case(tag_model(false); heat, cool)
+    CA.repair_energy_source_tags!(Y, p)
+    @test parent(Y.c.ρe_src_cool) == reshape(FT.(cool), size(parent(Y.c.ρe_src_cool)))
+    @test all(iszero, parent(Y.c.e_src_led_fix_cool))
+    (; ledgers) = p.tagging.tag_ledger_steps
+    ledgers.e_src_led_inc_cool.ᶜgross .= 0.5
+    ledgers.e_src_led_inc_heat.ᶜgross .= 0.25
+    audit = CA.energy_source_audit(Y, p, p.atmos.energy_source_tagging_model, FT(1))
+    # The negative tag: no inventory ratio, the burden ratio 2 / 100.
+    @test audit.led_inc_cool_retained == 2
+    @test isnan(audit.led_inc_cool_inventory_fraction)
+    @test audit.led_inc_cool_burden_fraction ≈ 0.02
+    @test audit.led_inc_cool_parent_fraction ≈ 2 / parent_scale
+    @test audit.led_inc_cool_applicable == 1
+    # The nearly cancelling tag: its signed total is about 1e-6 J, so the
+    # inventory ratio is about 1e6, set by the cancellation and not by the
+    # correction. The burden ratio is 1 / 2000.
+    @test audit.led_inc_heat_inventory_fraction > 1e5
+    @test audit.led_inc_heat_burden_fraction ≈ 1 / 2000
+    @test audit.led_inc_heat_applicable == 1
+    # Without process records there is no parent scale yet.
+    @test isnan(CA.energy_source_ledger_parent_scale((; c = (; ρ = Y.c.ρ))))
+end
