@@ -457,6 +457,36 @@ altitude_region(above) = Dict{String, Any}(
         @test energy_audit.led_inc_strat_retained > 0
         @test 0 < energy_audit.led_inc_strat_inventory_fraction < Inf
         @test energy_audit.ledger_cadence_step == 1
+        # G4.4: the residual's source ledger has no tag, so no inventory.
+        @test energy_audit.led_src_res_retained >= 0
+        @test !hasproperty(energy_audit, :led_src_res_inventory_fraction)
+        # The residual report, from two checks: the second has rates.
+        closure = CA.tag_closure(
+            Y,
+            p,
+            CA.energy_source_closure_total(energy_model),
+            CA.energy_source_region_tag_state_names(energy_model),
+        )
+        previous = Ref{Any}(nothing)
+        first_report =
+            CA.energy_source_residual_report(Y, p, energy_model, closure, 0.0, previous)
+        @test isnan(first_report.flush_rate)
+        @test first_report.flush_gross == energy_audit.led_src_res_retained
+        @test first_report.residual_max >= 0
+        @test 0 <= first_report.residual_peak_fraction <= 1
+        @test 1 <= first_report.residual_peak_level
+        previous[] = (;
+            t = -3600.0,
+            G = closure.gross_residual,
+            F = first_report.flush_gross / 2,
+        )
+        report =
+            CA.energy_source_residual_report(Y, p, energy_model, closure, 0.0, previous)
+        # Defined wherever the loss rule flushed anything.
+        @test (report.flush_rate > 0) == (first_report.flush_gross > 0)
+        headroom = CA.energy_source_headroom(Y, p, energy_model)
+        @test headroom.headroom_min > 0
+        @test isfinite(headroom.headroom_min_z)
     end
 
     # 3. The model's own fields.

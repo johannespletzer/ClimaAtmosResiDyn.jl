@@ -286,6 +286,58 @@ is a convention, so a value tuned for one energy reference means something
 different under another. Calibrate it against a first run of your own
 configuration.
 
+A second warning level, `throughput_tolerance`, is compared with
+`gross_over_throughput` instead, which does not depend on the reference. It
+needs `energy_source_tag_ledger_per_tag: true`, and defaults to `~`, since no
+level has been approved. The healthy runs of the tag-closure experiments reached
+at most 4.5e-3 under `enthalpy_increment`, in their first two hours on a
+sphere, and 3.4e-2 under the `enthalpy` audit. Under `tracer` the gross is
+transport error, which does not scale with the sources: a one-hour
+precipitating column reached 26 times its throughput.
+
+Warning levels, the void level and `abort_above` are kept apart, and none of
+them says whether a run is acceptable (see [Configuring
+Tracers](tracer_configuration.md)). An experiment scores its runs afterwards,
+from these tables, against thresholds it fixes in advance.
+
+### The residual report
+
+Every row of `energy_source_tag_closure.csv` also carries the offset's
+headroom: `headroom_min`, the smallest `e_tot + c` in the domain in J kg⁻¹, and
+`headroom_min_z`, its height. `nonpositive_fraction` moves only once a cell
+has crossed zero; the headroom shows the margin before that. With
+`energy_source_tag_ledger_per_tag: true` the row also carries
+`source_throughput`, the gross energy the sources have put into the tags since
+the start, and `gross_over_throughput`, the gross residual over it. That ratio
+does not depend on the energy reference, as `gross_relative` does. These
+columns come after the spin-up columns, and before `void` where the check has
+a void level.
+
+With `audit: true` the audit table also says where the residual `R` sits, and
+what the tags that carry sources do against the partition they overlay:
+
+  - `residual_max`, the largest `|R|/ρ` in J kg⁻¹, and `residual_max_z`;
+  - `residual_peak_level`, the level whose layer holds the largest part of the
+    gross residual, counted from the surface, `residual_peak_fraction`, that
+    part, and `residual_peak_z`, the level's mean height;
+  - `overlay_negative_mass_fraction`, the air mass where a source tag is
+    negative; `overlay_excess` and `overlay_excess_mass_fraction`, the energy
+    and the air mass where a source tag holds more than the partition's sum.
+
+With `energy_source_tag_ledger_per_tag: true` it also gives a forecast. The
+loss rule takes from every tag by its share, so each loss flushes part of the
+residual: a loss `Δ⁻` in a cell changes `R` by `-(R/E) Δ⁻`. The residual's own
+source ledger, `e_src_led_src_res`, records what the sources did to it, and
+its per-step gross is the flush, `flush_gross`. Between two checks the report
+writes the rate the residual is flushed at, `flush_rate` per day, what the
+rest of the run added to it, `production_rate`, and the level at which the two
+would balance, `settling_level`, with `settling_ratio`, that level over the
+present gross. The first row, and the first after a restart, write `NaN` for
+the rates. The flush rate is not constant, so the settling level is an order
+of magnitude, not a prediction.
+
+None of these is a verdict. They say where to look.
+
 ### Checking per process
 
 `e_src_res` checks the region tags against their total. Two more checks test
@@ -646,6 +698,11 @@ column it checks that the model's state is bit for bit the one without tags.
     throughput is the difference of two rows. The source tags overlay the
     partition, so they are left out of the sum and each unit of source energy
     counts once;
+  - `e_src_led_src_res`, with the same key: what the sources' brackets did to
+    the residual `e_src_res`, the energy the partition's tags did not take.
+    With region masks that sum to one it is the loss rule's flush of the
+    residual. Its per-step gross is the audit's `flush_gross` (see
+    [The residual report](@ref));
   - `e_src_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
@@ -726,6 +783,12 @@ ClimaAtmos.energy_source_fraction
 ClimaAtmos.snapshot_energy_source_tags!
 ClimaAtmos.attribute_energy_source_tags!
 ClimaAtmos.energy_source_audit
+ClimaAtmos.energy_source_residual_report
+ClimaAtmos.energy_source_forecast
+ClimaAtmos.energy_source_headroom
+ClimaAtmos.energy_source_closure_columns
+ClimaAtmos.accumulate_energy_source_residual_source!
+ClimaAtmos.ENERGY_SOURCE_RESIDUAL_LEDGER
 ClimaAtmos.AbstractEnergySourceTransport
 ClimaAtmos.TracerEnergySourceTransport
 ClimaAtmos.EnthalpyEnergySourceTransport
