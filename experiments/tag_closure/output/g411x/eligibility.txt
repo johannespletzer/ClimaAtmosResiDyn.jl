@@ -1,0 +1,35 @@
+window: OD2's rule finds no end of startup; OD2's table's first hour is used
+window: startup ends at 3600.0 s; scored to 86400.0 s
+== g411_d4_copies: throughput 2.0038e+07 J/m² over the window, exact (the audit's source_throughput)
+   own residual 1.170e-05 of it (at most 0.0002); repair 3.107e-02 a day (at most 0.002)
+   e_src_copy_res: ∫ρ|res|dz up to 6.1119e+04 J/m², mean 3.6884e+04, over the throughput 3.050e-03
+   parity against g411_d4_untagged: 26 fields: bit for bit
+== g411_d4_copies_before: throughput 2.0039e+07 J/m² over the window, exact (the audit's source_throughput)
+   own residual 1.230e-05 of it (at most 0.0002); repair 2.718e-02 a day (at most 0.002)
+   parity against g411_d4_untagged: 26 fields: bit for bit
+== g411_d4_copies_dt60: throughput 1.9938e+07 J/m² over the window, exact (the audit's source_throughput)
+   own residual 2.845e-06 of it (at most 0.0002); repair 2.011e-02 a day (at most 0.002)
+   e_src_copy_res: ∫ρ|res|dz up to 7.1535e+04 J/m², mean 3.8809e+04, over the throughput 3.588e-03
+   parity against g411_d4_untagged: 26 fields: DIFFERS arup, clw, clwup, edt, evu, hus, husra, husraup, husup, lwp, pr, prra, rhoa, rhoaup, rwp, ta, tke, wa, waup
+== g411_d4_default: throughput 2.0032e+07 J/m² over the window, exact (the audit's source_throughput)
+   own residual 8.716e-06 of it (at most 0.0002); repair 7.316e-02 a day (at most 0.002)
+   parity against g411_d4_untagged: 26 fields: bit for bit
+== refinement: repair per day at dt 60 s over dt 120 s = 0.647 (at most 1.1)
+== default against g411_d4_copies per tag at 24 h: comparator not eligible; reported, not scored
+   strat: L1 8.166e-03, L∞ 6.678e-03: within
+   tropo: L1 6.509e-03, L∞ 6.521e-03: within
+   rad: L1 3.882e-03, L∞ 7.908e-03: within
+   sfc: L1 3.843e-03, L∞ 8.634e-03: within
+   sub (small, share 5.296e-03): ∫ρ|Δe|dz 4.409e-04 of the throughput: exceeds
+   mp (small, share 0.000e+00): ∫ρ|Δe|dz 0.000e+00 of the throughput: within
+   new_strat (small, share 3.083e-03): ∫ρ|Δe|dz 1.621e-04 of the throughput: within
+   new_tropo: L1 2.802e-03, L∞ 7.937e-03: within
+== default against g411_d4_copies_before per tag at 24 h: comparator not eligible; reported, not scored
+   strat: L1 9.047e-03, L∞ 7.393e-03: within
+   tropo: L1 7.200e-03, L∞ 7.216e-03: within
+   rad: L1 6.610e-03, L∞ 9.207e-03: within
+   sfc: L1 6.433e-03, L∞ 2.508e-02: within
+   sub (small, share 5.291e-03): ∫ρ|Δe|dz 4.657e-04 of the throughput: exceeds
+   mp (small, share 0.000e+00): ∫ρ|Δe|dz 0.000e+00 of the throughput: within
+   new_strat (small, share 3.082e-03): ∫ρ|Δe|dz 1.677e-04 of the throughput: within
+   new_tropo: L1 6.378e-03, L∞ 2.079e-02: within

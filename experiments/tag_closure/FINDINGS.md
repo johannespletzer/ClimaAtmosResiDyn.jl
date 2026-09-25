@@ -93,7 +93,7 @@ changes, which [RUNS.md](RUNS.md) records.
 | E45, E47, E51, E54, E55, E57, E58                | 6. Parity, Float32, MPI and restarts                |
 | E7–E9, E20–E24, E26, E28, E30, E38, E49, E63     | 7. The process records and the per-process checks   |
 | E50, E60, E69, E70, E74, E75, E81                | 8. The sphere and long runs                         |
-| E68, E72, E73, E76, E83                          | 9. Mixing: V3 and the updraft gap                   |
+| E68, E72, E73, E76, E83, E84                     | 9. Mixing: V3 and the updraft gap                   |
 | T1–T10, E44, E44b–E44e, E52, E56, E77, E78       | 10. Cost                                            |
 | M1–M8                                            | 11. Method                                          |
 | old claims, errata, conflicts                    | 12. Superseded and falsified claims                 |
@@ -2734,6 +2734,9 @@ energy source tags, a day, copies with and without the mirrors, a `dt` 60 s
 twin, the default mode and an untagged twin. The scale is OD4's gross source
 throughput. These runs predate its exact accumulator (#115), so it is the
 process records' lower bound, and every percentage here is an upper bound.
+*Corrected by E84: the process-record figure is 6% above the exact
+throughput here, so it is not a lower bound, and these percentages are
+estimates, not upper bounds. The verdict stands.*
 
 | run | own residual (at most 2e-4) | repair a day (at most 0.20%) | eligible |
 |:--- | ---------------------------:| ----------------------------:|:-------- |
@@ -2757,6 +2760,40 @@ process records' lower bound, and every percentage here is an upper bound.
 *`hpda2_compute`, 2026-09-25, jobs `13944458` to `13944462`, from
 `../ClimaAtmosResiDyn-g411-run` (the mirrors) and `-g411before-run`
 (`main`). `analysis/increment/g411_eligibility.py`; `output/g411/`.*
+
+**E84. E83's rerun with OD4's exact throughput: the energy copies' repair is
+3.1% of the throughput a day on D4 with the mirrors, so they remain no
+eligible comparator. The exact throughput is 6% below the process-record
+figure E83 took as a lower bound, so that figure is not a lower bound here,
+and E83's percentages were not upper bounds.** E83's five runs repeated with
+`energy_source_tag_ledger_per_tag: true` (configs `g411x_d4_*`, pre-registered
+in the mirrors' note, section 6), on a tree with #114 and #115; the rules
+unchanged.
+
+| run | throughput over the window (J/m²) | own residual (at most 2e-4) | repair a day (at most 0.20%) |
+|:--- | ---------------------------------:| ---------------------------:| ----------------------------:|
+| copies, with the mirrors      | 2.004e7 (E83's figure 2.123e7) | 1.2e-5 | 3.1% (E83: 2.9%) |
+| copies, before (`main`)       | 2.004e7 | 1.2e-5 | 2.7% (E83: 2.6%) |
+| copies, with the mirrors, `dt` 60 s | 1.994e7 | 2.8e-6 | 2.0% (E83: 1.9%) |
+
+  - Refinement passes (0.65). The copies and default runs are bit for bit the
+    untagged twin; the 60 s twin is compared with the 120 s untagged run and
+    differs, as two time steps must.
+  - **The interim scale.** OD4's interim, the process records' sum of the four
+    source processes, came out 6% above the exact per-tag accumulator. E83
+    and the interim rule called it a lower bound, so that every percentage on
+    it would be an upper bound. On this case it is neither. Either the
+    records count something the tags do not take, or the accumulator misses
+    a source; which is not established. The per-process comparison would
+    tell, and is open on #115. Until then, a percentage on the interim is an
+    estimate, not a bound.
+  - E83's verdict stands: with the exact scale the repair is 15.5 times its
+    bound.
+
+*`hpda2_compute`, 2026-09-25, jobs `13944938` to `13944942`, from
+`../ClimaAtmosResiDyn-g411x-run` (the record with #115 and #114) and
+`-g411xbefore-run` (with #115). `G411_PREFIX=g411x
+analysis/increment/g411_eligibility.py`; `output/g411x/`.*
 
 ## 10. Cost
 
