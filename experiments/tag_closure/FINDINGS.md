@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W43                                           | 1. Water tags                                       |
+| W1–W45                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -1578,6 +1578,46 @@ Newton iteration, first-order tracer upwinding, three tags.
 PR #121, on #105): the new group 133 of 133 in 26 min, the unit tests
 (`test/tagged_water_precipitation_tests.jl`) 42,088, `tagging_water` 111 and
 `tagging_water_increment_explicit` 38. `design/RAIN_SNOW_TAGS.md`, section 17.*
+
+**W45. WP4c's `vdiff` correction, V1: the correction takes the closed-form
+leak exactly (its ledger 1.948% of the water a day against the closed form's
+1.945%), and closure, parity and the ledgers hold. But the follower's work
+that `vdiff` drives does not fall. Part 2a rises from W40's 2.92% to 3.09% of
+the water a day, where V1 required at most 2.42%. Criterion 1 fails, so by
+the pre-registration the difference is investigated before anything else.**
+`design/WP4C_CORRECTIONS.md` section 8: the gate's probe on W40's default
+case (D4-W, 30 levels, a day) with `water_tag_leak_correction: true`, the
+same run tree otherwise; the window from 6600 s.
+
+| V1 criterion | W40, no correction | with the correction | pass |
+|:------------ | ------------------:| -------------------:|:---- |
+| 1. `vdiff`'s part 2a, the follower's moved gross on minus off, at most 2.42% a day | 2.92% | 3.09% | **fails** |
+| 2. part 1, the remainder, below 2e-4 a day; `q_tag_res` gross at 24 h within 0.2% | 1.3e-5; — | 1.4e-5; 8.4e-6 | holds |
+| 3. 37 parent fields against W25's untagged twin, bit for bit, every hourly output to 24 h | — | equal | holds |
+| 4. `∫q_tag_led_leaknet ρ dz` within 1e-12 of the water; `leaknet` against the tags' own leak ledgers to 1e-10 | — | 6.3e-18; 2.3e-15 | holds |
+
+  - **What moved.** `vdiff`'s growth of the tags' drift from the parent
+    (gross, on minus off) falls from 4.28% to 3.82% of the water a day. The
+    reference's whole moved gross falls from 4.57% to 4.37% (W25's tagged run
+    against this one). Part 2b for `tropo` rises from 3.2% to 3.4% of its
+    inventory.
+  - So the correction removes the closed-form leak from the tags'
+    tendency, but the follower's per-step correction of `vdiff`'s mismatch
+    does not shrink with it. The correction sits in the implicit EDMF
+    diffusive-flux tendency (`edmfx_sgs_diffusive_flux_tendency!`). Why part
+    2a rises is not established. The design names this outcome: the
+    correction does not take the leak's share of the follower's work.
+  - `wp4c_corr_compare.py` was fixed before this entry. Its parity check
+    compared values and passed when the two runs shared no output time. It
+    now compares bits, needs the twin to cover every output and exits 1 on a
+    failure. V1's result is the same under both.
+  - V2 (the copies, job `13973349`) is still running.
+
+*`hpda2_compute`, 2026-09-25, job `13973348`, run tree
+`../ClimaAtmosResiDyn-wp4c-corr-run` at `90f32566` (the gate's tree
+`52a666c5`, the record at `abbc2319`, `claude/water-tags-leak-correction` at
+`d0c0064a`, #119). `analysis/water/wp4c_gate_score.py --startup 6600`,
+`wp4c_corr_compare.py`; `output/wp4c_corr/`.*
 
 ## 2. Energy source tags: closure by transport
 

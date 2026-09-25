@@ -725,7 +725,11 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     the overlap with WP4b and the validation (V1, V2), pre-registered:
     [design/WP4C_CORRECTIONS.md](design/WP4C_CORRECTIONS.md). Open: the
     validation jobs; the default, the owner's call after V1.
-    *Submitted 2026-09-25:* V1 `13973348`, V2 `13973349`.
+    *Submitted 2026-09-25:* V1 `13973348`, V2 `13973349`. *V1 scored
+    (W45):* criterion 1 fails. The correction takes the closed-form leak
+    exactly, but `vdiff`'s part 2a rises from 2.92% to 3.09% a day (at most
+    2.42% required). Criteria 2 to 4 hold. By section 8 the difference is
+    investigated before anything else. [ ] That investigation. [ ] V2.
 
   - [ ] Review (xhigh) of each stage.
 

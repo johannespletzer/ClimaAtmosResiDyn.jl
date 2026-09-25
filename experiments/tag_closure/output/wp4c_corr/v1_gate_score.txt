@@ -1,0 +1,36 @@
+startup ends at 6600.0 s (given)
+
+== wp4c_corr_d4w_default: 720 steps, operators ['vdiff', 'sgs_mass_flux']
+-- established flow: 665 steps, 0.924 days, W = 11.6029 kg
+   vdiff: source -5.963e-20 (gross 1.933e-02), growth +4.958e-06 (gross 3.816e-02), remainder +2.079e-07 (gross 1.397e-05) of W a day
+      growth over source, gross: 1.975
+      part 1 (remainder > 0.0002 of W a day): no
+      part 2a (follower's moved, gross 3.090e-02 > 0.005): holds
+      part 2b, tropo: 3.425e-02 of its inventory over the window
+      part 2b, strat: 9.854e-03 of its inventory over the window
+      part 2b, evap: 1.954e-02 of its inventory over the window
+      part 2b, evap_tropo: 1.954e-02 of its inventory over the window
+      part 2b, evap_strat: 1.954e-02 of its inventory over the window
+      part 2b (> 0.02 for any tag): holds
+      part 3, ρq_tag_tropo: L1 3.105e-02, L∞ 8.198e-02: exceeds
+      part 3, ρq_tag_strat: L1 7.831e-03, L∞ 1.849e-02: within
+      part 3, ρq_tag_evap: L1 1.816e-02, L∞ 5.066e-02: exceeds
+      part 3, ρq_tag_evap_tropo: L1 1.816e-02, L∞ 5.066e-02: exceeds
+      part 3, ρq_tag_evap_strat (small): ∫|D|dz 2.173e-09 of the water, L1 1.816e-02, L∞ 5.066e-02: within
+      part 3: holds
+      VERDICT vdiff: retain (parts 2a, 2b, 3)
+   sgs_mass_flux: source +nan (gross nan), growth -4.784e-06 (gross 4.325e-02), remainder +7.782e-06 (gross 1.376e-05) of W a day
+      part 1 (remainder > 0.0002 of W a day): no
+      part 2a (follower's moved, gross 3.567e-02 > 0.005): holds
+      part 2b, tropo: 3.962e-02 of its inventory over the window
+      part 2b, strat: 1.113e-02 of its inventory over the window
+      part 2b, evap: 2.257e-02 of its inventory over the window
+      part 2b, evap_tropo: 2.257e-02 of its inventory over the window
+      part 2b, evap_strat: 2.257e-02 of its inventory over the window
+      part 2b (> 0.02 for any tag): holds
+      part 3: not assessable for this operator
+      VERDICT sgs_mass_flux: retain (parts 2a, 2b)
+-- startup (not scored): 55 steps, 0.076 days, W = 11.5841 kg
+   vdiff: source -1.666e-20 (gross 3.172e-03), growth -7.473e-07 (gross 1.542e-02), remainder -1.802e-06 (gross 1.883e-06) of W a day
+      growth over source, gross: 4.863
+   sgs_mass_flux: source +nan (gross nan), growth -1.101e-05 (gross 2.403e-02), remainder -2.085e-07 (gross 8.753e-07) of W a day

@@ -1,0 +1,5 @@
+RESULT run=wp4c_corr_d4w_default operator=sgs_mass_flux ledger=q_tag_led_leak_strat gross_per_day=4.5040240029722846e-5
+RESULT run=wp4c_corr_d4w_default operator=sgs_mass_flux ledger=q_tag_led_leak_evap gross_per_day=0.00010403012590362557
+RESULT run=wp4c_corr_d4w_default operator=sgs_mass_flux ledger=q_tag_led_leak_evap_tropo gross_per_day=0.00010403007343630258
+RESULT run=wp4c_corr_d4w_default operator=sgs_mass_flux ledger=q_tag_led_leak_evap_strat gross_per_day=5.2467324376873446e-11
+RESULT run=wp4c_corr_d4w_default steps=720 days=1.0 water=11.602852888830638

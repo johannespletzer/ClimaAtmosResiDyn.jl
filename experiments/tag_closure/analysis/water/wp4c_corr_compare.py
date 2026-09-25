@@ -14,7 +14,10 @@ diagnostics in `<run>_reference/output_0000/`. For each case it prints:
   - reported: the moved gross against W25's tagged run over the window, and
     the leak ledger's gross against the closed-form source in the gate CSV.
 The gate's parts are scored by `wp4c_gate_score.py CORR_DIR --startup 6600`.
-Nothing here is tuned after the runs.
+Nothing here is tuned after the runs. It exits 1 if a criterion fails or a
+case has no output; parity is bit for bit and needs the twin to cover every
+output time (fixed 2026-09-25, before V1 was recorded: it compared values
+and passed with no common output time).
 """
 import argparse
 import csv
@@ -58,6 +61,22 @@ def column(directory, name, rho):
     return (data * rho).sum(axis=1) * DZ
 
 
+def bits(a):
+    return np.ascontiguousarray(a, dtype=np.float64).view(np.uint64)
+
+
+def check_levels(directory):
+    """DZ assumes 30 uniform levels of 50 m; stop if the output says otherwise."""
+    (path,) = glob.glob(os.path.join(directory, "rhoa_1h_inst.nc"))
+    with nc.Dataset(path) as d:
+        z = np.asarray(d.variables["z"][:], dtype=float)
+    if not np.allclose(z, DZ * (np.arange(len(z)) + 0.5)):
+        raise SystemExit(f"FAIL: {directory} is not on uniform {DZ} m levels")
+
+
+failures = []
+
+
 def parent_names(directory):
     names = []
     for path in sorted(glob.glob(os.path.join(directory, "*_1h_inst.nc"))):
@@ -71,27 +90,41 @@ for reference in sorted(glob.glob(os.path.join(args.corr_dir, "*_reference/outpu
     run = os.path.basename(os.path.dirname(reference))[: -len("_reference")]
     print(f"== {run}")
     t, rho = read(reference, "rhoa")
+    if len(t) == 0:
+        print("  no output yet -> FAILS (not scored)")
+        failures.append(f"{run}: no output")
+        continue
+    check_levels(reference)
     water = column(reference, "hus", rho)
 
-    # Criterion 3: parity with the untagged twin, bit for bit.
+    # Criterion 3: parity with the untagged twin, bit for bit, at every output
+    # the reference wrote. The twin must have written each of those times; a
+    # field compared at no time fails.
     mismatches, compared = [], 0
     for name in parent_names(reference):
         if not glob.glob(os.path.join(UNTAGGED, f"{name}_1h_inst.nc")):
             continue
         t_ref, a = read(reference, name)
         t_twin, b = read(UNTAGGED, name)
-        n = min(len(t_ref), len(t_twin))
+        n = len(t_ref)
         compared += 1
-        if not (np.array_equal(t_ref[:n], t_twin[:n]) and np.array_equal(a[:n], b[:n], equal_nan=True)):
+        if n == 0 or len(t_twin) < n or a.shape[1:] != b.shape[1:]:
+            mismatches.append(f"{name} (times {n} against the twin's {len(t_twin)})")
+        elif not (np.array_equal(bits(t_ref), bits(t_twin[:n])) and np.array_equal(bits(a), bits(b[:n]))):
             mismatches.append(name)
-    print(f"  criterion 3 (parity): {compared} fields against the untagged twin, "
-          f"mismatches: {mismatches or 'none'} -> {'holds' if compared and not mismatches else 'FAILS'}")
+    holds = compared > 0 and not mismatches
+    print(f"  criterion 3 (parity): {compared} fields against the untagged twin, bit for bit, "
+          f"to {t[-1]/3600:.0f} h; mismatches: {mismatches or 'none'} -> {'holds' if holds else 'FAILS'}")
+    if not holds:
+        failures.append(f"{run}: parity")
 
     # Criterion 2: the partition's residual at the end.
     _, res = read(reference, "q_tag_res")
     gross = np.abs(res * rho).sum(axis=1) * DZ
     print(f"  criterion 2 (closure): q_tag_res gross at {t[-1]/3600:.0f} h = {gross[-1]/water[-1]:.3e} "
           f"of the water -> {'holds' if gross[-1] / water[-1] <= 2e-3 else 'FAILS'} (0.2% budget; part 1 in the gate score)")
+    if not gross[-1] / water[-1] <= 2e-3:
+        failures.append(f"{run}: closure")
 
     # Criterion 4: the ledgers.
     net = column(reference, "q_tag_led_leaknet", rho)
@@ -109,6 +142,8 @@ for reference in sorted(glob.glob(os.path.join(args.corr_dir, "*_reference/outpu
         holds = holds and upworst <= LEDGER_LIMIT
         line += f"; max |∫upleaknet dz| / water = {upworst:.2e}"
     print(line + f" -> {'holds' if holds else 'FAILS'}")
+    if not holds:
+        failures.append(f"{run}: ledgers")
 
     # Reported: the window's grosses per day over the water at the end.
     window = t >= args.startup
@@ -136,3 +171,7 @@ for reference in sorted(glob.glob(os.path.join(args.corr_dir, "*_reference/outpu
         moved_w = (moved_w[w_last] - moved_w[w_first]) / water_w[w_last] / days
         line += f"; without the correction (W25) {moved_w:.3e}; fall {moved_w - moved:+.3e}"
     print(line + f", over {t[first]/3600:.1f} h to {t[last]/3600:.1f} h")
+
+for f in failures:
+    print("FAIL " + f)
+raise SystemExit(1 if failures else 0)
