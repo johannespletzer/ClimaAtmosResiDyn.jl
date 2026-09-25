@@ -459,8 +459,12 @@ name, and another diagnostic of the family would take it:
   - `res` is reserved in both families. It is the closure residual,
     `q_tag_res` or `e_tag_res`.
   - A `water_tracers` name may not begin with `fix_`, `upfix_`, `inc_`,
-    `rtag_` or `stag_`. `fix_` begins the ledger `q_tag_fix_<name>`; the
-    others are held for diagnostics still to come.
+    `rtag_`, `stag_`, `fixgross_`, `fixcount_`, `upfixgross_`,
+    `upfixcount_`, `led_` or `aud_`. `fix_` begins the ledger
+    `q_tag_fix_<name>`, and `aud_` the microphysics audit's records
+    `q_rtag_aud_<name>` and `q_stag_aud_<name>` of
+    `water_tag_precipitation` (see [Tagged Water Tracers](tagged_water.md)).
+    The others begin other ledgers, or are held.
   - The underscore is part of each prefix, so names such as `fixed`, `income`
     and `rtagged` are allowed.
 

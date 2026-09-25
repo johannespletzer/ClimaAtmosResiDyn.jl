@@ -374,9 +374,123 @@ the model refuses it where they fail. A restart that changes
 before the default changed restarts only with `water_tag_transport: tracer`
 set.
 
+## Rain and snow parts
+
+`water_tag_precipitation: true` gives each tag three parts, as the design note
+WP4b-D recommends (`design/RAIN_SNOW_TAGS.md` on the record branch):
+
+| field | holds | the partition's parts sum to |
+|:----- |:----- |:---------------------------- |
+| `ρq_tag_<name>` | vapour, cloud liquid and cloud ice | ``\rho q_\mathrm{tot} - \rho q_\mathrm{rai} - \rho q_\mathrm{sno}`` |
+| `ρq_rtag_<name>` | rain | ``\rho q_\mathrm{rai}`` |
+| `ρq_stag_<name>` | snow | ``\rho q_\mathrm{sno}`` |
+
+So under the key `ρq_tag_<name>` holds only the non-precipitating water. The
+tag's total water is the sum of its parts, and `q_tag_<name>` reports that sum.
+Each part starts as its masked share of its compartment. A tag with a `source`
+starts at zero in every part.
+
+```yaml
+microphysics_model: "1M"
+water_tag_precipitation: true
+water_tracers:
+  - name: lower
+    region: {type: tanh_altitude, z_center: 3000.0, width: 300.0, above: false}
+  - name: upper
+    region: {type: tanh_altitude, z_center: 3000.0, width: 300.0}
+```
+
+The key needs 1-moment microphysics. It is refused under
+`turbconv: prognostic_edmfx` and `edonly_edmfx`, and with
+`water_tag_updraft_copy: true`: those are stages 2 and 3 of the note. A
+checkpoint written with the key restarts only with it, and one written without
+it only without it.
+
+What moves the parts:
+
+  - **Sedimentation.** Rain falls in each tag's rain part and snow in its snow
+    part, by the species' own operator applied to the part, as if the part
+    were the species. That is linear, so each part's Jacobian block is its
+    species' block, value for value, and the split solver solves each part
+    apart. The cloud falls in `ρq_tag_<name>` by the tag's share of the
+    non-precipitating water, with cross blocks to the cloud species only.
+  - **Advection.** Every part is advected as a tracer, as rain and snow are.
+    Under `water_tag_transport: increment` the non-precipitating parts follow
+    the parent's implicit increment of ``\rho q_\mathrm{tot} - \rho
+    q_\mathrm{rai} - \rho q_\mathrm{sno}``. ``\rho q_\mathrm{tot}`` is advected
+    implicitly with its rain and snow, while ``\rho q_\mathrm{rai}`` and
+    ``\rho q_\mathrm{sno}`` are advected explicitly. So each rain and snow part
+    keeps its explicit advection and gives it back to its tag's
+    non-precipitating part. The rain and snow parts follow their own implicit
+    terms, which are their species' by construction.
+  - **Diffusion.** Rain and snow take no vertical diffusion, hyperdiffusion or
+    viscous sponge, so neither do their parts. The non-precipitating parts
+    diffuse as the parent's diffusing water ``q_\mathrm{tot,eff}``, so the
+    paths `q_tag_leak_<path>` measures leak nothing, and those diagnostics
+    read zero. The hyperdiffusion takes each non-precipitating part as
+    ``\nabla^2(\rho q_{\mathrm{tag},i}/\rho - \varphi_i q_\mathrm{tot,r})``,
+    with ``\varphi_i`` its share of the compartment, as the parent takes
+    ``q_\mathrm{tot,eff} - q_\mathrm{tot,r}``.
+  - **Microphysics.** The 1-moment scheme moves water between the
+    compartments. `water_tag_1m_flows` repeats the model's linearized
+    substeps and decomposes each into six flows between the compartments:
+    rain and snow formation, evaporation, sublimation, deposition, melting and
+    the rain–snow collisions. Each flow carries its donor compartment's
+    composition (the design note's section 9, the gross flows). The flows'
+    net is the model's tendency to rounding. The rounding remainder moves by
+    the net-flow rule. Where the flows are not available, that rule moves all
+    of it.
+  - **Limiters and constraints.** A correction that changes a compartment
+    moves the change between the part and the tag's non-precipitating part
+    (section 8): a compartment that shrinks gives its own composition back,
+    one that grows takes the non-precipitating composition, and a clip to
+    zero returns the part to its tag's non-precipitating part. Floors keep
+    every part non-negative. Then the non-precipitating parts take the change
+    of ``\rho q_\mathrm{tot}`` by the rule of [`rescale_water_tags!`](@ref).
+    The grid-mean constraint of 1-moment microphysics clips and rescales the
+    condensates every time the state is constrained, so this runs every step.
+  - **The repair** runs on each compartment's parts, among themselves.
+  - **The vapour nonnegativity tendency**, when configured, lifts negative
+    rain and snow from vapour. Their parts take the non-precipitating
+    composition by the net-flow rule.
+
+**The audit.** The microphysics also writes, per tag, the net-flow rule's
+change of its rain and snow parts less the change the gross flows gave, into
+the state records `q_rtag_aud_<name>` and `q_stag_aud_<name>` (the note's
+section 12). Both rules keep each tag's total, so the non-precipitating
+part's difference is minus their sum. Where rain forms and evaporates in one
+step, the net-flow rule gives the evaporated water the rain's composition only
+for the net, and the audit shows the difference. The records are cumulative
+and carried through restarts.
+
+**Precipitation.** `pr_tag_<name>` is the tag's share of `pr`: the flux of its
+rain and snow parts and of its share of the cloud at the bottom face, from the
+same level-1 values, terminal velocities and extrapolated surface density as
+`pr`. The partition's `pr_tag` sums to `pr` wherever its rain and snow parts sum
+to ``\rho q_\mathrm{rai}`` and ``\rho q_\mathrm{sno}`` at the lowest level.
+That tests the closure at one level only.
+
+**Closure.** `q_tag_res` and the closure check sum all three parts of the
+partition. Each compartment has its own residual: `q_ntag_res`, `q_rtag_res`
+and `q_stag_res`. With first-order tracer upwinding the rain and snow parts'
+transport is linear, and on the integration test's column each compartment
+closes to rounding under `increment`. The default `vanleer_limiter` is
+nonlinear per field, so the parts drift from their species as the tags drift
+from ``\rho q_\mathrm{tot}`` today, and the repair only removes negative
+parts.
+
+**Cost.** Three fields per tag, two audit records per tag, and the flows,
+which cost about as much as the microphysics itself.
+
 ## Diagnostics and closure
 
-  - `q_tag_<name>`: tagged **total** water ``\rho q_\mathrm{tag}/\rho``;
+  - `q_tag_<name>`: tagged **total** water ``\rho q_\mathrm{tag}/\rho``, and
+    under `water_tag_precipitation: true` the sum of the tag's three parts;
+  - with the key only: `q_ntag_<name>`, `q_rtag_<name>` and `q_stag_<name>`,
+    the parts; `q_ntag_res`, `q_rtag_res` and `q_stag_res`, each
+    compartment's residual; `pr_tag_<name>`, the tag's share of `pr`; and
+    `q_rtag_aud_<name>` and `q_stag_aud_<name>`, the microphysics audit. See
+    [Rain and snow parts](#Rain-and-snow-parts);
   - `qv_tag_<name>`: tagged **vapor**, ``q_\mathrm{tag} \, q_v / q_t``;
   - `q_tag_res`: the closure residual ``(\rho q_\mathrm{tot} - \sum_i \rho q_{\mathrm{tag},i})/\rho``, summed over the pure region tags;
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
@@ -500,7 +614,10 @@ its records are not transported.
   - **1-moment**: phase changes are *not* an obstacle — those conserve
     ``\rho q_\mathrm{tot}`` and are invisible to the tags. Sedimentation is,
     and it is handled by mirroring the flux per tag rather than attributing it;
-    see [Sedimentation with 1-moment microphysics](@ref).
+    see [Sedimentation with 1-moment microphysics](@ref). With
+    `water_tag_precipitation: true` rain and snow carry their own tags, and the
+    phase changes move water between a tag's parts; see
+    [Rain and snow parts](#Rain-and-snow-parts).
   - **Dry**: there is no ``\rho q_\mathrm{tot}`` in the state to partition.
   - **2-moment and P3** remain unsupported: they additionally carry prognostic
     number concentrations, whose provenance is a separate question from the mass
@@ -601,4 +718,42 @@ ClimaAtmos.water_tag_extra_audit
 ClimaAtmos.WATER_TAG_CHECKPOINT_VERSION
 ClimaAtmos.write_water_tag_checkpoint_attributes!
 ClimaAtmos.check_water_tag_checkpoint
+ClimaAtmos.has_water_tag_precipitation
+ClimaAtmos.WaterTagPart
+ClimaAtmos.NonPrecipitatingPart
+ClimaAtmos.water_tag_part_field
+ClimaAtmos.water_tag_part_parent
+ClimaAtmos.water_tag_parent
+ClimaAtmos.water_tag_part_share
+ClimaAtmos.is_water_precip_part_name
+ClimaAtmos.is_water_tag_audit_name
+ClimaAtmos.water_tag_precip_part_state_names
+ClimaAtmos.water_tag_audit_state_names
+ClimaAtmos.water_partition_state_names
+ClimaAtmos.water_precip_part_names
+ClimaAtmos.water_tag_sedimenting_mass_names
+ClimaAtmos.update_water_precip_part_sedimentation_jacobian!
+ClimaAtmos.WATER_TAG_FLOW_NAMES
+ClimaAtmos.WaterTagFlows1M
+ClimaAtmos.water_tag_1m_flows
+ClimaAtmos.water_tag_1m_flows_grid_mean
+ClimaAtmos.set_water_tag_microphysics_flows!
+ClimaAtmos.water_tag_gross_flow_change
+ClimaAtmos.water_tag_net_flow_change
+ClimaAtmos.water_tag_microphysics_change
+ClimaAtmos.water_tag_microphysics_audit
+ClimaAtmos.water_tag_precipitation_microphysics_tendency!
+ClimaAtmos.snapshot_water_tag_precipitation_tendency!
+ClimaAtmos.snapshot_water_tag_precipitation!
+ClimaAtmos.follow_water_tag_precipitation!
+ClimaAtmos.water_tag_part_follow_shift
+ClimaAtmos.water_tag_source_part_follow_shift
+ClimaAtmos.water_tag_moves_precip_advection
+ClimaAtmos.water_tag_precip_advection!
+ClimaAtmos.prep_water_tag_hyperdiffusion!
+ClimaAtmos.water_tag_precipitation_flux!
+ClimaAtmos.water_tag_precipitation_from_config
+ClimaAtmos.check_water_tag_precipitation_supported
+ClimaAtmos.rebuild_water_tags_from_state!
+ClimaAtmos.water_tag_precipitation_audit_variables
 ```
