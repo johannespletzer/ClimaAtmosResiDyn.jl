@@ -255,3 +255,165 @@ From each run tree's root, with `submit_g3.sh` and
 `DRIVER=experiments/tag_closure/analysis/water/d4w_driver.jl`, `hpda2_compute`,
 2 CPUs, 48 GB, `--time=08:00:00` (the samesign run reached day 74.5 in about
 2 h; the ledgers add fields).
+
+## 9. The probe of option C's miss, pre-registered before it runs (2026-09-25)
+
+Option C's validation failed V2 at site 23 (W42). The region tags hold more
+than the target `max(ρq_tot, 0)`, by up to 2.2% of the water, and the miss is
+all `overclaimed`. The owner decided on 2026-09-25: probe the miss first, and
+decide the fix after. This section registers the probe. Nothing below changes
+after the runs. Option C's code does not change for it.
+
+### 9.1 The question
+
+Which operator grows the excess where no ledger records it? W42 found four
+6-hourly rises of the excess (days 30.50–30.75 and 52.50–53.25) where no
+ledger changes by half the rise in the cells that hold it. A fifth rise, days
+30.75–31.00, is carried by the follower's ledgers (35 times the rise). It is
+the control.
+
+The excess is `E = ∫ max(ρq_tag_pbl + ρq_tag_free − max(ρq_tot, 0), 0) dz`,
+per unit area, and `W = ∫ max(ρq_tot, 0) dz` scales it.
+
+The candidates, considered and not presumed:
+
+ 1. explicit transport moving the parent's negative water into positive
+    cells, while the tags move only non-negative amounts, so the target
+    shrinks and the tags do not;
+ 2. EDMF or diffusion;
+ 3. the follower's stage handling;
+ 4. the target's nonlinearity across a step;
+ 5. an explicit local process (the prescribed forcing's advection terms, its
+    nudging, the surface flux) whose bracket gives a cell with a negative
+    parent new region water, which the target, zero there, does not have.
+
+The fifth is added because the code allows it and no ledger would record
+it: the brackets attribute explicit processes, and the follower corrects
+only the implicit increment.
+
+### 9.2 The runs
+
+One job, `analysis/water/ic_miss_probe.jl` as the driver of
+`configs/ic_miss_probe_s23.yml`. That config is `ic_s23_c.yml` with only the
+job id changed. The run tree is `ic_s23_c`'s code, `e6bab0fc`, with the
+current record merged; only `experiments/` differs.
+
+**The reference** runs the config from the start and writes its outputs, as
+`ic_s23_c` did. The column has no checkpoints, so it is rerun from day 0. It
+stops after day 53.3.
+
+**The windows.** Days 30.3–31.0 and 52.4–53.3: 6048 and 7776 steps of 10 s.
+They cover the no-ledger rises and the control rise, with 0.2 days before
+each. Outside them the reference only steps.
+
+**At every step `k` in a window,** from the reference's state `Yₖ`:
+
+  - **The reference's own step.** `ΔE_ref` over the step, split by where it
+    lies: cells with `ρq_tot ≤ 0` at the step's start (class N), cells with
+    `ρq_tot > 0` there (class P), and, as a subset of both, the cells whose
+    parent changes sign over the step (class X). Beside it, each ledger's
+    change over the step in the cells that hold an excess at the step's end,
+    as W42 measured it per 6 hours.
+  - **Explicit probes.** Each explicit process that writes `ρq_tot` is
+    evaluated alone at `Yₖ`, with the tags' bracket exactly as the model
+    applies it (`open_applied_update!`, `close_applied_update!`). Its
+    tendency is applied for one step, `Yₖ + Δt·T`, and the excess's change
+    `ΔE_o` is taken, split as above. The processes: the external forcing as
+    a whole, and each of its terms alone (horizontal advection, the vertical
+    fluctuation, subsidence, nudging); the surface flux; subsidence and
+    large-scale advection outside the forcing, where the model has them; and
+    the whole explicit tendency (`remaining_tendency!`).
+  - **Trials**, the WP4c gate's pattern: copies of `Yₖ`, each stepped once,
+    with the reference's radiation flux copied in, so that every trial sees
+    the radiation the reference saw. The trials: `on` (the config as it is,
+    the control), `tracer` (`water_tag_transport: tracer`: the follower off),
+    `off_sgs_mass_flux` (`edmfx_sgs_mass_flux: false`) and
+    `off_sgs_diffusive_flux` (`edmfx_sgs_diffusive_flux: false`). A trial's
+    contribution is `ΔE_on − ΔE_trial`, split as above.
+
+Everything goes to one CSV row per step in the reference's output directory.
+
+### 9.3 Validity, before any attribution
+
+  - **P0, the reference is `ic_s23_c`.** Every field both write, at every
+    6-hourly and daily output up to day 53.25, bit for bit. If not, the
+    probe measures another run. Its numbers are then reported, and nothing
+    is attributed to W42's rises.
+  - **P1, the `on` trial is the reference's step.** Per rise, `|Σ ΔE_on −
+    Σ ΔE_ref|` at most 10% of the rise. Where it is more, the trials'
+    contributions for that rise are *not assessable*. The explicit probes
+    do not depend on it.
+  - **P2, the rises are W42's.** Each rise from the per-step sum,
+    `Σ ΔE_ref / W`, within 10% of W42's 6-hourly value (which weighs by the
+    output's `ρΔz`). A rise outside that is reported beside W42's.
+
+### 9.4 Attribution, per rise
+
+For each of the five rises `I`, with `R = Σ_{k∈I} ΔE_ref`:
+
+  - an explicit probe's share `s_o = Σ_{k∈I} ΔE_o / R`;
+  - a trial's share `s_τ = Σ_{k∈I} (ΔE_on − ΔE_τ) / R`;
+  - where the rise lies: its shares in N, P and X.
+
+**Rules.**
+
+  - A share of at least 0.5 **attributes** the rise to that operator. A share
+    from 0.1 to 0.5 **contributes**. Several operators can each reach 0.5;
+    they interact, and each is reported.
+  - The candidates map to the measures as follows:
+      + candidate 1 is supported if the subsidence term or the
+        `off_sgs_mass_flux` trial attributes the rise, with at least half of
+        that operator's share in class P;
+      + candidate 2 is supported if the `off_sgs_mass_flux` or the
+        `off_sgs_diffusive_flux` trial attributes it;
+      + candidate 3 is supported if the `tracer` trial attributes it;
+      + candidate 4 is consistent with the rise if class X holds at least
+        half of it. That is a location, not a mechanism, and it is reported
+        so;
+      + candidate 5 is supported if a local explicit probe (horizontal
+        advection, the vertical fluctuation, nudging, the surface flux)
+        attributes it, with at least half of its share in class N.
+  - A rise is **unattributed** if no probe and no trial reaches 0.5.
+
+**Bounded claims.** An explicit probe linearizes its process at the step's
+start. It leaves out how the process interacts with the implicit solve and
+with the other stages. A trial changes more than the operator it switches
+off: its transport of the parent and of any excess already there goes with
+it. So each share bounds the operator's part; none isolates a cause.
+
+**The control.** At the follower-carried rise (days 30.75–31.00), the
+per-step ledgers should move by more than the rise, as W42 found per 6 hours.
+If they do not, the step-scale ledger reading differs from W42's, and that is
+reported.
+
+### 9.5 What the result means for a revision of C
+
+  - **Candidate 5 or 1, an explicit process:** the brackets and the explicit
+    transport do not follow the target. A revision would give the explicit
+    attribution the target's treatment: water produced where the parent stays
+    at or below zero, or the parent's negative water moved into a positive
+    cell, would enter the negative part, not the region tags. The follower's
+    negative-part entry is the pattern.
+  - **Candidate 2 or 3, an implicit operator or the follower:** the follower's
+    handling of the implicit stages misses part of the target's increment. A
+    revision would correct the follower, for instance against the target at
+    the step's end.
+  - **Candidate 4 alone:** the target's kink at zero. A revision would treat
+    the crossing cells, for instance by correcting against the target at the
+    step's end.
+  - **Unattributed:** the operators probed here do not carry it. The
+    constraint step, the callbacks and the implicit microphysics bracket
+    remain. The owner decides whether to probe them.
+
+In every case the owner decides the fix.
+
+### 9.6 Checks and the job
+
+Before the job, on the login node: every trial configuration builds its
+model, and the driver runs a short window near the start of the run to the
+end (`IC_PROBE_WINDOWS` set to seconds, not days), writing a CSV. The job:
+`submit_g3.sh` from the clean run tree `../ClimaAtmosResiDyn-ic-probe-run`,
+`DRIVER=experiments/tag_closure/analysis/water/ic_miss_probe.jl`,
+`hpda2_compute`, 2 CPUs, 48 GB, `--time=12:00:00`. The estimate is about 4 h:
+five model builds, 53 days of stepping, and the windows' trials.
+`analysis/water/ic_miss_score.py` scores it.
