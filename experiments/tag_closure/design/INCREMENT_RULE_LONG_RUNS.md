@@ -113,3 +113,76 @@ parent water. So each run reports, every 6 hours, the parent's negative water
 decision rule of section 5 is unchanged. If negative parent water puts both
 rules over the budget at a site, section 5 already says nothing is chosen from
 that site.
+
+## 8. Addendum: site 23's rerun with option C, for OD7 (2026-09-25, before any run)
+
+W36 could not score site 23. From day 10 the parent's own water went negative,
+the water tags drifted from it, and every tagged run crashed (known issue 7).
+The owner deferred OD7 until site 23 can be scored, and on 2026-09-25 chose
+option C: the partition tags partition `max(ρq_tot, 0)`, and the negative part
+is a named field (`design/NEGATIVE_PARENT_WATER.md`, section 8). This addendum
+registers site 23's rerun with option C. Nothing below changes after the runs.
+
+**When.** Only after option C passes its validation
+(`design/NEGATIVE_PARENT_WATER.md`, section 8.3: V1 to V4; V5 is reported).
+If C fails it, nothing here is submitted, and the owner decides.
+
+**The runs.** Site 23, 90 days, W36's configurations with the radiation's seed
+reset (section 7). Each differs from its `lr_s23_*.yml` only in the job id and
+in the daily outputs `q_tag_negative` and, under the follower,
+`q_tag_inc_negative`. No tag keeps its own ledgers, as in W36.
+
+| run | code | config |
+|:--- |:---- |:------ |
+| `samesign` | `claude/long-run-c-samesign` (`f13649da`) | `configs/lrc_s23_samesign.yml` |
+| `absm` | `claude/long-run-c-absm` (`4244e8ab`) | `configs/lrc_s23_absm.yml` |
+| `untagged` | `claude/long-run-c-samesign` | `configs/lrc_s23_untagged.yml` |
+| `copies` | `claude/long-run-c-samesign` | `configs/lrc_s23_copies.yml` |
+
+`claude/long-run-c-samesign` is option C (#116 at `49d29435`) merged with
+`claude/long-run-samesign` (`746cbf0f`, section 3). One conflict, in the energy
+follower's ledger, was resolved as the issue 7 probe's run tree resolved it:
+#109's per-tag ledger and attempted totals, with G4.15b's same-sign weight.
+`claude/long-run-c-absm` adds `claude/long-run-absm`'s one change, the weight
+`|m|` in `water_increment_left_weight`. Neither branch is for merge. The run
+trees are `../ClimaAtmosResiDyn-lrc-run` and `../ClimaAtmosResiDyn-lrc-absm-run`,
+each the record merged with its branch. Output in each run's `output_0000/`.
+
+**What differs from W36's code.** Only the tags:
+  - option C, water only: the target, the follower's entry for the negative
+    part's change, the rescale's and the copies' repair's aim, and the closure
+    check against the target;
+  - #109 (WP6 step 3) and #112 (no abort by default), which option C's branch
+    carries. The per-tag ledgers stay off;
+  - under `absm`, the weight `|m|` also places option C's negative-part entry,
+    since that entry and the part left out share `water_increment_left_weight`.
+    So `absm` is `|m|` wherever the water follower places a column total.
+
+**The decision rule.** Section 5, unchanged, per family. Water's criterion 1
+reads the closure check as option C writes it: the partition against the
+target, relative to `∫max(ρq_tot, 0)`, against the same 0.2%. This is option
+C's V2 measure. The energy tags are untouched by option C, and their budget,
+1e-4, stays a proposal. Section 4's measurements and section 7's negative
+water are reported as before, with `q_tag_negative` and the per-step gross of
+`q_tag_inc_negative` beside them. Parity (section 4) is each tagged run's
+fields against `lrc_s23_untagged`, bit for bit. As a further check, reported,
+`lrc_s23_untagged` against W36's `lr_s23_untagged`, bit for bit, since no code
+difference reaches the parent.
+
+**Site 26 is not rerun if option C's V3 holds by its first branch**: `ic_s26_c`'s
+water tags bit for bit `ic_s26_before`'s at every daily output. Site 26's parent
+had no negative water on any of W36's 91 daily outputs, and every change of
+option C is a no-op where the parent stays non-negative. So W36's site 26
+verdicts, same sign kept for both families, stand. If V3 holds only by its
+second branch, differences where the parent was negative, site 26 is rerun on
+the same trees with `lrc_s26_*` configurations written the same way.
+
+**The scripts.** `analysis/water/lr_rule_metrics.py` and `lr_parity.py` take
+the rerun's names from the environment, `LR_PREFIX=lrc LR_OUTPUT=output_0000
+LR_SITES=23`. Their defaults still reproduce W36 (`lr_parity.py` passes on
+W36's 60 fields).
+
+**The jobs.** From each run tree's root, with `submit_g3.sh`,
+`DRIVER=experiments/tag_closure/analysis/water/d4w_driver.jl`, `hpda2_compute`,
+2 CPUs, 48 GB, `--time=08:00:00`: four jobs. Every configuration builds its
+model on the login node first.

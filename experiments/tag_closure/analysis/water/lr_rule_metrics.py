@@ -1,5 +1,7 @@
 """Long runs (design/INCREMENT_RULE_LONG_RUNS.md): the pre-registered metrics
-of sections 4 and 5, from the second submission (output_0001).
+of sections 4 and 5, from the second submission (output_0001), or from
+site 23's rerun with option C (section 8) through LR_PREFIX, LR_OUTPUT and
+LR_SITES.
 
     python3 lr_rule_metrics.py [OUTPUT_ROOT] [--csv OUT.csv]
 
@@ -32,6 +34,12 @@ import numpy as np
 import netCDF4
 
 ROOT = '/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output'
+# The runs' names and output directory. The defaults are W36's second
+# submission. Site 23's rerun with option C (the design's section 8) sets
+# LR_PREFIX=lrc LR_OUTPUT=output_0000 LR_SITES=23.
+RUN_PREFIX = os.environ.get('LR_PREFIX', 'lr')
+OUTPUT = os.environ.get('LR_OUTPUT', 'output_0001')
+SITES = tuple(os.environ.get('LR_SITES', '23,26').split(','))
 DAY = 86400.0
 BUDGET = {'water': 2e-3, 'energy': 1e-4}
 FILES = {'water': 'water_tag_closure.csv', 'energy': 'energy_source_tag_closure.csv'}
@@ -41,7 +49,7 @@ PREFIX = {'water': 'q_tag_', 'energy': 'e_src_'}
 
 
 def out(run):
-    return f'{ROOT}/{run}/output_0001'
+    return f'{ROOT}/{run}/{OUTPUT}'
 
 
 def rows(path):
@@ -132,9 +140,9 @@ def main():
     if args:
         ROOT = args[0]
     table = []
-    for site in ('23', '26'):
+    for site in SITES:
         print(f'=== site {site}')
-        t, frac, qmin = negative_water(f'lr_s{site}_untagged')
+        t, frac, qmin = negative_water(f'{RUN_PREFIX}_s{site}_untagged')
         bad = frac < 0
         worst = int(np.argmin(frac))
         print(f'parent negative water (untagged, daily, weights rho dz): days with any {int(bad.sum())} of {len(t)}; '
@@ -146,7 +154,7 @@ def main():
             print(f'-- {fam} (budget {BUDGET[fam]:.0e})')
             summary = {}
             for v in ('samesign', 'absm'):
-                run = f'lr_s{site}_{v}'
+                run = f'{RUN_PREFIX}_s{site}_{v}'
                 rs = rows(f'{out(run)}/{FILES[fam]}')
                 au = rows(f'{out(run)}/{AUDIT[fam]}')
                 last, a = rs[-1], au[-1]
@@ -173,7 +181,7 @@ def main():
             for v in ('samesign', 'absm'):
                 parts = []
                 for d in (10, 30, 90):
-                    vals = {tag: l1(f'lr_s{site}_{v}', f'lr_s{site}_copies', PREFIX[fam] + tag, d) for tag in TAGS[fam]}
+                    vals = {tag: l1(f'{RUN_PREFIX}_s{site}_{v}', f'{RUN_PREFIX}_s{site}_copies', PREFIX[fam] + tag, d) for tag in TAGS[fam]}
                     if any(x is None for x in vals.values()):
                         parts.append(f'day {d}: not reached by both')
                         continue
@@ -181,8 +189,8 @@ def main():
                     for tag, x in vals.items():
                         table.append({'site': site, 'family': fam, 'run': v, 'metric': f'l1_vs_copies_{tag}', 'value': x, 'day': d})
                 print(f'   L1 vs copies (weights rho dz), {v}: ' + ' | '.join(parts))
-        rw = rows(f'{out(f"lr_s{site}_copies")}/water_tag_closure.csv')
-        re_ = rows(f'{out(f"lr_s{site}_copies")}/energy_source_tag_closure.csv')
+        rw = rows(f'{out(f"{RUN_PREFIX}_s{site}_copies")}/water_tag_closure.csv')
+        re_ = rows(f'{out(f"{RUN_PREFIX}_s{site}_copies")}/energy_source_tag_closure.csv')
         print(f'-- copies: last water check day {float(rw[-1]["time"]) / DAY:g}, gross {float(rw[-1]["gross_relative"]):.2e}; '
               f'last energy check day {float(re_[-1]["time"]) / DAY:g}, gross {float(re_[-1]["gross_relative"]):.2e}')
     if out_csv:

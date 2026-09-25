@@ -1,0 +1,88 @@
+# Site 23's rerun for OD7 (design/INCREMENT_RULE_LONG_RUNS.md, section 8):
+# W36's run with option C, both families' followers under |m|
+# (claude/long-run-c-absm); the same file as samesign otherwise.
+
+job_id: "lrc_s23_absm"
+
+water_tracers:
+  - name: pbl
+    region: {type: tanh_altitude, z_center: 1000.0, width: 200.0, above: false}
+  - name: free
+    region: {type: tanh_altitude, z_center: 1000.0, width: 200.0}
+  - name: evap
+    source: surface_flux
+  - name: fcg
+    source: forcing
+water_tag_transport: "increment"
+
+energy_source_tags:
+  - name: pbl
+    region: {type: tanh_altitude, z_center: 1000.0, width: 200.0, above: false}
+  - name: free
+    region: {type: tanh_altitude, z_center: 1000.0, width: 200.0}
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+energy_source_tag_offset: 110495.0
+energy_source_tag_transport: "enthalpy_increment"
+
+water_closure_check:
+  period: "6hours"
+  audit: true
+energy_source_closure_check:
+  period: "6hours"
+  audit: true
+
+initial_condition: "GCM"
+external_forcing_file: artifact"cfsite_gcm_forcing"/HadGEM2-A_amip.2004-2008.07.nc
+cfsite_number: "site23"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+rayleigh_sponge: true
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "0M"
+config: "column"
+z_max: 40e3
+z_elem: 60
+z_stretch: true
+dz_bottom: 30
+perturb_initstate: false
+dt: "10secs"
+dt_rad: "30mins"
+t_end: "90days"
+toml: [toml/prognostic_edmfx_gcmdriven.toml]
+rad: allskywithclear
+# The cloud optics sample at random. Without a reset of the seed each run draws
+# its own numbers, and the runs' atmospheres differ from the first day
+# (design section 7).
+radiation_reset_rng_seed: true
+ode_algo: "ARS222"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, wa, pr, lwp, arup, husup]
+    period: "1days"
+  - short_name: [q_tag_res, q_tag_pbl, q_tag_free, q_tag_evap, q_tag_fcg]
+    period: "1days"
+  - short_name: [q_tag_fix_pbl, q_tag_fix_free, q_tag_fix_evap, q_tag_fix_fcg]
+    period: "1days"
+  - short_name: [e_src_res, e_src_pbl, e_src_free, e_src_sfc, e_src_rad]
+    period: "1days"
+  - short_name: [q_tag_inc_left, q_tag_inc_moved, q_tag_inc_left_gross, q_tag_inc_moved_gross]
+    period: "1days"
+  - short_name: [e_src_inc_left, e_src_inc_moved, e_src_inc_left_gross, e_src_inc_moved_gross]
+    period: "1days"
+  # Option C: the parent's negative water, named, and what the follower
+  # gave the tags for its change.
+  - short_name: [q_tag_negative, q_tag_inc_negative]
+    period: "1days"

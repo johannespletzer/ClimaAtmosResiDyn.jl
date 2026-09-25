@@ -3,7 +3,8 @@ model output with its untagged twin, bit for bit, failing closed.
 
     python3 lr_parity.py [OUTPUT_ROOT] [--csv OUT.csv]
 
-OUTPUT_ROOT holds `lr_s<site>_<variant>/output_0001/`. The inventory of model
+OUTPUT_ROOT holds `lr_s<site>_<variant>/output_0001/`, or the names and
+directory LR_PREFIX, LR_OUTPUT and LR_SITES give (the design's section 8). The inventory of model
 fields is the untagged twin's own diagnostic list, read from the config the
 run wrote (`lr_s<site>_untagged.yml` in its output directory). Every field in
 it must exist, be readable and hold that variable in every tagged run.
@@ -35,7 +36,12 @@ import numpy as np
 
 ROOT = '/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output'
 SUFFIX = '_1d_inst.nc'
-SITES = ('23', '26')
+# The runs' names and output directory. The defaults are W36's second
+# submission. Site 23's rerun with option C (the design's section 8) sets
+# LR_PREFIX=lrc LR_OUTPUT=output_0000 LR_SITES=23.
+RUN_PREFIX = os.environ.get('LR_PREFIX', 'lr')
+OUTPUT = os.environ.get('LR_OUTPUT', 'output_0001')
+SITES = tuple(os.environ.get('LR_SITES', '23,26').split(','))
 TAGGED = ('samesign', 'absm', 'copies')
 
 
@@ -43,7 +49,7 @@ def inventory(site):
     """The twin's diagnostic short names, from the `short_name:` lines of the
     config it wrote. The module's Python has no YAML parser, so this reads the
     flow and block list forms the configs use, and fails if it finds none."""
-    path = f'{ROOT}/lr_s{site}_untagged/output_0001/lr_s{site}_untagged.yml'
+    path = f'{ROOT}/{RUN_PREFIX}_s{site}_untagged/{OUTPUT}/{RUN_PREFIX}_s{site}_untagged.yml'
     with open(path) as f:
         text = f.read()
     names = []
@@ -57,7 +63,7 @@ def inventory(site):
 
 
 def read(run, name):
-    path = f'{ROOT}/{run}/output_0001/{name}{SUFFIX}'
+    path = f'{ROOT}/{run}/{OUTPUT}/{name}{SUFFIX}'
     if not os.path.exists(path):
         return None, f'missing file {path}'
     try:
@@ -93,9 +99,9 @@ def main():
     rows, failures, compared = [], [], 0
     for site in SITES:
         names = inventory(site)
-        twin = f'lr_s{site}_untagged'
+        twin = f'{RUN_PREFIX}_s{site}_untagged'
         for variant in TAGGED:
-            run = f'lr_s{site}_{variant}'
+            run = f'{RUN_PREFIX}_s{site}_{variant}'
             run_ok, spans = True, set()
             for name in names:
                 ref, err_ref = read(twin, name)
