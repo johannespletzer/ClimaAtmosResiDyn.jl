@@ -245,8 +245,10 @@ not re-derive them.
 
 ## 7. Tagged water ends a run where the parent's water goes negative (open, parity class)
 
-**Status:** open. The run no longer ends (option A, below); the cause of the
-divergence is open. To be settled before the sphere.
+**Status:** open. The owner chose option A on 2026-09-24, so that a closure
+check no longer ends such a run. It is proposed in #112, which is not merged.
+Until it is, the water closure check still ends such a run, as below. The cause
+of the divergence is open. To be settled before the sphere.
 
 A diagnostic must never end a run that upstream completes. This one does.
 The tag-closure long runs (the record branch's
@@ -276,12 +278,14 @@ configured abort level 1.0 at t = 6.4368e6 s", from `tag_closure_callback!`.
 That level assumed a non-negative parent: then non-negative tags miss it by at
 most the parent itself. Here the parent is negative.
 
-**Option A, done** (the owner's choice of 2026-09-24):
+**Option A, chosen and not merged** (the owner's choice of 2026-09-24): #112,
 `claude/tag-closure-no-abort`, a PR against `main`, which this stack gets by
-merge. No closure check ends a run by default any more. Water's old level,
-1.0, is now its `void_above`: past it the check warns once and marks this and
-every later row `void` in the closure and audit tables, and the run goes on.
-An explicit `abort_above` still ends a run.
+merge. With it, no closure check ends a run by default. Past water's old level,
+1.0, the check warns and marks the tables' rows void, and the run goes on. An
+explicit `abort_above` still ends a run. That the mark covers the row where
+the level is passed and every later one holds only once #112 merges. Its
+handling across a restart is still being changed. On this code the default
+level, 1.0, still ends the run.
 
 **Still open:** which of the tags' operators makes the divergence. The runs
 bound the problem to negative parent water on a long column; they do not
