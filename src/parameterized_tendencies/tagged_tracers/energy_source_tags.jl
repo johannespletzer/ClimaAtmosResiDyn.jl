@@ -527,6 +527,10 @@ The energy source family's own columns of the audit table, beside those
     absolute value; and `increment_moved_gross`, the absolute value of what it
     moved between levels. Each also over `scale`. See
     [`energy_source_increment_ledger_variables`](@ref).
+  - per state ledger, what the accepted steps retained, what its writers
+    attempted, and the events, and for each tag's own ledgers the ratios to
+    the tag's energy, to its absolute burden and to
+    `energy_source_ledger_parent_scale` (`tag_ledger_audit`, WP6 step 3).
 
 Every reduction is collective, so every process must call it.
 """
@@ -579,15 +583,35 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         repair_events = tag_event_total(p.tagging.ᶜenergy_source_fix_count),
         _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale)...,
         # Per state ledger, retained, attempted and events, and each tag's own
-        # ledgers against its energy, where kept (WP6, step 3).
+        # ledgers against its energy, its burden and the parent scale, where
+        # kept (WP6, step 3).
         tag_ledger_audit(
             Y,
             p,
             "e_src_",
             scale,
             p.tagging.ᶜenergy_source_fix_gross,
+            energy_source_ledger_parent_scale(Y),
         )...,
     )
+end
+
+"""
+    energy_source_ledger_parent_scale(Y)
+
+The energy source tags' parent scale for their own ledgers' ratios and
+small-tag bound. OD4 sets it to the gross energy the sources put into the tags.
+Until that is in the model, this is the interim the owner set: the process
+records' amounts, `Σₚ ∫|prc_e_p|` over the recorded processes. Each record is
+net over time in each cell, so it misses what cancels there, and a ratio to it
+is read as an upper bound. `NaN` without energy process records. It is not
+`∫(ρe_tot + c·ρ)`: that depends on the offset `c`, and it is so large that the
+small-tag bound would pass over most source tags. Collective, as `sum` is.
+"""
+function energy_source_ledger_parent_scale(Y)
+    names = filter(name -> startswith(string(name), "prc_e_"), propertynames(Y.c))
+    isempty(names) && return NaN
+    return sum(name -> Float64(sum(abs, getproperty(Y.c, name))), names)
 end
 
 _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale) =
