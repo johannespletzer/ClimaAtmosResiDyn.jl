@@ -2406,7 +2406,7 @@ struct IncrementWaterTagTransport <: AbstractWaterTagTransport end
 """
     WaterTaggingModel(tags::Tuple; updraft_copies = false,
                       transport = TracerWaterTagTransport(),
-                      ledger_per_tag = false)
+                      ledger_per_tag = false, leak_correction = false)
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 `water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2429,12 +2429,18 @@ ledgers of what the corrections changed it by (WP6, step 3): `q_tag_led_fix_<nam
 for the limiters' rescale and the partition repair, and, under the increment,
 `q_tag_led_inc_<name>` for the follower. Off by default, since each adds a
 state field per tag. A type parameter, like `updraft_copies`.
+
+`leak_correction`, from `water_tag_leak_correction`, charges each tag the EDMF
+vertical diffusion of its share of the rain and snow, which the parent does not
+diffuse, on the grid mean and on the copies (WP4c). Off by default. A type
+parameter too. See [`correct_water_tag_diffusion_leak!`](@ref).
 """
 struct WaterTaggingModel{
     T <: Tuple,
     UpdraftCopies,
     TR <: AbstractWaterTagTransport,
     LedgerPerTag,
+    LeakCorrection,
 }
     tags::T
     transport::TR
@@ -2444,6 +2450,7 @@ function WaterTaggingModel(
     updraft_copies::Bool = false,
     transport::AbstractWaterTagTransport = TracerWaterTagTransport(),
     ledger_per_tag::Bool = false,
+    leak_correction::Bool = false,
 )
     # The correction gives the partition the parent's increment, less what the
     # partition's own tendencies moved. Without a partition the tags that carry
@@ -2465,6 +2472,7 @@ function WaterTaggingModel(
         updraft_copies,
         typeof(transport),
         ledger_per_tag,
+        leak_correction,
     }(
         tags,
         transport,
@@ -2503,6 +2511,18 @@ has_water_tag_ledger_per_tag(::Nothing) = false
 has_water_tag_ledger_per_tag(
     ::WaterTaggingModel{T, U, TR, LedgerPerTag},
 ) where {T, U, TR, LedgerPerTag} = LedgerPerTag
+
+"""
+    has_water_tag_leak_correction(model)
+
+Whether the water tags of `model` are charged the EDMF vertical diffusion of
+their share of the rain and snow, from the `water_tag_leak_correction` config
+key (WP4c). `false` without water tags.
+"""
+has_water_tag_leak_correction(::Nothing) = false
+has_water_tag_leak_correction(
+    ::WaterTaggingModel{T, U, TR, L, LeakCorrection},
+) where {T, U, TR, L, LeakCorrection} = LeakCorrection
 
 """
     EnergySourceTag{name}(region, source = :none)

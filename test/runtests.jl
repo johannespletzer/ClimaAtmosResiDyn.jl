@@ -33,6 +33,7 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_edmf_copies",
     "tagging_water_edmf_0m",
     "tagging_water_increment",
+    "tagging_water_leak",
     "parameterizations",
     "restarts",
 )
@@ -260,6 +261,14 @@ end
 if TEST_GROUP in ("tagging_water_increment", "all")
     @safetestset "Water tags following the implicit increment" begin
         @time include("tagged_water_increment_integration.jl")
+    end
+end
+
+# `water_tag_leak_correction: true` is a model type of its own, and its check
+# against the column without tags needs a second build, so it has its own group.
+if TEST_GROUP in ("tagging_water_leak", "all")
+    @safetestset "Water tags with the diffusion leak correction" begin
+        @time include("tagged_water_leak_correction_integration.jl")
     end
 end
 

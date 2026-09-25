@@ -384,6 +384,10 @@ set.
         the water the repair adds where it zeroes every tag.
       + With copies, `uprepair` is the copies' repair and `upfilter` the
         updraft filter's change of the copies, net over the copies in a cell.
+      + Under `water_tag_leak_correction: true`, `leaknet` is what the
+        diffusion leak's correction gave the partition's tags, net over them,
+        and with copies `upleaknet` what it gave their copies, times ``\rho a^j``. A tendency writes them, so they are exact per step at every
+        cadence and have no attempted total.
       + All but `repair` are signed.
   - `<ledger>_gross` and `<ledger>_colgross`, for each `q_tag_led_*` and the
     increment follower's `q_tag_inc_left` and `q_tag_inc_moved`: the sum over
@@ -399,7 +403,10 @@ set.
     change over a step is what the step retained at every cadence. Each has
     its `_gross` and `_colgross` as above, spelled `q_tag_led_fixgross_<name>`
     and `q_tag_led_fixcolgross_<name>` (and `inc` alike), so that no tag's
-    name can collide with them.
+    name can collide with them. Under `water_tag_leak_correction: true` each
+    tag also has `q_tag_led_leak_<name>`, what the diffusion leak's correction
+    gave it, and with copies `q_tag_led_upleak_<name>`, what it gave the tag's
+    copies, times ``\rho a^j``.
 
 The audit table (`audit: true` in `water_closure_check`) reports, per state
 ledger `L`, named without its `q_tag_` prefix:
@@ -483,7 +490,28 @@ partition under 0-moment too, wherever that profile varies along a model level.
 `q_tag_leak_<path>` is each path's source, in closed form from the state
 (`water_tag_leak!`): the rate at which the path would drift an exactly closed
 partition. It does not read the tags, so it leaves out the path's transport of
-a residual already there. No path corrects it yet.
+a residual already there.
+
+**The correction of the EDMF vertical diffusion's leak**
+(`water_tag_leak_correction: true`, WP4c). Each tag takes back the diffusion of
+its own share of the rain and snow,
+``\nabla\cdot(\rho K_h \nabla(\psi_i\, q_\mathrm{p}))`` with
+``q_\mathrm{p} = q_\mathrm{rai} + q_\mathrm{sno}``, where ``\psi_i`` is the
+share the sedimentation takes the tag's rain and snow by. The partition's
+shares sum to one wherever it holds water, so its diffusion is then the
+parent's, and the leak is charged to the tags whose water leaked. Without the
+correction, under `water_tag_transport: increment`, the follower absorbs the
+leak and spreads it by the shares of the cells its flux leaves. With copies
+each copy takes its tag's correction per unit mass, as it takes its tag's
+diffusion, so the copies no longer leak on that path either. It covers the EDMF
+vertical diffusive flux and its updrafts' mirror, the two paths the
+experiments' gate retained. The other paths are not corrected, and the key is
+refused with `vert_diff`, whose diffusion leaks the same way. It has no
+Jacobian block, so with one Newton iteration it is taken at the stage's first
+guess. Its ledgers are `q_tag_led_leaknet` and, with copies,
+`q_tag_led_upleaknet`, and under `water_tag_ledger_per_tag: true` each tag's
+`q_tag_led_leak_<name>` and `q_tag_led_upleak_<name>`. The model's fields do
+not change. See `correct_water_tag_diffusion_leak!`.
 
 It is not the *only* contributor, though. Any tendency that writes
 ``\rho q_\mathrm{tot}`` by name without an attribution bracket and without a
@@ -600,6 +628,10 @@ ClimaAtmos.water_tag_copy_sgs_names
 ClimaAtmos.water_tag_edmf_audit
 ClimaAtmos.WATER_TAG_LEAK_PATHS
 ClimaAtmos.water_tag_leak!
+ClimaAtmos.correct_water_tag_diffusion_leak!
+ClimaAtmos.apply_water_tag_leak_correction!
+ClimaAtmos.water_tag_leak_ledgers
+ClimaAtmos.has_water_tag_leak_correction
 ClimaAtmos.IncrementWaterTagTransport
 ClimaAtmos.TracerWaterTagTransport
 ClimaAtmos.follows_water_increment

@@ -93,6 +93,8 @@ import ..follows_water_increment
 # energy_source_tagging_model
 import ..EnergySourceTaggingModel
 import ..WATER_TAG_ALL_MECHANISM_NAMES
+import ..WATER_TAG_LEAK_MECHANISM_NAMES
+import ..WATER_TAG_COPY_LEAK_MECHANISM_NAMES
 import ..ENERGY_SOURCE_MECHANISM_NAMES
 import ..tag_state_ledger_names
 import ..tag_attempted_ledger_names

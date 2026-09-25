@@ -1043,6 +1043,40 @@ end
         with_per_tag,
     )
 
+    # The leak correction's ledgers (WP4c) are in the file or are not, so a
+    # changed `water_tag_leak_correction` is refused either way.
+    leak_model = CA.WaterTaggingModel(tags(); leak_correction = true)
+    with_leak = (; c = (; tagged.c..., q_tag_led_leaknet = 0.0))
+    @test isnothing(check(written, leak_model, with_leak))
+    @test_throws r"leak correction ledgers none.*`water_tag_leak_correction`" check(
+        written,
+        leak_model,
+    )
+    @test_throws r"Not configured: leaknet.*`water_tag_leak_correction`" check(
+        written,
+        water_model(),
+        with_leak,
+    )
+    # With each tag's ledgers, the correction's own per tag are checked with
+    # them, and the error names both keys.
+    leak_per_tag_model =
+        CA.WaterTaggingModel(tags(); leak_correction = true, ledger_per_tag = true)
+    with_leak_per_tag = (;
+        c = (;
+            with_leak.c...,
+            with_per_tag.c...,
+            q_tag_led_leak_tropo = 0.0,
+            q_tag_led_leak_strat = 0.0,
+            q_tag_led_leak_evap = 0.0,
+        ),
+    )
+    @test isnothing(check(written, leak_per_tag_model, with_leak_per_tag))
+    @test_throws r"Missing from the file: leak_tropo.*`water_tag_leak_correction`" check(
+        written,
+        leak_per_tag_model,
+        (; c = (; with_leak.c..., with_per_tag.c...)),
+    )
+
     # A checkpoint from before the guard is checked by its fields, with a
     # warning, and restarts.
     unrecorded = checkpoint(water_model(), "unrecorded"; record = false)
@@ -1938,5 +1972,117 @@ end
             @test maximum(abs, parent(ᶜtag)) > 0
             @test parent(ᶜledger) == parent(ᶜtag)
         end
+    end
+end
+
+@testset "The diffusion leak's correction (WP4c)" begin
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    tags = (
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+        CA.WaterTag{:evap}(nothing, (:surface_flux,)),
+    )
+    plain = CA.WaterTaggingModel(tags)
+    corrected = CA.WaterTaggingModel(tags; leak_correction = true)
+    per_tag = CA.WaterTaggingModel(tags; leak_correction = true, ledger_per_tag = true)
+    copies = CA.WaterTaggingModel(
+        tags;
+        updraft_copies = true,
+        leak_correction = true,
+        ledger_per_tag = true,
+    )
+    @test !CA.has_water_tag_leak_correction(nothing)
+    @test !CA.has_water_tag_leak_correction(plain)
+    @test CA.has_water_tag_leak_correction(corrected)
+
+    @testset "The ledgers' names" begin
+        fix_names = (:q_tag_led_fix_tropo, :q_tag_led_fix_strat, :q_tag_led_fix_evap)
+        leak_names =
+            (:q_tag_led_leak_tropo, :q_tag_led_leak_strat, :q_tag_led_leak_evap)
+        upleak_names =
+            (:q_tag_led_upleak_tropo, :q_tag_led_upleak_strat, :q_tag_led_upleak_evap)
+        @test CA.water_tag_leak_mechanism_names(nothing) == ()
+        @test CA.water_tag_leak_mechanism_names(plain) == ()
+        @test CA.water_tag_leak_mechanism_names(corrected) == (:q_tag_led_leaknet,)
+        @test CA.water_tag_leak_mechanism_names(copies) ==
+              (:q_tag_led_leaknet, :q_tag_led_upleaknet)
+        @test CA.water_tag_leak_mechanism_variables(1.0f0, plain) == (;)
+        @test CA.water_tag_leak_mechanism_variables(1.0f0, corrected) ==
+              (; q_tag_led_leaknet = 0.0f0)
+        # Each tag's own ledgers of the correction come with
+        # `water_tag_ledger_per_tag` only.
+        @test CA.water_tag_per_tag_ledger_names(corrected) == ()
+        @test CA.water_tag_per_tag_ledger_names(per_tag) == (fix_names..., leak_names...)
+        @test CA.water_tag_per_tag_ledger_names(copies) ==
+              (fix_names..., leak_names..., upleak_names...)
+        @test all(CA.is_tag_per_tag_ledger_name, (leak_names..., upleak_names...))
+        @test !CA.is_tag_per_tag_ledger_name(:q_tag_led_leaknet)
+        @test !CA.is_tag_per_tag_ledger_name(:q_tag_led_upleaknet)
+        @test CA.is_water_tag_leak_mechanism_name(:q_tag_led_leaknet)
+        @test CA.is_water_tag_leak_mechanism_name(:q_tag_led_upleaknet)
+        @test !CA.is_water_tag_leak_mechanism_name(:q_tag_led_leak_tropo)
+        # They are not the kernels' ledgers per mechanism: a tendency writes
+        # them, so they have no attempted total and no cadence warning.
+        @test !CA.is_tag_mechanism_ledger_name(:q_tag_led_leaknet)
+        atmos = (;
+            water_tagging_model = copies,
+            energy_source_tagging_model = nothing,
+        )
+        state_names = CA.tag_state_ledger_names(atmos)
+        attempted_names = CA.tag_attempted_ledger_names(atmos)
+        for name in
+            (:q_tag_led_leaknet, :q_tag_led_upleaknet, leak_names..., upleak_names...)
+            @test name in state_names
+            @test !(name in attempted_names)
+            @test !CA.is_tracer_var(name)
+        end
+        for name in (:q_tag_led_leaknet, :q_tag_led_leak_tropo, :q_tag_led_upleak_evap)
+            @test CA.is_splittable_jacobian_field(CA.MatrixFields.FieldName(:c, name))
+        end
+        # The diagnostics put a tag's kind before its name, and no tag's name
+        # can make one collide with the partition's ledger's.
+        @test CA.Diagnostics.tag_ledger_diagnostic_name(:q_tag_led_leak_tropo, "gross") ==
+              "q_tag_led_leakgross_tropo"
+        @test CA.Diagnostics.tag_ledger_diagnostic_name(
+            :q_tag_led_upleak_evap,
+            "colgross",
+        ) == "q_tag_led_upleakcolgross_evap"
+        @test CA.Diagnostics.tag_ledger_diagnostic_name(:q_tag_led_leaknet, "gross") ==
+              "q_tag_led_leaknet_gross"
+        @test CA.Diagnostics.tag_ledger_diagnostic_name(:q_tag_led_upleaknet, "gross") ==
+              "q_tag_led_upleaknet_gross"
+    end
+
+    @testset "The key and its refusals" begin
+        @test CA.tag_ledger_per_tag_from_config(true, "water_tag_leak_correction")
+        @test !CA.tag_ledger_per_tag_from_config(nothing, "water_tag_leak_correction")
+        @test_throws r"`water_tag_leak_correction` must be `true` or `false`" CA.tag_ledger_per_tag_from_config(
+            "true",
+            "water_tag_leak_correction",
+        )
+        edmf = Dict{String, Any}(
+            "turbconv" => "prognostic_edmfx",
+            "edmfx_sgs_diffusive_flux" => true,
+        )
+        one_moment = CA.NonEquilibriumMicrophysics1M()
+        check = CA.check_water_tag_leak_correction_supported
+        @test isnothing(check(edmf, one_moment))
+        @test isnothing(check(merge(edmf, Dict("turbconv" => "edonly_edmfx")), one_moment))
+        @test_throws r"needs `microphysics_model: 1M`" check(
+            edmf,
+            CA.EquilibriumMicrophysics0M(),
+        )
+        @test_throws r"`edmfx_sgs_diffusive_flux: true`" check(
+            Dict{String, Any}(),
+            one_moment,
+        )
+        @test_throws r"`edmfx_sgs_diffusive_flux: true`" check(
+            merge(edmf, Dict("edmfx_sgs_diffusive_flux" => false)),
+            one_moment,
+        )
+        @test_throws r"refused with `vert_diff: VerticalDiffusion`" check(
+            merge(edmf, Dict("vert_diff" => "VerticalDiffusion")),
+            one_moment,
+        )
     end
 end

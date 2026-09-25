@@ -126,6 +126,11 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
             ρ * q_tot,
             atmos_model.water_tagging_model,
         )...,
+        # The diffusion leak correction's ledgers, where it is on (WP4c).
+        water_tag_leak_mechanism_variables(
+            ρ * q_tot,
+            atmos_model.water_tagging_model,
+        )...,
         # Each water tag's own ledgers, where kept (WP6, step 3).
         water_tag_per_tag_ledger_variables(
             ρ * q_tot,

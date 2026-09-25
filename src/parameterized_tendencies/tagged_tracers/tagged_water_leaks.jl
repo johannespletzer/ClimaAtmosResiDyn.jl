@@ -205,3 +205,220 @@ end
 _has_water_tag_copies(p, ::PrognosticEDMFX) =
     has_water_tag_updraft_copies(p.atmos.water_tagging_model)
 _has_water_tag_copies(p, turbconv_model) = false
+
+#####
+##### The correction of the EDMF vertical diffusion's leak (WP4c)
+#####
+##### WP4c's gate retained two corrections (FINDINGS W40 on the record branch):
+##### the grid mean's `vdiff` and the updrafts' `diffusion_up`. Each gives the
+##### tags back the diffusion of the rain and snow, which the parent does not
+##### diffuse. Each tag takes back the diffusion of its own share of the rain
+##### and snow, the share the sedimentation takes it by, so the leak is charged
+##### to the tags whose water leaked. Without the correction the follower
+##### absorbs the leak and spreads it by the shares of the cells its flux
+##### leaves. design/WP4C_CORRECTIONS.md on the record branch.
+
+"""
+    correct_water_tag_diffusion_leak!(Yₜ, Y, p, ᶠρK_h, apply_sgs_updraft)
+
+Under `water_tag_leak_correction: true`, add to each water tag's tendency
+`∇·(ρK_h ∇(ψᵢ q_p))`, the EDMF vertical diffusion of its share `ψᵢ` of the rain
+and snow `q_p = q_tot - q_tot_eff`. The tags diffuse their whole value at
+`K_h + K_e`, and the parent diffuses `q_tot_eff` at `K_h` and `q_tot` at `K_e`.
+So without the correction the partition gains `-∇·(ρK_h ∇q_p)` that the parent
+does not, the leak `q_tag_leak_vdiff`.
+
+`ψᵢ` is the share the sedimentation mirror takes a tag's rain and snow by: a
+partition tag's clamped share renormalized over the partition, a source tag's
+own clamped share. The partition's shares sum to one wherever it holds water, so
+the partition's corrections sum to `∇·(ρK_h ∇q_p)`, the leak with the opposite
+sign, and its diffusion is the parent's. Where the partition holds no water the
+shares are zero and the leak there is not corrected. It lands in `q_tag_res`, or
+under the follower in `q_tag_inc_moved`, as before. A source tag's correction
+takes back its own share, so its diffusion moves only the water that the parent
+diffuses too.
+
+With `apply_sgs_updraft`, the updrafts' mirror of the diffusion is on, and with
+updraft copies each copy takes its tag's correction per unit mass, `/ρ`, as it
+takes its tag's diffusion. So the copies' sum mirrors `q_totʲ`'s diffusion too,
+and their repair no longer takes out the `diffusion_up` leak.
+
+`ᶠρK_h` is the face field `ρK_h` the parent's water diffusion uses. Called from
+`edmfx_sgs_diffusive_flux_tendency!` after its tracer loop, so it is implicit
+where the diffusion is. It has no Jacobian block, so with one Newton iteration
+it is taken at the stage's first guess, and under `water_tag_transport: increment` the follower moves what differs.
+
+Each correction is added to its ledgers: `q_tag_led_leaknet`, the partition's
+correction, and with copies `q_tag_led_upleaknet`, the copies' times `ρaʲ`; and
+under `water_tag_ledger_per_tag: true` each tag's `q_tag_led_leak_<name>` and
+`q_tag_led_upleak_<name>`. They are state fields, so the stepper weights them as
+it weights the tags. Only the tags and their ledgers change. A no-op without the
+key.
+"""
+correct_water_tag_diffusion_leak!(Yₜ, Y, p, ᶠρK_h, apply_sgs_updraft) =
+    _correct_water_tag_diffusion_leak!(
+        Yₜ,
+        Y,
+        p,
+        ᶠρK_h,
+        apply_sgs_updraft,
+        p.atmos.water_tagging_model,
+    )
+_correct_water_tag_diffusion_leak!(Yₜ, Y, p, ᶠρK_h, apply_sgs_updraft, ::Nothing) =
+    nothing
+function _correct_water_tag_diffusion_leak!(
+    Yₜ,
+    Y,
+    p,
+    ᶠρK_h,
+    apply_sgs_updraft,
+    model::WaterTaggingModel,
+)
+    has_water_tag_leak_correction(model) || return nothing
+    apply_water_tag_leak_correction!(
+        Yₜ,
+        Y,
+        p,
+        ᶠρK_h,
+        p.scratch.ᶜtagging_q_leak_correction,
+        water_tag_leak_ledgers(Yₜ, model),
+        apply_sgs_updraft && _has_water_tag_copies(p, p.atmos.turbconv_model),
+    )
+    return nothing
+end
+
+"""
+    water_tag_leak_ledgers(Yₜ, model)
+
+The fields of the tendency `Yₜ` that [`apply_water_tag_leak_correction!`](@ref)
+adds the corrections to: `net`, `q_tag_led_leaknet`; `upnet`,
+`q_tag_led_upleaknet` with copies; and `per_tag` and `per_tag_up`, the
+[`TagLedgerView`](@ref)s of each tag's own ledgers under
+`water_tag_ledger_per_tag: true`. `nothing` for each that the model does not
+have, and `nothing` without the correction.
+"""
+water_tag_leak_ledgers(Yₜ, model) =
+    has_water_tag_leak_correction(model) ?
+    (;
+        net = Yₜ.c.q_tag_led_leaknet,
+        upnet = has_water_tag_updraft_copies(model) ? Yₜ.c.q_tag_led_upleaknet :
+                nothing,
+        per_tag = has_water_tag_ledger_per_tag(model) ? TagLedgerView{:leak}(Yₜ.c) :
+                  nothing,
+        per_tag_up = has_water_tag_ledger_per_tag(model) &&
+                     has_water_tag_updraft_copies(model) ?
+                     TagLedgerView{:upleak}(Yₜ.c) : nothing,
+    ) : nothing
+
+"""
+    apply_water_tag_leak_correction!(Yₜ, Y, p, ᶠρK_h, ᶜcorrection, ledgers,
+                                     mirror)
+
+The correction of [`correct_water_tag_diffusion_leak!`](@ref), whatever the
+model's key: each tag's correction is written into `ᶜcorrection`, a scratch
+center field, and added to the tag's tendency, to `ledgers`
+([`water_tag_leak_ledgers`](@ref), or `nothing` for none), and where `mirror` is
+`true` to each updraft's copy, per unit mass. The tests call it on a model
+without the key.
+"""
+function apply_water_tag_leak_correction!(
+    Yₜ,
+    Y,
+    p,
+    ᶠρK_h,
+    ᶜcorrection,
+    ledgers,
+    mirror,
+)
+    model = p.atmos.water_tagging_model
+    water_tag_share_norm!(p, Y)
+    ᶜnorm = p.scratch.ᶜtagging_q_share_norm
+    ᶜq_p = _leaking_water(Y, p)
+    n = mirror ? n_mass_flux_subdomains(p.atmos.turbconv_model) : 0
+    _apply_water_tag_leak_correction!(
+        Yₜ,
+        Y,
+        ᶠρK_h,
+        ᶜq_p,
+        ᶜnorm,
+        ᶜcorrection,
+        ledgers,
+        n,
+        model.tags,
+    )
+    return nothing
+end
+
+_apply_water_tag_leak_correction!(
+    Yₜ,
+    Y,
+    ᶠρK_h,
+    ᶜq_p,
+    ᶜnorm,
+    ᶜcorrection,
+    ledgers,
+    n,
+    ::Tuple{},
+) =
+    nothing
+function _apply_water_tag_leak_correction!(
+    Yₜ,
+    Y,
+    ᶠρK_h,
+    ᶜq_p,
+    ᶜnorm,
+    ᶜcorrection,
+    ledgers,
+    n,
+    tags::Tuple,
+)
+    tag = first(tags)
+    ᶜshare = _water_tag_share_field(Y.c, ᶜnorm, tag)
+    ᶜdivergence =
+        ᶜdiffusive_flux_divergenceᵥ(ᶠρK_h, (@. lazy(ᶜshare * ᶜq_p)))
+    @. ᶜcorrection = ᶜdivergence
+    ᶜρq_tagₜ = tag_field(Yₜ.c, tag)
+    @. ᶜρq_tagₜ += ᶜcorrection
+    _add_leak_ledgers!(ledgers, tag, ᶜcorrection)
+    for j in 1:n
+        ᶜχʲₜ = updraft_copy_field(Yₜ.c.sgsʲs.:($j), tag)
+        @. ᶜχʲₜ += ᶜcorrection / Y.c.ρ
+        _add_updraft_leak_ledgers!(
+            ledgers,
+            tag,
+            (@. lazy(ᶜcorrection * Y.c.sgsʲs.:($$j).ρa / Y.c.ρ)),
+        )
+    end
+    return _apply_water_tag_leak_correction!(
+        Yₜ,
+        Y,
+        ᶠρK_h,
+        ᶜq_p,
+        ᶜnorm,
+        ᶜcorrection,
+        ledgers,
+        n,
+        Base.tail(tags),
+    )
+end
+
+# The partition's correction goes to the mechanism's ledger, and every tag's to
+# its own. `_is_partition_tag` resolves on the tag's type.
+_add_leak_ledgers!(::Nothing, tag, ᶜchange) = nothing
+function _add_leak_ledgers!(ledgers, tag, ᶜchange)
+    if _is_partition_tag(tag)
+        ᶜnet = ledgers.net
+        @. ᶜnet += ᶜchange
+    end
+    add_to_tag_ledger!(ledgers.per_tag, tag, ᶜchange)
+    return nothing
+end
+_add_updraft_leak_ledgers!(::Nothing, tag, change) = nothing
+function _add_updraft_leak_ledgers!(ledgers, tag, change)
+    if _is_partition_tag(tag) && !isnothing(ledgers.upnet)
+        ᶜupnet = ledgers.upnet
+        @. ᶜupnet += change
+    end
+    add_to_tag_ledger!(ledgers.per_tag_up, tag, change)
+    return nothing
+end

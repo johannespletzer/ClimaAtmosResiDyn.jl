@@ -137,6 +137,55 @@ const WATER_TAG_ALL_MECHANISM_NAMES =
     (WATER_TAG_MECHANISM_NAMES..., WATER_TAG_COPY_MECHANISM_NAMES...)
 
 """
+    WATER_TAG_LEAK_MECHANISM_NAMES
+
+The water tags' state ledgers of the diffusion leak's correction (WP4c), under
+`water_tag_leak_correction: true` only: `q_tag_led_leaknet`, the partition's
+correction, the net of what it gave the partition's tags.
+`WATER_TAG_COPY_LEAK_MECHANISM_NAMES` adds the copies', `q_tag_led_upleaknet`,
+times `ρaʲ` and summed over the updrafts. The correction is a tendency, so these
+ledgers are exact per step at every `update_constrain_state_every`, and they
+have no `attempted` total: a tendency is evaluated at every stage and Newton
+iterate, and a sum over those evaluations is not what any step tried to move.
+See [`correct_water_tag_diffusion_leak!`](@ref).
+"""
+const WATER_TAG_LEAK_MECHANISM_NAMES = (:q_tag_led_leaknet,)
+const WATER_TAG_COPY_LEAK_MECHANISM_NAMES = (:q_tag_led_upleaknet,)
+
+"""
+    water_tag_leak_mechanism_names(model)
+
+The names of the leak correction's ledgers, in state order, or `()` without
+`water_tag_leak_correction: true`.
+"""
+water_tag_leak_mechanism_names(::Nothing) = ()
+water_tag_leak_mechanism_names(model::WaterTaggingModel) =
+    has_water_tag_leak_correction(model) ?
+    (
+        has_water_tag_updraft_copies(model) ?
+        (WATER_TAG_LEAK_MECHANISM_NAMES..., WATER_TAG_COPY_LEAK_MECHANISM_NAMES...) :
+        WATER_TAG_LEAK_MECHANISM_NAMES
+    ) : ()
+
+"""
+    water_tag_leak_mechanism_variables(value, model)
+
+The initial state of the leak correction's ledgers: zero, in the type of
+`value`, per point. `(;)` without them.
+"""
+water_tag_leak_mechanism_variables(value, model) =
+    _mechanism_zeros(value, Val(water_tag_leak_mechanism_names(model)))
+
+"""
+    is_water_tag_leak_mechanism_name(name)
+
+Whether `name` is one of the leak correction's ledgers.
+"""
+is_water_tag_leak_mechanism_name(name::Symbol) =
+    name in WATER_TAG_LEAK_MECHANISM_NAMES ||
+    name in WATER_TAG_COPY_LEAK_MECHANISM_NAMES
+
+"""
     ENERGY_SOURCE_MECHANISM_NAMES
 
 The energy source tags' state ledgers of the partition repair: its transfers,
@@ -201,11 +250,12 @@ is_tag_mechanism_ledger_name(name::Symbol) =
     tag_state_ledger_names(atmos)
 
 Every state ledger of the tags that the per-step gross follows: the ledgers per
-mechanism, the increment corrections' ledgers, and each tag's own ledgers where
-the tags keep them (step 3), of both families.
+mechanism, the leak correction's (WP4c), the increment corrections' ledgers,
+and each tag's own ledgers where the tags keep them (step 3), of both families.
 """
 tag_state_ledger_names(atmos) = (
     water_tag_mechanism_names(atmos.water_tagging_model)...,
+    water_tag_leak_mechanism_names(atmos.water_tagging_model)...,
     _water_increment_ledger_names(atmos.water_tagging_model)...,
     water_tag_per_tag_ledger_names(atmos.water_tagging_model)...,
     energy_source_mechanism_names(atmos.energy_source_tagging_model)...,
@@ -457,8 +507,10 @@ A view of a state or tendency `obj`, such as `Y.c` or `Yₜ.c`, whose
 `tag_field` for a tag is that tag's own ledger of kind `Kind` rather than the
 tag: `q_tag_led_<Kind>_<name>` for a water tag and `e_src_led_<Kind>_<name>` for
 an energy source tag. `Kind` is `:fix`, for the limiters' rescale and the
-repair, or `:inc`, for the increment correction. A kernel that changes the tags
-writes the same change into it, so each ledger follows its tag's correction.
+repair, `:inc`, for the increment correction, or, for water tags only, `:leak`
+and `:upleak`, for the diffusion leak's correction of the tag and of its copies
+(WP4c). A kernel that changes the tags writes the same change into it, so each
+ledger follows its tag's correction.
 """
 struct TagLedgerView{Kind, O}
     obj::O
@@ -495,14 +547,18 @@ _tag_type_name(::Type{<:EnergySourceTag{name}}) where {name} = name
 """
     water_tag_ledger_fix_names(model)
     water_tag_ledger_inc_names(model)
+    water_tag_ledger_leak_names(model)
+    water_tag_ledger_upleak_names(model)
     water_tag_per_tag_ledger_names(model)
 
 Each water tag's own state ledgers, in state order, under
 `water_tag_ledger_per_tag: true`, and `()` otherwise: `q_tag_led_fix_<name>`
 for every tag, what the limiters' rescale and the partition repair changed it
-by; and under `water_tag_transport: increment`, `q_tag_led_inc_<name>`, what
-the follower moved into or out of it. Their names carry no `ρ` prefix, so no
-transport operator sees them, and the tag names `led_*` are reserved.
+by; under `water_tag_transport: increment`, `q_tag_led_inc_<name>`, what
+the follower moved into or out of it; and under `water_tag_leak_correction: true`, `q_tag_led_leak_<name>`, what the diffusion leak's correction gave it,
+and with copies `q_tag_led_upleak_<name>`, what it gave its copies, times `ρaʲ`
+(WP4c). Their names carry no `ρ` prefix, so no transport operator sees them,
+and the tag names `led_*` are reserved.
 """
 water_tag_ledger_fix_names(::Nothing) = ()
 water_tag_ledger_fix_names(model::WaterTaggingModel) =
@@ -512,8 +568,22 @@ water_tag_ledger_inc_names(::Nothing) = ()
 water_tag_ledger_inc_names(model::WaterTaggingModel) =
     has_water_tag_ledger_per_tag(model) && follows_water_increment(model) ?
     _prefixed_tag_names(Val(:q_tag_led_inc_), model.tags) : ()
-water_tag_per_tag_ledger_names(model) =
-    (water_tag_ledger_fix_names(model)..., water_tag_ledger_inc_names(model)...)
+water_tag_ledger_leak_names(::Nothing) = ()
+water_tag_ledger_leak_names(model::WaterTaggingModel) =
+    has_water_tag_ledger_per_tag(model) && has_water_tag_leak_correction(model) ?
+    _prefixed_tag_names(Val(:q_tag_led_leak_), model.tags) : ()
+water_tag_ledger_upleak_names(::Nothing) = ()
+water_tag_ledger_upleak_names(model::WaterTaggingModel) =
+    has_water_tag_ledger_per_tag(model) &&
+    has_water_tag_leak_correction(model) &&
+    has_water_tag_updraft_copies(model) ?
+    _prefixed_tag_names(Val(:q_tag_led_upleak_), model.tags) : ()
+water_tag_per_tag_ledger_names(model) = (
+    water_tag_ledger_fix_names(model)...,
+    water_tag_ledger_inc_names(model)...,
+    water_tag_ledger_leak_names(model)...,
+    water_tag_ledger_upleak_names(model)...,
+)
 
 """
     energy_source_ledger_fix_names(model)
@@ -560,8 +630,18 @@ Whether `name` is one tag's own state ledger, of either family.
 is_tag_per_tag_ledger_name(name::Symbol) =
     any(
         prefix -> startswith(string(name), prefix),
-        ("q_tag_led_fix_", "q_tag_led_inc_", "e_src_led_fix_", "e_src_led_inc_"),
+        TAG_PER_TAG_LEDGER_PREFIXES,
     )
+
+# The prefixes of each tag's own ledgers, of both families.
+const TAG_PER_TAG_LEDGER_PREFIXES = (
+    "q_tag_led_fix_",
+    "q_tag_led_inc_",
+    "q_tag_led_leak_",
+    "q_tag_led_upleak_",
+    "e_src_led_fix_",
+    "e_src_led_inc_",
+)
 
 """
     water_tag_fix_ledger_view(Y, model)
@@ -679,12 +759,14 @@ prefix. Over the domain, as `scale` is:
   - `<L>_retained`, `<L>_retained_relative`: the per-step gross since the start
     of the run, `Σ |ΔL|` over the accepted steps, integrated, and over `scale`.
     Exact per step at `update_constrain_state_every: step` for the ledgers per
-    mechanism, and at every cadence for each tag's own ledgers;
+    mechanism, and at every cadence for each tag's own ledgers and the leak
+    correction's;
   - `<L>_attempted`, `<L>_attempted_relative`: what the writers of `L` added,
     in absolute value, over every call, including stage values the stepper
     discards. For a tag's own ledger of the limiters' and the repair's
     corrections, the cache ledger's gross twin `fix_gross`, which takes the
-    same changes;
+    same changes. `NaN` for the leak correction's ledgers, a tendency's, which
+    have none;
   - `<L>_events`: the number of cell-steps whose change of `L` exceeded
     rounding against the cell's total;
   - for a tag's own ledger, `<L>_inventory_fraction`: `<L>_retained` over the
@@ -732,7 +814,11 @@ function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross)
         column!("$(short)_attempted_relative", per_scale(attempted))
         column!("$(short)_events", tag_event_total((ledger.ᶜevents,)))
         if is_tag_per_tag_ledger_name(name)
-            tag_name = chopprefix(chopprefix(short, "led_fix_"), "led_inc_")
+            tag_name = foldl(
+                chopprefix,
+                ("led_fix_", "led_inc_", "led_leak_", "led_upleak_");
+                init = short,
+            )
             inventory = Float64(
                 sum(getproperty(Y.c, Symbol(tag_prefix, tag_name))),
             )

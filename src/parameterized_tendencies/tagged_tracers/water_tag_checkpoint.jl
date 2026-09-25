@@ -60,8 +60,8 @@ Refuse a restart that would change what the water tags in `restart_file` mean.
 It checks, in this order, and stops at the first mismatch:
 
  1. The water tag fields in `Y`, the increment's ledger, the tags' copies
-    in the first updraft, then the ledgers per mechanism, against what
-    `model` configures. A checkpoint written before the ledgers per mechanism
+    in the first updraft, then the ledgers per mechanism, the leak
+    correction's and each tag's own, against what `model` configures. A checkpoint written before the ledgers per mechanism
     is refused here. A changed
     `water_tag_transport` or `water_tag_updraft_copy` fails here, because the
     ledger or the copies are in the file or are not. This needs no attribute,
@@ -118,8 +118,20 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "q_tag_",
         "water_tag_updraft_copy",
     )
+    # The leak correction's ledgers (WP4c) are in the file or are not, so a
+    # changed `water_tag_leak_correction` fails here.
+    check_restart_fields(
+        restart_file,
+        Y,
+        is_water_tag_leak_mechanism_name,
+        water_tag_leak_mechanism_names(water_model),
+        "water tags' leak correction ledgers",
+        "water_tag_leak_correction",
+        "q_tag_led_",
+    )
     # Each tag's own ledgers (WP6, step 3) are in the file or are not, so a
-    # changed `water_tag_ledger_per_tag` fails here.
+    # changed `water_tag_ledger_per_tag` fails here. Those of the leak
+    # correction depend on `water_tag_leak_correction` too.
     check_restart_fields(
         restart_file,
         Y,
@@ -128,7 +140,7 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
             startswith(string(name), "q_tag_"),
         water_tag_per_tag_ledger_names(water_model),
         "water tags' own ledgers",
-        "water_tag_ledger_per_tag",
+        "water_tag_ledger_per_tag` and `water_tag_leak_correction",
         "q_tag_led_",
     )
     isnothing(water_model) && return nothing

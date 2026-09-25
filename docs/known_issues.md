@@ -72,7 +72,9 @@ parent, by these mechanisms:
   - **The leaks.** Paths that move the tags on their whole value and `ρq_tot`
     without rain and snow, or relative to a reference profile.
     `q_tag_leak_<path>` gives the source each would add to an exactly closed
-    partition. WP4c corrects the ones G3_PLAN 4.2's rule selects.
+    partition. `water_tag_leak_correction: true` corrects the two that WP4c's
+    gate retained, the EDMF vertical diffusion and its updrafts' mirror. It is
+    off by default. The other paths, on the sphere only, are not corrected.
   - **The vertical advection split**, as without EDMF.
   - **The plume model.** The default mode's updraft composition is a steady
     entraining plume, not a prognostic field. The updraft copies audit it.

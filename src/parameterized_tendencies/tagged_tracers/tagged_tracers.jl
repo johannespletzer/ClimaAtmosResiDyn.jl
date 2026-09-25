@@ -356,7 +356,9 @@ Scratch fields needed by tagged-tracer source attribution, merged into
 `Yₜ.c.ρe_tot` from the last [`snapshot_tagged_ρe_tot!`](@ref); no other code
 touches it, so a bracketed process cannot clobber it. `ᶜtagging_q_snapshot` is
 its water counterpart, and `ᶜtagging_q_share_norm` holds the partition-share
-denominator of [`water_tag_share_norm!`](@ref).
+denominator of [`water_tag_share_norm!`](@ref). `ᶜtagging_q_leak_correction`,
+under `water_tag_leak_correction: true` only, holds one tag's correction of the
+diffusion's leak at a time ([`correct_water_tag_diffusion_leak!`](@ref)).
 """
 tagging_scratch(Y, atmos::AtmosModel) = (;
     (
@@ -369,6 +371,10 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
             ᶜtagging_q_snapshot = similar(Y.c.ρ),
             ᶜtagging_q_share_norm = similar(Y.c.ρ),
             water_tag_edmf_scratch(Y, atmos.water_tagging_model, atmos)...,
+            (
+                has_water_tag_leak_correction(atmos.water_tagging_model) ?
+                (; ᶜtagging_q_leak_correction = similar(Y.c.ρ)) : (;)
+            )...,
         )
     )...,
     (

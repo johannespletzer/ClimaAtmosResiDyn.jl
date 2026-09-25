@@ -16,7 +16,9 @@ so that parity covers the tags' brackets on the explicit path, after an hour:
  4. with one composition everywhere, each copy's whole tendency is its share
     of `q_totʲ`'s, up to the diffusion's leak, whose closed form it checks, and
     up to the surface flux, whose new water goes by region and source. The
-    partition's copies take all of the updraft's surface flux;
+    partition's copies take all of the updraft's surface flux. The diffusion
+    leak's correction, called on its own, closes the partition's diffusion
+    and the copies';
  5. the copies' own code allocates next to nothing;
  6. the model's fields are those of the same column without tags, bit for bit.
 
@@ -324,6 +326,54 @@ end
             @test relative_difference(ᶜχₜ, share .* (ᶜq_totʲₜ .+ ᶜleakʲ)) <
                   1e-10
         end
+    end
+
+    # 4c. The diffusion leak's correction (WP4c) on the copies. This model does
+    # not set `water_tag_leak_correction`, so the kernel is called on its own,
+    # with its scratch and no ledgers. With one composition everywhere, the
+    # partition's diffusion differs from the parent's by the leak, and the
+    # copies' from `q_totʲ`'s by the same leak per unit mass. After the
+    # correction both agree to rounding.
+    @testset "The leak correction closes the copies' diffusion" begin
+        shares = (; tropo = 0.3, strat = 0.7, evap = 0.2)
+        Y_uniform = copy(Y)
+        ᶜsgsʲ_uniform = Y_uniform.c.sgsʲs.:(1)
+        for (name, share) in pairs(shares)
+            getproperty(Y_uniform.c, Symbol(:ρq_tag_, name)) .=
+                share .* Y.c.ρq_tot
+            getproperty(ᶜsgsʲ_uniform, Symbol(:q_tag_, name)) .=
+                share .* ᶜsgsʲ.q_tot
+        end
+        CA.set_precomputed_quantities!(Y_uniform, p, t)
+        @test !CA.has_water_tag_leak_correction(model)
+        Yₜ = zero(Y)
+        CA.edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y_uniform, p, t, turbconv_model)
+        ᶜleak = similar(Y.c.ρ)
+        CA.water_tag_leak!(ᶜleak, Y_uniform, p, Val(:vdiff))
+        scale = maximum(abs, parent(ᶜleak))
+        @test scale > 0
+        partition_gap(Yₜ) =
+            (Yₜ.c.ρq_tag_tropo .+ Yₜ.c.ρq_tag_strat .- Yₜ.c.ρq_tot) ./ Y.c.ρ
+        ᶜsgsʲₜ = Yₜ.c.sgsʲs.:(1)
+        copies_gap(ᶜsgsʲₜ) = ᶜsgsʲₜ.q_tag_tropo .+ ᶜsgsʲₜ.q_tag_strat .- ᶜsgsʲₜ.q_tot
+        @test maximum(abs, parent(partition_gap(Yₜ) .- ᶜleak)) < 1e-8 * scale
+        @test maximum(abs, parent(copies_gap(ᶜsgsʲₜ) .- ᶜleak)) < 1e-8 * scale
+        ᶠρK_h = CA.Fields.Field(eltype(Y), axes(Y.f))
+        @. ᶠρK_h = CA.ᶠinterp(Y_uniform.c.ρ) * p.precomputed.ᶠK_h
+        CA.apply_water_tag_leak_correction!(
+            Yₜ,
+            Y_uniform,
+            p,
+            ᶠρK_h,
+            similar(Y.c.ρ),
+            nothing,
+            true,
+        )
+        @test maximum(abs, parent(partition_gap(Yₜ))) < 1e-8 * scale
+        @test maximum(abs, parent(copies_gap(ᶜsgsʲₜ))) < 1e-8 * scale
+        # A copy takes its tag's correction per unit mass, as it takes its
+        # tag's diffusion.
+        @test maximum(abs, parent(ᶜsgsʲₜ.q_tag_evap)) > 0
     end
 
     # 4b. The sedimentation mirror takes the updraft's share for the falling

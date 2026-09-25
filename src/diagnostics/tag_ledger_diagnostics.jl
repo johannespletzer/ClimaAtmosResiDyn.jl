@@ -7,6 +7,8 @@
 # from an earlier model in this process is dropped.
 const _ALL_TAG_STATE_LEDGER_NAMES = (
     WATER_TAG_ALL_MECHANISM_NAMES...,
+    WATER_TAG_LEAK_MECHANISM_NAMES...,
+    WATER_TAG_COPY_LEAK_MECHANISM_NAMES...,
     :q_tag_inc_left,
     :q_tag_inc_moved,
     ENERGY_SOURCE_MECHANISM_NAMES...,
@@ -33,6 +35,14 @@ const _TAG_MECHANISM_TEXT = (;
                          "(repair_water_tag_copies!)",
     q_tag_led_upfilter = "the updraft filter's change of the partition " *
                          "copies' water, Δ(ρaʲ Σ χᵢʲ), net over the copies",
+    q_tag_led_leaknet = "the water the diffusion leak's correction gave " *
+                        "the partition's tags, the net of their changes: " *
+                        "minus the leak q_tag_leak_vdiff times ρ, where " *
+                        "the partition holds water " *
+                        "(correct_water_tag_diffusion_leak!, WP4c)",
+    q_tag_led_upleaknet = "the water the diffusion leak's correction gave " *
+                          "the partition's copies, times ρaʲ, the net of " *
+                          "their changes (correct_water_tag_diffusion_leak!)",
     e_src_led_repair = "the energy the partition repair moved between the " *
                        "tags, half the sum of the tags' changes less their " *
                        "net (repair_energy_source_tags!)",
@@ -73,13 +83,27 @@ function compute_tag_ledger_attempted!(out, state, cache, name)
     return result
 end
 
+# What writes a tag's own ledger, for its comments.
+function _per_tag_ledger_writer(name)
+    long = string(name)
+    any(prefix -> startswith(long, prefix), ("q_tag_led_fix_", "e_src_led_fix_")) &&
+        return "limiters' rescale and the partition repair "
+    any(prefix -> startswith(long, prefix), ("q_tag_led_inc_", "e_src_led_inc_")) &&
+        return "correction after each implicit solve "
+    startswith(long, "q_tag_led_upleak_") &&
+        return "diffusion leak's correction of the tag's copies, times ρaʲ, "
+    return "diffusion leak's correction (WP4c) "
+end
+
 # The name of a diagnostic of kind `kind` (`gross`, `colgross`, `attempted`) of
 # the state ledger `name`. For a tag's own ledger the kind goes before the tag's
 # name, `q_tag_led_fixgross_<tag>`, so that no tag's name can make it collide
 # with another tag's ledger; the tag names `led_*` are reserved.
 function tag_ledger_diagnostic_name(name, kind)
     long = string(name)
-    for prefix in ("q_tag_led_", "e_src_led_"), part in ("fix_", "inc_")
+    for prefix in ("q_tag_led_", "e_src_led_"),
+        part in ("fix_", "inc_", "leak_", "upleak_")
+
         startswith(long, prefix * part) || continue
         tag = chopprefix(long, prefix * part)
         return "$(prefix)$(chopsuffix(part, "_"))$(kind)_$(tag)"
@@ -107,6 +131,8 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
     attempted_names = tag_attempted_ledger_names(model)
     for name in _ALL_TAG_STATE_LEDGER_NAMES
         name in WATER_TAG_ALL_MECHANISM_NAMES ||
+            name in WATER_TAG_LEAK_MECHANISM_NAMES ||
+            name in WATER_TAG_COPY_LEAK_MECHANISM_NAMES ||
             name in ENERGY_SOURCE_MECHANISM_NAMES ||
             continue
         delete!(ALL_DIAGNOSTICS, string(name))
@@ -120,7 +146,14 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
     for short_name in collect(keys(ALL_DIAGNOSTICS))
         any(
             prefix -> startswith(short_name, prefix),
-            ("q_tag_led_fix", "q_tag_led_inc", "e_src_led_fix", "e_src_led_inc"),
+            (
+                "q_tag_led_fix",
+                "q_tag_led_inc",
+                "q_tag_led_leak",
+                "q_tag_led_upleak",
+                "e_src_led_fix",
+                "e_src_led_inc",
+            ),
         ) && delete!(ALL_DIAGNOSTICS, short_name)
     end
     for name in names
@@ -132,11 +165,7 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
                 units,
                 long_name = "$what Retained by the Corrections of One Tag",
                 comments = "What the " *
-                           (
-                               occursin("_led_fix_", string(name)) ?
-                               "limiters' rescale and the partition repair " :
-                               "correction after each implicit solve "
-                           ) *
+                           _per_tag_ledger_writer(name) *
                            "changed this tag by, as the steps retained it: " *
                            "the stepper weights this state field as it " *
                            "weights the tag. Per unit mass, cumulative since " *

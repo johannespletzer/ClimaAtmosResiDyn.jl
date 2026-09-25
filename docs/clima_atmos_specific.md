@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `tagging_water_increment`, `parameterizations`, `restarts`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `tagging_water_increment`, `tagging_water_leak`, `parameterizations`, `restarts`. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -88,8 +88,9 @@ runs `test/energy_source_tags_updraft_integration.jl`,
 `tagging_water_edmf`, `tagging_water_edmf_copies` and `tagging_water_edmf_0m`
 run `test/tagged_water_edmf_integration.jl`,
 `test/tagged_water_edmf_copies_integration.jl` and
-`test/tagged_water_edmf_0m_integration.jl`, and `tagging_water_increment`
-runs `test/tagged_water_increment_integration.jl`. They are split because a tag
+`test/tagged_water_edmf_0m_integration.jl`, `tagging_water_increment`
+runs `test/tagged_water_increment_integration.jl`, and `tagging_water_leak`
+runs `test/tagged_water_leak_correction_integration.jl`. They are split because a tag
 name is a type parameter, so each tag set recompiles the whole tendency and
 solve pipeline, roughly seven minutes per simulation on Julia 1.11, and the
 files share no compilation between them. Combined they overran the 90-minute
@@ -165,6 +166,12 @@ donor cell at each face, the hook running the parent's own correction
 unchanged, no allocations), the closure after an hour, the ledger in the
 audit, the diagnostics and the split solver, and parity. It also builds the
 column twice.
+
+`tagging_water_leak` runs `water_tag_leak_correction: true` on the same column
+under the follower, with each tag's ledgers. It checks that the partition's
+EDMF diffusion is the parent's, that each tag's correction and ledger is the
+diffusion of its share of the rain and snow, the ledgers after an hour, the
+audit and the split solver, and parity. It also builds the column twice.
 
 Each checks that the model's fields are those without tags, bit for bit.
 
