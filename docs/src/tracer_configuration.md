@@ -300,20 +300,23 @@ can see drift without waiting for the run to end.
 water_closure_check:
   period: "1days"        # how often to check
   tolerance: 1.0e-10     # warn above this relative residual
-  abort_above: 1.0       # end the run above this one
+  void_above: 1.0        # above this, warn once and mark every later row void
+  abort_above: ~         # end the run above this one; never, by default
   audit: false           # write the second table described below
 
 energy_closure_check:
   period: "1days"
   tolerance: 1.0e-6
-  abort_above: ~         # the default for both energy families
+  void_above: ~          # the default for both energy families
+  abort_above: ~
 ```
 
 Every key is optional inside each block, and both blocks are off by default.
 Both also accept `spin_up`, described under the energy source tags.
 Each writes `water_tag_closure.csv` / `energy_tag_closure.csv` to the output
 directory, with columns `time`, `total`, `tagged`, `residual`, `relative`,
-`gross_residual`, `gross_relative`, `scale` and `nonpositive_fraction`.
+`gross_residual`, `gross_relative`, `scale` and `nonpositive_fraction`, and a
+last column `void` where the check has a void level.
 
 `residual = total - tagged` is the signed miss between two global integrals, and
 `relative` is it over `scale = ∫|parent|`. `gross_residual` integrates the
@@ -338,20 +341,29 @@ Exceeding the tolerance **warns and keeps running**. Closure drift is something
 you want to watch grow, and ending a multi-year integration over it costs more
 than it saves.
 
-Exceeding `abort_above` **ends the run**. That is a different event from drift: a
-residual larger than the field it measures says the tags no longer describe
-anything, and every hour past that point burns compute to produce output nobody
-can use. Only water has a default level, `1.0`. A set of non-negative tags inside
-a non-negative parent misses it by at most the parent itself, pointwise, so an
-honest partition cannot reach 1 — and neither can an honest strict subset of one,
-which leaves most of the water untagged and pushes the ratio towards 1 from
-below. Passing 1 means the tags hold water that is not there, or the parent has
-gone negative. Both energy families default to `~`, no level at all, because
-their residual is normalized by `∫|ρe_tot|`, whose zero is a convention: a
-shifted energy reference can make that denominator arbitrarily small and the
-ratio arbitrarily large with nothing wrong. Set one per run once its first
-closure table shows where that configuration settles. Writing `abort_above: ~`
-turns the water default off.
+Exceeding `void_above` **marks the tags void, and the run goes on.** That is a
+different event from drift: a residual larger than the field it measures says
+the tags no longer describe anything. The check warns once, and from then on it
+writes `void` as 1 on every row of its closure table and its audit table. The
+tags are a diagnostic, and a diagnostic must never end a run that the model
+would complete. Before, water's check ended the run at this level, and so ended
+runs whose parent's own water had gone negative (known issue 7). Only water has
+a default level, `1.0`. A set of non-negative tags inside a non-negative parent
+misses it by at most the parent itself, pointwise, so an honest partition
+cannot reach 1 — and neither can an honest strict subset of one, which leaves
+most of the water untagged and pushes the ratio towards 1 from below. Passing 1
+means the tags hold water that is not there, or the parent has gone negative.
+Both energy families default to `~`, no level at all, because their residual is
+normalized by `∫|ρe_tot|`, whose zero is a convention: a shifted energy
+reference can make that denominator arbitrarily small and the ratio
+arbitrarily large with nothing wrong. Set one per run once its first closure
+table shows where that configuration settles. Writing `void_above: ~` turns the
+water default off. The flag starts again after a restart, from the restarted
+run's own first pass.
+
+Exceeding `abort_above` **ends the run**, where a user sets it. No family sets
+one by default. Set it when a run whose tags no longer mean anything is not
+worth its compute.
 
 The check adds no tendency. It only reads the state and writes a table, so
 switching it on does not change what the simulation produces.
@@ -592,6 +604,7 @@ ClimaAtmos.DEFAULT_CLOSURE_TOLERANCES
 ClimaAtmos.ENERGY_SOURCE_CLOSURE_TOLERANCES
 ClimaAtmos.energy_source_closure_tolerance
 ClimaAtmos.DEFAULT_CLOSURE_ABORT_LEVELS
+ClimaAtmos.DEFAULT_CLOSURE_VOID_LEVELS
 ClimaAtmos.closure_check_from_config
 ClimaAtmos.tag_closure
 ClimaAtmos.tag_audit

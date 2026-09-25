@@ -516,7 +516,8 @@ tag_closure_path(output_dir, family) =
     joinpath(output_dir, "$(family)_tag_closure.csv")
 
 """
-    write_tag_closure!(output_dir, t, family, closure; reference = nothing)
+    write_tag_closure!(output_dir, t, family, closure; reference = nothing,
+                       void = nothing)
 
 Append one row to the closure table of `family`, creating it with a header if
 it does not exist yet. Called on the root process only.
@@ -525,8 +526,19 @@ A check with a spin-up reference passes `reference`, a `Ref` that holds the
 residual at the spin-up once it is taken, and `nothing` before. The row then
 carries three more columns: that residual, the residual since, and the residual
 since relative to the scale. Before the reference is taken, they are `NaN`.
+
+A check with a void level passes `void`, a `Bool`: whether its residual has
+passed that level at this row or before. The row then ends with a `void` column,
+1 or 0. Without a void level, `nothing`, the table has no such column.
 """
-function write_tag_closure!(output_dir, t, family, closure; reference = nothing)
+function write_tag_closure!(
+    output_dir,
+    t,
+    family,
+    closure;
+    reference = nothing,
+    void = nothing,
+)
     path = tag_closure_path(output_dir, family)
     write_header = !isfile(path) || filesize(path) == 0
     values = (
@@ -551,6 +563,10 @@ function write_tag_closure!(output_dir, t, family, closure; reference = nothing)
         relative_since =
             iszero(closure.scale) ? zero(since) : since / closure.scale
         values = (values..., at_spin_up, since, relative_since)
+    end
+    if !isnothing(void)
+        header *= ",void"
+        values = (values..., Int(void))
     end
     open(path, "a") do io
         write_header && println(io, header)
@@ -679,16 +695,24 @@ tag_audit_path(output_dir, family) =
     joinpath(output_dir, "$(family)_tag_audit.csv")
 
 """
-    write_tag_audit!(output_dir, t, family, audit; extra = nothing)
+    write_tag_audit!(output_dir, t, family, audit; extra = nothing, void = nothing)
 
 Append one row to the audit table of `family`, creating it with a header if it
 does not exist yet. Called on the root process only.
 
 `extra` is a `NamedTuple` of a family's own columns, such as
 [`energy_source_audit`](@ref) gives, appended after the common ones under their
-own names, or `nothing`.
+own names, or `nothing`. `void` is as in [`write_tag_closure!`](@ref): a last
+column `void`, 1 or 0, where the check has a void level.
 """
-function write_tag_audit!(output_dir, t, family, audit; extra = nothing)
+function write_tag_audit!(
+    output_dir,
+    t,
+    family,
+    audit;
+    extra = nothing,
+    void = nothing,
+)
     path = tag_audit_path(output_dir, family)
     write_header = !isfile(path) || filesize(path) == 0
     header =
@@ -711,6 +735,10 @@ function write_tag_audit!(output_dir, t, family, audit; extra = nothing)
     if !isnothing(extra)
         header *= "," * join(string.(keys(extra)), ",")
         row = (row..., values(extra)...)
+    end
+    if !isnothing(void)
+        header *= ",void"
+        row = (row..., Int(void))
     end
     open(path, "a") do io
         write_header && println(io, header)
@@ -754,10 +782,13 @@ end
 
 """
     tag_closure_callback!(integrator, output_dir, family, total_name,
-                          tag_state_names, tolerance, abort_above, audit)
+                          tag_state_names, tolerance, abort_above, audit;
+                          reference = nothing, extra_audit = nothing,
+                          void_above = nothing, voided = nothing)
 
 Record the closure of one tag family, warn when it has drifted past `tolerance`,
-and end the run when it has passed `abort_above`.
+mark its rows void once it has passed `void_above`, and end the run only when
+it has passed an `abort_above` the user set.
 
 The comparison is against `gross_relative`, the relative residual that does not
 let opposite-signed local errors cancel (see [`tag_closure`](@ref)). It is never
@@ -769,11 +800,15 @@ to watch grow, and ending a multi-year integration over it would cost more than
 it saves, so exceeding `tolerance` warns and keeps running.
 
 A divergence is not drift. A residual far larger than the field it measures says
-the tags no longer describe anything, and every hour the run continues past that
-point costs compute and produces output nobody can use. `abort_above` is the
-level at which the run stops instead, and `nothing` disables it. See
-[`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref) for what each family defaults to and why
-the two energy families default to no level at all.
+the tags no longer describe anything. But the tags are a diagnostic, and a
+diagnostic must never end a run that upstream completes (known issue 7). So
+past `void_above` the check warns once, and marks this row and every later row
+void, in the closure table and the audit table; the run goes on. `voided`, a
+`Ref{Bool}`, remembers that the level was passed; it starts again at `false`
+after a restart, so a restarted run marks its rows from its own first pass.
+`abort_above` still ends the run where a user sets it; no family sets one by
+default. See [`DEFAULT_CLOSURE_VOID_LEVELS`](@ref) and
+[`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref).
 
 `audit` adds a second table that splits the residual into the parts that mean
 different things, and reports the non-positive parent by mass beside the volume
@@ -803,9 +838,19 @@ function tag_closure_callback!(
     audit;
     reference = nothing,
     extra_audit = nothing,
+    void_above = nothing,
+    voided = nothing,
 )
     Y = integrator.u
     closure = tag_closure(Y, integrator.p, total_name, tag_state_names)
+    # Every process computes the same `closure`, so every process keeps the
+    # same flag.
+    passed_void = !isnothing(void_above) && closure.gross_relative > void_above
+    first_void = passed_void && !(!isnothing(voided) && voided[])
+    isnothing(voided) || (voided[] = voided[] || passed_void)
+    void =
+        isnothing(void_above) ? nothing :
+        (isnothing(voided) ? passed_void : voided[])
     # Collective, like the closure itself, so it runs on every process and is
     # written on one.
     audit_row =
@@ -817,9 +862,23 @@ function tag_closure_callback!(
         extra_audit(Y, integrator.p, closure.scale) : nothing
     t = Float64(integrator.t)
     if ClimaComms.iamroot(ClimaComms.context(Y.c))
-        write_tag_closure!(output_dir, t, family, closure; reference)
-        isnothing(audit_row) ||
-            write_tag_audit!(output_dir, t, family, audit_row; extra = extra_row)
+        write_tag_closure!(output_dir, t, family, closure; reference, void)
+        isnothing(audit_row) || write_tag_audit!(
+            output_dir,
+            t,
+            family,
+            audit_row;
+            extra = extra_row,
+            void,
+        )
+        first_void && @warn(
+            "$family tag closure residual $(closure.gross_relative) exceeds \
+            the void level $void_above at t = $t s. The tags no longer \
+            describe the field they partition. The run goes on, and this row \
+            and every later row of $(tag_closure_path(output_dir, family)) \
+            are marked void. Set `abort_above` in the closure-check block to \
+            end the run instead."
+        )
         !isnothing(tolerance) && closure.gross_relative > tolerance &&
             @warn(
                 "$family tag closure residual $(closure.gross_relative) exceeds \
