@@ -21,6 +21,14 @@ verdict:
     ledger's per-step gross (reported), the partition repair's retained gross
     (at most 0.5% of the water a day) and each tag's led_fix (at most 2% of
     its inventory).
+
+Checked 2026-09-25, after #116's defect was found (the water audit's
+`nonpositive_mass` reads `max(ρq_tot, 0)` under option C, so it is 0 by
+construction; PR #118 fixes it): nothing here reads `nonpositive_mass` or
+`nonpositive_fraction`. The parent's negative water comes from the output:
+the untagged twin's `hus` (V3) and `q_tag_negative` (V2b). "The water" in V5
+is the closure table's `total`, which under option C is `∫max(ρq_tot, 0)`,
+the total the partition holds. No pass rule changes.
 """
 import csv
 import glob
