@@ -533,6 +533,86 @@ end
     )
     @test enthalpy.energy_source_tagging_model.transport isa
           CA.EnthalpyEnergySourceTransport
+
+    # `enthalpy_increment` with sedimenting microphysics stepped explicitly:
+    # the tags have no sedimentation cross blocks, so they lag the parent
+    # there (FINDINGS E80 on the record branch, for 1M; 2M and P3 are not
+    # measured). The default refuses it. The opt-in key lets it through the
+    # check, with a warning.
+    key = "energy_source_tag_increment_allow_explicit_microphysics"
+    explicit(microphysics) = (
+        "microphysics_model" => microphysics,
+        "implicit_microphysics" => false,
+        "energy_source_tag_transport" => "enthalpy_increment",
+    )
+    for microphysics in ("1M", "2M", "2MP3")
+        @test_throws Regex("refused with\\s+`microphysics_model: $microphysics`") CA.AtmosTagging(
+            source_config("increment_explicit_$microphysics", explicit(microphysics)...),
+        )
+        @test_throws Regex("$key: true") CA.AtmosTagging(
+            source_config("increment_explicit_$microphysics", explicit(microphysics)...),
+        )
+        allowed =
+            @test_logs (:warn, r"stepped explicitly") match_mode = :any CA.AtmosTagging(
+                source_config(
+                    "increment_explicit_$(microphysics)_allowed",
+                    explicit(microphysics)...,
+                    key => true,
+                ),
+            )
+        @test allowed.energy_source_tagging_model.transport isa
+              CA.EnthalpyIncrementEnergySourceTransport
+    end
+    # The message says what was measured: 1M was, 2M and P3 were not.
+    @test_throws r"2\.1e-4 of the partitioned energy, against" CA.AtmosTagging(
+        source_config("increment_explicit_1M_measured", explicit("1M")...),
+    )
+    @test_throws r"No run has measured the lag" CA.AtmosTagging(
+        source_config("increment_explicit_2M_unmeasured", explicit("2M")...),
+    )
+    # The refusal concerns only that combination. With the microphysics
+    # implicit, the default, with 0M, which sediments nothing, or with another
+    # transport, nothing changes, and the key's default is off.
+    for (name, pairs) in (
+        "increment_implicit_1m" => (
+            "microphysics_model" => "1M",
+            "energy_source_tag_transport" => "enthalpy_increment",
+        ),
+        "increment_implicit_2m" => (
+            "microphysics_model" => "2M",
+            "energy_source_tag_transport" => "enthalpy_increment",
+        ),
+        "increment_explicit_0m" => (
+            "microphysics_model" => "0M",
+            "implicit_microphysics" => false,
+            "energy_source_tag_transport" => "enthalpy_increment",
+        ),
+    )
+        @test CA.AtmosTagging(source_config(name, pairs...)).energy_source_tagging_model.transport isa
+              CA.EnthalpyIncrementEnergySourceTransport
+    end
+    tracer_explicit_1m = CA.AtmosTagging(
+        source_config(
+            "tracer_explicit_1m",
+            "microphysics_model" => "1M",
+            "implicit_microphysics" => false,
+        ),
+    )
+    @test tracer_explicit_1m.energy_source_tagging_model.transport isa
+          CA.TracerEnergySourceTransport
+    @test CA.energy_source_increment_explicit_microphysics_from_config(nothing) ==
+          false
+    @test CA.energy_source_increment_explicit_microphysics_from_config(true) == true
+    @test_throws r"must be\s+`true` or `false`" CA.energy_source_increment_explicit_microphysics_from_config(
+        "true",
+    )
+    # As the offset and the transport, the key is refused without tags.
+    @test_throws r"no tags for it\s+to allow" CA.AtmosTagging(
+        tracer_config(
+            [key => true];
+            job_id = "tracer_config_source_explicit_microphysics_alone",
+        ),
+    )
 end
 
 @testset "passive_tracers release grid" begin

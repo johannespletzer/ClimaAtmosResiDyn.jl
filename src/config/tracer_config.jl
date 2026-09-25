@@ -1341,6 +1341,105 @@ function check_energy_source_updraft_copy_supported(turbconv)
 end
 
 """
+    energy_source_increment_explicit_microphysics_from_config(value)
+
+Parse `energy_source_tag_increment_allow_explicit_microphysics`. `false`, the
+default, and `~` keep `energy_source_tag_transport: enthalpy_increment` refused
+with sedimenting microphysics stepped explicitly; `true` allows it, for
+development runs. Anything else is an error, so that a quoted `"true"` cannot
+silently read as off. See `check_energy_source_increment_microphysics_supported`.
+"""
+function energy_source_increment_explicit_microphysics_from_config(value)
+    isnothing(value) && return false
+    value isa Bool || error(
+        "`energy_source_tag_increment_allow_explicit_microphysics` must be \
+        `true` or `false`, got $(repr(value)).",
+    )
+    return value
+end
+
+"""
+    SEDIMENTING_MICROPHYSICS_MODELS
+
+The values of `microphysics_model` whose species sediment: 1M, 2M and P3.
+0M removes its condensate as a local sink and sediments nothing.
+"""
+const SEDIMENTING_MICROPHYSICS_MODELS = ("1M", "2M", "2MP3")
+
+"""
+    check_energy_source_increment_microphysics_supported(
+        transport,
+        parsed_args,
+        allow_explicit_microphysics,
+    )
+
+Refuse `energy_source_tag_transport: enthalpy_increment` with microphysics that
+sediments (`microphysics_model: 1M`, `2M` or `2MP3`) stepped explicitly
+(`implicit_microphysics: false`), unless
+`energy_source_tag_increment_allow_explicit_microphysics: true`. With that key
+the configuration runs, and the model warns.
+
+In the implicit Jacobian the parent's `ρe_tot` row has a cross block from each
+sedimenting species, for the energy the falling water carries. The tags' rows
+do not. So with one Newton iteration the tags miss part of the parent's
+sedimentation update. The correction after each solve cannot move the part
+that changes a column's total, and that part stays in `e_src_res`. On the
+tag-closure experiments' DYCOMS RF02 column (prognostic EDMF, 1M, an hour)
+the closure residual was 2.1e-4 of the partitioned energy with the
+microphysics explicit, 1.5e-6 with it implicit, and 4.9e-12 with ten Newton
+iterations (FINDINGS E80 on the record branch). 2M and P3 sediment too, and
+nothing has measured them, so they are refused until a run does. The water
+tags lag in the same way under 1M. PR #105 proposes the analogous cross
+blocks for them, and PR #113 the energy tags' own.
+
+The check concerns only the tags' own keys. Without the tags, with another
+transport, with 0M, or with the microphysics implicit, it does nothing.
+"""
+function check_energy_source_increment_microphysics_supported(
+    transport,
+    parsed_args,
+    allow_explicit_microphysics,
+)
+    transport isa EnthalpyIncrementEnergySourceTransport || return nothing
+    microphysics = get(parsed_args, "microphysics_model", nothing)
+    explicit_sedimenting =
+        microphysics in SEDIMENTING_MICROPHYSICS_MODELS &&
+        get(parsed_args, "implicit_microphysics", true) == false
+    explicit_sedimenting || return nothing
+    if allow_explicit_microphysics
+        @warn(
+            "`energy_source_tag_transport: enthalpy_increment` runs with \
+            `microphysics_model: $microphysics` stepped explicitly, because \
+            `energy_source_tag_increment_allow_explicit_microphysics: true`. \
+            The tags have no cross blocks to the sedimenting species in the \
+            implicit Jacobian, so with few Newton iterations they lag the \
+            parent's sedimentation, and the lag lands in `e_src_res`.",
+        )
+        return nothing
+    end
+    measured =
+        microphysics == "1M" ?
+        "On a DYCOMS RF02 EDMF column with 1M the closure residual after an \
+        hour was 2.1e-4 of the partitioned energy, against 1.5e-6 with the \
+        microphysics implicit." :
+        "No run has measured the lag with `microphysics_model: \
+        $microphysics`, so it is refused until one does. With 1M it was \
+        2.1e-4 of the partitioned energy after an hour on a DYCOMS RF02 EDMF \
+        column, against 1.5e-6 with the microphysics implicit."
+    return error(
+        "`energy_source_tag_transport: enthalpy_increment` is refused with \
+        `microphysics_model: $microphysics` stepped explicitly \
+        (`implicit_microphysics: false`). The tags have no cross blocks to \
+        the sedimenting species in the implicit Jacobian, while the parent's \
+        `ρe_tot` has them. With one Newton iteration the tags then lag the \
+        parent's sedimentation. $measured Step the microphysics implicitly, \
+        the default, or set \
+        `energy_source_tag_increment_allow_explicit_microphysics: true` to \
+        run it anyway, for development.",
+    )
+end
+
+"""
     check_energy_source_tagging_supported(turbconv, updraft_number)
 
 Refuse `energy_source_tags` under `turbconv: prognostic_edmfx` with more than
@@ -1606,7 +1705,8 @@ warn_water_tags_under_prescribed_flow(prescribed_flow, water_tagging_model) =
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
 `energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`,
-`energy_source_tag_transport` and `energy_source_tag_updraft_copy`),
+`energy_source_tag_transport`, `energy_source_tag_updraft_copy` and
+`energy_source_tag_increment_allow_explicit_microphysics`),
 `energy_process_record` and
 `water_process_record` config keys. Any of them
 being `~` (null) or an empty list disables that feature entirely, at no runtime
@@ -1614,9 +1714,13 @@ cost.
 
 Energy source tags are refused without `energy_source_tag_offset`, see
 `check_energy_source_offset_given`, and under `turbconv: prognostic_edmfx` with
-more than one updraft, see `check_energy_source_tagging_supported`. Water
-tags are refused under `turbconv: prognostic_edmfx` and `amd_les: true`, see
-`check_water_tracers_transport_supported`. The label warnings of the energy
+more than one updraft, see `check_energy_source_tagging_supported`. Under
+`energy_source_tag_transport: enthalpy_increment` they are refused with
+sedimenting microphysics (1M, 2M, P3) stepped explicitly, unless the
+configuration opts in, see
+`check_energy_source_increment_microphysics_supported`. Water tags are refused
+under `turbconv: prognostic_edmfx` with more than one updraft and under
+`amd_les: true`, see `check_water_tracers_transport_supported`. The label warnings of the energy
 source tags and the records see the microphysics model, and the warning for
 water tags under a prescribed flow sees the built model
 (`warn_water_tags_under_prescribed_flow`).
@@ -1692,6 +1796,14 @@ function AtmosTagging(config::AtmosConfig)
     source_updraft_copies = energy_source_updraft_copy_from_config(
         get(config.parsed_args, "energy_source_tag_updraft_copy", false),
     )
+    source_increment_explicit_microphysics =
+        energy_source_increment_explicit_microphysics_from_config(
+            get(
+                config.parsed_args,
+                "energy_source_tag_increment_allow_explicit_microphysics",
+                false,
+            ),
+        )
     energy_source_tagging_model =
         if isnothing(source_entries) || isempty(source_entries)
             isnothing(source_offset) || error(
@@ -1710,9 +1822,20 @@ function AtmosTagging(config::AtmosConfig)
                 `energy_source_tags` is not, so there are no tags to copy. \
                 Configure `energy_source_tags`, or drop the key.",
             )
+            source_increment_explicit_microphysics && error(
+                "`energy_source_tag_increment_allow_explicit_microphysics: \
+                true` is set \
+                but `energy_source_tags` is not, so there are no tags for it \
+                to allow. Configure `energy_source_tags`, or drop the key.",
+            )
             nothing
         else
             check_energy_source_offset_given(source_offset_value)
+            check_energy_source_increment_microphysics_supported(
+                source_transport,
+                config.parsed_args,
+                source_increment_explicit_microphysics,
+            )
             check_energy_source_tagging_supported(
                 get(config.parsed_args, "turbconv", nothing),
                 get(config.parsed_args, "updraft_number", 1),
