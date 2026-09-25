@@ -426,3 +426,9 @@ end (`IC_PROBE_WINDOWS` set to seconds, not days), writing a CSV. The job:
 `hpda2_compute`, 2 CPUs, 48 GB, `--time=12:00:00`. The estimate is about 4 h:
 five model builds, 53 days of stepping, and the windows' trials.
 `analysis/water/ic_miss_score.py` scores it.
+
+*Checked and submitted 2026-09-25:* the login-node check built all five
+models and ran six steps (60 to 120 s) in 2946 s, writing its CSV. The job is
+`13987196`, from the run tree at `49958c1b` (clean; `ic_s23_c`'s code,
+`e6bab0fc`, with the record), output in
+`$SCRATCH/tag_closure/output/ic_miss_probe_s23/output_0000/`.

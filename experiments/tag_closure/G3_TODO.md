@@ -107,6 +107,8 @@ The twelve criteria of the plan, section 2, in short:
     accepted step, carried through restarts. Another agent builds both on a
     branch stacked on #116; it also fixes #116's water audit, whose
     `nonpositive_mass` read 0 under option C and will read the raw parent.
+    *After W42 (the owner, 2026-09-25): probe the miss first.* Pre-registered
+    in `design/NEGATIVE_PARENT_WATER.md`, section 9; job `13987196`.
   - [x] **R2, the Newton row, on D4-W** (W25's scoring: 4.1e-3 to 1.7e-2 at two
     iterations, against 1e-3). *The owner, 2026-09-25:* measure three and four
     iterations first (job `13944802`); then raise OD1's Newton count or revise
