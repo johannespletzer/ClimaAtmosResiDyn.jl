@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W40                                           | 1. Water tags                                       |
+| W1–W41                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -1437,6 +1437,38 @@ case; the established window from OD2's rule (startup ends at 1.8 h).
 (copies), run tree `../ClimaAtmosResiDyn-wp4c-run` (the record with #109,
 #105 and #112). `analysis/water/wp4c_gate_probe.jl`, `wp4c_gate_score.py`;
 `output/wp4c_gate/score.txt`.*
+
+**W41. On D4-W at 60 levels the parent's one-step Newton error levels off
+near 2e-3 of the step's increment: 1.2e-2, 4.1e-3, 2.3e-3 and 1.9e-3 with 1,
+2, 3 and 4 iterations, against ten. So no practical iteration count meets
+OD3's Newton row (at most 1e-3), and the owner revised where the row
+applies.** W25's fixed-parent probe rerun with trials of 1 to 4 iterations
+(W38's R2 measured it at 1 and 2), on `w25i_d4w_default_z60_c`, the
+production grid; `E` for `ρq_tot` summed over the established window (after
+2.0 h):
+
+| iterations | 1 | 2 | 3 | 4 |
+|:---------- | -:| -:| -:| -:|
+| parent `E` | 1.2e-2 | 4.1e-3 | 2.3e-3 | 1.9e-3 |
+| `tropo`'s `E`, whole run | 2.6e-2 | 4.7e-3 | 1.7e-3 | 1.1e-3 |
+| `evap`'s `E`, whole run | 0.20 | 4.3e-2 | 1.3e-2 | 5.2e-3 |
+
+  - From 3 to 4 iterations the parent gains 17%. Two iterations already
+    take most of the error. The tags converge with the parent and the small
+    source tag `evap` more slowly.
+  - Why it levels off is not isolated: an approximate Jacobian, or a
+    ten-iteration reference that is itself not converged, would each give
+    this. It bounds what more iterations can buy on this case.
+  - **The owner's decision (2026-09-25):** the parent's `E` is always
+    reported, and the row gates only verdicts that compare runs with
+    different parents (full-run comparisons, provenance against copies from
+    a separate run). Same-parent verdicts, where the parent's error cancels
+    (W25's P1 and P2, the WP4c gate, W35), go ahead. Recorded as a revision
+    after W38 and this measurement, with these numbers.
+
+*`hpda2_compute`, 2026-09-25, job `13944802`, run tree
+`../ClimaAtmosResiDyn-w25i-run` at `705c8ed0`, `analysis/water/w25_probes.jl`
+with `TRIALS=1,2,3,4`; `output/w25i/newton34/`.*
 
 ## 2. Energy source tags: closure by transport
 
