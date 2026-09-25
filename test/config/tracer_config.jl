@@ -1351,8 +1351,7 @@ end
     @test transport(["water_tag_transport" => "increment"], "water_increment") isa
           increment
     # Elsewhere the default is `tracer`: without EDMF, with copies, without the
-    # parent's post-solve correction, without a region tag, and with 1M
-    # microphysics stepped explicitly.
+    # parent's post-solve correction, and without a region tag.
     @test transport([], "water_default_plain") isa tracer
     @test transport(
         [edmf..., "water_tag_updraft_copy" => true],
@@ -1367,20 +1366,42 @@ end
         "water_default_sources_only";
         tags = [partition[3]],
     ) isa tracer
-    explicit_one_moment =
+    # With 1M stepped explicitly the follower is opt-in: the cross blocks close
+    # the lag on one column (WP5b, FINDINGS W29), which does not yet decide the
+    # default (the owner's review of #105).
+    explicit_1m =
         [edmf..., "microphysics_model" => "1M", "implicit_microphysics" => false]
-    @test transport(explicit_one_moment, "water_default_explicit_1m") isa tracer
+    @test transport(explicit_1m, "water_default_explicit_1m") isa tracer
+    @test transport(
+        [explicit_1m..., "water_tag_transport" => "increment"],
+        "water_increment_explicit_1m",
+    ) isa increment
     @test transport(
         [edmf..., "microphysics_model" => "1M"],
         "water_default_implicit_1m",
     ) isa increment
-    # And the follower is refused there, with the reason.
-    @test_throws "stepped explicitly" CA.AtmosTagging(
+    # Not with the sparse autodiff Jacobian on the explicit path, which does
+    # not carry the cross blocks. There the follower is refused, with the
+    # reason. The dense one wins over it and is exact.
+    explicit_auto = [explicit_1m..., "use_auto_jacobian" => true]
+    @test_throws "use_auto_jacobian" CA.AtmosTagging(
         config(
-            [explicit_one_moment..., "water_tag_transport" => "increment"],
-            "water_increment_explicit_1m",
+            [explicit_auto..., "water_tag_transport" => "increment"],
+            "water_increment_explicit_1m_auto",
         ),
     )
+    @test transport(
+        [
+            explicit_auto...,
+            "use_dense_jacobian" => true,
+            "water_tag_transport" => "increment",
+        ],
+        "water_increment_explicit_1m_dense",
+    ) isa increment
+    @test transport(
+        [edmf..., "microphysics_model" => "1M", "use_auto_jacobian" => true],
+        "water_default_implicit_1m_auto",
+    ) isa increment
     @test_throws "must be `tracer` or `increment`" CA.water_tag_transport_from_config(
         "follow",
     )

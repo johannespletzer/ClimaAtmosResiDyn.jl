@@ -1451,9 +1451,17 @@ on the record branch). So `increment` is the default in the default mode under
   - an ARS algorithm, which solves every stage it uses;
   - an `energy_q_tot_upwinding` other than `none`, so the parent has a
     post-solve correction;
-  - microphysics other than 1M stepped explicitly, where the follower is
-    refused ([`check_water_tag_increment_supported`](@ref));
-  - a region tag without a source, which the follower needs.
+  - a region tag without a source, which the follower needs;
+  - microphysics other than 1M stepped explicitly.
+
+With 1M stepped explicitly the follower is opt-in. The tags' sedimentation
+cross blocks close the lag there, but the evidence is one column: W23's DYCOMS
+RF02 EDMF column, ARS222, `dt` 120 s, one Newton iteration, one hour (FINDINGS
+W29). A precipitating case on a timestep and Newton ladder decides the default
+(the owner's review of #105). The cross blocks need a Jacobian that carries
+them: the manual one does, and the dense one is exact. Under
+`use_auto_jacobian` the follower is refused there
+(`_explicit_one_moment_without_cross_blocks`).
 
 Elsewhere, and with copies, `tracer`. The model still checks what the
 configuration cannot show, such as whether the regions partition the domain.
@@ -1466,13 +1474,32 @@ function default_water_tag_transport(parsed_args, updraft_copies, tags)
         return tracer
     string(get(parsed_args, "energy_q_tot_upwinding", "vanleer_limiter")) ==
     "none" && return tracer
-    _explicit_one_moment_config(parsed_args) && return tracer
     any(_is_partition_tag, tags) || return tracer
+    _explicit_one_moment_config(parsed_args) && return tracer
     return IncrementWaterTagTransport()
 end
 _explicit_one_moment_config(parsed_args) =
     get(parsed_args, "microphysics_model", nothing) == "1M" &&
     get(parsed_args, "implicit_microphysics", true) == false
+
+# With 1M microphysics stepped explicitly, the follower closes only because the
+# tags' Jacobian rows carry the sedimentation cross blocks. Only the manual
+# Jacobian's split solver carries them (`_derivative_flags`). The sparse
+# autodiff Jacobian takes its pattern from the unsplit blocks, so it lacks
+# them. The dense one wins over it when both are set, and is exact.
+_explicit_one_moment_without_cross_blocks(parsed_args) =
+    _explicit_one_moment_config(parsed_args) &&
+    get(parsed_args, "use_auto_jacobian", false) == true &&
+    get(parsed_args, "use_dense_jacobian", false) != true
+const _EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE = "`water_tag_transport: \
+    increment` is refused with 1M microphysics stepped explicitly \
+    (`implicit_microphysics: false`) under `use_auto_jacobian: true`. That \
+    Jacobian does not carry the tags' sedimentation cross blocks, so the tags \
+    lag the parent's sedimentation by about 0.8% of the water an hour with \
+    one Newton iteration (FINDINGS W23 on the record branch). The lag changes \
+    the column's total, which the follower cannot move. Use the manual \
+    Jacobian, the default, step the microphysics implicitly, or set \
+    `water_tag_transport: tracer`, which lags alike."
 
 """
     water_tag_updraft_copy_from_config(value)
@@ -1644,7 +1671,7 @@ function AtmosTagging(config::AtmosConfig)
             ),
         )
         water_transport isa IncrementWaterTagTransport &&
-            _explicit_one_moment_config(config.parsed_args) &&
+            _explicit_one_moment_without_cross_blocks(config.parsed_args) &&
             error(_EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE)
         WaterTaggingModel(
             water_tags;
