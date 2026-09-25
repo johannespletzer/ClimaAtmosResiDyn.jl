@@ -529,6 +529,11 @@ the correction after each solve moved into or out of it; and
 `e_src_led_src_<name>` for every tag, what the sources' brackets
 (`attribute_energy_source_tags!`) put into it or took out of it. The last one's
 per-step gross is OD4's scale (`energy_source_throughput`).
+
+The source ledgers end with `e_src_led_src_res`, the residual's own: what the
+brackets did to `e_src_res`, the part of the total the partition's tags did
+not take (G4.4). Its per-step gross is the loss rule's flush of the residual.
+The tag name `res` is refused, so the name cannot collide with a tag's.
 """
 energy_source_ledger_fix_names(::Nothing) = ()
 energy_source_ledger_fix_names(model::EnergySourceTaggingModel) =
@@ -541,8 +546,21 @@ energy_source_ledger_inc_names(model::EnergySourceTaggingModel) =
     _prefixed_tag_names(Val(:e_src_led_inc_), model.tags) : ()
 energy_source_ledger_src_names(::Nothing) = ()
 energy_source_ledger_src_names(model::EnergySourceTaggingModel) =
-    has_energy_source_ledger_per_tag(model) ?
-    _prefixed_tag_names(Val(:e_src_led_src_), model.tags) : ()
+    has_energy_source_ledger_per_tag(model) ? _src_ledger_names(model.tags) : ()
+# The source ledgers of the tags, then the residual's, as one literal tuple.
+@generated _src_ledger_names(tags::Tuple) = QuoteNode((
+    (Symbol(:e_src_led_src_, _tag_type_name(T)) for T in tags.parameters)...,
+    :e_src_led_src_res,
+))
+
+"""
+    ENERGY_SOURCE_RESIDUAL_LEDGER
+
+`:e_src_led_src_res`, the residual's own source ledger among each energy source
+tag's source ledgers (`energy_source_ledger_src_names`). It belongs to no tag,
+so the audit gives it no inventory fraction.
+"""
+const ENERGY_SOURCE_RESIDUAL_LEDGER = :e_src_led_src_res
 energy_source_per_tag_ledger_names(model) = (
     energy_source_ledger_fix_names(model)...,
     energy_source_ledger_inc_names(model)...,
@@ -758,7 +776,10 @@ function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross)
         column!("$(short)_attempted", attempted)
         column!("$(short)_attempted_relative", per_scale(attempted))
         column!("$(short)_events", tag_event_total((ledger.ᶜevents,)))
-        if is_tag_per_tag_ledger_name(name)
+        # The residual's source ledger belongs to no tag, so it has no
+        # inventory to set its gross against (G4.4).
+        if is_tag_per_tag_ledger_name(name) &&
+           name != ENERGY_SOURCE_RESIDUAL_LEDGER
             tag_name = chopprefix(
                 chopprefix(chopprefix(short, "led_fix_"), "led_inc_"),
                 "led_src_",

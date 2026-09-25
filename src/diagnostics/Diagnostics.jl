@@ -97,6 +97,7 @@ import ..ENERGY_SOURCE_MECHANISM_NAMES
 import ..tag_state_ledger_names
 import ..tag_attempted_ledger_names
 import ..is_tag_per_tag_ledger_name
+import ..ENERGY_SOURCE_RESIDUAL_LEDGER
 import ..energy_source_region_tag_state_names
 import ..follows_implicit_increment
 

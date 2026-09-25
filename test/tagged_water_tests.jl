@@ -1665,6 +1665,11 @@ end
     @test CA.is_tag_per_tag_ledger_name(:e_src_led_src_sfc)
     @test CA.Diagnostics.tag_ledger_diagnostic_name(:e_src_led_src_sfc, "gross") ==
           "e_src_led_srcgross_sfc"
+    # The residual's source ledger (G4.4) is split out as a tag's ledger is.
+    @test CA.is_tag_per_tag_ledger_name(CA.ENERGY_SOURCE_RESIDUAL_LEDGER)
+    @test CA.is_splittable_jacobian_field(CA.MatrixFields.@name(c.e_src_led_src_res))
+    @test CA.Diagnostics.tag_ledger_diagnostic_name(:e_src_led_src_res, "gross") ==
+          "e_src_led_srcgross_res"
     @test CA.Diagnostics.tag_ledger_diagnostic_name(:q_tag_led_repair, "gross") ==
           "q_tag_led_repair_gross"
 

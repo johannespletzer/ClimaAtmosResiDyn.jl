@@ -1817,7 +1817,12 @@ end
         )
         fix_names = (:e_src_led_fix_strat, :e_src_led_fix_tropo, :e_src_led_fix_sfc)
         inc_names = (:e_src_led_inc_strat, :e_src_led_inc_tropo, :e_src_led_inc_sfc)
-        src_names = (:e_src_led_src_strat, :e_src_led_src_tropo, :e_src_led_src_sfc)
+        src_names = (
+            :e_src_led_src_strat,
+            :e_src_led_src_tropo,
+            :e_src_led_src_sfc,
+            :e_src_led_src_res,
+        )
         @test CA.energy_source_per_tag_ledger_names(plain) == ()
         @test CA.energy_source_per_tag_ledger_names(per_tag) ==
               (fix_names..., src_names...)
@@ -1827,7 +1832,7 @@ end
         @test CA.has_energy_source_ledger_per_tag(increment)
         @test !CA.has_energy_source_ledger_per_tag(nothing)
         @test CA.energy_source_per_tag_ledger_variables(FT(1), per_tag) ==
-              NamedTuple{(fix_names..., src_names...)}(ntuple(_ -> FT(0), 6))
+              NamedTuple{(fix_names..., src_names...)}(ntuple(_ -> FT(0), 7))
 
         # The repair writes each tag's change into its own ledger: from zero,
         # the cache ledger bit for bit.
@@ -1960,6 +1965,7 @@ end
             :e_src_led_src_tropo,
             :e_src_led_src_sfc,
             :e_src_led_src_rad_low,
+            :e_src_led_src_res,
         )
         @test CA.energy_source_ledger_src_names(per_tag) == src_names
         @test CA.energy_source_ledger_src_names(plain) == ()

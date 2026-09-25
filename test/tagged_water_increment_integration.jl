@@ -382,8 +382,9 @@ altitude_region(above) = Dict{String, Any}(
         water_names = CA.water_tag_per_tag_ledger_names(model)
         energy_names = CA.energy_source_per_tag_ledger_names(energy_model)
         @test length(water_names) == 6
-        # Three tags' repair, increment and source ledgers (OD4).
-        @test length(energy_names) == 9
+        # Three tags' repair, increment and source ledgers (OD4), and the
+        # residual's source ledger (G4.4).
+        @test length(energy_names) == 10
         @test all(name -> hasproperty(Y.c, name), (water_names..., energy_names...))
         # The follower's ledgers of the partition's tags sum to what it moved
         # between levels: the shares sum to one wherever the donor cell holds
