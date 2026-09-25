@@ -1573,3 +1573,103 @@ end
         "energy_source_tag_ledger_per_tag" => true,
     )
 end
+
+# G4.5: warnings, the void level, the abort and acceptance are kept apart. The
+# energy source tags get a second warning level, against the gross source
+# throughput, which needs each tag's ledgers and is off by default.
+@testset "Closure levels kept apart (G4.5)" begin
+    partition_entries = [
+        Dict{String, Any}("name" => "trop", "region" => "tropics"),
+        Dict{String, Any}("name" => "rad", "source" => "radiation"),
+    ]
+    check(value; ledger_per_tag = false) =
+        CA.energy_source_closure_check_from_config(
+            value,
+            partition_entries,
+            CA.EnthalpyIncrementEnergySourceTransport(),
+            FT;
+            ledger_per_tag,
+        )
+    # Off by default, with or without the ledgers.
+    @test isnothing(check(nothing).throughput_tolerance)
+    @test isnothing(check(nothing; ledger_per_tag = true).throughput_tolerance)
+    set = check(
+        Dict{String, Any}("throughput_tolerance" => 0.05, "tolerance" => 1e-3);
+        ledger_per_tag = true,
+    )
+    @test set.throughput_tolerance == FT(0.05)
+    # The other keys are read as before.
+    @test set.tolerance == FT(1e-3)
+    @test set.spin_up == "1hours"
+    # It needs the throughput, so the ledgers; and it must be positive.
+    @test_throws r"energy_source_tag_ledger_per_tag: true" check(
+        Dict{String, Any}("throughput_tolerance" => 0.05),
+    )
+    @test_throws r"must be positive" check(
+        Dict{String, Any}("throughput_tolerance" => 0.0);
+        ledger_per_tag = true,
+    )
+    # The other families do not take it.
+    @test_throws r"unknown key" CA.closure_check_from_config(
+        Dict{String, Any}("throughput_tolerance" => 0.05),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = nothing,
+        default_abort_above = nothing,
+    )
+
+    # The check warns on each level in its own words, and neither is an
+    # acceptance verdict; the family's closure columns carry the ratio.
+    CC = CA.ClimaCore
+    space = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CC.CommonSpaces.CellCenter(),
+    )
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(space),
+            NamedTuple{(:ρ, :ρe_tot, :ρe_src_a), NTuple{3, FT}},
+        ),
+    )
+    Y.c.ρ .= 1
+    Y.c.ρe_tot .= 1
+    Y.c.ρe_src_a .= 0.5
+    integrator = (;
+        u = Y,
+        p = (; scratch = (; ᶜtemp_scalar = zero(Y.c.ρ))),
+        t = 3600.0,
+    )
+    columns(ratio) = (Y, p, closure) -> (; gross_over_throughput = ratio)
+    run_check!(dir; tolerance = nothing, ratio = 0.01, level = nothing) =
+        CA.tag_closure_callback!(
+            integrator,
+            dir,
+            "energy_source",
+            :ρe_tot,
+            (:ρe_src_a,),
+            tolerance,
+            nothing,
+            false;
+            extra_closure = columns(ratio),
+            throughput_tolerance = level,
+        )
+    @test_logs (:warn, r"exceeds\s+the warning tolerance") run_check!(
+        mktempdir();
+        tolerance = FT(0.1),
+    )
+    @test_logs (:warn, r"over the gross source throughput") run_check!(
+        mktempdir();
+        ratio = 0.5,
+        level = 0.05,
+    )
+    # Below the level, or without one, it is silent.
+    @test_logs run_check!(mktempdir(); ratio = 0.01, level = 0.05)
+    @test_logs run_check!(mktempdir(); ratio = 0.5)
+    dir = mktempdir()
+    run_check!(dir; ratio = 0.5)
+    header = first(readlines(CA.tag_closure_path(dir, "energy_source")))
+    @test endswith(header, ",nonpositive_fraction,gross_over_throughput")
+end

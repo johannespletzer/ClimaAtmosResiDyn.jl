@@ -1079,30 +1079,80 @@ one is on by default whenever the tags include a pure region tag, a tag with a
     reference one hour after the start, without the audit;
   - `false` switches the check off;
   - a mapping sets the keys of [`closure_check_from_config`](@ref), with the same
-    defaults.
+    defaults, and one more, `throughput_tolerance`.
 
 `~` with no pure region tag gives no check, since there is no partition to close.
+
+`throughput_tolerance` is a second warning level, in the units of the gross
+source throughput (the tag-closure experiments' OD4): the check warns when the
+gross residual over the throughput since the start passes it. That ratio does
+not depend on the energy reference, as `gross_relative` does. It needs the
+throughput, so each tag's ledgers (`energy_source_tag_ledger_per_tag: true`),
+and without them it is refused. It defaults to `~`: no level has been approved.
+It warns only; like `tolerance` it is not an acceptance threshold.
 """
 function energy_source_closure_check_from_config(
     value,
     entries,
     transport,
-    ::Type{FT},
+    ::Type{FT};
+    ledger_per_tag = false,
 ) where {FT}
     value === false && return nothing
     if isnothing(value)
         has_energy_source_partition_entry(entries) || return nothing
         value = Dict{String, Any}()
     end
-    return closure_check_from_config(
-        value,
-        "`energy_source_closure_check`",
+    context = "`energy_source_closure_check`"
+    spec = config_mapping(value, context)
+    throughput_tolerance = closure_throughput_tolerance_from_config(
+        get(spec, "throughput_tolerance", nothing),
+        context,
+        FT,
+        ledger_per_tag,
+    )
+    check = closure_check_from_config(
+        filter(entry -> first(entry) != "throughput_tolerance", spec),
+        context,
         FT;
         default_tolerance = energy_source_closure_tolerance(transport),
         default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy_source,
         default_void_above = DEFAULT_CLOSURE_VOID_LEVELS.energy_source,
         default_spin_up = "1hours",
     )
+    return (; check..., throughput_tolerance)
+end
+
+"""
+    closure_throughput_tolerance_from_config(value, context, FT, ledger_per_tag)
+
+Read `throughput_tolerance`, as an `FT` or `nothing`. It must be positive, and
+it needs each tag's ledgers, which give the throughput it is compared against.
+"""
+closure_throughput_tolerance_from_config(
+    ::Nothing,
+    context,
+    ::Type{FT},
+    ledger_per_tag,
+) where {FT} = nothing
+function closure_throughput_tolerance_from_config(
+    value,
+    context,
+    ::Type{FT},
+    ledger_per_tag,
+) where {FT}
+    level = FT(value)
+    level > 0 || error(
+        "$context `throughput_tolerance` must be positive, got $level. Use `~` \
+        for no level.",
+    )
+    ledger_per_tag || error(
+        "$context `throughput_tolerance` compares the gross residual with the \
+        gross source throughput, which needs \
+        `energy_source_tag_ledger_per_tag: true`. Set it, or drop \
+        `throughput_tolerance`.",
+    )
+    return level
 end
 
 # Whether the `energy_source_tags` entries include a pure region tag, one with a
@@ -1183,7 +1233,11 @@ function closure_checks_from_config(config::AtmosConfig)
             energy_source_transport_from_config(
                 get(pa, "energy_source_tag_transport", "tracer"),
             ),
-            FT,
+            FT;
+            ledger_per_tag = tag_ledger_per_tag_from_config(
+                get(pa, "energy_source_tag_ledger_per_tag", false),
+                "energy_source_tag_ledger_per_tag",
+            ),
         ),
         energy = closure_check_from_config(
             pa["energy_closure_check"],

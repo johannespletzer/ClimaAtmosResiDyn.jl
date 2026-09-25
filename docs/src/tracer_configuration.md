@@ -365,6 +365,21 @@ Exceeding `abort_above` **ends the run**, where a user sets it. No family sets
 one by default. Set it when a run whose tags no longer mean anything is not
 worth its compute.
 
+**None of these levels is acceptance.** They are kept apart, for every family:
+
+| level | what passing it does | default |
+|:----- |:-------------------- |:------- |
+| `tolerance` | warns, every time | water 1.0e-10; `energy_tracers` 1.0e-6; energy source tags one per transport |
+| `throughput_tolerance`, energy source tags only | warns, every time | `~` |
+| `void_above` | warns once, and marks this row and every later one void | water 1.0; the energy families `~` |
+| `abort_above` | ends the run | `~` for every family |
+
+A warning says the residual has drifted past the level set for this check. The
+void level says the tags no longer describe the field. Whether a run is
+acceptable is a different question. It is answered afterwards, from the closure
+and audit tables, against thresholds fixed before the run and over windows
+fixed before it, not by any level the model checks while it runs.
+
 The check adds no tendency. It only reads the state and writes a table, so
 switching it on does not change what the simulation produces.
 
