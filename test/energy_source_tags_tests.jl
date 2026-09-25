@@ -1817,15 +1817,17 @@ end
         )
         fix_names = (:e_src_led_fix_strat, :e_src_led_fix_tropo, :e_src_led_fix_sfc)
         inc_names = (:e_src_led_inc_strat, :e_src_led_inc_tropo, :e_src_led_inc_sfc)
+        src_names = (:e_src_led_src_strat, :e_src_led_src_tropo, :e_src_led_src_sfc)
         @test CA.energy_source_per_tag_ledger_names(plain) == ()
-        @test CA.energy_source_per_tag_ledger_names(per_tag) == fix_names
+        @test CA.energy_source_per_tag_ledger_names(per_tag) ==
+              (fix_names..., src_names...)
         @test CA.energy_source_per_tag_ledger_names(increment) ==
-              (fix_names..., inc_names...)
+              (fix_names..., inc_names..., src_names...)
         @test CA.energy_source_ledger_inc_names(per_tag) == ()
         @test CA.has_energy_source_ledger_per_tag(increment)
         @test !CA.has_energy_source_ledger_per_tag(nothing)
         @test CA.energy_source_per_tag_ledger_variables(FT(1), per_tag) ==
-              NamedTuple{fix_names}((FT(0), FT(0), FT(0)))
+              NamedTuple{(fix_names..., src_names...)}(ntuple(_ -> FT(0), 6))
 
         # The repair writes each tag's change into its own ledger: from zero,
         # the cache ledger bit for bit.
@@ -1937,5 +1939,122 @@ end
             @test maximum(abs, parent(ᶜtag)) > 0
             @test parent(ᶜledger) == parent(ᶜtag)
         end
+    end
+end
+
+# OD4 (the owner, 2026-09-25): each energy source tag's source ledger, and the
+# gross source throughput it gives.
+@testset "Each energy source tag's source ledger (OD4)" begin
+    for FT in (Float32, Float64)
+        region(above) = CA.TanhAltitudeRegion(FT(750), FT(100), above)
+        strat = CA.EnergySourceTag{:strat}(region(true))
+        tropo = CA.EnergySourceTag{:tropo}(region(false))
+        sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        rad_low = CA.EnergySourceTag{:rad_low}(region(false), (:radiation,))
+        tags = (strat, tropo, sfc, rad_low)
+        c = FT(50000)
+        plain = CA.EnergySourceTaggingModel(tags, c)
+        per_tag = CA.EnergySourceTaggingModel(tags, c; ledger_per_tag = true)
+        src_names = (
+            :e_src_led_src_strat,
+            :e_src_led_src_tropo,
+            :e_src_led_src_sfc,
+            :e_src_led_src_rad_low,
+        )
+        @test CA.energy_source_ledger_src_names(per_tag) == src_names
+        @test CA.energy_source_ledger_src_names(plain) == ()
+        @test CA.energy_source_ledger_src_names(nothing) == ()
+        @test all(CA.is_tag_per_tag_ledger_name, src_names)
+        @test isnothing(CA.energy_source_src_ledger_view((; c = (;)), plain))
+
+        # Five cells across the partition's edge. The partition holds the
+        # total, with `strat` 30% of it where its mask is 1/2, so the loss
+        # shares sum to one.
+        tropo_mask = FT[1, 0.9, 0.5, 0.1, 0]
+        masks = (;
+            ρe_src_tropo = tropo_mask,
+            ρe_src_strat = 1 .- tropo_mask,
+            ρe_src_rad_low = tropo_mask,
+        )
+        ᶜparent = FT[3e5, 2.9e5, 2.8e5, 2.7e5, 2.6e5]
+        share = FT[0, 0.1, 0.3, 0.9, 1]
+        ᶜY = (;
+            ρe_tot = ᶜparent .- c,
+            ρe_src_strat = share .* ᶜparent,
+            ρe_src_tropo = (1 .- share) .* ᶜparent,
+            ρe_src_sfc = FT(0.05) .* ᶜparent,
+            ρe_src_rad_low = FT(0.02) .* ᶜparent,
+        )
+        tendencies() = (;
+            ρe_src_strat = zeros(FT, 5),
+            ρe_src_tropo = zeros(FT, 5),
+            ρe_src_sfc = zeros(FT, 5),
+            ρe_src_rad_low = zeros(FT, 5),
+            e_src_led_src_strat = zeros(FT, 5),
+            e_src_led_src_tropo = zeros(FT, 5),
+            e_src_led_src_sfc = zeros(FT, 5),
+            e_src_led_src_rad_low = zeros(FT, 5),
+        )
+        ᶜΔ = FT[8, -8, 3, -2, 0.5]
+        for source in (:radiation, :surface_flux, :microphysics)
+            ᶜYₜ = tendencies()
+            CA._accumulate_energy_source_tags!(
+                ᶜYₜ,
+                ᶜY,
+                masks,
+                ᶜΔ,
+                source,
+                tags,
+                ᶜparent,
+                CA.TagLedgerView{:src}(ᶜYₜ),
+            )
+            # Each ledger takes exactly its tag's change.
+            for tag in (:strat, :tropo, :sfc, :rad_low)
+                @test getproperty(ᶜYₜ, Symbol(:e_src_led_src_, tag)) ==
+                      getproperty(ᶜYₜ, Symbol(:ρe_src_, tag))
+            end
+            # The partition's ledgers take the whole increment, once.
+            @test ᶜYₜ.e_src_led_src_strat .+ ᶜYₜ.e_src_led_src_tropo ≈ ᶜΔ rtol =
+                10 * eps(FT)
+            # A source tag gains only for its own label: where the increment
+            # is positive, its ledger is positive for that label and zero
+            # otherwise.
+            gains = ᶜYₜ.e_src_led_src_sfc[ᶜΔ .> 0]
+            @test all(>(0), gains) == (source == :surface_flux)
+            @test all(iszero, gains) == (source != :surface_flux)
+            # The tags' tendencies do not depend on the ledger, bit for bit.
+            ᶜYₜ_plain = tendencies()
+            CA._accumulate_energy_source_tags!(
+                ᶜYₜ_plain,
+                ᶜY,
+                masks,
+                ᶜΔ,
+                source,
+                tags,
+                ᶜparent,
+            )
+            for tag in (:strat, :tropo, :sfc, :rad_low)
+                name = Symbol(:ρe_src_, tag)
+                @test getproperty(ᶜYₜ_plain, name) == getproperty(ᶜYₜ, name)
+            end
+            @test all(iszero, ᶜYₜ_plain.e_src_led_src_strat)
+        end
+
+        # The throughput: the per-step gross of the partition's source
+        # ledgers, summed. The source tags overlay the partition and are left
+        # out, so each unit of source energy counts once.
+        gross(values) = (; ᶜgross = values)
+        steps = (;
+            ledgers = (;
+                e_src_led_src_strat = gross([1.0, 2.0]),
+                e_src_led_src_tropo = gross([3.0, 4.0]),
+                e_src_led_src_sfc = gross([100.0, 100.0]),
+                e_src_led_src_rad_low = gross([50.0, 50.0]),
+            ),
+        )
+        p = (; tagging = (; tag_ledger_steps = steps))
+        @test CA.energy_source_throughput(nothing, p, per_tag) == 10.0
+        @test isnothing(CA.energy_source_throughput(nothing, p, plain))
+        @test isnothing(CA.energy_source_throughput(nothing, (; tagging = (;)), per_tag))
     end
 end

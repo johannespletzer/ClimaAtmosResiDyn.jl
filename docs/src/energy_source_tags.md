@@ -634,6 +634,18 @@ column it checks that the model's state is bit for bit the one without tags.
     (`_attempted`) and the events (`_events`), and for each tag's own ledgers
     the retained amount over the tag's energy now (`_inventory_fraction`). The
     energy is that of `ρe_tot + c·ρ`, so the fraction depends on the offset;
+  - `e_src_led_src_<name>`, with the same key: what the sources' brackets put
+    into each tag or took out of it, its gains by its mask and its losses by
+    its share. It is a tendency, so the stepper integrates it as it
+    integrates the tag, and its change over a step is what the step's sources
+    gave the tag. Its per-step gross, `e_src_led_srcgross_<name>`, summed over
+    the region tags without sources and over the domain, is the gross source
+    throughput, the scale of every energy percentage in the tag-closure
+    experiments' acceptance contract (their OD4). The audit table reports it as
+    `source_throughput`, cumulative since the start of the run; a window's
+    throughput is the difference of two rows. The source tags overlay the
+    partition, so they are left out of the sum and each unit of source energy
+    counts once;
   - `e_src_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``

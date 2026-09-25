@@ -578,6 +578,8 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         repair_gross_relative = per_scale(repair_gross),
         repair_events = tag_event_total(p.tagging.ᶜenergy_source_fix_count),
         _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale)...,
+        # OD4's scale, where each tag keeps its source ledger.
+        _energy_source_throughput_column(energy_source_throughput(Y, p, model))...,
         # Per state ledger, retained, attempted and events, and each tag's own
         # ledgers against its energy, where kept (WP6, step 3).
         tag_ledger_audit(
@@ -589,6 +591,11 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         )...,
     )
 end
+
+# The audit's `source_throughput`: OD4's scale, cumulative since the start of
+# the run (`energy_source_throughput`). No column without it.
+_energy_source_throughput_column(::Nothing) = (;)
+_energy_source_throughput_column(throughput) = (; source_throughput = throughput)
 
 _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale) =
     follows_implicit_increment(model) ?
@@ -772,6 +779,8 @@ function _attribute_energy_source_tags!(
     (; ᶜenergy_source_masks) = p.tagging
     ᶜΔ = _energy_source_increment(Yₜ, p.scratch, model.offset)
     ᶜparent = _energy_source_parent_field(Y, model.offset)
+    # Each tag's change also goes into its source ledger, where the tags keep
+    # ledgers per tag: OD4's throughput (`energy_source_throughput`).
     _accumulate_energy_source_tags!(
         Yₜ.c,
         Y.c,
@@ -780,6 +789,7 @@ function _attribute_energy_source_tags!(
         source,
         model.tags,
         ᶜparent,
+        energy_source_src_ledger_view(Yₜ, model),
     )
     return nothing
 end
@@ -849,8 +859,29 @@ _accumulate_energy_source_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags::Tu
         tags,
         ᶜY.ρe_tot,
     )
-_accumulate_energy_source_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, ::Tuple{}, ᶜparent) =
-    nothing
+# `ledger_view` is where each tag's change also goes, its source ledger, or
+# `nothing` (`energy_source_src_ledger_view`).
+_accumulate_energy_source_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags::Tuple, ᶜparent) =
+    _accumulate_energy_source_tags!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜmasks,
+        ᶜΔ,
+        source,
+        tags,
+        ᶜparent,
+        nothing,
+    )
+_accumulate_energy_source_tags!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜmasks,
+    ᶜΔ,
+    source,
+    ::Tuple{},
+    ᶜparent,
+    ledger_view,
+) = nothing
 function _accumulate_energy_source_tags!(
     ᶜYₜ,
     ᶜY,
@@ -859,6 +890,7 @@ function _accumulate_energy_source_tags!(
     source,
     tags::Tuple,
     ᶜparent,
+    ledger_view,
 )
     _accumulate_energy_source_tag!(
         ᶜYₜ,
@@ -868,6 +900,7 @@ function _accumulate_energy_source_tags!(
         source,
         first(tags),
         ᶜparent,
+        ledger_view,
     )
     return _accumulate_energy_source_tags!(
         ᶜYₜ,
@@ -877,10 +910,13 @@ function _accumulate_energy_source_tags!(
         source,
         Base.tail(tags),
         ᶜparent,
+        ledger_view,
     )
 end
 
 # Region-less tag: production weight is 1 wherever the tag receives this source.
+# Each branch writes its change once, lazily, into the tag's tendency and into
+# its source ledger, so the two are the same broadcast.
 function _accumulate_energy_source_tag!(
     ᶜYₜ,
     ᶜY,
@@ -889,14 +925,20 @@ function _accumulate_energy_source_tag!(
     source,
     tag::EnergySourceTag{name, Nothing},
     ᶜparent,
+    ledger_view,
 ) where {name}
     ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
     ᶜρe_src = tag_field(ᶜY, tag)
     if tag_receives_source(tag, source)
-        @. ᶜρe_srcₜ +=
-            max(ᶜΔ, 0) + min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
+        ᶜchange = @. lazy(
+            max(ᶜΔ, 0) + min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent),
+        )
+        @. ᶜρe_srcₜ += ᶜchange
+        add_to_tag_ledger!(ledger_view, tag, ᶜchange)
     else
-        @. ᶜρe_srcₜ += min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
+        ᶜchange = @. lazy(min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent))
+        @. ᶜρe_srcₜ += ᶜchange
+        add_to_tag_ledger!(ledger_view, tag, ᶜchange)
     end
     return nothing
 end
@@ -911,16 +953,22 @@ function _accumulate_energy_source_tag!(
     source,
     tag::EnergySourceTag,
     ᶜparent,
+    ledger_view,
 )
     ᶜρe_srcₜ = tag_field(ᶜYₜ, tag)
     ᶜρe_src = tag_field(ᶜY, tag)
     ᶜmask = tag_field(ᶜmasks, tag)
     if tag_receives_source(tag, source)
-        @. ᶜρe_srcₜ +=
+        ᶜchange = @. lazy(
             ᶜmask * max(ᶜΔ, 0) +
-            min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
+            min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent),
+        )
+        @. ᶜρe_srcₜ += ᶜchange
+        add_to_tag_ledger!(ledger_view, tag, ᶜchange)
     else
-        @. ᶜρe_srcₜ += min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
+        ᶜchange = @. lazy(min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent))
+        @. ᶜρe_srcₜ += ᶜchange
+        add_to_tag_ledger!(ledger_view, tag, ᶜchange)
     end
     return nothing
 end

@@ -1421,7 +1421,7 @@ end
     @test CA.water_tag_per_tag_ledger_names(on.water_tagging_model) ==
           (:q_tag_led_fix_tropo, :q_tag_led_fix_extra)
     @test CA.energy_source_per_tag_ledger_names(on.energy_source_tagging_model) ==
-          (:e_src_led_fix_a, :e_src_led_fix_b)
+          (:e_src_led_fix_a, :e_src_led_fix_b, :e_src_led_src_a, :e_src_led_src_b)
     # A quoted value is refused, and so is the key without its family.
     @test_throws r"must be `true` or `false`" CA.tag_ledger_per_tag_from_config(
         "true",

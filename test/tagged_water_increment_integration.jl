@@ -382,7 +382,8 @@ altitude_region(above) = Dict{String, Any}(
         water_names = CA.water_tag_per_tag_ledger_names(model)
         energy_names = CA.energy_source_per_tag_ledger_names(energy_model)
         @test length(water_names) == 6
-        @test length(energy_names) == 6
+        # Three tags' repair, increment and source ledgers (OD4).
+        @test length(energy_names) == 9
         @test all(name -> hasproperty(Y.c, name), (water_names..., energy_names...))
         # The follower's ledgers of the partition's tags sum to what it moved
         # between levels: the shares sum to one wherever the donor cell holds
@@ -434,6 +435,15 @@ altitude_region(above) = Dict{String, Any}(
         @test 0 < audit.led_inc_tropo_inventory_fraction < Inf
         @test audit.inc_moved_attempted > 0
         @test audit.led_inc_tropo_attempted > 0
+        # OD4: the sources' brackets put energy into the partition, and the
+        # throughput is the per-step gross of the partition's source ledgers.
+        throughput = CA.energy_source_throughput(Y, p, energy_model)
+        @test throughput > 0
+        energy_audit = CA.energy_source_audit(Y, p, energy_model, FT(1))
+        @test energy_audit.source_throughput == throughput
+        @test energy_audit.led_src_strat_retained +
+              energy_audit.led_src_tropo_retained ≈ throughput rtol = 1e-12
+        @test energy_audit.led_src_sfc_retained > 0
         # At the default cadence the repair fires once per step on the
         # accepted state, so what it attempted is what the steps retained.
         @test isapprox(

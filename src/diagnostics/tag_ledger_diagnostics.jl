@@ -79,7 +79,7 @@ end
 # with another tag's ledger; the tag names `led_*` are reserved.
 function tag_ledger_diagnostic_name(name, kind)
     long = string(name)
-    for prefix in ("q_tag_led_", "e_src_led_"), part in ("fix_", "inc_")
+    for prefix in ("q_tag_led_", "e_src_led_"), part in ("fix_", "inc_", "src_")
         startswith(long, prefix * part) || continue
         tag = chopprefix(long, prefix * part)
         return "$(prefix)$(chopsuffix(part, "_"))$(kind)_$(tag)"
@@ -120,23 +120,32 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
     for short_name in collect(keys(ALL_DIAGNOSTICS))
         any(
             prefix -> startswith(short_name, prefix),
-            ("q_tag_led_fix", "q_tag_led_inc", "e_src_led_fix", "e_src_led_inc"),
+            (
+                "q_tag_led_fix",
+                "q_tag_led_inc",
+                "e_src_led_fix",
+                "e_src_led_inc",
+                "e_src_led_src",
+            ),
         ) && delete!(ALL_DIAGNOSTICS, short_name)
     end
     for name in names
         water = _is_water_ledger(name)
         (units, what) = water ? ("kg kg^-1", "Water") : ("J kg^-1", "Energy")
         if is_tag_per_tag_ledger_name(name)
+            writer =
+                occursin("_led_fix_", string(name)) ?
+                "limiters' rescale and the partition repair " :
+                occursin("_led_src_", string(name)) ?
+                "sources' attribution brackets (OD4's throughput) " :
+                "correction after each implicit solve "
             add_diagnostic_variable!(;
                 short_name = string(name),
                 units,
-                long_name = "$what Retained by the Corrections of One Tag",
-                comments = "What the " *
-                           (
-                               occursin("_led_fix_", string(name)) ?
-                               "limiters' rescale and the partition repair " :
-                               "correction after each implicit solve "
-                           ) *
+                long_name = occursin("_led_src_", string(name)) ?
+                            "$what Put into One Tag by the Sources" :
+                            "$what Retained by the Corrections of One Tag",
+                comments = "What the " * writer *
                            "changed this tag by, as the steps retained it: " *
                            "the stepper weights this state field as it " *
                            "weights the tag. Per unit mass, cumulative since " *
