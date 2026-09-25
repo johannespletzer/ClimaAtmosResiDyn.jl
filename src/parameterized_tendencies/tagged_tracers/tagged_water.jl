@@ -347,6 +347,10 @@ function water_closure_parent(Y, p)
     return ᶜparent
 end
 
+# The closure's `nonpositive_fraction` and the audit's `nonpositive_mass` read
+# the raw parent, since the partition's target is never negative.
+closure_signed_parent(Y, p, ::typeof(water_closure_parent)) = Y.c.ρq_tot
+
 """
     snapshot_tagged_ρq_tot!(p, Yₜ)
 

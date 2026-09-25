@@ -2114,6 +2114,25 @@ end
         U2 = closed!(state(), U.c.ρq_tot)
         z = FT(2e-3)
         @. U2.c.ρq_tot = U.c.ρq_tot + (y + z) * ᶜcell3 - (y + z) * ᶜcell4
+        # The closure's non-positive columns and the parent's negative water
+        # read the raw `ρq_tot`, not the target, which is never negative. At
+        # 49d29435 the audit read the target and gave 0 here.
+        ᶜnegative = @. -CA.water_tag_negative_part(after.c.ρq_tot)
+        @test sum(ᶜnegative) > 0
+        @test sum(@. -CA.water_tag_negative_part(ᶜtarget)) == 0
+        @test closure.nonpositive_fraction > 0
+        p_audit = merge(
+            p,
+            (; scratch = merge(p.scratch, (; ᶜtemp_scalar_2 = similar(ᶜbase)))),
+        )
+        audit = CA.tag_audit(
+            after,
+            p_audit,
+            CA.water_closure_total(model),
+            CA.water_region_tag_state_names(model),
+            closure.scale,
+        )
+        @test audit.nonpositive_mass == sum(ᶜnegative)
         after2, dY2, _ = stage(Y2, U2)
         ᶜtarget2 = @. CA.water_tag_partition_target(U2.c.ρq_tot)
         ᶜpartition2 = @. after2.c.ρq_tag_tropo + after2.c.ρq_tag_strat

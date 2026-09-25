@@ -419,6 +419,18 @@ closure_parent(Y, p, total_name) = total_name(Y, p)
 """
     tag_closure(Y, p, total_name, tag_state_names)
 
+"""
+    closure_signed_parent(Y, p, total_name)
+
+The field whose non-positive part a closure check reports: the parent itself,
+as `closure_parent` gives it, except where the tags partition only a
+part of it. The water tags partition `max(ρq_tot, 0)` (known issue 7, option
+C), which is never negative, so for them this is the raw `ρq_tot` (see
+`water_closure_parent`). Otherwise `nonpositive_mass` would be zero by
+construction.
+"""
+closure_signed_parent(Y, p, total_name) = closure_parent(Y, p, total_name)
+
 Global closure of one tag family: how much of the parent field its tags account
 for, right now.
 
@@ -441,7 +453,8 @@ would pass silently at any residual. `∫|parent|` is positive whenever the fiel
 is not identically zero, and equals `total` wherever the parent is non-negative,
 so the water numbers are unchanged.
 
-`nonpositive_fraction` is the volume fraction where `parent ≤ 0`. It is zero for
+`nonpositive_fraction` is the volume fraction where `parent ≤ 0`, read from
+[`closure_signed_parent`](@ref): for water, the raw `ρq_tot`. It is zero for
 a well-posed run. Anything above zero says the shares are undefined somewhere,
 which the residual alone will not tell you: a set of complementary region tags
 can partition a negative parent exactly, giving perfect closure over a state
@@ -475,10 +488,13 @@ function tag_closure(Y, p, total_name, tag_state_names)
     scale = sum(ᶜtmp)
 
     # Volume where the parent is non-positive, and the total volume to make it a
-    # fraction. Reported directly, because closure cannot reveal it.
-    @. ᶜtmp = ifelse(ᶜparent <= zero(ᶜparent), one(ᶜparent), zero(ᶜparent))
+    # fraction. Reported directly, because closure cannot reveal it. For water
+    # the raw `ρq_tot`, not the partition's target; the two are non-positive
+    # in the same cells.
+    ᶜsigned = closure_signed_parent(Y, p, total_name)
+    @. ᶜtmp = ifelse(ᶜsigned <= zero(ᶜsigned), one(ᶜsigned), zero(ᶜsigned))
     nonpositive_volume = sum(ᶜtmp)
-    @. ᶜtmp = one(ᶜparent)
+    @. ᶜtmp = one(ᶜsigned)
     volume = sum(ᶜtmp)
 
     # The same subtraction as `e_tag_res` and `q_tag_res`, reduced to one
@@ -614,7 +630,10 @@ separate reductions and each rounds on its own, so test them with a tolerance
 rather than for equality.
 
 `nonpositive_mass` is the mass where the parent is non-positive, the counterpart
-of the volume fraction [`tag_closure`](@ref) reports. The two answer different
+of the volume fraction [`tag_closure`](@ref) reports. It is read from
+[`closure_signed_parent`](@ref): for water, `∫|min(ρq_tot, 0)| dV` of the raw
+`ρq_tot`, not of the partition's target `max(ρq_tot, 0)`, which is never
+negative. The two answer different
 questions and can differ by many orders of magnitude, because cells with no
 water take up much of a moist sphere's volume and almost none of its mass. The
 volume fraction says how much of the domain has undefined shares. The mass
@@ -670,7 +689,10 @@ function tag_audit(Y, p, total_name, tag_state_names, scale)
     @. ᶜtmp = one(ᶜparent)
     volume = sum(ᶜtmp)
 
-    @. ᶜtmp = ifelse(ᶜparent <= zero(ᶜparent), abs(ᶜparent), zero(ᶜparent))
+    # From the raw parent: the water tags' target is never negative, so its
+    # non-positive mass would be zero by construction.
+    ᶜsigned = closure_signed_parent(Y, p, total_name)
+    @. ᶜtmp = ifelse(ᶜsigned <= zero(ᶜsigned), abs(ᶜsigned), zero(ᶜsigned))
     nonpositive_mass = sum(ᶜtmp)
 
     # The same guards `tag_closure` uses, for the same reason: a field that is
