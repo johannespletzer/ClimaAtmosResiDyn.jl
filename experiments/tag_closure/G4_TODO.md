@@ -252,7 +252,7 @@ Rate and settling forecast (synergy 4), vertical and local maxima, headroom
     group's sum.
   - [x] *2026-09-25:* designed in
     [design/RESIDUAL_REPORT.md](design/RESIDUAL_REPORT.md) and built on
-    `claude/energy-claims-budget` (#115 with #112's commit): the residual's
+    `claude/energy-claims-budget` (#115 with #112's commit; draft PR #120): the residual's
     own source ledger `e_src_led_src_res` (the flush, exact per step), the
     forecast columns, the local and vertical maxima, U9's headroom in the
     closure table (no abort, under #112), A5 read against the partition's
@@ -289,8 +289,11 @@ parent source). The offline EDMF column budget.
     `test_process_budget.py`). The three configurations build and take two
     steps on the login node at `1cc40e23` (`analysis/increment/g46_build_check.jl`,
     all checks pass; the budget's build 889 s, the untagged twin's 262 s;
-    `output/g46/`). [ ] The jobs, from a run tree of the record with
-    `claude/energy-claims-budget`; not submitted.
+    `output/g46/`). [x] The jobs, from the run tree
+    `../ClimaAtmosResiDyn-g46-run` at `0164c2fd` (the record with
+    `claude/energy-claims-budget`), submitted 2026-09-25: `13975411`
+    (`g46_d4_budget`), `13975417` (`_2c`), `13975419` (`_untagged`); #120's
+    increment integration test `13975420`. [ ] Their score.
   - **C4, `c·Δρ` from processes the tags do not bracket**: vertical diffusion,
     sponges, hyperdiffusion, EDMF, LES (`OT-C4`; OT section 3). Measure it,
     then share it as transport or document its size.

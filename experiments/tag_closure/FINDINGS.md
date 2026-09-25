@@ -1111,8 +1111,8 @@ on TRMM 0M's initial state in the default mode, per call, `wp9_plume_cost.jl`:
     426/426); the EDMF integration tests are in `output/wp9/` when they finish.
   - **Copies' build time.** `get_simulation` for the TRMM column with copies:
     8 copies 699 s, 16 copies 2417 s, 3.5 times as long for twice the copies.
-    32 copies did not build in 4 h (W30); a run with an 8 h limit is running
-    (job `13911480`).
+    32 copies did not build in 4 h (W30), nor in 8 h (job `13911480`, timed
+    out 2026-09-25 at 8:00:22 without a build).
 
 *`hpda2_compute`, 2026-09-24. #102 is `e29384ee`, WP9a `bfd9ff08`
 (`claude/water-tags-plume-cost`, from `../ClimaAtmosResiDyn-wedmf9`). The

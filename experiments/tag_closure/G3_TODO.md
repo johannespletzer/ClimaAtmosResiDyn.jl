@@ -700,7 +700,7 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     *Scored 2026-09-25 (W40):* `vdiff` retained on parts 2a, 2b and 3 in
     the default mode, and `vdiff` and `diffusion_up` on part 2a with copies.
     *Built 2026-09-25:* both corrections, on
-    `claude/water-tags-leak-correction` (from #109), behind
+    `claude/water-tags-leak-correction` (from #109; draft PR #119), behind
     `water_tag_leak_correction: false` by default: each tag takes back the
     EDMF diffusion of its sedimentation share of the rain and snow, and each
     copy its tag's. Ledgers `q_tag_led_leaknet`, `q_tag_led_upleaknet` and
@@ -849,8 +849,8 @@ owner's points in the note's section 8.
         the number of tags. Before the cost budget.
       + [ ] Copies mode with 32 tags did not build a TRMM column in 4 h (W30;
         8 copies take about 15 min). Measure the build time against the
-        number of copies. 8 copies 699 s, 16 copies 2417 s (W34); 32 running
-        with 8 h (`13911480`). *2026-09-24 (OD8):* 32 tags are a cost item
+        number of copies. 8 copies 699 s, 16 copies 2417 s (W34); 32 did not
+        build in 8 h either (`13911480`, timed out). *2026-09-24 (OD8):* 32 tags are a cost item
         only and are not qualified.
   - *Scope added (rev. 2, 2026-09-24):* WP9 stays before the held-out
     default selection.
