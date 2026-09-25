@@ -86,6 +86,14 @@ changes across a restart.
     mirrored. #114. The surface relaxation shares the buoyant excess by
     composition, as the owner decided on 2026-09-25. The validation on D4 at 8 tags is pre-registered
     (`configs/g411_d4_*.yml`, `analysis/increment/g411_eligibility.py`).
+    *Run 2026-09-25 (jobs `13944458` to `13944462`; FINDINGS E83, the parent
+    session's):* the energy copies are not an eligible comparator on D4.
+    Their repair is 2.9% of the throughput a day with the mirrors and 2.6%
+    without, against 0.20%; both are upper bounds, since the throughput is the
+    process records' lower bound. Their own residual (1.1e-5) and refinement
+    (0.65) pass. The mirrors bring the modes closer (`sfc` L∞ 2.5% to 0.86%).
+    Open: what makes the copies' repair; provenance against them stays *not
+    assessable* on D4.
 
   - **The region masks' width in the docs** (decision 10 of 2026-09-18,
     `OT-regionmask`): 2° stays. Say that a mask narrower than the grid spacing
