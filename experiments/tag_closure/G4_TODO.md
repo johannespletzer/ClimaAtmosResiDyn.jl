@@ -293,7 +293,9 @@ parent source). The offline EDMF column budget.
     `../ClimaAtmosResiDyn-g46-run` at `0164c2fd` (the record with
     `claude/energy-claims-budget`), submitted 2026-09-25: `13975411`
     (`g46_d4_budget`), `13975417` (`_2c`), `13975419` (`_untagged`); #120's
-    increment integration test `13975420`. [ ] Their score.
+    increment integration test `13975420` (153/153). [x] Their score
+    (E87): parity holds; A2, A3, A4 pass; A5 fails. C4, `c·M_U` = −1.15e5
+    J/m² a day (0.55% of Θx), does not land in the residual (28 J/m²).
   - **C4, `c·Δρ` from processes the tags do not bracket**: vertical diffusion,
     sponges, hyperdiffusion, EDMF, LES (`OT-C4`; OT section 3). Measure it,
     then share it as transport or document its size.

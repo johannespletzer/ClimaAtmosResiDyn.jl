@@ -91,7 +91,7 @@ changes, which [RUNS.md](RUNS.md) records.
 | E40, E53                                         | 4. EDMF and the updrafts                            |
 | E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82 | 5. The implicit channel and the increment prototype |
 | E45, E47, E51, E54, E55, E57, E58                | 6. Parity, Float32, MPI and restarts                |
-| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63     | 7. The process records and the per-process checks   |
+| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87 | 7. The process records and the per-process checks   |
 | E50, E60, E69, E70, E74, E75, E81                | 8. The sphere and long runs                         |
 | E68, E72, E73, E76, E83, E84, E86                | 9. Mixing: V3 and the updraft gap                   |
 | T1–T10, E44, E44b–E44e, E52, E56, E77, E78       | 10. Cost                                            |
@@ -2639,6 +2639,50 @@ were unaffected. The fix, `is_process_record_var`, is #93, now merged; V2 ran
 from a branch that had it. *Jobs `13504847` (fixed, at `61d8dc3d`) and
 `13504848` (the prototype at `faa98974`), `hpda2_test`, 2026-09-19;
 `analysis/increment/sphere_record_advection.jl`.*
+
+**E87. G4.6, the D4 process budget: the residual's identity closes to 1e-6
+J/m² per day at both offsets, and the repair never acts as a parent source
+(A2, A3, A4 pass). But C4, the `c·Δρ` the tags do not bracket, does not land
+in the residual. The pair puts `c·M_U` at −1.15e5 J/m² a day (0.55% of the
+day's Θx), while the residual's part left in place moves by only −28 J/m²
+between `c` and `2c`. A5 fails.** `design/D4_PROCESS_BUDGET.md`, pre-registered
+before the runs: three D4 days from one run tree, the budget at `c` and at
+`2c`, and the untagged twin.
+
+| check at 24 h | value | pass |
+|:------------- | -----:|:---- |
+| parity, both tagged runs against the twin, every output | bit for bit | holds |
+| A2, `|X_II|` for the column at `c`, at most 1 J/m² | 4.7e-7 | pass |
+| A3, the same at `2c` | 9.3e-7 | pass |
+| A4, `∫|F_S| dz`, the repair as a parent source, at most 1 J/m² | 2.3e-9 | pass |
+| A5, `I_col(2c) − I_col(c)` against `c·M_U`, within 10% or 1 J/m² | −28 against −1.15e5 | **fail** |
+
+  - **Identity II** (the residual): `R(t) − R(0) = L_R + I − F_S + X_II`
+    holds per layer and for the column at 1, 6, 12 and 24 h, to 1e-6 J/m².
+    At 24 h at `c` the column's residual changed by −1.0 J/m²: the flush
+    `L_R` +44.5, the part left in place `I` −45.5. Two adjacent layers hold
+    almost all of the flush.
+  - **Identity I** (the partitioned total) at 24 h: `ΔE` 1.17e6 = `B` 1.36e6
+    + precipitation −7.6e4 + `c·M_U` −1.15e5 + `X_I` −17 J/m² at `c`. `c·M_U`
+    comes from the pair, so identity I holds by construction (the note
+    says so). `X_I` is −33 to −17 J/m² over the day.
+  - **Where C4 goes.** Not into the residual: `I` differs between the two
+    offsets by 28 J/m², four thousand times less than `c·M_U`. By identity I
+    it lies in the tags' bracketed total `B`: `B(2c) − B(c) = c·ΔM −
+    c·M_U`. The record-based estimate of the same
+    term, `c·(ΔM − Σ q_prc + ∫pr dt)`, gives +1.06e4 J/m², opposite in sign
+    and ten times smaller. So the process records do not bracket it either.
+    This bounds where C4 is not; which process carries it is not named.
+  - It answers the owner's open point on C4 ("share it as transport, or
+    document its size") with a size: 0.55% of the day's throughput on D4.
+    The choice stays the owner's (DECISIONS).
+  - Bounds: one column, one day, one Newton iteration, one time step.
+
+*`hpda2_compute`, 2026-09-25, jobs `13975411` (`g46_d4_budget`), `13975417`
+(`_2c`), `13975419` (`g46_d4_untagged`), from `../ClimaAtmosResiDyn-g46-run`
+at `0164c2fd` (the record `claude/plan-rev2-g4` at `e566844c` with
+`claude/energy-claims-budget` at `b83c831a`, #120); every manifest clean.
+`analysis/increment/process_budget.py`; `output/g46/`.*
 
 ## 8. The sphere and long runs
 

@@ -70,6 +70,8 @@ record; the answered and superseded entries are in the next section.
         (`design/RESIDUAL_REPORT.md`);
       + a warning on the settling ratio: yes or no;
       + once G4.6 measures C4, share it as transport, or document its size.
+        *Measured (E87):* 0.55% of the day's Θx on D4, and not in the
+        residual.
 
     [G4T](G4_TODO.md)
   - **WP4b stage 1's points** (raised 2026-09-25 with #121 and W43; the

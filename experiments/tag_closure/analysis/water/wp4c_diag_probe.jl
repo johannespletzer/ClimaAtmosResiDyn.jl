@@ -286,6 +286,7 @@ function diag()
         solver = solver_settings(set)
         for (label, kwargs) in ((:C, (; off = true)), (:B, (; corr = false)), (:A, (;)))
             @info "building" set label
+            flush(stderr)
             trials[(set, label)] =
                 CA.get_simulation(config(; tag = "$(set)_$label", t_end = T_END, solver, kwargs...)).integrator
         end
@@ -402,6 +403,7 @@ function diag()
                     [cellcols[name][lev] for name in cell_header[4:end]]))
             end
             @info "step" set t = seconds(reference.t) X = gross(X) XL = gross(XL) L = gross(L) leak = gross(ᶜl)
+            flush(stderr)
         end
         open(joinpath(OUTDIR, "$(RUN)_$(set)_diag_steps.csv"), "w") do io
             println(io, join(header, ","))
