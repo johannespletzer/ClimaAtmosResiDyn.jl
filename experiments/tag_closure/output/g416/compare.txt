@@ -1,0 +1,26 @@
+== expl_n1
+   reference without blocks: net +1.50e-04 gross 2.10e-04
+   off: net +1.46e-04 gross 1.76e-04
+   on : net +2.64e-16 gross 1.37e-15
+   V1 (on, gross <= 1e-07): pass
+   control (off within 10% of E80's gross): NO
+   parity, untagged against on: 26 fields over 7 outputs: bit for bit
+   parity, untagged against off: 26 fields over 7 outputs: bit for bit
+   parity, on against off (all but e_src_*): 26 fields over 7 outputs: bit for bit
+== impl_n1
+   reference without blocks: net -7.70e-07 gross 1.50e-06
+   off: net -7.51e-07 gross 8.07e-07
+   on : net +0.00e+00 gross 1.24e-15
+   V2/V4 (on no worse than max(off, 1e-07)): yes
+   parity, untagged against on: 26 fields over 7 outputs: bit for bit
+   parity, untagged against off: 26 fields over 7 outputs: bit for bit
+   parity, on against off (all but e_src_*): 26 fields over 7 outputs: bit for bit
+== d4
+   reference without blocks: net +9.50e-08 gross 9.20e-06
+   off: net -8.68e-09 gross 2.34e-06
+   on : net +7.57e-15 gross 8.87e-15
+   V2/V4 (on no worse than max(off, 1e-07)): yes
+   parity, untagged against on: 26 fields over 25 outputs: bit for bit
+   parity, untagged against off: 26 fields over 25 outputs: bit for bit
+   parity, on against off (all but e_src_*): 31 fields over 25 outputs: bit for bit
+== V3: the explicit hour with the blocks, gross 1.37e-15, against the implicit hour without them, 8.07e-07: no worse

@@ -85,11 +85,11 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W37                                           | 1. Water tags                                       |
+| W1–W39                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
-| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80 | 5. The implicit channel and the increment prototype |
+| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82 | 5. The implicit channel and the increment prototype |
 | E45, E47, E51, E54, E55, E57, E58                | 6. Parity, Float32, MPI and restarts                |
 | E7–E9, E20–E24, E26, E28, E30, E38, E49, E63     | 7. The process records and the per-process checks   |
 | E50, E60, E69, E70, E74, E75, E81                | 8. The sphere and long runs                         |
@@ -1303,6 +1303,99 @@ mode:
 `../ClimaAtmosResiDyn-wedmf5c`. `analysis/water/wp5b_compare.py` (label
 `cc`); output in `output/wp5c_probe/`.*
 
+**W38. W25's isolation: on D4-W the default mode stays within its 24-hour
+closure budget at every rung and the tagged runs are bit for bit the untagged
+ones, but the parent's own Newton
+error fails the approved rule at the production count, the copies are not
+an eligible comparator at any rung, and first-order reconstruction breaks
+the copies and delays OD2's startup past the day.** The pre-registered
+isolation of `design/W25_ISOLATION.md` (step 2 of rev. 2): D4-W at 30, 60 and
+120 levels, centred (`c`) and first-order (`fo`) SGS reconstruction; P1
+fixed-parent one-step probes (ten iterations as reference, one and two as
+trials), P2 refinement from a 6 h state, P3 first-step probes, P4 full runs
+with untagged twins; scored against the OD3 rows approved on 2026-09-24.
+
+| rule | least favourable result |
+|:---- |:----------------------- |
+| R1 parity | *pass*, all 12 tagged runs, every model field bit for bit |
+| R2 Newton, the parent's `E` at two iterations ≤ 1e-3 | *fail* on every rung it can be scored: 1.1e-2 at 30 levels, 4.1e-3 at 60, 1.7e-2 at 120, centred, after startup; *not assessable* on first order |
+| R3 temperature, negative water | *pass*: the top level moves at most 2.1 K, no negative parent water |
+| R4 closure, default | the 24 h gross within budget everywhere (at most 3.0e-5); the second-half rule fails on 4 rungs, by at most 1.7e-5 |
+| R4 closure, copies | breaks at first order, up to 1.06 of the water at 30 levels |
+| R5 comparator residual and repair | *fail* on every rung: repair 0.66% a day at 60 levels centred against 0.20%; residual fails on first order, up to 1.0e-2 |
+| R6 comparator refinement | centred *pass*; first order *fail*, repair up to 2.18 times per rung |
+| R7 provenance | *not assessable* on every rung (R5 fails) |
+| R8 intervention | centred *pass* (no repair after startup); first order: 0.87% a day (default), up to 17% (copies) |
+| R9 refinement of `inc_left` and the repair | `inc_left` falls everywhere (worst ratio 0.51); the repair flagged structural at 60 levels first order (3.8) |
+| R10 one-step convergence | *pass* where it can be scored (worst 0.49) |
+
+  - **OD2's windows.** Startup ends at 1.8 h, 2.0 h and 2.3 h on the centred
+    rungs. On first order the column's water tendency stays above a tenth of
+    its early peak most of the day: no end at 30 levels, 21 h at 60. Rules
+    scored over established flow are *not assessable* there.
+  - **R2 in context.** The reference is ten iterations, so `E` is the
+    distance to that, not to a converged solve. At the production count
+    (OD1: two iterations) the parent fails OD3's parent-validity Newton row
+    on this case. W35 (TRMM 1M, `dt` 120 s) gave 6.3e-4 there. So the row
+    separates the cases; whether D4-W at two iterations should count as a
+    valid parent is the owner's question (the threshold or the production
+    Newton count).
+  - **W25's three breaks, bounded.** The 60-level first-hour miss was
+    measured against copies that are not eligible (R5), and the first-step
+    probes do not confine it to the first step. At 120 levels the default
+    stays within budget (2.6e-5 at 24 h, against 3.0e-2 under the code W25
+    ran); what remains is the tags' lag, which fails the second-half rule. The first-order break is
+    bounded to the copies: the default closes there.
+  - **The two failed probes** (`13932726`, `13932732`, P1 at 120 levels,
+    first order): the ten-iteration reference itself diverged at step 9, a
+    negative pressure in `theta_v`. The one-iteration runs of the same
+    config completed. So it is the model with ten iterations on that rung,
+    not the probe; R2 and R10 are *not assessable* there.
+  - What this does not show: provenance anywhere (no eligible comparator);
+    the sphere's grid (a uniform 1.5 km column, not 60 levels to 30 km).
+
+*`hpda2_compute`, 2026-09-24/25, jobs `13932703` to `13932748`, run tree
+`../ClimaAtmosResiDyn-w25i-run` at `705c8ed0` (the record with #109, #105
+and #112). `analysis/water/w25_probes.jl`, `w25_score.py`,
+`w25_compare.py`; `output/w25i/`, with checksums of the inputs left on
+scratch.*
+
+**W39. Known issue 7's probe: as site 23's parent first goes negative, the
+follower's moved part is the first and fastest ledger in and next to the
+negative cells, about 120 times the corrections, and 70% of the overclaim
+lies outside the negative cells. By the pre-registered table it points to
+option C.** The probe of `design/NEGATIVE_PARENT_WATER.md` section 5: site
+23's same-sign long run rerun to day 20 with WP6 step 3's per-tag ledgers,
+the radiation's seed reset.
+
+  - **Valid:** `rhoa`, `ta` and `hus` are bit for bit the untagged twin's
+    (W36) at every daily output to day 20.
+  - The parent first goes negative in the interval starting at day 9.0, in
+    one cell, and in at most four cells on any day to day 20. At day 20 the
+    partition exceeds the parent's water by 31%.
+  - **First:** at day 9.0 the follower's moved part and its per-tag split
+    (`led_inc`) are the largest ledgers in the negative cells, about 120
+    times the repair's net, and the only ledgers acting next to them. The
+    corrections follow half a day later; the repair starts at day 11.5; the
+    emptying and the rescale never act.
+  - **Fastest:** over days 10 to 20 the moved part's rate in the negative
+    cells is about 100 times the repair's net and 700 times the repair. The
+    negative cells hold no water on days 5 to 8, so "fastest" there is read
+    by the absolute rate, a reading the pre-registration did not define.
+  - **Where:** the overclaim averages 0.74 kg/m² in the negative cells, 0.49
+    next to them and 1.25 farther away.
+  - **The table:** B (the corrections first) not met; C (the follower first
+    and fastest, in or next to the negative cells) met; D (the overclaim in
+    the rest too, no ledger first by a clear margin) half met. So the probe
+    points to C, the partition of the parent's non-negative part. It bounds
+    which ledger acts first; it does not show that C alone removes the
+    divergence. The choice is the owner's.
+
+*`hpda2_compute`, job `13932689`, 2026-09-24/25, from
+`../ClimaAtmosResiDyn-issue7-probe-run` at `09793dcd` (the record with #109
+and `claude/long-run-samesign`). `analysis/water/issue7_probe_read.py`;
+`output/issue7_probe/`.*
+
 ## 2. Energy source tags: closure by transport
 
 Under the default `tracer` transport the tags move as passive tracers while the
@@ -2033,6 +2126,35 @@ with the energy source tags `strat`, `tropo` and `sfc` under
 The water tags' fix, cross blocks to each falling species, is G4.16. Until
 then nothing refuses `enthalpy_increment` there. *Jobs `13911689` to
 `13911691`, G4.15 at `7856501b`; `output/g415/`.*
+
+**E82. G4.16's cross blocks close the energy tags on the explicit 1M path:
+with one Newton iteration the hour's gross closure residual falls from
+1.8e-4 to 1.4e-15, and every model field is bit for bit the same.** The
+pre-registered validation (`design/ENERGY_SEDIMENTATION_CROSS_BLOCKS.md`
+section 6), #113 on #105, blocks off on #105's code:
+
+| case | blocks off | blocks on | parity |
+|:---- | ----------:| ---------:|:------ |
+| W23's column, 1M explicit, one iteration, an hour (E80's case) | 1.8e-4 | 1.4e-15 | bit for bit |
+| the same, 1M implicit | 8.1e-7 | 1.2e-15 | bit for bit |
+| D4, a day | 2.3e-6 | 8.9e-15 | bit for bit |
+
+  - V1 (on, gross at most 1e-7) *passes*; V2 to V4 (nothing worse with the
+    blocks; the explicit hour with them no worse than the implicit hour
+    without) *pass*. Parity: on and off against the untagged twin, and on
+    against off for every model field, at every output.
+  - **The control misses its band.** The blocks-off run was to reproduce
+    E80's 2.1e-4 within 10%, and gave 1.76e-4. E80 ran G4.15's same-sign rule
+    (`7856501b`); this control runs the merged |m| rule. The D4 control gives
+    2.3e-6, which is E79's |m| value (its same-sign value was 9.2e-6). So
+    the rule likely accounts for the difference; that bounds it, it does not
+    isolate it.
+  - Per rev. 2 this is the condition for lifting #108's guard for 1M. 2M and
+    P3 stay refused until measured.
+
+*`hpda2_compute`, 2026-09-25, jobs `13944447` to `13944455`, from
+`../ClimaAtmosResiDyn-g416-run` (on) and `-g416off-run` (off).
+`analysis/increment/g416_compare.py`; `output/g416/`.*
 
 ## 6. Parity, Float32, MPI and restarts
 
