@@ -1,0 +1,73 @@
+startup ends at 6600.0 s (given)
+
+== wp4c_corr_d4w_copies: 360 steps, operators ['vdiff', 'diffusion_up']
+-- established flow: 305 steps, 0.424 days, W = 11.5607 kg
+   vdiff: source -2.699e-20 (gross 1.467e-02), growth +2.030e-06 (gross 3.672e-02), remainder -5.269e-06 (gross 1.932e-05) of W a day
+      growth over source, gross: 2.504
+      part 1 (remainder > 0.0002 of W a day): no
+      part 2a (follower's moved, gross 3.217e-02 > 0.005): holds
+      part 2b, tropo: 1.683e-02 of its inventory over the window
+      part 2b, strat: 4.580e-03 of its inventory over the window
+      part 2b, evap: 1.015e-02 of its inventory over the window
+      part 2b, evap_tropo: 1.015e-02 of its inventory over the window
+      part 2b, evap_strat: 1.015e-02 of its inventory over the window
+      part 2b (> 0.02 for any tag): no
+      part 3, ρq_tag_tropo: L1 1.351e-02, L∞ 3.777e-02: within
+      part 3, ρq_tag_strat: L1 2.875e-03, L∞ 6.737e-03: within
+      part 3, ρq_tag_evap: L1 6.991e-03, L∞ 1.945e-02: within
+      part 3, ρq_tag_evap_tropo: L1 6.991e-03, L∞ 1.945e-02: within
+      part 3, ρq_tag_evap_strat (small): ∫|D|dz 4.519e-10 of the water, L1 6.991e-03, L∞ 1.945e-02: within
+      part 3: no
+      VERDICT vdiff: retain (parts 2a)
+   diffusion_up: source +6.940e-05 (gross 8.120e-04), growth +1.230e-07 (gross 1.040e-02), remainder +1.764e-07 (gross 7.736e-06) of W a day
+      growth over source, gross: 12.803
+      part 1 (remainder > 0.0002 of W a day): no
+      part 2a (follower's moved, gross 1.235e-02 > 0.005): holds
+      part 2b, tropo: 6.499e-03 of its inventory over the window
+      part 2b, strat: 1.827e-03 of its inventory over the window
+      part 2b, evap: 3.988e-03 of its inventory over the window
+      part 2b, evap_tropo: 3.988e-03 of its inventory over the window
+      part 2b, evap_strat: 3.988e-03 of its inventory over the window
+      part 2b (> 0.02 for any tag): no
+      part 3: not assessable for this operator
+      VERDICT diffusion_up: retain (parts 2a)
+-- startup (not scored): 55 steps, 0.076 days, W = 11.5841 kg
+   vdiff: source -1.666e-20 (gross 3.172e-03), growth -7.050e-07 (gross 1.554e-02), remainder -1.680e-06 (gross 1.820e-06) of W a day
+      growth over source, gross: 4.900
+   diffusion_up: source +2.436e-05 (gross 2.027e-04), growth +5.715e-07 (gross 5.346e-03), remainder +2.972e-08 (gross 4.042e-07) of W a day
+      growth over source, gross: 26.379
+
+== wp4c_corr_d4w_default: 720 steps, operators ['vdiff', 'sgs_mass_flux']
+-- established flow: 665 steps, 0.924 days, W = 11.6029 kg
+   vdiff: source -5.963e-20 (gross 1.933e-02), growth +4.958e-06 (gross 3.816e-02), remainder +2.079e-07 (gross 1.397e-05) of W a day
+      growth over source, gross: 1.975
+      part 1 (remainder > 0.0002 of W a day): no
+      part 2a (follower's moved, gross 3.090e-02 > 0.005): holds
+      part 2b, tropo: 3.425e-02 of its inventory over the window
+      part 2b, strat: 9.854e-03 of its inventory over the window
+      part 2b, evap: 1.954e-02 of its inventory over the window
+      part 2b, evap_tropo: 1.954e-02 of its inventory over the window
+      part 2b, evap_strat: 1.954e-02 of its inventory over the window
+      part 2b (> 0.02 for any tag): holds
+      part 3, ρq_tag_tropo: L1 3.105e-02, L∞ 8.198e-02: exceeds
+      part 3, ρq_tag_strat: L1 7.831e-03, L∞ 1.849e-02: within
+      part 3, ρq_tag_evap: L1 1.816e-02, L∞ 5.066e-02: exceeds
+      part 3, ρq_tag_evap_tropo: L1 1.816e-02, L∞ 5.066e-02: exceeds
+      part 3, ρq_tag_evap_strat (small): ∫|D|dz 2.173e-09 of the water, L1 1.816e-02, L∞ 5.066e-02: within
+      part 3: holds
+      VERDICT vdiff: retain (parts 2a, 2b, 3)
+   sgs_mass_flux: source +nan (gross nan), growth -4.784e-06 (gross 4.325e-02), remainder +7.782e-06 (gross 1.376e-05) of W a day
+      part 1 (remainder > 0.0002 of W a day): no
+      part 2a (follower's moved, gross 3.567e-02 > 0.005): holds
+      part 2b, tropo: 3.962e-02 of its inventory over the window
+      part 2b, strat: 1.113e-02 of its inventory over the window
+      part 2b, evap: 2.257e-02 of its inventory over the window
+      part 2b, evap_tropo: 2.257e-02 of its inventory over the window
+      part 2b, evap_strat: 2.257e-02 of its inventory over the window
+      part 2b (> 0.02 for any tag): holds
+      part 3: not assessable for this operator
+      VERDICT sgs_mass_flux: retain (parts 2a, 2b)
+-- startup (not scored): 55 steps, 0.076 days, W = 11.5841 kg
+   vdiff: source -1.666e-20 (gross 3.172e-03), growth -7.473e-07 (gross 1.542e-02), remainder -1.802e-06 (gross 1.883e-06) of W a day
+      growth over source, gross: 4.863
+   sgs_mass_flux: source +nan (gross nan), growth -1.101e-05 (gross 2.403e-02), remainder -2.085e-07 (gross 8.753e-07) of W a day

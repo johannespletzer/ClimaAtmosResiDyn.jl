@@ -1611,13 +1611,24 @@ same run tree otherwise; the window from 6600 s.
     compared values and passed when the two runs shared no output time. It
     now compares bits, needs the twin to cover every output and exits 1 on a
     failure. V1's result is the same under both.
-  - V2 (the copies, job `13973349`) is still running.
+  - **V2, the copies (12 hours).** Parity holds, bit for bit on 37 fields
+    to 12 h, and closure holds (`q_tag_res` 4.6e-6). Criterion 4 fails for
+    the copies: `∫ρ q_tag_led_upleaknet dz` reaches 3.1e-5 of the water,
+    against 1e-12. The partition's `leaknet` is 2.1e-18. The copies take
+    their tag's correction per unit mass, and `upleaknet` is their change
+    times `ρaʲ`. So its column integral need not vanish unless `aʲ` is
+    uniform. Whether the criterion was ill-posed or the copies' correction
+    does not conserve what it should is not established. Reported: the
+    follower's work falls on neither path. `diffusion_up`'s part 2a is 1.24%
+    a day (W40 1.24%), and `vdiff`'s rises from 3.02% to 3.22%. The leak
+    ledger's gross over the closed form is 0.997.
 
 *`hpda2_compute`, 2026-09-25, job `13973348`, run tree
 `../ClimaAtmosResiDyn-wp4c-corr-run` at `90f32566` (the gate's tree
 `52a666c5`, the record at `abbc2319`, `claude/water-tags-leak-correction` at
-`d0c0064a`, #119). `analysis/water/wp4c_gate_score.py --startup 6600`,
-`wp4c_corr_compare.py`; `output/wp4c_corr/`.*
+`d0c0064a`, #119), and V2, job `13973349`, the same tree.
+`analysis/water/wp4c_gate_score.py --startup 6600`, `wp4c_corr_compare.py`;
+`output/wp4c_corr/`.*
 
 ## 2. Energy source tags: closure by transport
 

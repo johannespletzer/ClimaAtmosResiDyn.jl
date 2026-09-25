@@ -1,0 +1,5 @@
+RESULT run=wp4c_corr_d4w_copies operator=diffusion_up ledger=q_tag_led_upleak_strat gross_per_day=6.154750440389052e-5
+RESULT run=wp4c_corr_d4w_copies operator=diffusion_up ledger=q_tag_led_upleak_evap gross_per_day=6.629976164763289e-5
+RESULT run=wp4c_corr_d4w_copies operator=diffusion_up ledger=q_tag_led_upleak_evap_tropo gross_per_day=6.629972820951993e-5
+RESULT run=wp4c_corr_d4w_copies operator=diffusion_up ledger=q_tag_led_upleak_evap_strat gross_per_day=3.3438112952957385e-11
+RESULT run=wp4c_corr_d4w_copies steps=360 days=0.5 water=11.560671968269402

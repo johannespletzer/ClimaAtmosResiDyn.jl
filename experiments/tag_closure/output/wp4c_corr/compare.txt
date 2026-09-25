@@ -1,0 +1,13 @@
+== wp4c_corr_d4w_copies
+  criterion 3 (parity): 37 fields against the untagged twin, bit for bit, to 12 h; mismatches: none -> holds
+  criterion 2 (closure): q_tag_res gross at 12 h = 4.648e-06 of the water -> holds (0.2% budget; part 1 in the gate score)
+  criterion 4 (ledgers): max |∫leaknet ρ dz| / water = 2.09e-18 (<= 1e-12); leaknet against tropo + strat 1.52e-15 (<= 1e-10); max |∫upleaknet dz| / water = 3.12e-05 -> FAILS
+  reported: leaknet's gross 1.482e-02 of the water a day, closed-form source 1.486e-02, ratio 0.997 (expected within 10%)
+  reported: the reference's moved gross 4.723e-02 of the water a day, over 2.0 h to 12.0 h
+== wp4c_corr_d4w_default
+  criterion 3 (parity): 37 fields against the untagged twin, bit for bit, to 24 h; mismatches: none -> holds
+  criterion 2 (closure): q_tag_res gross at 24 h = 8.433e-06 of the water -> holds (0.2% budget; part 1 in the gate score)
+  criterion 4 (ledgers): max |∫leaknet ρ dz| / water = 6.27e-18 (<= 1e-12); leaknet against tropo + strat 2.28e-15 (<= 1e-10) -> holds
+  reported: leaknet's gross 1.948e-02 of the water a day, closed-form source 1.945e-02, ratio 1.002 (expected within 10%)
+  reported: the reference's moved gross 4.371e-02 of the water a day; without the correction (W25) 4.572e-02; fall +2.004e-03, over 2.0 h to 24.0 h
+FAIL wp4c_corr_d4w_copies: ledgers

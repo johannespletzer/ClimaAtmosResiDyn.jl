@@ -731,7 +731,10 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     (W45):* criterion 1 fails. The correction takes the closed-form leak
     exactly, but `vdiff`'s part 2a rises from 2.92% to 3.09% a day (at most
     2.42% required). Criteria 2 to 4 hold. By section 8 the difference is
-    investigated before anything else. [ ] That investigation. [ ] V2.
+    investigated before anything else. [ ] That investigation. [x] V2
+    (W45): parity and closure hold, but criterion 4 fails for the copies
+    (`upleaknet`'s column integral 3.1e-5 of the water). The same
+    investigation takes it.
 
   - [ ] Review (xhigh) of each stage.
 
