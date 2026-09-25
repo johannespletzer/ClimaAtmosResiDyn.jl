@@ -346,3 +346,54 @@ run (not its value at 24 h), on the deep cases of V-W5 and V-W6 as well as
 D4-W. A third run with the rain and snow tags bounds the imprint; it changes
 too much to isolate it. The rule then reads: a path gets its correction where
 its imprint's maximum exceeds a tenth of the closure budget.
+
+## 17. Stage 1 as built (2026-09-25)
+
+Where the build departs from or fills in the note:
+
+1. **Donor composition over the step (section 9).** Each gross flow carries
+   its donor's composition over the step, not at its start: the donor's water
+   at the start mixed with what flowed into it during the step
+   (`water_tag_pool_shares`, a 3×3 linear system per tag and cell). The model's
+   linearized step lets water pass through a compartment within one step. With
+   the start composition, rain that formed and evaporated in a cell without
+   rain carried no composition, and on the 10 km precipitating column the rain
+   parts drifted from the rain by 20 times the rain in 600 s. With the pool the
+   compartments close to rounding. Where a compartment holds much more than
+   passes through, the two agree. *For the owner.*
+2. **The flows** repeat CloudMicrophysics 0.40's linearized substeps
+   (`_microphysics_source_terms`, `_linearize` and the substep solve) and sum
+   the transfers that cross compartments into six flows. Their nets match the
+   model's tendencies to the rounding of the step's water over the step, not
+   bit for bit (the compiler may fuse a `muladd` differently); the rounding
+   remainder moves by the net-flow rule. A CloudMicrophysics upgrade that
+   changes the step shows in the unit test that compares the nets.
+3. **No follower for the rain and snow parts (section 6).** Their implicit
+   terms (sedimentation with the species' block, value for value, and the
+   microphysics) are the species' by construction, so their increments match
+   the species' to rounding; only `ρq_tag_<name>` follows the parent's
+   increment of the non-precipitating water. The integration test's rounding
+   closure under `increment` is the evidence.
+4. **The audit (section 12)** keeps two state records per tag, rain and snow.
+   The non-precipitating part's difference is minus their sum, since both
+   rules keep each tag's total. It is always on with the key.
+5. **The restart guard (section 11)** goes to version 2. A version 1
+   checkpoint reads as written without the key, rather than refused.
+6. **The hyperdiffusion correction (section 3)** takes `φᵢ` as the tag's
+   normalized share of the non-precipitating water. The `q_tag_leak_*`
+   diagnostics read zero under the key.
+7. **The clip rule (section 8)** runs on the whole field at each correction:
+   where a compartment is not positive, its parts are returned to the tags'
+   non-precipitating parts, whether or not the correction touched the cell.
+8. **The test column.** `PrecipitatingColumn` has negative total water above
+   about 6.2 km (its Rico `q_tot` profile runs below zero); no partition of a
+   negative parent is possible, and the repair then empties the parts. The
+   test cuts the column at 6 km. This is the setup's profile, not the tags'.
+9. **Cost, one bounded measurement.** On the 6 km column (30 levels, 3 tags,
+   9 parts and 6 audit records), the default transport's step took 5.6 ms
+   against 3.2 ms without tags on the shared login node. How that splits
+   between the flows, the parts and the audit was not measured.
+10. **Default transport.** With `water_tag_transport: tracer` the rain and
+    snow parts also close to rounding (1.8e-16 and 3.3e-16 of the start's
+    rain and snow in 300 s). The total's residual, 3.2e-5 of the column's
+    water, is the known advection split.

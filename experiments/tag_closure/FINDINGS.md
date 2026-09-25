@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W42                                           | 1. Water tags                                       |
+| W1–W43                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -1538,6 +1538,46 @@ from `../ClimaAtmosResiDyn-ic-c-run` at `e6bab0fc`, and `13944932`,
 `13944933` (`ic_s{23,26}_before`) from `../ClimaAtmosResiDyn-ic-before-run` at
 `078c122c`; every manifest clean. `analysis/water/ic_validate.py`,
 `ic_overclaim_where.py`; `output/ic_validate/`.*
+
+**W43. WP4b stage 1: on a precipitating 1M column the tags' rain and snow
+parts close each compartment to rounding over 300 s, `Σ pr_tag = pr`, and
+every model field is bit for bit the run without tags. Attributing each
+gross flow by its donor's start composition alone did not close: the rain
+parts drifted from the rain by 20 times the rain.** The new CI group
+`tagging_water_precipitation` (`test/tagged_water_precipitation_integration.jl`)
+on `PrecipitatingColumn` cut at 6 km: 1M, 30 levels, `dt` 10 s, ARS343, one
+Newton iteration, first-order tracer upwinding, three tags.
+
+| check, after 300 s | `increment` | `tracer` |
+|:------------------ | -----------:| --------:|
+| rain parts against the rain, of the start's rain | 2e-16 | 1.8e-16 |
+| snow parts against the snow, of the start's snow | 3e-16 | 3.3e-16 |
+| non-precipitating water and the total, of the column's water | 4e-15 | total 3.2e-5 (the known advection split) |
+| `Σ pr_tag` against `pr` | within 2e-12 | — |
+| every model field against the column without tags | `isequal` | `isequal` |
+
+  - **The donor's composition over the step.** Each gross flow carries its
+    donor's water at the start mixed with what flowed into it during the
+    step (the design note's section 17, point 1). With the start
+    composition alone, rain that formed and evaporated within a step in a
+    cell without rain carried no composition. On a 10 km column the rain
+    parts then drifted from the rain by 20 times the rain in 600 s. That
+    was a build during development, not a registered run.
+  - A tag holding all the water moves as the parent, operator by operator.
+    A restart comes back bit for bit, and is refused without the key.
+  - **The column is cut at 6 km** because its Rico `q_tot` profile goes
+    below zero above about 6.2 km. No partition of a negative parent is
+    possible there.
+  - **Bounds.** One column and one regime, over 300 s: evidence of closure
+    and parity, not of provenance. The hyperdiffusion correction is built,
+    but this column has no horizontal extent, so no run exercises it. The
+    step took 5.6 ms against 3.2 ms without tags, measured once on the
+    shared login node and not split by part.
+
+*Login node, 2026-09-25, `claude/water-tags-rain-snow` at `4b86ec66` (draft
+PR #121, on #105): the new group 133 of 133 in 26 min, the unit tests
+(`test/tagged_water_precipitation_tests.jl`) 42,088, `tagging_water` 111 and
+`tagging_water_increment_explicit` 38. `design/RAIN_SNOW_TAGS.md`, section 17.*
 
 ## 2. Energy source tags: closure by transport
 

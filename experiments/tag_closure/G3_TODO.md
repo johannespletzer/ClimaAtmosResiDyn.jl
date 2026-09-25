@@ -654,7 +654,7 @@ after the owner's decision 1 ("WP4a's two points" above). Separate from #104's
 scope (the split, `pr_tag` and the restatement), by the owner's review of
 #104, finding 6.
 
-## WP4b: rain and snow carry their own tags (draft PR-W4b)
+## WP4b: rain and snow carry their own tags (draft PR #121)
 
   - [x] **WP4b-D, the design note.** *Its fields and points decided
     2026-09-25 (DECISIONS.md).* It fixes:
@@ -673,15 +673,29 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     Review by `clima-numerics-reviewer` (xhigh) before any code. The operator
     list comes from `clima-inventory-explorer`.
 
-  - [ ] Stage 1: a 1M column without EDMF. The key `water_tag_precipitation`,
-    with its restart guard. `pr_tag_*` and `Σ pr_tag = pr`.
+  - [x] **Stage 1: a 1M column without EDMF.** Built on
+    `claude/water-tags-rain-snow` at `4b86ec66` (draft PR #121, stacked on
+    #105): the key `water_tag_precipitation`, three parts per tag
+    (`ρq_tag_`, `ρq_rtag_`, `ρq_stag_`), the note's sections 5, 6, 8, 9
+    (gross flows), 10, 11 and 12, the hyperdiffusion correction and the
+    repair per compartment of section 3. EDMF and copies refused. Unit tests
+    (`test/tagged_water_precipitation_tests.jl`, 42,088) and the new CI group
+    `tagging_water_precipitation` (133) pass on the login node (2026-09-25).
+    What it shows is W43; where the build departs from the note is its
+    section 17.
+  - [ ] Review (xhigh) of stage 1.
+  - [ ] The hyperdiffusion correction (note section 3) is built, but no model
+    run exercises it: the test column has no horizontal extent. A sphere or
+    box run checks it before a default relies on it.
 
   - [ ] Stage 2: EDMF, default mode.
 
   - [ ] Stage 3: copies of the rain and snow parts.
 
-  - [ ] The audit script: gross 1M process rates recomputed offline for a
-    column, compared with the net-flow attribution.
+  - [~] ~~The audit script: gross 1M process rates recomputed offline for a
+    column, compared with the net-flow attribution.~~ Superseded by the
+    inline audit (`q_rtag_aud_<name>`, `q_stag_aud_<name>`), as the note's
+    section 12 says.
 
   - [ ] WP4c, beside it: the leak corrections that plan 4.2's rule selects, for
     runs without rain and snow tags. *Scope added (rev. 2, 2026-09-24):* the
