@@ -94,7 +94,10 @@ The twelve criteria of the plan, section 2, in short:
     (W42, `output/ic_validate/`):* V1, V2b, V3 and V4 pass. V2 fails at site
     23: the region tags overshoot the target by up to 2.2% of the water
     (budget 0.2%). V5's per-tag row fails for `pbl` (2.03%, from day 89).
-    By section 8.3 the owner decides (Decisions).
+    By section 8.3 the owner decides (Decisions). *The owner, 2026-09-25:
+    probe the miss first,* then validate again (the register). [ ] The
+    probe, pre-registered in the design note's section 9. [ ] C's
+    validation again.
     *The owner, 2026-09-25:* a persistent parent-validity flag in the
     closure tables, B and D together (the register, OD3's negative-water
     row). B, `negative_water_void`: a latch per family, key
