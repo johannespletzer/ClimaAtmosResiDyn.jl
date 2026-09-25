@@ -473,11 +473,13 @@ and constraints, so a tag named `fix_a` would take the name of tag `a`'s
 ledger, and the first registered diagnostic would win silently. `upfix_` is
 held for the updraft copies' repair ledger, which collides the same way.
 `inc_` is held for an increment follower's ledgers, `q_tag_inc_left` and
-`q_tag_inc_moved`. `rtag_` and `stag_` are held for the rain and snow parts,
-whose output names are not fixed yet. Refusing them now keeps configurations
-valid when those diagnostics arrive. `fixgross_`, `fixcount_`, `upfixgross_`
-and `upfixcount_` start the ledgers' gross twins and counts, and `led_` the
-ledgers per mechanism, `q_tag_led_rescale` and the others.
+`q_tag_inc_moved`. `rtag_` and `stag_` were held for the rain and snow parts,
+before their names were fixed, and stay refused. `fixgross_`, `fixcount_`,
+`upfixgross_` and `upfixcount_` start the ledgers' gross twins and counts, and
+`led_` the ledgers per mechanism, `q_tag_led_rescale` and the others. `aud_`
+starts the microphysics audit's records `q_rtag_aud_<name>` and
+`q_stag_aud_<name>`, which a rain part `q_rtag_<name>` of a tag named
+`aud_<name>` would collide with.
 """
 const RESERVED_WATER_TAG_PREFIXES = (
     "fix_",
@@ -490,6 +492,7 @@ const RESERVED_WATER_TAG_PREFIXES = (
     "upfixgross_",
     "upfixcount_",
     "led_",
+    "aud_",
 )
 
 """
@@ -1604,7 +1607,9 @@ warn_water_tags_under_prescribed_flow(prescribed_flow, water_tagging_model) =
 """
     AtmosTagging(config::AtmosConfig)
 
-Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
+Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`
+(with `water_tag_updraft_copy`, `water_tag_transport` and
+`water_tag_precipitation`),
 `energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`,
 `energy_source_tag_transport` and `energy_source_tag_updraft_copy`),
 `energy_process_record` and
@@ -1636,7 +1641,15 @@ function AtmosTagging(config::AtmosConfig)
     )
     water_transport_value = get(config.parsed_args, "water_tag_transport", nothing)
     water_transport = water_tag_transport_from_config(water_transport_value)
+    water_precipitation = water_tag_precipitation_from_config(
+        get(config.parsed_args, "water_tag_precipitation", false),
+    )
     water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
+        water_precipitation && error(
+            "`water_tag_precipitation: true` is set but `water_tracers` is \
+            not, so there are no tags to split. Configure `water_tracers`, or \
+            drop the key.",
+        )
         water_updraft_copies && error(
             "`water_tag_updraft_copy: true` is set but `water_tracers` is \
             not, so there are no tags to copy. Configure `water_tracers`, or \
@@ -1661,6 +1674,10 @@ function AtmosTagging(config::AtmosConfig)
             get(config.parsed_args, "edmfx_mse_q_tot_upwinding", "first_order"),
             get(config.parsed_args, "edmfx_tracer_upwinding", "first_order"),
         )
+        water_precipitation && check_water_tag_precipitation_supported(
+            microphysics_model,
+            get(config.parsed_args, "turbconv", nothing),
+        )
         water_tags = water_tracer_tuple(water_entries, FT)
         water_transport = water_tag_transport_from_config(
             water_transport_value,
@@ -1677,6 +1694,7 @@ function AtmosTagging(config::AtmosConfig)
             water_tags;
             updraft_copies = water_updraft_copies,
             transport = water_transport,
+            precipitation = water_precipitation,
         )
     end
     source_entries = config.parsed_args["energy_source_tags"]

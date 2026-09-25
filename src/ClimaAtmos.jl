@@ -102,6 +102,14 @@ include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_tracers.j
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tag_throughput.jl"))
 # Tagged prognostic water tracers (reuses the regions and masks defined above)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water.jl"))
+# The rain and snow parts of the water tags (`water_tag_precipitation`).
+include(
+    joinpath(
+        "parameterized_tendencies",
+        "tagged_tracers",
+        "tagged_water_precipitation.jl",
+    ),
+)
 # Energy source tags (ρe_src_*, the donor-proportional counterpart of the water tags)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_tags.jl"))
 # After the energy source tags, whose weight-free exchange helpers it uses.

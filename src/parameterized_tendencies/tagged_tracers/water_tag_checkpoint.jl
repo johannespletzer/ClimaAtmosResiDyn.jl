@@ -5,20 +5,28 @@
 ##### tag fields and their updraft copies must match the configuration, which
 ##### needs no record. Each tag's region and sources are recorded in the
 ##### checkpoint, as the energy source tags record theirs, and a restart that
-##### changes one stops with an error that names it.
+##### changes one stops with an error that names it. So is
+##### `water_tag_precipitation`, under which `ρq_tag_<name>` holds only the
+##### water that is neither rain nor snow.
 
 """
     WATER_TAG_CHECKPOINT_VERSION
 
 The version of the water tags' checkpoint attributes. A checkpoint without it
-predates the restart guard. A checkpoint with another version is refused.
+predates the restart guard. Version 2 adds `water_tag_precipitation`. A
+version 1 checkpoint was written before that key, so it reads as written
+without it. A checkpoint with any other version is refused.
 """
-const WATER_TAG_CHECKPOINT_VERSION = 1
+const WATER_TAG_CHECKPOINT_VERSION = 2
 
 const WATER_TAG_CHECKPOINT_KEYS = (;
     version = "water_tag_checkpoint",
     tags = "water_tracers",
+    precipitation = "water_tag_precipitation",
 )
+
+# The versions this guard reads. Version 1 predates `water_tag_precipitation`.
+const WATER_TAG_CHECKPOINT_READABLE_VERSIONS = (1, 2)
 const WATER_TAG_KEY_PREFIX = "water_tag."
 
 water_tag_key(name) = string(WATER_TAG_KEY_PREFIX, name)
@@ -32,9 +40,10 @@ water_tag_definition(tag) = energy_source_tag_definition(tag)
     write_water_tag_checkpoint_attributes!(file, model)
 
 Write each water tag's region and sources as attributes of `file`, with a
-version and the tags' names in state order. A definition is split into parts
-of at most 32,000 bytes, as the energy source tags' are. A no-op without water
-tags. Called by `save_state_to_disk_func`.
+version, the tags' names in state order and `water_tag_precipitation`, as 0 or
+1. A definition is split into parts of at most 32,000 bytes, as the energy
+source tags' are. A no-op without water tags. Called by
+`save_state_to_disk_func`.
 """
 write_water_tag_checkpoint_attributes!(file, ::Nothing) = nothing
 function write_water_tag_checkpoint_attributes!(file, model::WaterTaggingModel)
@@ -42,6 +51,7 @@ function write_water_tag_checkpoint_attributes!(file, model::WaterTaggingModel)
     put(key, value) = InputOutput.HDF5.write_attribute(file, key, value)
     put(K.version, WATER_TAG_CHECKPOINT_VERSION)
     put(K.tags, join(map(tag -> string(tag_name(tag)), model.tags), ","))
+    put(K.precipitation, Int(has_water_tag_precipitation(model)))
     for tag in model.tags
         name = tag_name(tag)
         parts = energy_source_text_parts(water_tag_definition(tag))
@@ -59,17 +69,21 @@ end
 Refuse a restart that would change what the water tags in `restart_file` mean.
 It checks, in this order, and stops at the first mismatch:
 
- 1. The water tag fields in `Y`, the increment's ledger, the tags' copies
-    in the first updraft, then the ledgers per mechanism, against what
+ 1. The water tag fields in `Y`, the rain and snow parts, the increment's
+    ledger, the tags' copies in the first updraft, then the ledgers per
+    mechanism, then the records of the microphysics audit, against what
     `model` configures. A checkpoint written before the ledgers per mechanism
-    is refused here. A changed
+    is refused here. A changed `water_tag_precipitation`,
     `water_tag_transport` or `water_tag_updraft_copy` fails here, because the
-    ledger or the copies are in the file or are not. This needs no attribute,
-    so it covers every checkpoint.
+    parts, the ledger or the copies are in the file or are not. This needs no
+    attribute, so it covers every checkpoint.
  2. The version attribute. A checkpoint without it predates this guard. Then
     it warns that the tags' regions and sources cannot be checked, and lets
-    the restart go on. A checkpoint with another version is refused.
- 3. Each tag's region and sources.
+    the restart go on. A checkpoint with a version this guard does not read
+    is refused.
+ 3. The recorded `water_tag_precipitation`, which version 1 records as
+    `false`.
+ 4. Each tag's region and sources.
 
 `Y` is the state read from `restart_file`. Called by `handle_restart`, before
 the cache is built, so a refused restart fails in seconds. The repair ledgers
@@ -85,6 +99,19 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "water tags",
         "water_tracers",
         "ρq_tag_",
+    )
+    # The rain and snow parts are in the file or are not, so a changed
+    # `water_tag_precipitation` fails here. Without this check a checkpoint
+    # written with the key would restart without it, and its parts would ride
+    # along as untagged tracers.
+    check_restart_fields(
+        restart_file,
+        Y,
+        is_water_precip_part_name,
+        water_tag_precip_part_state_names(water_model),
+        "rain and snow parts of the water tags",
+        "water_tag_precipitation",
+        "ρq_",
     )
     # The increment's ledger is in the file or is not, so a changed
     # `water_tag_transport` fails here, as a changed energy transport does.
@@ -118,6 +145,16 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "q_tag_",
         "water_tag_updraft_copy",
     )
+    # The microphysics audit's records come with the rain and snow parts.
+    check_restart_fields(
+        restart_file,
+        Y,
+        is_water_tag_audit_name,
+        water_tag_audit_state_names(water_model),
+        "records of the water tags' microphysics audit",
+        "water_tag_precipitation",
+        "q_",
+    )
     isnothing(water_model) && return nothing
 
     reader = InputOutput.HDF5Reader(restart_file, context)
@@ -133,12 +170,23 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
                they are the ones the file was written with."
         return nothing
     end
-    if recorded.version != WATER_TAG_CHECKPOINT_VERSION
+    if !(recorded.version in WATER_TAG_CHECKPOINT_READABLE_VERSIONS)
         error(
             "The restart file $restart_file records the water tags' settings \
             in version $(recorded.version) of the checkpoint format, and this \
             run reads version $WATER_TAG_CHECKPOINT_VERSION. Restart with the \
             version of ClimaAtmos that wrote the file, or start a new run.",
+        )
+    end
+    if recorded.precipitation != has_water_tag_precipitation(water_model)
+        error(
+            "The restart file $restart_file was written with \
+            `water_tag_precipitation: $(recorded.precipitation)`, and this run \
+            sets `water_tag_precipitation: \
+            $(has_water_tag_precipitation(water_model))`. The key decides \
+            whether `ρq_tag_<name>` holds all of a tag's water or only the \
+            water that is neither rain nor snow. Restart with the same key, or \
+            start a new run.",
         )
     end
     for tag in water_model.tags
@@ -184,8 +232,14 @@ function read_water_tag_checkpoint(file, tags)
                 part in 1:get_attribute(key)
             ) : nothing
     end
+    # Version 1 predates `water_tag_precipitation`, and so was written
+    # without it.
+    precipitation =
+        WATER_TAG_CHECKPOINT_KEYS.precipitation in keys(attributes) &&
+        get_attribute(WATER_TAG_CHECKPOINT_KEYS.precipitation) == 1
     return (;
         version = get_attribute(WATER_TAG_CHECKPOINT_KEYS.version),
         tags = definitions,
+        precipitation,
     )
 end

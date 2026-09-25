@@ -221,9 +221,11 @@ NVTX.@annotate function viscous_sponge_tendency!(Yₜ, Y, p)
         end
     end
 
-    # Passive (non-microphysics) grid-scale tracers.
+    # Passive (non-microphysics) grid-scale tracers. The water tags' rain and
+    # snow parts are left out, as rain and snow are.
     foreach_gs_tracer(Yₜ, Y) do ᶜρχₜ, ᶜρχ, ρχ_name
         ρχ_name in microphysics_tracer_names(Y) && return
+        _is_water_precip_part_field(ρχ_name) && return
         ᶜχ = @. lazy(specific(ᶜρχ, Y.c.ρ))
         vst_tracer = viscous_sponge_tendency_tracer(ᶜρ, ᶜχ, viscous_sponge)
         @. ᶜρχₜ += vst_tracer

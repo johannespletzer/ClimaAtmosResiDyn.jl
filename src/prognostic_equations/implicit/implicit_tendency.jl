@@ -82,6 +82,8 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
+        # The water tags' rain and snow parts take the microphysics' flows.
+        water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
         close_ledger_event!(p.parent_budget, Yₜ, Y, p, :microphysics)
         attribute_tagged_ρq_tot!(Yₜ, Y, p, :microphysics)
         attribute_energy_source_tags!(Yₜ, Y, p, :microphysics)

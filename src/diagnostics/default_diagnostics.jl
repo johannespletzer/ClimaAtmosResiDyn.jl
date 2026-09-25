@@ -687,12 +687,21 @@ function default_diagnostics(
     end
     water_tagging_model = atmos_tagging.water_tagging_model
     if !isnothing(water_tagging_model)
+        precipitation = has_water_tag_precipitation(water_tagging_model)
         for tag in water_tagging_model.tags
             name = tag_name(tag)
             append!(tag_diagnostics, ["q_tag_$name", "qv_tag_$name"])
+            # The rain and snow parts, and the tag's surface precipitation.
+            precipitation && append!(
+                tag_diagnostics,
+                ["q_rtag_$name", "q_stag_$name", "pr_tag_$name"],
+            )
         end
-        isempty(water_region_tag_state_names(water_tagging_model)) ||
+        if !isempty(water_region_tag_state_names(water_tagging_model))
             push!(tag_diagnostics, "q_tag_res")
+            precipitation &&
+                append!(tag_diagnostics, ["q_rtag_res", "q_stag_res"])
+        end
     end
     energy_source_tagging_model = atmos_tagging.energy_source_tagging_model
     if !isnothing(energy_source_tagging_model)
@@ -745,6 +754,14 @@ function default_diagnostics(
                 tag in energy_source_tagging_model.tags
             ],
         )
+    end
+    # The water tags' microphysics audit is a running total too.
+    if !isnothing(water_tagging_model) &&
+       has_water_tag_precipitation(water_tagging_model)
+        for tag in water_tagging_model.tags
+            name = tag_name(tag)
+            append!(record_diagnostics, ["q_rtag_aud_$name", "q_stag_aud_$name"])
+        end
     end
     isempty(tag_diagnostics) && isempty(record_diagnostics) && return []
     average_func = frequency_averages(duration)

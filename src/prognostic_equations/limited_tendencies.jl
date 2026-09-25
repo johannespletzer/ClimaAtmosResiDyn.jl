@@ -61,6 +61,10 @@ from the pre- and post-limited states and passed to
 `enforce_mass_energy_consistency!`, which updates density and total energy; see the
 "Microphysics" page of the docs (`docs/src/microphysics.md`).
 
+Under `water_tag_precipitation: true` the water tags' rain and snow parts follow
+what the limiters do to rain and snow, from `snapshot_water_tag_precipitation!`
+at the start to `rescale_water_tags!` and `follow_water_tag_precipitation!`.
+
 # Arguments
 
   - `Y`: Current state vector, modified in place.
@@ -78,6 +82,10 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
         vertical_water_borrowing_species,
     ) =
         p.numerics
+
+    # The water tags' rain and snow parts follow what the limiters do to rain
+    # and snow, measured from here.
+    snapshot_water_tag_precipitation!(Y, p)
 
     # Apply general (SEM quasimonotone) limiter if configured.
     # When ρq_tot is limited, update ρ and ρe_tot for mass and energy consistency.
@@ -150,5 +158,7 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
             enforce_mass_energy_consistency!(Y, p, p.scratch.ᶜtemp_scalar_2)
         end
     end
+    # What a limiter did to rain and snow without a change of ρq_tot.
+    follow_water_tag_precipitation!(Y, p)
     return nothing
 end

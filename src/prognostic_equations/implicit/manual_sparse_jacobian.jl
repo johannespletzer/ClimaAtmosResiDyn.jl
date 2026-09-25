@@ -300,7 +300,9 @@ Tagged water tracers mirror the sedimentation flux (see
 [`sediment_water_tags!`](@ref)), so their diagonals are allocated here too and
 excluded from `diffusion_jacobian_blocks`, which would otherwise allocate them
 a second time as passive tracers. With `water_tag_cross_flag` set, so are their
-cross blocks to each sedimenting mass, the tag's share of `ρq_tot`'s.
+cross blocks to each sedimenting mass, the tag's share of `ρq_tot`'s. Under
+`water_tag_precipitation: true` the cross blocks go to the cloud species only,
+and each rain and snow part has its own diagonal, the parent species' block.
 
 # Returns
 
@@ -315,6 +317,15 @@ function sedimentation_jacobian_blocks(Y, atmos, water_tag_cross_flag)
     mass_names = unrolled_map(center_state_name, sedimenting_mass_names(Y))
     water_tag_names =
         unrolled_map(center_state_name, sedimenting_water_tag_names(Y))
+    # The species the tags' `ρq_tag_<name>` fields fall with: every one, or
+    # under `water_tag_precipitation: true` the cloud only.
+    water_tag_mass_names = unrolled_map(
+        center_state_name,
+        water_tag_sedimenting_mass_names(Y, atmos.water_tagging_model),
+    )
+    # The rain and snow parts, whose diagonal is their species' block.
+    precip_part_names =
+        unrolled_map(center_state_name, water_precip_part_names(Y))
     # Each tag falls with its share of each species, as `ρq_tot` falls with all
     # of it, so its row has a cross block to each species' column. No other row
     # names a tag, so the split solver still solves the tags apart, by
@@ -328,7 +339,7 @@ function sedimentation_jacobian_blocks(Y, atmos, water_tag_cross_flag)
                     tag_name -> map(
                         mass_name ->
                             (tag_name, mass_name) => similar(Y.c, TridiagonalRow),
-                        mass_names,
+                        water_tag_mass_names,
                     ),
                     water_tag_names,
                 ),
@@ -340,6 +351,10 @@ function sedimentation_jacobian_blocks(Y, atmos, water_tag_cross_flag)
             water_tag_names,
         )...,
         water_tag_cross_blocks...,
+        map(
+            name -> (name, name) => similar(Y.c, TridiagonalRow),
+            precip_part_names,
+        )...,
         (@name(c.ρe_tot), @name(c.ρe_tot)) => similar(Y.c, TridiagonalRow),
         (@name(c.ρq_tot), @name(c.ρq_tot)) => similar(Y.c, TridiagonalRow),
         (@name(c.ρe_tot), @name(c.ρq_tot)) => similar(Y.c, TridiagonalRow),
@@ -750,9 +765,10 @@ function jacobian_name_chains_overlap(a::Vector{Any}, b::Vector{Any})
 end
 
 # Whether a state variable is one the split may solve apart: a tag of any of the
-# three families, a process record, the ledger of the energy source tags' or
-# the water tags' increment correction, or a ledger per mechanism of either
-# family (WP6). All live directly in `Y.c`.
+# three families, the water tags' rain and snow parts among them, a process
+# record, the ledger of the energy source tags' or the water tags' increment
+# correction, a ledger per mechanism of either family (WP6), or a record of the
+# water tags' microphysics audit (WP4b). All live directly in `Y.c`.
 function is_splittable_jacobian_field(name::MatrixFields.FieldName)
     chain = jacobian_name_chain(name)
     (length(chain) == 2 && chain[1] === :c && chain[2] isa Symbol) ||
@@ -761,7 +777,8 @@ function is_splittable_jacobian_field(name::MatrixFields.FieldName)
            startswith(string(chain[2]), "prc_") ||
            is_energy_source_ledger_name(chain[2]) ||
            is_water_tag_ledger_name(chain[2]) ||
-           is_tag_mechanism_ledger_name(chain[2])
+           is_tag_mechanism_ledger_name(chain[2]) ||
+           is_water_tag_audit_name(chain[2])
 end
 
 """
@@ -1398,6 +1415,8 @@ function update_water_tag_sedimentation_jacobian!(
     p,
     water_tag_cross_flag,
 )
+    # The rain and snow parts take their species' blocks, set above.
+    update_water_precip_part_sedimentation_jacobian!(matrix, Y, p)
     isempty(sedimenting_water_tag_names(Y)) && return nothing
     # The share denominator is a property of the current state, so it has to be
     # rebuilt here rather than reused from the tendency evaluation.
@@ -1429,7 +1448,11 @@ function update_water_tag_sedimentation_block!(
     ∂ᶜρq_tag_err_∂ᶜρq_tag = matrix[tag_state_name, tag_state_name]
     @. ∂ᶜρq_tag_err_∂ᶜρq_tag = zero(typeof(∂ᶜρq_tag_err_∂ᶜρq_tag)) - (I,)
 
-    MatrixFields.unrolled_foreach(sedimenting_mass_names(Y)) do ρqₚ_name
+    # Under `water_tag_precipitation: true` only the cloud falls in the
+    # `ρq_tag_<name>` fields.
+    mass_names =
+        water_tag_sedimenting_mass_names(Y, p.atmos.water_tagging_model)
+    MatrixFields.unrolled_foreach(mass_names) do ρqₚ_name
         ᶜwₚ = MatrixFields.get_field(
             p.precomputed,
             sedimentation_velocity_name(ρqₚ_name),

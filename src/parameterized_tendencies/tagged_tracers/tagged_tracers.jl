@@ -369,6 +369,7 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
             ᶜtagging_q_snapshot = similar(Y.c.ρ),
             ᶜtagging_q_share_norm = similar(Y.c.ρ),
             water_tag_edmf_scratch(Y, atmos.water_tagging_model, atmos)...,
+            _water_tag_precipitation_scratch(Y, atmos.water_tagging_model)...,
         )
     )...,
     (
@@ -918,10 +919,11 @@ never touched.
 function rebuild_tags_from_state!(Y, atmos)
     ᶜcoord = Fields.coordinate_field(Y.c)
     _rebuild_tags_of_family!(Y.c, ᶜcoord, Y.c.ρe_tot, atmos.tagging_model)
-    hasproperty(Y.c, :ρq_tot) && _rebuild_tags_of_family!(
+    # Each water tag's parts take their masked share of their compartments,
+    # the whole of `ρq_tot` without `water_tag_precipitation`.
+    hasproperty(Y.c, :ρq_tot) && rebuild_water_tags_from_state!(
         Y.c,
         ᶜcoord,
-        Y.c.ρq_tot,
         atmos.water_tagging_model,
     )
     rebuild_water_tag_updraft_copies!(
@@ -1086,6 +1088,8 @@ in each case:
     because a shape-preserving adjustment applied per tag has no reason to
     reproduce the parent's and would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags
     follow the parent's limiting through [`rescale_water_tags!`](@ref) instead.
+    The same holds for their rain and snow parts, `ρq_rtag_*` and `ρq_stag_*`
+    ([`is_water_precip_part_name`](@ref)).
   - `ρe_src_*` is exempt for the same partition reason as the water tags. It
     has no equivalent of `rescale_water_tags!`. Instead
     `repair_energy_source_tags!`, on by default, puts negative tags back after
@@ -1096,4 +1100,5 @@ in each case:
 is_tagged_tracer_name(name) =
     is_energy_tag_name(name) ||
     is_water_tag_name(name) ||
+    is_water_precip_part_name(name) ||
     is_energy_source_tag_name(name)

@@ -2405,7 +2405,8 @@ struct IncrementWaterTagTransport <: AbstractWaterTagTransport end
 
 """
     WaterTaggingModel(tags::Tuple; updraft_copies = false,
-                      transport = TracerWaterTagTransport())
+                      transport = TracerWaterTagTransport(),
+                      precipitation = false)
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 `water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2422,11 +2423,19 @@ time.
 implicit terms: as tracers by default, or by the parent's own increment after
 each Newton solve. The increment needs region tags without sources, and is
 refused without them. See [`IncrementWaterTagTransport`](@ref).
+
+`precipitation`, from `water_tag_precipitation`, splits each tag into three
+parts: `ρq_tag_<name>` holds the water that is neither rain nor snow,
+`ρq_rtag_<name>` the rain and `ρq_stag_<name>` the snow. It is a type
+parameter too. It needs 1-moment microphysics, which the configuration checks,
+and it is refused here with updraft copies. See
+[`has_water_tag_precipitation`](@ref).
 """
 struct WaterTaggingModel{
     T <: Tuple,
     UpdraftCopies,
     TR <: AbstractWaterTagTransport,
+    Precipitation,
 }
     tags::T
     transport::TR
@@ -2435,7 +2444,18 @@ function WaterTaggingModel(
     tags::Tuple;
     updraft_copies::Bool = false,
     transport::AbstractWaterTagTransport = TracerWaterTagTransport(),
+    precipitation::Bool = false,
 )
+    # The copies of the rain and snow parts are stage 3 of the design note
+    # (design/RAIN_SNOW_TAGS.md on the record branch, section 13). Their build
+    # cost is measured first.
+    precipitation &&
+        updraft_copies &&
+        error(
+            "`water_tag_precipitation: true` is refused with \
+            `water_tag_updraft_copy: true`. The updraft copies of the rain and \
+            snow parts are not built yet. Drop one of the two keys.",
+        )
     # The correction gives the partition the parent's increment, less what the
     # partition's own tendencies moved. Without a partition the tags that carry
     # a source would take the parent's whole implicit transport on top of
@@ -2451,7 +2471,12 @@ function WaterTaggingModel(
             region and its complement, for example with `above: false` or \
             `inside: false`.",
         )
-    return WaterTaggingModel{typeof(tags), updraft_copies, typeof(transport)}(
+    return WaterTaggingModel{
+        typeof(tags),
+        updraft_copies,
+        typeof(transport),
+        precipitation,
+    }(
         tags,
         transport,
     )
@@ -2478,6 +2503,19 @@ has_water_tag_updraft_copies(::Nothing) = false
 has_water_tag_updraft_copies(
     ::WaterTaggingModel{T, UpdraftCopies},
 ) where {T, UpdraftCopies} = UpdraftCopies
+
+"""
+    has_water_tag_precipitation(model)
+
+Whether each water tag of `model` has a rain part and a snow part, from the
+`water_tag_precipitation` config key. Then `ρq_tag_<name>` holds only the water
+that is neither rain nor snow. A property of the model's type, so it folds away
+at compile time. `false` without water tags.
+"""
+has_water_tag_precipitation(::Nothing) = false
+has_water_tag_precipitation(
+    ::WaterTaggingModel{T, U, TR, Precipitation},
+) where {T, U, TR, Precipitation} = Precipitation
 
 """
     EnergySourceTag{name}(region, source = :none)

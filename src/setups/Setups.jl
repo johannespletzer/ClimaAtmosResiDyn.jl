@@ -50,6 +50,7 @@ import ..energy_source_tagging_variables
 import ..energy_source_parent
 import ..energy_source_increment_ledger_variables
 import ..water_tag_mechanism_variables
+import ..water_tag_precipitation_audit_variables
 import ..energy_source_mechanism_variables
 import ..energy_source_updraft_copy_variables
 import ..with_water_tag_updraft_copies
