@@ -92,8 +92,8 @@ changes, which [RUNS.md](RUNS.md) records.
 | E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82 | 5. The implicit channel and the increment prototype |
 | E45, E47, E51, E54, E55, E57, E58                | 6. Parity, Float32, MPI and restarts                |
 | E7–E9, E20–E24, E26, E28, E30, E38, E49, E63     | 7. The process records and the per-process checks   |
-| E50, E60, E69, E70, E74, E75, E81, E83           | 8. The sphere and long runs                         |
-| E68, E72, E73, E76                               | 9. Mixing: V3 and the updraft gap                   |
+| E50, E60, E69, E70, E74, E75, E81                | 8. The sphere and long runs                         |
+| E68, E72, E73, E76, E83                          | 9. Mixing: V3 and the updraft gap                   |
 | T1–T10, E44, E44b–E44e, E52, E56, E77, E78       | 10. Cost                                            |
 | M1–M8                                            | 11. Method                                          |
 | old claims, errata, conflicts                    | 12. Superseded and falsified claims                 |
@@ -2527,39 +2527,6 @@ closure fails). *Revised after the review of `4507e247`, as W36: ρΔz weights
 and the actual end of each interval. The runs, commits and output of W36;
 `output/long_runs/`.*
 
-**E83. With the four new mirrors (#114) the energy copies still repair 2.9% of
-the source throughput a day on D4, against a bound of 0.20%, so they are not
-an eligible comparator there. The mirrors bring default and copies closer:
-`sfc`'s L∞ gap at 24 h falls from 2.5% to 0.86%.** The pre-registered D4
-validation of G4.1 and G4.11 (`design/ENERGY_COPY_MIRRORS.md` section 5): 8
-energy source tags, a day, copies with and without the mirrors, a `dt` 60 s
-twin, the default mode and an untagged twin. The scale is OD4's gross source
-throughput. These runs predate its exact accumulator (#115), so it is the
-process records' lower bound, and every percentage here is an upper bound.
-
-| run | own residual (at most 2e-4) | repair a day (at most 0.20%) | eligible |
-|:--- | ---------------------------:| ----------------------------:|:-------- |
-| copies, with the mirrors      | 1.1e-5 | 2.9% | no |
-| copies, before (`main`)       | 1.2e-5 | 2.6% | no |
-| copies, with the mirrors, `dt` 60 s | 2.7e-6 | 1.9% | no |
-
-  - Refinement passes: the repair per day at 60 s is 0.65 times that at 120 s
-    (at most 1.1).
-  - Parity: the copies and default runs are bit for bit the untagged twin.
-    The script also compared the 60 s twin with the 120 s untagged run; that
-    differs, as two time steps must, and is not a parity result.
-  - Default against copies at 24 h, reported and not scored, since the copies
-    are not eligible: `sfc` L1 0.64% → 0.38%, L∞ 2.5% → 0.86%; `rad` L1
-    0.66% → 0.39%; `new_tropo` L∞ 2.1% → 0.79%; with the mirrors against
-    without.
-  - The mirrors change what the copies see; they do not bring the repair
-    within its bound. What the repair corrects is not isolated here. So E39
-    and E76's gaps stay *comparator not eligible*.
-
-*`hpda2_compute`, 2026-09-25, jobs `13944458` to `13944462`, from
-`../ClimaAtmosResiDyn-g411-run` (the mirrors) and `-g411before-run`
-(`main`). `analysis/increment/g411_eligibility.py`; `output/g411/`.*
-
 ## 9. Mixing: V3 and the updraft gap
 
 Under EDMF the tags' updraft share is the grid mean's, so the provenance the
@@ -2683,6 +2650,39 @@ depends on the configuration: `sfc` at 1 h grows from 14.3% to 21.3% as the
 step shrinks, and at 24 h it is 6.5% under first-order upwinding against
 0.64%. They do not show which scheme moved. E73's baseline pair is the same
 comparison. The parity of every pair stands.
+
+**E83. With the four new mirrors (#114) the energy copies still repair 2.9% of
+the source throughput a day on D4, against a bound of 0.20%, so they are not
+an eligible comparator there. The mirrors bring default and copies closer:
+`sfc`'s L∞ gap at 24 h falls from 2.5% to 0.86%.** The pre-registered D4
+validation of G4.1 and G4.11 (`design/ENERGY_COPY_MIRRORS.md` section 5): 8
+energy source tags, a day, copies with and without the mirrors, a `dt` 60 s
+twin, the default mode and an untagged twin. The scale is OD4's gross source
+throughput. These runs predate its exact accumulator (#115), so it is the
+process records' lower bound, and every percentage here is an upper bound.
+
+| run | own residual (at most 2e-4) | repair a day (at most 0.20%) | eligible |
+|:--- | ---------------------------:| ----------------------------:|:-------- |
+| copies, with the mirrors      | 1.1e-5 | 2.9% | no |
+| copies, before (`main`)       | 1.2e-5 | 2.6% | no |
+| copies, with the mirrors, `dt` 60 s | 2.7e-6 | 1.9% | no |
+
+  - Refinement passes: the repair per day at 60 s is 0.65 times that at 120 s
+    (at most 1.1).
+  - Parity: the copies and default runs are bit for bit the untagged twin.
+    The script also compared the 60 s twin with the 120 s untagged run; that
+    differs, as two time steps must, and is not a parity result.
+  - Default against copies at 24 h, reported and not scored, since the copies
+    are not eligible: `sfc` L1 0.64% → 0.38%, L∞ 2.5% → 0.86%; `rad` L1
+    0.66% → 0.39%; `new_tropo` L∞ 2.1% → 0.79%; with the mirrors against
+    without.
+  - The mirrors change what the copies see; they do not bring the repair
+    within its bound. What the repair corrects is not isolated here. So E39
+    and E76's gaps stay *comparator not eligible*.
+
+*`hpda2_compute`, 2026-09-25, jobs `13944458` to `13944462`, from
+`../ClimaAtmosResiDyn-g411-run` (the mirrors) and `-g411before-run`
+(`main`). `analysis/increment/g411_eligibility.py`; `output/g411/`.*
 
 ## 10. Cost
 
