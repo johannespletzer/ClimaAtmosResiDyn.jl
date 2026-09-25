@@ -54,6 +54,24 @@ record; the answered and superseded entries are in the next section.
     should model the surface flux (plan 4.1, review S4). Rev. 2 sets the
     first-hour budget (OD3's provenance rows) but not this rule.
     [G3T](G3_TODO.md#decisions)
+  - **G4.3 to G4.6's seven points** (raised 2026-09-25 with #120 and E86;
+    the proposals are in `review/od4_restatement.md` and the design notes it
+    names):
+      + whether the register's interim rule should now say that values on the
+        process records are estimates, not bounds (E84);
+      + whether an aggregate intervention threshold applies to energy. At
+        water's 0.5% a day, D4 (7.3%) and the sphere (2.6%) fail (E86);
+      + `throughput_tolerance`'s levels: 5e-2 for `enthalpy_increment`, 0.3
+        for `enthalpy`, none for `tracer`; or leave it off (#120);
+      + water's warning default (1e-10) fires on every run with the follower,
+        and a healthy D4-W day reaches 1.35e-4. Set a default per transport,
+        or leave it?
+      + whether A5 reads "its group's sum" as the partition's sum
+        (`design/RESIDUAL_REPORT.md`);
+      + a warning on the settling ratio: yes or no;
+      + once G4.6 measures C4, share it as transport, or document its size.
+
+    [G4T](G4_TODO.md)
 
 ## Answered or superseded, moved from the waiting list (2026-09-25)
 
