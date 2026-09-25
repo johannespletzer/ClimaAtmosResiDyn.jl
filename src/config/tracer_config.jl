@@ -962,12 +962,12 @@ const DEFAULT_CLOSURE_VOID_LEVELS =
 """
     closure_check_from_config(spec_value, context, FT; default_tolerance,
                               default_abort_above, default_void_above = nothing,
-                              default_spin_up = nothing)
+                              default_spin_up = nothing,
+                              negative_water = false)
 
 Read a `water_closure_check`, `energy_closure_check` or
 `energy_source_closure_check` block into
-`(; period, tolerance, abort_above, void_above, audit, spin_up)`, or `nothing`
-when the key is absent.
+`(; period, tolerance, abort_above, void_above, audit, spin_up, negative_water_void_above)`, or `nothing` when the key is absent.
 
 Every key is optional: `period` defaults to `"1days"`, `tolerance` to the
 family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref), `abort_above` to its
@@ -990,6 +990,15 @@ The first hour of a run makes a residual that is an artefact of the initial
 adjustment, and the rows since the spin-up leave it out. The reference is taken
 again after a restart, at `spin_up` after the restart. Every family's block
 accepts the key; only the energy source family sets it by default.
+
+`negative_water_void_above` is read only where `negative_water` is `true`,
+which is the water block. It defaults to
+[`DEFAULT_NEGATIVE_WATER_VOID_ABOVE`](@ref), `1e-4`: past it, the parent's
+negative water over its water, from the raw `ρq_tot`, marks this row and every
+later row `negative_water_void`. `~` switches it off and drops the columns. It
+must not be negative. Zero marks the rows at the first negative water. The
+energy blocks refuse the key, since their parent is not water; there it is
+`nothing`.
 """
 closure_check_from_config(
     ::Nothing,
@@ -999,6 +1008,7 @@ closure_check_from_config(
     default_abort_above,
     default_void_above = nothing,
     default_spin_up = nothing,
+    negative_water = false,
 ) where {FT} = nothing
 
 function closure_check_from_config(
@@ -1009,7 +1019,16 @@ function closure_check_from_config(
     default_abort_above,
     default_void_above = nothing,
     default_spin_up = nothing,
+    negative_water = false,
 ) where {FT}
+    negative_water ||
+        !(spec_value isa AbstractDict) ||
+        !haskey(spec_value, "negative_water_void_above") ||
+        error(
+            "$context does not take `negative_water_void_above`: only \
+            `water_closure_check` reads the parent's negative water. Drop \
+            the key from this block.",
+        )
     spec = checked_mapping(
         spec_value,
         context;
@@ -1020,6 +1039,7 @@ function closure_check_from_config(
             "void_above",
             "audit",
             "spin_up",
+            (negative_water ? ("negative_water_void_above",) : ())...,
         ),
     )
     period = get(spec, "period", "1days")
@@ -1050,7 +1070,49 @@ function closure_check_from_config(
             "$context `spin_up` must be a positive, finite time such as \
             \"1hours\", or `~` for none; got $(repr(spin_up)).",
         )
-    return (; period, tolerance, abort_above, void_above, audit, spin_up)
+    negative_water_void_above =
+        negative_water ?
+        negative_water_void_above_from_config(
+            get(
+                spec,
+                "negative_water_void_above",
+                DEFAULT_NEGATIVE_WATER_VOID_ABOVE,
+            ),
+            context,
+            FT,
+        ) : nothing
+    return (;
+        period,
+        tolerance,
+        abort_above,
+        void_above,
+        audit,
+        spin_up,
+        negative_water_void_above,
+    )
+end
+
+"""
+    negative_water_void_above_from_config(value, context, FT)
+
+Read the `negative_water_void_above` entry of the water closure-check block, as
+an `FT` or `nothing`. `nothing` switches the flag and its columns off. A
+negative level is refused: the ratio it is compared against is never
+negative.
+"""
+negative_water_void_above_from_config(::Nothing, context, ::Type{FT}) where {FT} =
+    nothing
+function negative_water_void_above_from_config(
+    value,
+    context,
+    ::Type{FT},
+) where {FT}
+    level = FT(value)
+    level >= 0 || error(
+        "$context `negative_water_void_above` must not be negative, got \
+        $level. Use `~` to switch the flag off.",
+    )
+    return level
 end
 
 """
@@ -1179,6 +1241,7 @@ function closure_checks_from_config(config::AtmosConfig)
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.water,
             default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.water,
             default_void_above = DEFAULT_CLOSURE_VOID_LEVELS.water,
+            negative_water = true,
         ),
         energy_source = energy_source_closure_check_from_config(
             pa["energy_source_closure_check"],

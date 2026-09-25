@@ -1550,9 +1550,13 @@ end
     Y.c.q_tag_led_repair .= 1
     atmos = (; water_tagging_model = model, energy_source_tagging_model = nothing)
     # The gross starts from the state the cache is built from, as after a
-    # restart, so the ledger's value then is not counted.
-    integrator =
-        (; u = Y, p = (; tagging = CA.tag_ledger_step_cache(Y, atmos), atmos))
+    # restart, so the ledger's value then is not counted. `dt` is the step the
+    # parent's negative water ledger adds up.
+    integrator = (;
+        u = Y,
+        p = (; tagging = CA.tag_ledger_step_cache(Y, atmos), atmos),
+        dt = 10.0,
+    )
     (; ledgers) = integrator.p.tagging.tag_ledger_steps
     CA.accumulate_tag_ledger_gross!(integrator)
     @test all(iszero, parent(ledgers.q_tag_led_repair.ᶜgross))
@@ -1786,7 +1790,7 @@ end
         CA.tag_ledger_step_cache(Y, atmos)...,
     )
     p = (; tagging, atmos)
-    integrator = (; u = Y, p)
+    integrator = (; u = Y, p, dt = 10.0)
     steps = tagging.tag_ledger_steps
     @test keys(steps.attempted) == CA.water_tag_mechanism_names(model)
     @test keys(steps.ledgers) ==
@@ -1862,11 +1866,15 @@ end
     written = CA.tag_ledger_checkpoint_fields(tagging)
     restored = CA.tag_ledger_checkpoint_fields(fresh)
     @test first.(written) == first.(restored)
-    @test length(written) == 6 + 3 * 6 + 4
+    # The parent's negative water ledger adds its two fields, last.
+    @test length(written) == 6 + 3 * 6 + 4 + 2
+    @test first.(written[(end - 1):end]) ==
+          ["tag_ledger.negative_water.amount", "tag_ledger.negative_water.events"]
     for ((_, a), (_, b)) in zip(written, restored)
         @test parent(a) == parent(b)
     end
-    # A checkpoint without them starts them at zero, with a warning.
+    # A checkpoint without them starts them at zero, with a warning. The
+    # negative water ledger, which came later, warns on its own.
     bare = joinpath(directory, "bare.hdf5")
     writer = CA.InputOutput.HDF5Writer(bare, context)
     CA.InputOutput.write!(writer, Y, "Y")
@@ -1875,11 +1883,10 @@ end
         ᶜwater_fix = keyed(zero_field),
         CA.tag_ledger_step_cache(Y, atmos)...,
     )
-    @test_logs (:warn, r"carries none of the tags' accumulators") CA.restore_tag_ledger_checkpoint!(
-        zeroed,
-        bare,
-        context,
-    )
+    @test_logs (:warn, r"before the parent's\s+negative water ledger") (
+        :warn,
+        r"carries none of the tags' accumulators",
+    ) CA.restore_tag_ledger_checkpoint!(zeroed, bare, context)
     @test all(iszero, parent(zeroed.ᶜwater_fix.ρq_tag_tropo))
     # One that carries some but not all is refused.
     partial = joinpath(directory, "partial.hdf5")
@@ -2107,13 +2114,6 @@ end
         )
         @test closure.gross_relative <= 100 * eps(FT)
         @test closure.total ≈ sum(ᶜtarget)
-
-        # The parent recovers: cell 3 takes 2e-3 from cell 4 on top of its
-        # deficit. The partition gives up the deficit where it holds water.
-        Y2 = closed!(state(), U.c.ρq_tot)
-        U2 = closed!(state(), U.c.ρq_tot)
-        z = FT(2e-3)
-        @. U2.c.ρq_tot = U.c.ρq_tot + (y + z) * ᶜcell3 - (y + z) * ᶜcell4
         # The closure's non-positive columns and the parent's negative water
         # read the raw `ρq_tot`, not the target, which is never negative. At
         # 49d29435 the audit read the target and gave 0 here.
@@ -2133,6 +2133,16 @@ end
             closure.scale,
         )
         @test audit.nonpositive_mass == sum(ᶜnegative)
+        water = CA.parent_negative_water(after, p)
+        @test water.negative == sum(ᶜnegative)
+        @test water.relative == sum(ᶜnegative) / sum(after.c.ρq_tot)
+
+        # The parent recovers: cell 3 takes 2e-3 from cell 4 on top of its
+        # deficit. The partition gives up the deficit where it holds water.
+        Y2 = closed!(state(), U.c.ρq_tot)
+        U2 = closed!(state(), U.c.ρq_tot)
+        z = FT(2e-3)
+        @. U2.c.ρq_tot = U.c.ρq_tot + (y + z) * ᶜcell3 - (y + z) * ᶜcell4
         after2, dY2, _ = stage(Y2, U2)
         ᶜtarget2 = @. CA.water_tag_partition_target(U2.c.ρq_tot)
         ᶜpartition2 = @. after2.c.ρq_tag_tropo + after2.c.ρq_tag_strat
