@@ -41,9 +41,10 @@ concurrency:
 
 jobs:
   # The test groups are read from `test/runtests.jl`'s `KNOWN_TEST_GROUPS`, less
-  # `all`. So a pull request that adds a group no longer edits this file, and no
-  # longer starts the full matrix below. The weekly run, main and a manual run
-  # still test every group.
+  # `all`, by `.github/read_test_groups.jl`. It evaluates only that assignment
+  # and fails if it is not a literal tuple of plain names. So a pull request
+  # that adds a group no longer edits this file, and no longer starts the full
+  # matrix below. The weekly run, main and a manual run still test every group.
   groups:
     name: Test groups
     runs-on: ubuntu-latest
@@ -51,25 +52,13 @@ jobs:
       groups: ${{ steps.read.outputs.groups }}
     steps:
       - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.11'
       - id: read
         name: Read the groups from test/runtests.jl
         run: |
-          groups=$(python3 - <<'EOF'
-          import json
-          import re
-
-          text = open("test/runtests.jl").read()
-          match = re.search(r"const KNOWN_TEST_GROUPS = \((.*?)\n\)", text, re.S)
-          if match is None:
-              raise SystemExit("KNOWN_TEST_GROUPS not found in test/runtests.jl")
-          groups = [g for g in re.findall(r'"([^"]+)"', match.group(1)) if g != "all"]
-          if not groups:
-              raise SystemExit("KNOWN_TEST_GROUPS lists no group")
-          print(json.dumps(groups))
-          EOF
-          )
-          echo "groups=$groups" >> "$GITHUB_OUTPUT"
-          echo "$groups"
+          julia --startup-file=no .github/read_test_groups.jl | tee -a "$GITHUB_OUTPUT"
 
   test:
     name: Downgrade ${{ matrix.version }} - ${{ matrix.test_group }}
