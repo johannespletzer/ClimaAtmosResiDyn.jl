@@ -294,6 +294,109 @@ The D4-W runs use the driver `analysis/water/d4w_driver.jl`, which sets the
 passive tracer to the `tropo` mask. For the `w3_*` copies it also starts the
 copies from the default mode's plume.
 
+### From W29 on: long runs, W25, WP4c, known issue 7, G4 (backfilled 2026-09-25)
+
+These runs are from 2026-09-24 and 2026-09-25. They were not in the table
+until this backfill. Commit, date, job and exit status come from each
+output's `provenance.txt`, and the NetCDF counts from scratch, as checked on
+2026-09-25. "synced" in the last column means the run's directory is in the
+archive's `scratch_tag_closure/output/`. A row with output "—" is a probe's
+directory, which the probe's job script wrote without `output_XXXX`. The long
+runs' first submission has no provenance, so its commit is unknown and its job
+is one of the eight. Exit status 1 marks the runs that ended with
+`simulation_crashed` (W36). Rows marked "pending" or "running" have no finding
+yet.
+
+| Run | Output | Config | Commit | Date | Job | Purpose | Findings | Repo | Scratch | Archive |
+|:--- |:------ |:------ |:------ |:---- |:--- |:------- |:-------- |:---- |:------- |:------- |
+| `lr_s23_samesign` | 0000 | same | — | 2026-09-24 | one of `13915221`–`228` | long runs, site 23, 90 days: both followers under the same-sign rule; the first submission, void (no radiation seed reset) and cancelled | W36 (void) | no | 32 nc | synced |
+| `lr_s23_samesign` | 0001 | same | b01f926a | 2026-09-24 | `13917157` | long runs, site 23, 90 days: both followers under the same-sign rule; the second submission; exit status 1 | W36, E81 | `output/long_runs/lr_s23_samesign/` | 32 nc | synced |
+| `lr_s23_absm` | 0000 | same | — | 2026-09-24 | one of `13915221`–`228` | long runs, site 23, 90 days: both followers under \|m\|; the first submission, void (no radiation seed reset) and cancelled | W36 (void) | no | 32 nc | synced |
+| `lr_s23_absm` | 0001 | same | 952d960d | 2026-09-24 | `13917158` | long runs, site 23, 90 days: both followers under \|m\|; the second submission; exit status 1 | W36, E81 | `output/long_runs/lr_s23_absm/` | 32 nc | synced |
+| `lr_s23_copies` | 0000 | same | — | 2026-09-24 | one of `13915221`–`228` | long runs, site 23, 90 days: the copies of both families, the per-tag reference; the first submission, void (no radiation seed reset) and cancelled | W36 (void) | no | 24 nc | synced |
+| `lr_s23_copies` | 0001 | same | b01f926a | 2026-09-24 | `13917160` | long runs, site 23, 90 days: the copies of both families, the per-tag reference; the second submission; exit status 1 | W36, E81 | `output/long_runs/lr_s23_copies/` | 24 nc | synced |
+| `lr_s23_untagged` | 0000 | same | — | 2026-09-24 | one of `13915221`–`228` | long runs, site 23, 90 days: the untagged twin, for parity; the first submission, void (no radiation seed reset) and cancelled | W36 (void) | no | 10 nc | synced |
+| `lr_s23_untagged` | 0001 | same | b01f926a | 2026-09-24 | `13917159` | long runs, site 23, 90 days: the untagged twin, for parity; the second submission | W36, E81 | `output/long_runs/lr_s23_untagged/` | 10 nc | synced |
+| `lr_s26_samesign` | 0000 | same | — | 2026-09-24 | one of `13915221`–`228` | long runs, site 26, 90 days: both followers under the same-sign rule; the first submission, void (no radiation seed reset) and cancelled | W36 (void) | no | 32 nc | synced |
+| `lr_s26_samesign` | 0001 | same | b01f926a | 2026-09-24 | `13917162` | long runs, site 26, 90 days: both followers under the same-sign rule; the second submission | W36, E81 | `output/long_runs/lr_s26_samesign/` | 32 nc | synced |
+| `lr_s26_absm` | 0000 | same | — | 2026-09-24 | one of `13915221`–`228` | long runs, site 26, 90 days: both followers under \|m\|; the first submission, void (no radiation seed reset) and cancelled | W36 (void) | no | 32 nc | synced |
+| `lr_s26_absm` | 0001 | same | 952d960d | 2026-09-24 | `13917177` | long runs, site 26, 90 days: both followers under \|m\|; the second submission | W36, E81 | `output/long_runs/lr_s26_absm/` | 32 nc | synced |
+| `lr_s26_copies` | 0000 | same | — | 2026-09-24 | one of `13915221`–`228` | long runs, site 26, 90 days: the copies of both families, the per-tag reference; the first submission, void (no radiation seed reset) and cancelled | W36 (void) | no | 24 nc | synced |
+| `lr_s26_copies` | 0001 | same | b01f926a | 2026-09-24 | `13917199` | long runs, site 26, 90 days: the copies of both families, the per-tag reference; the second submission | W36, E81 | `output/long_runs/lr_s26_copies/` | 24 nc | synced |
+| `lr_s26_untagged` | 0000 | same | — | 2026-09-24 | one of `13915221`–`228` | long runs, site 26, 90 days: the untagged twin, for parity; the first submission, void (no radiation seed reset) and cancelled | W36 (void) | no | 10 nc | synced |
+| `lr_s26_untagged` | 0001 | same | b01f926a | 2026-09-24 | `13917192` | long runs, site 26, 90 days: the untagged twin, for parity; the second submission | W36, E81 | `output/long_runs/lr_s26_untagged/` | 10 nc | synced |
+| `lr_s23_probe_ledgers` | 0000 | same | 09793dcd | 2026-09-24 | `13932689` | known issue 7's probe: `lr_s23_samesign` with each tag's ledgers every 6 h, on #109 | W39 | `output/issue7_probe/` | 79 nc | not yet |
+| `w25i_d4w_untagged_z30_c` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932703` | W25's isolation, P4: D4-W a day, no tags, 30 levels, centred SGS reconstruction | W38 | `output/w25i/` | 42 nc | not yet |
+| `w25i_d4w_untagged_z30_fo` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932704` | W25's isolation, P4: D4-W a day, no tags, 30 levels, first-order SGS reconstruction | W38 | `output/w25i/` | 42 nc | not yet |
+| `w25i_d4w_untagged_z60_c` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932705` | W25's isolation, P4: D4-W a day, no tags, 60 levels, centred SGS reconstruction | W38 | `output/w25i/` | 42 nc | not yet |
+| `w25i_d4w_untagged_z60_fo` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932706` | W25's isolation, P4: D4-W a day, no tags, 60 levels, first-order SGS reconstruction | W38 | `output/w25i/` | 42 nc | not yet |
+| `w25i_d4w_untagged_z120_c` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932707` | W25's isolation, P4: D4-W a day, no tags, 120 levels, centred SGS reconstruction | W38 | `output/w25i/` | 42 nc | not yet |
+| `w25i_d4w_untagged_z120_fo` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932708` | W25's isolation, P4: D4-W a day, no tags, 120 levels, first-order SGS reconstruction | W38 | `output/w25i/` | 42 nc | not yet |
+| `w25i_d4w_default_z30_c` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932709` | W25's isolation, P4: D4-W a day, the default mode with the follower, 30 levels, centred SGS reconstruction | W38 | `output/w25i/` | 72 nc | not yet |
+| `w25i_d4w_default_z30_fo` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932710` | W25's isolation, P4: D4-W a day, the default mode with the follower, 30 levels, first-order SGS reconstruction | W38 | `output/w25i/` | 72 nc | not yet |
+| `w25i_d4w_default_z60_c` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932711` | W25's isolation, P4: D4-W a day, the default mode with the follower, 60 levels, centred SGS reconstruction | W38 | `output/w25i/` | 72 nc | not yet |
+| `w25i_d4w_default_z60_fo` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932712` | W25's isolation, P4: D4-W a day, the default mode with the follower, 60 levels, first-order SGS reconstruction | W38 | `output/w25i/` | 72 nc | not yet |
+| `w25i_d4w_default_z120_c` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932713` | W25's isolation, P4: D4-W a day, the default mode with the follower, 120 levels, centred SGS reconstruction | W38 | `output/w25i/` | 72 nc | not yet |
+| `w25i_d4w_default_z120_fo` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932714` | W25's isolation, P4: D4-W a day, the default mode with the follower, 120 levels, first-order SGS reconstruction | W38 | `output/w25i/` | 72 nc | not yet |
+| `w25i_d4w_copies_z30_c` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932715` | W25's isolation, P4: D4-W a day, the copies, 30 levels, centred SGS reconstruction | W38 | `output/w25i/` | 68 nc | not yet |
+| `w25i_d4w_copies_z30_fo` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932716` | W25's isolation, P4: D4-W a day, the copies, 30 levels, first-order SGS reconstruction | W38 | `output/w25i/` | 68 nc | not yet |
+| `w25i_d4w_copies_z60_c` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932717` | W25's isolation, P4: D4-W a day, the copies, 60 levels, centred SGS reconstruction | W38 | `output/w25i/` | 68 nc | not yet |
+| `w25i_d4w_copies_z60_fo` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932718` | W25's isolation, P4: D4-W a day, the copies, 60 levels, first-order SGS reconstruction | W38 | `output/w25i/` | 68 nc | not yet |
+| `w25i_d4w_copies_z120_c` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932719` | W25's isolation, P4: D4-W a day, the copies, 120 levels, centred SGS reconstruction | W38 | `output/w25i/` | 68 nc | not yet |
+| `w25i_d4w_copies_z120_fo` | 0000 | same | 705c8ed0 | 2026-09-24 | `13932720` | W25's isolation, P4: D4-W a day, the copies, 120 levels, first-order SGS reconstruction | W38 | `output/w25i/` | 68 nc | not yet |
+| `w25i_probes/fixed_parent` | — | none | 705c8ed0 | 2026-09-25 | `13932721`–`732` | P1, fixed-parent one-step probes on the twelve tagged P4 configurations (`analysis/water/w25_probes.jl`) | W38 | `output/w25i/` | 22 files | not yet |
+| `w25i_probes/refinement` | — | none | 705c8ed0 | 2026-09-25 | `13932733`–`744` | P2, refinement from a 6 h state (`analysis/water/w25_probes.jl`) | W38 | `output/w25i/` | 24 files | not yet |
+| `w25i_probes/first_step` | — | none | 705c8ed0 | 2026-09-25 | `13932745`–`748` | P3, first-step probes of the surface pulse (`analysis/water/w25_probes.jl`) | W38 | `output/w25i/` | 16 files | not yet |
+| `w25i_probes/fixed_parent_newton34` | — | none | 705c8ed0 | 2026-09-25 | `13944802` | P1 with 1 to 4 Newton iterations on `w25i_d4w_default_z60_c` (`analysis/water/w25_probes.jl`) | W41 | `output/w25i/` | 2 files | not yet |
+| `w5v_trmm1m_dt120_n1` | 0000 | same | 2588623e | 2026-09-24 | `13910959` | WP5b-V: TRMM 1M stepped explicitly, dt 120 s, 1 Newton iteration, the follower | W33, W35 | `output/w5v/` | 35 nc | not yet |
+| `w5v_trmm1m_dt120_n10` | 0000 | same | 2588623e | 2026-09-24 | `13910961` | WP5b-V: TRMM 1M stepped explicitly, dt 120 s, 10 Newton iterations, the follower | W33, W35 | `output/w5v/` | 35 nc | not yet |
+| `w5v_trmm1m_dt120_n1_plain` | 0000 | same | 2588623e | 2026-09-24 | `13910964` | WP5b-V: TRMM 1M stepped explicitly, dt 120 s, 1 Newton iteration, the untagged twin | W33, W35 | `output/w5v/` | 26 nc | not yet |
+| `w5v_trmm1m_dt120_n1_tracer` | 0000 | same | 2588623e | 2026-09-24 | `13910966` | WP5b-V: TRMM 1M stepped explicitly, dt 120 s, 1 Newton iteration, the tracer transport | W33, W35 | `output/w5v/` | 33 nc | not yet |
+| `w5v_trmm1m_dt120_n2` | 0000 | same | 2588623e | 2026-09-24 | `13910960` | WP5b-V: TRMM 1M stepped explicitly, dt 120 s, 2 Newton iterations, the follower | W33, W35 | `output/w5v/` | 35 nc | not yet |
+| `w5v_trmm1m_dt60_n1` | 0000 | same | 2588623e | 2026-09-24 | `13910962` | WP5b-V: TRMM 1M stepped explicitly, dt 60 s, 1 Newton iteration, the follower | W33, W35 | `output/w5v/` | 35 nc | not yet |
+| `w5v_trmm1m_dt60_n10` | 0000 | same | 2588623e | 2026-09-24 | `13910963` | WP5b-V: TRMM 1M stepped explicitly, dt 60 s, 10 Newton iterations, the follower | W33, W35 | `output/w5v/` | 35 nc | not yet |
+| `w5v_trmm1m_dt60_n1_plain` | 0000 | same | 2588623e | 2026-09-24 | `13910965` | WP5b-V: TRMM 1M stepped explicitly, dt 60 s, 1 Newton iteration, the untagged twin | W33, W35 | `output/w5v/` | 26 nc | not yet |
+| `g415_inc_d4_before` | 0000 | same | 2e811fb2 | 2026-09-24 | `13911687` | G4.15: D4 a day, the energy follower's \|m\| rule | E79 | `output/g415/` | 27 nc | not yet |
+| `g415_inc_d4_after` | 0000 | same | 7856501b | 2026-09-24 | `13911688` | G4.15: the same with the same-sign rule | E79 | `output/g415/` | 27 nc | not yet |
+| `g415_n5_explicit_n1` | 0000 | same | 7856501b | 2026-09-24 | `13911689` | the energy source tags on W23's column, an hour, 1M explicit, one iteration | E80 | `output/g415/` | 6 nc | not yet |
+| `g415_n5_explicit_n10` | 0000 | same | 7856501b | 2026-09-24 | `13911690` | the energy source tags on W23's column, an hour, 1M explicit, ten iterations | E80 | `output/g415/` | 6 nc | not yet |
+| `g415_n5_implicit_n1` | 0000 | same | 7856501b | 2026-09-24 | `13911691` | the energy source tags on W23's column, an hour, 1M implicit, one iteration | E80 | `output/g415/` | 6 nc | not yet |
+| `g416_d4_on` | 0000 | same | 6c001cfc | 2026-09-25 | `13944451` | G4.16's validation: D4 a day, cross blocks on | E82 | `output/g416/` | 50 nc | not yet |
+| `g416_d4_off` | 0000 | same | 052615e8 | 2026-09-25 | `13944455` | G4.16's validation: D4 a day, cross blocks off | E82 | `output/g416/` | 50 nc | not yet |
+| `g416_d4_untagged` | 0000 | same | 6c001cfc | 2026-09-25 | `13944452` | G4.16's validation: D4 a day, untagged twin | E82 | `output/g416/` | 26 nc | not yet |
+| `g416_expl_n1_on` | 0000 | same | 6c001cfc | 2026-09-25 | `13944447` | G4.16's validation: the explicit 1M column, an hour, one iteration, cross blocks on | E82 | `output/g416/` | 32 nc | not yet |
+| `g416_expl_n1_off` | 0000 | same | 052615e8 | 2026-09-25 | `13944453` | G4.16's validation: the explicit 1M column, an hour, one iteration, cross blocks off | E82 | `output/g416/` | 32 nc | not yet |
+| `g416_expl_n1_untagged` | 0000 | same | 6c001cfc | 2026-09-25 | `13944448` | G4.16's validation: the explicit 1M column, an hour, one iteration, untagged twin | E82 | `output/g416/` | 26 nc | not yet |
+| `g416_impl_n1_on` | 0000 | same | 6c001cfc | 2026-09-25 | `13944449` | G4.16's validation: the implicit 1M column, an hour, one iteration, cross blocks on | E82 | `output/g416/` | 32 nc | not yet |
+| `g416_impl_n1_off` | 0000 | same | 052615e8 | 2026-09-25 | `13944454` | G4.16's validation: the implicit 1M column, an hour, one iteration, cross blocks off | E82 | `output/g416/` | 32 nc | not yet |
+| `g416_impl_n1_untagged` | 0000 | same | 6c001cfc | 2026-09-25 | `13944450` | G4.16's validation: the implicit 1M column, an hour, one iteration, untagged twin | E82 | `output/g416/` | 26 nc | not yet |
+| `g411_d4_copies` | 0000 | same | a5c9160c | 2026-09-25 | `13944458` | the energy mirrors' eligibility on D4: copies with the mirrors | E83 | `output/g411/` | 51 nc | not yet |
+| `g411_d4_copies_before` | 0000 | same | f1525f86 | 2026-09-25 | `13944462` | the energy mirrors' eligibility on D4: copies without them (`main`) | E83 | `output/g411/` | 50 nc | not yet |
+| `g411_d4_copies_dt60` | 0000 | same | a5c9160c | 2026-09-25 | `13944459` | the energy mirrors' eligibility on D4: copies with the mirrors, dt 60 s | E83 | `output/g411/` | 51 nc | not yet |
+| `g411_d4_default` | 0000 | same | a5c9160c | 2026-09-25 | `13944460` | the energy mirrors' eligibility on D4: the default mode | E83 | `output/g411/` | 50 nc | not yet |
+| `g411_d4_untagged` | 0000 | same | a5c9160c | 2026-09-25 | `13944461` | the energy mirrors' eligibility on D4: the untagged twin | E83 | `output/g411/` | 26 nc | not yet |
+| `g411x_d4_copies` | 0000 | same | df315dc4 | 2026-09-25 | `13944938` | the energy mirrors' eligibility on D4 with the exact throughput: copies with the mirrors | E84 | `output/g411x/` | 51 nc | not yet |
+| `g411x_d4_copies_before` | 0000 | same | e6aab96c | 2026-09-25 | `13944942` | the energy mirrors' eligibility on D4 with the exact throughput: copies without them (`main`) | E84 | `output/g411x/` | 50 nc | not yet |
+| `g411x_d4_copies_dt60` | 0000 | same | df315dc4 | 2026-09-25 | `13944939` | the energy mirrors' eligibility on D4 with the exact throughput: copies with the mirrors, dt 60 s | E84 | `output/g411x/` | 51 nc | not yet |
+| `g411x_d4_default` | 0000 | same | df315dc4 | 2026-09-25 | `13944940` | the energy mirrors' eligibility on D4 with the exact throughput: the default mode | E84 | `output/g411x/` | 50 nc | not yet |
+| `g411x_d4_untagged` | 0000 | same | df315dc4 | 2026-09-25 | `13944941` | the energy mirrors' eligibility on D4 with the exact throughput: the untagged twin | E84 | `output/g411x/` | 26 nc | not yet |
+| `ic_s23_c` | 0000 | same | e6bab0fc | 2026-09-25 | `13944928` | option C's validation, site 23, 90 days: option C | W42 | `output/ic_validate/ic_s23_c/` | 83 nc | not yet |
+| `ic_s23_untagged` | 0000 | same | e6bab0fc | 2026-09-25 | `13944929` | option C's validation, site 23, 90 days: C's untagged twin | W42 | `output/ic_validate/ic_s23_untagged/` | 10 nc | not yet |
+| `ic_s23_before` | 0000 | same | 078c122c | 2026-09-25 | `13944932` | option C's validation, site 23, 90 days: the same trees without C, the control | W42 | `output/ic_validate/ic_s23_before/` | 79 nc | not yet |
+| `ic_s26_c` | 0000 | same | e6bab0fc | 2026-09-25 | `13944930` | option C's validation, site 26, 90 days: option C | W42 | `output/ic_validate/ic_s26_c/` | 83 nc | not yet |
+| `ic_s26_untagged` | 0000 | same | e6bab0fc | 2026-09-25 | `13944931` | option C's validation, site 26, 90 days: C's untagged twin | W42 | `output/ic_validate/ic_s26_untagged/` | 10 nc | not yet |
+| `ic_s26_before` | 0000 | same | 078c122c | 2026-09-25 | `13944933` | option C's validation, site 26, 90 days: the same trees without C, the control | W42 | `output/ic_validate/ic_s26_before/` | 79 nc | not yet |
+| `ledger_ratio_d4_repair_on` | 0000 | same | f4c21ad0 | 2026-09-25 | `13948351` | the per-tag ledger ratio through a zero crossing: D4, the repair on | E85 | `output/ledger_ratio/ledger_ratio_d4_repair_on/` | 24 nc | not yet |
+| `ledger_ratio_d4_repair_off` | 0000 | same | f4c21ad0 | 2026-09-25 | `13948352` | the per-tag ledger ratio through a zero crossing: D4, the repair off | E85 | `output/ledger_ratio/ledger_ratio_d4_repair_off/` | 24 nc | not yet |
+| `ledger_ratio_sphere_repair_on` | 0000 | same | f4c21ad0 | 2026-09-25 | `13948353` | the per-tag ledger ratio through a zero crossing: the sphere, the repair on | E85 | `output/ledger_ratio/ledger_ratio_sphere_repair_on/` | 15 nc | not yet |
+| `ledger_ratio_sphere_repair_off` | 0000 | same | f4c21ad0 | 2026-09-25 | `13948354` | the per-tag ledger ratio through a zero crossing: the sphere, the repair off | E85 | `output/ledger_ratio/ledger_ratio_sphere_repair_off/` | 15 nc | not yet |
+| `g46_d4_budget` | 0000 | same | — | — | — | G4.6's process budget: D4, the process budget; submitted by the G4 agent | pending | `output/g46/` | 45 nc | not yet |
+| `g46_d4_budget_2c` | 0000 | same | 0164c2fd | 2026-09-25 | `13975417` | G4.6's process budget: the same on 2 CPUs; submitted by the G4 agent | pending | `output/g46/` | 46 nc | not yet |
+| `g46_d4_untagged` | 0000 | same | 0164c2fd | 2026-09-25 | `13975419` | G4.6's process budget: the untagged twin; submitted by the G4 agent | pending | `output/g46/` | 26 nc | not yet |
+| `wp4c_gate` | — | `wp4c_gate_d4w_{default,copies}` | the WP4c run tree (record + #109 + #105 + #112) | 2026-09-25 | `13944456`, `13944457` | WP4c's gate: the operator decomposition on D4-W, the default mode and the copies (`analysis/water/wp4c_gate_probe.jl`) | W40 | `output/wp4c_gate/` | CSVs and logs | not yet |
+| `wp4c_corr` | — | `wp4c_corr_d4w_{default,copies}` | 90f32566 | 2026-09-25 | `13973348`, `13973349` | WP4c's validation V1 and V2: the gate's cases with `water_tag_leak_correction: true`, the reference's output kept | running | no | running | not yet |
+| `wp4c_corr_smoke` | — | `wp4c_corr_d4w_default` | ee3b4d0d | 2026-09-25 | login node | two steps of V1 before the jobs; its first attempt's log kept beside | none | no | 1 reference dir | not yet |
+
 ### Analysis outputs, not model runs
 
 | Run                       | Output | Config | Commit   | Date | Job | Purpose                                                                                                                           | Findings       | Repo | Scratch  | Archive  |
