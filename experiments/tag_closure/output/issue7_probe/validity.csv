@@ -1,0 +1,4 @@
+field,days_compared,bit_for_bit,max_abs_diff
+rhoa,20,True,0.0
+ta,20,True,0.0
+hus,20,True,0.0
