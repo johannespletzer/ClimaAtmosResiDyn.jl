@@ -304,6 +304,9 @@ water_closure_check:
                          # closure_void, also after a restart
   abort_above: ~         # end the run above this one; never, by default
   audit: false           # write the second table described below
+  negative_water_void_above: 1.0e-4  # water only: above this fraction of
+                         # negative water, mark every later row
+                         # negative_water_void, also after a restart
 
 energy_closure_check:
   period: "1days"
@@ -316,8 +319,10 @@ Every key is optional inside each block, and both blocks are off by default.
 Both also accept `spin_up`, described under the energy source tags.
 Each writes `water_tag_closure.csv` / `energy_tag_closure.csv` to the output
 directory, with columns `time`, `total`, `tagged`, `residual`, `relative`,
-`gross_residual`, `gross_relative`, `scale` and `nonpositive_fraction`, and a
-last column `closure_void` where the check has a void level.
+`gross_residual`, `gross_relative`, `scale` and `nonpositive_fraction`, then a
+column `closure_void` where the check has a void level. The water table ends
+with `negative_water_relative` and `negative_water_void`, unless
+`negative_water_void_above` is `~` (see below).
 
 `residual = total - tagged` is the signed miss between two global integrals, and
 `relative` is it over `scale = ∫|parent|`. `gross_residual` integrates the
@@ -382,7 +387,66 @@ means the tags' shares are undefined somewhere. The audit's
 `nonpositive_mass_fraction` gives the same by mass. Both read the grid-mean
 parent at the check's times only, so a cell that goes negative and back between
 two checks does not show. Unlike `closure_void`, they are not kept from one row
-to the next.
+to the next. For water, the next section adds a flag that is kept, and a
+ledger that sees every step.
+
+### The parent's negative water
+
+The water tags partition the parent's non-negative water, `max(ρq_tot, 0)`
+(known issue 7, option C). The closure check compares them with that. So a
+parent whose own water has gone negative can close perfectly, and
+`closure_void` stays 0. The water check therefore also reads the parent's own
+negative water, from the raw `ρq_tot`, not from the partition's target.
+
+`negative_water_relative`, on every row of the water closure table, is
+
+    ∫max(-ρq_tot, 0) dV / ∫ρq_tot dV,
+
+the parent's negative water, `Σ ρ max(-q_tot, 0) dV`, over its water, at the
+row's time. It is 0 where no cell is negative, and `Inf` where some cell is
+negative and `∫ρq_tot` is not positive. This is the tag-closure contract's row
+"Parent validity: negative water" read at the checks: above `1e-4`, a run's
+water results are not scored.
+
+`negative_water_void_above`, `1e-4` by default, is that level. The first row
+whose `negative_water_relative` passes it warns once, and from then on
+`negative_water_void` is 1 on every row of the closure table and of the audit
+table, also after the parent recovers. The checkpoint records the flag, as it
+records `closure_void`, and a restarted run reads it back before its first
+check. A checkpoint written before the flag restarts it at 0, with a warning.
+`negative_water_void_above: ~` drops both columns. Zero marks the rows at the
+first negative water. Only `water_closure_check` takes the key.
+
+`negative_water_void` says one thing: the parent's negative water passed the
+level at a check. `negative_water_void = 0` does not say that the parent is
+valid in any other way. The check reads the state at its own times only, so
+an excursion that begins and ends between two checks does not set the flag. At
+site 23 of the tag-closure long runs, the negative water rose from zero within
+one 6-hour interval at the start of each spell, and fell back to zero within
+one at its end. So an excursion shorter than the interval is possible.
+
+The audit sees every step instead. After each accepted step, a ledger in the
+cache adds `max(-ρq_tot, 0) Δt` per cell, and counts the cells whose `ρq_tot`
+is below zero. The checkpoint carries it. The water audit table reports it:
+
+| column                                  | what it is                                                                                   |
+|:--------------------------------------- |:-------------------------------------------------------------------------------------------- |
+| `negative_water_integral`               | `∫∫max(-ρq_tot, 0) dV dt` since the start of the run, in kg s                                 |
+| `negative_water_interval`               | its change since the previous audit row, in kg s                                              |
+| `negative_water_interval_mean_relative` | that change over the interval's length, over `∫ρq_tot dV` at this row                          |
+| `negative_water_interval_events`        | cell-steps in the interval whose end state had `ρq_tot < 0`; exactly 0 when none had any      |
+| `negative_water_void`                   | the flag above, last                                                                          |
+
+An interval with `negative_water_interval_events = 0` had no negative water
+at the end of any accepted step, anywhere. The first row of a run, or of a
+restarted segment, has an empty interval, so its interval columns are 0. The
+interval's mean divides by `∫ρq_tot` at the row, not over the interval, so it
+does not set the flag. A checkpoint written before the ledger restarts it at
+zero, with a warning. The per-cell fields are the opt-in diagnostics
+`q_tag_negative_integral`, in kg s m⁻³, and `q_tag_negative_events`.
+
+Both the flag and the ledger live in the cache and in the checkpoint, never in
+the model's state, so neither can change a model field.
 
 Exceeding `abort_above` **ends the run**, where a user sets it. No family sets
 one by default. Set it when a run whose tags no longer mean anything is not
@@ -410,7 +474,11 @@ the run.
 
 Each of the first three also has a `_relative` column over the same `scale` the
 closure table uses, and `nonpositive_mass_fraction` is `nonpositive_mass` over
-it. A separate file rather than more columns on the closure table, so that
+it. For water, `nonpositive_mass` is `∫|min(ρq_tot, 0)| dV` of the raw
+`ρq_tot`. The partition's target, `max(ρq_tot, 0)`, is never negative, so read
+from it the column would be 0 by construction. `scale` is the target's
+integral, `∫max(ρq_tot, 0) dV`. The water audit table also has the negative
+water ledger's columns, after `closure_void` (see above). A separate file rather than more columns on the closure table, so that
 turning the audit on does not change a schema other runs and analysis scripts
 already read. Join the two on `time`.
 
@@ -637,4 +705,9 @@ ClimaAtmos.write_tag_closure!
 ClimaAtmos.tag_closure_void_flags
 ClimaAtmos.write_tag_closure_void_attributes!
 ClimaAtmos.restore_tag_closure_void!
+ClimaAtmos.closure_signed_parent
+ClimaAtmos.negative_water_rows
+ClimaAtmos.negative_water_void_flags
+ClimaAtmos.write_negative_water_void_attributes!
+ClimaAtmos.restore_negative_water_void!
 ```

@@ -282,8 +282,8 @@ most the parent itself. Here the parent is negative.
 `claude/tag-closure-no-abort`, a PR against `main`, which this stack gets by
 merge. No closure check ends a run by default any more. Water's old level,
 1.0, is now its `void_above`: past it the check warns once and marks this and
-every later row `void` in the closure and audit tables, and the run goes on.
-An explicit `abort_above` still ends a run.
+every later row `closure_void` in the closure and audit tables, and the run
+goes on. An explicit `abort_above` still ends a run.
 
 **The probe** (the record's FINDINGS W39) read the per-tag ledgers over 20
 days at site 23. When the parent first goes negative, the follower's moved
@@ -303,3 +303,27 @@ part is a named remainder, `q_tag_negative`.
   - The limiters' rescale and the copies' repair aim at the non-negative part.
   - The closure check and `q_tag_res` compare the partition with it.
   - Where the parent is never negative, nothing changes, bit for bit.
+
+**The parent's negative water, flagged** (the owner's choice of 2026-09-25,
+on `claude/water-tags-negative-water-flag`, stacked on option C). Under C the
+closure can pass while the parent itself is negative, so `closure_void` stays
+0. The water closure check now also reads the parent's own negative water,
+from the raw `ρq_tot`:
+
+  - `negative_water_relative`, on every closure row, is
+    `∫max(-ρq_tot, 0) dV / ∫ρq_tot dV`. It is the tag-closure contract's row
+    "Parent validity: negative water", read at the checks.
+  - `negative_water_void` latches at 1 once that passes
+    `negative_water_void_above`, `1e-4` by default, the contract's level. It
+    stays 1 after the parent recovers, and the checkpoint carries it through a
+    restart.
+  - The checks see the state at their own times only. So a ledger in the cache
+    adds `max(-ρq_tot, 0) Δt` after every accepted step, and counts the
+    negative cells. The water audit reports its change per interval. An
+    interval whose event count is 0 had no negative water at the end of any
+    step.
+  - The audit's `nonpositive_mass` had read the target `max(ρq_tot, 0)` under
+    C, and so was 0 by construction. It reads the raw `ρq_tot` again.
+
+The flag and the ledger live in the cache, never in the model's state. See
+`docs/src/tracer_configuration.md`, "The parent's negative water".
