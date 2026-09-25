@@ -120,7 +120,11 @@ repair's gross. Per day over Θi (an estimate), window 1 h to the end:
   - **Refinement.** OD3: the repair's throughput per unit time at the finer
     rung at most 0.75 times the coarser rung's, and above 0.9 a structural
     cause. The default's repair a day: 60 s over 120 s **0.91** (fails, and
-    flags a structural cause); 30 s over 60 s 0.67 (passes).
+    flags a structural cause); 30 s over 60 s 0.67 (passes). These are ratios
+    of `repair_moved`, which is net over time in each cell, not of the
+    per-step throughput the row names. The per-step gross exists only in runs
+    with the per-tag ledgers, so the row's own ratio needs the ladder rerun
+    with them.
   - **What the repair is.** The repair moved 0.83 J/m² a day before the
     exchange and 1.4e6 J/m² after #95's fixes. Between those runs the exchange
     and other code changed. So this bounds when the repair grew; it does not
@@ -176,7 +180,8 @@ without blocks 2.2e-2 of D4's first-hour Θx, 5.1e-2 of the surface flux alone
 (6.9% of Θi at `dcf7d086` in E76's ladder; 1.8% at E73's `e010f780`; 0.83 J/m²
 before the exchange, E68), so it grew between those commits; the runs change
 more than one thing, so this bounds when, not why. The repair a day at 60 s
-over 120 s is 0.91 (OD3's refinement row: at most 0.75). The sphere's repair
-is 2.6% of Θi a day. E80, E81 and E39b cannot be restated without a rerun.
+over 120 s is 0.91 (OD3's refinement row: at most 0.75), on `repair_moved`,
+which is net over time; the row's own per-step ratio needs the ladder rerun
+with the per-tag ledgers. The sphere's repair is 2.6% of Θi a day. E80, E81 and E39b cannot be restated without a rerun.
 *`analysis/increment/od4_restate.py`; `output/od4_restatement/`; runs as each
 record, and E84's `g411x_d4_*`.*
