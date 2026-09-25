@@ -1,0 +1,116 @@
+# U2's calibration, G4.5. Output root: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output
+run | B11 | transport | length, h | max gross_relative | gross/Θ at the end | scale
+c0_sphere_audit |  | tracer | 24.0 | 0.0154 | — | —
+c10_sphere_enthalpy_repair |  | enthalpy | 24.0 | 0.000529 | — | —
+c1_sphere_shift |  | tracer | 24.0 | 0.0038 | — | —
+c1c_base_d4_enthalpy |  | enthalpy | 24.0 | 0.00554 | 0.0286 | Θi (estimate)
+c1c_opt1_d4_enthalpy |  | enthalpy | 24.0 | 0.0588 | 0.303 | Θi (estimate)
+c1c_opt1_newton_d4_enthalpy |  | enthalpy | 12.0 | 0.00204 | 0.0212 | Θi (estimate)
+c1c_opt2_d4_enthalpy |  | enthalpy | 24.0 | 0.0104 | 0.0534 | Θi (estimate)
+c1c_opt3_d4_enthalpy |  | enthalpy | 24.0 | 0.0128 | 0.0658 | Θi (estimate)
+c4_sphere_tag_offset |  | tracer | 24.0 | 0.00382 | — | —
+c4_sphere_tag_offset_2x |  | tracer | 24.0 | 0.00175 | — | —
+c5_column_offset |  | tracer | 24.0 | 0.0221 | 0.143 | Θi (estimate)
+c5_sphere_gray |  | tracer | 24.0 | 0.00588 | — | —
+c6_column_no_repair |  | tracer | 24.0 | 0.0213 | 0.0942 | Θi (estimate)
+c6_column_repair |  | tracer | 24.0 | 0.0213 | 0.0942 | Θi (estimate)
+c6_sphere_first_order |  | tracer | 24.0 | 0.00552 | — | —
+c6_sphere_no_repair |  | tracer | 24.0 | 0.00589 | — | —
+c6_sphere_repair |  | tracer | 24.0 | 0.00586 | — | —
+c6_sphere_wide_mask |  | tracer | 24.0 | 0.00586 | — | —
+c7_sphere_mp |  | tracer | 24.0 | 0.00589 | — | —
+c8_column_1m |  | tracer | 24.0 | 0.0216 | 0.0794 | Θi (estimate)
+c9_column_enthalpy |  | enthalpy | 24.0 | 2.38e-05 | 8.81e-05 | Θi (estimate)
+c9_sphere_enthalpy |  | enthalpy | 24.0 | 0.000529 | — | —
+d1_column_1m_ice |  | tracer | 1.0 | 0.00372 | 24.9 | Θi (estimate)
+d1_column_1m_ice_no_vdiff |  | tracer | 1.0 | 0.0037 | 26.3 | Θi (estimate)
+d4_column_edmf |  | tracer | 24.0 | 0.00758 | 0.0266 | Θi (estimate)
+d4_column_edmf_enthalpy |  | enthalpy | 24.0 | 0.00474 | 0.0215 | Θi (estimate)
+d4_column_edmf_vd |  | tracer | 24.0 | 0.00858 | 0.0283 | Θi (estimate)
+d4_column_edmf_vd_float32 |  | tracer | 24.0 | 0.00775 | 0.031 | Θi (estimate)
+d5_column_edmf_ice |  | tracer | 6.0 | 0.00306 | 0.231 | Θi (estimate)
+g1_base_d4_float32 |  | enthalpy | 24.0 | 0.0066 | 0.0337 | Θi (estimate)
+g1_inc_d4 |  | enthalpy_increment | 24.0 | 2.36e-06 | 1.21e-05 | Θi (estimate)
+g1_inc_d4_2c |  | enthalpy_increment | 24.0 | 1.71e-06 | 2.3e-05 | Θi (estimate)
+g1_inc_d4_float32 |  | enthalpy_increment | 24.0 | 5.32e-06 | 2.72e-05 | Θi (estimate)
+g1_inc_newton10_d4 |  | enthalpy_increment | 24.0 | 2.14e-11 | 7.27e-11 | Θi (estimate)
+g1_inc_newton_d4 |  | enthalpy_increment | 24.0 | 8.68e-10 | 3.63e-09 | Θi (estimate)
+g1_ref_newton10_d4 |  | enthalpy | 24.0 | 0.00524 | 0.0273 | Θi (estimate)
+g1_ref_newton_d4 |  | enthalpy | 24.0 | 0.00485 | 0.0251 | Θi (estimate)
+g2_v2_diag_newton2 |  | enthalpy_increment | 2.0 | 3.85e-06 | 0.0045 | Θi (estimate)
+g2_v2_diag_nosponge |  | enthalpy_increment | 3.0 | 4.84e-06 | 0.00342 | Θi (estimate)
+g2_v2_diag_notopo |  | enthalpy_increment | 3.0 | 3.68e-06 | 0.00342 | Θi (estimate)
+g2_v2_f64_2h |  | enthalpy_increment | 2.0 | 5.74e-15 | 6.71e-12 | Θi (estimate)
+g2_v2_nosponge_2h |  | enthalpy_increment | 2.0 | 3.87e-06 | 0.00452 | Θi (estimate)
+g2_v2_sphere | V2 | enthalpy_increment | 240.0 | 0.000158 | 0.000611 | Θi (estimate)
+g2_v2_sphere_mix | V2 | enthalpy_increment | 240.0 | 0.0002 | 0.000784 | Θi (estimate)
+g2_v2_sphere_n2 | V2 | enthalpy_increment | 240.0 | 0.000201 | 0.000786 | Θi (estimate)
+g2_v2_sphere_newton10 | V2 | enthalpy_increment | 24.0 | 2.78e-05 | 0.00162 | Θi (estimate)
+g2_v2_sphere_test | V2 | enthalpy_increment | 2.0 | 3.73e-06 | 0.00435 | Θi (estimate)
+g411_d4_copies |  | enthalpy_increment | 24.0 | 3.08e-06 | 1.57e-05 | Θi (estimate)
+g411_d4_copies_before |  | enthalpy_increment | 24.0 | 3.25e-06 | 1.65e-05 | Θi (estimate)
+g411_d4_copies_dt60 |  | enthalpy_increment | 24.0 | 9.89e-07 | 5.17e-06 | Θi (estimate)
+g411_d4_default |  | enthalpy_increment | 24.0 | 2.37e-06 | 1.21e-05 | Θi (estimate)
+g411x_d4_copies |  | enthalpy_increment | 24.0 | 3.08e-06 | 1.66e-05 | Θx
+g411x_d4_copies_before |  | enthalpy_increment | 24.0 | 3.25e-06 | 1.75e-05 | Θx
+g411x_d4_copies_dt60 |  | enthalpy_increment | 24.0 | 9.89e-07 | 5.43e-06 | Θx
+g411x_d4_default |  | enthalpy_increment | 24.0 | 2.37e-06 | 1.28e-05 | Θx
+g415_inc_d4_after |  | enthalpy_increment | 24.0 | 9.19e-06 | 4.74e-05 | Θi (estimate)
+g415_inc_d4_before |  | enthalpy_increment | 24.0 | 2.37e-06 | 1.21e-05 | Θi (estimate)
+g415_n5_explicit_n1 |  | enthalpy_increment | 1.0 | 0.000209 | — | —
+g415_n5_explicit_n10 |  | enthalpy_increment | 1.0 | 4.87e-12 | — | —
+g415_n5_implicit_n1 |  | enthalpy_increment | 1.0 | 1.6e-06 | — | —
+g416_d4_off |  | enthalpy_increment | 24.0 | 2.37e-06 | 1.21e-05 | Θi (estimate)
+g416_d4_on |  | enthalpy_increment | 24.0 | 8.9e-15 | 4.58e-14 | Θi (estimate)
+g416_expl_n1_off |  | enthalpy_increment | 1.0 | 0.000176 | — | —
+g416_expl_n1_on |  | enthalpy_increment | 1.0 | 1.37e-15 | — | —
+g416_impl_n1_off |  | enthalpy_increment | 1.0 | 9.98e-07 | — | —
+g416_impl_n1_on |  | enthalpy_increment | 1.0 | 1.24e-15 | — | —
+ic_s23_before |  | enthalpy_increment | 906.0 | 8.86e-13 | — | —
+ic_s23_c |  | enthalpy_increment | 846.0 | 8.86e-13 | — | —
+ic_s26_before |  | enthalpy_increment | 1008.0 | 1.82e-13 | — | —
+ic_s26_c |  | enthalpy_increment | 834.0 | 1.45e-13 | — | —
+inc_d4_enthalpy_increment |  | enthalpy_increment | 24.0 | 2.36e-06 | 1.21e-05 | Θi (estimate)
+lr_s23_absm |  | enthalpy_increment | 1782.0 | 1.62e-12 | — | —
+lr_s23_copies |  | tracer | 1158.0 | 0.0147 | — | —
+lr_s23_probe_ledgers |  | enthalpy_increment | 480.0 | 2.37e-12 | — | —
+lr_s23_samesign |  | enthalpy_increment | 1782.0 | 7.59e-12 | — | —
+lr_s26_absm |  | enthalpy_increment | 2160.0 | 2.77e-13 | — | —
+lr_s26_copies |  | tracer | 2160.0 | 0.0554 | — | —
+lr_s26_samesign |  | enthalpy_increment | 2160.0 | 7.26e-12 | — | —
+mp1_sphere_4ranks |  | tracer | 24.0 | 0.00589 | — | —
+p1_sphere_tags |  | tracer | 24.0 | 0.00589 | — | —
+v3_d4_passive_tracer | V3 (D4 twin) | enthalpy_increment | 24.0 | 2.36e-06 | 1.21e-05 | Θi (estimate)
+v3_sphere_float32 | V3 | tracer | 24.0 | 0.00589 | — | —
+v3_upd_copies | V3 (D4 twin) | enthalpy_increment | 24.0 | 3.25e-06 | 1.65e-05 | Θi (estimate)
+v3_upd_copies_dt30 | V3 (D4 twin) | enthalpy_increment | 24.0 | 2.77e-07 | 1.41e-06 | Θi (estimate)
+v3_upd_copies_dt60 | V3 (D4 twin) | enthalpy_increment | 24.0 | 1.15e-06 | 6.03e-06 | Θi (estimate)
+v3_upd_copies_newton2 | V3 (D4 twin) | enthalpy_increment | 24.0 | 9.06e-07 | 4.7e-06 | Θi (estimate)
+v3_upd_copies_upwind | V3 (D4 twin) | enthalpy_increment | 24.0 | 2.89e-06 | 1.28e-05 | Θi (estimate)
+v3_upd_default | V3 (D4 twin) | enthalpy_increment | 24.0 | 2.37e-06 | 1.21e-05 | Θi (estimate)
+v3_upd_default_dt30 | V3 (D4 twin) | enthalpy_increment | 24.0 | 3.13e-07 | 1.31e-06 | Θi (estimate)
+v3_upd_default_dt60 | V3 (D4 twin) | enthalpy_increment | 24.0 | 7.54e-07 | 3.94e-06 | Θi (estimate)
+v3_upd_default_newton2 | V3 (D4 twin) | enthalpy_increment | 24.0 | 1.04e-06 | 5.39e-06 | Θi (estimate)
+v3_upd_default_prefix_e010f780_superseded | V3 (D4 twin) | enthalpy_increment | 24.0 | 2.2e-06 | 1.13e-05 | Θi (estimate)
+v3_upd_default_upwind | V3 (D4 twin) | enthalpy_increment | 24.0 | 2e-06 | 8.11e-06 | Θi (estimate)
+v5_c5_continuous |  | tracer | 24.0 | 0.0213 | 0.138 | Θi (estimate)
+v5_c5_restarted |  | tracer | 24.0 | 0.0213 | 0.289 | Θi (estimate)
+w8_gcm_tags |  | tracer | 3.0 | 0.00131 | — | —
+
+## Left out of the calibration
+   g416_expl_n1_off: explicit 1M without the cross blocks (E82's control)
+   g415_n5_explicit_n1: explicit 1M without the cross blocks (E80)
+   c1c_opt1_d4_enthalpy: C1c option 1, shelved (E59)
+   c1c_opt2_d4_enthalpy: C1c option 2, shelved (E59)
+   c1c_opt3_d4_enthalpy: C1c option 3, shelved (E59)
+   c1c_opt1_newton_d4_enthalpy: C1c option 1, shelved (E59, E61)
+
+## Per transport, over the healthy runs
+   enthalpy: largest gross_relative 0.0066 (g1_base_d4_float32); default tolerance 0.1, margin 15.2
+      gross over the throughput since the start: largest 0.0337 (g1_base_d4_float32)
+   enthalpy_increment: largest gross_relative 0.000201 (g2_v2_sphere_n2); default tolerance 0.01, margin 49.8
+      V2 and V3 alone: largest 0.000201 (g2_v2_sphere_n2), margin 49.8
+      gross over the throughput since the start: largest 0.00452 (g2_v2_nosponge_2h)
+   tracer: largest gross_relative 0.0554 (lr_s26_copies); default tolerance 1.0, margin 18.1
+      V2 and V3 alone: largest 0.00589 (v3_sphere_float32), margin 170
+      gross over the throughput since the start: largest 26.3 (d1_column_1m_ice_no_vdiff)

@@ -1,0 +1,98 @@
+# G4.6, the D4 process budget: the budget at the offset c.
+# Pre-registered in design/D4_PROCESS_BUDGET.md, section 5, before any run.
+# `g411x_d4_default` (E84): 1M stepped implicitly, one Newton iteration, a day,
+# eight energy tags under `enthalpy_increment` with the per-tag ledgers, which
+# now include the residual's source ledger (G4.4); plus every record.
+
+job_id: "g46_d4_budget"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: true
+energy_source_tag_transport: "enthalpy_increment"
+energy_source_tag_ledger_per_tag: true
+
+# `d4_column_edmf`, unchanged.
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: false
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: rad
+    source: radiation
+  - name: sfc
+    source: surface_flux
+  - name: sub
+    source: subsidence
+  - name: mp
+    source: microphysics
+  - name: new_strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+    source: all
+  - name: new_tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+    source: all
+
+energy_process_record:
+  [radiation, surface_flux, subsidence, microphysics, precipitation]
+water_process_record: [surface_flux, subsidence, microphysics]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  # Identity II, per layer: the residual, its source ledger, the follower's
+  # left part and the repair's ledger of the partition.
+  - short_name: [e_src_res, e_src_led_src_res, e_src_led_srcgross_res]
+    period: "1hours"
+  - short_name: [e_src_led_src_strat, e_src_led_src_tropo, e_src_inc_left, e_src_inc_moved]
+    period: "1hours"
+  - short_name: [e_src_fix_strat, e_src_fix_tropo, e_src_strat, e_src_tropo]
+    period: "1hours"
+  # Identity I, for the column: every record.
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_subsidence]
+    period: "1hours"
+  - short_name: [e_prc_microphysics, e_prc_precipitation]
+    period: "1hours"
+  - short_name: [q_prc_surface_flux, q_prc_subsidence, q_prc_microphysics]
+    period: "1hours"
+  - short_name: [pr]
+    period: "1hours"
+    reduction_time: average
+  # The model's own fields, for parity (bit for bit) between the runs.
+  - short_name: [rhoa, ta, hus, clw, cli, husra, hussn, wa]
+    period: "1hours"
+  - short_name: [pr, prra, prsn, hfls, hfss, lwp, rwp]
+    period: "1hours"
+  - short_name: [arup, rhoaup, waup, husup, clwup, cliup, husraup, hussnup]
+    period: "1hours"
+  - short_name: [tke, edt, evu]
+    period: "1hours"
