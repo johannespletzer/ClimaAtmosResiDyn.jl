@@ -111,5 +111,5 @@ diagnostics:
   # Option C's own fields, every 6 hours.
   - short_name: [q_tag_negative, q_tag_inc_negative, q_tag_inc_negative_gross]
     period: "6hours"
-  - short_name: [q_tag_negative, q_tag_res, rhoa, hus]
+  - short_name: [q_tag_negative]
     period: "1days"

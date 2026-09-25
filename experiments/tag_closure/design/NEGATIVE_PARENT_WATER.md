@@ -227,7 +227,7 @@ The energy follower on these trees is #109's (|m|), not W36's same-sign rule
 |:- | :--- | :--- |
 | V1 | site 23 with C completes | the run reaches day 90 |
 | V2 | the partition against the target, at every closure check to day 90, both sites | gross relative to `∫max(ρq_tot, 0)` at most 0.2% (OD3's water closure row) |
-| V2b | the named remainder | `q_tag_res + q_tag_negative + Σ region tags = q_tot` at every daily output, to 1e-12 relative per cell |
+| V2b | the named remainder | `q_tag_res + q_tag_negative + Σ region tags = q_tot` at every daily output, to 1e-12 of the column's largest `|q_tot|` at that output (amended before any run: a cell's own `q_tot` can be near zero) |
 | V3 | site 26's water tags, `ic_s26_c` against `ic_s26_before` | bit for bit at every daily output; or different only in cells and after times where the parent was ever negative there, which the untagged twin shows (expected: nowhere) |
 | V4 | every model field of each C run against its untagged twin, every daily output | bit for bit (the parity row) |
 | V5 | intervention, both sites, from the ledgers | reported: `q_tag_inc_negative`'s per-step gross per day; the partition repair's retained gross (OD3's aggregate row, at most 0.5% a day) and each tag's `led_fix` (OD3's per-tag row, 2%) scored over days 1 to 90 |
