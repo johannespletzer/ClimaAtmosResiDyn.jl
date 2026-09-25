@@ -158,3 +158,100 @@ provenance: 18:14 to 20:10, one process). Twenty days with the ledgers every
     after A.
  3. Whether results already recorded from runs whose parent went negative
     (site 23's long runs) are kept, flagged or voided.
+
+## 8. Option C: its validation, pre-registered before any run (2026-09-25)
+
+The owner chose option C on 2026-09-25, after the probe (W39): the partition
+tags partition the parent's non-negative water, `max(ρq_tot, 0)`; the follower
+takes that field's increment; the repair, the rescale and the copies' repair
+aim at it; the negative part is a named field. Registered before any
+validation run. Nothing below changes after the runs.
+
+### 8.1 What is built
+
+On `claude/water-tags-negative-parent`, from `claude/water-tags-wp6-step3`
+(#109) with `claude/tag-closure-no-abort` (#112) merged. #109 has the follower
+and each tag's own ledgers, which C must write; #112 lets a run go on past the
+old abort level, so a failure shows as a number, not a crash.
+
+  - **The target.** `water_tag_partition_target(ρq_tot) = max(ρq_tot, 0)`,
+    with `-0.0` kept as `-0.0`, and the remainder
+    `water_tag_negative_part(ρq_tot) = min(ρq_tot, 0)`. The diagnostic
+    `q_tag_negative` is the remainder per unit mass; `q_tag_res` is the target
+    less the region tags. The tag name `negative` is reserved.
+  - **The follower.** Its mismatch is the target's increment less the
+    partition's. The target's column total differs from the parent's by the
+    negative part's change, `N = ∫ −Δ min(ρq_tot, 0)`. That part is no lag,
+    so the tags take it: it goes to the cells whose mismatch has its sign, in
+    proportion to it, by each cell's composition, and is recorded in a new
+    ledger, `q_tag_inc_negative`. The rest of the column total is left out as
+    before. Where the parent is negative at the solved stage, a cell's tags
+    move by the partition's own composition: the parent's shares are
+    undefined there, and without this a cell a solve took below zero could not
+    give up the tags it held. That was the mechanism the probe pointed to.
+  - **The rescale and the copies' repair** aim at the target: a correction
+    that leaves the parent (or `q_totʲ`) negative takes the partition to zero,
+    not below. The copies' residual `q_tag_copy_res` is `max(q_totʲ, 0)` less
+    the copies.
+  - **The closure check** compares the partition with the target
+    (`water_closure_total`), and the initial and rebuilt tags partition the
+    target.
+  - **The repair** already keeps the partition non-negative with its sum; it
+    is unchanged.
+  - **Unchanged where the parent is never negative, bit for bit**: every
+    change is a no-op there, including the signed zeros.
+
+### 8.2 The runs
+
+The GCM-driven column, W36's configuration with the radiation's seed reset
+(`radiation_reset_rng_seed: true`): prognostic EDMF, 0M, 60 levels to 40 km,
+`dt` 10 s, ARS222, one Newton iteration, 90 days, both families, water tags
+`pbl`, `free`, `evap`, `fcg` under the follower. Each tag's own ledgers on
+and written every 6 hours, as the probe had them.
+
+| run | site | code | what for |
+|:--- |:---- |:---- |:-------- |
+| `ic_s23_c` | 23 | option C's run tree | V1, V2, V4, V5 |
+| `ic_s23_untagged` | 23 | option C's run tree | V4's twin |
+| `ic_s23_before` | 23 | the record + #109 + #112 | reported: the same run without C |
+| `ic_s26_c` | 26 | option C's run tree | V2, V3, V4 |
+| `ic_s26_untagged` | 26 | option C's run tree | V4's twin |
+| `ic_s26_before` | 26 | the record + #109 + #112 | V3's control |
+
+The energy follower on these trees is #109's (|m|), not W36's same-sign rule
+(G4.15b; OD7 is open). The energy tags are not part of this validation.
+
+### 8.3 The pass rules
+
+| # | what | pass |
+|:- | :--- | :--- |
+| V1 | site 23 with C completes | the run reaches day 90 |
+| V2 | the partition against the target, at every closure check to day 90, both sites | gross relative to `∫max(ρq_tot, 0)` at most 0.2% (OD3's water closure row) |
+| V2b | the named remainder | `q_tag_res + q_tag_negative + Σ region tags = q_tot` at every daily output, to 1e-12 relative per cell |
+| V3 | site 26's water tags, `ic_s26_c` against `ic_s26_before` | bit for bit at every daily output; or different only in cells and after times where the parent was ever negative there, which the untagged twin shows (expected: nowhere) |
+| V4 | every model field of each C run against its untagged twin, every daily output | bit for bit (the parity row) |
+| V5 | intervention, both sites, from the ledgers | reported: `q_tag_inc_negative`'s per-step gross per day; the partition repair's retained gross (OD3's aggregate row, at most 0.5% a day) and each tag's `led_fix` (OD3's per-tag row, 2%) scored over days 1 to 90 |
+
+**How V2 fails, if it does.** If the gross exceeds 0.2% at site 23 while V1
+passes, C keeps the run going but does not keep the partition on its target.
+The ledgers (V5) then show whether the follower's negative-part entry, the
+repair or neither carries the miss, and the owner decides.
+
+### 8.4 Checks before the runs
+
+  - Unit (`test/tagged_water_tests.jl`, both float types): on a column whose
+    parent a solve takes below zero in one cell, the partition closes against
+    the target cell by cell, the negative cell's partition is empty, no
+    partition tag goes negative, the negative part's column total is
+    `q_tag_inc_negative`'s, nothing is left out, and each tag's own ledger is
+    its change bit for bit; the recovery of that cell; a parent that stays
+    non-negative gives no negative-part entry; the target, the remainder and
+    the rescale at their edges.
+  - The existing water and config test groups, unchanged in what they check.
+
+### 8.5 The jobs
+
+From each run tree's root, with `submit_g3.sh` and
+`DRIVER=experiments/tag_closure/analysis/water/d4w_driver.jl`, `hpda2_compute`,
+2 CPUs, 48 GB, `--time=08:00:00` (the samesign run reached day 74.5 in about
+2 h; the ledgers add fields).
