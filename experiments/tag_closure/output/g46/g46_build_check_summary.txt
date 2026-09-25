@@ -1,0 +1,26 @@
+== g46_build_check at 1cc40e23, record 6efca28a
+== g46_d4_budget: built in 888.9 s, stepped to t = 240.0 seconds (2010-01-01T00:04:00) [counter = 240, period = 1 second, epoch = 2010-01-01T00:00:00]
+ok    g46_d4_budget keeps the residual's source ledger
+ok    g46_d4_budget: the ledger is finite
+ok    g46_d4_budget keeps the energy records
+ok    g46_d4_budget keeps the water records
+ok    g46_d4_budget: the report has the forecast
+ok    g46_d4_budget: the report's local maximum is finite
+ok    g46_d4_budget: the headroom is positive
+ok    g46_d4_budget: the throughput is positive
+ok    g46_d4_budget: the offset is the config's
+== g46_d4_budget_2c: built in 0.5 s, stepped to t = 240.0 seconds (2010-01-01T00:04:00) [counter = 240, period = 1 second, epoch = 2010-01-01T00:00:00]
+ok    g46_d4_budget_2c keeps the residual's source ledger
+ok    g46_d4_budget_2c: the ledger is finite
+ok    g46_d4_budget_2c keeps the energy records
+ok    g46_d4_budget_2c keeps the water records
+ok    g46_d4_budget_2c: the report has the forecast
+ok    g46_d4_budget_2c: the report's local maximum is finite
+ok    g46_d4_budget_2c: the headroom is positive
+ok    g46_d4_budget_2c: the throughput is positive
+ok    g46_d4_budget_2c: the offset is the config's
+== g46_d4_untagged: built in 261.7 s, stepped to t = 240.0 seconds (2010-01-01T00:04:00) [counter = 240, period = 1 second, epoch = 2010-01-01T00:00:00]
+ok    g46_d4_untagged has no energy source tags
+all checks passed
+2300.55 s
+exit=0

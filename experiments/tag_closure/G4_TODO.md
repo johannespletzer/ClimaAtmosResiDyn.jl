@@ -201,6 +201,23 @@ per-tag, per-step accumulator, carried through restarts; the process records'
 lower bound is the interim. Built on `claude/energy-source-throughput`
 ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), section 11).
 
+*2026-09-25, done on `claude/plan-rev2-g4`:*
+
+  - [x] The claim contracts:
+    [design/G4_CLAIM_CONTRACTS.md](design/G4_CLAIM_CONTRACTS.md). The tags
+    claim stored provenance, the records what each process did, the
+    parent-budget ledger its levels 1 to 4 (not assessable under EDMF). Every
+    energy percentage names its scale.
+  - [x] The restatement, [review/od4_restatement.md](review/od4_restatement.md),
+    from the runs' own output (`analysis/increment/od4_restate.py`). Nothing
+    rerun. On D4 the records' interim differs from the exact throughput by 6%
+    (E84), so a value on it is an estimate, not a bound. On OD4's scale the
+    closure verdicts change for the `enthalpy` audit, D1 under `tracer` and
+    the explicit hour without G4.16's blocks (fail); the prototype and the
+    sphere pass. The default's repair, never scored, is 7.3% of Θx a day on
+    D4. E80, E81 and E39b cannot be restated without a rerun. Proposed
+    FINDINGS entry: E85, in the review's section 6.
+
 ### G4.4 The residual report
 
 Rate and settling forecast (synergy 4), vertical and local maxima, headroom
@@ -214,6 +231,15 @@ Rate and settling forecast (synergy 4), vertical and local maxima, headroom
   - **A5, an overlay-bound diagnostic** (`OT-A5`; OT section 4): the mass
     fraction where an overlay is negative, and where a member exceeds its
     group's sum.
+  - [x] *2026-09-25:* designed in
+    [design/RESIDUAL_REPORT.md](design/RESIDUAL_REPORT.md) and built on
+    `claude/energy-claims-budget` (#115 with #112's commit): the residual's
+    own source ledger `e_src_led_src_res` (the flush, exact per step), the
+    forecast columns, the local and vertical maxima, U9's headroom in the
+    closure table (no abort, under #112), A5 read against the partition's
+    sum. Unit tests pass on the login node (section 5 of the note). [ ] The
+    integration group `tagging_water_increment`, a compute-node job (47 min
+    for #115's run of it).
 
 ### G4.5 Warnings, abort rules and acceptance kept apart
 
@@ -221,6 +247,12 @@ For both families' closure checks. U2's calibration.
 
   - **B11, calibrate U2's tolerance per transport** from V2 and V3, and add the
     warning (`OT-B11`; OT section 2, item 11; also Plan C.4, `OT-PC4`).
+  - [x] *2026-09-25:* [design/CLOSURE_LEVELS.md](design/CLOSURE_LEVELS.md).
+    The four levels kept apart for both families; acceptance scored only by
+    `analysis/evidence/closure_verdict.py`, with its tests. B11: the
+    per-transport defaults stand, 50 times above V2 and 170 above V3
+    (`analysis/increment/u2_calibration.py`). A warning in OD4 units,
+    `throughput_tolerance`, off by default; its levels are the owner's.
 
 ### G4.6 The D4 process budget
 
@@ -231,6 +263,15 @@ parent source). The offline EDMF column budget.
     (`OT-SYN6`; OT section 7, prepared, revised after the review of PR #98). A
     new question with an acceptance test set in advance. It does not explain
     E23's remainder, which E26 settled. Design at the end of this file.
+  - [x] *2026-09-25, pre-registered before any run:*
+    [design/D4_PROCESS_BUDGET.md](design/D4_PROCESS_BUDGET.md), with C4. Three
+    D4 days, `configs/g46_d4_*.yml`, scored by
+    `analysis/increment/process_budget.py` (tested on synthetic runs,
+    `test_process_budget.py`). The three configurations build and take two
+    steps on the login node at `1cc40e23` (`analysis/increment/g46_build_check.jl`,
+    all checks pass; the budget's build 889 s, the untagged twin's 262 s;
+    `output/g46/`). [ ] The jobs, from a run tree of the record with
+    `claude/energy-claims-budget`; not submitted.
   - **C4, `c·Δρ` from processes the tags do not bracket**: vertical diffusion,
     sponges, hyperdiffusion, EDMF, LES (`OT-C4`; OT section 3). Measure it,
     then share it as transport or document its size.
