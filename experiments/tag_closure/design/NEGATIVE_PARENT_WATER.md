@@ -333,6 +333,15 @@ each. Outside them the reference only steps.
 
 Everything goes to one CSV row per step in the reference's output directory.
 
+*Amended before the run (2026-09-25), after the login-node check:* the
+forcing holds two nudging terms, one for the scalars and one for the winds.
+Each is probed alone, labelled by its variables. The check's six steps (60 to
+120 s) also showed the `on` trial equal to the reference bit for bit, and
+the `tracer` trial growing the excess by 5.9e-4 kg m⁻² in one step, where the
+reference grew it by 9e-16. So near the start the `tracer` trial's share is
+dominated by the tracer transport's own departure from the parent, and it
+bounds the follower's part only loosely. The rules are unchanged.
+
 ### 9.3 Validity, before any attribution
 
   - **P0, the reference is `ic_s23_c`.** Every field both write, at every

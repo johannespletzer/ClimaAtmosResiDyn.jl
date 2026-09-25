@@ -190,8 +190,15 @@ function explicit_probes(p)
         )
         if has_scm_forcing(p)
             (; forcing_terms, term_caches) = p.external_forcing
+            used = Set{String}()
             for (term, cache) in zip(forcing_terms, term_caches)
+                # The forcing can hold two nudging terms (the scalars and the
+                # winds), so a term's variables go into its label.
                 label = "forcing_" * lowercase(string(nameof(typeof(term))))
+                hasproperty(term, :variables) &&
+                    (label *= "_" * join(string.(term.variables), "_"))
+                label in used && (label *= "_$(length(used))")
+                push!(used, label)
                 push!(probes, (label, :external_forcing, forcing_term!(term, cache)))
             end
         end

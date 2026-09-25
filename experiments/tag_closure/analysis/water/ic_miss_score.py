@@ -133,9 +133,9 @@ def main():
             p_share = S(f"probe_{o}_P") / S(f"probe_{o}_total") if S(f"probe_{o}_total") else np.nan
             label = "attributes" if share >= ATTRIBUTES else "contributes" if share >= CONTRIBUTES else ""
             print(f"  probe {o}: share {share:+.3f}; of it in N {n_share:.2f}, in P {p_share:.2f} {label}")
-            if share >= ATTRIBUTES and o in TRANSPORT_PROBES and p_share >= 0.5:
+            if share >= ATTRIBUTES and o.startswith(TRANSPORT_PROBES) and p_share >= 0.5:
                 verdicts.append(f"candidate 1 ({o})")
-            if share >= ATTRIBUTES and o in LOCAL_PROBES and n_share >= 0.5:
+            if share >= ATTRIBUTES and o.startswith(LOCAL_PROBES) and n_share >= 0.5:
                 verdicts.append(f"candidate 5 ({o})")
         if p1:
             for tr in trials:
