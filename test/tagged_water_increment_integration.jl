@@ -433,6 +433,15 @@ altitude_region(above) = Dict{String, Any}(
         @test audit.ledger_cadence_step == 1
         @test audit.led_inc_tropo_retained > 0
         @test 0 < audit.led_inc_tropo_inventory_fraction < Inf
+        # The burden is at least the inventory, so its ratio is at most the
+        # inventory's. The parent scale is `∫ρq_tot`, and `tropo` is far above
+        # 2e-4 of it.
+        @test 0 < audit.led_inc_tropo_burden_fraction <=
+              audit.led_inc_tropo_inventory_fraction
+        @test audit.ledger_parent_scale > 0
+        @test audit.led_inc_tropo_parent_fraction ≈
+              audit.led_inc_tropo_retained / audit.ledger_parent_scale
+        @test audit.led_inc_tropo_applicable == 1
         @test audit.inc_moved_attempted > 0
         @test audit.led_inc_tropo_attempted > 0
         # OD4: the sources' brackets put energy into the partition, and the
@@ -455,6 +464,12 @@ altitude_region(above) = Dict{String, Any}(
         energy_audit = CA.energy_source_audit(Y, p, energy_model, FT(1))
         @test energy_audit.led_inc_strat_retained > 0
         @test 0 < energy_audit.led_inc_strat_inventory_fraction < Inf
+        # The parent scale is OD4's throughput, which the tags keep with their
+        # ledgers per tag, although this run keeps no process records.
+        @test energy_audit.ledger_parent_scale == throughput
+        @test energy_audit.led_inc_strat_parent_fraction ≈
+              energy_audit.led_inc_strat_retained / throughput
+        @test energy_audit.led_inc_strat_applicable == 1
         @test energy_audit.ledger_cadence_step == 1
     end
 

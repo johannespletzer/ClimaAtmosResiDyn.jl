@@ -527,6 +527,10 @@ The energy source family's own columns of the audit table, beside those
     absolute value; and `increment_moved_gross`, the absolute value of what it
     moved between levels. Each also over `scale`. See
     [`energy_source_increment_ledger_variables`](@ref).
+  - per state ledger, what the accepted steps retained, what its writers
+    attempted, and the events, and for each tag's own ledgers the ratios to
+    the tag's energy, to its absolute burden and to
+    `energy_source_ledger_parent_scale` (`tag_ledger_audit`, WP6 step 3).
 
 Every reduction is collective, so every process must call it.
 """
@@ -568,6 +572,7 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
     repair_gross = tag_gross_total(p.tagging.ᶜenergy_source_fix_gross)
 
     per_scale(x) = iszero(scale) ? zero(x) : x / scale
+    throughput = energy_source_throughput(Y, p, model)
     return (;
         source_negative,
         source_negative_relative = per_scale(source_negative),
@@ -579,15 +584,17 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         repair_events = tag_event_total(p.tagging.ᶜenergy_source_fix_count),
         _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale)...,
         # OD4's scale, where each tag keeps its source ledger.
-        _energy_source_throughput_column(energy_source_throughput(Y, p, model))...,
+        _energy_source_throughput_column(throughput)...,
         # Per state ledger, retained, attempted and events, and each tag's own
-        # ledgers against its energy, where kept (WP6, step 3).
+        # ledgers against its energy, its burden and the parent scale, where
+        # kept (WP6, step 3).
         tag_ledger_audit(
             Y,
             p,
             "e_src_",
             scale,
             p.tagging.ᶜenergy_source_fix_gross,
+            energy_source_ledger_parent_scale(Y, throughput),
         )...,
     )
 end
@@ -596,6 +603,31 @@ end
 # the run (`energy_source_throughput`). No column without it.
 _energy_source_throughput_column(::Nothing) = (;)
 _energy_source_throughput_column(throughput) = (; source_throughput = throughput)
+
+"""
+    energy_source_ledger_parent_scale(Y, throughput)
+
+The energy source tags' parent scale for their own ledgers' ratios and
+small-tag bound: OD4's gross source throughput, `throughput`, from
+`energy_source_throughput`. The tags keep it whenever they keep ledgers
+per tag, so it is there wherever the ratios are.
+
+Where `throughput` is `nothing`, the interim the owner set before it existed:
+the process records' amounts, `Σₚ ∫|prc_e_p|` over the recorded processes, or
+`NaN` without energy process records. The interim is an estimate, not a bound.
+Each record is net over time in each cell, and the throughput nets the
+processes against each other within a step, so either can be the larger. On
+the tag-closure experiments' D4 column the exact throughput was 6% below it
+(their E84). The scale is not `∫(ρe_tot + c·ρ)`: that depends on the offset
+`c`, and it is so large that the small-tag bound would pass over most source
+tags. Collective, as `sum` is.
+"""
+energy_source_ledger_parent_scale(Y, throughput) = Float64(throughput)
+function energy_source_ledger_parent_scale(Y, ::Nothing)
+    names = filter(name -> startswith(string(name), "prc_e_"), propertynames(Y.c))
+    isempty(names) && return NaN
+    return sum(name -> Float64(sum(abs, getproperty(Y.c, name))), names)
+end
 
 _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale) =
     follows_implicit_increment(model) ?

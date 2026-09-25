@@ -1817,7 +1817,17 @@ end
     # The audit: per ledger, retained, attempted and events over the domain,
     # and each tag's own ledger against the tag's water now. The column holds
     # 1000 m of each, so 1 per cell integrates to 1000.
-    audit = CA.tag_ledger_audit(Y, p, "q_tag_", 1.0e4, tagging.ᶜwater_fix_gross)
+    # The parent scale is `∫ρq_tot`: the accepted step left 9 over 1000 m.
+    parent_scale = CA.water_tag_ledger_parent_scale(Y)
+    @test parent_scale ≈ 9000
+    audit = CA.tag_ledger_audit(
+        Y,
+        p,
+        "q_tag_",
+        1.0e4,
+        tagging.ᶜwater_fix_gross,
+        parent_scale,
+    )
     @test audit.led_rescale_retained ≈ 1000
     @test audit.led_rescale_attempted ≈ 3000
     @test audit.led_rescale_retained_relative ≈ 0.1
@@ -1827,16 +1837,32 @@ end
     # attempted: 0.6 up on the discarded stage, 0.3 down on the accepted one.
     @test audit.led_fix_tropo_attempted ≈ 900
     @test audit.led_fix_tropo_inventory_fraction ≈ 300 / (2.7 * 1000)
+    # A tag without negative parts has its burden as its inventory, so the two
+    # ratios are equal. Its burden is far above 2e-4 of the parent's water.
+    @test audit.led_fix_tropo_burden_fraction ==
+          audit.led_fix_tropo_inventory_fraction
+    @test audit.led_fix_tropo_parent_fraction ≈ 300 / 9000
+    @test audit.led_fix_tropo_applicable == 1
+    @test audit.ledger_parent_scale == parent_scale
+    # The ledgers per mechanism have no ratios to a tag.
+    @test !haskey(audit, :led_rescale_burden_fraction)
     @test audit.ledger_cadence_step == 1
     CA.set_tag_ledger_cadence!(p, "dss")
     @test (@test_logs (:warn, r"exact\s+only at `step`") match_mode = :any CA.set_tag_ledger_cadence!(
         p,
         "stage",
     )) === nothing
-    @test CA.tag_ledger_audit(Y, p, "q_tag_", 1.0e4, tagging.ᶜwater_fix_gross).ledger_cadence_step ==
-          0
+    @test CA.tag_ledger_audit(
+        Y,
+        p,
+        "q_tag_",
+        1.0e4,
+        tagging.ᶜwater_fix_gross,
+        parent_scale,
+    ).ledger_cadence_step == 0
     # Without the ledger cache, as in a mock, the report is empty.
-    @test CA.tag_ledger_audit(Y, (; tagging = (;)), "q_tag_", 1.0, (;)) == (;)
+    @test CA.tag_ledger_audit(Y, (; tagging = (;)), "q_tag_", 1.0, (;), 1.0) ==
+          (;)
 
     # The checkpoint carries every accumulator, bit for bit, and a fresh cache
     # takes them back.
