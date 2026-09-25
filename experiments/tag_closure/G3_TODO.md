@@ -684,6 +684,17 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     builds its model on the login node. The owner confirmed its reading of
     OD3 for parts 1 and 2 on 2026-09-25. Jobs `13944456` (case A) and
     `13944457` (case B).
+    *Scored 2026-09-25 (W40):* `vdiff` retained on parts 2a, 2b and 3 in
+    the default mode, and `vdiff` and `diffusion_up` on part 2a with copies.
+    *Built 2026-09-25:* both corrections, on
+    `claude/water-tags-leak-correction` (from #109), behind
+    `water_tag_leak_correction: false` by default: each tag takes back the
+    EDMF diffusion of its sedimentation share of the rain and snow, and each
+    copy its tag's. Ledgers `q_tag_led_leaknet`, `q_tag_led_upleaknet` and
+    each tag's `q_tag_led_leak_<name>`, `q_tag_led_upleak_<name>`. The design,
+    the overlap with WP4b and the validation (V1, V2), pre-registered:
+    [design/WP4C_CORRECTIONS.md](design/WP4C_CORRECTIONS.md). Open: the
+    validation jobs; the default, the owner's call after V1.
 
   - [ ] Review (xhigh) of each stage.
 

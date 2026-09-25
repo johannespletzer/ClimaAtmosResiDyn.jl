@@ -2,7 +2,13 @@
 # parent state per step.
 #
 #   CONFIG=<configs/wp4c_gate_*.yml> OUTDIR=<dir> [OPERATORS=vdiff,sgs_mass_flux] \
-#       [T_END=1days] julia --project=<env at the gate's run tree> wp4c_gate_probe.jl
+#       [T_END=1days] [REFERENCE_OUTPUT=1] \
+#       julia --project=<env at the gate's run tree> wp4c_gate_probe.jl
+#
+# With `REFERENCE_OUTPUT=1` (WP4c's validation, design/WP4C_CORRECTIONS.md) the
+# reference keeps CONFIG's diagnostics and closure check and writes them to
+# `OUTDIR/<run>_reference/`. The trials never write output. The default, `0`,
+# is the gate's behaviour.
 #
 # The reference is CONFIG as it is: D4-W's water tags under the follower, with
 # each tag's ledgers on. At every step it copies the reference's state `Yₖ` and
@@ -47,6 +53,7 @@ OUTDIR = get(ENV, "OUTDIR", pwd())
 mkpath(OUTDIR)
 RUN = splitext(basename(CONFIG))[1]
 OPERATORS = Symbol.(split(get(ENV, "OPERATORS", "vdiff,sgs_mass_flux"), ","))
+REFERENCE_OUTPUT = get(ENV, "REFERENCE_OUTPUT", "0") == "1"
 # The configuration key that switches each operator off, parent and tags alike.
 OPERATOR_KEYS = Dict(
     :vdiff => "edmfx_sgs_diffusive_flux",
@@ -63,12 +70,16 @@ TROPO_REGION = Dict(
 )
 seconds(x) = CA.time_to_seconds(x)
 
-function config(; tag, transport = nothing, off = nothing, t_end = nothing)
+function config(; tag, transport = nothing, off = nothing, t_end = nothing, output = false)
     dict = Dict{String, Any}(YAML.load_file(CONFIG))
-    dict["diagnostics"] = []
-    delete!(dict, "water_closure_check")
-    dict["output_default_diagnostics"] = false
-    dict["output_dir"] = mktempdir(pwd())
+    if output
+        dict["output_dir"] = joinpath(OUTDIR, "$(RUN)_reference")
+    else
+        dict["diagnostics"] = []
+        delete!(dict, "water_closure_check")
+        dict["output_default_diagnostics"] = false
+        dict["output_dir"] = mktempdir(pwd())
+    end
     dict["toml"] = [joinpath(pkgdir(CA), path) for path in dict["toml"]]
     isnothing(transport) || (dict["water_tag_transport"] = transport)
     isnothing(off) || (dict[OPERATOR_KEYS[off]] = false)
@@ -178,7 +189,9 @@ end
 function gate()
     t_end = seconds(get(ENV, "T_END", "1days"))
     build(; kwargs...) = CA.get_simulation(config(; t_end, kwargs...)).integrator
-    reference = build(; tag = "reference")
+    reference_simulation =
+        CA.get_simulation(config(; t_end, tag = "reference", output = REFERENCE_OUTPUT))
+    reference = reference_simulation.integrator
     start_as_driver!(reference)
     model = reference.p.atmos.water_tagging_model
     CA.follows_water_increment(model) ||
@@ -279,6 +292,9 @@ function gate()
         push!(rows, row)
     end
     write_csv(joinpath(OUTDIR, "$(RUN)_gate.csv"), header, rows)
+    # The reference's writers, as `solve_atmos!` closes them.
+    writers = reference_simulation.output_writers
+    REFERENCE_OUTPUT && !isnothing(writers) && foreach(close, writers)
 
     # The provenance part: D against the reference's final profiles.
     Y = reference.u
