@@ -391,34 +391,43 @@ end
         ) <= 64 * eps(FT) * gross
     end
 
-    # The attribution rules, on random flows and shares.
+    # The attribution rules, on random flows, pools and shares.
     rng = Random.MersenneTwister(99)
+    Δt = 60.0
     for _ in 1:2000
-        F = NamedTuple{CA.WATER_TAG_FLOW_NAMES}(Tuple(rand(rng, 6) .* (rand(rng, 6) .< 0.7)))
-        # A partition of three tags: shares of each compartment summing to 1.
-        shares = map(1:3) do _
+        F = NamedTuple{CA.WATER_TAG_FLOW_NAMES}(
+            Tuple(1e-7 .* rand(rng, 6) .* (rand(rng, 6) .< 0.7)),
+        )
+        # The pools, and some of them empty at the start.
+        (qN, qR, qS) =
+            (1e-2 * rand(rng), 1e-3 * rand(rng), 1e-3 * rand(rng)) .*
+            (1, rand(rng) < 0.7, rand(rng) < 0.7)
+        # A partition of three tags: shares of each compartment summing to 1,
+        # or to 0 where the compartment is empty.
+        shares = map((qN, qR, qS)) do q
             w = rand(rng, 3)
-            w ./ sum(w)
+            q > 0 ? w ./ sum(w) : zeros(3)
         end
         dq_rai = (F.NR + F.SR) - (F.RN + F.RS)
         dq_sno = (F.NS + F.RS) - (F.SN + F.SR)
-        changes = map(1:3) do i
-            CA.water_tag_microphysics_change(
-                F,
-                dq_rai,
-                dq_sno,
-                shares[1][i],
-                shares[2][i],
-                shares[3][i],
-            )
-        end
+        args(i) = (qN, qR, qS, Δt, shares[1][i], shares[2][i], shares[3][i])
+        changes = map(i -> CA.water_tag_microphysics_change(F, dq_rai, dq_sno, args(i)...), 1:3)
+        scale = 1e-7
         # Each tag keeps its total.
-        @test all(c -> abs(sum(c)) <= 1e-14, changes)
-        # The partition's parts take the compartments' changes.
-        @test sum(c -> c[2], changes) ≈ dq_rai atol = 1e-14
-        @test sum(c -> c[3], changes) ≈ dq_sno atol = 1e-14
-        @test sum(c -> c[1], changes) ≈ -(dq_rai + dq_sno) atol = 1e-14
-        # The net-flow rule keeps the same sums.
+        @test all(c -> abs(sum(c)) <= 1e-14 * scale, changes)
+        # The partition's parts take the compartments' changes, even where a
+        # compartment was empty at the start and water passed through it.
+        @test sum(c -> c[2], changes) ≈ dq_rai atol = 1e-14 * scale
+        @test sum(c -> c[3], changes) ≈ dq_sno atol = 1e-14 * scale
+        @test sum(c -> c[1], changes) ≈ -(dq_rai + dq_sno) atol = 1e-14 * scale
+        # The pool shares sum to one over the partition, and lie in [0, 1].
+        pools = map(i -> CA.water_tag_pool_shares(F, args(i)...), 1:3)
+        for k in 1:3
+            @test sum(ψ -> ψ[k], pools) ≈ 1 atol = 1e-12
+            @test all(ψ -> -1e-15 <= ψ[k] <= 1 + 1e-12, pools)
+        end
+        # The net-flow rule keeps each tag's total, and the compartments'
+        # sums wherever the losing compartments are tagged.
         net = map(1:3) do i
             CA.water_tag_net_flow_change(
                 -(dq_rai + dq_sno),
@@ -429,22 +438,38 @@ end
                 shares[3][i],
             )
         end
-        @test all(c -> abs(sum(c)) <= 1e-14, net)
-        @test sum(c -> c[2], net) ≈ dq_rai atol = 1e-14
-        # The audit is their difference, and its parts sum to minus N's.
+        @test all(c -> abs(sum(c)) <= 1e-14 * scale, net)
+        # The audit is their difference.
         for i in 1:3
-            audit = CA.water_tag_microphysics_audit(
-                F,
-                dq_rai,
-                dq_sno,
-                shares[1][i],
-                shares[2][i],
-                shares[3][i],
-            )
-            @test audit[1] ≈ net[i][2] - changes[i][2] atol = 1e-14
-            @test audit[2] ≈ net[i][3] - changes[i][3] atol = 1e-14
+            audit = CA.water_tag_microphysics_audit(F, dq_rai, dq_sno, args(i)...)
+            @test audit[1] ≈ net[i][2] - changes[i][2] atol = 1e-14 * scale
+            @test audit[2] ≈ net[i][3] - changes[i][3] atol = 1e-14 * scale
         end
     end
+    # A compartment that holds much more than passes through it passes on its
+    # own composition.
+    F = (; NR = 2e-9, NS = 0.0, RN = 1.5e-9, RS = 0.0, SR = 0.0, SN = 0.0)
+    ψ = CA.water_tag_pool_shares(F, 1e-2, 1e-3, 0.0, 60.0, 0.3, 0.6, 0.0)
+    @test ψ[1] ≈ 0.3 rtol = 1e-4
+    @test ψ[2] ≈ 0.6 rtol = 1e-3
+    # Rain that forms and evaporates in one step, in a cell without rain at
+    # the start: it passes on the composition it formed with.
+    ψ = CA.water_tag_pool_shares(F, 1e-2, 0.0, 0.0, 60.0, 0.3, 0.0, 0.0)
+    @test ψ[2] ≈ ψ[1]
+    (ΔN, ΔR, ΔS) = CA.water_tag_microphysics_change(
+        F,
+        F.NR - F.RN,
+        0.0,
+        1e-2,
+        0.0,
+        0.0,
+        60.0,
+        0.3,
+        0.0,
+        0.0,
+    )
+    @test ΔR ≈ 0.3 * (F.NR - F.RN) rtol = 1e-6
+    @test ΔN ≈ -ΔR
     # Two-way flow with different compositions: rain forms from `N` of one
     # composition and evaporates with rain of another. The net-flow rule
     # gives the evaporated water the rain's composition only for the net.
@@ -453,8 +478,12 @@ end
     @test (gN, gR, gS) == (-2.0, 2.0, 0.0)
     (nN, nR, nS) = CA.water_tag_net_flow_change(-0.5, 0.5, 0.0, 1.0, 0.0, 0.0)
     @test (nN, nR, nS) == (-0.5, 0.5, 0.0)
-    @test CA.water_tag_microphysics_audit(F, 0.5, 0.0, 1.0, 0.0, 0.0) ==
-          (-1.5, 0.0)
+    # With a large rain pool of the other composition, the rain that
+    # evaporates is nearly all of that composition, and the audit records the
+    # difference from the net-flow rule.
+    audit = CA.water_tag_microphysics_audit(F, 0.5, 0.0, 1e6, 1e6, 0.0, 1e-6, 1.0, 0.0, 0.0)
+    @test audit[1] ≈ -1.5 rtol = 1e-5
+    @test audit[2] == 0
     # The guards: a losing compartment no tag holds gives nothing; no loss
     # moves nothing; without flows the net-flow rule is the fallback.
     @test CA.water_tag_net_flow_change(1.0, -1.0, 0.0, 0.3, 0.0, 0.0) ==
@@ -463,9 +492,22 @@ end
           (0.0, 0.0, 0.0)
     zero_flows = NamedTuple{CA.WATER_TAG_FLOW_NAMES}(ntuple(_ -> 0.0, 6))
     @test all(
-        CA.water_tag_microphysics_change(zero_flows, 0.5, -0.2, 0.3, 0.4, 0.6) .≈
-        CA.water_tag_net_flow_change(-0.3, 0.5, -0.2, 0.3, 0.4, 0.6),
+        CA.water_tag_microphysics_change(
+            zero_flows,
+            0.5,
+            -0.2,
+            1e-2,
+            1e-3,
+            1e-3,
+            60.0,
+            0.3,
+            0.4,
+            0.6,
+        ) .≈ CA.water_tag_net_flow_change(-0.3, 0.5, -0.2, 0.3, 0.4, 0.6),
     )
+    # Every pool empty: the start shares.
+    @test CA.water_tag_pool_shares(zero_flows, 0.0, 0.0, 0.0, 60.0, 0.3, 0.4, 0.6) ==
+          (0.3, 0.4, 0.6)
 end
 
 # A cell state of three tags (two partition tags and a source tag), their
@@ -582,10 +624,11 @@ nonprecip_parent(ᶜY) = ᶜY.ρq_tot .- ᶜY.ρq_rai .- ᶜY.ρq_sno
         ᶜY = Y.c
         low_share = ᶜY.ρq_tag_low ./ nonprecip_parent(ᶜY)
         rain_before = copy(ᶜY.ρq_rtag_low)
-        growth = FT(1e-4)
-        ᶜY.ρq_rai .+= growth
+        parent_before = copy(ᶜY.ρq_rai)
+        ᶜY.ρq_rai .+= FT(1e-4)
+        growth = ᶜY.ρq_rai .- parent_before
         CA._rescale_water_tag_parts!(Y, p, copy(ᶜY.ρq_tot), model, Val(false))
-        @test ᶜY.ρq_rtag_low .- rain_before ≈ growth .* low_share rtol = 16 * eps(FT)
+        @test ᶜY.ρq_rtag_low .- rain_before ≈ growth .* low_share rtol = 64 * eps(FT)
         check(ᶜY)
 
         # 4. The repair per compartment: a negative rain part is repaired

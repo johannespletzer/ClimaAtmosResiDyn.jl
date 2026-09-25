@@ -830,18 +830,72 @@ function _set_water_tag_microphysics_flows!(
 end
 
 """
-    water_tag_gross_flow_change(F, φN, φR, φS)
+    water_tag_gross_flow_change(F, ψN, ψR, ψS)
 
 The change of one tag's three parts, per unit mass and time, when each of the
 six flows `F` ([`WATER_TAG_FLOW_NAMES`](@ref)) carries its donor compartment's
-composition: `φN`, `φR` and `φS` are the tag's shares of the non-precipitating
-water, rain and snow. Returns `(ΔN, ΔR, ΔS)`, which sum to zero.
+composition: `ψN`, `ψR` and `ψS` are the tag's shares of the water that leaves
+the non-precipitating water, rain and snow ([`water_tag_pool_shares`](@ref)).
+Returns `(ΔN, ΔR, ΔS)`, which sum to zero.
 """
-@inline water_tag_gross_flow_change(F, φN, φR, φS) = (
-    F.RN * φR + F.SN * φS - (F.NR + F.NS) * φN,
-    F.NR * φN + F.SR * φS - (F.RN + F.RS) * φR,
-    F.NS * φN + F.RS * φR - (F.SN + F.SR) * φS,
+@inline water_tag_gross_flow_change(F, ψN, ψR, ψS) = (
+    F.RN * ψR + F.SN * ψS - (F.NR + F.NS) * ψN,
+    F.NR * ψN + F.SR * ψS - (F.RN + F.RS) * ψR,
+    F.NS * ψN + F.RS * ψR - (F.SN + F.SR) * ψS,
 )
+
+"""
+    water_tag_pool_shares(F, qN, qR, qS, Δt, φN, φR, φS)
+
+A tag's shares of the water that leaves each compartment over the step `Δt`:
+the compartment's water at the start, `qN`, `qR` or `qS` (per unit mass, with
+the tag's shares `φN`, `φR`, `φS`), mixed with what the flows `F` bring into it
+during the step, each with its own donor's share. So each share solves
+
+    ψR (qR + Δt (F.NR + F.SR)) = qR φR + Δt (F.NR ψN + F.SR ψS),
+
+and alike for `ψN` and `ψS`, a 3×3 linear system solved by Cramer's rule.
+Returns `(ψN, ψR, ψS)`.
+
+Why the pool and not the start alone: the model's linearized step lets water
+pass through a compartment within the step, such as rain that forms and
+evaporates again, or snow that forms and melts. At the start such a compartment
+may hold none of it, or none at all, and then its outflow would carry no
+composition, and the partition's parts would drift from their compartments.
+Over the pool the partition's shares of each compartment sum to one wherever
+the pool holds water, as the start's do. Where a compartment holds much more
+than passes through it, `ψ` is its start share `φ`.
+
+Where the system is singular, which needs every pool empty, it returns the
+start shares.
+"""
+@inline function water_tag_pool_shares(F, qN, qR, qS, Δt, φN, φR, φS)
+    a11 = qN + Δt * (F.RN + F.SN)
+    a12 = -Δt * F.RN
+    a13 = -Δt * F.SN
+    a21 = -Δt * F.NR
+    a22 = qR + Δt * (F.NR + F.SR)
+    a23 = -Δt * F.SR
+    a31 = -Δt * F.NS
+    a32 = -Δt * F.RS
+    a33 = qS + Δt * (F.NS + F.RS)
+    b1 = qN * φN
+    b2 = qR * φR
+    b3 = qS * φS
+    m1 = a22 * a33 - a23 * a32
+    m2 = a21 * a33 - a23 * a31
+    m3 = a21 * a32 - a22 * a31
+    det = a11 * m1 - a12 * m2 + a13 * m3
+    det > zero(det) || return (φN, φR, φS)
+    ψN = (b1 * m1 - a12 * (b2 * a33 - a23 * b3) + a13 * (b2 * a32 - a22 * b3)) / det
+    ψR =
+        (a11 * (b2 * a33 - a23 * b3) - b1 * m2 + a13 * (a21 * b3 - b2 * a31)) /
+        det
+    ψS =
+        (a11 * (a22 * b3 - b2 * a32) - a12 * (a21 * b3 - b2 * a31) + b1 * m3) /
+        det
+    return (ψN, ψR, ψS)
+end
 
 """
     water_tag_net_flow_change(ΔN, ΔR, ΔS, φN, φR, φS)
@@ -872,27 +926,32 @@ source tag's shares are not normalized, as elsewhere.
 end
 
 """
-    water_tag_microphysics_change(F, dq_rai_dt, dq_sno_dt, φN, φR, φS)
+    water_tag_microphysics_change(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS)
 
 The change of one tag's parts by the microphysics, per unit mass and time: the
-gross flows `F` with their donors' compositions
-([`water_tag_gross_flow_change`](@ref)), plus the net-flow rule
-([`water_tag_net_flow_change`](@ref)) on what the flows' net misses of the
-model's own tendencies, `dq_rai_dt` and `dq_sno_dt`. That remainder is rounding
-where the flows are available, so the gross flows set the attribution. Where
-they are not, `F` is zero, and the net-flow rule is the fallback. Either way the
-partition's parts take the model's rain and snow tendencies in full wherever it
-holds all of each losing compartment. Returns `(ΔN, ΔR, ΔS)`.
+gross flows `F` over the step `Δt`, each with its donor's composition over the
+step ([`water_tag_pool_shares`](@ref), [`water_tag_gross_flow_change`](@ref)),
+plus the net-flow rule ([`water_tag_net_flow_change`](@ref)) on what the
+flows' net misses of the model's own tendencies, `dq_rai_dt` and `dq_sno_dt`.
+That remainder is rounding where the flows are available, so the gross flows
+set the attribution. Where they are not, `F` is zero, and the net-flow rule is
+the fallback. `qN`, `qR` and `qS` are the compartments' water per unit mass,
+and `φN`, `φR`, `φS` the tag's shares of them. Returns `(ΔN, ΔR, ΔS)`.
 """
 @inline function water_tag_microphysics_change(
     F,
     dq_rai_dt,
     dq_sno_dt,
+    qN,
+    qR,
+    qS,
+    Δt,
     φN,
     φR,
     φS,
 )
-    (gN, gR, gS) = water_tag_gross_flow_change(F, φN, φR, φS)
+    (ψN, ψR, ψS) = water_tag_pool_shares(F, qN, qR, qS, Δt, φN, φR, φS)
+    (gN, gR, gS) = water_tag_gross_flow_change(F, ψN, ψR, ψS)
     δR = dq_rai_dt - ((F.NR + F.SR) - (F.RN + F.RS))
     δS = dq_sno_dt - ((F.NS + F.RS) - (F.SN + F.SR))
     (nN, nR, nS) = water_tag_net_flow_change(-(δR + δS), δR, δS, φN, φR, φS)
@@ -900,7 +959,7 @@ holds all of each losing compartment. Returns `(ΔN, ΔR, ΔS)`.
 end
 
 """
-    water_tag_microphysics_audit(F, dq_rai_dt, dq_sno_dt, φN, φR, φS)
+    water_tag_microphysics_audit(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS)
 
 The audit of the design note's section 12, for one tag: the net-flow rule's
 change of the tag's rain and snow parts, minus the change the model applies
@@ -912,6 +971,10 @@ sum.
     F,
     dq_rai_dt,
     dq_sno_dt,
+    qN,
+    qR,
+    qS,
+    Δt,
     φN,
     φR,
     φS,
@@ -924,8 +987,18 @@ sum.
         φR,
         φS,
     )
-    (_, cR, cS) =
-        water_tag_microphysics_change(F, dq_rai_dt, dq_sno_dt, φN, φR, φS)
+    (_, cR, cS) = water_tag_microphysics_change(
+        F,
+        dq_rai_dt,
+        dq_sno_dt,
+        qN,
+        qR,
+        qS,
+        Δt,
+        φN,
+        φR,
+        φS,
+    )
     return (aR - cR, aS - cS)
 end
 
@@ -941,7 +1014,7 @@ end
 
 Move each tag's water between its three parts as the 1-moment microphysics
 moves the parent's between its compartments: by the gross flows, each with its
-donor's composition ([`water_tag_microphysics_change`](@ref)). The flows are
+donor's composition over the step ([`water_tag_microphysics_change`](@ref)). The flows are
 frozen in `p.tagging.ᶜwater_mp_flows` with the model's own tendencies, and the
 shares are taken from `Y`. It also adds the audit's difference to the state
 records `q_rtag_aud_<name>` and `q_stag_aud_<name>`
@@ -967,47 +1040,87 @@ function _water_tag_precipitation_microphysics_tendency!(
 )
     has_water_tag_precipitation(model) || return nothing
     water_tag_share_norm!(p, Y)
+    # The compartments' water per unit mass, not below zero, as the
+    # microphysics takes it. The flows are averages over the model's step.
+    ᶜqN = @. lazy(
+        max(specific(Y.c.ρq_tot - Y.c.ρq_rai - Y.c.ρq_sno, Y.c.ρ), 0),
+    )
+    ᶜqR = @. lazy(max(specific(Y.c.ρq_rai, Y.c.ρ), 0))
+    ᶜqS = @. lazy(max(specific(Y.c.ρq_sno, Y.c.ρ), 0))
+    ᶜpools = (; N = ᶜqN, R = ᶜqR, S = ᶜqS)
     _microphysics_of_water_tag_parts!(
         Yₜ.c,
         Y.c,
         p.scratch,
         p.tagging.ᶜwater_mp_flows,
         p.precomputed.ᶜmp_tendency,
+        ᶜpools,
+        eltype(Y.c.ρ)(float(p.dt)),
         model.tags,
     )
     return nothing
 end
 
-_microphysics_of_water_tag_parts!(ᶜYₜ, ᶜY, scratch, ᶜF, ᶜmp, ::Tuple{}) =
-    nothing
-function _microphysics_of_water_tag_parts!(ᶜYₜ, ᶜY, scratch, ᶜF, ᶜmp, tags::Tuple)
+_microphysics_of_water_tag_parts!(
+    ᶜYₜ,
+    ᶜY,
+    scratch,
+    ᶜF,
+    ᶜmp,
+    ᶜpools,
+    Δt,
+    ::Tuple{},
+) = nothing
+function _microphysics_of_water_tag_parts!(
+    ᶜYₜ,
+    ᶜY,
+    scratch,
+    ᶜF,
+    ᶜmp,
+    ᶜpools,
+    Δt,
+    tags::Tuple,
+)
     tag = first(tags)
     ᶜφN = water_tag_part_share(ᶜY, scratch, tag, NonPrecipitatingPart())
     ᶜφR = water_tag_part_share(ᶜY, scratch, tag, RainPart())
     ᶜφS = water_tag_part_share(ᶜY, scratch, tag, SnowPart())
     ᶜdq_rai_dt = ᶜmp.dq_rai_dt
     ᶜdq_sno_dt = ᶜmp.dq_sno_dt
+    (ᶜqN, ᶜqR, ᶜqS) = (ᶜpools.N, ᶜpools.R, ᶜpools.S)
     ᶜNₜ = tag_field(ᶜYₜ, tag)
     ᶜRₜ = rain_tag_field(ᶜYₜ, tag)
     ᶜSₜ = snow_tag_field(ᶜYₜ, tag)
     @. ᶜNₜ +=
-        ᶜY.ρ * _mp_change_n(ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜφN, ᶜφR, ᶜφS)
+        ᶜY.ρ * _mp_change_n(
+            ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+        )
     @. ᶜRₜ +=
-        ᶜY.ρ * _mp_change_r(ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜφN, ᶜφR, ᶜφS)
+        ᶜY.ρ * _mp_change_r(
+            ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+        )
     @. ᶜSₜ +=
-        ᶜY.ρ * _mp_change_s(ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜφN, ᶜφR, ᶜφS)
+        ᶜY.ρ * _mp_change_s(
+            ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+        )
     ᶜrain_auditₜ = rain_audit_field(ᶜYₜ, tag)
     ᶜsnow_auditₜ = snow_audit_field(ᶜYₜ, tag)
     @. ᶜrain_auditₜ +=
-        ᶜY.ρ * _mp_audit_r(ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜφN, ᶜφR, ᶜφS)
+        ᶜY.ρ * _mp_audit_r(
+            ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+        )
     @. ᶜsnow_auditₜ +=
-        ᶜY.ρ * _mp_audit_s(ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜφN, ᶜφR, ᶜφS)
+        ᶜY.ρ * _mp_audit_s(
+            ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+        )
     return _microphysics_of_water_tag_parts!(
         ᶜYₜ,
         ᶜY,
         scratch,
         ᶜF,
         ᶜmp,
+        ᶜpools,
+        Δt,
         Base.tail(tags),
     )
 end
