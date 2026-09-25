@@ -1520,6 +1520,13 @@ follower, each tag's own ledgers every 6 hours.
     This bounds which ledgers move with the excess, by size in the same
     cells and interval. It does not show that either follower entry causes
     it.
+  - **Against the contract's negative-water row.** The untagged twin's
+    negative water, `Σ ρΔz min(q_tot, 0)` over `Σ ρΔz q_tot`, passes the
+    approved 1e-4 on 65 of 91 daily outputs, from day 10 (worst 11%). Above
+    it the contract does not score the run's water results. Before day 10
+    C's gross is at most 7.5e-11. So all of V2's failure lies where the
+    contract already leaves site 23's water unscored. V2 was registered
+    without that exclusion and fails as registered.
   - **Consequence for OD7.** Site 23's rerun of the long runs
     (`design/INCREMENT_RULE_LONG_RUNS.md` section 8) was to be submitted
     once option C passes. It is not submitted. OD7 stays deferred behind the
