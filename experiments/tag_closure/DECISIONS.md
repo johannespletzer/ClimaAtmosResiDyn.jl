@@ -166,6 +166,14 @@ The list as it stood before this classification, kept as written:
         go ahead. Nothing is rescored; W38's R2 verdicts are read under the
         revised scope, where every W25 verdict is same-parent except R7.
         **In force.** [ROADMAP.md, the OD3 table](ROADMAP.md#the-od3-thresholds-approved-2026-09-24)
+      + **The per-tag intervention row applies to all tags** (from the
+        review of #109), with two denominators: a pure region tag
+        `retained / ∫tag`, with a positive inventory as precondition; a
+        source-labelled or signed tag `retained / ∫|tag|`, the absolute
+        burden. Below the small-tag bound (2e-4 of the parent, OD4 units for
+        energy) "not applicable", reported explicitly. Both ratios and a
+        parent-scale ratio are reported. Built on #109 by another agent.
+        **In force.** [ROADMAP.md, the OD3 table](ROADMAP.md#the-od3-thresholds-approved-2026-09-24)
 
   - **The owner's answers of 2026-09-25** (through the parent session).
     **In force.**

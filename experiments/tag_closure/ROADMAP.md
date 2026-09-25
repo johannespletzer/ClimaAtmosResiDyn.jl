@@ -246,7 +246,7 @@ holds; none was measured for the production sphere.
 | Comparator: its repair | at most 0.20% of `∫ρq_tot` a day (set); energy the same in OD4 units (approved 2026-09-24) | 6.1 | D4-W 0.60% (fails), TRMM below 1e-5, W32 9.5e-10 |
 | Comparator: refinement | at each halving of `dt` or doubling of Newton count, the repair per day is at most 1.1 times the coarser rung's (approved 2026-09-24) | "must not grow"; 10% allows for the atmosphere's own change between rungs | W25: dt 0.60, 1.6, 1.8% (grows, fails); Newton 0.60, 0.30, 0.28% (passes) |
 | Intervention, aggregate | the partition repair's retained gross at most 0.5% of `∫ρq_tot` a day (approved 2026-09-24) | a quarter of the per-tag L1 budget | D4-W 0.29% a day (W24, net over time, a lower bound) |
-| Intervention, per tag | each tag's `led_fix` `_inventory_fraction` at most 2% over the window; `led_inc` reported, judged only through the refinement test (approved 2026-09-24); also WP4c gate part 2, `led_inc` per tag between two runs (2026-09-25) | a correction as large as the per-tag L1 budget could alone use it up; `led_inc` holds the parent's vertical advection | none yet (WP6 step 3 is new); aggregate moved 2.4% a day on D4-W (W28) |
+| Intervention, per tag | each tag's `led_fix` `_inventory_fraction` at most 2% over the window; `led_inc` reported, judged only through the refinement test (approved 2026-09-24); also WP4c gate part 2, `led_inc` per tag between two runs (2026-09-25). *Revised 2026-09-25 (the owner, from #109's review):* it applies to every tag, with two denominators: a pure region tag `retained / ∫tag`, with a positive inventory as its precondition; a source-labelled or signed tag `retained / ∫|tag|`, the absolute burden. Below the small-tag bound (2e-4 of the parent, OD4 units for energy) the row is "not applicable", reported explicitly. Both ratios and a parent-scale ratio are reported | a correction as large as the per-tag L1 budget could alone use it up; `led_inc` holds the parent's vertical advection | none yet (WP6 step 3 is new); aggregate moved 2.4% a day on D4-W (W28) |
 | Refinement | the repair's and `inc_left`'s throughput per unit time at the finer rung at most 0.75 times the coarser rung's; above 0.9 flags a structural cause (approved 2026-09-24) | lag shrinks with the step or the iterations; a plateau is not lag | W35: one-step `E` halves at half the step (0.50, 0.47); follower gross 1.5e-4, 8.2e-5, 2.3e-5 at 120, 60, 30 s (W24, W25) |
 | Aggregation | the 8 tags summed into groups against a run of the groups: relative L∞ at most 1e-10 at 24 h, Float64; reported, since OD8 needs no bridge (approved 2026-09-24) | roundoff over a day's steps | not run |
 | Cost, default mode, 8 + 8 tags | build at most twice the untagged build; step time at most twice the untagged step (approved 2026-09-24) | measured ratios at fewer tags, with room for 16 tags | build: D4 untagged 410 s (E44), with 8 energy tags 600 s (E73); step: 1.43× with 4 + 4 tags (W22) |
@@ -368,6 +368,17 @@ package.
     stays. Nothing is rescored. W38's R2 verdicts stand as scored and are
     read under the revised scope: every W25 verdict is same-parent except
     R7, the provenance against copies.
+  - **The per-tag intervention row, revised** (from the review of #109). OD3's
+    per-tag row (2%) applies to all tags, with two denominators:
+      + a pure region tag: `retained / ∫tag`, with a positive inventory as its
+        precondition;
+      + a source-labelled or signed tag: `retained / ∫|tag|`, the absolute
+        burden;
+      + below the small-tag bound (2e-4 of the parent, OD4 units for energy):
+        "not applicable", reported explicitly.
+
+    Both ratios and a parent-scale ratio are reported. Another agent builds
+    it on #109.
 
 ### The execution order
 

@@ -200,6 +200,12 @@ the interim are in [the register](ROADMAP.md#the-decision-register)):* an exact
 per-tag, per-step accumulator, carried through restarts; the process records'
 lower bound is the interim. Built on `claude/energy-source-throughput`
 ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), section 11).
+*Decided 2026-09-25 (review of #109; the register):* OD3's per-tag
+intervention row (2%) applies to every energy source tag too: a pure region
+tag against `∫tag`, with a positive inventory as precondition; a source tag
+against `∫|tag|`. Below the small-tag bound, 2e-4 of the parent in OD4 units,
+"not applicable", reported explicitly. Both ratios and a parent-scale ratio
+are reported. Another agent builds it on #109.
 
 ### G4.4 The residual report
 

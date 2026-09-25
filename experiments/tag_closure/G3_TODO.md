@@ -801,6 +801,13 @@ owner's points in the note's section 8.
         uses the tag's current inventory. The audit writes the absolute
         amount, `<L>_retained` in kg or J over the domain, in the same row as
         `<L>_inventory_fraction`: checked in `tag_ledger_audit`.
+      + [ ] *The owner, 2026-09-25 (review of #109):* OD3's per-tag
+        intervention row (2%) applies to all tags, with two denominators: a
+        pure region tag `retained / ∫tag`, with a positive inventory as
+        precondition; a source-labelled or signed tag `retained / ∫|tag|`.
+        Below the small-tag bound (2e-4 of the parent) "not applicable",
+        reported explicitly. Both ratios and a parent-scale ratio are
+        reported. Another agent builds it on #109 (the register).
 
 ## WP2, WP8, WP9: consolidation, docs, cost
 
