@@ -13,9 +13,10 @@ run, `<job_id>/output_0000`, for the five `g411_d4_*` runs. It prints:
   - the scale: the window's gross source throughput (OD4). Exact from the
     audit's `source_throughput` where the run has it (the per-tag source
     ledgers, design/GROSS_ACCUMULATORS.md section 11). Otherwise the interim
-    the owner set (2026-09-25): a lower bound from the process records of the
-    four source processes, whose hourly samples are net within each hour, so
-    every percentage on it is an upper bound. The script says which;
+    the owner set (2026-09-25): the process records of the four source
+    processes, whose hourly samples are net within each hour. It was taken as
+    a lower bound; E84 found it 6% above the exact throughput on D4, so it is
+    an estimate, and so is every percentage on it. The script says which;
   - the copies' eligibility under OD3's comparator rows, each run with copies:
     own residual (the closure's gross over the window) at most 0.02% of the
     throughput; repair (the audit's `repair_moved` over the window) at most
@@ -171,7 +172,7 @@ for job in copies_runs + ("g411_d4_default",):
     own = (at(closure, t1, "gross_residual") - at(closure, t0, "gross_residual")) / scale
     repair = (at(audit, t1, "repair_moved") - at(audit, t0, "repair_moved")) / scale / days
     repair_per_day[job] = repair
-    kind = "exact (the audit's source_throughput)" if EXACT[job] else "lower bound (process records): percentages are upper bounds"
+    kind = "exact (the audit's source_throughput)" if EXACT[job] else "estimate (process records; not a bound, E84): percentages are estimates"
     print(f"== {job}: throughput {scale:.4e} J/m² over the window, {kind}")
     print(f"   own residual {own:.3e} of it (at most {OWN_RESIDUAL:g}); "
           f"repair {repair:.3e} a day (at most {REPAIR_PER_DAY:g})")

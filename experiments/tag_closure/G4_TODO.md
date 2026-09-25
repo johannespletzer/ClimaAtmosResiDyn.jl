@@ -89,8 +89,10 @@ changes across a restart.
     *Run 2026-09-25 (jobs `13944458` to `13944462`; FINDINGS E83, the parent
     session's):* the energy copies are not an eligible comparator on D4.
     Their repair is 2.9% of the throughput a day with the mirrors and 2.6%
-    without, against 0.20%; both are upper bounds, since the throughput is the
-    process records' lower bound. Their own residual (1.1e-5) and refinement
+    without, against 0.20%, on the process records' figure. *E84 (the parent
+    session's), on the exact throughput:* 3.1% and 2.7%. The records' figure
+    was 6% above it, so E83's percentages were estimates, not upper bounds.
+    Their own residual (1.1e-5) and refinement
     (0.65) pass. The mirrors bring the modes closer (`sfc` L∞ 2.5% to 0.86%).
     Open: what makes the copies' repair; provenance against them stays *not
     assessable* on D4.
@@ -194,18 +196,28 @@ repair, in OD4 units) are approved with the rest of the table.
 sources put into the tags over the same window. The audit's first pass sorts
 the records' denominators into four classes and restates no number yet
 ([review/od4_denominator_audit.md](review/od4_denominator_audit.md)). The
-throughput needs the process records, a lower bound, or a new per-step
-accumulator; which one is the owner's. *Decided 2026-09-25 (the state and
+throughput needs the process records, then taken as a lower bound, or a new
+per-step accumulator; which one is the owner's. *Decided 2026-09-25 (the state and
 the interim are in [the register](ROADMAP.md#the-decision-register)):* an exact
 per-tag, per-step accumulator, carried through restarts; the process records'
-lower bound is the interim. Built on `claude/energy-source-throughput`
+figure is the interim. Built on `claude/energy-source-throughput`
 ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), section 11).
+*Corrected after E84 (2026-09-25):* that interim is an estimate. On D4 it came
+out 6% above the exact accumulator, so it is not a lower bound, and a
+percentage on it is not an upper bound. The direction of its error is not
+established. A per-process comparison against the accumulator is open on #115.
 *Decided 2026-09-25 (review of #109; the register):* OD3's per-tag
 intervention row (2%) applies to every energy source tag too: a pure region
 tag against `∫tag`, with a positive inventory as precondition; a source tag
 against `∫|tag|`. Below the small-tag bound, 2e-4 of the parent in OD4 units,
 "not applicable", reported explicitly. Both ratios and a parent-scale ratio
 are reported. Another agent builds it on #109.
+
+  - [ ] **The process records against OD4's accumulator, per process** (#115,
+    after E84). The records' sum of the four source processes came out 6%
+    above the exact per-tag throughput on D4. Either the records count
+    something the tags do not take, or the accumulator misses a source.
+    Compare them per process on one run, and say which.
 
 ### G4.4 The residual report
 

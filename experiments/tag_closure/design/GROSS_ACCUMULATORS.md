@@ -395,8 +395,8 @@ The owner set OD4's scale on 2026-09-24 (the gross energy the sources put
 into the tags over the window) and its quantity on 2026-09-25: an exact
 accumulator per tag and per step, carried through restarts, as step 3 did for
 the ledgers. Until it lands, and for runs that predate it, the process
-records' lower bound is the interim, and every percentage on it is an upper
-bound (the register, OD4). Built on `claude/energy-source-throughput`, from
+records' figure is the interim (the register, OD4). *Corrected after E84 (2026-09-25):* the interim is an estimate. On D4 it came out 6% above the exact accumulator, so it is not a lower bound, and a percentage on it is not an upper bound. The direction of its error is not established.
+A per-process comparison against the accumulator is open on #115. Built on `claude/energy-source-throughput`, from
 #109.
 
 ### 11.1 The quantity
@@ -460,7 +460,7 @@ the repair are not sources; they have their ledgers already.
 ### 11.4 The scripts
 
 `analysis/increment/g411_eligibility.py` takes `source_throughput` from the
-audit where a run has it, and the process records' lower bound otherwise, and
-says which. The earlier E-records are restated with the lower bound, labelled
-an upper bound, and rerun only where the contract needs an exact value (the
-register, OD4).
+audit where a run has it, and the process records' figure otherwise, and
+says which. The earlier E-records are restated with that figure and rerun
+only where the contract needs an exact value (the register, OD4). *Corrected
+after E84:* they are labelled estimates, not upper bounds.

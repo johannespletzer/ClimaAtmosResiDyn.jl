@@ -68,7 +68,9 @@ of the answers.
     (above).
   - **OD4's throughput source** for the existing records. *Answered*
     2026-09-25: an exact per-tag, per-step accumulator; the process records'
-    lower bound is the interim. [Register](ROADMAP.md#the-decision-register)
+    figure is the interim, an estimate: E84 found it 6% above the exact
+    throughput on D4, so it is not a lower bound, and the direction of its
+    error is not established. [Register](ROADMAP.md#the-decision-register)
   - **W33's verdict**, after the same-atmosphere check passed (W35).
     *Answered* 2026-09-24: W33 stays a failure. The default at M5 stays open
     (above).
@@ -188,8 +190,10 @@ The list as it stood before this classification, kept as written:
         stage 1. [design/RAIN_SNOW_TAGS.md](design/RAIN_SNOW_TAGS.md)
       + **OD4's quantity:** an exact accumulator, per tag and per step, of the
         gross source into each energy source tag, carried through restarts,
-        as WP6 did for the ledgers. The process records' lower bound is the
-        interim until it lands.
+        as WP6 did for the ledgers. The process records' figure is the
+        interim until it lands. *Corrected after E84:* an estimate, not a
+        lower bound; a per-process comparison against the accumulator is
+        open on #115.
         [design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md)
       + **The WP4c gate's reading of OD3, confirmed:** part 1, the remainder
         above 0.02% of the water; part 2, `led_inc` per tag above 2% of the

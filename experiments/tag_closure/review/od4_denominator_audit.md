@@ -44,3 +44,6 @@ Whether the throughput is taken from the process records for the existing
 runs, as a lower bound, or from a new per-step accumulator in new runs.
 *Decided 2026-09-25:* an exact per-tag, per-step accumulator in new runs,
 carried through restarts. The process records' lower bound is the interim.
+*Corrected after E84 (2026-09-25):* that interim is an estimate, not a lower
+bound. On D4 it came out 6% above the exact accumulator; the direction of its
+error is not established, and a per-process comparison is open on #115.

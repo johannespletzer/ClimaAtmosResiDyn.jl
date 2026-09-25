@@ -147,7 +147,9 @@ until a RRTMGP or a 0M case with copies runs.
     script takes the process records of the four source processes, whose
     hourly samples are net within each hour. That is a lower bound on the
     throughput, so each percentage is an upper bound, and a pass holds under
-    either source.
+    either source. *Corrected after E84 (2026-09-25):* on D4 the records'
+    figure came out 6% above the exact throughput. So it is not a lower
+    bound, and these percentages are estimates, not upper bounds.
   - **Eligibility**, OD3's comparator rows, for each copies run: its own
     closure residual over the window at most 0.02% of the throughput (a tenth
     of the energy closure row, as the water row is a tenth of its budget);
@@ -163,7 +165,7 @@ until a RRTMGP or a 0M case with copies runs.
 
 **Expectation, not a pass criterion.** G4.15's default-mode D4 day repaired
 6.9% of this throughput a day (its `repair_moved`, against the process
-records' lower bound). If the copies repair as much, they fail the repair row
+records' figure, then taken as a lower bound; E84 found it is not one). If the copies repair as much, they fail the repair row
 with or without the mirrors, and the comparison stays "not eligible". The
 mirrors would then show in `e_src_copy_res`, not in eligibility.
 
@@ -177,7 +179,9 @@ day.
 
 E83 found the copies not eligible on the process records' lower bound of
 OD4's throughput, so its percentages are upper bounds. The exact throughput
-(#115) can only lower them. The rerun repeats section 5's five runs with
+(#115) can only lower them. *Corrected after E84:* the records' figure was
+6% above the exact throughput, so it was not a lower bound, and the rerun's
+percentages came out higher, not lower. The rerun repeats section 5's five runs with
 `energy_source_tag_ledger_per_tag: true` (configs `g411x_d4_*`), on a run
 tree with #114 and #115 (the "before" run on #115 alone). The rules,
 thresholds and window are section 5's, unchanged; the only change is the
