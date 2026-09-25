@@ -1389,8 +1389,8 @@ the closure residual was 2.1e-4 of the partitioned energy with the
 microphysics explicit, 1.5e-6 with it implicit, and 4.9e-12 with ten Newton
 iterations (FINDINGS E80 on the record branch). 2M and P3 sediment too, and
 nothing has measured them, so they are refused until a run does. The water
-tags lagged in the same way under 1M and now carry the parent's cross blocks.
-The energy tags do not yet.
+tags lag in the same way under 1M. PR #105 proposes the analogous cross
+blocks for them, and PR #113 the energy tags' own.
 
 The check concerns only the tags' own keys. Without the tags, with another
 transport, with 0M, or with the microphysics implicit, it does nothing.

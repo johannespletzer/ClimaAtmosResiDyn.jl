@@ -590,10 +590,11 @@ lands in `e_src_res`. On the tag-closure experiments' DYCOMS RF02 EDMF column,
 with one Newton iteration, the closure residual after an hour was 2.1e-4 of
 the partitioned energy with the microphysics explicit and 1.5e-6 with it
 implicit. With ten iterations it was 4.9e-12. 2M and P3 sediment too, and no
-run has measured them, so they are refused until one does. The water tags
-lagged in the same way under 1M and now carry the parent's cross blocks. Until the energy tags carry
-them too, the key is an override for development runs, and the model warns
-when it is used. The refusal concerns only the tags' keys. Without the tags, or
+run has measured them, so they are refused until one does. The water tags lag
+in the same way under 1M. PR #105 proposes the analogous cross blocks for
+them, and PR #113 the energy tags' own. Until the energy tags carry them, the
+key is an override for development runs, and the model warns when it is
+used. The refusal concerns only the tags' keys. Without the tags, or
 with another transport, the configuration runs as before.
 
 ```yaml
