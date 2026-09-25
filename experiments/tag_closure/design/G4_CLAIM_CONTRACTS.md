@@ -18,11 +18,12 @@ verdict is *pass*, *fail* or *not assessable*, as the contract says.
     qualification run sets (the owner, 2026-09-24).
   - **Θi, interim:** the process records' `Σ ∫ρ|Δe_prc|` over the output
     intervals and the source processes, without `precipitation`.
-  - **Label.** Every percentage names its scale: "of Θx", or "of Θi
-    (interim)". The register's word for the interim, *upper bound*, is not
-    used: on D4 a percentage on Θi is 6% below the exact one
-    ([review/od4_restatement.md](../review/od4_restatement.md), section 1). The
-    least favourable reading is quoted beside it. This is an owner question.
+  - **Label.** Every percentage names its scale: "of Θx", or "of Θi (an
+    estimate)". A value on Θi is not called a bound. On D4 the two scales
+    differ by 6%, and which is off is not established (E84;
+    [review/od4_restatement.md](../review/od4_restatement.md), section 1). So
+    Θx is used wherever a run has it, and a verdict within 10% of its
+    threshold on Θi waits for a run with Θx.
   - **Window.** OD2's windows. A window's Θ is the difference of two audit
     rows. A state quantity, such as the gross residual, is taken as its change
     over the window, as `g411_eligibility.py` does, and its value at the
@@ -110,7 +111,7 @@ repair's ledgers sum to zero over the partition in each cell).
 
  1. Each contract row that applies: pass, fail or not assessable, with the
     missing prerequisite named.
- 2. Every energy percentage with its scale (Θx, or Θi interim) and window.
+ 2. Every energy percentage with its scale (Θx, or Θi as an estimate) and window.
  3. Tags, records and the ledger in separate tables. A number from one is
     never presented as evidence for another's claim.
  4. The least favourable number where there is a choice, and the bound
@@ -120,6 +121,6 @@ repair's ledgers sum to zero over the partition in each cell).
 
 ## 6. Owner questions
 
-The three of [review/od4_restatement.md](../review/od4_restatement.md),
-section 5: the interim's label, an energy aggregate-intervention threshold,
-and the per-tag intervention row for energy.
+The two of [review/od4_restatement.md](../review/od4_restatement.md),
+section 5: the interim's status in the register, and an energy
+aggregate-intervention threshold.

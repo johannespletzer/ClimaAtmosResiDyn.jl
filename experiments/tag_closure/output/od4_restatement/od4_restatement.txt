@@ -44,7 +44,7 @@ E83 | default: gross at 24 h | g411_d4_default | 24 h | 267 | — | 2.21e+07 | �
 ## 3. E83 on both scales, window 1 to 24 h (OD2's first hour)
    g411x_d4_default: own 8.224e-06 of Θi, repair 6.903e-02 a day of Θi; own 8.716e-06 of Θx, repair 7.316e-02 a day of Θx
    g411x_d4_copies: own 1.104e-05 of Θi, repair 2.932e-02 a day of Θi; own 1.170e-05 of Θx, repair 3.107e-02 a day of Θx
-   g411x_d4_copies_before: not finished or not present
+   g411x_d4_copies_before: own 1.161e-05 of Θi, repair 2.566e-02 a day of Θi; own 1.230e-05 of Θx, repair 2.718e-02 a day of Θx
    g411x_d4_copies_dt60: own 2.709e-06 of Θi, repair 1.914e-02 a day of Θi; own 2.845e-06 of Θx, repair 2.011e-02 a day of Θx
    g411_d4_copies: own 1.104e-05 of Θi, repair 2.932e-02 a day of Θi
    g411_d4_copies_before: own 1.161e-05 of Θi, repair 2.566e-02 a day of Θi
