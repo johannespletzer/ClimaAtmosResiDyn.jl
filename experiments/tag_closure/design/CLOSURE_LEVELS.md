@@ -72,9 +72,11 @@ B11 names V2 and V3. V2 is the production sphere under `enthalpy_increment`
     7.6e-12 under `enthalpy_increment` in 90 days (E81), and 5.5e-2 under
     `tracer` with copies.
 
-**In OD4 units.** `gross_over_throughput` does not depend on the offset, as
-`gross_relative` does (E15). The largest over the healthy runs, on Θx where a
-run has it and on Θi otherwise:
+**In OD4 units.** `gross_over_throughput`'s scale is set by the sources, not
+by the offset as `gross_relative`'s is (E15). The residual itself still grows
+with the offset (E71: 509 against 267 J/m² at 2c), so the ratio is not
+offset-free either; a level states its `c`. The largest over the healthy runs,
+on Θx where a run has it and on Θi otherwise:
 
   - `enthalpy_increment`: 4.5e-3, in V2's first two hours; 1.6e-3 at day 1 and
     7.9e-4 at day 10. The ratio falls as the run goes on, since the
