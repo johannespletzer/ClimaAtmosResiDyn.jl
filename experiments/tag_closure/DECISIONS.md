@@ -72,6 +72,20 @@ record; the answered and superseded entries are in the next section.
       + once G4.6 measures C4, share it as transport, or document its size.
 
     [G4T](G4_TODO.md)
+  - **WP4b stage 1's points** (raised 2026-09-25 with #121 and W43; the
+    design note's section 17):
+      + whether each gross flow carrying its donor's composition over the
+        step stands as the reading of section 9;
+      + the rain and snow parts get no increment follower, since their
+        implicit terms are their species' by construction, while section 6's
+        table lists a mismatch for them;
+      + the audit is always on with the key: should it get its own sub-key?
+      + the hyperdiffusion correction is built, but no run exercises it yet;
+      + `follow_water_tag_precipitation!` in the limiters and constraints is
+        not in the parent-budget coverage registry (it writes tag fields
+        only).
+
+    [G3T](G3_TODO.md)
 
 ## Answered or superseded, moved from the waiting list (2026-09-25)
 
