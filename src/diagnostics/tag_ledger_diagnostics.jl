@@ -66,6 +66,16 @@ function compute_tag_ledger_colgross!(out, state, cache, name)
     return result
 end
 
+# The parent's negative water ledger (known issue 7), per volume, from the
+# Float64 cache: its time integral, or its count of steps with negative water.
+function compute_negative_water_ledger!(out, state, cache, name)
+    ledger = cache.tagging.tag_ledger_steps.negative_water
+    ᶜfield = getproperty(ledger, name)
+    result = isnothing(out) ? similar(state.c.ρ) : out
+    @. result = ᶜfield
+    return result
+end
+
 # What a state ledger's writers attempted, per unit mass (WP6, step 3).
 function compute_tag_ledger_attempted!(out, state, cache, name)
     ᶜattempted = getproperty(cache.tagging.tag_ledger_steps.attempted, name)
@@ -102,6 +112,15 @@ state ledger:
 
 The grosses are carried through a restart by the checkpoint (WP6, step 3).
 See `tag_ledger_step_cache`.
+
+With water tags, also the parent's negative water ledger (known issue 7; see
+`negative_water_ledger_cache`), which no default output writes:
+
+  - `q_tag_negative_integral`: the sum over the accepted steps of
+    `max(-ρq_tot, 0) Δt`, in kg s m⁻³. Its volume integral, in kg s, is the
+    audit's `negative_water_integral`;
+  - `q_tag_negative_events`: the number of accepted steps whose end state had
+    `ρq_tot < 0` in the cell.
 """
 function register_tag_ledger_diagnostics!(model::AtmosModel)
     names = tag_state_ledger_names(model)
@@ -116,6 +135,33 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
         delete!(ALL_DIAGNOSTICS, "$(name)_gross")
         delete!(ALL_DIAGNOSTICS, "$(name)_colgross")
         delete!(ALL_DIAGNOSTICS, "$(name)_attempted")
+    end
+    delete!(ALL_DIAGNOSTICS, "q_tag_negative_integral")
+    delete!(ALL_DIAGNOSTICS, "q_tag_negative_events")
+    if !isnothing(model.water_tagging_model)
+        add_diagnostic_variable!(;
+            short_name = "q_tag_negative_integral",
+            units = "kg s m^-3",
+            long_name = "Time Integral of the Parent's Negative Water",
+            comments = "The sum over the accepted steps of max(-ρq_tot, 0) " *
+                       "times the step, per unit volume, since the start of " *
+                       "the run and carried through a restart. Its volume " *
+                       "integral, in kg s, is the water audit's " *
+                       "negative_water_integral. Zero wherever q_tot was " *
+                       "never negative at the end of a step (known issue 7).",
+            compute! = (out, u, p, t) ->
+                compute_negative_water_ledger!(out, u, p, :ᶜamount),
+        )
+        add_diagnostic_variable!(;
+            short_name = "q_tag_negative_events",
+            units = "1",
+            long_name = "Steps with Negative Parent Water",
+            comments = "The number of accepted steps whose end state had " *
+                       "ρq_tot < 0 in this cell, since the start of the run " *
+                       "and carried through a restart (known issue 7).",
+            compute! = (out, u, p, t) ->
+                compute_negative_water_ledger!(out, u, p, :ᶜevents),
+        )
     end
     # Each tag's own ledgers are named by the tags of an earlier model too.
     for short_name in collect(keys(ALL_DIAGNOSTICS))

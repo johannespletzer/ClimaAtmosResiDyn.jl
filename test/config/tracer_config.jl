@@ -912,6 +912,49 @@ end
     # `Float32(1e-4) != Float64(1e-4)`.
     @test checks.energy.tolerance isa eltype(config)
     @test checks.energy.tolerance == eltype(config)(1.0e-4)
+    # Only water reads the parent's negative water, at the contract's level by
+    # default (known issue 7).
+    @test checks.water.negative_water_void_above ==
+          eltype(config)(CA.DEFAULT_NEGATIVE_WATER_VOID_ABOVE) ==
+          eltype(config)(1.0e-4)
+    @test isnothing(checks.energy.negative_water_void_above)
+
+    # The water block's `negative_water_void_above`: its default, a level of
+    # its own, zero, and `~`, which switches it off. A negative level is
+    # refused, and so is the key in a block whose parent is not water.
+    water_check(spec) = CA.closure_check_from_config(
+        spec,
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
+        default_void_above = voids.water,
+        negative_water = true,
+    )
+    @test water_check(Dict{String, Any}()).negative_water_void_above ==
+          FT(1.0e-4)
+    @test water_check(
+        Dict{String, Any}("negative_water_void_above" => 1.0e-3),
+    ).negative_water_void_above == FT(1.0e-3)
+    @test water_check(
+        Dict{String, Any}("negative_water_void_above" => 0.0),
+    ).negative_water_void_above == FT(0)
+    @test isnothing(
+        water_check(
+            Dict{String, Any}("negative_water_void_above" => nothing),
+        ).negative_water_void_above,
+    )
+    @test_throws r"`negative_water_void_above` must not be negative" water_check(
+        Dict{String, Any}("negative_water_void_above" => -1.0e-4),
+    )
+    @test isnothing(bare.negative_water_void_above)
+    @test_throws r"does not take `negative_water_void_above`" CA.closure_check_from_config(
+        Dict{String, Any}("negative_water_void_above" => 1.0e-4),
+        "`energy_closure_check`",
+        FT;
+        default_tolerance = tolerances.energy,
+        default_abort_above = aborts.energy,
+    )
 end
 
 @testset "Closure checks refuse what they cannot compute" begin
@@ -1272,7 +1315,8 @@ end
 end
 
 # Known issue 7: past the void level the check warns once and marks every later
-# row void, and the run goes on. Only an explicit `abort_above` ends it.
+# row `closure_void`, and the run goes on. Only an explicit `abort_above` ends
+# it.
 @testset "Closure past the void level" begin
     CC = CA.ClimaCore
     space = CC.CommonSpaces.ColumnSpace(
@@ -1325,8 +1369,8 @@ end
     # warning is not repeated.
     Y.c.ρq_tag_a .= 1
     @test_logs check!(dir, voided)
-    @test void_column(dir) == ["void", "0", "1", "1"]
-    # Without a void level the table has no `void` column.
+    @test void_column(dir) == ["closure_void", "0", "1", "1"]
+    # Without a void level the table has no `closure_void` column.
     plain = mktempdir()
     check!(plain, Ref(false); void_above = nothing)
     @test !occursin("void", first(readlines(CA.tag_closure_path(plain, "water"))))
@@ -1350,10 +1394,347 @@ end
         nonpositive_mass = 0.0,
         nonpositive_mass_fraction = 0.0,
     )
-    CA.write_tag_audit!(audit_dir, 0.0, "water", audit; void = true)
+    CA.write_tag_audit!(audit_dir, 0.0, "water", audit; closure_void = true)
     audit_rows = readlines(CA.tag_audit_path(audit_dir, "water"))
-    @test endswith(audit_rows[1], ",nonpositive_mass_fraction,void")
+    @test endswith(audit_rows[1], ",nonpositive_mass_fraction,closure_void")
     @test endswith(audit_rows[2], ",1")
+
+    # The flags go through a checkpoint (the owner's review of #112). The cache
+    # holds one flag per tag family the model has. The stand-ins for the models
+    # only need to be there.
+    atmos = (;
+        water_tagging_model = :water,
+        tagging_model = nothing,
+        energy_source_tagging_model = :energy_source,
+    )
+    flags = CA.tag_closure_void_flags(atmos)
+    @test keys(flags) == (:water, :energy_source)
+    @test !flags.water[] && !flags.energy_source[]
+    # The callback passes the family's flag from `p.tagging`.
+    @test CA.tag_closure_voided((; tagging = (; closure_void = flags)), :water) ===
+          flags.water
+    flags.water[] = true
+    context = ClimaComms.SingletonCommsContext()
+    checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(checkpoint, context) do writer
+        CA.write_tag_closure_void_attributes!(
+            writer.file,
+            (; closure_void = flags),
+        )
+    end
+    # A restart reads them back, and says which checks restart as void.
+    restored = CA.tag_closure_void_flags(atmos)
+    @test_logs (:warn, r"water tags passed their `void_above` level") CA.restore_tag_closure_void!(
+        (; closure_void = restored),
+        checkpoint,
+        context,
+    )
+    @test restored.water[]
+    @test !restored.energy_source[]
+    # The first row after the restart is void although the partition is closed,
+    # and it does not warn again.
+    Y.c.ρq_tag_a .= 1
+    after_restart = mktempdir()
+    @test_logs check!(after_restart, restored.water)
+    @test void_column(after_restart) == ["closure_void", "1"]
+    # A checkpoint written before the flags were recorded restarts as not void,
+    # with a warning.
+    old_checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(_ -> nothing, old_checkpoint, context)
+    stale = CA.tag_closure_void_flags(atmos)
+    stale.water[] = true
+    @test_logs (:warn, r"written before the closure checks recorded") CA.restore_tag_closure_void!(
+        (; closure_void = stale),
+        old_checkpoint,
+        context,
+    )
+    @test !stale.water[]
+    @test !stale.energy_source[]
+    # Without tags there is nothing to write or read back.
+    @test isnothing(CA.write_tag_closure_void_attributes!(nothing, nothing))
+    @test isnothing(CA.restore_tag_closure_void!(nothing, checkpoint, context))
+end
+
+# Known issue 7, rev. 2's contract row "Parent validity: negative water": the
+# water check reads the parent's own negative water from the raw `ρq_tot`, and
+# marks its rows `negative_water_void` past the level. The ledger adds it up
+# after every accepted step, so that the checks miss nothing between them.
+@testset "The parent's negative water" begin
+    CC = CA.ClimaCore
+    space = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CC.CommonSpaces.CellCenter(),
+    )
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(space),
+            NamedTuple{(:ρ, :ρq_tot, :ρq_tag_a), NTuple{3, FT}},
+        ),
+    )
+    Y.c.ρ .= 1
+    Δz = FT(250)
+    # Four cells of 250 m. The third holds -0.5, the others 1.
+    positive = FT[1, 1, 1, 1]
+    one_negative = FT[1, 1, -0.5, 1]
+    set_parent!(values) = (parent(Y.c.ρq_tot) .= values; Y)
+    p = (;
+        scratch = (;
+            ᶜtemp_scalar = zero(Y.c.ρ),
+            ᶜtemp_scalar_2 = zero(Y.c.ρ),
+        ),
+        tagging = (; ᶜwater_parent = zero(Y.c.ρ)),
+    )
+
+    # The ratio: 0 on a positive column, and N / ∫ρq_tot with one negative
+    # cell, N = 250 × 0.5 = 125 and ∫ρq_tot = 250 × 2.5 = 625.
+    @test CA.parent_negative_water(set_parent!(positive), p).relative == 0
+    water = CA.parent_negative_water(set_parent!(one_negative), p)
+    @test water.negative ≈ Δz * FT(0.5) rtol = 4 * eps(FT)
+    @test water.total ≈ Δz * FT(2.5) rtol = 4 * eps(FT)
+    @test water.relative ≈ FT(0.2) rtol = 8 * eps(FT)
+    # Under option C the closure's parent is the target, `max(ρq_tot, 0)`,
+    # whose negative part is zero. Read from it, the ratio would be 0.
+    ᶜtarget = CA.water_closure_parent(Y, p)
+    @test sum(@. -CA.water_tag_negative_part(ᶜtarget)) == 0
+    # The guard: no scale where the parent's water is zero or less in all.
+    @test CA.negative_water_relative(FT(0), FT(0)) == 0
+    @test CA.negative_water_relative(FT(1), FT(0)) == Inf
+    @test CA.negative_water_relative(FT(1), FT(-2)) == Inf
+    @test CA.negative_water_relative(FT(1), FT(4)) == FT(0.25)
+
+    # The audit's non-positive mass reads the raw parent too:
+    # Σ|min(ρq_tot, 0)| dV, not zero. At 49d29435 it read the target.
+    Y.c.ρq_tag_a .= max.(Y.c.ρq_tot, 0)
+    audit = CA.tag_audit(
+        Y,
+        p,
+        CA.water_closure_parent,
+        (:ρq_tag_a,),
+        FT(3) * Δz,
+    )
+    @test audit.nonpositive_mass ≈ Δz * FT(0.5) rtol = 4 * eps(FT)
+    @test audit.nonpositive_mass > 0
+    closure =
+        CA.tag_closure(Y, p, CA.water_closure_parent, (:ρq_tag_a,))
+    @test closure.nonpositive_fraction == FT(0.25)
+    @test closure.gross_relative == 0
+
+    # The check, as the water family runs it. `table_column` reads a column of
+    # a table by name.
+    function table_column(path, name)
+        header, rows... = readlines(path)
+        index = findfirst(==(name), split(header, ","))
+        isnothing(index) && return nothing
+        return map(row -> split(row, ",")[index], rows)
+    end
+    integrator(t) = (; u = Y, p, t)
+    function check!(dir, t, negative_water; audit = false)
+        Y.c.ρq_tag_a .= max.(Y.c.ρq_tot, 0)
+        return CA.tag_closure_callback!(
+            integrator(t),
+            dir,
+            "water",
+            CA.water_closure_parent,
+            (:ρq_tag_a,),
+            nothing,
+            nothing,
+            audit;
+            negative_water,
+        )
+    end
+    level = FT(1.0e-4)
+    dir = mktempdir()
+    voided = Ref(false)
+    flag = (; void_above = level, voided, ledger = nothing)
+    closure_table = CA.tag_closure_path(dir, "water")
+    # Positive: 0. Negative past the level: 1, with one warning. Positive
+    # again: still 1, and no second warning.
+    set_parent!(positive)
+    @test_logs check!(dir, 0.0, flag)
+    set_parent!(one_negative)
+    @test_logs (:warn, r"above\s+`negative_water_void_above`") match_mode =
+        :any check!(dir, 10.0, flag)
+    @test voided[]
+    set_parent!(positive)
+    @test_logs check!(dir, 20.0, flag)
+    @test table_column(closure_table, "negative_water_void") == ["0", "1", "1"]
+    relatives = parse.(FT, table_column(closure_table, "negative_water_relative"))
+    @test relatives[1] == 0 && relatives[3] == 0
+    @test relatives[2] ≈ FT(0.2) rtol = 8 * eps(FT)
+    # The contract's level is a mass fraction: a smaller negative part stays
+    # below it. 250 × 1e-5 is 3.3e-6 of the water, not void.
+    below = mktempdir()
+    below_voided = Ref(false)
+    set_parent!(FT[1, 1, -1.0e-5, 1])
+    check!(below, 0.0, (; void_above = level, voided = below_voided, ledger = nothing))
+    @test !below_voided[]
+    @test table_column(CA.tag_closure_path(below, "water"), "negative_water_void") ==
+          ["0"]
+    # `~` drops both columns, and the audit's flag.
+    off = mktempdir()
+    set_parent!(one_negative)
+    check!(off, 0.0, (; void_above = nothing, voided = Ref(false), ledger = nothing))
+    @test !occursin("negative_water", first(readlines(CA.tag_closure_path(off, "water"))))
+    # Without the key the table is as before, column for column.
+    header_off = first(readlines(CA.tag_closure_path(off, "water")))
+    @test header_off ==
+          "time,total,tagged,residual,relative,gross_residual," *
+          "gross_relative,scale,nonpositive_fraction"
+
+    # The ledger: each accepted step adds max(-ρq_tot, 0) Δt and one event per
+    # negative cell, against a hand computation.
+    ledger = CA.negative_water_ledger_cache(Y, :water)
+    @test isnothing(CA.negative_water_ledger_cache(Y, nothing))
+    set_parent!(one_negative)
+    CA.accumulate_negative_water!(ledger, Y.c.ρq_tot, 10.0)
+    @test parent(ledger.ᶜamount)[:] == [0, 0, 5, 0]
+    @test parent(ledger.ᶜevents)[:] == [0, 0, 1, 0]
+    CA.accumulate_negative_water!(ledger, Y.c.ρq_tot, 5.0)
+    @test parent(ledger.ᶜamount)[:] == [0, 0, 7.5, 0]
+    @test parent(ledger.ᶜevents)[:] == [0, 0, 2, 0]
+    @test eltype(parent(ledger.ᶜamount)) == Float64
+    # A clean step, including a signed zero, leaves both bit for bit.
+    amount = copy(parent(ledger.ᶜamount))
+    events = copy(parent(ledger.ᶜevents))
+    set_parent!(FT[1, -0.0, 0, 1])
+    CA.accumulate_negative_water!(ledger, Y.c.ρq_tot, 10.0)
+    @test isequal(parent(ledger.ᶜamount), amount)
+    @test isequal(parent(ledger.ᶜevents), events)
+    @test isnothing(CA.accumulate_negative_water!(nothing, Y.c.ρq_tot, 10.0))
+
+    # The audit's columns of the ledger: the first row has an empty interval,
+    # a clean interval changes by exactly 0, and a step with negative water
+    # changes the integral by 250 × 0.5 × 10 kg s and the count by one.
+    fresh = CA.negative_water_ledger_cache(Y, :water)
+    audit_dir = mktempdir()
+    audit_voided = Ref(false)
+    ledger_check = (; void_above = level, voided = audit_voided, ledger = fresh)
+    set_parent!(positive)
+    check!(audit_dir, 0.0, ledger_check; audit = true)
+    CA.accumulate_negative_water!(fresh, Y.c.ρq_tot, 10.0)
+    check!(audit_dir, 10.0, ledger_check; audit = true)
+    set_parent!(one_negative)
+    CA.accumulate_negative_water!(fresh, Y.c.ρq_tot, 10.0)
+    @test_logs (:warn,) match_mode = :any check!(
+        audit_dir,
+        20.0,
+        ledger_check;
+        audit = true,
+    )
+    audit_table = CA.tag_audit_path(audit_dir, "water")
+    column(name) = parse.(Float64, table_column(audit_table, name))
+    @test column("negative_water_interval")[1:2] == [0, 0]
+    @test column("negative_water_interval")[3] ≈ 1250 rtol = 1.0e-14
+    @test column("negative_water_integral") ≈ [0, 0, 1250] rtol = 1.0e-14
+    @test column("negative_water_interval_events")[1:2] == [0, 0]
+    @test column("negative_water_interval_events")[3] ≈ 1 rtol = 1.0e-12
+    # The interval's mean, (1250 kg s / 10 s) over ∫ρq_tot = 625 kg.
+    @test column("negative_water_interval_mean_relative")[3] ≈ 0.2 rtol = 1.0e-12
+    @test table_column(audit_table, "negative_water_void") == ["0", "0", "1"]
+    # The flag is the audit's last column, after `closure_void` where set.
+    @test endswith(
+        first(readlines(audit_table)),
+        ",negative_water_interval_mean_relative," *
+        "negative_water_interval_events,negative_water_void",
+    )
+    # With `~` the audit keeps the ledger and drops only the flag.
+    audit_off = mktempdir()
+    check!(
+        audit_off,
+        0.0,
+        (; void_above = nothing, voided = Ref(false), ledger = fresh);
+        audit = true,
+    )
+    audit_off_header = first(readlines(CA.tag_audit_path(audit_off, "water")))
+    @test occursin("negative_water_integral", audit_off_header)
+    @test !occursin("negative_water_void", audit_off_header)
+
+    # The flag goes through a checkpoint, as `closure_void` does. Only water
+    # has one.
+    atmos = (;
+        water_tagging_model = :water,
+        tagging_model = nothing,
+        energy_source_tagging_model = :energy_source,
+    )
+    flags = CA.negative_water_void_flags(atmos)
+    @test keys(flags) == (:water,)
+    @test isempty(
+        CA.negative_water_void_flags(merge(atmos, (; water_tagging_model = nothing))),
+    )
+    @test CA.negative_water_voided(
+        (; tagging = (; negative_water_void = flags)),
+        :water,
+    ) ===
+          flags.water
+    flags.water[] = true
+    context = ClimaComms.SingletonCommsContext()
+    checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(checkpoint, context) do writer
+        CA.write_negative_water_void_attributes!(
+            writer.file,
+            (; negative_water_void = flags),
+        )
+    end
+    restored = CA.negative_water_void_flags(atmos)
+    @test_logs (:warn, r"passed `negative_water_void_above`") CA.restore_negative_water_void!(
+        (; negative_water_void = restored),
+        checkpoint,
+        context,
+    )
+    @test restored.water[]
+    # The first row after the restart is void although the parent is positive.
+    set_parent!(positive)
+    after_restart = mktempdir()
+    @test_logs check!(
+        after_restart,
+        3600.0,
+        (; void_above = level, voided = restored.water, ledger = nothing),
+    )
+    @test table_column(
+        CA.tag_closure_path(after_restart, "water"),
+        "negative_water_void",
+    ) ==
+          ["1"]
+    # A checkpoint without the flag restarts at 0, with a warning.
+    old_checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(_ -> nothing, old_checkpoint, context)
+    stale = CA.negative_water_void_flags(atmos)
+    stale.water[] = true
+    @test_logs (:warn, r"written before the negative\s+water flag") CA.restore_negative_water_void!(
+        (; negative_water_void = stale),
+        old_checkpoint,
+        context,
+    )
+    @test !stale.water[]
+    @test isnothing(CA.write_negative_water_void_attributes!(nothing, nothing))
+    @test isnothing(CA.restore_negative_water_void!(nothing, checkpoint, context))
+
+    # The ledger goes through a checkpoint as the tags' other accumulators do.
+    # A checkpoint without it restarts it at zero, with a warning, and reads
+    # the others as before.
+    tagging(ledger) = (;
+        tag_ledger_steps = (; ledgers = (;), attempted = (;), negative_water = ledger),
+    )
+    @test first.(CA.tag_ledger_checkpoint_fields(tagging(ledger))) ==
+          ["tag_ledger.negative_water.amount", "tag_ledger.negative_water.events"]
+    ledger_checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(ledger_checkpoint, context) do writer
+        CA.write_tag_ledger_checkpoint!(writer, tagging(ledger))
+    end
+    back = CA.negative_water_ledger_cache(Y, :water)
+    CA.restore_tag_ledger_checkpoint!(tagging(back), ledger_checkpoint, context)
+    @test isequal(parent(back.ᶜamount), parent(ledger.ᶜamount))
+    @test isequal(parent(back.ᶜevents), parent(ledger.ᶜevents))
+    empty_ledger = CA.negative_water_ledger_cache(Y, :water)
+    @test_logs (:warn, r"before the parent's\s+negative water ledger") CA.restore_tag_ledger_checkpoint!(
+        tagging(empty_ledger),
+        old_checkpoint,
+        context,
+    )
+    @test all(iszero, parent(empty_ledger.ᶜamount))
 end
 
 @testset "Audit table" begin

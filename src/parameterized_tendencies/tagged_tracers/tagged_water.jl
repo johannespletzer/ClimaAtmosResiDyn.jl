@@ -347,6 +347,57 @@ function water_closure_parent(Y, p)
     return ᶜparent
 end
 
+# The closure's `nonpositive_fraction` and the audit's `nonpositive_mass` read
+# the raw parent, since the partition's target is never negative.
+closure_signed_parent(Y, p, ::typeof(water_closure_parent)) = Y.c.ρq_tot
+
+"""
+    DEFAULT_NEGATIVE_WATER_VOID_ABOVE
+
+Default `negative_water_void_above` of the water closure check: `1e-4`. Past
+it, the parent's negative water, `∫max(-ρq_tot, 0) dV`, is more than this
+fraction of the parent's water, `∫ρq_tot dV`, and the check marks this row and
+every later row `negative_water_void`. It is the tag-closure contract's row
+"Parent validity: negative water" (the record branch's ROADMAP, approved
+2026-09-24): above it a run's water results are not scored.
+"""
+const DEFAULT_NEGATIVE_WATER_VOID_ABOVE = 1.0e-4
+
+"""
+    parent_negative_water(Y, p)
+
+The parent's negative water, from the raw `ρq_tot` (known issue 7):
+
+  - `negative = ∫max(-ρq_tot, 0) dV`, which is `Σ ρ max(-q_tot, 0) dV`, in kg;
+  - `total = ∫ρq_tot dV`, in kg;
+  - `relative = negative / total` ([`negative_water_relative`](@ref)).
+
+Not the partition's target `max(ρq_tot, 0)`, whose negative part is zero by
+construction. `negative` is the integral of `ρ q_tag_negative` up to sign.
+Uses `p.scratch.ᶜtemp_scalar`. `Base.sum` reduces across processes, so this
+is collective: every process must call it.
+"""
+function parent_negative_water(Y, p)
+    ᶜρq_tot = Y.c.ρq_tot
+    ᶜtmp = p.scratch.ᶜtemp_scalar
+    @. ᶜtmp = -water_tag_negative_part(ᶜρq_tot)
+    negative = sum(ᶜtmp)
+    total = sum(ᶜρq_tot)
+    return (; negative, total, relative = negative_water_relative(negative, total))
+end
+
+"""
+    negative_water_relative(negative, total)
+
+`negative / total`, guarded: `0` where `negative` is zero, whatever `total` is,
+and `Inf` where `negative` is positive and `total` is not. A parent whose
+water is zero or less in all has no scale to measure its negative part
+against, and a run in that state is past any level.
+"""
+negative_water_relative(negative, total) =
+    iszero(negative) ? zero(negative) :
+    total > zero(total) ? negative / total : oftype(negative, Inf)
+
 """
     snapshot_tagged_ρq_tot!(p, Yₜ)
 

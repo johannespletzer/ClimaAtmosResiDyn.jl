@@ -116,6 +116,14 @@ Two consequences worth stating:
     closure check compares the partition with the non-negative part. Where
     the parent is never negative, nothing changes, bit for bit.
 
+    That closure can pass while the parent is negative. So the water closure
+    check also reads the parent's own negative water, from the raw
+    ``\rho q_\mathrm{tot}``: `negative_water_relative` on every row, and the
+    flag `negative_water_void` past `negative_water_void_above`, `1e-4` by
+    default. A ledger in the cache adds the negative water up after every
+    accepted step, for the audit. See "The parent's negative water" in
+    `tracer_configuration.md`.
+
 ### Taggable processes
 
 | Group     | `source` label          | Process                                                             |
@@ -372,6 +380,7 @@ set.
   - `qv_tag_<name>`: tagged **vapor**, ``q_\mathrm{tag} \, q_v / q_t``;
   - `q_tag_res`: the closure residual ``(\max(\rho q_\mathrm{tot}, 0) - \sum_i \rho q_{\mathrm{tag},i})/\rho``, summed over the pure region tags. The tags partition the parent's non-negative water;
   - `q_tag_negative`: the parent's negative water, ``\min(\rho q_\mathrm{tot}, 0)/\rho``, the remainder the partition leaves. `q_tag_res`, `q_tag_negative` and the region tags add up to ``q_\mathrm{tot}``;
+  - `q_tag_negative_integral` and `q_tag_negative_events`: the parent's negative water ledger, the sum over the accepted steps of ``\max(-\rho q_\mathrm{tot}, 0) \, \Delta t`` in kg s m⁻³, and the number of steps with ``\rho q_\mathrm{tot} < 0``, per cell, since the start of the run and carried through a restart. Neither is in any default output;
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
     state constraints, cumulative since the start of the run and carried
     through a restart, so a budget over an interval is the difference of two
@@ -656,6 +665,11 @@ ClimaAtmos.water_tag_increment_ledger_variables
 ClimaAtmos.water_tag_extra_audit
 ClimaAtmos.TagLedgerView
 ClimaAtmos.set_tag_ledger_cadence!
+ClimaAtmos.DEFAULT_NEGATIVE_WATER_VOID_ABOVE
+ClimaAtmos.parent_negative_water
+ClimaAtmos.negative_water_relative
+ClimaAtmos.negative_water_ledger_cache
+ClimaAtmos.accumulate_negative_water!
 ClimaAtmos.tag_ledger_normalization
 ClimaAtmos.TAG_LEDGER_SMALL_TAG_BOUND
 ClimaAtmos.WATER_TAG_CHECKPOINT_VERSION

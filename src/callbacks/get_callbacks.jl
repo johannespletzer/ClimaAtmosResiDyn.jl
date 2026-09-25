@@ -779,14 +779,20 @@ by a quantity whose zero is a convention, so it is not comparable across runs
 that use different energy references.
 
 Each block also carries a `void_above` level, above which the check warns once
-and marks its rows void while the run goes on. Only water has a default one, for
-the same reason: see [`DEFAULT_CLOSURE_VOID_LEVELS`](@ref). An `abort_above`
+and marks its rows `closure_void` while the run goes on, also after a restart.
+Only water has a default one, for the same reason: see
+[`DEFAULT_CLOSURE_VOID_LEVELS`](@ref). An `abort_above`
 level ends the run instead, only where a user sets it: see
 [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref).
 
 Each block also carries an `audit` flag, off by default, which adds a second
 table splitting the residual into the parts that mean different things. See
 [`tag_audit`](@ref).
+
+The water block also carries `negative_water_void_above`, `1e-4` by default:
+the check reports the parent's own negative water, from the raw `ρq_tot`, and
+marks its rows `negative_water_void` past the level. See
+[`negative_water_rows`](@ref).
 """
 function default_model_callbacks(
     tagging::AtmosTagging;
@@ -813,6 +819,8 @@ function default_model_callbacks(
             config_key = "water_closure_check",
             tracer_key = "water_tracers",
             extra_audit = water_extra_audit(tagging.water_tagging_model),
+            # The parent's own negative water, from the raw `ρq_tot`.
+            reads_negative_water = true,
             scheduling...,
         )...,
         tag_closure_callback(
@@ -895,6 +903,7 @@ function tag_closure_callback(
     t_end,
     checkpoint_frequency,
     extra_audit = nothing,
+    reads_negative_water = false,
 )
     isnothing(tagging_model) && error(
         "`$config_key` is set but `$tracer_key` is not, so there are no tags \
@@ -925,9 +934,21 @@ function tag_closure_callback(
     # so that a row due at the same time already has the reference.
     spin_up = get(check, :spin_up, nothing)
     reference = isnothing(spin_up) ? nothing : Ref{Any}(nothing)
-    # Past the void level every later row is marked void (known issue 7).
+    # Past the void level every later row is marked `closure_void` (known
+    # issue 7). The flag lives in the cache, not here, so that a checkpoint
+    # carries it through a restart (`tag_closure_checkpoint.jl`).
     void_above = get(check, :void_above, nothing)
-    voided = Ref(false)
+    family_key = Symbol(family)
+    # The water check also reads the parent's negative water. Its flag lives in
+    # the cache for the same reason, and its ledger is the tags' (WP6).
+    negative_water_void_above = get(check, :negative_water_void_above, nothing)
+    negative_water(p) =
+        reads_negative_water ?
+        (;
+            void_above = negative_water_void_above,
+            voided = negative_water_voided(p, family_key),
+            ledger = negative_water_ledger(p.tagging),
+        ) : nothing
     affect!(integrator) = tag_closure_callback!(
         integrator,
         output_dir,
@@ -940,7 +961,8 @@ function tag_closure_callback(
         reference,
         extra_audit,
         void_above,
-        voided,
+        voided = tag_closure_voided(integrator.p, family_key),
+        negative_water = negative_water(integrator.p),
     )
     periodic = call_every_dt(affect!, period)
     isnothing(spin_up) && return (periodic,)

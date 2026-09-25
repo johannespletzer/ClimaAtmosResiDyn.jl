@@ -306,6 +306,11 @@ Cache entries used by tagged-tracer source attribution (stored as
     spatial mask of that tag's region, keyed like the state
     (`ρe_tag_<name>`). Masks are evaluated once here and never inside a
     per-timestep broadcast.
+  - `closure_void`: the closure checks' void flags, one per tag family (see
+    [`tag_closure_void_flags`](@ref)). They live here so that a checkpoint can
+    carry them through a restart.
+  - `negative_water_void`: the water closure check's negative water flag (see
+    [`negative_water_void_flags`](@ref)), here for the same reason.
 
 The buffer that [`snapshot_tagged_ρe_tot!`](@ref) records `Yₜ.c.ρe_tot` into
 lives in `p.scratch` instead (see [`tagging_scratch`](@ref)), because the
@@ -331,6 +336,8 @@ function tagging_cache(Y, atmos::AtmosModel)
         _or_empty(sources)...,
         # The per-step gross of the tags' state ledgers (WP6).
         tag_ledger_step_cache(Y, atmos)...,
+        closure_void = tag_closure_void_flags(atmos),
+        negative_water_void = negative_water_void_flags(atmos),
     )
 end
 _or_empty(::Nothing) = (;)
@@ -413,6 +420,18 @@ closure_parent(Y, p, total_name::Symbol) = getproperty(Y.c, total_name)
 closure_parent(Y, p, total_name) = total_name(Y, p)
 
 """
+    closure_signed_parent(Y, p, total_name)
+
+The field whose non-positive part a closure check reports: the parent itself,
+as `closure_parent` gives it, except where the tags partition only a
+part of it. The water tags partition `max(ρq_tot, 0)` (known issue 7, option
+C), which is never negative, so for them this is the raw `ρq_tot` (see
+`water_closure_parent`). Otherwise `nonpositive_mass` would be zero by
+construction.
+"""
+closure_signed_parent(Y, p, total_name) = closure_parent(Y, p, total_name)
+
+"""
     tag_closure(Y, p, total_name, tag_state_names)
 
 Global closure of one tag family: how much of the parent field its tags account
@@ -437,7 +456,8 @@ would pass silently at any residual. `∫|parent|` is positive whenever the fiel
 is not identically zero, and equals `total` wherever the parent is non-negative,
 so the water numbers are unchanged.
 
-`nonpositive_fraction` is the volume fraction where `parent ≤ 0`. It is zero for
+`nonpositive_fraction` is the volume fraction where `parent ≤ 0`, read from
+[`closure_signed_parent`](@ref): for water, the raw `ρq_tot`. It is zero for
 a well-posed run. Anything above zero says the shares are undefined somewhere,
 which the residual alone will not tell you: a set of complementary region tags
 can partition a negative parent exactly, giving perfect closure over a state
@@ -471,10 +491,13 @@ function tag_closure(Y, p, total_name, tag_state_names)
     scale = sum(ᶜtmp)
 
     # Volume where the parent is non-positive, and the total volume to make it a
-    # fraction. Reported directly, because closure cannot reveal it.
-    @. ᶜtmp = ifelse(ᶜparent <= zero(ᶜparent), one(ᶜparent), zero(ᶜparent))
+    # fraction. Reported directly, because closure cannot reveal it. For water
+    # the raw `ρq_tot`, not the partition's target; the two are non-positive
+    # in the same cells.
+    ᶜsigned = closure_signed_parent(Y, p, total_name)
+    @. ᶜtmp = ifelse(ᶜsigned <= zero(ᶜsigned), one(ᶜsigned), zero(ᶜsigned))
     nonpositive_volume = sum(ᶜtmp)
-    @. ᶜtmp = one(ᶜparent)
+    @. ᶜtmp = one(ᶜsigned)
     volume = sum(ᶜtmp)
 
     # The same subtraction as `e_tag_res` and `q_tag_res`, reduced to one
@@ -517,7 +540,7 @@ tag_closure_path(output_dir, family) =
 
 """
     write_tag_closure!(output_dir, t, family, closure; reference = nothing,
-                       void = nothing)
+                       closure_void = nothing, negative_water = nothing)
 
 Append one row to the closure table of `family`, creating it with a header if
 it does not exist yet. Called on the root process only.
@@ -527,9 +550,20 @@ residual at the spin-up once it is taken, and `nothing` before. The row then
 carries three more columns: that residual, the residual since, and the residual
 since relative to the scale. Before the reference is taken, they are `NaN`.
 
-A check with a void level passes `void`, a `Bool`: whether its residual has
-passed that level at this row or before. The row then ends with a `void` column,
-1 or 0. Without a void level, `nothing`, the table has no such column.
+A check with a void level passes `closure_void`, a `Bool`: whether its residual
+has passed that level at this row or before, in this run or before the
+checkpoint it restarted from. The row then ends with a `closure_void` column, 1
+or 0. Without a void level, `nothing`, the table has no such column.
+
+`closure_void` says only that the closure residual has passed `void_above`. It
+does not say that the parent is valid. The parent can go negative long before
+the residual passes the level. `nonpositive_fraction`, in the same row, reports
+that by volume, and `negative_water_relative` by mass.
+
+The water check passes `negative_water`, a `NamedTuple` of named columns that
+end the row: `negative_water_relative` and `negative_water_void` (see
+[`tag_closure_callback!`](@ref)). Without them, `nothing`, the table has no
+such columns.
 """
 function write_tag_closure!(
     output_dir,
@@ -537,7 +571,8 @@ function write_tag_closure!(
     family,
     closure;
     reference = nothing,
-    void = nothing,
+    closure_void = nothing,
+    negative_water = nothing,
 )
     path = tag_closure_path(output_dir, family)
     write_header = !isfile(path) || filesize(path) == 0
@@ -564,9 +599,13 @@ function write_tag_closure!(
             iszero(closure.scale) ? zero(since) : since / closure.scale
         values = (values..., at_spin_up, since, relative_since)
     end
-    if !isnothing(void)
-        header *= ",void"
-        values = (values..., Int(void))
+    if !isnothing(closure_void)
+        header *= ",closure_void"
+        values = (values..., Int(closure_void))
+    end
+    if !isnothing(negative_water) && !isempty(negative_water)
+        header *= "," * join(string.(keys(negative_water)), ",")
+        values = (values..., Tuple(negative_water)...)
     end
     open(path, "a") do io
         write_header && println(io, header)
@@ -604,7 +643,10 @@ separate reductions and each rounds on its own, so test them with a tolerance
 rather than for equality.
 
 `nonpositive_mass` is the mass where the parent is non-positive, the counterpart
-of the volume fraction [`tag_closure`](@ref) reports. The two answer different
+of the volume fraction [`tag_closure`](@ref) reports. It is read from
+[`closure_signed_parent`](@ref): for water, `∫|min(ρq_tot, 0)| dV` of the raw
+`ρq_tot`, not of the partition's target `max(ρq_tot, 0)`, which is never
+negative. The two answer different
 questions and can differ by many orders of magnitude, because cells with no
 water take up much of a moist sphere's volume and almost none of its mass. The
 volume fraction says how much of the domain has undefined shares. The mass
@@ -660,7 +702,10 @@ function tag_audit(Y, p, total_name, tag_state_names, scale)
     @. ᶜtmp = one(ᶜparent)
     volume = sum(ᶜtmp)
 
-    @. ᶜtmp = ifelse(ᶜparent <= zero(ᶜparent), abs(ᶜparent), zero(ᶜparent))
+    # From the raw parent: the water tags' target is never negative, so its
+    # non-positive mass would be zero by construction.
+    ᶜsigned = closure_signed_parent(Y, p, total_name)
+    @. ᶜtmp = ifelse(ᶜsigned <= zero(ᶜsigned), abs(ᶜsigned), zero(ᶜsigned))
     nonpositive_mass = sum(ᶜtmp)
 
     # The same guards `tag_closure` uses, for the same reason: a field that is
@@ -695,15 +740,19 @@ tag_audit_path(output_dir, family) =
     joinpath(output_dir, "$(family)_tag_audit.csv")
 
 """
-    write_tag_audit!(output_dir, t, family, audit; extra = nothing, void = nothing)
+    write_tag_audit!(output_dir, t, family, audit; extra = nothing,
+                     closure_void = nothing, negative_water = nothing)
 
 Append one row to the audit table of `family`, creating it with a header if it
 does not exist yet. Called on the root process only.
 
 `extra` is a `NamedTuple` of a family's own columns, such as
 [`energy_source_audit`](@ref) gives, appended after the common ones under their
-own names, or `nothing`. `void` is as in [`write_tag_closure!`](@ref): a last
-column `void`, 1 or 0, where the check has a void level.
+own names, or `nothing`. `closure_void` is as in [`write_tag_closure!`](@ref):
+a column `closure_void`, 1 or 0, where the check has a void level.
+`negative_water`, from the water check, is a `NamedTuple` of named columns
+that end the row: the parent's negative water ledger and
+`negative_water_void` (see [`tag_closure_callback!`](@ref)), or `nothing`.
 """
 function write_tag_audit!(
     output_dir,
@@ -711,7 +760,8 @@ function write_tag_audit!(
     family,
     audit;
     extra = nothing,
-    void = nothing,
+    closure_void = nothing,
+    negative_water = nothing,
 )
     path = tag_audit_path(output_dir, family)
     write_header = !isfile(path) || filesize(path) == 0
@@ -736,9 +786,13 @@ function write_tag_audit!(
         header *= "," * join(string.(keys(extra)), ",")
         row = (row..., values(extra)...)
     end
-    if !isnothing(void)
-        header *= ",void"
-        row = (row..., Int(void))
+    if !isnothing(closure_void)
+        header *= ",closure_void"
+        row = (row..., Int(closure_void))
+    end
+    if !isnothing(negative_water) && !isempty(negative_water)
+        header *= "," * join(string.(keys(negative_water)), ",")
+        row = (row..., Tuple(negative_water)...)
     end
     open(path, "a") do io
         write_header && println(io, header)
@@ -786,11 +840,12 @@ end
     tag_closure_callback!(integrator, output_dir, family, total_name,
                           tag_state_names, tolerance, abort_above, audit;
                           reference = nothing, extra_audit = nothing,
-                          void_above = nothing, voided = nothing)
+                          void_above = nothing, voided = nothing,
+                          negative_water = nothing)
 
 Record the closure of one tag family, warn when it has drifted past `tolerance`,
-mark its rows void once it has passed `void_above`, and end the run only when
-it has passed an `abort_above` the user set.
+mark its rows `closure_void` once it has passed `void_above`, and end the run
+only when it has passed an `abort_above` the user set.
 
 The comparison is against `gross_relative`, the relative residual that does not
 let opposite-signed local errors cancel (see [`tag_closure`](@ref)). It is never
@@ -804,13 +859,33 @@ it saves, so exceeding `tolerance` warns and keeps running.
 A divergence is not drift. A residual far larger than the field it measures says
 the tags no longer describe anything. But the tags are a diagnostic, and a
 diagnostic must never end a run that upstream completes (known issue 7). So
-past `void_above` the check warns once, and marks this row and every later row
-void, in the closure table and the audit table; the run goes on. `voided`, a
-`Ref{Bool}`, remembers that the level was passed; it starts again at `false`
-after a restart, so a restarted run marks its rows from its own first pass.
-`abort_above` still ends the run where a user sets it; no family sets one by
-default. See [`DEFAULT_CLOSURE_VOID_LEVELS`](@ref) and
+past `void_above` the check warns once. It marks this row and every later row
+with `closure_void = 1`, in the closure table and the audit table, and the run
+goes on. `voided`, a `Ref{Bool}`, remembers that the level was passed. The
+callback passes the family's flag in `p.tagging.closure_void`, which the
+checkpoint records and a restart reads back, so the rows after a restart stay
+marked (see [`restore_tag_closure_void!`](@ref)). `abort_above` still ends the
+run where a user sets it; no family sets one by default. See
+[`DEFAULT_CLOSURE_VOID_LEVELS`](@ref) and
 [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref).
+
+`closure_void` is limited to the closure threshold. `closure_void = 0` does not
+mean that the parent is valid, only that the residual has not passed the level.
+The parent can go negative long before that. `nonpositive_fraction`, in the
+same row, is the volume fraction where the parent is not positive, and this
+check warns on every row where it is above zero.
+
+The water check also reads the parent's own negative water, from the raw
+`ρq_tot` (known issue 7). `negative_water`, `nothing` for the other families,
+is `(; void_above, voided, ledger)`: the check's `negative_water_void_above`,
+the family's flag in `p.tagging.negative_water_void`, and the parent's
+negative water ledger (see [`negative_water_ledger_cache`](@ref)) or
+`nothing`. See [`negative_water_rows`](@ref) for the columns. Past
+`void_above` the check warns once, and marks this row and every later row
+`negative_water_void = 1`, in both tables, also after a restart. Like
+`closure_void`, this flag covers one thing: the parent's negative water at
+the checks. `negative_water_void = 0` does not say that the parent is valid
+in any other way.
 
 `audit` adds a second table that splits the residual into the parts that mean
 different things, and reports the non-positive parent by mass beside the volume
@@ -842,6 +917,7 @@ function tag_closure_callback!(
     extra_audit = nothing,
     void_above = nothing,
     voided = nothing,
+    negative_water = nothing,
 )
     Y = integrator.u
     closure = tag_closure(Y, integrator.p, total_name, tag_state_names)
@@ -850,7 +926,7 @@ function tag_closure_callback!(
     passed_void = !isnothing(void_above) && closure.gross_relative > void_above
     first_void = passed_void && !(!isnothing(voided) && voided[])
     isnothing(voided) || (voided[] = voided[] || passed_void)
-    void =
+    closure_void =
         isnothing(void_above) ? nothing :
         (isnothing(voided) ? passed_void : voided[])
     # Collective, like the closure itself, so it runs on every process and is
@@ -863,23 +939,43 @@ function tag_closure_callback!(
         (audit && !isnothing(extra_audit)) ?
         extra_audit(Y, integrator.p, closure.scale) : nothing
     t = Float64(integrator.t)
+    # Collective too, and the same on every process, as the flag above.
+    negative_row = negative_water_rows(Y, integrator.p, negative_water, t, audit)
     if ClimaComms.iamroot(ClimaComms.context(Y.c))
-        write_tag_closure!(output_dir, t, family, closure; reference, void)
+        write_tag_closure!(
+            output_dir,
+            t,
+            family,
+            closure;
+            reference,
+            closure_void,
+            negative_water = negative_row.closure,
+        )
         isnothing(audit_row) || write_tag_audit!(
             output_dir,
             t,
             family,
             audit_row;
             extra = extra_row,
-            void,
+            closure_void,
+            negative_water = negative_row.audit,
+        )
+        negative_row.first_void && @warn(
+            "The $family tags' parent has negative water \
+            $(negative_row.relative) of its water at t = $t s, above \
+            `negative_water_void_above` = $(negative_water.void_above). The \
+            tags partition only its non-negative part, and `q_tag_negative` \
+            holds the rest. The run goes on, and this row and every later row \
+            of $(tag_closure_path(output_dir, family)) are marked \
+            `negative_water_void`, also after a restart."
         )
         first_void && @warn(
             "$family tag closure residual $(closure.gross_relative) exceeds \
             the void level $void_above at t = $t s. The tags no longer \
             describe the field they partition. The run goes on, and this row \
             and every later row of $(tag_closure_path(output_dir, family)) \
-            are marked void. Set `abort_above` in the closure-check block to \
-            end the run instead."
+            are marked `closure_void`, also after a restart. Set \
+            `abort_above` in the closure-check block to end the run instead."
         )
         !isnothing(tolerance) && closure.gross_relative > tolerance &&
             @warn(
@@ -909,6 +1005,113 @@ function tag_closure_callback!(
         )
     end
     return nothing
+end
+
+"""
+    negative_water_rows(Y, p, negative_water, t, audit)
+
+The water check's columns on the parent's own negative water, for one row, as
+`(; closure, audit, first_void, relative)`. `negative_water` is
+`(; void_above, voided, ledger)`, as [`tag_closure_callback!`](@ref) takes it,
+or `nothing`, which gives no columns and no reduction.
+
+On the closure table, where `void_above` is set:
+
+  - `negative_water_relative`: `∫max(-ρq_tot, 0) dV / ∫ρq_tot dV` at the row,
+    from the raw `ρq_tot` ([`parent_negative_water`](@ref)). This is the
+    contract row "Parent validity: negative water" read at the check;
+  - `negative_water_void`: 1 on this and every later row once
+    `negative_water_relative` has passed `void_above`, in this run or before
+    the checkpoint it restarted from, else 0.
+
+`void_above = nothing` (`negative_water_void_above: ~`) drops both columns.
+
+On the audit table, where the audit is on: the parent's negative water ledger
+(see [`negative_water_ledger_cache`](@ref)), and `negative_water_void` last
+where `void_above` is set.
+
+  - `negative_water_integral`: `∫∫max(-ρq_tot, 0) dV dt` since the start of
+    the run, in kg s, summed over the accepted steps;
+  - `negative_water_interval`: its change since the previous audit row, in
+    kg s;
+  - `negative_water_interval_mean_relative`: that change over the interval's
+    length, over `∫ρq_tot dV` at this row. It is the interval's mean of
+    `negative_water_relative`, as far as `∫ρq_tot` stays constant over the
+    interval;
+  - `negative_water_interval_events`: the number of cell-steps in the interval
+    whose end state had `ρq_tot < 0`. It is exactly 0 when no accepted step in
+    the interval had negative water anywhere, and about 1 or more otherwise
+    (the count is summed as a quadrature, as `tag_event_total` does);
+  - `negative_water_void`, as above.
+
+The previous audit row is the previous one of this run or segment. At the
+first row of a run or of a restarted segment the interval is empty, and the
+three interval columns are 0.
+
+The flag is set from the checks only, not from the ledger. The ledger's
+interval mean divides by `∫ρq_tot` at the row, which can differ from its value
+within the interval, so it does not prove a crossing. It shows that negative
+water occurred between the checks, and how much.
+"""
+negative_water_rows(Y, p, ::Nothing, t, audit) =
+    (; closure = nothing, audit = nothing, first_void = false, relative = nothing)
+function negative_water_rows(Y, p, negative_water, t, audit)
+    (; void_above, voided, ledger) = negative_water
+    ledger_on = audit && !isnothing(ledger)
+    isnothing(void_above) && !ledger_on &&
+        return negative_water_rows(Y, p, nothing, t, audit)
+    parent_water = parent_negative_water(Y, p)
+    (; relative) = parent_water
+    passed = !isnothing(void_above) && relative > void_above
+    first_void = passed && !(!isnothing(voided) && voided[])
+    isnothing(voided) || (voided[] = voided[] || passed)
+    flag =
+        isnothing(void_above) ? (;) :
+        (; negative_water_void = Int(isnothing(voided) ? passed : voided[]))
+    closure =
+        isnothing(void_above) ? nothing :
+        (; negative_water_relative = relative, flag...)
+    audit_columns =
+        !audit ? nothing :
+        (;
+            (
+                ledger_on ?
+                negative_water_ledger_row!(ledger, t, parent_water.total) : (;)
+            )...,
+            flag...,
+        )
+    return (; closure, audit = audit_columns, first_void, relative)
+end
+
+"""
+    negative_water_ledger_row!(ledger, t, total)
+
+The audit's columns of the parent's negative water ledger at time `t`, and
+remember them for the next row. `total` is `∫ρq_tot dV` now. See
+[`negative_water_rows`](@ref). Collective, as `sum` is.
+"""
+function negative_water_ledger_row!(ledger, t, total)
+    integral = Float64(sum(ledger.ᶜamount))
+    events = tag_event_total((ledger.ᶜevents,))
+    (last_t, last_integral, last_events) = ledger.last_row[]
+    ledger.last_row[] = (t, integral, events)
+    if isnan(last_t)
+        interval = 0.0
+        interval_events = 0.0
+        mean_relative = 0.0
+    else
+        interval = integral - last_integral
+        interval_events = events - last_events
+        seconds = t - last_t
+        mean = seconds > 0 ? interval / seconds : 0.0
+        mean_relative = Float64(negative_water_relative(mean, total))
+    end
+    return (;
+        negative_water_integral = integral,
+        negative_water_interval = interval,
+        negative_water_interval_mean_relative = mean_relative,
+        negative_water_interval_events = interval_events,
+    )
 end
 
 """

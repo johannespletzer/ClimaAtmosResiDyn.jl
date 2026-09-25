@@ -20,7 +20,9 @@ tag and its two region-restricted halves, and asserts:
     unrestricted source tag to near machine precision. This is the sharp check —
     a violation is a bug, not expected leakage — and it exercises the
     production, loss and limiter-rescale rules together;
- 5. the state survives a checkpoint round-trip bit-for-bit.
+ 5. the state survives a checkpoint round-trip bit-for-bit, and so does the
+    closure check's void flag: a run that passed `void_above` before the
+    checkpoint marks every row after the restart `closure_void`.
 
 The column trips no limiter, so a second setup — a coarse moist sphere with the
 SEM quasimonotone limiter on — covers `rescale_water_tags!` and the
@@ -341,12 +343,20 @@ end
         Dict{String, Any}("name" => "lower", "region" => lower_region()),
         Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
     ]
+    # The closure check passes its void level, which is tiny here, before the
+    # checkpoint. Its audit table gets the flag too.
+    closure_check = Dict{String, Any}(
+        "period" => "10secs",
+        "void_above" => 1.0e-30,
+        "audit" => true,
+    )
     test_dict = base_config(
         tags;
         extra = Dict{String, Any}(
             "t_end" => "20secs",
             "dt_save_state_to_disk" => "20secs",
             "output_dir" => mktempdir(pwd()),
+            "water_closure_check" => closure_check,
         ),
     )
 
@@ -400,11 +410,41 @@ end
     restart_file = joinpath(simulation.output_dir, "day0.20.hdf5")
     @test isfile(restart_file)
 
-    restarted = CA.get_simulation(
-        CA.AtmosConfig(
-            merge(test_dict, Dict("restart_file" => restart_file));
-            job_id = "tagged_water_restart_read",
+    # A table's column by name, without its header.
+    function table_column(path, name)
+        header, rows... = readlines(path)
+        index = findfirst(==(name), split(header, ","))
+        return map(row -> split(row, ",")[index], rows)
+    end
+    closure_table(sim) = CA.tag_closure_path(sim.output_dir, "water")
+    audit_table(sim) = CA.tag_audit_path(sim.output_dir, "water")
+    # The run passed the void level by its last row, and the checkpoint written
+    # after that row records the flag.
+    @test last(table_column(closure_table(simulation), "closure_void")) == "1"
+    context = ClimaComms.context(Y.c)
+    CA.InputOutput.HDF5Reader(restart_file, context) do reader
+        @test CA.InputOutput.HDF5.read_attribute(
+            reader.file,
+            "water_tag_closure_void",
+        ) == 1
+    end
+
+    # The restart sets water's default level, 1.0, which its own residual does
+    # not reach. So its rows are void only through the flag in the checkpoint.
+    restart_dict = merge(
+        test_dict,
+        Dict{String, Any}(
+            "restart_file" => restart_file,
+            "t_end" => "40secs",
+            "water_closure_check" =>
+                merge(closure_check, Dict{String, Any}("void_above" => 1.0)),
         ),
+    )
+    restart(dict, job_id) = CA.get_simulation(CA.AtmosConfig(dict; job_id))
+    restored_void = (:warn, r"passed their `void_above` level")
+    restarted = @test_logs restored_void match_mode = :any restart(
+        restart_dict,
+        "tagged_water_restart_read",
     )
     Y_restart = restarted.integrator.u
 
@@ -421,6 +461,181 @@ end
             getproperty(simulation.integrator.p.tagging.ᶜwater_masks, name),
         )
     end
+
+    # The first row, written when the restarted run starts, and every later
+    # row of both tables stay void (the owner's review of #112).
+    @test CA.solve_atmos!(restarted).ret_code == :success
+    @test table_column(closure_table(restarted), "time") ==
+          ["20.0", "30.0", "40.0"]
+    @test all(
+        <(1),
+        parse.(Float64, table_column(closure_table(restarted), "gross_relative")),
+    )
+    @test table_column(closure_table(restarted), "closure_void") == ["1", "1", "1"]
+    @test table_column(audit_table(restarted), "closure_void") == ["1", "1", "1"]
+
+    # A checkpoint without the flag, as one written before it was recorded,
+    # restarts as not void, with a warning.
+    unrecorded_file = joinpath(mktempdir(pwd()), "day0.20.hdf5")
+    cp(restart_file, unrecorded_file)
+    CA.InputOutput.HDF5.h5open(unrecorded_file, "r+") do file
+        CA.InputOutput.HDF5.delete_attribute(file, "water_tag_closure_void")
+    end
+    unrecorded_dict = merge(
+        restart_dict,
+        Dict{String, Any}(
+            "restart_file" => unrecorded_file,
+            "output_dir" => mktempdir(pwd()),
+        ),
+    )
+    not_recorded = (:warn, r"written before the closure checks recorded")
+    unrecorded = @test_logs not_recorded match_mode = :any restart(
+        unrecorded_dict,
+        "tagged_water_restart_unrecorded",
+    )
+    @test table_column(closure_table(unrecorded), "closure_void") == ["0"]
+
+    # The parent's negative water (known issue 7). The water check reads it at
+    # the default level, 1e-4. This column never goes negative, so every row
+    # is 0 and the ledger stays empty.
+    @test all(==("0"), table_column(closure_table(simulation), "negative_water_void"))
+    @test all(
+        iszero,
+        parse.(Float64, table_column(audit_table(simulation), "negative_water_integral")),
+    )
+
+    # So a copy of the run has one cell's water made negative after its first
+    # check, which changes the model's own state: these are runs of their own.
+    # The column has no vertical diffusion, so the cell stays negative.
+    function negative_run(dict, job_id)
+        local sim = CA.get_simulation(CA.AtmosConfig(dict; job_id))
+        local water = parent(sim.integrator.u.c.ρq_tot)
+        water[10] = -water[10] / 2
+        return sim
+    end
+    negative_dict(level) = merge(
+        test_dict,
+        Dict{String, Any}(
+            "output_dir" => mktempdir(pwd()),
+            "water_closure_check" => merge(
+                closure_check,
+                Dict{String, Any}("negative_water_void_above" => level),
+            ),
+        ),
+    )
+    negative = negative_run(negative_dict(1.0e-4), "tagged_water_negative")
+    @test CA.solve_atmos!(negative).ret_code == :success
+    # The row at the start saw no negative water; the checks after it do.
+    relative(sim) =
+        parse.(Float64, table_column(closure_table(sim), "negative_water_relative"))
+    @test relative(negative)[1] == 0
+    @test all(>(1.0e-4), relative(negative)[2:end])
+    @test table_column(closure_table(negative), "negative_water_void") ==
+          ["0", "1", "1"]
+    @test table_column(audit_table(negative), "negative_water_void") ==
+          ["0", "1", "1"]
+    # The ledger took both steps: each interval has negative water in it.
+    integral(sim) =
+        parse.(Float64, table_column(audit_table(sim), "negative_water_integral"))
+    events(sim) = parse.(
+        Float64,
+        table_column(audit_table(sim), "negative_water_interval_events"),
+    )
+    @test integral(negative)[1] == 0
+    @test integral(negative)[2] > 0
+    @test integral(negative)[3] > integral(negative)[2]
+    @test all(>=(1 - 1.0e-9), events(negative)[2:end])
+    ledger(sim) = sim.integrator.p.tagging.tag_ledger_steps.negative_water
+
+    # With the key off, the model's fields and every other column of both
+    # tables are bit for bit the same. Only the flag's columns go.
+    negative_off = negative_run(negative_dict(nothing), "tagged_water_negative_off")
+    @test CA.solve_atmos!(negative_off).ret_code == :success
+    for field in (:c, :f)
+        local on = getproperty(negative.integrator.u, field)
+        local off = getproperty(negative_off.integrator.u, field)
+        for name in propertynames(off)
+            @test isequal(parent(getproperty(on, name)), parent(getproperty(off, name)))
+        end
+    end
+    for table in (closure_table, audit_table)
+        local header_off = split(first(readlines(table(negative_off))), ",")
+        local header_on = split(first(readlines(table(negative))), ",")
+        @test setdiff(header_on, header_off) ==
+              (
+            table === closure_table ?
+            ["negative_water_relative", "negative_water_void"] :
+            ["negative_water_void"]
+        )
+        for name in header_off
+            @test table_column(table(negative), name) ==
+                  table_column(table(negative_off), name)
+        end
+    end
+    @test isequal(parent(ledger(negative).ᶜamount), parent(ledger(negative_off).ᶜamount))
+
+    # Through a restart: the flag and the ledger continue. The restarted run
+    # sets a level its own ratio does not reach, so its rows are void only
+    # through the flag in the checkpoint.
+    negative_file = joinpath(negative.output_dir, "day0.20.hdf5")
+    CA.InputOutput.HDF5Reader(negative_file, context) do reader
+        @test CA.InputOutput.HDF5.read_attribute(
+            reader.file,
+            "water_negative_water_void",
+        ) == 1
+    end
+    negative_restart_dict = merge(
+        negative_dict(1.0),
+        Dict{String, Any}("restart_file" => negative_file, "t_end" => "40secs"),
+    )
+    restored_flag = (:warn, r"passed `negative_water_void_above`")
+    continued = @test_logs restored_flag match_mode = :any restart(
+        negative_restart_dict,
+        "tagged_water_negative_restart",
+    )
+    # The ledger is the checkpoint's, bit for bit.
+    @test isequal(parent(ledger(continued).ᶜamount), parent(ledger(negative).ᶜamount))
+    @test isequal(parent(ledger(continued).ᶜevents), parent(ledger(negative).ᶜevents))
+    @test CA.solve_atmos!(continued).ret_code == :success
+    @test table_column(closure_table(continued), "time") == ["20.0", "30.0", "40.0"]
+    @test all(<(1), relative(continued))
+    @test table_column(closure_table(continued), "negative_water_void") ==
+          ["1", "1", "1"]
+    @test table_column(audit_table(continued), "negative_water_void") ==
+          ["1", "1", "1"]
+    # The first row after the restart has the integral the run before ended
+    # with, to the digit, and an empty interval. The ledger then grows on.
+    @test first(table_column(audit_table(continued), "negative_water_integral")) ==
+          last(table_column(audit_table(negative), "negative_water_integral"))
+    @test first(events(continued)) == 0
+    @test integral(continued)[3] > integral(continued)[2] > integral(continued)[1]
+
+    # A checkpoint without the flag and the ledger, as one written before
+    # them, restarts both at 0, with a warning each.
+    old_file = joinpath(mktempdir(pwd()), "day0.20.hdf5")
+    cp(negative_file, old_file)
+    CA.InputOutput.HDF5.h5open(old_file, "r+") do file
+        CA.InputOutput.HDF5.delete_attribute(file, "water_negative_water_void")
+        for name in ("amount", "events")
+            CA.InputOutput.HDF5.delete_object(
+                file,
+                "fields/tag_ledger.negative_water.$name",
+            )
+        end
+    end
+    old_dict = merge(
+        negative_restart_dict,
+        Dict{String, Any}("restart_file" => old_file, "output_dir" => mktempdir(pwd())),
+    )
+    flag_not_recorded = (:warn, r"written before the negative\s+water flag")
+    ledger_not_carried = (:warn, r"before the parent's\s+negative water ledger")
+    from_old = @test_logs flag_not_recorded ledger_not_carried match_mode = :any restart(
+        old_dict,
+        "tagged_water_negative_old",
+    )
+    @test table_column(closure_table(from_old), "negative_water_void") == ["0"]
+    @test integral(from_old) == [0]
+    @test all(iszero, parent(ledger(from_old).ᶜamount))
 end
 
 @testset "Tagged water rejects unsupported microphysics" begin
