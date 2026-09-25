@@ -865,12 +865,18 @@ end
     restore_tag_ledger_checkpoint!(tagging, restart_file, context)
 
 Read the tags' accumulators back from `restart_file` into the cache just built,
-so that a run continues them rather than starting them again at zero. A
-checkpoint written before they were carried holds none of them. Then they start
-at zero, with a warning, and the audit's grosses cover only this segment.
-Whether such a checkpoint should be refused instead is the owner's
-(design/GROSS_ACCUMULATORS.md, section 8, point 1). A checkpoint that holds some
-but not all of them is refused, since it was written by another configuration.
+so that a run continues them rather than starting them again at zero. The state
+ledgers need nothing here: they are fields of the state, which the checkpoint
+carries anyway.
+
+The policy for a checkpoint without the accumulators:
+
+  - It holds none of them: it was written before they were carried. They start
+    at zero with a warning. The run then begins a new accumulator segment, and
+    their totals, the audit's `_retained`, `_attempted` and `_events` among
+    them, cover that segment only. They are not whole-run totals.
+  - It holds some but not all of them: it is refused. Another configuration of
+    the tags' ledgers wrote it.
 """
 function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
     fields = tag_ledger_checkpoint_fields(tagging)
@@ -885,8 +891,9 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
                 "The restart file $restart_file carries none of the tags' \
                 accumulators: their cache ledgers, gross twins, counts, \
                 per-step grosses and attempted totals. It was written before \
-                they were carried. They start at zero for this segment, so \
-                the audit's grosses cover only this segment.",
+                they were carried. They start at zero, so this run begins a \
+                new segment: the audit's grosses and the cumulative \
+                diagnostics cover this segment only, not the whole run.",
             )
             return nothing
         end

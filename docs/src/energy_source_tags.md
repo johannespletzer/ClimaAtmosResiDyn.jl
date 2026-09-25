@@ -727,6 +727,14 @@ A ratio whose denominator is not positive is `NaN`. `_applicable` is never
     existed is checked by its fields alone, with a warning. One written in
     another version of the format is refused. There is no override: to change
     a setting, start a new run.
+  - The state ledgers (`e_src_led_*`, `e_src_inc_left`, `e_src_inc_moved`) are
+    fields of the state and continue through a restart. The repair's ledger
+    `e_src_fix_<name>`, its gross twin and count, and each state ledger's
+    per-step gross, events and attempted total live in the cache. The
+    checkpoint carries them beside the state, so they continue too. A
+    checkpoint written before it carried them starts them at zero, with a
+    warning, and their totals then cover the new segment only, not the whole
+    run. One with some but not all of them is refused.
 
 ## Interpretation limit
 
