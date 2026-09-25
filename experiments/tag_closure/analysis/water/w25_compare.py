@@ -31,6 +31,8 @@ def column_water(run_dir):
             raise SystemExit(f"no 10-minute {short} in {run_dir}")
         with netCDF4.Dataset(paths[0]) as data:
             values = np.asarray(data[short][:], dtype=float)
+            # Time first, found by name: a column writes (z, time).
+            values = np.moveaxis(values, data[short].dimensions.index("time"), 0)
             time = np.asarray(data["time"][:], dtype=float)
             z = np.asarray(data["z"][:], dtype=float)
         return time, z, values.reshape(values.shape[0], -1)

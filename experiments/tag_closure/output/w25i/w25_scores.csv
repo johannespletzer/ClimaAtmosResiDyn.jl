@@ -1,0 +1,495 @@
+rule,rung,mode,metric,window,value,threshold,verdict,od3_row,note
+OD2,z30_c,untagged,startup_end_seconds,,np.float64(6600.0),,reported,OD2 windows,level 2.022e-06 kg m^-2 s^-1
+OD2,z30_fo,untagged,startup_end_seconds,,none,,reported,OD2 windows,level 9.099e-07 kg m^-2 s^-1
+OD2,z60_c,untagged,startup_end_seconds,,np.float64(7200.0),,reported,OD2 windows,level 1.742e-06 kg m^-2 s^-1
+OD2,z60_fo,untagged,startup_end_seconds,,np.float64(75600.0),,reported,OD2 windows,level 1.924e-06 kg m^-2 s^-1
+OD2,z120_c,untagged,startup_end_seconds,,np.float64(8400.0),,reported,OD2 windows,level 5.993e-06 kg m^-2 s^-1
+OD2,z120_fo,untagged,startup_end_seconds,,np.float64(2400.0),,reported,OD2 windows,level 5.943e-06 kg m^-2 s^-1
+R1,z30_c,default,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z30_c,copies,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z30_fo,default,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z30_fo,copies,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z60_c,default,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z60_c,copies,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z60_fo,default,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z60_fo,copies,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z120_c,default,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z120_c,copies,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z120_fo,default,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R1,z120_fo,copies,model fields bit for bit,whole day,0,0,pass,Parent validity: parity,40 fields compared
+R2,z30_c,default,"E rho_q_tot, n2",established,0.011292329333288565,0.001,fail,Parent validity: Newton,E n1 = 0.015611133226360561
+R10,z30_c,default,"E n2 / E n1, tropo",established,0.4249250972370099,0.75,pass,Refinement,"E n1 = 0.02001207352857986, E n2 = 0.008503632290045988"
+R10,z30_c,default,"E n2 / E n1, strat",established,0.17861610598123745,0.75,pass,Refinement,"E n1 = 0.024098788301077187, E n2 = 0.004304431725204608"
+R10,z30_c,default,"E n2 / E n1, evap",established,0.13717149652690755,0.75,pass,Refinement,"E n1 = 0.10945946334966657, E n2 = 0.015014718396705951"
+R10,z30_c,default,"E n2 / E n1, evap_tropo",established,0.13717149652690447,0.75,pass,Refinement,"E n1 = 0.10945946334966546, E n2 = 0.015014718396705462"
+R10,z30_c,default,"E n2 / E n1, evap_strat",established,0.13717149652690708,0.75,pass,Refinement,"E n1 = 0.10945946334966598, E n2 = 0.015014718396705819"
+R2,z30_c,default,"E rho_q_tot, n2",whole 6 h,0.008377371281515293,0.001,reported,Parent validity: Newton,E n1 = 0.012832623628903292
+R10,z30_c,default,"E n2 / E n1, tropo",whole 6 h,0.2585026054587082,0.75,reported,Refinement,"E n1 = 0.020652157576153067, E n2 = 0.005338636541779368"
+R10,z30_c,default,"E n2 / E n1, strat",whole 6 h,0.10713098289687607,0.75,reported,Refinement,"E n1 = 0.024092803828055228, E n2 = 0.002581085754841175"
+R10,z30_c,default,"E n2 / E n1, evap",whole 6 h,0.11500888677933269,0.75,reported,Refinement,"E n1 = 0.10893373939328053, E n2 = 0.012528348100331134"
+R10,z30_c,default,"E n2 / E n1, evap_tropo",whole 6 h,0.11500888677933171,0.75,reported,Refinement,"E n1 = 0.1089337393932797, E n2 = 0.012528348100330933"
+R10,z30_c,default,"E n2 / E n1, evap_strat",whole 6 h,0.11500888677933169,0.75,reported,Refinement,"E n1 = 0.10893373939328001, E n2 = 0.012528348100330964"
+R2,z30_c,default,"E rho_q_tot, n2",startup,0.0005371066568472773,0.001,reported,Parent validity: Newton,E n1 = 0.005359359822244847
+R10,z30_c,default,"E n2 / E n1, tropo",startup,0.055240774983969135,0.75,reported,Refinement,"E n1 = 0.021491733895192423, E n2 = 0.001187220036119667"
+R10,z30_c,default,"E n2 / E n1, strat",startup,0.051683621138461526,0.75,reported,Refinement,"E n1 = 0.024088164024170095, E n2 = 0.001244963543346326"
+R10,z30_c,default,"E n2 / E n1, evap",startup,0.055388837273232565,0.75,reported,Refinement,"E n1 = 0.10754422521935204, E n2 = 0.005956749590350564"
+R10,z30_c,default,"E n2 / E n1, evap_tropo",startup,0.055388837273237734,0.75,reported,Refinement,"E n1 = 0.10754422521935196, E n2 = 0.005956749590351115"
+R10,z30_c,default,"E n2 / E n1, evap_strat",startup,0.055388837273230275,0.75,reported,Refinement,"E n1 = 0.10754422521935164, E n2 = 0.0059567495903502955"
+R2,z30_c,copies,"E rho_q_tot, n2",established,0.011292329333288565,0.001,fail,Parent validity: Newton,E n1 = 0.015611133226360561
+R10,z30_c,copies,"E n2 / E n1, tropo",established,0.2714752888611863,0.75,pass,Refinement,"E n1 = 0.04300343099426995, E n2 = 0.011674368851191528"
+R10,z30_c,copies,"E n2 / E n1, strat",established,0.22165969172398528,0.75,pass,Refinement,"E n1 = 0.03028849461687499, E n2 = 0.006713738379560098"
+R10,z30_c,copies,"E n2 / E n1, evap",established,0.48045843396806964,0.75,pass,Refinement,"E n1 = 0.031352564094028146, E n2 = 0.015063603845500293"
+R10,z30_c,copies,"E n2 / E n1, evap_tropo",established,0.48045843396808313,0.75,pass,Refinement,"E n1 = 0.03135256409402895, E n2 = 0.015063603845501103"
+R10,z30_c,copies,"E n2 / E n1, evap_strat",established,0.4804584339680434,0.75,pass,Refinement,"E n1 = 0.03135256409402966, E n2 = 0.015063603845500196"
+R2,z30_c,copies,"E rho_q_tot, n2",whole 6 h,0.008377371281515293,0.001,reported,Parent validity: Newton,E n1 = 0.012832623628903292
+R10,z30_c,copies,"E n2 / E n1, tropo",whole 6 h,0.18844259878569344,0.75,reported,Refinement,"E n1 = 0.03914062744113799, E n2 = 0.007375761553110669"
+R10,z30_c,copies,"E n2 / E n1, strat",whole 6 h,0.1299623359296273,0.75,reported,Refinement,"E n1 = 0.028306666776747924, E n2 = 0.003678800536687734"
+R10,z30_c,copies,"E n2 / E n1, evap",whole 6 h,0.383679326024579,0.75,reported,Refinement,"E n1 = 0.0349014935402933, E n2 = 0.013390981518790932"
+R10,z30_c,copies,"E n2 / E n1, evap_tropo",whole 6 h,0.38367932602459204,0.75,reported,Refinement,"E n1 = 0.034901493540293774, E n2 = 0.013390981518791568"
+R10,z30_c,copies,"E n2 / E n1, evap_strat",whole 6 h,0.3836793260245665,0.75,reported,Refinement,"E n1 = 0.034901493540294315, E n2 = 0.013390981518790885"
+R2,z30_c,copies,"E rho_q_tot, n2",startup,0.0005371066568472773,0.001,reported,Parent validity: Newton,E n1 = 0.005359359822244847
+R10,z30_c,copies,"E n2 / E n1, tropo",startup,0.05132491394873194,0.75,reported,Refinement,"E n1 = 0.03408467443123506, E n2 = 0.001749392982153683"
+R10,z30_c,copies,"E n2 / E n1, strat",startup,0.041215551422499,0.75,reported,Refinement,"E n1 = 0.026620866072893105, E n2 = 0.0010971936745387846"
+R10,z30_c,copies,"E n2 / E n1, evap",startup,0.1955563795014243,0.75,reported,Refinement,"E n1 = 0.044747299998191443, E n2 = 0.008750619980110409"
+R10,z30_c,copies,"E n2 / E n1, evap_tropo",startup,0.1955563795014298,0.75,reported,Refinement,"E n1 = 0.04474729999819096, E n2 = 0.00875061998011056"
+R10,z30_c,copies,"E n2 / E n1, evap_strat",startup,0.19555637950142826,0.75,reported,Refinement,"E n1 = 0.04474729999819103, E n2 = 0.008750619980110504"
+R2,z30_fo,default,"E rho_q_tot, n2",whole 6 h,0.008654916661165161,0.001,reported,Parent validity: Newton,E n1 = 0.036784714043858094
+R10,z30_fo,default,"E n2 / E n1, tropo",whole 6 h,0.35220739767667975,0.75,reported,Refinement,"E n1 = 0.026989937485700173, E n2 = 0.009506055645294727"
+R10,z30_fo,default,"E n2 / E n1, strat",whole 6 h,0.31840765402248755,0.75,reported,Refinement,"E n1 = 0.03283447458763852, E n2 = 0.010454748024510964"
+R10,z30_fo,default,"E n2 / E n1, evap",whole 6 h,0.211524427787451,0.75,reported,Refinement,"E n1 = 0.05737496933294782, E n2 = 0.012136207557474337"
+R10,z30_fo,default,"E n2 / E n1, evap_tropo",whole 6 h,0.21152442778746763,0.75,reported,Refinement,"E n1 = 0.057374969332947764, E n2 = 0.012136207557475279"
+R10,z30_fo,default,"E n2 / E n1, evap_strat",whole 6 h,0.21152442778744354,0.75,reported,Refinement,"E n1 = 0.057374969332948535, E n2 = 0.01213620755747406"
+R2,z30_fo,default,"E rho_q_tot, n2",established,,0.001,not assessable (OD2's rule finds no end of startup),Parent validity: Newton,
+R10,z30_fo,default,"E n2 / E n1, each tag",established,,0.75,not assessable (OD2's rule finds no end of startup),Refinement,
+R2,z30_fo,copies,"E rho_q_tot, n2",whole 6 h,0.008654916661165161,0.001,reported,Parent validity: Newton,E n1 = 0.036784714043858094
+R10,z30_fo,copies,"E n2 / E n1, tropo",whole 6 h,0.2835054200326209,0.75,reported,Refinement,"E n1 = 0.033650428821025334, E n2 = 0.0095400789571826"
+R10,z30_fo,copies,"E n2 / E n1, strat",whole 6 h,0.3697618252805954,0.75,reported,Refinement,"E n1 = 0.029926188107981175, E n2 = 0.011065561938497568"
+R10,z30_fo,copies,"E n2 / E n1, evap",whole 6 h,0.3701237362279743,0.75,reported,Refinement,"E n1 = 0.0470479038459809, E n2 = 0.01741354595316893"
+R10,z30_fo,copies,"E n2 / E n1, evap_tropo",whole 6 h,0.3701237362279793,0.75,reported,Refinement,"E n1 = 0.047047903845980274, E n2 = 0.017413545953168935"
+R10,z30_fo,copies,"E n2 / E n1, evap_strat",whole 6 h,0.3701237362279769,0.75,reported,Refinement,"E n1 = 0.04704790384598101, E n2 = 0.017413545953169095"
+R2,z30_fo,copies,"E rho_q_tot, n2",established,,0.001,not assessable (OD2's rule finds no end of startup),Parent validity: Newton,
+R10,z30_fo,copies,"E n2 / E n1, each tag",established,,0.75,not assessable (OD2's rule finds no end of startup),Refinement,
+R2,z60_c,default,"E rho_q_tot, n2",established,0.004084856069369304,0.001,fail,Parent validity: Newton,E n1 = 0.011618596142465047
+R10,z60_c,default,"E n2 / E n1, tropo",established,0.2233066310830901,0.75,pass,Refinement,"E n1 = 0.01770378790902905, E n2 = 0.003953373235374821"
+R10,z60_c,default,"E n2 / E n1, strat",established,0.12760070286412956,0.75,pass,Refinement,"E n1 = 0.024647863607469667, E n2 = 0.0031450847204123294"
+R10,z60_c,default,"E n2 / E n1, evap",established,0.23863600919296973,0.75,pass,Refinement,"E n1 = 0.19317524546395393, E n2 = 0.046098569652390294"
+R10,z60_c,default,"E n2 / E n1, evap_tropo",established,0.23863600919297787,0.75,pass,Refinement,"E n1 = 0.19317524546395348, E n2 = 0.04609856965239176"
+R10,z60_c,default,"E n2 / E n1, evap_strat",established,0.238636009192974,0.75,pass,Refinement,"E n1 = 0.1931752454639532, E n2 = 0.046098569652390946"
+R2,z60_c,default,"E rho_q_tot, n2",whole 6 h,0.0031068795703380787,0.001,reported,Parent validity: Newton,E n1 = 0.010951327735627191
+R10,z60_c,default,"E n2 / E n1, tropo",whole 6 h,0.18104934677059892,0.75,reported,Refinement,"E n1 = 0.025846742880171792, E n2 = 0.0046795359146027315"
+R10,z60_c,default,"E n2 / E n1, strat",whole 6 h,0.15086842724123972,0.75,reported,Refinement,"E n1 = 0.03296036482368846, E n2 = 0.004972678402247359"
+R10,z60_c,default,"E n2 / E n1, evap",whole 6 h,0.2149081857550468,0.75,reported,Refinement,"E n1 = 0.1986579575233684, E n2 = 0.042693221237150254"
+R10,z60_c,default,"E n2 / E n1, evap_tropo",whole 6 h,0.21490818575505158,0.75,reported,Refinement,"E n1 = 0.19865795752336812, E n2 = 0.04269322123715114"
+R10,z60_c,default,"E n2 / E n1, evap_strat",whole 6 h,0.214908185755049,0.75,reported,Refinement,"E n1 = 0.19865795752336782, E n2 = 0.042693221237150566"
+R2,z60_c,default,"E rho_q_tot, n2",startup,0.00124834880815753,0.001,reported,Parent validity: Newton,E n1 = 0.009683261619551978
+R10,z60_c,default,"E n2 / E n1, tropo",startup,0.1592406120469107,0.75,reported,Refinement,"E n1 = 0.0338920483622194, E n2 = 0.005396990524723315"
+R10,z60_c,default,"E n2 / E n1, strat",startup,0.16171288635379566,0.75,reported,Refinement,"E n1 = 0.0391073944560613, E n2 = 0.0063241696352660986"
+R10,z60_c,default,"E n2 / E n1, evap",startup,0.17343919151460316,0.75,reported,Refinement,"E n1 = 0.20902632926572615, E n2 = 0.03625335755311278"
+R10,z60_c,default,"E n2 / E n1, evap_tropo",startup,0.17343919151460213,0.75,reported,Refinement,"E n1 = 0.20902632926572615, E n2 = 0.03625335755311256"
+R10,z60_c,default,"E n2 / E n1, evap_strat",startup,0.17343919151460177,0.75,reported,Refinement,"E n1 = 0.2090263292657259, E n2 = 0.036253357553112445"
+R2,z60_c,copies,"E rho_q_tot, n2",established,0.004084856069369304,0.001,fail,Parent validity: Newton,E n1 = 0.011618596142465047
+R10,z60_c,copies,"E n2 / E n1, tropo",established,0.288213868031404,0.75,pass,Refinement,"E n1 = 0.05097102462319625, E n2 = 0.014690556164175327"
+R10,z60_c,copies,"E n2 / E n1, strat",established,0.1922623554581138,0.75,pass,Refinement,"E n1 = 0.024174267517646942, E n2 = 0.00464780161441737"
+R10,z60_c,copies,"E n2 / E n1, evap",established,0.4853247528615539,0.75,pass,Refinement,"E n1 = 0.03617587869888416, E n2 = 0.01755704938908551"
+R10,z60_c,copies,"E n2 / E n1, evap_tropo",established,0.4853247528615753,0.75,pass,Refinement,"E n1 = 0.036175878698883134, E n2 = 0.017557049389085783"
+R10,z60_c,copies,"E n2 / E n1, evap_strat",established,0.4853247528615653,0.75,pass,Refinement,"E n1 = 0.03617587869888357, E n2 = 0.017557049389085633"
+R2,z60_c,copies,"E rho_q_tot, n2",whole 6 h,0.0031068795703380787,0.001,reported,Parent validity: Newton,E n1 = 0.010951327735627191
+R10,z60_c,copies,"E n2 / E n1, tropo",whole 6 h,0.22468878835172693,0.75,reported,Refinement,"E n1 = 0.05747993638750515, E n2 = 0.012915097261442871"
+R10,z60_c,copies,"E n2 / E n1, strat",whole 6 h,0.1873654864605141,0.75,reported,Refinement,"E n1 = 0.0371540981274182, E n2 = 0.0069613956696453864"
+R10,z60_c,copies,"E n2 / E n1, evap",whole 6 h,0.3720228420681805,0.75,reported,Refinement,"E n1 = 0.05096762070466424, E n2 = 0.01896111910800223"
+R10,z60_c,copies,"E n2 / E n1, evap_tropo",whole 6 h,0.3720228420681892,0.75,reported,Refinement,"E n1 = 0.05096762070466359, E n2 = 0.018961119108002432"
+R10,z60_c,copies,"E n2 / E n1, evap_strat",whole 6 h,0.372022842068184,0.75,reported,Refinement,"E n1 = 0.050967620704663874, E n2 = 0.018961119108002272"
+R2,z60_c,copies,"E rho_q_tot, n2",startup,0.00124834880815753,0.001,reported,Parent validity: Newton,E n1 = 0.009683261619551978
+R10,z60_c,copies,"E n2 / E n1, tropo",startup,0.17501023239473962,0.75,reported,Refinement,"E n1 = 0.06385694335609111, E n2 = 0.01117561849676723"
+R10,z60_c,copies,"E n2 / E n1, strat",startup,0.18548548833562967,0.75,reported,Refinement,"E n1 = 0.0468016128801193, E n2 = 0.008681020019964025"
+R10,z60_c,copies,"E n2 / E n1, evap",startup,0.2734924188999635,0.75,reported,Refinement,"E n1 = 0.07909028764365778, E n2 = 0.02163059407915786"
+R10,z60_c,copies,"E n2 / E n1, evap_tropo",startup,0.27349241889996406,0.75,reported,Refinement,"E n1 = 0.07909028764365787, E n2 = 0.02163059407915793"
+R10,z60_c,copies,"E n2 / E n1, evap_strat",startup,0.2734924188999617,0.75,reported,Refinement,"E n1 = 0.07909028764365787, E n2 = 0.021630594079157742"
+R2,z60_fo,default,"E rho_q_tot, n2",whole 6 h,0.016254021493228715,0.001,reported,Parent validity: Newton,E n1 = 0.05911349106501564
+R10,z60_fo,default,"E n2 / E n1, tropo",whole 6 h,0.30412723108846285,0.75,reported,Refinement,"E n1 = 0.04118959886158216, E n2 = 0.012526878651417484"
+R10,z60_fo,default,"E n2 / E n1, strat",whole 6 h,0.27004556013593123,0.75,reported,Refinement,"E n1 = 0.03151834119776498, E n2 = 0.008511388103305843"
+R10,z60_fo,default,"E n2 / E n1, evap",whole 6 h,0.22049245167571851,0.75,reported,Refinement,"E n1 = 0.08912956384777822, E n2 = 0.019652396049584107"
+R10,z60_fo,default,"E n2 / E n1, evap_tropo",whole 6 h,0.22049245167572917,0.75,reported,Refinement,"E n1 = 0.08912956384777738, E n2 = 0.019652396049584873"
+R10,z60_fo,default,"E n2 / E n1, evap_strat",whole 6 h,0.2204924516756692,0.75,reported,Refinement,"E n1 = 0.08912956384778212, E n2 = 0.01965239604958057"
+R2,z60_fo,default,"E rho_q_tot, n2",established,,0.001,"not assessable (startup ends at 21.0 h, after 6 h)",Parent validity: Newton,
+R10,z60_fo,default,"E n2 / E n1, each tag",established,,0.75,"not assessable (startup ends at 21.0 h, after 6 h)",Refinement,
+R2,z60_fo,copies,"E rho_q_tot, n2",whole 6 h,0.016254021493228715,0.001,reported,Parent validity: Newton,E n1 = 0.05911349106501564
+R10,z60_fo,copies,"E n2 / E n1, tropo",whole 6 h,0.24700989805592977,0.75,reported,Refinement,"E n1 = 0.05232009029620054, E n2 = 0.012923580170341536"
+R10,z60_fo,copies,"E n2 / E n1, strat",whole 6 h,0.24379500604357385,0.75,reported,Refinement,"E n1 = 0.042823810273094925, E n2 = 0.010440231084338038"
+R10,z60_fo,copies,"E n2 / E n1, evap",whole 6 h,0.2967791456842808,0.75,reported,Refinement,"E n1 = 0.07775518428667753, E n2 = 0.023076117165123974"
+R10,z60_fo,copies,"E n2 / E n1, evap_tropo",whole 6 h,0.2967791456842785,0.75,reported,Refinement,"E n1 = 0.07775518428667727, E n2 = 0.023076117165123717"
+R10,z60_fo,copies,"E n2 / E n1, evap_strat",whole 6 h,0.2967791456842786,0.75,reported,Refinement,"E n1 = 0.07775518428667759, E n2 = 0.023076117165123818"
+R2,z60_fo,copies,"E rho_q_tot, n2",established,,0.001,"not assessable (startup ends at 21.0 h, after 6 h)",Parent validity: Newton,
+R10,z60_fo,copies,"E n2 / E n1, each tag",established,,0.75,"not assessable (startup ends at 21.0 h, after 6 h)",Refinement,
+R2,z120_c,default,"E rho_q_tot, n2",established,0.017148155365483822,0.001,fail,Parent validity: Newton,E n1 = 0.025141272350926627
+R10,z120_c,default,"E n2 / E n1, tropo",established,0.33998491545060594,0.75,pass,Refinement,"E n1 = 0.035265253439541455, E n2 = 0.011989654208986691"
+R10,z120_c,default,"E n2 / E n1, strat",established,0.17186136467905277,0.75,pass,Refinement,"E n1 = 0.05172696887318002, E n2 = 0.008889867461255602"
+R10,z120_c,default,"E n2 / E n1, evap",established,0.1524278885079258,0.75,pass,Refinement,"E n1 = 0.1742240074003526, E n2 = 0.026556597575424987"
+R10,z120_c,default,"E n2 / E n1, evap_tropo",established,0.15242788850792688,0.75,pass,Refinement,"E n1 = 0.17422400740035243, E n2 = 0.026556597575425146"
+R10,z120_c,default,"E n2 / E n1, evap_strat",established,0.15242788850792607,0.75,pass,Refinement,"E n1 = 0.17422400740035285, E n2 = 0.026556597575425073"
+R2,z120_c,default,"E rho_q_tot, n2",whole 6 h,0.013981068142576306,0.001,reported,Parent validity: Newton,E n1 = 0.025545289634384197
+R10,z120_c,default,"E n2 / E n1, tropo",whole 6 h,0.347917812977834,0.75,reported,Refinement,"E n1 = 0.050287785220697594, E n2 = 0.01749601625348415"
+R10,z120_c,default,"E n2 / E n1, strat",whole 6 h,0.3021893245976087,0.75,reported,Refinement,"E n1 = 0.07127102513425733, E n2 = 0.021537342948700418"
+R10,z120_c,default,"E n2 / E n1, evap",whole 6 h,0.29815284680148807,0.75,reported,Refinement,"E n1 = 0.28607128243350216, E n2 = 0.08529296724570119"
+R10,z120_c,default,"E n2 / E n1, evap_tropo",whole 6 h,0.2981528468014925,0.75,reported,Refinement,"E n1 = 0.28607128243350266, E n2 = 0.08529296724570262"
+R10,z120_c,default,"E n2 / E n1, evap_strat",whole 6 h,0.29815284680148985,0.75,reported,Refinement,"E n1 = 0.28607128243350444, E n2 = 0.08529296724570239"
+R2,z120_c,default,"E rho_q_tot, n2",startup,0.008988056924903566,0.001,reported,Parent validity: Newton,E n1 = 0.02618223541025247
+R10,z120_c,default,"E n2 / E n1, tropo",startup,0.3523390275211253,0.75,reported,Refinement,"E n1 = 0.06594373451740083, E n2 = 0.023234551290972273"
+R10,z120_c,default,"E n2 / E n1, strat",startup,0.3607083676053536,0.75,reported,Refinement,"E n1 = 0.08583264897946952, E n2 = 0.03096055470062777"
+R10,z120_c,default,"E n2 / E n1, evap",startup,0.3695882829732359,0.75,reported,Refinement,"E n1 = 0.41743967838208934, E n2 = 0.15428081397813623"
+R10,z120_c,default,"E n2 / E n1, evap_tropo",startup,0.3695882829732418,0.75,reported,Refinement,"E n1 = 0.41743967838209045, E n2 = 0.1542808139781391"
+R10,z120_c,default,"E n2 / E n1, evap_strat",startup,0.36958828297323776,0.75,reported,Refinement,"E n1 = 0.4174396783820937, E n2 = 0.15428081397813861"
+R2,z120_c,copies,"E rho_q_tot, n2",established,0.017148155365483822,0.001,fail,Parent validity: Newton,E n1 = 0.025141272350926627
+R10,z120_c,copies,"E n2 / E n1, tropo",established,0.2804513823236945,0.75,pass,Refinement,"E n1 = 0.06679531920979043, E n2 = 0.01873283960513815"
+R10,z120_c,copies,"E n2 / E n1, strat",established,0.2530302141955573,0.75,pass,Refinement,"E n1 = 0.049225970468288194, E n2 = 0.01245565785157514"
+R10,z120_c,copies,"E n2 / E n1, evap",established,0.4383747503211147,0.75,pass,Refinement,"E n1 = 0.06262598592312378, E n2 = 0.027453650942663034"
+R10,z120_c,copies,"E n2 / E n1, evap_tropo",established,0.43837475032110956,0.75,pass,Refinement,"E n1 = 0.06262598592312371, E n2 = 0.02745365094266268"
+R10,z120_c,copies,"E n2 / E n1, evap_strat",established,0.43837475032110995,0.75,pass,Refinement,"E n1 = 0.06262598592312403, E n2 = 0.027453650942662843"
+R2,z120_c,copies,"E rho_q_tot, n2",whole 6 h,0.013981068142576306,0.001,reported,Parent validity: Newton,E n1 = 0.025545289634384197
+R10,z120_c,copies,"E n2 / E n1, tropo",whole 6 h,0.29720584916970827,0.75,reported,Refinement,"E n1 = 0.09150003746386402, E n2 = 0.027194346333507827"
+R10,z120_c,copies,"E n2 / E n1, strat",whole 6 h,0.2871956750344581,0.75,reported,Refinement,"E n1 = 0.06731641041215149, E n2 = 0.01933298192921447"
+R10,z120_c,copies,"E n2 / E n1, evap",whole 6 h,0.3563588789514893,0.75,reported,Refinement,"E n1 = 0.12120501262991476, E n2 = 0.043192482424097525"
+R10,z120_c,copies,"E n2 / E n1, evap_tropo",whole 6 h,0.35635887895148816,0.75,reported,Refinement,"E n1 = 0.12120501262991461, E n2 = 0.04319248242409733"
+R10,z120_c,copies,"E n2 / E n1, evap_strat",whole 6 h,0.35635887895148816,0.75,reported,Refinement,"E n1 = 0.12120501262991486, E n2 = 0.04319248242409742"
+R2,z120_c,copies,"E rho_q_tot, n2",startup,0.008988056924903566,0.001,reported,Parent validity: Newton,E n1 = 0.02618223541025247
+R10,z120_c,copies,"E n2 / E n1, tropo",startup,0.3066268351228827,0.75,reported,Refinement,"E n1 = 0.1155258994489315, E n2 = 0.03542334092275024"
+R10,z120_c,copies,"E n2 / E n1, strat",startup,0.30199534182089205,0.75,reported,Refinement,"E n1 = 0.0800615113861615, E n2 = 0.02417820349776108"
+R10,z120_c,copies,"E n2 / E n1, evap",startup,0.3216908387408302,0.75,reported,Refinement,"E n1 = 0.2004660635171656, E n2 = 0.06448809611190955"
+R10,z120_c,copies,"E n2 / E n1, evap_tropo",startup,0.3216908387408308,0.75,reported,Refinement,"E n1 = 0.2004660635171654, E n2 = 0.0644880961119096"
+R10,z120_c,copies,"E n2 / E n1, evap_strat",startup,0.3216908387408305,0.75,reported,Refinement,"E n1 = 0.20046606351716556, E n2 = 0.06448809611190959"
+R2,z120_fo,default,"E rho_q_tot, n2",,,0.001,not assessable (P1 failed: the 10-iteration reference diverged; README),Parent validity: Newton,
+R10,z120_fo,default,"E n2 / E n1, each tag",,,0.75,not assessable (P1 failed: the 10-iteration reference diverged; README),Refinement,
+R2,z120_fo,copies,"E rho_q_tot, n2",,,0.001,not assessable (P1 failed: the 10-iteration reference diverged; README),Parent validity: Newton,
+R10,z120_fo,copies,"E n2 / E n1, each tag",,,0.75,not assessable (P1 failed: the 10-iteration reference diverged; README),Refinement,
+R3,z30_c,default,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z30_c,default,"top level's temperature change, K",whole day,1.702554565814978,5.0,pass,Parent validity: temperature,
+R3,z30_c,default,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z30_c,copies,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z30_c,copies,"top level's temperature change, K",whole day,1.702554565814978,5.0,pass,Parent validity: temperature,
+R3,z30_c,copies,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z30_c,untagged,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z30_c,untagged,"top level's temperature change, K",whole day,1.702554565814978,5.0,pass,Parent validity: temperature,
+R3,z30_c,untagged,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z30_fo,default,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z30_fo,default,"top level's temperature change, K",whole day,1.9900481623992619,5.0,pass,Parent validity: temperature,
+R3,z30_fo,default,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z30_fo,copies,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z30_fo,copies,"top level's temperature change, K",whole day,1.9900481623992619,5.0,pass,Parent validity: temperature,
+R3,z30_fo,copies,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z30_fo,untagged,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z30_fo,untagged,"top level's temperature change, K",whole day,1.9900481623992619,5.0,pass,Parent validity: temperature,
+R3,z30_fo,untagged,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z60_c,default,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z60_c,default,"top level's temperature change, K",whole day,1.9948833540417468,5.0,pass,Parent validity: temperature,
+R3,z60_c,default,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z60_c,copies,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z60_c,copies,"top level's temperature change, K",whole day,1.9948833540417468,5.0,pass,Parent validity: temperature,
+R3,z60_c,copies,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z60_c,untagged,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z60_c,untagged,"top level's temperature change, K",whole day,1.9948833540417468,5.0,pass,Parent validity: temperature,
+R3,z60_c,untagged,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z60_fo,default,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z60_fo,default,"top level's temperature change, K",whole day,1.957081995967883,5.0,pass,Parent validity: temperature,
+R3,z60_fo,default,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z60_fo,copies,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z60_fo,copies,"top level's temperature change, K",whole day,1.957081995967883,5.0,pass,Parent validity: temperature,
+R3,z60_fo,copies,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z60_fo,untagged,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z60_fo,untagged,"top level's temperature change, K",whole day,1.957081995967883,5.0,pass,Parent validity: temperature,
+R3,z60_fo,untagged,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z120_c,default,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z120_c,default,"top level's temperature change, K",whole day,2.0850969241496955,5.0,pass,Parent validity: temperature,
+R3,z120_c,default,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z120_c,copies,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z120_c,copies,"top level's temperature change, K",whole day,2.0850969241496955,5.0,pass,Parent validity: temperature,
+R3,z120_c,copies,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z120_c,untagged,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z120_c,untagged,"top level's temperature change, K",whole day,2.0850969241496955,5.0,pass,Parent validity: temperature,
+R3,z120_c,untagged,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z120_fo,default,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z120_fo,default,"top level's temperature change, K",whole day,1.8390420895800048,5.0,pass,Parent validity: temperature,
+R3,z120_fo,default,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z120_fo,copies,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z120_fo,copies,"top level's temperature change, K",whole day,1.8390420895800048,5.0,pass,Parent validity: temperature,
+R3,z120_fo,copies,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R3,z120_fo,untagged,points at the 150 K floor,whole day,0,0,pass,Parent validity: temperature,
+R3,z120_fo,untagged,"top level's temperature change, K",whole day,1.8390420895800048,5.0,pass,Parent validity: temperature,
+R3,z120_fo,untagged,"negative water over the water, max over hours",whole day,0.0,0.0001,pass,Parent validity: negative water,
+R4,z30_c,default,"gross residual at 24 h, of the water",24 h,7.246007804392767e-06,0.002,pass,"Closure, water",
+R4,z30_c,default,second 12 h minus first 12 h,0-12-24 h,-1.704670054426691e-07,0.0,pass,"Closure, water","first 3.708e-06, second 3.538e-06"
+R8,z30_c,default,partition repair retained gross per day,established,0.0,0.005,pass,"Intervention, aggregate",whole day 1.446e-03
+R8,z30_c,default,"led_fix inventory fraction, tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 1.875e-03
+R8,z30_c,default,"led_inc inventory fraction, tropo",whole day,0.05507466357830547,,reported,"Intervention, per tag (led_inc reported)",
+R8,z30_c,default,"led_fix inventory fraction, strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 6.331e-03
+R8,z30_c,default,"led_inc inventory fraction, strat",whole day,0.02654390515207201,,reported,"Intervention, per tag (led_inc reported)",
+R8,z30_c,default,"led_fix inventory fraction, evap",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z30_c,default,"led_inc inventory fraction, evap",whole day,0.03059296346170068,,reported,"Intervention, per tag (led_inc reported)",
+R8,z30_c,default,"led_fix inventory fraction, evap_tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z30_c,default,"led_inc inventory fraction, evap_tropo",whole day,0.030592963461700717,,reported,"Intervention, per tag (led_inc reported)",
+R8,z30_c,default,"led_fix inventory fraction, evap_strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z30_c,default,"led_inc inventory fraction, evap_strat",whole day,0.03059296346170075,,reported,"Intervention, per tag (led_inc reported)",
+R4,z30_c,copies,"gross residual at 24 h, of the water",24 h,0.001922821705592672,0.002,pass,"Closure, water",
+R4,z30_c,copies,second 12 h minus first 12 h,0-12-24 h,-0.0024657350890440596,0.0,pass,"Closure, water","first 2.194e-03, second -2.715e-04"
+R8,z30_c,copies,partition repair retained gross per day,established,0.0,0.005,pass,"Intervention, aggregate",whole day 2.576e-03
+R8,z30_c,copies,"led_fix inventory fraction, tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 3.344e-03
+R8,z30_c,copies,"led_fix inventory fraction, strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 1.123e-02
+R8,z30_c,copies,"led_fix inventory fraction, evap",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z30_c,copies,"led_fix inventory fraction, evap_tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z30_c,copies,"led_fix inventory fraction, evap_strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R5,z30_c,copies,"copies' own residual, max over hours",whole day,5.564057223377171e-05,0.0002,pass,Comparator: its own residual,at 24 h 1.080e-05
+R5,z30_c,copies,"copies' repair, gross, per day",established,0.0069288684978369396,0.002,fail,Comparator: its repair,whole day 7.204e-03; signed ledger over the day 6.221e-03
+R4,z30_fo,default,"gross residual at 24 h, of the water",24 h,8.508179825673772e-06,0.002,pass,"Closure, water",
+R4,z30_fo,default,second 12 h minus first 12 h,0-12-24 h,3.3563535760764734e-06,0.0,fail,"Closure, water","first 2.576e-06, second 5.932e-06"
+R8,z30_fo,default,partition repair retained gross per day,established,,0.005,not assessable (OD2's rule finds no end of startup),"Intervention, aggregate",
+R8,z30_fo,default,partition repair retained gross per day,whole day,0.004535854960743046,0.005,reported,"Intervention, aggregate",
+R8,z30_fo,default,"led_fix inventory fraction, tropo",established,,0.02,not assessable (OD2's rule finds no end of startup),"Intervention, per tag",
+R8,z30_fo,default,"led_fix inventory fraction, tropo",whole day,0.005848710716969397,0.02,reported,"Intervention, per tag",
+R8,z30_fo,default,"led_fix inventory fraction, strat",established,,0.02,not assessable (OD2's rule finds no end of startup),"Intervention, per tag",
+R8,z30_fo,default,"led_fix inventory fraction, strat",whole day,0.020206276666059553,0.02,reported,"Intervention, per tag",
+R8,z30_fo,default,"led_fix inventory fraction, evap",established,,0.02,not assessable (OD2's rule finds no end of startup),"Intervention, per tag",
+R8,z30_fo,default,"led_fix inventory fraction, evap",whole day,0.0,0.02,reported,"Intervention, per tag",
+R8,z30_fo,default,"led_fix inventory fraction, evap_tropo",established,,0.02,not assessable (OD2's rule finds no end of startup),"Intervention, per tag",
+R8,z30_fo,default,"led_fix inventory fraction, evap_tropo",whole day,0.0,0.02,reported,"Intervention, per tag",
+R8,z30_fo,default,"led_fix inventory fraction, evap_strat",established,,0.02,not assessable (OD2's rule finds no end of startup),"Intervention, per tag",
+R8,z30_fo,default,"led_fix inventory fraction, evap_strat",whole day,0.0,0.02,reported,"Intervention, per tag",
+R4,z30_fo,copies,"gross residual at 24 h, of the water",24 h,1.056440618067543,0.002,fail,"Closure, water",void rows
+R4,z30_fo,copies,second 12 h minus first 12 h,0-12-24 h,0.9925649043196793,0.0,fail,"Closure, water","first 3.194e-02, second 1.025e+00"
+R8,z30_fo,copies,partition repair retained gross per day,established,,0.005,not assessable (OD2's rule finds no end of startup),"Intervention, aggregate",
+R8,z30_fo,copies,partition repair retained gross per day,whole day,0.20407960749906698,0.005,reported,"Intervention, aggregate",
+R8,z30_fo,copies,"led_fix inventory fraction, tropo",established,,0.02,not assessable (OD2's rule finds no end of startup),"Intervention, per tag",
+R8,z30_fo,copies,"led_fix inventory fraction, tropo",whole day,0.46320266421916023,0.02,reported,"Intervention, per tag",
+R8,z30_fo,copies,"led_fix inventory fraction, strat",established,,0.02,not assessable (OD2's rule finds no end of startup),"Intervention, per tag",
+R8,z30_fo,copies,"led_fix inventory fraction, strat",whole day,0.9988610139370725,0.02,reported,"Intervention, per tag",
+R8,z30_fo,copies,"led_fix inventory fraction, evap",established,,0.02,not assessable (OD2's rule finds no end of startup),"Intervention, per tag",
+R8,z30_fo,copies,"led_fix inventory fraction, evap",whole day,0.0,0.02,reported,"Intervention, per tag",
+R8,z30_fo,copies,"led_fix inventory fraction, evap_tropo",established,,0.02,not assessable (OD2's rule finds no end of startup),"Intervention, per tag",
+R8,z30_fo,copies,"led_fix inventory fraction, evap_tropo",whole day,0.0,0.02,reported,"Intervention, per tag",
+R8,z30_fo,copies,"led_fix inventory fraction, evap_strat",established,,0.02,not assessable (OD2's rule finds no end of startup),"Intervention, per tag",
+R8,z30_fo,copies,"led_fix inventory fraction, evap_strat",whole day,0.0,0.02,reported,"Intervention, per tag",
+R5,z30_fo,copies,"copies' own residual, max over hours",whole day,0.01003613649971728,0.0002,fail,Comparator: its own residual,at 24 h 7.389e-03
+R5,z30_fo,copies,"copies' repair, gross, per day",established,,0.002,not assessable (OD2's rule finds no end of startup),Comparator: its repair,
+R5,z30_fo,copies,"copies' repair, gross, per day",whole day,1.2258712224774846,0.002,reported,Comparator: its repair,signed ledger over the day 9.568e-01
+R4,z60_c,default,"gross residual at 24 h, of the water",24 h,1.0350066022487357e-05,0.002,pass,"Closure, water",
+R4,z60_c,default,second 12 h minus first 12 h,0-12-24 h,-2.110145875019287e-07,0.0,pass,"Closure, water","first 5.281e-06, second 5.070e-06"
+R8,z60_c,default,partition repair retained gross per day,established,0.0,0.005,pass,"Intervention, aggregate",whole day 1.199e-02
+R8,z60_c,default,"led_fix inventory fraction, tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 1.558e-02
+R8,z60_c,default,"led_inc inventory fraction, tropo",whole day,0.06624842999100992,,reported,"Intervention, per tag (led_inc reported)",
+R8,z60_c,default,"led_fix inventory fraction, strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 5.200e-02
+R8,z60_c,default,"led_inc inventory fraction, strat",whole day,0.03618958714070037,,reported,"Intervention, per tag (led_inc reported)",
+R8,z60_c,default,"led_fix inventory fraction, evap",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z60_c,default,"led_inc inventory fraction, evap",whole day,0.03393371634090764,,reported,"Intervention, per tag (led_inc reported)",
+R8,z60_c,default,"led_fix inventory fraction, evap_tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z60_c,default,"led_inc inventory fraction, evap_tropo",whole day,0.033933716340907645,,reported,"Intervention, per tag (led_inc reported)",
+R8,z60_c,default,"led_fix inventory fraction, evap_strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z60_c,default,"led_inc inventory fraction, evap_strat",whole day,0.03393371634090763,,reported,"Intervention, per tag (led_inc reported)",
+R4,z60_c,copies,"gross residual at 24 h, of the water",24 h,0.0015668766422617972,0.002,pass,"Closure, water",
+R4,z60_c,copies,second 12 h minus first 12 h,0-12-24 h,-0.0018321564343544085,0.0,pass,"Closure, water","first 1.700e-03, second -1.326e-04"
+R8,z60_c,copies,partition repair retained gross per day,established,0.0,0.005,pass,"Intervention, aggregate",whole day 8.519e-03
+R8,z60_c,copies,"led_fix inventory fraction, tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 1.103e-02
+R8,z60_c,copies,"led_fix inventory fraction, strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 3.746e-02
+R8,z60_c,copies,"led_fix inventory fraction, evap",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z60_c,copies,"led_fix inventory fraction, evap_tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z60_c,copies,"led_fix inventory fraction, evap_strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R5,z60_c,copies,"copies' own residual, max over hours",whole day,5.934224167955574e-05,0.0002,pass,Comparator: its own residual,at 24 h 6.950e-06
+R5,z60_c,copies,"copies' repair, gross, per day",established,0.006576490963116639,0.002,fail,Comparator: its repair,whole day 7.268e-03; signed ledger over the day 6.295e-03
+R4,z60_fo,default,"gross residual at 24 h, of the water",24 h,1.8925405101647783e-05,0.002,pass,"Closure, water",
+R4,z60_fo,default,second 12 h minus first 12 h,0-12-24 h,1.2459293926477997e-05,0.0,fail,"Closure, water","first 3.233e-06, second 1.569e-05"
+R8,z60_fo,default,partition repair retained gross per day,established,0.0,0.005,pass,"Intervention, aggregate",whole day 2.964e-02
+R8,z60_fo,default,"led_fix inventory fraction, tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 3.935e-02
+R8,z60_fo,default,"led_inc inventory fraction, tropo",whole day,0.10305702130054979,,reported,"Intervention, per tag (led_inc reported)",
+R8,z60_fo,default,"led_fix inventory fraction, strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 1.201e-01
+R8,z60_fo,default,"led_inc inventory fraction, strat",whole day,0.07156070487865639,,reported,"Intervention, per tag (led_inc reported)",
+R8,z60_fo,default,"led_fix inventory fraction, evap",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z60_fo,default,"led_inc inventory fraction, evap",whole day,0.06754773198849386,,reported,"Intervention, per tag (led_inc reported)",
+R8,z60_fo,default,"led_fix inventory fraction, evap_tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z60_fo,default,"led_inc inventory fraction, evap_tropo",whole day,0.06754773200281025,,reported,"Intervention, per tag (led_inc reported)",
+R8,z60_fo,default,"led_fix inventory fraction, evap_strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z60_fo,default,"led_inc inventory fraction, evap_strat",whole day,0.06754773199874038,,reported,"Intervention, per tag (led_inc reported)",
+R4,z60_fo,copies,"gross residual at 24 h, of the water",24 h,0.7052387905387786,0.002,fail,"Closure, water",
+R4,z60_fo,copies,second 12 h minus first 12 h,0-12-24 h,0.6853980388340205,0.0,fail,"Closure, water","first 9.920e-03, second 6.953e-01"
+R8,z60_fo,copies,partition repair retained gross per day,established,0.16720903412327612,0.005,fail,"Intervention, aggregate",whole day 7.141e-02
+R8,z60_fo,copies,"led_fix inventory fraction, tropo",established,0.21573568628060752,0.02,fail,"Intervention, per tag",whole day 3.239e-01
+R8,z60_fo,copies,"led_fix inventory fraction, strat",established,0.08127175546639025,0.02,fail,"Intervention, per tag",whole day 4.278e-01
+R8,z60_fo,copies,"led_fix inventory fraction, evap",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z60_fo,copies,"led_fix inventory fraction, evap_tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z60_fo,copies,"led_fix inventory fraction, evap_strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R5,z60_fo,copies,"copies' own residual, max over hours",whole day,0.008310610966886773,0.0002,fail,Comparator: its own residual,at 24 h 5.348e-03
+R5,z60_fo,copies,"copies' repair, gross, per day",established,1.7616842647664128,0.002,fail,Comparator: its repair,whole day 5.203e-01; signed ledger over the day 2.445e-01
+R4,z120_c,default,"gross residual at 24 h, of the water",24 h,2.6031699744816634e-05,0.002,pass,"Closure, water",
+R4,z120_c,default,second 12 h minus first 12 h,0-12-24 h,4.303141749688997e-06,0.0,fail,"Closure, water","first 1.086e-05, second 1.517e-05"
+R8,z120_c,default,partition repair retained gross per day,established,0.0,0.005,pass,"Intervention, aggregate",whole day 1.733e-02
+R8,z120_c,default,"led_fix inventory fraction, tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 2.247e-02
+R8,z120_c,default,"led_inc inventory fraction, tropo",whole day,0.19310155533123338,,reported,"Intervention, per tag (led_inc reported)",
+R8,z120_c,default,"led_fix inventory fraction, strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 7.572e-02
+R8,z120_c,default,"led_inc inventory fraction, strat",whole day,0.13340028569185752,,reported,"Intervention, per tag (led_inc reported)",
+R8,z120_c,default,"led_fix inventory fraction, evap",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z120_c,default,"led_inc inventory fraction, evap",whole day,0.06411485828875037,,reported,"Intervention, per tag (led_inc reported)",
+R8,z120_c,default,"led_fix inventory fraction, evap_tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z120_c,default,"led_inc inventory fraction, evap_tropo",whole day,0.06411485828875035,,reported,"Intervention, per tag (led_inc reported)",
+R8,z120_c,default,"led_fix inventory fraction, evap_strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z120_c,default,"led_inc inventory fraction, evap_strat",whole day,0.06411485828875033,,reported,"Intervention, per tag (led_inc reported)",
+R4,z120_c,copies,"gross residual at 24 h, of the water",24 h,0.004101194278210115,0.002,fail,"Closure, water",
+R4,z120_c,copies,second 12 h minus first 12 h,0-12-24 h,-0.007659078658405001,0.0,pass,"Closure, water","first 5.880e-03, second -1.779e-03"
+R8,z120_c,copies,partition repair retained gross per day,established,0.0,0.005,pass,"Intervention, aggregate",whole day 1.188e-02
+R8,z120_c,copies,"led_fix inventory fraction, tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 1.633e-02
+R8,z120_c,copies,"led_fix inventory fraction, strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 5.395e-02
+R8,z120_c,copies,"led_fix inventory fraction, evap",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z120_c,copies,"led_fix inventory fraction, evap_tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z120_c,copies,"led_fix inventory fraction, evap_strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R5,z120_c,copies,"copies' own residual, max over hours",whole day,0.0001661401029100066,0.0002,pass,Comparator: its own residual,at 24 h 1.987e-05
+R5,z120_c,copies,"copies' repair, gross, per day",established,0.021380844051284716,0.002,fail,Comparator: its repair,whole day 3.296e-02; signed ledger over the day 2.125e-02
+R4,z120_fo,default,"gross residual at 24 h, of the water",24 h,3.001903259763895e-05,0.002,pass,"Closure, water",
+R4,z120_fo,default,second 12 h minus first 12 h,0-12-24 h,1.713545050486249e-05,0.0,fail,"Closure, water","first 6.442e-06, second 2.358e-05"
+R8,z120_fo,default,partition repair retained gross per day,established,0.008679405541680608,0.005,fail,"Intervention, aggregate",whole day 8.318e-03
+R8,z120_fo,default,"led_fix inventory fraction, tropo",established,0.010848887692306285,0.02,pass,"Intervention, per tag",whole day 1.085e-02
+R8,z120_fo,default,"led_inc inventory fraction, tropo",whole day,0.1946175777923007,,reported,"Intervention, per tag (led_inc reported)",
+R8,z120_fo,default,"led_fix inventory fraction, strat",established,0.03564700508149977,0.02,fail,"Intervention, per tag",whole day 3.565e-02
+R8,z120_fo,default,"led_inc inventory fraction, strat",whole day,0.08354103738834877,,reported,"Intervention, per tag (led_inc reported)",
+R8,z120_fo,default,"led_fix inventory fraction, evap",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z120_fo,default,"led_inc inventory fraction, evap",whole day,0.0951555826822491,,reported,"Intervention, per tag (led_inc reported)",
+R8,z120_fo,default,"led_fix inventory fraction, evap_tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z120_fo,default,"led_inc inventory fraction, evap_tropo",whole day,0.095155582682249,,reported,"Intervention, per tag (led_inc reported)",
+R8,z120_fo,default,"led_fix inventory fraction, evap_strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z120_fo,default,"led_inc inventory fraction, evap_strat",whole day,0.09515558268224913,,reported,"Intervention, per tag (led_inc reported)",
+R4,z120_fo,copies,"gross residual at 24 h, of the water",24 h,0.5992359925504633,0.002,fail,"Closure, water",
+R4,z120_fo,copies,second 12 h minus first 12 h,0-12-24 h,0.5500375207272941,0.0,fail,"Closure, water","first 2.460e-02, second 5.746e-01"
+R8,z120_fo,copies,partition repair retained gross per day,established,0.11069703831499247,0.005,fail,"Intervention, aggregate",whole day 1.061e-01
+R8,z120_fo,copies,"led_fix inventory fraction, tropo",established,0.3431031119058435,0.02,fail,"Intervention, per tag",whole day 3.431e-01
+R8,z120_fo,copies,"led_fix inventory fraction, strat",established,0.5452337591207754,0.02,fail,"Intervention, per tag",whole day 5.452e-01
+R8,z120_fo,copies,"led_fix inventory fraction, evap",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z120_fo,copies,"led_fix inventory fraction, evap_tropo",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R8,z120_fo,copies,"led_fix inventory fraction, evap_strat",established,0.0,0.02,pass,"Intervention, per tag",whole day 0.000e+00
+R5,z120_fo,copies,"copies' own residual, max over hours",whole day,0.008940119150291716,0.0002,fail,Comparator: its own residual,at 24 h 2.600e-03
+R5,z120_fo,copies,"copies' repair, gross, per day",established,0.9427330480575087,0.002,fail,Comparator: its repair,whole day 9.093e-01; signed ledger over the day 7.460e-01
+R9,z30_c,default,"q_tag_led_repair, (60, 1) over (120, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00
+R9,z30_c,default,"q_tag_led_repair, (30, 1) over (60, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z30_c,default,"q_tag_led_repair, (120, 2) over (120, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00
+R9,z30_c,default,"q_tag_led_repair, (120, 10) over (120, 2)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00
+R9,z30_c,default,"q_tag_inc_left, (60, 1) over (120, 1)",6-7 h,0.4221347895299221,0.75,pass,Refinement,4.145e-07 over 9.820e-07
+R9,z30_c,default,"q_tag_inc_left, (30, 1) over (60, 1)",6-7 h,0.429428009476198,0.75,pass,Refinement,1.780e-07 over 4.145e-07; parent moved more than 1%
+R9,z30_c,default,"q_tag_inc_left, (120, 2) over (120, 1)",6-7 h,0.013917744308333485,0.75,pass,Refinement,1.367e-08 over 9.820e-07
+R9,z30_c,default,"q_tag_inc_left, (120, 10) over (120, 2)",6-7 h,7.639815517857397e-07,0.75,pass,Refinement,1.044e-14 over 1.367e-08
+R6,z30_c,copies,"copies' repair per hour, (60, 1) over (120, 1)",6-7 h,0.8022299165973178,1.1,pass,Comparator: refinement,2.084e-04 over 2.598e-04
+R6,z30_c,copies,"copies' repair per hour, (30, 1) over (60, 1)",6-7 h,0.7985730218054023,1.1,pass,Comparator: refinement,1.664e-04 over 2.084e-04; parent moved more than 1%
+R6,z30_c,copies,"copies' repair per hour, (120, 2) over (120, 1)",6-7 h,0.2837673532220316,1.1,pass,Comparator: refinement,7.372e-05 over 2.598e-04
+R6,z30_c,copies,"copies' repair per hour, (120, 10) over (120, 1)",6-7 h,0.1939767849393937,1.1,pass,Comparator: refinement,5.040e-05 over 2.598e-04
+R9,z30_fo,default,"q_tag_led_repair, (60, 1) over (120, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z30_fo,default,"q_tag_led_repair, (30, 1) over (60, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z30_fo,default,"q_tag_led_repair, (120, 2) over (120, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00
+R9,z30_fo,default,"q_tag_led_repair, (120, 10) over (120, 2)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00
+R9,z30_fo,default,"q_tag_inc_left, (60, 1) over (120, 1)",6-7 h,0.41847089614102734,0.75,pass,Refinement,4.173e-07 over 9.973e-07; parent moved more than 1%
+R9,z30_fo,default,"q_tag_inc_left, (30, 1) over (60, 1)",6-7 h,0.43837419597151067,0.75,pass,Refinement,1.830e-07 over 4.173e-07; parent moved more than 1%
+R9,z30_fo,default,"q_tag_inc_left, (120, 2) over (120, 1)",6-7 h,0.011828208107702902,0.75,pass,Refinement,1.180e-08 over 9.973e-07
+R9,z30_fo,default,"q_tag_inc_left, (120, 10) over (120, 2)",6-7 h,3.206930319467443e-05,0.75,pass,Refinement,3.783e-13 over 1.180e-08
+R6,z30_fo,copies,"copies' repair per hour, (60, 1) over (120, 1)",6-7 h,1.1221730052268772,1.1,fail,Comparator: refinement,8.977e-04 over 7.999e-04; parent moved more than 1%
+R6,z30_fo,copies,"copies' repair per hour, (30, 1) over (60, 1)",6-7 h,0.9917182174972081,1.1,pass,Comparator: refinement,8.902e-04 over 8.977e-04; parent moved more than 1%
+R6,z30_fo,copies,"copies' repair per hour, (120, 2) over (120, 1)",6-7 h,0.9108286723000866,1.1,pass,Comparator: refinement,7.286e-04 over 7.999e-04
+R6,z30_fo,copies,"copies' repair per hour, (120, 10) over (120, 1)",6-7 h,0.8881146792115656,1.1,pass,Comparator: refinement,7.104e-04 over 7.999e-04
+R9,z60_c,default,"q_tag_led_repair, (60, 1) over (120, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z60_c,default,"q_tag_led_repair, (30, 1) over (60, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z60_c,default,"q_tag_led_repair, (120, 2) over (120, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00
+R9,z60_c,default,"q_tag_led_repair, (120, 10) over (120, 2)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z60_c,default,"q_tag_inc_left, (60, 1) over (120, 1)",6-7 h,0.3673951233747741,0.75,pass,Refinement,1.539e-07 over 4.189e-07; parent moved more than 1%
+R9,z60_c,default,"q_tag_inc_left, (30, 1) over (60, 1)",6-7 h,0.37656428402535924,0.75,pass,Refinement,5.796e-08 over 1.539e-07; parent moved more than 1%
+R9,z60_c,default,"q_tag_inc_left, (120, 2) over (120, 1)",6-7 h,0.029586340936177045,0.75,pass,Refinement,1.239e-08 over 4.189e-07
+R9,z60_c,default,"q_tag_inc_left, (120, 10) over (120, 2)",6-7 h,2.890013475046082e-06,0.75,pass,Refinement,3.582e-14 over 1.239e-08; parent moved more than 1%
+R6,z60_c,copies,"copies' repair per hour, (60, 1) over (120, 1)",6-7 h,1.0622701649047104,1.1,pass,Comparator: refinement,3.952e-04 over 3.721e-04; parent moved more than 1%
+R6,z60_c,copies,"copies' repair per hour, (30, 1) over (60, 1)",6-7 h,1.004867837547057,1.1,pass,Comparator: refinement,3.972e-04 over 3.952e-04; parent moved more than 1%
+R6,z60_c,copies,"copies' repair per hour, (120, 2) over (120, 1)",6-7 h,0.8367448568467288,1.1,pass,Comparator: refinement,3.113e-04 over 3.721e-04
+R6,z60_c,copies,"copies' repair per hour, (120, 10) over (120, 1)",6-7 h,0.7889879002626794,1.1,pass,Comparator: refinement,2.936e-04 over 3.721e-04; parent moved more than 1%
+R9,z60_fo,default,"q_tag_led_repair, (60, 1) over (120, 1)",6-7 h,3.779281373075422,0.75,flag,Refinement,3.867e-03 over 1.023e-03; parent moved more than 1%
+R9,z60_fo,default,"q_tag_led_repair, (30, 1) over (60, 1)",6-7 h,1.3396685247271285,0.75,flag,Refinement,5.180e-03 over 3.867e-03; parent moved more than 1%
+R9,z60_fo,default,"q_tag_led_repair, (120, 2) over (120, 1)",6-7 h,0.6954920084529714,0.75,pass,Refinement,7.116e-04 over 1.023e-03; parent moved more than 1%
+R9,z60_fo,default,"q_tag_led_repair, (120, 10) over (120, 2)",6-7 h,1.2835577888174279,0.75,flag,Refinement,9.133e-04 over 7.116e-04; parent moved more than 1%
+R9,z60_fo,default,"q_tag_inc_left, (60, 1) over (120, 1)",6-7 h,0.5097773522759301,0.75,pass,Refinement,8.540e-07 over 1.675e-06; parent moved more than 1%
+R9,z60_fo,default,"q_tag_inc_left, (30, 1) over (60, 1)",6-7 h,0.4089490501944279,0.75,pass,Refinement,3.493e-07 over 8.540e-07; parent moved more than 1%
+R9,z60_fo,default,"q_tag_inc_left, (120, 2) over (120, 1)",6-7 h,0.036206830811427525,0.75,pass,Refinement,6.066e-08 over 1.675e-06; parent moved more than 1%
+R9,z60_fo,default,"q_tag_inc_left, (120, 10) over (120, 2)",6-7 h,1.9502316677222803e-05,0.75,pass,Refinement,1.183e-12 over 6.066e-08; parent moved more than 1%
+R6,z60_fo,copies,"copies' repair per hour, (60, 1) over (120, 1)",6-7 h,2.18149776177707,1.1,fail,Comparator: refinement,6.997e-03 over 3.207e-03; parent moved more than 1%
+R6,z60_fo,copies,"copies' repair per hour, (30, 1) over (60, 1)",6-7 h,1.7230843708887393,1.1,fail,Comparator: refinement,1.206e-02 over 6.997e-03; parent moved more than 1%
+R6,z60_fo,copies,"copies' repair per hour, (120, 2) over (120, 1)",6-7 h,0.5417094075679082,1.1,pass,Comparator: refinement,1.737e-03 over 3.207e-03; parent moved more than 1%
+R6,z60_fo,copies,"copies' repair per hour, (120, 10) over (120, 1)",6-7 h,0.5454150535125986,1.1,pass,Comparator: refinement,1.749e-03 over 3.207e-03; parent moved more than 1%
+R9,z120_c,default,"q_tag_led_repair, (60, 1) over (120, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z120_c,default,"q_tag_led_repair, (30, 1) over (60, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z120_c,default,"q_tag_led_repair, (120, 2) over (120, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z120_c,default,"q_tag_led_repair, (120, 10) over (120, 2)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z120_c,default,"q_tag_inc_left, (60, 1) over (120, 1)",6-7 h,0.42800841826532454,0.75,pass,Refinement,4.577e-07 over 1.069e-06; parent moved more than 1%
+R9,z120_c,default,"q_tag_inc_left, (30, 1) over (60, 1)",6-7 h,0.4356121776251052,0.75,pass,Refinement,1.994e-07 over 4.577e-07; parent moved more than 1%
+R9,z120_c,default,"q_tag_inc_left, (120, 2) over (120, 1)",6-7 h,0.0480565336469001,0.75,pass,Refinement,5.139e-08 over 1.069e-06; parent moved more than 1%
+R9,z120_c,default,"q_tag_inc_left, (120, 10) over (120, 2)",6-7 h,1.0515165015391264e-05,0.75,pass,Refinement,5.404e-13 over 5.139e-08; parent moved more than 1%
+R6,z120_c,copies,"copies' repair per hour, (60, 1) over (120, 1)",6-7 h,1.036895563866625,1.1,pass,Comparator: refinement,1.649e-03 over 1.590e-03; parent moved more than 1%
+R6,z120_c,copies,"copies' repair per hour, (30, 1) over (60, 1)",6-7 h,0.9734997296679329,1.1,pass,Comparator: refinement,1.605e-03 over 1.649e-03; parent moved more than 1%
+R6,z120_c,copies,"copies' repair per hour, (120, 2) over (120, 1)",6-7 h,0.8958281512282114,1.1,pass,Comparator: refinement,1.425e-03 over 1.590e-03; parent moved more than 1%
+R6,z120_c,copies,"copies' repair per hour, (120, 10) over (120, 1)",6-7 h,0.9026990541829389,1.1,pass,Comparator: refinement,1.436e-03 over 1.590e-03; parent moved more than 1%
+R9,z120_fo,default,"q_tag_led_repair, (60, 1) over (120, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z120_fo,default,"q_tag_led_repair, (30, 1) over (60, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z120_fo,default,"q_tag_led_repair, (120, 2) over (120, 1)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z120_fo,default,"q_tag_led_repair, (120, 10) over (120, 2)",6-7 h,,0.75,vacuous (no throughput on either rung),Refinement,0.000e+00 over 0.000e+00; parent moved more than 1%
+R9,z120_fo,default,"q_tag_inc_left, (60, 1) over (120, 1)",6-7 h,0.3829885375060351,0.75,pass,Refinement,3.089e-07 over 8.066e-07; parent moved more than 1%
+R9,z120_fo,default,"q_tag_inc_left, (30, 1) over (60, 1)",6-7 h,0.4088693165147666,0.75,pass,Refinement,1.263e-07 over 3.089e-07; parent moved more than 1%
+R9,z120_fo,default,"q_tag_inc_left, (120, 2) over (120, 1)",6-7 h,0.03918795128182548,0.75,pass,Refinement,3.161e-08 over 8.066e-07; parent moved more than 1%
+R9,z120_fo,default,"q_tag_inc_left, (120, 10) over (120, 2)",6-7 h,2.6783918850243455e-05,0.75,pass,Refinement,8.466e-13 over 3.161e-08; parent moved more than 1%
+R6,z120_fo,copies,"copies' repair per hour, (60, 1) over (120, 1)",6-7 h,1.1655036440910698,1.1,fail,Comparator: refinement,6.209e-03 over 5.328e-03; parent moved more than 1%
+R6,z120_fo,copies,"copies' repair per hour, (30, 1) over (60, 1)",6-7 h,1.1482119175506034,1.1,fail,Comparator: refinement,7.130e-03 over 6.209e-03; parent moved more than 1%
+R6,z120_fo,copies,"copies' repair per hour, (120, 2) over (120, 1)",6-7 h,1.0363899855945784,1.1,pass,Comparator: refinement,5.521e-03 over 5.328e-03; parent moved more than 1%
+R6,z120_fo,copies,"copies' repair per hour, (120, 10) over (120, 1)",6-7 h,1.0638666759354187,1.1,pass,Comparator: refinement,5.668e-03 over 5.328e-03; parent moved more than 1%
+R7,z30_c,default vs copies,"tropo at 1 h, L1",1 h,0.0027760007203142104,0.01,not assessable (R5 failed),"Provenance, per tag","region tag: L1=2.776e-03 (budget 0.01), Linf=1.668e-02 (budget 0.25); judged pass if it were scored"
+R7,z30_c,default vs copies,"tropo at 24 h, L1",24 h,0.0025824345020810996,0.02,not assessable (R5 failed),"Provenance, per tag","region tag: L1=2.582e-03 (budget 0.02), Linf=6.508e-03 (budget 0.05); judged pass if it were scored"
+R7,z30_c,default vs copies,"strat at 1 h, L1",1 h,0.0063078797717866725,0.01,not assessable (R5 failed),"Provenance, per tag","region tag: L1=6.308e-03 (budget 0.01), Linf=3.530e-02 (budget 0.25); judged pass if it were scored"
+R7,z30_c,default vs copies,"strat at 24 h, L1",24 h,0.0040982930016168154,0.02,not assessable (R5 failed),"Provenance, per tag","region tag: L1=4.098e-03 (budget 0.02), Linf=1.341e-02 (budget 0.05); judged pass if it were scored"
+R7,z30_c,default vs copies,"evap at 1 h, L1",1 h,0.06492827038213161,0.1,not assessable (R5 failed),"Provenance, per tag","source tag: L1=6.493e-02 (budget 0.1), Linf=7.046e-02 (budget 0.25); judged pass if it were scored"
+R7,z30_c,default vs copies,"evap at 24 h, L1",24 h,0.004110407039628848,0.02,not assessable (R5 failed),"Provenance, per tag","source tag: L1=4.110e-03 (budget 0.02), Linf=8.220e-03 (budget 0.05); judged pass if it were scored"
+R7,z30_c,default vs copies,"evap_tropo at 1 h, L1",1 h,0.06492827038213192,0.1,not assessable (R5 failed),"Provenance, per tag","source tag: L1=6.493e-02 (budget 0.1), Linf=7.046e-02 (budget 0.25); judged pass if it were scored"
+R7,z30_c,default vs copies,"evap_tropo at 24 h, L1",24 h,0.004110407039629937,0.02,not assessable (R5 failed),"Provenance, per tag","source tag: L1=4.110e-03 (budget 0.02), Linf=8.220e-03 (budget 0.05); judged pass if it were scored"
+R7,z30_c,default vs copies,"evap_strat at 1 h, abs L1 (small tag)",1 h,4.336824540413221e-09,2e-4 of the water,not assessable (R5 failed),"Provenance, per tag",small tag (share=5.7686693283239826e-09): abs_L1=4.337e-09 <= 2.316e-03; judged pass if it were scored
+R7,z30_c,default vs copies,"evap_strat at 24 h, abs L1 (small tag)",24 h,5.70749931630122e-09,2e-4 of the water,not assessable (R5 failed),"Provenance, per tag",small tag (share=1.196687093042008e-07): abs_L1=5.707e-09 <= 2.321e-03; judged pass if it were scored
+R7,z30_fo,default vs copies,"tropo at 1 h, L1",1 h,0.0015415176399763844,0.01,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=1.542e-03 (budget 0.01), Linf=8.879e-03 (budget 0.25); judged pass if it were scored"
+R7,z30_fo,default vs copies,"tropo at 24 h, L1",24 h,0.8534571708443729,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=8.535e-01 (budget 0.02), Linf=6.979e-01 (budget 0.05); judged fail if it were scored"
+R7,z30_fo,default vs copies,"strat at 1 h, L1",1 h,0.0039143191469779666,0.01,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=3.914e-03 (budget 0.01), Linf=2.106e-02 (budget 0.25); judged pass if it were scored"
+R7,z30_fo,default vs copies,"strat at 24 h, L1",24 h,0.38371838155259325,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=3.837e-01 (budget 0.02), Linf=7.497e-01 (budget 0.05); judged fail if it were scored"
+R7,z30_fo,default vs copies,"evap at 1 h, L1",1 h,0.04303498101146688,0.1,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=4.303e-02 (budget 0.1), Linf=6.373e-02 (budget 0.25); judged pass if it were scored"
+R7,z30_fo,default vs copies,"evap at 24 h, L1",24 h,0.04517855793836336,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=4.518e-02 (budget 0.02), Linf=1.081e-01 (budget 0.05); judged fail if it were scored"
+R7,z30_fo,default vs copies,"evap_tropo at 1 h, L1",1 h,0.043034981011466654,0.1,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=4.303e-02 (budget 0.1), Linf=6.373e-02 (budget 0.25); judged pass if it were scored"
+R7,z30_fo,default vs copies,"evap_tropo at 24 h, L1",24 h,0.045178557938364394,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=4.518e-02 (budget 0.02), Linf=1.081e-01 (budget 0.05); judged fail if it were scored"
+R7,z30_fo,default vs copies,"evap_strat at 1 h, abs L1 (small tag)",1 h,2.877520620107867e-09,2e-4 of the water,not assessable (R5 and R6 failed),"Provenance, per tag",small tag (share=5.773430836990019e-09): abs_L1=2.878e-09 <= 2.316e-03; judged pass if it were scored
+R7,z30_fo,default vs copies,"evap_strat at 24 h, abs L1 (small tag)",24 h,6.301098396675126e-08,2e-4 of the water,not assessable (R5 and R6 failed),"Provenance, per tag",small tag (share=1.1732070787451552e-07): abs_L1=6.301e-08 <= 2.378e-03; judged pass if it were scored
+R7,z60_c,default vs copies,"tropo at 1 h, L1",1 h,0.005673038132154327,0.01,not assessable (R5 failed),"Provenance, per tag","region tag: L1=5.673e-03 (budget 0.01), Linf=8.175e-02 (budget 0.25); judged pass if it were scored"
+R7,z60_c,default vs copies,"tropo at 24 h, L1",24 h,0.003926590876341791,0.02,not assessable (R5 failed),"Provenance, per tag","region tag: L1=3.927e-03 (budget 0.02), Linf=5.502e-03 (budget 0.05); judged pass if it were scored"
+R7,z60_c,default vs copies,"strat at 1 h, L1",1 h,0.013563924501206236,0.01,not assessable (R5 failed),"Provenance, per tag","region tag: L1=1.356e-02 (budget 0.01), Linf=1.769e-01 (budget 0.25); judged fail if it were scored"
+R7,z60_c,default vs copies,"strat at 24 h, L1",24 h,0.017212758236785447,0.02,not assessable (R5 failed),"Provenance, per tag","region tag: L1=1.721e-02 (budget 0.02), Linf=1.383e-02 (budget 0.05); judged pass if it were scored"
+R7,z60_c,default vs copies,"evap at 1 h, L1",1 h,0.1181557385946672,0.1,not assessable (R5 failed),"Provenance, per tag","source tag: L1=1.182e-01 (budget 0.1), Linf=1.964e-01 (budget 0.25); judged fail if it were scored"
+R7,z60_c,default vs copies,"evap at 24 h, L1",24 h,0.002264584363653084,0.02,not assessable (R5 failed),"Provenance, per tag","source tag: L1=2.265e-03 (budget 0.02), Linf=3.378e-03 (budget 0.05); judged pass if it were scored"
+R7,z60_c,default vs copies,"evap_tropo at 1 h, L1",1 h,0.11815573859466678,0.1,not assessable (R5 failed),"Provenance, per tag","source tag: L1=1.182e-01 (budget 0.1), Linf=1.964e-01 (budget 0.25); judged fail if it were scored"
+R7,z60_c,default vs copies,"evap_tropo at 24 h, L1",24 h,0.002264584363652472,0.02,not assessable (R5 failed),"Provenance, per tag","source tag: L1=2.265e-03 (budget 0.02), Linf=3.378e-03 (budget 0.05); judged pass if it were scored"
+R7,z60_c,default vs copies,"evap_strat at 1 h, abs L1 (small tag)",1 h,6.10805722839895e-09,2e-4 of the water,not assessable (R5 failed),"Provenance, per tag",small tag (share=4.463988426783759e-09): abs_L1=6.108e-09 <= 2.316e-03; judged pass if it were scored
+R7,z60_c,default vs copies,"evap_strat at 24 h, abs L1 (small tag)",24 h,2.519046348897887e-09,2e-4 of the water,not assessable (R5 failed),"Provenance, per tag",small tag (share=9.30418202966135e-08): abs_L1=2.519e-09 <= 2.391e-03; judged pass if it were scored
+R7,z60_fo,default vs copies,"tropo at 1 h, L1",1 h,0.004011816806278936,0.01,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=4.012e-03 (budget 0.01), Linf=3.481e-02 (budget 0.25); judged pass if it were scored"
+R7,z60_fo,default vs copies,"tropo at 24 h, L1",24 h,0.70009869494926,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=7.001e-01 (budget 0.02), Linf=7.799e-01 (budget 0.05); judged fail if it were scored"
+R7,z60_fo,default vs copies,"strat at 1 h, L1",1 h,0.0031212345027501727,0.01,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=3.121e-03 (budget 0.01), Linf=1.176e-02 (budget 0.25); judged pass if it were scored"
+R7,z60_fo,default vs copies,"strat at 24 h, L1",24 h,0.19979334047183467,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=1.998e-01 (budget 0.02), Linf=5.345e-01 (budget 0.05); judged fail if it were scored"
+R7,z60_fo,default vs copies,"evap at 1 h, L1",1 h,0.10863134412690317,0.1,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=1.086e-01 (budget 0.1), Linf=5.444e-02 (budget 0.25); judged fail if it were scored"
+R7,z60_fo,default vs copies,"evap at 24 h, L1",24 h,0.029226726034452987,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=2.923e-02 (budget 0.02), Linf=7.040e-02 (budget 0.05); judged fail if it were scored"
+R7,z60_fo,default vs copies,"evap_tropo at 1 h, L1",1 h,0.1086313441269033,0.1,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=1.086e-01 (budget 0.1), Linf=5.444e-02 (budget 0.25); judged fail if it were scored"
+R7,z60_fo,default vs copies,"evap_tropo at 24 h, L1",24 h,0.02922672596462899,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=2.923e-02 (budget 0.02), Linf=7.040e-02 (budget 0.05); judged fail if it were scored"
+R7,z60_fo,default vs copies,"evap_strat at 1 h, abs L1 (small tag)",1 h,5.603142510517992e-09,2e-4 of the water,not assessable (R5 and R6 failed),"Provenance, per tag",small tag (share=4.454070772466375e-09): abs_L1=5.603e-09 <= 2.316e-03; judged pass if it were scored
+R7,z60_fo,default vs copies,"evap_strat at 24 h, abs L1 (small tag)",24 h,3.142853720298499e-08,2e-4 of the water,not assessable (R5 and R6 failed),"Provenance, per tag",small tag (share=9.067791329162365e-08): abs_L1=3.143e-08 <= 2.372e-03; judged pass if it were scored
+R7,z120_c,default vs copies,"tropo at 1 h, L1",1 h,0.02127223873800283,0.01,not assessable (R5 failed),"Provenance, per tag","region tag: L1=2.127e-02 (budget 0.01), Linf=1.073e-01 (budget 0.25); judged fail if it were scored"
+R7,z120_c,default vs copies,"tropo at 24 h, L1",24 h,0.013597826710178297,0.02,not assessable (R5 failed),"Provenance, per tag","region tag: L1=1.360e-02 (budget 0.02), Linf=2.481e-02 (budget 0.05); judged pass if it were scored"
+R7,z120_c,default vs copies,"strat at 1 h, L1",1 h,0.017511541933551297,0.01,not assessable (R5 failed),"Provenance, per tag","region tag: L1=1.751e-02 (budget 0.01), Linf=1.270e-01 (budget 0.25); judged fail if it were scored"
+R7,z120_c,default vs copies,"strat at 24 h, L1",24 h,0.039880851695064334,0.02,not assessable (R5 failed),"Provenance, per tag","region tag: L1=3.988e-02 (budget 0.02), Linf=3.407e-02 (budget 0.05); judged fail if it were scored"
+R7,z120_c,default vs copies,"evap at 1 h, L1",1 h,0.28679349187258857,0.1,not assessable (R5 failed),"Provenance, per tag","source tag: L1=2.868e-01 (budget 0.1), Linf=4.609e-01 (budget 0.25); judged fail if it were scored"
+R7,z120_c,default vs copies,"evap at 24 h, L1",24 h,0.005478832434257862,0.02,not assessable (R5 failed),"Provenance, per tag","source tag: L1=5.479e-03 (budget 0.02), Linf=7.766e-03 (budget 0.05); judged pass if it were scored"
+R7,z120_c,default vs copies,"evap_tropo at 1 h, L1",1 h,0.2867934918725889,0.1,not assessable (R5 failed),"Provenance, per tag","source tag: L1=2.868e-01 (budget 0.1), Linf=4.609e-01 (budget 0.25); judged fail if it were scored"
+R7,z120_c,default vs copies,"evap_tropo at 24 h, L1",24 h,0.005478832434257469,0.02,not assessable (R5 failed),"Provenance, per tag","source tag: L1=5.479e-03 (budget 0.02), Linf=7.766e-03 (budget 0.05); judged pass if it were scored"
+R7,z120_c,default vs copies,"evap_strat at 1 h, abs L1 (small tag)",1 h,1.376103922088145e-08,2e-4 of the water,not assessable (R5 failed),"Provenance, per tag",small tag (share=3.8547644880798565e-09): abs_L1=1.376e-08 <= 2.301e-03; judged pass if it were scored
+R7,z120_c,default vs copies,"evap_strat at 24 h, abs L1 (small tag)",24 h,5.366554756842574e-09,2e-4 of the water,not assessable (R5 failed),"Provenance, per tag",small tag (share=8.211984015622559e-08): abs_L1=5.367e-09 <= 2.386e-03; judged pass if it were scored
+R7,z120_fo,default vs copies,"tropo at 1 h, L1",1 h,0.021809638148705453,0.01,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=2.181e-02 (budget 0.01), Linf=9.910e-02 (budget 0.25); judged fail if it were scored"
+R7,z120_fo,default vs copies,"tropo at 24 h, L1",24 h,0.5428029810761692,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=5.428e-01 (budget 0.02), Linf=7.048e-01 (budget 0.05); judged fail if it were scored"
+R7,z120_fo,default vs copies,"strat at 1 h, L1",1 h,0.010270874273250893,0.01,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=1.027e-02 (budget 0.01), Linf=7.931e-02 (budget 0.25); judged fail if it were scored"
+R7,z120_fo,default vs copies,"strat at 24 h, L1",24 h,0.4851753764020134,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","region tag: L1=4.852e-01 (budget 0.02), Linf=9.039e-01 (budget 0.05); judged fail if it were scored"
+R7,z120_fo,default vs copies,"evap at 1 h, L1",1 h,0.08425816810306991,0.1,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=8.426e-02 (budget 0.1), Linf=1.157e-01 (budget 0.25); judged pass if it were scored"
+R7,z120_fo,default vs copies,"evap at 24 h, L1",24 h,0.03586382454488551,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=3.586e-02 (budget 0.02), Linf=2.931e-01 (budget 0.05); judged fail if it were scored"
+R7,z120_fo,default vs copies,"evap_tropo at 1 h, L1",1 h,0.0842581681030695,0.1,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=8.426e-02 (budget 0.1), Linf=1.157e-01 (budget 0.25); judged pass if it were scored"
+R7,z120_fo,default vs copies,"evap_tropo at 24 h, L1",24 h,0.035863824544885244,0.02,not assessable (R5 and R6 failed),"Provenance, per tag","source tag: L1=3.586e-02 (budget 0.02), Linf=2.931e-01 (budget 0.05); judged fail if it were scored"
+R7,z120_fo,default vs copies,"evap_strat at 1 h, abs L1 (small tag)",1 h,3.760893223413246e-09,2e-4 of the water,not assessable (R5 and R6 failed),"Provenance, per tag",small tag (share=3.877393979409054e-09): abs_L1=3.761e-09 <= 2.302e-03; judged pass if it were scored
+R7,z120_fo,default vs copies,"evap_strat at 24 h, abs L1 (small tag)",24 h,3.3263441271249506e-08,2e-4 of the water,not assessable (R5 and R6 failed),"Provenance, per tag",small tag (share=8.01292420276275e-08): abs_L1=3.326e-08 <= 2.315e-03; judged pass if it were scored

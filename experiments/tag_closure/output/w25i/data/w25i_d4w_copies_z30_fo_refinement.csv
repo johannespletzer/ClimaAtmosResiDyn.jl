@@ -1,0 +1,6 @@
+dt,newton,steps,q_tag_led_rescale_per_hour,q_tag_led_empty_per_hour,q_tag_led_repair_per_hour,q_tag_led_repairnet_per_hour,q_tag_led_uprepair_per_hour,q_tag_led_upfilter_per_hour,q_tag_led_fix_tropo_per_hour,q_tag_led_fix_strat_per_hour,q_tag_led_fix_evap_per_hour,q_tag_led_fix_evap_tropo_per_hour,q_tag_led_fix_evap_strat_per_hour,parent_hus_change_vs_first
+120.0,1.0,30.0,0.0,0.0,0.0,0.0,0.000799937823020017,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+120.0,2.0,30.0,0.0,0.0,0.0,0.0,0.0007286063052639437,0.0,0.0,0.0,0.0,0.0,0.0,0.0020234895792487135
+120.0,10.0,30.0,0.0,0.0,0.0,0.0,0.0007104365230806205,0.0,0.0,0.0,0.0,0.0,0.0,0.005583663252928886
+60.0,1.0,60.0,0.0,0.0,0.0,0.0,0.0008976686308530183,0.0,0.0,0.0,0.0,0.0,0.0,0.01790912865436007
+30.0,1.0,120.0,0.0,0.0,0.0,0.0,0.0008902343344927146,0.0,0.0,0.0,0.0,0.0,0.0,0.02423957195516444

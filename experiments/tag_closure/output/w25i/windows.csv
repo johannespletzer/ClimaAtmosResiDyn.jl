@@ -1,0 +1,7 @@
+rung,startup_end_seconds
+z30_c,6600.0
+z30_fo,none
+z60_c,7200.0
+z60_fo,75600.0
+z120_c,8400.0
+z120_fo,2400.0
