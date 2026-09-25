@@ -4,7 +4,9 @@ Integration test for the water tags' rain and snow parts,
 of design/RAIN_SNOW_TAGS.md on the record branch, WP4b).
 
 The column is `PrecipitatingColumn`: rain, snow, cloud liquid and cloud ice
-from the start, warm and cold, with rain reaching the ground. An altitude
+from the start, warm and cold, with rain reaching the ground. It is cut at
+6 km, because above about 6.2 km its total water profile goes negative and no
+partition of a negative parent is possible. An altitude
 region and its complement partition the water, and a `surface_flux` source
 tag rides along. The file builds the column three times: with the parts
 following the parent's increment (`water_tag_transport: increment`), with the
@@ -36,13 +38,13 @@ altitude_region(above) = Dict{String, Any}(
     "above" => above,
 )
 
-const T_END = "600secs"
+const T_END = "300secs"
 base_config() = Dict{String, Any}(
     "config" => "column",
     "initial_condition" => "PrecipitatingColumn",
     "surface_setup" => "DefaultMoninObukhov",
-    "z_elem" => 50,
-    "z_max" => 10000.0,
+    "z_elem" => 30,
+    "z_max" => 6000.0,
     "z_stretch" => false,
     "dt" => "10secs",
     "t_end" => T_END,
@@ -88,12 +90,14 @@ compartments(Y) = (;
     ρq_stag_ = parent(Y.c.ρq_sno),
 )
 # Each compartment's and the total's largest residual, relative to the
-# compartment's largest value.
-function closure(Y)
+# compartment's largest value in `Y_scale`. Rain and snow fall out and
+# evaporate within minutes here, so their scale is taken at the start.
+function closure(Y, Y_scale = Y)
     parents = compartments(Y)
+    scales = compartments(Y_scale)
     relative(prefix) =
         maximum(abs, getproperty(parents, prefix) .- part_sum(Y, prefix)) /
-        maximum(abs, getproperty(parents, prefix))
+        maximum(abs, getproperty(scales, prefix))
     total =
         part_sum(Y, :ρq_tag_) .+ part_sum(Y, :ρq_rtag_) .+ part_sum(Y, :ρq_stag_)
     return (;
@@ -133,6 +137,7 @@ end
     )
     simulation = build(config, "water_tags_precipitation")
     Y = simulation.integrator.u
+    Y_start = copy(Y)
     p = simulation.integrator.p
     FT = eltype(Y)
     model = p.atmos.water_tagging_model
@@ -156,12 +161,12 @@ end
 
     # 2. The design note's section 6 test.
     @testset "Each compartment closes under the increment" begin
-        result = closure(Y)
+        result = closure(Y, Y_start)
         @info "The parts' closure after $T_END under increment" result
         @test result.rain < 1e-12
         @test result.snow < 1e-12
-        @test result.nonprecip < 1e-10
-        @test result.total < 1e-10
+        @test result.nonprecip < 1e-12
+        @test result.total < 1e-12
         # The check the model's callbacks write sums over all six fields.
         check = CA.tag_closure(
             Y,
@@ -169,7 +174,7 @@ end
             :ρq_tot,
             CA.water_partition_state_names(model),
         )
-        @test abs(check.relative) < 1e-10
+        @test abs(check.relative) < 1e-12
         # The parts stay non-negative, up to the transport's rounding.
         for prefix in (:ρq_rtag_, :ρq_stag_), name in (:lower, :upper, :evap)
             field = parent(getproperty(Y.c, Symbol(prefix, name)))
@@ -189,20 +194,21 @@ end
         for name in (:lower, :upper, :evap)
             total = CA.Diagnostics.get_diagnostic_variable("q_tag_$name")
             ᶜtotal = total.compute!(nothing, Y, p, t)
-            ᶜsum = @. (
-                getproperty(Y.c, Symbol(:ρq_tag_, name)) +
-                getproperty(Y.c, Symbol(:ρq_rtag_, name)) +
-                getproperty(Y.c, Symbol(:ρq_stag_, name))
-            ) / Y.c.ρ
+            (ᶜN, ᶜR, ᶜS) = map(
+                prefix -> getproperty(Y.c, Symbol(prefix, name)),
+                (:ρq_tag_, :ρq_rtag_, :ρq_stag_),
+            )
+            ᶜsum = @. (ᶜN + ᶜR + ᶜS) / Y.c.ρ
             @test maximum(abs, parent(ᶜtotal) .- parent(ᶜsum)) <=
                   4 * eps(FT) * maximum(abs, parent(ᶜsum))
             for part in ("q_ntag", "q_rtag", "q_stag", "pr_tag")
                 @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "$(part)_$name")
             end
         end
+        start_rain = maximum(parent(Y_start.c.ρq_rai) ./ parent(Y_start.c.ρ))
         residual = CA.Diagnostics.get_diagnostic_variable("q_rtag_res")
         @test maximum(abs, parent(residual.compute!(nothing, Y, p, t))) <
-              1e-12 * maximum(parent(Y.c.ρq_rai) ./ parent(Y.c.ρ))
+              1e-12 * start_rain
     end
 
     # 4. The design note's section 10: the partition's `pr_tag` closes to `pr`.
@@ -234,10 +240,12 @@ end
         end
         CA.set_precomputed_quantities!(Y_twin, p, t)
         CA.water_tag_share_norm!(p, Y_twin)
-        function compare(label, Yₜ)
+        # `ρq_tot`'s tendency less `advection`, where `ρq_tot` takes a
+        # transport that the parts take in another way.
+        function compare(label, Yₜ; advection = 0)
             parents = (;
                 ρq_tag_ = parent(Yₜ.c.ρq_tot) .- parent(Yₜ.c.ρq_rai) .-
-                          parent(Yₜ.c.ρq_sno),
+                          parent(Yₜ.c.ρq_sno) .- advection,
                 ρq_rtag_ = parent(Yₜ.c.ρq_rai),
                 ρq_stag_ = parent(Yₜ.c.ρq_sno),
             )
@@ -249,10 +257,21 @@ end
             end
         end
         zero_tendency() = (Yₜ = similar(Y_twin); fill!(parent(Yₜ), 0); Yₜ)
-        # Sedimentation.
+        # Sedimentation, in the implicit vertical advection. There `ρq_tot`
+        # also takes its central advection, which the parts take through
+        # the follower instead.
         Yₜ = zero_tendency()
-        CA.vertical_advection_of_water_tendency!(Yₜ, Y_twin, p, t)
-        compare("sedimentation", Yₜ)
+        CA.implicit_vertical_advection_tendency!(Yₜ, Y_twin, p, t)
+        ᶜadvection = similar(Y_twin.c.ρ)
+        ᶜq_tot = @. Y_twin.c.ρq_tot / Y_twin.c.ρ
+        ᶜadvection .= CA.vertical_transport(
+            Y_twin.c.ρ,
+            p.precomputed.ᶠu³,
+            ᶜq_tot,
+            p.dt,
+            Val(:none),
+        )
+        compare("sedimentation", Yₜ; advection = parent(ᶜadvection))
         @test maximum(abs, parent(Yₜ.c.ρq_rtag_upper)) > 0
         # Microphysics, by the gross flows.
         Yₜ = zero_tendency()

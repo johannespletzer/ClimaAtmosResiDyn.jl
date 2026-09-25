@@ -345,14 +345,17 @@ end
                 dt, nsub,
             )
             # The substeps repeat CloudMicrophysics' arithmetic, so the net
-            # tendencies are the model's, bit for bit.
-            @test isequal(flows.dq_rai_dt, reference.dq_rai_dt)
-            @test isequal(flows.dq_sno_dt, reference.dq_sno_dt)
-            # The flows' net is the net, to rounding of the gross.
+            # tendencies are the model's. The compiler may fuse a `muladd`
+            # in one and not the other, so they agree to the rounding of
+            # the step's water over the step, not bit for bit.
             gross =
                 abs(flows.NR) + abs(flows.NS) + abs(flows.RN) +
                 abs(flows.RS) + abs(flows.SR) + abs(flows.SN)
-            tolerance = 64 * eps(FT) * max(gross, floatmin(FT))
+            water = s.q_lcl + s.q_icl + s.q_rai + s.q_sno
+            tolerance = 64 * eps(FT) * (water / dt + gross)
+            @test abs(flows.dq_rai_dt - reference.dq_rai_dt) <= tolerance
+            @test abs(flows.dq_sno_dt - reference.dq_sno_dt) <= tolerance
+            # The flows' net is the net, to the same rounding.
             @test abs(
                 (flows.NR + flows.SR - flows.RN - flows.RS) - reference.dq_rai_dt,
             ) <= tolerance
@@ -382,26 +385,46 @@ end
         reference = CA.microphysics_tendencies_1m(BMT.Microphysics1Moment(), args...)
         flows = CA.microphysics_tendencies_1m(CA.WaterTagFlows1M(), args...)
         @test keys(flows) == CA.WATER_TAG_FLOW_NAMES
-        gross = sum(abs, values(flows))
+        tolerance =
+            64 * eps(FT) * (
+                (s.q_lcl + s.q_icl + s.q_rai + s.q_sno) / dt +
+                sum(abs, values(flows))
+            )
         @test abs(
             (flows.NR + flows.SR - flows.RN - flows.RS) - reference.dq_rai_dt,
-        ) <= 64 * eps(FT) * gross
+        ) <= tolerance
         @test abs(
             (flows.NS + flows.RS - flows.SN - flows.SR) - reference.dq_sno_dt,
-        ) <= 64 * eps(FT) * gross
+        ) <= tolerance
     end
 
     # The attribution rules, on random flows, pools and shares.
     rng = Random.MersenneTwister(99)
     Δt = 60.0
     for _ in 1:2000
-        F = NamedTuple{CA.WATER_TAG_FLOW_NAMES}(
-            Tuple(1e-7 .* rand(rng, 6) .* (rand(rng, 6) .< 0.7)),
-        )
         # The pools, and some of them empty at the start.
         (qN, qR, qS) =
             (1e-2 * rand(rng), 1e-3 * rand(rng), 1e-3 * rand(rng)) .*
             (1, rand(rng) < 0.7, rand(rng) < 0.7)
+        # Flows, with none out of a pool that holds nothing and takes nothing
+        # in, as the model's step gives.
+        f = 1e-7 .* rand(rng, 6) .* (rand(rng, 6) .< 0.7)
+        (NR, NS, RN, RS, SR, SN) = f
+        # Twice, since each check can empty the other's inflow. Rain and snow
+        # that are both empty and take nothing from `N` have nothing to pass
+        # between them either.
+        for _ in 1:2
+            if qR == 0 && qS == 0 && NR + NS == 0
+                (RN, RS, SR, SN) = (0.0, 0.0, 0.0, 0.0)
+            end
+            if qR == 0 && NR + SR == 0
+                (RN, RS) = (0.0, 0.0)
+            end
+            if qS == 0 && NS + RS == 0
+                (SN, SR) = (0.0, 0.0)
+            end
+        end
+        F = (; NR, NS, RN, RS, SR, SN)
         # A partition of three tags: shares of each compartment summing to 1,
         # or to 0 where the compartment is empty.
         shares = map((qN, qR, qS)) do q
@@ -420,10 +443,16 @@ end
         @test sum(c -> c[2], changes) ≈ dq_rai atol = 1e-14 * scale
         @test sum(c -> c[3], changes) ≈ dq_sno atol = 1e-14 * scale
         @test sum(c -> c[1], changes) ≈ -(dq_rai + dq_sno) atol = 1e-14 * scale
-        # The pool shares sum to one over the partition, and lie in [0, 1].
+        # The pool shares sum to one over the partition wherever the pool
+        # holds water or takes some in, and lie in [0, 1].
         pools = map(i -> CA.water_tag_pool_shares(F, args(i)...), 1:3)
+        full = (
+            true,
+            qR + Δt * (F.NR + F.SR) > 0,
+            qS + Δt * (F.NS + F.RS) > 0,
+        )
         for k in 1:3
-            @test sum(ψ -> ψ[k], pools) ≈ 1 atol = 1e-12
+            full[k] && @test sum(ψ -> ψ[k], pools) ≈ 1 atol = 1e-12
             @test all(ψ -> -1e-15 <= ψ[k] <= 1 + 1e-12, pools)
         end
         # The net-flow rule keeps each tag's total, and the compartments'
@@ -481,7 +510,18 @@ end
     # With a large rain pool of the other composition, the rain that
     # evaporates is nearly all of that composition, and the audit records the
     # difference from the net-flow rule.
-    audit = CA.water_tag_microphysics_audit(F, 0.5, 0.0, 1e6, 1e6, 0.0, 1e-6, 1.0, 0.0, 0.0)
+    audit = CA.water_tag_microphysics_audit(
+        F,
+        0.5,
+        0.0,
+        1e6,
+        1e6,
+        0.0,
+        1e-6,
+        1.0,
+        0.0,
+        0.0,
+    )
     @test audit[1] ≈ -1.5 rtol = 1e-5
     @test audit[2] == 0
     # The guards: a losing compartment no tag holds gives nothing; no loss

@@ -131,7 +131,7 @@ water_tag_part_norm(scratch, ::SnowPart) = scratch.ᶜtagging_q_share_norm_sno
 
 Whether `name` (a `Symbol` like `:ρq_rtag_upper`, or a
 `MatrixFields.FieldName`) is the rain or snow part of a water tag,
-`ρq_rtag_<name>` or `ρq_stag_<name>`. [`is_water_tag_name`](@ref) does not
+`ρq_rtag_<name>` or `ρq_stag_<name>`. `is_water_tag_name` does not
 see these parts, and [`is_tagged_tracer_name`](@ref) does.
 """
 is_water_precip_part_name(name::Symbol) =
@@ -568,8 +568,10 @@ in its donor, `D q_donor*`, so each process's transfer over the substep is its
 coefficient times the solved donor. The transfers that cross between
 compartments are summed into the six flows. Transfers inside `N`, such as
 condensation or ice melt, do not move a tag's water between its parts, so they
-are left out. The flows' net is the tendency's net, to rounding. A test holds
-the two nets to that.
+are left out. The net tendencies it returns are the model's, and the flows'
+net is the tendency's net, both to the rounding of the step's water over the
+step: the compiler may fuse a `muladd` in one and not in the other. A test
+holds them to that.
 
 This is the per-process decomposition that the design note's section 9 calls
 the gross flows. Each flow is later attributed with its donor's composition
@@ -866,22 +868,30 @@ Over the pool the partition's shares of each compartment sum to one wherever
 the pool holds water, as the start's do. Where a compartment holds much more
 than passes through it, `ψ` is its start share `φ`.
 
-Where the system is singular, which needs every pool empty, it returns the
+A pool that holds nothing and takes nothing in passes nothing on, so its
+share is its start share. Where the system is still singular, it returns the
 start shares.
 """
 @inline function water_tag_pool_shares(F, qN, qR, qS, Δt, φN, φR, φS)
-    a11 = qN + Δt * (F.RN + F.SN)
-    a12 = -Δt * F.RN
-    a13 = -Δt * F.SN
-    a21 = -Δt * F.NR
-    a22 = qR + Δt * (F.NR + F.SR)
-    a23 = -Δt * F.SR
-    a31 = -Δt * F.NS
-    a32 = -Δt * F.RS
-    a33 = qS + Δt * (F.NS + F.RS)
-    b1 = qN * φN
-    b2 = qR * φR
-    b3 = qS * φS
+    FT = typeof(qN)
+    # A pool that holds nothing and takes nothing in passes nothing on, and
+    # its row would make the system singular. Its share is then its start
+    # share, by a row of the identity.
+    fullN = qN + Δt * (F.RN + F.SN) > zero(FT)
+    fullR = qR + Δt * (F.NR + F.SR) > zero(FT)
+    fullS = qS + Δt * (F.NS + F.RS) > zero(FT)
+    a11 = fullN ? qN + Δt * (F.RN + F.SN) : one(FT)
+    a12 = fullN ? -Δt * F.RN : zero(FT)
+    a13 = fullN ? -Δt * F.SN : zero(FT)
+    a21 = fullR ? -Δt * F.NR : zero(FT)
+    a22 = fullR ? qR + Δt * (F.NR + F.SR) : one(FT)
+    a23 = fullR ? -Δt * F.SR : zero(FT)
+    a31 = fullS ? -Δt * F.NS : zero(FT)
+    a32 = fullS ? -Δt * F.RS : zero(FT)
+    a33 = fullS ? qS + Δt * (F.NS + F.RS) : one(FT)
+    b1 = fullN ? qN * φN : φN
+    b2 = fullR ? qR * φR : φR
+    b3 = fullS ? qS * φS : φS
     m1 = a22 * a33 - a23 * a32
     m2 = a21 * a33 - a23 * a31
     m3 = a21 * a32 - a22 * a31
@@ -1602,10 +1612,13 @@ function water_tag_precipitation_flux!(sfc_flux, Y, p, tag)
     sfc_space = axes(sfc_J)
     sfc_lev(x) = Fields.Field(Fields.field_values(Fields.level(x, 1)), sfc_space)
     ᶜφN = water_tag_part_share(Y.c, p.scratch, tag, NonPrecipitatingPart())
+    # The parts are looked up outside the broadcast, which cannot take the tag.
+    ᶜρq_rain = rain_tag_field(Y.c, tag)
+    ᶜρq_snow = snow_tag_field(Y.c, tag)
     ᶜflux = p.scratch.ᶜtemp_scalar
     @. ᶜflux =
-        specific(rain_tag_field(Y.c, tag), Y.c.ρ) * (-(ᶜwᵣ)) +
-        specific(snow_tag_field(Y.c, tag), Y.c.ρ) * (-(ᶜwₛ)) +
+        specific(ᶜρq_rain, Y.c.ρ) * (-(ᶜwᵣ)) +
+        specific(ᶜρq_snow, Y.c.ρ) * (-(ᶜwₛ)) +
         ᶜφN * (
             specific(Y.c.ρq_lcl, Y.c.ρ) * (-(ᶜwₗ)) +
             specific(Y.c.ρq_icl, Y.c.ρ) * (-(ᶜwᵢ))

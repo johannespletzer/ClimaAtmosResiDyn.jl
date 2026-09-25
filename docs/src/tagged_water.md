@@ -440,6 +440,15 @@ What moves the parts:
     net is the model's tendency to rounding. The rounding remainder moves by
     the net-flow rule. Where the flows are not available, that rule moves all
     of it.
+
+    The donor's composition is taken over the step, not only at its start
+    (`water_tag_pool_shares`): the compartment's water at the start, mixed
+    with what flowed into it during the step. The model's step lets water pass
+    through a compartment, such as rain that forms and evaporates again, or
+    snow that forms and melts. With the start alone, a compartment empty at
+    the start passes on no composition, and on the integration test's column
+    the rain parts then drifted from the rain by 20 times the rain. Where a
+    compartment holds much more than passes through it, the two agree.
   - **Limiters and constraints.** A correction that changes a compartment
     moves the change between the part and the tag's non-precipitating part
     (section 8): a compartment that shrinks gives its own composition back,
@@ -739,6 +748,7 @@ ClimaAtmos.water_tag_1m_flows
 ClimaAtmos.water_tag_1m_flows_grid_mean
 ClimaAtmos.set_water_tag_microphysics_flows!
 ClimaAtmos.water_tag_gross_flow_change
+ClimaAtmos.water_tag_pool_shares
 ClimaAtmos.water_tag_net_flow_change
 ClimaAtmos.water_tag_microphysics_change
 ClimaAtmos.water_tag_microphysics_audit
