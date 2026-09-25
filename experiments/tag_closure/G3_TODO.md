@@ -91,6 +91,15 @@ The twelve criteria of the plan, section 2, in short:
     *Decided 2026-09-25: option C* (the register). Built on
     `claude/water-tags-negative-parent`; its validation is pre-registered
     (`design/NEGATIVE_PARENT_WATER.md`, section 8). Open: that validation.
+    *The owner, 2026-09-25:* a persistent parent-validity flag in the
+    closure tables, B and D together (the register, OD3's negative-water
+    row). B, `negative_water_void`: a latch per family, key
+    `negative_water_void_above` (default 1e-4, water only), set at the checks
+    from the raw `ρq_tot`, the ratio in its own column, carried through
+    checkpoints. D: a per-cell cumulative negative-water ledger, every
+    accepted step, carried through restarts. Another agent builds both on a
+    branch stacked on #116; it also fixes #116's water audit, whose
+    `nonpositive_mass` read 0 under option C and will read the raw parent.
   - [x] **R2, the Newton row, on D4-W** (W25's scoring: 4.1e-3 to 1.7e-2 at two
     iterations, against 1e-3). *The owner, 2026-09-25:* measure three and four
     iterations first (job `13944802`); then raise OD1's Newton count or revise

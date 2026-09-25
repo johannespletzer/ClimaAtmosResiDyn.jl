@@ -168,6 +168,18 @@ The list as it stood before this classification, kept as written:
         go ahead. Nothing is rescored; W38's R2 verdicts are read under the
         revised scope, where every W25 verdict is same-parent except R7.
         **In force.** [ROADMAP.md, the OD3 table](ROADMAP.md#the-od3-thresholds-approved-2026-09-24)
+      + **A persistent parent-validity flag, B and D together.** B,
+        `negative_water_void`: a latch per family, key
+        `negative_water_void_above` (default 1e-4, water only), set at the
+        checks when the raw `ρq_tot`'s `N / ∫ρq_tot` passes the level, with
+        the ratio in its own column and the latch carried through
+        checkpoints. It reads OD3's negative-water row online; offline
+        scoring stays the reference. D: a per-cell cumulative negative-water
+        ledger, updated every accepted step and carried through restarts.
+        Built by another agent on a branch stacked on #116, which also makes
+        the water audit's `nonpositive_mass` read the raw parent again
+        (under option C it read 0 by construction). **In force.**
+        [ROADMAP.md, the OD3 table](ROADMAP.md#the-od3-thresholds-approved-2026-09-24)
       + **The per-tag intervention row applies to all tags** (from the
         review of #109), with two denominators: a pure region tag
         `retained / ∫tag`, with a positive inventory as precondition; a

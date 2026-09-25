@@ -234,7 +234,7 @@ holds; none was measured for the production sphere.
 |:--- |:---------------------------------- |:------ |:---------------- |
 | Parent validity: parity | bit for bit (set, the parity rule) | the fork's rule | every tagged run so far, up to the site 23 crashes |
 | Parent validity: temperature | no point at the 150 K floor, and the top level's mean moves less than 5 K in the first day (approved 2026-09-24) | E69's one-Newton collapse is the failure this catches | E69: 156 K and 18% at the floor at 6 h with one iteration; E74: 218 to 220 K over ten days with two |
-| Parent validity: negative water | the parent's negative water, `Σ ρ min(q_tot, 0) dV`, stays below 1e-4 of `∫ρq_tot`; above it the run's water results are not scored (approved 2026-09-24) | a negative parent voids the partition's meaning (known issue 7) | site 23: `q_tot` below zero from day 10, to −3.1e-3 kg/kg (day 30); the negative part at worst 11% of the column's water (W36) |
+| Parent validity: negative water | the parent's negative water, `Σ ρ min(q_tot, 0) dV`, stays below 1e-4 of `∫ρq_tot`; above it the run's water results are not scored (approved 2026-09-24). *Read online from 2026-09-25 (the owner):* the closure tables carry a persistent flag, B, `negative_water_void`, a latch per family set at the checks when the raw `ρq_tot`'s `N / ∫ρq_tot` passes `negative_water_void_above` (default 1e-4, water only), with the ratio in its own column and the latch carried through checkpoints; and D, a per-cell cumulative negative-water ledger, updated every accepted step and carried through restarts, which makes "never negative" exact. Offline scoring from the output stays the reference | a negative parent voids the partition's meaning (known issue 7) | site 23: `q_tot` below zero from day 10, to −3.1e-3 kg/kg (day 30); the negative part at worst 11% of the column's water (W36) |
 | Parent validity: Newton | the parent's one-step error at the production Newton count, W35's `E`, at most 1e-3 (approved 2026-09-24). *Revised 2026-09-25, after W38 and W41:* `E` is always reported, and the row gates only verdicts that compare runs with different parents (full-run comparisons, provenance against copies from a separate run). Same-parent verdicts go ahead | a tenth of a percent of a step's increment keeps the parent's solve out of the tags' error; in a same-parent verdict the parent's error cancels | W35, TRMM 1M, 120 s: 4.9e-3 with one iteration, 6.3e-4 with two. W41, D4-W at 60 levels: 1.2e-2, 4.1e-3, 2.3e-3, 1.9e-3 with 1 to 4 |
 | Closure, water | gross at 0.2% of `∫ρq_tot` at 24 h, no more in the second 12 h (set, G3_PLAN 6.1) | a tenth of the per-tag L1 budget | D4-W under the follower 1.35e-4 (W28), 7.3e-6 with the cross blocks (W31) |
 | Closure, energy | gross at most 0.2% of the window's gross source throughput (OD4 units) (approved 2026-09-24) | water's budget in the new scale | not yet in OD4 units; E79: 2.3e-6 of the partitioned energy on D4; E74: 2.0e-4 of the scale at ten days |
@@ -369,6 +369,18 @@ package.
     stays. Nothing is rescored. W38's R2 verdicts stand as scored and are
     read under the revised scope: every W25 verdict is same-parent except
     R7, the provenance against copies.
+  - **A persistent parent-validity flag in the closure tables: B and D
+    together.** B, `negative_water_void`: a latch per family, with the key
+    `negative_water_void_above` (default 1e-4, water only). It is set at the
+    checks when the raw `ρq_tot`'s negative water `N / ∫ρq_tot` passes the
+    level; the ratio has its own column on every row; the latch is carried
+    through checkpoints. It reads the contract's negative-water row online;
+    offline scoring stays the reference. D: a per-cell cumulative
+    negative-water ledger, updated every accepted step and carried through
+    restarts, so "never negative" is exact, not sampled. Another agent builds
+    both on a branch stacked on #116, which also fixes #116's water audit:
+    under option C `nonpositive_mass` read 0 by construction, and it will
+    read the raw parent again.
   - **The per-tag intervention row, revised** (from the review of #109). OD3's
     per-tag row (2%) applies to all tags, with two denominators:
       + a pure region tag: `retained / ∫tag`, with a positive inventory as its
