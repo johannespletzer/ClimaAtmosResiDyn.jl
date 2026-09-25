@@ -1810,3 +1810,263 @@ end
     ) ==
           "tanh_polygon(vertices = [[0.0, 1.5], [2.0, 3.0], [4.0, 5.0]], width = 1.0, inside = false)"
 end
+
+# G4.16: the energy source tags' sedimentation cross blocks, as the water tags'
+# (#105). The real blocks, from `update_sedimentation_jacobian!` on a small
+# column. Each tag's block is checked against a finite difference of the tags'
+# real sedimentation tendency (`_sediment_energy_source_tags!`) in the falling
+# species, at fixed `ρe_tot`, `ρ`, temperature and terminal velocity. The
+# partition's blocks are checked against the block of `E = ρe_tot + c·ρ`. Ice
+# and snow carry negative energy per unit mass, below `-c` even with the
+# offset, so their flux points up and the faces take the shares of the cell
+# below, a path the test covers too.
+@testset "The energy tags' sedimentation cross blocks, assembled" begin
+    CC = CA.ClimaCore
+    MF = CA.MatrixFields
+    Geometry = CC.Geometry
+    for FT in (Float32, Float64), offset in (nothing, FT(110495))
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 2000,
+            z_elem = 16,
+            staggering,
+        )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜz = CC.Fields.coordinate_field(ᶜspace).z
+        region(above) = CA.TanhAltitudeRegion(FT(750), FT(100), above)
+        tags = (
+            CA.EnergySourceTag{:tropo}(region(false)),
+            CA.EnergySourceTag{:strat}(region(true)),
+            CA.EnergySourceTag{:sfc}(nothing, (:surface_flux,)),
+        )
+        model = CA.EnergySourceTaggingModel(tags, offset)
+        c = isnothing(offset) ? FT(0) : offset
+        masses = (:ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+        velocities = (:ᶜwₗ, :ᶜwᵢ, :ᶜwᵣ, :ᶜwₛ)
+        ᶜnames = (
+            :ρ,
+            :ρe_tot,
+            :ρq_tot,
+            masses...,
+            :ρe_src_tropo,
+            :ρe_src_strat,
+            :ρe_src_sfc,
+        )
+        Y = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        fill!(parent(Y.f), 0)
+        @. Y.c.ρ = FT(1.2) * exp(-(ᶜz) / 8000)
+        @. Y.c.ρe_tot = Y.c.ρ * FT(2.5e4)
+        @. Y.c.ρq_tot = Y.c.ρ * (FT(0.012) - FT(4e-6) * ᶜz)
+        @. Y.c.ρq_lcl = Y.c.ρ * FT(2e-4) * (1 + sin(ᶜz / 300))
+        @. Y.c.ρq_icl = Y.c.ρ * FT(5e-5) * (1 + cos(ᶜz / 400))
+        @. Y.c.ρq_rai = Y.c.ρ * FT(3e-4) * (1 + sin(ᶜz / 200 + 1))
+        @. Y.c.ρq_sno = Y.c.ρ * FT(1e-4) * (1 + cos(ᶜz / 250 + 2))
+        # A drifted partition of `E`: `tropo` holds 10% too much, `strat` 5% too
+        # little, so the shares are renormalized.
+        ᶜE = @. Y.c.ρe_tot + c * Y.c.ρ
+        ᶜbelow = @. (1 - tanh((ᶜz - 750) / 100)) / 2
+        @. Y.c.ρe_src_tropo = FT(1.1) * ᶜbelow * ᶜE
+        @. Y.c.ρe_src_strat = FT(0.95) * (1 - ᶜbelow) * ᶜE
+        @. Y.c.ρe_src_sfc = FT(0.3) * ᶜE
+
+        ᶜvelocity(scale) = @. FT(scale) * (1 + ᶜz / 2000)
+        precomputed = (;
+            ᶜwₗ = ᶜvelocity(0.01),
+            ᶜwᵢ = ᶜvelocity(0.2),
+            ᶜwᵣ = ᶜvelocity(4),
+            ᶜwₛ = ᶜvelocity(1),
+            ᶜT = fill(FT(275), ᶜspace),
+            ᶜu = fill(
+                Geometry.Covariant123Vector(FT(0), FT(0), FT(0)),
+                ᶜspace,
+            ),
+        )
+        scratch = (;
+            ᶜbidiagonal_adjoint_matrix_c3 = CC.Fields.Field(
+                MF.BidiagonalMatrixRow{typeof(Geometry.Covariant3Vector(FT(0))')},
+                ᶜspace,
+            ),
+            ᶠband_matrix_wvec = similar(
+                Y.f,
+                MF.BandMatrixRow{
+                    CC.Utilities.PlusHalf{Int64}(0),
+                    1,
+                    Geometry.WVector{FT},
+                },
+            ),
+            ᶜe_src_share_norm = similar(Y.c.ρ),
+        )
+        ᶠinterior = one.(CC.Fields.coordinate_field(ᶠspace).z)
+        CC.Fields.level(ᶠinterior, CC.Utilities.half) .= 0
+        ᶜΦ = @. FT(9.81) * ᶜz
+        params = CA.ClimaAtmosParameters(FT)
+        p = (;
+            atmos = (;
+                microphysics_model = CA.NonEquilibriumMicrophysics1M(),
+                water_tagging_model = nothing,
+                energy_source_tagging_model = model,
+            ),
+            params,
+            core = (; ᶜΦ),
+            precomputed,
+            scratch,
+            tagging = (; ᶠenergy_source_interior = ᶠinterior),
+        )
+        blocks = CA.sedimentation_jacobian_blocks(Y, p.atmos, CA.UseDerivative())
+        c_name(n) = MF.FieldName(:c, n)
+        # Every tag has a block to every falling mass, with the flag only.
+        for tag in (:ρe_src_tropo, :ρe_src_strat, :ρe_src_sfc), mass in masses
+            @test any(pair -> pair.first == (c_name(tag), c_name(mass)), blocks)
+        end
+        @test !any(
+            pair -> CA.is_energy_source_tag_name(pair.first[1]),
+            CA.sedimentation_jacobian_blocks(Y, p.atmos, CA.IgnoreDerivative()),
+        )
+        matrix = MF.FieldMatrix(blocks...)
+        dtγ = FT(60)
+        CA.update_sedimentation_jacobian!(matrix, Y, p, dtγ, CA.UseDerivative())
+        @test maximum(abs, parent(scratch.ᶜe_src_share_norm) .- 1) > FT(0.04)
+
+        # The tags' sedimentation tendency for one species, as the model
+        # computes it (`vertical_advection_of_water_tendency!`).
+        thermo_params = CA.Parameters.thermodynamics_params(params)
+        ᶜJ = CC.Fields.local_geometry_field(Y.c).J
+        ᶠJ = CC.Fields.local_geometry_field(Y.f).J
+        ᶠρ = @. CA.ᶠinterp(Y.c.ρ * ᶜJ) / ᶠJ
+        e_int(mass) =
+            mass in (:ρq_lcl, :ρq_rai) ? CA.TD.internal_energy_liquid :
+            CA.TD.internal_energy_ice
+        function tag_tendencies(ᶜρqₚ, ᶜw, mass)
+            ᶜYₜ = CA._energy_source_fix_fields(Y.c.ρ, tags)
+            ᶜq = @. ᶜρqₚ / Y.c.ρ
+            e_int_func = e_int(mass)
+            ᶜenergy_flux = @. -(ᶜw) *
+               ᶜq *
+               (
+                   e_int_func(thermo_params, precomputed.ᶜT) + ᶜΦ +
+                   $(CA.Kin(ᶜw, precomputed.ᶜu))
+               )
+            CA._sediment_energy_source_tags!(
+                (; c = ᶜYₜ),
+                Y,
+                p,
+                ᶜq,
+                ᶜw,
+                ᶜenergy_flux,
+                ᶠρ,
+                model,
+            )
+            return ᶜYₜ
+        end
+        for (mass, velocity) in zip(masses, velocities)
+            ᶜρqₚ = getproperty(Y.c, mass)
+            ᶜw = getproperty(precomputed, velocity)
+            # The partition's blocks add up to the block of `E`: the parent's
+            # `ρe_tot` block plus `c` times its `ρ` block.
+            energy_block = matrix[c_name(:ρe_tot), c_name(mass)]
+            mass_block = matrix[c_name(:ρ), c_name(mass)]
+            ᶜE_block = copy(energy_block)
+            @. ᶜE_block = energy_block + c * mass_block
+            scale = maximum(abs, parent(ᶜE_block))
+            @test scale > 0
+            tropo_block = matrix[c_name(:ρe_src_tropo), c_name(mass)]
+            strat_block = matrix[c_name(:ρe_src_strat), c_name(mass)]
+            ᶜpartition_block = copy(ᶜE_block)
+            @. ᶜpartition_block = tropo_block + strat_block
+            @test maximum(abs, parent(ᶜpartition_block) .- parent(ᶜE_block)) <=
+                  100 * eps(FT) * scale
+            # Each tag's block is the derivative of its tendency in the species.
+            ᶜv = @. ᶜρqₚ * (1 + sin(ᶜz / 170)) / 2
+            h = FT(0.1)
+            base = tag_tendencies(ᶜρqₚ, ᶜw, mass)
+            moved = tag_tendencies((@. ᶜρqₚ + h * ᶜv), ᶜw, mass)
+            for name in (:ρe_src_tropo, :ρe_src_strat, :ρe_src_sfc)
+                block = matrix[c_name(name), c_name(mass)]
+                ᶜJv = @. block * ᶜv
+                ᶜmoved = getproperty(moved, name)
+                ᶜbase = getproperty(base, name)
+                ᶜfinite_difference = @. dtγ * (ᶜmoved - ᶜbase) / h
+                Jv_scale = maximum(abs, parent(ᶜJv))
+                @test Jv_scale > 0
+                @test maximum(abs, parent(ᶜJv) .- parent(ᶜfinite_difference)) <=
+                      1000 * eps(FT) * Jv_scale
+            end
+            # Where the species carries negative energy, the flux points up
+            # and the tendency takes the cell below's share. Ice carries
+            # about -3.3e5 J/kg at 275 K, more negative than the offset is
+            # positive, so its flux points up with the offset too, and the
+            # finite difference above checked that branch. Liquid's points
+            # down.
+            e_int_func = e_int(mass)
+            h_c = parent((@. e_int_func(thermo_params, precomputed.ᶜT) + ᶜΦ + c))
+            @test all(<(0), h_c) == (mass in (:ρq_icl, :ρq_sno))
+            @test all(>(0), h_c) == (mass in (:ρq_lcl, :ρq_rai))
+        end
+    end
+end
+
+@testset "The energy tags' cross blocks come only with the split solver" begin
+    # As for the water tags: without the split, the tags' rows would join the
+    # nested solve's Schur complement, so the unsplit form carries no cross
+    # blocks. The tags' diagonals do not come from sedimentation at all.
+    FT = Float64
+    space = CA.ClimaCore.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CA.ClimaCore.CommonSpaces.CellCenter(),
+    )
+    ᶜnames = (:ρ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+    ᶜnames = (ᶜnames..., :ρe_src_tropo, :ρe_src_sfc)
+    Y = CA.ClimaCore.Fields.FieldVector(;
+        c = similar(
+            CA.ClimaCore.Fields.coordinate_field(space),
+            NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+        ),
+    )
+    atmos = (;
+        microphysics_model = CA.NonEquilibriumMicrophysics1M(),
+        diff_mode = CA.Implicit(),
+    )
+    split_flags = CA._derivative_flags(atmos, Y)
+    unsplit_flags = CA._derivative_flags(atmos, Y; split_uncoupled_fields = false)
+    block_keys(flags) = map(
+        pair -> pair.first,
+        CA.sedimentation_jacobian_blocks(Y, atmos, flags.water_tag_cross_flag),
+    )
+    @test CA.sedimenting_energy_source_tag_names(Y) ==
+          (CA.MatrixFields.@name(ρe_src_tropo), CA.MatrixFields.@name(ρe_src_sfc))
+    for name in (:ρe_src_tropo, :ρe_src_sfc)
+        tag = CA.MatrixFields.FieldName(:c, name)
+        for flags in (split_flags, unsplit_flags)
+            @test !((tag, tag) in block_keys(flags))
+        end
+        for mass in (:ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+            cross_key = (tag, CA.MatrixFields.FieldName(:c, mass))
+            @test cross_key in block_keys(split_flags)
+            @test !(cross_key in block_keys(unsplit_flags))
+        end
+    end
+
+    # Nothing falls without the condensate masses, so there are no blocks.
+    dry_names = (:ρ, :ρe_tot, :ρq_tot, :ρe_src_tropo)
+    Y_dry = CA.ClimaCore.Fields.FieldVector(;
+        c = similar(
+            CA.ClimaCore.Fields.coordinate_field(space),
+            NamedTuple{dry_names, NTuple{length(dry_names), FT}},
+        ),
+    )
+    @test CA.sedimenting_energy_source_tag_names(Y_dry) == ()
+end

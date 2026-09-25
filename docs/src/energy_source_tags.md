@@ -99,12 +99,25 @@ offset, is shared out by the shares of the cell that loses the energy:
   - at the surface, the lowest cell's shares are kept.
 
 The partition tags' shares add up to one, so their fluxes add up to the
-parent's, and sedimentation adds nothing to `e_src_res`. Two conditions come
-with it. It needs an offset: a share is zero wherever the total is not
-positive, and there the tags would not move, which the model warns about at
-initialization. And the tags have no Jacobian block for it, so within a step
-they lag the parent's implicit flux slightly, and that gap lands in
-`e_src_res`.
+parent's, and sedimentation adds nothing to `e_src_res`. It needs an offset: a
+share is zero wherever the total is not positive, and there the tags would not
+move, which the model warns about at initialization.
+
+The parent's flux is implicit, and its Jacobian has a cross block from `ρe_tot`
+to each falling species. With the manual Jacobian's split solver, the default,
+each tag's row has one too: the face's share times the block of `E`, which is
+the parent's `ρe_tot` block plus `c` times its `ρ` block. So the partition's
+blocks add up to the block of `E`. The tags keep no diagonal block of their
+own for sedimentation. The split solver solves the tags after the model's
+fields, by back-substitution, so the model's increments do not change, bit for
+bit. The blocks leave out what the parent's block leaves out: the shares' and
+`e_int`'s own dependence on the state, and the EDMF corrections. Without the
+split (`use_auto_jacobian: true`) there are no cross blocks. Then, within a
+step, the tags lag the parent's implicit flux slightly, and with the increment
+follower that gap changes the column's total, which lands in `e_src_res`. With
+the microphysics stepped explicitly and one Newton iteration, that was 2.1e-4
+of the column's energy in an hour (FINDINGS E80 in the tag-closure
+experiments).
 
 Under `turbconv: prognostic_edmfx` the parent's energy flux in sedimentation
 has two corrections besides the grid mean's, one for the updraft and one for
