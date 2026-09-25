@@ -704,6 +704,7 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     the overlap with WP4b and the validation (V1, V2), pre-registered:
     [design/WP4C_CORRECTIONS.md](design/WP4C_CORRECTIONS.md). Open: the
     validation jobs; the default, the owner's call after V1.
+    *Submitted 2026-09-25:* V1 `13973348`, V2 `13973349`.
 
   - [ ] Review (xhigh) of each stage.
 

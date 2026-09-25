@@ -220,3 +220,11 @@ failure of 2, 3 or 4 is a defect to fix.
 **Jobs.** `hpda2_compute`, 2 CPUs, 48 GB, with
 `$SCRATCH/claude_work/plan2/wp4c_corr_job.sh`, as the gate's: V1 about 5 h
 (limit 10 h), V2 about 10 h (limit 16 h).
+
+*Submitted 2026-09-25:* V1 job `13973348`, V2 job `13973349`, run tree at
+`90f32566` (clean; the gate's tree `52a666c5`, this record at `abbc2319`,
+the correction branch at `d0c0064a`). Before them, V1's probe ran two steps
+on the login node with the reference's output on (`T_END=240secs`, exit 0).
+That smoke first stopped at a refusal of the key with the diffusive flux
+off, which the gate's `vdiff`-off trials need; the refusal was relaxed
+(`d0c0064a`: with the flux off the key does nothing). V2 was not smoked.
