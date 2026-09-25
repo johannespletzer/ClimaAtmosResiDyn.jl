@@ -67,9 +67,10 @@ end
 The energy source tags' own columns of their closure table: the headroom
 ([`energy_source_headroom`](@ref)), and, where each tag keeps its ledgers, the
 gross source throughput since the start of the run, `source_throughput`, in J,
-and `gross_over_throughput`, the row's gross residual over it (G4.5). That ratio
-does not depend on the energy reference, as `gross_relative` does, and
-`throughput_tolerance` warns on it. A window's throughput is the difference of
+and `gross_over_throughput`, the row's gross residual over it (G4.5). Its
+scale is set by the sources, not by the energy reference as `gross_relative`'s
+is; the residual itself still grows with the offset. `throughput_tolerance`
+warns on it. A window's throughput is the difference of
 two rows. Collective.
 """
 function energy_source_closure_columns(Y, p, model::EnergySourceTaggingModel, closure)

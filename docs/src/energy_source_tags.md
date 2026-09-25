@@ -287,7 +287,8 @@ different under another. Calibrate it against a first run of your own
 configuration.
 
 A second warning level, `throughput_tolerance`, is compared with
-`gross_over_throughput` instead, which does not depend on the reference. It
+`gross_over_throughput` instead, whose scale is set by the sources rather than
+by the reference. It
 needs `energy_source_tag_ledger_per_tag: true`, and defaults to `~`, since no
 level has been approved. The healthy runs of the tag-closure experiments reached
 at most 4.5e-3 under `enthalpy_increment`, in their first two hours on a
@@ -308,8 +309,9 @@ headroom: `headroom_min`, the smallest `e_tot + c` in the domain in J kg⁻¹, a
 has crossed zero; the headroom shows the margin before that. With
 `energy_source_tag_ledger_per_tag: true` the row also carries
 `source_throughput`, the gross energy the sources have put into the tags since
-the start, and `gross_over_throughput`, the gross residual over it. That ratio
-does not depend on the energy reference, as `gross_relative` does. These
+the start, and `gross_over_throughput`, the gross residual over it. Its scale
+is set by the sources, not by the energy reference as `gross_relative`'s is,
+though the residual itself still grows with the offset. These
 columns come after the spin-up columns, and before `void` where the check has
 a void level.
 

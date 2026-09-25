@@ -1085,8 +1085,9 @@ one is on by default whenever the tags include a pure region tag, a tag with a
 
 `throughput_tolerance` is a second warning level, in the units of the gross
 source throughput (the tag-closure experiments' OD4): the check warns when the
-gross residual over the throughput since the start passes it. That ratio does
-not depend on the energy reference, as `gross_relative` does. It needs the
+gross residual over the throughput since the start passes it. Its scale is set
+by the sources, not by the energy reference as `gross_relative`'s is; the
+residual itself still grows with the offset. It needs the
 throughput, so each tag's ledgers (`energy_source_tag_ledger_per_tag: true`),
 and without them it is refused. It defaults to `~`: no level has been approved.
 It warns only; like `tolerance` it is not an acceptance threshold.
