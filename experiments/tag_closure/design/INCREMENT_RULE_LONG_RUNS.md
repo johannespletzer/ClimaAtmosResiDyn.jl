@@ -185,4 +185,5 @@ W36's 60 fields).
 **The jobs.** From each run tree's root, with `submit_g3.sh`,
 `DRIVER=experiments/tag_closure/analysis/water/d4w_driver.jl`, `hpda2_compute`,
 2 CPUs, 48 GB, `--time=08:00:00`: four jobs. Every configuration builds its
-model on the login node first.
+model on the login node first. *Checked 2026-09-25:* all four build, each on
+its own run tree's `.buildkite` project.
