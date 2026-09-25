@@ -282,13 +282,13 @@ function gate()
 
     # The provenance part: D against the reference's final profiles.
     Y = reference.u
-    z = vec(parent(CA.Fields.coordinate_field(Y.c).z))
-    J = vec(parent(CA.Fields.local_geometry_field(Y.c).J))
+    z = Float64.(vec(parent(CA.Fields.coordinate_field(Y.c).z)))
+    J = Float64.(vec(parent(CA.Fields.local_geometry_field(Y.c).J)))
     profile_header = ["z", "J", "rho", "rho_q_tot"]
-    columns = [z, J, vec(parent(Y.c.ρ)), vec(parent(Y.c.ρq_tot))]
+    columns = Vector{Float64}[z, J, Float64.(vec(parent(Y.c.ρ))), Float64.(vec(parent(Y.c.ρq_tot)))]
     for t in tags
         push!(profile_header, "$(t)_final", "$(t)_D_vdiff")
-        push!(columns, vec(parent(getproperty(Y.c, t))), vec(parent(ᶜD[t])))
+        push!(columns, Float64.(vec(parent(getproperty(Y.c, t)))), Float64.(vec(parent(ᶜD[t]))))
     end
     write_csv(
         joinpath(OUTDIR, "$(RUN)_gate_profiles.csv"),
