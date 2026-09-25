@@ -42,3 +42,5 @@ source throughput, which no run reports yet.
 
 Whether the throughput is taken from the process records for the existing
 runs, as a lower bound, or from a new per-step accumulator in new runs.
+*Decided 2026-09-25:* an exact per-tag, per-step accumulator in new runs,
+carried through restarts. The process records' lower bound is the interim.

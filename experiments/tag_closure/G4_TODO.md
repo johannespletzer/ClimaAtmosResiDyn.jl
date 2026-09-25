@@ -83,7 +83,8 @@ changes across a restart.
     updraft, the surface relaxation, RRTMGP radiation and the 0M rain-out.
     Built on `claude/energy-copies-mirrors` (from `main` at `3eac4d44`; not
     pushed), with a residual diagnostic `e_src_copy_res` for what is not
-    mirrored. The validation on D4 at 8 tags is pre-registered
+    mirrored. #114. The surface relaxation shares the buoyant excess by
+    composition, as the owner decided on 2026-09-25. The validation on D4 at 8 tags is pre-registered
     (`configs/g411_d4_*.yml`, `analysis/increment/g411_eligibility.py`).
 
   - **The region masks' width in the docs** (decision 10 of 2026-09-18,
@@ -186,7 +187,10 @@ sources put into the tags over the same window. The audit's first pass sorts
 the records' denominators into four classes and restates no number yet
 ([review/od4_denominator_audit.md](review/od4_denominator_audit.md)). The
 throughput needs the process records, a lower bound, or a new per-step
-accumulator; which one is the owner's.
+accumulator; which one is the owner's. *Decided 2026-09-25:* an exact
+per-tag, per-step accumulator, carried through restarts; the process records'
+lower bound is the interim. Built on `claude/energy-source-throughput`
+([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), section 11).
 
 ### G4.4 The residual report
 

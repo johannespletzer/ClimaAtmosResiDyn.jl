@@ -99,8 +99,8 @@ would then have to cover it.
     to the surface-flux tag. The excess is the surface layer's buoyant tail,
     so one could argue it is surface-flux energy. Water chose composition
     because the excess is air the cell holds, not new water. The same holds
-    for energy. **This is the one choice the owner may want to make.** The
-    note builds composition, as water has it.
+    for energy. The note builds composition, as water has it. *The owner
+    decided composition on 2026-09-25.*
   - Row 2 is not mirrored. Its part `1 − α_b` moves energy between `mseʲ`
     and `Kʲ` within `Aʲ`. Its part `α_b`, with the pressure drag, is work
     the updraft exchanges with the environment through pressure: a transfer,

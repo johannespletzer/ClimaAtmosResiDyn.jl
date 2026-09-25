@@ -35,8 +35,9 @@ Short names for the sources:
     `design/NEGATIVE_PARENT_WATER.md`, before the sphere. ~~**Waiting.**~~
     A chosen 2026-09-24 (below). **Waiting:** the choice among B, C and D,
     after the probe.
-  - **OD4's throughput source** for the existing records: the process records
-    as a lower bound, or a new per-step accumulator. **Waiting.**
+  - ~~**OD4's throughput source** for the existing records: the process records
+    as a lower bound, or a new per-step accumulator. **Waiting.**~~ Decided
+    2026-09-25 (below): an exact accumulator.
     [review/od4_denominator_audit.md](review/od4_denominator_audit.md)
   - ~~**W33's verdict**, after the same-atmosphere check passed (W35).
     **Waiting.**~~ Decided 2026-09-24 (below).
@@ -45,10 +46,11 @@ Short names for the sources:
     **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
   - **The default mode's cost budget**, proposed from V-W10's first
     measurements, set before V-W11. **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
-  - **The prognostic fields of the rain and snow tags**, settled in design note
+  - ~~**The prognostic fields of the rain and snow tags**, settled in design note
     WP4b-D and its review. Recommended: the non-precipitating, rain and snow
     parts. Three further points of the note's section 15 go with it.
-    **Waiting.** [G3T](G3_TODO.md#decisions)
+    **Waiting.**~~ Decided 2026-09-25 (below): the three parts, gross flows.
+    [G3T](G3_TODO.md#decisions)
   - **WP4a's two points:**
       + known issue 4's Jacobian, either the pair of entries or the diagonal
         alone as a test;
@@ -66,6 +68,32 @@ Short names for the sources:
   - **When to investigate V-W4's two breaks:** the partition at 120 levels,
     and the copies under first-order upwinding (W25). **Waiting.**
     [FINDINGS W25](FINDINGS.md)
+
+## 2026-09-25
+
+  - **The owner's answers of 2026-09-25** (through the parent session).
+    **In force.**
+    [ROADMAP.md, "The owner's answers, 2026-09-25"](ROADMAP.md#the-owners-answers-2026-09-25)
+      + **WP4b-D:** the three parts as the note names them. `ρq_tag_<name>`
+        holds the non-precipitating part, beside `ρq_rtag_<name>` and
+        `ρq_stag_<name>`, behind `water_tag_precipitation: true`, 1M only.
+        The microphysics by the gross flows, the net-flow rule the fallback
+        where per-process terms are not available. The note's section 15,
+        point 4 (4.2's rule restated), is superseded by rev. 2's WP4c gate.
+        Steps 7, 8 and 8b are unblocked; a separate agent builds step 7,
+        stage 1. [design/RAIN_SNOW_TAGS.md](design/RAIN_SNOW_TAGS.md)
+      + **OD4's quantity:** an exact accumulator, per tag and per step, of the
+        gross source into each energy source tag, carried through restarts,
+        as WP6 did for the ledgers. The process records' lower bound is the
+        interim until it lands.
+        [design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md)
+      + **The WP4c gate's reading of OD3, confirmed:** part 1, the remainder
+        above 0.02% of the water; part 2, `led_inc` per tag above 2% of the
+        tag's inventory, taken as the difference between two runs. The
+        per-tag intervention row's 2% is used here too.
+        [design/WP4C_GATE.md](design/WP4C_GATE.md)
+      + **The energy copies' surface relaxation: by composition**, as built.
+        [design/ENERGY_COPY_MIRRORS.md](design/ENERGY_COPY_MIRRORS.md)
 
 ## 2026-09-24
 

@@ -7,6 +7,11 @@ the session's goal that day. **Second version**, after its review by
 section 14 says how each point was taken. It proposes; it decides nothing.
 **The choice of the prognostic fields is the owner's** (G3_TODO, Decisions),
 and so are the points of section 15. No WP4b code is written before that.
+*Decided 2026-09-25 (DECISIONS.md):* points 1 to 3 as proposed, the three
+parts, `ρq_tag_<name>` the non-precipitating water, beside `ρq_rtag_<name>`
+and `ρq_stag_<name>`, behind `water_tag_precipitation: true`, 1M only, the
+gross flows with the net-flow rule as the fallback. Point 4 is superseded by
+rev. 2's WP4c gate (`design/WP4C_GATE.md`).
 
 **What was read.** WP3 at `4a1c91a4` (`file:line` references without a
 directory are there), WP5 at `1addf74c`, V-W0c and V-W3's outputs (FINDINGS

@@ -6,7 +6,8 @@ housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
 done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for), 12:40 and
 20:00 (rev. 2 of the work plan, steps 0 and 1), 21:10 (the owner's answers
 to the register) and later that evening (OD3 approved; known issue 7's option
-A; step 2 pre-registered). Update it when something here changes, and at each milestone of a work
+A; step 2 pre-registered), and on 2026-09-25 (the owner's answers of that
+day). Update it when something here changes, and at each milestone of a work
 package and at each goal's end. The checklist for those moments is in
 [README.md](README.md), "Closing a work package or a goal". Where a fact was
 not checked, it says so.
@@ -179,7 +180,9 @@ not checked, it says so.
         validated on TRMM 0M, where it moves the tags by at most 0.47%, both
         modes alike (W26). The explicit path is parity-checked. The Jacobian
         of known issue 4 waits on the owner.
-      + **WP4b-D:** the design note is reviewed. The fields wait on the owner.
+      + **WP4b-D:** the design note is reviewed. ~~The fields wait on the
+        owner.~~ Decided 2026-09-25: the three parts, gross flows; steps 7, 8
+        and 8b unblocked; a separate agent builds step 7, stage 1.
       + **V-W8 is done (W22).**
       + **V-W4 is done (W25).**
           * The default meets its budgets on the time-step and Newton rungs,
@@ -374,8 +377,9 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
       + **known issue 7's fix**: ~~which option~~ A is chosen and built; the
         choice among B, C and D follows the probe
         (`design/NEGATIVE_PARENT_WATER.md`);
-      + **OD4's throughput source**: the process records as a lower bound, or
-        a new per-step accumulator (`review/od4_denominator_audit.md`).
+      + ~~**OD4's throughput source**: the process records as a lower bound, or
+        a new per-step accumulator (`review/od4_denominator_audit.md`).~~
+        Decided 2026-09-25: an exact accumulator.
 
     The register's first list, kept as written:
       + OD1, the production envelope: levels, SGS reconstruction, Δt, Newton
@@ -401,8 +405,9 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
     budget**, after V-W10's first measurements and before V-W11. The other
     budgets were set on 2026-09-23
     ([G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)).
-  - **The rain and snow tags' prognostic fields**, after the design note
-    WP4b-D and its review ([G3_TODO](G3_TODO.md#decisions)).
+  - ~~**The rain and snow tags' prognostic fields**, after the design note
+    WP4b-D and its review ([G3_TODO](G3_TODO.md#decisions)).~~ Decided
+    2026-09-25 (DECISIONS.md).
   - WP4a's, WP6's and WP4b-D's points, the copies' repair, the surface rule,
     and V-W4's two breaks: [DECISIONS.md](DECISIONS.md), "Waiting for the
     owner".

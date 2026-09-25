@@ -100,8 +100,12 @@ The twelve criteria of the plan, section 2, in short:
     between the modes by 14% (L1) at 1 h, against a 1% budget, and meets it
     from 6 h (W21). Whether the plume's start should model the surface flux
     (plan 4.1, review S4) is the owner's.
-  - [ ] **The prognostic fields of the rain and snow tags**, settled in the
-    design note WP4b-D and its review. The recommended option is the
+  - [x] **The prognostic fields of the rain and snow tags**, settled in the
+    design note WP4b-D and its review. *Decided 2026-09-25:* the three parts;
+    `ρq_tag_<name>` holds the non-precipitating water, beside `ρq_rtag_<name>`
+    and `ρq_stag_<name>`, behind `water_tag_precipitation: true`, 1M only; the
+    microphysics by the gross flows, the net-flow rule the fallback; point 4
+    superseded by the WP4c gate (DECISIONS.md, 2026-09-25). The recommended option is the
     non-precipitating, rain and snow parts. The note
     ([design/RAIN_SNOW_TAGS.md](design/RAIN_SNOW_TAGS.md), reviewed xhigh and
     revised on 2026-09-24) asks four things in its section 15: the fields;
@@ -614,7 +618,8 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
 
 ## WP4b: rain and snow carry their own tags (draft PR-W4b)
 
-  - [ ] **WP4b-D, the design note.** It fixes:
+  - [x] **WP4b-D, the design note.** *Its fields and points decided
+    2026-09-25 (DECISIONS.md).* It fixes:
 
       + the prognostic fields;
       + the operator list with file:line references;
@@ -654,8 +659,9 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     *Pre-registered 2026-09-25:* [design/WP4C_GATE.md](design/WP4C_GATE.md),
     with `analysis/water/wp4c_gate_probe.jl`, `wp4c_gate_score.py` and
     `configs/wp4c_gate_d4w_{default,copies}.yml`. Every trial configuration
-    builds its model on the login node. Two readings of OD3 for the rule's
-    parts 1 and 2b wait for the owner's confirmation (the note, section 4).
+    builds its model on the login node. The owner confirmed its reading of
+    OD3 for parts 1 and 2 on 2026-09-25. Jobs `13944456` (case A) and
+    `13944457` (case B).
 
   - [ ] Review (xhigh) of each stage.
 

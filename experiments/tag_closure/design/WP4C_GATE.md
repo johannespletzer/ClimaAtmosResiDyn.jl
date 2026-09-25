@@ -86,12 +86,13 @@ Part 3 is measured for `vdiff` only. `diffusion_up`'s leak reaches the copies,
 not the grid mean's tags, and the copies' repair takes it out; its part 3 is
 not assessable here.
 
-**Two readings to confirm.** OD3 has no row named for part 1. The table uses
+**Two readings, confirmed by the owner on 2026-09-25.** OD3 has no row named for part 1. The table uses
 the tenth-of-the-budget level that the comparator's own-residual row uses.
 And OD3's per-tag intervention row judges `led_fix`, with `led_inc` "reported,
 judged only through the refinement test". Part 2b applies the same 2% to the
 follower's per-tag share because G3_PLAN 4.2 names the intervention threshold
-for it. The owner may change either before the gate is scored.
+for it. The owner confirmed both on 2026-09-25, part 2 as the difference
+between two runs, and the per-tag intervention row's 2% is used here too.
 
 **What follows.**
   - A correction retained under 1 or 2 is built in WP4c.
