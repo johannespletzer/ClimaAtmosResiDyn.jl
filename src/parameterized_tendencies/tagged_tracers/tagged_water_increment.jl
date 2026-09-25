@@ -10,6 +10,15 @@
 ##### to it as a vertical flux, as `correct_energy_source_increment!` does for
 ##### the energy source tags. The tags' explicit vertical advection is skipped,
 ##### because the parent's increment carries it.
+#####
+##### Under `water_tag_precipitation: true` the tags' `ρq_tag_<name>` fields
+##### follow the parent's increment of the water that is neither rain nor snow,
+##### `ρq_tot - ρq_rai - ρq_sno`. `ρq_tot` is advected implicitly with its rain
+##### and snow, and `ρq_rai` and `ρq_sno` explicitly. So the rain and snow parts
+##### keep their explicit advection and hand it back to the non-precipitating
+##### part (`water_tag_precip_advection!`), and they follow their own implicit
+##### terms, which are their species' by construction (the design note WP4b-D,
+##### section 6).
 
 # The names of the correction's ledger, in the state's order.
 const WATER_TAG_LEDGER_NAMES = (:q_tag_inc_left, :q_tag_inc_moved)
@@ -172,7 +181,9 @@ snapshot_water_tag_increment!(Y, p, dtγ) =
 function _snapshot_water_tag_increment!(Y, p, dtγ, model)
     (; ᶜq_tag_ρq_tot_snapshot, ᶜq_tag_partition_snapshot, q_tag_dtγ) =
         p.tagging
-    @. ᶜq_tag_ρq_tot_snapshot = Y.c.ρq_tot
+    # The water the tags' `ρq_tag_<name>` fields partition: `ρq_tot`, or its
+    # non-precipitating part under `water_tag_precipitation: true`.
+    @. ᶜq_tag_ρq_tot_snapshot = $(water_tag_parent(Y.c, model))
     _water_partition_sum!(ᶜq_tag_partition_snapshot, Y.c, Y.c, false, model.tags)
     q_tag_dtγ[] = dtγ
     return nothing
@@ -258,8 +269,8 @@ function correct_water_tag_increment!(dY, U, p)
     # so the mismatch stays right if it ever writes more.
     _water_partition_sum!(ᶜm, U.c, dY.c, dtγ, model.tags)
     @. ᶜm =
-        (U.c.ρq_tot + dtγ * dY.c.ρq_tot - ᶜq_tag_ρq_tot_snapshot) -
-        (ᶜm - ᶜq_tag_partition_snapshot)
+        ($(_water_tag_parent_after(U.c, dY.c, dtγ, model)) -
+         ᶜq_tag_ρq_tot_snapshot) - (ᶜm - ᶜq_tag_partition_snapshot)
     Operators.column_integral_indefinite!(ᶠq_tag_mismatch_integral, ᶜm)
     Operators.column_integral_definite!(q_tag_mismatch_total, ᶜm)
     # The column's total `M` is left out only where the mismatch has `M`'s
@@ -302,6 +313,7 @@ function correct_water_tag_increment!(dY, U, p)
         p.scratch.ᶜtagging_q_share_norm,
         ᶠq_tag_increment_flux,
         model.tags,
+        water_tag_parent(U.c, model),
     )
     # The ledger. What is left out stays out of the tags, and the rest is what
     # the flux moved. The stepper adds `dtγ·dY`, as it does for the tags. The
@@ -315,6 +327,16 @@ function correct_water_tag_increment!(dY, U, p)
     @. dY.c.q_tag_inc_moved += (ᶜm - ᶜq_tag_left_weight) / dtγ
     return nothing
 end
+
+# The water the tags' `ρq_tag_<name>` fields partition after the stage, with the
+# parent's post-solve correction: `ρq_tot`, or under `water_tag_precipitation:
+# true` its non-precipitating part.
+_water_tag_parent_after(ᶜU, ᶜdY, dtγ, model) =
+    has_water_tag_precipitation(model) ?
+    (@. lazy(
+        (ᶜU.ρq_tot + dtγ * ᶜdY.ρq_tot) - (ᶜU.ρq_rai + dtγ * ᶜdY.ρq_rai) -
+        (ᶜU.ρq_sno + dtγ * ᶜdY.ρq_sno),
+    )) : (@. lazy(ᶜU.ρq_tot + dtγ * ᶜdY.ρq_tot))
 
 """
     water_tag_extra_audit(Y, p, model, scale)

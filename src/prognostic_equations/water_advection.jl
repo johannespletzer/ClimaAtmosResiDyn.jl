@@ -92,7 +92,8 @@ function vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
         @. Yₜ.c.ρq_tot += vtt
         # Mirror this species' flux onto the tagged water tracers, built from
         # the same ᶜq, ᶜw and ᶠρ so that the tagged fluxes sum to vtt exactly.
-        sediment_water_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶠρ)
+        # With rain and snow parts, the species' name routes it to its part.
+        sediment_water_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶠρ, ρq_name)
 
         e_int_func = internal_energy_func(ρq_name)
         @. p.scratch.ᶜtemp_scalar_3 =

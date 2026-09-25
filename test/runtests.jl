@@ -34,6 +34,7 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_edmf_0m",
     "tagging_water_increment",
     "tagging_water_increment_explicit",
+    "tagging_water_precipitation",
     "parameterizations",
     "restarts",
 )
@@ -60,6 +61,7 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Tracer processes" begin @time include("tracer_processes_tests.jl") end
     @safetestset "Tagged tracers" begin @time include("tagged_tracers_tests.jl") end
     @safetestset "Tagged water" begin @time include("tagged_water_tests.jl") end
+    @safetestset "Tagged water with rain and snow parts" begin @time include("tagged_water_precipitation_tests.jl") end
     @safetestset "Energy source tags" begin @time include("energy_source_tags_tests.jl") end
     @safetestset "Process records" begin @time include("process_record_tests.jl") end
     @safetestset "Parent-budget packets" begin @time include("parent_budget/reduction_tests.jl") end
@@ -270,6 +272,15 @@ end
 if TEST_GROUP in ("tagging_water_increment_explicit", "all")
     @safetestset "Water tags following the increment, microphysics explicit" begin
         @time include("tagged_water_increment_explicit_integration.jl")
+    end
+end
+
+# The water tags' rain and snow parts (`water_tag_precipitation: true`) on a
+# 1-moment column without EDMF. The file builds the column three times: with
+# the parts under each transport, and without tags.
+if TEST_GROUP in ("tagging_water_precipitation", "all")
+    @safetestset "Water tags with rain and snow parts" begin
+        @time include("tagged_water_precipitation_integration.jl")
     end
 end
 

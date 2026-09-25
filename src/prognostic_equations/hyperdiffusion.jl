@@ -442,6 +442,10 @@ NVTX.@annotate function prep_tracer_hyperdiffusion_tendency!(Yₜ, Y, p, t)
     foreach_gs_tracer(Y, ᶜ∇²specific_tracers) do ᶜρχ, ᶜ∇²χ, _
         @. ᶜ∇²χ = wdivₕ(gradₕ(specific(ᶜρχ, Y.c.ρ)))
     end
+    # Under `water_tag_precipitation: true` the water tags' non-precipitating
+    # parts are hyperdiffused against their share of the reference profile, as
+    # the parent's diffusing water is.
+    prep_water_tag_hyperdiffusion!(ᶜ∇²specific_tracers, Y, p)
     return nothing
 end
 
@@ -542,6 +546,8 @@ NVTX.@annotate function apply_tracer_hyperdiffusion_tendency!(Yₜ, Y, p, t)
         # standard ∇⁴ tendency.
         ρχ_name == @name(ρq_tot) && return
         ρχ_name in _microphysics_names && return
+        # The water tags' rain and snow parts do not hyperdiffuse either.
+        _is_water_precip_part_field(ρχ_name) && return
         # Under enthalpy transport the energy source tags take their shares of
         # the parent's flux in `apply_hyperdiffusion_tendency!` instead.
         energy_source_tag_moves_as_enthalpy(p, ρχ_name) && return

@@ -147,9 +147,11 @@ function vertical_diffusion_boundary_layer_tendency!(
     end
 
     # Passive (non-microphysics) grid-scale tracers: independent diffusion at
-    # full K_h. Skip microphysics species (handled above or no diffusion).
+    # full K_h. Skip microphysics species (handled above or no diffusion), and
+    # the water tags' rain and snow parts, which move as rain and snow do.
     foreach_gs_tracer(Yₜ, Y) do ᶜρχₜ, ᶜρχ, ρχ_name
         ρχ_name in microphysics_tracer_names(Y) && return
+        _is_water_precip_part_field(ρχ_name) && return
         @. ᶜρχₜ -= ᶜdiffdivᵥ(-(ᶠρK * ᶠgradᵥ(specific(ᶜρχ, Y.c.ρ))))
     end
 end
