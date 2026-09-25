@@ -99,9 +99,9 @@ water_tag_part_field(obj, tag, ::SnowPart) = snow_tag_field(obj, tag)
 """
     water_tag_part_parent(ᶜY, part)
 
-The compartment of the parent that `part` is a share of: `ρq_tot - ρq_rai -
-ρq_sno`, lazily, for the non-precipitating part, and `ρq_rai` or `ρq_sno` for
-rain and snow.
+The compartment of the parent that `part` is a share of. For the
+non-precipitating part it is `ρq_tot - ρq_rai - ρq_sno`, lazily. For rain and
+snow it is `ρq_rai` or `ρq_sno`.
 """
 water_tag_part_parent(ᶜY, ::NonPrecipitatingPart) =
     @. lazy(ᶜY.ρq_tot - ᶜY.ρq_rai - ᶜY.ρq_sno)
@@ -411,18 +411,21 @@ end
 # ============================================================================
 
 """
-    water_tag_sedimenting_mass_names(Y, model)
+    water_tag_sedimenting_mass_names(Y)
 
 The sedimenting species whose flux the tags' `ρq_tag_<name>` fields share, as
-`@name`s relative to `Y.c`: every sedimenting mass without the key, and only
-cloud liquid and cloud ice with it. Rain and snow then fall in their own parts.
+`@name`s relative to `Y.c`: every sedimenting mass, and only cloud liquid and
+cloud ice where the state holds rain and snow parts
+(`water_tag_precipitation: true`). Rain and snow then fall in their own parts.
+It reads the state, as `sedimenting_water_tag_names` does, so the Jacobian's
+blocks and their update cannot disagree.
 """
-water_tag_sedimenting_mass_names(Y, model) =
-    has_water_tag_precipitation(model) ?
+water_tag_sedimenting_mass_names(Y) =
+    isempty(water_precip_part_names(Y)) ? sedimenting_mass_names(Y) :
     unrolled_filter(
         name -> name == @name(ρq_lcl) || name == @name(ρq_icl),
         sedimenting_mass_names(Y),
-    ) : sedimenting_mass_names(Y)
+    )
 
 """
     water_precip_part_names(Y)
@@ -481,26 +484,29 @@ species, `ρq_rai` or `ρq_sno`, value for value. Each part falls by the
 species' own linear operator, so its block is the species' block. The parts
 take nothing else implicitly that has a block, and no other row names them, so
 the split solver solves each apart. Called at the end of the sedimentation
-update, after the species' blocks are set. A no-op without the key.
+update, after the species' blocks are set. The parts are found in the state,
+so this is a no-op without them.
 """
 function update_water_precip_part_sedimentation_jacobian!(matrix, Y, p)
-    has_water_tag_precipitation(p.atmos.water_tagging_model) || return nothing
+    part_names = water_precip_part_names(Y)
+    isempty(part_names) && return nothing
     ∂ᶜρq_rai_err_∂ᶜρq_rai = matrix[@name(c.ρq_rai), @name(c.ρq_rai)]
     ∂ᶜρq_sno_err_∂ᶜρq_sno = matrix[@name(c.ρq_sno), @name(c.ρq_sno)]
-    MatrixFields.unrolled_foreach(p.atmos.water_tagging_model.tags) do tag
-        ∂ᶜrain_err_∂ᶜrain = matrix[
-            center_state_name(rain_tag_field_name(tag)),
-            center_state_name(rain_tag_field_name(tag)),
-        ]
-        @. ∂ᶜrain_err_∂ᶜrain = ∂ᶜρq_rai_err_∂ᶜρq_rai
-        ∂ᶜsnow_err_∂ᶜsnow = matrix[
-            center_state_name(snow_tag_field_name(tag)),
-            center_state_name(snow_tag_field_name(tag)),
-        ]
-        @. ∂ᶜsnow_err_∂ᶜsnow = ∂ᶜρq_sno_err_∂ᶜρq_sno
+    MatrixFields.unrolled_foreach(part_names) do name
+        state_name = center_state_name(name)
+        ∂ᶜpart_err_∂ᶜpart = matrix[state_name, state_name]
+        if _is_rain_part_field(name)
+            @. ∂ᶜpart_err_∂ᶜpart = ∂ᶜρq_rai_err_∂ᶜρq_rai
+        else
+            @. ∂ᶜpart_err_∂ᶜpart = ∂ᶜρq_sno_err_∂ᶜρq_sno
+        end
     end
     return nothing
 end
+
+# Whether a part's name is a rain part, at compile time.
+@generated _is_rain_part_field(::MatrixFields.FieldName{chain}) where {chain} =
+    startswith(string(first(chain)), "ρq_rtag_")
 
 # ============================================================================
 # Microphysics: the gross flows

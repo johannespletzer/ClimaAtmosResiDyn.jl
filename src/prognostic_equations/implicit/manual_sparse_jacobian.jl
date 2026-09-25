@@ -319,10 +319,8 @@ function sedimentation_jacobian_blocks(Y, atmos, water_tag_cross_flag)
         unrolled_map(center_state_name, sedimenting_water_tag_names(Y))
     # The species the tags' `ρq_tag_<name>` fields fall with: every one, or
     # under `water_tag_precipitation: true` the cloud only.
-    water_tag_mass_names = unrolled_map(
-        center_state_name,
-        water_tag_sedimenting_mass_names(Y, atmos.water_tagging_model),
-    )
+    water_tag_mass_names =
+        unrolled_map(center_state_name, water_tag_sedimenting_mass_names(Y))
     # The rain and snow parts, whose diagonal is their species' block.
     precip_part_names =
         unrolled_map(center_state_name, water_precip_part_names(Y))
@@ -1450,8 +1448,7 @@ function update_water_tag_sedimentation_block!(
 
     # Under `water_tag_precipitation: true` only the cloud falls in the
     # `ρq_tag_<name>` fields.
-    mass_names =
-        water_tag_sedimenting_mass_names(Y, p.atmos.water_tagging_model)
+    mass_names = water_tag_sedimenting_mass_names(Y)
     MatrixFields.unrolled_foreach(mass_names) do ρqₚ_name
         ᶜwₚ = MatrixFields.get_field(
             p.precomputed,

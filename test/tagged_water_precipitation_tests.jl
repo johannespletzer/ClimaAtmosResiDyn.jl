@@ -224,10 +224,19 @@ end
     @test CA.sedimenting_water_tag_names(Y) == (@name(ρq_tag_low),)
     @test CA.water_precip_part_names(Y) ==
           (@name(ρq_rtag_low), @name(ρq_stag_low))
-    @test CA.water_tag_sedimenting_mass_names(Y, model) ==
+    @test CA.water_tag_sedimenting_mass_names(Y) ==
           (@name(ρq_lcl), @name(ρq_icl))
-    @test CA.water_tag_sedimenting_mass_names(Y, plain) ==
-          CA.sedimenting_mass_names(Y)
+    # Without the parts, every sedimenting species.
+    plain_names = filter(name -> !CA.is_water_precip_part_name(name), names)
+    Y_plain = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(space),
+            NamedTuple{plain_names, NTuple{length(plain_names), Float64}},
+        ),
+    )
+    @test CA.water_tag_sedimenting_mass_names(Y_plain) ==
+          CA.sedimenting_mass_names(Y_plain)
+    @test length(CA.water_tag_sedimenting_mass_names(Y_plain)) == 4
 end
 
 @testset "The initial state and the denominators" begin
@@ -386,7 +395,8 @@ end
         flows = CA.microphysics_tendencies_1m(CA.WaterTagFlows1M(), args...)
         @test keys(flows) == CA.WATER_TAG_FLOW_NAMES
         tolerance =
-            64 * eps(FT) * (
+            64 * eps(FT) *
+            (
                 (s.q_lcl + s.q_icl + s.q_rai + s.q_sno) / dt +
                 sum(abs, values(flows))
             )
@@ -434,7 +444,8 @@ end
         dq_rai = (F.NR + F.SR) - (F.RN + F.RS)
         dq_sno = (F.NS + F.RS) - (F.SN + F.SR)
         args(i) = (qN, qR, qS, Δt, shares[1][i], shares[2][i], shares[3][i])
-        changes = map(i -> CA.water_tag_microphysics_change(F, dq_rai, dq_sno, args(i)...), 1:3)
+        changes =
+            map(i -> CA.water_tag_microphysics_change(F, dq_rai, dq_sno, args(i)...), 1:3)
         scale = 1e-7
         # Each tag keeps its total.
         @test all(c -> abs(sum(c)) <= 1e-14 * scale, changes)
@@ -833,8 +844,9 @@ end
         scale = maximum(abs, parent(ᶜflux))
         prefix =
             mass == :ρq_rai ? :ρq_rtag_ : mass == :ρq_sno ? :ρq_stag_ : :ρq_tag_
-        partition = parent(getproperty(Yₜ.c, Symbol(prefix, :low))) .+
-                    parent(getproperty(Yₜ.c, Symbol(prefix, :high)))
+        partition =
+            parent(getproperty(Yₜ.c, Symbol(prefix, :low))) .+
+            parent(getproperty(Yₜ.c, Symbol(prefix, :high)))
         @test maximum(abs, partition .- parent(ᶜflux)) <= 1e-12 * scale
         # The other parts take nothing of this species.
         for other in (:ρq_tag_, :ρq_rtag_, :ρq_stag_)
@@ -852,7 +864,10 @@ end
     plain = CA.WaterTaggingModel(tags)
     atmos(model) = (; water_tagging_model = model)
     ledgers =
-        map(_ -> 0.0, NamedTuple{CA.WATER_TAG_MECHANISM_NAMES}(CA.WATER_TAG_MECHANISM_NAMES))
+        map(
+            _ -> 0.0,
+            NamedTuple{CA.WATER_TAG_MECHANISM_NAMES}(CA.WATER_TAG_MECHANISM_NAMES),
+        )
     state(names) = (;
         c = (;
             NamedTuple{(:ρ, :ρq_tot, names...)}(Tuple(zeros(2 + length(names))))...,

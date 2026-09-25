@@ -203,8 +203,8 @@ during simulation setup rather than at package load time:
   - `qv_tag_<name>`: tagged **vapor**, `q_tag_<name> * q_v / q_t`, under the
     assumption that the phases are well mixed within a grid cell. Under
     `water_tag_precipitation: true` the vapour's share is taken of the tag's
-    non-precipitating part and its compartment, `q_ntag_<name> * q_v /
-    (q_tot - q_rai - q_sno)`;
+    non-precipitating part and its compartment: `q_ntag_<name>` times `q_v`
+    over `q_tot - q_rai - q_sno`;
 
   - `q_tag_res`: closure residual `(ρq_tot - Σᵢ ρq_tag_i) / ρ`, where the sum
     runs over the pure region tags (only registered when at least one exists),

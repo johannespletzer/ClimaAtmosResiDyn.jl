@@ -122,9 +122,9 @@ function test_parity(Y, Y_plain)
     @test all(
         name ->
             hasproperty(Y_plain.c, name) ||
-                CA.is_tagged_tracer_name(name) ||
-                CA.is_tag_mechanism_ledger_name(name) ||
-                CA.is_water_tag_audit_name(name),
+            CA.is_tagged_tracer_name(name) ||
+            CA.is_tag_mechanism_ledger_name(name) ||
+            CA.is_water_tag_audit_name(name),
         propertynames(Y.c),
     )
 end
@@ -349,8 +349,9 @@ end
         @test Set(map(first, tag_field.lower)) ==
               Set((CA.@name(c.ρq_lcl), CA.@name(c.ρq_icl)))
         # The audit: the net-flow rule and the gross flows differ here.
-        audit = maximum(abs, parent(Y.c.q_rtag_aud_lower)) +
-                maximum(abs, parent(Y.c.q_rtag_aud_upper))
+        audit =
+            maximum(abs, parent(Y.c.q_rtag_aud_lower)) +
+            maximum(abs, parent(Y.c.q_rtag_aud_upper))
         @info "The audit's largest rain difference" audit maximum(parent(Y.c.ρq_rai))
         @test all(isfinite, parent(Y.c.q_rtag_aud_lower))
         @test audit > 0
@@ -391,7 +392,12 @@ end
     end
 
     # 8 and 9. The default transport, and the column without tags.
-    tracer = run!(build(merge(base_config(), tag_config("tracer")), "water_tags_precipitation_tracer"))
+    tracer = run!(
+        build(
+            merge(base_config(), tag_config("tracer")),
+            "water_tags_precipitation_tracer",
+        ),
+    )
     @testset "The parts under the default transport" begin
         @test !CA.follows_water_increment(tracer.integrator.p.atmos.water_tagging_model)
         result = closure(tracer.integrator.u)

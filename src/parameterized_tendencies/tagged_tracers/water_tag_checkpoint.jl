@@ -40,9 +40,9 @@ water_tag_definition(tag) = energy_source_tag_definition(tag)
     write_water_tag_checkpoint_attributes!(file, model)
 
 Write each water tag's region and sources as attributes of `file`, with a
-version, the tags' names in state order and `water_tag_precipitation`, as 0 or
-1. A definition is split into parts of at most 32,000 bytes, as the energy
-source tags' are. A no-op without water tags. Called by
+version, the tags' names in state order and `water_tag_precipitation` as an
+integer, one for `true`. A definition is split into parts of at most 32,000
+bytes, as the energy source tags' are. A no-op without water tags. Called by
 `save_state_to_disk_func`.
 """
 write_water_tag_checkpoint_attributes!(file, ::Nothing) = nothing
