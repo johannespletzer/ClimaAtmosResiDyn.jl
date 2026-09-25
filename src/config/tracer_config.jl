@@ -1601,10 +1601,12 @@ parent does not. So it needs 1-moment microphysics, whose diffusing water
 tags support no other scheme (`check_water_tagging_supported`). The correction is built for the EDMF
 vertical diffusive flux, the path that WP4c's gate measured and retained, and
 its updrafts' mirror (FINDINGS W40 on the record branch). So it needs
-`turbconv: prognostic_edmfx` or `edonly_edmfx` with
-`edmfx_sgs_diffusive_flux: true`. The boundary-layer diffusion (`vert_diff`)
-leaks the same way, but the gate did not measure it, so the key is refused with
-it rather than leaving that part uncorrected.
+`turbconv: prognostic_edmfx` or `edonly_edmfx`. With
+`edmfx_sgs_diffusive_flux: false` there is no flux and no leak, and the key does
+nothing; it is accepted, so that a run with that flux switched off, such as
+WP4c's gate trials, keeps the rest of its configuration. The boundary-layer
+diffusion (`vert_diff`) leaks the same way, but the gate did not measure it, so
+the key is refused with it rather than leaving that part uncorrected.
 """
 function check_water_tag_leak_correction_supported(parsed_args, microphysics_model)
     microphysics_model isa NonEquilibriumMicrophysics1M || error(
@@ -1614,13 +1616,10 @@ function check_water_tag_leak_correction_supported(parsed_args, microphysics_mod
         tags do. Without prognostic rain and snow there is no leak. Drop the \
         key.",
     )
-    turbconv = get(parsed_args, "turbconv", nothing)
-    turbconv in ("prognostic_edmfx", "edonly_edmfx") &&
-    get(parsed_args, "edmfx_sgs_diffusive_flux", false) === true ||
+    get(parsed_args, "turbconv", nothing) in ("prognostic_edmfx", "edonly_edmfx") ||
         error(
             "`water_tag_leak_correction: true` needs `turbconv: \
-            prognostic_edmfx` or `edonly_edmfx` with \
-            `edmfx_sgs_diffusive_flux: true`. It corrects the EDMF vertical \
+            prognostic_edmfx` or `edonly_edmfx`. It corrects the EDMF vertical \
             diffusive flux and its updrafts' mirror, the paths WP4c's gate \
             measured, and nothing else. Drop the key.",
         )

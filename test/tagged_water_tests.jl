@@ -2072,13 +2072,15 @@ end
             edmf,
             CA.EquilibriumMicrophysics0M(),
         )
-        @test_throws r"`edmfx_sgs_diffusive_flux: true`" check(
+        @test_throws r"needs `turbconv: prognostic_edmfx` or `edonly_edmfx`" check(
             Dict{String, Any}(),
             one_moment,
         )
-        @test_throws r"`edmfx_sgs_diffusive_flux: true`" check(
-            merge(edmf, Dict("edmfx_sgs_diffusive_flux" => false)),
-            one_moment,
+        # Without the EDMF diffusive flux there is no leak, and the key does
+        # nothing. It is accepted, so that the gate's trials with that flux
+        # switched off build.
+        @test isnothing(
+            check(merge(edmf, Dict("edmfx_sgs_diffusive_flux" => false)), one_moment),
         )
         @test_throws r"refused with `vert_diff: VerticalDiffusion`" check(
             merge(edmf, Dict("vert_diff" => "VerticalDiffusion")),
