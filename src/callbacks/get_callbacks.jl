@@ -807,7 +807,8 @@ function default_model_callbacks(
             water_closure_check,
             tagging.water_tagging_model;
             family = "water",
-            total_name = :ρq_tot,
+            # The partition's target, the parent's non-negative water.
+            total_name = water_closure_total(tagging.water_tagging_model),
             state_names = water_region_tag_state_names,
             config_key = "water_closure_check",
             tracer_key = "water_tracers",

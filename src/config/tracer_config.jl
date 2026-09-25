@@ -472,8 +472,10 @@ Name prefixes that a `water_tracers` tag may not take. A tag's diagnostic is
 and constraints, so a tag named `fix_a` would take the name of tag `a`'s
 ledger, and the first registered diagnostic would win silently. `upfix_` is
 held for the updraft copies' repair ledger, which collides the same way.
-`inc_` is held for an increment follower's ledgers, `q_tag_inc_left` and
-`q_tag_inc_moved`. `rtag_` and `stag_` are held for the rain and snow parts,
+`inc_` is held for an increment follower's ledgers, `q_tag_inc_left`,
+`q_tag_inc_moved` and `q_tag_inc_negative`. `negative` is held for
+`q_tag_negative`, the parent's negative water the partition leaves.
+`rtag_` and `stag_` are held for the rain and snow parts,
 whose output names are not fixed yet. Refusing them now keeps configurations
 valid when those diagnostics arrive. `fixgross_`, `fixcount_`, `upfixgross_`
 and `upfixcount_` start the ledgers' gross twins and counts, and `led_` the
@@ -483,6 +485,7 @@ const RESERVED_WATER_TAG_PREFIXES = (
     "fix_",
     "upfix_",
     "inc_",
+    "negative",
     "rtag_",
     "stag_",
     "fixgross_",

@@ -58,12 +58,16 @@ the other grid-scale variables. Returns `(;)` when water tagging is disabled
 (`water_tagging_model === nothing`).
 
 Must be evaluated with the same `ρq_tot` that `moisture_variables` puts into the
-state, so that a partition-of-unity set of region tags sums to `ρq_tot` exactly
-at `t = 0`.
+state, so that a partition-of-unity set of region tags sums to the partition's
+target, `water_tag_partition_target(ρq_tot)`, exactly at `t = 0`.
 """
 water_tagging_variables(ρq_tot, local_geometry, ::Nothing) = (;)
 water_tagging_variables(ρq_tot, local_geometry, model::WaterTaggingModel) =
-    _tag_variables(ρq_tot, local_geometry.coordinates, model.tags)
+    _tag_variables(
+        water_tag_partition_target(ρq_tot),
+        local_geometry.coordinates,
+        model.tags,
+    )
 
 """
     water_tag_state_names(model::WaterTaggingModel)
@@ -274,6 +278,8 @@ function _water_tagging_cache(Y, model::WaterTaggingModel)
     return (;
         ᶜwater_masks,
         ᶜwater_fix,
+        # The closure check's parent, the partition's target (option C).
+        ᶜwater_parent = zero.(Y.c.ρ),
         ᶜwater_fix_gross = tag_throughput_fields(Y.c.ρ, model.tags),
         ᶜwater_fix_count = tag_throughput_fields(Y.c.ρ, model.tags),
         ᶜwater_pos,
@@ -298,6 +304,48 @@ transport leakage, and when `ρq_tot` is positive but negligible.
 @inline water_tag_fraction(ρq_tag, ρq_tot) =
     ρq_tot > zero(ρq_tot) ?
     min(max(ρq_tag / ρq_tot, zero(ρq_tot)), one(ρq_tot)) : zero(ρq_tot)
+
+"""
+    water_tag_partition_target(ρq_tot)
+    water_tag_negative_part(ρq_tot)
+
+What the partition tags partition, and what they leave to a named remainder
+(known issue 7, option C; the owner, 2026-09-25). Numerics can take the
+parent's water below zero, and no set of non-negative tags can partition a
+negative amount. So the partition's target is the parent's non-negative part,
+`max(ρq_tot, 0)`, and its negative part, `min(ρq_tot, 0)`, is the remainder
+the diagnostic `q_tag_negative` reports. The two add up to `ρq_tot`. Where the
+parent is not negative the target is `ρq_tot` itself, bit for bit: `-0.0`
+stays `-0.0`, so a run whose parent never goes negative is unchanged.
+
+The follower takes the target's increment
+([`correct_water_tag_increment!`](@ref)), the limiters' rescale and the
+copies' repair aim at it ([`water_tag_rescale_shift`](@ref)), and the closure
+check and `q_tag_res` compare the partition with it
+([`water_closure_total`](@ref)).
+"""
+@inline water_tag_partition_target(ρq_tot) =
+    ifelse(ρq_tot < zero(ρq_tot), zero(ρq_tot), ρq_tot)
+@inline water_tag_negative_part(ρq_tot) =
+    ifelse(ρq_tot < zero(ρq_tot), ρq_tot, zero(ρq_tot))
+
+"""
+    water_closure_total(model)
+
+What the water closure check compares the partition with, in the form
+`closure_parent` takes: without water tags `:ρq_tot`, and with them a function
+that fills `p.tagging.ᶜwater_parent` with the partition's target,
+`water_tag_partition_target(ρq_tot)`, and returns it. The closure's `total`,
+`scale` and residuals are then over the parent's non-negative water; its
+negative part is the named remainder `q_tag_negative`.
+"""
+water_closure_total(::Nothing) = :ρq_tot
+water_closure_total(::WaterTaggingModel) = water_closure_parent
+function water_closure_parent(Y, p)
+    ᶜparent = p.tagging.ᶜwater_parent
+    @. ᶜparent = water_tag_partition_target(Y.c.ρq_tot)
+    return ᶜparent
+end
 
 """
     snapshot_tagged_ρq_tot!(p, Yₜ)
@@ -764,6 +812,11 @@ Where `pos` is zero there is no tagged water to share the increment out over, so
 nothing moves and the change surfaces in `q_tag_res`. Water is never invented
 into a tag that holds none, which is the rule the rest of this file follows.
 
+The increment is that of the partition's target
+([`water_tag_partition_target`](@ref)): where a correction leaves the parent
+negative, the tags go to zero, not below (known issue 7, option C). Where the
+parent stays non-negative this is the increment itself, bit for bit.
+
 The `ρq_tot_before ≤ 0` branch removes the tag, returning `-ρq_tag`. The
 rescale is applied to the whole field after a correction, not only to the cells
 the correction touched, so this branch is reached in every cell whose
@@ -785,7 +838,7 @@ the parent is clipped to zero, and logs the removal honestly.
 )
     ρq_tot_before > zero(ρq_tot_before) || return -ρq_tag
     pos > zero(pos) || return zero(ρq_tag)
-    Δ = max(ρq_tot_after - ρq_tot_before, -pos)
+    Δ = max(water_tag_partition_target(ρq_tot_after) - ρq_tot_before, -pos)
     return Δ * max(ρq_tag, zero(ρq_tag)) / pos
 end
 

@@ -243,10 +243,12 @@ not re-derive them.
   - **Julia 1.9 compatibility.** Upstream still declares `julia = "1.9"` while
     testing only 1.10 and 1.11. This fork raised its own floor to 1.10.
 
-## 7. Tagged water ends a run where the parent's water goes negative (open, parity class)
+## 7. Tagged water ends a run where the parent's water goes negative (option C built; its validation is pending)
 
-**Status:** open. The run no longer ends (option A, below); the cause of the
-divergence is open. To be settled before the sphere.
+**Status:** option C is built and unit-tested (below). The run no longer ends
+(option A). Whether C keeps the tags on their target over the long runs is the
+record branch's pre-registered validation
+(`design/NEGATIVE_PARENT_WATER.md`, section 8), not yet run.
 
 A diagnostic must never end a run that upstream completes. This one does.
 The tag-closure long runs (the record branch's
@@ -283,8 +285,21 @@ merge. No closure check ends a run by default any more. Water's old level,
 every later row `void` in the closure and audit tables, and the run goes on.
 An explicit `abort_above` still ends a run.
 
-**Still open:** which of the tags' operators makes the divergence. The runs
-bound the problem to negative parent water on a long column; they do not
-isolate the mechanism. A probe with the per-tag ledgers runs next, and the
-owner then chooses among options B, C and D of the record branch's
-`design/NEGATIVE_PARENT_WATER.md`.
+**The probe** (the record's FINDINGS W39) read the per-tag ledgers over 20
+days at site 23. When the parent first goes negative, the follower's moved
+part is about 120 times the corrections, and 70% of the tags' overclaim lies
+outside the negative cells. It pointed to option C.
+
+**Option C, done** (the owner's choice of 2026-09-25): the partition tags
+partition the parent's non-negative water, `max(ρq_tot, 0)`, and the negative
+part is a named remainder, `q_tag_negative`.
+
+  - The follower takes the non-negative part's increment. The part of its
+    column total that is the negative water a solve creates goes to the tags,
+    in the new ledger `q_tag_inc_negative`, and not into `q_tag_res`.
+  - Where the parent is negative, a cell's tags move by the partition's own
+    composition, so a cell overdrawn by a solve gives up the tags it held.
+    Before, its shares were zero and the tags stayed.
+  - The limiters' rescale and the copies' repair aim at the non-negative part.
+  - The closure check and `q_tag_res` compare the partition with it.
+  - Where the parent is never negative, nothing changes, bit for bit.
