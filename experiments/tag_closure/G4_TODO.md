@@ -333,6 +333,11 @@ for energy at both sites and for water at site 26. Water at site 23 breaks the
 budget under both rules. The owner deferred the decision, for example until the
 site 23 defect (known issue 7) is fixed and site 23 can be scored. G4.15b
 waits. The metrics are in the parent session's FINDINGS entries.
+*Prepared 2026-09-25:* site 23's rerun with option C, pre-registered in
+`design/INCREMENT_RULE_LONG_RUNS.md`, section 8: four runs on
+`claude/long-run-c-samesign` and `claude/long-run-c-absm`, submitted only
+after option C passes its validation. Site 26 is not rerun if option C's V3
+holds bit for bit.
 
 Added on 2026-09-24. The review of the water follower (#102) changed three
 things that the energy source tags' `enthalpy_increment` still does the old
