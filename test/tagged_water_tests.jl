@@ -1025,16 +1025,17 @@ end
     # warning, and restarts.
     unrecorded = checkpoint(water_model(), "unrecorded"; record = false)
     @test_logs (:warn, r"written before") check(unrecorded, water_model())
-    # A checkpoint in another version of the format is refused.
+    # A checkpoint in a version of the format this guard does not read is
+    # refused. Version 2 added `water_tag_precipitation`.
     newer = checkpoint(
         water_model(),
         "newer";
         edit = file -> begin
             HDF5.delete_attribute(file, "water_tag_checkpoint")
-            HDF5.write_attribute(file, "water_tag_checkpoint", 2)
+            HDF5.write_attribute(file, "water_tag_checkpoint", 3)
         end,
     )
-    @test_throws r"version 2 of the checkpoint format.*reads version 1" check(
+    @test_throws r"version 3 of the checkpoint format.*reads version 2" check(
         newer,
         water_model(),
     )

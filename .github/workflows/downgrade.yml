@@ -80,6 +80,7 @@ jobs:
           - tagging_water_edmf_0m
           - tagging_water_increment
           - tagging_water_increment_explicit
+          - tagging_water_precipitation
           - parameterizations
           - restarts
     steps:
