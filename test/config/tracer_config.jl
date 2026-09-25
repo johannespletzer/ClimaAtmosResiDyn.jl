@@ -1272,7 +1272,8 @@ end
 end
 
 # Known issue 7: past the void level the check warns once and marks every later
-# row void, and the run goes on. Only an explicit `abort_above` ends it.
+# row `closure_void`, and the run goes on. Only an explicit `abort_above` ends
+# it.
 @testset "Closure past the void level" begin
     CC = CA.ClimaCore
     space = CC.CommonSpaces.ColumnSpace(
@@ -1325,8 +1326,8 @@ end
     # warning is not repeated.
     Y.c.ρq_tag_a .= 1
     @test_logs check!(dir, voided)
-    @test void_column(dir) == ["void", "0", "1", "1"]
-    # Without a void level the table has no `void` column.
+    @test void_column(dir) == ["closure_void", "0", "1", "1"]
+    # Without a void level the table has no `closure_void` column.
     plain = mktempdir()
     check!(plain, Ref(false); void_above = nothing)
     @test !occursin("void", first(readlines(CA.tag_closure_path(plain, "water"))))
@@ -1350,10 +1351,65 @@ end
         nonpositive_mass = 0.0,
         nonpositive_mass_fraction = 0.0,
     )
-    CA.write_tag_audit!(audit_dir, 0.0, "water", audit; void = true)
+    CA.write_tag_audit!(audit_dir, 0.0, "water", audit; closure_void = true)
     audit_rows = readlines(CA.tag_audit_path(audit_dir, "water"))
-    @test endswith(audit_rows[1], ",nonpositive_mass_fraction,void")
+    @test endswith(audit_rows[1], ",nonpositive_mass_fraction,closure_void")
     @test endswith(audit_rows[2], ",1")
+
+    # The flags go through a checkpoint (the owner's review of #112). The cache
+    # holds one flag per tag family the model has. The stand-ins for the models
+    # only need to be there.
+    atmos = (;
+        water_tagging_model = :water,
+        tagging_model = nothing,
+        energy_source_tagging_model = :energy_source,
+    )
+    flags = CA.tag_closure_void_flags(atmos)
+    @test keys(flags) == (:water, :energy_source)
+    @test !flags.water[] && !flags.energy_source[]
+    # The callback passes the family's flag from `p.tagging`.
+    @test CA.tag_closure_voided((; tagging = (; closure_void = flags)), :water) ===
+          flags.water
+    flags.water[] = true
+    context = ClimaComms.SingletonCommsContext()
+    checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(checkpoint, context) do writer
+        CA.write_tag_closure_void_attributes!(
+            writer.file,
+            (; closure_void = flags),
+        )
+    end
+    # A restart reads them back, and says which checks restart as void.
+    restored = CA.tag_closure_void_flags(atmos)
+    @test_logs (:warn, r"water tags passed their `void_above` level") CA.restore_tag_closure_void!(
+        (; closure_void = restored),
+        checkpoint,
+        context,
+    )
+    @test restored.water[]
+    @test !restored.energy_source[]
+    # The first row after the restart is void although the partition is closed,
+    # and it does not warn again.
+    Y.c.ρq_tag_a .= 1
+    after_restart = mktempdir()
+    @test_logs check!(after_restart, restored.water)
+    @test void_column(after_restart) == ["closure_void", "1"]
+    # A checkpoint written before the flags were recorded restarts as not void,
+    # with a warning.
+    old_checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(_ -> nothing, old_checkpoint, context)
+    stale = CA.tag_closure_void_flags(atmos)
+    stale.water[] = true
+    @test_logs (:warn, r"written before the closure checks recorded") CA.restore_tag_closure_void!(
+        (; closure_void = stale),
+        old_checkpoint,
+        context,
+    )
+    @test !stale.water[]
+    @test !stale.energy_source[]
+    # Without tags there is nothing to write or read back.
+    @test isnothing(CA.write_tag_closure_void_attributes!(nothing, nothing))
+    @test isnothing(CA.restore_tag_closure_void!(nothing, checkpoint, context))
 end
 
 @testset "Audit table" begin

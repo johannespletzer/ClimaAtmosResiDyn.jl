@@ -300,7 +300,8 @@ can see drift without waiting for the run to end.
 water_closure_check:
   period: "1days"        # how often to check
   tolerance: 1.0e-10     # warn above this relative residual
-  void_above: 1.0        # above this, warn once and mark every later row void
+  void_above: 1.0        # above this, warn once and mark every later row
+                         # closure_void, also after a restart
   abort_above: ~         # end the run above this one; never, by default
   audit: false           # write the second table described below
 
@@ -316,7 +317,7 @@ Both also accept `spin_up`, described under the energy source tags.
 Each writes `water_tag_closure.csv` / `energy_tag_closure.csv` to the output
 directory, with columns `time`, `total`, `tagged`, `residual`, `relative`,
 `gross_residual`, `gross_relative`, `scale` and `nonpositive_fraction`, and a
-last column `void` where the check has a void level.
+last column `closure_void` where the check has a void level.
 
 `residual = total - tagged` is the signed miss between two global integrals, and
 `relative` is it over `scale = ∫|parent|`. `gross_residual` integrates the
@@ -344,13 +345,13 @@ than it saves.
 Exceeding `void_above` **marks the tags void, and the run goes on.** That is a
 different event from drift: a residual larger than the field it measures says
 the tags no longer describe anything. The check warns once, and from then on it
-writes `void` as 1 on every row of its closure table and its audit table. The
-tags are a diagnostic, and a diagnostic must never end a run that the model
-would complete. Before, water's check ended the run at this level, and so ended
-runs whose parent's own water had gone negative (known issue 7). Only water has
-a default level, `1.0`. A set of non-negative tags inside a non-negative parent
-misses it by at most the parent itself, pointwise, so an honest partition
-cannot reach 1 — and neither can an honest strict subset of one, which leaves
+writes `closure_void` as 1 on every row of its closure table and its audit
+table. The tags are a diagnostic, and a diagnostic must never end a run that
+the model would complete. Before, water's check ended the run at this level,
+and so ended runs whose parent's own water had gone negative (known issue 7).
+Only water has a default level, `1.0`. A set of non-negative tags inside a
+non-negative parent misses it by at most the parent itself, pointwise, so an
+honest partition cannot reach 1 — and neither can an honest strict subset of one, which leaves
 most of the water untagged and pushes the ratio towards 1 from below. Passing 1
 means the tags hold water that is not there, or the parent has gone negative.
 Both energy families default to `~`, no level at all, because their residual is
@@ -358,8 +359,30 @@ normalized by `∫|ρe_tot|`, whose zero is a convention: a shifted energy
 reference can make that denominator arbitrarily small and the ratio
 arbitrarily large with nothing wrong. Set one per run once its first closure
 table shows where that configuration settles. Writing `void_above: ~` turns the
-water default off. The flag starts again after a restart, from the restarted
-run's own first pass.
+water default off.
+
+The flag holds across a restart. The checkpoint records it, and the restarted
+run reads it back before its first check. So a run split into segments marks
+its rows as one run would. A check that restarts as void says so in a warning.
+A checkpoint written before the flag was recorded restarts as not void, also
+with a warning.
+
+`closure_void` is about the closure only. It says that the residual has passed
+`void_above`, and nothing else. `closure_void = 0` does not mean that the tags
+or the parent are valid. It only means that the residual has not passed the
+level yet. The parent's water can go negative long before that. At site 23 of
+the tag-closure long runs, the parent's `q_tot` went below zero from day 10.
+The water closure passed 1.0 only at day 48 in one run, and at day 74.5 in two
+others.
+
+For the parent, read `nonpositive_fraction` in the same row. It is the volume
+fraction of the domain where the parent is zero or negative, at the time of the
+row, and the check warns on every row where it is above zero. For water, that
+means the tags' shares are undefined somewhere. The audit's
+`nonpositive_mass_fraction` gives the same by mass. Both read the grid-mean
+parent at the check's times only, so a cell that goes negative and back between
+two checks does not show. Unlike `closure_void`, they are not kept from one row
+to the next.
 
 Exceeding `abort_above` **ends the run**, where a user sets it. No family sets
 one by default. Set it when a run whose tags no longer mean anything is not
@@ -611,4 +634,7 @@ ClimaAtmos.tag_audit
 ClimaAtmos.tag_closure_callback
 ClimaAtmos.tag_closure_callback!
 ClimaAtmos.write_tag_closure!
+ClimaAtmos.tag_closure_void_flags
+ClimaAtmos.write_tag_closure_void_attributes!
+ClimaAtmos.restore_tag_closure_void!
 ```

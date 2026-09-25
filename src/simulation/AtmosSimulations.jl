@@ -456,6 +456,10 @@ function AtmosSimulation(
     set_tag_ledger_cadence!(p, update_constrain_state_every)
     isnothing(restart_file) ||
         restore_tag_ledger_checkpoint!(p.tagging, restart_file, context)
+    # A restarted run reads the tag closure checks' void flags back from its
+    # checkpoint. The first check runs when the integrator starts, below.
+    isnothing(restart_file) ||
+        restore_tag_closure_void!(p.tagging, restart_file, context)
 
     # Combine all callbacks. The ledger's callback goes first: it reads the
     # accepted state and the stepper cache before any other callback runs.
