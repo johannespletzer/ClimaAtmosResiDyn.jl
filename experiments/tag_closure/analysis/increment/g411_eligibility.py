@@ -2,6 +2,7 @@
 and without their mirrors of mseʲ (design/ENERGY_COPY_MIRRORS.md, section 5).
 
     python3 g411_eligibility.py [OUTPUT_ROOT]
+    G411_PREFIX=g411x python3 g411_eligibility.py   # E83's rerun
 
 OUTPUT_ROOT defaults to $SCRATCH/tag_closure/output, with one directory per
 run, `<job_id>/output_0000`, for the five `g411_d4_*` runs. It prints:
@@ -44,8 +45,14 @@ OWN_RESIDUAL, REPAIR_PER_DAY, REFINEMENT = 2e-4, 2e-3, 1.1
 L1_MAX, LINF_MAX, SMALL_SHARE, SMALL_ABS = 0.02, 0.05, 0.01, 2e-4
 
 
+# The run set: `g411` for the first submission, `g411x` for E83's rerun with
+# OD4's exact throughput (the same configs with the per-tag ledgers on). The
+# labels below keep the `g411_d4_*` names.
+PREFIX = os.environ.get("G411_PREFIX", "g411")
+
+
 def out_dir(job):
-    return os.path.join(ROOT, job, "output_0000")
+    return os.path.join(ROOT, job.replace("g411_", PREFIX + "_", 1), "output_0000")
 
 
 def read_csv(job, name):

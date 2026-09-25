@@ -172,3 +172,14 @@ runs (E73: 8 energy copies built in 3504 s cold) and `04:00:00` for the
 others, with `submit_g3.sh` and
 `DRIVER=experiments/tag_closure/analysis/water/d4w_driver.jl`, as G4.15's D4
 day.
+
+## 6. E83's rerun with the exact throughput (2026-09-25, before the runs)
+
+E83 found the copies not eligible on the process records' lower bound of
+OD4's throughput, so its percentages are upper bounds. The exact throughput
+(#115) can only lower them. The rerun repeats section 5's five runs with
+`energy_source_tag_ledger_per_tag: true` (configs `g411x_d4_*`), on a run
+tree with #114 and #115 (the "before" run on #115 alone). The rules,
+thresholds and window are section 5's, unchanged; the only change is the
+scale, now exact. `G411_PREFIX=g411x python3 analysis/increment/g411_eligibility.py`
+scores it.
