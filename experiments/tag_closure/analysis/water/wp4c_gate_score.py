@@ -59,7 +59,12 @@ def od2_boundary(untagged):
     def read(var):
         (path,) = glob.glob(os.path.join(untagged, f"{var}_10m_inst.nc"))
         with nc.Dataset(path) as d:
-            return np.asarray(d["time"][:]), np.asarray(d[var][:]).reshape(len(d["time"]), -1)
+            values = np.asarray(d[var][:])
+            # The column output is stored (z, time). Put time first, as the
+            # rest assumes; a plain reshape would scramble levels and times.
+            if d[var].dimensions[0] != "time":
+                values = np.moveaxis(values, d[var].dimensions.index("time"), 0)
+            return np.asarray(d["time"][:]), values.reshape(len(d["time"]), -1)
 
     t, rho = read("rhoa")
     _, hus = read("hus")

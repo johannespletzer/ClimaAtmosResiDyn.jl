@@ -1,0 +1,36 @@
+startup ends at 6600.0 s (OD2's rule, from /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w25i_d4w_untagged_z30_c/output_0000)
+
+== wp4c_gate_d4w_default: 720 steps, operators ['vdiff', 'sgs_mass_flux']
+-- established flow: 665 steps, 0.924 days, W = 11.6029 kg
+   vdiff: source -5.963e-20 (gross 1.933e-02), growth +4.736e-06 (gross 4.279e-02), remainder +1.411e-07 (gross 1.320e-05) of W a day
+      growth over source, gross: 2.214
+      part 1 (remainder > 0.0002 of W a day): no
+      part 2a (follower's moved, gross 2.917e-02 > 0.005): holds
+      part 2b, tropo: 3.233e-02 of its inventory over the window
+      part 2b, strat: 9.355e-03 of its inventory over the window
+      part 2b, evap: 1.862e-02 of its inventory over the window
+      part 2b, evap_tropo: 1.862e-02 of its inventory over the window
+      part 2b, evap_strat: 1.862e-02 of its inventory over the window
+      part 2b (> 0.02 for any tag): holds
+      part 3, ρq_tag_tropo: L1 2.417e-02, L∞ 6.192e-02: exceeds
+      part 3, ρq_tag_strat: L1 5.994e-03, L∞ 1.324e-02: within
+      part 3, ρq_tag_evap: L1 1.386e-02, L∞ 3.464e-02: within
+      part 3, ρq_tag_evap_tropo: L1 1.386e-02, L∞ 3.464e-02: within
+      part 3, ρq_tag_evap_strat (small): ∫|D|dz 1.659e-09 of the water, L1 1.386e-02, L∞ 3.464e-02: within
+      part 3: holds
+      VERDICT vdiff: retain (parts 2a, 2b, 3)
+   sgs_mass_flux: source +nan (gross nan), growth -4.775e-06 (gross 4.319e-02), remainder +7.791e-06 (gross 1.357e-05) of W a day
+      part 1 (remainder > 0.0002 of W a day): no
+      part 2a (follower's moved, gross 3.573e-02 > 0.005): holds
+      part 2b, tropo: 3.968e-02 of its inventory over the window
+      part 2b, strat: 1.114e-02 of its inventory over the window
+      part 2b, evap: 2.261e-02 of its inventory over the window
+      part 2b, evap_tropo: 2.261e-02 of its inventory over the window
+      part 2b, evap_strat: 2.261e-02 of its inventory over the window
+      part 2b (> 0.02 for any tag): holds
+      part 3: not assessable for this operator
+      VERDICT sgs_mass_flux: retain (parts 2a, 2b)
+-- startup (not scored): 55 steps, 0.076 days, W = 11.5841 kg
+   vdiff: source -1.666e-20 (gross 3.172e-03), growth -7.471e-07 (gross 1.590e-02), remainder -1.803e-06 (gross 1.876e-06) of W a day
+      growth over source, gross: 5.012
+   sgs_mass_flux: source +nan (gross nan), growth -1.101e-05 (gross 2.402e-02), remainder -2.084e-07 (gross 8.590e-07) of W a day
