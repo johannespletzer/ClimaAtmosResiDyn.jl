@@ -779,6 +779,7 @@ function _attribute_energy_source_tags!(
     (; ᶜenergy_source_masks) = p.tagging
     ᶜΔ = _energy_source_increment(Yₜ, p.scratch, model.offset)
     ᶜparent = _energy_source_parent_field(Y, model.offset)
+    ledger_view = energy_source_src_ledger_view(Yₜ, model)
     # Each tag's change also goes into its source ledger, where the tags keep
     # ledgers per tag: OD4's throughput (`energy_source_throughput`).
     _accumulate_energy_source_tags!(
@@ -789,9 +790,82 @@ function _attribute_energy_source_tags!(
         source,
         model.tags,
         ᶜparent,
-        energy_source_src_ledger_view(Yₜ, model),
+        ledger_view,
+    )
+    # And what the partition's tags did not take goes into the residual's
+    # source ledger: the loss rule's flush of `e_src_res` (G4.4).
+    accumulate_energy_source_residual_source!(
+        ledger_view,
+        Y.c,
+        ᶜenergy_source_masks,
+        ᶜΔ,
+        model.tags,
+        ᶜparent,
     )
     return nothing
+end
+
+"""
+    accumulate_energy_source_residual_source!(ledger_view, ᶜY, ᶜmasks, ᶜΔ,
+                                              tags, ᶜparent)
+
+Add to `e_src_led_src_res`, the residual's own source ledger, what one source
+bracket did to the residual `R = E - Σ partition tags`: the bracket's increment
+`ᶜΔ` of `E` less the change each partition tag took,
+
+    Δ - Σ_partition (Mᵢ Δ⁺ - φᵢ Δ⁻) = (1 - Σ Mᵢ) Δ⁺ - (1 - Σ φᵢ) Δ⁻.
+
+With masks that sum to one this is `-(R/E) Δ⁻`, the loss rule's flush of the
+residual. The ledger's per-step gross is the gross flush, which the audit's
+forecast reads (`energy_source_residual_report`).
+
+The partition's changes are computed again here, from the same expression the
+tags' own broadcast uses, rather than read from the tags' tendencies. So the
+tags' tendencies are computed exactly as without the ledger. A no-op for
+`nothing`, where the tags keep no ledger per tag.
+"""
+accumulate_energy_source_residual_source!(
+    ::Nothing,
+    ᶜY,
+    ᶜmasks,
+    ᶜΔ,
+    tags,
+    ᶜparent,
+) = nothing
+function accumulate_energy_source_residual_source!(
+    ledger_view::TagLedgerView{:src},
+    ᶜY,
+    ᶜmasks,
+    ᶜΔ,
+    tags,
+    ᶜparent,
+)
+    ᶜL = getproperty(ledger_view.obj, ENERGY_SOURCE_RESIDUAL_LEDGER)
+    @. ᶜL += ᶜΔ
+    _subtract_partition_changes!(ᶜL, ᶜY, ᶜmasks, ᶜΔ, tags, ᶜparent)
+    return nothing
+end
+
+_subtract_partition_changes!(ᶜL, ᶜY, ᶜmasks, ᶜΔ, ::Tuple{}, ᶜparent) = nothing
+function _subtract_partition_changes!(ᶜL, ᶜY, ᶜmasks, ᶜΔ, tags::Tuple, ᶜparent)
+    tag = first(tags)
+    # A partition tag receives every source: its mask's share of a gain, and
+    # its donor share of a loss (`_accumulate_energy_source_tag!`).
+    if _is_energy_partition_tag(tag)
+        ᶜρe_src = tag_field(ᶜY, tag)
+        ᶜmask = tag_field(ᶜmasks, tag)
+        @. ᶜL -=
+            ᶜmask * max(ᶜΔ, 0) +
+            min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
+    end
+    return _subtract_partition_changes!(
+        ᶜL,
+        ᶜY,
+        ᶜmasks,
+        ᶜΔ,
+        Base.tail(tags),
+        ᶜparent,
+    )
 end
 
 # The bracketed process's increment to the total the tags partition. With an

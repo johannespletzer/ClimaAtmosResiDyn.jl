@@ -722,6 +722,7 @@ end
 @testset "Closure checks" begin
     tolerances = CA.DEFAULT_CLOSURE_TOLERANCES
     aborts = CA.DEFAULT_CLOSURE_ABORT_LEVELS
+    voids = CA.DEFAULT_CLOSURE_VOID_LEVELS
 
     # Both keys are optional.
     bare = CA.closure_check_from_config(
@@ -730,10 +731,48 @@ end
         FT;
         default_tolerance = tolerances.water,
         default_abort_above = aborts.water,
+        default_void_above = voids.water,
     )
     @test bare.period == "1days"
     @test bare.tolerance == FT(tolerances.water)
-    @test bare.abort_above == FT(aborts.water)
+    # No family ends a run by default: a diagnostic must not end a run the
+    # model completes (known issue 7). Water's old abort level is its void
+    # level now.
+    @test isnothing(aborts.water)
+    @test isnothing(bare.abort_above)
+    @test bare.void_above == FT(voids.water) == FT(1)
+    # An explicit level of either kind is read; `~` turns the void level off,
+    # and zero is refused, as for `abort_above`.
+    set_void = CA.closure_check_from_config(
+        Dict{String, Any}("void_above" => 5.0, "abort_above" => 10.0),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
+        default_void_above = voids.water,
+    )
+    @test set_void.void_above == FT(5)
+    @test set_void.abort_above == FT(10)
+    @test isnothing(
+        CA.closure_check_from_config(
+            Dict{String, Any}("void_above" => nothing),
+            "`water_closure_check`",
+            FT;
+            default_tolerance = tolerances.water,
+            default_abort_above = aborts.water,
+            default_void_above = voids.water,
+        ).void_above,
+    )
+    @test_throws r"`void_above` must be positive" CA.closure_check_from_config(
+        Dict{String, Any}("void_above" => 0.0),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
+        default_void_above = voids.water,
+    )
+    @test isnothing(voids.energy)
+    @test isnothing(voids.energy_source)
     # The audit is extra reductions and a second file, so it is opt-in.
     @test bare.audit == false
 
@@ -862,6 +901,12 @@ end
     )
     checks = CA.closure_checks_from_config(config)
     @test checks.water.period == "6hours"
+    # From a configuration: water never aborts and has its void level; the
+    # energy family has neither.
+    @test isnothing(checks.water.abort_above)
+    @test checks.water.void_above == eltype(config)(1)
+    @test isnothing(checks.energy.abort_above)
+    @test isnothing(checks.energy.void_above)
     # This path takes its float type from the run, through `eltype(config)`,
     # rather than from this file's `FT`. `FLOAT_TYPE` defaults to Float32, and
     # `Float32(1e-4) != Float64(1e-4)`.
@@ -1226,6 +1271,91 @@ end
     @test all(row -> length(split(row, ",")) == 9, rows)
 end
 
+# Known issue 7: past the void level the check warns once and marks every later
+# row void, and the run goes on. Only an explicit `abort_above` ends it.
+@testset "Closure past the void level" begin
+    CC = CA.ClimaCore
+    space = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CC.CommonSpaces.CellCenter(),
+    )
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(space),
+            NamedTuple{(:ρ, :ρq_tot, :ρq_tag_a), NTuple{3, FT}},
+        ),
+    )
+    Y.c.ρ .= 1
+    Y.c.ρq_tot .= 1
+    integrator = (;
+        u = Y,
+        p = (; scratch = (; ᶜtemp_scalar = zero(Y.c.ρ))),
+        t = 3600.0,
+    )
+    check!(dir, voided; void_above = FT(1), abort_above = nothing) =
+        CA.tag_closure_callback!(
+            integrator,
+            dir,
+            "water",
+            :ρq_tot,
+            (:ρq_tag_a,),
+            nothing,
+            abort_above,
+            false;
+            void_above,
+            voided,
+        )
+    void_column(dir) =
+        map(row -> last(split(row, ",")), readlines(CA.tag_closure_path(dir, "water")))
+
+    dir = mktempdir()
+    voided = Ref(false)
+    # A closed partition: not void.
+    Y.c.ρq_tag_a .= 1
+    @test isnothing(check!(dir, voided))
+    # The tags hold three times the water: past the level. It warns once and
+    # does not end the run.
+    Y.c.ρq_tag_a .= 3
+    @test_logs (:warn, r"exceeds the void level") check!(dir, voided)
+    @test voided[]
+    # Closed again, but every row from the first pass on stays void, and the
+    # warning is not repeated.
+    Y.c.ρq_tag_a .= 1
+    @test_logs check!(dir, voided)
+    @test void_column(dir) == ["void", "0", "1", "1"]
+    # Without a void level the table has no `void` column.
+    plain = mktempdir()
+    check!(plain, Ref(false); void_above = nothing)
+    @test !occursin("void", first(readlines(CA.tag_closure_path(plain, "water"))))
+    # An explicit `abort_above` still ends the run.
+    Y.c.ρq_tag_a .= 3
+    @test_throws r"exceeds\s+the configured abort level" check!(
+        mktempdir(),
+        Ref(false);
+        abort_above = FT(1),
+    )
+    # The audit table gets the same last column.
+    audit_dir = mktempdir()
+    audit = (;
+        untagged = 0.0,
+        untagged_relative = 0.0,
+        overclaimed = 2.0,
+        overclaimed_relative = 2.0,
+        orphaned = 0.0,
+        orphaned_relative = 0.0,
+        orphaned_volume_fraction = 0.0,
+        nonpositive_mass = 0.0,
+        nonpositive_mass_fraction = 0.0,
+    )
+    CA.write_tag_audit!(audit_dir, 0.0, "water", audit; void = true)
+    audit_rows = readlines(CA.tag_audit_path(audit_dir, "water"))
+    @test endswith(audit_rows[1], ",nonpositive_mass_fraction,void")
+    @test endswith(audit_rows[2], ",1")
+end
+
 @testset "Audit table" begin
     dir = mktempdir()
     audit = (;
@@ -1420,8 +1550,13 @@ end
     @test CA.has_energy_source_ledger_per_tag(on.energy_source_tagging_model)
     @test CA.water_tag_per_tag_ledger_names(on.water_tagging_model) ==
           (:q_tag_led_fix_tropo, :q_tag_led_fix_extra)
-    @test CA.energy_source_per_tag_ledger_names(on.energy_source_tagging_model) ==
-          (:e_src_led_fix_a, :e_src_led_fix_b, :e_src_led_src_a, :e_src_led_src_b)
+    @test CA.energy_source_per_tag_ledger_names(on.energy_source_tagging_model) == (
+        :e_src_led_fix_a,
+        :e_src_led_fix_b,
+        :e_src_led_src_a,
+        :e_src_led_src_b,
+        :e_src_led_src_res,
+    )
     # A quoted value is refused, and so is the key without its family.
     @test_throws r"must be `true` or `false`" CA.tag_ledger_per_tag_from_config(
         "true",
@@ -1437,4 +1572,104 @@ end
         "source_alone",
         "energy_source_tag_ledger_per_tag" => true,
     )
+end
+
+# G4.5: warnings, the void level, the abort and acceptance are kept apart. The
+# energy source tags get a second warning level, against the gross source
+# throughput, which needs each tag's ledgers and is off by default.
+@testset "Closure levels kept apart (G4.5)" begin
+    partition_entries = [
+        Dict{String, Any}("name" => "trop", "region" => "tropics"),
+        Dict{String, Any}("name" => "rad", "source" => "radiation"),
+    ]
+    check(value; ledger_per_tag = false) =
+        CA.energy_source_closure_check_from_config(
+            value,
+            partition_entries,
+            CA.EnthalpyIncrementEnergySourceTransport(),
+            FT;
+            ledger_per_tag,
+        )
+    # Off by default, with or without the ledgers.
+    @test isnothing(check(nothing).throughput_tolerance)
+    @test isnothing(check(nothing; ledger_per_tag = true).throughput_tolerance)
+    set = check(
+        Dict{String, Any}("throughput_tolerance" => 0.05, "tolerance" => 1e-3);
+        ledger_per_tag = true,
+    )
+    @test set.throughput_tolerance == FT(0.05)
+    # The other keys are read as before.
+    @test set.tolerance == FT(1e-3)
+    @test set.spin_up == "1hours"
+    # It needs the throughput, so the ledgers; and it must be positive.
+    @test_throws r"energy_source_tag_ledger_per_tag: true" check(
+        Dict{String, Any}("throughput_tolerance" => 0.05),
+    )
+    @test_throws r"must be positive" check(
+        Dict{String, Any}("throughput_tolerance" => 0.0);
+        ledger_per_tag = true,
+    )
+    # The other families do not take it.
+    @test_throws r"unknown key" CA.closure_check_from_config(
+        Dict{String, Any}("throughput_tolerance" => 0.05),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = nothing,
+        default_abort_above = nothing,
+    )
+
+    # The check warns on each level in its own words, and neither is an
+    # acceptance verdict; the family's closure columns carry the ratio.
+    CC = CA.ClimaCore
+    space = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CC.CommonSpaces.CellCenter(),
+    )
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(space),
+            NamedTuple{(:ρ, :ρe_tot, :ρe_src_a), NTuple{3, FT}},
+        ),
+    )
+    Y.c.ρ .= 1
+    Y.c.ρe_tot .= 1
+    Y.c.ρe_src_a .= 0.5
+    integrator = (;
+        u = Y,
+        p = (; scratch = (; ᶜtemp_scalar = zero(Y.c.ρ))),
+        t = 3600.0,
+    )
+    columns(ratio) = (Y, p, closure) -> (; gross_over_throughput = ratio)
+    run_check!(dir; tolerance = nothing, ratio = 0.01, level = nothing) =
+        CA.tag_closure_callback!(
+            integrator,
+            dir,
+            "energy_source",
+            :ρe_tot,
+            (:ρe_src_a,),
+            tolerance,
+            nothing,
+            false;
+            extra_closure = columns(ratio),
+            throughput_tolerance = level,
+        )
+    @test_logs (:warn, r"exceeds\s+the warning tolerance") run_check!(
+        mktempdir();
+        tolerance = FT(0.1),
+    )
+    @test_logs (:warn, r"over the gross source throughput") run_check!(
+        mktempdir();
+        ratio = 0.5,
+        level = 0.05,
+    )
+    # Below the level, or without one, it is silent.
+    @test_logs run_check!(mktempdir(); ratio = 0.01, level = 0.05)
+    @test_logs run_check!(mktempdir(); ratio = 0.5)
+    dir = mktempdir()
+    run_check!(dir; ratio = 0.5)
+    header = first(readlines(CA.tag_closure_path(dir, "energy_source")))
+    @test endswith(header, ",nonpositive_fraction,gross_over_throughput")
 end

@@ -778,8 +778,10 @@ tolerance, so by default their check only reports: their residual is normalized
 by a quantity whose zero is a convention, so it is not comparable across runs
 that use different energy references.
 
-Each block also carries an `abort_above` level at which the run ends instead of
-warning. Only water has a default one, for the same reason: see
+Each block also carries a `void_above` level, above which the check warns once
+and marks its rows void while the run goes on. Only water has a default one, for
+the same reason: see [`DEFAULT_CLOSURE_VOID_LEVELS`](@ref). An `abort_above`
+level ends the run instead, only where a user sets it: see
 [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref).
 
 Each block also carries an `audit` flag, off by default, which adds a second
@@ -835,6 +837,9 @@ function default_model_callbacks(
             extra_audit = energy_source_extra_audit(
                 tagging.energy_source_tagging_model,
             ),
+            extra_closure = energy_source_extra_closure(
+                tagging.energy_source_tagging_model,
+            ),
             scheduling...,
         )...,
     )
@@ -849,17 +854,31 @@ tag_ledger_gross_callback(tagging) =
     (call_every_n_steps(accumulate_tag_ledger_gross!, 1; skip_first = true),)
 
 # The water family's own audit columns, under prognostic EDMF and under the
-# increment follower, as a function of `(Y, p, scale)`, or `nothing` without
-# the tags.
+# increment follower, as a function of `(Y, p, closure, t)`, or `nothing`
+# without the tags.
 water_extra_audit(::Nothing) = nothing
 water_extra_audit(model) =
-    (Y, p, scale) -> water_tag_extra_audit(Y, p, model, scale)
+    (Y, p, closure, t) -> water_tag_extra_audit(Y, p, model, closure.scale)
 
-# The energy source family's own audit columns, as a function of `(Y, p, scale)`,
-# or `nothing` without the tags.
+# The energy source family's own audit columns, as a function of
+# `(Y, p, closure, t)`, or `nothing` without the tags: the family's audit, then
+# the residual report (G4.4). The report's forecast needs the previous check,
+# which the `Ref` keeps; a restart builds a new one.
 energy_source_extra_audit(::Nothing) = nothing
-energy_source_extra_audit(model) =
-    (Y, p, scale) -> energy_source_audit(Y, p, model, scale)
+function energy_source_extra_audit(model)
+    previous = Ref{Any}(nothing)
+    return (Y, p, closure, t) -> merge(
+        energy_source_audit(Y, p, model, closure.scale),
+        energy_source_residual_report(Y, p, model, closure, t, previous),
+    )
+end
+
+# The energy source family's own closure columns, the offset's headroom (U9)
+# and the gross source throughput (G4.5), as a function of `(Y, p, closure)`,
+# or `nothing` without the tags.
+energy_source_extra_closure(::Nothing) = nothing
+energy_source_extra_closure(model) =
+    (Y, p, closure) -> energy_source_closure_columns(Y, p, model, closure)
 
 """
     tag_closure_callback(check, tagging_model; family, total_name, state_names,
@@ -892,6 +911,7 @@ function tag_closure_callback(
     t_end,
     checkpoint_frequency,
     extra_audit = nothing,
+    extra_closure = nothing,
 )
     isnothing(tagging_model) && error(
         "`$config_key` is set but `$tracer_key` is not, so there are no tags \
@@ -922,6 +942,11 @@ function tag_closure_callback(
     # so that a row due at the same time already has the reference.
     spin_up = get(check, :spin_up, nothing)
     reference = isnothing(spin_up) ? nothing : Ref{Any}(nothing)
+    # Past the void level every later row is marked void (known issue 7).
+    void_above = get(check, :void_above, nothing)
+    voided = Ref(false)
+    # The energy source tags' second warning level, against the throughput.
+    throughput_tolerance = get(check, :throughput_tolerance, nothing)
     affect!(integrator) = tag_closure_callback!(
         integrator,
         output_dir,
@@ -933,6 +958,10 @@ function tag_closure_callback(
         check.audit;
         reference,
         extra_audit,
+        extra_closure,
+        void_above,
+        voided,
+        throughput_tolerance,
     )
     periodic = call_every_dt(affect!, period)
     isnothing(spin_up) && return (periodic,)

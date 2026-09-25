@@ -914,19 +914,38 @@ energy_source_closure_tolerance(::EnthalpyIncrementEnergySourceTransport) =
     DEFAULT_CLOSURE_ABORT_LEVELS
 
 Default `abort_above` level of each tag family's closure check: the relative
-residual at which the run ends rather than warns, or `nothing` where no single
-level means the same thing in every configuration.
+residual at which the run ends rather than warns. `nothing` for every family.
 
-Water gets `1.0`. `gross_relative` is `∫|ρq_tot - Σ tags| / ∫|ρq_tot|`, and any
-set of non-negative tags that stays inside a non-negative parent misses it by at
-most the parent itself, pointwise. So an honest partition cannot reach 1, and
-neither can an honest strict subset of one, which leaves most of the water
-untagged and drives the ratio *towards* 1 from below. Passing 1 means the tags
-hold water that is not there, or the parent has gone negative. That is a broken
-state rather than drift, and it is ten orders of magnitude above the level the
-default `tolerance` warns at. Issue #64 is the run this level exists for: its
-residual passed 1 in the fourth simulated hour and reached 1e113 by the end of
-the day, while the run reported success.
+A diagnostic must never end a run that upstream completes. Water's check used to
+end the run above 1.0, and that ended runs whose parent's water had gone
+negative while the model itself ran on (known issue 7 in `docs/known_issues.md`).
+So no family ends a run by default. Above its void level the check warns once
+and marks every later row void instead; see
+[`DEFAULT_CLOSURE_VOID_LEVELS`](@ref). An explicit `abort_above` still ends the
+run, for a user who wants that.
+"""
+const DEFAULT_CLOSURE_ABORT_LEVELS =
+    (; water = nothing, energy = nothing, energy_source = nothing)
+
+"""
+    DEFAULT_CLOSURE_VOID_LEVELS
+
+Default `void_above` level of each tag family's closure check: the relative
+residual above which the tags no longer describe the field they partition. The
+first time a check passes it, it warns once. From then on it marks every row of
+its closure table, and of its audit table, as void, and the run goes on.
+`nothing` where no single level means the same thing in every configuration.
+
+Water gets `1.0`, the level at which its check used to end the run.
+`gross_relative` is `∫|ρq_tot - Σ tags| / ∫|ρq_tot|`, and any set of
+non-negative tags that stays inside a non-negative parent misses it by at most
+the parent itself, pointwise. So an honest partition cannot reach 1, and neither
+can an honest strict subset of one, which leaves most of the water untagged and
+drives the ratio *towards* 1 from below. Passing 1 means the tags hold water
+that is not there, or the parent has gone negative. That is a broken state
+rather than drift, and it is ten orders of magnitude above the level the
+default `tolerance` warns at. Issue #64 passed 1 in the fourth simulated hour
+and reached 1e113 by the end of the day.
 
 Both energy families get `nothing`. Their residual is normalized by `∫|ρe_tot|`,
 whose zero is a convention: a shifted energy reference can make the denominator
@@ -934,24 +953,26 @@ arbitrarily small and the ratio arbitrarily large with nothing actually wrong, s
 no level transfers between configurations. Set one per run, once its closure
 table shows where that run settles.
 """
-const DEFAULT_CLOSURE_ABORT_LEVELS =
+const DEFAULT_CLOSURE_VOID_LEVELS =
     (; water = 1.0, energy = nothing, energy_source = nothing)
 
 """
     closure_check_from_config(spec_value, context, FT; default_tolerance,
-                              default_abort_above, default_spin_up = nothing)
+                              default_abort_above, default_void_above = nothing,
+                              default_spin_up = nothing)
 
 Read a `water_closure_check`, `energy_closure_check` or
 `energy_source_closure_check` block into
-`(; period, tolerance, abort_above, audit, spin_up)`, or `nothing` when the key
-is absent.
+`(; period, tolerance, abort_above, void_above, audit, spin_up)`, or `nothing`
+when the key is absent.
 
 Every key is optional: `period` defaults to `"1days"`, `tolerance` to the
-family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref) and `abort_above` to its
-entry in [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref). Writing `abort_above: ~` turns
-the abort off for a family that defaults to having one. A `tolerance` of `~`
-means the check never warns about the residual; the warning about a non-positive
-parent stays.
+family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref), `abort_above` to its
+entry in [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref), which is `nothing` for every
+family, and `void_above` to its entry in [`DEFAULT_CLOSURE_VOID_LEVELS`](@ref).
+Writing `void_above: ~` turns the void flag off for a family that defaults to
+having one. A `tolerance` of `~` means the check never warns about the
+residual; the warning about a non-positive parent stays.
 
 `audit` defaults to `false`. Setting it writes a second table beside the closure
 table, splitting the residual into the parts that mean different things; see
@@ -973,6 +994,7 @@ closure_check_from_config(
     ::Type{FT};
     default_tolerance,
     default_abort_above,
+    default_void_above = nothing,
     default_spin_up = nothing,
 ) where {FT} = nothing
 
@@ -982,12 +1004,20 @@ function closure_check_from_config(
     ::Type{FT};
     default_tolerance,
     default_abort_above,
+    default_void_above = nothing,
     default_spin_up = nothing,
 ) where {FT}
     spec = checked_mapping(
         spec_value,
         context;
-        optional = ("period", "tolerance", "abort_above", "audit", "spin_up"),
+        optional = (
+            "period",
+            "tolerance",
+            "abort_above",
+            "void_above",
+            "audit",
+            "spin_up",
+        ),
     )
     period = get(spec, "period", "1days")
     isfinite(time_to_seconds(period)) || error(
@@ -1004,6 +1034,11 @@ function closure_check_from_config(
         context,
         FT,
     )
+    void_above = closure_void_above_from_config(
+        get(spec, "void_above", default_void_above),
+        context,
+        FT,
+    )
     audit = Bool(get(spec, "audit", false))
     spin_up = get(spec, "spin_up", default_spin_up)
     isnothing(spin_up) ||
@@ -1012,7 +1047,7 @@ function closure_check_from_config(
             "$context `spin_up` must be a positive, finite time such as \
             \"1hours\", or `~` for none; got $(repr(spin_up)).",
         )
-    return (; period, tolerance, abort_above, audit, spin_up)
+    return (; period, tolerance, abort_above, void_above, audit, spin_up)
 end
 
 """
@@ -1044,29 +1079,81 @@ one is on by default whenever the tags include a pure region tag, a tag with a
     reference one hour after the start, without the audit;
   - `false` switches the check off;
   - a mapping sets the keys of [`closure_check_from_config`](@ref), with the same
-    defaults.
+    defaults, and one more, `throughput_tolerance`.
 
 `~` with no pure region tag gives no check, since there is no partition to close.
+
+`throughput_tolerance` is a second warning level, in the units of the gross
+source throughput (the tag-closure experiments' OD4): the check warns when the
+gross residual over the throughput since the start passes it. Its scale is set
+by the sources, not by the energy reference as `gross_relative`'s is; the
+residual itself still grows with the offset. It needs the
+throughput, so each tag's ledgers (`energy_source_tag_ledger_per_tag: true`),
+and without them it is refused. It defaults to `~`: no level has been approved.
+It warns only; like `tolerance` it is not an acceptance threshold.
 """
 function energy_source_closure_check_from_config(
     value,
     entries,
     transport,
-    ::Type{FT},
+    ::Type{FT};
+    ledger_per_tag = false,
 ) where {FT}
     value === false && return nothing
     if isnothing(value)
         has_energy_source_partition_entry(entries) || return nothing
         value = Dict{String, Any}()
     end
-    return closure_check_from_config(
-        value,
-        "`energy_source_closure_check`",
+    context = "`energy_source_closure_check`"
+    spec = config_mapping(value, context)
+    throughput_tolerance = closure_throughput_tolerance_from_config(
+        get(spec, "throughput_tolerance", nothing),
+        context,
+        FT,
+        ledger_per_tag,
+    )
+    check = closure_check_from_config(
+        filter(entry -> first(entry) != "throughput_tolerance", spec),
+        context,
         FT;
         default_tolerance = energy_source_closure_tolerance(transport),
         default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy_source,
+        default_void_above = DEFAULT_CLOSURE_VOID_LEVELS.energy_source,
         default_spin_up = "1hours",
     )
+    return (; check..., throughput_tolerance)
+end
+
+"""
+    closure_throughput_tolerance_from_config(value, context, FT, ledger_per_tag)
+
+Read `throughput_tolerance`, as an `FT` or `nothing`. It must be positive, and
+it needs each tag's ledgers, which give the throughput it is compared against.
+"""
+closure_throughput_tolerance_from_config(
+    ::Nothing,
+    context,
+    ::Type{FT},
+    ledger_per_tag,
+) where {FT} = nothing
+function closure_throughput_tolerance_from_config(
+    value,
+    context,
+    ::Type{FT},
+    ledger_per_tag,
+) where {FT}
+    level = FT(value)
+    level > 0 || error(
+        "$context `throughput_tolerance` must be positive, got $level. Use `~` \
+        for no level.",
+    )
+    ledger_per_tag || error(
+        "$context `throughput_tolerance` compares the gross residual with the \
+        gross source throughput, which needs \
+        `energy_source_tag_ledger_per_tag: true`. Set it, or drop \
+        `throughput_tolerance`.",
+    )
+    return level
 end
 
 # Whether the `energy_source_tags` entries include a pure region tag, one with a
@@ -1088,8 +1175,8 @@ has_energy_source_partition_entry(entries) =
 
 Read the `abort_above` entry of a closure-check block, as an `FT` or `nothing`.
 
-`nothing` means the run never ends over closure, which is what the two energy
-families default to. Zero is refused rather than read as "always abort": a run
+`nothing` means the run never ends over closure, which is what every family
+defaults to. Zero is refused rather than read as "always abort": a run
 configured that way would die at the first check whatever its residual was, and
 `~` already says "never" without the ambiguity.
 """
@@ -1103,6 +1190,25 @@ function closure_abort_above_from_config(value, context, ::Type{FT}) where {FT}
         keep warning without ever ending the run.",
     )
     return abort_above
+end
+
+"""
+    closure_void_above_from_config(value, context, FT)
+
+Read the `void_above` entry of a closure-check block, as an `FT` or `nothing`.
+`nothing` means the check never marks its rows void. Zero is refused, as for
+`abort_above`: every row would be void from the first check.
+"""
+closure_void_above_from_config(::Nothing, context, ::Type{FT}) where {FT} =
+    nothing
+
+function closure_void_above_from_config(value, context, ::Type{FT}) where {FT}
+    void_above = FT(value)
+    void_above > 0 || error(
+        "$context `void_above` must be positive, got $void_above. Use `~` for \
+        no void level.",
+    )
+    return void_above
 end
 
 """
@@ -1120,6 +1226,7 @@ function closure_checks_from_config(config::AtmosConfig)
             FT;
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.water,
             default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.water,
+            default_void_above = DEFAULT_CLOSURE_VOID_LEVELS.water,
         ),
         energy_source = energy_source_closure_check_from_config(
             pa["energy_source_closure_check"],
@@ -1127,7 +1234,11 @@ function closure_checks_from_config(config::AtmosConfig)
             energy_source_transport_from_config(
                 get(pa, "energy_source_tag_transport", "tracer"),
             ),
-            FT,
+            FT;
+            ledger_per_tag = tag_ledger_per_tag_from_config(
+                get(pa, "energy_source_tag_ledger_per_tag", false),
+                "energy_source_tag_ledger_per_tag",
+            ),
         ),
         energy = closure_check_from_config(
             pa["energy_closure_check"],
@@ -1135,6 +1246,7 @@ function closure_checks_from_config(config::AtmosConfig)
             FT;
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy,
             default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy,
+            default_void_above = DEFAULT_CLOSURE_VOID_LEVELS.energy,
         ),
     )
 end

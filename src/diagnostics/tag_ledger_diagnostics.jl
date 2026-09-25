@@ -132,7 +132,21 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
     for name in names
         water = _is_water_ledger(name)
         (units, what) = water ? ("kg kg^-1", "Water") : ("J kg^-1", "Energy")
-        if is_tag_per_tag_ledger_name(name)
+        if name == ENERGY_SOURCE_RESIDUAL_LEDGER
+            add_diagnostic_variable!(;
+                short_name = string(name),
+                units,
+                long_name = "Change of the Energy Source Tags' Residual by the Sources",
+                comments = "What the sources' attribution brackets did to " *
+                           "e_src_res, the energy the partition's tags did not " *
+                           "take: with masks that sum to one, the loss rule's " *
+                           "flush of the residual. The stepper weights this " *
+                           "state field as it weights the tags. Per unit mass, " *
+                           "cumulative since the start of the run (G4.4).",
+                compute! = (out, u, p, t) ->
+                    compute_tag_state_ledger!(out, u, name),
+            )
+        elseif is_tag_per_tag_ledger_name(name)
             writer =
                 occursin("_led_fix_", string(name)) ?
                 "limiters' rescale and the partition repair " :
