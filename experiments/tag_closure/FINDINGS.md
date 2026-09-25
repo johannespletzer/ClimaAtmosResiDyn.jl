@@ -85,7 +85,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W39                                           | 1. Water tags                                       |
+| W1–W40                                           | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
@@ -1395,6 +1395,48 @@ the radiation's seed reset.
 `../ClimaAtmosResiDyn-issue7-probe-run` at `09793dcd` (the record with #109
 and `claude/long-run-samesign`). `analysis/water/issue7_probe_read.py`;
 `output/issue7_probe/`.*
+
+**W40. WP4c's gate: on D4-W the follower leaves no remainder of the 1M
+diffusion leak, but the leak accounts for 2.9% of the water a day of the
+follower's moved gross, so the leak's correction is retained (part 2a). In
+the default mode it also moves `tropo` by 3.2% of its inventory and its
+provenance by 2.4% L1.** The pre-registered gate of `design/WP4C_GATE.md`
+(step 6 of rev. 2), with the thresholds the owner confirmed on 2026-09-25: at
+every step of the reference, trials from its state with each operator on and
+off, under the follower and the tracer transport. W25's 30-level centred D4-W
+case; the established window from OD2's rule (startup ends at 1.8 h).
+
+| case, operator | remainder, of the water a day (part 1, > 2e-4) | the follower's moved gross it accounts for (part 2a, > 0.5% a day) | largest per-tag share (part 2b, > 2%) | provenance, `vdiff` only (part 3) | verdict |
+|:-------------- | -----:| -----:| -----:|:----- |:------- |
+| default, `vdiff` (W18's leak) | 1.4e-7 | 2.9% | `tropo` 3.2% | `tropo` L1 2.4%, L∞ 6.2% | retain (2a, 2b, 3) |
+| default, `sgs_mass_flux` (a reference, no WP4c path) | 7.8e-6 | 3.6% | `tropo` 4.0% | — | reported |
+| copies, `vdiff` | −5.3e-6 | 3.0% | `tropo` 1.6% | `tropo` L1 1.0%, L∞ 3.6% | retain (2a) |
+| copies, `diffusion_up` | 1.8e-7 | 1.2% | `tropo` 0.65% | — | retain (2a) |
+
+  - **No remainder anywhere.** The follower absorbs every operator's
+    mismatch to at most 1.9e-5 of the water a day (gross). So closure alone
+    would reject every correction, as rev. 2's Insight 5 foresaw.
+  - **The leak is a real share of the follower's work.** W18 estimated the
+    leak at 0.9% a day from hourly samples; measured per step it drives 2.9%
+    a day of the follower's moved gross. The actual growth under the tracer
+    transport is 2.2 to 2.7 times the closed-form source (gross) on
+    `vdiff`, and 13 times on `diffusion_up`. So the closed form does not
+    bound the growth; why is not isolated.
+  - **What the gate decides.** The corrections for `vdiff` (the grid mean)
+    and `diffusion_up` (the copies) are retained, since each cuts the
+    follower's intervention past the threshold. The default-mode `vdiff`
+    correction is retained on parts 2b and 3 as well. `sgs_mass_flux` has no
+    WP4c path; its row says the mass flux drives about as much of the
+    follower's work as the leak does (E59). None is deferred.
+  - The copies case ran 12 hours by design, so its window is 0.42 days.
+  - The gate's score script read the column output as (time, z) where it is
+    (z, time), and first put startup's end at 21.7 h. It was fixed and
+    rescored before this entry (plan2 `6ade3cf1`); the runs are unchanged.
+
+*`hpda2_compute`, 2026-09-25, jobs `13944456` (default) and `13944457`
+(copies), run tree `../ClimaAtmosResiDyn-wp4c-run` (the record with #109,
+#105 and #112). `analysis/water/wp4c_gate_probe.jl`, `wp4c_gate_score.py`;
+`output/wp4c_gate/score.txt`.*
 
 ## 2. Energy source tags: closure by transport
 
