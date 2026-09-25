@@ -9,11 +9,12 @@ run, `<job_id>/output_0000`, for the five `g411_d4_*` runs. It prints:
     total (the closure CSV's `total`, hourly) stays below 10% of its largest
     value in the first 6 hours for three outputs in a row (OD2's rule, on the
     offset total, which is what the tags partition);
-  - the scale: the window's gross source throughput (OD4), as a LOWER BOUND
-    from the process records of the four source processes, whose hourly
-    samples are net within each hour. So every percentage below is an UPPER
-    bound. Which source OD4 uses is the owner's (DECISIONS.md); a pass here
-    passes under either;
+  - the scale: the window's gross source throughput (OD4). Exact from the
+    audit's `source_throughput` where the run has it (the per-tag source
+    ledgers, design/GROSS_ACCUMULATORS.md section 11). Otherwise the interim
+    the owner set (2026-09-25): a lower bound from the process records of the
+    four source processes, whose hourly samples are net within each hour, so
+    every percentage on it is an upper bound. The script says which;
   - the copies' eligibility under OD3's comparator rows, each run with copies:
     own residual (the closure's gross over the window) at most 0.02% of the
     throughput; repair (the audit's `repair_moved` over the window) at most
@@ -90,8 +91,17 @@ def startup_end(closure):
 
 
 def throughput(job, t0, t1):
-    """Σ over hourly intervals in (t0, t1] and the four source records of
-    ∫ρ|Δe_prc|dz: a lower bound on the gross source throughput."""
+    """OD4's scale over (t0, t1]. The exact accumulator where the run has it:
+    the audit's `source_throughput`, the partition's per-step gross of each
+    tag's source ledger (design/GROSS_ACCUMULATORS.md, section 11). Otherwise
+    the interim: Σ over hourly intervals and the four source records of
+    ∫ρ|Δe_prc|dz, a lower bound, so every percentage on it is an upper bound."""
+    audit = read_csv(job, "energy_source_tag_audit.csv")
+    if audit and "source_throughput" in audit[0]:
+        exact = at(audit, t1, "source_throughput") - at(audit, t0, "source_throughput")
+        EXACT[job] = True
+        return exact
+    EXACT[job] = False
     t, rho, z = read_nc(job, "rhoa")
     dz = layer_thickness(z)
     total = 0.0
@@ -128,6 +138,7 @@ def parity(untagged, job):
     return f"{len(names)} fields: " + ("bit for bit" if not differ else "DIFFERS " + ", ".join(differ))
 
 
+EXACT = {}
 copies_runs = ("g411_d4_copies", "g411_d4_copies_before", "g411_d4_copies_dt60")
 closure = read_csv("g411_d4_copies", "energy_source_tag_closure.csv")
 t0 = startup_end(closure) if closure else None
@@ -153,7 +164,8 @@ for job in copies_runs + ("g411_d4_default",):
     own = (at(closure, t1, "gross_residual") - at(closure, t0, "gross_residual")) / scale
     repair = (at(audit, t1, "repair_moved") - at(audit, t0, "repair_moved")) / scale / days
     repair_per_day[job] = repair
-    print(f"== {job}: throughput lower bound {scale:.4e} J/m² over the window")
+    kind = "exact (the audit's source_throughput)" if EXACT[job] else "lower bound (process records): percentages are upper bounds"
+    print(f"== {job}: throughput {scale:.4e} J/m² over the window, {kind}")
     print(f"   own residual {own:.3e} of it (at most {OWN_RESIDUAL:g}); "
           f"repair {repair:.3e} a day (at most {REPAIR_PER_DAY:g})")
     if job in copies_runs:

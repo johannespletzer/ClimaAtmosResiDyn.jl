@@ -388,3 +388,79 @@ them without another build.
     time, as rev. 2 words it. A time mean or the maximum can be formed offline
     from `_retained` and the tag's output. It belongs with OD3's per-tag
     threshold.
+
+## 11. OD4's accumulator: the energy sources' gross throughput (2026-09-25)
+
+The owner set OD4's scale on 2026-09-24 (the gross energy the sources put
+into the tags over the window) and its quantity on 2026-09-25: an exact
+accumulator per tag and per step, carried through restarts, as step 3 did for
+the ledgers. Until it lands, and for runs that predate it, the process
+records' lower bound is the interim, and every percentage on it is an upper
+bound (the register, OD4). Built on `claude/energy-source-throughput`, from
+#109.
+
+### 11.1 The quantity
+
+Every source reaches the energy source tags through a bracket
+(`attribute_energy_source_tags!`): the bracketed process's increment `Δ` of
+`E = ρe_tot + c·ρ` goes to tag `i` as `M_i Δ⁺ − φ_i Δ⁻`, where `M_i` is its
+mask for a label it receives and `φ_i` its share of `E`. So a tag's source is
+exactly the sum of its bracket terms. Transport, the increment correction and
+the repair are not sources; they have their ledgers already.
+
+  - **Each tag's source ledger**, `e_src_led_src_<name>`: a state field whose
+    tendency is the tag's bracket terms, written in the same broadcast as the
+    tag's own (`_accumulate_energy_source_tag!`). The stepper integrates it
+    with the tag's weights, explicit and implicit brackets alike, so its
+    change over a step is what the step's sources gave the tag.
+  - **Its per-step gross**, `Σ_steps |ΔL|` per cell, by step 2's callback,
+    like every state ledger: exact per step at every cadence, carried through
+    a restart by step 3's checkpoint fields.
+  - **The throughput**, `energy_source_throughput`: the per-step gross of the
+    partition's source ledgers (the region tags without sources), summed over
+    the domain. The partition's tags take every source in full, gains by their
+    masks and losses by their shares, so each unit counts once. The source
+    tags overlay the partition and are left out; their own grosses are in the
+    audit per tag.
+  - **Not `|Σ sources|`, not per process.** A step in which one process adds to
+    a tag and another takes the same away counts zero for that tag. Per
+    process and tag would need a ledger per pair; not built.
+
+### 11.2 Where it lives
+
+  - Under `energy_source_tag_ledger_per_tag: true` only, beside the repair's
+    and the correction's ledgers per tag. The owner decided on 2026-09-24 that
+    those are off by default and on in every validation and qualification run;
+    OD4's percentages belong to those runs. One state field more per tag.
+  - The audit: `led_src_<name>_retained` per tag (with `_events` and
+    `_inventory_fraction`, the throughput over the tag's energy), and
+    `source_throughput`, the partition's sum, cumulative. A window's value is
+    the difference of two rows.
+  - The diagnostics: `e_src_led_src_<name>` per unit mass, and its
+    `e_src_led_srcgross_<name>` and `e_src_led_srccolgross_<name>`.
+  - The restart guard: a checkpoint written with the per-tag ledgers but
+    before this ledger lacks `e_src_led_src_*`, and is refused, naming them.
+
+### 11.3 Tests
+
+  - Unit (`energy_source_tags_tests.jl`, both float types): each tag's source
+    ledger takes exactly its tag's bracket change, bit for bit, for three
+    labels; the partition's ledgers sum to the increment; a source tag gains
+    only for its own label; the tags' tendencies are the same bit for bit with
+    and without the ledger; the throughput sums the partition's grosses and
+    leaves the source tags out; nothing without the key.
+  - The names, the config key and the diagnostic names
+    (`tracer_config.jl`, `tagged_water_tests.jl`).
+  - Integration (`tagged_water_increment_integration.jl`, group
+    `tagging_water_increment`): on the EDMF column the throughput is positive
+    and the audit's `source_throughput` equals it; the partition's per-tag
+    grosses sum to it; the model's fields are unchanged, as that file already
+    checks.
+
+### 11.4 The scripts
+
+`analysis/increment/g411_eligibility.py` takes `source_throughput` from the
+audit where a run has it, and the process records' lower bound otherwise, and
+says which. The earlier E-records are restated with the lower bound, labelled
+an upper bound, and rerun only where the contract needs an exact value (the
+register, OD4).
