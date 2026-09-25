@@ -1,0 +1,77 @@
+# The ratios of a tag's own ledgers through a zero crossing (PR #109 review,
+# finding 2; the design note is in the review's hand-back). D4, the EDMF
+# column of `g1_inc_d4`, under `enthalpy_increment`, so that each tag's
+# increment ledger `e_src_led_inc_<name>` moves with the repair on and off.
+# Paired source tags: `sfc` on the heating surface flux, `rad` on the
+# cooling DYCOMS radiation. Its twin differs only in
+# `energy_source_tag_repair`. The model never reads the tags, so `ta`,
+# `rhoa` and `hus` must be bit for bit the twin's.
+job_id: "ledger_ratio_d4_repair_off"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: false
+energy_source_tag_transport: "enthalpy_increment"
+energy_source_tag_ledger_per_tag: true
+
+# `d4_column_edmf`, unchanged, as in `g1_inc_d4`.
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: false
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+energy_source_tags:
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+
+# The interim parent scale of `_parent_fraction` (`ledger_parent_scale`).
+energy_process_record:
+  [radiation, surface_flux, subsidence, microphysics, precipitation]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_strat, e_src_tropo, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_fix_strat, e_src_fix_tropo, e_src_fix_sfc, e_src_fix_rad]
+    period: "1hours"
+  - short_name: [e_src_led_fix_strat, e_src_led_fix_tropo, e_src_led_fix_sfc, e_src_led_fix_rad]
+    period: "1hours"
+  - short_name: [e_src_led_inc_strat, e_src_led_inc_tropo, e_src_led_inc_sfc, e_src_led_inc_rad]
+    period: "1hours"
+  - short_name: [e_prc_radiation, e_prc_surface_flux, e_prc_subsidence]
+    period: "1hours"
+  - short_name: [e_prc_microphysics, e_prc_precipitation]
+    period: "1hours"
+  - short_name: [rhoa, ta, hus]
+    period: "1hours"

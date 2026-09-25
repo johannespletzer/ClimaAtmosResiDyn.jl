@@ -1,0 +1,60 @@
+# The ratios of a tag's own ledgers through a zero crossing (PR #109 review,
+# finding 2), on C6's small sphere, where with the repair off `sfc` reached
+# -190 J/kg and `rad` -13 J/kg in a day (E2, E14; `c6_sphere_no_repair`).
+# Here under `enthalpy_increment`, so that each tag's increment ledger moves
+# with the repair on and off. Paired source tags: `sfc` on the heating
+# surface flux, `rad` on the net-cooling gray radiation. Its twin differs
+# only in `energy_source_tag_repair`; `ta`, `rhoa` and `hus` must be
+# bit for bit the twin's.
+job_id: "ledger_ratio_sphere_repair_off"
+
+energy_source_tag_offset: 110495.0
+energy_source_tag_repair: false
+energy_source_tag_transport: "enthalpy_increment"
+energy_source_tag_ledger_per_tag: true
+
+# C6's sphere, unchanged.
+config: "sphere"
+h_elem: 6
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "400secs"
+ode_algo: "ARS343"
+rayleigh_sponge: false
+viscous_sponge: false
+initial_condition: "MoistBaroclinicWave"
+microphysics_model: "0M"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+rad: "gray"
+dt_rad: "1hours"
+
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+  - name: rad
+    source: radiation
+
+# The interim parent scale of `_parent_fraction` (`ledger_parent_scale`).
+energy_process_record: [radiation, surface_flux, microphysics]
+
+energy_source_closure_check:
+  period: "1hours"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [e_src_tropics, e_src_extratropics, e_src_sfc, e_src_rad]
+    period: "1hours"
+  - short_name: [e_src_fix_tropics, e_src_fix_extratropics, e_src_fix_sfc, e_src_fix_rad]
+    period: "1hours"
+  - short_name: [e_src_led_fix_sfc, e_src_led_fix_rad, e_src_led_inc_sfc, e_src_led_inc_rad]
+    period: "1hours"
+  - short_name: [rhoa, ta, hus]
+    period: "1hours"
