@@ -21,53 +21,129 @@ Short names for the sources:
 
 ## Waiting for the owner
 
-  - **Rev. 2's register, OD1 to OD8**: the production envelope, the windows,
-    the thresholds, the energy scale, *not assessable* at M5, the sphere,
-    G4.15, and the audit's feasibility. ~~**Waiting.**~~ Answered on
-    2026-09-24 (below), except:
-      + ~~**the OD3 draft**, with OD2's levels, OD6's ceiling and the 60-level
-        stretching: **waiting for approval**. Step 2 waits for it.~~
-        **Approved** 2026-09-24 (below).
-        [ROADMAP.md, "The OD3 thresholds"](ROADMAP.md#the-od3-thresholds-approved-2026-09-24)
-      + **OD7**: **open, deferred**.
-    [ROADMAP.md, "The decision register"](ROADMAP.md#the-decision-register)
-  - **Known issue 7's fix**, one of the options in
-    `design/NEGATIVE_PARENT_WATER.md`, before the sphere. ~~**Waiting.**~~
-    A chosen 2026-09-24 (below). **Waiting:** the choice among B, C and D,
-    after the probe.
-  - ~~**OD4's throughput source** for the existing records: the process records
-    as a lower bound, or a new per-step accumulator. **Waiting.**~~ Decided
-    2026-09-25 (below): an exact accumulator.
-    [review/od4_denominator_audit.md](review/od4_denominator_audit.md)
-  - ~~**W33's verdict**, after the same-atmosphere check passed (W35).
-    **Waiting.**~~ Decided 2026-09-24 (below).
-    [G3T](G3_TODO.md#wp5b-v-the-explicit-1m-default)
-  - **The sphere's numbers**, in the form G3_PLAN 6.1 fixes, before V-W11.
-    **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
-  - **The default mode's cost budget**, proposed from V-W10's first
-    measurements, set before V-W11. **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
-  - ~~**The prognostic fields of the rain and snow tags**, settled in design note
-    WP4b-D and its review. Recommended: the non-precipitating, rain and snow
-    parts. Three further points of the note's section 15 go with it.
-    **Waiting.**~~ Decided 2026-09-25 (below): the three parts, gross flows.
-    [G3T](G3_TODO.md#decisions)
+Each decision's current state is in
+[ROADMAP.md's register](ROADMAP.md#the-decision-register), the single source.
+This list names what is still open. Classified on 2026-09-25 against the
+record; the answered and superseded entries are in the next section.
+
+  - **OD7**, G4.15's rule for energy: same sign or |m|. Deferred by the owner
+    on 2026-09-24, until the long runs can be scored at site 23.
+    [Register](ROADMAP.md#the-decision-register)
+  - **Known issue 7: the choice among B, C and D.** Option A was chosen on
+    2026-09-24 and built (#112). The probe is read: it points to C, and D's
+    first condition holds too
+    ([output/issue7_probe/](output/issue7_probe/README.md)).
+    [design/NEGATIVE_PARENT_WATER.md](design/NEGATIVE_PARENT_WATER.md)
   - **WP4a's two points:**
       + known issue 4's Jacobian, either the pair of entries or the diagonal
         alone as a test;
       + where the copies' part of issue 4 goes.
 
-    **Waiting.** [G3T](G3_TODO.md#decisions)
-  - **WP6's three points:**
-      + whether a pre-WP6 checkpoint is refused or zero-filled;
-      + whether loss and τ move to WP4a and WP4b;
-      + whether the transfer ledgers stay as they are or go per tag.
+    [G3T](G3_TODO.md#decisions)
+  - **WP6's three points.** Step 3 took the conservative default for each
+    ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), 10.6):
+      + whether a pre-WP6 checkpoint is refused or zero-filled (refused);
+      + whether loss and τ move to WP4a and WP4b (not in WP6);
+      + whether the transfer ledgers stay as they are or go per tag (as they
+        are, with the per-tag ledgers beside them).
 
-    **Waiting.** [G3T](G3_TODO.md#decisions)
-  - **The copies' repair over its bound, and the surface rule in the first
-    hour** (W21). **Waiting.** [G3T](G3_TODO.md#decisions)
-  - **When to investigate V-W4's two breaks:** the partition at 120 levels,
-    and the copies under first-order upwinding (W25). **Waiting.**
-    [FINDINGS W25](FINDINGS.md)
+    [G3T](G3_TODO.md#decisions)
+  - **The explicit-1M water default, at M5.** W33's verdict is decided (it
+    stays a failure, W35 beside it; 2026-09-24). The default itself is decided
+    at M5 under the contract. [G3T](G3_TODO.md#decisions)
+  - **W21's surface rule in the first hour:** whether the plume's start
+    should model the surface flux (plan 4.1, review S4). Rev. 2 sets the
+    first-hour budget (OD3's provenance rows) but not this rule.
+    [G3T](G3_TODO.md#decisions)
+
+## Answered or superseded, moved from the waiting list (2026-09-25)
+
+Each entry as it stood in the waiting list, classified. The dates are those
+of the answers.
+
+  - **Rev. 2's register, OD1 to OD6 and OD8.** *Answered* 2026-09-24; OD3's
+    draft approved later that day. OD7 stays open (above).
+    [Register](ROADMAP.md#the-decision-register)
+  - **Known issue 7's fix, which option.** *Answered in part* 2026-09-24:
+    option A now, then the probe. The choice among B, C and D stays open
+    (above).
+  - **OD4's throughput source** for the existing records. *Answered*
+    2026-09-25: an exact per-tag, per-step accumulator; the process records'
+    lower bound is the interim. [Register](ROADMAP.md#the-decision-register)
+  - **W33's verdict**, after the same-atmosphere check passed (W35).
+    *Answered* 2026-09-24: W33 stays a failure. The default at M5 stays open
+    (above).
+  - **The sphere's numbers**, in the form G3_PLAN 6.1 fixes, before V-W11.
+    *Superseded* by OD6 (2026-09-24: 90 days to saturation, its ceiling
+    approved with OD3) and by the owner's short-run decision of 2026-09-24 (a
+    1 to 2 day run measures the cost first).
+    [Register](ROADMAP.md#the-decision-register)
+  - **The default mode's cost budget**, proposed from V-W10's first
+    measurements. *Answered* 2026-09-24 by OD3's cost rows (build and step at
+    most twice the untagged, at 8 + 8 tags).
+    [ROADMAP.md, "The OD3 thresholds"](ROADMAP.md#the-od3-thresholds-approved-2026-09-24)
+  - **The prognostic fields of the rain and snow tags** (WP4b-D). *Answered*
+    2026-09-25: the three parts, the gross flows, point 4 superseded by the
+    WP4c gate. [ROADMAP.md, "The owner's answers, 2026-09-25"](ROADMAP.md#the-owners-answers-2026-09-25)
+  - **The copies' repair over its bound** (W21). *Superseded* by rev. 2's
+    comparator eligibility (OD3's comparator rows, 2026-09-24): a copies run
+    whose repair exceeds 0.20% a day is not an eligible comparator, and
+    provenance there is *not assessable*. W25's scoring applied it
+    ([output/w25i/](output/w25i/README.md)).
+  - **When to investigate V-W4's two breaks** (W25). *Superseded* by W25's
+    isolation, rev. 2's step 2: pre-registered on 2026-09-24
+    ([design/W25_ISOLATION.md](design/W25_ISOLATION.md)) and scored on
+    2026-09-25.
+
+The list as it stood before this classification, kept as written:
+
+>   - **Rev. 2's register, OD1 to OD8**: the production envelope, the windows,
+>     the thresholds, the energy scale, *not assessable* at M5, the sphere,
+>     G4.15, and the audit's feasibility. ~~**Waiting.**~~ Answered on
+>     2026-09-24 (below), except:
+>       + ~~**the OD3 draft**, with OD2's levels, OD6's ceiling and the 60-level
+>         stretching: **waiting for approval**. Step 2 waits for it.~~
+>         **Approved** 2026-09-24 (below).
+>         [ROADMAP.md, "The OD3 thresholds"](ROADMAP.md#the-od3-thresholds-approved-2026-09-24)
+>       + **OD7**: **open, deferred**.
+>     [ROADMAP.md, "The decision register"](ROADMAP.md#the-decision-register)
+>   - **Known issue 7's fix**, one of the options in
+>     `design/NEGATIVE_PARENT_WATER.md`, before the sphere. ~~**Waiting.**~~
+>     A chosen 2026-09-24 (below). **Waiting:** the choice among B, C and D,
+>     after the probe.
+>   - ~~**OD4's throughput source** for the existing records: the process records
+>     as a lower bound, or a new per-step accumulator. **Waiting.**~~ Decided
+>     2026-09-25 (below): an exact accumulator.
+>     [review/od4_denominator_audit.md](review/od4_denominator_audit.md)
+>   - ~~**W33's verdict**, after the same-atmosphere check passed (W35).
+>     **Waiting.**~~ Decided 2026-09-24 (below).
+>     [G3T](G3_TODO.md#wp5b-v-the-explicit-1m-default)
+>   - **The sphere's numbers**, in the form G3_PLAN 6.1 fixes, before V-W11.
+>     **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
+>   - **The default mode's cost budget**, proposed from V-W10's first
+>     measurements, set before V-W11. **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
+>   - ~~**The prognostic fields of the rain and snow tags**, settled in design note
+>     WP4b-D and its review. Recommended: the non-precipitating, rain and snow
+>     parts. Three further points of the note's section 15 go with it.
+>     **Waiting.**~~ Decided 2026-09-25 (below): the three parts, gross flows.
+>     [G3T](G3_TODO.md#decisions)
+>   - **WP4a's two points:**
+>       + known issue 4's Jacobian, either the pair of entries or the diagonal
+>         alone as a test;
+>       + where the copies' part of issue 4 goes.
+>
+>     **Waiting.** [G3T](G3_TODO.md#decisions)
+>   - **WP6's three points:**
+>       + whether a pre-WP6 checkpoint is refused or zero-filled;
+>       + whether loss and τ move to WP4a and WP4b;
+>       + whether the transfer ledgers stay as they are or go per tag.
+>
+>     **Waiting.** [G3T](G3_TODO.md#decisions)
+>   - **The copies' repair over its bound, and the surface rule in the first
+>     hour** (W21). **Waiting.** [G3T](G3_TODO.md#decisions)
+>   - **When to investigate V-W4's two breaks:** the partition at 120 levels,
+>     and the copies under first-order upwinding (W25). **Waiting.**
+>     [FINDINGS W25](FINDINGS.md)
 
 ## 2026-09-25
 

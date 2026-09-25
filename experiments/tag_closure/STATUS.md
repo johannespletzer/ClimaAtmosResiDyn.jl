@@ -72,7 +72,21 @@ not checked, it says so.
 
 ## Where things stand
 
-  - **Update, 2026-09-24, later: OD3 approved, option A, step 2 ready.**
+  - **Update, 2026-09-25: the owner's answers, W25 scored, the probe read.**
+    Each decision's state is in ROADMAP.md's register, the single source;
+    the open ones are listed below ("The owner's open decisions").
+      + The owner answered WP4b-D (the three parts, gross flows; steps 7, 8
+        and 8b unblocked), OD4's quantity (an exact accumulator), the WP4c
+        gate's OD3 reading, and the mirrors' relaxation (by composition).
+      + W25's isolation (step 2) is scored (`output/w25i/`). The copies fail
+        their repair row on every rung, so provenance is not assessable
+        there. The parent's two-iteration Newton error exceeds 1e-3 on every
+        assessable rung.
+      + Known issue 7's probe is read (`output/issue7_probe/`): it points to
+        C. The choice among B, C and D is the owner's.
+      + Jobs `13944447` to `13944462` (G4.16, the WP4c gate, the mirrors) are
+        with the parent session.
+  - *Superseded 2026-09-25: see the update above.* **Update, 2026-09-24, later: OD3 approved, option A, step 2 ready.**
       + The owner approved the OD3 thresholds, OD2's window rule and OD6's
         ceiling, as drafted (ROADMAP.md, "The OD3 thresholds"). Step 2 is
         unblocked.
@@ -90,7 +104,7 @@ not checked, it says so.
       + Draft PRs #108 (the guard) and #109 (WP6 step 3) are open; all 16
         validation jobs passed (`output/wp6_step3/jobs/`,
         `output/g416_guard/jobs/`).
-  - **Update, 2026-09-24, 21:10: the owner's answers.** The owner answered
+  - *Superseded later the same day: see the register.* **Update, 2026-09-24, 21:10: the owner's answers.** The owner answered
     the register (ROADMAP.md, "The owner's answers"): OD1 the sphere at 60
     levels; OD2 physical windows; OD4 gross source throughput; OD5 bounded
     passes; OD6 90 days to saturation; OD8 8 tags with copies at 8; W33
@@ -184,7 +198,7 @@ not checked, it says so.
         owner.~~ Decided 2026-09-25: the three parts, gross flows; steps 7, 8
         and 8b unblocked; a separate agent builds step 7, stage 1.
       + **V-W8 is done (W22).**
-      + **V-W4 is done (W25).**
+      + *Superseded 2026-09-25: see the register and `output/w25i/`.* **V-W4 is done (W25).**
           * The default meets its budgets on the time-step and Newton rungs,
             but not at 60 or 120 levels.
           * At 120 levels, and for the copies under first-order upwinding,
@@ -364,58 +378,77 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
 
 ## The owner's open decisions
 
-  - **Rev. 2's register, OD1 to OD8** ([ROADMAP.md](ROADMAP.md), "The
-    decision register"). ~~All eight are open. Steps 2 and 3 of the revised
-    order wait on OD1, OD2 and OD3.~~ *Superseded 2026-09-24, 21:10:* OD1,
-    OD4, OD5 and OD8 are set, and OD2 and OD6 are set in form. Still open:
-      + ~~**the approval of the OD3 draft** (ROADMAP.md, "The OD3 threshold
-        draft"), which includes OD2's levels, OD6's ceiling and the proposed
-        60-level stretching. Step 2 waits for it;~~ *Approved 2026-09-24, as
-        drafted.* The stretching is used for the short sphere run;
-      + **OD7**, deferred by the owner until, for example, known issue 7 is
-        fixed and site 23 can be scored;
-      + **known issue 7's fix**: ~~which option~~ A is chosen and built; the
-        choice among B, C and D follows the probe
-        (`design/NEGATIVE_PARENT_WATER.md`);
-      + ~~**OD4's throughput source**: the process records as a lower bound, or
-        a new per-step accumulator (`review/od4_denominator_audit.md`).~~
-        Decided 2026-09-25: an exact accumulator.
+Each decision's current state is in ROADMAP.md's register, the single source.
+OD7 is the only open numbered decision. Open now, each with its entry in
+[DECISIONS.md](DECISIONS.md), "Waiting for the owner":
 
-    The register's first list, kept as written:
-      + OD1, the production envelope: levels, SGS reconstruction, Δt, Newton
-        count, microphysics, the intended tag counts.
-      + OD2, the window boundaries per case.
-      + OD3, the thresholds not yet set.
-      + OD4, the offset-invariant scale for energy percentages.
-      + OD5, how *not assessable* is treated at M5.
-      + OD6, the sphere's ceiling, growth bound and run length.
-      + OD7, G4.15's rule for energy.
-      + OD8, the audit's feasibility at the intended tag count.
-  - ~~**W33's verdict**, after the same-atmosphere check passed (W35).~~
-    *Decided 2026-09-24:* W33 stays a failure, W35 beside it; the explicit-1M
-    water follower stays opt-in until M5.
-  - ~~**WP6 step 3's open questions**~~ *Decided 2026-09-24:* off by default,
-    on in every validation and qualification run; the fraction uses the tag's
-    current inventory, the absolute amount beside it. Kept as written:
-    ([review/agent_reviews/plan_rev2_steps0-1_2026-09-24.md](review/agent_reviews/plan_rev2_steps0-1_2026-09-24.md)):
-    whether each tag's ledger is on by default, and the denominator of the
-    per-tag fraction.
+  - **OD7**, G4.15's rule for energy, deferred until site 23 can be scored.
+  - **Known issue 7's option among B, C and D.** The probe points to C
+    (`output/issue7_probe/`).
+  - **WP4a's two points:** known issue 4's Jacobian, and the copies' part.
+  - **WP6's three points,** where step 3 took the conservative defaults.
+  - **The explicit-1M water default, at M5** (W33 stays a failure).
+  - **W21's surface rule in the first hour.**
 
-  - **The sphere's numbers**, before V-W11, and **the default mode's cost
-    budget**, after V-W10's first measurements and before V-W11. The other
-    budgets were set on 2026-09-23
-    ([G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)).
-  - ~~**The rain and snow tags' prognostic fields**, after the design note
-    WP4b-D and its review ([G3_TODO](G3_TODO.md#decisions)).~~ Decided
-    2026-09-25 (DECISIONS.md).
-  - WP4a's, WP6's and WP4b-D's points, the copies' repair, the surface rule,
-    and V-W4's two breaks: [DECISIONS.md](DECISIONS.md), "Waiting for the
-    owner".
-  - **`main`'s CI at `0b2b1032`**, after #95's merge, which was queued at
-    16:40. V-W1 runs on it.
-  - **A rerun of `main`'s CI.** #96 and #97 were merged with `ci-required`
-    failing on cancelled checks, not on a failed test, and `main`'s own CI
-    runs were cancelled too. A rerun is the owner's to start.
+Not plan decisions, kept as they stood on 2026-09-23 and not rechecked:
+
+  - **`main`'s CI at `0b2b1032`**, after #95's merge.
+  - **A rerun of `main`'s CI** after #96 and #97, the owner's to start.
+
+*Superseded on 2026-09-25 by the list above; kept as written:*
+
+>   - **Rev. 2's register, OD1 to OD8** ([ROADMAP.md](ROADMAP.md), "The
+>     decision register"). ~~All eight are open. Steps 2 and 3 of the revised
+>     order wait on OD1, OD2 and OD3.~~ *Superseded 2026-09-24, 21:10:* OD1,
+>     OD4, OD5 and OD8 are set, and OD2 and OD6 are set in form. Still open:
+>       + ~~**the approval of the OD3 draft** (ROADMAP.md, "The OD3 threshold
+>         draft"), which includes OD2's levels, OD6's ceiling and the proposed
+>         60-level stretching. Step 2 waits for it;~~ *Approved 2026-09-24, as
+>         drafted.* The stretching is used for the short sphere run;
+>       + **OD7**, deferred by the owner until, for example, known issue 7 is
+>         fixed and site 23 can be scored;
+>       + **known issue 7's fix**: ~~which option~~ A is chosen and built; the
+>         choice among B, C and D follows the probe
+>         (`design/NEGATIVE_PARENT_WATER.md`);
+>       + ~~**OD4's throughput source**: the process records as a lower bound, or
+>         a new per-step accumulator (`review/od4_denominator_audit.md`).~~
+>         Decided 2026-09-25: an exact accumulator.
+>
+>     The register's first list, kept as written:
+>       + OD1, the production envelope: levels, SGS reconstruction, Δt, Newton
+>         count, microphysics, the intended tag counts.
+>       + OD2, the window boundaries per case.
+>       + OD3, the thresholds not yet set.
+>       + OD4, the offset-invariant scale for energy percentages.
+>       + OD5, how *not assessable* is treated at M5.
+>       + OD6, the sphere's ceiling, growth bound and run length.
+>       + OD7, G4.15's rule for energy.
+>       + OD8, the audit's feasibility at the intended tag count.
+>   - ~~**W33's verdict**, after the same-atmosphere check passed (W35).~~
+>     *Decided 2026-09-24:* W33 stays a failure, W35 beside it; the explicit-1M
+>     water follower stays opt-in until M5.
+>   - ~~**WP6 step 3's open questions**~~ *Decided 2026-09-24:* off by default,
+>     on in every validation and qualification run; the fraction uses the tag's
+>     current inventory, the absolute amount beside it. Kept as written:
+>     ([review/agent_reviews/plan_rev2_steps0-1_2026-09-24.md](review/agent_reviews/plan_rev2_steps0-1_2026-09-24.md)):
+>     whether each tag's ledger is on by default, and the denominator of the
+>     per-tag fraction.
+>
+>   - **The sphere's numbers**, before V-W11, and **the default mode's cost
+>     budget**, after V-W10's first measurements and before V-W11. The other
+>     budgets were set on 2026-09-23
+>     ([G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)).
+>   - ~~**The rain and snow tags' prognostic fields**, after the design note
+>     WP4b-D and its review ([G3_TODO](G3_TODO.md#decisions)).~~ Decided
+>     2026-09-25 (DECISIONS.md).
+>   - WP4a's, WP6's and WP4b-D's points, the copies' repair, the surface rule,
+>     and V-W4's two breaks: [DECISIONS.md](DECISIONS.md), "Waiting for the
+>     owner".
+>   - **`main`'s CI at `0b2b1032`**, after #95's merge, which was queued at
+>     16:40. V-W1 runs on it.
+>   - **A rerun of `main`'s CI.** #96 and #97 were merged with `ci-required`
+>     failing on cancelled checks, not on a failed test, and `main`'s own CI
+>     runs were cancelled too. A rerun is the owner's to start.
 
 Every decision taken so far is in [DECISIONS.md](DECISIONS.md).
 

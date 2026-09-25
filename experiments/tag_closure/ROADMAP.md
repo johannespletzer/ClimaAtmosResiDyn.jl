@@ -121,19 +121,35 @@ it is closest to a failed comparator's repaired output.
 ### The decision register
 
 Each decision is recorded here before the first run it judges. Results are
-scored against the value recorded at that time, as W33 is. Open decisions are
-listed in [STATUS.md](STATUS.md). No agent fills one in.
+scored against the value recorded at that time, as W33 is. **This register is
+the single source of each decision's current state.** STATUS, DECISIONS, the
+TODO files and G3_PLAN point here and do not restate it. **OD7 is the only
+open numbered decision.** The owner's other open choices have no OD number;
+they are listed below the table. No agent fills one in.
 
 | ID  | Decision                                                                                                                                                                                  | Needed before                                          | Notes                                                                                                                                                                  | Status                              |
 |:--- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------ |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:----------------------------------- |
-| OD1 | The production envelope: vertical levels, SGS reconstruction, Δt, Newton count, microphysics (0M or 1M, explicit or implicit sedimentation), the intended water and energy tag counts | W25 isolation (step 2); OD8                            | If production uses ≥ 60 levels or first-order SGS, W25's failures are the main case                                                                                     | ~~OWNER DECISION REQUIRED (OD1)~~ **Set** 2026-09-24       |
-| OD2 | The window boundaries per case: startup or source pulse, established flow, long run                                                                                                      | The first run scored by window                         | Include the WP4b held-out case                                                                                                                                          | ~~OWNER DECISION REQUIRED (OD2)~~ **Set** 2026-09-24; its window rule approved as drafted |
-| OD3 | Thresholds: parent-validity checks; provenance (L1, L∞, absolute error for small tags); intervention (aggregate and per tag); comparator eligibility; refinement; aggregation tolerance; cost (build time, peak memory, per-step time) | The first run each threshold judges                    | Existing numbers carry over unchanged: water closure 0.2% day-scale, copies' repair 0.20%/day, and the existing time-step, Newton and first-hour budgets (G3_PLAN 6.1) | ~~OWNER DECISION REQUIRED (OD3)~~ ~~**Draft**, pending approval~~ **Approved** 2026-09-24 as drafted |
-| OD4 | The offset-invariant scale for every energy percentage                                                                                                                                  | Energy thresholds in OD3; G4.3 to G4.6                 | Candidate: the cumulative gross source throughput into the tags over the same window. First audit the denominators of the existing E-records                          | ~~OWNER DECISION REQUIRED (OD4)~~ **Set** 2026-09-24; audit, first pass; quantity: an exact per-tag, per-step accumulator (2026-09-25) |
-| OD5 | How *not assessable* is treated at M5                                                                                                                                                  | M5                                                     | Proposed: it blocks M5 for that configuration unless the Insight 10 tests pass their thresholds; the configuration is then labelled "provenance bounded, not validated" | ~~OWNER DECISION REQUIRED (OD5)~~ **Set** 2026-09-24       |
-| OD6 | The sphere: an absolute ceiling relative to the smallest analysed tag; a growth-rate or loss-timescale bound; the run length                                                            | Water sphere (step 9); energy sphere (step 11)          | Run length budgeted under M4. G3_PLAN 6.1's "plateau after day one" is replaced by this                                                                                | ~~OWNER DECISION REQUIRED (OD6)~~ **Set** 2026-09-24; its ceiling approved as drafted |
-| OD7 | G4.15: bounded local movement (the same-sign rule), or the fourfold increase in gross residual it measured (E79)                                                                       | The G4.7 and G4.8 runs; the energy default             | Water's same-sign choice is not inherited. The owner decided on 2026-09-24 to choose after the long runs (DECISIONS.md, `design/INCREMENT_RULE_LONG_RUNS.md`)         | ~~OWNER DECISION REQUIRED (OD7)~~ **Open, deferred** 2026-09-24       |
-| OD8 | Audit feasibility: copies as the reference at the intended tag count, or copies at the largest buildable count plus the aggregation bridge                                             | WP5b-C at those counts; G4.1 and G4.11                 | Measured on TRMM's column: 699 s at 8 copies, 2417 s at 16, no build within 4 h at 32 (W30, W34); an 8 h build of 32 is running (job `13911480`)                     | ~~OWNER DECISION REQUIRED (OD8)~~ **Set** 2026-09-24       |
+| OD1 | The production envelope: vertical levels, SGS reconstruction, Δt, Newton count, microphysics (0M or 1M, explicit or implicit sedimentation), the intended water and energy tag counts | W25 isolation (step 2); OD8                            | If production uses ≥ 60 levels or first-order SGS, W25's failures are the main case                                                                                     | ~~OWNER DECISION REQUIRED (OD1)~~ **Decided** 2026-09-24: `g2_v2_sphere_n2` at 60 levels; its stretching chosen the same day |
+| OD2 | The window boundaries per case: startup or source pulse, established flow, long run                                                                                                      | The first run scored by window                         | Include the WP4b held-out case                                                                                                                                          | ~~OWNER DECISION REQUIRED (OD2)~~ **Decided** 2026-09-24: physical windows; the window rule approved the same day |
+| OD3 | Thresholds: parent-validity checks; provenance (L1, L∞, absolute error for small tags); intervention (aggregate and per tag); comparator eligibility; refinement; aggregation tolerance; cost (build time, peak memory, per-step time) | The first run each threshold judges                    | Existing numbers carry over unchanged: water closure 0.2% day-scale, copies' repair 0.20%/day, and the existing time-step, Newton and first-hour budgets (G3_PLAN 6.1) | ~~OWNER DECISION REQUIRED (OD3)~~ **Decided** 2026-09-24: approved as drafted. Its WP4c reading confirmed 2026-09-25 |
+| OD4 | The offset-invariant scale for every energy percentage                                                                                                                                  | Energy thresholds in OD3; G4.3 to G4.6                 | Candidate: the cumulative gross source throughput into the tags over the same window. First audit the denominators of the existing E-records                          | ~~OWNER DECISION REQUIRED (OD4)~~ **Decided:** the scale is the gross source throughput (2026-09-24); the quantity is an exact per-tag, per-step accumulator (2026-09-25), being built. **Interim**, until it lands and for runs that predate it: the process records' lower bound, with every such percentage labelled an upper bound. Earlier E-records are restated with it, and rerun only where the contract needs an exact value |
+| OD5 | How *not assessable* is treated at M5                                                                                                                                                  | M5                                                     | Proposed: it blocks M5 for that configuration unless the Insight 10 tests pass their thresholds; the configuration is then labelled "provenance bounded, not validated" | ~~OWNER DECISION REQUIRED (OD5)~~ **Decided** 2026-09-24 |
+| OD6 | The sphere: an absolute ceiling relative to the smallest analysed tag; a growth-rate or loss-timescale bound; the run length                                                            | Water sphere (step 9); energy sphere (step 11)          | Run length budgeted under M4. G3_PLAN 6.1's "plateau after day one" is replaced by this                                                                                | ~~OWNER DECISION REQUIRED (OD6)~~ **Decided** 2026-09-24: 90 days to saturation; its ceiling approved; a 1 to 2 day run measures the cost first |
+| OD7 | G4.15: bounded local movement (the same-sign rule), or the fourfold increase in gross residual it measured (E79)                                                                       | The G4.7 and G4.8 runs; the energy default             | Water's same-sign choice is not inherited. The owner decided on 2026-09-24 to choose after the long runs (DECISIONS.md, `design/INCREMENT_RULE_LONG_RUNS.md`)         | ~~OWNER DECISION REQUIRED (OD7)~~ **OPEN**: deferred by the owner on 2026-09-24, until the long runs can be scored at site 23 (known issue 7) |
+| OD8 | Audit feasibility: copies as the reference at the intended tag count, or copies at the largest buildable count plus the aggregation bridge                                             | WP5b-C at those counts; G4.1 and G4.11                 | Measured on TRMM's column: 699 s at 8 copies, 2417 s at 16, no build within 4 h at 32 (W30, W34); an 8 h build of 32 is running (job `13911480`)                     | ~~OWNER DECISION REQUIRED (OD8)~~ **Decided** 2026-09-24: 8 water and 8 energy tags, copies at 8 |
+
+**The owner's other open choices** (no OD number), each with its entry in
+[DECISIONS.md](DECISIONS.md), "Waiting for the owner":
+
+  - known issue 7's option among B, C and D. The probe is read
+    (2026-09-25, `output/issue7_probe/`);
+  - WP4a's two points: known issue 4's Jacobian, and the copies' part of it;
+  - WP6's three points, where step 3 took the conservative defaults
+    (`design/GROSS_ACCUMULATORS.md` 10.6);
+  - the explicit-1M water default, decided at M5 under the contract (W33
+    stays a failure);
+  - W21's surface rule in the first hour: whether the plume's start models
+    the surface flux.
 
 ### The owner's answers, 2026-09-24
 
@@ -141,7 +157,7 @@ The owner answered the register on 2026-09-24, after the report of steps 0 and
 1, and added five points. Each earlier value they change is kept where it
 stands, marked as superseded.
 
-  - **OD1, set: the sphere at 60 levels.** Production is `g2_v2_sphere_n2` at
+  - *Superseded later the same day: see the register.* **OD1, set: the sphere at 60 levels.** Production is `g2_v2_sphere_n2` at
     60 levels instead of 10. Everything else stays as that configuration has
     it: `h_elem` 6, `z_max` 30 km, `dt` 20 s, ARS222, two Newton iterations,
     1M stepped implicitly, the default SGS reconstruction. So W25's 60-level
@@ -149,21 +165,21 @@ stands, marked as superseded.
     1.5 km, so they are the nearest measured rung, not the same grid. The tag
     count comes from OD8. The owner did not set the stretching: the OD3 draft
     proposes one.
-  - **OD2, set in form: windows are physical.** Startup ends when the parent's
+  - *Superseded later the same day: see the register.* **OD2, set in form: windows are physical.** Startup ends when the parent's
     domain-mean tendency, or the source pulse, falls below a set level. The
     levels are in the OD3 draft.
-  - **OD3: drafted at the owner's request; pending the owner's approval.** The
+  - *Superseded later the same day: see the register.* **OD3: drafted at the owner's request; pending the owner's approval.** The
     owner chose "I draft, you approve". One threshold table, below, every
     number a proposal. No run is scored before the owner approves it, so step
     2 stays blocked.
-  - **OD4, set: gross source throughput.** An energy percentage is restated
+  - *Completed on 2026-09-25: see the register.* **OD4, set: gross source throughput.** An energy percentage is restated
     against the cumulative gross energy the sources put into the tags over the
     same window. The denominators of the existing E-records are audited:
     first pass, [review/od4_denominator_audit.md](review/od4_denominator_audit.md).
   - **OD5, set: bounded passes.** *Not assessable* blocks M5 for that
     configuration unless the Insight 10 tests pass their OD3 thresholds. Then
     the configuration qualifies as "provenance bounded, not validated".
-  - **OD6, set in form: run to saturation, 90 days.** The sphere is judged by
+  - *Superseded later the same day: see the register.* **OD6, set in form: run to saturation, 90 days.** The sphere is judged by
     the level it reaches, observed over 90 days, not by a projection. A
     ceiling relative to the smallest analysed tag is still needed; its value
     is in the OD3 draft. The 90-day, 60-level sphere's cost enters M4 as an
@@ -180,7 +196,7 @@ stands, marked as superseded.
     item and are not qualified.
   - **W33: opt-in until M5.** W33 stays a failure, and W35 is recorded beside
     it. The explicit-1M water default is decided at M5 under the contract.
-  - **Known issue 7, the site 23 crash: a defect, fixed before the sphere.**
+  - *Superseded later the same day: see the register.* **Known issue 7, the site 23 crash: a defect, fixed before the sphere.**
     At site 23 the parent's own water goes negative from day 10, the water
     tags diverge, and the tagged runs end while the untagged twin completes 90
     days. A diagnostic ends a run that upstream completes: a parity-class
@@ -262,7 +278,7 @@ reported beside it, as the long runs report it. Nearest measured: E74's energy
 sphere, 2.0e-4 of the scale at day 10, still growing; V-W8's water, 4.2e-4 at
 3 h, before the follower (W22).
 
-**OD1's stretching, a proposal.** The GCM-driven column's rule, scaled to
+*Superseded later the same day: see the register.* **OD1's stretching, a proposal.** The GCM-driven column's rule, scaled to
 30 km: `z_stretch: true`, `dz_bottom` 30 m, 60 elements to 30 km. ClimaCore's
 `HyperbolicTangentStretching` then gives 30 m at the bottom, 116 m at 1 km and
 1313 m at the top, with 16 levels below 1 km and 27 below 3 km. The GCM column
@@ -332,21 +348,21 @@ package.
 Each step names the decisions it needs. An agent stops at a step whose
 decision is open and asks the owner.
 
-| Step | What                                                                                                                                                     | Needs          | State (2026-09-24)                                                                                                                                                             |
+| Step | What                                                                                                                                                     | Needs          | State (2026-09-25)                                                                                                                                                             |
 |:---- |:-------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 0    | Guard and records, no simulations: G4.16's interim refusal and its test; STATUS; the in-place edits; this register; the comparator-eligibility annotations on W29, E39, E76 and D4-W | —              | Done. The guard, extended to 1M, 2M and P3 (the owner, 2026-09-24), is draft PR #108 against `main` (`e55ae293`); its two integration jobs passed at `33eeb5cd`, before the 2M and P3 extension, which has passed its config tests only; PR CI covers the rest (`output/g416_guard/`) |
 | 1    | G3 WP6 step 3, with the per-tag ledger (Insight 10)                                                                                                      | —              | Done: draft PR #109 on #103 (`claude/water-tags-wp6-step3`). Unit tests, 13 integration groups and the check script all pass (`output/wp6_step3/jobs/`) |
-| 2    | W25 isolation at 30, 60 and 120 levels, centred and first-order: fixed-parent probes and the refinement test first, then full matched runs              | OD1, OD2, OD3  | Unblocked: OD3 approved 2026-09-24. 60 levels is the main case. Pre-registered in `design/W25_ISOLATION.md`; its jobs are not yet submitted                                  |
+| 2    | W25 isolation at 30, 60 and 120 levels, centred and first-order: fixed-parent probes and the refinement test first, then full matched runs              | OD1, OD2, OD3  | Done 2026-09-25: jobs 13932703 to 748 scored against every rule (`output/w25i/`). Two P1 probes at 120 levels, first order, failed in the model (the README) |
 | 3    | The audit-feasibility decision (WP9, OD8), water and energy copies at the intended tag counts; may run beside step 2                                    | OD1            | Decided (OD8): 8 water and 8 energy tags, copies at 8 as the direct audit where eligible, no aggregation bridge. 32 tags stay a WP9 cost item, not qualified                   |
 | 4    | WP5b-C at the tag counts OD8 keeps; copies pass eligibility in each run before they serve as the audit                                                  | OD8            | A first build exists outside the pushed branches (G3_TODO, WP5b-C)                                                                                                            |
-| 5    | WP5b-V's remaining arms: those without copies after step 2, default-against-copies arms after step 4; the explicit-1M follower stays opt-in unless it passes | step 2, step 4 | The same-atmosphere check is done and passes (W35). W33 stays a failure; the owner decides whether its verdict changes                                                        |
+| 5    | WP5b-V's remaining arms: those without copies after step 2, default-against-copies arms after step 4; the explicit-1M follower stays opt-in unless it passes | step 2, step 4 | The same-atmosphere check is done and passes (W35). W33 stays a failure; the explicit-1M default is decided at M5 (the register's open choices) |
 | 6    | The WP4c operator-decomposition gate, with the three-part retention rule; defer, don't delete                                                           | OD3            | Pre-registered 2026-09-25: `design/WP4C_GATE.md`, probe and score scripts, two configs. The trial configurations build on the login node. Its OD3 reading confirmed by the owner 2026-09-25. Jobs submitted (13944456, 13944457) |
-| 7    | WP4b, its implementation only: the rain and snow tag fields and their diagnostics, with closure as an invariant. No held-out evaluation yet                | the owner's rain and snow decision (WP4b-D) ~~waiting~~ decided 2026-09-25 | Unblocked 2026-09-25: three parts, gross flows. A separate agent builds stage 1 |
-| 8    | WP9's cost qualification at the intended tag count, with WP4b's fields on, the comparator included; M4's ceilings fixed                              | OD3            | Waits. At 8 tags (OD8); the aggregation test is no longer needed for qualification. Unblocked 2026-09-25 (WP4b-D decided) |
-| 8a   | The fix of known issue 7: tagged water ends a run where the parent's water goes negative (site 23). Added 2026-09-24                                   | the owner's choice of option | Option A chosen and built: no closure check ends a run by default (`claude/tag-closure-no-abort`, `00c9eedb`, for a PR against `main`). Next the probe (the design note's section 5), then the owner chooses among B, C and D |
-| 8b   | WP4b's validation, then default selection (M5): process-weighted same-state evidence and a held-out case that rains in established flow, within step 8's cost ceilings | step 8, OD2, OD3 | Waits. This is the part of the former step 7 that produces M5 evidence. Unblocked 2026-09-25 (WP4b-D decided); follows step 8 |
+| 7    | WP4b, its implementation only: the rain and snow tag fields and their diagnostics, with closure as an invariant. No held-out evaluation yet                | the owner's rain and snow decision (WP4b-D), decided 2026-09-25 | Unblocked 2026-09-25: three parts, gross flows. A separate agent builds stage 1 |
+| 8    | WP9's cost qualification at the intended tag count, with WP4b's fields on, the comparator included; M4's ceilings fixed                              | OD3            | Unblocked 2026-09-25 (WP4b-D decided). At 8 tags (OD8); the aggregation test is no longer needed for qualification |
+| 8a   | The fix of known issue 7: tagged water ends a run where the parent's water goes negative (site 23). Added 2026-09-24                                   | the owner's choice of option | Option A chosen and built (#112). The probe is read (2026-09-25, `output/issue7_probe/`): it points to C. The choice among B, C and D is the owner's (the register's open choices) |
+| 8b   | WP4b's validation, then default selection (M5): process-weighted same-state evidence and a held-out case that rains in established flow, within step 8's cost ceilings | step 8, OD2, OD3 | Unblocked 2026-09-25 (WP4b-D decided); follows step 8. The part of the former step 7 that produces M5 evidence |
 | 9    | The water sphere under the revised long-run criterion                                                                                                   | OD6            | Waits. `g2_v2_sphere_n2` at 60 levels, 90 days, judged by the level it reaches (OD1, OD6); after step 8a. First a 1 to 2 day run at 60 levels, untagged and with 8 + 8 tags, measures its cost (the owner, 2026-09-24) |
-| 10   | G4: G4.16's cross blocks (the refusal stays until they pass), G4.1 and G4.11's mirrors at the OD8 counts, G4.3 to G4.6 with offset-invariant scales, the G4.15 decision, G4.7 and G4.8 with startup windows and fixed-parent comparisons, the energy default | OD4, OD7       | OD4 set; OD7 deferred. 2026-09-25: G4.16 built (`claude/energy-tags-sed-cross`) and its validation pre-registered; G4.1 and G4.11's mirrors built (`claude/energy-copies-mirrors`) with their D4 validation pre-registered. Jobs not submitted. OD4's throughput source waits |
+| 10   | G4: G4.16's cross blocks (the refusal stays until they pass), G4.1 and G4.11's mirrors at the OD8 counts, G4.3 to G4.6 with offset-invariant scales, the G4.15 decision, G4.7 and G4.8 with startup windows and fixed-parent comparisons, the energy default | OD4, OD7       | OD4 decided (2026-09-24 and 2026-09-25; its accumulator being built); OD7 open. G4.16 (#113) and G4.1 and G4.11's mirrors (#114) built, their validations pre-registered and submitted (13944447 to 462) |
 | 11   | The energy sphere, once its comparator, offset, cross-block, intervention and cost contracts are settled                                                | OD6            | Waits. The same sphere as step 9 (OD1, OD6)                                                                                                                                    |
 
 ## Where the open items go

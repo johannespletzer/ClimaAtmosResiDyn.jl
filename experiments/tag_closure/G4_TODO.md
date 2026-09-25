@@ -187,7 +187,8 @@ sources put into the tags over the same window. The audit's first pass sorts
 the records' denominators into four classes and restates no number yet
 ([review/od4_denominator_audit.md](review/od4_denominator_audit.md)). The
 throughput needs the process records, a lower bound, or a new per-step
-accumulator; which one is the owner's. *Decided 2026-09-25:* an exact
+accumulator; which one is the owner's. *Decided 2026-09-25 (the state and
+the interim are in [the register](ROADMAP.md#the-decision-register)):* an exact
 per-tag, per-step accumulator, carried through restarts; the process records'
 lower bound is the interim. Built on `claude/energy-source-throughput`
 ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), section 11).
@@ -317,7 +318,8 @@ before the G4.7 and G4.8 runs, after the long runs (DECISIONS.md,
 rule: a sign-dependent rule is not linear in the tags, so some departure is
 expected, and its size is evidence.
 
-*OD7, 2026-09-24: open, deferred.* Analysis done: by the registered rule
+*OD7, 2026-09-24: open, deferred.* Its current state is in
+[the register](ROADMAP.md#the-decision-register). Analysis done: by the registered rule
 (`design/INCREMENT_RULE_LONG_RUNS.md`) same sign is kept. Both criteria hold
 for energy at both sites and for water at site 26. Water at site 23 breaks the
 budget under both rules. The owner deferred the decision, for example until the

@@ -10,7 +10,8 @@ been run.
 2 of the work plan"): sections 2, 4.2, 5 and 6.1 below. Each change says
 "rev. 2". Every result is reported with the verdicts of the acceptance
 contract in ROADMAP.md, and the thresholds rev. 2 adds wait on the owner's
-register, OD1 to OD8.
+register, OD1 to OD8. *Each decision's current state is in ROADMAP.md's
+register, the single source; all but OD7 are decided.*
 
 ## 0. Decisions this plan rests on
 
@@ -218,7 +219,8 @@ the dynamics and not a spin-up.
     estimate, fresh surface water is 0.3 to 1% of the updraft's water at
     level 1, and `evap` holds about 1% of the column in the first hour. This
     alone could fail the first-hour source-tag budget. V-W3 measures it. The
-    owner decides whether the plume's start should model it.
+    owner decides whether the plume's start should model it. *Open
+    (DECISIONS.md, "Waiting for the owner").*
 
 ### 4.2 The `q_tot_eff` leaks under 1M
 
@@ -629,7 +631,7 @@ The verifier computes both (WP0).
     *Set on 2026-09-24 (OD6):* the sphere runs 90 days, to saturation, and is
     judged by the level observed, against a ceiling relative to the smallest
     analysed tag. The ceiling's value is drafted in ROADMAP.md's OD3 table,
-    pending approval.
+    ~~pending approval~~ approved 2026-09-24 (the register).
 
       + At every output, `Σᵢ ρq_tagᵢ ≤ ρq_tot (1 + 1e-6)` at every point, and
         the non-positive fraction does not grow. Issue #64 went to 1e130 and

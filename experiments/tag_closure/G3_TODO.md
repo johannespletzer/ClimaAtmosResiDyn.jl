@@ -43,13 +43,14 @@ The twelve criteria of the plan, section 2, in short:
 
 ## Decisions
 
-  - [!] **Rev. 2's register, OD1 to OD8** (2026-09-24; ROADMAP.md, "The
-    decision register"): the production envelope, the windows, the
+  - [x] **Rev. 2's register, OD1 to OD8** (2026-09-24; ROADMAP.md, "The
+    decision register"). *Each decision's current state is in [the register](ROADMAP.md#the-decision-register); all but
+    OD7 are decided, and OD7 is deferred.* Kept as written: the production envelope, the windows, the
     thresholds, the energy scale, *not assessable* at M5, the sphere, G4.15,
     and the audit's feasibility. ~~All open. Steps 2 and 3 of the revised
     order wait on OD1 to OD3.~~ *Superseded 2026-09-24:* the owner answered
     (ROADMAP.md, "The owner's answers"). Set: OD1 (the sphere at 60 levels),
-    OD2 in form, OD4, OD5, OD6 in form, OD8 (8 tags, copies at 8). OD3 is a
+    OD2 in form, OD4, OD5, OD6 in form, OD8 (8 tags, copies at 8). *Superseded later the same day: see the register.* OD3 is a
     draft, pending the owner's approval; step 2 waits for it. OD7 is
     deferred.
   - [x] G3 is water and G4 is energy; production target; precipitation
@@ -60,13 +61,15 @@ The twelve criteria of the plan, section 2, in short:
     2% and 5% at 24 h with G1's first-hour split; closure 0.2% with at most
     1e-6 left after the named parts; convergence as robustness; rain and snow
     as proposed; the sphere's form.
-  - [ ] **The sphere's numbers**, set by the owner before V-W11, in the form of
-    plan 6.1. *Rev. 2:* the form is now OD6's ceiling and growth bound, not a
+  - [x] **The sphere's numbers**, set by the owner before V-W11, in the form of
+    plan 6.1. *Answered 2026-09-24: OD6 and the short-run decision
+    ([the register](ROADMAP.md#the-decision-register); DECISIONS.md, 2026-09-25 classification).* *Rev. 2:* the form is now OD6's ceiling and growth bound, not a
     plateau after day one. *2026-09-24 (OD6):* 90 days, judged by the level
     observed; the ceiling's value is in ROADMAP.md's OD3 draft, ~~pending
     approval~~ approved 2026-09-24.
-  - [ ] **The default mode's cost budget**, proposed from V-W10's first
-    measurements and set by the owner before V-W11. *2026-09-24:* proposed in
+  - [x] **The default mode's cost budget**, proposed from V-W10's first
+    measurements and set by the owner before V-W11. *Answered 2026-09-24 by
+    OD3's cost rows ([the register](ROADMAP.md#the-decision-register)).* *2026-09-24:* proposed in
     ROADMAP.md's OD3 draft, at 8 + 8 tags, ~~pending approval~~ approved
     2026-09-24.
   - [x] **The explicit-1M water default: opt-in until M5** (the owner,
@@ -83,7 +86,9 @@ The twelve criteria of the plan, section 2, in short:
     water. The energy guard is G4_TODO's G4.16.
   - [~] **Known issue 7's fix** (the site 23 crash): the option is the
     owner's (`design/NEGATIVE_PARENT_WATER.md`; WP3 below). *2026-09-24:* A
-    now, then the probe, then a choice among B, C and D.
+    now, then the probe, then a choice among B, C and D. *2026-09-25:* A is
+    #112; the probe is read and points to C (`output/issue7_probe/`). Open:
+    the choice among B, C and D (DECISIONS.md, "Waiting for the owner").
   - [x] **WP5's default transport under EDMF**, by the rule fixed in plan 4.3.
     The owner's review of #102 (2026-09-24) asked for it to be applied. It is
     applied in #102 where the configuration supports the follower, and
@@ -92,14 +97,18 @@ The twelve criteria of the plan, section 2, in short:
     #102, point 3). It is refused for now. The owner chose on 2026-09-24 to
     give the tags the parent's sedimentation cross blocks. That work is in
     progress, with the review's distinguishing experiment.
-  - [ ] **The copies' repair** moves 0.6% of D4-W's water in a day, 0.27%
+  - [x] **The copies' repair** moves 0.6% of D4-W's water in a day, 0.27%
     with ten Newton iterations, over plan 6.1's 0.2%, so the audit is flagged
     (W21). Whether the audit stands as it is, or its repair's cause is
-    isolated first, is the owner's.
+    isolated first, is the owner's. *Superseded 2026-09-24 by rev. 2's
+    comparator eligibility (OD3's comparator rows, [the register](ROADMAP.md#the-decision-register)): over its repair row
+    the copies are not eligible, and provenance is not assessable. W25's
+    scoring applied it on 2026-09-25 (`output/w25i/`).*
   - [ ] **The surface rule in the first hour.** A surface-layer tag differs
     between the modes by 14% (L1) at 1 h, against a 1% budget, and meets it
     from 6 h (W21). Whether the plume's start should model the surface flux
-    (plan 4.1, review S4) is the owner's.
+    (plan 4.1, review S4) is the owner's. *Open (DECISIONS.md, "Waiting for
+    the owner").*
   - [x] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. *Decided 2026-09-25:* the three parts;
     `ρq_tag_<name>` holds the non-precipitating water, beside `ρq_rtag_<name>`
@@ -112,14 +121,15 @@ The twelve criteria of the plan, section 2, in short:
     `ρq_tag_<name>` holding the non-precipitating water under the key; the
     microphysics attribution, net-flow rule or gross flows; and 4.2's rule
     restated to measure a leak's imprint.
-  - [ ] **WP4a's two points**
+  - [ ] **WP4a's two points** *Open (DECISIONS.md, "Waiting for the owner").*
     ([design/ZERO_M_SPLIT.md](design/ZERO_M_SPLIT.md), section 8, after its
     xhigh review): known issue 4's Jacobian, the pair (diagonal and cross
     term, with the split solver's back-substitution) or the diagonal alone as
     a test; the review showed the diagonal alone makes one Newton iteration
     worse and today's missing entry costs nothing for the pure sink. And the
     copies' part of issue 4, a follow-up or in WP4a.
-  - [ ] **WP6's three points**
+  - [ ] **WP6's three points** *Open (DECISIONS.md, "Waiting for the
+    owner"); step 3 took the conservative defaults (the note's 10.6).*
     ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), section 8):
     a pre-WP6 checkpoint refused or zero-filled; loss and residence time moved
     to WP4a and WP4b; and, after the code review, the transfer ledgers as they
@@ -379,8 +389,8 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
       + The copies' shares converge on the Newton ladder. On the time-step
         ladder they move as far as the atmosphere does.
       + R5, the cost, is not answered; V-W10 measures it.
-  - [ ] **Follow-up from V-W4, for the owner to schedule** (not in this
-    session's scope):
+  - [x] **Follow-up from V-W4, for the owner to schedule** (not in this
+    session's scope). *Done 2026-09-25: step 2 scored (`output/w25i/`).*
       + what parts the partition at 120 levels, in both modes;
       + what parts the copies under first-order upwinding.
 
@@ -491,7 +501,9 @@ The owner's review of #105, finding 3. Closure shows the tags sum to the water,
 not that each label is right. W29's `evap` agreed less with the copies with the
 cross blocks (5.8% against 3.8%), and the copies lack their own blocks.
 
-  - [ ] A per-source acceptance criterion, set with the owner before the runs.
+  - [x] A per-source acceptance criterion, set with the owner before the runs.
+    *Set 2026-09-24 by OD3's process-weighted provenance row, per tag against
+    an eligible comparator ([the register](ROADMAP.md#the-decision-register)).*
   - [ ] Precipitation-weighted per-tag errors, besides the column L1.
   - [ ] The comparison repeated after WP5b-C, or against a tightly converged
     reference in which neither path's sedimentation lags.
@@ -818,7 +830,8 @@ owner's points in the note's section 8.
 
 ## The sphere
 
-  - [ ] The sphere's numbers, set by the owner before V-W11 (plan 6.1 fixes the form).
+  - [x] The sphere's numbers, set by the owner before V-W11 (plan 6.1 fixes the form).
+    *Answered 2026-09-24: OD6 ([the register](ROADMAP.md#the-decision-register)).*
   - [ ] **V-W11**:
       + ~~ten days of `g2_v2_sphere_n2` with water, rain and snow tags under
         the chosen default~~ *superseded 2026-09-24 (OD1, OD6):* 90 days of
