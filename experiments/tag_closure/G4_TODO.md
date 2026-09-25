@@ -234,7 +234,8 @@ are reported. Another agent builds it on #109.
     the explicit hour without G4.16's blocks (fail); the prototype and the
     sphere pass. The default's repair, never scored, is 7.3% of Θx a day on
     D4. E80, E81 and E39b cannot be restated without a rerun. Proposed
-    FINDINGS entry: E85, in the review's section 6.
+    FINDINGS entry: E86 (proposed as E85 in the review's section 6;
+    E85 went to the ledger-ratio test).
 
 ### G4.4 The residual report
 

@@ -93,7 +93,7 @@ changes, which [RUNS.md](RUNS.md) records.
 | E45, E47, E51, E54, E55, E57, E58                | 6. Parity, Float32, MPI and restarts                |
 | E7–E9, E20–E24, E26, E28, E30, E38, E49, E63     | 7. The process records and the per-process checks   |
 | E50, E60, E69, E70, E74, E75, E81                | 8. The sphere and long runs                         |
-| E68, E72, E73, E76, E83, E84                     | 9. Mixing: V3 and the updraft gap                   |
+| E68, E72, E73, E76, E83, E84, E86                | 9. Mixing: V3 and the updraft gap                   |
 | T1–T10, E44, E44b–E44e, E52, E56, E77, E78       | 10. Cost                                            |
 | M1–M8                                            | 11. Method                                          |
 | old claims, errata, conflicts                    | 12. Superseded and falsified claims                 |
@@ -2893,6 +2893,38 @@ unchanged.
 `../ClimaAtmosResiDyn-g411x-run` (the record with #115 and #114) and
 `-g411xbefore-run` (with #115). `G411_PREFIX=g411x
 analysis/increment/g411_eligibility.py`; `output/g411x/`.*
+
+**E86. On OD4's scale the energy records' closure verdicts hold for the
+prototype and the sphere, and fail for the `enthalpy` audit, for D1 under
+`tracer`, and for the explicit hour without G4.16's blocks. The default
+exchange's repair, never scored before, is 7.3% of the exact throughput a day
+on D4, and its per-tag `led_fix` fraction fails for `sub` and `new_strat`.**
+G4.3's restatement of recorded runs, no new runs except E84's `g411x_d4_*`.
+The gross closure residual over the window's throughput, on the records'
+estimate Θi (E84: an estimate, not a bound), against 2e-3:
+
+| record | on OD4's scale | verdict |
+|:------ |:-------------- |:------- |
+| D4 prototype, 24 h (E62, E64, E73) | 1.2e-5 (E79's same sign 4.7e-5) | pass |
+| the sphere (E74) | 7.9e-4 at 10 days, 1.6e-3 at day 1 | pass, by 1.24 times at day 1 |
+| the `enthalpy` audit on D4 (E62's base, E65's base, E66's reference) | 2.7e-2 to 3.4e-2 | fail |
+| D1 under `tracer` (E42) | 24.9 times Θi in its hour | fail |
+| the explicit hour without the blocks (E82's control) | 2.2e-2 of D4's first-hour Θx; 5.1e-2 of the surface flux alone | fail |
+
+  - **The repair.** On `g411x_d4_default` the repair moves 7.3% of Θx a day.
+    It was 6.9% of Θi at `dcf7d086` in E76's ladder, 1.8% at E73's
+    `e010f780`, and 0.83 J/m² before the exchange (E68). So it grew between
+    those commits. The runs change more than one thing, so this bounds when,
+    not why. The sphere's repair is 2.6% of Θi a day.
+  - **Refinement.** The repair a day at 60 s over 120 s is 0.91 (OD3's
+    refinement row: at most 0.75), on `repair_moved`, which is net over
+    time. The row's own per-step ratio needs the ladder rerun with the
+    per-tag ledgers.
+  - E80, E81 and E39b cannot be restated without a rerun.
+
+*`analysis/increment/od4_restate.py`; `output/od4_restatement/`;
+`review/od4_restatement.md` (the full restatement). Runs as each record says,
+and E84's `g411x_d4_*`.*
 
 ## 10. Cost
 

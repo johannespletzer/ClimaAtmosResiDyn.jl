@@ -163,7 +163,8 @@ file, was decided by the owner on 2026-09-25 (the register, OD3 table).
 
 ## 6. Proposed FINDINGS entry (for the parent)
 
-E84 is taken (E83's rerun). The next free number is proposed.
+E84 is taken (E83's rerun). The next free number is proposed. *Entered
+as E86 on 2026-09-25: E85 went to the ledger-ratio test.*
 
 **E85. On OD4's scale the energy records' closure verdicts hold for the
 prototype and the sphere, and fail for the `enthalpy` audit, for D1 under
