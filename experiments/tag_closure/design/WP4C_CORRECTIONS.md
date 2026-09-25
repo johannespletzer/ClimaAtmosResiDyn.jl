@@ -160,11 +160,18 @@ untagged run). Scored by `wp4c_gate_score.py` (`--startup 6600`) and
 
  1. **The follower's work falls.** `vdiff`'s part 2a, the gross change of
     `q_tag_inc_moved` on minus `vdiff` off, falls from W40's 2.92% of the
-    water a day to at most 0.98%. That is a fall of at least 1.93 points, the
-    closed-form leak's gross over the same window (W40's `vdiff` source).
-    The correction removes that leak from the tags' tendency exactly, so the
-    fall should be at least that. *Expected, not a criterion:* below 0.5%,
-    OD3's intervention threshold, so the gate would no longer retain `vdiff`.
+    water a day by more than OD3's intervention threshold, 0.5%: to at most
+    2.42%. That is the gate's part 2 turned round: the correction cuts the
+    follower's share of `vdiff`'s transfer by more than the threshold.
+    *Expected, not a criterion:* about 1%. If the follower's leak-driven
+    work per step is the closed-form leak, 1.93% a day (W40's `vdiff`
+    source), then the rest is at least 2.92 − 1.93 = 0.99% by the triangle
+    inequality, and equal to it where the two do not cancel. A value below
+    0.99% would mean the leak drove more of the follower's work than its
+    closed form, as W40's growth of 2.2 times the source suggests it may.
+    *Amended before any run (2026-09-25):* the first draft asked for at most
+    0.98%, which the triangle inequality puts out of reach unless the leak
+    drove more than its closed form.
  2. **Closure unchanged.** Part 1 stays below 2e-4 of the water a day for
     both operators, as in W40. The reference's `q_tag_res` gross at 24 h
     stays within the 0.2% budget.
