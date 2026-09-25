@@ -141,8 +141,14 @@ they are listed below the table. No agent fills one in.
 **The owner's other open choices** (no OD number), each with its entry in
 [DECISIONS.md](DECISIONS.md), "Waiting for the owner":
 
-  - known issue 7's option among B, C and D. The probe is read
-    (2026-09-25, `output/issue7_probe/`);
+  - ~~known issue 7's option among B, C and D~~ **decided 2026-09-25: option
+    C** (below); its validation is pre-registered
+    (`design/NEGATIVE_PARENT_WATER.md`, section 8);
+  - **R2, the Newton row, on D4-W** (W25 scored it failing at two
+    iterations): the owner asked on 2026-09-25 to measure three and four
+    iterations first (job `13944802`), then choose between raising OD1's
+    Newton count and revising the row. The threshold stays as approved.
+    **Waiting on the job;**
   - WP4a's two points: known issue 4's Jacobian, and the copies' part of it;
   - WP6's three points, where step 3 took the conservative defaults
     (`design/GROSS_ACCUMULATORS.md` 10.6);
@@ -343,6 +349,20 @@ package.
     per-tag intervention row's 2% is used here too.
   - **The mirrors' surface relaxation: by composition**, as built (#114).
 
+### The owner's answers, later on 2026-09-25
+
+  - **Known issue 7: option C.** The partition tags partition the parent's
+    non-negative water, `max(ρq_tot, 0)`. The follower takes that field's
+    increment; the repair, the rescale and the copies' repair aim at it. The
+    negative part becomes a named field, `q_tag_negative`. Built on
+    `claude/water-tags-negative-parent`; its validation is pre-registered in
+    `design/NEGATIVE_PARENT_WATER.md`, section 8.
+  - **R2, the Newton rule: measure three and four iterations first.** The
+    threshold stays as approved. Job `13944802` runs W25's fixed-parent probe
+    on `w25i_d4w_default_z60_c` with `TRIALS=1,2,3,4`, output in
+    `$SCRATCH/tag_closure/output/w25i_probes/fixed_parent_newton34/`. Raising
+    OD1's Newton count or revising the row follows its result.
+
 ### The execution order
 
 Each step names the decisions it needs. An agent stops at a step whose
@@ -359,7 +379,7 @@ decision is open and asks the owner.
 | 6    | The WP4c operator-decomposition gate, with the three-part retention rule; defer, don't delete                                                           | OD3            | Pre-registered 2026-09-25: `design/WP4C_GATE.md`, probe and score scripts, two configs. The trial configurations build on the login node. Its OD3 reading confirmed by the owner 2026-09-25. Jobs submitted (13944456, 13944457) |
 | 7    | WP4b, its implementation only: the rain and snow tag fields and their diagnostics, with closure as an invariant. No held-out evaluation yet                | the owner's rain and snow decision (WP4b-D), decided 2026-09-25 | Unblocked 2026-09-25: three parts, gross flows. A separate agent builds stage 1 |
 | 8    | WP9's cost qualification at the intended tag count, with WP4b's fields on, the comparator included; M4's ceilings fixed                              | OD3            | Unblocked 2026-09-25 (WP4b-D decided). At 8 tags (OD8); the aggregation test is no longer needed for qualification |
-| 8a   | The fix of known issue 7: tagged water ends a run where the parent's water goes negative (site 23). Added 2026-09-24                                   | the owner's choice of option | Option A chosen and built (#112). The probe is read (2026-09-25, `output/issue7_probe/`): it points to C. The choice among B, C and D is the owner's (the register's open choices) |
+| 8a   | The fix of known issue 7: tagged water ends a run where the parent's water goes negative (site 23). Added 2026-09-24                                   | the owner's choice of option | Option A built (#112). The probe read (2026-09-25): it points to C. **Option C chosen 2026-09-25** and built (`claude/water-tags-negative-parent`); its validation pre-registered (the design note, section 8), jobs not submitted |
 | 8b   | WP4b's validation, then default selection (M5): process-weighted same-state evidence and a held-out case that rains in established flow, within step 8's cost ceilings | step 8, OD2, OD3 | Unblocked 2026-09-25 (WP4b-D decided); follows step 8. The part of the former step 7 that produces M5 evidence |
 | 9    | The water sphere under the revised long-run criterion                                                                                                   | OD6            | Waits. `g2_v2_sphere_n2` at 60 levels, 90 days, judged by the level it reaches (OD1, OD6); after step 8a. First a 1 to 2 day run at 60 levels, untagged and with 8 + 8 tags, measures its cost (the owner, 2026-09-24) |
 | 10   | G4: G4.16's cross blocks (the refusal stays until they pass), G4.1 and G4.11's mirrors at the OD8 counts, G4.3 to G4.6 with offset-invariant scales, the G4.15 decision, G4.7 and G4.8 with startup windows and fixed-parent comparisons, the energy default | OD4, OD7       | OD4 decided (2026-09-24 and 2026-09-25; its accumulator being built); OD7 open. G4.16 (#113) and G4.1 and G4.11's mirrors (#114) built, their validations pre-registered and submitted (13944447 to 462) |

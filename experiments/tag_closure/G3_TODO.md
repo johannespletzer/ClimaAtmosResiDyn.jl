@@ -87,8 +87,14 @@ The twelve criteria of the plan, section 2, in short:
   - [~] **Known issue 7's fix** (the site 23 crash): the option is the
     owner's (`design/NEGATIVE_PARENT_WATER.md`; WP3 below). *2026-09-24:* A
     now, then the probe, then a choice among B, C and D. *2026-09-25:* A is
-    #112; the probe is read and points to C (`output/issue7_probe/`). Open:
-    the choice among B, C and D (DECISIONS.md, "Waiting for the owner").
+    #112; the probe is read and points to C (`output/issue7_probe/`).
+    *Decided 2026-09-25: option C* (the register). Built on
+    `claude/water-tags-negative-parent`; its validation is pre-registered
+    (`design/NEGATIVE_PARENT_WATER.md`, section 8). Open: that validation.
+  - [ ] **R2, the Newton row, on D4-W** (W25's scoring: 4.1e-3 to 1.7e-2 at two
+    iterations, against 1e-3). *The owner, 2026-09-25:* measure three and four
+    iterations first (job `13944802`); then raise OD1's Newton count or revise
+    the row. The threshold stays as approved (the register).
   - [x] **WP5's default transport under EDMF**, by the rule fixed in plan 4.3.
     The owner's review of #102 (2026-09-24) asked for it to be applied. It is
     applied in #102 where the configuration supports the follower, and

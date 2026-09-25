@@ -383,8 +383,10 @@ OD7 is the only open numbered decision. Open now, each with its entry in
 [DECISIONS.md](DECISIONS.md), "Waiting for the owner":
 
   - **OD7**, G4.15's rule for energy, deferred until site 23 can be scored.
-  - **Known issue 7's option among B, C and D.** The probe points to C
-    (`output/issue7_probe/`).
+  - ~~**Known issue 7's option among B, C and D.**~~ Decided 2026-09-25:
+    option C (the register). Built; its validation is pre-registered.
+  - **R2, the Newton row, on D4-W:** three and four iterations are measured
+    first (job `13944802`), then raising OD1's count or revising the row.
   - **WP4a's two points:** known issue 4's Jacobian, and the copies' part.
   - **WP6's three points,** where step 3 took the conservative defaults.
   - **The explicit-1M water default, at M5** (W33 stays a failure).

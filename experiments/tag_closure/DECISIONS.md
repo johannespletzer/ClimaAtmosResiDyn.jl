@@ -29,11 +29,13 @@ record; the answered and superseded entries are in the next section.
   - **OD7**, G4.15's rule for energy: same sign or |m|. Deferred by the owner
     on 2026-09-24, until the long runs can be scored at site 23.
     [Register](ROADMAP.md#the-decision-register)
-  - **Known issue 7: the choice among B, C and D.** Option A was chosen on
-    2026-09-24 and built (#112). The probe is read: it points to C, and D's
-    first condition holds too
-    ([output/issue7_probe/](output/issue7_probe/README.md)).
-    [design/NEGATIVE_PARENT_WATER.md](design/NEGATIVE_PARENT_WATER.md)
+  - ~~**Known issue 7: the choice among B, C and D.**~~ *Answered 2026-09-25:
+    option C* (below).
+  - **R2, the Newton row, on D4-W.** W25 scored the parent's two-iteration
+    error above the approved 1e-3. The owner asked on 2026-09-25 to measure
+    three and four iterations first (job `13944802`); then the choice between
+    raising OD1's Newton count and revising the row. The threshold stays as
+    approved. [Register](ROADMAP.md#the-decision-register)
   - **WP4a's two points:**
       + known issue 4's Jacobian, either the pair of entries or the diagonal
         alone as a test;
@@ -146,6 +148,18 @@ The list as it stood before this classification, kept as written:
 >     [FINDINGS W25](FINDINGS.md)
 
 ## 2026-09-25
+
+  - **The owner's answers, later on 2026-09-25.** **In force.**
+    [ROADMAP.md, "The owner's answers, later on 2026-09-25"](ROADMAP.md#the-owners-answers-later-on-2026-09-25)
+      + **Known issue 7: option C.** The partition tags partition
+        `max(ρq_tot, 0)`; the follower takes its increment; the repair, the
+        rescale and the copies' repair aim at it; the negative part is the
+        named field `q_tag_negative`. Validation pre-registered in
+        [design/NEGATIVE_PARENT_WATER.md](design/NEGATIVE_PARENT_WATER.md),
+        section 8.
+      + **R2: measure three and four Newton iterations first** (job
+        `13944802`). The threshold stays. The choice between raising OD1's
+        count and revising the row waits on that result.
 
   - **The owner's answers of 2026-09-25** (through the parent session).
     **In force.**
