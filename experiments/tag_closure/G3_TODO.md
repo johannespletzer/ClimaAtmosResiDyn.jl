@@ -91,10 +91,14 @@ The twelve criteria of the plan, section 2, in short:
     *Decided 2026-09-25: option C* (the register). Built on
     `claude/water-tags-negative-parent`; its validation is pre-registered
     (`design/NEGATIVE_PARENT_WATER.md`, section 8). Open: that validation.
-  - [ ] **R2, the Newton row, on D4-W** (W25's scoring: 4.1e-3 to 1.7e-2 at two
+  - [x] **R2, the Newton row, on D4-W** (W25's scoring: 4.1e-3 to 1.7e-2 at two
     iterations, against 1e-3). *The owner, 2026-09-25:* measure three and four
     iterations first (job `13944802`); then raise OD1's Newton count or revise
-    the row. The threshold stays as approved (the register).
+    the row. The threshold stays as approved (the register). *Decided
+    2026-09-25, after W41 (1.9e-3 at four iterations):* the row is revised.
+    The parent's `E` is always reported and gates only verdicts that compare
+    runs with different parents; same-parent verdicts go ahead. Nothing is
+    rescored (the register).
   - [x] **WP5's default transport under EDMF**, by the rule fixed in plan 4.3.
     The owner's review of #102 (2026-09-24) asked for it to be applied. It is
     applied in #102 where the configuration supports the follower, and

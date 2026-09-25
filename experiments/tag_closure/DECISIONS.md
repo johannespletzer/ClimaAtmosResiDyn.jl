@@ -31,11 +31,8 @@ record; the answered and superseded entries are in the next section.
     [Register](ROADMAP.md#the-decision-register)
   - ~~**Known issue 7: the choice among B, C and D.**~~ *Answered 2026-09-25:
     option C* (below).
-  - **R2, the Newton row, on D4-W.** W25 scored the parent's two-iteration
-    error above the approved 1e-3. The owner asked on 2026-09-25 to measure
-    three and four iterations first (job `13944802`); then the choice between
-    raising OD1's Newton count and revising the row. The threshold stays as
-    approved. [Register](ROADMAP.md#the-decision-register)
+  - ~~**R2, the Newton row, on D4-W.**~~ *Answered 2026-09-25: the row is
+    revised* (below).
   - **WP4a's two points:**
       + known issue 4's Jacobian, either the pair of entries or the diagonal
         alone as a test;
@@ -159,7 +156,16 @@ The list as it stood before this classification, kept as written:
         section 8.
       + **R2: measure three and four Newton iterations first** (job
         `13944802`). The threshold stays. The choice between raising OD1's
-        count and revising the row waits on that result.
+        count and revising the row waits on that result. *Done:* see the
+        next entry.
+      + **R2: the Newton row is revised** (after W38 and W41). The parent's
+        `E` levels off near 2e-3 (1.2e-2, 4.1e-3, 2.3e-3, 1.9e-3 with 1 to
+        4 iterations). `E` is always reported. The row gates only verdicts
+        that compare runs with different parents (full-run comparisons,
+        provenance against copies from a separate run). Same-parent verdicts
+        go ahead. Nothing is rescored; W38's R2 verdicts are read under the
+        revised scope, where every W25 verdict is same-parent except R7.
+        **In force.** [ROADMAP.md, the OD3 table](ROADMAP.md#the-od3-thresholds-approved-2026-09-24)
 
   - **The owner's answers of 2026-09-25** (through the parent session).
     **In force.**

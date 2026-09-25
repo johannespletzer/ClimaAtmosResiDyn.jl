@@ -144,11 +144,8 @@ they are listed below the table. No agent fills one in.
   - ~~known issue 7's option among B, C and D~~ **decided 2026-09-25: option
     C** (below); its validation is pre-registered
     (`design/NEGATIVE_PARENT_WATER.md`, section 8);
-  - **R2, the Newton row, on D4-W** (W25 scored it failing at two
-    iterations): the owner asked on 2026-09-25 to measure three and four
-    iterations first (job `13944802`), then choose between raising OD1's
-    Newton count and revising the row. The threshold stays as approved.
-    **Waiting on the job;**
+  - ~~**R2, the Newton row, on D4-W**~~ **decided 2026-09-25: the row is
+    revised** (below). Three and four iterations level off near 2e-3 (W41);
   - WP4a's two points: known issue 4's Jacobian, and the copies' part of it;
   - WP6's three points, where step 3 took the conservative defaults
     (`design/GROSS_ACCUMULATORS.md` 10.6);
@@ -238,7 +235,7 @@ holds; none was measured for the production sphere.
 | Parent validity: parity | bit for bit (set, the parity rule) | the fork's rule | every tagged run so far, up to the site 23 crashes |
 | Parent validity: temperature | no point at the 150 K floor, and the top level's mean moves less than 5 K in the first day (approved 2026-09-24) | E69's one-Newton collapse is the failure this catches | E69: 156 K and 18% at the floor at 6 h with one iteration; E74: 218 to 220 K over ten days with two |
 | Parent validity: negative water | the parent's negative water, `Σ ρ min(q_tot, 0) dV`, stays below 1e-4 of `∫ρq_tot`; above it the run's water results are not scored (approved 2026-09-24) | a negative parent voids the partition's meaning (known issue 7) | site 23: `q_tot` below zero from day 10, to −3.1e-3 kg/kg (day 30); the negative part at worst 11% of the column's water (W36) |
-| Parent validity: Newton | the parent's one-step error at the production Newton count, W35's `E`, at most 1e-3 (approved 2026-09-24) | a tenth of a percent of a step's increment keeps the parent's solve out of the tags' error | W35, TRMM 1M, 120 s: 4.9e-3 with one iteration, 6.3e-4 with two |
+| Parent validity: Newton | the parent's one-step error at the production Newton count, W35's `E`, at most 1e-3 (approved 2026-09-24). *Revised 2026-09-25, after W38 and W41:* `E` is always reported, and the row gates only verdicts that compare runs with different parents (full-run comparisons, provenance against copies from a separate run). Same-parent verdicts go ahead | a tenth of a percent of a step's increment keeps the parent's solve out of the tags' error; in a same-parent verdict the parent's error cancels | W35, TRMM 1M, 120 s: 4.9e-3 with one iteration, 6.3e-4 with two. W41, D4-W at 60 levels: 1.2e-2, 4.1e-3, 2.3e-3, 1.9e-3 with 1 to 4 |
 | Closure, water | gross at 0.2% of `∫ρq_tot` at 24 h, no more in the second 12 h (set, G3_PLAN 6.1) | a tenth of the per-tag L1 budget | D4-W under the follower 1.35e-4 (W28), 7.3e-6 with the cross blocks (W31) |
 | Closure, energy | gross at most 0.2% of the window's gross source throughput (OD4 units) (approved 2026-09-24) | water's budget in the new scale | not yet in OD4 units; E79: 2.3e-6 of the partitioned energy on D4; E74: 2.0e-4 of the scale at ten days |
 | Provenance, per tag at 24 h | L1 ≤ 2%, L∞ ≤ 5% (set) | G1's criterion 4b | D4-W: 0.25/0.41/0.42% (W28), against copies that are not eligible (W21) |
@@ -362,6 +359,15 @@ package.
     on `w25i_d4w_default_z60_c` with `TRIALS=1,2,3,4`, output in
     `$SCRATCH/tag_closure/output/w25i_probes/fixed_parent_newton34/`. Raising
     OD1's Newton count or revising the row follows its result.
+  - **R2, the Newton row: revised** (after W38 and W41). The job measured the
+    parent's `E` after startup at 1.2e-2, 4.1e-3, 2.3e-3 and 1.9e-3 with 1,
+    2, 3 and 4 iterations, so it levels off near 2e-3. The parent's `E` is
+    always reported. The row gates only verdicts that compare runs with
+    different parents: full-run comparisons, and provenance against copies
+    from a separate run. Same-parent verdicts go ahead. OD1's Newton count
+    stays. Nothing is rescored. W38's R2 verdicts stand as scored and are
+    read under the revised scope: every W25 verdict is same-parent except
+    R7, the provenance against copies.
 
 ### The execution order
 
