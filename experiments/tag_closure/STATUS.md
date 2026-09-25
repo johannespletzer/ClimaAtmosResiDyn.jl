@@ -383,6 +383,10 @@ OD7 is the only open numbered decision. Open now, each with its entry in
 [DECISIONS.md](DECISIONS.md), "Waiting for the owner":
 
   - **OD7**, G4.15's rule for energy, deferred until site 23 can be scored.
+  - **Option C after its validation (W42).** V2 fails at site 23 (2.2%
+    against 0.2%) and `pbl`'s per-tag row (2.03%). By the design note's
+    section 8.3 the owner decides; site 23's long-run rerun, which OD7 waits
+    on, is not submitted until then.
   - ~~**Known issue 7's option among B, C and D.**~~ Decided 2026-09-25:
     option C (the register). Built; its validation is pre-registered.
   - **WP4a's two points:** known issue 4's Jacobian, and the copies' part.

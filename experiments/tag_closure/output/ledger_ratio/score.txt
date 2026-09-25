@@ -1,0 +1,23 @@
+Preconditions (a pair that misses one is inconclusive):
+  d4: model fields ta, rhoa, hus bit for bit: yes
+  d4: repair off, sfc or rad crosses: sfc no; rad no
+  d4: repair on, led_fix retains: sfc 1.42e+04; rad 611.5
+  d4: INCONCLUSIVE
+  sphere: model fields ta, rhoa, hus bit for bit: yes
+  sphere: repair off, sfc or rad crosses: sfc no; rad no
+  sphere: repair on, led_fix retains: sfc 2.854e+18; rad 6.821e+17
+  sphere: INCONCLUSIVE
+Pass rules, per ratio, over every tag ledger of both arms of both pairs, from 1 h on where applicable:
+  inventory_fraction: PASS over 768 rows
+    (a) pass
+    (b) pass
+    (c) pass
+  burden_fraction: PASS over 768 rows
+    (a) pass
+    (b) pass
+    (c) pass
+  parent_fraction: PASS over 768 rows
+    (a) pass
+    (b) pass
+    (c) pass
+RESULT: at least one pair is inconclusive; its verdicts above are reported, not scored

@@ -1,0 +1,28 @@
+run: ic_s26_before
+machine: terrabyte
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-before-run/experiments/tag_closure/configs/ic_s26_before.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-before-run/experiments/tag_closure/analysis/water/d4w_driver.jl
+commit: 078c122cfccd108587b6765ff1255980737d3b31
+commit_source: git-files
+commit_dirty: unknown
+branch: detached
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-before-run/.buildkite
+started: 2026-09-25T08:38:23+02:00
+finished: 2026-09-25T11:29:58+02:00
+exit_status: 0
+slurm_job_id: 13944933
+slurm_job_name: tag-closure-c
+partition: hpda2_compute
+nodelist: hpdar12c01s03
+cpus_per_task: 2
+ntasks: 1
+launch: direct
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/ic_s26_before/output_0000
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/ic_s26_before/output_0000 (left on scratch, not committed)
+manifest_path: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/ic_s26_before.20260925T063758Z.json

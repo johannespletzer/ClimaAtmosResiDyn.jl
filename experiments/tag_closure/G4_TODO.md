@@ -355,7 +355,9 @@ waits. The metrics are in the parent session's FINDINGS entries.
 `design/INCREMENT_RULE_LONG_RUNS.md`, section 8: four runs on
 `claude/long-run-c-samesign` and `claude/long-run-c-absm`, submitted only
 after option C passes its validation. Site 26 is not rerun if option C's V3
-holds bit for bit.
+holds bit for bit. *2026-09-25:* option C's V3 holds (site 26 not rerun), but
+its V2 fails at site 23 (W42). The rerun is not submitted; it waits on the
+owner's decision on option C.
 
 Added on 2026-09-24. The review of the water follower (#102) changed three
 things that the energy source tags' `enthalpy_increment` still does the old

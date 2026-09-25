@@ -1,0 +1,21 @@
+V1 site 23 reaches day 90: last closure row at 90.0 days: pass
+V2 site 23: largest gross 2.243e-02 of max(ρq_tot, 0): FAIL
+V2b site 23: largest relative gap 2.398e-16: pass
+V4 site 23: 10 model fields against the untagged twin: pass
+V5 site 23: negative part's per-step gross 1.347e-02 of the water a day (reported); repair's retained gross 9.445e-05 a day: pass
+    led_fix pbl: 2.033e-02 of its inventory: FAIL
+    led_fix free: 1.625e-02 of its inventory: pass
+    led_fix evap: 0.000e+00 of its inventory: pass
+    led_fix fcg: 0.000e+00 of its inventory: pass
+V2 site 26: largest gross 5.611e-12 of max(ρq_tot, 0): pass
+V2b site 26: largest relative gap 3.457e-16: pass
+V4 site 26: 10 model fields against the untagged twin: pass
+V5 site 26: negative part's per-step gross 0.000e+00 of the water a day (reported); repair's retained gross 2.302e-08 a day: pass
+    led_fix pbl: 7.711e-06 of its inventory: pass
+    led_fix free: 2.790e-06 of its inventory: pass
+    led_fix evap: 0.000e+00 of its inventory: pass
+    led_fix fcg: 0.000e+00 of its inventory: pass
+V3 site 26 q_tag_pbl: bit for bit at 91 outputs: pass
+V3 site 26 q_tag_free: bit for bit at 91 outputs: pass
+V3 site 26 q_tag_evap: bit for bit at 91 outputs: pass
+V3 site 26 q_tag_fcg: bit for bit at 91 outputs: pass

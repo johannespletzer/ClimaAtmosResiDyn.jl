@@ -85,8 +85,8 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                              | section                                             |
 |:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W41                                           | 1. Water tags                                       |
-| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48 | 2. Energy source tags: closure by transport         |
+| W1–W42                                           | 1. Water tags                                       |
+| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
 | E40, E53                                         | 4. EDMF and the updrafts                            |
 | E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82 | 5. The implicit channel and the increment prototype |
@@ -1470,6 +1470,68 @@ production grid; `E` for `ρq_tot` summed over the established window (after
 `../ClimaAtmosResiDyn-w25i-run` at `705c8ed0`, `analysis/water/w25_probes.jl`
 with `TRIALS=1,2,3,4`; `output/w25i/newton34/`.*
 
+**W42. Known issue 7, option C's validation: site 23 now runs to day 90,
+every model field is bit for bit its untagged twin's at both sites, and site
+26's tags are unchanged bit for bit. But site 23's partition overshoots its
+target by up to 2.2% of the water (V2, budget 0.2%), and `pbl`'s corrections
+reach 2.03% of its inventory at day 90 (V5, 2%). V2 fails, so by the
+pre-registration the owner decides.** The validation of
+`design/NEGATIVE_PARENT_WATER.md` section 8: W36's column with the
+radiation's seed reset, 90 days, `pbl`, `free`, `evap` and `fcg` under the
+follower, each tag's own ledgers every 6 hours.
+
+| rule | site 23 | site 26 | pass |
+|:---- |:------- |:------- |:---- |
+| V1, reaches day 90 | yes | — | pass |
+| V2, largest gross against `∫max(ρq_tot, 0)`, at most 0.2% | 2.2% (day 74.5) | 5.6e-12 | **fail** at site 23 |
+| V2b, the named remainder closes, to 1e-12 | 2.4e-16 | 3.5e-16 | pass |
+| V3, site 26's tags against the control, bit for bit | — | all four, 91 outputs | pass |
+| V4, 10 model fields against the untagged twin, bit for bit | yes | yes | pass |
+| V5, the negative part's entry, per-step gross a day (reported) | 1.3% of the water | 0 | — |
+| V5, the repair's retained gross, at most 0.5% a day | 9.4e-5 | 2.3e-8 | pass |
+| V5, each tag's `led_fix`, at most 2% of its inventory | `pbl` 2.03%, `free` 1.6% | at most 7.7e-6 | **fail** at site 23 (`pbl`, from day 89) |
+
+  - **Against the run without C** (`ic_s23_before`, the same trees without
+    C): the gross exceeds 0.2% from day 10 and reaches 129% at day 90. With
+    C it first exceeds 0.2% at day 29.25, at 179 of 361 checks, and it is
+    0.42% at day 90.
+  - **The miss is one-signed: the region tags hold more than the target.**
+    The audit's `overclaimed` is the whole gross, and `untagged` stays below
+    2.5e-4. The remainder closes (V2b) because `q_tag_res` goes negative
+    where the tags overshoot, to −3.9e-4 kg/kg.
+  - **Where.** On the 46 daily outputs over 0.2%, a median 15% of the excess
+    (0 to 100%) lies in cells where `q_tot ≤ 0`, whose target is zero. The
+    rest lies where the parent is positive. At day 90 all of it lies in the
+    12 negative cells, between 369 and 1544 m. The unit tests of section 8.4
+    empty a negative cell's partition within a solve. In the run the negative
+    cells hold region tags.
+  - **Which ledger carries it (section 8.3).** Over the ten largest 6-hourly
+    rises of the excess, each ledger's change in the cells holding an excess:
+      + the repair and each tag's `led_fix` change by at most 5e-4, below
+        every rise. The repair does not carry the miss;
+      + in six rises a follower ledger changes by 1.9 to 35 times the rise.
+        The negative part's entry is the largest in four (days 71.25 to 72.0,
+        and 73.5). The moved part is the largest in two (days 30.75 and 54.5;
+        at 54.5 it is level with the negative part's entry);
+      + in four rises (days 30.5 and 52.5 to 53.25) no ledger reaches half
+        the rise (at most 0.48, down to 0.064). There at least part of the
+        excess grows with no ledger recording it.
+
+    This bounds which ledgers move with the excess, by size in the same
+    cells and interval. It does not show that either follower entry causes
+    it.
+  - **Consequence for OD7.** Site 23's rerun of the long runs
+    (`design/INCREMENT_RULE_LONG_RUNS.md` section 8) was to be submitted
+    once option C passes. It is not submitted. OD7 stays deferred behind the
+    owner's decision on option C.
+
+*`hpda2_compute`, 2026-09-25, jobs `13944928` (`ic_s23_c`), `13944929`
+(`ic_s23_untagged`), `13944930` (`ic_s26_c`), `13944931` (`ic_s26_untagged`)
+from `../ClimaAtmosResiDyn-ic-c-run` at `e6bab0fc`, and `13944932`,
+`13944933` (`ic_s{23,26}_before`) from `../ClimaAtmosResiDyn-ic-before-run` at
+`078c122c`; every manifest clean. `analysis/water/ic_validate.py`,
+`ic_overclaim_where.py`; `output/ic_validate/`.*
+
 ## 2. Energy source tags: closure by transport
 
 Under the default `tracer` transport the tags move as passive tracers while the
@@ -1630,6 +1692,43 @@ owner kept 2° on 2026-09-18 (decision 10, [DECISIONS.md](DECISIONS.md)). *Job
 `13441633` at `f399b9f8`; `output/c6_sphere_wide_mask/`;
 `analysis/wide_mask_trades.jl`, `analysis/same_atmosphere.jl`,
 `analysis/c5_process_closure.jl`.*
+
+**E85. The test of which per-tag ledger ratio stays readable through a zero
+crossing is inconclusive. With the repair off, neither `sfc` nor `rad` came
+near a zero crossing in either pair (`∫|tag| / ∫tag` at most 1.018), so its
+precondition failed. The owner's two-denominator rule stands as decided; this
+test did not probe it.** `design/LEDGER_RATIO_ZERO_CROSSING.md`, pre-registered
+before the runs: two pairs, D4's EDMF column and C6's small sphere, a day
+each under `enthalpy_increment`, differing only in `energy_source_tag_repair`.
+
+| precondition | D4 | sphere |
+|:------------ |:-- |:------ |
+| `ta`, `rhoa`, `hus` bit for bit within the pair | yes | yes |
+| repair off: `sfc` or `rad` reaches `∫tag ≤ 0` or `∫|tag|/∫tag ≥ 10` | no (`sfc` 1.017, `rad` 1.000) | no (`sfc` 1.005, `rad` 1.001) |
+| repair on: `led_fix_sfc` or `led_fix_rad` retains more than 0 | yes | yes |
+| the pair | inconclusive | inconclusive |
+
+  - The audit writes the ratios, not the tag's integrals, so `∫|tag|/∫tag`
+    is read as `inventory_fraction / burden_fraction` from the ledgers that
+    retained something. With the repair off that is `led_inc`, at every
+    hourly row from 1 h.
+  - **Why the case missed.** The configs chose C6's sphere from E2 and E14,
+    where with the repair off `sfc` reached −190 J/kg and `rad` −13 J/kg in
+    a day. Those are pointwise minima. The precondition is on the domain
+    integral, which a few negative cells do not bring near zero. So the
+    design chose its case by a different quantity than it tested.
+  - **The rules, reported, not scored.** All three ratios pass (a) to (c)
+    over 768 applicable rows. The prediction that the parent ratio fails (c)
+    with the repair on did not hold here: where the burden fraction reached
+    2% (D4, `sfc`, the first hour, 3.4%), the parent ratio was 6.5e-4, above
+    its 2e-4. No row tests the ratios at a crossing.
+  - A test of the question needs a case whose tag integral does cross zero.
+    None is registered.
+
+*`hpda2_compute`, 2026-09-25, jobs `13948351` to `13948354`, from
+`../ClimaAtmosResiDyn-ledgerratio-run` at `f4c21ad0` (the record with #109 at
+`6695a5c7`); every manifest clean. `analysis/increment/ledger_ratio_score.py`;
+`output/ledger_ratio/`.*
 
 ### 2.4 Sedimentation and ice
 

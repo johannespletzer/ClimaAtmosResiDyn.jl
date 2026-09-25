@@ -1,0 +1,12 @@
+kind,name,rule,verdict,rows,first_failure
+precondition,d4,conclusive,0,,
+precondition,sphere,conclusive,0,,
+ratio,inventory_fraction,a,1,768,
+ratio,inventory_fraction,b,1,768,
+ratio,inventory_fraction,c,1,768,
+ratio,burden_fraction,a,1,768,
+ratio,burden_fraction,b,1,768,
+ratio,burden_fraction,c,1,768,
+ratio,parent_fraction,a,1,768,
+ratio,parent_fraction,b,1,768,
+ratio,parent_fraction,c,1,768,
