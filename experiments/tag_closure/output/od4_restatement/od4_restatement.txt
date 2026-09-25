@@ -1,0 +1,81 @@
+# OD4 restatement, G4.3. Scales in J/m² for columns and J for spheres.
+# Output root: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output
+# Θi: the interim, the process records' Σ∫ρ|Δe_prc| over output intervals.
+# Θx: the exact accumulator, the audit's source_throughput (#115).
+
+## 1. The interim against the exact scale, D4 (g411x_d4_default)
+   0 to    1 h: Θi 8.9726e+05, Θx 8.8430e+05, Θx/Θi 0.9856  (records radiation, surface_flux, subsidence, microphysics; sampled every 3600 s)
+   0 to    6 h: Θi 5.4773e+06, Θx 5.1520e+06, Θx/Θi 0.9406  (records radiation, surface_flux, subsidence, microphysics; sampled every 3600 s)
+   0 to   12 h: Θi 1.0883e+07, Θx 1.0326e+07, Θx/Θi 0.9488  (records radiation, surface_flux, subsidence, microphysics; sampled every 3600 s)
+   0 to   24 h: Θi 2.2129e+07, Θx 2.0917e+07, Θx/Θi 0.9452  (records radiation, surface_flux, subsidence, microphysics; sampled every 3600 s)
+   1 to 24 h (OD2's D4 window): Θi 2.1231e+07, Θx 2.0032e+07, Θx/Θi 0.9435
+
+## 2. The records' numbers on OD4's scale, window 0 to t unless stated
+record | quantity | run | t | amount | recorded | Θi | Θx | amount/Θi | amount/Θx | E/Θi
+E26 | form B remainder, J/m² | c6_column_repair | 24 h | 3.32e-07 | 3.3e-7 J/m² of 1.43 MJ/m² | 2.59e+07 | — | 1.28e-14 | — | 4.42
+E39 | gross at 1 h, one Newton iteration | c9_column_enthalpy | 1 h | 2.7e+03 | 2,695 J/m² | 8.89e+05 | — | 0.00303 | — | 127
+E39 | gross at 1 h, converged (reviewer's stepping) | c9_column_enthalpy | 1 h | 20.5 | 20.5 J/m² | 8.89e+05 | — | 2.31e-05 | — | 127
+E42 | gross at 1 h | d1_column_1m_ice | 1 h | 2.37e+06 | 3.7e-3 of the partition | 9.51e+04 | — | 24.9 | — | 6.7e+03
+E42 | signed at 1 h | d1_column_1m_ice | 1 h | 0.286 | 4.5e-10 of the partition | 9.51e+04 | — | 3.01e-06 | — | 6.7e+03
+E42b | gross at 1 h, no vertical diffusion | d1_column_1m_ice_no_vdiff | 1 h | 2.35e+06 | 2.350e6 J/m² | 8.93e+04 | — | 26.3 | — | 7.13e+03
+E62 | gross at 24 h | inc_d4_enthalpy_increment | 24 h | 267 | 267 J/m², 2.4e-6 of the partition | 2.21e+07 | — | 1.21e-05 | — | 5.16
+E62 | base (enthalpy) gross at 24 h | c1c_base_d4_enthalpy | 24 h | 6.32e+05 | 6.32e5 J/m², 5.5e-3 | 2.21e+07 | — | 0.0286 | — | 5.16
+E64 | gross at 24 h | g1_inc_d4 | 24 h | 267 | 266.942 J/m² | 2.21e+07 | — | 1.21e-05 | — | 5.16
+E64 | left in place, cells' absolute | g1_inc_d4 | 24 h | 313 | 313 J/m² | 2.21e+07 | — | 1.41e-05 | — | 5.16
+E64 | moved, cells' absolute | g1_inc_d4 | 24 h | 3.3e+07 | 3.3e7 J/m² | 2.21e+07 | — | 1.49 | — | 5.16
+E64 | gross at 24 h, ten iterations | g1_inc_newton_d4 | 24 h | 0.08 | 0.080 J/m² | 2.2e+07 | — | 3.63e-09 | — | 5.18
+E65 | gross at 24 h, Float32 prototype | g1_inc_d4_float32 | 24 h | 607 | 607 J/m² | 2.23e+07 | — | 2.72e-05 | — | 5.11
+E65 | gross at 24 h, Float32 base (enthalpy) | g1_base_d4_float32 | 24 h | 7.53e+05 | 7.53e5 J/m² | 2.23e+07 | — | 0.0337 | — | 5.11
+E66 | reference's gross at 24 h | g1_ref_newton10_d4 | 24 h | 5.99e+05 | 5.99e5 J/m² | 2.19e+07 | — | 0.0273 | — | 5.21
+E71 | gross at 24 h, offset 2c | g1_inc_d4_2c | 24 h | 509 | 509 J/m² | 2.21e+07 | — | 2.3e-05 | — | 13.6
+E73 | default gross at 24 h | v3_upd_default | 24 h | 267 | 267.07 J/m² | 2.21e+07 | — | 1.21e-05 | — | 5.16
+E73 | copies gross at 24 h | v3_upd_copies | 24 h | 365 | 365 J/m² | 2.21e+07 | — | 1.65e-05 | — | 5.16
+E74 | gross at 10 d | g2_v2_sphere_n2 | 240 h | 8.77e+19 | 2.01e-4 of the scale | 1.12e+23 | — | 0.000786 | — | 3.91
+E74 | gross at 1 d | g2_v2_sphere_n2 | 24 h | 1.19e+19 | 2.77e-5 of the scale | 7.4e+21 | — | 0.00161 | — | 58.2
+E75 | gross at 10 d, with the mixing | g2_v2_sphere_mix | 240 h | 8.74e+19 | 2.003e-4 of the scale | 1.12e+23 | — | 0.000784 | — | 3.91
+E79 | gross at 24 h, |m| rule | g415_inc_d4_before | 24 h | 267 | 2.3e-6 of the partition | 2.21e+07 | — | 1.21e-05 | — | 5.16
+E79 | gross at 24 h, same sign | g415_inc_d4_after | 24 h | 1.05e+03 | 9.2e-6 of the partition | 2.21e+07 | — | 4.74e-05 | — | 5.16
+E79 | moved, |m| rule | g415_inc_d4_before | 24 h | 3.3e+07 | 0.289 of the partition | 2.21e+07 | — | 1.49 | — | 5.16
+E82 | D4 gross at 24 h, blocks off | g416_d4_off | 24 h | 267 | 2.3e-6 | 2.21e+07 | — | 1.21e-05 | — | 5.16
+E82 | D4 gross at 24 h, blocks on | g416_d4_on | 24 h | 1.01e-06 | 8.9e-15 | 2.21e+07 | — | 4.58e-14 | — | 5.16
+E83 | copies with mirrors: repair at 24 h | g411_d4_copies | 24 h | 6.4e+05 | 2.9% a day of Θi over 1 to 24 h | 2.21e+07 | — | 0.0289 | — | 5.16
+E83 | default: gross at 24 h | g411_d4_default | 24 h | 267 | — | 2.21e+07 | — | 1.21e-05 | — | 5.16
+
+## 3. E83 on both scales, window 1 to 24 h (OD2's first hour)
+   g411x_d4_default: own 8.224e-06 of Θi, repair 6.903e-02 a day of Θi; own 8.716e-06 of Θx, repair 7.316e-02 a day of Θx
+   g411x_d4_copies: own 1.104e-05 of Θi, repair 2.932e-02 a day of Θi; own 1.170e-05 of Θx, repair 3.107e-02 a day of Θx
+   g411x_d4_copies_before: not finished or not present
+   g411x_d4_copies_dt60: own 2.709e-06 of Θi, repair 1.914e-02 a day of Θi; own 2.845e-06 of Θx, repair 2.011e-02 a day of Θx
+   g411_d4_copies: own 1.104e-05 of Θi, repair 2.932e-02 a day of Θi
+   g411_d4_copies_before: own 1.161e-05 of Θi, repair 2.566e-02 a day of Θi
+   g411_d4_copies_dt60: own 2.709e-06 of Θi, repair 1.914e-02 a day of Θi
+   g411_d4_default: own 8.224e-06 of Θi, repair 6.903e-02 a day of Θi
+
+## 4. The sphere's remapped integral of the partition over the closure's total
+   g2_v2_sphere_n2: 1.00172
+   g2_v2_sphere_mix: 1.00172
+
+## 5. Runs without records: the surface enthalpy flux alone (hfss + hfls)
+   g416_expl_n1_off: to 3600 s, ∫(hfss+hfls)dt 3.9240e+05 J/m²; gross 1.9878e+04 J/m² = 5.066e-02 of it (recorded 1.758e-04 of the partition)
+   g416_expl_n1_on: to 3600 s, ∫(hfss+hfls)dt 3.9240e+05 J/m²; gross 1.5495e-07 J/m² = 3.949e-13 of it (recorded 1.371e-15 of the partition)
+   g416_impl_n1_off: to 3600 s, ∫(hfss+hfls)dt 3.9240e+05 J/m²; gross 9.1189e+01 J/m² = 2.324e-04 of it (recorded 8.066e-07 of the partition)
+   g416_impl_n1_on: to 3600 s, ∫(hfss+hfls)dt 3.9240e+05 J/m²; gross 1.4059e-07 J/m² = 3.583e-13 of it (recorded 1.244e-15 of the partition)
+
+## 6. The repair per day over Θi, window 1 h to the end (intervention; refinement)
+   before the exchange (E68, 04d63916) [v3_d4_passive_tracer]: repair 0.0000e+00 over 0.958 d; 0 a day of Θi
+   the exchange, E73's run (e010f780) [v3_upd_default]: repair 3.6895e+05 over 0.958 d; 0.0181 a day of Θi
+   the exchange at 846ef55d (E73's rerun) [v3_upd_default]: repair 3.4269e+05 over 0.958 d; 0.0168 a day of Θi
+   E76, 120 s (dcf7d086) [v3_upd_default]: repair 1.4046e+06 over 0.958 d; 0.069 a day of Θi
+   E76, 60 s (dcf7d086) [v3_upd_default_dt60]: repair 1.2636e+06 over 0.958 d; 0.063 a day of Θi
+   E76, 30 s (dcf7d086) [v3_upd_default_dt30]: repair 8.4771e+05 over 0.958 d; 0.0422 a day of Θi
+   E76, two Newton iterations (dcf7d086) [v3_upd_default_newton2]: repair 1.5664e+06 over 0.958 d; 0.0774 a day of Θi
+   E76, first-order upwind (dcf7d086) [v3_upd_default_upwind]: repair 8.2948e+05 over 0.958 d; 0.0347 a day of Θi
+   E73's copies (3ec098f1) [v3_upd_copies]: repair 5.2201e+05 over 0.958 d; 0.0257 a day of Θi
+   E76's copies, 60 s (dbe7435c) [v3_upd_copies_dt60]: repair 3.2349e+05 over 0.958 d; 0.0161 a day of Θi
+   E76's copies, 30 s (dbe7435c) [v3_upd_copies_dt30]: repair 1.3954e+05 over 0.958 d; 0.00695 a day of Θi
+   E83's default rerun on #115 [g411x_d4_default]: repair 1.4046e+06 over 0.958 d; 0.069 a day of Θi, 0.0732 a day of Θx
+   E74, the sphere, 10 d [g2_v2_sphere_n2]: repair 2.8955e+22 over 9.958 d; 0.0261 a day of Θi
+   E75, the sphere with the mixing, 10 d [g2_v2_sphere_mix]: repair 2.7761e+22 over 9.958 d; 0.025 a day of Θi
+   ratio, 60 s over 120 s: 0.912
+   ratio, 30 s over 120 s: 0.612
+   ratio, two iterations over one: 1.121
