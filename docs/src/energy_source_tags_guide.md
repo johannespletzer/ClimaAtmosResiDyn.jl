@@ -49,7 +49,7 @@ the partition freely. The entry schema and the named regions are in
 |:------------------------------------------------ |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `e_src_<name>`                                   | the tag's energy per unit mass, J kg⁻¹                                                                                                                                                                                                      |
 | `e_src_res`                                      | the partition's closure residual, J kg⁻¹                                                                                                                                                                                                    |
-| `e_src_fix_<name>`                               | what the repair moved into or out of the tag, cumulative in the run segment                                                                                                                                                                 |
+| `e_src_fix_<name>`                               | what the repair moved into or out of the tag, cumulative since the run started                                                                                                                                                              |
 | `e_src_fixgross_<name>`, `e_src_fixcount_<name>` | beside it, the sum of the absolute changes and the number of changed cells, of every call, in Float64                                                                                                                                       |
 | `e_src_led_repair`, `e_src_led_repairnet`        | the energy the repair moved between the partition's tags, and the energy it added where it zeroed every tag, as the steps retained them: state fields, through restarts; exact per step at the default `update_constrain_state_every: step` |
 | `<ledger>_gross`, `<ledger>_colgross`            | for the ledgers above, `e_src_inc_left` and `e_src_inc_moved`: the sum over the steps of the change per cell and per column, in Float64, from zero at each restart                                                                          |
@@ -60,12 +60,13 @@ Add the tags to a `diagnostics` block the same way as any other short name.
 
 ## The choices, and what to set them to
 
-| Key                              | Default        | Set it to                                                                                                                                                |
-|:-------------------------------- |:-------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `energy_source_tag_offset`       | none, required | 110495.0 unless you have a reason. It makes the partitioned total positive, which the donor rule needs. It is a convention, and the tags depend on it    |
-| `energy_source_tag_transport`    | `tracer`       | `enthalpy_increment` under EDMF or implicit diffusion. `tracer` only when you want the tags to ride the plain tracer path                                |
-| `energy_source_tag_repair`       | `true`         | leave on, unless you want to see what the attribution rule alone produces                                                                                |
-| `energy_source_tag_updraft_copy` | `false`        | leave off. `true` is the audit: a copy of each tag in the updraft, moved by the model's own tracer machinery. A cold build takes about six times as long |
+| Key                                                       | Default        | Set it to                                                                                                                                                                      |
+|:--------------------------------------------------------- |:-------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `energy_source_tag_offset`                                | none, required | 110495.0 unless you have a reason. It makes the partitioned total positive, which the donor rule needs. It is a convention, and the tags depend on it                          |
+| `energy_source_tag_transport`                             | `tracer`       | `enthalpy_increment` under EDMF or implicit diffusion. `tracer` only when you want the tags to ride the plain tracer path                                                      |
+| `energy_source_tag_repair`                                | `true`         | leave on, unless you want to see what the attribution rule alone produces                                                                                                      |
+| `energy_source_tag_updraft_copy`                          | `false`        | leave off. `true` is the audit: a copy of each tag in the updraft, moved by the model's own tracer machinery. A cold build takes about six times as long                       |
+| `energy_source_tag_increment_allow_explicit_microphysics` | `false`        | leave off. `enthalpy_increment` with 1M, 2M or P3 stepped explicitly is refused, because the tags lag the parent's sedimentation there. `true` runs it anyway, for development |
 
 Under `prognostic_edmfx` the tags need `updraft_number: 1`, and the model
 refuses more.
@@ -135,9 +136,9 @@ there, because the two air masses carry different energy per kilogram.
     them, and their flux needs the same post-solve correction. The plume adds
     the assumption that the updraft adjusts faster than the shares change. The sedimentation corrections take the grid mean's shares either
     way.
-  - **`e_src_fix_<name>` restarts at zero.** It is cumulative within a run
-    segment, not across restarts. Stitch the segments yourself if you want the
-    whole history.
+  - **`e_src_fix_<name>` is carried through a restart.** The checkpoint holds
+    it beside the state. A checkpoint written before it did starts it at zero,
+    with a warning, and then you stitch the segments yourself.
   - **The offset `c` is a choice with consequences.** It sets how long the
     initial-energy tags are remembered, and it is the reference that makes the
     shares meaningful. Keep one `c` across every run you compare. Before a run

@@ -40,8 +40,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The test groups are read from `test/runtests.jl`'s `KNOWN_TEST_GROUPS`, less
+  # `all`, by `.github/read_test_groups.jl`. It evaluates only that assignment
+  # and fails if it is not a literal tuple of plain names. So a pull request
+  # that adds a group no longer edits this file, and no longer starts the full
+  # matrix below. The weekly run, main and a manual run still test every group.
+  groups:
+    name: Test groups
+    runs-on: ubuntu-latest
+    outputs:
+      groups: ${{ steps.read.outputs.groups }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.11'
+      - id: read
+        name: Read the groups from test/runtests.jl
+        run: |
+          julia --startup-file=no .github/read_test_groups.jl | tee -a "$GITHUB_OUTPUT"
+
   test:
     name: Downgrade ${{ matrix.version }} - ${{ matrix.test_group }}
+    needs: groups
     runs-on: ubuntu-latest
     timeout-minutes: 90
     # julia-downgrade-compat rewrites Project.toml (test extras are promoted to
@@ -59,29 +80,9 @@ jobs:
         # sequentially, the first failing group ends the job and every later
         # group silently goes unrun, so a red downgrade job says nothing about
         # the groups behind the failure. With `fail-fast: false` above, each
-        # group now reports its own result.
-        test_group:
-          - infrastructure
-          - parent_budget
-          - diagnostics
-          - dynamics
-          - dynamics_tracers
-          - dynamics_edmfx
-          - tagging_energy
-          - tagging_water
-          - tagging_source
-          - tagging_record
-          - tagging_source_float32
-          - tagging_source_edmf
-          - tagging_source_increment
-          - tagging_source_updraft
-          - tagging_water_edmf
-          - tagging_water_edmf_copies
-          - tagging_water_edmf_0m
-          - tagging_water_increment
-          - tagging_water_increment_explicit
-          - parameterizations
-          - restarts
+        # group now reports its own result. The groups come from the job
+        # above.
+        test_group: ${{ fromJSON(needs.groups.outputs.groups) }}
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3

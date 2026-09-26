@@ -293,6 +293,35 @@ The copies start, and are rebuilt from a file, as ``q_\mathrm{tot}^j`` times
 the grid mean's share. They cost one updraft tracer per tag, and they are the
 audit of the default mode's plume.
 
+**The 0-moment rain-out.** Under 0-moment microphysics, EDMF computes the
+rain-out per subdomain: ``\Delta^j = \rho a^j \, \partial_t q_\mathrm{tot}^j``
+in the updraft and ``\Delta^0 = \rho a^0 \, \partial_t q_\mathrm{tot}^0`` in the
+environment. The model adds their sum to ``\rho q_\mathrm{tot}``. The
+grid-scale tags take each part by that subdomain's composition,
+``\sum_k \Delta^k \varphi_i^k``, not by the grid mean's
+(`splits_rainout`, `add_split_rainout!`). With the copies, the updraft's share
+is the copy's, ``\chi_i^j / q_\mathrm{tot}^j``, and the environment's is what
+the grid tags and the copies leave for it. In the default mode, the model holds
+no subdomain composition, so the split reconstructs one: the grid mean's shares
+plus the exchange's difference for that subdomain, from the steady-plume
+closure the exchange uses. It is a modelled estimate, not a prognosed value. On
+TRMM 0M it was checked against the copies' own shares on the copies run's
+state, the copies converged over Newton iterations (FINDINGS W32). There the
+grid rule's rain-weighted share error was 0.15 to 0.19, and the
+reconstruction's 9% to 25% of that, on four rungs of timestep, levels and
+iterations. That is one deep-convection column with one partition. The
+partition's shares, both of them in the default mode and the environment's
+with the copies, are scaled by the partition's sum of grid shares. So a
+drifted partition keeps losing in proportion to what it holds.
+Where a subdomain's share is not defined, the grid mean's applies. The split
+applies to both signs, since a subdomain's area can go negative in the Newton
+iterates. Where it does, the subdomain's rain-out is a gain, and the split
+attributes that gain too. So the split, and `pr_tag` below, are signed
+attributions, which close with the sink, not a record of physical rain-out
+alone. In the default mode without the SGS mass flux there is no
+exchange, and the grid mean's share applies to all the rain-out, as it does
+without EDMF. The model's fields do not change.
+
 **Refusals.** Both modes refuse more than one updraft. The copies are refused
 without prognostic EDMF, and when `edmfx_mse_q_tot_upwinding` differs from
 `edmfx_tracer_upwinding`, because the copies' fluxes then do not sum to the
@@ -380,20 +409,37 @@ set.
   - `qv_tag_<name>`: tagged **vapor**, ``q_\mathrm{tag} \, q_v / q_t``;
   - `q_tag_res`: the closure residual ``(\rho q_\mathrm{tot} - \sum_i \rho q_{\mathrm{tag},i})/\rho``, summed over the pure region tags;
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
-    state constraints, cumulative since the start of the simulation segment (and
-    reset on restart), so a budget over an interval is the difference of two
+    state constraints, cumulative since the start of the run and carried
+    through a restart, so a budget over an interval is the difference of two
     outputs, and a time *average* of it is not meaningful;
   - `q_tag_upfix_<name>` and `q_tag_copy_res`: with updraft copies, the copies'
     repair, cumulative as `q_tag_fix` is, and the residual it found;
   - `q_tag_leak_<path>`: the rate at which one path drifts the partition's sum
     from ``\rho q_\mathrm{tot}``, computed from the state; see below;
+  - `pr_tag_<name>`, `prra_tag_<name>` and `prsn_tag_<name>`, under 0-moment
+    microphysics only: the tag's part of `pr`, `prra` and `prsn`, the column
+    integral of its part of the rain-out (`water_tag_precipitation!`). It is
+    upward-positive as `pr` is, so negative, and split into rain and snow by
+    the grid mean's temperature as `pr` is. It is computed from the state at
+    output time, so it is the rate at the step's end, not the one the step
+    applied. All the tags' parts are computed together, once per output time
+    (`update_water_tag_rainouts!`), so the cost of the whole set grows
+    linearly with the number of tags. Under 1-moment it waits on rain and snow
+    tags;
+  - `pr_tag_res`, with a region tag, under 0-moment: `pr` less the region
+    tags' `pr_tag`, the rain-out no region tag takes. Under the split it is the
+    rain-out times one less the partition's sum of shares, in each subdomain:
+    ``\int (\Delta^j (1 - S^j) + \Delta^0 (1 - S))``. ``S`` is the grid
+    partition's sum of shares, and ``S^j`` is ``S`` in the default mode and the
+    copies' own sum with copies. So it shows the partition's residual and the
+    copies' at the surface;
   - `q_tag_fixgross_<name>` and `q_tag_fixcount_<name>`, and with copies
     `q_tag_upfixgross_<name>` and `q_tag_upfixcount_<name>`: beside each
     ledger, the sum of the absolute values of its changes and the number of
     cell-events larger than rounding. A ledger's `+x` then `−x` reads zero, and
     its gross twin reads `2|x|`. These count every call, including those
     inside a step that the stepper later discards, so they record what was
-    attempted. They are kept in Float64 and restart at zero;
+    attempted. They are kept in Float64 and carried through a restart;
   - `q_tag_led_<mechanism>`: what each correction moved, as the steps
     retained it. These are state fields, which the stepper weights as it
     weights the tags, and they go through restarts.
@@ -408,9 +454,69 @@ set.
   - `<ledger>_gross` and `<ledger>_colgross`, for each `q_tag_led_*` and the
     increment follower's `q_tag_inc_left` and `q_tag_inc_moved`: the sum over
     the steps of the ledger's change per cell, ``|\Delta L|``, and per
-    column, ``|\int \Delta L \, dz|``, in Float64. They restart at zero, so
-    after a restart a gross can be smaller than its ledger. They are kept by a
-    default callback, and read zero without the default callbacks.
+    column, ``|\int \Delta L \, dz|``, in Float64, carried through a restart.
+    They are kept by a default callback, and read zero without the default
+    callbacks;
+  - `q_tag_led_fix_<name>` and, under the increment follower,
+    `q_tag_led_inc_<name>`, with `water_tag_ledger_per_tag: true`: each tag's
+    own ledgers, what the limiters' rescale and the partition repair changed
+    the tag by, and what the follower moved into or out of it. They are state
+    fields, so the stepper weights each as it weights its tag, and a ledger's
+    change over a step is what the step retained at every cadence. Each has
+    its `_gross` and `_colgross` as above, spelled `q_tag_led_fixgross_<name>`
+    and `q_tag_led_fixcolgross_<name>` (and `inc` alike), so that no tag's
+    name can collide with them.
+
+The audit table (`audit: true` in `water_closure_check`) reports, per state
+ledger `L`, named without its `q_tag_` prefix:
+
+  - `<L>_retained`: the per-step gross, integrated over the domain, what the
+    accepted steps retained, since the start of the run;
+  - `<L>_attempted`: what the ledger's writers added, in absolute value, over
+    every call, including calls on stage values that the stepper discards. For
+    a tag's `led_fix` ledger it is the cache ledger's gross twin, which takes
+    the same changes;
+  - `<L>_events`: the number of cell-steps whose change of `L` exceeded
+    rounding against the cell's water;
+  - each also over the column's water, `_relative`;
+  - for a tag's own ledger, three ratios of `<L>_retained` and a flag, which
+    the next paragraphs explain: `<L>_inventory_fraction`, over the tag's
+    water now, `∫ρq_tag`; `<L>_burden_fraction`, over its absolute burden,
+    `∫|ρq_tag|`; `<L>_parent_fraction`, over the parent's water, `∫ρq_tot`;
+    and `<L>_applicable`. Each bounds how far the corrections can have moved
+    that tag. Under the follower most of what `led_inc` holds is the parent's
+    vertical advection, which the tags no longer take explicitly, so it bounds
+    the follower's intervention from above and does not isolate it;
+  - `ledger_parent_scale`, with the ledgers per tag: `∫ρq_tot`, the scale of
+    `_parent_fraction`;
+  - `ledger_cadence_step`: 1 at `update_constrain_state_every: step`, 0
+    otherwise.
+
+**Which ratio to read** (the owner's decision of 2026-09-25). A ratio to the
+tag is read only where `<L>_applicable` is 1, and which one depends on the tag:
+
+  - A pure region tag is read by `_inventory_fraction`. Its precondition is a
+    positive inventory. For a tag without negative parts the two ratios to
+    the tag are the same number.
+  - A source tag, such as `evap`, and any tag with negative parts are read by
+    `_burden_fraction`. A source tag starts at zero. A tag's negative parts
+    can cancel its positive parts, so that its inventory nears zero and the
+    inventory ratio grows without bound, whatever the correction did. The
+    burden does not cancel. Where the two ratios differ, the tag has negative
+    parts.
+  - `<L>_applicable` is 0 where the tag's burden is below the small-tag bound,
+    2e-4 of `∫ρq_tot`, or zero. Neither ratio to the tag applies there, and
+    the tag is judged by `_parent_fraction`, its absolute amount against the
+    parent. The ratios are still reported.
+
+A ratio whose denominator is not positive is `NaN`. `<L>_applicable` is never
+`NaN` unless the tag or its ledger is not finite, so a check reads it first.
+The bound is `TAG_LEDGER_SMALL_TAG_BOUND`.
+
+At the default cadence, `<L>_attempted` less `<L>_retained` is the work the
+steps discarded, for the ledgers per mechanism. For the follower's ledgers the
+two differ by how the tableau combines the stages, so the difference is not a
+discarded amount.
 
 What "retained" means depends on `update_constrain_state_every`. At the
 default, `step`, the corrections fire once per step on the accepted state, so
@@ -530,8 +636,11 @@ its records are not transported.
   - Tagged state is carried through restarts like any other prognostic field.
     The masks are rebuilt from the configuration, so the `water_tracers` block
     must match the one used to write the checkpoint, and the restart guard
-    refuses one that does not. The `q_tag_fix` and `q_tag_upfix` ledgers are
-    cache-resident and restart at zero.
+    refuses one that does not. The `q_tag_fix` and `q_tag_upfix` ledgers and
+    the grosses, counts and attempted totals live in the cache, and the
+    checkpoint carries them beside the state. A checkpoint written before it
+    carried them starts them at zero, with a warning, and the audit's grosses
+    then cover only the new segment.
 
 ## Interpretation limit
 
@@ -584,6 +693,12 @@ ClimaAtmos.water_tag_copy_sgs_names
 ClimaAtmos.water_tag_edmf_audit
 ClimaAtmos.WATER_TAG_LEAK_PATHS
 ClimaAtmos.water_tag_leak!
+ClimaAtmos.splits_rainout
+ClimaAtmos.add_split_rainout!
+ClimaAtmos.add_rainout_increments!
+ClimaAtmos.update_water_tag_rainouts!
+ClimaAtmos.water_tag_precipitation!
+ClimaAtmos.water_tag_precipitation_residual!
 ClimaAtmos.IncrementWaterTagTransport
 ClimaAtmos.TracerWaterTagTransport
 ClimaAtmos.follows_water_increment
@@ -598,6 +713,10 @@ ClimaAtmos.water_increment_partition_tolerance
 ClimaAtmos.water_increment_left_weight
 ClimaAtmos.water_tag_increment_ledger_variables
 ClimaAtmos.water_tag_extra_audit
+ClimaAtmos.TagLedgerView
+ClimaAtmos.set_tag_ledger_cadence!
+ClimaAtmos.tag_ledger_normalization
+ClimaAtmos.TAG_LEDGER_SMALL_TAG_BOUND
 ClimaAtmos.WATER_TAG_CHECKPOINT_VERSION
 ClimaAtmos.write_water_tag_checkpoint_attributes!
 ClimaAtmos.check_water_tag_checkpoint
