@@ -2405,7 +2405,8 @@ struct IncrementWaterTagTransport <: AbstractWaterTagTransport end
 
 """
     WaterTaggingModel(tags::Tuple; updraft_copies = false,
-                      transport = TracerWaterTagTransport())
+                      transport = TracerWaterTagTransport(),
+                      ledger_per_tag = false)
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 `water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2422,11 +2423,18 @@ time.
 implicit terms: as tracers by default, or by the parent's own increment after
 each Newton solve. The increment needs region tags without sources, and is
 refused without them. See [`IncrementWaterTagTransport`](@ref).
+
+`ledger_per_tag`, from `water_tag_ledger_per_tag`, gives each tag its own state
+ledgers of what the corrections changed it by (WP6, step 3): `q_tag_led_fix_<name>`
+for the limiters' rescale and the partition repair, and, under the increment,
+`q_tag_led_inc_<name>` for the follower. Off by default, since each adds a
+state field per tag. A type parameter, like `updraft_copies`.
 """
 struct WaterTaggingModel{
     T <: Tuple,
     UpdraftCopies,
     TR <: AbstractWaterTagTransport,
+    LedgerPerTag,
 }
     tags::T
     transport::TR
@@ -2435,6 +2443,7 @@ function WaterTaggingModel(
     tags::Tuple;
     updraft_copies::Bool = false,
     transport::AbstractWaterTagTransport = TracerWaterTagTransport(),
+    ledger_per_tag::Bool = false,
 )
     # The correction gives the partition the parent's increment, less what the
     # partition's own tendencies moved. Without a partition the tags that carry
@@ -2451,7 +2460,12 @@ function WaterTaggingModel(
             region and its complement, for example with `above: false` or \
             `inside: false`.",
         )
-    return WaterTaggingModel{typeof(tags), updraft_copies, typeof(transport)}(
+    return WaterTaggingModel{
+        typeof(tags),
+        updraft_copies,
+        typeof(transport),
+        ledger_per_tag,
+    }(
         tags,
         transport,
     )
@@ -2478,6 +2492,17 @@ has_water_tag_updraft_copies(::Nothing) = false
 has_water_tag_updraft_copies(
     ::WaterTaggingModel{T, UpdraftCopies},
 ) where {T, UpdraftCopies} = UpdraftCopies
+
+"""
+    has_water_tag_ledger_per_tag(model)
+
+Whether each water tag keeps its own state ledgers of the corrections, from the
+`water_tag_ledger_per_tag` config key. `false` without water tags.
+"""
+has_water_tag_ledger_per_tag(::Nothing) = false
+has_water_tag_ledger_per_tag(
+    ::WaterTaggingModel{T, U, TR, LedgerPerTag},
+) where {T, U, TR, LedgerPerTag} = LedgerPerTag
 
 """
     EnergySourceTag{name}(region, source = :none)
@@ -2595,7 +2620,7 @@ struct EnthalpyIncrementEnergySourceTransport <: AbstractEnergySourceTransport e
 """
     EnergySourceTaggingModel(tags::Tuple, offset = nothing; repair = true,
                              transport = TracerEnergySourceTransport(),
-                             updraft_copies = false)
+                             updraft_copies = false, ledger_per_tag = false)
 
 Model component holding a `Tuple` of [`EnergySourceTag`](@ref)s. Constructed
 from the `energy_source_tags` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2629,12 +2654,20 @@ steady entraining plume (`sgs_mass_flux_of_energy_source_tags!`). On, it is an
 audit: the copies are passive updraft tracers, and the model moves them as it
 moves any other. It is refused with the `enthalpy` transport. See
 [`has_energy_source_updraft_copies`](@ref).
+
+`ledger_per_tag`, from `energy_source_tag_ledger_per_tag`, gives each tag its
+own state ledgers of what the corrections changed it by (WP6, step 3):
+`e_src_led_fix_<name>` for the repair, and, under `enthalpy_increment`,
+`e_src_led_inc_<name>` for the correction after each solve. Off by default,
+since each adds a state field per tag. A type parameter, like
+`updraft_copies`.
 """
 struct EnergySourceTaggingModel{
     T <: Tuple,
     O <: Union{Nothing, AbstractFloat},
     TR <: AbstractEnergySourceTransport,
     UpdraftCopies,
+    LedgerPerTag,
 }
     tags::T
     offset::O
@@ -2647,6 +2680,7 @@ function EnergySourceTaggingModel(
     repair::Bool = true,
     transport::AbstractEnergySourceTransport = TracerEnergySourceTransport(),
     updraft_copies::Bool = false,
+    ledger_per_tag::Bool = false,
 )
     !(transport isa TracerEnergySourceTransport) && isnothing(offset) &&
         error(
@@ -2693,6 +2727,7 @@ function EnergySourceTaggingModel(
         typeof(offset),
         typeof(transport),
         updraft_copies,
+        ledger_per_tag,
     }(
         tags,
         offset,
@@ -2713,6 +2748,18 @@ has_energy_source_updraft_copies(::Nothing) = false
 has_energy_source_updraft_copies(
     ::EnergySourceTaggingModel{T, O, TR, UpdraftCopies},
 ) where {T, O, TR, UpdraftCopies} = UpdraftCopies
+
+"""
+    has_energy_source_ledger_per_tag(model)
+
+Whether each energy source tag keeps its own state ledgers of the corrections,
+from the `energy_source_tag_ledger_per_tag` config key. `false` without energy
+source tags.
+"""
+has_energy_source_ledger_per_tag(::Nothing) = false
+has_energy_source_ledger_per_tag(
+    ::EnergySourceTaggingModel{T, O, TR, U, LedgerPerTag},
+) where {T, O, TR, U, LedgerPerTag} = LedgerPerTag
 
 """
     RecordedProcess{name}()

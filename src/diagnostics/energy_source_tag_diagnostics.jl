@@ -20,7 +20,8 @@ Register the diagnostics of the energy source tags:
   - `e_src_<name>`: specific tagged energy `ρe_src_<name> / ρ`, for each tag;
   - `e_src_fix_<name>`: the energy `repair_energy_source_tags!` has moved into
     (positive) or out of (negative) each tag, per unit mass, cumulative since
-    the start of the simulation segment. Zero when `energy_source_tag_repair`
+    the start of the run, carried through a restart by the checkpoint. Zero
+    when `energy_source_tag_repair`
     is false. It equals what the repair changed in the state only at the
     default `update_constrain_state_every: step`;
   - `e_src_res`: closure residual `(ρe_tot - Σᵢ ρe_src_i) / ρ`, summed over the
@@ -89,8 +90,8 @@ function register_energy_source_tagging_diagnostics!(
                            "(negative) the tag `$name` by the repair that " *
                            "keeps the energy source tags non-negative where " *
                            "their total is positive, per unit mass of moist " *
-                           "air. Cumulative since the start of the simulation " *
-                           "segment and reset on restart, so a budget over an " *
+                           "air. Cumulative since the start of the run and " *
+                           "carried through a restart, so a budget over an " *
                            "interval is the difference of two outputs, and a " *
                            "time average is not meaningful. Zero when " *
                            "energy_source_tag_repair is false. Each increment " *
@@ -123,8 +124,8 @@ function register_energy_source_tagging_diagnostics!(
                                "the number of times the repair changed the tag " *
                                "`$name` in this cell by more than rounding"
                            ) *
-                           ". Cumulative since the start of the simulation " *
-                           "segment and reset on restart. It counts what was " *
+                           ". Cumulative since the start of the run and " *
+                           "carried through a restart. It counts what was " *
                            "attempted, every call, including changes inside a " *
                            "step that the stepper discards. A transfer between " *
                            "partition tags counts once out and once in.",

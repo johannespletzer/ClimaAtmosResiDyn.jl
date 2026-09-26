@@ -229,7 +229,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                            "the tag `$name` by the tracer limiters and state " *
                            "constraints, following the parent `ρq_tot` " *
                            "correction. Cumulative since the start of the " *
-                           "simulation segment and reset on restart, so a " *
+                           "run and carried through a restart, so a " *
                            "budget over an interval is the difference of two " *
                            "outputs, and a time average of this variable is " *
                            "not meaningful. Identically zero unless a tracer " *
@@ -269,8 +269,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                 units,
                 long_name = "Gross Tagged Water Numerical Correction ($name)",
                 comments = "Beside q_tag_fix_$name, which is signed: $what. " *
-                           "Cumulative since the start of the simulation " *
-                           "segment and reset on restart. It counts what was " *
+                           "Cumulative since the start of the run and " *
+                           "carried through a restart. It counts what was " *
                            "attempted, every call, including changes inside a " *
                            "step that the stepper discards. A transfer " *
                            "between tags counts once out and once in.",
@@ -301,7 +301,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                            "copies' repair after the updraft filter, times " *
                            "the updraft's density-area `ρaʲ`, per unit mass " *
                            "of grid-mean moist air. Cumulative since the " *
-                           "start of the simulation segment and reset on " *
+                           "start of the run and carried through a " *
                            "restart. Written only under " *
                            "`water_tag_updraft_copy: true`, for the tags of " *
                            "the partition.",
@@ -333,8 +333,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                                "the updraft copy of `$name` in this cell by more " *
                                "than rounding"
                            ) *
-                           ". Cumulative since the start of the simulation " *
-                           "segment and reset on restart; every call counts.",
+                           ". Cumulative since the start of the run and " *
+                           "carried through a restart; every call counts.",
                 compute! = (out, u, p, t) -> compute_tag_throughput!(
                     out,
                     u,

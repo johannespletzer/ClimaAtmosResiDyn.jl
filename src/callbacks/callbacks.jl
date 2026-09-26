@@ -325,6 +325,9 @@ NVTX.@annotate function save_state_to_disk_func(integrator, output_dir)
         p.atmos.water_tagging_model,
     )
     InputOutput.write!(hdfwriter, Y, "Y")
+    # The tags' accumulators, which live in the cache, so that a restart
+    # continues them (WP6, step 3). Nothing without tags.
+    write_tag_ledger_checkpoint!(hdfwriter, p.tagging)
     Base.close(hdfwriter)
     return nothing
 end

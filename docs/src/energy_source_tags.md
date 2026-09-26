@@ -646,8 +646,19 @@ column it checks that the model's state is bit for bit the one without tags.
     (J kg⁻¹);
   - `e_src_fix_<name>`: the energy the repair has moved into (positive) or out
     of (negative) each tag, per unit mass, cumulative since the start of the
-    run segment and reset on restart. Zero with the repair off, and exact only
-    at the default `update_constrain_state_every: step`;
+    run and carried through a restart. Zero with the repair off, and exact
+    only at the default `update_constrain_state_every: step`;
+  - `e_src_led_fix_<name>` and, under `enthalpy_increment`,
+    `e_src_led_inc_<name>`, with `energy_source_tag_ledger_per_tag: true`:
+    each tag's own ledgers, what the repair changed the tag by and what the
+    correction after each solve moved into or out of it. They are state
+    fields, so a ledger's change over a step is what the step retained at
+    every cadence. The audit table reports, per state ledger, what the
+    accepted steps retained (`_retained`), what its writers attempted
+    (`_attempted`) and the events (`_events`). For each tag's own ledgers it
+    reports three ratios of the retained amount and a flag, explained below:
+    `_inventory_fraction`, `_burden_fraction`, `_parent_fraction` and
+    `_applicable`, with the parent scale as `ledger_parent_scale`;
   - `e_src_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
@@ -671,6 +682,44 @@ an energy per unit mass in J kg⁻¹, and it is not the same quantity as the
 normalized by ``\int|\rho e_\mathrm{tot}|``. And it does **not** cover the
 source-labelled tags, only the pure region ones, so it is not a check on the
 family as a whole.
+
+### Reading a tag's own ledgers
+
+Each ratio divides the ledger's retained amount by a different scale (the
+owner's decision of 2026-09-25):
+
+  - `_inventory_fraction`: over the tag's energy now, `∫ρe_src`. The energy is
+    that of `ρe_tot + c·ρ`, so it depends on the offset. It is the ratio for a
+    pure region tag, and its precondition is a positive inventory.
+  - `_burden_fraction`: over the tag's absolute burden, `∫|ρe_src|`. It is the
+    ratio for a tag that carries a source and for any tag with negative parts.
+    For a tag without negative parts it is the same number as
+    `_inventory_fraction`.
+  - `_parent_fraction`: over the parent scale. OD4 sets that scale to the gross
+    energy the sources put into the tags. Until the model reports it, the
+    scale is the interim the owner set, the process records' amounts,
+    `Σₚ ∫|prc_e_p|`, and a ratio to it is read as an upper bound. It is `NaN`
+    without `energy_process_record`. It is not `∫(ρe_tot + c·ρ)`, which depends
+    on the offset and would make most source tags look small.
+  - `_applicable`: 0 where the tag's burden is zero or below the small-tag
+    bound, 2e-4 of the parent scale, and 1 otherwise. At 0 no ratio to the tag
+    is read, and the tag is judged by `_parent_fraction`. Without a parent
+    scale only a zero burden gives 0.
+
+The ratios to the tag hold only in this domain. Three states of a tag fall
+outside the inventory ratio's:
+
+  - A source tag starts at zero, and the repair clips it back to zero, so its
+    inventory can be zero. Then `_applicable` is 0, and `_parent_fraction` is
+    read.
+  - With `energy_source_tag_repair: false` a tag can be negative throughout.
+    Its inventory ratio is then `NaN`, and `_burden_fraction` is read.
+  - A tag whose positive and negative parts nearly cancel has an inventory
+    near zero. Its inventory ratio then grows without bound, whatever the
+    correction did. The burden does not cancel, so `_burden_fraction` is read.
+
+A ratio whose denominator is not positive is `NaN`. `_applicable` is never
+`NaN` unless the tag or its ledger is not finite, so a check reads it first.
 
 ## Caveats
 
@@ -702,6 +751,14 @@ family as a whole.
     existed is checked by its fields alone, with a warning. One written in
     another version of the format is refused. There is no override: to change
     a setting, start a new run.
+  - The state ledgers (`e_src_led_*`, `e_src_inc_left`, `e_src_inc_moved`) are
+    fields of the state and continue through a restart. The repair's ledger
+    `e_src_fix_<name>`, its gross twin and count, and each state ledger's
+    per-step gross, events and attempted total live in the cache. The
+    checkpoint carries them beside the state, so they continue too. A
+    checkpoint written before it carried them starts them at zero, with a
+    warning, and their totals then cover the new segment only, not the whole
+    run. One with some but not all of them is refused.
 
 ## Interpretation limit
 

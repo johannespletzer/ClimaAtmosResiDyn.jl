@@ -242,3 +242,53 @@ not re-derive them.
     values rather than restoring as scaffolds.
   - **Julia 1.9 compatibility.** Upstream still declares `julia = "1.9"` while
     testing only 1.10 and 1.11. This fork raised its own floor to 1.10.
+
+## 7. Tagged water ends a run where the parent's water goes negative (open, parity class)
+
+**Status:** open. The owner chose option A on 2026-09-24, so that a closure
+check no longer ends such a run. It is proposed in #112, which is not merged.
+Until it is, the water closure check still ends such a run, as below. The cause
+of the divergence is open. To be settled before the sphere.
+
+A diagnostic must never end a run that upstream completes. This one does.
+The tag-closure long runs (the record branch's
+`design/INCREMENT_RULE_LONG_RUNS.md`, second submission, jobs `13917157` to
+`13917199`) ran the GCM-driven column for 90 days at site 23. They ran
+`claude/long-run-samesign`, which is #102 and #103 with the energy follower's
+same-sign rule, and its `|m|` twin.
+
+  - **The parent.** The model's own `q_tot` goes below zero from day 10, in
+    the untagged twin too, down to −3.1e-3 kg/kg (day 30), on 66 of 91 daily outputs.
+    That is upstream's behavior at this site, not the tags'.
+  - **The tags.** The water tags then diverge. On day 48 the copies run's
+    column tags hold 28 kg/m² of water against the parent's 13, and
+    `q_tag_pbl` reaches 0.13 kg/kg against a `hus` maximum of 0.016.
+  - **The end.** The tagged runs stop with `simulation_crashed`, the water
+    closure at −1.02: the copies run at day 48, and both follower rules at
+    day 74.5 (t = 6.4368e6 s). The untagged twin completes 90 days.
+  - **Parity holds until then.** The ten daily output fields (density,
+    temperature, humidity, cloud water and ice, vertical velocity,
+    precipitation, liquid water path, updraft area and humidity) are bit for
+    bit the untagged twin's at every output up to each crash. The runs keep
+    no checkpoints, so the full state is compared only through these.
+
+**What ended the runs:** the water closure check. Job `13917157`'s `.err`,
+line 1401, reads "water tag closure residual 1.0194981558568388 exceeds the
+configured abort level 1.0 at t = 6.4368e6 s", from `tag_closure_callback!`.
+That level assumed a non-negative parent: then non-negative tags miss it by at
+most the parent itself. Here the parent is negative.
+
+**Option A, chosen and not merged** (the owner's choice of 2026-09-24): #112,
+`claude/tag-closure-no-abort`, a PR against `main`, which this stack gets by
+merge. With it, no closure check ends a run by default. Past water's old level,
+1.0, the check warns and marks the tables' rows void, and the run goes on. An
+explicit `abort_above` still ends a run. That the mark covers the row where
+the level is passed and every later one holds only once #112 merges. Its
+handling across a restart is still being changed. On this code the default
+level, 1.0, still ends the run.
+
+**Still open:** which of the tags' operators makes the divergence. The runs
+bound the problem to negative parent water on a long column; they do not
+isolate the mechanism. A probe with the per-tag ledgers runs next, and the
+owner then chooses among options B, C and D of the record branch's
+`design/NEGATIVE_PARENT_WATER.md`.

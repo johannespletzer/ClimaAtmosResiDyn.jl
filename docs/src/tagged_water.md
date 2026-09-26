@@ -380,8 +380,8 @@ set.
   - `qv_tag_<name>`: tagged **vapor**, ``q_\mathrm{tag} \, q_v / q_t``;
   - `q_tag_res`: the closure residual ``(\rho q_\mathrm{tot} - \sum_i \rho q_{\mathrm{tag},i})/\rho``, summed over the pure region tags;
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
-    state constraints, cumulative since the start of the simulation segment (and
-    reset on restart), so a budget over an interval is the difference of two
+    state constraints, cumulative since the start of the run and carried
+    through a restart, so a budget over an interval is the difference of two
     outputs, and a time *average* of it is not meaningful;
   - `q_tag_upfix_<name>` and `q_tag_copy_res`: with updraft copies, the copies'
     repair, cumulative as `q_tag_fix` is, and the residual it found;
@@ -393,7 +393,7 @@ set.
     cell-events larger than rounding. A ledger's `+x` then `−x` reads zero, and
     its gross twin reads `2|x|`. These count every call, including those
     inside a step that the stepper later discards, so they record what was
-    attempted. They are kept in Float64 and restart at zero;
+    attempted. They are kept in Float64 and carried through a restart;
   - `q_tag_led_<mechanism>`: what each correction moved, as the steps
     retained it. These are state fields, which the stepper weights as it
     weights the tags, and they go through restarts.
@@ -408,9 +408,69 @@ set.
   - `<ledger>_gross` and `<ledger>_colgross`, for each `q_tag_led_*` and the
     increment follower's `q_tag_inc_left` and `q_tag_inc_moved`: the sum over
     the steps of the ledger's change per cell, ``|\Delta L|``, and per
-    column, ``|\int \Delta L \, dz|``, in Float64. They restart at zero, so
-    after a restart a gross can be smaller than its ledger. They are kept by a
-    default callback, and read zero without the default callbacks.
+    column, ``|\int \Delta L \, dz|``, in Float64, carried through a restart.
+    They are kept by a default callback, and read zero without the default
+    callbacks;
+  - `q_tag_led_fix_<name>` and, under the increment follower,
+    `q_tag_led_inc_<name>`, with `water_tag_ledger_per_tag: true`: each tag's
+    own ledgers, what the limiters' rescale and the partition repair changed
+    the tag by, and what the follower moved into or out of it. They are state
+    fields, so the stepper weights each as it weights its tag, and a ledger's
+    change over a step is what the step retained at every cadence. Each has
+    its `_gross` and `_colgross` as above, spelled `q_tag_led_fixgross_<name>`
+    and `q_tag_led_fixcolgross_<name>` (and `inc` alike), so that no tag's
+    name can collide with them.
+
+The audit table (`audit: true` in `water_closure_check`) reports, per state
+ledger `L`, named without its `q_tag_` prefix:
+
+  - `<L>_retained`: the per-step gross, integrated over the domain, what the
+    accepted steps retained, since the start of the run;
+  - `<L>_attempted`: what the ledger's writers added, in absolute value, over
+    every call, including calls on stage values that the stepper discards. For
+    a tag's `led_fix` ledger it is the cache ledger's gross twin, which takes
+    the same changes;
+  - `<L>_events`: the number of cell-steps whose change of `L` exceeded
+    rounding against the cell's water;
+  - each also over the column's water, `_relative`;
+  - for a tag's own ledger, three ratios of `<L>_retained` and a flag, which
+    the next paragraphs explain: `<L>_inventory_fraction`, over the tag's
+    water now, `∫ρq_tag`; `<L>_burden_fraction`, over its absolute burden,
+    `∫|ρq_tag|`; `<L>_parent_fraction`, over the parent's water, `∫ρq_tot`;
+    and `<L>_applicable`. Each bounds how far the corrections can have moved
+    that tag. Under the follower most of what `led_inc` holds is the parent's
+    vertical advection, which the tags no longer take explicitly, so it bounds
+    the follower's intervention from above and does not isolate it;
+  - `ledger_parent_scale`, with the ledgers per tag: `∫ρq_tot`, the scale of
+    `_parent_fraction`;
+  - `ledger_cadence_step`: 1 at `update_constrain_state_every: step`, 0
+    otherwise.
+
+**Which ratio to read** (the owner's decision of 2026-09-25). A ratio to the
+tag is read only where `<L>_applicable` is 1, and which one depends on the tag:
+
+  - A pure region tag is read by `_inventory_fraction`. Its precondition is a
+    positive inventory. For a tag without negative parts the two ratios to
+    the tag are the same number.
+  - A source tag, such as `evap`, and any tag with negative parts are read by
+    `_burden_fraction`. A source tag starts at zero. A tag's negative parts
+    can cancel its positive parts, so that its inventory nears zero and the
+    inventory ratio grows without bound, whatever the correction did. The
+    burden does not cancel. Where the two ratios differ, the tag has negative
+    parts.
+  - `<L>_applicable` is 0 where the tag's burden is below the small-tag bound,
+    2e-4 of `∫ρq_tot`, or zero. Neither ratio to the tag applies there, and
+    the tag is judged by `_parent_fraction`, its absolute amount against the
+    parent. The ratios are still reported.
+
+A ratio whose denominator is not positive is `NaN`. `<L>_applicable` is never
+`NaN` unless the tag or its ledger is not finite, so a check reads it first.
+The bound is `TAG_LEDGER_SMALL_TAG_BOUND`.
+
+At the default cadence, `<L>_attempted` less `<L>_retained` is the work the
+steps discarded, for the ledgers per mechanism. For the follower's ledgers the
+two differ by how the tableau combines the stages, so the difference is not a
+discarded amount.
 
 What "retained" means depends on `update_constrain_state_every`. At the
 default, `step`, the corrections fire once per step on the accepted state, so
@@ -530,8 +590,11 @@ its records are not transported.
   - Tagged state is carried through restarts like any other prognostic field.
     The masks are rebuilt from the configuration, so the `water_tracers` block
     must match the one used to write the checkpoint, and the restart guard
-    refuses one that does not. The `q_tag_fix` and `q_tag_upfix` ledgers are
-    cache-resident and restart at zero.
+    refuses one that does not. The `q_tag_fix` and `q_tag_upfix` ledgers and
+    the grosses, counts and attempted totals live in the cache, and the
+    checkpoint carries them beside the state. A checkpoint written before it
+    carried them starts them at zero, with a warning, and the audit's grosses
+    then cover only the new segment.
 
 ## Interpretation limit
 
@@ -598,6 +661,10 @@ ClimaAtmos.water_increment_partition_tolerance
 ClimaAtmos.water_increment_left_weight
 ClimaAtmos.water_tag_increment_ledger_variables
 ClimaAtmos.water_tag_extra_audit
+ClimaAtmos.TagLedgerView
+ClimaAtmos.set_tag_ledger_cadence!
+ClimaAtmos.tag_ledger_normalization
+ClimaAtmos.TAG_LEDGER_SMALL_TAG_BOUND
 ClimaAtmos.WATER_TAG_CHECKPOINT_VERSION
 ClimaAtmos.write_water_tag_checkpoint_attributes!
 ClimaAtmos.check_water_tag_checkpoint

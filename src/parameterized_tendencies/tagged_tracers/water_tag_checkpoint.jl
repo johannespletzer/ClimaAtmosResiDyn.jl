@@ -72,8 +72,22 @@ It checks, in this order, and stops at the first mismatch:
  3. Each tag's region and sources.
 
 `Y` is the state read from `restart_file`. Called by `handle_restart`, before
-the cache is built, so a refused restart fails in seconds. The repair ledgers
-start again from zero, as every cumulative tag diagnostic does.
+the cache is built, so a refused restart fails in seconds.
+
+What continues through a restart:
+
+  - The state ledgers: the ledgers per mechanism, the increment follower's
+    ledger and each tag's own ledgers. They are fields of the state, so they
+    continue from the checkpoint. A checkpoint without the configured ones is
+    refused, in step 1.
+  - The cache accumulators: the repair ledgers `q_tag_fix_<name>` and
+    `q_tag_upfix_<name>`, their gross twins and counts, and each state
+    ledger's per-step gross, column gross, events and attempted total. The
+    checkpoint carries them beside the state, and
+    `restore_tag_ledger_checkpoint!` reads them back after the cache is built,
+    so they continue too. A checkpoint with none of them starts them at zero,
+    with a warning, and their totals then cover the new segment only. One with
+    some but not all of them is refused.
 """
 function check_water_tag_checkpoint(restart_file, model, Y, context)
     water_model = model.water_tagging_model
@@ -117,6 +131,19 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "water",
         "q_tag_",
         "water_tag_updraft_copy",
+    )
+    # Each tag's own ledgers (WP6, step 3) are in the file or are not, so a
+    # changed `water_tag_ledger_per_tag` fails here.
+    check_restart_fields(
+        restart_file,
+        Y,
+        name ->
+            is_tag_per_tag_ledger_name(name) &&
+            startswith(string(name), "q_tag_"),
+        water_tag_per_tag_ledger_names(water_model),
+        "water tags' own ledgers",
+        "water_tag_ledger_per_tag",
+        "q_tag_led_",
     )
     isnothing(water_model) && return nothing
 

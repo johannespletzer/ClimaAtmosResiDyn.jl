@@ -1701,6 +1701,21 @@ warn_water_tags_under_prescribed_flow(prescribed_flow, water_tagging_model) =
     )
 
 """
+    tag_ledger_per_tag_from_config(value, key)
+
+Parse `water_tag_ledger_per_tag` or `energy_source_tag_ledger_per_tag`, named by
+`key`. `false`, the default, and `~` keep no ledger per tag; `true` gives each
+tag its own state ledgers of the corrections (WP6, step 3). Anything else is an
+error, so that a quoted `"true"` cannot silently read as off.
+"""
+function tag_ledger_per_tag_from_config(value, key)
+    isnothing(value) && return false
+    value isa Bool ||
+        error("`$key` must be `true` or `false`, got $(repr(value)).")
+    return value
+end
+
+"""
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
@@ -1740,7 +1755,16 @@ function AtmosTagging(config::AtmosConfig)
     )
     water_transport_value = get(config.parsed_args, "water_tag_transport", nothing)
     water_transport = water_tag_transport_from_config(water_transport_value)
+    water_ledger_per_tag = tag_ledger_per_tag_from_config(
+        get(config.parsed_args, "water_tag_ledger_per_tag", false),
+        "water_tag_ledger_per_tag",
+    )
     water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
+        water_ledger_per_tag && error(
+            "`water_tag_ledger_per_tag: true` is set but `water_tracers` is \
+            not, so there are no tags to keep ledgers for. Configure \
+            `water_tracers`, or drop the key.",
+        )
         water_updraft_copies && error(
             "`water_tag_updraft_copy: true` is set but `water_tracers` is \
             not, so there are no tags to copy. Configure `water_tracers`, or \
@@ -1781,6 +1805,7 @@ function AtmosTagging(config::AtmosConfig)
             water_tags;
             updraft_copies = water_updraft_copies,
             transport = water_transport,
+            ledger_per_tag = water_ledger_per_tag,
         )
     end
     source_entries = config.parsed_args["energy_source_tags"]
@@ -1795,6 +1820,10 @@ function AtmosTagging(config::AtmosConfig)
     )
     source_updraft_copies = energy_source_updraft_copy_from_config(
         get(config.parsed_args, "energy_source_tag_updraft_copy", false),
+    )
+    source_ledger_per_tag = tag_ledger_per_tag_from_config(
+        get(config.parsed_args, "energy_source_tag_ledger_per_tag", false),
+        "energy_source_tag_ledger_per_tag",
     )
     source_increment_explicit_microphysics =
         energy_source_increment_explicit_microphysics_from_config(
@@ -1821,6 +1850,11 @@ function AtmosTagging(config::AtmosConfig)
                 "`energy_source_tag_updraft_copy: true` is set but \
                 `energy_source_tags` is not, so there are no tags to copy. \
                 Configure `energy_source_tags`, or drop the key.",
+            )
+            source_ledger_per_tag && error(
+                "`energy_source_tag_ledger_per_tag: true` is set but \
+                `energy_source_tags` is not, so there are no tags to keep \
+                ledgers for. Configure `energy_source_tags`, or drop the key.",
             )
             source_increment_explicit_microphysics && error(
                 "`energy_source_tag_increment_allow_explicit_microphysics: \
@@ -1853,6 +1887,7 @@ function AtmosTagging(config::AtmosConfig)
                 repair = source_repair,
                 transport = source_transport,
                 updraft_copies = source_updraft_copies,
+                ledger_per_tag = source_ledger_per_tag,
             )
         end
     energy_process_record = process_record_from_config(

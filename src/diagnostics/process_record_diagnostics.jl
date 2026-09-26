@@ -41,8 +41,8 @@ Register the diagnostics of the configured process records:
 Both are cumulative from the start of the run and are carried through a
 restart, because the records are prognostic. A budget over an interval is
 therefore the difference of two outputs, and a time average of one is not
-meaningful. Note this is *not* the `q_tag_fix_<name>` contract:
-`q_tag_fix_<name>` lives in the cache and does restart at zero.
+meaningful. `q_tag_fix_<name>` lives in the cache instead, and a checkpoint
+carries it separately (WP6, step 3).
 
 Short names depend on the configured processes, so this runs during simulation
 setup rather than at package load time.
