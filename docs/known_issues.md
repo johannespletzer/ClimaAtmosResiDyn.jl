@@ -243,12 +243,17 @@ not re-derive them.
   - **Julia 1.9 compatibility.** Upstream still declares `julia = "1.9"` while
     testing only 1.10 and 1.11. This fork raised its own floor to 1.10.
 
-## 7. Tagged water ends a run where the parent's water goes negative (open, parity class)
+## 7. Tagged water ends a run where the parent's water goes negative (option C built; its validation fails one rule at site 23)
 
-**Status:** open. The owner chose option A on 2026-09-24, so that a closure
-check no longer ends such a run. It is proposed in #112, which is not merged.
-Until it is, the water closure check still ends such a run, as below. The cause
-of the divergence is open. To be settled before the sphere.
+**Status:** option C is built and unit-tested (below). Option A keeps the
+check from ending the run; this branch has it by merge of #112, which is not
+merged into `main`. Whether C keeps the tags on their target over the long runs
+was the record branch's pre-registered validation
+(`design/NEGATIVE_PARENT_WATER.md`, section 8). It ran on 2026-09-25 (the
+record's FINDINGS W42). Site 23 now runs 90 days, the model fields match the
+untagged twin bit for bit, and site 26's tags are unchanged bit for bit. But
+at site 23 the region tags overshoot the target by up to 2.2% of the water,
+against a budget of 0.2%. What follows is the owner's decision.
 
 A diagnostic must never end a run that upstream completes. This one does.
 The tag-closure long runs (the record branch's
@@ -278,17 +283,31 @@ configured abort level 1.0 at t = 6.4368e6 s", from `tag_closure_callback!`.
 That level assumed a non-negative parent: then non-negative tags miss it by at
 most the parent itself. Here the parent is negative.
 
-**Option A, chosen and not merged** (the owner's choice of 2026-09-24): #112,
-`claude/tag-closure-no-abort`, a PR against `main`, which this stack gets by
-merge. With it, no closure check ends a run by default. Past water's old level,
-1.0, the check warns and marks the tables' rows void, and the run goes on. An
-explicit `abort_above` still ends a run. That the mark covers the row where
-the level is passed and every later one holds only once #112 merges. Its
-handling across a restart is still being changed. On this code the default
-level, 1.0, still ends the run.
+**Option A, chosen, in this branch by merge** (the owner's choice of
+2026-09-24): #112, `claude/tag-closure-no-abort`, a PR against `main` that is
+not merged. This branch has it at `36cd8cee`. With it, no closure check ends a
+run by default. Past water's old level, 1.0, the check warns and marks the
+tables' rows void, and the run goes on. An explicit `abort_above` still ends a
+run. At `36cd8cee` the mark starts again after a restart; #112's later head
+carries it through one. So the mark covers the row where the level is passed
+and every later one within a segment here, and across a restart only with that
+later head.
 
-**Still open:** which of the tags' operators makes the divergence. The runs
-bound the problem to negative parent water on a long column; they do not
-isolate the mechanism. A probe with the per-tag ledgers runs next, and the
-owner then chooses among options B, C and D of the record branch's
-`design/NEGATIVE_PARENT_WATER.md`.
+**The probe** (the record's FINDINGS W39) read the per-tag ledgers over 20
+days at site 23. When the parent first goes negative, the follower's moved
+part is about 120 times the corrections, and 70% of the tags' overclaim lies
+outside the negative cells. It pointed to option C.
+
+**Option C, done** (the owner's choice of 2026-09-25): the partition tags
+partition the parent's non-negative water, `max(ρq_tot, 0)`, and the negative
+part is a named remainder, `q_tag_negative`.
+
+  - The follower takes the non-negative part's increment. The part of its
+    column total that is the negative water a solve creates goes to the tags,
+    in the new ledger `q_tag_inc_negative`, and not into `q_tag_res`.
+  - Where the parent is negative, a cell's tags move by the partition's own
+    composition, so a cell overdrawn by a solve gives up the tags it held.
+    Before, its shares were zero and the tags stayed.
+  - The limiters' rescale and the copies' repair aim at the non-negative part.
+  - The closure check and `q_tag_res` compare the partition with it.
+  - Where the parent is never negative, nothing changes, bit for bit.

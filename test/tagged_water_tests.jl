@@ -1004,8 +1004,14 @@ end
         tags();
         transport = CA.IncrementWaterTagTransport(),
     )
-    with_ledger =
-        (; c = (; tagged.c..., q_tag_inc_left = 0.0, q_tag_inc_moved = 0.0))
+    with_ledger = (;
+        c = (;
+            tagged.c...,
+            q_tag_inc_left = 0.0,
+            q_tag_inc_moved = 0.0,
+            q_tag_inc_negative = 0.0,
+        ),
+    )
     @test isnothing(check(written, increment_model, with_ledger))
     @test_throws r"water_tag_transport" check(written, increment_model)
     @test_throws r"water_tag_transport" check(
@@ -1221,11 +1227,11 @@ end
         @test !CA.follows_water_increment(CA.WaterTaggingModel(tags))
         @test !CA.follows_water_increment(nothing)
         @test CA.water_tag_increment_ledger_names(increment) ==
-              (:q_tag_inc_left, :q_tag_inc_moved)
+              (:q_tag_inc_left, :q_tag_inc_moved, :q_tag_inc_negative)
         @test CA.water_tag_increment_ledger_names(CA.WaterTaggingModel(tags)) ==
               ()
         @test CA.water_tag_increment_ledger_variables(1.0, increment) ==
-              (; q_tag_inc_left = 0.0, q_tag_inc_moved = 0.0)
+              (; q_tag_inc_left = 0.0, q_tag_inc_moved = 0.0, q_tag_inc_negative = 0.0)
         @test CA.water_tag_increment_ledger_variables(1.0, nothing) == (;)
         # The ledger's names are not tracers, so no transport reaches them,
         # and the reserved tag names keep the diagnostics apart.
@@ -2371,5 +2377,193 @@ end
             @test maximum(abs, parent(ᶜtag)) > 0
             @test parent(ᶜledger) == parent(ᶜtag)
         end
+    end
+end
+
+# Known issue 7, option C (the owner, 2026-09-25): the partition tags partition
+# the parent's non-negative water, and the negative part is a named remainder.
+@testset "Option C: the tags partition the parent's non-negative water" begin
+    CC = CA.ClimaCore
+    MF = CA.MatrixFields
+    for FT in (Float32, Float64)
+        # The target and the remainder add up to the parent, and a parent that
+        # is not negative is its own target, bit for bit.
+        @test CA.water_tag_partition_target(FT(2)) == FT(2)
+        @test CA.water_tag_partition_target(FT(-1)) == FT(0)
+        @test isequal(CA.water_tag_partition_target(FT(-0.0)), FT(-0.0))
+        @test CA.water_tag_negative_part(FT(-1)) == FT(-1)
+        @test CA.water_tag_negative_part(FT(2)) == FT(0)
+        for x in (FT(-3), FT(0), FT(5))
+            @test CA.water_tag_partition_target(x) +
+                  CA.water_tag_negative_part(x) == x
+        end
+        # The limiters' rescale aims at the target: a correction that leaves
+        # the parent negative takes a closed partition to zero, not below.
+        @test CA.water_tag_rescale_shift(FT(1.5), FT(-1), FT(2), FT(2)) ==
+              FT(-1.5)
+        @test CA.water_tag_rescale_shift(FT(1.5), FT(1), FT(2), FT(2)) ==
+              FT(1.5) * (FT(1) - FT(2)) / FT(2)
+
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1200,
+            z_elem = 6,
+            staggering,
+        )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜz = CC.Fields.coordinate_field(ᶜspace).z
+        region(above) = CA.TanhAltitudeRegion(FT(600), FT(100), above)
+        tags = (
+            CA.WaterTag{:tropo}(region(false)),
+            CA.WaterTag{:strat}(region(true)),
+            CA.WaterTag{:evap}(nothing, :surface_flux),
+        )
+        model = CA.WaterTaggingModel(
+            tags;
+            transport = CA.IncrementWaterTagTransport(),
+            ledger_per_tag = true,
+        )
+        ᶜnames = (
+            :ρ,
+            :ρq_tot,
+            :ρq_tag_tropo,
+            :ρq_tag_strat,
+            :ρq_tag_evap,
+            :q_tag_inc_left,
+            :q_tag_inc_moved,
+            :q_tag_inc_negative,
+            :q_tag_led_inc_tropo,
+            :q_tag_led_inc_strat,
+            :q_tag_led_inc_evap,
+        )
+        state() = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        # A closed partition of the target, with a source tag beside it.
+        function closed!(Y, ᶜρq)
+            fill!(parent(Y.c), 0)
+            fill!(parent(Y.f), 0)
+            @. Y.c.ρ = FT(1.1)
+            Y.c.ρq_tot .= ᶜρq
+            ᶜtarget = @. CA.water_tag_partition_target(Y.c.ρq_tot)
+            ᶜbelow = @. (1 - tanh((ᶜz - 600) / 100)) / 2
+            @. Y.c.ρq_tag_tropo = ᶜbelow * ᶜtarget
+            @. Y.c.ρq_tag_strat = ᶜtarget - Y.c.ρq_tag_tropo
+            @. Y.c.ρq_tag_evap = FT(0.1) * ᶜtarget
+            return Y
+        end
+        ᶜbase = @. FT(0.012) - FT(4e-6) * ᶜz
+        cache() = (;
+            atmos = (; water_tagging_model = model),
+            tagging = (;
+                CA._water_tag_increment_cache(state(), model)...,
+                ᶜwater_parent = similar(ᶜbase),
+                ᶜwater_pos = similar(ᶜbase),
+            ),
+            scratch = (;
+                ᶜtagging_q_share_norm = similar(ᶜbase),
+                ᶜtemp_scalar = similar(ᶜbase),
+            ),
+        )
+        level(field, k) = parent(field)[k]
+        function ᶜcell(k)
+            z_k = parent(ᶜz)[k]
+            return @. ifelse(ᶜz == z_k, FT(1), FT(0))
+        end
+        ᶜcell3 = ᶜcell(3)
+        ᶜcell4 = ᶜcell(4)
+        dtγ = FT(60)
+        # One stage from `Y` to `U`, with the parent's post-solve `dY` zero:
+        # the tags after it.
+        function stage(Y, U)
+            p = cache()
+            CA.snapshot_water_tag_increment!(Y, p, dtγ)
+            dY = zero(U)
+            CA.correct_water_tag_increment!(dY, U, p)
+            after = copy(U)
+            @. after.c.ρq_tag_tropo += dtγ * dY.c.ρq_tag_tropo
+            @. after.c.ρq_tag_strat += dtγ * dY.c.ρq_tag_strat
+            @. after.c.ρq_tag_evap += dtγ * dY.c.ρq_tag_evap
+            return after, dY, p
+        end
+        tol = 100 * eps(FT) * maximum(abs, parent(ᶜbase))
+
+        # A solve takes cell 3 below zero: it gives its water and 3e-3 more to
+        # cell 4.
+        Y = closed!(state(), ᶜbase)
+        x = level(ᶜbase, 3)
+        y = FT(3e-3)
+        U = closed!(state(), ᶜbase)
+        @. U.c.ρq_tot = ᶜbase - (x + y) * ᶜcell3 + (x + y) * ᶜcell4
+        after, dY, p = stage(Y, U)
+        ᶜtarget = @. CA.water_tag_partition_target(U.c.ρq_tot)
+        ᶜpartition = @. after.c.ρq_tag_tropo + after.c.ρq_tag_strat
+        # The partition closes against the target, cell by cell, and the
+        # negative cell's partition holds nothing.
+        @test maximum(abs, parent(ᶜpartition) .- parent(ᶜtarget)) <= tol
+        @test abs(level(ᶜpartition, 3)) <= tol
+        # The bound: no partition tag goes negative.
+        @test minimum(parent(after.c.ρq_tag_tropo)) >= -tol
+        @test minimum(parent(after.c.ρq_tag_strat)) >= -tol
+        # Every change is in the ledgers: the negative part's column total is
+        # the ledger's, nothing is left out, and each tag's own ledger is its
+        # change bit for bit.
+        ᶜn = @. CA.water_tag_negative_part(Y.c.ρq_tot) -
+           CA.water_tag_negative_part(U.c.ρq_tot)
+        @test sum(dtγ .* dY.c.q_tag_inc_negative) ≈ sum(ᶜn) rtol = 100 * eps(FT)
+        @test sum(ᶜn) > 0
+        @test maximum(abs, parent(dY.c.q_tag_inc_left)) <= tol / dtγ
+        for name in (:tropo, :strat, :evap)
+            @test isequal(
+                parent(getproperty(dY.c, Symbol(:q_tag_led_inc_, name))),
+                parent(getproperty(dY.c, Symbol(:ρq_tag_, name))),
+            )
+        end
+        @test parent(dY.c.q_tag_led_inc_tropo .+ dY.c.q_tag_led_inc_strat) ≈
+              parent(dY.c.q_tag_inc_moved .+ dY.c.q_tag_inc_negative) atol =
+            tol / dtγ
+        # The closure check compares the partition with the target.
+        closure = CA.tag_closure(
+            after,
+            p,
+            CA.water_closure_total(model),
+            CA.water_region_tag_state_names(model),
+        )
+        @test closure.gross_relative <= 100 * eps(FT)
+        @test closure.total ≈ sum(ᶜtarget)
+
+        # The parent recovers: cell 3 takes 2e-3 from cell 4 on top of its
+        # deficit. The partition gives up the deficit where it holds water.
+        Y2 = closed!(state(), U.c.ρq_tot)
+        U2 = closed!(state(), U.c.ρq_tot)
+        z = FT(2e-3)
+        @. U2.c.ρq_tot = U.c.ρq_tot + (y + z) * ᶜcell3 - (y + z) * ᶜcell4
+        after2, dY2, _ = stage(Y2, U2)
+        ᶜtarget2 = @. CA.water_tag_partition_target(U2.c.ρq_tot)
+        ᶜpartition2 = @. after2.c.ρq_tag_tropo + after2.c.ρq_tag_strat
+        @test maximum(abs, parent(ᶜpartition2) .- parent(ᶜtarget2)) <= tol
+        ᶜn2 = @. CA.water_tag_negative_part(Y2.c.ρq_tot) -
+           CA.water_tag_negative_part(U2.c.ρq_tot)
+        @test sum(ᶜn2) < 0
+        @test sum(dtγ .* dY2.c.q_tag_inc_negative) ≈ sum(ᶜn2) rtol =
+            1000 * eps(FT)
+
+        # A parent that stays non-negative: nothing is given, and the
+        # partition follows the parent as before.
+        U3 = closed!(state(), ᶜbase)
+        @. U3.c.ρq_tot = ᶜbase - FT(1e-3) * ᶜcell3 + FT(1e-3) * ᶜcell4
+        after3, dY3, _ = stage(Y, U3)
+        @test all(iszero, parent(dY3.c.q_tag_inc_negative))
+        ᶜpartition3 = @. after3.c.ρq_tag_tropo + after3.c.ρq_tag_strat
+        @test maximum(abs, parent(ᶜpartition3) .- parent(U3.c.ρq_tot)) <= tol
     end
 end

@@ -47,7 +47,9 @@ end
 
 function compute_q_tag_res!(out, state, cache, time, ρq_tag_names)
     ᶜres = isnothing(out) ? similar(state.c.ρq_tot) : out
-    ᶜres .= state.c.ρq_tot
+    # Against the partition's target, the parent's non-negative water
+    # (known issue 7, option C).
+    ᶜres .= water_tag_partition_target.(state.c.ρq_tot)
     for ρq_tag_name in ρq_tag_names
         ρq_tag_name in propertynames(state.c) ||
             error("$ρq_tag_name does not exist in the model")
@@ -55,6 +57,16 @@ function compute_q_tag_res!(out, state, cache, time, ρq_tag_names)
     end
     ᶜres .= specific.(ᶜres, state.c.ρ)
     return ᶜres
+end
+
+# `q_tag_negative`: the parent's negative water, the remainder the partition
+# leaves (known issue 7, option C).
+function compute_q_tag_negative!(out, state, cache, time)
+    if isnothing(out)
+        return specific.(water_tag_negative_part.(state.c.ρq_tot), state.c.ρ)
+    else
+        out .= specific.(water_tag_negative_part.(state.c.ρq_tot), state.c.ρ)
+    end
 end
 
 function compute_q_tag_upfix!(out, state, cache, time, ρq_tag_name)
@@ -146,10 +158,15 @@ during simulation setup rather than at package load time:
   - `qv_tag_<name>`: tagged **vapor**, `q_tag_<name> * q_v / q_t`, under the
     assumption that the phases are well mixed within a grid cell;
 
-  - `q_tag_res`: closure residual `(ρq_tot - Σᵢ ρq_tag_i) / ρ`, where the sum
-    runs over the pure region tags (only registered when at least one exists);
+  - `q_tag_res`: closure residual `(max(ρq_tot, 0) - Σᵢ ρq_tag_i) / ρ`, where
+    the sum runs over the pure region tags (only registered when at least one
+    exists). The tags partition the parent's non-negative water;
 
-  - `q_tag_inc_left` and `q_tag_inc_moved`, under `water_tag_transport: increment` only: the increment correction's ledger per unit mass,
+  - `q_tag_negative`: the parent's negative water, `min(ρq_tot, 0) / ρ`, which
+    the partition leaves (known issue 7, option C). So `q_tag_res`,
+    `q_tag_negative` and the region tags add up to `q_tot`;
+
+  - `q_tag_inc_left`, `q_tag_inc_moved` and `q_tag_inc_negative`, under `water_tag_transport: increment` only: the increment correction's ledger per unit mass,
     cumulative since the start of the run. See
     `water_tag_increment_ledger_variables`.
 
@@ -420,6 +437,14 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             "take explicitly, and the column-neutral part of their lag behind " *
             "the parent's other implicit terms.",
         ),
+        (
+            "q_tag_inc_negative",
+            "Given to the Water Tags for the Parent's Negative Part",
+            "gave the tags, or took from them, because the parent's negative " *
+            "part changed: the tags partition max(ρq_tot, 0), whose column " *
+            "total grows by the negative water a solve creates. Zero where " *
+            "the parent stays non-negative (known issue 7, option C).",
+        ),
     )
         delete!(ALL_DIAGNOSTICS, short_name)
         follows_water_increment(model) || continue
@@ -447,13 +472,27 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
     # summed over tags that never partitioned this model's water. That returns a
     # wrong number and no error, so clear it.
     delete!(ALL_DIAGNOSTICS, "q_tag_res")
+    delete!(ALL_DIAGNOSTICS, "q_tag_negative")
     if !isempty(region_names)
+        add_diagnostic_variable!(;
+            short_name = "q_tag_negative",
+            units = "kg kg^-1",
+            long_name = "Negative Total Water Left Out of the Water Tags",
+            comments = "The parent's negative water, min(ρq_tot, 0) / ρ. " *
+                       "The region tags partition the non-negative part, " *
+                       "max(ρq_tot, 0), so this is the remainder they leave, " *
+                       "beside q_tag_res (known issue 7, option C). Zero " *
+                       "wherever q_tot is not negative.",
+            compute! = (out, u, p, t) -> compute_q_tag_negative!(out, u, p, t),
+        )
         add_diagnostic_variable!(;
             short_name = "q_tag_res",
             units = "kg kg^-1",
             long_name = "Tagged Water Closure Residual",
-            comments = "Total water minus the sum of the region tags, " *
-                       "(ρq_tot - Σᵢ ρq_tag_i) / ρ. One contributor is the " *
+            comments = "Total water's non-negative part minus the sum of the " *
+                       "region tags, (max(ρq_tot, 0) - Σᵢ ρq_tag_i) / ρ. " *
+                       "Where ρq_tot is negative, the tags aim at zero, and " *
+                       "the negative water is q_tag_negative. One contributor is the " *
                        "vertical advection split: the tags are advected on " *
                        "the explicit passive-tracer path while ρq_tot is " *
                        "advected implicitly with a post-Newton upwind " *

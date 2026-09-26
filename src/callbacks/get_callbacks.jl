@@ -778,8 +778,10 @@ tolerance, so by default their check only reports: their residual is normalized
 by a quantity whose zero is a convention, so it is not comparable across runs
 that use different energy references.
 
-Each block also carries an `abort_above` level at which the run ends instead of
-warning. Only water has a default one, for the same reason: see
+Each block also carries a `void_above` level, above which the check warns once
+and marks its rows void while the run goes on. Only water has a default one, for
+the same reason: see [`DEFAULT_CLOSURE_VOID_LEVELS`](@ref). An `abort_above`
+level ends the run instead, only where a user sets it: see
 [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref).
 
 Each block also carries an `audit` flag, off by default, which adds a second
@@ -805,7 +807,8 @@ function default_model_callbacks(
             water_closure_check,
             tagging.water_tagging_model;
             family = "water",
-            total_name = :ρq_tot,
+            # The partition's target, the parent's non-negative water.
+            total_name = water_closure_total(tagging.water_tagging_model),
             state_names = water_region_tag_state_names,
             config_key = "water_closure_check",
             tracer_key = "water_tracers",
@@ -922,6 +925,9 @@ function tag_closure_callback(
     # so that a row due at the same time already has the reference.
     spin_up = get(check, :spin_up, nothing)
     reference = isnothing(spin_up) ? nothing : Ref{Any}(nothing)
+    # Past the void level every later row is marked void (known issue 7).
+    void_above = get(check, :void_above, nothing)
+    voided = Ref(false)
     affect!(integrator) = tag_closure_callback!(
         integrator,
         output_dir,
@@ -933,6 +939,8 @@ function tag_closure_callback(
         check.audit;
         reference,
         extra_audit,
+        void_above,
+        voided,
     )
     periodic = call_every_dt(affect!, period)
     isnothing(spin_up) && return (periodic,)

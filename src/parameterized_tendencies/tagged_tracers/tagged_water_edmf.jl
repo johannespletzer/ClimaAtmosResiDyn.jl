@@ -1070,9 +1070,11 @@ end
 After the updraft filter (`enforce_edmf_updraft_constraints!`), close the
 partition's copies onto `q_totʲ` again. The filter clamps each copy and
 `q_totʲ` apart, so their sum and `q_totʲ` part. The residual
-`r = q_totʲ - Σᵢ∈P χᵢʲ` is handed to the partition's copies by their shares,
+`r = max(q_totʲ, 0) - Σᵢ∈P χᵢʲ` is handed to the partition's copies by their shares,
 floored at what they hold, by [`water_tag_rescale_shift`](@ref), the rule the
-grid-scale tags follow after a limiter. The filter's own increment is not
+grid-scale tags follow after a limiter. As for the grid mean, the copies
+partition the updraft's non-negative water, and a negative `q_totʲ` leaves
+them at zero (known issue 7, option C). The filter's own increment is not
 handed on as well: the filter already clamped each copy, and doing both would
 count it twice. `r` before the repair is kept in `p.tagging.ᶜwater_copy_residual`
 for the diagnostic `q_tag_copy_res`, and the water moved, times `ρaʲ`, in the
@@ -1101,7 +1103,9 @@ function _repair_water_tag_copies!(
     @. ᶜwater_copy_sum = 0
     @. ᶜwater_copy_pos = 0
     _accumulate_copy_sums!(ᶜwater_copy_sum, ᶜwater_copy_pos, ᶜsgsʲ, model.tags)
-    @. ᶜwater_copy_residual = ᶜsgsʲ.q_tot - ᶜwater_copy_sum
+    # The copies partition the updraft's non-negative water (option C).
+    @. ᶜwater_copy_residual =
+        water_tag_partition_target(ᶜsgsʲ.q_tot) - ᶜwater_copy_sum
     # What this call adds goes to the ledger's `attempted` (WP6, step 3).
     before_tag_ledgers!(p, Y, Val((:q_tag_led_uprepair,)))
     _apply_copy_repair!(
