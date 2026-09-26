@@ -2217,7 +2217,7 @@ end
     end
 
     # The closure table: the family's columns go after the spin-up columns and
-    # before `void`, so both keep their places.
+    # before `closure_void`, so both keep their places.
     dir = mktempdir()
     closure = (;
         total = 3.0,
@@ -2236,12 +2236,12 @@ end
         closure;
         reference = Ref{Any}(0.5),
         extra = (; headroom_min = 2e5, headroom_min_z = 875.0),
-        void = false,
+        closure_void = false,
     )
     rows = readlines(CA.tag_closure_path(dir, "energy_source"))
     @test endswith(
         rows[1],
-        ",relative_since_spin_up,headroom_min,headroom_min_z,void",
+        ",relative_since_spin_up,headroom_min,headroom_min_z,closure_void",
     )
     values = split(rows[2], ",")
     @test length(values) == 15

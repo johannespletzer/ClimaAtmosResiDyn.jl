@@ -312,8 +312,8 @@ has crossed zero; the headroom shows the margin before that. With
 the start, and `gross_over_throughput`, the gross residual over it. Its scale
 is set by the sources, not by the energy reference as `gross_relative`'s is,
 though the residual itself still grows with the offset. These
-columns come after the spin-up columns, and before `void` where the check has
-a void level.
+columns come after the spin-up columns, and before `closure_void` where the
+check has a void level.
 
 With `audit: true` the audit table also says where the residual `R` sits, and
 what the tags that carry sources do against the partition they overlay:
