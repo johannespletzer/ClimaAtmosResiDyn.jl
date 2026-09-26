@@ -199,7 +199,10 @@ test minute is compilation and that the queue, not the jobs, set the wall time.
     that no longer fits new code usually shows up here.
   - **`Downgrade`, the full matrix at minimum compat.** It runs weekly (Monday
     03:00 UTC), on demand from the Actions tab, on tags, and when
-    `Project.toml` or `downgrade.yml` changes.
+    `Project.toml` or `downgrade.yml` changes. Its test groups are read from
+    `test/runtests.jl`'s `KNOWN_TEST_GROUPS`, less `all`, so adding a group
+    does not edit `downgrade.yml` and does not start the matrix on a pull
+    request.
   - **`Downstream`, ClimaCoupler's AMIP tests on 1.11.** It takes about an hour
     without a cache, so it runs after a merge, not on each pull request. It
     runs on `main` when `src/`, `ext/`, `config/`, `toml/` or `Project.toml`
