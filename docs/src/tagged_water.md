@@ -224,11 +224,15 @@ Where no tagged water is present the share is zero rather than undefined; if
 ``\rho q_\mathrm{tot}`` is nonzero there, closure genuinely cannot hold and the
 discrepancy surfaces in `q_tag_res` as it should.
 
-Sedimentation is stepped implicitly, so the tags also enter the Jacobian:
-`update_sedimentation_jacobian!` allocates and fills their diagonal blocks using
-the analytic derivative of the share. For a partition tag that derivative carries
-a ``(1 - \hat\varphi_k)`` factor, because a tag that already owns all the local
-water cannot increase its share.
+Sedimentation is stepped implicitly, so the tags also enter the Jacobian.
+`update_sedimentation_jacobian!` fills their diagonal blocks using the analytic
+derivative of the share. For a partition tag that derivative carries a
+``(1 - \hat\varphi_k)`` factor, because a tag that already owns all the local
+water cannot increase its share. Under 1-moment microphysics it also fills each
+tag's cross block to each falling species: the parent's block times the tag's
+share. The cross blocks are carried only when the manual Jacobian's split
+solver solves the tags apart, which is its default. `use_auto_jacobian` does
+not carry them.
 
 !!! note "Phases are well mixed within a cell"
 
@@ -301,6 +305,35 @@ The copies start, and are rebuilt from a file, as ``q_\mathrm{tot}^j`` times
 the grid mean's share. They cost one updraft tracer per tag, and they are the
 audit of the default mode's plume.
 
+**The 0-moment rain-out.** Under 0-moment microphysics, EDMF computes the
+rain-out per subdomain: ``\Delta^j = \rho a^j \, \partial_t q_\mathrm{tot}^j``
+in the updraft and ``\Delta^0 = \rho a^0 \, \partial_t q_\mathrm{tot}^0`` in the
+environment. The model adds their sum to ``\rho q_\mathrm{tot}``. The
+grid-scale tags take each part by that subdomain's composition,
+``\sum_k \Delta^k \varphi_i^k``, not by the grid mean's
+(`splits_rainout`, `add_split_rainout!`). With the copies, the updraft's share
+is the copy's, ``\chi_i^j / q_\mathrm{tot}^j``, and the environment's is what
+the grid tags and the copies leave for it. In the default mode, the model holds
+no subdomain composition, so the split reconstructs one: the grid mean's shares
+plus the exchange's difference for that subdomain, from the steady-plume
+closure the exchange uses. It is a modelled estimate, not a prognosed value. On
+TRMM 0M it was checked against the copies' own shares on the copies run's
+state, the copies converged over Newton iterations (FINDINGS W32). There the
+grid rule's rain-weighted share error was 0.15 to 0.19, and the
+reconstruction's 9% to 25% of that, on four rungs of timestep, levels and
+iterations. That is one deep-convection column with one partition. The
+partition's shares, both of them in the default mode and the environment's
+with the copies, are scaled by the partition's sum of grid shares. So a
+drifted partition keeps losing in proportion to what it holds.
+Where a subdomain's share is not defined, the grid mean's applies. The split
+applies to both signs, since a subdomain's area can go negative in the Newton
+iterates. Where it does, the subdomain's rain-out is a gain, and the split
+attributes that gain too. So the split, and `pr_tag` below, are signed
+attributions, which close with the sink, not a record of physical rain-out
+alone. In the default mode without the SGS mass flux there is no
+exchange, and the grid mean's share applies to all the rain-out, as it does
+without EDMF. The model's fields do not change.
+
 **Refusals.** Both modes refuse more than one updraft. The copies are refused
 without prognostic EDMF, and when `edmfx_mse_q_tot_upwinding` differs from
 `edmfx_tracer_upwinding`, because the copies' fluxes then do not sum to the
@@ -318,10 +351,12 @@ implicit increment. It is the default in the default mode under
 G3_PLAN 4.3 fixed that rule before the runs: the follower becomes the default
 under EDMF if the default mode's one-iteration part of the closure residual
 exceeds a quarter of the 0.2% budget. V-W3 measured twelve times that. With
-copies, and without prognostic EDMF, the default is `tracer`. ``\rho q_\mathrm{tot}`` is advected
-vertically in the implicit step, and its sub-grid flux, diffusion and
-sedimentation have Jacobian blocks the tags' terms lack. So with one Newton
-iteration the tags lag the parent's solve. On a day of the DYCOMS RF02 EDMF
+copies, without prognostic EDMF, and with 1M microphysics stepped explicitly,
+the default is `tracer`.
+``\rho q_\mathrm{tot}`` is advected vertically in the implicit step, and its
+sub-grid flux and diffusion have Jacobian blocks the tags' terms lack. Its
+sedimentation had them too, until the tags' cross blocks (below). So with one
+Newton iteration the tags lag the parent's solve. On a day of the DYCOMS RF02 EDMF
 column that lag was most of a 0.7% closure residual.
 
 Under the key the tags skip their explicit vertical advection. After each
@@ -354,11 +389,25 @@ It needs:
     100 rounding units;
   - an algorithm that solves every implicit stage it uses (ARS222, ARS343);
   - the parent's own post-solve correction (`energy_q_tot_upwinding` other
-    than `none`);
-  - microphysics other than 1M stepped explicitly. There the tags'
-    sedimentation lags the parent's by a change of the column's total, about
-    0.8% of the water an hour with one Newton iteration, which the follower
-    cannot take. `tracer` lags there alike.
+    than `none`).
+
+With 1M microphysics each grid-scale water tag's Jacobian row carries the
+parent's sedimentation cross block to each falling species, times the tag's
+share. The updraft copies' rows do not yet. So one Newton iteration moves the
+tags with the updated species, as it moves ``\rho q_\mathrm{tot}``. Without
+those blocks the tags lagged the parent's surface outflow, about 0.8% of the
+water an hour with microphysics stepped explicitly, and the follower cannot
+move a change of the column's total. With them, on W23's DYCOMS RF02 EDMF
+column (ARS222, `dt` 120 s, one Newton iteration), the follower's net residual
+after an hour was −2.1e-8 and its gross 5.7e-8; the integration test bounds
+both by 1e-6. That validates the closure and the lag it removed, not the
+provenance of each tag. The split Jacobian solver solves the tags after the
+other fields, by back-substitution, so the model's fields do not change.
+
+On that path the follower is still opt-in: one column in one regime does not
+yet decide the default. Only the manual Jacobian's split solver carries the
+cross blocks, so with 1M stepped explicitly and `use_auto_jacobian: true` the
+follower is refused.
 
 The default takes `increment` only where the configuration shows these, and
 the model refuses it where they fail. A restart that changes
@@ -380,6 +429,23 @@ set.
     repair, cumulative as `q_tag_fix` is, and the residual it found;
   - `q_tag_leak_<path>`: the rate at which one path drifts the partition's sum
     from ``\rho q_\mathrm{tot}``, computed from the state; see below;
+  - `pr_tag_<name>`, `prra_tag_<name>` and `prsn_tag_<name>`, under 0-moment
+    microphysics only: the tag's part of `pr`, `prra` and `prsn`, the column
+    integral of its part of the rain-out (`water_tag_precipitation!`). It is
+    upward-positive as `pr` is, so negative, and split into rain and snow by
+    the grid mean's temperature as `pr` is. It is computed from the state at
+    output time, so it is the rate at the step's end, not the one the step
+    applied. All the tags' parts are computed together, once per output time
+    (`update_water_tag_rainouts!`), so the cost of the whole set grows
+    linearly with the number of tags. Under 1-moment it waits on rain and snow
+    tags;
+  - `pr_tag_res`, with a region tag, under 0-moment: `pr` less the region
+    tags' `pr_tag`, the rain-out no region tag takes. Under the split it is the
+    rain-out times one less the partition's sum of shares, in each subdomain:
+    ``\int (\Delta^j (1 - S^j) + \Delta^0 (1 - S))``. ``S`` is the grid
+    partition's sum of shares, and ``S^j`` is ``S`` in the default mode and the
+    copies' own sum with copies. So it shows the partition's residual and the
+    copies' at the surface;
   - `q_tag_fixgross_<name>` and `q_tag_fixcount_<name>`, and with copies
     `q_tag_upfixgross_<name>` and `q_tag_upfixcount_<name>`: beside each
     ledger, the sum of the absolute values of its changes and the number of
@@ -614,6 +680,8 @@ ClimaAtmos.water_tag_partition_target
 ClimaAtmos.water_closure_total
 ClimaAtmos.water_tag_share_norm!
 ClimaAtmos.water_tag_sediment_share
+ClimaAtmos.water_tag_source_sediment_share
+ClimaAtmos.water_tag_sediment_share_field
 ClimaAtmos.sediment_water_tags!
 ClimaAtmos.snapshot_tagged_ρq_tot!
 ClimaAtmos.attribute_tagged_ρq_tot!
@@ -640,6 +708,12 @@ ClimaAtmos.water_tag_copy_sgs_names
 ClimaAtmos.water_tag_edmf_audit
 ClimaAtmos.WATER_TAG_LEAK_PATHS
 ClimaAtmos.water_tag_leak!
+ClimaAtmos.splits_rainout
+ClimaAtmos.add_split_rainout!
+ClimaAtmos.add_rainout_increments!
+ClimaAtmos.update_water_tag_rainouts!
+ClimaAtmos.water_tag_precipitation!
+ClimaAtmos.water_tag_precipitation_residual!
 ClimaAtmos.IncrementWaterTagTransport
 ClimaAtmos.TracerWaterTagTransport
 ClimaAtmos.follows_water_increment
