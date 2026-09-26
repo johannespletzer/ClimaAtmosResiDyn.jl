@@ -330,8 +330,8 @@ between levels. Both are net over time in each cell: a cell whose ledger went
 up and down again counts only what is left. They are not a throughput, and
 understate how much the correction redistributed; the per-step throughput is
 the diagnostics `q_tag_inc_left_gross` and `q_tag_inc_moved_gross`
-(`tag_throughput.jl`). The energy source tags' columns of the same kind are
-still named `_gross`. Each also over `scale`.
+(`tag_throughput.jl`). The energy source tags' columns of the same kind have
+the same names. Each also over `scale`.
 
 Always, the gross throughput of the cache ledgers since the segment started
 (`tag_throughput.jl`): `fix_gross` and `fix_events`, for the limiters' and the

@@ -900,6 +900,42 @@ column_atmos_model(; kwargs...) =
                 enthalpy.energy_source_tagging_model,
             ),
         )
+        # The masks must sum to 1 within 100 rounding units of their float
+        # type, as for the water tags' follower. The old check allowed 1%. So a
+        # sum of 0.995 passed it, and it must fail now. A sum 50 units from 1
+        # passes and one 150 units from 1 fails, so the bound sits at 100 units
+        # in both float types. 0.75 plus or minus a few units is exact.
+        for FT in (Float32, Float64)
+            model = increment.energy_source_tagging_model
+            check(strat, tropo) =
+                CA._check_increment_partition(masks(strat, tropo), partition, model)
+            quarter, rest, unit = FT(0.25), FT(0.75), eps(FT)
+            @test_throws r"partition the domain" check(quarter, FT(0.745))
+            @test isnothing(check(quarter, rest + 50 * unit))
+            @test isnothing(check(quarter, rest - 50 * unit))
+            @test_throws r"partition the domain" check(quarter, rest + 150 * unit)
+            @test_throws r"partition the domain" check(quarter, rest - 150 * unit)
+            # On a column's fields the deviation is the maximum over the
+            # processes, through `ClimaComms.allreduce`. This runs that method
+            # on one process, with the gap in one cell only. More than one
+            # process is not tested here.
+            space = ClimaCore.CommonSpaces.ColumnSpace(
+                FT;
+                z_min = 0,
+                z_max = 1000,
+                z_elem = 4,
+                staggering = ClimaCore.CommonSpaces.CellCenter(),
+            )
+            ᶜtropo = fill(rest, space)
+            ᶜmasks = (; ρe_src_strat = fill(quarter, space), ρe_src_tropo = ᶜtropo)
+            @test isnothing(CA._check_increment_partition(ᶜmasks, partition, model))
+            parent(ᶜtropo)[end] = FT(0.745)
+            @test_throws r"partition the domain" CA._check_increment_partition(
+                ᶜmasks,
+                partition,
+                model,
+            )
+        end
         # And the model refuses the mode without an offset.
         @test_throws r"enthalpy_increment` needs `energy_source_tag_offset`" CA.EnergySourceTaggingModel(
             tags;

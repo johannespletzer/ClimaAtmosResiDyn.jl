@@ -617,9 +617,11 @@ integrates with the tags:
 Both are cumulative since the start of the run and carried through a restart.
 The diagnostics of the same names report them per unit mass, on request; they
 are not among the default outputs. The closure check's audit table gets their
-integrals, `increment_left`, `increment_left_gross` and
-`increment_moved_gross`. So the residual's column total splits into what the
-correction left and what everything else leaves.
+integrals, `increment_left`, `increment_left_net_abs` and
+`increment_moved_net_abs`. The last two sum each cell's absolute ledger, which
+is net over time in that cell, so they are not a throughput. So the residual's
+column total splits into what the correction left and what everything else
+leaves.
 
 The ledger records what the correction intends. A face whose donor cell has no
 share of the partition moves no tag, so there a cell's change differs a little
