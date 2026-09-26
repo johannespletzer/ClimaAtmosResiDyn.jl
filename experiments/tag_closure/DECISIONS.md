@@ -26,12 +26,6 @@ Each decision's current state is in
 This list names what is still open. Classified on 2026-09-25 against the
 record; the answered and superseded entries are in the next section.
 
-  - **OD9 to OD14**, proposed by the provenance pathway on 2026-09-26
-    ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9): the ladder
-    and its labels; the certification arithmetic; the rule classification
-    and the E66 reading; reference validity and the Newton row's amendment;
-    the probe PRs; held-out hygiene. Open once the owner enters them.
-    [Register](ROADMAP.md#the-decision-register)
   - **OD7**, G4.15's rule for energy: same sign or |m|. Deferred by the owner
     on 2026-09-24, until the long runs can be scored at site 23.
     [Register](ROADMAP.md#the-decision-register)
@@ -94,6 +88,11 @@ record; the answered and superseded entries are in the next section.
         only).
 
     [G3T](G3_TODO.md)
+
+*Scope added (provenance pathway, 2026-09-26):* **OD9 to OD14** are proposed,
+not yet open ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9). Each
+becomes open when the owner accepts it.
+[Register](ROADMAP.md#the-decision-register)
 
 ## Answered or superseded, moved from the waiting list (2026-09-25)
 

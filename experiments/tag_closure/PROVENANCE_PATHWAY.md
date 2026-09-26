@@ -1,19 +1,24 @@
 # The provenance pathway
 
 Proposed on 2026-09-26, pending the owner's decisions OD9 to OD14. It is
-written on `claude/plan-rev2` at `a6949414`. That branch held the newest
-results: it was 78 commits ahead of `claude/tag-closure-record`, and no other
-branch held a record commit that it lacked. Nothing here has been run. Every
-number quoted is a finding already on the record, and values read before this
-page was written count as prior evidence only, never as a scored test.
+written on `claude/tag-provenance-certainty-zwkx73`, from `claude/plan-rev2`
+at `a6949414`. That branch held the newest results: it was 78 commits ahead of
+`claude/tag-closure-record`, and no other branch held a record commit that it
+lacked. Nothing here has been run. Every measured number quoted is a finding
+already on the record, unless it says otherwise. PT2's estimate is reasoned
+from the RF02 profiles and is labelled so. Values read before this page was
+written count as prior evidence only, never as a scored test.
 
 **Why this page exists.** The owner wrote on 2026-09-25 that the provenance of
-the tags is much harder to reach than closure. Closure now holds to rounding in
-almost every run. No provenance row has passed anywhere. Rev. 2 of the work
-plan ([ROADMAP.md](ROADMAP.md)) already says that closure cannot stand in for
-provenance. It blocks false positives, but it gives no route to positive
-evidence. This page adds that route. It adds; it strikes nothing that the owner
-approved. The in-place edits it makes elsewhere are listed in section 12.
+the tags is much harder to reach than closure. Closure now holds within its
+0.2% budget in almost every run (D4-W 7.2e-6 to 3.0e-5 at 24 h, W38), and to
+rounding in some (TRMM 0M, W28; site 26, W36). No provenance verdict has passed
+under rev. 2's contract. W32's same-state check on TRMM 0M comes closest. Rev. 2
+of the work plan ([ROADMAP.md](ROADMAP.md)) already says that closure cannot
+stand in for provenance. It blocks false positives, but it gives no route to
+positive evidence. This page proposes that route. It adds; it strikes nothing
+that the owner approved. The in-place edits it makes elsewhere are listed in
+section 12.
 
 ## 1. The core idea
 
@@ -49,19 +54,22 @@ The record shows this several times:
     moved from 3.8% to 5.8% away from the copies;
   - W36: at site 26 the same-sign and `|m|` rules close to rounding, move the
     same net 0.123, and give the same L1 against the copies;
-  - W40: the remainder is 1.4e-7, while two rules that both close differ for
-    `tropo` by 2.4% L1 and 6.2% L∞;
+  - W40: the remainder is 1.4e-7 of the water a day, while the first-order
+    estimate of the difference between two closing rules (part 3, without
+    feedback) is 2.4% L1 and 6.2% L∞ for `tropo`;
   - W45: the follower moves about 4.4% of the water a day while the partition
     closes to 8.4e-6;
-  - E86: the energy tags close to 8.7e-6 of the throughput, while the repair
-    trades 7.3% of it a day.
+  - E86 (with `review/od4_restatement.md` for `g411x_d4_default`): the energy
+    tags close to 8.7e-6 of the throughput, while the repair trades 7.3% of it
+    a day.
 
 Worse, a correction that enforces closure turns a visible residual into an
 invisible composition error. The leak that the follower absorbs in W40 is the
 clearest case.
 
-**Fidelity and conventional validity** ([design/ATTRIBUTION_PATH.md](design/ATTRIBUTION_PATH.md),
-sections 3.1 and 3.7). Provenance has two parts.
+**Fidelity and conventional validity**
+([design/ATTRIBUTION_PATH.md](design/ATTRIBUTION_PATH.md), sections 3.1 and
+3.7). Provenance has two parts.
 
   - *Fidelity:* the code solves its own declared tag equation. This can be
     measured, by invariants, ledger completeness, convergence, known answers
@@ -98,8 +106,9 @@ in a rule it shares.
     through the local `:subsidence` bracket (`remaining_tendency.jl` lines 186
     to 188 on `main`), although `subsidence!` is first-order upwind and linear
     in χ. So the default-against-copies agreement tests only the plume and the
-    exchange. The copies are also ineligible wherever they were scored (W21,
-    W38, E84).
+    exchange. The copies are also ineligible on D4-W and D4 (W21, W38, E84).
+    On TRMM 0M their own residual and repair pass (W21, W32), but their full
+    eligibility is not assessed (PX12).
   - The ten-iteration twins share the follower.
   - WP4c's part 3 compares two rules that both close.
   - The passive tracer has its own surface convention: it gets nothing at the
@@ -114,9 +123,11 @@ is never evidence for that rule.
 **The 2% budget is a fidelity budget.** G3_PLAN 6.1 justifies the 2% per-tag
 row as "the spread from the mixing convention alone, about 1% in L1 (E66)".
 E66's L1 row is in fractions: 0.08 and 0.12 for the region tags, 0.68 to 1.26
-for the source tags. So the convention spread is 8% to 126%, and the 2% cannot
-score conventional validity. Convention spreads are reported beside it, never
-scored against it. OD11 asks the owner to confirm this reading.
+for the source tags. So the spread that E66 reads as the convention is 8% to
+126%. It was measured for energy tags on D4, against a reference that fails
+closure on OD4's scale (E86). Either way the 2% cannot score conventional
+validity. This page proposes that convention spreads are reported beside the
+row and not scored against it. OD11 asks the owner to confirm this reading.
 
 **What certainty can mean here.** Each tag gets an interval `[L, U]` on its
 provenance error.
@@ -138,12 +149,12 @@ evidence for a higher one. Every result states its fidelity level, its
 
 **Fidelity: does the code solve its declared equation?**
 
-| Level                 | Certifies                                                                                                                                  | Required evidence                                                                                                                                                                                                                                                           | Cannot certify                                                                                                                                                                           |
-|:--------------------- |:------------------------------------------------------------------------------------------------------------------------------------------ |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Fid-0 closed          | The tags are passive and sum to the parent                                                                                                 | Parity bit for bit; the closure rows; the negative-water latch not set (the parent-validity row voids the case otherwise)                                                                                                                                                   | Any composition                                                                                                                                                                          |
-| Fid-1 well-posed      | The attribution is linear where it is declared linear, independent of tag order, symmetric in labels, bounded, and composes under grouping | Uniform composition (exists, 1e-12); permutation; a duplicate tag; proportionality (`evap_tropo` against `evap`); overlay at most parent; source integral at most production; superposition and aggregation with distinct footprints (needs PR-P4); the three-tag hull (V8) | That any rule is right. It is blind to a consistently wrong linear rule, and proportionality alone is blind to rules that are homogeneous of degree one (the repair, van Leer per field) |
-| Fid-2 ledger-complete | Every mechanism that sets a label is named and classed, and each tag's change equals the sum of its named parts                            | Per-tag, per-process accounting from the same state (the `ic_miss_probe.jl` pattern), closing to rounding; every rise attributed                                                                                                                                            | The size of any rule's error                                                                                                                                                             |
-| Fid-3 faithful        | The code solves its declared equation within a measured numerical error `F`, and injected errors do not grow beyond a measured `K`         | The follower's work split into lag and structure (PX7); the faithful parts converge (the OD3 refinement row); exact per-tag counterparts for bracketed transport (PX8); `K` from spike arms (PX9)                                                                           | Whether any assumed rule is the right physics                                                                                                                                            |
+| Level                 | Certifies                                                                                                                                  | Required evidence                                                                                                                                                                                                                                                                                | Cannot certify                                                                                                                                                                           |
+|:--------------------- |:------------------------------------------------------------------------------------------------------------------------------------------ |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fid-0 closed          | The tags are passive and sum to the parent                                                                                                 | Parity bit for bit; the closure rows; the negative-water latch not set (the parent-validity row voids the case otherwise)                                                                                                                                                                        | Any composition                                                                                                                                                                          |
+| Fid-1 well-posed      | The attribution is linear where it is declared linear, independent of tag order, symmetric in labels, bounded, and composes under grouping | Uniform composition (exists, 1e-12); permutation; a duplicate tag; proportionality (`evap_tropo` against `evap`); overlay at most parent; source integral at most production; superposition and aggregation with distinct footprints (needs PP-BAND); the three-tag hull (ATTRIBUTION_PATH's V8) | That any rule is right. It is blind to a consistently wrong linear rule, and proportionality alone is blind to rules that are homogeneous of degree one (the repair, van Leer per field) |
+| Fid-2 ledger-complete | Every mechanism that sets a label is named and classed, and each tag's change equals the sum of its named parts                            | Per-tag, per-process accounting from the same state (the `ic_miss_probe.jl` pattern), closing to rounding; every rise attributed                                                                                                                                                                 | The size of any rule's error                                                                                                                                                             |
+| Fid-3 faithful        | The code solves its declared equation within a measured numerical error `F`, and injected errors do not grow beyond a measured `K`         | The follower's work split into lag and structure (PX7); the faithful parts converge (the OD3 refinement row); exact per-tag counterparts for bracketed transport (PX8); `K` from spike arms (PX9)                                                                                                | Whether any assumed rule is the right physics                                                                                                                                            |
 
 **Validity: is the declared equation right?**
 
@@ -171,10 +182,13 @@ ladder. They never pass or fail.
     Reference-validity row.
 
 **OD5.** OD9 proposes that "bounded, not validated" means Fid-3 and `U` within
-the row. Rev. 2's three Insight 10 tests become parts of it:
+the row. That would amend OD5, decided on 2026-09-24, whose "bounded" rests on
+the Insight 10 tests alone. Under OD9 the three tests become parts of it:
 
-  - the per-tag `led_fix` is the repair's term in `U`, with the repair's
-    Lipschitz factor of at most 2;
+  - the per-tag `led_fixgross` (`q_tag_led_fixgross_<tag>`, the sum of the
+    steps' absolute changes per cell) is the repair's term in `U`, with the
+    repair's Lipschitz factor of at most 2. The retained `led_fix` is net over
+    time and under-bounds it;
   - refinement gives `F` and the lag-structure split;
   - aggregation is a Fid-1 premise.
 
@@ -201,13 +215,15 @@ propagator. The premises matter more than the formula.
     (W40) accumulates `D` per cell and step without feedback and reports its
     net. So part 3 is a first-order estimate of `L`. It bounds nothing and
     certifies nothing. Its ratio to part 2b is not evidence for the lemma.
- 2. **Where the alternative is unknown,** the per-tag term is
-    the *worst-case form* `Σ G · max(a_i, 1 − a_i)`, with `G` the gross label-carrying mass of
-    the faithful process. It is not the per-tag gross that the rule wrote,
-    which under-bounds the minority tags.
- 3. **Bracketed transport needs its exact per-tag counterpart (the *exact form*).** A bracket
-    sees a net close to zero where labels still move. The 750 m label edge
-    inside D4-W's well-mixed boundary layer is the case: the parent's
+ 2. **Where the alternative is unknown,** the per-tag term takes the
+    *worst-case form* `Σ G · max(a_i, 1 − a_i)`. Here `G` is the gross
+    label-carrying mass of the faithful process, and `a_i` is the share of it
+    that the rule gives tag i. The true share lies somewhere in `[0, 1]`, so
+    the rule's error on it is at most `max(a_i, 1 − a_i)`. This is not the
+    per-tag gross that the rule wrote, which under-bounds the minority tags.
+ 3. **Bracketed transport needs its exact per-tag counterpart,** the *exact
+    form*. A bracket sees a net close to zero where labels still move. The 750 m
+    label edge inside D4-W's well-mixed boundary layer is the case: the parent's
     subsidence tendency there is small, while `ρ|w| q |∂φ/∂z|` is not.
  4. **Hulls are optional.** Where the alternative is known to lie in a hull
     (the two cells of a face at both time levels, say), the factor becomes the
@@ -233,26 +249,30 @@ L1-contractive, wherever these act:
   - the tags' truncated Newton solve, which lacks some Jacobian blocks.
 
 The remedy is to move each nonlinear piece into the inventory of assumed rules,
-with its own gross: `led_fix` for the repair, the clamp's cut, the exchange's
-mass where θ is below one, van Leer's antidiffusive flux. What remains of the
-propagator is then linear by construction, and PX9 measures `K` for it. **The
-bound is only as good as the inventory**, so ledger completeness (Fid-2) comes
-before any bound. W42 found rises that no ledger records, and E87 found `C4`
-outside the residual, so the inventory is not yet complete.
+with its own gross: `led_fixgross` for the repair, the clamp's cut, the
+exchange's mass where θ is below one, van Leer's antidiffusive flux. What
+remains of the propagator is then linear by construction, and PX9 measures `K`
+for it. **The bound is only as good as the inventory**, so ledger completeness
+(Fid-2) comes before any bound. W42 found rises that no single ledger accounts
+for by half, and E87 found `C4` outside the residual, so the inventory is not
+yet complete.
 
 **The L∞ route.** Suppose the propagator is positive, conservative and
-constant-preserving. Uniform composition to 1e-12 already tests the last
-property. Then the composition update is row-stochastic, and the sup norm of
-the composition error cannot grow. A per-cell bound is then the accumulated
-largest relabelled fraction per cell. This route opens only where PX9 finds
-positivity. On the centred rungs it is not expected, for the two reasons in the
-last two bullets above.
+constant-preserving. A CI test checks the last property to 1e-12, but for the
+SGS mass-flux tendency alone (`tagged_water_edmf_integration.jl`); PX4 and PX9
+must check it for the full step. Then the composition update is row-stochastic,
+and the sup norm of the composition error cannot grow. A per-cell bound is then
+the accumulated largest relabelled fraction per cell. This route opens only
+where PX9 finds positivity. On the centred rungs it is not expected, for the two
+reasons in the last two bullets above.
 
 **Prior evidence on the size of `U` (read before this page, so not scored).**
-On D4-W the follower's per-tag exposure for `tropo` over the gate's 0.924-day
-window is 3.23% from `vdiff` and 3.97% from `sgs_mass_flux`
-(`output/wp4c_gate/score.txt`). That is about 7.2% together. So a worst-case bound
-cannot pass the 2% row on D4-W. Passing needs a hull, fewer assumed rules, or
+On D4-W the follower's per-tag gross attributed to each operator, the gate's
+part 2b, is 3.23% from `vdiff` and 3.97% from `sgs_mass_flux` for `tropo` over
+the gate's 0.924-day window (`output/wp4c_gate/score.txt`). That is about 7.2%
+together, and about 2.0% for `strat`. Part 2b is the gross that the rule wrote,
+so it is a lower bound on the worst-case form. So a worst-case bound cannot pass
+the 2% row for `tropo` on D4-W. Passing needs a hull, fewer assumed rules, or
 PX7 showing that most of the follower's work is lag.
 
 ## 4. The rule inventory
@@ -261,78 +281,81 @@ Each rule acting on a tag, its class, and the per-tag account that exists
 today. The claim contracts (OD11) must adopt this classification before any `L`
 or `U` is scored. Otherwise a bound can be gamed by calling a rule definitional.
 
-| Rule  | What it does                                                                                                               | Class                                                                             | Per-tag account today                             |
-|:----- |:-------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------- |:------------------------------------------------- |
-| WR1   | Region tags take new water by mask                                                                                         | definitional                                                                      | the brackets' records                             |
-| WR2   | Loss by the grid-mean donor share                                                                                          | definitional at cell scale; assumed where the process acts in a sub-volume (WR15) | the brackets' records                             |
-| WR3   | Subsidence and the GCM's large-scale subsidence reach the tags through the local bracket                                   | assumed; a faithful counterpart exists (per-tag `subsidence!`)                    | none per tag; the bracket sees the net            |
-| WR4   | Large-scale forcing and nudging import water by label                                                                      | definitional label (`fcg`); its subsidence part is WR3                            | the brackets' records                             |
-| WR5   | Rescale after the limiters, borrowing and constraints, by the receiver's composition                                       | assumed                                                                           | `q_tag_fix_*`, `fixgross`, `led_rescale`          |
-| WR6   | Partition repair: a negative tag is charged to the positive ones by holdings                                               | assumed, nonlinear                                                                | `led_repair`, per-tag `led_fix`                   |
-| WR7   | Share clamp and renormalisation                                                                                            | assumed, nonlinear                                                                | the clamp's cut (W33: 1.2e-15 under the follower) |
-| WR8   | SGS mass flux by the donor cell's share (default mode)                                                                     | assumed                                                                           | none per tag                                      |
-| WR9   | The exchange from the plume, and its bound θ                                                                               | assumed                                                                           | bound activation in the EDMF audit                |
-| WR10  | The copies' own rules: surface relaxation to the grid-mean composition, the filter, their repair                           | assumed (the comparator's rules)                                                  | `q_tag_upfix_*`, `led_uprepair`, `led_upfilter`   |
-| WR11a | The follower's moved part: the tags' mismatch with the parent's increment, carried by donor shares                         | assumed                                                                           | `q_tag_inc_moved`, per-tag `led_inc`              |
-| WR11b | The follower's placement of the column total (same sign or \|m\|)                                                          | assumed                                                                           | `q_tag_inc_left`                                  |
-| WR12  | Sedimentation resets the composition at each level (without the WP4b key)                                                  | assumed; the rain and snow parts are its faithful counterpart                     | none                                              |
-| WR13  | WP4b's pool composition over the step                                                                                      | assumed                                                                           | the audit `q_rtag_aud_*`, `q_stag_aud_*`          |
-| WR14  | The net-flow fallback between compartments                                                                                 | assumed; exact for one-way flows                                                  | the same audit                                    |
-| WR15  | The 0M rain-out by the grid-mean composition, or split by subdomain (WP4a, #104)                                           | assumed                                                                           | `pr_tag`                                          |
-| WR16  | Option C's entry of the negative part                                                                                      | assumed; void where the parent is invalid                                         | V5's ledger                                       |
-| WR17  | The `q_tot_eff` leaks and their attribution (the follower's donor shares, or WP4c's ψ)                                     | gap, then a convention                                                            | `q_tag_leak_<path>`, WP4c's ledgers               |
-| WR18  | The surface excess's composition: the plume starts at the grid mean, the copies relax to it, a passive tracer gets nothing | convention                                                                        | none                                              |
-| WR19  | Bracket granularity                                                                                                        | definitional                                                                      | —                                                 |
-| WR20  | Per-field nonlinear reconstruction of the tags' own transport (van Leer; SEM on the sphere)                                | assumed, nonlinear                                                                | none; zero on columns without a limiter (W3)      |
-| ER1   | The offset `c`                                                                                                             | definitional                                                                      | the `c`/2`c` pair                                 |
-| ER2   | Donor-proportional loss                                                                                                    | definitional                                                                      | —                                                 |
-| ER3   | Mask placement and width                                                                                                   | definitional                                                                      | a bracket                                         |
-| ER4   | The default exchange's repair (E86: 7.3% of the throughput a day)                                                          | assumed                                                                           | `e_src_fix_*`, `fixgross`                         |
-| ER5   | The follower's placement (OD7)                                                                                             | assumed                                                                           | the left-out part (E79)                           |
-| ER6   | The upward branch for ice and snow                                                                                         | assumed; its sign flips with `c`                                                  | none                                              |
-| ER7   | Granularity of the radiation labels                                                                                        | definitional                                                                      | —                                                 |
-| ER8   | The per-tag outflow of `C4` (E87)                                                                                          | gap                                                                               | none                                              |
-| ER9   | The copies' composition rule M2                                                                                            | assumed                                                                           | `e_src_copy_res`                                  |
-| ER10  | The energy exchange and plume                                                                                              | assumed                                                                           | bound activation                                  |
-| ER11  | Energy subsidence (the `sub` tag)                                                                                          | definitional; no faithful counterpart, since the parent subsides `h_tot`          | the records                                       |
-| ER12  | The energy follower's moved part                                                                                           | assumed                                                                           | `e_src_led_inc_*`                                 |
+| Rule  | What it does                                                                                                               | Class                                                                             | Per-tag account today                                                 |
+|:----- |:-------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------- |:--------------------------------------------------------------------- |
+| WR1   | Region tags take new water by mask                                                                                         | definitional                                                                      | the brackets' records                                                 |
+| WR2   | Loss by the grid-mean donor share                                                                                          | definitional at cell scale; assumed where the process acts in a sub-volume (WR15) | the brackets' records                                                 |
+| WR3   | Subsidence and the GCM's large-scale subsidence reach the tags through the local bracket                                   | assumed; a faithful counterpart exists (per-tag `subsidence!`)                    | none per tag; the bracket sees the net                                |
+| WR4   | Large-scale forcing and nudging import water by label                                                                      | definitional label (`fcg`); its subsidence part is WR3                            | the brackets' records                                                 |
+| WR5   | Rescale after the limiters, borrowing and constraints, by the receiver's composition                                       | assumed                                                                           | `q_tag_fix_*`, `fixgross`, `led_rescale`                              |
+| WR6   | Partition repair: a negative tag is charged to the positive ones by holdings                                               | assumed, nonlinear                                                                | `led_repair`, per-tag `led_fixgross` (gross) and `led_fix` (retained) |
+| WR7   | Share clamp and renormalisation                                                                                            | assumed, nonlinear                                                                | the clamp's cut (W33: 1.2e-15 under the follower)                     |
+| WR8   | SGS mass flux by the donor cell's share (default mode)                                                                     | assumed                                                                           | none per tag                                                          |
+| WR9   | The exchange from the plume, and its bound θ                                                                               | assumed                                                                           | bound activation in the EDMF audit                                    |
+| WR10  | The copies' own rules: surface relaxation to the grid-mean composition, the filter, their repair                           | assumed (the comparator's rules)                                                  | `q_tag_upfix_*`, `led_uprepair`, `led_upfilter`                       |
+| WR11a | The follower's moved part: the tags' mismatch with the parent's increment, carried by donor shares                         | assumed                                                                           | `q_tag_inc_moved`, per-tag `led_inc`                                  |
+| WR11b | The follower's placement of the column total (same sign or \|m\|)                                                          | assumed                                                                           | `q_tag_inc_left`                                                      |
+| WR12  | Sedimentation resets the composition at each level (without the WP4b key)                                                  | assumed; the rain and snow parts are its faithful counterpart                     | none                                                                  |
+| WR13  | WP4b's pool composition over the step                                                                                      | assumed                                                                           | the audit `q_rtag_aud_*`, `q_stag_aud_*`                              |
+| WR14  | The net-flow fallback between compartments                                                                                 | assumed; exact for one-way flows                                                  | the same audit                                                        |
+| WR15  | The 0M rain-out by the grid-mean composition, or split by subdomain (WP4a, #104)                                           | assumed                                                                           | `pr_tag`                                                              |
+| WR16  | Option C's entry of the negative part                                                                                      | assumed; void where the parent is invalid                                         | V5's ledger                                                           |
+| WR17  | The `q_tot_eff` leaks and their attribution (the follower's donor shares, or WP4c's ψ)                                     | gap, then a convention                                                            | `q_tag_leak_<path>`, WP4c's ledgers                                   |
+| WR18  | The surface excess's composition: the plume starts at the grid mean, the copies relax to it, a passive tracer gets nothing | convention                                                                        | none                                                                  |
+| WR19  | Bracket granularity                                                                                                        | definitional                                                                      | —                                                                     |
+| WR20  | Per-field nonlinear reconstruction of the tags' own transport (van Leer; SEM on the sphere)                                | assumed, nonlinear                                                                | none; zero on columns without a limiter (W3)                          |
+| ER1   | The offset `c`                                                                                                             | definitional                                                                      | the `c`/2`c` pair                                                     |
+| ER2   | Donor-proportional loss                                                                                                    | definitional                                                                      | —                                                                     |
+| ER3   | Mask placement and width                                                                                                   | definitional                                                                      | a bracket                                                             |
+| ER4   | The default exchange's repair (E86: 7.3% of the throughput a day)                                                          | assumed                                                                           | `e_src_fix_*`, `fixgross`                                             |
+| ER5   | The follower's placement (OD7)                                                                                             | assumed                                                                           | the left-out part (E79)                                               |
+| ER6   | The upward branch for ice and snow                                                                                         | assumed; its sign flips with `c`                                                  | none                                                                  |
+| ER7   | Granularity of the radiation labels                                                                                        | definitional                                                                      | —                                                                     |
+| ER8   | The per-tag outflow of `C4` (E87)                                                                                          | gap                                                                               | none                                                                  |
+| ER9   | The energy copies' surface relaxation toward the grid-mean composition (mirror M2 of `design/ENERGY_COPY_MIRRORS.md`)      | assumed                                                                           | `e_src_copy_res`                                                      |
+| ER10  | The energy exchange and plume                                                                                              | assumed                                                                           | bound activation                                                      |
+| ER11  | Energy subsidence (the `sub` tag)                                                                                          | definitional; no faithful counterpart, since the parent subsides `h_tot`          | the records                                                           |
+| ER12  | The energy follower's moved part                                                                                           | assumed                                                                           | `e_src_led_inc_*`                                                     |
 
 ## 5. The coverage matrix
 
 Each assumed rule and its references. `★` is the first valid reference, `○` a
 further valid one, `×` invalid because it shares the rule, `—` not applicable.
 Columns: `U` is the exposure form; Exact is the same-state exact counterpart
-(PX8, PR-A); Air is the passive-tracer twin (PX11 on Soares, or PX17 with
-PR-S); Copies is eligible copies (PX12); Replay is the sub-step replay (PX14);
-`L` is the realized spread between rules.
+(PX8, PP-SUB); Air is the passive-tracer twin (PX11 on Soares, or PX17 with
+PP-TRACER); Copies is eligible copies (PX12); Replay is the sub-step replay
+(PX14); `L` is the realized spread between rules. The Air column certifies a
+rule only against the default mode. Against the copies, the air twin shares the
+updraft filter (`enforce_edmf_updraft_constraints!`), so it cannot validate the
+filter in WR10.
 
-| Rule                               | `U`                                                | Exact         | Air                               | Copies          | Replay | `L`                   |
-|:---------------------------------- |:-------------------------------------------------- |:------------- |:--------------------------------- |:--------------- |:------ |:--------------------- |
-| WR3 subsidence through the bracket | exact only                                         | ★ PX8, ○ PX16 | × (○ with PR-S)                   | ×               | —      | —                     |
-| WR5 rescale by the receiver        | ★ PX20 (zero on columns)                           | —             | —                                 | ×               | —      | —                     |
-| WR6 partition repair               | ★ `led_fix` × 2                                    | —             | ○                                 | ×               | —      | —                     |
-| WR7 clamp and renormalisation      | ★ the cut                                          | —             | ○                                 | ×               | —      | —                     |
-| WR8 SGS donor share                | worst case                                         | —             | ★ PX11                            | ○ PX12          | —      | —                     |
-| WR9 exchange and θ                 | worst case                                         | —             | ★ PX11                            | ○ PX12          | —      | —                     |
-| WR10 the copies' own rules         | the comparator's floor                             | —             | —                                 | itself          | —      | PX5 (cause)           |
-| WR11a follower, moved              | lag goes to `F`, structure to the worst case (PX7) | —             | ○                                 | —               | —      | ○ PR-D (a convention) |
-| WR11b follower, placement          | —                                                  | —             | —                                 | —               | —      | ★ PX3                 |
-| WR12 sedimentation reset           | —                                                  | —             | —                                 | —               | ★ PX14 | —                     |
-| WR13 WP4b pool                     | —                                                  | —             | —                                 | —               | ★ PX14 | —                     |
-| WR14 net-flow fallback             | ★ the audit                                        | —             | —                                 | —               | ○ PX14 | —                     |
-| WR15 0M rain-out                   | —                                                  | —             | ×                                 | ★ PX12 (as W32) | —      | —                     |
-| WR16 option C's entry              | before the latch                                   | —             | —                                 | —               | —      | —                     |
-| WR17 leaks and their attribution   | ○ the closed form                                  | —             | —                                 | —               | —      | ★ PX2                 |
-| WR18 surface excess                | —                                                  | —             | × (○ if the level-1 check passes) | ×               | —      | ★ PX13                |
-| WR20 per-field reconstruction      | PX20                                               | —             | —                                 | ×               | —      | —                     |
-| ER4 energy repair                  | ★ `fixgross` (PX10)                                | —             | ×                                 | ×               | —      | ★ PX10                |
-| ER5 energy placement               | the left-out size (E79)                            | —             | —                                 | —               | —      | ★ the E79 pair        |
-| ER8 `C4` outflow                   | a Fid-2 probe                                      | —             | —                                 | —               | —      | —                     |
-| ER10 energy exchange               | worst case                                         | —             | × (plausibility only)             | × (E84)         | —      | —                     |
-| ER12 energy follower, moved        | ★ PX15                                             | —             | —                                 | —               | —      | —                     |
+| Rule                               | `U`                                                | Exact         | Air                               | Copies          | Replay | `L`                      |
+|:---------------------------------- |:-------------------------------------------------- |:------------- |:--------------------------------- |:--------------- |:------ |:------------------------ |
+| WR3 subsidence through the bracket | exact only                                         | ★ PX8, ○ PX16 | × (○ with PP-TRACER)              | ×               | —      | —                        |
+| WR5 rescale by the receiver        | ★ PX20 (zero on columns)                           | —             | —                                 | ×               | —      | —                        |
+| WR6 partition repair               | ★ `led_fixgross` × 2                               | —             | ○                                 | ×               | —      | —                        |
+| WR7 clamp and renormalisation      | ★ the cut                                          | —             | ○                                 | ×               | —      | —                        |
+| WR8 SGS donor share                | worst case                                         | —             | ★ PX11                            | ○ PX12          | —      | —                        |
+| WR9 exchange and θ                 | worst case                                         | —             | ★ PX11                            | ○ PX12          | —      | —                        |
+| WR10 the copies' own rules         | the comparator's floor                             | —             | —                                 | itself          | —      | PX5 (cause)              |
+| WR11a follower, moved              | lag goes to `F`, structure to the worst case (PX7) | —             | ○                                 | —               | —      | ○ PP-FACE (a convention) |
+| WR11b follower, placement          | —                                                  | —             | —                                 | —               | —      | ★ PX3                    |
+| WR12 sedimentation reset           | —                                                  | —             | —                                 | —               | ★ PX14 | —                        |
+| WR13 WP4b pool                     | —                                                  | —             | —                                 | —               | ★ PX14 | —                        |
+| WR14 net-flow fallback             | ★ the audit                                        | —             | —                                 | —               | ○ PX14 | —                        |
+| WR15 0M rain-out                   | —                                                  | —             | ×                                 | ★ PX12 (as W32) | —      | —                        |
+| WR16 option C's entry              | before the latch                                   | —             | —                                 | —               | —      | —                        |
+| WR17 leaks and their attribution   | ○ the closed form                                  | —             | —                                 | —               | —      | ★ PX2                    |
+| WR18 surface excess                | —                                                  | —             | × (○ if the level-1 check passes) | ×               | —      | ★ PX13                   |
+| WR20 per-field reconstruction      | PX20                                               | —             | —                                 | ×               | —      | —                        |
+| ER4 energy repair                  | ★ `fixgross` (PX10)                                | —             | ×                                 | ×               | —      | ★ PX10                   |
+| ER5 energy placement               | the left-out size (E79)                            | —             | —                                 | —               | —      | ★ the E79 pair           |
+| ER8 `C4` outflow                   | a Fid-2 probe                                      | —             | —                                 | —               | —      | —                        |
+| ER10 energy exchange               | worst case                                         | —             | × (plausibility only)             | × (E84)         | —      | —                        |
+| ER12 energy follower, moved        | ★ PX15                                             | —             | —                                 | —               | —      | —                        |
 
-The definitional rules WR1, WR2, WR4, WR19, ER1 to ER3, ER7 and ER11 are declared, and
-their spread is reported. They have no row here.
+The definitional rules WR1, WR2, WR4, WR19, ER1 to ER3, ER7 and ER11 are
+declared, and their spread is reported. They have no row here.
 
 ## 6. Theories
 
@@ -350,18 +373,21 @@ composition error between closing rule variants on a shared parent.
     refines the null-space claim rather than refuting it.
 
 **PT2. Subsidence is a large shared relabelling at D4-W's 750 m split.** Near
-the inversion (about 795 m) the bracket gives subsiding water the receiving
-cell's label. `subsidence!` is linear in χ, so the exact per-tag answer is
-known.
+the inversion the bracket gives subsiding water the receiving cell's label. The
+inversion is at 795 m in the RF02 profiles; the 30-level grid's step is at 825 m
+(E5). `subsidence!` is linear in χ, so the exact per-tag answer is known.
 
-  - If true: the gross exact-form exposure for `strat` exceeds 2% of its inventory a day. It
-    concentrates between 700 and 950 m and is sign-coherent (`s > 0.7`). The
-    realized difference with PR-A exceeds 2% L1 or 5% L∞ at 24 h.
+  - If true: the gross exact-form exposure for `strat` exceeds 2% of its
+    inventory a day. It concentrates between 700 and 950 m and is
+    sign-coherent (`s > 0.7`). The realized difference with PP-SUB exceeds 2%
+    L1 or 5% L∞ at 24 h.
   - If false: that exposure stays below 0.2% a day for every tag.
-  - Prior: unmeasured. A reasoned estimate from the RF02 profiles: the defect
-    `ρ|w| q Δφ` is about 1.1 × 2.8e-3 m/s × 5e-3 to 9e-3, so 1 to 2 kg m⁻² a
-    day, against a `strat` inventory of about 3.4 kg m⁻². DYCOMS subsides with
-    `w = −3.75e-6 z`. The default-against-copies agreement (W24: 0.25%, 0.41%,
+  - Prior: unmeasured. A reasoned estimate from the RF02 profiles, not on the
+    record: the defect `ρ|w| q Δφ` is about 1.1 × 2.8e-3 m/s × 5e-3 to 9e-3,
+    so about 1.3 to 2.4 kg m⁻² a day, against a `strat` inventory of about 3.4
+    kg m⁻². DYCOMS subsides with `w = −3.75e-6 z`. Mixing inside the boundary
+    layer weakens the label edge, so the real defect may be smaller; PX1
+    measures it. The default-against-copies agreement (W24: 0.25%, 0.41%,
     0.41%) cannot see it, since both share the bracket.
 
 **PT3. The leak's attribution matters after feedback.** W40's first-order part
@@ -370,6 +396,10 @@ within a factor of two.
 
   - If false: the realized difference is much smaller. Feedback then flushes
     the relabelling, and first-order estimates overstate `L` across the record.
+  - Confounded by W45: the correction did not take the follower's `vdiff`
+    share, so part 3 does not describe the corrected run. PX2 therefore scores
+    the realized difference itself, and reports its ratio to part 3 only
+    beside it.
   - Prior: W40; W45, whose V1 run keeps parity on 37 fields.
 
 **PT4. The follower's work is mostly lag.** On a monotone solver ladder the
@@ -414,11 +444,12 @@ acts, and by no more than their exposure.
     levels).
 
 **PT8. The ledgers are incomplete.** Each family has at least one channel that
-sets labels with no per-tag account. Water: option C's entry and W42's
-unrecorded rises. Energy: `C4`'s per-tag outflow.
+sets labels with no per-tag account. Water: option C's entry, and the part of
+W42's rises that no ledger records. Energy: `C4`'s per-tag outflow.
 
   - If false: probe accounting closes per tag to rounding in every window.
-  - Prior: W42 (4 of the 10 largest rises unrecorded); E87 (A5 fails).
+  - Prior: W42 (in 4 of the 10 largest rises no single ledger reaches half the
+    rise); E87 (A5 fails).
 
 **PT9. The transport bundle is faithful in a clean regime.** On Soares (no
 subsidence, no sinks) the nearly source-free upper tag equals the
@@ -477,7 +508,8 @@ Status marks:
   - **[R]** re-scores output that exists, with no new run. Some of it is on
     Levante scratch only, so PX0 comes first.
   - **[K]** runs on existing keys, with a probe script, a config or a driver
-    only. The owner submits it.
+    only. Each job follows the record's approval rule (STATUS.md, "What needs
+    approval").
   - **[P]** needs a named diagnostic-only probe PR (section 8): a draft, off by
     default, the parent bit for bit, validated against an untagged twin.
 
@@ -491,18 +523,19 @@ opened.
 derives them again:
 
   - W40's part 3 against part 2b as a test of the lemma: part 3 is a net
-    first-order sum, so the ratios test nothing. PX2 gives the realized value.
-  - Placement pairs at sites 23 and 26 and on TRMM 0M: the placed quantity is at
-    rounding there (W36, E81, W28), so their outcome is fixed in advance. PX3
-    uses W24 against W28 instead.
+    first-order sum, so the ratios test nothing. PX2 would give the realized
+    value.
+  - Placement pairs at site 26 (water and energy), site 23 (energy) and on TRMM
+    0M: the placed quantity is at rounding there (W36, E81, W28), so their
+    outcome is fixed in advance. PX3 uses W24 against W28 instead.
   - A donor-cell replay as the linear truth: E66 shows that it measures the
-    mixing convention. It stays only as a conditional bracket member (PR-D).
+    mixing convention. It stays only as a conditional bracket member (PP-FACE).
   - The passive tracer as the surface truth: it has its own surface convention.
     It is used only with a level-1 check (PX13).
   - Split duplicate tags with the same footprint: they stay proportional, so
     they test homogeneity only. The column test `evap_upper + evap_lower = evap`
     has the same weakness, since both sub-tags are fed in the lowest cell. A
-    band partition (PR-P4) is needed for superposition.
+    band partition (PP-BAND) is needed for superposition.
   - First-order tracer twins on 1M columns: `tracer_upwinding` also moves the
     1M species, so the parent changes. Tracer-mode twins run only on 0M cases,
     with parity checked.
@@ -512,10 +545,11 @@ derives them again:
 ### Tier 0: re-score, no run [R]
 
 **PX0. Archive first.** No score. Archive and checksum the NetCDF and CSVs of
-W24, W28, W38 to W45, E85 and `g46` from scratch; RUNS.md's backfill says
-W38 to W45 are not yet synced. Feed every new script faults before any score is
-read: a removed variable, a shifted time, a truncated run, a flipped signed
-zero, a permuted tag name. Each must fail closed. Hours. Priority 1.
+W24, W28, W38 to W43, W45 (there is no W44), E85 and `g46` from scratch.
+RUNS.md's backfill says W38 to W45 are not yet synced. Feed every new script
+faults before any score is read: a removed variable, a shifted time, a truncated
+run, a flipped signed zero, a permuted tag name. Each must fail closed. Hours.
+Priority 1.
 
 **PX1. Subsidence screen.** Tests PT2.
 
@@ -523,8 +557,11 @@ zero, a permuted tag name. Each must fail closed. Hours. Priority 1.
     with DYCOMS's `w = −3.75e-6 z`.
   - Method: per tag, the exact rate `R_ex,i`, which is first-order upwind
     `subsidence!` of `χ_i`. The bracket's rate
-    `R_br,i = M_i max(Δ, 0) + φ_i min(Δ, 0)` with `Δ = Σ R_ex`. The gross
-    exposure `∫∫ abs(R_ex − R_br)`, the sign coherence `s`, and a map by level.
+    `R_br,i = M_i max(Δ, 0) + φ_i min(Δ, 0)` with `Δ = Σ R_ex`. Here `M_i` is
+    tag i's mask weight in the cell, which the bracket gives new water, and
+    `φ_i` is tag i's share of the cell, which the bracket takes water by. The
+    gross exposure `∫∫ abs(R_ex − R_br)`, the sign coherence `s`, and a map by
+    level.
   - Reference: the parent's own linear operator, which does not share the
     bracket. The copies and the unsubsided tracer are invalid here.
   - Rule: a screening estimate, reported and not scored. If `strat` or `tropo`
@@ -532,25 +569,32 @@ zero, a permuted tag name. Each must fail closed. Hours. Priority 1.
     critical path.
   - Code: none. Hours. Priority 1, the first item.
 
-**PX2. The leak rule, realized with feedback.** Tests PT3 and PT1; evidence for
-OD12's same-parent amendment.
+**PX2. The leak rule, realized with feedback.** Tests PT3 and PT1.
 
-  - Runs: `wp4c_gate_d4w_default` (gate tree `52a666c5`) against
-    `wp4c_corr_d4w_default` (tree `90f32566`). Both are bit for bit with W25's
-    untagged `z30_c` twin. Confirm in the manifests that no other tag code
-    differs. For the copies: `wp4c_gate_d4w_copies` against V2 (12 h).
-  - Metric: per-tag L1 and L∞ at 1, 6, 12 and 24 h in the established window,
-    against the gate's first-order part 3 at the same times, with the map by
-    level from the gate's profiles.
+  - Runs: `w25i_d4w_default_z30_c` (W38, tree `705c8ed0`) against
+    `wp4c_corr_d4w_default` (W45, tree `90f32566`, run with
+    `REFERENCE_OUTPUT=1`). The gate's case A has the same configuration under
+    its own job id, but its reference wrote no hourly output. Both runs are
+    bit for bit with `w25i_d4w_untagged_z30_c` (W38's R1; W45's criterion 3).
+    The probe runs have no manifest, so confirm from the trees' diffs that only
+    the correction differs. For the copies: `w25i_d4w_copies_z30_c` to 12 h
+    against V2.
+  - Metric: per-tag L1 and L∞ at 2, 6, 12 and 24 h (startup ends at 1.83 h),
+    with a map by level. The gate's first-order part 3 exists only as `D` at
+    24 h, accumulated from the first step. Earlier times need the gate probe
+    rerun with `D` written hourly.
   - Reference: the other closing rule (ψ against the follower's donor shares).
     It shares everything else, so it gives `L`, not truth.
-  - Rules: (a) realized over first-order at 1 h within [0.8, 1.25] means that
-    separate runs with bit-identical parents behave as same-state pairs for a
-    swap of follower rules; (b) if OD11 lists ψ as admissible and the realized
-    `tropo` exceeds 2% L1 or 5% L∞, `tropo` on D4-W is convention-limited for
-    the leak; (c) realized over first-order at 24 h calibrates every
-    first-order estimate on the record.
-  - Code: none. Hours. Priority 1.
+  - Rules:
+      + (a) The realized difference over the first-order one, at 2 h and 24 h,
+        is reported, not scored. It mixes feedback with W45's finding that the
+        correction does not take the follower's share, so it tests neither the
+        lemma nor whether the parents are the same.
+      + (b) Suppose OD11 lists ψ as admissible. If the realized `tropo`
+        difference exceeds 2% L1 or 5% L∞, `tropo` on D4-W is
+        convention-limited for the leak.
+  - Code: none for the full runs; the hourly `D` needs a rerun of the gate
+    probe. Hours. Priority 1.
 
 **PX3. The placement pair.** Tests PT6 and the water side of OD7.
 
@@ -560,13 +604,17 @@ OD12's same-parent amendment.
     0.83%.
   - Rule: at most 0.5% L1 and 1.25% L∞ means placement does not matter for
     water composition, so OD7 can be decided on closure and slope. Above that,
-    OD7 carries a provenance spread.
+    OD7 carries a provenance spread. For `tropo` the L1 part is decided in
+    advance by the cap (0.50%); only its L∞ and the `strat` and `evap` rows
+    discriminate.
   - Code: none. Hours. Priority 1.
 
 **PX4. Invariants on existing output.** Tests PT7 (Fid-1, in part).
 
-  - Runs: the 12 W25i runs, W38, W40.
-  - Metrics: `r = ρq_evap_tropo / (m_t ρq_evap) − 1`, the same for `strat`,
+  - Runs: W38's 12 tagged `w25i_*` runs (hourly), W45's V1 (hourly), and
+    W40's final profiles.
+  - Metrics: `r = ρq_evap_tropo / (m_t ρq_evap) − 1`, where `m_t` is the
+    `tropo` mask's value in the cell where `evap` is fed; the same for `strat`;
     and `evap_tropo + evap_strat − evap`, each classified against the logged
     bound and fix events. Overlay at most parent, per cell. The audit's
     `overclaimed` and `orphaned`. Source at most production, from hourly
@@ -583,10 +631,16 @@ OD12's same-parent amendment.
     CSVs.
   - Rules: a filter share of at least 0.7 that grows by at least 1.5 times per
     halving means a per-step cause. The only D4-W routes are then a copies-only
-    draft PR, or the air twin with PR-S (PX17). Otherwise record "no eligible
-    D4-like comparator at production cost". Site 26's copies are formally
-    ineligible (repair about 0.33% a day, own closure 6.3e-4), so W36's 2% to
-    13% is agreement with an ineligible comparator.
+    draft PR, or the air twin with PP-TRACER (PX17). Otherwise record "no
+    eligible D4-like comparator at production cost".
+  - Site 26's copies fail the repair row. Their cumulative repair is 33% of the
+    water over 90 days, about 0.37% a day against 0.20%
+    (`copy_repair_relative` in
+    `output/long_runs/lr_s26_copies/water_tag_audit.csv`). That was read for
+    this page and is not yet on the record; PX5 enters it. Their own residual
+    is 2.3e-7 and passes. The run's grid-mean closure is 6.3e-4 (W36), and
+    OD12 decides which counts. So W36's 2% to 13% is agreement with an
+    ineligible comparator.
   - Code: none. Priority 1.
 
 **PX6. The missing-channel inventory.** Tests PT8 and PT1.
@@ -601,23 +655,28 @@ OD12's same-parent amendment.
 
 ### Tier 1: existing keys [K]
 
-**PX7. The follower's work: lag or structure (W46, pending).** Tests PT4.
+**PX7. The follower's work: lag or structure.** Tests PT4. This is the
+investigation that W45 requires. Its scripts reserve the ID W46; no job exists
+yet.
 
   - Tool: `analysis/water/wp4c_diag_probe.jl` on `wp4c_corr_d4w_default`, from
     6600 s, with the solver sets default, `lin4`, `lin8`, `newton2lin2`,
     `newton4lin8` and `newton10lin10`. A second set turns `sgs_mass_flux` off in
-    trial C (a script switch). Run `wp4c_upleak_check.py` on V2.
+    trial C; that switch must be added to the script before the run. Run
+    `wp4c_upleak_check.py` on V2.
   - Pre-register the rule as a dated amendment to
     [design/WP4C_CORRECTIONS.md](design/WP4C_CORRECTIONS.md) section 8 before
     the result is read. Read it by monotone ratios, not by the distance to the
     unconverged ten-iteration set (W41).
-  - Rules: *lag* if `newton4lin8` is at most 0.25 and each doubling at most
-    0.75. That part then enters `F`, and V1's criterion 1 is scored again at the
-    converged set. *Structural* if any doubling leaves more than 0.9. Its parts
-    are then read with the share rule of at least 0.5 or 0.1 to 0.5: the
-    linearisation, Jacobian and post-solve parts become a convention to
-    bracket (PR-D); `filt_T − filt_q` points at the tags' Jacobian coverage
-    (PR-E).
+  - Rules: the work is *lag* if `newton4lin8` leaves at most 0.25 of it and
+    each doubling at most 0.75. That part then enters `F`, and V1's criterion 1
+    is scored again at the converged set. The work is *structural* if any
+    doubling leaves more than 0.9 of it. Its parts are then read with the share
+    rule of `design/NEGATIVE_PARENT_WATER.md` section 9: a share of at least
+    0.5 attributes, 0.1 to 0.5 contributes. If the linearisation, Jacobian and
+    post-solve parts carry the work, they become a convention to bracket, with
+    PP-FACE. If `filt_T − filt_q` carries it, the tags' Jacobian coverage is at
+    fault, and PP-JAC follows.
   - This answers WP4c's default. One or two jobs of one to two hours.
     Priority 1.
 
@@ -626,7 +685,8 @@ OD12's same-parent amendment.
   - Tool: a new script, `analysis/water/sub_probe.jl`, on the pattern of
     `wp4c_gate_probe.jl`. From each accepted step's state it evaluates
     `subsidence!` on `ρq_tot`, the exact `T_i` per tag and the bracket's `B_i`.
-    It asserts `Σ T_i = Σ B_i = Δ`, so closure is blind by construction. It
+    It asserts `Σ T_i = Σ B_i = Δ` to the partition's residual `q_tag_res`, so
+    closure is blind by construction. It
     accumulates the gross `G_i = Σ_k dt ∫ abs(T_i − B_i)`, the net `D_i` and
     `s_i`.
   - Cases: `w25i_d4w_default_z30_c` (as W40) and `_z60_c`, 24 h, in their own
@@ -637,7 +697,8 @@ OD12's same-parent amendment.
   - Rules: `U_sub,i = K · G_i`. `G_i` at most 0.2% of every inventory a day is a
     certificate that subsidence is immaterial for that case. Above the per-tag
     row, PX16 follows, and every D4-W default-against-copies number gets a dated
-    annotation: "shared subsidence rule: its exact-form exposure measured, not in the comparison".
+    annotation: "shared subsidence rule: its exact-form exposure measured, not
+    in the comparison".
   - Code: none; the script calls the model's operator on scratch copies. Two
     D4-W jobs and a short GCM probe. Priority 1.
 
@@ -655,8 +716,8 @@ OD12's same-parent amendment.
     `ε` from rounding.
   - Metrics: the column sums `‖e‖₁ / ‖δ‖₁` (so `sup K`), the positivity index
     `‖e_tropo⁻‖₁ / ‖e_tropo⁺‖₁`, and linearity.
-  - Rules: `sup K ≤ 1 + ε` sets `K = 1` in `U`; sampled levels give only a lower
-    bound, so the full-level time decides. `K > 1` multiplies `U` by the
+  - Rules: `sup K ≤ 1 + ε` sets `K = 1 + ε` in `U`. Sampled levels give only a
+    lower bound, so the full-level time decides. `K > 1` multiplies `U` by the
     measured `sup K`, and on/off trials locate the operator. A positivity index
     above zero closes the L∞ route for the case. Stated before the run: `K ≤ 1`,
     positivity index above zero.
@@ -666,15 +727,16 @@ OD12's same-parent amendment.
 
   - Case: `g411x_d4_default` with `energy_source_tag_repair` true and false,
     `e_src_fixgross_*` added to the output (config only), 24 h, parity against
-    the untagged twin. E85's pair has 4 tags and no gross, so it is prior
-    evidence for `strat` and `tropo` only.
+    the untagged twin. E85's pair has 4 tags (`strat`, `tropo`, `sfc`, `rad`)
+    and no gross, so it is prior evidence for those four only, not for `sub` or
+    `new_strat`.
   - Metrics: the per-tag realized difference at 1, 6 and 24 h in OD4's units;
     `fixgross` as the repair's `U` term (factor 2); where it acts relative to
     750 m.
   - Rule: `sub` or `new_strat` above 2% L1 means the repair is material for
     energy, and Val-2 is out of reach until the exchange changes. Otherwise the
-    7.3%-a-day trade is immaterial by the realized difference. This answers
-    point 2 of G4.3 to G4.6.
+    7.3%-a-day trade is immaterial by the realized difference. This informs
+    the owner's point 2 of G4.3 to G4.6.
   - Code: none. Two D4 jobs. Priority 2.
 
 **PX11. The Soares air twin.** Tests PT9: the first Val-3 route for the
@@ -684,8 +746,9 @@ transport bundle.
     no subsidence in `Soares.jl`) with water tags `low` and `up`, split at the
     untagged run's boundary-layer top at 2 h (fixed before the scored runs),
     plus `evap`. `chemistry_model` passive. The driver sets
-    `q_gas_A = M_up · q_tot` and its updraft copy `M_up · q_totʲ`, as
-    `d4w_driver.jl` does. Arms: untagged, default, copies, with parity.
+    `ρq_gas_A = M_up · ρq_tot` and its updraft copy `M_up · q_totʲ`, on
+    `d4w_driver.jl`'s pattern. That driver sets the mask itself, a tracer of
+    air, as in W17. Arms: untagged, default, copies, with parity.
   - Validity, checked on the untagged run first: no sedimenting condensate
     (`∫pr` below 1e-4 of the water); the water tags build on the login node.
   - Floors: the `up` tag's mask-gain bound `M_up(z₁) ∫evspsbl / ∫ρq_up`; a
@@ -694,8 +757,11 @@ transport bundle.
     cumulative `evspsbl`; the parent's Newton error at this iteration count
     (one W25 P1 probe).
   - Score only the `up` tag, which avoids the tracer's surface convention.
-  - Reference: EDMF's passive-tracer equations. They share no tag rule: no mask
-    gain, loss rule, follower, plume, exchange, repair or clamp.
+  - Reference: EDMF's passive-tracer equations. Against the default mode they
+    share no tag rule: no mask gain, loss rule, follower, plume, exchange,
+    repair or clamp. Against the copies they share the updraft filter's clamp
+    and reset (`enforce_edmf_updraft_constraints!`), so a copies pass does not
+    validate the filter in WR10.
   - Rules: L1 of `up` at most 1% at 1 h and 2% at 8 h, and L∞ at most 5%, above
     the floors. Both modes pass: the transport bundle is Val-3 in a regime
     without sinks or subsidence. The copies pass and the default fails: the
@@ -709,8 +775,9 @@ the sub-grid rules. W21's TRMM runs predate WP6 and the current copies, so new
 runs are needed: default, copies and untagged; `dt` 150 and 75 s; two and ten
 Newton iterations; one P1 probe for the parent's error. OD12 fixes which
 "own residual" counts: the updraft copies' 7.1e-7 (W21) or the grid mean's
-5.0e-4 (W28). It needs OD12's same-parent amendment, or a measured parent error
-of at most 1e-3. If the copies are eligible, `pbl`, `free` and `evap` are
+5.0e-4 (W28). It needs a measured parent error of at most 1e-3 at its Newton
+count, one P1 probe per rung; OD12's proposed reading of the Newton row does not
+cover copies. If the copies are eligible, `pbl`, `free` and `evap` are
 scored in OD2's windows. That certifies the SGS share, the exchange and the 0M
 rain-out, for the code tested. Priority 2.
 
@@ -719,26 +786,28 @@ rule.
 
   - Case: `w25i_d4w_pulse_{default,copies}_z60_c` and `_z30_c`, 3 h, output
     every 10 min, with the level-1 updraft fields. A driver sets
-    `q_gas_A = ρq_tot` and its updraft copy `q_totʲ`, with its own untagged
-    twin.
+    `ρq_gas_A = ρq_tot` (so `q_gas_A = q_tot`) and its updraft copy `q_totʲ`,
+    with its own untagged twin.
   - The candidate `evap* = ρq_tot − T1` counts only if (a) at level 1,
     `abs(T1ʲ − T̄1)` is at most a quarter of the budget relative to the `evap`
     share, and (b) the contamination from the tracer's missing subsidence and
     from rain over the lowest 300 m in the first hour is at most a quarter of
     the budget (a floor near 4e-4 of `q_tot`).
-  - Score `evap` only. The `sfc` tag, 10 m wide against 25 m cells, is
-    ill-conditioned.
+  - Score `evap` only. The `sfc` tag, 10 m wide against 25 m cells (z60) and
+    50 m cells (z30), is ill-conditioned.
   - `L` is the spread among the grid-mean start, the relaxation and zero credit.
   - Rule: `L` above 10% means first-hour `evap` is convention-limited (Val-1),
-    and the claim is narrowed. PR-B goes to the owner only if (a) and (b) pass
-    and it lies nearer `evap*`.
+    and the claim is narrowed. The pathway proposes PP-SFC to the owner if (a)
+    and (b) pass and it lies nearer `evap*`. The owner may decide W21's surface
+    rule earlier.
   - Code: none. About twelve short jobs. Priority 2.
 
 **PX14. WP4b's pool and the sedimentation reset, replayed.** Tests PT12. After
 #121's review.
 
-  - Case: #121's tree, `PrecipitatingColumn`'s rain-out window only (the first
-    25 to 60 min, read from the untagged run), the key on.
+  - Case: #121's tree, `PrecipitatingColumn`'s rain-out window only, the key
+    on. The window is read from the untagged run before the replay; it is not
+    yet measured (W43 ran 300 s).
   - Method: from each state take `water_tag_1m_flows` as frozen rates. Solve
     each tag's three-compartment label equation with 1, 4, 16 and 64 sub-steps;
     one sub-step reproduces W43's failing start rule. Apply the pool rule. In
@@ -759,7 +828,7 @@ frames OD7 and G4.7. Priority 2.
 
 These need OD13. Each is a separate draft PR with a unit test and a parity job.
 
-**PX16 (PR-A). Per-tag subsidence.** Tests PT2 and the lemma against an exact
+**PX16 (PP-SUB). Per-tag subsidence.** Tests PT2 and the lemma against an exact
 counterpart. D4-W `z30_c` default plus the untagged twin, 24 h. Metric: the
 realized per-tag difference with feedback, against `K · G` from PX8 and PX9.
 Rules: a difference above `K · G` means the inventory or `K` is wrong, and `U`
@@ -767,19 +836,19 @@ is void for the case; above 2% L1 or 5% L∞ means the default fails the
 provenance row on D4-W whatever any comparator says. Adoption is the owner's
 call. Priority 1 if PX1 or PX8 is material, otherwise 3.
 
-**PX17 (PR-S). A subsided passive tracer.** It makes the air twin valid on
-D4-W, RICO, BOMEX and the GCM columns, and checks PR-A independently. On D4-W
+**PX17 (PP-TRACER). A subsided passive tracer.** It makes the air twin valid on
+D4-W, RICO, BOMEX and the GCM columns, and checks PP-SUB independently. On D4-W
 score the `up` or `strat` tag, with a contamination bound for rain formed at
 cloud top in the `strat` region, where the tracer loses no water. Priority 2.
 
-**PX18 (PR-P4). A band region.** Tests PT7 and OD9's aggregation premise. D4-W
+**PX18 (PP-BAND). A band region.** Tests PT7 and OD9's aggregation premise. D4-W
 `z30_c` with a fine partition (below 400 m, 400 to 750 m, above 750 m) and a
 coarse one (`tropo`, `strat`), a run with the tags in reverse order, and the
-three-tag hull test (V8), plus the untagged twin. Metric: the relative L∞ of
-the members' sum minus the group at 24 h, against OD3's 1e-10, mapped against
-bound activation and the repair's gross. Rule: departures only where θ binds or
-the repair acts, and within `K` times their exposure, support PT7. The owner
-then chooses the form of the aggregation row. Priority 2.
+three-tag hull test (ATTRIBUTION_PATH's V8), plus the untagged twin. Metric: the
+relative L∞ of the members' sum minus the group at 24 h, against OD3's 1e-10,
+mapped against bound activation and the repair's gross. Rule: departures only
+where θ binds or the repair acts, and within `K` times their exposure, support
+PT7. The owner then chooses the form of the aggregation row. Priority 2.
 
 ### Tier 3: long run, sphere, certification
 
@@ -811,100 +880,113 @@ Each is diagnostic only: off by default, the parent bit for bit, a unit test, a
 parity job against an untagged twin, and a draft PR that only the owner merges.
 OD13 approves them.
 
-  - **PR-A, per-tag subsidence.** A key `water_tag_subsidence: bracket | per_tag`
-    for `LargeScaleSubsidence` and the GCM forcing's subsidence. It must define
+  - **PP-SUB, per-tag subsidence.** A key
+    `water_tag_subsidence: bracket | per_tag` for `LargeScaleSubsidence` and
+    the GCM forcing's subsidence. It must define
     two overlay cases: overlays that list subsidence (then `fcg` changes
     meaning) and overlays that do not (then `evap` is carried faithfully instead
     of losing by share).
-  - **PR-S, a subsided passive tracer.** A key that applies `subsidence!` to
-    `q_gas_A` as well. The tracer feeds back into nothing, so every other field
-    stays bit for bit.
-  - **PR-P4, a band region.** A region type `tanh_altitude_band`, in the parser
-    only. Today's types are `everywhere`, `tanh_altitude`, `tanh_latitude`,
-    `tanh_box` and `tanh_polygon`.
-  - **Conditional:** PR-B, a surface rule that composes the flux, after PX13;
-    PR-D, face-flux output for a replay, after PX7's structural branch, and
-    labelled a convention reference (E66), never truth; PR-E, tag Jacobian
+  - **PP-TRACER, a subsided passive tracer.** A key that applies `subsidence!`
+    to `q_gas_A` as well. The tracer feeds back into nothing, so every other
+    field stays bit for bit.
+  - **PP-BAND, a band region.** A region type `tanh_altitude_band`: a region
+    struct, its `region_mask`, the parser branch and `tag_region_spec`, and no
+    tendency code. Today's types are `everywhere`, `tanh_altitude`,
+    `tanh_latitude`, `tanh_box` and `tanh_polygon`.
+  - **Conditional:** PP-SFC, a surface rule that composes the flux, after PX13;
+    PP-FACE, face-flux output for a replay, after PX7's structural branch, and
+    labelled a convention reference (E66), never truth; PP-JAC, tag Jacobian
     blocks for the bracket loss and the SGS flux, after PX7's filter branch;
-    PR-P2, sources off for region tags, only if a regime with sinks needs a
+    PP-SRCOFF, sources off for region tags, only if a regime with sinks needs a
     region reference (Soares does not).
   - State ledgers per process and tag are not proposed. Probe accounting
     replaces them, because build time grows with the number of fields.
 
 ## 9. Decisions for the owner
 
-These enter the register in [ROADMAP.md](ROADMAP.md) as "OWNER DECISION
-REQUIRED". No agent fills one in. The panel that designed this page proposed
-eight; they are merged into six to spare the owner's time.
+These enter the register in [ROADMAP.md](ROADMAP.md) as proposals. Each
+becomes an open "OWNER DECISION REQUIRED" row when the owner accepts it. No
+agent fills one in. The panel that designed this page proposed eight; they are
+merged into six to spare the owner's time.
 
-  - **OD9. The ladder and its labels.** Adopt the two axes; "bounded" means
-    Fid-3 and `U` within the row; "validated" means Val-3. Decide whether
-    "bracketed" ever qualifies at M5. Decide the aggregation row's form: a Fid-1
-    premise run with PR-P4, accepting departures where θ or the repair acts;
-    or "departure at most `K` times the nonlinear rules' exposure"; or
-    "reported" as now. Needed before any ladder label and before step 8b.
+  - **OD9. The ladder and its labels.** Adopt the two axes. "Bounded" would
+    mean Fid-3 and `U` within the row. That amends OD5's decided meaning, which
+    rests on the Insight 10 tests alone. "Validated" would mean Val-3. Decide
+    whether "bracketed" ever qualifies at M5. Decide the aggregation row's
+    form. There are three options. The first is a Fid-1 premise run with
+    PP-BAND, which accepts departures where θ or the repair acts. The second
+    bounds each departure by `K` times the nonlinear rules' exposure. The third
+    keeps the row "reported", as now. Needed before any ladder label and
+    before step 8b.
   - **OD10. The certification arithmetic.** The lemma of section 3: gross, not
-    net; the exact form for bracketed transport; `K` from spike arms, with `ε` from null and
-    scaling arms; the L∞ route only under positivity; completeness to rounding
-    for the probe accounting. The proposed numbers are in a separate marked
-    block after the OD3 table. Needed before PX8, PX9 and PX16 are scored.
+    net; the exact form for bracketed transport; `K` from spike arms, with `ε`
+    from null and scaling arms; the L∞ route only under positivity;
+    completeness to rounding for the probe accounting. The proposed numbers
+    are under their own heading, after ROADMAP's OD3 section. Needed before
+    PX8, PX9 and PX16 are scored.
   - **OD11. The rule classification.** The claim contracts (G3 criterion 12,
-    G4.3) adopt section 4's classes before any `L` or `U` is scored, and they
-    list the admissible alternatives, including whether ψ is admissible for the
-    leak. The owner also confirms the E66 reading: the 2% is a fidelity budget.
-    Needed before PX2's rule (b), PX3, PX10 and PX13.
+    G4.3) adopt section 4's classes before any `L` or `U` is scored. They list
+    the admissible alternatives, including whether ψ is admissible for the
+    leak. The owner also says whether to read the 2% as a fidelity budget
+    (E66). Until then the row is scored as approved. Needed before PX2's rule
+    (b), PX3, PX10 and PX13.
   - **OD12. Reference validity and independence.** Copies certify sub-grid
     rules only. The air twin certifies transport rules only in windows without
-    sinks, subsidence or sedimentation (subsidence allowed with PR-S). Floors
-    at most a quarter of the budget; the level-1 check; which "own residual"
-    counts for TRMM 0M's copies. And an amendment to the Newton row, as a
-    proposal: separate runs whose parents are bit for bit equal to the same
-    untagged twin count as same-parent for swaps of follower rules, if PX2 (a)
-    passes; arms that solve their own transport (the copies, tracer mode, a
-    passive tracer) stay gated unless the parent's error is at most 1e-3.
-    Needed before PX11 to PX13.
-  - **OD13. The probe PRs.** PR-A, PR-S and PR-P4 first; PR-B, PR-D, PR-E and
-    PR-P2 conditional; probe accounting instead of new state ledgers. Needed
-    before tier 2.
+    sinks, subsidence or sedimentation. With PP-TRACER, subsidence is allowed.
+    A reference's floors are at most a quarter of the budget. The passive
+    tracer needs the level-1 check. The owner also says which "own residual"
+    counts for TRMM 0M's copies. Last, a proposed reading of the Newton row.
+    Separate runs whose parents are bit for bit the same untagged twin count as
+    same-parent, since the parent's error cancels exactly (the owner's revision
+    of 2026-09-25). Arms that solve their own transport stay gated unless the
+    parent's error is at most 1e-3. These arms are the copies, tracer mode and
+    a passive tracer. Needed before PX11 to PX13.
+  - **OD13. The probe PRs.** PP-SUB, PP-TRACER and PP-BAND first; PP-SFC,
+    PP-FACE, PP-JAC and PP-SRCOFF conditional; probe accounting instead of new
+    state ledgers. Needed before tier 2.
   - **OD14. Held-out hygiene.** Name the GCM site or window kept back. Soares,
     TRMM 0M and sites 23 and 26 are development cases. A held-out case is never
     used to develop a rule. Needed before step 8b.
 
 ## 10. Sequencing, and what G4 takes
 
-Order inside each gate: exposure times the decision it blocks (subsidence, the
-follower, the energy repair, the surface, placement), then cost, with no-run
-items first.
+The order follows the proposed steps of ROADMAP's execution order. Inside each
+step: exposure times the decision it blocks (subsidence, the follower, the
+energy repair, the surface, placement), then cost, with no-run items first.
 
- 1. **Gate 0, step 1b: documents and archive.** This page, the in-place edits,
-    OD9 to OD14, PX0. No runs, no code. Scripts pass fault injection first.
- 2. **Gate A, step 2a: no runs.** PX1 first. If `strat` or `tropo` reaches 0.2%
-    of its inventory a day, subsidence becomes the critical path: PX8, then
-    PR-A, then PX16. Then PX2, PX3, PX4, PX5 and PX6. They are reported until
-    OD9 to OD11 are approved. Stop if proportionality departs with no logged
-    event, or if a realized difference exceeds `K` times its gross once `K` is
-    known. PX3 may let the owner decide OD7.
- 3. **Gate B: existing keys.** PX7 (step 6a) decides whether the follower's
-    work is lag, which the bounded route needs. PX8 and PX9 (step 6b) give the
-    subsidence term and `K`; if `K > 1`, locate the operator before any `U` is
-    scored. PX11, PX12 and PX13 (step 6c) give the first Val-3 candidates and
-    the surface verdict. PX14 (step 7a) after #121's review.
- 4. **Gate C, step 7b: probe PRs, after OD13.** PR-A with PX16, PR-P4 with PX18,
-    PR-S with PX17. The conditional PRs only if their trigger reads above
-    budget.
- 5. **Gate D, step 8c: certification.** PX21 labels every case, tag and window.
-    Step 8b then selects a default only at the level OD9 requires.
+ 1. **Step 1b: documents and archive.** This page, the in-place edits, OD9 to
+    OD14, PX0. No runs, no code. Scripts pass fault injection first.
+ 2. **Step 2a: no runs.** PX1 first. If `strat` or `tropo` reaches 0.2% of its
+    inventory a day, subsidence becomes the critical path: PX8, then PP-SUB,
+    then PX16. Then PX2, PX3, PX4, PX5 and PX6. They are reported until OD9 to
+    OD11 are approved. Stop if proportionality departs with no logged event,
+    or if a realized difference exceeds `K` times its gross once `K` is known.
+    PX3 may help the owner decide OD7.
+ 3. **Steps 6a to 7a: existing keys.** PX7 (step 6a) decides whether the
+    follower's work is lag, which the bounded route needs. PX8 and PX9 (step
+    6b) give the subsidence term and `K`. If `K > 1`, the operator is located
+    before any `U` is scored. PX11, PX12 and PX13 (step 6c) give the first
+    Val-3 candidates and the surface verdict. PX14 (step 7a) follows #121's
+    review.
+ 4. **Step 7b: probe PRs, after OD13.** PP-SUB with PX16, PP-BAND with PX18,
+    PP-TRACER with PX17. The conditional PRs follow only if their trigger reads
+    above budget.
+ 5. **Step 8c: certification.** PX21 labels every case, tag and window. If the
+    owner adopts OD9, step 8b then selects a default only at the level OD9
+    requires.
  6. **Step 9.** PX20 inside the one-to-two-day sphere run; PX19 before the 90
     days.
- 7. **Step 10.** PX10 (step 10a) and PX15 (step 10b), then G4.15 and G4.7.
+ 7. **Steps 10a and 10b.** PX10 and PX15, then G4.15 and G4.7.
 
 **Expected outcomes, stated before any run.**
 
   - D4-W reaches Fid-1 and Fid-2 soon, and Fid-3 after PX7 and PX9.
-  - `U` probably fails for `tropo` and `strat` on D4-W: the follower's worst-case exposure is
-    about 7.2% over 0.924 days, and subsidence may add tens of percent a day.
-    So OD5's bounded route is likely closed on D4-W until PR-A exists and PX7
-    shows the follower's work to be mostly lag.
+  - `U` probably fails for `tropo` on D4-W. The follower's per-tag gross
+    attributed to `vdiff` and `sgs_mass_flux` (the gate's part 2b) is already
+    about 7.2% for `tropo` over 0.924 days, and 2.0% for `strat`. The
+    worst-case form can only be larger. Subsidence may add tens of percent a
+    day. So OD5's bounded route is likely closed on D4-W until PP-SUB exists and
+    PX7 shows the follower's work to be mostly lag.
   - Soares, and TRMM 0M before its rain-out, are the first Val-3 candidates.
   - Energy on D4 tops out at Val-2: it has no passive truth, and its copies are
     ineligible (E84).
@@ -918,7 +1000,8 @@ items first.
   - PX8's subsidence size at the same 750 m split of DYCOMS RF02. It sizes the
     `sub` tag and the region tags. Energy has no faithful counterpart for it,
     so it stays a convention there.
-  - PX13's surface verdict, for G4.11 and M2.
+  - PX13's surface verdict, for G4.11 and for the energy copies' surface
+    relaxation (mirror M2 of `design/ENERGY_COPY_MIRRORS.md`, ER9).
   - PX3, for the water side of OD7.
   - PX11's certificate, only for the kernels the two families truly share.
     Check `ShareDifferences`, `_blend_factor`, `_plume_step` and the
@@ -926,30 +1009,34 @@ items first.
   - PX18's aggregation reading.
 
 Energy's own items are PX10, the `c`/2`c` bracket and a per-tag outflow probe
-for `C4`. The committed process budget carries the records' estimate of `C4`
-(`output/g46/process_budget.txt`), but only a per-tag bottom-face outflow probe
-tells where it goes (Fid-2, priority 3).
+for `C4`. The committed process budget gives `C4`'s size from the `c`/2`c`
+pair: `c·M_U` is −1.15e5 J/m² a day, 0.55% of the throughput (E87,
+`output/g46/process_budget.txt`). The records' estimate printed beside it
+(+1.06e4 J/m²) has the opposite sign, and E87 concludes that the records do not
+bracket it. Only a per-tag bottom-face outflow probe tells where `C4` goes
+(Fid-2, priority 3).
 
 ## 11. Risks and open questions
 
-  - **`U` may never pass on D4-W.** The follower's worst-case exposure for `tropo` is about 7.2%,
-    and subsidence may be tens of percent a day. Certainty would then come only
-    from turning rules into faithful ones (PR-A, WP4b under EDMF, tags solved
-    consistently with the parent's Newton step), or from Val-3 in clean
-    regimes. The owner should know this before the runs.
+  - **`U` may never pass on D4-W.** The follower's part 2b alone for `tropo`
+    is about 7.2%, a lower bound on its worst-case exposure, and subsidence may
+    be tens of percent a day. Certainty would then come only from turning
+    rules into faithful ones (PP-SUB, WP4b under EDMF, tags solved consistently
+    with the parent's Newton step), or from Val-3 in clean regimes. The owner
+    should know this before the runs.
   - **A faithful rule helps only if its operator is monotone.** Centred
     reconstructions per tag can raise `K`. Advective subsidence can expand on
     GCM columns.
-  - **Is ψ admissible for the leak?** If yes, W40 already suggests that `tropo`
-    is convention-limited on D4-W, unless PX2 shows that feedback flushes it
-    (OD11).
+  - **Is ψ admissible for the leak?** If yes, W40's first-order estimate
+    already suggests that `tropo` is convention-limited on D4-W, unless PX2
+    shows that feedback flushes it (OD11).
   - **First-order estimates against realized runs.** Adopting a rule always
-    needs a prognostic arm (PX2, PX16). PX2's calibration is the only test so
-    far of the same-state equivalence that OD12's amendment would rest on.
+    needs a prognostic arm (PX2, PX16). PX2's ratio to part 3 is confounded by
+    W45, so it is reported and not scored.
   - **References carry their own conventions.** The passive tracer's zero
-    surface credit and missing subsidence (PR-S fixes the second), the floors,
-    and cloud-top rain in D4-W's `strat` region. Each needs its certificate, or
-    agreement will be over-read again.
+    surface credit and missing subsidence (PP-TRACER fixes the second), the
+    shared updraft filter, the floors, and cloud-top rain in D4-W's `strat`
+    region. Each needs its certificate, or agreement will be over-read again.
   - **Run trees.** The per-tag ledgers, the leak-correction key, the placement
     variants and option C sit in separate trees. Every comparison names its
     tree.
@@ -964,8 +1051,8 @@ tells where it goes (Fid-2, priority 3).
     finds positivity.
   - **Data durability.** Every tier-0 item depends on scratch until PX0 is done.
   - **The owner's bandwidth.** Six new decisions, OD7, and up to seven PRs.
-    OD9 to OD12 are needed before gate B is scored; OD13 and OD14 before gate C
-    and step 8b.
+    OD9 to OD12 are needed before steps 6b and 6c are scored; OD13 and OD14
+    before step 7b and step 8b.
   - **Multiple testing.** Only pre-registered decision rules count. Everything
     else is reported.
   - **Two meanings of provenance.** "Tag provenance" is this page's subject.
@@ -973,24 +1060,28 @@ tells where it goes (Fid-2, priority 3).
 
 ## 12. Edits made elsewhere
 
-Each is in place and marked "*Scope added (provenance pathway, 2026-09-26)*".
-Nothing the owner approved is struck.
+Each edit is in place and marked. Prose carries "*Scope added (provenance
+pathway, 2026-09-26)*". Table cells carry "Proposed 2026-09-26 (provenance
+pathway)" or a dated italic note that names the pathway. Nothing the owner
+approved is struck.
 
-  - [ROADMAP.md](ROADMAP.md): a fourth aim; M2, M3 and M5 annotations; notes on
-    the Provenance, Comparator-eligibility, Convergence and Aggregation rows;
-    six proposed rows and four rules under the contract; OD9 to OD14 in the
-    register, with notes on OD5 and OD7; a block of proposed numbers after the
-    OD3 table, with the E66 note on the approved 24 h row; new steps 1b, 2a, 6a
-    to 6c, 7a, 7b, 8c, 10a and 10b, and notes on steps 4, 6, 8b, 9 and 10 and on
-    the milestone table's sphere row.
+  - [ROADMAP.md](ROADMAP.md): a fourth aim; M2, M3 and M5 notes; notes on the
+    Provenance, Comparator-eligibility, Convergence and Aggregation rows; six
+    proposed rows and four rules under the contract; OD9 to OD14 in the
+    register as proposals, with notes on OD5 and OD7; the E66 note beside the
+    approved 24 h row; the proposed numbers under their own heading after the
+    OD3 section; new steps 1b, 2a, 6a to 6c, 7a, 7b, 8c, 10a and 10b, and notes
+    on steps 4, 6, 8b, 9 and 10 and on the milestone table's sphere row.
   - [G3_PLAN.md](G3_PLAN.md): a pointer in the header; §2 (criteria 5, 7, 8 and
-    12 on the ladder); §3 (subsidence is not "Followed"); §4.1, §4.2, §4.3 and
-    §4.5; §6 (D4-W subsides; the rows V-P0 to V-P3); §6.1 (the E66 note); §8;
-    §9.
+    12 on the ladder); §3 (subsidence is followed only through the local
+    bracket); §4.1, §4.2, §4.3 and §4.5; §6 (D4-W subsides; the rows V-P0 to
+    V-P3); §6.1 (the E66 note); §8; §9.
   - [G3_TODO.md](G3_TODO.md): OD9 to OD14 under Decisions; a new section
     "Provenance pathway" with PX0 to PX21 and the probe PRs; pointers in WP3,
     WP4c, WP5b-P, WP5b-C, WP4b, WP9 and the sphere.
-  - [G4_TODO.md](G4_TODO.md): the pathway note; G4.1, G4.3, G4.6, G4.7 to
-    G4.10, G4.12 and G4.15; a new item for energy subsidence.
-  - [STATUS.md](STATUS.md) and [DECISIONS.md](DECISIONS.md): pointers only.
+  - [G4_TODO.md](G4_TODO.md): the pathway note; G4.1, G4.3, G4.6, G4.7 (with a
+    remark on G4.8's pulse), G4.9, G4.10, G4.12 and G4.15; a new item for
+    energy subsidence among the energy items that no G4.n takes up.
+  - [STATUS.md](STATUS.md): a dated update, a note under the open decisions and
+    a row in "Where to look". [DECISIONS.md](DECISIONS.md): a pointer.
   - FINDINGS.md is not edited: no result exists yet.

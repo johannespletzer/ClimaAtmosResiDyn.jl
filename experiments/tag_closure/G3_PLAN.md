@@ -104,14 +104,16 @@ assessable, and the Insight 10 tests (refinement, per-tag intervention,
 aggregation) bound it under OD5. Criterion 11's plateau is replaced by OD6's
 ceiling and growth bound (6.1).
 
-*Scope added (provenance pathway, 2026-09-26, pending OD9, OD11, OD12 and OD14):*
-the criteria on the provenance ladder.
+*Scope added (provenance pathway, 2026-09-26, pending OD9, OD11, OD12 and
+OD14):* the criteria on the provenance ladder.
 
-  - **Criterion 5** is judged on the ladder: a fidelity level and `[L, U]`
-    per tag. Copies that pass eligibility validate only the rules they do
-    not share: the plume, the exchange and the SGS share. Its clause "a CI
-    test shows the copies and a passive tracer agree" maps to PX11 (the
-    Soares air twin), and "manufactured mixing tests" to PX9 (the
+  - **Criterion 5** would be judged on the ladder: a fidelity level and
+    `[L, U]` per tag. Copies that pass eligibility validate only the rules
+    they do not share: the plume, the exchange and the SGS share. Its clause
+    "a CI test shows the copies and a passive tracer agree to rounding
+    without water-specific terms" stays a CI identity test (W20's copies
+    group). PX11 (the Soares air twin) adds a scored run beside it and does
+    not replace it. "Manufactured mixing tests" are joined by PX9 (the
     propagation probe) and PX18 (a band region).
   - **Criterion 7:** the net-flow audit and WP4b's pool rule map to PX14.
   - **Criterion 8** is Val-4 under OD14's held-out hygiene.
@@ -131,22 +133,22 @@ bounded, not validated", and only if the Insight 10 tests pass.
 
 From the inventory of 2026-09-23 and the review, at `dbe7435c`.
 
-| Path                                                                                                                                           | What it does to water                                                                                                                                                                                     | The tags today                                                                                                                                                                                              |
-|:---------------------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SGS mass flux (`edmfx_sgs_flux.jl:28-175`)                                                                                                     | Moves `ρq_tot`, `ρ` and each species by the updraft's and environment's flux. Always implicit (`implicit_tendency.jl:118`), with Jacobian blocks `(ρq_tot, q_totʲ)`, `(ρq_tot, ρ)` and the species'.      | **Nothing.** No updraft field, so the loop never sees them.                                                                                                                                                 |
-| SGS diffusive flux (`:213-427`)                                                                                                                | `ρq_tot` takes `K_h` on `q_tot_eff` (1M: without rain and snow) and `K_e` in the tracer loop (`α = 0`).                                                                                                   | **Leak under 1M:** tags take `(K_h + K_e)` on their whole value. Exact under 0M. The updraft mirror is skipped (B4 guard).                                                                                  |
-| Grid-scale hyperdiffusion (`hyperdiffusion.jl:496` against `:548`) and viscous sponge (`viscous_sponge.jl:197` against `:228`)                 | Act on `q_tot_eff` for `ρq_tot` under 1M.                                                                                                                                                                 | **Leak under 1M,** the same kind.                                                                                                                                                                           |
-| Updraft vertical-diffusion mirror (`edmfx_sgs_flux.jl:330` against `:415`) and updraft hyperdiffusion (`hyperdiffusion.jl:555` against `:618`) | The same `q_tot_eff` treatment for `q_totʲ`.                                                                                                                                                              | Copies would inherit the **leak**.                                                                                                                                                                          |
-| Updraft advection, entrainment, filter (`mass_flux_closures.jl:303-316`: clamp to `[0, ρq_tag/ρa]`, reset to `ρq_tag/ρ` where `ρa < ϵ`)        | Move `sgsʲs.q_tot`. The filter never writes `ρq_tot`.                                                                                                                                                     | Generic for copies.                                                                                                                                                                                         |
-| **Updraft 1M sedimentation** (`advection.jl:440-441`, `updraft_sedimentation!` with lateral inflow `α_lat ∂a/∂z ρ⁰w⁰χ⁰`, `:561`)               | Changes `sgsʲs.q_tot` and the updraft species.                                                                                                                                                            | **Copies miss it.** It is not generic.                                                                                                                                                                      |
-| Microphysics, 0M (`microphysics/tendency.jl:101-133`)                                                                                          | The environment (`ρa⁰`) and each updraft (`ρaʲ`) contribute `dq_tot_dt`, and `Δ = Δ⁰ + ΣΔʲ` to rounding.                                                                                                  | Mass exact. **Composition** is the cell's average.                                                                                                                                                          |
-| Microphysics, 1M (`:153-191`)                                                                                                                  | Net tendencies of `q_lcl`, `q_icl`, `q_rai` and `q_sno` per subdomain (`ᶜmp_tendency⁰`, `ᶜmp_tendencyʲs`), from CloudMicrophysics' bulk tendencies. No process rates are exposed. Never changes `ρq_tot`. | Correctly a no-op for total water.                                                                                                                                                                          |
-| Sedimentation, 1M (`water_advection.jl:41-218`)                                                                                                | Grid-mean flux per species. EDMF corrects only the energy flux.                                                                                                                                           | Mass exact. **Composition is reset at each level** (the mirror takes the donor cell's total-water share), so `pr_tag` would be the lowest cell's composition.                                               |
-| Updraft surface boundary (`edmfx_boundary_condition.jl:337-384`)                                                                               | Relaxes `q_totʲ` at level 1 toward `q_b = q̄ + C√σ²`, where the excess is never negative.                                                                                                                 | Nothing at grid scale. Copies need a target.                                                                                                                                                                |
-| Surface flux, forcings, subsidence                                                                                                             | Grid-mean writers, bracketed.                                                                                                                                                                             | Followed. *Provenance pathway, 2026-09-26: subsidence reaches the tags only through the local bracket, although `subsidence!` is linear in χ; the default and the copies share this rule (PX1, PX8, PX16).* |
-| Vertical advection of `ρq_tot` (`implicit_tendency.jl:252, 395`)                                                                               | Implicit, with a post-Newton correction.                                                                                                                                                                  | Explicit for the tags: the known drift.                                                                                                                                                                     |
-| `rescale_water_tags!`                                                                                                                          | Runs inside `tracer_nonnegativity_constraint!`, **before** the filter (`constrain_state.jl:44-48`). Only `repair_water_tag_partition!` runs after it.                                                     | —                                                                                                                                                                                                           |
-| The updraft's precipitation mass loss on the implicit path                                                                                     | `sgs_ρa_implicit_tendency!` overwrites microphysics' `ρa` sink (`initialize_implicit_problem.jl:291`), while `q_totʲ` keeps the `(1 − q)` dilution.                                                       | Documented. The copies' rule mirrors `q_totʲ`.                                                                                                                                                              |
+| Path                                                                                                                                           | What it does to water                                                                                                                                                                                     | The tags today                                                                                                                                                                                                            |
+|:---------------------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SGS mass flux (`edmfx_sgs_flux.jl:28-175`)                                                                                                     | Moves `ρq_tot`, `ρ` and each species by the updraft's and environment's flux. Always implicit (`implicit_tendency.jl:118`), with Jacobian blocks `(ρq_tot, q_totʲ)`, `(ρq_tot, ρ)` and the species'.      | **Nothing.** No updraft field, so the loop never sees them.                                                                                                                                                               |
+| SGS diffusive flux (`:213-427`)                                                                                                                | `ρq_tot` takes `K_h` on `q_tot_eff` (1M: without rain and snow) and `K_e` in the tracer loop (`α = 0`).                                                                                                   | **Leak under 1M:** tags take `(K_h + K_e)` on their whole value. Exact under 0M. The updraft mirror is skipped (B4 guard).                                                                                                |
+| Grid-scale hyperdiffusion (`hyperdiffusion.jl:496` against `:548`) and viscous sponge (`viscous_sponge.jl:197` against `:228`)                 | Act on `q_tot_eff` for `ρq_tot` under 1M.                                                                                                                                                                 | **Leak under 1M,** the same kind.                                                                                                                                                                                         |
+| Updraft vertical-diffusion mirror (`edmfx_sgs_flux.jl:330` against `:415`) and updraft hyperdiffusion (`hyperdiffusion.jl:555` against `:618`) | The same `q_tot_eff` treatment for `q_totʲ`.                                                                                                                                                              | Copies would inherit the **leak**.                                                                                                                                                                                        |
+| Updraft advection, entrainment, filter (`mass_flux_closures.jl:303-316`: clamp to `[0, ρq_tag/ρa]`, reset to `ρq_tag/ρ` where `ρa < ϵ`)        | Move `sgsʲs.q_tot`. The filter never writes `ρq_tot`.                                                                                                                                                     | Generic for copies.                                                                                                                                                                                                       |
+| **Updraft 1M sedimentation** (`advection.jl:440-441`, `updraft_sedimentation!` with lateral inflow `α_lat ∂a/∂z ρ⁰w⁰χ⁰`, `:561`)               | Changes `sgsʲs.q_tot` and the updraft species.                                                                                                                                                            | **Copies miss it.** It is not generic.                                                                                                                                                                                    |
+| Microphysics, 0M (`microphysics/tendency.jl:101-133`)                                                                                          | The environment (`ρa⁰`) and each updraft (`ρaʲ`) contribute `dq_tot_dt`, and `Δ = Δ⁰ + ΣΔʲ` to rounding.                                                                                                  | Mass exact. **Composition** is the cell's average.                                                                                                                                                                        |
+| Microphysics, 1M (`:153-191`)                                                                                                                  | Net tendencies of `q_lcl`, `q_icl`, `q_rai` and `q_sno` per subdomain (`ᶜmp_tendency⁰`, `ᶜmp_tendencyʲs`), from CloudMicrophysics' bulk tendencies. No process rates are exposed. Never changes `ρq_tot`. | Correctly a no-op for total water.                                                                                                                                                                                        |
+| Sedimentation, 1M (`water_advection.jl:41-218`)                                                                                                | Grid-mean flux per species. EDMF corrects only the energy flux.                                                                                                                                           | Mass exact. **Composition is reset at each level** (the mirror takes the donor cell's total-water share), so `pr_tag` would be the lowest cell's composition.                                                             |
+| Updraft surface boundary (`edmfx_boundary_condition.jl:337-384`)                                                                               | Relaxes `q_totʲ` at level 1 toward `q_b = q̄ + C√σ²`, where the excess is never negative.                                                                                                                 | Nothing at grid scale. Copies need a target.                                                                                                                                                                              |
+| Surface flux, forcings, subsidence                                                                                                             | Grid-mean writers, bracketed.                                                                                                                                                                             | Followed. *Scope added (provenance pathway, 2026-09-26): subsidence reaches the tags only through the local bracket, although `subsidence!` is linear in χ; the default and the copies share this rule (PX1, PX8, PX16).* |
+| Vertical advection of `ρq_tot` (`implicit_tendency.jl:252, 395`)                                                                               | Implicit, with a post-Newton correction.                                                                                                                                                                  | Explicit for the tags: the known drift.                                                                                                                                                                                   |
+| `rescale_water_tags!`                                                                                                                          | Runs inside `tracer_nonnegativity_constraint!`, **before** the filter (`constrain_state.jl:44-48`). Only `repair_water_tag_partition!` runs after it.                                                     | —                                                                                                                                                                                                                         |
+| The updraft's precipitation mass loss on the implicit path                                                                                     | `sgs_ρa_implicit_tendency!` overwrites microphysics' `ρa` sink (`initialize_implicit_problem.jl:291`), while `q_totʲ` keeps the `(1 − q)` dilution.                                                       | Documented. The copies' rule mirrors `q_totʲ`.                                                                                                                                                                            |
 
 ## 4. Technical design
 
@@ -242,8 +244,9 @@ the dynamics and not a spin-up.
     *Scope added (provenance pathway, 2026-09-26):* PX13 brackets the three
     admissible surface treatments. If they spread by more than the
     first-hour source row, first-hour `evap` is convention-limited and the
-    claim is narrowed. A surface rule that composes the flux (PR-B) goes to
-    the owner only after PX13.
+    claim is narrowed. The pathway proposes to bring a surface rule that
+    composes the flux (PP-SFC) to the owner after PX13. The owner may decide
+    earlier.
 
 ### 4.2 The `q_tot_eff` leaks under 1M
 
@@ -300,11 +303,11 @@ comparator or a documented mechanistic argument for its attribution, for
 example charging the 1M leak to the tags whose condensate leaked. The rest are
 deferred with their decomposition numbers, not deleted.
 
-*Scope added (provenance pathway, 2026-09-26):* part 3 accumulates its difference
-per cell and step without feedback, and reports the net. So it is a
-first-order estimate of `L`, the spread between two rules that both close. It
-is not a bound, and its ratio to part 2b is not evidence for the exposure
-lemma. PX2 gives the realized value from the two full runs.
+*Scope added (provenance pathway, 2026-09-26):* part 3 accumulates its
+difference per cell and step without feedback, and reports the net. So it is a
+first-order estimate of `L`, the spread between two rules that both close. It is
+not a bound, and its ratio to part 2b is not evidence for the exposure lemma.
+PX2 would give the realized value from W38's run and V1.
 
 ### 4.3 Following the parent's increment (WP5)
 
@@ -343,7 +346,7 @@ Hence:
 
 *Scope added (provenance pathway, 2026-09-26):* the follower's moved part is
 an assumed rule. PX7 splits it into lag, which enters the numerical error
-`F`, and structure, which is a convention to bracket. PX3 measures the
+`F`, and structure, which is a convention to bracket. PX3 would measure the
 placement's effect on composition (W24 against W28). The exposure lemma's
 premises are in the pathway's section 3.
 
@@ -445,10 +448,10 @@ reviews it before any code. Implementation is staged:
  2. EDMF in the default mode;
  3. copies.
 
-*Scope added (provenance pathway, 2026-09-26):* PX14 replays the pool rule and the
-sedimentation reset with sub-steps, in `PrecipitatingColumn`'s rain-out window
-only. Until stage 2, WP4b is refused under EDMF, so the production envelope
-keeps the reset.
+*Scope added (provenance pathway, 2026-09-26):* PX14 replays the pool rule and
+the sedimentation reset with sub-steps, in `PrecipitatingColumn`'s rain-out
+window only. Until stage 2, WP4b is refused under EDMF, so the production
+envelope keeps the reset.
 
 ### 4.6 Shared code (WP2), after the water design has settled
 
@@ -552,9 +555,10 @@ so a violation can be traced.
 *Scope added (provenance pathway, 2026-09-26):* D4-W subsides, with DYCOMS's
 `w = −3.75e-6 z`. Both modes reach the tags' subsidence through the same
 bracket, so their comparison cannot see it (PX1, PX8). The identity above is
-also weak where `evap_tropo` and `evap_strat` are fed by fixed masks: then
-they are constant multiples of `evap`, and proportionality is the invariant
-to check (PX4).
+also weak where `evap_tropo` and `evap_strat` are fed by fixed masks. Then
+they are constant multiples of `evap`, except where a source tag's own θ
+binds or the repair acts, and proportionality is the invariant to check
+(PX4).
 
 **The deep 0M development case** is TRMM_LBA with 0M, 3 h. The held-out set of
 criterion 8 is separate.
@@ -623,11 +627,13 @@ The verifier computes both (WP0).
     Newton count, with 1.6% and 2.6% at worst. A looser budget would let the
     default's error exceed the spread from the mixing convention alone, about
     1% in L1 (E66).
-    *Scope added (provenance pathway, 2026-09-26, pending OD11):* E66's L1 row is in
-    fractions: 0.08 and 0.12 for the region tags, 0.68 to 1.26 for the source
-    tags. So the convention spread is 8% to 126%, and this 2% is a fidelity
-    budget. Convention spreads are reported beside it, never scored against
-    it. The sentence above is kept as written.
+    *Scope added (provenance pathway, 2026-09-26, pending OD11):*
+    E66's L1 row is in fractions: 0.08 and 0.12 for the region tags, 0.68
+    to 1.26 for the source tags. So the convention spread is 8% to 126%. The
+    pathway reads this 2% as a fidelity budget, and proposes that convention
+    spreads are reported beside it and not scored against it. OD11 asks the
+    owner to confirm this reading. Until then, the row is scored as approved.
+    The sentence above is kept as written.
 
   - **Per tag, in the first hour:** L1 ≤ 1% for the region tags and ≤ 10% for
     the source tags, and L∞ ≤ 25%. This is G1's split of 2026-09-20. It
@@ -771,15 +777,15 @@ set. None submits jobs, pushes or merges. Reports go to
 
 ## 8. Risks and open questions
 
-  - *Scope added (provenance pathway, 2026-09-26):* **common-mode references.** A
-    reference cannot see a rule it shares, so agreement between the default
+  - *Scope added (provenance pathway, 2026-09-26):* **common-mode references.**
+    A reference cannot see a rule it shares, so agreement between the default
     and the copies says nothing about the grid-scale rules. **`U` may be too
-    loose** to pass on D4-W (the follower's worst case is about 7.2% for
-    `tropo`). **References have floors** and conventions of their own.
-    **Classification gaming** is blocked by fixing OD11 before any score.
-    **Run trees** differ between PRs. **`tracer_upwinding` also moves the
-    1M species,** so tracer-mode twins change the 1M parent. See the
-    pathway's section 11.
+    loose** to pass on D4-W (the follower's part 2b alone is about 7.2% for
+    `tropo`, a lower bound on its worst case). **References have floors** and
+    conventions of their own. **Classification gaming** is blocked by fixing
+    OD11 before any score. **Run trees** differ between PRs.
+    **`tracer_upwinding` also moves the 1M species,** so tracer-mode twins
+    change the 1M parent. See the pathway's section 11.
 
   - **The tracer form lags under stiff implicit fluxes** (E59). The follower is
     built anyway (4.3). The rule decides only the default.

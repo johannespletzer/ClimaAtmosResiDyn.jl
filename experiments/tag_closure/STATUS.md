@@ -6,10 +6,11 @@ housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
 done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for), 12:40 and
 20:00 (rev. 2 of the work plan, steps 0 and 1), 21:10 (the owner's answers
 to the register) and later that evening (OD3 approved; known issue 7's option
-A; step 2 pre-registered), and on 2026-09-25 (the owner's answers of that
-day). Update it when something here changes, and at each milestone of a work
-package and at each goal's end. The checklist for those moments is in
-[README.md](README.md), "Closing a work package or a goal". Where a fact was
+A; step 2 pre-registered), on 2026-09-25 (the owner's answers of that day), and
+on 2026-09-26 (the provenance pathway, proposed). Update it when something here
+changes, and at each milestone of a work package and at each goal's end. The
+checklist for those moments is in [README.md](README.md), "Closing a work
+package or a goal". Where a fact was
 not checked, it says so.
 
 ## The goals
@@ -73,15 +74,16 @@ not checked, it says so.
 ## Where things stand
 
   - **Update, 2026-09-26: the provenance pathway, proposed.**
-    [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md) revises rev. 2 toward
-    provenance certainty for both families: the core idea (closure is one
-    question with an answer; provenance is the rest, with none), a ladder
-    with an interval `[L, U]` per tag, fourteen theories and twenty-two
-    experiments, and OD9 to OD14 for the owner. Nothing has run.
-      + **Where the newest results live.** On 2026-09-25 they were on
-        `claude/plan-rev2`, 78 commits ahead of `claude/tag-closure-record`,
-        and no other branch held a record commit that it lacked. Check that
-        before building on either branch.
+    [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md) proposes a revision of rev.
+    2 toward provenance certainty for both families. Closure is one question
+    per cell, and the model knows its answer. Provenance is the rest, and the
+    model computes no answer for it. The page gives a ladder with an interval
+    `[L, U]` per tag, fourteen theories and twenty-two experiments. It proposes
+    OD9 to OD14 to the owner. Nothing has run.
+      + **Where the newest results live.** On 2026-09-26 they were on
+        `claude/plan-rev2` at `a6949414`, 78 commits ahead of
+        `claude/tag-closure-record`, and no other branch held a record commit
+        that it lacked. Check that before building on either branch.
   - **Update, 2026-09-25: the owner's answers, W25 scored, the probe read.**
     Each decision's state is in ROADMAP.md's register, the single source;
     the open ones are listed below ("The owner's open decisions").
@@ -406,12 +408,11 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
 
 ## The owner's open decisions
 
+*Scope added (provenance pathway, 2026-09-26):* OD9 to OD14 are proposed, not
+yet open. Each becomes open when the owner accepts it
+([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9).
+
 Each decision's current state is in ROADMAP.md's register, the single source.
-
-*Scope added (provenance pathway, 2026-09-26):* OD9 to OD14 are proposed and open
-once the owner enters them ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md),
-section 9).
-
 OD7 is the only open numbered decision. Open now, each with its entry in
 [DECISIONS.md](DECISIONS.md), "Waiting for the owner":
 
@@ -492,24 +493,24 @@ Every decision taken so far is in [DECISIONS.md](DECISIONS.md).
 
 ## Where to look
 
-| To find                                                                                                | Look in                                                                                                       |
-|:------------------------------------------------------------------------------------------------------ |:------------------------------------------------------------------------------------------------------------- |
-| how to set up, submit a run, compare runs, and the traps                                               | [README.md](README.md)                                                                                        |
-| the milestones M0 to M8 and where each open item goes                                                  | [ROADMAP.md](ROADMAP.md)                                                                                      |
-| rev. 2: the acceptance contract, the decision register OD1 to OD8, the execution order                 | [ROADMAP.md](ROADMAP.md), "Rev. 2 of the work plan"                                                           |
-| the provenance pathway: the ladder, the theories PT1 to PT14, the experiments PX0 to PX21, OD9 to OD14 | [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md)                                                                |
-| G3's plan, criteria and budgets                                                                        | [G3_PLAN.md](G3_PLAN.md)                                                                                      |
-| G3's to-do list                                                                                        | [G3_TODO.md](G3_TODO.md)                                                                                      |
-| G4's items, and the energy items of the former OPERATIONAL_TODO                                        | [G4_TODO.md](G4_TODO.md)                                                                                      |
-| open items beyond G4                                                                                   | [BACKLOG.md](BACKLOG.md)                                                                                      |
-| every decision of the owner                                                                            | [DECISIONS.md](DECISIONS.md)                                                                                  |
-| what has been measured, and what was falsified                                                         | [FINDINGS.md](FINDINGS.md)                                                                                    |
-| every run: commit, job, purpose, findings, where its data is                                           | [RUNS.md](RUNS.md)                                                                                            |
-| the energy attribution path, the mixing conventions, the updraft gap, the sub-grid design              | [design/](design/)                                                                                            |
-| the frozen external reviews of 2026-09-21                                                              | [reference/](reference/)                                                                                      |
-| agent reviews, instructions, check scripts, the register                                               | [review/](review/)                                                                                            |
-| H3's re-check of G3's claims                                                                           | [review/verify_g3.md](review/verify_g3.md)                                                                    |
-| the originals as they were, and where their content went                                               | [archive/2026-09-23/INDEX.md](archive/2026-09-23/INDEX.md)                                                    |
-| the housekeeping of 2026-09-23 and its outcome                                                         | [archive/2026-09-23/CONDENSE_PLAN.md](archive/2026-09-23/CONDENSE_PLAN.md)                                    |
-| the run data                                                                                           | `$SCRATCH/tag_closure/output/` and `~/git/Clima/ClimaAtmosResiDyn-archive/` (RUNS.md)                         |
-| the user docs of the diagnostics                                                                       | `docs/src/energy_source_tags.md`, `tagged_water.md`, `process_record.md`; #95's `energy_source_tags_guide.md` |
+| To find                                                                                                          | Look in                                                                                                       |
+|:---------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------- |
+| how to set up, submit a run, compare runs, and the traps                                                         | [README.md](README.md)                                                                                        |
+| the milestones M0 to M8 and where each open item goes                                                            | [ROADMAP.md](ROADMAP.md)                                                                                      |
+| rev. 2: the acceptance contract, the decision register OD1 to OD8, the execution order                           | [ROADMAP.md](ROADMAP.md), "Rev. 2 of the work plan"                                                           |
+| the provenance pathway, proposed: the ladder, the theories PT1 to PT14, the experiments PX0 to PX21, OD9 to OD14 | [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md)                                                                |
+| G3's plan, criteria and budgets                                                                                  | [G3_PLAN.md](G3_PLAN.md)                                                                                      |
+| G3's to-do list                                                                                                  | [G3_TODO.md](G3_TODO.md)                                                                                      |
+| G4's items, and the energy items of the former OPERATIONAL_TODO                                                  | [G4_TODO.md](G4_TODO.md)                                                                                      |
+| open items beyond G4                                                                                             | [BACKLOG.md](BACKLOG.md)                                                                                      |
+| every decision of the owner                                                                                      | [DECISIONS.md](DECISIONS.md)                                                                                  |
+| what has been measured, and what was falsified                                                                   | [FINDINGS.md](FINDINGS.md)                                                                                    |
+| every run: commit, job, purpose, findings, where its data is                                                     | [RUNS.md](RUNS.md)                                                                                            |
+| the energy attribution path, the mixing conventions, the updraft gap, the sub-grid design                        | [design/](design/)                                                                                            |
+| the frozen external reviews of 2026-09-21                                                                        | [reference/](reference/)                                                                                      |
+| agent reviews, instructions, check scripts, the register                                                         | [review/](review/)                                                                                            |
+| H3's re-check of G3's claims                                                                                     | [review/verify_g3.md](review/verify_g3.md)                                                                    |
+| the originals as they were, and where their content went                                                         | [archive/2026-09-23/INDEX.md](archive/2026-09-23/INDEX.md)                                                    |
+| the housekeeping of 2026-09-23 and its outcome                                                                   | [archive/2026-09-23/CONDENSE_PLAN.md](archive/2026-09-23/CONDENSE_PLAN.md)                                    |
+| the run data                                                                                                     | `$SCRATCH/tag_closure/output/` and `~/git/Clima/ClimaAtmosResiDyn-archive/` (RUNS.md)                         |
+| the user docs of the diagnostics                                                                                 | `docs/src/energy_source_tags.md`, `tagged_water.md`, `process_record.md`; #95's `energy_source_tags_guide.md` |
