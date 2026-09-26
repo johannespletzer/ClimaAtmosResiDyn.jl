@@ -168,10 +168,32 @@ nor the exchange runs. The tags then move by the model's tracer flux
 of `E`. Under `energy_source_tag_transport: enthalpy_increment` the correction
 after each solve takes the difference, since every sub-grid term runs in the
 implicit tendency. Under `enthalpy` nothing would, so the copies are refused
-there. The model injects the surface's buoyant air into the lowest level of
-the updraft. That air carries surface-flux energy, but the copies do not see
-it. They take the environment's composition there. A restart refuses a change
-of the switch, since the copies are part of the state.
+there. A restart refuses a change of the switch, since the copies are part of
+the state.
+
+The model gives the updraft's `mseʲ` four things it gives no updraft tracer,
+and the copies mirror each (`energy_source_copy_mirrors.jl`):
+
+  - the surface enthalpy flux into the updraft's lowest cell;
+  - the relaxation there toward the surface's buoyant air, `mse̅ + C√σ²`;
+  - radiation, under RRTMGP;
+  - the updraft's rain-out under 0-moment microphysics.
+
+Each mirror takes the model's own increment of `mseʲ` and gives it to the
+copies by the grid mean's rule for that process's label. A tag that receives
+the label gains its mask times the increment's positive part, and every copy
+loses its share of the negative part. The shares are of the partition's
+copies' sum, so the partition's copies change by exactly the increment. In the
+relaxation, each copy moves toward its tag's grid-mean value plus its share of
+the buoyant excess, so the surface-flux tag gets only its share of that
+excess, as the water copies decide. The buoyancy term of `mseʲ` is not
+mirrored. The updraft's velocity equation takes part of it from the updraft's
+kinetic energy, and the rest is work the updraft exchanges with its
+surroundings through the non-hydrostatic pressure. Neither is a source any tag
+is labelled with. What the mirrors do not cover, such as that work, the two
+advection schemes and the diffusion mirror's different operator, shows in
+`e_src_copy_res`, the updraft's energy `mseʲ + Kʲ - p/ρʲ + c` minus the
+partition's copies, times `ρaʲ/ρ`.
 
 The copies have costs. Their state names are nested in the updraft, so the
 split Jacobian solver does not solve them apart. They join the nested solver, and the
@@ -751,6 +773,8 @@ ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
 ClimaAtmos.sgs_exchange_of_energy_source_tags!
 ClimaAtmos.has_energy_source_updraft_copies
 ClimaAtmos.energy_source_updraft_copy_variables
+ClimaAtmos.mirror_on_energy_source_copies!
+ClimaAtmos.energy_source_copy_residual!
 ClimaAtmos.keep_energy_source_sediment_correction!
 ClimaAtmos.sediment_energy_source_tags_with_corrections!
 ```
