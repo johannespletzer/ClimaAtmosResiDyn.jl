@@ -74,8 +74,16 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
-        # The water tags' updraft copies lose their share of the updraft's rain.
+        # The water tags' updraft copies lose their share of the updraft's rain,
+        # and the energy copies the energy it takes.
         water_tag_copies_microphysics_tendency!(
+            Yₜ,
+            Y,
+            p,
+            p.atmos.microphysics_model,
+            p.atmos.turbconv_model,
+        )
+        energy_source_copies_microphysics_tendency!(
             Yₜ,
             Y,
             p,
@@ -134,6 +142,12 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
 
     edmfx_boundary_condition_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
     water_tag_copies_boundary_condition_tendency!(
+        Yₜ,
+        Y,
+        p,
+        p.atmos.turbconv_model,
+    )
+    energy_source_copies_boundary_condition_tendency!(
         Yₜ,
         Y,
         p,

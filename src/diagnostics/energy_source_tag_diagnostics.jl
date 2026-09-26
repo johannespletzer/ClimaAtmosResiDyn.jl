@@ -143,6 +143,23 @@ function register_energy_source_tagging_diagnostics!(
     register_energy_source_ledger_diagnostics!(model)
 
     region_names = energy_source_region_tag_state_names(model)
+    # The copies' residual describes a partition, so it needs region tags as
+    # well as copies. A stale entry from an earlier model is dropped first.
+    delete!(ALL_DIAGNOSTICS, "e_src_copy_res")
+    if has_energy_source_updraft_copies(model) && !isempty(region_names)
+        add_diagnostic_variable!(;
+            short_name = "e_src_copy_res",
+            units = "J kg^-1",
+            long_name = "Energy Source Tag Updraft Copy Residual",
+            comments = "The first updraft's energy minus the sum of the " *
+                       "partition's updraft copies, times the updraft's " *
+                       "density-area, per unit mass of grid-mean air: " *
+                       "ρaʲ (Aʲ - Σᵢ χᵢʲ) / ρ, with Aʲ = mseʲ + Kʲ - p/ρʲ + c. " *
+                       "It shows what the copies' mirrors do not cover. " *
+                       "Written only under energy_source_tag_updraft_copy: true.",
+            compute! = (out, u, p, t) -> compute_e_src_copy_res!(out, u, p, t),
+        )
+    end
     offset = model.offset
     # Drop any stale entry first, then decide whether to register a new one. An
     # earlier simulation in this process may have registered `e_src_res` over a
@@ -229,6 +246,15 @@ function compute_e_src_res!(out, state, cache, time, region_names, offset)
     ᶜres = compute_e_tag_res!(out, state, cache, time, region_names)
     isnothing(offset) || (ᶜres .+= offset)
     return ᶜres
+end
+
+# `e_src_copy_res`: `energy_source_copy_residual!`.
+function compute_e_src_copy_res!(out, state, cache, time)
+    if isnothing(out)
+        return energy_source_copy_residual!(similar(state.c.ρ), state, cache)
+    else
+        energy_source_copy_residual!(out, state, cache)
+    end
 end
 
 # `e_src_fix_<name>`: the repair's ledger for one tag, per unit mass, as the
