@@ -838,8 +838,10 @@ approved.
 
   - It needs a reference that is valid in its case. The air twin is valid
     only without sinks, subsidence or sedimentation (OD12). Criterion 8's
-    columns do not qualify: RICO and BOMEX set `subsidence_forcing`, and the
-    GCM-driven column subsides.
+    columns do not qualify. RICO and BOMEX set `subsidence_forcing`. ARM SGP
+    is a deep 1M case driven by large-scale forcing from a file
+    (`prognostic_edmfx_armvaranal_column.yml`). The GCM-driven column
+    subsides.
   - So OD14 either names a held-out window where PX11's reference stays
     valid, measured as in PX11, or PX23 waits for a reference for that
     regime: PP-TRACER (PX17) for subsidence, or eligible copies (PX12). Until
