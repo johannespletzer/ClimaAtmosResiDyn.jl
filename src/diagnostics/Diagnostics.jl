@@ -89,6 +89,8 @@ import ..has_water_tag_updraft_copies
 import ..water_tag_leak!
 import ..WATER_TAG_LEAK_PATHS
 import ..follows_water_increment
+import ..water_tag_precipitation!
+import ..water_tag_precipitation_residual!
 
 # energy_source_tagging_model
 import ..EnergySourceTaggingModel
@@ -99,6 +101,8 @@ import ..tag_attempted_ledger_names
 import ..is_tag_per_tag_ledger_name
 import ..ENERGY_SOURCE_RESIDUAL_LEDGER
 import ..energy_source_region_tag_state_names
+import ..has_energy_source_updraft_copies
+import ..energy_source_copy_residual!
 import ..follows_implicit_increment
 
 # process records

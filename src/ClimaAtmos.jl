@@ -108,8 +108,14 @@ include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_ta
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_report.jl"))
 # After the energy source tags, whose weight-free exchange helpers it uses.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_edmf.jl"))
+# The energy copies' mirrors of what `mseʲ` gets and an updraft tracer does not.
+include(
+    joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_copy_mirrors.jl"),
+)
 # It calls the diffusion and hyperdiffusion helpers, which load later.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_leaks.jl"))
+# The 0M rain-out split by subdomain, after the exchange's helpers it reuses.
+include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_rainout.jl"))
 # The increment follower, after the default mode's flux helper it reuses.
 include(
     joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_increment.jl"),

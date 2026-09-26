@@ -439,11 +439,7 @@ function water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
     flags = _water_partition_flags(model.tags)
     # The grid mean's specific tag values, negative ones as zero, one tuple per
     # cell, so each tag's kernel below reads a few tuple fields.
-    tag_fields = map(tag -> tag_field(Y.c, tag), model.tags)
-    Base.Broadcast.materialize!(
-        ᶜε̄,
-        Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, tag_fields...),
-    )
+    set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
 
     # The updraft's specific tag values, from the plume, rescaled at each level
     # to the updraft's water.
@@ -557,6 +553,10 @@ WaterPlumeStep(::Val{partition}) where {partition} = WaterPlumeStep{partition}()
     ((total > zero(FT)) & (q_totʲ > zero(FT))) || return mixed
     # Each value's share first, then the water: `q_totʲ / total` can overflow
     # where the partition holds a denormal amount, and a share cannot.
+    # `map`, not `ntuple` over the index: inside the column march the tuple is
+    # ClimaCore's `AutoBroadcaster`, whose `map` unrolls, while `ntuple` builds
+    # a plain tuple that the march converts back, allocating in every cell
+    # (`analysis/water/wp9_variants.jl`).
     return map(ε -> (ε / total) * q_totʲ, mixed)
 end
 
@@ -1184,7 +1184,7 @@ water_tag_copy_sgs_names(model::WaterTaggingModel) = _water_tag_copy_sgs_names(
 )
 _water_tag_copy_sgs_names(::Val{false}, tags) = ()
 _water_tag_copy_sgs_names(::Val{true}, tags) =
-    map(water_tag_copy_field_name, tags)
+    unrolled_map(water_tag_copy_field_name, tags)
 
 # The derivative of a copy's falling water `qʲ χ / q_totʲ` with respect to the
 # copy. The sedimentation Jacobian takes it without the renormalization's and

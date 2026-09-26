@@ -900,6 +900,42 @@ column_atmos_model(; kwargs...) =
                 enthalpy.energy_source_tagging_model,
             ),
         )
+        # The masks must sum to 1 within 100 rounding units of their float
+        # type, as for the water tags' follower. The old check allowed 1%. So a
+        # sum of 0.995 passed it, and it must fail now. A sum 50 units from 1
+        # passes and one 150 units from 1 fails, so the bound sits at 100 units
+        # in both float types. 0.75 plus or minus a few units is exact.
+        for FT in (Float32, Float64)
+            model = increment.energy_source_tagging_model
+            check(strat, tropo) =
+                CA._check_increment_partition(masks(strat, tropo), partition, model)
+            quarter, rest, unit = FT(0.25), FT(0.75), eps(FT)
+            @test_throws r"partition the domain" check(quarter, FT(0.745))
+            @test isnothing(check(quarter, rest + 50 * unit))
+            @test isnothing(check(quarter, rest - 50 * unit))
+            @test_throws r"partition the domain" check(quarter, rest + 150 * unit)
+            @test_throws r"partition the domain" check(quarter, rest - 150 * unit)
+            # On a column's fields the deviation is the maximum over the
+            # processes, through `ClimaComms.allreduce`. This runs that method
+            # on one process, with the gap in one cell only. More than one
+            # process is not tested here.
+            space = ClimaCore.CommonSpaces.ColumnSpace(
+                FT;
+                z_min = 0,
+                z_max = 1000,
+                z_elem = 4,
+                staggering = ClimaCore.CommonSpaces.CellCenter(),
+            )
+            ᶜtropo = fill(rest, space)
+            ᶜmasks = (; ρe_src_strat = fill(quarter, space), ρe_src_tropo = ᶜtropo)
+            @test isnothing(CA._check_increment_partition(ᶜmasks, partition, model))
+            parent(ᶜtropo)[end] = FT(0.745)
+            @test_throws r"partition the domain" CA._check_increment_partition(
+                ᶜmasks,
+                partition,
+                model,
+            )
+        end
         # And the model refuses the mode without an offset.
         @test_throws r"enthalpy_increment` needs `energy_source_tag_offset`" CA.EnergySourceTaggingModel(
             tags;
@@ -1375,16 +1411,30 @@ column_atmos_model(; kwargs...) =
             (name(:c, :ρe_src_tropics), name(:c, :ρe_src_tropics)) => :block,
             # So is a record.
             (name(:c, :prc_e_radiation), name(:c, :prc_e_radiation)) => :block,
-            # A tag another block names is not.
+            # A tag another row names is not.
             (name(:c, :ρq_tag_rain), name(:c, :ρq_tag_rain)) => :block,
-            (name(:c, :ρq_tag_rain), name(:f, :u₃)) => :block,
+            (name(:f, :u₃), name(:c, :ρq_tag_rain)) => :block,
+            # A tag whose own row names a coupled field's column is, by
+            # back-substitution after the coupled fields (WP5b).
+            (name(:c, :ρq_tag_snow), name(:c, :ρq_tag_snow)) => :block,
+            (name(:c, :ρq_tag_snow), name(:c, :ρq_lcl)) => :block,
             # Nor is a field that is neither a tag nor a record, even when it
             # couples to nothing.
             (name(:c, :ρq_lcl), name(:c, :ρq_lcl)) => :block,
             (name(:f, :u₃), name(:f, :u₃)) => :block,
         )
-        @test CA.uncoupled_jacobian_names(block_pairs) ==
-              (name(:c, :ρe_src_tropics), name(:c, :prc_e_radiation))
+        @test CA.uncoupled_jacobian_names(block_pairs) == (
+            name(:c, :ρe_src_tropics),
+            name(:c, :prc_e_radiation),
+            name(:c, :ρq_tag_snow),
+        )
+        # Not when its own row names another splittable field's column.
+        @test isempty(
+            CA.uncoupled_jacobian_names((
+                (name(:c, :ρq_tag_a), name(:c, :ρq_tag_a)) => :block,
+                (name(:c, :ρq_tag_a), name(:c, :ρe_src_x)) => :block,
+            )),
+        )
         # A block that names a part of a tag also couples it.
         @test isempty(
             CA.uncoupled_jacobian_names((
@@ -2435,4 +2485,195 @@ end
     @test audit.led_inc_heat_applicable == 1
     # Without the throughput or process records there is no parent scale.
     @test isnan(CA.energy_source_ledger_parent_scale((; c = (; ρ = Y.c.ρ)), nothing))
+end
+
+# G4.1 and G4.11: the energy copies' mirrors of what `mseʲ` gets and an updraft
+# tracer does not (`energy_source_copy_mirrors.jl`).
+@testset "The energy copies' mirrors of mseʲ" begin
+    CC = CA.ClimaCore
+    for FT in (Float32, Float64)
+        space = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1500,
+            z_elem = 12,
+            staggering = CC.CommonSpaces.CellCenter(),
+        )
+        ᶜcoord = CC.Fields.coordinate_field(space)
+        ᶜz = ᶜcoord.z
+        region(above) = CA.TanhAltitudeRegion(FT(750), FT(100), above)
+        tags = (
+            CA.EnergySourceTag{:tropo}(region(false)),
+            CA.EnergySourceTag{:strat}(region(true)),
+            CA.EnergySourceTag{:sfc}(nothing, (:surface_flux,)),
+            CA.EnergySourceTag{:rad_low}(region(false), (:radiation,)),
+        )
+        offset = FT(110495)
+        model = CA.EnergySourceTaggingModel(
+            tags,
+            offset;
+            transport = CA.EnthalpyIncrementEnergySourceTransport(),
+            updraft_copies = true,
+        )
+        names = (:tropo, :strat, :sfc, :rad_low)
+        copy_names = map(name -> Symbol(:e_src_, name), names)
+        tag_names = map(name -> Symbol(:ρe_src_, name), names)
+        sgs_type = NamedTuple{(:ρa, copy_names...), NTuple{5, FT}}
+        c_type = NamedTuple{
+            (:ρ, :ρe_tot, tag_names..., :sgsʲs),
+            Tuple{ntuple(_ -> FT, 6)..., Tuple{sgs_type}},
+        }
+        Y = CC.Fields.FieldVector(; c = similar(ᶜcoord, c_type))
+        Yₜ = similar(Y)
+        ᶜsgsʲ = Y.c.sgsʲs.:(1)
+        ᶜsgsʲₜ = Yₜ.c.sgsʲs.:(1)
+        @. Y.c.ρ = FT(1.2) * exp(-(ᶜz) / 8000)
+        @. Y.c.ρe_tot = Y.c.ρ * FT(2.2e4)
+        ᶜE = @. Y.c.ρe_tot + offset * Y.c.ρ
+        ᶜbelow = @. (1 - tanh((ᶜz - 750) / 100)) / 2
+        @. Y.c.ρe_src_tropo = FT(1.05) * ᶜbelow * ᶜE
+        @. Y.c.ρe_src_strat = FT(0.97) * (1 - ᶜbelow) * ᶜE
+        @. Y.c.ρe_src_sfc = FT(0.02) * ᶜE
+        @. Y.c.ρe_src_rad_low = FT(0.01) * ᶜE
+        @. ᶜsgsʲ.ρa = FT(0.1) * Y.c.ρ
+        @. ᶜsgsʲ.e_src_tropo = FT(1.3e5) * ᶜbelow + FT(100)
+        @. ᶜsgsʲ.e_src_strat = FT(1.3e5) * (1 - ᶜbelow) + FT(200)
+        @. ᶜsgsʲ.e_src_sfc = FT(3e3) * (1 + sin(ᶜz / 150))
+        @. ᶜsgsʲ.e_src_rad_low = FT(1e3)
+        ᶜmasks = CA._tag_masks(ᶜcoord, tags)
+        ᶜS = similar(Y.c.ρ)
+
+        @testset "The bracket rule on the copies ($FT)" begin
+            ᶜΔ = @. FT(50) * sin(ᶜz / 200)
+            Δ = parent(ᶜΔ)
+            scale = maximum(abs, Δ)
+            for source in (:surface_flux, :radiation, :microphysics)
+                fill!(parent(Yₜ), 0)
+                CA.energy_source_copy_sum!(ᶜS, ᶜsgsʲ, model.tags)
+                CA.mirror_on_energy_source_copies!(
+                    ᶜsgsʲₜ,
+                    ᶜsgsʲ,
+                    ᶜmasks,
+                    ᶜΔ,
+                    ᶜS,
+                    source,
+                    model.tags,
+                )
+                # The partition's copies change by the process's increment.
+                partition = parent(ᶜsgsʲₜ.e_src_tropo) .+ parent(ᶜsgsʲₜ.e_src_strat)
+                @test maximum(abs, partition .- Δ) <= 10 * eps(FT) * scale
+                # A tag without a region gains all of a gain for its label, and
+                # every tag loses by its share of the partition's copies.
+                S = parent(ᶜS)
+                share(name) = clamp.(parent(getproperty(ᶜsgsʲ, name)) ./ S, 0, 1)
+                sfc_gain = source == :surface_flux ? max.(Δ, 0) : zero(Δ)
+                @test parent(ᶜsgsʲₜ.e_src_sfc) ≈
+                      sfc_gain .+ min.(Δ, 0) .* share(:e_src_sfc) rtol = 10 * eps(FT)
+                # A region tag with a source gains by its mask, for its label.
+                mask = parent(ᶜmasks.ρe_src_rad_low)
+                rad_gain = source == :radiation ? mask .* max.(Δ, 0) : zero(Δ)
+                @test parent(ᶜsgsʲₜ.e_src_rad_low) ≈
+                      rad_gain .+ min.(Δ, 0) .* share(:e_src_rad_low) rtol = 10 * eps(FT)
+                # The model's fields and the grid-mean tags are not touched.
+                @test all(iszero, parent(Yₜ.c.ρe_tot))
+                @test all(iszero, parent(Yₜ.c.ρe_src_tropo))
+                @test all(iszero, parent(ᶜsgsʲₜ.ρa))
+            end
+            # Only the partition's positive parts make the shares' denominator.
+            @. ᶜsgsʲ.e_src_sfc = -1
+            CA.energy_source_copy_sum!(ᶜS, ᶜsgsʲ, model.tags)
+            @test parent(ᶜS) ≈ parent(ᶜsgsʲ.e_src_tropo) .+ parent(ᶜsgsʲ.e_src_strat)
+            @test CA.energy_source_copy_share(FT(-1), FT(2)) == 0
+            @test CA.energy_source_copy_share(FT(1), FT(0)) == 0
+            @test CA.energy_source_copy_share(FT(3), FT(2)) == 1
+            @. ᶜsgsʲ.e_src_sfc = FT(3e3) * (1 + sin(ᶜz / 150))
+        end
+
+        @testset "The surface relaxation ($FT)" begin
+            level(field) = CC.Fields.level(field, 1)
+            level_type(T) = similar(level(Y.c.ρ), T)
+            ᶜρʲs = similar(Y.c.ρ, Tuple{FT})
+            @. ᶜρʲs.:(1) = FT(0.99) * Y.c.ρ
+            source = level_type(Tuple{FT})
+            mse_b = level_type(Tuple{FT})
+            ᶜh_tot = @. FT(3.1e5) + 0 * ᶜz
+            ᶜK = @. FT(2) + 0 * ᶜz
+            fill!(parent(source), FT(0.03))
+            fill!(parent(mse_b), FT(3.1e5) - 2 + FT(400))
+            p = (;
+                params = CA.ClimaAtmosParameters(FT),
+                atmos = (; energy_source_tagging_model = model),
+                precomputed = (;
+                    ᶜρʲs,
+                    sfc_mass_flux_sourceʲs = source,
+                    sfc_mse_buoyantʲs = mse_b,
+                    ᶜh_tot,
+                    ᶜK,
+                ),
+                scratch = (; ᶜe_src_share_norm = similar(Y.c.ρ)),
+                tagging = (; ᶜenergy_source_copy_sum = similar(Y.c.ρ)),
+            )
+            edmf = CA.PrognosticEDMFX{1, true}(FT(1e-5))
+            fill!(parent(Yₜ), 0)
+            CA.energy_source_copies_boundary_condition_tendency!(Yₜ, Y, p, edmf)
+            # Only the lowest cell moves.
+            for name in copy_names
+                @test all(iszero, parent(getproperty(ᶜsgsʲₜ, name))[2:end])
+            end
+            a_min = CA.Parameters.min_area(CA.Parameters.turbconv_params(p.params))
+            first_value(field) = parent(field)[1]
+            ρ = first_value(Y.c.ρ)
+            rate =
+                FT(0.03) /
+                max(first_value(ᶜsgsʲ.ρa), FT(0.99) * ρ * FT(a_min))
+            excess = FT(400)
+            CA.energy_source_share_norm!(p, Y)
+            norm = first_value(p.scratch.ᶜe_src_share_norm)
+            E = first_value(ᶜE)
+            for (name, copy_name, tag_name) in zip(names, copy_names, tag_names)
+                ρe_src = first_value(getproperty(Y.c, tag_name))
+                partition = name in (:tropo, :strat)
+                share =
+                    partition ? CA.energy_source_sediment_share(ρe_src, E, norm) :
+                    CA.energy_source_source_sediment_share(ρe_src, E)
+                χ = first_value(getproperty(ᶜsgsʲ, copy_name))
+                expected = rate * (ρe_src / ρ + share * excess - χ)
+                @test first_value(getproperty(ᶜsgsʲₜ, copy_name)) ≈ expected rtol =
+                    100 * eps(FT)
+            end
+            # The partition's targets add up to the offset total plus the excess.
+            partition_rate =
+                first_value(ᶜsgsʲₜ.e_src_tropo) + first_value(ᶜsgsʲₜ.e_src_strat)
+            partition_copies =
+                first_value(ᶜsgsʲ.e_src_tropo) + first_value(ᶜsgsʲ.e_src_strat)
+            partition_values =
+                (first_value(Y.c.ρe_src_tropo) + first_value(Y.c.ρe_src_strat)) / ρ
+            @test partition_rate ≈
+                  rate * (partition_values + excess - partition_copies) rtol =
+                100 * eps(FT)
+            # Without copies, nothing moves.
+            plain = CA.EnergySourceTaggingModel(
+                tags,
+                offset;
+                transport = CA.EnthalpyIncrementEnergySourceTransport(),
+            )
+            fill!(parent(Yₜ), 0)
+            CA.energy_source_copies_boundary_condition_tendency!(
+                Yₜ,
+                Y,
+                merge(p, (; atmos = (; energy_source_tagging_model = plain))),
+                edmf,
+            )
+            @test all(iszero, parent(Yₜ))
+        end
+
+        @testset "The copies' Jacobian names ($FT)" begin
+            @test CA.energy_source_copy_sgs_names(nothing) == ()
+            @test CA.energy_source_copy_sgs_names(
+                CA.EnergySourceTaggingModel(tags, offset),
+            ) == ()
+            @test CA.energy_source_copy_sgs_names(model) ==
+                  map(name -> CA.MatrixFields.FieldName(name), copy_names)
+        end
+    end
 end

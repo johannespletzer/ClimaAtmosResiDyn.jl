@@ -314,8 +314,16 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         ᶜenergy_source_neg,
         ᶠenergy_source_interior,
         _energy_source_increment_cache(Y, model)...,
+        _energy_source_copy_cache(Y, model)...,
     )
 end
+
+# With updraft copies, a work field for the copies' mirrors
+# (`energy_source_copy_mirrors.jl`): the partition's copies' sum, and each
+# tag's share in the surface relaxation.
+_energy_source_copy_cache(Y, model) =
+    has_energy_source_updraft_copies(model) ?
+    (; ᶜenergy_source_copy_sum = zero.(Y.c.ρ)) : (;)
 
 # The increment correction gives the partition the parent's increment of `E`,
 # less what the partition's own tendencies moved. So under
@@ -329,8 +337,14 @@ function _check_increment_partition(ᶜmasks, names, model)
         (a, b) -> a .+ b,
         map(name -> parent(getproperty(ᶜmasks, name)), names),
     )
-    deviation = maximum(abs.(mask_sum .- 1))
-    deviation > 0.01 && error(
+    deviation = _collective_maximum(
+        maximum(abs.(mask_sum .- 1)),
+        getproperty(ᶜmasks, first(names)),
+    )
+    # 100 rounding units, as the water tags' follower allows
+    # (`water_increment_partition_tolerance`): a region and its complement sum
+    # to 1 within a few; a gap the size of the closure budget does not pass.
+    deviation > 100 * eps(eltype(mask_sum)) && error(
         "`energy_source_tag_transport: enthalpy_increment` needs region tags \
         that partition the domain, and the masks of these sum to 1 only to \
         within $deviation. The correction gives the region tags the parent's \
@@ -523,9 +537,10 @@ The energy source family's own columns of the audit table, beside those
   - under `energy_source_tag_transport: enthalpy_increment` only, the integrals
     of the increment correction's ledger since the start of the run, in J:
     `increment_left`, what it left out of the tags, which is signed and lands
-    in the closure residual; `increment_left_gross`, the same with each cell's
-    absolute value; and `increment_moved_gross`, the absolute value of what it
-    moved between levels. Each also over `scale`. See
+    in the closure residual; `increment_left_net_abs`, the sum over the cells of
+    the absolute value of each cell's ledger; and `increment_moved_net_abs`, the
+    same for what it moved between levels. Both are net over time in each cell,
+    as the water tags' are: not a throughput. Each also over `scale`. See
     [`energy_source_increment_ledger_variables`](@ref).
   - per state ledger, what the accepted steps retained, what its writers
     attempted, and the events, and for each tag's own ledgers the ratios to
@@ -635,16 +650,16 @@ _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale) =
 function _energy_source_ledger_columns(Y, ᶜtmp, per_scale)
     increment_left = sum(Y.c.e_src_inc_left)
     @. ᶜtmp = abs(Y.c.e_src_inc_left)
-    increment_left_gross = sum(ᶜtmp)
+    increment_left_net_abs = sum(ᶜtmp)
     @. ᶜtmp = abs(Y.c.e_src_inc_moved)
-    increment_moved_gross = sum(ᶜtmp)
+    increment_moved_net_abs = sum(ᶜtmp)
     return (;
         increment_left,
         increment_left_relative = per_scale(increment_left),
-        increment_left_gross,
-        increment_left_gross_relative = per_scale(increment_left_gross),
-        increment_moved_gross,
-        increment_moved_gross_relative = per_scale(increment_moved_gross),
+        increment_left_net_abs,
+        increment_left_net_abs_relative = per_scale(increment_left_net_abs),
+        increment_moved_net_abs,
+        increment_moved_net_abs_relative = per_scale(increment_moved_net_abs),
     )
 end
 
@@ -2083,11 +2098,7 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     # stored as one tuple per cell, so the tag fields are read once, and each
     # tag's kernel below reads a few tuple fields rather than every tag.
     ᶜε̄ = p.scratch.ᶜe_src_mean
-    tag_fields = map(tag -> tag_field(Y.c, tag), model.tags)
-    Base.Broadcast.materialize!(
-        ᶜε̄,
-        Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, tag_fields...),
-    )
+    set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
 
     # The updraft's specific tag values, from the plume.
     ᶜεʲ = p.scratch.ᶜe_src_plume
@@ -2200,6 +2211,37 @@ _exchange_upwinding(::Val{:vanleer_limiter}) = Val(:first_order)
 
 @inline _nonnegative_specific(ρ, ρχs...) =
     map(ρχ -> max(ρχ, zero(ρχ)) / ρ, ρχs)
+
+"""
+    set_nonnegative_specific!(ᶜε̄, ᶜY, tags)
+
+Write every tag's specific value in `ᶜY`, negative ones as zero, into the tuple
+field `ᶜε̄` (`_nonnegative_specific`). Up to 31 tags this is one broadcast over
+`ρ` and the tag fields. From 32 tags on that broadcast would take more than 32
+arguments, which Julia does not specialize: with 32 tags it allocated at every
+level (FINDINGS W34 on the record branch). So there each tag's component is
+written by its own broadcast. The number of tags is a constant of the type, so
+the choice costs nothing at run time.
+"""
+function set_nonnegative_specific!(ᶜε̄, ᶜY, tags)
+    if length(tags) < 32
+        tag_fields = unrolled_map(tag -> tag_field(ᶜY, tag), tags)
+        Base.Broadcast.materialize!(
+            ᶜε̄,
+            Base.Broadcast.broadcasted(_nonnegative_specific, ᶜY.ρ, tag_fields...),
+        )
+    else
+        _set_nonnegative_specific!(ᶜε̄, ᶜY, tags, Val(1))
+    end
+    return nothing
+end
+_set_nonnegative_specific!(ᶜε̄, ᶜY, ::Tuple{}, ::Val) = nothing
+function _set_nonnegative_specific!(ᶜε̄, ᶜY, tags::Tuple, ::Val{i}) where {i}
+    ᶜε̄ᵢ = getproperty(ᶜε̄, i)
+    ᶜρχ = tag_field(ᶜY, first(tags))
+    @. ᶜε̄ᵢ = max(ᶜρχ, zero(ᶜρχ)) / ᶜY.ρ
+    return _set_nonnegative_specific!(ᶜε̄, ᶜY, Base.tail(tags), Val(i + 1))
+end
 
 # One level of the plume: the grid mean's specific values, the grid mean's
 # weight in the step, and whether the plume starts again here, because there is
