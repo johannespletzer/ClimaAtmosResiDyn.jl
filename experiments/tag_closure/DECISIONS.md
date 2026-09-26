@@ -103,7 +103,9 @@ record; the answered and superseded entries are in the next section.
 
 *Scope added (provenance pathway, 2026-09-26):* **OD9 to OD14** are proposed,
 not yet open ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9). Each
-becomes open when the owner accepts it.
+becomes open when the owner accepts it. The owner stated on 2026-09-26 (PR
+#122) that a site-23-derived case does not count as held out for a rule
+developed using site 23.
 [Register](ROADMAP.md#the-decision-register)
 
 ## Answered or superseded, moved from the waiting list (2026-09-25)

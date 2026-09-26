@@ -123,8 +123,10 @@ beside them.
     deferred until WP4b moves toward validation.
   - **Criterion 8** stays as approved. PX23, one held-out case named before
     any rule is tuned, is reported beside it as Val-4, under OD14's hygiene.
-    OD14 also decides whether the GCM-driven column, which starts from site
-    23, still counts as held out.
+    The owner stated on 2026-09-26 (PR #122) that the GCM-driven column,
+    which starts from site 23, does not count as held out for a rule
+    developed using site 23. Val-4 stays not assessable until an independent
+    case and its reference are fixed.
   - **Criterion 12:** the claim contract for tagged water carries the rule
     classification of the pathway's section 4 and the declared labelling
     model of its section 1 (OD11).
@@ -595,12 +597,12 @@ criterion 8 is separate.
 *Scope added (provenance pathway, 2026-09-26; revised after the owner's
 review):* the pathway's runs, by gate.
 
-| Run  | What it decides                                                                                                                                                                           | Needs                                      |
-|:---- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------ |
-| V-P0 | Gate A and gate B's screen, no runs: PX0 (the archive) and PX1 (the subsidence screen)                                                                                                    | step 1b                                    |
-| V-P1 | Gates B to E, existing keys: PX8 if PX1 is material; PX7 (the follower's lag or structure); PX11 (the clean label benchmark), then PX23 (one held-out case); PX22 (energy at a fixed `c`) | OD11, OD12, OD14                           |
-| V-P2 | Gate B's probe PR: PX16 with PP-SUB, only if PX8 is material                                                                                                                              | OD13                                       |
-| V-P3 | Deferred until a measured result needs them: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21 and the other probe PRs                                                                    | their triggers (the pathway's section 7.2) |
+| Run  | What it decides                                                                                                                                                                                                                                                                                                | Needs                                      |
+|:---- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------ |
+| V-P0 | Gate A and gate B's screen, no runs: PX0 (the archive) and PX1 (the subsidence screen)                                                                                                                                                                                                                         | step 1b                                    |
+| V-P1 | Gates B to E, existing keys: PX8 after PX1, whatever PX1 finds; PX7 (the follower's lag or structure); PX24 and PX11 (the clean label benchmark and its per-tag accounting), then PX23 (one held-out case, not assessable until an independent case and its reference are fixed); PX22 (energy at a fixed `c`) | OD11, OD12, OD14                           |
+| V-P2 | Gate B's probe PR: PX16 with PP-SUB, only if PX8 is material                                                                                                                                                                                                                                                   | OD13                                       |
+| V-P3 | Deferred until a measured result needs them: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21 and the other probe PRs                                                                                                                                                                                         | their triggers (the pathway's section 7.2) |
 
 That makes about 70 column-scale jobs and 5 sphere jobs. Column runs go to
 `hpda2_test` where they fit in two hours, otherwise `hpda2_compute`.
@@ -639,18 +641,13 @@ The verifier computes both (WP0).
 
   - **Per tag, default against copies, at 24 h:** L1 ≤ 2% and L∞ ≤ 5%. These
     are G1's criterion 4b for energy. E76 met them at every time step and
-    Newton count, with 1.6% and 2.6% at worst. A looser budget would let the
-    default's error exceed the spread from the mixing convention alone, about
-    1% in L1 (E66).
-    *Scope added (provenance pathway, 2026-09-26; revised after the owner's
-    review):* E66's L1 row is in fractions: 0.08 and 0.12 for the region
-    tags, 0.68 to 1.26 for the source tags, so 8% to 126%. E66's reference
-    also keeps 5.99e5 J/m² of its own residual, and fails closure on OD4's
-    scale (E86). So E66's difference is not a pure convention effect, and the
-    argument above does not hold as written. The 2% row stands as approved
-    (OD3), and so does OD5, until the owner amends them. E66's measured
-    spread is reported apart from the row, labelled as convention plus the
-    reference's residual. The sentence above is kept as written.
+    Newton count, with 1.6% and 2.6% at worst. *Replaced 2026-09-26 at the
+    owner's request (PR #122):* the row rests on G1's criterion 4b and OD3's
+    approval, and it stands as approved. E66 is not a reason for it. E66's
+    measured spread, 8% to 126% in L1 against a reference that keeps its own
+    residual (E86), is reported apart from the row. The sentence replaced
+    here cited E66 as a convention spread of about 1% in L1, which E66 does
+    not support (see E66's annotation in FINDINGS).
 
   - **Per tag, in the first hour:** L1 ≤ 1% for the region tags and ≤ 10% for
     the source tags, and L∞ ≤ 25%. This is G1's split of 2026-09-20. It

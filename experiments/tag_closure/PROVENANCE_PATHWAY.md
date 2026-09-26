@@ -63,10 +63,27 @@ edits of section 12.
     The other experiments and probe PRs wait until a measured result needs
     them (section 7).
 
-The review names four papers as background: Goessling and Reick (2013),
+**The owner's second review**, at `f360937` the same day, asked for three
+more changes. They are made here.
+
+ 1. A low PX1 result cannot end gate B. Hourly output can miss a short-lived
+    effect between outputs, so PX8's accepted-step probe always follows PX1
+    (section 7.1).
+ 2. PX11 names individual rules only after PX24, a same-state per-tag
+    process accounting that is complete in the case. Without it, PX11
+    reports an aggregate comparison of the transport bundle.
+ 3. The E66 sentence in G3_PLAN 6.1 is replaced at the owner's request, and
+    OD3's 2% criterion is kept. Section 3 no longer says that listing the
+    nonlinear pieces makes the rest of the propagator linear.
+
+The owner also stated that a site-23-derived case does not count as held out
+for a rule developed using site 23. So Val-4 stays not assessable until an
+independent case and its reference are fixed (PX23, OD14).
+
+The reviews name four papers as background: Goessling and Reick (2013),
 Kalverla et al. (2025), Fiorella et al. (2021) and Marquet (2015). They were
 not read for this page. Where this page uses them, it repeats only what the
-review says of them.
+first review says of them.
 
 ## 1. The core idea
 
@@ -197,14 +214,15 @@ reference that does not share it. Agreement among references that share a rule
 is never evidence for that rule.
 
 **One written argument for the 2% row does not match E66.** The row comes
-from G1's criterion 4b. G3_PLAN 6.1 argues against a looser budget, which
+from G1's criterion 4b. G3_PLAN 6.1 argued against a looser budget, which
 would let the default's error exceed "the spread from the mixing convention
 alone, about 1% in L1 (E66)". E66's L1 row is in fractions: 0.08 and 0.12 for
 the region tags, 0.68 to 1.26 for the source tags. That is 8% to 126%, measured
 for energy tags on D4. E66's reference also keeps 5.99e5 J/m² of its own
 residual, and it fails closure on OD4's scale (E86). So E66's difference is not
 a pure convention effect. It mixes the convention with the reference's own
-error, and the argument as written does not hold. The row itself stands. OD3
+error, and the argument did not hold. At the owner's request that sentence in
+G3_PLAN 6.1 is replaced. The row itself stands. OD3
 approved the 2% criterion, and OD5 keeps its meaning, until the owner amends
 them. This page reports E66's measured spread apart from the row, labelled as
 convention plus the reference's residual. It does not relabel the row.
@@ -247,13 +265,13 @@ validate, and only for the rules named with them.
 
 **Validity: is the declared equation right?**
 
-| Level                           | Says                                                                                                                                                            | Required evidence                                                                                                                                                                    | Cannot say                                                                           |
-|:------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |:------------------------------------------------------------------------------------ |
-| Val-0 unscreened                | Nothing                                                                                                                                                         | —                                                                                                                                                                                    | —                                                                                    |
-| Val-1 spread observed           | The observed spread over the admissible alternatives of each material rule. The tag is *convention-sensitive* where the spread exceeds the approved per-tag row | Realized same-parent pairs with feedback, or first-order estimates labelled as such; the admissible alternatives fixed by OD11 before the run                                        | That any rule is right; any bound on the error                                       |
-| Val-2 screened                  | The tag's exposure screen, summed over its listed rules, stays within the approved per-tag row, at the sampled states                                           | Fid-2, which gives the list of rules; the screen of section 3; every realized rule-against-rule difference at most its screen, else the screen is void                               | Any bound on the error; rules missing from the list; states not sampled; conventions |
-| Val-3 validated for named rules | Each named rule was active in the case and passed a reference that does not share it                                                                            | The verdict record below; the excluded processes measured inactive; the reference's floors passing (surface, initialization, parent error, contamination); reference validity (OD12) | Shared rules; rules inactive in the case; definitional rules; untested regimes       |
-| Val-4 held out                  | Val-3 carries over, without retuning, to a case named before any rule was tuned                                                                                 | Val-3 on that case (G3 criterion 8), under OD14's hygiene                                                                                                                            | Regimes outside the envelope                                                         |
+| Level                           | Says                                                                                                                                                            | Required evidence                                                                                                                                                                                                                                                                       | Cannot say                                                                           |
+|:------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------ |
+| Val-0 unscreened                | Nothing                                                                                                                                                         | —                                                                                                                                                                                                                                                                                       | —                                                                                    |
+| Val-1 spread observed           | The observed spread over the admissible alternatives of each material rule. The tag is *convention-sensitive* where the spread exceeds the approved per-tag row | Realized same-parent pairs with feedback, or first-order estimates labelled as such; the admissible alternatives fixed by OD11 before the run                                                                                                                                           | That any rule is right; any bound on the error                                       |
+| Val-2 screened                  | The tag's exposure screen, summed over its listed rules, stays within the approved per-tag row, at the sampled states                                           | Fid-2, which gives the list of rules; the screen of section 3; every realized rule-against-rule difference at most its screen, else the screen is void                                                                                                                                  | Any bound on the error; rules missing from the list; states not sampled; conventions |
+| Val-3 validated for named rules | Each named rule was active in the case and passed a reference that does not share it                                                                            | Same-state per-tag process accounting, complete in the case (Fid-2), which names the active rules; the verdict record below; the excluded processes measured inactive; the reference's floors passing (surface, initialization, parent error, contamination); reference validity (OD12) | Shared rules; rules inactive in the case; definitional rules; untested regimes       |
+| Val-4 held out                  | Val-3 carries over, without retuning, to a case named before any rule was tuned                                                                                 | Val-3 on that case (G3 criterion 8), under OD14's hygiene                                                                                                                                                                                                                               | Regimes outside the envelope                                                         |
 
 **Conventions** are declared in the claim contracts (G3 criterion 12,
 [design/G4_CLAIM_CONTRACTS.md](design/G4_CLAIM_CONTRACTS.md)). Their spread,
@@ -367,11 +385,13 @@ L1-contractive, wherever these act:
     which is linear but not monotone;
   - the tags' truncated Newton solve, which lacks some Jacobian blocks.
 
-The remedy is to move each nonlinear piece into the inventory of assumed rules,
-with its own gross: `led_fixgross` for the repair, the clamp's cut, the
-exchange's mass where θ is below one, van Leer's antidiffusive flux. What
-remains of the propagator is then linear by construction, and PX9 would sample
-`K̂` for it. **The screen is only as good as the inventory**, so ledger
+Each nonlinear piece is also listed in the inventory of assumed rules, with its
+own gross: `led_fixgross` for the repair, the clamp's cut, the exchange's mass
+where θ is below one, van Leer's antidiffusive flux. That gives each piece its
+own screen term. It does not make the rest of the propagator linear. A
+correction still changes the state that later steps act on, so its effect
+propagates. PX9 would therefore sample `K̂` across these pieces, and the result
+stays a screen. **The screen is only as good as the inventory**, so ledger
 completeness (Fid-2) comes before any screen is read as clean. W42 found rises
 that no single ledger accounts for by half, and E87 found `C4` outside the
 residual, so the inventory is not yet complete.
@@ -494,9 +514,11 @@ declared, and their spread is reported. They have no row here.
 
 **What the gated plan can validate.** Two items only. PX16 can validate WR3 on
 D4-W, if the subsidence gate reaches it. PX11 can validate the transport rules
-active in Soares: WR8 and WR9, and WR6, WR7 and WR11a where they are measured
-active. Every other rule stays screened or untested, and every verdict lists
-it so. ER6 has no screen at all yet.
+active in Soares, and only once PX24's per-tag accounting is complete there:
+WR8 and WR9, and WR6, WR7 and WR11a where they are measured active. Without
+PX24, PX11 gives an aggregate comparison of the transport bundle and names no
+rule. Every other rule stays screened or untested, and every verdict lists it
+so. ER6 has no screen at all yet.
 
 ## 6. Theories
 
@@ -676,14 +698,19 @@ Gate D follows gate C, because the follower acts in the benchmark's default arm
 and its lag must be known to read a failure there.
 
   - **Gate A, the archive (PX0).** Archive and fault-check the existing data.
-  - **Gate B, the shared subsidence rule (PX1, then PX8, then PX16).** PX1
-    screens it from existing output. PX8, the same-state exact counterpart,
-    follows only if PX1 is material. The feedback comparison, PX16 with
-    PP-SUB, follows only if PX8 is material too, and after OD13.
+  - **Gate B, the shared subsidence rule (PX1, PX8, then PX16).** PX1 screens
+    it from hourly output. A PX1 result above the exploratory trigger is a
+    reason to go on. One below it is not assessable, since hourly output can
+    miss a short-lived effect. So PX8, the accepted-step exact counterpart,
+    always follows PX1. The feedback comparison, PX16 with PP-SUB, follows
+    only if PX8 is material, and after OD13.
   - **Gate C, the follower (PX7).** Resolve whether its measured work is lag or
     structure. W45 did not resolve that mechanism.
-  - **Gate D, one clean label benchmark, then one held-out case (PX11, then
-    PX23).** The held-out case is named before any rule is tuned (OD14).
+  - **Gate D, one clean label benchmark, then one held-out case (PX24 and
+    PX11, then PX23).** PX24's per-tag process accounting comes before PX11
+    names any rule. The held-out case is named before any rule is tuned
+    (OD14). Val-4 stays not assessable until an independent case and its
+    reference are fixed.
   - **Gate E, energy at a fixed `c` (PX22).** The budget and `C4` checks at the
     fixed `c` and source convention.
 
@@ -691,8 +718,9 @@ Every gated result writes the verdict record of section 2. If a prerequisite
 fails, the gate reports *not assessable* and stops. It does not fall back on
 closure or on a comparison with a reference that shares the rule. "Material"
 in gate B uses the exploratory 0.2%-a-day screen (ROADMAP, "Provenance pathway:
-exploratory numbers and proposals"). It only proposes the next step. The owner
-approves each job, and may change the number before PX1 is read.
+exploratory numbers and proposals"). Only PX8's accepted-step value decides
+whether PX16 is proposed. PX1 can bring PX8 forward, never skip it. The owner
+approves each job, and may change the number before PX8 is read.
 
 **PX0. Archive first.** [R] No score. Archive and checksum the NetCDF and CSVs
 of W24, W28, W38 to W43, W45 (there is no W44), E85 and `g46` from scratch.
@@ -714,13 +742,14 @@ run, a flipped signed zero, a permuted tag name. Each must fail closed. Hours.
   - Reference: the parent's own linear operator, which does not share the
     bracket. The copies and the unsubsided tracer are invalid here.
   - Rule: a screen, reported and not scored. Hourly output is coarser than the
-    step, so it screens and nothing more. If `strat` or `tropo` reaches the
-    exploratory 0.2% of its inventory a day, the pathway proposes PX8 to the
-    owner.
+    step and can miss a short-lived effect between outputs. So a result at or
+    above the exploratory 0.2% of an inventory a day is a reason to go on. A
+    result below it is not assessable. It is not evidence that subsidence is
+    immaterial. PX8 follows either way.
   - Code: none. Hours.
 
 **PX8. The same-state subsidence probe.** [K] Tests PT2 and gives its screen
-term. Only if PX1 is material.
+term. It follows PX1 whatever PX1 finds.
 
   - Tool: a new script, `analysis/water/sub_probe.jl`, on the pattern of
     `wp4c_gate_probe.jl`. From each accepted step's state it evaluates
@@ -820,15 +849,39 @@ sinks and no subsidence, the declared labelling model makes the source-free
     (L1 at most 1%, L∞ at most 25%). At 8 h, the case's end, the 24 h row (L1
     at most 2%, L∞ at most 5%); applying it at 8 h is a proposal under OD12.
     The floors must pass first. They are not subtracted from the scores.
-      + Both modes pass: the tag rules measured active in Soares are validated
-        there, and only those. The verdict lists them from the Fid-2
-        accounting, with the shared transport operators and the untested
-        rules.
+      + Both modes pass, and PX24's accounting is complete: the tag rules it
+        measures active in Soares are validated there, and only those. The
+        verdict lists them, with the shared transport operators and the
+        untested rules.
+      + Both modes pass, but PX24 is missing or incomplete: the transport
+        bundle agrees in aggregate. No single rule is named as validated.
       + The copies pass and the default fails: the plume or the exchange is
         isolated.
       + Both fail alike: the follower or the grid-scale rules; PX7's result
         says which.
   - Code: none. About six short runs; copies compile in 28 to 41 min.
+
+**PX24. The benchmark's per-tag process accounting.** [K] Before PX11 names
+any rule. Tests PT8 on Soares.
+
+  - Tool: a new script, `analysis/water/tag_process_probe.jl`, on the pattern
+    of `ic_miss_probe.jl` and `wp4c_gate_probe.jl`. From each accepted step's
+    state in PX11's default arm, it evaluates each operator's per-tag
+    tendency on its own. The operators are the grid-scale transport, the SGS
+    mass flux by donor share (WR8), the exchange and its bound θ (WR9), the
+    repair (WR6), the clamp (WR7) and the follower (WR11a). The copies arm
+    gets the same accounting if its verdict is to name rules. The parent is
+    checked bit for bit in every trial.
+  - Today WR8 has no per-tag account and WR9 has only bound activation
+    (section 4), so this probe is what names the active rules.
+  - Metrics: per tag and rule, the gross over each window; and the
+    completeness residual, each tag's step change minus the sum of its named
+    parts.
+  - Rules: the accounting is complete if the residual is at rounding for
+    every tag and window (OD10's proposal). A rule then counts as active
+    where its per-tag gross is above rounding, and PX11 may name it. If the
+    accounting is not complete, PX11 reports only an aggregate comparison.
+  - Code: the script only, no model code. It runs on PX11's arms.
 
 **PX23. One held-out case.** [K] Only after PX11. OD14 names the case, its
 window and its metrics before any rule is tuned on PX11's result. The case is
@@ -847,8 +900,11 @@ approved.
     regime: PP-TRACER (PX17) for subsidence, or eligible copies (PX12). Until
     then PX23 is not assessable.
   - Criterion 8's GCM-driven column starts from site 23, which has been used
-    to develop option C (known issue 7). OD14 also decides whether that
-    column still counts as held out.
+    to develop option C (known issue 7). The owner stated on 2026-09-26 (PR
+    #122) that a site-23-derived case does not count as held out for a rule
+    developed using site 23.
+  - So Val-4 stays not assessable until an independent case and its
+    reference are fixed.
   - The run writes the same verdict record. Val-4 is reached only for the
     rules that PX11 validated, and only if the held-out case passes without
     retuning.
@@ -883,26 +939,26 @@ energy part of PT8.
 
 Each of these waits for its trigger. None is on the gated path.
 
-| Item            | What                                              | Trigger                                                                                           |
-|:--------------- |:------------------------------------------------- |:------------------------------------------------------------------------------------------------- |
-| PX2             | The leak rule realized with feedback              | OD11 lists ψ as admissible, or PX7 finds the follower's work structural                           |
-| PX3             | The placement pair, W24 against W28               | The owner takes up OD7 and asks for its water side                                                |
-| PX4             | Invariants on existing output                     | Before any Fid-1 label is reported                                                                |
-| PX5             | Why the copies are ineligible on D4-W             | Before copies serve as a comparator on D4-W (step 4)                                              |
-| PX6             | The missing-channel inventory                     | A verdict's rule list shows a channel with no account; the option C miss probe stays with step 8a |
-| PX9             | The propagation probe, which samples `K̂`         | A screen lies near the row, and `K̂ = 1` decides it                                               |
-| PX10            | The energy repair on and off at 8 tags            | PX22 finds the repair's per-tag screen material at the fixed `c`                                  |
-| PX12            | TRMM 0M comparator eligibility on current code    | A second benchmark, for the sub-grid rules, is needed after PX11                                  |
-| PX13            | The surface-excess comparison, then PP-SFC        | The owner takes up W21's surface rule, or PX11's surface floor fails                              |
-| PX14            | WP4b's pool and the sedimentation reset, replayed | WP4b moves toward validation (step 8b), after #121's review                                       |
-| PX15            | The energy follower's split                       | PX7 has read, and G4.7 or OD7 needs the energy side                                               |
-| PX17            | A subsided passive tracer (PP-TRACER)             | PX8 finds subsidence material, and a comparator beyond PP-SUB is needed                           |
-| PX18            | A band region (PP-BAND)                           | The owner asks for more than a reported aggregation row, or a measured departure needs it         |
-| PX19            | The flush rate                                    | Before the 90-day sphere, if a long-run screen is needed                                          |
-| PX20            | The sphere census                                 | Step 9's one-to-two-day run exists                                                                |
-| PX21            | The verdict tables as a script                    | Enough verdicts exist to tabulate; until then each verdict record is written by hand              |
-| PP-FACE, PP-JAC | Face-flux replay; tag Jacobian blocks             | PX7's structural or filter branch                                                                 |
-| PP-SRCOFF       | Sources off for region tags                       | A regime with sinks needs a region reference                                                      |
+| Item            | What                                              | Trigger                                                                                                                      |
+|:--------------- |:------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------- |
+| PX2             | The leak rule realized with feedback              | OD11 lists ψ as admissible, or PX7 finds the follower's work structural                                                      |
+| PX3             | The placement pair, W24 against W28               | The owner takes up OD7 and asks for its water side                                                                           |
+| PX4             | Invariants on existing output                     | Before any Fid-1 label is reported                                                                                           |
+| PX5             | Why the copies are ineligible on D4-W             | Before copies serve as a comparator on D4-W (step 4)                                                                         |
+| PX6             | The missing-channel inventory                     | A verdict's rule list shows a channel with no account; PX24 covers the benchmark; the option C miss probe stays with step 8a |
+| PX9             | The propagation probe, which samples `K̂`         | A screen lies near the row, and `K̂ = 1` decides it                                                                          |
+| PX10            | The energy repair on and off at 8 tags            | PX22 finds the repair's per-tag screen material at the fixed `c`                                                             |
+| PX12            | TRMM 0M comparator eligibility on current code    | A second benchmark, for the sub-grid rules, is needed after PX11                                                             |
+| PX13            | The surface-excess comparison, then PP-SFC        | The owner takes up W21's surface rule, or PX11's surface floor fails                                                         |
+| PX14            | WP4b's pool and the sedimentation reset, replayed | WP4b moves toward validation (step 8b), after #121's review                                                                  |
+| PX15            | The energy follower's split                       | PX7 has read, and G4.7 or OD7 needs the energy side                                                                          |
+| PX17            | A subsided passive tracer (PP-TRACER)             | PX8 finds subsidence material, and a comparator beyond PP-SUB is needed                                                      |
+| PX18            | A band region (PP-BAND)                           | The owner asks for more than a reported aggregation row, or a measured departure needs it                                    |
+| PX19            | The flush rate                                    | Before the 90-day sphere, if a long-run screen is needed                                                                     |
+| PX20            | The sphere census                                 | Step 9's one-to-two-day run exists                                                                                           |
+| PX21            | The verdict tables as a script                    | Enough verdicts exist to tabulate; until then each verdict record is written by hand                                         |
+| PP-FACE, PP-JAC | Face-flux replay; tag Jacobian blocks             | PX7's structural or filter branch                                                                                            |
+| PP-SRCOFF       | Sources off for region tags                       | A regime with sinks needs a region reference                                                                                 |
 
 **Considered and dropped while this page was designed**, so that nobody
 derives them again:
@@ -1149,11 +1205,10 @@ and the rules left uncovered.
 
 ## 8. Probe PRs
 
-Only PP-SUB is on the gated path, and only if PX1 and PX8 find subsidence
-material. The others wait for the triggers of section 7.2. Each would be
-diagnostic only: off by default, the parent bit for bit, a unit test, a parity
-job against an untagged twin, and a draft PR that only the owner merges. OD13
-approves them.
+Only PP-SUB is on the gated path, and only if PX8 finds subsidence material. The
+others wait for the triggers of section 7.2. Each would be diagnostic only: off
+by default, the parent bit for bit, a unit test, a parity job against an
+untagged twin, and a draft PR that only the owner merges. OD13 approves them.
 
   - **PP-SUB, per-tag subsidence.** A key
     `water_tag_subsidence: bracket | per_tag` for `LargeScaleSubsidence` and
@@ -1223,9 +1278,11 @@ review (section 0).
   - **OD14. Held-out hygiene.** Name one held-out case, its window and its
     metrics, before any rule is tuned on PX11's result. The case needs a
     reference that is valid there (PX23). Soares, TRMM 0M and sites 23 and 26
-    are development cases. Decide whether criterion 8's GCM-driven column,
-    which starts from site 23, still counts as held out. A held-out case is
-    never used to develop a rule. Needed before PX23 and before step 8b.
+    are development cases. The owner stated on 2026-09-26 that criterion 8's
+    GCM-driven column, which starts from site 23, does not count as held out
+    for a rule developed using site 23. Until an independent case and its
+    reference are fixed, Val-4 is not assessable. A held-out case is never
+    used to develop a rule. Needed before PX23 and before step 8b.
 
 ## 10. Sequencing, and what G4 takes
 
@@ -1233,11 +1290,14 @@ The gates map onto the proposed steps of ROADMAP's execution order.
 
  1. **Step 1b, gate A.** This page, the in-place edits, OD9 to OD14, PX0. No
     runs, no code. Scripts pass fault injection first.
- 2. **Step 2a, gate B's screen.** PX1, with no run. If it is material, the
-    pathway proposes PX8 (step 6b). If PX8 is material too, it proposes PP-SUB
-    with PX16 (step 7b, after OD13).
+ 2. **Step 2a, gate B's screen.** PX1, with no run. Whatever it finds, the
+    pathway proposes PX8 (step 6b); a low PX1 is not assessable, not a reason
+    to stop. If PX8 is material, it proposes PP-SUB with PX16 (step 7b, after
+    OD13).
  3. **Step 6a, gate C.** PX7.
- 4. **Step 6c, gate D.** PX11, then PX23 once OD14 names the case.
+ 4. **Step 6c, gate D.** PX24 and PX11, then PX23 once OD14 names an
+    independent case with a valid reference. Until then Val-4 is not
+    assessable.
  5. **Step 10a, gate E.** PX22, for G4, beside the water gates.
  6. **Deferred items** run only when their trigger fires (section 7.2).
     Step 8b selects a default under rev. 2's rules as approved, with the
@@ -1248,8 +1308,8 @@ If a gate reports *not assessable*, no later gate takes its result as input.
 **Hypotheses, stated before any run.** None of these is evidence. The gates
 test them.
 
-  - PT2's reasoned estimate suggests the subsidence screen is material near
-    750 m on D4-W, so gate B probably reaches PX8.
+  - PT2's reasoned estimate suggests that subsidence is material near 750 m
+    on D4-W. PX8 runs either way.
   - The follower's part 2b alone puts the exposure screen for `tropo` on D4-W
     above the 2% row. So `tropo` on D4-W will probably not reach Val-2. It
     would then need PX16 and PX7, or a narrower claim.
@@ -1347,7 +1407,8 @@ review.
   - [G3_PLAN.md](G3_PLAN.md): a pointer in the header; §2 (criteria 5, 7, 8 and
     12 on the evidence levels); §3 (subsidence is followed only through the
     local bracket); §4.1, §4.2, §4.3 and §4.5; §6 (D4-W subsides; the rows
-    V-P0 to V-P3); §6.1 (the E66 note); §8; §9.
+    V-P0 to V-P3); §6.1 (the E66 sentence, replaced at the owner's request);
+    §8; §9.
   - [G3_TODO.md](G3_TODO.md): OD9 to OD14 under Decisions; a new section
     "Provenance pathway" with the gated items, the deferred items and the probe
     PRs; pointers in WP3, WP4c, WP5b-P, WP5b-C, WP4b, WP9 and the sphere.

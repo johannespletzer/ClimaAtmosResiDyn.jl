@@ -562,7 +562,7 @@ cross blocks (5.8% against 3.8%), and the copies lack their own blocks.
   - [ ] The comparison repeated after WP5b-C, or against a tightly converged
     reference in which neither path's sedimentation lags.
   - [ ] *Scope added (provenance pathway, 2026-09-26):* the subsidence gate:
-    PX1, then PX8 if PX1 is material. PX3 (the placement pair) is deferred
+    PX1, then PX8 whatever PX1 finds. PX3 (the placement pair) is deferred
     until the owner takes up OD7.
 
 ### WP5b-C: the copies' cross blocks
@@ -820,14 +820,20 @@ verdict record of the pathway's section 2. If a prerequisite fails, it says
     and `g46` from scratch; fault-inject every new script.
   - [ ] Gate B. PX1: the subsidence screen from W38's hourly profiles (no
     run).
-      + [ ] PX8, only if PX1 is material: the same-state subsidence probe,
-        `sub_probe.jl`.
+      + [ ] PX8, after PX1 whatever it finds (a low PX1 is not assessable):
+        the accepted-step subsidence probe, `sub_probe.jl`.
       + [ ] PX16 with PP-SUB, only if PX8 is material: a draft PR, owner
         approval (OD13); diagnostic only; the parent bit for bit.
   - [ ] Gate C. PX7: the follower's split into lag and structure (W46).
   - [ ] Gate D. PX11: the clean label benchmark, the Soares air twin, with the
     excluded processes measured inactive and its floors passing.
+      + [ ] PX24, before PX11 names any rule: the per-tag process accounting
+        on the benchmark, `tag_process_probe.jl`, complete to rounding.
+        Without it, PX11 reports an aggregate comparison only.
       + [ ] PX23: one held-out case, named before any rule is tuned (OD14).
+        Val-4 is not assessable until an independent case and its reference
+        are fixed. The owner, 2026-09-26: a site-23-derived case does not
+        count as held out for a rule developed using site 23.
   - [ ] Gate E (G4). PX22: the energy budget and `C4` checks at a fixed `c`.
   - Deferred until a measured result needs them, each with its trigger in the
     pathway's section 7.2: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21,
