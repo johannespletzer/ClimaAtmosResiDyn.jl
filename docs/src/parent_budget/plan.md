@@ -52,8 +52,9 @@ makes does not make that claim.
 What is **not** reused, and must not be implied: a process record is not a
 closed budget and is never a closure leg. It is a partial signed history of
 configured, bracketed processes, and its bracket set is not the ledger's
-coverage set. Brackets exist only where `snapshot_tags!` and `attribute_tags!`
-are called, which is the explicit path and one implicit water block. The
+coverage set. Brackets exist only on the explicit path, where `snapshot_tags!`
+and `attribute_tags!` are called, and around the implicit microphysics sink and
+precipitation sedimentation, which `implicit_tendency.jl` brackets itself. The
 `e_prc_*` and `q_prc_*` diagnostics also divide by current density; only the raw
 `prc_e_*` and `prc_q_*` state is extensive.
 

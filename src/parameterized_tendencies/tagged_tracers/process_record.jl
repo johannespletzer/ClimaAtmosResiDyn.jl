@@ -174,8 +174,10 @@ Record the current `Yₜ.c.ρe_tot` and `Yₜ.c.ρq_tot` in `p.scratch`, opening
 process-record bracket. A no-op for a process no record lists, and when neither
 record is configured.
 
-Paired with [`accumulate_process_record!`](@ref). Called from `snapshot_tags!`
-alongside the tag snapshots, so a record needs no bracket of its own.
+Paired with [`accumulate_process_record!`](@ref). On the explicit path it is
+called from `snapshot_tags!` alongside the tag snapshots. On the implicit path
+`implicit_tendency.jl` calls it directly, around the microphysics sink and
+precipitation sedimentation.
 """
 function snapshot_process_record!(p, Yₜ, source::Symbol)
     _snapshot_energy_record!(p, Yₜ, source, p.atmos.energy_process_record)

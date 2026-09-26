@@ -506,13 +506,17 @@ architecture](parent_budget/architecture.md) for how it is put together, and
 [the coverage registry](parent_budget/coverage.md) for what it covers.
 
 Only the two module docstrings are rendered, because they are what declares the
-namespace unstable. **Nothing inside them is rendered.** There is no
-configuration key, no output and no reporting surface yet, so there is no
-user-facing API, and publishing the types, the mutable ledger operations and the
-helpers would freeze a compatibility surface around an implementation that is
-expected to move as the remaining stack steps wire the ledger in. A small public
-facade belongs here once configuration and reporting exist, and it will be a
-report and a claim certificate rather than the journal internals.
+namespace unstable. **Nothing inside them is rendered.** Users reach the parent
+budget through configuration and a report. The key `parent_budget_mode` takes
+`off` (the default), `summary` or `audit`. The key `parent_budget_attribution`
+takes `net` (the default) or `gross`. A successful run with the parent budget on
+writes the claim certificate `parent_budget_report.yaml` to its output directory
+and logs a summary. Two `AtmosSimulation` inputs do name types from inside. The
+keyword `parent_budget_tolerances` takes `BudgetTolerance` values. When the
+parent budget is on, a custom callback must be wrapped in `ReadOnlyCallback`.
+The types, the mutable ledger operations and the helpers stay internal.
+Publishing them would freeze a compatibility surface around an implementation
+that is still expected to move.
 
 ```@docs
 ClimaAtmos.Internals
