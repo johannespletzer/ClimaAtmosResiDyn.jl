@@ -81,9 +81,10 @@ for a rule developed using site 23. So Val-4 stays not assessable until an
 independent case and its reference are fixed (PX23, OD14).
 
 The reviews name four papers as background: Goessling and Reick (2013),
-Kalverla et al. (2025), Fiorella et al. (2021) and Marquet (2015). They were
-not read for this page. Where this page uses them, it repeats only what the
-first review says of them.
+Kalverla et al. (2025), Fiorella et al. (2021) and Marquet (2015). Their full
+texts could not be reached from this environment. The notes on them in section
+1 rest on their abstracts and on published passages quoted in search results.
+A full reading may change them.
 
 ## 1. The core idea
 
@@ -174,10 +175,31 @@ so the two-way part is 72% of the net. A frozen-parent label
 calculation, implemented independently from the gross flows, would test the
 code against the declared equation. That is fidelity. It would not establish
 unique molecular provenance in unresolved sub-grid physics, because there the
-labelling model is itself a convention. The owner's review notes that Goessling
-and Reick (2013) test the well-mixed assumption for vertically integrated
-mixing. This code assumes mixing per cell or subdomain, so their result is a
-caution here, not a direct falsification.
+labelling model is itself a convention.
+
+**What the named papers add** (from their abstracts and quoted passages only;
+section 0).
+
+  - Goessling and Reick (2013) test the well-mixed assumption for vertically
+    integrated mixing. This code assumes mixing per cell or subdomain, so
+    their result is a caution here, not a direct falsification. Their
+    reference, three-dimensional tracers in ECHAM6, is itself a finer mixing
+    volume, not truth. The coarser volume missed a significant degree of fast
+    recycling, and it did worst in the tropics.
+  - By analogy, grid-mean against subdomain mixing is a choice of labelling
+    model with an expected sign: the coarser volume should under-attribute
+    fast local recycling. That is a hypothesis for the default-against-copies
+    comparison, not a result.
+  - Kalverla et al. (2025) compute WAM2layers' vertical transport as a closure
+    term. They note that it absorbs unresolved processes, and even errors in
+    the horizontal fluxes. They also note that without ground truth, results
+    that differ between methods are hard to interpret. Both points match this
+    page: a term built to close a budget can hide errors from closure, and
+    diverging methods give a spread, not a truth.
+  - Fiorella et al. (2021) use process-oriented tags in iCAM6 to interpret
+    precipitation isotopes. There the tags serve as the diagnostic reference,
+    so what they show rests on the fidelity of the tag rules. That is this
+    page's subject.
 
 **Energy is tested at a fixed offset.** The energy tags depend on the offset
 `c`. When `c` doubles, `strat` and `tropo` change by 177% and 152% in integral
@@ -187,8 +209,17 @@ record's runs use 110,495 J/kg, and the claim contracts
 convention. A test at that fixed `c` is a conditional budget test. It holds for
 that `c` and convention only. The `c`/2`c` spread and `C4`'s unresolved outflow
 (E87) are reported with it as limitations. Offset sensitivity is neither an
-error bound nor proof that no conditional test is possible. The review points
-to Marquet (2015) on the choice of reference enthalpy.
+error bound nor proof that no conditional test is possible.
+
+Marquet (2015) derives absolute reference enthalpies for dry air and water from
+the Third Law. With arbitrary references, enthalpy fluxes in an open system,
+where water enters and leaves, depend on the reference values (from the
+abstract and related summaries). The offset `c` is such a reference choice,
+made per kilogram of air. `C4`, the `c·Δρ` that the tags do not bracket, is the
+term it creates where the mass changes. So the size of `C4` and the `c`/2`c`
+spread follow from the reference choice. Where `C4` goes per tag is still a gap
+in the ledgers. A Third-law reference would differ between dry air and water.
+Whether the tags could use one is a design question for OD11.
 
 **Every reference used so far is common-mode.** A reference cannot see an error
 in a rule it shares.
@@ -939,26 +970,26 @@ energy part of PT8.
 
 Each of these waits for its trigger. None is on the gated path.
 
-| Item            | What                                              | Trigger                                                                                                                      |
-|:--------------- |:------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------- |
-| PX2             | The leak rule realized with feedback              | OD11 lists ψ as admissible, or PX7 finds the follower's work structural                                                      |
-| PX3             | The placement pair, W24 against W28               | The owner takes up OD7 and asks for its water side                                                                           |
-| PX4             | Invariants on existing output                     | Before any Fid-1 label is reported                                                                                           |
-| PX5             | Why the copies are ineligible on D4-W             | Before copies serve as a comparator on D4-W (step 4)                                                                         |
-| PX6             | The missing-channel inventory                     | A verdict's rule list shows a channel with no account; PX24 covers the benchmark; the option C miss probe stays with step 8a |
-| PX9             | The propagation probe, which samples `K̂`         | A screen lies near the row, and `K̂ = 1` decides it                                                                          |
-| PX10            | The energy repair on and off at 8 tags            | PX22 finds the repair's per-tag screen material at the fixed `c`                                                             |
-| PX12            | TRMM 0M comparator eligibility on current code    | A second benchmark, for the sub-grid rules, is needed after PX11                                                             |
-| PX13            | The surface-excess comparison, then PP-SFC        | The owner takes up W21's surface rule, or PX11's surface floor fails                                                         |
-| PX14            | WP4b's pool and the sedimentation reset, replayed | WP4b moves toward validation (step 8b), after #121's review                                                                  |
-| PX15            | The energy follower's split                       | PX7 has read, and G4.7 or OD7 needs the energy side                                                                          |
-| PX17            | A subsided passive tracer (PP-TRACER)             | PX8 finds subsidence material, and a comparator beyond PP-SUB is needed                                                      |
-| PX18            | A band region (PP-BAND)                           | The owner asks for more than a reported aggregation row, or a measured departure needs it                                    |
-| PX19            | The flush rate                                    | Before the 90-day sphere, if a long-run screen is needed                                                                     |
-| PX20            | The sphere census                                 | Step 9's one-to-two-day run exists                                                                                           |
-| PX21            | The verdict tables as a script                    | Enough verdicts exist to tabulate; until then each verdict record is written by hand                                         |
-| PP-FACE, PP-JAC | Face-flux replay; tag Jacobian blocks             | PX7's structural or filter branch                                                                                            |
-| PP-SRCOFF       | Sources off for region tags                       | A regime with sinks needs a region reference                                                                                 |
+| Item            | What                                              | Trigger                                                                                                                                             |
+|:--------------- |:------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PX2             | The leak rule realized with feedback              | OD11 lists ψ as admissible, or PX7 finds the follower's work structural                                                                             |
+| PX3             | The placement pair, W24 against W28               | The owner takes up OD7 and asks for its water side                                                                                                  |
+| PX4             | Invariants on existing output                     | Before any Fid-1 label is reported                                                                                                                  |
+| PX5             | Why the copies are ineligible on D4-W             | Before copies serve as a comparator on D4-W (step 4)                                                                                                |
+| PX6             | The missing-channel inventory                     | A verdict's rule list shows a channel with no account; PX24 covers the benchmark; the option C miss probe stays with step 8a                        |
+| PX9             | The propagation probe, which samples `K̂`         | A screen lies near the row, and `K̂ = 1` decides it                                                                                                 |
+| PX10            | The energy repair on and off at 8 tags            | PX22 finds the repair's per-tag screen material at the fixed `c`                                                                                    |
+| PX12            | TRMM 0M comparator eligibility on current code    | A second benchmark, for the sub-grid rules, is needed after PX11                                                                                    |
+| PX13            | The surface-excess comparison, then PP-SFC        | The owner takes up W21's surface rule, or PX11's surface floor fails                                                                                |
+| PX14            | WP4b's pool and the sedimentation reset, replayed | WP4b moves toward validation (step 8b), after #121's review                                                                                         |
+| PX15            | The energy follower's split                       | PX7 has read, and G4.7 or OD7 needs the energy side                                                                                                 |
+| PX17            | A subsided passive tracer (PP-TRACER)             | PX8 finds subsidence material, and a comparator beyond PP-SUB is needed                                                                             |
+| PX18            | A band region (PP-BAND)                           | The owner asks for more than a reported aggregation row, or a measured departure needs it                                                           |
+| PX19            | The flush rate                                    | Before the 90-day sphere, if a long-run screen is needed                                                                                            |
+| PX20            | The sphere census                                 | Step 9's one-to-two-day run exists                                                                                                                  |
+| PX21            | The verdict tables as a script                    | Enough verdicts exist to tabulate; until then each verdict record is written by hand                                                                |
+| PP-FACE, PP-JAC | Face-flux replay; tag Jacobian blocks             | PX7's structural or filter branch. PP-FACE also if an independently implemented benchmark is wanted beside PX11 (the owner's first review, point 2) |
+| PP-SRCOFF       | Sources off for region tags                       | A regime with sinks needs a region reference                                                                                                        |
 
 **Considered and dropped while this page was designed**, so that nobody
 derives them again:
@@ -969,9 +1000,12 @@ derives them again:
   - Placement pairs at site 26 (water and energy), site 23 (energy) and on TRMM
     0M: the placed quantity is at rounding there (W36, E81, W28), so their
     outcome is fixed in advance. PX3 uses W24 against W28 instead.
-  - A donor-cell replay as the linear truth: E66 shows that it measures the
-    mixing convention, mixed with its own residual. It stays only as a
-    conditional comparison member (PP-FACE).
+  - A donor-cell replay as the *truth*: E66 shows that it measures the mixing
+    convention, mixed with its own residual. As a test of the declared
+    equation it is another matter. The owner's first review (point 2) names a
+    frozen-parent, independently implemented gross-flow calculation for that,
+    and PX11 shares the grid-scale transport operators. Such a replay needs
+    face-flux output (PP-FACE), so it waits in section 7.2.
   - The passive tracer as the surface truth: it has its own surface convention.
     It is used only with a level-1 check (PX13).
   - Split duplicate tags with the same footprint: they stay proportional, so
@@ -1226,8 +1260,9 @@ untagged twin, and a draft PR that only the owner merges. OD13 approves them.
         `everywhere`, `tanh_altitude`, `tanh_latitude`, `tanh_box` and
         `tanh_polygon`.
       + PP-SFC, a surface rule that composes the flux, after PX13.
-      + PP-FACE, face-flux output for a replay, after PX7's structural branch.
-        It is labelled a convention reference (E66), never truth.
+      + PP-FACE, face-flux output for a replay, after PX7's structural branch,
+        or for a frozen-parent test of the declared equation. It is never
+        truth (E66).
       + PP-JAC, tag Jacobian blocks for the bracket loss and the SGS flux,
         after PX7's filter branch.
       + PP-SRCOFF, sources off for region tags, only if a regime with sinks
