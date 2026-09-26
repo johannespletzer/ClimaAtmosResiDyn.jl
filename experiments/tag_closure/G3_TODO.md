@@ -26,23 +26,30 @@ Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
 
 The twelve criteria of the plan, section 2, in short:
 
-| #  | Criterion                                                                              | Status                   |
-|:-- |:-------------------------------------------------------------------------------------- |:------------------------ |
-| 1  | Evidence: every headline number goes through the verifier and a manifest               | tools built; review open |
-| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips     | open                     |
-| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks     | open                     |
-| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts        | open                     |
-| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                     | open                     |
-| 6  | Convergence of the default's error and of the copies                                   | open                     |
-| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit | open                     |
-| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                  | open                     |
-| 9  | Float32 twin                                                                           | open                     |
-| 10 | Cost, both modes and both families                                                     | open                     |
+| #  | Criterion                                                                                      | Status                   |
+|:-- |:---------------------------------------------------------------------------------------------- |:------------------------ |
+| 1  | Evidence: every headline number goes through the verifier and a manifest                       | tools built; review open |
+| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | open                     |
+| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | open                     |
+| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | open                     |
+| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | open                     |
+| 6  | Convergence of the default's error and of the copies                                           | open                     |
+| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | open                     |
+| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | open                     |
+| 9  | Float32 twin                                                                                   | open                     |
+| 10 | Cost, both modes and both families                                                             | open                     |
 | 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | open                     |
-| 12 | Reviews, CI, draft PRs, docs                                                           | open                     |
+| 12 | Reviews, CI, draft PRs, docs                                                                   | open                     |
 
 ## Decisions
 
+  - [!] **OD9 to OD14, proposed by the provenance pathway** (2026-09-26;
+    [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9; entered in
+    [the register](ROADMAP.md#the-decision-register) as "OWNER DECISION
+    REQUIRED"): the ladder and its labels; the certification arithmetic;
+    the rule classification and the E66 reading; reference validity and
+    the Newton row's amendment; the probe PRs; held-out hygiene. No agent
+    fills one in.
   - [x] **Rev. 2's register, OD1 to OD8** (2026-09-24; ROADMAP.md, "The
     decision register"). *Each decision's current state is in [the register](ROADMAP.md#the-decision-register); all but
     OD7 are decided, and OD7 is deferred.* Kept as written: the production envelope, the windows, the
@@ -330,6 +337,10 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
         terms off;
       + manufactured mixing tests on a frozen parent.
 
+    *Scope added (provenance pathway, 2026-09-26):* the copies against a passive
+    tracer maps to PX11 (the Soares air twin); the manufactured mixing
+    tests map to PX9 (the propagation probe) and PX18 (a band region).
+
     At #101's head `4a1c91a4` the copies group fails, in CI (downgrade 1.11)
     and locally. Since `73fa27bd` it steps the microphysics explicitly, and
     the partition then misses by 0.8 to 0.9% net and 1.0% gross after an
@@ -533,8 +544,11 @@ cross blocks (5.8% against 3.8%), and the copies lack their own blocks.
     *Set 2026-09-24 by OD3's process-weighted provenance row, per tag against
     an eligible comparator ([the register](ROADMAP.md#the-decision-register)).*
   - [ ] Precipitation-weighted per-tag errors, besides the column L1.
+    *Scope added (provenance pathway, 2026-09-26):* with its term in `U`.
   - [ ] The comparison repeated after WP5b-C, or against a tightly converged
     reference in which neither path's sedimentation lags.
+  - [ ] *Scope added (provenance pathway, 2026-09-26):* rule sensitivity: PX3 (the
+    placement pair) and PX8 (the subsidence probe).
 
 ### WP5b-C: the copies' cross blocks
 
@@ -556,6 +570,10 @@ the explicit path (the owner's review of #105, finding 7).
     counts OD8 keeps. With their blocks, the copies must still pass
     comparator eligibility in each run where they serve as the audit
     (ROADMAP.md, the acceptance contract). *2026-09-24 (OD8):* at 8 tags.
+  - *Scope added (provenance pathway, 2026-09-26, pending OD12):* PX5 names the
+    cause of the copies' repair before further copies work. Eligibility is
+    not independence: eligible copies validate only the rules they do not
+    share.
 
 ## WP4a: the 0M split (draft PR-W4a)
 
@@ -735,6 +753,14 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     (W45): parity and closure hold, but criterion 4 fails for the copies
     (`upleaknet`'s column integral 3.1e-5 of the water). The same
     investigation takes it.
+    *Scope added (provenance pathway, 2026-09-26):*
+
+      + [ ] PX7's rule, a dated amendment to WP4C_CORRECTIONS section 8,
+        committed before W46 is read: read by monotone ratios, lag or
+        structure.
+      + [ ] PX2: the leak rule's realized difference, from the gate's and
+        V1's full runs, against part 3's first-order value.
+      + [ ] W40's difference mapped by level.
 
   - [ ] Review (xhigh) of each stage.
 
@@ -756,6 +782,44 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     implementation is step 7 of the revised order; the validation is step 8b,
     after WP9's cost qualification (step 8), so that cost ceilings are fixed
     before any held-out or default evidence (review of `4507e247`).
+  - [ ] *Scope added (provenance pathway, 2026-09-26):* PX14, the pool rule and
+    the sedimentation reset replayed with sub-steps in the rain-out window,
+    after #121's review.
+
+## Provenance pathway (rev. 2 addendum)
+
+*Scope added (provenance pathway, 2026-09-26, pending OD9 to OD14).* The items of
+[PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 7. Each decision
+rule is committed in a dated design note before any file it judges is
+opened. The owner submits every job.
+
+  - [ ] PX0: archive W24, W28, W38 to W45, E85 and `g46` from scratch;
+    fault-inject every new script.
+  - [ ] PX1: the subsidence screen from W38's hourly profiles (no run).
+  - [ ] PX2: the leak rule realized with feedback (no run).
+  - [ ] PX3: the placement pair, W24 against W28 (no run).
+  - [ ] PX4: invariants on existing output (no run).
+  - [ ] PX5: why the copies are ineligible on D4-W (no run).
+  - [ ] PX6: the missing-channel inventory; the option C miss probe (no run).
+  - [ ] PX7: the follower's split into lag and structure (W46).
+  - [ ] PX8: the same-state subsidence probe, `sub_probe.jl`.
+  - [ ] PX9: the propagation probe, `perturb_probe.jl`.
+  - [ ] PX10: the energy repair on and off at 8 tags (G4).
+  - [ ] PX11: the Soares air twin.
+  - [ ] PX12: TRMM 0M comparator eligibility on current code.
+  - [ ] PX13: the surface-excess bracket.
+  - [ ] PX14: WP4b's pool and the sedimentation reset, replayed.
+  - [ ] PX15: the energy follower's split (G4).
+  - [ ] PX16 with PR-A (per-tag subsidence): a draft PR, owner approval;
+    diagnostic only; the parent bit for bit.
+  - [ ] PX17 with PR-S (a subsided passive tracer): the same conditions.
+  - [ ] PX18 with PR-P4 (a band region): the same conditions.
+  - [ ] Conditional: PR-B (after PX13), PR-D (after PX7's structural
+    branch), PR-E (after PX7's filter branch), PR-P2 (only if a regime
+    with sinks needs it). Each a draft PR, diagnostic only.
+  - [ ] PX19: the flush rate, before the 90-day sphere.
+  - [ ] PX20: the sphere census, inside the one-to-two-day run.
+  - [ ] PX21: `provenance_verdict.py`, before step 8b.
 
 ## Qualification runs
 
@@ -893,6 +957,8 @@ owner's points in the note's section 8.
       + *Decided 2026-09-24 (OD8):* 8 water and 8 energy tags; copies at 8 are
         the direct audit where they pass eligibility; no aggregation bridge
         for qualification, so the aggregation test is reported, not required.
+        *Scope added (provenance pathway, 2026-09-26, pending OD9):* OD9 proposes
+        aggregation as a premise of "bounded", run with PR-P4 (PX18).
         ~~Copies at the largest buildable count plus the aggregation
         bridge~~ is not needed. 32 tags stay a cost item, not qualified.
 
@@ -915,6 +981,8 @@ owner's points in the note's section 8.
       + a one-day copies twin;
       + a restart after day 1;
       + a two-rank parity pair.
+      + [ ] *Scope added (provenance pathway, 2026-09-26):* PX20 inside the
+        one-to-two-day run; PX19 before the 90 days.
   - [ ] G3's closing entry, and the question of what comes next.
 
 ## G4: the energy source tags, after G3
