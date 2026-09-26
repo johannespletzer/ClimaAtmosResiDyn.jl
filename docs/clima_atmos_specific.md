@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `tagging_water_increment`, `tagging_water_increment_explicit`, `parameterizations`, `restarts`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `tagging_water_edmf_0m_explicit`, `tagging_water_increment`, `tagging_water_increment_explicit`, `parameterizations`, `restarts`. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -85,11 +85,12 @@ runs `test/energy_source_tags_edmf_integration.jl`,
 `tagging_source_increment` runs
 `test/energy_source_tags_increment_integration.jl`, `tagging_source_updraft`
 runs `test/energy_source_tags_updraft_integration.jl`,
-`tagging_water_edmf`, `tagging_water_edmf_copies` and `tagging_water_edmf_0m`
-run `test/tagged_water_edmf_integration.jl`,
-`test/tagged_water_edmf_copies_integration.jl` and
-`test/tagged_water_edmf_0m_integration.jl`, and `tagging_water_increment` and
-`tagging_water_increment_explicit` run
+`tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m` and
+`tagging_water_edmf_0m_explicit` run `test/tagged_water_edmf_integration.jl`,
+`test/tagged_water_edmf_copies_integration.jl`,
+`test/tagged_water_edmf_0m_integration.jl` and
+`test/tagged_water_edmf_0m_explicit_integration.jl`, and `tagging_water_increment`
+and `tagging_water_increment_explicit` run
 `test/tagged_water_increment_integration.jl` and
 `test/tagged_water_increment_explicit_integration.jl`. They are split because a tag
 name is a type parameter, so each tag set recompiles the whole tendency and
@@ -154,11 +155,17 @@ builds it twice.
   - `tagging_water_edmf_0m` runs the copies under 0M, with the microphysics
     implicit, the default, and a passive chemistry tracer. It checks that the
     tracer, set to a copy's values, takes the copy's tendency apart from its
-    mirrors.
+    mirrors, the rain-out split by subdomain in both modes, and that `pr` less
+    the partition's `pr_tag` is the rain-out the shares leave.
+  - `tagging_water_edmf_0m_explicit` runs the split with the microphysics
+    explicit, in both modes. It checks that the `:microphysics` bracket of
+    `remaining_tendency!` gives the tags the split, that each subdomain gives
+    each region tag a part, and the partition's sums at each level and at the
+    surface.
 
 The tagged runs write the closure audit and the leak diagnostics, which use
 scratch from callbacks, so parity covers them too. The default mode under 0M
-runs in V-W3's TRMM pair, not in CI.
+also runs in V-W3's TRMM pair.
 
 `tagging_water_increment` runs `water_tag_transport: increment` on the same
 1M column, with the updrafts' vertical diffusion, as D4-W has it. It checks the
