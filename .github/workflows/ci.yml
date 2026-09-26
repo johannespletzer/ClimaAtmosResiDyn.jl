@@ -212,6 +212,7 @@ jobs:
           - tagging_water_edmf
           - tagging_water_edmf_copies
           - tagging_water_edmf_0m
+          - tagging_water_edmf_0m_explicit
           - tagging_water_increment
           - tagging_water_increment_explicit
           - parameterizations

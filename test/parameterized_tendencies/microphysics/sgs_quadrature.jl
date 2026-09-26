@@ -5,6 +5,20 @@ Unit tests for SGS Quadrature utilities (src/cache/sgs_quadrature.jl)
 using Test
 using ClimaAtmos
 
+# The fastest of `n` wall-clock timings of `ex`, in seconds. On a shared CI
+# runner, noise only adds time. One slow repeat then no longer decides a
+# timing test. This is a macro and not a function so that `ex` stays inline.
+# A closure would make the calls in `ex` type-stable and change what is timed.
+macro min_elapsed(n, ex)
+    return quote
+        local t_min = Inf
+        for _ in 1:($(esc(n)))
+            t_min = min(t_min, @elapsed $(esc(ex)))
+        end
+        t_min
+    end
+end
+
 @testset "SGS Quadrature" begin
 
     @testset "Gauss-Hermite Quadrature" begin
@@ -1021,6 +1035,9 @@ using ClimaAtmos
 
         N_warmup = 100
         N_bench = 10_000
+        # Each timing is the fastest of N_repeat runs of N_bench calls. With a
+        # single run, one runner hiccup failed a ratio test on CI.
+        N_repeat = 5
 
         # --- 0M Performance ---
         # We would be getting better measurements with BenchmarkTools, but I did not
@@ -1033,7 +1050,7 @@ using ClimaAtmos
                     BMT.Microphysics0Moment(), mp_0m, thp, T, q_liq, q_ice, q_vap_sat,
                 )
             end
-            t_direct_0m = @elapsed for _ in 1:N_bench
+            t_direct_0m = @min_elapsed N_repeat for _ in 1:N_bench
                 BMT.bulk_microphysics_tendencies(
                     BMT.Microphysics0Moment(), mp_0m, thp, T, q_liq, q_ice, q_vap_sat,
                 )
@@ -1045,7 +1062,7 @@ using ClimaAtmos
                     mp_0m, thp, ρ, T, q_tot, q_liq, q_ice, Φ, dt,
                 )
             end
-            t_wrapper_0m = @elapsed for _ in 1:N_bench
+            t_wrapper_0m = @min_elapsed N_repeat for _ in 1:N_bench
                 microphysics_tendencies_0m(
                     mp_0m, thp, ρ, T, q_tot, q_liq, q_ice, Φ, dt,
                 )
@@ -1061,7 +1078,7 @@ using ClimaAtmos
                         T′T′, q′q′, corr_Tq, Φ, dt,
                     )
                 end
-                t = @elapsed for _ in 1:N_bench
+                t = @min_elapsed N_repeat for _ in 1:N_bench
                     microphysics_tendencies_0m(
                         quad, mp_0m, thp, ρ, T, q_tot,
                         T′T′, q′q′, corr_Tq, Φ, dt,
@@ -1091,7 +1108,7 @@ using ClimaAtmos
                     q_tot, q_lcl, q_icl, q_rai, q_sno, dt,
                 )
             end
-            t_direct_1m = @elapsed for _ in 1:N_bench
+            t_direct_1m = @min_elapsed N_repeat for _ in 1:N_bench
                 BMT.bulk_microphysics_tendencies(
                     BMT.LinearizedAverage(),
                     BMT.Microphysics1Moment(), mp_1m, thp, ρ, T,
@@ -1106,7 +1123,7 @@ using ClimaAtmos
                     T, mp_1m, thp, dt, nsubs,
                 )
             end
-            t_wrapper_1m = @elapsed for _ in 1:N_bench
+            t_wrapper_1m = @min_elapsed N_repeat for _ in 1:N_bench
                 microphysics_tendencies_1m(
                     ρ, q_tot, q_lcl, q_icl, q_rai, q_sno,
                     T, mp_1m, thp, dt, nsubs,
@@ -1125,7 +1142,7 @@ using ClimaAtmos
                         nsubs_quad,
                     )
                 end
-                t = @elapsed for _ in 1:N_bench
+                t = @min_elapsed N_repeat for _ in 1:N_bench
                     microphysics_tendencies_1m(
                         BMT.Microphysics1Moment(), quad, mp_1m, thp, ρ, T,
                         q_tot, q_lcl, q_icl, q_rai, q_sno,

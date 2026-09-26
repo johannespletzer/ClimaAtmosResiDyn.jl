@@ -1,4 +1,5 @@
 using Test
+import Random
 import ClimaAtmos as CA
 import ClimaCore.MatrixFields: @name
 
@@ -1415,6 +1416,122 @@ end
             ),
         )
     end
+end
+
+# WP4a: the 0M rain-out split's shares, on the kernel itself. The partition's
+# shares in a subdomain are its normalized grid shares plus the exchange's
+# differences, which sum to zero over the partition, times `S`.
+@testset "The rain-out split's shares" begin
+    partition = (true, true, false)
+    flags = Val(partition)
+    share(i) = CA.SplitShare(flags, Val(i))
+    # Grid compositions, and bounded differences that sum to zero over the
+    # partition, including an empty tag and a clamp that binds.
+    rng_values = [
+        (0.3, 0.6, 0.2),
+        (0.0, 0.9, 0.5),
+        (1e-3, 0.5, 0.0),
+        (0.45, 0.45, 0.9),
+    ]
+    for ε̄ in rng_values, δ in (0.0, 0.1, -0.2), S in (1.0, 0.98)
+        total = ε̄[1] + ε̄[2]
+        # Differences as the exchange's bound keeps them: a share stays in
+        # [0, 1], and the partition's sum is zero.
+        d = clamp(δ, -ε̄[1] / total, ε̄[2] / total)
+        Δφ = (d, -d, 0.5)
+        φ = map(i -> share(i)(ε̄, Δφ, S, -1.0), (1, 2, 3))
+        @test all(isfinite, φ)
+        @test 0 <= φ[1] <= 1 && 0 <= φ[2] <= 1
+        @test φ[1] + φ[2] ≈ S
+        # A source tag is clamped to [0, 1] whatever its difference.
+        @test 0 <= φ[3] <= 1
+    end
+    # Where the partition holds nothing, the grid mean's share, the fallback.
+    @test share(1)((0.0, 0.0, 0.3), (0.1, -0.1, 0.0), 1.0, 0.25) == 0.25
+    # A value that is not finite falls back too.
+    @test share(1)((0.3, 0.6, 0.2), (NaN, 0.0, 0.0), 1.0, 0.25) == 0.25
+    # Without an exchange the split is the grid rule: the normalized share
+    # times `S` is the clamped grid share where no clamp binds.
+    ε̄ = (0.3, 0.6, 0.2)
+    S = 0.3 / 1.0 + 0.6 / 1.0
+    @test share(1)(ε̄, (0.0, 0.0, 0.0), S, -1.0) ≈ 0.3
+    # Where a clamp binds it is not: a partition tag above the parent.
+    ε̄ = (1.5, 0.5, 0.2)
+    S = CA.water_tag_fraction(1.5, 1.0) + CA.water_tag_fraction(0.5, 1.0)
+    @test share(1)(ε̄, (0.0, 0.0, 0.0), S, -1.0) ≈ 1.125
+    @test share(3)(ε̄, (0.0, 0.0, 0.0), S, -1.0) ≈ 0.15
+
+    # Random cells through the exchange's own kernels, as the model holds them:
+    # the shares are finite and sum to `S` in each subdomain, and a source
+    # tag's lies in [0, 1], with a drifted partition and with a subdomain's
+    # area negative, in both float types.
+    rng = Random.MersenneTwister(1)
+    function random_cell(FT; drift = 0.0, negative_environment = false,
+        negative_updraft = false)
+        ρ = FT(1 + 0.2 * rand(rng))
+        ρq_tot = FT(1e-2 * rand(rng) + 1e-6)
+        f1 = rand(rng)
+        f2 = 1 - f1
+        f1 *= 1 + drift * (2 * rand(rng) - 1)
+        f2 *= 1 + drift * (2 * rand(rng) - 1)
+        rand(rng) < 0.1 && (f1 = -0.01 * rand(rng))
+        ρq_tags = FT.((f1, f2, 1.5 * rand(rng)) .* ρq_tot)
+        ρaʲ = FT(negative_updraft ? -0.01 * ρ * rand(rng) : 0.3 * rand(rng) * ρ)
+        ρa⁰ = negative_environment ? FT(-0.01 * ρ * rand(rng)) : ρ - ρaʲ
+        q_totʲ = FT(ρq_tot / ρ * (0.5 + rand(rng)))
+        q_tot⁰ =
+            ρa⁰ > eps(FT) ? max((ρq_tot - ρaʲ * q_totʲ) / ρa⁰, FT(0)) :
+            ρq_tot / ρ
+        ε̄ = map(x -> max(x, FT(0)) / ρ, ρq_tags)
+        w = (rand(rng), rand(rng), rand(rng))
+        εʲ = map(x -> FT(x / (w[1] + w[2]) * q_totʲ), w)
+        room = CA._exchange_room(ρ, ρaʲ, ρa⁰, ρq_tot / ρ, q_totʲ, q_tot⁰)
+        ratio = CA._exchange_energy_ratio(ρaʲ, ρa⁰, q_totʲ, q_tot⁰)
+        S =
+            CA.water_tag_fraction(ρq_tags[1], ρq_tot) +
+            CA.water_tag_fraction(ρq_tags[2], ρq_tot)
+        fallbacks = map(x -> CA.water_tag_fraction(x, ρq_tot), ρq_tags)
+        return (; ε̄, εʲ, room, ratio, S, fallbacks)
+    end
+    for FT in (Float64, Float32),
+        kwargs in (
+            (;),
+            (; drift = 0.05),
+            (; negative_environment = true),
+            (; negative_updraft = true),
+        )
+
+        (finite, sums, sources) = (true, true, true)
+        for _ in 1:2000, environment in (true, false)
+            cell = random_cell(FT; kwargs...)
+            Δφ = CA.ShareDifferences(flags, environment)(
+                cell.εʲ,
+                cell.ε̄,
+                cell.room,
+                cell.ratio,
+            )
+            φ = map(
+                i -> share(i)(cell.ε̄, Δφ, cell.S, cell.fallbacks[i]),
+                (1, 2, 3),
+            )
+            finite &= all(isfinite, φ)
+            sums &= isapprox(φ[1] + φ[2], cell.S; atol = 100 * eps(FT))
+            sources &= 0 <= φ[3] <= 1
+        end
+        @test finite
+        @test sums
+        @test sources
+    end
+
+    # The split applies under 0M with prognostic EDMF only. Elsewhere,
+    # including EDOnly, the grid rule applies as before.
+    model = CA.WaterTaggingModel((
+        CA.WaterTag{:tropo}(CA.TanhAltitudeRegion(750.0, 100.0, false)),
+        CA.WaterTag{:strat}(CA.TanhAltitudeRegion(750.0, 100.0, true)),
+    ))
+    zero_moment = CA.EquilibriumMicrophysics0M()
+    @test !CA._splits_rainout(zero_moment, nothing, model, nothing)
+    @test !CA._splits_rainout(zero_moment, CA.EDOnlyEDMFX(), model, nothing)
 end
 
 # WP5b: a water tag's sedimentation cross blocks to a falling species. The tag

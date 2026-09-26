@@ -356,7 +356,11 @@ Scratch fields needed by tagged-tracer source attribution, merged into
 `Yₜ.c.ρe_tot` from the last [`snapshot_tagged_ρe_tot!`](@ref); no other code
 touches it, so a bracketed process cannot clobber it. `ᶜtagging_q_snapshot` is
 its water counterpart, and `ᶜtagging_q_share_norm` holds the partition-share
-denominator of [`water_tag_share_norm!`](@ref).
+denominator of [`water_tag_share_norm!`](@ref). Under 0M,
+`ᶜtagging_q_rainouts` holds every tag's part of the rain-out and
+`ᶜtagging_q_rainout_res` the part no region tag takes, computed once per
+output time for `pr_tag` ([`update_water_tag_rainouts!`](@ref)), and
+`tagging_q_rainout_time` that time in seconds.
 """
 tagging_scratch(Y, atmos::AtmosModel) = (;
     (
@@ -369,6 +373,18 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
             ᶜtagging_q_snapshot = similar(Y.c.ρ),
             ᶜtagging_q_share_norm = similar(Y.c.ρ),
             water_tag_edmf_scratch(Y, atmos.water_tagging_model, atmos)...,
+            # Each tag's part of the 0M rain-out, for `pr_tag` (WP4a).
+            (
+                atmos.microphysics_model isa EquilibriumMicrophysics0M ?
+                (;
+                    ᶜtagging_q_rainouts = _water_fix_fields(
+                        Y.c.ρ,
+                        atmos.water_tagging_model.tags,
+                    ),
+                    ᶜtagging_q_rainout_res = similar(Y.c.ρ),
+                    tagging_q_rainout_time = Ref(NaN),
+                ) : (;)
+            )...,
         )
     )...,
     (
