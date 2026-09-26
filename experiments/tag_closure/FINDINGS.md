@@ -2378,6 +2378,13 @@ tags and 10% for the source tags, L∞ at most 25%. Measured: 0.14%, 5.6% and 12
 `output/inc_d4_enthalpy_increment/tags_against_converged.txt`, from
 `analysis/increment/tag_correctness.py`.*
 
+*Annotation, 2026-09-26 (the owner's review of #122, the provenance pathway):*
+the headline's "that difference is the mixing convention, not an error" is too
+strong. The reference leaves 5.99e5 J/m² of its own residual, and it fails
+closure on OD4's scale (E86). So the first two rows mix the convention with the
+reference's own error. They are not a pure convention effect. The entry is
+otherwise unchanged.
+
 **E67. Under a deep atmosphere the correction put 0.4% of each cell's move in
 the wrong place, until its flux was scaled by the face areas.** On the smallest
 test sphere, 30 km deep, the top face is 1/0.9906 times the bottom one. With a

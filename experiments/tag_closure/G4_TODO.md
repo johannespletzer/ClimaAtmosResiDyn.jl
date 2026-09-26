@@ -504,7 +504,8 @@ Measure it on W23's explicit column before either is decided.
 
 *Scope added (provenance pathway, 2026-09-26):* OD7's provenance side, proposed:
 the energy observed spread from E79's run pair, and, if the owner asks,
-water's PX3 (the placement pair) and PX15 (both deferred). E79's left-out part
+water's PX3 (the placement pair) and the energy follower's split PX15 (both
+deferred). E79's left-out part
 is not a bound, because the moved part can also change with the placement
 (PT6). An aggregation departure of the sign-dependent rule would be Fid-1
 evidence.

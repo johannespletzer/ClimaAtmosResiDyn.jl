@@ -75,7 +75,7 @@ not checked, it says so.
 
   - **Update, 2026-09-26: the provenance pathway, proposed.**
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md) proposes a revision of rev.
-    2 toward provenance certainty for both families. Closure is one question
+    2 toward provenance evidence for both families. Closure is one question
     per cell, and the model knows its answer. Provenance is the rest, and the
     model computes no answer for it. The page gives evidence levels, and per
     tag an observed spread and an exposure screen, neither of them an error

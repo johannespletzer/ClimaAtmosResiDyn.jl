@@ -121,8 +121,10 @@ beside them.
     probe) and PX18 (a band region) until a measured result needs them.
   - **Criterion 7:** the net-flow audit and WP4b's pool rule map to PX14,
     deferred until WP4b moves toward validation.
-  - **Criterion 8** is Val-4: one held-out case (PX23), named before any rule
-    is tuned, under OD14's hygiene.
+  - **Criterion 8** stays as approved. PX23, one held-out case named before
+    any rule is tuned, is reported beside it as Val-4, under OD14's hygiene.
+    OD14 also decides whether the GCM-driven column, which starts from site
+    23, still counts as held out.
   - **Criterion 12:** the claim contract for tagged water carries the rule
     classification of the pathway's section 4 and the declared labelling
     model of its section 1 (OD11).
@@ -645,7 +647,7 @@ The verifier computes both (WP0).
     tags, 0.68 to 1.26 for the source tags, so 8% to 126%. E66's reference
     also keeps 5.99e5 J/m² of its own residual, and fails closure on OD4's
     scale (E86). So E66's difference is not a pure convention effect, and the
-    reason above does not hold as written. The 2% row stands as approved
+    argument above does not hold as written. The 2% row stands as approved
     (OD3), and so does OD5, until the owner amends them. E66's measured
     spread is reported apart from the row, labelled as convention plus the
     reference's residual. The sentence above is kept as written.
