@@ -329,6 +329,9 @@ NVTX.@annotate function save_state_to_disk_func(integrator, output_dir)
     # The closure checks' void flags, which a restart reads back.
     write_tag_closure_void_attributes!(hdfwriter.file, p.tagging)
     InputOutput.write!(hdfwriter, Y, "Y")
+    # The tags' accumulators, which live in the cache, so that a restart
+    # continues them (WP6, step 3). Nothing without tags.
+    write_tag_ledger_checkpoint!(hdfwriter, p.tagging)
     Base.close(hdfwriter)
     return nothing
 end
