@@ -168,10 +168,32 @@ nor the exchange runs. The tags then move by the model's tracer flux
 of `E`. Under `energy_source_tag_transport: enthalpy_increment` the correction
 after each solve takes the difference, since every sub-grid term runs in the
 implicit tendency. Under `enthalpy` nothing would, so the copies are refused
-there. The model injects the surface's buoyant air into the lowest level of
-the updraft. That air carries surface-flux energy, but the copies do not see
-it. They take the environment's composition there. A restart refuses a change
-of the switch, since the copies are part of the state.
+there. A restart refuses a change of the switch, since the copies are part of
+the state.
+
+The model gives the updraft's `mseʲ` four things it gives no updraft tracer,
+and the copies mirror each (`energy_source_copy_mirrors.jl`):
+
+  - the surface enthalpy flux into the updraft's lowest cell;
+  - the relaxation there toward the surface's buoyant air, `mse̅ + C√σ²`;
+  - radiation, under RRTMGP;
+  - the updraft's rain-out under 0-moment microphysics.
+
+Each mirror takes the model's own increment of `mseʲ` and gives it to the
+copies by the grid mean's rule for that process's label. A tag that receives
+the label gains its mask times the increment's positive part, and every copy
+loses its share of the negative part. The shares are of the partition's
+copies' sum, so the partition's copies change by exactly the increment. In the
+relaxation, each copy moves toward its tag's grid-mean value plus its share of
+the buoyant excess, so the surface-flux tag gets only its share of that
+excess, as the water copies decide. The buoyancy term of `mseʲ` is not
+mirrored. The updraft's velocity equation takes part of it from the updraft's
+kinetic energy, and the rest is work the updraft exchanges with its
+surroundings through the non-hydrostatic pressure. Neither is a source any tag
+is labelled with. What the mirrors do not cover, such as that work, the two
+advection schemes and the diffusion mirror's different operator, shows in
+`e_src_copy_res`, the updraft's energy `mseʲ + Kʲ - p/ρʲ + c` minus the
+partition's copies, times `ρaʲ/ρ`.
 
 The copies have costs. Their state names are nested in the updraft, so the
 split Jacobian solver does not solve them apart. They join the nested solver, and the
@@ -579,6 +601,30 @@ misses one:
     Without one, a new hook would make the stepper refresh the implicit cache
     after each solve, and the model's constraints read that cache.
 
+With microphysics that sediments (`microphysics_model` 1M, 2M or 2MP3) stepped
+explicitly (`implicit_microphysics: false`) the mode is refused as well, unless
+`energy_source_tag_increment_allow_explicit_microphysics: true`. In the implicit Jacobian
+the parent's `ρe_tot` row has a cross block from each sedimenting species, for
+the energy the falling water carries. The tags' rows do not. So with one Newton
+iteration the tags miss part of the parent's sedimentation update. The
+correction cannot move the part that changes a column's total, and that part
+lands in `e_src_res`. On the tag-closure experiments' DYCOMS RF02 EDMF column,
+with one Newton iteration, the closure residual after an hour was 2.1e-4 of
+the partitioned energy with the microphysics explicit and 1.5e-6 with it
+implicit. With ten iterations it was 4.9e-12. 2M and P3 sediment too, and no
+run has measured them, so they are refused until one does. The water tags lag
+in the same way under 1M. PR #105 proposes the analogous cross blocks for
+them, and PR #113 the energy tags' own. Until the energy tags carry them, the
+key is an override for development runs, and the model warns when it is
+used. The refusal concerns only the tags' keys. Without the tags, or
+with another transport, the configuration runs as before.
+
+```yaml
+energy_source_tag_transport: enthalpy_increment
+implicit_microphysics: false
+energy_source_tag_increment_allow_explicit_microphysics: true # development runs only
+```
+
 The correction keeps a ledger, as two prognostic fields that the stepper
 integrates with the tags:
 
@@ -593,9 +639,11 @@ integrates with the tags:
 Both are cumulative since the start of the run and carried through a restart.
 The diagnostics of the same names report them per unit mass, on request; they
 are not among the default outputs. The closure check's audit table gets their
-integrals, `increment_left`, `increment_left_gross` and
-`increment_moved_gross`. So the residual's column total splits into what the
-correction left and what everything else leaves.
+integrals, `increment_left`, `increment_left_net_abs` and
+`increment_moved_net_abs`. The last two sum each cell's absolute ledger, which
+is net over time in that cell, so they are not a throughput. So the residual's
+column total splits into what the correction left and what everything else
+leaves.
 
 The ledger records what the correction intends. A face whose donor cell has no
 share of the partition moves no tag, so there a cell's change differs a little
@@ -784,6 +832,8 @@ ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
 ClimaAtmos.sgs_exchange_of_energy_source_tags!
 ClimaAtmos.has_energy_source_updraft_copies
 ClimaAtmos.energy_source_updraft_copy_variables
+ClimaAtmos.mirror_on_energy_source_copies!
+ClimaAtmos.energy_source_copy_residual!
 ClimaAtmos.keep_energy_source_sediment_correction!
 ClimaAtmos.sediment_energy_source_tags_with_corrections!
 ```

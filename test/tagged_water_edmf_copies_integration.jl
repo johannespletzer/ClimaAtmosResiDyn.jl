@@ -18,7 +18,9 @@ so that parity covers the tags' brackets on the explicit path, after an hour:
     up to the surface flux, whose new water goes by region and source. The
     partition's copies take all of the updraft's surface flux;
  5. the copies' own code allocates next to nothing;
- 6. the model's fields are those of the same column without tags, bit for bit.
+ 6. the model's fields are those of the same column without tags, bit for bit;
+ 7. the partition copies' sedimentation cross blocks to each updraft species
+    sum to the updraft water's block, `(q_totʲ, qʲ)`, to rounding (WP5b-C).
 
 The copies are a model type of their own, and the check against the column
 without tags needs a second. So the file builds the EDMF column twice and has a
@@ -489,5 +491,32 @@ end
         CA.accumulate_tag_ledger_gross!(integrator)
         @test (@allocated CA.accumulate_tag_ledger_gross!(integrator)) <=
               256 * length(names)
+    end
+
+    # 7. Each copy falls with its share of each species, as `q_totʲ` falls
+    # with all of it, so each copy's row has a block to each species' column
+    # (WP5b-C). Over the partition the updraft's shares sum to one, and so do
+    # the environment's, so the partition copies' blocks sum to the updraft
+    # water's.
+    @testset "The copies' sedimentation cross blocks sum to the water's" begin
+        integrator = copies.integrator
+        alg = CA.ManualSparseJacobian(; approximate_solve_iters = 2)
+        cache = CA.jacobian_cache(alg, integrator.u, p.atmos)
+        CA.update_jacobian!(alg, cache, integrator.u, p, 60.0, integrator.t)
+        sgs(name) = CA.sgs_state_name(CA.MatrixFields.FieldName(name))
+        partition_copies = (:q_tag_tropo, :q_tag_strat)
+        for species in CA.sedimenting_sgs_mass_names(integrator.u)
+            ᶜblock = cache.matrix[sgs(:q_tot), CA.sgs_state_name(species)]
+            ᶜsum = copy(ᶜblock)
+            parent(ᶜsum) .= 0
+            for name in partition_copies
+                ᶜcopy_block = cache.matrix[sgs(name), CA.sgs_state_name(species)]
+                @. ᶜsum = ᶜsum + ᶜcopy_block
+            end
+            scale = maximum(abs, parent(ᶜblock))
+            @test scale > 0
+            @test maximum(abs, parent(ᶜsum) .- parent(ᶜblock)) <=
+                  100 * eps(Float64) * scale
+        end
     end
 end
