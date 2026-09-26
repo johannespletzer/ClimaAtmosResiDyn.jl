@@ -450,6 +450,10 @@ function AtmosSimulation(
         Y, model, params, dt, start_date, resolved_steady_state_velocity;
         parent_budget,
     )
+    # A restarted run reads the tag closure checks' void flags back from its
+    # checkpoint. The first check runs when the integrator starts, below.
+    isnothing(restart_file) ||
+        restore_tag_closure_void!(p.tagging, restart_file, context)
 
     # Combine all callbacks. The ledger's callback goes first: it reads the
     # accepted state and the stepper cache before any other callback runs.
