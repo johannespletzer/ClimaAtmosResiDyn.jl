@@ -33,6 +33,7 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_edmf_copies",
     "tagging_water_edmf_0m",
     "tagging_water_increment",
+    "tagging_water_increment_explicit",
     "parameterizations",
     "restarts",
 )
@@ -260,6 +261,15 @@ end
 if TEST_GROUP in ("tagging_water_increment", "all")
     @safetestset "Water tags following the implicit increment" begin
         @time include("tagged_water_increment_integration.jl")
+    end
+end
+
+# The same with the microphysics stepped explicitly, where the tags' closure
+# rests on their sedimentation cross blocks. Its two builds compile the
+# explicit path, so it has a group of its own too.
+if TEST_GROUP in ("tagging_water_increment_explicit", "all")
+    @safetestset "Water tags following the increment, microphysics explicit" begin
+        @time include("tagged_water_increment_explicit_integration.jl")
     end
 end
 
