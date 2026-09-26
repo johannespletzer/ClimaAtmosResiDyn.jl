@@ -26,9 +26,10 @@ water an hour. With implicit microphysics the same terms exist, and W24 left
 
 A tag's tendency is `-precipdivᵥ(ᶠρ ᶠtop_bias(-wₚ qₚ φ̂ᵢ))`, summed over the
 species, where `φ̂ᵢ` is the tag's share of the falling species:
-- for a partition tag, `water_tag_sediment_share`, the partition-normalized
-  share;
-- for a source tag, `water_tag_source_sediment_share`.
+
+  - for a partition tag, `water_tag_sediment_share`, the partition-normalized
+    share;
+  - for a source tag, `water_tag_source_sediment_share`.
 
 Its derivative with respect to `ρqₚ`, at fixed `φ̂ᵢ`, is `φ̂ᵢ` times the
 parent's cross block:
@@ -48,12 +49,12 @@ diagonal (`∂φ̂/∂ρq_tag`) stays as it is. Copies (updraft) are a second st
 A tag with these blocks is no longer uncoupled in today's sense
 (`uncoupled_jacobian_names`, `manual_sparse_jacobian.jl:735-751`: "its only
 block is its own diagonal"). But the coupling is one way:
-- the tag's row names species columns;
-- no row other than its own names the tag's column.
+
+  - the tag's row names species columns;
+  - no row other than its own names the tag's column.
 
 The split solver keeps such a field apart. It solves the coupled fields first,
-exactly as now. Then, for each uncoupled field, it forms `R_tag − Σₚ C_tag,ₚ
-ΔYₚ` in one scratch field and solves the tag's own block on it.
+exactly as now. Then, for each uncoupled field, it forms `R_tag − Σₚ C_tag,ₚ ΔYₚ` in one scratch field and solves the tag's own block on it.
 
 The coupled system's rows, name tree and solver are unchanged, so the parent's
 `ΔY` is the same computation, bit for bit (`split_jacobian_solver`,
@@ -72,26 +73,27 @@ exist only with the split. With 1M stepped explicitly and
 
 ## 4. Tests
 
-- **Unit: the split's back-substitution.** On a small column with a
-  sedimenting species and a tag with a cross block, the split solve equals
-  the exact block-lower-triangular solution to rounding. The coupled fields'
-  `ΔY` is bit for bit that of the solve without the tag's cross block.
-- **Unit: the field lists.** A field whose only other blocks are in its own
-  row stays uncoupled. A field named as a column by another row does not.
-- **Unit: the blocks.** On a column, the partition tags' cross blocks sum to
-  the parent's.
-- **Integration.** Under 1M and a tag, the parent is bit for bit the same with
-  the cross blocks and without, on both the implicit and the explicit path.
-  With the follower and one Newton iteration, W23's explicit column closes
-  within the budget.
+  - **Unit: the split's back-substitution.** On a small column with a
+    sedimenting species and a tag with a cross block, the split solve equals
+    the exact block-lower-triangular solution to rounding. The coupled fields'
+    `ΔY` is bit for bit that of the solve without the tag's cross block.
+  - **Unit: the field lists.** A field whose only other blocks are in its own
+    row stays uncoupled. A field named as a column by another row does not.
+  - **Unit: the blocks.** On a column, the partition tags' cross blocks sum to
+    the parent's.
+  - **Integration.** Under 1M and a tag, the parent is bit for bit the same with
+    the cross blocks and without, on both the implicit and the explicit path.
+    With the follower and one Newton iteration, W23's explicit column closes
+    within the budget.
 
 ## 5. The experiment, and what follows
 
 The owner's review's distinguishing experiment, on W23's column (DYCOMS 1M
 EDMF, microphysics explicit, one hour, one Newton iteration):
-- default and copies;
-- tracer and follower;
-- cross blocks off (#102's head) and on.
+
+  - default and copies;
+  - tracer and follower;
+  - cross blocks off (#102's head) and on.
 
 It reports the net and gross closure, `q_tag_inc_left`, the per-tag agreement
 with the copies, the smallest tag value, the partition repair, and the parent's

@@ -195,7 +195,9 @@ function gate()
     start_as_driver!(reference)
     model = reference.p.atmos.water_tagging_model
     CA.follows_water_increment(model) ||
-        error("The gate's reference must follow the increment (`water_tag_transport: increment`).")
+        error(
+            "The gate's reference must follow the increment (`water_tag_transport: increment`).",
+        )
     tags = CA.water_tag_state_names(model)
     ledgers = CA.tag_state_ledger_names(reference.p.atmos)
     per_tag_inc = filter(l -> startswith(string(l), "q_tag_led_inc_"), collect(ledgers))
@@ -282,7 +284,8 @@ function gate()
             if o == :vdiff
                 for (t, ᶜexcess) in vdiff_excess(Yₖ, on_trial.p, dt)
                     append!(row, [net(ᶜexcess), gross(ᶜexcess)])
-                    inc = Symbol(:q_tag_led_inc_, Symbol(replace(string(t), "ρq_tag_" => "")))
+                    inc =
+                        Symbol(:q_tag_led_inc_, Symbol(replace(string(t), "ρq_tag_" => "")))
                     ᶜfollower = get(ledger_change, inc, zero(ᶜexcess))
                     ᶜDₜ = ᶜD[t]
                     @. ᶜDₜ += -(ᶜexcess) - ᶜfollower
@@ -301,10 +304,19 @@ function gate()
     z = Float64.(vec(parent(CA.Fields.coordinate_field(Y.c).z)))
     J = Float64.(vec(parent(CA.Fields.local_geometry_field(Y.c).J)))
     profile_header = ["z", "J", "rho", "rho_q_tot"]
-    columns = Vector{Float64}[z, J, Float64.(vec(parent(Y.c.ρ))), Float64.(vec(parent(Y.c.ρq_tot)))]
+    columns = Vector{Float64}[
+        z,
+        J,
+        Float64.(vec(parent(Y.c.ρ))),
+        Float64.(vec(parent(Y.c.ρq_tot))),
+    ]
     for t in tags
         push!(profile_header, "$(t)_final", "$(t)_D_vdiff")
-        push!(columns, Float64.(vec(parent(getproperty(Y.c, t)))), Float64.(vec(parent(ᶜD[t]))))
+        push!(
+            columns,
+            Float64.(vec(parent(getproperty(Y.c, t)))),
+            Float64.(vec(parent(ᶜD[t]))),
+        )
     end
     write_csv(
         joinpath(OUTDIR, "$(RUN)_gate_profiles.csv"),
@@ -317,7 +329,9 @@ function gate()
     for o in OPERATORS, quantity in ("source", "growth", "remainder")
         n = sum(r[column("$(o)_$(quantity)_net")] for r in rows)
         g = sum(r[column("$(o)_$(quantity)_gross")] for r in rows)
-        println("RESULT run=$RUN operator=$o $quantity net_per_day=$(n / water / days) gross_per_day=$(g / water / days)")
+        println(
+            "RESULT run=$RUN operator=$o $quantity net_per_day=$(n / water / days) gross_per_day=$(g / water / days)",
+        )
     end
     for o in OPERATORS, l in ledgers
         g = sum(r[column("$(o)_ledger_$(l)_gross")] for r in rows)

@@ -61,13 +61,13 @@ So the tags change nothing in the model until they end it. The runs used
 
 ## 4. The options
 
-| option | what it does | for | against |
-|:------ |:------------ |:--- |:------- |
-| **A. The tags cannot end a run** | The water closure check never aborts by default (`abort_above: ~`), or it does not abort where the parent's negative water explains the residual. The check still warns, and the audit flags the rows. | It restores the parity rule at once, whatever the cause. It changes no tag value. | The tags still diverge. Every result after the divergence is void and must be flagged. It hides nothing only if the flag is read. |
-| **B. No tag water where the parent has none** | After the constraints, where `ρq_tot ≤ 0`, every partition tag is set to zero, and every copy where `q_totʲ ≤ 0`. The change goes to `q_tag_led_empty` and the per-tag ledgers. | Tags never claim water a cell does not hold. The residual there is the parent's own negative water, bounded by it. | The provenance of water that returns to the cell is erased. It stops the column's divergence only if the divergence starts in the negative cells. Tag values change wherever the parent is ever negative. |
-| **C. The tags partition the parent's non-negative part** | The partition's target is `max(ρq_tot, 0)`: the follower takes that field's increment, and the repair, the rescale and the copies' repair aim at it. The parent's negative part becomes a named field, for example `q_tag_negative`. | The partition is consistent by construction, and the remainder has a name. | The largest change: the follower, the repair, the rescale and the copies. It needs its own validation, and the closure's definition changes. |
-| **D. A cap** | Where `Σ_P ρq_tag > max(ρq_tot, 0)(1 + ε)`, the partition is scaled down to the cap, logged in a new state ledger. It is the sphere's pointwise check (G3_PLAN 6.1) turned into a correction. | Local and bounded; it shows up as intervention. | One more correction to count. A large cap can hide a divergence it should expose. |
-| **E. Stop the tags, not the run** | When the tags pass `abort_above`, their tendencies stop and the audit marks the time. The model runs on. | The run completes, and parity holds. | The tags' fields stay in the state with no meaning after that time. The results after it are void. It adds a mode to every tag path. |
+| option                                                   | what it does                                                                                                                                                                                                                         | for                                                                                                                | against                                                                                                                                                                                                   |
+|:-------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |:------------------------------------------------------------------------------------------------------------------ |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. The tags cannot end a run**                         | The water closure check never aborts by default (`abort_above: ~`), or it does not abort where the parent's negative water explains the residual. The check still warns, and the audit flags the rows.                               | It restores the parity rule at once, whatever the cause. It changes no tag value.                                  | The tags still diverge. Every result after the divergence is void and must be flagged. It hides nothing only if the flag is read.                                                                         |
+| **B. No tag water where the parent has none**            | After the constraints, where `ρq_tot ≤ 0`, every partition tag is set to zero, and every copy where `q_totʲ ≤ 0`. The change goes to `q_tag_led_empty` and the per-tag ledgers.                                                      | Tags never claim water a cell does not hold. The residual there is the parent's own negative water, bounded by it. | The provenance of water that returns to the cell is erased. It stops the column's divergence only if the divergence starts in the negative cells. Tag values change wherever the parent is ever negative. |
+| **C. The tags partition the parent's non-negative part** | The partition's target is `max(ρq_tot, 0)`: the follower takes that field's increment, and the repair, the rescale and the copies' repair aim at it. The parent's negative part becomes a named field, for example `q_tag_negative`. | The partition is consistent by construction, and the remainder has a name.                                         | The largest change: the follower, the repair, the rescale and the copies. It needs its own validation, and the closure's definition changes.                                                              |
+| **D. A cap**                                             | Where `Σ_P ρq_tag > max(ρq_tot, 0)(1 + ε)`, the partition is scaled down to the cap, logged in a new state ledger. It is the sphere's pointwise check (G3_PLAN 6.1) turned into a correction.                                        | Local and bounded; it shows up as intervention.                                                                    | One more correction to count. A large cap can hide a divergence it should expose.                                                                                                                         |
+| **E. Stop the tags, not the run**                        | When the tags pass `abort_above`, their tendencies stop and the audit marks the time. The model runs on.                                                                                                                             | The run completes, and parity holds.                                                                               | The tags' fields stay in the state with no meaning after that time. The results after it are void. It adds a mode to every tag path.                                                                      |
 
 The options can combine. A is the smallest change that meets the parity rule.
 B, C and D act on the divergence itself. Which of them acts on its cause is not
@@ -125,12 +125,12 @@ turns negative (W36: from day 10).
 **How the readings bound the options.** They bound; they do not isolate a
 cause, since the probe changes nothing and compares time windows of one run.
 
-| reading | what it bounds | the option it points to |
-|:------- |:-------------- |:----------------------- |
-| the emptying, the rescale or the repair grows first and fastest, in N, and the overclaim grows in N | the tags meet the negative parent through the corrections in the negative cells | B: no tag water where the parent has none |
-| the follower's moved or left part, or `led_inc`, grows first and fastest, in or next to N | the follower carries the parent's increments of a negative field into the tags | C: the tags partition the parent's non-negative part |
-| the overclaim grows in P too, with no single ledger first by a clear margin (less than 2 times the next) | the divergence spreads beyond the negative cells | D: a cap; B alone would not reach it |
-| no ledger grows by the rule while the overclaim does | the growth is in a path the ledgers do not see, such as the tags' own tendencies with shares of a negative total | none of B to D is shown to act on the cause; a further probe is needed |
+| reading                                                                                                  | what it bounds                                                                                                   | the option it points to                                                |
+|:-------------------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------- |
+| the emptying, the rescale or the repair grows first and fastest, in N, and the overclaim grows in N      | the tags meet the negative parent through the corrections in the negative cells                                  | B: no tag water where the parent has none                              |
+| the follower's moved or left part, or `led_inc`, grows first and fastest, in or next to N                | the follower carries the parent's increments of a negative field into the tags                                   | C: the tags partition the parent's non-negative part                   |
+| the overclaim grows in P too, with no single ledger first by a clear margin (less than 2 times the next) | the divergence spreads beyond the negative cells                                                                 | D: a cap; B alone would not reach it                                   |
+| no ledger grows by the rule while the overclaim does                                                     | the growth is in a path the ledgers do not see, such as the tags' own tendencies with shares of a negative total | none of B to D is shown to act on the cause; a further probe is needed |
 
 The parent session brings the reading and the choice among B, C and D to the
 owner.
@@ -209,28 +209,28 @@ The GCM-driven column, W36's configuration with the radiation's seed reset
 `pbl`, `free`, `evap`, `fcg` under the follower. Each tag's own ledgers on
 and written every 6 hours, as the probe had them.
 
-| run | site | code | what for |
-|:--- |:---- |:---- |:-------- |
-| `ic_s23_c` | 23 | option C's run tree | V1, V2, V4, V5 |
-| `ic_s23_untagged` | 23 | option C's run tree | V4's twin |
-| `ic_s23_before` | 23 | the record + #109 + #112 | reported: the same run without C |
-| `ic_s26_c` | 26 | option C's run tree | V2, V3, V4 |
-| `ic_s26_untagged` | 26 | option C's run tree | V4's twin |
-| `ic_s26_before` | 26 | the record + #109 + #112 | V3's control |
+| run               | site | code                     | what for                         |
+|:----------------- |:---- |:------------------------ |:-------------------------------- |
+| `ic_s23_c`        | 23   | option C's run tree      | V1, V2, V4, V5                   |
+| `ic_s23_untagged` | 23   | option C's run tree      | V4's twin                        |
+| `ic_s23_before`   | 23   | the record + #109 + #112 | reported: the same run without C |
+| `ic_s26_c`        | 26   | option C's run tree      | V2, V3, V4                       |
+| `ic_s26_untagged` | 26   | option C's run tree      | V4's twin                        |
+| `ic_s26_before`   | 26   | the record + #109 + #112 | V3's control                     |
 
 The energy follower on these trees is #109's (|m|), not W36's same-sign rule
 (G4.15b; OD7 is open). The energy tags are not part of this validation.
 
 ### 8.3 The pass rules
 
-| # | what | pass |
-|:- | :--- | :--- |
-| V1 | site 23 with C completes | the run reaches day 90 |
-| V2 | the partition against the target, at every closure check to day 90, both sites | gross relative to `∫max(ρq_tot, 0)` at most 0.2% (OD3's water closure row) |
-| V2b | the named remainder | `q_tag_res + q_tag_negative + Σ region tags = q_tot` at every daily output, to 1e-12 of the column's largest `|q_tot|` at that output (amended before any run: a cell's own `q_tot` can be near zero) |
-| V3 | site 26's water tags, `ic_s26_c` against `ic_s26_before` | bit for bit at every daily output; or different only in cells and after times where the parent was ever negative there, which the untagged twin shows (expected: nowhere) |
-| V4 | every model field of each C run against its untagged twin, every daily output | bit for bit (the parity row) |
-| V5 | intervention, both sites, from the ledgers | reported: `q_tag_inc_negative`'s per-step gross per day; the partition repair's retained gross (OD3's aggregate row, at most 0.5% a day) and each tag's `led_fix` (OD3's per-tag row, 2%) scored over days 1 to 90 |
+| #   | what                                                                           | pass                                                                                                                                                                                                               |
+|:--- |:------------------------------------------------------------------------------ |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| V1  | site 23 with C completes                                                       | the run reaches day 90                                                                                                                                                                                             |
+| V2  | the partition against the target, at every closure check to day 90, both sites | gross relative to `∫max(ρq_tot, 0)` at most 0.2% (OD3's water closure row)                                                                                                                                         |
+| V2b | the named remainder                                                            | `q_tag_res + q_tag_negative + Σ region tags = q_tot` at every daily output, to 1e-12 of the column's largest `|q_tot|` at that output (amended before any run: a cell's own `q_tot` can be near zero)              |
+| V3  | site 26's water tags, `ic_s26_c` against `ic_s26_before`                       | bit for bit at every daily output; or different only in cells and after times where the parent was ever negative there, which the untagged twin shows (expected: nowhere)                                          |
+| V4  | every model field of each C run against its untagged twin, every daily output  | bit for bit (the parity row)                                                                                                                                                                                       |
+| V5  | intervention, both sites, from the ledgers                                     | reported: `q_tag_inc_negative`'s per-step gross per day; the partition repair's retained gross (OD3's aggregate row, at most 0.5% a day) and each tag's `led_fix` (OD3's per-tag row, 2%) scored over days 1 to 90 |
 
 **How V2 fails, if it does.** If the gross exceeds 0.2% at site 23 while V1
 passes, C keeps the run going but does not keep the partition on its target.
@@ -348,8 +348,7 @@ bounds the follower's part only loosely. The rules are unchanged.
     6-hourly and daily output up to day 53.25, bit for bit. If not, the
     probe measures another run. Its numbers are then reported, and nothing
     is attributed to W42's rises.
-  - **P1, the `on` trial is the reference's step.** Per rise, `|Σ ΔE_on −
-    Σ ΔE_ref|` at most 10% of the rise. Where it is more, the trials'
+  - **P1, the `on` trial is the reference's step.** Per rise, `|Σ ΔE_on − Σ ΔE_ref|` at most 10% of the rise. Where it is more, the trials'
     contributions for that rise are *not assessable*. The explicit probes
     do not depend on it.
   - **P2, the rises are W42's.** Each rise from the per-step sum,

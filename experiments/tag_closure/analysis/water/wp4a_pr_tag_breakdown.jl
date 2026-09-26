@@ -67,7 +67,7 @@ parts["integrals_3n"] = timed(
 )
 parts["update_batch"] = timed(() -> CA.update_water_tag_rainouts!(Y, p, t))
 split_bytes = (CA.add_split_rainout!(ᶜrainouts, Y, p, model);
-@allocated CA.add_split_rainout!(ᶜrainouts, Y, p, model))
+    @allocated CA.add_split_rainout!(ᶜrainouts, Y, p, model))
 println(
     "RESULT run=$run_name ntags=$ntags split_bytes=$split_bytes " *
     join(("$k=$(parts[k])" for k in sort(collect(keys(parts)))), " "),

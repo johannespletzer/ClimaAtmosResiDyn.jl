@@ -82,7 +82,9 @@ for (n, _) in trials
     for name in names
         error = sum(row[column] for row in rows)
         increment = sum(row[column + 1] for row in rows)
-        println("RESULT run=$run_name newton=$n variable=$name E=$(error / increment) error=$error increment=$increment")
+        println(
+            "RESULT run=$run_name newton=$n variable=$name E=$(error / increment) error=$error increment=$increment",
+        )
         global column += 2
     end
 end

@@ -131,14 +131,29 @@ function fixed_parent()
         tₖ = reference.t
         CA.CTS.step!(reference)
         row = [seconds(reference.t)]
-        append!(row, [l1(getproperty(reference.u.c, v), getproperty(Yₖ.c, v)) for v in variables])
-        append!(row, [l1(getproperty(reference.u.c, l), getproperty(Yₖ.c, l)) for l in ledgers])
+        append!(
+            row,
+            [l1(getproperty(reference.u.c, v), getproperty(Yₖ.c, v)) for v in variables],
+        )
+        append!(
+            row,
+            [l1(getproperty(reference.u.c, l), getproperty(Yₖ.c, l)) for l in ledgers],
+        )
         for (_, trial) in trials
             take_state!(trial, Yₖ, tₖ)
             CA.CTS.step!(trial)
             @assert trial.t == reference.t
-            append!(row, [l1(getproperty(trial.u.c, v), getproperty(reference.u.c, v)) for v in variables])
-            append!(row, [l1(getproperty(trial.u.c, l), getproperty(Yₖ.c, l)) for l in ledgers])
+            append!(
+                row,
+                [
+                    l1(getproperty(trial.u.c, v), getproperty(reference.u.c, v)) for
+                    v in variables
+                ],
+            )
+            append!(
+                row,
+                [l1(getproperty(trial.u.c, l), getproperty(Yₖ.c, l)) for l in ledgers],
+            )
         end
         push!(rows, row)
     end
@@ -149,7 +164,9 @@ function fixed_parent()
         for (n, _) in trials, v in variables
             error = sum(r[column("error_n$(n)_$(v)")] for r in kept)
             increment = sum(r[column("increment_$(v)")] for r in kept)
-            println("RESULT run=$RUN probe=fixed_parent window=$label newton=$n variable=$v E=$(error / increment)")
+            println(
+                "RESULT run=$RUN probe=fixed_parent window=$label newton=$n variable=$v E=$(error / increment)",
+            )
         end
     end
     println("RESULT run=$RUN probe=fixed_parent steps=$(length(rows))")
@@ -174,7 +191,13 @@ function refinement()
     names = nothing
     for (dt, n) in variants
         run = CA.get_simulation(
-            config(; dt, newton = n, t_start = t0, t_end = t0 + interval, tag = "dt$(dt)_n$n"),
+            config(;
+                dt,
+                newton = n,
+                t_start = t0,
+                t_end = t0 + interval,
+                tag = "dt$(dt)_n$n",
+            ),
         ).integrator
         take_state!(run, Y0, run.t)
         names = ledger_names(run)
@@ -185,15 +208,24 @@ function refinement()
             steps += 1
         end
         water = Float64(sum(run.u.c.ρq_tot))
-        per_hour = [(gross_total(run, l) - b) / water / (interval / 3600) for (l, b) in zip(names, before)]
+        per_hour = [
+            (gross_total(run, l) - b) / water / (interval / 3600) for
+            (l, b) in zip(names, before)
+        ]
         hus = parent(run.u.c.ρq_tot ./ run.u.c.ρ)
-        drift = isnothing(first_hus) ? 0.0 : maximum(abs, hus .- first_hus) / maximum(abs, first_hus)
+        drift =
+            isnothing(first_hus) ? 0.0 :
+            maximum(abs, hus .- first_hus) / maximum(abs, first_hus)
         isnothing(first_hus) && (first_hus = copy(hus))
         push!(rows, [dt, n, steps, per_hour..., drift])
         for (l, value) in zip(names, per_hour)
-            println("RESULT run=$RUN probe=refinement dt=$dt newton=$n ledger=$l per_hour=$value")
+            println(
+                "RESULT run=$RUN probe=refinement dt=$dt newton=$n ledger=$l per_hour=$value",
+            )
         end
-        println("RESULT run=$RUN probe=refinement dt=$dt newton=$n parent_hus_change=$drift")
+        println(
+            "RESULT run=$RUN probe=refinement dt=$dt newton=$n parent_hus_change=$drift",
+        )
     end
     append!(header, ["$(l)_per_hour" for l in names])
     push!(header, "parent_hus_change_vs_first")
@@ -207,7 +239,8 @@ function first_step()
         run = CA.get_simulation(config(; tag = variant)).integrator
         start_as_driver!(run)
         if variant == "converged_first"
-            converged = CA.get_simulation(config(; newton = nref, tag = "first_n$nref")).integrator
+            converged =
+                CA.get_simulation(config(; newton = nref, tag = "first_n$nref")).integrator
             take_state!(converged, run.u, run.t)
             CA.CTS.step!(converged)
             take_state!(run, converged.u, converged.t)
@@ -225,14 +258,27 @@ function first_step()
         z = parent(CA.Fields.coordinate_field(run.u.c).z)
         rho = parent(run.u.c.ρ)
         header = ["z", "rho", "rho_q_tot", string.(tags)...]
-        columns = [vec(z), vec(rho), vec(parent(run.u.c.ρq_tot)), (vec(parent(getproperty(run.u.c, t))) for t in tags)...]
+        columns = [
+            vec(z),
+            vec(rho),
+            vec(parent(run.u.c.ρq_tot)),
+            (vec(parent(getproperty(run.u.c, t))) for t in tags)...,
+        ]
         rows = [[c[i] for c in columns] for i in eachindex(columns[1])]
         write_csv(joinpath(OUTDIR, "$(RUN)_first_step_$(variant).csv"), header, rows)
-        closure = CA.tag_closure(run.u, run.p, :ρq_tot, CA.water_region_tag_state_names(run.p.atmos.water_tagging_model))
-        println("RESULT run=$RUN probe=first_step variant=$variant t=$(seconds(run.t)) gross_relative=$(closure.gross_relative)")
+        closure = CA.tag_closure(
+            run.u,
+            run.p,
+            :ρq_tot,
+            CA.water_region_tag_state_names(run.p.atmos.water_tagging_model),
+        )
+        println(
+            "RESULT run=$RUN probe=first_step variant=$variant t=$(seconds(run.t)) gross_relative=$(closure.gross_relative)",
+        )
     end
 end
 
 PROBE == "fixed_parent" ? fixed_parent() :
 PROBE == "refinement" ? refinement() :
-PROBE == "first_step" ? first_step() : error("PROBE must be fixed_parent, refinement or first_step, got $PROBE")
+PROBE == "first_step" ? first_step() :
+error("PROBE must be fixed_parent, refinement or first_step, got $PROBE")

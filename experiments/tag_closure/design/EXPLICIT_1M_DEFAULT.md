@@ -19,6 +19,7 @@ TRMM_LBA with 1M microphysics, the upstream column
 rain and snow, 82 levels to 16.4 km, ARS222, 6 h. It is the sedimentation-
 heaviest column the repository ships. Changed from upstream only as a tagged
 run needs:
+
   - `implicit_microphysics: false`, the path in question;
   - water tags `pbl` and `free` (a region below and above 1 km, 200 m tanh
     edge, as W26) and `evap` (the surface flux), with
@@ -31,32 +32,33 @@ ladder moves to 60 s and 30 s.
 
 ## 3. The rungs
 
-| run                     | `dt`  | Newton | tags | transport |
-|:----------------------- | -----:| ------:|:---- |:--------- |
-| `w5v_trmm1m_dt120_n1`   | 120 s | 1      | yes  | increment |
-| `w5v_trmm1m_dt120_n2`   | 120 s | 2      | yes  | increment |
-| `w5v_trmm1m_dt120_n10`  | 120 s | 10     | yes  | increment |
-| `w5v_trmm1m_dt60_n1`    | 60 s  | 1      | yes  | increment |
-| `w5v_trmm1m_dt60_n10`   | 60 s  | 10     | yes  | increment |
-| `w5v_trmm1m_dt120_n1_plain` | 120 s | 1  | no   |           |
-| `w5v_trmm1m_dt60_n1_plain`  | 60 s  | 1  | no   |           |
-| `w5v_trmm1m_dt120_n1_tracer` | 120 s | 1 | yes  | tracer (today's default there) |
+| run                          | `dt`  | Newton | tags | transport                      |
+|:---------------------------- | -----:| ------:|:---- |:------------------------------ |
+| `w5v_trmm1m_dt120_n1`        | 120 s | 1      | yes  | increment                      |
+| `w5v_trmm1m_dt120_n2`        | 120 s | 2      | yes  | increment                      |
+| `w5v_trmm1m_dt120_n10`       | 120 s | 10     | yes  | increment                      |
+| `w5v_trmm1m_dt60_n1`         | 60 s  | 1      | yes  | increment                      |
+| `w5v_trmm1m_dt60_n10`        | 60 s  | 10     | yes  | increment                      |
+| `w5v_trmm1m_dt120_n1_plain`  | 120 s | 1      | no   |                                |
+| `w5v_trmm1m_dt60_n1_plain`   | 60 s  | 1      | no   |                                |
+| `w5v_trmm1m_dt120_n1_tracer` | 120 s | 1      | yes  | tracer (today's default there) |
 
 ## 4. Passes when all of these hold
 
-1. **Budget.** On both one-iteration rungs, the partition's gross closure
-   residual (`water_tag_closure.csv`, `gross_relative`) stays below 2e-3 at
-   every half-hourly check through 6 h.
-2. **Nonlinear convergence.** At `dt` 120 s, for `pbl` and `free`, the L1
-   difference at 6 h from the Newton-10 run (`compare_runs.py`, weights
-   ρ dz) is smaller with two iterations than with one.
-3. **Timestep convergence.** For `pbl` and `free`, the one-iteration L1
-   difference from the Newton-10 run at the same `dt` is no larger at 60 s
-   than at 120 s.
-4. **Parity.** Every model field of each one-iteration tagged run equals its
-   untagged twin's, bit for bit.
+ 1. **Budget.** On both one-iteration rungs, the partition's gross closure
+    residual (`water_tag_closure.csv`, `gross_relative`) stays below 2e-3 at
+    every half-hourly check through 6 h.
+ 2. **Nonlinear convergence.** At `dt` 120 s, for `pbl` and `free`, the L1
+    difference at 6 h from the Newton-10 run (`compare_runs.py`, weights
+    ρ dz) is smaller with two iterations than with one.
+ 3. **Timestep convergence.** For `pbl` and `free`, the one-iteration L1
+    difference from the Newton-10 run at the same `dt` is no larger at 60 s
+    than at 120 s.
+ 4. **Parity.** Every model field of each one-iteration tagged run equals its
+    untagged twin's, bit for bit.
 
 Reported beside the verdict, not criteria:
+
   - the part left out (`increment_left_relative`) and the moved ledger;
   - the smallest partition tag value over the run;
   - the partition repair's ledger over the column's water;
@@ -97,8 +99,9 @@ run: `E = Σₖ Σ_cells |ρq_trial − ρq_ref| / Σₖ Σ_cells |ρq_ref − �
 local error relative to the step's own increment.
 
 **Passes when**, for `pbl` and `free`:
-  1. at `dt` 120 s, `E` with two iterations is smaller than with one;
-  2. with one iteration, `E` at `dt` 60 s is no larger than at 120 s.
+
+ 1. at `dt` 120 s, `E` with two iterations is smaller than with one;
+ 2. with one iteration, `E` at `dt` 60 s is no larger than at 120 s.
 
 Reported beside it: the parent's `E` at each rung, and each tag's `E` over the
 parent's. The probe is `analysis/water/w5v_same_atmosphere.jl`, run against

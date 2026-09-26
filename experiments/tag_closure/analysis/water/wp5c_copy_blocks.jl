@@ -66,12 +66,15 @@ for species in CA.sedimenting_sgs_mass_names(Y)
     ᶜsum = copy(block)
     parent(ᶜsum) .= 0
     for copy_name in partition_copies
-        ᶜcopy_block = split_cache.matrix[sgs(MatrixFields.FieldName(copy_name)), sgs(species)]
+        ᶜcopy_block =
+            split_cache.matrix[sgs(MatrixFields.FieldName(copy_name)), sgs(species)]
         @. ᶜsum = ᶜsum + ᶜcopy_block
     end
     scale = maximum(abs, parent(block))
     difference = maximum(abs, parent(ᶜsum) .- parent(block))
-    println("RESULT block_sum species=$species scale=$scale relative_difference=$(difference / scale)")
+    println(
+        "RESULT block_sum species=$species scale=$scale relative_difference=$(difference / scale)",
+    )
 end
 
 unsplit_cache = try
@@ -114,8 +117,12 @@ if !isnothing(unsplit_cache)
     for name in propertynames(Y.c.sgsʲs.:(1))
         is_tag(name) && continue
         parent(getproperty(ΔY_split.c.sgsʲs.:(1), name)) ==
-        parent(getproperty(ΔY_unsplit.c.sgsʲs.:(1), name)) || push!(differing, "c.sgsʲ.$name")
+        parent(getproperty(ΔY_unsplit.c.sgsʲs.:(1), name)) ||
+            push!(differing, "c.sgsʲ.$name")
     end
     parent(ΔY_split.f) == parent(ΔY_unsplit.f) || push!(differing, "f")
-    println("RESULT model increments split against unsplit: ", isempty(differing) ? "bit for bit" : "differ in " * join(differing, ", "))
+    println(
+        "RESULT model increments split against unsplit: ",
+        isempty(differing) ? "bit for bit" : "differ in " * join(differing, ", "),
+    )
 end

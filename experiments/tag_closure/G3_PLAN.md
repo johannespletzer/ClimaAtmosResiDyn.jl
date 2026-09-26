@@ -13,6 +13,10 @@ contract in ROADMAP.md, and the thresholds rev. 2 adds wait on the owner's
 register, OD1 to OD8. *Each decision's current state is in ROADMAP.md's
 register, the single source; all but OD7 are decided.*
 
+*Scope added (provenance pathway, 2026-09-26):* the provenance pathway,
+[PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), adds notes to sections 2, 3,
+4.1, 4.2, 4.3, 4.5, 6, 6.1, 8 and 9. Each says so. Nothing here is struck.
+
 ## 0. Decisions this plan rests on
 
 The owner decided on 2026-09-23:
@@ -100,6 +104,33 @@ assessable, and the Insight 10 tests (refinement, per-tag intervention,
 aggregation) bound it under OD5. Criterion 11's plateau is replaced by OD6's
 ceiling and growth bound (6.1).
 
+*Scope added (provenance pathway, 2026-09-26, pending OD9, OD11, OD12 and
+OD14; revised after the owner's review):* the criteria and the pathway's
+evidence levels. The criteria are judged as approved. The levels are reported
+beside them.
+
+  - **Criterion 5** would also report a fidelity level, the observed spread
+    and the exposure screen per tag, with the active, shared and untested
+    rules. Neither the spread nor the screen is an error bound. Copies that
+    pass eligibility validate only the active rules they do not share: the
+    plume, the exchange and the SGS share. Its clause "a CI test shows the
+    copies and a passive tracer agree to rounding without water-specific
+    terms" stays a CI identity test (W20's copies group). PX11 (the Soares
+    air twin, the pathway's clean label benchmark) adds a scored run beside
+    it and does not replace it. The pathway defers PX9 (the propagation
+    probe) and PX18 (a band region) until a measured result needs them.
+  - **Criterion 7:** the net-flow audit and WP4b's pool rule map to PX14,
+    deferred until WP4b moves toward validation.
+  - **Criterion 8** stays as approved. PX23, one held-out case named before
+    any rule is tuned, is reported beside it as Val-4, under OD14's hygiene.
+    The owner stated on 2026-09-26 (PR #122) that the GCM-driven column,
+    which starts from site 23, does not count as held out for a rule
+    developed using site 23. Val-4 stays not assessable until an independent
+    case and its reference are fixed.
+  - **Criterion 12:** the claim contract for tagged water carries the rule
+    classification of the pathway's section 4 and the declared labelling
+    model of its section 1 (OD11).
+
 *The owner's answers, 2026-09-24 (ROADMAP.md, "The owner's answers").*
 Criterion 11's "ten days of the G2 sphere" is superseded: ninety days of
 `g2_v2_sphere_n2` at 60 levels, judged by the level the residual reaches over
@@ -113,22 +144,22 @@ bounded, not validated", and only if the Insight 10 tests pass.
 
 From the inventory of 2026-09-23 and the review, at `dbe7435c`.
 
-| Path                                                                                                                                           | What it does to water                                                                                                                                                                                     | The tags today                                                                                                                                                |
-|:---------------------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SGS mass flux (`edmfx_sgs_flux.jl:28-175`)                                                                                                     | Moves `ρq_tot`, `ρ` and each species by the updraft's and environment's flux. Always implicit (`implicit_tendency.jl:118`), with Jacobian blocks `(ρq_tot, q_totʲ)`, `(ρq_tot, ρ)` and the species'.      | **Nothing.** No updraft field, so the loop never sees them.                                                                                                   |
-| SGS diffusive flux (`:213-427`)                                                                                                                | `ρq_tot` takes `K_h` on `q_tot_eff` (1M: without rain and snow) and `K_e` in the tracer loop (`α = 0`).                                                                                                   | **Leak under 1M:** tags take `(K_h + K_e)` on their whole value. Exact under 0M. The updraft mirror is skipped (B4 guard).                                    |
-| Grid-scale hyperdiffusion (`hyperdiffusion.jl:496` against `:548`) and viscous sponge (`viscous_sponge.jl:197` against `:228`)                 | Act on `q_tot_eff` for `ρq_tot` under 1M.                                                                                                                                                                 | **Leak under 1M,** the same kind.                                                                                                                             |
-| Updraft vertical-diffusion mirror (`edmfx_sgs_flux.jl:330` against `:415`) and updraft hyperdiffusion (`hyperdiffusion.jl:555` against `:618`) | The same `q_tot_eff` treatment for `q_totʲ`.                                                                                                                                                              | Copies would inherit the **leak**.                                                                                                                            |
-| Updraft advection, entrainment, filter (`mass_flux_closures.jl:303-316`: clamp to `[0, ρq_tag/ρa]`, reset to `ρq_tag/ρ` where `ρa < ϵ`)        | Move `sgsʲs.q_tot`. The filter never writes `ρq_tot`.                                                                                                                                                     | Generic for copies.                                                                                                                                           |
-| **Updraft 1M sedimentation** (`advection.jl:440-441`, `updraft_sedimentation!` with lateral inflow `α_lat ∂a/∂z ρ⁰w⁰χ⁰`, `:561`)               | Changes `sgsʲs.q_tot` and the updraft species.                                                                                                                                                            | **Copies miss it.** It is not generic.                                                                                                                        |
-| Microphysics, 0M (`microphysics/tendency.jl:101-133`)                                                                                          | The environment (`ρa⁰`) and each updraft (`ρaʲ`) contribute `dq_tot_dt`, and `Δ = Δ⁰ + ΣΔʲ` to rounding.                                                                                                  | Mass exact. **Composition** is the cell's average.                                                                                                            |
-| Microphysics, 1M (`:153-191`)                                                                                                                  | Net tendencies of `q_lcl`, `q_icl`, `q_rai` and `q_sno` per subdomain (`ᶜmp_tendency⁰`, `ᶜmp_tendencyʲs`), from CloudMicrophysics' bulk tendencies. No process rates are exposed. Never changes `ρq_tot`. | Correctly a no-op for total water.                                                                                                                            |
-| Sedimentation, 1M (`water_advection.jl:41-218`)                                                                                                | Grid-mean flux per species. EDMF corrects only the energy flux.                                                                                                                                           | Mass exact. **Composition is reset at each level** (the mirror takes the donor cell's total-water share), so `pr_tag` would be the lowest cell's composition. |
-| Updraft surface boundary (`edmfx_boundary_condition.jl:337-384`)                                                                               | Relaxes `q_totʲ` at level 1 toward `q_b = q̄ + C√σ²`, where the excess is never negative.                                                                                                                 | Nothing at grid scale. Copies need a target.                                                                                                                  |
-| Surface flux, forcings, subsidence                                                                                                             | Grid-mean writers, bracketed.                                                                                                                                                                             | Followed.                                                                                                                                                     |
-| Vertical advection of `ρq_tot` (`implicit_tendency.jl:252, 395`)                                                                               | Implicit, with a post-Newton correction.                                                                                                                                                                  | Explicit for the tags: the known drift.                                                                                                                       |
-| `rescale_water_tags!`                                                                                                                          | Runs inside `tracer_nonnegativity_constraint!`, **before** the filter (`constrain_state.jl:44-48`). Only `repair_water_tag_partition!` runs after it.                                                     | —                                                                                                                                                             |
-| The updraft's precipitation mass loss on the implicit path                                                                                     | `sgs_ρa_implicit_tendency!` overwrites microphysics' `ρa` sink (`initialize_implicit_problem.jl:291`), while `q_totʲ` keeps the `(1 − q)` dilution.                                                       | Documented. The copies' rule mirrors `q_totʲ`.                                                                                                                |
+| Path                                                                                                                                           | What it does to water                                                                                                                                                                                     | The tags today                                                                                                                                                                                                            |
+|:---------------------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SGS mass flux (`edmfx_sgs_flux.jl:28-175`)                                                                                                     | Moves `ρq_tot`, `ρ` and each species by the updraft's and environment's flux. Always implicit (`implicit_tendency.jl:118`), with Jacobian blocks `(ρq_tot, q_totʲ)`, `(ρq_tot, ρ)` and the species'.      | **Nothing.** No updraft field, so the loop never sees them.                                                                                                                                                               |
+| SGS diffusive flux (`:213-427`)                                                                                                                | `ρq_tot` takes `K_h` on `q_tot_eff` (1M: without rain and snow) and `K_e` in the tracer loop (`α = 0`).                                                                                                   | **Leak under 1M:** tags take `(K_h + K_e)` on their whole value. Exact under 0M. The updraft mirror is skipped (B4 guard).                                                                                                |
+| Grid-scale hyperdiffusion (`hyperdiffusion.jl:496` against `:548`) and viscous sponge (`viscous_sponge.jl:197` against `:228`)                 | Act on `q_tot_eff` for `ρq_tot` under 1M.                                                                                                                                                                 | **Leak under 1M,** the same kind.                                                                                                                                                                                         |
+| Updraft vertical-diffusion mirror (`edmfx_sgs_flux.jl:330` against `:415`) and updraft hyperdiffusion (`hyperdiffusion.jl:555` against `:618`) | The same `q_tot_eff` treatment for `q_totʲ`.                                                                                                                                                              | Copies would inherit the **leak**.                                                                                                                                                                                        |
+| Updraft advection, entrainment, filter (`mass_flux_closures.jl:303-316`: clamp to `[0, ρq_tag/ρa]`, reset to `ρq_tag/ρ` where `ρa < ϵ`)        | Move `sgsʲs.q_tot`. The filter never writes `ρq_tot`.                                                                                                                                                     | Generic for copies.                                                                                                                                                                                                       |
+| **Updraft 1M sedimentation** (`advection.jl:440-441`, `updraft_sedimentation!` with lateral inflow `α_lat ∂a/∂z ρ⁰w⁰χ⁰`, `:561`)               | Changes `sgsʲs.q_tot` and the updraft species.                                                                                                                                                            | **Copies miss it.** It is not generic.                                                                                                                                                                                    |
+| Microphysics, 0M (`microphysics/tendency.jl:101-133`)                                                                                          | The environment (`ρa⁰`) and each updraft (`ρaʲ`) contribute `dq_tot_dt`, and `Δ = Δ⁰ + ΣΔʲ` to rounding.                                                                                                  | Mass exact. **Composition** is the cell's average.                                                                                                                                                                        |
+| Microphysics, 1M (`:153-191`)                                                                                                                  | Net tendencies of `q_lcl`, `q_icl`, `q_rai` and `q_sno` per subdomain (`ᶜmp_tendency⁰`, `ᶜmp_tendencyʲs`), from CloudMicrophysics' bulk tendencies. No process rates are exposed. Never changes `ρq_tot`. | Correctly a no-op for total water.                                                                                                                                                                                        |
+| Sedimentation, 1M (`water_advection.jl:41-218`)                                                                                                | Grid-mean flux per species. EDMF corrects only the energy flux.                                                                                                                                           | Mass exact. **Composition is reset at each level** (the mirror takes the donor cell's total-water share), so `pr_tag` would be the lowest cell's composition.                                                             |
+| Updraft surface boundary (`edmfx_boundary_condition.jl:337-384`)                                                                               | Relaxes `q_totʲ` at level 1 toward `q_b = q̄ + C√σ²`, where the excess is never negative.                                                                                                                 | Nothing at grid scale. Copies need a target.                                                                                                                                                                              |
+| Surface flux, forcings, subsidence                                                                                                             | Grid-mean writers, bracketed.                                                                                                                                                                             | Followed. *Scope added (provenance pathway, 2026-09-26): subsidence reaches the tags only through the local bracket, although `subsidence!` is linear in χ; the default and the copies share this rule (PX1, PX8, PX16).* |
+| Vertical advection of `ρq_tot` (`implicit_tendency.jl:252, 395`)                                                                               | Implicit, with a post-Newton correction.                                                                                                                                                                  | Explicit for the tags: the known drift.                                                                                                                                                                                   |
+| `rescale_water_tags!`                                                                                                                          | Runs inside `tracer_nonnegativity_constraint!`, **before** the filter (`constrain_state.jl:44-48`). Only `repair_water_tag_partition!` runs after it.                                                     | —                                                                                                                                                                                                                         |
+| The updraft's precipitation mass loss on the implicit path                                                                                     | `sgs_ρa_implicit_tendency!` overwrites microphysics' `ρa` sink (`initialize_implicit_problem.jl:291`), while `q_totʲ` keeps the `(1 − q)` dilution.                                                       | Documented. The copies' rule mirrors `q_totʲ`.                                                                                                                                                                            |
 
 ## 4. Technical design
 
@@ -221,6 +252,12 @@ the dynamics and not a spin-up.
     alone could fail the first-hour source-tag budget. V-W3 measures it. The
     owner decides whether the plume's start should model it. *Open
     (DECISIONS.md, "Waiting for the owner").*
+    *Scope added (provenance pathway, 2026-09-26; revised after the owner's
+    review):* PX13 would compare the three admissible surface treatments. If
+    they spread by more than the first-hour source row, first-hour `evap` is
+    convention-sensitive and the claim is narrowed. PX13 and a surface rule
+    that composes the flux (PP-SFC) are deferred until the owner takes up
+    this rule, or PX11's surface floor fails.
 
 ### 4.2 The `q_tot_eff` leaks under 1M
 
@@ -277,6 +314,14 @@ comparator or a documented mechanistic argument for its attribution, for
 example charging the 1M leak to the tags whose condensate leaked. The rest are
 deferred with their decomposition numbers, not deleted.
 
+*Scope added (provenance pathway, 2026-09-26; revised after the owner's
+review):* part 3 accumulates its difference per cell and step without feedback,
+and reports the net. So it is a first-order estimate of an observed spread
+between two rules that both close. It is not a bound, and its ratio to part 2b
+is not evidence for the exposure inequality. PX2 would give the realized value
+from W38's run and V1. It is deferred until OD11 lists ψ as admissible, or PX7
+finds the follower's work structural.
+
 ### 4.3 Following the parent's increment (WP5)
 
 The parent's SGS water flux has Jacobian blocks. The tags' donor flux, their
@@ -311,6 +356,14 @@ Hence:
     Jacobian block either, so parent and tags take it at the same iterate. It
     also changes the column's total, which the follower leaves in place.
     V-W0a restates or closes that issue.
+
+*Scope added (provenance pathway, 2026-09-26; revised after the owner's
+review):* the follower's moved part is an assumed rule. PX7, the pathway's gate
+C, splits it into lag, which enters the numerical error `F`, and structure,
+which is a convention reported with its observed spread. Neither branch
+validates it. PX3 would measure the placement's effect on composition (W24
+against W28); it is deferred until the owner takes up OD7. The exposure screen's
+premises are in the pathway's section 3.
 
 ### 4.4 Precipitation provenance under 0M (WP4a)
 
@@ -410,6 +463,12 @@ reviews it before any code. Implementation is staged:
  2. EDMF in the default mode;
  3. copies.
 
+*Scope added (provenance pathway, 2026-09-26; revised after the owner's
+review):* PX14 would replay the pool rule and the sedimentation reset with
+sub-steps, in `PrecipitatingColumn`'s rain-out window only. It is deferred until
+WP4b moves toward validation. Until stage 2, WP4b is refused under EDMF, so the
+production envelope keeps the reset.
+
 ### 4.6 Shared code (WP2), after the water design has settled
 
 The water helpers are written for water first, in WP3 to WP4b. After V-W3 and
@@ -456,20 +515,20 @@ metadata (WP6).
 
 ## 5. Work packages and their order
 
-| WP     | What                                                                                                                                                                                                                                                                                                                                                      | Kind              | Depends on   | Review       |
-|:------ |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:----------------- |:------------ |:------------ |
-| WP0    | #95 merged with decision 5 (job session, owner). The phase-1 review. The verifier extended to `q_tag_*`, copies, rain and snow parts and `pr_tag_*`. Checks: the ERA5 forcing of V-W8 is on disk, and V-W2 can be set up. The sizing run V-W0c                                                                                                            | analysis          | —            | this session |
-| WP1    | Refusals and reserved names (4.8). Known issue 1 closed with the post-#64 CI numbers; issue 3 updated. **Draft PR-W1**                                                                                                                                                                                                                                    | model code, small | WP0          | Opus, high   |
-| WP3    | Total water under EDMF (4.1): the switch; donor flux and exchange with the rescaled plume; copies with their four mirrors, rebuild and repair; restart guard; refusals lifted; bound activation in the audit; leak diagnostics (4.2); CI group `tagging_water_edmf` with the parity, manufactured-mixing and copies-against-tracer tests. **Draft PR-W3** | model code        | WP1          | Opus, xhigh  |
-| WP5    | The follower (4.3). **Draft PR-W5**                                                                                                                                                                                                                                                                                                                       | model code        | WP3          | Opus, xhigh  |
-| WP4a   | The 0M split (4.4) and `pr_tag` under 0M. **Draft PR-W4a**                                                                                                                                                                                                                                                                                                | model code        | WP5          | Opus, xhigh  |
-| WP4b-D | Design note for rain and snow tags (4.5)                                                                                                                                                                                                                                                                                                                  | design            | WP3          | Opus, xhigh  |
-| WP4b   | Rain and snow tags in three stages (4.5), with the audit script. **Draft PR-W4b**                                                                                                                                                                                                                                                                         | model code        | WP4b-D, WP4a | Opus, xhigh  |
-| WP4c   | The leak corrections that 4.2's rule selects, for runs without rain and snow tags. *Scope added (rev. 2):* 4.2's operator decomposition is the entry gate, with the three-part retention rule; corrections not retained are deferred, not deleted                                                                                                          | model code        | V-W0c, V-W3  | with WP4b    |
+| WP     | What                                                                                                                                                                                                                                                                                                                                                                                                                                            | Kind              | Depends on   | Review       |
+|:------ |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:----------------- |:------------ |:------------ |
+| WP0    | #95 merged with decision 5 (job session, owner). The phase-1 review. The verifier extended to `q_tag_*`, copies, rain and snow parts and `pr_tag_*`. Checks: the ERA5 forcing of V-W8 is on disk, and V-W2 can be set up. The sizing run V-W0c                                                                                                                                                                                                  | analysis          | —            | this session |
+| WP1    | Refusals and reserved names (4.8). Known issue 1 closed with the post-#64 CI numbers; issue 3 updated. **Draft PR-W1**                                                                                                                                                                                                                                                                                                                          | model code, small | WP0          | Opus, high   |
+| WP3    | Total water under EDMF (4.1): the switch; donor flux and exchange with the rescaled plume; copies with their four mirrors, rebuild and repair; restart guard; refusals lifted; bound activation in the audit; leak diagnostics (4.2); CI group `tagging_water_edmf` with the parity, manufactured-mixing and copies-against-tracer tests. **Draft PR-W3**                                                                                       | model code        | WP1          | Opus, xhigh  |
+| WP5    | The follower (4.3). **Draft PR-W5**                                                                                                                                                                                                                                                                                                                                                                                                             | model code        | WP3          | Opus, xhigh  |
+| WP4a   | The 0M split (4.4) and `pr_tag` under 0M. **Draft PR-W4a**                                                                                                                                                                                                                                                                                                                                                                                      | model code        | WP5          | Opus, xhigh  |
+| WP4b-D | Design note for rain and snow tags (4.5)                                                                                                                                                                                                                                                                                                                                                                                                        | design            | WP3          | Opus, xhigh  |
+| WP4b   | Rain and snow tags in three stages (4.5), with the audit script. **Draft PR-W4b**                                                                                                                                                                                                                                                                                                                                                               | model code        | WP4b-D, WP4a | Opus, xhigh  |
+| WP4c   | The leak corrections that 4.2's rule selects, for runs without rain and snow tags. *Scope added (rev. 2):* 4.2's operator decomposition is the entry gate, with the three-part retention rule; corrections not retained are deferred, not deleted                                                                                                                                                                                               | model code        | V-W0c, V-W3  | with WP4b    |
 | WP6    | Gross accumulators for both families: absolute repair and fix throughput with event counts, per-step `\|m_left\|`, attempted against retained, restart segments. **Draft PR-W6**. *Scope added (rev. 2):* step 3 before the sphere and the default decisions: accepted-step gross throughput, attempted against retained transfer, event counts, restart stitching, validity by cadence, and each tag's cumulative correction against its water | model code        | WP0          | Opus, high   |
-| WP2    | Shared helpers, only the identical parts (4.6)                                                                                                                                                                                                                                                                                                            | refactor          | V-W3, V-W5   | Opus, xhigh  |
-| WP8    | Docs: `tagged_water.md` (EDMF, precipitation, the corrected operator claim), the claim contract, `known_issues.md`, NEWS                                                                                                                                                                                                                                  | docs              | WP4b         | Opus, high   |
-| WP9    | Cost for both families (V-W10). *Scope added (rev. 2):* the audit-feasibility decision (OD8) comes early, before WP5b-C and G4.1/G4.11; then build time, peak memory and per-step scaling at the intended tag count for the default and the comparator, the aggregation test and the sphere's run-length budget | benchmarks        | WP4b         | this session |
+| WP2    | Shared helpers, only the identical parts (4.6)                                                                                                                                                                                                                                                                                                                                                                                                  | refactor          | V-W3, V-W5   | Opus, xhigh  |
+| WP8    | Docs: `tagged_water.md` (EDMF, precipitation, the corrected operator claim), the claim contract, `known_issues.md`, NEWS                                                                                                                                                                                                                                                                                                                        | docs              | WP4b         | Opus, high   |
+| WP9    | Cost for both families (V-W10). *Scope added (rev. 2):* the audit-feasibility decision (OD8) comes early, before WP5b-C and G4.1/G4.11; then build time, peak memory and per-step scaling at the intended tag count for the default and the comparator, the aggregation test and the sphere's run-length budget                                                                                                                                 | benchmarks        | WP4b         | this session |
 
 Order:
 
@@ -509,23 +568,41 @@ The identity `evap_tropo + evap_strat = evap` is not exact under decision 5,
 nor where the copies' filter binds. Bound activation is logged per source tag,
 so a violation can be traced.
 
+*Scope added (provenance pathway, 2026-09-26):* D4-W subsides, with DYCOMS's
+`w = −3.75e-6 z`. Both modes reach the tags' subsidence through the same
+bracket, so their comparison cannot see it (PX1, PX8). The identity above is
+also weak where `evap_tropo` and `evap_strat` are fed by fixed masks. Then
+they are constant multiples of `evap`, except where a source tag's own θ
+binds or the repair acts, and proportionality is the invariant to check
+(PX4, deferred until a Fid-1 label is reported).
+
 **The deep 0M development case** is TRMM_LBA with 0M, 3 h. The held-out set of
 criterion 8 is separate.
 
-| Run   | What it decides                                                                                                                                                                                                                                                                                                               | Jobs     | Needs      |
-|:----- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------- |:---------- |
-| V-W0a | Known issue 4: a precipitating 0M column without EDMF, 1 against 10 Newton iterations. Closes or restates the issue                                                                                                                                                                                                           | 2        | WP0        |
-| V-W0c | Sizing before WP3's details are fixed: one untagged D4-W day with EDMF diagnostics. The updraft's share of rain and snow, the surface excess `C√σ²`, and the five 1M leaks in closed form                                                                                                                                     | 1        | WP0        |
-| V-W1  | "Before": D4-W with grid-scale tags on `main` + #95, before WP1's refusal, plus the untagged twin                                                                                                                                                                                                                             | 2        | WP0        |
-| V-W3  | D4-W, default against copies on one atmosphere, 1 to 24 h; each with a 10-Newton twin; bound activation; a surface pulse. The TRMM 0M development case, default against copies                                                                                                                                                | 8        | WP3        |
-| V-W4  | The ladder, default and copies at each rung: dt 60 and 30; Newton 2, 4 and 10; 60 and 120 levels; first-order upwinding. The copies' own convergence is read from the same runs                                                                                                                                               | 18       | V-W3, WP5  |
-| V-W5  | Precipitation: the 0M split on and off (TRMM development case, both modes). Rain and snow tags on and off on a 1M column without EDMF and on D4-W (both modes). The net-flow audit on the column. `Σ pr_tag = pr`                                                                                                             | 10       | WP4a, WP4b |
-| V-W6  | Held out, default and copies each: RICO 1M (24 h), BOMEX (`bomex_column`, dt 120 s, 6 h, with the passive tracer), ARM SGP 1M (1 day), GCM-driven 0M (6 h)                                                                                                                                                                    | 8        | V-W5       |
-| V-W7  | Float32 twin of D4-W                                                                                                                                                                                                                                                                                                          | 1        | V-W5       |
-| V-W8  | A file-based column with water and energy tags: `prognostic_edmfx_gcmdriven_column` (0M, the GCM start from site 23) for 3 h. Its forcing, the `cfsite_gcm_forcing` artifact, downloads through the package manager and was fetched on 2026-09-23. The owner chose it over the ERA5 column, whose forcing is not downloadable | 1        | WP3        |
-| V-W9  | Restart round trips: D4-W in both modes, and with rain and snow tags                                                                                                                                                                                                                                                          | 4        | WP4b       |
-| V-W10 | Cost: 2, 4, 8 and 32 tags where they build in time, both modes, with and without rain and snow tags, both families. *2026-09-24 (OD8):* qualification is at 8 tags; 32 is a cost item only                                                                                                                                                                                                            | about 14 | WP4b       |
-| V-W11 | The sphere: `g2_v2_sphere_n2` with water tags and rain and snow tags under the chosen default, 10 days, 24 ranks (about 16.5 h and 500 GB, as E75). *Superseded 2026-09-24 (OD1, OD6):* 90 days at 60 levels, with 8 water and 8 energy tags and the per-tag ledgers; its cost is ROADMAP.md's M4 estimate. A one-day copies twin. A restart after day 1. A two-rank parity pair                                                                                                      | 5        | all above  |
+| Run   | What it decides                                                                                                                                                                                                                                                                                                                                                                  | Jobs     | Needs      |
+|:----- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------- |:---------- |
+| V-W0a | Known issue 4: a precipitating 0M column without EDMF, 1 against 10 Newton iterations. Closes or restates the issue                                                                                                                                                                                                                                                              | 2        | WP0        |
+| V-W0c | Sizing before WP3's details are fixed: one untagged D4-W day with EDMF diagnostics. The updraft's share of rain and snow, the surface excess `C√σ²`, and the five 1M leaks in closed form                                                                                                                                                                                        | 1        | WP0        |
+| V-W1  | "Before": D4-W with grid-scale tags on `main` + #95, before WP1's refusal, plus the untagged twin                                                                                                                                                                                                                                                                                | 2        | WP0        |
+| V-W3  | D4-W, default against copies on one atmosphere, 1 to 24 h; each with a 10-Newton twin; bound activation; a surface pulse. The TRMM 0M development case, default against copies                                                                                                                                                                                                   | 8        | WP3        |
+| V-W4  | The ladder, default and copies at each rung: dt 60 and 30; Newton 2, 4 and 10; 60 and 120 levels; first-order upwinding. The copies' own convergence is read from the same runs                                                                                                                                                                                                  | 18       | V-W3, WP5  |
+| V-W5  | Precipitation: the 0M split on and off (TRMM development case, both modes). Rain and snow tags on and off on a 1M column without EDMF and on D4-W (both modes). The net-flow audit on the column. `Σ pr_tag = pr`                                                                                                                                                                | 10       | WP4a, WP4b |
+| V-W6  | Held out, default and copies each: RICO 1M (24 h), BOMEX (`bomex_column`, dt 120 s, 6 h, with the passive tracer), ARM SGP 1M (1 day), GCM-driven 0M (6 h)                                                                                                                                                                                                                       | 8        | V-W5       |
+| V-W7  | Float32 twin of D4-W                                                                                                                                                                                                                                                                                                                                                             | 1        | V-W5       |
+| V-W8  | A file-based column with water and energy tags: `prognostic_edmfx_gcmdriven_column` (0M, the GCM start from site 23) for 3 h. Its forcing, the `cfsite_gcm_forcing` artifact, downloads through the package manager and was fetched on 2026-09-23. The owner chose it over the ERA5 column, whose forcing is not downloadable                                                    | 1        | WP3        |
+| V-W9  | Restart round trips: D4-W in both modes, and with rain and snow tags                                                                                                                                                                                                                                                                                                             | 4        | WP4b       |
+| V-W10 | Cost: 2, 4, 8 and 32 tags where they build in time, both modes, with and without rain and snow tags, both families. *2026-09-24 (OD8):* qualification is at 8 tags; 32 is a cost item only                                                                                                                                                                                       | about 14 | WP4b       |
+| V-W11 | The sphere: `g2_v2_sphere_n2` with water tags and rain and snow tags under the chosen default, 10 days, 24 ranks (about 16.5 h and 500 GB, as E75). *Superseded 2026-09-24 (OD1, OD6):* 90 days at 60 levels, with 8 water and 8 energy tags and the per-tag ledgers; its cost is ROADMAP.md's M4 estimate. A one-day copies twin. A restart after day 1. A two-rank parity pair | 5        | all above  |
+
+*Scope added (provenance pathway, 2026-09-26; revised after the owner's
+review):* the pathway's runs, by gate.
+
+| Run  | What it decides                                                                                                                                                                                                                                                                                                | Needs                                      |
+|:---- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------ |
+| V-P0 | Gate A and gate B's screen, no runs: PX0 (the archive) and PX1 (the subsidence screen)                                                                                                                                                                                                                         | step 1b                                    |
+| V-P1 | Gates B to E, existing keys: PX8 after PX1, whatever PX1 finds; PX7 (the follower's lag or structure); PX24 and PX11 (the clean label benchmark and its per-tag accounting), then PX23 (one held-out case, not assessable until an independent case and its reference are fixed); PX22 (energy at a fixed `c`) | OD11, OD12, OD14                           |
+| V-P2 | Gate B's probe PR: PX16 with PP-SUB, only if PX8 is material                                                                                                                                                                                                                                                   | OD13                                       |
+| V-P3 | Deferred until a measured result needs them: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21 and the other probe PRs                                                                                                                                                                                         | their triggers (the pathway's section 7.2) |
 
 That makes about 70 column-scale jobs and 5 sphere jobs. Column runs go to
 `hpda2_test` where they fit in two hours, otherwise `hpda2_compute`.
@@ -564,9 +641,13 @@ The verifier computes both (WP0).
 
   - **Per tag, default against copies, at 24 h:** L1 ≤ 2% and L∞ ≤ 5%. These
     are G1's criterion 4b for energy. E76 met them at every time step and
-    Newton count, with 1.6% and 2.6% at worst. A looser budget would let the
-    default's error exceed the spread from the mixing convention alone, about
-    1% in L1 (E66).
+    Newton count, with 1.6% and 2.6% at worst. *Replaced 2026-09-26 at the
+    owner's request (PR #122):* the row rests on G1's criterion 4b and OD3's
+    approval, and it stands as approved. E66 is not a reason for it. E66's
+    measured spread, 8% to 126% in L1 against a reference that keeps its own
+    residual (E86), is reported apart from the row. The sentence replaced
+    here cited E66 as a convention spread of about 1% in L1, which E66 does
+    not support (see E66's annotation in FINDINGS).
 
   - **Per tag, in the first hour:** L1 ≤ 1% for the region tags and ≤ 10% for
     the source tags, and L∞ ≤ 25%. This is G1's split of 2026-09-20. It
@@ -710,6 +791,17 @@ set. None submits jobs, pushes or merges. Reports go to
 
 ## 8. Risks and open questions
 
+  - *Scope added (provenance pathway, 2026-09-26):* **common-mode references.**
+    A reference cannot see a rule it shares, so agreement between the default
+    and the copies says nothing about the grid-scale rules. **The exposure
+    screen may exceed the row** on D4-W (the follower's part 2b alone is
+    about 7.2% for `tropo`). A screen is not a bound, so this does not show
+    an error above the row. **References have floors** and
+    conventions of their own. **Classification gaming** is blocked by fixing
+    OD11 before any score. **Run trees** differ between PRs.
+    **`tracer_upwinding` also moves the 1M species,** so tracer-mode twins
+    change the 1M parent. See the pathway's section 11.
+
   - **The tracer form lags under stiff implicit fluxes** (E59). The follower is
     built anyway (4.3). The rule decides only the default.
 
@@ -753,6 +845,9 @@ set. None submits jobs, pushes or merges. Reports go to
     it.
 
 ## 9. G4, the energy source tags, with what G3 learns
+
+*Scope added (provenance pathway, 2026-09-26):* what G4 takes from the pathway
+is in [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 10.
 
 What transfers is structure and method, not accuracy. The weight differs
 (`Aᵏ` with an offset, against `q_totᵏ`), and so do the sinks. The plume's

@@ -19,9 +19,13 @@ dict["output_dir"] = mktempdir(pwd())
 dict["toml"] = [joinpath(pkgdir(CA), path) for path in dict["toml"]]
 dict["water_tracers"] = [
     dict["water_tracers"][1:2]...,
-    [Dict{String, Any}("name" => "src$k", "source" => "surface_flux") for k in 1:(ntags - 2)]...,
+    [
+        Dict{String, Any}("name" => "src$k", "source" => "surface_flux") for
+        k in 1:(ntags - 2)
+    ]...,
 ]
-simulation = CA.get_simulation(CA.AtmosConfig(dict; job_id = "wp9_identity_$(label)_n$ntags"))
+simulation =
+    CA.get_simulation(CA.AtmosConfig(dict; job_id = "wp9_identity_$(label)_n$ntags"))
 Y = simulation.integrator.u
 p = simulation.integrator.p
 model = p.atmos.water_tagging_model

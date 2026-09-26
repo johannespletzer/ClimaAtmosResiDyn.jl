@@ -18,10 +18,10 @@ Not listed here:
   - the named parity exception `dd06318f`, for which no upstream PR is planned
     (DECISIONS, decision 12).
 
-| ID  | Requirement | Why the fork needs it | Status |
-|:--- |:--- |:--- |:--- |
-| UP1 | A Jacobian diagonal for the implicit 0M rain-out: the updraft's `q_totʲ`, with `ρaʲ` and `mseʲ`, and the grid mean's sink | The 0M updraft copies and the grid-scale tags lag their rain-out after a fixed number of Newton iterations | Waiting on evidence: the TRMM 0M Newton ladder |
-| UP2 | Lift the model's gate on 2-moment microphysics, and fix the parent's P3 sedimentation | The water tags accept 2M once the gate lifts, and refuse P3 until its sedimentation is fixed (DECISIONS, decision 6) | Waiting for upstream |
+| ID  | Requirement                                                                                                               | Why the fork needs it                                                                                                | Status                                         |
+|:--- |:------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------- |:---------------------------------------------- |
+| UP1 | A Jacobian diagonal for the implicit 0M rain-out: the updraft's `q_totʲ`, with `ρaʲ` and `mseʲ`, and the grid mean's sink | The 0M updraft copies and the grid-scale tags lag their rain-out after a fixed number of Newton iterations           | Waiting on evidence: the TRMM 0M Newton ladder |
+| UP2 | Lift the model's gate on 2-moment microphysics, and fix the parent's P3 sedimentation                                     | The water tags accept 2M once the gate lifts, and refuse P3 until its sedimentation is fixed (DECISIONS, decision 6) | Waiting for upstream                           |
 
 ## UP1. A Jacobian diagonal for the implicit 0M rain-out
 

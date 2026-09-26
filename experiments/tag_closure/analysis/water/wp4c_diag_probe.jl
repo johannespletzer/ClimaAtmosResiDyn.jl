@@ -288,7 +288,9 @@ function diag()
             @info "building" set label
             flush(stderr)
             trials[(set, label)] =
-                CA.get_simulation(config(; tag = "$(set)_$label", t_end = T_END, solver, kwargs...)).integrator
+                CA.get_simulation(
+                    config(; tag = "$(set)_$label", t_end = T_END, solver, kwargs...),
+                ).integrator
         end
     end
     tableau = reference.cache.tableau
@@ -343,7 +345,11 @@ function diag()
             ᶜnorm = A.p.scratch.ᶜtagging_q_share_norm
             ᶜψ = zero(Yₖ.c.ρ)
             for name in partition
-                ᶜψ .+= CA.water_tag_sediment_share.(getproperty(Yₖ.c, name), Yₖ.c.ρq_tot, ᶜnorm)
+                ᶜψ .+= CA.water_tag_sediment_share.(
+                    getproperty(Yₖ.c, name),
+                    Yₖ.c.ρq_tot,
+                    ᶜnorm,
+                )
             end
             ᶜl_res = @. ᶜl * (1 - ᶜψ)
             X = ends[:A] .- ends[:C]
@@ -351,7 +357,8 @@ function diag()
             L = ends[:B] .- ends[:A]
             row = Float64[seconds(reference.t), net(Yₖ.c.ρq_tot)]
             hdr = ["t_seconds", "water"]
-            for (name, f) in (("X", X), ("XL", XL), ("L", L), ("leak", ᶜl), ("leak_residual", ᶜl_res))
+            for (name, f) in
+                (("X", X), ("XL", XL), ("L", L), ("leak", ᶜl), ("leak_residual", ᶜl_res))
                 push!(row, net(f), gross(f))
                 push!(hdr, "$(name)_net", "$(name)_gross")
             end
@@ -381,12 +388,17 @@ function diag()
                             ᶜpart = w .* e[part]
                             rest .-= ᶜpart
                             push!(row, net(ᶜpart), gross(ᶜpart))
-                            push!(hdr, "s$(i)_$(label)_$(part)_net", "s$(i)_$(label)_$(part)_gross")
+                            push!(
+                                hdr,
+                                "s$(i)_$(label)_$(part)_net",
+                                "s$(i)_$(label)_$(part)_gross",
+                            )
                             cellcols["s$(i)_$(label)_$(part)"] = column(ᶜpart)
                         end
                         push!(row, gross(rest), e[:resolve_error], e[:linearity_error])
                         push!(hdr, "s$(i)_$(label)_unexplained_gross",
-                            "s$(i)_$(label)_resolve_error", "s$(i)_$(label)_linearity_error")
+                            "s$(i)_$(label)_resolve_error", "s$(i)_$(label)_linearity_error",
+                        )
                     end
                 end
             end
@@ -399,10 +411,14 @@ function diag()
                 append!(cell_header, ["t_seconds", "z", "J"], sort(collect(keys(cellcols))))
             end
             for lev in eachindex(z)
-                push!(cells, vcat([seconds(reference.t), z[lev], J[lev]],
-                    [cellcols[name][lev] for name in cell_header[4:end]]))
+                push!(
+                    cells,
+                    vcat([seconds(reference.t), z[lev], J[lev]],
+                        [cellcols[name][lev] for name in cell_header[4:end]]),
+                )
             end
-            @info "step" set t = seconds(reference.t) X = gross(X) XL = gross(XL) L = gross(L) leak = gross(ᶜl)
+            @info "step" set t = seconds(reference.t) X = gross(X) XL = gross(XL) L =
+                gross(L) leak = gross(ᶜl)
             flush(stderr)
         end
         open(joinpath(OUTDIR, "$(RUN)_$(set)_diag_steps.csv"), "w") do io
