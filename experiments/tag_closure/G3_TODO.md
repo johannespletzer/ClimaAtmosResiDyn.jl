@@ -47,9 +47,11 @@ The twelve criteria of the plan, section 2, in short:
     (provenance pathway, 2026-09-26):*
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9. They are in [the
     register](ROADMAP.md#the-decision-register) as proposals, not yet open. They
-    cover the ladder and its labels, the certification arithmetic, the rule
-    classification and the E66 reading, reference validity and the Newton row's
-    reading, the probe PRs, and held-out hygiene. No agent fills one in.
+    were revised after the owner's review of 2026-09-26. They cover the
+    evidence labels, the screen arithmetic, the rule classification with the
+    fixed energy convention, reference validity and the Newton row's reading,
+    the probe PRs, and held-out hygiene. OD3 and OD5 stay as decided. No agent
+    fills one in.
   - [x] **Rev. 2's register, OD1 to OD8** (2026-09-24; ROADMAP.md, "The
     decision register"). *Each decision's current state is in [the register](ROADMAP.md#the-decision-register); all but
     OD7 are decided, and OD7 is deferred.* Kept as written: the production envelope, the windows, the
@@ -341,9 +343,9 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
 
     *Scope added (provenance pathway, 2026-09-26):* the copies against a passive
     tracer stays a CI identity test at rounding. PX11 (the Soares air twin)
-    would add a scored run beside it, not replace it. The manufactured
-    mixing tests would be joined by PX9 (the propagation probe) and PX18 (a
-    band region).
+    would add a scored run beside it, not replace it. PX9 (the propagation
+    probe) and PX18 (a band region) are deferred until a measured result
+    needs them.
 
     At #101's head `4a1c91a4` the copies group fails, in CI (downgrade 1.11)
     and locally. Since `73fa27bd` it steps the microphysics explicitly, and
@@ -555,11 +557,13 @@ cross blocks (5.8% against 3.8%), and the copies lack their own blocks.
     *Set 2026-09-24 by OD3's process-weighted provenance row, per tag against
     an eligible comparator ([the register](ROADMAP.md#the-decision-register)).*
   - [ ] Precipitation-weighted per-tag errors, besides the column L1.
-    *Scope added (provenance pathway, 2026-09-26):* with its term in `U`.
+    *Scope added (provenance pathway, 2026-09-26):* with its exposure screen,
+    which is not a bound.
   - [ ] The comparison repeated after WP5b-C, or against a tightly converged
     reference in which neither path's sedimentation lags.
-  - [ ] *Scope added (provenance pathway, 2026-09-26):* rule sensitivity: PX3
-    (the placement pair) and PX8 (the subsidence probe).
+  - [ ] *Scope added (provenance pathway, 2026-09-26):* the subsidence gate:
+    PX1, then PX8 if PX1 is material. PX3 (the placement pair) is deferred
+    until the owner takes up OD7.
 
 ### WP5b-C: the copies' cross blocks
 
@@ -581,10 +585,10 @@ the explicit path (the owner's review of #105, finding 7).
     counts OD8 keeps. With their blocks, the copies must still pass
     comparator eligibility in each run where they serve as the audit
     (ROADMAP.md, the acceptance contract). *2026-09-24 (OD8):* at 8 tags.
-  - *Scope added (provenance pathway, 2026-09-26, pending OD12):* PX5 names the
-    cause of the copies' repair before further copies work. Eligibility is
-    not independence: eligible copies validate only the rules they do not
-    share.
+  - *Scope added (provenance pathway, 2026-09-26, pending OD12):* before copies
+    serve as the comparator on D4-W, PX5 would name the cause of their repair.
+    Eligibility is not independence: eligible copies validate only the active
+    rules they do not share.
 
 ## WP4a: the 0M split (draft PR-W4a)
 
@@ -771,9 +775,10 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
       + [ ] PX7's rule, a dated amendment to WP4C_CORRECTIONS section 8,
         committed before W46 is read: read by monotone ratios, lag or
         structure.
-      + [ ] PX2: the leak rule's realized difference, from W38's
-        `w25i_d4w_default_z30_c` and V1, reported beside part 3's
-        first-order value.
+      + [ ] PX2, deferred until OD11 lists ψ as admissible or PX7 finds the
+        follower's work structural: the leak rule's realized difference,
+        from W38's `w25i_d4w_default_z30_c` and V1, reported beside part
+        3's first-order value.
       + [ ] W40's difference mapped by level.
 
   - [ ] Review (xhigh) of each stage.
@@ -799,42 +804,35 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
 
   - [ ] *Scope added (provenance pathway, 2026-09-26):* PX14, the pool rule and
     the sedimentation reset replayed with sub-steps in the rain-out window,
-    after #121's review.
+    after #121's review, once WP4b moves toward validation.
 
 ## Provenance pathway (proposed 2026-09-26, pending OD9 to OD14)
 
-*Scope added (provenance pathway, 2026-09-26, pending OD9 to OD14):* the items
-of [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 7. Each decision rule
+*Scope added (provenance pathway, 2026-09-26, pending OD9 to OD14; revised
+after the owner's review):* the gated plan of
+[PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 7. Each decision rule
 is committed in a dated design note before any file it judges is opened. Every
-job follows STATUS.md, "What needs approval".
+job follows STATUS.md, "What needs approval". Each gated result writes the
+verdict record of the pathway's section 2. If a prerequisite fails, it says
+*not assessable*.
 
-  - [ ] PX0: archive W24, W28, W38 to W43, W45 (there is no W44), E85 and
-    `g46` from scratch; fault-inject every new script.
-  - [ ] PX1: the subsidence screen from W38's hourly profiles (no run).
-  - [ ] PX2: the leak rule realized with feedback (no run).
-  - [ ] PX3: the placement pair, W24 against W28 (no run).
-  - [ ] PX4: invariants on existing output (no run).
-  - [ ] PX5: why the copies are ineligible on D4-W (no run).
-  - [ ] PX6: the missing-channel inventory; the option C miss probe (no run).
-  - [ ] PX7: the follower's split into lag and structure (W46).
-  - [ ] PX8: the same-state subsidence probe, `sub_probe.jl`.
-  - [ ] PX9: the propagation probe, `perturb_probe.jl`.
-  - [ ] PX10: the energy repair on and off at 8 tags (G4).
-  - [ ] PX11: the Soares air twin.
-  - [ ] PX12: TRMM 0M comparator eligibility on current code.
-  - [ ] PX13: the surface-excess bracket.
-  - [ ] PX14: WP4b's pool and the sedimentation reset, replayed.
-  - [ ] PX15: the energy follower's split (G4).
-  - [ ] PX16 with PP-SUB (per-tag subsidence): a draft PR, owner approval;
-    diagnostic only; the parent bit for bit.
-  - [ ] PX17 with PP-TRACER (a subsided passive tracer): the same conditions.
-  - [ ] PX18 with PP-BAND (a band region): the same conditions.
-  - [ ] Conditional: PP-SFC (after PX13), PP-FACE (after PX7's structural
-    branch), PP-JAC (after PX7's filter branch), PP-SRCOFF (only if a regime
-    with sinks needs it). Each a draft PR, diagnostic only.
-  - [ ] PX19: the flush rate, before the 90-day sphere.
-  - [ ] PX20: the sphere census, inside the one-to-two-day run.
-  - [ ] PX21: `provenance_verdict.py`, before step 8b.
+  - [ ] Gate A. PX0: archive W24, W28, W38 to W43, W45 (there is no W44), E85
+    and `g46` from scratch; fault-inject every new script.
+  - [ ] Gate B. PX1: the subsidence screen from W38's hourly profiles (no
+    run).
+      + [ ] PX8, only if PX1 is material: the same-state subsidence probe,
+        `sub_probe.jl`.
+      + [ ] PX16 with PP-SUB, only if PX8 is material: a draft PR, owner
+        approval (OD13); diagnostic only; the parent bit for bit.
+  - [ ] Gate C. PX7: the follower's split into lag and structure (W46).
+  - [ ] Gate D. PX11: the clean label benchmark, the Soares air twin, with the
+    excluded processes measured inactive and its floors passing.
+      + [ ] PX23: one held-out case, named before any rule is tuned (OD14).
+  - [ ] Gate E (G4). PX22: the energy budget and `C4` checks at a fixed `c`.
+  - Deferred until a measured result needs them, each with its trigger in the
+    pathway's section 7.2: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21,
+    and the probe PRs PP-TRACER, PP-BAND, PP-SFC, PP-FACE, PP-JAC and
+    PP-SRCOFF.
 
 ## Qualification runs
 
@@ -977,8 +975,8 @@ owner's points in the note's section 8.
         ~~Copies at the largest buildable count plus the aggregation
         bridge~~ is not needed. 32 tags stay a cost item, not qualified.
         *Scope added (provenance pathway, 2026-09-26, pending OD9):*
-        OD9 proposes aggregation as a premise of "bounded", run with
-        PP-BAND (PX18).
+        the aggregation row stays reported. PP-BAND (PX18) is deferred
+        until a measured result needs it.
 
 ## The sphere
 
@@ -999,8 +997,9 @@ owner's points in the note's section 8.
       + a one-day copies twin;
       + a restart after day 1;
       + a two-rank parity pair.
-      + [ ] *Scope added (provenance pathway, 2026-09-26):* PX20 inside the
-        one-to-two-day run; PX19 before the 90 days.
+      + [ ] *Scope added (provenance pathway, 2026-09-26):* deferred: PX20 once
+        the one-to-two-day run exists; PX19 before the 90 days, if a
+        long-run screen is needed.
   - [ ] G3's closing entry, and the question of what comes next.
 
 ## G4: the energy source tags, after G3

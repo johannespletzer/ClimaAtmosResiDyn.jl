@@ -105,20 +105,27 @@ aggregation) bound it under OD5. Criterion 11's plateau is replaced by OD6's
 ceiling and growth bound (6.1).
 
 *Scope added (provenance pathway, 2026-09-26, pending OD9, OD11, OD12 and
-OD14):* the criteria on the provenance ladder.
+OD14; revised after the owner's review):* the criteria and the pathway's
+evidence levels. The criteria are judged as approved. The levels are reported
+beside them.
 
-  - **Criterion 5** would be judged on the ladder: a fidelity level and
-    `[L, U]` per tag. Copies that pass eligibility validate only the rules
-    they do not share: the plume, the exchange and the SGS share. Its clause
-    "a CI test shows the copies and a passive tracer agree to rounding
-    without water-specific terms" stays a CI identity test (W20's copies
-    group). PX11 (the Soares air twin) adds a scored run beside it and does
-    not replace it. "Manufactured mixing tests" are joined by PX9 (the
-    propagation probe) and PX18 (a band region).
-  - **Criterion 7:** the net-flow audit and WP4b's pool rule map to PX14.
-  - **Criterion 8** is Val-4 under OD14's held-out hygiene.
+  - **Criterion 5** would also report a fidelity level, the observed spread
+    and the exposure screen per tag, with the active, shared and untested
+    rules. Neither the spread nor the screen is an error bound. Copies that
+    pass eligibility validate only the active rules they do not share: the
+    plume, the exchange and the SGS share. Its clause "a CI test shows the
+    copies and a passive tracer agree to rounding without water-specific
+    terms" stays a CI identity test (W20's copies group). PX11 (the Soares
+    air twin, the pathway's clean label benchmark) adds a scored run beside
+    it and does not replace it. The pathway defers PX9 (the propagation
+    probe) and PX18 (a band region) until a measured result needs them.
+  - **Criterion 7:** the net-flow audit and WP4b's pool rule map to PX14,
+    deferred until WP4b moves toward validation.
+  - **Criterion 8** is Val-4: one held-out case (PX23), named before any rule
+    is tuned, under OD14's hygiene.
   - **Criterion 12:** the claim contract for tagged water carries the rule
-    classification of the pathway's section 4 (OD11).
+    classification of the pathway's section 4 and the declared labelling
+    model of its section 1 (OD11).
 
 *The owner's answers, 2026-09-24 (ROADMAP.md, "The owner's answers").*
 Criterion 11's "ten days of the G2 sphere" is superseded: ninety days of
@@ -241,12 +248,12 @@ the dynamics and not a spin-up.
     alone could fail the first-hour source-tag budget. V-W3 measures it. The
     owner decides whether the plume's start should model it. *Open
     (DECISIONS.md, "Waiting for the owner").*
-    *Scope added (provenance pathway, 2026-09-26):* PX13 brackets the three
-    admissible surface treatments. If they spread by more than the
-    first-hour source row, first-hour `evap` is convention-limited and the
-    claim is narrowed. The pathway proposes to bring a surface rule that
-    composes the flux (PP-SFC) to the owner after PX13. The owner may decide
-    earlier.
+    *Scope added (provenance pathway, 2026-09-26; revised after the owner's
+    review):* PX13 would compare the three admissible surface treatments. If
+    they spread by more than the first-hour source row, first-hour `evap` is
+    convention-sensitive and the claim is narrowed. PX13 and a surface rule
+    that composes the flux (PP-SFC) are deferred until the owner takes up
+    this rule, or PX11's surface floor fails.
 
 ### 4.2 The `q_tot_eff` leaks under 1M
 
@@ -303,11 +310,13 @@ comparator or a documented mechanistic argument for its attribution, for
 example charging the 1M leak to the tags whose condensate leaked. The rest are
 deferred with their decomposition numbers, not deleted.
 
-*Scope added (provenance pathway, 2026-09-26):* part 3 accumulates its
-difference per cell and step without feedback, and reports the net. So it is a
-first-order estimate of `L`, the spread between two rules that both close. It is
-not a bound, and its ratio to part 2b is not evidence for the exposure lemma.
-PX2 would give the realized value from W38's run and V1.
+*Scope added (provenance pathway, 2026-09-26; revised after the owner's
+review):* part 3 accumulates its difference per cell and step without feedback,
+and reports the net. So it is a first-order estimate of an observed spread
+between two rules that both close. It is not a bound, and its ratio to part 2b
+is not evidence for the exposure inequality. PX2 would give the realized value
+from W38's run and V1. It is deferred until OD11 lists ψ as admissible, or PX7
+finds the follower's work structural.
 
 ### 4.3 Following the parent's increment (WP5)
 
@@ -344,10 +353,12 @@ Hence:
     also changes the column's total, which the follower leaves in place.
     V-W0a restates or closes that issue.
 
-*Scope added (provenance pathway, 2026-09-26):* the follower's moved part is
-an assumed rule. PX7 splits it into lag, which enters the numerical error
-`F`, and structure, which is a convention to bracket. PX3 would measure the
-placement's effect on composition (W24 against W28). The exposure lemma's
+*Scope added (provenance pathway, 2026-09-26; revised after the owner's
+review):* the follower's moved part is an assumed rule. PX7, the pathway's gate
+C, splits it into lag, which enters the numerical error `F`, and structure,
+which is a convention reported with its observed spread. Neither branch
+validates it. PX3 would measure the placement's effect on composition (W24
+against W28); it is deferred until the owner takes up OD7. The exposure screen's
 premises are in the pathway's section 3.
 
 ### 4.4 Precipitation provenance under 0M (WP4a)
@@ -448,10 +459,11 @@ reviews it before any code. Implementation is staged:
  2. EDMF in the default mode;
  3. copies.
 
-*Scope added (provenance pathway, 2026-09-26):* PX14 replays the pool rule and
-the sedimentation reset with sub-steps, in `PrecipitatingColumn`'s rain-out
-window only. Until stage 2, WP4b is refused under EDMF, so the production
-envelope keeps the reset.
+*Scope added (provenance pathway, 2026-09-26; revised after the owner's
+review):* PX14 would replay the pool rule and the sedimentation reset with
+sub-steps, in `PrecipitatingColumn`'s rain-out window only. It is deferred until
+WP4b moves toward validation. Until stage 2, WP4b is refused under EDMF, so the
+production envelope keeps the reset.
 
 ### 4.6 Shared code (WP2), after the water design has settled
 
@@ -558,7 +570,7 @@ bracket, so their comparison cannot see it (PX1, PX8). The identity above is
 also weak where `evap_tropo` and `evap_strat` are fed by fixed masks. Then
 they are constant multiples of `evap`, except where a source tag's own θ
 binds or the repair acts, and proportionality is the invariant to check
-(PX4).
+(PX4, deferred until a Fid-1 label is reported).
 
 **The deep 0M development case** is TRMM_LBA with 0M, 3 h. The held-out set of
 criterion 8 is separate.
@@ -578,14 +590,15 @@ criterion 8 is separate.
 | V-W10 | Cost: 2, 4, 8 and 32 tags where they build in time, both modes, with and without rain and snow tags, both families. *2026-09-24 (OD8):* qualification is at 8 tags; 32 is a cost item only                                                                                                                                                                                       | about 14 | WP4b       |
 | V-W11 | The sphere: `g2_v2_sphere_n2` with water tags and rain and snow tags under the chosen default, 10 days, 24 ranks (about 16.5 h and 500 GB, as E75). *Superseded 2026-09-24 (OD1, OD6):* 90 days at 60 levels, with 8 water and 8 energy tags and the per-tag ledgers; its cost is ROADMAP.md's M4 estimate. A one-day copies twin. A restart after day 1. A two-rank parity pair | 5        | all above  |
 
-*Scope added (provenance pathway, 2026-09-26):* the pathway's runs, by tier.
+*Scope added (provenance pathway, 2026-09-26; revised after the owner's
+review):* the pathway's runs, by gate.
 
-| Run  | What it decides                                                                                                                                                                                                          | Needs             |
-|:---- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |:----------------- |
-| V-P0 | Tier 0, no runs: PX0 to PX6 (archive; subsidence screen; the leak rule realized; the placement pair; invariants; the copies' cause; missing channels)                                                                    | step 1b           |
-| V-P1 | Tier 1, existing keys: PX7 to PX15 (the follower's split; the subsidence and propagation probes; the energy repair; the Soares air twin; TRMM 0M eligibility; the surface bracket; the pool replay; the energy follower) | OD10 to OD12      |
-| V-P2 | Tier 2, probe PRs: PX16 to PX18 (per-tag subsidence; a subsided passive tracer; a band region)                                                                                                                           | OD13              |
-| V-P3 | Tier 3: PX19 (flush rate), PX20 (sphere census), PX21 (certification tables)                                                                                                                                             | step 9; before 8b |
+| Run  | What it decides                                                                                                                                                                           | Needs                                      |
+|:---- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------ |
+| V-P0 | Gate A and gate B's screen, no runs: PX0 (the archive) and PX1 (the subsidence screen)                                                                                                    | step 1b                                    |
+| V-P1 | Gates B to E, existing keys: PX8 if PX1 is material; PX7 (the follower's lag or structure); PX11 (the clean label benchmark), then PX23 (one held-out case); PX22 (energy at a fixed `c`) | OD11, OD12, OD14                           |
+| V-P2 | Gate B's probe PR: PX16 with PP-SUB, only if PX8 is material                                                                                                                              | OD13                                       |
+| V-P3 | Deferred until a measured result needs them: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21 and the other probe PRs                                                                    | their triggers (the pathway's section 7.2) |
 
 That makes about 70 column-scale jobs and 5 sphere jobs. Column runs go to
 `hpda2_test` where they fit in two hours, otherwise `hpda2_compute`.
@@ -627,13 +640,15 @@ The verifier computes both (WP0).
     Newton count, with 1.6% and 2.6% at worst. A looser budget would let the
     default's error exceed the spread from the mixing convention alone, about
     1% in L1 (E66).
-    *Scope added (provenance pathway, 2026-09-26, pending OD11):*
-    E66's L1 row is in fractions: 0.08 and 0.12 for the region tags, 0.68
-    to 1.26 for the source tags. So the convention spread is 8% to 126%. The
-    pathway reads this 2% as a fidelity budget, and proposes that convention
-    spreads are reported beside it and not scored against it. OD11 asks the
-    owner to confirm this reading. Until then, the row is scored as approved.
-    The sentence above is kept as written.
+    *Scope added (provenance pathway, 2026-09-26; revised after the owner's
+    review):* E66's L1 row is in fractions: 0.08 and 0.12 for the region
+    tags, 0.68 to 1.26 for the source tags, so 8% to 126%. E66's reference
+    also keeps 5.99e5 J/m² of its own residual, and fails closure on OD4's
+    scale (E86). So E66's difference is not a pure convention effect, and the
+    reason above does not hold as written. The 2% row stands as approved
+    (OD3), and so does OD5, until the owner amends them. E66's measured
+    spread is reported apart from the row, labelled as convention plus the
+    reference's residual. The sentence above is kept as written.
 
   - **Per tag, in the first hour:** L1 ≤ 1% for the region tags and ≤ 10% for
     the source tags, and L∞ ≤ 25%. This is G1's split of 2026-09-20. It
@@ -779,9 +794,10 @@ set. None submits jobs, pushes or merges. Reports go to
 
   - *Scope added (provenance pathway, 2026-09-26):* **common-mode references.**
     A reference cannot see a rule it shares, so agreement between the default
-    and the copies says nothing about the grid-scale rules. **`U` may be too
-    loose** to pass on D4-W (the follower's part 2b alone is about 7.2% for
-    `tropo`, a lower bound on its worst case). **References have floors** and
+    and the copies says nothing about the grid-scale rules. **The exposure
+    screen may exceed the row** on D4-W (the follower's part 2b alone is
+    about 7.2% for `tropo`). A screen is not a bound, so this does not show
+    an error above the row. **References have floors** and
     conventions of their own. **Classification gaming** is blocked by fixing
     OD11 before any score. **Run trees** differ between PRs.
     **`tracer_upwinding` also moves the 1M species,** so tracer-mode twins

@@ -49,12 +49,15 @@ keeps, G4.3 to G4.6 with offset-invariant scales (OD4), the G4.15 decision
 last (OD6). ROADMAP.md, "Rev. 2 of the work plan", holds the contract and the
 register.
 
-*Scope added (provenance pathway, 2026-09-26, pending OD9 to OD14):* the
-provenance pathway, [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), applies
-in OD4's units with `c` stated. `c` is a convention: it is bracketed by the
-`c`/2`c` pair and never bounded. On D4 the pathway expects Val-2 (bounded) at
-most, since energy has no passive truth and its copies are ineligible (E84).
-What G4 takes from G3 is in the pathway's section 10.
+*Scope added (provenance pathway, 2026-09-26, pending OD9 to OD14; revised
+after the owner's review):* the provenance pathway,
+[PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), applies in OD4's units at a
+fixed `c` and source convention (OD11). Energy tests are conditional budget
+tests, valid for that `c` and convention. The `c`/2`c` spread and `C4`'s
+unresolved outflow (E87) are limitations listed with every energy verdict.
+They are neither error bounds nor proof that no conditional test is possible.
+The energy copies are ineligible on D4 (E84). Energy's gate is PX22. What G4
+takes from G3 is in the pathway's section 10.
 
 ### G4.1 #95's follow-ups
 
@@ -103,9 +106,9 @@ changes across a restart.
     (0.65) pass. The mirrors bring the modes closer (`sfc` L∞ 2.5% to 0.86%).
     Open: what makes the copies' repair; provenance against them stays *not
     assessable* on D4.
-    *Scope added (provenance pathway, 2026-09-26):* port PX5's reading (the
-    filter's gross against the repair's, by level and `dt`) to the energy
-    copies.
+    *Scope added (provenance pathway, 2026-09-26):* if the energy copies are
+    to serve as a comparator, port PX5's reading (the filter's gross against
+    the repair's, by level and `dt`) to them. Deferred until then.
 
   - **The region masks' width in the docs** (decision 10 of 2026-09-18,
     `OT-regionmask`): 2° stays. Say that a mask narrower than the grid spacing
@@ -203,8 +206,11 @@ ledger.
       + Assumed: the exchange and θ, the repair, the follower's placement,
         the copies' surface relaxation (mirror M2 of
         `design/ENERGY_COPY_MIRRORS.md`) and the upward ice branch.
-      + A gap: `C4`'s per-tag outflow.
-  - [ ] The `U` row from `fixgross`, the repair's gross (factor 2).
+      + A gap: `C4`'s per-tag outflow, a limitation of every energy verdict.
+  - [ ] The repair's exposure screen from `fixgross`, the repair's gross
+    (factor 2), at the fixed `c` (PX22). A screen, not a bound.
+  - [ ] The fixed `c` and source convention for the conditional tests
+    (OD11).
 
 *Scope added (rev. 2, 2026-09-24), for G4.3 to G4.6:* these items refer to the
 acceptance contract in ROADMAP.md and do not restate it. Process records stay
@@ -325,8 +331,9 @@ parent source). The offline EDMF column budget.
     the committed process budget gives `C4`'s size from the `c`/2`c` pair:
     `c·M_U` is −1.15e5 J/m² a day, 0.55% of the throughput (E87,
     `output/g46/process_budget.txt`). The records' estimate printed beside it
-    (+1.06e4 J/m²) has the opposite sign. Where `C4` goes, per tag, needs a
-    bottom-face outflow probe (Fid-2, priority 3).
+    (+1.06e4 J/m²) has the opposite sign. PX22 repeats the size check in its
+    case and lists `C4` as a limitation. Where it goes, per tag, would need a
+    bottom-face outflow probe, deferred until a measured result needs it.
   - **If G4.6 names them, these close too.** Otherwise they stay open for a
     later goal (ROADMAP, M2, "later"):
       + open question 1: what makes D1's zero-sum gross residual (E42, E42b).
@@ -358,9 +365,11 @@ tags started after it. E39 found that 98% of the audit's first-hour residual
 is made in the first 10 s step. Full-run comparisons stay, reported as
 configuration outcomes. They run after G4.16, the mirrors and OD7.
 
-*Scope added (provenance pathway, 2026-09-26):* PX15 (the energy follower's
-split) and PX10 (the energy repair on and off) come before G4.7. The energy
-pulse inherits PX13's surface bracket; energy has no passive truth.
+*Scope added (provenance pathway, 2026-09-26):* PX22 (the energy budget and
+`C4` checks at a fixed `c`) comes before G4.7. PX15 (the energy follower's
+split) and PX10 (the energy repair on and off) are deferred with their
+triggers. The energy pulse would inherit PX13's surface comparison, if PX13
+runs.
 
 ### G4.8 A surface pulse, and convection switched on and off, for energy
 
@@ -371,9 +380,9 @@ pulse inherits PX13's surface bracket; energy has no passive truth.
     decided on 2026-09-19 to keep it as built (DECISIONS.md). G4.9 tests the
     alternatives.
 
-*Scope added (provenance pathway, 2026-09-26):* the placements are read as `L`,
-the spread between rules that both close. They are an input to OD7, not a
-decision.
+*Scope added (provenance pathway, 2026-09-26):* the placements are read as an
+observed spread between rules that both close. It is not a bound on the
+error. It is an input to OD7, not a decision.
 
 ### G4.10 The offset sweep (U8), and a check for leaving the tested regime
 
@@ -389,8 +398,8 @@ decision.
   - **FQ-24, whether C1's suppression cost (R11) matters in practice**
     (`FQ-24`): measured on C4 as about 1% over a day (E19). Its impact over
     long runs is open.
-  - *Scope added (provenance pathway, 2026-09-26):* the `c`/2`c` pair is the
-    convention bracket for every energy conclusion.
+  - *Scope added (provenance pathway, 2026-09-26):* every energy conclusion is
+    stated at the fixed `c`, with the `c`/2`c` spread as a limitation.
 
 ### G4.11 Carried over from G3
 
@@ -405,8 +414,9 @@ upward where it lasts (open question 3, FQ-10's remainder).
 
 ### G4.12 Held-out columns for energy, a red team, and the owner's choice of the energy default
 
-*Scope added (provenance pathway, 2026-09-26):* the default is chosen at its
-ladder level, with OD14's held-out hygiene.
+*Scope added (provenance pathway, 2026-09-26):* the default is chosen under
+rev. 2's rules as approved, with the pathway's verdict records beside it and
+OD14's held-out hygiene.
 
 ### G4.13 Ten days of the energy sphere at the chosen default, against E75
 
@@ -493,10 +503,11 @@ Measure it on W23's explicit column before either is decided.
         jobs `13917157` to `13917199`, output in `output_0001/`.
 
 *Scope added (provenance pathway, 2026-09-26):* OD7's provenance side, proposed:
-water's PX3 (the placement pair), the energy spread `L` from E79's run pair,
-and PX15. E79's left-out part is not a bound, because the moved part can also
-change with the placement (PT6). An aggregation departure of the
-sign-dependent rule would be Fid-1 evidence.
+the energy observed spread from E79's run pair, and, if the owner asks,
+water's PX3 (the placement pair) and PX15 (both deferred). E79's left-out part
+is not a bound, because the moved part can also change with the placement
+(PT6). An aggregation departure of the sign-dependent rule would be Fid-1
+evidence.
 
 ### G4.16 Sedimentation cross blocks for the energy source tags
 
@@ -572,10 +583,10 @@ approval before any model code (Plan D, `OT-PD1`, `OT-PD3`).
 *Scope added (provenance pathway, 2026-09-26):*
 
   - [ ] **Energy subsidence, the `sub` tag.** E66 found `sub` +18% in its
-    integral against the donor reference. The parent subsides `h_tot`, so
-    the energy tags have no faithful counterpart for it: it stays a
-    convention. Water's PX8 at the same 750 m split of DYCOMS RF02 sizes
-    it.
+    integral against the donor reference, which keeps its own residual. The
+    parent subsides `h_tot`, so the energy tags have no faithful counterpart
+    for it: it stays a convention. Water's PX8 at the same 750 m split of
+    DYCOMS RF02 would size it, if PX8 runs.
 
 ## Items that G3 takes up
 
