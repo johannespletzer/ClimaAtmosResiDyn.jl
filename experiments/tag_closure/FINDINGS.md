@@ -83,21 +83,21 @@ changes, which [RUNS.md](RUNS.md) records.
 
 ## Index
 
-| IDs                                              | section                                             |
-|:------------------------------------------------ |:--------------------------------------------------- |
-| W1–W45                                           | 1. Water tags                                       |
+| IDs                                                   | section                                             |
+|:----------------------------------------------------- |:--------------------------------------------------- |
+| W1–W45                                                | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
-| E1–E6, E9b, E9c, E10–E19, E71, R1–R11            | 3. The energy reference and the offset              |
-| E40, E53                                         | 4. EDMF and the updrafts                            |
+| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
+| E40, E53                                              | 4. EDMF and the updrafts                            |
 | E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82 | 5. The implicit channel and the increment prototype |
-| E45, E47, E51, E54, E55, E57, E58                | 6. Parity, Float32, MPI and restarts                |
-| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87 | 7. The process records and the per-process checks   |
-| E50, E60, E69, E70, E74, E75, E81                | 8. The sphere and long runs                         |
-| E68, E72, E73, E76, E83, E84, E86                | 9. Mixing: V3 and the updraft gap                   |
-| T1–T10, E44, E44b–E44e, E52, E56, E77, E78       | 10. Cost                                            |
-| M1–M8                                            | 11. Method                                          |
-| old claims, errata, conflicts                    | 12. Superseded and falsified claims                 |
-| FQ-1 to FQ-24                                    | 13. What is not established                         |
+| E45, E47, E51, E54, E55, E57, E58                     | 6. Parity, Float32, MPI and restarts                |
+| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87     | 7. The process records and the per-process checks   |
+| E50, E60, E69, E70, E74, E75, E81                     | 8. The sphere and long runs                         |
+| E68, E72, E73, E76, E83, E84, E86                     | 9. Mixing: V3 and the updraft gap                   |
+| T1–T10, E44, E44b–E44e, E52, E56, E77, E78            | 10. Cost                                            |
+| M1–M8                                                 | 11. Method                                          |
+| old claims, errata, conflicts                         | 12. Superseded and falsified claims                 |
+| FQ-1 to FQ-24                                         | 13. What is not established                         |
 
 ## 1. Water tags
 
@@ -346,19 +346,19 @@ copies needed a fifth mirror, the surface moisture flux into the updraft.** Thre
 columns, as V-W1's but with WP3's code, before V-W3. Relative to the column's
 water, from each run's `water_tag_closure.csv` and `water_tag_audit.csv`:
 
-| gross residual                  | 1 h     | 2 h     | 3 h     |
-|:------------------------------- | -------:| -------:| -------:|
-| V-W1, grid-scale tags (W17)     | 2.2e-2  | 2.3e-2  | 4.4e-2  |
-| default mode                    | 5.4e-4  | 3.0e-4  | 1.6e-3  |
-| copies, four mirrors            | 3.8e-4  | 2.0e-4  | 4.0e-4  |
-| copies, five mirrors            | 3.7e-4  | 2.0e-4  | 3.9e-4  |
+| gross residual              | 1 h    | 2 h    | 3 h    |
+|:--------------------------- | ------:| ------:| ------:|
+| V-W1, grid-scale tags (W17) | 2.2e-2 | 2.3e-2 | 4.4e-2 |
+| default mode                | 5.4e-4 | 3.0e-4 | 1.6e-3 |
+| copies, four mirrors        | 3.8e-4 | 2.0e-4 | 4.0e-4 |
+| copies, five mirrors        | 3.7e-4 | 2.0e-4 | 3.9e-4 |
 
-| copies                                  | 1 h     | 2 h     | 3 h     |
-|:--------------------------------------- | -------:| -------:| -------:|
-| residual before repair, four mirrors    | 9.0e-5  | 4.1e-5  | 4.3e-5  |
-| residual before repair, five mirrors    | 5.6e-5  | 6.2e-6  | 8.6e-6  |
-| repair, cumulative, four mirrors        | 1.5e-3  | 3.1e-3  | 4.3e-3  |
-| repair, cumulative, five mirrors        | 2.6e-4  | 7.8e-4  | 9.9e-4  |
+| copies                               | 1 h    | 2 h    | 3 h    |
+|:------------------------------------ | ------:| ------:| ------:|
+| residual before repair, four mirrors | 9.0e-5 | 4.1e-5 | 4.3e-5 |
+| residual before repair, five mirrors | 5.6e-5 | 6.2e-6 | 8.6e-6 |
+| repair, cumulative, four mirrors     | 1.5e-3 | 3.1e-3 | 4.3e-3 |
+| repair, cumulative, five mirrors     | 2.6e-4 | 7.8e-4 | 9.9e-4 |
 
   - **The fifth mirror.** `surface_flux_tendency!` adds the surface moisture
     flux to `q_totʲ` in the lowest cell and gives every other updraft tracer
@@ -407,24 +407,24 @@ days match the untagged twin `w0c_d4w_untagged`.
 
 Per tag, default against copies (L1 / L∞):
 
-| tag, iterations | 1 h           | 24 h          | budget 1 h / 24 h (L1, L∞)    |
-|:--------------- | -------------:| -------------:|:----------------------------- |
-| `tropo`, 1      | 0.22% / 1.4%  | 0.73% / 3.4%  | region: 1%, 25% / 2%, 5%      |
-| `tropo`, 10     | 0.21% / 1.4%  | 0.17% / 0.49% |                               |
-| `strat`, 1      | 0.62% / 3.7%  | 0.47% / 1.1%  |                               |
-| `strat`, 10     | 0.55% / 3.4%  | 0.23% / 0.84% |                               |
-| `evap`, 1       | 6.6% / 7.2%   | 0.96% / 4.2%  | source: 10%, 25% / 2%, 5%     |
-| `evap`, 10      | 4.6% / 7.3%   | 0.22% / 0.28% |                               |
+| tag, iterations | 1 h          | 24 h          | budget 1 h / 24 h (L1, L∞) |
+|:--------------- | ------------:| -------------:|:-------------------------- |
+| `tropo`, 1      | 0.22% / 1.4% | 0.73% / 3.4%  | region: 1%, 25% / 2%, 5%   |
+| `tropo`, 10     | 0.21% / 1.4% | 0.17% / 0.49% |                            |
+| `strat`, 1      | 0.62% / 3.7% | 0.47% / 1.1%  |                            |
+| `strat`, 10     | 0.55% / 3.4% | 0.23% / 0.84% |                            |
+| `evap`, 1       | 6.6% / 7.2%  | 0.96% / 4.2%  | source: 10%, 25% / 2%, 5%  |
+| `evap`, 10      | 4.6% / 7.3%  | 0.22% / 0.28% |                            |
 
 The gross closure residual, relative to the column's water, from each run's
 `water_tag_closure.csv`:
 
-| run            | 1 h     | 12 h    | 24 h    |
-|:-------------- | -------:| -------:| -------:|
-| default, 1     | 5.4e-4  | 3.0e-3  | 7.1e-3  |
-| default, 10    | 9.9e-5  | 5.8e-4  | 1.3e-3  |
-| copies, 1      | 3.7e-4  | 2.1e-3  | 1.8e-3  |
-| copies, 10     | 9.6e-5  | 7.4e-4  | 1.8e-3  |
+| run         | 1 h    | 12 h   | 24 h   |
+|:----------- | ------:| ------:| ------:|
+| default, 1  | 5.4e-4 | 3.0e-3 | 7.1e-3 |
+| default, 10 | 9.9e-5 | 5.8e-4 | 1.3e-3 |
+| copies, 1   | 3.7e-4 | 2.1e-3 | 1.8e-3 |
+| copies, 10  | 9.6e-5 | 7.4e-4 | 1.8e-3 |
 
   - **WP5's rule.** The one-iteration part of the default's residual is
     7.1e-3 − 1.3e-3 = 5.8e-3, twelve times a quarter of the budget (5e-4).
@@ -530,14 +530,14 @@ hour, in both EDMF modes. Ten iterations close it.** The CI group
 the partition `tropo`/`strat` at 750 m and `evap`, run as a probe in six
 variants. Closure after the hour, relative to the column's water:
 
-| mode, microphysics, iterations | net       | gross    |
-|:------------------------------ | ---------:| --------:|
-| copies, implicit, 1            | −3.7e-5   | 3.7e-4   |
-| copies, explicit, 1            | 7.8e-3    | 9.7e-3   |
-| copies, explicit, 10           | −4.3e-7   | 7.5e-4   |
-| default, implicit, 1           | −3.5e-5   | 5.4e-4   |
-| default, explicit, 1           | 7.7e-3    | 1.6e-2   |
-| default, explicit, 10          | −4.4e-7   | 7.7e-4   |
+| mode, microphysics, iterations | net     | gross  |
+|:------------------------------ | -------:| ------:|
+| copies, implicit, 1            | −3.7e-5 | 3.7e-4 |
+| copies, explicit, 1            | 7.8e-3  | 9.7e-3 |
+| copies, explicit, 10           | −4.3e-7 | 7.5e-4 |
+| default, implicit, 1           | −3.5e-5 | 5.4e-4 |
+| default, explicit, 1           | 7.7e-3  | 1.6e-2 |
+| default, explicit, 10          | −4.4e-7 | 7.7e-4 |
 
   - **The mechanism.** The parent's `ρq_tot` row carries a cross block from
     each sedimenting species (`update_sedimentation_jacobian!`,
@@ -573,40 +573,44 @@ W23's lag.** The validation of #102 (`water_tag_transport: increment`), on
 D4-W as V-W3's default day otherwise, and the explicit-path probes of W23 with
 the follower.
 
-| D4-W, default mode, 24 h                  | gross   | net      |
-|:----------------------------------------- | -------:| --------:|
-| tracer transport, 1 iteration (W21)       | 7.1e-3  | 2.0e-3   |
-| **follower, 1 iteration**                 | 1.5e-4  | 2.4e-5   |
-| tracer transport, 10 iterations (W21)     | 1.3e-3  | 1.1e-4   |
-| **follower, 10 iterations**               | 5.6e-10 | 1.1e-10  |
-| copies, 1 iteration (W21)                 | 1.8e-3  | 3.1e-4   |
+| D4-W, default mode, 24 h              | gross   | net     |
+|:------------------------------------- | -------:| -------:|
+| tracer transport, 1 iteration (W21)   | 7.1e-3  | 2.0e-3  |
+| **follower, 1 iteration**             | 1.5e-4  | 2.4e-5  |
+| tracer transport, 10 iterations (W21) | 1.3e-3  | 1.1e-4  |
+| **follower, 10 iterations**           | 5.6e-10 | 1.1e-10 |
+| copies, 1 iteration (W21)             | 1.8e-3  | 3.1e-4  |
 
   - **Against the copies** (the verifier, `--judge`, on one atmosphere; every
     parent field bit for bit): PASS at both iteration counts. At 24 h, one
     iteration, `tropo` L1 0.25% (0.73% under the tracer transport, W21),
     `strat` 0.41% (0.47%), `evap` 0.41% (0.96%); at 1 h `evap` 6.5% (6.6%).
     With ten iterations 0.25%, 0.32% and 0.25%.
+
   - **The closure's growth.** With one iteration the gross residual is 4.1e-5
     at 1 h, 1.1e-4 at 12 h and 1.5e-4 at 24 h: the second 12 h add less than
     the first, as 6.1 asks. The part left out at 24 h is −2.6e-5 of the column
     net and 2.0e-4 gross over the cells.
+
   - **What remains with one iteration** is the part of the parent's increment
     that changes a column's total, which the follower cannot move (the review
     of #102, S1). With ten iterations the Newton solve converges and that part
     vanishes with the rest.
+
   - **The partition's negativity (review S3).** Its minimum stays at 1.4e-9
     kg/kg, and the partition repair's ledger (gross over the cells, net over
     time) reaches 2.9e-3 of the column's water with the follower, as under the
     tracer transport; the copies' run has 5.2e-3. Nearly all of it arrives in
     the first 12 h, in every mode.
+
   - **The explicit 1M path, W23's column, an hour, one iteration:**
 
-    | mode, transport       | net     | gross   |
-    |:--------------------- | -------:| -------:|
-    | default, tracer (W23) | 7.7e-3  | 1.6e-2  |
-    | default, follower     | 7.9e-3  | 8.0e-3  |
-    | copies, tracer (W23)  | 7.8e-3  | 9.7e-3  |
-    | copies, follower      | 7.9e-3  | 8.0e-3  |
+    | mode, transport       | net    | gross  |
+    |:--------------------- | ------:| ------:|
+    | default, tracer (W23) | 7.7e-3 | 1.6e-2 |
+    | default, follower     | 7.9e-3 | 8.0e-3 |
+    | copies, tracer (W23)  | 7.8e-3 | 9.7e-3 |
+    | copies, follower      | 7.9e-3 | 8.0e-3 |
 
     The follower removes the column-neutral part and leaves the net, as its
     invariant says. Closing the net needs the column-total part routed out
@@ -637,6 +641,7 @@ lose it, and the default does not. The parent fields are bit for bit the same
 in every pair.** D4-W ran for a day at seven rungs: dt 60 and 30 s, Newton 2
 and 4, 60 and 120 levels, and first-order upwinding of the sub-grid flux. W24
 has the Newton-10 rung. Each rung ran in two modes:
+
   - the default mode under the follower (`water_tag_transport: increment`);
   - with copies, started from the plume.
 
@@ -646,15 +651,15 @@ V-W3's copies day and W24's follower day.
 
 Default against copies, L1 in percent, at 1 h / 24 h:
 
-| rung        | `tropo`     | `strat`     | `evap`      | judge                          |
-|:----------- | -----------:| -----------:| -----------:|:------------------------------ |
-| dt 60 s     | 0.29 / 0.24 | 0.73 / 0.40 | 5.4 / 0.47  | pass                           |
-| dt 30 s     | 0.30 / 0.23 | 0.75 / 0.58 | 8.6 / 0.45  | pass                           |
-| Newton 2    | 0.21 / 0.24 | 0.56 / 0.28 | 4.7 / 0.41  | pass                           |
-| Newton 4    | 0.22 / 0.21 | 0.56 / 0.31 | 4.6 / 0.39  | pass                           |
-| 60 levels   | 0.57 / 0.40 | 1.36 / 1.72 | 11.8 / 0.22 | fail at 1 h: `strat`, `evap`   |
-| 120 levels  | 23 / 19     | 8.0 / 9.2   | 31 / 3.8    | fail at 1 h and 24 h           |
-| first order | 0.15 / 77   | 0.39 / 36   | 4.3 / 4.8   | reported, not judged; 23 h     |
+| rung        | `tropo`     | `strat`     | `evap`      | judge                        |
+|:----------- | -----------:| -----------:| -----------:|:---------------------------- |
+| dt 60 s     | 0.29 / 0.24 | 0.73 / 0.40 | 5.4 / 0.47  | pass                         |
+| dt 30 s     | 0.30 / 0.23 | 0.75 / 0.58 | 8.6 / 0.45  | pass                         |
+| Newton 2    | 0.21 / 0.24 | 0.56 / 0.28 | 4.7 / 0.41  | pass                         |
+| Newton 4    | 0.22 / 0.21 | 0.56 / 0.31 | 4.6 / 0.39  | pass                         |
+| 60 levels   | 0.57 / 0.40 | 1.36 / 1.72 | 11.8 / 0.22 | fail at 1 h: `strat`, `evap` |
+| 120 levels  | 23 / 19     | 8.0 / 9.2   | 31 / 3.8    | fail at 1 h and 24 h         |
+| first order | 0.15 / 77   | 0.39 / 36   | 4.3 / 4.8   | reported, not judged; 23 h   |
 
 The gross closure residual at 24 h, relative to the column's water, and the
 copies' repair over the day:
@@ -734,6 +739,7 @@ are unchanged bit for bit, the tags move by at most 0.47% of a tag's water,
 and `Σ pr_tag` is `pr` to within 1.8e-3. The split moves both modes alike, so
 their agreement is unchanged.** Two pairs of runs, each on one atmosphere,
 from 0 to 6 h (TRMM rains from about 3 h):
+
   - the split: #104 at `b4c44841`;
   - the grid rule: #102 at `fd07d902`, the twins.
 
@@ -742,28 +748,32 @@ Each pair ran in the default mode and with copies. The verifier compared them.
   - **Parity.** Split against grid rule, in both modes, and #104's 3 h pair
     against V-W3's `w3_trmm0m_*` runs: every model field bit for bit (24
     fields, `--parity-only`).
+
   - **The split's effect** on each tag, same mode and atmosphere, L1 at 6 h
     (4 h in brackets):
 
-    | tag    | default         | copies          |
-    |:------ | ---------------:| ---------------:|
-    | `pbl`  | 0.44% (0.098%)  | 0.47% (0.10%)   |
-    | `free` | 0.23% (0.048%)  | 0.25% (0.049%)  |
-    | `evap` | 0.45% (0.14%)   | 0.44% (0.13%)   |
+    | tag    | default        | copies         |
+    |:------ | --------------:| --------------:|
+    | `pbl`  | 0.44% (0.098%) | 0.47% (0.10%)  |
+    | `free` | 0.23% (0.048%) | 0.25% (0.049%) |
+    | `evap` | 0.45% (0.14%)  | 0.44% (0.13%)  |
 
     The split takes more of `pbl`'s water and less of `free`'s, so the
     updraft's rain carries more boundary-layer water than the grid mean's
     composition gives it. The effect grows with the rain. At 3 h, before the
     rain, it is 4e-6.
+
   - **Default against copies,** L1 at 6 h, with the split and with the grid
     rule: `pbl` 1.54% and 1.53%, `free` 0.82% and 0.82%, `evap` 1.72% and
     1.71%. The split does not narrow or widen the gap between the modes.
+
   - **`pr_tag`.** Over the partition, `pr_tag_pbl + pr_tag_free` is `pr` to
     within 1.8e-3 at every half hour with rain, in both modes. The rain's
     source moves from `pbl` (95% at 3 h) to `free` (70% at 6 h). The modes
     differ in `pbl`'s share by at most 6 points (at 5 h), and the surface
     tag's share is 4 to 7%. No `pbl` water falls as snow at the output
     times.
+
   - **The explicit path.** The same 0M EDMF column with explicit
     microphysics, an hour, in both modes, matches its untagged twin bit for
     bit (`analysis/water/wp4a_explicit_parity.jl`, 20 tests).
@@ -785,31 +795,39 @@ ran four configurations for 30 min each (15 steps of 120 s): the 1M EDMF
 DYCOMS column under ARS343, with the vertical water borrowing limiter and the
 updraft filter, at `update_constrain_state_every` `stage` or `dss`, with the
 follower or with copies.
+
   - Each run's model fields equal the untagged run's at the same cadence, bit
     for bit.
+
   - The callback's gross equals `Σ|ΔL|` recorded by stepping by hand, bit for
     bit.
+
   - A run restarted from a mid-run checkpoint (ARS222, 20 min) ends with the
     state ledgers of the uninterrupted run, bit for bit.
+
   - 153 tests passed.
+
   - **At `dss` the transfer ledger `q_tag_led_repair` goes negative**, to
     −5.3e-7 with the follower and −2.6e-6 with copies. The code review
     predicted this from the negative stage weight (its S2). At `stage` the
     repair did not act in these 15 steps.
+
   - **At `dss` with the follower,** the largest cell values after 15 steps
     are much larger than at `stage`:
 
-    | ledger                | `dss`   | `stage` |
-    |:--------------------- | -------:| -------:|
-    | `q_tag_led_repairnet` | 1.7e-2  | 0       |
-    | `q_tag_inc_left`      | 2.7e-2  | 5.4e-5  |
-    | `q_tag_inc_moved`     | 1.4e-2  | 1.6e-4  |
+    | ledger                | `dss`  | `stage` |
+    |:--------------------- | ------:| -------:|
+    | `q_tag_led_repairnet` | 1.7e-2 | 0       |
+    | `q_tag_inc_left`      | 2.7e-2 | 5.4e-5  |
+    | `q_tag_inc_moved`     | 1.4e-2 | 1.6e-4  |
 
     These are state values in kg m⁻³, per cell. With copies at `dss`,
     `q_tag_led_repairnet` reaches 3.1e-3 and `q_tag_led_upfilter` 2.0e-2.
+
   - The follower's note (WP5) says the constraints at `dss` run between its
     snapshot and its solve, so their changes enter the mismatch. These runs
     agree with that, but do not isolate it.
+
   - `update_constrain_state_every: dss` is not the default, and no G3 run
     uses it.
 
@@ -826,15 +844,15 @@ rule is #102 at `5bfa7cea`. W24's D4-W day under the |m| rule is the reference.
 TRMM 0M ran for 6 h under both rules, in the default mode with the follower.
 The copies' runs are the references.
 
-| D4-W, 24 h, one Newton iteration                       | \|m\| (W24) | same sign |
-|:------------------------------------------------------- | ----------:| ---------:|
-| gross closure residual                                  | 1.53e-4    | 1.35e-4   |
-| net closure residual                                    | +2.4e-5    | +4.2e-5   |
-| left out (`increment_left_relative`)                    | −2.57e-5   | −2.55e-5  |
-| moved, the cells' absolute ledgers summed               | 4.8e-2     | 2.4e-2    |
-| the partition repair's ledger, the same way             | 2.9e-3     | 2.9e-3    |
-| smallest tag value, kg/kg                               | 1.4e-9     | 1.4e-9    |
-| against the copies, L1 at 24 h, `tropo`/`strat`/`evap`  | 0.25/0.41/0.41% | 0.25/0.41/0.42% |
+| D4-W, 24 h, one Newton iteration                       | \|m\| (W24)     | same sign       |
+|:------------------------------------------------------ | ---------------:| ---------------:|
+| gross closure residual                                 | 1.53e-4         | 1.35e-4         |
+| net closure residual                                   | +2.4e-5         | +4.2e-5         |
+| left out (`increment_left_relative`)                   | −2.57e-5        | −2.55e-5        |
+| moved, the cells' absolute ledgers summed              | 4.8e-2          | 2.4e-2          |
+| the partition repair's ledger, the same way            | 2.9e-3          | 2.9e-3          |
+| smallest tag value, kg/kg                              | 1.4e-9          | 1.4e-9          |
+| against the copies, L1 at 24 h, `tropo`/`strat`/`evap` | 0.25/0.41/0.41% | 0.25/0.41/0.42% |
 
   - The model's fields are bit for bit the same under both rules (37 fields
     on D4-W, 24 on TRMM).
@@ -870,41 +888,45 @@ of the water to 2e-8. The model's fields are bit for bit the same.** This is
 the owner's distinguishing experiment for #102's point 3, run on W23's column:
 DYCOMS RF02, 1M, prognostic EDMF, microphysics stepped explicitly, ARS222, one
 Newton iteration, one hour. Eight runs cover every combination of:
+
   - the cross blocks off (WP5b's control, `f8da0913`, the refusal lifted) or
     on (`c2bf8a62`);
   - the default mode or copies;
   - the tracer transport or the follower.
 
-| run                        | net      | gross   | left out | repair  |
-|:-------------------------- | --------:| -------:| --------:| -------:|
-| default, follower, off     | +7.9e-3  | 8.5e-3  | +7.9e-3  | 1.8e-4  |
-| default, follower, **on**  | −2.1e-8  | 5.7e-8  | −2.1e-8  | 2.2e-4  |
-| default, tracer, off       | +7.7e-3  | 1.6e-2  |          | 2.3e-4  |
-| default, tracer, on        | −1.5e-5  | 6.8e-3  |          | 2.3e-4  |
-| copies, follower, off      | +7.9e-3  | 8.3e-3  | +7.9e-3  | 2.4e-4  |
-| copies, follower, on       | −1.2e-8  | 5.3e-8  | −1.2e-8  | 2.6e-4  |
-| copies, tracer, off        | +7.8e-3  | 9.7e-3  |          | 2.7e-4  |
-| copies, tracer, on         | −1.3e-5  | 7.4e-3  |          | 2.7e-4  |
+| run                       | net     | gross  | left out | repair |
+|:------------------------- | -------:| ------:| --------:| ------:|
+| default, follower, off    | +7.9e-3 | 8.5e-3 | +7.9e-3  | 1.8e-4 |
+| default, follower, **on** | −2.1e-8 | 5.7e-8 | −2.1e-8  | 2.2e-4 |
+| default, tracer, off      | +7.7e-3 | 1.6e-2 |          | 2.3e-4 |
+| default, tracer, on       | −1.5e-5 | 6.8e-3 |          | 2.3e-4 |
+| copies, follower, off     | +7.9e-3 | 8.3e-3 | +7.9e-3  | 2.4e-4 |
+| copies, follower, on      | −1.2e-8 | 5.3e-8 | −1.2e-8  | 2.6e-4 |
+| copies, tracer, off       | +7.8e-3 | 9.7e-3 |          | 2.7e-4 |
+| copies, tracer, on        | −1.3e-5 | 7.4e-3 |          | 2.7e-4 |
 
 `repair` is the partition repair's ledger, summed as absolute values over the
 cells, over the column's water. No tag goes negative in any run.
 
   - **The parent's fields** (ρ, ρq_tot, ρe_tot, ρq_rai, ρq_sno) are the same,
     value for value, in all eight runs.
+
   - **The net lag is gone under both transports.** Under the tracer transport
     the gross stays at 7e-3. That is its explicit advection's mismatch, which
     the follower removes.
+
   - **Default against copies** (L1 over the column, per tag, `tropo`, `strat`,
     `evap`):
 
-    | transport | cross blocks off     | on                   |
-    |:--------- |:-------------------- |:-------------------- |
-    | follower  | 0.55%, 0.87%, 3.8%   | 0.29%, 0.72%, 5.8%   |
-    | tracer    | 1.8%, 0.65%, 6.2%    | 0.46%, 0.76%, 6.4%   |
+    | transport | cross blocks off   | on                 |
+    |:--------- |:------------------ |:------------------ |
+    | follower  | 0.55%, 0.87%, 3.8% | 0.29%, 0.72%, 5.8% |
+    | tracer    | 1.8%, 0.65%, 6.2%  | 0.46%, 0.76%, 6.4% |
 
     The region tags agree better. The small source tag `evap` does not, but
     its first-hour budget is 10%. The copies' own rows in the updraft do not
     have the cross blocks yet, so the audit is not yet symmetric in the modes.
+
   - One column for one hour does not bound the lag elsewhere. D4-W for a day
     on the implicit path, in both modes, is the next check.
 
@@ -915,6 +937,7 @@ print no commit. The final columns, the RESULT lines and
 `analysis/water/wp5b_compare.py`'s output are in `output/wp5b_probe/`.*
 
 *Qualified 2026-09-24, after the xhigh review and the owner's review of #105.*
+
   - "The model's fields are bit for bit the same" rests on the five fields the
     probe wrote, and `ρq_sno` is zero there. The integration test
     `tagging_water_increment_explicit` compares every model field of the
@@ -937,17 +960,18 @@ flawed reference, and this entry cannot tell. Closure and parity stand.
 
 **W30. `pr_tag`'s cost after the batch, and the rain-out of negative areas on
 TRMM (the owner's review of #104, findings 1 and 5).**
+
   - **The cost.** All 3N `pr_tag`, `prra_tag` and `prsn_tag` at one output
     time, at TRMM's initial state, now (one batch per output time) and at
     `53cd2db3` (each call redid the shared work):
 
-    | mode    | tags | now      | at `53cd2db3` |
-    |:------- | ----:| --------:| -------------:|
-    | default | 2    | 2.8e-5 s | 1.5e-4 s      |
-    | default | 8    | 1.7e-4 s | 8.5e-4 s      |
-    | default | 32   | 2.5e-3 s | 1.3e-1 s      |
-    | copies  | 2    | 2.9e-5 s | 1.2e-4 s      |
-    | copies  | 8    | 2.0e-4 s | 5.7e-4 s      |
+    | mode    | tags | now              | at `53cd2db3`    |
+    |:------- | ----:| ----------------:| ----------------:|
+    | default | 2    | 2.8e-5 s         | 1.5e-4 s         |
+    | default | 8    | 1.7e-4 s         | 8.5e-4 s         |
+    | default | 32   | 2.5e-3 s         | 1.3e-1 s         |
+    | copies  | 2    | 2.9e-5 s         | 1.2e-4 s         |
+    | copies  | 8    | 2.0e-4 s         | 5.7e-4 s         |
     | copies  | 32   | not built in 4 h | not built in 4 h |
 
     After the batch, each diagnostic costs 5 to 8 µs at every size. The batch
@@ -958,12 +982,14 @@ TRMM (the owner's review of #104, findings 1 and 5).**
     at most 64 bytes on Julia 1.11. The model's exchange calls the same plume
     at every implicit evaluation. Where in the plume the growth arises is not
     isolated.
+
   - **32 copies do not build.** With 32 tags and their updraft copies, the
     TRMM column did not finish `get_simulation` within 2 h (job `13900297`)
     or 4 h (job `13898602`); both timed out with nothing logged past start.
     8 copies build in about 15 min.
     So copies mode cannot be timed at 32 tags on this node, and its build
     time is itself a WP9 item.
+
   - **Negative areas.** On W26's TRMM column over 6 h, after every one of 144
     steps (80 with rain), both modes: no rain-out from a subdomain whose area
     is negative, and no gain. So on this run the signed attribution is the
@@ -981,13 +1007,13 @@ and move nothing else measured by more than an eighth. The model's fields are
 bit for bit the same.** WP5b at `0aad20ee` against W28's same-sign run, the
 reference, both D4-W for 24 h with one Newton iteration:
 
-| D4-W, 24 h                                             | W28 (no blocks) | with blocks |
-|:------------------------------------------------------- | ---------:| ---------:|
-| gross closure residual                                  | 1.35e-4   | 7.3e-6    |
-| net closure residual                                    | +4.2e-5   | −5.2e-6   |
-| left out (`increment_left_relative`)                    | −2.55e-5  | −7.1e-6   |
-| moved, the cells' absolute ledgers summed               | 2.40e-2   | 2.68e-2   |
-| smallest tag value, kg/kg                               | 1.4e-9    | 1.4e-9    |
+| D4-W, 24 h                                                               | W28 (no blocks) | with blocks     |
+|:------------------------------------------------------------------------ | ---------------:| ---------------:|
+| gross closure residual                                                   | 1.35e-4         | 7.3e-6          |
+| net closure residual                                                     | +4.2e-5         | −5.2e-6         |
+| left out (`increment_left_relative`)                                     | −2.55e-5        | −7.1e-6         |
+| moved, the cells' absolute ledgers summed                                | 2.40e-2         | 2.68e-2         |
+| smallest tag value, kg/kg                                                | 1.4e-9          | 1.4e-9          |
 | against the copies (`w3_d4w_copies`), L1 at 24 h, `tropo`/`strat`/`evap` | 0.25/0.41/0.42% | 0.25/0.41/0.41% |
 
   - All 37 of the parent's output fields are bit for bit the same.
@@ -1014,12 +1040,12 @@ on a copies run's own state, after every step, the rain-weighted error of each
 rule's shares against the copies', `E = Σ|Δᵏ||φ_cand − φ_ref| / Σ|Δᵏ|`, over
 6 h. Pass: `E_recon ≤ 0.75 E_grid` for `pbl` and `free` on every rung.
 
-| rung                     | `E_grid` pbl | `E_recon` pbl | ratio pbl / free / evap |
-|:------------------------ | ------------:| -------------:|:----------------------- |
-| base (150 s, 82, n 10)   | 0.185        | 0.030         | 0.16 / 0.16 / 0.18      |
-| N2 (150 s, 82, n 2)      | 0.189        | 0.026         | 0.14 / 0.14 / 0.14      |
-| dt75 (75 s, 82, n 10)    | 0.159        | 0.014         | 0.086 / 0.087 / 0.065   |
-| z164 (150 s, 164, n 10)  | 0.150        | 0.038         | 0.25 / 0.25 / 0.40      |
+| rung                    | `E_grid` pbl | `E_recon` pbl | ratio pbl / free / evap |
+|:----------------------- | ------------:| -------------:|:----------------------- |
+| base (150 s, 82, n 10)  | 0.185        | 0.030         | 0.16 / 0.16 / 0.18      |
+| N2 (150 s, 82, n 2)     | 0.189        | 0.026         | 0.14 / 0.14 / 0.14      |
+| dt75 (75 s, 82, n 10)   | 0.159        | 0.014         | 0.086 / 0.087 / 0.065   |
+| z164 (150 s, 164, n 10) | 0.150        | 0.038         | 0.25 / 0.25 / 0.40      |
 
   - **Valid:** `E_grid` is 0.15 to 0.19, far above the 1e-2 bar. The updraft's
     composition where the rain forms differs from the grid mean's by about a
@@ -1049,12 +1075,12 @@ the same; but its difference from the ten-iteration run does not shrink at
 the shorter step.** The pre-registered check (`design/EXPLICIT_1M_DEFAULT.md`)
 on TRMM_LBA 1M, microphysics explicit, 6 h, the follower on:
 
-| criterion                                   | result                                                  | pass |
-|:------------------------------------------- |:------------------------------------------------------- |:---- |
-| 1. gross closure < 2e-3 at every check      | max 1.8e-6 (dt 120 s) and 1.5e-6 (dt 60 s), one iteration | yes  |
-| 2. L1 against n10 at 120 s: n2 < n1         | `pbl` 8.6e-3 < 3.4e-2; `free` 3.0e-3 < 1.2e-2            | yes  |
-| 3. L1 against n10: 60 s ≤ 120 s, one iteration | `pbl` 3.41e-2 ≤ 3.42e-2; `free` 1.44e-2 > 1.15e-2     | **no** |
-| 4. parity with the untagged twin            | 26 of 26 fields bit for bit, both steps                  | yes  |
+| criterion                                      | result                                                    | pass   |
+|:---------------------------------------------- |:--------------------------------------------------------- |:------ |
+| 1. gross closure < 2e-3 at every check         | max 1.8e-6 (dt 120 s) and 1.5e-6 (dt 60 s), one iteration | yes    |
+| 2. L1 against n10 at 120 s: n2 < n1            | `pbl` 8.6e-3 < 3.4e-2; `free` 3.0e-3 < 1.2e-2             | yes    |
+| 3. L1 against n10: 60 s ≤ 120 s, one iteration | `pbl` 3.41e-2 ≤ 3.42e-2; `free` 1.44e-2 > 1.15e-2         | **no** |
+| 4. parity with the untagged twin               | 26 of 26 fields bit for bit, both steps                   | yes    |
 
   - **What criterion 3 measured.** Ten Newton iterations change the model:
     against the one-iteration run, `hus` differs in 984 of 1066 cells, by up
@@ -1082,11 +1108,11 @@ broadcast of 33 arguments. Split per tag from 32 on, the plume's inputs cost 3.4
 exchange are bit for bit the same at 8 and 32 tags.** W30's open item (WP9a),
 on TRMM 0M's initial state in the default mode, per call, `wp9_plume_cost.jl`:
 
-| part                               | 8 tags, #102      | 8 tags, WP9a      | 32 tags, #102      | 32 tags, WP9a      |
-|:---------------------------------- | -----------------:| -----------------:| ------------------:| ------------------:|
+| part                                    | 8 tags, #102     | 8 tags, WP9a     | 32 tags, #102      | 32 tags, WP9a    |
+|:--------------------------------------- | ----------------:| ----------------:| ------------------:| ----------------:|
 | plume inputs (`water_exchange_inputs!`) | 2.6e-5 s, 5.8 kB | 2.6e-5 s, 5.8 kB | 1.15e-3 s, 1.40 MB | 3.4e-4 s, 189 kB |
-| the exchange                       | 2.9e-4 s, 8 B     | 2.9e-4 s, 8 B     | 3.9e-3 s, 1.40 MB  | 3.1e-3 s, 183 kB   |
-| the implicit tendency              | 6.6e-4 s, 67 kB   | 6.6e-4 s, 67 kB   | 8.7e-3 s, 2.08 MB  | 7.5e-3 s, 864 kB   |
+| the exchange                            | 2.9e-4 s, 8 B    | 2.9e-4 s, 8 B    | 3.9e-3 s, 1.40 MB  | 3.1e-3 s, 183 kB |
+| the implicit tendency                   | 6.6e-4 s, 67 kB  | 6.6e-4 s, 67 kB  | 8.7e-3 s, 2.08 MB  | 7.5e-3 s, 864 kB |
 
   - **Where.** The grid mean's specific tag values were one broadcast over `ρ`
     and every tag field. With 32 tags that is 33 arguments, past the 32 that
@@ -1129,17 +1155,17 @@ follower on, 6 h. At every step of the ten-iteration run, trials with one and
 two iterations step from its state, and each result is compared with the
 reference's step. `E` is the summed L1 error over the summed L1 increment:
 
-| `dt`  | iterations | parent `ρq_tot` | `pbl`   | `free`  | `evap`  |
-|:----- | ----------:| ---------------:| -------:| -------:| -------:|
-| 120 s | 1          | 4.9e-3          | 2.6e-2  | 3.9e-2  | 6.7e-2  |
-| 120 s | 2          | 6.3e-4          | 1.2e-3  | 1.7e-3  | 2.1e-3  |
-| 60 s  | 1          | 3.5e-3          | 1.3e-2  | 1.8e-2  | 3.5e-2  |
-| 60 s  | 2          | 2.3e-4          | 4.7e-4  | 5.9e-4  | 1.2e-3  |
+| `dt`  | iterations | parent `ρq_tot` | `pbl`  | `free` | `evap` |
+|:----- | ----------:| ---------------:| ------:| ------:| ------:|
+| 120 s | 1          | 4.9e-3          | 2.6e-2 | 3.9e-2 | 6.7e-2 |
+| 120 s | 2          | 6.3e-4          | 1.2e-3 | 1.7e-3 | 2.1e-3 |
+| 60 s  | 1          | 3.5e-3          | 1.3e-2 | 1.8e-2 | 3.5e-2 |
+| 60 s  | 2          | 2.3e-4          | 4.7e-4 | 5.9e-4 | 1.2e-3 |
 
-| criterion                                         | `pbl`             | `free`            | pass |
-|:------------------------------------------------- |:----------------- |:----------------- |:---- |
-| 1. at 120 s, two iterations below one             | 1.2e-3 < 2.6e-2   | 1.7e-3 < 3.9e-2   | yes  |
-| 2. one iteration, 60 s no larger than 120 s       | 1.3e-2 ≤ 2.6e-2   | 1.8e-2 ≤ 3.9e-2   | yes  |
+| criterion                                   | `pbl`           | `free`          | pass |
+|:------------------------------------------- |:--------------- |:--------------- |:---- |
+| 1. at 120 s, two iterations below one       | 1.2e-3 < 2.6e-2 | 1.7e-3 < 3.9e-2 | yes  |
+| 2. one iteration, 60 s no larger than 120 s | 1.3e-2 ≤ 2.6e-2 | 1.8e-2 ≤ 3.9e-2 | yes  |
 
   - With one iteration, halving the step halves the tags' `E` (ratio 0.50
     for `pbl`, 0.47 for `free`), and the parent's falls by 0.73. The tags'
@@ -1177,7 +1203,7 @@ Site 26 (ascent, 90 days, every run finished):
 | rule      | day 10 gross | day 30 gross | day 90 net | day 90 gross | slope, days 30–90 | moved, net over time |
 |:--------- | ------------:| ------------:| ----------:| ------------:| -----------------:| --------------------:|
 | same sign | 9.7e-13      | 2.5e-12      | −1.5e-12   | 5.4e-12      | 0.70              | 0.123                |
-| \|m\|       | 1.7e-13      | 3.8e-13      | −3.8e-13   | 6.9e-13      | 0.63              | 0.123                |
+| \|m\|     | 1.7e-13      | 3.8e-13      | −3.8e-13   | 6.9e-13      | 0.63              | 0.123                |
 
   - **The decision rule** (section 5). Same sign is inside the budget (0.2%)
     and its slope is at most |m|'s plus 0.25 (0.70 against 0.88). So the rule
@@ -1199,22 +1225,26 @@ Site 23 (subsidence):
     30. At worst, on day 30, the negative part is 11% of the column's water:
     −1.22 kg/m² against +12.5, in the levels from about 0.3 to 1.3 km
     (weights ρΔz).
+
   - The water closure breaks when the parent goes negative, and the same way
     under both rules: gross 2.5e-3 at day 10, 0.415 at day 30, 1.02 at the
     last check (day 74.5). The slope over days 30 to 74.5 is 1.04 under both.
     The two rules' totals agree to four digits.
+
   - Every tagged run ends with `simulation_crashed`: the copies at day 48.5
     (water gross 1.16), both follower rules at day 74.5. At the followers'
     crash the tags hold 25 kg/m² of water against the parent's 12, and on
     day 74 `q_tag_pbl` and `q_tag_evap` reach 0.06 kg/kg against a largest
     `hus` of 0.016. The copies on day 48: 28 kg/m² against 13, `q_tag_pbl`
     0.13 kg/kg.
+
   - Up to each crash, the ten daily output fields (`rhoa`, `ta`, `hus`,
     `clw`, `cli`, `wa`, `pr`, `lwp`, `arup`, `husup`) are bit for bit the
     twin's: prefix parity to day 74 and day 48. So the tags end a run that
     the model without them completes. This is recorded
     as known issue 7, a parity-class defect, with fix options in
     `design/NEGATIVE_PARENT_WATER.md`, for the owner.
+
   - Under section 5 neither rule meets the budget at site 23, so nothing is
     chosen from it. Against the copies at day 10 the tags differ by at most
     3.7%, and at day 30 by 1.5–63%, when neither is valid (weights ρΔz).
@@ -1230,6 +1260,7 @@ Site 23 (subsidence):
     crash.
 
 Verdicts (ROADMAP's contract):
+
   - parent parity: *pass*, for the ten daily output fields; completion at
     site 26, prefix at site 23;
   - parent validity: *not assessable* (OD3 pending), with site 23's
@@ -1271,9 +1302,9 @@ share of the environment's on the lateral inflow. W29's column (DYCOMS RF02,
 mode:
 
 | transport | copies' residual, last step: #105 → WP5b-C | copies' repair, cumulative: #105 → WP5b-C | grid tags' gross: #105 → WP5b-C |
-|:--------- | ----------------:| ----------------:| ----------------:|
-| follower  | 1.0e-4 → 9.2e-5  | 9.2e-4 → 6.5e-4  | 5.3e-8 → 5.4e-8  |
-| tracer    | 1.2e-4 → 1.2e-4  | 8.3e-4 → 8.7e-4  | 7.4e-3 → 7.4e-3  |
+|:--------- | ------------------------------------------:| -----------------------------------------:| -------------------------------:|
+| follower  | 1.0e-4 → 9.2e-5                            | 9.2e-4 → 6.5e-4                           | 5.3e-8 → 5.4e-8                 |
+| tracer    | 1.2e-4 → 1.2e-4                            | 8.3e-4 → 8.7e-4                           | 7.4e-3 → 7.4e-3                 |
 
   - Without any cross blocks (`f8da0913`) the copies' residual was 3.0e-4
     (follower) and 1.9e-4 (tracer). So #105's grid-tag blocks made most of the
@@ -1315,19 +1346,19 @@ fixed-parent one-step probes (ten iterations as reference, one and two as
 trials), P2 refinement from a 6 h state, P3 first-step probes, P4 full runs
 with untagged twins; scored against the OD3 rows approved on 2026-09-24.
 
-| rule | least favourable result |
-|:---- |:----------------------- |
-| R1 parity | *pass*, all 12 tagged runs, every model field bit for bit |
+| rule                                                 | least favourable result                                                                                                                          |
+|:---------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------ |
+| R1 parity                                            | *pass*, all 12 tagged runs, every model field bit for bit                                                                                        |
 | R2 Newton, the parent's `E` at two iterations ≤ 1e-3 | *fail* on every rung it can be scored: 1.1e-2 at 30 levels, 4.1e-3 at 60, 1.7e-2 at 120, centred, after startup; *not assessable* on first order |
-| R3 temperature, negative water | *pass*: the top level moves at most 2.1 K, no negative parent water |
-| R4 closure, default | the 24 h gross within budget everywhere (at most 3.0e-5); the second-half rule fails on 4 rungs, by at most 1.7e-5 |
-| R4 closure, copies | breaks at first order, up to 1.06 of the water at 30 levels |
-| R5 comparator residual and repair | *fail* on every rung: repair 0.66% a day at 60 levels centred against 0.20%; residual fails on first order, up to 1.0e-2 |
-| R6 comparator refinement | centred *pass*; first order *fail*, repair up to 2.18 times per rung |
-| R7 provenance | *not assessable* on every rung (R5 fails) |
-| R8 intervention | centred *pass* (no repair after startup); first order: 0.87% a day (default), up to 17% (copies) |
-| R9 refinement of `inc_left` and the repair | `inc_left` falls everywhere (worst ratio 0.51); the repair flagged structural at 60 levels first order (3.8) |
-| R10 one-step convergence | *pass* where it can be scored (worst 0.49) |
+| R3 temperature, negative water                       | *pass*: the top level moves at most 2.1 K, no negative parent water                                                                              |
+| R4 closure, default                                  | the 24 h gross within budget everywhere (at most 3.0e-5); the second-half rule fails on 4 rungs, by at most 1.7e-5                               |
+| R4 closure, copies                                   | breaks at first order, up to 1.06 of the water at 30 levels                                                                                      |
+| R5 comparator residual and repair                    | *fail* on every rung: repair 0.66% a day at 60 levels centred against 0.20%; residual fails on first order, up to 1.0e-2                         |
+| R6 comparator refinement                             | centred *pass*; first order *fail*, repair up to 2.18 times per rung                                                                             |
+| R7 provenance                                        | *not assessable* on every rung (R5 fails)                                                                                                        |
+| R8 intervention                                      | centred *pass* (no repair after startup); first order: 0.87% a day (default), up to 17% (copies)                                                 |
+| R9 refinement of `inc_left` and the repair           | `inc_left` falls everywhere (worst ratio 0.51); the repair flagged structural at 60 levels first order (3.8)                                     |
+| R10 one-step convergence                             | *pass* where it can be scored (worst 0.49)                                                                                                       |
 
   - **OD2's windows.** Startup ends at 1.8 h, 2.0 h and 2.3 h on the centred
     rungs. On first order the column's water tendency stays above a tenth of
@@ -1406,12 +1437,12 @@ every step of the reference, trials from its state with each operator on and
 off, under the follower and the tracer transport. W25's 30-level centred D4-W
 case; the established window from OD2's rule (startup ends at 1.8 h).
 
-| case, operator | remainder, of the water a day (part 1, > 2e-4) | the follower's moved gross it accounts for (part 2a, > 0.5% a day) | largest per-tag share (part 2b, > 2%) | provenance, `vdiff` only (part 3) | verdict |
-|:-------------- | -----:| -----:| -----:|:----- |:------- |
-| default, `vdiff` (W18's leak) | 1.4e-7 | 2.9% | `tropo` 3.2% | `tropo` L1 2.4%, L∞ 6.2% | retain (2a, 2b, 3) |
-| default, `sgs_mass_flux` (a reference, no WP4c path) | 7.8e-6 | 3.6% | `tropo` 4.0% | — | reported |
-| copies, `vdiff` | −5.3e-6 | 3.0% | `tropo` 1.6% | `tropo` L1 1.0%, L∞ 3.6% | retain (2a) |
-| copies, `diffusion_up` | 1.8e-7 | 1.2% | `tropo` 0.65% | — | retain (2a) |
+| case, operator                                       | remainder, of the water a day (part 1, > 2e-4) | the follower's moved gross it accounts for (part 2a, > 0.5% a day) | largest per-tag share (part 2b, > 2%) | provenance, `vdiff` only (part 3) | verdict            |
+|:---------------------------------------------------- | ----------------------------------------------:| ------------------------------------------------------------------:| -------------------------------------:|:--------------------------------- |:------------------ |
+| default, `vdiff` (W18's leak)                        | 1.4e-7                                         | 2.9%                                                               | `tropo` 3.2%                          | `tropo` L1 2.4%, L∞ 6.2%          | retain (2a, 2b, 3) |
+| default, `sgs_mass_flux` (a reference, no WP4c path) | 7.8e-6                                         | 3.6%                                                               | `tropo` 4.0%                          | —                                 | reported           |
+| copies, `vdiff`                                      | −5.3e-6                                        | 3.0%                                                               | `tropo` 1.6%                          | `tropo` L1 1.0%, L∞ 3.6%          | retain (2a)        |
+| copies, `diffusion_up`                               | 1.8e-7                                         | 1.2%                                                               | `tropo` 0.65%                         | —                                 | retain (2a)        |
 
   - **No remainder anywhere.** The follower absorbs every operator's
     mismatch to at most 1.9e-5 of the water a day (gross). So closure alone
@@ -1447,11 +1478,11 @@ applies.** W25's fixed-parent probe rerun with trials of 1 to 4 iterations
 production grid; `E` for `ρq_tot` summed over the established window (after
 2.0 h):
 
-| iterations | 1 | 2 | 3 | 4 |
-|:---------- | -:| -:| -:| -:|
-| parent `E` | 1.2e-2 | 4.1e-3 | 2.3e-3 | 1.9e-3 |
+| iterations               | 1      | 2      | 3      | 4      |
+|:------------------------ | ------:| ------:| ------:| ------:|
+| parent `E`               | 1.2e-2 | 4.1e-3 | 2.3e-3 | 1.9e-3 |
 | `tropo`'s `E`, whole run | 2.6e-2 | 4.7e-3 | 1.7e-3 | 1.1e-3 |
-| `evap`'s `E`, whole run | 0.20 | 4.3e-2 | 1.3e-2 | 5.2e-3 |
+| `evap`'s `E`, whole run  | 0.20   | 4.3e-2 | 1.3e-2 | 5.2e-3 |
 
   - From 3 to 4 iterations the parent gains 17%. Two iterations already
     take most of the error. The tags converge with the parent and the small
@@ -1480,33 +1511,37 @@ pre-registration the owner decides.** The validation of
 radiation's seed reset, 90 days, `pbl`, `free`, `evap` and `fcg` under the
 follower, each tag's own ledgers every 6 hours.
 
-| rule | site 23 | site 26 | pass |
-|:---- |:------- |:------- |:---- |
-| V1, reaches day 90 | yes | — | pass |
-| V2, largest gross against `∫max(ρq_tot, 0)`, at most 0.2% | 2.2% (day 74.5) | 5.6e-12 | **fail** at site 23 |
-| V2b, the named remainder closes, to 1e-12 | 2.4e-16 | 3.5e-16 | pass |
-| V3, site 26's tags against the control, bit for bit | — | all four, 91 outputs | pass |
-| V4, 10 model fields against the untagged twin, bit for bit | yes | yes | pass |
-| V5, the negative part's entry, per-step gross a day (reported) | 1.3% of the water | 0 | — |
-| V5, the repair's retained gross, at most 0.5% a day | 9.4e-5 | 2.3e-8 | pass |
-| V5, each tag's `led_fix`, at most 2% of its inventory | `pbl` 2.03%, `free` 1.6% | at most 7.7e-6 | **fail** at site 23 (`pbl`, from day 89) |
+| rule                                                           | site 23                  | site 26              | pass                                     |
+|:-------------------------------------------------------------- |:------------------------ |:-------------------- |:---------------------------------------- |
+| V1, reaches day 90                                             | yes                      | —                    | pass                                     |
+| V2, largest gross against `∫max(ρq_tot, 0)`, at most 0.2%      | 2.2% (day 74.5)          | 5.6e-12              | **fail** at site 23                      |
+| V2b, the named remainder closes, to 1e-12                      | 2.4e-16                  | 3.5e-16              | pass                                     |
+| V3, site 26's tags against the control, bit for bit            | —                        | all four, 91 outputs | pass                                     |
+| V4, 10 model fields against the untagged twin, bit for bit     | yes                      | yes                  | pass                                     |
+| V5, the negative part's entry, per-step gross a day (reported) | 1.3% of the water        | 0                    | —                                        |
+| V5, the repair's retained gross, at most 0.5% a day            | 9.4e-5                   | 2.3e-8               | pass                                     |
+| V5, each tag's `led_fix`, at most 2% of its inventory          | `pbl` 2.03%, `free` 1.6% | at most 7.7e-6       | **fail** at site 23 (`pbl`, from day 89) |
 
   - **Against the run without C** (`ic_s23_before`, the same trees without
     C): the gross exceeds 0.2% from day 10 and reaches 129% at day 90. With
     C it first exceeds 0.2% at day 29.25, at 179 of 361 checks, and it is
     0.42% at day 90.
+
   - **The miss is one-signed: the region tags hold more than the target.**
     The audit's `overclaimed` is the whole gross, and `untagged` stays below
     2.5e-4. The remainder closes (V2b) because `q_tag_res` goes negative
     where the tags overshoot, to −3.9e-4 kg/kg.
+
   - **Where.** On the 46 daily outputs over 0.2%, a median 15% of the excess
     (0 to 100%) lies in cells where `q_tot ≤ 0`, whose target is zero. The
     rest lies where the parent is positive. At day 90 all of it lies in the
     12 negative cells, between 369 and 1544 m. The unit tests of section 8.4
     empty a negative cell's partition within a solve. In the run the negative
     cells hold region tags.
+
   - **Which ledger carries it (section 8.3).** Over the ten largest 6-hourly
     rises of the excess, each ledger's change in the cells holding an excess:
+
       + the repair and each tag's `led_fix` change by at most 5e-4, below
         every rise. The repair does not carry the miss;
       + in six rises a follower ledger changes by 1.9 to 35 times the rise.
@@ -1520,6 +1555,7 @@ follower, each tag's own ledgers every 6 hours.
     This bounds which ledgers move with the excess, by size in the same
     cells and interval. It does not show that either follower entry causes
     it.
+
   - **Against the contract's negative-water row.** The untagged twin's
     negative water, `Σ ρΔz min(q_tot, 0)` over `Σ ρΔz q_tot`, passes the
     approved 1e-4 on 65 of 91 daily outputs, from day 10 (worst 11%). Above
@@ -1527,6 +1563,7 @@ follower, each tag's own ledgers every 6 hours.
     C's gross is at most 7.5e-11. So all of V2's failure lies where the
     contract already leaves site 23's water unscored. V2 was registered
     without that exclusion and fails as registered.
+
   - **Consequence for OD7.** Site 23's rerun of the long runs
     (`design/INCREMENT_RULE_LONG_RUNS.md` section 8) was to be submitted
     once option C passes. It is not submitted. OD7 stays deferred behind the
@@ -1548,13 +1585,13 @@ parts drifted from the rain by 20 times the rain.** The new CI group
 on `PrecipitatingColumn` cut at 6 km: 1M, 30 levels, `dt` 10 s, ARS343, one
 Newton iteration, first-order tracer upwinding, three tags.
 
-| check, after 300 s | `increment` | `tracer` |
-|:------------------ | -----------:| --------:|
-| rain parts against the rain, of the start's rain | 2e-16 | 1.8e-16 |
-| snow parts against the snow, of the start's snow | 3e-16 | 3.3e-16 |
-| non-precipitating water and the total, of the column's water | 4e-15 | total 3.2e-5 (the known advection split) |
-| `Σ pr_tag` against `pr` | within 2e-12 | — |
-| every model field against the column without tags | `isequal` | `isequal` |
+| check, after 300 s                                           | `increment`  | `tracer`                                 |
+|:------------------------------------------------------------ | ------------:| ----------------------------------------:|
+| rain parts against the rain, of the start's rain             | 2e-16        | 1.8e-16                                  |
+| snow parts against the snow, of the start's snow             | 3e-16        | 3.3e-16                                  |
+| non-precipitating water and the total, of the column's water | 4e-15        | total 3.2e-5 (the known advection split) |
+| `Σ pr_tag` against `pr`                                      | within 2e-12 | —                                        |
+| every model field against the column without tags            | `isequal`    | `isequal`                                |
 
   - **The donor's composition over the step.** Each gross flow carries its
     donor's water at the start mixed with what flowed into it during the
@@ -1589,12 +1626,12 @@ the pre-registration the difference is investigated before anything else.**
 case (D4-W, 30 levels, a day) with `water_tag_leak_correction: true`, the
 same run tree otherwise; the window from 6600 s.
 
-| V1 criterion | W40, no correction | with the correction | pass |
-|:------------ | ------------------:| -------------------:|:---- |
-| 1. `vdiff`'s part 2a, the follower's moved gross on minus off, at most 2.42% a day | 2.92% | 3.09% | **fails** |
-| 2. part 1, the remainder, below 2e-4 a day; `q_tag_res` gross at 24 h within 0.2% | 1.3e-5; — | 1.4e-5; 8.4e-6 | holds |
-| 3. 37 parent fields against W25's untagged twin, bit for bit, every hourly output to 24 h | — | equal | holds |
-| 4. `∫q_tag_led_leaknet ρ dz` within 1e-12 of the water; `leaknet` against the tags' own leak ledgers to 1e-10 | — | 6.3e-18; 2.3e-15 | holds |
+| V1 criterion                                                                                                  | W40, no correction | with the correction | pass      |
+|:------------------------------------------------------------------------------------------------------------- | ------------------:| -------------------:|:--------- |
+| 1. `vdiff`'s part 2a, the follower's moved gross on minus off, at most 2.42% a day                            | 2.92%              | 3.09%               | **fails** |
+| 2. part 1, the remainder, below 2e-4 a day; `q_tag_res` gross at 24 h within 0.2%                             | 1.3e-5; —          | 1.4e-5; 8.4e-6      | holds     |
+| 3. 37 parent fields against W25's untagged twin, bit for bit, every hourly output to 24 h                     | —                  | equal               | holds     |
+| 4. `∫q_tag_led_leaknet ρ dz` within 1e-12 of the water; `leaknet` against the tags' own leak ledgers to 1e-10 | —                  | 6.3e-18; 2.3e-15    | holds     |
 
   - **What moved.** `vdiff`'s growth of the tags' drift from the parent
     (gross, on minus off) falls from 4.28% to 3.82% of the water a day. The
@@ -1799,12 +1836,12 @@ test did not probe it.** `design/LEDGER_RATIO_ZERO_CROSSING.md`, pre-registered
 before the runs: two pairs, D4's EDMF column and C6's small sphere, a day
 each under `enthalpy_increment`, differing only in `energy_source_tag_repair`.
 
-| precondition | D4 | sphere |
-|:------------ |:-- |:------ |
-| `ta`, `rhoa`, `hus` bit for bit within the pair | yes | yes |
+| precondition                                                        | D4                            | sphere                        |
+|:------------------------------------------------------------------- |:----------------------------- |:----------------------------- |
+| `ta`, `rhoa`, `hus` bit for bit within the pair                     | yes                           | yes                           |
 | repair off: `sfc` or `rad` reaches `∫tag ≤ 0` or `∫|tag|/∫tag ≥ 10` | no (`sfc` 1.017, `rad` 1.000) | no (`sfc` 1.005, `rad` 1.001) |
-| repair on: `led_fix_sfc` or `led_fix_rad` retains more than 0 | yes | yes |
-| the pair | inconclusive | inconclusive |
+| repair on: `led_fix_sfc` or `led_fix_rad` retains more than 0       | yes                           | yes                           |
+| the pair                                                            | inconclusive                  | inconclusive                  |
 
   - The audit writes the ratios, not the tag's integrals, so `∫|tag|/∫tag`
     is read as `inventory_fraction / burden_fraction` from the ledgers that
@@ -2359,13 +2396,13 @@ The model is bit for bit the same.** `g1_inc_d4`'s configuration (E64: D4,
 rule) and at G4.15 (`2b43580d`, the same-sign rule, the 100-unit partition
 check, the `_net_abs` names):
 
-| D4, 24 h, over the partition's energy | |m| rule  | same sign |
-|:------------------------------------- | ---------:| ---------:|
-| net closure residual                  | −8.7e-9   | +9.5e-8   |
-| gross closure residual                | 2.3e-6    | 9.2e-6    |
-| left out (`increment_left`)           | −4.0e-7   | −4.0e-7   |
-| left out, the cells' absolute ledgers | 2.7e-6    | 9.7e-6    |
-| moved, the cells' absolute ledgers    | 0.289     | 0.288     |
+| D4, 24 h, over the partition's energy | \|m\| rule | same sign |
+|:------------------------------------- | ----------:| ---------:|
+| net closure residual                  | −8.7e-9    | +9.5e-8   |
+| gross closure residual                | 2.3e-6     | 9.2e-6    |
+| left out (`increment_left`)           | −4.0e-7    | −4.0e-7   |
+| left out, the cells' absolute ledgers | 2.7e-6     | 9.7e-6    |
+| moved, the cells' absolute ledgers    | 0.289      | 0.288     |
 
   - `ta`, `rhoa` and `hus` are bit for bit the same at every hour.
   - The part left out is the same, since it is the columns' total by
@@ -2388,11 +2425,11 @@ path.** W23's column (DYCOMS RF02, 1M, EDMF, ARS222, `dt` 120 s, an hour)
 with the energy source tags `strat`, `tropo` and `sfc` under
 `enthalpy_increment` (N5 of the review of #105):
 
-| microphysics, Newton iterations | net      | gross    |
-|:------------------------------- | --------:| --------:|
-| explicit, 1                     | 1.5e-4   | 2.1e-4   |
-| explicit, 10                    | 3.7e-12  | 4.9e-12  |
-| implicit, 1                     | −7.7e-7  | 1.5e-6   |
+| microphysics, Newton iterations | net     | gross   |
+|:------------------------------- | -------:| -------:|
+| explicit, 1                     | 1.5e-4  | 2.1e-4  |
+| explicit, 10                    | 3.7e-12 | 4.9e-12 |
+| implicit, 1                     | −7.7e-7 | 1.5e-6  |
 
 The water tags' fix, cross blocks to each falling species, is G4.16. Until
 then nothing refuses `enthalpy_increment` there. *Jobs `13911689` to
@@ -2404,11 +2441,11 @@ with one Newton iteration the hour's gross closure residual falls from
 pre-registered validation (`design/ENERGY_SEDIMENTATION_CROSS_BLOCKS.md`
 section 6), #113 on #105, blocks off on #105's code:
 
-| case | blocks off | blocks on | parity |
-|:---- | ----------:| ---------:|:------ |
-| W23's column, 1M explicit, one iteration, an hour (E80's case) | 1.8e-4 | 1.4e-15 | bit for bit |
-| the same, 1M implicit | 8.1e-7 | 1.2e-15 | bit for bit |
-| D4, a day | 2.3e-6 | 8.9e-15 | bit for bit |
+| case                                                           | blocks off | blocks on | parity      |
+|:-------------------------------------------------------------- | ----------:| ---------:|:----------- |
+| W23's column, 1M explicit, one iteration, an hour (E80's case) | 1.8e-4     | 1.4e-15   | bit for bit |
+| the same, 1M implicit                                          | 8.1e-7     | 1.2e-15   | bit for bit |
+| D4, a day                                                      | 2.3e-6     | 8.9e-15   | bit for bit |
 
   - V1 (on, gross at most 1e-7) *passes*; V2 to V4 (nothing worse with the
     blocks; the explicit hour with them no worse than the implicit hour
@@ -2649,12 +2686,12 @@ between `c` and `2c`. A5 fails.** `design/D4_PROCESS_BUDGET.md`, pre-registered
 before the runs: three D4 days from one run tree, the budget at `c` and at
 `2c`, and the untagged twin.
 
-| check at 24 h | value | pass |
-|:------------- | -----:|:---- |
-| parity, both tagged runs against the twin, every output | bit for bit | holds |
-| A2, `|X_II|` for the column at `c`, at most 1 J/m² | 4.7e-7 | pass |
-| A3, the same at `2c` | 9.3e-7 | pass |
-| A4, `∫|F_S| dz`, the repair as a parent source, at most 1 J/m² | 2.3e-9 | pass |
+| check at 24 h                                                    | value               | pass     |
+|:---------------------------------------------------------------- | -------------------:|:-------- |
+| parity, both tagged runs against the twin, every output          | bit for bit         | holds    |
+| A2, `|X_II|` for the column at `c`, at most 1 J/m²               | 4.7e-7              | pass     |
+| A3, the same at `2c`                                             | 9.3e-7              | pass     |
+| A4, `∫|F_S| dz`, the repair as a parent source, at most 1 J/m²   | 2.3e-9              | pass     |
 | A5, `I_col(2c) − I_col(c)` against `c·M_U`, within 10% or 1 J/m² | −28 against −1.15e5 | **fail** |
 
   - **Identity II** (the residual): `R(t) − R(0) = L_R + I − F_S + X_II`
@@ -2663,13 +2700,12 @@ before the runs: three D4 days from one run tree, the budget at `c` and at
     `L_R` +44.5, the part left in place `I` −45.5. Two adjacent layers hold
     almost all of the flush.
   - **Identity I** (the partitioned total) at 24 h: `ΔE` 1.17e6 = `B` 1.36e6
-    + precipitation −7.6e4 + `c·M_U` −1.15e5 + `X_I` −17 J/m² at `c`. `c·M_U`
-    comes from the pair, so identity I holds by construction (the note
-    says so). `X_I` is −33 to −17 J/m² over the day.
+      + precipitation −7.6e4 + `c·M_U` −1.15e5 + `X_I` −17 J/m² at `c`. `c·M_U`
+        comes from the pair, so identity I holds by construction (the note
+        says so). `X_I` is −33 to −17 J/m² over the day.
   - **Where C4 goes.** Not into the residual: `I` differs between the two
     offsets by 28 J/m², four thousand times less than `c·M_U`. By identity I
-    it lies in the tags' bracketed total `B`: `B(2c) − B(c) = c·ΔM −
-    c·M_U`. The record-based estimate of the same
+    it lies in the tags' bracketed total `B`: `B(2c) − B(c) = c·ΔM − c·M_U`. The record-based estimate of the same
     term, `c·(ΔM − Σ q_prc + ∫pr dt)`, gives +1.06e4 J/m², opposite in sign
     and ten times smaller. So the process records do not bracket it either.
     This bounds where C4 is not; which process carries it is not named.
@@ -2812,9 +2848,9 @@ offset 110495 J/kg:
 | site, last check | rule      | day 10 gross | day 30 gross | gross at the last check | slope over          | moved, net over time |
 |:---------------- |:--------- | ------------:| ------------:| -----------------------:|:------------------- | --------------------:|
 | 26, day 90       | same sign | 1.2e-12      | 3.1e-12      | 7.3e-12                 | 0.76, days 30–90    | 1.28                 |
-| 26, day 90       | \|m\|       | 6.0e-14      | 1.4e-13      | 2.7e-13                 | 0.65, days 30–90    | 1.28                 |
+| 26, day 90       | \|m\|     | 6.0e-14      | 1.4e-13      | 2.7e-13                 | 0.65, days 30–90    | 1.28                 |
 | 23, day 74.25    | same sign | 1.2e-12      | 3.9e-12      | 7.6e-12                 | 0.67, days 30–74.25 | 0.48                 |
-| 23, day 74.25    | \|m\|       | 5.9e-14      | 7.1e-13      | 1.6e-12                 | 0.46, days 30–74.25 | 0.48                 |
+| 23, day 74.25    | \|m\|     | 5.9e-14      | 7.1e-13      | 1.6e-12                 | 0.46, days 30–74.25 | 0.48                 |
 
   - **The decision rule** (section 5, energy budget 1e-4, a proposal). Same
     sign is inside the budget at both sites, and its slope is at most |m|'s
@@ -2979,11 +3015,11 @@ process records' lower bound, and every percentage here is an upper bound.
 throughput here, so it is not a lower bound, and these percentages are
 estimates, not upper bounds. The verdict stands.*
 
-| run | own residual (at most 2e-4) | repair a day (at most 0.20%) | eligible |
-|:--- | ---------------------------:| ----------------------------:|:-------- |
-| copies, with the mirrors      | 1.1e-5 | 2.9% | no |
-| copies, before (`main`)       | 1.2e-5 | 2.6% | no |
-| copies, with the mirrors, `dt` 60 s | 2.7e-6 | 1.9% | no |
+| run                                 | own residual (at most 2e-4) | repair a day (at most 0.20%) | eligible |
+|:----------------------------------- | ---------------------------:| ----------------------------:|:-------- |
+| copies, with the mirrors            | 1.1e-5                      | 2.9%                         | no       |
+| copies, before (`main`)             | 1.2e-5                      | 2.6%                         | no       |
+| copies, with the mirrors, `dt` 60 s | 2.7e-6                      | 1.9%                         | no       |
 
   - Refinement passes: the repair per day at 60 s is 0.65 times that at 120 s
     (at most 1.1).
@@ -3011,11 +3047,11 @@ and E83's percentages were not upper bounds.** E83's five runs repeated with
 in the mirrors' note, section 6), on a tree with #114 and #115; the rules
 unchanged.
 
-| run | throughput over the window (J/m²) | own residual (at most 2e-4) | repair a day (at most 0.20%) |
-|:--- | ---------------------------------:| ---------------------------:| ----------------------------:|
-| copies, with the mirrors      | 2.004e7 (E83's figure 2.123e7) | 1.2e-5 | 3.1% (E83: 2.9%) |
-| copies, before (`main`)       | 2.004e7 | 1.2e-5 | 2.7% (E83: 2.6%) |
-| copies, with the mirrors, `dt` 60 s | 1.994e7 | 2.8e-6 | 2.0% (E83: 1.9%) |
+| run                                 | throughput over the window (J/m²) | own residual (at most 2e-4) | repair a day (at most 0.20%) |
+|:----------------------------------- | ---------------------------------:| ---------------------------:| ----------------------------:|
+| copies, with the mirrors            | 2.004e7 (E83's figure 2.123e7)    | 1.2e-5                      | 3.1% (E83: 2.9%)             |
+| copies, before (`main`)             | 2.004e7                           | 1.2e-5                      | 2.7% (E83: 2.6%)             |
+| copies, with the mirrors, `dt` 60 s | 1.994e7                           | 2.8e-6                      | 2.0% (E83: 1.9%)             |
 
   - Refinement passes (0.65). The copies and default runs are bit for bit the
     untagged twin; the 60 s twin is compared with the 120 s untagged run and
@@ -3033,8 +3069,7 @@ unchanged.
 
 *`hpda2_compute`, 2026-09-25, jobs `13944938` to `13944942`, from
 `../ClimaAtmosResiDyn-g411x-run` (the record with #115 and #114) and
-`-g411xbefore-run` (with #115). `G411_PREFIX=g411x
-analysis/increment/g411_eligibility.py`; `output/g411x/`.*
+`-g411xbefore-run` (with #115). `G411_PREFIX=g411x analysis/increment/g411_eligibility.py`; `output/g411x/`.*
 
 **E86. On OD4's scale the energy records' closure verdicts hold for the
 prototype and the sphere, and fail for the `enthalpy` audit, for D1 under
@@ -3045,13 +3080,13 @@ G4.3's restatement of recorded runs, no new runs except E84's `g411x_d4_*`.
 The gross closure residual over the window's throughput, on the records'
 estimate Θi (E84: an estimate, not a bound), against 2e-3:
 
-| record | on OD4's scale | verdict |
-|:------ |:-------------- |:------- |
-| D4 prototype, 24 h (E62, E64, E73) | 1.2e-5 (E79's same sign 4.7e-5) | pass |
-| the sphere (E74) | 7.9e-4 at 10 days, 1.6e-3 at day 1 | pass, by 1.24 times at day 1 |
-| the `enthalpy` audit on D4 (E62's base, E65's base, E66's reference) | 2.7e-2 to 3.4e-2 | fail |
-| D1 under `tracer` (E42) | 24.9 times Θi in its hour | fail |
-| the explicit hour without the blocks (E82's control) | 2.2e-2 of D4's first-hour Θx; 5.1e-2 of the surface flux alone | fail |
+| record                                                               | on OD4's scale                                                 | verdict                      |
+|:-------------------------------------------------------------------- |:-------------------------------------------------------------- |:---------------------------- |
+| D4 prototype, 24 h (E62, E64, E73)                                   | 1.2e-5 (E79's same sign 4.7e-5)                                | pass                         |
+| the sphere (E74)                                                     | 7.9e-4 at 10 days, 1.6e-3 at day 1                             | pass, by 1.24 times at day 1 |
+| the `enthalpy` audit on D4 (E62's base, E65's base, E66's reference) | 2.7e-2 to 3.4e-2                                               | fail                         |
+| D1 under `tracer` (E42)                                              | 24.9 times Θi in its hour                                      | fail                         |
+| the explicit hour without the blocks (E82's control)                 | 2.2e-2 of D4's first-hour Θx; 5.1e-2 of the surface flux alone | fail                         |
 
   - **The repair.** On `g411x_d4_default` the repair moves 7.3% of Θx a day.
     It was 6.9% of Θi at `dcf7d086` in E76's ladder, 1.8% at E73's

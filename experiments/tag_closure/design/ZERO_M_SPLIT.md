@@ -39,10 +39,10 @@ partition sum of clamped grid shares, and `φᴺᵢ` the partition-normalized
 shares that `ShareDifferences` works on (`min(ε̄ᵢ/total, 1)`, negatives
 clamped; `energy_source_tags.jl:1965-1966, 2044-2045, 2093`).
 
-| mode | updraft `φʲᵢ` | environment `φ⁰ᵢ` |
-|:---- |:------------- |:----------------- |
-| default | `S·(φᴺᵢ + Δφʲᵢ)`, from `ShareDifferences(flags, false)` | `S·(φᴺᵢ + Δφ⁰ᵢ)`, from `ShareDifferences(flags, true)` |
-| copies | `clamp(χᵢʲ/q_totʲ, 0, 1)`, the share `_copies_rain_out!` uses | `(ρq_tagᵢ − ρaʲχᵢʲ)/(ρq_tot − ρaʲq_totʲ)`, clamped to [0, 1] and renormalized over the partition, times `S` |
+| mode    | updraft `φʲᵢ`                                                 | environment `φ⁰ᵢ`                                                                                           |
+|:------- |:------------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------- |
+| default | `S·(φᴺᵢ + Δφʲᵢ)`, from `ShareDifferences(flags, false)`       | `S·(φᴺᵢ + Δφ⁰ᵢ)`, from `ShareDifferences(flags, true)`                                                      |
+| copies  | `clamp(χᵢʲ/q_totʲ, 0, 1)`, the share `_copies_rain_out!` uses | `(ρq_tagᵢ − ρaʲχᵢʲ)/(ρq_tot − ρaʲq_totʲ)`, clamped to [0, 1] and renormalized over the partition, times `S` |
 
 The factor `S` keeps today's behaviour of a drifted partition, whose
 residual keeps its ratio to `ρq_tot` as the cell rains out. Without it the
@@ -131,11 +131,11 @@ to the parent, `−min(Δ,0)·ρq_tagᵢ/ρq_tot²`. The parent's own sink needs
 CTS `imex_ark.jl:212, 312`; the Jacobian updated every iteration), with
 `c = dtγ|Δ|/ρq_tot`, for a pure proportional sink:
 
-| entries | after one iteration | error |
-|:------- |:------------------- |:----- |
-| none (today) | `Ŷᵢ(1 − c)` | none: the shares are invariant, so this is the fixed point |
-| the diagonal alone | `Ŷᵢ/(1 + c)` | `Ŷᵢc²/(1 + c)` per stage; the partition leaves the parent by that much |
-| the diagonal and the cross term | exact | none |
+| entries                         | after one iteration | error                                                                  |
+|:------------------------------- |:------------------- |:---------------------------------------------------------------------- |
+| none (today)                    | `Ŷᵢ(1 − c)`         | none: the shares are invariant, so this is the fixed point             |
+| the diagonal alone              | `Ŷᵢ/(1 + c)`        | `Ŷᵢc²/(1 + c)` per stage; the partition leaves the parent by that much |
+| the diagonal and the cross term | exact               | none                                                                   |
 
 With other implicit processes changing the shares in the stage, the diagonal
 alone trades per-tag error against closure, 7.5 times worse in one case, and
@@ -173,11 +173,11 @@ On the raining 0M column of V-W0a (DYCOMS RF02 without EDMF, ARS222, implicit
 microphysics, 2 h; W15, W16), with `water_tag_transport: tracer` pinned, since
 the follower would move the switch's closure change into its ledger.
 
-| runs | dt | Newton | switch |
-|:---- |:-- |:------ |:------ |
-| the references | 120, 60, 30 s | 20 (checked against 40 on the tags) | off |
-| the Newton ladder | 120 s | 1, 2, 10 | off and on |
-| the time step ladder | 60, 30 s | 1 | off and on |
+| runs                 | dt            | Newton                              | switch     |
+|:-------------------- |:------------- |:----------------------------------- |:---------- |
+| the references       | 120, 60, 30 s | 20 (checked against 40 on the tags) | off        |
+| the Newton ladder    | 120 s         | 1, 2, 10                            | off and on |
+| the time step ladder | 60, 30 s      | 1                                   | off and on |
 
 Eleven runs plus the 40-iteration checks. `newton_rtol` is not used: it tests
 the whole state's norm, which `ρe_tot` dominates (`integrator.jl:109-113`;
@@ -232,17 +232,17 @@ where there was the `-I` fallback.
 
 ## 9. The review, point by point
 
-| point | taken as |
-|:----- |:-------- |
+| point                                           | taken as                                              |
+|:----------------------------------------------- |:----------------------------------------------------- |
 | B1 the diagonal alone makes one iteration worse | section 4, the owner's choice; known issue 4 restated |
-| B2 φ̄ undefined, mixed normalization | section 2, `S·φᴺ` with guards |
-| S1 source tags' environment share > 1 | section 2, clamped |
-| S2 `edmfx_sgs_mass_flux: false` | section 2, fallback |
-| S3 `ρaᵏ < 0` gives production | section 2, both signs |
-| S4 copies' edge cases and the implicit path | section 2 |
-| S5 the switch's specification | section 4 |
-| S6 the experiment | section 5 |
-| S7 the plume twice; the scratch overwritten | section 2, computed once |
-| S8 `pr_tag` | section 3 |
-| S9 non-EDMF and EDOnly unchanged | section 2, tested |
-| minor | sections 2-5 |
+| B2 φ̄ undefined, mixed normalization            | section 2, `S·φᴺ` with guards                         |
+| S1 source tags' environment share > 1           | section 2, clamped                                    |
+| S2 `edmfx_sgs_mass_flux: false`                 | section 2, fallback                                   |
+| S3 `ρaᵏ < 0` gives production                   | section 2, both signs                                 |
+| S4 copies' edge cases and the implicit path     | section 2                                             |
+| S5 the switch's specification                   | section 4                                             |
+| S6 the experiment                               | section 5                                             |
+| S7 the plume twice; the scratch overwritten     | section 2, computed once                              |
+| S8 `pr_tag`                                     | section 3                                             |
+| S9 non-EDMF and EDOnly unchanged                | section 2, tested                                     |
+| minor                                           | sections 2-5                                          |

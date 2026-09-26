@@ -56,7 +56,10 @@ CA.set_precomputed_quantities!(Y, p, integrator.t)
 FT = eltype(Y.c.ρ)
 tag_values() = CA.Fields.Field(NTuple{length(model.tags), FT}, axes(Y.c))
 extra = (;
-    ᶠq_tag_sgs_flux = CA.Fields.Field(CA.ClimaCore.Geometry.Contravariant3Vector{FT}, axes(Y.f)),
+    ᶠq_tag_sgs_flux = CA.Fields.Field(
+        CA.ClimaCore.Geometry.Contravariant3Vector{FT},
+        axes(Y.f),
+    ),
     ᶜq_tag_mean = tag_values(),
     ᶜq_tag_plume = tag_values(),
     ᶜq_tag_environment = tag_values(),
@@ -149,7 +152,7 @@ while CA.time_to_seconds(integrator.t) < t_end - 1e-6
         ᶜgrid_error =
             @. lazy(abs(ᶜΔʲ) * abs(ᶜφ̄ - ᶜrefʲ) + abs(ᶜΔ⁰) * abs(ᶜφ̄ - ᶜref⁰))
         ᶜrecon_error = @. lazy(
-            abs(ᶜΔʲ) * abs(ᶜrecʲ - ᶜrefʲ) + abs(ᶜΔ⁰) * abs(ᶜrec⁰ - ᶜref⁰)
+            abs(ᶜΔʲ) * abs(ᶜrecʲ - ᶜrefʲ) + abs(ᶜΔ⁰) * abs(ᶜrec⁰ - ᶜref⁰),
         )
         # The reference's own shares, to set against the other rungs'.
         ᶜref_share = @. lazy(abs(ᶜΔʲ) * ᶜrefʲ + abs(ᶜΔ⁰) * ᶜref⁰)
@@ -180,7 +183,9 @@ function report(selected, what)
     end
     off = sum(row[3] for row in selected) / weight
     binding = sum(row[4] for row in selected) / weight
-    println("RESULT run=$run_name $what exchange_off_fraction=$off bound_binding_fraction=$binding")
+    println(
+        "RESULT run=$run_name $what exchange_off_fraction=$off bound_binding_fraction=$binding",
+    )
 end
 report(rows, "all")
 report(filter(row -> row[1] > 3 * 3600, rows), "hours3to6")

@@ -29,34 +29,44 @@ record; the answered and superseded entries are in the next section.
   - **OD7**, G4.15's rule for energy: same sign or |m|. Deferred by the owner
     on 2026-09-24, until the long runs can be scored at site 23.
     [Register](ROADMAP.md#the-decision-register)
+
   - ~~**Known issue 7: the choice among B, C and D.**~~ *Answered 2026-09-25:
     option C* (below).
+
   - ~~**R2, the Newton row, on D4-W.**~~ *Answered 2026-09-25: the row is
     revised* (below).
+
   - **WP4a's two points:**
+
       + known issue 4's Jacobian, either the pair of entries or the diagonal
         alone as a test;
       + where the copies' part of issue 4 goes.
 
     [G3T](G3_TODO.md#decisions)
+
   - **WP6's three points.** Step 3 took the conservative default for each
     ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), 10.6):
+
       + whether a pre-WP6 checkpoint is refused or zero-filled (refused);
       + whether loss and τ move to WP4a and WP4b (not in WP6);
       + whether the transfer ledgers stay as they are or go per tag (as they
         are, with the per-tag ledgers beside them).
 
     [G3T](G3_TODO.md#decisions)
+
   - **The explicit-1M water default, at M5.** W33's verdict is decided (it
     stays a failure, W35 beside it; 2026-09-24). The default itself is decided
     at M5 under the contract. [G3T](G3_TODO.md#decisions)
+
   - **W21's surface rule in the first hour:** whether the plume's start
     should model the surface flux (plan 4.1, review S4). Rev. 2 sets the
     first-hour budget (OD3's provenance rows) but not this rule.
     [G3T](G3_TODO.md#decisions)
+
   - **G4.3 to G4.6's seven points** (raised 2026-09-25 with #120 and E86;
     the proposals are in `review/od4_restatement.md` and the design notes it
     names):
+
       + whether the register's interim rule should now say that values on the
         process records are estimates, not bounds (E84);
       + whether an aggregate intervention threshold applies to energy. At
@@ -74,8 +84,10 @@ record; the answered and superseded entries are in the next section.
         residual.
 
     [G4T](G4_TODO.md)
+
   - **WP4b stage 1's points** (raised 2026-09-25 with #121 and W43; the
     design note's section 17):
+
       + whether each gross flow carrying its donor's composition over the
         step stands as the reading of section 9;
       + the rain and snow parts get no increment follower, since their
@@ -141,46 +153,59 @@ The list as it stood before this classification, kept as written:
 >     the thresholds, the energy scale, *not assessable* at M5, the sphere,
 >     G4.15, and the audit's feasibility. ~~**Waiting.**~~ Answered on
 >     2026-09-24 (below), except:
+>
 >       + ~~**the OD3 draft**, with OD2's levels, OD6's ceiling and the 60-level
 >         stretching: **waiting for approval**. Step 2 waits for it.~~
 >         **Approved** 2026-09-24 (below).
 >         [ROADMAP.md, "The OD3 thresholds"](ROADMAP.md#the-od3-thresholds-approved-2026-09-24)
 >       + **OD7**: **open, deferred**.
->     [ROADMAP.md, "The decision register"](ROADMAP.md#the-decision-register)
+>         [ROADMAP.md, "The decision register"](ROADMAP.md#the-decision-register)
+>
 >   - **Known issue 7's fix**, one of the options in
 >     `design/NEGATIVE_PARENT_WATER.md`, before the sphere. ~~**Waiting.**~~
 >     A chosen 2026-09-24 (below). **Waiting:** the choice among B, C and D,
 >     after the probe.
+>
 >   - ~~**OD4's throughput source** for the existing records: the process records
 >     as a lower bound, or a new per-step accumulator. **Waiting.**~~ Decided
 >     2026-09-25 (below): an exact accumulator.
 >     [review/od4_denominator_audit.md](review/od4_denominator_audit.md)
+>
 >   - ~~**W33's verdict**, after the same-atmosphere check passed (W35).
 >     **Waiting.**~~ Decided 2026-09-24 (below).
 >     [G3T](G3_TODO.md#wp5b-v-the-explicit-1m-default)
+>
 >   - **The sphere's numbers**, in the form G3_PLAN 6.1 fixes, before V-W11.
 >     **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
+>
 >   - **The default mode's cost budget**, proposed from V-W10's first
 >     measurements, set before V-W11. **Waiting.** [G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)
+>
 >   - ~~**The prognostic fields of the rain and snow tags**, settled in design note
 >     WP4b-D and its review. Recommended: the non-precipitating, rain and snow
 >     parts. Three further points of the note's section 15 go with it.
 >     **Waiting.**~~ Decided 2026-09-25 (below): the three parts, gross flows.
 >     [G3T](G3_TODO.md#decisions)
+>
 >   - **WP4a's two points:**
+>
 >       + known issue 4's Jacobian, either the pair of entries or the diagonal
 >         alone as a test;
 >       + where the copies' part of issue 4 goes.
 >
 >     **Waiting.** [G3T](G3_TODO.md#decisions)
+>
 >   - **WP6's three points:**
+>
 >       + whether a pre-WP6 checkpoint is refused or zero-filled;
 >       + whether loss and τ move to WP4a and WP4b;
 >       + whether the transfer ledgers stay as they are or go per tag.
 >
 >     **Waiting.** [G3T](G3_TODO.md#decisions)
+>
 >   - **The copies' repair over its bound, and the surface rule in the first
 >     hour** (W21). **Waiting.** [G3T](G3_TODO.md#decisions)
+>
 >   - **When to investigate V-W4's two breaks:** the partition at 120 levels,
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
@@ -189,6 +214,7 @@ The list as it stood before this classification, kept as written:
 
   - **The owner's answers, later on 2026-09-25.** **In force.**
     [ROADMAP.md, "The owner's answers, later on 2026-09-25"](ROADMAP.md#the-owners-answers-later-on-2026-09-25)
+
       + **Known issue 7: option C.** The partition tags partition
         `max(ρq_tot, 0)`; the follower takes its increment; the repair, the
         rescale and the copies' repair aim at it; the negative part is the
@@ -231,6 +257,7 @@ The list as it stood before this classification, kept as written:
   - **The owner's answers of 2026-09-25** (through the parent session).
     **In force.**
     [ROADMAP.md, "The owner's answers, 2026-09-25"](ROADMAP.md#the-owners-answers-2026-09-25)
+
       + **WP4b-D:** the three parts as the note names them. `ρq_tag_<name>`
         holds the non-precipitating part, beside `ρq_rtag_<name>` and
         `ρq_stag_<name>`, behind `water_tag_precipitation: true`, 1M only.
@@ -258,6 +285,7 @@ The list as it stood before this classification, kept as written:
 
   - **The owner's answers, later on 2026-09-24.** **In force.**
     [ROADMAP.md, "The owner's answers, later on 2026-09-24"](ROADMAP.md#the-owners-answers-later-on-2026-09-24)
+
       + OD3: approved as drafted. Every row of the threshold table is a
         scoring threshold from 2026-09-24, its numbers unchanged. Step 2 is
         unblocked.
@@ -273,6 +301,7 @@ The list as it stood before this classification, kept as written:
   - **The owner's answers to rev. 2's register** (evening, through the parent
     session). **In force**, each as recorded in
     [ROADMAP.md, "The owner's answers"](ROADMAP.md#the-owners-answers-2026-09-24):
+
       + OD1: production is `g2_v2_sphere_n2` at 60 levels instead of 10, the
         rest of that configuration unchanged (`h_elem` 6, `z_max` 30 km,
         `dt` 20 s, ARS222, two Newton iterations, 1M implicit, the default
@@ -313,6 +342,7 @@ The list as it stood before this classification, kept as written:
 
   - **Rev. 2 of the work plan** ("Simulation-results synthesis and in-place
     work-plan revision"). The owner's plan decides, in force from its step 0:
+
       + results are reported by the acceptance contract's verdicts; closure
         never substitutes for provenance;
       + copies are a provenance comparator only where they pass eligibility
@@ -331,6 +361,7 @@ The list as it stood before this classification, kept as written:
 
     **In force.** Its open decisions are OD1 to OD8.
     [ROADMAP.md, "Rev. 2 of the work plan"](ROADMAP.md#rev-2-of-the-work-plan-2026-09-24)
+
   - **The followers' placement rule (same sign or |m|) is decided after long
     runs**, not after a day. G4.15 is split: G4.15a (the partition check and
     the audit names) goes ahead; G4.15b (the same-sign rule for energy) waits.
@@ -348,21 +379,26 @@ The list as it stood before this classification, kept as written:
     sedimentation cross blocks**, not a route through the bottom face. Until
     then the follower is refused there (#102). **In force; in progress.**
     [G3T](G3_TODO.md#decisions), the owner's review of #102, point 3
+
   - **With 1M stepped explicitly the follower stays opt-in** until a
     precipitating case on a timestep and Newton ladder passes (WP5b-V). The
     owner's review of #105, finding 2, offered this or the evidence first.
     **In force** (#105 at `c446fe91`).
+
   - **#104's scope excludes known issue 4's Jacobian switch** (now WP4a-J)
     and the test of the default mode's reconstruction against a converged
     reference (WP4a-V), each with criteria in G3_TODO. The owner's review of
     #104, findings 2 and 6, asked for the boundary. Proposed in the reply;
     the owner may object.
+
   - **WP5's default transport under EDMF is applied.** `increment` is the
     default in the default mode under prognostic EDMF, where the
     configuration supports it; `tracer` elsewhere and with copies. The
     owner's review of #102 asked for G3_PLAN 4.3's rule to take effect.
     **Done** (#102 at `a3a23d80`).
+
   - **The owner's review of #102, points 2 and 4 to 7, as proposed:**
+
       + the partition tolerance at 100 rounding units;
       + the column's total left out only where the mismatch has its sign;
       + the net-over-time audit columns renamed;
@@ -370,10 +406,13 @@ The list as it stood before this classification, kept as written:
       + the W24 evidence pinned under the tag `evidence/w24`.
 
     **Done** (#102), W28.
+
   - **A checklist runs at each WP milestone and each goal's end**: STATUS,
     `output/`, FINDINGS, RUNS, the TODO file, reviews, and a push.
     **In force.** [README.md, "Closing a work package or a goal"](README.md#closing-a-work-package-or-a-goal)
+
   - **The session goal extends** (late on 2026-09-23 and early on 2026-09-24):
+
       + WP5;
       + WP4b-D, the rain and snow tags' design note;
       + Batch 2: V-W8, WP6, WP4a and V-W4.

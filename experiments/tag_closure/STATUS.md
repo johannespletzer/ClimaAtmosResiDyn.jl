@@ -80,13 +80,16 @@ not checked, it says so.
     model computes no answer for it. The page gives a ladder with an interval
     `[L, U]` per tag, fourteen theories and twenty-two experiments. It proposes
     OD9 to OD14 to the owner. Nothing has run.
+
       + **Where the newest results live.** On 2026-09-26 they were on
         `claude/plan-rev2` at `a6949414`, 78 commits ahead of
         `claude/tag-closure-record`, and no other branch held a record commit
         that it lacked. Check that before building on either branch.
+
   - **Update, 2026-09-25: the owner's answers, W25 scored, the probe read.**
     Each decision's state is in ROADMAP.md's register, the single source;
     the open ones are listed below ("The owner's open decisions").
+
       + The owner answered WP4b-D (the three parts, gross flows; steps 7, 8
         and 8b unblocked), OD4's quantity (an exact accumulator), the WP4c
         gate's OD3 reading, and the mirrors' relaxation (by composition).
@@ -98,7 +101,9 @@ not checked, it says so.
         C. The choice among B, C and D is the owner's.
       + Jobs `13944447` to `13944462` (G4.16, the WP4c gate, the mirrors) are
         with the parent session.
+
   - *Superseded 2026-09-25: see the update above.* **Update, 2026-09-24, later: OD3 approved, option A, step 2 ready.**
+
       + The owner approved the OD3 thresholds, OD2's window rule and OD6's
         ceiling, as drafted (ROADMAP.md, "The OD3 thresholds"). Step 2 is
         unblocked.
@@ -116,6 +121,7 @@ not checked, it says so.
       + Draft PRs #108 (the guard) and #109 (WP6 step 3) are open; all 16
         validation jobs passed (`output/wp6_step3/jobs/`,
         `output/g416_guard/jobs/`).
+
   - *Superseded later the same day: see the register.* **Update, 2026-09-24, 21:10: the owner's answers.** The owner answered
     the register (ROADMAP.md, "The owner's answers"): OD1 the sphere at 60
     levels; OD2 physical windows; OD4 gross source throughput; OD5 bounded
@@ -124,6 +130,7 @@ not checked, it says so.
     runs; 2M and P3 refused until measured; draft PRs when green. OD7 is
     deferred. OD3 is drafted in ROADMAP.md and waits for approval; step 2
     waits for it.
+
       + **Known issue 7**, a parity-class defect: at site 23 the tagged long
         runs end while the untagged twin completes 90 days. The fix is step
         8a, before the sphere; the options are in
@@ -135,8 +142,10 @@ not checked, it says so.
       + New commits, not pushed: the guard's extension (`e55ae293`), known
         issue 7 on `claude/water-tags-wp6-step3` (`18e7ef1d`), and these
         records.
+
   - **Update, 2026-09-24, 20:00: rev. 2 of the work plan, steps 0 and 1.**
     The owner revised the plan (ROADMAP.md, "Rev. 2 of the work plan").
+
       + Step 0 is done: the energy explicit-1M guard with its test
         (`claude/energy-explicit-1m-guard`, `33eeb5cd`), these entries, the
         in-place edits of G3_PLAN, G3_TODO, G4_TODO and ROADMAP, the decision
@@ -156,6 +165,7 @@ not checked, it says so.
 
   - **Update, 2026-09-24, 12:40.** The owner reviewed #104 and #105; both are
     answered on the PRs and pushed.
+
       + **#104 (WP4a) at `dfd93d7c`.** `pr_tag` reads one batch per output
         time; `pr_tag_res` added; the residual identities tested to rounding;
         the explicit path is a CI group, `tagging_water_edmf_0m_explicit`.
@@ -172,7 +182,9 @@ not checked, it says so.
         1.35e-4 to 7.3e-6, parent bit for bit. The three 1M integration files
         pass at `11b8d875`.
       + Running: the 32-tag copies timings, CI on #104 and #105.
+
   - **Update, 2026-09-24, 09:50.**
+
       + The owner confirmed the session's scope: finish it, and leave WP5b
         to the other session.
       + #102's reviewed head (`e29384ee`) is merged into WP4a (#104,
@@ -183,9 +195,11 @@ not checked, it says so.
       + Next session: read those two tests and the CI.
       + Otherwise every open item waits on the owner (DECISIONS.md) or
         belongs to WP5b.
+
   - **Update, 2026-09-24, 09:30.** The session's goal grew twice overnight.
     Late on 2026-09-23 it added WP5. On 2026-09-24 it added WP4b-D and
     Batch 2: V-W8, WP6, WP4a and V-W4.
+
       + **WP3, #101: green.** The owner's review is answered on the PR.
       + **WP5, #102.** Built, reviewed at xhigh, and validated on D4-W (W24).
         The owner reviewed it on 2026-09-24, and all seven points are taken at
@@ -218,6 +232,7 @@ not checked, it says so.
       + Every open decision is in [DECISIONS.md](DECISIONS.md), "Waiting for
         the owner". When a WP reaches a milestone, run the checklist in
         [README.md](README.md), "Closing a work package or a goal".
+
   - **Update, late on 2026-09-23.** WP1 is draft PR #100, green, waiting for
     the owner. WP3 is PR #101: built, reviewed by `clima-numerics-reviewer`
     and by the owner, whose points are addressed at `4a1c91a4`. **V-W3 is
@@ -230,6 +245,7 @@ not checked, it says so.
     it switched to in `73fa27bd`, 0.9% after an hour. Probes are queued.
     **The owner added WP5 to the session's goal**, after WP3's open items.
     Upstream needs: [UPSTREAM_REQUIREMENTS.md](UPSTREAM_REQUIREMENTS.md).
+
   - **G3's WP0 is done, and WP1 waits only for CI.** **This session's
     goal**, set by the owner on 2026-09-23, is WP0 and WP1. WP0: the plan
     checked against the merged #95; V-W0a, V-W0c and V-W1 run, recorded as
@@ -243,22 +259,26 @@ not checked, it says so.
     `claude/water-tags-edmf-wp3`, stacked on #100, then V-W3. See G3_TODO for
     each item. #95 merged on 2026-09-23 at 16:32
     (`0b2b1032`), which WP0 was waiting for.
+
   - **#95 brought the partition-only factor to `main`** (from `dcf7d086`;
     head `b9c6e7b0`), as the owner decided (decision 5 of G3_PLAN). The job session reran the R2 ladder's
     default runs there and recorded the result as **E76**: after a day the
     exchange agrees with the copies within 1.6% (L1) at every timestep and
     Newton count, and the first hour does not converge by design. E76 is on
     the record branch as `eec7f363`, ported from `8726d2cb`.
+
   - **H3 re-checked what G3 relies on** ([review/verify_g3.md](review/verify_g3.md)):
     20 claims recomputed, 1 consistent, 1 stale (W7's line citation) and 2
     discrepant (E73's build-cost figure, and one cell of E75's table). The
     errata are in FINDINGS (`388d2f3a`). G3_PLAN's cost risk already cites
     E73's corrected figures.
+
   - **The housekeeping is done.** The condensed documents merged into the
     record branch as #98 (H6, 13:47), after the loss check (H5) found nothing
     lost and the collective review (H5b) found them sound. `main` was merged
     in after #99 (`30913645`). The plan is archived:
     [archive/2026-09-23/CONDENSE_PLAN.md](archive/2026-09-23/CONDENSE_PLAN.md).
+
   - **The archive was synced again** at 13:50, before the last four worktrees
     were removed. Its copy of scratch is identical to scratch (RUNS.md, "Where
     the data lives"; the archive's README gives the file count).
@@ -440,6 +460,7 @@ Not plan decisions, kept as they stood on 2026-09-23 and not rechecked:
 >     decision register"). ~~All eight are open. Steps 2 and 3 of the revised
 >     order wait on OD1, OD2 and OD3.~~ *Superseded 2026-09-24, 21:10:* OD1,
 >     OD4, OD5 and OD8 are set, and OD2 and OD6 are set in form. Still open:
+>
 >       + ~~**the approval of the OD3 draft** (ROADMAP.md, "The OD3 threshold
 >         draft"), which includes OD2's levels, OD6's ceiling and the proposed
 >         60-level stretching. Step 2 waits for it;~~ *Approved 2026-09-24, as
@@ -454,6 +475,7 @@ Not plan decisions, kept as they stood on 2026-09-23 and not rechecked:
 >         Decided 2026-09-25: an exact accumulator.
 >
 >     The register's first list, kept as written:
+>
 >       + OD1, the production envelope: levels, SGS reconstruction, Δt, Newton
 >         count, microphysics, the intended tag counts.
 >       + OD2, the window boundaries per case.
@@ -463,9 +485,11 @@ Not plan decisions, kept as they stood on 2026-09-23 and not rechecked:
 >       + OD6, the sphere's ceiling, growth bound and run length.
 >       + OD7, G4.15's rule for energy.
 >       + OD8, the audit's feasibility at the intended tag count.
+>
 >   - ~~**W33's verdict**, after the same-atmosphere check passed (W35).~~
 >     *Decided 2026-09-24:* W33 stays a failure, W35 beside it; the explicit-1M
 >     water follower stays opt-in until M5.
+>
 >   - ~~**WP6 step 3's open questions**~~ *Decided 2026-09-24:* off by default,
 >     on in every validation and qualification run; the fraction uses the tag's
 >     current inventory, the absolute amount beside it. Kept as written:
@@ -477,14 +501,18 @@ Not plan decisions, kept as they stood on 2026-09-23 and not rechecked:
 >     budget**, after V-W10's first measurements and before V-W11. The other
 >     budgets were set on 2026-09-23
 >     ([G3_PLAN 6.1](G3_PLAN.md#61-budgets-fixed-before-the-runs)).
+>
 >   - ~~**The rain and snow tags' prognostic fields**, after the design note
 >     WP4b-D and its review ([G3_TODO](G3_TODO.md#decisions)).~~ Decided
 >     2026-09-25 (DECISIONS.md).
+>
 >   - WP4a's, WP6's and WP4b-D's points, the copies' repair, the surface rule,
 >     and V-W4's two breaks: [DECISIONS.md](DECISIONS.md), "Waiting for the
 >     owner".
+>
 >   - **`main`'s CI at `0b2b1032`**, after #95's merge, which was queued at
 >     16:40. V-W1 runs on it.
+>
 >   - **A rerun of `main`'s CI.** #96 and #97 were merged with `ci-required`
 >     failing on cancelled checks, not on a failed test, and `main`'s own CI
 >     runs were cancelled too. A rerun is the owner's to start.

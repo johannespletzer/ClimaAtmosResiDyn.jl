@@ -35,7 +35,9 @@ for name in ("g46_d4_budget", "g46_d4_budget_2c", "g46_d4_untagged")
     CA.CTS.step!(integrator)
     CA.CTS.step!(integrator)
     Y, p = integrator.u, integrator.p
-    println("== $name: built in $(round(built; digits = 1)) s, stepped to t = $(integrator.t)")
+    println(
+        "== $name: built in $(round(built; digits = 1)) s, stepped to t = $(integrator.t)",
+    )
     model = p.atmos.energy_source_tagging_model
     if name == "g46_d4_untagged"
         check(isnothing(model), "$name has no energy source tags")
@@ -57,7 +59,10 @@ for name in ("g46_d4_budget", "g46_d4_budget_2c", "g46_d4_untagged")
     columns = CA.energy_source_closure_columns(Y, p, model, closure)
     check(columns.headroom_min > 0, "$name: the headroom is positive")
     check(columns.source_throughput > 0, "$name: the throughput is positive")
-    check(model.offset == dict["energy_source_tag_offset"], "$name: the offset is the config's")
+    check(
+        model.offset == dict["energy_source_tag_offset"],
+        "$name: the offset is the config's",
+    )
 end
 
 isempty(failures) || (println("failed: ", join(failures, "; ")); exit(1))

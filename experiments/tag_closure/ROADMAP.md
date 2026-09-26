@@ -454,11 +454,13 @@ these is a scoring threshold until the owner approves it.
     negative part becomes a named field, `q_tag_negative`. Built on
     `claude/water-tags-negative-parent`; its validation is pre-registered in
     `design/NEGATIVE_PARENT_WATER.md`, section 8.
+
   - **R2, the Newton rule: measure three and four iterations first.** The
     threshold stays as approved. Job `13944802` runs W25's fixed-parent probe
     on `w25i_d4w_default_z60_c` with `TRIALS=1,2,3,4`, output in
     `$SCRATCH/tag_closure/output/w25i_probes/fixed_parent_newton34/`. Raising
     OD1's Newton count or revising the row follows its result.
+
   - **R2, the Newton row: revised** (after W38 and W41). The job measured the
     parent's `E` after startup at 1.2e-2, 4.1e-3, 2.3e-3 and 1.9e-3 with 1,
     2, 3 and 4 iterations, so it levels off near 2e-3. The parent's `E` is
@@ -468,6 +470,7 @@ these is a scoring threshold until the owner approves it.
     stays. Nothing is rescored. W38's R2 verdicts stand as scored and are
     read under the revised scope: every W25 verdict is same-parent except
     R7, the provenance against copies.
+
   - **A persistent parent-validity flag in the closure tables: B and D
     together.** B, `negative_water_void`: a latch per family, with the key
     `negative_water_void_above` (default 1e-4, water only). It is set at the
@@ -480,8 +483,10 @@ these is a scoring threshold until the owner approves it.
     both on a branch stacked on #116, which also fixes #116's water audit:
     under option C `nonpositive_mass` read 0 by construction, and it will
     read the raw parent again.
+
   - **The per-tag intervention row, revised** (from the review of #109). OD3's
     per-tag row (2%) applies to all tags, with two denominators:
+
       + a pure region tag: `retained / ∫tag`, with a positive inventory as its
         precondition;
       + a source-labelled or signed tag: `retained / ∫|tag|`, the absolute

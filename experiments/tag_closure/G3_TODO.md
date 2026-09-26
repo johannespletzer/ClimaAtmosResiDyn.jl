@@ -303,8 +303,10 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
         and `r` as a diagnostic.
 
   - [x] Copies initialised and rebuilt as `q_totʲ φ̄ᵢ`.
+
   - [x] The comparison driver starts them from the plume
     (`start_water_tag_copies_from_plume!`, called by `d4w_driver.jl`).
+
   - [x] A fifth mirror, the surface moisture flux into the updraft
     (`water_tag_copies_surface_flux_tendency!`). 4.1 lists four; the 0M CI
     test found it (FINDINGS W20).
@@ -360,6 +362,7 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
     follower rules at day 74.5), while the untagged twin completes 90 days.
     The parent is bit for bit the twin's up to each crash. The copies, WP3's,
     and the follower, WP5's, both end the run.
+
       + [x] Recorded in `docs/known_issues.md`, issue 7, on
         `claude/water-tags-wp6-step3` (`18e7ef1d`). The FINDINGS entry is the
         parent session's.
@@ -412,6 +415,7 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
   - [ ] Its default under EDMF, by the rule in plan 4.3. The rule selects it
     (W21), and the validation (W24) supports it: D4-W closes to 1.5e-4 in a
     day with one iteration. The owner confirms.
+
   - [x] Built: draft PR #102 (`fd07d902`), reviewed (xhigh, nothing
     blocking; `review/agent_reviews/wp5_numerics_review_2026-09-24.md`),
     validated on D4-W (W24). Its invariant: it never changes a column's
@@ -422,6 +426,7 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
   - [x] **V-W4**, the ladder, default and copies at each rung: dt 60 and 30;
     Newton 2, 4 and 10; 60 and 120 levels; first-order upwinding. Ran on
     2026-09-24, FINDINGS W25.
+
       + The default meets the per-tag budgets at the time-step and Newton
         rungs. At 60 levels it misses the first hour's, and at 120 levels
         every hour's.
@@ -430,8 +435,10 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
       + The copies' shares converge on the Newton ladder. On the time-step
         ladder they move as far as the atmosphere does.
       + R5, the cost, is not answered; V-W10 measures it.
+
   - [x] **Follow-up from V-W4, for the owner to schedule** (not in this
     session's scope). *Done 2026-09-25: step 2 scored (`output/w25i/`).*
+
       + what parts the partition at 120 levels, in both modes;
       + what parts the copies under first-order upwinding.
 
@@ -446,6 +453,7 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
     configs (`w25i_*`), scripts (`w25_probes.jl`, `w25_compare.py`) and run
     tree (`../ClimaAtmosResiDyn-w25i-run`). Its 46 jobs are not submitted.
     It comes before WP4b and the sphere, and is scored against OD1 and OD2.
+
       + Fixed-parent one-step probes at 30, 60 and 120 levels, with centred
         and first-order reconstruction.
       + The refinement test (Insight 10): from one saved state, a fixed
@@ -466,6 +474,7 @@ The owner chose this on 2026-09-24 for the explicit-1M lag (W23; the owner's
 review of #102, point 3). Design: `design/SEDIMENTATION_CROSS_BLOCKS.md`. The
 work is on branch `claude/water-tags-sed-cross`, worktree `-wedmf5b`, stacked
 on #102.
+
   - [x] Each tag's row gets the parent's cross block to each falling species,
     times the tag's share. The split solver solves the tags after the coupled
     fields, by back-substitution, so the parent's increments are unchanged.
@@ -705,7 +714,9 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     `tagging_water_precipitation` (133) pass on the login node (2026-09-25).
     What it shows is W43; where the build departs from the note is its
     section 17.
+
   - [ ] Review (xhigh) of stage 1.
+
   - [ ] The hyperdiffusion correction (note section 3) is built, but no model
     run exercises it: the test column has no horizontal extent. A sphere or
     box run checks it before a default relies on it.
@@ -785,6 +796,7 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     implementation is step 7 of the revised order; the validation is step 8b,
     after WP9's cost qualification (step 8), so that cost ceilings are fixed
     before any held-out or default evidence (review of `4507e247`).
+
   - [ ] *Scope added (provenance pathway, 2026-09-26):* PX14, the pool rule and
     the sedimentation reset replayed with sub-steps in the rain-out window,
     after #121's review.
@@ -879,9 +891,11 @@ owner's points in the note's section 8.
     against its own water. No owner decision was needed; the owner's three
     points of the note's section 8 stay open, and the code takes the
     conservative side of each.
+
   - [~] **Step 3, built on 2026-09-24** on `claude/water-tags-wp6-step3`
     (worktree `../ClimaAtmosResiDyn-wp6s3`, on #103 at `f22cfb27`); design
     note section 10; not pushed.
+
       + [x] The audit reports, per state ledger, what the accepted steps
         retained, what its writers attempted, and the events per accepted
         step. `ledger_cadence_step` marks the runs where a transfer's
