@@ -120,6 +120,10 @@ include(
 include(
     joinpath("parameterized_tendencies", "tagged_tracers", "water_tag_checkpoint.jl"),
 )
+# The closure checks' void flags, carried through a checkpoint.
+include(
+    joinpath("parameterized_tendencies", "tagged_tracers", "tag_closure_checkpoint.jl"),
+)
 # The applied-update event the tendency code brackets every parent-writing
 # process with; feeds the tags, the process records and the parent-budget ledger.
 include(joinpath("prognostic_equations", "applied_update.jl"))
