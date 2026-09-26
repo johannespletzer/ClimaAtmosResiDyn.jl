@@ -390,6 +390,27 @@ function sgs_advection_jacobian_blocks(Y, atmos)
         unrolled_map(sgs_state_name, advected_sgs_scalar_names(Y))
     sgs_mass_names =
         unrolled_map(sgs_state_name, sedimenting_sgs_mass_names(Y))
+    # The water tags' updraft copies fall with their share of each species, as
+    # `q_totʲ` falls with all of it, so each copy's row has a block to each
+    # species' column. The species are solved before the copies
+    # (`jacobian_solver_algorithm`), so the blocks sit below the diagonal.
+    copy_names = unrolled_map(
+        sgs_state_name,
+        water_tag_copy_sgs_names(atmos.water_tagging_model),
+    )
+    copy_cross_blocks = Tuple(
+        Iterators.flatten(
+            map(
+                copy_name -> map(
+                    mass_name ->
+                        (copy_name, mass_name) =>
+                            similar(Y.c, TridiagonalRow),
+                    sgs_mass_names,
+                ),
+                copy_names,
+            ),
+        ),
+    )
     return (
         map(
             name -> (name, name) => similar(Y.c, TridiagonalRow),
@@ -401,6 +422,7 @@ function sgs_advection_jacobian_blocks(Y, atmos)
                     similar(Y.c, TridiagonalRow),
             sgs_mass_names,
         )...,
+        copy_cross_blocks...,
     )
 end
 
@@ -1947,7 +1969,9 @@ function update_sgs_advection_jacobian!(matrix, Y, p, dtγ)
                 # environment's composition. Its dependence on the copy runs
                 # through the environment's share, and is left out, as the
                 # renormalization's and the clamp's are. The model's blocks
-                # above are written, so the operator's scratch is reused.
+                # above are written, so the operator's scratch is reused. The
+                # copies' cross blocks to the species follow, as the grid
+                # tags' do (WP5b).
                 copy_names =
                     water_tag_copy_sgs_names(p.atmos.water_tagging_model)
                 if !isempty(copy_names)
@@ -1974,9 +1998,85 @@ function update_sgs_advection_jacobian!(matrix, Y, p, dtγ)
                                 ),
                             )
                     end
+                    # Each copy's block to the species: the model's
+                    # `(q_totʲ, qʲ)` block with the copy's share of the
+                    # updraft's water on the part within the updraft, and its
+                    # share of the environment's on the lateral inflow.
+                    ᶜlateral_rate = @. lazy(
+                        dtγ * ifelse(
+                            ᶜ∂a∂z < 0,
+                            α_lat * ᶜ∂a∂z * ᶜρʲs.:(1) * ᶜwʲ /
+                            max(1 - ᶜa, eps(eltype(ᶜa))),
+                            zero(ᶜ∂a∂z),
+                        ),
+                    )
+                    update_water_tag_copy_sedimentation_blocks!(
+                        matrix,
+                        Y,
+                        p,
+                        χ_state_name,
+                        ᶜtridiagonal_matrix_scalar,
+                        ᶜlateral_rate,
+                        ᶜinv_ρ̂,
+                    )
                 end
             end
         end
+    end
+    return nothing
+end
+
+"""
+    update_water_tag_copy_sedimentation_blocks!(matrix, Y, p, χ_state_name, ᶜupdraft_operator, ᶜlateral_rate, ᶜinv_ρ̂)
+
+Fill each water tag copy's cross block to the updraft species `χ_state_name`.
+The copy's sedimentation (`sediment_water_tag_copies!`) is the model's with the
+falling water `qʲ` taken at the copy's share of the updraft's water and the
+environment's inflow at its share of the environment's. At fixed shares its
+derivative in `qʲ` is the model's `(q_totʲ, qʲ)` block with those shares:
+`ᶜinv_ρ̂ (ᶜupdraft_operator · φʲ + ᶜlateral_rate · φ⁰)`, `ᶜupdraft_operator`
+being the part within the updraft and `ᶜlateral_rate` the diagonal of the
+inflow, both with `dtγ` folded in. Over a closed partition the shares sum to
+one in each subdomain, so the partition's blocks sum to the model's. The
+shares' own dependence on the state is left out, as the copies' diagonal
+leaves out the renormalization's. Writes `ᶜtemp_scalar_5` and `ᶜtemp_scalar_6`
+in `p.scratch`.
+"""
+function update_water_tag_copy_sedimentation_blocks!(
+    matrix,
+    Y,
+    p,
+    χ_state_name,
+    ᶜupdraft_operator,
+    ᶜlateral_rate,
+    ᶜinv_ρ̂,
+)
+    model = p.atmos.water_tagging_model
+    ᶜsgsʲ = Y.c.sgsʲs.:(1)
+    (ᶜnormʲ, ᶜnorm⁰) =
+        (p.scratch.ᶜq_tag_copy_normʲ, p.scratch.ᶜq_tag_copy_norm⁰)
+    @. ᶜnormʲ = 0
+    @. ᶜnorm⁰ = 0
+    _accumulate_copy_norms!(ᶜnormʲ, ᶜnorm⁰, ᶜsgsʲ, Y, p, model.tags)
+    ᶜq_tot⁰ = ᶜspecific_env_value(@name(q_tot), Y, p)
+    MatrixFields.unrolled_foreach(model.tags) do tag
+        partition = Val(_is_partition_tag(tag))
+        copy_name = water_tag_copy_field_name(tag)
+        ∂ᶜcopy_err_∂ᶜqʲ = matrix[sgs_state_name(copy_name), χ_state_name]
+        ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
+        ᶜχ⁰ = ᶜspecific_env_value(copy_name, Y, p)
+        # The shares are written to scratch first: inside the matrix
+        # broadcast ClimaCore cannot infer their type through the
+        # environment's lazy values, and refuses the product.
+        (ᶜshareʲ, ᶜinflow_rate) = (p.scratch.ᶜtemp_scalar_5, p.scratch.ᶜtemp_scalar_6)
+        @. ᶜshareʲ = _copy_share(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜnormʲ, partition)
+        @. ᶜinflow_rate =
+            ᶜlateral_rate * _copy_share(ᶜχ⁰, ᶜq_tot⁰, ᶜnorm⁰, partition)
+        @. ∂ᶜcopy_err_∂ᶜqʲ =
+            DiagonalMatrixRow(ᶜinv_ρ̂) * (
+                ᶜupdraft_operator * DiagonalMatrixRow(ᶜshareʲ) +
+                DiagonalMatrixRow(ᶜinflow_rate)
+            )
     end
     return nothing
 end
