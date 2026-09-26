@@ -337,7 +337,8 @@ altitude_region(above) = Dict{String, Any}(
         @info "Energy source tags on the same column" energy_closure.relative energy_closure.gross_relative
         @test energy_closure.gross_relative < 1e-3
         # Without the follower this column's gross residual after an hour is
-        # 5.4e-4 (FINDINGS W23's probe of the default mode); with it, 4.1e-5.
+        # 5.4e-4 (FINDINGS W23's probe of the default mode); with it, 4.1e-5,
+        # and with the tags' sedimentation cross blocks too (WP5b), 3.2e-8.
         @test closure.gross_relative < 1e-4
         # What remains is nearly all the part left in place: the parent's
         # change of the column's total that the tags' own implicit tendencies

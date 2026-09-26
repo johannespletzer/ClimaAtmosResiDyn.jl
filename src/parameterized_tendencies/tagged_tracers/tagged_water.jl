@@ -526,6 +526,28 @@ function water_tag_sediment_dshare_field(Y, p, tag)
 end
 
 """
+    water_tag_sediment_share_field(Y, p, tag)
+
+Lazy field of `tag`'s share `φ̂` of each sedimenting species, as
+[`sediment_water_tags!`](@ref) takes it: [`water_tag_sediment_share`](@ref) for
+a partition tag, [`water_tag_source_sediment_share`](@ref) for a source tag. It
+scales the parent's sedimentation cross block into the tag's.
+
+Requires [`water_tag_share_norm!`](@ref) to have been evaluated for the current
+state.
+"""
+function water_tag_sediment_share_field(Y, p, tag)
+    ᶜρq_tag = tag_field(Y.c, tag)
+    ᶜρq_tot = Y.c.ρq_tot
+    if _is_partition_tag(tag)
+        ᶜnorm = p.scratch.ᶜtagging_q_share_norm
+        return @. lazy(water_tag_sediment_share(ᶜρq_tag, ᶜρq_tot, ᶜnorm))
+    else
+        return @. lazy(water_tag_source_sediment_share(ᶜρq_tag, ᶜρq_tot))
+    end
+end
+
+"""
     water_tag_share_norm!(p, Y)
 
 Fill `p.scratch.ᶜtagging_q_share_norm` with `Σⱼ clamp(ρq_tag_j / ρq_tot)` over

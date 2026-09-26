@@ -212,11 +212,15 @@ Where no tagged water is present the share is zero rather than undefined; if
 ``\rho q_\mathrm{tot}`` is nonzero there, closure genuinely cannot hold and the
 discrepancy surfaces in `q_tag_res` as it should.
 
-Sedimentation is stepped implicitly, so the tags also enter the Jacobian:
-`update_sedimentation_jacobian!` allocates and fills their diagonal blocks using
-the analytic derivative of the share. For a partition tag that derivative carries
-a ``(1 - \hat\varphi_k)`` factor, because a tag that already owns all the local
-water cannot increase its share.
+Sedimentation is stepped implicitly, so the tags also enter the Jacobian.
+`update_sedimentation_jacobian!` fills their diagonal blocks using the analytic
+derivative of the share. For a partition tag that derivative carries a
+``(1 - \hat\varphi_k)`` factor, because a tag that already owns all the local
+water cannot increase its share. Under 1-moment microphysics it also fills each
+tag's cross block to each falling species: the parent's block times the tag's
+share. The cross blocks are carried only when the manual Jacobian's split
+solver solves the tags apart, which is its default. `use_auto_jacobian` does
+not carry them.
 
 !!! note "Phases are well mixed within a cell"
 
@@ -306,10 +310,12 @@ implicit increment. It is the default in the default mode under
 G3_PLAN 4.3 fixed that rule before the runs: the follower becomes the default
 under EDMF if the default mode's one-iteration part of the closure residual
 exceeds a quarter of the 0.2% budget. V-W3 measured twelve times that. With
-copies, and without prognostic EDMF, the default is `tracer`. ``\rho q_\mathrm{tot}`` is advected
-vertically in the implicit step, and its sub-grid flux, diffusion and
-sedimentation have Jacobian blocks the tags' terms lack. So with one Newton
-iteration the tags lag the parent's solve. On a day of the DYCOMS RF02 EDMF
+copies, without prognostic EDMF, and with 1M microphysics stepped explicitly,
+the default is `tracer`.
+``\rho q_\mathrm{tot}`` is advected vertically in the implicit step, and its
+sub-grid flux and diffusion have Jacobian blocks the tags' terms lack. Its
+sedimentation had them too, until the tags' cross blocks (below). So with one
+Newton iteration the tags lag the parent's solve. On a day of the DYCOMS RF02 EDMF
 column that lag was most of a 0.7% closure residual.
 
 Under the key the tags skip their explicit vertical advection. After each
@@ -342,11 +348,25 @@ It needs:
     100 rounding units;
   - an algorithm that solves every implicit stage it uses (ARS222, ARS343);
   - the parent's own post-solve correction (`energy_q_tot_upwinding` other
-    than `none`);
-  - microphysics other than 1M stepped explicitly. There the tags'
-    sedimentation lags the parent's by a change of the column's total, about
-    0.8% of the water an hour with one Newton iteration, which the follower
-    cannot take. `tracer` lags there alike.
+    than `none`).
+
+With 1M microphysics each grid-scale water tag's Jacobian row carries the
+parent's sedimentation cross block to each falling species, times the tag's
+share. The updraft copies' rows do not yet. So one Newton iteration moves the
+tags with the updated species, as it moves ``\rho q_\mathrm{tot}``. Without
+those blocks the tags lagged the parent's surface outflow, about 0.8% of the
+water an hour with microphysics stepped explicitly, and the follower cannot
+move a change of the column's total. With them, on W23's DYCOMS RF02 EDMF
+column (ARS222, `dt` 120 s, one Newton iteration), the follower's net residual
+after an hour was −2.1e-8 and its gross 5.7e-8; the integration test bounds
+both by 1e-6. That validates the closure and the lag it removed, not the
+provenance of each tag. The split Jacobian solver solves the tags after the
+other fields, by back-substitution, so the model's fields do not change.
+
+On that path the follower is still opt-in: one column in one regime does not
+yet decide the default. Only the manual Jacobian's split solver carries the
+cross blocks, so with 1M stepped explicitly and `use_auto_jacobian: true` the
+follower is refused.
 
 The default takes `increment` only where the configuration shows these, and
 the model refuses it where they fail. A restart that changes
@@ -599,6 +619,8 @@ ClimaAtmos.WATER_TAG_SOURCE_GROUPS
 ClimaAtmos.water_tag_fraction
 ClimaAtmos.water_tag_share_norm!
 ClimaAtmos.water_tag_sediment_share
+ClimaAtmos.water_tag_source_sediment_share
+ClimaAtmos.water_tag_sediment_share_field
 ClimaAtmos.sediment_water_tags!
 ClimaAtmos.snapshot_tagged_ρq_tot!
 ClimaAtmos.attribute_tagged_ρq_tot!
