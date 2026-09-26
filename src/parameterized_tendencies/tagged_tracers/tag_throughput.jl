@@ -588,13 +588,17 @@ water_tag_per_tag_ledger_names(model) = (
 """
     energy_source_ledger_fix_names(model)
     energy_source_ledger_inc_names(model)
+    energy_source_ledger_src_names(model)
     energy_source_per_tag_ledger_names(model)
 
 Each energy source tag's own state ledgers, in state order, under
 `energy_source_tag_ledger_per_tag: true`, and `()` otherwise:
-`e_src_led_fix_<name>` for every tag, what the repair changed it by; and under
+`e_src_led_fix_<name>` for every tag, what the repair changed it by; under
 `energy_source_tag_transport: enthalpy_increment`, `e_src_led_inc_<name>`, what
-the correction after each solve moved into or out of it.
+the correction after each solve moved into or out of it; and
+`e_src_led_src_<name>` for every tag, what the sources' brackets
+(`attribute_energy_source_tags!`) put into it or took out of it. The last one's
+per-step gross is OD4's scale (`energy_source_throughput`).
 """
 energy_source_ledger_fix_names(::Nothing) = ()
 energy_source_ledger_fix_names(model::EnergySourceTaggingModel) =
@@ -605,9 +609,14 @@ energy_source_ledger_inc_names(model::EnergySourceTaggingModel) =
     has_energy_source_ledger_per_tag(model) &&
     model.transport isa EnthalpyIncrementEnergySourceTransport ?
     _prefixed_tag_names(Val(:e_src_led_inc_), model.tags) : ()
+energy_source_ledger_src_names(::Nothing) = ()
+energy_source_ledger_src_names(model::EnergySourceTaggingModel) =
+    has_energy_source_ledger_per_tag(model) ?
+    _prefixed_tag_names(Val(:e_src_led_src_), model.tags) : ()
 energy_source_per_tag_ledger_names(model) = (
     energy_source_ledger_fix_names(model)...,
     energy_source_ledger_inc_names(model)...,
+    energy_source_ledger_src_names(model)...,
 )
 
 """
@@ -641,6 +650,7 @@ const TAG_PER_TAG_LEDGER_PREFIXES = (
     "q_tag_led_upleak_",
     "e_src_led_fix_",
     "e_src_led_inc_",
+    "e_src_led_src_",
 )
 
 """
@@ -662,6 +672,18 @@ water_tag_inc_ledger_view(Yₜ, model) =
     has_water_tag_ledger_per_tag(model) ? TagLedgerView{:inc}(Yₜ.c) : nothing
 energy_source_inc_ledger_view(Yₜ, model) =
     has_energy_source_ledger_per_tag(model) ? TagLedgerView{:inc}(Yₜ.c) :
+    nothing
+
+"""
+    energy_source_src_ledger_view(Yₜ, model)
+
+The [`TagLedgerView`](@ref) of `Yₜ.c` that the sources' brackets write each
+energy source tag's change into, `e_src_led_src_<name>`, or `nothing` where the
+tags keep no ledger per tag. The brackets add to the tags' tendencies, so the
+ledger is a tendency too: the stepper integrates it as it integrates the tag.
+"""
+energy_source_src_ledger_view(Yₜ, model) =
+    has_energy_source_ledger_per_tag(model) ? TagLedgerView{:src}(Yₜ.c) :
     nothing
 
 """
@@ -750,7 +772,54 @@ function _add_attempted_per_tag!(
 end
 
 """
-    tag_ledger_audit(Y, p, prefix, scale, fix_gross)
+    TAG_LEDGER_SMALL_TAG_BOUND
+
+The small-tag bound for a tag's own ledgers, as a fraction of the family's
+parent scale: 2e-4, as in G3's small-tag rule. Below it a tag holds too little
+for a ratio to the tag to be read, and the audit reports that ratio as not
+applicable ([`tag_ledger_normalization`](@ref)).
+"""
+const TAG_LEDGER_SMALL_TAG_BOUND = 2e-4
+
+"""
+    tag_ledger_normalization(retained, inventory, burden, parent_scale)
+
+The ratios of one tag's own ledger, from its retained amount `retained`, the
+tag's signed integral `inventory = ∫tag`, its absolute burden `burden = ∫|tag|`,
+and the family's parent scale `parent_scale`, which is `NaN` where the run has
+none:
+
+  - `inventory_fraction`: `retained / inventory`, where `inventory > 0`. The
+    ratio for a pure region tag, whose precondition is a positive inventory. It
+    is ill-conditioned when a tag's positive and negative parts nearly cancel.
+  - `burden_fraction`: `retained / burden`, where `burden > 0`. The ratio for a
+    source-labelled tag and for any tag with negative parts. For a tag without
+    negative parts it equals `inventory_fraction`.
+  - `parent_fraction`: `retained / parent_scale`, where the scale is positive.
+  - `applicable`: 1 where the burden is positive and at least
+    [`TAG_LEDGER_SMALL_TAG_BOUND`](@ref) times the parent scale, and 0 where it
+    is not. At 0 neither ratio to the tag applies, and the tag is judged by
+    `parent_fraction`. Without a parent scale only a zero burden gives 0.
+
+A ratio whose denominator is not positive is `NaN`. `applicable` is `NaN` only
+where the burden or the retained amount is not finite.
+"""
+function tag_ledger_normalization(retained, inventory, burden, parent_scale)
+    has_parent = isfinite(parent_scale) && parent_scale > 0
+    bound = has_parent ? TAG_LEDGER_SMALL_TAG_BOUND * parent_scale : 0.0
+    applicable =
+        isfinite(burden) && isfinite(retained) ?
+        (burden > 0 && burden >= bound ? 1.0 : 0.0) : NaN
+    return (;
+        inventory_fraction = inventory > 0 ? retained / inventory : NaN,
+        burden_fraction = burden > 0 ? retained / burden : NaN,
+        parent_fraction = has_parent ? retained / parent_scale : NaN,
+        applicable,
+    )
+end
+
+"""
+    tag_ledger_audit(Y, p, prefix, scale, fix_gross, parent_scale)
 
 The audit's columns for every state ledger of the family whose names start
 with `prefix` (`"q_tag_"` or `"e_src_"`), each named by the ledger without the
@@ -769,27 +838,35 @@ prefix. Over the domain, as `scale` is:
     have none;
   - `<L>_events`: the number of cell-steps whose change of `L` exceeded
     rounding against the cell's total;
-  - for a tag's own ledger, `<L>_inventory_fraction`: `<L>_retained` over the
-    tag's integral now, or `NaN` where that is not positive. It bounds how far
-    the corrections can have moved the tag, relative to what it holds.
+  - for a tag's own ledger, `<L>_inventory_fraction`, `<L>_burden_fraction`,
+    `<L>_parent_fraction` and `<L>_applicable`: `<L>_retained` over the tag's
+    integral now, over its absolute burden now, and over `parent_scale`, and
+    whether a ratio to the tag applies ([`tag_ledger_normalization`](@ref)).
 
-And `ledger_cadence_step`: 1 at `update_constrain_state_every: step`, 0
-otherwise. `(;)` without the ledger cache. Collective, as `sum` is.
+With a tag's own ledgers, `ledger_parent_scale`: `parent_scale`, the family's
+parent scale, `∫ρq_tot` for the water tags and for the energy source tags
+`energy_source_ledger_parent_scale`, OD4's gross source throughput. And
+`ledger_cadence_step`: 1 at
+`update_constrain_state_every: step`, 0 otherwise. `(;)` without the ledger
+cache. Collective, as `sum` is.
 """
-tag_ledger_audit(Y, p, prefix, scale, fix_gross) = _tag_ledger_audit(
-    _tag_ledger_steps(p.tagging),
-    Y,
-    prefix,
-    scale,
-    fix_gross,
-)
-_tag_ledger_audit(::Nothing, Y, prefix, scale, fix_gross) = (;)
-function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross)
+tag_ledger_audit(Y, p, prefix, scale, fix_gross, parent_scale) =
+    _tag_ledger_audit(
+        _tag_ledger_steps(p.tagging),
+        Y,
+        prefix,
+        scale,
+        fix_gross,
+        parent_scale,
+    )
+_tag_ledger_audit(::Nothing, Y, prefix, scale, fix_gross, parent_scale) = (;)
+function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross, parent_scale)
     per_scale(x) = iszero(scale) ? zero(x) : x / scale
     tag_prefix = prefix == "q_tag_" ? "ρq_tag_" : "ρe_src_"
     names = Symbol[]
     values = Float64[]
     column!(name, value) = (push!(names, Symbol(name)); push!(values, value))
+    per_tag = false
     for (name, ledger) in pairs(steps.ledgers)
         long = string(name)
         startswith(long, prefix) || continue
@@ -814,23 +891,55 @@ function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross)
         column!("$(short)_attempted_relative", per_scale(attempted))
         column!("$(short)_events", tag_event_total((ledger.ᶜevents,)))
         if is_tag_per_tag_ledger_name(name)
+            per_tag = true
             tag_name = foldl(
                 chopprefix,
-                ("led_fix_", "led_inc_", "led_leak_", "led_upleak_");
+                ("led_fix_", "led_inc_", "led_src_", "led_leak_", "led_upleak_");
                 init = short,
             )
-            inventory = Float64(
-                sum(getproperty(Y.c, Symbol(tag_prefix, tag_name))),
+            ᶜtag = getproperty(Y.c, Symbol(tag_prefix, tag_name))
+            ratios = tag_ledger_normalization(
+                retained,
+                Float64(sum(ᶜtag)),
+                Float64(sum(abs, ᶜtag)),
+                Float64(parent_scale),
             )
-            column!(
-                "$(short)_inventory_fraction",
-                inventory > 0 ? retained / inventory : NaN,
-            )
+            for (ratio, value) in pairs(ratios)
+                column!("$(short)_$(ratio)", value)
+            end
         end
     end
     isempty(names) && return (;)
+    per_tag && column!("ledger_parent_scale", Float64(parent_scale))
     column!("ledger_cadence_step", steps.cadence[] == :step ? 1.0 : 0.0)
     return NamedTuple{Tuple(names)}(Tuple(values))
+end
+
+"""
+    energy_source_throughput(Y, p, model)
+
+OD4's scale (the owner, 2026-09-24 and 2026-09-25): the gross energy the
+sources put into the energy source tags, over the domain and since the start
+of the run. It is the sum over the partition's tags, the region tags without
+sources, of the per-step gross of each tag's source ledger,
+`Σ_steps |Δ e_src_led_src_<name>|`, integrated. The partition's tags receive
+every source in full, gains by their masks and losses by their shares, so each
+unit of source energy counts once; the source tags overlay it and are left out.
+A window's throughput is the difference of two values. `nothing` where the
+tags keep no ledger per tag. Collective, as `sum` is.
+"""
+energy_source_throughput(Y, p, model) =
+    _energy_source_throughput(_tag_ledger_steps(p.tagging), model)
+_energy_source_throughput(steps, model) = nothing
+function _energy_source_throughput(steps::NamedTuple, model::EnergySourceTaggingModel)
+    isempty(energy_source_ledger_src_names(model)) && return nothing
+    total = 0.0
+    for name in energy_source_region_tag_state_names(model)
+        ledger_name =
+            Symbol(:e_src_led_src_, chopprefix(string(name), "ρe_src_"))
+        total += Float64(sum(getproperty(steps.ledgers, ledger_name).ᶜgross))
+    end
+    return total
 end
 
 """
@@ -892,12 +1001,18 @@ end
     restore_tag_ledger_checkpoint!(tagging, restart_file, context)
 
 Read the tags' accumulators back from `restart_file` into the cache just built,
-so that a run continues them rather than starting them again at zero. A
-checkpoint written before they were carried holds none of them. Then they start
-at zero, with a warning, and the audit's grosses cover only this segment.
-Whether such a checkpoint should be refused instead is the owner's
-(design/GROSS_ACCUMULATORS.md, section 8, point 1). A checkpoint that holds some
-but not all of them is refused, since it was written by another configuration.
+so that a run continues them rather than starting them again at zero. The state
+ledgers need nothing here: they are fields of the state, which the checkpoint
+carries anyway.
+
+The policy for a checkpoint without the accumulators:
+
+  - It holds none of them: it was written before they were carried. They start
+    at zero with a warning. The run then begins a new accumulator segment, and
+    their totals, the audit's `_retained`, `_attempted` and `_events` among
+    them, cover that segment only. They are not whole-run totals.
+  - It holds some but not all of them: it is refused. Another configuration of
+    the tags' ledgers wrote it.
 """
 function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
     fields = tag_ledger_checkpoint_fields(tagging)
@@ -912,8 +1027,9 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
                 "The restart file $restart_file carries none of the tags' \
                 accumulators: their cache ledgers, gross twins, counts, \
                 per-step grosses and attempted totals. It was written before \
-                they were carried. They start at zero for this segment, so \
-                the audit's grosses cover only this segment.",
+                they were carried. They start at zero, so this run begins a \
+                new segment: the audit's grosses and the cumulative \
+                diagnostics cover this segment only, not the whole run.",
             )
             return nothing
         end

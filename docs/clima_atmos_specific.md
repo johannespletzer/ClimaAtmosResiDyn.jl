@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `tagging_water_increment`, `tagging_water_leak`, `parameterizations`, `restarts`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `tagging_water_edmf_0m_explicit`, `tagging_water_increment`, `tagging_water_increment_explicit`, `tagging_water_leak`, `parameterizations`, `restarts`. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -85,11 +85,14 @@ runs `test/energy_source_tags_edmf_integration.jl`,
 `tagging_source_increment` runs
 `test/energy_source_tags_increment_integration.jl`, `tagging_source_updraft`
 runs `test/energy_source_tags_updraft_integration.jl`,
-`tagging_water_edmf`, `tagging_water_edmf_copies` and `tagging_water_edmf_0m`
-run `test/tagged_water_edmf_integration.jl`,
-`test/tagged_water_edmf_copies_integration.jl` and
-`test/tagged_water_edmf_0m_integration.jl`, `tagging_water_increment`
-runs `test/tagged_water_increment_integration.jl`, and `tagging_water_leak`
+`tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m` and
+`tagging_water_edmf_0m_explicit` run `test/tagged_water_edmf_integration.jl`,
+`test/tagged_water_edmf_copies_integration.jl`,
+`test/tagged_water_edmf_0m_integration.jl` and
+`test/tagged_water_edmf_0m_explicit_integration.jl`, and `tagging_water_increment`
+and `tagging_water_increment_explicit` run
+`test/tagged_water_increment_integration.jl` and
+`test/tagged_water_increment_explicit_integration.jl`, and `tagging_water_leak`
 runs `test/tagged_water_leak_correction_integration.jl`. They are split because a tag
 name is a type parameter, so each tag set recompiles the whole tendency and
 solve pipeline, roughly seven minutes per simulation on Julia 1.11, and the
@@ -153,11 +156,17 @@ builds it twice.
   - `tagging_water_edmf_0m` runs the copies under 0M, with the microphysics
     implicit, the default, and a passive chemistry tracer. It checks that the
     tracer, set to a copy's values, takes the copy's tendency apart from its
-    mirrors.
+    mirrors, the rain-out split by subdomain in both modes, and that `pr` less
+    the partition's `pr_tag` is the rain-out the shares leave.
+  - `tagging_water_edmf_0m_explicit` runs the split with the microphysics
+    explicit, in both modes. It checks that the `:microphysics` bracket of
+    `remaining_tendency!` gives the tags the split, that each subdomain gives
+    each region tag a part, and the partition's sums at each level and at the
+    surface.
 
 The tagged runs write the closure audit and the leak diagnostics, which use
 scratch from callbacks, so parity covers them too. The default mode under 0M
-runs in V-W3's TRMM pair, not in CI.
+also runs in V-W3's TRMM pair.
 
 `tagging_water_increment` runs `water_tag_transport: increment` on the same
 1M column, with the updrafts' vertical diffusion, as D4-W has it. It checks the
@@ -165,7 +174,10 @@ correction on a set increment (what is left in place and what is moved, the
 donor cell at each face, the hook running the parent's own correction
 unchanged, no allocations), the closure after an hour, the ledger in the
 audit, the diagnostics and the split solver, and parity. It also builds the
-column twice.
+column twice. `tagging_water_increment_explicit` runs it with the microphysics
+explicit and one Newton iteration. It checks the closure after an hour, the
+tags' sedimentation cross blocks against the parent's and their solve by the
+split solver, and parity.
 
 `tagging_water_leak` runs `water_tag_leak_correction: true` on the same column
 under the follower, with each tag's ledgers. It checks that the partition's
@@ -201,7 +213,10 @@ test minute is compilation and that the queue, not the jobs, set the wall time.
     that no longer fits new code usually shows up here.
   - **`Downgrade`, the full matrix at minimum compat.** It runs weekly (Monday
     03:00 UTC), on demand from the Actions tab, on tags, and when
-    `Project.toml` or `downgrade.yml` changes.
+    `Project.toml` or `downgrade.yml` changes. Its test groups are read from
+    `test/runtests.jl`'s `KNOWN_TEST_GROUPS`, less `all`, so adding a group
+    does not edit `downgrade.yml` and does not start the matrix on a pull
+    request.
   - **`Downstream`, ClimaCoupler's AMIP tests on 1.11.** It takes about an hour
     without a cache, so it runs after a merge, not on each pull request. It
     runs on `main` when `src/`, `ext/`, `config/`, `toml/` or `Project.toml`

@@ -337,7 +337,8 @@ altitude_region(above) = Dict{String, Any}(
         @info "Energy source tags on the same column" energy_closure.relative energy_closure.gross_relative
         @test energy_closure.gross_relative < 1e-3
         # Without the follower this column's gross residual after an hour is
-        # 5.4e-4 (FINDINGS W23's probe of the default mode); with it, 4.1e-5.
+        # 5.4e-4 (FINDINGS W23's probe of the default mode); with it, 4.1e-5,
+        # and with the tags' sedimentation cross blocks too (WP5b), 3.2e-8.
         @test closure.gross_relative < 1e-4
         # What remains is nearly all the part left in place: the parent's
         # change of the column's total that the tags' own implicit tendencies
@@ -382,7 +383,8 @@ altitude_region(above) = Dict{String, Any}(
         water_names = CA.water_tag_per_tag_ledger_names(model)
         energy_names = CA.energy_source_per_tag_ledger_names(energy_model)
         @test length(water_names) == 6
-        @test length(energy_names) == 6
+        # Three tags' repair, increment and source ledgers (OD4).
+        @test length(energy_names) == 9
         @test all(name -> hasproperty(Y.c, name), (water_names..., energy_names...))
         # The follower's ledgers of the partition's tags sum to what it moved
         # between levels: the shares sum to one wherever the donor cell holds
@@ -432,8 +434,26 @@ altitude_region(above) = Dict{String, Any}(
         @test audit.ledger_cadence_step == 1
         @test audit.led_inc_tropo_retained > 0
         @test 0 < audit.led_inc_tropo_inventory_fraction < Inf
+        # The burden is at least the inventory, so its ratio is at most the
+        # inventory's. The parent scale is `∫ρq_tot`, and `tropo` is far above
+        # 2e-4 of it.
+        @test 0 < audit.led_inc_tropo_burden_fraction <=
+              audit.led_inc_tropo_inventory_fraction
+        @test audit.ledger_parent_scale > 0
+        @test audit.led_inc_tropo_parent_fraction ≈
+              audit.led_inc_tropo_retained / audit.ledger_parent_scale
+        @test audit.led_inc_tropo_applicable == 1
         @test audit.inc_moved_attempted > 0
         @test audit.led_inc_tropo_attempted > 0
+        # OD4: the sources' brackets put energy into the partition, and the
+        # throughput is the per-step gross of the partition's source ledgers.
+        throughput = CA.energy_source_throughput(Y, p, energy_model)
+        @test throughput > 0
+        energy_audit = CA.energy_source_audit(Y, p, energy_model, FT(1))
+        @test energy_audit.source_throughput == throughput
+        @test energy_audit.led_src_strat_retained +
+              energy_audit.led_src_tropo_retained ≈ throughput rtol = 1e-12
+        @test energy_audit.led_src_sfc_retained > 0
         # At the default cadence the repair fires once per step on the
         # accepted state, so what it attempted is what the steps retained.
         @test isapprox(
@@ -445,6 +465,12 @@ altitude_region(above) = Dict{String, Any}(
         energy_audit = CA.energy_source_audit(Y, p, energy_model, FT(1))
         @test energy_audit.led_inc_strat_retained > 0
         @test 0 < energy_audit.led_inc_strat_inventory_fraction < Inf
+        # The parent scale is OD4's throughput, which the tags keep with their
+        # ledgers per tag, although this run keeps no process records.
+        @test energy_audit.ledger_parent_scale == throughput
+        @test energy_audit.led_inc_strat_parent_fraction ≈
+              energy_audit.led_inc_strat_retained / throughput
+        @test energy_audit.led_inc_strat_applicable == 1
         @test energy_audit.ledger_cadence_step == 1
     end
 

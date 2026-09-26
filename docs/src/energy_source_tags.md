@@ -168,10 +168,32 @@ nor the exchange runs. The tags then move by the model's tracer flux
 of `E`. Under `energy_source_tag_transport: enthalpy_increment` the correction
 after each solve takes the difference, since every sub-grid term runs in the
 implicit tendency. Under `enthalpy` nothing would, so the copies are refused
-there. The model injects the surface's buoyant air into the lowest level of
-the updraft. That air carries surface-flux energy, but the copies do not see
-it. They take the environment's composition there. A restart refuses a change
-of the switch, since the copies are part of the state.
+there. A restart refuses a change of the switch, since the copies are part of
+the state.
+
+The model gives the updraft's `mseʲ` four things it gives no updraft tracer,
+and the copies mirror each (`energy_source_copy_mirrors.jl`):
+
+  - the surface enthalpy flux into the updraft's lowest cell;
+  - the relaxation there toward the surface's buoyant air, `mse̅ + C√σ²`;
+  - radiation, under RRTMGP;
+  - the updraft's rain-out under 0-moment microphysics.
+
+Each mirror takes the model's own increment of `mseʲ` and gives it to the
+copies by the grid mean's rule for that process's label. A tag that receives
+the label gains its mask times the increment's positive part, and every copy
+loses its share of the negative part. The shares are of the partition's
+copies' sum, so the partition's copies change by exactly the increment. In the
+relaxation, each copy moves toward its tag's grid-mean value plus its share of
+the buoyant excess, so the surface-flux tag gets only its share of that
+excess, as the water copies decide. The buoyancy term of `mseʲ` is not
+mirrored. The updraft's velocity equation takes part of it from the updraft's
+kinetic energy, and the rest is work the updraft exchanges with its
+surroundings through the non-hydrostatic pressure. Neither is a source any tag
+is labelled with. What the mirrors do not cover, such as that work, the two
+advection schemes and the diffusion mirror's different operator, shows in
+`e_src_copy_res`, the updraft's energy `mseʲ + Kʲ - p/ρʲ + c` minus the
+partition's copies, times `ρaʲ/ρ`.
 
 The copies have costs. Their state names are nested in the updraft, so the
 split Jacobian solver does not solve them apart. They join the nested solver, and the
@@ -579,6 +601,30 @@ misses one:
     Without one, a new hook would make the stepper refresh the implicit cache
     after each solve, and the model's constraints read that cache.
 
+With microphysics that sediments (`microphysics_model` 1M, 2M or 2MP3) stepped
+explicitly (`implicit_microphysics: false`) the mode is refused as well, unless
+`energy_source_tag_increment_allow_explicit_microphysics: true`. In the implicit Jacobian
+the parent's `ρe_tot` row has a cross block from each sedimenting species, for
+the energy the falling water carries. The tags' rows do not. So with one Newton
+iteration the tags miss part of the parent's sedimentation update. The
+correction cannot move the part that changes a column's total, and that part
+lands in `e_src_res`. On the tag-closure experiments' DYCOMS RF02 EDMF column,
+with one Newton iteration, the closure residual after an hour was 2.1e-4 of
+the partitioned energy with the microphysics explicit and 1.5e-6 with it
+implicit. With ten iterations it was 4.9e-12. 2M and P3 sediment too, and no
+run has measured them, so they are refused until one does. The water tags lag
+in the same way under 1M. PR #105 proposes the analogous cross blocks for
+them, and PR #113 the energy tags' own. Until the energy tags carry them, the
+key is an override for development runs, and the model warns when it is
+used. The refusal concerns only the tags' keys. Without the tags, or
+with another transport, the configuration runs as before.
+
+```yaml
+energy_source_tag_transport: enthalpy_increment
+implicit_microphysics: false
+energy_source_tag_increment_allow_explicit_microphysics: true # development runs only
+```
+
 The correction keeps a ledger, as two prognostic fields that the stepper
 integrates with the tags:
 
@@ -593,9 +639,11 @@ integrates with the tags:
 Both are cumulative since the start of the run and carried through a restart.
 The diagnostics of the same names report them per unit mass, on request; they
 are not among the default outputs. The closure check's audit table gets their
-integrals, `increment_left`, `increment_left_gross` and
-`increment_moved_gross`. So the residual's column total splits into what the
-correction left and what everything else leaves.
+integrals, `increment_left`, `increment_left_net_abs` and
+`increment_moved_net_abs`. The last two sum each cell's absolute ledger, which
+is net over time in that cell, so they are not a throughput. So the residual's
+column total splits into what the correction left and what everything else
+leaves.
 
 The ledger records what the correction intends. A face whose donor cell has no
 share of the partition moves no tag, so there a cell's change differs a little
@@ -631,9 +679,22 @@ column it checks that the model's state is bit for bit the one without tags.
     fields, so a ledger's change over a step is what the step retained at
     every cadence. The audit table reports, per state ledger, what the
     accepted steps retained (`_retained`), what its writers attempted
-    (`_attempted`) and the events (`_events`), and for each tag's own ledgers
-    the retained amount over the tag's energy now (`_inventory_fraction`). The
-    energy is that of `ρe_tot + c·ρ`, so the fraction depends on the offset;
+    (`_attempted`) and the events (`_events`). For each tag's own ledgers it
+    reports three ratios of the retained amount and a flag, explained below:
+    `_inventory_fraction`, `_burden_fraction`, `_parent_fraction` and
+    `_applicable`, with the parent scale as `ledger_parent_scale`;
+  - `e_src_led_src_<name>`, with the same key: what the sources' brackets put
+    into each tag or took out of it, its gains by its mask and its losses by
+    its share. It is a tendency, so the stepper integrates it as it
+    integrates the tag, and its change over a step is what the step's sources
+    gave the tag. Its per-step gross, `e_src_led_srcgross_<name>`, summed over
+    the region tags without sources and over the domain, is the gross source
+    throughput, the scale of every energy percentage in the tag-closure
+    experiments' acceptance contract (their OD4). The audit table reports it as
+    `source_throughput`, cumulative since the start of the run; a window's
+    throughput is the difference of two rows. The source tags overlay the
+    partition, so they are left out of the sum and each unit of source energy
+    counts once;
   - `e_src_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
@@ -657,6 +718,45 @@ an energy per unit mass in J kg⁻¹, and it is not the same quantity as the
 normalized by ``\int|\rho e_\mathrm{tot}|``. And it does **not** cover the
 source-labelled tags, only the pure region ones, so it is not a check on the
 family as a whole.
+
+### Reading a tag's own ledgers
+
+Each ratio divides the ledger's retained amount by a different scale (the
+owner's decision of 2026-09-25):
+
+  - `_inventory_fraction`: over the tag's energy now, `∫ρe_src`. The energy is
+    that of `ρe_tot + c·ρ`, so it depends on the offset. It is the ratio for a
+    pure region tag, and its precondition is a positive inventory.
+  - `_burden_fraction`: over the tag's absolute burden, `∫|ρe_src|`. It is the
+    ratio for a tag that carries a source and for any tag with negative parts.
+    For a tag without negative parts it is the same number as
+    `_inventory_fraction`.
+  - `_parent_fraction`: over the parent scale, OD4's gross source throughput,
+    the audit's `source_throughput`. The tags keep it whenever they keep
+    ledgers per tag. It is not `∫(ρe_tot + c·ρ)`, which depends on the offset
+    and would make most source tags look small. Runs from before the
+    throughput used the interim the owner set, the process records' amounts,
+    `Σₚ ∫|prc_e_p|`. That is an estimate, not a bound: on the tag-closure
+    experiments' D4 column the exact throughput was 6% below it (their E84).
+  - `_applicable`: 0 where the tag's burden is zero or below the small-tag
+    bound, 2e-4 of the parent scale, and 1 otherwise. At 0 no ratio to the tag
+    is read, and the tag is judged by `_parent_fraction`. Without a parent
+    scale only a zero burden gives 0.
+
+The ratios to the tag hold only in this domain. Three states of a tag fall
+outside the inventory ratio's:
+
+  - A source tag starts at zero, and the repair clips it back to zero, so its
+    inventory can be zero. Then `_applicable` is 0, and `_parent_fraction` is
+    read.
+  - With `energy_source_tag_repair: false` a tag can be negative throughout.
+    Its inventory ratio is then `NaN`, and `_burden_fraction` is read.
+  - A tag whose positive and negative parts nearly cancel has an inventory
+    near zero. Its inventory ratio then grows without bound, whatever the
+    correction did. The burden does not cancel, so `_burden_fraction` is read.
+
+A ratio whose denominator is not positive is `NaN`. `_applicable` is never
+`NaN` unless the tag or its ledger is not finite, so a check reads it first.
 
 ## Caveats
 
@@ -688,6 +788,14 @@ family as a whole.
     existed is checked by its fields alone, with a warning. One written in
     another version of the format is refused. There is no override: to change
     a setting, start a new run.
+  - The state ledgers (`e_src_led_*`, `e_src_inc_left`, `e_src_inc_moved`) are
+    fields of the state and continue through a restart. The repair's ledger
+    `e_src_fix_<name>`, its gross twin and count, and each state ledger's
+    per-step gross, events and attempted total live in the cache. The
+    checkpoint carries them beside the state, so they continue too. A
+    checkpoint written before it carried them starts them at zero, with a
+    warning, and their totals then cover the new segment only, not the whole
+    run. One with some but not all of them is refused.
 
 ## Interpretation limit
 
@@ -737,6 +845,8 @@ ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
 ClimaAtmos.sgs_exchange_of_energy_source_tags!
 ClimaAtmos.has_energy_source_updraft_copies
 ClimaAtmos.energy_source_updraft_copy_variables
+ClimaAtmos.mirror_on_energy_source_copies!
+ClimaAtmos.energy_source_copy_residual!
 ClimaAtmos.keep_energy_source_sediment_correction!
 ClimaAtmos.sediment_energy_source_tags_with_corrections!
 ```

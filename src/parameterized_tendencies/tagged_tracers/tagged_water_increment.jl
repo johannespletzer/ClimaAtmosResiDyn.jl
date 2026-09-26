@@ -347,8 +347,8 @@ between levels. Both are net over time in each cell: a cell whose ledger went
 up and down again counts only what is left. They are not a throughput, and
 understate how much the correction redistributed; the per-step throughput is
 the diagnostics `q_tag_inc_left_gross` and `q_tag_inc_moved_gross`
-(`tag_throughput.jl`). The energy source tags' columns of the same kind are
-still named `_gross`. Each also over `scale`.
+(`tag_throughput.jl`). The energy source tags' columns of the same kind have
+the same names. Each also over `scale`.
 
 Always, the gross throughput of the cache ledgers since the start of the run
 (`tag_throughput.jl`), carried through a restart from a checkpoint that holds
@@ -360,8 +360,8 @@ over the domain, a transfer counting once out and once in, and also over
 
 And, per state ledger of the water tags, what the accepted steps retained, what
 its writers attempted, and the events, with each tag's own ledgers against the
-tag's water, where kept (`tag_ledger_audit`, WP6 step 3). Collective, as
-`tag_audit` is.
+tag's water, its absolute burden and `∫ρq_tot`, where kept (`tag_ledger_audit`,
+WP6 step 3). Collective, as `tag_audit` is.
 """
 function water_tag_extra_audit(Y, p, model, scale)
     per_scale(x) = iszero(scale) ? zero(x) : x / scale
@@ -374,7 +374,14 @@ function water_tag_extra_audit(Y, p, model, scale)
     )
     edmf = water_tag_edmf_audit(Y, p, model, scale)
     columns = isnothing(edmf) ? throughput : merge(edmf, throughput)
-    ledgers = tag_ledger_audit(Y, p, "q_tag_", scale, p.tagging.ᶜwater_fix_gross)
+    ledgers = tag_ledger_audit(
+        Y,
+        p,
+        "q_tag_",
+        scale,
+        p.tagging.ᶜwater_fix_gross,
+        water_tag_ledger_parent_scale(Y),
+    )
     follows_water_increment(model) || return merge(columns, ledgers)
     return merge(
         columns,
@@ -382,6 +389,15 @@ function water_tag_extra_audit(Y, p, model, scale)
         ledgers,
     )
 end
+
+"""
+    water_tag_ledger_parent_scale(Y)
+
+The water tags' parent scale for their own ledgers' ratios and small-tag bound:
+`∫ρq_tot` over the domain. Collective, as `sum` is.
+"""
+water_tag_ledger_parent_scale(Y) = Float64(sum(Y.c.ρq_tot))
+
 _water_copy_events(p, model) =
     has_water_tag_updraft_copies(model) ?
     (; copy_repair_events = tag_event_total(p.tagging.ᶜwater_upfix_count)) :
@@ -463,9 +479,9 @@ the same check decides them:
     unless `energy_q_tot_upwinding` is `none`. A hook the parent does not have
     would make the stepper refresh the implicit cache after each solve, which
     the model's constraints read, and so change the model's fields;
-  - 1M microphysics must not be stepped explicitly. There the tags'
-    sedimentation lags the parent's by a change of the column's total, which
-    the follower cannot take (FINDINGS W23).
+  - with 1M microphysics stepped explicitly, the tags' sedimentation cross
+    blocks (WP5b) let the tags follow the parent's surface outflow in the
+    solve; without them the lag changed the column's total (FINDINGS W23).
 
 Called when the integrator is built. A no-op for the default transport.
 """
@@ -474,28 +490,12 @@ check_water_tag_increment_supported(atmos, ode_algo, T_imp!, T_post_imp!) =
     _check_water_tag_increment_supported(atmos, ode_algo, T_imp!, T_post_imp!) :
     nothing
 
-# Why the follower is refused with 1M microphysics stepped explicitly, for the
-# check below and the configuration's.
-const _EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE = "`water_tag_transport: increment` \
-    is refused with 1M microphysics stepped explicitly \
-    (`implicit_microphysics: false`). There the tags' sedimentation lags the \
-    parent's, whose rows carry the falling species' cross blocks, by about \
-    0.8% of the water an hour with one Newton iteration (FINDINGS W23 on the \
-    record branch). That lag changes the column's total, which the follower \
-    never does, so the closure stays outside its budget. Step the \
-    microphysics implicitly, the default, or set `water_tag_transport: \
-    tracer`, which lags alike (W23)."
-_explicit_one_moment(atmos) =
-    atmos.microphysics_model isa NonEquilibriumMicrophysics1M &&
-    atmos.microphysics_tendency_timestepping isa Explicit
-
 function _check_water_tag_increment_supported(
     atmos,
     ode_algo,
     T_imp!,
     T_post_imp!,
 )
-    _explicit_one_moment(atmos) && error(_EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE)
     !isnothing(T_imp!) && isnothing(T_post_imp!) &&
         error(
             "`water_tag_transport: increment` takes the parent's increment in \

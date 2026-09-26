@@ -88,6 +88,8 @@ function _per_tag_ledger_writer(name)
     long = string(name)
     any(prefix -> startswith(long, prefix), ("q_tag_led_fix_", "e_src_led_fix_")) &&
         return "limiters' rescale and the partition repair "
+    startswith(long, "e_src_led_src_") &&
+        return "sources' attribution brackets (OD4's throughput) "
     any(prefix -> startswith(long, prefix), ("q_tag_led_inc_", "e_src_led_inc_")) &&
         return "correction after each implicit solve "
     startswith(long, "q_tag_led_upleak_") &&
@@ -102,7 +104,7 @@ end
 function tag_ledger_diagnostic_name(name, kind)
     long = string(name)
     for prefix in ("q_tag_led_", "e_src_led_"),
-        part in ("fix_", "inc_", "leak_", "upleak_")
+        part in ("fix_", "inc_", "src_", "leak_", "upleak_")
 
         startswith(long, prefix * part) || continue
         tag = chopprefix(long, prefix * part)
@@ -153,6 +155,7 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
                 "q_tag_led_upleak",
                 "e_src_led_fix",
                 "e_src_led_inc",
+                "e_src_led_src",
             ),
         ) && delete!(ALL_DIAGNOSTICS, short_name)
     end
@@ -160,12 +163,14 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
         water = _is_water_ledger(name)
         (units, what) = water ? ("kg kg^-1", "Water") : ("J kg^-1", "Energy")
         if is_tag_per_tag_ledger_name(name)
+            writer = _per_tag_ledger_writer(name)
             add_diagnostic_variable!(;
                 short_name = string(name),
                 units,
-                long_name = "$what Retained by the Corrections of One Tag",
-                comments = "What the " *
-                           _per_tag_ledger_writer(name) *
+                long_name = occursin("_led_src_", string(name)) ?
+                            "$what Put into One Tag by the Sources" :
+                            "$what Retained by the Corrections of One Tag",
+                comments = "What the " * writer *
                            "changed this tag by, as the steps retained it: " *
                            "the stepper weights this state field as it " *
                            "weights the tag. Per unit mass, cumulative since " *

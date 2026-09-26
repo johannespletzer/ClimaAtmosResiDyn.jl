@@ -32,7 +32,9 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_edmf",
     "tagging_water_edmf_copies",
     "tagging_water_edmf_0m",
+    "tagging_water_edmf_0m_explicit",
     "tagging_water_increment",
+    "tagging_water_increment_explicit",
     "tagging_water_leak",
     "parameterizations",
     "restarts",
@@ -256,11 +258,29 @@ if TEST_GROUP in ("tagging_water_edmf_0m", "all")
     end
 end
 
+# The 0M rain-out split with the microphysics stepped explicitly, in both
+# modes. Its three builds compile the explicit path, so it has a group of its
+# own.
+if TEST_GROUP in ("tagging_water_edmf_0m_explicit", "all")
+    @safetestset "The 0M rain-out split, microphysics explicit" begin
+        @time include("tagged_water_edmf_0m_explicit_integration.jl")
+    end
+end
+
 # `water_tag_transport: increment` builds the EDMF column twice as well, with
 # the tags following the parent's increment and without tags.
 if TEST_GROUP in ("tagging_water_increment", "all")
     @safetestset "Water tags following the implicit increment" begin
         @time include("tagged_water_increment_integration.jl")
+    end
+end
+
+# The same with the microphysics stepped explicitly, where the tags' closure
+# rests on their sedimentation cross blocks. Its two builds compile the
+# explicit path, so it has a group of its own too.
+if TEST_GROUP in ("tagging_water_increment_explicit", "all")
+    @safetestset "Water tags following the increment, microphysics explicit" begin
+        @time include("tagged_water_increment_explicit_integration.jl")
     end
 end
 
