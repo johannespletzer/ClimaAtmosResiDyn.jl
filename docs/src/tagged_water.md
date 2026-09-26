@@ -413,14 +413,39 @@ ledger `L`, named without its `q_tag_` prefix:
   - `<L>_events`: the number of cell-steps whose change of `L` exceeded
     rounding against the cell's water;
   - each also over the column's water, `_relative`;
-  - for a tag's own ledger, `<L>_inventory_fraction`: `<L>_retained` over the
-    tag's water now. It bounds how far the corrections can have moved that
-    tag, relative to what it holds. Under the follower most of what
-    `led_inc` holds is the parent's vertical advection, which the tags no
-    longer take explicitly, so it bounds the follower's intervention from
-    above and does not isolate it;
+  - for a tag's own ledger, three ratios of `<L>_retained` and a flag, which
+    the next paragraphs explain: `<L>_inventory_fraction`, over the tag's
+    water now, `∫ρq_tag`; `<L>_burden_fraction`, over its absolute burden,
+    `∫|ρq_tag|`; `<L>_parent_fraction`, over the parent's water, `∫ρq_tot`;
+    and `<L>_applicable`. Each bounds how far the corrections can have moved
+    that tag. Under the follower most of what `led_inc` holds is the parent's
+    vertical advection, which the tags no longer take explicitly, so it bounds
+    the follower's intervention from above and does not isolate it;
+  - `ledger_parent_scale`, with the ledgers per tag: `∫ρq_tot`, the scale of
+    `_parent_fraction`;
   - `ledger_cadence_step`: 1 at `update_constrain_state_every: step`, 0
     otherwise.
+
+**Which ratio to read** (the owner's decision of 2026-09-25). A ratio to the
+tag is read only where `<L>_applicable` is 1, and which one depends on the tag:
+
+  - A pure region tag is read by `_inventory_fraction`. Its precondition is a
+    positive inventory. For a tag without negative parts the two ratios to
+    the tag are the same number.
+  - A source tag, such as `evap`, and any tag with negative parts are read by
+    `_burden_fraction`. A source tag starts at zero. A tag's negative parts
+    can cancel its positive parts, so that its inventory nears zero and the
+    inventory ratio grows without bound, whatever the correction did. The
+    burden does not cancel. Where the two ratios differ, the tag has negative
+    parts.
+  - `<L>_applicable` is 0 where the tag's burden is below the small-tag bound,
+    2e-4 of `∫ρq_tot`, or zero. Neither ratio to the tag applies there, and
+    the tag is judged by `_parent_fraction`, its absolute amount against the
+    parent. The ratios are still reported.
+
+A ratio whose denominator is not positive is `NaN`. `<L>_applicable` is never
+`NaN` unless the tag or its ledger is not finite, so a check reads it first.
+The bound is `TAG_LEDGER_SMALL_TAG_BOUND`.
 
 At the default cadence, `<L>_attempted` less `<L>_retained` is the work the
 steps discarded, for the ledgers per mechanism. For the follower's ledgers the
@@ -616,6 +641,8 @@ ClimaAtmos.water_tag_increment_ledger_variables
 ClimaAtmos.water_tag_extra_audit
 ClimaAtmos.TagLedgerView
 ClimaAtmos.set_tag_ledger_cadence!
+ClimaAtmos.tag_ledger_normalization
+ClimaAtmos.TAG_LEDGER_SMALL_TAG_BOUND
 ClimaAtmos.WATER_TAG_CHECKPOINT_VERSION
 ClimaAtmos.write_water_tag_checkpoint_attributes!
 ClimaAtmos.check_water_tag_checkpoint

@@ -360,8 +360,8 @@ over the domain, a transfer counting once out and once in, and also over
 
 And, per state ledger of the water tags, what the accepted steps retained, what
 its writers attempted, and the events, with each tag's own ledgers against the
-tag's water, where kept (`tag_ledger_audit`, WP6 step 3). Collective, as
-`tag_audit` is.
+tag's water, its absolute burden and `∫ρq_tot`, where kept (`tag_ledger_audit`,
+WP6 step 3). Collective, as `tag_audit` is.
 """
 function water_tag_extra_audit(Y, p, model, scale)
     per_scale(x) = iszero(scale) ? zero(x) : x / scale
@@ -374,7 +374,14 @@ function water_tag_extra_audit(Y, p, model, scale)
     )
     edmf = water_tag_edmf_audit(Y, p, model, scale)
     columns = isnothing(edmf) ? throughput : merge(edmf, throughput)
-    ledgers = tag_ledger_audit(Y, p, "q_tag_", scale, p.tagging.ᶜwater_fix_gross)
+    ledgers = tag_ledger_audit(
+        Y,
+        p,
+        "q_tag_",
+        scale,
+        p.tagging.ᶜwater_fix_gross,
+        water_tag_ledger_parent_scale(Y),
+    )
     follows_water_increment(model) || return merge(columns, ledgers)
     return merge(
         columns,
@@ -382,6 +389,15 @@ function water_tag_extra_audit(Y, p, model, scale)
         ledgers,
     )
 end
+
+"""
+    water_tag_ledger_parent_scale(Y)
+
+The water tags' parent scale for their own ledgers' ratios and small-tag bound:
+`∫ρq_tot` over the domain. Collective, as `sum` is.
+"""
+water_tag_ledger_parent_scale(Y) = Float64(sum(Y.c.ρq_tot))
+
 _water_copy_events(p, model) =
     has_water_tag_updraft_copies(model) ?
     (; copy_repair_events = tag_event_total(p.tagging.ᶜwater_upfix_count)) :
