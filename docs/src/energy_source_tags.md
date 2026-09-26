@@ -659,6 +659,18 @@ column it checks that the model's state is bit for bit the one without tags.
     reports three ratios of the retained amount and a flag, explained below:
     `_inventory_fraction`, `_burden_fraction`, `_parent_fraction` and
     `_applicable`, with the parent scale as `ledger_parent_scale`;
+  - `e_src_led_src_<name>`, with the same key: what the sources' brackets put
+    into each tag or took out of it, its gains by its mask and its losses by
+    its share. It is a tendency, so the stepper integrates it as it
+    integrates the tag, and its change over a step is what the step's sources
+    gave the tag. Its per-step gross, `e_src_led_srcgross_<name>`, summed over
+    the region tags without sources and over the domain, is the gross source
+    throughput, the scale of every energy percentage in the tag-closure
+    experiments' acceptance contract (their OD4). The audit table reports it as
+    `source_throughput`, cumulative since the start of the run; a window's
+    throughput is the difference of two rows. The source tags overlay the
+    partition, so they are left out of the sum and each unit of source energy
+    counts once;
   - `e_src_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
@@ -695,12 +707,13 @@ owner's decision of 2026-09-25):
     ratio for a tag that carries a source and for any tag with negative parts.
     For a tag without negative parts it is the same number as
     `_inventory_fraction`.
-  - `_parent_fraction`: over the parent scale. OD4 sets that scale to the gross
-    energy the sources put into the tags. Until the model reports it, the
-    scale is the interim the owner set, the process records' amounts,
-    `Σₚ ∫|prc_e_p|`, and a ratio to it is read as an upper bound. It is `NaN`
-    without `energy_process_record`. It is not `∫(ρe_tot + c·ρ)`, which depends
-    on the offset and would make most source tags look small.
+  - `_parent_fraction`: over the parent scale, OD4's gross source throughput,
+    the audit's `source_throughput`. The tags keep it whenever they keep
+    ledgers per tag. It is not `∫(ρe_tot + c·ρ)`, which depends on the offset
+    and would make most source tags look small. Runs from before the
+    throughput used the interim the owner set, the process records' amounts,
+    `Σₚ ∫|prc_e_p|`. That is an estimate, not a bound: on the tag-closure
+    experiments' D4 column the exact throughput was 6% below it (their E84).
   - `_applicable`: 0 where the tag's burden is zero or below the small-tag
     bound, 2e-4 of the parent scale, and 1 otherwise. At 0 no ratio to the tag
     is read, and the tag is judged by `_parent_fraction`. Without a parent

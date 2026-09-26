@@ -518,13 +518,17 @@ water_tag_per_tag_ledger_names(model) =
 """
     energy_source_ledger_fix_names(model)
     energy_source_ledger_inc_names(model)
+    energy_source_ledger_src_names(model)
     energy_source_per_tag_ledger_names(model)
 
 Each energy source tag's own state ledgers, in state order, under
 `energy_source_tag_ledger_per_tag: true`, and `()` otherwise:
-`e_src_led_fix_<name>` for every tag, what the repair changed it by; and under
+`e_src_led_fix_<name>` for every tag, what the repair changed it by; under
 `energy_source_tag_transport: enthalpy_increment`, `e_src_led_inc_<name>`, what
-the correction after each solve moved into or out of it.
+the correction after each solve moved into or out of it; and
+`e_src_led_src_<name>` for every tag, what the sources' brackets
+(`attribute_energy_source_tags!`) put into it or took out of it. The last one's
+per-step gross is OD4's scale (`energy_source_throughput`).
 """
 energy_source_ledger_fix_names(::Nothing) = ()
 energy_source_ledger_fix_names(model::EnergySourceTaggingModel) =
@@ -535,9 +539,14 @@ energy_source_ledger_inc_names(model::EnergySourceTaggingModel) =
     has_energy_source_ledger_per_tag(model) &&
     model.transport isa EnthalpyIncrementEnergySourceTransport ?
     _prefixed_tag_names(Val(:e_src_led_inc_), model.tags) : ()
+energy_source_ledger_src_names(::Nothing) = ()
+energy_source_ledger_src_names(model::EnergySourceTaggingModel) =
+    has_energy_source_ledger_per_tag(model) ?
+    _prefixed_tag_names(Val(:e_src_led_src_), model.tags) : ()
 energy_source_per_tag_ledger_names(model) = (
     energy_source_ledger_fix_names(model)...,
     energy_source_ledger_inc_names(model)...,
+    energy_source_ledger_src_names(model)...,
 )
 
 """
@@ -560,7 +569,13 @@ Whether `name` is one tag's own state ledger, of either family.
 is_tag_per_tag_ledger_name(name::Symbol) =
     any(
         prefix -> startswith(string(name), prefix),
-        ("q_tag_led_fix_", "q_tag_led_inc_", "e_src_led_fix_", "e_src_led_inc_"),
+        (
+            "q_tag_led_fix_",
+            "q_tag_led_inc_",
+            "e_src_led_fix_",
+            "e_src_led_inc_",
+            "e_src_led_src_",
+        ),
     )
 
 """
@@ -582,6 +597,18 @@ water_tag_inc_ledger_view(Yₜ, model) =
     has_water_tag_ledger_per_tag(model) ? TagLedgerView{:inc}(Yₜ.c) : nothing
 energy_source_inc_ledger_view(Yₜ, model) =
     has_energy_source_ledger_per_tag(model) ? TagLedgerView{:inc}(Yₜ.c) :
+    nothing
+
+"""
+    energy_source_src_ledger_view(Yₜ, model)
+
+The [`TagLedgerView`](@ref) of `Yₜ.c` that the sources' brackets write each
+energy source tag's change into, `e_src_led_src_<name>`, or `nothing` where the
+tags keep no ledger per tag. The brackets add to the tags' tendencies, so the
+ledger is a tendency too: the stepper integrates it as it integrates the tag.
+"""
+energy_source_src_ledger_view(Yₜ, model) =
+    has_energy_source_ledger_per_tag(model) ? TagLedgerView{:src}(Yₜ.c) :
     nothing
 
 """
@@ -740,8 +767,9 @@ prefix. Over the domain, as `scale` is:
     whether a ratio to the tag applies ([`tag_ledger_normalization`](@ref)).
 
 With a tag's own ledgers, `ledger_parent_scale`: `parent_scale`, the family's
-parent scale, `∫ρq_tot` for the water tags and for the energy source tags the
-interim of `energy_source_ledger_parent_scale`. And `ledger_cadence_step`: 1 at
+parent scale, `∫ρq_tot` for the water tags and for the energy source tags
+`energy_source_ledger_parent_scale`, OD4's gross source throughput. And
+`ledger_cadence_step`: 1 at
 `update_constrain_state_every: step`, 0 otherwise. `(;)` without the ledger
 cache. Collective, as `sum` is.
 """
@@ -787,7 +815,10 @@ function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross, parent_scale)
         column!("$(short)_events", tag_event_total((ledger.ᶜevents,)))
         if is_tag_per_tag_ledger_name(name)
             per_tag = true
-            tag_name = chopprefix(chopprefix(short, "led_fix_"), "led_inc_")
+            tag_name = chopprefix(
+                chopprefix(chopprefix(short, "led_fix_"), "led_inc_"),
+                "led_src_",
+            )
             ᶜtag = getproperty(Y.c, Symbol(tag_prefix, tag_name))
             ratios = tag_ledger_normalization(
                 retained,
@@ -804,6 +835,33 @@ function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross, parent_scale)
     per_tag && column!("ledger_parent_scale", Float64(parent_scale))
     column!("ledger_cadence_step", steps.cadence[] == :step ? 1.0 : 0.0)
     return NamedTuple{Tuple(names)}(Tuple(values))
+end
+
+"""
+    energy_source_throughput(Y, p, model)
+
+OD4's scale (the owner, 2026-09-24 and 2026-09-25): the gross energy the
+sources put into the energy source tags, over the domain and since the start
+of the run. It is the sum over the partition's tags, the region tags without
+sources, of the per-step gross of each tag's source ledger,
+`Σ_steps |Δ e_src_led_src_<name>|`, integrated. The partition's tags receive
+every source in full, gains by their masks and losses by their shares, so each
+unit of source energy counts once; the source tags overlay it and are left out.
+A window's throughput is the difference of two values. `nothing` where the
+tags keep no ledger per tag. Collective, as `sum` is.
+"""
+energy_source_throughput(Y, p, model) =
+    _energy_source_throughput(_tag_ledger_steps(p.tagging), model)
+_energy_source_throughput(steps, model) = nothing
+function _energy_source_throughput(steps::NamedTuple, model::EnergySourceTaggingModel)
+    isempty(energy_source_ledger_src_names(model)) && return nothing
+    total = 0.0
+    for name in energy_source_region_tag_state_names(model)
+        ledger_name =
+            Symbol(:e_src_led_src_, chopprefix(string(name), "ρe_src_"))
+        total += Float64(sum(getproperty(steps.ledgers, ledger_name).ᶜgross))
+    end
+    return total
 end
 
 """

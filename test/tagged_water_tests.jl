@@ -2068,6 +2068,10 @@ end
           "q_tag_led_fixgross_tropo"
     @test CA.Diagnostics.tag_ledger_diagnostic_name(:e_src_led_inc_sfc, "colgross") ==
           "e_src_led_inccolgross_sfc"
+    # OD4's source ledger per tag (2026-09-25).
+    @test CA.is_tag_per_tag_ledger_name(:e_src_led_src_sfc)
+    @test CA.Diagnostics.tag_ledger_diagnostic_name(:e_src_led_src_sfc, "gross") ==
+          "e_src_led_srcgross_sfc"
     @test CA.Diagnostics.tag_ledger_diagnostic_name(:q_tag_led_repair, "gross") ==
           "q_tag_led_repair_gross"
 
