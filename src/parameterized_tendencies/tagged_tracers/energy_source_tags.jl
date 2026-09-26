@@ -314,8 +314,16 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         ᶜenergy_source_neg,
         ᶠenergy_source_interior,
         _energy_source_increment_cache(Y, model)...,
+        _energy_source_copy_cache(Y, model)...,
     )
 end
+
+# With updraft copies, a work field for the copies' mirrors
+# (`energy_source_copy_mirrors.jl`): the partition's copies' sum, and each
+# tag's share in the surface relaxation.
+_energy_source_copy_cache(Y, model) =
+    has_energy_source_updraft_copies(model) ?
+    (; ᶜenergy_source_copy_sum = zero.(Y.c.ρ)) : (;)
 
 # The increment correction gives the partition the parent's increment of `E`,
 # less what the partition's own tendencies moved. So under
