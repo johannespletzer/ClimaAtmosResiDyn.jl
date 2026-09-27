@@ -1405,9 +1405,11 @@ end
 
 Parse `energy_source_tag_increment_allow_explicit_microphysics`. `false`, the
 default, and `~` keep `energy_source_tag_transport: enthalpy_increment` refused
-with sedimenting microphysics stepped explicitly; `true` allows it, for
-development runs. Anything else is an error, so that a quoted `"true"` cannot
-silently read as off. See `check_energy_source_increment_microphysics_supported`.
+with sedimenting microphysics stepped explicitly where no run has shown that
+the tags close. That is 2M and P3, and 1M under `use_auto_jacobian: true`.
+`true` allows it, for development runs. Anything else is an error, so that a
+quoted `"true"` cannot silently read as off. See
+`check_energy_source_increment_microphysics_supported`.
 """
 function energy_source_increment_explicit_microphysics_from_config(value)
     isnothing(value) && return false
@@ -1434,26 +1436,36 @@ const SEDIMENTING_MICROPHYSICS_MODELS = ("1M", "2M", "2MP3")
     )
 
 Refuse `energy_source_tag_transport: enthalpy_increment` with microphysics that
-sediments (`microphysics_model: 1M`, `2M` or `2MP3`) stepped explicitly
-(`implicit_microphysics: false`), unless
-`energy_source_tag_increment_allow_explicit_microphysics: true`. With that key
-the configuration runs, and the model warns.
+sediments stepped explicitly (`implicit_microphysics: false`) where no run has
+shown that the tags close, unless
+`energy_source_tag_increment_allow_explicit_microphysics: true`. That is
+`microphysics_model: 2M` or `2MP3`, and `1M` under `use_auto_jacobian: true`
+(`_explicit_one_moment_without_cross_blocks`). With the key the configuration
+runs, and the model warns.
 
 In the implicit Jacobian the parent's `ρe_tot` row has a cross block from each
-sedimenting species, for the energy the falling water carries. The tags' rows
-do not. So with one Newton iteration the tags miss part of the parent's
-sedimentation update. The correction after each solve cannot move the part
-that changes a column's total, and that part stays in `e_src_res`. On the
+sedimenting species, for the energy the falling water carries. Without the
+tags' own blocks, one Newton iteration leaves the tags short of part of the
+parent's sedimentation update. The correction after each solve cannot move the
+part that changes a column's total, and that part stays in `e_src_res`. On the
 tag-closure experiments' DYCOMS RF02 column (prognostic EDMF, 1M, an hour)
 the closure residual was 2.1e-4 of the partitioned energy with the
 microphysics explicit, 1.5e-6 with it implicit, and 4.9e-12 with ten Newton
-iterations (FINDINGS E80 on the record branch). 2M and P3 sediment too, and
-nothing has measured them, so they are refused until a run does. The water
-tags lag in the same way under 1M. PR #105 proposes the analogous cross
-blocks for them, and PR #113 the energy tags' own.
+iterations (FINDINGS E80 on the record branch). With the split solver the
+tags' rows carry their face shares of those blocks, as the water tags' rows
+do. With them, this column's explicit 1M hour closed to a gross residual of
+1.4e-15 against the pre-registered bound of 1e-7, with every model field bit
+for bit (PR #113's validation). So 1M stepped explicitly runs without the key
+where the Jacobian carries the blocks. The manual Jacobian, the default,
+carries them, and the dense one is exact. The sparse autodiff Jacobian takes
+its pattern from the unsplit blocks and lacks them, so under
+`use_auto_jacobian: true` 1M still needs the key. 2M and P3 sediment too. With
+the split solver the tags carry blocks to their species as well, but no run
+has measured the closure with them, so they need the key until one does.
 
 The check concerns only the tags' own keys. Without the tags, with another
-transport, with 0M, or with the microphysics implicit, it does nothing.
+transport, with 0M, with the microphysics implicit, or with 1M under a
+Jacobian that carries the blocks, it does nothing.
 """
 function check_energy_source_increment_microphysics_supported(
     transport,
@@ -1466,34 +1478,53 @@ function check_energy_source_increment_microphysics_supported(
         microphysics in SEDIMENTING_MICROPHYSICS_MODELS &&
         get(parsed_args, "implicit_microphysics", true) == false
     explicit_sedimenting || return nothing
+    # With 1M the tags' sedimentation cross blocks close the lag (PR #113's
+    # validation). So 1M is refused only under a Jacobian that lacks them, as
+    # the water tags' follower is.
+    one_moment = microphysics == "1M"
+    without_blocks = _explicit_one_moment_without_cross_blocks(parsed_args)
+    one_moment && !without_blocks && return nothing
+    jacobian = one_moment ? " under `use_auto_jacobian: true`" : ""
+    reason =
+        one_moment ?
+        "That Jacobian does not carry the tags' sedimentation cross blocks, \
+        while the parent's `ρe_tot` row has them. With few Newton iterations \
+        the tags then lag the parent's sedimentation, and the lag lands in \
+        `e_src_res`." :
+        "No run has measured the closure with `microphysics_model: \
+        $microphysics`. With the manual Jacobian, the default, the tags carry \
+        sedimentation cross blocks to each falling species, as with 1M. The \
+        sparse autodiff Jacobian (`use_auto_jacobian: true`) carries none."
     if allow_explicit_microphysics
         @warn(
             "`energy_source_tag_transport: enthalpy_increment` runs with \
-            `microphysics_model: $microphysics` stepped explicitly, because \
+            `microphysics_model: $microphysics` stepped explicitly$jacobian, because \
             `energy_source_tag_increment_allow_explicit_microphysics: true`. \
-            The tags have no cross blocks to the sedimenting species in the \
-            implicit Jacobian, so with few Newton iterations they lag the \
-            parent's sedimentation, and the lag lands in `e_src_res`.",
+            $reason",
         )
         return nothing
     end
     measured =
-        microphysics == "1M" ?
-        "On a DYCOMS RF02 EDMF column with 1M the closure residual after an \
-        hour was 2.1e-4 of the partitioned energy, against 1.5e-6 with the \
-        microphysics implicit." :
-        "No run has measured the lag with `microphysics_model: \
-        $microphysics`, so it is refused until one does. With 1M it was \
-        2.1e-4 of the partitioned energy after an hour on a DYCOMS RF02 EDMF \
-        column, against 1.5e-6 with the microphysics implicit."
+        one_moment ?
+        "On a DYCOMS RF02 EDMF column with one Newton iteration and without \
+        the blocks, the closure residual after an hour was 2.1e-4 of the \
+        partitioned energy, against 1.5e-6 with the microphysics implicit \
+        (FINDINGS E80 on the record branch). With the blocks the gross \
+        residual was 1.4e-15 (PR #113's validation)." :
+        "With 1M stepped explicitly on a DYCOMS RF02 EDMF column, the closure \
+        residual after an hour was 2.1e-4 of the partitioned energy without \
+        the blocks (FINDINGS E80 on the record branch), and the gross \
+        residual 1.4e-15 with them (PR #113's validation)."
+    remedy =
+        one_moment ?
+        "Use the manual Jacobian, the default, step the microphysics \
+        implicitly, or set" :
+        "Until a run measures `microphysics_model: $microphysics`, step the \
+        microphysics implicitly, the default, or set"
     return error(
         "`energy_source_tag_transport: enthalpy_increment` is refused with \
         `microphysics_model: $microphysics` stepped explicitly \
-        (`implicit_microphysics: false`). The tags have no cross blocks to \
-        the sedimenting species in the implicit Jacobian, while the parent's \
-        `ρe_tot` has them. With one Newton iteration the tags then lag the \
-        parent's sedimentation. $measured Step the microphysics implicitly, \
-        the default, or set \
+        (`implicit_microphysics: false`)$jacobian. $reason $measured $remedy \
         `energy_source_tag_increment_allow_explicit_microphysics: true` to \
         run it anyway, for development.",
     )
@@ -1641,11 +1672,12 @@ _explicit_one_moment_config(parsed_args) =
     get(parsed_args, "microphysics_model", nothing) == "1M" &&
     get(parsed_args, "implicit_microphysics", true) == false
 
-# With 1M microphysics stepped explicitly, the follower closes only because the
-# tags' Jacobian rows carry the sedimentation cross blocks. Only the manual
-# Jacobian's split solver carries them (`_derivative_flags`). The sparse
-# autodiff Jacobian takes its pattern from the unsplit blocks, so it lacks
-# them. The dense one wins over it when both are set, and is exact.
+# With 1M microphysics stepped explicitly, the water tags' follower and the
+# energy source tags' `enthalpy_increment` close only because the tags' Jacobian
+# rows carry the sedimentation cross blocks. Only the manual Jacobian's split
+# solver carries them (`_derivative_flags`). The sparse autodiff Jacobian takes
+# its pattern from the unsplit blocks, so it lacks them. The dense one wins over
+# it when both are set, and is exact.
 _explicit_one_moment_without_cross_blocks(parsed_args) =
     _explicit_one_moment_config(parsed_args) &&
     get(parsed_args, "use_auto_jacobian", false) == true &&
@@ -1790,9 +1822,9 @@ cost.
 Energy source tags are refused without `energy_source_tag_offset`, see
 `check_energy_source_offset_given`, and under `turbconv: prognostic_edmfx` with
 more than one updraft, see `check_energy_source_tagging_supported`. Under
-`energy_source_tag_transport: enthalpy_increment` they are refused with
-sedimenting microphysics (1M, 2M, P3) stepped explicitly, unless the
-configuration opts in, see
+`energy_source_tag_transport: enthalpy_increment` they are refused with 2M or
+P3 microphysics stepped explicitly, and with 1M stepped explicitly under
+`use_auto_jacobian: true`, unless the configuration opts in, see
 `check_energy_source_increment_microphysics_supported`. Water tags are refused
 under `turbconv: prognostic_edmfx` with more than one updraft and under
 `amd_les: true`, see `check_water_tracers_transport_supported`. The label warnings of the energy
