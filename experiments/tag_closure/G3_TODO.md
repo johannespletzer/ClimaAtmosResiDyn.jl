@@ -63,8 +63,10 @@ The twelve criteria of the plan, section 2, in short:
     trend rule is new. It reuses OD3's refinement ratios, and the owner
     decides whether to adopt it. It also asks how the day-scale rows and
     R9's proposed hourly reading are read on a shorter case, which row holds
-    `q_ntag_res` against its compartment, and whether the sub-step rungs get
-    a ratio of their own. No agent fills it in.
+    `q_ntag_res` against its compartment, whether the sub-step rungs get a
+    ratio of their own, and whether the pool rule's ordering error is
+    measured in runs (#121's item 4 finds it does not fall with `dt` on the
+    1-moment scheme). No agent fills it in.
   - [x] **Rev. 2's register, OD1 to OD8** (2026-09-24; ROADMAP.md, "The
     decision register"). *Each decision's current state is in [the register](ROADMAP.md#the-decision-register); all but
     OD7 are decided, and OD7 is deferred.* Kept as written: the production envelope, the windows, the
@@ -739,8 +741,8 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     box run checks it before a default relies on it.
     *Scope added (provenance pathway, 2026-09-27, from the owner's review of
     #121):* the review's item 6, a horizontally varying operator test for
-    it, was added to #121 in `00b4ecf`. It had reported no result at #121's
-    `3681fc2`, so it is a test, not a result.
+    it, was added to #121 in `00b4ecf`. #121's `835ff9a` reports its sphere
+    passing. It is not in FINDINGS.md, so it is a test, not a result.
 
   - [ ] Stage 2: EDMF, default mode.
 

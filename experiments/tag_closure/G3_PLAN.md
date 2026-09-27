@@ -484,8 +484,8 @@ compartment's residual under both transports, both upwinding schemes and
 several time steps. The review's sub-step-resolved reference test (item 4)
 and a horizontally varying operator test (item 6) were added to #121 in
 `00b4ecf`. #121's commit `3681fc2` reports item 4's test file passing on the
-login node. Item 6's integration test had reported no result by then. Neither
-is in FINDINGS.md, so they are tests, not results.
+login node, and `835ff9a` item 6's sphere passing. Neither is in FINDINGS.md,
+so they are tests, not results.
 
 ### 4.6 Shared code (WP2), after the water design has settled
 

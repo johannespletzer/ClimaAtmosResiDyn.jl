@@ -93,15 +93,15 @@ review of #121, pending OD15):* two of its items were added to #121 as tests in
 `00b4ecf`. One is a test-only reference that evolves the three compartments
 after every microphysics sub-step (the review's item 4). The other is a
 horizontally varying operator test (item 6). #121's commit `3681fc2` reports
-item 4's test file passing on Julia 1.11 on the login node. Item 6's integration
-test had reported no result by then. Neither is in FINDINGS.md, so they are
-tests, not results. Items 5 and 7 enter this page. PX25 runs WP4b's two
-transports over a refinement matrix, records the residuals rather than bounding
-them, and reports the audit on two scales (PT15, PT16). The review's question on
-the acceptable closure error, and over what duration, becomes OD15. OD15 builds
-on OD3's approved rows and OD2's windows, and proposes no new value. PX25's
-trend rule is new. It reuses OD3's refinement ratios, and the owner decides
-whether to adopt it.
+item 4's test file passing on Julia 1.11 on the login node, and `835ff9a` item
+6's sphere passing, with the parts' residual below 1e-15 under both operators.
+Neither is in FINDINGS.md, so they are tests, not results. Items 5 and 7 enter
+this page. PX25 runs WP4b's two transports over a refinement matrix, records the
+residuals rather than bounding them, and reports the audit on two scales (PT15,
+PT16). The review's question on the acceptable closure error, and over what
+duration, becomes OD15. OD15 builds on OD3's approved rows and OD2's windows,
+and proposes no new value. PX25's trend rule is new. It reuses OD3's refinement
+ratios, and the owner decides whether to adopt it.
 
 **The check of PR #122 at `d18a453`** (comment 5857451675, 2026-09-27, an
 automated check posted from the owner's account) asked for text fixes to PX25,
@@ -1581,6 +1581,18 @@ review (section 0). OD15 was added on 2026-09-27, from the owner's review of
         assessable.
       + Whether the sub-step rungs, which are not halvings, get a
         per-doubling ratio or stay reported only.
+      + Added 2026-09-27, after #121's `3681fc2`: whether the pool rule's
+        ordering error is measured in runs. Item 4's test on #121 finds that
+        on the 1-moment scheme it does not fall with `dt` on its sampled
+        states. With 3 sub-steps the largest error is 0.012, 0.011, 0.013
+        and 0.050 of the water the step's flows move, at 120, 60, 30 and
+        15 s, and the mean is 8.9e-4 to 2.1e-3. PX25 records the audit, not
+        this error. PX14 replays each step's flows as frozen rates, so it
+        does not see rates that change within the step. A measure in runs
+        needs a diagnostic that attributes each sub-step, or a replay that
+        calls the model's own sub-steps. Whether #121 keeps the step-level
+        rule as a coarse-grained definition, as the review's item 4 allows,
+        is decided in #121.
 
 ## 10. Sequencing, and what G4 takes
 
@@ -1735,3 +1747,9 @@ review.
     so that total again follows the V-W table, and its words are unchanged.
     The same edits give the run status of items 4 and 6 at #121's `3681fc2`.
     Nothing approved is changed, and FINDINGS.md is not touched.
+  - *Revised 2026-09-27, after the check of `abd8599` (comment 5858758066):*
+    OD15 asks whether the pool rule's ordering error is measured in runs, in
+    section 9, ROADMAP's register and G3_TODO's OD15 item. Section 0,
+    ROADMAP's note on step 7, G3_PLAN 4.5 and G3_TODO's hyperdiffusion item
+    give item 6's result at #121's `835ff9a`. Nothing approved is changed,
+    and FINDINGS.md is not touched.
