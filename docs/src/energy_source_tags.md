@@ -371,8 +371,12 @@ writes the rate the residual is flushed at, `flush_rate` per day, what the
 rest of the run added to it, `production_rate`, and the level at which the two
 would balance, `settling_level`, with `settling_ratio`, that level over the
 present gross. The first row, and the first after a restart, write `NaN` for
-the rates. The flush rate is not constant, so the settling level is an order
-of magnitude, not a prediction.
+the rates. A balance needs a positive production. Where the rest of the run
+added nothing to the residual over the interval, or took from it,
+`production_rate` is zero or negative, the residual only decays, and the
+settling level and its ratio are `NaN`. `forecast_defined` is 1 where the
+settling level is a number and 0 elsewhere. The flush rate is not constant, so
+the settling level is an order of magnitude, not a prediction.
 
 None of these is a verdict. They say where to look.
 

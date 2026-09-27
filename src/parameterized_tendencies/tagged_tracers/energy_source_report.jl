@@ -161,12 +161,15 @@ where the pure region tags' masks are a verified partition
   - `production_rate`: `P = (ΔG + ΔF) / Δt`, in J per day, what everything
     else added to the residual;
   - `settling_level`: `G* = P/λ`, the gross at which the two would balance,
-    and `settling_ratio`, `G*/G`.
+    and `settling_ratio`, `G*/G`;
+  - `forecast_defined`: 1 where `settling_level` is a number, 0 elsewhere.
 
 `previous` is a `Ref` that holds the last check's `(t, G, F)`, or `nothing`.
 The first check, and the first after a restart, have no interval, and write
-`NaN` for the rates. `λ` is not constant (E74), so `G*` is an order of
-magnitude, not a prediction. Collective.
+`NaN` for the rates. A balance needs `P > 0`: where the rest of the run did
+not add to the residual, it only decays, and `settling_level` is `NaN`
+([`energy_source_forecast`](@ref)). `λ` is not constant (E74), so `G*` is an
+order of magnitude, not a prediction. Collective.
 """
 function energy_source_residual_report(
     Y,
@@ -256,20 +259,36 @@ end
 
 Synergy 4 from two checks, `(t₀, G₀, F₀)` and `(t, G, F)`, with `t` in
 seconds, `G` the gross residual and `F` the gross flush, both in J:
-`(; flush_rate, production_rate, settling_level, settling_ratio)`, the rates per
-day. `NaN` where the interval is empty, the mean gross is zero, or nothing was
-flushed, since the rate is then not defined.
+`(; flush_rate, production_rate, settling_level, settling_ratio, forecast_defined)`, the rates per day.
+
+  - `flush_rate` is `NaN` where the interval is empty, the mean gross is zero,
+    or nothing was flushed, since the rate is then not defined.
+  - `production_rate` is `NaN` only where the interval is empty. It can be
+    zero or negative: then the rest of the run took from the residual, or
+    added nothing, over the interval.
+  - `settling_level` needs both rates, and a positive production. Without
+    one the residual only decays, and there is no positive level to settle
+    at, so it is `NaN`. `settling_ratio` also needs `G > 0`.
+  - `forecast_defined` is 1 where `settling_level` is a number, 0 elsewhere.
 """
 function energy_source_forecast(G₀, F₀, t₀, G, F, t)
     days = (t - t₀) / 86400
     mean_gross = (G + G₀) / 2
     flushed = F - F₀
-    defined = days > 0 && mean_gross > 0 && flushed > 0
-    flush_rate = defined ? flushed / (mean_gross * days) : NaN
+    rated = days > 0 && mean_gross > 0 && flushed > 0
+    flush_rate = rated ? flushed / (mean_gross * days) : NaN
     production_rate = days > 0 ? (G - G₀ + flushed) / days : NaN
+    # A negative level would be no balance at all: the residual decays.
+    defined = rated && production_rate > 0
     settling_level = defined ? production_rate / flush_rate : NaN
     settling_ratio = defined && G > 0 ? settling_level / G : NaN
-    return (; flush_rate, production_rate, settling_level, settling_ratio)
+    return (;
+        flush_rate,
+        production_rate,
+        settling_level,
+        settling_ratio,
+        forecast_defined = Int(defined),
+    )
 end
 
 function _energy_source_forecast(p, closure, t, previous)
@@ -283,6 +302,7 @@ function _energy_source_forecast(p, closure, t, previous)
         production_rate = NaN,
         settling_level = NaN,
         settling_ratio = NaN,
+        forecast_defined = 0,
     )
     # Without a verified partition the ledger is the net residual source
     # attribution, not the flush, so no rate is read from it.

@@ -2184,9 +2184,43 @@ end
         @test forecast.production_rate ≈ 6
         @test forecast.settling_level ≈ 36
         @test forecast.settling_ratio ≈ 36 / 14
+        @test forecast.forecast_defined == 1
         # Nothing flushed, or no interval: no rate.
         @test isnan(CA.energy_source_forecast(10.0, 2.0, 0.0, 14.0, 2.0, 3600.0).flush_rate)
         @test isnan(CA.energy_source_forecast(10.0, 0.0, 0.0, 14.0, 2.0, 0.0).flush_rate)
+        # The review of #120, finding 3: a settling level only where the rest
+        # of the run adds to the residual. Steady: G stays at 10 J while 2 J
+        # are flushed, so P = 2 J a day and G* = G.
+        steady = CA.energy_source_forecast(10.0, 0.0, 0.0, 10.0, 2.0, 86400.0)
+        @test steady.production_rate ≈ 2
+        @test steady.settling_level ≈ 10
+        @test steady.settling_ratio ≈ 1
+        @test steady.forecast_defined == 1
+        # Decaying: G falls from 10 to 6 J with 2 J flushed, so P = -2 J a day.
+        # There is no positive balance, so no level, and no negative one.
+        decaying = CA.energy_source_forecast(10.0, 0.0, 0.0, 6.0, 2.0, 86400.0)
+        @test decaying.flush_rate ≈ 2 / 8
+        @test decaying.production_rate ≈ -2
+        @test isnan(decaying.settling_level)
+        @test isnan(decaying.settling_ratio)
+        @test decaying.forecast_defined == 0
+        # The flush alone explains the fall: P = 0, still no level.
+        flushed_only = CA.energy_source_forecast(10.0, 0.0, 0.0, 8.0, 2.0, 86400.0)
+        @test flushed_only.production_rate == 0
+        @test isnan(flushed_only.settling_level)
+        @test flushed_only.forecast_defined == 0
+        # Nothing flushed over a day: P is known, the rate and the level not.
+        no_flush = CA.energy_source_forecast(10.0, 2.0, 0.0, 14.0, 2.0, 86400.0)
+        @test no_flush.production_rate ≈ 4
+        @test isnan(no_flush.flush_rate)
+        @test isnan(no_flush.settling_level)
+        @test no_flush.forecast_defined == 0
+        # No residual at either check.
+        no_residual = CA.energy_source_forecast(0.0, 0.0, 0.0, 0.0, 0.0, 86400.0)
+        @test isnan(no_residual.flush_rate)
+        @test isnan(no_residual.settling_level)
+        @test isnan(no_residual.settling_ratio)
+        @test no_residual.forecast_defined == 0
 
         # The report on a column of four 250 m layers with set fields.
         space = ClimaCore.CommonSpaces.ColumnSpace(
@@ -2252,6 +2286,7 @@ end
             CA.energy_source_residual_report(Y, p_steps, per_tag, closure, 0.0, previous)
         @test first_row.flush_gross ≈ 4
         @test isnan(first_row.flush_rate)
+        @test first_row.forecast_defined == 0
         @test previous[].F ≈ 4
         ᶜgross .= 0.006
         second_row = CA.energy_source_residual_report(
@@ -2266,6 +2301,7 @@ end
         @test second_row.production_rate ≈ 2
         @test second_row.settling_level ≈ 45 * 250
         @test second_row.settling_ratio ≈ 1
+        @test second_row.forecast_defined == 1
     end
 
     # The closure table: the family's columns go after the spin-up columns and
@@ -2397,6 +2433,7 @@ end
                 # it settles where it is.
                 @test second_row.flush_rate ≈ 2
                 @test second_row.settling_level ≈ 5
+                @test second_row.forecast_defined == 1
             else
                 @test isnan(columns.source_throughput)
                 @test isnan(columns.gross_over_throughput)
@@ -2411,6 +2448,7 @@ end
 
                     @test isnan(getproperty(row, name))
                 end
+                @test second_row.forecast_defined == 0
             end
 
             # The warning level on the ratio is refused without a verified
