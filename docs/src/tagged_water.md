@@ -91,6 +91,7 @@ Two consequences worth stating:
     If the configured tags are a strict subset (say a single "Atlantic
     evaporation" tag), then ``\sum_k \varphi_k < 1`` and the untagged remainder
     absorbs the rest — also correct, just not a partition.
+
   - **Positivity.** A tag update is
     ``\rho q_{\mathrm{tag},k}\,(1 - \Delta^{-}\Delta t / \rho q_\mathrm{tot})``,
     so a tag stays non-negative for as long as the step is short enough that
