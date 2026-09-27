@@ -1539,6 +1539,12 @@ end
 # water check reads the parent's own negative water from the raw `ρq_tot`, and
 # marks its rows `negative_water_void` past the level. The ledger adds it up
 # after every accepted step, so that the checks miss nothing between them.
+
+# What a call allocates once compiled, behind a function barrier, so that the
+# testset's own scope adds nothing.
+second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
+    (f(args...); @allocated f(args...))
+
 @testset "The parent's negative water" begin
     CC = CA.ClimaCore
     space = CC.CommonSpaces.ColumnSpace(
@@ -1716,6 +1722,17 @@ end
     @test isnothing(check_step!(0.0, nothing))
     @test !step_voided[]
     @test (@allocated check_step!(0.0, nothing)) == 0
+    # With a level it allocates: each global sum goes through ClimaCore's
+    # `sum`, which wraps the local result in a one-element array for the
+    # allreduce. Measured, that is 48 bytes a sum on Julia 1.11 and 288 on
+    # Julia 1.10. Two sums here, since the parent is negative. The flag is
+    # set first, so that the calls do not warn.
+    step_voided[] = true
+    @test second_call_allocations(
+        CA.check_negative_water_step!,
+        (; u = Y, p = step_p, t = 0.0),
+        level,
+    ) <= 2 * (VERSION >= v"1.11" ? 48 : 288)
     # The level the per-step callback gets: the water check's key, or nothing
     # without water tags, without the check, or with `~`.
     @test CA.negative_water_step_level((; negative_water_void_above = level), :water) ==

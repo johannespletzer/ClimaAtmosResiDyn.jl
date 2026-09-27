@@ -516,10 +516,14 @@ _water_ledger_total(Y, model) = Y.c.ρq_tot
 _energy_ledger_total(Y, ::Nothing) = nothing
 _energy_ledger_total(Y, model) = _energy_source_parent_field(Y, model.offset)
 # The names are type parameters, and each field is named by a literal, so the
-# callback needs no run-time symbol and allocates nothing on a column. The one
-# call that has allocated, about 200 bytes, in some measurements is ClimaCore's
-# `column_integral_definite!`, which the model's surface precipitation calls
-# every step too.
+# ledgers' part of the callback needs no run-time symbol and allocates nothing
+# on a column. The one call that has allocated, about 200 bytes, in some
+# measurements is ClimaCore's `column_integral_definite!`, which the model's
+# surface precipitation calls every step too. The check of the parent's
+# negative water, where the water check has a level, does allocate: ClimaCore's
+# `sum` wraps each global sum in a one-element array for the allreduce. That is
+# 48 bytes a sum on Julia 1.11 and 288 on Julia 1.10, measured on a column, with
+# one sum on a clean parent and two after a step with negative water.
 @generated function _accumulate_ledger_gross!(
     Y,
     ledgers,

@@ -487,10 +487,30 @@ end
                   G_before[i] .+ abs.(ᶜL .- L_before[i])
         end
         # At most ClimaCore's column integral, about 200 bytes a call where it
-        # allocates, one call per ledger.
+        # allocates, one call per ledger. Without a level, as for
+        # `negative_water_void_above: ~`, the step check does nothing.
         CA.accumulate_tag_ledger_gross!(integrator)
         @test (@allocated CA.accumulate_tag_ledger_gross!(integrator)) <=
               256 * length(names)
+        # The installed callback has the water check's level, the default
+        # 1e-4 here, and so checks the parent's negative water at every step.
+        # That is not free: each of its global sums goes through ClimaCore's
+        # `sum`, which wraps the local result in a one-element array for the
+        # allreduce. One sum on a clean parent, two after a step with negative
+        # water. Measured on a column, a sum allocates 48 bytes on Julia 1.11
+        # and 288 on Julia 1.10.
+        level = CA.DEFAULT_NEGATIVE_WATER_VOID_ABOVE
+        check_bound = 2 * (VERSION >= v"1.11" ? 48 : 288)
+        @test second_call_allocations(
+            CA.check_negative_water_step!,
+            integrator,
+            level,
+        ) <= check_bound
+        @test second_call_allocations(
+            CA.accumulate_tag_ledger_gross!,
+            integrator,
+            level,
+        ) <= 256 * length(names) + check_bound
     end
 
     # 7. Each copy falls with its share of each species, as `q_totʲ` falls
