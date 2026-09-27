@@ -429,13 +429,13 @@ The audit sees every step instead. After each accepted step, a ledger in the
 cache adds `max(-ρq_tot, 0) Δt` per cell, and counts the cells whose `ρq_tot`
 is below zero. The checkpoint carries it. The water audit table reports it:
 
-| column                                  | what it is                                                                                   |
-|:--------------------------------------- |:-------------------------------------------------------------------------------------------- |
-| `negative_water_integral`               | `∫∫max(-ρq_tot, 0) dV dt` since the start of the run, in kg s                                 |
-| `negative_water_interval`               | its change since the previous audit row, in kg s                                              |
-| `negative_water_interval_mean_relative` | that change over the interval's length, over `∫ρq_tot dV` at this row                          |
-| `negative_water_interval_events`        | cell-steps in the interval whose end state had `ρq_tot < 0`; exactly 0 when none had any      |
-| `negative_water_void`                   | the flag above, last                                                                          |
+| column                                  | what it is                                                                               |
+|:--------------------------------------- |:---------------------------------------------------------------------------------------- |
+| `negative_water_integral`               | `∫∫max(-ρq_tot, 0) dV dt` since the start of the run, in kg s                            |
+| `negative_water_interval`               | its change since the previous audit row, in kg s                                         |
+| `negative_water_interval_mean_relative` | that change over the interval's length, over `∫ρq_tot dV` at this row                    |
+| `negative_water_interval_events`        | cell-steps in the interval whose end state had `ρq_tot < 0`; exactly 0 when none had any |
+| `negative_water_void`                   | the flag above, last                                                                     |
 
 An interval with `negative_water_interval_events = 0` had no negative water
 at the end of any accepted step, anywhere. The first row of a run, or of a
