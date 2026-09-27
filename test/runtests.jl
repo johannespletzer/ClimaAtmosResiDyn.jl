@@ -287,7 +287,8 @@ end
 
 # The water tags' rain and snow parts (`water_tag_precipitation: true`) on a
 # 1-moment column without EDMF. The file builds the column three times: with
-# the parts under each transport, and without tags.
+# the parts under each transport, and without tags. For the horizontal
+# operators it builds a small sphere twice, with the parts and without tags.
 if TEST_GROUP in ("tagging_water_precipitation", "all")
     @safetestset "Water tags with rain and snow parts" begin
         @time include("tagged_water_precipitation_integration.jl")

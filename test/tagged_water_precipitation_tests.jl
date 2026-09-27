@@ -12,7 +12,9 @@ What is tested here, without a simulation:
  3. the initial state and the denominators (section 6);
  4. the microphysics: the gross flows reproduce the model's own tendencies,
     and the gross and net-flow rules keep each tag's total and each
-    compartment's sum (section 9), with the audit (section 12);
+    compartment's sum (section 9), with the audit (section 12), and the
+    ordering error of attributing a step's flows once, against a reference
+    that attributes each substep;
  5. the limiters and constraints: clip, rescale, borrowing and a SEM-like
     change keep every part non-negative and each compartment summing to its
     parent (section 8), and the repair per compartment, also with a ledger
@@ -566,6 +568,392 @@ end
     # Every pool empty: the start shares.
     @test CA.water_tag_pool_shares(zero_flows, 0.0, 0.0, 0.0, 60.0, 0.3, 0.4, 0.6) ==
           (0.3, 0.4, 0.6)
+end
+
+# The ordering error of the microphysics' attribution.
+#
+# The model sums the flows over the microphysics substeps and attributes them
+# once per step. Each flow takes its donor's composition over the whole step:
+# the donor's water at the start mixed with all that flowed into it during the
+# step (`water_tag_pool_shares`). The reference below attributes each
+# substep's flows by the same rule over the substep, from the parts at that
+# substep's start. It follows the order in which water passes through a
+# compartment. Rain that forms early in the step and evaporates late, for
+# instance, then carries the composition it had when it evaporated. The two
+# rules differ by an ordering error, which the testset below measures.
+#
+# The error `e` is the largest difference of a tag's part between the rules,
+# as a fraction of the water the flows move. It scales with the step's
+# Courant number of turnover `κ`. That is the step times the fastest rate at
+# which a compartment's water is renewed: its outflow rate plus its inflow
+# over its water. The inflow changes the composition, and the outflow carries
+# it on. To leading order `e` is proportional to `κ`. In the simplest case,
+# rain in balance with a much larger `N` and water passing both ways, it is
+# `(n - 1)/(8n) κ Δφ` for `n` substeps, where `Δφ` is the difference of a
+# tag's share between rain and `N`.
+#
+# `parts[i]` holds tag `i`'s water in `N`, rain and snow, and `compartments`
+# the parent's, all per unit mass. A step's flows `F` hold the six flows and
+# the net tendencies of rain and snow, as `water_tag_1m_flows` returns them.
+
+# The six flows of `F`, as a `Tuple`.
+flow_values(F) = map(name -> getproperty(F, name), CA.WATER_TAG_FLOW_NAMES)
+
+# A partition's shares of each compartment, as the model takes them
+# (`water_tag_part_share`): each tag's clamped share, renormalized over the
+# partition.
+function partition_shares(parts, compartments)
+    norms = ntuple(3) do k
+        sum(part -> CA.water_tag_fraction(part[k], compartments[k]), parts)
+    end
+    return map(parts) do part
+        ntuple(k -> CA.water_tag_sediment_share(part[k], compartments[k], norms[k]), 3)
+    end
+end
+
+# The model's rule over a step `Δt`: the flows `F`, averaged over the step,
+# attributed from the parts at its start. The pools are not below zero, as the
+# model takes them. Returns the parts at the end.
+function attribute_microphysics(parts, compartments, F, Δt)
+    (qN, qR, qS) = max.(compartments, 0)
+    return map(parts, partition_shares(parts, compartments)) do part, φ
+        change = CA.water_tag_microphysics_change(
+            F, F.dq_rai_dt, F.dq_sno_dt, qN, qR, qS, Δt, φ...,
+        )
+        part .+ Δt .* change
+    end
+end
+
+# The audit's records of the step, as the model adds them
+# (`water_tag_microphysics_audit`), per unit mass.
+function audit_microphysics(parts, compartments, F, Δt)
+    (qN, qR, qS) = max.(compartments, 0)
+    return map(partition_shares(parts, compartments)) do φ
+        audit = CA.water_tag_microphysics_audit(
+            F, F.dq_rai_dt, F.dq_sno_dt, qN, qR, qS, Δt, φ...,
+        )
+        Δt .* audit
+    end
+end
+
+# Three tags that partition each compartment, with a different tag holding
+# most of each: tag 1 most of `N`, tag 2 most of the rain and tag 3 most of
+# the snow. The order of attribution matters most where the compositions
+# differ.
+function contrasting_parts(rng, compartments)
+    weights = ntuple(k -> rand(rng, 3) .+ 2 .* ((1:3) .== k), 3)
+    return map(1:3) do i
+        ntuple(k -> compartments[k] * weights[k][i] / sum(weights[k]), 3)
+    end
+end
+
+# A synthetic microphysics of linear kinetics. Each flow is a rate of `k`
+# times its donor's water at the start of the substep. Rain and snow then form
+# and are removed at once, as in the model.
+function synthetic_flows(k, (qN, qR, qS))
+    F = (;
+        NR = k.NR * qN,
+        NS = k.NS * qN,
+        RN = k.RN * qR,
+        RS = k.RS * qR,
+        SR = k.SR * qS,
+        SN = k.SN * qS,
+    )
+    dq_rai_dt = (F.NR + F.SR) - (F.RN + F.RS)
+    dq_sno_dt = (F.NS + F.RS) - (F.SN + F.SR)
+    return (; F..., dq_rai_dt, dq_sno_dt)
+end
+
+# The fastest rate at which the synthetic microphysics renews a compartment's
+# water: its outflow rate plus its inflow over its water. Times the step it is
+# the step's `κ`.
+function turnover_rate(k, (qN, qR, qS))
+    inflow(q, flow) = q > 0 ? flow / q : zero(q)
+    return max(
+        k.NR + k.NS + inflow(qN, k.RN * qR + k.SN * qS),
+        k.RN + k.RS + inflow(qR, k.NR * qN + k.SR * qS),
+        k.SR + k.SN + inflow(qS, k.NS * qN + k.RS * qR),
+    )
+end
+
+# The reference for the synthetic microphysics over `Δt` in `nsub` substeps.
+# Returns the parts and the compartments at the end, and the step's flows as
+# `water_tag_1m_flows` sums them, for the model's rule.
+function synthetic_substeps(k, parts, compartments, Δt, nsub)
+    q_tot = sum(compartments)
+    (qN, qR, qS) = compartments
+    Δt_sub = Δt / nsub
+    sums = ntuple(_ -> zero(Δt), 6)
+    for _ in 1:nsub
+        F = synthetic_flows(k, (qN, qR, qS))
+        parts = attribute_microphysics(parts, (qN, qR, qS), F, Δt_sub)
+        sums = sums .+ flow_values(F) .* Δt_sub
+        qR += F.dq_rai_dt * Δt_sub
+        qS += F.dq_sno_dt * Δt_sub
+        qN = q_tot - qR - qS
+    end
+    step = (;
+        NamedTuple{CA.WATER_TAG_FLOW_NAMES}(sums ./ Δt)...,
+        dq_rai_dt = (qR - compartments[2]) / Δt,
+        dq_sno_dt = (qS - compartments[3]) / Δt,
+    )
+    return (; parts, compartments = (qN, qR, qS), step)
+end
+
+# The reference for the model's 1-moment microphysics over `Δt` in `nsub`
+# substeps. It moves the state on as `water_tag_1m_flows` does, with each
+# substep's flows and tendencies from `_water_tag_1m_substep`. Returns what
+# `synthetic_substeps` returns.
+function microphysics_substeps(mp, tps, state, parts, Δt, nsub)
+    FT = typeof(Δt)
+    cp_d = BMT.TDI.TD.Parameters.cp_d(tps)
+    Lv_over_cp = BMT.TDI.TD.Parameters.LH_v0(tps) / cp_d
+    Ls_over_cp = BMT.TDI.TD.Parameters.LH_s0(tps) / cp_d
+    (; ρ, q_tot) = state
+    (T, q_lcl, q_icl, q_rai, q_sno) =
+        (state.T, state.q_lcl, state.q_icl, state.q_rai, state.q_sno)
+    Δt_sub = Δt / FT(nsub)
+    sums = ntuple(_ -> zero(FT), 6)
+    for _ in 1:nsub
+        (; rates, flows) = CA._water_tag_1m_substep(
+            mp, tps, ρ, T, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt_sub,
+        )
+        F = (; flows..., dq_rai_dt = rates.dq_rai_dt, dq_sno_dt = rates.dq_sno_dt)
+        compartments = (q_tot - q_rai - q_sno, q_rai, q_sno)
+        parts = attribute_microphysics(parts, compartments, F, Δt_sub)
+        sums = sums .+ flow_values(flows) .* Δt_sub
+        # The state update of `water_tag_1m_flows`.
+        q_lcl += rates.dq_lcl_dt * Δt_sub
+        q_icl += rates.dq_icl_dt * Δt_sub
+        q_rai += rates.dq_rai_dt * Δt_sub
+        q_sno += rates.dq_sno_dt * Δt_sub
+        T +=
+            (
+                Lv_over_cp * (rates.dq_lcl_dt + rates.dq_rai_dt) +
+                Ls_over_cp * (rates.dq_icl_dt + rates.dq_sno_dt)
+            ) * Δt_sub
+    end
+    step = (;
+        NamedTuple{CA.WATER_TAG_FLOW_NAMES}(sums ./ Δt)...,
+        dq_rai_dt = (q_rai - state.q_rai) / Δt,
+        dq_sno_dt = (q_sno - state.q_sno) / Δt,
+    )
+    compartments = (q_tot - q_rai - q_sno, q_rai, q_sno)
+    return (; parts, compartments, step)
+end
+
+# The two rules over one step: the model's, from the step's flows `F`, and the
+# substep-resolved `reference`. Returns the gross water the flows move, the
+# largest difference of a tag's part between the rules, the largest audit
+# record, the largest closure error of a compartment and of a tag's total
+# under either rule, and the smallest part.
+function compare_rules(parts, compartments, F, reference, Δt)
+    aggregate = attribute_microphysics(parts, compartments, F, Δt)
+    audit = audit_microphysics(parts, compartments, F, Δt)
+    ends = (
+        compartments[1] - Δt * (F.dq_rai_dt + F.dq_sno_dt),
+        compartments[2] + Δt * F.dq_rai_dt,
+        compartments[3] + Δt * F.dq_sno_dt,
+    )
+    closure(result, ends) = maximum(k -> abs(sum(part -> part[k], result) - ends[k]), 1:3)
+    total(result) = maximum(i -> abs(sum(result[i]) - sum(parts[i])), eachindex(parts))
+    part_difference(i) = maximum(abs, aggregate[i] .- reference.parts[i])
+    closure_error = max(
+        closure(aggregate, ends),
+        closure(reference.parts, reference.compartments),
+    )
+    smallest = min(minimum(minimum, aggregate), minimum(minimum, reference.parts))
+    return (;
+        gross = Δt * sum(abs, flow_values(F)),
+        difference = maximum(part_difference, eachindex(parts)),
+        audit = maximum(record -> maximum(abs, record), audit),
+        closure = closure_error,
+        total = max(total(aggregate), total(reference.parts)),
+        smallest,
+    )
+end
+
+@testset "The ordering error of the microphysics' attribution" begin
+    # What the testset finds. With one substep the two rules agree to
+    # rounding. Both keep each tag's total and each compartment's sum, and no
+    # part goes negative beyond rounding. Where rain and snow start empty, all
+    # the water that moves has the composition of `N`, so the rules agree to
+    # rounding too. On a synthetic microphysics of linear kinetics the error is
+    # at most `κ/2` at every step, so it vanishes as the step shrinks. From
+    # `κ = 0.05` down, where it is not negligible, it falls by at least 1.5
+    # with each halving of the step. A first-order error halves.
+    #
+    # What it does not find. It tests the rule's ordering error, not which
+    # molecules end up where: both rules are bookkeeping over a step. On the
+    # model's own microphysics the rates change within the step, and a small
+    # pool can turn over within one step, so `κ` can exceed one at the steps
+    # tested. There the testset reports the error and the audit but asserts no
+    # convergence. On such steps the model's rule is a coarse-grained
+    # definition of provenance over the step, and this is its ordering error.
+
+    # The synthetic microphysics. The rates are scaled so that the longest
+    # step's `κ` is `κ₀`. Each substep then keeps every compartment positive.
+    Δt₀ = 60.0
+    κ₀ = 0.8
+    levels = 0:6
+    Δts = Δt₀ ./ 2 .^ levels
+    κs = κ₀ ./ 2 .^ levels
+    rng = Random.MersenneTwister(2026)
+    worst = Dict(3 => zeros(length(Δts)), 10 => zeros(length(Δts)))
+    (largest_error_over_κ, largest_audit) = (0.0, 0.0)
+    (largest_rounding, smallest_part) = (0.0, Inf)
+    halvings = 0
+    for draw in 1:64
+        # Rain and snow held at the start, or rain, snow or both empty.
+        (empty_rain, empty_snow) =
+            ((false, false), (true, false), (false, true), (true, true))[mod1(draw, 4)]
+        compartments = (
+            5e-3 + 1e-2 * rand(rng),
+            empty_rain ? 0.0 : 1e-3 * rand(rng),
+            empty_snow ? 0.0 : 5e-4 * rand(rng),
+        )
+        parts = contrasting_parts(rng, compartments)
+        raw = NamedTuple{CA.WATER_TAG_FLOW_NAMES}(Tuple(rand(rng, 6)))
+        rate = turnover_rate(raw, compartments)
+        k = map(r -> r * κ₀ / (Δt₀ * rate), raw)
+        for nsub in (1, 3, 10)
+            e = zeros(length(Δts))
+            for (j, Δt) in enumerate(Δts)
+                reference = synthetic_substeps(k, parts, compartments, Δt, nsub)
+                result = compare_rules(parts, compartments, reference.step, reference, Δt)
+                # A prototype of this arithmetic over 700000 draws found every
+                # closure error, each tag total's change and every difference
+                # that must be rounding below 5 eps of this scale.
+                scale = eps() * (sum(compartments) + result.gross)
+                @test result.closure <= 64 * scale
+                @test result.total <= 64 * scale
+                @test result.smallest >= -64 * scale
+                if nsub == 1 || (empty_rain && empty_snow)
+                    @test result.difference <= 64 * scale
+                end
+                e[j] = result.difference / result.gross
+                largest_audit = max(largest_audit, result.audit / result.gross)
+                largest_rounding =
+                    max(largest_rounding, result.closure / scale, result.total / scale)
+                smallest_part = min(smallest_part, result.smallest / scale)
+            end
+            nsub == 1 && continue
+            worst[nsub] .= max.(worst[nsub], e)
+            largest_error_over_κ = max(largest_error_over_κ, maximum(e ./ κs))
+            # The bound. The simplest case above gives at most `κ/8`. A search
+            # over pools, shares and rates found `e` at most 0.23 κ, and the
+            # prototype's draws about 0.11 κ at most.
+            @test maximum(e ./ κs) <= 0.5
+            # The halving. From `κ = 0.05` down the search found every ratio at
+            # least 1.84, and the prototype's draws at least 1.92. Where `e` is
+            # below 1% of `κ`, a nearly cancelling first-order term can spoil
+            # the ratio, and the bound covers those steps.
+            for j in 1:(length(Δts) - 1)
+                if κs[j] <= κ₀ / 16 && e[j] >= 0.01 * κs[j]
+                    @test e[j] / e[j + 1] >= 1.5
+                    halvings += 1
+                end
+            end
+        end
+    end
+    # The halving is tested on enough steps. The prototype's draws gave at
+    # least 20 of them in each of 12000 sets of 64 draws.
+    @test halvings >= 10
+    # The rounding and the smallest part are in units of eps times the water
+    # and the gross water the flows move.
+    synthetic = (;
+        κ = κs,
+        error_3 = round.(worst[3]; sigdigits = 3),
+        error_10 = round.(worst[10]; sigdigits = 3),
+        error_over_κ = round(largest_error_over_κ; sigdigits = 3),
+        audit = round(largest_audit; sigdigits = 3),
+        rounding_in_eps = round(largest_rounding; sigdigits = 3),
+        smallest_part_in_eps = round(smallest_part; sigdigits = 3),
+        halvings,
+    )
+    @info "The attribution's ordering error on synthetic kinetics" synthetic
+
+    # The model's 1-moment microphysics, on random states as in the testset
+    # above. Its flows come from the same substeps as the model's.
+    FT = Float64
+    (params, states) = microphysics_states(FT, 100; seed = 4321)
+    mp = CA.Parameters.microphysics_1m_params(params)
+    tps = CA.Parameters.thermodynamics_params(params)
+    rng = Random.MersenneTwister(2027)
+    steps = (120.0, 60.0, 30.0, 15.0)
+    nsubs = (1, 3, 10)
+    names = (CA.WATER_TAG_FLOW_NAMES..., :dq_rai_dt, :dq_sno_dt)
+    largest_error = zeros(length(nsubs), length(steps))
+    mean_error = zeros(length(nsubs), length(steps))
+    (largest_audit, largest_rounding, smallest_part) = (0.0, 0.0, Inf)
+    (two_way, melting) = (0, 0)
+    for s in states
+        compartments = (s.q_tot - s.q_rai - s.q_sno, s.q_rai, s.q_sno)
+        parts = contrasting_parts(rng, compartments)
+        for (i, nsub) in enumerate(nsubs), (j, Δt) in enumerate(steps)
+            reference = microphysics_substeps(mp, tps, s, parts, Δt, nsub)
+            F = CA.water_tag_1m_flows(
+                mp, tps, s.ρ, s.T, s.q_tot, s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
+                Δt, nsub,
+            )
+            # The reference steps the state as `water_tag_1m_flows` does, with
+            # the same arithmetic. The compiler may fuse a `muladd` in one and
+            # not in the other. The testset above holds CloudMicrophysics' own
+            # loop to 64 eps of this scale, so 1e-10 leaves room for growth
+            # over ten substeps.
+            water = s.q_lcl + s.q_icl + s.q_rai + s.q_sno
+            mismatch = maximum(names) do name
+                abs(getproperty(reference.step, name) - getproperty(F, name))
+            end
+            @test mismatch <= 1e-10 * (water + Δt * sum(abs, flow_values(F))) / Δt
+            result = compare_rules(parts, compartments, F, reference, Δt)
+            # The pool shares close to the rounding of their solve, which the
+            # testset above bounds by 1e-10 of the gross flows. The remainder
+            # the net-flow rule moves is rounding of the step's water, summed
+            # over at most ten substeps.
+            scale = eps(FT) * (sum(compartments) + result.gross)
+            rounding = 1e-10 * result.gross + 1e3 * eps(FT) * sum(compartments)
+            @test result.closure <= rounding
+            @test result.total <= rounding
+            @test result.smallest >= -rounding
+            if nsub == 1 || (s.q_rai == 0 && s.q_sno == 0)
+                @test result.difference <= rounding
+            end
+            result.gross > 0 || continue
+            # A difference within rounding counts as none. Where the flows
+            # are tiny, it would otherwise swamp the fraction.
+            e = result.difference > rounding ? result.difference / result.gross : 0.0
+            largest_error[i, j] = max(largest_error[i, j], e)
+            mean_error[i, j] += e / length(states)
+            largest_audit = max(largest_audit, result.audit / result.gross)
+            largest_rounding =
+                max(largest_rounding, result.closure / scale, result.total / scale)
+            smallest_part = min(smallest_part, result.smallest / scale)
+            if nsub == 1 && Δt == 60
+                two_way += (F.NR > 0 && F.RN > 0)
+                melting += (F.SR > 0)
+            end
+        end
+    end
+    # The states hold rain that forms and evaporates in one step, and snow
+    # that melts. These are the cases the comparison has to cover. About 45
+    # and 29 of the 100 states are expected to show them.
+    @test two_way > 0
+    @test melting > 0
+    # The rounding and the smallest part are in units of eps times the water
+    # and the gross water the flows move.
+    microphysics = (;
+        Δt = steps,
+        substeps = nsubs,
+        largest_error = round.(largest_error; sigdigits = 3),
+        mean_error = round.(mean_error; sigdigits = 3),
+        audit = round(largest_audit; sigdigits = 3),
+        rounding_in_eps = round(largest_rounding; sigdigits = 3),
+        smallest_part_in_eps = round(smallest_part; sigdigits = 3),
+        two_way,
+        melting,
+    )
+    @info "The attribution's ordering error on the 1-moment microphysics" microphysics
 end
 
 # A cell state of three tags (two partition tags and a source tag), their

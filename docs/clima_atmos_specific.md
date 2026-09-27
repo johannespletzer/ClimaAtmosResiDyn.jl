@@ -186,7 +186,13 @@ EDMF. It checks each compartment's closure under `increment` with first-order
 upwinding, the parts' diagnostics, `pr_tag` against `pr`, a tag that holds all
 the water moving as the parent operator by operator, the split solver and the
 audit, the restart guard, and the default transport. It builds the column
-three times: with the parts under each transport, and without tags.
+three times: with the parts under each transport, and without tags. A column
+has no horizontal operators, so it also builds a small sphere with the viscous
+sponge on, twice, with the parts and without tags. There hyperdiffusion and the
+sponge are checked one at a time: rain and snow parts take nothing, the
+non-precipitating parts add up to the tendency of the parent's diffusing water
+before and after DSS, each part moves by its own gradients rather than by a
+share of the parent's tendency, and the parent's tendencies do not change.
 
 Each checks that the model's fields are those without tags, bit for bit.
 
