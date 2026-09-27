@@ -1830,3 +1830,79 @@ end
     header = first(readlines(CA.tag_closure_path(dir, "energy_source")))
     @test endswith(header, ",nonpositive_fraction,gross_over_throughput")
 end
+
+# The review of #120: the setup refuses `throughput_tolerance` where the pure
+# region tags are not a verified partition. `AtmosSimulation` calls
+# `check_energy_source_throughput_setup` with the cache and the callbacks'
+# keyword arguments, so this checks that the refusal finds the level in what
+# `callback_kwargs_from_config` gives.
+@testset "The setup refuses throughput_tolerance without a partition (#120)" begin
+    region_entries(regions) = [
+        Dict{String, Any}("name" => name, "region" => region) for
+        (name, region) in regions
+    ]
+    function source_config(regions, check; job_id)
+        config = tracer_config(
+            [
+                "energy_source_tags" => [
+                    region_entries(regions)...,
+                    Dict{String, Any}("name" => "rad", "source" => "radiation"),
+                ],
+                "energy_source_tag_offset" => 0,
+                "energy_source_tag_ledger_per_tag" => true,
+                "energy_source_closure_check" => check,
+            ];
+            job_id,
+        )
+        # The cache's deviation, from the tags' own masks on a sweep of
+        # latitudes, as `_energy_source_tagging_cache` takes it on the grid.
+        model = CA.AtmosTagging(config).energy_source_tagging_model
+        coords = [(; lat = FT(lat), z = FT(0)) for lat in -90:0.25:90]
+        deviation = CA.energy_source_partition_deviation(
+            CA._tag_masks(coords, model.tags),
+            CA.energy_source_region_tag_state_names(model),
+            zeros(FT, length(coords)),
+        )
+        tagging = (; energy_source_partition_deviation = deviation)
+        return tagging, CA.callback_kwargs_from_config(config)
+    end
+    level = Dict{String, Any}("throughput_tolerance" => 0.05)
+    no_level = Dict{String, Any}("tolerance" => 1.0e-3)
+    tropics_only = ("trop" => "tropics",)
+    partition = ("trop" => "tropics", "extra" => "extratropics")
+
+    # `tropics` alone leaves the extratropics out: refused, with the deviation.
+    tagging, kwargs = source_config(tropics_only, level; job_id = "setup_gap")
+    @test !CA.energy_source_partition_verified(tagging)
+    @test kwargs.energy_source_closure_check.throughput_tolerance == FT(0.05)
+    @test_throws r"throughput_tolerance" CA.check_energy_source_throughput_setup(
+        tagging,
+        kwargs,
+    )
+    err = try
+        CA.check_energy_source_throughput_setup(tagging, kwargs)
+    catch e
+        e
+    end
+    @test occursin(string(tagging.energy_source_partition_deviation), err.msg)
+
+    # A region and its complement pass.
+    tagging, kwargs = source_config(partition, level; job_id = "setup_partition")
+    @test CA.energy_source_partition_verified(tagging)
+    @test isnothing(CA.check_energy_source_throughput_setup(tagging, kwargs))
+
+    # Without the key, nothing is refused, even on a strict subset.
+    tagging, kwargs = source_config(tropics_only, no_level; job_id = "setup_no_key")
+    @test isnothing(kwargs.energy_source_closure_check.throughput_tolerance)
+    @test isnothing(CA.check_energy_source_throughput_setup(tagging, kwargs))
+
+    # Without energy source tags there is no check and no cache entry.
+    plain = CA.callback_kwargs_from_config(
+        tracer_config(Pair{String, Any}[]; job_id = "setup_no_tags"),
+    )
+    @test isnothing(plain.energy_source_closure_check)
+    @test isnothing(CA.check_energy_source_throughput_setup(nothing, plain))
+    # Nor with no callback keywords at all, as `AtmosSimulation` defaults them.
+    @test isnothing(CA.check_energy_source_throughput_setup(nothing, ()))
+    @test isnothing(CA.check_energy_source_throughput_setup((;), ()))
+end

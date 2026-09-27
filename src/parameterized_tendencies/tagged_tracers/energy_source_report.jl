@@ -101,8 +101,9 @@ verified partition ([`energy_source_partition_verified`](@ref)). The level is
 compared with `gross_over_throughput`, which is `NaN` there, so it could never
 warn. `tagging` is the cache, `p.tagging`, and `check` the energy source
 closure check, or `nothing`. The masks are known only once the cache is built,
-so `AtmosSimulation` calls this at setup, before the callbacks. A no-op
-without the level or without the tags.
+so this runs at setup, before the callbacks, through
+[`check_energy_source_throughput_setup`](@ref). A no-op without the level or
+without the tags.
 """
 check_energy_source_throughput_partition(tagging, ::Nothing) = nothing
 function check_energy_source_throughput_partition(tagging, check)
@@ -123,6 +124,23 @@ function check_energy_source_throughput_partition(tagging, check)
         `inside: false` or `above: false`, or drop `throughput_tolerance`.",
     )
 end
+
+"""
+    check_energy_source_throughput_setup(tagging, callback_kwargs)
+
+The setup's check of `throughput_tolerance`, which `AtmosSimulation` calls
+once the cache is built. It finds the energy source closure check among the
+callbacks' keyword arguments, `callback_kwargs`, as
+`callback_kwargs_from_config` gives them, and passes it with the cache
+`tagging` to [`check_energy_source_throughput_partition`](@ref). So it refuses
+the level where the pure region tags are not a verified partition. A no-op
+without energy source tags, without the check or without the level.
+"""
+check_energy_source_throughput_setup(tagging, callback_kwargs) =
+    check_energy_source_throughput_partition(
+        tagging,
+        get((; callback_kwargs...), :energy_source_closure_check, nothing),
+    )
 
 """
     energy_source_residual_report(Y, p, model, closure, t, previous)

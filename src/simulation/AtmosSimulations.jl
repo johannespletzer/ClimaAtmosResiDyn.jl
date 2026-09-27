@@ -462,10 +462,8 @@ function AtmosSimulation(
         restore_tag_closure_void!(p.tagging, restart_file, context)
     # The energy source tags' throughput level needs a verified partition. Only
     # the cache's masks show whether there is one, so it is checked here.
-    default_callbacks && check_energy_source_throughput_partition(
-        p.tagging,
-        get((; callback_kwargs...), :energy_source_closure_check, nothing),
-    )
+    default_callbacks &&
+        check_energy_source_throughput_setup(p.tagging, callback_kwargs)
 
     # Combine all callbacks. The ledger's callback goes first: it reads the
     # accepted state and the stepper cache before any other callback runs.
