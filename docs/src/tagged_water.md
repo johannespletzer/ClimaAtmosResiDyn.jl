@@ -137,9 +137,9 @@ construction. For the prescribed forcings it is an assumption.
 
   - **Phase changes**: condensation, evaporation, freezing and melting conserve
     ``q_t``, so they are invisible to a total-water tag by construction. This is
-    why no per-transfer ledger is needed — and why a vapor-only passive tracer
-    would be the wrong design, since it would lose provenance at every phase
-    change.
+    why no per-transfer bookkeeping is needed — and why a vapor-only passive
+    tracer would be the wrong design, since it would lose provenance at every
+    phase change.
 
   - **Precipitation sedimentation**: with 0-moment microphysics there are no
     prognostic condensate species to sediment, so the term does not exist. With
@@ -236,15 +236,15 @@ label that the energy tags carry has no water counterpart.
   - `q_tag_res`: the closure residual ``(\rho q_\mathrm{tot} - \sum_i \rho q_{\mathrm{tag},i})/\rho``, summed over the pure region tags;
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
     state constraints, cumulative since the start of the simulation segment (and
-    reset on restart), so a budget over an interval is the difference of two
+    reset on restart), so the change over an interval is the difference of two
     outputs, and a time *average* of it is not meaningful.
 
 !!! note "What `q_tag_fix` includes"
 
-    Two mechanisms write to the ledger. `repair_water_tag_partition!` runs every
-    step and contributes wherever transport drove a partition tag negative, so
-    `q_tag_fix_<name>` is generally nonzero even under stock settings — it is a
-    useful direct measure of how much the tags are drifting.
+    Two mechanisms write to the repair ledger. `repair_water_tag_partition!`
+    runs every step and contributes wherever transport drove a partition tag
+    negative, so `q_tag_fix_<name>` is generally nonzero even under stock
+    settings — it is a useful direct measure of how much the tags are drifting.
     `rescale_water_tags!` contributes only when something actually corrects
     ``\rho q_\mathrm{tot}``: `apply_sem_quasimonotone_limiter: true`,
     `tracer_nonnegativity_method: vertical_water_borrowing`, an elementwise
@@ -323,8 +323,8 @@ Water tagging supports `microphysics_model: "0M"` and `"1M"`, and
     tags and the process records.
   - Tagged state is carried through restarts like any other prognostic field;
     the masks are rebuilt from the configuration, so the `water_tracers` block
-    must match the one used to write the checkpoint. The `q_tag_fix` ledger is
-    cache-resident and restarts at zero.
+    must match the one used to write the checkpoint. The `q_tag_fix` repair
+    ledger is cache-resident and restarts at zero.
 
 ## Interpretation limit
 

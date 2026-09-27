@@ -1,20 +1,43 @@
-# Parent-Budget Ledger: The Vocabulary in Plain Language
+# Parent Budget: The Vocabulary in Plain Language
 
-The words the parent-budget ledger uses, in simple terms, for someone reading a
-budget report or configuring a run. The [closure contract](contract.md) defines
-the same terms normatively in its ledger glossary and fixes the arithmetic
-behind them; when the two differ, the contract governs. This page exists so the
-contract does not have to be read first.
+The words the parent budget uses, in simple terms, for someone reading
+`parent_budget_report.yaml` or configuring a run. The
+[closure contract](contract.md) defines the same terms normatively in its
+glossary and fixes the arithmetic behind them. When the two differ, the
+contract governs. This page exists so the contract does not have to be read
+first.
 
-## What the ledger counts
+## Three families of bookkeeping words
+
+Budget is the parent's, ledger is a tag's, record is a process's. The rest of
+this page explains only the first family.
+
+  - **Parent budget**: The check this page describes, in the module
+    `ParentBudget`. Over each accepted step it compares the change of `∫ρ`,
+    `∫ρq_tot` and `∫ρe_tot` with what the timestepper applied. Its per-step
+    store is the journal, and it writes `parent_budget_report.yaml`.
+  - **Tag ledger**: A running total that a tag correction keeps of what it
+    moved. It comes in three kinds. A *repair ledger* is `q_tag_fix_*` or
+    `e_src_fix_*`, held in the cache as `ᶜwater_fix` or `ᶜenergy_source_fix`.
+    An *increment ledger* is `e_src_inc_left`, `e_src_inc_moved` or
+    `q_tag_inc_*`. A *mechanism ledger* is `q_tag_led_*` or `e_src_led_*`.
+    This version of the code does not define `q_tag_inc_*`, `q_tag_led_*` or
+    `e_src_led_*`. They are named in the tag-closure design notes.
+  - **Closure residual**: The parent minus the sum of the tags. It is
+    `q_tag_res`, `e_src_res` or `e_tag_res`.
+  - **Process record**: One process's signed history of the parent tendency,
+    `prc_e_<process>` or `prc_q_<process>`, written out as `e_prc_*` and
+    `q_prc_*`. The noun "record" means only this.
+
+## What the parent budget counts
 
   - **Parent quantity**: One of the three totals the model state carries: air
-    mass, total water, and total energy. The budget is about these three and
-    nothing else.
+    mass, total water, and total energy. The parent budget is about these
+    three and nothing else.
   - **Reservoir**: A place that holds a parent quantity. The atmosphere, and the
     slab surface when a run has one.
   - **Control volume**: The reservoirs a claim is about. The atmosphere alone, or
-    the atmosphere and the surface together. The same records give a different
+    the atmosphere and the surface together. The same entries give a different
     answer in each.
   - **Endpoint**: The total of one quantity in one reservoir at the start or the
     end of a step, integrated from the model state.
@@ -51,7 +74,7 @@ contract does not have to be read first.
   - **Counterparty**: The name of the exterior an exterior crossing goes to. It
     is a label. No number is ever invented for it.
 
-## The three questions the ledger asks
+## The three questions the parent budget asks
 
   - **Parent closure**: Did each total change by exactly what the accepted
     updates say? The endpoint change is compared with the envelopes plus the
@@ -68,14 +91,15 @@ contract does not have to be read first.
   - **Claim**: One answer to one question, for one quantity, in one control
     volume, for one step.
 
-## How the ledger decides
+## How the parent budget decides
 
-  - **Schema**: Everything the ledger expects, declared from the configuration
-    before the first step: which reservoirs own which quantity, which channels,
-    maps and events must report, and what each is expected to do.
+  - **Schema**: Everything the parent budget expects, declared from the
+    configuration before the first step: which reservoirs own which quantity,
+    which channels, maps and events must report, and what each is expected to
+    do.
   - **Disposition**: What a declaration expects of one quantity: measured,
     provably zero, not applicable, or open.
-  - **Open**: Not established yet. An open row demands nothing of a record and
+  - **Open**: Not established yet. An open row demands nothing of an entry and
     blocks every claim it feeds, because a sum over a row nobody has
     established proves nothing.
   - **Roster**: The list of process rows a channel's decomposition must record.
@@ -97,7 +121,7 @@ contract does not have to be read first.
     intermediate stage. Kept as evidence for locating a defect, and never
     counted.
 
-## The words in a report
+## The words in the parent-budget report
 
   - **Pass**: Applicable, nothing missing, and the residual is within tolerance.
   - **Fail**: Nothing missing, and the residual is outside tolerance.

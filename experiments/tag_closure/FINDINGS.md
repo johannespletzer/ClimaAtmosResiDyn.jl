@@ -58,6 +58,10 @@ relative to this directory.
   - Labels such as T3, T6, A2, A7, U8, R5 or P4 inside an entry name items of
     the old to-do list, [archive/2026-09-23/OPERATIONAL_TODO.md](archive/2026-09-23/OPERATIONAL_TODO.md),
     not register IDs.
+  - **Budget, ledger, record.** Budget is the parent's, ledger is a tag's,
+    record is a process's. A bare "budget" in older text often means an
+    acceptance tolerance, as in G3_PLAN 6.1. New text follows the glossary in
+    [docs/src/glossary.md](../../docs/src/glossary.md).
 
 The series' short names, where an entry cites a run by name only. Jobs and
 commits are from `review/register/runs.csv`; phase A's worktrees had local
