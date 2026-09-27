@@ -320,8 +320,9 @@ last row, and from the process records' estimate of the throughput, not from
 the exact throughput `gross_over_throughput` uses. The one case with both, the
 EDMF column under `enthalpy_increment`, had the exact throughput 6% below the
 estimate. The model did not verify either run's partition, though both used a
-region and its exact complement. The ratio falls as a run goes on: with the
-same physics on the sphere it was 1.6e-3 after a day and 7.9e-4 after ten.
+region and its exact complement. The ratio falls as a run goes on: in a
+ten-day run of the same physics on the sphere it was 1.6e-3 after a day and
+7.9e-4 after ten.
 Under `tracer` the gross is transport error, which does not scale with the
 sources: a one-hour precipitating column reached 26 times its throughput.
 
@@ -399,20 +400,22 @@ table they follow the spin-up columns; in the audit table, the common columns
 and the family's audit. Where the check has a void level, `closure_void` stays
 last in both.
 
-| column                                                                               | table          | written with                   | `NaN` where                                                                        |
-|:------------------------------------------------------------------------------------ |:-------------- |:------------------------------ |:---------------------------------------------------------------------------------- |
-| `headroom_min`, `headroom_min_z`                                                     | closure        | always                         | never                                                                              |
-| `source_partition_valid`                                                             | closure, audit | ledgers per tag                | never; 1 or 0                                                                      |
-| `source_throughput`                                                                  | closure, audit | ledgers per tag                | no verified partition                                                              |
-| `gross_over_throughput`                                                              | closure        | ledgers per tag                | no verified partition; zero throughput                                             |
-| `residual_max`                                                                       | audit          | `audit: true`                  | never                                                                              |
-| `residual_max_z`, `residual_peak_level`, `residual_peak_fraction`, `residual_peak_z` | audit          | `audit: true`                  | a residual zero everywhere                                                         |
-| `overlay_negative_mass_fraction`, `overlay_excess`, `overlay_excess_mass_fraction`   | audit          | `audit: true`                  | no source tag                                                                      |
-| `flush_gross`                                                                        | audit          | `audit: true`, ledgers per tag | no verified partition                                                              |
-| `flush_rate`                                                                         | audit          | `audit: true`, ledgers per tag | first row; no verified partition; an empty interval, a zero mean gross or no flush |
-| `production_rate`                                                                    | audit          | `audit: true`, ledgers per tag | first row; no verified partition; an empty interval                                |
-| `settling_level`, `settling_ratio`                                                   | audit          | `audit: true`, ledgers per tag | where `forecast_defined` is 0; the ratio also where the gross is zero              |
-| `forecast_defined`                                                                   | audit          | `audit: true`, ledgers per tag | never; 1 or 0                                                                      |
+| column                                                                               | table          | written with                   | `NaN` where                                                                                                           |
+|:------------------------------------------------------------------------------------ |:-------------- |:------------------------------ |:--------------------------------------------------------------------------------------------------------------------- |
+| `headroom_min`, `headroom_min_z`                                                     | closure        | always                         | never                                                                                                                 |
+| `source_partition_valid`                                                             | closure, audit | ledgers per tag                | never; 1 or 0                                                                                                         |
+| `source_throughput`                                                                  | closure, audit | ledgers per tag                | no verified partition                                                                                                 |
+| `ledger_parent_scale`                                                                | audit          | `audit: true`, ledgers per tag | never; not the throughput where `source_partition_valid` is 0                                                         |
+| `led_<kind>_<name>_parent_fraction`                                                  | audit          | `audit: true`, ledgers per tag | a zero parent scale; over `ledger_parent_scale`, so not a share of the throughput where `source_partition_valid` is 0 |
+| `gross_over_throughput`                                                              | closure        | ledgers per tag                | no verified partition; zero throughput                                                                                |
+| `residual_max`                                                                       | audit          | `audit: true`                  | never                                                                                                                 |
+| `residual_max_z`, `residual_peak_level`, `residual_peak_fraction`, `residual_peak_z` | audit          | `audit: true`                  | a residual zero everywhere                                                                                            |
+| `overlay_negative_mass_fraction`, `overlay_excess`, `overlay_excess_mass_fraction`   | audit          | `audit: true`                  | no source tag                                                                                                         |
+| `flush_gross`                                                                        | audit          | `audit: true`, ledgers per tag | no verified partition                                                                                                 |
+| `flush_rate`                                                                         | audit          | `audit: true`, ledgers per tag | first row; no verified partition; an empty interval, a zero mean gross or no flush                                    |
+| `production_rate`                                                                    | audit          | `audit: true`, ledgers per tag | first row; no verified partition; an empty interval                                                                   |
+| `settling_level`, `settling_ratio`                                                   | audit          | `audit: true`, ledgers per tag | where `forecast_defined` is 0; the ratio also where the gross is zero                                                 |
+| `forecast_defined`                                                                   | audit          | `audit: true`, ledgers per tag | never; 1 or 0                                                                                                         |
 
 None of these is a verdict. They say where to look.
 
