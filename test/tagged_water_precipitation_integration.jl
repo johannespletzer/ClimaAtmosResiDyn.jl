@@ -596,10 +596,12 @@ sphere_part_sum(x, prefix) =
     # degree-3 elements, their DSS and the same band, on 8 and 16 elements
     # (2026-09-27). There the residual is 3e-16 to 6e-15. Even taken as
     # independent, the parent's own rounding stays below 1.4e-13 of its
-    # tendency. The sphere's metric terms add operations, not orders. In the
-    # same model a part hyperdiffused without its share of `q_tot_r`, or with
-    # all of it, leaves 2e-5 to 2e-3, and a part left out of the Laplacians'
-    # DSS leaves 0.15 to 0.5.
+    # tendency. The sphere's metric terms add operations, not orders: on this
+    # sphere, on Julia 1.11, the residual is 6e-16 to 9e-16 under both
+    # operators, before and after DSS. So the bound sits above that rounding
+    # estimate. In the same model a part hyperdiffused without its share of
+    # `q_tot_r`, or with all of it, leaves 2e-5 to 2e-3, and a part left out of
+    # the Laplacians' DSS leaves 0.15 to 0.5.
     function test_split(Yₜ)
         for name in (:ρq_rai, :ρq_sno)
             @test all(iszero, parent(getproperty(Yₜ.c, name)))
@@ -620,7 +622,7 @@ sphere_part_sum(x, prefix) =
             maximum(abs, extratropics),
         )
         residual = maximum(abs, tropics .+ extratropics .- expected) / scale
-        @test residual <= 1e-10
+        @test residual <= 1e-12
         return residual
     end
     operators = (("hyperdiffusion", hyperdiffusion), ("the viscous sponge", sponge))
