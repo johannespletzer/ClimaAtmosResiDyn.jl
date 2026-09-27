@@ -12,7 +12,8 @@
 ##### because the parent's increment carries it.
 
 # The names of the correction's ledger, in the state's order.
-const WATER_TAG_LEDGER_NAMES = (:q_tag_inc_left, :q_tag_inc_moved)
+const WATER_TAG_LEDGER_NAMES =
+    (:q_tag_inc_left, :q_tag_inc_moved, :q_tag_inc_negative)
 
 """
     water_tag_increment_ledger_variables(ρq_tot, model)
@@ -33,27 +34,38 @@ and `(;)` otherwise:
     to zero in each column: mostly the parent's vertical advection, which the
     tags no longer take explicitly, and the column-neutral part of their lag
     behind the parent's other implicit terms.
+  - `q_tag_inc_negative`: the water the correction has given the tags, or
+    taken from them, because the parent's negative part changed, in kg/m³,
+    since the start of the run (known issue 7, option C). The tags partition
+    the parent's non-negative water, `max(ρq_tot, 0)`. Where a solve takes a
+    cell below zero, that part grows by the negative water, and the column's
+    total with it. That change is not a lag, so the tags take it, where the
+    mismatch has its sign, by the cells' composition. Zero wherever the
+    parent stays non-negative.
 
-Both are prognostic, so the stepper weights each stage's entry as it weights
+All three are prognostic, so the stepper weights each stage's entry as it weights
 the tags. They record what the correction intends. A face whose donor cell holds
 no partition water moves no tag, so there a cell's actual change differs, and
 the difference lands in `q_tag_res` but in neither field.
 
 Their names carry no `ρ` prefix, so `gs_tracer_names` and `is_tracer_var` skip
 them, and no transport or limiter reaches them. They are carried through a
-restart. The tag names `inc_left` and `inc_moved` are reserved, so no tag's
-diagnostic can take these names.
+restart. The tag names `inc_*` are reserved, so no tag's diagnostic can take
+these names.
 """
 water_tag_increment_ledger_variables(ρq_tot, ::Nothing) = (;)
 water_tag_increment_ledger_variables(ρq_tot, model::WaterTaggingModel) =
     follows_water_increment(model) ?
-    NamedTuple{WATER_TAG_LEDGER_NAMES}((zero(ρq_tot), zero(ρq_tot))) : (;)
+    NamedTuple{WATER_TAG_LEDGER_NAMES}(
+        (zero(ρq_tot), zero(ρq_tot), zero(ρq_tot)),
+    ) : (;)
 
 """
     water_tag_increment_ledger_names(model)
 
 `Tuple` of the state-field `Symbol`s of the correction's ledger:
-`(:q_tag_inc_left, :q_tag_inc_moved)` under `water_tag_transport: increment`,
+`(:q_tag_inc_left, :q_tag_inc_moved, :q_tag_inc_negative)` under
+`water_tag_transport: increment`,
 and `()` otherwise. See [`water_tag_increment_ledger_variables`](@ref).
 """
 water_tag_increment_ledger_names(model) =
@@ -98,6 +110,13 @@ _water_tag_increment_cache(Y, model) =
         ᶠq_tag_left_weight_integral = Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
         q_tag_mismatch_total = zeros(axes(Fields.level(Y.f, half))),
         q_tag_left_weight_total = zeros(axes(Fields.level(Y.f, half))),
+        # The negative part's change and its spread (option C).
+        ᶜq_tag_negative_change = similar(Y.c.ρ),
+        ᶜq_tag_negative_weight = similar(Y.c.ρ),
+        ᶠq_tag_negative_weight_integral =
+        Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
+        q_tag_negative_total = zeros(axes(Fields.level(Y.f, half))),
+        q_tag_negative_weight_total = zeros(axes(Fields.level(Y.f, half))),
         ᶠq_tag_increment_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
         ᶠq_tag_area_ratio = _energy_source_face_area_ratio(Y.f),
         q_tag_dtγ = Ref(zero(eltype(Y.c.ρ))),
@@ -212,11 +231,22 @@ parent's increment, up to the part left out. A tag that carries a source takes
 its own share of the flux. This is `correct_energy_source_increment!` for
 water, without the offset.
 
+**The target** is the parent's non-negative water, `max(ρq_tot, 0)` (known
+issue 7, option C; [`water_tag_partition_target`](@ref)). Where a solve takes a
+cell below zero, the parent moves water that cell does not hold, and the
+target's column total grows by the negative water created. That part, the
+column total `N` of `-Δ min(ρq_tot, 0)`, is not a lag, so the tags take it:
+it goes to the cells whose mismatch has its sign, in proportion to it, and
+only where the partition holds water to give it a composition, each tag by its
+share there. It is recorded in `q_tag_inc_negative`. Where no cell can take it,
+it is left out with the rest. Where the parent stays non-negative, `N` is zero
+and every number here is what it was, bit for bit.
+
 What it cannot do:
 
-  - **Change a column's total.** The flux vanishes at both boundaries, so each
-    stage changes the partition's column total by exactly its own implicit
-    tendencies. A lag that changes the total, such as the linearized surface
+  - **Change a column's total**, apart from the negative part above. The flux
+    vanishes at both boundaries, so each stage changes the partition's column
+    total by exactly its own implicit tendencies and `N`. A lag that changes the total, such as the linearized surface
     outflow of sedimentation (FINDINGS W23 on the record branch), stays in the
     net closure residual, and `q_tag_inc_left` records it.
   - **Say where that part arose.** The part left out, `M`, is spread over the
@@ -237,9 +267,9 @@ Under `update_constrain_state_every: dss` the constraints run inside the
 window between the snapshot and the solve, so their changes to `ρq_tot` and
 the tags' repair enter `m` too.
 
-The part left out and the part moved are added to the ledger,
-`q_tag_inc_left` and `q_tag_inc_moved` (see
-[`water_tag_increment_ledger_variables`](@ref)).
+The part left out, the part given for the negative water and the part moved
+are added to the ledger, `q_tag_inc_left`, `q_tag_inc_negative` and
+`q_tag_inc_moved` (see [`water_tag_increment_ledger_variables`](@ref)).
 """
 function correct_water_tag_increment!(dY, U, p)
     model = p.atmos.water_tagging_model
@@ -248,26 +278,76 @@ function correct_water_tag_increment!(dY, U, p)
     (; ᶜq_tag_mismatch, ᶜq_tag_left_weight, ᶠq_tag_increment_flux) = p.tagging
     (; ᶠq_tag_mismatch_integral, ᶠq_tag_left_weight_integral) = p.tagging
     (; q_tag_mismatch_total, q_tag_left_weight_total) = p.tagging
+    (; ᶜq_tag_negative_change, ᶜq_tag_negative_weight) = p.tagging
+    (; ᶠq_tag_negative_weight_integral) = p.tagging
+    (; q_tag_negative_total, q_tag_negative_weight_total) = p.tagging
     (; ᶠq_tag_area_ratio) = p.tagging
     FT = eltype(ᶜq_tag_mismatch)
     dtγ = q_tag_dtγ[]
     ᶜm = ᶜq_tag_mismatch
+    ᶜn = ᶜq_tag_negative_change
     # The partition after the stage, with the parent's post-solve correction,
     # which moves no tag. That correction zeroes `dY` and writes only `ρe_tot`
     # and `ρq_tot`, so the `dY` terms of the partition are zero; they are kept
     # so the mismatch stays right if it ever writes more.
     _water_partition_sum!(ᶜm, U.c, dY.c, dtγ, model.tags)
+    # The partition's target is the parent's non-negative water (known issue
+    # 7, option C). Where the parent is non-negative on both sides of the
+    # stage this is the parent's increment, bit for bit.
+    ᶜρq_tot_new = @. lazy(U.c.ρq_tot + dtγ * dY.c.ρq_tot)
     @. ᶜm =
-        (U.c.ρq_tot + dtγ * dY.c.ρq_tot - ᶜq_tag_ρq_tot_snapshot) -
-        (ᶜm - ᶜq_tag_partition_snapshot)
+        (
+            water_tag_partition_target(ᶜρq_tot_new) -
+            water_tag_partition_target(ᶜq_tag_ρq_tot_snapshot)
+        ) - (ᶜm - ᶜq_tag_partition_snapshot)
+    # The part of the target's increment that is the parent's negative part
+    # changing: the target less the parent, `-Δ min(ρq_tot, 0)`. Zero where
+    # the parent stays non-negative.
+    @. ᶜn =
+        water_tag_negative_part(ᶜq_tag_ρq_tot_snapshot) -
+        water_tag_negative_part(ᶜρq_tot_new)
     Operators.column_integral_indefinite!(ᶠq_tag_mismatch_integral, ᶜm)
     Operators.column_integral_definite!(q_tag_mismatch_total, ᶜm)
-    # The column's total `M` is left out only where the mismatch has `M`'s
-    # sign, in proportion to it there. Each cell then leaves out at most its
-    # own mismatch, with its sign, and moves at most its own mismatch, so no
-    # cell's correction is larger than its mismatch (the owner's review of
-    # #102, point 4). Spreading `M` by `|m|` instead moved more than that
-    # where the signs differ.
+    Operators.column_integral_definite!(q_tag_negative_total, ᶜn)
+    # The shares at the solved stage, for the flux and the negative part. Where
+    # the parent is negative there, the tags move by the partition's own
+    # composition (`_water_tag_follower_share_field`), so they need its sum.
+    water_tag_share_norm!(p, U)
+    ᶜnorm = p.scratch.ᶜtagging_q_share_norm
+    ᶜpos = p.tagging.ᶜwater_pos
+    @. ᶜpos = 0
+    _accumulate_partition_pos!(ᶜpos, U.c, model.tags)
+    # The negative part's column total `N` changes the target's total, and is
+    # no lag, so the tags take it. It goes to the cells whose mismatch has
+    # its sign, in proportion to it, as the part left out is spread, and only
+    # to cells whose partition holds water to give it a composition. Where no
+    # cell can take it, it is left out with the rest.
+    @. ᶜq_tag_negative_weight = ifelse(
+        ifelse(U.c.ρq_tot < 0, ᶜpos > 0, ᶜnorm > 0),
+        water_increment_left_weight(ᶜm, q_tag_negative_total),
+        zero(ᶜm),
+    )
+    Operators.column_integral_indefinite!(
+        ᶠq_tag_negative_weight_integral,
+        ᶜq_tag_negative_weight,
+    )
+    Operators.column_integral_definite!(
+        q_tag_negative_weight_total,
+        ᶜq_tag_negative_weight,
+    )
+    @. q_tag_negative_total = ifelse(
+        q_tag_negative_weight_total > 0,
+        q_tag_negative_total,
+        zero(q_tag_negative_total),
+    )
+    # The column's total `M`, less what the tags take for the negative part,
+    # is left out only where the mismatch has its sign, in proportion to it
+    # there. Each cell then leaves out at most its own mismatch, with its
+    # sign, and moves at most its own mismatch, so no cell's correction is
+    # larger than its mismatch (the owner's review of #102, point 4).
+    # Spreading `M` by `|m|` instead moved more than that where the signs
+    # differ. Where the parent is non-negative, `N` is zero and this is `M`.
+    @. q_tag_mismatch_total -= q_tag_negative_total
     @. ᶜq_tag_left_weight =
         water_increment_left_weight(ᶜm, q_tag_mismatch_total)
     Operators.column_integral_indefinite!(
@@ -291,46 +371,150 @@ function correct_water_tag_increment!(dY, U, p)
                     q_tag_left_weight_total > 0,
                     q_tag_mismatch_total / q_tag_left_weight_total,
                     FT(0),
-                ) * ᶠq_tag_left_weight_integral
+                ) * ᶠq_tag_left_weight_integral -
+                ifelse(
+                    q_tag_negative_weight_total > 0,
+                    q_tag_negative_total / q_tag_negative_weight_total,
+                    FT(0),
+                ) * ᶠq_tag_negative_weight_integral
             ) / dtγ * ᶠq_tag_area_ratio,
         ),
     )
-    water_tag_share_norm!(p, U)
-    _sgs_water_tag_fluxes!(
+    _follower_water_tag_fluxes!(
         dY.c,
         U.c,
-        p.scratch.ᶜtagging_q_share_norm,
+        ᶜnorm,
+        ᶜpos,
         ᶠq_tag_increment_flux,
         model.tags,
     )
-    # Each tag's own ledger, where kept, takes the same flux, so it holds what
-    # the correction moved into or out of that tag (WP6, step 3). The same
-    # kernel writes it, from a zero entry as the tag's is, so it is the tag's
-    # change bit for bit. Its absolute value per stage goes to `attempted`.
-    ledger_view = water_tag_inc_ledger_view(dY, model)
-    isnothing(ledger_view) || _sgs_water_tag_fluxes!(
-        ledger_view,
+    # What each cell takes for the negative part, by its own composition.
+    @. ᶜq_tag_negative_weight *= ifelse(
+        q_tag_negative_weight_total > 0,
+        q_tag_negative_total / q_tag_negative_weight_total,
+        FT(0),
+    )
+    _give_water_tags!(
+        dY.c,
         U.c,
-        p.scratch.ᶜtagging_q_share_norm,
-        ᶠq_tag_increment_flux,
+        ᶜnorm,
+        ᶜpos,
+        ᶜq_tag_negative_weight,
+        q_tag_negative_total,
+        dtγ,
         model.tags,
     )
+    # Each tag's own ledger, where kept, takes the same flux and the same
+    # share of the negative part, so it holds what the correction moved into
+    # or out of that tag (WP6, step 3). The same kernels write it, from a zero
+    # entry as the tag's is, so it is the tag's change bit for bit. Its
+    # absolute value per stage goes to `attempted`.
+    ledger_view = water_tag_inc_ledger_view(dY, model)
+    if !isnothing(ledger_view)
+        _follower_water_tag_fluxes!(
+            ledger_view,
+            U.c,
+            ᶜnorm,
+            ᶜpos,
+            ᶠq_tag_increment_flux,
+            model.tags,
+        )
+        _give_water_tags!(
+            ledger_view,
+            U.c,
+            ᶜnorm,
+            ᶜpos,
+            ᶜq_tag_negative_weight,
+            q_tag_negative_total,
+            dtγ,
+            model.tags,
+        )
+    end
     add_attempted_per_tag!(p, dY, dtγ, ledger_view, model.tags)
-    # The ledger. What is left out stays out of the tags, and the rest is what
-    # the flux moved. The stepper adds `dtγ·dY`, as it does for the tags. The
-    # weight's total is at least `|M|`, so the factor lies in [-1, 1].
+    # The ledger. What is left out stays out of the tags, what they take for
+    # the negative part is its own entry, and the rest is what the flux
+    # moved. The stepper adds `dtγ·dY`, as it does for the tags. The weights'
+    # totals are at least `|M − N|` and `|N|`, so the factors lie in [-1, 1].
     @. ᶜq_tag_left_weight *= ifelse(
         q_tag_left_weight_total > 0,
         q_tag_mismatch_total / q_tag_left_weight_total,
         FT(0),
     )
     @. dY.c.q_tag_inc_left += ᶜq_tag_left_weight / dtγ
-    @. dY.c.q_tag_inc_moved += (ᶜm - ᶜq_tag_left_weight) / dtγ
-    # What this stage left out and moved, in absolute value, whether or not
-    # the step keeps it (WP6, step 3).
+    @. dY.c.q_tag_inc_negative += ᶜq_tag_negative_weight / dtγ
+    @. dY.c.q_tag_inc_moved +=
+        (ᶜm - ᶜq_tag_left_weight - ᶜq_tag_negative_weight) / dtγ
+    # What this stage left out, gave and moved, in absolute value, whether or
+    # not the step keeps it (WP6, step 3).
     add_attempted!(p, Val(:q_tag_inc_left), ᶜq_tag_left_weight)
-    add_attempted!(p, Val(:q_tag_inc_moved), @. lazy(ᶜm - ᶜq_tag_left_weight))
+    add_attempted!(p, Val(:q_tag_inc_negative), ᶜq_tag_negative_weight)
+    add_attempted!(
+        p,
+        Val(:q_tag_inc_moved),
+        @. lazy(ᶜm - ᶜq_tag_left_weight - ᶜq_tag_negative_weight)
+    )
     return nothing
+end
+
+# The share a cell's tag moves by in the follower. Where the parent is not
+# negative, the flux's (`_water_tag_share_field`), so nothing changes there,
+# bit for bit. Where it is negative, the tag's clamped fraction of the
+# partition's own positive water, `ᶜpos`: the parent's shares are undefined
+# there, and without these a cell whose parent a solve took below zero could
+# not give up the tags it held (known issue 7, option C).
+function _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag)
+    ᶜρq_tag = tag_field(ᶜY, tag)
+    ᶜshare = _water_tag_share_field(ᶜY, ᶜnorm, tag)
+    return @. lazy(
+        ifelse(ᶜY.ρq_tot < 0, water_tag_fraction(ᶜρq_tag, ᶜpos), ᶜshare),
+    )
+end
+
+# The follower's flux, as `_sgs_water_tag_fluxes!` moves the default mode's,
+# with the follower's shares.
+_follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, ::Tuple{}) = nothing
+function _follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, tags::Tuple)
+    tag = first(tags)
+    ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
+    ᶜshare = _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag)
+    @. ᶜρq_tagₜ -= ᶜadvdivᵥ(
+        ᶠflux * ifelse(
+            _is_upward(ᶠflux),
+            ᶠbottom_bias_zero(ᶜshare),
+            ᶠtop_bias_zero(ᶜshare),
+        ),
+    )
+    return _follower_water_tag_fluxes!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜnorm,
+        ᶜpos,
+        ᶠflux,
+        Base.tail(tags),
+    )
+end
+
+# Give each tag its share of `ᶜgive`, the water a cell's partition takes for
+# the parent's negative part, as a tendency over `dtγ`, by the follower's
+# shares. Only where the column's total `N` is not zero, so a run whose parent
+# stays non-negative is unchanged bit for bit.
+_give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, ::Tuple{}) = nothing
+function _give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, tags::Tuple)
+    tag = first(tags)
+    ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
+    ᶜshare = _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag)
+    @. ᶜρq_tagₜ =
+        ifelse(N != 0, ᶜρq_tagₜ + ᶜgive * ᶜshare / dtγ, ᶜρq_tagₜ)
+    return _give_water_tags!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜnorm,
+        ᶜpos,
+        ᶜgive,
+        N,
+        dtγ,
+        Base.tail(tags),
+    )
 end
 
 """
