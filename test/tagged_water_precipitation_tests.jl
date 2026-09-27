@@ -15,7 +15,8 @@ What is tested here, without a simulation:
     compartment's sum (section 9), with the audit (section 12);
  5. the limiters and constraints: clip, rescale, borrowing and a SEM-like
     change keep every part non-negative and each compartment summing to its
-    parent (section 8), and the repair per compartment;
+    parent (section 8), and the repair per compartment, also with a ledger
+    per tag (`water_tag_ledger_per_tag: true`);
  6. the sedimentation and its Jacobian on a small column (sections 5 and 7);
  7. the restart guard (section 11).
 
@@ -450,12 +451,18 @@ end
         # Each tag keeps its total.
         @test all(c -> abs(sum(c)) <= 1e-14 * scale, changes)
         # The partition's parts take the compartments' changes, even where a
-        # compartment was empty at the start and water passed through it.
-        @test sum(c -> c[2], changes) ≈ dq_rai atol = 1e-14 * scale
-        @test sum(c -> c[3], changes) ≈ dq_sno atol = 1e-14 * scale
-        @test sum(c -> c[1], changes) ≈ -(dq_rai + dq_sno) atol = 1e-14 * scale
+        # compartment was empty at the start and water passed through it. The
+        # pool shares close only to the rounding of their solve, which grows
+        # when rain and snow start empty. So the bound grows with the flows.
+        # The seeded draws differ between Julia 1.10 and 1.11.
+        gross = sum(abs, values(F))
+        tolerance = 1e-10 * gross + 1e-14 * scale
+        @test sum(c -> c[2], changes) ≈ dq_rai atol = tolerance
+        @test sum(c -> c[3], changes) ≈ dq_sno atol = tolerance
+        @test sum(c -> c[1], changes) ≈ -(dq_rai + dq_sno) atol = 2 * tolerance
         # The pool shares sum to one over the partition wherever the pool
-        # holds water or takes some in, and lie in [0, 1].
+        # holds water or takes some in, and lie in [0, 1]. The sum closes to
+        # the rounding of the solve, as above.
         pools = map(i -> CA.water_tag_pool_shares(F, args(i)...), 1:3)
         full = (
             true,
@@ -463,7 +470,7 @@ end
             qS + Δt * (F.NS + F.RS) > 0,
         )
         for k in 1:3
-            full[k] && @test sum(ψ -> ψ[k], pools) ≈ 1 atol = 1e-12
+            full[k] && @test sum(ψ -> ψ[k], pools) ≈ 1 atol = 1e-10
             @test all(ψ -> -1e-15 <= ψ[k] <= 1 + 1e-12, pools)
         end
         # The net-flow rule keeps each tag's total, and the compartments'
@@ -562,10 +569,11 @@ end
 end
 
 # A cell state of three tags (two partition tags and a source tag), their
-# three parts, and the cache the corrections use.
-function correction_setup(FT, rng, n)
+# three parts, and the cache the corrections use. With `ledger_per_tag`, each
+# tag also keeps its own ledger of the corrections.
+function correction_setup(FT, rng, n; ledger_per_tag = false)
     tags = precipitation_tags(FT)
-    model = CA.WaterTaggingModel(tags; precipitation = true)
+    model = CA.WaterTaggingModel(tags; precipitation = true, ledger_per_tag)
     rai = FT.(1e-3 .* rand(rng, n))
     sno = FT.(5e-4 .* rand(rng, n))
     nonprecip = FT.(1e-2 .* (0.5 .+ rand(rng, n)))
@@ -588,6 +596,16 @@ function correction_setup(FT, rng, n)
         q_tag_led_repair = zeros(FT, n),
         q_tag_led_repairnet = zeros(FT, n),
     )
+    if ledger_per_tag
+        ᶜY = merge(
+            ᶜY,
+            (;
+                q_tag_led_fix_low = zeros(FT, n),
+                q_tag_led_fix_high = zeros(FT, n),
+                q_tag_led_fix_evap = zeros(FT, n),
+            ),
+        )
+    end
     per_tag(T) = (;
         ρq_tag_low = zeros(T, n),
         ρq_tag_high = zeros(T, n),
@@ -693,6 +711,50 @@ nonprecip_parent(ᶜY) = ᶜY.ρq_tot .- ᶜY.ρq_rai .- ᶜY.ρq_sno
         @test minimum(ᶜY.ρq_rtag_low) >= 0
         @test partition_sum(ᶜY, :ρq_rtag_) ≈ rain_sum rtol = 8 * eps(FT)
         @test ᶜY.q_tag_led_repair[5] > 0
+    end
+end
+
+@testset "The rain and snow parts with a ledger per tag" begin
+    # The two keys are type parameters of their own. In the wrong order one
+    # predicate would read the other's key.
+    tags = precipitation_tags()
+    both = CA.WaterTaggingModel(tags; precipitation = true, ledger_per_tag = true)
+    @test CA.has_water_tag_precipitation(both)
+    @test CA.has_water_tag_ledger_per_tag(both)
+    key_only = CA.WaterTaggingModel(tags; precipitation = true)
+    @test CA.has_water_tag_precipitation(key_only)
+    @test !CA.has_water_tag_ledger_per_tag(key_only)
+    ledger_only = CA.WaterTaggingModel(tags; ledger_per_tag = true)
+    @test !CA.has_water_tag_precipitation(ledger_only)
+    @test CA.has_water_tag_ledger_per_tag(ledger_only)
+
+    # Each tag's own ledger takes the rescale of its non-precipitating part
+    # and the repair of all three parts, as `q_tag_fix_<name>` does. The moves
+    # between a tag's parts change neither. From zero, the tag's ledger is the
+    # cache ledger, bit for bit.
+    for FT in (Float32, Float64)
+        rng = Random.MersenneTwister(11)
+        n = 200
+        (; Y, p, model) = correction_setup(FT, rng, n; ledger_per_tag = true)
+        ᶜY = Y.c
+        @test CA.has_water_tag_ledger_per_tag(model)
+        # `ρq_tot`, rain and snow change together, as in case 2 above.
+        ᶜρq_tot_before = copy(ᶜY.ρq_tot)
+        @. ᶜY.ρq_rai = max(ᶜY.ρq_rai * FT(1 + 0.4 * (rand(rng) - 0.5)), 0)
+        @. ᶜY.ρq_sno = max(ᶜY.ρq_sno * FT(1 + 0.4 * (rand(rng) - 0.5)), 0)
+        @. ᶜY.ρq_tot = ᶜY.ρq_tot * FT(1 + 0.02 * (rand(rng) - 0.5))
+        CA._rescale_water_tags!(Y, p, ᶜρq_tot_before, model)
+        # A negative rain part, as in case 4 above, for the repair.
+        ᶜY.ρq_rtag_low[5] = -FT(0.1) * ᶜY.ρq_rai[5]
+        ᶜY.ρq_rtag_high[5] = FT(1.1) * ᶜY.ρq_rai[5]
+        CA._repair_water_tag_partition!(Y, p, model)
+        for name in (:low, :high, :evap)
+            ᶜL = getproperty(ᶜY, Symbol(:q_tag_led_fix_, name))
+            ᶜfix = getproperty(p.tagging.ᶜwater_fix, Symbol(:ρq_tag_, name))
+            @test ᶜL == ᶜfix
+        end
+        @test maximum(abs, ᶜY.q_tag_led_fix_low) > 0
+        @test maximum(abs, ᶜY.q_tag_led_fix_high) > 0
     end
 end
 

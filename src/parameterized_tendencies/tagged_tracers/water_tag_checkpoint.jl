@@ -16,6 +16,10 @@ The version of the water tags' checkpoint attributes. A checkpoint without it
 predates the restart guard. Version 2 adds `water_tag_precipitation`. A
 version 1 checkpoint was written before that key, so it reads as written
 without it. A checkpoint with any other version is refused.
+
+The tags' own ledgers and the accumulators that a checkpoint carries since WP6,
+step 3, need no version of their own. The guard and
+`restore_tag_ledger_checkpoint!` check them by whether the file holds them.
 """
 const WATER_TAG_CHECKPOINT_VERSION = 2
 
@@ -71,12 +75,13 @@ It checks, in this order, and stops at the first mismatch:
 
  1. The water tag fields in `Y`, the rain and snow parts, the increment's
     ledger, the tags' copies in the first updraft, then the ledgers per
-    mechanism, then the records of the microphysics audit, against what
-    `model` configures. A checkpoint written before the ledgers per mechanism
-    is refused here. A changed `water_tag_precipitation`,
-    `water_tag_transport` or `water_tag_updraft_copy` fails here, because the
-    parts, the ledger or the copies are in the file or are not. This needs no
-    attribute, so it covers every checkpoint.
+    mechanism, each tag's own ledgers, then the records of the microphysics
+    audit, against what `model` configures. A checkpoint written before the
+    ledgers per mechanism is refused here. A changed
+    `water_tag_precipitation`, `water_tag_transport`,
+    `water_tag_updraft_copy` or `water_tag_ledger_per_tag` fails here,
+    because the parts, the ledgers or the copies are in the file or are not.
+    This needs no attribute, so it covers every checkpoint.
  2. The version attribute. A checkpoint without it predates this guard. Then
     it warns that the tags' regions and sources cannot be checked, and lets
     the restart go on. A checkpoint with a version this guard does not read
@@ -86,8 +91,23 @@ It checks, in this order, and stops at the first mismatch:
  4. Each tag's region and sources.
 
 `Y` is the state read from `restart_file`. Called by `handle_restart`, before
-the cache is built, so a refused restart fails in seconds. The repair ledgers
-start again from zero, as every cumulative tag diagnostic does.
+the cache is built, so a refused restart fails in seconds.
+
+What continues through a restart:
+
+  - The state ledgers: the ledgers per mechanism, the increment follower's
+    ledger and each tag's own ledgers. They are fields of the state, so they
+    continue from the checkpoint. A checkpoint without the configured ones is
+    refused, in step 1. Under `water_tag_precipitation: true` the records of
+    the microphysics audit are state fields too, and continue the same way.
+  - The cache accumulators: the repair ledgers `q_tag_fix_<name>` and
+    `q_tag_upfix_<name>`, their gross twins and counts, and each state
+    ledger's per-step gross, column gross, events and attempted total. The
+    checkpoint carries them beside the state, and
+    `restore_tag_ledger_checkpoint!` reads them back after the cache is built,
+    so they continue too. A checkpoint with none of them starts them at zero,
+    with a warning, and their totals then cover the new segment only. One with
+    some but not all of them is refused.
 """
 function check_water_tag_checkpoint(restart_file, model, Y, context)
     water_model = model.water_tagging_model
@@ -144,6 +164,19 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "water",
         "q_tag_",
         "water_tag_updraft_copy",
+    )
+    # Each tag's own ledgers (WP6, step 3) are in the file or are not, so a
+    # changed `water_tag_ledger_per_tag` fails here.
+    check_restart_fields(
+        restart_file,
+        Y,
+        name ->
+            is_tag_per_tag_ledger_name(name) &&
+            startswith(string(name), "q_tag_"),
+        water_tag_per_tag_ledger_names(water_model),
+        "water tags' own ledgers",
+        "water_tag_ledger_per_tag",
+        "q_tag_led_",
     )
     # The microphysics audit's records come with the rain and snow parts.
     check_restart_fields(

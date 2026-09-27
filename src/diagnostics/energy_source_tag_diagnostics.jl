@@ -20,7 +20,8 @@ Register the diagnostics of the energy source tags:
   - `e_src_<name>`: specific tagged energy `ρe_src_<name> / ρ`, for each tag;
   - `e_src_fix_<name>`: the energy `repair_energy_source_tags!` has moved into
     (positive) or out of (negative) each tag, per unit mass, cumulative since
-    the start of the simulation segment. Zero when `energy_source_tag_repair`
+    the start of the run, carried through a restart by the checkpoint. Zero
+    when `energy_source_tag_repair`
     is false. It equals what the repair changed in the state only at the
     default `update_constrain_state_every: step`;
   - `e_src_res`: closure residual `(ρe_tot - Σᵢ ρe_src_i) / ρ`, summed over the
@@ -89,8 +90,8 @@ function register_energy_source_tagging_diagnostics!(
                            "(negative) the tag `$name` by the repair that " *
                            "keeps the energy source tags non-negative where " *
                            "their total is positive, per unit mass of moist " *
-                           "air. Cumulative since the start of the simulation " *
-                           "segment and reset on restart, so a budget over an " *
+                           "air. Cumulative since the start of the run and " *
+                           "carried through a restart, so a budget over an " *
                            "interval is the difference of two outputs, and a " *
                            "time average is not meaningful. Zero when " *
                            "energy_source_tag_repair is false. Each increment " *
@@ -123,8 +124,8 @@ function register_energy_source_tagging_diagnostics!(
                                "the number of times the repair changed the tag " *
                                "`$name` in this cell by more than rounding"
                            ) *
-                           ". Cumulative since the start of the simulation " *
-                           "segment and reset on restart. It counts what was " *
+                           ". Cumulative since the start of the run and " *
+                           "carried through a restart. It counts what was " *
                            "attempted, every call, including changes inside a " *
                            "step that the stepper discards. A transfer between " *
                            "partition tags counts once out and once in.",
@@ -143,6 +144,23 @@ function register_energy_source_tagging_diagnostics!(
     register_energy_source_ledger_diagnostics!(model)
 
     region_names = energy_source_region_tag_state_names(model)
+    # The copies' residual describes a partition, so it needs region tags as
+    # well as copies. A stale entry from an earlier model is dropped first.
+    delete!(ALL_DIAGNOSTICS, "e_src_copy_res")
+    if has_energy_source_updraft_copies(model) && !isempty(region_names)
+        add_diagnostic_variable!(;
+            short_name = "e_src_copy_res",
+            units = "J kg^-1",
+            long_name = "Energy Source Tag Updraft Copy Residual",
+            comments = "The first updraft's energy minus the sum of the " *
+                       "partition's updraft copies, times the updraft's " *
+                       "density-area, per unit mass of grid-mean air: " *
+                       "ρaʲ (Aʲ - Σᵢ χᵢʲ) / ρ, with Aʲ = mseʲ + Kʲ - p/ρʲ + c. " *
+                       "It shows what the copies' mirrors do not cover. " *
+                       "Written only under energy_source_tag_updraft_copy: true.",
+            compute! = (out, u, p, t) -> compute_e_src_copy_res!(out, u, p, t),
+        )
+    end
     offset = model.offset
     # Drop any stale entry first, then decide whether to register a new one. An
     # earlier simulation in this process may have registered `e_src_res` over a
@@ -229,6 +247,15 @@ function compute_e_src_res!(out, state, cache, time, region_names, offset)
     ᶜres = compute_e_tag_res!(out, state, cache, time, region_names)
     isnothing(offset) || (ᶜres .+= offset)
     return ᶜres
+end
+
+# `e_src_copy_res`: `energy_source_copy_residual!`.
+function compute_e_src_copy_res!(out, state, cache, time)
+    if isnothing(out)
+        return energy_source_copy_residual!(similar(state.c.ρ), state, cache)
+    else
+        energy_source_copy_residual!(out, state, cache)
+    end
 end
 
 # `e_src_fix_<name>`: the repair's ledger for one tag, per unit mass, as the

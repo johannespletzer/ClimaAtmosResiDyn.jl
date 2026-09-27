@@ -221,8 +221,10 @@ when water tagging is disabled. Contains:
   - `ᶜwater_fix`: one center `Field` per tag accumulating the water that the
     limiters and state constraints have moved into or out of that tag (see
     [`rescale_water_tags!`](@ref) and [`repair_water_tag_partition!`](@ref)).
-    Cumulative since the start of the simulation segment, and reset on restart,
-    so a budget over an interval is the difference of two outputs.
+    Cumulative since the start of the run, and carried through a restart by
+    the checkpoint (WP6, step 3; a checkpoint written before that starts it at
+    zero, with a warning), so a budget over an interval is the difference of
+    two outputs.
   - `ᶜwater_fix_gross`, `ᶜwater_fix_count`: the gross twin and the count of
     `ᶜwater_fix`, in Float64: the absolute value of every change, and one per
     cell-event above rounding (`tag_event`). What was attempted, including
@@ -342,6 +344,9 @@ attribute_tagged_ρq_tot!(Yₜ, Y, p, source::Symbol) =
 _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, ::Nothing) = nothing
 function _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, model::WaterTaggingModel)
     source in KNOWN_WATER_TAG_SOURCES || return nothing
+    # Under 0M and prognostic EDMF the rain-out goes to the tags by each
+    # subdomain's composition (`tagged_water_rainout.jl`).
+    splits_rainout(p, source) && return add_split_rainout!(Yₜ.c, Y, p, model)
     (; ᶜwater_masks) = p.tagging
     ᶜρq_tot_snapshot = p.scratch.ᶜtagging_q_snapshot
     ᶜΔρq_tot = @. lazy(Yₜ.c.ρq_tot - ᶜρq_tot_snapshot)
@@ -971,23 +976,32 @@ rescale_water_tags!(Y, p, ᶜρq_tot_before) =
     _rescale_water_tags!(Y, p, ᶜρq_tot_before, p.atmos.water_tagging_model)
 _rescale_water_tags!(Y, p, ᶜρq_tot_before, ::Nothing) = nothing
 function _rescale_water_tags!(Y, p, ᶜρq_tot_before, model::WaterTaggingModel)
-    has_water_tag_precipitation(model) && return _rescale_water_tag_parts!(
-        Y,
-        p,
-        ᶜρq_tot_before,
-        model,
-        Val(true),
-    )
-    (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count, ᶜwater_pos) = p.tagging
-    ᶜwater_pos .= zero(eltype(ᶜwater_pos))
-    _accumulate_partition_pos!(ᶜwater_pos, Y.c, model.tags)
-    _apply_water_tag_rescale!(
-        Y.c,
-        tag_ledger(ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count),
-        ᶜwater_pos,
-        ᶜρq_tot_before,
-        model.tags,
-    )
+    # What this call adds to the ledgers per mechanism goes to their
+    # `attempted`, whether or not the stepper keeps it (WP6, step 3). The
+    # bracket holds both branches, since the parts' rescale under
+    # `water_tag_precipitation: true` adds to the same two ledgers.
+    mechanisms = Val((:q_tag_led_rescale, :q_tag_led_empty))
+    before_tag_ledgers!(p, Y, mechanisms)
+    if has_water_tag_precipitation(model)
+        _rescale_water_tag_parts!(Y, p, ᶜρq_tot_before, model, Val(true))
+    else
+        (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count, ᶜwater_pos) = p.tagging
+        ᶜwater_pos .= zero(eltype(ᶜwater_pos))
+        _accumulate_partition_pos!(ᶜwater_pos, Y.c, model.tags)
+        _apply_water_tag_rescale!(
+            Y.c,
+            tag_ledger(
+                ᶜwater_fix,
+                ᶜwater_fix_gross,
+                ᶜwater_fix_count,
+                water_tag_fix_ledger_view(Y, model),
+            ),
+            ᶜwater_pos,
+            ᶜρq_tot_before,
+            model.tags,
+        )
+    end
+    after_tag_ledgers!(p, Y, mechanisms)
     return nothing
 end
 
@@ -1046,6 +1060,14 @@ function _apply_water_tag_rescale!(
             water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
             ᶜρq_tot_before,
         )
+        # The tag's own ledger, where kept, takes the same change (step 3).
+        add_to_tag_ledger!(
+            ledger.state,
+            tag,
+            @. lazy(
+                water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+            )
+        )
         @. ᶜfix += water_tag_rescale_shift(
             ᶜρq_tag,
             ᶜafter,
@@ -1065,6 +1087,13 @@ function _apply_water_tag_rescale!(
         @. ᶜcount += tag_event(
             water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
             ᶜρq_tot_before,
+        )
+        add_to_tag_ledger!(
+            ledger.state,
+            tag,
+            @. lazy(
+                water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
+            )
         )
         @. ᶜfix += water_tag_source_rescale_shift(
             ᶜρq_tag,
@@ -1158,7 +1187,14 @@ function _repair_water_tag_partition!(Y, p, model::WaterTaggingModel)
     ᶜwater_neg .= zero(eltype(ᶜwater_neg))
     _accumulate_partition_pos!(ᶜwater_pos, Y.c, model.tags)
     _accumulate_partition_neg!(ᶜwater_neg, Y.c, model.tags)
-    ledger = tag_ledger(ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count)
+    mechanisms = Val((:q_tag_led_repair, :q_tag_led_repairnet))
+    before_tag_ledgers!(p, Y, mechanisms)
+    ledger = tag_ledger(
+        ᶜwater_fix,
+        ᶜwater_fix_gross,
+        ᶜwater_fix_count,
+        water_tag_fix_ledger_view(Y, model),
+    )
     _apply_partition_repair!(
         Y.c,
         ledger,
@@ -1174,7 +1210,10 @@ function _repair_water_tag_partition!(Y, p, model::WaterTaggingModel)
     @. Y.c.q_tag_led_repairnet += max(-(ᶜwater_pos + ᶜwater_neg), 0)
     # Under `water_tag_precipitation: true` the rain parts and the snow parts
     # are repaired the same way, each among themselves, into the same ledgers.
+    # Each tag's own ledger takes their changes too. They add to the ledgers
+    # per mechanism, so they run before `after_tag_ledgers!`.
     _repair_water_tag_precip_parts!(Y, p, ledger, model)
+    after_tag_ledgers!(p, Y, mechanisms)
     return nothing
 end
 
@@ -1213,6 +1252,13 @@ function _apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, tags::Tuple, par
         @. ᶜcount += tag_event(
             max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag,
             ᶜpos,
+        )
+        add_to_tag_ledger!(
+            ledger.state,
+            tag,
+            @. lazy(
+                max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag,
+            )
         )
         @. ᶜfix +=
             max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag

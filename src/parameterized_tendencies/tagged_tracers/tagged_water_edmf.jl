@@ -451,11 +451,7 @@ function water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
     flags = _water_partition_flags(model.tags)
     # The grid mean's specific tag values, negative ones as zero, one tuple per
     # cell, so each tag's kernel below reads a few tuple fields.
-    tag_fields = map(tag -> tag_field(Y.c, tag), model.tags)
-    Base.Broadcast.materialize!(
-        ᶜε̄,
-        Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, tag_fields...),
-    )
+    set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
 
     # The updraft's specific tag values, from the plume, rescaled at each level
     # to the updraft's water.
@@ -569,6 +565,10 @@ WaterPlumeStep(::Val{partition}) where {partition} = WaterPlumeStep{partition}()
     ((total > zero(FT)) & (q_totʲ > zero(FT))) || return mixed
     # Each value's share first, then the water: `q_totʲ / total` can overflow
     # where the partition holds a denormal amount, and a share cannot.
+    # `map`, not `ntuple` over the index: inside the column march the tuple is
+    # ClimaCore's `AutoBroadcaster`, whose `map` unrolls, while `ntuple` builds
+    # a plain tuple that the march converts back, allocating in every cell
+    # (`analysis/water/wp9_variants.jl`).
     return map(ε -> (ε / total) * q_totʲ, mixed)
 end
 
@@ -1068,8 +1068,10 @@ function _water_tag_copy_filter!(Y, p, model::WaterTaggingModel, when)
     if when isa Val{:before}
         @. ᶜwater_copy_before = ᶜsgsʲ.ρa * ᶜwater_copy_sum
     else
+        before_tag_ledgers!(p, Y, Val((:q_tag_led_upfilter,)))
         @. Y.c.q_tag_led_upfilter +=
             ᶜsgsʲ.ρa * ᶜwater_copy_sum - ᶜwater_copy_before
+        after_tag_ledgers!(p, Y, Val((:q_tag_led_upfilter,)))
     end
     return nothing
 end
@@ -1086,7 +1088,7 @@ grid-scale tags follow after a limiter. The filter's own increment is not
 handed on as well: the filter already clamped each copy, and doing both would
 count it twice. `r` before the repair is kept in `p.tagging.ᶜwater_copy_residual`
 for the diagnostic `q_tag_copy_res`, and the water moved, times `ρaʲ`, in the
-ledger `q_tag_upfix_<name>`, cumulative since the segment started. Source tags'
+ledger `q_tag_upfix_<name>`, cumulative since the start of the run. Source tags'
 copies are not part of the sum and are left as the filter left them. A no-op
 without copies.
 """
@@ -1112,6 +1114,8 @@ function _repair_water_tag_copies!(
     @. ᶜwater_copy_pos = 0
     _accumulate_copy_sums!(ᶜwater_copy_sum, ᶜwater_copy_pos, ᶜsgsʲ, model.tags)
     @. ᶜwater_copy_residual = ᶜsgsʲ.q_tot - ᶜwater_copy_sum
+    # What this call adds goes to the ledger's `attempted` (WP6, step 3).
+    before_tag_ledgers!(p, Y, Val((:q_tag_led_uprepair,)))
     _apply_copy_repair!(
         ᶜsgsʲ,
         Y.c.q_tag_led_uprepair,
@@ -1120,6 +1124,7 @@ function _repair_water_tag_copies!(
         ᶜwater_copy_pos,
         model.tags,
     )
+    after_tag_ledgers!(p, Y, Val((:q_tag_led_uprepair,)))
     return nothing
 end
 _accumulate_copy_sums!(ᶜsum, ᶜpos, ᶜsgsʲ, ::Tuple{}) = nothing
@@ -1191,7 +1196,7 @@ water_tag_copy_sgs_names(model::WaterTaggingModel) = _water_tag_copy_sgs_names(
 )
 _water_tag_copy_sgs_names(::Val{false}, tags) = ()
 _water_tag_copy_sgs_names(::Val{true}, tags) =
-    map(water_tag_copy_field_name, tags)
+    unrolled_map(water_tag_copy_field_name, tags)
 
 # The derivative of a copy's falling water `qʲ χ / q_totʲ` with respect to the
 # copy. The sedimentation Jacobian takes it without the renormalization's and

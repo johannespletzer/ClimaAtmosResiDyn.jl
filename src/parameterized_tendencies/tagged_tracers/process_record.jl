@@ -22,8 +22,8 @@
 ##### and nothing else touches them: no advection, no limiter, no Jacobian block
 ##### beyond the fallback identity. They accumulate from the start of the run
 ##### and are carried through a restart, so a budget over an interval is the
-##### difference of two outputs. This differs from `q_tag_fix_<name>`, which
-##### lives in the cache and does restart at zero.
+##### difference of two outputs. `q_tag_fix_<name>` lives in the cache, and a
+##### checkpoint carries it separately (WP6, step 3).
 #####
 ##### Both tendency paths are recorded. `snapshot_tags!` and `attribute_tags!`
 ##### bracket the explicit path from `remaining_tendency.jl`, and

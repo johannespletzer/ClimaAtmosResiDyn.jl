@@ -139,8 +139,9 @@ is_water_precip_part_name(name::Symbol) =
 is_water_precip_part_name(name::MatrixFields.FieldName) =
     is_water_precip_part_name(MatrixFields.extract_first(name))
 
-# The same test at compile time, for the tracer loops, whose names are
-# `FieldName`s.
+# The same test at compile time, for the tracer loops and the name filters
+# that run every step, whose names are `FieldName`s. The `Symbol` form above
+# builds strings, which allocates, so the Jacobian update must not call it.
 @generated function _is_water_precip_part_field(
     ::MatrixFields.FieldName{chain},
 ) where {chain}
@@ -431,10 +432,11 @@ water_tag_sedimenting_mass_names(Y) =
     water_precip_part_names(Y)
 
 `Tuple` of the `@name`s, relative to `Y.c`, of the rain and snow parts of the
-water tags in `Y`. Empty without the key.
+water tags in `Y`. Empty without the key. It filters by the compile-time
+predicate, so the Jacobian update can call it every step without allocating.
 """
 water_precip_part_names(Y) =
-    unrolled_filter(is_water_precip_part_name, gs_tracer_names(Y))
+    unrolled_filter(_is_water_precip_part_field, gs_tracer_names(Y))
 
 # One species' flux for the three parts. Rain and snow fall in their own part,
 # linearly: each part is moved by the parent species' own operator, as if it
@@ -484,10 +486,11 @@ species, `ρq_rai` or `ρq_sno`, value for value. Each part falls by the
 species' own linear operator, so its block is the species' block. The parts
 take nothing else implicitly that has a block, and no other row names them, so
 the split solver solves each apart. Called at the end of the sedimentation
-update, after the species' blocks are set. The parts are found in the state,
-so this is a no-op without them.
+update, after the species' blocks are set. The parts are found in the state.
+A no-op without the key, which the model's type decides at compile time.
 """
 function update_water_precip_part_sedimentation_jacobian!(matrix, Y, p)
+    has_water_tag_precipitation(p.atmos.water_tagging_model) || return nothing
     part_names = water_precip_part_names(Y)
     isempty(part_names) && return nothing
     ∂ᶜρq_rai_err_∂ᶜρq_rai = matrix[@name(c.ρq_rai), @name(c.ρq_rai)]
@@ -568,9 +571,11 @@ over `Δt`, and the net tendencies of rain and snow, `dq_rai_dt` and
 `dq_sno_dt`.
 
 It repeats `BMT.bulk_microphysics_tendencies(BMT.LinearizedAverage(), ...)` of
-CloudMicrophysics 0.40, substep for substep, with the same arithmetic. Each
-substep solves the linearized system `(q* - q)/Δt = M q* + e`. A sink is linear
-in its donor, `D q_donor*`, so each process's transfer over the substep is its
+CloudMicrophysics 0.39 and 0.40, substep for substep, with the same arithmetic.
+The two versions differ only in `_linearize`, and the flows call the one the
+model's version has (`_water_tag_linearize`). Each substep solves the
+linearized system `(q* - q)/Δt = M q* + e`. A sink is linear in its donor,
+`D q_donor*`, so each process's transfer over the substep is its
 coefficient times the solved donor. The transfers that cross between
 compartments are summed into the six flows. Transfers inside `N`, such as
 condensation or ice melt, do not move a tag's water between its parts, so they
@@ -647,13 +652,25 @@ the gross flows. Each flow is later attributed with its donor's composition
     )
 end
 
-# One substep of `BMT._linearized_implicit_step`, CloudMicrophysics 0.40, line
-# for line, and the flows it implies. The rain row of the solved system is
-# `(q_rai* - q_rai)/Δt = M31 q_lcl* + M33 q_rai* + M34 q_sno*`, and the snow row
-# `M41 q_lcl* + M42 q_icl* + M43 q_rai* + M44 q_sno* + α e4`. `M31` holds the
-# transfers from cloud liquid into rain, `M41` and `M42` those from cloud
-# liquid and ice into snow, `α e4` vapour deposition on snow, `M43` rain's
-# transfers into snow and `M34` snow's into rain. What rain loses beyond
+# CloudMicrophysics 0.40 passes the substep to `_linearize`, to integrate the
+# vapour relaxation over it. CloudMicrophysics 0.39 does not. The model's step
+# calls the method its version has, so the flows call the same one. The choice
+# is made once, when the package is compiled.
+@static if hasmethod(BMT._linearize, NTuple{7, Any})
+    @inline _water_tag_linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt) =
+        BMT._linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt)
+else
+    @inline _water_tag_linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt) =
+        BMT._linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min)
+end
+
+# One substep of `BMT._linearized_implicit_step`, CloudMicrophysics 0.39 and
+# 0.40, line for line, and the flows it implies. The rain row of the solved
+# system is `(q_rai* - q_rai)/Δt = M31 q_lcl* + M33 q_rai* + M34 q_sno*`, and
+# the snow row `M41 q_lcl* + M42 q_icl* + M43 q_rai* + M44 q_sno* + α e4`.
+# `M31` holds the transfers from cloud liquid into rain, `M41` and `M42` those
+# from cloud liquid and ice into snow, `α e4` vapour deposition on snow, `M43`
+# rain's transfers into snow and `M34` snow's into rain. What rain loses beyond
 # `M43` is evaporation, `-(M33 + M43)`, and what snow loses beyond `M34` is
 # sublimation, `-(M44 + M34)`.
 @inline function _water_tag_1m_substep(
@@ -682,7 +699,7 @@ end
         q_sno,
     )
     q_min = BMT.TDI.TD.Parameters.q_min(tps)
-    lin = BMT._linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt)
+    lin = _water_tag_linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt)
 
     invΔt = one(FT) / Δt
 
@@ -1319,7 +1336,17 @@ function _rescale_water_tag_parts!(Y, p, ᶜρq_tot_before, model, ::Val{total})
     (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count) = p.tagging
     (; ᶜwater_pos, ᶜwater_pos_2, ᶜwater_shift) = p.tagging
     (; ᶜwater_rai_before, ᶜwater_sno_before) = p.tagging
-    ledger = tag_ledger(ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count)
+    # Each tag's own ledger, where kept, takes the rescale of its
+    # non-precipitating part, as `q_tag_fix_<name>` does. The moves between a
+    # tag's parts leave it alone. Only the rescale adds to the ledgers per
+    # mechanism, and `_rescale_water_tags!` brackets it, so there is no bracket
+    # here.
+    ledger = tag_ledger(
+        ᶜwater_fix,
+        ᶜwater_fix_gross,
+        ᶜwater_fix_count,
+        water_tag_fix_ledger_view(Y, model),
+    )
     ᶜY = Y.c
     # The non-precipitating compartment before each step, for the source
     # tags' shares.
