@@ -597,26 +597,9 @@ partition under 0-moment too, wherever that profile varies along a model level.
 partition. It does not read the tags, so it leaves out the path's transport of
 a residual already there.
 
-**The correction of the EDMF vertical diffusion's leak**
-(`water_tag_leak_correction: true`, WP4c). Each tag takes back the diffusion of
-its own share of the rain and snow,
-``\nabla\cdot(\rho K_h \nabla(\psi_i\, q_\mathrm{p}))`` with
-``q_\mathrm{p} = q_\mathrm{rai} + q_\mathrm{sno}``, where ``\psi_i`` is the
-share the sedimentation takes the tag's rain and snow by. The partition's
-shares sum to one wherever it holds water, so its diffusion is then the
-parent's, and the leak is charged to the tags whose water leaked. Without the
-correction, under `water_tag_transport: increment`, the follower absorbs the
-leak and spreads it by the shares of the cells its flux leaves. With copies
-each copy takes its tag's correction per unit mass, as it takes its tag's
-diffusion, so the copies no longer leak on that path either. It covers the EDMF
-vertical diffusive flux and its updrafts' mirror, the two paths the
-experiments' gate retained. The other paths are not corrected, and the key is
-refused with `vert_diff`, whose diffusion leaks the same way. It has no
-Jacobian block, so with one Newton iteration it is taken at the stage's first
-guess. Its ledgers are `q_tag_led_leaknet` and, with copies,
-`q_tag_led_upleaknet`, and under `water_tag_ledger_per_tag: true` each tag's
-`q_tag_led_leak_<name>` and `q_tag_led_upleak_<name>`. The model's fields do
-not change. See `correct_water_tag_diffusion_leak!`.
+`water_tag_leak_correction: true` corrects two of these paths, the EDMF
+vertical diffusive flux and its updrafts' mirror; see
+[The EDMF diffusion leak correction](@ref).
 
 It is not the *only* contributor, though. Any tendency that writes
 ``\rho q_\mathrm{tot}`` by name without an attribution bracket and without a
@@ -632,6 +615,43 @@ production, loss, transport and the limiter rescale implies
 indicates a bug rather than expected leakage.
 `config/model_configs/baroclinic_wave_tagged_water.yml` and the integration test use
 this identity.
+
+### The EDMF diffusion leak correction
+
+`water_tag_leak_correction: true` (WP4c) corrects the leak of the EDMF vertical
+diffusive flux and of its updrafts' mirror, the two paths the experiments' gate
+retained. Each tag takes back the diffusion of its own share of the rain and
+snow, ``\nabla\cdot(\rho K_h \nabla(\psi_i\, q_\mathrm{p}))`` with
+``q_\mathrm{p} = q_\mathrm{rai} + q_\mathrm{sno}``, where ``\psi_i`` is the
+share the sedimentation takes the tag's rain and snow by. The partition's
+shares sum to one wherever it holds water, so its diffusion is then the
+parent's. Without the correction, under `water_tag_transport: increment`, the
+follower absorbs the leak and spreads it by the shares of the cells its flux
+leaves. With copies each copy takes its tag's correction per unit mass, as it
+takes its tag's diffusion, so the copies no longer leak on that path either.
+The other paths are not corrected, and the key is refused with `vert_diff`,
+whose diffusion leaks the same way. It has no Jacobian block, so with one
+Newton iteration it is taken at the stage's first guess. Its ledgers are
+`q_tag_led_leaknet` and, with copies, `q_tag_led_upleaknet`, and under
+`water_tag_ledger_per_tag: true` each tag's `q_tag_led_leak_<name>` and
+`q_tag_led_upleak_<name>`. The model's fields do not change. See
+`correct_water_tag_diffusion_leak!`.
+
+  - **Each tag's share of the rain and snow is an assumption.** The tags
+    partition total water and hold no phase of their own, so the model does
+    not know whose water the rain and snow are. The correction takes them to
+    have the cell's total-water composition, ``\psi_i\, q_\mathrm{p}``, as
+    the sedimentation mirror does (see "Phases are well mixed within a
+    cell"). That is a modeling assumption, not demonstrated provenance. It
+    closes the partition's diffusion. It does not show that the tags it
+    charges are the ones whose water leaked. Where the composition changes
+    sharply, or the phases change fast, it may charge the wrong tags.
+
+  - **Where the partition holds no water, the leak is left.** The shares are
+    zero there, and so is the correction. The same holds where the parent's
+    water is not positive, since the shares are taken against it. That part
+    of the leak stays in `q_tag_res`, or under the follower in
+    `q_tag_inc_moved`, as without the correction.
 
 ## Scope
 
@@ -688,8 +708,9 @@ its records are not transported.
 
 Exact closure establishes internally consistent contribution accounting; it does
 not turn the tags into counterfactual sensitivities. The donor-fraction loss
-rule, the well-mixed-phases assumption behind `qv_tag`, and the limiter rescale
-policy are modeling choices, and conclusions are conditional on them.
+rule, the well-mixed-phases assumption behind `qv_tag`, the sedimentation
+mirror and the leak correction, and the limiter rescale policy are modeling
+choices, and conclusions are conditional on them.
 
 See `config/model_configs/baroclinic_wave_tagged_water.yml` for a complete example,
 and `test/tagged_water_integration.jl` for the closure assertions.

@@ -213,10 +213,11 @@ _has_water_tag_copies(p, turbconv_model) = false
 ##### the grid mean's `vdiff` and the updrafts' `diffusion_up`. Each gives the
 ##### tags back the diffusion of the rain and snow, which the parent does not
 ##### diffuse. Each tag takes back the diffusion of its own share of the rain
-##### and snow, the share the sedimentation takes it by, so the leak is charged
-##### to the tags whose water leaked. Without the correction the follower
-##### absorbs the leak and spreads it by the shares of the cells its flux
-##### leaves. design/WP4C_CORRECTIONS.md on the record branch.
+##### and snow, the share the sedimentation takes it by. That share is a
+##### modeling assumption: the rain and snow take the cell's total-water
+##### composition. Without the correction the follower absorbs the leak and
+##### spreads it by the shares of the cells its flux leaves.
+##### design/WP4C_CORRECTIONS.md on the record branch.
 
 """
     correct_water_tag_diffusion_leak!(Yₜ, Y, p, ᶠρK_h, apply_sgs_updraft)
@@ -230,13 +231,17 @@ does not, the leak `q_tag_leak_vdiff`.
 
 `ψᵢ` is the share the sedimentation mirror takes a tag's rain and snow by: a
 partition tag's clamped share renormalized over the partition, a source tag's
-own clamped share. The partition's shares sum to one wherever it holds water, so
-the partition's corrections sum to `∇·(ρK_h ∇q_p)`, the leak with the opposite
-sign, and its diffusion is the parent's. Where the partition holds no water the
-shares are zero and the leak there is not corrected. It lands in `q_tag_res`, or
-under the follower in `q_tag_inc_moved`, as before. A source tag's correction
-takes back its own share, so its diffusion moves only the water that the parent
-diffuses too.
+own clamped share. `ψᵢ q_p` is a modeling assumption. The tags partition total
+water and hold no phase, so the rain and snow are taken to have the cell's
+total-water composition. That is not demonstrated provenance. The partition's
+shares sum to one wherever it holds water, so the partition's corrections sum to
+`∇·(ρK_h ∇q_p)`, the leak with the opposite sign, and its diffusion is the
+parent's. Where the partition holds no water, the shares are zero and the leak
+there is not corrected. The same holds where the parent's water is not
+positive, since the shares are taken against it. That leak lands in
+`q_tag_res`, or under the follower in `q_tag_inc_moved`, as before. A source
+tag's correction takes back its own share, so its diffusion moves only the water
+that the parent diffuses too.
 
 With `apply_sgs_updraft`, the updrafts' mirror of the diffusion is on, and with
 updraft copies each copy takes its tag's correction per unit mass, `/ρ`, as it
