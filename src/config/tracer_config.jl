@@ -1437,17 +1437,19 @@ sediments (`microphysics_model: 1M`, `2M` or `2MP3`) stepped explicitly
 the configuration runs, and the model warns.
 
 In the implicit Jacobian the parent's `ρe_tot` row has a cross block from each
-sedimenting species, for the energy the falling water carries. The tags' rows
-do not. So with one Newton iteration the tags miss part of the parent's
-sedimentation update. The correction after each solve cannot move the part
-that changes a column's total, and that part stays in `e_src_res`. On the
+sedimenting species, for the energy the falling water carries. Without the
+tags' own blocks, one Newton iteration leaves the tags short of part of the
+parent's sedimentation update. The correction after each solve cannot move the
+part that changes a column's total, and that part stays in `e_src_res`. On the
 tag-closure experiments' DYCOMS RF02 column (prognostic EDMF, 1M, an hour)
 the closure residual was 2.1e-4 of the partitioned energy with the
 microphysics explicit, 1.5e-6 with it implicit, and 4.9e-12 with ten Newton
-iterations (FINDINGS E80 on the record branch). 2M and P3 sediment too, and
-nothing has measured them, so they are refused until a run does. The water
-tags lag in the same way under 1M. PR #105 proposes the analogous cross
-blocks for them, and PR #113 the energy tags' own.
+iterations (FINDINGS E80 on the record branch). With the split solver the
+tags' rows now carry their face shares of those blocks, as the water tags'
+rows do. With the microphysics implicit, that brings this column's residual to
+rounding. The explicit case has not been measured with the blocks, so it stays
+refused until a run does, for 1M first. 2M and P3 sediment too, and nothing
+has measured them either.
 
 The check concerns only the tags' own keys. Without the tags, with another
 transport, with 0M, or with the microphysics implicit, it does nothing.

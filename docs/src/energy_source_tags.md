@@ -618,19 +618,21 @@ With microphysics that sediments (`microphysics_model` 1M, 2M or 2MP3) stepped
 explicitly (`implicit_microphysics: false`) the mode is refused as well, unless
 `energy_source_tag_increment_allow_explicit_microphysics: true`. In the implicit Jacobian
 the parent's `ρe_tot` row has a cross block from each sedimenting species, for
-the energy the falling water carries. The tags' rows do not. So with one Newton
-iteration the tags miss part of the parent's sedimentation update. The
-correction cannot move the part that changes a column's total, and that part
-lands in `e_src_res`. On the tag-closure experiments' DYCOMS RF02 EDMF column,
-with one Newton iteration, the closure residual after an hour was 2.1e-4 of
-the partitioned energy with the microphysics explicit and 1.5e-6 with it
-implicit. With ten iterations it was 4.9e-12. 2M and P3 sediment too, and no
-run has measured them, so they are refused until one does. The water tags lag
-in the same way under 1M. PR #105 proposes the analogous cross blocks for
-them, and PR #113 the energy tags' own. Until the energy tags carry them, the
-key is an override for development runs, and the model warns when it is
-used. The refusal concerns only the tags' keys. Without the tags, or
-with another transport, the configuration runs as before.
+the energy the falling water carries. Without the tags' own blocks, one Newton
+iteration leaves the tags short of part of the parent's sedimentation update.
+The correction cannot move the part that changes a column's total, and that
+part lands in `e_src_res`. On the tag-closure experiments' DYCOMS RF02 EDMF
+column, with one Newton iteration, the closure residual after an hour was
+2.1e-4 of the partitioned energy with the microphysics explicit and 1.5e-6 with
+it implicit. With ten iterations it was 4.9e-12. With the split solver the
+tags' rows now carry their face shares of those blocks, as the water tags'
+rows do (see the sedimentation cross blocks above). With the microphysics
+implicit, that brings this column's residual to rounding. The explicit case
+has not been measured with the blocks, so it stays refused until a run does,
+for 1M first. 2M and P3 sediment too, and no run has measured them either.
+Until then the key is an override for development runs, and the model warns
+when it is used. The refusal concerns only the tags' keys. Without the tags,
+or with another transport, the configuration runs as before.
 
 ```yaml
 energy_source_tag_transport: enthalpy_increment
