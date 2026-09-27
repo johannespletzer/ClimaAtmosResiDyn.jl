@@ -2354,6 +2354,80 @@ end
     @test parse(Float64, values[10]) == 0.5
     @test parse(Float64, values[13]) == 2e5
     @test last(values) == "0"
+
+    # With the ledgers per tag, the partition's flag, the throughput and the
+    # ratio follow the headroom, in the order `energy_source_closure_columns`
+    # returns them, and `closure_void` stays last (the review of #120).
+    ledger_dir = mktempdir()
+    CA.write_tag_closure!(
+        ledger_dir,
+        0.0,
+        "energy_source",
+        closure;
+        reference = Ref{Any}(0.5),
+        extra = (;
+            headroom_min = 2e5,
+            headroom_min_z = 875.0,
+            source_partition_valid = 0,
+            source_throughput = NaN,
+            gross_over_throughput = NaN,
+        ),
+        closure_void = true,
+    )
+    rows = readlines(CA.tag_closure_path(ledger_dir, "energy_source"))
+    @test endswith(
+        rows[1],
+        ",relative_since_spin_up,headroom_min,headroom_min_z," *
+        "source_partition_valid,source_throughput,gross_over_throughput," *
+        "closure_void",
+    )
+    values = split(rows[2], ",")
+    @test length(values) == 18
+    @test parse(Float64, values[10]) == 0.5
+    @test parse(Float64, values[13]) == 2e5
+    @test values[15] == "0"
+    @test isnan(parse(Float64, values[16]))
+    @test last(values) == "1"
+
+    # The audit table: the forecast's flag ends the report's columns, and
+    # `closure_void` stays last there too.
+    audit = NamedTuple{(
+        :untagged,
+        :untagged_relative,
+        :overclaimed,
+        :overclaimed_relative,
+        :orphaned,
+        :orphaned_relative,
+        :orphaned_volume_fraction,
+        :nonpositive_mass,
+        :nonpositive_mass_fraction,
+    )}(
+        ntuple(_ -> 0.0, 9),
+    )
+    audit_dir = mktempdir()
+    CA.write_tag_audit!(
+        audit_dir,
+        0.0,
+        "energy_source",
+        audit;
+        extra = (;
+            source_partition_valid = 1,
+            source_throughput = 10.0,
+            flush_gross = 4.0,
+            flush_rate = 0.5,
+            production_rate = -2.0,
+            settling_level = NaN,
+            settling_ratio = NaN,
+            forecast_defined = 0,
+        ),
+        closure_void = false,
+    )
+    rows = readlines(CA.tag_audit_path(audit_dir, "energy_source"))
+    @test endswith(rows[1], ",settling_ratio,forecast_defined,closure_void")
+    values = split(rows[2], ",")
+    @test length(values) == 19
+    @test values[end - 1] == "0"
+    @test last(values) == "0"
 end
 
 # The review of #120, finding 2: the throughput and the flush count each source
@@ -2442,6 +2516,15 @@ end
             ledgers.e_src_led_src_res.ᶜgross .= 5.0
             second_row =
                 CA.energy_source_residual_report(Y, p, model, closure, 86400.0, previous)
+            # The forecast's columns close the report, the flag last.
+            @test keys(second_row)[(end - 5):end] == (
+                :flush_gross,
+                :flush_rate,
+                :production_rate,
+                :settling_level,
+                :settling_ratio,
+                :forecast_defined,
+            )
             if valid
                 @test columns.source_throughput == 10 * length(region_names)
                 @test columns.gross_over_throughput ≈ 5 / 20
@@ -2703,6 +2786,9 @@ end
     @test audit.ledger_parent_scale == parent_scale
     @test audit.source_partition_valid == 1
     @test audit.source_throughput == parent_scale
+    # The flag goes just before the throughput it qualifies.
+    flag = findfirst(==(:source_partition_valid), keys(audit))
+    @test keys(audit)[flag + 1] == :source_throughput
     # Without a verified partition the throughput is not written, and the
     # ledgers keep the partition's gross as their scale.
     gap = merge(

@@ -387,6 +387,26 @@ settling level and its ratio are `NaN`. `forecast_defined` is 1 where the
 settling level is a number and 0 elsewhere. The flush rate is not constant, so
 the settling level is an order of magnitude, not a prediction.
 
+The family's own columns, in the order the tables write them. In the closure
+table they follow the spin-up columns; in the audit table, the common columns
+and the family's audit. Where the check has a void level, `closure_void` stays
+last in both.
+
+| column                                                                               | table          | written with                   | `NaN` where                                                                        |
+|:------------------------------------------------------------------------------------ |:-------------- |:------------------------------ |:---------------------------------------------------------------------------------- |
+| `headroom_min`, `headroom_min_z`                                                     | closure        | always                         | never                                                                              |
+| `source_partition_valid`                                                             | closure, audit | ledgers per tag                | never; 1 or 0                                                                      |
+| `source_throughput`                                                                  | closure, audit | ledgers per tag                | no verified partition                                                              |
+| `gross_over_throughput`                                                              | closure        | ledgers per tag                | no verified partition; zero throughput                                             |
+| `residual_max`                                                                       | audit          | `audit: true`                  | never                                                                              |
+| `residual_max_z`, `residual_peak_level`, `residual_peak_fraction`, `residual_peak_z` | audit          | `audit: true`                  | a residual zero everywhere                                                         |
+| `overlay_negative_mass_fraction`, `overlay_excess`, `overlay_excess_mass_fraction`   | audit          | `audit: true`                  | no source tag                                                                      |
+| `flush_gross`                                                                        | audit          | `audit: true`, ledgers per tag | no verified partition                                                              |
+| `flush_rate`                                                                         | audit          | `audit: true`, ledgers per tag | first row; no verified partition; an empty interval, a zero mean gross or no flush |
+| `production_rate`                                                                    | audit          | `audit: true`, ledgers per tag | first row; no verified partition; an empty interval                                |
+| `settling_level`, `settling_ratio`                                                   | audit          | `audit: true`, ledgers per tag | where `forecast_defined` is 0; the ratio also where the gross is zero              |
+| `forecast_defined`                                                                   | audit          | `audit: true`, ledgers per tag | never; 1 or 0                                                                      |
+
 None of these is a verdict. They say where to look.
 
 ### Checking per process
