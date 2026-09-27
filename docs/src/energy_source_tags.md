@@ -140,8 +140,9 @@ every evaluation of the tendency. A tag's composition in an updraft is taken as
 that of the cell the flux leaves. The flux moves the energy convection carries,
 but it does not mix provenance the way it mixes the air. It runs in the
 implicit tendency beside the parent's flux. The parent's flux has Jacobian
-blocks and the tags' has none, as in sedimentation. So within a step the tags
-lag the parent's implicit flux slightly, and that gap lands in `e_src_res`.
+blocks and the tags' has none, unlike sedimentation under the manual
+Jacobian. So within a step the tags lag the parent's implicit flux slightly,
+and that gap lands in `e_src_res`.
 
 ### The updraft's mixing of provenance
 
@@ -651,7 +652,7 @@ implicit_microphysics: false
 ```
 
 ```yaml
-# Refused without the key: 2M stepped explicitly has not been measured.
+# 2M stepped explicitly has not been measured, so it needs the key.
 energy_source_tag_transport: enthalpy_increment
 microphysics_model: 2M
 implicit_microphysics: false
