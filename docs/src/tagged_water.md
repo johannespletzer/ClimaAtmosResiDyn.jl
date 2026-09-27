@@ -631,10 +631,9 @@ follower absorbs the leak and spreads it by the shares of the cells its flux
 leaves. With copies each copy takes its tag's correction per unit mass, as it
 takes its tag's diffusion, so the copies no longer leak on that path either.
 The other paths are not corrected, and the key is refused with `vert_diff`,
-whose diffusion leaks the same way. It has no Jacobian block, so with one
-Newton iteration it is taken at the stage's first guess. Its ledgers are
-`q_tag_led_leaknet` and, with copies, `q_tag_led_upleaknet`, and under
-`water_tag_ledger_per_tag: true` each tag's `q_tag_led_leak_<name>` and
+whose diffusion leaks the same way. It has no Jacobian block (see below). Its
+ledgers are `q_tag_led_leaknet` and, with copies, `q_tag_led_upleaknet`, and
+under `water_tag_ledger_per_tag: true` each tag's `q_tag_led_leak_<name>` and
 `q_tag_led_upleak_<name>`. The model's fields do not change. See
 `correct_water_tag_diffusion_leak!`.
 
@@ -653,6 +652,16 @@ Newton iteration it is taken at the stage's first guess. Its ledgers are
     water is not positive, since the shares are taken against it. That part
     of the leak stays in `q_tag_res`, or under the follower in
     `q_tag_inc_moved`, as without the correction.
+
+  - **It has no Jacobian block.** The correction is written in the implicit
+    tendency, after the tracer loop of `edmfx_sgs_diffusive_flux_tendency!`,
+    where the tags' diffusion is. But the manual Jacobian has no block for
+    it, so the Newton solve does not see it. Each iteration evaluates it
+    again, at that iteration's state. With one iteration it is taken at the
+    stage's first guess, and under the follower the follower moves what then
+    differs from the parent's increment. How much the results depend on `dt`
+    and on the number of iterations is not measured. A sweep over `dt` of
+    30, 60 and 120 s and one to three iterations is a follow-up.
 
   - **Its validation failed two criteria.** It was pre-registered on the
     record branch (`design/WP4C_CORRECTIONS.md`, section 8) and ran on the

@@ -250,8 +250,11 @@ and their repair no longer takes out the `diffusion_up` leak.
 
 `ᶠρK_h` is the face field `ρK_h` the parent's water diffusion uses. Called from
 `edmfx_sgs_diffusive_flux_tendency!` after its tracer loop, so it is implicit
-where the diffusion is. It has no Jacobian block, so with one Newton iteration
-it is taken at the stage's first guess, and under `water_tag_transport: increment` the follower moves what differs.
+where the diffusion is. It has no Jacobian block, so the Newton solve does not
+see it. Each iteration evaluates it again, at that iteration's state. With one
+iteration it is taken at the stage's first guess, and under
+`water_tag_transport: increment` the follower moves what differs. How much the
+results depend on `dt` and on the number of iterations is not measured.
 
 Each correction is added to its ledgers: `q_tag_led_leaknet`, the partition's
 correction, and with copies `q_tag_led_upleaknet`, the copies' times `ρaʲ`; and
