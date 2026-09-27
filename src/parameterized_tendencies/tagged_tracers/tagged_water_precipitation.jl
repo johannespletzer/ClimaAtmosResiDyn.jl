@@ -120,6 +120,59 @@ water_tag_parent(ᶜY, model) =
     has_water_tag_precipitation(model) ?
     water_tag_part_parent(ᶜY, NonPrecipitatingPart()) : ᶜY.ρq_tot
 
+"""
+    water_tag_part_target(ᶜY, part)
+
+What the partition's `part`s partition, lazily: the non-negative part of their
+compartment, [`water_tag_partition_target`](@ref) of
+[`water_tag_part_parent`](@ref). This is known issue 7's option C, applied per
+compartment. Where the compartment is not negative, it is the compartment
+itself, bit for bit.
+"""
+function water_tag_part_target(ᶜY, part)
+    ᶜparent = water_tag_part_parent(ᶜY, part)
+    return @. lazy(water_tag_partition_target(ᶜparent))
+end
+
+"""
+    water_partition_target(ᶜY, model)
+    water_partition_negative_part(ᶜY, model)
+
+What the region tags partition with all their parts, and the negative remainder
+they leave, lazily (known issue 7, option C). Without `water_tag_precipitation`
+they are `water_tag_partition_target(ρq_tot)` and
+`water_tag_negative_part(ρq_tot)`. With it, option C applies per compartment.
+The remainder is the sum of the three compartments' negative parts, and the
+target the sum of their non-negative parts. The target is written as `ρq_tot`
+less the remainder. So the two add up to `ρq_tot`, to rounding, and where no
+compartment is negative the target is `ρq_tot` itself, bit for bit. The
+closure check and `q_tag_res` compare the partition with the target, and
+`q_tag_negative` reports the remainder.
+"""
+water_partition_target(ᶜY, model) =
+    has_water_tag_precipitation(model) ?
+    _compartments_target(ᶜY) : (@. lazy(water_tag_partition_target(ᶜY.ρq_tot)))
+water_partition_negative_part(ᶜY, model) =
+    has_water_tag_precipitation(model) ?
+    _compartments_negative_part(ᶜY) : (@. lazy(water_tag_negative_part(ᶜY.ρq_tot)))
+
+# The sum of the three compartments' non-negative parts, as `ρq_tot` less the
+# sum of their negative parts, lazily.
+function _compartments_target(ᶜY)
+    ᶜnegative = _compartments_negative_part(ᶜY)
+    return @. lazy(ᶜY.ρq_tot - ᶜnegative)
+end
+
+# The sum of the three compartments' negative parts, lazily.
+function _compartments_negative_part(ᶜY)
+    ᶜnonprecip = water_tag_part_parent(ᶜY, NonPrecipitatingPart())
+    return @. lazy(
+        water_tag_negative_part(ᶜnonprecip) +
+        water_tag_negative_part(ᶜY.ρq_rai) +
+        water_tag_negative_part(ᶜY.ρq_sno),
+    )
+end
+
 # The scratch field that holds the share denominator of each part.
 water_tag_part_norm(scratch, ::NonPrecipitatingPart) =
     scratch.ᶜtagging_q_share_norm
@@ -221,9 +274,11 @@ water_partition_state_names(model::WaterTaggingModel) = (
 The water tags' state for a single grid point. Without the key it is
 `water_tagging_variables(ρq_tot, local_geometry, model)`. With it, each tag's
 non-precipitating part starts from `ρq_tot - ρq_rai - ρq_sno` and its rain and
-snow parts from `ρq_rai` and `ρq_sno`, each times the tag's mask. A tag with a
-`source` starts at zero in every part. The non-precipitating parts come first,
-then the rain parts, then the snow parts.
+snow parts from `ρq_rai` and `ρq_sno`, each times the tag's mask. Each takes
+the non-negative part of its compartment, [`water_tag_partition_target`](@ref),
+as known issue 7's option C does per compartment. A tag with a `source` starts
+at zero in every part. The non-precipitating parts come first, then the rain
+parts, then the snow parts.
 """
 water_tagging_variables(ρq_tot, ρq_rai, ρq_sno, local_geometry, ::Nothing) = (;)
 water_tagging_variables(
@@ -236,19 +291,19 @@ water_tagging_variables(
     has_water_tag_precipitation(model) ?
     (;
         _tag_variables(
-            ρq_tot - ρq_rai - ρq_sno,
+            water_tag_partition_target(ρq_tot - ρq_rai - ρq_sno),
             local_geometry.coordinates,
             model.tags,
         )...,
         _part_variables(
             rain_tag_entry,
-            ρq_rai,
+            water_tag_partition_target(ρq_rai),
             local_geometry.coordinates,
             model.tags,
         )...,
         _part_variables(
             snow_tag_entry,
-            ρq_sno,
+            water_tag_partition_target(ρq_sno),
             local_geometry.coordinates,
             model.tags,
         )...,
@@ -288,21 +343,26 @@ end
 """
     rebuild_water_tags_from_state!(ᶜY, ᶜcoord, model)
 
-Set the water tags from the state `ᶜY` holds, by the rule that built them. Under
-`water_tag_precipitation: true` each part takes its masked share of its
-compartment. Called by `rebuild_tags_from_state!`.
+Set the water tags from the state `ᶜY` holds, by the rule that built them. A
+tag takes its masked share of the non-negative part of `ρq_tot`
+([`water_tag_partition_target`](@ref)). Under `water_tag_precipitation: true`
+each part takes its masked share of the non-negative part of its compartment
+([`water_tag_part_target`](@ref)). Called by `rebuild_tags_from_state!`.
 """
 rebuild_water_tags_from_state!(ᶜY, ᶜcoord, ::Nothing) = nothing
 function rebuild_water_tags_from_state!(ᶜY, ᶜcoord, model::WaterTaggingModel)
+    ᶜparent = water_tag_parent(ᶜY, model)
     _rebuild_tag_fields!(
         ᶜY,
         ᶜcoord,
-        water_tag_parent(ᶜY, model),
+        (@. lazy(water_tag_partition_target(ᶜparent))),
         model.tags,
     )
     has_water_tag_precipitation(model) || return nothing
-    _rebuild_part_fields!(ᶜY, ᶜcoord, ᶜY.ρq_rai, model.tags, RainPart())
-    _rebuild_part_fields!(ᶜY, ᶜcoord, ᶜY.ρq_sno, model.tags, SnowPart())
+    for part in (RainPart(), SnowPart())
+        ᶜtarget = water_tag_part_target(ᶜY, part)
+        _rebuild_part_fields!(ᶜY, ᶜcoord, ᶜtarget, model.tags, part)
+    end
     return nothing
 end
 _rebuild_part_fields!(ᶜY, ᶜcoord, ᶜparent, ::Tuple{}, part) = nothing
@@ -1283,6 +1343,12 @@ design note's section 8:
   - where the compartment is clipped to zero, or is not positive, the part is
     emptied into the non-precipitating part.
 
+`Δ` is the change of the compartment's non-negative part,
+[`water_tag_partition_target`](@ref), which the parts partition (known issue
+7, option C, per compartment). So a compartment that was negative gives its
+parts only the water it now holds. Where `before` is not negative, `Δ` is
+`after - before`, bit for bit.
+
 What the floors leave out surfaces in the compartment's residual.
 """
 @inline function water_tag_part_follow_shift(
@@ -1294,7 +1360,8 @@ What the floors leave out surfaces in the compartment's residual.
     pos_nonprecip,
 )
     after > zero(after) || return -ρq_part
-    Δ = after - before
+    # `after` is positive here, so it is its own non-negative part.
+    Δ = after - water_tag_partition_target(before)
     if Δ < zero(Δ)
         pos_part > zero(pos_part) || return zero(ρq_part)
         return max(Δ, -pos_part) * max(ρq_part, zero(ρq_part)) / pos_part
@@ -1310,7 +1377,8 @@ end
 
 The same for a *source* tag, with its own clamped shares of each compartment,
 unnormalized, as `water_tag_source_rescale_shift` takes them.
-`nonprecip_before` is the non-precipitating compartment before the change.
+`nonprecip_before` is the non-precipitating compartment before the change. `Δ`
+is again the change of the compartment's non-negative part.
 """
 @inline function water_tag_source_part_follow_shift(
     ρq_part,
@@ -1320,7 +1388,7 @@ unnormalized, as `water_tag_source_rescale_shift` takes them.
     nonprecip_before,
 )
     after > zero(after) || return -ρq_part
-    Δ = after - before
+    Δ = after - water_tag_partition_target(before)
     Δ < zero(Δ) && return Δ * water_tag_fraction(ρq_part, before)
     return min(Δ, max(nonprecip_before, zero(nonprecip_before))) *
            water_tag_fraction(ρq_nonprecip, nonprecip_before)

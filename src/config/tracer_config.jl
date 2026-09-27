@@ -472,19 +472,22 @@ Name prefixes that a `water_tracers` tag may not take. A tag's diagnostic is
 and constraints, so a tag named `fix_a` would take the name of tag `a`'s
 ledger, and the first registered diagnostic would win silently. `upfix_` is
 held for the updraft copies' repair ledger, which collides the same way.
-`inc_` is held for an increment follower's ledgers, `q_tag_inc_left` and
-`q_tag_inc_moved`. `rtag_` and `stag_` were held for the rain and snow parts,
-before their names were fixed, and stay refused. `fixgross_`, `fixcount_`,
-`upfixgross_` and `upfixcount_` start the ledgers' gross twins and counts, and
-`led_` the ledgers per mechanism, `q_tag_led_rescale` and the others. `aud_`
-starts the microphysics audit's records `q_rtag_aud_<name>` and
-`q_stag_aud_<name>`, which a rain part `q_rtag_<name>` of a tag named
-`aud_<name>` would collide with.
+`inc_` is held for an increment follower's ledgers, `q_tag_inc_left`,
+`q_tag_inc_moved` and `q_tag_inc_negative`. `negative` is held for
+`q_tag_negative`, the parent's negative water the partition leaves. `rtag_`
+and `stag_` were held for the rain and snow parts, before their names were
+fixed, and stay refused. `fixgross_`, `fixcount_`, `upfixgross_` and
+`upfixcount_` start the ledgers' gross twins and counts, and `led_` the
+ledgers per mechanism, `q_tag_led_rescale` and the others. `aud_` starts the
+microphysics audit's records `q_rtag_aud_<name>` and `q_stag_aud_<name>`,
+which a rain part `q_rtag_<name>` of a tag named `aud_<name>` would collide
+with.
 """
 const RESERVED_WATER_TAG_PREFIXES = (
     "fix_",
     "upfix_",
     "inc_",
+    "negative",
     "rtag_",
     "stag_",
     "fixgross_",

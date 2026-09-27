@@ -803,9 +803,11 @@ function nonpositive_parent_note(family)
         non-negative: `tracer_nonnegativity_method` is off unless configured, \
         and transport alone can take a cell below zero. Those cells have their \
         tags emptied by `rescale_water_tags!` whenever a constraint clips the \
-        parent, so the water they held surfaces in the residual. A large \
-        fraction is worth investigating as a sign that the run is under-resolved \
-        or the timestep too long."
+        parent. The partition's target is the parent's non-negative water, \
+        so where the parent is negative the tags aim at zero and the negative \
+        water is reported apart, as `q_tag_negative` (known issue 7, option \
+        C). A large fraction is worth investigating as a sign that the run is \
+        under-resolved or the timestep too long."
     return "This family applies the whole signed increment by mask and uses \
         no donor share, so its attribution is unaffected. It does mean the \
         closure denominator is degenerate where this happens."
@@ -1023,8 +1025,9 @@ never touched.
 function rebuild_tags_from_state!(Y, atmos)
     ᶜcoord = Fields.coordinate_field(Y.c)
     _rebuild_tags_of_family!(Y.c, ᶜcoord, Y.c.ρe_tot, atmos.tagging_model)
-    # Each water tag's parts take their masked share of their compartments,
-    # the whole of `ρq_tot` without `water_tag_precipitation`.
+    # Each water tag's parts take their masked share of their compartments'
+    # non-negative parts (known issue 7, option C). Without
+    # `water_tag_precipitation` that is the whole of `max(ρq_tot, 0)`.
     hasproperty(Y.c, :ρq_tot) && rebuild_water_tags_from_state!(
         Y.c,
         ᶜcoord,

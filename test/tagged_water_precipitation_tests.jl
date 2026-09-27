@@ -19,8 +19,12 @@ What is tested here, without a simulation:
     change keep every part non-negative and each compartment summing to its
     parent (section 8), and the repair per compartment, also with a ledger
     per tag (`water_tag_ledger_per_tag: true`);
- 6. the sedimentation and its Jacobian on a small column (sections 5 and 7);
- 7. the restart guard (section 11).
+ 6. known issue 7's option C per compartment, where each compartment's parts
+    partition its non-negative part: the initial state and the rebuild, the
+    limiters, the residual diagnostics and the increment follower, each also
+    bit for bit as without option C where no compartment is negative;
+ 7. the sedimentation and its Jacobian on a small column (sections 5 and 7);
+ 8. the restart guard (section 11).
 
 `test/tagged_water_precipitation_integration.jl` runs the key in a model.
 =#
@@ -1099,6 +1103,722 @@ nonprecip_parent(ᶜY) = ᶜY.ρq_tot .- ᶜY.ρq_rai .- ᶜY.ρq_sno
         @test minimum(ᶜY.ρq_rtag_low) >= 0
         @test partition_sum(ᶜY, :ρq_rtag_) ≈ rain_sum rtol = 8 * eps(FT)
         @test ᶜY.q_tag_led_repair[5] > 0
+    end
+end
+
+# Known issue 7, option C, per compartment: each compartment's parts partition
+# its non-negative part, and the negative remainder is the sum of the three
+# compartments' negative parts.
+@testset "Option C per compartment" begin
+    for FT in (Float32, Float64)
+        tags = precipitation_tags(FT)
+        model = CA.WaterTaggingModel(tags; precipitation = true)
+        plain = CA.WaterTaggingModel(tags)
+
+        # The initial state. A negative rain compartment gives its parts
+        # nothing, and the other parts take their compartments whole.
+        (ρq_tot, ρq_rai, ρq_sno) = (FT(0.012), FT(-1e-5), FT(1e-4))
+        local_geometry = (; coordinates = (; z = FT(700)))
+        state = CA.water_tagging_variables(
+            ρq_tot,
+            ρq_rai,
+            ρq_sno,
+            local_geometry,
+            model,
+        )
+        @test iszero(state.ρq_rtag_low) && iszero(state.ρq_rtag_high)
+        @test state.ρq_tag_low + state.ρq_tag_high ≈ ρq_tot - ρq_rai - ρq_sno rtol =
+            4 * eps(FT)
+        @test state.ρq_stag_low + state.ρq_stag_high ≈ ρq_sno rtol = 4 * eps(FT)
+
+        # The targets and the remainder. The compartments' water is
+        # `N = [3, 2, -1]`, rain `[1, -1, 0]` and snow `[-1, 0, 0]`.
+        ᶜY = (;
+            ρ = FT[2, 2, 2],
+            ρq_tot = FT[3, 1, -1],
+            ρq_rai = FT[1, -1, 0],
+            ρq_sno = FT[-1, 0, 0],
+        )
+        target = collect(CA.water_partition_target(ᶜY, model) .+ 0)
+        negative = collect(CA.water_partition_negative_part(ᶜY, model) .+ 0)
+        @test target == FT[4, 2, 0]
+        @test negative == FT[-1, -1, -1]
+        @test target .+ negative == ᶜY.ρq_tot
+        @test collect(CA.water_tag_part_target(ᶜY, CA.RainPart()) .+ 0) ==
+              FT[1, 0, 0]
+        # Without the key, the parent's own target and negative part.
+        @test collect(CA.water_partition_target(ᶜY, plain) .+ 0) == FT[3, 1, 0]
+        @test collect(CA.water_partition_negative_part(ᶜY, plain) .+ 0) ==
+              FT[0, 0, -1]
+
+        # The diagnostics, per unit mass. `q_tag_negative` is the sum of the
+        # compartments' negative parts, and each residual is against its
+        # compartment's target.
+        diagnostics = CA.Diagnostics
+        state_c = (; c = ᶜY)
+        @test diagnostics.compute_q_tag_negative!(nothing, state_c, nothing, 0, model) ==
+              FT[-0.5, -0.5, -0.5]
+        @test diagnostics.compute_q_tag_negative!(nothing, state_c, nothing, 0, plain) ==
+              FT[0, 0, -0.5]
+        @test diagnostics.compute_q_tag_res!(nothing, state_c, nothing, 0, (), model) ==
+              FT[2, 1, 0]
+        @test diagnostics.compute_q_tag_part_res!(
+            nothing,
+            state_c,
+            nothing,
+            0,
+            (),
+            CA.NonPrecipitatingPart(),
+        ) == FT[1.5, 1, 0]
+
+        # The limiters' move into a rain part aims at the compartment's
+        # target. Rain that was negative gives its parts only what it now
+        # holds, and rain that was not negative moves as before.
+        @test CA.water_tag_part_follow_shift(
+            FT(0),
+            FT(6),
+            FT(2),
+            FT(-1),
+            FT(0),
+            FT(6),
+        ) == FT(2)
+        @test CA.water_tag_part_follow_shift(
+            FT(0),
+            FT(6),
+            FT(2),
+            FT(1),
+            FT(0),
+            FT(6),
+        ) == FT(1)
+    end
+end
+
+# Under the increment follower the non-precipitating parts follow the target
+# of the non-precipitating water `N`, and its negative part. A solve that takes
+# `N` below zero in a cell where `ρq_tot` stays positive empties that cell's
+# non-precipitating parts, as `ρq_tot` below zero does without the key.
+@testset "Option C per compartment under the increment follower" begin
+    CC = CA.ClimaCore
+    for FT in (Float32, Float64)
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1200,
+            z_elem = 6,
+            staggering,
+        )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜz = CC.Fields.coordinate_field(ᶜspace).z
+        altitude_region(above) = CA.TanhAltitudeRegion(FT(600), FT(100), above)
+        tags = (
+            CA.WaterTag{:low}(altitude_region(false)),
+            CA.WaterTag{:high}(altitude_region(true)),
+        )
+        model = CA.WaterTaggingModel(
+            tags;
+            transport = CA.IncrementWaterTagTransport(),
+            precipitation = true,
+        )
+        ᶜnames = (
+            :ρ,
+            :ρq_tot,
+            :ρq_rai,
+            :ρq_sno,
+            :ρq_tag_low,
+            :ρq_tag_high,
+            :ρq_rtag_low,
+            :ρq_rtag_high,
+            :ρq_stag_low,
+            :ρq_stag_high,
+            :q_tag_inc_left,
+            :q_tag_inc_moved,
+            :q_tag_inc_negative,
+        )
+        state() = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        ᶜbase = @. FT(0.012) - FT(4e-6) * ᶜz
+        (rai, sno) = (FT(2e-3), FT(1e-3))
+        # Each compartment's parts partition its target.
+        function closed!(Y, ᶜρq_tot)
+            fill!(parent(Y.c), 0)
+            fill!(parent(Y.f), 0)
+            @. Y.c.ρ = FT(1.1)
+            Y.c.ρq_tot .= ᶜρq_tot
+            @. Y.c.ρq_rai = rai
+            @. Y.c.ρq_sno = sno
+            ᶜbelow = @. (1 - tanh((ᶜz - 600) / 100)) / 2
+            ᶜtarget = @. CA.water_tag_partition_target(
+                Y.c.ρq_tot - Y.c.ρq_rai - Y.c.ρq_sno,
+            )
+            @. Y.c.ρq_tag_low = ᶜbelow * ᶜtarget
+            @. Y.c.ρq_tag_high = ᶜtarget - Y.c.ρq_tag_low
+            @. Y.c.ρq_rtag_low = ᶜbelow * Y.c.ρq_rai
+            @. Y.c.ρq_rtag_high = Y.c.ρq_rai - Y.c.ρq_rtag_low
+            @. Y.c.ρq_stag_low = ᶜbelow * Y.c.ρq_sno
+            @. Y.c.ρq_stag_high = Y.c.ρq_sno - Y.c.ρq_stag_low
+            return Y
+        end
+        cache() = (;
+            atmos = (; water_tagging_model = model),
+            tagging = (;
+                CA._water_tag_increment_cache(state(), model)...,
+                ᶜwater_parent = similar(ᶜbase),
+                ᶜwater_pos = similar(ᶜbase),
+            ),
+            scratch = (;
+                ᶜtagging_q_share_norm = similar(ᶜbase),
+                ᶜtagging_q_share_norm_rai = similar(ᶜbase),
+                ᶜtagging_q_share_norm_sno = similar(ᶜbase),
+                ᶜtemp_scalar = similar(ᶜbase),
+            ),
+        )
+        ᶜN(Y) = @. Y.c.ρq_tot - Y.c.ρq_rai - Y.c.ρq_sno
+        level(field, k) = parent(field)[k]
+        function ᶜcell(k)
+            z_k = parent(ᶜz)[k]
+            return @. ifelse(ᶜz == z_k, FT(1), FT(0))
+        end
+        ᶜcell3 = ᶜcell(3)
+        ᶜcell4 = ᶜcell(4)
+        dtγ = FT(60)
+        tol = 100 * eps(FT) * maximum(abs, parent(ᶜbase))
+
+        # A solve takes `N` in cell 3 to `-y` and gives the water to cell 4.
+        # Rain and snow do not change, so `ρq_tot` in cell 3 stays positive.
+        ρq_tot = @. ᶜbase + rai + sno
+        Y = closed!(state(), ρq_tot)
+        x = level(ᶜN(Y), 3)
+        y = FT(1e-3)
+        U = closed!(state(), ρq_tot)
+        @. U.c.ρq_tot = ρq_tot - (x + y) * ᶜcell3 + (x + y) * ᶜcell4
+        @test level(U.c.ρq_tot, 3) > 0
+        @test level(ᶜN(U), 3) < 0
+        p = cache()
+        CA.snapshot_water_tag_increment!(Y, p, dtγ)
+        dY = zero(U)
+        CA.correct_water_tag_increment!(dY, U, p)
+        after = copy(U)
+        @. after.c.ρq_tag_low += dtγ * dY.c.ρq_tag_low
+        @. after.c.ρq_tag_high += dtγ * dY.c.ρq_tag_high
+
+        # The non-precipitating parts close against `N`'s target, cell by
+        # cell, and hold nothing where `N` is negative.
+        ᶜtarget = @. CA.water_tag_partition_target($(ᶜN(U)))
+        ᶜpartition = @. after.c.ρq_tag_low + after.c.ρq_tag_high
+        @test maximum(abs, parent(ᶜpartition) .- parent(ᶜtarget)) <= tol
+        @test abs(level(ᶜpartition, 3)) <= tol
+        @test minimum(parent(after.c.ρq_tag_low)) >= -tol
+        @test minimum(parent(after.c.ρq_tag_high)) >= -tol
+        # The negative part's change is `N`'s, and its ledger holds it.
+        ᶜn = @. CA.water_tag_negative_part($(ᶜN(Y))) -
+           CA.water_tag_negative_part($(ᶜN(U)))
+        @test sum(ᶜn) > 0
+        @test sum(dtγ .* dY.c.q_tag_inc_negative) ≈ sum(ᶜn) rtol = 100 * eps(FT)
+        @test maximum(abs, parent(dY.c.q_tag_inc_left)) <= tol / dtγ
+        # The follower leaves the rain and snow parts alone.
+        for name in (:ρq_rtag_low, :ρq_rtag_high, :ρq_stag_low, :ρq_stag_high)
+            @test all(iszero, parent(getproperty(dY.c, name)))
+        end
+        # The closure check compares all parts with the sum of the three
+        # compartments' targets.
+        closure = CA.tag_closure(
+            after,
+            p,
+            CA.water_closure_total(model),
+            CA.water_partition_state_names(model),
+        )
+        @test closure.gross_relative <= 100 * eps(FT)
+        @test closure.total ≈ sum(@. ᶜtarget + rai + sno) rtol = 100 * eps(FT)
+
+        # A solve takes `ρq_tot` in cell 3 below zero with its snow, and gives
+        # that snow to cell 4. `N` keeps its value, so no negative part of it
+        # changes. The follower gives the tags nothing for one, though
+        # `ρq_tot` is negative in cell 3, and the partition stays on `N`.
+        s = level(ρq_tot, 3) + FT(1e-3)
+        U2 = closed!(state(), ρq_tot)
+        @. U2.c.ρq_sno = sno - s * ᶜcell3 + s * ᶜcell4
+        @. U2.c.ρq_tot = ρq_tot - s * ᶜcell3 + s * ᶜcell4
+        @test level(U2.c.ρq_tot, 3) < 0
+        @test level(ᶜN(U2), 3) > 0
+        p2 = cache()
+        CA.snapshot_water_tag_increment!(Y, p2, dtγ)
+        dY2 = zero(U2)
+        CA.correct_water_tag_increment!(dY2, U2, p2)
+        after2 = copy(U2)
+        @. after2.c.ρq_tag_low += dtγ * dY2.c.ρq_tag_low
+        @. after2.c.ρq_tag_high += dtγ * dY2.c.ρq_tag_high
+        @test all(iszero, parent(dY2.c.q_tag_inc_negative))
+        ᶜpartition2 = @. after2.c.ρq_tag_low + after2.c.ρq_tag_high
+        @test maximum(abs, parent(ᶜpartition2) .- parent(ᶜN(U2))) <= tol
+        @test maximum(abs, parent(dY2.c.q_tag_inc_left)) <= tol / dtγ
+        for name in (:ρq_rtag_low, :ρq_rtag_high, :ρq_stag_low, :ρq_stag_high)
+            @test all(iszero, parent(getproperty(dY2.c, name)))
+        end
+
+        # Where every compartment stays non-negative, the follower gives
+        # nothing for a negative part. The closure check's parent is then
+        # `ρq_tot` itself, bit for bit, as it was without option C.
+        U3 = closed!(state(), ρq_tot)
+        @. U3.c.ρq_tot = ρq_tot - FT(1e-3) * ᶜcell3 + FT(1e-3) * ᶜcell4
+        p3 = cache()
+        CA.snapshot_water_tag_increment!(Y, p3, dtγ)
+        dY3 = zero(U3)
+        CA.correct_water_tag_increment!(dY3, U3, p3)
+        after3 = copy(U3)
+        @. after3.c.ρq_tag_low += dtγ * dY3.c.ρq_tag_low
+        @. after3.c.ρq_tag_high += dtγ * dY3.c.ρq_tag_high
+        @test all(iszero, parent(dY3.c.q_tag_inc_negative))
+        ᶜpartition3 = @. after3.c.ρq_tag_low + after3.c.ρq_tag_high
+        @test maximum(abs, parent(ᶜpartition3) .- parent(ᶜN(U3))) <= tol
+        @test isequal(
+            vec(parent(CA.water_closure_parent(after3, p3))),
+            vec(parent(after3.c.ρq_tot)),
+        )
+    end
+end
+
+# The rules as they were before option C, for the checks of parity below. Each
+# part took its masked share of its compartment, negative or not, and a
+# correction moved the change of the compartment itself, not of its
+# non-negative part.
+initial_state_without_option_c(ρq_tot, ρq_rai, ρq_sno, coord, tags) = (;
+    CA._tag_variables(ρq_tot - ρq_rai - ρq_sno, coord, tags)...,
+    CA._part_variables(CA.rain_tag_entry, ρq_rai, coord, tags)...,
+    CA._part_variables(CA.snow_tag_entry, ρq_sno, coord, tags)...,
+)
+function rebuild_without_option_c!(ᶜY, ᶜcoord, model)
+    ᶜparent = CA.water_tag_parent(ᶜY, model)
+    CA._rebuild_tag_fields!(ᶜY, ᶜcoord, ᶜparent, model.tags)
+    CA._rebuild_part_fields!(ᶜY, ᶜcoord, ᶜY.ρq_rai, model.tags, CA.RainPart())
+    CA._rebuild_part_fields!(ᶜY, ᶜcoord, ᶜY.ρq_sno, model.tags, CA.SnowPart())
+    return ᶜY
+end
+function part_follow_shift_without_option_c(
+    ρq_part,
+    ρq_nonprecip,
+    after,
+    before,
+    pos_part,
+    pos_nonprecip,
+)
+    after > zero(after) || return -ρq_part
+    Δ = after - before
+    if Δ < zero(Δ)
+        pos_part > zero(pos_part) || return zero(ρq_part)
+        return max(Δ, -pos_part) * max(ρq_part, zero(ρq_part)) / pos_part
+    else
+        pos_nonprecip > zero(pos_nonprecip) || return zero(ρq_part)
+        return min(Δ, pos_nonprecip) * max(ρq_nonprecip, zero(ρq_nonprecip)) /
+               pos_nonprecip
+    end
+end
+function source_part_follow_shift_without_option_c(
+    ρq_part,
+    ρq_nonprecip,
+    after,
+    before,
+    nonprecip_before,
+)
+    after > zero(after) || return -ρq_part
+    Δ = after - before
+    Δ < zero(Δ) && return Δ * CA.water_tag_fraction(ρq_part, before)
+    return min(Δ, max(nonprecip_before, zero(nonprecip_before))) *
+           CA.water_tag_fraction(ρq_nonprecip, nonprecip_before)
+end
+function rescale_shift_without_option_c(ρq_tag, ρq_tot_after, ρq_tot_before, pos)
+    ρq_tot_before > zero(ρq_tot_before) || return -ρq_tag
+    pos > zero(pos) || return zero(ρq_tag)
+    Δ = max(ρq_tot_after - ρq_tot_before, -pos)
+    return Δ * max(ρq_tag, zero(ρq_tag)) / pos
+end
+# A residual as it was before option C: the compartment less the parts, per
+# unit mass, in the order the diagnostics subtract them.
+function residual_without_option_c(ᶜparent, ᶜY, names)
+    ᶜres = copy(ᶜparent)
+    for name in names
+        ᶜres .-= getproperty(ᶜY, name)
+    end
+    return ᶜres ./ ᶜY.ρ
+end
+
+@testset "Option C per compartment: the initial state and the rebuild" begin
+    for FT in (Float32, Float64)
+        tags = precipitation_tags(FT)
+        model = CA.WaterTaggingModel(tags; precipitation = true)
+        part_names = (
+            CA.water_tag_state_names(model)...,
+            CA.water_tag_precip_part_state_names(model)...,
+        )
+        # Cell 1 holds water in every compartment. Cell 2 has `N < 0` with rain
+        # and snow, cell 3 negative rain with `N > 0`, and cell 4 negative snow
+        # and `ρq_tot < 0` with `N > 0`. Cell 5 has only a negative `N`, cell 6
+        # rain of `-0.0`, and cell 7 is dry, with `ρq_tot = -0.0`. So cells 1,
+        # 6 and 7 have no negative compartment. The parts start as `NaN`, as a
+        # setup that reads its state from a file leaves them.
+        ᶜcoord = map(z -> (; z = FT(z)), [700, 300, 800, 1200, 100, 600, 900])
+        n = length(ᶜcoord)
+        ᶜY = (;
+            ρq_tot = FT[0.012, 1e-4, 0.012, -1e-5, -2e-5, 0.01, -0.0],
+            ρq_rai = FT[4e-4, 3e-4, -1e-5, 2e-5, 0, -0.0, 0],
+            ρq_sno = FT[1e-4, 1e-4, 1e-4, -4e-5, 0, 2e-4, 0],
+            NamedTuple{part_names}(ntuple(_ -> fill(FT(NaN), n), length(part_names)))...,
+        )
+        ᶜY_without_option_c = deepcopy(ᶜY)
+        CA.rebuild_water_tags_from_state!(ᶜY, ᶜcoord, model)
+        rebuild_without_option_c!(ᶜY_without_option_c, ᶜcoord, model)
+        @test all(name -> all(isfinite, getproperty(ᶜY, name)), part_names)
+
+        # Each compartment's parts partition its non-negative part, cell by
+        # cell. Where the compartment is negative they hold nothing. So in
+        # cell 2 the non-precipitating parts are zero, and the rain and snow
+        # parts hold all the rain and snow. A source tag starts at zero in
+        # every part.
+        for (prefix, part, negative_cells) in (
+            (:ρq_tag_, CA.NonPrecipitatingPart(), [2, 5]),
+            (:ρq_rtag_, CA.RainPart(), [3]),
+            (:ρq_stag_, CA.SnowPart(), [4]),
+        )
+            ᶜcompartment = identity.(CA.water_tag_part_parent(ᶜY, part))
+            @test findall(<(0), ᶜcompartment) == negative_cells
+            ᶜtarget = identity.(CA.water_tag_part_target(ᶜY, part))
+            @test all(isapprox.(partition_sum(ᶜY, prefix), ᶜtarget; rtol = 4 * eps(FT)))
+            for name in (:low, :high, :evap)
+                ᶜpart = getproperty(ᶜY, Symbol(prefix, name))
+                @test all(iszero, ᶜpart[negative_cells])
+            end
+            @test all(iszero, getproperty(ᶜY, Symbol(prefix, :evap)))
+        end
+
+        # The parts and the negative remainder add up to `ρq_tot`, to the
+        # rounding of the masks and of the sums.
+        partition_names = CA.water_partition_state_names(model)
+        ᶜparts = sum(name -> getproperty(ᶜY, name), partition_names)
+        ᶜnegative = identity.(CA.water_partition_negative_part(ᶜY, model))
+        ᶜscale = abs.(ᶜY.ρq_tot) .+ abs.(ᶜY.ρq_rai) .+ abs.(ᶜY.ρq_sno)
+        @test all(abs.(ᶜparts .+ ᶜnegative .- ᶜY.ρq_tot) .<= 16 * eps(FT) .* ᶜscale)
+        @test ᶜnegative[2] == ᶜY.ρq_tot[2] - ᶜY.ρq_rai[2] - ᶜY.ρq_sno[2]
+
+        # The rebuild is the initial state, cell by cell.
+        for i in 1:n
+            state = CA.water_tagging_variables(
+                ᶜY.ρq_tot[i],
+                ᶜY.ρq_rai[i],
+                ᶜY.ρq_sno[i],
+                (; coordinates = ᶜcoord[i]),
+                model,
+            )
+            @test propertynames(state) == part_names
+            for name in part_names
+                @test getproperty(state, name) ≈ getproperty(ᶜY, name)[i] rtol =
+                    2 * eps(FT)
+            end
+        end
+
+        # Where no compartment is negative, the rebuild and the initial state
+        # are those without option C, bit for bit. Without option C the
+        # non-precipitating parts of cell 2 were negative.
+        for i in (1, 6, 7)
+            for name in part_names
+                @test isequal(
+                    getproperty(ᶜY, name)[i],
+                    getproperty(ᶜY_without_option_c, name)[i],
+                )
+            end
+            args = (ᶜY.ρq_tot[i], ᶜY.ρq_rai[i], ᶜY.ρq_sno[i])
+            @test isequal(
+                CA.water_tagging_variables(args..., (; coordinates = ᶜcoord[i]), model),
+                initial_state_without_option_c(args..., ᶜcoord[i], tags),
+            )
+        end
+        @test ᶜY_without_option_c.ρq_tag_low[2] < 0
+    end
+end
+
+@testset "Option C per compartment: the limiters and constraints" begin
+    for FT in (Float32, Float64)
+        rng = Random.MersenneTwister(17)
+        n = 40
+        closes(a, b) = maximum(abs, a .- b) <= 64 * eps(FT) * maximum(abs, b)
+
+        # 1. Rain is below zero in cells 1 to 5 and snow in cells 6 to 10.
+        # Their parts hold nothing, which is each compartment's target, and `N`
+        # keeps its value. A correction at fixed `ρq_tot` lifts them above
+        # zero. Each compartment's parts then take only the water it holds
+        # now. The rule without option C would add its deficit too. In cells
+        # 11 to 15 the correction takes rain below zero, and its parts empty.
+        (; Y, p, model) = correction_setup(FT, rng, n)
+        ᶜY = Y.c
+        (rain, snow, drained, lifted) = (1:5, 6:10, 11:15, 1:10)
+        (deficit, lift) = (FT(1e-4), FT(2e-4))
+        ᶜN = nonprecip_parent(ᶜY)
+        ᶜY.ρq_rai[rain] .= -deficit
+        ᶜY.ρq_sno[snow] .= -deficit
+        for name in (:low, :high, :evap)
+            getproperty(ᶜY, Symbol(:ρq_rtag_, name))[rain] .= 0
+            getproperty(ᶜY, Symbol(:ρq_stag_, name))[snow] .= 0
+        end
+        ᶜY.ρq_tot[lifted] .= ᶜN[lifted] .+ ᶜY.ρq_rai[lifted] .+ ᶜY.ρq_sno[lifted]
+        p.tagging.ᶜwater_rai_before .= ᶜY.ρq_rai
+        p.tagging.ᶜwater_sno_before .= ᶜY.ρq_sno
+        totals = map(name -> tag_total(ᶜY, name), (:low, :high, :evap))
+        ᶜY.ρq_rai[rain] .= lift
+        ᶜY.ρq_sno[snow] .= lift
+        ᶜY.ρq_rai[drained] .= -deficit
+        CA._rescale_water_tag_parts!(Y, p, copy(ᶜY.ρq_tot), model, Val(false))
+        @test closes(partition_sum(ᶜY, :ρq_rtag_)[rain], fill(lift, length(rain)))
+        @test closes(partition_sum(ᶜY, :ρq_stag_)[snow], fill(lift, length(snow)))
+        for name in (:low, :high, :evap)
+            @test all(iszero, getproperty(ᶜY, Symbol(:ρq_rtag_, name))[drained])
+        end
+        # Everywhere, the rain and snow parts partition their targets.
+        for (prefix, part) in ((:ρq_rtag_, CA.RainPart()), (:ρq_stag_, CA.SnowPart()))
+            ᶜtarget = identity.(CA.water_tag_part_target(ᶜY, part))
+            @test closes(partition_sum(ᶜY, prefix), ᶜtarget)
+        end
+        # The moves are within each tag, and no part goes below zero.
+        for (name, total) in zip((:low, :high, :evap), totals)
+            @test tag_total(ᶜY, name) ≈ total rtol = 8 * eps(FT)
+        end
+        for name in propertynames(ᶜY)
+            CA.is_tagged_tracer_name(name) || continue
+            @test minimum(getproperty(ᶜY, name)) >= 0
+        end
+
+        # 2. A correction of `ρq_tot` takes `N` below zero in cells 1 to 5,
+        # while `ρq_tot` stays positive there. The non-precipitating parts aim
+        # at `N`'s target, not at `ρq_tot`, so they empty there. Rain and snow
+        # do not change, and nor do their parts, bit for bit.
+        (; Y, p, model) = correction_setup(FT, rng, n)
+        ᶜY = Y.c
+        emptied = 1:5
+        ᶜρq_tot_before = copy(ᶜY.ρq_tot)
+        precip_names = CA.water_tag_precip_part_state_names(model)
+        precip_parts = map(name -> copy(getproperty(ᶜY, name)), precip_names)
+        ᶜY.ρq_tot .*= FT.(1 .+ 0.02 .* (rand(rng, n) .- 0.5))
+        ᶜY.ρq_tot[emptied] .= (ᶜY.ρq_rai[emptied] .+ ᶜY.ρq_sno[emptied]) ./ 2
+        @test all(>(0), ᶜY.ρq_tot[emptied])
+        @test all(<(0), nonprecip_parent(ᶜY)[emptied])
+        CA._rescale_water_tags!(Y, p, ᶜρq_tot_before, model)
+        ᶜtarget = identity.(CA.water_tag_part_target(ᶜY, CA.NonPrecipitatingPart()))
+        @test all(iszero, ᶜtarget[emptied])
+        @test closes(partition_sum(ᶜY, :ρq_tag_), ᶜtarget)
+        # The source tag's part goes with them.
+        tolerance = 64 * eps(FT) * maximum(ᶜtarget)
+        for name in (:ρq_tag_low, :ρq_tag_high, :ρq_tag_evap)
+            @test maximum(abs, getproperty(ᶜY, name)[emptied]) <= tolerance
+        end
+        for (name, part) in zip(precip_names, precip_parts)
+            @test isequal(getproperty(ᶜY, name), part)
+        end
+
+        # 3. A compartment that was negative gives a source tag's part only
+        # the water it now holds. Without option C it would give 0.75.
+        @test CA.water_tag_source_part_follow_shift(FT(0), FT(2), FT(2), FT(-1), FT(8)) ==
+              FT(0.5)
+
+        # 4. Where the compartment was not negative before the correction, the
+        # moves are those without option C, bit for bit, whatever the parts
+        # hold. So is the rescale of the non-precipitating parts where their
+        # compartment is not negative after it. The draws include both zeros.
+        nonnegative() = rand(rng, (FT(0), FT(-0.0), FT(rand(rng)), FT(2 * rand(rng))))
+        any_sign() = rand(rng, (FT(0), FT(-0.0), FT(rand(rng)), -FT(rand(rng))))
+        for _ in 1:500
+            (ρq_part, ρq_nonprecip, after) = (any_sign(), any_sign(), any_sign())
+            before = nonnegative()
+            (pos_part, pos_nonprecip) = (nonnegative(), nonnegative())
+            args = (ρq_part, ρq_nonprecip, after, before, pos_part, pos_nonprecip)
+            @test isequal(
+                CA.water_tag_part_follow_shift(args...),
+                part_follow_shift_without_option_c(args...),
+            )
+            args = (ρq_part, ρq_nonprecip, after, before, any_sign())
+            @test isequal(
+                CA.water_tag_source_part_follow_shift(args...),
+                source_part_follow_shift_without_option_c(args...),
+            )
+            args = (ρq_part, nonnegative(), any_sign(), pos_part)
+            @test isequal(
+                CA.water_tag_rescale_shift(args...),
+                rescale_shift_without_option_c(args...),
+            )
+        end
+    end
+end
+
+@testset "Option C per compartment: the residual diagnostics" begin
+    for FT in (Float32, Float64)
+        model = CA.WaterTaggingModel(precipitation_tags(FT); precipitation = true)
+        CA.Diagnostics.register_water_tagging_diagnostics!(model)
+        diagnostic(name) = CA.Diagnostics.get_diagnostic_variable(name)
+        compute(name, state) = diagnostic(name).compute!(nothing, state, nothing, FT(0))
+        # Cell 1 holds water in every compartment, cell 2 has `N < 0`, cell 3
+        # negative rain, and cell 4 negative snow and `ρq_tot < 0`. Cell 5 is
+        # dry, with `ρq_tot = -0.0`. The parts leave a residual in cells 1 and
+        # 3. The source tag's parts are large, and no residual counts them. The
+        # numbers are exact in both float types.
+        ᶜY = (;
+            ρ = FT[2, 2, 2, 2, 2],
+            ρq_tot = FT[12, 2, 6, -1, -0.0],
+            ρq_rai = FT[2, 3, -1, 0, 0],
+            ρq_sno = FT[1, 1, 2, -2, 0],
+            ρq_tag_low = FT[5, 0, 4, 0.5, 0],
+            ρq_tag_high = FT[3, 0, 1, 0.5, 0],
+            ρq_tag_evap = fill(FT(100), 5),
+            ρq_rtag_low = FT[1, 2, 0.25, 0, 0],
+            ρq_rtag_high = FT[1, 1, 0.25, 0, 0],
+            ρq_rtag_evap = fill(FT(100), 5),
+            ρq_stag_low = FT[0.5, 1, 1, 0, 0],
+            ρq_stag_high = FT[0.25, 0, 1, 0, 0],
+            ρq_stag_evap = fill(FT(100), 5),
+        )
+        state = (; c = ᶜY)
+        q_res = compute("q_tag_res", state)
+        q_negative = compute("q_tag_negative", state)
+        (q_nres, q_rres, q_sres) =
+            map(name -> compute(name, state), ("q_ntag_res", "q_rtag_res", "q_stag_res"))
+        # `q_tag_negative` is the sum of the compartments' negative parts, and
+        # each residual is against the non-negative part of its compartment,
+        # or of all three.
+        @test q_negative == FT[0, -1, -0.5, -1, 0]
+        @test q_res == FT[0.625, 0, -0.25, 0, 0]
+        @test q_nres == FT[0.5, 0, 0, 0, 0]
+        @test q_rres == FT[0, 0, -0.25, 0, 0]
+        @test q_sres == FT[0.125, 0, 0, 0, 0]
+        # The compartments' residuals add up to the total's. The parts, the
+        # residual and the negative remainder add up to `q_tot`.
+        @test q_nres .+ q_rres .+ q_sres == q_res
+        partition_names = CA.water_partition_state_names(model)
+        ᶜparts = sum(name -> getproperty(ᶜY, name), partition_names)
+        @test q_res .+ q_negative .+ ᶜparts ./ ᶜY.ρ == ᶜY.ρq_tot ./ ᶜY.ρ
+        # The preallocated form writes into `out`.
+        out = zeros(FT, 5)
+        diagnostic("q_tag_negative").compute!(out, state, nothing, FT(0))
+        @test out == q_negative
+
+        # Where no compartment is negative, in cells 1 and 5, nothing is
+        # negative and the residuals are those without option C, bit for bit.
+        cells = [1, 5]
+        @test all(iszero, q_negative[cells])
+        @test isequal(
+            q_res[cells],
+            residual_without_option_c(ᶜY.ρq_tot, ᶜY, partition_names)[cells],
+        )
+        for (res, ᶜparent, prefix) in (
+            (q_nres, ᶜY.ρq_tot .- ᶜY.ρq_rai .- ᶜY.ρq_sno, :ρq_tag_),
+            (q_rres, ᶜY.ρq_rai, :ρq_rtag_),
+            (q_sres, ᶜY.ρq_sno, :ρq_stag_),
+        )
+            compartment_names = (Symbol(prefix, :low), Symbol(prefix, :high))
+            ᶜreference = residual_without_option_c(ᶜparent, ᶜY, compartment_names)
+            @test isequal(res[cells], ᶜreference[cells])
+        end
+    end
+end
+
+@testset "Option C per compartment: the follower's shares" begin
+    for FT in (Float32, Float64)
+        tags = precipitation_tags(FT)
+        (low, high, evap) = tags
+        model = CA.WaterTaggingModel(
+            tags;
+            transport = CA.IncrementWaterTagTransport(),
+            precipitation = true,
+        )
+        # Cell 1 holds water in every compartment. In cell 2 `N` is negative
+        # and `ρq_tot` positive, and the partition still holds water. In cell
+        # 3 the snow is negative, and so is `ρq_tot`, while `N` is positive.
+        # The partition there holds more than `N`, so its clamped shares of
+        # `N` differ from its own composition.
+        ᶜY = (;
+            ρq_tot = FT[8, 2, -1],
+            ρq_rai = FT[2, 3, 1],
+            ρq_sno = FT[2, 1, -6],
+            ρq_tag_low = FT[3, 1, 8],
+            ρq_tag_high = FT[1, 3, 4],
+            ρq_tag_evap = FT[1, 2, 1],
+            ρq_rtag_low = FT[1, 1, 0.5],
+            ρq_rtag_high = FT[1, 2, 0.5],
+            ρq_rtag_evap = FT[0, 0, 0],
+            ρq_stag_low = FT[1, 0.5, 0],
+            ρq_stag_high = FT[1, 0.5, 0],
+            ρq_stag_evap = FT[0, 0, 0],
+        )
+        Y = (; c = ᶜY)
+        p = (;
+            atmos = (; water_tagging_model = model),
+            scratch = (;
+                ᶜtagging_q_share_norm = zeros(FT, 3),
+                ᶜtagging_q_share_norm_rai = zeros(FT, 3),
+                ᶜtagging_q_share_norm_sno = zeros(FT, 3),
+            ),
+            tagging = (;
+                ᶜwater_pos = zeros(FT, 3),
+                ᶜq_tag_ρq_tot_snapshot = zeros(FT, 3),
+                ᶜq_tag_partition_snapshot = zeros(FT, 3),
+                q_tag_dtγ = Ref(FT(0)),
+            ),
+        )
+        dtγ = FT(2)
+
+        # The follower's snapshot keeps `N`, the water the partition's
+        # non-precipitating parts partition, not `ρq_tot`.
+        CA.snapshot_water_tag_increment!(Y, p, dtγ)
+        @test p.tagging.ᶜq_tag_ρq_tot_snapshot == FT[4, -2, 4]
+        @test p.tagging.ᶜq_tag_partition_snapshot == FT[4, 4, 12]
+        @test p.tagging.q_tag_dtγ[] == dtγ
+        # After the solve it takes `N` again, with the post-solve `dY`.
+        ᶜdY = (;
+            ρq_tot = FT[0.5, -1, 0.25],
+            ρq_rai = FT[0.25, 0, 0],
+            ρq_sno = FT[0, 0.5, -0.5],
+        )
+        ᶜparent_after = CA._water_tag_parent_after(ᶜY, ᶜdY, dtγ, model)
+        @test identity.(ᶜparent_after) == FT[4.5, -5, 5.5]
+
+        # The shares switch on `N < 0`, not on `ρq_tot < 0`. Where `N` is
+        # negative, in cell 2, each tag moves by its fraction of the
+        # partition's positive water. Elsewhere it moves by its share of `N`,
+        # also in cell 3, where `ρq_tot` is negative.
+        ᶜparent = CA.water_tag_parent(ᶜY, model)
+        CA.water_tag_share_norm!(p, Y)
+        ᶜnorm = p.scratch.ᶜtagging_q_share_norm
+        ᶜpos = p.tagging.ᶜwater_pos
+        CA._accumulate_partition_pos!(ᶜpos, ᶜY, tags)
+        @test ᶜnorm == FT[1, 0, 2]
+        @test ᶜpos == FT[4, 4, 12]
+        share(tag) =
+            identity.(CA._water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag, ᶜparent))
+        @test share(low) == FT[0.75, 0.25, 0.5]
+        @test share(high) == FT[0.25, 0.75, 0.5]
+        @test share(evap) == FT[0.25, 0.5, 0.25]
+        @test share(low) .+ share(high) == FT[1, 1, 1]
+        # Where `N` is not negative, the share is the flux's, as it was
+        # without option C, bit for bit.
+        for tag in tags
+            ᶜflux_share = identity.(CA._water_tag_share_field(ᶜY, ᶜnorm, tag, ᶜparent))
+            @test isequal(share(tag)[[1, 3]], ᶜflux_share[[1, 3]])
+        end
+        # The water given for a negative part goes by the same shares, and
+        # only where the column's negative part changed.
+        tag_names = (:ρq_tag_low, :ρq_tag_high, :ρq_tag_evap)
+        for N in (FT(4), FT(0))
+            ᶜYₜ = NamedTuple{tag_names}(ntuple(_ -> zeros(FT, 3), 3))
+            ᶜgive = FT[4, 4, 4]
+            CA._give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, tags, ᶜparent)
+            for (name, tag) in zip(tag_names, tags)
+                expected = iszero(N) ? zeros(FT, 3) : 2 .* share(tag)
+                @test getproperty(ᶜYₜ, name) == expected
+            end
+        end
     end
 end
 

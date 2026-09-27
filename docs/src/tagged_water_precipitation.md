@@ -123,6 +123,23 @@ nonlinear per field, so the parts drift from their species as the tags drift
 from ``\rho q_\mathrm{tot}`` today, and the repair only removes negative
 parts.
 
+**Negative water.** Known issue 7's option C applies per compartment. The
+numerics can take a compartment below zero, and no set of non-negative parts
+can partition a negative amount. So the non-precipitating parts partition the
+non-negative part of ``\rho q_\mathrm{tot} - \rho q_\mathrm{rai} - \rho q_\mathrm{sno}``,
+the rain parts that of ``\rho q_\mathrm{rai}`` and the snow parts that of
+``\rho q_\mathrm{sno}``. The initial state, the rebuild from a file and the
+corrections of the limiters and constraints aim at these targets.
+`q_tag_negative` is the sum of the three compartments' negative parts. So
+`q_tag_res`, `q_tag_negative` and the partition's parts add up to
+``q_\mathrm{tot}``, to rounding. `q_tag_res` and the closure check compare the
+parts with the sum of the three targets, and `q_ntag_res`, `q_rtag_res` and
+`q_stag_res` compare each compartment's parts with its own target. Under
+`water_tag_transport: increment` the follower takes the increment of the
+non-precipitating water's target, and `q_tag_inc_negative` holds what it gives
+the tags for that water's negative part. Where no compartment is negative,
+nothing changes, bit for bit.
+
 **Cost.** Three fields per tag, two audit records per tag, and the flows,
 which cost about as much as the microphysics itself.
 
@@ -135,6 +152,8 @@ ClimaAtmos.NonPrecipitatingPart
 ClimaAtmos.water_tag_part_field
 ClimaAtmos.water_tag_part_parent
 ClimaAtmos.water_tag_parent
+ClimaAtmos.water_tag_part_target
+ClimaAtmos.water_partition_target
 ClimaAtmos.water_tag_part_share
 ClimaAtmos.is_water_precip_part_name
 ClimaAtmos.is_water_tag_audit_name

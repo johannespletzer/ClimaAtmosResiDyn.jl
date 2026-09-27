@@ -92,6 +92,9 @@ import ..RainPart
 import ..SnowPart
 import ..water_tag_precipitation_flux!
 import ..water_tag_fraction
+import ..water_tag_part_target
+import ..water_partition_target
+import ..water_partition_negative_part
 import ..has_water_tag_updraft_copies
 import ..water_tag_leak!
 import ..WATER_TAG_LEAK_PATHS

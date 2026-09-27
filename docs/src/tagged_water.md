@@ -91,6 +91,7 @@ Two consequences worth stating:
     If the configured tags are a strict subset (say a single "Atlantic
     evaporation" tag), then ``\sum_k \varphi_k < 1`` and the untagged remainder
     absorbs the rest — also correct, just not a partition.
+
   - **Positivity.** A tag update is
     ``\rho q_{\mathrm{tag},k}\,(1 - \Delta^{-}\Delta t / \rho q_\mathrm{tot})``,
     so a tag stays non-negative for as long as the step is short enough that
@@ -103,6 +104,18 @@ Two consequences worth stating:
     share is undefined and the tags of that cell say nothing; the
     `nonpositive_fraction` column of the closure table is what reports how much
     of the domain is in that state.
+
+    So the partition tags partition the parent's non-negative water,
+    ``\max(\rho q_\mathrm{tot}, 0)``, and the negative part is a named
+    remainder, `q_tag_negative` (known issue 7, option C). The follower takes
+    the non-negative part's increment. Where a solve takes a cell below zero,
+    the cell's tags move out by the partition's own composition, and the
+    water the parent creates elsewhere by overdrawing that cell goes to the
+    tags where the mismatch has its sign, by their composition there, in the
+    ledger `q_tag_inc_negative`. The limiters' rescale and the copies' repair
+    take a partition whose parent they leave negative to zero, not below. The
+    closure check compares the partition with the non-negative part. Where
+    the parent is never negative, nothing changes, bit for bit.
 
 ### Taggable processes
 
@@ -419,7 +432,10 @@ is neither rain nor snow, the rain and the snow. They have a page of their own,
     `q_rtag_aud_<name>` and `q_stag_aud_<name>`, the microphysics audit. See
     [Rain and snow parts](#Rain-and-snow-parts);
   - `qv_tag_<name>`: tagged **vapor**, ``q_\mathrm{tag} \, q_v / q_t``;
-  - `q_tag_res`: the closure residual ``(\rho q_\mathrm{tot} - \sum_i \rho q_{\mathrm{tag},i})/\rho``, summed over the pure region tags;
+  - `q_tag_res`: the closure residual ``(\max(\rho q_\mathrm{tot}, 0) - \sum_i \rho q_{\mathrm{tag},i})/\rho``, summed over the pure region tags. The tags partition the parent's non-negative water;
+  - `q_tag_negative`: the parent's negative water, ``\min(\rho q_\mathrm{tot}, 0)/\rho``, the remainder the partition leaves. `q_tag_res`, `q_tag_negative` and the region tags add up to ``q_\mathrm{tot}``.
+    Under `water_tag_precipitation: true` the non-negative and negative parts
+    are taken per compartment;
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
     state constraints, cumulative since the start of the run and carried
     through a restart, so a budget over an interval is the difference of two
@@ -687,6 +703,8 @@ ClimaAtmos.WaterTag
 ClimaAtmos.KNOWN_WATER_TAG_SOURCES
 ClimaAtmos.WATER_TAG_SOURCE_GROUPS
 ClimaAtmos.water_tag_fraction
+ClimaAtmos.water_tag_partition_target
+ClimaAtmos.water_closure_total
 ClimaAtmos.water_tag_share_norm!
 ClimaAtmos.water_tag_sediment_share
 ClimaAtmos.water_tag_source_sediment_share
