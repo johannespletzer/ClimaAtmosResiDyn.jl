@@ -626,12 +626,12 @@ column, with one Newton iteration, the closure residual after an hour was
 2.1e-4 of the partitioned energy with the microphysics explicit and 1.5e-6 with
 it implicit. With ten iterations it was 4.9e-12. With the split solver the
 tags' rows now carry their face shares of those blocks, as the water tags'
-rows do (see the sedimentation cross blocks above). With the microphysics
-implicit, that brings this column's residual to rounding. The explicit case
-has not been measured with the blocks, so it stays refused until a run does,
-for 1M first. 2M and P3 sediment too, and no run has measured them either.
-Until then the key is an override for development runs, and the model warns
-when it is used. The refusal concerns only the tags' keys. Without the tags,
+rows do (see the sedimentation cross blocks above). With them, this column's
+explicit 1M hour closed to a gross residual of 1.4e-15 against the
+pre-registered bound of 1e-7, with every model field bit for bit (PR #113's
+validation). That meets the condition for lifting the refusal for 1M. Until it
+is lifted, the key is an override for development runs, and the model warns
+when it is used. 2M and P3 sediment too, and no run has measured them. The refusal concerns only the tags' keys. Without the tags,
 or with another transport, the configuration runs as before.
 
 ```yaml

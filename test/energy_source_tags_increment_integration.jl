@@ -348,6 +348,8 @@ tags = [
         @test abs(left) < rounding
         @test abs(closure_increment.residual) < rounding
         @test closure_increment.gross_residual < rounding
+        # G4.16's pre-registered bound, which the rounding check implies.
+        @test closure_increment.gross_relative < 1e-7
 
         # The audit's columns and the diagnostics read the ledger.
         audit = CA.energy_source_audit(Y, p, model, FT(1))
@@ -372,6 +374,22 @@ tags = [
         uncoupled = Set(map(field -> field.name, cache.solver.uncoupled))
         for name in (:e_src_inc_left, :e_src_inc_moved)
             @test CA.MatrixFields.FieldName(:c, name) in uncoupled
+        end
+        # G4.16: every energy source tag is solved apart, with a block to
+        # every falling species. These blocks are what took the residual above
+        # to rounding.
+        uncoupled_fields = collect(cache.solver.uncoupled)
+        mass_names = map(CA.center_state_name, CA.sedimenting_mass_names(Y))
+        tag_names = map(
+            CA.center_state_name,
+            CA.sedimenting_energy_source_tag_names(Y),
+        )
+        @test !isempty(mass_names)
+        @test !isempty(tag_names)
+        for tag_name in tag_names
+            fields = filter(field -> field.name == tag_name, uncoupled_fields)
+            @test length(fields) == 1
+            @test issubset(Set(mass_names), Set(map(first, only(fields).lower)))
         end
 
         # The model's own fields are those of the same column without tags,

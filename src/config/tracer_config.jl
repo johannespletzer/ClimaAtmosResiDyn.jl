@@ -1446,10 +1446,11 @@ the closure residual was 2.1e-4 of the partitioned energy with the
 microphysics explicit, 1.5e-6 with it implicit, and 4.9e-12 with ten Newton
 iterations (FINDINGS E80 on the record branch). With the split solver the
 tags' rows now carry their face shares of those blocks, as the water tags'
-rows do. With the microphysics implicit, that brings this column's residual to
-rounding. The explicit case has not been measured with the blocks, so it stays
-refused until a run does, for 1M first. 2M and P3 sediment too, and nothing
-has measured them either.
+rows do. With them, this column's explicit 1M hour closed to a gross residual
+of 1.4e-15 against the pre-registered bound of 1e-7, with every model field bit
+for bit (PR #113's validation). That meets the condition for lifting the
+refusal for 1M. Until it is lifted, 1M still needs the key. 2M and P3 sediment
+too, and nothing has measured them.
 
 The check concerns only the tags' own keys. Without the tags, with another
 transport, with 0M, or with the microphysics implicit, it does nothing.
