@@ -312,11 +312,18 @@ A second warning level, `throughput_tolerance`, is compared with
 `gross_over_throughput` instead, whose scale is set by the sources rather than
 by the reference. It needs `energy_source_tag_ledger_per_tag: true` and a
 verified partition (see below), and defaults to `~`, since no level has been
-approved. Without a verified partition it is refused at setup. The healthy runs of the tag-closure experiments reached
-at most 4.5e-3 under `enthalpy_increment`, in their first two hours on a
-sphere, and 3.4e-2 under the `enthalpy` audit. Under `tracer` the gross is
-transport error, which does not scale with the sources: a one-hour
-precipitating column reached 26 times its throughput.
+approved. Without a verified partition it is refused at setup. The healthy
+runs of the tag-closure experiments reached at most 4.5e-3 under
+`enthalpy_increment`, in their first two hours on a sphere, and 3.4e-2 under
+the `enthalpy` audit, in a day on an EDMF column. Both come from each run's
+last row, and from the process records' estimate of the throughput, not from
+the exact throughput `gross_over_throughput` uses. The one case with both, the
+EDMF column under `enthalpy_increment`, had the exact throughput 6% below the
+estimate. The model did not verify either run's partition, though both used a
+region and its exact complement. The ratio falls as a run goes on: with the
+same physics on the sphere it was 1.6e-3 after a day and 7.9e-4 after ten.
+Under `tracer` the gross is transport error, which does not scale with the
+sources: a one-hour precipitating column reached 26 times its throughput.
 
 Warning levels, the void level and `abort_above` are kept apart, and none of
 them says whether a run is acceptable (see [Configuring
