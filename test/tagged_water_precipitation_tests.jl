@@ -783,8 +783,8 @@ end
     # part goes negative beyond rounding. Where rain and snow start empty, all
     # the water that moves has the composition of `N`, so the rules agree to
     # rounding too. On a synthetic microphysics of linear kinetics the error is
-    # at most `κ/2` at every step, so it vanishes as the step shrinks. From
-    # `κ = 0.05` down, where it is not negligible, it falls by at least 1.5
+    # at most `κ/4` at every step, so it vanishes as the step shrinks. From
+    # `κ = 0.05` down, where it is not negligible, it falls by at least 1.8
     # with each halving of the step. A first-order error halves.
     #
     # What it does not find. It tests the rule's ordering error, not which
@@ -845,16 +845,18 @@ end
             worst[nsub] .= max.(worst[nsub], e)
             largest_error_over_κ = max(largest_error_over_κ, maximum(e ./ κs))
             # The bound. The simplest case above gives at most `κ/8`. A search
-            # over pools, shares and rates found `e` at most 0.23 κ, and the
-            # prototype's draws about 0.11 κ at most.
-            @test maximum(e ./ κs) <= 0.5
+            # over pools, shares and rates found `e` at most 0.23 κ, the
+            # prototype's draws about 0.11 κ at most, and these draws 0.052 κ
+            # on Julia 1.11. The bound sits just above the search's largest.
+            @test maximum(e ./ κs) <= 0.25
             # The halving. From `κ = 0.05` down the search found every ratio at
-            # least 1.84, and the prototype's draws at least 1.92. Where `e` is
-            # below 1% of `κ`, a nearly cancelling first-order term can spoil
-            # the ratio, and the bound covers those steps.
+            # least 1.84, and the prototype's draws at least 1.92. The bound
+            # sits just below the search's smallest. Where `e` is below 1% of
+            # `κ`, a nearly cancelling first-order term can spoil the ratio, and
+            # the bound covers those steps.
             for j in 1:(length(Δts) - 1)
                 if κs[j] <= κ₀ / 16 && e[j] >= 0.01 * κs[j]
-                    @test e[j] / e[j + 1] >= 1.5
+                    @test e[j] / e[j + 1] >= 1.8
                     halvings += 1
                 end
             end
