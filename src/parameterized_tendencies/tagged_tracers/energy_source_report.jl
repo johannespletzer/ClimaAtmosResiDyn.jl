@@ -280,17 +280,18 @@ end
     energy_source_forecast(G₀, F₀, t₀, G, F, t)
 
 Synergy 4 from two checks, `(t₀, G₀, F₀)` and `(t, G, F)`, with `t` in
-seconds, `G` the gross residual and `F` the gross flush, both in J:
-`(; flush_rate, production_rate, settling_level, settling_ratio, forecast_defined)`, the rates per day.
+seconds, `G` the gross residual and `F` the gross flush, both in J. It returns
+`flush_rate`, `production_rate`, `settling_level`, `settling_ratio` and
+`forecast_defined`, the rates per day.
 
   - `flush_rate` is `NaN` where the interval is empty, the mean gross is zero,
     or nothing was flushed, since the rate is then not defined.
   - `production_rate` is `NaN` only where the interval is empty. It can be
     zero or negative: then the rest of the run took from the residual, or
     added nothing, over the interval.
-  - `settling_level` needs both rates, and a positive production. Without
-    one the residual only decays, and there is no positive level to settle
-    at, so it is `NaN`. `settling_ratio` also needs `G > 0`.
+  - `settling_level` needs both rates, and a positive production. Without a
+    positive production the residual only decays, and there is no positive
+    level to settle at, so it is `NaN`. `settling_ratio` also needs `G > 0`.
   - `forecast_defined` is 1 where `settling_level` is a number, 0 elsewhere.
 """
 function energy_source_forecast(G₀, F₀, t₀, G, F, t)
