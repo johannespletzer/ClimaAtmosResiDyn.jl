@@ -390,12 +390,12 @@ worth its compute.
 
 **None of these levels is acceptance.** They are kept apart, for every family:
 
-| level | what passing it does | default |
-|:----- |:-------------------- |:------- |
-| `tolerance` | warns, every time | water 1.0e-10; `energy_tracers` 1.0e-6; energy source tags one per transport |
-| `throughput_tolerance`, energy source tags only | warns, every time | `~` |
-| `void_above` | warns once, and marks this row and every later one void | water 1.0; the energy families `~` |
-| `abort_above` | ends the run | `~` for every family |
+| level                                           | what passing it does                                    | default                                                                      |
+|:----------------------------------------------- |:------------------------------------------------------- |:---------------------------------------------------------------------------- |
+| `tolerance`                                     | warns, every time                                       | water 1.0e-10; `energy_tracers` 1.0e-6; energy source tags one per transport |
+| `throughput_tolerance`, energy source tags only | warns, every time                                       | `~`                                                                          |
+| `void_above`                                    | warns once, and marks this row and every later one void | water 1.0; the energy families `~`                                           |
+| `abort_above`                                   | ends the run                                            | `~` for every family                                                         |
 
 A warning says the residual has drifted past the level set for this check. The
 void level says the tags no longer describe the field. Whether a run is
