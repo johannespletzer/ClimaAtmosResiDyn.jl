@@ -129,7 +129,12 @@ can partition a negative amount. So the non-precipitating parts partition the
 non-negative part of ``\rho q_\mathrm{tot} - \rho q_\mathrm{rai} - \rho q_\mathrm{sno}``,
 the rain parts that of ``\rho q_\mathrm{rai}`` and the snow parts that of
 ``\rho q_\mathrm{sno}``. The initial state, the rebuild from a file and the
-corrections of the limiters and constraints aim at these targets.
+corrections of the limiters and constraints aim at these targets. Where a
+correction takes rain or snow across zero at fixed ``\rho q_\mathrm{tot}``,
+the non-precipitating water changes by more than the rain or snow parts can
+give or take. The non-precipitating parts then also take the change of that
+compartment's negative part, by their composition, into the rescale's ledgers.
+So the tags' totals change by it.
 `q_tag_negative` is the sum of the three compartments' negative parts. So
 `q_tag_res`, `q_tag_negative` and the partition's parts add up to
 ``q_\mathrm{tot}``, to rounding. `q_tag_res` and the closure check compare the

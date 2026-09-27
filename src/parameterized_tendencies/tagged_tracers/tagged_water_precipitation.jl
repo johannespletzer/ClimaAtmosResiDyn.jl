@@ -143,9 +143,9 @@ they leave, lazily (known issue 7, option C). Without `water_tag_precipitation`
 they are `water_tag_partition_target(ρq_tot)` and
 `water_tag_negative_part(ρq_tot)`. With it, option C applies per compartment.
 The remainder is the sum of the three compartments' negative parts, and the
-target the sum of their non-negative parts. The target is written as `ρq_tot`
-less the remainder. So the two add up to `ρq_tot`, to rounding, and where no
-compartment is negative the target is `ρq_tot` itself, bit for bit. The
+target the sum of their non-negative parts. The two add up to `ρq_tot`, to
+rounding, and where no compartment is negative the target is `ρq_tot` itself,
+bit for bit. The
 closure check and `q_tag_res` compare the partition with the target, and
 `q_tag_negative` reports the remainder.
 """
@@ -156,11 +156,22 @@ water_partition_negative_part(ᶜY, model) =
     has_water_tag_precipitation(model) ?
     _compartments_negative_part(ᶜY) : (@. lazy(water_tag_negative_part(ᶜY.ρq_tot)))
 
-# The sum of the three compartments' non-negative parts, as `ρq_tot` less the
-# sum of their negative parts, lazily.
+# The sum of the three compartments' non-negative parts, lazily. Where no
+# compartment is negative it is `ρq_tot` itself, bit for bit. Elsewhere it is
+# the sum of the three parts, not `ρq_tot` less the negative parts, which could
+# leave rounding noise where every part is zero.
 function _compartments_target(ᶜY)
+    ᶜnonprecip = water_tag_part_parent(ᶜY, NonPrecipitatingPart())
     ᶜnegative = _compartments_negative_part(ᶜY)
-    return @. lazy(ᶜY.ρq_tot - ᶜnegative)
+    return @. lazy(
+        ifelse(
+            iszero(ᶜnegative),
+            ᶜY.ρq_tot,
+            water_tag_partition_target(ᶜnonprecip) +
+            water_tag_partition_target(ᶜY.ρq_rai) +
+            water_tag_partition_target(ᶜY.ρq_sno),
+        ),
+    )
 end
 
 # The sum of the three compartments' negative parts, lazily.
@@ -385,7 +396,7 @@ into the non-precipitating water. Each is a rate per unit mass of air.
 const WATER_TAG_FLOW_NAMES = (:NR, :NS, :RN, :RS, :SR, :SN)
 
 # The cache under the key: the microphysics' flows, the snapshots of rain and
-# snow that the corrections follow, and three sums and shifts they use.
+# snow that the corrections follow, and the sums and shifts they use.
 function _water_tag_precipitation_cache(Y, model)
     has_water_tag_precipitation(model) || return (;)
     FT = eltype(Y.c.ρ)
@@ -400,6 +411,7 @@ function _water_tag_precipitation_cache(Y, model)
         ᶜwater_sno_before = copy(Y.c.ρq_sno),
         ᶜwater_pos_2 = zero.(Y.c.ρ),
         ᶜwater_shift = zero.(Y.c.ρ),
+        ᶜwater_shift_sum = zero.(Y.c.ρ),
     )
 end
 
@@ -1316,15 +1328,23 @@ the clip and rescale of the condensates in
 limiter that leaves `ρq_tot` out. Called last in `limiters_func!`, and in
 `constrain_state!` before the partition repair. A no-op without the key.
 """
-follow_water_tag_precipitation!(Y, p) =
-    has_water_tag_precipitation(p.atmos.water_tagging_model) ?
-    _rescale_water_tag_parts!(
-        Y,
-        p,
-        Y.c.ρq_tot,
-        p.atmos.water_tagging_model,
-        Val(false),
-    ) : nothing
+follow_water_tag_precipitation!(Y, p) = _follow_water_tag_precipitation!(
+    Y,
+    p,
+    p.atmos.water_tagging_model,
+)
+_follow_water_tag_precipitation!(Y, p, ::Nothing) = nothing
+function _follow_water_tag_precipitation!(Y, p, model::WaterTaggingModel)
+    has_water_tag_precipitation(model) || return nothing
+    # Where rain or snow crosses zero, the non-precipitating parts take the
+    # rest of their compartment's change by the rescale's rule, into its
+    # ledgers per mechanism. So the call is bracketed as the rescale is.
+    mechanisms = Val((:q_tag_led_rescale, :q_tag_led_empty))
+    before_tag_ledgers!(p, Y, mechanisms)
+    _rescale_water_tag_parts!(Y, p, Y.c.ρq_tot, model, Val(false))
+    after_tag_ledgers!(p, Y, mechanisms)
+    return nothing
+end
 
 """
     water_tag_part_follow_shift(ρq_part, ρq_nonprecip, after, before, pos_part, pos_nonprecip)
@@ -1349,7 +1369,9 @@ design note's section 8:
 parts only the water it now holds. Where `before` is not negative, `Δ` is
 `after - before`, bit for bit.
 
-What the floors leave out surfaces in the compartment's residual.
+What the floors leave out surfaces in the compartment's residual. Where a
+compartment crosses zero, `-Δ` is not the change of the non-precipitating
+compartment's target, and `_follow_water_tag_part!` moves the rest.
 """
 @inline function water_tag_part_follow_shift(
     ρq_part,
@@ -1402,7 +1424,7 @@ end
 # changed since.
 function _rescale_water_tag_parts!(Y, p, ᶜρq_tot_before, model, ::Val{total}) where {total}
     (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count) = p.tagging
-    (; ᶜwater_pos, ᶜwater_pos_2, ᶜwater_shift) = p.tagging
+    (; ᶜwater_pos, ᶜwater_pos_2, ᶜwater_shift, ᶜwater_shift_sum) = p.tagging
     (; ᶜwater_rai_before, ᶜwater_sno_before) = p.tagging
     # Each tag's own ledger, where kept, takes the rescale of its
     # non-precipitating part, as `q_tag_fix_<name>` does. The moves between a
@@ -1416,27 +1438,32 @@ function _rescale_water_tag_parts!(Y, p, ᶜρq_tot_before, model, ::Val{total})
         water_tag_fix_ledger_view(Y, model),
     )
     ᶜY = Y.c
-    # The non-precipitating compartment before each step, for the source
-    # tags' shares.
+    scratch = (ᶜwater_pos, ᶜwater_pos_2, ᶜwater_shift, ᶜwater_shift_sum)
+    # The non-precipitating compartment before and after each step, at the
+    # `ρq_tot` before the correction. The rain step's after is the snow step's
+    # before, and the snow step's after is what the rescale below starts from.
     ᶜnonprecip_before_rain =
         @. lazy(ᶜρq_tot_before - ᶜwater_rai_before - ᶜwater_sno_before)
+    ᶜnonprecip_before_snow =
+        @. lazy(ᶜρq_tot_before - ᶜY.ρq_rai - ᶜwater_sno_before)
+    ᶜnonprecip_after_snow = @. lazy(ᶜρq_tot_before - ᶜY.ρq_rai - ᶜY.ρq_sno)
     _follow_water_tag_part!(
         ᶜY,
         ledger,
-        (ᶜwater_pos, ᶜwater_pos_2, ᶜwater_shift),
+        scratch,
         ᶜwater_rai_before,
         ᶜnonprecip_before_rain,
+        ᶜnonprecip_before_snow,
         model.tags,
         RainPart(),
     )
-    ᶜnonprecip_before_snow =
-        @. lazy(ᶜρq_tot_before - ᶜY.ρq_rai - ᶜwater_sno_before)
     _follow_water_tag_part!(
         ᶜY,
         ledger,
-        (ᶜwater_pos, ᶜwater_pos_2, ᶜwater_shift),
+        scratch,
         ᶜwater_sno_before,
         ᶜnonprecip_before_snow,
+        ᶜnonprecip_after_snow,
         model.tags,
         SnowPart(),
     )
@@ -1447,7 +1474,7 @@ function _rescale_water_tag_parts!(Y, p, ᶜρq_tot_before, model, ::Val{total})
             ᶜY,
             ledger,
             ᶜwater_pos,
-            (@. lazy(ᶜρq_tot_before - ᶜY.ρq_rai - ᶜY.ρq_sno)),
+            ᶜnonprecip_after_snow,
             model.tags,
             water_tag_part_parent(ᶜY, NonPrecipitatingPart()),
         )
@@ -1457,30 +1484,66 @@ function _rescale_water_tag_parts!(Y, p, ᶜρq_tot_before, model, ::Val{total})
     return nothing
 end
 
+# One compartment's follow, then the rest of the non-precipitating parts' change.
+#
+# The follow moves each partition tag's `shift` into its `part` and out of its
+# non-precipitating part, so the partition's non-precipitating sum changes by
+# `-S`, `S` the sum of the shifts. Its target changes by
+# `T(N_after) - T(N_before)`, with `T` the non-negative part. The two agree
+# where no compartment is negative. Where rain or snow crosses zero they do not:
+# a compartment's negative part changes, and the parts it partitions do not see
+# that change. For example, rain from -1e-4 to 2e-4 at fixed `ρq_tot` lowers `N`
+# by 3e-4, but moves only 2e-4 into the rain parts.
+#
+# So, in the cells where `N` or the compartment is negative before or after,
+# the non-precipitating parts then take the rest,
+# `T(N_after) - (T(N_before) - S)`, by the rescale's rule: the partition by its
+# composition, floored at what it holds, and each source tag by its own share.
+# It goes to the same ledgers as the rescale. Elsewhere nothing more moves, and
+# the result is bit for bit that of the follow alone.
 function _follow_water_tag_part!(
     ᶜY,
     ledger,
-    (ᶜpos_part, ᶜpos_nonprecip, ᶜshift),
+    (ᶜpos_part, ᶜpos_nonprecip, ᶜshift, ᶜshift_sum),
     ᶜbefore,
     ᶜnonprecip_before,
+    ᶜnonprecip_after,
     tags,
     part,
 )
+    ᶜafter = water_tag_part_parent(ᶜY, part)
     ᶜpos_part .= zero(eltype(ᶜpos_part))
     _accumulate_part_pos!(ᶜpos_part, ᶜY, tags, part)
     ᶜpos_nonprecip .= zero(eltype(ᶜpos_nonprecip))
     _accumulate_partition_pos!(ᶜpos_nonprecip, ᶜY, tags)
+    ᶜshift_sum .= zero(eltype(ᶜshift_sum))
     _apply_part_follow!(
         ᶜY,
         ledger,
         ᶜpos_part,
         ᶜpos_nonprecip,
-        ᶜshift,
-        water_tag_part_parent(ᶜY, part),
+        (ᶜshift, ᶜshift_sum),
+        ᶜafter,
         ᶜbefore,
         ᶜnonprecip_before,
         tags,
         part,
+    )
+    # The partition's non-precipitating sum after the follow, for the rest.
+    ᶜpos_nonprecip .= zero(eltype(ᶜpos_nonprecip))
+    _accumulate_partition_pos!(ᶜpos_nonprecip, ᶜY, tags)
+    ᶜnegative_somewhere = @. lazy(
+        min(ᶜnonprecip_before, ᶜnonprecip_after, ᶜbefore, ᶜafter) <
+        zero(ᶜafter),
+    )
+    _apply_water_tag_rescale!(
+        ᶜY,
+        ledger,
+        ᶜpos_nonprecip,
+        (@. lazy(water_tag_partition_target(ᶜnonprecip_before) - ᶜshift_sum)),
+        tags,
+        ᶜnonprecip_after,
+        ᶜnegative_somewhere,
     )
     return nothing
 end
@@ -1513,7 +1576,7 @@ _apply_part_follow!(
     ledger,
     ᶜpos_part,
     ᶜpos_nonprecip,
-    ᶜshift,
+    shifts,
     ᶜafter,
     ᶜbefore,
     ᶜnonprecip_before,
@@ -1525,7 +1588,7 @@ function _apply_part_follow!(
     ledger,
     ᶜpos_part,
     ᶜpos_nonprecip,
-    ᶜshift,
+    (ᶜshift, ᶜshift_sum),
     ᶜafter,
     ᶜbefore,
     ᶜnonprecip_before,
@@ -1545,6 +1608,8 @@ function _apply_part_follow!(
             ᶜpos_part,
             ᶜpos_nonprecip,
         )
+        # The partition's shifts, summed, for the rest in the caller.
+        @. ᶜshift_sum += ᶜshift
     else
         @. ᶜshift = water_tag_source_part_follow_shift(
             ᶜρq_part,
@@ -1566,7 +1631,7 @@ function _apply_part_follow!(
         ledger,
         ᶜpos_part,
         ᶜpos_nonprecip,
-        ᶜshift,
+        (ᶜshift, ᶜshift_sum),
         ᶜafter,
         ᶜbefore,
         ᶜnonprecip_before,

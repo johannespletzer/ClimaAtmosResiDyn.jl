@@ -1011,6 +1011,7 @@ function correction_setup(FT, rng, n; ledger_per_tag = false)
         ᶜwater_neg = zeros(FT, n),
         ᶜwater_pos_2 = zeros(FT, n),
         ᶜwater_shift = zeros(FT, n),
+        ᶜwater_shift_sum = zeros(FT, n),
         ᶜwater_rai_before = copy(ᶜY.ρq_rai),
         ᶜwater_sno_before = copy(ᶜY.ρq_sno),
     )
@@ -1320,7 +1321,7 @@ end
         @test minimum(parent(after.c.ρq_tag_high)) >= -tol
         # The negative part's change is `N`'s, and its ledger holds it.
         ᶜn = @. CA.water_tag_negative_part($(ᶜN(Y))) -
-           CA.water_tag_negative_part($(ᶜN(U)))
+                CA.water_tag_negative_part($(ᶜN(U)))
         @test sum(ᶜn) > 0
         @test sum(dtγ .* dY.c.q_tag_inc_negative) ≈ sum(ᶜn) rtol = 100 * eps(FT)
         @test maximum(abs, parent(dY.c.q_tag_inc_left)) <= tol / dtγ
@@ -1553,8 +1554,11 @@ end
         # Their parts hold nothing, which is each compartment's target, and `N`
         # keeps its value. A correction at fixed `ρq_tot` lifts them above
         # zero. Each compartment's parts then take only the water it holds
-        # now. The rule without option C would add its deficit too. In cells
-        # 11 to 15 the correction takes rain below zero, and its parts empty.
+        # now. The rule without option C would add its deficit too. `N` falls
+        # by the deficit as well, and the non-precipitating parts follow it to
+        # their target. In cells 11 to 15 the correction takes rain below zero.
+        # Its parts empty, and the non-precipitating parts rise by what rain
+        # held and by its new deficit.
         (; Y, p, model) = correction_setup(FT, rng, n)
         ᶜY = Y.c
         (rain, snow, drained, lifted) = (1:5, 6:10, 11:15, 1:10)
@@ -1584,10 +1588,27 @@ end
             ᶜtarget = identity.(CA.water_tag_part_target(ᶜY, part))
             @test closes(partition_sum(ᶜY, prefix), ᶜtarget)
         end
-        # The moves are within each tag, and no part goes below zero.
+        # So do the non-precipitating parts, and all the parts together.
+        ᶜtarget = identity.(CA.water_tag_part_target(ᶜY, CA.NonPrecipitatingPart()))
+        @test closes(partition_sum(ᶜY, :ρq_tag_), ᶜtarget)
+        ᶜall =
+            partition_sum(ᶜY, :ρq_tag_) .+ partition_sum(ᶜY, :ρq_rtag_) .+
+            partition_sum(ᶜY, :ρq_stag_)
+        @test closes(ᶜall, identity.(CA.water_partition_target(ᶜY, model)))
+        # Where no compartment was or is negative, the moves are within each
+        # tag. Where one crossed zero, each tag's total changes by its share of
+        # the change of that compartment's negative part.
+        untouched = (last(drained) + 1):n
         for (name, total) in zip((:low, :high, :evap), totals)
-            @test tag_total(ᶜY, name) ≈ total rtol = 8 * eps(FT)
+            @test tag_total(ᶜY, name)[untouched] ≈ total[untouched] rtol = 8 * eps(FT)
         end
+        crossed = union(lifted, drained)
+        change =
+            (tag_total(ᶜY, :low) .+ tag_total(ᶜY, :high) .- totals[1] .- totals[2])[crossed]
+        expected = vcat(fill(-deficit, length(lifted)), fill(deficit, length(drained)))
+        @test maximum(abs, change .- expected) <=
+              64 * eps(FT) * maximum(totals[1] .+ totals[2])
+        # No part goes below zero.
         for name in propertynames(ᶜY)
             CA.is_tagged_tracer_name(name) || continue
             @test minimum(getproperty(ᶜY, name)) >= 0
@@ -1651,6 +1672,99 @@ end
                 rescale_shift_without_option_c(args...),
             )
         end
+    end
+end
+
+@testset "Option C per compartment: the rest of a follow stays in its cells" begin
+    # After a rain or snow follow, the non-precipitating parts take the rest of
+    # their compartment's change only where a compartment is negative. Outside
+    # those cells the rescale's gate must leave every field it writes as it
+    # was, bit for bit, signed zeros included, so that #121's results there do
+    # not move. Inside them it applies the rescale as without a gate.
+    for FT in (Float32, Float64)
+        rng = Random.MersenneTwister(23)
+        n = 20
+        (; Y, p, model) = correction_setup(FT, rng, n; ledger_per_tag = true)
+        ᶜY = Y.c
+        # Signed zeros, which adding `+0.0` would turn into `+0.0`.
+        ᶜY.ρq_tag_low[1:2] .= FT(-0.0)
+        ᶜY.q_tag_led_rescale .= FT(-0.0)
+        ᶜY.q_tag_led_fix_high .= FT(-0.0)
+        p.tagging.ᶜwater_fix.ρq_tag_evap .= FT(-0.0)
+        (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count) = p.tagging
+        ledger() = CA.tag_ledger(
+            ᶜwater_fix,
+            ᶜwater_fix_gross,
+            ᶜwater_fix_count,
+            CA.water_tag_fix_ledger_view(Y, model),
+        )
+        ᶜpos = max.(ᶜY.ρq_tag_low, 0) .+ max.(ᶜY.ρq_tag_high, 0)
+        ᶜbefore = copy(ᶜpos)
+        # A change that moves water in every cell, emptying cells 5 and 6.
+        ᶜafter = ᶜbefore .* FT(0.9)
+        ᶜafter[5:6] .= FT(-1e-4)
+        snapshot() = (deepcopy(ᶜY), deepcopy(p.tagging))
+        same(a, b) = all(
+            name -> isequal(getproperty(a, name), getproperty(b, name)),
+            propertynames(a),
+        )
+
+        (Y0, tagging0) = snapshot()
+        CA._apply_water_tag_rescale!(
+            ᶜY,
+            ledger(),
+            ᶜpos,
+            ᶜbefore,
+            model.tags,
+            ᶜafter,
+            falses(n),
+        )
+        @test same(ᶜY, Y0)
+        @test same(p.tagging.ᶜwater_fix, tagging0.ᶜwater_fix)
+        @test same(p.tagging.ᶜwater_fix_gross, tagging0.ᶜwater_fix_gross)
+        @test same(p.tagging.ᶜwater_fix_count, tagging0.ᶜwater_fix_count)
+
+        # Gated to cells 4 to 7: there the result is the ungated one, bit for
+        # bit, and elsewhere nothing moves.
+        cells = 4:7
+        gate = falses(n)
+        gate[cells] .= true
+        CA._apply_water_tag_rescale!(ᶜY, ledger(), ᶜpos, ᶜbefore, model.tags, ᶜafter, gate)
+        (Y_gated, tagging_gated) = snapshot()
+        (ᶜY_all, tagging_all) = (deepcopy(Y0), deepcopy(tagging0))
+        Y_all = (; c = ᶜY_all)
+        CA._apply_water_tag_rescale!(
+            ᶜY_all,
+            CA.tag_ledger(
+                tagging_all.ᶜwater_fix,
+                tagging_all.ᶜwater_fix_gross,
+                tagging_all.ᶜwater_fix_count,
+                CA.water_tag_fix_ledger_view(Y_all, model),
+            ),
+            ᶜpos,
+            ᶜbefore,
+            model.tags,
+            ᶜafter,
+        )
+        outside = setdiff(1:n, cells)
+        for name in propertynames(ᶜY)
+            (gated, all_cells, before) =
+                map(obj -> getproperty(obj, name), (Y_gated, ᶜY_all, Y0))
+            @test isequal(gated[cells], all_cells[cells])
+            @test isequal(gated[outside], before[outside])
+        end
+        for kind in (:ᶜwater_fix, :ᶜwater_fix_gross, :ᶜwater_fix_count),
+            name in propertynames(getproperty(tagging0, kind))
+
+            (gated, all_cells, before) = map(
+                obj -> getproperty(getproperty(obj, kind), name),
+                (tagging_gated, tagging_all, tagging0),
+            )
+            @test isequal(gated[cells], all_cells[cells])
+            @test isequal(gated[outside], before[outside])
+        end
+        # The gated cells did move.
+        @test !isequal(Y_gated.ρq_tag_high[cells], Y0.ρq_tag_high[cells])
     end
 end
 

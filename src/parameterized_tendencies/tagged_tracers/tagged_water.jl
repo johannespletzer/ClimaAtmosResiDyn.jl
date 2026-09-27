@@ -1021,8 +1021,10 @@ disagree", which `q_tag_res` alone would conflate.
 Under `water_tag_precipitation: true` a correction can also change `ρq_rai` and
 `ρq_sno`. Their changes since [`snapshot_water_tag_precipitation!`](@ref) move
 first, each between the tags' rain or snow parts and their non-precipitating
-parts ([`water_tag_part_follow_shift`](@ref)). Then the non-precipitating parts
-take the change of `ρq_tot` by the rule above, on their own compartment
+parts ([`water_tag_part_follow_shift`](@ref)). Where a compartment is negative
+before or after, the non-precipitating parts then also take the rest of their
+compartment's change of target, by the rule above. Then the non-precipitating
+parts take the change of `ρq_tot` by the rule above, on their own compartment
 `ρq_tot - ρq_rai - ρq_sno`. The design note's section 8.
 
 A no-op when water tagging is disabled.
@@ -1067,6 +1069,10 @@ end
 # `ᶜafter` is the corrected parent, `ρq_tot` without the key. Under
 # `water_tag_precipitation: true` it is the corrected non-precipitating water,
 # and `ᶜρq_tot_before` that water before the correction.
+#
+# `ᶜgate`, where given, is a lazy field of `Bool`s. Outside it every field this
+# writes is left as it was, bit for bit, signed zeros included. `nothing`
+# applies the rescale everywhere.
 _apply_water_tag_rescale!(ᶜY, ledger, ᶜpos, ᶜρq_tot_before, tags::Tuple) =
     _apply_water_tag_rescale!(
         ᶜY,
@@ -1075,9 +1081,27 @@ _apply_water_tag_rescale!(ᶜY, ledger, ᶜpos, ᶜρq_tot_before, tags::Tuple) 
         ᶜρq_tot_before,
         tags,
         ᶜY.ρq_tot,
+        nothing,
     )
-_apply_water_tag_rescale!(ᶜY, ledger, ᶜpos, ᶜρq_tot_before, ::Tuple{}, ᶜafter) =
-    nothing
+_apply_water_tag_rescale!(ᶜY, ledger, ᶜpos, ᶜρq_tot_before, tags::Tuple, ᶜafter) =
+    _apply_water_tag_rescale!(
+        ᶜY,
+        ledger,
+        ᶜpos,
+        ᶜρq_tot_before,
+        tags,
+        ᶜafter,
+        nothing,
+    )
+_apply_water_tag_rescale!(
+    ᶜY,
+    ledger,
+    ᶜpos,
+    ᶜρq_tot_before,
+    ::Tuple{},
+    ᶜafter,
+    ᶜgate,
+) = nothing
 function _apply_water_tag_rescale!(
     ᶜY,
     ledger,
@@ -1085,6 +1109,7 @@ function _apply_water_tag_rescale!(
     ᶜρq_tot_before,
     tags::Tuple,
     ᶜafter,
+    ᶜgate,
 )
     tag = first(tags)
     ᶜρq_tag = tag_field(ᶜY, tag)
@@ -1098,67 +1123,85 @@ function _apply_water_tag_rescale!(
         # The state ledgers per mechanism take the partition's shift: the
         # rescale where the parent held water, the emptying where it did not
         # (WP6, design/GROSS_ACCUMULATORS.md section 9).
-        @. ᶜY.q_tag_led_rescale += ifelse(
-            ᶜρq_tot_before > 0,
-            water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
-            zero(ᶜρq_tot_before),
+        @. ᶜY.q_tag_led_rescale += _gated(
+            ᶜgate,
+            ifelse(
+                ᶜρq_tot_before > 0,
+                water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+                zero(ᶜρq_tot_before),
+            ),
         )
-        @. ᶜY.q_tag_led_empty += ifelse(
-            ᶜρq_tot_before > 0,
-            zero(ᶜρq_tot_before),
-            water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+        @. ᶜY.q_tag_led_empty += _gated(
+            ᶜgate,
+            ifelse(
+                ᶜρq_tot_before > 0,
+                zero(ᶜρq_tot_before),
+                water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+            ),
         )
-        @. ᶜgross += abs(
-            water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+        @. ᶜgross += _gated(
+            ᶜgate,
+            abs(water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos)),
         )
-        @. ᶜcount += tag_event(
-            water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
-            ᶜρq_tot_before,
+        @. ᶜcount += _gated(
+            ᶜgate,
+            tag_event(
+                water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+                ᶜρq_tot_before,
+            ),
         )
         # The tag's own ledger, where kept, takes the same change (step 3).
         add_to_tag_ledger!(
             ledger.state,
             tag,
             @. lazy(
-                water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+                _gated(
+                    ᶜgate,
+                    water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+                ),
             )
         )
-        @. ᶜfix += water_tag_rescale_shift(
-            ᶜρq_tag,
-            ᶜafter,
-            ᶜρq_tot_before,
-            ᶜpos,
+        @. ᶜfix += _gated(
+            ᶜgate,
+            water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
         )
-        @. ᶜρq_tag += water_tag_rescale_shift(
-            ᶜρq_tag,
-            ᶜafter,
-            ᶜρq_tot_before,
-            ᶜpos,
+        @. ᶜρq_tag += _gated(
+            ᶜgate,
+            water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
         )
     else
-        @. ᶜgross += abs(
-            water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
+        @. ᶜgross += _gated(
+            ᶜgate,
+            abs(water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before)),
         )
-        @. ᶜcount += tag_event(
-            water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
-            ᶜρq_tot_before,
+        @. ᶜcount += _gated(
+            ᶜgate,
+            tag_event(
+                water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
+                ᶜρq_tot_before,
+            ),
         )
         add_to_tag_ledger!(
             ledger.state,
             tag,
             @. lazy(
-                water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
+                _gated(
+                    ᶜgate,
+                    water_tag_source_rescale_shift(
+                        ᶜρq_tag,
+                        ᶜafter,
+                        ᶜρq_tot_before,
+                    ),
+                ),
             )
         )
-        @. ᶜfix += water_tag_source_rescale_shift(
-            ᶜρq_tag,
-            ᶜafter,
-            ᶜρq_tot_before,
+        @. ᶜfix += _gated(
+            ᶜgate,
+            water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
         )
-        @. ᶜρq_tag += water_tag_source_rescale_shift(
-            ᶜρq_tag,
-            ᶜafter,
-            ᶜρq_tot_before,
+        @. ᶜρq_tag += _gated(
+            ᶜgate,
+            water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
         )
     end
     return _apply_water_tag_rescale!(
@@ -1168,8 +1211,14 @@ function _apply_water_tag_rescale!(
         ᶜρq_tot_before,
         Base.tail(tags),
         ᶜafter,
+        ᶜgate,
     )
 end
+
+# A change outside the gate is `-0`, which leaves any value it is added to as it
+# was, bit for bit, `-0.0` included. Without a gate the change is kept.
+@inline _gated(::Nothing, change) = change
+@inline _gated(gate::Bool, change) = ifelse(gate, change, -zero(change))
 
 # ============================================================================
 # Partition repair
