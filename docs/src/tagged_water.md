@@ -618,10 +618,11 @@ this identity.
 
 ### The EDMF diffusion leak correction
 
-`water_tag_leak_correction: true` (WP4c) corrects the leak of the EDMF vertical
-diffusive flux and of its updrafts' mirror, the two paths the experiments' gate
-retained. Each tag takes back the diffusion of its own share of the rain and
-snow, ``\nabla\cdot(\rho K_h \nabla(\psi_i\, q_\mathrm{p}))`` with
+`water_tag_leak_correction: true` (WP4c) is experimental and off by default.
+It corrects the leak of the EDMF vertical diffusive flux and of its updrafts'
+mirror, the two paths the experiments' gate retained. Each tag takes back the
+diffusion of its own share of the rain and snow,
+``\nabla\cdot(\rho K_h \nabla(\psi_i\, q_\mathrm{p}))`` with
 ``q_\mathrm{p} = q_\mathrm{rai} + q_\mathrm{sno}``, where ``\psi_i`` is the
 share the sedimentation takes the tag's rain and snow by. The partition's
 shares sum to one wherever it holds water, so its diffusion is then the
@@ -652,6 +653,26 @@ Newton iteration it is taken at the stage's first guess. Its ledgers are
     water is not positive, since the shares are taken against it. That part
     of the leak stays in `q_tag_res`, or under the follower in
     `q_tag_inc_moved`, as without the correction.
+
+  - **Its validation failed two criteria.** It was pre-registered on the
+    record branch (`design/WP4C_CORRECTIONS.md`, section 8) and ran on the
+    D4-W column (the record's FINDINGS W45). The correction takes the
+    closed-form leak exactly: its ledger is 1.948% of the water a day,
+    against the closed form's 1.945%. Closure, parity and the ledgers hold.
+    But two criteria fail.
+
+      + V1, criterion 1, over a day: the follower's work that `vdiff` drives
+        does not fall. Its part 2a rises from 2.92% of the water a day
+        without the correction to 3.09% with it, where V1 required at most
+        2.42%. Why is not established.
+      + V2, criterion 4, with copies over 12 hours: the column integral of
+        `q_tag_led_upleaknet` reaches 3.1e-5 of the water, against 1e-12. The
+        copies take their tag's correction per unit mass, so the integral
+        need not vanish unless the updraft's area fraction is uniform.
+        Whether the criterion was ill-posed or the copies' correction does
+        not conserve what it should is not established.
+
+    So the key is not to be made a default on this evidence.
 
 ## Scope
 
