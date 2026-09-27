@@ -344,9 +344,10 @@ _negative_water_ledger(steps) = steps.negative_water
 
 Add one accepted step to the parent's negative water ledger `ledger` (see
 [`negative_water_ledger_cache`](@ref)): `max(-ρq_tot, 0) dt` to `ᶜamount`, and
-1 to `ᶜevents` where `ρq_tot < 0`. `dt` is the step, in seconds. Where
-`ρq_tot` is not negative, including `-0.0`, it adds `-0.0` and `0.0`, which
-leave the ledger bit for bit. A no-op without the ledger.
+1 to `ᶜevents` where `ρq_tot < 0`. `dt` is the length of the step just
+accepted, in seconds. Where `ρq_tot` is not negative, including `-0.0`, it
+adds `-0.0` and `0.0`, which leave the ledger bit for bit. A no-op without the
+ledger.
 """
 accumulate_negative_water!(::Nothing, ᶜρq_tot, dt) = nothing
 function accumulate_negative_water!(ledger, ᶜρq_tot, dt)
@@ -491,7 +492,13 @@ function accumulate_tag_ledger_gross!(
         Val(keys(ledgers)),
     )
     # The parent's negative water, from the step's end state (known issue 7).
-    # The step just taken is `integrator.dt`, shortened where it met a stop.
+    # It is weighted by the length of the step just accepted. ClimaTimeSteppers'
+    # `__step!` (0.10.6 to 1.0.1) sets `integrator.dt` to
+    # `min(_dt, first(tstops) - t)` before it steps, moves `t` by that, and
+    # only then runs the callbacks. So here `integrator.dt` is that step,
+    # shortened where it met a stop. ClimaAtmos keeps time as `ITime`, whose
+    # sum is exact, so `t` moved by exactly `dt`. `tagged_water_integration.jl`
+    # checks the ledger against the elapsed times over shortened steps.
     isnothing(negative_water) || accumulate_negative_water!(
         negative_water,
         Y.c.ρq_tot,

@@ -720,6 +720,40 @@ end
           ["1", "1"]
     @test table_column(audit_table(between_restarted), "negative_water_void") ==
           ["1", "1"]
+
+    # The ledger weights each accepted step by its length (#118's review,
+    # finding 2). The steps here are 10 s, 4 s to a stop added by hand, 10 s,
+    # and 1 s to the end at 25 s. The cell made negative stays negative, so
+    # every step adds to the ledger. The ledger must be the sum over the steps
+    # of max(-ρq_tot, 0) times the time that elapsed, bit for bit.
+    shortened = negative_run(
+        merge(negative_dict(1.0e-4), Dict{String, Any}("t_end" => "25secs")),
+        "tagged_water_negative_shortened",
+    )
+    expected = zero(parent(ledger(shortened).ᶜamount))
+    with_base_step = zero(expected)
+    elapsed = Float64[]
+    step_negative = Float64[]
+    for stop_after in (nothing, 0.4, nothing, nothing)
+        local integrator = shortened.integrator
+        isnothing(stop_after) || CA.CTS.add_tstop!(
+            integrator,
+            integrator.t + CA.CTS.get_dt(integrator) * stop_after,
+        )
+        local t_before = Float64(integrator.t)
+        CA.CTS.step!(integrator)
+        local interval = Float64(integrator.t) - t_before
+        local negative = max.(.-Float64.(parent(integrator.u.c.ρq_tot)), 0)
+        push!(elapsed, interval)
+        push!(step_negative, sum(negative))
+        expected .+= negative .* interval
+        with_base_step .+= negative .* 10
+    end
+    @test elapsed == [10, 4, 10, 1]
+    @test all(>(0), step_negative)
+    @test isequal(parent(ledger(shortened).ᶜamount), expected)
+    # Weighted by the base step instead, it would not be.
+    @test !isequal(parent(ledger(shortened).ᶜamount), with_base_step)
 end
 
 @testset "Tagged water rejects unsupported microphysics" begin
