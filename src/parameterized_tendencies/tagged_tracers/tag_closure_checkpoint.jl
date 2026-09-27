@@ -112,10 +112,11 @@ end
 #####
 ##### The negative water flag through a restart
 #####
-##### Past `negative_water_void_above`, the water closure check marks this row
-##### and every later row of its tables with `negative_water_void = 1`. The
-##### flag lives in the cache, in `p.tagging.negative_water_void`, and the
-##### checkpoint records it beside the void flags above.
+##### Past `negative_water_void_above`, at a row of the water closure check or
+##### at the end of an accepted step, every later row of the check's tables is
+##### marked `negative_water_void = 1`. The flag lives in the cache, in
+##### `p.tagging.negative_water_void`, and the checkpoint records it beside the
+##### void flags above.
 
 """
     negative_water_void_flags(atmos)
@@ -124,10 +125,12 @@ The negative water flags, stored in `p.tagging.negative_water_void`: one
 `Ref{Bool}` for each tag family whose closure check reads the parent's
 negative water. Only water has one, named `water`, and only with water tags. A
 flag says whether the parent's negative water has passed
-`negative_water_void_above` at a check, in this run or before the checkpoint
-the run restarted from. It starts as `false`.
+`negative_water_void_above` at a row of the check or at the end of an accepted
+step, in this run or before the checkpoint the run restarted from. It starts as
+`false`.
 
-[`tag_closure_callback!`](@ref) reads and sets the flag.
+[`tag_closure_callback!`](@ref) reads and sets the flag, and
+[`check_negative_water_step!`](@ref) sets it after every accepted step.
 [`write_negative_water_void_attributes!`](@ref) writes it to a checkpoint, and
 [`restore_negative_water_void!`](@ref) reads it back.
 """

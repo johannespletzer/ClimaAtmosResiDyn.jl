@@ -791,8 +791,10 @@ table splitting the residual into the parts that mean different things. See
 
 The water block also carries `negative_water_void_above`, `1e-4` by default:
 the check reports the parent's own negative water, from the raw `ρq_tot`, and
-marks its rows `negative_water_void` past the level. See
-[`negative_water_rows`](@ref).
+marks its rows `negative_water_void` past the level. The tags' per-step
+callback compares the same ratio with the level at the end of every accepted
+step, so an excursion between two rows marks the next one. See
+[`negative_water_rows`](@ref) and [`check_negative_water_step!`](@ref).
 """
 function default_model_callbacks(
     tagging::AtmosTagging;
@@ -808,7 +810,7 @@ function default_model_callbacks(
 )
     scheduling = (; output_dir, dt, t_start, t_end, checkpoint_frequency)
     return (
-        tag_ledger_gross_callback(tagging)...,
+        tag_ledger_gross_callback(tagging, water_closure_check)...,
         tag_closure_callback(
             water_closure_check,
             tagging.water_tagging_model;
@@ -854,10 +856,42 @@ end
 tag_closure_callback(::Nothing, tagging_model; kwargs...) = ()
 
 # The per-step gross of the tags' state ledgers, after every step, where the
-# tags keep any (WP6). It reads the state and writes only its own cache.
-tag_ledger_gross_callback(tagging) =
+# tags keep any (WP6). It reads the state and writes only its own cache. With
+# water tags, the same callback compares the parent's negative water with the
+# water check's `negative_water_void_above` (known issue 7). It comes before
+# the closure checks, so a row in the same step already sees the flag.
+tag_ledger_gross_callback(tagging, water_closure_check = nothing) =
     isempty(tag_state_ledger_names(tagging)) ? () :
-    (call_every_n_steps(accumulate_tag_ledger_gross!, 1; skip_first = true),)
+    (
+        call_every_n_steps(
+            tag_ledger_step_affect(
+                negative_water_step_level(
+                    water_closure_check,
+                    tagging.water_tagging_model,
+                ),
+            ),
+            1;
+            skip_first = true,
+        ),
+    )
+
+# The per-step callback's work. The level of the check at every step is fixed
+# in the closure: a number, or `nothing` for no check.
+tag_ledger_step_affect(negative_water_void_above) =
+    integrator ->
+        accumulate_tag_ledger_gross!(integrator, negative_water_void_above)
+
+"""
+    negative_water_step_level(water_closure_check, water_tagging_model)
+
+The level that the check at every accepted step compares the parent's
+negative water with: the water check's `negative_water_void_above`. It is
+`nothing` without water tags, without a water check, or where the key is `~`.
+Then the step does no work for it.
+"""
+negative_water_step_level(water_closure_check, water_tagging_model) =
+    (isnothing(water_closure_check) || isnothing(water_tagging_model)) ?
+    nothing : get(water_closure_check, :negative_water_void_above, nothing)
 
 # The water family's own audit columns, under prognostic EDMF and under the
 # increment follower, as a function of `(Y, p, scale)`, or `nothing` without

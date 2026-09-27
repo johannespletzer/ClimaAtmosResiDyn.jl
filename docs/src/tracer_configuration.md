@@ -387,8 +387,9 @@ means the tags' shares are undefined somewhere. The audit's
 `nonpositive_mass_fraction` gives the same by mass. Both read the grid-mean
 parent at the check's times only, so a cell that goes negative and back between
 two checks does not show. Unlike `closure_void`, they are not kept from one row
-to the next. For water, the next section adds a flag that is kept, and a
-ledger that sees every step.
+to the next. For water, the next section adds a flag that is kept and is
+also checked at the end of every accepted step, and a ledger that sees every
+step.
 
 ### The parent's negative water
 
@@ -405,27 +406,39 @@ negative water, from the raw `ρq_tot`, not from the partition's target.
 the parent's negative water, `Σ ρ max(-q_tot, 0) dV`, over its water, at the
 row's time. It is 0 where no cell is negative, and `Inf` where some cell is
 negative and `∫ρq_tot` is not positive. This is the tag-closure contract's row
-"Parent validity: negative water" read at the checks: above `1e-4`, a run's
-water results are not scored.
+"Parent validity: negative water": above `1e-4`, a run's water results are not
+scored.
 
-`negative_water_void_above`, `1e-4` by default, is that level. The first row
-whose `negative_water_relative` passes it warns once, and from then on
+`negative_water_void_above`, `1e-4` by default, is that level. The check
+compares the ratio with it at every row, and also at the end of every accepted
+step. The first time the ratio passes it, the run warns once. From then on
 `negative_water_void` is 1 on every row of the closure table and of the audit
 table, also after the parent recovers. The checkpoint records the flag, as it
 records `closure_void`, and a restarted run reads it back before its first
 check. A checkpoint written before the flag restarts it at 0, with a warning.
-`negative_water_void_above: ~` drops both columns. Zero marks the rows at the
-first negative water. Only `water_closure_check` takes the key.
+`negative_water_void_above: ~` drops both columns and the check at every step.
+Zero marks the rows at the first negative water. Only `water_closure_check`
+takes the key.
+
+The check at every step matters because the rows see the state at their own
+times only. At site 23 of the tag-closure long runs, the negative water rose
+from zero within one 6-hour interval at the start of each spell, and fell back
+to zero within one at its end. So an excursion shorter than the interval is
+possible. An excursion that passes the level and ends between two rows still
+sets the flag, and the next row is the first one marked. That row's own
+`negative_water_relative` can then be below the level, or 0.
 
 `negative_water_void` says one thing: the parent's negative water passed the
-level at a check. `negative_water_void = 0` does not say that the parent is
-valid in any other way. The check reads the state at its own times only, so
-an excursion that begins and ends between two checks does not set the flag. At
-site 23 of the tag-closure long runs, the negative water rose from zero within
-one 6-hour interval at the start of each spell, and fell back to zero within
-one at its end. So an excursion shorter than the interval is possible.
+level at a row or at the end of an accepted step. `negative_water_void = 0`
+does not say that the parent is valid in any other way. The check reads the
+state at the end of each accepted step, not within a step.
 
-The audit sees every step instead. After each accepted step, a ledger in the
+It costs a global sum of `max(-ρq_tot, 0)` after every accepted step, and a
+second one, of `ρq_tot`, after a step that ends with negative water somewhere.
+Under MPI both are collective, so every process takes them. With the key at
+`~`, the step does neither.
+
+The audit also sees every step. After each accepted step, a ledger in the
 cache adds `max(-ρq_tot, 0) Δt` per cell, and counts the cells whose `ρq_tot`
 is below zero. The checkpoint carries it. The water audit table reports it:
 
@@ -440,9 +453,11 @@ is below zero. The checkpoint carries it. The water audit table reports it:
 An interval with `negative_water_interval_events = 0` had no negative water
 at the end of any accepted step, anywhere. The first row of a run, or of a
 restarted segment, has an empty interval, so its interval columns are 0. The
-interval's mean divides by `∫ρq_tot` at the row, not over the interval, so it
-does not set the flag. A checkpoint written before the ledger restarts it at
-zero, with a warning. The per-cell fields are the opt-in diagnostics
+interval's mean divides by `∫ρq_tot` at the row, not at each step. So it
+approximates the interval's mean of `negative_water_relative`, and the two
+differ where the parent's water changes within the interval. The flag does not
+use it. A checkpoint written before the ledger restarts it at zero, with a
+warning. The per-cell fields are the opt-in diagnostics
 `q_tag_negative_integral`, in kg s m⁻³, and `q_tag_negative_events`.
 
 Both the flag and the ledger live in the cache and in the checkpoint, never in
@@ -707,6 +722,7 @@ ClimaAtmos.write_tag_closure_void_attributes!
 ClimaAtmos.restore_tag_closure_void!
 ClimaAtmos.closure_signed_parent
 ClimaAtmos.negative_water_rows
+ClimaAtmos.negative_water_step_level
 ClimaAtmos.negative_water_void_flags
 ClimaAtmos.write_negative_water_void_attributes!
 ClimaAtmos.restore_negative_water_void!

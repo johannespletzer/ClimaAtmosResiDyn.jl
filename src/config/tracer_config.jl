@@ -993,12 +993,13 @@ accepts the key; only the energy source family sets it by default.
 
 `negative_water_void_above` is read only where `negative_water` is `true`,
 which is the water block. It defaults to
-[`DEFAULT_NEGATIVE_WATER_VOID_ABOVE`](@ref), `1e-4`: past it, the parent's
-negative water over its water, from the raw `ρq_tot`, marks this row and every
-later row `negative_water_void`. `~` switches it off and drops the columns. It
-must not be negative. Zero marks the rows at the first negative water. The
-energy blocks refuse the key, since their parent is not water; there it is
-`nothing`.
+[`DEFAULT_NEGATIVE_WATER_VOID_ABOVE`](@ref), `1e-4`. The parent's negative
+water over its water, from the raw `ρq_tot`, is compared with it at each row
+and at the end of every accepted step. Once past it, every later row is marked
+`negative_water_void`. `~` switches it off, drops the columns, and removes the
+check at every step. It must not be negative. Zero marks the rows at the first
+negative water. The energy blocks refuse the key, since their parent is not
+water; there it is `nothing`.
 """
 closure_check_from_config(
     ::Nothing,

@@ -1570,8 +1570,8 @@ end
 
     # The ratio: 0 on a positive column, and N / ∫ρq_tot with one negative
     # cell, N = 250 × 0.5 = 125 and ∫ρq_tot = 250 × 2.5 = 625.
-    @test CA.parent_negative_water(set_parent!(positive), p).relative == 0
-    water = CA.parent_negative_water(set_parent!(one_negative), p)
+    @test CA.parent_negative_water(set_parent!(positive)).relative == 0
+    water = CA.parent_negative_water(set_parent!(one_negative))
     @test water.negative ≈ Δz * FT(0.5) rtol = 4 * eps(FT)
     @test water.total ≈ Δz * FT(2.5) rtol = 4 * eps(FT)
     @test water.relative ≈ FT(0.2) rtol = 8 * eps(FT)
@@ -1663,6 +1663,70 @@ end
     @test header_off ==
           "time,total,tagged,residual,relative,gross_residual," *
           "gross_relative,scale,nonpositive_fraction"
+
+    # The same level at the end of every accepted step (the owner's decision
+    # on #118's review). The step's ratio is the row's, bit for bit, and 0
+    # without negative water.
+    set_parent!(one_negative)
+    @test CA.negative_water_step_relative(Y.c.ρq_tot) ===
+          CA.parent_negative_water(Y).relative
+    set_parent!(FT[1, -0.0, 0, 1])
+    @test CA.negative_water_step_relative(Y.c.ρq_tot) === zero(FT)
+    # Where all the water is zero or less, the guard gives `Inf`.
+    set_parent!(FT[0, 0, -0.5, 0])
+    @test CA.negative_water_step_relative(Y.c.ρq_tot) == Inf
+    # A row, a clean step, a step past the level, a clean step, and a row:
+    # the excursion lies wholly between the two rows. The step sets the flag
+    # and warns once. The next row is void, though its own ratio is 0, and it
+    # does not warn again.
+    step_voided = Ref(false)
+    step_p = merge(
+        p,
+        (; tagging = (; p.tagging..., negative_water_void = (; water = step_voided))),
+    )
+    check_step!(t, level) = CA.check_negative_water_step!((; u = Y, p = step_p, t), level)
+    step_flag = (; void_above = level, voided = step_voided, ledger = nothing)
+    between = mktempdir()
+    set_parent!(positive)
+    check!(between, 0.0, step_flag)
+    @test_logs check_step!(10.0, level)
+    @test !step_voided[]
+    set_parent!(one_negative)
+    @test_logs (:warn, r"end of the step to t = 20.0 s") check_step!(20.0, level)
+    @test step_voided[]
+    @test_logs check_step!(25.0, level)
+    set_parent!(positive)
+    @test_logs check_step!(30.0, level)
+    @test step_voided[]
+    @test_logs check!(between, 40.0, step_flag)
+    between_table = CA.tag_closure_path(between, "water")
+    @test table_column(between_table, "negative_water_void") == ["0", "1"]
+    @test table_column(between_table, "negative_water_relative") == ["0.0", "0.0"]
+    # A negative part below the level leaves the flag, and zero marks the
+    # first negative water.
+    step_voided[] = false
+    set_parent!(FT[1, 1, -1.0e-5, 1])
+    check_step!(0.0, level)
+    @test !step_voided[]
+    @test_logs (:warn,) check_step!(0.0, zero(FT))
+    @test step_voided[]
+    # `~` does no work: no sum, no flag, even on a negative parent.
+    step_voided[] = false
+    set_parent!(one_negative)
+    @test isnothing(check_step!(0.0, nothing))
+    @test !step_voided[]
+    @test (@allocated check_step!(0.0, nothing)) == 0
+    # The level the per-step callback gets: the water check's key, or nothing
+    # without water tags, without the check, or with `~`.
+    @test CA.negative_water_step_level((; negative_water_void_above = level), :water) ==
+          level
+    @test isnothing(
+        CA.negative_water_step_level((; negative_water_void_above = nothing), :water),
+    )
+    @test isnothing(CA.negative_water_step_level(nothing, :water))
+    @test isnothing(
+        CA.negative_water_step_level((; negative_water_void_above = level), nothing),
+    )
 
     # The ledger: each accepted step adds max(-ρq_tot, 0) Δt and one event per
     # negative cell, against a hand computation.
