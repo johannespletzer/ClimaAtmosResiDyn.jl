@@ -1855,13 +1855,15 @@ end
             job_id,
         )
         # The cache's deviation, from the tags' own masks on a sweep of
-        # latitudes, as `_energy_source_tagging_cache` takes it on the grid.
+        # latitudes in the configuration's float type, as
+        # `_energy_source_tagging_cache` takes it on the grid.
         model = CA.AtmosTagging(config).energy_source_tagging_model
-        coords = [(; lat = FT(lat), z = FT(0)) for lat in -90:0.25:90]
+        config_FT = eltype(config)
+        coords = [(; lat = config_FT(lat), z = zero(config_FT)) for lat in -90:0.25:90]
         deviation = CA.energy_source_partition_deviation(
             CA._tag_masks(coords, model.tags),
             CA.energy_source_region_tag_state_names(model),
-            zeros(FT, length(coords)),
+            zeros(config_FT, length(coords)),
         )
         tagging = (; energy_source_partition_deviation = deviation)
         return tagging, CA.callback_kwargs_from_config(config)
@@ -1874,7 +1876,8 @@ end
     # `tropics` alone leaves the extratropics out: refused, with the deviation.
     tagging, kwargs = source_config(tropics_only, level; job_id = "setup_gap")
     @test !CA.energy_source_partition_verified(tagging)
-    @test kwargs.energy_source_closure_check.throughput_tolerance == FT(0.05)
+    @test kwargs.energy_source_closure_check.throughput_tolerance ==
+          typeof(tagging.energy_source_partition_deviation)(0.05)
     @test_throws r"throughput_tolerance" CA.check_energy_source_throughput_setup(
         tagging,
         kwargs,
