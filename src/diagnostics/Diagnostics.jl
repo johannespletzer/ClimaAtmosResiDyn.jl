@@ -85,6 +85,8 @@ import ..region_tag_state_names
 import ..WaterTaggingModel
 import ..water_region_tag_state_names
 import ..water_tag_fraction
+import ..water_tag_partition_target
+import ..water_tag_negative_part
 import ..has_water_tag_updraft_copies
 import ..water_tag_leak!
 import ..WATER_TAG_LEAK_PATHS
