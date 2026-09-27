@@ -101,11 +101,12 @@ record; the answered and superseded entries are in the next section.
 
     [G3T](G3_TODO.md)
 
-*Scope added (provenance pathway, 2026-09-26):* **OD9 to OD14** are proposed,
-not yet open ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9). Each
-becomes open when the owner accepts it. The owner stated on 2026-09-26 (PR
-#122) that a site-23-derived case does not count as held out for a rule
-developed using site 23.
+*Scope added (provenance pathway, 2026-09-26):* **OD9 to OD15** are proposed,
+not yet open ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9). OD15,
+WP4b's acceptance for precipitation provenance, was added on 2026-09-27 from
+the owner's review of #121. Each becomes open when the owner accepts it. The
+owner stated on 2026-09-26 (PR #122) that a site-23-derived case does not count
+as held out for a rule developed using site 23.
 [Register](ROADMAP.md#the-decision-register)
 
 ## Answered or superseded, moved from the waiting list (2026-09-25)

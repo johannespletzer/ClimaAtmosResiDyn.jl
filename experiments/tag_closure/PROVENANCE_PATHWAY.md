@@ -1,8 +1,9 @@
 # The provenance pathway
 
-Proposed on 2026-09-26, pending the owner's decisions OD9 to OD14. Revised the
-same day after the owner's review (section 0). It is written on
-`claude/tag-provenance-certainty-zwkx73`, from `claude/plan-rev2` at
+Proposed on 2026-09-26, pending the owner's decisions OD9 to OD15. Revised the
+same day after the owner's review (section 0). PT15, PT16, PX25 and OD15 were
+added on 2026-09-27, from the owner's review of #121 (section 0). It is written
+on `claude/tag-provenance-certainty-zwkx73`, from `claude/plan-rev2` at
 `a6949414`. That branch held the newest results: it was 78 commits ahead of
 `claude/tag-closure-record`, and no other branch held a record commit that it
 lacked. Nothing here has been run. Every measured number quoted is a finding
@@ -86,19 +87,29 @@ texts could not be reached from this environment. The notes on them in section
 1 rest on their abstracts and on published passages quoted in search results.
 A full reading may change them.
 
-**The owner's review of #121** (2026-09-25, comment 5839010537) bears on
-WP4b's validation. *Scope added (provenance pathway, 2026-09-27, from the
-owner's review of #121, pending OD15):* two of its items are being added to
-#121 as tests. One is a test-only reference that evolves the three
-compartments after every microphysics sub-step (item 4). The other is a
-horizontally varying operator test (item 6). They are tests being added, not
-results. Items 5 and 7 enter this page. PX25 runs WP4b's two transports over a
-refinement matrix, records the residuals rather than bounding them, and
-reports the audit on two scales (PT15, PT16). The review's question on the
-acceptable closure error, and over what duration, becomes OD15. OD15 builds on
-OD3's approved rows and OD2's windows, and proposes no new value. PX25's trend
-rule is new. It reuses OD3's refinement ratios, and the owner decides whether
-to adopt it.
+**The owner's review of #121** (2026-09-25, comment 5839010537) bears on WP4b's
+validation. *Scope added (provenance pathway, 2026-09-27, from the owner's
+review of #121, pending OD15):* two of its items were added to #121 as tests in
+`00b4ecf`. One is a test-only reference that evolves the three compartments
+after every microphysics sub-step (the review's item 4). The other is a
+horizontally varying operator test (item 6). #121's commit `3681fc2` reports
+item 4's test file passing on Julia 1.11 on the login node. Item 6's integration
+test had reported no result by then. Neither is in FINDINGS.md, so they are
+tests, not results. Items 5 and 7 enter this page. PX25 runs WP4b's two
+transports over a refinement matrix, records the residuals rather than bounding
+them, and reports the audit on two scales (PT15, PT16). The review's question on
+the acceptable closure error, and over what duration, becomes OD15. OD15 builds
+on OD3's approved rows and OD2's windows, and proposes no new value. PX25's
+trend rule is new. It reuses OD3's refinement ratios, and the owner decides
+whether to adopt it.
+
+**The check of PR #122 at `d18a453`** (comment 5857451675, 2026-09-27, an
+automated check posted from the owner's account) asked for text fixes to PX25,
+PT15, PT16, OD15 and their pointers (S1 to S6, N3 to N8). They are made here and
+in the edits of section 12. The approved audit row keeps its pass or fail.
+PX25's proposed first case is now stated to be shorter than an hour. Item 5's
+longer run needs a second case that is not held out, and none is shown yet to
+rain in established flow (PX25, OD15).
 
 ## 1. The core idea
 
@@ -738,7 +749,9 @@ either transport.**
     non-precipitating part gives back its rain and snow parts' explicit
     advection (`water_tag_precip_advection!`). So there `q_ntag_res` stays at
     rounding in the first-order arms, and in the van Leer arms it is minus
-    the sum of `q_rtag_res` and `q_stag_res`.
+    the sum of `q_rtag_res` and `q_stag_res`. That identity is pointwise and
+    signed, so it is checked on the signed fields, not on the gross values
+    that PX25 also records.
   - If false: any of these fails. For example, a van Leer arm keeps rain and
     snow within 1e-8.
   - Prior: W43 (300 s, first order: rain and snow at rounding in both
@@ -751,9 +764,16 @@ either transport.**
 between compartments, which a shorter step or more sub-steps do not remove.
 
   - If true: the audit's ratio to the gross microphysical transfer is
-    systematic by PX25's rule at every `dt` and sub-step rung.
+    systematic by PX25's trend rule across the two `dt` halvings. The
+    sub-step readings are reported beside it, since the rule reads the `dt`
+    halvings only (PX25). So PT16's claim about more sub-steps is not
+    assessable unless OD15 defines a per-doubling ratio for the sub-step
+    rungs.
   - If false: it converges, so the difference is a step effect. Or it grows
     with cyclic processing.
+  - The trend rule is a proposal under OD15. If OD15 does not adopt it, no
+    rule decides between converging, systematic and growing, and PT16 is not
+    assessable.
   - Prior: [design/RAIN_SNOW_TAGS.md](design/RAIN_SNOW_TAGS.md) section 9
     (the two-way part is 72% of the net at 97% relative humidity, in one
     state). #121's integration test shows only that the audit is positive
@@ -1248,11 +1268,13 @@ After #121's review.
     precipitation tolerance means WP4b's stage 2 (EDMF) comes before any
     precipitation claim in the production envelope.
   - *Scope added (provenance pathway, 2026-09-27, from the owner's review of
-    #121):* #121 is adding a test-only reference that evolves the three
-    compartments after every microphysics sub-step (the review's item 4). It
-    is a test being added, not a result. PX14 is its run-scale counterpart.
-    Its readout also reports the audit and `|φ_pool − φ₆₄|` on PX25's two
-    scales, as maxima and integrated values, at each sub-step count.
+    #121):* a test-only reference that evolves the three compartments after
+    every microphysics sub-step (the review's item 4) was added to #121 in
+    `00b4ecf`. #121's commit `3681fc2` reports its test file passing on the
+    login node. It is not in FINDINGS.md, so it is a test, not a result. PX14
+    is its run-scale counterpart. Its readout also reports the audit and
+    `|φ_pool − φ₆₄|` on PX25's two scales, as maxima and integrated values,
+    at each sub-step count.
   - Code: none. Under an hour per case.
 
 **PX15. The energy follower's split.** [K] After PX7. Port
@@ -1304,20 +1326,51 @@ PT16. *Scope added (provenance pathway, 2026-09-27, from the owner's review of
 step 8b, beside PX14.
 
   - Case: #121's tree, 1M without EDMF, since WP4b is refused under EDMF
-    until stage 2. OD15 names the case and its length before the first run.
-    Proposed: `PrecipitatingColumn` over its whole rain-out window, read from
-    the untagged run as in PX14, and one 1M case without EDMF that rains in
-    established flow by OD2's window rule. Neither is OD2's WP4b held-out
-    case, since PX25 may change the recommended mode (OD14).
-    `PrecipitatingColumn` starts from Rico's profiles. By the owner's reading
-    of 2026-09-26 on site 23, RICO 1M may then not count as held out for a
-    mode that PX25 recommends. OD14 decides whether it still does.
+    until stage 2. OD15 names the cases and their length before the first
+    run. Neither case is OD2's WP4b held-out case, since PX25 may change the
+    recommended mode (OD14). That case is TRMM_LBA 1M if its rain starts
+    after startup, otherwise RICO 1M (ROADMAP's window table).
+    `PrecipitatingColumn` starts from Rico's profiles. By analogy with the
+    owner's statement of 2026-09-26, the pathway asks OD14 whether RICO 1M,
+    the fallback held-out case, still counts as held out for a mode PX25
+    recommends. Proposed:
+      + `PrecipitatingColumn` on W43's column. W43 cut it at 6 km, since
+        Rico's `q_tot` goes below zero above about 6.2 km. It has 30 levels
+        and `dt` 10 s. `t_end` is 1500 s, the length that
+        `single_column_precipitation_test.yml` sets, so this case is shorter
+        than an hour. The config itself runs a 10 km column with 200 levels,
+        so the cut and the 30 levels are W43's. W43 ran 300 s, and by then
+        the rain had nearly all fallen out (`4b86ec66`). R9's hourly reading,
+        the 24 h closure row and the audit over the day have no output to
+        read on it. OD15 says how they are read.
+      + A second case, 1M without EDMF, that rains in established flow by
+        OD2's window rule. It carries item 5's "materially longer" run. It
+        cannot be a held-out case, so it is neither OD2's WP4b case nor one
+        of criterion 8's columns (RICO, BOMEX, ARM SGP and the GCM-driven
+        column from site 23). The candidates outside those lists, from
+        `config/` and the record, are not yet shown to rain in established
+        flow. DYCOMS RF02 1M without EDMF is the column of FINDINGS' case C8
+        (`configs/c8_column_1m.yml`: 1.5 km, 30 levels, `dt` 10 s, a day).
+        It is on no held-out list. E33 gives the rain's energy over that
+        day, not when it fell, and the same case under 0M rained only in its
+        first hour (W15). The moist baroclinic wave with 1M
+        (`baroclinic_wave_nonequil_conservation_source.yml`, 5 days) is a
+        sphere, not a column. Larcform1 1M, a 5-day Arctic column, ships
+        only with prognostic EDMF, so without EDMF it is a new
+        configuration. The GCM-driven column at site 26, a development case
+        in OD14's proposal, ran in the record only with prognostic EDMF and
+        0M (W36, `configs/lr_s26_untagged.yml`). So 1M without EDMF there is
+        also a new configuration, and its rain is not yet shown.
+        Shipway-Hill (`kinematic_driver.yml`) runs 20 minutes, and it did
+        not run at E57's check. Until OD15 names a second case and its
+        untagged run shows rain in established flow, item 5's longer run is
+        not assessable. The owner decides.
   - Arms: `water_tag_transport` `tracer` and `increment`; `tracer_upwinding`
     `first_order` and `vanleer_limiter` (the default); the case's `dt` and
-    two halvings. Under van Leer at the case's `dt`, also 1 and 10
-    microphysics sub-steps beside the default (the review's item 4).
-    `PrecipitatingColumn` runs with the SGS quadrature, since
-    `use_sgs_quadrature` is `true` by default. So there the key is
+    two halvings. Only under van Leer at the case's `dt`, 1 and 10
+    microphysics sub-steps run beside the default, in both transports (the
+    review's item 4). `PrecipitatingColumn` runs with the SGS quadrature,
+    since `use_sgs_quadrature` is `true` by default. So there the key is
     `microphysics_n_substeps_quadrature`, default 2.
     `microphysics_n_substeps`, default 3, acts only without the quadrature.
     Each case's key is read from its config before the run. A sub-step arm
@@ -1332,7 +1385,8 @@ step 8b, beside PX14.
     scored.
   - Recorded, not only bounded, at every output:
       + `q_ntag_res`, `q_rtag_res`, `q_stag_res` and `q_tag_res`, gross, each
-        over the total water and over its own compartment;
+        over the total water and over its own compartment, and the signed
+        fields, on which PT15's identity is checked;
       + each part's minimum, and the corrections' gross per tag from the
         per-tag ledgers (`water_tag_ledger_per_tag: true`). A tag's `led_fix`
         ledger takes the limiters' rescale and the repair, for all three of
@@ -1349,28 +1403,51 @@ step 8b, beside PX14.
         change in absolute value, from the probe, and as the field's absolute
         value. The gross transfer comes from an accepted-step probe on
         `wp4c_gate_probe.jl`'s pattern, unless #121 adds a diagnostic for it
-        (the review's open question 4).
+        (related to the review's open question 4).
   - Rules, on the approved rows as they stand:
       + closure: `q_tag_res` at most 0.2% of `∫ρq_tot` at 24 h, and the
         second 12 h add no more than the first (G3_PLAN 6.1);
-      + rain and snow, read as R9 proposes (G3_PLAN 6.1): `q_rtag_res` and
-        `q_stag_res` within 1e-8 of their compartment each hour, and
-        `Σ pr_tag = pr` within 1e-8 at each output. The accumulated sum is
-        reported, and scored only if OD15 says so;
+      + rain and snow (G3_PLAN 6.1): `q_rtag_res` and `q_stag_res` within
+        1e-8 of their compartment, and `Σ pr_tag = pr` within 1e-8
+        relative. The hourly reading, and the reading at each output, are
+        R9's proposal.
+        [R9's text](review/agent_reviews/phase1_tools_review_2026-09-23.md)
+        marks both as proposed, and G3_PLAN 6.1 only names R9. The
+        accumulated sum is reported, and scored only if OD15 says so;
+      + the non-precipitating compartment: no approved row holds
+        `q_ntag_res` against its compartment. It is reported, and OD15 asks
+        which row or tolerance holds it, or whether it stays reported only.
+        Under van Leer and `increment`, PT15 predicts it to be minus the rain
+        and snow residuals, so it is not expected to be small there;
       + the repair: OD3's intervention rows, and its refinement row across
         the `dt` rungs;
-      + the audit: within 10% of each tag's precipitation over the day
-        (G3_PLAN 6.1). Its ratio to the gross transfer is weighted as OD3's
-        process-weighted row is. But it weighs a spread between two rules,
-        not a comparator, so it is reported, not scored, unless OD15 sets a
-        tolerance;
-      + the audit's trend, a proposal under OD15 with OD3's refinement ratios
-        (0.75, 0.9, 1.1): take its per-step reading over the gross transfer,
-        finer rung over coarser. At most 0.75 at every rung, it converges.
-        Above 1.1 at any rung, it grows. Between 0.9 and 1.1 at every rung,
-        it is systematic. Anything else is reported as unresolved.
+      + the audit: G3_PLAN 6.1's audit row, the net-flow audit within 10% of
+        each tag's precipitation over the day, on the 1M column without
+        EDMF. The 10% row passes or fails as approved (6.1). The ratio to the
+        gross transfer is reported, not scored, unless OD15 sets a tolerance.
+        The ratio is weighted as OD3's process-weighted row is, but it weighs
+        a spread between two rules, not a comparator;
+      + the audit's trend, a proposal under OD15. It reuses OD3's ratios.
+        0.75 and 0.9 come from the row "Refinement", and 1.1 from the row
+        "Comparator: refinement". The second row states its ratio per
+        halving of `dt` or doubling of the Newton count. The first compares
+        a finer rung with a coarser one. The rule reads the two `dt`
+        halvings only, which fit both rows. Take the audit's per-step reading
+        over the gross transfer, finer rung over coarser. At most 0.75 at
+        both halvings, it converges. Above 1.1 at either, it grows. Between
+        0.9 and 1.1 at both, it is systematic. Anything else is reported as
+        unresolved. The sub-step rungs, 1, 2 and 10 under the quadrature, are
+        factors of 2 and 5. So their readings are reported, not judged by the
+        rule, and OD15 asks whether a per-doubling ratio is defined for them.
+        If OD15 does not adopt the rule, PT16 is not assessable.
   - OD15 is decided before the first run. Without it the approved rows apply
-    as they stand. No tolerance changes after a failure.
+    as they stand. A case shorter than a day has no 24 h output for the
+    closure row or the audit row over the day. A case shorter than an hour
+    has none for R9's proposed hourly reading. The owner's reading rule of
+    2026-09-23 counts a missing hour as a failure (G3_PLAN 6.1, "How the
+    budgets are read"). Whether that applies to a case that ends early, or
+    the row is not assessable there, is OD15's question. No tolerance
+    changes after a failure.
   - If a tracer arm fails a row that the increment arm on the same parent
     passes, the pathway proposes that `increment` is the recommended mode
     for precipitation provenance, stated prominently in
@@ -1379,8 +1456,15 @@ step 8b, beside PX14.
     no mode is recommended on closure. The owner decides.
   - Closure and the audit are not provenance. PX25 validates no rule, and
     PX14 stays WR13's reference.
-  - Code: none in the model; the probe script. About 24 jobs per case, the
-    untagged twins included.
+  - Code: none in the model; the probe script. It has 24 jobs per case,
+    counted from the arms above. There are 16 tagged arms: the 12 of
+    transport, upwinding and `dt`, and the 4 sub-step arms. There are 8
+    untagged twins: the 6 upwinding and `dt` parents, and the 2 sub-step
+    parents. Two cases make 48. Column runs go to `hpda2_test` where they
+    fit in two hours, otherwise `hpda2_compute` (G3_PLAN 6). No approved
+    budget counts these jobs. They are outside G3_PLAN 6's total of about 70
+    column-scale jobs. Step 8's cost ceilings bound the model's cost, not a
+    job count (G3_PLAN, V-P3).
 
 ## 8. Probe PRs
 
@@ -1421,7 +1505,8 @@ These enter the register in [ROADMAP.md](ROADMAP.md) as proposals. Each
 becomes an open "OWNER DECISION REQUIRED" row when the owner accepts it. No
 agent fills one in. The panel that designed this page proposed eight; they are
 merged into six to spare the owner's time. They were revised after the owner's
-review (section 0).
+review (section 0). OD15 was added on 2026-09-27, from the owner's review of
+#121, so seven are proposed.
 
   - **OD9. The evidence labels.** Adopt the two axes as reporting labels: the
     fidelity levels, "observed spread", "exposure screen", "validated for named
@@ -1463,18 +1548,39 @@ review (section 0).
     for a rule developed using site 23. Until an independent case and its
     reference are fixed, Val-4 is not assessable. A held-out case is never
     used to develop a rule. Needed before PX23 and before step 8b.
+    *Added 2026-09-27 (PX25):* `PrecipitatingColumn` starts from Rico's
+    profiles. By analogy with the owner's statement of 2026-09-26, OD14 also
+    asks whether RICO 1M, WP4b's fallback held-out case, still counts as held
+    out for a mode PX25 recommends.
   - **OD15. WP4b's acceptance for precipitation provenance.** *Scope added
     (provenance pathway, 2026-09-27, from the owner's review of #121):* the
     review asks what closure error is acceptable for the analyses WP4b
     serves, and over what duration. The proposed answer uses decided rows
-    only: OD3's approved rows and G3_PLAN 6.1's rain and snow row, read each
-    hour as R9 proposes, in OD2's windows. OD15 names PX25's case and length.
-    It says how the day-scale rows are read on a case shorter than a day. It
-    says whether a van Leer arm is held to the approved 1e-8 row or to a
-    compartment tolerance the owner names. It says whether the accumulated
-    `Σ pr_tag` is scored beside R9's reading at each output. It says whether
-    the audit's ratio to the gross transfer gets a tolerance, and whether
-    PX25's trend rule is adopted. Needed before PX25's first run.
+    only: OD3's approved rows, G3_PLAN 6.1's rain and snow row and its audit
+    row, in OD2's windows. Reading the rain and snow row each hour is R9's
+    proposal
+    ([R9's text](review/agent_reviews/phase1_tools_review_2026-09-23.md)).
+    Needed before PX25's first run. The questions:
+      + PX25's cases and their length. If no case outside the held-out lists
+        is shown to rain in established flow, item 5's longer run is not
+        assessable, and the owner decides (PX25).
+      + How the day-scale rows are read on a case shorter than a day, and
+        R9's proposed hourly reading on a case shorter than an hour: not
+        assessable, or a failure under the owner's rule of 2026-09-23 that a
+        missing hour is a failure.
+      + Whether a van Leer arm is held to the approved 1e-8 row or to a
+        compartment tolerance the owner names.
+      + Which row or tolerance holds `q_ntag_res` against its compartment, or
+        whether it is reported only. Under van Leer and `increment`, PT15
+        predicts `q_ntag_res = −(q_rtag_res + q_stag_res)`, so it is not
+        expected to be small there.
+      + Whether the accumulated `Σ pr_tag` is scored beside R9's reading at
+        each output.
+      + Whether the audit's ratio to the gross transfer gets a tolerance.
+      + Whether PX25's trend rule is adopted. Without it, PT16 is not
+        assessable.
+      + Whether the sub-step rungs, which are not halvings, get a
+        per-doubling ratio or stay reported only.
 
 ## 10. Sequencing, and what G4 takes
 
@@ -1574,8 +1680,8 @@ listed with every energy verdict.
   - **The L∞ rows** (5% and 25%) have no route without a comparator, unless
     positivity is shown for the operators of a case.
   - **Data durability.** Every [R] item depends on scratch until PX0 is done.
-  - **The owner's bandwidth.** Six proposed decisions, OD7, and at most one
-    probe PR on the gated path.
+  - **The owner's bandwidth.** Seven proposed decisions (OD15 added on
+    2026-09-27), OD7, and at most one probe PR on the gated path.
   - **Multiple testing.** Only pre-registered decision rules count. Everything
     else is reported.
   - **Two meanings of provenance.** "Tag provenance" is this page's subject.
@@ -1618,3 +1724,14 @@ review.
     in PX14, and OD15. Elsewhere: OD15 in ROADMAP's register and notes on
     steps 7 and 8b; G3_PLAN 4.5, criterion 7 and V-P3; G3_TODO's Decisions,
     WP4b and pathway sections. FINDINGS.md is not touched.
+  - *Revised 2026-09-27, after the check of PR #122 at `d18a453` (comment
+    5857451675):* on this page, the header, section 0, PT15, PT16, PX14's
+    readout, PX25, section 9 (its intro, OD14 and OD15) and section 11.
+    Elsewhere: OD14 and OD15 in ROADMAP's register and the notes on steps 7
+    and 8b; G3_PLAN 4.5 and a note after V-P3's table; G3_TODO's OD15 item,
+    WP4b items and pathway section title; STATUS's header, update,
+    open-decisions note and "Where to look" row; DECISIONS' pointer. The
+    rows V-P0 to V-P3 now come after the V-W table's total of about 70 jobs,
+    so that total again follows the V-W table, and its words are unchanged.
+    The same edits give the run status of items 4 and 6 at #121's `3681fc2`.
+    Nothing approved is changed, and FINDINGS.md is not touched.

@@ -481,9 +481,11 @@ two rules, not a bound on the pool's error. PX14 is the pool's reference.
 PX25 reports the audit on two scales: the gross microphysical transfer, and
 the rain or snow mass or each tag's precipitation. It also records each
 compartment's residual under both transports, both upwinding schemes and
-several time steps. #121 is adding the review's sub-step-resolved reference
-test (item 4) and a horizontally varying operator test (item 6). They are
-tests being added, not results.
+several time steps. The review's sub-step-resolved reference test (item 4)
+and a horizontally varying operator test (item 6) were added to #121 in
+`00b4ecf`. #121's commit `3681fc2` reports item 4's test file passing on the
+login node. Item 6's integration test had reported no result by then. Neither
+is in FINDINGS.md, so they are tests, not results.
 
 ### 4.6 Shared code (WP2), after the water design has settled
 
@@ -610,6 +612,9 @@ criterion 8 is separate.
 | V-W10 | Cost: 2, 4, 8 and 32 tags where they build in time, both modes, with and without rain and snow tags, both families. *2026-09-24 (OD8):* qualification is at 8 tags; 32 is a cost item only                                                                                                                                                                                       | about 14 | WP4b       |
 | V-W11 | The sphere: `g2_v2_sphere_n2` with water tags and rain and snow tags under the chosen default, 10 days, 24 ranks (about 16.5 h and 500 GB, as E75). *Superseded 2026-09-24 (OD1, OD6):* 90 days at 60 levels, with 8 water and 8 energy tags and the per-tag ledgers; its cost is ROADMAP.md's M4 estimate. A one-day copies twin. A restart after day 1. A two-rank parity pair | 5        | all above  |
 
+That makes about 70 column-scale jobs and 5 sphere jobs. Column runs go to
+`hpda2_test` where they fit in two hours, otherwise `hpda2_compute`.
+
 *Scope added (provenance pathway, 2026-09-26; revised after the owner's
 review):* the pathway's runs, by gate.
 
@@ -620,8 +625,13 @@ review):* the pathway's runs, by gate.
 | V-P2 | Gate B's probe PR: PX16 with PP-SUB, only if PX8 is material                                                                                                                                                                                                                                                   | OD13                                       |
 | V-P3 | Deferred until a measured result needs them: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21 and the other probe PRs; *PX25, added 2026-09-27 (provenance pathway, from the owner's review of #121)*                                                                                                         | their triggers (the pathway's section 7.2) |
 
-That makes about 70 column-scale jobs and 5 sphere jobs. Column runs go to
-`hpda2_test` where they fit in two hours, otherwise `hpda2_compute`.
+*Scope added (provenance pathway, 2026-09-27, from the check of PR #122,
+comment 5857451675):* PX25 (V-P3) is not in the V-W table's total of about 70
+column-scale jobs, and no approved budget counts its jobs. Step 8's cost
+ceilings bound the model's cost, not a job count. Counted from its arms in the
+pathway, PX25 has 24 jobs per case, 16 tagged arms and 8 untagged twins. With
+a second case it has 48. Its column runs go to the same queues by the same
+rule.
 
 ### 6.1 Budgets, fixed before the runs
 

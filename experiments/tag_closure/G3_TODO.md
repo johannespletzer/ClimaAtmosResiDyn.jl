@@ -57,11 +57,14 @@ The twelve criteria of the plan, section 2, in short:
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9 and PX25. It is
     in [the register](ROADMAP.md#the-decision-register) as a proposal, not
     yet open. It answers the review's question on the acceptable closure
-    error for WP4b, and over what duration, with OD3's approved rows, G3_PLAN
-    6.1's rain and snow row and OD2's windows. It proposes no new value;
-    where one is needed, the owner names it. PX25's trend rule is new. It
-    reuses OD3's refinement ratios, and the owner decides whether to adopt
-    it. No agent fills it in.
+    error for WP4b, and over what duration, with OD3's approved rows,
+    G3_PLAN 6.1's rain and snow row and its audit row, and OD2's windows. It
+    proposes no new value; where one is needed, the owner names it. PX25's
+    trend rule is new. It reuses OD3's refinement ratios, and the owner
+    decides whether to adopt it. It also asks how the day-scale rows and
+    R9's proposed hourly reading are read on a shorter case, which row holds
+    `q_ntag_res` against its compartment, and whether the sub-step rungs get
+    a ratio of their own. No agent fills it in.
   - [x] **Rev. 2's register, OD1 to OD8** (2026-09-24; ROADMAP.md, "The
     decision register"). *Each decision's current state is in [the register](ROADMAP.md#the-decision-register); all but
     OD7 are decided, and OD7 is deferred.* Kept as written: the production envelope, the windows, the
@@ -735,8 +738,9 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     run exercises it: the test column has no horizontal extent. A sphere or
     box run checks it before a default relies on it.
     *Scope added (provenance pathway, 2026-09-27, from the owner's review of
-    #121):* #121 is adding a horizontally varying operator test for it (the
-    review's item 6). It is a test being added, not a result.
+    #121):* the review's item 6, a horizontally varying operator test for
+    it, was added to #121 in `00b4ecf`. It had reported no result at #121's
+    `3681fc2`, so it is a test, not a result.
 
   - [ ] Stage 2: EDMF, default mode.
 
@@ -819,24 +823,33 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     the sedimentation reset replayed with sub-steps in the rain-out window,
     after #121's review, once WP4b moves toward validation.
     *Scope added (provenance pathway, 2026-09-27, from the owner's review of
-    #121):* #121 is adding a test-only sub-step-resolved reference (the
-    review's item 4). It is a test being added, not a result. PX14 is its
-    run-scale counterpart.
+    #121):* a test-only sub-step-resolved reference (the review's item 4)
+    was added to #121 in `00b4ecf`. #121's commit `3681fc2` reports its test
+    file passing on the login node. It is not in FINDINGS.md, so it is a
+    test, not a result. PX14 is its run-scale counterpart.
 
   - [ ] *Scope added (provenance pathway, 2026-09-27, from the owner's review
     of #121, pending OD15):* PX25, the review's items 5 and 7, before step
-    8b. Both transports, first-order and van Leer upwinding, three time
-    steps and three sub-step counts, on a longer precipitating run. It
-    records `q_ntag_res`, `q_rtag_res`, `q_stag_res` and `q_tag_res`, the
-    parts' minima, the repair's throughput and accumulated `Σ pr_tag`. It
-    reports the audit fields on two scales: the gross microphysical
-    transfer, and the rain or snow mass and each tag's precipitation. It is
-    scored on OD3's approved rows and G3_PLAN 6.1's rain and snow row. OD15
-    names the case and its length. If tracer mode fails where increment
-    passes, the pathway proposes increment as the recommended mode for
-    precipitation provenance. The owner decides.
+    8b. Both transports, first-order and van Leer upwinding, and the case's
+    `dt` with two halvings. The sub-step counts 1 and 10, beside the
+    default, run only under van Leer at the case's `dt`. The proposed first
+    case is `PrecipitatingColumn` cut at 6 km as in W43, run for 1500 s, so
+    it is shorter than an hour. Item 5's longer run needs a second case, 1M
+    without EDMF, that rains in established flow and is not held out. None
+    is shown yet, so that run is not assessable until OD15 names one and its
+    untagged run shows rain in established flow. It records `q_ntag_res`,
+    `q_rtag_res`, `q_stag_res` and `q_tag_res`, the parts' minima, the
+    repair's throughput and accumulated `Σ pr_tag`. It reports the audit
+    fields on two scales: the gross microphysical transfer, and the rain or
+    snow mass and each tag's precipitation. It is scored on OD3's approved
+    rows, G3_PLAN 6.1's rain and snow row and its audit row (within 10% of
+    each tag's precipitation over the day). OD15 names the cases and their
+    length. PX25 has 24 jobs per case, and no approved budget counts them
+    (G3_PLAN, V-P3). If tracer mode fails where increment passes, the
+    pathway proposes increment as the recommended mode for precipitation
+    provenance. The owner decides.
 
-## Provenance pathway (proposed 2026-09-26, pending OD9 to OD14)
+## Provenance pathway (proposed 2026-09-26, pending OD9 to OD15)
 
 *Scope added (provenance pathway, 2026-09-26, pending OD9 to OD14; revised
 after the owner's review):* the gated plan of

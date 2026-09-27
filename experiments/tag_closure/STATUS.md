@@ -6,11 +6,12 @@ housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
 done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for), 12:40 and
 20:00 (rev. 2 of the work plan, steps 0 and 1), 21:10 (the owner's answers
 to the register) and later that evening (OD3 approved; known issue 7's option
-A; step 2 pre-registered), on 2026-09-25 (the owner's answers of that day), and
-on 2026-09-26 (the provenance pathway, proposed). Update it when something here
-changes, and at each milestone of a work package and at each goal's end. The
-checklist for those moments is in [README.md](README.md), "Closing a work
-package or a goal". Where a fact was
+A; step 2 pre-registered), on 2026-09-25 (the owner's answers of that day), on
+2026-09-26 (the provenance pathway, proposed), and on 2026-09-27 (PT15, PT16,
+PX25 and OD15 added to it, proposed). Update it when something here changes,
+and at each milestone of a work package and at each goal's end. The checklist
+for those moments is in [README.md](README.md), "Closing a work package or a
+goal". Where a fact was
 not checked, it says so.
 
 ## The goals
@@ -79,10 +80,11 @@ not checked, it says so.
     per cell, and the model knows its answer. Provenance is the rest, and the
     model computes no answer for it. The page gives evidence levels, and per
     tag an observed spread and an exposure screen, neither of them an error
-    bound. It gives fourteen theories and a plan of five gates; the other
+    bound. It gives sixteen theories and a plan of five gates; the other
     experiments wait for a measured result. It was revised the same day after
-    the owner's review. It proposes OD9 to OD14 to the owner; OD3 and OD5
-    stay as decided. Nothing has run.
+    the owner's review. It proposes OD9 to OD15 to the owner; OD3 and OD5
+    stay as decided. PT15, PT16, PX25 and OD15 were added on 2026-09-27,
+    from the owner's review of #121. Nothing has run.
 
       + **Where the newest results live.** On 2026-09-26 they were on
         `claude/plan-rev2` at `a6949414`, 78 commits ahead of
@@ -431,9 +433,9 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
 
 ## The owner's open decisions
 
-*Scope added (provenance pathway, 2026-09-26):* OD9 to OD14 are proposed, not
-yet open. Each becomes open when the owner accepts it
-([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9).
+*Scope added (provenance pathway, 2026-09-26):* OD9 to OD15 are proposed, not
+yet open. OD15 was added on 2026-09-27. Each becomes open when the owner
+accepts it ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9).
 
 Each decision's current state is in ROADMAP.md's register, the single source.
 OD7 is the only open numbered decision. Open now, each with its entry in
@@ -529,7 +531,7 @@ Every decision taken so far is in [DECISIONS.md](DECISIONS.md).
 | how to set up, submit a run, compare runs, and the traps                                                                                     | [README.md](README.md)                                                                                        |
 | the milestones M0 to M8 and where each open item goes                                                                                        | [ROADMAP.md](ROADMAP.md)                                                                                      |
 | rev. 2: the acceptance contract, the decision register OD1 to OD8, the execution order                                                       | [ROADMAP.md](ROADMAP.md), "Rev. 2 of the work plan"                                                           |
-| the provenance pathway, proposed: the evidence levels, the theories PT1 to PT14, the gated plan and the experiments PX0 to PX23, OD9 to OD14 | [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md)                                                                |
+| the provenance pathway, proposed: the evidence levels, the theories PT1 to PT16, the gated plan and the experiments PX0 to PX25, OD9 to OD15 | [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md)                                                                |
 | G3's plan, criteria and budgets                                                                                                              | [G3_PLAN.md](G3_PLAN.md)                                                                                      |
 | G3's to-do list                                                                                                                              | [G3_TODO.md](G3_TODO.md)                                                                                      |
 | G4's items, and the energy items of the former OPERATIONAL_TODO                                                                              | [G4_TODO.md](G4_TODO.md)                                                                                      |
