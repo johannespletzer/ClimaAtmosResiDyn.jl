@@ -44,7 +44,7 @@ state and may be overwritten by any function.
     is `true`; otherwise `nothing`.
   - `conservation_check`: Column-integrated precipitation energy tendency, used for
     the conservation check with a prognostic surface temperature.
-  - `parent_budget`: The parent-budget ledger adapter when `parent_budget_mode` is
+  - `parent_budget`: The parent-budget adapter when `parent_budget_mode` is
     not `off`, and `nothing` otherwise. It reads the state and the timestepper
     cache after every accepted step and never writes either.
 """
@@ -122,7 +122,7 @@ struct AtmosCache{
     # Conservation check for prognostic surface temperature
     conservation_check::CONSCHECK
 
-    # The parent-budget ledger adapter, or `nothing` when the ledger is off
+    # The parent-budget adapter, or `nothing` when the parent budget is off
     parent_budget::PARENTBUDGET
 end
 
@@ -165,7 +165,7 @@ gravity waves, radiation, tracers).
   - `start_date`: Simulation start date, used for time-varying inputs and radiation.
   - `steady_state_velocity`: Predicted steady-state velocity for the
     `check_steady_state` diagnostic, or `nothing`.
-  - `parent_budget`: The parent-budget ledger adapter, or `nothing`. Built before
+  - `parent_budget`: The parent-budget adapter, or `nothing`. Built before
     the cache by `Internals.ParentBudget.build_parent_budget`, so that the
     schema is fixed before anything is collected.
 

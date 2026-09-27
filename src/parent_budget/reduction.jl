@@ -1,5 +1,5 @@
 #####
-##### Parent-budget ledger: packet layout and the one collective
+##### Parent budget: packet layout and the one collective
 #####
 ##### A global integral is a collective. ARS343 has four stages and the coverage
 ##### registry lists dozens of paths, so a collective per quantity per leg would
@@ -28,7 +28,7 @@ What has happened to one packet slot.
 
 `UnsetSlot` and `NotApplicableSlot` are not interchangeable, and that is the
 reason this type exists. A single "no value" flag makes a forgotten measurement
-indistinguishable from a deliberate omission, so the ledger would report a
+indistinguishable from a deliberate omission, so the parent budget would report a
 configuration fact where a defect belongs.
 """
 abstract type PacketSlotState end

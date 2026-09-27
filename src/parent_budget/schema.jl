@@ -1,5 +1,5 @@
 #####
-##### Parent-budget ledger: the declaration layer
+##### Parent budget: the declaration layer
 #####
 ##### What a configuration is expected to produce, declared before anything is
 ##### collected. The journal records what happened; this file says what should
@@ -399,7 +399,7 @@ end
 
 What the coverage registry can say a component of a declared row will be.
 
-  - `:measured`: not provably zero, so the ledger has to measure it.
+  - `:measured`: not provably zero, so the parent budget has to measure it.
   - `:invariant_zero`: provably zero, with the proof named in the record.
   - `:not_applicable`: the row does not write this quantity in this
     configuration.

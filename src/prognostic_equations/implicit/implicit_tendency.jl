@@ -58,11 +58,11 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
         # `KNOWN_TAG_SOURCES`); extending it here would silently change
         # existing tagged-energy results, so that gap is left as it is.
         #
-        # The parent-budget ledger takes the whole increment, through its own
+        # The parent budget takes the whole increment, through its own
         # half of the applied-update event, and only while it is metering the
         # audit evaluation at the Newton-solved stage. It reads `Yₜ` and writes
         # nothing, so the Newton iterations see no difference.
-        open_ledger_event!(p.parent_budget, Yₜ, :microphysics)
+        open_parent_budget_event!(p.parent_budget, Yₜ, :microphysics)
         snapshot_tagged_ρq_tot!(p, Yₜ)
         snapshot_energy_source_tags!(p, Yₜ)
         snapshot_process_record!(p, Yₜ, :microphysics)
@@ -74,13 +74,13 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
-        close_ledger_event!(p.parent_budget, Yₜ, Y, p, :microphysics)
+        close_parent_budget_event!(p.parent_budget, Yₜ, Y, p, :microphysics)
         attribute_tagged_ρq_tot!(Yₜ, Y, p, :microphysics)
         attribute_energy_source_tags!(Yₜ, Y, p, :microphysics)
         accumulate_process_record!(Yₜ, p, :microphysics)
         # Surface water/energy deposition from precipitation (implicit path).
         # The explicit counterpart is called from remaining_tendency!.
-        open_ledger_event!(p.parent_budget, Yₜ, :surface_precipitation)
+        open_parent_budget_event!(p.parent_budget, Yₜ, :surface_precipitation)
         surface_precipitation_tendency!(
             Yₜ,
             Y,
@@ -89,7 +89,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             p.atmos.surface.temperature,
             p.atmos.microphysics_model,
         )
-        close_ledger_event!(p.parent_budget, Yₜ, Y, p, :surface_precipitation)
+        close_parent_budget_event!(p.parent_budget, Yₜ, Y, p, :surface_precipitation)
     end
 
     edmfx_sgs_vertical_advection_tendency!(
@@ -101,7 +101,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
     )
 
     if p.atmos.diff_mode == Implicit()
-        open_ledger_event!(p.parent_budget, Yₜ, :vertical_diffusion)
+        open_parent_budget_event!(p.parent_budget, Yₜ, :vertical_diffusion)
         vertical_diffusion_boundary_layer_tendency!(
             Yₜ,
             Y,
@@ -109,7 +109,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             t,
             p.atmos.vertical_diffusion,
         )
-        close_ledger_event!(p.parent_budget, Yₜ, Y, p, :vertical_diffusion)
+        close_parent_budget_event!(p.parent_budget, Yₜ, Y, p, :vertical_diffusion)
         edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
     end
 
@@ -334,11 +334,11 @@ function implicit_vertical_advection_tendency!(Yₜ, Y, p, t)
     # arrives in a cell as new energy. So `vertical_advection_of_water_tendency!`
     # moves the tags with the water instead, each by its share of what the
     # losing cell holds (`sediment_energy_source_tags!`).
-    open_ledger_event!(p.parent_budget, Yₜ, :precipitation)
+    open_parent_budget_event!(p.parent_budget, Yₜ, :precipitation)
     snapshot_tagged_ρe_tot!(p, Yₜ)
     snapshot_process_record!(p, Yₜ, :precipitation)
     vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
-    close_ledger_event!(p.parent_budget, Yₜ, Y, p, :precipitation)
+    close_parent_budget_event!(p.parent_budget, Yₜ, Y, p, :precipitation)
     attribute_tagged_ρe_tot!(Yₜ, p, :precipitation)
     accumulate_process_record!(Yₜ, p, :precipitation)
 

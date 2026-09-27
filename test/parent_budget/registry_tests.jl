@@ -14,7 +14,7 @@ column_model(; kwargs...) =
 # drift from the other without this file noticing. And the schema a
 # configuration selects from those rows is the fail-closed core at work: built
 # before anything is recorded, it names every envelope, roster row, final map
-# and transfer leg a run owes, and a ledger holding it blocks every claim until
+# and transfer leg a run owes, and a journal holding it blocks every claim until
 # the run supplies them.
 
 const PAGE = joinpath(pkgdir(CA), "docs", "src", "parent_budget", "coverage.md")
@@ -89,7 +89,7 @@ event(schema, name) = PB.transfer_event_spec(schema, Symbol(name))
 has_event(schema, name) = PB.has_transfer_event(schema, Symbol(name))
 processes(schema, name) = Tuple(row.process for row in channel(schema, name).processes)
 
-# Endpoints that agree with the schema about applicability, so a ledger can
+# Endpoints that agree with the schema about applicability, so a journal can
 # open and commit with nothing recorded in between.
 function synthetic_endpoints(schema, step)
     FT = PB.BUDGET_ACCOUNTING_TYPE
@@ -374,13 +374,13 @@ end
         ).event === :radiation
     end
 
-    @testset "A ledger built from the schema blocks until the run supplies every term" begin
+    @testset "A journal made from the schema blocks until the run supplies every term" begin
         for model in (dry_model(), moist_slab_model())
             schema = schema_for(model)
             FT = PB.BUDGET_ACCOUNTING_TYPE
-            ledger = PB.BudgetLedger{FT}(schema)
-            PB.open_transaction!(ledger, synthetic_endpoints(schema, 0))
-            commit = PB.commit_transaction!(ledger, synthetic_endpoints(schema, 1))
+            journal = PB.BudgetJournal{FT}(schema)
+            PB.open_transaction!(journal, synthetic_endpoints(schema, 0))
+            commit = PB.commit_transaction!(journal, synthetic_endpoints(schema, 1))
             for r in commit.parent
                 if r.applicable
                     @test r.status === :blocked

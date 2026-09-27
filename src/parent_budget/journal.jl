@@ -1,5 +1,5 @@
 #####
-##### Parent-budget ledger: the transactional event journal
+##### Parent budget: the transactional event journal
 #####
 ##### One journal holds the signed legs of every event in one accepted timestep.
 ##### A leg says what one event did to one reservoir, and it is recorded once.
@@ -552,7 +552,7 @@ reservoir the surface side of a `flux` would be a duplicate of its atmospheric
 side, and a schema the constructor accepts could never be recorded in full.
 
 Deterministic, and stable across runs, so a leg can be named in a report and
-found again. `ExecutionIdentity` is its type, and the ledger's set of recorded
+found again. `ExecutionIdentity` is its type, and the journal's set of recorded
 keys is declared with it, so the two cannot drift apart.
 """
 execution_identity(leg::BudgetLeg)::ExecutionIdentity = (

@@ -251,7 +251,7 @@ This is `src/parent_budget/checkpoint.jl`. The checkpoint callback runs after
 the parent budget's, so the endpoint the open transaction opened on is the
 endpoint of the state being written, and `save_state_to_disk_func` writes it
 as attributes beside the model hash. A restarted run reads them before the
-adapter is built, and `initialize_ledger!` compares the measured endpoint
+adapter is built, and `initialize_parent_budget!` compares the measured endpoint
 with them component by component: the amounts are the same integrals of the
 same state in the same arithmetic, so they are equal or the state changed on
 the way. A checkpoint without them, written with the parent budget off,

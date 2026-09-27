@@ -8,19 +8,19 @@ import ClimaTimeSteppers as CTS
 # The restart transition and the callback rules.
 #
 # A restart restores a state that no transaction produced. The checkpoint
-# carries the ledger's endpoint of the state it holds, and the first
+# carries the parent budget's endpoint of the state it holds, and the first
 # transaction after the restart measures the restored state and compares it
 # with that endpoint exactly before it opens. The same integrals of the same
 # state in the same arithmetic are equal, or something changed the state on
-# the way and that change belongs to no step. A checkpoint written without a
-# ledger carries no endpoint, and a restart from it is recorded as unverified
+# the way and that change belongs to no step. A checkpoint written without the
+# parent budget carries no endpoint, and a restart from it is recorded as unverified
 # rather than refused. A custom callback runs on the accepted state between
-# two transactions, so with the ledger on it is accepted only inside a
+# two transactions, so with the parent budget on it is accepted only inside a
 # read-only declaration, which audit mode holds it to.
 
 const FT = Float64
 
-# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# The parent budget's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
 # the model. The parameters follow the model's microphysics, as the removed
 # `AtmosSimulation{FT}` constructor chose them.
 function column_model(; kwargs...)
@@ -96,8 +96,8 @@ end
         @test carried isa PB.CheckpointEndpoints
         @test carried.step == 2
         # The attributes are the closing endpoint of the committed step, as
-        # the ledger holds it: the same amounts, the same statuses.
-        closing = adapter.ledger.last_closing
+        # the journal holds it: the same amounts, the same statuses.
+        closing = adapter.journal.last_closing
         @test closing.step == 2
         for endpoint in closing.reservoirs, quantity in PB.BUDGET_QUANTITIES
             c = PB.budget_component(endpoint, quantity)
@@ -116,7 +116,7 @@ end
         @test transition.checkpoint_step == 2
         # The record after the restart is a new segment from the restored
         # endpoint, and its steps close as before.
-        @test adapter.ledger.initial.step == 0
+        @test adapter.journal.initial.step == 0
         step!(restarted, 2)
         @test adapter.steps_committed == 2
         for quantity in (:mass, :energy)
@@ -125,7 +125,7 @@ end
         @test isnothing(PB.restart_transition(adapter_of(simulation)))
     end
 
-    @testset "A checkpoint written without a ledger restarts unverified" begin
+    @testset "A checkpoint written without the parent budget restarts unverified" begin
         _, checkpoint = checkpoint_after_two_steps(; parent_budget_mode = "off")
         @test isnothing(PB.read_checkpoint_endpoints(checkpoint, ClimaComms.context()))
         restarted = column_simulation(; restart_file = checkpoint)
@@ -140,7 +140,7 @@ end
         simulation = column_simulation()
         adapter = adapter_of(simulation)
         step!(simulation, 1)
-        measured = adapter.ledger.last_closing
+        measured = adapter.journal.last_closing
         exact = Dict(
             (PB.reservoir_name(e.reservoir), q) => (
                 PB.budget_component(e, q).amount,
@@ -202,7 +202,7 @@ end
         step!(declared, 2)
         @test fired[] == 2
         @test parent_row(adapter_of(declared), :energy).status === :pass
-        # Without a ledger the declaration passes through untouched.
+        # Without the parent budget the declaration passes through untouched.
         @test PB.declared_callbacks(nothing, (counting,)) === (counting,)
     end
 

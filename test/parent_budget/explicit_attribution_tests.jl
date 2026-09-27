@@ -21,11 +21,11 @@ import ClimaTimeSteppers as CTS
 # unattributed: the subsidence of total enthalpy is a genuine energy source,
 # and the explicit channel is otherwise the dynamics, which the registry proves
 # integrate to zero. The three faults the plan names are injected into the
-# adapter's half of the bracket, so the ledger's answer to each is on record.
+# adapter's half of the bracket, so the parent budget's answer to each is on record.
 
 const FT = Float64
 
-# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# The parent budget's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
 # the model. The parameters follow the model's microphysics, as the removed
 # `AtmosSimulation{FT}` constructor chose them.
 function column_model(; kwargs...)
@@ -258,24 +258,34 @@ status(component) = PB.component_status(component)
         # Outside a metered evaluation every bracket is a no-op, whatever it
         # names: this is every Newton iteration and every summary-mode step.
         @test adapter.evaluation === :none
-        PB.open_ledger_event!(adapter, Yₜ, :not_a_process)
-        PB.close_ledger_event!(adapter, Yₜ, Y, p, :not_a_process)
+        PB.open_parent_budget_event!(adapter, Yₜ, :not_a_process)
+        PB.close_parent_budget_event!(adapter, Yₜ, Y, p, :not_a_process)
         @test isempty(adapter.parts)
         PB.begin_evaluation!(adapter, :explicit, 2)
-        PB.open_ledger_event!(adapter, Yₜ, :subsidence)
-        PB.close_ledger_event!(adapter, Yₜ, Y, p, :subsidence)
+        PB.open_parent_budget_event!(adapter, Yₜ, :subsidence)
+        PB.close_parent_budget_event!(adapter, Yₜ, Y, p, :subsidence)
         @test haskey(adapter.parts, (:explicit, :subsidence, 2))
         # Duplicated.
-        @test_throws ErrorException PB.open_ledger_event!(adapter, Yₜ, :subsidence)
+        @test_throws ErrorException PB.open_parent_budget_event!(adapter, Yₜ, :subsidence)
         # Nested, and closed out of order.
-        PB.open_ledger_event!(adapter, Yₜ, :radiation)
-        @test_throws ErrorException PB.open_ledger_event!(adapter, Yₜ, :surface_flux)
-        @test_throws ErrorException PB.close_ledger_event!(adapter, Yₜ, Y, p, :surface_flux)
-        PB.close_ledger_event!(adapter, Yₜ, Y, p, :radiation)
+        PB.open_parent_budget_event!(adapter, Yₜ, :radiation)
+        @test_throws ErrorException PB.open_parent_budget_event!(adapter, Yₜ, :surface_flux)
+        @test_throws ErrorException PB.close_parent_budget_event!(
+            adapter,
+            Yₜ,
+            Y,
+            p,
+            :surface_flux,
+        )
+        PB.close_parent_budget_event!(adapter, Yₜ, Y, p, :radiation)
         # Unknown to the registry.
-        @test_throws ErrorException PB.open_ledger_event!(adapter, Yₜ, :not_a_process)
+        @test_throws ErrorException PB.open_parent_budget_event!(
+            adapter,
+            Yₜ,
+            :not_a_process,
+        )
         # Left open at the end of the evaluation.
-        PB.open_ledger_event!(adapter, Yₜ, :viscous_sponge)
+        PB.open_parent_budget_event!(adapter, Yₜ, :viscous_sponge)
         @test_throws ErrorException PB.end_evaluation!(adapter)
         PB.clear_step_state!(adapter)
         @test adapter.evaluation === :none

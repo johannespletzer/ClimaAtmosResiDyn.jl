@@ -1,8 +1,8 @@
 #####
-##### Parent-budget ledger: the executable coverage registry
+##### Parent budget: the executable coverage registry
 #####
 ##### Every path that can change an authoritative parent field is one row here,
-##### and the rows a configuration selects become the schema the ledger checks a
+##### and the rows a configuration selects become the schema the parent budget checks a
 ##### run against. `docs/src/parent_budget/coverage.md` shows the same rows as
 ##### tables, and `test/parent_budget/registry_tests.jl` holds the two to exact
 ##### agreement, so a reader of either sees what the code declares.
@@ -167,7 +167,7 @@ end
 """
     unsupported_reason(atmos) -> Union{Nothing, String}
 
-Return why the ledger refuses `atmos`, or `nothing` when the configuration is
+Return why the parent budget refuses `atmos`, or `nothing` when the configuration is
 inside the contract's supported scope. The reasons are the contract's own. The
 EDMF subdomains raise a modelling question the bookkeeping cannot settle. A
 prescribed flow overwrites the state. Chemistry changes composition through an
@@ -202,14 +202,14 @@ is_supported(atmos) = isnothing(unsupported_reason(atmos))
 
 Refuse an out-of-scope configuration at setup, naming the reason. The refusal
 comes before a long simulation starts. A configuration outside the scope has
-rows the registry has never dispositioned. A ledger that ran on it would close
+rows the registry has never dispositioned. A parent budget that ran on it would close
 over paths nobody declared.
 """
 function check_supported(atmos)
     reason = unsupported_reason(atmos)
     isnothing(reason) && return nothing
     return error(
-        "The parent-budget ledger cannot be enabled for this configuration: " *
+        "The parent budget cannot be enabled for this configuration: " *
         "$reason. See the supported scope in docs/src/parent_budget/contract.md.",
     )
 end
@@ -231,7 +231,7 @@ code cannot disagree without a test noticing. A transfer row carries
 `channel`, because its table has those columns instead.
 
 `dispositions` is the row's `Disposition M·W·E` cell in `BUDGET_QUANTITIES`
-order and in the ledger's vocabulary, see `EXPECTED_DISPOSITIONS`. `level` is
+order and in the parent budget's vocabulary, see `EXPECTED_DISPOSITIONS`. `level` is
 the collection level and `state` the collection state, both as symbols with
 the table's spelling (`:final_map` for "final map"). `step` is the row's `Step`
 column.
@@ -242,7 +242,7 @@ cell, and the two are written to agree.
 
 `event` is the label of the applied-update bracket that measures the row. It
 is `nothing` for a row that needs no measurement. Such a row has every
-quantity provably zero or not applicable, and the ledger books it from this
+quantity provably zero or not applicable, and the parent budget books it from this
 registry. It is not a table cell. The labels are the ones the tendency code
 passes to `open_applied_update!`. The same label can measure one row in one
 configuration and another row elsewhere. `:radiation` measures a prescribed
