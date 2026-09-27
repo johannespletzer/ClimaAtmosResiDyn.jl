@@ -9,6 +9,7 @@ const _ALL_TAG_STATE_LEDGER_NAMES = (
     WATER_TAG_ALL_MECHANISM_NAMES...,
     :q_tag_inc_left,
     :q_tag_inc_moved,
+    :q_tag_inc_negative,
     ENERGY_SOURCE_MECHANISM_NAMES...,
     :e_src_inc_left,
     :e_src_inc_moved,
