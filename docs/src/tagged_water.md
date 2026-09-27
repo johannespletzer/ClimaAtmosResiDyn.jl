@@ -117,7 +117,15 @@ Two consequences worth stating:
     closure check compares the partition with the non-negative part. Where
     the parent is never negative, nothing changes, bit for bit.
 
-    That closure can pass while the parent is negative. So the water closure
+    Moving a negative cell's tags out, and giving the water the parent
+    creates elsewhere to the tags there, is a numerical closure convention.
+    It is meant to keep the partition on its target. It is not a demonstrated
+    physical pathway: nothing shows that the water the tags give up in one cell
+    is the water they take up in another. It is also not yet enough. At site 23 of
+    the tag-closure long runs the region tags still overshoot their target by
+    up to 2.2% of the water, against a budget of 0.2% (known issue 7).
+
+    The closure can pass while the parent is negative. So the water closure
     check also reads the parent's own negative water, from the raw
     ``\rho q_\mathrm{tot}``: `negative_water_relative` on every row, and the
     flag `negative_water_void` past `negative_water_void_above`, `1e-4` by

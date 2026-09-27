@@ -280,8 +280,8 @@ not re-derive them.
 ## 7. Tagged water ends a run where the parent's water goes negative (option C built; its validation fails one rule at site 23)
 
 **Status:** option C is built and unit-tested (below). Option A keeps the
-check from ending the run; this branch has it by merge of #112, which is not
-merged into `main`. Whether C keeps the tags on their target over the long runs
+check from ending the run. It is #112, merged into `main`. Whether C keeps the
+tags on their target over the long runs
 was the record branch's pre-registered validation
 (`design/NEGATIVE_PARENT_WATER.md`, section 8). It ran on 2026-09-25 (the
 record's FINDINGS W42). Site 23 now runs 90 days, the model fields match the
@@ -289,7 +289,8 @@ untagged twin bit for bit, and site 26's tags are unchanged bit for bit. But
 at site 23 the region tags overshoot the target by up to 2.2% of the water,
 against a budget of 0.2%. What follows is the owner's decision.
 
-A diagnostic must never end a run that upstream completes. This one does.
+A diagnostic must never end a run that upstream completes. This one did,
+until option A below.
 The tag-closure long runs (the record branch's
 `design/INCREMENT_RULE_LONG_RUNS.md`, second submission, jobs `13917157` to
 `13917199`) ran the GCM-driven column for 90 days at site 23. They ran
@@ -317,13 +318,13 @@ configured abort level 1.0 at t = 6.4368e6 s", from `tag_closure_callback!`.
 That level assumed a non-negative parent: then non-negative tags miss it by at
 most the parent itself. Here the parent is negative.
 
-**Option A, chosen, in this branch by merge** (the owner's choice of
-2026-09-24): #112, `claude/tag-closure-no-abort`, a PR against `main` that is
-not merged. This branch has it at `1b096d77`. With it, no closure check ends a
-run by default. Past water's old level, 1.0, is its `void_above`: the check
-warns once and marks this and every later row `closure_void` in the closure and
-audit tables, through restarts, and the run goes on. An explicit `abort_above`
-still ends a run.
+**Option A, chosen and merged** (the owner's choice of 2026-09-24): #112,
+`claude/tag-closure-no-abort`, merged into `main` at `03b6d428`. With it, no
+closure check ends a run by default. Past water's old level, 1.0, is its
+`void_above`: the check warns once and marks this and every later row
+`closure_void` in the closure and audit tables, and the run goes on. The
+checkpoint carries the mark, so the rows after a restart stay marked. An
+explicit `abort_above` still ends a run.
 
 **The probe** (the record's FINDINGS W39) read the per-tag ledgers over 20
 days at site 23. When the parent first goes negative, the follower's moved
