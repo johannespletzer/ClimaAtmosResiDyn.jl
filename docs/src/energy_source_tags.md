@@ -310,9 +310,9 @@ configuration.
 
 A second warning level, `throughput_tolerance`, is compared with
 `gross_over_throughput` instead, whose scale is set by the sources rather than
-by the reference. It
-needs `energy_source_tag_ledger_per_tag: true`, and defaults to `~`, since no
-level has been approved. The healthy runs of the tag-closure experiments reached
+by the reference. It needs `energy_source_tag_ledger_per_tag: true` and a
+verified partition (see below), and defaults to `~`, since no level has been
+approved. Without a verified partition it is refused at setup. The healthy runs of the tag-closure experiments reached
 at most 4.5e-3 under `enthalpy_increment`, in their first two hours on a
 sphere, and 3.4e-2 under the `enthalpy` audit. Under `tracer` the gross is
 transport error, which does not scale with the sources: a one-hour
@@ -330,12 +330,22 @@ headroom: `headroom_min`, the smallest `e_tot + c` in the domain in J kg⁻¹, a
 `headroom_min_z`, its height. `nonpositive_fraction` moves only once a cell
 has crossed zero; the headroom shows the margin before that. With
 `energy_source_tag_ledger_per_tag: true` the row also carries
-`source_throughput`, the gross energy the sources have put into the tags since
-the start, and `gross_over_throughput`, the gross residual over it. Its scale
-is set by the sources, not by the energy reference as `gross_relative`'s is,
-though the residual itself still grows with the offset. These
-columns come after the spin-up columns, and before `closure_void` where the
-check has a void level.
+`source_partition_valid`, `source_throughput`, the gross energy the sources
+have put into the tags since the start, and `gross_over_throughput`, the gross
+residual over it. The ratio's scale is set by the sources, not by the energy
+reference as `gross_relative`'s is, though the residual itself still grows
+with the offset. These columns come after the spin-up columns, and before
+`closure_void` where the check has a void level.
+
+The throughput counts each unit of source energy once only where the masks of
+the pure region tags sum to 1, a verified partition. The model checks this
+once, at setup, to 100 rounding units of the float type, the level
+`enthalpy_increment` requires anyway. `source_partition_valid` is 1 there and
+0 elsewhere. A strict subset of the domain counts too little and an overlap
+too much, so where it is 0, `source_throughput` and `gross_over_throughput`
+are `NaN`, in the audit too. Under `tracer` and `enthalpy`, masks that miss
+1 by more than 1% only draw a warning at setup, and smaller misses none, so
+`source_partition_valid` is the column to read.
 
 With `audit: true` the audit table also says where the residual `R` sits, and
 what the tags that carry sources do against the partition they overlay:
@@ -351,8 +361,12 @@ what the tags that carry sources do against the partition they overlay:
 With `energy_source_tag_ledger_per_tag: true` it also gives a forecast. The
 loss rule takes from every tag by its share, so each loss flushes part of the
 residual: a loss `Δ⁻` in a cell changes `R` by `-(R/E) Δ⁻`. The residual's own
-source ledger, `e_src_led_src_res`, records what the sources did to it, and
-its per-step gross is the flush, `flush_gross`. Between two checks the report
+source ledger, `e_src_led_src_res`, records what the sources did to it, the net
+residual source attribution. On a verified partition that is the flush, and
+its per-step gross is `flush_gross`. Elsewhere the ledger also holds the part
+of each gain that a gap leaves out of the partition, or that an overlap takes
+twice, so it is not the flush: `flush_gross` and every forecast column are
+then `NaN`. Between two checks the report
 writes the rate the residual is flushed at, `flush_rate` per day, what the
 rest of the run added to it, `production_rate`, and the level at which the two
 would balance, `settling_level`, with `settling_ratio`, that level over the
@@ -748,12 +762,13 @@ column it checks that the model's state is bit for bit the one without tags.
     `source_throughput`, cumulative since the start of the run; a window's
     throughput is the difference of two rows. The source tags overlay the
     partition, so they are left out of the sum and each unit of source energy
-    counts once;
+    counts once. That needs region masks that sum to 1; elsewhere the audit
+    writes `NaN` (see [The residual report](@ref));
   - `e_src_led_src_res`, with the same key: what the sources' brackets did to
     the residual `e_src_res`, the energy the partition's tags did not take.
-    With region masks that sum to one it is the loss rule's flush of the
-    residual. Its per-step gross is the audit's `flush_gross` (see
-    [The residual report](@ref));
+    It is the net residual source attribution. Only with region masks that sum
+    to 1 is it the loss rule's flush of the residual, and its per-step gross
+    the audit's `flush_gross` (see [The residual report](@ref));
   - `e_src_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{src},i}) / \rho``, summed
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
@@ -792,7 +807,9 @@ owner's decision of 2026-09-25):
     `_inventory_fraction`.
   - `_parent_fraction`: over the parent scale, OD4's gross source throughput,
     the audit's `source_throughput`. The tags keep it whenever they keep
-    ledgers per tag. It is not `∫(ρe_tot + c·ρ)`, which depends on the offset
+    ledgers per tag. Where the region masks do not sum to 1 it is what the
+    partition's tags took from the sources, still a scale, while
+    `source_throughput` is `NaN`. It is not `∫(ρe_tot + c·ρ)`, which depends on the offset
     and would make most source tags look small. Runs from before the
     throughput used the interim the owner set, the process records' amounts,
     `Σₚ ∫|prc_e_p|`. That is an estimate, not a bound: on the tag-closure
@@ -887,6 +904,11 @@ ClimaAtmos.energy_source_headroom
 ClimaAtmos.energy_source_closure_columns
 ClimaAtmos.accumulate_energy_source_residual_source!
 ClimaAtmos.ENERGY_SOURCE_RESIDUAL_LEDGER
+ClimaAtmos.energy_source_throughput
+ClimaAtmos.energy_source_partition_tolerance
+ClimaAtmos.energy_source_partition_deviation
+ClimaAtmos.energy_source_partition_verified
+ClimaAtmos.check_energy_source_throughput_partition
 ClimaAtmos.AbstractEnergySourceTransport
 ClimaAtmos.TracerEnergySourceTransport
 ClimaAtmos.EnthalpyEnergySourceTransport

@@ -532,8 +532,10 @@ per-step gross is OD4's scale (`energy_source_throughput`).
 
 The source ledgers end with `e_src_led_src_res`, the residual's own: what the
 brackets did to `e_src_res`, the part of the total the partition's tags did
-not take (G4.4). Its per-step gross is the loss rule's flush of the residual.
-The tag name `res` is refused, so the name cannot collide with a tag's.
+not take (G4.4). It is the net residual source attribution. Only where the
+pure region tags' masks are a verified partition is its per-step gross the
+loss rule's flush of the residual. The tag name `res` is refused, so the name
+cannot collide with a tag's.
 """
 energy_source_ledger_fix_names(::Nothing) = ()
 energy_source_ledger_fix_names(model::EnergySourceTaggingModel) =
@@ -868,8 +870,12 @@ sources, of the per-step gross of each tag's source ledger,
 `Σ_steps |Δ e_src_led_src_<name>|`, integrated. The partition's tags receive
 every source in full, gains by their masks and losses by their shares, so each
 unit of source energy counts once; the source tags overlay it and are left out.
-A window's throughput is the difference of two values. `nothing` where the
-tags keep no ledger per tag. Collective, as `sum` is.
+That holds only where their masks sum to one, a verified partition
+([`energy_source_partition_verified`](@ref)). A strict subset counts too
+little and an overlap too much, so the tables write `NaN` there. This function
+returns the sum either way. A window's throughput is the difference of two
+values. `nothing` where the tags keep no ledger per tag. Collective, as `sum`
+is.
 """
 energy_source_throughput(Y, p, model) =
     _energy_source_throughput(_tag_ledger_steps(p.tagging), model)

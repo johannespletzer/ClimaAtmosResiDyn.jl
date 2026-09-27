@@ -139,10 +139,11 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
                 long_name = "Change of the Energy Source Tags' Residual by the Sources",
                 comments = "What the sources' attribution brackets did to " *
                            "e_src_res, the energy the partition's tags did not " *
-                           "take: with masks that sum to one, the loss rule's " *
-                           "flush of the residual. The stepper weights this " *
-                           "state field as it weights the tags. Per unit mass, " *
-                           "cumulative since the start of the run (G4.4).",
+                           "take: the net residual source attribution. Only " *
+                           "where the region masks sum to one is it the loss " *
+                           "rule's flush of the residual. The stepper weights " *
+                           "this state field as it weights the tags. Per unit " *
+                           "mass, cumulative since the start of the run (G4.4).",
                 compute! = (out, u, p, t) ->
                     compute_tag_state_ledger!(out, u, name),
             )

@@ -65,21 +65,63 @@ end
     energy_source_closure_columns(Y, p, model, closure)
 
 The energy source tags' own columns of their closure table: the headroom
-([`energy_source_headroom`](@ref)), and, where each tag keeps its ledgers, the
-gross source throughput since the start of the run, `source_throughput`, in J,
-and `gross_over_throughput`, the row's gross residual over it (G4.5). Its
-scale is set by the sources, not by the energy reference as `gross_relative`'s
-is; the residual itself still grows with the offset. `throughput_tolerance`
-warns on it. A window's throughput is the difference of
-two rows. Collective.
+([`energy_source_headroom`](@ref)), and, where each tag keeps its ledgers:
+
+  - `source_partition_valid`: 1 where the pure region tags' masks are a
+    verified partition ([`energy_source_partition_verified`](@ref)), 0
+    elsewhere;
+  - `source_throughput`: the gross source throughput since the start of the
+    run, in J ([`energy_source_throughput`](@ref));
+  - `gross_over_throughput`: the row's gross residual over it (G4.5).
+
+Only a verified partition counts each unit of source energy once. Elsewhere
+the throughput and the ratio are `NaN`, and so is the ratio where the
+throughput is zero. The ratio's scale is set by the sources, not by the energy
+reference as `gross_relative`'s is; the residual itself still grows with the
+offset. `throughput_tolerance` warns on it. A window's throughput is the
+difference of two rows. Collective.
 """
 function energy_source_closure_columns(Y, p, model::EnergySourceTaggingModel, closure)
     headroom = energy_source_headroom(Y, p, model)
     throughput = energy_source_throughput(Y, p, model)
     isnothing(throughput) && return headroom
+    columns = _energy_source_throughput_column(throughput, p.tagging)
+    # `NaN > 0` is false, so the ratio is `NaN` without a verified partition.
     gross_over_throughput =
-        throughput > 0 ? Float64(closure.gross_residual) / throughput : NaN
-    return (; headroom..., source_throughput = throughput, gross_over_throughput)
+        columns.source_throughput > 0 ?
+        Float64(closure.gross_residual) / columns.source_throughput : NaN
+    return (; headroom..., columns..., gross_over_throughput)
+end
+
+"""
+    check_energy_source_throughput_partition(tagging, check)
+
+Refuse `throughput_tolerance` where the pure region tags' masks are not a
+verified partition ([`energy_source_partition_verified`](@ref)). The level is
+compared with `gross_over_throughput`, which is `NaN` there, so it could never
+warn. `tagging` is the cache, `p.tagging`, and `check` the energy source
+closure check, or `nothing`. The masks are known only once the cache is built,
+so `AtmosSimulation` calls this at setup, before the callbacks. A no-op
+without the level or without the tags.
+"""
+check_energy_source_throughput_partition(tagging, ::Nothing) = nothing
+function check_energy_source_throughput_partition(tagging, check)
+    isnothing(get(check, :throughput_tolerance, nothing)) && return nothing
+    isnothing(tagging) && return nothing
+    hasproperty(tagging, :energy_source_partition_deviation) || return nothing
+    deviation = tagging.energy_source_partition_deviation
+    energy_source_partition_verified(deviation) && return nothing
+    tolerance = energy_source_partition_tolerance(typeof(deviation))
+    return error(
+        "`energy_source_closure_check` sets `throughput_tolerance`, which \
+        compares the gross residual with the gross source throughput. The \
+        throughput counts each unit of source energy once only where the \
+        masks of the region tags without sources sum to 1. These sum to 1 only \
+        to within $deviation, more than the $tolerance allowed, so the \
+        throughput and the ratio are `NaN` and the level could never warn. \
+        Use regions that sum to 1, such as a region and its complement via \
+        `inside: false` or `above: false`, or drop `throughput_tolerance`.",
+    )
 end
 
 """
@@ -106,7 +148,11 @@ The overlays, the tags that carry sources, against the partition they overlay
   - `overlay_excess_mass_fraction`: the air mass where any overlay does.
 
 The flush and the settling level (synergy 4), where the tags keep their
-ledgers per tag, and so the residual's source ledger `e_src_led_src_res`:
+ledgers per tag, and so the residual's source ledger `e_src_led_src_res`. That
+ledger is the net residual source attribution. It is the loss rule's flush only
+where the pure region tags' masks are a verified partition
+([`energy_source_partition_verified`](@ref)). Elsewhere every column below is
+`NaN`:
 
   - `flush_gross`: `F`, the per-step gross of that ledger since the start of
     the run, in J: what the loss rule flushed from the residual;
@@ -232,13 +278,18 @@ function _energy_source_forecast(p, closure, t, previous)
     G = Float64(closure.gross_residual)
     last = previous[]
     previous[] = (; t = Float64(t), G, F)
+    no_rates = (;
+        flush_rate = NaN,
+        production_rate = NaN,
+        settling_level = NaN,
+        settling_ratio = NaN,
+    )
+    # Without a verified partition the ledger is the net residual source
+    # attribution, not the flush, so no rate is read from it.
+    energy_source_partition_verified(p.tagging) ||
+        return (; flush_gross = NaN, no_rates...)
     rates =
-        isnothing(last) ?
-        (;
-            flush_rate = NaN,
-            production_rate = NaN,
-            settling_level = NaN,
-            settling_ratio = NaN,
-        ) : energy_source_forecast(last.G, last.F, last.t, G, F, Float64(t))
+        isnothing(last) ? no_rates :
+        energy_source_forecast(last.G, last.F, last.t, G, F, Float64(t))
     return (; flush_gross = F, rates...)
 end

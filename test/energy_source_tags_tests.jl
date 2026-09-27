@@ -2245,7 +2245,9 @@ end
         ᶜgross = ClimaCore.Fields.Field(Float64, space)
         ᶜgross .= 0.004
         steps = (; ledgers = (; e_src_led_src_res = (; ᶜgross)))
-        p_steps = (; scratch, tagging = (; tag_ledger_steps = steps))
+        # The two region tags' masks are complementary: a verified partition.
+        tagging = (; tag_ledger_steps = steps, energy_source_partition_deviation = FT(0))
+        p_steps = (; scratch, tagging)
         first_row =
             CA.energy_source_residual_report(Y, p_steps, per_tag, closure, 0.0, previous)
         @test first_row.flush_gross ≈ 4
@@ -2298,6 +2300,146 @@ end
     @test parse(Float64, values[10]) == 0.5
     @test parse(Float64, values[13]) == 2e5
     @test last(values) == "0"
+end
+
+# The review of #120, finding 2: the throughput and the flush count each source
+# increment once only where the pure region tags' masks sum to 1. A strict
+# subset, an overlap and source tags alone are not a verified partition. There
+# the throughput, its ratio, the flush and the forecast are `NaN`, and a
+# throughput warning level is refused.
+@testset "Throughput and flush only on a verified partition (#120)" begin
+    for FT in (Float32, Float64)
+        space = ClimaCore.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 4,
+            staggering = ClimaCore.CommonSpaces.CellCenter(),
+        )
+        coords = ClimaCore.Fields.coordinate_field(space)
+        altitude(above, z_center = FT(500)) =
+            CA.TanhAltitudeRegion(z_center, FT(100), above)
+        sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        cases = (;
+            complementary = (
+                CA.EnergySourceTag{:up}(altitude(true)),
+                CA.EnergySourceTag{:down}(altitude(false)),
+                sfc,
+            ),
+            subset = (CA.EnergySourceTag{:up}(altitude(true)), sfc),
+            # Both hold the layer between 500 and 800 m.
+            overlap = (
+                CA.EnergySourceTag{:up}(altitude(true)),
+                CA.EnergySourceTag{:down}(altitude(false, FT(800))),
+                sfc,
+            ),
+            sources_only = (sfc, CA.EnergySourceTag{:rad}(nothing, :radiation)),
+        )
+        for (case, tags) in pairs(cases)
+            model = CA.EnergySourceTaggingModel(tags, FT(50000); ledger_per_tag = true)
+            region_names = CA.energy_source_region_tag_state_names(model)
+            masks = CA._tag_masks(coords, tags)
+            state_names = (:ρ, :ρe_tot, CA.energy_source_tag_state_names(model)...)
+            Y = ClimaCore.Fields.FieldVector(;
+                c = similar(
+                    coords,
+                    NamedTuple{state_names, NTuple{length(state_names), FT}},
+                ),
+            )
+            parent(Y.c) .= 0
+            Y.c.ρ .= 1
+            Y.c.ρe_tot .= 2e5
+            deviation = CA.energy_source_partition_deviation(masks, region_names, Y.c.ρ)
+            @test deviation isa FT
+            valid = CA.energy_source_partition_verified(deviation)
+            @test valid == (case == :complementary)
+            if case == :complementary
+                @test deviation <= CA.energy_source_partition_tolerance(FT)
+            else
+                # A gap or an overlap of most of a layer, or no partition.
+                @test deviation > FT(0.5)
+            end
+
+            # Every source ledger holds a gross of 2.5 J per cell, so each
+            # partition tag's throughput is 10 J and the flush is 10 J.
+            ledger_names = CA.energy_source_ledger_src_names(model)
+            ledgers = NamedTuple{ledger_names}(
+                ntuple(_ -> (; ᶜgross = fill(2.5, 4)), length(ledger_names)),
+            )
+            tagging = (;
+                tag_ledger_steps = (; ledgers),
+                energy_source_partition_deviation = deviation,
+            )
+            scratch = (; ᶜtemp_scalar = zero(Y.c.ρ), ᶜtemp_scalar_2 = zero(Y.c.ρ))
+            p = (; scratch, tagging)
+            closure = (; gross_residual = FT(5))
+            columns = CA.energy_source_closure_columns(Y, p, model, closure)
+            @test keys(columns) == (
+                :headroom_min,
+                :headroom_min_z,
+                :source_partition_valid,
+                :source_throughput,
+                :gross_over_throughput,
+            )
+            @test columns.source_partition_valid == Int(valid)
+            previous = Ref{Any}(nothing)
+            first_row =
+                CA.energy_source_residual_report(Y, p, model, closure, 0.0, previous)
+            ledgers.e_src_led_src_res.ᶜgross .= 5.0
+            second_row =
+                CA.energy_source_residual_report(Y, p, model, closure, 86400.0, previous)
+            if valid
+                @test columns.source_throughput == 10 * length(region_names)
+                @test columns.gross_over_throughput ≈ 5 / 20
+                @test first_row.flush_gross == 10
+                @test second_row.flush_gross == 20
+                # The same gross at both checks, with 10 J flushed in a day:
+                # it settles where it is.
+                @test second_row.flush_rate ≈ 2
+                @test second_row.settling_level ≈ 5
+            else
+                @test isnan(columns.source_throughput)
+                @test isnan(columns.gross_over_throughput)
+                for row in (first_row, second_row),
+                    name in (
+                        :flush_gross,
+                        :flush_rate,
+                        :production_rate,
+                        :settling_level,
+                        :settling_ratio,
+                    )
+
+                    @test isnan(getproperty(row, name))
+                end
+            end
+
+            # The warning level on the ratio is refused without a verified
+            # partition, with the deviation in the message.
+            check = (; throughput_tolerance = FT(0.05))
+            if valid
+                @test isnothing(CA.check_energy_source_throughput_partition(tagging, check))
+            else
+                err = try
+                    CA.check_energy_source_throughput_partition(tagging, check)
+                catch e
+                    e
+                end
+                @test err isa ErrorException
+                @test occursin(string(deviation), err.msg)
+                @test occursin("throughput_tolerance", err.msg)
+            end
+            # Without the level, without the check or without the tags, nothing
+            # is refused.
+            @test isnothing(
+                CA.check_energy_source_throughput_partition(
+                    tagging,
+                    (; throughput_tolerance = nothing),
+                ),
+            )
+            @test isnothing(CA.check_energy_source_throughput_partition(tagging, nothing))
+            @test isnothing(CA.check_energy_source_throughput_partition(nothing, check))
+        end
+    end
 end
 
 # The ratios of a tag's own ledgers (the owner's decision of 2026-09-25): the
@@ -2409,6 +2551,8 @@ end
                 ᶜenergy_source_fix_count = keyed(() -> CA._throughput_field(Y.c.ρ)),
                 ᶜenergy_source_pos = zeros(ᶜspace),
                 ᶜenergy_source_neg = zeros(ᶜspace),
+                # `strat` and `tropo` are a region and its complement.
+                energy_source_partition_deviation = FT(0),
                 CA.tag_ledger_step_cache(Y, atmos)...,
             ),
         )
@@ -2439,6 +2583,18 @@ end
     @test CA.energy_source_ledger_parent_scale(Y, nothing) == interim
     audit = CA.energy_source_audit(Y, p, p.atmos.energy_source_tagging_model, FT(1))
     @test audit.ledger_parent_scale == parent_scale
+    @test audit.source_partition_valid == 1
+    @test audit.source_throughput == parent_scale
+    # Without a verified partition the throughput is not written, and the
+    # ledgers keep the partition's gross as their scale.
+    gap = merge(
+        p,
+        (; tagging = merge(p.tagging, (; energy_source_partition_deviation = FT(0.5)))),
+    )
+    gap_audit = CA.energy_source_audit(Y, gap, p.atmos.energy_source_tagging_model, FT(1))
+    @test gap_audit.source_partition_valid == 0
+    @test isnan(gap_audit.source_throughput)
+    @test gap_audit.ledger_parent_scale == parent_scale
     @test audit.led_fix_heat_retained == 2
     @test isnan(audit.led_fix_heat_inventory_fraction)
     @test isnan(audit.led_fix_heat_burden_fraction)

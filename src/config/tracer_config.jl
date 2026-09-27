@@ -1089,8 +1089,12 @@ gross residual over the throughput since the start passes it. Its scale is set
 by the sources, not by the energy reference as `gross_relative`'s is; the
 residual itself still grows with the offset. It needs the
 throughput, so each tag's ledgers (`energy_source_tag_ledger_per_tag: true`),
-and without them it is refused. It defaults to `~`: no level has been approved.
-It warns only; like `tolerance` it is not an acceptance threshold.
+and without them it is refused. It also needs pure region tags whose masks sum
+to 1, a verified partition, since only then does the throughput count each
+source increment once. The masks are known only once the cache is built, so
+that is refused at setup ([`check_energy_source_throughput_partition`](@ref)).
+It defaults to `~`: no level has been approved. It warns only; like
+`tolerance` it is not an acceptance threshold.
 """
 function energy_source_closure_check_from_config(
     value,

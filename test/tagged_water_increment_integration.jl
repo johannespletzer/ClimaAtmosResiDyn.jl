@@ -451,6 +451,10 @@ altitude_region(above) = Dict{String, Any}(
         throughput = CA.energy_source_throughput(Y, p, energy_model)
         @test throughput > 0
         energy_audit = CA.energy_source_audit(Y, p, energy_model, FT(1))
+        # `enthalpy_increment` refuses masks that are not a verified partition,
+        # so the throughput is written.
+        @test CA.energy_source_partition_verified(p.tagging)
+        @test energy_audit.source_partition_valid == 1
         @test energy_audit.source_throughput == throughput
         @test energy_audit.led_src_strat_retained +
               energy_audit.led_src_tropo_retained ≈ throughput rtol = 1e-12
@@ -503,6 +507,10 @@ altitude_region(above) = Dict{String, Any}(
         headroom = CA.energy_source_headroom(Y, p, energy_model)
         @test headroom.headroom_min > 0
         @test isfinite(headroom.headroom_min_z)
+        columns = CA.energy_source_closure_columns(Y, p, energy_model, closure)
+        @test columns.source_partition_valid == 1
+        @test columns.source_throughput == throughput
+        @test columns.gross_over_throughput ≈ closure.gross_residual / throughput
     end
 
     # 3. The model's own fields.
