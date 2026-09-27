@@ -2498,6 +2498,68 @@ end
     end
 end
 
+# The review of #120: `overlay_excess` compares each source tag with the
+# partition's sum on its own, the owner's reading of A5. Every valid
+# configuration keeps each overlay within that sum, duplicate tags included.
+# Their sum has no such bound unless the overlays are disjoint, so it is not
+# checked.
+@testset "overlay_excess is per tag (#120)" begin
+    for FT in (Float32, Float64)
+        region(above) = CA.TanhAltitudeRegion(FT(500), FT(100), above)
+        tags = (
+            CA.EnergySourceTag{:up}(region(true)),
+            CA.EnergySourceTag{:down}(region(false)),
+            CA.EnergySourceTag{:rad}(nothing, :radiation),
+            CA.EnergySourceTag{:rad_again}(nothing, :radiation),
+        )
+        c = FT(50000)
+        model = CA.EnergySourceTaggingModel(tags, c)
+        space = ClimaCore.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 4,
+            staggering = ClimaCore.CommonSpaces.CellCenter(),
+        )
+        names = (:ρ, :ρe_tot, CA.energy_source_tag_state_names(model)...)
+        Y = ClimaCore.Fields.FieldVector(;
+            c = similar(
+                ClimaCore.Fields.coordinate_field(space),
+                NamedTuple{names, NTuple{length(names), FT}},
+            ),
+        )
+        E = FT[4e5, 3e5, 2e5, 1e5]
+        parent(Y.c.ρ) .= 1
+        parent(Y.c.ρe_tot) .= E .- c
+        parent(Y.c.ρe_src_up) .= E ./ 4
+        parent(Y.c.ρe_src_down) .= 3 .* E ./ 4
+        # Two tags of the same source hold the same energy, 60% of the
+        # partition's sum each: 120% together, and each within the bound.
+        parent(Y.c.ρe_src_rad) .= FT(0.6) .* E
+        parent(Y.c.ρe_src_rad_again) .= FT(0.6) .* E
+        scratch = (; ᶜtemp_scalar = zero(Y.c.ρ), ᶜtemp_scalar_2 = zero(Y.c.ρ))
+        p = (; scratch, tagging = (;))
+        report(Y) = CA.energy_source_residual_report(
+            Y,
+            p,
+            model,
+            (; gross_residual = FT(0)),
+            0.0,
+            Ref{Any}(nothing),
+        )
+        duplicates = report(Y)
+        @test duplicates.overlay_excess == 0
+        @test duplicates.overlay_excess_mass_fraction == 0
+        @test duplicates.overlay_negative_mass_fraction == 0
+        # One of them past the partition's sum, by 10% of it in the top
+        # layer: that alone is the excess.
+        parent(Y.c.ρe_src_rad_again) .= FT[0.6, 0.6, 0.6, 1.1] .* E
+        past = report(Y)
+        @test past.overlay_excess ≈ FT(0.1) * E[4] * 250 rtol = 10 * eps(FT)
+        @test past.overlay_excess_mass_fraction ≈ 1 / 4
+    end
+end
+
 # The ratios of a tag's own ledgers (the owner's decision of 2026-09-25): the
 # signed inventory for a pure region tag, the absolute burden for a source tag
 # or a tag with negative parts, the parent scale beside them, and an explicit

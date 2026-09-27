@@ -151,6 +151,15 @@ The overlays, the tags that carry sources, against the partition they overlay
     in J, where an overlay holds more than the partition's sum;
   - `overlay_excess_mass_fraction`: the air mass where any overlay does.
 
+Each overlay is compared with the partition's sum on its own, as the owner
+read A5. That bound holds for every valid configuration, duplicate tags
+included: an overlay holds part of the energy the partition holds (the
+tag-closure experiments' invariant "overlay at most parent"). The sum of the
+overlays has no such bound. Two tags of the same source hold the same energy,
+so together they can hold more than the partition. Only disjoint overlays
+would bound the sum, and the configuration does not declare which are, so the
+sum is not checked.
+
 The flush and the settling level (synergy 4), where the tags keep their
 ledgers per tag, and so the residual's source ledger `e_src_led_src_res`. That
 ledger is the net residual source attribution. It is the loss rule's flush only

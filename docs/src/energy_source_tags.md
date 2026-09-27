@@ -359,6 +359,13 @@ what the tags that carry sources do against the partition they overlay:
   - `overlay_negative_mass_fraction`, the air mass where a source tag is
     negative; `overlay_excess` and `overlay_excess_mass_fraction`, the energy
     and the air mass where a source tag holds more than the partition's sum.
+    Each source tag is compared with that sum on its own. The bound holds for
+    every valid configuration, duplicate tags included, since a source tag
+    holds part of the energy the partition holds. The sum of the source tags
+    has no such bound: two tags of the same source hold the same energy, and
+    together they can hold more than the partition. Only disjoint source tags
+    would bound their sum, and no key says which are, so the sum is not
+    checked.
 
 With `energy_source_tag_ledger_per_tag: true` it also gives a forecast. The
 loss rule takes from every tag by its share, so each loss flushes part of the
