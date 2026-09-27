@@ -148,14 +148,14 @@ increment before the final assembly, see `HookCall`.
 const FINAL_MAP_HOOKS = (:lim!, :dss!, :constrain_state!)
 
 """
-    TimestepperRecord
+    TimestepperPin
 
 What the adapter pinned when the integrator was initialised: the
 `ClimaTimeSteppers` version, the algorithm, and the accepted weights it read.
-Every certificate carries this record, and the trace test fixes the behaviour
+Every certificate carries it, and the trace test fixes the behaviour
 it stands for, which together are the pin the contract asks for.
 """
-struct TimestepperRecord
+struct TimestepperPin
     package_version::VersionNumber
     algorithm::Symbol
     stages::Int
@@ -182,17 +182,17 @@ function check_algorithm(alg)
     )
 end
 
-# The record, read from the integrator once the cache exists. The weights come
+# The pin, read from the integrator once the cache exists. The weights come
 # from the cache's tableau rather than the algorithm's. The cache holds the
 # tableau cast to the state's float type, and that is the one the stepper
 # applies.
-function timestepper_record(integrator)
+function timestepper_pin(integrator)
     alg = integrator.alg
     check_algorithm(alg)
     tableau = integrator.cache.tableau
     b_exp = tableau.b_exp.coeffs
     b_imp = tableau.b_imp.coeffs
-    return TimestepperRecord(
+    return TimestepperPin(
         pkgversion(CTS),
         isnothing(alg.name) ? :tableau : nameof(typeof(alg.name)),
         length(b_exp),
@@ -519,7 +519,7 @@ and their difference.
 const Measurement = NTuple{2, NTuple{3, BUDGET_ACCOUNTING_TYPE}}
 
 """
-    GrossRecord
+    GrossParts
 
 The positive and negative parts of one process row's applied update at one
 stage, weighted as the row's leg is, kept under
@@ -528,7 +528,7 @@ the parts sum to the leg's net amount and the identities use the net. The
 parts are those of the weighted contribution, so `positive` is never negative
 whatever the sign of the stage weight.
 """
-struct GrossRecord{FT}
+struct GrossParts{FT}
     event::Symbol
     channel::Symbol
     process::Symbol
@@ -547,7 +547,7 @@ end
 
 The parent budget and everything it needs to run inside a simulation: the schema and
 the journal built from it, the one packet the step reduces, the hook template,
-the record of the timestepper, the tolerances, what the meters and the
+the timestepper pin, the tolerances, what the meters and the
 applied-update events measured in the current step, and what has been
 committed. `last_commit`, `last_legs`, `last_observations` and `last_gross`
 hold the latest step's results in every mode; `commits` holds every commit in
@@ -598,7 +598,7 @@ mutable struct ParentBudgetAdapter{S, C, T, G}
     restart::Bool
     checkpoint::Union{Nothing, CheckpointEndpoints}
     transition::Union{Nothing, RestartTransition}
-    timestepper::Union{Nothing, TimestepperRecord}
+    timestepper::Union{Nothing, TimestepperPin}
     stepper_cache::Any
     # Per-step meter state. A measurement is a triple of amounts and a triple
     # of arithmetic magnitudes, see `Measurement`.
@@ -630,7 +630,7 @@ mutable struct ParentBudgetAdapter{S, C, T, G}
     last_commit::Union{Nothing, BudgetCommit{BUDGET_ACCOUNTING_TYPE}}
     last_legs::Vector{BudgetLeg{BUDGET_ACCOUNTING_TYPE}}
     last_observations::Vector{StageObservation{BUDGET_ACCOUNTING_TYPE}}
-    last_gross::Vector{GrossRecord{BUDGET_ACCOUNTING_TYPE}}
+    last_gross::Vector{GrossParts{BUDGET_ACCOUNTING_TYPE}}
     last_transfer_checks::Vector{TransferCheck{BUDGET_ACCOUNTING_TYPE}}
     commits::Vector{BudgetCommit{BUDGET_ACCOUNTING_TYPE}}
 end
@@ -813,7 +813,7 @@ A restarted run passes `restart = true` and the endpoints its checkpoint
 carried as `checkpoint`. `read_checkpoint_endpoints` reads them, and returns
 `nothing` for a checkpoint written without a parent budget. The first transaction
 then checks the restored state against them exactly before it opens, see
-`check_restart_transition`. The record after the restart is a new segment.
+`check_restart_transition`. The history after the restart is a new segment.
 """
 build_parent_budget(mode, atmos, Y; kwargs...) =
     build_parent_budget(parent_budget_mode(mode), atmos, Y; kwargs...)
@@ -923,7 +923,7 @@ function build_parent_budget(
         nothing,
         BudgetLeg{FT}[],
         StageObservation{FT}[],
-        GrossRecord{FT}[],
+        GrossParts{FT}[],
         TransferCheck{FT}[],
         BudgetCommit{FT}[],
     )
@@ -1449,7 +1449,7 @@ end
 # cache the integrator built is checked against the template built earlier,
 # and a restored state against the endpoints its checkpoint carried.
 function initialize_parent_budget!(adapter::ParentBudgetAdapter, integrator)
-    adapter.timestepper = timestepper_record(integrator)
+    adapter.timestepper = timestepper_pin(integrator)
     adapter.stepper_cache = integrator.cache
     stages = length(integrator.cache.tableau.b_imp.coeffs)
     expected = length(adapter.template.implicit_stages)
@@ -1580,7 +1580,7 @@ function commit_step!(adapter::ParentBudgetAdapter, integrator)
     is_audit(adapter) && record_audit_legs!(adapter, packet, integrator, step)
     record_process_legs!(adapter, packet, integrator, step)
     is_audit(adapter) && record_transfer_legs!(adapter, packet, integrator, step)
-    # The commit clears the transaction, so the step's records are kept here
+    # The commit clears the transaction, so the step's entries are kept here
     # for the report and the tests. Bounded by the template, not the run.
     copy!(adapter.last_legs, journal.legs)
     copy!(adapter.last_observations, journal.observations)
@@ -1885,8 +1885,8 @@ function fill_audit_slots!(packet::BudgetPacket, adapter::ParentBudgetAdapter, i
     return nothing
 end
 
-function stage_value(records, stage::Int, what::AbstractString)
-    for (recorded_stage, values) in records
+function stage_value(entries, stage::Int, what::AbstractString)
+    for (recorded_stage, values) in entries
         recorded_stage == stage && return values
     end
     return error("The $what of stage $stage was not measured.")
@@ -2290,7 +2290,7 @@ function record_process_legs!(
                 adapter.attribution === :gross && !unmeasured &&
                     push!(
                         adapter.last_gross,
-                        gross_record(adapter, packet, row, channel, stage, weight),
+                        gross_parts(adapter, packet, row, channel, stage, weight),
                     )
             end
         end
@@ -2395,7 +2395,7 @@ function record_declared_row!(
     return nothing
 end
 
-function gross_record(
+function gross_parts(
     adapter::ParentBudgetAdapter,
     packet::BudgetPacket,
     row::ProcessRowSpec,
@@ -2409,7 +2409,7 @@ function gross_record(
         packet_value(packet, gross_group(channel, row.process, stage, part), quantity) :
         zero(FT)
     parts(part) = map(quantity -> value(part, quantity), BUDGET_QUANTITIES)
-    return GrossRecord{FT}(
+    return GrossParts{FT}(
         row.event,
         channel,
         row.process,
@@ -2625,7 +2625,7 @@ stage. Empty outside `AuditMode`.
 latest_transfer_checks(adapter::ParentBudgetAdapter) = adapter.last_transfer_checks
 
 """
-    latest_gross(adapter) -> Vector{GrossRecord}
+    latest_gross(adapter) -> Vector{GrossParts}
 
 Return the gross parts of the last accepted step's measured process rows,
 empty unless `parent_budget_attribution` is `gross`.

@@ -82,7 +82,7 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
             local_geometry,
             atmos_model.energy_source_tagging_model,
         )...,
-        # The increment correction's ledger, under
+        # The increment ledger, under
         # `energy_source_tag_transport: enthalpy_increment` only. Like the
         # process records below, its names carry no `ρ` prefix.
         energy_source_increment_ledger_variables(

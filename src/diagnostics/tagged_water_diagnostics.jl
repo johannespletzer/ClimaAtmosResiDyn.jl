@@ -156,8 +156,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                 comments = "Water moved into (positive) or out of (negative) " *
                            "the tag `$name` by the tracer limiters and state " *
                            "constraints. Cumulative since the start of the " *
-                           "simulation segment and reset on restart, so a " *
-                           "budget over an interval is the difference of two " *
+                           "simulation segment and reset on restart, so the " *
+                           "change over an interval is the difference of two " *
                            "outputs, and a time average of this variable is " *
                            "not meaningful. For a partition tag (a region, no " *
                            "source), partition repair writes here whenever " *

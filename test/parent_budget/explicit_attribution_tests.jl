@@ -21,7 +21,7 @@ import ClimaTimeSteppers as CTS
 # unattributed: the subsidence of total enthalpy is a genuine energy source,
 # and the explicit channel is otherwise the dynamics, which the registry proves
 # integrate to zero. The three faults the plan names are injected into the
-# adapter's half of the bracket, so the parent budget's answer to each is on record.
+# adapter's half of the bracket, so the parent budget's answer to each is tested.
 
 const FT = Float64
 
@@ -297,21 +297,21 @@ status(component) = PB.component_status(component)
         step!(net, 2)
         step!(gross, 2)
         @test isempty(PB.latest_gross(adapter_of(net)))
-        records = PB.latest_gross(adapter_of(gross))
+        all_parts = PB.latest_gross(adapter_of(gross))
         legs = legs_of(adapter_of(gross), :subsidence)
-        @test length(records) == length(legs) == 3
+        @test length(all_parts) == length(legs) == 3
         for leg in legs
-            record = only(filter(g -> g.stage == leg.stage, records))
-            @test record.event === :subsidence
-            @test record.weight == leg.weight
-            @test all(>=(0), record.positive)
-            @test all(<=(0), record.negative)
+            parts = only(filter(g -> g.stage == leg.stage, all_parts))
+            @test parts.event === :subsidence
+            @test parts.weight == leg.weight
+            @test all(>=(0), parts.positive)
+            @test all(<=(0), parts.negative)
             # The parts sum to the net and differ by the magnitude.
-            @test record.positive[3] + record.negative[3] ≈ leg.energy.amount
-            @test record.positive[3] - record.negative[3] ≈ leg.energy.magnitude
+            @test parts.positive[3] + parts.negative[3] ≈ leg.energy.amount
+            @test parts.positive[3] - parts.negative[3] ≈ leg.energy.magnitude
         end
         # A negative stage weight puts the whole update in the negative part.
-        stage_3 = only(filter(g -> g.stage == 3, records))
+        stage_3 = only(filter(g -> g.stage == 3, all_parts))
         @test stage_3.weight < 0
         @test stage_3.positive[3] == 0
         @test stage_3.negative[3] < 0

@@ -5,7 +5,7 @@ import ClimaAtmos.Internals.ParentBudget as PB
 #
 # These tests are deliberately state-free. They exercise the rules the parent budget
 # enforces rather than the physics it will later measure: expectations come from
-# the schema and never from the records, a leg is recorded once, an unknown
+# the schema and never from the legs, a leg is recorded once, an unknown
 # component blocks rather than reading as zero, an envelope and its
 # decomposition never land in one sum, a final accepted-state map is a term of
 # the primary identity and not an attribution channel, an exterior crossing is
@@ -187,7 +187,7 @@ transfer_result(commit, event, quantity, cv) = only(
     FT = Float64
 
     @testset "Evidence invariants hold at direct construction" begin
-        # The rules live in the inner constructor, so a record built straight
+        # The rules live in the inner constructor, so a component built straight
         # from BudgetComponent obeys them as much as one built through a helper.
         @test_throws ErrorException PB.BudgetComponent{FT}(
             1.0,
@@ -360,7 +360,7 @@ transfer_result(commit, event, quantity, cv) = only(
         )
     end
 
-    @testset "A record the schema does not declare is refused" begin
+    @testset "A leg the schema does not declare is refused" begin
         schema = test_schema(;
             channels = [PB.ChannelSpec(:explicit_main, ATMOS)],
             final_maps = [PB.FinalMapSpec(:dss!, ATMOS)],
@@ -501,7 +501,7 @@ transfer_result(commit, event, quantity, cv) = only(
         )
         @test length(journal.legs) == 1
 
-        # A proof that has not been established yet is an honest record. It is
+        # A proof that has not been established yet is an honest entry. It is
         # accepted, and it blocks.
         PB.record_leg!(journal, toa_leg(; occurrence = 3, mass = unkval(FT)))
         @test length(journal.legs) == 2
@@ -515,7 +515,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ATMOS;
             dispositions = (:measured, :zero, :measured),
         )
-        # An open disposition demands nothing of a record. It blocks the claim
+        # An open disposition demands nothing of a leg. It blocks the claim
         # the declaration feeds at reconciliation instead, tested below.
         @test PB.OPEN_DISPOSITIONS ==
               ntuple(_ -> :open, length(PB.BUDGET_QUANTITIES))

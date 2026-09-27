@@ -820,7 +820,7 @@ column_atmos_model(; kwargs...) =
             ),
         )
 
-        # The ledger exists in this mode only, and its names are not a
+        # The increment ledger exists in this mode only, and its names are not a
         # tracer's, so no transport reaches it.
         ledger = CA.energy_source_increment_ledger_variables(
             1.0,
@@ -846,8 +846,9 @@ column_atmos_model(; kwargs...) =
             @test !CA.is_tracer_var(name)
         end
 
-        # A restart checks the ledger's fields, through the checkpoint's own
-        # check, in both directions. Both stop before the file is opened.
+        # A restart checks the increment ledger's fields, through the
+        # checkpoint's own check, in both directions. Both stop before the file
+        # is opened.
         restart_model(source) = (;
             energy_source_tagging_model = source,
             energy_process_record = nothing,
@@ -1056,7 +1057,7 @@ column_atmos_model(; kwargs...) =
         @test Y.c.ρe_src_strat[1] > 0
         @test Y.c.ρe_src_tropo[1] == 0
         @test Y.c.ρe_src_sfc[1] == 0
-        # The ledger is the change, and the partition's entries cancel.
+        # The repair ledger is the change, and the partition's entries cancel.
         for name in tag_state_names
             @test getproperty(fix, name) ≈
                   getproperty(Y.c, name) .- getproperty(before, name)
@@ -1070,7 +1071,7 @@ column_atmos_model(; kwargs...) =
             @test getproperty(fix, name)[2] == 0
         end
 
-        # Switched off, the repair leaves the tags and the ledger alone.
+        # Switched off, the repair leaves the tags and the repair ledger alone.
         Y = state()
         p = cache(CA.EnergySourceTaggingModel(tags, c; repair = false))
         CA.repair_energy_source_tags!(Y, p)
@@ -1120,9 +1121,9 @@ column_atmos_model(; kwargs...) =
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_res")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "e_src_fix_tropics")
 
-        # With the repair on, the default output carries its ledgers, sampled
-        # rather than averaged, because each is a running total. With the
-        # repair off they would read zero, so they are left out.
+        # With the repair on, the default output carries the repair ledgers,
+        # sampled rather than averaged, because each is a running total. With
+        # the repair off they would read zero, so they are left out.
         scheduled_names(repair) = begin
             tagging = CA.AtmosTagging(;
                 energy_source_tagging_model = CA.EnergySourceTaggingModel(
@@ -1298,7 +1299,7 @@ column_atmos_model(; kwargs...) =
         @test audit.source_negative_relative == 0.9
         # The smallest source tag per unit mass: -6 / 2.
         @test audit.source_minimum == -3
-        # Every tag's ledger counts, the region tag's too: 1 + 2 + 3 + 1.
+        # Every tag's repair ledger counts, the region tag's too: 1 + 2 + 3 + 1.
         @test audit.repair_moved == 7
         @test audit.repair_moved_relative == 0.7
 

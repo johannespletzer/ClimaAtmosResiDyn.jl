@@ -641,7 +641,7 @@ end
 #
 # A disposition describes what a path does to a quantity where the reservoir
 # owns it. Where the schema says the reservoir does not own the quantity, the
-# only honest record is `NotApplicable`, whatever the row declares: a slab in a
+# only honest status is `NotApplicable`, whatever the row declares: a slab in a
 # dry run has no water to measure, and a channel that names both reservoirs
 # declares one disposition for the atmosphere's water and none for the slab's.
 function check_leg_dispositions(schema::BudgetSchema, spec, leg::BudgetLeg)
@@ -661,15 +661,15 @@ function check_leg_dispositions(schema::BudgetSchema, spec, leg::BudgetLeg)
         disposition_permits(expected, status) || error(
             "Leg $(leg_label(leg)) records $quantity as " *
             "$(status_name(status)), but the schema declares it $expected. A " *
-            "declared disposition is a proof obligation about the code, so a " *
-            "record that contradicts it is a disagreement between the registry " *
+            "declared disposition is a proof obligation about the code, so an " *
+            "entry that contradicts it is a disagreement between the registry " *
             "and the implementation rather than a residual.",
         )
     end
     return nothing
 end
 
-# Every leg is checked against the schema before it is stored. A record the
+# Every leg is checked against the schema before it is stored. An entry the
 # schema does not declare is refused rather than becoming a new row, because a
 # row nothing expected is a row nothing will check.
 function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
@@ -752,7 +752,7 @@ Refused, loudly, in these cases.
   - The schema does not declare the leg's reservoir, channel, final map, or
     transfer event, or declares the event with different legs or in a different
     channel, or does not name the leg's process among the channel's declared
-    decomposition rows. Expectations come from the configuration, so a record
+    decomposition rows. Expectations come from the configuration, so an entry
     nothing declared fails closed.
   - A component contradicts the disposition its declaration gave it, such as a
     measurement on a quantity the registry says the path leaves provably zero.
@@ -1069,7 +1069,7 @@ end
 
 # Whether a decomposition leg for this channel, process and reservoir was
 # recorded in the open transaction. Any status counts: a row recorded as not
-# applicable is a record, and an unknown one blocks on its own.
+# applicable is an entry, and an unknown one blocks on its own.
 function has_process_leg(
     journal::BudgetJournal,
     channel::Symbol,
@@ -1092,7 +1092,7 @@ Return every declaration in `specs` that touches `control_volume` and whose
 disposition for `quantity` is still `:open`, as blockers.
 
 An open row is one the coverage registry has not established from the code. It
-demands nothing of a record, so a leg on it is accepted, but the claim it feeds
+demands nothing of an entry, so a leg on it is accepted, but the claim it feeds
 cannot be evaluated: the registry does not know what the path writes, so no sum
 that includes it proves anything. A zero residual over an open row is a
 coincidence and not a closure, and the row blocks until it is declared. This is
@@ -1139,7 +1139,7 @@ Return whether the configuration says any of `reservoirs` inside
 Applicability is read from the schema and never from whether a leg arrived. An
 expected channel or event that recorded nothing is a **blocked** claim, not a
 claim the configuration never made. Those are different answers and only one of
-them is a defect, so deriving one from the absence of records would report every
+them is a defect, so deriving one from the absence of entries would report every
 silent gap as a quantity nobody has.
 """
 function declared_applicable(
@@ -1737,7 +1737,7 @@ The closing endpoints must be for the step the transaction opened, which is the
 check that catches a missed or a doubled step, and they must describe the
 configuration the schema declares.
 
-Every row comes from a declaration rather than from a record, so a channel or
+Every row comes from a declaration rather than from an entry, so a channel or
 event that reported nothing produces a blocked row naming it instead of
 vanishing. Cumulative totals are updated here and only here, so an aborted
 transaction contributes nothing to them.

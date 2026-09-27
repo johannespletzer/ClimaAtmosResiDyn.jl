@@ -21,7 +21,7 @@
 ##### Records are prognostic but not transported. The timestepper advances them
 ##### and nothing else touches them: no advection, no limiter, no Jacobian block
 ##### beyond the fallback identity. They accumulate from the start of the run
-##### and are carried through a restart, so a budget over an interval is the
+##### and are carried through a restart, so the change over an interval is the
 ##### difference of two outputs. This differs from `q_tag_fix_<name>`, which
 ##### lives in the cache and does restart at zero.
 #####

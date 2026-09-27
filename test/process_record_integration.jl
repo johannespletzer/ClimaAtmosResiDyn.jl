@@ -15,8 +15,8 @@ simulation. This file covers the paths it cannot reach:
  3. the real timestepper integrates them, so a bracketed process that fires
     leaves a nonzero record;
  4. they survive a checkpoint round trip with their values intact, which is the
-    contract that makes a window budget the difference of two outputs even
-    across a restart;
+    contract that makes the change over a window the difference of two outputs
+    even across a restart;
  5. their brackets allocate nothing, on the explicit path and in the implicit
     tendency.
 
@@ -151,7 +151,7 @@ end
 
     # 4. Checkpoint round trip. Records live in `Y`, so they are written to the
     # checkpoint and restored with their values rather than restarting at
-    # zero. This is what makes a budget over a window the difference of two
+    # zero. This is what makes the change over a window the difference of two
     # outputs even when a restart falls between them, and it is the one place
     # the records differ from `q_tag_fix_<name>`, which stays in the cache.
     restart_file = joinpath(simulation.output_dir, "day0.20.hdf5")

@@ -107,7 +107,7 @@ last accepted step. Before the first commit the claims section is empty and
 function budget_report(adapter::ParentBudgetAdapter; job_id = "", float_type = "")
     (; schema, journal) = adapter
     commit = latest_commit(adapter)
-    record = adapter.timestepper
+    pin = adapter.timestepper
     context = adapter.context
     report = Dict{String, Any}(
         "version" => REPORT_VERSION,
@@ -126,12 +126,12 @@ function budget_report(adapter::ParentBudgetAdapter; job_id = "", float_type = "
             "adapter_version" =>
                 string(pkgversion(parentmodule(parentmodule(@__MODULE__)))),
             "timestepper" =>
-                isnothing(record) ? "not initialised" :
+                isnothing(pin) ? "not initialised" :
                 Dict{String, Any}(
-                    "package_version" => string(record.package_version),
-                    "algorithm" => String(record.algorithm),
-                    "stages" => record.stages,
-                    "fsal" => record.fsal,
+                    "package_version" => string(pin.package_version),
+                    "algorithm" => String(pin.algorithm),
+                    "stages" => pin.stages,
+                    "fsal" => pin.fsal,
                 ),
             "moist" => adapter.moist,
             "slab" => adapter.slab,
@@ -219,7 +219,7 @@ function budget_summary(adapter::ParentBudgetAdapter)
         adapter.tolerance_source)
     isnothing(adapter.transition) ||
         println(io, "Restarted: transition ", adapter.transition.status,
-            ", checkpoint step ", adapter.transition.checkpoint_step, ", record segmented")
+            ", checkpoint step ", adapter.transition.checkpoint_step, ", history segmented")
     if isnothing(commit)
         println(io, "No step committed yet.")
         return String(take!(io))

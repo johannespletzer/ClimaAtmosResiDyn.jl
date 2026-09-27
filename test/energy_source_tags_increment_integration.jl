@@ -10,13 +10,13 @@ step by step. The parent's increment has no such gap. This file checks:
     increment in every cell, up to the part left in place. That part sums to
     the column's change of `E` and sits where the mismatch is. The part moved
     sums to zero in the column. Each face takes the shares of the cell the
-    flux leaves. The ledger holds both parts, and nothing else in the tendency
-    changes. The stepper's hook runs the parent's own correction unchanged,
-    and none of it allocates;
+    flux leaves. The increment ledger holds both parts, and nothing else in
+    the tendency changes. The stepper's hook runs the parent's own correction
+    unchanged, and none of it allocates;
  2. on the DYCOMS RF02 EDMF column with 1-moment microphysics, where the parent
     has its own post-solve correction (the default `energy_q_tot_upwinding`):
-    the closure residual is small, and the ledger explains its column total.
-    The audit, the diagnostics and the split solver read the ledger. The
+    the closure residual is small, and the increment ledger explains its column
+    total. The audit, the diagnostics and the split solver read the ledger. The
     model's fields are those of the same column without tags, bit for bit;
  3. the updraft's mixing of provenance on that column: the default exchange
     sums to zero over the partition and allocates only the parent helper's
@@ -200,7 +200,7 @@ tags = [
         Y₀ = copy(Y)
         U, dY, ᶜδ = set_increment(Y₀)
 
-        # Only the tags and the ledger change.
+        # Only the tags and the increment ledger change.
         for name in propertynames(Y.c)
             (
                 CA.is_energy_source_tag_name(name) ||
@@ -344,7 +344,7 @@ tags = [
         # hour; here it is 8e-7.
         @test closure_increment.gross_relative < 1e-5
 
-        # The audit's columns and the diagnostics read the ledger.
+        # The audit's columns and the diagnostics read the increment ledger.
         audit = CA.energy_source_audit(Y, p, model, FT(1))
         @test isequal(audit.increment_left, left)
         @test audit.increment_left_gross ≈ sum(abs.(Y.c.e_src_inc_left))
