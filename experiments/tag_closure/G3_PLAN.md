@@ -121,6 +121,11 @@ beside them.
     probe) and PX18 (a band region) until a measured result needs them.
   - **Criterion 7:** the net-flow audit and WP4b's pool rule map to PX14,
     deferred until WP4b moves toward validation.
+    *Scope added (provenance pathway, 2026-09-27, from the owner's review of
+    #121, pending OD15):* the audit is also reported normalized, and the
+    compartments' residuals and `Σ pr_tag` are recorded over a refinement
+    matrix (PX25). The approved audit row, 10% of each tag's precipitation
+    over the day (6.1), is unchanged.
   - **Criterion 8** stays as approved. PX23, one held-out case named before
     any rule is tuned, is reported beside it as Val-4, under OD14's hygiene.
     The owner stated on 2026-09-26 (PR #122) that the GCM-driven column,
@@ -469,6 +474,17 @@ sub-steps, in `PrecipitatingColumn`'s rain-out window only. It is deferred until
 WP4b moves toward validation. Until stage 2, WP4b is refused under EDMF, so the
 production envelope keeps the reset.
 
+*Scope added (provenance pathway, 2026-09-27, from the owner's review of #121,
+pending OD15):* stage 1 attributes by the gross flows, so the audit now holds
+the net-flow rule's difference from them. That is an observed spread between
+two rules, not a bound on the pool's error. PX14 is the pool's reference.
+PX25 reports the audit on two scales: the gross microphysical transfer, and
+the rain or snow mass or each tag's precipitation. It also records each
+compartment's residual under both transports, both upwinding schemes and
+several time steps. #121 is adding the review's sub-step-resolved reference
+test (item 4) and a horizontally varying operator test (item 6). They are
+tests being added, not results.
+
 ### 4.6 Shared code (WP2), after the water design has settled
 
 The water helpers are written for water first, in WP3 to WP4b. After V-W3 and
@@ -602,7 +618,7 @@ review):* the pathway's runs, by gate.
 | V-P0 | Gate A and gate B's screen, no runs: PX0 (the archive) and PX1 (the subsidence screen)                                                                                                                                                                                                                         | step 1b                                    |
 | V-P1 | Gates B to E, existing keys: PX8 after PX1, whatever PX1 finds; PX7 (the follower's lag or structure); PX24 and PX11 (the clean label benchmark and its per-tag accounting), then PX23 (one held-out case, not assessable until an independent case and its reference are fixed); PX22 (energy at a fixed `c`) | OD11, OD12, OD14                           |
 | V-P2 | Gate B's probe PR: PX16 with PP-SUB, only if PX8 is material                                                                                                                                                                                                                                                   | OD13                                       |
-| V-P3 | Deferred until a measured result needs them: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21 and the other probe PRs                                                                                                                                                                                         | their triggers (the pathway's section 7.2) |
+| V-P3 | Deferred until a measured result needs them: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21 and the other probe PRs; *PX25, added 2026-09-27 (provenance pathway, from the owner's review of #121)*                                                                                                         | their triggers (the pathway's section 7.2) |
 
 That makes about 70 column-scale jobs and 5 sphere jobs. Column runs go to
 `hpda2_test` where they fit in two hours, otherwise `hpda2_compute`.

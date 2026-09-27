@@ -52,6 +52,16 @@ The twelve criteria of the plan, section 2, in short:
     fixed energy convention, reference validity and the Newton row's reading,
     the probe PRs, and held-out hygiene. OD3 and OD5 stay as decided. No agent
     fills one in.
+  - [ ] **OD15, proposed by the provenance pathway from the owner's review of
+    #121.** *Scope added (provenance pathway, 2026-09-27):*
+    [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9 and PX25. It is
+    in [the register](ROADMAP.md#the-decision-register) as a proposal, not
+    yet open. It answers the review's question on the acceptable closure
+    error for WP4b, and over what duration, with OD3's approved rows, G3_PLAN
+    6.1's rain and snow row and OD2's windows. It proposes no new value;
+    where one is needed, the owner names it. PX25's trend rule is new. It
+    reuses OD3's refinement ratios, and the owner decides whether to adopt
+    it. No agent fills it in.
   - [x] **Rev. 2's register, OD1 to OD8** (2026-09-24; ROADMAP.md, "The
     decision register"). *Each decision's current state is in [the register](ROADMAP.md#the-decision-register); all but
     OD7 are decided, and OD7 is deferred.* Kept as written: the production envelope, the windows, the
@@ -724,6 +734,9 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
   - [ ] The hyperdiffusion correction (note section 3) is built, but no model
     run exercises it: the test column has no horizontal extent. A sphere or
     box run checks it before a default relies on it.
+    *Scope added (provenance pathway, 2026-09-27, from the owner's review of
+    #121):* #121 is adding a horizontally varying operator test for it (the
+    review's item 6). It is a test being added, not a result.
 
   - [ ] Stage 2: EDMF, default mode.
 
@@ -805,6 +818,23 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
   - [ ] *Scope added (provenance pathway, 2026-09-26):* PX14, the pool rule and
     the sedimentation reset replayed with sub-steps in the rain-out window,
     after #121's review, once WP4b moves toward validation.
+    *Scope added (provenance pathway, 2026-09-27, from the owner's review of
+    #121):* #121 is adding a test-only sub-step-resolved reference (the
+    review's item 4). It is a test being added, not a result. PX14 is its
+    run-scale counterpart.
+
+  - [ ] *Scope added (provenance pathway, 2026-09-27, from the owner's review
+    of #121, pending OD15):* PX25, the review's items 5 and 7, before step
+    8b. Both transports, first-order and van Leer upwinding, three time
+    steps and three sub-step counts, on a longer precipitating run. It
+    records `q_ntag_res`, `q_rtag_res`, `q_stag_res` and `q_tag_res`, the
+    parts' minima, the repair's throughput and accumulated `Σ pr_tag`. It
+    reports the audit fields on two scales: the gross microphysical
+    transfer, and the rain or snow mass and each tag's precipitation. It is
+    scored on OD3's approved rows and G3_PLAN 6.1's rain and snow row. OD15
+    names the case and its length. If tracer mode fails where increment
+    passes, the pathway proposes increment as the recommended mode for
+    precipitation provenance. The owner decides.
 
 ## Provenance pathway (proposed 2026-09-26, pending OD9 to OD14)
 
@@ -838,7 +868,8 @@ verdict record of the pathway's section 2. If a prerequisite fails, it says
   - Deferred until a measured result needs them, each with its trigger in the
     pathway's section 7.2: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21,
     and the probe PRs PP-TRACER, PP-BAND, PP-SFC, PP-FACE, PP-JAC and
-    PP-SRCOFF.
+    PP-SRCOFF. *Scope added (provenance pathway, 2026-09-27, from the
+    owner's review of #121):* also PX25, WP4b's refinement matrix.
 
 ## Qualification runs
 
