@@ -131,9 +131,10 @@ Two consequences worth stating:
     flag `negative_water_void` past `negative_water_void_above`, `1e-4` by
     default. The flag is checked at every row and at the end of every
     accepted step, so an excursion between two rows marks the next one. A
-    ledger in the cache adds the negative water up after every accepted step,
-    for the audit. See "The parent's negative water" in
-    `tracer_configuration.md`.
+    crossing after the run's last row sets the flag and warns, and a later
+    checkpoint carries it, but no row of that run shows it. A ledger in the
+    cache adds the negative water up after every accepted step, for the
+    audit. See "The parent's negative water" in `tracer_configuration.md`.
 
 ### Taggable processes
 

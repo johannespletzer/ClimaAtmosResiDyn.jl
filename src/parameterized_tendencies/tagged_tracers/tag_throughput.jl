@@ -379,10 +379,18 @@ first time, the root process warns once. The flag then stays set, through a
 restart too. A row of the check that sees the same state later in the step
 does not warn again.
 
+A crossing after the run's last row reaches no row. The water check's rows fall
+every `period` from the start, so where `t_end` is not a multiple of the period,
+or after a graceful exit, the last steps have no row after them. A step past the
+level there still sets the flag and warns. A checkpoint written after it carries
+the flag, and the next segment's rows are marked. But no row of this run's
+tables shows it.
+
 `void_above` is the water check's `negative_water_void_above`. `nothing`, for
 `~` or without a water check, does no work at all. Otherwise every process
-takes the sums on every accepted step, since they are collective. It writes
-only the flag, never a field, so the model's fields cannot depend on it.
+takes the first sum on every accepted step, and the second after a step with
+negative water, since both are collective. It writes only the flag, never a
+field, so the model's fields cannot depend on it.
 """
 check_negative_water_step!(integrator, ::Nothing) = nothing
 function check_negative_water_step!(integrator, void_above)
@@ -398,8 +406,10 @@ function check_negative_water_step!(integrator, void_above)
             the end of the step to t = $(Float64(integrator.t)) s, above \
             `negative_water_void_above` = $void_above. The tags partition only \
             its non-negative part, and `q_tag_negative` holds the rest. The run \
-            goes on. The next row and every later row of the water closure and \
-            audit tables are marked `negative_water_void`, also after a restart."
+            goes on. Every later row of the water closure and audit tables is \
+            marked `negative_water_void`, also after a restart. If the run ends \
+            before its next row, no row shows this crossing: only this warning \
+            and a checkpoint written after it record it."
         )
     return nothing
 end

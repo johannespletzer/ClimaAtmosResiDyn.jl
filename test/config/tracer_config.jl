@@ -1896,6 +1896,46 @@ second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
         context,
     )
     @test all(iszero, parent(empty_ledger.ᶜamount))
+
+    # A crossing after the run's last row. The rows fall every 10 s, and the
+    # run ends at 25 s, so its last row is at 20 s. The parent is negative only
+    # at the end of the step to 25 s. The flag is set and the run warns, but
+    # no row shows it. A checkpoint written after it carries it, so the next
+    # segment's rows are marked.
+    tail_voided = Ref(false)
+    tail_p = merge(
+        p,
+        (; tagging = (; p.tagging..., negative_water_void = (; water = tail_voided))),
+    )
+    tail_flag = (; void_above = level, voided = tail_voided, ledger = nothing)
+    tail = mktempdir()
+    set_parent!(positive)
+    for t in (0.0, 10.0, 20.0)
+        check!(tail, t, tail_flag)
+    end
+    set_parent!(one_negative)
+    @test_logs (:warn, r"end of the step to t = 25.0 s") CA.check_negative_water_step!(
+        (; u = Y, p = tail_p, t = 25.0),
+        level,
+    )
+    @test tail_voided[]
+    tail_table = CA.tag_closure_path(tail, "water")
+    @test table_column(tail_table, "time") == ["0.0", "10.0", "20.0"]
+    @test table_column(tail_table, "negative_water_void") == ["0", "0", "0"]
+    tail_checkpoint = joinpath(mktempdir(), "day0.25.hdf5")
+    CA.InputOutput.HDF5Writer(tail_checkpoint, context) do writer
+        CA.write_negative_water_void_attributes!(
+            writer.file,
+            (; negative_water_void = (; water = tail_voided)),
+        )
+    end
+    tail_restored = CA.negative_water_void_flags(atmos)
+    @test_logs (:warn, r"passed `negative_water_void_above`") CA.restore_negative_water_void!(
+        (; negative_water_void = tail_restored),
+        tail_checkpoint,
+        context,
+    )
+    @test tail_restored.water[]
 end
 
 @testset "Audit table" begin

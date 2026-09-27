@@ -376,9 +376,9 @@ The parent's negative water, from the raw `ρq_tot` (known issue 7):
 
 Not the partition's target `max(ρq_tot, 0)`, whose negative part is zero by
 construction. `negative` is the integral of `ρ q_tag_negative` up to sign.
-It writes no field, not even scratch, because the check at every accepted step
-([`check_negative_water_step!`](@ref)) takes the same sums between the model's
-steps. `Base.sum` reduces across processes, so this is collective: every
+It writes no field, not even scratch. So the check at every accepted step
+([`check_negative_water_step!`](@ref)), which takes the same sums, writes none
+either. `Base.sum` reduces across processes, so this is collective: every
 process must call it.
 """
 function parent_negative_water(Y)

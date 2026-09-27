@@ -428,6 +428,14 @@ possible. An excursion that passes the level and ends between two rows still
 sets the flag, and the next row is the first one marked. That row's own
 `negative_water_relative` can then be below the level, or 0.
 
+A crossing after the run's last row reaches no row. The rows fall every
+`period` from the start. Where `t_end` is not a multiple of the period, or
+after a graceful exit, the last steps have no row after them. A step past the
+level there still sets the flag, and the run warns. A checkpoint written after
+it records the flag, so a restarted run marks all its rows. But neither table
+of this run shows the crossing. To score a run from its tables alone, choose a
+`t_end` that is a multiple of the `period`.
+
 `negative_water_void` says one thing: the parent's negative water passed the
 level at a row or at the end of an accepted step. `negative_water_void = 0`
 does not say that the parent is valid in any other way. The check reads the
