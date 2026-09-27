@@ -395,9 +395,10 @@ end
 """
     negative_water_step_relative(ᶜρq_tot)
 
-The ratio [`parent_negative_water`](@ref) gives, `∫max(-ρq_tot, 0) dV / ∫ρq_tot dV`, for the check at every accepted step. It takes the same two sums,
-so the same state gives the same ratio, bit for bit. Where no cell is negative
-it stops after the first sum, and the ratio is 0.
+The ratio that [`parent_negative_water`](@ref) gives,
+`∫max(-ρq_tot, 0) dV / ∫ρq_tot dV`, for the check at every accepted step. It
+takes the same two sums, so the same state gives the same ratio, bit for bit.
+Where no cell is negative it stops after the first sum, and the ratio is 0.
 
 Both sums are collective. The first adds terms that are not negative, so it is
 zero on every process or on none. So every process takes the same branch.
