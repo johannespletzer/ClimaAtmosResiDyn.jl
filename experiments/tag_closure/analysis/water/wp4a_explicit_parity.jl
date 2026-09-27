@@ -27,17 +27,31 @@ tags = Dict{String, Any}(
         Dict{String, Any}("name" => "strat", "region" => altitude_region(true)),
         Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
     ],
-    "diagnostics" => [Dict{String, Any}("short_name" => ["pr_tag_tropo", "prra_tag_strat"], "period" => "10mins")],
+    "diagnostics" => [
+        Dict{String, Any}(
+            "short_name" => ["pr_tag_tropo", "prra_tag_strat"],
+            "period" => "10mins",
+        ),
+    ],
 )
-run(d, id) = (s = CA.get_simulation(CA.AtmosConfig(merge(d, Dict{String, Any}("output_dir" => mktempdir(pwd()))); job_id = id));
-              @test CA.solve_atmos!(s).ret_code == :success; s)
+run(d, id) = (
+    s = CA.get_simulation(
+        CA.AtmosConfig(
+            merge(d, Dict{String, Any}("output_dir" => mktempdir(pwd())));
+            job_id = id,
+        ),
+    );
+    @test CA.solve_atmos!(s).ret_code == :success; s)
 function same(Y, Yp)
     for n in propertynames(Yp.c)
         n == :sgsʲs && continue
         @test isequal(parent(getproperty(Y.c, n)), parent(getproperty(Yp.c, n)))
     end
     for n in propertynames(Yp.c.sgsʲs.:(1))
-        @test isequal(parent(getproperty(Y.c.sgsʲs.:(1), n)), parent(getproperty(Yp.c.sgsʲs.:(1), n)))
+        @test isequal(
+            parent(getproperty(Y.c.sgsʲs.:(1), n)),
+            parent(getproperty(Yp.c.sgsʲs.:(1), n)),
+        )
     end
     @test isequal(parent(Yp.f), parent(Y.f))
 end
@@ -47,6 +61,9 @@ plain = run(edmf, "wp4a_explicit_plain")
     same(s.integrator.u, plain.integrator.u)
 end
 @testset "explicit, copies" begin
-    s = run(merge(edmf, tags, Dict{String, Any}("water_tag_updraft_copy" => true)), "wp4a_explicit_copies")
+    s = run(
+        merge(edmf, tags, Dict{String, Any}("water_tag_updraft_copy" => true)),
+        "wp4a_explicit_copies",
+    )
     same(s.integrator.u, plain.integrator.u)
 end

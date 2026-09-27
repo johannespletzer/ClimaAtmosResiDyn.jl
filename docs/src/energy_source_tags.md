@@ -13,7 +13,7 @@ and a different quantity from the [Tagged Energy Tracers](tagged_tracers.md):
 | Family               | Field           | Holds                                                 |
 |:-------------------- |:--------------- |:----------------------------------------------------- |
 | `energy_source_tags` | `ρe_src_<name>` | an amount of energy present now, traced to its origin |
-| `energy_tracers`     | `ρe_tag_<name>` | a signed record of what one process did               |
+| `energy_tracers`     | `ρe_tag_<name>` | a signed history of what one process did              |
 
 Both accept the same `source` labels. The rule applied to them differs, and that
 is the whole distinction.
@@ -579,8 +579,8 @@ misses one:
     Without one, a new hook would make the stepper refresh the implicit cache
     after each solve, and the model's constraints read that cache.
 
-The correction keeps a ledger, as two prognostic fields that the stepper
-integrates with the tags:
+The correction keeps an increment ledger, as two prognostic fields that the
+stepper integrates with the tags:
 
   - `e_src_inc_left`: what it has left out of the tags. In each column it sums
     to the part of the parent's implicit increment that changes the column's
@@ -597,12 +597,12 @@ integrals, `increment_left`, `increment_left_gross` and
 `increment_moved_gross`. So the residual's column total splits into what the
 correction left and what everything else leaves.
 
-The ledger records what the correction intends. A face whose donor cell has no
-share of the partition moves no tag, so there a cell's change differs a little
-from the ledger, and the difference lands in `e_src_res`. The column totals are
-right. Under a deep atmosphere the faces grow with height, and the flux is
-scaled by the bottom face's area over each face's own, so each cell takes its
-part of the mismatch exactly. On the tag-closure experiments' EDMF
+The increment ledger records what the correction intends. A face whose donor
+cell has no share of the partition moves no tag, so there a cell's change
+differs a little from the ledger, and the difference lands in `e_src_res`. The
+column totals are right. Under a deep atmosphere the faces grow with height, and
+the flux is scaled by the bottom face's area over each face's own, so each cell
+takes its part of the mismatch exactly. On the tag-closure experiments' EDMF
 column, D4, the residual at 24 h was 267 J/m², against 6.3e5 under `enthalpy`,
 and it was the one-iteration solve's column totals less what the loss rule
 flushes.
@@ -613,8 +613,9 @@ energy_source_tag_transport: enthalpy_increment
 ```
 
 `test/energy_source_tags_increment_integration.jl` checks the correction on a
-set increment, with its donors, its ledger and its audit columns. On the EDMF
-column it checks that the model's state is bit for bit the one without tags.
+set increment, with its donors, its increment ledger and its audit columns. On
+the EDMF column it checks that the model's state is bit for bit the one without
+tags.
 
 ## Diagnostics
 
@@ -629,8 +630,8 @@ column it checks that the model's state is bit for bit the one without tags.
     over the pure region tags, with ``\rho e_\mathrm{tot}`` replaced by ``E``
     under an offset.
   - `e_src_inc_left` and `e_src_inc_moved`, under
-    `energy_source_tag_transport: enthalpy_increment` only: the increment
-    correction's ledger per unit mass (J kg⁻¹), cumulative since the start of
+    `energy_source_tag_transport: enthalpy_increment` only: the correction's
+    increment ledger per unit mass (J kg⁻¹), cumulative since the start of
     the run (see
     [Following the parent's implicit increment, a prototype](@ref)).
 
@@ -674,7 +675,7 @@ family as a whole.
     sources, `energy_source_tag_transport` and `energy_source_tag_repair`. A
     restart that changes one stops with an error that names it and both
     values. A restart whose tag or process-record fields differ from the ones
-    configured is refused as well. A checkpoint written before these records
+    configured is refused as well. A checkpoint written before these entries
     existed is checked by its fields alone, with a warning. One written in
     another version of the format is refused. There is no override: to change
     a setting, start a new run.

@@ -91,18 +91,18 @@ OD2's windows: startup ends where `w25_compare.py window` puts it on each
 rung's untagged twin (the approved rule); established flow runs from there to
 24 h (P4) or to 6 h (P1). The OD3 rows are ROADMAP.md's, approved 2026-09-24.
 
-| # | metric | pass rule | OD3 row |
-|:- | :----- | :-------- | :------ |
-| R1 | P4: every model field of each tagged run against its untagged twin | bit for bit | Parent validity: parity |
-| R2 | P1: the parent's `E` for `ρq_tot` at two iterations | at most 1e-3 | Parent validity: Newton |
-| R3 | P4: the top level's temperature, the 150 K floor, the parent's negative water | as the rows say | Parent validity: temperature; negative water |
-| R4 | P4: the partition's gross residual at 24 h, and the second 12 h against the first | 0.2% of `∫ρq_tot`; no more in the second 12 h | Closure, water |
-| R5 | P4, copies: their own residual; their repair over the day | 0.02%; 0.20% of `∫ρq_tot` a day | Comparator: its own residual; its repair |
-| R6 | P2, copies: the repair per hour at `dt` 60 against 120 s, 30 against 60 s, and at 2 and 10 iterations against 1 | at most 1.1 times the coarser rung's | Comparator: refinement |
-| R7 | P4: per tag, default against copies, L1 and L∞ at 24 h and in the first hour; small tags on absolute error | 2% and 5% at 24 h; 1%, 10%, 25% in the first hour; `2e-4 ∫ρq_tot` | Provenance rows. **Scored only where R5 and R6 pass on that rung**; otherwise *not assessable*, naming which failed |
-| R8 | P4: the partition repair's retained gross per day; each tag's `led_fix` `_inventory_fraction` over the day | 0.5% of `∫ρq_tot` a day; 2% per tag. `led_inc` reported | Intervention, aggregate; per tag |
-| R9 | P2, default: the throughput per hour of the partition repair and of `inc_left`, finer rung against coarser | at most 0.75 times; above 0.9 flags a structural cause | Refinement |
-| R10 | P1, each tag: `E` at two iterations against one | at most 0.75 times, as R9; above 0.9 flags a structural cause | Refinement |
+| #   | metric                                                                                                          | pass rule                                                         | OD3 row                                                                                                             |
+|:--- |:--------------------------------------------------------------------------------------------------------------- |:----------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------- |
+| R1  | P4: every model field of each tagged run against its untagged twin                                              | bit for bit                                                       | Parent validity: parity                                                                                             |
+| R2  | P1: the parent's `E` for `ρq_tot` at two iterations                                                             | at most 1e-3                                                      | Parent validity: Newton                                                                                             |
+| R3  | P4: the top level's temperature, the 150 K floor, the parent's negative water                                   | as the rows say                                                   | Parent validity: temperature; negative water                                                                        |
+| R4  | P4: the partition's gross residual at 24 h, and the second 12 h against the first                               | 0.2% of `∫ρq_tot`; no more in the second 12 h                     | Closure, water                                                                                                      |
+| R5  | P4, copies: their own residual; their repair over the day                                                       | 0.02%; 0.20% of `∫ρq_tot` a day                                   | Comparator: its own residual; its repair                                                                            |
+| R6  | P2, copies: the repair per hour at `dt` 60 against 120 s, 30 against 60 s, and at 2 and 10 iterations against 1 | at most 1.1 times the coarser rung's                              | Comparator: refinement                                                                                              |
+| R7  | P4: per tag, default against copies, L1 and L∞ at 24 h and in the first hour; small tags on absolute error      | 2% and 5% at 24 h; 1%, 10%, 25% in the first hour; `2e-4 ∫ρq_tot` | Provenance rows. **Scored only where R5 and R6 pass on that rung**; otherwise *not assessable*, naming which failed |
+| R8  | P4: the partition repair's retained gross per day; each tag's `led_fix` `_inventory_fraction` over the day      | 0.5% of `∫ρq_tot` a day; 2% per tag. `led_inc` reported           | Intervention, aggregate; per tag                                                                                    |
+| R9  | P2, default: the throughput per hour of the partition repair and of `inc_left`, finer rung against coarser      | at most 0.75 times; above 0.9 flags a structural cause            | Refinement                                                                                                          |
+| R10 | P1, each tag: `E` at two iterations against one                                                                 | at most 0.75 times, as R9; above 0.9 flags a structural cause     | Refinement                                                                                                          |
 
 **How the readings bound the three failures.** Each is a bound, not a cause.
 
@@ -130,13 +130,13 @@ shows the record's head with these configs. `S` is
 `sbatch --account=hpda-c --partition=hpda2_compute --cpus-per-task=2 --mem=48G`.
 Probes write to `$SCRATCH/tag_closure/output/w25i_probes/`.
 
-| jobs | what | limit | expected wall time |
-|:---- |:---- |:----- |:------------------ |
-| 6 | P4 untagged twins | 3 h; 6 h at 120 levels | 30 to 60 min; about 2 h at 120 levels (W25: compiling 12 to 13 min) |
-| 12 | P4 tagged runs, 6 rungs × 2 modes | 4 h; 8 h at 120 levels | default 40 to 60 min, copies 1 to 1.5 h (W25: copies compile 28 to 41 min); 120 levels about twice |
-| 12 | P1, 6 rungs × 2 modes, to 6 h | 8 h | three integrators, the reference at ten iterations: about 3 to 5 h |
-| 12 | P2, 6 rungs × 2 modes | 6 h | 6 h of lead, five one-hour variants: about 1.5 to 3 h |
-| 4 | P3, pulse at 30 and 60 levels × 2 modes | 3 h | three one-hour variants: about 1 h |
+| jobs | what                                    | limit                  | expected wall time                                                                                 |
+|:---- |:--------------------------------------- |:---------------------- |:-------------------------------------------------------------------------------------------------- |
+| 6    | P4 untagged twins                       | 3 h; 6 h at 120 levels | 30 to 60 min; about 2 h at 120 levels (W25: compiling 12 to 13 min)                                |
+| 12   | P4 tagged runs, 6 rungs × 2 modes       | 4 h; 8 h at 120 levels | default 40 to 60 min, copies 1 to 1.5 h (W25: copies compile 28 to 41 min); 120 levels about twice |
+| 12   | P1, 6 rungs × 2 modes, to 6 h           | 8 h                    | three integrators, the reference at ten iterations: about 3 to 5 h                                 |
+| 12   | P2, 6 rungs × 2 modes                   | 6 h                    | 6 h of lead, five one-hour variants: about 1.5 to 3 h                                              |
+| 4    | P3, pulse at 30 and 60 levels × 2 modes | 3 h                    | three one-hour variants: about 1 h                                                                 |
 
 46 jobs. The expected times are estimates from W25's and W35's jobs. None was
 measured with the per-tag ledgers, which add state fields. On the login node

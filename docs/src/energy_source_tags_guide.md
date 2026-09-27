@@ -45,13 +45,13 @@ the partition freely. The entry schema and the named regions are in
 
 ## What you get
 
-| Where                           | What                                                                                       |
-|:------------------------------- |:------------------------------------------------------------------------------------------ |
-| `e_src_<name>`                  | the tag's energy per unit mass, J kg⁻¹                                                     |
-| `e_src_res`                     | the partition's closure residual, J kg⁻¹                                                   |
-| `e_src_fix_<name>`              | what the repair moved into or out of the tag, cumulative in the run segment                |
-| `energy_source_tag_closure.csv` | one row per check: the residual, gross and relative                                        |
-| `energy_source_tag_audit.csv`   | with `audit: true`: untagged, overclaimed, the repair's total, and the correction's ledger |
+| Where                           | What                                                                                                 |
+|:------------------------------- |:---------------------------------------------------------------------------------------------------- |
+| `e_src_<name>`                  | the tag's energy per unit mass, J kg⁻¹                                                               |
+| `e_src_res`                     | the partition's closure residual, J kg⁻¹                                                             |
+| `e_src_fix_<name>`              | what the repair moved into or out of the tag, cumulative in the run segment                          |
+| `energy_source_tag_closure.csv` | one row per check: the residual, gross and relative                                                  |
+| `energy_source_tag_audit.csv`   | with `audit: true`: untagged, overclaimed, the repair's total, and the correction's increment ledger |
 
 Add the tags to a `diagnostics` block the same way as any other short name.
 

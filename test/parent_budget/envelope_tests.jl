@@ -14,13 +14,13 @@ import ClimaCore: Fields
 # and implicit channels. That is what lets the explicit envelopes the adapter
 # records be checked against the state change the integrator actually applied,
 # rather than against the formula they came from. Everything else here is the
-# contract's own rules: the ledger changes nothing, a step costs one collective,
+# contract's own rules: the parent budget changes nothing, a step costs one collective,
 # the timestepper is pinned, and the stage construction the adapter assumes is
 # the one the stepper runs.
 
 const FT = Float64
 
-# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# The parent budget's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
 # the model. The parameters follow the model's microphysics, as the removed
 # `AtmosSimulation{FT}` constructor chose them.
 function column_model(; kwargs...)
@@ -120,16 +120,16 @@ end
     end
 
     @testset "The timestepper is pinned" begin
-        record = adapter.timestepper
-        @test record.package_version == pkgversion(CTS)
-        @test record.algorithm === :ARS343
-        @test record.stages == 4
-        @test !record.fsal
+        pin = adapter.timestepper
+        @test pin.package_version == pkgversion(CTS)
+        @test pin.algorithm === :ARS343
+        @test pin.stages == 4
+        @test !pin.fsal
         γ = 0.4358665215084590
-        @test record.b_exp ≈
+        @test pin.b_exp ≈
               [0.0, -3 / 2 * γ^2 + 4 * γ - 1 / 4, 3 / 2 * γ^2 - 5 * γ + 5 / 4, γ]
-        @test record.b_imp == record.b_exp
-        @test iszero(record.b_exp[1])
+        @test pin.b_imp == pin.b_exp
+        @test iszero(pin.b_exp[1])
     end
 
     @testset "One collective per accepted step" begin
@@ -142,7 +142,7 @@ end
         @test adapter.steps_committed == 3
     end
 
-    @testset "The trajectory is bitwise unchanged with the ledger on" begin
+    @testset "The trajectory is bitwise unchanged with the parent budget on" begin
         step!(off, 3)
         Y_off, Y_on = off.integrator.u, on.integrator.u
         @test parent(Y_off.c) == parent(Y_on.c)
@@ -167,7 +167,7 @@ end
             background =
                 2 * abs(
                     PB.endpoint_total(
-                        adapter.ledger.last_closing,
+                        adapter.journal.last_closing,
                         quantity,
                         PB.ATMOSPHERE_ONLY,
                     ).total,

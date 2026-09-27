@@ -20,6 +20,7 @@ truth than the grid rule, `φᵏ = φ̄`.
 The candidates are compared on one state, not across runs. A copies run holds
 the grid tags and the updraft's own copies. At every step, on that run's
 state, three shares per partition tag and subdomain are computed:
+
   - **grid rule:** `φ̄ᵢ = water_tag_fraction(ρq_tagᵢ, ρq_tot)`, both subdomains;
   - **reconstruction:** `SplitShare` of #104 on the plume and the share
     differences that `water_exchange_inputs!` and `ShareDifferences` give for
@@ -77,6 +78,7 @@ That is, the reconstruction lowers the rain-weighted share error by at least a
 quarter. **The 0.75 is my proposal**; the owner left "material" open.
 
 Reported beside the verdict:
+
   - `E` for `evap` too (a source tag, clamped to [0, 1]);
   - the partition repair's and the copies' repair's ledgers (`q_tag_fix`,
     `q_tag_upfix`), and the copies' residual (`q_tag_copy_res`);

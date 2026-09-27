@@ -57,13 +57,13 @@ One key, `water_tag_leak_correction` (default `false`), turns on both. The
 copies' part runs only where the updrafts' mirror runs
 (`edmfx_vertical_diffusion: true`) and the copies exist.
 
-| configuration | `vdiff` (grid mean) | `diffusion_up` (copies) |
-|:------------- |:------------------- |:----------------------- |
-| 0M | no leak; the key is refused | no leak |
-| 1M, EDMF diffusive flux, default mode | applies | no copies |
-| 1M, EDMF, copies | applies | applies |
-| 1M, `vert_diff` (boundary-layer diffusion) | the same leak, not measured by the gate; the key is refused with `vert_diff` | — |
-| 1M with WP4b's `water_tag_precipitation: true` | moot: the non-precipitating part diffuses as `q_tot_eff` | moot |
+| configuration                                  | `vdiff` (grid mean)                                                          | `diffusion_up` (copies) |
+|:---------------------------------------------- |:---------------------------------------------------------------------------- |:----------------------- |
+| 0M                                             | no leak; the key is refused                                                  | no leak                 |
+| 1M, EDMF diffusive flux, default mode          | applies                                                                      | no copies               |
+| 1M, EDMF, copies                               | applies                                                                      | applies                 |
+| 1M, `vert_diff` (boundary-layer diffusion)     | the same leak, not measured by the gate; the key is refused with `vert_diff` | —                       |
+| 1M with WP4b's `water_tag_precipitation: true` | moot: the non-precipitating part diffuses as `q_tot_eff`                     | moot                    |
 
 **The overlap with WP4b.** Under `water_tag_precipitation: true`,
 `ρq_tag_<name>` holds the water that is neither rain nor snow. It diffuses at
@@ -91,8 +91,7 @@ The boundary-layer diffusion is not built either: the gate did not measure it.
 ## 4. The follower and the Newton solve
 
 The correction is written in `edmfx_sgs_diffusive_flux_tendency!`, after the
-tracer loop. So it is implicit where the diffusion is (`implicit_diffusion:
-true`, as on D4-W). It has no Jacobian block. With one Newton iteration it is
+tracer loop. So it is implicit where the diffusion is (`implicit_diffusion: true`, as on D4-W). It has no Jacobian block. With one Newton iteration it is
 taken at the stage's first guess. Under the follower the tags' own implicit
 tendency then contains it. The follower moves only what still differs from the
 parent's increment.
@@ -147,10 +146,10 @@ gate's cases, with the key on. `REFERENCE_OUTPUT=1` makes the probe's reference
 write its configuration's diagnostics, so parity and the ledgers are read from
 the same runs. Output in `$SCRATCH/tag_closure/output/wp4c_corr/`.
 
-| case | config | operators | length |
-|:---- |:------ |:--------- |:------ |
-| V1, the primary | `configs/wp4c_corr_d4w_default.yml`: case A with `water_tag_leak_correction: true` and the leak ledgers' diagnostics | `vdiff`, `sgs_mass_flux` | a day |
-| V2 | `configs/wp4c_corr_d4w_copies.yml`: case B, the same way | `vdiff`, `diffusion_up` | 12 hours |
+| case            | config                                                                                                               | operators                | length   |
+|:--------------- |:-------------------------------------------------------------------------------------------------------------------- |:------------------------ |:-------- |
+| V1, the primary | `configs/wp4c_corr_d4w_default.yml`: case A with `water_tag_leak_correction: true` and the leak ledgers' diagnostics | `vdiff`, `sgs_mass_flux` | a day    |
+| V2              | `configs/wp4c_corr_d4w_copies.yml`: case B, the same way                                                             | `vdiff`, `diffusion_up`  | 12 hours |
 
 The window is W40's: established flow from 6600 s (OD2's rule on W25's
 untagged run). Scored by `wp4c_gate_score.py` (`--startup 6600`) and

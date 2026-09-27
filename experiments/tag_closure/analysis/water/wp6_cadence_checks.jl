@@ -44,13 +44,22 @@ base = Dict{String, Any}(
     "FLOAT_TYPE" => "Float64", "output_default_diagnostics" => false,
 )
 setups = (
-    follower = Dict{String, Any}("water_tracers" => tracers, "water_tag_transport" => "increment"),
-    copies = Dict{String, Any}("water_tracers" => tracers, "water_tag_updraft_copy" => true),
+    follower = Dict{String, Any}(
+        "water_tracers" => tracers,
+        "water_tag_transport" => "increment",
+    ),
+    copies = Dict{String, Any}(
+        "water_tracers" => tracers,
+        "water_tag_updraft_copy" => true,
+    ),
 )
-build(dict, job) = CA.get_simulation(CA.AtmosConfig(
-    merge(dict, Dict{String, Any}("output_dir" => mktempdir(pwd()))); job_id = job))
-is_diag(name) = startswith(string(name), "ρq_tag_") || CA.is_water_tag_ledger_name(name) ||
-                CA.is_tag_mechanism_ledger_name(name)
+build(dict, job) = CA.get_simulation(
+    CA.AtmosConfig(
+        merge(dict, Dict{String, Any}("output_dir" => mktempdir(pwd()))); job_id = job),
+)
+is_diag(name) =
+    startswith(string(name), "ρq_tag_") || CA.is_water_tag_ledger_name(name) ||
+    CA.is_tag_mechanism_ledger_name(name)
 
 function same_model(Y, Y_plain)
     for name in propertynames(Y_plain.c)
@@ -101,24 +110,37 @@ for cadence in ("stage", "dss")
             end
             fixg = integ.p.tagging.ᶜwater_fix_gross
             attempted = sum(parent(fixg.ρq_tag_tropo) .+ parent(fixg.ρq_tag_strat))
-            retained = sum(parent(getproperty(ledgers, :q_tag_led_repair).ᶜgross)) * 2 +
-                       sum(parent(getproperty(ledgers, :q_tag_led_rescale).ᶜgross)) +
-                       sum(parent(getproperty(ledgers, :q_tag_led_empty).ᶜgross))
-            println("  attempted (cache gross, partition) = $attempted, retained (state, per step) ≈ $retained")
+            retained =
+                sum(parent(getproperty(ledgers, :q_tag_led_repair).ᶜgross)) * 2 +
+                sum(parent(getproperty(ledgers, :q_tag_led_rescale).ᶜgross)) +
+                sum(parent(getproperty(ledgers, :q_tag_led_empty).ᶜgross))
+            println(
+                "  attempted (cache gross, partition) = $attempted, retained (state, per step) ≈ $retained",
+            )
             same_model(integ.u, plain.integrator.u)
         end
     end
 end
 
 @testset "Restart continuation of the state ledgers" begin
-    config = merge(base, setups.copies, Dict{String, Any}(
-        "ode_algo" => "ARS222", "t_end" => "20mins", "dt_save_state_to_disk" => "10mins",
-        "reproducible_restart" => true))
+    config = merge(
+        base,
+        setups.copies,
+        Dict{String, Any}(
+            "ode_algo" => "ARS222", "t_end" => "20mins",
+            "dt_save_state_to_disk" => "10mins",
+            "reproducible_restart" => true),
+    )
     whole = build(config, "wp6_restart_whole")
     @test CA.solve_atmos!(whole).ret_code == :success
     file = joinpath(whole.output_dir, "day0.600.hdf5")
-    isfile(file) || (file = first(filter(f -> occursin("600", f), readdir(whole.output_dir; join = true))))
-    restarted = build(merge(config, Dict{String, Any}("restart_file" => file)), "wp6_restart_read")
+    isfile(file) || (
+        file = first(
+            filter(f -> occursin("600", f), readdir(whole.output_dir; join = true)),
+        )
+    )
+    restarted =
+        build(merge(config, Dict{String, Any}("restart_file" => file)), "wp6_restart_read")
     @test CA.solve_atmos!(restarted).ret_code == :success
     for n in CA.water_tag_mechanism_names(whole.integrator.p.atmos.water_tagging_model)
         @test isequal(parent(getproperty(restarted.integrator.u.c, n)),

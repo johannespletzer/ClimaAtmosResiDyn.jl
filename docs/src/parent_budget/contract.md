@@ -1,6 +1,6 @@
-# Parent-Budget Ledger: Closure Contract
+# Parent Budget: Closure Contract
 
-This page is the normative contract for the parent-budget ledger. It fixes the
+This page is the normative contract for the parent budget. It fixes the
 parent quantities, the reservoirs and control volumes they live in, the
 identities that reconcile them, the vocabulary every report uses, and the
 tolerance a residual is judged against. Everything else in the parent-budget
@@ -9,10 +9,10 @@ work is measured against this page: the
 [coverage registry](coverage.md) inventories every path that has to be
 dispositioned, and the [implementation plan](plan.md) sequences the work.
 
-The contract governs three separate budgets that share one journal. It does not
-by itself establish that any of them closes in a running simulation. What has
-been established at any moment is a property of the implementation, and each
-stack step in the plan names the one claim it adds.
+The contract governs three separate parent quantities that share one journal. It
+does not by itself establish that any of them closes in a running simulation.
+What has been established at any moment is a property of the implementation, and
+each stack step in the plan names the one claim it adds.
 
 The same terms are explained in plain language, for model users, on the
 [vocabulary page](vocabulary.md). This page governs where the two differ.
@@ -25,9 +25,9 @@ a report may never present a lower level as evidence for a higher one.
  1. **Accepted-state reconciliation.** The endpoint change of each parent
     quantity over an accepted step agrees, within tolerance, with the recorded
     accepted channel envelopes and final maps.
- 2. **Implemented-update accounting.** The ledger represents what the supported
-    discrete integrator actually applied, including the stage weights it used
-    and the algebraic defect of an unconverged solve.
+ 2. **Implemented-update accounting.** The parent budget represents what the
+    supported discrete integrator actually applied, including the stage weights
+    it used and the algebraic defect of an unconverged solve.
  3. **Process attribution.** Classified process contributions reproduce their
     channel envelope, so a named process can be held responsible for its share.
  4. **Transfer consistency.** Independently measured legs of a modeled internal
@@ -43,12 +43,12 @@ term can leave no residual at all. Level 6 belongs to the source-tag work and is
 excluded here.
 
 **Discrete closure, within a declared tolerance.** The phrase "exact closure" is
-not used. What the ledger can establish is agreement between an endpoint change
-and a sum of recorded amounts to within the tolerance defined below, for the
-discrete system the model actually integrates. That is a weaker and more useful
-statement than exactness, and it is the only one the arithmetic supports.
+not used. What the parent budget can establish is agreement between an endpoint
+change and a sum of recorded amounts to within the tolerance defined below, for
+the discrete system the model actually integrates. That is a weaker and more
+useful statement than exactness, and it is the only one the arithmetic supports.
 
-## Ledger glossary
+## Parent-budget glossary
 
 One vocabulary, used in this contract, in the code, in the registry, and in
 every report. The heading is qualified because `docs/src/glossary.md` is the
@@ -57,10 +57,10 @@ to either of them ambiguous.
 
 | Term                      | Meaning                                                                                                                                            |
 |:------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Parent quantity           | One of `M`, `W`, `E`. The three budgets the ledger reconciles.                                                                                     |
+| Parent quantity           | One of `M`, `W`, `E`. The three quantities the parent budget reconciles.                                                                           |
 | Reservoir                 | A place the model owns state in, which can gain or lose a parent quantity.                                                                         |
-| Control volume            | A named set of reservoirs a budget is projected onto.                                                                                              |
-| Budget schema             | The configuration-derived declaration of everything the ledger expects to collect, built before collection begins.                                 |
+| Control volume            | A named set of reservoirs the parent budget is projected onto.                                                                                     |
+| Budget schema             | The configuration-derived declaration of everything the parent budget expects to collect, built before collection begins.                          |
 | Internal transfer         | An exchange whose participating reservoirs are all modeled. Its legs are expected to cancel.                                                       |
 | Exterior crossing         | An exchange whose counterparty is not modeled. It has one modeled leg and no cancellation test.                                                    |
 | Exterior counterparty     | The unmodeled far side of a crossing. Named in the topology; never given a numerical leg.                                                          |
@@ -78,7 +78,7 @@ to either of them ambiguous.
 | Not applicable            | The quantity does not exist for this path or reservoir in this configuration.                                                                      |
 | Unknown                   | Not established. Blocks the claim it belongs to.                                                                                                   |
 | Blocked                   | A claim that cannot be evaluated because a required component is unknown, open, or missing.                                                        |
-| Open                      | A disposition not yet established from the code. Demands nothing of a record and blocks every claim it feeds.                                      |
+| Open                      | A disposition not yet established from the code. Demands nothing of an entry and blocks every claim it feeds.                                      |
 | Reported                  | The status of a crossing: a signed boundary flux with no verdict, because nothing exists to cancel against.                                        |
 
 ## The three identities
@@ -200,9 +200,9 @@ leg belongs to, rather than care exercised at every call site.
 
 ## Declared expectations
 
-The ledger does not discover what it should have collected by looking at what it
-did collect. Expectations come from a schema derived from the selected model
-configuration, and the recorded data are checked against that schema.
+The parent budget does not discover what it should have collected by looking at
+what it did collect. Expectations come from a schema derived from the selected
+model configuration, and the recorded data are checked against that schema.
 
 > Expectations are constructed from the selected model configuration before
 > collection begins. Recorded data are checked against those expectations;
@@ -212,7 +212,7 @@ configuration, and the recorded data are checked against that schema.
 The schema is the executable form of the [coverage registry](coverage.md), and
 it declares:
 
-  - the enabled budget quantities;
+  - the enabled parent quantities;
   - the supported control volumes;
   - the expected accepted-update channels;
   - the expected final-state maps;
@@ -236,8 +236,8 @@ nothing at all produces a `blocked` or `fail` result naming it. It does not
 disappear from the report, which is what happens whenever a report is assembled
 out of whatever was recorded.
 
-**An unexpected record is refused.** A channel, event, or reservoir the schema
-does not declare is an error rather than a new row, and so is a second record
+**An unexpected entry is refused.** A channel, event, or reservoir the schema
+does not declare is an error rather than a new row, and so is a second entry
 under an identity already used.
 
 **Applicability is declared, never sniffed.** Whether a reservoir owns a
@@ -293,9 +293,10 @@ Concrete types, not families.
 given, so a caller can install a callback that writes `Y`.
 
 A custom state-mutating callback is **unsupported** unless it either declares
-itself read-only with respect to `Y` or supplies its own ledger accounting.
-Without one of the two, the configuration fails closed at setup rather than
-producing a closure claim that silently omits whatever the callback did.
+itself read-only with respect to `Y` or supplies its own parent-budget
+accounting. Without one of the two, the configuration fails closed at setup
+rather than producing a closure claim that silently omits whatever the
+callback did.
 
 ### Timestepping methods supported
 
@@ -482,18 +483,18 @@ callback which does mutate state falls on one side by rule rather than by
 accident.
 
 `update_constrain_state_every` defaults to `"step"` and accepts `"stage"` and
-`"dss"`. The ledger reads the configured cadence and records one correction per
-firing, so a leg carries a stage index and an occurrence alongside its event and
-step. Without them the same correction firing at four ARS343 stages would
-collide as one leg.
+`"dss"`. The parent budget reads the configured cadence and records one
+correction per firing, so a leg carries a stage index and an occurrence
+alongside its event and step. Without them the same correction firing at four
+ARS343 stages would collide as one leg.
 
 **Endpoint continuity is enforced, not assumed.** Transaction `n+1` opens on the
-endpoint transaction `n` closed on, and the ledger checks amounts *and* statuses
-rather than trusting the caller. A gap between them is a change nothing
+endpoint transaction `n` closed on, and the parent budget checks amounts *and*
+statuses rather than trusting the caller. A gap between them is a change nothing
 accounted for, and it would otherwise vanish from the cumulative total without
 leaving a residual anywhere.
 
-## What a ledger amount is
+## What a parent-budget amount is
 
 A leg's amount is an **accepted-step-weighted extensive contribution**: the part
 of `Bⁿ⁺¹ − Bⁿ` that this path is responsible for. It is not a raw tendency, and
@@ -683,9 +684,9 @@ under that sweep is a bookkeeping error wearing a solver's clothes.
 
 ### Accounting precision
 
-The ledger's arithmetic precision is independent of the state's and is at least
-`Float64`. Every accumulation, reduction, endpoint, leg amount, and cumulative
-total is in the accounting type even when the state is `Float32`.
+The parent budget's arithmetic precision is independent of the state's and is at
+least `Float64`. Every accumulation, reduction, endpoint, leg amount, and
+cumulative total is in the accounting type even when the state is `Float32`.
 
 Conversion happens **before** accumulation and before the global reduction.
 Casting a completed `Float32` reduction to `Float64` is not enough: the
@@ -732,15 +733,15 @@ Two rules follow, and they are part of the contract:
 
  1. Legs accumulate locally, and the global reduction happens **once per
     accepted step** over one packed fixed-layout buffer.
- 2. The ledger is off by default behind its own configuration key. A run with it
-    off must produce a bitwise-identical trajectory to the same run built
-    without the feature, and a run with it on must produce the same trajectory
-    as the same run with it off. Both are tested.
+ 2. The parent budget is off by default behind its own configuration key. A run
+    with it off must produce a bitwise-identical trajectory to the same run
+    built without the feature, and a run with it on must produce the same
+    trajectory as the same run with it off. Both are tested.
 
-The second rule is what makes "the ledger is not a fixer" checkable rather than
-merely stated. Nothing in the ledger writes to the state, and no residual may
-ever be inserted as a balancing entry: a residual is defined by subtraction and
-by nothing else.
+The second rule is what makes "the parent budget is not a fixer" checkable
+rather than merely stated. Nothing in the parent budget writes to the state, and
+no residual may ever be inserted as a balancing entry: a residual is defined by
+subtraction and by nothing else.
 
 ## Energy-reference covariance
 
@@ -761,15 +762,16 @@ precipitation fallout and surface deposition, is what the audit is for.
 
 **Two different things are called covariance and only one can settle `b`.**
 
-*Algebraic re-expression.* Take a completed ledger and apply the substitution to
-every amount. The residual transforms the same way for any `a` and `b`, because
-the ledger is linear and the substitution is exact. This is a **consistency
-check** on the implementation — it verifies that the ledger really is linear and
-that no amount was stored in a way that breaks the substitution — and it is
-worth nothing as evidence about which `b` the model admits.
+*Algebraic re-expression.* Take a completed journal and apply the substitution
+to every amount. The residual transforms the same way for any `a` and `b`,
+because the parent budget is linear and the substitution is exact. This is a
+**consistency check** on the implementation — it verifies that the parent budget
+really is linear and that no amount was stored in a way that breaks the
+substitution — and it is worth nothing as evidence about which `b` the
+model admits.
 
 *Physical reference experiment.* Rerun the model with shifted thermodynamic
-references and compare the two ledgers. This one can reject a `b`. It is an
+references and compare the two journals. This one can reject a `b`. It is an
 intervention, so it has to be specified before it is run: which parameters shift
 and by how much; how the initial state is transformed so the two runs start at
 corresponding states; how boundary and carrier fluxes transform, in particular
@@ -784,8 +786,9 @@ model does not have.
 ## The existing conservation check
 
 `check_conservation` in `src/simulation/solve.jl` is a useful independent
-cross-check and the ledger is compared against it. It is not stage-integrated
-accounting, for four reasons the ledger must not inherit:
+cross-check and the parent budget is compared against it. It is not
+stage-integrated accounting, for four reasons the parent budget must
+not inherit:
 
  1. Its boundary term is `Δt × horizontal_integral_at_boundary(...)` from
     `flux_accumulation!`, which is `dt` times one sample rather than the
@@ -813,11 +816,11 @@ step transition was reproduced" from "the named processes explain the channel"
 from "the two sides of an exchange agree". Merging them lets a success in one
 mask a failure in another, and it makes a failure impossible to localize.
 
-**Why status is per component.** The three budgets have different applicability
-and different evidence on the same path. A momentum drag proves an energy zero
-and says nothing about water; a forcing path measures water and proves a mass
-zero. A per-leg status would have to pick one, and whichever it picked would be
-wrong for the others.
+**Why status is per component.** The three parent quantities have different
+applicability and different evidence on the same path. A momentum drag proves an
+energy zero and says nothing about water; a forcing path measures water and
+proves a mass zero. A per-leg status would have to pick one, and whichever it
+picked would be wrong for the others.
 
 **Why accounting precision is fixed above the state's.** The residual is what
 survives subtracting two large global totals. Tying it to the state's type would
@@ -845,23 +848,23 @@ final report.
     zero by construction. Any intended frictional heating, stress work, or
     solid-Earth exchange has no implemented counterpart.
   - Prescribed forcing adds water and energy to a column without adding air to
-    it, so a forced run has an open dry-air budget. The ledger records the mass
-    component as an invariant zero and reports the open budget rather than
-    closing it.
+    it, so a forced run has an open dry-air budget. The parent budget records
+    the mass component as an invariant zero and reports the open budget rather
+    than closing it.
   - `Y.sfc.water` is an accounting accumulator with no hydrology, as described
     above. There is no soil, snow, or deposited-condensate reservoir at all.
   - `flux_accumulation!` omits turbulent surface fluxes.
   - The process record covers the explicitly bracketed tendency path, and on
     the implicit path the microphysics sink and sedimentation, which
-    `implicit_tendency!` brackets for it. Its bracket set is not the ledger's
-    coverage set, and a process record is never a closure leg.
+    `implicit_tendency!` brackets for it. Its bracket set is not the parent
+    budget's coverage set, and a process record is never a closure leg.
   - A custom callback that writes the state and supplies its own accounting is
     not supported yet. A custom callback is accepted only declared read-only,
     which `audit` mode verifies and `summary` mode trusts.
 
 ## Blockers
 
-Each blocks a named claim, not the whole ledger.
+Each blocks a named claim, not the whole parent budget.
 
 | Blocker                                                      | Blocks                                 | Cleared by              |
 |:------------------------------------------------------------ |:-------------------------------------- |:----------------------- |

@@ -29,23 +29,23 @@ the partition's copies are from `Aʲ`.
 Every writer of `Y.c.sgsʲs.:(j).mse` or its tendency on `main`, and what the
 copies get.
 
-| #  | process                                   | writer of `mseʲ`                         | on D4 (DYCOMS, 1M, a column) | the copies get                                                                 | status |
-|:-- |:----------------------------------------- |:---------------------------------------- |:--------------------------- |:------------------------------------------------------------------------------ |:------ |
-| 1  | vertical advection by the updraft          | `advection.jl:364`                        | yes | the SGS tracer loop, `advection.jl:376`, with `edmfx_tracer_upwinding`; `mseʲ` uses `edmfx_mse_q_tot_upwinding` | mirrored; the two schemes may differ, bounded |
-| 2  | buoyancy, `u₃ʲ ρ_diffʲ ∇Φ`                 | `advection.jl:353`                        | yes | nothing | energy the updraft trades: its velocity equation takes the part `1 − α_b` from `Kʲ` (`solve_sgs_u₃_implicit_stage_analytic!`), and the rest is work through the non-hydrostatic pressure. No tag's label; not mirrored; bounded by `e_src_copy_res` |
-| 3  | horizontal advection                        | `advection.jl:63`                         | no (sphere) | the SGS tracer loop, `advection.jl:137` | mirrored |
-| 4  | entrainment                                 | `edmfx_entr_detr.jl:615`                  | yes | `edmfx_entr_detr.jl:622`, the environment's value | mirrored |
-| 5  | the EDMF diffusive flux's updraft mirror    | `edmfx_sgs_flux.jl:379`                   | yes (`edmfx_vertical_diffusion`) | the grid-mean tag's specific diffusive tendency, `edmfx_sgs_flux.jl:415` | mirrored in form; the tags' operator is a tracer's, `ρe_tot`'s is not. The energy counterpart of water's `diffusion_up` leak. Bounded |
-| 6  | its horizontal counterpart                  | `edmfx_sgs_flux.jl:547`                   | no (sphere) | the same, horizontally | as 5 |
-| 7  | hyperdiffusion                              | `hyperdiffusion.jl:368`                   | no (sphere) | `hyperdiffusion.jl:600` | mirrored in form; operators differ. Bounded |
-| 8  | Rayleigh sponge                             | `remaining_tendency.jl:143`               | when on | `remaining_tendency.jl:151` | mirrored |
-| 9  | radiation, RRTMGP only                      | `radiation.jl:556`                        | no: DYCOMS radiation writes `ρe_tot` only | nothing | **missing: mirror (M3)** |
-| 10 | 0M microphysics, `dq_totʲ (e_hlpr − e_int(Tʲ))` | `microphysics/tendency.jl:126`       | no (1M writes no `mseʲ`) | nothing | **missing: mirror (M4)** |
-| 11 | the surface enthalpy flux into the updraft's lowest cell | `surface_flux.jl:122`        | yes | nothing: the grid-mean tags' surface flux reaches no copy | **missing: mirror (M1)** |
-| 12 | the surface mass flux's relaxation toward the buoyant value, lowest cell | `edmfx_boundary_condition.jl:376` | yes | nothing | **missing: mirror (M2)**; water's mirror 3 |
-| 13 | the filter                                  | `mass_flux_closures.jl:286`               | yes (`edmfx_filter`) | `mass_flux_closures.jl:303`: toward the grid mean where `ρaʲ` is negligible, as `mseʲ`; elsewhere a clamp to `[0, ρe_src/ρaʲ]` that `mseʲ` does not have | mirrored where `ρaʲ` is negligible; the clamp bounded (water's mirror 5 is a repair) |
-| 14 | pressure work                               | `pressure_work.jl:17`                     | — | — | a no-op in the model; nothing to mirror |
-| 15 | the updraft's 1M sedimentation              | none for `mseʲ` (`q_totʲ` only)           | — | none | consistent; nothing to mirror |
+| #  | process                                                                  | writer of `mseʲ`                  | on D4 (DYCOMS, 1M, a column)              | the copies get                                                                                                                                           | status                                                                                                                                                                                                                                              |
+|:-- |:------------------------------------------------------------------------ |:--------------------------------- |:----------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1  | vertical advection by the updraft                                        | `advection.jl:364`                | yes                                       | the SGS tracer loop, `advection.jl:376`, with `edmfx_tracer_upwinding`; `mseʲ` uses `edmfx_mse_q_tot_upwinding`                                          | mirrored; the two schemes may differ, bounded                                                                                                                                                                                                       |
+| 2  | buoyancy, `u₃ʲ ρ_diffʲ ∇Φ`                                               | `advection.jl:353`                | yes                                       | nothing                                                                                                                                                  | energy the updraft trades: its velocity equation takes the part `1 − α_b` from `Kʲ` (`solve_sgs_u₃_implicit_stage_analytic!`), and the rest is work through the non-hydrostatic pressure. No tag's label; not mirrored; bounded by `e_src_copy_res` |
+| 3  | horizontal advection                                                     | `advection.jl:63`                 | no (sphere)                               | the SGS tracer loop, `advection.jl:137`                                                                                                                  | mirrored                                                                                                                                                                                                                                            |
+| 4  | entrainment                                                              | `edmfx_entr_detr.jl:615`          | yes                                       | `edmfx_entr_detr.jl:622`, the environment's value                                                                                                        | mirrored                                                                                                                                                                                                                                            |
+| 5  | the EDMF diffusive flux's updraft mirror                                 | `edmfx_sgs_flux.jl:379`           | yes (`edmfx_vertical_diffusion`)          | the grid-mean tag's specific diffusive tendency, `edmfx_sgs_flux.jl:415`                                                                                 | mirrored in form; the tags' operator is a tracer's, `ρe_tot`'s is not. The energy counterpart of water's `diffusion_up` leak. Bounded                                                                                                               |
+| 6  | its horizontal counterpart                                               | `edmfx_sgs_flux.jl:547`           | no (sphere)                               | the same, horizontally                                                                                                                                   | as 5                                                                                                                                                                                                                                                |
+| 7  | hyperdiffusion                                                           | `hyperdiffusion.jl:368`           | no (sphere)                               | `hyperdiffusion.jl:600`                                                                                                                                  | mirrored in form; operators differ. Bounded                                                                                                                                                                                                         |
+| 8  | Rayleigh sponge                                                          | `remaining_tendency.jl:143`       | when on                                   | `remaining_tendency.jl:151`                                                                                                                              | mirrored                                                                                                                                                                                                                                            |
+| 9  | radiation, RRTMGP only                                                   | `radiation.jl:556`                | no: DYCOMS radiation writes `ρe_tot` only | nothing                                                                                                                                                  | **missing: mirror (M3)**                                                                                                                                                                                                                            |
+| 10 | 0M microphysics, `dq_totʲ (e_hlpr − e_int(Tʲ))`                          | `microphysics/tendency.jl:126`    | no (1M writes no `mseʲ`)                  | nothing                                                                                                                                                  | **missing: mirror (M4)**                                                                                                                                                                                                                            |
+| 11 | the surface enthalpy flux into the updraft's lowest cell                 | `surface_flux.jl:122`             | yes                                       | nothing: the grid-mean tags' surface flux reaches no copy                                                                                                | **missing: mirror (M1)**                                                                                                                                                                                                                            |
+| 12 | the surface mass flux's relaxation toward the buoyant value, lowest cell | `edmfx_boundary_condition.jl:376` | yes                                       | nothing                                                                                                                                                  | **missing: mirror (M2)**; water's mirror 3                                                                                                                                                                                                          |
+| 13 | the filter                                                               | `mass_flux_closures.jl:286`       | yes (`edmfx_filter`)                      | `mass_flux_closures.jl:303`: toward the grid mean where `ρaʲ` is negligible, as `mseʲ`; elsewhere a clamp to `[0, ρe_src/ρaʲ]` that `mseʲ` does not have | mirrored where `ρaʲ` is negligible; the clamp bounded (water's mirror 5 is a repair)                                                                                                                                                                |
+| 14 | pressure work                                                            | `pressure_work.jl:17`             | —                                         | —                                                                                                                                                        | a no-op in the model; nothing to mirror                                                                                                                                                                                                             |
+| 15 | the updraft's 1M sedimentation                                           | none for `mseʲ` (`q_totʲ` only)   | —                                         | none                                                                                                                                                     | consistent; nothing to mirror                                                                                                                                                                                                                       |
 
 `Aʲ`'s other parts, `Kʲ` and `p/ρʲ`, change with the updraft's momentum and
 density, which write no `mseʲ`. Row 2 is the one place where they meet it.
@@ -55,21 +55,23 @@ density, which write no `mseʲ`. Row 2 is the one place where they meet it.
 Each mirror takes the model's own increment of `mseʲ` from the process,
 `Δʲ`, recomputed from the same flux and operator, and gives it to the copies
 by the grid mean's bracket rule (`_accumulate_energy_source_tag!`):
+
   - a tag that receives the process's label gains its mask times `max(Δʲ, 0)`
     (a pure region tag receives every label; a tag without a region has mask
     one);
+
   - every copy loses its share of `min(Δʲ, 0)`. The share is the copy's
     clamped fraction of the partition's copies' sum, `S_Pʲ = Σᵢ∈P max(χᵢʲ, 0)`,
     so the partition loses exactly `min(Δʲ, 0)`.
-So the partition's copies change by exactly `Δʲ` where the masks partition
-the domain. The offset does not enter: a specific increment carries no `c`.
+    So the partition's copies change by exactly `Δʲ` where the masks partition
+    the domain. The offset does not enter: a specific increment carries no `c`.
 
   - **M1, the surface flux** (row 11), label `surface_flux`, lowest cell,
     `Δʲ = −btt / ρʲ` with `btt` the grid mean's boundary tendency of `h_tot`.
     In the remaining tendency, after `surface_flux_tendency!`, as
     `water_tag_copies_surface_flux_tendency!`.
-  - **M2, the relaxation** (row 12). `mseʲ` relaxes toward `mse_b = mse̅ +
-    C√σ²` at the rate `S / max(ρa, ρ a_min)`. Each copy relaxes at the same
+
+  - **M2, the relaxation** (row 12). `mseʲ` relaxes toward `mse_b = mse̅ + C√σ²` at the rate `S / max(ρa, ρ a_min)`. Each copy relaxes at the same
     rate toward `ρe_srcᵢ/ρ + φ̄ᵢ (mse_b − mse̅)`: its grid-mean value plus its
     grid-mean share `φ̄ᵢ` of the buoyant excess, the partition's shares
     renormalized. So no copy gets the excess as its own, as water decided for
@@ -77,10 +79,11 @@ the domain. The offset does not enter: a specific increment carries no `c`.
     tendency, after `edmfx_boundary_condition_tendency!`, with the rate on
     each copy's Jacobian diagonal, as the water copies have it
     (`update_sgs_boundary_condition_jacobian!`).
+
   - **M3, radiation** (row 9), label `radiation`, `Δʲ = −divᵥ(F_rad) / ρʲ`,
     after `radiation_tendency!`, RRTMGP modes only.
-  - **M4, 0M microphysics** (row 10), label `microphysics`, `Δʲ = dq_totʲ
-    (e_hlpr − e_int(Tʲ))`, after the 0M `microphysics_tendency!`, beside
+
+  - **M4, 0M microphysics** (row 10), label `microphysics`, `Δʲ = dq_totʲ (e_hlpr − e_int(Tʲ))`, after the 0M `microphysics_tendency!`, beside
     `water_tag_copies_microphysics_tendency!`.
 
 The mirrors read the state and write only the copies' tendencies. The model's
@@ -111,6 +114,7 @@ would then have to cover it.
 
 **Unit** (`test/energy_source_tags_tests.jl`), on a small EDMF column state
 with copies:
+
   - each mirror changes the partition's copies by exactly the model's own
     `Δʲ`, in both signs, in Float32 and Float64;
   - a tag gains only where it receives the label, by its mask; every copy
@@ -126,19 +130,20 @@ twin with the mirrors on.
 energy tags of `g415_inc_d4_after` under `enthalpy_increment`, one day, with
 the model's fields written hourly for parity (`configs/g411_d4_*.yml`):
 
-| run | code | what |
-|:--- |:---- |:---- |
-| `g411_d4_copies`        | the mirrors' run tree | copies with the mirrors; writes `e_src_copy_res` |
-| `g411_d4_copies_dt60`   | the mirrors' run tree | the same at `dt` 60 s, OD3's refinement row |
-| `g411_d4_copies_before` | `main`'s run tree     | copies without the mirrors |
+| run                     | code                  | what                                               |
+|:----------------------- |:--------------------- |:-------------------------------------------------- |
+| `g411_d4_copies`        | the mirrors' run tree | copies with the mirrors; writes `e_src_copy_res`   |
+| `g411_d4_copies_dt60`   | the mirrors' run tree | the same at `dt` 60 s, OD3's refinement row        |
+| `g411_d4_copies_before` | `main`'s run tree     | copies without the mirrors                         |
 | `g411_d4_default`       | the mirrors' run tree | the default mode, the other side of the comparison |
-| `g411_d4_untagged`      | the mirrors' run tree | the parity twin |
+| `g411_d4_untagged`      | the mirrors' run tree | the parity twin                                    |
 
 D4 exercises M1 and M2 only: its radiation is DYCOMS's, which gives `mseʲ`
 nothing, and its microphysics is 1M. M3 and M4 are covered by the unit tests
 until a RRTMGP or a 0M case with copies runs.
 
 `analysis/increment/g411_eligibility.py` scores them:
+
   - **The window.** OD2's rule on the partitioned total's hourly tendency.
     Where it finds no end of startup, as on a steadily cooled column, OD2's
     table's expectation for D4 holds, the first hour. The script says which.

@@ -1,4 +1,4 @@
-# The parent-budget ledger's κ calibration table. See contract.md, "Calibrating
+# The parent budget's κ calibration table. See contract.md, "Calibrating
 # κ": one row per backend, state float type and rank count, each measured by
 # running the named configuration for the stated number of accepted steps in
 # summary mode with the arithmetic term alone at κ = 1, recording the largest

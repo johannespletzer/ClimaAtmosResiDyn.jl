@@ -217,7 +217,7 @@ when water tagging is disabled. Contains:
     limiters and state constraints have moved into or out of that tag (see
     [`rescale_water_tags!`](@ref) and [`repair_water_tag_partition!`](@ref)).
     Cumulative since the start of the simulation segment, and reset on restart,
-    so a budget over an interval is the difference of two outputs.
+    so the change over an interval is the difference of two outputs.
   - `ᶜwater_pos`, `ᶜwater_neg`: the positive and negative parts of the partition
     sum, `Σₖ max(ρq_tagₖ, 0)` and `Σₖ min(ρq_tagₖ, 0)`. Both corrections use
     them. [`rescale_water_tags!`](@ref) needs only the positive part, as the
@@ -632,8 +632,8 @@ water-tagged run nothing.
 
 This is the tag half of the applied-update event. The tendency code calls
 [`open_applied_update!`](@ref) and `close_applied_update!`, which reach
-here only for a `source` in `KNOWN_TAG_SOURCES` and feed the parent-budget
-ledger for every label.
+here only for a `source` in `KNOWN_TAG_SOURCES` and feed the parent budget
+for every label.
 
 Each half is a no-op when its own model is `nothing`, so a run with only one
 family enabled pays only for that family.
@@ -737,10 +737,10 @@ case it is written for is a nonnegativity constraint clipping a negative
 `ρq_tot` up, where the tags of such a cell are themselves negative — the donor
 rule scaled them by the same negative parent.
 Leaving them alone would leave them negative while the parent became zero, and
-would record nothing in `q_tag_fix_<name>`, so the ledger would report that the
-limiter had done nothing — exactly the conflation the ledger exists to prevent.
-Emptying the tags along with the parent keeps `Σᵢ ρq_tag_i = ρq_tot` exact when
-the parent is clipped to zero, and logs the removal honestly.
+would record nothing in `q_tag_fix_<name>`, so the repair ledger would report
+that the limiter had done nothing — exactly the conflation the ledger exists to
+prevent. Emptying the tags along with the parent keeps `Σᵢ ρq_tag_i = ρq_tot`
+exact when the parent is clipped to zero, and logs the removal honestly.
 """
 @inline function water_tag_rescale_shift(
     ρq_tag,
@@ -854,10 +854,10 @@ function _apply_water_tag_rescale!(
     tag = first(tags)
     ᶜρq_tag = tag_field(ᶜY, tag)
     ᶜfix = tag_field(ᶜwater_fix, tag)
-    # Accumulate the signed change before applying it, so the ledger records the
-    # correction itself and not its effect on an already-corrected tag. The
-    # shift is recomputed on the spot. A few comparisons and a divide cost less
-    # than a scratch field per tag, and this stays allocation free.
+    # Accumulate the signed change before applying it, so the repair ledger
+    # records the correction itself and not its effect on an already-corrected
+    # tag. The shift is recomputed on the spot. A few comparisons and a divide
+    # cost less than a scratch field per tag, and this stays allocation free.
     if _is_partition_tag(tag)
         @. ᶜfix += water_tag_rescale_shift(
             ᶜρq_tag,
@@ -980,8 +980,9 @@ function _apply_partition_repair!(ᶜY, ᶜwater_fix, ᶜpos, ᶜneg, tags::Tupl
     if _is_partition_tag(tag)
         ᶜρq_tag = tag_field(ᶜY, tag)
         ᶜfix = tag_field(ᶜwater_fix, tag)
-        # Ledger first, so it records the correction itself and not its effect
-        # on an already-corrected tag. This matches `rescale_water_tags!`.
+        # Repair ledger first, so it records the correction itself and not its
+        # effect on an already-corrected tag. This matches
+        # `rescale_water_tags!`.
         @. ᶜfix +=
             max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag
         @. ᶜρq_tag = max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg)

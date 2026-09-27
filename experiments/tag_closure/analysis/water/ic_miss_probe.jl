@@ -185,7 +185,8 @@ function explicit_probes(p)
             (
                 "forcing",
                 :external_forcing,
-                (Yₜ, Y, p, t) -> CA.external_forcing_tendency!(Yₜ, Y, p, t, p.atmos.external_forcing),
+                (Yₜ, Y, p, t) ->
+                    CA.external_forcing_tendency!(Yₜ, Y, p, t, p.atmos.external_forcing),
             ),
         )
         if has_scm_forcing(p)
@@ -203,13 +204,27 @@ function explicit_probes(p)
             end
         end
     end
-    push!(probes, ("surface_flux", :surface_flux, (Yₜ, Y, p, t) -> CA.surface_flux_tendency!(Yₜ, Y, p, t)))
+    push!(
+        probes,
+        (
+            "surface_flux",
+            :surface_flux,
+            (Yₜ, Y, p, t) -> CA.surface_flux_tendency!(Yₜ, Y, p, t),
+        ),
+    )
     isnothing(p.atmos.subsidence) || push!(
         probes,
-        ("subsidence", :subsidence, (Yₜ, Y, p, t) -> CA.subsidence_tendency!(Yₜ, Y, p, t, p.atmos.subsidence)),
+        (
+            "subsidence",
+            :subsidence,
+            (Yₜ, Y, p, t) -> CA.subsidence_tendency!(Yₜ, Y, p, t, p.atmos.subsidence),
+        ),
     )
     isnothing(p.atmos.ls_adv) ||
-        push!(probes, ("large_scale_advection", :large_scale_advection, large_scale_advection!))
+        push!(
+            probes,
+            ("large_scale_advection", :large_scale_advection, large_scale_advection!),
+        )
     return probes
 end
 
@@ -236,7 +251,8 @@ function main_probe()
     trials_dir = joinpath(outdir, "trials")
     trials = map(TRIALS) do (label, changes)
         @info "building the trial" label
-        label => CA.get_simulation(trial_config(path, label, changes, trials_dir)).integrator
+        label =>
+            CA.get_simulation(trial_config(path, label, changes, trials_dir)).integrator
     end
     on = last(first(trials))
     probes = explicit_probes(on.p)
@@ -287,7 +303,8 @@ function main_probe()
         # Each ledger's change in the cells that hold an excess at the end.
         excess!(s.ᶜe, Y_ref, names)
         for l in ledgers
-            @. s.ᶜm = ifelse(s.ᶜe > 0, abs(getproperty(Y_ref.c, l) - getproperty(Y₀.c, l)), 0)
+            @. s.ᶜm =
+                ifelse(s.ᶜe > 0, abs(getproperty(Y_ref.c, l) - getproperty(Y₀.c, l)), 0)
             push!(row, Float64(sum(s.ᶜm)))
         end
         gaps = nothing
@@ -297,12 +314,18 @@ function main_probe()
             CA.CTS.step!(trial)
             @assert trial.t == reference.t
             if label == "on"
-                q_gap = maximum(abs, parent(trial.u.c.ρq_tot) .- parent(Y_ref.c.ρq_tot)) /
-                        maximum(abs, parent(Y_ref.c.ρq_tot))
-                tag_gap = maximum(
-                    n -> maximum(abs, parent(getproperty(trial.u.c, n)) .- parent(getproperty(Y_ref.c, n))),
-                    names,
-                ) / maximum(abs, parent(Y_ref.c.ρq_tot))
+                q_gap =
+                    maximum(abs, parent(trial.u.c.ρq_tot) .- parent(Y_ref.c.ρq_tot)) /
+                    maximum(abs, parent(Y_ref.c.ρq_tot))
+                tag_gap =
+                    maximum(
+                        n -> maximum(
+                            abs,
+                            parent(getproperty(trial.u.c, n)) .-
+                            parent(getproperty(Y_ref.c, n)),
+                        ),
+                        names,
+                    ) / maximum(abs, parent(Y_ref.c.ρq_tot))
                 gaps = (q_gap, tag_gap)
             end
             append!(changes, split_change(Y₀, trial.u, ᶜe₀, names, s))

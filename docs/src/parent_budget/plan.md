@@ -1,6 +1,6 @@
-# Parent-Budget Ledger: Implementation Plan
+# Parent Budget: Implementation Plan
 
-The sequence of work that builds the parent-budget ledger. The
+The sequence of work that builds the parent budget. The
 [contract](contract.md) fixes what may be claimed, the
 [architecture](architecture.md) fixes the shapes, and the
 [coverage registry](coverage.md) inventories the paths. This page says in what
@@ -28,12 +28,12 @@ makes does not make that claim.
 
 ## What this work is not
 
-  - Not a fixer. The ledger never changes the trajectory, and that is tested
-    bitwise rather than asserted.
+  - Not a fixer. The parent budget never changes the trajectory, and that is
+    tested bitwise rather than asserted.
   - Not a claim about configurations outside the contract's supported list.
   - Not source-tag closure. `ρq_tag_*`, `ρe_src_*` and `ρe_tag_*` are excluded
     from the parent identity, and their sum-to-parent properties are a separate
-    audit. A finished parent ledger may later help explain a tag residual; tag
+    audit. A finished parent budget may later help explain a tag residual; tag
     closure may never be used to certify the parent.
   - Not a claim of physical completeness. `D = M − W` is a derived dry-air
     diagnostic, not a conservation invariant, and a forced run has an open
@@ -51,9 +51,10 @@ makes does not make that claim.
 
 What is **not** reused, and must not be implied: a process record is not a
 closed budget and is never a closure leg. It is a partial signed history of
-configured, bracketed processes, and its bracket set is not the ledger's
-coverage set. Brackets exist only where `snapshot_tags!` and `attribute_tags!`
-are called, which is the explicit path and one implicit water block. The
+configured, bracketed processes, and its bracket set is not the parent budget's
+coverage set. Brackets exist only on the explicit path, where `snapshot_tags!`
+and `attribute_tags!` are called, and around the implicit microphysics sink and
+precipitation sedimentation, which `implicit_tendency.jl` brackets itself. The
 `e_prc_*` and `q_prc_*` diagnostics also divide by current density; only the raw
 `prc_e_*` and `prc_q_*` state is extensive.
 
@@ -80,10 +81,11 @@ transfer event, a declared topology.
 ## Stack step 2 — Journal and endpoint-reconciliation core
 
 **Claim.** None in a simulation. The core's own invariants hold: expectations
-come from a declared schema and never from records, only a measured component
-carries a nonzero amount, an unknown blocks, a not-applicable is not a measured
-zero, an unset packet slot is not a not-applicable one, a leg is recorded once,
-an aggregate is never summed with its decomposition, and a commit is atomic.
+come from a declared schema and never from recorded data, only a measured
+component carries a nonzero amount, an unknown blocks, a not-applicable is not a
+measured zero, an unset packet slot is not a not-applicable one, a leg is
+recorded once, an aggregate is never summed with its decomposition, and a commit
+is atomic.
 
 **Scope.** The declaration layer that says what a configuration is expected to
 produce, the internal types that record what it did, and the arithmetic that
@@ -101,7 +103,7 @@ simulation closes.
 **Tests.** `test/parent_budget/` — endpoint integrals against real ClimaCore
 state across the supported model and surface combinations and both state float
 types; schema declaration, and its refusal of undeclared, duplicate and missing
-records; journal invariants including deliberate faults; packet slot states,
+entries; journal invariants including deliberate faults; packet slot states,
 layout and reduction assembly.
 
 **Definition of done.** The core is internal, exports nothing, and every rule in
@@ -156,8 +158,8 @@ contributions reproduce `env.explicit_main` and `env.explicit_limited`.
 tableau weights, and the conversion of the coverage table into an executable
 registry.
 
-**Non-goals.** The implicit channel, which is step 5. No process-change record
-is used as a closure leg.
+**Non-goals.** The implicit channel, which is step 5. No process record is used
+as a closure leg.
 
 **Primary files.** `src/prognostic_equations/remaining_tendency.jl`,
 `src/prognostic_equations/limited_tendencies.jl`, the explicit forcing, sponge,
@@ -186,10 +188,10 @@ name what blocks them, and the registry is the single source of truth for
 process classification.
 
 **Status.** #57 delivers the applied-update event, one bracket per process
-that feeds the tag families, the process records and the ledger, and books
-every roster row of every collected channel: a row the registry proves zero
-from the registry alone, in both modes, and a measured row from its event at
-every weighted stage, in `audit` mode, with the gross parts beside it under
+that feeds the tag families, the process records and the parent budget, and
+books every roster row of every collected channel: a row the registry proves
+zero from the registry alone, in both modes, and a measured row from its event
+at every weighted stage, in `audit` mode, with the gross parts beside it under
 `parent_budget_attribution: gross`. Both explicit channels attribute on a
 forced dry column, and the implicit channel does too, now that vertical
 advection is booked. A transfer event a channel applies blocks that channel's
@@ -323,23 +325,23 @@ stage observations unless their accepted weights are proven.
   - Verify no duplicate charge across step, restart and callback boundaries.
 
 **Tests.** Each final map measured on the accepted state; all three
-`constrain_state!` cadences; restart round trip with the ledger enabled; a
-deliberately mutating callback rejected at setup.
+`constrain_state!` cadences; restart round trip with the parent budget enabled;
+a deliberately mutating callback rejected at setup.
 
 **Definition of done.** Every authoritative accepted-state mutation has exactly
 one disposition and exactly one booking, across ordinary steps and restarts.
 
 **Status.** The final maps were delivered by #56. #59 delivers the restart
-transition and the callback rules. A checkpoint written with the ledger on
-carries the ledger's endpoint of the state it holds, as attributes, and the
-first transaction after a restart measures the restored state and compares
-it with that endpoint exactly before it opens; a difference is refused, and a
-checkpoint written without a ledger restarts the record as unverified. The
-record after a restart is a new segment from the restored endpoint. A custom
-callback is accepted only inside a `ReadOnlyCallback` declaration, which
-`audit` mode holds to by reading the state around every firing; a callback
-that supplies its own accounting is not supported yet and is refused, which
-the limitations register records.
+transition and the callback rules. A checkpoint written with the parent budget
+on carries the parent budget's endpoint of the state it holds, as attributes,
+and the first transaction after a restart measures the restored state and
+compares it with that endpoint exactly before it opens; a difference is refused,
+and a checkpoint written without the parent budget restarts the history as
+unverified. The history after a restart is a new segment from the restored
+endpoint. A custom callback is accepted only inside a `ReadOnlyCallback`
+declaration, which `audit` mode holds to by reading the state around every
+firing; a callback that supplies its own accounting is not supported yet and is
+refused, which the limitations register records.
 
 ## Stack step 8 — Reporting and closure certification
 
@@ -391,13 +393,13 @@ backend, float type and rank count; the serial row is `κ = 8` from a worst
 ratio of `1.38`, a run takes its row's tolerance unless it brings its own,
 and a run with no row is blocked by name. The tests re-measure the serial
 row against `κ/4`, and gate summary mode on constant per-step allocation, a
-bounded adapter, and an explicit overhead beside a run without the ledger.
-The cross-check against `check_conservation` runs on a small moist sphere,
-which also takes the ledger through DSS and the horizontal dynamics: every
-identity holds there under the column-calibrated `κ`, the endpoint changes
-agree with ClimaCore's sums, the radiation crossings agree with the
-callback's accumulation to the order of a step, and the check's residual is
-the turbulent flux and precipitation its callback omits, as the ledger's
+bounded adapter, and an explicit overhead beside a run without the parent
+budget. The cross-check against `check_conservation` runs on a small moist
+sphere, which also takes the parent budget through DSS and the horizontal
+dynamics: every identity holds there under the column-calibrated `κ`, the
+endpoint changes agree with ClimaCore's sums, the radiation crossings agree with
+the callback's accumulation to the order of a step, and the check's residual is
+the turbulent flux and precipitation its callback omits, as the parent budget's
 legs say. The GPU and MPI rows and the energy-reference covariance audit
 remain open: this repository's CI runs neither GPUs nor MPI, and the
 covariance claim needs a reference shift the model does not expose.
@@ -431,8 +433,8 @@ no claim level appears in it that its own tests did not establish.
   - Accounting precision matches the documented precision at the point of
     accumulation, not after the fact.
   - One packed global collective per accepted step.
-  - The ledger changes neither the trajectory nor solver convergence, tested
-    bitwise.
+  - The parent budget changes neither the trajectory nor solver convergence,
+    tested bitwise.
   - Unsupported configurations and undeclared state-mutating callbacks fail at
     setup.
   - The contract, the registry, the code, and the published report describe the

@@ -3,7 +3,7 @@ using ClimaComms
 ClimaComms.@import_required_backends
 import ClimaAtmos.Internals.ParentBudget as PB
 
-# Packet mechanics for the parent-budget ledger.
+# Packet mechanics for the parent budget.
 #
 # These tests are state-free. They exercise the rules the packet enforces rather
 # than the integrals it later carries: a slot is unset until something writes

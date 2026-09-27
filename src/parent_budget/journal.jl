@@ -1,5 +1,5 @@
 #####
-##### Parent-budget ledger: the transactional event journal
+##### Parent budget: the transactional event journal
 #####
 ##### One journal holds the signed legs of every event in one accepted timestep.
 ##### A leg says what one event did to one reservoir, and it is recorded once.
@@ -18,7 +18,7 @@
 ##### is recorded at one collection level, so an envelope and its own
 ##### decomposition can be compared but can never land in the same sum.
 #####
-##### Legs are host-side scalar records built after the step's one collective, so
+##### Legs are host-side scalar entries built after the step's one collective, so
 ##### these types are written for clarity rather than for a kernel. Nothing here
 ##### is evaluated on the device.
 
@@ -91,12 +91,12 @@ status_name(::UnknownComponent) = :unknown
 Return whether a component with this `status` is what the schema's `expected`
 disposition asked for. See `EXPECTED_DISPOSITIONS`.
 
-  - `:open` permits anything at the record. The registry has not established
+  - `:open` permits any status. The registry has not established
     what the path does, so nothing is demanded of a leg, and the claim the
     declaration feeds is blocked by the schema at reconciliation instead; see
     `open_dispositions`.
   - `:measured` permits a `Measured` component, and an `UnknownComponent`,
-    which is the honest record of a measurement that was expected and not
+    which is the honest status for a measurement that was expected and not
     taken. It blocks, which is the point.
   - `:invariant_zero` permits an `InvariantZero`, and an `UnknownComponent`
     for a proof not yet established. A `Measured` component is **not**
@@ -125,7 +125,7 @@ How one component came to have the status it has.
 
 Evidence is **per component**, never per leg. One event routinely measures
 energy, proves a mass zero, and has nothing to say about water, so a single
-per-leg record would misdescribe two of the three.
+per-leg entry would misdescribe two of the three.
 
   - `status` is the `ComponentStatus`.
   - `method` is how the amount was obtained, or, for an `InvariantZero`, the
@@ -160,7 +160,7 @@ normalized. Positive means addition to the reservoir the leg names.
 
 The constructors `measured`, `invariant_zero`, `not_applicable` and
 `unknown_component` are the convenient way in. The rules below live in the inner
-constructor instead of in them, so a record built directly from
+constructor instead of in them, so a component built directly from
 `BudgetComponent` and `BudgetEvidence` obeys the same rules as one built through
 a helper.
 
@@ -552,7 +552,7 @@ reservoir the surface side of a `flux` would be a duplicate of its atmospheric
 side, and a schema the constructor accepts could never be recorded in full.
 
 Deterministic, and stable across runs, so a leg can be named in a report and
-found again. `ExecutionIdentity` is its type, and the ledger's set of recorded
+found again. `ExecutionIdentity` is its type, and the journal's set of recorded
 keys is declared with it, so the two cannot drift apart.
 """
 execution_identity(leg::BudgetLeg)::ExecutionIdentity = (
@@ -578,17 +578,17 @@ function leg_label(leg::BudgetLeg)
 end
 
 """
-    budget_component(record, quantity) -> BudgetComponent
+    budget_component(entry, quantity) -> BudgetComponent
 
 Return the `quantity` component of a leg or observation, where `quantity` is
 `:mass`, `:water`, or `:energy`.
 """
 function budget_component(
-    record::Union{BudgetLeg, StageObservation},
+    entry::Union{BudgetLeg, StageObservation},
     quantity::Symbol,
 )
-    quantity === :mass && return record.mass
-    quantity === :water && return record.water
-    quantity === :energy && return record.energy
+    quantity === :mass && return entry.mass
+    quantity === :water && return entry.water
+    quantity === :energy && return entry.energy
     error("Unknown budget quantity $quantity; expected :mass, :water or :energy")
 end

@@ -17,8 +17,7 @@ The configs are `configs/g46_d4_*.yml`.
 On D4 under `enthalpy_increment`, does the change of the partitioned total
 `E = ρe_tot + c·ρ` split into named terms: what each process did, with `c`
 times its change of mass; what the implicit solve left; what the repair moved;
-and a named remainder? And the same for the residual `R = E − Σ partition
-tags`, the part the tags do not hold? E23's 1.37 MJ/m² is not part of it: E26
+and a named remainder? And the same for the residual `R = E − Σ partition tags`, the part the tags do not hold? E23's 1.37 MJ/m² is not part of it: E26
 settled that.
 
 ## 2. The terms
@@ -27,18 +26,18 @@ Per cell, `ρ` from `rhoa`, each field below times `ρ`; a layer's value is that
 times its thickness, and the column's the sum over layers. All are cumulative
 from the start, so a term over `(0, t]` is its value at `t`.
 
-| symbol | what | output |
-|:------ |:---- |:------ |
-| `E` | the partitioned total | the closure table's `total` (the column); `rhoa`, `ta`, not needed per layer |
-| `R` | the residual | `e_src_res` |
-| `L_i` | partition tag `i`'s source ledger (#115) | `e_src_led_src_strat`, `e_src_led_src_tropo` |
-| `L_R` | the residual's source ledger (G4.4) | `e_src_led_src_res` |
-| `B = Σ L_i + L_R` | every source bracket's increment of `E`, with its `c·Δρ` | from the above |
-| `I` | what the follower left in place | `e_src_inc_left` |
-| `F_S = Σ F_i` | what the repair changed the partition's sum by | `e_src_fix_strat`, `e_src_fix_tropo` |
-| `P_e,p` | process `p`'s energy record | `e_prc_<p>` |
-| `P_q,p` | process `p`'s water record | `q_prc_<p>` |
-| `M` | the column's mass | `∫rhoa dz` |
+| symbol            | what                                                     | output                                                                       |
+|:----------------- |:-------------------------------------------------------- |:---------------------------------------------------------------------------- |
+| `E`               | the partitioned total                                    | the closure table's `total` (the column); `rhoa`, `ta`, not needed per layer |
+| `R`               | the residual                                             | `e_src_res`                                                                  |
+| `L_i`             | partition tag `i`'s source ledger (#115)                 | `e_src_led_src_strat`, `e_src_led_src_tropo`                                 |
+| `L_R`             | the residual's source ledger (G4.4)                      | `e_src_led_src_res`                                                          |
+| `B = Σ L_i + L_R` | every source bracket's increment of `E`, with its `c·Δρ` | from the above                                                               |
+| `I`               | what the follower left in place                          | `e_src_inc_left`                                                             |
+| `F_S = Σ F_i`     | what the repair changed the partition's sum by           | `e_src_fix_strat`, `e_src_fix_tropo`                                         |
+| `P_e,p`           | process `p`'s energy record                              | `e_prc_<p>`                                                                  |
+| `P_q,p`           | process `p`'s water record                               | `q_prc_<p>`                                                                  |
+| `M`               | the column's mass                                        | `∫rhoa dz`                                                                   |
 
 ## 3. The identities
 
@@ -113,11 +112,11 @@ merged. Each is `g411x_d4_default`'s configuration (8 tags,
 `enthalpy_increment`, one Newton iteration, `dt` 120 s, 1M implicit, the
 repair, the per-tag ledgers) with every record and the budget's outputs:
 
-| config | offset | purpose |
-|:------ | ------:|:------- |
-| `g46_d4_budget` | 110,495 J/kg | the budget at `c` |
+| config             | offset       | purpose                                 |
+|:------------------ | ------------:|:--------------------------------------- |
+| `g46_d4_budget`    | 110,495 J/kg | the budget at `c`                       |
 | `g46_d4_budget_2c` | 220,990 J/kg | the budget at `2c`; `M_U` from the pair |
-| `g46_d4_untagged` | — | the parity twin: no tags, no records |
+| `g46_d4_untagged`  | —            | the parity twin: no tags, no records    |
 
 `energy_process_record` lists radiation, surface flux, subsidence,
 microphysics and precipitation; `water_process_record` the water labels the

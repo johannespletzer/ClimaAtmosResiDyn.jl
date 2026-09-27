@@ -56,7 +56,7 @@ while CA.time_to_seconds(integrator.t) < t_end - 1e-6
     ᶜtotal = @. lazy(abs(ᶜΔʲ) + abs(ᶜΔ⁰))
     ᶜnegative = @. lazy(
         ifelse(ᶜρaʲ < 0, abs(ᶜΔʲ), zero(ᶜΔʲ)) +
-        ifelse(ᶜρa⁰ < 0, abs(ᶜΔ⁰), zero(ᶜΔ⁰))
+        ifelse(ᶜρa⁰ < 0, abs(ᶜΔ⁰), zero(ᶜΔ⁰)),
     )
     ᶜgain = @. lazy(max(ᶜΔʲ, 0) + max(ᶜΔ⁰, 0))
     total = column(ᶜtotal)
@@ -75,7 +75,9 @@ raining = filter(row -> row[2] >= 1e-3 * largest && row[2] > 0, rows)
 max_negative = isempty(raining) ? NaN : maximum(row[3] / row[2] for row in raining)
 max_gain = isempty(raining) ? NaN : maximum(row[4] / row[2] for row in raining)
 summed = sum(row[2] for row in rows)
-println("RESULT run=$run_name commit=$commit steps=$(length(rows)) raining_steps=$(length(raining))")
+println(
+    "RESULT run=$run_name commit=$commit steps=$(length(rows)) raining_steps=$(length(raining))",
+)
 println("RESULT per_step_max negative_area_fraction=$max_negative gain_fraction=$max_gain")
 println(
     "RESULT run_sum negative_area_fraction=$(sum(row[3] for row in rows) / summed) " *

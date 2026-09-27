@@ -51,16 +51,16 @@ offset `c`.
 
 **Evidence, and the rows it serves.**
 
-| row | evidence the tags write | where it comes from |
-|:--- |:----------------------- |:------------------- |
-| Parent validity | parity of every model field against the untagged twin, bit for bit | the verifier, `compare_runs.py` |
-| Closure | the gross residual over the window, over Θ | closure table; audit's `source_throughput` |
-| Provenance | per tag L1 and L∞, small tags absolute in OD4 units, process-weighted where it applies | against an eligible comparator only |
-| Comparator eligibility | the copies' own residual, their repair over Θ a day, refinement, the `mseʲ` mirrors | E83: not eligible on D4 |
-| Intervention | the repair's retained gross over Θ a day; each tag's `led_fix` inventory fraction; events | audit, per-tag ledgers |
-| Convergence | the refinement of the repair and of `increment_left`; fixed-parent trial steps | ladders (E76, W25's method) |
-| Aggregation | 8 tags summed into groups against a run of the groups | reported (OD8) |
-| Reproducibility, cost | manifest, verifier, build and step time | `submit_g3.sh`, WP9 |
+| row                    | evidence the tags write                                                                   | where it comes from                        |
+|:---------------------- |:----------------------------------------------------------------------------------------- |:------------------------------------------ |
+| Parent validity        | parity of every model field against the untagged twin, bit for bit                        | the verifier, `compare_runs.py`            |
+| Closure                | the gross residual over the window, over Θ                                                | closure table; audit's `source_throughput` |
+| Provenance             | per tag L1 and L∞, small tags absolute in OD4 units, process-weighted where it applies    | against an eligible comparator only        |
+| Comparator eligibility | the copies' own residual, their repair over Θ a day, refinement, the `mseʲ` mirrors       | E83: not eligible on D4                    |
+| Intervention           | the repair's retained gross over Θ a day; each tag's `led_fix` inventory fraction; events | audit, per-tag ledgers                     |
+| Convergence            | the refinement of the repair and of `increment_left`; fixed-parent trial steps            | ladders (E76, W25's method)                |
+| Aggregation            | 8 tags summed into groups against a run of the groups                                     | reported (OD8)                             |
+| Reproducibility, cost  | manifest, verifier, build and step time                                                   | `submit_g3.sh`, WP9                        |
 
 **The residual report (G4.4)** adds, beside the closure: where the residual
 sits (its vertical and local maxima), how fast the loss rule flushes it and the

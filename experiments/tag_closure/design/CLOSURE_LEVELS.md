@@ -9,13 +9,13 @@ onto `claude/energy-claims-budget` as its first commit.
 
 ## 1. Four levels, for both families
 
-| level | lives in | passing it | default | set by |
-|:----- |:-------- |:---------- |:------- |:------ |
-| `tolerance` | the model's check | warns, every time | water 1e-10; `energy_tracers` 1e-6; energy source tags per transport (section 2) | configuration |
-| `throughput_tolerance` (energy source tags) | the model's check | warns, every time | `~` | configuration; no level approved |
-| `void_above` (#112) | the model's check | warns once; this row and every later one void | water 1.0; energy `~` | configuration |
-| `abort_above` | the model's check | ends the run | `~`, every family (#112) | configuration |
-| acceptance | `analysis/evidence/closure_verdict.py` | pass, fail or not assessable | the OD3 rows | the register, before the run |
+| level                                       | lives in                               | passing it                                    | default                                                                          | set by                           |
+|:------------------------------------------- |:-------------------------------------- |:--------------------------------------------- |:-------------------------------------------------------------------------------- |:-------------------------------- |
+| `tolerance`                                 | the model's check                      | warns, every time                             | water 1e-10; `energy_tracers` 1e-6; energy source tags per transport (section 2) | configuration                    |
+| `throughput_tolerance` (energy source tags) | the model's check                      | warns, every time                             | `~`                                                                              | configuration; no level approved |
+| `void_above` (#112)                         | the model's check                      | warns once; this row and every later one void | water 1.0; energy `~`                                                            | configuration                    |
+| `abort_above`                               | the model's check                      | ends the run                                  | `~`, every family (#112)                                                         | configuration                    |
+| acceptance                                  | `analysis/evidence/closure_verdict.py` | pass, fail or not assessable                  | the OD3 rows                                                                     | the register, before the run     |
 
   - **A warning** says the residual passed a level set for this check. Its text
     now says so and adds that it is not an acceptance threshold. Before, the
@@ -53,11 +53,11 @@ B11 names V2 and V3. V2 is the production sphere under `enthalpy_increment`
 (`g2_v2_sphere*`). B11's V3 is E45's, C7's sphere in Float32 under `tracer`
 (`v3_sphere_float32`); the D4 twins of E68 and E73 (`v3_upd_*`) are listed too.
 
-| transport | default `tolerance` | largest `gross_relative`, V2 and V3 | margin | largest over all healthy runs | margin |
-|:--------- | -------------------:|:----------------------------------- | ------:|:----------------------------- | ------:|
-| `enthalpy_increment` | 0.01 | 2.01e-4 (V2, `g2_v2_sphere_n2`, 10 d) | 50 | the same | 50 |
-| `tracer` | 1.0 | 5.9e-3 (V3, `v3_sphere_float32`) | 170 | 5.5e-2 (`lr_s26_copies`, 90 d) | 18 |
-| `enthalpy` | 0.1 | no V2 or V3 run | — | 6.6e-3 (`g1_base_d4_float32`) | 15 |
+| transport            | default `tolerance` | largest `gross_relative`, V2 and V3   | margin | largest over all healthy runs  | margin |
+|:-------------------- | -------------------:|:------------------------------------- | ------:|:------------------------------ | ------:|
+| `enthalpy_increment` | 0.01                | 2.01e-4 (V2, `g2_v2_sphere_n2`, 10 d) | 50     | the same                       | 50     |
+| `tracer`             | 1.0                 | 5.9e-3 (V3, `v3_sphere_float32`)      | 170    | 5.5e-2 (`lr_s26_copies`, 90 d) | 18     |
+| `enthalpy`           | 0.1                 | no V2 or V3 run                       | —      | 6.6e-3 (`g1_base_d4_float32`)  | 15     |
 
   - **The defaults stand.** V2 and V3 sit 50 and 170 times below them, and no
     healthy run on scratch comes within a factor of 15. The code's own table

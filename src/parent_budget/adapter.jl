@@ -1,5 +1,5 @@
 #####
-##### Parent-budget ledger: the timestepper adapter
+##### Parent budget: the timestepper adapter
 #####
 ##### The one place that knows how `ClimaTimeSteppers` builds an accepted step.
 ##### The transaction and reconciliation code knows nothing about processes or
@@ -32,7 +32,7 @@
 """
     ParentBudgetMode
 
-How much the ledger measures and keeps.
+How much the parent budget measures and keeps.
 
   - `SummaryMode`: the endpoints, the channel envelopes and the final maps, which
     is what the parent identity needs, plus the cumulative totals and the last
@@ -50,7 +50,7 @@ How much the ledger measures and keeps.
     is not the default.
 
 `off` is not a mode. It is the absence of an adapter, so that a run with the
-ledger off is the run without the feature.
+parent budget off is the run without the feature.
 """
 abstract type ParentBudgetMode end
 
@@ -148,14 +148,14 @@ increment before the final assembly, see `HookCall`.
 const FINAL_MAP_HOOKS = (:lim!, :dss!, :constrain_state!)
 
 """
-    TimestepperRecord
+    TimestepperPin
 
 What the adapter pinned when the integrator was initialised: the
 `ClimaTimeSteppers` version, the algorithm, and the accepted weights it read.
-Every certificate carries this record, and the trace test fixes the behaviour
+Every certificate carries it, and the trace test fixes the behaviour
 it stands for, which together are the pin the contract asks for.
 """
-struct TimestepperRecord
+struct TimestepperPin
     package_version::VersionNumber
     algorithm::Symbol
     stages::Int
@@ -176,23 +176,23 @@ ARK would book the wrong numbers.
 function check_algorithm(alg)
     alg isa CTS.IMEXAlgorithm{CTS.Unconstrained} && return nothing
     return error(
-        "The parent-budget ledger supports unconstrained IMEX-ARK algorithms " *
+        "The parent budget supports unconstrained IMEX-ARK algorithms " *
         "only, got $(typeof(alg)). See the timestepping methods in " *
         "docs/src/parent_budget/contract.md.",
     )
 end
 
-# The record, read from the integrator once the cache exists. The weights come
+# The pin, read from the integrator once the cache exists. The weights come
 # from the cache's tableau rather than the algorithm's. The cache holds the
 # tableau cast to the state's float type, and that is the one the stepper
 # applies.
-function timestepper_record(integrator)
+function timestepper_pin(integrator)
     alg = integrator.alg
     check_algorithm(alg)
     tableau = integrator.cache.tableau
     b_exp = tableau.b_exp.coeffs
     b_imp = tableau.b_imp.coeffs
-    return TimestepperRecord(
+    return TimestepperPin(
         pkgversion(CTS),
         isnothing(alg.name) ? :tableau : nameof(typeof(alg.name)),
         length(b_exp),
@@ -519,7 +519,7 @@ and their difference.
 const Measurement = NTuple{2, NTuple{3, BUDGET_ACCOUNTING_TYPE}}
 
 """
-    GrossRecord
+    GrossParts
 
 The positive and negative parts of one process row's applied update at one
 stage, weighted as the row's leg is, kept under
@@ -528,7 +528,7 @@ the parts sum to the leg's net amount and the identities use the net. The
 parts are those of the weighted contribution, so `positive` is never negative
 whatever the sign of the stage weight.
 """
-struct GrossRecord{FT}
+struct GrossParts{FT}
     event::Symbol
     channel::Symbol
     process::Symbol
@@ -545,9 +545,9 @@ end
 """
     ParentBudgetAdapter
 
-The ledger and everything it needs to run inside a simulation: the schema and
-the ledger built from it, the one packet the step reduces, the hook template,
-the record of the timestepper, the tolerances, what the meters and the
+The parent budget and everything it needs to run inside a simulation: the schema and
+the journal built from it, the one packet the step reduces, the hook template,
+the timestepper pin, the tolerances, what the meters and the
 applied-update events measured in the current step, and what has been
 committed. `last_commit`, `last_legs`, `last_observations` and `last_gross`
 hold the latest step's results in every mode; `commits` holds every commit in
@@ -584,7 +584,7 @@ mutable struct ParentBudgetAdapter{S, C, T, G}
     surface_temperature::S
     context::C
     moist::Bool
-    ledger::BudgetLedger{BUDGET_ACCOUNTING_TYPE}
+    journal::BudgetJournal{BUDGET_ACCOUNTING_TYPE}
     template::HookTemplate
     layout::BudgetPacketLayout
     packet::BudgetPacket
@@ -598,7 +598,7 @@ mutable struct ParentBudgetAdapter{S, C, T, G}
     restart::Bool
     checkpoint::Union{Nothing, CheckpointEndpoints}
     transition::Union{Nothing, RestartTransition}
-    timestepper::Union{Nothing, TimestepperRecord}
+    timestepper::Union{Nothing, TimestepperPin}
     stepper_cache::Any
     # Per-step meter state. A measurement is a triple of amounts and a triple
     # of arithmetic magnitudes, see `Measurement`.
@@ -630,7 +630,7 @@ mutable struct ParentBudgetAdapter{S, C, T, G}
     last_commit::Union{Nothing, BudgetCommit{BUDGET_ACCOUNTING_TYPE}}
     last_legs::Vector{BudgetLeg{BUDGET_ACCOUNTING_TYPE}}
     last_observations::Vector{StageObservation{BUDGET_ACCOUNTING_TYPE}}
-    last_gross::Vector{GrossRecord{BUDGET_ACCOUNTING_TYPE}}
+    last_gross::Vector{GrossParts{BUDGET_ACCOUNTING_TYPE}}
     last_transfer_checks::Vector{TransferCheck{BUDGET_ACCOUNTING_TYPE}}
     commits::Vector{BudgetCommit{BUDGET_ACCOUNTING_TYPE}}
 end
@@ -796,7 +796,7 @@ end
 
 Build the adapter for a run, or return `nothing` when `mode` is `off`.
 
-Everything the ledger expects is fixed here, before the cache is built and
+Everything the parent budget expects is fixed here, before the cache is built and
 before the first step. The configuration is checked against the supported
 scope. The schema is built from the coverage registry, and every measured
 roster row is checked to name the event that measures it. The hook template
@@ -811,9 +811,9 @@ neither reports every numeric verdict as `blocked`.
 
 A restarted run passes `restart = true` and the endpoints its checkpoint
 carried as `checkpoint`. `read_checkpoint_endpoints` reads them, and returns
-`nothing` for a checkpoint written without a ledger. The first transaction
+`nothing` for a checkpoint written without a parent budget. The first transaction
 then checks the restored state against them exactly before it opens, see
-`check_restart_transition`. The record after the restart is a new segment.
+`check_restart_transition`. The history after the restart is a new segment.
 """
 build_parent_budget(mode, atmos, Y; kwargs...) =
     build_parent_budget(parent_budget_mode(mode), atmos, Y; kwargs...)
@@ -884,7 +884,7 @@ function build_parent_budget(
         atmos.surface.temperature,
         context,
         moist,
-        BudgetLedger{FT}(schema),
+        BudgetJournal{FT}(schema),
         template,
         layout,
         BudgetPacket(layout),
@@ -923,7 +923,7 @@ function build_parent_budget(
         nothing,
         BudgetLeg{FT}[],
         StageObservation{FT}[],
-        GrossRecord{FT}[],
+        GrossParts{FT}[],
         TransferCheck{FT}[],
         BudgetCommit{FT}[],
     )
@@ -1185,7 +1185,7 @@ end
     meter_post_implicit(adapter, f, implicit_tendency)
 
 Wrap the hook `f` in the adapter's meter, or return `f` itself when there is no
-adapter, so `args_integrator` wires the same names whether the ledger is on or
+adapter, so `args_integrator` wires the same names whether the parent budget is on or
 off.
 """
 meter_explicit(::Nothing, f) = f
@@ -1223,8 +1223,8 @@ function end_evaluation!(adapter::ParentBudgetAdapter)
 end
 
 """
-    open_ledger_event!(adapter, Yₜ, event)
-    close_ledger_event!(adapter, Yₜ, Y, p, event)
+    open_parent_budget_event!(adapter, Yₜ, event)
+    close_parent_budget_event!(adapter, Yₜ, Y, p, event)
 
 Open and close the adapter's half of an applied-update event; see
 `open_applied_update!`.
@@ -1239,7 +1239,7 @@ negative parts of what the process added to them, which is its applied update
 at this stage. The transfer legs the event measures are then read from their
 own flux fields in the cache, see `transfer_legs.jl`. Nothing is written.
 """
-function open_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, event::Symbol)
+function open_parent_budget_event!(adapter::ParentBudgetAdapter, Yₜ, event::Symbol)
     adapter.evaluation === :none && return nothing
     event in REGISTRY_EVENTS || error(
         "The applied-update event $event is not one the coverage registry " *
@@ -1262,7 +1262,7 @@ function open_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, event::Symbol)
     return nothing
 end
 
-function close_ledger_event!(adapter::ParentBudgetAdapter, Yₜ, Y, p, event::Symbol)
+function close_parent_budget_event!(adapter::ParentBudgetAdapter, Yₜ, Y, p, event::Symbol)
     adapter.evaluation === :none && return nothing
     adapter.open_event === event || error(
         "The applied-update event $event was closed while " *
@@ -1395,7 +1395,7 @@ end
     clear_fault!(adapter)
 
 Make the adapter's half of the applied-update `event` misbehave in a named
-way, so a test can show what the ledger does with a measurement that is
+way, so a test can show what the parent budget does with a measurement that is
 missing or has the wrong sign. `kind` is `:missing`, which drops the event's
 increment, `:sign_reversed`, which negates it, `:leg_missing`, which drops the
 transfer legs the event measures, or `:leg_sign_reversed`, which negates them.
@@ -1427,20 +1427,20 @@ has_post_implicit_evaluation(adapter::ParentBudgetAdapter) =
 """
     parent_budget_callbacks(adapter) -> Tuple
 
-Return the discrete callback that drives the ledger, as a one-element tuple to
+Return the discrete callback that drives the parent budget, as a one-element tuple to
 splice in front of every other callback, or an empty tuple for `nothing`.
 
 The callback's `initialize` reads the opening endpoint after the integrator has
 initialised its cache and before any other callback has run, which is where
 `B⁰` is defined. Its `affect!` commits every accepted step. Its condition is
-always true. The ledger has no cadence of its own, because a step it skipped
+always true. The parent budget has no cadence of its own, because a step it skipped
 would be a change nobody accounted for.
 """
 parent_budget_callbacks(::Nothing) = ()
 function parent_budget_callbacks(adapter::ParentBudgetAdapter)
     condition = (u, t, integrator) -> true
     affect! = integrator -> commit_step!(adapter, integrator)
-    initialize = (cb, u, t, integrator) -> initialize_ledger!(adapter, integrator)
+    initialize = (cb, u, t, integrator) -> initialize_parent_budget!(adapter, integrator)
     return (CTS.DiscreteCallback(condition, affect!; initialize),)
 end
 
@@ -1448,8 +1448,8 @@ end
 # closing endpoint to reuse. This is one collective, paid once per run. The
 # cache the integrator built is checked against the template built earlier,
 # and a restored state against the endpoints its checkpoint carried.
-function initialize_ledger!(adapter::ParentBudgetAdapter, integrator)
-    adapter.timestepper = timestepper_record(integrator)
+function initialize_parent_budget!(adapter::ParentBudgetAdapter, integrator)
+    adapter.timestepper = timestepper_pin(integrator)
     adapter.stepper_cache = integrator.cache
     stages = length(integrator.cache.tableau.b_imp.coeffs)
     expected = length(adapter.template.implicit_stages)
@@ -1485,14 +1485,14 @@ function initialize_ledger!(adapter::ParentBudgetAdapter, integrator)
         adapter.transition =
             check_restart_transition(adapter.schema, endpoints, adapter.checkpoint)
     )
-    open_transaction!(adapter.ledger, endpoints)
+    open_transaction!(adapter.journal, endpoints)
     return nothing
 end
 
 """
     restart_transition(adapter) -> Union{Nothing, RestartTransition}
 
-Return what the ledger found when it opened on a restored state, or `nothing`
+Return what the parent budget found when it opened on a restored state, or `nothing`
 for a run that did not restart.
 """
 restart_transition(adapter::ParentBudgetAdapter) = adapter.transition
@@ -1500,8 +1500,8 @@ restart_transition(adapter::ParentBudgetAdapter) = adapter.transition
 """
     declared_callbacks(adapter, callbacks) -> Tuple
 
-Return the user callbacks a run may install beside the ledger. Without a
-ledger they pass through. With one, each must be a `ReadOnlyCallback`, and the
+Return the user callbacks a run may install beside the parent budget. Without a
+parent budget they pass through. With one, each must be a `ReadOnlyCallback`, and the
 declaration is unwrapped. In `AuditMode` every firing is checked against it by
 reading the parent integrals of the state around the call, locally and with
 no collective.
@@ -1512,7 +1512,7 @@ function declared_callbacks(adapter::ParentBudgetAdapter, callbacks)
 end
 
 declared_callback(::ParentBudgetAdapter, callback) = error(
-    "The parent-budget ledger accepts a custom callback only inside a " *
+    "The parent budget accepts a custom callback only inside a " *
     "ReadOnlyCallback declaration, got $(typeof(callback)). A callback that " *
     "writes the state between two transactions is a change nothing accounts " *
     "for, and a callback that supplies its own accounting is not supported.",
@@ -1554,8 +1554,8 @@ recorded, and the transaction is committed. Audit mode keeps the commit. The
 next transaction opens on the closing endpoint without measuring it again.
 """
 function commit_step!(adapter::ParentBudgetAdapter, integrator)
-    (; schema, ledger, packet, surface_temperature) = adapter
-    step = ledger.step
+    (; schema, journal, packet, surface_temperature) = adapter
+    step = journal.step
     Y = integrator.u
 
     check_hook_counts(adapter)
@@ -1580,17 +1580,17 @@ function commit_step!(adapter::ParentBudgetAdapter, integrator)
     is_audit(adapter) && record_audit_legs!(adapter, packet, integrator, step)
     record_process_legs!(adapter, packet, integrator, step)
     is_audit(adapter) && record_transfer_legs!(adapter, packet, integrator, step)
-    # The commit clears the transaction, so the step's records are kept here
+    # The commit clears the transaction, so the step's entries are kept here
     # for the report and the tests. Bounded by the template, not the run.
-    copy!(adapter.last_legs, ledger.legs)
-    copy!(adapter.last_observations, ledger.observations)
-    commit = commit_transaction!(ledger, closing; tolerances = adapter.tolerances)
+    copy!(adapter.last_legs, journal.legs)
+    copy!(adapter.last_observations, journal.observations)
+    commit = commit_transaction!(journal, closing; tolerances = adapter.tolerances)
 
     adapter.last_commit = commit
     is_audit(adapter) && push!(adapter.commits, commit)
     adapter.steps_committed += 1
     clear_step_state!(adapter)
-    open_transaction!(ledger)
+    open_transaction!(journal)
     return nothing
 end
 
@@ -1885,8 +1885,8 @@ function fill_audit_slots!(packet::BudgetPacket, adapter::ParentBudgetAdapter, i
     return nothing
 end
 
-function stage_value(records, stage::Int, what::AbstractString)
-    for (recorded_stage, values) in records
+function stage_value(entries, stage::Int, what::AbstractString)
+    for (recorded_stage, values) in entries
         recorded_stage == stage && return values
     end
     return error("The $what of stage $stage was not measured.")
@@ -1937,7 +1937,7 @@ end
 
 # One envelope leg per collected channel and reservoir, from the reduced packet.
 function record_envelopes!(adapter::ParentBudgetAdapter, packet::BudgetPacket, step::Int)
-    (; schema, ledger) = adapter
+    (; schema, journal) = adapter
     FT = BUDGET_ACCOUNTING_TYPE
     for channel in adapter.channels
         source = Symbol("adapter.", channel)
@@ -1967,7 +1967,7 @@ function record_envelopes!(adapter::ParentBudgetAdapter, packet::BudgetPacket, s
                 step,
                 measured_at = :accepted_increment,
             )
-            record_leg!(ledger, leg)
+            record_leg!(journal, leg)
         end
     end
     return nothing
@@ -1980,7 +1980,7 @@ end
 # measured, a quantity declared zero is required to have moved by exactly zero,
 # so a registry that has fallen behind the code is caught here.
 function record_final_maps!(adapter::ParentBudgetAdapter, packet::BudgetPacket, step::Int)
-    (; schema, ledger) = adapter
+    (; schema, journal) = adapter
     FT = BUDGET_ACCOUNTING_TYPE
     for hook in FINAL_MAP_HOOKS
         spec = final_map_spec(schema, hook)
@@ -2036,7 +2036,7 @@ function record_final_maps!(adapter::ParentBudgetAdapter, packet::BudgetPacket, 
             step,
             measured_at = :accepted_state,
         )
-        record_leg!(ledger, leg)
+        record_leg!(journal, leg)
     end
     return nothing
 end
@@ -2048,7 +2048,7 @@ function record_audit_legs!(
     integrator,
     step::Int,
 )
-    (; schema, ledger) = adapter
+    (; schema, journal) = adapter
     FT = BUDGET_ACCOUNTING_TYPE
     tableau = integrator.cache.tableau
     dt = FT(float(integrator.dt))
@@ -2104,7 +2104,7 @@ function record_audit_legs!(
                 weight = process === :post_implicit_correction ? dt * b : b / γ,
                 measured_at = :solved_stage,
             )
-            record_leg!(ledger, leg)
+            record_leg!(journal, leg)
         end
         for process in stage_rows(schema, SLAB_SURFACE_ENDPOINT_GROUP)
             group = stage_row_group(process, stage, SLAB_SURFACE_ENDPOINT_GROUP)
@@ -2125,7 +2125,7 @@ function record_audit_legs!(
                 end
             end
             record_leg!(
-                ledger,
+                journal,
                 BudgetLeg{FT}(;
                     event = Symbol("impl.", process),
                     leg = :slab_surface,
@@ -2164,7 +2164,7 @@ function record_audit_legs!(
             stage = call.stage,
             occurrence = call.occurrence,
         )
-        record_observation!(ledger, observation)
+        record_observation!(journal, observation)
     end
     return nothing
 end
@@ -2240,7 +2240,7 @@ function record_process_legs!(
     integrator,
     step::Int,
 )
-    (; schema, ledger, template) = adapter
+    (; schema, journal, template) = adapter
     FT = BUDGET_ACCOUNTING_TYPE
     tableau = integrator.cache.tableau
     dt = FT(float(integrator.dt))
@@ -2286,11 +2286,11 @@ function record_process_legs!(
                     weight,
                     measured_at = channel === :implicit ? :solved_stage : :stage_evaluation,
                 )
-                record_leg!(ledger, leg)
+                record_leg!(journal, leg)
                 adapter.attribution === :gross && !unmeasured &&
                     push!(
                         adapter.last_gross,
-                        gross_record(adapter, packet, row, channel, stage, weight),
+                        gross_parts(adapter, packet, row, channel, stage, weight),
                     )
             end
         end
@@ -2391,11 +2391,11 @@ function record_declared_row!(
         step,
         measured_at = :coverage_registry,
     )
-    record_leg!(adapter.ledger, leg)
+    record_leg!(adapter.journal, leg)
     return nothing
 end
 
-function gross_record(
+function gross_parts(
     adapter::ParentBudgetAdapter,
     packet::BudgetPacket,
     row::ProcessRowSpec,
@@ -2409,7 +2409,7 @@ function gross_record(
         packet_value(packet, gross_group(channel, row.process, stage, part), quantity) :
         zero(FT)
     parts(part) = map(quantity -> value(part, quantity), BUDGET_QUANTITIES)
-    return GrossRecord{FT}(
+    return GrossParts{FT}(
         row.event,
         channel,
         row.process,
@@ -2483,7 +2483,7 @@ function record_transfer_legs!(
     integrator,
     step::Int,
 )
-    (; schema, ledger, template) = adapter
+    (; schema, journal, template) = adapter
     FT = BUDGET_ACCOUNTING_TYPE
     tableau = integrator.cache.tableau
     dt = FT(float(integrator.dt))
@@ -2517,7 +2517,7 @@ function record_transfer_legs!(
                 )
             end
             record_leg!(
-                ledger,
+                journal,
                 BudgetLeg{FT}(;
                     event = spec.name,
                     leg,
@@ -2625,7 +2625,7 @@ stage. Empty outside `AuditMode`.
 latest_transfer_checks(adapter::ParentBudgetAdapter) = adapter.last_transfer_checks
 
 """
-    latest_gross(adapter) -> Vector{GrossRecord}
+    latest_gross(adapter) -> Vector{GrossParts}
 
 Return the gross parts of the last accepted step's measured process rows,
 empty unless `parent_budget_attribution` is `gross`.

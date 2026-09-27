@@ -13,7 +13,8 @@
 using Test
 import ClimaAtmos as CA
 
-mode, transport, newton, label, outroot = ARGS[1], ARGS[2], parse(Int, ARGS[3]), ARGS[4], ARGS[5]
+mode, transport, newton, label, outroot =
+    ARGS[1], ARGS[2], parse(Int, ARGS[3]), ARGS[4], ARGS[5]
 run = "wp5b_$(label)_$(mode)_$(transport)_n$(newton)"
 outdir = joinpath(outroot, run)
 mkpath(outdir)

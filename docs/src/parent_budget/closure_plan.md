@@ -165,16 +165,16 @@ it is, the contract's claim is then measured.
 Done in this pull request. `failed_claims(adapter)` in `report.jl` returns
 one line per claim of the last accepted step whose status is `:fail`, and
 `write_parent_budget_report` in `solve.jl` logs them with `@warn` after the
-summary. The return code is unchanged: the ledger is a diagnostic and does
-not decide whether a run succeeded. A test is still to be added: inject a
+summary. The return code is unchanged: the parent budget is a diagnostic and
+does not decide whether a run succeeded. A test is still to be added: inject a
 fault with `inject_fault!` on a short column and check the log with
 `@test_logs`.
 
 ### W6. Small findings
 
-  - `vocabulary.md` line 56 says the ledger asks whether each total changed
-    "by exactly what the accepted updates say"; the contract refuses the
-    word. Reword to "by what the accepted updates say, within the declared
+  - `vocabulary.md` line 77 says the parent budget asks whether each total
+    changed "by exactly what the accepted updates say"; the contract refuses
+    the word. Reword to "by what the accepted updates say, within the declared
     tolerance".
   - `read_calibration_table` does not check that a row's `steps` equals
     `CALIBRATION_STEPS`; only the test does. Move the check into the loader.

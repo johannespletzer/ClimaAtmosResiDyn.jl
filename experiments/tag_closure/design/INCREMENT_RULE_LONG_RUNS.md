@@ -10,6 +10,7 @@ the decision rule. The runs start after it.
 Both families' increment followers leave out of the tags, each step, the part
 of the mismatch that changes a column's total, `M = ∫m`. The two rules leave
 out the same amount and differ only in where it lands:
+
   - **same sign** (#102 for water, G4.15b for energy): over the cells whose `m`
     has `M`'s sign, in proportion to `m` there; no cell leaves out or moves
     more than its own mismatch;
@@ -30,6 +31,7 @@ SGS mass flux, 0M microphysics, all-sky radiation, 60 stretched levels to
 40 km, `dt` 10 s, ARS222, one Newton iteration. **90 days.**
 
 Two sites of the forcing file, in contrasting regimes:
+
   - **site 23** (17°N, 211°E): subsidence of 26 hPa/day at 5.5 km, sea at
     298 K, trade cumulus; V-W8's site;
   - **site 26** (8°N, 199°E): ascent of 81 hPa/day at 5.5 km, sea at 301 K,
@@ -45,12 +47,12 @@ increment (`water_tag_transport: increment`), the energy tags too
 
 ## 3. The runs, per site
 
-| run          | code                                           | what                                |
-|:------------ |:---------------------------------------------- |:----------------------------------- |
-| `samesign`   | `claude/long-run-samesign` (`746cbf0f`)        | both families under same sign       |
-| `absm`       | `claude/long-run-absm` (`7fd0ffab`)            | the same code with the weight `|m|` |
-| `untagged`   | `claude/long-run-samesign`                     | parity twin                         |
-| `copies`     | `claude/long-run-samesign`                     | the copies of both families, the per-tag reference |
+| run        | code                                    | what                                               |
+|:---------- |:--------------------------------------- |:-------------------------------------------------- |
+| `samesign` | `claude/long-run-samesign` (`746cbf0f`) | both families under same sign                      |
+| `absm`     | `claude/long-run-absm` (`7fd0ffab`)     | the same code with the weight `|m|`                |
+| `untagged` | `claude/long-run-samesign`              | parity twin                                        |
+| `copies`   | `claude/long-run-samesign`              | the copies of both families, the per-tag reference |
 
 `claude/long-run-samesign` is G4.15b (on G4.15a, on #102) merged with WP6
 (#103), for the per-step gross accumulators. `claude/long-run-absm` differs
@@ -71,11 +73,12 @@ families call it. Neither branch is for merge.
 ## 5. The decision rule, per family
 
 Keep **same sign** if both hold:
-  1. its gross closure residual at day 90 is within the family's budget:
-     water 0.2% of `∫ρq_tot` (G3_PLAN 6.1); energy 1e-4 of `∫(ρe_tot + cρ)`,
-     **a proposal**, since no energy budget of this form is set;
-  2. it grows no faster than under `|m|`: its slope over days 30 to 90 is at
-     most `|m|`'s plus 0.25.
+
+ 1. its gross closure residual at day 90 is within the family's budget:
+    water 0.2% of `∫ρq_tot` (G3_PLAN 6.1); energy 1e-4 of `∫(ρe_tot + cρ)`,
+    **a proposal**, since no energy budget of this form is set;
+ 2. it grows no faster than under `|m|`: its slope over days 30 to 90 is at
+    most `|m|`'s plus 0.25.
 
 Otherwise that family takes the rule with the smaller gross at day 90. The
 agreement with the copies is reported, and breaks a tie (both within 10% of
@@ -132,12 +135,12 @@ reset (section 7). Each differs from its `lr_s23_*.yml` only in the job id and
 in the daily outputs `q_tag_negative` and, under the follower,
 `q_tag_inc_negative`. No tag keeps its own ledgers, as in W36.
 
-| run | code | config |
-|:--- |:---- |:------ |
+| run        | code                                      | config                         |
+|:---------- |:----------------------------------------- |:------------------------------ |
 | `samesign` | `claude/long-run-c-samesign` (`f13649da`) | `configs/lrc_s23_samesign.yml` |
-| `absm` | `claude/long-run-c-absm` (`4244e8ab`) | `configs/lrc_s23_absm.yml` |
-| `untagged` | `claude/long-run-c-samesign` | `configs/lrc_s23_untagged.yml` |
-| `copies` | `claude/long-run-c-samesign` | `configs/lrc_s23_copies.yml` |
+| `absm`     | `claude/long-run-c-absm` (`4244e8ab`)     | `configs/lrc_s23_absm.yml`     |
+| `untagged` | `claude/long-run-c-samesign`              | `configs/lrc_s23_untagged.yml` |
+| `copies`   | `claude/long-run-c-samesign`              | `configs/lrc_s23_copies.yml`   |
 
 `claude/long-run-c-samesign` is option C (#116 at `49d29435`) merged with
 `claude/long-run-samesign` (`746cbf0f`, section 3). One conflict, in the energy
@@ -149,6 +152,7 @@ trees are `../ClimaAtmosResiDyn-lrc-run` and `../ClimaAtmosResiDyn-lrc-absm-run`
 each the record merged with its branch. Output in each run's `output_0000/`.
 
 **What differs from W36's code.** Only the tags:
+
   - option C, water only: the target, the follower's entry for the negative
     part's change, the rescale's and the copies' repair's aim, and the closure
     check against the target;
@@ -178,8 +182,7 @@ second branch, differences where the parent was negative, site 26 is rerun on
 the same trees with `lrc_s26_*` configurations written the same way.
 
 **The scripts.** `analysis/water/lr_rule_metrics.py` and `lr_parity.py` take
-the rerun's names from the environment, `LR_PREFIX=lrc LR_OUTPUT=output_0000
-LR_SITES=23`. Their defaults still reproduce W36 (`lr_parity.py` passes on
+the rerun's names from the environment, `LR_PREFIX=lrc LR_OUTPUT=output_0000 LR_SITES=23`. Their defaults still reproduce W36 (`lr_parity.py` passes on
 W36's 60 fields).
 
 **The jobs.** From each run tree's root, with `submit_g3.sh`,

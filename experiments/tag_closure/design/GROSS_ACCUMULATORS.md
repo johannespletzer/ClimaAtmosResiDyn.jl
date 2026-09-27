@@ -37,13 +37,13 @@ exceed one or be negative.
 
 ## 2. What exists
 
-| ledger | family | where | written by | net or gross |
-|:------ |:------ |:----- |:---------- |:------------ |
-| `ᶜwater_fix` (`q_tag_fix_<name>`) | water | cache, per tag | `rescale_water_tags!` (limiters, `constrain_state!`, including the emptying where the parent is ≤ 0), `repair_water_tag_partition!` | signed, cumulative, attempted, reset at restart |
-| `ᶜwater_upfix` (`q_tag_upfix_<name>`) | water, copies | cache, per partition tag | `repair_water_tag_copies!` | as above |
-| `q_tag_inc_left`, `q_tag_inc_moved` | water, WP5 | state | `correct_water_tag_increment!` | signed, cumulative, retained, through restarts |
-| `ᶜenergy_source_fix` (`e_src_fix_<name>`) | energy source | cache, per tag | `repair_energy_source_tags!` | signed, cumulative, attempted, reset at restart |
-| `e_src_inc_left`, `e_src_inc_moved` | energy source | state | `correct_energy_source_increment!` | signed, cumulative, retained, through restarts |
+| ledger                                    | family        | where                    | written by                                                                                                                          | net or gross                                    |
+|:----------------------------------------- |:------------- |:------------------------ |:----------------------------------------------------------------------------------------------------------------------------------- |:----------------------------------------------- |
+| `ᶜwater_fix` (`q_tag_fix_<name>`)         | water         | cache, per tag           | `rescale_water_tags!` (limiters, `constrain_state!`, including the emptying where the parent is ≤ 0), `repair_water_tag_partition!` | signed, cumulative, attempted, reset at restart |
+| `ᶜwater_upfix` (`q_tag_upfix_<name>`)     | water, copies | cache, per partition tag | `repair_water_tag_copies!`                                                                                                          | as above                                        |
+| `q_tag_inc_left`, `q_tag_inc_moved`       | water, WP5    | state                    | `correct_water_tag_increment!`                                                                                                      | signed, cumulative, retained, through restarts  |
+| `ᶜenergy_source_fix` (`e_src_fix_<name>`) | energy source | cache, per tag           | `repair_energy_source_tags!`                                                                                                        | signed, cumulative, attempted, reset at restart |
+| `e_src_inc_left`, `e_src_inc_moved`       | energy source | state                    | `correct_energy_source_increment!`                                                                                                  | signed, cumulative, retained, through restarts  |
 
 The updraft filter's clamp of each copy (`mass_flux_closures.jl:303-316`) has
 no ledger at all.
@@ -159,24 +159,24 @@ per-step grosses of 3.2 get their own names.
 
 ## 7. The review, point by point
 
-| point | taken as |
-|:----- |:-------- |
-| B1 per-stage gross wrong under ARS343 | 3.2, a per-step callback |
-| B2 loss in the cache adds rates | 3.6, moved to WP4a/WP4b as state records |
-| S1 the "retained" twin | 3.1, signed state ledgers in the kernels |
-| S2 attempted ≠ retained at every cadence with a limiter | section 1, and a test |
-| S3 stitching, pre-WP6 checkpoints | 3.5 |
-| S4 loss by channel | 3.6 |
-| S5 Float32 | 3.4, Float64 cache; 4, a test |
-| S6 gross against the budget, by mechanism | 3.3 |
-| M1 name collisions | 3.7 |
-| M2 counting rounding | 3.4, a threshold |
-| M3 "gross" columns | 3.7 |
-| M4 the filter's clamp | 3.1 |
-| M5 tolerances | 4 |
-| M6 τ offline | 3.6 |
-| M7 parity breadth, cost | 4, 5 |
-| M8 reuse the parent-budget adapter | 3.1 may take the adapter's classification of hook firings (`adapter.jl:209-235`) where a kernel cannot write the state field itself; to be decided in the code |
+| point                                                   | taken as                                                                                                                                                       |
+|:------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B1 per-stage gross wrong under ARS343                   | 3.2, a per-step callback                                                                                                                                       |
+| B2 loss in the cache adds rates                         | 3.6, moved to WP4a/WP4b as state records                                                                                                                       |
+| S1 the "retained" twin                                  | 3.1, signed state ledgers in the kernels                                                                                                                       |
+| S2 attempted ≠ retained at every cadence with a limiter | section 1, and a test                                                                                                                                          |
+| S3 stitching, pre-WP6 checkpoints                       | 3.5                                                                                                                                                            |
+| S4 loss by channel                                      | 3.6                                                                                                                                                            |
+| S5 Float32                                              | 3.4, Float64 cache; 4, a test                                                                                                                                  |
+| S6 gross against the budget, by mechanism               | 3.3                                                                                                                                                            |
+| M1 name collisions                                      | 3.7                                                                                                                                                            |
+| M2 counting rounding                                    | 3.4, a threshold                                                                                                                                               |
+| M3 "gross" columns                                      | 3.7                                                                                                                                                            |
+| M4 the filter's clamp                                   | 3.1                                                                                                                                                            |
+| M5 tolerances                                           | 4                                                                                                                                                              |
+| M6 τ offline                                            | 3.6                                                                                                                                                            |
+| M7 parity breadth, cost                                 | 4, 5                                                                                                                                                           |
+| M8 reuse the parent-budget adapter                      | 3.1 may take the adapter's classification of hook firings (`adapter.jl:209-235`) where a kernel cannot write the state field itself; to be decided in the code |
 
 ## 8. For the owner
 
@@ -195,14 +195,14 @@ sum is zero in every cell, so it would record nothing. Each field therefore
 adds, per application, the water that mechanism moved in section 3.3's sense,
 over the partition's tags. It keeps the sign where 3.3's measure has one.
 
-| state ledger | mechanism | adds per application |
-|:------------ |:--------- |:-------------------- |
-| `q_tag_led_rescale` | `rescale_water_tags!` where `ρq_tot_before > 0` | `Σ_P shiftᵢ`, signed: one way |
-| `q_tag_led_empty` | the same where `ρq_tot_before ≤ 0`, which empties the tags | `Σ_P shiftᵢ`, signed |
-| `q_tag_led_repair` | `repair_water_tag_partition!` | `½ Σ_P |Δᵢ|`: a transfer |
-| `q_tag_led_uprepair` | `repair_water_tag_copies!` | `ρaʲ Σ_P shiftᵢʲ`, signed: the residual handed to the copies |
-| `q_tag_led_upfilter` | the updraft filter, across `enforce_physical_constraints!` | `Δ(ρaʲ Σ_P χᵢʲ)`, signed, from one snapshot |
-| `e_src_led_repair` | `repair_energy_source_tags!`, partition tags | `½ Σ_P |Δᵢ|` |
+| state ledger         | mechanism                                                  | adds per application                                         |
+|:-------------------- |:---------------------------------------------------------- |:------------------------------------------------------------ |
+| `q_tag_led_rescale`  | `rescale_water_tags!` where `ρq_tot_before > 0`            | `Σ_P shiftᵢ`, signed: one way                                |
+| `q_tag_led_empty`    | the same where `ρq_tot_before ≤ 0`, which empties the tags | `Σ_P shiftᵢ`, signed                                         |
+| `q_tag_led_repair`   | `repair_water_tag_partition!`                              | `½ Σ_P |Δᵢ|`: a transfer                                     |
+| `q_tag_led_uprepair` | `repair_water_tag_copies!`                                 | `ρaʲ Σ_P shiftᵢʲ`, signed: the residual handed to the copies |
+| `q_tag_led_upfilter` | the updraft filter, across `enforce_physical_constraints!` | `Δ(ρaʲ Σ_P χᵢʲ)`, signed, from one snapshot                  |
+| `e_src_led_repair`   | `repair_energy_source_tags!`, partition tags               | `½ Σ_P |Δᵢ|`                                                 |
 
   - **The stepper weights each as it weights the tags.** A transfer's field
     adds a non-negative amount per application. It can still fall within a
@@ -235,8 +235,7 @@ over the partition's tags. It keeps the sign where 3.3's measure has one.
     to zero. `q_tag_led_repair` and `e_src_led_repair` now take half the
     changes less their net, the part moved between tags. The net goes to
     `q_tag_led_repairnet` and `e_src_led_repairnet`, signed.
-  - **"Retained" is exact per step only at `update_constrain_state_every:
-    step`** (review S2). That is the default, where the corrections fire once
+  - **"Retained" is exact per step only at `update_constrain_state_every: step`** (review S2). That is the default, where the corrections fire once
     per step on the accepted state.
       + At `stage` or `dss` each firing is weighted by its tableau weight, and
         under ARS343 one weight is negative.

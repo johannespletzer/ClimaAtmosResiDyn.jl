@@ -71,6 +71,7 @@ it without rebuilding it first (`water_advection.jl:70`).
 ## 4. What stays out
 
 The same as the parent's block and the water tags':
+
   - the shares' own dependence on the state, and `e_int`'s on `T`;
   - under prognostic EDMF, the subdomain corrections, which the tendency adds
     explicitly. There the tendency takes the face's share by the direction of
@@ -83,6 +84,7 @@ These are convergence-rate approximations. They do not change what is solved.
 ## 5. Tests on the branch
 
 In `test/energy_source_tags_tests.jl`:
+
   - **The blocks, assembled.** On a 16-level column with the four masses, two
     partition tags and a source tag, in Float32 and Float64, with and without
     the offset, on a drifted partition (so the shares are renormalized):
@@ -102,6 +104,7 @@ Registered on 2026-09-24, before any run. Nothing below is changed after the
 runs.
 
 **Code.** Two run trees, each the record branch merged with code:
+
   - *on*: `claude/plan-rev2` + `claude/energy-tags-sed-cross` + the guard
     (`claude/energy-explicit-1m-guard`);
   - *off*: `claude/plan-rev2` + `claude/water-tags-sed-cross` (#105) + the
@@ -109,33 +112,33 @@ runs.
 
 **Runs.** Nine, in `configs/g416_*.yml`:
 
-| case    | what                                                              | on   | off  | untagged twin |
-|:------- |:----------------------------------------------------------------- |:---- |:---- |:------------- |
-| expl_n1 | E80's: W23's column, 1M explicit, one Newton iteration, an hour, `strat`, `tropo`, `sfc` under `enthalpy_increment`, with the guard's opt-in key | on tree | off tree | on tree |
-| impl_n1 | the same, 1M implicit, without the key                            | on tree | off tree | on tree |
-| d4      | G4.15's D4 day (`g415_inc_d4_after`), eight tags, 1M implicit      | on tree | off tree | on tree |
+| case    | what                                                                                                                                             | on      | off      | untagged twin |
+|:------- |:------------------------------------------------------------------------------------------------------------------------------------------------ |:------- |:-------- |:------------- |
+| expl_n1 | E80's: W23's column, 1M explicit, one Newton iteration, an hour, `strat`, `tropo`, `sfc` under `enthalpy_increment`, with the guard's opt-in key | on tree | off tree | on tree       |
+| impl_n1 | the same, 1M implicit, without the key                                                                                                           | on tree | off tree | on tree       |
+| d4      | G4.15's D4 day (`g415_inc_d4_after`), eight tags, 1M implicit                                                                                    | on tree | off tree | on tree       |
 
 Every run writes the model's own fields every 10 minutes (hourly in the day)
 for parity: `rhoa`, `ta`, `hus`, `clw`, `cli`, `husra`, `hussn`, `wa`,
 precipitation and surface fluxes, the updraft's fields and the TKE.
 
 **Measures.** The energy closure (`energy_source_tag_closure.csv`), net and
-gross relative, at the last output. Parity with `analysis/increment/
-g416_compare.py`, which compares bit patterns.
+gross relative, at the last output. Parity with `analysis/increment/ g416_compare.py`, which compares bit patterns.
 
 **Bands.**
 
-| check | what                                                                                                     | pass                                     |
-|:----- |:-------------------------------------------------------------------------------------------------------- |:---------------------------------------- |
-| V1    | expl_n1, on: the gross closure at 1 h                                                                    | ≤ 1e-7 (from E80's 2.1e-4)               |
-| V1c   | expl_n1, off: the control reproduces E80                                                                  | gross within 10% of 2.1e-4               |
-| V2    | impl_n1, on, against off                                                                                  | on ≤ max(off, 1e-7)                      |
-| V3    | the explicit hour with the blocks against the implicit hour without them                                  | expl on ≤ impl off (E80: 1.5e-6)         |
-| V4    | d4, on, against off, at 24 h                                                                              | on ≤ max(off, 1e-7)                      |
-| P1    | every model field of each tagged run against its untagged twin, every output                              | bit for bit                              |
-| P2    | on against off, every field but `e_src_*`                                                                 | bit for bit                              |
+| check | what                                                                         | pass                             |
+|:----- |:---------------------------------------------------------------------------- |:-------------------------------- |
+| V1    | expl_n1, on: the gross closure at 1 h                                        | ≤ 1e-7 (from E80's 2.1e-4)       |
+| V1c   | expl_n1, off: the control reproduces E80                                     | gross within 10% of 2.1e-4       |
+| V2    | impl_n1, on, against off                                                     | on ≤ max(off, 1e-7)              |
+| V3    | the explicit hour with the blocks against the implicit hour without them     | expl on ≤ impl off (E80: 1.5e-6) |
+| V4    | d4, on, against off, at 24 h                                                 | on ≤ max(off, 1e-7)              |
+| P1    | every model field of each tagged run against its untagged twin, every output | bit for bit                      |
+| P2    | on against off, every field but `e_src_*`                                    | bit for bit                      |
 
 V1's levels:
+
   - gross ≤ 1e-7: pass. The water tags' blocks reached 5.7e-8 on this column
     (W29), with a remainder from the share's diagonal, which the energy tags
     do not have.

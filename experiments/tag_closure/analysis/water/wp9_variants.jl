@@ -48,10 +48,19 @@ function timed(f)
 end
 Yₜ = zero(Y)
 function measure(label)
-    inputs = timed(() -> Base.invokelatest(CA.water_exchange_inputs!, Y, p, turbconv_model, model))
+    inputs = timed(
+        () -> Base.invokelatest(CA.water_exchange_inputs!, Y, p, turbconv_model, model),
+    )
     fill!(parent(Yₜ), 0)
     exchange = timed(
-        () -> Base.invokelatest(CA.sgs_exchange_of_water_tags!, Yₜ, Y, p, turbconv_model, model),
+        () -> Base.invokelatest(
+            CA.sgs_exchange_of_water_tags!,
+            Yₜ,
+            Y,
+            p,
+            turbconv_model,
+            model,
+        ),
     )
     Base.invokelatest(CA.water_exchange_inputs!, Y, p, turbconv_model, model)
     plume = copy(parent(p.scratch.ᶜq_tag_plume))
@@ -84,8 +93,20 @@ function definition(path, first_line)
     end
     return join(lines[i:j], "\n")
 end
-water = joinpath(new_root, "src", "parameterized_tendencies", "tagged_tracers", "tagged_water_edmf.jl")
-energy = joinpath(new_root, "src", "parameterized_tendencies", "tagged_tracers", "energy_source_tags.jl")
+water = joinpath(
+    new_root,
+    "src",
+    "parameterized_tendencies",
+    "tagged_tracers",
+    "tagged_water_edmf.jl",
+)
+energy = joinpath(
+    new_root,
+    "src",
+    "parameterized_tendencies",
+    "tagged_tracers",
+    "energy_source_tags.jl",
+)
 variants = [
     ("V1", water, "function water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)"),
     ("V2", energy, "@inline _nonnegative_specific(ρ, ρχs...) ="),

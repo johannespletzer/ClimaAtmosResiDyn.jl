@@ -107,7 +107,7 @@ include(
     joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_checkpoint.jl"),
 )
 # The applied-update event the tendency code brackets every parent-writing
-# process with; feeds the tags, the process records and the parent-budget ledger.
+# process with; feeds the tags, the process records and the parent budget.
 include(joinpath("prognostic_equations", "applied_update.jl"))
 
 include(joinpath("surface_conditions", "SurfaceConditions.jl"))
@@ -212,7 +212,7 @@ Nothing under this module is public API. Names, signatures and behavior may
 change in any release, nothing here is exported, and no top-level alias
 forwards to it, so a user cannot come to depend on it by accident.
 
-`Internals.ParentBudget` is the parent-budget ledger's implementation. A
+`Internals.ParentBudget` is the parent budget's implementation. A
 simulation builds one only when `parent_budget_mode` is not `off`.
 """
 module Internals

@@ -55,9 +55,10 @@ config = Dict{String, Any}(
     "water_closure_check" => Dict{String, Any}("period" => "10mins", "audit" => true),
     "diagnostics" => [
         Dict{String, Any}(
-            "short_name" => mode == "copies" ?
-                           ["q_tag_leak_vdiff", "q_tag_leak_diffusion_up"] :
-                           ["q_tag_leak_vdiff"],
+            "short_name" =>
+                mode == "copies" ?
+                ["q_tag_leak_vdiff", "q_tag_leak_diffusion_up"] :
+                ["q_tag_leak_vdiff"],
             "period" => "10mins",
         ),
     ],
@@ -89,14 +90,18 @@ if CA.has_water_tag_updraft_copies(model)
     ᶜleak = similar(Y.c.ρ)
     CA.water_tag_leak!(ᶜleak, Y, p, Val(:diffusion_up))
     ᶜleakʲ = ᶜleak .* Y.c.ρ ./ ᶜsgsʲ.ρa
-    @info "leak per updraft mass" count(isnan, parent(ᶜleakʲ)) count(isinf, parent(ᶜleakʲ)) count(iszero, parent(ᶜleak))
+    @info "leak per updraft mass" count(isnan, parent(ᶜleakʲ)) count(isinf, parent(ᶜleakʲ)) count(
+        iszero,
+        parent(ᶜleak),
+    )
     Yₜ = zero(Y)
     Yₜ_lim = zero(Y)
     CA.remaining_tendency!(Yₜ, Yₜ_lim, Y, p, t)
     Yₜ_implicit = zero(Y)
     CA.implicit_tendency!(Yₜ_implicit, Y, p, t)
     for name in CA.water_tag_updraft_copy_names(model)
-        v = parent(getproperty(Yₜ.c.sgsʲs.:(1), name)) .+
+        v =
+            parent(getproperty(Yₜ.c.sgsʲs.:(1), name)) .+
             parent(getproperty(Yₜ_lim.c.sgsʲs.:(1), name)) .+
             parent(getproperty(Yₜ_implicit.c.sgsʲs.:(1), name))
         @info "copy tendency" name count(isnan, v)

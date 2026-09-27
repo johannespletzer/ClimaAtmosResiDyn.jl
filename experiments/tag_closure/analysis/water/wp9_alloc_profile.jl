@@ -63,7 +63,8 @@ for (name, f) in calls
         total += alloc.size
         # The innermost frame inside ClimaAtmos's source.
         frame = findfirst(
-            sf -> startswith(string(sf.file), src_root) ||
+            sf ->
+                startswith(string(sf.file), src_root) ||
                 occursin("ClimaAtmos", string(sf.file)),
             alloc.stacktrace,
         )
@@ -73,7 +74,9 @@ for (name, f) in calls
         (bytes, count) = get(by_line, key, (0, 0))
         by_line[key] = (bytes + alloc.size, count + 1)
     end
-    println("RESULT function=$name total_bytes=$total allocations=$(length(results.allocs))")
+    println(
+        "RESULT function=$name total_bytes=$total allocations=$(length(results.allocs))",
+    )
     ranked = sort(collect(by_line); by = kv -> -kv[2][1])
     for (key, (bytes, count)) in first(ranked, min(15, length(ranked)))
         println("RESULT   $bytes bytes in $count at $key")

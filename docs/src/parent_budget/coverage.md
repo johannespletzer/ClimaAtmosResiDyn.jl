@@ -1,4 +1,4 @@
-# Parent-Budget Ledger: Coverage Registry
+# Parent Budget: Coverage Registry
 
 Every path that can change an authoritative parent field, with the disposition
 it is expected to have and the evidence that would establish it. The
@@ -30,17 +30,17 @@ A row can be mathematically zero and still be uncollected, and reading one as
 the other is how an unmeasured term becomes an assumed zero.
 
 **Disposition** — what the implemented equation does to the parent variable.
-This is a proof obligation about the code, not a claim about the ledger.
+This is a proof obligation about the code, not a claim about the parent budget.
 
 | Disposition | Meaning                                                                  |
 |:----------- |:------------------------------------------------------------------------ |
-| `measured`  | Not provably zero, so the ledger has to measure it                       |
+| `measured`  | Not provably zero, so the parent budget has to measure it                |
 | `zero`      | Invariant zero, with the proof named in the row's note                   |
 | `n/a`       | The path does not write this parent field in any supported configuration |
 | `open`      | Not yet established from the code; blocks the affected claim             |
 
-**Collection state** — whether the ledger reads the row at runtime, and how far
-that has been checked.
+**Collection state** — whether the parent budget reads the row at runtime, and
+how far that has been checked.
 
 | State       | Meaning                                                             |
 |:----------- |:------------------------------------------------------------------- |
@@ -199,8 +199,8 @@ instead and never enters the identity at its raw value.
 | `map.physical_constraints`             | `constrain_state!`, `enforce_physical_constraints!` non-EDMF branch        | `NonEquilibriumMicrophysics1M` | `constrain_state!` | atmosphere       | categories                                            | zero · zero · zero             | clamps and rescales the condensate fields, reads `ρq_tot` and writes none of `ρ`, `ρq_tot`, `ρe_tot`                                         | final map | collected | field-write inventory                                                                          | `journal_tests.jl`            | 7    |
 | `map.repair_water_tag_partition`       | `constrain_state!`, `repair_water_tag_partition!`                          | water tags configured          | `constrain_state!` | atmosphere       | tag fields only                                       | zero · zero · zero             | tag-only, sum preserved by construction                                                                                                      | final map | collected | field-write inventory                                                                          | `journal_tests.jl`            | 7    |
 | `map.repair_energy_source_tags`        | `constrain_state!`, `repair_energy_source_tags!`                           | energy source repair on        | `constrain_state!` | atmosphere       | tag fields only                                       | zero · zero · zero             | tag-only, partition sum preserved by construction                                                                                            | final map | collected | unit test of the repair on fields                                                              | `energy_source_tags_tests.jl` | 7    |
-| `map.restart_transition`               | `handle_restart`                                                           | restart                        | initialization     | atmosphere, slab | `ρ`, `ρq_tot`, `ρe_tot`, `sfc.*`                      | measured · measured · measured | a zero-duration transition of its own, never charged to the next step                                                                        | final map | collected | endpoint pair across the restart boundary, compared exactly before the first transaction opens | `restart_ledger_tests.jl`     | 7    |
-| `map.initial_state`                    | `Setups.initial_state`, `overwrite_initial_state!`, `overwrite_from_file!` | initialization                 | initialization     | atmosphere, slab | all                                                   | n/a · n/a · n/a                | sets `B⁰`, outside every transaction                                                                                                         | final map | none      | first endpoint recorded as the initial one                                                     | `restart_ledger_tests.jl`     | 7    |
+| `map.restart_transition`               | `handle_restart`                                                           | restart                        | initialization     | atmosphere, slab | `ρ`, `ρq_tot`, `ρe_tot`, `sfc.*`                      | measured · measured · measured | a zero-duration transition of its own, never charged to the next step                                                                        | final map | collected | endpoint pair across the restart boundary, compared exactly before the first transaction opens | `restart_tests.jl`            | 7    |
+| `map.initial_state`                    | `Setups.initial_state`, `overwrite_initial_state!`, `overwrite_from_file!` | initialization                 | initialization     | atmosphere, slab | all                                                   | n/a · n/a · n/a                | sets `B⁰`, outside every transaction                                                                                                         | final map | none      | first endpoint recorded as the initial one                                                     | `restart_tests.jl`            | 7    |
 
 `update_constrain_state_every` decides how often the `constrain_state!` rows
 fire. At `"step"` there is one firing per transaction and it is a final map. At
@@ -329,8 +329,8 @@ and top faces so that the contravariant vertical velocity vanishes there
 and `cache_imp!` call, including at initialization before `B⁰` is read and inside
 every implicit stage, where the stepper folds it into the effective implicit
 increment. It writes momentum and nothing else, so its mass, water and energy
-contributions are exactly zero by construction. It is on record so that a future
-change which made it touch `ρ` is seen to need a row.
+contributions are exactly zero by construction. It is listed here so that a
+future change which made it touch `ρ` is seen to need a row.
 
 ## Open gaps and what they block
 
