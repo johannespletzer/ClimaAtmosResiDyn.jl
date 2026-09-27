@@ -353,7 +353,9 @@ what the tags that carry sources do against the partition they overlay:
   - `residual_max`, the largest `|R|/ρ` in J kg⁻¹, and `residual_max_z`;
   - `residual_peak_level`, the level whose layer holds the largest part of the
     gross residual, counted from the surface, `residual_peak_fraction`, that
-    part, and `residual_peak_z`, the level's mean height;
+    part, and `residual_peak_z`, the level's mean height. Where the residual
+    is zero everywhere there is no peak, and these three and `residual_max_z`
+    are `NaN`;
   - `overlay_negative_mass_fraction`, the air mass where a source tag is
     negative; `overlay_excess` and `overlay_excess_mass_fraction`, the energy
     and the air mass where a source tag holds more than the partition's sum.

@@ -2265,6 +2265,24 @@ end
         @test report.overlay_negative_mass_fraction ≈ 2 * 250 / mass
         @test report.overlay_excess ≈ (1e6 - (1e5 - 5)) * 250 rtol = 10 * eps(FT)
         @test report.overlay_excess_mass_fraction ≈ 0.5 * 250 / mass
+        # The review of #120, finding 4: a residual that is zero everywhere has
+        # no peak level and no height of its maximum. Every value here is
+        # exact, so `R` is zero to the bit.
+        parent(Y.c.ρe_src_strat) .= E .- tropo_values
+        zero_report = CA.energy_source_residual_report(
+            Y,
+            p,
+            per_tag,
+            (; gross_residual = FT(0)),
+            0.0,
+            Ref{Any}(nothing),
+        )
+        @test zero_report.residual_max == 0
+        @test isnan(zero_report.residual_max_z)
+        @test isnan(zero_report.residual_peak_level)
+        @test isnan(zero_report.residual_peak_fraction)
+        @test isnan(zero_report.residual_peak_z)
+        parent(Y.c.ρe_src_strat) .= E .- R .- tropo_values
         # Without the tags' ledgers per tag there is no forecast.
         @test !hasproperty(report, :flush_rate)
         # The headroom: E/ρ is smallest, 2e5 J/kg, in three layers; the highest

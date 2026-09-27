@@ -138,6 +138,10 @@ Where the residual sits:
     gross, counted from the surface; `residual_peak_fraction`, that part over
     the sum of the layers; `residual_peak_z`, the level's volume-mean height.
 
+Where the residual is zero everywhere there is no peak and no maximum to
+place, so `residual_peak_level`, `residual_peak_fraction`, `residual_peak_z`
+and `residual_max_z` are `NaN`.
+
 The overlays, the tags that carry sources, against the partition they overlay
 (A5):
 
@@ -184,24 +188,33 @@ function energy_source_residual_report(
     FT = eltype(ᶜR)
     _fill_energy_source_residual!(ᶜR, Y, model)
 
-    # The local maximum per unit mass, and where it is.
+    # The local maximum per unit mass, and where it is. A zero residual has
+    # its maximum in every cell, so it has no height.
     @. ᶜtmp = abs(ᶜR) / Y.c.ρ
     residual_max = _global_extremum(ᶜtmp, max)
-    residual_max_z = _height_of!(ᶜtmp, residual_max, Y)
+    residual_max_z =
+        residual_max > 0 ? _height_of!(ᶜtmp, residual_max, Y) : FT(NaN)
 
     # The gross per layer. On a column a level's sum is its layer's integral
-    # per unit area; on a sphere, over the whole layer.
+    # per unit area; on a sphere, over the whole layer. Every process has the
+    # same layers, so every process takes the same branch below.
     @. ᶜtmp = abs(ᶜR)
     nlevels = Spaces.nlevels(axes(ᶜtmp))
     layers = [Float64(sum(Fields.level(ᶜtmp, level))) for level in 1:nlevels]
     total = sum(layers)
-    peak = argmax(layers)
-    residual_peak_fraction = total > 0 ? layers[peak] / total : NaN
-    @. ᶜtmp = one(FT)
-    volume = sum(Fields.level(ᶜtmp, peak))
-    ᶜz = Fields.coordinate_field(Y.c).z
-    @. ᶜtmp = ᶜz
-    residual_peak_z = sum(Fields.level(ᶜtmp, peak)) / volume
+    residual_peak_level = NaN
+    residual_peak_fraction = NaN
+    residual_peak_z = NaN
+    if total > 0
+        peak = argmax(layers)
+        residual_peak_level = Float64(peak)
+        residual_peak_fraction = layers[peak] / total
+        @. ᶜtmp = one(FT)
+        volume = sum(Fields.level(ᶜtmp, peak))
+        ᶜz = Fields.coordinate_field(Y.c).z
+        @. ᶜtmp = ᶜz
+        residual_peak_z = Float64(sum(Fields.level(ᶜtmp, peak)) / volume)
+    end
 
     # The overlays against the partition's sum, `E - R`.
     overlay_names = Tuple(
@@ -235,7 +248,7 @@ function energy_source_residual_report(
     return (;
         residual_max,
         residual_max_z,
-        residual_peak_level = Float64(peak),
+        residual_peak_level,
         residual_peak_fraction,
         residual_peak_z,
         overlay_negative_mass_fraction,
