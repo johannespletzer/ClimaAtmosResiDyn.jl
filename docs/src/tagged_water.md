@@ -122,13 +122,16 @@ Two consequences worth stating:
     provenance between cells that no water moved between. It does not yet
     keep the tags within their budget at site 23 (known issue 7).
 
-    Under this rule the closure can pass while the parent is negative. So the
-    water closure check also reads the parent's own negative water, from the
-    raw ``\rho q_\mathrm{tot}``: `negative_water_relative` on every row, and
-    the flag `negative_water_void` past `negative_water_void_above`, `1e-4` by
-    default. A ledger in the cache adds the negative water up after every
-    accepted step, for the audit. See "The parent's negative water" in
-    `tracer_configuration.md`.
+    The closure can pass while the parent is negative. So the water closure
+    check also reads the parent's own negative water, from the raw
+    ``\rho q_\mathrm{tot}``: `negative_water_relative` on every row, and the
+    flag `negative_water_void` past `negative_water_void_above`, `1e-4` by
+    default. The flag is checked at every row and at the end of every
+    accepted step, so an excursion between two rows marks the next one. A
+    crossing after the run's last row sets the flag and warns, and a later
+    checkpoint carries it, but no row of that run shows it. A ledger in the
+    cache adds the negative water up after every accepted step, for the
+    audit. See "The parent's negative water" in `tracer_configuration.md`.
 
 ### Taggable processes
 
@@ -808,6 +811,8 @@ ClimaAtmos.parent_negative_water
 ClimaAtmos.negative_water_relative
 ClimaAtmos.negative_water_ledger_cache
 ClimaAtmos.accumulate_negative_water!
+ClimaAtmos.negative_water_step_relative
+ClimaAtmos.check_negative_water_step!
 ClimaAtmos.tag_ledger_normalization
 ClimaAtmos.TAG_LEDGER_SMALL_TAG_BOUND
 ClimaAtmos.WATER_TAG_CHECKPOINT_VERSION

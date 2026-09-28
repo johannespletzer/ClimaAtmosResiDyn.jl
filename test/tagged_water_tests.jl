@@ -2727,7 +2727,7 @@ end
             closure.scale,
         )
         @test audit.nonpositive_mass == sum(ᶜnegative)
-        water = CA.parent_negative_water(after, p)
+        water = CA.parent_negative_water(after)
         @test water.negative == sum(ᶜnegative)
         @test water.relative == sum(ᶜnegative) / sum(after.c.ρq_tot)
 

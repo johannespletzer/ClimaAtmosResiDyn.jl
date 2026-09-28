@@ -1573,6 +1573,12 @@ end
 # water check reads the parent's own negative water from the raw `ρq_tot`, and
 # marks its rows `negative_water_void` past the level. The ledger adds it up
 # after every accepted step, so that the checks miss nothing between them.
+
+# What a call allocates once compiled, behind a function barrier, so that the
+# testset's own scope adds nothing.
+second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
+    (f(args...); @allocated f(args...))
+
 @testset "The parent's negative water" begin
     CC = CA.ClimaCore
     space = CC.CommonSpaces.ColumnSpace(
@@ -1607,8 +1613,8 @@ end
 
     # The ratio: 0 on a positive column, and N / ∫ρq_tot with one negative
     # cell, N = 250 × 0.5 = 125 and ∫ρq_tot = 250 × 2.5 = 625.
-    @test CA.parent_negative_water(set_parent!(positive), p).relative == 0
-    water = CA.parent_negative_water(set_parent!(one_negative), p)
+    @test CA.parent_negative_water(set_parent!(positive)).relative == 0
+    water = CA.parent_negative_water(set_parent!(one_negative))
     @test water.negative ≈ Δz * FT(0.5) rtol = 4 * eps(FT)
     @test water.total ≈ Δz * FT(2.5) rtol = 4 * eps(FT)
     @test water.relative ≈ FT(0.2) rtol = 8 * eps(FT)
@@ -1700,6 +1706,81 @@ end
     @test header_off ==
           "time,total,tagged,residual,relative,gross_residual," *
           "gross_relative,scale,nonpositive_fraction"
+
+    # The same level at the end of every accepted step (the owner's decision
+    # on #118's review). The step's ratio is the row's, bit for bit, and 0
+    # without negative water.
+    set_parent!(one_negative)
+    @test CA.negative_water_step_relative(Y.c.ρq_tot) ===
+          CA.parent_negative_water(Y).relative
+    set_parent!(FT[1, -0.0, 0, 1])
+    @test CA.negative_water_step_relative(Y.c.ρq_tot) === zero(FT)
+    # Where all the water is zero or less, the guard gives `Inf`.
+    set_parent!(FT[0, 0, -0.5, 0])
+    @test CA.negative_water_step_relative(Y.c.ρq_tot) == Inf
+    # A row, a clean step, a step past the level, a clean step, and a row:
+    # the excursion lies wholly between the two rows. The step sets the flag
+    # and warns once. The next row is void, though its own ratio is 0, and it
+    # does not warn again.
+    step_voided = Ref(false)
+    step_p = merge(
+        p,
+        (; tagging = (; p.tagging..., negative_water_void = (; water = step_voided))),
+    )
+    check_step!(t, level) = CA.check_negative_water_step!((; u = Y, p = step_p, t), level)
+    step_flag = (; void_above = level, voided = step_voided, ledger = nothing)
+    between = mktempdir()
+    set_parent!(positive)
+    check!(between, 0.0, step_flag)
+    @test_logs check_step!(10.0, level)
+    @test !step_voided[]
+    set_parent!(one_negative)
+    @test_logs (:warn, r"end of the step to t = 20.0 s") check_step!(20.0, level)
+    @test step_voided[]
+    @test_logs check_step!(25.0, level)
+    set_parent!(positive)
+    @test_logs check_step!(30.0, level)
+    @test step_voided[]
+    @test_logs check!(between, 40.0, step_flag)
+    between_table = CA.tag_closure_path(between, "water")
+    @test table_column(between_table, "negative_water_void") == ["0", "1"]
+    @test table_column(between_table, "negative_water_relative") == ["0.0", "0.0"]
+    # A negative part below the level leaves the flag, and zero marks the
+    # first negative water.
+    step_voided[] = false
+    set_parent!(FT[1, 1, -1.0e-5, 1])
+    check_step!(0.0, level)
+    @test !step_voided[]
+    @test_logs (:warn,) check_step!(0.0, zero(FT))
+    @test step_voided[]
+    # `~` does no work: no sum, no flag, even on a negative parent.
+    step_voided[] = false
+    set_parent!(one_negative)
+    @test isnothing(check_step!(0.0, nothing))
+    @test !step_voided[]
+    @test (@allocated check_step!(0.0, nothing)) == 0
+    # With a level it allocates: each global sum goes through ClimaCore's
+    # `sum`, which wraps the local result in a one-element array for the
+    # allreduce. Measured, that is 48 bytes a sum on Julia 1.11 and 288 on
+    # Julia 1.10. Two sums here, since the parent is negative. The flag is
+    # set first, so that the calls do not warn.
+    step_voided[] = true
+    @test second_call_allocations(
+        CA.check_negative_water_step!,
+        (; u = Y, p = step_p, t = 0.0),
+        level,
+    ) <= 2 * (VERSION >= v"1.11" ? 48 : 288)
+    # The level the per-step callback gets: the water check's key, or nothing
+    # without water tags, without the check, or with `~`.
+    @test CA.negative_water_step_level((; negative_water_void_above = level), :water) ==
+          level
+    @test isnothing(
+        CA.negative_water_step_level((; negative_water_void_above = nothing), :water),
+    )
+    @test isnothing(CA.negative_water_step_level(nothing, :water))
+    @test isnothing(
+        CA.negative_water_step_level((; negative_water_void_above = level), nothing),
+    )
 
     # The ledger: each accepted step adds max(-ρq_tot, 0) Δt and one event per
     # negative cell, against a hand computation.
@@ -1852,6 +1933,46 @@ end
         context,
     )
     @test all(iszero, parent(empty_ledger.ᶜamount))
+
+    # A crossing after the run's last row. The rows fall every 10 s, and the
+    # run ends at 25 s, so its last row is at 20 s. The parent is negative only
+    # at the end of the step to 25 s. The flag is set and the run warns, but
+    # no row shows it. A checkpoint written after it carries it, so the next
+    # segment's rows are marked.
+    tail_voided = Ref(false)
+    tail_p = merge(
+        p,
+        (; tagging = (; p.tagging..., negative_water_void = (; water = tail_voided))),
+    )
+    tail_flag = (; void_above = level, voided = tail_voided, ledger = nothing)
+    tail = mktempdir()
+    set_parent!(positive)
+    for t in (0.0, 10.0, 20.0)
+        check!(tail, t, tail_flag)
+    end
+    set_parent!(one_negative)
+    @test_logs (:warn, r"end of the step to t = 25.0 s") CA.check_negative_water_step!(
+        (; u = Y, p = tail_p, t = 25.0),
+        level,
+    )
+    @test tail_voided[]
+    tail_table = CA.tag_closure_path(tail, "water")
+    @test table_column(tail_table, "time") == ["0.0", "10.0", "20.0"]
+    @test table_column(tail_table, "negative_water_void") == ["0", "0", "0"]
+    tail_checkpoint = joinpath(mktempdir(), "day0.25.hdf5")
+    CA.InputOutput.HDF5Writer(tail_checkpoint, context) do writer
+        CA.write_negative_water_void_attributes!(
+            writer.file,
+            (; negative_water_void = (; water = tail_voided)),
+        )
+    end
+    tail_restored = CA.negative_water_void_flags(atmos)
+    @test_logs (:warn, r"passed `negative_water_void_above`") CA.restore_negative_water_void!(
+        (; negative_water_void = tail_restored),
+        tail_checkpoint,
+        context,
+    )
+    @test tail_restored.water[]
 end
 
 @testset "Audit table" begin

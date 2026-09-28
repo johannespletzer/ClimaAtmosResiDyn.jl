@@ -921,10 +921,13 @@ the family's flag in `p.tagging.negative_water_void`, and the parent's
 negative water ledger (see [`negative_water_ledger_cache`](@ref)) or
 `nothing`. See [`negative_water_rows`](@ref) for the columns. Past
 `void_above` the check warns once, and marks this row and every later row
-`negative_water_void = 1`, in both tables, also after a restart. Like
-`closure_void`, this flag covers one thing: the parent's negative water at
-the checks. `negative_water_void = 0` does not say that the parent is valid
-in any other way.
+`negative_water_void = 1`, in both tables, also after a restart. The same
+flag is also set at the end of every accepted step
+([`check_negative_water_step!`](@ref)), so an excursion between two rows marks
+the next row. Like `closure_void`, this flag covers one thing: the parent's
+negative water at the rows and at the ends of the accepted steps.
+`negative_water_void = 0` does not say that the parent is valid in any other
+way.
 
 `audit` adds a second table that splits the residual into the parts that mean
 different things, and reports the non-positive parent by mass beside the volume
@@ -1098,9 +1101,11 @@ On the closure table, where `void_above` is set:
   - `negative_water_relative`: `∫max(-ρq_tot, 0) dV / ∫ρq_tot dV` at the row,
     from the raw `ρq_tot` ([`parent_negative_water`](@ref)). This is the
     contract row "Parent validity: negative water" read at the check;
-  - `negative_water_void`: 1 on this and every later row once
-    `negative_water_relative` has passed `void_above`, in this run or before
-    the checkpoint it restarted from, else 0.
+  - `negative_water_void`: 1 on this and every later row once the same ratio
+    has passed `void_above`, at a row or at the end of an accepted step
+    ([`check_negative_water_step!`](@ref)), in this run or before the
+    checkpoint it restarted from, else 0. So a row can be void while its own
+    `negative_water_relative` is below the level, or 0.
 
 `void_above = nothing` (`negative_water_void_above: ~`) drops both columns.
 
@@ -1113,8 +1118,9 @@ where `void_above` is set.
   - `negative_water_interval`: its change since the previous audit row, in
     kg s;
   - `negative_water_interval_mean_relative`: that change over the interval's
-    length, over `∫ρq_tot dV` at this row. It is the interval's mean of
-    `negative_water_relative`, as far as `∫ρq_tot` stays constant over the
+    length, over `∫ρq_tot dV` at this row. It approximates the interval's mean
+    of `negative_water_relative`. It divides by `∫ρq_tot` at the row, not at
+    each step, so the two differ where the parent's water changes within the
     interval;
   - `negative_water_interval_events`: the number of cell-steps in the interval
     whose end state had `ρq_tot < 0`. It is exactly 0 when no accepted step in
@@ -1126,10 +1132,9 @@ The previous audit row is the previous one of this run or segment. At the
 first row of a run or of a restarted segment the interval is empty, and the
 three interval columns are 0.
 
-The flag is set from the checks only, not from the ledger. The ledger's
-interval mean divides by `∫ρq_tot` at the row, which can differ from its value
-within the interval, so it does not prove a crossing. It shows that negative
-water occurred between the checks, and how much.
+The ledger does not set the flag. The check at every accepted step does, from
+the ratio at that step. The ledger shows how much negative water there was
+between the rows, and in how many cell-steps.
 """
 negative_water_rows(Y, p, ::Nothing, t, audit) =
     (; closure = nothing, audit = nothing, first_void = false, relative = nothing)
@@ -1138,7 +1143,7 @@ function negative_water_rows(Y, p, negative_water, t, audit)
     ledger_on = audit && !isnothing(ledger)
     isnothing(void_above) && !ledger_on &&
         return negative_water_rows(Y, p, nothing, t, audit)
-    parent_water = parent_negative_water(Y, p)
+    parent_water = parent_negative_water(Y)
     (; relative) = parent_water
     passed = !isnothing(void_above) && relative > void_above
     first_void = passed && !(!isnothing(voided) && voided[])

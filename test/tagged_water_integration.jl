@@ -636,6 +636,124 @@ end
     @test table_column(closure_table(from_old), "negative_water_void") == ["0"]
     @test integral(from_old) == [0]
     @test all(iszero, parent(ledger(from_old).ᶜamount))
+
+    # The contract's level is also checked at the end of every accepted step
+    # (the owner's decision on #118's review). Here the excursion lies wholly
+    # between two rows, at 0 and 40 s. The parent is valid at the end of the
+    # step to 10 s, above the level at 20 s, and valid again at 30 and 40 s.
+    # The steps are taken by hand. Between them one cell's water is made
+    # negative for one step and then put back.
+    between_dict = merge(
+        test_dict,
+        Dict{String, Any}(
+            "output_dir" => mktempdir(pwd()),
+            "t_end" => "40secs",
+            "dt_save_state_to_disk" => "40secs",
+            "water_closure_check" => merge(
+                closure_check,
+                Dict{String, Any}(
+                    "period" => "40secs",
+                    "negative_water_void_above" => 1.0e-4,
+                ),
+            ),
+        ),
+    )
+    between = CA.get_simulation(
+        CA.AtmosConfig(between_dict; job_id = "tagged_water_negative_between"),
+    )
+    voided(sim) = sim.integrator.p.tagging.negative_water_void.water[]
+    ratio(sim) = CA.parent_negative_water(sim.integrator.u).relative
+    cell_steps(sim) = sum(parent(ledger(sim).ᶜevents))
+    step_by_hand!(sim) = CA.CTS.step!(sim.integrator)
+    step_by_hand!(between)
+    @test ratio(between) == 0
+    @test !voided(between)
+    @test cell_steps(between) == 0
+    water = parent(between.integrator.u.c.ρq_tot)
+    kept = water[10]
+    water[10] = -kept / 2
+    # The column has no vertical diffusion, so the cell stays negative.
+    @test_logs (:warn, r"end of the step to t = 20.0 s") match_mode = :any step_by_hand!(
+        between,
+    )
+    @test ratio(between) > 1.0e-4
+    @test voided(between)
+    @test cell_steps(between) == 1
+    water[10] = kept
+    @test ratio(between) == 0
+    step_by_hand!(between)
+    step_by_hand!(between)
+    @test Float64(between.integrator.t) == 40
+    # Valid again at both ends of the steps: no new negative cell-step.
+    @test ratio(between) == 0
+    @test cell_steps(between) == 1
+    # Both rows see a clean parent. The second is void all the same.
+    @test table_column(closure_table(between), "time") == ["0.0", "40.0"]
+    @test relative(between) == [0, 0]
+    @test table_column(closure_table(between), "negative_water_void") == ["0", "1"]
+    @test table_column(audit_table(between), "negative_water_void") == ["0", "1"]
+    @test last(events(between)) ≈ 1 rtol = 1.0e-9
+    # Through a checkpoint and a restart the flag stays 1, on rows whose
+    # parent stays clean.
+    between_file = joinpath(between.output_dir, "day0.40.hdf5")
+    CA.InputOutput.HDF5Reader(between_file, context) do reader
+        @test CA.InputOutput.HDF5.read_attribute(
+            reader.file,
+            "water_negative_water_void",
+        ) == 1
+    end
+    between_restarted = @test_logs restored_flag match_mode = :any restart(
+        merge(
+            between_dict,
+            Dict{String, Any}(
+                "restart_file" => between_file,
+                "t_end" => "80secs",
+                "output_dir" => mktempdir(pwd()),
+            ),
+        ),
+        "tagged_water_negative_between_restart",
+    )
+    @test CA.solve_atmos!(between_restarted).ret_code == :success
+    @test table_column(closure_table(between_restarted), "time") == ["40.0", "80.0"]
+    @test relative(between_restarted) == [0, 0]
+    @test table_column(closure_table(between_restarted), "negative_water_void") ==
+          ["1", "1"]
+    @test table_column(audit_table(between_restarted), "negative_water_void") ==
+          ["1", "1"]
+
+    # The ledger weights each accepted step by its length (#118's review,
+    # finding 2). The steps here are 10 s, 4 s to a stop added by hand, 10 s,
+    # and 1 s to the end at 25 s. The cell made negative stays negative, so
+    # every step adds to the ledger. The ledger must be the sum over the steps
+    # of max(-ρq_tot, 0) times the time that elapsed, bit for bit.
+    shortened = negative_run(
+        merge(negative_dict(1.0e-4), Dict{String, Any}("t_end" => "25secs")),
+        "tagged_water_negative_shortened",
+    )
+    expected = zero(parent(ledger(shortened).ᶜamount))
+    with_base_step = zero(expected)
+    elapsed = Float64[]
+    step_negative = Float64[]
+    for stop_after in (nothing, 0.4, nothing, nothing)
+        local integrator = shortened.integrator
+        isnothing(stop_after) || CA.CTS.add_tstop!(
+            integrator,
+            integrator.t + CA.CTS.get_dt(integrator) * stop_after,
+        )
+        local t_before = Float64(integrator.t)
+        CA.CTS.step!(integrator)
+        local interval = Float64(integrator.t) - t_before
+        local negative = max.(.-Float64.(parent(integrator.u.c.ρq_tot)), 0)
+        push!(elapsed, interval)
+        push!(step_negative, sum(negative))
+        expected .+= negative .* interval
+        with_base_step .+= negative .* 10
+    end
+    @test elapsed == [10, 4, 10, 1]
+    @test all(>(0), step_negative)
+    @test isequal(parent(ledger(shortened).ᶜamount), expected)
+    # Weighted by the base step instead, it would not be.
+    @test !isequal(parent(ledger(shortened).ᶜamount), with_base_step)
 end
 
 @testset "Tagged water rejects unsupported microphysics" begin
