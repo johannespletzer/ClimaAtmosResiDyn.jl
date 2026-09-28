@@ -120,7 +120,7 @@ Two consequences worth stating:
     That allocation is a numerical closure convention, not a physical path
     of water. It keeps the partition on its target, but it can move
     provenance between cells that no water moved between. It does not yet
-    keep the tags within their budget at site 23 (known issue 7).
+    keep the tags within the 0.2% tolerance at site 23 (known issue 7).
 
 ### Taggable processes
 
