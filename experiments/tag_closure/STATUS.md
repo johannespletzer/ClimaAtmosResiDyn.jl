@@ -520,7 +520,9 @@ to #126 were read from GitHub on 2026-09-28.
     (`13973348`, `13973349`) finished on 2026-09-25. V1 and V2 are W45. The
     probe was scored later that day as W47. Two test jobs for PRs ran that
     day and passed: `13995633` for #118 and `13996629` for #126. The
-    extended probe's check job, `13996777`, has run since 20:25.
+    extended probe's check job, `13996777`, passed (1 h 57 min, both CSVs
+    written, the per-level sums equal to the step totals). The probe itself,
+    `13996867`, was submitted at 22:22 from the run tree at `e09e0986`.
 
 ## The housekeeping, H0 to H7: done
 
