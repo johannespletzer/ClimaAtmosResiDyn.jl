@@ -121,7 +121,8 @@ The twelve criteria of the plan, section 2, in short:
     By section 8.3 the owner decides (Decisions). *The owner, 2026-09-25:
     probe the miss first,* then validate again (the register). [ ] The
     probe, pre-registered in the design note's section 9. [ ] C's
-    validation again.
+    validation again. *2026-09-28:* the probe ran as job `13987196` on
+    2026-09-25, with exit status 0 (RUNS.md). It is not scored yet.
     *The owner, 2026-09-25:* a persistent parent-validity flag in the
     closure tables, B and D together (the register, OD3's negative-water
     row). B, `negative_water_void`: a latch per family, key
@@ -133,6 +134,10 @@ The twelve criteria of the plan, section 2, in short:
     `nonpositive_mass` read 0 under option C and will read the raw parent.
     *After W42 (the owner, 2026-09-25): probe the miss first.* Pre-registered
     in `design/NEGATIVE_PARENT_WATER.md`, section 9; job `13987196`.
+    *2026-09-28:* B and D merged into `main` as #118 (`09d66bcb`). The latch
+    is checked at every accepted step, as the owner decided on 2026-09-27.
+    #126, open, renames D's total an accumulator, the owner's choice of
+    2026-09-28.
   - [x] **R2, the Newton row, on D4-W** (W25's scoring: 4.1e-3 to 1.7e-2 at two
     iterations, against 1e-3). *The owner, 2026-09-25:* measure three and four
     iterations first (job `13944802`); then raise OD1's Newton count or revise
@@ -744,6 +749,20 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     it, was added to #121 in `00b4ecf`. #121's `835ff9a` reports its sphere
     passing. It is not in FINDINGS.md, so it is a test, not a result.
 
+  - [ ] *Found 2026-09-28:* follow-ups of #121 that were written in the
+    worktree `-wp4b` on 2026-09-27 and never committed. #121 merged into
+    `main` on 2026-09-28 (`6489e110`) without them. They are kept on
+    `claude/backup/wp4b-2026-09-27` (`5d904221`), as the owner asked:
+
+      + `q_tag_leak_hyperdiff` reports the hyperdiffusion's leak where the
+        partition holds none of the non-precipitating water. The docs had
+        said that no path leaks.
+      + a paragraph on moving the tags once per model step rather than per
+        substep;
+      + a restart error that names #116 for an increment checkpoint without
+        `q_tag_inc_negative`;
+      + tests for these.
+
   - [ ] Stage 2: EDMF, default mode.
 
   - [ ] Stage 3: copies of the rain and snow parts.
@@ -789,6 +808,16 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     (W45): parity and closure hold, but criterion 4 fails for the copies
     (`upleaknet`'s column integral 3.1e-5 of the water). The same
     investigation takes it.
+    *2026-09-28:* #119 merged into `main` (`134c442f`), experimental and off
+    by default, as the owner decided on 2026-09-27. Three commits and about
+    530 lines of tests and docs written for it on 2026-09-27 never reached
+    `main`, though some of their text reached it by another route. They are
+    kept on `claude/backup/wp4c-2026-09-27` (`b0133d78`), as the owner asked.
+    They hold the NEWS line that marks the correction experimental, with
+    W45's failure, and state each tag's share of the rain and snow as an
+    assumption. They document the missing Jacobian block. They add a test of
+    the correction with the copies inside the model (#119's review, point
+    5), and a test that steps a corrected run beside an uncorrected one.
     *Scope added (provenance pathway, 2026-09-26):*
 
       + [ ] PX7's rule, a dated amendment to WP4C_CORRECTIONS section 8,

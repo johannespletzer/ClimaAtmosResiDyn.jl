@@ -1,4 +1,13 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-09-28,owner,"#118's parent negative-water total is renamed from ledger to accumulator in a separate PR (#126), since #118 and #125 merged together; checkpoint keys tag_ledger.negative_water.* unchanged.",PR #126,n/a,yes,
+2026-09-28,owner,Write 'a threshold is a tolerance' into the bookkeeping norm in AGENTS.md (#125).,PR #125,n/a,yes,
+2026-09-28,owner,Fold the seven unpushed commits of 2026-09-27 (worktree -negflag) into #118.,PR #118,n/a,yes,
+2026-09-28,owner,"Back up unpushed work as claude/backup/{negflag,wp4c,wp4b}-2026-09-27 and keep the backups as they are.",STATUS.md,"Update, 2026-09-28",yes,
+2026-09-28,owner,"Housekeeping: remove merged PRs' worktrees and local branches after an archive capture, delete remote branches merged into main; keep run trees, long-run branches, -exp and -plan2g4.",STATUS.md,"Branches, worktrees and sessions",yes,
+2026-09-27,owner,"#118's negative-water latch checks the level at every accepted step, not only at the checks.",memory: pr-review-plan-2026-09-27.md,n/a,yes,
+2026-09-27,owner,"#119 merges as experimental, off by default; the dt/iteration validation matrix is not a merge gate.",memory: pr-review-plan-2026-09-27.md,n/a,yes,
+2026-09-27,owner,"The probe of option C's miss runs on main after #118, so the site-23 runs also give the negative water at every step.",memory: pr-review-plan-2026-09-27.md,n/a,yes,
+2026-09-27,owner,"Merge order #113, #118, #120, #119; push one PR at a time.",memory: pr-review-plan-2026-09-27.md,n/a,no,2026-09-28: #120 and #119 merged before #118
 2026-09-23,owner,"Revive the condense plan; the full re-check moves to the start of G4, only re-checking what G3 relies on now.",CONDENSE_PLAN.md,The owner's decisions of 2026-09-23,yes,
 2026-09-23,owner,Rebuild the record branch on main (claude/tag-closure-record).,CONDENSE_PLAN.md,The owner's decisions of 2026-09-23,done,
 2026-09-23,owner,Take the terrabyte setup to main in a small PR (#96).,CONDENSE_PLAN.md,The owner's decisions of 2026-09-23,yes,

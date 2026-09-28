@@ -7,8 +7,10 @@ done, and on 2026-09-24 at 09:30 (the catch-up the owner asked for), 12:40 and
 20:00 (rev. 2 of the work plan, steps 0 and 1), 21:10 (the owner's answers
 to the register) and later that evening (OD3 approved; known issue 7's option
 A; step 2 pre-registered), on 2026-09-25 (the owner's answers of that day), on
-2026-09-26 (the provenance pathway, proposed), and on 2026-09-27 (PT15, PT16,
-PX25 and OD15 added to it, proposed). Update it when something here changes,
+2026-09-26 (the provenance pathway, proposed), on 2026-09-27 (PT15, PT16,
+PX25 and OD15 added to it, proposed), and on 2026-09-28 (the PRs merged
+that week, the work of 2026-09-27 that was never pushed, the housekeeping).
+Update it when something here changes,
 and at each milestone of a work package and at each goal's end. The checklist
 for those moments is in [README.md](README.md), "Closing a work package or a
 goal". Where a fact was
@@ -73,6 +75,49 @@ not checked, it says so.
     owner. See [ROADMAP.md](ROADMAP.md) and [BACKLOG.md](BACKLOG.md).
 
 ## Where things stand
+
+  - **Update, 2026-09-28: PRs merged, unpushed work found, housekeeping.**
+    Written by the session that reviewed #125. `main` is at `cfc2152c`.
+
+      + *Merged into `main` since 2026-09-26:* #104, #107, #109, #111 to
+        #121, #124 and #125 (the table under "Pull requests"). #122 merged
+        into this branch on 2026-09-27. Open: #123 (draft) and #126.
+      + *#126, open.* #118 called the parent's own negative-water total "the
+        ledger", against #125's rule: budget is the parent's, ledger is a
+        tag's, record is a process's. #126 renames it "accumulator", the
+        owner's choice. The checkpoint keys stay as they are.
+      + *Work of 2026-09-27 that was never pushed.* Three worktrees held
+        commits or edits that no remote had. They are kept on origin as
+        backups, and the owner asked to keep them as they are:
+          * `claude/backup/negflag-2026-09-27` (`c509c830`): #118's latch at
+            every accepted step, its tests and the docs left over from
+            #116's review. It was merged into #118 before #118 merged, so it
+            is on `main`.
+          * `claude/backup/wp4c-2026-09-27` (`b0133d78`): three commits for
+            #119, and about 530 lines of tests and docs never committed. Not
+            on `main` (G3_TODO, WP4c).
+          * `claude/backup/wp4b-2026-09-27` (`5d904221`): follow-ups for
+            #121, never committed. Not on `main` (G3_TODO, WP4b).
+      + *Option C's miss probe ran, but is not scored.* Job `13987196`
+        finished on 2026-09-25 with exit status 0 (RUNS.md). The record has
+        its score script, `analysis/water/ic_miss_score.py`, but no finding.
+        The owner's plan of 2026-09-27 reruns it on `main` after #118, so
+        that it also gives the parent's negative water at every step.
+      + *#118's CI: one runner shutdown.* On 2026-09-28 the Julia 1.10 job
+        `tagging_water_precipitation` stopped after 52 minutes, when GitHub's
+        runner received a shutdown signal during the sphere test. The rerun
+        passed. The log does not show the cause. That job's Julia process
+        peaks at 14.6 to 14.7 GiB (`maxrss`) on a 16 GB runner, on `main`
+        too, so memory is one candidate. If it recurs, the sphere tests get
+        a test group of their own.
+      + *Housekeeping.* 24 worktrees whose work is on `main` were captured
+        into the archive and removed, and 22 merged remote branches were deleted
+        ("Branches, worktrees and sessions"). The archive's
+        `scratch_tag_closure/` was synced first.
+      + *Where the next session starts:* score the probe, then decide on the
+        rerun; decide what becomes of the wp4b and wp4c follow-ups; #126;
+        merge `main` into this branch. Every conflict of that merge resolves
+        to `main`'s side (#125's description).
 
   - **Update, 2026-09-26: the provenance pathway, proposed.**
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md) proposes a revision of rev.
@@ -332,6 +377,36 @@ section 5). Records go on `claude/tag-closure-record`. Outside
 `toml/tag_closure_c1_reference.toml`, which committed configs point to. Merge
 `origin/main` into it again when `main` moves.
 
+**2026-09-28, after that day's housekeeping.** The table above is as it
+stood on 2026-09-23. Beside the repository there are now:
+
+  - the main clone, `ClimaAtmos-upstream-d331fe3`, `-exp`, and `-plan2`,
+    which holds this branch with another session's uncommitted edits;
+  - `-plan2g4`;
+  - `-wp4b` and `-wp4c`, with the uncommitted follow-ups under "Where
+    things stand";
+  - the long runs' branches: `-lr`, `-lr-absm`, `-lrc`, `-lrc-absm` and
+    `-g415`;
+  - 22 detached run trees, `-g411-run` to `-wp4c-run`. No remote has their
+    commits.
+
+The owner kept these. On origin the branches are:
+
+  - `main` and `gh-pages`;
+  - this branch, `claude/plan-rev2-g4` and `claude/tag-closure-record`;
+  - `claude/review-open-prs-tasks-wxiw0k` and `claude/pr118-merge-preview`;
+  - #123's and #126's branches;
+  - the three backups `claude/backup/*-2026-09-27`.
+
+The 24 worktrees removed were:
+
+  - the 18 branch worktrees of PRs #100 to #117 and #120;
+  - `-negflag` (#118);
+  - four detached trees whose head is in `main`;
+  - a job worktree.
+
+Each is captured in the archive's `worktrees/`.
+
 ## Pull requests
 
 | PR   | Branch                                   | State                                                                                                                                                                                                                                                                                                                                                                                 | What                                                                                                                                                 |
@@ -345,25 +420,32 @@ section 5). Records go on `claude/tag-closure-record`. Outside
 | #101 | `claude/water-tags-edmf-wp3`             | merged into its stacked base; its content reached `main` through #110                                                                                                                                                                                                                                                                                                                 |                                                                                                                                                      |
 | #102 | `claude/water-tags-edmf-wp5`             | merged into #101's branch; reached `main` through #110                                                                                                                                                                                                                                                                                                                                |                                                                                                                                                      |
 | #103 | `claude/water-tags-edmf-wp6`             | merged into `main`                                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                      |
-| #104 | `claude/water-tags-edmf-wp4a`            | open, ready, at `2ec3a4a6`                                                                                                                                                                                                                                                                                                                                                            |                                                                                                                                                      |
-| #105 | `claude/water-tags-sed-cross`            | open, ready, at `464f6fd0`                                                                                                                                                                                                                                                                                                                                                            |                                                                                                                                                      |
-| #106 | `claude/water-tags-plume-cost`           | merged into `main` (W34)                                                                                                                                                                                                                                                                                                                                                              |                                                                                                                                                      |
-| #107 | `claude/energy-follower-check-names`     | open, ready, at `460d699c` (G4.15a)                                                                                                                                                                                                                                                                                                                                                   |                                                                                                                                                      |
-| #108 | `claude/energy-explicit-1m-guard`        | open, ready, at `2f7987d5` (G4.16's guard)                                                                                                                                                                                                                                                                                                                                            |                                                                                                                                                      |
-| #109 | `claude/water-tags-wp6-step3`            | draft, against `main`, at `6695a5c7` (WP6 step 3, the per-tag ratios)                                                                                                                                                                                                                                                                                                                 |                                                                                                                                                      |
-| #110 | `claude/water-tags-edmf-wp3`             | merged into `main` (#101 and #102's content)                                                                                                                                                                                                                                                                                                                                          |                                                                                                                                                      |
-| #111 | `claude/water-tags-copy-cross`           | draft, on #105, at `105ba0f1` (WP5b-C)                                                                                                                                                                                                                                                                                                                                                |                                                                                                                                                      |
-| #112 | `claude/tag-closure-no-abort`            | open, ready, at `1b096d77` (known issue 7, option A)                                                                                                                                                                                                                                                                                                                                  |                                                                                                                                                      |
-| #113 | `claude/energy-tags-sed-cross`           | draft, on #105, at `939fd9b1` (G4.16)                                                                                                                                                                                                                                                                                                                                                 |                                                                                                                                                      |
-| #114 | `claude/energy-copies-mirrors`           | draft, against `main`, at `3bfddacf` (the mirrors, E83)                                                                                                                                                                                                                                                                                                                               |                                                                                                                                                      |
-| #115 | `claude/energy-source-throughput`        | draft, on #109, at `745fef22` (OD4's accumulator); #109's head being merged in                                                                                                                                                                                                                                                                                                        |                                                                                                                                                      |
-| #116 | `claude/water-tags-negative-parent`      | draft, on #109, at `49d29435` (option C; its validation W42); #109's head being merged in                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
-| #117 | `claude/downgrade-groups-from-runtests`  | open, ready, against `main`, at `189deaf6`                                                                                                                                                                                                                                                                                                                                            |                                                                                                                                                      |
-| #118 | `claude/water-tags-negative-water-flag`  | draft, on #116, at `04829d85` (the parent flag, B and D); #109's head being merged in                                                                                                                                                                                                                                                                                                 |                                                                                                                                                      |
-| #119 | `claude/water-tags-leak-correction`      | draft, on #109, at `d0c0064a` (WP4c's corrections; validation jobs `13973348`, `13973349`)                                                                                                                                                                                                                                                                                            |                                                                                                                                                      |
-| #120 | `claude/energy-claims-budget`            | draft, on #115, at `b83c831a` (G4.4, G4.5; G4.6's runs `13975411` to `13975419`)                                                                                                                                                                                                                                                                                                      |                                                                                                                                                      |
+| #104 | `claude/water-tags-edmf-wp4a`            | merged into `main` 2026-09-26 (`e003e7aa`), at `860fcce4`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #105 | `claude/water-tags-sed-cross`            | merged into `main` 2026-09-25 (`ab0beb7a`), at `464f6fd0`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #106 | `claude/water-tags-plume-cost`           | merged into `main` 2026-09-24 (`3eac4d44`), at `bfd9ff08`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #107 | `claude/energy-follower-check-names`     | merged into `main` 2026-09-26 (`0ca2ca97`), at `fd1e86e1`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #108 | `claude/energy-explicit-1m-guard`        | merged into `main` 2026-09-25 (`99b4b6b0`), at `2f7987d5`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #109 | `claude/water-tags-wp6-step3`            | merged into `main` 2026-09-26 (`405b5b63`), at `6f6152a2`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #110 | `claude/water-tags-edmf-wp3`             | merged into `main` 2026-09-24 (`14ed3b51`), at `7f384796`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #111 | `claude/water-tags-copy-cross`           | merged into `main` 2026-09-26 (`d1eb9606`), at `105ba0f1`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #112 | `claude/tag-closure-no-abort`            | merged into `main` 2026-09-26 (`03b6d428`), at `ca74cecd`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #113 | `claude/energy-tags-sed-cross`           | merged into `main` 2026-09-27 (`7f54d0fa`), at `b9798fd5`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #114 | `claude/energy-copies-mirrors`           | merged into `main` 2026-09-26 (`fb1bffdf`), at `528ca1a2`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #115 | `claude/energy-source-throughput`        | merged into `main` 2026-09-26 (`fe7d3d26`), at `c4fa73b5`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #116 | `claude/water-tags-negative-parent`      | merged into `main` 2026-09-27 (`7f2b7244`), at `6e8769cf`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #117 | `claude/downgrade-groups-from-runtests`  | merged into `main` 2026-09-26 (`6fb78f2b`), at `afda1f1a`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #118 | `claude/water-tags-negative-water-flag`  | merged into `main` 2026-09-28 (`09d66bcb`), at `2115426f`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #119 | `claude/water-tags-leak-correction`      | merged into `main` 2026-09-28 (`134c442f`), at `818b6238`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #120 | `claude/energy-claims-budget`            | merged into `main` 2026-09-28 (`43f9eaa7`), at `ef49771f`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #121 | `claude/water-tags-rain-snow`            | merged into `main` 2026-09-28 (`6489e110`), at `4d600bd9`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #122 | `claude/tag-provenance-certainty-zwkx73` | merged into `claude/plan-rev2` 2026-09-27 (`4aeacf81`), at `130064d6`                                                                                                                                                                                                                                                                                                                 |                                                                                                                                                      |
+| #123 | `claude/water-tags-substep-attribution`  | draft, against `main`, at `7fb9cabc` (per-substep attribution of the 1M microphysics)                                                                                                                                                                                                                                                                                                 |                                                                                                                                                      |
+| #124 | `claude/docs-issue7-after-116`           | merged into `main` 2026-09-28 (`283a18ec`), at `9481e412`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #125 | `claude/terminology-to-main`             | merged into `main` 2026-09-28 (`cfc2152c`), at `1ff3e8c0`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
+| #126 | `claude/negative-water-accumulator`      | open, against `main`, at `c165ae18` (#118's negative-water total renamed an accumulator)                                                                                                                                                                                                                                                                                              |                                                                                                                                                      |
 
-Only the owner merges. The token cannot mark a PR ready for review.
+Only the owner merges. The token cannot mark a PR ready for review. Rows #104
+to #126 were read from GitHub on 2026-09-28.
 
 ## Jobs in flight
 
@@ -387,6 +469,11 @@ Only the owner merges. The token cannot mark a PR ready for review.
     `13973349`), G4.6's three runs (`13975411`, `13975417`, `13975419`),
     #120's increment integration test (`13975420`), and #119's two test
     groups (`13975443`, `13975444`).
+  - **2026-09-28, queried with Slurm:** no job of this account is queued or
+    running. Option C's miss probe (`13987196`) and WP4c's V1 and V2
+    (`13973348`, `13973349`) finished on 2026-09-25. V1 and V2 are W45. The
+    probe is not scored. Two test jobs for PRs ran that day and passed:
+    `13995633` for #118 and `13996629` for #126.
 
 ## The housekeeping, H0 to H7: done
 

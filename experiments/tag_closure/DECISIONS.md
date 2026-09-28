@@ -213,6 +213,58 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-09-28
+
+  - **#125's review: #118's negative-water total is the parent's, not a
+    tag's.** #125 was to rename it when it took #118. The two merged 13 s
+    apart, so the rename became #126. The owner chose the name
+    "accumulator" (`negative_water_accumulator_cache` and the others), and
+    the checkpoint keys `tag_ledger.negative_water.*` stay. **In force**,
+    #126 open. Memory: pr125-terminology.md; PR #126.
+  - **"A threshold is a tolerance" is written into the bookkeeping norm** in
+    `AGENTS.md` (#125, `1ff3e8c0`). **Done.** PR #125.
+  - **The seven commits of 2026-09-27 found only in the worktree `-negflag`
+    are folded into #118.** They carry the latch at every accepted step.
+    **Done:** `2115426f`, merged with #118. PR #118.
+  - **Unpushed work is backed up, and the backups stay as they are:**
+    `claude/backup/{negflag,wp4c,wp4b}-2026-09-27`. **In force.**
+    [STATUS.md](STATUS.md), "Update, 2026-09-28". Memory:
+    housekeeping-2026-09-28.md.
+  - **Housekeeping.** Worktrees and local branches of merged PRs are
+    removed, after an archive capture. Remote branches merged into `main`
+    are deleted. The run trees, the long runs' branches, `-exp` and
+    `-plan2g4` are kept. **Done.** [STATUS.md](STATUS.md), "Branches,
+    worktrees and sessions".
+  - **Order:** #126 first, then the housekeeping. Option C's miss probe
+    waits for the owner's go. **In force.** Memory:
+    housekeeping-2026-09-28.md.
+
+## 2026-09-27
+
+Given in a session on the open PRs' reviews. They are recorded in the
+owner's memory (pr-review-plan-2026-09-27.md) and not in the register
+before 2026-09-28.
+
+  - **#121 stays with the provenance session.** **Done:** #121 merged on
+    2026-09-28.
+  - **#118's negative-water latch checks the 1e-4 level at every accepted
+    step,** a global reduction per step, not only at the checks.
+    **Done:** in #118 (`2115426f`, merged).
+  - **#119 merges as experimental, off by default.** The `dt` and iteration
+    validation matrix is not a merge gate. **Done:** #119 merged on
+    2026-09-28 (`134c442f`). Its three follow-up commits are on
+    `claude/backup/wp4c-2026-09-27`, not on `main`.
+  - **#116's unaddressed review goes into #118's docs:** qualify the NEWS
+    line, drop the stale #112 text in known issue 7, and name the
+    redistribution a numerical convention. **Done,** through #124 and
+    #118.
+  - **The probe of option C's miss runs on `main` after #118,** so that
+    the site-23 runs also give the negative water at every step. **In
+    force.** The probe ran once on 2026-09-25 (job `13987196`) and is not
+    scored.
+  - **Merge order #113, #118, #120, #119; push one PR at a time.**
+    **Superseded:** #120 and #119 merged before #118, on 2026-09-28.
+
 ## 2026-09-25
 
   - **The owner's answers, later on 2026-09-25.** **In force.**
