@@ -507,7 +507,11 @@ ledger `L`, named without its `q_tag_` prefix:
     and `<L>_applicable`. Each bounds how far the corrections can have moved
     that tag. Under the follower most of what `led_inc` holds is the parent's
     vertical advection, which the tags no longer take explicitly, so it bounds
-    the follower's intervention from above and does not isolate it;
+    the follower's intervention from above and does not isolate it. The
+    ratios of `led_upleak_<name>`, what the leak correction gave the tag's
+    updraft copies times ``\rho a^j``, are taken against the grid-mean tag,
+    `∫ρq_tag` and `∫|ρq_tag|`, not against the copy's own water. Its
+    `_applicable` also follows the grid-mean tag;
   - `ledger_parent_scale`, with the ledgers per tag: `∫ρq_tot`, the scale of
     `_parent_fraction`;
   - `ledger_cadence_step`: 1 at `update_constrain_state_every: step`, 0
@@ -651,7 +655,10 @@ under `water_tag_ledger_per_tag: true` each tag's `q_tag_led_leak_<name>` and
     zero there, and so is the correction. The same holds where the parent's
     water is not positive, since the shares are taken against it. That part
     of the leak stays in `q_tag_res`, or under the follower in
-    `q_tag_inc_moved`, as without the correction.
+    `q_tag_inc_moved`, as without the correction. The integration test
+    (`test/tagged_water_leak_correction_integration.jl`) prints the fraction
+    of the leak that falls there. On the D4-W column over its first hour it
+    is zero.
 
   - **It has no Jacobian block.** The correction is written in the implicit
     tendency, after the tracer loop of `edmfx_sgs_diffusive_flux_tendency!`,

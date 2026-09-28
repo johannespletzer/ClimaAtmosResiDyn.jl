@@ -12,13 +12,23 @@ following the parent's increment), after an hour:
     parent's to rounding, where without the correction the two differ by the
     closed-form leak. Each tag's correction is the diffusion of its share of
     the rain and snow, and the ledgers take it;
- 2. after the hour the partition stays closed, the partition's ledger moves no
+ 2. with a composition that varies in space, the same, with each tag's share
+    taken cell by cell. Where the clamp and the renormalization change the
+    shares, and where the partition holds no water, the kernel takes the
+    shares the sedimentation takes. Where the partition holds no water, the
+    leak is left;
+ 3. after the hour the partition stays closed, the partition's ledger moves no
     water through the column's boundaries, it is the sum of the tags' own, and
     the split solver, the audit and the diagnostics read the ledgers;
- 3. the model's fields are those of the same column without tags, bit for bit.
+ 4. the model's fields are those of the same column without tags, bit for bit;
+ 5. against the same column with the correction off, stepped side by side:
+    the leak the partition takes from the EDMF diffusion falls by a set
+    factor, the closure stays within its bound, and the model's fields are the
+    same. The follower's and the repairs' ledgers are printed, not bounded.
 
-The file compiles the EDMF column twice, with the tags and without them, so it
-has its own test group. See `docs/src/tagged_water.md`.
+The file compiles the EDMF column three times, with the tags, with the tags and
+the correction off, and without tags, so it has its own test group. See
+`docs/src/tagged_water.md`.
 =#
 using Test
 import ClimaAtmos as CA
@@ -37,6 +47,29 @@ function run_simulation(config_dict, job_id)
     return simulation
 end
 
+# A run stepped by hand to its end, with `reading(integrator)` taken after each
+# step. Each step runs the stepper and the callbacks, as `solve_atmos!` does.
+function stepped_run(config_dict, job_id, reading)
+    simulation = CA.get_simulation(
+        CA.AtmosConfig(
+            merge(
+                config_dict,
+                Dict{String, Any}("output_dir" => mktempdir(pwd())),
+            );
+            job_id,
+        ),
+    )
+    (; integrator, output_writers) = simulation
+    t_end = last(integrator.sol.prob.tspan)
+    readings = []
+    while integrator.t < t_end
+        CA.CTS.step!(integrator)
+        push!(readings, reading(integrator))
+    end
+    isnothing(output_writers) || foreach(close, output_writers)
+    return simulation, readings
+end
+
 altitude_region(above) = Dict{String, Any}(
     "type" => "tanh_altitude",
     "z_center" => 750.0,
@@ -46,6 +79,79 @@ altitude_region(above) = Dict{String, Any}(
 
 # The largest absolute value of a field.
 largest(ᶜf) = maximum(abs, parent(ᶜf))
+
+# The absolute value of a field, integrated over the domain.
+gross(ᶜf) = Float64(sum(abs.(ᶜf)))
+
+# The rain and snow that the parent does not diffuse, `q_p`, as a field.
+function leaking_water(Y, p)
+    ᶜq_p = similar(Y.c.ρ)
+    ᶜq_p_lazy = CA._leaking_water(Y, p)
+    @. ᶜq_p = ᶜq_p_lazy
+    return ᶜq_p
+end
+
+# `ρK_h` on the faces, as the parent's water diffusion takes it.
+function face_ρK_h(Y, p)
+    ᶠρK_h = CA.Fields.Field(eltype(Y), axes(Y.f))
+    @. ᶠρK_h = CA.ᶠinterp(Y.c.ρ) * p.precomputed.ᶠK_h
+    return ᶠρK_h
+end
+
+# `∇·(ρK_h ∇f)`, with the operator the correction uses, as a field.
+function diffusion_of(ᶠρK_h, ᶜf)
+    ᶜout = similar(ᶜf)
+    ᶜdivergence = CA.ᶜdiffusive_flux_divergenceᵥ(ᶠρK_h, ᶜf)
+    @. ᶜout = ᶜdivergence
+    return ᶜout
+end
+
+# The EDMF vertical diffusion's leak as a run has it after a step, over the
+# domain. `gap` is the gross of the partition's tendency from
+# `edmfx_sgs_diffusive_flux_tendency!` less the parent's: the leak the tags
+# take. `leak` is the gross of the closed form. It reads no tag, so it is the
+# same with the correction on and off. `uncovered` is the gross of the closed
+# form's part where the partition holds no water, which the correction leaves.
+# `ρq_p` and `ρq_p_uncovered` are the rain and snow, and their part there.
+function diffusion_reading(integrator)
+    Y = integrator.u
+    p = integrator.p
+    t = integrator.t
+    CA.set_precomputed_quantities!(Y, p, t)
+    Yₜ = zero(Y)
+    CA.edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
+    ᶜleak = similar(Y.c.ρ)
+    CA.water_tag_leak!(ᶜleak, Y, p, Val(:vdiff))
+    CA.water_tag_share_norm!(p, Y)
+    ᶜq_p = leaking_water(Y, p)
+    ᶜq_p_uncovered = @. ifelse(
+        p.scratch.ᶜtagging_q_share_norm > 0,
+        zero(ᶜq_p),
+        ᶜq_p,
+    )
+    return (;
+        gap = gross(Yₜ.c.ρq_tag_tropo .+ Yₜ.c.ρq_tag_strat .- Yₜ.c.ρq_tot),
+        leak = gross(ᶜleak .* Y.c.ρ),
+        uncovered = gross(diffusion_of(face_ρK_h(Y, p), ᶜq_p_uncovered)),
+        ρq_p = Float64(sum(Y.c.ρ .* ᶜq_p)),
+        ρq_p_uncovered = Float64(sum(Y.c.ρ .* ᶜq_p_uncovered)),
+    )
+end
+
+# The per-step gross of each named state ledger over the hour, as a fraction of
+# the column's water now. `NaN` for a ledger the run does not have.
+function ledger_grosses(Y, p, names)
+    (; ledgers) = p.tagging.tag_ledger_steps
+    water = Float64(sum(Y.c.ρq_tot))
+    return NamedTuple{names}(
+        map(
+            name ->
+                haskey(ledgers, name) ?
+                Float64(sum(getproperty(ledgers, name).ᶜgross)) / water : NaN,
+            names,
+        ),
+    )
+end
 
 @testset "The water tags' diffusion leak correction" begin
     edmf_dict = Dict{String, Any}(
@@ -153,8 +259,7 @@ largest(ᶜf) = maximum(abs, parent(ᶜf))
         # Each tag's correction is the diffusion of its share of the rain and
         # snow, its ledger holds it, and the partition's ledger their sum, the
         # leak with the opposite sign.
-        ᶠρK_h = CA.Fields.Field(FT, axes(Y.f))
-        @. ᶠρK_h = CA.ᶠinterp(Y_uniform.c.ρ) * p.precomputed.ᶠK_h
+        ᶠρK_h = face_ρK_h(Y_uniform, p)
         ᶜq_p = CA._leaking_water(Y_uniform, p)
         for (name, share) in pairs(shares)
             ᶜpart = similar(Y.c.ρ)
@@ -185,7 +290,124 @@ largest(ᶜf) = maximum(abs, parent(ᶜf))
         @test largest(Yₜ_alone.c.q_tag_led_leaknet) > 0
     end
 
-    # 2. After the hour.
+    # 2. A composition that varies in space (the review of #119, point 1). The
+    # correction takes each tag's share cell by cell, so a tag's correction is
+    # not its share times the partition's. First a closed partition, through
+    # the model's tendency. Then shares that the clamp and the renormalization
+    # change, and a band where the partition holds no water, through the
+    # kernel, against the shares computed here by hand.
+    @testset "A composition that varies in space" begin
+        @test all(>(0), parent(Y.c.ρq_tot))
+        ᶜz = CA.Fields.coordinate_field(Y.c).z
+        # tropo's share falls from about 0.94 at the ground to 0.06 at the
+        # top, across the cloud, and evap's from 0.3.
+        ᶜs = @. 0.5 - 0.45 * tanh((ᶜz - 700) / 300)
+        ᶜe = @. 0.3 * exp(-(ᶜz / 500))
+        Y_varied = copy(Y)
+        @. Y_varied.c.ρq_tag_tropo = ᶜs * Y.c.ρq_tot
+        @. Y_varied.c.ρq_tag_strat = (1 - ᶜs) * Y.c.ρq_tot
+        @. Y_varied.c.ρq_tag_evap = ᶜe * Y.c.ρq_tot
+        CA.set_precomputed_quantities!(Y_varied, p, t)
+        ᶜρleak = similar(Y.c.ρ)
+        CA.water_tag_leak!(ᶜρleak, Y_varied, p, Val(:vdiff))
+        @. ᶜρleak *= Y.c.ρ
+        scale = largest(ᶜρleak)
+        @test scale > 0
+        ᶠρK_h = face_ρK_h(Y_varied, p)
+        ᶜq_p = leaking_water(Y_varied, p)
+
+        # The closed partition, through the model's tendency.
+        Yₜ = zero(Y)
+        CA.edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y_varied, p, t, turbconv_model)
+        @test largest(Yₜ.c.ρq_tag_tropo .+ Yₜ.c.ρq_tag_strat .- Yₜ.c.ρq_tot) <
+              1e-8 * scale
+        for (name, ᶜshare) in ((:tropo, ᶜs), (:strat, 1 .- ᶜs), (:evap, ᶜe))
+            ᶜledger = getproperty(Yₜ.c, Symbol(:q_tag_led_leak_, name))
+            @test largest(ᶜledger .- diffusion_of(ᶠρK_h, ᶜshare .* ᶜq_p)) <
+                  1e-10 * scale
+            # The share's gradient counts: the correction is not the share
+            # times the partition's.
+            share_times_net = largest(ᶜledger .- ᶜshare .* Yₜ.c.q_tag_led_leaknet)
+            @info "A varying share against the share times the partition's correction" name share_times_net /
+                                                                                            scale
+            @test share_times_net > 1e-3 * scale
+        end
+        @test largest(Yₜ.c.q_tag_led_leaknet .+ ᶜρleak) < 1e-10 * scale
+
+        # The kernel against the shares computed here by hand, as the
+        # sedimentation mirror takes them. Returns the tendency and the
+        # partition's norm.
+        clamped_share(ᶜρq_tag) = @. min(max(ᶜρq_tag / Y.c.ρq_tot, 0), 1)
+        function kernel_against_hand(Y_state)
+            ᶜφ_tropo = clamped_share(Y_state.c.ρq_tag_tropo)
+            ᶜφ_strat = clamped_share(Y_state.c.ρq_tag_strat)
+            ᶜnorm = ᶜφ_tropo .+ ᶜφ_strat
+            partition_share(ᶜφ) = @. ifelse(ᶜnorm > 0, ᶜφ / ᶜnorm, 0.0)
+            CA.set_precomputed_quantities!(Y_state, p, t)
+            Yₜ = zero(Y)
+            CA.apply_water_tag_leak_correction!(
+                Yₜ,
+                Y_state,
+                p,
+                ᶠρK_h,
+                similar(Y.c.ρ),
+                CA.water_tag_leak_ledgers(Yₜ, model),
+                false,
+            )
+            for (name, ᶜshare) in (
+                (:tropo, partition_share(ᶜφ_tropo)),
+                (:strat, partition_share(ᶜφ_strat)),
+                (:evap, clamped_share(Y_state.c.ρq_tag_evap)),
+            )
+                ᶜexpected = diffusion_of(ᶠρK_h, ᶜshare .* ᶜq_p)
+                ᶜtagₜ = getproperty(Yₜ.c, Symbol(:ρq_tag_, name))
+                ᶜledger = getproperty(Yₜ.c, Symbol(:q_tag_led_leak_, name))
+                @test largest(ᶜexpected) > 0
+                @test largest(ᶜtagₜ .- ᶜexpected) < 1e-10 * scale
+                @test largest(ᶜledger .- ᶜexpected) < 1e-10 * scale
+            end
+            return Yₜ, ᶜnorm
+        end
+
+        # Clamped and renormalized shares. tropo holds more than the cell's
+        # water near the ground, strat goes negative there, and elsewhere the
+        # two sum to more than the water. The partition's shares still sum to
+        # one, so its correction is still the leak with the opposite sign.
+        Y_clamped = copy(Y_varied)
+        @. Y_clamped.c.ρq_tag_tropo = 1.2 * ᶜs * Y.c.ρq_tot
+        @. Y_clamped.c.ρq_tag_strat = (1 - 1.1 * ᶜs) * Y.c.ρq_tot
+        @test minimum(parent(Y_clamped.c.ρq_tag_strat)) < 0
+        @test maximum(parent(Y_clamped.c.ρq_tag_tropo .- Y.c.ρq_tot)) > 0
+        Yₜ, ᶜnorm = kernel_against_hand(Y_clamped)
+        @test all(>(0), parent(ᶜnorm))
+        @test maximum(abs, parent(ᶜnorm) .- 1) > 0.01
+        @test largest(Yₜ.c.q_tag_led_leaknet .+ ᶜρleak) < 1e-10 * scale
+
+        # And where the partition holds no water, at the level with the most
+        # rain and snow, the shares are zero and the leak there is left. The
+        # partition's correction is the diffusion of the rain and snow where
+        # it holds water.
+        ᶜband = ᶜq_p .== maximum(parent(ᶜq_p))
+        Y_band = copy(Y_clamped)
+        @. Y_band.c.ρq_tag_tropo = ifelse(ᶜband, 0.0, Y_band.c.ρq_tag_tropo)
+        @. Y_band.c.ρq_tag_strat = ifelse(ᶜband, 0.0, Y_band.c.ρq_tag_strat)
+        Yₜ, ᶜnorm = kernel_against_hand(Y_band)
+        @test count(iszero, parent(ᶜnorm)) == 1
+        ᶜcovered = diffusion_of(ᶠρK_h, (@. ifelse(ᶜnorm > 0, ᶜq_p, 0.0)))
+        ᶜuncovered = diffusion_of(ᶠρK_h, (@. ifelse(ᶜnorm > 0, 0.0, ᶜq_p)))
+        @test largest(Yₜ.c.q_tag_led_leaknet .- ᶜcovered) < 1e-10 * scale
+        @test largest(Yₜ.c.q_tag_led_leaknet .+ ᶜρleak .+ ᶜuncovered) <
+              1e-10 * scale
+        # Both parts are there, so the check is not vacuous.
+        @info "The rain and snow by level, kg/kg" parent(ᶜq_p)[:]
+        @test gross(ᶜuncovered) > 0
+        @test gross(ᶜcovered) > 0.01 * gross(ᶜρleak)
+        @info "The leak left where the partition holds no water, at one level" gross(
+            ᶜuncovered,
+        ) / gross(ᶜρleak)
+    end
+
+    # 3. After the hour.
     @testset "The column after an hour" begin
         closure = CA.tag_closure(
             Y,
@@ -195,7 +417,7 @@ largest(ᶜf) = maximum(abs, parent(ᶜf))
         )
         @info "Water tags with the leak correction after an hour" closure.relative closure.gross_relative
         # `tagged_water_increment_integration.jl` bounds the same column
-        # without the correction at 1e-4.
+        # without the correction at 1e-4. Section 5 compares with it.
         @test closure.gross_relative < 1e-4
         # The correction is in flux form, so it moves no water through the
         # column's boundaries, and the partition's ledger is its tags' sum.
@@ -219,6 +441,15 @@ largest(ᶜf) = maximum(abs, parent(ᶜf))
         @test isnan(audit.led_leaknet_attempted)
         @test audit.led_leak_tropo_retained > 0
         @test 0 < audit.led_leak_tropo_inventory_fraction < Inf
+        # The ratios of #109 (the second review of #119, finding 1). A pure
+        # region tag is read by its inventory, where the flag says a ratio
+        # applies. `evap`, a source tag, is read by its burden. The parent
+        # scale is `∫ρq_tot`.
+        @test audit.led_leak_tropo_applicable == 1
+        @test 0 < audit.led_leak_tropo_parent_fraction < Inf
+        @test 0 < audit.led_leak_evap_burden_fraction < Inf
+        @test audit.ledger_parent_scale > 0
+        @test audit.ledger_parent_scale == Float64(sum(Y.c.ρq_tot))
         # The split solver solves the ledgers apart, as it does the tags.
         cache = CA.jacobian_cache(
             CA.ManualSparseJacobian(; approximate_solve_iters = 2),
@@ -232,7 +463,7 @@ largest(ᶜf) = maximum(abs, parent(ᶜf))
         end
     end
 
-    # 3. The model's own fields.
+    # 4. The model's own fields.
     @testset "The model's fields do not depend on the tags" begin
         plain = run_simulation(edmf_dict, "water_tags_leak_plain")
         Y_plain = plain.integrator.u
@@ -254,5 +485,128 @@ largest(ᶜf) = maximum(abs, parent(ᶜf))
         end
         @test propertynames(Y.f) == propertynames(Y_plain.f)
         @test isequal(parent(Y.f), parent(Y_plain.f))
+    end
+
+    # 5. Against the same column with the correction off (the review of #119,
+    # point 1). Both are stepped by hand, and after each step the EDMF
+    # diffusion's leak is read as each run has it: what the partition takes
+    # from `edmfx_sgs_diffusive_flux_tendency!` beyond the parent. The
+    # closed form reads no tag, so it is the same in both. The corrected run
+    # is a second simulation of the first's type, so it compiles in seconds.
+    @testset "Against the same column without the correction" begin
+        off_dict = merge(
+            tag_dict,
+            Dict{String, Any}(
+                "water_tag_leak_correction" => false,
+                "diagnostics" => [
+                    Dict{String, Any}(
+                        "short_name" => ["q_tag_res", "q_tag_leak_vdiff"],
+                        "period" => "10mins",
+                    ),
+                ],
+            ),
+        )
+        off, readings_off = stepped_run(
+            merge(edmf_dict, off_dict),
+            "water_tags_leak_off",
+            diffusion_reading,
+        )
+        on, readings_on = stepped_run(
+            merge(edmf_dict, tag_dict),
+            "water_tags_leak_on",
+            diffusion_reading,
+        )
+        Y_off = off.integrator.u
+        p_off = off.integrator.p
+        Y_on = on.integrator.u
+        p_on = on.integrator.p
+        @test !CA.has_water_tag_leak_correction(p_off.atmos.water_tagging_model)
+        @test CA.has_water_tag_leak_correction(p_on.atmos.water_tagging_model)
+        @test length(readings_off) == length(readings_on) == 30
+
+        # The model's fields do not depend on the key.
+        @test Set(filter(!is_diagnostic, propertynames(Y_off.c))) ==
+              Set(filter(!is_diagnostic, propertynames(Y_on.c)))
+        for name in filter(!is_diagnostic, propertynames(Y_off.c))
+            name == :sgsʲs && continue
+            @test isequal(
+                parent(getproperty(Y_off.c, name)),
+                parent(getproperty(Y_on.c, name)),
+            )
+        end
+        @test isequal(parent(Y_off.c.sgsʲs), parent(Y_on.c.sgsʲs))
+        @test isequal(parent(Y_off.f), parent(Y_on.f))
+        # So the closed form is the same after every step.
+        @test [r.leak for r in readings_off] == [r.leak for r in readings_on]
+
+        # The leak over the hour, as a fraction of the column's water, and its
+        # largest rate per step, as a fraction per hour.
+        water = Float64(sum(Y_on.c.ρq_tot))
+        step_seconds = 120.0 # `edmf_dict`'s `dt`
+        over_hour(readings, key) =
+            sum(r -> getproperty(r, key), readings) * step_seconds / water
+        per_hour(readings, key) =
+            maximum(r -> getproperty(r, key), readings) * 3600 / water
+        leak = over_hour(readings_on, :leak)
+        gap_off = over_hour(readings_off, :gap)
+        gap_on = over_hour(readings_on, :gap)
+        factor = gap_off / gap_on
+        max_factor =
+            per_hour(readings_off, :gap) / per_hour(readings_on, :gap)
+        @info "The EDMF diffusion's leak the partition takes, off and on, of the water" leak gap_off gap_on factor per_hour(
+            readings_off,
+            :gap,
+        ) per_hour(readings_on, :gap) max_factor
+        # The zero-norm part (the review of #119, point 3): the largest
+        # fraction, over the steps, of the closed form and of the rain and
+        # snow that falls where the partition holds no water.
+        fraction(part, whole) = whole > 0 ? part / whole : 0.0
+        uncovered_leak =
+            maximum(r -> fraction(r.uncovered, r.leak), readings_on)
+        uncovered_water =
+            maximum(r -> fraction(r.ρq_p_uncovered, r.ρq_p), readings_on)
+        @info "The leak where the partition holds no water, largest over the steps" uncovered_leak uncovered_water
+        # Without the correction the partition takes the closed form's leak.
+        # The two differ by the diffusion of the closure's residual: 2e-7 of
+        # the leak on terrabyte, Julia 1.11.
+        @test isapprox(gap_off, leak; rtol = 1e-3)
+        # With it the partition takes that leak reduced by a factor. On
+        # terrabyte, Julia 1.11, it was 5.3e3 over the hour and 2.7e3 in the
+        # worst step. What is left is again the diffusion of the closure's
+        # residual. The bounds leave a margin of five.
+        @test factor > 1000
+        @test max_factor > 500
+
+        # The closure stays within its bound, with the correction and without.
+        names = CA.water_region_tag_state_names(model)
+        closure_off = CA.tag_closure(Y_off, p_off, :ρq_tot, names)
+        closure_on = CA.tag_closure(Y_on, p_on, :ρq_tot, names)
+        @info "The closure after an hour, off and on" closure_off.relative closure_off.gross_relative closure_on.relative closure_on.gross_relative
+        @test closure_on.gross_relative < 1e-4
+
+        # Printed, not bounded: what the follower and the repairs moved, and
+        # the correction's own ledger, each the per-step gross over the hour as
+        # a fraction of the column's water. The follower's `moved` is the
+        # reference the record's gate reads (FINDINGS W40 and W45).
+        ledger_names = (
+            :q_tag_inc_moved,
+            :q_tag_inc_left,
+            :q_tag_inc_negative,
+            :q_tag_led_inc_tropo,
+            :q_tag_led_inc_strat,
+            :q_tag_led_inc_evap,
+            :q_tag_led_rescale,
+            :q_tag_led_empty,
+            :q_tag_led_repair,
+            :q_tag_led_repairnet,
+            :q_tag_led_leaknet,
+        )
+        grosses_off = ledger_grosses(Y_off, p_off, ledger_names)
+        grosses_on = ledger_grosses(Y_on, p_on, ledger_names)
+        fix_off = CA.tag_gross_total(p_off.tagging.ᶜwater_fix_gross) / water
+        fix_on = CA.tag_gross_total(p_on.tagging.ᶜwater_fix_gross) / water
+        @info "The ledgers' per-step gross over the hour, of the water, off" grosses_off fix_off
+        @info "The ledgers' per-step gross over the hour, of the water, on" grosses_on fix_on
+        @test all(isfinite, grosses_on)
     end
 end
