@@ -112,6 +112,8 @@ include(
 )
 # Energy source tags (ρe_src_*, the donor-proportional counterpart of the water tags)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_tags.jl"))
+# The residual report of the energy source tags' closure check (G4.4).
+include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_report.jl"))
 # After the energy source tags, whose weight-free exchange helpers it uses.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_edmf.jl"))
 # The energy copies' mirrors of what `mseʲ` gets and an updraft tracer does not.
