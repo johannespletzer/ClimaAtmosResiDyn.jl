@@ -499,7 +499,7 @@ end
 
     # The parent's negative water (known issue 7). The water check reads it at
     # the default level, 1e-4. This column never goes negative, so every row
-    # is 0 and the ledger stays empty.
+    # is 0 and the accumulator stays empty.
     @test all(==("0"), table_column(closure_table(simulation), "negative_water_void"))
     @test all(
         iszero,
@@ -536,7 +536,7 @@ end
           ["0", "1", "1"]
     @test table_column(audit_table(negative), "negative_water_void") ==
           ["0", "1", "1"]
-    # The ledger took both steps: each interval has negative water in it.
+    # The accumulator took both steps: each interval has negative water in it.
     integral(sim) =
         parse.(Float64, table_column(audit_table(sim), "negative_water_integral"))
     events(sim) = parse.(
@@ -547,7 +547,7 @@ end
     @test integral(negative)[2] > 0
     @test integral(negative)[3] > integral(negative)[2]
     @test all(>=(1 - 1.0e-9), events(negative)[2:end])
-    ledger(sim) = sim.integrator.p.tagging.tag_ledger_steps.negative_water
+    accumulator(sim) = sim.integrator.p.tagging.tag_ledger_steps.negative_water
 
     # With the key off, the model's fields and every other column of both
     # tables are bit for bit the same. Only the flag's columns go.
@@ -574,9 +574,12 @@ end
                   table_column(table(negative_off), name)
         end
     end
-    @test isequal(parent(ledger(negative).ᶜamount), parent(ledger(negative_off).ᶜamount))
+    @test isequal(
+        parent(accumulator(negative).ᶜamount),
+        parent(accumulator(negative_off).ᶜamount),
+    )
 
-    # Through a restart: the flag and the ledger continue. The restarted run
+    # Through a restart: the flag and the accumulator continue. The restarted run
     # sets a level its own ratio does not reach, so its rows are void only
     # through the flag in the checkpoint.
     negative_file = joinpath(negative.output_dir, "day0.20.hdf5")
@@ -595,9 +598,15 @@ end
         negative_restart_dict,
         "tagged_water_negative_restart",
     )
-    # The ledger is the checkpoint's, bit for bit.
-    @test isequal(parent(ledger(continued).ᶜamount), parent(ledger(negative).ᶜamount))
-    @test isequal(parent(ledger(continued).ᶜevents), parent(ledger(negative).ᶜevents))
+    # The accumulator is the checkpoint's, bit for bit.
+    @test isequal(
+        parent(accumulator(continued).ᶜamount),
+        parent(accumulator(negative).ᶜamount),
+    )
+    @test isequal(
+        parent(accumulator(continued).ᶜevents),
+        parent(accumulator(negative).ᶜevents),
+    )
     @test CA.solve_atmos!(continued).ret_code == :success
     @test table_column(closure_table(continued), "time") == ["20.0", "30.0", "40.0"]
     @test all(<(1), relative(continued))
@@ -606,13 +615,13 @@ end
     @test table_column(audit_table(continued), "negative_water_void") ==
           ["1", "1", "1"]
     # The first row after the restart has the integral the run before ended
-    # with, to the digit, and an empty interval. The ledger then grows on.
+    # with, to the digit, and an empty interval. The accumulator then grows on.
     @test first(table_column(audit_table(continued), "negative_water_integral")) ==
           last(table_column(audit_table(negative), "negative_water_integral"))
     @test first(events(continued)) == 0
     @test integral(continued)[3] > integral(continued)[2] > integral(continued)[1]
 
-    # A checkpoint without the flag and the ledger, as one written before
+    # A checkpoint without the flag and the accumulator, as one written before
     # them, restarts both at 0, with a warning each.
     old_file = joinpath(mktempdir(pwd()), "day0.20.hdf5")
     cp(negative_file, old_file)
@@ -630,14 +639,15 @@ end
         Dict{String, Any}("restart_file" => old_file, "output_dir" => mktempdir(pwd())),
     )
     flag_not_recorded = (:warn, r"written before the negative\s+water flag")
-    ledger_not_carried = (:warn, r"before the parent's\s+negative water ledger")
-    from_old = @test_logs flag_not_recorded ledger_not_carried match_mode = :any restart(
-        old_dict,
-        "tagged_water_negative_old",
-    )
+    accumulator_not_carried = (:warn, r"before the parent's\s+negative water accumulator")
+    from_old =
+        @test_logs flag_not_recorded accumulator_not_carried match_mode = :any restart(
+            old_dict,
+            "tagged_water_negative_old",
+        )
     @test table_column(closure_table(from_old), "negative_water_void") == ["0"]
     @test integral(from_old) == [0]
-    @test all(iszero, parent(ledger(from_old).ᶜamount))
+    @test all(iszero, parent(accumulator(from_old).ᶜamount))
 
     # The contract's level is also checked at the end of every accepted step
     # (the owner's decision on #118's review). Here the excursion lies wholly
@@ -665,7 +675,7 @@ end
     )
     voided(sim) = sim.integrator.p.tagging.negative_water_void.water[]
     ratio(sim) = CA.parent_negative_water(sim.integrator.u).relative
-    cell_steps(sim) = sum(parent(ledger(sim).ᶜevents))
+    cell_steps(sim) = sum(parent(accumulator(sim).ᶜevents))
     step_by_hand!(sim) = CA.CTS.step!(sim.integrator)
     step_by_hand!(between)
     @test ratio(between) == 0
@@ -723,16 +733,16 @@ end
     @test table_column(audit_table(between_restarted), "negative_water_void") ==
           ["1", "1"]
 
-    # The ledger weights each accepted step by its length (#118's review,
+    # The accumulator weights each accepted step by its length (#118's review,
     # finding 2). The steps here are 10 s, 4 s to a stop added by hand, 10 s,
     # and 1 s to the end at 25 s. The cell made negative stays negative, so
-    # every step adds to the ledger. The ledger must be the sum over the steps
+    # every step adds to the accumulator. The accumulator must be the sum over the steps
     # of max(-ρq_tot, 0) times the time that elapsed, bit for bit.
     shortened = negative_run(
         merge(negative_dict(1.0e-4), Dict{String, Any}("t_end" => "25secs")),
         "tagged_water_negative_shortened",
     )
-    expected = zero(parent(ledger(shortened).ᶜamount))
+    expected = zero(parent(accumulator(shortened).ᶜamount))
     with_base_step = zero(expected)
     elapsed = Float64[]
     step_negative = Float64[]
@@ -753,9 +763,9 @@ end
     end
     @test elapsed == [10, 4, 10, 1]
     @test all(>(0), step_negative)
-    @test isequal(parent(ledger(shortened).ᶜamount), expected)
+    @test isequal(parent(accumulator(shortened).ᶜamount), expected)
     # Weighted by the base step instead, it would not be.
-    @test !isequal(parent(ledger(shortened).ᶜamount), with_base_step)
+    @test !isequal(parent(accumulator(shortened).ᶜamount), with_base_step)
 end
 
 @testset "Tagged water rejects unsupported microphysics" begin

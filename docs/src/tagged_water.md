@@ -129,8 +129,8 @@ Two consequences worth stating:
     default. The flag is checked at every row and at the end of every
     accepted step, so an excursion between two rows marks the next one. A
     crossing after the run's last row sets the flag and warns, and a later
-    checkpoint carries it, but no row of that run shows it. A ledger in the
-    cache adds the negative water up after every accepted step, for the
+    checkpoint carries it, but no row of that run shows it. An accumulator in
+    the cache adds the negative water up after every accepted step, for the
     audit. See "The parent's negative water" in `tracer_configuration.md`.
 
 ### Taggable processes
@@ -452,7 +452,7 @@ is neither rain nor snow, the rain and the snow. They have a page of their own,
   - `q_tag_negative`: the parent's negative water, ``\min(\rho q_\mathrm{tot}, 0)/\rho``, the remainder the partition leaves. `q_tag_res`, `q_tag_negative` and the region tags add up to ``q_\mathrm{tot}``.
     Under `water_tag_precipitation: true` the non-negative and negative parts
     are taken per compartment;
-  - `q_tag_negative_integral` and `q_tag_negative_events`: the parent's negative water ledger, the sum over the accepted steps of ``\max(-\rho q_\mathrm{tot}, 0) \, \Delta t`` in kg s m⁻³, and the number of steps with ``\rho q_\mathrm{tot} < 0``, per cell, since the start of the run and carried through a restart. Neither is in any default output;
+  - `q_tag_negative_integral` and `q_tag_negative_events`: the parent's negative water accumulator, the sum over the accepted steps of ``\max(-\rho q_\mathrm{tot}, 0) \, \Delta t`` in kg s m⁻³, and the number of steps with ``\rho q_\mathrm{tot} < 0``, per cell, since the start of the run and carried through a restart. Neither is in any default output;
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
     state constraints, cumulative since the start of the run and carried
     through a restart, so the change over an interval is the difference of two
@@ -809,7 +809,7 @@ ClimaAtmos.set_tag_ledger_cadence!
 ClimaAtmos.DEFAULT_NEGATIVE_WATER_VOID_ABOVE
 ClimaAtmos.parent_negative_water
 ClimaAtmos.negative_water_relative
-ClimaAtmos.negative_water_ledger_cache
+ClimaAtmos.negative_water_accumulator_cache
 ClimaAtmos.accumulate_negative_water!
 ClimaAtmos.negative_water_step_relative
 ClimaAtmos.check_negative_water_step!

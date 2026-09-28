@@ -1571,7 +1571,7 @@ end
 
 # Known issue 7, rev. 2's contract row "Parent validity: negative water": the
 # water check reads the parent's own negative water from the raw `ρq_tot`, and
-# marks its rows `negative_water_void` past the level. The ledger adds it up
+# marks its rows `negative_water_void` past the level. The accumulator adds it up
 # after every accepted step, so that the checks miss nothing between them.
 
 # What a call allocates once compiled, behind a function barrier, so that the
@@ -1671,7 +1671,7 @@ second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
     level = FT(1.0e-4)
     dir = mktempdir()
     voided = Ref(false)
-    flag = (; void_above = level, voided, ledger = nothing)
+    flag = (; void_above = level, voided, accumulator = nothing)
     closure_table = CA.tag_closure_path(dir, "water")
     # Positive: 0. Negative past the level: 1, with one warning. Positive
     # again: still 1, and no second warning.
@@ -1692,14 +1692,14 @@ second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
     below = mktempdir()
     below_voided = Ref(false)
     set_parent!(FT[1, 1, -1.0e-5, 1])
-    check!(below, 0.0, (; void_above = level, voided = below_voided, ledger = nothing))
+    check!(below, 0.0, (; void_above = level, voided = below_voided, accumulator = nothing))
     @test !below_voided[]
     @test table_column(CA.tag_closure_path(below, "water"), "negative_water_void") ==
           ["0"]
     # `~` drops both columns, and the audit's flag.
     off = mktempdir()
     set_parent!(one_negative)
-    check!(off, 0.0, (; void_above = nothing, voided = Ref(false), ledger = nothing))
+    check!(off, 0.0, (; void_above = nothing, voided = Ref(false), accumulator = nothing))
     @test !occursin("negative_water", first(readlines(CA.tag_closure_path(off, "water"))))
     # Without the key the table is as before, column for column.
     header_off = first(readlines(CA.tag_closure_path(off, "water")))
@@ -1728,7 +1728,7 @@ second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
         (; tagging = (; p.tagging..., negative_water_void = (; water = step_voided))),
     )
     check_step!(t, level) = CA.check_negative_water_step!((; u = Y, p = step_p, t), level)
-    step_flag = (; void_above = level, voided = step_voided, ledger = nothing)
+    step_flag = (; void_above = level, voided = step_voided, accumulator = nothing)
     between = mktempdir()
     set_parent!(positive)
     check!(between, 0.0, step_flag)
@@ -1782,44 +1782,44 @@ second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
         CA.negative_water_step_level((; negative_water_void_above = level), nothing),
     )
 
-    # The ledger: each accepted step adds max(-ρq_tot, 0) Δt and one event per
+    # The accumulator: each accepted step adds max(-ρq_tot, 0) Δt and one event per
     # negative cell, against a hand computation.
-    ledger = CA.negative_water_ledger_cache(Y, :water)
-    @test isnothing(CA.negative_water_ledger_cache(Y, nothing))
+    accumulator = CA.negative_water_accumulator_cache(Y, :water)
+    @test isnothing(CA.negative_water_accumulator_cache(Y, nothing))
     set_parent!(one_negative)
-    CA.accumulate_negative_water!(ledger, Y.c.ρq_tot, 10.0)
-    @test parent(ledger.ᶜamount)[:] == [0, 0, 5, 0]
-    @test parent(ledger.ᶜevents)[:] == [0, 0, 1, 0]
-    CA.accumulate_negative_water!(ledger, Y.c.ρq_tot, 5.0)
-    @test parent(ledger.ᶜamount)[:] == [0, 0, 7.5, 0]
-    @test parent(ledger.ᶜevents)[:] == [0, 0, 2, 0]
-    @test eltype(parent(ledger.ᶜamount)) == Float64
+    CA.accumulate_negative_water!(accumulator, Y.c.ρq_tot, 10.0)
+    @test parent(accumulator.ᶜamount)[:] == [0, 0, 5, 0]
+    @test parent(accumulator.ᶜevents)[:] == [0, 0, 1, 0]
+    CA.accumulate_negative_water!(accumulator, Y.c.ρq_tot, 5.0)
+    @test parent(accumulator.ᶜamount)[:] == [0, 0, 7.5, 0]
+    @test parent(accumulator.ᶜevents)[:] == [0, 0, 2, 0]
+    @test eltype(parent(accumulator.ᶜamount)) == Float64
     # A clean step, including a signed zero, leaves both bit for bit.
-    amount = copy(parent(ledger.ᶜamount))
-    events = copy(parent(ledger.ᶜevents))
+    amount = copy(parent(accumulator.ᶜamount))
+    events = copy(parent(accumulator.ᶜevents))
     set_parent!(FT[1, -0.0, 0, 1])
-    CA.accumulate_negative_water!(ledger, Y.c.ρq_tot, 10.0)
-    @test isequal(parent(ledger.ᶜamount), amount)
-    @test isequal(parent(ledger.ᶜevents), events)
+    CA.accumulate_negative_water!(accumulator, Y.c.ρq_tot, 10.0)
+    @test isequal(parent(accumulator.ᶜamount), amount)
+    @test isequal(parent(accumulator.ᶜevents), events)
     @test isnothing(CA.accumulate_negative_water!(nothing, Y.c.ρq_tot, 10.0))
 
-    # The audit's columns of the ledger: the first row has an empty interval,
+    # The audit's columns of the accumulator: the first row has an empty interval,
     # a clean interval changes by exactly 0, and a step with negative water
     # changes the integral by 250 × 0.5 × 10 kg s and the count by one.
-    fresh = CA.negative_water_ledger_cache(Y, :water)
+    fresh = CA.negative_water_accumulator_cache(Y, :water)
     audit_dir = mktempdir()
     audit_voided = Ref(false)
-    ledger_check = (; void_above = level, voided = audit_voided, ledger = fresh)
+    accumulator_check = (; void_above = level, voided = audit_voided, accumulator = fresh)
     set_parent!(positive)
-    check!(audit_dir, 0.0, ledger_check; audit = true)
+    check!(audit_dir, 0.0, accumulator_check; audit = true)
     CA.accumulate_negative_water!(fresh, Y.c.ρq_tot, 10.0)
-    check!(audit_dir, 10.0, ledger_check; audit = true)
+    check!(audit_dir, 10.0, accumulator_check; audit = true)
     set_parent!(one_negative)
     CA.accumulate_negative_water!(fresh, Y.c.ρq_tot, 10.0)
     @test_logs (:warn,) match_mode = :any check!(
         audit_dir,
         20.0,
-        ledger_check;
+        accumulator_check;
         audit = true,
     )
     audit_table = CA.tag_audit_path(audit_dir, "water")
@@ -1838,12 +1838,12 @@ second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
         ",negative_water_interval_mean_relative," *
         "negative_water_interval_events,negative_water_void",
     )
-    # With `~` the audit keeps the ledger and drops only the flag.
+    # With `~` the audit keeps the accumulator and drops only the flag.
     audit_off = mktempdir()
     check!(
         audit_off,
         0.0,
-        (; void_above = nothing, voided = Ref(false), ledger = fresh);
+        (; void_above = nothing, voided = Ref(false), accumulator = fresh);
         audit = true,
     )
     audit_off_header = first(readlines(CA.tag_audit_path(audit_off, "water")))
@@ -1889,7 +1889,7 @@ second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
     @test_logs check!(
         after_restart,
         3600.0,
-        (; void_above = level, voided = restored.water, ledger = nothing),
+        (; void_above = level, voided = restored.water, accumulator = nothing),
     )
     @test table_column(
         CA.tag_closure_path(after_restart, "water"),
@@ -1910,29 +1910,29 @@ second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
     @test isnothing(CA.write_negative_water_void_attributes!(nothing, nothing))
     @test isnothing(CA.restore_negative_water_void!(nothing, checkpoint, context))
 
-    # The ledger goes through a checkpoint as the tags' other accumulators do.
+    # The accumulator goes through a checkpoint as the tags' other accumulators do.
     # A checkpoint without it restarts it at zero, with a warning, and reads
     # the others as before.
-    tagging(ledger) = (;
-        tag_ledger_steps = (; ledgers = (;), attempted = (;), negative_water = ledger),
+    tagging(accumulator) = (;
+        tag_ledger_steps = (; ledgers = (;), attempted = (;), negative_water = accumulator),
     )
-    @test first.(CA.tag_ledger_checkpoint_fields(tagging(ledger))) ==
+    @test first.(CA.tag_ledger_checkpoint_fields(tagging(accumulator))) ==
           ["tag_ledger.negative_water.amount", "tag_ledger.negative_water.events"]
     ledger_checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
     CA.InputOutput.HDF5Writer(ledger_checkpoint, context) do writer
-        CA.write_tag_ledger_checkpoint!(writer, tagging(ledger))
+        CA.write_tag_ledger_checkpoint!(writer, tagging(accumulator))
     end
-    back = CA.negative_water_ledger_cache(Y, :water)
+    back = CA.negative_water_accumulator_cache(Y, :water)
     CA.restore_tag_ledger_checkpoint!(tagging(back), ledger_checkpoint, context)
-    @test isequal(parent(back.ᶜamount), parent(ledger.ᶜamount))
-    @test isequal(parent(back.ᶜevents), parent(ledger.ᶜevents))
-    empty_ledger = CA.negative_water_ledger_cache(Y, :water)
-    @test_logs (:warn, r"before the parent's\s+negative water ledger") CA.restore_tag_ledger_checkpoint!(
-        tagging(empty_ledger),
+    @test isequal(parent(back.ᶜamount), parent(accumulator.ᶜamount))
+    @test isequal(parent(back.ᶜevents), parent(accumulator.ᶜevents))
+    empty_accumulator = CA.negative_water_accumulator_cache(Y, :water)
+    @test_logs (:warn, r"before the parent's\s+negative water accumulator") CA.restore_tag_ledger_checkpoint!(
+        tagging(empty_accumulator),
         old_checkpoint,
         context,
     )
-    @test all(iszero, parent(empty_ledger.ᶜamount))
+    @test all(iszero, parent(empty_accumulator.ᶜamount))
 
     # A crossing after the run's last row. The rows fall every 10 s, and the
     # run ends at 25 s, so its last row is at 20 s. The parent is negative only
@@ -1944,7 +1944,7 @@ second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
         p,
         (; tagging = (; p.tagging..., negative_water_void = (; water = tail_voided))),
     )
-    tail_flag = (; void_above = level, voided = tail_voided, ledger = nothing)
+    tail_flag = (; void_above = level, voided = tail_voided, accumulator = nothing)
     tail = mktempdir()
     set_parent!(positive)
     for t in (0.0, 10.0, 20.0)

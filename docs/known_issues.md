@@ -367,12 +367,12 @@ from the raw `ρq_tot`:
     that passes the level and ends between two rows marks the next row. The
     flag stays 1 after the parent recovers, and the checkpoint carries it
     through a restart.
-  - A ledger in the cache adds `max(-ρq_tot, 0) Δt` after every accepted
+  - An accumulator in the cache adds `max(-ρq_tot, 0) Δt` after every accepted
     step, and counts the negative cells. The water audit reports its change
     per interval. An interval whose event count is 0 had no negative water at
     the end of any step.
   - The audit's `nonpositive_mass` had read the target `max(ρq_tot, 0)` under
     C, and so was 0 by construction. It reads the raw `ρq_tot` again.
 
-The flag and the ledger live in the cache, never in the model's state. See
+The flag and the accumulator live in the cache, never in the model's state. See
 `docs/src/tracer_configuration.md`, "The parent's negative water".

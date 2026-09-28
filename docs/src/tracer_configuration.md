@@ -388,8 +388,8 @@ means the tags' shares are undefined somewhere. The audit's
 parent at the check's times only, so a cell that goes negative and back between
 two checks does not show. Unlike `closure_void`, they are not kept from one row
 to the next. For water, the next section adds a flag that is kept and is
-also checked at the end of every accepted step, and a ledger that sees every
-step.
+also checked at the end of every accepted step, and an accumulator that sees
+every step.
 
 ### The parent's negative water
 
@@ -446,7 +446,7 @@ second one, of `ρq_tot`, after a step that ends with negative water somewhere.
 Under MPI both are collective, so every process takes them. With the key at
 `~`, the step does neither.
 
-The audit also sees every step. After each accepted step, a ledger in the
+The audit also sees every step. After each accepted step, an accumulator in the
 cache adds `max(-ρq_tot, 0) Δt` per cell, and counts the cells whose `ρq_tot`
 is below zero. The checkpoint carries it. The water audit table reports it:
 
@@ -464,12 +464,12 @@ restarted segment, has an empty interval, so its interval columns are 0. The
 interval's mean divides by `∫ρq_tot` at the row, not at each step. So it
 approximates the interval's mean of `negative_water_relative`, and the two
 differ where the parent's water changes within the interval. The flag does not
-use it. A checkpoint written before the ledger restarts it at zero, with a
+use it. A checkpoint written before the accumulator restarts it at zero, with a
 warning. The per-cell fields are the opt-in diagnostics
 `q_tag_negative_integral`, in kg s m⁻³, and `q_tag_negative_events`.
 
-Both the flag and the ledger live in the cache and in the checkpoint, never in
-the model's state, so neither can change a model field.
+Both the flag and the accumulator live in the cache and in the checkpoint,
+never in the model's state, so neither can change a model field.
 
 Exceeding `abort_above` **ends the run**, where a user sets it. No family sets
 one by default. Set it when a run whose tags no longer mean anything is not
@@ -516,7 +516,7 @@ it. For water, `nonpositive_mass` is `∫|min(ρq_tot, 0)| dV` of the raw
 `ρq_tot`. The partition's target, `max(ρq_tot, 0)`, is never negative, so read
 from it the column would be 0 by construction. `scale` is the target's
 integral, `∫max(ρq_tot, 0) dV`. The water audit table also has the negative
-water ledger's columns, after `closure_void` (see above). A separate file rather than more columns on the closure table, so that
+water accumulator's columns, after `closure_void` (see above). A separate file rather than more columns on the closure table, so that
 turning the audit on does not change a schema other runs and analysis scripts
 already read. Join the two on `time`.
 

@@ -998,14 +998,15 @@ function tag_closure_callback(
     # The energy source tags' second warning level, against the throughput.
     throughput_tolerance = get(check, :throughput_tolerance, nothing)
     # The water check also reads the parent's negative water. Its flag lives in
-    # the cache for the same reason, and its ledger is the tags' (WP6).
+    # the cache for the same reason. Its accumulator sits in the tags' step
+    # cache, beside their ledgers (WP6).
     negative_water_void_above = get(check, :negative_water_void_above, nothing)
     negative_water(p) =
         reads_negative_water ?
         (;
             void_above = negative_water_void_above,
             voided = negative_water_voided(p, family_key),
-            ledger = negative_water_ledger(p.tagging),
+            accumulator = negative_water_accumulator(p.tagging),
         ) : nothing
     affect!(integrator) = tag_closure_callback!(
         integrator,
